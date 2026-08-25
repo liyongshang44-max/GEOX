@@ -1,0 +1,150 @@
+{
+  "anchor_id": "MCFT_CAP09_QUALIFICATION_EVIDENCE_DURABLE_ANCHORS_V1",
+  "schema_version": 1,
+  "frozen_subject_sha": "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
+  "capture_policy": "REPOSITORY_VERSIONED_CRYPTOGRAPHIC_SNAPSHOT_OF_VERIFIED_ACTIONS_EVIDENCE",
+  "entries": [
+    {
+      "evidence_id": "V13_SUCCESSOR_SUBJECT_3BBF096E",
+      "workflow_name": "mcft-cap-09-v13-autonomous-forcing-foundation",
+      "run_id": 32881283813,
+      "run_conclusion": "success",
+      "artifact_id": 9575891293,
+      "artifact_digest": "sha256:5470f9e59a73d95bdb68e1ec37d3bf39464f3dd0826fd6a41e67a0baaaac766a",
+      "artifact_expires_at": "2026-11-23T18:00:58Z",
+      "captured_files": [
+        {
+          "path": "MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION_GOVERNANCE.json",
+          "sha256": "sha256:ddfbad9a159fa39199f33f22de48aff2210c32b40134dfb32bab198e988e8274",
+          "status": "PASS"
+        },
+        {
+          "path": "MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION_RESULT.json",
+          "sha256": "sha256:ffd914a826b66e05e6afba64f100010aa377d59820389d703f14b703b7b5552b",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "evidence_id": "V13_HOLISTIC_SCHEMA_3BBF096E",
+      "workflow_name": "mcft-cap-09-v13-holistic-schema-postgres",
+      "run_id": 32881283336,
+      "run_conclusion": "success",
+      "artifact_id": 9575878791,
+      "artifact_digest": "sha256:04630f1f869ba99e9be40d55e24967e6e26671e80d3459fb9b28ce0694aaeb40",
+      "artifact_expires_at": "2026-11-23T18:00:58Z",
+      "captured_files": [
+        {
+          "path": "MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES_RESULT.json",
+          "sha256": "sha256:2f0a98f100fcb391092dc7406ee229bdb05c289b185afad7802175f190746f02",
+          "status": "PASS",
+          "v13_column_fingerprint_md5": "c61154d4439a82efc256bed461386781",
+          "v13_constraint_fingerprint_md5": "67a588bc5b8c3d213b03aa1dbfa4ff2b",
+          "v13_index_fingerprint_md5": "306e26a56d419c4e08fac0912ccfdda8"
+        }
+      ]
+    },
+    {
+      "evidence_id": "V13_NEXT_TICK_3BBF096E",
+      "workflow_name": "mcft-cap-09-v13-next-tick-viability-postgres",
+      "run_id": 32881284034,
+      "run_conclusion": "success",
+      "artifact_id": 9575898642,
+      "artifact_digest": "sha256:5dc7bbdf61372518e50ef33cbc470b50b788197622b8a0ce4978686365e9b625",
+      "artifact_expires_at": "2026-11-23T18:00:58Z",
+      "captured_files": [
+        {
+          "path": "MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES_RESULT.json",
+          "sha256": "sha256:d6c65b6fa56c69732d04689bf6f5d195d60b30149a0228a0867ae062b7b8b395",
+          "status": "PASS"
+        },
+        {
+          "path": "MCFT_CAP_09_V13_POST_COMMIT_ADJUDICATION_BOUNDARY_RESULT.json",
+          "sha256": "sha256:5e6d7b7def521183630dbf993a544f6bcb5254a05abec9719601825b8a26eb43",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "evidence_id": "EA5C1_SUCCESSOR_REVALIDATION_3BBF096E",
+      "workflow_name": "mcft-cap-09-ea5c1-durable-raw-restricted-ingress",
+      "run_id": 32881283425,
+      "run_conclusion": "success",
+      "artifact_id": 9575893745,
+      "artifact_digest": "sha256:5d0cd30932062032298b24a44b7d7d728a58807669961058931c22dfba0b99ac",
+      "artifact_expires_at": "2026-11-23T18:00:58Z",
+      "captured_files": [
+        {
+          "path": "MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS_GOVERNANCE_RESULT.json",
+          "sha256": "sha256:83a7ad887f21c1faab088708013a4b8d8034383bcae1f142028569d7d91eac10",
+          "status": "PASS"
+        },
+        {
+          "path": "MCFT_CAP_08_S2_G3_BOUNDARY_RESULT.json",
+          "sha256": "sha256:5cad225397bb802b8679c8a0514dd13bde174fb288c1bf6ea3398a467b05e01f",
+          "status": "PASS"
+        },
+        {
+          "path": "EA5C1_FOCUSED_ACCEPTANCE.log",
+          "sha256": "sha256:57c8199758db808c29813b203a21955d4300d0a68a540fef140a6b62ecfc2372",
+          "summary": "11 PASS, 0 FAIL"
+        },
+        {
+          "path": "EA5C1_SERVER_TYPECHECK.log",
+          "sha256": "sha256:9e8966eea9f57e1323592da1ea5b3ce5ba1027d049cc105137ec04b131b09bf4"
+        }
+      ]
+    },
+    {
+      "evidence_id": "EA5E2_RUNTIME_GRAPH_3BBF096E",
+      "workflow_name": "mcft-cap-09-ea5e2-runtime-dependency-graph",
+      "run_id": 32881283560,
+      "run_conclusion": "success",
+      "artifact_id": 9575862147,
+      "artifact_digest": "sha256:1fac3c1e8812fd978611d10444f0bf469de89ddca9694b5d4ea111b137fc1bd1",
+      "artifact_expires_at": "2026-09-01T18:01:10Z",
+      "captured_files": [
+        {
+          "path": "MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json",
+          "sha256": "sha256:4fe2f0487ee3886ae15951e0d9407d94138c2b4d467e0c3389345fccc7ee2002",
+          "status": "PASS",
+          "runtime_dependency_graph_count": 93,
+          "expected_dependency_graph_sha256": "sha256:b222cc98c5f518a42021dfea958215f4a9d8615463de02108af29c4d23987218",
+          "carrier_dependency_graph_sha256": "sha256:b222cc98c5f518a42021dfea958215f4a9d8615463de02108af29c4d23987218"
+        }
+      ]
+    },
+    {
+      "evidence_id": "LEGACY_AM19_24T_SUCCESSOR_ROUTING_3BBF096E",
+      "workflow_name": "mcft-cap-09-amendment19-persistent-24t-qualification",
+      "run_id": 32881283602,
+      "run_conclusion": "success",
+      "artifact_id": null,
+      "artifact_digest": null,
+      "run_snapshot": {
+        "event": "pull_request",
+        "run_number": 178,
+        "workflow_path": ".github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml",
+        "head_sha": "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
+        "base_sha": "26c1383f7f45abb76c99e28ec3d06714e85d1b2c",
+        "created_at": "2026-08-25T18:00:58Z",
+        "updated_at": "2026-08-25T18:01:58Z"
+      }
+    }
+  ],
+  "rules": {
+    "source_run_and_artifact_refs_must_match_at_capture": "FAIL_CLOSED",
+    "repository_anchor_mutation": "REQUALIFY_CONTROL_PLANE",
+    "artifact_expiry_does_not_delete_repository_anchor": true,
+    "artifact_digest_remains_historical_identity_after_expiry": true,
+    "anchor_is_not_production_authority": true
+  },
+  "non_effects": {
+    "runtime_mutation": false,
+    "production_workflow_activation": false,
+    "formal_database_mutation": false,
+    "provider_request": false,
+    "graduation_effect": false,
+    "mcft_cap09_completed": false
+  }
+}
