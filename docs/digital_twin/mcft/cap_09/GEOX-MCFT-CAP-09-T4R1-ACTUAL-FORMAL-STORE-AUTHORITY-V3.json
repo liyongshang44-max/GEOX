@@ -53,12 +53,14 @@
   },
   "schema_contract": {
     "predecessor_required_public_table_count": 26,
-    "v13_required_public_table_count": 28,
+    "v13_required_public_table_count": 29,
     "new_operational_relations": [
       "twin_external_formal_forcing_base_cursor_v1",
-      "twin_external_formal_forcing_base_target_v1"
+      "twin_external_formal_forcing_base_target_v1",
+      "twin_external_formal_forcing_controller_lease_v1"
     ],
     "canonical_facts_schema_mutation_required": false,
+    "holistic_v13_schema_acceptance_required": true,
     "v13_column_fingerprint_md5": null,
     "v13_constraint_fingerprint_md5": null,
     "v13_index_fingerprint_md5": null,
@@ -139,6 +141,7 @@
     "formal_o00_o23_qualifying_manual_rescue_count_required": 0
   },
   "machine_gates": [
+    "HOLISTIC_V13_SCHEMA_ACCEPTANCE",
     "PRODUCER_CURSOR_CONTINUITY",
     "EXACT_PREDECESSOR_BASE_CONTINUITY",
     "NEXT_TICK_FORCING_VIABILITY",
