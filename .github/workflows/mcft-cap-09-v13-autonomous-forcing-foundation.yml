@@ -5,11 +5,13 @@ on:
     paths:
       - '.github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml'
       - 'apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql'
+      - 'apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql'
       - 'apps/server/src/domain/twin_runtime/external_formal_forcing_acquisition_budget_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES.ts'
   workflow_dispatch:
 
 permissions:
@@ -99,7 +101,8 @@ jobs:
           const fs=require('node:fs');
           const governance=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION_GOVERNANCE.json','utf8'));
           const runtime=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION_RESULT.json','utf8'));
-          if(governance.status!=='PASS'||governance.operational_table_delta!==2||governance.canonical_facts_schema_mutation!==false||governance.hardcoded_35_minute_budget_authorized!==false||governance.physical_visibility_uses_post_commit_db_readback!==true||governance.production_effect!==false)throw new Error('V13_FOUNDATION_GOVERNANCE_PASS_REQUIRED');
+          const exactRelations=['twin_external_formal_forcing_base_cursor_v1','twin_external_formal_forcing_base_target_v1','twin_external_formal_forcing_controller_lease_v1'];
+          if(governance.status!=='PASS'||governance.operational_table_delta!==3||JSON.stringify(governance.exact_new_operational_relations)!==JSON.stringify(exactRelations)||governance.canonical_facts_schema_mutation!==false||governance.hardcoded_35_minute_budget_authorized!==false||governance.physical_visibility_uses_post_commit_db_readback!==true||governance.production_effect!==false)throw new Error('V13_FOUNDATION_GOVERNANCE_PASS_REQUIRED');
           if(runtime.status!=='PASS'||runtime.acceptance_mode!=='REAL_POSTGRESQL_V13_AUTONOMOUS_FORCING_FOUNDATION')throw new Error('V13_FOUNDATION_RUNTIME_PASS_REQUIRED');
           for(const key of ['producer_cursor_continuity_verified','producer_cursor_leads_runtime_consumption_by_required_base','exact_predecessor_base_continuity_verified','forcing_base_claim_lease_fencing_verified','duplicate_wake_idempotency_verified','stale_fencing_token_rejected','missed_causal_deadline_terminalized_before_runtime_claim','post_commit_fresh_transaction_fact_readback_verified','db_clock_post_commit_visibility_attested_before_base','payload_time_travel_rejected_by_physical_visibility','end_to_end_budget_requires_controlled_delay_matrix'])if(runtime[key]!==true)throw new Error(`V13_FOUNDATION_MACHINE_PROOF_MISSING:${key}`);
           if(runtime.hardcoded_35_minute_budget_authorized!==false||runtime.production_workflow_wiring_changed!==false||runtime.formal_v4_mutation_performed!==false||runtime.mcft_cap09_completed!==false)throw new Error('V13_FOUNDATION_NONCLAIM_REGRESSION');
