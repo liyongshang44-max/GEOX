@@ -46,11 +46,46 @@ function hasAuthorityError(result, code) {
   return (result.authority_errors || []).some((row) => row.code === code);
 }
 
+function assertCheckContract(authority) {
+  const resolverIds = new Set(Object.keys(authority.dependency_resolvers || {}));
+  const allowedStages = new Set(authority.allowed_stages || []);
+  for (const check of authority.checks || []) {
+    const id = check.check_id || "<missing>";
+    for (const field of ["owner", "historical_evidence_policy", "execution_workflow_status", "fail_policy", "carry_forward_policy"]) {
+      assert.equal(typeof check[field], "string", `CHECK_CONTRACT_STRING_REQUIRED:${id}:${field}`);
+      assert.ok(check[field].length > 0, `CHECK_CONTRACT_STRING_EMPTY:${id}:${field}`);
+    }
+    assert(Array.isArray(check.generation_scope) && check.generation_scope.length > 0, `CHECK_GENERATION_SCOPE_REQUIRED:${id}`);
+    assert(check.generation_scope.every((value) => typeof value === "string" && value.length > 0), `CHECK_GENERATION_SCOPE_INVALID:${id}`);
+    assert(Array.isArray(check.authority_refs) && check.authority_refs.length > 0, `CHECK_AUTHORITY_REFS_REQUIRED:${id}`);
+    for (const ref of check.authority_refs) {
+      assert.equal(typeof ref, "string", `CHECK_AUTHORITY_REF_INVALID:${id}`);
+      assert(fs.existsSync(path.join(ROOT, ref)), `CHECK_AUTHORITY_REF_UNRESOLVABLE:${id}:${ref}`);
+    }
+    assert(Array.isArray(check.resolver_ids) && check.resolver_ids.length > 0, `CHECK_RESOLVER_IDS_REQUIRED:${id}`);
+    for (const resolverId of check.resolver_ids) assert(resolverIds.has(resolverId), `CHECK_RESOLVER_REF_UNRESOLVABLE:${id}:${resolverId}`);
+    assert(Array.isArray(check.requalification_triggers) && check.requalification_triggers.length > 0, `CHECK_REQUALIFICATION_TRIGGERS_REQUIRED:${id}`);
+    for (const resolverId of check.requalification_triggers) assert(resolverIds.has(resolverId), `CHECK_REQUALIFICATION_TRIGGER_UNRESOLVABLE:${id}:${resolverId}`);
+    assert(Array.isArray(check.applicable_stages) && check.applicable_stages.length > 0, `CHECK_APPLICABLE_STAGES_REQUIRED:${id}`);
+    for (const stage of check.applicable_stages) assert(allowedStages.has(stage), `CHECK_STAGE_UNDECLARED:${id}:${stage}`);
+
+    if (check.execution_workflow_status === "NOT_IMPLEMENTED_AT_FROZEN_SUBJECT") {
+      assert.equal(check.execution_workflow, null, `UNIMPLEMENTED_WORKFLOW_MUST_NOT_INVENT_PATH:${id}`);
+    } else {
+      assert.equal(typeof check.execution_workflow, "string", `IMPLEMENTED_WORKFLOW_PATH_REQUIRED:${id}`);
+      assert(fs.existsSync(path.join(ROOT, check.execution_workflow)), `IMPLEMENTED_WORKFLOW_PATH_UNRESOLVABLE:${id}:${check.execution_workflow}`);
+    }
+  }
+}
+
 function main() {
   const authority = readJson(AUTHORITY_PATH);
   const registry = readJson(REGISTRY_PATH);
   assert.equal(authority.authority_id, "MCFT_CAP09_CHECK_APPLICABILITY_V1");
   assert.equal(registry.frozen_subject_sha, authority.frozen_successor_subject_sha);
+
+  // CP-1: every registered check must expose a complete central machine-readable contract.
+  assertCheckContract(authority);
 
   // Authority itself must resolve every exact path / import root / external graph now.
   const resolved = resolveDependencyResolvers(ROOT, authority);
@@ -135,7 +170,13 @@ function main() {
   assert.equal(duplicateCheck.status, "FAIL");
   assert(hasAuthorityError(duplicateCheck, "DUPLICATE_CHECK_ID"));
 
-  // CP-4: a check pointing at a missing dependency authority ref must fail closed.
+  // CP-4: a missing central authority ref must make the meta-gate fail closed.
+  const missingCentralAuthority = clone(authority);
+  const missingCentralAuthorityCheck = missingCentralAuthority.checks.find((row) => row.check_id === "V13_AUTONOMOUS_FORCING_FOUNDATION");
+  missingCentralAuthorityCheck.authority_refs = ["docs/__mcft_cap09_missing_authority_ref__.json"];
+  assert.throws(() => assertCheckContract(missingCentralAuthority), /CHECK_AUTHORITY_REF_UNRESOLVABLE/);
+
+  // CP-4: a check pointing at a missing dependency authority/resolver ref must fail closed in the planner.
   const missingAuthority = clone(authority);
   const missingAuthorityCheck = missingAuthority.checks.find((row) => row.check_id === "V13_AUTONOMOUS_FORCING_FOUNDATION");
   missingAuthorityCheck.resolver_ids = ["__MCFT_CAP09_MISSING_AUTHORITY_REF__"];
@@ -152,6 +193,14 @@ function main() {
   const missingArtifactResult = plan(authority, missingArtifactRegistry, []);
   assert.equal(missingArtifactResult.status, "FAIL");
   assert.equal(byId(missingArtifactResult, "V13_HOLISTIC_SCHEMA").status, "UNKNOWN");
+
+  // CP-4: a future obligation may be declared without inventing a workflow that does not exist yet.
+  for (const id of ["V13_PRODUCER_DRIVEN_QUALIFICATION", "END_TO_END_EVIDENCE_SUPPLY_DEADLINE", "EXACT_ONE_PRODUCTION_OWNER", "FORMAL_V5_ACTIVATION"]) {
+    const check = authority.checks.find((row) => row.check_id === id);
+    assert.ok(check, `FUTURE_CHECK_REQUIRED:${id}`);
+    assert.equal(check.execution_workflow_status, "NOT_IMPLEMENTED_AT_FROZEN_SUBJECT");
+    assert.equal(check.execution_workflow, null);
+  }
 
   // CP-4: a failed-v4 subject is forbidden for carry-forward by the actual Formal-store authority.
   const failedV4Registry = clone(registry);
@@ -185,6 +234,8 @@ function main() {
     frozen_successor_subject_sha: authority.frozen_successor_subject_sha,
     resolver_count: Object.keys(resolved.resolved).length,
     all_resolvers_materialized_without_missing_paths: true,
+    central_check_contract_complete_and_resolvable: true,
+    unimplemented_future_workflows_explicit_without_invented_paths: true,
     control_plane_only_change_does_not_invalidate_frozen_runtime_evidence: true,
     known_changed_dependency_requalifies: true,
     unknown_changed_path_fails_closed: true,
@@ -193,6 +244,7 @@ function main() {
     transitive_shared_dependency_uses_generated_closure: true,
     historical_evidence_mutation_fails_closed: true,
     duplicate_check_id_fails_closed: true,
+    missing_central_authority_ref_fails_closed: true,
     missing_authority_ref_fails_closed: true,
     missing_evidence_artifact_ref_fails_closed: true,
     not_applicable_generation_is_machine_recorded: true,
@@ -206,7 +258,7 @@ function main() {
     formal_database_mutation: false,
     provider_request: false,
     graduation_effect: false,
-    mcft_cap09_completed: false,
+    mcft_cap09_completed: false
   };
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify(proof, null, 2) + "\n");
