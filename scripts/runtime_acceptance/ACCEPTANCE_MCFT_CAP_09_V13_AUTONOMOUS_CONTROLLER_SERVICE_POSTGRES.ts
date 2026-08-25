@@ -296,7 +296,8 @@ async function main(): Promise<void> {
         heartbeat_interval_ms: 30,
       },
     );
-    assert.equal((await competing.runOnce()).status, "CONTROLLER_BUSY");
+    const competingResult = await competing.runOnce();
+    assert.equal(competingResult.status, "CONTROLLER_BUSY");
 
     const retryEpoch = "v13-autonomous-promotion-zero-write-failure";
     const retry = await createService({
@@ -354,7 +355,7 @@ async function main(): Promise<void> {
       producer_claim_heartbeat_during_long_capture_and_promotion: result.producer_heartbeat_count >= 2,
       same_producer_fence_preserved_through_completion: result.producer_fencing_token === "1",
       physical_attestation_advanced_cursor: (await main.continuity.readCursor()).completed === true,
-      competing_controller_denied_while_lease_live: (await competing.runOnce()).status === "CONTROLLER_BUSY",
+      competing_controller_denied_while_lease_live: competingResult.status === "CONTROLLER_BUSY",
       zero_formal_write_promotion_failure_is_retryable: retryState.state === "FAILED_RETRYABLE",
       partial_formal_write_promotion_failure_is_not_retryable: partialState.state === "PROMOTING" && partialState.failure_class === null,
       partial_formal_write_promotion_failure_terminalizes_controller: partialLifecycle.status === "TERMINAL",
