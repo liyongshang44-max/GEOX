@@ -1,0 +1,180 @@
+{
+  "schema_version": "geox_mcft_cap09_t4r1_actual_formal_store_authority_v3",
+  "status": "CANDIDATE",
+  "purpose": "FRESH_T4R1_AUTONOMOUS_CAUSAL_FORMAL_V5_SUCCESSOR_AFTER_IRREVERSIBLE_V4_O08_NO_GO",
+  "predecessor_protected_main_sha": "26c1383f7f45abb76c99e28ec3d06714e85d1b2c",
+  "supersedes_for_future_v5_only": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V2.json",
+  "scope": {
+    "site_id": "KBS_MCSE_T4R1",
+    "field_id": "field_kbs_mcse_t4r1",
+    "season_id": "season_2026_corn",
+    "zone_id": "zone_kbs_mcse_t4r1_crop_formal_v1"
+  },
+  "failed_v4_incident": {
+    "failed_subject_sha": "26c1383f7f45abb76c99e28ec3d06714e85d1b2c",
+    "workflow_run_id": 32846668961,
+    "artifact_id": 9562596508,
+    "artifact_digest": "sha256:40e7b5cbf35d7a65f52f7290b5587fb55ce0bd7eb6ad19abd6c3ac5551e9fc41",
+    "epoch_id": "mcft_cap09_am19_formal_20260825030000000_26c1383f7f45",
+    "formal_database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v4",
+    "terminal_slot": "O08",
+    "terminal_logical_time": "2026-08-25T12:00:00.000Z",
+    "terminal_detail": "AMENDMENT19_NO_CAUSAL_CURRENT_INTERVAL_FORCING_PAIR",
+    "formal_epoch_no_go": true,
+    "failed_epoch_continuation_forbidden": true,
+    "failed_epoch_repair_or_late_forcing_insertion_forbidden": true,
+    "successful_continuation_ticks_before_failure": 8
+  },
+  "database_identity": {
+    "provider": "NEON_POSTGRES",
+    "database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v5",
+    "failed_predecessor_database": "geox_mcft_cap09_s6_formal_t4r1_24h_v4",
+    "failed_predecessor_reuse_forbidden": true,
+    "data_clone_from_failed_v4_forbidden": true,
+    "fresh_zero_state_required": true,
+    "capacity_preflight_required_before_provision": true,
+    "superseded_old_qualification_generation_inventory_required_before_cleanup": true,
+    "v12_or_v4_cleanup_for_capacity_forbidden": true
+  },
+  "qualification_generation": {
+    "generation": "v13",
+    "fresh_qualification_required": true,
+    "qualification_database": "geox_mcft_cap09_s6_accel24t_am19_v13",
+    "blocked_database": "geox_mcft_cap09_s6_accel24t_am19_blocked_v13",
+    "previous_qualification_database": "geox_mcft_cap09_s6_accel24t_am19_v12",
+    "previous_blocked_database": "geox_mcft_cap09_s6_accel24t_am19_blocked_v12",
+    "previous_generation_reuse_forbidden": true,
+    "qualification_clock_mode": "ACCELERATED_ENGINEERING_ONLY",
+    "qualification_clock_substitutes_wait_only": true,
+    "producer_supply_graph_must_be_exercised": true,
+    "preinsert_all_24_hourly_forcing_pairs_forbidden": true,
+    "production_canonical_core_must_be_identical": true,
+    "real_wall_clock_formal_still_required_after_qualification": true
+  },
+  "schema_contract": {
+    "predecessor_required_public_table_count": 26,
+    "v13_required_public_table_count": 28,
+    "new_operational_relations": [
+      "twin_external_formal_forcing_base_cursor_v1",
+      "twin_external_formal_forcing_base_target_v1"
+    ],
+    "canonical_facts_schema_mutation_required": false,
+    "v13_column_fingerprint_md5": null,
+    "v13_constraint_fingerprint_md5": null,
+    "v13_index_fingerprint_md5": null,
+    "fingerprints_must_be_frozen_from_exact_head_fresh_store_qualification": true,
+    "all_governed_relations_zero_state_before_arm_required": true
+  },
+  "amendment19_selector_contract": {
+    "selector_authority_changed": false,
+    "selection_policy": "EXACT_PROVIDER_PAIR_ELSE_PRIOR_STEP_CAUSAL_ASSUMPTION_PAIR_NO_WAIT_V1",
+    "arbitrary_older_snapshot_fallback_forbidden": true,
+    "incomplete_71_point_assumption_window_forbidden": true,
+    "timestamp_relabel_forbidden": true,
+    "late_repair_of_terminal_tick_forbidden": true
+  },
+  "forcing_base_continuity": {
+    "cursor_id": "FORMAL_FORCING_BASE_CONTINUITY_CURSOR_V1",
+    "runtime_and_forcing_cursors_are_independent": true,
+    "a0_warm_start_supplies_o00": true,
+    "post_a0_required_base_range": "O00_THROUGH_O22",
+    "post_a0_required_base_count": 23,
+    "last_contiguous_eligible_base_required": true,
+    "next_missing_required_base_required": true,
+    "causal_deadline_equals_base": true,
+    "claim_lease_fencing_per_epoch_and_base_required": true,
+    "github_concurrency_is_not_durable_queue_authority": true,
+    "required_base_silent_skip_forbidden": true,
+    "deadline_miss_failure_class": "REQUIRED_FORMAL_FORCING_BASE_DEADLINE_MISSED"
+  },
+  "timing_authority": {
+    "authority_id": "FORMAL_FORCING_ACQUISITION_BUDGET_V1",
+    "status": "UNQUALIFIED_UNTIL_EXACT_HEAD_TIMING_QUALIFICATION",
+    "fixed_35_minute_lead_authorized_for_v5": false,
+    "hardcoded_replacement_budget_minutes": null,
+    "budget_must_cover": [
+      "GITHUB_WAKE_DELAY",
+      "JOB_START_AND_SETUP",
+      "PROVIDER_CAPTURE",
+      "RETAINED_RAW_AND_CANDIDATE",
+      "PROMOTION_QUEUE_AND_SETUP",
+      "REHYDRATION_PROMOTION_NEON_COMMIT_POST_COMMIT_READBACK",
+      "CONTROLLED_CROSS_WAKE_CAPTURE_OVERLAP",
+      "EXPLICIT_SAFETY_MARGIN"
+    ],
+    "minimum_real_timing_sample_count": 3,
+    "controlled_delay_matrix_required": true,
+    "acquisition_start_deadline": "BASE_MINUS_QUALIFIED_END_TO_END_BUDGET",
+    "physical_formal_visibility_deadline": "BASE"
+  },
+  "physical_visibility_authority": {
+    "attestation_id": "FORMAL_PHYSICAL_INGRESS_ATTESTATION_V1",
+    "payload_ingested_at_is_not_physical_visibility_authority": true,
+    "facts_ingested_at_column_assumed_to_exist": false,
+    "post_commit_fresh_database_transaction_required": true,
+    "exact_weather_et0_soil_fact_identity_readback_required": true,
+    "database_clock_read_after_exact_fact_readback_required": true,
+    "post_commit_db_readback_at_must_be_before_base": true,
+    "attestation_persistence_must_be_before_base": true,
+    "provider_chronology_legal_required": true,
+    "payload_chronology_legal_required": true,
+    "physical_visibility_chronology_legal_required": true
+  },
+  "next_tick_viability": {
+    "required_before_successor_slot_claim": true,
+    "reads_runtime_cursor": true,
+    "reads_forcing_continuity_cursor": true,
+    "reads_physical_ingress_attestation": true,
+    "a2_blocked_may_terminalize_current_tick_with_limitations": true,
+    "a2_blocked_does_not_imply_successor_viable": true,
+    "successor_claim_forbidden_when_next_tick_viable_false": true
+  },
+  "workflow_lifecycle": {
+    "exact_one_production_owner_per_role_required_before_effectiveness": true,
+    "retired_workflow_schedule_count_required": 0,
+    "retired_workflow_live_dispatch_count_required": 0,
+    "retired_workflow_downstream_dispatch_count_required": 0,
+    "emergency_manual_dispatch_may_exist_on_active_owner": true,
+    "routine_success_must_not_depend_on_manual_dispatch": true,
+    "formal_o00_o23_qualifying_manual_rescue_count_required": 0
+  },
+  "machine_gates": [
+    "PRODUCER_CURSOR_CONTINUITY",
+    "EXACT_PREDECESSOR_BASE_CONTINUITY",
+    "NEXT_TICK_FORCING_VIABILITY",
+    "FORMAL_INGRESS_BEFORE_BASE",
+    "END_TO_END_EVIDENCE_SUPPLY_DEADLINE",
+    "FORCING_BASE_CLAIM_LEASE_FENCING",
+    "LATE_WAKE_FAIL_CLOSED",
+    "A2_BLOCKED_SUCCESSOR_HANDLING",
+    "HISTORICAL_SCHEDULE_RETIREMENT",
+    "NO_ROUTINE_MANUAL_WAKE_REQUIRED"
+  ],
+  "activation_sequence": [
+    "MERGE_EXACT_V13_SUCCESSOR_SUBJECT",
+    "CAPACITY_PREFLIGHT_AND_SAFE_SUPERSEDED_GENERATION_CLEANUP_IF_REQUIRED",
+    "PROVISION_ZERO_STATE_V13_BLOCKED_V13_AND_FORMAL_V5_STORES",
+    "RUN_PRODUCER_DRIVEN_V13_QUALIFICATION",
+    "FREEZE_EXACT_HEAD_END_TO_END_TIMING_BUDGET",
+    "OPEN_NEW_MACHINE_ONLY_GRADUATION_GATE",
+    "PROVE_EXACT_ONE_PRODUCTION_OWNER_AND_RETIRED_TRIGGER_ZERO",
+    "ARM_FRESH_V5_EPOCH",
+    "BOOTSTRAP_FRESH_A0",
+    "RUN_REAL_WALL_CLOCK_O00_O23_WITH_ZERO_ROUTINE_MANUAL_RESCUE",
+    "RUN_AUTOMATIC_FINAL_READBACK",
+    "FINAL_READ_ONLY_COMPLETION_ADJUDICATION"
+  ],
+  "nonclaims": {
+    "v13_stores_provisioned_by_this_document": false,
+    "formal_v5_store_provisioned_by_this_document": false,
+    "timing_budget_qualified": false,
+    "v13_qualification_executed": false,
+    "new_graduation_gate_open": false,
+    "formal_v5_epoch_selected": false,
+    "formal_v5_a0_bootstrapped": false,
+    "formal_v5_o00_started": false,
+    "failed_v4_repaired": false,
+    "failed_v4_continued": false,
+    "mcft_cap09_completed": false
+  }
+}
