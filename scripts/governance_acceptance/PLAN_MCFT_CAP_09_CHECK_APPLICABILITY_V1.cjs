@@ -69,6 +69,7 @@ function buildImportClosure(root, roots) {
     if (!/\.(?:ts|tsx|js|cjs|mjs)$/.test(current)) continue;
     const text = fs.readFileSync(path.join(root, current), "utf8");
     for (const spec of localImportSpecifiers(text)) {
+      if (!spec.startsWith(".")) continue;
       const resolved = resolveLocalImport(root, current, spec);
       if (!resolved) {
         missing.push(`${current} -> ${spec}`);
@@ -78,6 +79,30 @@ function buildImportClosure(root, roots) {
     }
   }
   return { paths: [...visited].sort(), missing: [...new Set(missing)].sort() };
+}
+
+function materializeGeneratedGraph(root, resolverId, spec) {
+  const outputPath = norm(spec.output_path || "");
+  if (!spec.generator_command || !outputPath || !spec.output_field) throw new Error(`GENERATED_GRAPH_SPEC_INVALID:${resolverId}`);
+  try { fs.rmSync(path.join(root, outputPath), { force: true }); } catch {}
+  const result = cp.spawnSync(spec.generator_command, { cwd: root, shell: true, encoding: "utf8", env: { ...process.env, MCFT_CAP09_APPLICABILITY_GRAPH_MATERIALIZATION: "1" } });
+  if (!exists(root, outputPath)) throw new Error(`GENERATED_GRAPH_OUTPUT_MISSING:${resolverId}:${outputPath}:exit=${result.status}`);
+  const output = readJson(root, outputPath);
+  const value = output[spec.output_field];
+  if (!Array.isArray(value) || value.some((p) => typeof p !== "string" || !p)) throw new Error(`GENERATED_GRAPH_OUTPUT_FIELD_INVALID:${resolverId}:${spec.output_field}`);
+  const paths = [...new Set(value.map(norm))].sort();
+  const missing = paths.filter((p) => !exists(root, p));
+  return {
+    resolver_id: resolverId,
+    kind: spec.kind,
+    paths,
+    missing,
+    generator_command: spec.generator_command,
+    output_path: outputPath,
+    output_field: spec.output_field,
+    generator_exit_code: result.status,
+    graph_conformance: spec.conformance_field ? output[spec.conformance_field] ?? null : null,
+  };
 }
 
 function resolveDependencyResolvers(root, authority) {
@@ -98,17 +123,10 @@ function resolveDependencyResolvers(root, authority) {
         const missing = [...new Set([...closure.missing, ...missingExact])].sort();
         resolved[resolverId] = { resolver_id: resolverId, kind: spec.kind, paths, missing };
         if (missing.length) errors.push({ resolver_id: resolverId, code: "RESOLVER_IMPORT_OR_PATH_MISSING", detail: missing });
-      } else if (spec.kind === "EXTERNAL_AUTHORITY_GRAPH") {
-        const bindingPath = norm(spec.binding_module || "");
-        if (!bindingPath || !exists(root, bindingPath)) throw new Error(`EXTERNAL_BINDING_MISSING:${bindingPath}`);
-        delete require.cache[require.resolve(path.join(root, bindingPath))];
-        const binding = require(path.join(root, bindingPath));
-        const value = binding[spec.binding_export];
-        if (!Array.isArray(value) || value.some((p) => typeof p !== "string" || !p)) throw new Error(`EXTERNAL_BINDING_EXPORT_INVALID:${resolverId}:${spec.binding_export}`);
-        const paths = [...new Set(value.map(norm))].sort();
-        const missing = paths.filter((p) => !exists(root, p));
-        resolved[resolverId] = { resolver_id: resolverId, kind: spec.kind, paths, missing, binding_module: bindingPath, binding_export: spec.binding_export };
-        if (missing.length) errors.push({ resolver_id: resolverId, code: "EXTERNAL_GRAPH_PATH_MISSING", detail: missing });
+      } else if (spec.kind === "GENERATED_GRAPH_OUTPUT") {
+        const graph = materializeGeneratedGraph(root, resolverId, spec);
+        resolved[resolverId] = graph;
+        if (graph.missing.length) errors.push({ resolver_id: resolverId, code: "GENERATED_GRAPH_PATH_MISSING", detail: graph.missing });
       } else {
         errors.push({ resolver_id: resolverId, code: "UNKNOWN_RESOLVER_KIND", detail: spec.kind ?? null });
       }
@@ -200,7 +218,13 @@ function planApplicability({ root = ROOT, authority, registry, changedPaths, sta
     changed_paths: changed,
     unknown_changed_paths: unknownChangedPaths,
     resolver_errors: resolverResult.errors,
-    resolver_summaries: Object.fromEntries(Object.entries(resolverResult.resolved).map(([id, value]) => [id, { kind: value.kind, path_count: value.paths.length, missing: value.missing }])),
+    resolver_summaries: Object.fromEntries(Object.entries(resolverResult.resolved).map(([id, value]) => [id, {
+      kind: value.kind,
+      path_count: value.paths.length,
+      missing: value.missing,
+      graph_conformance: value.graph_conformance ?? null,
+      generator_exit_code: value.generator_exit_code ?? null,
+    }])),
     counts,
     decisions,
     blockers,
@@ -249,6 +273,7 @@ module.exports = {
   AUTHORITY_PATH,
   REGISTRY_PATH,
   buildImportClosure,
+  materializeGeneratedGraph,
   resolveDependencyResolvers,
   evidenceIsStructurallyValid,
   planApplicability,
