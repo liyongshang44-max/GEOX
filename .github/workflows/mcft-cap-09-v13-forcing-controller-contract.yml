@@ -7,6 +7,7 @@ on:
       - 'apps/server/src/domain/twin_runtime/external_formal_forcing_supply_controller_v1.ts'
       - 'apps/server/src/domain/twin_runtime/external_formal_forcing_acquisition_budget_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts'
+      - 'scripts/governance/VALIDATE_MCFT_CAP_09_V13_FORCING_CONTROLLER_WORKFLOW.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_FORCING_CONTROLLER_CONTRACT.ts'
   merge_group:
     types: [checks_requested]
@@ -42,15 +43,7 @@ jobs:
       - name: Install locked workspace
         run: pnpm install --frozen-lockfile
       - name: Require controller workflow has zero production wake surface
-        shell: bash
-        run: |
-          set -euo pipefail
-          workflow=.github/workflows/mcft-cap-09-v13-forcing-controller-contract.yml
-          ! grep -Eq '^[[:space:]]*schedule:' "$workflow"
-          ! grep -Eq '^[[:space:]]*workflow_dispatch:' "$workflow"
-          ! grep -Fq 'actions: write' "$workflow"
-          ! grep -Fq 'GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL' "$workflow"
-          ! grep -Fq 'FORMAL_RAW_S3' "$workflow"
+        run: node scripts/governance/VALIDATE_MCFT_CAP_09_V13_FORCING_CONTROLLER_WORKFLOW.cjs
       - name: Typecheck controller contract
         run: >-
           pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node
