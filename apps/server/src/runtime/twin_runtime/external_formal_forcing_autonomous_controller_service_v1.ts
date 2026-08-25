@@ -1,5 +1,12 @@
-import type { ExternalFormalPhysicalFactIdentityV1, PostgresExternalFormalForcingBaseContinuityRepositoryV1 } from "./postgres_external_formal_forcing_base_continuity_repository_v1.js";
-import type { PostgresExternalFormalForcingControllerLifecycleV1 } from "./postgres_external_formal_forcing_controller_lifecycle_v1.js";
+import type {
+  ExternalFormalForcingBaseClaimV1,
+  ExternalFormalPhysicalFactIdentityV1,
+  PostgresExternalFormalForcingBaseContinuityRepositoryV1,
+} from "./postgres_external_formal_forcing_base_continuity_repository_v1.js";
+import type {
+  ExternalFormalForcingControllerLeaseV1,
+  PostgresExternalFormalForcingControllerLifecycleV1,
+} from "./postgres_external_formal_forcing_controller_lifecycle_v1.js";
 import type { PostgresExternalFormalForcingSupplyAdmissionV1 } from "./postgres_external_formal_forcing_supply_admission_v1.js";
 
 export const MCFT_CAP09_AUTONOMOUS_FORCING_CONTROLLER_SERVICE_ID_V1 =
@@ -18,7 +25,10 @@ export type ExternalFormalExactBasePromotionReceiptV1 = {
   base_target_t: string;
   promotion_run_id: string;
   facts: readonly ExternalFormalPhysicalFactIdentityV1[];
-  formal_database_write_count: 3;
+  formal_fact_present_count: 3;
+  formal_database_write_count: 0 | 1 | 2 | 3;
+  idempotent_existing_fact_count: 0 | 1 | 2 | 3;
+  database_fence_commit_succeeded: true;
 };
 
 export type ExternalFormalExactBasePromotionMutationStateV1 =
@@ -69,6 +79,8 @@ export interface ExternalFormalExactBasePromotionPortV1 {
     subject_sha: string;
     idempotency_key: string;
     capture: ExternalFormalExactBaseCaptureReceiptV1;
+    controller_lease: ExternalFormalForcingControllerLeaseV1;
+    producer_claim: ExternalFormalForcingBaseClaimV1;
   }): Promise<ExternalFormalExactBasePromotionReceiptV1>;
 }
 
@@ -117,6 +129,19 @@ export type ExternalFormalAutonomousControllerRunResultV1 =
       status: "TERMINAL_LATE_WAKE";
       base_target_t: string;
       failure_class: string;
+    }
+  | {
+      service_id: typeof MCFT_CAP09_AUTONOMOUS_FORCING_CONTROLLER_SERVICE_ID_V1;
+      status: "PROMOTION_COMMITTED_ATTESTATION_PENDING_RECOVERY";
+      base_target_t: string;
+      failure_class: string;
+      promotion_run_id: string;
+      facts: readonly ExternalFormalPhysicalFactIdentityV1[];
+      controller_fencing_token: string;
+      producer_fencing_token: string;
+      formal_fact_present_count: 3;
+      database_fence_commit_succeeded: true;
+      cursor_advanced: false;
     }
   | {
       service_id: typeof MCFT_CAP09_AUTONOMOUS_FORCING_CONTROLLER_SERVICE_ID_V1;
@@ -180,8 +205,16 @@ function validateConfig(input: ExternalFormalAutonomousControllerServiceConfigV1
   };
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function authorityLoss(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return [
+    "FORMAL_FORCING_CONTROLLER_STALE_FENCE",
+    "FORMAL_FORCING_CONTROLLER_LEASE_EXPIRED",
+    "FORMAL_FORCING_STALE_FENCING_TOKEN",
+    "FORMAL_FORCING_CLAIM_LEASE_EXPIRED",
+    "AUTONOMOUS_FORCING_CONTROLLER_HEARTBEAT_LOST",
+    "AUTONOMOUS_FORCING_CONTROLLER_FENCE_CHANGED_DURING_OWNED_RUN",
+  ].some((marker) => message.includes(marker));
 }
 
 export class ExternalFormalForcingAutonomousControllerServiceV1 {
@@ -251,12 +284,26 @@ export class ExternalFormalForcingAutonomousControllerServiceV1 {
     let controllerHeartbeatCount = 0;
     let producerHeartbeatCount = 0;
 
-    const runWithHeartbeats = async <T>(operation: () => Promise<T>): Promise<T> => {
+    const runWithHeartbeats = async <T>(operation: () => Promise<T>): Promise<{ value: T; heartbeat_error: unknown | null }> => {
       let stop = false;
       let heartbeatError: unknown = null;
+      let cancelDelay: (() => void) | null = null;
       const heartbeatLoop = (async () => {
         while (!stop) {
-          await sleep(this.config.heartbeat_interval_ms);
+          await new Promise<void>((resolve) => {
+            let settled = false;
+            const finish = () => {
+              if (settled) return;
+              settled = true;
+              cancelDelay = null;
+              resolve();
+            };
+            const timer = setTimeout(finish, this.config.heartbeat_interval_ms);
+            cancelDelay = () => {
+              clearTimeout(timer);
+              finish();
+            };
+          });
           if (stop) break;
           try {
             const renewed = await this.lifecycle.acquireOrRenew({
@@ -289,23 +336,25 @@ export class ExternalFormalForcingAutonomousControllerServiceV1 {
         operationError = error;
       } finally {
         stop = true;
+        cancelDelay?.();
         await heartbeatLoop;
       }
       // The operation error takes precedence because it may carry authoritative mutation-state evidence.
       if (operationError) throw operationError;
-      if (heartbeatError) throw heartbeatError;
-      return value;
+      return { value, heartbeat_error: heartbeatError };
     };
 
     await this.continuity.advanceClaimPhaseUnderController({ controller_lease: controllerLease, claim: producerClaim, phase: "ACQUIRING" });
 
     let capture: ExternalFormalExactBaseCaptureReceiptV1;
     try {
-      capture = await runWithHeartbeats(() => this.capture.captureExactBase({
+      const captureOutcome = await runWithHeartbeats(() => this.capture.captureExactBase({
         base_target_t: base,
         subject_sha: this.config.subject_sha,
         idempotency_key: producerClaim.idempotency_key,
       }));
+      if (captureOutcome.heartbeat_error) throw captureOutcome.heartbeat_error;
+      capture = captureOutcome.value;
     } catch (error) {
       try {
         await this.continuity.markRetryableFailureUnderController({
@@ -324,13 +373,18 @@ export class ExternalFormalForcingAutonomousControllerServiceV1 {
     await this.continuity.advanceClaimPhaseUnderController({ controller_lease: controllerLease, claim: producerClaim, phase: "PROMOTING" });
 
     let promoted: ExternalFormalExactBasePromotionReceiptV1;
+    let promotionHeartbeatError: unknown | null = null;
     try {
-      promoted = await runWithHeartbeats(() => this.promotion.promoteExactBase({
+      const promotionOutcome = await runWithHeartbeats(() => this.promotion.promoteExactBase({
         base_target_t: base,
         subject_sha: this.config.subject_sha,
         idempotency_key: producerClaim.idempotency_key,
         capture,
+        controller_lease: controllerLease,
+        producer_claim: producerClaim,
       }));
+      promoted = promotionOutcome.value;
+      promotionHeartbeatError = promotionOutcome.heartbeat_error;
       if (canonicalHour(promoted.base_target_t, "AUTONOMOUS_FORCING_PROMOTION_BASE_INVALID") !== base) {
         throw new ExternalFormalExactBasePromotionFailureV1({
           failure_class: "PROMOTION_RECEIPT_BASE_MISMATCH",
@@ -338,9 +392,20 @@ export class ExternalFormalForcingAutonomousControllerServiceV1 {
           formal_database_write_count: null,
         });
       }
-      if (promoted.formal_database_write_count !== 3 || promoted.facts.length !== 3) {
+      if (
+        promoted.database_fence_commit_succeeded !== true
+        || promoted.formal_fact_present_count !== 3
+        || promoted.facts.length !== 3
+        || !Number.isInteger(promoted.formal_database_write_count)
+        || promoted.formal_database_write_count < 0
+        || promoted.formal_database_write_count > 3
+        || !Number.isInteger(promoted.idempotent_existing_fact_count)
+        || promoted.idempotent_existing_fact_count < 0
+        || promoted.idempotent_existing_fact_count > 3
+        || promoted.formal_database_write_count + promoted.idempotent_existing_fact_count !== 3
+      ) {
         throw new ExternalFormalExactBasePromotionFailureV1({
-          failure_class: "PROMOTION_RECEIPT_EXACT_THREE_WRITES_REQUIRED",
+          failure_class: "PROMOTION_RECEIPT_EXACT_THREE_FENCED_PRESENT_REQUIRED",
           mutation_state: "UNKNOWN_FORMAL_MUTATION",
           formal_database_write_count: null,
         });
@@ -385,6 +450,22 @@ export class ExternalFormalForcingAutonomousControllerServiceV1 {
       };
     }
 
+    if (promotionHeartbeatError) {
+      return {
+        service_id: MCFT_CAP09_AUTONOMOUS_FORCING_CONTROLLER_SERVICE_ID_V1,
+        status: "PROMOTION_COMMITTED_ATTESTATION_PENDING_RECOVERY",
+        base_target_t: base,
+        failure_class: `PROMOTION_COMMITTED_HEARTBEAT_AUTHORITY_LOST:${promotionHeartbeatError instanceof Error ? promotionHeartbeatError.message : String(promotionHeartbeatError)}`,
+        promotion_run_id: promoted.promotion_run_id,
+        facts: promoted.facts,
+        controller_fencing_token: controllerLease.fencing_token.toString(),
+        producer_fencing_token: producerClaim.fencing_token.toString(),
+        formal_fact_present_count: 3,
+        database_fence_commit_succeeded: true,
+        cursor_advanced: false,
+      };
+    }
+
     try {
       const attested = await this.continuity.attestFormalPhysicalVisibilityUnderController({
         controller_lease: controllerLease,
@@ -410,6 +491,21 @@ export class ExternalFormalForcingAutonomousControllerServiceV1 {
         wall_clock_target_planner_used: false,
       };
     } catch (error) {
+      if (authorityLoss(error)) {
+        return {
+          service_id: MCFT_CAP09_AUTONOMOUS_FORCING_CONTROLLER_SERVICE_ID_V1,
+          status: "PROMOTION_COMMITTED_ATTESTATION_PENDING_RECOVERY",
+          base_target_t: base,
+          failure_class: `ATTESTATION_AUTHORITY_LOST_AFTER_FENCED_COMMIT:${error instanceof Error ? error.message : String(error)}`,
+          promotion_run_id: promoted.promotion_run_id,
+          facts: promoted.facts,
+          controller_fencing_token: controllerLease.fencing_token.toString(),
+          producer_fencing_token: producerClaim.fencing_token.toString(),
+          formal_fact_present_count: 3,
+          database_fence_commit_succeeded: true,
+          cursor_advanced: false,
+        };
+      }
       const failureClass = `PHYSICAL_ATTESTATION_AFTER_FORMAL_PROMOTION_FAILED:${error instanceof Error ? error.message : String(error)}`;
       await this.lifecycle.recordTerminal({
         lease: controllerLease,
