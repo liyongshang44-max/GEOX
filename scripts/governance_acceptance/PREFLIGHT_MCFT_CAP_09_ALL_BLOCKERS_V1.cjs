@@ -66,6 +66,7 @@ function main() {
     registry,
     changedPaths: changed,
     stage,
+    generation: args.generation || null,
     baseSha: args.base || null,
     headSha: args.head || null,
   });
@@ -73,7 +74,9 @@ function main() {
   const results = [];
   const blockers = [];
 
-  // Unknown paths and resolver failures are inventory items, not early exits.
+  for (const error of plan.authority_errors || []) {
+    blockers.push({ blocker_class: "AUTHORITY_DEFINITION_FAILURE", check_id: null, detail: error });
+  }
   for (const unknownPath of plan.unknown_changed_paths) {
     blockers.push({ blocker_class: "UNKNOWN_CHANGED_PATH", check_id: null, detail: unknownPath });
   }
@@ -83,51 +86,39 @@ function main() {
 
   for (const decision of plan.decisions) {
     let result;
+    const common = {
+      check_id: decision.check_id,
+      applicability: decision.status,
+      reason_code: decision.reason_code,
+      dependency_digest: decision.dependency_digest ?? null,
+      historical_dependency_digest: decision.historical_dependency_digest ?? null,
+      dependency_digest_match: decision.dependency_digest_match ?? false,
+      historical_evidence_ref: decision.historical_evidence_ref ?? null,
+    };
     if (decision.status === "NOT_APPLICABLE") {
-      result = { check_id: decision.check_id, applicability: decision.status, execution: "NOT_APPLICABLE", status: "NOT_APPLICABLE", reason_code: decision.reason_code };
+      result = { ...common, execution: "NOT_APPLICABLE", status: "NOT_APPLICABLE" };
     } else if (decision.status === "CARRY_FORWARD") {
       const entry = registryById.get(decision.carry_forward_evidence_id);
-      const valid = evidenceIsStructurallyValid(entry, authority) && entry.check_id === decision.check_id;
+      const valid = evidenceIsStructurallyValid(entry, authority, ROOT, registry) && entry.check_id === decision.check_id && decision.dependency_digest_match === true;
       result = {
-        check_id: decision.check_id,
-        applicability: decision.status,
-        execution: "IMMUTABLE_EVIDENCE_VALIDATION",
+        ...common,
+        execution: "DURABLE_IMMUTABLE_EVIDENCE_AND_DEPENDENCY_DIGEST_VALIDATION",
         status: valid ? "PASS" : "FAIL",
-        reason_code: valid ? "CARRY_FORWARD_EVIDENCE_VALID" : "CARRY_FORWARD_EVIDENCE_INVALID",
+        reason_code: valid ? "CARRY_FORWARD_EVIDENCE_AND_DEPENDENCY_DIGEST_VALID" : "CARRY_FORWARD_EVIDENCE_OR_DEPENDENCY_DIGEST_INVALID",
         evidence_id: decision.carry_forward_evidence_id,
       };
-      if (!valid) blockers.push({ blocker_class: "INVALID_CARRY_FORWARD_EVIDENCE", check_id: decision.check_id, detail: decision.carry_forward_evidence_id });
+      if (!valid) blockers.push({ blocker_class: "INVALID_CARRY_FORWARD_EVIDENCE_OR_DIGEST", check_id: decision.check_id, detail: decision.carry_forward_evidence_id });
     } else if (decision.status === "REQUALIFY" || decision.status === "REQUIRED") {
       if (decision.diagnostic_command) {
         const diagnostic = runDiagnostic(decision.diagnostic_command);
-        result = {
-          check_id: decision.check_id,
-          applicability: decision.status,
-          execution: "DIAGNOSTIC_COMMAND",
-          status: diagnostic.status,
-          reason_code: diagnostic.status === "PASS" ? "DIAGNOSTIC_PASS" : "DIAGNOSTIC_FAIL",
-          diagnostic_command: decision.diagnostic_command,
-          diagnostic,
-        };
+        result = { ...common, execution: "DIAGNOSTIC_COMMAND", status: diagnostic.status, reason_code: diagnostic.status === "PASS" ? "DIAGNOSTIC_PASS" : "DIAGNOSTIC_FAIL", diagnostic_command: decision.diagnostic_command, diagnostic };
         if (diagnostic.status !== "PASS") blockers.push({ blocker_class: "DIAGNOSTIC_FAILURE", check_id: decision.check_id, detail: diagnostic });
       } else {
-        result = {
-          check_id: decision.check_id,
-          applicability: decision.status,
-          execution: "NO_DIAGNOSTIC_AVAILABLE",
-          status: "FAIL",
-          reason_code: "REQUIRED_OR_REQUALIFY_WITHOUT_DIAGNOSTIC",
-        };
+        result = { ...common, execution: "NO_DIAGNOSTIC_AVAILABLE", status: "FAIL", reason_code: "REQUIRED_OR_REQUALIFY_WITHOUT_DIAGNOSTIC" };
         blockers.push({ blocker_class: "UNRESOLVED_REQUIRED_CHECK", check_id: decision.check_id, detail: decision.reason_code });
       }
     } else {
-      result = {
-        check_id: decision.check_id,
-        applicability: decision.status,
-        execution: "FAIL_CLOSED",
-        status: "FAIL",
-        reason_code: decision.reason_code,
-      };
+      result = { ...common, execution: "FAIL_CLOSED", status: "FAIL" };
       blockers.push({ blocker_class: `APPLICABILITY_${decision.status}`, check_id: decision.check_id, detail: decision.reason_code });
     }
     results.push(result);
@@ -143,6 +134,7 @@ function main() {
     requalify: plan.decisions.filter((d) => d.status === "REQUALIFY").length,
     unknown: plan.decisions.filter((d) => d.status === "UNKNOWN").length,
     forbidden: plan.decisions.filter((d) => d.status === "FORBIDDEN").length,
+    authority_errors: (plan.authority_errors || []).length,
     unknown_changed_paths: plan.unknown_changed_paths.length,
     blocker_count: blockers.length,
   };
@@ -151,10 +143,13 @@ function main() {
     preflight_id: "MCFT_CAP09_ALL_BLOCKERS_PREFLIGHT_V1",
     status: blockers.length === 0 ? "PASS" : "FAIL",
     stage,
+    generation: plan.generation,
+    generation_context: plan.generation_context,
     base_sha: args.base || null,
     head_sha: args.head || null,
     planner_status: plan.status,
     counts,
+    authority_errors: plan.authority_errors || [],
     unknown_changed_paths: plan.unknown_changed_paths,
     results,
     blockers,
