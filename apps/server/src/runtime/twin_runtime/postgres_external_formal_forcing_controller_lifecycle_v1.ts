@@ -57,6 +57,10 @@ function scopeValues(scope: TwinScopeKeyV1): string[] {
   return SCOPE_KEYS.map((key) => requiredText(scope[key], `FORMAL_FORCING_CONTROLLER_SCOPE_${key.toUpperCase()}_REQUIRED`));
 }
 
+function sameScope(left: TwinScopeKeyV1, right: TwinScopeKeyV1): boolean {
+  return SCOPE_KEYS.every((key) => left[key] === right[key]);
+}
+
 function validateConfig(input: ExternalFormalForcingControllerLifecycleConfigV1): ExternalFormalForcingControllerLifecycleConfigV1 {
   scopeValues(input.scope);
   const epoch = requiredText(input.epoch_id, "FORMAL_FORCING_CONTROLLER_EPOCH_REQUIRED");
@@ -167,7 +171,11 @@ export class PostgresExternalFormalForcingControllerLifecycleV1 {
 
   async recordTerminal(input: { lease: ExternalFormalForcingControllerLeaseV1; reason: string }): Promise<void> {
     const reason = requiredText(input.reason, "FORMAL_FORCING_CONTROLLER_TERMINAL_REASON_REQUIRED");
-    if (input.lease.epoch_id !== this.config.epoch_id || input.lease.subject_sha !== this.config.subject_sha) {
+    if (
+      input.lease.epoch_id !== this.config.epoch_id
+      || input.lease.subject_sha !== this.config.subject_sha
+      || !sameScope(input.lease.scope, this.config.scope)
+    ) {
       throw new Error("FORMAL_FORCING_CONTROLLER_TERMINAL_LEASE_IDENTITY_MISMATCH");
     }
     const client = await this.pool.connect() as ClientV1;
