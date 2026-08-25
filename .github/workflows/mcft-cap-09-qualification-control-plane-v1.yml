@@ -1,0 +1,104 @@
+name: mcft-cap-09-qualification-control-plane-v1
+
+on:
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json'
+      - 'scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs'
+      - '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+env:
+  FROZEN_SUCCESSOR_SHA: '3bbf096ee5cb73e8e0e0251dc400733d6cab501f'
+
+concurrency:
+  group: mcft-cap09-qualification-control-plane-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  applicability-and-blocker-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact control-plane subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require frozen stacked predecessor and zero production bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            test "${{ github.event.pull_request.base.sha }}" = "$FROZEN_SUCCESSOR_SHA"
+          fi
+          test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
+          test -z "${FORMAL_RAW_S3_ACCESS_KEY_ID:-}"
+          test -z "${R2_ACCESS_KEY_ID:-}"
+
+      - name: Prove central applicability semantics
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+
+      - name: Generate exact PR applicability plan
+        if: github.event_name == 'pull_request'
+        run: >-
+          node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+          --base '${{ github.event.pull_request.base.sha }}'
+          --head '${{ github.event.pull_request.head.sha }}'
+          --stage SUCCESSOR_SUBJECT_PRE_MERGE
+          --out acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json
+
+      - name: Enumerate all blockers without fail-fast
+        if: github.event_name == 'pull_request'
+        run: >-
+          node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+          --base '${{ github.event.pull_request.base.sha }}'
+          --head '${{ github.event.pull_request.head.sha }}'
+          --stage SUCCESSOR_SUBJECT_PRE_MERGE
+          --out acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json
+
+      - name: Validate control-plane machine proof
+        if: github.event_name == 'pull_request'
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+          const proof = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json','utf8'));
+          const plan = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json','utf8'));
+          const preflight = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json','utf8'));
+          if (proof.status !== 'PASS' || proof.regex_fallback_used !== false || proof.unknown_changed_path_fails_closed !== true) throw new Error('CONTROL_PLANE_SELFTEST_NOT_PASS');
+          if (plan.status !== 'PASS' || plan.unknown_changed_paths.length !== 0 || plan.resolver_errors.length !== 0) throw new Error('CONTROL_PLANE_PLAN_NOT_PASS');
+          const control = plan.decisions.find(x => x.check_id === 'CONTROL_PLANE_INTEGRITY');
+          if (!control || control.status !== 'REQUALIFY') throw new Error('CONTROL_PLANE_SELF_CHANGE_MUST_REQUALIFY');
+          for (const id of ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS','EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T']) {
+            const row = plan.decisions.find(x => x.check_id === id);
+            if (!row || row.status !== 'CARRY_FORWARD') throw new Error(`FROZEN_EVIDENCE_MUST_CARRY_FORWARD:${id}:${row?.status}`);
+          }
+          if (preflight.status !== 'PASS' || preflight.non_fail_fast !== true || preflight.counts.blocker_count !== 0) throw new Error('ALL_BLOCKERS_PREFLIGHT_NOT_PASS');
+          for (const source of [proof, plan, preflight]) {
+            const effects = source.non_effects || source;
+            for (const key of ['runtime_mutation','production_workflow_activation','formal_database_mutation','provider_request','graduation_effect','mcft_cap09_completed']) {
+              if (effects[key] !== false) throw new Error(`CONTROL_PLANE_NON_EFFECT_VIOLATION:${key}`);
+            }
+          }
+
+      - name: Upload applicability and blocker inventory
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-qualification-control-plane-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json
+            acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
