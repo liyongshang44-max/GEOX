@@ -39,28 +39,35 @@
       ]
     },
     "EA5E2_RUNTIME_GRAPH_V4": {
-      "kind": "EXTERNAL_AUTHORITY_GRAPH",
-      "binding_module": "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs",
-      "binding_export": "expectedDependencyPaths",
+      "kind": "GENERATED_GRAPH_OUTPUT",
+      "generator_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs",
+      "output_path": "acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json",
+      "output_field": "runtime_dependency_graph_paths",
+      "conformance_field": "status",
       "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs"
     },
     "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS": {
-      "kind": "EXACT_PATH_SET",
-      "paths": [
-        "apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts",
-        "apps/server/src/runtime/twin_runtime/s3_compatible_private_raw_evidence_retention_adapter_v1.ts",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS_REAL_IO.ts",
-        ".github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml"
+      "kind": "IMPORT_CLOSURE",
+      "roots": [
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts"
+      ],
+      "additional_exact_paths": [
+        ".github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml",
+        "apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts",
+        "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C1-DURABLE-RAW-RESTRICTED-INGRESS-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs"
       ]
     },
     "LEGACY_AM19_PERSISTENT_24T": {
-      "kind": "EXACT_PATH_SET",
-      "paths": [
-        "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py",
+      "kind": "IMPORT_CLOSURE",
+      "roots": [
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts",
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts",
-        "apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts",
+        "apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts"
+      ],
+      "additional_exact_paths": [
+        "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py",
         ".github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml"
       ]
     },
@@ -74,7 +81,7 @@
         "apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts",
         "apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_controller_lifecycle_v1.ts",
         "apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_supply_admission_v1.ts",
-        "apps/server/src/runtime/twin_runtime/postgres_external_formal_fenced_exact_base_fact_promotion_v1.ts"
+        "apps/server/src/persistence/twin_runtime/postgres_external_formal_fenced_exact_base_fact_promotion_v1.ts"
       ],
       "additional_exact_paths": [
         "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql",
@@ -82,11 +89,13 @@
         "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.cjs",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION_POSTGRES.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_FENCED_FACT_PROMOTION_POSTGRES.ts",
         ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
         ".github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml",
-        ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml"
+        ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
+        ".github/workflows/mcft-cap-09-v13-fenced-fact-promotion-postgres.yml"
       ]
     }
   },
