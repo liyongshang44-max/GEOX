@@ -6,8 +6,9 @@ import type {
   TwinScopeKeyV1,
 } from "./ports.js";
 import type {
-  ExternalFormalNextTickViabilityPortV1,
   ExternalFormalNextTickViabilityResultV1,
+  ExternalFormalSuccessorTerminalAdjudicationResultV1,
+  ExternalFormalTerminalSuccessorViabilityPortV1,
 } from "./postgres_external_formal_next_tick_viability_v1.js";
 
 export const MCFT_CAP09_FORMAL_V5_VIABILITY_GATED_SCHEDULER_ID_V1 =
@@ -29,10 +30,11 @@ export class ExternalFormalNextTickNotViablePreclaimErrorV1 extends Error {
 
 export class ExternalFormalV5ViabilityGatedSchedulerV1 implements SchedulerPortSubsetV1 {
   readonly adapter_id = MCFT_CAP09_FORMAL_V5_VIABILITY_GATED_SCHEDULER_ID_V1;
+  private lastTerminalSuccessorAdjudication: ExternalFormalSuccessorTerminalAdjudicationResultV1 | null = null;
 
   constructor(
     private readonly inner: SchedulerPortSubsetV1,
-    private readonly viability: ExternalFormalNextTickViabilityPortV1,
+    private readonly viability: ExternalFormalTerminalSuccessorViabilityPortV1,
   ) {}
 
   async listMissedSlots(input: { scope: TwinScopeKeyV1; through_logical_time: string }): Promise<readonly ShadowOnlineBoundaryV1[]> {
@@ -52,6 +54,18 @@ export class ExternalFormalV5ViabilityGatedSchedulerV1 implements SchedulerPortS
   }
 
   async recordTerminalResult(input: { claim: ShadowOnlineSlotClaimV1; result: ShadowOnlineTerminalSlotResultV1 }): Promise<void> {
+    // First commit the current slot terminal result and advance the durable runtime cursor.
+    // Only after that committed transition can successor identity be adjudicated exactly.
     await this.inner.recordTerminalResult(input);
+    this.lastTerminalSuccessorAdjudication = await this.viability.adjudicateSuccessorAfterTerminal({
+      terminal_boundary: input.result.boundary,
+      terminal_at: input.result.terminal_at,
+    });
+  }
+
+  readLastTerminalSuccessorAdjudication(): ExternalFormalSuccessorTerminalAdjudicationResultV1 | null {
+    return this.lastTerminalSuccessorAdjudication === null
+      ? null
+      : structuredClone(this.lastTerminalSuccessorAdjudication);
   }
 }
