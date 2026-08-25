@@ -11,6 +11,10 @@ import type {
   ExternalFormalForcingBaseClaimV1,
   ExternalFormalForcingBaseContinuityConfigV1,
 } from "./postgres_external_formal_forcing_base_continuity_repository_v1.js";
+import {
+  MCFT_CAP09_FORMAL_FORCING_CONTROLLER_LIFECYCLE_ID_V1,
+  type ExternalFormalForcingControllerLeaseV1,
+} from "./postgres_external_formal_forcing_controller_lifecycle_v1.js";
 
 export const MCFT_CAP09_FORMAL_FORCING_SUPPLY_ADMISSION_ID_V1 =
   "FORMAL_FORCING_SUPPLY_ADMISSION_V1" as const;
@@ -57,6 +61,14 @@ export type ExternalFormalForcingSupplyAdmissionResultV1 =
 
 type ClientV1 = Pick<PoolClient, "query" | "release">;
 type PoolV1 = Pick<Pool, "connect">;
+
+type ControllerRowV1 = {
+  subject_sha: string;
+  lifecycle_state: "ACTIVE" | "TERMINAL";
+  lease_owner: string;
+  fencing_token: string | number | bigint;
+  lease_expires_at: string | Date | null;
+};
 
 type CursorRowV1 = {
   subject_sha: string;
@@ -105,6 +117,10 @@ function scopeValues(scope: TwinScopeKeyV1): string[] {
   return SCOPE_KEYS.map((key) => text(scope[key], `FORMAL_FORCING_ADMISSION_SCOPE_${key.toUpperCase()}_REQUIRED`));
 }
 
+function sameScope(left: TwinScopeKeyV1, right: TwinScopeKeyV1): boolean {
+  return SCOPE_KEYS.every((key) => left[key] === right[key]);
+}
+
 function validateConfig(input: ExternalFormalForcingSupplyAdmissionConfigV1): ExternalFormalForcingSupplyAdmissionConfigV1 {
   scopeValues(input.scope);
   const epoch = text(input.epoch_id, "FORMAL_FORCING_ADMISSION_EPOCH_REQUIRED");
@@ -126,6 +142,22 @@ function validateConfig(input: ExternalFormalForcingSupplyAdmissionConfigV1): Ex
     last_required_base: last,
     qualified_budget: { ...budget },
   };
+}
+
+function validateControllerLeaseIdentity(
+  config: ExternalFormalForcingSupplyAdmissionConfigV1,
+  lease: ExternalFormalForcingControllerLeaseV1,
+): void {
+  if (
+    lease.lifecycle_id !== MCFT_CAP09_FORMAL_FORCING_CONTROLLER_LIFECYCLE_ID_V1
+    || lease.epoch_id !== config.epoch_id
+    || lease.subject_sha !== config.subject_sha
+    || !sameScope(lease.scope, config.scope)
+    || !lease.lease_owner
+    || lease.fencing_token <= 0n
+  ) {
+    throw new Error("FORMAL_FORCING_ADMISSION_CONTROLLER_LEASE_IDENTITY_MISMATCH");
+  }
 }
 
 function idempotencyKey(config: ExternalFormalForcingSupplyAdmissionConfigV1, base: string): string {
@@ -176,7 +208,12 @@ export class PostgresExternalFormalForcingSupplyAdmissionV1 {
     this.config = validateConfig(config);
   }
 
-  async claimNextRequiredBase(input: { lease_owner: string; lease_duration_seconds: number }): Promise<ExternalFormalForcingSupplyAdmissionResultV1> {
+  async claimNextRequiredBase(input: {
+    controller_lease: ExternalFormalForcingControllerLeaseV1;
+    lease_owner: string;
+    lease_duration_seconds: number;
+  }): Promise<ExternalFormalForcingSupplyAdmissionResultV1> {
+    validateControllerLeaseIdentity(this.config, input.controller_lease);
     const owner = text(input.lease_owner, "FORMAL_FORCING_ADMISSION_LEASE_OWNER_REQUIRED");
     if (!Number.isInteger(input.lease_duration_seconds) || input.lease_duration_seconds <= 0 || input.lease_duration_seconds > 1800) {
       throw new Error("FORMAL_FORCING_ADMISSION_LEASE_DURATION_INVALID");
@@ -184,6 +221,31 @@ export class PostgresExternalFormalForcingSupplyAdmissionV1 {
     const client = await this.pool.connect() as ClientV1;
     try {
       await client.query("BEGIN");
+
+      // Epoch-level controller ownership is the first lock in every supply admission transaction.
+      // A stale controller is rejected before it can lock/read the forcing cursor or target row.
+      const controllerResult = await client.query<ControllerRowV1>(
+        `SELECT subject_sha,lifecycle_state,lease_owner,fencing_token,lease_expires_at
+           FROM twin_external_formal_forcing_controller_lease_v1
+          WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND epoch_id=$7
+          FOR UPDATE`,
+        [...scopeValues(this.config.scope), this.config.epoch_id],
+      );
+      if (controllerResult.rows.length !== 1) throw new Error("FORMAL_FORCING_ADMISSION_CONTROLLER_LEASE_REQUIRED");
+      const controller = controllerResult.rows[0];
+      const now = await databaseNow(client);
+      if (
+        controller.subject_sha !== this.config.subject_sha
+        || controller.lifecycle_state !== "ACTIVE"
+        || controller.lease_owner !== input.controller_lease.lease_owner
+        || BigInt(controller.fencing_token) !== input.controller_lease.fencing_token
+      ) {
+        throw new Error("FORMAL_FORCING_ADMISSION_CONTROLLER_STALE_FENCE");
+      }
+      if (!controller.lease_expires_at || Date.parse(iso(controller.lease_expires_at)) <= Date.parse(now)) {
+        throw new Error("FORMAL_FORCING_ADMISSION_CONTROLLER_LEASE_EXPIRED");
+      }
+
       const cursorResult = await client.query<CursorRowV1>(
         `SELECT subject_sha,first_required_base,last_required_base,next_missing_required_base,completed
            FROM twin_external_formal_forcing_base_cursor_v1
@@ -205,7 +267,6 @@ export class PostgresExternalFormalForcingSupplyAdmissionV1 {
 
       const base = iso(cursor.next_missing_required_base);
       const startDeadline = formalForcingAcquisitionStartDeadlineV1(base, this.config.qualified_budget.selected_budget_ms);
-      const now = await databaseNow(client);
       const targetParams = [...scopeValues(this.config.scope), this.config.epoch_id, base];
       let targetResult = await client.query<TargetRowV1>(
         `SELECT subject_sha,base_target_t,causal_deadline,state,claim_owner,fencing_token,lease_expires_at,idempotency_key,
