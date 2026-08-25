@@ -345,6 +345,79 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
     if (row.subject_sha !== this.config.subject_sha || iso(row.base_target_t) !== base || iso(row.causal_deadline) !== base) throw new Error("FORMAL_FORCING_TARGET_IDENTITY_CONFLICT");
   }
 
+  private async verifyCommittedAttestation(input: {
+    base: string;
+    facts: readonly ExternalFormalPhysicalFactIdentityV1[];
+    producer_run_id: string;
+    promotion_run_id: string;
+    candidate_artifact_digest: string;
+  }): Promise<{ target: TargetRowV1; cursor: CursorRowV1 }> {
+    const verifier = await this.pool.connect() as ClientLikeV1;
+    try {
+      await verifier.query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      const targetResult = await verifier.query<TargetRowV1>(
+        `SELECT subject_sha,base_target_t,causal_deadline,state,claim_owner,fencing_token,lease_expires_at,idempotency_key,
+                producer_run_id,promotion_run_id,candidate_artifact_digest,
+                weather_fact_id,weather_source_record_hash,weather_record_semantic_hash,
+                et0_fact_id,et0_source_record_hash,et0_record_semantic_hash,
+                soil_fact_id,soil_source_record_hash,soil_record_semantic_hash,
+                post_commit_db_readback_at,formal_visible_attested_at,failure_class
+           FROM twin_external_formal_forcing_base_target_v1
+          WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND epoch_id=$7 AND base_target_t=$8::timestamptz`,
+        [...scopeValues(this.config.scope), this.config.epoch_id, input.base],
+      );
+      if (targetResult.rows.length !== 1) throw new Error("FORMAL_PHYSICAL_POST_ATTESTATION_TARGET_READBACK_REQUIRED");
+      const target = targetResult.rows[0];
+      this.assertTargetIdentity(target, input.base);
+      if (target.state !== "FORMAL_VISIBLE_ATTESTED") throw new Error("FORMAL_PHYSICAL_POST_ATTESTATION_STATE_NOT_COMMITTED");
+      if (
+        target.producer_run_id !== input.producer_run_id
+        || target.promotion_run_id !== input.promotion_run_id
+        || target.candidate_artifact_digest !== input.candidate_artifact_digest
+      ) throw new Error("FORMAL_PHYSICAL_POST_ATTESTATION_PROVENANCE_NOT_COMMITTED");
+      if (!target.post_commit_db_readback_at || !target.formal_visible_attested_at) throw new Error("FORMAL_PHYSICAL_POST_ATTESTATION_TIMESTAMPS_REQUIRED");
+      const persistedFactRows = [
+        ["WEATHER", target.weather_fact_id, target.weather_source_record_hash, target.weather_record_semantic_hash],
+        ["ET0", target.et0_fact_id, target.et0_source_record_hash, target.et0_record_semantic_hash],
+        ["SOIL", target.soil_fact_id, target.soil_source_record_hash, target.soil_record_semantic_hash],
+      ].map(([kind, fact_id, source_record_hash, record_semantic_hash]) => ({ kind, fact_id, source_record_hash, record_semantic_hash }));
+      for (const identity of input.facts) {
+        const persisted = persistedFactRows.find((item) => item.kind === identity.kind);
+        if (!persisted || persisted.fact_id !== identity.fact_id || persisted.source_record_hash !== identity.source_record_hash || persisted.record_semantic_hash !== identity.record_semantic_hash) {
+          throw new Error("FORMAL_PHYSICAL_POST_ATTESTATION_FACT_IDENTITY_NOT_COMMITTED");
+        }
+      }
+      if (Date.parse(iso(target.post_commit_db_readback_at)) >= Date.parse(input.base)) throw new Error("FORMAL_PHYSICAL_FACT_READBACK_PERSISTED_AFTER_BASE");
+      if (Date.parse(iso(target.formal_visible_attested_at)) >= Date.parse(input.base)) throw new Error("FORMAL_PHYSICAL_ATTESTATION_PERSISTED_AFTER_CAUSAL_BASE");
+
+      const cursorResult = await verifier.query<CursorRowV1>(
+        `SELECT epoch_id,subject_sha,first_required_base,last_required_base,last_contiguous_eligible_base,next_missing_required_base,completed
+           FROM twin_external_formal_forcing_base_cursor_v1
+          WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND epoch_id=$7`,
+        [...scopeValues(this.config.scope), this.config.epoch_id],
+      );
+      if (cursorResult.rows.length !== 1) throw new Error("FORMAL_PHYSICAL_POST_ATTESTATION_CURSOR_READBACK_REQUIRED");
+      const cursor = cursorResult.rows[0];
+      if (cursor.subject_sha !== this.config.subject_sha || iso(cursor.first_required_base) !== this.config.first_required_base || iso(cursor.last_required_base) !== this.config.last_required_base) throw new Error("FORMAL_PHYSICAL_POST_ATTESTATION_CURSOR_CONFIG_CONFLICT");
+      if (Date.parse(iso(cursor.last_contiguous_eligible_base)) < Date.parse(input.base)) throw new Error("FORMAL_PHYSICAL_POST_ATTESTATION_CURSOR_NOT_COMMITTED");
+      if (input.base === this.config.last_required_base) {
+        if (!cursor.completed || cursor.next_missing_required_base !== null || iso(cursor.last_contiguous_eligible_base) !== input.base) throw new Error("FORMAL_PHYSICAL_POST_ATTESTATION_FINAL_CURSOR_NOT_COMMITTED");
+      } else if (!cursor.completed && (cursor.next_missing_required_base === null || Date.parse(iso(cursor.next_missing_required_base)) <= Date.parse(input.base))) {
+        throw new Error("FORMAL_PHYSICAL_POST_ATTESTATION_SUCCESSOR_CURSOR_NOT_COMMITTED");
+      }
+
+      const verifiedAt = await databaseNow(verifier);
+      if (Date.parse(verifiedAt) >= Date.parse(input.base)) throw new Error(`FORMAL_PHYSICAL_ATTESTATION_COMMIT_NOT_PROVEN_BEFORE_BASE:${verifiedAt}:${input.base}`);
+      await verifier.query("COMMIT");
+      return { target, cursor };
+    } catch (error) {
+      try { await verifier.query("ROLLBACK"); } catch {}
+      throw error;
+    } finally {
+      verifier.release();
+    }
+  }
+
   async initializeCursor(): Promise<ExternalFormalForcingBaseCursorSnapshotV1> {
     const client = await this.pool.connect() as ClientLikeV1;
     try {
@@ -600,6 +673,7 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
       await reader.query("COMMIT");
     } catch (error) { try { await reader.query("ROLLBACK"); } catch {} throw error; } finally { reader.release(); }
 
+    let cursorAdvanced = false;
     const writer = await this.pool.connect() as ClientLikeV1;
     try {
       await writer.query("BEGIN");
@@ -619,66 +693,78 @@ export class PostgresExternalFormalForcingBaseContinuityRepositoryV1 {
           const existing = existingFacts.find((item) => item.kind === identity.kind);
           if (!existing || existing.fact_id !== identity.fact_id || existing.source_record_hash !== identity.source_record_hash || existing.record_semantic_hash !== identity.record_semantic_hash) throw new Error("FORMAL_PHYSICAL_EXISTING_ATTESTATION_CONFLICT");
         }
-        const result: ExternalFormalPhysicalIngressAttestationV1 = {
-          attestation_id: MCFT_CAP09_FORMAL_PHYSICAL_INGRESS_ATTESTATION_ID_V1,
-          status: "PASS", scope: { ...this.config.scope }, epoch_id: this.config.epoch_id, subject_sha: this.config.subject_sha,
-          base_target_t: base, causal_deadline: base,
-          producer_run_id: requiredText(target.producer_run_id, "FORMAL_PHYSICAL_EXISTING_PRODUCER_RUN_REQUIRED"),
-          promotion_run_id: requiredText(target.promotion_run_id, "FORMAL_PHYSICAL_EXISTING_PROMOTION_RUN_REQUIRED"),
-          candidate_artifact_digest: requiredText(target.candidate_artifact_digest, "FORMAL_PHYSICAL_EXISTING_ARTIFACT_REQUIRED"),
-          facts: input.facts.map((item) => ({ ...item })),
-          post_commit_db_readback_at: iso(target.post_commit_db_readback_at!), formal_visible_attested_at: iso(target.formal_visible_attested_at!),
-          physical_visibility_before_base: true, cursor_advanced: false,
-          next_missing_required_base: cursor.next_missing_required_base === null ? null : iso(cursor.next_missing_required_base),
-        };
+        if (target.producer_run_id !== producerRun || target.promotion_run_id !== promotionRun || target.candidate_artifact_digest !== artifactDigest) throw new Error("FORMAL_PHYSICAL_EXISTING_ATTESTATION_PROVENANCE_CONFLICT");
         await writer.query("COMMIT");
-        return result;
+      } else {
+        if (target.state !== "PROMOTING" || target.claim_owner !== input.claim.lease_owner || BigInt(target.fencing_token) !== input.claim.fencing_token) throw new Error("FORMAL_PHYSICAL_ATTESTATION_REQUIRES_CURRENT_PROMOTING_FENCE");
+        const now = await databaseNow(writer);
+        if (Date.parse(now) >= Date.parse(base) || !target.lease_expires_at || Date.parse(iso(target.lease_expires_at)) <= Date.parse(now)) throw new Error("FORMAL_PHYSICAL_ATTESTATION_REQUIRES_LIVE_PREDEADLINE_LEASE");
+        if (cursor.next_missing_required_base === null || iso(cursor.next_missing_required_base) !== base) throw new Error("FORMAL_PHYSICAL_ATTESTATION_MUST_MATCH_NEXT_MISSING_CONTIGUOUS_BASE");
+
+        const byKind = new Map(input.facts.map((item) => [item.kind, item]));
+        const weather = byKind.get("WEATHER")!;
+        const et0 = byKind.get("ET0")!;
+        const soil = byKind.get("SOIL")!;
+        const updated = await writer.query<{ formal_visible_attested_at: string | Date }>(
+          `UPDATE twin_external_formal_forcing_base_target_v1
+              SET state='FORMAL_VISIBLE_ATTESTED',producer_run_id=$9,promotion_run_id=$10,candidate_artifact_digest=$11,
+                  weather_fact_id=$12,weather_source_record_hash=$13,weather_record_semantic_hash=$14,
+                  et0_fact_id=$15,et0_source_record_hash=$16,et0_record_semantic_hash=$17,
+                  soil_fact_id=$18,soil_source_record_hash=$19,soil_record_semantic_hash=$20,
+                  post_commit_db_readback_at=$21::timestamptz,formal_visible_attested_at=clock_timestamp(),failure_class=NULL,updated_at=clock_timestamp()
+            WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND epoch_id=$7 AND base_target_t=$8::timestamptz
+            RETURNING formal_visible_attested_at`,
+          [...scopeValues(this.config.scope), this.config.epoch_id, base, producerRun, promotionRun, artifactDigest,
+            weather.fact_id, weather.source_record_hash, weather.record_semantic_hash,
+            et0.fact_id, et0.source_record_hash, et0.record_semantic_hash,
+            soil.fact_id, soil.source_record_hash, soil.record_semantic_hash, readbackAt],
+        );
+        if (updated.rows.length !== 1) throw new Error("FORMAL_PHYSICAL_ATTESTATION_UPDATE_REQUIRED");
+        const attestedAt = iso(updated.rows[0].formal_visible_attested_at);
+        if (Date.parse(attestedAt) >= Date.parse(base)) throw new Error("FORMAL_PHYSICAL_ATTESTATION_PERSISTED_AFTER_CAUSAL_BASE");
+        const lastRequired = iso(cursor.last_required_base);
+        const completes = base === lastRequired;
+        const next = completes ? null : addHours(base, 1);
+        await writer.query(
+          `UPDATE twin_external_formal_forcing_base_cursor_v1
+              SET last_contiguous_eligible_base=$8::timestamptz,next_missing_required_base=$9::timestamptz,completed=$10,updated_at=clock_timestamp()
+            WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND epoch_id=$7`,
+          [...scopeValues(this.config.scope), this.config.epoch_id, base, next, completes],
+        );
+        await writer.query("COMMIT");
+        cursorAdvanced = true;
       }
+    } catch (error) {
+      try { await writer.query("ROLLBACK"); } catch {}
+      throw error;
+    } finally {
+      writer.release();
+    }
 
-      if (target.state !== "PROMOTING" || target.claim_owner !== input.claim.lease_owner || BigInt(target.fencing_token) !== input.claim.fencing_token) throw new Error("FORMAL_PHYSICAL_ATTESTATION_REQUIRES_CURRENT_PROMOTING_FENCE");
-      const now = await databaseNow(writer);
-      if (Date.parse(now) >= Date.parse(base) || !target.lease_expires_at || Date.parse(iso(target.lease_expires_at)) <= Date.parse(now)) throw new Error("FORMAL_PHYSICAL_ATTESTATION_REQUIRES_LIVE_PREDEADLINE_LEASE");
-      if (cursor.next_missing_required_base === null || iso(cursor.next_missing_required_base) !== base) throw new Error("FORMAL_PHYSICAL_ATTESTATION_MUST_MATCH_NEXT_MISSING_CONTIGUOUS_BASE");
-
-      const byKind = new Map(input.facts.map((item) => [item.kind, item]));
-      const weather = byKind.get("WEATHER")!;
-      const et0 = byKind.get("ET0")!;
-      const soil = byKind.get("SOIL")!;
-      const updated = await writer.query<{ formal_visible_attested_at: string | Date }>(
-        `UPDATE twin_external_formal_forcing_base_target_v1
-            SET state='FORMAL_VISIBLE_ATTESTED',producer_run_id=$9,promotion_run_id=$10,candidate_artifact_digest=$11,
-                weather_fact_id=$12,weather_source_record_hash=$13,weather_record_semantic_hash=$14,
-                et0_fact_id=$15,et0_source_record_hash=$16,et0_record_semantic_hash=$17,
-                soil_fact_id=$18,soil_source_record_hash=$19,soil_record_semantic_hash=$20,
-                post_commit_db_readback_at=$21::timestamptz,formal_visible_attested_at=clock_timestamp(),failure_class=NULL,updated_at=clock_timestamp()
-          WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND epoch_id=$7 AND base_target_t=$8::timestamptz
-          RETURNING formal_visible_attested_at`,
-        [...scopeValues(this.config.scope), this.config.epoch_id, base, producerRun, promotionRun, artifactDigest,
-          weather.fact_id, weather.source_record_hash, weather.record_semantic_hash,
-          et0.fact_id, et0.source_record_hash, et0.record_semantic_hash,
-          soil.fact_id, soil.source_record_hash, soil.record_semantic_hash, readbackAt],
-      );
-      if (updated.rows.length !== 1) throw new Error("FORMAL_PHYSICAL_ATTESTATION_UPDATE_REQUIRED");
-      const attestedAt = iso(updated.rows[0].formal_visible_attested_at);
-      if (Date.parse(attestedAt) >= Date.parse(base)) throw new Error("FORMAL_PHYSICAL_ATTESTATION_PERSISTED_AFTER_CAUSAL_BASE");
-      const lastRequired = iso(cursor.last_required_base);
-      const completes = base === lastRequired;
-      const next = completes ? null : addHours(base, 1);
-      await writer.query(
-        `UPDATE twin_external_formal_forcing_base_cursor_v1
-            SET last_contiguous_eligible_base=$8::timestamptz,next_missing_required_base=$9::timestamptz,completed=$10,updated_at=clock_timestamp()
-          WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND epoch_id=$7`,
-        [...scopeValues(this.config.scope), this.config.epoch_id, base, next, completes],
-      );
-      await writer.query("COMMIT");
-      return {
-        attestation_id: MCFT_CAP09_FORMAL_PHYSICAL_INGRESS_ATTESTATION_ID_V1,
-        status: "PASS", scope: { ...this.config.scope }, epoch_id: this.config.epoch_id, subject_sha: this.config.subject_sha,
-        base_target_t: base, causal_deadline: base, producer_run_id: producerRun, promotion_run_id: promotionRun,
-        candidate_artifact_digest: artifactDigest, facts: input.facts.map((item) => ({ ...item })),
-        post_commit_db_readback_at: readbackAt, formal_visible_attested_at: attestedAt,
-        physical_visibility_before_base: true, cursor_advanced: true, next_missing_required_base: next,
-      };
-    } catch (error) { try { await writer.query("ROLLBACK"); } catch {} throw error; } finally { writer.release(); }
+    const committed = await this.verifyCommittedAttestation({
+      base,
+      facts: input.facts,
+      producer_run_id: producerRun,
+      promotion_run_id: promotionRun,
+      candidate_artifact_digest: artifactDigest,
+    });
+    return {
+      attestation_id: MCFT_CAP09_FORMAL_PHYSICAL_INGRESS_ATTESTATION_ID_V1,
+      status: "PASS",
+      scope: { ...this.config.scope },
+      epoch_id: this.config.epoch_id,
+      subject_sha: this.config.subject_sha,
+      base_target_t: base,
+      causal_deadline: base,
+      producer_run_id: producerRun,
+      promotion_run_id: promotionRun,
+      candidate_artifact_digest: artifactDigest,
+      facts: input.facts.map((item) => ({ ...item })),
+      post_commit_db_readback_at: iso(committed.target.post_commit_db_readback_at!),
+      formal_visible_attested_at: iso(committed.target.formal_visible_attested_at!),
+      physical_visibility_before_base: true,
+      cursor_advanced: cursorAdvanced,
+      next_missing_required_base: committed.cursor.next_missing_required_base === null ? null : iso(committed.cursor.next_missing_required_base),
+    };
   }
 }
