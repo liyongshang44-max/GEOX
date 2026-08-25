@@ -64,49 +64,64 @@ jobs:
           const authority = JSON.parse(fs.readFileSync(AUTHORITY_PATH, 'utf8'));
           const registry = JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf8'));
           const head = cp.execFileSync('git', ['rev-parse','HEAD'], {encoding:'utf8'}).trim();
+          const failures = [];
+          const assert = (condition, code, detail = null) => {
+            if (!condition) failures.push({code, detail});
+          };
           const current = planApplicability({
             authority, registry, changedPaths:[REGISTRY_PATH],
             stage:'SUCCESSOR_SUBJECT_PRE_MERGE', generation:'v13',
             baseSha:authority.frozen_successor_subject_sha, headSha:head,
           });
-          if (current.status !== 'PASS') throw new Error(`CP2_CURRENT_PLAN_FAIL:${JSON.stringify(current.blockers)}`);
-          const g = current.generation_context;
-          if (g.requested_generation !== 'v13' || g.authoritative_generation !== 'v13') throw new Error('V13_GENERATION_NOT_AUTHORIZED');
-          if (g.authority_generation !== 'geox_mcft_cap09_t4r1_actual_formal_store_authority_v3') throw new Error('AUTHORITY_GENERATION_MISMATCH');
-          if (g.store_generation.qualification_database !== 'geox_mcft_cap09_s6_accel24t_am19_v13') throw new Error('QUALIFICATION_STORE_GENERATION_MISMATCH');
-          if (g.store_generation.blocked_database !== 'geox_mcft_cap09_s6_accel24t_am19_blocked_v13') throw new Error('BLOCKED_STORE_GENERATION_MISMATCH');
-          if (g.store_generation.formal_database !== 'geox_mcft_cap09_s6_formal_t4r1_24h_v5') throw new Error('FORMAL_STORE_GENERATION_MISMATCH');
-          if (registry.dependency_digest_strategy !== DEPENDENCY_DIGEST_STRATEGY) throw new Error('DEPENDENCY_DIGEST_STRATEGY_MISMATCH');
-          if (registry.durable_anchors?.entries?.length !== registry.entries.length) throw new Error('DURABLE_ANCHOR_CARDINALITY_MISMATCH');
+          const g = current.generation_context || {};
+          assert(current.status === 'PASS', 'CP2_CURRENT_PLAN_FAIL', {blockers:current.blockers, authority_errors:current.authority_errors, resolver_errors:current.resolver_errors});
+          assert(g.requested_generation === 'v13' && g.authoritative_generation === 'v13', 'V13_GENERATION_NOT_AUTHORIZED', g);
+          assert(g.authority_generation === 'geox_mcft_cap09_t4r1_actual_formal_store_authority_v3', 'AUTHORITY_GENERATION_MISMATCH', g.authority_generation);
+          assert(g.store_generation?.qualification_database === 'geox_mcft_cap09_s6_accel24t_am19_v13', 'QUALIFICATION_STORE_GENERATION_MISMATCH', g.store_generation);
+          assert(g.store_generation?.blocked_database === 'geox_mcft_cap09_s6_accel24t_am19_blocked_v13', 'BLOCKED_STORE_GENERATION_MISMATCH', g.store_generation);
+          assert(g.store_generation?.formal_database === 'geox_mcft_cap09_s6_formal_t4r1_24h_v5', 'FORMAL_STORE_GENERATION_MISMATCH', g.store_generation);
+          assert(registry.dependency_digest_strategy === DEPENDENCY_DIGEST_STRATEGY, 'DEPENDENCY_DIGEST_STRATEGY_MISMATCH', registry.dependency_digest_strategy);
+          assert(registry.durable_anchors?.entries?.length === registry.entries.length, 'DURABLE_ANCHOR_CARDINALITY_MISMATCH', {anchors:registry.durable_anchors?.entries?.length, entries:registry.entries.length});
           const frozenIds = ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS','EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T'];
           for (const id of frozenIds) {
             const row = current.decisions.find(x => x.check_id === id);
-            if (!row || row.status !== 'CARRY_FORWARD' || row.dependency_digest_match !== true) throw new Error(`FROZEN_DIGEST_CARRY_FORWARD_REQUIRED:${id}:${row?.status}`);
-            if (!/^sha256:[0-9a-f]{64}$/.test(row.dependency_digest || '')) throw new Error(`DEPENDENCY_DIGEST_REQUIRED:${id}`);
+            assert(Boolean(row) && row.status === 'CARRY_FORWARD' && row.dependency_digest_match === true, 'FROZEN_DIGEST_CARRY_FORWARD_REQUIRED', row || {check_id:id, missing:true});
+            assert(/^sha256:[0-9a-f]{64}$/.test(row?.dependency_digest || ''), 'DEPENDENCY_DIGEST_REQUIRED', row || {check_id:id, missing:true});
           }
           const future = planApplicability({
             authority, registry, changedPaths:[REGISTRY_PATH],
             stage:'SUCCESSOR_SUBJECT_PRE_MERGE', generation:'v14',
             baseSha:authority.frozen_successor_subject_sha, headSha:head,
           });
-          if (future.status !== 'PASS') throw new Error('V14_NA_PLAN_MUST_BE_STRUCTURALLY_PASS');
+          assert(future.status === 'PASS', 'V14_NA_PLAN_MUST_BE_STRUCTURALLY_PASS', {blockers:future.blockers, authority_errors:future.authority_errors, resolver_errors:future.resolver_errors});
           for (const row of future.decisions.filter(x => x.check_id !== 'CONTROL_PLANE_INTEGRITY')) {
-            if (row.status !== 'NOT_APPLICABLE' || row.reason_code !== 'GENERATION_NOT_APPLICABLE') throw new Error(`V14_MUST_NOT_INHERIT_V13:${row.check_id}:${row.status}`);
+            assert(row.status === 'NOT_APPLICABLE' && row.reason_code === 'GENERATION_NOT_APPLICABLE', 'V14_MUST_NOT_INHERIT_V13', row);
           }
           const proof = {
-            status:'PASS', acceptance_id:'MCFT_CAP09_CP2_GENERATION_DEPENDENCY_DIGEST_V1',
-            head_sha:head, generation_context:g,
-            durable_anchor_count:registry.durable_anchors.entries.length,
+            status:failures.length === 0 ? 'PASS' : 'FAIL',
+            acceptance_id:'MCFT_CAP09_CP2_GENERATION_DEPENDENCY_DIGEST_V1',
+            head_sha:head,
+            generation_context:g,
+            durable_anchor_count:registry.durable_anchors?.entries?.length ?? null,
             dependency_digest_strategy:DEPENDENCY_DIGEST_STRATEGY,
             frozen_carry_forward_checks:frozenIds,
-            v14_non_control_checks_not_applicable:true,
+            current_decisions:current.decisions,
+            current_resolver_summaries:current.resolver_summaries,
+            current_authority_errors:current.authority_errors,
+            current_resolver_errors:current.resolver_errors,
+            future_decisions:future.decisions,
+            failures,
+            v14_non_control_checks_not_applicable:future.decisions.filter(x => x.check_id !== 'CONTROL_PLANE_INTEGRITY').every(x => x.status === 'NOT_APPLICABLE' && x.reason_code === 'GENERATION_NOT_APPLICABLE'),
             runtime_mutation:false, production_workflow_activation:false,
             formal_database_mutation:false, provider_request:false,
             graduation_effect:false, mcft_cap09_completed:false,
           };
           fs.mkdirSync('acceptance-output',{recursive:true});
           fs.writeFileSync('acceptance-output/MCFT_CAP_09_CP2_GENERATION_DEPENDENCY_DIGEST_V1_RESULT.json', JSON.stringify(proof,null,2)+'\n');
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_CP2_CURRENT_PLAN_DEBUG.json', JSON.stringify(current,null,2)+'\n');
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_CP2_FUTURE_PLAN_DEBUG.json', JSON.stringify(future,null,2)+'\n');
           process.stdout.write(JSON.stringify(proof,null,2)+'\n');
+          if (failures.length) process.exitCode = 1;
 
       - name: Resolve immutable qualification evidence references
         if: github.event_name == 'pull_request'
@@ -247,6 +262,8 @@ jobs:
           path: |
             acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_CP2_GENERATION_DEPENDENCY_DIGEST_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_CP2_CURRENT_PLAN_DEBUG.json
+            acceptance-output/MCFT_CAP_09_CP2_FUTURE_PLAN_DEBUG.json
             acceptance-output/MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json
             acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json
