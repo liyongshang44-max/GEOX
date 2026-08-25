@@ -100,7 +100,7 @@ jobs:
         run: |
           const fs=require('node:fs');
           const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_AUTONOMOUS_CONTROLLER_SERVICE_POSTGRES_RESULT.json','utf8'));
-          for(const key of ['exact_cursor_base_passed_to_capture','exact_cursor_base_passed_to_promotion','epoch_controller_heartbeat_during_long_capture_and_promotion','producer_claim_heartbeat_during_long_capture_and_promotion','same_producer_fence_preserved_through_completion','physical_attestation_advanced_cursor','competing_controller_denied_while_lease_live'])if(p[key]!==true)throw new Error(`V13_AUTONOMOUS_CONTROLLER_PROOF_MISSING:${key}`);
+          for(const key of ['exact_cursor_base_passed_to_capture','exact_cursor_base_passed_to_promotion','epoch_controller_heartbeat_during_long_capture_and_promotion','producer_claim_heartbeat_during_long_capture_and_promotion','same_producer_fence_preserved_through_completion','physical_attestation_advanced_cursor','competing_controller_denied_while_lease_live','zero_formal_write_promotion_failure_is_retryable','partial_formal_write_promotion_failure_is_not_retryable','partial_formal_write_promotion_failure_terminalizes_controller','partial_formal_write_does_not_advance_forcing_cursor','unknown_or_partial_promotion_mutation_fails_closed'])if(p[key]!==true)throw new Error(`V13_AUTONOMOUS_CONTROLLER_PROOF_MISSING:${key}`);
           if(p.status!=='PASS'||p.wall_clock_target_planner_used!==false||p.capture_port_formal_database_write_count!==0||p.production_workflow_effect!==false||p.formal_v4_mutation_performed!==false||p.mcft_cap09_completed!==false)throw new Error('V13_AUTONOMOUS_CONTROLLER_NONCLAIM_REGRESSION');
 
       - name: Upload immutable autonomous controller proof
