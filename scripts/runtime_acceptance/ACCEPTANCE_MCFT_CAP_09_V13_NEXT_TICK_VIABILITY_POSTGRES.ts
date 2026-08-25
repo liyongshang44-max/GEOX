@@ -54,6 +54,7 @@ async function reset(pool: Pool): Promise<void> {
   await pool.query("DROP SCHEMA public CASCADE");
   await pool.query("CREATE SCHEMA public");
   await pool.query(fs.readFileSync(path.join(ROOT, "docker/postgres/init/001_schema.sql"), "utf8"));
+  await pool.query(fs.readFileSync(path.join(ROOT, "apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql"), "utf8"));
   await pool.query(fs.readFileSync(path.join(ROOT, "apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql"), "utf8"));
   await pool.query(fs.readFileSync(path.join(ROOT, "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql"), "utf8"));
   await pool.query(fs.readFileSync(path.join(ROOT, "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql"), "utf8"));
@@ -110,14 +111,12 @@ async function main(): Promise<void> {
     const epoch = "v13-next-tick-viability";
     const checker = new PostgresExternalFormalNextTickViabilityV1(pool, { scope, epoch_id: epoch, subject_sha: SUBJECT, o00_logical_time: O00 });
 
-    // O00 is A0 warm-start, but still requires the runtime cursor to name exact O00 preclaim.
     await setRuntimeCursor(pool, 0);
     const o00 = await checker.checkPreclaimViability(boundary(0));
     assert.equal(o00.status, "PASS");
     if (o00.status !== "PASS") throw new Error("V13_VIABILITY_O00_PASS_REQUIRED");
     assert.equal(o00.mode, "A0_WARM_START");
 
-    // O01 cannot claim until O00 forcing base is contiguous and physically attested.
     await setRuntimeCursor(pool, 1);
     await seedForcingCursor(pool, epoch, addHours(O00, -1));
     const o01Before = await checker.checkPreclaimViability(boundary(1));
@@ -134,7 +133,6 @@ async function main(): Promise<void> {
     assert.equal(o01After.required_forcing_base, O00);
     assert.equal(o01After.physical_ingress_attestation_verified, true);
 
-    // Reproduce a target that is already terminal: successor preclaim must fail closed.
     const seamEpoch = "v13-a2-blocked-successor-seam";
     await setRuntimeCursor(pool, 8);
     await seedForcingCursor(pool, seamEpoch, addHours(O00, 6));
@@ -151,8 +149,6 @@ async function main(): Promise<void> {
     assert.equal(o08.required_forcing_base, addHours(O00, 7));
     assert.equal(o08.reason, "REQUIRED_FORCING_BASE_TERMINAL");
 
-    // A late FORMAL_VISIBLE_ATTESTED row is no longer a legal database state. The schema itself
-    // must reject it; read-side viability then sees no valid physical attestation.
     const lateEpoch = "v13-late-physical-attestation";
     await setRuntimeCursor(pool, 1);
     await seedForcingCursor(pool, lateEpoch, O00);
@@ -166,7 +162,6 @@ async function main(): Promise<void> {
     if (late.status !== "NOT_VIABLE") throw new Error("V13_VIABILITY_LATE_ATTEST_BLOCK_REQUIRED");
     assert.equal(late.reason, "REQUIRED_FORCING_BASE_ATTESTATION_MISSING");
 
-    // Simple gate proof: NOT_VIABLE prevents the underlying durable scheduler claim call entirely.
     let claimCalls = 0;
     const inner: Pick<SchedulerPortV1, "listMissedSlots" | "claimDueSlot" | "recordTerminalResult"> = {
       async listMissedSlots() { return [boundary(8)]; },
@@ -196,10 +191,6 @@ async function main(): Promise<void> {
     );
     assert.equal(claimCalls, 0);
 
-    // Strong v13 seam: use the real persistent scheduler. O07 itself is viable from O06 forcing,
-    // then O07 terminalization advances runtime cursor to O08 and immediately adjudicates O08.
-    // Because O07 forcing never became visible before its base, the existing forcing target is
-    // durably latched terminal before any O08 claim can occur.
     await reset(pool);
     const dbClock = (await pool.query<{ hour_now: string | Date; database_now: string | Date }>(
       "SELECT date_trunc('hour',clock_timestamp()) AS hour_now, clock_timestamp() AS database_now",
@@ -276,8 +267,7 @@ async function main(): Promise<void> {
     assert.equal(new Date(runtimeAfterO07.next_logical_time!).toISOString(), terminalO08);
 
     const o08BeforeClaimCount = Number((await pool.query<{ n: string }>(
-      `SELECT count(*)::text AS n FROM twin_shadow_online_scheduler_slot_v1
-        WHERE slot_id='O08'`,
+      `SELECT count(*)::text AS n FROM twin_shadow_online_scheduler_slot_v1 WHERE slot_id='O08'`,
     )).rows[0]?.n ?? "-1");
     assert.equal(o08BeforeClaimCount, 0);
     await assert.rejects(
@@ -290,8 +280,7 @@ async function main(): Promise<void> {
         && error.viability.reason === "REQUIRED_FORCING_BASE_TERMINAL",
     );
     const o08AfterClaimCount = Number((await pool.query<{ n: string }>(
-      `SELECT count(*)::text AS n FROM twin_shadow_online_scheduler_slot_v1
-        WHERE slot_id='O08'`,
+      `SELECT count(*)::text AS n FROM twin_shadow_online_scheduler_slot_v1 WHERE slot_id='O08'`,
     )).rows[0]?.n ?? "-1");
     assert.equal(o08AfterClaimCount, 0);
 
