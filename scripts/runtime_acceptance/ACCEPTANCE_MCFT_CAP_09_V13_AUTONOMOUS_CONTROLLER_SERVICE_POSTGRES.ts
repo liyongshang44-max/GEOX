@@ -263,13 +263,14 @@ async function main(): Promise<void> {
     await reset(pool);
     const base = await futureBase(pool);
 
+    const mainPromotion = new ControlledPromotionPort(pool);
     const main = await createService({
       pool,
       epoch: MAIN_EPOCH,
       base,
       controllerOwner: "autonomous-controller-A",
       producerOwner: "autonomous-producer-1",
-      promotion: new ControlledPromotionPort(pool),
+      promotion: mainPromotion,
     });
     const result = await main.service.runOnce();
     assert.equal(result.status, "COMPLETED_BASE");
@@ -279,6 +280,7 @@ async function main(): Promise<void> {
     assert(result.controller_heartbeat_count >= 2);
     assert(result.producer_heartbeat_count >= 2);
     assert.deepEqual(main.capture.calls, [base]);
+    assert.deepEqual(mainPromotion.calls, [base]);
     assert.equal((await main.continuity.readCursor()).completed, true);
 
     const competing = new ExternalFormalForcingAutonomousControllerServiceV1(
@@ -350,6 +352,7 @@ async function main(): Promise<void> {
       status: "PASS",
       acceptance_mode: "REAL_POSTGRES_V13_AUTONOMOUS_CONTROLLER_SERVICE",
       exact_cursor_base_passed_to_capture: main.capture.calls[0] === base,
+      exact_cursor_base_passed_to_promotion: mainPromotion.calls[0] === base,
       wall_clock_target_planner_used: false,
       epoch_controller_heartbeat_during_long_capture_and_promotion: result.controller_heartbeat_count >= 2,
       producer_claim_heartbeat_during_long_capture_and_promotion: result.producer_heartbeat_count >= 2,
