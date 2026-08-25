@@ -16,6 +16,11 @@ export const MCFT_CAP09_FORMAL_V5_VIABILITY_GATED_SCHEDULER_ID_V1 =
 
 type SchedulerPortSubsetV1 = Pick<SchedulerPortV1, "listMissedSlots" | "claimDueSlot" | "recordTerminalResult">;
 
+type TerminalSuccessorAdjudicationOutcomeV1 =
+  | { status: "NOT_RUN" }
+  | { status: "PASS"; adjudication: ExternalFormalSuccessorTerminalAdjudicationResultV1 }
+  | { status: "ERROR"; error: unknown };
+
 export class ExternalFormalNextTickNotViablePreclaimErrorV1 extends Error {
   readonly code = "NEXT_TICK_FORCING_NOT_VIABLE_PRECLAIM" as const;
 
@@ -30,7 +35,7 @@ export class ExternalFormalNextTickNotViablePreclaimErrorV1 extends Error {
 
 export class ExternalFormalV5ViabilityGatedSchedulerV1 implements SchedulerPortSubsetV1 {
   readonly adapter_id = MCFT_CAP09_FORMAL_V5_VIABILITY_GATED_SCHEDULER_ID_V1;
-  private lastTerminalSuccessorAdjudication: ExternalFormalSuccessorTerminalAdjudicationResultV1 | null = null;
+  private lastTerminalSuccessorAdjudicationOutcome: TerminalSuccessorAdjudicationOutcomeV1 = { status: "NOT_RUN" };
 
   constructor(
     private readonly inner: SchedulerPortSubsetV1,
@@ -54,18 +59,36 @@ export class ExternalFormalV5ViabilityGatedSchedulerV1 implements SchedulerPortS
   }
 
   async recordTerminalResult(input: { claim: ShadowOnlineSlotClaimV1; result: ShadowOnlineTerminalSlotResultV1 }): Promise<void> {
-    // First commit the current slot terminal result and advance the durable runtime cursor.
-    // Only after that committed transition can successor identity be adjudicated exactly.
+    // The predecessor terminal commit owns the v3 scheduler contract. A post-COMMIT successor
+    // adjudication error must never escape back through that v3 terminal catch and cause a
+    // second terminal write for the already-committed predecessor slot.
+    this.lastTerminalSuccessorAdjudicationOutcome = { status: "NOT_RUN" };
     await this.inner.recordTerminalResult(input);
-    this.lastTerminalSuccessorAdjudication = await this.viability.adjudicateSuccessorAfterTerminal({
-      terminal_boundary: input.result.boundary,
-      terminal_at: input.result.terminal_at,
-    });
+    try {
+      const adjudication = await this.viability.adjudicateSuccessorAfterTerminal({
+        terminal_boundary: input.result.boundary,
+        terminal_at: input.result.terminal_at,
+      });
+      this.lastTerminalSuccessorAdjudicationOutcome = { status: "PASS", adjudication };
+    } catch (error) {
+      this.lastTerminalSuccessorAdjudicationOutcome = { status: "ERROR", error };
+    }
+  }
+
+  requireLastTerminalSuccessorAdjudication(): ExternalFormalSuccessorTerminalAdjudicationResultV1 {
+    const outcome = this.lastTerminalSuccessorAdjudicationOutcome;
+    if (outcome.status === "NOT_RUN") {
+      throw new Error("FORMAL_V5_TERMINAL_SUCCESSOR_ADJUDICATION_REQUIRED_AFTER_TERMINAL_COMMIT");
+    }
+    if (outcome.status === "ERROR") {
+      if (outcome.error instanceof Error) throw outcome.error;
+      throw new Error(`FORMAL_V5_TERMINAL_SUCCESSOR_ADJUDICATION_FAILED:${String(outcome.error)}`);
+    }
+    return structuredClone(outcome.adjudication);
   }
 
   readLastTerminalSuccessorAdjudication(): ExternalFormalSuccessorTerminalAdjudicationResultV1 | null {
-    return this.lastTerminalSuccessorAdjudication === null
-      ? null
-      : structuredClone(this.lastTerminalSuccessorAdjudication);
+    const outcome = this.lastTerminalSuccessorAdjudicationOutcome;
+    return outcome.status === "PASS" ? structuredClone(outcome.adjudication) : null;
   }
 }

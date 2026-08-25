@@ -42,6 +42,7 @@ export type ExternalFormalV5Am19RunnerResultV1 =
 
 export class ExternalFormalV5Amendment19RunnerV1 {
   private readonly inner: ExternalFormalV3Amendment19RunnerV1;
+  private readonly gatedScheduler: ExternalFormalV5ViabilityGatedSchedulerV1;
 
   constructor(
     manifest: ExternalFormalV3Am19WindowManifestV1,
@@ -52,10 +53,10 @@ export class ExternalFormalV5Amendment19RunnerV1 {
     tickService: TickServicePortV1,
     viability: ExternalFormalTerminalSuccessorViabilityPortV1,
   ) {
-    const gatedScheduler = new ExternalFormalV5ViabilityGatedSchedulerV1(scheduler, viability);
+    this.gatedScheduler = new ExternalFormalV5ViabilityGatedSchedulerV1(scheduler, viability);
     this.inner = new ExternalFormalV3Amendment19RunnerV1(
       manifest,
-      gatedScheduler,
+      this.gatedScheduler,
       runtimeConfigRepository,
       cropContextMaterializer,
       evidenceSource,
@@ -65,7 +66,14 @@ export class ExternalFormalV5Amendment19RunnerV1 {
 
   async executeOneDueSlot(input: ExecuteExternalFormalV3Am19RunnerInputV1): Promise<ExternalFormalV5Am19RunnerResultV1> {
     try {
-      return await this.inner.executeOneDueSlot(input);
+      const result = await this.inner.executeOneDueSlot(input);
+      if ("terminal_result_recorded" in result && result.terminal_result_recorded === true) {
+        // This assertion deliberately runs only after the v3 runner has returned from its terminal
+        // catch boundary. A post-COMMIT adjudication failure therefore fails v5 outward without
+        // re-terminalizing the already committed predecessor slot.
+        this.gatedScheduler.requireLastTerminalSuccessorAdjudication();
+      }
+      return result;
     } catch (error) {
       if (!(error instanceof ExternalFormalNextTickNotViablePreclaimErrorV1)) throw error;
       return {

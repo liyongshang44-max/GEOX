@@ -11,6 +11,7 @@ on:
       - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts'
       - 'apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_POST_COMMIT_ADJUDICATION_BOUNDARY.ts'
   merge_group:
     types: [checks_requested]
 
@@ -76,10 +77,13 @@ jobs:
           apps/server/src/runtime/twin_runtime/external_formal_v5_viability_gated_scheduler_v1.ts
           apps/server/src/runtime/twin_runtime/external_formal_v5_amendment19_runner_v1.ts
           scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES.ts
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_POST_COMMIT_ADJUDICATION_BOUNDARY.ts
       - name: Run real PostgreSQL next-tick viability acceptance
         env:
           MCFT_CAP09_V13_VIABILITY_DESTRUCTIVE_ACCEPTANCE: '1'
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES.ts
+      - name: Prove post-COMMIT adjudication failure cannot re-terminalize predecessor
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_POST_COMMIT_ADJUDICATION_BOUNDARY.ts
       - name: Typecheck full server Runtime surface
         run: pnpm --filter @geox/server typecheck
       - name: Validate viability machine proof
@@ -89,11 +93,19 @@ jobs:
           const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES_RESULT.json','utf8'));
           for(const key of ['o00_a0_warm_start_exception_verified','runtime_cursor_exact_preclaim_boundary_verified','o01_requires_o00_forcing_base_attestation','exact_predecessor_forcing_base_required','physical_attestation_before_base_required','a2_blocked_does_not_imply_successor_viable','o08_claim_prevented_when_o07_forcing_base_terminal','successor_claim_forbidden_when_next_tick_viable_false'])if(p[key]!==true)throw new Error(`V13_VIABILITY_MACHINE_PROOF_MISSING:${key}`);
           if(p.status!=='PASS'||p.viability_failure_underlying_scheduler_claim_count!==0||p.canonical_tick_core_changed!==false||p.production_workflow_effect!==false||p.mcft_cap09_completed!==false)throw new Error('V13_VIABILITY_NONCLAIM_REGRESSION');
+      - name: Validate post-COMMIT adjudication boundary proof
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_POST_COMMIT_ADJUDICATION_BOUNDARY_RESULT.json','utf8'));
+          if(p.status!=='PASS'||p.predecessor_terminal_commit_count!==1||p.successor_adjudication_attempt_count!==1||p.post_commit_adjudication_failure_propagated_from_v5!==true||p.post_commit_adjudication_failure_does_not_reterminalize_current_slot!==true||p.frozen_v3_runner_modified!==false||p.canonical_tick_core_changed!==false||p.production_workflow_effect!==false||p.mcft_cap09_completed!==false)throw new Error('V13_POST_COMMIT_ADJUDICATION_BOUNDARY_REGRESSION');
       - name: Upload immutable viability proof
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap09-v13-next-tick-viability-${{ github.sha }}
-          path: acceptance-output/MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES_RESULT.json
+          path: |
+            acceptance-output/MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES_RESULT.json
+            acceptance-output/MCFT_CAP_09_V13_POST_COMMIT_ADJUDICATION_BOUNDARY_RESULT.json
           if-no-files-found: error
           retention-days: 90
