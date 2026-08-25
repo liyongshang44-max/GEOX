@@ -75,7 +75,8 @@ jobs:
           fi
           test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
           test -z "${FORMAL_RAW_S3_ACCESS_KEY_ID:-}"
-          ! grep -Eq '^  schedule:|workflow_dispatch:' .github/workflows/mcft-cap-09-v13-autonomous-controller-service-postgres.yml
+          trigger_block="$(awk '/^on:/{capture=1} /^permissions:/{capture=0} capture{print}' .github/workflows/mcft-cap-09-v13-autonomous-controller-service-postgres.yml)"
+          ! grep -Eq '^  schedule:|^  workflow_dispatch:' <<<"$trigger_block"
 
       - name: Typecheck autonomous controller execution graph
         run: >-
