@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 env:
   FROZEN_SUCCESSOR_SHA: '3bbf096ee5cb73e8e0e0251dc400733d6cab501f'
@@ -49,6 +50,97 @@ jobs:
       - name: Prove central applicability semantics
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
 
+      - name: Resolve immutable qualification evidence references
+        if: github.event_name == 'pull_request'
+        shell: node {0}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          const fs = require('node:fs');
+          const path = require('node:path');
+
+          const registryPath = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json';
+          const outPath = 'acceptance-output/MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json';
+          const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+          const token = process.env.GITHUB_TOKEN;
+          const repo = process.env.GITHUB_REPOSITORY;
+          if (!token || !repo) throw new Error('GITHUB_ACTIONS_READ_CONTEXT_REQUIRED');
+
+          async function api(endpoint) {
+            const response = await fetch(`https://api.github.com/repos/${repo}${endpoint}`, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28',
+              },
+            });
+            if (!response.ok) throw new Error(`GITHUB_REF_UNRESOLVABLE:${endpoint}:${response.status}`);
+            return response.json();
+          }
+
+          async function main() {
+            const results = [];
+            for (const entry of registry.entries || []) {
+              const run = await api(`/actions/runs/${entry.run_id}`);
+              if (run.conclusion !== 'success') throw new Error(`EVIDENCE_RUN_NOT_SUCCESS:${entry.evidence_id}:${run.conclusion}`);
+              if (run.head_sha !== entry.subject_sha) throw new Error(`EVIDENCE_RUN_SUBJECT_MISMATCH:${entry.evidence_id}:${run.head_sha}`);
+              if (run.name !== entry.workflow_name) throw new Error(`EVIDENCE_RUN_WORKFLOW_MISMATCH:${entry.evidence_id}:${run.name}`);
+
+              let artifactResolved = false;
+              if (entry.evidence_class === 'IMMUTABLE_WORKFLOW_ARTIFACT') {
+                const artifact = await api(`/actions/artifacts/${entry.artifact_id}`);
+                if (artifact.expired === true) throw new Error(`EVIDENCE_ARTIFACT_EXPIRED:${entry.evidence_id}`);
+                if (artifact.digest !== entry.artifact_digest) throw new Error(`EVIDENCE_ARTIFACT_DIGEST_MISMATCH:${entry.evidence_id}:${artifact.digest}`);
+                if (artifact.workflow_run?.id !== entry.run_id) throw new Error(`EVIDENCE_ARTIFACT_RUN_MISMATCH:${entry.evidence_id}:${artifact.workflow_run?.id}`);
+                artifactResolved = true;
+              } else if (entry.evidence_class === 'IMMUTABLE_WORKFLOW_RUN') {
+                if (entry.artifact_id !== null || entry.artifact_digest !== null) throw new Error(`RUN_ONLY_EVIDENCE_MUST_NOT_CLAIM_ARTIFACT:${entry.evidence_id}`);
+              } else {
+                throw new Error(`UNKNOWN_EVIDENCE_CLASS:${entry.evidence_id}:${entry.evidence_class}`);
+              }
+
+              results.push({
+                evidence_id: entry.evidence_id,
+                check_id: entry.check_id,
+                run_id: entry.run_id,
+                run_resolved: true,
+                run_subject_sha: run.head_sha,
+                artifact_id: entry.artifact_id,
+                artifact_resolved: artifactResolved,
+                artifact_digest: entry.artifact_digest,
+              });
+            }
+
+            const proof = {
+              status: 'PASS',
+              acceptance_id: 'MCFT_CAP09_IMMUTABLE_EVIDENCE_REFS_V1',
+              frozen_subject_sha: registry.frozen_subject_sha,
+              evidence_count: results.length,
+              all_run_refs_resolvable: results.every(x => x.run_resolved === true),
+              all_artifact_refs_resolvable_when_required: results.every(x => x.artifact_id === null || x.artifact_resolved === true),
+              artifact_digests_match_registry: true,
+              workflow_run_subjects_match_registry: true,
+              runtime_mutation: false,
+              production_workflow_activation: false,
+              formal_database_mutation: false,
+              provider_request: false,
+              graduation_effect: false,
+              mcft_cap09_completed: false,
+              results,
+            };
+            fs.mkdirSync(path.dirname(outPath), { recursive: true });
+            fs.writeFileSync(outPath, JSON.stringify(proof, null, 2) + '\n');
+            process.stdout.write(JSON.stringify(proof, null, 2) + '\n');
+          }
+
+          main().catch(error => {
+            fs.mkdirSync(path.dirname(outPath), { recursive: true });
+            fs.writeFileSync(outPath, JSON.stringify({ status: 'FAIL', error: error instanceof Error ? error.message : String(error) }, null, 2) + '\n');
+            console.error(error);
+            process.exitCode = 1;
+          });
+
       - name: Generate exact PR applicability plan
         if: github.event_name == 'pull_request'
         run: >-
@@ -73,9 +165,11 @@ jobs:
         run: |
           const fs = require('node:fs');
           const proof = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json','utf8'));
+          const evidence = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json','utf8'));
           const plan = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json','utf8'));
           const preflight = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json','utf8'));
           if (proof.status !== 'PASS' || proof.regex_fallback_used !== false || proof.unknown_changed_path_fails_closed !== true) throw new Error('CONTROL_PLANE_SELFTEST_NOT_PASS');
+          if (evidence.status !== 'PASS' || evidence.all_run_refs_resolvable !== true || evidence.all_artifact_refs_resolvable_when_required !== true || evidence.artifact_digests_match_registry !== true || evidence.workflow_run_subjects_match_registry !== true) throw new Error('IMMUTABLE_EVIDENCE_REFS_NOT_RESOLVED');
           if (plan.status !== 'PASS' || plan.unknown_changed_paths.length !== 0 || plan.resolver_errors.length !== 0) throw new Error('CONTROL_PLANE_PLAN_NOT_PASS');
           const control = plan.decisions.find(x => x.check_id === 'CONTROL_PLANE_INTEGRITY');
           if (!control || control.status !== 'REQUALIFY') throw new Error('CONTROL_PLANE_SELF_CHANGE_MUST_REQUALIFY');
@@ -84,7 +178,7 @@ jobs:
             if (!row || row.status !== 'CARRY_FORWARD') throw new Error(`FROZEN_EVIDENCE_MUST_CARRY_FORWARD:${id}:${row?.status}`);
           }
           if (preflight.status !== 'PASS' || preflight.non_fail_fast !== true || preflight.counts.blocker_count !== 0) throw new Error('ALL_BLOCKERS_PREFLIGHT_NOT_PASS');
-          for (const source of [proof, plan, preflight]) {
+          for (const source of [proof, evidence, plan, preflight]) {
             const effects = source.non_effects || source;
             for (const key of ['runtime_mutation','production_workflow_activation','formal_database_mutation','provider_request','graduation_effect','mcft_cap09_completed']) {
               if (effects[key] !== false) throw new Error(`CONTROL_PLANE_NON_EFFECT_VIOLATION:${key}`);
@@ -98,6 +192,7 @@ jobs:
           name: mcft-cap09-qualification-control-plane-${{ github.event.pull_request.head.sha }}
           path: |
             acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json
             acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json
           if-no-files-found: error
