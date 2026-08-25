@@ -1,0 +1,75 @@
+name: mcft-cap-09-v13-forcing-controller-contract
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-v13-forcing-controller-contract.yml'
+      - 'apps/server/src/domain/twin_runtime/external_formal_forcing_supply_controller_v1.ts'
+      - 'apps/server/src/domain/twin_runtime/external_formal_forcing_acquisition_budget_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_FORCING_CONTROLLER_CONTRACT.ts'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-v13-forcing-controller-contract-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+
+jobs:
+  controller-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Require controller workflow has zero production wake surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          workflow=.github/workflows/mcft-cap-09-v13-forcing-controller-contract.yml
+          ! grep -Eq '^[[:space:]]*schedule:' "$workflow"
+          ! grep -Eq '^[[:space:]]*workflow_dispatch:' "$workflow"
+          ! grep -Fq 'actions: write' "$workflow"
+          ! grep -Fq 'GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL' "$workflow"
+          ! grep -Fq 'FORMAL_RAW_S3' "$workflow"
+      - name: Typecheck controller contract
+        run: >-
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node
+          apps/server/src/domain/twin_runtime/external_formal_forcing_acquisition_budget_v1.ts
+          apps/server/src/domain/twin_runtime/external_formal_forcing_supply_controller_v1.ts
+          apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_FORCING_CONTROLLER_CONTRACT.ts
+      - name: Prove cursor-driven target and late-wake semantics
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_FORCING_CONTROLLER_CONTRACT.ts
+      - name: Validate controller proof
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_FORCING_CONTROLLER_CONTRACT_RESULT.json','utf8'));
+          if(p.status!=='PASS'||p.next_missing_required_base_is_only_target_authority!==true||p.delayed_wake_cannot_skip_required_base!==true||p.acquisition_start_deadline_fail_closed!==true||p.production_workflow_effect!==false) throw new Error('MCFT_CAP09_V13_CONTROLLER_MACHINE_PROOF_REQUIRED');
+      - name: Upload immutable controller proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-v13-forcing-controller-contract-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_09_V13_FORCING_CONTROLLER_CONTRACT_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
