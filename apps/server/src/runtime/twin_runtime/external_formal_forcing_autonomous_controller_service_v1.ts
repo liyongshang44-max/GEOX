@@ -287,7 +287,7 @@ export class ExternalFormalForcingAutonomousControllerServiceV1 {
     const runWithHeartbeats = async <T>(operation: () => Promise<T>): Promise<{ value: T; heartbeat_error: unknown | null }> => {
       let stop = false;
       let heartbeatError: unknown = null;
-      let cancelDelay: (() => void) | null = null;
+      let cancelDelay: () => void = () => {};
       const heartbeatLoop = (async () => {
         while (!stop) {
           await new Promise<void>((resolve) => {
@@ -295,7 +295,7 @@ export class ExternalFormalForcingAutonomousControllerServiceV1 {
             const finish = () => {
               if (settled) return;
               settled = true;
-              cancelDelay = null;
+              cancelDelay = () => {};
               resolve();
             };
             const timer = setTimeout(finish, this.config.heartbeat_interval_ms);
@@ -336,7 +336,7 @@ export class ExternalFormalForcingAutonomousControllerServiceV1 {
         operationError = error;
       } finally {
         stop = true;
-        cancelDelay?.();
+        cancelDelay();
         await heartbeatLoop;
       }
       // The operation error takes precedence because it may carry authoritative mutation-state evidence.
