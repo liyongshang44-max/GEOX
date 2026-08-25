@@ -1,5 +1,5 @@
-import type { ExternalFormalPhysicalFactIdentityV1, ExternalFormalForcingBaseClaimV1, PostgresExternalFormalForcingBaseContinuityRepositoryV1 } from "./postgres_external_formal_forcing_base_continuity_repository_v1.js";
-import type { ExternalFormalForcingControllerLeaseV1, PostgresExternalFormalForcingControllerLifecycleV1 } from "./postgres_external_formal_forcing_controller_lifecycle_v1.js";
+import type { ExternalFormalPhysicalFactIdentityV1, PostgresExternalFormalForcingBaseContinuityRepositoryV1 } from "./postgres_external_formal_forcing_base_continuity_repository_v1.js";
+import type { PostgresExternalFormalForcingControllerLifecycleV1 } from "./postgres_external_formal_forcing_controller_lifecycle_v1.js";
 import type { PostgresExternalFormalForcingSupplyAdmissionV1 } from "./postgres_external_formal_forcing_supply_admission_v1.js";
 
 export const MCFT_CAP09_AUTONOMOUS_FORCING_CONTROLLER_SERVICE_ID_V1 =
@@ -18,7 +18,42 @@ export type ExternalFormalExactBasePromotionReceiptV1 = {
   base_target_t: string;
   promotion_run_id: string;
   facts: readonly ExternalFormalPhysicalFactIdentityV1[];
+  formal_database_write_count: 3;
 };
+
+export type ExternalFormalExactBasePromotionMutationStateV1 =
+  | "NO_FORMAL_MUTATION"
+  | "PARTIAL_FORMAL_MUTATION"
+  | "UNKNOWN_FORMAL_MUTATION";
+
+export class ExternalFormalExactBasePromotionFailureV1 extends Error {
+  readonly failure_class: string;
+  readonly mutation_state: ExternalFormalExactBasePromotionMutationStateV1;
+  readonly formal_database_write_count: number | null;
+
+  constructor(input: {
+    failure_class: string;
+    mutation_state: ExternalFormalExactBasePromotionMutationStateV1;
+    formal_database_write_count: number | null;
+    cause?: unknown;
+  }) {
+    const failureClass = required(input.failure_class, "AUTONOMOUS_FORCING_PROMOTION_FAILURE_CLASS_REQUIRED");
+    if (input.mutation_state === "NO_FORMAL_MUTATION" && input.formal_database_write_count !== 0) {
+      throw new Error("AUTONOMOUS_FORCING_NO_MUTATION_FAILURE_COUNT_MUST_BE_ZERO");
+    }
+    if (input.mutation_state === "PARTIAL_FORMAL_MUTATION" && (!Number.isInteger(input.formal_database_write_count) || Number(input.formal_database_write_count) <= 0)) {
+      throw new Error("AUTONOMOUS_FORCING_PARTIAL_MUTATION_FAILURE_COUNT_REQUIRED");
+    }
+    if (input.mutation_state === "UNKNOWN_FORMAL_MUTATION" && input.formal_database_write_count !== null) {
+      throw new Error("AUTONOMOUS_FORCING_UNKNOWN_MUTATION_FAILURE_COUNT_MUST_BE_NULL");
+    }
+    super(failureClass, input.cause === undefined ? undefined : { cause: input.cause });
+    this.name = "ExternalFormalExactBasePromotionFailureV1";
+    this.failure_class = failureClass;
+    this.mutation_state = input.mutation_state;
+    this.formal_database_write_count = input.formal_database_write_count;
+  }
+}
 
 export interface ExternalFormalExactBaseCapturePortV1 {
   captureExactBase(input: {
@@ -37,7 +72,7 @@ export interface ExternalFormalExactBasePromotionPortV1 {
   }): Promise<ExternalFormalExactBasePromotionReceiptV1>;
 }
 
-type LifecyclePortV1 = Pick<PostgresExternalFormalForcingControllerLifecycleV1, "acquireOrRenew">;
+type LifecyclePortV1 = Pick<PostgresExternalFormalForcingControllerLifecycleV1, "acquireOrRenew" | "recordTerminal">;
 type AdmissionPortV1 = Pick<PostgresExternalFormalForcingSupplyAdmissionV1, "claimNextRequiredBase">;
 type ContinuityPortV1 = Pick<
   PostgresExternalFormalForcingBaseContinuityRepositoryV1,
@@ -82,6 +117,16 @@ export type ExternalFormalAutonomousControllerRunResultV1 =
       status: "TERMINAL_LATE_WAKE";
       base_target_t: string;
       failure_class: string;
+    }
+  | {
+      service_id: typeof MCFT_CAP09_AUTONOMOUS_FORCING_CONTROLLER_SERVICE_ID_V1;
+      status: "TERMINAL_PROMOTION_MUTATION_UNSAFE";
+      base_target_t: string;
+      failure_class: string;
+      mutation_state: Exclude<ExternalFormalExactBasePromotionMutationStateV1, "NO_FORMAL_MUTATION">;
+      formal_database_write_count: number | null;
+      controller_fencing_token: string;
+      forcing_controller_terminal_recorded: true;
     }
   | {
       service_id: typeof MCFT_CAP09_AUTONOMOUS_FORCING_CONTROLLER_SERVICE_ID_V1;
@@ -246,8 +291,9 @@ export class ExternalFormalForcingAutonomousControllerServiceV1 {
         stop = true;
         await heartbeatLoop;
       }
-      if (heartbeatError) throw heartbeatError;
+      // The operation error takes precedence because it may carry authoritative mutation-state evidence.
       if (operationError) throw operationError;
+      if (heartbeatError) throw heartbeatError;
       return value;
     };
 
@@ -285,40 +331,96 @@ export class ExternalFormalForcingAutonomousControllerServiceV1 {
         idempotency_key: producerClaim.idempotency_key,
         capture,
       }));
+      if (canonicalHour(promoted.base_target_t, "AUTONOMOUS_FORCING_PROMOTION_BASE_INVALID") !== base) {
+        throw new ExternalFormalExactBasePromotionFailureV1({
+          failure_class: "PROMOTION_RECEIPT_BASE_MISMATCH",
+          mutation_state: "UNKNOWN_FORMAL_MUTATION",
+          formal_database_write_count: null,
+        });
+      }
+      if (promoted.formal_database_write_count !== 3 || promoted.facts.length !== 3) {
+        throw new ExternalFormalExactBasePromotionFailureV1({
+          failure_class: "PROMOTION_RECEIPT_EXACT_THREE_WRITES_REQUIRED",
+          mutation_state: "UNKNOWN_FORMAL_MUTATION",
+          formal_database_write_count: null,
+        });
+      }
     } catch (error) {
-      try {
+      if (
+        error instanceof ExternalFormalExactBasePromotionFailureV1
+        && error.mutation_state === "NO_FORMAL_MUTATION"
+        && error.formal_database_write_count === 0
+      ) {
         await this.continuity.markRetryableFailureUnderController({
           controller_lease: controllerLease,
           claim: producerClaim,
-          failure_class: `PROMOTION_FAILED:${error instanceof Error ? error.message : String(error)}`,
+          failure_class: `PROMOTION_FAILED_NO_FORMAL_MUTATION:${error.failure_class}`,
         });
-      } catch {}
-      throw error;
+        throw error;
+      }
+
+      const failure = error instanceof ExternalFormalExactBasePromotionFailureV1
+        ? error
+        : new ExternalFormalExactBasePromotionFailureV1({
+            failure_class: `PROMOTION_FAILURE_MUTATION_STATE_UNKNOWN:${error instanceof Error ? error.message : String(error)}`,
+            mutation_state: "UNKNOWN_FORMAL_MUTATION",
+            formal_database_write_count: null,
+            cause: error,
+          });
+      const terminalReason = `FORMAL_PROMOTION_MUTATION_UNSAFE:${failure.mutation_state}:${failure.failure_class}`;
+      await this.lifecycle.recordTerminal({ lease: controllerLease, reason: terminalReason });
+      return {
+        service_id: MCFT_CAP09_AUTONOMOUS_FORCING_CONTROLLER_SERVICE_ID_V1,
+        status: "TERMINAL_PROMOTION_MUTATION_UNSAFE",
+        base_target_t: base,
+        failure_class: failure.failure_class,
+        mutation_state: failure.mutation_state,
+        formal_database_write_count: failure.formal_database_write_count,
+        controller_fencing_token: controllerLease.fencing_token.toString(),
+        forcing_controller_terminal_recorded: true,
+      };
     }
-    if (canonicalHour(promoted.base_target_t, "AUTONOMOUS_FORCING_PROMOTION_BASE_INVALID") !== base) throw new Error("AUTONOMOUS_FORCING_PROMOTION_BASE_MISMATCH");
 
-    const attested = await this.continuity.attestFormalPhysicalVisibilityUnderController({
-      controller_lease: controllerLease,
-      claim: producerClaim,
-      facts: promoted.facts,
-      producer_run_id: capture.producer_run_id,
-      promotion_run_id: promoted.promotion_run_id,
-      candidate_artifact_digest: capture.candidate_artifact_digest,
-    });
+    try {
+      const attested = await this.continuity.attestFormalPhysicalVisibilityUnderController({
+        controller_lease: controllerLease,
+        claim: producerClaim,
+        facts: promoted.facts,
+        producer_run_id: capture.producer_run_id,
+        promotion_run_id: promoted.promotion_run_id,
+        candidate_artifact_digest: capture.candidate_artifact_digest,
+      });
 
-    return {
-      service_id: MCFT_CAP09_AUTONOMOUS_FORCING_CONTROLLER_SERVICE_ID_V1,
-      status: "COMPLETED_BASE",
-      base_target_t: base,
-      controller_fencing_token: controllerLease.fencing_token.toString(),
-      producer_fencing_token: producerClaim.fencing_token.toString(),
-      controller_heartbeat_count: controllerHeartbeatCount,
-      producer_heartbeat_count: producerHeartbeatCount,
-      candidate_artifact_digest: capture.candidate_artifact_digest,
-      producer_run_id: capture.producer_run_id,
-      promotion_run_id: promoted.promotion_run_id,
-      next_missing_required_base: attested.next_missing_required_base,
-      wall_clock_target_planner_used: false,
-    };
+      return {
+        service_id: MCFT_CAP09_AUTONOMOUS_FORCING_CONTROLLER_SERVICE_ID_V1,
+        status: "COMPLETED_BASE",
+        base_target_t: base,
+        controller_fencing_token: controllerLease.fencing_token.toString(),
+        producer_fencing_token: producerClaim.fencing_token.toString(),
+        controller_heartbeat_count: controllerHeartbeatCount,
+        producer_heartbeat_count: producerHeartbeatCount,
+        candidate_artifact_digest: capture.candidate_artifact_digest,
+        producer_run_id: capture.producer_run_id,
+        promotion_run_id: promoted.promotion_run_id,
+        next_missing_required_base: attested.next_missing_required_base,
+        wall_clock_target_planner_used: false,
+      };
+    } catch (error) {
+      const failureClass = `PHYSICAL_ATTESTATION_AFTER_FORMAL_PROMOTION_FAILED:${error instanceof Error ? error.message : String(error)}`;
+      await this.lifecycle.recordTerminal({
+        lease: controllerLease,
+        reason: `FORMAL_PROMOTION_MUTATION_UNSAFE:PARTIAL_FORMAL_MUTATION:${failureClass}`,
+      });
+      return {
+        service_id: MCFT_CAP09_AUTONOMOUS_FORCING_CONTROLLER_SERVICE_ID_V1,
+        status: "TERMINAL_PROMOTION_MUTATION_UNSAFE",
+        base_target_t: base,
+        failure_class: failureClass,
+        mutation_state: "PARTIAL_FORMAL_MUTATION",
+        formal_database_write_count: promoted.formal_database_write_count,
+        controller_fencing_token: controllerLease.fencing_token.toString(),
+        forcing_controller_terminal_recorded: true,
+      };
+    }
   }
 }
