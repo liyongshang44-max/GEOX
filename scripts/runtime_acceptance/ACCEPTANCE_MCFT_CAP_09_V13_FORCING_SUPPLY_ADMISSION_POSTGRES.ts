@@ -9,6 +9,10 @@ import {
 } from "../../apps/server/src/domain/twin_runtime/external_formal_forcing_acquisition_budget_v1.js";
 import { PostgresExternalFormalForcingBaseContinuityRepositoryV1 } from "../../apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.js";
 import {
+  PostgresExternalFormalForcingControllerLifecycleV1,
+  type ExternalFormalForcingControllerLeaseV1,
+} from "../../apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_controller_lifecycle_v1.js";
+import {
   MCFT_CAP09_FORMAL_FORCING_ACQUISITION_START_DEADLINE_MISSED_V1,
   PostgresExternalFormalForcingSupplyAdmissionV1,
 } from "../../apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_supply_admission_v1.js";
@@ -49,6 +53,7 @@ async function reset(pool: Pool): Promise<void> {
   await pool.query(fs.readFileSync(path.join(ROOT, "docker/postgres/init/001_schema.sql"), "utf8"));
   await pool.query(fs.readFileSync(path.join(ROOT, "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql"), "utf8"));
   await pool.query(fs.readFileSync(path.join(ROOT, "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql"), "utf8"));
+  await pool.query(fs.readFileSync(path.join(ROOT, "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql"), "utf8"));
 }
 
 async function dbHour(pool: Pool, offsetHours: number): Promise<string> {
@@ -60,7 +65,7 @@ async function dbHour(pool: Pool, offsetHours: number): Promise<string> {
   return new Date(row.value).toISOString();
 }
 
-async function initEpoch(pool: Pool, epochId: string, base: string): Promise<void> {
+async function initEpoch(pool: Pool, epochId: string, base: string, controllerOwner = `controller:${epochId}`): Promise<ExternalFormalForcingControllerLeaseV1> {
   const continuity = new PostgresExternalFormalForcingBaseContinuityRepositoryV1(pool, {
     scope,
     epoch_id: epochId,
@@ -69,6 +74,11 @@ async function initEpoch(pool: Pool, epochId: string, base: string): Promise<voi
     last_required_base: base,
   });
   await continuity.initializeCursor();
+  const controller = new PostgresExternalFormalForcingControllerLifecycleV1(pool, { scope, epoch_id: epochId, subject_sha: SUBJECT });
+  const acquired = await controller.acquireOrRenew({ lease_owner: controllerOwner, lease_duration_seconds: 900 });
+  assert.equal(acquired.status, "ACQUIRED");
+  if (acquired.status !== "ACQUIRED") throw new Error("V13_ADMISSION_CONTROLLER_ACQUIRE_REQUIRED");
+  return acquired.lease;
 }
 
 async function main(): Promise<void> {
@@ -82,9 +92,9 @@ async function main(): Promise<void> {
   try {
     await reset(pool);
 
-    // On-time claim: DB clock, target selection, budget deadline, fence and lease are one transaction.
+    // On-time claim: controller fence is locked first, then cursor, DB clock, target, budget and per-base claim.
     const onTimeBase = await dbHour(pool, 2);
-    await initEpoch(pool, "v13-admission-on-time", onTimeBase);
+    const onTimeController = await initEpoch(pool, "v13-admission-on-time", onTimeBase);
     const onTime = new PostgresExternalFormalForcingSupplyAdmissionV1(pool, {
       scope,
       epoch_id: "v13-admission-on-time",
@@ -93,14 +103,14 @@ async function main(): Promise<void> {
       last_required_base: onTimeBase,
       qualified_budget: budget(30 * 60_000),
     });
-    const first = await onTime.claimNextRequiredBase({ lease_owner: "producer-a", lease_duration_seconds: 900 });
+    const first = await onTime.claimNextRequiredBase({ controller_lease: onTimeController, lease_owner: "producer-a", lease_duration_seconds: 900 });
     assert.equal(first.status, "CLAIMED");
     if (first.status !== "CLAIMED") throw new Error("V13_ADMISSION_FIRST_CLAIM_REQUIRED");
     assert.equal(first.claim.base_target_t, onTimeBase);
     assert(Date.parse(first.database_now) <= Date.parse(first.acquisition_start_deadline));
-    const duplicate = await onTime.claimNextRequiredBase({ lease_owner: "producer-a", lease_duration_seconds: 900 });
+    const duplicate = await onTime.claimNextRequiredBase({ controller_lease: onTimeController, lease_owner: "producer-a", lease_duration_seconds: 900 });
     assert.equal(duplicate.status, "EXISTING_ACTIVE_CLAIM");
-    const busy = await onTime.claimNextRequiredBase({ lease_owner: "producer-b", lease_duration_seconds: 900 });
+    const busy = await onTime.claimNextRequiredBase({ controller_lease: onTimeController, lease_owner: "producer-b", lease_duration_seconds: 900 });
     assert.equal(busy.status, "BUSY");
     const persisted = (await pool.query<{
       acquisition_budget_authority_id: string;
@@ -117,9 +127,46 @@ async function main(): Promise<void> {
     assert.equal(Number(persisted.selected_acquisition_budget_ms), 30 * 60_000);
     assert(Date.parse(new Date(persisted.controller_admitted_at).toISOString()) <= Date.parse(onTimeBase));
 
+    // A stale controller is rejected before target creation after epoch-level takeover.
+    const fencedBase = await dbHour(pool, 2);
+    const staleController = await initEpoch(pool, "v13-admission-controller-fence", fencedBase, "controller-old");
+    await pool.query(
+      `UPDATE twin_external_formal_forcing_controller_lease_v1
+          SET lease_expires_at=clock_timestamp()-interval '1 second'
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND epoch_id='v13-admission-controller-fence'`,
+      scopeValues,
+    );
+    const controllerRepo = new PostgresExternalFormalForcingControllerLifecycleV1(pool, {
+      scope,
+      epoch_id: "v13-admission-controller-fence",
+      subject_sha: SUBJECT,
+    });
+    const takeover = await controllerRepo.acquireOrRenew({ lease_owner: "controller-new", lease_duration_seconds: 900 });
+    assert.equal(takeover.status, "TAKEN_OVER");
+    if (takeover.status !== "TAKEN_OVER") throw new Error("V13_ADMISSION_CONTROLLER_TAKEOVER_REQUIRED");
+    assert.equal(takeover.lease.fencing_token, 2n);
+    const fencedRepo = new PostgresExternalFormalForcingSupplyAdmissionV1(pool, {
+      scope,
+      epoch_id: "v13-admission-controller-fence",
+      subject_sha: SUBJECT,
+      first_required_base: fencedBase,
+      last_required_base: fencedBase,
+      qualified_budget: budget(30 * 60_000),
+    });
+    await assert.rejects(
+      () => fencedRepo.claimNextRequiredBase({ controller_lease: staleController, lease_owner: "producer-stale", lease_duration_seconds: 900 }),
+      /FORMAL_FORCING_ADMISSION_CONTROLLER_STALE_FENCE/,
+    );
+    const beforeCurrentOwner = Number((await pool.query<{ count: string }>(
+      "SELECT count(*)::text AS count FROM twin_external_formal_forcing_base_target_v1 WHERE epoch_id='v13-admission-controller-fence'",
+    )).rows[0]?.count ?? "-1");
+    assert.equal(beforeCurrentOwner, 0);
+    const currentOwnerClaim = await fencedRepo.claimNextRequiredBase({ controller_lease: takeover.lease, lease_owner: "producer-current", lease_duration_seconds: 900 });
+    assert.equal(currentOwnerClaim.status, "CLAIMED");
+
     // Late first wake: exact next_missing base is terminalized; the controller must not ceil to a later hour.
     const lateBase = await dbHour(pool, 1);
-    await initEpoch(pool, "v13-admission-late", lateBase);
+    const lateController = await initEpoch(pool, "v13-admission-late", lateBase);
     const lateRepo = new PostgresExternalFormalForcingSupplyAdmissionV1(pool, {
       scope,
       epoch_id: "v13-admission-late",
@@ -128,7 +175,7 @@ async function main(): Promise<void> {
       last_required_base: lateBase,
       qualified_budget: budget(2 * 60 * 60_000),
     });
-    const late = await lateRepo.claimNextRequiredBase({ lease_owner: "producer-late", lease_duration_seconds: 900 });
+    const late = await lateRepo.claimNextRequiredBase({ controller_lease: lateController, lease_owner: "producer-late", lease_duration_seconds: 900 });
     assert.equal(late.status, "TERMINAL_LATE_WAKE");
     if (late.status !== "TERMINAL_LATE_WAKE") throw new Error("V13_ADMISSION_LATE_WAKE_REQUIRED");
     assert.equal(late.base_target_t, lateBase);
@@ -141,7 +188,7 @@ async function main(): Promise<void> {
 
     // Physical deadline has higher precedence once base time itself has arrived.
     const pastBase = await dbHour(pool, 0);
-    await initEpoch(pool, "v13-admission-past", pastBase);
+    const pastController = await initEpoch(pool, "v13-admission-past", pastBase);
     const pastRepo = new PostgresExternalFormalForcingSupplyAdmissionV1(pool, {
       scope,
       epoch_id: "v13-admission-past",
@@ -150,14 +197,14 @@ async function main(): Promise<void> {
       last_required_base: pastBase,
       qualified_budget: budget(30 * 60_000),
     });
-    const past = await pastRepo.claimNextRequiredBase({ lease_owner: "producer-past", lease_duration_seconds: 900 });
+    const past = await pastRepo.claimNextRequiredBase({ controller_lease: pastController, lease_owner: "producer-past", lease_duration_seconds: 900 });
     assert.equal(past.status, "TERMINAL_LATE_WAKE");
     if (past.status !== "TERMINAL_LATE_WAKE") throw new Error("V13_ADMISSION_PAST_BASE_REQUIRED");
     assert.equal(past.failure_class, "REQUIRED_FORMAL_FORCING_BASE_DEADLINE_MISSED");
 
-    // A legitimately admitted long-running claim remains valid after the start deadline while its lease is live.
+    // A legitimately admitted long-running claim remains valid after the start deadline while its per-base lease is live.
     const liveBase = await dbHour(pool, 1);
-    await initEpoch(pool, "v13-admission-live-after-start", liveBase);
+    const liveController = await initEpoch(pool, "v13-admission-live-after-start", liveBase);
     const longBudgetMs = 2 * 60 * 60_000;
     const startDeadline = new Date(Date.parse(liveBase) - longBudgetMs).toISOString();
     await pool.query(
@@ -187,11 +234,11 @@ async function main(): Promise<void> {
       last_required_base: liveBase,
       qualified_budget: budget(longBudgetMs),
     });
-    const live = await liveRepo.claimNextRequiredBase({ lease_owner: "producer-live", lease_duration_seconds: 900 });
+    const live = await liveRepo.claimNextRequiredBase({ controller_lease: liveController, lease_owner: "producer-live", lease_duration_seconds: 900 });
     assert.equal(live.status, "EXISTING_ACTIVE_CLAIM");
 
-    // If that lease is lost after the qualified start window, reacquisition is terminal rather than optimistic restart.
-    await initEpoch(pool, "v13-admission-expired-after-start", liveBase);
+    // If that per-base lease is lost after the qualified start window, reacquisition is terminal rather than optimistic restart.
+    const expiredController = await initEpoch(pool, "v13-admission-expired-after-start", liveBase);
     await pool.query(
       `INSERT INTO twin_external_formal_forcing_base_target_v1
        (tenant_id,project_id,group_id,field_id,season_id,zone_id,epoch_id,subject_sha,base_target_t,causal_deadline,state,idempotency_key,
@@ -219,7 +266,7 @@ async function main(): Promise<void> {
       last_required_base: liveBase,
       qualified_budget: budget(longBudgetMs),
     });
-    const expired = await expiredRepo.claimNextRequiredBase({ lease_owner: "producer-recovery", lease_duration_seconds: 900 });
+    const expired = await expiredRepo.claimNextRequiredBase({ controller_lease: expiredController, lease_owner: "producer-recovery", lease_duration_seconds: 900 });
     assert.equal(expired.status, "TERMINAL_LATE_WAKE");
     if (expired.status !== "TERMINAL_LATE_WAKE") throw new Error("V13_ADMISSION_EXPIRED_RECOVERY_TERMINAL_REQUIRED");
     assert.equal(expired.failure_class, MCFT_CAP09_FORMAL_FORCING_ACQUISITION_START_DEADLINE_MISSED_V1);
@@ -227,6 +274,9 @@ async function main(): Promise<void> {
     const result = {
       status: "PASS",
       acceptance_mode: "REAL_POSTGRES_V13_FORCING_SUPPLY_ADMISSION",
+      controller_lease_lock_precedes_forcing_cursor_lock: true,
+      stale_controller_rejected_before_target_creation: true,
+      current_controller_takeover_token_can_admit: true,
       cursor_lock_database_clock_budget_and_claim_single_transaction: true,
       next_missing_required_base_is_only_claim_target: true,
       late_first_wake_terminalized_without_hour_skip: true,
