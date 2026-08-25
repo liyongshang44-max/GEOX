@@ -13,14 +13,20 @@ const EXPECTED_NEW_RELATIONS = [
   "twin_external_formal_forcing_base_target_v1",
   "twin_external_formal_forcing_controller_lease_v1",
 ] as const;
-const MIGRATIONS = [
+const PREDECESSOR_SCHEMA_CHAIN = [
+  "docker/postgres/init/001_schema.sql",
+  "apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql",
+  "apps/server/db/migrations/2026_07_10_mcft_cap_01_closure_remediation.sql",
+] as const;
+const V13_MIGRATIONS = [
   "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql",
   "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql",
   "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql",
 ] as const;
 
-function md5(value: unknown): string {
-  return crypto.createHash("md5").update(JSON.stringify(value), "utf8").digest("hex");
+function md5Rows(rows: readonly Record<string, unknown>[], fields: readonly string[]): string {
+  const lines = rows.map((row) => fields.map((field) => String(row[field] ?? "")).join("|")).join("\n");
+  return crypto.createHash("md5").update(lines, "utf8").digest("hex");
 }
 
 async function publicTables(pool: Pool): Promise<string[]> {
@@ -33,28 +39,31 @@ async function publicTables(pool: Pool): Promise<string[]> {
   return rows.map((row) => row.table_name);
 }
 
-async function columns(pool: Pool): Promise<unknown[]> {
+async function columns(pool: Pool): Promise<Record<string, unknown>[]> {
   return (await pool.query(
-    `SELECT table_name,column_name,ordinal_position,data_type,udt_name,is_nullable,column_default
-       FROM information_schema.columns
-      WHERE table_schema='public'
-      ORDER BY table_name,ordinal_position`,
+    `SELECT c.relname,a.attnum,a.attname,format_type(a.atttypid,a.atttypmod) AS typ,a.attnotnull,
+            COALESCE(pg_get_expr(ad.adbin,ad.adrelid),'') AS def
+       FROM pg_class c
+       JOIN pg_namespace n ON n.oid=c.relnamespace
+       JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped
+       LEFT JOIN pg_attrdef ad ON ad.adrelid=c.oid AND ad.adnum=a.attnum
+      WHERE n.nspname='public' AND c.relkind='r'
+      ORDER BY c.relname,a.attnum`,
   )).rows;
 }
 
-async function constraints(pool: Pool): Promise<unknown[]> {
+async function constraints(pool: Pool): Promise<Record<string, unknown>[]> {
   return (await pool.query(
-    `SELECT c.relname AS table_name, con.conname AS constraint_name, con.contype AS constraint_type,
-            pg_get_constraintdef(con.oid,true) AS definition
+    `SELECT c.relname,con.conname,con.contype::text AS contype,pg_get_constraintdef(con.oid,true) AS def
        FROM pg_constraint con
        JOIN pg_class c ON c.oid=con.conrelid
        JOIN pg_namespace n ON n.oid=c.relnamespace
-      WHERE n.nspname='public'
+      WHERE n.nspname='public' AND c.relkind='r' AND con.contype IN ('p','u','c','f')
       ORDER BY c.relname,con.conname`,
   )).rows;
 }
 
-async function indexes(pool: Pool): Promise<unknown[]> {
+async function indexes(pool: Pool): Promise<Record<string, unknown>[]> {
   return (await pool.query(
     `SELECT tablename,indexname,indexdef
        FROM pg_indexes
@@ -72,6 +81,10 @@ async function factsColumns(pool: Pool): Promise<unknown[]> {
   )).rows;
 }
 
+async function applyFiles(pool: Pool, files: readonly string[]): Promise<void> {
+  for (const file of files) await pool.query(fs.readFileSync(path.join(ROOT, file), "utf8"));
+}
+
 async function main(): Promise<void> {
   if (process.env.MCFT_CAP09_V13_HOLISTIC_SCHEMA_DESTRUCTIVE_ACCEPTANCE !== "1") {
     throw new Error("SET_MCFT_CAP09_V13_HOLISTIC_SCHEMA_DESTRUCTIVE_ACCEPTANCE_1");
@@ -82,16 +95,14 @@ async function main(): Promise<void> {
   try {
     await pool.query("DROP SCHEMA public CASCADE");
     await pool.query("CREATE SCHEMA public");
-    await pool.query(fs.readFileSync(path.join(ROOT, "docker/postgres/init/001_schema.sql"), "utf8"));
+    await applyFiles(pool, PREDECESSOR_SCHEMA_CHAIN);
 
     const predecessorTables = await publicTables(pool);
     assert.equal(predecessorTables.length, EXPECTED_PREDECESSOR_TABLE_COUNT, `V13_SCHEMA_PREDECESSOR_TABLE_COUNT:${predecessorTables.length}`);
     const predecessorFactsColumns = await factsColumns(pool);
     if (predecessorFactsColumns.length === 0) throw new Error("V13_SCHEMA_PREDECESSOR_FACTS_REQUIRED");
 
-    for (const migration of MIGRATIONS) {
-      await pool.query(fs.readFileSync(path.join(ROOT, migration), "utf8"));
-    }
+    await applyFiles(pool, V13_MIGRATIONS);
 
     const v13Tables = await publicTables(pool);
     assert.equal(v13Tables.length, EXPECTED_V13_TABLE_COUNT, `V13_SCHEMA_FINAL_TABLE_COUNT:${v13Tables.length}`);
@@ -139,19 +150,20 @@ async function main(): Promise<void> {
     const result = {
       status: "PASS",
       acceptance_mode: "REAL_POSTGRES_HOLISTIC_V13_SCHEMA",
+      predecessor_schema_chain: [...PREDECESSOR_SCHEMA_CHAIN],
       predecessor_public_table_count: predecessorTables.length,
       v13_required_public_table_count: v13Tables.length,
       exact_new_operational_relations: delta,
       operational_table_delta: delta.length,
-      migration_order: [...MIGRATIONS],
+      v13_migration_order: [...V13_MIGRATIONS],
       canonical_facts_schema_unchanged: true,
       all_new_relations_zero_state: true,
-      columns_observed_from_information_schema: true,
+      columns_observed_from_pg_catalog: true,
       constraints_observed_from_pg_catalog: true,
       indexes_observed_from_pg_indexes: true,
-      v13_column_fingerprint_md5: md5(allColumns),
-      v13_constraint_fingerprint_md5: md5(allConstraints),
-      v13_index_fingerprint_md5: md5(allIndexes),
+      v13_column_fingerprint_md5: md5Rows(allColumns, ["relname","attnum","attname","typ","attnotnull","def"]),
+      v13_constraint_fingerprint_md5: md5Rows(allConstraints, ["relname","conname","contype","def"]),
+      v13_index_fingerprint_md5: md5Rows(allIndexes, ["tablename","indexname","indexdef"]),
       exact_head_fingerprint_candidate_generated: true,
       production_workflow_effect: false,
       formal_v4_mutation_performed: false,
