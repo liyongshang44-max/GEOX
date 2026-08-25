@@ -1,0 +1,112 @@
+name: mcft-cap-09-v13-autonomous-controller-service-postgres
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-v13-autonomous-controller-service-postgres.yml'
+      - 'apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql'
+      - 'apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql'
+      - 'apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_forcing_autonomous_controller_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_controller_lifecycle_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_supply_admission_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_CONTROLLER_SERVICE_POSTGRES.ts'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_v13_autonomous_controller_service_acceptance
+  EXACT_PREDECESSOR_SHA: '26c1383f7f45abb76c99e28ec3d06714e85d1b2c'
+
+concurrency:
+  group: mcft-cap09-v13-autonomous-controller-service-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  autonomous-controller-service:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap09_v13_autonomous_controller_service_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d mcft_cap09_v13_autonomous_controller_service_acceptance"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Require exact predecessor and zero production bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            test "${{ github.event.pull_request.base.sha }}" = "$EXACT_PREDECESSOR_SHA"
+          fi
+          test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
+          test -z "${FORMAL_RAW_S3_ACCESS_KEY_ID:-}"
+          ! grep -Eq '^  schedule:|workflow_dispatch:' .github/workflows/mcft-cap-09-v13-autonomous-controller-service-postgres.yml
+
+      - name: Typecheck autonomous controller execution graph
+        run: >-
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node
+          apps/server/src/runtime/twin_runtime/external_formal_forcing_autonomous_controller_service_v1.ts
+          apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts
+          apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_controller_lifecycle_v1.ts
+          apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_supply_admission_v1.ts
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_CONTROLLER_SERVICE_POSTGRES.ts
+
+      - name: Run real PostgreSQL autonomous controller service acceptance
+        env:
+          MCFT_CAP09_V13_AUTONOMOUS_SERVICE_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_CONTROLLER_SERVICE_POSTGRES.ts
+
+      - name: Typecheck full server Runtime surface
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Validate autonomous controller machine proof
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_AUTONOMOUS_CONTROLLER_SERVICE_POSTGRES_RESULT.json','utf8'));
+          for(const key of ['exact_cursor_base_passed_to_capture','exact_cursor_base_passed_to_promotion','epoch_controller_heartbeat_during_long_capture_and_promotion','producer_claim_heartbeat_during_long_capture_and_promotion','same_producer_fence_preserved_through_completion','physical_attestation_advanced_cursor','competing_controller_denied_while_lease_live'])if(p[key]!==true)throw new Error(`V13_AUTONOMOUS_CONTROLLER_PROOF_MISSING:${key}`);
+          if(p.status!=='PASS'||p.wall_clock_target_planner_used!==false||p.capture_port_formal_database_write_count!==0||p.production_workflow_effect!==false||p.formal_v4_mutation_performed!==false||p.mcft_cap09_completed!==false)throw new Error('V13_AUTONOMOUS_CONTROLLER_NONCLAIM_REGRESSION');
+
+      - name: Upload immutable autonomous controller proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-v13-autonomous-controller-service-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_V13_AUTONOMOUS_CONTROLLER_SERVICE_POSTGRES_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
