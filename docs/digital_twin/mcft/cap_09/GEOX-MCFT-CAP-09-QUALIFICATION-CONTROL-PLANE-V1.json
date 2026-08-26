@@ -234,14 +234,14 @@
         "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs"
       ],
       "resolver_ids": ["EA5E2_RUNTIME_GRAPH_V4"],
-      "historical_evidence_policy": "CARRY_ONLY_IF_IMMUTABLE_BINDING_AND_GENERATED_AUTHORITY_GRAPH_UNCHANGED",
+      "historical_evidence_policy": "FRESH_REQUALIFICATION_REQUIRED_AFTER_PHASE2_DEPENDENCY_SET_EXPANSION",
       "execution_workflow": ".github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml",
       "execution_workflow_status": "IMPLEMENTED_AT_FROZEN_SUBJECT",
       "fail_policy": "FAIL_CLOSED",
-      "carry_forward_policy": "ONLY_WHEN_EXTERNAL_AUTHORITY_GRAPH_UNCHANGED",
+      "carry_forward_policy": "NONE_AFTER_PHASE2_DEPENDENCY_SET_EXPANSION",
       "requalification_triggers": ["EA5E2_RUNTIME_GRAPH_V4"],
       "applicable_stages": ["SUCCESSOR_SUBJECT_PRE_MERGE", "POST_MERGE_V13_QUALIFICATION", "POST_GRADUATION_FORMAL_V5_ACTIVATION"],
-      "carry_forward_evidence_id": "EA5E2_RUNTIME_GRAPH_3BBF096E",
+      "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs"
     },
     {
@@ -252,14 +252,14 @@
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts"
       ],
       "resolver_ids": ["LEGACY_AM19_PERSISTENT_24T"],
-      "historical_evidence_policy": "HISTORICAL_ONLY_CARRY_WHEN_LEGACY_SENSITIVE_PATHS_UNCHANGED",
+      "historical_evidence_policy": "FRESH_SUCCESSOR_REQUALIFICATION_REQUIRED_AFTER_PHASE2_PROVIDER_EXTRACTION",
       "execution_workflow": ".github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml",
-      "execution_workflow_status": "IMPLEMENTED_AT_FROZEN_SUBJECT",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
       "fail_policy": "FAIL_CLOSED",
-      "carry_forward_policy": "ONLY_WHEN_LEGACY_SENSITIVE_PATHS_UNCHANGED",
+      "carry_forward_policy": "NONE_AFTER_PHASE2_PROVIDER_EXTRACTION",
       "requalification_triggers": ["LEGACY_AM19_PERSISTENT_24T"],
       "applicable_stages": ["SUCCESSOR_SUBJECT_PRE_MERGE"],
-      "carry_forward_evidence_id": "LEGACY_AM19_24T_SUCCESSOR_ROUTING_3BBF096E",
+      "carry_forward_evidence_id": null,
       "diagnostic_command": null
     },
     {
