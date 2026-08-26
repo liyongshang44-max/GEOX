@@ -32,6 +32,8 @@ import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../apps/server/src/domai
 const execFileAsync = promisify(execFile);
 const PYTHON = process.env.PYTHON ?? "python3";
 const PROVIDER_SCRIPT = path.resolve("scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py");
+const PRODUCT_GFS_SCIENTIFIC_CORE_RELATIVE = "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py";
+const PRODUCT_GFS_SCIENTIFIC_CORE = path.resolve(PRODUCT_GFS_SCIENTIFIC_CORE_RELATIVE);
 const OUTPUT_DIR = path.resolve("acceptance-output");
 const OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION.json");
 const FORMAL_RAW_BUCKET = "geox-mcft-cap09-formal-raw-v1";
@@ -96,6 +98,29 @@ function sha256Hex(value: Buffer | Uint8Array | string): string {
 
 function sha256(value: Buffer | Uint8Array | string): string {
   return `sha256:${sha256Hex(value)}`;
+}
+
+function assertProductGfsScientificCoreBinding(): void {
+  if (!fs.existsSync(PROVIDER_SCRIPT)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_PROVIDER_SCRIPT_REQUIRED");
+  if (!fs.existsSync(PRODUCT_GFS_SCIENTIFIC_CORE)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_PRODUCT_GFS_CORE_REQUIRED");
+  const providerText = fs.readFileSync(PROVIDER_SCRIPT, "utf8");
+  const decodeStart = providerText.indexOf("def command_decode_gfs");
+  const decodeEnd = providerText.indexOf("def command_decode_kbs_late", decodeStart);
+  if (decodeStart < 0 || decodeEnd <= decodeStart) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_GFS_DECODE_BOUNDARY_REQUIRED");
+  const decodeText = providerText.slice(decodeStart, decodeEnd);
+  for (const marker of [
+    `GFS_CORE_PATH = ROOT / "${PRODUCT_GFS_SCIENTIFIC_CORE_RELATIVE}"`,
+    "gfs_core.validate_complete_cycle_inventory_v1",
+    "gfs_core.decode_pgrb2_v1",
+    "gfs_core.decode_sflux_v1",
+    "gfs_core.assemble_72h_scientific_series_v1",
+    "product_gfs_scientific_core_used",
+  ]) {
+    if (!providerText.includes(marker)) throw new Error(`MCFT_CAP09_ROLLING_REHYDRATION_PRODUCT_GFS_CORE_BINDING_REQUIRED:${marker}`);
+  }
+  for (const forbidden of ["ea4.decode_pgrb2(", "ea4.decode_sflux(", "ea4.apcp(", "ea4.block_start(", "ea4.scalar_eto("]) {
+    if (decodeText.includes(forbidden)) throw new Error(`MCFT_CAP09_ROLLING_REHYDRATION_SECOND_GFS_SCIENTIFIC_PATH_FORBIDDEN:${forbidden}`);
+  }
 }
 
 function hmac(key: Buffer | string, value: string): Buffer {
@@ -294,6 +319,7 @@ class PythonGfsRawBundleDecoderV2 implements ExternalEvidenceDecoderPortV1 {
   readonly decoder_version = "2";
   constructor(private readonly target: string, private readonly restoredIngestedAt: string) {}
   async decodeRetainedEvidence(input: ExternalEvidenceDecoderInputV1): Promise<readonly GovernedDecodedEvidenceDraftV1[]> {
+    assertProductGfsScientificCoreBinding();
     const temp = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-cap09-rolling-gfs-rehydrate-"));
     const bundle = path.join(temp, "gfs.tar");
     const output = path.join(temp, "gfs-drafts.json");
@@ -413,6 +439,7 @@ async function rehydrate(candidate: CandidateV1, pool: Pool): Promise<{ results:
 }
 
 function selftest(): void {
+  assertProductGfsScientificCoreBinding();
   const producer = "a".repeat(40);
   const digest = `sha256:${"b".repeat(64)}`;
   const valid = `s3-private://${FORMAL_RAW_BUCKET}/${TRANSIENT_ROOT_PREFIX}/${producer}/20260813t130000000z/sha256/${"b".repeat(64)}`;
@@ -426,6 +453,8 @@ function selftest(): void {
     producer_subject_sha_bound: true,
     producer_dataset_identity_preserved: true,
     producer_decoder_identity_preserved: true,
+    product_gfs_scientific_core_identity_preserved: true,
+    product_gfs_scientific_core: PRODUCT_GFS_SCIENTIFIC_CORE_RELATIVE,
     formal_raw_prefix_forbidden: true,
     read_only_r2: true,
     s3_put_count: 0,
@@ -467,6 +496,8 @@ async function main(): Promise<void> {
       producer_bound_raw_reverification: true,
       producer_dataset_identity_preserved: true,
       producer_decoder_identity_preserved: true,
+      product_gfs_scientific_core_identity_preserved: true,
+      product_gfs_scientific_core: PRODUCT_GFS_SCIENTIFIC_CORE_RELATIVE,
       provider_refetch_count: 0,
       private_r2_head_count: store.head_count,
       private_r2_get_count: store.get_count,
