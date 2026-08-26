@@ -10,6 +10,7 @@ import {
 import type { PoolClient } from "pg";
 import { mapStage1ObservationMetricToPipelineObservationV1 } from "../domain/sensing/stage1_sensing_input_mapping_v1.js";
 import { runSensingInferencePipelineV1, type RunSensingInferencePipelineV1Result } from "../domain/sensing/run_sensing_inference_pipeline_v1.js";
+import { buildIngressPhysicalQcSnapshotV1 } from "../evidence/ingress_physical_qc_snapshot_v1.js";
 import { refreshFieldReadModelsWithObservabilityV1 } from "./field_read_model_refresh_v1.js";
 
 export type DeviceObservationServiceV1Input = {
@@ -106,10 +107,21 @@ function isSimulatedObservation(input: DeviceObservationServiceV1Input): boolean
  * Contract boundary:
  * raw_telemetry_v1 is ingress evidence only and MUST NOT be consumed by business read models.
  * Business pipelines must consume device_observation_v1 only.
+ *
+ * B-04b boundary:
+ * physical QC is computed from the source metric/value/unit before compatibility
+ * normalization, then retained as a provenance snapshot on the observation fact.
+ * Existing compatibility metric/unit behavior remains unchanged in this subphase.
  */
 export async function writeDeviceObservationFactV1(clientConn: PoolClient, input: DeviceObservationServiceV1Input): Promise<{ fact_id: string; occurred_at_iso: string }> {
   const nowIso = new Date().toISOString();
   const occurred_at_iso = new Date(input.observed_at_ts_ms).toISOString();
+  const ingress_physical_qc = buildIngressPhysicalQcSnapshotV1({
+    source_fact_id: input.source_fact_id,
+    metric: input.metric,
+    value: input.value,
+    unit: input.unit,
+  });
   const normalizedTelemetry = normalizeMetricAndUnit(input.metric, input.unit);
   const metric = normalizedTelemetry.metric;
   const unit = normalizedTelemetry.unit;
@@ -170,6 +182,7 @@ export async function writeDeviceObservationFactV1(clientConn: PoolClient, input
       formal_eligible,
       evidence_level,
       dev_source: input.dev_source ?? null,
+      ingress_physical_qc,
       contract: parsed.data,
     },
   };
