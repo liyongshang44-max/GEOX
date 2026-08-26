@@ -34,6 +34,7 @@ const STATIC=[LIVE,SELF,STATIC_WF,
  "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
  "apps/server/src/external_evidence/provider/kbs_raw_hourly_live_provider_v1.ts",
  "apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py",
+ "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py",
  "package.json","pnpm-lock.yaml","pnpm-workspace.yaml","apps/server/package.json"];
 const MUST=[
  "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_V1.ts",
@@ -44,6 +45,7 @@ const MUST=[
  DRIFT,CARRIER,
  "apps/server/src/external_evidence/provider/kbs_raw_hourly_live_provider_v1.ts",
  "apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py",
+ "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py",
  "apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.ts",
  "apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts",
  "apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts",
