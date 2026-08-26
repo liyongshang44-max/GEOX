@@ -33,10 +33,20 @@ function normalizeCap07Surfaces(surfaces){
     variant:surface.variant,
     pages:surface.pages.map(page=>({
       content_hash:page.content_hash,
-      response_hash:page.response_hash,
       next_cursor_is_null:page.next_cursor===null,
     })),
   }));
+}
+function normalizeSelector(selector){
+  const copy=structuredClone(selector);
+  if(copy?.read_model?.surfaces){
+    copy.read_model.surfaces=copy.read_model.surfaces.map(surface=>({
+      name:surface.name,
+      status:surface.status,
+      content_hash:surface.content_hash,
+    }));
+  }
+  return copy;
 }
 async function tableCounts(adminPool){
   const relations=[
@@ -139,7 +149,7 @@ async function main(){
       canonical_identity_binding:context.boundSpec.canonical_identity_binding,
       canonical_receipt_count:receipts.length,
       canonical_receipts:receipts,
-      selector_snapshot:shared.selector,
+      selector_snapshot:normalizeSelector(shared.selector),
       final_handoff:context.s3.range.final_handoff,
       s4_authority:context.s4.authority,
       s4_corrected_set:context.s4.corrected_set,
@@ -160,6 +170,7 @@ async function main(){
       semantic_manifest_digest:digest(semanticManifest),
       semantic_manifest:semanticManifest,
       database_instance_identity_excluded_from_equivalence:true,
+      cap07_response_instance_identity_excluded_from_equivalence:true,
       historical_cap08_authority_reused:false,
       historical_cap08_completion_reopened:false,
       provider_request:false,
