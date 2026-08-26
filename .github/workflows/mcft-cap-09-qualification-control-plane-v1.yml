@@ -95,8 +95,9 @@ jobs:
             baseSha:authority.frozen_successor_subject_sha, headSha:head,
           });
           assert(future.status === 'PASS', 'V14_NA_PLAN_MUST_BE_STRUCTURALLY_PASS', {blockers:future.blockers, authority_errors:future.authority_errors, resolver_errors:future.resolver_errors});
-          for (const row of future.decisions.filter(x => x.check_id !== 'CONTROL_PLANE_INTEGRITY')) {
-            assert(row.status === 'NOT_APPLICABLE' && row.reason_code === 'GENERATION_NOT_APPLICABLE', 'V14_MUST_NOT_INHERIT_V13', row);
+          for (const id of frozenIds) {
+            const row = future.decisions.find(x => x.check_id === id);
+            assert(Boolean(row) && row.status === 'NOT_APPLICABLE' && row.reason_code === 'GENERATION_NOT_APPLICABLE', 'V14_FROZEN_EVIDENCE_MUST_NOT_INHERIT_V13', row || {check_id:id, missing:true});
           }
           const proof = {
             status:failures.length === 0 ? 'PASS' : 'FAIL',
@@ -112,7 +113,10 @@ jobs:
             current_resolver_errors:current.resolver_errors,
             future_decisions:future.decisions,
             failures,
-            v14_non_control_checks_not_applicable:future.decisions.filter(x => x.check_id !== 'CONTROL_PLANE_INTEGRITY').every(x => x.status === 'NOT_APPLICABLE' && x.reason_code === 'GENERATION_NOT_APPLICABLE'),
+            v14_frozen_checks_not_applicable:frozenIds.every(id => {
+              const row = future.decisions.find(x => x.check_id === id);
+              return Boolean(row) && row.status === 'NOT_APPLICABLE' && row.reason_code === 'GENERATION_NOT_APPLICABLE';
+            }),
             runtime_mutation:false, production_workflow_activation:false,
             formal_database_mutation:false, provider_request:false,
             graduation_effect:false, mcft_cap09_completed:false,
@@ -238,7 +242,7 @@ jobs:
           const plan = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json','utf8'));
           const preflight = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json','utf8'));
           if (proof.status !== 'PASS' || proof.regex_fallback_used !== false || proof.unknown_changed_path_fails_closed !== true) throw new Error('CONTROL_PLANE_SELFTEST_NOT_PASS');
-          if (cp2.status !== 'PASS' || cp2.v14_non_control_checks_not_applicable !== true) throw new Error('CP2_GENERATION_DIGEST_PROOF_NOT_PASS');
+          if (cp2.status !== 'PASS' || cp2.v14_frozen_checks_not_applicable !== true) throw new Error('CP2_GENERATION_DIGEST_PROOF_NOT_PASS');
           if (evidence.status !== 'PASS' || evidence.all_durable_anchor_refs_resolvable !== true || evidence.all_live_refs_match_when_present !== true) throw new Error('IMMUTABLE_DURABLE_EVIDENCE_NOT_RESOLVED');
           if (plan.status !== 'PASS' || plan.generation !== 'v13' || plan.unknown_changed_paths.length !== 0 || plan.resolver_errors.length !== 0 || plan.authority_errors.length !== 0) throw new Error('CONTROL_PLANE_PLAN_NOT_PASS');
           const control = plan.decisions.find(x => x.check_id === 'CONTROL_PLANE_INTEGRITY');
