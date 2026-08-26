@@ -1,0 +1,47 @@
+name: b02-connectivity-oneoff
+on:
+  push:
+    branches:
+      - docs/bline-b02-semantic-ownership-register-v1-test
+permissions:
+  contents: write
+jobs:
+  patch-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout control branch
+        uses: actions/checkout@v4
+      - name: Save patcher
+        run: cp scripts/governance_acceptance/_B02_CONNECTIVITY_PATCH_ONCE.cjs /tmp/b02-patch.cjs
+      - name: Checkout B-02 target
+        uses: actions/checkout@v4
+        with:
+          ref: docs/bline-b02-semantic-ownership-register-v1
+          path: target
+          fetch-depth: 0
+      - name: Patch B-02 target
+        run: node /tmp/b02-patch.cjs target
+      - name: Commit and push B-02 target
+        id: commit
+        working-directory: target
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json docs/architecture/semantic_convergence/GEOX-B02-SEMANTIC-OWNERSHIP-REGISTER-AND-LINTER-V1.md scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+          if git diff --cached --quiet; then
+            echo "No patch changes"
+          else
+            git commit -m "docs(architecture): extend B-02 with runtime connectivity"
+            git push origin HEAD:docs/bline-b02-semantic-ownership-register-v1
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Execute B-02 linter on exact target head
+        working-directory: target
+        run: |
+          echo "B02_EXACT_HEAD $(git rev-parse HEAD)"
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs 2>&1 | tee /tmp/b02-linter.log
+          code=${PIPESTATUS[0]}
+          echo "B02_LINTER_EXIT_CODE $code"
+          cat /tmp/b02-linter.log
+          exit "$code"
