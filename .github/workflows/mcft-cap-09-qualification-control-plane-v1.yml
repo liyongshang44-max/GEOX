@@ -84,19 +84,25 @@ jobs:
           assert(g.store_generation?.formal_database === 'geox_mcft_cap09_s6_formal_t4r1_24h_v5', 'FORMAL_STORE_GENERATION_MISMATCH', g.store_generation);
           assert(registry.dependency_digest_strategy === DEPENDENCY_DIGEST_STRATEGY, 'DEPENDENCY_DIGEST_STRATEGY_MISMATCH', registry.dependency_digest_strategy);
           assert(registry.durable_anchors?.entries?.length === registry.entries.length, 'DURABLE_ANCHOR_CARDINALITY_MISMATCH', {anchors:registry.durable_anchors?.entries?.length, entries:registry.entries.length});
-          const frozenIds = ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS','EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T'];
-          for (const id of frozenIds) {
+          const carryForwardIds = ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS','LEGACY_AM19_PERSISTENT_24T'];
+          const v13ScopedIds = [...carryForwardIds, 'EA5E2_RUNTIME_DEPENDENCY_GRAPH'];
+          for (const id of carryForwardIds) {
             const row = current.decisions.find(x => x.check_id === id);
             assert(Boolean(row) && row.status === 'CARRY_FORWARD' && row.dependency_digest_match === true, 'FROZEN_DIGEST_CARRY_FORWARD_REQUIRED', row || {check_id:id, missing:true});
             assert(/^sha256:[0-9a-f]{64}$/.test(row?.dependency_digest || ''), 'DEPENDENCY_DIGEST_REQUIRED', row || {check_id:id, missing:true});
           }
+          const ea5e2 = current.decisions.find(x => x.check_id === 'EA5E2_RUNTIME_DEPENDENCY_GRAPH');
+          assert(Boolean(ea5e2), 'EA5E2_REQUALIFICATION_DECISION_REQUIRED', {check_id:'EA5E2_RUNTIME_DEPENDENCY_GRAPH', missing:true});
+          assert(ea5e2?.status === 'REQUALIFY' && ea5e2?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED' && ea5e2?.dependency_digest_match === false, 'EA5E2_CHANGED_DEPENDENCY_MUST_REQUALIFY', ea5e2);
+          assert((ea5e2?.changed_dependencies || []).includes('.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml'), 'EA5E2_WORKFLOW_CHANGE_MUST_BE_VISIBLE', ea5e2?.changed_dependencies || []);
+          assert((ea5e2?.changed_dependencies || []).includes('scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs'), 'EA5E2_BINDING_CHANGE_MUST_BE_VISIBLE', ea5e2?.changed_dependencies || []);
           const future = planApplicability({
             authority, registry, changedPaths:[REGISTRY_PATH],
             stage:'SUCCESSOR_SUBJECT_PRE_MERGE', generation:'v14',
             baseSha:authority.frozen_successor_subject_sha, headSha:head,
           });
           assert(future.status === 'PASS', 'V14_NA_PLAN_MUST_BE_STRUCTURALLY_PASS', {blockers:future.blockers, authority_errors:future.authority_errors, resolver_errors:future.resolver_errors});
-          for (const id of frozenIds) {
+          for (const id of v13ScopedIds) {
             const row = future.decisions.find(x => x.check_id === id);
             assert(Boolean(row) && row.status === 'NOT_APPLICABLE' && row.reason_code === 'GENERATION_NOT_APPLICABLE', 'V14_FROZEN_EVIDENCE_MUST_NOT_INHERIT_V13', row || {check_id:id, missing:true});
           }
@@ -107,14 +113,15 @@ jobs:
             generation_context:g,
             durable_anchor_count:registry.durable_anchors?.entries?.length ?? null,
             dependency_digest_strategy:DEPENDENCY_DIGEST_STRATEGY,
-            frozen_carry_forward_checks:frozenIds,
+            frozen_carry_forward_checks:carryForwardIds,
+            required_requalification_checks:['EA5E2_RUNTIME_DEPENDENCY_GRAPH'],
             current_decisions:current.decisions,
             current_resolver_summaries:current.resolver_summaries,
             current_authority_errors:current.authority_errors,
             current_resolver_errors:current.resolver_errors,
             future_decisions:future.decisions,
             failures,
-            v14_frozen_checks_not_applicable:frozenIds.every(id => {
+            v14_frozen_checks_not_applicable:v13ScopedIds.every(id => {
               const row = future.decisions.find(x => x.check_id === id);
               return Boolean(row) && row.status === 'NOT_APPLICABLE' && row.reason_code === 'GENERATION_NOT_APPLICABLE';
             }),
