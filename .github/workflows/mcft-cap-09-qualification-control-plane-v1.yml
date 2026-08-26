@@ -1,0 +1,338 @@
+name: mcft-cap-09-qualification-control-plane-v1
+
+on:
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json'
+      - 'scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs'
+      - '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'
+      - '.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  FROZEN_SUCCESSOR_SHA: '3bbf096ee5cb73e8e0e0251dc400733d6cab501f'
+
+concurrency:
+  group: mcft-cap09-qualification-control-plane-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  applicability-and-blocker-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact control-plane subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require frozen stacked predecessor and zero production bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            test "${{ github.event.pull_request.base.sha }}" = "$FROZEN_SUCCESSOR_SHA"
+          fi
+          test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
+          test -z "${FORMAL_RAW_S3_ACCESS_KEY_ID:-}"
+          test -z "${R2_ACCESS_KEY_ID:-}"
+
+      - name: Prove central applicability semantics
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+
+      - name: Prove generation, durable-anchor, and dependency-digest semantics
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const cp = require('node:child_process');
+          const {
+            AUTHORITY_PATH,
+            REGISTRY_PATH,
+            DEPENDENCY_DIGEST_STRATEGY,
+            planApplicability,
+          } = require(path.join(process.cwd(),'scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'));
+          const authority = JSON.parse(fs.readFileSync(AUTHORITY_PATH, 'utf8'));
+          const registry = JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf8'));
+          const head = cp.execFileSync('git', ['rev-parse','HEAD'], {encoding:'utf8'}).trim();
+          const changedPaths = cp.execFileSync('git', ['diff','--name-only', `${authority.frozen_successor_subject_sha}...${head}`], {encoding:'utf8'})
+            .split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+          const failures = [];
+          const assert = (condition, code, detail = null) => {
+            if (!condition) failures.push({code, detail});
+          };
+          const current = planApplicability({
+            authority, registry, changedPaths,
+            stage:'SUCCESSOR_SUBJECT_PRE_MERGE', generation:'v13',
+            baseSha:authority.frozen_successor_subject_sha, headSha:head,
+          });
+          const g = current.generation_context || {};
+          assert(current.status === 'PASS', 'CP2_CURRENT_PLAN_FAIL', {blockers:current.blockers, authority_errors:current.authority_errors, resolver_errors:current.resolver_errors});
+          assert(g.requested_generation === 'v13' && g.authoritative_generation === 'v13', 'V13_GENERATION_NOT_AUTHORIZED', g);
+          assert(g.authority_generation === 'geox_mcft_cap09_t4r1_actual_formal_store_authority_v3', 'AUTHORITY_GENERATION_MISMATCH', g.authority_generation);
+          assert(g.store_generation?.qualification_database === 'geox_mcft_cap09_s6_accel24t_am19_v13', 'QUALIFICATION_STORE_GENERATION_MISMATCH', g.store_generation);
+          assert(g.store_generation?.blocked_database === 'geox_mcft_cap09_s6_accel24t_am19_blocked_v13', 'BLOCKED_STORE_GENERATION_MISMATCH', g.store_generation);
+          assert(g.store_generation?.formal_database === 'geox_mcft_cap09_s6_formal_t4r1_24h_v5', 'FORMAL_STORE_GENERATION_MISMATCH', g.store_generation);
+          assert(registry.dependency_digest_strategy === DEPENDENCY_DIGEST_STRATEGY, 'DEPENDENCY_DIGEST_STRATEGY_MISMATCH', registry.dependency_digest_strategy);
+          assert(registry.durable_anchors?.entries?.length === registry.entries.length, 'DURABLE_ANCHOR_CARDINALITY_MISMATCH', {anchors:registry.durable_anchors?.entries?.length, entries:registry.entries.length});
+          const carryForwardIds = ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS'];
+          const requalificationIds = ['EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T'];
+          const v13ScopedIds = [...carryForwardIds, ...requalificationIds];
+          for (const id of carryForwardIds) {
+            const row = current.decisions.find(x => x.check_id === id);
+            assert(Boolean(row) && row.status === 'CARRY_FORWARD' && row.dependency_digest_match === true, 'FROZEN_DIGEST_CARRY_FORWARD_REQUIRED', row || {check_id:id, missing:true});
+            assert(/^sha256:[0-9a-f]{64}$/.test(row?.dependency_digest || ''), 'DEPENDENCY_DIGEST_REQUIRED', row || {check_id:id, missing:true});
+          }
+          const ea5e2 = current.decisions.find(x => x.check_id === 'EA5E2_RUNTIME_DEPENDENCY_GRAPH');
+          assert(Boolean(ea5e2), 'EA5E2_REQUALIFICATION_DECISION_REQUIRED', {check_id:'EA5E2_RUNTIME_DEPENDENCY_GRAPH', missing:true});
+          assert(ea5e2?.status === 'REQUALIFY' && ea5e2?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED' && ea5e2?.dependency_digest_match === false, 'EA5E2_CHANGED_DEPENDENCY_MUST_REQUALIFY', ea5e2);
+          assert((ea5e2?.changed_dependencies || []).includes('.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml'), 'EA5E2_WORKFLOW_CHANGE_MUST_BE_VISIBLE', ea5e2?.changed_dependencies || []);
+          assert((ea5e2?.changed_dependencies || []).includes('scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs'), 'EA5E2_BINDING_CHANGE_MUST_BE_VISIBLE', ea5e2?.changed_dependencies || []);
+          const persistent24 = current.decisions.find(x => x.check_id === 'LEGACY_AM19_PERSISTENT_24T');
+          assert(Boolean(persistent24), 'LEGACY_AM19_PERSISTENT_24T_REQUALIFICATION_DECISION_REQUIRED', {check_id:'LEGACY_AM19_PERSISTENT_24T', missing:true});
+          assert(persistent24?.status === 'REQUALIFY' && persistent24?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED' && persistent24?.dependency_digest_match === false, 'LEGACY_AM19_PERSISTENT_24T_WORKFLOW_CHANGE_MUST_REQUALIFY', persistent24);
+          assert((persistent24?.changed_dependencies || []).includes('.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml'), 'LEGACY_AM19_PERSISTENT_24T_WORKFLOW_CHANGE_MUST_BE_VISIBLE', persistent24?.changed_dependencies || []);
+          const future = planApplicability({
+            authority, registry, changedPaths:[REGISTRY_PATH],
+            stage:'SUCCESSOR_SUBJECT_PRE_MERGE', generation:'v14',
+            baseSha:authority.frozen_successor_subject_sha, headSha:head,
+          });
+          assert(future.status === 'PASS', 'V14_NA_PLAN_MUST_BE_STRUCTURALLY_PASS', {blockers:future.blockers, authority_errors:future.authority_errors, resolver_errors:future.resolver_errors});
+          for (const id of v13ScopedIds) {
+            const row = future.decisions.find(x => x.check_id === id);
+            assert(Boolean(row) && row.status === 'NOT_APPLICABLE' && row.reason_code === 'GENERATION_NOT_APPLICABLE', 'V14_FROZEN_EVIDENCE_MUST_NOT_INHERIT_V13', row || {check_id:id, missing:true});
+          }
+          const proof = {
+            status:failures.length === 0 ? 'PASS' : 'FAIL',
+            acceptance_id:'MCFT_CAP09_CP2_GENERATION_DEPENDENCY_DIGEST_V1',
+            head_sha:head,
+            generation_context:g,
+            durable_anchor_count:registry.durable_anchors?.entries?.length ?? null,
+            dependency_digest_strategy:DEPENDENCY_DIGEST_STRATEGY,
+            frozen_carry_forward_checks:carryForwardIds,
+            required_requalification_checks:requalificationIds,
+            current_decisions:current.decisions,
+            current_resolver_summaries:current.resolver_summaries,
+            current_authority_errors:current.authority_errors,
+            current_resolver_errors:current.resolver_errors,
+            future_decisions:future.decisions,
+            failures,
+            v14_frozen_checks_not_applicable:v13ScopedIds.every(id => {
+              const row = future.decisions.find(x => x.check_id === id);
+              return Boolean(row) && row.status === 'NOT_APPLICABLE' && row.reason_code === 'GENERATION_NOT_APPLICABLE';
+            }),
+            runtime_mutation:false, production_workflow_activation:false,
+            formal_database_mutation:false, provider_request:false,
+            graduation_effect:false, mcft_cap09_completed:false,
+          };
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_CP2_GENERATION_DEPENDENCY_DIGEST_V1_RESULT.json', JSON.stringify(proof,null,2)+'\n');
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_CP2_CURRENT_PLAN_DEBUG.json', JSON.stringify(current,null,2)+'\n');
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_CP2_FUTURE_PLAN_DEBUG.json', JSON.stringify(future,null,2)+'\n');
+          process.stdout.write(JSON.stringify(proof,null,2)+'\n');
+          if (failures.length) process.exitCode = 1;
+
+      - name: Resolve immutable qualification evidence references
+        if: github.event_name == 'pull_request'
+        shell: node {0}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const registryPath = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json';
+          const outPath = 'acceptance-output/MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json';
+          const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+          const anchors = new Map((registry.durable_anchors?.entries || []).map(x => [x.evidence_id, x]));
+          const requalification = registry.requalification_evidence;
+          if (!requalification || requalification.binding_strategy !== 'MCFT_CAP09_REQUALIFICATION_RUN_BINDING_V1') throw new Error('REQUALIFICATION_EVIDENCE_REGISTRY_MISSING_OR_UNSUPPORTED');
+          if (!Array.isArray(requalification.entries) || requalification.entries.length === 0) throw new Error('REQUALIFICATION_EVIDENCE_REQUIRED');
+          const requalificationAnchors = new Map((requalification.durable_anchors?.entries || []).map(x => [x.evidence_id, x]));
+          const token = process.env.GITHUB_TOKEN;
+          const repo = process.env.GITHUB_REPOSITORY;
+          if (!token || !repo) throw new Error('GITHUB_ACTIONS_READ_CONTEXT_REQUIRED');
+
+          async function apiMaybe(endpoint) {
+            const response = await fetch(`https://api.github.com/repos/${repo}${endpoint}`, {
+              headers: { Authorization:`Bearer ${token}`, Accept:'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' },
+            });
+            if (response.status === 404 || response.status === 410) return null;
+            if (!response.ok) throw new Error(`GITHUB_REF_QUERY_FAILED:${endpoint}:${response.status}`);
+            return response.json();
+          }
+
+          async function main() {
+            const results = [];
+            for (const entry of registry.entries || []) {
+              const anchor = anchors.get(entry.evidence_id);
+              if (!anchor || anchor.run_id !== entry.run_id || (anchor.artifact_id ?? null) !== (entry.artifact_id ?? null) || (anchor.artifact_digest ?? null) !== (entry.artifact_digest ?? null)) {
+                throw new Error(`DURABLE_ANCHOR_MISMATCH:${entry.evidence_id}`);
+              }
+              const run = await apiMaybe(`/actions/runs/${entry.run_id}`);
+              if (run) {
+                if (run.conclusion !== 'success') throw new Error(`EVIDENCE_RUN_NOT_SUCCESS:${entry.evidence_id}:${run.conclusion}`);
+                if (run.head_sha !== entry.subject_sha) throw new Error(`EVIDENCE_RUN_SUBJECT_MISMATCH:${entry.evidence_id}:${run.head_sha}`);
+                if (run.name !== entry.workflow_name) throw new Error(`EVIDENCE_RUN_WORKFLOW_MISMATCH:${entry.evidence_id}:${run.name}`);
+              }
+              let artifactLiveResolved = false;
+              let artifactExpired = false;
+              if (entry.evidence_class === 'IMMUTABLE_WORKFLOW_ARTIFACT') {
+                const artifact = await apiMaybe(`/actions/artifacts/${entry.artifact_id}`);
+                if (artifact) {
+                  artifactExpired = artifact.expired === true;
+                  if (artifact.digest !== entry.artifact_digest) throw new Error(`EVIDENCE_ARTIFACT_DIGEST_MISMATCH:${entry.evidence_id}:${artifact.digest}`);
+                  if (artifact.workflow_run?.id !== entry.run_id) throw new Error(`EVIDENCE_ARTIFACT_RUN_MISMATCH:${entry.evidence_id}:${artifact.workflow_run?.id}`);
+                  artifactLiveResolved = !artifactExpired;
+                }
+              } else if (entry.evidence_class === 'IMMUTABLE_WORKFLOW_RUN') {
+                if (entry.artifact_id !== null || entry.artifact_digest !== null) throw new Error(`RUN_ONLY_EVIDENCE_MUST_NOT_CLAIM_ARTIFACT:${entry.evidence_id}`);
+              } else {
+                throw new Error(`UNKNOWN_EVIDENCE_CLASS:${entry.evidence_id}:${entry.evidence_class}`);
+              }
+              results.push({
+                evidence_id:entry.evidence_id, check_id:entry.check_id,
+                durable_anchor_resolved:true, run_id:entry.run_id,
+                live_run_resolved:Boolean(run), artifact_id:entry.artifact_id,
+                artifact_live_resolved:artifactLiveResolved,
+                artifact_expired_or_unavailable:entry.artifact_id !== null && !artifactLiveResolved,
+                artifact_expired:artifactExpired, artifact_digest:entry.artifact_digest,
+              });
+            }
+
+            const requalificationResults = [];
+            for (const entry of requalification.entries) {
+              const anchor = requalificationAnchors.get(entry.evidence_id);
+              const snapshot = anchor?.run_snapshot || null;
+              if (!anchor || anchor.run_id !== entry.run_id || !snapshot) throw new Error(`REQUALIFICATION_DURABLE_ANCHOR_MISMATCH:${entry.evidence_id}`);
+              if (entry.evidence_class !== 'IMMUTABLE_WORKFLOW_RUN' || entry.artifact_id !== null || entry.artifact_digest !== null) throw new Error(`REQUALIFICATION_RUN_ONLY_EVIDENCE_REQUIRED:${entry.evidence_id}`);
+              const run = await apiMaybe(`/actions/runs/${entry.run_id}`);
+              if (!run) throw new Error(`REQUALIFICATION_RUN_UNAVAILABLE:${entry.evidence_id}`);
+              if (run.conclusion !== 'success' || entry.run_conclusion !== 'success') throw new Error(`REQUALIFICATION_RUN_NOT_SUCCESS:${entry.evidence_id}:${run.conclusion}`);
+              if (run.head_sha !== entry.subject_sha || snapshot.head_sha !== entry.subject_sha) throw new Error(`REQUALIFICATION_RUN_SUBJECT_MISMATCH:${entry.evidence_id}:${run.head_sha}`);
+              if (run.name !== entry.workflow_name || snapshot.workflow_name !== entry.workflow_name) throw new Error(`REQUALIFICATION_RUN_WORKFLOW_MISMATCH:${entry.evidence_id}:${run.name}`);
+              if (run.path !== entry.workflow_path || snapshot.workflow_path !== entry.workflow_path) throw new Error(`REQUALIFICATION_RUN_PATH_MISMATCH:${entry.evidence_id}:${run.path}`);
+              if (run.event !== 'pull_request' || snapshot.event !== 'pull_request') throw new Error(`REQUALIFICATION_RUN_EVENT_MISMATCH:${entry.evidence_id}:${run.event}`);
+              const runBaseSha = run.pull_requests?.find(pr => pr?.base?.sha)?.base?.sha ?? null;
+              if (runBaseSha !== registry.frozen_subject_sha || snapshot.base_sha !== registry.frozen_subject_sha) throw new Error(`REQUALIFICATION_RUN_BASE_MISMATCH:${entry.evidence_id}:${runBaseSha}`);
+              requalificationResults.push({
+                evidence_id:entry.evidence_id, check_id:entry.check_id, run_id:entry.run_id,
+                live_run_resolved:true, run_conclusion:run.conclusion, head_sha:run.head_sha,
+                base_sha:runBaseSha, workflow_name:run.name, workflow_path:run.path, event:run.event,
+                durable_anchor_resolved:true,
+              });
+            }
+
+            const proof = {
+              status:'PASS', acceptance_id:'MCFT_CAP09_IMMUTABLE_EVIDENCE_REFS_V1',
+              frozen_subject_sha:registry.frozen_subject_sha, evidence_count:results.length,
+              requalification_evidence_count:requalificationResults.length,
+              all_durable_anchor_refs_resolvable:results.every(x => x.durable_anchor_resolved),
+              all_live_refs_match_when_present:true,
+              all_requalification_live_refs_match:requalificationResults.length === requalification.entries.length,
+              live_source_expiry_tolerated_only_with_durable_anchor:true,
+              runtime_mutation:false, production_workflow_activation:false,
+              formal_database_mutation:false, provider_request:false,
+              graduation_effect:false, mcft_cap09_completed:false, results,
+              requalification_results:requalificationResults,
+            };
+            fs.mkdirSync(path.dirname(outPath),{recursive:true});
+            fs.writeFileSync(outPath,JSON.stringify(proof,null,2)+'\n');
+            process.stdout.write(JSON.stringify(proof,null,2)+'\n');
+          }
+          main().catch(error => {
+            fs.mkdirSync(path.dirname(outPath),{recursive:true});
+            fs.writeFileSync(outPath,JSON.stringify({status:'FAIL',error:error instanceof Error?error.message:String(error)},null,2)+'\n');
+            console.error(error); process.exitCode=1;
+          });
+
+      - name: Generate exact PR applicability plan
+        if: github.event_name == 'pull_request'
+        run: >-
+          node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+          --base '${{ github.event.pull_request.base.sha }}'
+          --head '${{ github.event.pull_request.head.sha }}'
+          --generation v13
+          --stage SUCCESSOR_SUBJECT_PRE_MERGE
+          --out acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json
+
+      - name: Enumerate all blockers without fail-fast
+        if: github.event_name == 'pull_request'
+        run: >-
+          node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+          --base '${{ github.event.pull_request.base.sha }}'
+          --head '${{ github.event.pull_request.head.sha }}'
+          --generation v13
+          --stage SUCCESSOR_SUBJECT_PRE_MERGE
+          --out acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json
+
+      - name: Validate control-plane machine proof
+        if: github.event_name == 'pull_request'
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+          const proof = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json','utf8'));
+          const cp2 = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CP2_GENERATION_DEPENDENCY_DIGEST_V1_RESULT.json','utf8'));
+          const evidence = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json','utf8'));
+          const plan = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json','utf8'));
+          const preflight = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json','utf8'));
+          if (proof.status !== 'PASS' || proof.regex_fallback_used !== false || proof.unknown_changed_path_fails_closed !== true) throw new Error('CONTROL_PLANE_SELFTEST_NOT_PASS');
+          if (cp2.status !== 'PASS' || cp2.v14_frozen_checks_not_applicable !== true) throw new Error('CP2_GENERATION_DIGEST_PROOF_NOT_PASS');
+          if (evidence.status !== 'PASS' || evidence.all_durable_anchor_refs_resolvable !== true || evidence.all_live_refs_match_when_present !== true || evidence.all_requalification_live_refs_match !== true || evidence.requalification_evidence_count < 1) throw new Error('IMMUTABLE_DURABLE_EVIDENCE_NOT_RESOLVED');
+          if (plan.status !== 'PASS' || plan.generation !== 'v13' || plan.unknown_changed_paths.length !== 0 || plan.resolver_errors.length !== 0 || plan.authority_errors.length !== 0) throw new Error('CONTROL_PLANE_PLAN_NOT_PASS');
+          const control = plan.decisions.find(x => x.check_id === 'CONTROL_PLANE_INTEGRITY');
+          if (!control || control.status !== 'REQUALIFY') throw new Error('CONTROL_PLANE_SELF_CHANGE_MUST_REQUALIFY');
+          for (const id of ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS']) {
+            const row = plan.decisions.find(x => x.check_id === id);
+            if (!row || row.status !== 'CARRY_FORWARD' || row.dependency_digest_match !== true) throw new Error(`FROZEN_EVIDENCE_MUST_CARRY_FORWARD_WITH_DIGEST:${id}:${row?.status}`);
+          }
+          const ea5e2 = plan.decisions.find(x => x.check_id === 'EA5E2_RUNTIME_DEPENDENCY_GRAPH');
+          if (!ea5e2) throw new Error('EA5E2_APPLICABILITY_DECISION_REQUIRED');
+          const ea5e2WorkflowChanged = (ea5e2.changed_dependencies || []).includes('.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml');
+          if (ea5e2WorkflowChanged) {
+            if (ea5e2.status !== 'REQUALIFY') throw new Error(`EA5E2_WORKFLOW_CHANGE_MUST_REQUALIFY:${ea5e2.status}`);
+          } else if (ea5e2.status !== 'CARRY_FORWARD' || ea5e2.dependency_digest_match !== true) {
+            throw new Error(`EA5E2_UNCHANGED_MUST_CARRY_FORWARD_WITH_DIGEST:${ea5e2.status}`);
+          }
+          const persistent24 = plan.decisions.find(x => x.check_id === 'LEGACY_AM19_PERSISTENT_24T');
+          if (!persistent24) throw new Error('LEGACY_AM19_PERSISTENT_24T_APPLICABILITY_DECISION_REQUIRED');
+          const persistentWorkflowChanged = (persistent24.changed_dependencies || []).includes('.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml');
+          if (persistentWorkflowChanged) {
+            if (persistent24.status !== 'REQUALIFY') throw new Error(`LEGACY_AM19_PERSISTENT_24T_WORKFLOW_CHANGE_MUST_REQUALIFY:${persistent24.status}`);
+          } else if (persistent24.status !== 'CARRY_FORWARD' || persistent24.dependency_digest_match !== true) {
+            throw new Error(`LEGACY_AM19_PERSISTENT_24T_UNCHANGED_MUST_CARRY_FORWARD_WITH_DIGEST:${persistent24.status}`);
+          }
+          if (preflight.status !== 'PASS' || preflight.generation !== 'v13' || preflight.non_fail_fast !== true || preflight.counts.blocker_count !== 0) throw new Error('ALL_BLOCKERS_PREFLIGHT_NOT_PASS');
+          for (const source of [proof, cp2, evidence, plan, preflight]) {
+            const effects = source.non_effects || source;
+            for (const key of ['runtime_mutation','production_workflow_activation','formal_database_mutation','provider_request','graduation_effect','mcft_cap09_completed']) {
+              if (effects[key] !== false) throw new Error(`CONTROL_PLANE_NON_EFFECT_VIOLATION:${key}`);
+            }
+          }
+
+      - name: Upload applicability and blocker inventory
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-qualification-control-plane-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_CP2_GENERATION_DEPENDENCY_DIGEST_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_CP2_CURRENT_PLAN_DEBUG.json
+            acceptance-output/MCFT_CAP_09_CP2_FUTURE_PLAN_DEBUG.json
+            acceptance-output/MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json
+            acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
