@@ -1,4 +1,4 @@
-name: b04a-physical-qc-oneoff
+name: b04b1-ingress-physical-qc-oneoff
 on:
   push:
     branches:
@@ -6,13 +6,13 @@ on:
 permissions:
   contents: read
 jobs:
-  exact-head-physical-qc:
+  exact-head-ingress-physical-qc:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout exact B-04a target head
+      - name: Checkout exact B-04b1 target head
         uses: actions/checkout@v4
         with:
-          ref: 3ceb9ec68c947624bde2d547bf5ce9f55c22f796
+          ref: 32b1a635dfc4be1bb0012d7d90ac7e188868e406
           fetch-depth: 0
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -29,9 +29,13 @@ jobs:
         run: pnpm --filter @geox/server run typecheck
       - name: B-04a physical QC fixtures
         run: pnpm --filter @geox/server exec node --import tsx --test src/evidence/physical_qc_v1.test.ts
+      - name: B-04b1 ingress snapshot fixtures
+        run: pnpm --filter @geox/server exec node --import tsx --test src/evidence/ingress_physical_qc_snapshot_v1.test.ts
+      - name: B-04b1 observation persistence fixtures
+        run: pnpm --filter @geox/server exec node --import tsx --test src/services/device_observation_ingress_physical_qc_v1.test.ts
       - name: B-02 semantic contract linter
         run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
       - name: Exact-head marker
         run: |
-          echo "B04A_EXACT_HEAD $(git rev-parse HEAD)"
-          echo "B04A_PHYSICAL_QC_PASS"
+          echo "B04B1_EXACT_HEAD $(git rev-parse HEAD)"
+          echo "B04B1_INGRESS_PHYSICAL_QC_PASS"
