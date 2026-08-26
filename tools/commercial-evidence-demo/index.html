@@ -53,10 +53,7 @@
             <span><b>候选动作</b> 灌溉 / 推迟 / 暂不判断 <code>IRRIGATE / DELAY / ABSTAIN</code></span>
           </div>
         </div>
-        <div class="decision-question">
-          <p>客户真正需要的，不是再看一个天气数字。</p>
-          <strong>19:00 做这个决定的时候，我们到底已经知道什么？</strong>
-        </div>
+        <div class="decision-question"><p>客户真正需要的，不是再看一个天气数字。</p><strong>19:00 做这个决定的时候，我们到底已经知道什么？</strong></div>
       </div>
       <div class="callout executive-callout"><strong>Demo Input：</strong>20 mm、25 mm、田块和时间均用于展示决策流程，不构成真实田块的农艺建议。真正建议必须来自客户授权的数据、模型、规则和农艺知识。</div>
     </section>
@@ -64,102 +61,39 @@
     <section id="runtime-demo" class="panel core-panel proof-panel" data-section="2">
       <div class="section-heading"><span>02</span><div><p class="eyebrow">同一个答案，可能有完全不同的资格</p><h2>两个系统都说“明天预计降雨 25 mm”，唯一变化是这条信息什么时候真正可用。</h2></div></div>
       <div class="ab-decision-grid">
-        <article class="ab-card eligible">
-          <p class="eyebrow">CASE A</p>
-          <h3>18:43 已经可用</h3>
-          <div class="big-number">明天降雨 25 mm</div>
-          <dl><div><dt>决策时间</dt><dd>19:00</dd></div><div><dt>资格</dt><dd><span class="badge good" title="ELIGIBLE · 可以使用">可以参与判断 <code>ELIGIBLE</code></span></dd></div></dl>
-        </article>
-        <article class="ab-card ineligible">
-          <p class="eyebrow">CASE B</p>
-          <h3>19:17 才变得可用</h3>
-          <div class="big-number">明天降雨 25 mm</div>
-          <dl><div><dt>决策时间</dt><dd>19:00</dd></div><div><dt>资格</dt><dd><span class="badge blocked" title="INELIGIBLE · 不得回填">不能事后回填 <code>INELIGIBLE</code></span></dd></div></dl>
-        </article>
+        <article class="ab-card eligible"><p class="eyebrow">CASE A</p><h3>18:43 已经可用</h3><div class="big-number">明天降雨 25 mm</div><dl><div><dt>决策时间</dt><dd>19:00</dd></div><div><dt>资格</dt><dd><span class="badge good" title="ELIGIBLE · 可以使用">可以参与判断 <code>ELIGIBLE</code></span></dd></div></dl></article>
+        <article class="ab-card ineligible"><p class="eyebrow">CASE B</p><h3>19:17 才变得可用</h3><div class="big-number">明天降雨 25 mm</div><dl><div><dt>决策时间</dt><dd>19:00</dd></div><div><dt>资格</dt><dd><span class="badge blocked" title="INELIGIBLE · 不得回填">不能事后回填 <code>INELIGIBLE</code></span></dd></div></dl></article>
       </div>
-      <div class="commercial-meaning">
-        <p class="eyebrow">GEOX 的第一层价值</p>
-        <strong>做决定时真正已经拥有的信息，可以使用；后来才出现的信息，不能倒流回去污染历史决策。</strong>
-      </div>
-
+      <div class="commercial-meaning"><p class="eyebrow">GEOX 的第一层价值</p><strong>做决定时真正已经拥有的信息，可以使用；后来才出现的信息，不能倒流回去污染历史决策。</strong></div>
       <div class="runtime-lab">
-        <div class="runtime-lab-heading">
-          <div><p class="eyebrow">真实规范选择器 · 每次点击重新执行</p><h3>不是所有“数据晚到”都会直接停止：有合法替代证据时可以明确降级继续。</h3></div>
-          <span class="pill muted">只读 · 0 次数据提供方请求 · 0 次数据库写入</span>
-        </div>
-        <div class="case-buttons" id="runtimeCaseButtons">
-          <button type="button" data-case-id="healthy_exact_provider_pair" aria-label="NORMAL">正常</button>
-          <button type="button" data-case-id="provider_late" aria-label="PROVIDER LATE">数据晚到</button>
-          <button type="button" data-case-id="source_conflict" aria-label="SOURCE CONFLICT">来源冲突</button>
-          <button type="button" data-case-id="missing_evidence" aria-label="MISSING EVIDENCE">证据缺失</button>
-        </div>
+        <div class="runtime-lab-heading"><div><p class="eyebrow">真实规范选择器 · 每次点击重新执行</p><h3>不是所有“数据晚到”都会直接停止：有合法替代证据时可以明确降级继续。</h3></div><span class="pill muted">只读 · 0 次数据提供方请求 · 0 次数据库写入</span></div>
+        <div class="case-buttons" id="runtimeCaseButtons"><button type="button" data-case-id="healthy_exact_provider_pair" aria-label="NORMAL">正常</button><button type="button" data-case-id="provider_late" aria-label="PROVIDER LATE">数据晚到</button><button type="button" data-case-id="source_conflict" aria-label="SOURCE CONFLICT">来源冲突</button><button type="button" data-case-id="missing_evidence" aria-label="MISSING EVIDENCE">证据缺失</button></div>
         <div id="interactiveCaseStatus" class="status-line muted">选择一个案例，Demo 服务会重新执行仓库现有规范选择器。</div>
         <div id="interactiveCaseResult" class="interactive-result"></div>
-        <details class="machine-proof-details">
-          <summary>查看本次机器证据</summary>
-          <pre id="interactiveMachineProof">尚未执行。</pre>
-        </details>
+        <details class="machine-proof-details"><summary>查看本次机器证据</summary><pre id="interactiveMachineProof">尚未执行。</pre></details>
       </div>
-      <details class="engineering-details compact-engineering">
-        <summary><span>查看规范 A/B 技术实验</span><small>相同 rainfall/ET0 payload · 只改变 availability</small></summary>
-        <div class="engineering-details-body">
-          <div class="comparison-table-wrap flagship-table">
-            <table class="comparison-table">
-              <thead><tr><th>情况</th><th>数据描述时间</th><th>真正进入系统时间</th><th>GEOX 判断</th><th>系统行为</th></tr></thead>
-              <tbody id="runtimeComparison"></tbody>
-            </table>
-          </div>
-          <div id="runtimeCallout" class="callout executive-callout"></div>
-        </div>
-      </details>
+      <details class="engineering-details compact-engineering"><summary><span>查看规范 A/B 技术实验</span><small>相同 rainfall/ET0 payload · 只改变 availability</small></summary><div class="engineering-details-body"><div class="comparison-table-wrap flagship-table"><table class="comparison-table"><thead><tr><th>情况</th><th>数据描述时间</th><th>真正进入系统时间</th><th>GEOX 判断</th><th>系统行为</th></tr></thead><tbody id="runtimeComparison"></tbody></table></div><div id="runtimeCallout" class="callout executive-callout"></div></div></details>
     </section>
 
     <section id="workflow" class="panel core-panel" data-section="3">
       <div class="section-heading"><span>03</span><div><p class="eyebrow">一次完整的 GEOX 决策过程</p><h2>GEOX 不替换客户现有系统；它把已有信息组织成可以检查、审批和追溯的决策过程。</h2></div></div>
       <div class="callout executive-callout"><strong>系统边界：</strong>以下是组合客户流程演示。Temporal Decision Assurance 与 Commercial Control Loop 均有独立软件/工程证据，但当前不宣称它们已经在同一个真实客户现场完成统一 production qualification。</div>
-
-      <div class="problem-grid compact-statements">
-        <article class="statement safe"><p class="eyebrow">10:00｜数据进入</p><h3>先检查输入能不能用于当前决策</h3><p>田块、土壤状态、天气信息、最近灌溉记录、作物上下文进入系统。GEOX 检查 scope、时间可用性、质量、冲突和关键缺口。</p></article>
-        <article class="statement danger"><p class="eyebrow">10:01｜计算完成</p><h3>建议候选：灌溉 20 mm</h3><p>演示中发现关键天气证据超过当前允许窗口，且此时<strong>没有满足本次审批条件的合法替代证据</strong>，因此暂不进入审批。计算结果可以保留，但不能被包装成已经可执行的决定。</p></article>
-      </div>
-
-      <div class="problem-grid compact-statements">
-        <article class="statement safe"><p class="eyebrow">10:04｜新证据进入</p><h3>重新检查，而不是自动“翻案”历史</h3><p>新天气信息到达后，GEOX 对当前建议重新检查：田块正确、时间条件满足、关键证据已更新、没有阻断级冲突。新证据不会被倒填成 10:01 已知。</p></article>
-        <article class="statement safe"><p class="eyebrow">10:05｜当前状态</p><h3>可以提交人工审核</h3><p>当条件重新满足以后，GEOX 知道什么时候可以继续。这里的“继续”是进入人工审核，不等于自动执行。</p></article>
-      </div>
-
-      <div class="decision-card">
-        <div class="decision-card-main"><p class="eyebrow">10:08｜经理决定</p><h3>灌溉决策</h3><div class="decision-facts"><span><b>建议候选</b> 20 mm <em>演示输入</em></span><span><b>当前状态</b> 可以提交人工审核</span><span><b>主要依据</b> 土壤状态 / 天气情况 / 最近灌溉记录 / 当前作物上下文</span></div></div>
-        <div class="decision-question"><p>当前软件审批动作：</p><strong>批准 · 拒绝 · 退回补充</strong><p><code>APPROVE / REJECT / RETURN</code></p></div>
-      </div>
+      <div class="problem-grid compact-statements"><article class="statement safe"><p class="eyebrow">10:00｜数据进入</p><h3>先检查输入能不能用于当前决策</h3><p>田块、土壤状态、天气信息、最近灌溉记录、作物上下文进入系统。GEOX 检查 scope、时间可用性、质量、冲突和关键缺口。</p></article><article class="statement danger"><p class="eyebrow">10:01｜计算完成</p><h3>建议候选：灌溉 20 mm</h3><p>演示中发现关键天气证据超过当前允许窗口，且此时<strong>没有满足本次审批条件的合法替代证据</strong>，因此暂不进入审批。计算结果可以保留，但不能被包装成已经可执行的决定。</p></article></div>
+      <div class="problem-grid compact-statements"><article class="statement safe"><p class="eyebrow">10:04｜新证据进入</p><h3>重新检查，而不是自动“翻案”历史</h3><p>新天气信息到达后，GEOX 对当前建议重新检查：田块正确、时间条件满足、关键证据已更新、没有阻断级冲突。新证据不会被倒填成 10:01 已知。</p></article><article class="statement safe"><p class="eyebrow">10:05｜当前状态</p><h3>可以提交人工审核</h3><p>当条件重新满足以后，GEOX 知道什么时候可以继续。这里的“继续”是进入人工审核，不等于自动执行。</p></article></div>
+      <div class="decision-card"><div class="decision-card-main"><p class="eyebrow">10:08｜经理决定</p><h3>灌溉决策</h3><div class="decision-facts"><span><b>建议候选</b> 20 mm <em>演示输入</em></span><span><b>当前状态</b> 可以提交人工审核</span><span><b>主要依据</b> 土壤状态 / 天气情况 / 最近灌溉记录 / 当前作物上下文</span></div></div><div class="decision-question"><p>当前软件审批动作：</p><strong>批准 · 拒绝 · 退回补充</strong><p><code>APPROVE / REJECT / RETURN</code></p></div></div>
       <div class="commercial-meaning"><p class="eyebrow">责任边界</p><strong>模型负责给出候选答案；人负责决定是否采用。GEOX 记录谁在什么时候，对哪个田块，依据哪一组当时可用的信息做了决定。</strong></div>
-
-      <div class="problem-grid compact-statements">
-        <article class="statement safe"><p class="eyebrow">10:10｜进入作业流程</p><h3>Approval → Operation Plan → 授权后创建 Action Task</h3><p>审批通过以后，GEOX 可以先形成作业计划。只有在独立权限与执行条件满足后，后续流程才从已批准的作业计划创建执行任务。<strong>审批通过本身不会自动触发设备动作。</strong></p></article>
-        <article class="statement safe"><p class="eyebrow">推荐集成方式</p><h3>客户现有系统继续负责真实执行</h3><p>GEOX 批准后的作业信息 → 客户灌溉系统 / FMIS / 人工流程 → 真实执行。设备直连需要项目级适配、权限、作用范围、故障安全和现场验收。</p></article>
-      </div>
-
-      <div class="problem-grid compact-statements">
-        <article class="statement safe"><p class="eyebrow">11:08｜执行回执返回</p><h3>先确认“实际发生了什么”</h3><p>演示：计划 20.0 mm，实际 18.7 mm；10:21 开始，11:08 结束，回执已收到。18.7 mm 与时间同样属于 Demo Input，不是客户生产记录。</p></article>
-        <article class="statement safe"><p class="eyebrow">11:09｜计划与实际比较</p><h3>20.0 mm → 18.7 mm → 偏差 -1.3 mm</h3><p>实际执行与计划不一致时，差异不会被隐藏，而是进入正式记录和后续验收上下文。</p></article>
-      </div>
-
-      <div class="decision-card">
-        <div class="decision-card-main"><p class="eyebrow">11:10｜验收记录</p><h3>作业执行信息已记录；农业效果尚不能验证</h3><div class="decision-facts"><span><b>执行回执</b> 已收到</span><span><b>计划与实际</b> 已比较</span><span><b>关键执行信息</b> 已记录</span><span><b>作业后效果证据</b> 尚未获得</span></div></div>
-        <div class="decision-question"><strong>执行完成 ≠ 农业效果已经被证明。</strong><p>新的土壤、作物或其他现场观测以后进入系统时，可以继续关联到这次作业；是否形成正式验收结论仍由 acceptance 层的证据规则决定。</p></div>
-      </div>
+      <div class="problem-grid compact-statements"><article class="statement safe"><p class="eyebrow">10:10｜进入作业流程</p><h3>Approval → Operation Plan → 授权后创建 Action Task</h3><p>审批通过以后，GEOX 可以先形成作业计划。只有在独立权限与执行条件满足后，后续流程才从已批准的作业计划创建执行任务。<strong>审批通过本身不会自动触发设备动作。</strong></p></article><article class="statement safe"><p class="eyebrow">推荐集成方式</p><h3>客户现有系统继续负责真实执行</h3><p>GEOX 批准后的作业信息 → 客户灌溉系统 / FMIS / 人工流程 → 真实执行。设备直连需要项目级适配、权限、作用范围、故障安全和现场验收。</p></article></div>
+      <div class="problem-grid compact-statements"><article class="statement safe"><p class="eyebrow">11:08｜执行回执返回</p><h3>先确认“实际发生了什么”</h3><p>演示：计划 20.0 mm，实际 18.7 mm；10:21 开始，11:08 结束，回执已收到。18.7 mm 与时间同样属于 Demo Input，不是客户生产记录。</p></article><article class="statement safe"><p class="eyebrow">11:09｜计划与实际比较</p><h3>20.0 mm → 18.7 mm → 偏差 -1.3 mm</h3><p>实际执行与计划不一致时，差异不会被隐藏，而是进入正式记录和后续验收上下文。</p></article></div>
+      <div class="decision-card"><div class="decision-card-main"><p class="eyebrow">11:10｜验收记录</p><h3>作业执行信息已记录；农业效果尚不能验证</h3><div class="decision-facts"><span><b>执行回执</b> 已收到</span><span><b>计划与实际</b> 已比较</span><span><b>关键执行信息</b> 已记录</span><span><b>作业后效果证据</b> 尚未获得</span></div></div><div class="decision-question"><strong>执行完成 ≠ 农业效果已经被证明。</strong><p>新的土壤、作物或其他现场观测以后进入系统时，可以继续关联到这次作业；是否形成正式验收结论仍由 acceptance 层的证据规则决定。</p></div></div>
     </section>
 
     <section id="decision-trace" class="panel core-panel" data-section="4">
       <div class="section-heading"><span>04</span><div><p class="eyebrow">几个月后重新打开这次决策</p><h2>不只回答“系统当时算了什么”，还要回答“当时为什么允许或不允许继续”。</h2></div></div>
       <div class="comparison-table-wrap"><table class="comparison-table"><thead><tr><th>时间</th><th>记录</th></tr></thead><tbody><tr><td>10:00</td><td>数据进入</td></tr><tr><td>10:01</td><td>得到 20 mm 建议候选；发现关键天气证据需要更新；流程暂停</td></tr><tr><td>10:04</td><td>新证据进入</td></tr><tr><td>10:05</td><td>当前建议满足进入人工审核的条件</td></tr><tr><td>10:08</td><td>农场经理批准</td></tr><tr><td>10:10</td><td>形成作业计划；授权后可进入执行任务流程</td></tr><tr><td>11:08</td><td>执行回执返回</td></tr><tr><td>11:09</td><td>计划与实际完成比较</td></tr><tr><td>11:10</td><td>形成当前证据范围内的验收记录</td></tr></tbody></table></div>
       <div class="commercial-meaning"><p class="eyebrow">以后仍然可以回答</p><strong>当时有哪些信息？哪些信息不能用？为什么曾经阻断？什么变化让流程继续？谁批准？计划做什么？实际做了什么？执行证据在哪里？后续是否有足够证据证明效果？</strong></div>
-
       <div id="traceFlow" class="flow compact"></div>
       <div class="trace-loader primary-evidence-loader"><p class="eyebrow">历史持久化工程资格数据 · Neon · 只读</p><h3>系统在决策当时，究竟真正知道什么</h3><p class="footnote">下面来自已完成的一次历史 MCFT 工程资格运行。Demo 只读查询 Neon；其中部分天气/ET0 为 accelerated engineering fixture，因此不会被包装成生产实时数据或最终 Formal closure。</p><div class="input-row"><button id="refreshMcftRuntimeEvidence" type="button">刷新真实运行证据</button></div></div>
-      <div id="mcftRuntimeStatus" class="status-line muted">正在读取历史资格数据...</div>
-      <div id="mcftRuntimeAnswer" class="callout executive-callout" hidden></div>
-      <div id="mcftRuntimeObjects" class="trace-grid executive-trace-grid"></div>
+      <div id="mcftRuntimeStatus" class="status-line muted">正在读取历史资格数据...</div><div id="mcftRuntimeAnswer" class="callout executive-callout" hidden></div><div id="mcftRuntimeObjects" class="trace-grid executive-trace-grid"></div>
       <div class="callout executive-callout"><strong>证据等级提醒：</strong>这里证明的是持久化工程资格行为，不是 MCFT-CAP-09 最终连续 Formal O00–O23 已经完成。</div>
     </section>
 
@@ -168,7 +102,35 @@
       <div class="capability-grid"><article class="capability-card proven"><p class="eyebrow">01｜少做一次不该做的操作</p><p>避免让过期、缺失或冲突的信息直接推动真实作业。</p></article><article class="capability-card proven"><p class="eyebrow">02｜少让管理者自己拼五个系统</p><p>先排除不能使用的信息，并把缺口与冲突暴露出来。</p></article><article class="capability-card proven"><p class="eyebrow">03｜决策更容易解释</p><p>记录为什么做、谁批准、用了什么、排除了什么，以及实际执行了什么。</p></article><article class="capability-card proven"><p class="eyebrow">04｜远程管理更可控</p><p>管理者可以沿着计划、批准、任务、回执、验收查看链路，而不是只听“已经处理好了”。</p></article></div>
       <div class="commercial-meaning"><p class="eyebrow">05｜争议后的证据</p><strong>当一次农业作业后来出现问题，可以重新检查：当时究竟知道什么，以及为什么做出了那个决定。</strong></div>
       <div class="comparison-table-wrap"><table class="comparison-table behavior-table"><thead><tr><th>证据情况</th><th>GEOX 怎么做</th><th>这意味着什么</th></tr></thead><tbody id="behaviorMatrix"></tbody></table></div>
-      <div class="economics-panel"><div class="economics-heading"><div><p class="eyebrow">错误决策暴露 · 不是 ROI 声明</p><h3>如果因为证据时序错误而错误执行/取消一次灌溉，直接暴露是多少？</h3></div><span class="badge degraded">需要客户数据 <code>CUSTOMER DATA REQUIRED</code></span></div><div class="economics-grid"><label>田块面积 ha <span class="source-tag assumption">场景假设</span><input id="ecoAreaHa" type="number" min="0" step="1" value="120" /></label><label>计划灌溉 mm <span class="source-tag assumption">场景假设</span><input id="ecoIrrigationMm" type="number" min="0" step="0.1" value="20" /></label><label>泵送费 $ / mm / ha <span class="source-tag customer">客户费率</span><input id="ecoPumpingRate" type="number" min="0" step="0.01" placeholder="客户填写" /></label><label>能源 $ <span class="source-tag customer">客户费率</span><input id="ecoEnergy" type="number" min="0" step="1" placeholder="客户填写" /></label><label>人工 $ <span class="source-tag customer">客户费率</span><input id="ecoLabor" type="number" min="0" step="1" placeholder="客户填写" /></label><label>设备 $ <span class="source-tag customer">客户费率</span><input id="ecoEquipment" type="number" min="0" step="1" placeholder="客户填写" /></label></div><div id="economicsResult" class="economics-result"></div><div class="economics-unknowns"><span>潜在产量暴露 <b>需要客户数据</b></span><span>品质暴露 <b>需要客户数据</b></span><span>结论 <b>尚未证明客户 ROI</b> <code>NOT_PROVEN_CUSTOMER_ROI</code></span></div><details class="boundary-details"><summary>来源标签规则</summary><p class="footnote"><code>MEASURED</code> = 实测；<code>CUSTOMER_RATE_CARD</code> = 客户费率；<code>AGRONOMIC_MODEL</code> = 经授权农艺模型；<code>EXTERNAL_BENCHMARK</code> = 外部基准；<code>ASSUMPTION</code> = 场景假设。本 Demo 不把仓库工程 cost constants 当作客户 ROI authority。</p></details></div>
+
+      <div class="economics-panel">
+        <div class="economics-heading"><div><p class="eyebrow">密歇根基准场景 · 不是 ROI 声明</p><h3>一次“不该执行却执行了”的灌溉，最先能量化的是白白发生的泵送能源成本。</h3></div><span class="badge degraded">MSU 外部基准 <code>EXTERNAL_BENCHMARK</code></span></div>
+        <div class="callout executive-callout"><strong>为什么不用一个随意的“$/mm/ha”？</strong> Michigan State University Extension 以 <code>$/acre-inch</code> 报告当地灌溉能源成本。这里采用其 2024 价格口径：电力泵平均 <strong>$5.49 / acre-inch</strong>。页面把它换算成客户更容易理解的公制结果，不把泵送费和能源费重复相加。</div>
+        <div class="decision-card">
+          <div class="decision-card-main"><p class="eyebrow">代表性 Michigan 示例</p><h3>120 acres（约 48.6 ha）· center pivot · electric pump · 单次 20 mm</h3><div class="decision-facts"><span><b>20 mm</b> ≈ 0.79 inch</span><span><b>一次水量</b> ≈ 9,720 m³</span><span><b>MSU 电力泵平均能源成本</b> $5.49 / acre-inch</span></div></div>
+          <div class="decision-question"><p>基准估算</p><strong>约 $519 / 次</strong><p>120 acres × 0.79 inch × $5.49 / acre-inch</p></div>
+        </div>
+        <div class="problem-grid compact-statements">
+          <article class="statement safe"><h3>同样 20 mm，不同系统成本会不同</h3><p>MSU 2024 口径：电力 + 地下水约 <strong>$4.55/ac-in</strong>（本场景约 $430）；电力 + 地表水约 <strong>$6.44/ac-in</strong>（约 $609）；柴油泵平均约 <strong>$8.90/ac-in</strong>（约 $841）。这些是外部基准，不是某个客户的实际账单。</p></article>
+          <article class="statement danger"><h3>“错误取消灌溉”不是同一个成本公式</h3><p>取消一次本来应该执行的灌溉，可能反而节省当次能源费；真正风险可能出现在水分胁迫、产量、品质或后续补救。这部分必须用客户田块和农艺证据计算，不能和“错误执行”的泵送成本混为一谈。</p></article>
+        </div>
+        <p class="footnote">来源：Michigan State University Extension, <a href="https://www.canr.msu.edu/news/analyzing-the-costs-of-energy-for-irrigation-in-michigan" target="_blank" rel="noreferrer">Analyzing the costs of energy for irrigation in Michigan</a>（2024）。MSU 同文给出的 Michigan 平均年灌溉量约 7.2 acre-inches；这里仅计算一次 20 mm 灌溉的能源基准，不包含固定资产折旧、融资、产量损失或客户 ROI。</p>
+
+        <details class="boundary-details">
+          <summary>用客户真实账单替换 Michigan 基准</summary>
+          <div class="economics-grid">
+            <label>田块面积 ha <span class="source-tag assumption">场景假设</span><input id="ecoAreaHa" type="number" min="0" step="0.1" value="48.6" /></label>
+            <label>计划灌溉 mm <span class="source-tag assumption">场景假设</span><input id="ecoIrrigationMm" type="number" min="0" step="0.1" value="20" /></label>
+            <label>客户实际泵送/能源 $ / mm / ha <span class="source-tag customer">客户费率</span><input id="ecoPumpingRate" type="number" min="0" step="0.001" placeholder="例如 Michigan 电力泵均值≈0.534；客户应填实际值" /></label>
+            <label>其他电力/需求费 $ <span class="source-tag customer">客户费率</span><input id="ecoEnergy" type="number" min="0" step="1" placeholder="仅填未包含在上项中的额外费用" /></label>
+            <label>当次增量人工 $ <span class="source-tag customer">客户费率</span><input id="ecoLabor" type="number" min="0" step="1" placeholder="客户填写" /></label>
+            <label>当次增量维护/磨损 $ <span class="source-tag customer">客户费率</span><input id="ecoEquipment" type="number" min="0" step="1" placeholder="不要填设备年折旧或沉没成本" /></label>
+          </div>
+          <div id="economicsResult" class="economics-result"></div>
+        </details>
+        <div class="economics-unknowns"><span>错误执行：能源/增量作业成本 <b>可用基准或客户账单估算</b></span><span>错误取消：潜在产量/品质暴露 <b>需要客户与农艺数据</b></span><span>结论 <b>尚未证明客户 ROI</b> <code>NOT_PROVEN_CUSTOMER_ROI</code></span></div>
+        <details class="boundary-details"><summary>来源标签规则</summary><p class="footnote"><code>MEASURED</code> = 实测；<code>CUSTOMER_RATE_CARD</code> = 客户费率；<code>AGRONOMIC_MODEL</code> = 经授权农艺模型；<code>EXTERNAL_BENCHMARK</code> = 外部基准；<code>ASSUMPTION</code> = 场景假设。本 Demo 不把仓库工程 cost constants 当作客户 ROI authority。</p></details>
+      </div>
     </section>
 
     <section id="system-role" class="panel core-panel" data-section="6">
@@ -206,25 +168,20 @@
           <div class="architecture-sidecars"><span><b>Decision Assurance</b> Evidence → State → Forecast → Scenario → qualification / Human Decision</span><span><b>Commercial Control Loop</b> Recommendation → Approval → Operation Plan → authorized Task → Receipt → Acceptance</span><span><b>统一边界</b> 两条能力线均已存在，但本 Demo 不声明已经完成统一 production qualification</span><span><b>持久化</b> PostgreSQL facts + canonical / rebuildable projections</span><span><b>健康 / 恢复</b> runtime health + checkpoint</span><span><b>租约 / 栅栏</b> 当前 MCFT qualification governance；本 Demo 不调用、不修改，精确文件路径不在此虚构</span></div>
           <div class="component-map-wrap"><table class="comparison-table component-map"><thead><tr><th>能力节点</th><th>当前真实实现 / 证据</th><th>边界</th></tr></thead><tbody><tr><td><strong>人工审批</strong></td><td><code>apps/server/src/routes/v1/operator_approval_actions.ts</code></td><td>APPROVE / REJECT / RETURN；权限与审计</td></tr><tr><td><strong>作业计划</strong></td><td><code>operation_plan_v1</code> + <code>ACCEPTANCE_OPERATION_PLAN_FROM_APPROVED_DECISION_RUNTIME_V1.cjs</code></td><td>审批不会自动创建 Task</td></tr><tr><td><strong>执行任务</strong></td><td><code>/api/v1/actions/task/from-operation-plan</code></td><td>独立授权动作；不自动创建 Receipt / Acceptance</td></tr><tr><td><strong>回执 / As-executed / Acceptance</strong></td><td><code>ACCEPTANCE_IRRIGATION_CLOSED_LOOP_V1.cjs</code></td><td>工程验收路径；不是客户生产 ROI</td></tr></tbody><tbody id="componentMap" hidden></tbody></table></div>
         </section>
-
         <section id="failure-cases" class="panel secondary-panel"><div class="section-heading appendix-heading"><span>B</span><div><p class="eyebrow">确定性失败案例</p><h2>数据晚到、来源冲突、证据缺失</h2></div></div><div id="failureCards" class="failure-grid"></div></section>
-
         <section class="panel secondary-panel"><div class="section-heading appendix-heading"><span>C</span><div><p class="eyebrow">产品与 Twin Trace</p><h2>需要技术尽调时，再展开原始 ID、哈希和 lineage。</h2></div></div><details id="traceAdvancedDetails" class="engineering-details trace-advanced" open><summary><span>查看 Trace 证据</span><small>产品决策链 · 构建器证明 · 指定持久化记录</small></summary><div class="engineering-details-body"><div class="trace-loader"><p class="eyebrow">产品侧持久化决策链</p><h3>产品决策周期与 Twin Trace</h3><p class="footnote">Product Twin Kernel 与上面的 MCFT Runtime Evidence 是两个不同证据面。本地产品数据库无符合条件 decision cycle 时会明确显示未连接，不用 fixture 冒充持久化数据。</p><div class="input-row"><button id="refreshConnectedData" type="button">刷新产品决策链</button></div></div><div id="connectedDataStatus" class="status-line muted">正在读取产品侧持久化数据...</div><div id="connectedDataAnswer" class="callout" hidden></div><div id="connectedTraceObjects" class="trace-grid"></div><div class="trace-loader"><p class="eyebrow">工程证明 · 不需要数据库</p><h3>现有 Twin Kernel 构建器现场生成链路</h3></div><div id="runtimeTraceStatus" class="status-line muted">正在执行 Twin Kernel 构建器链...</div><div id="runtimeTraceAnswer" class="callout" hidden></div><div id="runtimeTraceObjects" class="trace-grid"></div><div class="trace-loader persisted-loader"><p class="eyebrow">指定持久化记录</p><label for="decisionCycleId">决策周期 ID <code>decision_cycle_id</code></label><div class="input-row"><input id="decisionCycleId" placeholder="例如 dc_..." autocomplete="off" /><button id="loadTraceButton" type="button">读取决策链</button></div></div><div id="persistedTraceStatus" class="status-line muted">尚未指定 decision_cycle_id。</div><div id="persistedTraceObjects" class="trace-grid"></div><div id="persistedTraceActions" class="trace-actions"></div></div></details></section>
-
         <section class="panel secondary-panel"><div class="section-heading appendix-heading"><span>D</span><div><p class="eyebrow">商业证据发布门</p><h2>页面声明必须能够回到 repo / API / 机器证据。</h2></div></div><div id="releaseGateSummary" class="callout executive-callout"></div><div class="comparison-table-wrap"><table class="comparison-table"><thead><tr><th>发布门</th><th>当前证据</th></tr></thead><tbody><tr><td><strong>1. 可复现启动</strong></td><td><code>pnpm exec tsx tools/commercial-evidence-demo/server.ts</code> → <code>http://127.0.0.1:4177</code></td></tr><tr><td><strong>2. 精确代码版本</strong></td><td><code id="releaseExactSha">读取中</code></td></tr><tr><td><strong>3. 真实机器案例</strong></td><td><code>GET /api/demo</code></td></tr><tr><td><strong>4. 历史持久化工程资格</strong></td><td><code>GET /api/mcft-runtime-evidence</code> · 只读白名单</td></tr><tr><td><strong>5. 商业执行闭环工程验收</strong></td><td><code>ACCEPTANCE_IRRIGATION_CLOSED_LOOP_V1.cjs</code> 等仓库 acceptance</td></tr></tbody></table></div><div class="economics-panel"><div class="economics-heading"><div><p class="eyebrow">Decision Assurance 核心声明证据映射</p><h3>真实机器执行 ≠ 持久化工程资格 ≠ 最终 Formal / 生产证据。</h3></div><span class="badge degraded">证据等级不可混用</span></div><div class="comparison-table-wrap"><table class="comparison-table component-map"><thead><tr><th>Demo 声明</th><th>真实 repo / runtime 实现</th><th>机器证据</th><th>证据等级</th><th>状态</th></tr></thead><tbody id="releaseManifestRows"></tbody></table></div></div></section>
       </div>
     </details>
 
     <section class="panel boundary-panel evidence-boundary">
-      <p class="eyebrow">证据边界</p>
-      <h2>当前页面不会把“已经有软件路径”写成“已经完成生产验收”</h2>
+      <p class="eyebrow">证据边界</p><h2>当前页面不会把“已经有软件路径”写成“已经完成生产验收”</h2>
       <p class="boundary-copy"><strong>当前可证明：</strong>GEOX 已有 temporal/as-of 资格判断、降级与 fail-closed、状态/预测/情景工程链，以及人工审批、作业计划、受控任务、回执、as-executed 与 acceptance 等软件/工程路径。<br /><strong>当前未声明：</strong>MCFT-CAP-09 最终连续 Formal 已完成、所有农业设备可自动控制、无人值守现场执行、生产资格化作物推荐、所有客户连接器现成可用，或已经证明客户 ROI。</p>
       <details class="boundary-details"><summary>查看 machine-readable 非声明项</summary><ul id="nonclaims" class="nonclaims"></ul></details>
     </section>
 
     <div id="fatalError" class="fatal" hidden></div>
   </main>
-
   <script type="module" src="/app.js"></script>
 </body>
 </html>
