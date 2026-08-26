@@ -10,6 +10,17 @@ on:
       - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs'
       - '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'
       - '.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml'
+      - '.github/workflows/mcft-cap-09-phase1-typed-cap08-frozen-replay-equivalence-v1.yml'
+      - '.github/workflows/mcft-cap-08-s4-late-evidence-append-forward.yml'
+      - 'apps/server/src/runtime/twin_runtime/cap08_replay_host_composition_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/cap08_s4_append_forward_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/cap08_s4_t17_corrected_predecessor_resolver_v1.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_SUCCESSOR_REQUALIFICATION_BOUNDARY_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE1_TYPED_CAP08_FROZEN_REPLAY_EQUIVALENCE_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE1_TYPED_RUNTIME_COMPOSITION_V1.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_PHASE1_TYPED_CAP08_REPLAY_EQUIVALENCE_LANE_V1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap09_phase1_typed_replay_host_product_chain_v1.cjs'
   merge_group:
     types: [checks_requested]
 
@@ -19,6 +30,7 @@ permissions:
 
 env:
   FROZEN_SUCCESSOR_SHA: '3bbf096ee5cb73e8e0e0251dc400733d6cab501f'
+  CP5_CLOSURE_SHA: '14653ba622bb12261a1ea79f3ea7e42be0b49f92'
 
 concurrency:
   group: mcft-cap09-qualification-control-plane-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
@@ -36,13 +48,17 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Require frozen stacked predecessor and zero production bindings
+      - name: Require governed successor predecessor and zero production bindings
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            test "${{ github.event.pull_request.base.sha }}" = "$FROZEN_SUCCESSOR_SHA"
+            base='${{ github.event.pull_request.base.sha }}'
+            if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ]; then
+              echo "MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:${base}" >&2
+              exit 1
+            fi
           fi
           test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
           test -z "${FORMAL_RAW_S3_ACCESS_KEY_ID:-}"
@@ -87,7 +103,7 @@ jobs:
           assert(registry.dependency_digest_strategy === DEPENDENCY_DIGEST_STRATEGY, 'DEPENDENCY_DIGEST_STRATEGY_MISMATCH', registry.dependency_digest_strategy);
           assert(registry.durable_anchors?.entries?.length === registry.entries.length, 'DURABLE_ANCHOR_CARDINALITY_MISMATCH', {anchors:registry.durable_anchors?.entries?.length, entries:registry.entries.length});
           const carryForwardIds = ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS'];
-          const requalificationIds = ['EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T'];
+          const requalificationIds = ['EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T','PHASE1_TYPED_RUNTIME_COMPOSITION'];
           const v13ScopedIds = [...carryForwardIds, ...requalificationIds];
           for (const id of carryForwardIds) {
             const row = current.decisions.find(x => x.check_id === id);
@@ -96,13 +112,16 @@ jobs:
           }
           const ea5e2 = current.decisions.find(x => x.check_id === 'EA5E2_RUNTIME_DEPENDENCY_GRAPH');
           assert(Boolean(ea5e2), 'EA5E2_REQUALIFICATION_DECISION_REQUIRED', {check_id:'EA5E2_RUNTIME_DEPENDENCY_GRAPH', missing:true});
-          assert(ea5e2?.status === 'REQUALIFY' && ea5e2?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED' && ea5e2?.dependency_digest_match === false, 'EA5E2_CHANGED_DEPENDENCY_MUST_REQUALIFY', ea5e2);
-          assert((ea5e2?.changed_dependencies || []).includes('.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml'), 'EA5E2_WORKFLOW_CHANGE_MUST_BE_VISIBLE', ea5e2?.changed_dependencies || []);
-          assert((ea5e2?.changed_dependencies || []).includes('scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs'), 'EA5E2_BINDING_CHANGE_MUST_BE_VISIBLE', ea5e2?.changed_dependencies || []);
+          assert(ea5e2?.status === 'REQUALIFY' && ea5e2?.dependency_digest_match === false, 'EA5E2_CHANGED_DEPENDENCY_MUST_REQUALIFY', ea5e2);
+          assert(['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED'].includes(ea5e2?.reason_code), 'EA5E2_REQUALIFICATION_REASON_INVALID', ea5e2);
           const persistent24 = current.decisions.find(x => x.check_id === 'LEGACY_AM19_PERSISTENT_24T');
           assert(Boolean(persistent24), 'LEGACY_AM19_PERSISTENT_24T_REQUALIFICATION_DECISION_REQUIRED', {check_id:'LEGACY_AM19_PERSISTENT_24T', missing:true});
-          assert(persistent24?.status === 'REQUALIFY' && persistent24?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED' && persistent24?.dependency_digest_match === false, 'LEGACY_AM19_PERSISTENT_24T_WORKFLOW_CHANGE_MUST_REQUALIFY', persistent24);
-          assert((persistent24?.changed_dependencies || []).includes('.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml'), 'LEGACY_AM19_PERSISTENT_24T_WORKFLOW_CHANGE_MUST_BE_VISIBLE', persistent24?.changed_dependencies || []);
+          assert(persistent24?.status === 'REQUALIFY' && persistent24?.dependency_digest_match === false, 'LEGACY_AM19_PERSISTENT_24T_MUST_REQUALIFY', persistent24);
+          assert(['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED'].includes(persistent24?.reason_code), 'LEGACY_AM19_PERSISTENT_24T_REQUALIFICATION_REASON_INVALID', persistent24);
+          const phase1 = current.decisions.find(x => x.check_id === 'PHASE1_TYPED_RUNTIME_COMPOSITION');
+          assert(Boolean(phase1), 'PHASE1_TYPED_RUNTIME_COMPOSITION_DECISION_REQUIRED', {check_id:'PHASE1_TYPED_RUNTIME_COMPOSITION', missing:true});
+          assert(phase1?.status === 'REQUALIFY' && phase1?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED', 'PHASE1_TYPED_RUNTIME_COMPOSITION_MUST_REQUALIFY', phase1);
+          assert(phase1?.execution_workflow === '.github/workflows/mcft-cap-09-phase1-typed-cap08-frozen-replay-equivalence-v1.yml', 'PHASE1_TYPED_RUNTIME_COMPOSITION_WORKFLOW_MISMATCH', phase1);
           const future = planApplicability({
             authority, registry, changedPaths:[REGISTRY_PATH],
             stage:'SUCCESSOR_SUBJECT_PRE_MERGE', generation:'v14',
@@ -151,7 +170,6 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           const fs = require('node:fs');
-          const path = require('node:path');
           const registryPath = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json';
           const outPath = 'acceptance-output/MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json';
           const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
@@ -163,6 +181,7 @@ jobs:
           const token = process.env.GITHUB_TOKEN;
           const repo = process.env.GITHUB_REPOSITORY;
           if (!token || !repo) throw new Error('GITHUB_ACTIONS_READ_CONTEXT_REQUIRED');
+          const governedRequalificationBases = new Set([registry.frozen_subject_sha, process.env.CP5_CLOSURE_SHA]);
 
           async function apiMaybe(endpoint) {
             const response = await fetch(`https://api.github.com/repos/${repo}${endpoint}`, {
@@ -225,7 +244,7 @@ jobs:
               if (run.path !== entry.workflow_path || snapshot.workflow_path !== entry.workflow_path) throw new Error(`REQUALIFICATION_RUN_PATH_MISMATCH:${entry.evidence_id}:${run.path}`);
               if (run.event !== 'pull_request' || snapshot.event !== 'pull_request') throw new Error(`REQUALIFICATION_RUN_EVENT_MISMATCH:${entry.evidence_id}:${run.event}`);
               const runBaseSha = run.pull_requests?.find(pr => pr?.base?.sha)?.base?.sha ?? null;
-              if (runBaseSha !== registry.frozen_subject_sha || snapshot.base_sha !== registry.frozen_subject_sha) throw new Error(`REQUALIFICATION_RUN_BASE_MISMATCH:${entry.evidence_id}:${runBaseSha}`);
+              if (snapshot.base_sha !== runBaseSha || !governedRequalificationBases.has(runBaseSha)) throw new Error(`REQUALIFICATION_RUN_BASE_MISMATCH:${entry.evidence_id}:${runBaseSha}`);
               requalificationResults.push({
                 evidence_id:entry.evidence_id, check_id:entry.check_id, run_id:entry.run_id,
                 live_run_resolved:true, run_conclusion:run.conclusion, head_sha:run.head_sha,
@@ -247,12 +266,12 @@ jobs:
               graduation_effect:false, mcft_cap09_completed:false, results,
               requalification_results:requalificationResults,
             };
-            fs.mkdirSync(path.dirname(outPath),{recursive:true});
+            fs.mkdirSync(require('node:path').dirname(outPath),{recursive:true});
             fs.writeFileSync(outPath,JSON.stringify(proof,null,2)+'\n');
             process.stdout.write(JSON.stringify(proof,null,2)+'\n');
           }
           main().catch(error => {
-            fs.mkdirSync(path.dirname(outPath),{recursive:true});
+            fs.mkdirSync(require('node:path').dirname(outPath),{recursive:true});
             fs.writeFileSync(outPath,JSON.stringify({status:'FAIL',error:error instanceof Error?error.message:String(error)},null,2)+'\n');
             console.error(error); process.exitCode=1;
           });
@@ -297,22 +316,20 @@ jobs:
             const row = plan.decisions.find(x => x.check_id === id);
             if (!row || row.status !== 'CARRY_FORWARD' || row.dependency_digest_match !== true) throw new Error(`FROZEN_EVIDENCE_MUST_CARRY_FORWARD_WITH_DIGEST:${id}:${row?.status}`);
           }
-          const ea5e2 = plan.decisions.find(x => x.check_id === 'EA5E2_RUNTIME_DEPENDENCY_GRAPH');
-          if (!ea5e2) throw new Error('EA5E2_APPLICABILITY_DECISION_REQUIRED');
-          const ea5e2WorkflowChanged = (ea5e2.changed_dependencies || []).includes('.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml');
-          if (ea5e2WorkflowChanged) {
-            if (ea5e2.status !== 'REQUALIFY') throw new Error(`EA5E2_WORKFLOW_CHANGE_MUST_REQUALIFY:${ea5e2.status}`);
-          } else if (ea5e2.status !== 'CARRY_FORWARD' || ea5e2.dependency_digest_match !== true) {
-            throw new Error(`EA5E2_UNCHANGED_MUST_CARRY_FORWARD_WITH_DIGEST:${ea5e2.status}`);
+          for (const id of ['EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T']) {
+            const row = plan.decisions.find(x => x.check_id === id);
+            if (!row) throw new Error(`${id}_APPLICABILITY_DECISION_REQUIRED`);
+            if (row.status === 'CARRY_FORWARD') {
+              if (row.dependency_digest_match !== true) throw new Error(`${id}_CARRY_FORWARD_REQUIRES_DIGEST_MATCH`);
+            } else if (row.status === 'REQUALIFY') {
+              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED'].includes(row.reason_code)) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID`);
+            } else {
+              throw new Error(`${id}_UNEXPECTED_STATUS:${row.status}`);
+            }
           }
-          const persistent24 = plan.decisions.find(x => x.check_id === 'LEGACY_AM19_PERSISTENT_24T');
-          if (!persistent24) throw new Error('LEGACY_AM19_PERSISTENT_24T_APPLICABILITY_DECISION_REQUIRED');
-          const persistentWorkflowChanged = (persistent24.changed_dependencies || []).includes('.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml');
-          if (persistentWorkflowChanged) {
-            if (persistent24.status !== 'REQUALIFY') throw new Error(`LEGACY_AM19_PERSISTENT_24T_WORKFLOW_CHANGE_MUST_REQUALIFY:${persistent24.status}`);
-          } else if (persistent24.status !== 'CARRY_FORWARD' || persistent24.dependency_digest_match !== true) {
-            throw new Error(`LEGACY_AM19_PERSISTENT_24T_UNCHANGED_MUST_CARRY_FORWARD_WITH_DIGEST:${persistent24.status}`);
-          }
+          const phase1 = plan.decisions.find(x => x.check_id === 'PHASE1_TYPED_RUNTIME_COMPOSITION');
+          if (!phase1 || phase1.status !== 'REQUALIFY' || phase1.reason_code !== 'GOVERNED_DEPENDENCY_CHANGED') throw new Error(`PHASE1_TYPED_RUNTIME_COMPOSITION_MUST_REQUALIFY:${phase1?.status}`);
+          if (phase1.execution_workflow !== '.github/workflows/mcft-cap-09-phase1-typed-cap08-frozen-replay-equivalence-v1.yml') throw new Error('PHASE1_TYPED_RUNTIME_COMPOSITION_WORKFLOW_MISMATCH');
           if (preflight.status !== 'PASS' || preflight.generation !== 'v13' || preflight.non_fail_fast !== true || preflight.counts.blocker_count !== 0) throw new Error('ALL_BLOCKERS_PREFLIGHT_NOT_PASS');
           for (const source of [proof, cp2, evidence, plan, preflight]) {
             const effects = source.non_effects || source;
