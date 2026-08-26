@@ -1,7 +1,6 @@
 // scripts/commercial_evidence/ACCEPTANCE_COMMERCIAL_EVIDENCE_DEMO_V1.cjs
-// Purpose: prove the off-main Commercial Evidence Demo is evidence-faithful to current GEOX software boundaries:
-// Decision Assurance qualification, human approval, operation-plan/task separation, receipt/as-executed/acceptance,
-// and explicit non-claims for unified production qualification, autonomous actuation, and customer ROI.
+// Purpose: prove the off-main Commercial Evidence Demo is evidence-faithful to current GEOX software boundaries,
+// keeps customer-visible fields in Chinese, and grounds the default irrigation cost example in a disclosed Michigan benchmark.
 
 const fs = require("node:fs");
 const path = require("node:path");
@@ -28,6 +27,9 @@ const files = {
 function text(file) { return fs.readFileSync(file, "utf8"); }
 function requireToken(name, content, token) {
   if (!content.includes(token)) throw new Error(`COMMERCIAL_EVIDENCE_DEMO_TOKEN_MISSING:${name}:${token}`);
+}
+function rejectToken(name, content, token) {
+  if (content.includes(token)) throw new Error(`COMMERCIAL_EVIDENCE_DEMO_FORBIDDEN_CUSTOMER_TOKEN:${name}:${token}`);
 }
 for (const [name, file] of Object.entries(files)) {
   if (!fs.existsSync(file)) throw new Error(`COMMERCIAL_EVIDENCE_DEMO_FILE_MISSING:${name}:${file}`);
@@ -60,20 +62,30 @@ for (const token of [
 
 for (const token of [
   "不是“能不能给答案”，而是“这个答案现在能不能进入真实生产”",
-  "今晚原计划灌溉 20 mm", "明天可能下雨 25 mm", "IRRIGATE / DELAY / ABSTAIN", "ASSUMPTION",
-  "18:43", "19:17", "ELIGIBLE · 可以使用", "INELIGIBLE · 不得回填",
-  "没有满足本次审批条件的合法替代证据", "批准 · 拒绝 · 退回补充", "APPROVE / REJECT / RETURN",
-  "Approval → Operation Plan → 授权后创建 Action Task", "审批通过本身不会自动触发设备动作",
+  "今晚原计划灌溉 20 毫米", "明天可能下雨 25 毫米",
+  "18:43", "19:17", "可以参与判断", "不能事后回填",
+  "没有满足本次审批条件的合法替代证据", "批准 · 拒绝 · 退回补充",
+  "人工审批 → 作业计划 → 授权后创建执行任务", "审批通过本身不会自动触发设备动作",
   "执行完成 ≠ 农业效果已经被证明", "组合客户流程演示", "不代表这两条能力线已经完成统一",
-  "影子模式", "Demo Input",
+  "影子模式", "演示输入",
 ]) requireToken("html", html, token);
 
 for (const token of [
-  "NORMAL", "PROVIDER LATE", "SOURCE CONFLICT", "MISSING EVIDENCE",
   'data-case-id="healthy_exact_provider_pair"', 'data-case-id="provider_late"',
   'data-case-id="source_conflict"', 'data-case-id="missing_evidence"',
 ]) requireToken("html", html, token);
-for (const token of ["/api/demo?case=", "canonical selector 已重新执行", "machine_proof", "使用上一步的合规假设值", "降级继续"]) requireToken("app", app, token);
+for (const token of ["/api/demo?case=", "规范选择器已重新执行", "机器证明链", "使用上一步的合规假设值", "降级继续"]) requireToken("app", app, token);
+
+// Customer-visible HTML must not regress to English field labels. Exact code paths and machine identifiers are allowed only in technical evidence blocks.
+for (const token of [
+  "Commercial Evidence Demo · Draft", "Decision Assurance", "Demo Input", "ASSUMPTION",
+  "IRRIGATE / DELAY / ABSTAIN", "CASE A", "CASE B", "ELIGIBLE", "INELIGIBLE",
+  "Temporal Decision Assurance", "Commercial Control Loop", "production qualification",
+  "Approval → Operation Plan", "Action Task", "FMIS", "Pilot 边界", "Shadow Mode",
+  "AI / Model", "Human Approval", "Existing System", "Receipt / Acceptance Evidence",
+  "PROVEN NOW", "NOT YET A COMMERCIAL CLAIM", "CUSTOMER DATA REQUIRED", "EXTERNAL_BENCHMARK",
+  "NOT_PROVEN_CUSTOMER_ROI", "Runtime qualification boundary", "Decision Assurance Runtime + Commercial Control Loop",
+]) rejectToken("html", html, token);
 
 // Product-side control-loop boundaries: verify current repo code, not marketing prose.
 for (const token of ["APPROVAL_APPROVE", "APPROVAL_REJECT", "APPROVAL_RETURN", "SELF_APPROVAL_BLOCKED", "operator_action_audit_v1"]) requireToken("approvalActions", approvalActions, token);
@@ -91,18 +103,20 @@ for (const token of [
   'id="nonclaims"', 'id="fatalError"',
 ]) requireToken("html", html, token);
 
-// Economics must keep provenance explicit. Michigan benchmark is allowed as EXTERNAL_BENCHMARK;
-// customer-specific ROI and agronomic loss still require customer data.
+// Michigan default scenario uses metric customer-facing units and prefilled values.
 for (const token of [
-  "CUSTOMER_RATE_CARD", "MEASURED", "AGRONOMIC_MODEL", "EXTERNAL_BENCHMARK",
-  "MSU 外部基准", "$5.49 / acre-inch", "120 acres", "约 $519 / 次",
-  "错误取消灌溉", "客户实际泵送/能源 $ / mm / ha",
-  "NOT_PROVEN_CUSTOMER_ROI", "本 Demo 不把仓库工程 cost constants 当作客户 ROI authority",
-  "连续在线数字孪生运行已完成最终正式验收", "生产资格化的作物推荐", "已证明的客户 ROI",
-  "AI 绕过人工审批直接进行生产作业",
+  "密歇根默认基准", "密歇根州立大学推广署", "5.49 美元/英亩·英寸", "0.534 美元/毫米/公顷",
+  "田块面积（公顷）", 'id="ecoAreaHa" type="number" min="0" step="0.1" value="48.6"',
+  "计划灌溉深度（毫米）", 'id="ecoIrrigationMm" type="number" min="0" step="0.1" value="20"',
+  "泵送能源成本（美元/毫米/公顷）", 'id="ecoPumpingRate" type="number" min="0" step="0.001" value="0.534"',
+  "其他当次电力费用（美元）", 'id="ecoEnergy" type="number" min="0" step="1" value="0"',
+  "当次增量人工成本（美元）", 'id="ecoLabor" type="number" min="0" step="1" value="0"',
+  "当次增量维护与磨损（美元）", 'id="ecoEquipment" type="number" min="0" step="1" value="0"',
+  "不代表客户实际成本为 0", "错误取消：潜在产量与品质暴露", "尚未证明客户投资回报",
 ]) requireToken("html", html, token);
+for (const token of ["可量化直接暴露", "其中泵送能源成本", "0.534 美元/毫米/公顷", "不是投资回报"]) requireToken("app", app, token);
 
-for (const token of ["技术细节｜默认折叠", "Decision Assurance Runtime + Commercial Control Loop", "Runtime qualification boundary", "精确文件路径不在此虚构"]) requireToken("html", html, token);
+for (const token of ["技术细节｜默认折叠", "决策资格运行链 + 商业执行闭环", "运行时资格边界"]) requireToken("html", html, token);
 for (let section = 1; section <= 6; section += 1) requireToken("html", html, `data-section="${section}"`);
 requireToken("style", style, ".topbar { position: relative;");
 requireToken("style", style, ".executive-trace-grid { grid-template-columns: repeat(3");
@@ -152,7 +166,9 @@ console.log(JSON.stringify({
   acceptance: "ACCEPTANCE_COMMERCIAL_EVIDENCE_DEMO_V1",
   commercial_gate: "PASS_FOR_PAID_PILOT_SALES_CONDITIONAL_ON_MACHINE_PROOF",
   paid_pilot_scope: "DECISION_ASSURANCE_PAID_PILOT",
-  narrative_version: "ANSWER_TO_PRODUCTION_ELIGIBILITY_V2",
+  narrative_version: "CHINESE_CUSTOMER_SURFACE_V3",
+  customer_visible_fields_chinese_guarded: true,
+  michigan_metric_defaults_guarded: true,
   decision_assurance_machine_proof: true,
   provider_late_behavior: selftest.provider_late_behavior,
   source_conflict_behavior: selftest.source_conflict_behavior,
@@ -162,8 +178,6 @@ console.log(JSON.stringify({
   receipt_as_executed_acceptance_paths_verified: true,
   execution_not_equated_with_agronomic_effect: true,
   combined_workflow_marked_not_unified_production_qualification: true,
-  michigan_irrigation_external_benchmark_guard_present: true,
-  customer_economics_provenance_guard_present: true,
   customer_roi_claim_absent: true,
   runtime_value_trace_builder_chain_passed: true,
   runtime_value_trace_object_count: requiredTraceObjects.length,
