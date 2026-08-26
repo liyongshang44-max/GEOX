@@ -5,9 +5,12 @@ on:
     paths:
       - '.github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml'
       - 'apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts'
+      - 'apps/server/src/external_evidence/provider/https_external_evidence_transport_v1.ts'
+      - 'apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C2B1-LIVE-KBS-SOIL-INGRESS-EXECUTOR-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs'
   merge_group:
     types: [checks_requested]
 
@@ -54,27 +57,34 @@ jobs:
           node-version: 20.11.1
           cache: pnpm
 
-      - name: Resolve exact EA5C2B1 base
+      - name: Resolve exact EA5C2B1 Phase2 predecessor
         id: authority
         shell: bash
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            base_sha="${{ github.event.pull_request.base.sha }}"
           else
-            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            base_sha="${{ github.event.merge_group.base_sha }}"
           fi
+          test "$base_sha" = "8943c752a354cb916cc7f144681203aa9a19f70b" || {
+            echo "EA5C2B1_PHASE2_EXACT_PHASE1_BASE_REQUIRED: $base_sha" >&2
+            exit 1
+          }
+          echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
 
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Syntax-check EA5C2B1 governance gate
-        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs
+      - name: Syntax-check historical and Phase2 successor governance gates
+        run: |
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs
 
-      - name: Validate exact EA5C2B1 authority and five-file boundary
+      - name: Validate Phase2 successor boundary without rewriting historical EA5C2B1 authority
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs
 
       - name: Typecheck server
         run: pnpm --filter @geox/server run typecheck
@@ -134,7 +144,7 @@ jobs:
         with:
           name: mcft-cap-09-ea5c2b1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: |
-            acceptance-output/MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_RESULT.json
           if-no-files-found: warn
           retention-days: 90
