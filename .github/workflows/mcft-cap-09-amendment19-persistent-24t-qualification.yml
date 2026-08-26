@@ -53,7 +53,8 @@ jobs:
           base_sha='${{ github.event.pull_request.base.sha }}'
           protected_main_sha="$(git rev-parse origin/main)"
           frozen_successor_sha='3bbf096ee5cb73e8e0e0251dc400733d6cab501f'
-          if [[ "$base_sha" != "$protected_main_sha" && "$base_sha" != "$frozen_successor_sha" ]]; then
+          phase1_successor_sha='8943c752a354cb916cc7f144681203aa9a19f70b'
+          if [[ "$base_sha" != "$protected_main_sha" && "$base_sha" != "$frozen_successor_sha" && "$base_sha" != "$phase1_successor_sha" ]]; then
             echo "AM19_P24_PR_BASE_NOT_GOVERNED:${base_sha}" >&2
             exit 1
           fi
