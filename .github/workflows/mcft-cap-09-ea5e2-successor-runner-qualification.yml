@@ -59,7 +59,7 @@ jobs:
           python-version: '3.12'
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
-      - name: Install pinned KBS decoder stack
+      - name: Install pinned KBS/GFS decoder stack and prove product GFS core
         run: |
           python -m pip install --disable-pip-version-check \
             'eccodes==2.47.0' \
@@ -67,6 +67,7 @@ jobs:
             'numpy==1.26.4' \
             'refet==0.4.2'
           python -m eccodes selfcheck
+          python apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py selftest
           python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py selftest-et0-decimal-normalization
       - name: Re-prove server and rolling T3R1 observer types
         run: |
