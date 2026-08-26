@@ -1,0 +1,143 @@
+name: mcft-cap-09-phase1b-cap08-frozen-replay-equivalence-v1
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/runtime/twin_runtime/cap08_replay_host_composition_v1.ts'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/product_loader_v1.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_PHASE1B_CAP08_REPLAY_EQUIVALENCE_LANE_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE1B_CAP08_FROZEN_REPLAY_EQUIVALENCE_V1.cjs'
+      - '.github/workflows/mcft-cap-09-phase1b-cap08-frozen-replay-equivalence-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PNPM_VERSION: 9.15.4
+  NODE_VERSION: 20.11.1
+  CAP08_PREDECESSOR_SHA: 67bd71560268046a7fa9a9433ee074ad3999cb71
+  PREDECESSOR_DB: geox_mcft_cap08_s6_phase1b_predecessor
+  SUCCESSOR_DB: geox_mcft_cap08_s6_phase1b_successor
+  CAP08_RUNNER_PASSWORD: cap08-phase1b-equivalence-runner
+  CAP08_MIGRATOR_PASSWORD: cap08-phase1b-equivalence-migrator
+  CAP08_LEGACY_RUNTIME_PASSWORD: cap08-phase1b-equivalence-legacy
+
+jobs:
+  cap08-frozen-replay-equivalence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 3s
+          --health-timeout 2s
+          --health-retries 30
+    steps:
+      - name: Checkout exact successor
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Checkout frozen CAP08 completion predecessor
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CAP08_PREDECESSOR_SHA }}
+          path: _phase1b_predecessor
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Assert predecessor and successor identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C _phase1b_predecessor rev-parse HEAD)" = "$CAP08_PREDECESSOR_SHA"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$GITHUB_SHA" != "$CAP08_PREDECESSOR_SHA"
+          test "$(git rev-parse $CAP08_PREDECESSOR_SHA:scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/product_chain_v1.cjs)" = "$(git rev-parse 26c1383f7f45abb76c99e28ec3d06714e85d1b2c:scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/product_chain_v1.cjs)"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install successor dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Bootstrap two independent disposable CAP08 databases
+        env:
+          MCFT_CAP08_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          MCFT_CAP08_RUNNER_PASSWORD: ${{ env.CAP08_RUNNER_PASSWORD }}
+          MCFT_CAP08_MIGRATOR_PASSWORD: ${{ env.CAP08_MIGRATOR_PASSWORD }}
+          MCFT_CAP08_LEGACY_RUNTIME_PASSWORD: ${{ env.CAP08_LEGACY_RUNTIME_PASSWORD }}
+          MCFT_CANDIDATE_SHA: ${{ env.CAP08_PREDECESSOR_SHA }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          export MCFT_CAP08_TARGET_DATABASE_NAME="$PREDECESSOR_DB"
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
+          export MCFT_CAP08_TARGET_DATABASE_NAME="$SUCCESSOR_DB"
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_PLATFORM_SECURITY_BOOTSTRAP_DB.ts
+
+      - name: Execute frozen predecessor replay lane
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/runtime_acceptance/RUN_MCFT_CAP_09_PHASE1B_CAP08_REPLAY_EQUIVALENCE_LANE_V1.cjs \
+            --root "$PWD/_phase1b_predecessor" \
+            --lane PREDECESSOR \
+            --database-url "postgres://geox_mcft_cap08_runner_v1:${CAP08_RUNNER_PASSWORD}@127.0.0.1:5432/${PREDECESSOR_DB}" \
+            --admin-url "postgres://postgres:postgres@127.0.0.1:5432/${PREDECESSOR_DB}" \
+            --out "$PWD/acceptance-output/MCFT_CAP_09_PHASE1B_CAP08_PREDECESSOR_RESULT.json"
+
+      - name: Execute successor ReplayHost lane
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/runtime_acceptance/RUN_MCFT_CAP_09_PHASE1B_CAP08_REPLAY_EQUIVALENCE_LANE_V1.cjs \
+            --root "$PWD" \
+            --lane SUCCESSOR \
+            --database-url "postgres://geox_mcft_cap08_runner_v1:${CAP08_RUNNER_PASSWORD}@127.0.0.1:5432/${SUCCESSOR_DB}" \
+            --admin-url "postgres://postgres:postgres@127.0.0.1:5432/${SUCCESSOR_DB}" \
+            --out "$PWD/acceptance-output/MCFT_CAP_09_PHASE1B_CAP08_SUCCESSOR_RESULT.json"
+
+      - name: Compare canonical replay semantics
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE1B_CAP08_FROZEN_REPLAY_EQUIVALENCE_V1.cjs
+
+      - name: Upload Phase1B equivalence proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-phase1b-cap08-frozen-replay-equivalence-${{ github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PHASE1B_CAP08_PREDECESSOR_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE1B_CAP08_SUCCESSOR_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE1B_CAP08_FROZEN_REPLAY_EQUIVALENCE_V1_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Drop both disposable databases
+        if: always()
+        env:
+          PGPASSWORD: postgres
+        shell: bash
+        run: |
+          set -euo pipefail
+          for db in "$PREDECESSOR_DB" "$SUCCESSOR_DB"; do
+            psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${db}' AND pid<>pg_backend_pid();" || true
+            psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"${db}\";"
+          done
