@@ -1,4 +1,4 @@
-name: b02-connectivity-oneoff
+name: b03-contracts-oneoff
 on:
   push:
     branches:
@@ -6,20 +6,23 @@ on:
 permissions:
   contents: read
 jobs:
-  exact-head-linter:
+  exact-head-contracts:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout exact B-02 target head
+      - name: Checkout exact B-03 target head
         uses: actions/checkout@v4
         with:
-          ref: docs/bline-b02-semantic-ownership-register-v1
+          ref: 7174d143803ed3db8b956a2b076d3b747ee25a85
           fetch-depth: 0
-      - name: Execute B-02 linter on exact current target head
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Server typecheck
+        run: pnpm --filter @geox/server run typecheck
+      - name: B-03 contract fixtures
+        run: pnpm --filter @geox/server exec node --import tsx --test src/contracts/canonical_evidence_v1.contract.test.ts
+      - name: Exact-head marker
         run: |
-          echo "B02_EXACT_HEAD $(git rev-parse HEAD)"
-          set +e
-          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs 2>&1 | tee /tmp/b02-linter.log
-          code=${PIPESTATUS[0]}
-          echo "B02_LINTER_EXIT_CODE $code"
-          exit "$code"
-# exact-head validation trigger: ee5b611bf182e704cdba33757cbcaa1185db7cd2
+          echo "B03_EXACT_HEAD $(git rev-parse HEAD)"
+          echo "B03_CANONICAL_EVIDENCE_CONTRACTS_PASS"
