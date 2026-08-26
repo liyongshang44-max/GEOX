@@ -1,5 +1,6 @@
 // scripts/commercial_evidence/SMOKE_COMMERCIAL_EVIDENCE_DEMO_V1.mjs
-// Purpose: start the standalone Commercial Evidence Demo and prove canonical Runtime execution, complete builder trace, connected read-only persisted-data plumbing, and safe Neon MCFT read-model behavior without CI database credentials.
+// Purpose: start the standalone Commercial Evidence Demo and prove canonical Runtime execution, complete builder trace,
+// connected read-only persisted-data plumbing, browser module dependency delivery, and safe Neon MCFT read-model behavior.
 
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -170,6 +171,21 @@ try {
   assert.ok(page.includes("runtimeTraceObjects"));
   assert.ok(page.includes("persistedTraceObjects"));
 
+  // Browser module dependency smoke: /app.js imports /app-core.js, so both assets must be served.
+  const appResponse = await fetch(`${BASE}/app.js`, { cache: "no-store" });
+  const appText = await appResponse.text();
+  assert.equal(appResponse.status, 200);
+  assert.match(String(appResponse.headers.get("content-type")), /text\/javascript/);
+  assert.ok(appText.includes('import "./app-core.js"'));
+  assert.ok(appText.includes("本次错误执行的直接增量成本"));
+
+  const appCoreResponse = await fetch(`${BASE}/app-core.js`, { cache: "no-store" });
+  const appCoreText = await appCoreResponse.text();
+  assert.equal(appCoreResponse.status, 200);
+  assert.match(String(appCoreResponse.headers.get("content-type")), /text\/javascript/);
+  assert.ok(appCoreText.includes("function renderEconomics()"));
+  assert.ok(appCoreText.includes("renderEvidenceReleaseManifest(packet)"));
+
   const rejectedWrite = await fetch(`${BASE}/api/mcft-runtime-evidence`, { method: "POST" });
   const rejectedWriteBody = await rejectedWrite.json();
   assert.equal(rejectedWrite.status, 405);
@@ -192,6 +208,8 @@ try {
     connected_data_read_only: true,
     connected_data_write_count: 0,
     six_section_page_served: true,
+    browser_module_dependency_passed: true,
+    app_core_asset_served: true,
     write_method_rejected: true,
     provider_late_behavior: late.outcome.action,
     source_conflict_behavior: conflict.outcome.action,
