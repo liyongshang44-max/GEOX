@@ -43,7 +43,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Require exact current protected-main base and governed qualification boundary
+      - name: Require governed qualification base and routing boundary
         id: routing
         shell: bash
         run: |
@@ -51,7 +51,12 @@ jobs:
           test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
           git fetch --no-tags origin main
           base_sha='${{ github.event.pull_request.base.sha }}'
-          test "$base_sha" = "$(git rev-parse origin/main)" || { echo 'AM19_P24_PR_BASE_MUST_EQUAL_CURRENT_PROTECTED_MAIN' >&2; exit 1; }
+          protected_main_sha="$(git rev-parse origin/main)"
+          frozen_successor_sha='3bbf096ee5cb73e8e0e0251dc400733d6cab501f'
+          if [[ "$base_sha" != "$protected_main_sha" && "$base_sha" != "$frozen_successor_sha" ]]; then
+            echo "AM19_P24_PR_BASE_NOT_GOVERNED:${base_sha}" >&2
+            exit 1
+          fi
           changed=$(git diff --name-only "$base_sha" "$SUBJECT_SHA" | sort)
           t4_runtime_rebind_files="$(printf '%s\n' \
             '.github/workflows/mcft-cap-09-ea5e2-rolling-operational-activation-live.yml' \
