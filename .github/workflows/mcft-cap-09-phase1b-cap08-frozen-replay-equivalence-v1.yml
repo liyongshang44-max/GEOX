@@ -17,6 +17,7 @@ env:
   PNPM_VERSION: 9.15.4
   NODE_VERSION: 20.11.1
   CAP08_PREDECESSOR_SHA: 67bd71560268046a7fa9a9433ee074ad3999cb71
+  SUCCESSOR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
   PREDECESSOR_DB: geox_mcft_cap08_s6_phase1b_predecessor
   SUCCESSOR_DB: geox_mcft_cap08_s6_phase1b_successor
   CAP08_RUNNER_PASSWORD: cap08-phase1b-equivalence-runner
@@ -44,6 +45,7 @@ jobs:
       - name: Checkout exact successor
         uses: actions/checkout@v4
         with:
+          ref: ${{ env.SUCCESSOR_SHA }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -60,8 +62,11 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git -C _phase1b_predecessor rev-parse HEAD)" = "$CAP08_PREDECESSOR_SHA"
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$GITHUB_SHA" != "$CAP08_PREDECESSOR_SHA"
+          test "$(git rev-parse HEAD)" = "$SUCCESSOR_SHA"
+          test "$SUCCESSOR_SHA" != "$CAP08_PREDECESSOR_SHA"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            test "$SUCCESSOR_SHA" = "${{ github.event.pull_request.head.sha }}"
+          fi
           test "$(git rev-parse $CAP08_PREDECESSOR_SHA:scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/product_chain_v1.cjs)" = "$(git rev-parse 26c1383f7f45abb76c99e28ec3d06714e85d1b2c:scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/product_chain_v1.cjs)"
 
       - name: Setup pnpm
@@ -122,7 +127,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-phase1b-cap08-frozen-replay-equivalence-${{ github.sha }}
+          name: mcft-cap09-phase1b-cap08-frozen-replay-equivalence-${{ env.SUCCESSOR_SHA }}
           path: |
             acceptance-output/MCFT_CAP_09_PHASE1B_CAP08_PREDECESSOR_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE1B_CAP08_SUCCESSOR_RESULT.json
