@@ -17,6 +17,7 @@ const TRANSPORT = "apps/server/src/external_evidence/provider/https_external_evi
 const PROVIDER = "apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.ts";
 const KBS_HOURLY_PROVIDER = "apps/server/src/external_evidence/provider/kbs_raw_hourly_live_provider_v1.ts";
 const KBS_HOURLY_CORE = "apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py";
+const GFS_PROVIDER = "apps/server/src/external_evidence/provider/gfs_nomads_live_provider_v1.ts";
 const GFS_SCIENTIFIC_CORE = "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py";
 const THIS = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs";
 const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1_RESULT.json");
@@ -42,6 +43,7 @@ const ALLOWED_SENSITIVE_DELTA = new Set([
   PROVIDER,
   KBS_HOURLY_PROVIDER,
   KBS_HOURLY_CORE,
+  GFS_PROVIDER,
   GFS_SCIENTIFIC_CORE,
   WORKFLOW,
   THIS,
@@ -92,7 +94,7 @@ try {
   const sensitive = changed.filter(isSensitive);
   const forbiddenSensitive = sensitive.filter((file) => !ALLOWED_SENSITIVE_DELTA.has(file));
   assert.deepEqual(forbiddenSensitive, [], "EA5C2B1_PHASE2_UNDECLARED_SENSITIVE_PATH");
-  for (const required of [EXECUTOR, TRANSPORT, PROVIDER, KBS_HOURLY_PROVIDER, KBS_HOURLY_CORE, GFS_SCIENTIFIC_CORE, WORKFLOW, THIS]) {
+  for (const required of [EXECUTOR, TRANSPORT, PROVIDER, KBS_HOURLY_PROVIDER, KBS_HOURLY_CORE, GFS_PROVIDER, GFS_SCIENTIFIC_CORE, WORKFLOW, THIS]) {
     assert.equal(sensitive.includes(required), true, `EA5C2B1_PHASE2_REQUIRED_DELTA_MISSING:${required}`);
   }
 
@@ -112,6 +114,7 @@ try {
   assert.equal(/\bINSERT\s+INTO\b/i.test(executor), false, "EA5C2B1_PHASE2_DIRECT_SQL_WRITE_FORBIDDEN");
 
   const transport = requireMarkers(TRANSPORT, [
+    "class ControlledHttpsByteClientV1",
     "class HttpsExternalEvidenceTransportV1",
     "request.allowed_final_hosts",
     "parsed.protocol === \"https:\"",
@@ -153,6 +156,34 @@ try {
     ".replace(source",
     "source.replace(",
   ]) assert.equal(kbsHourlyProvider.includes(forbidden), false, `EA5C2B1_PHASE2_KBS_HOURLY_PROVIDER_FORBIDDEN_DEPENDENCY:${forbidden}`);
+
+  const gfsProvider = requireMarkers(GFS_PROVIDER, [
+    "class GfsNomadsLiveProviderV1",
+    "ControlledHttpsByteClientV1",
+    "selectLatestCompleteCycle",
+    "fetchDirectoryRaw",
+    "fetchPgrb2FilteredRaw",
+    "fetchSfluxIndexRaw",
+    "fetchSfluxMessageRaw",
+    "parseGfsDirectoryInventoryV1",
+    "parseGfsSfluxIndexV1",
+    "same_exact_cycle_required: true",
+    "cross_cycle_substitution_authorized: false",
+    "Range:",
+    "content-range",
+    "last-modified",
+  ], "EA5C2B1_PHASE2_GFS_PROVIDER_MARKER_MISSING");
+  for (const forbidden of [
+    "scripts/runtime_acceptance",
+    "acceptance-output",
+    "GITHUB_",
+    "github.run",
+    "RuntimeTickCursor",
+    "twin_state",
+    "INSERT INTO",
+    "psycopg",
+    "subprocess",
+  ]) assert.equal(gfsProvider.includes(forbidden), false, `EA5C2B1_PHASE2_GFS_PROVIDER_FORBIDDEN_DEPENDENCY:${forbidden}`);
 
   const kbsHourlyCore = requireMarkers(KBS_HOURLY_CORE, [
     "class KbsRawHourlyScientificAuthorityV1",
@@ -212,7 +243,10 @@ try {
     provider_semantics_promoted_without_runtime_fallback: true,
     product_kbs_raw_hourly_provider_adapter_present: true,
     product_kbs_raw_hourly_scientific_core_present: true,
+    product_gfs_acquisition_provider_present: true,
+    product_gfs_acquisition_provider_uses_shared_https_client: true,
     product_gfs_scientific_core_declared_sensitive_delta: sensitive.includes(GFS_SCIENTIFIC_CORE),
+    product_gfs_provider_declared_sensitive_delta: sensitive.includes(GFS_PROVIDER),
     product_scientific_core_acceptance_dependency: false,
     product_scientific_core_github_identity_dependency: false,
     product_scientific_core_provider_fetch_dependency: false,
