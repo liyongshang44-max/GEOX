@@ -99,6 +99,22 @@
         ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
         ".github/workflows/mcft-cap-09-v13-fenced-fact-promotion-postgres.yml"
       ]
+    },
+    "PHASE1_TYPED_RUNTIME_COMPOSITION": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-phase1-typed-cap08-frozen-replay-equivalence-v1.yml",
+        ".github/workflows/mcft-cap-08-s4-late-evidence-append-forward.yml",
+        "apps/server/src/runtime/twin_runtime/cap08_replay_host_composition_v1.ts",
+        "apps/server/src/runtime/twin_runtime/cap08_s4_append_forward_service_v1.ts",
+        "apps/server/src/runtime/twin_runtime/cap08_s4_t17_corrected_predecessor_resolver_v1.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_SUCCESSOR_REQUALIFICATION_BOUNDARY_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE1_TYPED_CAP08_FROZEN_REPLAY_EQUIVALENCE_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE1_TYPED_RUNTIME_COMPOSITION_V1.cjs",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PHASE1_TYPED_CAP08_REPLAY_EQUIVALENCE_LANE_V1.cjs",
+        "scripts/runtime_acceptance/mcft_cap09_phase1_typed_replay_host_product_chain_v1.cjs"
+      ]
     }
   },
   "checks": [
@@ -228,6 +244,25 @@
       "requalification_triggers": ["LEGACY_AM19_PERSISTENT_24T"],
       "applicable_stages": ["SUCCESSOR_SUBJECT_PRE_MERGE"],
       "carry_forward_evidence_id": "LEGACY_AM19_24T_SUCCESSOR_ROUTING_3BBF096E",
+      "diagnostic_command": null
+    },
+    {
+      "check_id": "PHASE1_TYPED_RUNTIME_COMPOSITION",
+      "owner": "MCFT_CAP09_PHASE1_TYPED_RUNTIME_COMPOSITION_QUALIFICATION",
+      "generation_scope": ["PHASE1_TYPED_RUNTIME_COMPOSITION"],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "apps/server/src/runtime/twin_runtime/cap08_replay_host_composition_v1.ts"
+      ],
+      "resolver_ids": ["PHASE1_TYPED_RUNTIME_COMPOSITION"],
+      "historical_evidence_policy": "FRESH_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "execution_workflow": ".github/workflows/mcft-cap-09-phase1-typed-cap08-frozen-replay-equivalence-v1.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
+      "fail_policy": "FAIL_CLOSED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": ["PHASE1_TYPED_RUNTIME_COMPOSITION"],
+      "applicable_stages": ["SUCCESSOR_SUBJECT_PRE_MERGE"],
+      "carry_forward_evidence_id": null,
       "diagnostic_command": null
     },
     {
