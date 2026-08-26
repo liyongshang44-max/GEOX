@@ -15,7 +15,7 @@ import {
 } from "../../apps/server/src/external_evidence/mcft_cap09_evidence_visibility_supply_cursor_v1.js";
 import { PostgresExternalFormalEvidenceVisibilityV1 } from "../../apps/server/src/persistence/external_evidence/postgres_external_formal_evidence_visibility_v1.js";
 
-const ROOT = path.resolve(import.meta.dirname, "../..");
+const ROOT = path.resolve(process.cwd());
 const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_PHASE2_POST_COMMIT_VISIBILITY_CURSOR_V1_RESULT.json");
 const FACT_ID = `fact_external_evidence_${"1".repeat(64)}`;
 const RAW_SHA = `sha256:${"2".repeat(64)}`;
