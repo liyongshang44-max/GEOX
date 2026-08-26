@@ -15,6 +15,7 @@ const WORKFLOW = ".github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-ex
 const EXECUTOR = "apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts";
 const TRANSPORT = "apps/server/src/external_evidence/provider/https_external_evidence_transport_v1.ts";
 const PROVIDER = "apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.ts";
+const KBS_HOURLY_CORE = "apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py";
 const THIS = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs";
 const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1_RESULT.json");
 
@@ -33,7 +34,7 @@ const FROZEN_DEPENDENCIES = [
   "apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.ts",
 ];
 
-const ALLOWED_SENSITIVE_DELTA = new Set([EXECUTOR, TRANSPORT, PROVIDER, WORKFLOW, THIS]);
+const ALLOWED_SENSITIVE_DELTA = new Set([EXECUTOR, TRANSPORT, PROVIDER, KBS_HOURLY_CORE, WORKFLOW, THIS]);
 
 function git(...args) {
   return cp.execFileSync("git", args, { cwd: ROOT, encoding: "utf8" }).trim();
@@ -80,7 +81,7 @@ try {
   const sensitive = changed.filter(isSensitive);
   const forbiddenSensitive = sensitive.filter((file) => !ALLOWED_SENSITIVE_DELTA.has(file));
   assert.deepEqual(forbiddenSensitive, [], "EA5C2B1_PHASE2_UNDECLARED_SENSITIVE_PATH");
-  for (const required of [EXECUTOR, TRANSPORT, PROVIDER, WORKFLOW, THIS]) {
+  for (const required of [EXECUTOR, TRANSPORT, PROVIDER, KBS_HOURLY_CORE, WORKFLOW, THIS]) {
     assert.equal(sensitive.includes(required), true, `EA5C2B1_PHASE2_REQUIRED_DELTA_MISSING:${required}`);
   }
 
@@ -122,6 +123,39 @@ try {
   ], "EA5C2B1_PHASE2_PROVIDER_MARKER_MISSING");
   assert.equal(/\bINSERT\s+INTO\b/i.test(provider), false, "EA5C2B1_PHASE2_PROVIDER_DB_WRITE_FORBIDDEN");
 
+  const kbsHourlyCore = requireMarkers(KBS_HOURLY_CORE, [
+    "class KbsRawHourlyScientificAuthorityV1",
+    "class KbsRawHourlyExactIntervalV1",
+    "def parse_kbs_raw_hourly_csv_v1",
+    "def compute_asce_short_hourly_et0_v1",
+    "def decode_exact_kbs_raw_hourly_interval_v1",
+    "refet.Hourly(",
+    "method=\"asce\"",
+    "target.minute == 0 and target.second == 0 and target.microsecond == 0",
+    "len(matches) == 1",
+    "0 <= rainfall <= 100",
+    "-50 <= air <= 60",
+    "0 < actual_vapor_pressure <= 10",
+    "0 <= solar <= 1600",
+    "0 <= wind <= 100",
+  ], "EA5C2B1_PHASE2_KBS_HOURLY_CORE_MARKER_MISSING");
+  for (const forbidden of [
+    "scripts/runtime_acceptance",
+    "acceptance-output",
+    "MCFT_SUBJECT_SHA",
+    "GITHUB_",
+    "github.run",
+    "importlib.util",
+    "subprocess",
+    "os.environ",
+    "Path.cwd",
+    "tempfile",
+    "urlopen",
+    "INSERT INTO",
+    "RuntimeTickCursor",
+    "twin_state",
+  ]) assert.equal(kbsHourlyCore.includes(forbidden), false, `EA5C2B1_PHASE2_PRODUCT_SCIENTIFIC_CORE_FORBIDDEN_DEPENDENCY:${forbidden}`);
+
   const workflow = requireMarkers(WORKFLOW, [
     "ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs",
     "ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs",
@@ -144,6 +178,11 @@ try {
     historical_ea5c2b1_runtime_acceptance_unchanged: true,
     sensitive_changed_files: sensitive,
     provider_semantics_promoted_without_runtime_fallback: true,
+    product_kbs_raw_hourly_scientific_core_present: true,
+    product_scientific_core_acceptance_dependency: false,
+    product_scientific_core_github_identity_dependency: false,
+    product_scientific_core_provider_fetch_dependency: false,
+    product_scientific_core_database_write_dependency: false,
     retention_before_decode_boundary_preserved: true,
     governed_postgres_ingress_boundary_preserved: true,
     production_evidence_runtime_activated: false,
