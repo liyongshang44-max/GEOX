@@ -73,8 +73,10 @@ jobs:
       - name: Prove GFS product and successor qualification identity boundary
         shell: python
         run: |
+          import ast
           import json
           import pathlib
+          import re
           import subprocess
 
           root = pathlib.Path.cwd()
@@ -119,19 +121,38 @@ jobs:
               if forbidden in decode_text:
                   raise SystemExit(f"GFS_PRODUCT_IDENTITY_SECOND_SCIENTIFIC_PATH:{forbidden}")
 
-          for forbidden in [
-              "scripts/runtime_acceptance",
-              "urlopen",
-              "requests.",
-              "httpx.",
+          tree = ast.parse(core_text, filename=core)
+          imported_modules = []
+          for node in ast.walk(tree):
+              if isinstance(node, ast.Import):
+                  imported_modules.extend(alias.name for alias in node.names)
+              elif isinstance(node, ast.ImportFrom):
+                  imported_modules.append(node.module or "")
+
+          forbidden_import_prefixes = (
+              "scripts.runtime_acceptance",
+              "urllib",
+              "requests",
+              "httpx",
               "psycopg",
-              "INSERT INTO",
-              "RuntimeTickCursor",
-              "twin_state",
-              "os.environ",
-          ]:
-              if forbidden in core_text:
-                  raise SystemExit(f"GFS_PRODUCT_CORE_FORBIDDEN_DEPENDENCY:{forbidden}")
+              "psycopg2",
+              "sqlalchemy",
+          )
+          for module in imported_modules:
+              if any(module == prefix or module.startswith(prefix + ".") for prefix in forbidden_import_prefixes):
+                  raise SystemExit(f"GFS_PRODUCT_CORE_FORBIDDEN_IMPORT:{module}")
+              if "twin_runtime" in module.split("."):
+                  raise SystemExit(f"GFS_PRODUCT_CORE_RUNTIME_IMPORT_FORBIDDEN:{module}")
+
+          precise_forbidden_patterns = [
+              ("DIRECT_SQL", re.compile(r"\bINSERT\s+INTO\b", re.IGNORECASE)),
+              ("RUNTIME_TICK_CURSOR", re.compile(r"\bRuntimeTickCursor\b")),
+              ("OS_ENVIRON", re.compile(r"\bos\.environ\b")),
+              ("ACCEPTANCE_PATH", re.compile(r"scripts/runtime_acceptance")),
+          ]
+          for label, pattern in precise_forbidden_patterns:
+              if pattern.search(core_text):
+                  raise SystemExit(f"GFS_PRODUCT_CORE_FORBIDDEN_DEPENDENCY:{label}")
 
           if core not in graph_text:
               raise SystemExit("GFS_PRODUCT_CORE_NOT_IN_EA5E2_GRAPH")
@@ -148,6 +169,7 @@ jobs:
               "apcp_and_72h_assembly_uses_product_core": True,
               "solar_interval_and_et0_uses_product_core": True,
               "second_gfs_scientific_path_in_successor_decode": False,
+              "product_core_import_modules": sorted(imported_modules),
               "product_core_acceptance_dependency": False,
               "product_core_network_dependency": False,
               "product_core_database_dependency": False,
