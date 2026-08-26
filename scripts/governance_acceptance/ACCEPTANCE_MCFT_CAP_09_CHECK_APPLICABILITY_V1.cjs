@@ -38,7 +38,7 @@ function plan(authority, registry, changedPaths, stage = "SUCCESSOR_SUBJECT_PRE_
     changedPaths,
     stage,
     baseSha: authority.frozen_successor_subject_sha,
-    headSha: "1".repeat(40),
+    headSha: authority.frozen_successor_subject_sha,
   });
 }
 
