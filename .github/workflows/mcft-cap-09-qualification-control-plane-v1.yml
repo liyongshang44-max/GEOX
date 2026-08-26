@@ -66,12 +66,14 @@ jobs:
           const authority = JSON.parse(fs.readFileSync(AUTHORITY_PATH, 'utf8'));
           const registry = JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf8'));
           const head = cp.execFileSync('git', ['rev-parse','HEAD'], {encoding:'utf8'}).trim();
+          const changedPaths = cp.execFileSync('git', ['diff','--name-only', `${authority.frozen_successor_subject_sha}...${head}`], {encoding:'utf8'})
+            .split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
           const failures = [];
           const assert = (condition, code, detail = null) => {
             if (!condition) failures.push({code, detail});
           };
           const current = planApplicability({
-            authority, registry, changedPaths:[REGISTRY_PATH],
+            authority, registry, changedPaths,
             stage:'SUCCESSOR_SUBJECT_PRE_MERGE', generation:'v13',
             baseSha:authority.frozen_successor_subject_sha, headSha:head,
           });
@@ -117,7 +119,7 @@ jobs:
             head_sha:head,
             generation_context:g,
             durable_anchor_count:registry.durable_anchors?.entries?.length ?? null,
-            dependency_digest_strategy:DEPENDENCY_DIGEST_STRATEGY,
+            dependency_digest_strategy:DEPENDENDENCY_DIGEST_STRATEGY,
             frozen_carry_forward_checks:carryForwardIds,
             required_requalification_checks:requalificationIds,
             current_decisions:current.decisions,
