@@ -27,12 +27,30 @@ function normalizeRecoveryDetail(detail){
   if(Object.prototype.hasOwnProperty.call(copy,'database_name'))copy.database_name='<DISPOSABLE_DATABASE>';
   return copy;
 }
+function normalizeCap07ResponseBody(body){
+  assert.ok(body&&typeof body==='object'&&!Array.isArray(body),'CAP07_RESPONSE_BODY_REQUIRED');
+  const copy=structuredClone(body);
+  delete copy.response_started_at;
+  delete copy.response_instance_hash;
+  if(copy.schema_version==='field_twin_timeline_page_v1'){
+    delete copy.canonical_visibility_snapshot;
+    delete copy.next_cursor;
+    delete copy.timeline_page_content_hash;
+  }else if(copy.schema_version==='field_twin_collection_page_v1'){
+    delete copy.canonical_visibility_snapshot;
+    delete copy.fixed_root_ref;
+    delete copy.fixed_root_graph_content_hash;
+    delete copy.next_cursor;
+    delete copy.collection_page_content_hash;
+  }
+  return copy;
+}
 function normalizeCap07Surfaces(surfaces){
   return surfaces.map(surface=>({
     name:surface.name,
     variant:surface.variant,
     pages:surface.pages.map(page=>({
-      content_hash:page.content_hash,
+      semantic_body:normalizeCap07ResponseBody(page.body),
       next_cursor_is_null:page.next_cursor===null,
     })),
   }));
@@ -43,7 +61,6 @@ function normalizeSelector(selector){
     copy.read_model.surfaces=copy.read_model.surfaces.map(surface=>({
       name:surface.name,
       status:surface.status,
-      content_hash:surface.content_hash,
     }));
   }
   return copy;
@@ -171,6 +188,9 @@ async function main(){
       semantic_manifest:semanticManifest,
       database_instance_identity_excluded_from_equivalence:true,
       cap07_response_instance_identity_excluded_from_equivalence:true,
+      cap07_visibility_snapshot_identity_excluded_from_equivalence:true,
+      cap07_semantic_response_body_compared:true,
+      cap07_item_content_hashes_preserved:true,
       historical_cap08_authority_reused:false,
       historical_cap08_completion_reopened:false,
       provider_request:false,
