@@ -1,0 +1,64 @@
+name: mcft-cap-09-phase-1-runtime-composition-seams-v1
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/runtime/twin_runtime/cap08_s4_append_forward_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/cap08_s4_t17_corrected_predecessor_resolver_v1.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE-1-CANONICAL-RUNTIME-COMPOSITION-BOUNDARY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE_1_RUNTIME_COMPOSITION_SEAMS_V1.cjs'
+      - '.github/workflows/mcft-cap-09-phase-1-runtime-composition-seams-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  phase-1-runtime-composition-seams:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact protected-main base
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test "${{ github.event.pull_request.base.ref }}" = 'main'
+          test "${{ github.event.pull_request.base.sha }}" = '26c1383f7f45abb76c99e28ec3d06714e85d1b2c'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+
+      - name: Setup pnpm
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@9.15.4 --activate
+          pnpm --version
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prove explicit composition seam and frozen historical semantics
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE_1_RUNTIME_COMPOSITION_SEAMS_V1.cjs
+
+      - name: Typecheck server
+        run: pnpm --filter @geox/server run typecheck
+
+      - name: Upload Phase 1 composition seam evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-phase1-runtime-composition-seams-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_PHASE_1_RUNTIME_COMPOSITION_SEAMS_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
