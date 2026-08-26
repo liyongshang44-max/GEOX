@@ -84,8 +84,9 @@ jobs:
           assert(g.store_generation?.formal_database === 'geox_mcft_cap09_s6_formal_t4r1_24h_v5', 'FORMAL_STORE_GENERATION_MISMATCH', g.store_generation);
           assert(registry.dependency_digest_strategy === DEPENDENCY_DIGEST_STRATEGY, 'DEPENDENCY_DIGEST_STRATEGY_MISMATCH', registry.dependency_digest_strategy);
           assert(registry.durable_anchors?.entries?.length === registry.entries.length, 'DURABLE_ANCHOR_CARDINALITY_MISMATCH', {anchors:registry.durable_anchors?.entries?.length, entries:registry.entries.length});
-          const carryForwardIds = ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS','LEGACY_AM19_PERSISTENT_24T'];
-          const v13ScopedIds = [...carryForwardIds, 'EA5E2_RUNTIME_DEPENDENCY_GRAPH'];
+          const carryForwardIds = ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS'];
+          const requalificationIds = ['EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T'];
+          const v13ScopedIds = [...carryForwardIds, ...requalificationIds];
           for (const id of carryForwardIds) {
             const row = current.decisions.find(x => x.check_id === id);
             assert(Boolean(row) && row.status === 'CARRY_FORWARD' && row.dependency_digest_match === true, 'FROZEN_DIGEST_CARRY_FORWARD_REQUIRED', row || {check_id:id, missing:true});
@@ -96,6 +97,10 @@ jobs:
           assert(ea5e2?.status === 'REQUALIFY' && ea5e2?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED' && ea5e2?.dependency_digest_match === false, 'EA5E2_CHANGED_DEPENDENCY_MUST_REQUALIFY', ea5e2);
           assert((ea5e2?.changed_dependencies || []).includes('.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml'), 'EA5E2_WORKFLOW_CHANGE_MUST_BE_VISIBLE', ea5e2?.changed_dependencies || []);
           assert((ea5e2?.changed_dependencies || []).includes('scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs'), 'EA5E2_BINDING_CHANGE_MUST_BE_VISIBLE', ea5e2?.changed_dependencies || []);
+          const persistent24 = current.decisions.find(x => x.check_id === 'LEGACY_AM19_PERSISTENT_24T');
+          assert(Boolean(persistent24), 'LEGACY_AM19_PERSISTENT_24T_REQUALIFICATION_DECISION_REQUIRED', {check_id:'LEGACY_AM19_PERSISTENT_24T', missing:true});
+          assert(persistent24?.status === 'REQUALIFY' && persistent24?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED' && persistent24?.dependency_digest_match === false, 'LEGACY_AM19_PERSISTENT_24T_WORKFLOW_CHANGE_MUST_REQUALIFY', persistent24);
+          assert((persistent24?.changed_dependencies || []).includes('.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml'), 'LEGACY_AM19_PERSISTENT_24T_WORKFLOW_CHANGE_MUST_BE_VISIBLE', persistent24?.changed_dependencies || []);
           const future = planApplicability({
             authority, registry, changedPaths:[REGISTRY_PATH],
             stage:'SUCCESSOR_SUBJECT_PRE_MERGE', generation:'v14',
@@ -114,7 +119,7 @@ jobs:
             durable_anchor_count:registry.durable_anchors?.entries?.length ?? null,
             dependency_digest_strategy:DEPENDENCY_DIGEST_STRATEGY,
             frozen_carry_forward_checks:carryForwardIds,
-            required_requalification_checks:['EA5E2_RUNTIME_DEPENDENCY_GRAPH'],
+            required_requalification_checks:requalificationIds,
             current_decisions:current.decisions,
             current_resolver_summaries:current.resolver_summaries,
             current_authority_errors:current.authority_errors,
@@ -255,7 +260,7 @@ jobs:
           if (plan.status !== 'PASS' || plan.generation !== 'v13' || plan.unknown_changed_paths.length !== 0 || plan.resolver_errors.length !== 0 || plan.authority_errors.length !== 0) throw new Error('CONTROL_PLANE_PLAN_NOT_PASS');
           const control = plan.decisions.find(x => x.check_id === 'CONTROL_PLANE_INTEGRITY');
           if (!control || control.status !== 'REQUALIFY') throw new Error('CONTROL_PLANE_SELF_CHANGE_MUST_REQUALIFY');
-          for (const id of ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS','LEGACY_AM19_PERSISTENT_24T']) {
+          for (const id of ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS']) {
             const row = plan.decisions.find(x => x.check_id === id);
             if (!row || row.status !== 'CARRY_FORWARD' || row.dependency_digest_match !== true) throw new Error(`FROZEN_EVIDENCE_MUST_CARRY_FORWARD_WITH_DIGEST:${id}:${row?.status}`);
           }
@@ -266,6 +271,14 @@ jobs:
             if (ea5e2.status !== 'REQUALIFY') throw new Error(`EA5E2_WORKFLOW_CHANGE_MUST_REQUALIFY:${ea5e2.status}`);
           } else if (ea5e2.status !== 'CARRY_FORWARD' || ea5e2.dependency_digest_match !== true) {
             throw new Error(`EA5E2_UNCHANGED_MUST_CARRY_FORWARD_WITH_DIGEST:${ea5e2.status}`);
+          }
+          const persistent24 = plan.decisions.find(x => x.check_id === 'LEGACY_AM19_PERSISTENT_24T');
+          if (!persistent24) throw new Error('LEGACY_AM19_PERSISTENT_24T_APPLICABILITY_DECISION_REQUIRED');
+          const persistentWorkflowChanged = (persistent24.changed_dependencies || []).includes('.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml');
+          if (persistentWorkflowChanged) {
+            if (persistent24.status !== 'REQUALIFY') throw new Error(`LEGACY_AM19_PERSISTENT_24T_WORKFLOW_CHANGE_MUST_REQUALIFY:${persistent24.status}`);
+          } else if (persistent24.status !== 'CARRY_FORWARD' || persistent24.dependency_digest_match !== true) {
+            throw new Error(`LEGACY_AM19_PERSISTENT_24T_UNCHANGED_MUST_CARRY_FORWARD_WITH_DIGEST:${persistent24.status}`);
           }
           if (preflight.status !== 'PASS' || preflight.generation !== 'v13' || preflight.non_fail_fast !== true || preflight.counts.blocker_count !== 0) throw new Error('ALL_BLOCKERS_PREFLIGHT_NOT_PASS');
           for (const source of [proof, cp2, evidence, plan, preflight]) {
