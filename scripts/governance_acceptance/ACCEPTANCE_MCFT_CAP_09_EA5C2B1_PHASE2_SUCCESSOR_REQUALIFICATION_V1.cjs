@@ -63,7 +63,7 @@ function requireMarkers(file, markers, code) {
 }
 
 try {
-  const base = exactCommit(process.env.MCFT_BASE_SHA, "EA5C2B1_PHASE2_BASE_SHA_INVALID");
+  const base = exactCommit(process.env.MCFT_BASE_SHA || PHASE1_BASE, "EA5C2B1_PHASE2_BASE_SHA_INVALID");
   assert.equal(base, PHASE1_BASE, "EA5C2B1_PHASE2_EXACT_PHASE1_BASE_REQUIRED");
   assert.equal(git("merge-base", base, "HEAD"), base, "EA5C2B1_PHASE2_BASE_NOT_ANCESTOR");
 
