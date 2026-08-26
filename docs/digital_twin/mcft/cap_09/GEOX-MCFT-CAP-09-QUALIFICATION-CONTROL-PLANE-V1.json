@@ -3,6 +3,11 @@
   "status": "CANDIDATE_SUCCESSOR_CONTROL_PLANE",
   "schema_version": 1,
   "frozen_successor_subject_sha": "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
+  "governed_successor_predecessor_shas": [
+    "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
+    "14653ba622bb12261a1ea79f3ea7e42be0b49f92",
+    "8943c752a354cb916cc7f144681203aa9a19f70b"
+  ],
   "stacked_predecessor_branch": "fix/mcft-cap09-v13-autonomous-forcing-foundation",
   "default_stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
   "allowed_stages": [
@@ -114,6 +119,17 @@
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE1_TYPED_RUNTIME_COMPOSITION_V1.cjs",
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PHASE1_TYPED_CAP08_REPLAY_EQUIVALENCE_LANE_V1.cjs",
         "scripts/runtime_acceptance/mcft_cap09_phase1_typed_replay_host_product_chain_v1.cjs"
+      ]
+    },
+    "PHASE2_EVIDENCE_PROVIDER_MODULES": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml",
+        "apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts",
+        "apps/server/src/external_evidence/provider/https_external_evidence_transport_v1.ts",
+        "apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs",
+        "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs"
       ]
     }
   },
@@ -264,6 +280,25 @@
       "applicable_stages": ["SUCCESSOR_SUBJECT_PRE_MERGE"],
       "carry_forward_evidence_id": null,
       "diagnostic_command": null
+    },
+    {
+      "check_id": "PHASE2_EVIDENCE_PROVIDER_MODULES",
+      "owner": "MCFT_CAP09_PHASE2_EVIDENCE_PROVIDER_MODULES_QUALIFICATION",
+      "generation_scope": ["PHASE2_EVIDENCE_PROVIDER_MODULES"],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs"
+      ],
+      "resolver_ids": ["PHASE2_EVIDENCE_PROVIDER_MODULES"],
+      "historical_evidence_policy": "FRESH_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "execution_workflow": ".github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
+      "fail_policy": "FAIL_CLOSED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": ["PHASE2_EVIDENCE_PROVIDER_MODULES"],
+      "applicable_stages": ["SUCCESSOR_SUBJECT_PRE_MERGE"],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs"
     },
     {
       "check_id": "V13_PRODUCER_DRIVEN_QUALIFICATION",
