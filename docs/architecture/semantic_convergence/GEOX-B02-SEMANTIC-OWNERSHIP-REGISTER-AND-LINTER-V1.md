@@ -399,3 +399,146 @@ B-03 — Canonical Observation + Evidence Qualification Contracts
 ```
 
 B-03 may define typed contracts and negative fixtures, but still must not rewrite MCFT semantics.
+
+
+---
+
+## B-02 Connectivity Amendment 01
+
+Status: **part of B-02; B-03 remains blocked until the B-02 completion gate passes**
+
+B-02 is expanded from semantic ownership governance into the following bounded machine-readable repository map:
+
+```text
+Semantic Ownership
+        +
+Runtime Connectivity
+        =
+B-02 machine-readable repository map
+```
+
+This amendment does not change B-03/B-04 architecture ordering and does not mutate runtime semantics.
+
+### Capability is not wiring
+
+The register now separates:
+
+```text
+registered_consumer
+= contract/API/code capable of consuming this semantic
+
+runtime_consumer
+= repository evidence proves current runtime wiring
+```
+
+Every registered producer and consumer carries:
+
+```text
+connection_class
+activation
+runtime_edge
+```
+
+The allowed connection classes include MAINLINE, ACTIVE_PARALLEL, ROUTE_ISLAND, MANUAL_SEAM,
+ACCEPTANCE_LIBRARY_ISLAND, COMPATIBILITY, DEVTOOLS_ONLY, ORPHANED, INTENTIONAL_ISOLATION,
+REGISTERED_CAPABILITY_ISLAND, ACTIVE_LEGACY_WRITER, LOCAL_DIRECT_CALL, and REPORTING_ARTIFACT_PLANE.
+
+### Exact-main connectivity adjudications recorded
+
+The machine map records at least these B-02 results:
+
+- Agronomy Agent: ACTIVE_PARALLEL.
+- Evidence Judge V2: ROUTE_ISLAND.
+- Agronomy Judge V2: ROUTE_ISLAND.
+- Execution Judge V2: ROUTE_ISLAND with a proven execution-memory side effect.
+- Generic Skill Runtime: REGISTERED_CAPABILITY_ISLAND; Judge irrigation skills remain LOCAL_DIRECT_CALL.
+- evaluateIrrigationDecisionV1: ORPHANED / NOT_REFERENCED.
+- legacy root-zone State / Forecast / Scenario builders: ACCEPTANCE_LIBRARY_ISLAND.
+- legacy Operator scenario-to-recommendation POST module: ACTIVE_LEGACY_WRITER and CURRENT_PROVEN registration.
+- Agronomy Inference: ROUTE_ISLAND.
+- Agronomy Interpretation: INTENTIONAL_ISOLATION from deterministic Judge/Decision authority.
+- existing EvidenceModule: REPORTING_ARTIFACT_PLANE, not the future canonical Evidence Runtime.
+- Flight Table/simulator: DEVTOOLS_ONLY with intentional production-authority isolation.
+- Acceptance -> Water Response Verification: MANUAL_SEAM; no automatic call is proven.
+
+One proposed classification is corrected by exact-main code evidence:
+
+```text
+Acceptance -> Field Memory
+```
+
+is **not** a MANUAL_SEAM on the audited baseline. `apps/server/src/routes/acceptance_v1.ts` directly calls
+`recordMemoryV1` when verdict is PASS, formal_acceptance is true, and field_id exists. B-02 therefore records this
+edge as MAINLINE / API_ONLY / PROVEN / CURRENT_PROVEN. B-02 records code truth rather than forcing the planned label.
+
+### Judge wiring distinction
+
+`/api/v1/judge/evidence/evaluate` and `/api/v1/judge/agronomy/evaluate` are separate POST routes.
+The Agronomy Judge request can carry `evidence_judge_id` / `evidence_judge_verdict`, but the route does not
+automatically load and execute Evidence Judge before Agronomy Judge. Therefore:
+
+```text
+EvidenceJudgeV2 -> AgronomyJudgeV2
+contract_compatible = true
+runtime_edge = NOT_PROVEN
+status = NOT_WIRED
+```
+
+### Connectivity linter rules
+
+The B-02 linter now enforces explicit, mechanically provable rules corresponding to:
+
+- RUNTIME_CONSUMER_REQUIRES_CALL_EVIDENCE
+- ROUTE_ISLAND_MUST_BE_EXPLICIT
+- ACTIVE_LEGACY_WRITER_MUST_BE_REGISTERED
+- ORPHANED_SEMANTIC_EXPORT_MUST_BE_REGISTERED
+- MANUAL_SEAM_MUST_BE_EXPLICIT
+- DECLARED_RUNTIME_EDGE_REQUIRES_EVIDENCE
+- DEVTOOLS_ONLY_PATH_MUST_NOT_BE_PRODUCTION_CONSUMER
+- COMPATIBILITY_PRODUCER_CANNOT_GAIN_NEW_RUNTIME_CONSUMER
+
+It remains STATIC_EXPLICIT_ONLY. It does not claim arbitrary TypeScript semantic inference.
+
+### Coverage output
+
+A successful exact-head linter run prints both:
+
+```text
+B02_SEMANTIC_REGISTER_STATS ...
+B02_CONNECTIVITY_STATS ...
+B02_SEMANTIC_CONTRACT_LINTER_PASS
+```
+
+The connectivity stats include mainline edges, active parallel edges, route islands, manual seams,
+acceptance-only islands, active legacy writers, orphans, intentional isolation, registered capability islands,
+reporting artifact plane, and unproven runtime edges.
+
+`unknown_unclassified_production_edge = 0` means zero unknown edges inside the explicit B-02 audited/scanned
+scope. It does not claim whole-program semantic inference beyond that scope.
+
+### B-02 completion gate
+
+B-02 is COMPLETE only when all of the following are green on one exact B-02 head:
+
+```text
+Ownership Register                         PASS
+Parallel Authority Graph                   PASS
+Forbidden Edge Graph                       PASS
+Connectivity classification                PASS
+Connectivity edges                         PASS
+Static linter                              PASS
+Exact-head general CI                      PASS
+Existing MCFT governance/release lanes     PASS
+Unknown unclassified production edge       0
+```
+
+Until then:
+
+```text
+DO NOT START B-03
+DO NOT MODIFY RUNTIME SEMANTICS
+DO NOT DISABLE AGRONOMY AGENT
+DO NOT REWIRE JUDGE
+DO NOT MODIFY MCFT
+DO NOT DELETE LEGACY CODE
+```
