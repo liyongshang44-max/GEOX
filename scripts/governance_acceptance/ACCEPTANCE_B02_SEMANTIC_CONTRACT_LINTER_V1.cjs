@@ -5,291 +5,216 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const repoRoot = path.resolve(__dirname, "..", "..");
-const registerPath = path.join(
-  repoRoot,
-  "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json",
-);
-const graphPath = path.join(
-  repoRoot,
-  "docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json",
-);
+const baseDir = path.join(repoRoot, "docs/architecture/semantic_convergence");
+const registerPath = path.join(baseDir, "GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json");
+const graphPath = path.join(baseDir, "GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json");
+const allowlistPath = path.join(baseDir, "GEOX-B02-STATIC-SCAN-ALLOWLIST-V1.json");
 
-function readJson(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, "utf8"));
-}
+const readJson = (p) => JSON.parse(fs.readFileSync(p, "utf8"));
+const abs = (p) => path.join(repoRoot, p);
+const exists = (p) => fs.existsSync(abs(p));
+const repoPath = (p) => path.relative(repoRoot, p).split(path.sep).join("/");
 
-function toRepoPath(absPath) {
-  return path.relative(repoRoot, absPath).split(path.sep).join("/");
-}
-
-function existsRepoPath(repoPath) {
-  return fs.existsSync(path.join(repoRoot, repoPath));
-}
-
-function listFilesRecursive(rootAbs, extensions, ignoreFragments) {
+function listFiles(root, extensions, ignores) {
   const out = [];
-  if (!fs.existsSync(rootAbs)) return out;
-  const stack = [rootAbs];
-  while (stack.length > 0) {
-    const current = stack.pop();
-    const entries = fs.readdirSync(current, { withFileTypes: true });
-    for (const entry of entries) {
-      const abs = path.join(current, entry.name);
-      const repoPath = toRepoPath(abs);
-      if (ignoreFragments.some((fragment) => repoPath.includes(fragment))) continue;
-      if (entry.isDirectory()) {
-        if (entry.name === "node_modules" || entry.name === "dist" || entry.name === ".git") continue;
-        stack.push(abs);
-        continue;
+  const stack = [abs(root)];
+  while (stack.length) {
+    const dir = stack.pop();
+    if (!fs.existsSync(dir)) continue;
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      const rp = repoPath(p);
+      if (ignores.some((x) => rp.includes(x))) continue;
+      if (e.isDirectory()) {
+        if (!["node_modules", "dist", ".git"].includes(e.name)) stack.push(p);
+      } else if (e.isFile() && (!extensions.length || extensions.some((x) => rp.endsWith(x)))) {
+        out.push(p);
       }
-      if (!entry.isFile()) continue;
-      if (extensions.length > 0 && !extensions.some((ext) => repoPath.endsWith(ext))) continue;
-      out.push(abs);
     }
   }
   return out;
 }
 
-function contentMatches(content, match) {
-  if (!match || typeof match !== "object") return false;
-  const allOf = Array.isArray(match.all_of) ? match.all_of : [];
-  const anyOf = Array.isArray(match.any_of) ? match.any_of : [];
-  if (allOf.length > 0 && !allOf.every((token) => content.includes(String(token)))) return false;
-  if (anyOf.length > 0 && !anyOf.some((token) => content.includes(String(token)))) return false;
-  return allOf.length > 0 || anyOf.length > 0;
+function matches(content, spec) {
+  const all = Array.isArray(spec?.all_of) ? spec.all_of : [];
+  const any = Array.isArray(spec?.any_of) ? spec.any_of : [];
+  if (all.length && !all.every((x) => content.includes(String(x)))) return false;
+  if (any.length && !any.some((x) => content.includes(String(x)))) return false;
+  return all.length > 0 || any.length > 0;
 }
 
 function run() {
   const failures = [];
   const warnings = [];
-
-  if (!fs.existsSync(registerPath)) failures.push("REGISTER_MISSING");
-  if (!fs.existsSync(graphPath)) failures.push("GRAPH_MISSING");
-  if (failures.length > 0) return finish(failures, warnings, {});
+  for (const p of [registerPath, graphPath, allowlistPath]) {
+    if (!fs.existsSync(p)) failures.push(`REQUIRED_FILE_MISSING:${repoPath(p)}`);
+  }
+  if (failures.length) return finish(failures, warnings, {});
 
   const register = readJson(registerPath);
   const graph = readJson(graphPath);
+  const allowlist = readJson(allowlistPath);
 
-  if (register.phase !== "B-02") failures.push(`REGISTER_PHASE_INVALID:${String(register.phase)}`);
-  if (graph.phase !== "B-02") failures.push(`GRAPH_PHASE_INVALID:${String(graph.phase)}`);
+  if (register.phase !== "B-02") failures.push(`REGISTER_PHASE_INVALID:${register.phase}`);
+  if (graph.phase !== "B-02") failures.push(`GRAPH_PHASE_INVALID:${graph.phase}`);
+  if (allowlist.phase !== "B-02") failures.push(`ALLOWLIST_PHASE_INVALID:${allowlist.phase}`);
   if (register.enforcement_model?.linter_scope !== "STATIC_EXPLICIT_ONLY") {
     failures.push("REGISTER_LINTER_SCOPE_MUST_BE_STATIC_EXPLICIT_ONLY");
   }
 
   const semantics = Array.isArray(register.semantics) ? register.semantics : [];
-  if (semantics.length === 0) failures.push("REGISTER_SEMANTICS_EMPTY");
-
   const semanticIds = new Set();
   const producerIndex = new Map();
-  const currentProducerPaths = new Set();
+  const consumerIndex = new Map();
 
   for (const semantic of semantics) {
     const sid = String(semantic.semantic_id || "").trim();
-    if (!sid) {
-      failures.push("SEMANTIC_ID_MISSING");
-      continue;
-    }
+    if (!sid) { failures.push("SEMANTIC_ID_MISSING"); continue; }
     if (semanticIds.has(sid)) failures.push(`SEMANTIC_ID_DUPLICATE:${sid}`);
     semanticIds.add(sid);
+    for (const key of ["target_owner", "canonical_output_type", "new_owner_creation"]) {
+      if (!String(semantic[key] || "").trim()) failures.push(`SEMANTIC_FIELD_MISSING:${sid}:${key}`);
+    }
 
-    if (!String(semantic.target_owner || "").trim()) failures.push(`TARGET_OWNER_MISSING:${sid}`);
-    if (!String(semantic.canonical_output_type || "").trim()) failures.push(`CANONICAL_OUTPUT_TYPE_MISSING:${sid}`);
-    if (!String(semantic.new_owner_creation || "").trim()) failures.push(`NEW_OWNER_RULE_MISSING:${sid}`);
-
-    const producers = Array.isArray(semantic.registered_producers) ? semantic.registered_producers : [];
-    const localProducerIds = new Set();
-    for (const producer of producers) {
-      const pid = String(producer.producer_id || "").trim();
-      const ppath = String(producer.path || "").trim();
-      if (!pid) {
-        failures.push(`PRODUCER_ID_MISSING:${sid}`);
-        continue;
-      }
-      if (localProducerIds.has(pid)) failures.push(`PRODUCER_ID_DUPLICATE_WITHIN_SEMANTIC:${sid}:${pid}`);
-      localProducerIds.add(pid);
+    for (const p of Array.isArray(semantic.registered_producers) ? semantic.registered_producers : []) {
+      const pid = String(p.producer_id || "").trim();
+      const pp = String(p.path || "").trim();
+      if (!pid) { failures.push(`PRODUCER_ID_MISSING:${sid}`); continue; }
       if (producerIndex.has(pid)) failures.push(`PRODUCER_ID_GLOBAL_DUPLICATE:${pid}`);
-      producerIndex.set(pid, { semantic_id: sid, producer });
-
-      if (!ppath) failures.push(`PRODUCER_PATH_MISSING:${sid}:${pid}`);
-      if (producer.current !== false && ppath) {
-        currentProducerPaths.add(ppath);
-        if (!existsRepoPath(ppath)) failures.push(`REGISTERED_PRODUCER_PATH_MISSING:${sid}:${pid}:${ppath}`);
-      }
-
-      if (producer.grandfathered_duplicate === true) {
-        const removal = String(producer.removal_target || "").trim();
-        if (!/^B-0[4-9]$/.test(removal)) {
-          failures.push(`GRANDFATHERED_DUPLICATE_REMOVAL_TARGET_INVALID:${sid}:${pid}:${removal || "NONE"}`);
-        }
-        if (semantic.new_owner_creation !== "FORBIDDEN" && semantic.new_owner_creation !== "ALLOWED_ONLY_BY_EXPLICIT_REGISTER") {
-          failures.push(`GRANDFATHERED_DUPLICATE_NEW_OWNER_RULE_WEAK:${sid}:${pid}`);
+      producerIndex.set(pid, { semantic_id: sid, producer: p });
+      if (!pp) failures.push(`PRODUCER_PATH_MISSING:${sid}:${pid}`);
+      if (p.current !== false && pp && !exists(pp)) failures.push(`REGISTERED_PRODUCER_PATH_MISSING:${sid}:${pid}:${pp}`);
+      if (p.grandfathered_duplicate === true) {
+        const target = String(p.removal_target || "");
+        if (!/^B-0[4-9]$/.test(target)) failures.push(`GRANDFATHERED_REMOVAL_TARGET_INVALID:${sid}:${pid}:${target || "NONE"}`);
+        if (!["FORBIDDEN", "ALLOWED_ONLY_BY_EXPLICIT_REGISTER"].includes(semantic.new_owner_creation)) {
+          failures.push(`GRANDFATHERED_NEW_OWNER_RULE_WEAK:${sid}:${pid}`);
         }
       }
-
-      const fingerprints = Array.isArray(producer.fingerprints) ? producer.fingerprints : [];
-      if (producer.current !== false && ppath && fingerprints.length > 0 && existsRepoPath(ppath)) {
-        const content = fs.readFileSync(path.join(repoRoot, ppath), "utf8");
-        for (const fingerprint of fingerprints) {
-          if (!content.includes(String(fingerprint))) {
-            failures.push(`REGISTERED_PRODUCER_FINGERPRINT_MISSING:${sid}:${pid}:${fingerprint}`);
-          }
-        }
+      if (p.current !== false && pp && exists(pp) && Array.isArray(p.fingerprints)) {
+        const content = fs.readFileSync(abs(pp), "utf8");
+        for (const fp of p.fingerprints) if (!content.includes(String(fp))) failures.push(`PRODUCER_FINGERPRINT_MISSING:${sid}:${pid}:${fp}`);
       }
     }
 
-    const consumers = Array.isArray(semantic.registered_consumers) ? semantic.registered_consumers : [];
-    for (const consumer of consumers) {
-      const cid = String(consumer.consumer_id || "").trim();
-      const cpath = String(consumer.path || "").trim();
+    for (const c of Array.isArray(semantic.registered_consumers) ? semantic.registered_consumers : []) {
+      const cid = String(c.consumer_id || "").trim();
+      const cp = String(c.path || "").trim();
       if (!cid) failures.push(`CONSUMER_ID_MISSING:${sid}`);
-      if (!cpath) failures.push(`CONSUMER_PATH_MISSING:${sid}:${cid || "UNKNOWN"}`);
-      if (consumer.current !== false && cpath && !existsRepoPath(cpath)) {
-        failures.push(`REGISTERED_CONSUMER_PATH_MISSING:${sid}:${cid}:${cpath}`);
-      }
+      if (cid && consumerIndex.has(cid)) warnings.push(`CONSUMER_ID_REUSED:${cid}`);
+      if (cid) consumerIndex.set(cid, { semantic_id: sid, consumer: c });
+      if (!cp) failures.push(`CONSUMER_PATH_MISSING:${sid}:${cid || "UNKNOWN"}`);
+      if (c.current !== false && cp && !exists(cp)) failures.push(`REGISTERED_CONSUMER_PATH_MISSING:${sid}:${cid}:${cp}`);
     }
+  }
+
+  const allowByGuard = new Map();
+  for (const rule of Array.isArray(allowlist.rules) ? allowlist.rules : []) {
+    const gid = String(rule.guard_id || "");
+    if (!gid) { failures.push("ALLOWLIST_GUARD_ID_MISSING"); continue; }
+    allowByGuard.set(gid, new Set(Array.isArray(rule.additional_registered_paths) ? rule.additional_registered_paths : []));
+    for (const p of allowByGuard.get(gid)) if (!exists(p)) failures.push(`ALLOWLIST_PATH_MISSING:${gid}:${p}`);
   }
 
   const guards = Array.isArray(register.static_guards) ? register.static_guards : [];
   const guardIds = new Set();
   for (const guard of guards) {
-    const gid = String(guard.guard_id || "").trim();
-    const sid = String(guard.semantic_id || "").trim();
-    if (!gid) {
-      failures.push("STATIC_GUARD_ID_MISSING");
-      continue;
-    }
+    const gid = String(guard.guard_id || "");
+    const sid = String(guard.semantic_id || "");
+    if (!gid) { failures.push("STATIC_GUARD_ID_MISSING"); continue; }
     if (guardIds.has(gid)) failures.push(`STATIC_GUARD_ID_DUPLICATE:${gid}`);
     guardIds.add(gid);
     if (!semanticIds.has(sid)) failures.push(`STATIC_GUARD_UNKNOWN_SEMANTIC:${gid}:${sid}`);
 
     if (Array.isArray(guard.scan_files)) {
-      const patterns = Array.isArray(guard.forbid?.any_of_regex) ? guard.forbid.any_of_regex : [];
-      if (patterns.length === 0) failures.push(`STATIC_GUARD_FORBID_REGEX_EMPTY:${gid}`);
-      for (const repoPath of guard.scan_files) {
-        if (!existsRepoPath(repoPath)) {
-          failures.push(`STATIC_GUARD_SCAN_FILE_MISSING:${gid}:${repoPath}`);
-          continue;
-        }
-        const content = fs.readFileSync(path.join(repoRoot, repoPath), "utf8");
-        for (const rawPattern of patterns) {
-          let regex;
-          try {
-            regex = new RegExp(rawPattern, "m");
-          } catch (error) {
-            failures.push(`STATIC_GUARD_REGEX_INVALID:${gid}:${rawPattern}:${String(error.message || error)}`);
-            continue;
-          }
-          if (regex.test(content)) failures.push(`${guard.failure || "FORBIDDEN_PATTERN"}:${gid}:${repoPath}:${rawPattern}`);
+      for (const file of guard.scan_files) {
+        if (!exists(file)) { failures.push(`STATIC_GUARD_SCAN_FILE_MISSING:${gid}:${file}`); continue; }
+        const content = fs.readFileSync(abs(file), "utf8");
+        for (const raw of Array.isArray(guard.forbid?.any_of_regex) ? guard.forbid.any_of_regex : []) {
+          let re;
+          try { re = new RegExp(raw, "m"); } catch (e) { failures.push(`STATIC_GUARD_REGEX_INVALID:${gid}:${raw}`); continue; }
+          if (re.test(content)) failures.push(`${guard.failure || "FORBIDDEN_PATTERN"}:${gid}:${file}`);
         }
       }
       continue;
     }
 
-    const roots = Array.isArray(guard.scan_roots) ? guard.scan_roots : [];
-    const extensions = Array.isArray(guard.extensions) ? guard.extensions : [];
-    const ignoreFragments = Array.isArray(guard.ignore_path_fragments) ? guard.ignore_path_fragments : [];
-    const registeredPaths = new Set(Array.isArray(guard.registered_paths) ? guard.registered_paths : []);
-    const matchedPaths = new Set();
-
-    for (const root of roots) {
-      const rootAbs = path.join(repoRoot, root);
-      if (!fs.existsSync(rootAbs)) {
-        failures.push(`STATIC_GUARD_SCAN_ROOT_MISSING:${gid}:${root}`);
-        continue;
-      }
-      for (const abs of listFilesRecursive(rootAbs, extensions, ignoreFragments)) {
-        const content = fs.readFileSync(abs, "utf8");
-        if (!contentMatches(content, guard.match)) continue;
-        const repoPath = toRepoPath(abs);
-        matchedPaths.add(repoPath);
-        if (!registeredPaths.has(repoPath)) {
-          failures.push(`${guard.failure || "UNREGISTERED_SEMANTIC_TOUCHPOINT"}:${gid}:${repoPath}`);
-        }
+    const allowed = new Set(Array.isArray(guard.registered_paths) ? guard.registered_paths : []);
+    for (const p of allowByGuard.get(gid) || []) allowed.add(p);
+    const matched = new Set();
+    for (const root of Array.isArray(guard.scan_roots) ? guard.scan_roots : []) {
+      if (!exists(root)) { failures.push(`STATIC_GUARD_SCAN_ROOT_MISSING:${gid}:${root}`); continue; }
+      for (const file of listFiles(root, guard.extensions || [], guard.ignore_path_fragments || [])) {
+        const content = fs.readFileSync(file, "utf8");
+        if (!matches(content, guard.match)) continue;
+        const rp = repoPath(file);
+        matched.add(rp);
+        if (!allowed.has(rp)) failures.push(`${guard.failure || "UNREGISTERED_TOUCHPOINT"}:${gid}:${rp}`);
       }
     }
-
-    for (const repoPath of registeredPaths) {
-      if (!existsRepoPath(repoPath)) {
-        failures.push(`STATIC_GUARD_REGISTERED_PATH_MISSING:${gid}:${repoPath}`);
-        continue;
-      }
-      if (!matchedPaths.has(repoPath)) {
-        failures.push(`STATIC_GUARD_REGISTERED_FINGERPRINT_MISSING:${gid}:${repoPath}`);
-      }
+    for (const p of allowed) {
+      if (!exists(p)) failures.push(`STATIC_GUARD_REGISTERED_PATH_MISSING:${gid}:${p}`);
+      else if (!matched.has(p)) failures.push(`STATIC_GUARD_REGISTERED_FINGERPRINT_MISSING:${gid}:${p}`);
     }
   }
 
-  const semanticEdges = Array.isArray(graph.semantic_edges) ? graph.semantic_edges : [];
-  const parallelEdges = Array.isArray(graph.current_parallel_edges) ? graph.current_parallel_edges : [];
-  const forbiddenEdges = Array.isArray(graph.forbidden_edges) ? graph.forbidden_edges : [];
-  const graphEdgeIds = new Set();
-
-  function registerEdgeId(edge, family) {
-    const eid = String(edge.edge_id || "").trim();
-    if (!eid) {
-      failures.push(`GRAPH_EDGE_ID_MISSING:${family}`);
-      return;
-    }
-    if (graphEdgeIds.has(eid)) failures.push(`GRAPH_EDGE_ID_DUPLICATE:${eid}`);
-    graphEdgeIds.add(eid);
-  }
-
-  for (const edge of semanticEdges) {
-    registerEdgeId(edge, "semantic_edges");
-    if (!semanticIds.has(String(edge.from || ""))) failures.push(`GRAPH_UNKNOWN_FROM_SEMANTIC:${edge.edge_id}:${edge.from}`);
-    if (!semanticIds.has(String(edge.to || ""))) failures.push(`GRAPH_UNKNOWN_TO_SEMANTIC:${edge.edge_id}:${edge.to}`);
-  }
-
-  for (const edge of parallelEdges) {
-    registerEdgeId(edge, "current_parallel_edges");
-    const sid = String(edge.semantic_id || "");
-    const pid = String(edge.producer_id || "");
-    if (!semanticIds.has(sid)) failures.push(`PARALLEL_EDGE_UNKNOWN_SEMANTIC:${edge.edge_id}:${sid}`);
-    const producer = producerIndex.get(pid);
-    if (!producer) failures.push(`PARALLEL_EDGE_UNKNOWN_PRODUCER:${edge.edge_id}:${pid}`);
-    else if (producer.semantic_id !== sid) failures.push(`PARALLEL_EDGE_PRODUCER_SEMANTIC_MISMATCH:${edge.edge_id}:${pid}:${sid}`);
-    if (!/^B-0[4-9]$/.test(String(edge.removal_target || ""))) {
-      failures.push(`PARALLEL_EDGE_REMOVAL_TARGET_INVALID:${edge.edge_id}:${String(edge.removal_target || "NONE")}`);
-    }
-    if (edge.new_owner_creation !== "FORBIDDEN") failures.push(`PARALLEL_EDGE_NEW_OWNER_NOT_FORBIDDEN:${edge.edge_id}`);
-  }
-
-  for (const edge of forbiddenEdges) {
-    registerEdgeId(edge, "forbidden_edges");
-    if (!semanticIds.has(String(edge.from || ""))) failures.push(`FORBIDDEN_EDGE_UNKNOWN_FROM_SEMANTIC:${edge.edge_id}:${edge.from}`);
-    if (!semanticIds.has(String(edge.to || ""))) failures.push(`FORBIDDEN_EDGE_UNKNOWN_TO_SEMANTIC:${edge.edge_id}:${edge.to}`);
-    if (!String(edge.reason || "").trim()) failures.push(`FORBIDDEN_EDGE_REASON_MISSING:${edge.edge_id}`);
-    if (!String(edge.enforcement || "").trim()) failures.push(`FORBIDDEN_EDGE_ENFORCEMENT_MISSING:${edge.edge_id}`);
-  }
-
-  const stats = {
-    semantics: semanticIds.size,
-    producers: producerIndex.size,
-    current_producer_paths: currentProducerPaths.size,
-    static_guards: guards.length,
-    semantic_edges: semanticEdges.length,
-    parallel_edges: parallelEdges.length,
-    forbidden_edges: forbiddenEdges.length,
+  const edgeIds = new Set();
+  const edgeId = (e, family) => {
+    const id = String(e.edge_id || "");
+    if (!id) failures.push(`GRAPH_EDGE_ID_MISSING:${family}`);
+    else if (edgeIds.has(id)) failures.push(`GRAPH_EDGE_ID_DUPLICATE:${id}`);
+    else edgeIds.add(id);
   };
 
-  finish(failures, warnings, stats);
+  for (const e of graph.semantic_edges || []) {
+    edgeId(e, "semantic_edges");
+    if (!semanticIds.has(String(e.from || ""))) failures.push(`GRAPH_UNKNOWN_FROM_SEMANTIC:${e.edge_id}:${e.from}`);
+    if (!semanticIds.has(String(e.to || ""))) failures.push(`GRAPH_UNKNOWN_TO_SEMANTIC:${e.edge_id}:${e.to}`);
+  }
+  for (const e of graph.current_parallel_edges || []) {
+    edgeId(e, "current_parallel_edges");
+    const sid = String(e.semantic_id || "");
+    const pid = String(e.producer_id || "");
+    const p = producerIndex.get(pid);
+    if (!semanticIds.has(sid)) failures.push(`PARALLEL_UNKNOWN_SEMANTIC:${e.edge_id}:${sid}`);
+    if (!p) failures.push(`PARALLEL_UNKNOWN_PRODUCER:${e.edge_id}:${pid}`);
+    else if (p.semantic_id !== sid) failures.push(`PARALLEL_PRODUCER_SEMANTIC_MISMATCH:${e.edge_id}:${pid}:${sid}`);
+    if (!/^B-0[4-9]$/.test(String(e.removal_target || ""))) failures.push(`PARALLEL_REMOVAL_TARGET_INVALID:${e.edge_id}`);
+    if (e.new_owner_creation !== "FORBIDDEN") failures.push(`PARALLEL_NEW_OWNER_NOT_FORBIDDEN:${e.edge_id}`);
+  }
+  for (const e of graph.forbidden_edges || []) {
+    edgeId(e, "forbidden_edges");
+    if (!semanticIds.has(String(e.from || ""))) failures.push(`FORBIDDEN_UNKNOWN_FROM_SEMANTIC:${e.edge_id}:${e.from}`);
+    if (!semanticIds.has(String(e.to || ""))) failures.push(`FORBIDDEN_UNKNOWN_TO_SEMANTIC:${e.edge_id}:${e.to}`);
+    if (!String(e.reason || "").trim()) failures.push(`FORBIDDEN_REASON_MISSING:${e.edge_id}`);
+    if (!String(e.enforcement || "").trim()) failures.push(`FORBIDDEN_ENFORCEMENT_MISSING:${e.edge_id}`);
+  }
+
+  finish(failures, warnings, {
+    semantics: semanticIds.size,
+    producers: producerIndex.size,
+    consumers: consumerIndex.size,
+    static_guards: guards.length,
+    semantic_edges: (graph.semantic_edges || []).length,
+    parallel_edges: (graph.current_parallel_edges || []).length,
+    forbidden_edges: (graph.forbidden_edges || []).length
+  });
 }
 
 function finish(failures, warnings, stats) {
-  for (const warning of warnings) console.warn(`WARN ${warning}`);
-  for (const failure of failures) console.error(`FAIL ${failure}`);
+  for (const w of warnings) console.warn(`WARN ${w}`);
+  for (const f of failures) console.error(`FAIL ${f}`);
   console.log(`B02_SEMANTIC_REGISTER_STATS ${JSON.stringify(stats)}`);
-  if (failures.length > 0) {
+  if (failures.length) {
     console.error(`B02_SEMANTIC_CONTRACT_LINTER_FAIL count=${failures.length}`);
     process.exitCode = 1;
-    return;
+  } else {
+    console.log("B02_SEMANTIC_CONTRACT_LINTER_PASS");
   }
-  console.log("B02_SEMANTIC_CONTRACT_LINTER_PASS");
 }
 
-try {
-  run();
-} catch (error) {
-  console.error(`B02_SEMANTIC_CONTRACT_LINTER_CRASH ${error && error.stack ? error.stack : String(error)}`);
+try { run(); }
+catch (e) {
+  console.error(`B02_SEMANTIC_CONTRACT_LINTER_CRASH ${e?.stack || String(e)}`);
   process.exitCode = 1;
 }
