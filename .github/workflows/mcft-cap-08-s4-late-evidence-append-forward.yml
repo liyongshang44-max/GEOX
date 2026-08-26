@@ -8,10 +8,12 @@ on:
       - 'apps/server/src/domain/twin_runtime/cap08_s4_**'
       - 'apps/server/src/persistence/twin_runtime/postgres_cap08_s4_**'
       - 'apps/server/src/runtime/twin_runtime/cap08_s4_**'
+      - 'apps/server/src/runtime/twin_runtime/cap08_replay_host_composition_v1.ts'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-DELIVERY-STATUS-V1.json'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-IMPLEMENTATION-V1.json'
       - 'docs/digital_twin/mcft/cap_08/GEOX-MCFT-CAP-08-S4-CANDIDATE-CHANGED-FILE-BOUNDARY-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_BOUNDARY.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_SUCCESSOR_REQUALIFICATION_BOUNDARY_V1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_EXACT_SHA_ATTESTATION.cjs'
       - 'scripts/governance_acceptance/mcft_cap08_s4_artifact_finalize.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_LATE_CORRECTION_MATH.ts'
@@ -49,9 +51,15 @@ jobs:
         with: { node-version: 20.11.1, cache: pnpm }
       - name: Install locked workspace
         run: pnpm install --frozen-lockfile
-      - name: Validate exact formal boundary
+      - name: Validate exact historical formal boundary
+        if: github.event_name != 'pull_request' || github.event.pull_request.base.sha == '8dca45a90f3f614e73fbae581545add63e7a51b1'
         env: { MCFT_BASE_SHA: 8dca45a90f3f614e73fbae581545add63e7a51b1 }
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_BOUNDARY.cjs
+      - name: Validate Phase1 successor requalification boundary
+        if: github.event_name == 'pull_request' && github.event.pull_request.base.sha != '8dca45a90f3f614e73fbae581545add63e7a51b1'
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_SUCCESSOR_REQUALIFICATION_BOUNDARY_V1.cjs
       - name: Typecheck server
         run: pnpm --filter @geox/server typecheck
       - name: Qualify all twelve frozen vectors
@@ -72,7 +80,8 @@ jobs:
           MCFT_CAP08_S2_G3_DESTRUCTIVE_ACCEPTANCE: '1'
           MCFT_CAP08_S4_DESTRUCTIVE_ACCEPTANCE: '1'
         run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_APPEND_FORWARD_DB.ts
-      - name: Finalize candidate authority artifact
+      - name: Finalize historical candidate authority artifact
+        if: github.event_name != 'pull_request' || github.event.pull_request.base.sha == '8dca45a90f3f614e73fbae581545add63e7a51b1'
         env:
           MCFT_ARTIFACT_STAGE: CANDIDATE_HEAD
           MCFT_BASE_SHA: 8dca45a90f3f614e73fbae581545add63e7a51b1
