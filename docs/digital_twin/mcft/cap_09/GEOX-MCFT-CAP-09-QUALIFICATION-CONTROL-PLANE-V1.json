@@ -134,6 +134,7 @@
         "apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py",
         "apps/server/src/persistence/external_evidence/postgres_external_formal_evidence_visibility_v1.ts",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PRODUCT_ADAPTER_V1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE2_POST_COMMIT_VISIBILITY_CURSOR_V1.ts",
         "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs"
       ]
