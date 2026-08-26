@@ -91,8 +91,12 @@ for (const token of [
   'id="nonclaims"', 'id="fatalError"',
 ]) requireToken("html", html, token);
 
+// Economics must keep provenance explicit. Michigan benchmark is allowed as EXTERNAL_BENCHMARK;
+// customer-specific ROI and agronomic loss still require customer data.
 for (const token of [
-  "CUSTOMER_RATE_CARD", "CUSTOMER DATA REQUIRED", "MEASURED", "AGRONOMIC_MODEL", "EXTERNAL_BENCHMARK",
+  "CUSTOMER_RATE_CARD", "MEASURED", "AGRONOMIC_MODEL", "EXTERNAL_BENCHMARK",
+  "MSU 外部基准", "$5.49 / acre-inch", "120 acres", "约 $519 / 次",
+  "错误取消灌溉", "客户实际泵送/能源 $ / mm / ha",
   "NOT_PROVEN_CUSTOMER_ROI", "本 Demo 不把仓库工程 cost constants 当作客户 ROI authority",
   "连续在线数字孪生运行已完成最终正式验收", "生产资格化的作物推荐", "已证明的客户 ROI",
   "AI 绕过人工审批直接进行生产作业",
@@ -158,6 +162,7 @@ console.log(JSON.stringify({
   receipt_as_executed_acceptance_paths_verified: true,
   execution_not_equated_with_agronomic_effect: true,
   combined_workflow_marked_not_unified_production_qualification: true,
+  michigan_irrigation_external_benchmark_guard_present: true,
   customer_economics_provenance_guard_present: true,
   customer_roi_claim_absent: true,
   runtime_value_trace_builder_chain_passed: true,
