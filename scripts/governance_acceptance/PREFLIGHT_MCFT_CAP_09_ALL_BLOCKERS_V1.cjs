@@ -76,7 +76,7 @@ function resolveRequalificationEvidence(decision, authority, registry, stage, he
   if (!section || section.binding_strategy !== REQUALIFICATION_BINDING_STRATEGY) {
     return { status: "FAIL", reason_code: "REQUALIFICATION_EVIDENCE_REGISTRY_MISSING_OR_UNSUPPORTED", candidates: [] };
   }
-  const governedPredecessors = section.governed_successor_predecessors;
+  const governedPredecessors = section.durable_anchors?.rules?.governed_successor_predecessors;
   const governedPredecessorSet = Array.isArray(governedPredecessors) ? new Set(governedPredecessors) : null;
   const governedPredecessorsValid =
     Array.isArray(governedPredecessors) &&
