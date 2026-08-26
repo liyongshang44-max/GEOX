@@ -11,8 +11,10 @@ jobs:
     steps:
       - name: Checkout control branch
         uses: actions/checkout@v4
-      - name: Save patcher
-        run: cp scripts/governance_acceptance/_B02_CONNECTIVITY_PATCH_ONCE.cjs /tmp/b02-patch.cjs
+      - name: Save patchers
+        run: |
+          cp scripts/governance_acceptance/_B02_CONNECTIVITY_PATCH_ONCE.cjs /tmp/b02-patch.cjs
+          cp scripts/governance_acceptance/_B02_CONNECTIVITY_FIX01_ONCE.cjs /tmp/b02-fix01.cjs
       - name: Checkout B-02 target
         uses: actions/checkout@v4
         with:
@@ -20,7 +22,9 @@ jobs:
           path: target
           fetch-depth: 0
       - name: Patch B-02 target
-        run: node /tmp/b02-patch.cjs target
+        run: |
+          node /tmp/b02-patch.cjs target
+          node /tmp/b02-fix01.cjs target
       - name: Commit and push B-02 target
         id: commit
         working-directory: target
