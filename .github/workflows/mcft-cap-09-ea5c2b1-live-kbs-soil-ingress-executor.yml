@@ -8,6 +8,9 @@ on:
       - 'apps/server/src/external_evidence/provider/https_external_evidence_transport_v1.ts'
       - 'apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.ts'
       - 'apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_visibility_supply_cursor_v1.ts'
+      - 'apps/server/src/persistence/external_evidence/postgres_external_formal_evidence_visibility_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE2_POST_COMMIT_VISIBILITY_CURSOR_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C2B1-LIVE-KBS-SOIL-INGRESS-EXECUTOR-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs'
@@ -100,6 +103,9 @@ jobs:
       - name: Typecheck server
         run: pnpm --filter @geox/server run typecheck
 
+      - name: Prove post-COMMIT visibility gates EvidenceSupplyCursor advance
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE2_POST_COMMIT_VISIBILITY_CURSOR_V1.ts
+
       - name: Start CI-only private S3-compatible regression store
         shell: bash
         run: |
@@ -145,10 +151,12 @@ jobs:
         run: |
           const fs = require('fs');
           const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_RESULT.json','utf8'));
+          const phase2 = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_PHASE2_POST_COMMIT_VISIBILITY_CURSOR_V1_RESULT.json','utf8'));
           if (r.status !== 'PASS' || r.live_public_source_fetch_proved !== true || r.ea3_retention_before_decode_pipeline_used !== true || r.restricted_ea5c1_facts_ingress_used !== true) throw new Error('EA5C2B1_LIVE_PIPELINE_PROOF_REQUIRED');
           if (r.public_raw_value_emission_count !== 0 || r.raw_payload_embedded_in_fact !== false || r.runtime_public_provider_fetch_count !== 0) throw new Error('EA5C2B1_RAW_OR_RUNTIME_BOUNDARY_VIOLATION');
           if (r.ci_minio_is_formal_24h_durable_store !== false || r.formal_neon_write_performed !== false || r.persistent_formal_24h_raw_store_bound !== false || r.ea5c_complete !== false || r.ea5d_authorized !== false || r.formal_o00_start_authorized !== false) throw new Error('EA5C2B1_PREMATURE_FORMAL_EFFECT');
-          console.log(JSON.stringify({status:'PASS',live_kbs:true,ea3:true,ea5c1_ingress:true,public_raw_values:0,formal_store:false,formal_neon:false,ea5c:false,ea5d:false,ea5e:false,o00:false}));
+          if (phase2.status !== 'PASS' || phase2.missing_visibility_cursor_advance_count !== 0 || phase2.identity_drift_cursor_advance_count !== 0 || phase2.missing_receipt_cursor_advance_count !== 0 || phase2.postgres_visibility_read_only !== true || phase2.runtime_tick_cursor_mutation !== false || phase2.twin_state_mutation !== false || phase2.production_evidence_runtime_activation !== false || phase2.production_twin_runtime_activation !== false || phase2.formal_database_mutation !== false) throw new Error('PHASE2_VISIBILITY_CURSOR_BOUNDARY_PROOF_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',live_kbs:true,ea3:true,ea5c1_ingress:true,post_commit_visibility:true,evidence_supply_cursor_ordering:true,public_raw_values:0,formal_store:false,formal_neon:false,ea5c:false,ea5d:false,ea5e:false,o00:false}));
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -157,5 +165,6 @@ jobs:
           path: |
             acceptance-output/MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE2_POST_COMMIT_VISIBILITY_CURSOR_V1_RESULT.json
           if-no-files-found: warn
           retention-days: 90
