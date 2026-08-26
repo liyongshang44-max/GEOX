@@ -1,7 +1,7 @@
 // MCFT-CAP-09 production KBS Raw Hourly Evidence provider/decoder.
 // Boundary: HTTPS acquisition plus retained-byte scientific decode only.
 // Scientific CSV/exact-T/ASCE ET0 semantics live in the product-owned Python core.
-// No raw retention, governed ingress, scheduler/lease ownership, RuntimeTickCursor,
+// No raw retention, governed ingress, scheduler/lease ownership, runtime tick cursor,
 // Twin state mutation, GitHub identity, or production cadence ownership is defined here.
 
 import { execFile } from "node:child_process";
