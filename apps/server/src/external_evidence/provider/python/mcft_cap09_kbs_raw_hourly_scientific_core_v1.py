@@ -8,6 +8,7 @@ import math
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import numpy as np
 import refet
@@ -62,6 +63,19 @@ def parse_provider_utc_v1(value: str) -> datetime | None:
         return parsed.astimezone(timezone.utc) if parsed.tzinfo else None
     except ValueError:
         return None
+
+
+def parse_iso_v1(value: str, code: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise RuntimeError(code) from exc
+    require_v1(parsed.tzinfo is not None, code)
+    return parsed.astimezone(timezone.utc)
+
+
+def iso_v1(value: datetime) -> str:
+    return value.astimezone(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 def finite_v1(value) -> float | None:
@@ -199,6 +213,52 @@ def decode_exact_kbs_raw_hourly_interval_v1(
     )
 
 
+def exact_interval_json_v1(value: KbsRawHourlyExactIntervalV1) -> dict:
+    return {
+        "schema_version": "geox_mcft_cap09_kbs_raw_hourly_exact_interval_scientific_result_v1",
+        "target_interval_end": iso_v1(value.target_interval_end),
+        "provider_latest_timestamp": iso_v1(value.provider_latest_timestamp),
+        "provider_latest_age_hours": value.provider_latest_age_hours,
+        "historical_online_freshness_diagnostic_le_threshold": value.historical_online_freshness_diagnostic_le_threshold,
+        "freshness_is_late_authoritative_admission_gate": value.freshness_is_late_authoritative_admission_gate,
+        "rainfall_mm": value.rainfall_mm,
+        "historical_et0_mm": value.historical_et0_mm,
+        "air_temperature_c": value.air_temperature_c,
+        "actual_vapor_pressure_kpa": value.actual_vapor_pressure_kpa,
+        "solar_radiation_w_m2": value.solar_radiation_w_m2,
+        "wind_speed_10m": value.wind_speed_10m,
+    }
+
+
+def decode_cli_v1(args: argparse.Namespace) -> None:
+    authority = KbsRawHourlyScientificAuthorityV1(
+        historical_online_freshness_diagnostic_hours=float(args.historical_online_freshness_diagnostic_hours),
+        station_elevation_m=float(args.station_elevation_m),
+        station_latitude=float(args.station_latitude),
+        station_longitude=float(args.station_longitude),
+        wind_10m_to_2m_factor=float(args.wind_10m_to_2m_factor),
+    )
+    decoded = decode_exact_kbs_raw_hourly_interval_v1(
+        body=Path(args.input).read_bytes(),
+        target_interval_end=parse_iso_v1(args.target, "MCFT_CAP09_KBS_CLI_TARGET_INVALID"),
+        available_at=parse_iso_v1(args.available_at, "MCFT_CAP09_KBS_CLI_AVAILABLE_AT_INVALID"),
+        authority=authority,
+    )
+    payload = exact_interval_json_v1(decoded)
+    Path(args.output).write_text(json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+    print(json.dumps({
+        "status": "PASS",
+        "schema_version": payload["schema_version"],
+        "target_interval_end": payload["target_interval_end"],
+        "provider_latest_timestamp": payload["provider_latest_timestamp"],
+        "historical_online_freshness_diagnostic_le_threshold": payload["historical_online_freshness_diagnostic_le_threshold"],
+        "freshness_is_late_authoritative_admission_gate": False,
+        "raw_values_emitted": False,
+        "provider_request_count": 0,
+        "database_write_count": 0,
+    }, sort_keys=True))
+
+
 def selftest_v1() -> None:
     authority = KbsRawHourlyScientificAuthorityV1(
         historical_online_freshness_diagnostic_hours=6.0,
@@ -283,10 +343,23 @@ def selftest_v1() -> None:
 
 def main_v1() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=("selftest",))
+    sub = parser.add_subparsers(dest="command", required=True)
+    sub.add_parser("selftest")
+    decode = sub.add_parser("decode-exact")
+    decode.add_argument("--target", required=True)
+    decode.add_argument("--available-at", required=True)
+    decode.add_argument("--input", required=True)
+    decode.add_argument("--output", required=True)
+    decode.add_argument("--historical-online-freshness-diagnostic-hours", required=True, type=float)
+    decode.add_argument("--station-elevation-m", required=True, type=float)
+    decode.add_argument("--station-latitude", required=True, type=float)
+    decode.add_argument("--station-longitude", required=True, type=float)
+    decode.add_argument("--wind-10m-to-2m-factor", required=True, type=float)
     args = parser.parse_args()
     if args.command == "selftest":
         selftest_v1()
+    elif args.command == "decode-exact":
+        decode_cli_v1(args)
 
 
 if __name__ == "__main__":
