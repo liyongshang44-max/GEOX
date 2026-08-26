@@ -75,6 +75,7 @@
       ],
       "additional_exact_paths": [
         "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py",
+        "scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_AM19_PHASE2_AUTHORITY_SYMBOL_COMPATIBILITY_V1.ts",
         ".github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml"
       ]
     },
