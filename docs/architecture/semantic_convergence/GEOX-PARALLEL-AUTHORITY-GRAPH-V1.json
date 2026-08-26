@@ -795,8 +795,8 @@
       "evidence": {
         "kind": "DIRECT_CALL",
         "caller_path": "apps/server/src/routes/decision_engine_v1.ts",
-        "callee_path": "apps/server/src/services/derived_sensing_state_v1.js",
-        "fingerprint": "getLatestDerivedSensingStatesByFieldV1"
+        "callee_path": "apps/server/src/services/derived_sensing_state_v1.ts",
+        "fingerprint": "getLatestDerivedSensingStatesByFieldV1 imported via emitted .js specifier from the TypeScript source"
       },
       "status": "CURRENT_PROVEN"
     },

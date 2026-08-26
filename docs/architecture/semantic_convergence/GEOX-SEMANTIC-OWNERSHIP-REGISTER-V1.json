@@ -463,7 +463,9 @@
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN",
           "new_runtime_consumer_creation": "FORBIDDEN",
-          "grandfathered_runtime_consumers": []
+          "grandfathered_runtime_consumers": [
+            "decision-engine-state"
+          ]
         },
         {
           "producer_id": "sensing-inference-pipeline",
