@@ -46,77 +46,43 @@ const planAcceptance = text(files.planAcceptance);
 const irrigationLoop = text(files.irrigationLoop);
 const acceptanceSemantics = text(files.acceptanceSemantics);
 
-// Canonical Decision Assurance Runtime proof.
 for (const token of [
-  "selectExternalFormalCurrentIntervalForcingV1",
-  "healthy_exact_provider_pair",
-  "provider_late",
-  "source_conflict",
-  "missing_evidence",
-  "DEGRADE_AND_CONTINUE",
-  "FAIL_CLOSED",
-  "NO_FORMAL_O00_O23_CLAIM",
+  "selectExternalFormalCurrentIntervalForcingV1", "healthy_exact_provider_pair", "provider_late", "source_conflict",
+  "missing_evidence", "DEGRADE_AND_CONTINUE", "FAIL_CLOSED", "NO_FORMAL_O00_O23_CLAIM",
 ]) requireToken("packet", packet, token);
 
-// Standalone/read-only server boundary.
 for (const token of [
-  "standalone read-only Commercial Evidence Demo microsite",
-  "/api/runtime-value-trace",
-  "/api/twin-trace",
-  "/api/mcft-runtime-evidence",
-  "COMMERCIAL_EVIDENCE_MCFT_READ_URL",
-  "geox_mcft_cap09_s6_accel24t_am19_v3",
-  "MCFT_DATABASE_NOT_ALLOWLISTED",
-  "BEGIN READ ONLY",
-  "SET LOCAL statement_timeout",
-  "ROLLBACK",
-  "database_write_count: 0",
-  "canonical_runtime_write_count: 0",
-  "COMMERCIAL_EVIDENCE_DEMO_READ_ONLY_GET_REQUIRED",
+  "standalone read-only Commercial Evidence Demo microsite", "/api/runtime-value-trace", "/api/twin-trace",
+  "/api/mcft-runtime-evidence", "COMMERCIAL_EVIDENCE_MCFT_READ_URL", "geox_mcft_cap09_s6_accel24t_am19_v3",
+  "MCFT_DATABASE_NOT_ALLOWLISTED", "BEGIN READ ONLY", "SET LOCAL statement_timeout", "ROLLBACK",
+  "database_write_count: 0", "canonical_runtime_write_count: 0", "COMMERCIAL_EVIDENCE_DEMO_READ_ONLY_GET_REQUIRED",
 ]) requireToken("server", server, token);
 
-// New customer narrative must preserve the A/B chronology anchor and the reviewed truth boundaries.
 for (const token of [
   "不是“能不能给答案”，而是“这个答案现在能不能进入真实生产”",
-  "今晚原计划灌溉 20 mm",
-  "明天可能下雨 25 mm",
-  "IRRIGATE / DELAY / ABSTAIN",
-  "ASSUMPTION",
-  "18:43",
-  "19:17",
-  "ELIGIBLE · 可以使用",
-  "INELIGIBLE · 不得回填",
-  "没有满足本次审批条件的合法替代证据",
-  "批准 · 拒绝 · 退回补充",
-  "APPROVE / REJECT / RETURN",
-  "Approval → Operation Plan → 授权后创建 Action Task",
-  "审批通过本身不会自动触发设备动作",
-  "执行完成 ≠ 农业效果已经被证明",
-  "组合客户流程演示",
-  "不代表这两条能力线已经完成统一",
-  "影子模式",
-  "Demo Input",
+  "今晚原计划灌溉 20 mm", "明天可能下雨 25 mm", "IRRIGATE / DELAY / ABSTAIN", "ASSUMPTION",
+  "18:43", "19:17", "ELIGIBLE · 可以使用", "INELIGIBLE · 不得回填",
+  "没有满足本次审批条件的合法替代证据", "批准 · 拒绝 · 退回补充", "APPROVE / REJECT / RETURN",
+  "Approval → Operation Plan → 授权后创建 Action Task", "审批通过本身不会自动触发设备动作",
+  "执行完成 ≠ 农业效果已经被证明", "组合客户流程演示", "不代表这两条能力线已经完成统一",
+  "影子模式", "Demo Input",
 ]) requireToken("html", html, token);
 
-// Four interactive runtime cases still execute the canonical selector.
 for (const token of [
   "NORMAL", "PROVIDER LATE", "SOURCE CONFLICT", "MISSING EVIDENCE",
-  'data-case-id="healthy_exact_provider_pair"',
-  'data-case-id="provider_late"',
-  'data-case-id="source_conflict"',
-  'data-case-id="missing_evidence"',
+  'data-case-id="healthy_exact_provider_pair"', 'data-case-id="provider_late"',
+  'data-case-id="source_conflict"', 'data-case-id="missing_evidence"',
 ]) requireToken("html", html, token);
 for (const token of ["/api/demo?case=", "canonical selector 已重新执行", "machine_proof", "使用上一步的合规假设值", "降级继续"]) requireToken("app", app, token);
 
-// Commercial control-loop claims must be backed by current repo code/acceptance, and keep approval != task != dispatch.
+// Product-side control-loop boundaries: verify current repo code, not marketing prose.
 for (const token of ["APPROVAL_APPROVE", "APPROVAL_REJECT", "APPROVAL_RETURN", "SELF_APPROVAL_BLOCKED", "operator_action_audit_v1"]) requireToken("approvalActions", approvalActions, token);
 for (const token of ["operation_plan_v1", "buildOperationPlanFromApprovalDecisionV1"]) requireToken("approvalRoute", approvalRoute, token);
-for (const token of ["/api/v1/actions/task/from-operation-plan", "no operation_plan_transition_v1", "no ao_act_receipt_v1", "no acceptance_result_v1"]) requireToken("taskBoundary", taskBoundary, token);
-for (const token of ["operation plan act_task_id = null", "no operation_plan_transition_v1 fact is created"]) requireToken("planAcceptance", planAcceptance, token);
+for (const token of ["/api/v1/actions/task/from-operation-plan", "operation_plan_transition_v1", "ao_act_receipt_v1", "acceptance_result_v1", "route does not write"]) requireToken("taskBoundary", taskBoundary, token);
+for (const token of ["operation plan act_task_id = null", "operation_plan_transition_v1", "no ${type} fact is created"]) requireToken("planAcceptance", planAcceptance, token);
 for (const token of ["/api/v1/actions/task", "/api/v1/actions/receipt", "/api/v1/as-executed/from-receipt", "/api/v1/acceptance/evaluate", "no_direct_recommendation_to_task"]) requireToken("irrigationLoop", irrigationLoop, token);
 for (const token of ["PASS", "FAIL", "PARTIAL", "不等于 operation `final_status`"]) requireToken("acceptanceSemantics", acceptanceSemantics, token);
 
-// Required dynamic DOM surfaces.
 for (const token of [
   'id="subjectSha"', 'id="selectorId"', 'id="runtimeCaseButtons"', 'id="interactiveMachineProof"',
   'id="runtimeComparison"', 'id="traceFlow"', 'id="mcftRuntimeStatus"', 'id="mcftRuntimeObjects"',
@@ -125,23 +91,17 @@ for (const token of [
   'id="nonclaims"', 'id="fatalError"',
 ]) requireToken("html", html, token);
 
-// Customer economics provenance and non-claim boundary.
 for (const token of [
   "CUSTOMER_RATE_CARD", "CUSTOMER DATA REQUIRED", "MEASURED", "AGRONOMIC_MODEL", "EXTERNAL_BENCHMARK",
   "NOT_PROVEN_CUSTOMER_ROI", "本 Demo 不把仓库工程 cost constants 当作客户 ROI authority",
-  "连续在线数字孪生运行已完成最终正式验收", "生产资格化的作物推荐",
-  "已证明的客户 ROI", "AI 绕过人工审批直接进行生产作业",
+  "连续在线数字孪生运行已完成最终正式验收", "生产资格化的作物推荐", "已证明的客户 ROI",
+  "AI 绕过人工审批直接进行生产作业",
 ]) requireToken("html", html, token);
 
-// Page remains business-first; technical evidence is folded.
 for (const token of ["技术细节｜默认折叠", "Decision Assurance Runtime + Commercial Control Loop", "Runtime qualification boundary", "精确文件路径不在此虚构"]) requireToken("html", html, token);
-
-// Preserve six numbered compatibility surfaces used by the existing smoke check.
 for (let section = 1; section <= 6; section += 1) requireToken("html", html, `data-section="${section}"`);
 requireToken("style", style, ".topbar { position: relative;");
 requireToken("style", style, ".executive-trace-grid { grid-template-columns: repeat(3");
-
-// Documentation still states authority boundaries.
 for (const token of ["NOT PRODUCTION AUTHORITY", "PERSISTED ENGINEERING QUALIFICATION", "COMMERCIAL_EVIDENCE_MCFT_READ_URL", "Machine-verifiable proof", "PASS_FOR_PAID_PILOT_SALES_CONDITIONAL_ON_MACHINE_PROOF", "NOT_PROVEN_CUSTOMER_ROI"]) requireToken("docs", docs, token);
 
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
