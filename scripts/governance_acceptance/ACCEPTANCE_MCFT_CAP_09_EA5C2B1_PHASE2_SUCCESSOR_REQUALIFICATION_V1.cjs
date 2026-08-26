@@ -17,6 +17,7 @@ const TRANSPORT = "apps/server/src/external_evidence/provider/https_external_evi
 const PROVIDER = "apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.ts";
 const KBS_HOURLY_PROVIDER = "apps/server/src/external_evidence/provider/kbs_raw_hourly_live_provider_v1.ts";
 const KBS_HOURLY_CORE = "apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py";
+const GFS_SCIENTIFIC_CORE = "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py";
 const THIS = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs";
 const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1_RESULT.json");
 
@@ -41,6 +42,7 @@ const ALLOWED_SENSITIVE_DELTA = new Set([
   PROVIDER,
   KBS_HOURLY_PROVIDER,
   KBS_HOURLY_CORE,
+  GFS_SCIENTIFIC_CORE,
   WORKFLOW,
   THIS,
 ]);
@@ -90,7 +92,7 @@ try {
   const sensitive = changed.filter(isSensitive);
   const forbiddenSensitive = sensitive.filter((file) => !ALLOWED_SENSITIVE_DELTA.has(file));
   assert.deepEqual(forbiddenSensitive, [], "EA5C2B1_PHASE2_UNDECLARED_SENSITIVE_PATH");
-  for (const required of [EXECUTOR, TRANSPORT, PROVIDER, KBS_HOURLY_PROVIDER, KBS_HOURLY_CORE, WORKFLOW, THIS]) {
+  for (const required of [EXECUTOR, TRANSPORT, PROVIDER, KBS_HOURLY_PROVIDER, KBS_HOURLY_CORE, GFS_SCIENTIFIC_CORE, WORKFLOW, THIS]) {
     assert.equal(sensitive.includes(required), true, `EA5C2B1_PHASE2_REQUIRED_DELTA_MISSING:${required}`);
   }
 
@@ -210,6 +212,7 @@ try {
     provider_semantics_promoted_without_runtime_fallback: true,
     product_kbs_raw_hourly_provider_adapter_present: true,
     product_kbs_raw_hourly_scientific_core_present: true,
+    product_gfs_scientific_core_declared_sensitive_delta: sensitive.includes(GFS_SCIENTIFIC_CORE),
     product_scientific_core_acceptance_dependency: false,
     product_scientific_core_github_identity_dependency: false,
     product_scientific_core_provider_fetch_dependency: false,
