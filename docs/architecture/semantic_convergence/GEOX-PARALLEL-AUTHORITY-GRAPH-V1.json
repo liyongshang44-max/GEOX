@@ -1,0 +1,828 @@
+{
+  "schema_version": "1.1",
+  "status": "proposal_machine_graph",
+  "phase": "B-02",
+  "repository": "liyongshang44-max/GEOX",
+  "protected_main_baseline": "26c1383f7f45abb76c99e28ec3d06714e85d1b2c",
+  "register": "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json",
+  "authority_note": "This graph is a machine-readable derived/proposal view over B-01 findings and the B-02 register. It does not supersede docs/SSOT.md, README_MIGRATION.md, frozen domain contracts, or proven runtime behavior.",
+  "semantic_edges": [
+    {
+      "edge_id": "E-001",
+      "from": "evidence.raw_observation",
+      "to": "evidence.qualification",
+      "relation": "QUALIFIED_BY",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-002",
+      "from": "evidence.qualification",
+      "to": "twin.physical_state",
+      "relation": "GOVERNS_INPUT_AUTHORITY",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-003",
+      "from": "context.declared_identity",
+      "to": "context.crop_stage",
+      "relation": "SUPPORTS_DERIVATION",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-004",
+      "from": "evidence.qualification",
+      "to": "context.crop_stage",
+      "relation": "QUALIFIES_OBSERVED_PHENOLOGY",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-005",
+      "from": "twin.physical_state",
+      "to": "twin.forecast_scenario",
+      "relation": "STATE_TO_FORECAST_SCENARIO",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-006",
+      "from": "twin.physical_state",
+      "to": "decision.calculation",
+      "relation": "INPUT_TO",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-007",
+      "from": "twin.forecast_scenario",
+      "to": "decision.calculation",
+      "relation": "INPUT_TO",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-008",
+      "from": "context.declared_identity",
+      "to": "decision.calculation",
+      "relation": "INPUT_TO",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-009",
+      "from": "decision.calculation",
+      "to": "decision.candidate",
+      "relation": "SUPPORTS_CANDIDATE",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-010",
+      "from": "decision.candidate",
+      "to": "decision.eligibility",
+      "relation": "EVALUATED_BY",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-011",
+      "from": "evidence.qualification",
+      "to": "decision.eligibility",
+      "relation": "INPUT_TO",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-012",
+      "from": "decision.eligibility",
+      "to": "decision.approval",
+      "relation": "GATES",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-013",
+      "from": "decision.approval",
+      "to": "operation.plan",
+      "relation": "AUTHORIZES_PLAN_FORMATION",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-014",
+      "from": "operation.plan",
+      "to": "execution.task_receipt_acceptance",
+      "relation": "PLAN_TO_EXECUTION_CHAIN",
+      "status": "CURRENT_AND_TARGET",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-015",
+      "from": "execution.task_receipt_acceptance",
+      "to": "presentation.read_model",
+      "relation": "PROJECTED_TO",
+      "status": "CURRENT_AND_TARGET",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-016",
+      "from": "interpretation.agronomy",
+      "to": "presentation.read_model",
+      "relation": "EXPLAIN_ONLY_PROJECTION",
+      "status": "CURRENT_AND_TARGET",
+      "enforcement": "DECLARATIVE"
+    }
+  ],
+  "current_parallel_edges": [
+    {
+      "edge_id": "P-001",
+      "producer_id": "stage1-formal-gate",
+      "semantic_id": "evidence.qualification",
+      "relation": "GRANDFATHERED_PRODUCER",
+      "removal_target": "B-04",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-002",
+      "producer_id": "evidence-judge-v2",
+      "semantic_id": "evidence.qualification",
+      "relation": "GRANDFATHERED_PRODUCER",
+      "removal_target": "B-04",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-003",
+      "producer_id": "stage-resolver",
+      "semantic_id": "context.crop_stage",
+      "relation": "GRANDFATHERED_PRODUCER",
+      "removal_target": "B-05",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-004",
+      "producer_id": "rule-engine-stage",
+      "semantic_id": "context.crop_stage",
+      "relation": "GRANDFATHERED_PRODUCER",
+      "removal_target": "B-05",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-005",
+      "producer_id": "derived-sensing-state-service",
+      "semantic_id": "twin.physical_state",
+      "relation": "GRANDFATHERED_PROJECTION",
+      "removal_target": "B-09",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-006",
+      "producer_id": "agronomy-judge-calculation",
+      "semantic_id": "decision.calculation",
+      "relation": "GRANDFATHERED_MIXED_AUTHORITY",
+      "removal_target": "B-06",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-007",
+      "producer_id": "decision-engine-calculation",
+      "semantic_id": "decision.calculation",
+      "relation": "GRANDFATHERED_COMPOSITION_HOTSPOT",
+      "removal_target": "B-06",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-008",
+      "producer_id": "agronomy-agent-recommendation",
+      "semantic_id": "decision.candidate",
+      "relation": "GRANDFATHERED_PRODUCER",
+      "removal_target": "B-06",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-009",
+      "producer_id": "decision-engine-recommendation",
+      "semantic_id": "decision.candidate",
+      "relation": "GRANDFATHERED_PRODUCER",
+      "removal_target": "B-06",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-010",
+      "producer_id": "agronomy-agent-plan",
+      "semantic_id": "operation.plan",
+      "relation": "GRANDFATHERED_DIRECT_PLAN_PRODUCER",
+      "removal_target": "B-06",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-011",
+      "producer_id": "legacy-operator-scenario-recommendation-writer",
+      "semantic_id": "decision.candidate",
+      "relation": "ACTIVE_LEGACY_WRITER",
+      "removal_target": "B-09",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-012",
+      "producer_id": "evaluate-irrigation-decision-v1",
+      "semantic_id": "decision.calculation",
+      "relation": "ORPHANED_CAPABILITY",
+      "removal_target": "B-09",
+      "new_owner_creation": "FORBIDDEN"
+    }
+  ],
+  "forbidden_edges": [
+    {
+      "edge_id": "F-001",
+      "from": "interpretation.agronomy",
+      "to": "decision.eligibility",
+      "relation": "DIRECT_DETERMINISTIC_INPUT",
+      "reason": "Agronomy Interpretation is frozen explain-only and must not become deterministic Judge/eligibility input.",
+      "enforcement": "DECLARATIVE_EXISTING_CONSTITUTION"
+    },
+    {
+      "edge_id": "F-002",
+      "from": "decision.candidate",
+      "to": "execution.task_receipt_acceptance",
+      "relation": "DIRECT_EXECUTION",
+      "reason": "Candidate/Recommendation has no execution authority.",
+      "enforcement": "DECLARATIVE_EXISTING_CONTROL_BOUNDARY"
+    },
+    {
+      "edge_id": "F-003",
+      "from": "decision.candidate",
+      "to": "operation.plan",
+      "relation": "DIRECT_APPROVED_PLAN_AUTHORITY",
+      "reason": "Candidate/Recommendation must not directly confer ApprovedOperationPlan authority without Approval/Policy transition.",
+      "enforcement": "GRANDFATHERED_CURRENT_DEBT_PLUS_STATIC_FINGERPRINT"
+    },
+    {
+      "edge_id": "F-004",
+      "from": "evidence.raw_observation",
+      "to": "twin.physical_state",
+      "relation": "UNQUALIFIED_DIRECT_STATE_AUTHORITY",
+      "reason": "Canonical physical State must not consume an observation as authoritative without Evidence Qualification.",
+      "enforcement": "TARGET_DECLARATIVE_UNTIL_B-04/B-09"
+    },
+    {
+      "edge_id": "F-005",
+      "from": "evidence.raw_observation",
+      "to": "decision.candidate",
+      "relation": "FABRICATED_MISSING_OBSERVATION",
+      "reason": "Missing Evidence must not be converted into a convenience numeric value represented as measured/observed truth.",
+      "enforcement": "STATIC_FINGERPRINT_FOR_KNOWN_DEFAULT_PLUS_TARGET_DECLARATIVE"
+    },
+    {
+      "edge_id": "F-006",
+      "from": "presentation.read_model",
+      "to": "evidence.qualification",
+      "relation": "RECONSTRUCT_UPSTREAM_TRUTH",
+      "reason": "Read models/UI may project authority but may not become a second qualification owner.",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "F-007",
+      "from": "presentation.read_model",
+      "to": "twin.physical_state",
+      "relation": "RECONSTRUCT_UPSTREAM_TRUTH",
+      "reason": "Presentation cannot manufacture canonical Twin State.",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "F-008",
+      "from": "twin.forecast_scenario",
+      "to": "execution.task_receipt_acceptance",
+      "relation": "DIRECT_EXECUTION",
+      "reason": "Scenario is not Recommendation/Approval/Task.",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "F-009",
+      "from": "decision.calculation",
+      "to": "decision.approval",
+      "relation": "SELF_PROMOTE_CALCULATOR_TO_APPROVAL",
+      "reason": "Deterministic calculator results require CandidateDecision and Decision Eligibility before Approval.",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "F-010",
+      "from": "decision.calculation",
+      "to": "execution.task_receipt_acceptance",
+      "relation": "SELF_PROMOTE_CALCULATOR_TO_EXECUTION",
+      "reason": "Calculators have no task/device-command authority.",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "F-011",
+      "from": "decision.candidate",
+      "to": "evidence.qualification",
+      "relation": "DOWNSTREAM_REAUTHORIZE_UPSTREAM_EVIDENCE",
+      "reason": "Decision producers cannot re-authorize Evidence using an independent rule once canonical qualification exists.",
+      "enforcement": "TARGET_DECLARATIVE_UNTIL_B-04/B-06"
+    },
+    {
+      "edge_id": "F-012",
+      "from": "decision.candidate",
+      "to": "twin.physical_state",
+      "relation": "DOWNSTREAM_RECOMPUTE_CANONICAL_STATE",
+      "reason": "Decision Runtime must consume canonical State rather than reconstruct a competing state from raw telemetry.",
+      "enforcement": "TARGET_DECLARATIVE_UNTIL_B-09"
+    },
+    {
+      "edge_id": "F-013",
+      "from": "devtools.simulation",
+      "to": "evidence.qualification",
+      "relation": "DEVTOOLS_TO_PRODUCTION_AUTHORITY",
+      "reason": "Flight Table/simulator outputs are DEVTOOLS_ONLY and intentionally isolated from production/formal Evidence authority.",
+      "enforcement": "STATIC_PRODUCTION_IMPORT_GUARD"
+    }
+  ],
+  "current_connectivity_edges": [
+    {
+      "edge_id": "C-001",
+      "from_producer": "telemetry-ingest",
+      "to_consumer": "stage1-sensing",
+      "semantic_id": "evidence.raw_observation",
+      "connection_class": "MAINLINE",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "PERSISTED_DATA",
+        "caller_path": "apps/server/src/routes/telemetry_v1.ts",
+        "callee_path": "apps/server/src/domain/sensing/run_sensing_inference_pipeline_v1.ts",
+        "fingerprint": "telemetry_index_v1 / sensing pipeline"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-002",
+      "from_producer": "telemetry-ingest",
+      "to_consumer": "agronomy-agent",
+      "semantic_id": "evidence.raw_observation",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "FEATURE_FLAG",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "PERSISTED_DATA",
+        "caller_path": "apps/server/src/routes/telemetry_v1.ts",
+        "callee_path": "apps/server/src/jobs/agronomy_agent.ts",
+        "fingerprint": "telemetry_index_v1"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-003",
+      "from_producer": "stage1-formal-gate",
+      "to_consumer": "stage1-recommendation-path",
+      "semantic_id": "evidence.qualification",
+      "connection_class": "MAINLINE",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/routes/decision_engine_v1.ts",
+        "callee_path": "apps/server/src/domain/decision/stage1_action_boundary_v1.ts",
+        "fingerprint": "evaluateFormalStage1TriggerGateV1 / isFormalStage1TriggerEligible"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-004",
+      "from_producer": "evidence-judge-v2",
+      "to_consumer": "agronomy-judge-v2",
+      "semantic_id": "evidence.qualification",
+      "connection_class": "ROUTE_ISLAND",
+      "activation": "API_ONLY",
+      "runtime_edge": "NOT_PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "CONTRACT_ONLY",
+        "caller_path": "apps/server/src/routes/judge_v2.ts",
+        "callee_path": "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+        "fingerprint": "Agronomy request accepts evidence_judge_id/evidence_judge_verdict but does not load/run Evidence Judge"
+      },
+      "status": "NOT_WIRED"
+    },
+    {
+      "edge_id": "C-005",
+      "from_producer": "evidence-judge-v2",
+      "to_consumer": "judge-v2-evidence-route",
+      "semantic_id": "evidence.qualification",
+      "connection_class": "ROUTE_ISLAND",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/routes/judge_v2.ts",
+        "callee_path": "apps/server/src/domain/judge/evidence_judge_v2.ts",
+        "fingerprint": "evaluateEvidenceJudgeV2(body)"
+      },
+      "status": "ROUTE_ONLY"
+    },
+    {
+      "edge_id": "C-006",
+      "from_producer": "agronomy-judge-calculation",
+      "to_consumer": "judge-v2-agronomy-route",
+      "semantic_id": "decision.calculation",
+      "connection_class": "ROUTE_ISLAND",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/routes/judge_v2.ts",
+        "callee_path": "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+        "fingerprint": "evaluateAgronomyJudgeV2(body)"
+      },
+      "status": "ROUTE_ONLY"
+    },
+    {
+      "edge_id": "C-007",
+      "from_producer": "execution-judge-v2",
+      "to_consumer": "judge-v2-execution-route",
+      "semantic_id": "execution.task_receipt_acceptance",
+      "connection_class": "ROUTE_ISLAND",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/routes/judge_v2.ts",
+        "callee_path": "apps/server/src/domain/judge/execution_judge_v2.ts",
+        "fingerprint": "evaluateExecutionJudgeV2(body)"
+      },
+      "status": "ROUTE_ONLY"
+    },
+    {
+      "edge_id": "C-008",
+      "from_producer": "execution-judge-v2",
+      "to_consumer": "execution-memory-side-effect",
+      "semantic_id": "execution.task_receipt_acceptance",
+      "connection_class": "ROUTE_ISLAND",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "SAME_REQUEST_SIDE_EFFECT",
+        "caller_path": "apps/server/src/routes/judge_v2.ts",
+        "callee_path": "apps/server/src/services/field_memory_service.ts",
+        "fingerprint": "recordMemoryV1 type=execution_reliability"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-009",
+      "from_producer": "irrigation-requirement-skill",
+      "to_consumer": "agronomy-judge-local-skills",
+      "semantic_id": "decision.calculation",
+      "connection_class": "LOCAL_DIRECT_CALL",
+      "activation": "ALWAYS",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+        "callee_path": "apps/server/src/domain/agronomy/skills/irrigation/irrigation_requirement_skill_v1.ts",
+        "fingerprint": "runIrrigationRequirementSkillV1"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-010",
+      "from_producer": "irrigation-deficit-skill",
+      "to_consumer": "agronomy-judge-local-skills",
+      "semantic_id": "decision.calculation",
+      "connection_class": "LOCAL_DIRECT_CALL",
+      "activation": "ALWAYS",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+        "callee_path": "apps/server/src/domain/agronomy/skills/irrigation/irrigation_deficit_skill_v1.ts",
+        "fingerprint": "runIrrigationDeficitSkillV1"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-011",
+      "from_producer": "skill-runtime-route",
+      "to_consumer": "skill-runtime-module-registration",
+      "semantic_id": "runtime.skill_capability",
+      "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+      "activation": "ALWAYS",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "MODULE_REGISTRATION",
+        "caller_path": "apps/server/src/modules/decision/registerDecisionModule.ts",
+        "callee_path": "apps/server/src/routes/skill_runtime_v1.ts",
+        "fingerprint": "registerSkillRuntimeV1Routes"
+      },
+      "status": "ROUTE_ONLY"
+    },
+    {
+      "edge_id": "C-012",
+      "from_producer": "evaluate-irrigation-decision-v1",
+      "to_consumer": "NONE",
+      "semantic_id": "decision.calculation",
+      "connection_class": "ORPHANED",
+      "activation": "NOT_REFERENCED",
+      "runtime_edge": "NONE",
+      "contract_compatible": false,
+      "evidence": {
+        "kind": "CODE_SEARCH",
+        "caller_path": "apps/server/src/domain/decision_engine_v1.ts",
+        "callee_path": "apps/server/src/domain/decision_engine_v1.ts",
+        "fingerprint": "evaluateIrrigationDecisionV1 found only at export definition in B-02 exact-main search"
+      },
+      "status": "NOT_WIRED"
+    },
+    {
+      "edge_id": "C-013",
+      "from_producer": "legacy-root-zone-state-builder",
+      "to_consumer": "root-zone-state-acceptance",
+      "semantic_id": "twin.physical_state",
+      "connection_class": "ACCEPTANCE_LIBRARY_ISLAND",
+      "activation": "TEST_ACCEPTANCE_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "TEST_HARNESS",
+        "caller_path": "scripts/runtime_acceptance/ACCEPTANCE_ROOT_ZONE_SOIL_WATER_STATE_RUNTIME_V1.cjs",
+        "callee_path": "apps/server/src/domain/soil_water/root_zone_soil_water_state_builder_v1.ts",
+        "fingerprint": "root-zone state runtime acceptance"
+      },
+      "status": "TEST_ONLY"
+    },
+    {
+      "edge_id": "C-014",
+      "from_producer": "legacy-root-zone-forecast-builder",
+      "to_consumer": "root-zone-forecast-acceptance",
+      "semantic_id": "twin.forecast_scenario",
+      "connection_class": "ACCEPTANCE_LIBRARY_ISLAND",
+      "activation": "TEST_ACCEPTANCE_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "TEST_HARNESS",
+        "caller_path": "scripts/runtime_acceptance/ACCEPTANCE_ROOT_ZONE_SOIL_WATER_FORECAST_RUNTIME_V1.cjs",
+        "callee_path": "apps/server/src/domain/soil_water/root_zone_soil_water_forecast_builder_v1.ts",
+        "fingerprint": "root-zone forecast runtime acceptance"
+      },
+      "status": "TEST_ONLY"
+    },
+    {
+      "edge_id": "C-015",
+      "from_producer": "legacy-root-zone-scenario-builder",
+      "to_consumer": "root-zone-scenario-acceptance",
+      "semantic_id": "twin.forecast_scenario",
+      "connection_class": "ACCEPTANCE_LIBRARY_ISLAND",
+      "activation": "TEST_ACCEPTANCE_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "TEST_HARNESS",
+        "caller_path": "scripts/runtime_acceptance/ACCEPTANCE_ROOT_ZONE_IRRIGATION_SCENARIO_RUNTIME_V1.cjs",
+        "callee_path": "apps/server/src/domain/soil_water/root_zone_irrigation_scenario_builder_v1.ts",
+        "fingerprint": "root-zone scenario runtime acceptance"
+      },
+      "status": "TEST_ONLY"
+    },
+    {
+      "edge_id": "C-016",
+      "from_producer": "legacy-operator-scenario-recommendation-writer",
+      "to_consumer": "operator-module-registration",
+      "semantic_id": "decision.candidate",
+      "connection_class": "ACTIVE_LEGACY_WRITER",
+      "activation": "ALWAYS",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "MODULE_REGISTRATION",
+        "caller_path": "apps/server/src/modules/operator/registerOperatorModule.ts",
+        "callee_path": "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts",
+        "fingerprint": "registerOperatorTwinWriteLegacyRoutesV1(app, pool) / two POST paths"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-017",
+      "from_producer": "agronomy-inference-route",
+      "to_consumer": "agronomy-module-registration",
+      "semantic_id": "interpretation.agronomy",
+      "connection_class": "ROUTE_ISLAND",
+      "activation": "ALWAYS",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "MODULE_REGISTRATION",
+        "caller_path": "apps/server/src/modules/agronomy/registerAgronomyModule.ts",
+        "callee_path": "apps/server/src/routes/agronomy_inference_v1.ts",
+        "fingerprint": "register agronomy inference route"
+      },
+      "status": "ROUTE_ONLY"
+    },
+    {
+      "edge_id": "C-018",
+      "from_producer": "agronomy-interpretation-route",
+      "to_consumer": "agronomy-module-registration",
+      "semantic_id": "interpretation.agronomy",
+      "connection_class": "INTENTIONAL_ISOLATION",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "MODULE_REGISTRATION",
+        "caller_path": "apps/server/src/modules/agronomy/registerAgronomyModule.ts",
+        "callee_path": "apps/server/src/routes/agronomy_v0.ts",
+        "fingerprint": "Agronomy Interpretation route is registered but explain-only"
+      },
+      "status": "ROUTE_ONLY"
+    },
+    {
+      "edge_id": "C-019",
+      "from_producer": "acceptance-formal-pass",
+      "to_consumer": "field-memory-service",
+      "semantic_id": "post_acceptance.verification_memory",
+      "connection_class": "MAINLINE",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "SAME_REQUEST_SIDE_EFFECT",
+        "caller_path": "apps/server/src/routes/acceptance_v1.ts",
+        "callee_path": "apps/server/src/services/field_memory_service.ts",
+        "fingerprint": "verdict PASS && formal_acceptance && field_id -> recordMemoryV1 FORMAL_FIELD_MEMORY"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-020",
+      "from_producer": "water-response-from-acceptance-builder",
+      "to_consumer": "water-response-verification-route",
+      "semantic_id": "post_acceptance.verification_memory",
+      "connection_class": "MANUAL_SEAM",
+      "activation": "MANUAL",
+      "runtime_edge": "NOT_PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "SEPARATE_API",
+        "caller_path": "apps/server/src/routes/acceptance_v1.ts",
+        "callee_path": "apps/server/src/routes/water_response_verification_v1.ts",
+        "fingerprint": "acceptance-derived builder exists; no automatic call from acceptance route proven"
+      },
+      "status": "MANUAL"
+    },
+    {
+      "edge_id": "C-021",
+      "from_producer": "existing-evidence-module",
+      "to_consumer": "domain-module-evidence-registration",
+      "semantic_id": "evidence.reporting_artifact",
+      "connection_class": "REPORTING_ARTIFACT_PLANE",
+      "activation": "ALWAYS",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "MODULE_REGISTRATION",
+        "caller_path": "apps/server/src/modules/domain/registerDomainModules.ts",
+        "callee_path": "apps/server/src/modules/evidence/registerEvidenceModule.ts",
+        "fingerprint": "registerEvidenceModule"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-022",
+      "from_producer": "flight-table-devtools-module",
+      "to_consumer": "NONE",
+      "semantic_id": "devtools.simulation",
+      "connection_class": "DEVTOOLS_ONLY",
+      "activation": "API_ONLY",
+      "runtime_edge": "INTENTIONAL_NONE",
+      "contract_compatible": false,
+      "evidence": {
+        "kind": "INTENTIONAL_BOUNDARY",
+        "caller_path": "apps/server/src/modules/devtools/registerDevtoolsModule.ts",
+        "callee_path": "apps/server/src/routes/dev/flight_table_v1.ts",
+        "fingerprint": "devtools/Flight Table intentionally excluded from production semantic consumers"
+      },
+      "status": "NOT_WIRED"
+    },
+    {
+      "edge_id": "C-023",
+      "from_producer": "agronomy-agent-recommendation",
+      "to_consumer": "agronomy-agent-plan-write",
+      "semantic_id": "decision.candidate",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "FEATURE_FLAG",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "SAME_JOB",
+        "caller_path": "apps/server/src/jobs/agronomy_agent.ts",
+        "callee_path": "apps/server/src/jobs/agronomy_agent.ts",
+        "fingerprint": "recommendation_v1 / decision_recommendation_v1 followed by operation_plan_v1"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-024",
+      "from_producer": "agronomy-agent-plan",
+      "to_consumer": "agronomy-agent-plan-persistence",
+      "semantic_id": "operation.plan",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "FEATURE_FLAG",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "PERSISTENCE_WRITE",
+        "caller_path": "apps/server/src/jobs/agronomy_agent.ts",
+        "callee_path": "apps/server/src/jobs/agronomy_agent.ts",
+        "fingerprint": "agronomy_agent_auto_create / operation_plan_v1"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-025",
+      "from_producer": "agronomy-context-builder",
+      "to_consumer": "agronomy-rule-engine",
+      "semantic_id": "context.declared_identity",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "FEATURE_FLAG",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/jobs/agronomy_agent.ts",
+        "callee_path": "apps/server/src/domain/agronomy/context_builder.ts",
+        "fingerprint": "build AgronomyContext consumed by agronomy rules"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-026",
+      "from_producer": "agronomy-context-builder",
+      "to_consumer": "decision-engine-route",
+      "semantic_id": "context.declared_identity",
+      "connection_class": "COMPATIBILITY",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "SHARED_CONTEXT_SEMANTICS",
+        "caller_path": "apps/server/src/routes/decision_engine_v1.ts",
+        "callee_path": "apps/server/src/domain/agronomy/context_builder.ts",
+        "fingerprint": "decision route consumes request/program/read-model context and stage semantics"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-027",
+      "from_producer": "derived-sensing-state-service",
+      "to_consumer": "decision-engine-state",
+      "semantic_id": "twin.physical_state",
+      "connection_class": "COMPATIBILITY",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/routes/decision_engine_v1.ts",
+        "callee_path": "apps/server/src/services/derived_sensing_state_v1.ts",
+        "fingerprint": "getLatestDerivedSensingStatesByFieldV1 imported via emitted .js specifier from the TypeScript source"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-028",
+      "from_producer": "external-weather-projection",
+      "to_consumer": "decision-engine-weather",
+      "semantic_id": "twin.forecast_scenario",
+      "connection_class": "MAINLINE",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/routes/decision_engine_v1.ts",
+        "callee_path": "apps/server/src/projections/weather_forecast_v1.ts",
+        "fingerprint": "getLatestWeatherForecastIndexV1"
+      },
+      "status": "CURRENT_PROVEN"
+    }
+  ],
+  "connectivity_status_values": [
+    "CURRENT_PROVEN",
+    "ROUTE_ONLY",
+    "MANUAL",
+    "TEST_ONLY",
+    "NOT_WIRED"
+  ]
+}
