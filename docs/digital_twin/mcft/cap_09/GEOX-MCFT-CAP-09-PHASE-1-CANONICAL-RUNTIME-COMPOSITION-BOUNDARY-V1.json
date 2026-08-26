@@ -1,0 +1,52 @@
+{
+  "schema_version": "geox_mcft_cap09_phase_1_canonical_runtime_composition_boundary_v1",
+  "record_status": "PHASE_1_IN_PROGRESS",
+  "capability_line_id": "MCFT-CAP-09",
+  "phase_id": "PHASE_1_CANONICAL_RUNTIME_COMPOSITION_EXTRACTION",
+  "phase_step": "EXPLICIT_CAP08_S4_PRODUCT_COMPOSITION_SEAMS",
+  "protected_main_baseline": "26c1383f7f45abb76c99e28ec3d06714e85d1b2c",
+  "production_hosting_architecture_freeze": {
+    "pr_number": 3292,
+    "branch": "docs/mcft-cap09-production-hosting-architecture-v1",
+    "commit_sha": "2f7a065cc95e4a5a2c95411fb381fe5e4479d645",
+    "document_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+    "document_blob_sha": "8439891abddd4c1d2d08339e04d58f865386c0ae"
+  },
+  "frozen_v13_predecessor": {
+    "pr_number": 3289,
+    "exact_head_sha": "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
+    "mutation_forbidden": true
+  },
+  "historical_authorities_reopened": false,
+  "cap01_to_cap07_completion_reopened": false,
+  "cap08_stage1a_completion_reopened": false,
+  "formal_v4_no_go_reopened": false,
+  "objective": "Expose explicit product-level composition seams needed by a future ReplayHost without changing frozen CAP-08 execute/resolve semantics or mutating historical CAP-08 qualification scripts.",
+  "first_step_contract": {
+    "historical_cap08_scripts_must_remain_blob_identical_to_baseline": true,
+    "cap08_s4_execute_body_must_remain_byte_identical_to_baseline": true,
+    "cap08_t17_resolve_body_must_remain_byte_identical_to_baseline": true,
+    "historical_two_argument_service_composition_must_remain_available": true,
+    "successor_host_may_inject_chain_reader_repository_and_resolver": true,
+    "injected_repository_may_be_shared_with_t17_resolver": true,
+    "private_field_mutation_required_by_successor_host": false,
+    "module_cache_monkey_patch_required_by_successor_host": false
+  },
+  "phase_1_completion_requires": [
+    "PRODUCT_COMPOSITION_SEAM_ACCEPTANCE_PASS",
+    "SERVER_TYPECHECK_PASS",
+    "SUCCESSOR_REPLAY_HOST_COMPOSITION_ESTABLISHED",
+    "FROZEN_CAP08_VS_SUCCESSOR_REPLAY_DATABASE_SEMANTIC_EQUIVALENCE_PASS",
+    "QUALIFICATION_APPLICABILITY_IMPACT_ADJUDICATED"
+  ],
+  "phase_1_complete": false,
+  "phase_2_authorized": false,
+  "runtime_activation": false,
+  "production_workflow_activation": false,
+  "provider_request": false,
+  "formal_database_mutation": false,
+  "formal_v5_armed": false,
+  "formal_o00_started": false,
+  "graduation_effect": false,
+  "mcft_cap09_completed": false
+}
