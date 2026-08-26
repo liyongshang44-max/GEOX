@@ -76,6 +76,17 @@ function resolveRequalificationEvidence(decision, authority, registry, stage, he
   if (!section || section.binding_strategy !== REQUALIFICATION_BINDING_STRATEGY) {
     return { status: "FAIL", reason_code: "REQUALIFICATION_EVIDENCE_REGISTRY_MISSING_OR_UNSUPPORTED", candidates: [] };
   }
+  const governedPredecessors = section.governed_successor_predecessors;
+  const governedPredecessorSet = Array.isArray(governedPredecessors) ? new Set(governedPredecessors) : null;
+  const governedPredecessorsValid =
+    Array.isArray(governedPredecessors) &&
+    governedPredecessors.length > 0 &&
+    governedPredecessorSet.size === governedPredecessors.length &&
+    governedPredecessors.every((sha) => /^[0-9a-f]{40}$/.test(String(sha || ""))) &&
+    governedPredecessorSet.has(authority.frozen_successor_subject_sha);
+  if (!governedPredecessorsValid) {
+    return { status: "FAIL", reason_code: "REQUALIFICATION_GOVERNED_PREDECESSOR_SET_INVALID", candidates: [] };
+  }
   const anchors = new Map((section.durable_anchors?.entries || []).map((row) => [row.evidence_id, row]));
   const candidates = (section.entries || []).filter((entry) => entry.check_id === decision.check_id);
   const adjudications = candidates.map((entry) => {
@@ -95,7 +106,7 @@ function resolveRequalificationEvidence(decision, authority, registry, stage, he
       anchor_present: Boolean(anchor),
       anchor_run_match: anchor?.run_id === entry.run_id,
       anchor_head_match: snapshot?.head_sha === entry.subject_sha,
-      anchor_base_match: snapshot?.base_sha === authority.frozen_successor_subject_sha,
+      anchor_base_match: governedPredecessorSet.has(snapshot?.base_sha),
       anchor_event_match: snapshot?.event === "pull_request",
       anchor_workflow_path_match: snapshot?.workflow_path === entry.workflow_path,
       anchor_workflow_name_match: snapshot?.workflow_name === entry.workflow_name,
