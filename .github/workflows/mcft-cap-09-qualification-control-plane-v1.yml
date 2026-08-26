@@ -156,6 +156,10 @@ jobs:
           const outPath = 'acceptance-output/MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json';
           const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
           const anchors = new Map((registry.durable_anchors?.entries || []).map(x => [x.evidence_id, x]));
+          const requalification = registry.requalification_evidence;
+          if (!requalification || requalification.binding_strategy !== 'MCFT_CAP09_REQUALIFICATION_RUN_BINDING_V1') throw new Error('REQUALIFICATION_EVIDENCE_REGISTRY_MISSING_OR_UNSUPPORTED');
+          if (!Array.isArray(requalification.entries) || requalification.entries.length === 0) throw new Error('REQUALIFICATION_EVIDENCE_REQUIRED');
+          const requalificationAnchors = new Map((requalification.durable_anchors?.entries || []).map(x => [x.evidence_id, x]));
           const token = process.env.GITHUB_TOKEN;
           const repo = process.env.GITHUB_REPOSITORY;
           if (!token || !repo) throw new Error('GITHUB_ACTIONS_READ_CONTEXT_REQUIRED');
@@ -206,15 +210,42 @@ jobs:
                 artifact_expired:artifactExpired, artifact_digest:entry.artifact_digest,
               });
             }
+
+            const requalificationResults = [];
+            for (const entry of requalification.entries) {
+              const anchor = requalificationAnchors.get(entry.evidence_id);
+              const snapshot = anchor?.run_snapshot || null;
+              if (!anchor || anchor.run_id !== entry.run_id || !snapshot) throw new Error(`REQUALIFICATION_DURABLE_ANCHOR_MISMATCH:${entry.evidence_id}`);
+              if (entry.evidence_class !== 'IMMUTABLE_WORKFLOW_RUN' || entry.artifact_id !== null || entry.artifact_digest !== null) throw new Error(`REQUALIFICATION_RUN_ONLY_EVIDENCE_REQUIRED:${entry.evidence_id}`);
+              const run = await apiMaybe(`/actions/runs/${entry.run_id}`);
+              if (!run) throw new Error(`REQUALIFICATION_RUN_UNAVAILABLE:${entry.evidence_id}`);
+              if (run.conclusion !== 'success' || entry.run_conclusion !== 'success') throw new Error(`REQUALIFICATION_RUN_NOT_SUCCESS:${entry.evidence_id}:${run.conclusion}`);
+              if (run.head_sha !== entry.subject_sha || snapshot.head_sha !== entry.subject_sha) throw new Error(`REQUALIFICATION_RUN_SUBJECT_MISMATCH:${entry.evidence_id}:${run.head_sha}`);
+              if (run.name !== entry.workflow_name || snapshot.workflow_name !== entry.workflow_name) throw new Error(`REQUALIFICATION_RUN_WORKFLOW_MISMATCH:${entry.evidence_id}:${run.name}`);
+              if (run.path !== entry.workflow_path || snapshot.workflow_path !== entry.workflow_path) throw new Error(`REQUALIFICATION_RUN_PATH_MISMATCH:${entry.evidence_id}:${run.path}`);
+              if (run.event !== 'pull_request' || snapshot.event !== 'pull_request') throw new Error(`REQUALIFICATION_RUN_EVENT_MISMATCH:${entry.evidence_id}:${run.event}`);
+              const runBaseSha = run.pull_requests?.find(pr => pr?.base?.sha)?.base?.sha ?? null;
+              if (runBaseSha !== registry.frozen_subject_sha || snapshot.base_sha !== registry.frozen_subject_sha) throw new Error(`REQUALIFICATION_RUN_BASE_MISMATCH:${entry.evidence_id}:${runBaseSha}`);
+              requalificationResults.push({
+                evidence_id:entry.evidence_id, check_id:entry.check_id, run_id:entry.run_id,
+                live_run_resolved:true, run_conclusion:run.conclusion, head_sha:run.head_sha,
+                base_sha:runBaseSha, workflow_name:run.name, workflow_path:run.path, event:run.event,
+                durable_anchor_resolved:true,
+              });
+            }
+
             const proof = {
               status:'PASS', acceptance_id:'MCFT_CAP09_IMMUTABLE_EVIDENCE_REFS_V1',
               frozen_subject_sha:registry.frozen_subject_sha, evidence_count:results.length,
+              requalification_evidence_count:requalificationResults.length,
               all_durable_anchor_refs_resolvable:results.every(x => x.durable_anchor_resolved),
               all_live_refs_match_when_present:true,
+              all_requalification_live_refs_match:requalificationResults.length === requalification.entries.length,
               live_source_expiry_tolerated_only_with_durable_anchor:true,
               runtime_mutation:false, production_workflow_activation:false,
               formal_database_mutation:false, provider_request:false,
               graduation_effect:false, mcft_cap09_completed:false, results,
+              requalification_results:requalificationResults,
             };
             fs.mkdirSync(path.dirname(outPath),{recursive:true});
             fs.writeFileSync(outPath,JSON.stringify(proof,null,2)+'\n');
@@ -258,7 +289,7 @@ jobs:
           const preflight = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json','utf8'));
           if (proof.status !== 'PASS' || proof.regex_fallback_used !== false || proof.unknown_changed_path_fails_closed !== true) throw new Error('CONTROL_PLANE_SELFTEST_NOT_PASS');
           if (cp2.status !== 'PASS' || cp2.v14_frozen_checks_not_applicable !== true) throw new Error('CP2_GENERATION_DIGEST_PROOF_NOT_PASS');
-          if (evidence.status !== 'PASS' || evidence.all_durable_anchor_refs_resolvable !== true || evidence.all_live_refs_match_when_present !== true) throw new Error('IMMUTABLE_DURABLE_EVIDENCE_NOT_RESOLVED');
+          if (evidence.status !== 'PASS' || evidence.all_durable_anchor_refs_resolvable !== true || evidence.all_live_refs_match_when_present !== true || evidence.all_requalification_live_refs_match !== true || evidence.requalification_evidence_count < 1) throw new Error('IMMUTABLE_DURABLE_EVIDENCE_NOT_RESOLVED');
           if (plan.status !== 'PASS' || plan.generation !== 'v13' || plan.unknown_changed_paths.length !== 0 || plan.resolver_errors.length !== 0 || plan.authority_errors.length !== 0) throw new Error('CONTROL_PLANE_PLAN_NOT_PASS');
           const control = plan.decisions.find(x => x.check_id === 'CONTROL_PLANE_INTEGRITY');
           if (!control || control.status !== 'REQUALIFY') throw new Error('CONTROL_PLANE_SELF_CHANGE_MUST_REQUALIFY');
