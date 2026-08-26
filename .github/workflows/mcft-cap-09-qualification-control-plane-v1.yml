@@ -329,6 +329,7 @@ jobs:
           if (cp2.status !== 'PASS' || cp2.v14_frozen_checks_not_applicable !== true) throw new Error('CP2_GENERATION_DIGEST_PROOF_NOT_PASS');
           if (evidence.status !== 'PASS' || evidence.all_durable_anchor_refs_resolvable !== true || evidence.all_live_refs_match_when_present !== true || evidence.all_requalification_live_refs_match !== true || evidence.requalification_evidence_count < 1) throw new Error('IMMUTABLE_DURABLE_EVIDENCE_NOT_RESOLVED');
           if (plan.status !== 'PASS' || plan.generation !== 'v13' || plan.unknown_changed_paths.length !== 0 || plan.resolver_errors.length !== 0 || plan.authority_errors.length !== 0) throw new Error('CONTROL_PLANE_PLAN_NOT_PASS');
+          if (plan.base_sha !== process.env.PHASE1_CLOSURE_SHA) throw new Error(`PHASE2_EXACT_PLAN_BASE_MUST_EQUAL_PHASE1_CLOSURE:${plan.base_sha}`);
           const control = plan.decisions.find(x => x.check_id === 'CONTROL_PLANE_INTEGRITY');
           if (!control || control.status !== 'REQUALIFY') throw new Error('CONTROL_PLANE_SELF_CHANGE_MUST_REQUALIFY');
           for (const id of ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS']) {
@@ -347,7 +348,7 @@ jobs:
             }
           }
           const phase1 = plan.decisions.find(x => x.check_id === 'PHASE1_TYPED_RUNTIME_COMPOSITION');
-          if (!phase1 || phase1.status !== 'REQUALIFY' || phase1.reason_code !== 'GOVERNED_DEPENDENCY_CHANGED') throw new Error(`PHASE1_TYPED_RUNTIME_COMPOSITION_MUST_REQUALIFY:${phase1?.status}`);
+          if (!phase1 || phase1.status !== 'REQUIRED' || phase1.reason_code !== 'APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE' || !Array.isArray(phase1.changed_dependencies) || phase1.changed_dependencies.length !== 0) throw new Error(`PHASE1_TYPED_RUNTIME_COMPOSITION_MUST_BE_UNCHANGED_STACK_PREDECESSOR:${phase1?.status}:${phase1?.reason_code}`);
           if (phase1.execution_workflow !== '.github/workflows/mcft-cap-09-phase1-typed-cap08-frozen-replay-equivalence-v1.yml') throw new Error('PHASE1_TYPED_RUNTIME_COMPOSITION_WORKFLOW_MISMATCH');
           const phase2 = plan.decisions.find(x => x.check_id === 'PHASE2_EVIDENCE_PROVIDER_MODULES');
           if (!phase2 || phase2.status !== 'REQUALIFY' || phase2.reason_code !== 'GOVERNED_DEPENDENCY_CHANGED') throw new Error(`PHASE2_EVIDENCE_PROVIDER_MODULES_MUST_REQUALIFY:${phase2?.status}`);
