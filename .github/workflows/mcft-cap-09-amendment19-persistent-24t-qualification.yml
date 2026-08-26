@@ -10,6 +10,7 @@ on:
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_PREFLIGHT_V1.cjs'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts'
+      - 'scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_AM19_PHASE2_AUTHORITY_SYMBOL_COMPATIBILITY_V1.ts'
       - 'apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts'
   workflow_run:
     workflows: ['mcft-cap-09-rolling-preboundary-capture']
@@ -54,6 +55,9 @@ jobs:
           protected_main_sha="$(git rev-parse origin/main)"
           frozen_successor_sha='3bbf096ee5cb73e8e0e0251dc400733d6cab501f'
           phase1_successor_sha='8943c752a354cb916cc7f144681203aa9a19f70b'
+          phase2_compatibility_path='scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_AM19_PHASE2_AUTHORITY_SYMBOL_COMPATIBILITY_V1.ts'
+          frozen_historical_runner='scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'
+          frozen_historical_runner_blob='ae3e47593ef35cba08946427304a0d3271bb86e9'
           if [[ "$base_sha" != "$protected_main_sha" && "$base_sha" != "$frozen_successor_sha" && "$base_sha" != "$phase1_successor_sha" ]]; then
             echo "AM19_P24_PR_BASE_NOT_GOVERNED:${base_sha}" >&2
             exit 1
@@ -91,10 +95,15 @@ jobs:
           v13_marker_regex='(^\.github/workflows/mcft-cap-09-v13-|^apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_|external_formal_v5_|external_formal_forcing_|external_formal_exact_base_|postgres_external_formal_forcing_|postgres_external_formal_next_tick_|postgres_external_formal_fenced_exact_base_|/ACCEPTANCE_MCFT_CAP_09_V13_|/VALIDATE_MCFT_CAP_09_V13_|GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3\.json$)'
           historical_sensitive_changed=false
           v13_marker_changed=false
+          phase2_compatibility_changed=false
           if grep -Eq "$historical_sensitive_regex" <<<"$changed"; then historical_sensitive_changed=true; fi
           if grep -Eq "$v13_marker_regex" <<<"$changed"; then v13_marker_changed=true; fi
+          if grep -Fxq "$phase2_compatibility_path" <<<"$changed"; then phase2_compatibility_changed=true; fi
           mode='historical-am19'
-          if [[ "$changed" == "$qualification_control_plane_files" && "$historical_sensitive_changed" == 'false' ]]; then
+          if [[ "$base_sha" == "$phase1_successor_sha" && "$phase2_compatibility_changed" == 'true' && "$historical_sensitive_changed" == 'false' ]]; then
+            test "$(git rev-parse "HEAD:${frozen_historical_runner}")" = "$frozen_historical_runner_blob" || { echo 'AM19_PHASE2_HISTORICAL_RUNNER_BLOB_DRIFT' >&2; exit 1; }
+            mode='phase2-authority-symbol-compatibility'
+          elif [[ "$changed" == "$qualification_control_plane_files" && "$historical_sensitive_changed" == 'false' ]]; then
             mode='qualification-control-plane-successor'
           elif [[ "$v13_marker_changed" == 'true' && "$historical_sensitive_changed" == 'false' ]]; then
             mode='v13-maintenance-successor'
@@ -162,12 +171,17 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Typecheck server
+        if: steps.routing.outputs.mode != 'phase2-authority-symbol-compatibility'
         run: |
           set -euo pipefail
           pnpm --filter @geox/server run typecheck
 
+      - name: Prove Phase2 AM19 compatibility against byte-frozen historical runner
+        if: steps.routing.outputs.mode == 'phase2-authority-symbol-compatibility'
+        run: pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_AM19_PHASE2_AUTHORITY_SYMBOL_COMPATIBILITY_V1.ts selftest
+
       - name: Typecheck historical qualification orchestration
-        if: steps.routing.outputs.mode != 'v13-maintenance-successor' && steps.routing.outputs.mode != 'qualification-control-plane-successor'
+        if: steps.routing.outputs.mode != 'v13-maintenance-successor' && steps.routing.outputs.mode != 'qualification-control-plane-successor' && steps.routing.outputs.mode != 'phase2-authority-symbol-compatibility'
         run: |
           set -euo pipefail
           pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
@@ -176,7 +190,7 @@ jobs:
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
 
       - name: Prove stable T3R1 credential seed normalization fail-closed
-        if: steps.routing.outputs.mode != 'v13-maintenance-successor' && steps.routing.outputs.mode != 'qualification-control-plane-successor'
+        if: steps.routing.outputs.mode != 'v13-maintenance-successor' && steps.routing.outputs.mode != 'qualification-control-plane-successor' && steps.routing.outputs.mode != 'phase2-authority-symbol-compatibility'
         shell: node {0}
         run: |
           function normalize(raw) {
@@ -205,7 +219,7 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_PREFLIGHT_V1.cjs
 
       - name: Run pure orchestration selftests
-        if: steps.routing.outputs.mode != 't4-runtime-rebind-successor' && steps.routing.outputs.mode != 'v13-maintenance-successor' && steps.routing.outputs.mode != 'qualification-control-plane-successor'
+        if: steps.routing.outputs.mode != 't4-runtime-rebind-successor' && steps.routing.outputs.mode != 'v13-maintenance-successor' && steps.routing.outputs.mode != 'qualification-control-plane-successor' && steps.routing.outputs.mode != 'phase2-authority-symbol-compatibility'
         run: |
           set -euo pipefail
           node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_V1.cjs selftest
