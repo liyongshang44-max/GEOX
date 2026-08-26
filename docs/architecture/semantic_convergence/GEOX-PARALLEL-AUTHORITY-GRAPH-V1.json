@@ -1,0 +1,319 @@
+{
+  "schema_version": "1.0",
+  "status": "proposal_machine_graph",
+  "phase": "B-02",
+  "repository": "liyongshang44-max/GEOX",
+  "protected_main_baseline": "26c1383f7f45abb76c99e28ec3d06714e85d1b2c",
+  "register": "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json",
+  "authority_note": "This graph is a machine-readable derived/proposal view over B-01 findings and the B-02 register. It does not supersede docs/SSOT.md, README_MIGRATION.md, frozen domain contracts, or proven runtime behavior.",
+  "semantic_edges": [
+    {
+      "edge_id": "E-001",
+      "from": "evidence.raw_observation",
+      "to": "evidence.qualification",
+      "relation": "QUALIFIED_BY",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-002",
+      "from": "evidence.qualification",
+      "to": "twin.physical_state",
+      "relation": "GOVERNS_INPUT_AUTHORITY",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-003",
+      "from": "context.declared_identity",
+      "to": "context.crop_stage",
+      "relation": "SUPPORTS_DERIVATION",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-004",
+      "from": "evidence.qualification",
+      "to": "context.crop_stage",
+      "relation": "QUALIFIES_OBSERVED_PHENOLOGY",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-005",
+      "from": "twin.physical_state",
+      "to": "twin.forecast_scenario",
+      "relation": "STATE_TO_FORECAST_SCENARIO",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-006",
+      "from": "twin.physical_state",
+      "to": "decision.calculation",
+      "relation": "INPUT_TO",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-007",
+      "from": "twin.forecast_scenario",
+      "to": "decision.calculation",
+      "relation": "INPUT_TO",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-008",
+      "from": "context.declared_identity",
+      "to": "decision.calculation",
+      "relation": "INPUT_TO",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-009",
+      "from": "decision.calculation",
+      "to": "decision.candidate",
+      "relation": "SUPPORTS_CANDIDATE",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-010",
+      "from": "decision.candidate",
+      "to": "decision.eligibility",
+      "relation": "EVALUATED_BY",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-011",
+      "from": "evidence.qualification",
+      "to": "decision.eligibility",
+      "relation": "INPUT_TO",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-012",
+      "from": "decision.eligibility",
+      "to": "decision.approval",
+      "relation": "GATES",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-013",
+      "from": "decision.approval",
+      "to": "operation.plan",
+      "relation": "AUTHORIZES_PLAN_FORMATION",
+      "status": "TARGET_REQUIRED",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-014",
+      "from": "operation.plan",
+      "to": "execution.task_receipt_acceptance",
+      "relation": "PLAN_TO_EXECUTION_CHAIN",
+      "status": "CURRENT_AND_TARGET",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-015",
+      "from": "execution.task_receipt_acceptance",
+      "to": "presentation.read_model",
+      "relation": "PROJECTED_TO",
+      "status": "CURRENT_AND_TARGET",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "E-016",
+      "from": "interpretation.agronomy",
+      "to": "presentation.read_model",
+      "relation": "EXPLAIN_ONLY_PROJECTION",
+      "status": "CURRENT_AND_TARGET",
+      "enforcement": "DECLARATIVE"
+    }
+  ],
+  "current_parallel_edges": [
+    {
+      "edge_id": "P-001",
+      "producer_id": "stage1-formal-gate",
+      "semantic_id": "evidence.qualification",
+      "relation": "GRANDFATHERED_PRODUCER",
+      "removal_target": "B-04",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-002",
+      "producer_id": "evidence-judge-v2",
+      "semantic_id": "evidence.qualification",
+      "relation": "GRANDFATHERED_PRODUCER",
+      "removal_target": "B-04",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-003",
+      "producer_id": "stage-resolver",
+      "semantic_id": "context.crop_stage",
+      "relation": "GRANDFATHERED_PRODUCER",
+      "removal_target": "B-05",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-004",
+      "producer_id": "rule-engine-stage",
+      "semantic_id": "context.crop_stage",
+      "relation": "GRANDFATHERED_PRODUCER",
+      "removal_target": "B-05",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-005",
+      "producer_id": "derived-sensing-state-service",
+      "semantic_id": "twin.physical_state",
+      "relation": "GRANDFATHERED_PROJECTION",
+      "removal_target": "B-09",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-006",
+      "producer_id": "agronomy-judge-calculation",
+      "semantic_id": "decision.calculation",
+      "relation": "GRANDFATHERED_MIXED_AUTHORITY",
+      "removal_target": "B-06",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-007",
+      "producer_id": "decision-engine-calculation",
+      "semantic_id": "decision.calculation",
+      "relation": "GRANDFATHERED_COMPOSITION_HOTSPOT",
+      "removal_target": "B-06",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-008",
+      "producer_id": "agronomy-agent-recommendation",
+      "semantic_id": "decision.candidate",
+      "relation": "GRANDFATHERED_PRODUCER",
+      "removal_target": "B-06",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-009",
+      "producer_id": "decision-engine-recommendation",
+      "semantic_id": "decision.candidate",
+      "relation": "GRANDFATHERED_PRODUCER",
+      "removal_target": "B-06",
+      "new_owner_creation": "FORBIDDEN"
+    },
+    {
+      "edge_id": "P-010",
+      "producer_id": "agronomy-agent-plan",
+      "semantic_id": "operation.plan",
+      "relation": "GRANDFATHERED_DIRECT_PLAN_PRODUCER",
+      "removal_target": "B-06",
+      "new_owner_creation": "FORBIDDEN"
+    }
+  ],
+  "forbidden_edges": [
+    {
+      "edge_id": "F-001",
+      "from": "interpretation.agronomy",
+      "to": "decision.eligibility",
+      "relation": "DIRECT_DETERMINISTIC_INPUT",
+      "reason": "Agronomy Interpretation is frozen explain-only and must not become deterministic Judge/eligibility input.",
+      "enforcement": "DECLARATIVE_EXISTING_CONSTITUTION"
+    },
+    {
+      "edge_id": "F-002",
+      "from": "decision.candidate",
+      "to": "execution.task_receipt_acceptance",
+      "relation": "DIRECT_EXECUTION",
+      "reason": "Candidate/Recommendation has no execution authority.",
+      "enforcement": "DECLARATIVE_EXISTING_CONTROL_BOUNDARY"
+    },
+    {
+      "edge_id": "F-003",
+      "from": "decision.candidate",
+      "to": "operation.plan",
+      "relation": "DIRECT_APPROVED_PLAN_AUTHORITY",
+      "reason": "Candidate/Recommendation must not directly confer ApprovedOperationPlan authority without Approval/Policy transition.",
+      "enforcement": "GRANDFATHERED_CURRENT_DEBT_PLUS_STATIC_FINGERPRINT"
+    },
+    {
+      "edge_id": "F-004",
+      "from": "evidence.raw_observation",
+      "to": "twin.physical_state",
+      "relation": "UNQUALIFIED_DIRECT_STATE_AUTHORITY",
+      "reason": "Canonical physical State must not consume an observation as authoritative without Evidence Qualification.",
+      "enforcement": "TARGET_DECLARATIVE_UNTIL_B-04/B-09"
+    },
+    {
+      "edge_id": "F-005",
+      "from": "evidence.raw_observation",
+      "to": "decision.candidate",
+      "relation": "FABRICATED_MISSING_OBSERVATION",
+      "reason": "Missing Evidence must not be converted into a convenience numeric value represented as measured/observed truth.",
+      "enforcement": "STATIC_FINGERPRINT_FOR_KNOWN_DEFAULT_PLUS_TARGET_DECLARATIVE"
+    },
+    {
+      "edge_id": "F-006",
+      "from": "presentation.read_model",
+      "to": "evidence.qualification",
+      "relation": "RECONSTRUCT_UPSTREAM_TRUTH",
+      "reason": "Read models/UI may project authority but may not become a second qualification owner.",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "F-007",
+      "from": "presentation.read_model",
+      "to": "twin.physical_state",
+      "relation": "RECONSTRUCT_UPSTREAM_TRUTH",
+      "reason": "Presentation cannot manufacture canonical Twin State.",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "F-008",
+      "from": "twin.forecast_scenario",
+      "to": "execution.task_receipt_acceptance",
+      "relation": "DIRECT_EXECUTION",
+      "reason": "Scenario is not Recommendation/Approval/Task.",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "F-009",
+      "from": "decision.calculation",
+      "to": "decision.approval",
+      "relation": "SELF_PROMOTE_CALCULATOR_TO_APPROVAL",
+      "reason": "Deterministic calculator results require CandidateDecision and Decision Eligibility before Approval.",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "F-010",
+      "from": "decision.calculation",
+      "to": "execution.task_receipt_acceptance",
+      "relation": "SELF_PROMOTE_CALCULATOR_TO_EXECUTION",
+      "reason": "Calculators have no task/device-command authority.",
+      "enforcement": "DECLARATIVE"
+    },
+    {
+      "edge_id": "F-011",
+      "from": "decision.candidate",
+      "to": "evidence.qualification",
+      "relation": "DOWNSTREAM_REAUTHORIZE_UPSTREAM_EVIDENCE",
+      "reason": "Decision producers cannot re-authorize Evidence using an independent rule once canonical qualification exists.",
+      "enforcement": "TARGET_DECLARATIVE_UNTIL_B-04/B-06"
+    },
+    {
+      "edge_id": "F-012",
+      "from": "decision.candidate",
+      "to": "twin.physical_state",
+      "relation": "DOWNSTREAM_RECOMPUTE_CANONICAL_STATE",
+      "reason": "Decision Runtime must consume canonical State rather than reconstruct a competing state from raw telemetry.",
+      "enforcement": "TARGET_DECLARATIVE_UNTIL_B-09"
+    }
+  ]
+}
