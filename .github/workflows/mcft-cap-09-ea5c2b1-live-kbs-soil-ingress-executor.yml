@@ -7,6 +7,7 @@ on:
       - 'apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts'
       - 'apps/server/src/external_evidence/provider/https_external_evidence_transport_v1.ts'
       - 'apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.ts'
+      - 'apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C2B1-LIVE-KBS-SOIL-INGRESS-EXECUTOR-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs'
@@ -57,6 +58,10 @@ jobs:
           node-version: 20.11.1
           cache: pnpm
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Resolve exact EA5C2B1 Phase2 predecessor
         id: authority
         shell: bash
@@ -76,6 +81,9 @@ jobs:
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install frozen KBS scientific qualification oracle
+        run: python -m pip install --disable-pip-version-check 'numpy==1.26.4' 'refet==0.4.2'
+
       - name: Syntax-check historical and Phase2 successor governance gates
         run: |
           node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs
@@ -85,6 +93,9 @@ jobs:
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs
+
+      - name: Prove KBS Raw Hourly product core preserves Amendment-11 late authority
+        run: python apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py selftest
 
       - name: Typecheck server
         run: pnpm --filter @geox/server run typecheck

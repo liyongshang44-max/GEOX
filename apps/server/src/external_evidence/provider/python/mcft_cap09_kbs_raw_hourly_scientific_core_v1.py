@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 import csv
+import json
 import math
 import re
 from dataclasses import dataclass
@@ -13,7 +15,7 @@ import refet
 
 @dataclass(frozen=True)
 class KbsRawHourlyScientificAuthorityV1:
-    raw_hourly_latest_max_age_hours: float
+    historical_online_freshness_diagnostic_hours: float
     station_elevation_m: float
     station_latitude: float
     station_longitude: float
@@ -26,6 +28,8 @@ class KbsRawHourlyExactIntervalV1:
     target_interval_end: datetime
     provider_latest_timestamp: datetime
     provider_latest_age_hours: float
+    historical_online_freshness_diagnostic_le_threshold: bool
+    freshness_is_late_authoritative_admission_gate: bool
     rainfall_mm: float
     historical_et0_mm: float
     air_temperature_c: float
@@ -145,10 +149,7 @@ def decode_exact_kbs_raw_hourly_interval_v1(
 
     latest = parsed[-1][0]
     age_hours = (available - latest).total_seconds() / 3600.0
-    require_v1(
-        age_hours <= float(authority.raw_hourly_latest_max_age_hours),
-        f"MCFT_CAP09_KBS_SOURCE_STALE:{age_hours:.6f}",
-    )
+    freshness_diagnostic = age_hours <= float(authority.historical_online_freshness_diagnostic_hours)
 
     matches = [row for timestamp, row in parsed if timestamp == target]
     require_v1(len(matches) == 1, f"MCFT_CAP09_KBS_EXACT_TARGET_ROW_REQUIRED:{len(matches)}")
@@ -187,6 +188,8 @@ def decode_exact_kbs_raw_hourly_interval_v1(
         target_interval_end=target,
         provider_latest_timestamp=latest,
         provider_latest_age_hours=age_hours,
+        historical_online_freshness_diagnostic_le_threshold=freshness_diagnostic,
+        freshness_is_late_authoritative_admission_gate=False,
         rainfall_mm=rainfall,
         historical_et0_mm=et0,
         air_temperature_c=air,
@@ -194,3 +197,97 @@ def decode_exact_kbs_raw_hourly_interval_v1(
         solar_radiation_w_m2=solar,
         wind_speed_10m=wind,
     )
+
+
+def selftest_v1() -> None:
+    authority = KbsRawHourlyScientificAuthorityV1(
+        historical_online_freshness_diagnostic_hours=6.0,
+        station_elevation_m=286.43,
+        station_latitude=42.408537,
+        station_longitude=-85.373637,
+        wind_10m_to_2m_factor=0.747951075,
+    )
+    header = "datetime_utc,solrad_avg,wind_speed,ah,airtmp_107_avg,rain_mm\n"
+    rows = [
+        "2026-08-13 02:00:00,120.0,2.0,1.7,23.0,0.1",
+        "2026-08-13 03:00:00,150.0,2.5,1.8,24.0,0.2",
+        "2026-08-13 04:00:00,180.0,3.0,1.9,25.0,0.3",
+    ]
+    body = (header + "\n".join(rows) + "\n").encode("utf-8")
+    available = datetime(2026, 8, 13, 20, 0, tzinfo=timezone.utc)
+    target = datetime(2026, 8, 13, 3, 0, tzinfo=timezone.utc)
+
+    decoded = decode_exact_kbs_raw_hourly_interval_v1(
+        body=body,
+        target_interval_end=target,
+        available_at=available,
+        authority=authority,
+    )
+    require_v1(decoded.target_interval_end == target, "MCFT_CAP09_KBS_PRODUCT_CORE_SELFTEST_TARGET")
+    require_v1(decoded.provider_latest_timestamp.hour == 4, "MCFT_CAP09_KBS_PRODUCT_CORE_SELFTEST_LATEST")
+    require_v1(decoded.provider_latest_age_hours > 6.0, "MCFT_CAP09_KBS_PRODUCT_CORE_SELFTEST_STALE_CASE_REQUIRED")
+    require_v1(
+        decoded.historical_online_freshness_diagnostic_le_threshold is False,
+        "MCFT_CAP09_KBS_PRODUCT_CORE_SELFTEST_FRESHNESS_DIAGNOSTIC",
+    )
+    require_v1(
+        decoded.freshness_is_late_authoritative_admission_gate is False,
+        "MCFT_CAP09_KBS_PRODUCT_CORE_SELFTEST_FRESHNESS_NOT_ADMISSION",
+    )
+    require_v1(decoded.rainfall_mm == 0.2, "MCFT_CAP09_KBS_PRODUCT_CORE_SELFTEST_RAIN")
+    require_v1(math.isfinite(decoded.historical_et0_mm), "MCFT_CAP09_KBS_PRODUCT_CORE_SELFTEST_ET0")
+
+    try:
+        decode_exact_kbs_raw_hourly_interval_v1(
+            body=body,
+            target_interval_end=datetime(2026, 8, 13, 1, 0, tzinfo=timezone.utc),
+            available_at=available,
+            authority=authority,
+        )
+        raise RuntimeError("MCFT_CAP09_KBS_PRODUCT_CORE_SELFTEST_MISSING_TARGET_NOT_REJECTED")
+    except RuntimeError as exc:
+        require_v1(
+            str(exc) == "MCFT_CAP09_KBS_EXACT_TARGET_ROW_REQUIRED:0",
+            "MCFT_CAP09_KBS_PRODUCT_CORE_SELFTEST_MISSING_TARGET_CODE",
+        )
+
+    duplicate_body = (header + "\n".join(rows + [rows[1]]) + "\n").encode("utf-8")
+    try:
+        decode_exact_kbs_raw_hourly_interval_v1(
+            body=duplicate_body,
+            target_interval_end=target,
+            available_at=available,
+            authority=authority,
+        )
+        raise RuntimeError("MCFT_CAP09_KBS_PRODUCT_CORE_SELFTEST_DUPLICATE_TARGET_NOT_REJECTED")
+    except RuntimeError as exc:
+        require_v1(
+            str(exc) == "MCFT_CAP09_KBS_EXACT_TARGET_ROW_REQUIRED:2",
+            "MCFT_CAP09_KBS_PRODUCT_CORE_SELFTEST_DUPLICATE_TARGET_CODE",
+        )
+
+    print(json.dumps({
+        "schema_version": "geox_mcft_cap09_kbs_raw_hourly_scientific_core_selftest_v1",
+        "status": "PASS",
+        "provider_latest_age_hours": round(decoded.provider_latest_age_hours, 6),
+        "historical_online_freshness_diagnostic_le_6h": decoded.historical_online_freshness_diagnostic_le_threshold,
+        "freshness_is_late_authoritative_admission_gate": decoded.freshness_is_late_authoritative_admission_gate,
+        "stale_daily_batch_exact_t_remains_decodable": True,
+        "missing_exact_t_fails_closed": True,
+        "duplicate_exact_t_fails_closed": True,
+        "provider_request_count": 0,
+        "database_write_count": 0,
+        "runtime_tick_mutation_count": 0,
+    }, sort_keys=True))
+
+
+def main_v1() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("command", choices=("selftest",))
+    args = parser.parse_args()
+    if args.command == "selftest":
+        selftest_v1()
+
+
+if __name__ == "__main__":
+    main_v1()
