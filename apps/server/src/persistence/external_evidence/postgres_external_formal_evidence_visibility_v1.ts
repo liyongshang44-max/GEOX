@@ -5,10 +5,6 @@
 import type { Pool } from "pg";
 
 import { semanticHashV1 } from "../../domain/twin_runtime/canonical_identity_v1.js";
-import type { CanonicalReplayEvidenceRecordV1 } from "../../runtime/twin_runtime/ports.js";
-import {
-  MCFT_CAP09_EXTERNAL_FORMAL_EVIDENCE_FACT_SOURCE_V1,
-} from "../twin_runtime/postgres_external_formal_evidence_ingress_v1.js";
 import {
   MCFT_CAP09_EVIDENCE_POST_COMMIT_VISIBILITY_ID_V1,
   type CommittedExternalEvidenceIdentityV1,
@@ -20,8 +16,14 @@ export const MCFT_CAP09_POSTGRES_EXTERNAL_FORMAL_EVIDENCE_VISIBILITY_ID_V1 =
   "MCFT_CAP09_POSTGRES_EXTERNAL_FORMAL_EVIDENCE_VISIBILITY_V1" as const;
 
 type PoolV1 = Pick<Pool, "query">;
+type VisibleRecordV1 = {
+  record_type: string;
+  source_record_id: string;
+  source_record_hash: string;
+  source_payload: Record<string, unknown>;
+  [key: string]: unknown;
+};
 type VisibilityRowV1 = {
-  source: string;
   record_json: unknown;
   post_commit_db_readback_at: string | Date;
 };
@@ -43,16 +45,13 @@ function canonicalIsoV1(value: string | Date, code: string): string {
   return text;
 }
 
-function parseFactRecordV1(value: unknown): CanonicalReplayEvidenceRecordV1 {
+function parseFactRecordV1(value: unknown): VisibleRecordV1 {
   const parsed = typeof value === "string" ? JSON.parse(value) : value;
   const envelope = objectRecordV1(parsed, "PHASE2_VISIBILITY_FACT_ENVELOPE_INVALID");
-  return objectRecordV1(envelope.payload, "PHASE2_VISIBILITY_FACT_PAYLOAD_INVALID") as unknown as CanonicalReplayEvidenceRecordV1;
+  return objectRecordV1(envelope.payload, "PHASE2_VISIBILITY_FACT_PAYLOAD_INVALID") as VisibleRecordV1;
 }
 
-function verifyIdentityV1(
-  record: CanonicalReplayEvidenceRecordV1,
-  expected: CommittedExternalEvidenceIdentityV1,
-): void {
+function verifyIdentityV1(record: VisibleRecordV1, expected: CommittedExternalEvidenceIdentityV1): void {
   if (record.record_type !== expected.record_type) throw new Error("PHASE2_VISIBILITY_RECORD_TYPE_MISMATCH");
   if (record.source_record_id !== expected.source_record_id) throw new Error("PHASE2_VISIBILITY_SOURCE_RECORD_ID_MISMATCH");
   if (record.source_record_hash !== expected.source_record_hash) throw new Error("PHASE2_VISIBILITY_SOURCE_RECORD_HASH_MISMATCH");
@@ -79,7 +78,7 @@ export class PostgresExternalFormalEvidenceVisibilityV1
     // This query is intentionally issued only after the governed ingress has returned from COMMIT.
     // It is a fresh readback from public.facts and has no fallback to raw object storage.
     const result = await this.pool.query<VisibilityRowV1>(
-      `SELECT source,record_json,clock_timestamp() AS post_commit_db_readback_at
+      `SELECT record_json,clock_timestamp() AS post_commit_db_readback_at
          FROM public.facts
         WHERE fact_id=$1
         LIMIT 2`,
@@ -89,9 +88,6 @@ export class PostgresExternalFormalEvidenceVisibilityV1
       throw new Error(`PHASE2_VISIBILITY_EXACT_ONE_FACT_REQUIRED:${result.rows.length}`);
     }
     const row = result.rows[0];
-    if (row.source !== MCFT_CAP09_EXTERNAL_FORMAL_EVIDENCE_FACT_SOURCE_V1) {
-      throw new Error("PHASE2_VISIBILITY_FACT_SOURCE_MISMATCH");
-    }
     const record = parseFactRecordV1(row.record_json);
     verifyIdentityV1(record, expected);
 
