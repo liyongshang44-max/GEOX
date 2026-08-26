@@ -1,6 +1,7 @@
 // scripts/commercial_evidence/ACCEPTANCE_COMMERCIAL_EVIDENCE_DEMO_V1.cjs
 // Purpose: prove the off-main Commercial Evidence Demo is evidence-faithful to current GEOX software boundaries,
-// keeps customer-visible fields in Chinese, and grounds the default irrigation cost example in a disclosed Michigan benchmark.
+// keeps customer-visible fields in Chinese, grounds the default irrigation cost example in a disclosed Michigan benchmark,
+// and serves every browser module dependency required by the interactive page.
 
 const fs = require("node:fs");
 const path = require("node:path");
@@ -12,6 +13,7 @@ const files = {
   server: path.join(ROOT, "tools/commercial-evidence-demo/server.ts"),
   html: path.join(ROOT, "tools/commercial-evidence-demo/index.html"),
   app: path.join(ROOT, "tools/commercial-evidence-demo/app.js"),
+  appCore: path.join(ROOT, "tools/commercial-evidence-demo/app-core.js"),
   style: path.join(ROOT, "tools/commercial-evidence-demo/styles.css"),
   selftest: path.join(ROOT, "tools/commercial-evidence-demo/selftest.ts"),
   smoke: path.join(ROOT, "scripts/commercial_evidence/SMOKE_COMMERCIAL_EVIDENCE_DEMO_V1.mjs"),
@@ -39,6 +41,7 @@ const packet = text(files.packet);
 const server = text(files.server);
 const html = text(files.html);
 const app = text(files.app);
+const appCore = text(files.appCore);
 const style = text(files.style);
 const docs = text(files.docs);
 const approvalActions = text(files.approvalActions);
@@ -58,6 +61,7 @@ for (const token of [
   "/api/mcft-runtime-evidence", "COMMERCIAL_EVIDENCE_MCFT_READ_URL", "geox_mcft_cap09_s6_accel24t_am19_v3",
   "MCFT_DATABASE_NOT_ALLOWLISTED", "BEGIN READ ONLY", "SET LOCAL statement_timeout", "ROLLBACK",
   "database_write_count: 0", "canonical_runtime_write_count: 0", "COMMERCIAL_EVIDENCE_DEMO_READ_ONLY_GET_REQUIRED",
+  'url.pathname === "/app-core.js"', 'sendStatic(res, "app-core.js")',
 ]) requireToken("server", server, token);
 
 for (const token of [
@@ -74,7 +78,11 @@ for (const token of [
   'data-case-id="healthy_exact_provider_pair"', 'data-case-id="provider_late"',
   'data-case-id="source_conflict"', 'data-case-id="missing_evidence"',
 ]) requireToken("html", html, token);
-for (const token of ["/api/demo?case=", "规范选择器已重新执行", "机器证明链", "使用上一步的合规假设值", "降级继续"]) requireToken("app", app, token);
+for (const token of [
+  'import "./app-core.js"', "本次错误执行的直接增量成本", "密歇根泵送能源基准",
+  "当前泵送能源费率", "错误执行一次：当前场景可直接量化约",
+]) requireToken("app", app, token);
+for (const token of ["/api/demo?case=", "规范选择器已重新执行", "机器证明链", "使用上一步的合规假设值", "降级继续", "function renderEconomics()", "renderEvidenceReleaseManifest(packet)"]) requireToken("appCore", appCore, token);
 
 // Customer-visible HTML must not regress to English field labels. Exact code paths and machine identifiers are allowed only in technical evidence blocks.
 for (const token of [
@@ -114,7 +122,6 @@ for (const token of [
   "当次增量维护与磨损（美元）", 'id="ecoEquipment" type="number" min="0" step="1" value="0"',
   "不代表客户实际成本为 0", "错误取消：潜在产量与品质暴露", "尚未证明客户投资回报",
 ]) requireToken("html", html, token);
-for (const token of ["可量化直接暴露", "其中泵送能源成本", "0.534 美元/毫米/公顷", "不是投资回报"]) requireToken("app", app, token);
 
 for (const token of ["技术细节｜默认折叠", "决策资格运行链 + 商业执行闭环", "运行时资格边界"]) requireToken("html", html, token);
 for (let section = 1; section <= 6; section += 1) requireToken("html", html, `data-section="${section}"`);
@@ -159,17 +166,17 @@ if (smokeRun.status !== 0) {
 }
 let smoke;
 try { smoke = JSON.parse(smokeRun.stdout.trim()); } catch { throw new Error("COMMERCIAL_EVIDENCE_DEMO_HTTP_SMOKE_NON_JSON_OUTPUT"); }
-if (smoke.ok !== true || smoke.standalone_server_started !== true || smoke.healthz_passed !== true || smoke.canonical_demo_endpoint_passed !== true || smoke.runtime_value_trace_endpoint_passed !== true || smoke.mcft_neon_endpoint_passed !== true || smoke.mcft_neon_unconfigured_fails_safe !== true || smoke.mcft_neon_read_only !== true || smoke.mcft_neon_write_count !== 0 || smoke.six_section_page_served !== true || smoke.write_method_rejected !== true) throw new Error("COMMERCIAL_EVIDENCE_DEMO_HTTP_SMOKE_NOT_PASS");
+if (smoke.ok !== true || smoke.standalone_server_started !== true || smoke.healthz_passed !== true || smoke.canonical_demo_endpoint_passed !== true || smoke.runtime_value_trace_endpoint_passed !== true || smoke.mcft_neon_endpoint_passed !== true || smoke.mcft_neon_unconfigured_fails_safe !== true || smoke.mcft_neon_read_only !== true || smoke.mcft_neon_write_count !== 0 || smoke.six_section_page_served !== true || smoke.browser_module_dependency_passed !== true || smoke.app_core_asset_served !== true || smoke.write_method_rejected !== true) throw new Error("COMMERCIAL_EVIDENCE_DEMO_HTTP_SMOKE_NOT_PASS");
 
 console.log(JSON.stringify({
   ok: true,
   acceptance: "ACCEPTANCE_COMMERCIAL_EVIDENCE_DEMO_V1",
   commercial_gate: "PASS_FOR_PAID_PILOT_SALES_CONDITIONAL_ON_MACHINE_PROOF",
   paid_pilot_scope: "DECISION_ASSURANCE_PAID_PILOT",
-  narrative_version: "CHINESE_CUSTOMER_SURFACE_V3",
-  customer_visible_fields_chinese_guarded: true,
-  michigan_metric_defaults_guarded: true,
+  narrative_version: "CHINESE_CUSTOMER_SURFACE_V4",
   decision_assurance_machine_proof: true,
+  browser_module_dependency_passed: true,
+  app_core_asset_served: true,
   provider_late_behavior: selftest.provider_late_behavior,
   source_conflict_behavior: selftest.source_conflict_behavior,
   missing_evidence_behavior: selftest.missing_evidence_behavior,
@@ -178,6 +185,8 @@ console.log(JSON.stringify({
   receipt_as_executed_acceptance_paths_verified: true,
   execution_not_equated_with_agronomic_effect: true,
   combined_workflow_marked_not_unified_production_qualification: true,
+  michigan_irrigation_external_benchmark_guard_present: true,
+  customer_economics_provenance_guard_present: true,
   customer_roi_claim_absent: true,
   runtime_value_trace_builder_chain_passed: true,
   runtime_value_trace_object_count: requiredTraceObjects.length,
