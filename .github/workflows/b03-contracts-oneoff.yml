@@ -14,10 +14,17 @@ jobs:
         with:
           ref: 7174d143803ed3db8b956a2b076d3b747ee25a85
           fetch-depth: 0
-      - name: Enable pnpm
-        run: corepack enable
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
       - name: Server typecheck
         run: pnpm --filter @geox/server run typecheck
       - name: B-03 contract fixtures
