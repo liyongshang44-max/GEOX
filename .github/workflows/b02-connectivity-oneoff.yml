@@ -4,38 +4,17 @@ on:
     branches:
       - docs/bline-b02-semantic-ownership-register-v1-test
 permissions:
-  contents: write
+  contents: read
 jobs:
-  fix-and-test:
+  exact-head-linter:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout control branch
-        uses: actions/checkout@v4
-      - name: Save correction helper
-        run: cp scripts/governance_acceptance/_B02_CONNECTIVITY_FIX01_ONCE.cjs /tmp/b02-fix01.cjs
-      - name: Checkout B-02 target
+      - name: Checkout exact B-02 target head
         uses: actions/checkout@v4
         with:
           ref: docs/bline-b02-semantic-ownership-register-v1
-          path: target
           fetch-depth: 0
-      - name: Apply classified correction only
-        run: node /tmp/b02-fix01.cjs target
-      - name: Commit and push corrected B-02 target
-        working-directory: target
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json
-          if git diff --cached --quiet; then
-            echo "No correction changes"
-          else
-            git commit -m "docs(architecture): correct B-02 proven connectivity edge"
-            git push origin HEAD:docs/bline-b02-semantic-ownership-register-v1
-          fi
-          echo "B02_CORRECTED_HEAD $(git rev-parse HEAD)"
-      - name: Execute B-02 linter on exact corrected target head
-        working-directory: target
+      - name: Execute B-02 linter on exact current target head
         run: |
           echo "B02_EXACT_HEAD $(git rev-parse HEAD)"
           set +e
