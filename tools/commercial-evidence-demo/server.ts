@@ -509,6 +509,10 @@ const server = createServer(async (req, res) => {
       await sendStatic(res, "app.js");
       return;
     }
+    if (url.pathname === "/app-core.js") {
+      await sendStatic(res, "app-core.js");
+      return;
+    }
     if (url.pathname === "/styles.css") {
       await sendStatic(res, "styles.css");
       return;
