@@ -22,3 +22,4 @@ jobs:
           code=${PIPESTATUS[0]}
           echo "B02_LINTER_EXIT_CODE $code"
           exit "$code"
+# exact-head validation trigger: ee5b611bf182e704cdba33757cbcaa1185db7cd2
