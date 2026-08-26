@@ -4,6 +4,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const cp = require("node:child_process");
+const crypto = require("node:crypto");
 
 const {
   AUTHORITY_PATH,
@@ -14,6 +15,13 @@ const {
 
 const ROOT = path.resolve(__dirname, "../..");
 const DEFAULT_OUT = "acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json";
+const REQUALIFICATION_BINDING_STRATEGY = "MCFT_CAP09_REQUALIFICATION_RUN_BINDING_V1";
+const REQUALIFICATION_BINDING_FIELDS = [
+  "evidence_id", "check_id", "evidence_class", "generation", "stage", "subject_sha",
+  "workflow_name", "workflow_path", "run_id", "run_conclusion", "artifact_id", "artifact_digest",
+  "dependency_subject_sha", "dependency_digest_strategy", "dependency_digest",
+  "artifact_absence_reason", "immutable",
+];
 
 function parseArgs(argv) {
   const out = {};
@@ -50,6 +58,70 @@ function runDiagnostic(command) {
   };
 }
 
+function sha256(text) {
+  return crypto.createHash("sha256").update(text).digest("hex");
+}
+
+function isAncestor(ancestor, descendant) {
+  if (!/^[0-9a-f]{40}$/.test(String(ancestor || "")) || !/^[0-9a-f]{40}$/.test(String(descendant || ""))) return false;
+  return cp.spawnSync("git", ["merge-base", "--is-ancestor", ancestor, descendant], { cwd: ROOT, stdio: "ignore" }).status === 0;
+}
+
+function expectedRequalificationBinding(entry) {
+  return sha256(JSON.stringify(REQUALIFICATION_BINDING_FIELDS.map((key) => entry?.[key] ?? null)));
+}
+
+function resolveRequalificationEvidence(decision, authority, registry, stage, head) {
+  const section = registry.requalification_evidence;
+  if (!section || section.binding_strategy !== REQUALIFICATION_BINDING_STRATEGY) {
+    return { status: "FAIL", reason_code: "REQUALIFICATION_EVIDENCE_REGISTRY_MISSING_OR_UNSUPPORTED", candidates: [] };
+  }
+  const anchors = new Map((section.durable_anchors?.entries || []).map((row) => [row.evidence_id, row]));
+  const candidates = (section.entries || []).filter((entry) => entry.check_id === decision.check_id);
+  const adjudications = candidates.map((entry) => {
+    const anchor = anchors.get(entry.evidence_id);
+    const snapshot = anchor?.run_snapshot || null;
+    const checks = {
+      evidence_class: entry.evidence_class === "IMMUTABLE_WORKFLOW_RUN",
+      immutable: entry.immutable === true,
+      run_success: entry.run_conclusion === "success",
+      no_artifact_claim: entry.artifact_id === null && entry.artifact_digest === null,
+      stage_match: entry.stage === stage,
+      dependency_strategy_match: entry.dependency_digest_strategy === registry.dependency_digest_strategy,
+      dependency_digest_match: entry.dependency_digest === decision.dependency_digest,
+      dependency_subject_match: entry.dependency_subject_sha === entry.subject_sha,
+      workflow_path_match: entry.workflow_path === decision.execution_workflow,
+      binding_match: entry.immutable_binding_sha256 === expectedRequalificationBinding(entry),
+      anchor_present: Boolean(anchor),
+      anchor_run_match: anchor?.run_id === entry.run_id,
+      anchor_head_match: snapshot?.head_sha === entry.subject_sha,
+      anchor_base_match: snapshot?.base_sha === authority.frozen_successor_subject_sha,
+      anchor_event_match: snapshot?.event === "pull_request",
+      anchor_workflow_path_match: snapshot?.workflow_path === entry.workflow_path,
+      anchor_workflow_name_match: snapshot?.workflow_name === entry.workflow_name,
+      subject_is_ancestor_of_head: isAncestor(entry.subject_sha, head),
+    };
+    return { entry, checks, valid: Object.values(checks).every(Boolean) };
+  });
+  const valid = adjudications.filter((row) => row.valid);
+  if (valid.length !== 1) {
+    return {
+      status: "FAIL",
+      reason_code: valid.length === 0 ? "NO_VALID_REQUALIFICATION_EVIDENCE" : "AMBIGUOUS_REQUALIFICATION_EVIDENCE",
+      candidates: adjudications.map((row) => ({ evidence_id: row.entry.evidence_id, checks: row.checks, valid: row.valid })),
+    };
+  }
+  return {
+    status: "PASS",
+    reason_code: "DURABLE_REQUALIFICATION_EVIDENCE_AND_DEPENDENCY_DIGEST_VALID",
+    evidence_id: valid[0].entry.evidence_id,
+    run_id: valid[0].entry.run_id,
+    subject_sha: valid[0].entry.subject_sha,
+    dependency_digest: valid[0].entry.dependency_digest,
+    candidates: adjudications.map((row) => ({ evidence_id: row.entry.evidence_id, checks: row.checks, valid: row.valid })),
+  };
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const authority = readJson(AUTHORITY_PATH);
@@ -74,15 +146,9 @@ function main() {
   const results = [];
   const blockers = [];
 
-  for (const error of plan.authority_errors || []) {
-    blockers.push({ blocker_class: "AUTHORITY_DEFINITION_FAILURE", check_id: null, detail: error });
-  }
-  for (const unknownPath of plan.unknown_changed_paths) {
-    blockers.push({ blocker_class: "UNKNOWN_CHANGED_PATH", check_id: null, detail: unknownPath });
-  }
-  for (const error of plan.resolver_errors) {
-    blockers.push({ blocker_class: "DEPENDENCY_RESOLVER_FAILURE", check_id: null, detail: error });
-  }
+  for (const error of plan.authority_errors || []) blockers.push({ blocker_class: "AUTHORITY_DEFINITION_FAILURE", check_id: null, detail: error });
+  for (const unknownPath of plan.unknown_changed_paths) blockers.push({ blocker_class: "UNKNOWN_CHANGED_PATH", check_id: null, detail: unknownPath });
+  for (const error of plan.resolver_errors) blockers.push({ blocker_class: "DEPENDENCY_RESOLVER_FAILURE", check_id: null, detail: error });
 
   for (const decision of plan.decisions) {
     let result;
@@ -113,8 +179,21 @@ function main() {
         const diagnostic = runDiagnostic(decision.diagnostic_command);
         result = { ...common, execution: "DIAGNOSTIC_COMMAND", status: diagnostic.status, reason_code: diagnostic.status === "PASS" ? "DIAGNOSTIC_PASS" : "DIAGNOSTIC_FAIL", diagnostic_command: decision.diagnostic_command, diagnostic };
         if (diagnostic.status !== "PASS") blockers.push({ blocker_class: "DIAGNOSTIC_FAILURE", check_id: decision.check_id, detail: diagnostic });
+      } else if (decision.status === "REQUALIFY") {
+        const evidence = resolveRequalificationEvidence(decision, authority, registry, stage, args.head || null);
+        result = {
+          ...common,
+          execution: "DURABLE_REQUALIFICATION_EVIDENCE",
+          status: evidence.status,
+          reason_code: evidence.reason_code,
+          evidence_id: evidence.evidence_id ?? null,
+          evidence_run_id: evidence.run_id ?? null,
+          evidence_subject_sha: evidence.subject_sha ?? null,
+          evidence_adjudication: evidence.candidates,
+        };
+        if (evidence.status !== "PASS") blockers.push({ blocker_class: "INVALID_OR_MISSING_REQUALIFICATION_EVIDENCE", check_id: decision.check_id, detail: evidence });
       } else {
-        result = { ...common, execution: "NO_DIAGNOSTIC_AVAILABLE", status: "FAIL", reason_code: "REQUIRED_OR_REQUALIFY_WITHOUT_DIAGNOSTIC" };
+        result = { ...common, execution: "NO_DIAGNOSTIC_AVAILABLE", status: "FAIL", reason_code: "REQUIRED_WITHOUT_DIAGNOSTIC" };
         blockers.push({ blocker_class: "UNRESOLVED_REQUIRED_CHECK", check_id: decision.check_id, detail: decision.reason_code });
       }
     } else {
