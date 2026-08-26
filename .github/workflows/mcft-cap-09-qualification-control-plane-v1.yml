@@ -9,6 +9,7 @@ on:
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'
       - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs'
       - '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'
+      - '.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml'
   merge_group:
     types: [checks_requested]
 
@@ -247,9 +248,17 @@ jobs:
           if (plan.status !== 'PASS' || plan.generation !== 'v13' || plan.unknown_changed_paths.length !== 0 || plan.resolver_errors.length !== 0 || plan.authority_errors.length !== 0) throw new Error('CONTROL_PLANE_PLAN_NOT_PASS');
           const control = plan.decisions.find(x => x.check_id === 'CONTROL_PLANE_INTEGRITY');
           if (!control || control.status !== 'REQUALIFY') throw new Error('CONTROL_PLANE_SELF_CHANGE_MUST_REQUALIFY');
-          for (const id of ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS','EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T']) {
+          for (const id of ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS','LEGACY_AM19_PERSISTENT_24T']) {
             const row = plan.decisions.find(x => x.check_id === id);
             if (!row || row.status !== 'CARRY_FORWARD' || row.dependency_digest_match !== true) throw new Error(`FROZEN_EVIDENCE_MUST_CARRY_FORWARD_WITH_DIGEST:${id}:${row?.status}`);
+          }
+          const ea5e2 = plan.decisions.find(x => x.check_id === 'EA5E2_RUNTIME_DEPENDENCY_GRAPH');
+          if (!ea5e2) throw new Error('EA5E2_APPLICABILITY_DECISION_REQUIRED');
+          const ea5e2WorkflowChanged = (ea5e2.changed_dependencies || []).includes('.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml');
+          if (ea5e2WorkflowChanged) {
+            if (ea5e2.status !== 'REQUALIFY') throw new Error(`EA5E2_WORKFLOW_CHANGE_MUST_REQUALIFY:${ea5e2.status}`);
+          } else if (ea5e2.status !== 'CARRY_FORWARD' || ea5e2.dependency_digest_match !== true) {
+            throw new Error(`EA5E2_UNCHANGED_MUST_CARRY_FORWARD_WITH_DIGEST:${ea5e2.status}`);
           }
           if (preflight.status !== 'PASS' || preflight.generation !== 'v13' || preflight.non_fail_fast !== true || preflight.counts.blocker_count !== 0) throw new Error('ALL_BLOCKERS_PREFLIGHT_NOT_PASS');
           for (const source of [proof, cp2, evidence, plan, preflight]) {
