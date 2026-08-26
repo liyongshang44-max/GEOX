@@ -119,7 +119,7 @@ jobs:
             head_sha:head,
             generation_context:g,
             durable_anchor_count:registry.durable_anchors?.entries?.length ?? null,
-            dependency_digest_strategy:DEPENDENDENCY_DIGEST_STRATEGY,
+            dependency_digest_strategy:DEPENDENCY_DIGEST_STRATEGY,
             frozen_carry_forward_checks:carryForwardIds,
             required_requalification_checks:requalificationIds,
             current_decisions:current.decisions,
