@@ -1,0 +1,806 @@
+{
+  "schema_version": "1.0",
+  "status": "proposal_machine_register",
+  "phase": "B-02",
+  "repository": "liyongshang44-max/GEOX",
+  "protected_main_baseline": "26c1383f7f45abb76c99e28ec3d06714e85d1b2c",
+  "stacked_base_branch": "docs/bline-b01-semantic-convergence-v1",
+  "architecture_candidate_pr": 3300,
+  "b01_pr": 3301,
+  "authority_note": "This register is a B-line machine-readable governance proposal. It is not repository-level SSOT and does not activate target owners. docs/SSOT.md, README_MIGRATION.md, recognized domain constitutions, migrations, and proven runtime behavior retain their assigned authority.",
+  "enforcement_model": {
+    "purpose": "Prevent new unregistered semantic ownership/touchpoints while grandfathering explicitly recorded current duplication until B-04/B-05/B-06/B-09 convergence.",
+    "linter_scope": "STATIC_EXPLICIT_ONLY",
+    "grandfathered_duplicate_rule": {
+      "grandfathered_duplicate": true,
+      "new_owner_creation": "FORBIDDEN",
+      "removal_target_required": true
+    },
+    "non_goal": "The linter does not infer arbitrary TypeScript business meaning and does not repair current runtime semantics."
+  },
+  "semantics": [
+    {
+      "semantic_id": "evidence.raw_observation",
+      "question": "What raw event/source was received?",
+      "target_owner": "Raw Evidence Ledger / Evidence ingestion plane",
+      "canonical_output_type": "CanonicalObservationV1 (B-03 target; source facts remain source records)",
+      "current_state": "MULTI_INGRESS_EXPECTED",
+      "target_phase": "B-03/B-04",
+      "new_owner_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+      "registered_producers": [
+        {
+          "producer_id": "telemetry-ingest",
+          "path": "apps/server/src/routes/telemetry_v1.ts",
+          "role": "telemetry ingestion surface",
+          "authority_level": "INGRESS",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        },
+        {
+          "producer_id": "raw-compat-route",
+          "path": "apps/server/src/routes/raw.ts",
+          "role": "legacy/raw compatibility ingress",
+          "authority_level": "INGRESS_COMPATIBILITY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "stage1-sensing",
+          "path": "apps/server/src/domain/sensing/run_sensing_inference_pipeline_v1.ts",
+          "role": "current sensing consumer",
+          "current": true
+        },
+        {
+          "consumer_id": "agronomy-agent",
+          "path": "apps/server/src/jobs/agronomy_agent.ts",
+          "role": "currently reads telemetry_index_v1 directly",
+          "current": true
+        }
+      ],
+      "notes": [
+        "Multiple ingress adapters are expected; multiplicity here is not itself duplicate decision authority.",
+        "Raw evidence remains append-only even when qualification removes authority."
+      ]
+    },
+    {
+      "semantic_id": "evidence.qualification",
+      "question": "Can an observation carry authority for a role at decision time?",
+      "target_owner": "Evidence Qualification",
+      "canonical_output_type": "EvidenceQualificationV1 (B-03 target)",
+      "current_state": "DUPLICATE_AUTHORITY",
+      "target_phase": "B-04",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "stage1-formal-gate",
+          "path": "apps/server/src/domain/decision/stage1_action_boundary_v1.ts",
+          "role": "formal-trigger evidence sufficiency/time coverage/freshness/device/conflict gate",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-04",
+          "current": true,
+          "fingerprints": ["evaluateFormalStage1TriggerGateV1", "FORMAL_STAGE1_TRIGGER_NEEDS_EVIDENCE"]
+        },
+        {
+          "producer_id": "evidence-judge-v2",
+          "path": "apps/server/src/domain/judge/evidence_judge_v2.ts",
+          "role": "soil measurement quality plus freshness/heartbeat evidence verdict",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-04",
+          "current": true,
+          "fingerprints": ["evaluateEvidenceJudgeV2", "judge_kind: \"EVIDENCE\""]
+        },
+        {
+          "producer_id": "apple-ii-contract-semantics",
+          "path": "docs/audit/CONTRACT_ALIGNMENT_MATRIX_V1.md",
+          "role": "documented evidence-quality/time-coverage/QC/device/conflict semantics",
+          "authority_level": "REFERENCE_CONCEPT",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-04",
+          "current": true
+        },
+        {
+          "producer_id": "mcft-evidence-authority",
+          "path": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE.md",
+          "role": "governed/as-of evidence-window semantics for Twin progression",
+          "authority_level": "FUTURE_CANONICAL_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "agronomy-judge-v2",
+          "path": "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+          "role": "currently consumes evidence_judge_verdict",
+          "current": true
+        },
+        {
+          "consumer_id": "stage1-recommendation-path",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "role": "currently consumes Stage-1 formal trigger gate",
+          "current": true
+        }
+      ],
+      "notes": [
+        "Must converge physical, temporal, source, spatial, conflict and role-eligibility semantics.",
+        "Device/transport health is not measurement health."
+      ]
+    },
+    {
+      "semantic_id": "context.declared_identity",
+      "question": "What field/season/crop/cultivar/planting/customer context is declared?",
+      "target_owner": "Context Authority",
+      "canonical_output_type": "ContextAssertionV1 / ContextSnapshotV1 (B-05 target)",
+      "current_state": "DISTRIBUTED_CONTEXT",
+      "target_phase": "B-05",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "field-program-fact",
+          "path": "apps/server/src/jobs/agronomy_agent.ts",
+          "role": "reads field_program_v1 as direct decision context input",
+          "authority_level": "GRANDFATHERED_CONTEXT_SOURCE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-05",
+          "current": true,
+          "fingerprints": ["field_program_v1", "crop_code", "crop_stage"]
+        },
+        {
+          "producer_id": "agronomy-context-builder",
+          "path": "apps/server/src/domain/agronomy/context_builder.ts",
+          "role": "aggregates context and derives crop stage",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-05",
+          "current": true,
+          "fingerprints": ["buildAgronomyContext", "resolveCropStage"]
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "agronomy-rule-engine",
+          "path": "apps/server/src/domain/agronomy/rule_engine.ts",
+          "role": "consumes AgronomyContext",
+          "current": true
+        },
+        {
+          "consumer_id": "decision-engine-route",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "role": "consumes request/program/read-model context",
+          "current": true
+        }
+      ],
+      "notes": []
+    },
+    {
+      "semantic_id": "context.crop_stage",
+      "question": "What observed/estimated crop stage is authoritative for a decision?",
+      "target_owner": "Twin Runtime using qualified Evidence plus Context",
+      "canonical_output_type": "QualifiedCropStageState (B-05 convergence; actual Twin contract later)",
+      "current_state": "DUPLICATE_AUTHORITY",
+      "target_phase": "B-05",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "stage-resolver",
+          "path": "apps/server/src/domain/agronomy/stage_resolver.ts",
+          "role": "explicit/DAP/startDate stage derivation",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-05",
+          "current": true,
+          "fingerprints": ["resolveCropStage", "resolveCropStageByPriority"]
+        },
+        {
+          "producer_id": "context-builder-stage",
+          "path": "apps/server/src/domain/agronomy/context_builder.ts",
+          "role": "calls resolveCropStage while building context",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-05",
+          "current": true
+        },
+        {
+          "producer_id": "rule-engine-stage",
+          "path": "apps/server/src/domain/agronomy/rule_engine.ts",
+          "role": "crop-skill resolution and seedling fallback",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-05",
+          "current": true,
+          "fingerprints": ["normalizeSkillStage", "return \"seedling\""]
+        },
+        {
+          "producer_id": "decision-engine-stage",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "role": "direct stage-resolver consumer in recommendation route",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-05",
+          "current": true
+        },
+        {
+          "producer_id": "field-program-state-stage",
+          "path": "apps/server/src/projections/field_program_state_v1.ts",
+          "role": "projection resolves crop stage",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-05",
+          "current": true
+        },
+        {
+          "producer_id": "operation-state-stage",
+          "path": "apps/server/src/routes/operation_state_v1.ts",
+          "role": "operation-state route uses priority stage resolution",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-05",
+          "current": true
+        },
+        {
+          "producer_id": "mcft-stage-reference",
+          "path": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE.md",
+          "role": "future qualified stage/state authority",
+          "authority_level": "FUTURE_CANONICAL_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        }
+      ],
+      "registered_consumers": [],
+      "notes": [
+        "UNKNOWN must remain UNKNOWN in canonical paths.",
+        "Compatibility default/resolver output must not silently become authoritative stage."
+      ]
+    },
+    {
+      "semantic_id": "twin.physical_state",
+      "question": "What is the current estimated physical field/root-zone state?",
+      "target_owner": "Twin Runtime",
+      "canonical_output_type": "Twin State / canonical posterior (existing MCFT family)",
+      "current_state": "DUPLICATE_OR_LEGACY_STATE",
+      "target_phase": "B-09",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "derived-sensing-state-service",
+          "path": "apps/server/src/services/derived_sensing_state_service_v1.ts",
+          "role": "derived sensing state projection/service",
+          "authority_level": "PROJECTION_ONLY",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true
+        },
+        {
+          "producer_id": "sensing-inference-pipeline",
+          "path": "apps/server/src/domain/sensing/run_sensing_inference_pipeline_v1.ts",
+          "role": "sensing inference/derived-state producer",
+          "authority_level": "PROJECTION_OR_LEGACY",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true
+        },
+        {
+          "producer_id": "mcft-state-reference",
+          "path": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE.md",
+          "role": "future canonical posterior State",
+          "authority_level": "FUTURE_CANONICAL_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "decision-engine-state",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "role": "currently reads derived sensing state directly",
+          "current": true
+        }
+      ],
+      "notes": [
+        "B-line must not redefine MCFT State semantics.",
+        "Legacy sensing/water states become projection/calculator/compatibility as already adjudicated."
+      ]
+    },
+    {
+      "semantic_id": "twin.forecast_scenario",
+      "question": "What may happen under future forcing, and what happens under alternative candidate actions?",
+      "target_owner": "Twin Runtime / Scenario Engine",
+      "canonical_output_type": "Twin Forecast plus Scenario Set",
+      "current_state": "BOUNDARY_CLEAR_TARGET_NOT_YET_PRODUCT_CONNECTED",
+      "target_phase": "B-08/B-09",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "external-weather-projection",
+          "path": "apps/server/src/projections/weather_forecast_v1.ts",
+          "role": "external exogenous weather forecast; not canonical field Twin forecast",
+          "authority_level": "EXTERNAL_FORCING",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        },
+        {
+          "producer_id": "mcft-forecast-scenario-reference",
+          "path": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE.md",
+          "role": "canonical target field Forecast/Scenario semantics",
+          "authority_level": "FUTURE_CANONICAL_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "decision-engine-weather",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "role": "currently reads external weather forecast directly",
+          "current": true
+        }
+      ],
+      "notes": ["Forecast is not Scenario; Scenario is not Recommendation."]
+    },
+    {
+      "semantic_id": "interpretation.agronomy",
+      "question": "How is evidence interpreted for explanation without action authority?",
+      "target_owner": "Agronomy Interpretation layer",
+      "canonical_output_type": "agronomy_interpretation_v1",
+      "current_state": "FROZEN_CLEAR",
+      "target_phase": "KEEP",
+      "new_owner_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+      "registered_producers": [
+        {
+          "producer_id": "agronomy-interpretation-contract",
+          "path": "docs/controlplane/GEOX-CP-Agronomy-Interpretation-Contract-v1.md",
+          "role": "frozen explain-only semantic contract",
+          "authority_level": "CURRENT_AUTHORITY_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        }
+      ],
+      "registered_consumers": [],
+      "notes": ["Judge must not consume Agronomy Interpretation into deterministic ProblemState semantics."]
+    },
+    {
+      "semantic_id": "decision.calculation",
+      "question": "What deterministic agronomic calculations are produced?",
+      "target_owner": "Decision calculators",
+      "canonical_output_type": "CalculationResult plus trace (B-06 mapping target)",
+      "current_state": "MULTI_CALCULATOR_EXPECTED",
+      "target_phase": "B-06",
+      "new_owner_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+      "registered_producers": [
+        {
+          "producer_id": "irrigation-requirement-skill",
+          "path": "apps/server/src/domain/agronomy/skills/irrigation/irrigation_requirement_skill_v1.ts",
+          "role": "deterministic irrigation requirement calculator",
+          "authority_level": "CALCULATOR_ONLY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        },
+        {
+          "producer_id": "irrigation-deficit-skill",
+          "path": "apps/server/src/domain/agronomy/skills/irrigation/irrigation_deficit_skill_v1.ts",
+          "role": "deterministic deficit calculator",
+          "authority_level": "CALCULATOR_ONLY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        },
+        {
+          "producer_id": "agronomy-rule-engine",
+          "path": "apps/server/src/domain/agronomy/rule_engine.ts",
+          "role": "deterministic rule/crop-skill evaluation but currently emits recommendation semantics",
+          "authority_level": "GRANDFATHERED_CANDIDATE_PRODUCER",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-06",
+          "current": true
+        },
+        {
+          "producer_id": "agronomy-judge-calculation",
+          "path": "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+          "role": "calls deficit/requirement skills and emits WATER_DEFICIT/PASS/BLOCKED",
+          "authority_level": "GRANDFATHERED_MIXED_AUTHORITY",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-06",
+          "current": true
+        },
+        {
+          "producer_id": "decision-engine-calculation",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "role": "calls irrigation skills/diagnosis/recommendation builders directly",
+          "authority_level": "GRANDFATHERED_COMPOSITION_HOTSPOT",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-06",
+          "current": true
+        }
+      ],
+      "registered_consumers": [],
+      "notes": []
+    },
+    {
+      "semantic_id": "decision.candidate",
+      "question": "What action should be considered?",
+      "target_owner": "Decision Runtime",
+      "canonical_output_type": "CandidateDecisionV1 (B-06 target)",
+      "current_state": "DUPLICATE_AUTHORITY",
+      "target_phase": "B-06",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "agronomy-agent-recommendation",
+          "path": "apps/server/src/jobs/agronomy_agent.ts",
+          "role": "writes recommendation_v1 and decision_recommendation_v1",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-06",
+          "current": true,
+          "fingerprints": ["recommendation_v1", "decision_recommendation_v1"]
+        },
+        {
+          "producer_id": "decision-engine-recommendation",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "role": "formal/product recommendation producer",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-06",
+          "current": true
+        },
+        {
+          "producer_id": "rule-engine-recommendation",
+          "path": "apps/server/src/domain/agronomy/rule_engine.ts",
+          "role": "returns AgronomyRecommendationV2 from matched rules",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-06",
+          "current": true
+        },
+        {
+          "producer_id": "decision-plan-contract",
+          "path": "docs/controlplane/GEOX-CP-Decision-Plan-Contract-v0.md",
+          "role": "candidate-for-execution contract; not executable",
+          "authority_level": "COMPATIBILITY_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "approval-request-builder",
+          "path": "apps/server/src/domain/approval/recommendation_approval_request_builder_v1.ts",
+          "role": "builds approval request from recommendation",
+          "current": true
+        }
+      ],
+      "notes": [
+        "Recommendation, decision_plan and prescription are historical/compatibility objects until mapped.",
+        "Execution authority is always NONE at candidate level."
+      ]
+    },
+    {
+      "semantic_id": "decision.eligibility",
+      "question": "May this candidate action proceed toward approval/production given qualified inputs?",
+      "target_owner": "Decision Eligibility Runtime",
+      "canonical_output_type": "DecisionEligibilityDecisionV1 (B-07 target)",
+      "current_state": "NOT_YET_UNIFIED",
+      "target_phase": "B-07",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "stage1-trigger-eligibility",
+          "path": "apps/server/src/domain/decision/stage1_action_boundary_v1.ts",
+          "role": "currently mixes evidence sufficiency and formal-trigger eligibility",
+          "authority_level": "GRANDFATHERED_PRECURSOR",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-07",
+          "current": true
+        },
+        {
+          "producer_id": "agronomy-judge-gate",
+          "path": "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+          "role": "currently maps evidence verdict to BLOCKED and requirement to WATER_DEFICIT/PASS",
+          "authority_level": "GRANDFATHERED_PRECURSOR",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-07",
+          "current": true
+        },
+        {
+          "producer_id": "future-decision-eligibility",
+          "path": "docs/architecture/semantic_convergence/GEOX-BLINE-CHARTER-V1-AMENDMENT-01-EVIDENCE-FIRST-SEQUENCE.md",
+          "role": "target contract/runtime description",
+          "authority_level": "FUTURE_TARGET_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        }
+      ],
+      "registered_consumers": [],
+      "notes": [
+        "Normative target verdicts: PASS / DEGRADED / NEED_EVIDENCE / HUMAN_REVIEW / BLOCK.",
+        "Evidence invalidity does not automatically imply action BLOCK."
+      ]
+    },
+    {
+      "semantic_id": "decision.approval",
+      "question": "Who authorizes a candidate action?",
+      "target_owner": "Human or explicit Policy Approval authority",
+      "canonical_output_type": "approval request/decision contracts",
+      "current_state": "BOUNDARY_CLEAR",
+      "target_phase": "KEEP",
+      "new_owner_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+      "registered_producers": [
+        {
+          "producer_id": "control-approval-route",
+          "path": "apps/server/src/routes/control_approval_request_v1.ts",
+          "role": "approval request/decision runtime surface",
+          "authority_level": "CURRENT_AUTHORITY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        },
+        {
+          "producer_id": "approval-builder",
+          "path": "apps/server/src/domain/approval/recommendation_approval_request_builder_v1.ts",
+          "role": "approval-request builder",
+          "authority_level": "CURRENT_AUTHORITY_HELPER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        }
+      ],
+      "registered_consumers": [],
+      "notes": []
+    },
+    {
+      "semantic_id": "operation.plan",
+      "question": "How is an approved decision represented as an operation plan?",
+      "target_owner": "Operation planning after Approval authority",
+      "canonical_output_type": "ApprovedOperationPlan (B-06 semantic classification target)",
+      "current_state": "MULTIPLE_FORMATION_PATHS",
+      "target_phase": "B-06",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "control-operation-plan-route",
+          "path": "apps/server/src/routes/control_operation_plan_v1.ts",
+          "role": "formal operation-plan route",
+          "authority_level": "CURRENT_PLAN_PATH",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        },
+        {
+          "producer_id": "approval-operation-plan-path",
+          "path": "apps/server/src/routes/control_approval_request_v1.ts",
+          "role": "approval-linked plan formation/transition",
+          "authority_level": "CURRENT_PLAN_PATH",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        },
+        {
+          "producer_id": "agronomy-agent-plan",
+          "path": "apps/server/src/jobs/agronomy_agent.ts",
+          "role": "direct operation_plan_v1 creation after recommendation",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-06",
+          "current": true,
+          "fingerprints": ["operation_plan_v1", "agronomy_agent_auto_create"]
+        },
+        {
+          "producer_id": "decision-engine-plan-touchpoint",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "role": "recommendation/plan lifecycle touchpoint",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-06",
+          "current": true
+        },
+        {
+          "producer_id": "flight-table-plan",
+          "path": "apps/server/src/services/flight_table/flight_table_operation_v1.ts",
+          "role": "flight-table compatibility/demo plan semantics",
+          "authority_level": "COMPATIBILITY",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true
+        }
+      ],
+      "registered_consumers": [],
+      "notes": [
+        "operation_plan_v1 record existence alone must not imply approval authority.",
+        "Agronomy Agent direct plan creation is grandfathered debt, not a proven execution bypass."
+      ]
+    },
+    {
+      "semantic_id": "execution.task_receipt_acceptance",
+      "question": "What is executable, what actually happened, and was it accepted?",
+      "target_owner": "AO-ACT task / Receipt / Acceptance as distinct layers",
+      "canonical_output_type": "ao_act_task_v0 -> receipt -> acceptance verdict",
+      "current_state": "BOUNDARY_CLEAR",
+      "target_phase": "KEEP",
+      "new_owner_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+      "registered_producers": [
+        {
+          "producer_id": "task-service",
+          "path": "apps/server/src/domain/controlplane/task_service.ts",
+          "role": "task creation/service under control-plane rules",
+          "authority_level": "CURRENT_TASK_AUTHORITY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        },
+        {
+          "producer_id": "control-ao-act-route",
+          "path": "apps/server/src/routes/control_ao_act.ts",
+          "role": "AO-ACT task/receipt route boundary",
+          "authority_level": "CURRENT_EXECUTION_BOUNDARY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        },
+        {
+          "producer_id": "receipt-builder",
+          "path": "apps/server/src/domain/controlplane/ao_act_receipt_from_task_builder_v1.ts",
+          "role": "receipt construction from approved task execution",
+          "authority_level": "CURRENT_RECEIPT_HELPER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        },
+        {
+          "producer_id": "acceptance-reference",
+          "path": "docs/audit/CONTRACT_ALIGNMENT_MATRIX_V1.md",
+          "role": "acceptance versus receipt semantic reference",
+          "authority_level": "CURRENT_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        }
+      ],
+      "registered_consumers": [],
+      "notes": [
+        "Candidate/Recommendation is not executable.",
+        "Receipt is not Acceptance."
+      ]
+    },
+    {
+      "semantic_id": "presentation.read_model",
+      "question": "How are authoritative objects presented to operators/customers?",
+      "target_owner": "Read-model / presentation layer",
+      "canonical_output_type": "read models / reports / UI projections",
+      "current_state": "PROJECTION_ONLY",
+      "target_phase": "KEEP",
+      "new_owner_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+      "registered_producers": [
+        {
+          "producer_id": "operation-report-chain",
+          "path": "apps/server/src/projections/operation_report_chain_v1.ts",
+          "role": "read-model projection",
+          "authority_level": "PROJECTION_ONLY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        },
+        {
+          "producer_id": "dashboard-route",
+          "path": "apps/server/src/routes/dashboard_v1.ts",
+          "role": "customer/operator read surface",
+          "authority_level": "PROJECTION_ONLY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true
+        }
+      ],
+      "registered_consumers": [],
+      "notes": ["Presentation may project authoritative truth but must not reconstruct stronger upstream truth."]
+    }
+  ],
+  "static_guards": [
+    {
+      "guard_id": "G-B02-01-crop-stage-touchpoints",
+      "semantic_id": "context.crop_stage",
+      "description": "Any production TypeScript file that calls/imports the known crop-stage resolvers must be registered before merge.",
+      "scan_roots": ["apps/server/src"],
+      "extensions": [".ts"],
+      "ignore_path_fragments": [".test.ts", ".acceptance.test.ts"],
+      "match": {
+        "any_of": ["resolveCropStage(", "resolveCropStageByPriority(", "normalizeSkillStage("]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/agronomy/stage_resolver.ts",
+        "apps/server/src/domain/agronomy/context_builder.ts",
+        "apps/server/src/domain/agronomy/rule_engine.ts",
+        "apps/server/src/routes/decision_engine_v1.ts",
+        "apps/server/src/projections/field_program_state_v1.ts",
+        "apps/server/src/routes/operation_state_v1.ts"
+      ],
+      "failure": "UNREGISTERED_CROP_STAGE_TOUCHPOINT"
+    },
+    {
+      "guard_id": "G-B02-02-irrigation-calculator-touchpoints",
+      "semantic_id": "decision.calculation",
+      "description": "Use/definition of the known irrigation deficit/requirement skills is an explicit semantic touchpoint.",
+      "scan_roots": ["apps/server/src"],
+      "extensions": [".ts"],
+      "ignore_path_fragments": [".test.ts", ".acceptance.test.ts"],
+      "match": {
+        "any_of": ["runIrrigationRequirementSkillV1(", "runIrrigationDeficitSkillV1("]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/agronomy/skills/irrigation/irrigation_requirement_skill_v1.ts",
+        "apps/server/src/domain/agronomy/skills/irrigation/irrigation_deficit_skill_v1.ts",
+        "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+        "apps/server/src/routes/decision_engine_v1.ts"
+      ],
+      "failure": "UNREGISTERED_IRRIGATION_CALCULATION_TOUCHPOINT"
+    },
+    {
+      "guard_id": "G-B02-03-evidence-qualification-touchpoints",
+      "semantic_id": "evidence.qualification",
+      "description": "Known Stage-1/Evidence-Judge production qualification entrypoints may not silently proliferate.",
+      "scan_roots": ["apps/server/src"],
+      "extensions": [".ts"],
+      "ignore_path_fragments": [".test.ts", ".acceptance.test.ts"],
+      "match": {
+        "any_of": ["evaluateFormalStage1TriggerGateV1(", "evaluateEvidenceJudgeV2("]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/stage1_action_boundary_v1.ts",
+        "apps/server/src/domain/judge/evidence_judge_v2.ts"
+      ],
+      "failure": "UNREGISTERED_EVIDENCE_QUALIFICATION_TOUCHPOINT"
+    },
+    {
+      "guard_id": "G-B02-04-agronomy-agent-direct-plan-fingerprint",
+      "semantic_id": "operation.plan",
+      "description": "The current Agronomy Agent direct plan producer is grandfathered at exactly one path; copies are forbidden.",
+      "scan_roots": ["apps/server/src"],
+      "extensions": [".ts"],
+      "ignore_path_fragments": [".test.ts", ".acceptance.test.ts"],
+      "match": {
+        "all_of": ["agronomy_agent_auto_create", "operation_plan_v1"]
+      },
+      "registered_paths": ["apps/server/src/jobs/agronomy_agent.ts"],
+      "failure": "UNREGISTERED_AGRONOMY_AGENT_PLAN_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-05-missing-soil-default-fingerprint",
+      "semantic_id": "evidence.raw_observation",
+      "description": "The known DEFAULT_SOIL_MOISTURE compatibility fallback is grandfathered only in the existing Agronomy Agent.",
+      "scan_roots": ["apps/server/src"],
+      "extensions": [".ts"],
+      "ignore_path_fragments": [".test.ts", ".acceptance.test.ts"],
+      "match": {
+        "all_of": ["DEFAULT_SOIL_MOISTURE", "effectiveSoilMoisture"]
+      },
+      "registered_paths": ["apps/server/src/jobs/agronomy_agent.ts"],
+      "failure": "UNREGISTERED_FABRICATED_OBSERVATION_FALLBACK"
+    },
+    {
+      "guard_id": "G-B02-06-decision-engine-integration-hotspot",
+      "semantic_id": "decision.candidate",
+      "description": "decision_engine_v1 must not become the direct landing zone for future ADR/LLM/MCFT implementation imports.",
+      "scan_files": ["apps/server/src/routes/decision_engine_v1.ts"],
+      "forbid": {
+        "any_of_regex": [
+          "from\\s+[\\\"'][^\\\"']*(?:/adr/|/llm/|/mcft/)[^\\\"']*[\\\"']",
+          "require\\([\\\"'][^\\\"']*(?:/adr/|/llm/|/mcft/)[^\\\"']*[\\\"']\\)"
+        ]
+      },
+      "failure": "FORBIDDEN_DIRECT_ADR_LLM_MCFT_INTEGRATION_IN_DECISION_ENGINE"
+    }
+  ]
+}
