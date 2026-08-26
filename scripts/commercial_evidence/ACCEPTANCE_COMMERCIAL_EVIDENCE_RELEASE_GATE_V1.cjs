@@ -1,6 +1,5 @@
 // scripts/commercial_evidence/ACCEPTANCE_COMMERCIAL_EVIDENCE_RELEASE_GATE_V1.cjs
-// Purpose: guard the paid-pilot Commercial Evidence Demo release boundary after the customer narrative was expanded
-// from chronology-only proof to an evidence-faithful "answer -> production eligibility" workflow.
+// Purpose: guard the paid-pilot Commercial Evidence Demo release boundary and the Chinese customer-facing surface.
 
 const fs = require("node:fs");
 const path = require("node:path");
@@ -29,11 +28,10 @@ const html = read(files.html);
 const app = read(files.app);
 const releaseManifest = read(files.releaseManifest);
 
-// Chinese customer-facing page and revised positioning.
 for (const token of [
   'lang="zh-CN"',
+  "商业证据演示 · 草稿",
   "不是“能不能给答案”，而是“这个答案现在能不能进入真实生产”",
-  "Commercial Evidence Demo · Draft",
   "同一个答案，可能有完全不同的资格",
   "一次完整的 GEOX 决策过程",
   "客户真正买的是什么",
@@ -44,7 +42,6 @@ for (const token of [
   "技术细节｜默认折叠",
 ]) requireToken("html", html, token);
 
-// Five release-gate surfaces still exist, but the fifth now also names the commercial control-loop acceptance.
 for (const token of [
   "1. 可复现启动",
   "pnpm exec tsx tools/commercial-evidence-demo/server.ts",
@@ -59,7 +56,6 @@ for (const token of [
   'id="releaseManifestRows"',
 ]) requireToken("html", html, token);
 
-// Machine-readable Decision Assurance claim manifest and exact evidence classes remain authoritative for its core claims.
 for (const token of [
   "evidence_release_manifest",
   "PASS_FOR_PAID_PILOT_SALES_CONDITIONAL_ON_MACHINE_PROOF",
@@ -76,18 +72,16 @@ for (const token of [
   "GET /api/demo?case=missing_evidence",
 ]) requireToken("packet", packet, token);
 
-// Page renders that manifest dynamically instead of inventing a second machine claim table.
 for (const token of [
   "renderEvidenceReleaseManifest(packet)",
   "packet.evidence_release_manifest",
   "releaseManifestRows",
   "releaseExactSha",
-  "REAL_MACHINE_EXECUTION",
-  "PERSISTED_ENGINEERING_QUALIFICATION",
-  "FORMAL_PRODUCTION_EVIDENCE",
+  "真实机器执行",
+  "持久化工程资格证据",
+  "正式生产证据",
 ]) requireToken("app", app, token);
 
-// Due-diligence document remains the evidence-class reference.
 for (const token of [
   "PASS_FOR_PAID_PILOT_SALES_CONDITIONAL_ON_MACHINE_PROOF",
   "Demo Claim → Repo / Runtime implementation → Machine evidence → Evidence class → Status",
@@ -101,15 +95,22 @@ for (const token of [
   "off-main / read-only / standalone / non-authoritative",
 ]) requireToken("releaseManifest", releaseManifest, token);
 
-// The revised page must explicitly distinguish two implemented capability surfaces from unified production qualification.
 for (const token of [
-  "Decision Assurance Runtime + Commercial Control Loop",
-  "两条能力线均已存在，但本 Demo 不声明已经完成统一 production qualification",
+  "决策资格运行链 + 商业执行闭环",
+  "两条能力线均已存在，但本演示不声明已经完成统一生产资格验收",
   "审批通过本身不会自动触发设备动作",
   "执行完成 ≠ 农业效果已经被证明",
 ]) requireToken("html", html, token);
 
-// Never convert current Commercial evidence into final Formal/production claims.
+// Exact machine identifiers may remain in technical <code> evidence, but customer field labels must stay Chinese.
+for (const forbidden of [
+  "Commercial Evidence Demo · Draft", "Decision Assurance", "Demo Input", "CASE A", "CASE B",
+  "ELIGIBLE", "INELIGIBLE", "Temporal Decision Assurance", "Commercial Control Loop",
+  "Approval → Operation Plan", "Action Task", "FMIS", "Shadow Mode", "AI / Model",
+  "Human Approval", "Existing System", "NOT YET A COMMERCIAL CLAIM", "CUSTOMER DATA REQUIRED",
+  "EXTERNAL_BENCHMARK", "NOT_PROVEN_CUSTOMER_ROI",
+]) rejectToken("html", html, forbidden);
+
 for (const forbidden of [
   "Stage 1B 已完成",
   "24h production-qualified",
@@ -121,14 +122,13 @@ for (const forbidden of [
   rejectToken("packet", packet, forbidden);
 }
 
-// Explicit non-claim language must remain present.
 for (const token of [
   "连续在线数字孪生运行已完成最终正式验收",
   "已经自动控制所有农业设备",
   "无人值守现场执行",
   "生产资格化的作物推荐",
-  "已证明的客户 ROI",
-  "AI 绕过人工审批直接进行生产作业",
+  "已证明的客户投资回报",
+  "人工智能绕过人工审批直接进行生产作业",
 ]) requireToken("html", html, token);
 
 console.log(JSON.stringify({
@@ -136,9 +136,10 @@ console.log(JSON.stringify({
   acceptance: "ACCEPTANCE_COMMERCIAL_EVIDENCE_RELEASE_GATE_V1",
   customer_facing_language: "zh-CN",
   commercial_gate: "PASS_FOR_PAID_PILOT_SALES_CONDITIONAL_ON_MACHINE_PROOF",
-  narrative_version: "ANSWER_TO_PRODUCTION_ELIGIBILITY_V2",
+  narrative_version: "CHINESE_CUSTOMER_SURFACE_V3",
   release_manifest_machine_readable: true,
   release_gate_surface_count: 5,
+  customer_visible_field_labels_chinese: true,
   decision_assurance_and_control_loop_separated: true,
   unified_production_qualification_not_claimed: true,
   autonomous_irrigation_not_claimed: true,
