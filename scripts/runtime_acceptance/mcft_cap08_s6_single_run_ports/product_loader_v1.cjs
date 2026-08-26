@@ -38,6 +38,7 @@ async function loadProduct(root){
     product(root,'apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts'),
     product(root,'apps/server/src/runtime/twin_runtime/cap08_s4_append_forward_service_v1.ts'),
     product(root,'apps/server/src/runtime/twin_runtime/cap08_s4_persisted_chain_reader_v1.ts'),
+    product(root,'apps/server/src/runtime/twin_runtime/cap08_replay_host_composition_v1.ts'),
     product(root,'apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts'),
     product(root,'apps/server/src/persistence/twin_runtime/postgres_cap08_s5_exact_source_v1.ts'),
     product(root,'apps/server/src/persistence/calibration/postgres_calibration_governance_repository_v1.ts'),
@@ -47,17 +48,15 @@ async function loadProduct(root){
     product(root,'scripts/runtime_acceptance/mcft_cap08_s3_source_manifest_v1.ts'),
   ]);
   const p=Object.assign({},...modules);
-  const ProductS4Service=p.Cap08S4AppendForwardServiceV1;
-  assert.equal(typeof ProductS4Service,'function','S6_S4_PRODUCT_SERVICE_REQUIRED');
-  p.Cap08S4AppendForwardServiceV1=class S6CompositeCap08S4AppendForwardServiceV1 extends ProductS4Service{
+  const createReplayHostS4=p.createCap08ReplayHostS4AppendForwardServiceV1;
+  assert.equal(typeof createReplayHostS4,'function','S6_REPLAY_HOST_S4_COMPOSITION_REQUIRED');
+  p.Cap08S4AppendForwardServiceV1=class S6CompositeCap08S4AppendForwardServiceV1{
     constructor(pool,evidenceSource){
-      super(pool,evidenceSource);
-      assert.ok(Object.prototype.hasOwnProperty.call(this,'repository'),'S6_S4_PERSISTENCE_REPOSITORY_SEAM_REQUIRED');
-      this.repository=createS6S4AtomicPersistenceRepositoryV1({pool,p});
-      assert.ok(Object.prototype.hasOwnProperty.call(this,'resolver'),'S6_S4_RESOLVER_SEAM_REQUIRED');
-      assert.ok(this.resolver&&typeof this.resolver==='object','S6_S4_RESOLVER_OBJECT_REQUIRED');
-      assert.ok(Object.prototype.hasOwnProperty.call(this.resolver,'repository'),'S6_S4_RESOLVER_REPOSITORY_SEAM_REQUIRED');
-      this.resolver.repository=this.repository;
+      return createReplayHostS4({
+        pool,
+        evidenceSource,
+        repository:createS6S4AtomicPersistenceRepositoryV1({pool,p}),
+      });
     }
   };
   return p;

@@ -1,0 +1,52 @@
+name: mcft-cap-09-phase1-replay-host-composition-v1
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/runtime/twin_runtime/cap08_replay_host_composition_v1.ts'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_single_run_ports/product_loader_v1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap08_s6_run_a_qualification_ports_v2/qualification_product_chain_v2.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE1_REPLAY_HOST_COMPOSITION_V1.cjs'
+      - '.github/workflows/mcft-cap-09-phase1-replay-host-composition-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  phase1a-replay-host-composition:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Phase 1A architecture acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE1_REPLAY_HOST_COMPOSITION_V1.cjs
+
+      - name: Upload Phase 1A proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-phase1-replay-host-composition-v1-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_09_PHASE1_REPLAY_HOST_COMPOSITION_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
