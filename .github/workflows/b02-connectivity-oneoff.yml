@@ -6,40 +6,35 @@ on:
 permissions:
   contents: write
 jobs:
-  patch-and-test:
+  fix-and-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout control branch
         uses: actions/checkout@v4
-      - name: Save patchers
-        run: |
-          cp scripts/governance_acceptance/_B02_CONNECTIVITY_PATCH_ONCE.cjs /tmp/b02-patch.cjs
-          cp scripts/governance_acceptance/_B02_CONNECTIVITY_FIX01_ONCE.cjs /tmp/b02-fix01.cjs
+      - name: Save correction helper
+        run: cp scripts/governance_acceptance/_B02_CONNECTIVITY_FIX01_ONCE.cjs /tmp/b02-fix01.cjs
       - name: Checkout B-02 target
         uses: actions/checkout@v4
         with:
           ref: docs/bline-b02-semantic-ownership-register-v1
           path: target
           fetch-depth: 0
-      - name: Patch B-02 target
-        run: |
-          node /tmp/b02-patch.cjs target
-          node /tmp/b02-fix01.cjs target
-      - name: Commit and push B-02 target
-        id: commit
+      - name: Apply classified correction only
+        run: node /tmp/b02-fix01.cjs target
+      - name: Commit and push corrected B-02 target
         working-directory: target
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json docs/architecture/semantic_convergence/GEOX-B02-SEMANTIC-OWNERSHIP-REGISTER-AND-LINTER-V1.md scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+          git add docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json
           if git diff --cached --quiet; then
-            echo "No patch changes"
+            echo "No correction changes"
           else
-            git commit -m "docs(architecture): extend B-02 with runtime connectivity"
+            git commit -m "docs(architecture): correct B-02 proven connectivity edge"
             git push origin HEAD:docs/bline-b02-semantic-ownership-register-v1
           fi
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-      - name: Execute B-02 linter on exact target head
+          echo "B02_CORRECTED_HEAD $(git rev-parse HEAD)"
+      - name: Execute B-02 linter on exact corrected target head
         working-directory: target
         run: |
           echo "B02_EXACT_HEAD $(git rev-parse HEAD)"
@@ -47,5 +42,4 @@ jobs:
           node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs 2>&1 | tee /tmp/b02-linter.log
           code=${PIPESTATUS[0]}
           echo "B02_LINTER_EXIT_CODE $code"
-          cat /tmp/b02-linter.log
           exit "$code"
