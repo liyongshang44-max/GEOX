@@ -10,7 +10,12 @@ import {
   GfsNomadsRawBundleComposerV1,
 } from "../../apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.js";
 import {
+  ControlledHttpsByteClientV1,
+} from "../../apps/server/src/external_evidence/provider/https_external_evidence_transport_v1.js";
+import {
+  MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_MINIMUM_INTERVAL_MS_V1,
   MCFT_CAP09_GFS_NOMADS_LIVE_PROVIDER_ID_V1,
+  GfsNomadsLiveProviderV1,
   gfsPgrb2NamesV1,
   gfsSfluxNamesV1,
   type GfsNomadsRawObjectV1,
@@ -149,6 +154,42 @@ async function main(): Promise<void> {
   assert.equal(sha256(result.bundle_bytes), result.raw_bundle_sha256);
   assert.equal(Buffer.from(result.bundle_bytes.slice(257, 263)).toString("ascii"), "ustar\0");
 
+  let virtualNowMs = 1_000;
+  const cadenceWaits: number[] = [];
+  const filteredUrls: string[] = [];
+  const filteredFetch = (async (input: string | URL | Request) => {
+    filteredUrls.push(String(input));
+    return new Response(gribBytes(filteredUrls.length), {
+      status: 200,
+      headers: { "content-type": "application/octet-stream" },
+    });
+  }) as typeof fetch;
+  const cadenceClient = new ControlledHttpsByteClientV1({
+    fetch_impl: filteredFetch,
+    clock: () => new Date("2026-08-27T11:50:00.000Z"),
+    user_agent: "GEOX-MCFT-CAP09-PHASE3-CADENCE-TEST/1",
+    max_raw_bytes: 1_000_000,
+    timeout_ms: 5_000,
+  });
+  const cadenceProvider = new GfsNomadsLiveProviderV1({
+    byte_client: cadenceClient,
+    grib_filter_cadence: {
+      now_ms: () => virtualNowMs,
+      async wait_ms(milliseconds) {
+        cadenceWaits.push(milliseconds);
+        virtualNowMs += milliseconds;
+      },
+    },
+  });
+  await cadenceProvider.fetchPgrb2FilteredRaw(CYCLE, SUPPORT);
+  await cadenceProvider.fetchPgrb2FilteredRaw(CYCLE, SUPPORT + 1);
+  assert.equal(filteredUrls.length, 2);
+  assert.deepEqual(
+    cadenceWaits,
+    [MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_MINIMUM_INTERVAL_MS_V1],
+  );
+  assert.equal(MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_MINIMUM_INTERVAL_MS_V1, 10_000);
+
   const source = fs.readFileSync(
     path.resolve("apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts"),
     "utf8",
@@ -181,6 +222,9 @@ async function main(): Promise<void> {
     deterministic_tar_header: true,
     product_provider_id: result.provider_id,
     product_bundle_composer_id: result.composer_id,
+    nomads_grib_filter_minimum_interval_ms:
+      MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_MINIMUM_INTERVAL_MS_V1,
+    nomads_responsible_sharing_cadence_proven: true,
     database_write_count: 0,
     runtime_tick_cursor_mutation: false,
     twin_state_mutation: false,
