@@ -1,4 +1,4 @@
-name: b04d1-rawsample-physical-qc-oneoff
+name: b04d2-rawsample-authority-time-scope-oneoff
 on:
   push:
     branches:
@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 668a685c2e1ca3bfe33fa1fa45f54d5c74fbaa73
+          ref: 46560a3ab3d551ab316977cce495331740edb735
           fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
@@ -23,6 +23,8 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - name: Server typecheck
         run: pnpm --filter @geox/server run typecheck
+      - name: B04d2 source quality scope time fixtures
+        run: pnpm --filter @geox/server exec node --import tsx --test src/domain/sensing/raw_sample_authority_time_scope_v1.test.ts
       - name: B04d1 raw-sample guard fixtures
         run: pnpm --filter @geox/server exec node --import tsx --test src/evidence/raw_sample_stage1_physical_qc_v1.test.ts
       - name: B04d1 raw-sample ingress physical QC fixture
@@ -35,23 +37,22 @@ jobs:
         run: pnpm --filter @geox/server exec node --import tsx --test src/services/device_observation_stage1_physical_qc_guard_v1.test.ts
       - name: B04a fixtures
         run: pnpm --filter @geox/server exec node --import tsx --test src/evidence/physical_qc_v1.test.ts
-      - name: B04b1 fixtures
-        run: pnpm --filter @geox/server exec node --import tsx --test src/evidence/ingress_physical_qc_snapshot_v1.test.ts
-      - name: B04b1 observation persistence fixtures
-        run: pnpm --filter @geox/server exec node --import tsx --test src/services/device_observation_ingress_physical_qc_v1.test.ts
-      - name: B04b2 durable raw fixtures
-        run: pnpm --filter @geox/server exec node --import tsx --test src/services/telemetry_ingest_durable_raw_v1.test.ts
+      - name: B04b ingress and persistence regressions
+        run: |
+          pnpm --filter @geox/server exec node --import tsx --test src/evidence/ingress_physical_qc_snapshot_v1.test.ts
+          pnpm --filter @geox/server exec node --import tsx --test src/services/device_observation_ingress_physical_qc_v1.test.ts
+          pnpm --filter @geox/server exec node --import tsx --test src/services/telemetry_ingest_durable_raw_v1.test.ts
       - name: Build telemetry-ingest compile prerequisites
         run: pnpm --filter @geox/contracts build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build
       - name: Telemetry ingest package build
         run: pnpm --filter @geox/telemetry-ingest build
-      - name: B04b3 MQTT source-preserving fixtures
-        run: pnpm --filter @geox/telemetry-ingest exec node --import tsx --test src/mqtt_observation_input_v1.test.ts
-      - name: B04b4 MQTT durable raw fixtures
-        run: pnpm --filter @geox/telemetry-ingest exec node --import tsx --test src/mqtt_durable_raw_v1.test.ts
+      - name: MQTT regressions
+        run: |
+          pnpm --filter @geox/telemetry-ingest exec node --import tsx --test src/mqtt_observation_input_v1.test.ts
+          pnpm --filter @geox/telemetry-ingest exec node --import tsx --test src/mqtt_durable_raw_v1.test.ts
       - name: B02 linter
         run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
       - name: Marker
         run: |
-          echo "B04D1_EXACT_HEAD $(git rev-parse HEAD)"
-          echo "B04D1_RAWSAMPLE_PHYSICAL_QC_CONVERGENCE_PASS"
+          echo "B04D2_EXACT_HEAD $(git rev-parse HEAD)"
+          echo "B04D2_RAWSAMPLE_AUTHORITY_TIME_SCOPE_PASS"
