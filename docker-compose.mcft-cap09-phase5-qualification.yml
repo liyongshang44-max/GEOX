@@ -7,7 +7,7 @@
 
 x-phase5-runtime-build: &phase5-runtime-build
   context: .
-  dockerfile: docker/runtime.Dockerfile
+  dockerfile: docker/mcft-cap09-runtime.Dockerfile
   args:
     BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/server build
 
@@ -92,6 +92,54 @@ services:
       database-platform-bootstrap:
         condition: service_completed_successfully
 
+  fixture-capture:
+    <<: *phase5-runtime-image
+    profiles: ["qualification-orchestration"]
+    restart: "no"
+    command: ["node", "apps/server/dist/qualification/mcft_cap09_phase5_capture_a0_fixture.js"]
+    environment:
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?GEOX_DEPLOYMENT_SUBJECT_COMMIT is required}
+      GEOX_MCFT_CAP09_PHASE5_FIXTURE_OUTPUT_ROOT: /qualification/fixtures
+    volumes:
+      - ${GEOX_PHASE5_FIXTURE_ROOT:?GEOX_PHASE5_FIXTURE_ROOT is required}:/qualification/fixtures
+
+  qualification-prepare:
+    <<: *phase5-runtime-image
+    profiles: ["qualification-orchestration"]
+    restart: "no"
+    command: ["node", "apps/server/dist/qualification/mcft_cap09_phase5_prepare_24t.js"]
+    environment:
+      DATABASE_URL: postgres://${GEOX_PHASE5_POSTGRES_USER:-postgres}:${GEOX_PHASE5_POSTGRES_PASSWORD:?GEOX_PHASE5_POSTGRES_PASSWORD is required}@postgres:5432/${GEOX_PHASE5_DATABASE_NAME:-geox_mcft_cap09_phase5_qualification}
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?GEOX_DEPLOYMENT_SUBJECT_COMMIT is required}
+      GEOX_MCFT_CAP09_PHASE5_A0: ${GEOX_PHASE5_A0:?GEOX_PHASE5_A0 is required}
+      GEOX_MCFT_CAP09_PHASE5_CREATED_AT: ${GEOX_PHASE5_CREATED_AT:?GEOX_PHASE5_CREATED_AT is required}
+      GEOX_MCFT_CAP09_PHASE5_MANIFEST_OUTPUT: /qualification/control/phase5-manifest.json
+      GEOX_MCFT_CAP09_PHASE5_PREPARE_PROOF_OUTPUT: /qualification/control/prepare-proof.json
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_CROP_AUTHORITY_PATH: /app/docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_CONFIGURATION_MATRIX_PATH: /app/docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_LEASE_OWNER: ${GEOX_PHASE5_TWIN_LEASE_OWNER:-phase5-twin-runtime}
+    volumes:
+      - ${GEOX_PHASE5_CONTROL_ROOT:?GEOX_PHASE5_CONTROL_ROOT is required}:/qualification/control
+    depends_on:
+      service-principal-bootstrap:
+        condition: service_completed_successfully
+
+  qualification-verify:
+    <<: *phase5-runtime-image
+    profiles: ["qualification-orchestration"]
+    restart: "no"
+    command: ["node", "apps/server/dist/qualification/mcft_cap09_phase5_verify_24t.js"]
+    environment:
+      DATABASE_URL: postgres://${GEOX_PHASE5_POSTGRES_USER:-postgres}:${GEOX_PHASE5_POSTGRES_PASSWORD:?GEOX_PHASE5_POSTGRES_PASSWORD is required}@postgres:5432/${GEOX_PHASE5_DATABASE_NAME:-geox_mcft_cap09_phase5_qualification}
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?GEOX_DEPLOYMENT_SUBJECT_COMMIT is required}
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_MANIFEST_PATH: /qualification/control/phase5-manifest.json
+      GEOX_MCFT_CAP09_PHASE5_VERIFY_PROOF_OUTPUT: /qualification/control/verify-proof.json
+    volumes:
+      - ${GEOX_PHASE5_CONTROL_ROOT:?GEOX_PHASE5_CONTROL_ROOT is required}:/qualification/control
+    depends_on:
+      service-principal-bootstrap:
+        condition: service_completed_successfully
+
   evidence-runtime:
     <<: *phase5-runtime-image
     profiles: ["qualification-runtime"]
@@ -139,6 +187,7 @@ services:
       GEOX_MCFT_CAP09_TWIN_RUNTIME_CONFIGURATION_MATRIX_PATH: /app/docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json
       GEOX_MCFT_CAP09_PHASE5_ACCELERATED_THROUGH_LOGICAL_TIME: ${GEOX_PHASE5_ACCELERATED_THROUGH_LOGICAL_TIME:?GEOX_PHASE5_ACCELERATED_THROUGH_LOGICAL_TIME is required}
       GEOX_MCFT_CAP09_PHASE5_ACCELERATED_CLOCK_ACK: MCFT_CAP09_PHASE5_ACCELERATED_WAIT_AND_CLOCK_ONLY
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_LEASE_OWNER: ${GEOX_PHASE5_TWIN_LEASE_OWNER:-phase5-twin-runtime}
       GEOX_MCFT_CAP09_TWIN_RUNTIME_LEASE_DURATION_SECONDS: ${GEOX_PHASE5_TWIN_LEASE_DURATION_SECONDS:-300}
       GEOX_MCFT_CAP09_TWIN_RUNTIME_IDLE_POLL_MS: ${GEOX_PHASE5_TWIN_IDLE_POLL_MS:-100}
       GEOX_MCFT_CAP09_TWIN_RUNTIME_NOT_READY_POLL_MS: ${GEOX_PHASE5_TWIN_NOT_READY_POLL_MS:-100}
