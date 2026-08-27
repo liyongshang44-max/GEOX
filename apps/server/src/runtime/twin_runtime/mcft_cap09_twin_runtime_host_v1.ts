@@ -333,10 +333,25 @@ export class TwinRuntimeHostV1 {
         if (!terminalResultV1(result)) {
           throw new Error("PHASE4_TWIN_RUNTIME_CYCLE_RESULT_INVALID");
         }
-        await this.deps.successor_viability.verifyAfterTerminal({
-          terminal_slot_id: result.slot_id,
-          terminal_logical_time: result.logical_time,
-        });
+        try {
+          await this.deps.successor_viability.verifyAfterTerminal({
+            terminal_slot_id: result.slot_id,
+            terminal_logical_time: result.logical_time,
+          });
+        } catch (successorError) {
+          if (
+            result.status === "FAILED_TERMINAL_RECORDED"
+            || result.status === "BLOCKED_TERMINAL_RECORDED"
+          ) {
+            const successorDetail = successorError instanceof Error
+              ? successorError.message
+              : String(successorError);
+            throw new Error(
+              `${successorDetail}:TERMINAL_RESULT=${result.status}:RUNNER_DETAIL=${result.detail}`,
+            );
+          }
+          throw successorError;
+        }
         terminalSlotCount += 1;
         await this.healthV1({
           status: result.status === "FAILED_TERMINAL_RECORDED"
