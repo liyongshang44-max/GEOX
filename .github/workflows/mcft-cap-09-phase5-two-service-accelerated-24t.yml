@@ -1,4 +1,5 @@
 name: mcft-cap-09-phase5-two-service-accelerated-24t
+# exact-head execution trigger marker: runtime/product semantics are unchanged
 
 on:
   pull_request:
