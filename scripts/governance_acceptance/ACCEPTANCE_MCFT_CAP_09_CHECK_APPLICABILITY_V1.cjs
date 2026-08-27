@@ -118,6 +118,7 @@ function main() {
     "PHASE2_EVIDENCE_PROVIDER_MODULES",
     "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
     "PHASE4_TWIN_RUNTIME_FOUNDATION",
+    "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
   ]) assert.equal(byId(controlOnly, id).status, "REQUIRED", `EXPANDED_DEPENDENCY_SET_REQUIRES_FRESH_PROOF:${id}`);
   for (const id of ["V13_PRODUCER_DRIVEN_QUALIFICATION", "END_TO_END_EVIDENCE_SUPPLY_DEADLINE", "EXACT_ONE_PRODUCTION_OWNER", "FORMAL_V5_ACTIVATION"]) {
     assert.equal(byId(controlOnly, id).status, "NOT_APPLICABLE", `PREMERGE_FUTURE_CHECK_MUST_BE_NA:${id}`);
@@ -184,6 +185,25 @@ function main() {
   assert.equal(phase4TransitivePlan.status, "PASS");
   assert.equal(byId(phase4TransitivePlan, "PHASE4_TWIN_RUNTIME_FOUNDATION").status, "REQUALIFY");
   assert(byId(phase4TransitivePlan, "PHASE4_TWIN_RUNTIME_FOUNDATION").changed_dependencies.includes(phase4Transitive));
+
+  // CP-4: Phase5 production-equivalent packaging is explicitly and narrowly owned.
+  for (const phase5Path of [
+    ".github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml",
+    "apps/server/scripts/write_dist_entries.cjs",
+    "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
+    "apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.ts",
+    "apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts",
+    "apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts",
+    "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1.ts",
+  ]) {
+    const phase5 = plan(authority, registry, [phase5Path]);
+    assert.equal(phase5.status, "PASS");
+    assert.equal(phase5.unknown_changed_paths.length, 0);
+    assert.equal(byId(phase5, "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS").status, "REQUALIFY");
+    assert(byId(phase5, "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS").changed_dependencies.includes(phase5Path));
+  }
 
   // CP-4: runtime root changes invalidate v13 carry-forward by dependency closure.
   const runtimePath = "apps/server/src/runtime/twin_runtime/external_formal_forcing_autonomous_controller_service_v1.ts";
