@@ -58,6 +58,14 @@ runMcftCap09Phase5TwinRuntimeQualificationV1().catch((error) => {
 `,
   },
   {
+    name: path.join("qualification", "mcft_cap09_phase5_capture_a0_fixture.js"),
+    content: `import "../apps/server/src/external_evidence/qualification/mcft_cap09_phase5_capture_a0_fixture_v1.js";\n`,
+  },
+  {
+    name: path.join("qualification", "mcft_cap09_phase5_prepare_24t.js"),
+    content: `import "../apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.js";\n`,
+  },
+  {
     name: path.join("database", "platform_bootstrap.js"),
     content: `import { runMcftCap07DatabasePlatformBootstrapFromEnvironmentV1 } from "../apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.js";
 import { runRuntimeSchemaCompatibilityBootstrapFromEnvironmentV1 } from "../apps/server/src/infra/runtime_schema_compatibility_bootstrap_v1.js";
