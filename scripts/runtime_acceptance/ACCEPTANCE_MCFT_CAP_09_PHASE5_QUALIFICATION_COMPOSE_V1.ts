@@ -86,7 +86,7 @@ async function main(): Promise<void> {
 
   const rendered = execFileSync(
     "docker",
-    ["compose", "-f", COMPOSE, "config", "--format", "json"],
+    ["compose", "-f", COMPOSE, "--profile", "qualification-runtime", "config", "--format", "json"],
     { encoding: "utf8", env },
   );
   const config = JSON.parse(rendered) as {
