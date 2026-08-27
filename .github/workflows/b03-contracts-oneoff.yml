@@ -23,6 +23,8 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - name: Server typecheck
         run: pnpm --filter @geox/server run typecheck
+      - name: Build telemetry-ingest compile prerequisites
+        run: pnpm --filter @geox/contracts build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build
       - name: Telemetry ingest typecheck
         run: pnpm --filter @geox/telemetry-ingest exec tsc --noEmit -p tsconfig.json
       - name: MQTT mapper fixtures
