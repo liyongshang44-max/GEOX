@@ -158,6 +158,8 @@ export type CanonicalRawSampleEvidenceQualificationParamsV1 = {
   device_id?: string | null;
   now_ms?: number;
   observation_window_ms?: number;
+  expected_sample_interval_ms?: number;
+  freshness_max_age_ms?: number;
   formal_source_policy?: FormalSourcePolicyV1 | null;
 };
 
@@ -185,6 +187,10 @@ async function buildRawSampleEvidenceRuntimeContextV1(
 ): Promise<RawSampleEvidenceRuntimeContextV1> {
   const nowMs = Number.isFinite(params.now_ms) ? Number(params.now_ms) : Date.now();
   const observationWindowMs = Number(params.observation_window_ms ?? 6 * 60 * 60 * 1000);
+  const expectedSampleIntervalMs = Number(params.expected_sample_interval_ms ?? 30 * 60 * 1000);
+  const freshnessMaxAgeMs = Number(
+    params.freshness_max_age_ms ?? Math.max(expectedSampleIntervalMs * 2, 60 * 60 * 1000),
+  );
   const formalSourcePolicy = buildFormalSourcePolicy(params.formal_source_policy);
   const startTs = nowMs - observationWindowMs;
   const endTs = nowMs;
@@ -313,6 +319,7 @@ async function buildRawSampleEvidenceRuntimeContextV1(
     projectRawSampleEvidenceQualificationV1({
       sample,
       decision_time_ms: nowMs,
+      freshness_max_age_ms: freshnessMaxAgeMs,
       requested_scope: {
         tenant_id: params.tenant_id,
         project_id: params.project_id ?? null,
@@ -411,6 +418,8 @@ export async function buildAppleIIEvidenceSufficiencyV1(
     device_id: params.device_id,
     now_ms: nowMs,
     observation_window_ms: observationWindowMs,
+    expected_sample_interval_ms: expectedSampleIntervalMs,
+    freshness_max_age_ms: freshnessMaxAgeMs,
     formal_source_policy: params.formal_source_policy,
   });
 

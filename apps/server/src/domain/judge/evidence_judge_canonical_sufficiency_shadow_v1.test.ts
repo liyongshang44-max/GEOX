@@ -133,3 +133,20 @@ test("B-04e canonical shadow failure cannot alter legacy Evidence Judge authorit
     ["CANONICAL_EVIDENCE_SHADOW_READ_FAILED"],
   );
 });
+
+
+test("B-04 missing observation is not fabricated and requests evidence", () => {
+  const shadow = evaluateEvidenceJudgeCanonicalSufficiencyShadowV1(batch([]));
+
+  assert.equal(shadow.status, "NEEDS_EVIDENCE");
+  assert.deepEqual(shadow.counts, {
+    total: 0,
+    role_eligible: 0,
+    role_limited: 0,
+    role_ineligible: 0,
+    role_unknown: 0,
+  });
+  assert.deepEqual(shadow.reason_codes, ["NO_CANONICAL_EVIDENCE_QUALIFICATIONS"]);
+  assert.deepEqual(shadow.canonical_reason_codes, []);
+  assert.equal(shadow.authority_mode, "SHADOW_NON_AUTHORITATIVE");
+});
