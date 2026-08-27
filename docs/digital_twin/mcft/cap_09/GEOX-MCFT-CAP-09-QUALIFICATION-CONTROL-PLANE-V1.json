@@ -7,7 +7,8 @@
     "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
     "14653ba622bb12261a1ea79f3ea7e42be0b49f92",
     "8943c752a354cb916cc7f144681203aa9a19f70b",
-    "c3346768a44b16b127378cb690ada1d8cfec1049"
+    "c3346768a44b16b127378cb690ada1d8cfec1049",
+    "0e874b254c695b32fd94c7dc7034fd71b8aa3bc3"
   ],
   "stacked_predecessor_branch": "fix/mcft-cap09-v13-autonomous-forcing-foundation",
   "default_stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
@@ -186,6 +187,27 @@
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_SUPPLY_CADENCE_PROFILES_V1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts"
+      ]
+    },
+    "PHASE4_TWIN_RUNTIME_FOUNDATION": {
+      "kind": "IMPORT_CLOSURE",
+      "roots": [
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts"
+      ],
+      "additional_exact_paths": [
+        ".github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml",
+        "apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql",
+        "apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts",
+        "apps/server/src/infra/migrations.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1.ts",
+        "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts",
+        "apps/server/src/runtime/twin_runtime/postgres_twin_runtime_successor_viability_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1.ts"
       ]
     }
   },
@@ -462,6 +484,33 @@
       "carry_forward_policy": "NONE",
       "requalification_triggers": [
         "PHASE3_EVIDENCE_RUNTIME_FOUNDATION"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": null
+    },
+    {
+      "check_id": "PHASE4_TWIN_RUNTIME_FOUNDATION",
+      "owner": "MCFT_CAP09_PHASE4_TWIN_RUNTIME_QUALIFICATION",
+      "generation_scope": [
+        "PHASE4_TWIN_RUNTIME_FOUNDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts"
+      ],
+      "resolver_ids": [
+        "PHASE4_TWIN_RUNTIME_FOUNDATION"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "execution_workflow": ".github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
+      "fail_policy": "FAIL_CLOSED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "PHASE4_TWIN_RUNTIME_FOUNDATION"
       ],
       "applicable_stages": [
         "SUCCESSOR_SUBJECT_PRE_MERGE"

@@ -117,6 +117,7 @@ function main() {
     "PHASE1_TYPED_RUNTIME_COMPOSITION",
     "PHASE2_EVIDENCE_PROVIDER_MODULES",
     "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+    "PHASE4_TWIN_RUNTIME_FOUNDATION",
   ]) assert.equal(byId(controlOnly, id).status, "REQUIRED", `EXPANDED_DEPENDENCY_SET_REQUIRES_FRESH_PROOF:${id}`);
   for (const id of ["V13_PRODUCER_DRIVEN_QUALIFICATION", "END_TO_END_EVIDENCE_SUPPLY_DEADLINE", "EXACT_ONE_PRODUCTION_OWNER", "FORMAL_V5_ACTIVATION"]) {
     assert.equal(byId(controlOnly, id).status, "NOT_APPLICABLE", `PREMERGE_FUTURE_CHECK_MUST_BE_NA:${id}`);
@@ -160,6 +161,29 @@ function main() {
     assert.equal(byId(phase3Owned, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
     assert(byId(phase3Owned, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes(phase3Path));
   }
+
+  // CP-4: Phase4 Twin Runtime product roots and transitive canonical dependencies
+  // are governed by import closure and require fresh exact-head qualification.
+  for (const phase4Path of [
+    "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts",
+    "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts",
+  ]) {
+    const phase4 = plan(authority, registry, [phase4Path]);
+    assert.equal(phase4.status, "PASS");
+    assert.equal(phase4.unknown_changed_paths.length, 0);
+    assert.equal(byId(phase4, "PHASE4_TWIN_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert(byId(phase4, "PHASE4_TWIN_RUNTIME_FOUNDATION").changed_dependencies.includes(phase4Path));
+  }
+  const phase4Spec = authority.dependency_resolvers.PHASE4_TWIN_RUNTIME_FOUNDATION;
+  const phase4Explicit = new Set([...(phase4Spec.roots || []), ...(phase4Spec.additional_exact_paths || [])]);
+  const phase4Resolved = resolved.resolved.PHASE4_TWIN_RUNTIME_FOUNDATION.paths;
+  const phase4Transitive = phase4Resolved.find((candidate) => !phase4Explicit.has(candidate));
+  assert.ok(phase4Transitive, "PHASE4_TRANSITIVE_CANONICAL_DEPENDENCY_REQUIRED_FOR_SELFTEST");
+  const phase4TransitivePlan = plan(authority, registry, [phase4Transitive]);
+  assert.equal(phase4TransitivePlan.status, "PASS");
+  assert.equal(byId(phase4TransitivePlan, "PHASE4_TWIN_RUNTIME_FOUNDATION").status, "REQUALIFY");
+  assert(byId(phase4TransitivePlan, "PHASE4_TWIN_RUNTIME_FOUNDATION").changed_dependencies.includes(phase4Transitive));
 
   // CP-4: runtime root changes invalidate v13 carry-forward by dependency closure.
   const runtimePath = "apps/server/src/runtime/twin_runtime/external_formal_forcing_autonomous_controller_service_v1.ts";

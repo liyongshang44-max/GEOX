@@ -1,0 +1,270 @@
+name: mcft-cap-09-phase4-twin-runtime-persistence
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_twin_runtime_successor_viability_v1.ts'
+      - 'apps/server/src/infra/migrations.ts'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_persistent_tick_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_amendment19_evidence_source_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v3.ts'
+      - 'apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.ts'
+      - 'apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql'
+      - 'apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'apps/server/package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-phase4-twin-runtime-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  twin-runtime-host:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: phase4_twin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d phase4_twin"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/phase4_twin
+      GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/phase4_twin
+      GEOX_MIGRATION_DATABASE_URL: postgres://geox_mcft_migrator_v1:phase4-migrator@127.0.0.1:5432/phase4_twin
+      GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:phase4-runtime@127.0.0.1:5432/phase4_twin
+      GEOX_MCFT_MIGRATOR_PASSWORD: phase4-migrator
+      GEOX_RUNTIME_DATABASE_PASSWORD: phase4-runtime
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Extract frozen CAP04 PostgreSQL qualification support
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          source = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_DB.ts').read_text()
+          marker = 'async function deleteCap04GuardsV1()'
+          if marker not in source:
+              raise SystemExit('CAP04_SUPPORT_EXTRACTION_MARKER_MISSING')
+          support = source.split(marker, 1)[0]
+          replacements = {
+              'const pool = new Pool({ connectionString: databaseUrl });': 'export const pool = new Pool({ connectionString: databaseUrl });',
+              'function persistenceAdapterV1(': 'export function persistenceAdapterV1(',
+              'async function buildControlledAuthorityV1()': 'export async function buildControlledAuthorityV1()',
+              'async function seedControlledAuthorityV1(': 'export async function seedControlledAuthorityV1(',
+              'async function resetSchemaV1()': 'export async function resetSchemaV1()',
+          }
+          for old, new in replacements.items():
+              if old not in support:
+                  raise SystemExit(f'CAP04_SUPPORT_EXPORT_MARKER_MISSING:{old}')
+              support = support.replace(old, new, 1)
+          Path('scripts/runtime_acceptance/mcft_cap09_s5_canonical_integration_support_v1.ts').write_text(support)
+          PY
+
+      - name: Prove product and focused acceptance types
+        run: |
+          pnpm --filter @geox/server run typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts
+
+      - name: Transpile generated-support restart and successor qualifications
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const ts = require('typescript');
+          const files = [
+            'scripts/runtime_acceptance/mcft_cap09_s5_canonical_integration_support_v1.ts',
+            'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_RESTART_BACKFILL_STALE_DETECTION.ts',
+            'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1.ts',
+          ];
+          for (const file of files) {
+            const result = ts.transpileModule(fs.readFileSync(file, 'utf8'), {
+              fileName: file,
+              reportDiagnostics: true,
+              compilerOptions: {
+                target: ts.ScriptTarget.ES2022,
+                module: ts.ModuleKind.ESNext,
+                moduleResolution: ts.ModuleResolutionKind.Bundler,
+                esModuleInterop: true,
+              },
+            });
+            const errors = (result.diagnostics ?? []).filter(
+              diagnostic => diagnostic.category === ts.DiagnosticCategory.Error,
+            );
+            if (errors.length) {
+              for (const diagnostic of errors) {
+                console.error(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'));
+              }
+              throw new Error(`PHASE4_ACCEPTANCE_TRANSPILE_FAILED:${file}`);
+            }
+          }
+          console.log(JSON.stringify({ status: 'PASS', files }, null, 2));
+          NODE
+
+      - name: Prove long-running Twin Runtime host contract
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts
+
+      - name: Prove schema-before-ACL migration order
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1.ts
+
+      - name: Apply production PostgreSQL init chain
+        run: |
+          set -euo pipefail
+          for file in docker/postgres/init/*.sql; do
+            echo "applying ${file}"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
+          done
+
+      - name: Apply exact database-platform bootstrap and full migration inventory
+        run: >-
+          pnpm exec tsx -e "import('./apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts').then(m => m.runMcftCap07DatabasePlatformBootstrapFromEnvironmentV1())"
+
+      - name: Prove Twin Runtime database ACL separation
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1.ts
+
+      - name: Prove DB-clock Runtime cursor, fencing, restart and bounded catch-up
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts
+
+      - name: Create isolated successor-viability database
+        env:
+          PGPASSWORD: postgres
+        run: createdb -h 127.0.0.1 -U postgres mcft_cap09_phase4_successor_acceptance
+
+      - name: Prove read-only canonical successor viability
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_phase4_successor_acceptance
+          MCFT_CAP_04_SINGLE_TICK_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP_09_PHASE4_SUCCESSOR_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1.ts
+
+      - name: Prove canonical checkpoint restart and oldest-missed recovery
+        env:
+          PGPASSWORD: postgres
+          MCFT_CAP_09_S4_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: |
+          createdb -h 127.0.0.1 -U postgres phase4_restart
+          DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/phase4_restart \
+            pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_RESTART_BACKFILL_STALE_DETECTION.ts
+
+      - name: Prove Phase4 host and composition remain database-only
+        shell: python
+        run: |
+          import pathlib
+          import re
+
+          files = [
+              pathlib.Path("apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts"),
+              pathlib.Path("apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts"),
+              pathlib.Path("apps/server/src/runtime/twin_runtime/postgres_twin_runtime_successor_viability_v1.ts"),
+          ]
+          text = "\n".join(p.read_text(encoding="utf-8") for p in files)
+
+          forbidden_runtime_dependencies = [
+              "process.env",
+              "node:fs",
+              "node:http",
+              "node:https",
+              "node:child_process",
+              "scripts/runtime_acceptance",
+              "external_evidence_supply_cursor_v1",
+              "external_evidence_supply_event_v1",
+              "external_evidence_producer_lease_v1",
+              "twin_external_formal_forcing_base_",
+              "twin_external_formal_forcing_controller_",
+          ]
+          for marker in forbidden_runtime_dependencies:
+              if marker in text:
+                  raise SystemExit(f"PHASE4_TWIN_RUNTIME_FORBIDDEN_DEPENDENCY:{marker}")
+
+          imports = re.findall(r'from\s+["\']([^"\']+)["\']', text)
+          for spec in imports:
+              if "/external_evidence/" in spec or "/provider/" in spec:
+                  raise SystemExit(f"PHASE4_TWIN_RUNTIME_PROVIDER_IMPORT_FORBIDDEN:{spec}")
+
+          host = files[0].read_text(encoding="utf-8")
+          composition = files[1].read_text(encoding="utf-8")
+
+          if "SELECT transaction_timestamp() AS database_now" not in host:
+              raise SystemExit("PHASE4_DATABASE_CLOCK_BINDING_REQUIRED")
+          for sql_mutation in ["INSERT INTO", "UPDATE ", "DELETE FROM"]:
+              if sql_mutation in host:
+                  raise SystemExit(f"PHASE4_HOST_DIRECT_DB_MUTATION_FORBIDDEN:{sql_mutation}")
+
+          required_product_bindings = [
+              "PostgresPersistentSequentialSchedulerAdapterV1",
+              "PostgresExternalFormalAmendment19EvidenceSourceV1",
+              "PostgresNextTickRepositoryV1",
+              "PostgresRuntimeRepositoryV1",
+              "PostgresForecastScenarioRecoveryRepositoryV1",
+              "ExternalFormalV3Amendment19PersistentTickServiceV1",
+              "ExternalFormalV3Amendment19RunnerV1",
+              "PostgresTwinRuntimeSuccessorViabilityV1",
+              "TwinRuntimeHostV1",
+          ]
+          for marker in required_product_bindings:
+              if marker not in composition:
+                  raise SystemExit(f"PHASE4_PRODUCT_COMPOSITION_BINDING_MISSING:{marker}")
+
+          print("PHASE4_TWIN_RUNTIME_HOST_BOUNDARY_PASS")
+
+      - name: Upload Phase4 Twin Runtime host proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-phase4-twin-runtime-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_S4_POSTGRESQL_ACCEPTANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
