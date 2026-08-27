@@ -143,6 +143,16 @@ test("Apple-II raw-sample and device-health reads are project/scope and decision
   assert.equal(rawQuery.args.at(-1), now);
   assert.ok(!rawQuery.sql.includes("(payload_json ->> 'project_id') = 4"));
 
+  const lateShadowQuery = calls.find((call) => call.sql.includes("FROM raw_samples") && call.sql.includes("created_at >"));
+  assert.ok(lateShadowQuery);
+  assert.ok(lateShadowQuery.sql.includes("(payload_json ->> 'project_id') = $4"));
+  assert.ok(lateShadowQuery.sql.includes("(payload_json ->> 'group_id') = $5"));
+  assert.ok(lateShadowQuery.sql.includes("(payload_json ->> 'field_id') = $6"));
+  assert.ok(lateShadowQuery.sql.includes("sensor_id = $7"));
+  assert.ok(lateShadowQuery.sql.includes("created_at > to_timestamp($8 / 1000.0)"));
+  assert.equal(lateShadowQuery.args.length, 8);
+  assert.equal(lateShadowQuery.args.at(-1), now);
+
   const statusQuery = calls.find((call) => call.sql.includes("FROM device_status_index_v1"));
   assert.ok(statusQuery);
   assert.ok(statusQuery.sql.includes("project_id = $3"));
