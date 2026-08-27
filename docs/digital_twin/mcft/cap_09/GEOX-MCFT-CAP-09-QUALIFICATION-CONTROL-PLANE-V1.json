@@ -200,7 +200,9 @@
         "apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql",
         "apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts"
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts",
+        "apps/server/src/infra/migrations.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1.ts"
       ]
     }
   },
