@@ -898,7 +898,7 @@
         "kind": "RETURN_OBJECT_CHAIN",
         "caller_path": "apps/server/src/domain/judge/evidence_judge_v2.ts",
         "callee_path": "apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts",
-        "fingerprint": "evaluateEvidenceJudgeV2WithCanonicalShadow -> buildAppleIIEvidenceSufficiencyV1 -> canonical_evidence_qualification_projection_v1"
+        "fingerprint": "evaluateEvidenceJudgeV2WithCanonicalShadow -> buildCanonicalRawSampleEvidenceQualificationProjectionV1 -> canonical EvidenceQualificationV1 projection"
       },
       "status": "ROUTE_ONLY"
     }

@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { buildAppleIIEvidenceSufficiencyV1 } from "../sensing/appleii_evidence_sufficiency_v1.js";
+import { buildCanonicalRawSampleEvidenceQualificationProjectionV1 } from "../sensing/appleii_evidence_sufficiency_v1.js";
 import type { RawSampleEvidenceQualificationProjectionBatchV1 } from "../../evidence/raw_sample_evidence_qualification_projection_v1.js";
 import { STAGE1_FORMAL_EVIDENCE_ROLE_V1 } from "../../evidence/raw_sample_evidence_qualification_projection_v1.js";
 import { runDeviceFreshnessSkillV1 } from "./skills/device_freshness_skill_v1.js";
@@ -257,7 +257,7 @@ export async function evaluateEvidenceJudgeV2WithCanonicalShadow(
   } else {
     try {
       const nowTs = Number.isFinite(Number(input.now_ts_ms)) ? Number(input.now_ts_ms) : Date.now();
-      const evidence = await buildAppleIIEvidenceSufficiencyV1(pool, {
+      const canonicalProjection = await buildCanonicalRawSampleEvidenceQualificationProjectionV1(pool, {
         tenant_id: input.tenant_id,
         project_id: input.project_id,
         group_id: input.group_id,
@@ -265,9 +265,7 @@ export async function evaluateEvidenceJudgeV2WithCanonicalShadow(
         device_id: input.device_id ?? null,
         now_ms: nowTs,
       });
-      canonicalShadow = evaluateEvidenceJudgeCanonicalSufficiencyShadowV1(
-        evidence.canonical_evidence_qualification_projection_v1,
-      );
+      canonicalShadow = evaluateEvidenceJudgeCanonicalSufficiencyShadowV1(canonicalProjection);
     } catch {
       canonicalShadow = unavailableCanonicalSufficiencyShadowV1("CANONICAL_EVIDENCE_SHADOW_READ_FAILED");
     }

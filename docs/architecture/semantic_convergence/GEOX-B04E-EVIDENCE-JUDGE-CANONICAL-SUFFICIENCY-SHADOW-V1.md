@@ -30,12 +30,15 @@ B-04e adds a separate runtime shadow path that consumes persisted canonical `Evi
 
 ```text
 persisted raw_samples + post-COMMIT availability marker
-  -> Apple-II canonical EvidenceQualification projection
+  -> shared buildCanonicalRawSampleEvidenceQualificationProjectionV1
+  -> canonical EvidenceQualificationV1 projection
   -> evaluateEvidenceJudgeCanonicalSufficiencyShadowV1
   -> Evidence Judge output shadow
 ```
 
 The route uses `evaluateEvidenceJudgeV2WithCanonicalShadow(pool, body)`.
+
+The Judge path deliberately does not call the full Apple-II compatibility sufficiency builder. Canonical qualification is read through the shared persisted-evidence helper before Apple-II-only device-health/coverage compatibility logic, so a legacy device-status schema failure cannot erase otherwise available canonical qualification.
 
 The canonical shadow is persisted inside the existing Judge result `outputs`, but it is marked:
 
