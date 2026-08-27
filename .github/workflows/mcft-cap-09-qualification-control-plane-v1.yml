@@ -28,6 +28,25 @@ on:
       - 'apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.ts'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs'
       - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs'
+      - '.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_cycle_service_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_production_evidence_work_items_v1.ts'
+      - 'apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts'
+      - 'apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.ts'
+      - 'apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts'
+      - 'apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py'
+      - 'apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_CYCLE_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1.ts'
   merge_group:
     types: [checks_requested]
 
@@ -39,6 +58,7 @@ env:
   FROZEN_SUCCESSOR_SHA: '3bbf096ee5cb73e8e0e0251dc400733d6cab501f'
   CP5_CLOSURE_SHA: '14653ba622bb12261a1ea79f3ea7e42be0b49f92'
   PHASE1_CLOSURE_SHA: '8943c752a354cb916cc7f144681203aa9a19f70b'
+  PHASE2_CLOSURE_SHA: 'c3346768a44b16b127378cb690ada1d8cfec1049'
 
 concurrency:
   group: mcft-cap09-qualification-control-plane-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
@@ -63,7 +83,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             base='${{ github.event.pull_request.base.sha }}'
-            if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ]; then
+            if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ] && [ "$base" != "$PHASE2_CLOSURE_SHA" ]; then
               echo "MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:${base}" >&2
               exit 1
             fi
@@ -96,7 +116,7 @@ jobs:
           const assert = (condition, code, detail = null) => {
             if (!condition) failures.push({code, detail});
           };
-          const expectedPredecessors = [process.env.FROZEN_SUCCESSOR_SHA, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA];
+          const expectedPredecessors = [process.env.FROZEN_SUCCESSOR_SHA, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA, process.env.PHASE2_CLOSURE_SHA];
           const governedPredecessors = authority.governed_successor_predecessor_shas || [];
           assert(governedPredecessors.length === expectedPredecessors.length, 'GOVERNED_PREDECESSOR_CARDINALITY_MISMATCH', governedPredecessors);
           assert(new Set(governedPredecessors).size === governedPredecessors.length, 'GOVERNED_PREDECESSOR_DUPLICATE', governedPredecessors);
@@ -117,7 +137,7 @@ jobs:
           assert(registry.dependency_digest_strategy === DEPENDENCY_DIGEST_STRATEGY, 'DEPENDENCY_DIGEST_STRATEGY_MISMATCH', registry.dependency_digest_strategy);
           assert(registry.durable_anchors?.entries?.length === registry.entries.length, 'DURABLE_ANCHOR_CARDINALITY_MISMATCH', {anchors:registry.durable_anchors?.entries?.length, entries:registry.entries.length});
           const carryForwardIds = ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS'];
-          const requalificationIds = ['EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T','PHASE1_TYPED_RUNTIME_COMPOSITION','PHASE2_EVIDENCE_PROVIDER_MODULES'];
+          const requalificationIds = ['EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T','PHASE1_TYPED_RUNTIME_COMPOSITION','PHASE2_EVIDENCE_PROVIDER_MODULES','PHASE3_EVIDENCE_RUNTIME_FOUNDATION'];
           const v13ScopedIds = [...carryForwardIds, ...requalificationIds];
           for (const id of carryForwardIds) {
             const row = current.decisions.find(x => x.check_id === id);
