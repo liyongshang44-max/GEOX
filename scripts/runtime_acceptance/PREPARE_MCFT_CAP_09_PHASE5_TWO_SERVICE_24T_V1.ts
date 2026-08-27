@@ -24,21 +24,13 @@ import {
   materializeExternalFormalA18CropContextV3,
 } from "../../apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v3.js";
 import { ExternalFormalBootstrapPersistenceServiceV1 } from "../../apps/server/src/runtime/twin_runtime/external_formal_bootstrap_persistence_service_v1.js";
-import type {
-  ExternalFormalV3Am19WindowManifestV1,
-} from "../../apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.js";
+import type { ExternalFormalV3Am19WindowManifestV1 } from "../../apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.js";
 import type {
   CanonicalReplayEvidenceRecordV1,
   ReplayEvidenceSourcePortV1,
   TwinScopeKeyV1,
 } from "../../apps/server/src/runtime/twin_runtime/ports.js";
 
-const EVIDENCE_SOURCE = "mcft_cap09_external_formal_evidence_v1";
-const REQUIRED_TYPES = [
-  "soil_moisture_observation_v1",
-  "future_weather_assumption_v1",
-  "future_et0_assumption_v1",
-] as const;
 const CROP_AUTHORITY_PATH = path.resolve(
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json",
 );
@@ -66,12 +58,16 @@ function canonicalHour(value: string, code: string): string {
   return out;
 }
 
-function addHours(value: string, hours: number): string {
-  return new Date(Date.parse(value) + hours * 3_600_000).toISOString();
-}
-
 function addMinutes(value: string, minutes: number): string {
   return new Date(Date.parse(value) + minutes * 60_000).toISOString();
+}
+
+function loadJson(file: string): Record<string, unknown> {
+  const value = JSON.parse(fs.readFileSync(file, "utf8")) as unknown;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("PHASE5_PREPARE_JSON_OBJECT_REQUIRED:" + file);
+  }
+  return value as Record<string, unknown>;
 }
 
 function controlledBootstrapSoilV1(a0: string): CanonicalReplayEvidenceRecordV1 {
@@ -99,10 +95,7 @@ function controlledBootstrapSoilV1(a0: string): CanonicalReplayEvidenceRecordV1 
     epistemic_class: "OBSERVED",
     ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
     available_to_runtime_at: availableAt,
-    role_time: {
-      observed_at: observedAt,
-      ingested_at: availableAt,
-    },
+    role_time: { observed_at: observedAt, ingested_at: availableAt },
     quality: { status: "PASS" },
     source_payload: {
       source_version: "phase5-bootstrap-v1",
@@ -112,65 +105,12 @@ function controlledBootstrapSoilV1(a0: string): CanonicalReplayEvidenceRecordV1 
     canonical_payload: canonicalPayload,
     source_unit: "fraction",
     canonical_unit: "fraction",
-    conversion_rule: {
-      id: "VWC_FRACTION_IDENTITY_V1",
-      version: "1",
-    },
+    conversion_rule: { id: "VWC_FRACTION_IDENTITY_V1", version: "1" },
     limitations: [
       "ENGINEERING_BOOTSTRAP_FIXTURE_ONLY",
       "NOT_RUNTIME_EXTERNAL_EVIDENCE_AUTHORITY",
     ],
   };
-}
-
-function loadJson(file: string): Record<string, unknown> {
-  const value = JSON.parse(fs.readFileSync(file, "utf8")) as unknown;
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("PHASE5_PREPARE_JSON_OBJECT_REQUIRED:" + file);
-  }
-  return value as Record<string, unknown>;
-}
-
-function payloadFromRow(row: { record_json: unknown }): CanonicalReplayEvidenceRecordV1 {
-  const envelope = typeof row.record_json === "string"
-    ? JSON.parse(row.record_json)
-    : row.record_json;
-  if (!envelope || typeof envelope !== "object" || Array.isArray(envelope)) {
-    throw new Error("PHASE5_PREPARE_EVIDENCE_ENVELOPE_INVALID");
-  }
-  const payload = (envelope as { payload?: unknown }).payload;
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    throw new Error("PHASE5_PREPARE_EVIDENCE_PAYLOAD_INVALID");
-  }
-  return structuredClone(payload) as CanonicalReplayEvidenceRecordV1;
-}
-
-function exactScope(record: CanonicalReplayEvidenceRecordV1): void {
-  for (const key of [
-    "tenant_id",
-    "project_id",
-    "group_id",
-    "field_id",
-    "season_id",
-    "zone_id",
-  ] as const) {
-    if (record[key] !== MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1[key]) {
-      throw new Error("PHASE5_PREPARE_EVIDENCE_SCOPE_MISMATCH:" + key);
-    }
-  }
-}
-
-function eventTime(record: CanonicalReplayEvidenceRecordV1): string {
-  if (record.record_type === "soil_moisture_observation_v1") {
-    return canonicalIso(
-      String(record.role_time?.observed_at ?? ""),
-      "PHASE5_PREPARE_SOIL_OBSERVED_AT_INVALID",
-    );
-  }
-  return canonicalIso(
-    String(record.role_time?.issued_at ?? ""),
-    "PHASE5_PREPARE_GFS_ISSUED_AT_INVALID",
-  );
 }
 
 function materializationHash(
@@ -184,11 +124,12 @@ function materializationHash(
   });
 }
 
-class FrozenPhase5A0EvidenceSourceV1 implements ReplayEvidenceSourcePortV1 {
-  constructor(
-    private readonly records: readonly CanonicalReplayEvidenceRecordV1[],
-    private readonly a0: string,
-  ) {}
+class ControlledA0SourceV1 implements ReplayEvidenceSourcePortV1 {
+  private readonly record: CanonicalReplayEvidenceRecordV1;
+
+  constructor(private readonly a0: string) {
+    this.record = controlledBootstrapSoilV1(a0);
+  }
 
   async loadCandidateRecords(input: {
     scope: TwinScopeKeyV1;
@@ -209,15 +150,13 @@ class FrozenPhase5A0EvidenceSourceV1 implements ReplayEvidenceSourcePortV1 {
         throw new Error("PHASE5_PREPARE_A0_SOURCE_SCOPE_MISMATCH:" + key);
       }
     }
-    return this.records.map((record) => structuredClone(record));
+    return [structuredClone(this.record)];
   }
 }
 
 async function main(): Promise<void> {
-  const databaseUrl = requiredEnv("DATABASE_URL");
   const subject = requiredEnv("GEOX_DEPLOYMENT_SUBJECT_COMMIT");
   assert.match(subject, /^[0-9a-f]{40}$/);
-
   const a0 = canonicalHour(
     requiredEnv("GEOX_MCFT_CAP09_PHASE5_A0"),
     "PHASE5_PREPARE_A0_HOUR_REQUIRED",
@@ -229,7 +168,6 @@ async function main(): Promise<void> {
   if (Date.parse(createdAt) > Date.parse(a0)) {
     throw new Error("PHASE5_PREPARE_CREATED_AFTER_A0_FORBIDDEN");
   }
-
   const outputPath = path.resolve(
     requiredEnv("GEOX_MCFT_CAP09_PHASE5_MANIFEST_OUTPUT"),
   );
@@ -238,110 +176,27 @@ async function main(): Promise<void> {
       || "acceptance-output/MCFT_CAP_09_PHASE5_PREPARE_24T_RESULT.json",
   );
 
-  const pool = new Pool({ connectionString: databaseUrl, max: 4 });
+  const pool = new Pool({
+    connectionString: requiredEnv("DATABASE_URL"),
+    max: 4,
+  });
   try {
-    const scope = { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 };
-    const rows = (
-      await pool.query<{ record_json: unknown }>(
-        `SELECT record_json
-           FROM public.facts
-          WHERE source=$1
-            AND record_json#>>'{payload,tenant_id}'=$2
-            AND record_json#>>'{payload,project_id}'=$3
-            AND record_json#>>'{payload,group_id}'=$4
-            AND record_json#>>'{payload,field_id}'=$5
-            AND record_json#>>'{payload,season_id}'=$6
-            AND record_json#>>'{payload,zone_id}'=$7
-            AND record_json->>'type'=ANY($8::text[])
-          ORDER BY occurred_at ASC,fact_id ASC`,
-        [
-          EVIDENCE_SOURCE,
-          scope.tenant_id,
-          scope.project_id,
-          scope.group_id,
-          scope.field_id,
-          scope.season_id,
-          scope.zone_id,
-          [...REQUIRED_TYPES],
-        ],
-      )
-    ).rows;
-    const records = rows.map(payloadFromRow);
-    const byType = new Map(records.map((record) => [record.record_type, record]));
-    for (const type of REQUIRED_TYPES) {
-      if (!byType.has(type)) {
-        throw new Error("PHASE5_PREPARE_REQUIRED_EVIDENCE_MISSING:" + type);
-      }
-    }
-
-    const o00 = addHours(a0, 1);
-    const soil = byType.get("soil_moisture_observation_v1")!;
-    exactScope(soil);
-    const soilObserved = eventTime(soil);
-    const soilAvailable = canonicalIso(
-      soil.available_to_runtime_at,
-      "PHASE5_PREPARE_SOIL_AVAILABLE_AT_INVALID",
-    );
-    const soilIngested = canonicalIso(
-      String(soil.role_time?.ingested_at ?? ""),
-      "PHASE5_PREPARE_SOIL_INGESTED_AT_INVALID",
-    );
-    if (
-      Date.parse(soilObserved) > Date.parse(o00)
-      || Date.parse(soilAvailable) > Date.parse(o00)
-      || Date.parse(soilIngested) > Date.parse(o00)
-    ) {
-      throw new Error("PHASE5_PREPARE_SOIL_NOT_CAUSAL_O00");
-    }
-
-    for (const type of [
-      "future_weather_assumption_v1",
-      "future_et0_assumption_v1",
-    ] as const) {
-      const record = byType.get(type)!;
-      exactScope(record);
-      if (
-        record.epistemic_class !== "ASSUMED"
-        || record.role_time?.valid_from !== a0
-        || record.role_time?.valid_to !== addHours(a0, 72)
-      ) {
-        throw new Error("PHASE5_PREPARE_GFS_WINDOW_MISMATCH:" + type);
-      }
-      for (const value of [
-        record.role_time?.issued_at,
-        record.available_to_runtime_at,
-        record.role_time?.ingested_at,
-      ]) {
-        const causal = canonicalIso(
-          String(value ?? ""),
-          "PHASE5_PREPARE_GFS_CAUSAL_TIME_INVALID:" + type,
-        );
-        if (Date.parse(causal) > Date.parse(o00)) {
-          throw new Error("PHASE5_PREPARE_GFS_NOT_CAUSAL_O00:" + type);
-        }
-      }
-      const points = (record.canonical_payload as { points?: unknown })?.points;
-      if (!Array.isArray(points) || points.length !== 72) {
-        throw new Error("PHASE5_PREPARE_GFS_72_POINTS_REQUIRED:" + type);
-      }
-    }
-
-    const epoch = `mcft_cap09_phase5_two_service_${a0.replace(/[^0-9]/g, "")}_${subject.slice(0, 12)}`;
+    const epoch =
+      "mcft_cap09_phase5_two_service_"
+      + a0.replace(/[^0-9]/g, "")
+      + "_"
+      + subject.slice(0, 12);
     const bundle = buildExternalFormalPrewindowAuthorityBundleV3({
       epoch_id: epoch,
       bootstrap_logical_time: a0,
       created_at: createdAt,
       bootstrap_crop_stage_code: "MID",
-      hourly_crop_stage_codes: Array.from(
-        { length: 24 },
-        () => "MID" as const,
-      ),
+      hourly_crop_stage_codes: Array.from({ length: 24 }, () => "MID" as const),
       fresh_database_authority_ref: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3,
       fresh_database_authority_blob_sha: MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V3,
     });
     const cropAuthority = loadJson(CROP_AUTHORITY_PATH);
     const matrix = loadJson(MATRIX_PATH);
-
     const materializationPins = bundle.hourly_crop_pins.map((pin) => {
       const materialized = materializeExternalFormalA18CropContextV3({
         logical_time: pin.logical_time,
@@ -357,12 +212,14 @@ async function main(): Promise<void> {
       };
     });
 
+    const databaseName = String(
+      (await pool.query("SELECT current_database() AS n")).rows[0]?.n ?? "",
+    );
     const manifest = buildExternalFormalAmendment19WindowManifestV1({
       subject_sha: subject,
-      database_name: String(
-        (await pool.query("SELECT current_database() AS n")).rows[0]?.n ?? "",
-      ),
-      manifest_ref: `qualification://mcft-cap09/phase5/two-service/${epoch}`,
+      database_name: databaseName,
+      manifest_ref:
+        "qualification://mcft-cap09/phase5/two-service/" + epoch,
       bundle,
       crop_context_materialization_pins: materializationPins,
     });
@@ -373,22 +230,19 @@ async function main(): Promise<void> {
       runtime_config_repository: runtimeRepository,
       bootstrap_persistence: runtimeRepository,
       authority_snapshot_repository: new PostgresNextTickRepositoryV1(pool),
-      evidence_source: new FrozenPhase5A0EvidenceSourceV1(
-        [controlledBootstrapSoilV1(a0)],
-        a0,
-      ),
+      evidence_source: new ControlledA0SourceV1(a0),
     });
-    const bootstrapResult = await bootstrap.execute({
+    const result = await bootstrap.execute({
       bundle: bundle.persistence_bundle,
       created_at: a0,
       lease_owner: "phase5-two-service-bootstrap",
       lease_duration_seconds: 300,
     });
     if (
-      bootstrapResult.hourly_runtime_config_count !== 24
-      || bootstrapResult.provider_request_count !== 0
-      || bootstrapResult.scheduler_slot_write_count !== 0
-      || bootstrapResult.formal_window_started !== false
+      result.hourly_runtime_config_count !== 24
+      || result.provider_request_count !== 0
+      || result.scheduler_slot_write_count !== 0
+      || result.formal_window_started !== false
     ) {
       throw new Error("PHASE5_PREPARE_BOOTSTRAP_SIDE_EFFECT_BOUNDARY_DRIFT");
     }
@@ -404,21 +258,18 @@ async function main(): Promise<void> {
     );
 
     const proof = {
-      schema_version: "geox_mcft_cap09_phase5_two_service_prepare_24t_v1",
+      schema_version: "geox_mcft_cap09_phase5_two_service_prepare_24t_v2",
       status: "PASS",
       subject_sha: subject,
       a0,
       o00: bundle.o00_logical_time,
       o23: bundle.o23_logical_time,
-      evidence_source: EVIDENCE_SOURCE,
-      selected_evidence_record_count: records.length,
-      required_evidence_types: [...REQUIRED_TYPES],
-      runtime_evidence_real_governed_only: true,
+      bootstrap_evidence_kind: "CONTROLLED_A0_ONLY",
       engineering_bootstrap_fixture_count: 1,
-      engineering_runtime_evidence_fixture_count: 0,
-      hourly_runtime_config_count: bootstrapResult.hourly_runtime_config_count,
-      scheduler_slot_write_count: bootstrapResult.scheduler_slot_write_count,
-      formal_window_started: bootstrapResult.formal_window_started,
+      runtime_external_evidence_fixture_count: 0,
+      hourly_runtime_config_count: result.hourly_runtime_config_count,
+      scheduler_slot_write_count: result.scheduler_slot_write_count,
+      formal_window_started: result.formal_window_started,
       manifest_output: outputPath,
       provider_request_count: 0,
       production_activation: false,
