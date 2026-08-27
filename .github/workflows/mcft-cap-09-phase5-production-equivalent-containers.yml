@@ -17,7 +17,9 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1.ts'
       - 'apps/server/src/external_evidence/qualification/mcft_cap09_phase5_controlled_evidence_work_items_v1.ts'
+      - 'apps/server/src/external_evidence/qualification/mcft_cap09_phase5_evidence_runtime_qualification_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_CONTROLLED_PROVIDER_WORK_ITEMS_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_EVIDENCE_QUALIFICATION_ENTRYPOINT_V1.ts'
       - 'docker/runtime.Dockerfile'
       - 'docker/postgres/init/**'
       - 'apps/server/package.json'
@@ -84,10 +86,14 @@ jobs:
           pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_CONTROLLED_PROVIDER_WORK_ITEMS_V1.ts
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_CONTROLLED_PROVIDER_WORK_ITEMS_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_EVIDENCE_QUALIFICATION_ENTRYPOINT_V1.ts
 
       - name: Prove controlled Evidence provider work-item boundary
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_CONTROLLED_PROVIDER_WORK_ITEMS_V1.ts
+
+      - name: Prove Evidence qualification process entrypoint boundary
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_EVIDENCE_QUALIFICATION_ENTRYPOINT_V1.ts
 
       - name: Build exact server production package
         run: pnpm --filter @geox/server run build
@@ -110,11 +116,13 @@ jobs:
       - name: Prove isolated Evidence and Twin service principals
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1.ts
 
-      - name: Prove stable compiled Twin Runtime entrypoint
+      - name: Prove stable compiled Runtime entrypoints
         run: |
           test -f apps/server/dist/runtime/mcft_cap09_twin_runtime.js
           grep -Fq 'runMcftCap09TwinRuntimeProcessV1' apps/server/dist/runtime/mcft_cap09_twin_runtime.js
-          ! grep -Rq 'scripts/runtime_acceptance' apps/server/dist/runtime/mcft_cap09_twin_runtime.js
+          test -f apps/server/dist/qualification/mcft_cap09_phase5_evidence_runtime.js
+          grep -Fq 'runMcftCap09Phase5EvidenceRuntimeQualificationV1' apps/server/dist/qualification/mcft_cap09_phase5_evidence_runtime.js
+          ! grep -Rq 'scripts/runtime_acceptance' apps/server/dist/runtime/mcft_cap09_twin_runtime.js apps/server/dist/qualification/mcft_cap09_phase5_evidence_runtime.js
 
       - name: Prove Phase5 process source boundaries
         shell: python
@@ -169,5 +177,6 @@ jobs:
             acceptance-output/MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE5_CONTROLLED_PROVIDER_WORK_ITEMS_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE5_EVIDENCE_QUALIFICATION_ENTRYPOINT_V1_RESULT.json
           if-no-files-found: warn
           retention-days: 90
