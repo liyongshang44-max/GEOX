@@ -15,6 +15,7 @@ import {
 import {
   composeEvidenceRuntimeV1,
   type EvidenceRuntimeAcquisitionTargetPlannerV1,
+  type EvidenceRuntimeWorkItemFactoryV1,
 } from "./mcft_cap09_evidence_runtime_composition_v1.js";
 import type {
   EvidenceRuntimeScopeV1,
@@ -39,7 +40,7 @@ export const MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_CONTRACT_V1 = {
   database_principal: "geox_mcft_cap09_evidence_runtime_login_v1",
   raw_storage_authority: "EVIDENCE_RUNTIME_S3_CREDENTIALS_ONLY",
   target_selection_boundary: "EXPLICIT_INJECTED_TARGET_PLANNER",
-  qualification_provider_boundary: "EXPLICIT_WORK_ITEM_CONFIG_ONLY",
+  qualification_provider_boundary: "EXPLICIT_WORK_ITEM_FACTORY_INJECTION_WITH_PRODUCTION_DEFAULT",
   runtime_tick_cursor_authority: false,
   twin_state_authority: false,
   action_authority: false,
@@ -207,6 +208,7 @@ export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
   env?: EnvironmentV1;
   completion_clock?: () => string;
   work_item_config?: Omit<ProductionEvidenceWorkItemFactoryConfigV1, "retention">;
+  work_item_factory?: EvidenceRuntimeWorkItemFactoryV1;
 }): Promise<void> {
   const env = input.env ?? process.env;
   const config = readMcftCap09EvidenceRuntimeProcessConfigV1(env);
@@ -240,6 +242,7 @@ export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
       failure_classifier: new McftCap09ProductionEvidenceFailureClassifierV1(),
       completion_clock: input.completion_clock ?? (() => new Date().toISOString()),
       work_item_config: input.work_item_config,
+      work_item_factory: input.work_item_factory,
     });
 
     await composition.host.run({
