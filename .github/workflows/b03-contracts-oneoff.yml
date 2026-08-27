@@ -1,4 +1,4 @@
-name: b04d2r1-postgres-placeholder-correction-oneoff
+name: b04d3-canonical-evidence-qualification-shadow-oneoff
 on:
   push:
     branches:
@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 7306e9bad103b1284fbab0f6e280d47ec53fe6af
+          ref: 14a3b23d733ea3894933cd4f9656206d552abb23
           fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
@@ -23,7 +23,13 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - name: Server typecheck
         run: pnpm --filter @geox/server run typecheck
-      - name: B04d2r1 exact SQL placeholder + authority fixtures
+      - name: B04d3 canonical qualification projector fixtures
+        run: pnpm --filter @geox/server exec node --import tsx --test src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+      - name: B04d3 Apple-II shadow integration
+        run: pnpm --filter @geox/server exec node --import tsx --test src/domain/sensing/appleii_canonical_evidence_projection_v1.test.ts
+      - name: B04d3 Stage-1 shadow non-authority
+        run: pnpm --filter @geox/server exec node --import tsx --test src/domain/decision/stage1_canonical_evidence_shadow_visibility_v1.test.ts
+      - name: B04d2r1 exact SQL placeholder regression
         run: pnpm --filter @geox/server exec node --import tsx --test src/domain/sensing/raw_sample_authority_time_scope_v1.test.ts
       - name: B04d1 raw-sample guard fixtures
         run: pnpm --filter @geox/server exec node --import tsx --test src/evidence/raw_sample_stage1_physical_qc_v1.test.ts
@@ -54,5 +60,5 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
       - name: Marker
         run: |
-          echo "B04D2R1_EXACT_HEAD $(git rev-parse HEAD)"
-          echo "B04D2R1_POSTGRES_PLACEHOLDER_CORRECTION_PASS"
+          echo "B04D3_EXACT_HEAD $(git rev-parse HEAD)"
+          echo "B04D3_CANONICAL_EVIDENCE_QUALIFICATION_SHADOW_PASS"
