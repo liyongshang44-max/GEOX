@@ -214,7 +214,7 @@ jobs:
           const phase5 = current.decisions.find(x => x.check_id === 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS');
           assert(Boolean(phase5), 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_DECISION_REQUIRED', {check_id:'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS', missing:true});
           assert(phase5?.status === 'REQUALIFY' && phase5?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED', 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_MUST_REQUALIFY', phase5);
-          assert(phase5?.execution_workflow === '.github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml', 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_WORKFLOW_MISMATCH', phase5);
+          assert(phase5?.execution_workflow === '.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml', 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_WORKFLOW_MISMATCH', phase5);
           const future = planApplicability({
             authority, registry, changedPaths:[REGISTRY_PATH],
             stage:'SUCCESSOR_SUBJECT_PRE_MERGE', generation:'v14',
@@ -457,7 +457,7 @@ jobs:
           if (phase3.execution_workflow !== '.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml') throw new Error('PHASE3_EVIDENCE_RUNTIME_FOUNDATION_WORKFLOW_MISMATCH');
           const phase5 = plan.decisions.find(x => x.check_id === 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS');
           if (!phase5 || phase5.status !== 'REQUALIFY' || phase5.reason_code !== 'GOVERNED_DEPENDENCY_CHANGED' || !Array.isArray(phase5.changed_dependencies) || phase5.changed_dependencies.length === 0) throw new Error(`PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_MUST_REQUALIFY:${phase5?.status}:${phase5?.reason_code}`);
-          if (phase5.execution_workflow !== '.github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml') throw new Error('PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_WORKFLOW_MISMATCH');
+          if (phase5.execution_workflow !== '.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml') throw new Error('PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_WORKFLOW_MISMATCH');
           if (preflight.status !== 'PASS' || preflight.generation !== 'v13' || preflight.non_fail_fast !== true || preflight.counts.blocker_count !== 0) throw new Error('ALL_BLOCKERS_PREFLIGHT_NOT_PASS');
           for (const source of [proof, cp2, evidence, plan, preflight]) {
             const effects = source.non_effects || source;

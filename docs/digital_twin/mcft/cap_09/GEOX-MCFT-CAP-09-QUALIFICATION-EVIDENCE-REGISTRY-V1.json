@@ -539,6 +539,26 @@
         "artifact_absence_reason": "RUN_LEVEL_PHASE5_EXACT_HEAD_TWO_SERVICE_24T_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
         "immutable_binding_sha256": "0804d9ffbba8cde486089d8d93e9b08ad6ec943599b5408d4fa3caa11482420f"
+      },
+      {
+        "evidence_id": "LEGACY_AM19_PERSISTENT_24T_REQUAL_480C0746",
+        "check_id": "LEGACY_AM19_PERSISTENT_24T",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "legacy-am19-persistent-24t-production-hosting-symbol-compatibility",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "480c0746be7460ed68ebe1ee3ecd8425b10d3d0b",
+        "workflow_name": "mcft-cap-09-amendment19-persistent-24t-qualification",
+        "workflow_path": ".github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml",
+        "run_id": 33105254367,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "480c0746be7460ed68ebe1ee3ecd8425b10d3d0b",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:9dc1391be2a197d99e401db912007a844afcd94dc29040949d9dbdbe1cb9405a",
+        "artifact_absence_reason": "RUN_LEVEL_AM19_PRODUCTION_HOSTING_SYMBOL_COMPATIBILITY_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "5752161c69fab30f402c0813b4d1071decf5ceef60cb5354838074461d9df9f5"
       }
     ],
     "durable_anchors": {
@@ -725,6 +745,20 @@
             "base_sha": "16ff7160473c0a25dc059db6b2b6b7ba07f54dd1",
             "created_at": "2026-08-27T18:01:34Z",
             "updated_at": "2026-08-27T18:26:23Z"
+          }
+        },
+        {
+          "evidence_id": "LEGACY_AM19_PERSISTENT_24T_REQUAL_480C0746",
+          "run_id": 33105254367,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 316,
+            "workflow_path": ".github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml",
+            "workflow_name": "mcft-cap-09-amendment19-persistent-24t-qualification",
+            "head_sha": "480c0746be7460ed68ebe1ee3ecd8425b10d3d0b",
+            "base_sha": "16ff7160473c0a25dc059db6b2b6b7ba07f54dd1",
+            "created_at": "2026-08-27T18:47:49Z",
+            "updated_at": "2026-08-27T18:48:31Z"
           }
         }
       ],
