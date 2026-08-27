@@ -84,6 +84,29 @@ jobs:
             echo "GEOX_PHASE5_CONTROL_ROOT=$control_root"
           } >> "$GITHUB_ENV"
 
+      - name: Require central exact-path ownership
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs \
+            --base '${{ github.event.pull_request.base.sha }}' \
+            --head "$GEOX_DEPLOYMENT_SUBJECT_COMMIT" \
+            --generation v13 \
+            --stage SUCCESSOR_SUBJECT_PRE_MERGE \
+            --out "$GEOX_PHASE5_CONTROL_ROOT/applicability-plan.json"
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync(process.env.GEOX_PHASE5_CONTROL_ROOT+'/applicability-plan.json','utf8'));
+          if(p.status!=='PASS'||p.unknown_changed_paths.length||p.authority_errors.length||p.resolver_errors.length){
+            throw new Error('PHASE5_24T_CENTRAL_PLAN_NOT_PASS:'+JSON.stringify({
+              status:p.status,unknown:p.unknown_changed_paths,authority:p.authority_errors,resolver:p.resolver_errors
+            }));
+          }
+          const row=p.decisions.find(x=>x.check_id==='PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS');
+          if(!row||row.status!=='REQUALIFY') throw new Error('PHASE5_24T_REQUALIFY_ROUTE_REQUIRED');
+          NODE
+
       - name: Build exact scientific Runtime image
         shell: bash
         run: |
@@ -153,8 +176,10 @@ jobs:
           docker compose -f "$COMPOSE_FILE" --profile qualification-orchestration             run --rm --no-deps qualification-prepare             2>&1 | tee "$GEOX_PHASE5_CONTROL_ROOT/prepare.log"
           test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/prepare-proof.json")" = "PASS"
           test "$(jq -r .engineering_bootstrap_fixture_count "$GEOX_PHASE5_CONTROL_ROOT/prepare-proof.json")" = "0"
-          test "$(jq -r .bootstrap_lease_released_before_twin_start "$GEOX_PHASE5_CONTROL_ROOT/prepare-proof.json")" = "true"
+          test "$(jq -r .bootstrap_lease_release_mode "$GEOX_PHASE5_CONTROL_ROOT/prepare-proof.json")" = "NATURAL_TTL_EXPIRY"
+          test "$(jq -r .bootstrap_lease_duration_seconds "$GEOX_PHASE5_CONTROL_ROOT/prepare-proof.json")" = "1"
           test "$(jq -r .subject_sha "$GEOX_PHASE5_CONTROL_ROOT/prepare-proof.json")" = "$GEOX_DEPLOYMENT_SUBJECT_COMMIT"
+          sleep 2
 
       - name: Run O00-O07 then graceful Twin container stop
         shell: bash
