@@ -255,7 +255,7 @@ record = { // Telemetry record.
         const k = `drop_unregistered_device|${msgKeyBase}`; // Dedupe key.
         if (!seenRecently(k, 2000)) { // Avoid duplicate logs from QoS redelivery.
           // eslint-disable-next-line no-console
-          console.warn("[telemetry-ingest] drop_unregistered_device", { tenant_id: parsed.tenant_id, device_id }); // Log drop.
+          console.warn("[telemetry-ingest] drop_unregistered_device", { tenant_id: parsed.tenant_id, device_id: parsed.device_id }); // Log drop.
         } // End dedupe branch.
         return; // Stop processing.
       } // End registration gate.
@@ -322,13 +322,7 @@ record = { // Telemetry record.
       );
     }
 
-    await updateAgronomySnapshot(clientConn, {
-      field_id: field_id ?? null,
-      metric: metricNorm.metric,
-      value: valueNumForObservation,
-      ts_ms: p.ts_ms,
-      source: parsed.kind === "telemetry" ? "mqtt" : "heartbeat",
-    }); // Refresh agronomy signal snapshot for downstream recommendations.
+    await updateAgronomySnapshot(clientConn, parsed.tenant_id, parsed.device_id); // Refresh agronomy signal snapshot from canonical telemetry projection.
 
     await clientConn.query("COMMIT"); // Commit all writes.
     if (once) {
