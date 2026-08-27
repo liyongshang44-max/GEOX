@@ -604,7 +604,8 @@
         "No B-05a production runtime is authorized to instantiate QualifiedCropStageStateV1; future producer registration is required before runtime use.",
         "B-05c registers one capability-island QualifiedCropStageStateV1 compatibility adapter; this is not canonical stage authority and has no runtime consumer.",
         "Negative DAP, invalid/future start date, unsupported crop and resolver unknown are represented as canonical UNKNOWN rather than normalized into a concrete legacy stage.",
-        "Historical stage authority is not removed in B-05; authority removal remains gated by B-09 shadow-compare discipline."
+        "Historical stage authority is not removed in B-05; authority removal remains gated by B-09 shadow-compare discipline.",
+        "B-05c adapter is registered under both the crop-stage touchpoint guard and QualifiedCropStage instantiation guard."
       ],
       "runtime_consumers": []
     },
@@ -1847,7 +1848,8 @@
         "apps/server/src/domain/agronomy/rule_engine.ts",
         "apps/server/src/routes/decision_engine_v1.ts",
         "apps/server/src/projections/field_program_state_v1.ts",
-        "apps/server/src/routes/operation_state_v1.ts"
+        "apps/server/src/routes/operation_state_v1.ts",
+        "apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.ts"
       ],
       "failure": "UNREGISTERED_CROP_STAGE_TOUCHPOINT"
     },
