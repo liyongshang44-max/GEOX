@@ -18,6 +18,7 @@ on:
       - 'apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_visibility_supply_cursor_v1.ts'
       - 'apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts'
+      - 'apps/server/src/persistence/external_evidence/postgres_evidence_runtime_governed_ingress_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_CYCLE_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts'
@@ -136,6 +137,7 @@ jobs:
               pathlib.Path("apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts"),
               pathlib.Path("apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.ts"),
               pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts"),
+              pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_runtime_governed_ingress_v1.ts"),
           ]
           decoder_file = pathlib.Path("apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts")
           core_text = "\n".join(p.read_text(encoding="utf-8") for p in core_files)
