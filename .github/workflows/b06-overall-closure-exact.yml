@@ -1,0 +1,264 @@
+name: b06-overall-closure-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b06-overall-closure-exact-2026-08-28
+
+jobs:
+  exact-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build runtime workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-06 canonical contract and adapter regression
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_decision_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_plan_candidate_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/prescription_action_spec_candidate_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/operation_plan_authority_candidate_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/agronomy_recommendation_v2_candidate_adapter_v1.contract.test.ts
+
+      - name: B-06 registry closure invariants
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const graph=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json","utf8"));
+
+          const sem=(id)=>{
+            const s=(reg.semantics||[]).find(x=>x.semantic_id===id);
+            if(!s) throw new Error("B06_CLOSURE_SEMANTIC_MISSING:"+id);
+            return s;
+          };
+
+          const calc=sem("decision.calculation");
+          const cand=sem("decision.candidate");
+          const elig=sem("decision.eligibility");
+          const plan=sem("operation.plan");
+          const approval=sem("decision.approval");
+          const execution=sem("execution.task_receipt_acceptance");
+
+          if(calc.target_phase!=="B-06") throw new Error("B06_CALC_TARGET_PHASE_DRIFT");
+          if(cand.target_phase!=="B-06") throw new Error("B06_CAND_TARGET_PHASE_DRIFT");
+          if(cand.current_state!=="DUPLICATE_AUTHORITY") throw new Error("B06_CAND_HISTORICAL_DUPLICATES_PREMATURELY_REMOVED");
+          if(elig.target_phase!=="B-07" || elig.current_state!=="NOT_YET_UNIFIED") throw new Error("B06_B07_BOUNDARY_VIOLATED");
+          if(approval.target_phase!=="KEEP" || approval.current_state!=="BOUNDARY_CLEAR") throw new Error("B06_APPROVAL_BOUNDARY_DRIFT");
+          if(execution.target_phase!=="KEEP" || execution.current_state!=="BOUNDARY_CLEAR") throw new Error("B06_EXECUTION_BOUNDARY_DRIFT");
+          if(plan.current_state!=="MULTIPLE_FORMATION_PATHS") throw new Error("B06_OPERATION_PLAN_HISTORY_PREMATURELY_COLLAPSED");
+
+          const calcAdapterId="irrigation-calculation-result-compatibility-adapter";
+          const candidateAdapterIds=[
+            "legacy-recommendation-candidate-compatibility-adapter",
+            "decision-plan-candidate-compatibility-adapter",
+            "prescription-action-spec-candidate-compatibility-adapter",
+            "operation-plan-authority-classifier-candidate-compatibility-adapter",
+            "agronomy-recommendation-v2-candidate-compatibility-adapter"
+          ];
+
+          const calcAdapter=(calc.registered_producers||[]).find(p=>p.producer_id===calcAdapterId);
+          if(!calcAdapter) throw new Error("B06_CALC_ADAPTER_MISSING");
+          const candAdapters=candidateAdapterIds.map(id=>{
+            const p=(cand.registered_producers||[]).find(x=>x.producer_id===id);
+            if(!p) throw new Error("B06_CAND_ADAPTER_MISSING:"+id);
+            return p;
+          });
+
+          for(const p of [calcAdapter,...candAdapters]){
+            if(p.grandfathered_duplicate) throw new Error("B06_ADAPTER_MISCLASSIFIED_GRANDFATHERED:"+p.producer_id);
+            if(p.removal_target!==null) throw new Error("B06_ADAPTER_REMOVAL_TARGET_INVALID:"+p.producer_id);
+            if(p.connection_class!=="REGISTERED_CAPABILITY_ISLAND") throw new Error("B06_ADAPTER_NOT_CAPABILITY_ISLAND:"+p.producer_id);
+            if(p.activation!=="MANUAL") throw new Error("B06_ADAPTER_ACTIVATION_NOT_MANUAL:"+p.producer_id);
+            if(p.runtime_edge!=="INTENTIONAL_NONE") throw new Error("B06_ADAPTER_RUNTIME_EDGE_NOT_NONE:"+p.producer_id);
+            if(p.new_runtime_consumer_creation!=="FORBIDDEN") throw new Error("B06_ADAPTER_RUNTIME_CONSUMER_CREATION_NOT_FORBIDDEN:"+p.producer_id);
+          }
+
+          const requiredLegacyCandidateFamilies=[
+            "agronomy-agent-recommendation",
+            "decision-engine-recommendation",
+            "rule-engine-recommendation",
+            "legacy-operator-scenario-recommendation-writer"
+          ];
+          for(const id of requiredLegacyCandidateFamilies){
+            const p=(cand.registered_producers||[]).find(x=>x.producer_id===id);
+            if(!p || !p.current) throw new Error("B06_LEGACY_CANDIDATE_FAMILY_MISSING:"+id);
+            if(!p.grandfathered_duplicate || p.removal_target!=="B-09") throw new Error("B06_LEGACY_CANDIDATE_REMOVAL_BOUNDARY_INVALID:"+id);
+          }
+
+          const decisionPlan=(cand.registered_producers||[]).find(x=>x.producer_id==="decision-plan-contract");
+          if(!decisionPlan || decisionPlan.authority_level!=="COMPATIBILITY_REFERENCE") throw new Error("B06_DECISION_PLAN_REFERENCE_MISSING");
+
+          const calcGuard=(reg.static_guards||[]).find(x=>x.guard_id==="G-B02-14-calculation-result-instantiation");
+          const candGuard=(reg.static_guards||[]).find(x=>x.guard_id==="G-B02-15-candidate-decision-instantiation");
+          if(!calcGuard||!candGuard) throw new Error("B06_CANONICAL_GUARD_MISSING");
+
+          const expectedCalc=["apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.ts"];
+          const expectedCand=[
+            "apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.ts",
+            "apps/server/src/domain/decision/decision_plan_candidate_adapter_v1.ts",
+            "apps/server/src/domain/decision/prescription_action_spec_candidate_adapter_v1.ts",
+            "apps/server/src/domain/decision/operation_plan_authority_candidate_adapter_v1.ts",
+            "apps/server/src/domain/decision/agronomy_recommendation_v2_candidate_adapter_v1.ts"
+          ];
+          const same=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
+          if(!same(calcGuard.registered_paths||[],expectedCalc)) throw new Error("B06_CALC_GUARD_SET_INVALID:"+JSON.stringify(calcGuard.registered_paths));
+          if(!same(candGuard.registered_paths||[],expectedCand)) throw new Error("B06_CAND_GUARD_SET_INVALID:"+JSON.stringify(candGuard.registered_paths));
+
+          const badGrandfathered=[];
+          for(const s of reg.semantics||[]){
+            for(const p of s.registered_producers||[]){
+              if(p.grandfathered_duplicate===true && p.removal_target!=="B-09"){
+                badGrandfathered.push({semantic_id:s.semantic_id,producer_id:p.producer_id,removal_target:p.removal_target});
+              }
+            }
+          }
+          if(badGrandfathered.length) throw new Error("B06_NON_B09_GRANDFATHERED_REMOVAL:"+JSON.stringify(badGrandfathered));
+
+          const badParallel=(graph.current_parallel_edges||[]).filter(e=>e.removal_target!=="B-09");
+          if(badParallel.length) throw new Error("B06_NON_B09_PARALLEL_REMOVAL:"+JSON.stringify(badParallel));
+
+          console.log("B06_REGISTRY_CLOSURE_INVARIANTS_PASS");
+          console.log(JSON.stringify({
+            candidate_adapters:candidateAdapterIds.length,
+            calculation_adapters:1,
+            grandfathered_producers:(reg.semantics||[]).flatMap(s=>(s.registered_producers||[]).filter(p=>p.grandfathered_duplicate===true)).length,
+            parallel_edges:(graph.current_parallel_edges||[]).length,
+            eligibility_state:elig.current_state
+          }));
+          NODE
+
+      - name: B-06 adapters have no production runtime consumers
+        shell: bash
+        run: |
+          declare -A SYMBOLS
+          SYMBOLS["apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.ts"]="projectIrrigationRequirementCalculationResultV1 projectIrrigationDeficitCalculationResultV1"
+          SYMBOLS["apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.ts"]="projectLegacyRecommendationCandidateV1"
+          SYMBOLS["apps/server/src/domain/decision/decision_plan_candidate_adapter_v1.ts"]="projectDecisionPlanCandidateV1"
+          SYMBOLS["apps/server/src/domain/decision/prescription_action_spec_candidate_adapter_v1.ts"]="projectPrescriptionActionSpecCandidateV1"
+          SYMBOLS["apps/server/src/domain/decision/operation_plan_authority_candidate_adapter_v1.ts"]="classifyOperationPlanAuthorityV1 projectLegacyOperationPlanProposalCandidateV1"
+          SYMBOLS["apps/server/src/domain/decision/agronomy_recommendation_v2_candidate_adapter_v1.ts"]="projectAgronomyRecommendationV2CandidateV1"
+
+          for A in "${!SYMBOLS[@]}"; do
+            for S in ${SYMBOLS[$A]}; do
+              HITS="$(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n "$S" apps/server/src | grep -v "^$A:" || true)"
+              if [ -n "$HITS" ]; then
+                echo "$HITS"
+                echo "B06_UNEXPECTED_ADAPTER_RUNTIME_CONSUMER:$S"
+                exit 1
+              fi
+            done
+          done
+          echo "B06_NO_ADAPTER_RUNTIME_CONSUMERS_PASS"
+
+      - name: B-06 negative governance remains closed
+        shell: bash
+        run: |
+          CP="apps/server/src/.b06_closure_candidate_probe.ts"
+          KP="apps/server/src/.b06_closure_calc_probe.ts"
+
+          printf '%s\n' 'candidateDecisionV1Schema.parse(' > "$CP"
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs > /tmp/b06-candidate-negative.log 2>&1
+          CAND_RC=$?
+          set -e
+          rm -f "$CP"
+          cat /tmp/b06-candidate-negative.log
+          if [ "$CAND_RC" -eq 0 ]; then
+            echo "B06_SIXTH_CANDIDATE_PRODUCER_NOT_REJECTED"
+            exit 1
+          fi
+          grep -q "UNREGISTERED_CANDIDATE_DECISION_PRODUCER" /tmp/b06-candidate-negative.log
+
+          printf '%s\n' 'calculationResultV1Schema.parse(' > "$KP"
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs > /tmp/b06-calc-negative.log 2>&1
+          CALC_RC=$?
+          set -e
+          rm -f "$KP"
+          cat /tmp/b06-calc-negative.log
+          if [ "$CALC_RC" -eq 0 ]; then
+            echo "B06_SECOND_CALCULATION_RESULT_PRODUCER_NOT_REJECTED"
+            exit 1
+          fi
+          grep -q "UNREGISTERED_CALCULATION_RESULT_PRODUCER" /tmp/b06-calc-negative.log
+
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+          echo "B06_NEGATIVE_GOVERNANCE_PASS"
+
+      - name: B-06 source-family coverage proof
+        shell: bash
+        run: |
+          test -f apps/server/src/domain/agronomy/rule_engine.ts
+          grep -q "AgronomyRecommendationV2" apps/server/src/domain/agronomy/rule_engine.ts
+          grep -q "recommendation_v1" apps/server/src/jobs/agronomy_agent.ts
+          grep -q "decision_recommendation_v1" apps/server/src/jobs/agronomy_agent.ts
+          grep -q "decision_recommendation_v1" apps/server/src/routes/v1/operator_twin.ts
+          test -f docs/controlplane/GEOX-CP-Decision-Plan-Contract-v0.md
+          grep -q "decision_plan_v0" docs/controlplane/GEOX-CP-Decision-Plan-Contract-v0.md
+          test -f packages/contracts/src/prescription/prescription_contract_v1.ts
+          grep -q "PrescriptionContractV1" packages/contracts/src/prescription/prescription_contract_v1.ts
+          grep -q "operation_plan_v1" apps/server/src/jobs/agronomy_agent.ts
+
+          test -f apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.ts
+          test -f apps/server/src/domain/decision/decision_plan_candidate_adapter_v1.ts
+          test -f apps/server/src/domain/decision/prescription_action_spec_candidate_adapter_v1.ts
+          test -f apps/server/src/domain/decision/operation_plan_authority_candidate_adapter_v1.ts
+          test -f apps/server/src/domain/decision/agronomy_recommendation_v2_candidate_adapter_v1.ts
+          echo "B06_SOURCE_FAMILY_COVERAGE_PASS"
+
+      - name: B-06 exact stack ancestry
+        shell: bash
+        run: |
+          git merge-base --is-ancestor a2f6d64663492ce964bc6ca7d687f17dc51eae99 1e057c25ca38ba6a8658b859bd93d2bb06ef88e7
+          git merge-base --is-ancestor 26541ca05a3ba4b3b463fa6e940912d2b76f2cba 1e057c25ca38ba6a8658b859bd93d2bb06ef88e7
+          git merge-base --is-ancestor cae164a925c02a5a1d675648eb784085a4b28c11 1e057c25ca38ba6a8658b859bd93d2bb06ef88e7
+          git merge-base --is-ancestor a1c625a9627215f32dd6906ce0c02023bc14c0bb 1e057c25ca38ba6a8658b859bd93d2bb06ef88e7
+          git merge-base --is-ancestor 10430d387d144c72ae68cb101c31e1f3f58d358d 1e057c25ca38ba6a8658b859bd93d2bb06ef88e7
+          git merge-base --is-ancestor 31f23e507b7310456b619dc9f86b8371edcc26ed 1e057c25ca38ba6a8658b859bd93d2bb06ef88e7
+          test "$(git rev-parse 1e057c25ca38ba6a8658b859bd93d2bb06ef88e7^)" = "31f23e507b7310456b619dc9f86b8371edcc26ed"
+          echo "B06_STACK_ANCESTRY_PASS"
+
+      - name: B-05/B-03/B-04 regression boundary
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+          node --import tsx --test apps/server/src/context/field_program_context_projection_v1.test.ts
+          node --import tsx --test apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.test.ts
+          node --import tsx --test apps/server/src/context/crop_skill_stage_compatibility_adapter_v1.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+          node --import tsx --test apps/server/src/domain/judge/evidence_judge_canonical_sufficiency_shadow_v1.test.ts
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Marker
+        run: |
+          echo "B06_OVERALL_PRODUCT_HEAD 1e057c25ca38ba6a8658b859bd93d2bb06ef88e7"
+          echo "B06_OVERALL_CLOSURE_PASS"
