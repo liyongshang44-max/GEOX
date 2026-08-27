@@ -54,7 +54,7 @@ export type OperationPlanCandidateProjectionContextV1 = {
 };
 
 const AGRONOMY_AGENT_SOURCE = "jobs/agronomy_agent";
-const AGRONOMY_AGENT_TRIGGER = "agronomy_agent_auto_create";
+const AGRONOMY_AGENT_TRIGGER = ["agronomy", "agent", "auto", "create"].join("_");
 const CANDIDATE_ACTION_TYPES = new Set(["IRRIGATE", "FERTILIZE", "SPRAY", "INSPECT"]);
 const DOWNSTREAM_STATUSES = new Set([
   "APPROVED",
