@@ -1,0 +1,98 @@
+name: b05b-r1-register-key-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b05b-r1-register-key-exact-2026-08-27
+
+jobs:
+  exact-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Build runtime workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+      - name: Canonical B-02 governance passes
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+      - name: Projector is truly registered under registered_producers
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const p = "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json";
+          const reg = JSON.parse(fs.readFileSync(p, "utf8"));
+          const semantic = reg.semantics.find((x) => x.semantic_id === "context.declared_identity");
+          if (!semantic) throw new Error("MISSING_DECLARED_CONTEXT_SEMANTIC");
+          if (Object.prototype.hasOwnProperty.call(semantic, "producers")) throw new Error("STRAY_PRODUCERS_KEY_PRESENT");
+          const producer = (semantic.registered_producers || []).find((x) => x.producer_id === "field-program-context-compatibility-projector");
+          if (!producer) throw new Error("B05B_PROJECTOR_NOT_REGISTERED");
+          if (producer.path !== "apps/server/src/context/field_program_context_projection_v1.ts") throw new Error("B05B_PROJECTOR_PATH_MISMATCH");
+          console.log("B05B_R1_REGISTERED_PRODUCER_PASS");
+          NODE
+      - name: Linter rejects injected noncanonical producers key
+        shell: bash
+        run: |
+          REG="docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json"
+          cp "$REG" "$REG.bak"
+          node <<'NODE'
+          const fs = require("fs");
+          const p = "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json";
+          const reg = JSON.parse(fs.readFileSync(p, "utf8"));
+          const semantic = reg.semantics.find((x) => x.semantic_id === "context.declared_identity");
+          semantic.producers = [];
+          fs.writeFileSync(p, JSON.stringify(reg, null, 2) + "\n");
+          NODE
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs > /tmp/b05b-r1-negative.log 2>&1
+          RC=$?
+          set -e
+          cat /tmp/b05b-r1-negative.log
+          mv "$REG.bak" "$REG"
+          if [ "$RC" -eq 0 ]; then
+            echo "B05B_R1_LINTER_FAILED_TO_REJECT_STRAY_KEY"
+            exit 1
+          fi
+          grep -q "NONCANONICAL_PRODUCERS_KEY:context.declared_identity" /tmp/b05b-r1-negative.log
+          echo "B05B_R1_NEGATIVE_GOVERNANCE_PASS"
+      - name: Restored B-02 governance passes
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+      - name: B-05a/B-05b fixtures
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+          node --import tsx --test apps/server/src/context/field_program_context_projection_v1.test.ts
+      - name: B-05b capability-island audit
+        shell: bash
+        run: |
+          mapfile -t FILES < <(
+            grep -R -l --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts'               'projectFieldProgramDeclaredContextV1' apps/server/src || true
+          )
+          if [ "${#FILES[@]}" -ne 1 ] || [ "${FILES[0]}" != "apps/server/src/context/field_program_context_projection_v1.ts" ]; then
+            printf '%s\n' "${FILES[@]}"
+            echo "B05B_R1_UNEXPECTED_RUNTIME_CONSUMER"
+            exit 1
+          fi
+          echo "B05B_R1_CAPABILITY_ISLAND_PASS"
+      - name: B-03/B-04 regression boundary
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+      - name: Server build
+        run: pnpm --filter @geox/server build
+      - name: Marker
+        run: |
+          echo "B05B_R1_EXACT_HEAD 476eedd8b881077dd12dbb17f8dd278c269ddd93"
+          echo "B05B_R1_REGISTER_KEY_CORRECTION_PASS"
