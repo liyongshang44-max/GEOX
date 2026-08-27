@@ -62,6 +62,16 @@ runDatabasePlatformBootstrapV1().catch((error) => {
 `,
   },
   {
+    name: path.join("database", "mcft_cap09_phase5_service_principals.js"),
+    content: `import { runMcftCap09Phase5ServicePrincipalBootstrapFromEnvironmentV1 } from "../apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.js";
+
+runMcftCap09Phase5ServicePrincipalBootstrapFromEnvironmentV1().catch((error) => {
+  console.error(\`FATAL: MCFT-CAP-09 Phase5 service-principal bootstrap failed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+  process.exit(1);
+});
+`,
+  },
+  {
     name: path.join("database", "mcft_cap07_migration.js"),
     content: `import { runMcftCap07StartupMigrationFromEnvironmentV1 } from "../apps/server/src/infra/mcft_cap07_startup_migration_runner_v1.js";
 
