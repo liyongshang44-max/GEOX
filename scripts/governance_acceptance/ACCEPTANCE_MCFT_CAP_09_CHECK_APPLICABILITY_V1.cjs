@@ -118,6 +118,7 @@ function main() {
     "PHASE2_EVIDENCE_PROVIDER_MODULES",
     "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
     "PHASE4_TWIN_RUNTIME_FOUNDATION",
+    "PHASE5_TWO_SERVICE_ACCELERATED_24T",
   ]) assert.equal(byId(controlOnly, id).status, "REQUIRED", `EXPANDED_DEPENDENCY_SET_REQUIRES_FRESH_PROOF:${id}`);
   for (const id of ["V13_PRODUCER_DRIVEN_QUALIFICATION", "END_TO_END_EVIDENCE_SUPPLY_DEADLINE", "EXACT_ONE_PRODUCTION_OWNER", "FORMAL_V5_ACTIVATION"]) {
     assert.equal(byId(controlOnly, id).status, "NOT_APPLICABLE", `PREMERGE_FUTURE_CHECK_MUST_BE_NA:${id}`);
@@ -184,6 +185,30 @@ function main() {
   assert.equal(phase4TransitivePlan.status, "PASS");
   assert.equal(byId(phase4TransitivePlan, "PHASE4_TWIN_RUNTIME_FOUNDATION").status, "REQUALIFY");
   assert(byId(phase4TransitivePlan, "PHASE4_TWIN_RUNTIME_FOUNDATION").changed_dependencies.includes(phase4Transitive));
+
+  // CP-4: Phase5 hosting/service-identity foundation is centrally governed now,
+  // before the later two-service entrypoints/qualification Compose extend this resolver.
+  for (const phase5Path of [
+    "apps/server/src/hosting/mcft_cap09_phase5_service_lifecycle_v1.ts",
+    "apps/server/src/infra/mcft_cap09_phase5_service_identity_bootstrap_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_IDENTITIES_V1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_LIFECYCLE_V1.ts",
+  ]) {
+    const phase5 = plan(authority, registry, [phase5Path]);
+    assert.equal(phase5.status, "PASS");
+    assert.equal(phase5.unknown_changed_paths.length, 0);
+    assert.equal(byId(phase5, "PHASE5_TWO_SERVICE_ACCELERATED_24T").status, "REQUALIFY");
+    assert(byId(phase5, "PHASE5_TWO_SERVICE_ACCELERATED_24T").changed_dependencies.includes(phase5Path));
+  }
+  const phase5Spec = authority.dependency_resolvers.PHASE5_TWO_SERVICE_ACCELERATED_24T;
+  const phase5Explicit = new Set([...(phase5Spec.roots || []), ...(phase5Spec.additional_exact_paths || [])]);
+  const phase5Resolved = resolved.resolved.PHASE5_TWO_SERVICE_ACCELERATED_24T.paths;
+  const phase5Transitive = phase5Resolved.find((candidate) => !phase5Explicit.has(candidate));
+  assert.ok(phase5Transitive, "PHASE5_TRANSITIVE_HOSTING_DEPENDENCY_REQUIRED_FOR_SELFTEST");
+  const phase5TransitivePlan = plan(authority, registry, [phase5Transitive]);
+  assert.equal(phase5TransitivePlan.status, "PASS");
+  assert.equal(byId(phase5TransitivePlan, "PHASE5_TWO_SERVICE_ACCELERATED_24T").status, "REQUALIFY");
+  assert(byId(phase5TransitivePlan, "PHASE5_TWO_SERVICE_ACCELERATED_24T").changed_dependencies.includes(phase5Transitive));
 
   // CP-4: runtime root changes invalidate v13 carry-forward by dependency closure.
   const runtimePath = "apps/server/src/runtime/twin_runtime/external_formal_forcing_autonomous_controller_service_v1.ts";
