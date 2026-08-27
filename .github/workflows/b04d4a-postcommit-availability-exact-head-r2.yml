@@ -1,0 +1,90 @@
+name: b04d4a-postcommit-availability-exact-head-r2
+
+on:
+  push:
+    branches:
+      - ci/bline-b04d4a-postcommit-availability-exact-head-r2-2026-08-27
+
+jobs:
+  exact-head:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: geox
+          POSTGRES_PASSWORD: geox
+          POSTGRES_DB: b04d4a
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U geox -d b04d4a"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build runtime workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: B-04d4a focused unit fixtures
+        run: node --import tsx --test apps/server/src/domain/sensing/raw_sample_runtime_availability_v1.test.ts
+
+      - name: B-04d4a real PostgreSQL post-COMMIT proof
+        env:
+          B04D4A_DATABASE_URL: postgres://geox:geox@127.0.0.1:5432/b04d4a
+        run: node --import tsx --test apps/server/src/domain/sensing/raw_sample_runtime_availability_v1.postgres.test.ts
+
+      - name: Existing B-04d3r1 regressions
+        run: |
+          node --import tsx --test apps/server/src/domain/sensing/appleii_canonical_evidence_projection_v1.test.ts
+          node --import tsx --test apps/server/src/domain/sensing/raw_sample_authority_time_scope_v1.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+          node --import tsx --test apps/server/src/domain/decision/stage1_canonical_evidence_shadow_visibility_v1.test.ts
+
+      - name: B-02 semantic linter
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: Assert full B-04d4a diff excludes frozen MCFT inputs
+        run: |
+          git diff --exit-code f6013f704f58b5c6e0c8913065d5638a73c795a7 a867893568d443b87fac9d8eab3bc9121137ca2f -- \
+            pnpm-lock.yaml \
+            .github/workflows \
+            apps/server/src/domain/twin_runtime \
+            apps/server/src/runtime/twin_runtime \
+            apps/server/src/persistence/twin_runtime \
+            apps/server/src/external_evidence \
+            docs/digital_twin/mcft
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Marker
+        run: |
+          echo "B04D4A_EXACT_HEAD a867893568d443b87fac9d8eab3bc9121137ca2f"
+          echo "B04D4A_POSTCOMMIT_AVAILABILITY_WITNESS_PASS"
