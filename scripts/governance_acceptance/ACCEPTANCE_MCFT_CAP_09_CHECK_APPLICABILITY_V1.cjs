@@ -200,8 +200,10 @@ function main() {
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1.ts",
     "apps/server/src/external_evidence/qualification/mcft_cap09_phase5_controlled_evidence_work_items_v1.ts",
     "apps/server/src/external_evidence/qualification/mcft_cap09_phase5_evidence_runtime_qualification_v1.ts",
+    "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_twin_runtime_qualification_v1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_CONTROLLED_PROVIDER_WORK_ITEMS_V1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_EVIDENCE_QUALIFICATION_ENTRYPOINT_V1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_QUALIFICATION_CLOCK_V1.ts",
   ];
   const phase5 = plan(authority, registry, phase5Paths);
   assert.equal(phase5.status, "PASS");
