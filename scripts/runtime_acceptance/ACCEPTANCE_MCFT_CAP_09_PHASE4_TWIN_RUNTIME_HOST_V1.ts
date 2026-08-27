@@ -96,6 +96,7 @@ async function main(): Promise<void> {
 
   const sequence = [noDue(), notReady(), completed()];
   const calls: Array<Record<string, unknown>> = [];
+  let successorCalls = 0;
   const waits: string[] = [];
   const health: TwinRuntimeHostHealthEventV1[] = [];
   let stop = false;
@@ -115,6 +116,24 @@ async function main(): Promise<void> {
         const result = sequence.shift();
         if (!result) throw new Error("QUALIFICATION_SEQUENCE_EXHAUSTED");
         return result;
+      },
+    },
+    successor_viability: {
+      async verifyAfterTerminal(input) {
+        successorCalls += 1;
+        assert.equal(input.terminal_slot_id, "O00");
+        assert.equal(input.terminal_logical_time, "2026-08-27T00:00:00.000Z");
+        return {
+          viability_id: "MCFT_CAP09_TWIN_RUNTIME_SUCCESSOR_VIABILITY_V1",
+          status: "SUCCESSOR_VIABLE",
+          terminal_slot_id: "O00",
+          terminal_logical_time: "2026-08-27T00:00:00.000Z",
+          next_slot_id: "O01",
+          next_logical_time: "2026-08-27T01:00:00.000Z",
+          checkpoint_ref: "checkpoint:o00",
+          checkpoint_next_logical_time: "2026-08-27T01:00:00.000Z",
+          active_slot_count: 0,
+        };
       },
     },
     wait: {
@@ -150,6 +169,7 @@ async function main(): Promise<void> {
   assert.equal(result.no_due_slot_count, 1);
   assert.equal(result.preclaim_backpressure_count, 1);
   assert.equal(result.terminal_slot_count, 1);
+  assert.equal(successorCalls, 1);
   assert.equal(result.retryable_failure_count, 0);
   assert.equal(result.provider_request_count, 0);
   assert.equal(result.r2_request_count, 0);
@@ -195,6 +215,11 @@ async function main(): Promise<void> {
         return noDue();
       },
     },
+    successor_viability: {
+      async verifyAfterTerminal() {
+        throw new Error("SUCCESSOR_VIABILITY_MUST_NOT_RUN_WITHOUT_TERMINAL_SLOT");
+      },
+    },
     wait: {
       async waitAfterAttempt(input) {
         retryWaits.push(input.reason);
@@ -237,6 +262,11 @@ async function main(): Promise<void> {
         } as never;
       },
     },
+    successor_viability: {
+      async verifyAfterTerminal() {
+        throw new Error("SUCCESSOR_VIABILITY_MUST_NOT_RUN_AFTER_PROVIDER_FALLBACK");
+      },
+    },
     wait: { async waitAfterAttempt() {} },
     health: { async recordHealth() {} },
     stop: { stopRequested: () => false },
@@ -270,6 +300,7 @@ async function main(): Promise<void> {
     no_due_slot_wait: true,
     preclaim_evidence_backpressure: true,
     terminal_slot_progression: true,
+    terminal_successor_viability_required: true,
     retryable_failure_backoff: true,
     provider_or_r2_fallback_fail_closed: true,
     durable_restart_authority: "RUNTIME_TICK_CURSOR_AND_CANONICAL_CHECKPOINT",
