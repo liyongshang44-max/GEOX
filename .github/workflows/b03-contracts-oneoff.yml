@@ -1,4 +1,4 @@
-name: b04c-stage1-physical-qc-guard-oneoff
+name: b04d1-rawsample-physical-qc-oneoff
 on:
   push:
     branches:
@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: fc2745df43c3641cc6ca1479fcb6c7268b01e41b
+          ref: 17317218ea1f8b65d6476c7bad8f0dc8591abacb
           fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
@@ -23,6 +23,12 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - name: Server typecheck
         run: pnpm --filter @geox/server run typecheck
+      - name: B04d1 raw-sample guard fixtures
+        run: pnpm --filter @geox/server exec node --import tsx --test src/evidence/raw_sample_stage1_physical_qc_v1.test.ts
+      - name: B04d1 raw-sample ingress physical QC fixture
+        run: pnpm --filter @geox/server exec node --import tsx --test src/domain/sensing/raw_sample_ingress_physical_qc_v1.test.ts
+      - name: B04d1 Apple-II physical QC fixture
+        run: pnpm --filter @geox/server exec node --import tsx --test src/domain/sensing/appleii_evidence_physical_qc_v1.test.ts
       - name: B04c pure guard fixtures
         run: pnpm --filter @geox/server exec node --import tsx --test src/evidence/stage1_physical_qc_consumption_guard_v1.test.ts
       - name: B04c Stage-1 loader fixtures
@@ -47,5 +53,5 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
       - name: Marker
         run: |
-          echo "B04C_EXACT_HEAD $(git rev-parse HEAD)"
-          echo "B04C_STAGE1_PHYSICAL_QC_GUARD_PASS"
+          echo "B04D1_EXACT_HEAD $(git rev-parse HEAD)"
+          echo "B04D1_RAWSAMPLE_PHYSICAL_QC_CONVERGENCE_PASS"
