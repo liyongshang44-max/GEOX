@@ -182,7 +182,41 @@ B-05a is complete only when one exact product head proves:
 - compatibility stage cannot become decision-input eligible;
 - TWIN_QUALIFIED representation requires derived/context provenance;
 - B-02 governance PASS with zero unregistered canonical Context/Stage producers;
-- existing stage-resolver acceptance remains PASS;
+- legacy stage-resolver priority behavior (`explicit > DAP/startDate > UNKNOWN`) remains unchanged;
 - server typecheck/build PASS;
 - general CI/full acceptance PASS;
 - MCFT boundary lanes PASS.
+
+
+## 9. Pre-existing stage5 acceptance debt
+
+During B-05a exact-head qualification, the historical file:
+
+`apps/server/src/domain/agronomy/stage5.acceptance.test.ts`
+
+was executed in full.
+
+Its two crop-stage resolver tests passed, but an unrelated historical rule-version assertion failed:
+
+```text
+expected: corn_water_balance_v2
+actual:   corn_water_balance_v1
+```
+
+A separate exact baseline probe on the pre-B-05a B-04 completion head:
+
+`140e8f106cb9274f8c8f3150b9fbff2defb5fcf1`
+
+reproduced the identical failure.
+
+Therefore this is pre-existing rule-selection debt, not a B-05a regression.
+
+B-05a must not repair or re-order historical rule versions merely to obtain a green contract PR. Its compatibility gate is intentionally scoped to the resolver semantics relevant to B-05:
+
+```text
+valid explicit stage
+> DAP/startDate calculator
+> UNKNOWN
+```
+
+The historical rule-version mismatch remains visible and outside B-05a scope.
