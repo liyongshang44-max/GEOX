@@ -22,6 +22,7 @@ import {
   type VerifiedRawEvidenceProvenanceV1,
 } from "../../apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.js";
 import { KbsVariate25SoilEvidenceDecoderV1 } from "../../apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.js";
+import { GfsRawBundleEvidenceDecoderV1 } from "../../apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.js";
 import type {
   RawEvidenceRetentionVerificationPortV1,
   VerifyRetainedRawEvidenceInputV1,
@@ -314,28 +315,6 @@ class RetainedRawReplayTransportV1 implements ExternalEvidenceTransportPortV1 {
   }
 }
 
-class PythonGfsRawBundleDecoderV2 implements ExternalEvidenceDecoderPortV1 {
-  readonly decoder_id = "MCFT_CAP09_EA5E2_GFS_RAW_BUNDLE_DECODER_V2";
-  readonly decoder_version = "2";
-  constructor(private readonly target: string, private readonly restoredIngestedAt: string) {}
-  async decodeRetainedEvidence(input: ExternalEvidenceDecoderInputV1): Promise<readonly GovernedDecodedEvidenceDraftV1[]> {
-    assertProductGfsScientificCoreBinding();
-    const temp = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-cap09-rolling-gfs-rehydrate-"));
-    const bundle = path.join(temp, "gfs.tar");
-    const output = path.join(temp, "gfs-drafts.json");
-    try {
-      fs.writeFileSync(bundle, Buffer.from(input.raw_bytes));
-      await execFileAsync(PYTHON, [PROVIDER_SCRIPT, "decode-gfs-v2", "--target", this.target, "--available-at", input.provenance.available_at, "--input", bundle, "--output", output], { timeout: 20 * 60_000, maxBuffer: 32 * 1024 * 1024 });
-      const parsed = JSON.parse(fs.readFileSync(output, "utf8")) as { drafts?: GovernedDecodedEvidenceDraftV1[] };
-      if (!Array.isArray(parsed.drafts) || parsed.drafts.length !== 2) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_GFS_DRAFT_PAIR_REQUIRED");
-      const ingestedAt = canonicalIso(this.restoredIngestedAt, "MCFT_CAP09_ROLLING_REHYDRATION_GFS_INGESTED_AT_INVALID");
-      return parsed.drafts.map((draft) => ({ ...draft, role_time: { ...draft.role_time, ingested_at: ingestedAt } }));
-    } finally {
-      fs.rmSync(temp, { recursive: true, force: true });
-    }
-  }
-}
-
 function requestFromProvenance(provenance: VerifiedRawEvidenceProvenanceV1, contentPrefixes: readonly string[]): ExternalEvidenceFetchRequestV1 {
   const sourceHost = new URL(provenance.source_locator).hostname;
   const finalHost = new URL(provenance.final_locator).hostname;
@@ -415,7 +394,10 @@ async function rehydrate(candidate: CandidateV1, pool: Pool): Promise<{ results:
   }, {
     transport: new RetainedRawReplayTransportV1(gfsProvenance, gfsRaw.bytes),
     retention: store,
-    decoder: new PythonGfsRawBundleDecoderV2(candidate.target_t, manifest.gfs.ingested_at),
+    decoder: new GfsRawBundleEvidenceDecoderV1(candidate.target_t, {
+      normalize_et0: true,
+      restored_ingested_at: manifest.gfs.ingested_at,
+    }),
   });
   const soilResults = await collectRetainDecodeCanonicalizeExternalEvidenceV1({
     dataset_id: `mcft_cap09_ea5e2_live_soil_${candidate.target_t}`,
