@@ -1,0 +1,84 @@
+name: b04b4r1-telemetry-built-artifact-oneoff-r2
+
+on:
+  push:
+    branches:
+      - ci/bline-b04b4r1-built-artifact-oneoff-r2-2026-08-27
+
+jobs:
+  exact-head:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Prove compose uses built artifact
+        run: |
+          grep -Fq 'command: ["node", "apps/telemetry-ingest/dist/apps/telemetry-ingest/src/main.js"]' docker-compose.commercial_v1.yml
+          if grep -F 'telemetry-ingest/src/main.ts' docker-compose.commercial_v1.yml | grep -Fq 'tsx'; then
+            echo "B04B4R1_RUNTIME_STILL_DEPENDS_ON_TSX_SOURCE"
+            exit 1
+          fi
+
+      - name: Build telemetry-ingest emitted artifact
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+          pnpm --filter @geox/telemetry-ingest build
+          test -f apps/telemetry-ingest/dist/apps/telemetry-ingest/src/main.js
+          node --check apps/telemetry-ingest/dist/apps/telemetry-ingest/src/main.js
+
+      - name: MQTT regressions
+        run: |
+          node --import tsx --test apps/telemetry-ingest/src/mqtt_observation_input_v1.test.ts
+          node --import tsx --test apps/telemetry-ingest/src/mqtt_durable_raw_v1.test.ts
+
+      - name: B-02 semantic linter
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: Build actual telemetry-ingest runtime image
+        run: |
+          docker build \
+            -f docker/runtime.Dockerfile \
+            --build-arg 'BUILD_COMMAND=pnpm --filter @geox/contracts build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/telemetry-ingest build' \
+            -t geox/telemetry-ingest-b04b4r1:exact \
+            .
+
+      - name: Prove built-artifact image packaging
+        run: |
+          docker run --rm --entrypoint /bin/sh geox/telemetry-ingest-b04b4r1:exact -lc \
+            'test -f /app/apps/telemetry-ingest/dist/apps/telemetry-ingest/src/main.js && node --check /app/apps/telemetry-ingest/dist/apps/telemetry-ingest/src/main.js'
+
+      - name: Built-artifact boot probe
+        run: |
+          set +e
+          docker run --rm \
+            --entrypoint node \
+            geox/telemetry-ingest-b04b4r1:exact \
+            apps/telemetry-ingest/dist/apps/telemetry-ingest/src/main.js \
+            > /tmp/b04b4r1-boot.log 2>&1
+          rc=$?
+          set -e
+          cat /tmp/b04b4r1-boot.log
+          test "$rc" -ne 0
+          grep -Fq "DATABASE_URL_NOT_CONFIGURED" /tmp/b04b4r1-boot.log
+
+      - name: Marker
+        run: |
+          echo "B04B4R1_EXACT_HEAD 5e97609b77f833bb2e9159ccdf01b998c62af83f"
+          echo "B04B4R1_TELEMETRY_BUILT_ARTIFACT_RUNTIME_PASS"
