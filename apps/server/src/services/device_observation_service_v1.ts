@@ -10,7 +10,8 @@ import {
 import type { PoolClient } from "pg";
 import { mapStage1ObservationMetricToPipelineObservationV1 } from "../domain/sensing/stage1_sensing_input_mapping_v1.js";
 import { runSensingInferencePipelineV1, type RunSensingInferencePipelineV1Result } from "../domain/sensing/run_sensing_inference_pipeline_v1.js";
-import { buildIngressPhysicalQcSnapshotV1 } from "../evidence/ingress_physical_qc_snapshot_v1.js";\nimport { evaluateStage1PhysicalQcConsumptionV1 } from "../evidence/stage1_physical_qc_consumption_guard_v1.js";
+import { buildIngressPhysicalQcSnapshotV1 } from "../evidence/ingress_physical_qc_snapshot_v1.js";
+import { evaluateStage1PhysicalQcConsumptionV1 } from "../evidence/stage1_physical_qc_consumption_guard_v1.js";
 import { refreshFieldReadModelsWithObservabilityV1 } from "./field_read_model_refresh_v1.js";
 
 export type DeviceObservationServiceV1Input = {
