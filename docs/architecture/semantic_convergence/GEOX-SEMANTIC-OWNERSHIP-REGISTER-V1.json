@@ -1133,7 +1133,7 @@
       "semantic_id": "decision.candidate",
       "question": "What action should be considered?",
       "target_owner": "Decision Runtime",
-      "canonical_output_type": "CandidateDecisionV1 (B-06c legacy-recommendation compatibility adapter capability registered; no runtime consumer connected)",
+      "canonical_output_type": "CandidateDecisionV1 (B-06c recommendation + B-06d decision-plan compatibility adapter capabilities registered; no runtime consumer connected)",
       "current_state": "DUPLICATE_AUTHORITY",
       "target_phase": "B-06",
       "new_owner_creation": "FORBIDDEN",
@@ -1237,6 +1237,24 @@
           "runtime_edge": "INTENTIONAL_NONE",
           "new_runtime_consumer_creation": "FORBIDDEN",
           "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "decision-plan-candidate-compatibility-adapter",
+          "path": "apps/server/src/domain/decision/decision_plan_candidate_adapter_v1.ts",
+          "role": "pure B-06d compatibility projection from frozen decision_plan_v0 ledger proposal semantics into CandidateDecisionV1; no decision-plan API/writer/runtime consumer is connected",
+          "authority_level": "CANDIDATE_ONLY_ADAPTER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectDecisionPlanCandidateV1",
+            "candidateDecisionV1Schema.parse"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
         }
       ],
       "registered_consumers": [
@@ -1278,7 +1296,10 @@
         "B-06c registers one pure recommendation_v1/decision_recommendation_v1 -> CandidateDecisionV1 compatibility adapter capability with no runtime consumer.",
         "B-06c never promotes legacy recommendation evidence_refs into canonical EvidenceQualification refs; canonical refs must be supplied explicitly.",
         "B-06c rejects source objects that already carry downstream approval/plan/task/dispatch/receipt authority instead of collapsing them back into CandidateDecision.",
-        "B-06c uses the legacy top-level action_type as candidate action and does not elevate nested suggested_action operational labels."
+        "B-06c uses the legacy top-level action_type as candidate action and does not elevate nested suggested_action operational labels.",
+        "B-06d registers one pure decision_plan_v0 -> CandidateDecisionV1 compatibility adapter capability with no runtime consumer.",
+        "B-06d preserves Sprint 15/16 Decision Plan non-executing/non-coupling semantics and accepts only explicit proposal-shaped payloads.",
+        "B-06d keeps based_on.evidence_refs as legacy provenance only and never promotes them into canonical EvidenceQualification refs."
       ],
       "runtime_consumers": [
         {
@@ -2281,7 +2302,7 @@
     {
       "guard_id": "G-B02-15-candidate-decision-instantiation",
       "semantic_id": "decision.candidate",
-      "description": "B-06c permits exactly the registered legacy-recommendation CandidateDecision compatibility adapter; any additional production instantiation requires explicit later B-06 registration.",
+      "description": "B-06d permits exactly the registered B-06c recommendation adapter and B-06d decision-plan adapter; any additional production CandidateDecision instantiation requires explicit later B-06 registration.",
       "scan_roots": [
         "apps/server/src"
       ],
@@ -2298,7 +2319,8 @@
         ]
       },
       "registered_paths": [
-        "apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.ts"
+        "apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.ts",
+        "apps/server/src/domain/decision/decision_plan_candidate_adapter_v1.ts"
       ],
       "failure": "UNREGISTERED_CANDIDATE_DECISION_PRODUCER"
     }
