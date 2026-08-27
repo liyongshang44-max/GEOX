@@ -22,6 +22,7 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -85,7 +86,9 @@ jobs:
           pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1.ts
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_RESTART_BACKFILL_STALE_DETECTION.ts
 
       - name: Prove long-running Twin Runtime host contract
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts
@@ -99,6 +102,18 @@ jobs:
 
       - name: Prove Twin Runtime database ACL separation
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1.ts
+
+      - name: Prove DB-clock Runtime cursor, fencing, restart and bounded catch-up
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts
+
+      - name: Prove canonical checkpoint restart and oldest-missed recovery
+        env:
+          PGPASSWORD: postgres
+          MCFT_CAP_09_S4_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: |
+          createdb -h 127.0.0.1 -U postgres phase4_restart
+          DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/phase4_restart \
+            pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_RESTART_BACKFILL_STALE_DETECTION.ts
 
       - name: Prove Phase4 host and composition remain database-only
         shell: python
@@ -166,5 +181,7 @@ jobs:
             acceptance-output/MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_S4_POSTGRESQL_ACCEPTANCE_RESULT.json
           if-no-files-found: warn
           retention-days: 90
