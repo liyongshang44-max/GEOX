@@ -1,0 +1,104 @@
+name: b05c-legacy-stage-adapter-exact-r2
+
+on:
+  push:
+    branches:
+      - ci/bline-b05c-legacy-stage-adapter-exact-r2-2026-08-27
+
+jobs:
+  exact-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Build runtime workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+      - name: B-05a canonical context/stage contracts
+        run: node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+      - name: B-05b FieldProgram context projection
+        run: node --import tsx --test apps/server/src/context/field_program_context_projection_v1.test.ts
+      - name: B-05c legacy crop-stage compatibility adapter
+        run: node --import tsx --test apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.test.ts
+      - name: B-05c exactly one registered QualifiedCropStage producer
+        shell: bash
+        run: |
+          mapfile -t FILES < <(
+            grep -R -l --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts'               'qualifiedCropStageStateV1Schema.parse(' apps/server/src || true
+          )
+          printf '%s\n' "${FILES[@]}"
+          if [ "${#FILES[@]}" -ne 1 ] || [ "${FILES[0]}" != "apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.ts" ]; then
+            echo "B05C_QUALIFIED_STAGE_PRODUCER_SET_INVALID"
+            exit 1
+          fi
+          echo "B05C_SINGLE_REGISTERED_QUALIFIED_STAGE_PRODUCER_PASS"
+      - name: B-05c capability-island no-consumer audit
+        shell: bash
+        run: |
+          mapfile -t FILES < <(
+            grep -R -l --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts'               'projectLegacyCropStageCompatibilityV1' apps/server/src || true
+          )
+          printf '%s\n' "${FILES[@]}"
+          if [ "${#FILES[@]}" -ne 1 ] || [ "${FILES[0]}" != "apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.ts" ]; then
+            echo "B05C_UNEXPECTED_RUNTIME_CONSUMER"
+            exit 1
+          fi
+          echo "B05C_CAPABILITY_ISLAND_NO_CONSUMER_PASS"
+      - name: B-05c dual-guard register exactness
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const p = "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json";
+          const reg = JSON.parse(fs.readFileSync(p, "utf8"));
+          const semantic = reg.semantics.find((x) => x.semantic_id === "context.crop_stage");
+          if (!semantic) throw new Error("B05C_STAGE_SEMANTIC_MISSING");
+          const producer = (semantic.registered_producers || []).find((x) => x.producer_id === "legacy-stage-compatibility-adapter");
+          if (!producer) throw new Error("B05C_ADAPTER_NOT_REGISTERED");
+          if (producer.connection_class !== "REGISTERED_CAPABILITY_ISLAND") throw new Error("B05C_CONNECTION_CLASS_INVALID");
+          if (producer.runtime_edge !== "INTENTIONAL_NONE") throw new Error("B05C_RUNTIME_EDGE_INVALID");
+          if (producer.new_runtime_consumer_creation !== "FORBIDDEN") throw new Error("B05C_NEW_CONSUMER_RULE_INVALID");
+          const path = "apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.ts";
+          const g1 = (reg.static_guards || []).find((x) => x.guard_id === "G-B02-01-crop-stage-touchpoints");
+          const g12 = (reg.static_guards || []).find((x) => x.guard_id === "G-B02-12-qualified-crop-stage-instantiation");
+          if (!g1 || !g1.registered_paths.includes(path)) throw new Error("B05C_TOUCHPOINT_GUARD_PATH_MISSING");
+          if (!g12 || !g12.registered_paths.includes(path)) throw new Error("B05C_PRODUCER_GUARD_PATH_MISSING");
+          console.log("B05C_DUAL_GUARD_REGISTER_EXACTNESS_PASS");
+          NODE
+      - name: B-05c no Twin authority token in executable adapter logic
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const p = "apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.ts";
+          const src = fs.readFileSync(p, "utf8");
+          const executable = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+          if (executable.includes('"TWIN_QUALIFIED"')) throw new Error("B05C_TWIN_QUALIFIED_LITERAL_FOUND");
+          if (executable.includes('"TWIN_DERIVED_STATE"')) throw new Error("B05C_TWIN_DERIVED_LITERAL_FOUND");
+          console.log("B05C_NO_TWIN_AUTHORITY_OUTPUT_PASS");
+          NODE
+      - name: B-03/B-04 regression boundary
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+          node --import tsx --test apps/server/src/domain/judge/evidence_judge_canonical_sufficiency_shadow_v1.test.ts
+      - name: Server build
+        run: pnpm --filter @geox/server build
+      - name: Marker
+        run: |
+          echo "B05C_EXACT_HEAD 9b17fbf3c90b723544db1579c1965c72a18f0fbb"
+          echo "B05C_LEGACY_STAGE_COMPATIBILITY_PASS"
