@@ -10,6 +10,9 @@ import os from "node:os";
 
 import { createDatabasePool } from "../../infra/database.js";
 import {
+  assertMcftCap09ServicePrincipalV1,
+} from "../../infra/mcft_cap09_phase5_service_principal_v1.js";
+import {
   composeMcftCap09TwinRuntimeV1,
 } from "./mcft_cap09_twin_runtime_composition_v1.js";
 import type {
@@ -29,6 +32,7 @@ export const MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1 = {
   process_id: MCFT_CAP09_TWIN_RUNTIME_PROCESS_ID_V1,
   composition: "MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_V1",
   database_authority: "TWIN_RUNTIME_DATABASE_URL_ONLY",
+  database_principal: "geox_mcft_cap09_twin_runtime_login_v1",
   authority_loading: "EXPLICIT_MOUNTED_JSON_PATHS",
   provider_credentials_allowed: false,
   raw_storage_credentials_allowed: false,
@@ -104,12 +108,6 @@ export function readMcftCap09TwinRuntimeProcessConfigV1(
     "GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL",
     "PHASE5_TWIN_RUNTIME_DATABASE_URL_REQUIRED",
   );
-  if (/GEOX_MCFT_CAP09_EVIDENCE|S3_|R2_|AWS_ACCESS_KEY|AWS_SECRET/i.test(
-    Object.keys(env).filter((key) => env[key]).join("\n"),
-  )) {
-    // Presence of unrelated container environment is not itself authority. The Twin
-    // process deliberately does not read or expose provider/raw-storage values.
-  }
 
   return {
     database_url: databaseUrl,
@@ -206,6 +204,8 @@ export async function runMcftCap09TwinRuntimeProcessV1(input?: {
   const pool = createDatabasePool(config.database_url);
   const stop = createMcftCap09ProcessStopV1();
   try {
+    await assertMcftCap09ServicePrincipalV1(pool, "TWIN_RUNTIME");
+
     const composition = composeMcftCap09TwinRuntimeV1({
       pool,
       manifest,
