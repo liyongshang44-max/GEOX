@@ -38,6 +38,10 @@ export interface EvidenceSupplyCursorFactoryV1 {
   createForProducerClaim(claim: EvidenceProducerLeaseClaimV1): EvidenceSupplyCursorPortV1;
 }
 
+export interface EvidenceCommittedIngressFactoryV1 {
+  createForProducerClaim(claim: EvidenceProducerLeaseClaimV1): ExternalFormalEvidenceIngressPortV1;
+}
+
 export type ExecuteEvidenceRuntimeCycleInputV1 = {
   scope: EvidenceRuntimeScopeV1;
   lease_owner: string;
@@ -100,7 +104,7 @@ export class EvidenceRuntimeCycleServiceV1 {
   constructor(private readonly deps: {
     lease: EvidenceProducerLeasePortV1;
     retention: RawEvidenceRetentionPortV1;
-    committed_ingress: ExternalFormalEvidenceIngressPortV1;
+    committed_ingress_factory: EvidenceCommittedIngressFactoryV1;
     visibility: ExternalEvidencePostCommitVisibilityPortV1;
     cursor_factory: EvidenceSupplyCursorFactoryV1;
     completion_clock: () => string;
@@ -143,9 +147,10 @@ export class EvidenceRuntimeCycleServiceV1 {
         claim,
         lease_duration_seconds: input.lease_duration_seconds,
       });
+      const committedIngress = this.deps.committed_ingress_factory.createForProducerClaim(claim);
       const cursor = this.deps.cursor_factory.createForProducerClaim(claim);
       const visibleIngress = new PostCommitVisibleExternalFormalEvidenceIngressV1(
-        this.deps.committed_ingress,
+        committedIngress,
         this.deps.visibility,
         cursor,
       );
