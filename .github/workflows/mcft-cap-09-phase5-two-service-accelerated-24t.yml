@@ -139,6 +139,10 @@ jobs:
           test "$(jq -r .subject_sha "$proof")" = "$GEOX_DEPLOYMENT_SUBJECT_COMMIT"
           test "$(jq -r .fake_grib_used "$proof")" = "false"
           test "$(jq -r .fixture_raw_upload_authorized "$proof")" = "false"
+          test "$(jq -r .rolling_gfs_target_count "$proof")" = "24"
+          test "$(jq -r .gfs_single_causal_cycle_reused "$proof")" = "true"
+          test "$(jq -r .all_gfs_raw_retrieved_by_a0 "$proof")" = "true"
+          test "$(jq -r .gfs_extended_lead_count "$proof")" -ge "23"
           a0="$(jq -r .a0 "$proof")"
           o00="$(jq -r .o00 "$proof")"
           o23="$(jq -r .o23 "$proof")"
@@ -170,8 +174,8 @@ jobs:
             echo "PHASE5_24T_EVIDENCE_INGESTION_AFTER_A0" >&2
             exit 1
           fi
-          count="$(docker compose -f "$COMPOSE_FILE" exec -T postgres             psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc             "SELECT count(*) FROM public.facts WHERE source='mcft_cap09_external_formal_evidence_v1' AND record_json->>'type' IN ('soil_moisture_observation_v1','future_weather_assumption_v1','future_et0_assumption_v1');")"
-          test "$count" -ge 3
+          counts="$(docker compose -f "$COMPOSE_FILE" exec -T postgres             psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc             "SELECT concat_ws('|', count(*) FILTER (WHERE record_json->>'type'='soil_moisture_observation_v1'), count(*) FILTER (WHERE record_json->>'type'='future_weather_assumption_v1'), count(*) FILTER (WHERE record_json->>'type'='future_et0_assumption_v1')) FROM public.facts WHERE source='mcft_cap09_external_formal_evidence_v1';")"
+          test "$counts" = "1|24|24"
 
       - name: Prepare A0 and exact 24-slot manifest from canonical Evidence DB
         shell: bash
