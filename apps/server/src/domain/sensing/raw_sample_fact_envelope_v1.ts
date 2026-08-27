@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { buildIngressPhysicalQcSnapshotV1 } from "../../evidence/ingress_physical_qc_snapshot_v1.js";
+import { appendRawSampleRuntimeAvailabilityMarkerV1 } from "./raw_sample_runtime_availability_v1.js";
 
 export type RawSampleSourceV1 = "device" | "gateway" | "system" | "human" | "import" | "sim" | "unknown";
 export type RawSampleQualityV1 = "unknown" | "ok" | "suspect" | "bad";
@@ -373,6 +374,26 @@ export async function appendRawSampleV1(pool: Pool, input: RawSampleWriteInputV1
       [normalized.fact_id, normalized.ts_ms, normalized.source, JSON.stringify(factRecord)],
     );
     await client.query("COMMIT");
+
+    // B-04d4a: after the raw append transaction is durably committed, open a
+    // fresh statement snapshot and record a conservative visibility witness.
+    // Marker failure must never roll back or invalidate the already-committed
+    // raw evidence; absence of the marker keeps temporal authority UNKNOWN.
+    try {
+      await appendRawSampleRuntimeAvailabilityMarkerV1(client, {
+        sample_id: normalized.sample_id,
+        raw_sample_fact_id: normalized.fact_id,
+        tenant_id: tenant.tenant_id,
+        project_id: normalized.project_id,
+        group_id: normalized.group_id,
+        field_id: normalized.field_id,
+        sensor_id: normalized.sensor_id,
+      });
+    } catch {
+      // Fail closed on temporal authority by retaining the raw fact without a
+      // runtime-availability marker. A later consumer must treat this as UNKNOWN.
+    }
+
     return normalized;
   } catch (error: any) {
     await client.query("ROLLBACK").catch(() => undefined);
