@@ -190,14 +190,34 @@ async function main(): Promise<void> {
       assert.equal(visible.rows[0].source, "mcft_cap09_external_formal_evidence_v1");
 
       await client.query(
+        `INSERT INTO public.external_evidence_supply_event_v1
+         (tenant_id,project_id,group_id,field_id,season_id,zone_id,binding_id,origin_source_id,event_time,
+          source_record_id,fact_id,record_semantic_sha256,
+          first_publication_available_at,last_publication_available_at,
+          first_post_commit_db_readback_at,last_post_commit_db_readback_at,
+          revision_count,publication_count,lease_owner,fencing_token)
+         VALUES ($1,$2,$3,$4,$5,$6,
+                 'acl-binding','acl-source','2026-08-27T02:30:00.000Z',
+                 'acl-source-record','phase3_acl_external_fact_1',$7,
+                 '2026-08-27T02:30:00.000Z','2026-08-27T02:30:00.000Z',
+                 '2026-08-27T02:30:01.000Z','2026-08-27T02:30:01.000Z',
+                 0,1,'acl-owner-A',1)`,
+        [...Object.values(SCOPE), "sha256:" + "a".repeat(64)],
+      );
+      await client.query(
         `INSERT INTO public.external_evidence_supply_cursor_v1
          (tenant_id,project_id,group_id,field_id,season_id,zone_id,binding_id,origin_source_id,
-          fact_id,record_semantic_sha256,available_to_runtime_at,role_time,post_commit_db_readback_at,
-          lease_owner,fencing_token)
+          fact_id,record_semantic_sha256,available_to_runtime_at,publication_available_through,
+          latest_event_time,latest_source_record_id,event_time_contiguous_from,event_time_contiguous_through,
+          event_time_max_seen,event_gap_count,revision_count,publication_event_count,cadence_profile_id,
+          role_time,post_commit_db_readback_at,lease_owner,fencing_token)
          VALUES ($1,$2,$3,$4,$5,$6,
-                 'acl-binding','acl-source','phase3_acl_external_fact_1',
-                 $7,'2026-08-27T02:30:00.000Z','{}'::jsonb,
-                 '2026-08-27T02:30:01.000Z','acl-owner-A',1)`,
+                 'acl-binding','acl-source','phase3_acl_external_fact_1',$7,
+                 '2026-08-27T02:30:00.000Z','2026-08-27T02:30:00.000Z',
+                 '2026-08-27T02:30:00.000Z','acl-source-record',
+                 '2026-08-27T02:30:00.000Z','2026-08-27T02:30:00.000Z',
+                 '2026-08-27T02:30:00.000Z',0,0,1,'ACL_QUALIFICATION_PROFILE',
+                 '{}'::jsonb,'2026-08-27T02:30:01.000Z','acl-owner-A',1)`,
         [...Object.values(SCOPE), "sha256:" + "a".repeat(64)],
       );
     });
@@ -273,6 +293,9 @@ async function main(): Promise<void> {
       "external_evidence_supply_cursor_v1:INSERT",
       "external_evidence_supply_cursor_v1:SELECT",
       "external_evidence_supply_cursor_v1:UPDATE",
+      "external_evidence_supply_event_v1:INSERT",
+      "external_evidence_supply_event_v1:SELECT",
+      "external_evidence_supply_event_v1:UPDATE",
       "facts:SELECT",
     ]);
 
