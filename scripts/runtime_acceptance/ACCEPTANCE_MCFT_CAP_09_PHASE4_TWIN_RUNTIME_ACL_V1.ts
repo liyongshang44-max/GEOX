@@ -32,10 +32,13 @@ const POSITIVE_TABLE_PRIVILEGES: Record<string, readonly string[]> = {
   twin_scenario_latest_index_v1: ["SELECT", "INSERT", "UPDATE", "DELETE"],
 };
 
-const EVIDENCE_PLANE_TABLES = [
+const FORBIDDEN_CONTROL_PLANE_TABLES = [
   "external_evidence_producer_lease_v1",
   "external_evidence_supply_event_v1",
   "external_evidence_supply_cursor_v1",
+  "twin_external_formal_forcing_base_cursor_v1",
+  "twin_external_formal_forcing_base_target_v1",
+  "twin_external_formal_forcing_controller_lease_v1",
 ] as const;
 
 async function tablePrivilege(
@@ -124,7 +127,7 @@ async function main(): Promise<void> {
     assert.equal(await tablePrivilege(pool, "facts", "DELETE"), false);
     assert.equal(await tablePrivilege(pool, "facts", "TRUNCATE"), false);
 
-    for (const table of EVIDENCE_PLANE_TABLES) {
+    for (const table of FORBIDDEN_CONTROL_PLANE_TABLES) {
       for (const privilege of ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE"]) {
         assert.equal(
           await tablePrivilege(pool, table, privilege),
@@ -199,6 +202,21 @@ async function main(): Promise<void> {
       );
       await expectPermissionDenied(
         client,
+        "legacy_forcing_target_select",
+        "SELECT * FROM public.twin_external_formal_forcing_base_target_v1 LIMIT 1",
+      );
+      await expectPermissionDenied(
+        client,
+        "legacy_forcing_cursor_update",
+        "UPDATE public.twin_external_formal_forcing_base_cursor_v1 SET completed=completed WHERE false",
+      );
+      await expectPermissionDenied(
+        client,
+        "legacy_forcing_controller_lease_select",
+        "SELECT * FROM public.twin_external_formal_forcing_controller_lease_v1 LIMIT 1",
+      );
+      await expectPermissionDenied(
+        client,
         "evidence_cursor_insert",
         `INSERT INTO public.external_evidence_supply_cursor_v1
          (tenant_id,project_id,group_id,field_id,season_id,zone_id,binding_id,origin_source_id,
@@ -230,6 +248,7 @@ async function main(): Promise<void> {
       evidence_plane_direct_access_denied: true,
       evidence_supply_cursor_mutation_denied: true,
       evidence_producer_lease_mutation_denied: true,
+      legacy_forcing_controller_authority_denied: true,
       facts_update_delete_denied: true,
       action_plane_write_denied_when_present: true,
       production_container_activation: false,
