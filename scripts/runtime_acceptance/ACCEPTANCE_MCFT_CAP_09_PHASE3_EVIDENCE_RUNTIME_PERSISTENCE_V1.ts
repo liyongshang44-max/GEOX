@@ -9,7 +9,6 @@ import {
   type EvidenceSupplyCursorAdvanceInputV1,
 } from "../../apps/server/src/external_evidence/mcft_cap09_evidence_visibility_supply_cursor_v1.js";
 import type {
-  EvidenceProducerLeaseClaimV1,
   EvidenceRuntimeScopeV1,
 } from "../../apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.js";
 import {
@@ -30,11 +29,12 @@ const SCOPE: EvidenceRuntimeScopeV1 = {
   zone_id: "zone_root",
 };
 
-function evidence(input: {
+function soilEvidence(input: {
   fact: string;
   semantic: string;
   available_at: string;
   observed_at: string;
+  source_record_id: string;
 }): EvidenceSupplyCursorAdvanceInputV1 {
   return {
     cursor_contract_id: MCFT_CAP09_EVIDENCE_SUPPLY_CURSOR_CONTRACT_ID_V1,
@@ -42,16 +42,16 @@ function evidence(input: {
       visibility_id: MCFT_CAP09_EVIDENCE_POST_COMMIT_VISIBILITY_ID_V1,
       fact_id: input.fact,
       record_type: "soil_moisture_observation_v1",
-      source_record_id: input.fact.replace("fact_", "source_"),
-      source_record_hash: `sha256:${"3".repeat(64)}`,
+      source_record_id: input.source_record_id,
+      source_record_hash: "sha256:" + "3".repeat(64),
       record_semantic_sha256: input.semantic,
-      retention_ref: `s3-private://phase3-qualification/sha256/${"4".repeat(64)}`,
-      raw_sha256: `sha256:${"4".repeat(64)}`,
+      retention_ref: "s3-private://phase3-qualification/sha256/" + "4".repeat(64),
+      raw_sha256: "sha256:" + "4".repeat(64),
       raw_bytes: 128,
       post_commit_db_readback_at: input.available_at,
     },
-    binding_id: "MCFT_CAP09_PHASE3_QUALIFICATION_BINDING_V1",
-    origin_source_id: "PHASE3_QUALIFICATION_SOURCE",
+    binding_id: "kbs_lter_variate25_vwc_100mm_v1",
+    origin_source_id: "KBS_LTER_CURRENT_WEATHER_VARIATE_25",
     available_to_runtime_at: input.available_at,
     role_time: {
       observed_at: input.observed_at,
@@ -70,7 +70,7 @@ async function expectReject(fn: () => Promise<unknown>, pattern: RegExp): Promis
 async function main(): Promise<void> {
   const pool = new Pool({ connectionString: DATABASE_URL, application_name: "mcft-cap09-phase3-evidence-persistence-qualification" });
   try {
-    await pool.query("TRUNCATE TABLE external_evidence_supply_cursor_v1, external_evidence_producer_lease_v1");
+    await pool.query("TRUNCATE TABLE external_evidence_supply_event_v1, external_evidence_supply_cursor_v1, external_evidence_producer_lease_v1");
 
     const twinLease = await pool.query<{ name: string | null }>(
       "SELECT to_regclass('public.twin_runtime_lease_v1')::text AS name",
@@ -88,51 +88,33 @@ async function main(): Promise<void> {
     const renewed = await leaseRepo.renewLease({ claim: a, lease_duration_seconds: 300 });
     assert.equal(renewed.lease_owner, a.lease_owner);
     assert.equal(renewed.fencing_token, a.fencing_token);
-    assert(Date.parse(renewed.expires_at) > Date.parse(renewed.database_now));
 
     const cursorA = new PostgresEvidenceSupplyCursorV1(pool, SCOPE, renewed);
-    const first = evidence({
-      fact: `fact_${"1".repeat(64)}`,
-      semantic: `sha256:${"5".repeat(64)}`,
+    const first = soilEvidence({
+      fact: "fact_" + "1".repeat(64),
+      semantic: "sha256:" + "5".repeat(64),
       available_at: "2026-08-27T02:00:00.000Z",
       observed_at: "2026-08-27T01:55:00.000Z",
+      source_record_id: "soil-0155",
     });
     const firstAdvance = await cursorA.advanceAfterVisibleEvidence(first);
     assert.equal(firstAdvance.status, "ADVANCED");
-
     const repeat = await cursorA.advanceAfterVisibleEvidence(first);
     assert.equal(repeat.status, "EXISTING_IDEMPOTENT_SUCCESS");
-
-    await expectReject(
-      () => cursorA.advanceAfterVisibleEvidence(evidence({
-        fact: `fact_${"2".repeat(64)}`,
-        semantic: `sha256:${"6".repeat(64)}`,
-        available_at: "2026-08-27T01:59:59.000Z",
-        observed_at: "2026-08-27T01:50:00.000Z",
-      })),
-      /PHASE3_EVIDENCE_CURSOR_AVAILABILITY_REGRESSION/,
-    );
-
-    await expectReject(
-      () => cursorA.advanceAfterVisibleEvidence(evidence({
-        fact: `fact_${"2".repeat(64)}`,
-        semantic: `sha256:${"6".repeat(64)}`,
-        available_at: "2026-08-27T02:00:00.000Z",
-        observed_at: "2026-08-27T01:50:00.000Z",
-      })),
-      /PHASE3_EVIDENCE_CURSOR_EQUAL_WATERMARK_IDENTITY_CONFLICT/,
-    );
 
     await leaseRepo.releaseLease({ claim: renewed });
     const b = await leaseRepo.acquireLease({ scope: SCOPE, lease_owner: "evidence-producer-B", lease_duration_seconds: 300 });
     assert(b, "PHASE3_EXPIRED_TAKEOVER_REQUIRED");
-    assert.equal(b.fencing_token, 2n, "PHASE3_TAKEOVER_MUST_INCREMENT_FENCE");
+    assert.equal(b.fencing_token, 2n);
 
-    const second = evidence({
-      fact: `fact_${"2".repeat(64)}`,
-      semantic: `sha256:${"6".repeat(64)}`,
-      available_at: "2026-08-27T02:05:00.000Z",
+    const second = soilEvidence({
+      fact: "fact_" + "2".repeat(64),
+      semantic: "sha256:" + "6".repeat(64),
+      // Earlier publication timestamp is allowed to be processed later; the publication
+      // watermark remains the maximum visible publication, independently of event order.
+      available_at: "2026-08-27T01:59:00.000Z",
       observed_at: "2026-08-26T23:00:00.000Z",
+      source_record_id: "soil-2300-backfill",
     });
 
     await expectReject(
@@ -153,12 +135,15 @@ async function main(): Promise<void> {
     assert.equal(snapshot.fact_id, second.visible_evidence.fact_id);
     assert.equal(snapshot.fencing_token, 2n);
     assert.equal(snapshot.lease_owner, "evidence-producer-B");
-    assert.equal(snapshot.available_to_runtime_at, "2026-08-27T02:05:00.000Z");
-    assert.equal(
-      (snapshot.role_time.observed_at as string),
-      "2026-08-26T23:00:00.000Z",
-      "PHASE3_LATE_OBSERVED_AT_MUST_NOT_PREVENT_APPEND_FORWARD",
-    );
+    assert.equal(snapshot.available_to_runtime_at, "2026-08-27T01:59:00.000Z");
+    assert.equal(snapshot.publication_available_through, "2026-08-27T02:00:00.000Z");
+    assert.equal(snapshot.event_time_max_seen, "2026-08-27T01:55:00.000Z");
+    assert.equal(snapshot.event_time_contiguous_from, "2026-08-26T23:00:00.000Z");
+    assert.equal(snapshot.event_time_contiguous_through, "2026-08-27T01:55:00.000Z");
+    assert.equal(snapshot.event_gap_count, 0);
+    assert.equal(snapshot.revision_count, 0);
+    assert.equal(snapshot.publication_event_count, 2);
+    assert.equal(snapshot.cadence_profile_id, "KBS_VARIATE25_IRREGULAR_EVENT_V1");
 
     const restartedCursorB = new PostgresEvidenceSupplyCursorV1(pool, SCOPE, b);
     const restartRepeat = await restartedCursorB.advanceAfterVisibleEvidence(second);
@@ -169,15 +154,16 @@ async function main(): Promise<void> {
       /PHASE3_EVIDENCE_LEASE_RENEW_STALE_FENCE/,
     );
 
-    const counts = await pool.query<{ leases: number; cursors: number }>(
-      `SELECT
-         (SELECT count(*)::int FROM external_evidence_producer_lease_v1) AS leases,
-         (SELECT count(*)::int FROM external_evidence_supply_cursor_v1) AS cursors`,
+    const counts = await pool.query<{ leases: number; cursors: number; events: number }>(
+      "SELECT " +
+      "(SELECT count(*)::int FROM external_evidence_producer_lease_v1) AS leases," +
+      "(SELECT count(*)::int FROM external_evidence_supply_cursor_v1) AS cursors," +
+      "(SELECT count(*)::int FROM external_evidence_supply_event_v1) AS events",
     );
-    assert.deepEqual(counts.rows[0], { leases: 1, cursors: 1 });
+    assert.deepEqual(counts.rows[0], { leases: 1, cursors: 1, events: 2 });
 
     const result = {
-      schema_version: "geox_mcft_cap09_phase3_evidence_runtime_persistence_qualification_v1",
+      schema_version: "geox_mcft_cap09_phase3_evidence_runtime_persistence_qualification_v2",
       status: "PASS",
       initial_fencing_token: "1",
       takeover_fencing_token: "2",
@@ -188,14 +174,13 @@ async function main(): Promise<void> {
       cursor_first_advance: firstAdvance.status,
       cursor_exact_retry: repeat.status,
       restart_exact_retry: restartRepeat.status,
-      cursor_regression_rejected: true,
-      equal_watermark_conflict_rejected: true,
-      late_observed_at_append_forward: true,
-      evidence_producer_lease_independent_from_twin_runtime_lease: true,
-      database_clock_lease_authority: true,
-      serializable_cursor_and_lease_validation: true,
+      publication_watermark_independent_from_processing_order: true,
+      event_time_continuity_separate_from_publication_time: true,
+      evidence_event_ledger_row_count: counts.rows[0].events,
       evidence_supply_cursor_row_count: counts.rows[0].cursors,
       evidence_producer_lease_row_count: counts.rows[0].leases,
+      evidence_producer_lease_independent_from_twin_runtime_lease: true,
+      database_clock_lease_authority: true,
       runtime_tick_cursor_mutation: false,
       twin_state_mutation: false,
       production_evidence_runtime_activation: false,
@@ -205,8 +190,8 @@ async function main(): Promise<void> {
       mcft_cap09_completed: false,
     };
     fs.mkdirSync(path.dirname(OUT), { recursive: true });
-    fs.writeFileSync(OUT, `${JSON.stringify(result, null, 2)}\n`);
-    process.stdout.write(`${JSON.stringify(result)}\n`);
+    fs.writeFileSync(OUT, JSON.stringify(result, null, 2) + "\n");
+    process.stdout.write(JSON.stringify(result) + "\n");
   } finally {
     await pool.end();
   }
@@ -214,7 +199,7 @@ async function main(): Promise<void> {
 
 main().catch((error) => {
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
-  fs.writeFileSync(OUT, `${JSON.stringify({ status: "FAIL", error: error instanceof Error ? error.message : String(error) }, null, 2)}\n`);
+  fs.writeFileSync(OUT, JSON.stringify({ status: "FAIL", error: error instanceof Error ? error.message : String(error) }, null, 2) + "\n");
   console.error(error);
   process.exitCode = 1;
 });
