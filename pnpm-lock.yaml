@@ -150,9 +150,6 @@ importers:
       '@geox/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@geox/device-skills':
-        specifier: workspace:*
-        version: link:../../packages/device-skills
       mqtt:
         specifier: ^5
         version: 5.15.0
