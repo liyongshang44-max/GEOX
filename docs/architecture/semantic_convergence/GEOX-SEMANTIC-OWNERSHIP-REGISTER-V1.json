@@ -1395,8 +1395,8 @@
       "semantic_id": "decision.eligibility",
       "question": "May this candidate action proceed toward approval/production given qualified inputs?",
       "target_owner": "Decision Eligibility Runtime",
-      "canonical_output_type": "DecisionEligibilityDecisionV1 (B-07d deterministic evaluator registered as capability island; no runtime consumer connected)",
-      "current_state": "NOT_YET_UNIFIED",
+      "canonical_output_type": "DecisionEligibilityDecisionV1 (B-07e canonical domain runtime seam consumes CandidateDecisionV1 and the B-07d evaluator; no external route/Approval consumer connected)",
+      "current_state": "REGISTERED_CAPABILITY_ISLAND",
       "target_phase": "B-07",
       "new_owner_creation": "FORBIDDEN",
       "registered_producers": [
@@ -1493,11 +1493,21 @@
           "connection_class": "REGISTERED_CAPABILITY_ISLAND",
           "activation": "MANUAL",
           "runtime_edge": "INTENTIONAL_NONE",
-          "new_runtime_consumer_creation": "FORBIDDEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
           "grandfathered_runtime_consumers": []
         }
       ],
-      "registered_consumers": [],
+      "registered_consumers": [
+        {
+          "consumer_id": "decision-eligibility-runtime-seam-v1",
+          "path": "apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts",
+          "role": "canonical B-07e domain runtime seam; validates CandidateDecision identity/scope/basis continuity and delegates final verdict aggregation to the unique B-07d evaluator",
+          "current": true,
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "PROVEN"
+        }
+      ],
       "notes": [
         "Normative target verdicts: PASS / DEGRADED / NEED_EVIDENCE / HUMAN_REVIEW / BLOCK.",
         "Evidence invalidity does not automatically imply action BLOCK.",
@@ -1516,7 +1526,11 @@
         "B-07d registers the first canonical final DecisionEligibilityDecisionV1 producer as a pure deterministic capability island with no runtime consumer.",
         "B-07d requires an explicit policy_ref and explicit required_criteria; there is no hidden default required set.",
         "B-07d aggregation precedence is VIOLATED>REVIEW_REQUIRED>MISSING/UNKNOWN>DEGRADED>SATISFIED.",
-        "B-07d PASS remains ELIGIBILITY_ONLY and is not Approval."
+        "B-07d PASS remains ELIGIBILITY_ONLY and is not Approval.",
+        "B-07e establishes the canonical domain runtime seam over a real CandidateDecisionV1 without exposing an external route.",
+        "B-07e derives candidate_ref/scope/context/stage/decision_time from CandidateDecisionV1 and forbids caller overrides.",
+        "B-07e requires Candidate evidence-basis continuity and restricts criterion support refs to canonical runtime/basis refs.",
+        "B-07e is the sole explicitly registered consumer of the B-07d evaluator; Approval and historical precursor authority remain separate."
       ],
       "runtime_consumers": []
     },
@@ -2516,6 +2530,30 @@
         "apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.ts"
       ],
       "failure": "UNREGISTERED_DECISION_ELIGIBILITY_CRITERION_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-18-decision-eligibility-runtime-consumer",
+      "semantic_id": "decision.eligibility",
+      "description": "B-07e permits exactly the registered Decision Eligibility runtime seam to import/use the B-07d final evaluator; any additional runtime consumer requires explicit later registration.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "from \"./decision_eligibility_evaluator_v1.js\""
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts"
+      ],
+      "failure": "UNREGISTERED_DECISION_ELIGIBILITY_RUNTIME_CONSUMER"
     }
   ],
   "connectivity_model": {
