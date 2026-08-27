@@ -174,7 +174,18 @@ async function main(): Promise<void> {
           gfs_cycle: cycle,
         },
       ],
-      responses: [],
+      responses: [{
+        kind: "GFS_DIRECTORY",
+        target_logical_time: target0,
+        cycle,
+        locator: "https://nomads.ncep.noaa.gov/phase5-durable-planner-contract-only/",
+        file: "soil.json",
+        status: 200,
+        content_type: "text/html",
+        retrieved_at: requestedAt,
+        available_at: requestedAt,
+        sha256: digest(bytes),
+      }],
     }, null, 2) + "\n");
     const durableFixture = new FileBackedPhase5ControlledEvidenceFixtureV1({
       manifest_path: durableManifestPath,
