@@ -8,6 +8,7 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { setTimeout as waitTimeoutV1 } from "node:timers/promises";
 
 import type {
   RawEvidenceRetentionInputV1,
@@ -48,6 +49,8 @@ import {
 const SUBJECT_RE=/^[0-9a-f]{40}$/;
 const HOUR_MS=3_600_000;
 const ROLLING_GFS_TARGET_COUNT=24;
+const MIN_CAPTURE_RUNWAY_MINUTES=30;
+const SOIL_WINDOW_SETTLE_MINUTES=10;
 
 function requiredEnvV1(name:string):string {
   const value=String(process.env[name]??"").trim();
@@ -57,13 +60,16 @@ function requiredEnvV1(name:string):string {
 function sha256V1(bytes:Uint8Array):string {
   return "sha256:"+createHash("sha256").update(bytes).digest("hex");
 }
-function nextHourV1(value:string):string {
+function ceilHourV1(value:string):string {
   const ms=Date.parse(value);
   if(!Number.isFinite(ms)) throw new Error("PHASE5_CAPTURE_TIME_INVALID");
-  return new Date((Math.floor(ms/HOUR_MS)+1)*HOUR_MS).toISOString();
+  return new Date(Math.ceil(ms/HOUR_MS)*HOUR_MS).toISOString();
 }
 function addHoursV1(value:string,hours:number):string {
   return new Date(Date.parse(value)+hours*HOUR_MS).toISOString();
+}
+function addMinutesV1(value:string,minutes:number):string {
+  return new Date(Date.parse(value)+minutes*60_000).toISOString();
 }
 function safeFileV1(value:string):string {
   return value.replace(/[^0-9A-Za-z_.-]+/g,"_");
@@ -293,7 +299,7 @@ async function main():Promise<void> {
   }
 
   const captureStartedAt=new Date().toISOString();
-  const a0=nextHourV1(captureStartedAt);
+  const a0=ceilHourV1(addMinutesV1(captureStartedAt,MIN_CAPTURE_RUNWAY_MINUTES));
   const rollingTargets=Array.from(
     {length:ROLLING_GFS_TARGET_COUNT},
     (_,index)=>addHoursV1(a0,index),
@@ -413,8 +419,13 @@ async function main():Promise<void> {
   );
   if(!allCapturedByA0) throw new Error("PHASE5_CAPTURE_GFS_RAW_AFTER_A0_FORBIDDEN");
 
-  // Soil is acquired after GFS so the selected real observation is inside the strict
-  // (A0-1h,A0] bootstrap window without backdating or synthetic substitution.
+  // Soil is acquired after GFS inside the strict (A0-1h,A0] bootstrap window.
+  // If the extended GFS capture finishes before that window opens, qualification may
+  // wait for the real soil feed; this is acquisition orchestration only and never a
+  // Twin scheduler/provider wait.
+  const soilWindowFetchNotBefore=addMinutesV1(addHoursV1(a0,-1),SOIL_WINDOW_SETTLE_MINUTES);
+  const soilDelayMs=Date.parse(soilWindowFetchNotBefore)-Date.now();
+  if(soilDelayMs>0) await waitTimeoutV1(soilDelayMs);
   const soilRequestedAt=new Date().toISOString();
   if(Date.parse(soilRequestedAt)>=Date.parse(a0)) {
     throw new Error("PHASE5_CAPTURE_NO_CAUSAL_SOIL_WINDOW_REMAINING");
@@ -502,6 +513,8 @@ async function main():Promise<void> {
     status:"PASS",
     subject_sha:subject,
     capture_started_at:captureStartedAt,
+    minimum_capture_runway_minutes:MIN_CAPTURE_RUNWAY_MINUTES,
+    soil_window_settle_minutes:SOIL_WINDOW_SETTLE_MINUTES,
     soil_requested_at:soilRequestedAt,
     a0,
     o00:addHoursV1(a0,1),
