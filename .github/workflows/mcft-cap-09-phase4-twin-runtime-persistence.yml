@@ -6,6 +6,7 @@ on:
       - '.github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts'
+      - 'apps/server/src/infra/migrations.ts'
       - 'apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_persistent_tick_service_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts'
@@ -18,6 +19,7 @@ on:
       - 'apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql'
       - 'apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1.ts'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -58,10 +60,14 @@ jobs:
         run: |
           pnpm --filter @geox/server run typecheck
           pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1.ts
 
       - name: Prove long-running Twin Runtime host contract
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts
+
+      - name: Prove schema-before-ACL migration order
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1.ts
 
       - name: Prove Phase4 host and composition remain database-only
         shell: python
@@ -127,5 +133,6 @@ jobs:
           name: mcft-cap09-phase4-twin-runtime-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             acceptance-output/MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1_RESULT.json
           if-no-files-found: warn
           retention-days: 90
