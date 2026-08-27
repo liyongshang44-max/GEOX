@@ -1,0 +1,158 @@
+name: b07c-agronomy-judge-eligibility-precursor-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b07c-agronomy-judge-eligibility-precursor-exact-2026-08-28
+
+jobs:
+  exact-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Build runtime workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+      - name: B-07c Agronomy Judge eligibility precursor
+        run: node --import tsx --test apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.contract.test.ts
+      - name: B-07b Stage-1 precursor regression
+        run: node --import tsx --test apps/server/src/domain/decision/stage1_eligibility_precursor_adapter_v1.contract.test.ts
+      - name: B-07a Decision Eligibility contract regression
+        run: node --import tsx --test apps/server/src/contracts/decision_eligibility_v1.contract.test.ts
+      - name: B-07c guard exactness
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const finalGuard=(reg.static_guards||[]).find(x=>x.guard_id==="G-B02-16-decision-eligibility-instantiation");
+          const criterionGuard=(reg.static_guards||[]).find(x=>x.guard_id==="G-B02-17-decision-eligibility-criterion-instantiation");
+          if(!finalGuard||!criterionGuard) throw new Error("B07C_ELIGIBILITY_GUARD_MISSING");
+          if((finalGuard.registered_paths||[]).length!==0) throw new Error("B07C_FINAL_ELIGIBILITY_PRODUCER_PREMATURELY_REGISTERED");
+          const expected=[
+            "apps/server/src/domain/decision/stage1_eligibility_precursor_adapter_v1.ts",
+            "apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.ts"
+          ];
+          const got=criterionGuard.registered_paths||[];
+          if(got.length!==expected.length || got.some((x,i)=>x!==expected[i])) throw new Error("B07C_CRITERION_PRODUCER_SET_INVALID:"+JSON.stringify(got));
+          const sem=(reg.semantics||[]).find(x=>x.semantic_id==="decision.eligibility");
+          const p=(sem?.registered_producers||[]).find(x=>x.producer_id==="agronomy-judge-eligibility-precursor-criterion-adapter");
+          if(!p) throw new Error("B07C_REGISTERED_ADAPTER_MISSING");
+          if(p.connection_class!=="REGISTERED_CAPABILITY_ISLAND"||p.activation!=="MANUAL"||p.runtime_edge!=="INTENTIONAL_NONE") throw new Error("B07C_ADAPTER_BOUNDARY_INVALID");
+          console.log("B07C_GUARD_EXACTNESS_PASS");
+          NODE
+      - name: B-07c has no production runtime consumer
+        shell: bash
+        run: |
+          A="apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.ts"
+          S="projectAgronomyJudgeEligibilityPrecursorV1"
+          HITS="$(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n "$S" apps/server/src | grep -v "^$A:" || true)"
+          if [ -n "$HITS" ]; then
+            echo "$HITS"
+            echo "B07C_UNEXPECTED_RUNTIME_CONSUMER"
+            exit 1
+          fi
+          echo "B07C_NO_RUNTIME_CONSUMER_PASS"
+      - name: Final eligibility producer remains zero
+        shell: bash
+        run: |
+          HITS="$(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n 'decisionEligibilityDecisionV1Schema.parse(' apps/server/src || true)"
+          if [ -n "$HITS" ]; then
+            echo "$HITS"
+            echo "B07C_UNEXPECTED_FINAL_ELIGIBILITY_PRODUCER"
+            exit 1
+          fi
+          echo "B07C_ZERO_FINAL_ELIGIBILITY_PRODUCER_PASS"
+      - name: Linter rejects third criterion producer
+        shell: bash
+        run: |
+          P="apps/server/src/.b07c_unregistered_criterion_probe.ts"
+          printf '%s\n' 'decisionEligibilityCriterionAssessmentV1Schema.parse(' > "$P"
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs > /tmp/b07c-criterion-negative.log 2>&1
+          RC=$?
+          set -e
+          cat /tmp/b07c-criterion-negative.log
+          rm -f "$P"
+          if [ "$RC" -eq 0 ]; then
+            echo "B07C_THIRD_CRITERION_PRODUCER_NOT_REJECTED"
+            exit 1
+          fi
+          grep -q "UNREGISTERED_DECISION_ELIGIBILITY_CRITERION_PRODUCER" /tmp/b07c-criterion-negative.log
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+          echo "B07C_CRITERION_NEGATIVE_GOVERNANCE_PASS"
+      - name: Judge and downstream runtime surfaces untouched
+        shell: bash
+        run: |
+          git diff --exit-code ecb3c83e2d2741de77bc846668cc6b89574e8139 366de72a7c4983f48d5ec200353b10e0eea8360b --             apps/server/src/domain/judge/agronomy_judge_v2.ts             apps/server/src/domain/judge/evidence_judge_v2.ts             apps/server/src/domain/judge/judge_result_v2.ts             apps/server/src/routes/judge_v2.ts             apps/server/src/domain/decision/stage1_action_boundary_v1.ts             apps/server/src/routes/appleii_stage1_evidence_gate_v1.ts             apps/server/src/domain/approval/recommendation_approval_request_builder_v1.ts             apps/server/src/routes/control_approval_request_v1.ts             apps/server/src/domain/operations             apps/server/src/domain/controlplane
+          echo "B07C_RUNTIME_SURFACES_UNTOUCHED_PASS"
+      - name: B-07c preserves B-09-only removal boundary
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const graph=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json","utf8"));
+          const bad=[];
+          for(const s of reg.semantics||[]){
+            for(const p of s.registered_producers||[]){
+              if(p.grandfathered_duplicate===true && p.removal_target!=="B-09") bad.push({semantic_id:s.semantic_id,producer_id:p.producer_id,removal_target:p.removal_target});
+            }
+          }
+          if(bad.length) throw new Error("B07C_NON_B09_GRANDFATHERED_REMOVAL:"+JSON.stringify(bad));
+          const badEdges=(graph.current_parallel_edges||[]).filter(e=>e.removal_target!=="B-09");
+          if(badEdges.length) throw new Error("B07C_NON_B09_PARALLEL_REMOVAL:"+JSON.stringify(badEdges));
+          console.log("B07C_B09_ONLY_REMOVAL_BOUNDARY_PASS");
+          NODE
+      - name: B-06 overall regression
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_decision_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_plan_candidate_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/prescription_action_spec_candidate_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/operation_plan_authority_candidate_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/agronomy_recommendation_v2_candidate_adapter_v1.contract.test.ts
+      - name: B-05/B-03/B-04 regression boundary
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+          node --import tsx --test apps/server/src/context/field_program_context_projection_v1.test.ts
+          node --import tsx --test apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.test.ts
+          node --import tsx --test apps/server/src/context/crop_skill_stage_compatibility_adapter_v1.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+          node --import tsx --test apps/server/src/domain/judge/evidence_judge_canonical_sufficiency_shadow_v1.test.ts
+      - name: Product diff remains bounded
+        shell: bash
+        run: |
+          git diff --name-only ecb3c83e2d2741de77bc846668cc6b89574e8139 366de72a7c4983f48d5ec200353b10e0eea8360b > /tmp/b07c-files.txt
+          cat /tmp/b07c-files.txt
+          test "$(wc -l < /tmp/b07c-files.txt | tr -d ' ')" = "4"
+          grep -qx "apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.contract.test.ts" /tmp/b07c-files.txt
+          grep -qx "apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.ts" /tmp/b07c-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B07C-AGRONOMY-JUDGE-ELIGIBILITY-PRECURSOR-ADAPTER-V1.md" /tmp/b07c-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json" /tmp/b07c-files.txt
+          echo "B07C_BOUNDED_PRODUCT_DIFF_PASS"
+      - name: Server build
+        run: pnpm --filter @geox/server build
+      - name: Marker
+        run: |
+          echo "B07C_EXACT_HEAD 366de72a7c4983f48d5ec200353b10e0eea8360b"
+          echo "B07C_AGRONOMY_JUDGE_ELIGIBILITY_PRECURSOR_PASS"
