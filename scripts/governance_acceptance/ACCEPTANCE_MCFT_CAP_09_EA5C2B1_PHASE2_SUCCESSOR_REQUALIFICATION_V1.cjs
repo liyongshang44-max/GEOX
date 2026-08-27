@@ -8,6 +8,7 @@ const path = require("node:path");
 
 const ROOT = path.resolve(__dirname, "../..");
 const PHASE1_BASE = "8943c752a354cb916cc7f144681203aa9a19f70b";
+const PHASE2_CLOSURE = "c3346768a44b16b127378cb690ada1d8cfec1049";
 const HISTORICAL_GATE = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs";
 const HISTORICAL_AUTHORITY = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C2B1-LIVE-KBS-SOIL-INGRESS-EXECUTOR-V1.json";
 const HISTORICAL_ACCEPTANCE = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS.ts";
@@ -86,13 +87,18 @@ function requireMarkers(file, markers, code) {
 
 try {
   const base = exactCommit(process.env.MCFT_BASE_SHA || PHASE1_BASE, "EA5C2B1_PHASE2_BASE_SHA_INVALID");
-  assert.equal(base, PHASE1_BASE, "EA5C2B1_PHASE2_EXACT_PHASE1_BASE_REQUIRED");
+  assert.ok(
+    base === PHASE1_BASE || base === PHASE2_CLOSURE,
+    "EA5C2B1_GOVERNED_PREDECESSOR_REQUIRED",
+  );
   assert.equal(git("merge-base", base, "HEAD"), base, "EA5C2B1_PHASE2_BASE_NOT_ANCESTOR");
 
+  // Historical/frozen authority remains pinned to the original Phase1 predecessor even
+  // when this gate requalifies a later stacked Phase3 successor on top of Phase2 closure.
   for (const file of FROZEN_DEPENDENCIES) {
     assert.equal(
       git("rev-parse", `HEAD:${file}`),
-      git("rev-parse", `${base}:${file}`),
+      git("rev-parse", `${PHASE1_BASE}:${file}`),
       `EA5C2B1_PHASE2_FROZEN_AUTHORITY_DRIFT:${file}`,
     );
   }
@@ -102,13 +108,22 @@ try {
   const sensitive = changed.filter(isSensitive);
   const forbiddenSensitive = sensitive.filter((file) => !ALLOWED_SENSITIVE_DELTA.has(file));
   assert.deepEqual(forbiddenSensitive, [], "EA5C2B1_PHASE2_UNDECLARED_SENSITIVE_PATH");
-  for (const required of [
-    EXECUTOR, TRANSPORT, PROVIDER,
-    KBS_HOURLY_PROVIDER, KBS_HOURLY_CORE,
-    GFS_PROVIDER, GFS_SCIENTIFIC_CORE,
-    GFS_BUNDLE_COMPOSER, GFS_BUNDLE_TRANSPORT, GFS_BUNDLE_DECODER, GFS_BUNDLE_PYTHON_DECODER,
-    WORKFLOW, THIS,
-  ]) {
+  const requiredSensitive = base === PHASE1_BASE
+    ? [
+        EXECUTOR, TRANSPORT, PROVIDER,
+        KBS_HOURLY_PROVIDER, KBS_HOURLY_CORE,
+        GFS_PROVIDER, GFS_SCIENTIFIC_CORE,
+        WORKFLOW, THIS,
+      ]
+    : [
+        GFS_BUNDLE_COMPOSER,
+        GFS_BUNDLE_TRANSPORT,
+        GFS_BUNDLE_DECODER,
+        GFS_BUNDLE_PYTHON_DECODER,
+        WORKFLOW,
+        THIS,
+      ];
+  for (const required of requiredSensitive) {
     assert.equal(sensitive.includes(required), true, `EA5C2B1_PHASE2_REQUIRED_DELTA_MISSING:${required}`);
   }
 
@@ -294,8 +309,12 @@ try {
   const result = {
     schema_version: "geox_mcft_cap09_ea5c2b1_phase2_successor_requalification_v1",
     status: "PASS",
-    classification: "PHASE2_EVIDENCE_PROVIDER_EXTRACTION_SUCCESSOR_REQUALIFICATION",
+    classification: base === PHASE1_BASE
+      ? "PHASE2_EVIDENCE_PROVIDER_EXTRACTION_SUCCESSOR_REQUALIFICATION"
+      : "PHASE3_EVIDENCE_PROVIDER_MAINTENANCE_REQUALIFICATION",
     governed_base_sha: base,
+    phase1_frozen_authority_sha: PHASE1_BASE,
+    phase2_closure_sha: PHASE2_CLOSURE,
     candidate_sha: git("rev-parse", "HEAD"),
     historical_ea5c2b1_gate_unchanged: true,
     historical_ea5c2b1_authority_unchanged: true,
