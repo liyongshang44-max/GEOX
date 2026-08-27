@@ -844,10 +844,10 @@
       "runtime_edge": "PROVEN",
       "contract_compatible": true,
       "evidence": {
-        "kind": "PERSISTED_DATA",
+        "kind": "PERSISTED_DATA_CHAIN",
         "caller_path": "apps/server/src/routes/sensing_fact_envelope_v1.ts",
         "callee_path": "apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts",
-        "fingerprint": "raw_samples"
+        "fingerprint": "raw_samples + raw_sample_runtime_available_v1 post-COMMIT provenance marker"
       },
       "status": "CURRENT_PROVEN"
     },
