@@ -175,11 +175,11 @@ jobs:
       - name: Create isolated successor-viability database
         env:
           PGPASSWORD: postgres
-        run: createdb -h 127.0.0.1 -U postgres phase4_successor
+        run: createdb -h 127.0.0.1 -U postgres mcft_cap09_phase4_successor_acceptance
 
       - name: Prove read-only canonical successor viability
         env:
-          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/phase4_successor
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_phase4_successor_acceptance
           MCFT_CAP_04_SINGLE_TICK_DESTRUCTIVE_ACCEPTANCE: '1'
           MCFT_CAP_09_PHASE4_SUCCESSOR_DESTRUCTIVE_ACCEPTANCE: '1'
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1.ts
