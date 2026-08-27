@@ -1,0 +1,52 @@
+name: b05a-context-stage-contracts-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b05a-context-stage-contracts-exact-2026-08-27
+
+jobs:
+  exact-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Build runtime workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+      - name: B-05a canonical context and stage contracts
+        run: node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+      - name: Existing stage resolver acceptance compatibility
+        run: node --import tsx --test apps/server/src/domain/agronomy/stage5.acceptance.test.ts
+      - name: B-03/B-04 canonical evidence regression boundary
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+      - name: B-05a no runtime producer audit
+        shell: bash
+        run: |
+          if grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n             -e 'contextAssertionV1Schema.parse('             -e 'contextSnapshotV1Schema.parse('             -e 'qualifiedCropStageStateV1Schema.parse('             apps/server/src; then
+            echo "B05A_UNREGISTERED_RUNTIME_PRODUCER_FOUND"
+            exit 1
+          fi
+          echo "B05A_ZERO_RUNTIME_PRODUCERS_PASS"
+      - name: Server build
+        run: pnpm --filter @geox/server build
+      - name: Marker
+        run: |
+          echo "B05A_EXACT_HEAD 0357f9cb6c2a7bca73646e75b72ad173aaf66aab"
+          echo "B05A_CONTEXT_STAGE_CONTRACTS_PASS"
