@@ -134,19 +134,24 @@ test("Apple-II raw-sample and device-health reads are project/scope and decision
 
   const rawQuery = calls.find((call) => call.sql.includes("FROM raw_samples"));
   assert.ok(rawQuery);
-  assert.match(rawQuery.sql, /payload_json ->> 'project_id'/);
-  assert.match(rawQuery.sql, /payload_json ->> 'group_id'/);
-  assert.match(rawQuery.sql, /payload_json ->> 'field_id'/);
-  assert.match(rawQuery.sql, /created_at <= to_timestamp/);
+  assert.ok(rawQuery.sql.includes("(payload_json ->> 'project_id') = $4"));
+  assert.ok(rawQuery.sql.includes("(payload_json ->> 'group_id') = $5"));
+  assert.ok(rawQuery.sql.includes("(payload_json ->> 'field_id') = $6"));
+  assert.ok(rawQuery.sql.includes("sensor_id = $7"));
+  assert.ok(rawQuery.sql.includes("created_at <= to_timestamp($8 / 1000.0)"));
+  assert.equal(rawQuery.args.length, 8);
   assert.equal(rawQuery.args.at(-1), now);
+  assert.ok(!rawQuery.sql.includes("(payload_json ->> 'project_id') = 4"));
 
   const statusQuery = calls.find((call) => call.sql.includes("FROM device_status_index_v1"));
   assert.ok(statusQuery);
-  assert.match(statusQuery.sql, /project_id =/);
-  assert.match(statusQuery.sql, /group_id =/);
-  assert.match(statusQuery.sql, /field_id =/);
-  assert.match(statusQuery.sql, /updated_ts_ms IS NOT NULL AND updated_ts_ms <=/);
+  assert.ok(statusQuery.sql.includes("project_id = $3"));
+  assert.ok(statusQuery.sql.includes("group_id = $4"));
+  assert.ok(statusQuery.sql.includes("field_id = $5"));
+  assert.ok(statusQuery.sql.includes("updated_ts_ms IS NOT NULL AND updated_ts_ms <= $6"));
+  assert.equal(statusQuery.args.length, 6);
   assert.equal(statusQuery.args.at(-1), now);
+  assert.ok(!statusQuery.sql.includes("project_id = 3"));
 });
 
 test("Apple-II excludes unknown/bad source-quality rows from formal evidence without deleting total evidence", async () => {
