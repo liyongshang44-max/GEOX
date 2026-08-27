@@ -1,4 +1,4 @@
-name: b04b1-ingress-physical-qc-oneoff
+name: b04b2-durable-raw-ingress-oneoff
 on:
   push:
     branches:
@@ -6,13 +6,13 @@ on:
 permissions:
   contents: read
 jobs:
-  exact-head-ingress-physical-qc:
+  exact-head-durable-raw-ingress:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout exact B-04b1 target head
+      - name: Checkout exact B-04b2 target head
         uses: actions/checkout@v4
         with:
-          ref: 32b1a635dfc4be1bb0012d7d90ac7e188868e406
+          ref: 7cbd3b7489b5474b0469ea69fa220f033ea2ca20
           fetch-depth: 0
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -33,9 +33,11 @@ jobs:
         run: pnpm --filter @geox/server exec node --import tsx --test src/evidence/ingress_physical_qc_snapshot_v1.test.ts
       - name: B-04b1 observation persistence fixtures
         run: pnpm --filter @geox/server exec node --import tsx --test src/services/device_observation_ingress_physical_qc_v1.test.ts
+      - name: B-04b2 durable raw ingress fixtures
+        run: pnpm --filter @geox/server exec node --import tsx --test src/services/telemetry_ingest_durable_raw_v1.test.ts
       - name: B-02 semantic contract linter
         run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
       - name: Exact-head marker
         run: |
-          echo "B04B1_EXACT_HEAD $(git rev-parse HEAD)"
-          echo "B04B1_INGRESS_PHYSICAL_QC_PASS"
+          echo "B04B2_EXACT_HEAD $(git rev-parse HEAD)"
+          echo "B04B2_DURABLE_RAW_INGRESS_PASS"
