@@ -1,0 +1,132 @@
+name: b04e-evidence-judge-shadow-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b04e-evidence-judge-shadow-exact-2026-08-27
+
+jobs:
+  exact-head:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: geox
+          POSTGRES_PASSWORD: geox
+          POSTGRES_DB: geox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U geox -d geox"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://geox:geox@127.0.0.1:5432/geox
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Build runtime workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+      - name: B-04e canonical sufficiency fixtures
+        run: node --import tsx --test apps/server/src/domain/judge/evidence_judge_canonical_sufficiency_shadow_v1.test.ts
+      - name: Existing Judge traceability compatibility
+        run: node scripts/agronomy_acceptance/ACCEPTANCE_JUDGE_SKILL_TRACEABILITY_V1.cjs
+      - name: B-04d canonical qualification regressions
+        run: |
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+          node --import tsx --test apps/server/src/domain/sensing/appleii_canonical_evidence_projection_v1.test.ts
+          node --import tsx --test apps/server/src/domain/decision/stage1_canonical_evidence_shadow_visibility_v1.test.ts
+      - name: Real PostgreSQL Evidence Judge shadow proof
+        shell: bash
+        run: |
+          cat > .b04e_postgres_proof.ts <<'TS'
+          import fs from "node:fs";
+          import assert from "node:assert/strict";
+          import { Pool } from "pg";
+          import { appendRawSampleV1 } from "./apps/server/src/domain/sensing/raw_sample_fact_envelope_v1.ts";
+          import { evaluateEvidenceJudgeV2WithCanonicalShadow } from "./apps/server/src/domain/judge/evidence_judge_v2.ts";
+
+          async function main() {
+            const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+            try {
+              await pool.query(fs.readFileSync("docker/postgres/init/001_schema.sql", "utf8"));
+              await pool.query(fs.readFileSync("apps/server/db/migrations/2026_04_16_bootstrap_alignment.sql", "utf8"));
+              await pool.query(fs.readFileSync("apps/server/db/migrations/2026_05_15_fact_envelope_v1.sql", "utf8"));
+
+              const baseNow = Date.now();
+              for (let i = 0; i < 3; i += 1) {
+                await appendRawSampleV1(
+                  pool,
+                  {
+                    sample_id: "rs_b04e_pg_" + i,
+                    sensor_id: "dev_b04e_pg",
+                    field_id: "fieldA",
+                    ts_ms: baseNow - (45 - i * 15) * 60_000,
+                    metric: "soil_moisture",
+                    value: 0.22 + i * 0.01,
+                    unit: "m3/m3",
+                    qc_quality: "ok",
+                    source: "device",
+                    payload: {},
+                  },
+                  { tenant_id: "tenantA", project_id: "projectA", group_id: "groupA" },
+                );
+              }
+
+              const nowMs = Date.now() + 1_000;
+              const result = await evaluateEvidenceJudgeV2WithCanonicalShadow(pool, {
+                tenant_id: "tenantA",
+                project_id: "projectA",
+                group_id: "groupA",
+                field_id: "fieldA",
+                device_id: "dev_b04e_pg",
+                soil_moisture: 2.0,
+                observed_at_ts_ms: nowMs - 60_000,
+                now_ts_ms: nowMs,
+                last_heartbeat_ts_ms: nowMs - 60_000,
+              });
+
+              const shadow = result.outputs?.canonical_evidence_sufficiency_shadow_v1;
+              assert.equal(result.verdict, "SENSOR_DRIFT", "legacy compatibility verdict must remain authoritative in B-04e");
+              assert.equal(shadow?.authority_mode, "SHADOW_NON_AUTHORITATIVE");
+              assert.equal(shadow?.status, "SUFFICIENT");
+              assert.ok(Number(shadow?.counts?.role_eligible ?? 0) > 0);
+
+              console.log("B04E_POSTGRES_LEGACY_VERDICT", result.verdict);
+              console.log("B04E_POSTGRES_CANONICAL_SHADOW_STATUS", shadow?.status);
+              console.log("B04E_POSTGRES_DIVERGENCE_NON_AUTHORITY_PASS");
+            } finally {
+              await pool.end();
+            }
+          }
+
+          main().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+          TS
+          pnpm -w exec tsx .b04e_postgres_proof.ts
+          rm -f .b04e_postgres_proof.ts
+      - name: Server build
+        run: pnpm --filter @geox/server build
+      - name: Marker
+        run: |
+          echo "B04E_EXACT_HEAD 0163cf82902f634af51ffce15859b518ca678538"
+          echo "B04E_EVIDENCE_JUDGE_CANONICAL_SUFFICIENCY_SHADOW_PASS"
