@@ -1,0 +1,161 @@
+name: b08a-decision-episode-contract-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b08a-decision-episode-contract-exact-2026-08-28
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 0e87d8b9e5c6a5ca2bbeb308e7e631aa18fa7b14
+          fetch-depth: 0
+
+      - name: Prove literal product head checkout
+        run: |
+          test "$(git rev-parse HEAD)" = "0e87d8b9e5c6a5ca2bbeb308e7e631aa18fa7b14"
+          echo B08A_LITERAL_PRODUCT_HEAD_PASS
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-08a Decision Episode contract
+        run: node --import tsx --test apps/server/src/contracts/decision_episode_v1.contract.test.ts
+
+      - name: B-08a ownership and guard exactness
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const sem=(reg.semantics||[]).find(x=>x.semantic_id==="decision.episode");
+          if(!sem) throw new Error("B08A_DECISION_EPISODE_SEMANTIC_MISSING");
+          if(sem.target_phase!=="B-08") throw new Error("B08A_TARGET_PHASE_DRIFT");
+          if(sem.current_state!=="BOUNDARY_CLEAR_TARGET_NOT_YET_PRODUCT_CONNECTED") throw new Error("B08A_CURRENT_STATE_INVALID:"+sem.current_state);
+          if(!String(sem.canonical_output_type||"").includes("DecisionEpisodeV1")) throw new Error("B08A_CANONICAL_OUTPUT_MISSING");
+          if((sem.registered_consumers||[]).length!==0||(sem.runtime_consumers||[]).length!==0) throw new Error("B08A_PREMATURE_EPISODE_CONSUMER");
+          const real=(sem.registered_producers||[]).filter(p=>p.authority_level!=="FUTURE_TARGET_REFERENCE");
+          if(real.length!==0) throw new Error("B08A_PRODUCTION_EPISODE_PRODUCER_PREMATURELY_REGISTERED");
+
+          const guard=(reg.static_guards||[]).find(x=>x.guard_id==="G-B02-19-decision-episode-instantiation");
+          if(!guard) throw new Error("B08A_EPISODE_GUARD_MISSING");
+          if((guard.registered_paths||[]).length!==0) throw new Error("B08A_EPISODE_ASSEMBLER_ALREADY_REGISTERED");
+          console.log("B08A_OWNERSHIP_GUARD_EXACTNESS_PASS");
+          NODE
+
+      - name: B-08a zero production Decision Episode assembler
+        shell: bash
+        run: |
+          HITS="$(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n 'decisionEpisodeV1Schema.parse(' apps/server/src || true)"
+          if [ -n "$HITS" ]; then
+            echo "$HITS"
+            echo B08A_UNEXPECTED_EPISODE_ASSEMBLER
+            exit 1
+          fi
+          echo B08A_ZERO_PRODUCTION_EPISODE_ASSEMBLER_PASS
+
+      - name: Reject unregistered Decision Episode assembler
+        shell: bash
+        run: |
+          P="apps/server/src/.b08a_unregistered_episode_probe.ts"
+          printf '%s\n' 'decisionEpisodeV1Schema.parse(' > "$P"
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs >/tmp/b08a-episode-negative.log 2>&1
+          RC=$?
+          set -e
+          cat /tmp/b08a-episode-negative.log
+          rm -f "$P"
+          test "$RC" -ne 0
+          grep -q "UNREGISTERED_DECISION_EPISODE_PRODUCER" /tmp/b08a-episode-negative.log
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+          echo B08A_EPISODE_NEGATIVE_GOVERNANCE_PASS
+
+      - name: B-08a real integration remains disconnected
+        shell: bash
+        run: |
+          git diff --exit-code ddcb5f75a77731f5f564b21f831d4c7a98ff726c 0e87d8b9e5c6a5ca2bbeb308e7e631aa18fa7b14 --             docs/digital_twin/mcft             apps/server/src/runtime/twin_runtime             apps/server/src/modules             apps/server/src/routes             apps/server/src/domain/approval             apps/server/src/domain/operations             apps/server/src/domain/controlplane             apps/server/src/jobs/agronomy_agent.ts
+          echo B08A_REAL_INTEGRATION_RUNTIME_UNTOUCHED_PASS
+
+      - name: B-08a provider config absent from production contract
+        shell: bash
+        run: |
+          P="apps/server/src/contracts/decision_episode_v1.ts"
+          ! grep -q "mcft_adapter" "$P"
+          ! grep -q "adr_runtime" "$P"
+          ! grep -q "llm_provider" "$P"
+          ! grep -q "device_command" "$P"
+          ! grep -q "approval_authorized" "$P"
+          echo B08A_NO_REAL_PROVIDER_OR_AUTHORITY_CONFIG_PASS
+
+      - name: B-09-only removal boundary
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const graph=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json","utf8"));
+          const bad=(reg.semantics||[]).flatMap(s=>(s.registered_producers||[]).filter(p=>p.grandfathered_duplicate===true&&p.removal_target!=="B-09").map(p=>({semantic_id:s.semantic_id,producer_id:p.producer_id,removal_target:p.removal_target})));
+          if(bad.length) throw new Error("B08A_NON_B09_GRANDFATHERED_REMOVAL:"+JSON.stringify(bad));
+          const badEdges=(graph.current_parallel_edges||[]).filter(e=>e.removal_target!=="B-09");
+          if(badEdges.length) throw new Error("B08A_NON_B09_PARALLEL_REMOVAL:"+JSON.stringify(badEdges));
+          console.log("B08A_B09_BOUNDARY_PASS");
+          NODE
+
+      - name: B-07 overall regression
+        run: |
+          node --import tsx --test apps/server/src/contracts/decision_eligibility_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/stage1_eligibility_precursor_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: B-06 B-05 B-04 B-03 regression boundary
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_decision_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+
+      - name: Product diff remains bounded
+        shell: bash
+        run: |
+          git diff --name-only ddcb5f75a77731f5f564b21f831d4c7a98ff726c 0e87d8b9e5c6a5ca2bbeb308e7e631aa18fa7b14 >/tmp/b08a-files.txt
+          cat /tmp/b08a-files.txt
+          test "$(wc -l </tmp/b08a-files.txt | tr -d ' ')" = "4"
+          grep -qx "apps/server/src/contracts/decision_episode_v1.contract.test.ts" /tmp/b08a-files.txt
+          grep -qx "apps/server/src/contracts/decision_episode_v1.ts" /tmp/b08a-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B08A-DECISION-EPISODE-CONTRACT-V1.md" /tmp/b08a-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json" /tmp/b08a-files.txt
+          echo B08A_BOUNDED_PRODUCT_DIFF_PASS
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Marker
+        run: |
+          echo "B08A_EXACT_HEAD 0e87d8b9e5c6a5ca2bbeb308e7e631aa18fa7b14"
+          echo B08A_DECISION_EPISODE_CONTRACT_PASS
