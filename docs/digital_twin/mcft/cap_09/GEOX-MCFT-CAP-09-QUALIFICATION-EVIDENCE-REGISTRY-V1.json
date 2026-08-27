@@ -498,7 +498,8 @@
           "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
           "14653ba622bb12261a1ea79f3ea7e42be0b49f92",
           "8943c752a354cb916cc7f144681203aa9a19f70b",
-          "c3346768a44b16b127378cb690ada1d8cfec1049"
+          "c3346768a44b16b127378cb690ada1d8cfec1049",
+          "0e874b254c695b32fd94c7dc7034fd71b8aa3bc3"
         ],
         "dependency_digest_must_match_current": true,
         "anchor_is_not_production_authority": true
