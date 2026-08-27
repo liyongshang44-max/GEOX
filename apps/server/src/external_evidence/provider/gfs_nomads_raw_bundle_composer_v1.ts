@@ -1,6 +1,6 @@
 // MCFT-CAP-09 Phase 3 product GFS raw-bundle composition.
 // Boundary: acquisition + raw-retention-first deterministic bundle assembly only.
-// No qualification-script dependency, database write, scheduler, RuntimeTickCursor,
+// No qualification-script dependency, database write, scheduler, online runtime-cursor authority,
 // Twin state, environment, timer, or process lifecycle.
 
 import { createHash } from "node:crypto";
