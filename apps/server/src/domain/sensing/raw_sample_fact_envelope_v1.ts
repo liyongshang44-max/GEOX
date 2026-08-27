@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { buildIngressPhysicalQcSnapshotV1 } from "../../evidence/ingress_physical_qc_snapshot_v1.js";
 
 export type RawSampleSourceV1 = "device" | "gateway" | "system" | "human" | "import" | "sim" | "unknown";
@@ -321,7 +321,7 @@ export function rawSampleRuntimeAvailabilityMarkerIdV1(sampleId: string): string
 }
 
 export async function writeRawSampleRuntimeAvailabilityMarkerV1(
-  pool: Pool,
+  db: Pool | PoolClient,
   sample: RawSampleEnvelopeV1,
   tenant: RawSampleFactEnvelopeTenantV1,
 ): Promise<{ marker_id: string; available_to_runtime_at: string } | null> {
@@ -338,7 +338,7 @@ export async function writeRawSampleRuntimeAvailabilityMarkerV1(
     semantics: "RAW_SAMPLE_PROVEN_COMMITTED_BEFORE_MARKER_TIME",
   };
 
-  const got = await pool.query(
+  const got = await db.query(
     `INSERT INTO markers (marker_id, sensor_id, group_id, kind, source, payload_json, occurred_at)
      VALUES ($1, $2, $3, $4, 'system', $5::jsonb, clock_timestamp())
      ON CONFLICT (marker_id) DO NOTHING
@@ -418,7 +418,7 @@ export async function appendRawSampleV1(pool: Pool, input: RawSampleWriteInputV1
     // marker time. Marker failure must not roll back or reinterpret the raw fact;
     // absence of the marker simply leaves temporal authority UNKNOWN.
     try {
-      await writeRawSampleRuntimeAvailabilityMarkerV1(pool, normalized, tenant);
+      await writeRawSampleRuntimeAvailabilityMarkerV1(client, normalized, tenant);
     } catch {
       // Fail closed on temporal authority, not on durable raw ingestion.
     }

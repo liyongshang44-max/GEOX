@@ -12,11 +12,22 @@ test("B-04d4 writes runtime availability marker only after raw transaction COMMI
   const order: string[] = [];
   const markerCalls: Array<{ sql: string; args: unknown[] }> = [];
   const client = {
-    query: async (sql: string) => {
+    query: async (sql: string, args: unknown[] = []) => {
       if (sql === "BEGIN") { order.push("BEGIN"); return { rows: [], rowCount: 0 }; }
       if (sql.includes("INSERT INTO raw_samples")) { order.push("RAW_INSERT"); return { rows: [{ sample_id: "rs_avail_001" }], rowCount: 1 }; }
       if (sql.includes("INSERT INTO facts")) { order.push("FACT_INSERT"); return { rows: [], rowCount: 1 }; }
       if (sql === "COMMIT") { order.push("COMMIT"); return { rows: [], rowCount: 0 }; }
+      if (sql.includes("INSERT INTO markers")) {
+        order.push("AVAILABILITY_MARKER");
+        markerCalls.push({ sql, args });
+        return {
+          rows: [{
+            marker_id: rawSampleRuntimeAvailabilityMarkerIdV1("rs_avail_001"),
+            occurred_at: new Date("2026-08-27T06:00:01Z"),
+          }],
+          rowCount: 1,
+        };
+      }
       if (sql === "ROLLBACK") { order.push("ROLLBACK"); return { rows: [], rowCount: 0 }; }
       return { rows: [], rowCount: 0 };
     },
@@ -25,17 +36,6 @@ test("B-04d4 writes runtime availability marker only after raw transaction COMMI
 
   const pool = {
     connect: async () => client,
-    query: async (sql: string, args: unknown[] = []) => {
-      order.push("AVAILABILITY_MARKER");
-      markerCalls.push({ sql, args });
-      return {
-        rows: [{
-          marker_id: rawSampleRuntimeAvailabilityMarkerIdV1("rs_avail_001"),
-          occurred_at: new Date("2026-08-27T06:00:01Z"),
-        }],
-        rowCount: 1,
-      };
-    },
   } as unknown as Pool;
 
   await appendRawSampleV1(
@@ -74,6 +74,10 @@ test("B-04d4 marker failure does not roll back committed raw sample", async () =
       if (sql.includes("INSERT INTO raw_samples")) { order.push("RAW_INSERT"); return { rows: [{ sample_id: "rs_avail_fail" }], rowCount: 1 }; }
       if (sql.includes("INSERT INTO facts")) { order.push("FACT_INSERT"); return { rows: [], rowCount: 1 }; }
       if (sql === "COMMIT") { order.push("COMMIT"); return { rows: [], rowCount: 0 }; }
+      if (sql.includes("INSERT INTO markers")) {
+        order.push("AVAILABILITY_MARKER_FAILED");
+        throw new Error("marker store unavailable");
+      }
       if (sql === "ROLLBACK") { order.push("ROLLBACK"); return { rows: [], rowCount: 0 }; }
       return { rows: [], rowCount: 0 };
     },
@@ -81,10 +85,6 @@ test("B-04d4 marker failure does not roll back committed raw sample", async () =
   } as unknown as PoolClient;
   const pool = {
     connect: async () => client,
-    query: async () => {
-      order.push("AVAILABILITY_MARKER_FAILED");
-      throw new Error("marker store unavailable");
-    },
   } as unknown as Pool;
 
   const item = await appendRawSampleV1(
