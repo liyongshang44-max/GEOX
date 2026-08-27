@@ -187,7 +187,8 @@ function main() {
   assert(byId(phase4TransitivePlan, "PHASE4_TWIN_RUNTIME_FOUNDATION").changed_dependencies.includes(phase4Transitive));
 
   // CP-4: Phase5 production-equivalent packaging is explicitly and narrowly owned.
-  for (const phase5Path of [
+  // Resolve the complete path set in one plan so generated-graph resolvers are materialized once.
+  const phase5Paths = [
     ".github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml",
     "apps/server/scripts/write_dist_entries.cjs",
     "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
@@ -197,13 +198,13 @@ function main() {
     "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1.ts",
-  ]) {
-    const phase5 = plan(authority, registry, [phase5Path]);
-    assert.equal(phase5.status, "PASS");
-    assert.equal(phase5.unknown_changed_paths.length, 0);
-    assert.equal(byId(phase5, "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS").status, "REQUALIFY");
-    assert(byId(phase5, "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS").changed_dependencies.includes(phase5Path));
-  }
+  ];
+  const phase5 = plan(authority, registry, phase5Paths);
+  assert.equal(phase5.status, "PASS");
+  assert.deepEqual(phase5.unknown_changed_paths, []);
+  const phase5Decision = byId(phase5, "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS");
+  assert.equal(phase5Decision.status, "REQUALIFY");
+  for (const phase5Path of phase5Paths) assert(phase5Decision.changed_dependencies.includes(phase5Path));
 
   // CP-4: runtime root changes invalidate v13 carry-forward by dependency closure.
   const runtimePath = "apps/server/src/runtime/twin_runtime/external_formal_forcing_autonomous_controller_service_v1.ts";
