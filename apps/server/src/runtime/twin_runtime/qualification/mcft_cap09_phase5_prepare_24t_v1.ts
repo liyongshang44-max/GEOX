@@ -13,9 +13,6 @@ import {
   validateExternalFormalAmendment19WindowManifestV1,
 } from "../../../domain/twin_runtime/external_formal_amendment19_window_manifest_v1.js";
 import {
-  MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
-} from "../../../domain/twin_runtime/external_formal_runtime_config_v1.js";
-import {
   buildExternalFormalPrewindowAuthorityBundleV3,
   MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4,
   MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4,
@@ -91,6 +88,7 @@ async function main():Promise<void> {
   const cropPath=path.resolve(requiredEnvV1("GEOX_MCFT_CAP09_TWIN_RUNTIME_CROP_AUTHORITY_PATH"));
   const matrixPath=path.resolve(requiredEnvV1("GEOX_MCFT_CAP09_TWIN_RUNTIME_CONFIGURATION_MATRIX_PATH"));
   const bootstrapLeaseOwner="phase5-qualification-bootstrap:"+subject.slice(0,12);
+  const bootstrapLeaseDurationSeconds=1;
   const pool=new Pool({connectionString:requiredEnvV1("DATABASE_URL"),max:4});
   try {
     const databaseName=String((await pool.query("SELECT current_database() AS n")).rows[0]?.n??"");
@@ -143,18 +141,8 @@ async function main():Promise<void> {
       bundle:bundle.persistence_bundle,
       created_at:a0,
       lease_owner:bootstrapLeaseOwner,
-      lease_duration_seconds:300,
+      lease_duration_seconds:bootstrapLeaseDurationSeconds,
     });
-    const s=MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1;
-    const released=await pool.query(
-      `UPDATE public.twin_runtime_lease_v1
-          SET expires_at=GREATEST(transaction_timestamp(),acquired_at+interval '1 microsecond'),
-              heartbeat_at=transaction_timestamp()
-        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
-          AND lease_owner=$7`,
-      [s.tenant_id,s.project_id,s.group_id,s.field_id,s.season_id,s.zone_id,bootstrapLeaseOwner],
-    );
-    if(released.rowCount!==1) throw new Error("PHASE5_PREPARE_BOOTSTRAP_LEASE_RELEASE_REQUIRED");
     if(result.hourly_runtime_config_count!==24 || result.provider_request_count!==0
       || result.scheduler_slot_write_count!==0 || result.formal_window_started!==false) {
       throw new Error("PHASE5_PREPARE_BOOTSTRAP_BOUNDARY_DRIFT");
@@ -176,7 +164,8 @@ async function main():Promise<void> {
       scheduler_slot_write_count:result.scheduler_slot_write_count,
       provider_request_count:result.provider_request_count,
       formal_window_started:result.formal_window_started,
-      bootstrap_lease_released_before_twin_start:true,
+      bootstrap_lease_duration_seconds:bootstrapLeaseDurationSeconds,
+      bootstrap_lease_release_mode:"NATURAL_TTL_EXPIRY",
       production_activation:false,
     };
     fs.mkdirSync(path.dirname(proofPath),{recursive:true});
