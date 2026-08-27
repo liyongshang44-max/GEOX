@@ -6,6 +6,7 @@ import { appendRawSampleV1 } from "./raw_sample_fact_envelope_v1.js";
 import {
   RAW_SAMPLE_RUNTIME_AVAILABILITY_FACT_TYPE_V1,
   RAW_SAMPLE_RUNTIME_AVAILABILITY_PROOF_V1,
+  appendRawSampleRuntimeAvailabilityMarkerV1,
   rawSampleRuntimeAvailabilityFactIdV1,
 } from "./raw_sample_runtime_availability_v1.js";
 
@@ -95,6 +96,27 @@ test("B-04d4a PostgreSQL proves committed raw row before visibility witness is p
     assert.ok(Number.isFinite(markerOccurredAt));
     assert.equal(markerJsonAt, markerOccurredAt);
     assert.ok(markerOccurredAt >= rawCreatedAt, "post-COMMIT witness cannot precede raw row creation");
+
+    const retry = await appendRawSampleRuntimeAvailabilityMarkerV1(
+      pool,
+      {
+        sample_id: sampleId,
+        raw_sample_fact_id: `raw_sample:${sampleId}`,
+        tenant_id: "tenantA",
+        project_id: "projectA",
+        group_id: "groupA",
+        field_id: "fieldA",
+        sensor_id: "dev_001",
+      },
+    );
+    assert.equal(retry.recorded, false, "deterministic marker identity must not append a second fact");
+
+    const markerAfterRetry = await pool.query(
+      "SELECT count(*)::int AS count, min(occurred_at) AS occurred_at FROM facts WHERE fact_id = $1",
+      [markerFactId],
+    );
+    assert.equal(markerAfterRetry.rows[0].count, 1);
+    assert.equal(new Date(markerAfterRetry.rows[0].occurred_at).getTime(), markerOccurredAt);
 
     const rawFact = await pool.query(
       "SELECT fact_id FROM facts WHERE fact_id = $1",
