@@ -227,6 +227,7 @@ export function evaluateFormalStage1TriggerGateV1(summaryPayload: unknown): Stag
 export function buildStage1ActionBoundaryDebugV1(summaryPayload: unknown): Stage1ActionBoundaryDebugV1 {
   const summary = asRecord(summaryPayload);
   const coverage = asRecord(summary.time_coverage_v1);
+  const evidence = asRecord(summary.evidence_sufficiency_v1);
   const device = asRecord(summary.device_health_snapshot_v1);
   const conflict = asRecord(summary.conflict_detection_v1);
   const gate = evaluateFormalStage1TriggerGateV1(summaryPayload);
