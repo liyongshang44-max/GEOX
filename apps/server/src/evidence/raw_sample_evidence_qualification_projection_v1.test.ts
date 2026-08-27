@@ -201,3 +201,32 @@ test("shadow batch can report QUALIFIED evidence while remaining non-authoritati
   });
   assert.ok(batch.limitations.includes("DO_NOT_USE_FOR_STAGE1_TRIGGER_ELIGIBILITY_YET"));
 });
+
+
+test("stale observation becomes temporal STALE and loses role authority", () => {
+  const input = baseInput();
+  input.sample.sample_id = "rs_stale";
+  input.sample.ts_ms = decisionTime - 2 * 60 * 60_000;
+  input.sample.created_at = new Date(decisionTime - 119 * 60_000).toISOString();
+  input.sample.available_to_runtime_at = new Date(decisionTime - 118 * 60_000).toISOString();
+  input.freshness_max_age_ms = 60 * 60_000;
+
+  const q = projectRawSampleEvidenceQualificationV1(input);
+  assert.equal(q.temporal_eligibility, "STALE");
+  assert.equal(q.evidence_authority, "INELIGIBLE");
+  assert.equal(q.role_eligibility[0]?.eligibility, "INELIGIBLE");
+  assert.ok(q.reason_codes.includes("STALE_AT_DECISION_TIME"));
+});
+
+test("spatially limited observation remains explicit LIMITED authority", () => {
+  const input = baseInput();
+  input.sample.sample_id = "rs_spatial_limited";
+  input.sample.available_to_runtime_at = new Date(decisionTime - 8 * 60_000).toISOString();
+  input.requested_scope.project_id = null;
+
+  const q = projectRawSampleEvidenceQualificationV1(input);
+  assert.equal(q.spatial_authority, "LIMITED");
+  assert.equal(q.evidence_authority, "LIMITED");
+  assert.equal(q.role_eligibility[0]?.eligibility, "LIMITED");
+  assert.ok(q.reason_codes.includes("SPATIAL_AUTHORITY_LIMITED"));
+});

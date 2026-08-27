@@ -29,6 +29,14 @@ export type RawSampleEvidenceQualificationProjectionInputV1 = {
     available_to_runtime_at?: string | Date | null;
   };
   decision_time_ms: number;
+  /**
+   * Optional role-specific freshness boundary for the current
+   * STAGE1_FORMAL_EVIDENCE shadow projection.
+   *
+   * When absent, the pure projector does not invent a freshness threshold.
+   * Runtime callers bind the already-existing Apple-II freshness policy.
+   */
+  freshness_max_age_ms?: number | null;
   requested_scope: {
     tenant_id: string;
     project_id?: string | null;
@@ -119,9 +127,11 @@ function deriveTemporalEligibility(input: {
   created_at: string | Date | null | undefined;
   available_to_runtime_at: string | Date | null | undefined;
   decision_time_ms: number;
+  freshness_max_age_ms?: number | null;
 }): {
   temporal_eligibility:
     | "ELIGIBLE"
+    | "STALE"
     | "FUTURE_RELATIVE_TO_DECISION"
     | "NOT_AVAILABLE_AT_DECISION"
     | "UNKNOWN";
@@ -145,6 +155,18 @@ function deriveTemporalEligibility(input: {
     return {
       temporal_eligibility: "NOT_AVAILABLE_AT_DECISION",
       reason_code: "RAW_SAMPLE_CREATED_AFTER_DECISION_TIME",
+    };
+  }
+
+  const freshnessMaxAgeMs = Number(input.freshness_max_age_ms);
+  if (
+    Number.isFinite(freshnessMaxAgeMs) &&
+    freshnessMaxAgeMs > 0 &&
+    input.decision_time_ms - Number(input.observed_at_ms) > freshnessMaxAgeMs
+  ) {
+    return {
+      temporal_eligibility: "STALE",
+      reason_code: "STALE_AT_DECISION_TIME",
     };
   }
 
@@ -195,6 +217,7 @@ function deriveRoleAndAuthority(input: {
   physical_validity: "PASS" | "FAIL" | "UNKNOWN";
   temporal_eligibility:
     | "ELIGIBLE"
+    | "STALE"
     | "FUTURE_RELATIVE_TO_DECISION"
     | "NOT_AVAILABLE_AT_DECISION"
     | "UNKNOWN";
@@ -210,6 +233,7 @@ function deriveRoleAndAuthority(input: {
   if (!input.source_formal_eligible) reasons.push("SOURCE_NOT_FORMAL_ELIGIBLE");
   if (!input.quality_decision.observation_pipeline_eligible) reasons.push(input.quality_decision.reason_code);
   if (input.physical_validity === "FAIL") reasons.push("PHYSICAL_VALIDITY_FAIL");
+  if (input.temporal_eligibility === "STALE") reasons.push("STALE_AT_DECISION_TIME");
   if (input.temporal_eligibility === "FUTURE_RELATIVE_TO_DECISION") reasons.push("OBSERVATION_FUTURE_RELATIVE_TO_DECISION");
   if (input.temporal_eligibility === "NOT_AVAILABLE_AT_DECISION") reasons.push("NOT_AVAILABLE_AT_DECISION");
   if (input.spatial_authority === "OUT_OF_SCOPE") reasons.push("SPATIAL_OUT_OF_SCOPE");
@@ -219,6 +243,7 @@ function deriveRoleAndAuthority(input: {
     !input.source_formal_eligible ||
     !input.quality_decision.observation_pipeline_eligible ||
     input.physical_validity === "FAIL" ||
+    input.temporal_eligibility === "STALE" ||
     input.temporal_eligibility === "FUTURE_RELATIVE_TO_DECISION" ||
     input.temporal_eligibility === "NOT_AVAILABLE_AT_DECISION" ||
     input.spatial_authority === "OUT_OF_SCOPE" ||
@@ -278,6 +303,7 @@ export function projectRawSampleEvidenceQualificationV1(
     created_at: input.sample.created_at,
     available_to_runtime_at: input.sample.available_to_runtime_at,
     decision_time_ms: input.decision_time_ms,
+    freshness_max_age_ms: input.freshness_max_age_ms,
   });
   const sourceAuthority = input.source_formal_eligible ? "QUALIFIED" : "UNQUALIFIED";
   const role = deriveRoleAndAuthority({
