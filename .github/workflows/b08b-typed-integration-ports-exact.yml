@@ -1,0 +1,142 @@
+name: b08b-typed-integration-ports-exact
+on:
+  push:
+    branches: [ci/bline-b08b-typed-integration-ports-exact-2026-08-28]
+jobs:
+  exact-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+      - name: B-02 governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+      - name: B-08b typed integration port fixtures
+        run: node --import tsx --test apps/server/src/contracts/decision_integration_ports_v1.contract.test.ts
+      - name: B-08a Decision Episode contract regression
+        run: node --import tsx --test apps/server/src/contracts/decision_episode_v1.contract.test.ts
+      - name: B-08b governance exactness
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const sem=(reg.semantics||[]).find(x=>x.semantic_id==="decision.integration_ports");
+          if(!sem) throw new Error("B08B_PORT_SEMANTIC_MISSING");
+          if(sem.current_state!=="BOUNDARY_CLEAR_TARGET_NOT_YET_PRODUCT_CONNECTED") throw new Error("B08B_PORT_STATE_INVALID:"+sem.current_state);
+          const g20=(reg.static_guards||[]).find(x=>x.guard_id==="G-B02-20-decision-producer-port-output-instantiation");
+          const g21=(reg.static_guards||[]).find(x=>x.guard_id==="G-B02-21-future-integration-binding-instantiation");
+          if(!g20||!g21) throw new Error("B08B_PORT_GUARD_MISSING");
+          if((g20.registered_paths||[]).length!==0) throw new Error("B08B_PRODUCER_PORT_RUNTIME_PREMATURELY_REGISTERED");
+          if((g21.registered_paths||[]).length!==0) throw new Error("B08B_FUTURE_BINDING_PREMATURELY_REGISTERED");
+          const ep=(reg.static_guards||[]).find(x=>x.guard_id==="G-B02-19-decision-episode-instantiation");
+          if(!ep||(ep.registered_paths||[]).length!==0) throw new Error("B08B_EPISODE_ASSEMBLER_PREMATURELY_REGISTERED");
+          console.log("B08B_GOVERNANCE_EXACTNESS_PASS");
+          NODE
+      - name: Zero production port outputs and bindings
+        shell: bash
+        run: |
+          for S in decisionProducerPortOutputV1Schema.parse futureDecisionIntegrationBindingV1Schema.parse; do
+            H="$(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n "$S(" apps/server/src || true)"
+            if [ -n "$H" ]; then
+              echo "$H"
+              echo "B08B_UNEXPECTED_PRODUCTION_PORT_BINDING"
+              exit 1
+            fi
+          done
+          echo B08B_ZERO_PRODUCTION_PORT_BINDING_PASS
+      - name: Reject unregistered producer-port output
+        shell: bash
+        run: |
+          P="apps/server/src/.b08b_unregistered_producer_port_probe.ts"
+          printf '%s\n' 'decisionProducerPortOutputV1Schema.parse(' > "$P"
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs >/tmp/b08b-producer-negative.log 2>&1
+          RC=$?
+          set -e
+          cat /tmp/b08b-producer-negative.log
+          rm -f "$P"
+          test "$RC" -ne 0
+          grep -q "UNREGISTERED_DECISION_PRODUCER_PORT_OUTPUT" /tmp/b08b-producer-negative.log
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+          echo B08B_PRODUCER_PORT_NEGATIVE_PASS
+      - name: Reject unregistered real integration binding
+        shell: bash
+        run: |
+          P="apps/server/src/.b08b_unregistered_binding_probe.ts"
+          printf '%s\n' 'futureDecisionIntegrationBindingV1Schema.parse(' > "$P"
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs >/tmp/b08b-binding-negative.log 2>&1
+          RC=$?
+          set -e
+          cat /tmp/b08b-binding-negative.log
+          rm -f "$P"
+          test "$RC" -ne 0
+          grep -q "UNREGISTERED_FUTURE_DECISION_INTEGRATION_BINDING" /tmp/b08b-binding-negative.log
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+          echo B08B_BINDING_NEGATIVE_PASS
+      - name: No real port runtime consumer
+        shell: bash
+        run: |
+          H="$(grep -R --include='*.ts' --exclude='decision_integration_ports_v1.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n 'decision_integration_ports_v1' apps/server/src || true)"
+          if [ -n "$H" ]; then
+            echo "$H"
+            echo "B08B_UNEXPECTED_PORT_RUNTIME_CONSUMER"
+            exit 1
+          fi
+          echo B08B_NO_PORT_RUNTIME_CONSUMER_PASS
+      - name: No MCFT ADR LLM runtime mutation
+        shell: bash
+        run: |
+          git diff --exit-code 0e87d8b9e5c6a5ca2bbeb308e7e631aa18fa7b14 c3672de04880616b2cae9ac4aaeff03b759d7db0 --             apps/server/src/routes             apps/server/src/modules             apps/server/src/jobs             apps/server/src/domain/judge             apps/server/src/domain/approval             apps/server/src/domain/operations             apps/server/src/domain/controlplane             docs/digital_twin/mcft             .github/workflows/mcft*
+          echo B08B_REAL_INTEGRATION_RUNTIME_UNTOUCHED_PASS
+      - name: B-09-only removal boundary
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const graph=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json","utf8"));
+          const bad=(reg.semantics||[]).flatMap(s=>(s.registered_producers||[]).filter(p=>p.grandfathered_duplicate===true&&p.removal_target!=="B-09").map(p=>({semantic_id:s.semantic_id,producer_id:p.producer_id,removal_target:p.removal_target})));
+          if(bad.length) throw new Error("B08B_NON_B09_GRANDFATHERED_REMOVAL:"+JSON.stringify(bad));
+          const badEdges=(graph.current_parallel_edges||[]).filter(e=>e.removal_target!=="B-09");
+          if(badEdges.length) throw new Error("B08B_NON_B09_PARALLEL_REMOVAL:"+JSON.stringify(badEdges));
+          console.log("B08B_B09_BOUNDARY_PASS");
+          NODE
+      - name: B-07 and earlier regression
+        run: |
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/decision_eligibility_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_decision_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+      - name: Product diff bounded
+        shell: bash
+        run: |
+          git diff --name-only 0e87d8b9e5c6a5ca2bbeb308e7e631aa18fa7b14 c3672de04880616b2cae9ac4aaeff03b759d7db0 >/tmp/b08b-files.txt
+          cat /tmp/b08b-files.txt
+          test "$(wc -l </tmp/b08b-files.txt | tr -d ' ')" = "4"
+          grep -qx "apps/server/src/contracts/decision_integration_ports_v1.contract.test.ts" /tmp/b08b-files.txt
+          grep -qx "apps/server/src/contracts/decision_integration_ports_v1.ts" /tmp/b08b-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B08B-TYPED-INTEGRATION-PORTS-V1.md" /tmp/b08b-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json" /tmp/b08b-files.txt
+          echo B08B_BOUNDED_PRODUCT_DIFF_PASS
+      - name: Server build
+        run: pnpm --filter @geox/server build
+      - name: Marker
+        run: |
+          echo "B08B_EXACT_HEAD c3672de04880616b2cae9ac4aaeff03b759d7db0"
+          echo B08B_TYPED_INTEGRATION_PORTS_PASS
