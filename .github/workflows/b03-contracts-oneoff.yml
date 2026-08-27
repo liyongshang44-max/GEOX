@@ -1,4 +1,4 @@
-name: b04d2-rawsample-authority-time-scope-oneoff
+name: b04d2r1-postgres-placeholder-correction-oneoff
 on:
   push:
     branches:
@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 46560a3ab3d551ab316977cce495331740edb735
+          ref: 7306e9bad103b1284fbab0f6e280d47ec53fe6af
           fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
@@ -23,7 +23,7 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - name: Server typecheck
         run: pnpm --filter @geox/server run typecheck
-      - name: B04d2 source quality scope time fixtures
+      - name: B04d2r1 exact SQL placeholder + authority fixtures
         run: pnpm --filter @geox/server exec node --import tsx --test src/domain/sensing/raw_sample_authority_time_scope_v1.test.ts
       - name: B04d1 raw-sample guard fixtures
         run: pnpm --filter @geox/server exec node --import tsx --test src/evidence/raw_sample_stage1_physical_qc_v1.test.ts
@@ -54,5 +54,5 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
       - name: Marker
         run: |
-          echo "B04D2_EXACT_HEAD $(git rev-parse HEAD)"
-          echo "B04D2_RAWSAMPLE_AUTHORITY_TIME_SCOPE_PASS"
+          echo "B04D2R1_EXACT_HEAD $(git rev-parse HEAD)"
+          echo "B04D2R1_POSTGRES_PLACEHOLDER_CORRECTION_PASS"
