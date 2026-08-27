@@ -9,7 +9,7 @@ import mqtt from "mqtt"; // MQTT client for telemetry subscription.
 import { z } from "zod"; // Runtime schema validation for incoming telemetry payloads.
 import { updateAgronomySnapshot } from "../../server/src/projections/agronomy_signal_snapshot_v1"; // Refresh agronomy snapshot projection after telemetry commits.
 import { ensureDeviceObservationProjectionV1, writeObservationRunPipelineAndRefreshFieldV1 } from "../../server/src/services/device_observation_service_v1"; // raw_telemetry_v1 -> device_observation_v1 -> sensing pipeline -> read-model refresh.
-import { buildMqttObservationInputV1 } from "./mqtt_observation_input_v1"; // Source-preserving MQTT transport mapper.
+import { buildMqttObservationInputV1 } from "./mqtt_observation_input_v1"; // Source-preserving MQTT transport mapper.\nimport { runMqttObservationProjectionV1 } from "./mqtt_durable_raw_v1"; // Narrow durable-raw transaction exception.
 
 const TelemetryPayloadSchema = z.object({ // Define minimal telemetry payload schema.
   metric: z.string().min(1), // Metric name (e.g., soil_moisture).
@@ -98,9 +98,6 @@ function toQualityFlags(value: unknown): string[] { // Derive basic quality flag
   return ["OK"];
 } // End helper.
 
-function isDurableMqttObservationProjectionFailure(error: unknown): boolean {
-  return error instanceof Error && error.message === "DEVICE_OBSERVATION_VALUE_NOT_NUMERIC";
-}
 
 async function resolveTelemetryObservationFieldId(clientConn: import("pg").PoolClient, tenant_id: string, device_id: string): Promise<string | null> { // Attach latest field dimension for observation indexing.
   try {
@@ -314,7 +311,7 @@ record = { // Telemetry record.
     ); // Append raw telemetry/heartbeat fact.
 
     if (parsed.kind === "telemetry") {
-      try {
+      const projection = await runMqttObservationProjectionV1(clientConn, async () => {
         await writeObservationRunPipelineAndRefreshFieldV1(
           clientConn,
           buildMqttObservationInputV1({
@@ -331,17 +328,16 @@ record = { // Telemetry record.
             quality_flags: qualityFlags,
           })
         );
-      } catch (err) {
-        if (!isDurableMqttObservationProjectionFailure(err)) throw err;
+      });
 
-        await clientConn.query("COMMIT");
+      if (projection.kind === "RAW_COMMITTED_PROJECTION_REJECTED") {
         transactionOpen = false;
         // eslint-disable-next-line no-console
         console.warn("[telemetry-ingest] durable_raw_projection_rejected", {
           tenant_id: parsed.tenant_id,
           device_id: parsed.device_id,
           fact_id,
-          error: "DEVICE_OBSERVATION_VALUE_NOT_NUMERIC",
+          error: projection.error,
         });
         if (once) {
           // eslint-disable-next-line no-console
@@ -350,7 +346,7 @@ record = { // Telemetry record.
             durable_raw: true,
             fact_id,
             kind: parsed.kind,
-            error: "DEVICE_OBSERVATION_VALUE_NOT_NUMERIC",
+            error: projection.error,
           }));
           client.end(true);
           await pool.end();
