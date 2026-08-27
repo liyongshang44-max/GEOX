@@ -816,6 +816,40 @@
         "fingerprint": "getLatestWeatherForecastIndexV1"
       },
       "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-029",
+      "from_producer": "sensing-raw-sample-ingress",
+      "to_consumer": "stage1-sensing",
+      "semantic_id": "evidence.raw_observation",
+      "connection_class": "MAINLINE",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/routes/sensing_fact_envelope_v1.ts",
+        "callee_path": "apps/server/src/domain/sensing/run_sensing_inference_pipeline_v1.ts",
+        "fingerprint": "maybeRunOfficialObservationPipelineV1 -> writeObservationRunPipelineAndRefreshFieldV1"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-030",
+      "from_producer": "sensing-raw-sample-ingress",
+      "to_consumer": "appleii-stage1-evidence-sufficiency",
+      "semantic_id": "evidence.raw_observation",
+      "connection_class": "MAINLINE",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "PERSISTED_DATA",
+        "caller_path": "apps/server/src/routes/sensing_fact_envelope_v1.ts",
+        "callee_path": "apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts",
+        "fingerprint": "raw_samples"
+      },
+      "status": "CURRENT_PROVEN"
     }
   ],
   "connectivity_status_values": [
