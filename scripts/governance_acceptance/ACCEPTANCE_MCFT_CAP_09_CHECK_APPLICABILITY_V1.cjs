@@ -211,6 +211,11 @@ function main() {
     "apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.ts",
     "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase5_twin_fact_writer_acl.sql",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_CANONICAL_FACT_WRITER_V1.ts",
+    ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+    "docker/mcft-cap09-runtime.Dockerfile",
+    "apps/server/src/external_evidence/qualification/mcft_cap09_phase5_capture_a0_fixture_v1.ts",
+    "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.ts",
+    "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_verify_24t_v1.ts",
   ];
   const phase5 = plan(authority, registry, phase5Paths);
   assert.equal(phase5.status, "PASS");
