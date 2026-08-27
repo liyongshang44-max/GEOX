@@ -52,7 +52,22 @@ export type EvidenceSupplyCursorSnapshotV1 = {
   origin_source_id: string;
   fact_id: string;
   record_semantic_sha256: string;
+
+  // Latest processed fact publication time (compatibility field).
   available_to_runtime_at: string;
+
+  // Independent publication watermark and event-time continuity axes.
+  publication_available_through: string;
+  latest_event_time: string;
+  latest_source_record_id: string;
+  event_time_contiguous_from: string;
+  event_time_contiguous_through: string;
+  event_time_max_seen: string;
+  event_gap_count: number;
+  revision_count: number;
+  publication_event_count: number;
+  cadence_profile_id: string;
+
   role_time: Record<string, unknown>;
   post_commit_db_readback_at: string;
   lease_owner: string;
