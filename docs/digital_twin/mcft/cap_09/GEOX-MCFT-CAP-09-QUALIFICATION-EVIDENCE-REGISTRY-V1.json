@@ -459,6 +459,46 @@
         "artifact_absence_reason": "RUN_LEVEL_PHASE4_POST_CLOCK_SEAM_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
         "immutable_binding_sha256": "a55da97d4c05234d1eb06ff71db656d51e311501b8bc95bf7a49abb3ee33cc8a"
+      },
+      {
+        "evidence_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_76C920E1",
+        "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "phase3-evidence-runtime-foundation-post-nomads-cadence",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "76c920e15546b55b4a4f5e317cc9ad820b20b0f8",
+        "workflow_name": "mcft-cap-09-phase3-evidence-runtime-persistence",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+        "run_id": 33085589432,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "76c920e15546b55b4a4f5e317cc9ad820b20b0f8",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:9569eb7630e736e70cfa56942e15a39a14c933c804e194c83050047fd67b8b94",
+        "artifact_absence_reason": "RUN_LEVEL_PHASE3_POST_NOMADS_CADENCE_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "c640fe34018c6f621d26b8de69f25a282b56a874ac0ffb7e33b407ca99e4e16d"
+      },
+      {
+        "evidence_id": "PHASE4_TWIN_RUNTIME_FOUNDATION_REQUAL_76C920E1",
+        "check_id": "PHASE4_TWIN_RUNTIME_FOUNDATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "phase4-twin-runtime-foundation-post-phase5-writer",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "76c920e15546b55b4a4f5e317cc9ad820b20b0f8",
+        "workflow_name": "mcft-cap-09-phase4-twin-runtime-persistence",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml",
+        "run_id": 33085589444,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "76c920e15546b55b4a4f5e317cc9ad820b20b0f8",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:e503940c018c286bfaafa10b7ad71113c057727d356c71f0d3d709617539fe82",
+        "artifact_absence_reason": "RUN_LEVEL_PHASE4_POST_PHASE5_WRITER_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "29743d126c6c143d370ffc1bb2b15a9436357b2af30d1fb9bb5afd1681df7a2b"
       }
     ],
     "durable_anchors": {
@@ -589,6 +629,34 @@
             "base_sha": "16ff7160473c0a25dc059db6b2b6b7ba07f54dd1",
             "created_at": "2026-08-27T11:45:56Z",
             "updated_at": "2026-08-27T11:49:18Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_76C920E1",
+          "run_id": 33085589432,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 138,
+            "workflow_path": ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+            "workflow_name": "mcft-cap-09-phase3-evidence-runtime-persistence",
+            "head_sha": "76c920e15546b55b4a4f5e317cc9ad820b20b0f8",
+            "base_sha": "16ff7160473c0a25dc059db6b2b6b7ba07f54dd1",
+            "created_at": "2026-08-27T15:02:14Z",
+            "updated_at": "2026-08-27T15:03:32Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE4_TWIN_RUNTIME_FOUNDATION_REQUAL_76C920E1",
+          "run_id": 33085589444,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 92,
+            "workflow_path": ".github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml",
+            "workflow_name": "mcft-cap-09-phase4-twin-runtime-persistence",
+            "head_sha": "76c920e15546b55b4a4f5e317cc9ad820b20b0f8",
+            "base_sha": "16ff7160473c0a25dc059db6b2b6b7ba07f54dd1",
+            "created_at": "2026-08-27T15:02:14Z",
+            "updated_at": "2026-08-27T15:03:28Z"
           }
         }
       ],
