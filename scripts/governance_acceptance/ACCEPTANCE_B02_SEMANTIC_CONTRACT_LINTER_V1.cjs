@@ -80,8 +80,11 @@ function run() {
     for (const key of ["target_owner","canonical_output_type","new_owner_creation"]) {
       if (!String(semantic[key] || "").trim()) failures.push("SEMANTIC_FIELD_MISSING:" + sid + ":" + key);
     }
+    if (!Array.isArray(semantic.registered_producers)) failures.push("REGISTERED_PRODUCERS_MISSING:" + sid);
     if (!Array.isArray(semantic.registered_consumers)) failures.push("REGISTERED_CONSUMERS_MISSING:" + sid);
     if (!Array.isArray(semantic.runtime_consumers)) failures.push("RUNTIME_CONSUMERS_MISSING:" + sid);
+    if (Object.prototype.hasOwnProperty.call(semantic, "producers")) failures.push("NONCANONICAL_PRODUCERS_KEY:" + sid);
+    if (Object.prototype.hasOwnProperty.call(semantic, "consumers")) failures.push("NONCANONICAL_CONSUMERS_KEY:" + sid);
 
     for (const p of Array.isArray(semantic.registered_producers) ? semantic.registered_producers : []) {
       const pid = String(p.producer_id || "").trim();
