@@ -250,6 +250,18 @@ implements TwinRuntimeHostHealthPortV1 {
   }
 }
 
+function twinCoordinationContentionV1(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  const code = message.split(":", 1)[0];
+  return [
+    "LEASE_HELD_BY_OTHER_OWNER",
+    "SLOT_ALREADY_CLAIMED_BY_OTHER_OWNER",
+    "ACTIVE_SLOT_ALREADY_PRESENT",
+    "TERMINAL_SLOT_ALREADY_RECORDED",
+    "SLOT_PRECEDES_DURABLE_CURSOR",
+  ].includes(code);
+}
+
 function transientInfrastructureFailureV1(error: unknown): boolean {
   const code = typeof error === "object" && error !== null && "code" in error
     ? String((error as { code?: unknown }).code ?? "")
@@ -282,6 +294,8 @@ implements EvidenceRuntimeHostFailureClassifierV1 {
 export class McftCap09ProductionTwinFailureClassifierV1
 implements TwinRuntimeHostFailureClassifierV1 {
   classify(error: unknown): "RETRYABLE" | "FATAL" {
-    return transientInfrastructureFailureV1(error) ? "RETRYABLE" : "FATAL";
+    return twinCoordinationContentionV1(error) || transientInfrastructureFailureV1(error)
+      ? "RETRYABLE"
+      : "FATAL";
   }
 }

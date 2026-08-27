@@ -14,9 +14,62 @@ import {
 import {
   buildKbsVariate25SoilFetchRequestV1,
 } from "../../apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.js";
+import {
+  MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_ET0_BINDING_ID_V1,
+  MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_WEATHER_BINDING_ID_V1,
+} from "../../apps/server/src/domain/twin_runtime/external_formal_evidence_binding_profile_v1.js";
+import type {
+  EvidenceRuntimeScopeV1,
+  EvidenceSupplyCursorSnapshotV1,
+} from "../../apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.js";
 
 function digest(bytes: Uint8Array): string {
   return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+}
+
+
+const SCOPE: EvidenceRuntimeScopeV1 = {
+  tenant_id: "tenantA",
+  project_id: "projectA",
+  group_id: "groupA",
+  field_id: "field_e3r1",
+  season_id: "season_2026",
+  zone_id: "zone_root",
+};
+
+function cursorSnapshot(input: {
+  binding_id: string;
+  origin_source_id: string;
+  target: string;
+  ingested_at: string;
+}): EvidenceSupplyCursorSnapshotV1 {
+  return {
+    scope: { ...SCOPE },
+    binding_id: input.binding_id,
+    origin_source_id: input.origin_source_id,
+    fact_id: `fact:${input.binding_id}:${input.target}`,
+    record_semantic_sha256: "sha256:" + "1".repeat(64),
+    available_to_runtime_at: input.ingested_at,
+    publication_available_through: input.ingested_at,
+    latest_event_time: "2026-08-27T06:00:00.000Z",
+    latest_source_record_id: `source:${input.binding_id}:${input.target}`,
+    event_time_contiguous_from: "2026-08-27T06:00:00.000Z",
+    event_time_contiguous_through: "2026-08-27T06:00:00.000Z",
+    event_time_max_seen: "2026-08-27T06:00:00.000Z",
+    event_gap_count: 0,
+    revision_count: 0,
+    publication_event_count: 1,
+    cadence_profile_id: "GFS_SIX_HOUR_ISSUE_EVENTS_V1",
+    role_time: {
+      issued_at: "2026-08-27T06:00:00.000Z",
+      valid_from: input.target,
+      ingested_at: input.ingested_at,
+    },
+    post_commit_db_readback_at: input.ingested_at,
+    lease_owner: "evidence-runtime:test",
+    fencing_token: 1n,
+    advanced_at: input.ingested_at,
+  };
 }
 
 async function main(): Promise<void> {
@@ -102,6 +155,128 @@ async function main(): Promise<void> {
     assert.equal(exhausted, null);
     assert.equal(fixture.selectGfsCycle({ target_logical_time: target0 }), cycle);
 
+    const durableManifestPath = path.join(root, "durable-manifest.json");
+    fs.writeFileSync(durableManifestPath, JSON.stringify({
+      schema_version: MCFT_CAP09_PHASE5_CONTROLLED_FIXTURE_MANIFEST_SCHEMA_V1,
+      targets: [
+        {
+          target_logical_time: target0,
+          requested_at: requestedAt,
+          request_id_prefix: "phase5.durable.o00",
+          source_families: ["GFS_BUNDLE"],
+          gfs_cycle: cycle,
+        },
+        {
+          target_logical_time: target1,
+          requested_at: "2026-08-27T08:55:00.000Z",
+          request_id_prefix: "phase5.durable.o01",
+          source_families: ["GFS_BUNDLE"],
+          gfs_cycle: cycle,
+        },
+      ],
+      responses: [],
+    }, null, 2) + "\n");
+    const durableFixture = new FileBackedPhase5ControlledEvidenceFixtureV1({
+      manifest_path: durableManifestPath,
+      fixture_root: root,
+    });
+    const cursorByBinding = new Map<string, EvidenceSupplyCursorSnapshotV1 | null>([
+      [MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_WEATHER_BINDING_ID_V1, null],
+      [MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_ET0_BINDING_ID_V1, null],
+    ]);
+    const durablePlanner = durableFixture.createTargetPlanner({
+      scope: SCOPE,
+      cursor_reader: {
+        async readSupplyCursor(input) {
+          return cursorByBinding.get(input.binding_id) ?? null;
+        },
+      },
+    });
+    const durableFirst = await durablePlanner.nextTarget({
+      cycle_attempt: 0,
+      successful_cycle_count: 0,
+      consecutive_failure_count: 0,
+      previous_result: null,
+    });
+    assert.equal(durableFirst?.target_logical_time, target0);
+    assert.equal(durableFirst?.restored_ingested_at, undefined);
+
+    const cycleKey = "20260827t060000z";
+    const weatherOrigin = `gfs_${cycleKey}_pgrb2_0p25_kbs`;
+    const et0Origin = `gfs_${cycleKey}_asce_short_reference_et0_kbs`;
+    const ingest0 = "2026-08-27T07:57:00.000Z";
+    cursorByBinding.set(
+      MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_WEATHER_BINDING_ID_V1,
+      cursorSnapshot({
+        binding_id: MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_WEATHER_BINDING_ID_V1,
+        origin_source_id: weatherOrigin,
+        target: target0,
+        ingested_at: ingest0,
+      }),
+    );
+    const durablePartial0 = await durablePlanner.nextTarget({
+      cycle_attempt: 1,
+      successful_cycle_count: 0,
+      consecutive_failure_count: 0,
+      previous_result: null,
+    });
+    assert.equal(durablePartial0?.target_logical_time, target0);
+    assert.equal(durablePartial0?.restored_ingested_at, ingest0);
+
+    cursorByBinding.set(
+      MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_ET0_BINDING_ID_V1,
+      cursorSnapshot({
+        binding_id: MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_ET0_BINDING_ID_V1,
+        origin_source_id: et0Origin,
+        target: target0,
+        ingested_at: ingest0,
+      }),
+    );
+    const durableSecond = await durablePlanner.nextTarget({
+      cycle_attempt: 2,
+      successful_cycle_count: 0,
+      consecutive_failure_count: 0,
+      previous_result: null,
+    });
+    assert.equal(durableSecond?.target_logical_time, target1);
+    assert.equal(durableSecond?.restored_ingested_at, undefined);
+
+    const ingest1 = "2026-08-27T08:57:00.000Z";
+    cursorByBinding.set(
+      MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_WEATHER_BINDING_ID_V1,
+      cursorSnapshot({
+        binding_id: MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_WEATHER_BINDING_ID_V1,
+        origin_source_id: weatherOrigin,
+        target: target1,
+        ingested_at: ingest1,
+      }),
+    );
+    const durablePartial1 = await durablePlanner.nextTarget({
+      cycle_attempt: 3,
+      successful_cycle_count: 0,
+      consecutive_failure_count: 0,
+      previous_result: null,
+    });
+    assert.equal(durablePartial1?.target_logical_time, target1);
+    assert.equal(durablePartial1?.restored_ingested_at, ingest1);
+
+    cursorByBinding.set(
+      MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_ET0_BINDING_ID_V1,
+      cursorSnapshot({
+        binding_id: MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_ET0_BINDING_ID_V1,
+        origin_source_id: et0Origin,
+        target: target1,
+        ingested_at: ingest1,
+      }),
+    );
+    const durableDone = await durablePlanner.nextTarget({
+      cycle_attempt: 4,
+      successful_cycle_count: 0,
+      consecutive_failure_count: 0,
+      previous_result: null,
+    });
+    assert.equal(durableDone, null);
+
     const loaded = await fixture.loadRaw({
       kind: "KBS_SOIL",
       target_logical_time: target0,
@@ -179,6 +354,7 @@ async function main(): Promise<void> {
       "runMcftCap09EvidenceRuntimeProcessV1",
       "Phase5ControlledProviderWorkItemFactoryV1",
       "S3CompatiblePrivateRawEvidenceRetentionAdapterV1",
+      "PostgresEvidenceSupplyCursorReadV1",
       "sha256",
     ]) {
       assert.equal(source.includes(required), true, `qualification entrypoint must preserve ${required}`);
@@ -191,6 +367,8 @@ async function main(): Promise<void> {
       fixture_sha256_bound: true,
       fixture_path_escape_rejected: true,
       ordered_target_planner: true,
+      durable_gfs_cursor_restart_planner: true,
+      partial_gfs_pair_replay_restores_ingested_at: true,
       per_target_source_family_selection: true,
       gfs_cycle_required_only_for_gfs_targets: true,
       production_process_factory_reused: true,

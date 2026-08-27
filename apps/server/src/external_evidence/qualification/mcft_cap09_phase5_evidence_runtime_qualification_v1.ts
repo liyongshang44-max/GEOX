@@ -14,10 +14,23 @@ import {
   runMcftCap09EvidenceRuntimeProcessV1,
   readMcftCap09EvidenceRuntimeProcessConfigV1,
 } from "../mcft_cap09_evidence_runtime_process_v1.js";
+import {
+  MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_ET0_BINDING_ID_V1,
+  MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_WEATHER_BINDING_ID_V1,
+} from "../../domain/twin_runtime/external_formal_evidence_binding_profile_v1.js";
+import { createDatabasePool } from "../../infra/database.js";
+import {
+  PostgresEvidenceSupplyCursorReadV1,
+} from "../../persistence/external_evidence/postgres_evidence_runtime_persistence_v1.js";
 import type {
   EvidenceRuntimeAcquisitionTargetPlannerV1,
   EvidenceRuntimeAcquisitionTargetV1,
 } from "../mcft_cap09_evidence_runtime_composition_v1.js";
+import type {
+  EvidenceRuntimeScopeV1,
+  EvidenceSupplyCursorReadPortV1,
+  EvidenceSupplyCursorSnapshotV1,
+} from "../mcft_cap09_evidence_runtime_persistence_v1.js";
 import {
   S3CompatiblePrivateRawEvidenceRetentionAdapterV1,
 } from "../s3_compatible_raw_evidence_retention_adapter_v1.js";
@@ -83,6 +96,34 @@ function canonicalCycleV1(value: string): string {
   const parsed = Date.parse(value);
   if (!Number.isFinite(parsed)) throw new Error("PHASE5_QUALIFICATION_GFS_CYCLE_INVALID");
   return new Date(parsed).toISOString().replace(".000Z", "Z");
+}
+
+function gfsCycleKeyV1(value: string): string {
+  return canonicalCycleV1(value).replace(/[-:]/g, "").toLowerCase();
+}
+
+function gfsCursorIdentityV1(cycle: string): {
+  weather_origin_source_id: string;
+  et0_origin_source_id: string;
+} {
+  const key = gfsCycleKeyV1(cycle);
+  return {
+    weather_origin_source_id: `gfs_${key}_pgrb2_0p25_kbs`,
+    et0_origin_source_id: `gfs_${key}_asce_short_reference_et0_kbs`,
+  };
+}
+
+function cursorTargetV1(
+  cursor: EvidenceSupplyCursorSnapshotV1 | null,
+  targets: readonly Phase5QualificationTargetV1[],
+  code: string,
+): { index: number; ingested_at: string | null } {
+  if (!cursor) return { index: -1, ingested_at: null };
+  const validFrom = canonicalHourV1(String(cursor.role_time.valid_from ?? ""), `${code}_VALID_FROM_INVALID`);
+  const index = targets.findIndex((row) => row.target_logical_time === validFrom);
+  if (index < 0) throw new Error(`${code}_VALID_FROM_NOT_IN_MANIFEST:${validFrom}`);
+  const ingestedAt = canonicalIsoV1(String(cursor.role_time.ingested_at ?? ""), `${code}_INGESTED_AT_INVALID`);
+  return { index, ingested_at: ingestedAt };
 }
 
 function sha256V1(bytes: Uint8Array): string {
@@ -310,18 +351,85 @@ implements Phase5ControlledEvidenceFixturePortV1 {
     );
   }
 
-  createTargetPlanner(): EvidenceRuntimeAcquisitionTargetPlannerV1 {
+  createTargetPlanner(input?: {
+    cursor_reader?: EvidenceSupplyCursorReadPortV1;
+    scope?: EvidenceRuntimeScopeV1;
+  }): EvidenceRuntimeAcquisitionTargetPlannerV1 {
     const targets = this.manifest.targets;
+    const projectTarget = (
+      row: Phase5QualificationTargetV1,
+      restoredIngestedAt?: string,
+    ): EvidenceRuntimeAcquisitionTargetV1 => ({
+      target_logical_time: row.target_logical_time,
+      requested_at: row.requested_at,
+      request_id_prefix: row.request_id_prefix,
+      ...(row.source_families ? { source_families: row.source_families } : {}),
+      ...(restoredIngestedAt ? { restored_ingested_at: restoredIngestedAt } : {}),
+    });
+
+    if (!input?.cursor_reader) {
+      return {
+        async nextTarget(state): Promise<EvidenceRuntimeAcquisitionTargetV1 | null> {
+          const row = targets[state.successful_cycle_count];
+          return row ? projectTarget(row) : null;
+        },
+      };
+    }
+    if (!input.scope) throw new Error("PHASE5_QUALIFICATION_DURABLE_PLANNER_SCOPE_REQUIRED");
+    if (targets.some((row) => !(row.source_families ?? ["KBS_SOIL", "KBS_RAW_HOURLY", "GFS_BUNDLE"]).includes("GFS_BUNDLE"))) {
+      throw new Error("PHASE5_QUALIFICATION_DURABLE_PLANNER_GFS_REQUIRED_FOR_EVERY_TARGET");
+    }
+    const cycles = [...new Set(targets.map((row) => row.gfs_cycle))];
+    if (cycles.length !== 1 || !cycles[0]) {
+      throw new Error("PHASE5_QUALIFICATION_DURABLE_PLANNER_SINGLE_GFS_CYCLE_REQUIRED");
+    }
+    const cursorIds = gfsCursorIdentityV1(cycles[0]);
+    const scope = { ...input.scope };
+    const reader = input.cursor_reader;
+
     return {
-      async nextTarget(state): Promise<EvidenceRuntimeAcquisitionTargetV1 | null> {
-        const row = targets[state.successful_cycle_count];
-        if (!row) return null;
-        return {
-          target_logical_time: row.target_logical_time,
-          requested_at: row.requested_at,
-          request_id_prefix: row.request_id_prefix,
-          ...(row.source_families ? { source_families: row.source_families } : {}),
-        };
+      async nextTarget(): Promise<EvidenceRuntimeAcquisitionTargetV1 | null> {
+        const [weatherCursor, et0Cursor] = await Promise.all([
+          reader.readSupplyCursor({
+            scope,
+            binding_id: MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_WEATHER_BINDING_ID_V1,
+            origin_source_id: cursorIds.weather_origin_source_id,
+          }),
+          reader.readSupplyCursor({
+            scope,
+            binding_id: MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_ET0_BINDING_ID_V1,
+            origin_source_id: cursorIds.et0_origin_source_id,
+          }),
+        ]);
+        const weather = cursorTargetV1(
+          weatherCursor,
+          targets,
+          "PHASE5_QUALIFICATION_DURABLE_WEATHER_CURSOR",
+        );
+        const et0 = cursorTargetV1(
+          et0Cursor,
+          targets,
+          "PHASE5_QUALIFICATION_DURABLE_ET0_CURSOR",
+        );
+        if (Math.abs(weather.index - et0.index) > 1) {
+          throw new Error(
+            `PHASE5_QUALIFICATION_DURABLE_GFS_CURSOR_PAIR_GAP:${weather.index}:${et0.index}`,
+          );
+        }
+        if (weather.index === et0.index) {
+          const next = weather.index + 1;
+          return next >= targets.length ? null : projectTarget(targets[next]!);
+        }
+
+        // A process may stop after one member of the exact GFS pair committed.
+        // Replay exactly that target using the ingestion time persisted by the
+        // already-visible member; the product decoder then reproduces the same
+        // canonical identity for the first member and completes the missing pair.
+        const ahead = weather.index > et0.index ? weather : et0;
+        if (ahead.index < 0 || !ahead.ingested_at) {
+          throw new Error("PHASE5_QUALIFICATION_DURABLE_GFS_PARTIAL_CURSOR_IDENTITY_INVALID");
+        }
+        return projectTarget(targets[ahead.index]!, ahead.ingested_at);
       },
     };
   }
@@ -401,9 +509,21 @@ export async function runMcftCap09Phase5EvidenceRuntimeQualificationV1(input?: {
       String(env.GEOX_MCFT_CAP09_PHASE5_GFS_PRODUCT_DECODER_PATH ?? "").trim() || undefined,
   });
 
-  await runMcftCap09EvidenceRuntimeProcessV1({
-    env,
-    target_planner: fixture.createTargetPlanner(),
-    work_item_factory: controlledFactory,
-  });
+  const plannerPool = createDatabasePool(processConfig.database_url);
+  try {
+    const cursorReader = new PostgresEvidenceSupplyCursorReadV1(
+      plannerPool,
+      processConfig.scope,
+    );
+    await runMcftCap09EvidenceRuntimeProcessV1({
+      env,
+      target_planner: fixture.createTargetPlanner({
+        cursor_reader: cursorReader,
+        scope: processConfig.scope,
+      }),
+      work_item_factory: controlledFactory,
+    });
+  } finally {
+    await plannerPool.end();
+  }
 }

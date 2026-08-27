@@ -117,6 +117,7 @@ export class ProductionEvidenceWorkItemFactoryV1 {
     requested_at: string;
     request_id_prefix: string;
     source_families?: readonly ProductionEvidenceSourceFamilyV1[];
+    restored_ingested_at?: string;
   }): readonly EvidenceRuntimeCycleWorkItemV1[] {
     const target = canonicalHourV1(input.target_logical_time, "PHASE3_EVIDENCE_WORK_TARGET_INVALID");
     const requestedAt = canonicalIsoV1(input.requested_at, "PHASE3_EVIDENCE_WORK_REQUESTED_AT_INVALID");
@@ -189,6 +190,7 @@ export class ProductionEvidenceWorkItemFactoryV1 {
         python_executable: this.config.python_executable,
         product_decoder_path: this.config.gfs_product_decoder_path,
         normalize_et0: true,
+        restored_ingested_at: input.restored_ingested_at,
       }),
     };
 

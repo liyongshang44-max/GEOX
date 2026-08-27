@@ -50,6 +50,9 @@ export type EvidenceRuntimeAcquisitionTargetV1 = {
   requested_at: string;
   request_id_prefix: string;
   source_families?: readonly ProductionEvidenceSourceFamilyV1[];
+  // Optional durable replay identity for a partially committed acquisition cycle.
+  // It is consumed only by decoders that explicitly support restored ingestion time.
+  restored_ingested_at?: string;
 };
 
 export interface EvidenceRuntimeAcquisitionTargetPlannerV1 {

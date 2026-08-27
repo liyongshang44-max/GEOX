@@ -41,6 +41,7 @@ export const MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_CONTRACT_V1 = {
   raw_storage_authority: "EVIDENCE_RUNTIME_S3_CREDENTIALS_ONLY",
   target_selection_boundary: "EXPLICIT_INJECTED_TARGET_PLANNER",
   qualification_provider_boundary: "EXPLICIT_WORK_ITEM_FACTORY_INJECTION_WITH_PRODUCTION_DEFAULT",
+  graceful_current_lease_release: true,
   runtime_tick_cursor_authority: false,
   twin_state_authority: false,
   action_authority: false,
@@ -245,11 +246,15 @@ export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
       work_item_factory: input.work_item_factory,
     });
 
-    await composition.host.run({
+    const result = await composition.host.run({
       scope: config.scope,
       lease_owner: config.lease_owner,
       lease_duration_seconds: config.lease_duration_seconds,
     });
+    const finalClaim = result.last_cycle_result?.lease_claim ?? null;
+    if (finalClaim && finalClaim.lease_owner === config.lease_owner) {
+      await composition.lease_repository.releaseLease({ claim: finalClaim });
+    }
   } finally {
     stop.dispose();
     await pool.end();

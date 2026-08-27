@@ -9,6 +9,7 @@ import {
 } from "../../apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.js";
 import {
   createMcftCap09ProcessStopV1,
+  McftCap09ProductionTwinFailureClassifierV1,
   MCFT_CAP09_PRODUCTION_PROCESS_LIFECYCLE_ID_V1,
 } from "../../apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.js";
 import {
@@ -131,6 +132,32 @@ function main(): void {
   assert.equal(signals.listenerCount("SIGTERM"), 0);
   assert.equal(signals.listenerCount("SIGINT"), 0);
 
+  const twinFailureClassifier = new McftCap09ProductionTwinFailureClassifierV1();
+  for (const code of [
+    "LEASE_HELD_BY_OTHER_OWNER",
+    "SLOT_ALREADY_CLAIMED_BY_OTHER_OWNER",
+    "ACTIVE_SLOT_ALREADY_PRESENT",
+    "TERMINAL_SLOT_ALREADY_RECORDED",
+    "SLOT_PRECEDES_DURABLE_CURSOR",
+  ]) {
+    assert.equal(
+      twinFailureClassifier.classify(new Error(code)),
+      "RETRYABLE",
+      `PHASE5_TWIN_COORDINATION_CONTENTION_MUST_RETRY:${code}`,
+    );
+  }
+  for (const code of [
+    "STALE_FENCING_TOKEN",
+    "OLDER_MISSED_SLOT_REQUIRED",
+    "SCHEDULER_CURSOR_CONFIG_CONFLICT",
+  ]) {
+    assert.equal(
+      twinFailureClassifier.classify(new Error(code)),
+      "FATAL",
+      `PHASE5_TWIN_CORRUPTION_MUST_FAIL_CLOSED:${code}`,
+    );
+  }
+
   const lifecycleSource = fs.readFileSync(
     path.resolve("apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts"),
     "utf8",
@@ -162,6 +189,7 @@ function main(): void {
   }
   assert.equal(twinSource.includes("composeMcftCap09TwinRuntimeV1"), true);
   assert.equal(evidenceSource.includes("composeEvidenceRuntimeV1"), true);
+  assert.equal(evidenceSource.includes("lease_repository.releaseLease"), true);
   assert.equal(
     distWriter.includes('path.join("runtime", "mcft_cap09_twin_runtime.js")'),
     true,
@@ -183,6 +211,9 @@ function main(): void {
     evidence_process_uses_phase3_composition: true,
     twin_process_uses_phase4_composition: true,
     signal_stop_supported: true,
+    evidence_graceful_current_fence_release: true,
+    twin_duplicate_coordination_contention_retryable: true,
+    twin_stale_fence_corruption_fatal: true,
     stable_compiled_twin_entrypoint: true,
     test_script_dependency_in_product_process: false,
     production_owner_cutover: false,

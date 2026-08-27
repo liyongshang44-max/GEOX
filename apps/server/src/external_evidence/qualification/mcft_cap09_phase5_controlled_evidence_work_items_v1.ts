@@ -376,6 +376,7 @@ export class Phase5ControlledProviderWorkItemFactoryV1 implements EvidenceRuntim
         python_executable: this.config.python_executable,
         product_decoder_path: this.config.gfs_product_decoder_path,
         normalize_et0: true,
+        restored_ingested_at: input.restored_ingested_at,
       }),
     };
 

@@ -10,6 +10,7 @@ import {
   type EvidenceProducerLeaseClaimV1,
   type EvidenceProducerLeasePortV1,
   type EvidenceRuntimeScopeV1,
+  type EvidenceSupplyCursorReadPortV1,
   type EvidenceSupplyCursorSnapshotV1,
 } from "../../external_evidence/mcft_cap09_evidence_runtime_persistence_v1.js";
 import {
@@ -641,3 +642,61 @@ export class PostgresEvidenceSupplyCursorV1 implements DurableEvidenceSupplyCurs
   }
 }
 
+export class PostgresEvidenceSupplyCursorReadV1
+implements EvidenceSupplyCursorReadPortV1 {
+  readonly persistence_id = MCFT_CAP09_POSTGRES_EVIDENCE_RUNTIME_PERSISTENCE_ID_V1;
+
+  constructor(
+    private readonly pool: EvidencePoolV1,
+    private readonly configuredScope: EvidenceRuntimeScopeV1,
+  ) {
+    scopeValuesV1(configuredScope);
+  }
+
+  async readSupplyCursor(input: {
+    scope: EvidenceRuntimeScopeV1;
+    binding_id: string;
+    origin_source_id: string;
+  }): Promise<EvidenceSupplyCursorSnapshotV1 | null> {
+    assertScopeV1(input.scope, this.configuredScope);
+    const bindingId = requiredTextV1(input.binding_id, "PHASE3_EVIDENCE_CURSOR_BINDING_ID_REQUIRED");
+    const originSourceId = requiredTextV1(input.origin_source_id, "PHASE3_EVIDENCE_CURSOR_ORIGIN_SOURCE_ID_REQUIRED");
+    const result = await this.pool.query<CursorRowV1>(
+      "SELECT binding_id,origin_source_id,fact_id,record_semantic_sha256," +
+      "available_to_runtime_at,publication_available_through,latest_event_time,latest_source_record_id," +
+      "event_time_contiguous_from,event_time_contiguous_through,event_time_max_seen,event_gap_count," +
+      "revision_count,publication_event_count,cadence_profile_id,role_time,post_commit_db_readback_at," +
+      "lease_owner,fencing_token,advanced_at " +
+      "FROM external_evidence_supply_cursor_v1 " +
+      "WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 " +
+      "AND binding_id=$7 AND origin_source_id=$8",
+      [...scopeValuesV1(this.configuredScope), bindingId, originSourceId],
+    );
+    if (result.rows.length > 1) throw new Error("PHASE3_EVIDENCE_CURSOR_CARDINALITY_VIOLATION");
+    if (result.rows.length === 0) return null;
+    const row = result.rows[0];
+    return {
+      scope: { ...this.configuredScope },
+      binding_id: row.binding_id,
+      origin_source_id: row.origin_source_id,
+      fact_id: row.fact_id,
+      record_semantic_sha256: row.record_semantic_sha256,
+      available_to_runtime_at: canonicalIsoV1(row.available_to_runtime_at, "PHASE3_EVIDENCE_CURSOR_STORED_AVAILABLE_AT_INVALID"),
+      publication_available_through: canonicalIsoV1(row.publication_available_through, "PHASE3_EVIDENCE_CURSOR_STORED_PUBLICATION_WATERMARK_INVALID"),
+      latest_event_time: canonicalIsoV1(row.latest_event_time, "PHASE3_EVIDENCE_CURSOR_STORED_LATEST_EVENT_TIME_INVALID"),
+      latest_source_record_id: row.latest_source_record_id,
+      event_time_contiguous_from: canonicalIsoV1(row.event_time_contiguous_from, "PHASE3_EVIDENCE_CURSOR_STORED_CONTIGUOUS_FROM_INVALID"),
+      event_time_contiguous_through: canonicalIsoV1(row.event_time_contiguous_through, "PHASE3_EVIDENCE_CURSOR_STORED_CONTIGUOUS_THROUGH_INVALID"),
+      event_time_max_seen: canonicalIsoV1(row.event_time_max_seen, "PHASE3_EVIDENCE_CURSOR_STORED_EVENT_MAX_INVALID"),
+      event_gap_count: Number(row.event_gap_count),
+      revision_count: Number(row.revision_count),
+      publication_event_count: Number(row.publication_event_count),
+      cadence_profile_id: row.cadence_profile_id,
+      role_time: structuredClone(row.role_time),
+      post_commit_db_readback_at: canonicalIsoV1(row.post_commit_db_readback_at, "PHASE3_EVIDENCE_CURSOR_STORED_READBACK_AT_INVALID"),
+      lease_owner: row.lease_owner,
+      fencing_token: BigInt(row.fencing_token),
+      advanced_at: canonicalIsoV1(row.advanced_at, "PHASE3_EVIDENCE_CURSOR_ADVANCED_AT_INVALID"),
+    };
+  }
+}
