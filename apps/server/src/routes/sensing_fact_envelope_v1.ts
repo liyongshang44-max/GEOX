@@ -13,6 +13,7 @@ import {
   ensureDeviceObservationProjectionV1,
   writeObservationRunPipelineAndRefreshFieldV1,
 } from "../services/device_observation_service_v1.js";
+import { evaluateRawSampleObservationQualityV1 } from "../evidence/raw_sample_measurement_quality_v1.js";
 
 function badRequest(reply: FastifyReply, error: string) {
   return reply.status(400).send({ ok: false, error });
@@ -63,14 +64,6 @@ function enforceTenantMatch(auth: any, tenant: RawSampleFactEnvelopeTenantV1, re
 function isFormalRawSampleSourceV1(source: unknown): boolean {
   const s = String(source ?? "").trim().toLowerCase();
   return s === "device" || s === "gateway";
-}
-
-function qualityFlagsFromRawSampleV1(item: RawSampleEnvelopeV1): string[] {
-  const q = String(item.qc_quality ?? "").trim().toUpperCase();
-  if (q === "OK") return ["OK"];
-  if (q === "SUSPECT") return ["SUSPECT"];
-  if (q === "BAD") return ["OUTLIER"];
-  return ["OK"];
 }
 
 function asPayloadRecord(input: any): Record<string, any> {
@@ -166,6 +159,8 @@ async function requireFormalSampleGuardsV1(pool: Pool, body: any, tenant: RawSam
 async function maybeRunOfficialObservationPipelineV1(pool: Pool, item: RawSampleEnvelopeV1) {
   if (!isFormalRawSampleSourceV1(item.source)) return null;
   if (!item.field_id || !item.sensor_id || !item.metric) return null;
+  const qualityDecision = evaluateRawSampleObservationQualityV1(item.qc_quality);
+  if (!qualityDecision.observation_pipeline_eligible) return null;
   const client = await pool.connect();
   try {
     await ensureDeviceObservationProjectionV1(client);
@@ -178,7 +173,7 @@ async function maybeRunOfficialObservationPipelineV1(pool: Pool, item: RawSample
       metric: item.metric,
       value: item.value,
       unit: item.unit,
-      quality_flags: qualityFlagsFromRawSampleV1(item),
+      quality_flags: qualityDecision.quality_flags,
       confidence: item.qc_quality === "ok" ? 0.9 : 0.45,
       observed_at_ts_ms: item.ts_ms,
       source_fact_id: item.fact_id,
