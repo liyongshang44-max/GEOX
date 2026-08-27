@@ -42,6 +42,10 @@ GRANT SELECT, INSERT, UPDATE
   TO geox_mcft_cap09_evidence_runtime_v1;
 
 GRANT SELECT, INSERT, UPDATE
+  ON TABLE public.external_evidence_supply_event_v1
+  TO geox_mcft_cap09_evidence_runtime_v1;
+
+GRANT SELECT, INSERT, UPDATE
   ON TABLE public.external_evidence_supply_cursor_v1
   TO geox_mcft_cap09_evidence_runtime_v1;
 
