@@ -55,6 +55,24 @@
           "runtime_edge": "PROVEN",
           "new_runtime_consumer_creation": "FORBIDDEN",
           "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "sensing-raw-sample-ingress",
+          "path": "apps/server/src/routes/sensing_fact_envelope_v1.ts",
+          "role": "active raw_samples ingress that appends raw_sample_v1 evidence and invokes official observation pipeline for formal device/gateway samples",
+          "authority_level": "INGRESS",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "registerSensingFactEnvelopeV1Routes",
+            "appendRawSampleV1"
+          ],
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
         }
       ],
       "registered_consumers": [
@@ -74,6 +92,15 @@
           "current": true,
           "connection_class": "ACTIVE_PARALLEL",
           "activation": "FEATURE_FLAG",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "appleii-stage1-evidence-sufficiency",
+          "path": "apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts",
+          "role": "reads raw_samples to compute Stage-1 formal evidence coverage/freshness/conflict sufficiency",
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
           "runtime_edge": "PROVEN"
         }
       ],
@@ -99,6 +126,24 @@
           "activation": "FEATURE_FLAG",
           "runtime_edge": "PROVEN",
           "evidence_edge_id": "C-002"
+        },
+        {
+          "consumer_id": "stage1-sensing",
+          "path": "apps/server/src/domain/sensing/run_sensing_inference_pipeline_v1.ts",
+          "producer_id": "sensing-raw-sample-ingress",
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-029"
+        },
+        {
+          "consumer_id": "appleii-stage1-evidence-sufficiency",
+          "path": "apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts",
+          "producer_id": "sensing-raw-sample-ingress",
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-030"
         }
       ]
     },
@@ -1880,6 +1925,30 @@
         ]
       },
       "failure": "DEVTOOLS_ONLY_PATH_USED_BY_PRODUCTION_CONSUMER"
+    },
+    {
+      "guard_id": "G-B02-09-raw-sample-production-ingress",
+      "semantic_id": "evidence.raw_observation",
+      "description": "Every production route that calls appendRawSampleV1 must be explicitly registered as a raw-observation ingress producer.",
+      "scan_roots": [
+        "apps/server/src/routes"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "all_of": [
+          "appendRawSampleV1"
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/routes/sensing_fact_envelope_v1.ts"
+      ],
+      "failure": "UNREGISTERED_RAW_SAMPLE_PRODUCTION_INGRESS"
     }
   ],
   "connectivity_model": {

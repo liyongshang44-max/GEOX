@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { Pool } from "pg";
+import { buildIngressPhysicalQcSnapshotV1 } from "../../evidence/ingress_physical_qc_snapshot_v1.js";
 
 export type RawSampleSourceV1 = "device" | "gateway" | "system" | "human" | "import" | "sim";
 export type RawSampleQualityV1 = "unknown" | "ok" | "suspect" | "bad";
@@ -228,6 +229,13 @@ function normalizeRawSampleWriteInputV1(input: RawSampleWriteInputV1, tenant: Ra
   const sample_id = asTrimmedString(input.sample_id) ?? asTrimmedString(input.sampleId) ?? makeSampleId({ sensor_id, ts_ms, metric, value, unit });
   const fact_id = `raw_sample:${sample_id}`;
 
+  const ingress_physical_qc = buildIngressPhysicalQcSnapshotV1({
+    source_fact_id: fact_id,
+    metric,
+    value,
+    unit,
+  });
+
   const payload_json = {
     ...payload,
     tenant_id: tenant.tenant_id,
@@ -240,6 +248,7 @@ function normalizeRawSampleWriteInputV1(input: RawSampleWriteInputV1, tenant: Ra
     value,
     unit,
     qc_quality,
+    ingress_physical_qc,
     sample_kind: "raw",
     interpolated: false,
     synthetic: false,
@@ -348,6 +357,7 @@ export async function appendRawSampleV1(pool: Pool, input: RawSampleWriteInputV1
         metric: normalized.metric,
         value: normalized.value,
         unit: normalized.unit,
+        ingress_physical_qc: normalized.payload_json.ingress_physical_qc,
       },
       qc: { quality: normalized.qc_quality },
       integrity: {
