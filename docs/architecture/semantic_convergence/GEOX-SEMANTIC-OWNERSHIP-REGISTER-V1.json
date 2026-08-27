@@ -1133,7 +1133,7 @@
       "semantic_id": "decision.candidate",
       "question": "What action should be considered?",
       "target_owner": "Decision Runtime",
-      "canonical_output_type": "CandidateDecisionV1 (B-06c recommendation + B-06d decision-plan compatibility adapter capabilities registered; no runtime consumer connected)",
+      "canonical_output_type": "CandidateDecisionV1 (B-06c recommendation + B-06d decision-plan + B-06e prescription action-spec adapter capabilities registered; no runtime consumer connected)",
       "current_state": "DUPLICATE_AUTHORITY",
       "target_phase": "B-06",
       "new_owner_creation": "FORBIDDEN",
@@ -1255,6 +1255,24 @@
           "runtime_edge": "INTENTIONAL_NONE",
           "new_runtime_consumer_creation": "FORBIDDEN",
           "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "prescription-action-spec-candidate-compatibility-adapter",
+          "path": "apps/server/src/domain/decision/prescription_action_spec_candidate_adapter_v1.ts",
+          "role": "pure B-06e projection of pre-approval PrescriptionContractV1 action-spec semantics into CandidateDecisionV1; approval/timing/device/acceptance metadata are not promoted and no approval/plan/task runtime consumer is connected",
+          "authority_level": "CANDIDATE_ONLY_ADAPTER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectPrescriptionActionSpecCandidateV1",
+            "candidateDecisionV1Schema.parse"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
         }
       ],
       "registered_consumers": [
@@ -1299,7 +1317,11 @@
         "B-06c uses the legacy top-level action_type as candidate action and does not elevate nested suggested_action operational labels.",
         "B-06d registers one pure decision_plan_v0 -> CandidateDecisionV1 compatibility adapter capability with no runtime consumer.",
         "B-06d preserves Sprint 15/16 Decision Plan non-executing/non-coupling semantics and accepts only explicit proposal-shaped payloads.",
-        "B-06d keeps based_on.evidence_refs as legacy provenance only and never promotes them into canonical EvidenceQualification refs."
+        "B-06d keeps based_on.evidence_refs as legacy provenance only and never promotes them into canonical EvidenceQualification refs.",
+        "B-06e registers one pure pre-approval PrescriptionContractV1 action-spec -> CandidateDecisionV1 compatibility adapter with no runtime consumer.",
+        "B-06e treats DRAFT/READY_FOR_APPROVAL as candidate-compatible only; APPROVAL_REQUESTED/APPROVED/TASK_CREATED/REJECTED/CANCELLED fail closed.",
+        "B-06e never promotes prescription approval/timing/device/acceptance metadata or legacy evidence_refs into downstream or Evidence authority.",
+        "B-06e rejects auto_execute_allowed=true and explicit downstream approval/plan/task/receipt identities."
       ],
       "runtime_consumers": [
         {
@@ -2302,7 +2324,7 @@
     {
       "guard_id": "G-B02-15-candidate-decision-instantiation",
       "semantic_id": "decision.candidate",
-      "description": "B-06d permits exactly the registered B-06c recommendation adapter and B-06d decision-plan adapter; any additional production CandidateDecision instantiation requires explicit later B-06 registration.",
+      "description": "B-06e permits exactly the registered B-06c recommendation, B-06d decision-plan, and B-06e prescription action-spec adapters; any additional CandidateDecision instantiation requires explicit later B-06 registration.",
       "scan_roots": [
         "apps/server/src"
       ],
@@ -2320,7 +2342,8 @@
       },
       "registered_paths": [
         "apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.ts",
-        "apps/server/src/domain/decision/decision_plan_candidate_adapter_v1.ts"
+        "apps/server/src/domain/decision/decision_plan_candidate_adapter_v1.ts",
+        "apps/server/src/domain/decision/prescription_action_spec_candidate_adapter_v1.ts"
       ],
       "failure": "UNREGISTERED_CANDIDATE_DECISION_PRODUCER"
     }
