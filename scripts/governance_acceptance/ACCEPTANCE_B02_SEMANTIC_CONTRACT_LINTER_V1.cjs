@@ -100,7 +100,7 @@ function run() {
       if (!runtimeValues.has(p.runtime_edge)) failures.push("PRODUCER_RUNTIME_EDGE_INVALID:" + sid + ":" + pid + ":" + p.runtime_edge);
       if (p.grandfathered_duplicate === true) {
         const target = String(p.removal_target || "");
-        if (!/^B-0[4-9]$/.test(target)) failures.push("GRANDFATHERED_REMOVAL_TARGET_INVALID:" + sid + ":" + pid + ":" + (target || "NONE"));
+        if (target !== "B-09") failures.push("GRANDFATHERED_REMOVAL_TARGET_NOT_B09:" + sid + ":" + pid + ":" + (target || "NONE"));
         if (!["FORBIDDEN","ALLOWED_ONLY_BY_EXPLICIT_REGISTER"].includes(semantic.new_owner_creation)) failures.push("GRANDFATHERED_NEW_OWNER_RULE_WEAK:" + sid + ":" + pid);
       }
       if (["COMPATIBILITY","ACTIVE_LEGACY_WRITER","DEVTOOLS_ONLY","ORPHANED","ACCEPTANCE_LIBRARY_ISLAND"].includes(p.connection_class)) {
@@ -220,7 +220,7 @@ function run() {
     if (!semanticIds.has(sid)) failures.push("PARALLEL_UNKNOWN_SEMANTIC:" + e.edge_id + ":" + sid);
     if (!p) failures.push("PARALLEL_UNKNOWN_PRODUCER:" + e.edge_id + ":" + pid);
     else if (p.semantic_id !== sid) failures.push("PARALLEL_PRODUCER_SEMANTIC_MISMATCH:" + e.edge_id + ":" + pid + ":" + sid);
-    if (!/^B-0[4-9]$/.test(String(e.removal_target || ""))) failures.push("PARALLEL_REMOVAL_TARGET_INVALID:" + e.edge_id);
+    if (String(e.removal_target || "") !== "B-09") failures.push("PARALLEL_REMOVAL_TARGET_NOT_B09:" + e.edge_id + ":" + String(e.removal_target || "NONE"));
     if (e.new_owner_creation !== "FORBIDDEN") failures.push("PARALLEL_NEW_OWNER_NOT_FORBIDDEN:" + e.edge_id);
   }
 

@@ -198,7 +198,7 @@
           "role": "documented evidence-quality/time-coverage/QC/device/conflict semantics",
           "authority_level": "REFERENCE_CONCEPT",
           "grandfathered_duplicate": true,
-          "removal_target": "B-04",
+          "removal_target": "B-09",
           "current": true,
           "connection_class": "COMPATIBILITY",
           "activation": "MANUAL",
@@ -297,7 +297,8 @@
       ],
       "notes": [
         "Must converge physical, temporal, source, spatial, conflict and role-eligibility semantics.",
-        "Device/transport health is not measurement health."
+        "Device/transport health is not measurement health.",
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only."
       ],
       "runtime_consumers": [
         {
@@ -362,7 +363,7 @@
           "role": "reads field_program_v1 as direct decision context input",
           "authority_level": "GRANDFATHERED_CONTEXT_SOURCE",
           "grandfathered_duplicate": true,
-          "removal_target": "B-05",
+          "removal_target": "B-09",
           "current": true,
           "fingerprints": [
             "field_program_v1",
@@ -381,7 +382,7 @@
           "role": "aggregates context and derives crop stage",
           "authority_level": "GRANDFATHERED_DUPLICATE",
           "grandfathered_duplicate": true,
-          "removal_target": "B-05",
+          "removal_target": "B-09",
           "current": true,
           "fingerprints": [
             "buildAgronomyContext",
@@ -438,7 +439,8 @@
         "Crop stage is not a field of ContextSnapshotV1 and must not be smuggled into declared context authority.",
         "B-05b maps only typed FieldProgramV1 declaration fields; record_json-only crop_stage/days_after_planting extras are excluded from canonical Context projection.",
         "FieldProgramV1 does not establish planting-event or management-history assertions unless those facts exist in a typed authority source.",
-        "B-05b-r1 corrected the projector registration into registered_producers; stray producers key is forbidden."
+        "B-05b-r1 corrected the projector registration into registered_producers; stray producers key is forbidden.",
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only."
       ],
       "runtime_consumers": [
         {
@@ -476,7 +478,7 @@
           "role": "explicit/DAP/startDate stage derivation",
           "authority_level": "GRANDFATHERED_DUPLICATE",
           "grandfathered_duplicate": true,
-          "removal_target": "B-05",
+          "removal_target": "B-09",
           "current": true,
           "fingerprints": [
             "resolveCropStage",
@@ -494,7 +496,7 @@
           "role": "calls resolveCropStage while building context",
           "authority_level": "GRANDFATHERED_DUPLICATE",
           "grandfathered_duplicate": true,
-          "removal_target": "B-05",
+          "removal_target": "B-09",
           "current": true,
           "connection_class": "ACTIVE_PARALLEL",
           "activation": "FEATURE_FLAG",
@@ -508,7 +510,7 @@
           "role": "crop-skill resolution and seedling fallback",
           "authority_level": "GRANDFATHERED_DUPLICATE",
           "grandfathered_duplicate": true,
-          "removal_target": "B-05",
+          "removal_target": "B-09",
           "current": true,
           "fingerprints": [
             "normalizeSkillStage",
@@ -526,7 +528,7 @@
           "role": "direct stage-resolver consumer in recommendation route",
           "authority_level": "GRANDFATHERED_DUPLICATE",
           "grandfathered_duplicate": true,
-          "removal_target": "B-05",
+          "removal_target": "B-09",
           "current": true,
           "connection_class": "MAINLINE",
           "activation": "API_ONLY",
@@ -540,7 +542,7 @@
           "role": "projection resolves crop stage",
           "authority_level": "GRANDFATHERED_DUPLICATE",
           "grandfathered_duplicate": true,
-          "removal_target": "B-05",
+          "removal_target": "B-09",
           "current": true,
           "connection_class": "COMPATIBILITY",
           "activation": "API_ONLY",
@@ -554,7 +556,7 @@
           "role": "operation-state route uses priority stage resolution",
           "authority_level": "GRANDFATHERED_DUPLICATE",
           "grandfathered_duplicate": true,
-          "removal_target": "B-05",
+          "removal_target": "B-09",
           "current": true,
           "connection_class": "COMPATIBILITY",
           "activation": "API_ONLY",
@@ -626,7 +628,8 @@
         "Historical stage authority is not removed in B-05; authority removal remains gated by B-09 shadow-compare discipline.",
         "B-05c adapter is registered under both the crop-stage touchpoint guard and QualifiedCropStage instantiation guard.",
         "B-05d registers crop-skill stage calculation as compatibility-only; missing day input cannot inherit legacy seedling defaults into canonical stage.",
-        "Explicit zero-day input is distinguishable from missing input: zero may produce compatibility seedling while missing remains UNKNOWN."
+        "Explicit zero-day input is distinguishable from missing input: zero may produce compatibility seedling while missing remains UNKNOWN.",
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only."
       ],
       "runtime_consumers": []
     },
@@ -722,7 +725,8 @@
       ],
       "notes": [
         "B-line must not redefine MCFT State semantics.",
-        "Legacy sensing/water states become projection/calculator/compatibility as already adjudicated."
+        "Legacy sensing/water states become projection/calculator/compatibility as already adjudicated.",
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only."
       ],
       "runtime_consumers": [
         {
@@ -845,7 +849,8 @@
         }
       ],
       "notes": [
-        "Forecast is not Scenario; Scenario is not Recommendation."
+        "Forecast is not Scenario; Scenario is not Recommendation.",
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only."
       ],
       "runtime_consumers": [
         {
@@ -1002,7 +1007,7 @@
           "role": "deterministic rule/crop-skill evaluation but currently emits recommendation semantics",
           "authority_level": "GRANDFATHERED_CANDIDATE_PRODUCER",
           "grandfathered_duplicate": true,
-          "removal_target": "B-06",
+          "removal_target": "B-09",
           "current": true,
           "connection_class": "ACTIVE_PARALLEL",
           "activation": "FEATURE_FLAG",
@@ -1016,7 +1021,7 @@
           "role": "calls deficit/requirement skills and emits WATER_DEFICIT/PASS/BLOCKED",
           "authority_level": "GRANDFATHERED_MIXED_AUTHORITY",
           "grandfathered_duplicate": true,
-          "removal_target": "B-06",
+          "removal_target": "B-09",
           "current": true,
           "connection_class": "ROUTE_ISLAND",
           "activation": "API_ONLY",
@@ -1030,7 +1035,7 @@
           "role": "calls irrigation skills/diagnosis/recommendation builders directly",
           "authority_level": "GRANDFATHERED_COMPOSITION_HOTSPOT",
           "grandfathered_duplicate": true,
-          "removal_target": "B-06",
+          "removal_target": "B-09",
           "current": true,
           "connection_class": "MAINLINE",
           "activation": "API_ONLY",
@@ -1076,7 +1081,9 @@
           "runtime_edge": "PROVEN"
         }
       ],
-      "notes": [],
+      "notes": [
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only."
+      ],
       "runtime_consumers": [
         {
           "consumer_id": "judge-v2-agronomy-route",
@@ -1113,7 +1120,7 @@
           "role": "writes recommendation_v1 and decision_recommendation_v1",
           "authority_level": "GRANDFATHERED_DUPLICATE",
           "grandfathered_duplicate": true,
-          "removal_target": "B-06",
+          "removal_target": "B-09",
           "current": true,
           "fingerprints": [
             "recommendation_v1",
@@ -1133,7 +1140,7 @@
           "role": "formal/product recommendation producer",
           "authority_level": "GRANDFATHERED_DUPLICATE",
           "grandfathered_duplicate": true,
-          "removal_target": "B-06",
+          "removal_target": "B-09",
           "current": true,
           "connection_class": "MAINLINE",
           "activation": "API_ONLY",
@@ -1147,7 +1154,7 @@
           "role": "returns AgronomyRecommendationV2 from matched rules",
           "authority_level": "GRANDFATHERED_DUPLICATE",
           "grandfathered_duplicate": true,
-          "removal_target": "B-06",
+          "removal_target": "B-09",
           "current": true,
           "connection_class": "ACTIVE_PARALLEL",
           "activation": "FEATURE_FLAG",
@@ -1221,7 +1228,8 @@
       ],
       "notes": [
         "Recommendation, decision_plan and prescription are historical/compatibility objects until mapped.",
-        "Execution authority is always NONE at candidate level."
+        "Execution authority is always NONE at candidate level.",
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only."
       ],
       "runtime_consumers": [
         {
@@ -1259,7 +1267,7 @@
           "role": "currently mixes evidence sufficiency and formal-trigger eligibility",
           "authority_level": "GRANDFATHERED_PRECURSOR",
           "grandfathered_duplicate": true,
-          "removal_target": "B-07",
+          "removal_target": "B-09",
           "current": true,
           "connection_class": "MAINLINE",
           "activation": "API_ONLY",
@@ -1273,7 +1281,7 @@
           "role": "currently maps evidence verdict to BLOCKED and requirement to WATER_DEFICIT/PASS",
           "authority_level": "GRANDFATHERED_PRECURSOR",
           "grandfathered_duplicate": true,
-          "removal_target": "B-07",
+          "removal_target": "B-09",
           "current": true,
           "connection_class": "ROUTE_ISLAND",
           "activation": "API_ONLY",
@@ -1299,7 +1307,8 @@
       "registered_consumers": [],
       "notes": [
         "Normative target verdicts: PASS / DEGRADED / NEED_EVIDENCE / HUMAN_REVIEW / BLOCK.",
-        "Evidence invalidity does not automatically imply action BLOCK."
+        "Evidence invalidity does not automatically imply action BLOCK.",
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only."
       ],
       "runtime_consumers": []
     },
@@ -1388,7 +1397,7 @@
           "role": "direct operation_plan_v1 creation after recommendation",
           "authority_level": "GRANDFATHERED_DUPLICATE",
           "grandfathered_duplicate": true,
-          "removal_target": "B-06",
+          "removal_target": "B-09",
           "current": true,
           "fingerprints": [
             "operation_plan_v1",
@@ -1408,7 +1417,7 @@
           "role": "recommendation/plan lifecycle touchpoint",
           "authority_level": "GRANDFATHERED_DUPLICATE",
           "grandfathered_duplicate": true,
-          "removal_target": "B-06",
+          "removal_target": "B-09",
           "current": true,
           "connection_class": "COMPATIBILITY",
           "activation": "API_ONLY",
@@ -1444,7 +1453,8 @@
       ],
       "notes": [
         "operation_plan_v1 record existence alone must not imply approval authority.",
-        "Agronomy Agent direct plan creation is grandfathered debt, not a proven execution bypass."
+        "Agronomy Agent direct plan creation is grandfathered debt, not a proven execution bypass.",
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only."
       ],
       "runtime_consumers": [
         {
