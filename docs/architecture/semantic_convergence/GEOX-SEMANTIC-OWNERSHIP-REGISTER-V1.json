@@ -66,9 +66,7 @@
           "current": true,
           "fingerprints": [
             "registerSensingFactEnvelopeV1Routes",
-            "appendRawSampleV1",
-            "writeRawSampleRuntimeAvailabilityMarkerV1",
-            "RAW_SAMPLE_RUNTIME_AVAILABILITY_MARKER_KIND_V1"
+            "appendRawSampleV1"
           ],
           "connection_class": "MAINLINE",
           "activation": "API_ONLY",
