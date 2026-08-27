@@ -10,6 +10,9 @@ import os from "node:os";
 
 import { createDatabasePool } from "../infra/database.js";
 import {
+  assertMcftCap09ServicePrincipalV1,
+} from "../infra/mcft_cap09_phase5_service_principal_v1.js";
+import {
   composeEvidenceRuntimeV1,
   type EvidenceRuntimeAcquisitionTargetPlannerV1,
 } from "./mcft_cap09_evidence_runtime_composition_v1.js";
@@ -33,6 +36,7 @@ export const MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_CONTRACT_V1 = {
   process_id: MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_ID_V1,
   composition: "MCFT_CAP09_EVIDENCE_RUNTIME_COMPOSITION_V1",
   database_authority: "EVIDENCE_RUNTIME_DATABASE_URL_ONLY",
+  database_principal: "geox_mcft_cap09_evidence_runtime_login_v1",
   raw_storage_authority: "EVIDENCE_RUNTIME_S3_CREDENTIALS_ONLY",
   target_selection_boundary: "EXPLICIT_INJECTED_TARGET_PLANNER",
   qualification_provider_boundary: "EXPLICIT_WORK_ITEM_CONFIG_ONLY",
@@ -211,6 +215,8 @@ export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
   const pool = createDatabasePool(config.database_url);
   const stop = createMcftCap09ProcessStopV1();
   try {
+    await assertMcftCap09ServicePrincipalV1(pool, "EVIDENCE_RUNTIME");
+
     const composition = composeEvidenceRuntimeV1({
       pool,
       scope: config.scope,
