@@ -11,10 +11,8 @@ import {
 } from "../../../domain/twin_runtime/external_formal_runtime_config_v1.js";
 import {
   validateExternalFormalAmendment19WindowManifestV1,
+  type ExternalFormalAmendment19WindowManifestV1,
 } from "../../../domain/twin_runtime/external_formal_amendment19_window_manifest_v1.js";
-import type {
-  ExternalFormalV3Am19WindowManifestV1,
-} from "../external_formal_v3_amendment19_runner_v1.js";
 
 const TWIN_ROLE="geox_mcft_cap09_twin_runtime_v1";
 const EVIDENCE_ROLE="geox_mcft_cap09_evidence_runtime_v1";
@@ -51,7 +49,7 @@ async function main():Promise<void> {
   const subject=envV1("GEOX_DEPLOYMENT_SUBJECT_COMMIT");
   if(!/^[0-9a-f]{40}$/.test(subject)) throw new Error("PHASE5_VERIFY_SUBJECT_INVALID");
   const manifestPath=path.resolve(envV1("GEOX_MCFT_CAP09_TWIN_RUNTIME_MANIFEST_PATH"));
-  const manifest=JSON.parse(fs.readFileSync(manifestPath,"utf8")) as ExternalFormalV3Am19WindowManifestV1;
+  const manifest=JSON.parse(fs.readFileSync(manifestPath,"utf8")) as ExternalFormalAmendment19WindowManifestV1;
   validateExternalFormalAmendment19WindowManifestV1(manifest,subject);
   const out=path.resolve(envV1("GEOX_MCFT_CAP09_PHASE5_VERIFY_PROOF_OUTPUT"));
   const pool=new Pool({connectionString:envV1("DATABASE_URL"),max:2});
