@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildMqttObservationInputV1 } from "./mqtt_observation_input_v1";
+import { buildMqttObservationInputV1 } from "./mqtt_observation_input_v1.js";
 
 test("MQTT source Fahrenheit is not relabelled as Celsius before evidence QC", () => {
   const result = buildMqttObservationInputV1({
