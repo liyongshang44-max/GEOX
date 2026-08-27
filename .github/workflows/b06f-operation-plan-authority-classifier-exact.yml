@@ -84,8 +84,7 @@ jobs:
         shell: bash
         run: |
           P="apps/server/src/.b06f_unregistered_candidate_probe.ts"
-          printf '%s
-' 'candidateDecisionV1Schema.parse(' > "$P"
+          printf '%s\\n' 'candidateDecisionV1Schema.parse(' > "$P"
           set +e
           node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs > /tmp/b06f-candidate-negative.log 2>&1
           RC=$?
@@ -102,8 +101,7 @@ jobs:
         shell: bash
         run: |
           P="apps/server/src/.b06f_unregistered_calc_probe.ts"
-          printf '%s
-' 'calculationResultV1Schema.parse(' > "$P"
+          printf '%s\\n' 'calculationResultV1Schema.parse(' > "$P"
           set +e
           node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs > /tmp/b06f-calc-negative.log 2>&1
           RC=$?
