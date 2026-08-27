@@ -1,0 +1,164 @@
+name: mcft-cap-09-phase5-two-service-accelerated-24t
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml'
+      - 'apps/server/src/hosting/mcft_cap09_phase5_service_lifecycle_v1.ts'
+      - 'apps/server/src/infra/mcft_cap09_phase5_service_identity_bootstrap_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_IDENTITIES_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_LIFECYCLE_V1.ts'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql'
+      - 'apps/server/src/infra/migrations.ts'
+      - 'apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'apps/server/package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-phase5-two-service-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  service-identities-and-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap09_phase5_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mcft_cap09_phase5_acceptance"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_phase5_acceptance
+      GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_phase5_acceptance
+      GEOX_MIGRATION_DATABASE_URL: postgres://geox_mcft_migrator_v1:phase5-migrator@127.0.0.1:5432/mcft_cap09_phase5_acceptance
+      GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:phase5-generic-runtime@127.0.0.1:5432/mcft_cap09_phase5_acceptance
+      GEOX_MCFT_MIGRATOR_PASSWORD: phase5-migrator
+      GEOX_RUNTIME_DATABASE_PASSWORD: phase5-generic-runtime
+      GEOX_MCFT_CAP09_EVIDENCE_SERVICE_PASSWORD: phase5-evidence-service
+      GEOX_MCFT_CAP09_TWIN_SERVICE_PASSWORD: phase5-twin-service
+      GEOX_MCFT_CAP09_EVIDENCE_DATABASE_URL: postgres://geox_mcft_cap09_evidence_service_v1:phase5-evidence-service@127.0.0.1:5432/mcft_cap09_phase5_acceptance
+      GEOX_MCFT_CAP09_TWIN_DATABASE_URL: postgres://geox_mcft_cap09_twin_service_v1:phase5-twin-service@127.0.0.1:5432/mcft_cap09_phase5_acceptance
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prove product and focused acceptance types
+        run: |
+          pnpm --filter @geox/server run typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_IDENTITIES_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_LIFECYCLE_V1.ts
+
+      - name: Apply production PostgreSQL init chain
+        run: |
+          set -euo pipefail
+          for file in docker/postgres/init/*.sql; do
+            echo "applying ${file}"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
+          done
+
+      - name: Apply exact database-platform bootstrap and full migration inventory
+        run: >-
+          pnpm exec tsx -e "import('./apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts').then(m => m.runMcftCap07DatabasePlatformBootstrapFromEnvironmentV1())"
+
+      - name: Bootstrap distinct Phase5 service database identities
+        run: >-
+          pnpm exec tsx -e "import('./apps/server/src/infra/mcft_cap09_phase5_service_identity_bootstrap_v1.ts').then(m => m.runMcftCap09Phase5ServiceIdentityBootstrapFromEnvironmentV1())"
+
+      - name: Prove real service-login privilege separation
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_IDENTITIES_V1.ts
+
+      - name: Prove service lifecycle and accelerated-wait boundary
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_LIFECYCLE_V1.ts
+
+      - name: Prove Phase5 identity and lifecycle modules remain hosting-only
+        shell: python
+        run: |
+          import pathlib
+          import re
+
+          files = [
+              pathlib.Path("apps/server/src/hosting/mcft_cap09_phase5_service_lifecycle_v1.ts"),
+              pathlib.Path("apps/server/src/infra/mcft_cap09_phase5_service_identity_bootstrap_v1.ts"),
+          ]
+          text = "\n".join(p.read_text(encoding="utf-8") for p in files)
+
+          forbidden_product_dependencies = [
+              "scripts/runtime_acceptance",
+              "external_evidence/provider",
+              "future_forcing_selector",
+              "state_estimation",
+              "forecast_execution",
+              "RuntimeTickCursorPort",
+              "EvidenceSupplyCursorPort",
+              "docker-compose.commercial_v1.yml",
+              "FORMAL_V5",
+          ]
+          for marker in forbidden_product_dependencies:
+              if marker in text:
+                  raise SystemExit(f"PHASE5_HOSTING_FOUNDATION_FORBIDDEN_DEPENDENCY:{marker}")
+
+          lifecycle = files[0].read_text(encoding="utf-8")
+          identities = files[1].read_text(encoding="utf-8")
+          if "setTimeout as sleep" not in lifecycle:
+              raise SystemExit("PHASE5_WAIT_IMPLEMENTATION_REQUIRED")
+          if "POSTGRES_RETRYABLE_CODES" not in lifecycle:
+              raise SystemExit("PHASE5_POSTGRES_RETRY_CLASSIFIER_REQUIRED")
+          for role in [
+              "geox_mcft_cap09_evidence_service_v1",
+              "geox_mcft_cap09_twin_service_v1",
+              "geox_mcft_cap09_evidence_runtime_v1",
+              "geox_mcft_cap09_twin_runtime_v1",
+          ]:
+              if role not in identities:
+                  raise SystemExit(f"PHASE5_SERVICE_IDENTITY_MARKER_MISSING:{role}")
+          if "PHASE5_SERVICE_IDENTITY_PASSWORD_REUSE_FORBIDDEN" not in identities:
+              raise SystemExit("PHASE5_DISTINCT_SERVICE_CREDENTIAL_GATE_REQUIRED")
+
+          print("PHASE5_SERVICE_IDENTITY_AND_LIFECYCLE_BOUNDARY_PASS")
+
+      - name: Upload Phase5 foundation proofs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-phase5-foundation-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PHASE5_SERVICE_IDENTITIES_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE5_SERVICE_LIFECYCLE_V1_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
