@@ -285,4 +285,4 @@ jobs:
         run: |
           set +e
           docker compose -f "$COMPOSE_FILE" --profile qualification-runtime --profile qualification-orchestration             down -v --remove-orphans
-          rm -rf "${GEOX_PHASE5_FIXTURE_ROOT:-}" "${GEOX_PHASE5_CONTROL_ROOT:-}"
+          sudo rm -rf "${GEOX_PHASE5_FIXTURE_ROOT:-}" "${GEOX_PHASE5_CONTROL_ROOT:-}"

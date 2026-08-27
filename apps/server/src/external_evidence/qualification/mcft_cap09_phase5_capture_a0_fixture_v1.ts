@@ -163,8 +163,23 @@ async function main():Promise<void> {
   const gfsResponses=captureRetention.captured
     .map(row=>gfsResponseV1(row,a0,cycle))
     .filter((row):row is Phase5ControlledFixtureManifestResponseV1=>row!==null);
+  if(captureRetention.captured.length!==composed.raw_provider_object_count) {
+    throw new Error(
+      `PHASE5_CAPTURE_GFS_RETENTION_CARDINALITY_MISMATCH:${captureRetention.captured.length}:${composed.raw_provider_object_count}`,
+    );
+  }
+  const selectedDirectoryLocator=gfsDirectoryUrlV1(cycle);
+  const retainedRejectedDirectoryCount=captureRetention.captured.filter(
+    row=>row.input.source_family==="GFS_DIRECTORY_LISTING"
+      && row.input.final_locator!==selectedDirectoryLocator,
+  ).length;
+  if(retainedRejectedDirectoryCount>composed.directory_rejection_count) {
+    throw new Error(
+      `PHASE5_CAPTURE_GFS_REJECTED_DIRECTORY_ACCOUNTING_INVALID:${retainedRejectedDirectoryCount}:${composed.directory_rejection_count}`,
+    );
+  }
   const expectedReplayMemberCount=
-    composed.raw_provider_object_count-composed.directory_rejection_count;
+    composed.raw_provider_object_count-retainedRejectedDirectoryCount;
   if(gfsResponses.filter(row=>row.kind==="GFS_DIRECTORY").length!==1) {
     throw new Error("PHASE5_CAPTURE_EXACT_SELECTED_GFS_DIRECTORY_REQUIRED");
   }
