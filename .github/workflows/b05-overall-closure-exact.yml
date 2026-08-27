@@ -1,0 +1,227 @@
+name: b05-overall-closure-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b05-overall-closure-exact-2026-08-27
+
+jobs:
+  exact-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Build runtime workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+      - name: B-05a through B-05d contract and adapter regressions
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+          node --import tsx --test apps/server/src/context/field_program_context_projection_v1.test.ts
+          node --import tsx --test apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.test.ts
+          node --import tsx --test apps/server/src/context/crop_skill_stage_compatibility_adapter_v1.test.ts
+      - name: Phenology scouting management use canonical Observation and Qualification
+        shell: bash
+        run: |
+          cat > .b05_observation_semantics.ts <<'TS'
+          import assert from "node:assert/strict";
+          import {
+            canonicalObservationV1Schema,
+            evidenceQualificationV1Schema,
+          } from "./apps/server/src/contracts/canonical_evidence_v1.ts";
+
+          const scope = {
+            tenant_id: "tenantA",
+            project_id: "projectA",
+            group_id: "groupA",
+            field_id: "fieldA",
+            season_id: "seasonA",
+            zone_id: null,
+          };
+
+          const cases = [
+            { id: "phenology", metric: "phenology_stage_observed", value: "V6", role: "CROP_STAGE_DERIVATION_INPUT" },
+            { id: "scouting", metric: "scouting_canopy_observation", value: "TASSELS_NOT_OBSERVED", role: "CROP_STAGE_DERIVATION_INPUT" },
+            { id: "management", metric: "management_event_observed", value: "IRRIGATION_APPLIED", role: "CONTEXT_HISTORY_INPUT" },
+          ];
+
+          for (const c of cases) {
+            const observation = canonicalObservationV1Schema.parse({
+              schema_version: "canonical_observation_v1",
+              observation_id: "obs_b05_" + c.id,
+              source_fact_id: "fact_b05_" + c.id,
+              source_ref: "fixture://b05/" + c.id,
+              scope,
+              metric: c.metric,
+              unit: null,
+              raw_value: c.value,
+              canonical_value: c.value,
+              observed_at: "2026-08-27T10:00:00.000Z",
+              ingested_at: "2026-08-27T10:00:05.000Z",
+              available_to_runtime_at: "2026-08-27T10:00:05.000Z",
+              device_transport_health: "GOOD",
+              measurement_health: "VALID",
+              physical_validity: "PASS",
+              temporal_eligibility: "ELIGIBLE",
+              source_authority: "QUALIFIED",
+              spatial_authority: "EXACT_SCOPE",
+              conflict_state: "NONE",
+              role_eligibility: [{ role: c.role, eligibility: "ELIGIBLE", reason_codes: [] }],
+              limitations: [],
+              reason_codes: [],
+              epistemic_class: "OBSERVED",
+            });
+
+            const qualification = evidenceQualificationV1Schema.parse({
+              schema_version: "evidence_qualification_v1",
+              qualification_id: "eq_b05_" + c.id,
+              observation_id: observation.observation_id,
+              source_ref: observation.source_ref,
+              metric: observation.metric,
+              scope,
+              evaluated_at: "2026-08-27T10:01:00.000Z",
+              decision_time: "2026-08-27T10:02:00.000Z",
+              presence: "PRESENT",
+              epistemic_class: "OBSERVED",
+              physical_validity: "PASS",
+              temporal_eligibility: "ELIGIBLE",
+              source_authority: "QUALIFIED",
+              spatial_authority: "EXACT_SCOPE",
+              conflict_state: "NONE",
+              evidence_authority: "QUALIFIED",
+              role_eligibility: [{ role: c.role, eligibility: "ELIGIBLE", reason_codes: [] }],
+              limitations: [],
+              reason_codes: [],
+            });
+
+            assert.equal(qualification.observation_id, observation.observation_id);
+            console.log("B05_CANONICAL_OBSERVATION_QUALIFICATION_PASS", c.id);
+          }
+          TS
+          pnpm -w exec tsx .b05_observation_semantics.ts
+          rm -f .b05_observation_semantics.ts
+      - name: Canonical Context and Stage capabilities remain non-authoritative islands
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const reg = JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const context = reg.semantics.find((x) => x.semantic_id === "context.declared_identity");
+          const stage = reg.semantics.find((x) => x.semantic_id === "context.crop_stage");
+          if (!context || !stage) throw new Error("B05_CONTEXT_STAGE_SEMANTICS_MISSING");
+
+          const contextProjector = (context.registered_producers || []).find((x) => x.producer_id === "field-program-context-compatibility-projector");
+          if (!contextProjector || contextProjector.runtime_edge !== "INTENTIONAL_NONE") throw new Error("B05_CONTEXT_PROJECTOR_NOT_ISOLATED");
+
+          const adapterIds = ["legacy-stage-compatibility-adapter","crop-skill-stage-compatibility-adapter"];
+          for (const id of adapterIds) {
+            const p = (stage.registered_producers || []).find((x) => x.producer_id === id);
+            if (!p) throw new Error("B05_STAGE_ADAPTER_MISSING:" + id);
+            if (p.authority_level !== "COMPATIBILITY_PROJECTION") throw new Error("B05_STAGE_ADAPTER_AUTHORITY_INVALID:" + id);
+            if (p.runtime_edge !== "INTENTIONAL_NONE") throw new Error("B05_STAGE_ADAPTER_RUNTIME_EDGE_INVALID:" + id);
+            if (p.new_runtime_consumer_creation !== "FORBIDDEN") throw new Error("B05_STAGE_ADAPTER_CONSUMER_RULE_INVALID:" + id);
+          }
+
+          if ((stage.runtime_consumers || []).length !== 0) throw new Error("B05_CANONICAL_STAGE_RUNTIME_CONSUMER_ACTIVATED");
+
+          for (const p of stage.registered_producers || []) {
+            if (p.grandfathered_duplicate === true) {
+              if (p.current !== true) throw new Error("B05_LEGACY_STAGE_PREMATURELY_REMOVED:" + p.producer_id);
+              if (p.removal_target !== "B-09") throw new Error("B05_LEGACY_STAGE_REMOVAL_TARGET_INVALID:" + p.producer_id);
+            }
+          }
+
+          console.log("B05_CONTEXT_STAGE_CAPABILITY_ISOLATION_PASS");
+          console.log("B05_LEGACY_AUTHORITY_REMAINS_VISIBLE_UNTIL_B09_PASS");
+          NODE
+      - name: Canonical adapter symbols have no production consumers
+        shell: bash
+        run: |
+          check_one() {
+            SYMBOL="$1"
+            EXPECTED="$2"
+            mapfile -t FILES < <(
+              grep -R -l --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' "$SYMBOL" apps/server/src || true
+            )
+            printf '%s -> %s\n' "$SYMBOL" "${FILES[*]}"
+            if [ "${#FILES[@]}" -ne 1 ] || [ "${FILES[0]}" != "$EXPECTED" ]; then
+              echo "B05_UNEXPECTED_CANONICAL_RUNTIME_CONSUMER:$SYMBOL"
+              exit 1
+            fi
+          }
+          check_one "projectFieldProgramDeclaredContextV1" "apps/server/src/context/field_program_context_projection_v1.ts"
+          check_one "projectLegacyCropStageCompatibilityV1" "apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.ts"
+          check_one "projectCropSkillStageCompatibilityV1" "apps/server/src/context/crop_skill_stage_compatibility_adapter_v1.ts"
+          echo "B05_CANONICAL_CAPABILITY_NO_RUNTIME_CONSUMER_PASS"
+      - name: QualifiedCropStage producer set is exactly the two compatibility adapters
+        shell: bash
+        run: |
+          mapfile -t FILES < <(
+            grep -R -l --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts'               'qualifiedCropStageStateV1Schema.parse(' apps/server/src | sort
+          )
+          EXPECTED=(
+            "apps/server/src/context/crop_skill_stage_compatibility_adapter_v1.ts"
+            "apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.ts"
+          )
+          printf '%s\n' "${FILES[@]}"
+          if [ "${#FILES[@]}" -ne 2 ] || [ "${FILES[0]}" != "${EXPECTED[0]}" ] || [ "${FILES[1]}" != "${EXPECTED[1]}" ]; then
+            echo "B05_QUALIFIED_STAGE_PRODUCER_SET_INVALID"
+            exit 1
+          fi
+          echo "B05_QUALIFIED_STAGE_PRODUCER_SET_PASS"
+      - name: No compatibility adapter can emit Twin-qualified authority
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          for (const p of [
+            "apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.ts",
+            "apps/server/src/context/crop_skill_stage_compatibility_adapter_v1.ts",
+          ]) {
+            const src = fs.readFileSync(p,"utf8");
+            const executable = src.replace(/\/\*[\s\S]*?\*\//g,"").replace(/\/\/.*$/gm,"");
+            if (executable.includes('"TWIN_QUALIFIED"')) throw new Error("B05_TWIN_QUALIFIED_LITERAL_FOUND:" + p);
+            if (executable.includes('"TWIN_DERIVED_STATE"')) throw new Error("B05_TWIN_DERIVED_LITERAL_FOUND:" + p);
+          }
+          console.log("B05_NO_TWIN_AUTHORITY_FROM_COMPATIBILITY_ADAPTERS_PASS");
+          NODE
+      - name: B-09 removal-target governance remains exact
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const reg = JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const graph = JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json","utf8"));
+          for (const s of reg.semantics || []) for (const p of s.registered_producers || []) {
+            if (p.grandfathered_duplicate === true && p.removal_target !== "B-09") throw new Error("B05_NON_B09_PRODUCER_REMOVAL:" + s.semantic_id + ":" + p.producer_id);
+          }
+          for (const e of graph.current_parallel_edges || []) {
+            if (e.removal_target !== "B-09") throw new Error("B05_NON_B09_PARALLEL_REMOVAL:" + e.edge_id);
+          }
+          console.log("B05_B09_REMOVAL_DISCIPLINE_PASS");
+          NODE
+      - name: B-03/B-04 regression boundary
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+          node --import tsx --test apps/server/src/domain/judge/evidence_judge_canonical_sufficiency_shadow_v1.test.ts
+      - name: Server build
+        run: pnpm --filter @geox/server build
+      - name: Marker
+        run: |
+          echo "B05_OVERALL_EXACT_HEAD f240d76c38cb3f839556f768b578745f7b38627d"
+          echo "B05_CONTEXT_CROP_STAGE_CONVERGENCE_CLOSURE_PASS"
