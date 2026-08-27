@@ -8,6 +8,7 @@ import type { Pool } from "pg";
 
 import {
   EvidenceRuntimeCycleServiceV1,
+  type EvidenceRuntimeCycleWorkItemV1,
   type ExecuteEvidenceRuntimeCycleResultV1,
 } from "./mcft_cap09_evidence_runtime_cycle_service_v1.js";
 import {
@@ -58,10 +59,15 @@ export interface EvidenceRuntimeAcquisitionTargetPlannerV1 {
   }): Promise<EvidenceRuntimeAcquisitionTargetV1 | null>;
 }
 
+export interface EvidenceRuntimeWorkItemFactoryV1 {
+  readonly factory_id: string;
+  buildForTarget(input: EvidenceRuntimeAcquisitionTargetV1): readonly EvidenceRuntimeCycleWorkItemV1[];
+}
+
 export type EvidenceRuntimeCompositionV1 = {
   composition_id: typeof MCFT_CAP09_EVIDENCE_RUNTIME_COMPOSITION_ID_V1;
   host: EvidenceRuntimeHostV1;
-  work_item_factory: ProductionEvidenceWorkItemFactoryV1;
+  work_item_factory: EvidenceRuntimeWorkItemFactoryV1;
   retention: S3CompatiblePrivateRawEvidenceRetentionAdapterV1;
   lease_repository: PostgresEvidenceProducerLeaseV1;
 };
@@ -76,15 +82,20 @@ export function composeEvidenceRuntimeV1(input: {
   stop: EvidenceRuntimeHostStopPortV1;
   failure_classifier: EvidenceRuntimeHostFailureClassifierV1;
   completion_clock: () => string;
+  work_item_factory?: EvidenceRuntimeWorkItemFactoryV1;
   work_item_config?: Omit<ProductionEvidenceWorkItemFactoryConfigV1, "retention">;
 }): EvidenceRuntimeCompositionV1 {
+  if (input.work_item_factory && input.work_item_config) {
+    throw new Error("PHASE3_EVIDENCE_RUNTIME_WORK_ITEM_FACTORY_AND_CONFIG_MUTUALLY_EXCLUSIVE");
+  }
   const retention = new S3CompatiblePrivateRawEvidenceRetentionAdapterV1(input.raw_retention);
   const leaseRepository = new PostgresEvidenceProducerLeaseV1(input.pool, input.scope);
   const visibility = new PostgresExternalFormalEvidenceVisibilityV1(input.pool);
-  const workItemFactory = new ProductionEvidenceWorkItemFactoryV1({
-    ...input.work_item_config,
-    retention,
-  });
+  const workItemFactory: EvidenceRuntimeWorkItemFactoryV1 = input.work_item_factory
+    ?? new ProductionEvidenceWorkItemFactoryV1({
+      ...input.work_item_config,
+      retention,
+    });
 
   const cycleService = new EvidenceRuntimeCycleServiceV1({
     lease: leaseRepository,

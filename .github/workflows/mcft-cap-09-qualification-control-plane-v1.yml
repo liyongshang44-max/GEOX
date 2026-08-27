@@ -427,7 +427,6 @@ jobs:
           const priorStack = [
             ['PHASE1_TYPED_RUNTIME_COMPOSITION','.github/workflows/mcft-cap-09-phase1-typed-cap08-frozen-replay-equivalence-v1.yml'],
             ['PHASE2_EVIDENCE_PROVIDER_MODULES','.github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml'],
-            ['PHASE3_EVIDENCE_RUNTIME_FOUNDATION','.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml'],
             ['PHASE4_TWIN_RUNTIME_FOUNDATION','.github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml'],
           ];
           for (const [id, workflow] of priorStack) {
@@ -435,6 +434,9 @@ jobs:
             if (!row || row.status !== 'REQUIRED' || row.reason_code !== 'APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE' || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length !== 0) throw new Error(`${id}_MUST_BE_UNCHANGED_STACK_PREDECESSOR:${row?.status}:${row?.reason_code}`);
             if (row.execution_workflow !== workflow) throw new Error(`${id}_WORKFLOW_MISMATCH`);
           }
+          const phase3 = plan.decisions.find(x => x.check_id === 'PHASE3_EVIDENCE_RUNTIME_FOUNDATION');
+          if (!phase3 || phase3.status !== 'REQUALIFY' || phase3.reason_code !== 'GOVERNED_DEPENDENCY_CHANGED' || !Array.isArray(phase3.changed_dependencies) || !phase3.changed_dependencies.includes('apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts')) throw new Error(`PHASE3_EVIDENCE_RUNTIME_FOUNDATION_MUST_REQUALIFY_FOR_FACTORY_SEAM:${phase3?.status}:${phase3?.reason_code}`);
+          if (phase3.execution_workflow !== '.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml') throw new Error('PHASE3_EVIDENCE_RUNTIME_FOUNDATION_WORKFLOW_MISMATCH');
           const phase5 = plan.decisions.find(x => x.check_id === 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS');
           if (!phase5 || phase5.status !== 'REQUALIFY' || phase5.reason_code !== 'GOVERNED_DEPENDENCY_CHANGED' || !Array.isArray(phase5.changed_dependencies) || phase5.changed_dependencies.length === 0) throw new Error(`PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_MUST_REQUALIFY:${phase5?.status}:${phase5?.reason_code}`);
           if (phase5.execution_workflow !== '.github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml') throw new Error('PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_WORKFLOW_MISMATCH');

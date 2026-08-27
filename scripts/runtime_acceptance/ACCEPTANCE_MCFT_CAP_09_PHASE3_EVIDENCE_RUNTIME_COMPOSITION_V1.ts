@@ -5,6 +5,7 @@ import type { Pool } from "pg";
 
 import {
   composeEvidenceRuntimeV1,
+  type EvidenceRuntimeWorkItemFactoryV1,
 } from "../../apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.js";
 import {
   ProductionEvidenceWorkItemFactoryV1,
@@ -54,9 +55,16 @@ async function main(): Promise<void> {
 
   let plannerCalls = 0;
   let healthCalls = 0;
+  let databaseCalls = 0;
   const fakePool = {
-    connect() { throw new Error("PHASE3_COMPOSITION_STOPPED_HOST_DB_CONNECT_FORBIDDEN"); },
-    query() { throw new Error("PHASE3_COMPOSITION_STOPPED_HOST_DB_QUERY_FORBIDDEN"); },
+    connect() {
+      databaseCalls += 1;
+      throw new Error("PHASE3_COMPOSITION_STOPPED_HOST_DB_CONNECT_FORBIDDEN");
+    },
+    query() {
+      databaseCalls += 1;
+      throw new Error("PHASE3_COMPOSITION_STOPPED_HOST_DB_QUERY_FORBIDDEN");
+    },
   } as unknown as Pool;
 
   const composition = composeEvidenceRuntimeV1({
@@ -100,6 +108,11 @@ async function main(): Promise<void> {
     },
   });
   assert.equal(composition.composition_id, "MCFT_CAP09_EVIDENCE_RUNTIME_COMPOSITION_V1");
+  assert(composition.work_item_factory instanceof ProductionEvidenceWorkItemFactoryV1);
+  assert.equal(
+    composition.work_item_factory.factory_id,
+    "MCFT_CAP09_PRODUCTION_EVIDENCE_WORK_ITEM_FACTORY_V1",
+  );
 
   const stopped = await composition.host.run({
     scope: {
@@ -117,6 +130,107 @@ async function main(): Promise<void> {
   assert.equal(stopped.stop_reason, "STOP_REQUESTED");
   assert.equal(plannerCalls, 0);
   assert.equal(healthCalls, 2);
+
+  let injectedTargetPlannerCalls = 0;
+  let injectedFactoryCalls = 0;
+  const injectedFactory: EvidenceRuntimeWorkItemFactoryV1 = {
+    factory_id: "MCFT_CAP09_PHASE5_CONTROLLED_WORK_ITEM_FACTORY_QUALIFICATION_V1",
+    buildForTarget(target) {
+      injectedFactoryCalls += 1;
+      assert.deepEqual(target, {
+        target_logical_time: TARGET,
+        requested_at: REQUESTED,
+        request_id_prefix: "phase5-controlled-provider",
+      });
+      throw new Error("PHASE3_COMPOSITION_INJECTED_WORK_ITEM_FACTORY_SENTINEL");
+    },
+  };
+  const injectedComposition = composeEvidenceRuntimeV1({
+    pool: fakePool,
+    scope: {
+      tenant_id: "tenantA",
+      project_id: "projectA",
+      group_id: "groupA",
+      field_id: "field_e3r1",
+      season_id: "season_2026",
+      zone_id: "zone_root",
+    },
+    raw_retention: {
+      endpoint: "https://s3.example.invalid",
+      bucket: "phase3-evidence-private",
+      region: "us-test-1",
+      access_key_id: "qualification-access",
+      secret_access_key: "qualification-secret",
+      clock: () => new Date(REQUESTED),
+    },
+    target_planner: {
+      async nextTarget() {
+        injectedTargetPlannerCalls += 1;
+        return {
+          target_logical_time: TARGET,
+          requested_at: REQUESTED,
+          request_id_prefix: "phase5-controlled-provider",
+        };
+      },
+    },
+    wait: {
+      async waitAfterAttempt() {
+        throw new Error("PHASE3_COMPOSITION_INJECTED_FACTORY_WAIT_FORBIDDEN");
+      },
+    },
+    health: { async recordHealth() {} },
+    stop: { stopRequested: () => false },
+    failure_classifier: {
+      classify() {
+        throw new Error("PHASE3_COMPOSITION_INJECTED_FACTORY_CLASSIFIER_FORBIDDEN");
+      },
+    },
+    completion_clock: () => REQUESTED,
+    work_item_factory: injectedFactory,
+  });
+  assert.equal(injectedComposition.work_item_factory, injectedFactory);
+  await assert.rejects(
+    injectedComposition.host.run({
+      scope: {
+        tenant_id: "tenantA",
+        project_id: "projectA",
+        group_id: "groupA",
+        field_id: "field_e3r1",
+        season_id: "season_2026",
+        zone_id: "zone_root",
+      },
+      lease_owner: "phase3-injected-factory-test",
+      lease_duration_seconds: 300,
+    }),
+    /PHASE3_COMPOSITION_INJECTED_WORK_ITEM_FACTORY_SENTINEL/,
+  );
+  assert.equal(injectedTargetPlannerCalls, 1);
+  assert.equal(injectedFactoryCalls, 1);
+  assert.equal(databaseCalls, 0);
+
+  assert.throws(
+    () => composeEvidenceRuntimeV1({
+      pool: fakePool,
+      scope: {
+        tenant_id: "tenantA", project_id: "projectA", group_id: "groupA",
+        field_id: "field_e3r1", season_id: "season_2026", zone_id: "zone_root",
+      },
+      raw_retention: {
+        endpoint: "https://s3.example.invalid", bucket: "phase3-evidence-private",
+        region: "us-test-1", access_key_id: "qualification-access",
+        secret_access_key: "qualification-secret", clock: () => new Date(REQUESTED),
+      },
+      target_planner: { async nextTarget() { return null; } },
+      wait: { async waitAfterAttempt() {} },
+      health: { async recordHealth() {} },
+      stop: { stopRequested: () => true },
+      failure_classifier: { classify: () => "FATAL" },
+      completion_clock: () => REQUESTED,
+      work_item_factory: injectedFactory,
+      work_item_config: { clock: () => new Date(REQUESTED) },
+    }),
+    /PHASE3_EVIDENCE_RUNTIME_WORK_ITEM_FACTORY_AND_CONFIG_MUTUALLY_EXCLUSIVE/,
+  );
 
   const productionFiles = [
     "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
@@ -144,9 +258,16 @@ async function main(): Promise<void> {
     explicit_target_required: true,
     target_selection_owned_by_composition: false,
     stopped_host_target_planner_calls: plannerCalls,
-    stopped_host_database_calls: 0,
+    stopped_host_database_calls: databaseCalls,
     stopped_host_provider_calls: 0,
     stopped_host_s3_calls: 0,
+    default_work_item_factory_id: composition.work_item_factory.factory_id,
+    default_production_work_item_factory: composition.work_item_factory instanceof ProductionEvidenceWorkItemFactoryV1,
+    injected_work_item_factory_id: injectedComposition.work_item_factory.factory_id,
+    injected_work_item_factory_identity_preserved: injectedComposition.work_item_factory === injectedFactory,
+    injected_target_planner_calls: injectedTargetPlannerCalls,
+    injected_work_item_factory_calls: injectedFactoryCalls,
+    work_item_factory_and_config_mutually_exclusive: true,
     same_canonical_cycle_service_path: true,
     production_activation: false,
     runtime_tick_cursor_mutation: false,
