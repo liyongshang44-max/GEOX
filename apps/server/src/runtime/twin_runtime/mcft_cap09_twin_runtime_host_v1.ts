@@ -16,6 +16,9 @@ import type {
   ExecuteExternalFormalV3Am19RunnerResultV1,
   ExternalFormalV3Amendment19RunnerV1,
 } from "./external_formal_v3_amendment19_runner_v1.js";
+import type {
+  TwinRuntimeSuccessorViabilityPortV1,
+} from "./postgres_twin_runtime_successor_viability_v1.js";
 
 export const MCFT_CAP09_TWIN_RUNTIME_HOST_ID_V1 =
   "MCFT_CAP09_TWIN_RUNTIME_HOST_V1" as const;
@@ -40,6 +43,8 @@ export const MCFT_CAP09_TWIN_RUNTIME_HOST_CONTRACT_V1 = {
     "twin_runtime_lease_v1",
   clock_authority: "POSTGRES_TRANSACTION_TIMESTAMP",
   missed_slot_order: "OLDEST_ELIGIBLE_FIRST",
+  successor_viability:
+    "PostgresTwinRuntimeSuccessorViabilityV1.verifyAfterTerminal",
   provider_request_allowed: false,
   raw_r2_fallback_allowed: false,
   evidence_supply_cursor_mutation_allowed: false,
@@ -196,6 +201,7 @@ export class TwinRuntimeHostV1 {
     database_clock: TwinRuntimeDatabaseClockPortV1;
     one_due_slot: Pick<ExternalFormalV3Amendment19RunnerV1, "executeOneDueSlot">
       | TwinRuntimeOneDueSlotPortV1;
+    successor_viability: TwinRuntimeSuccessorViabilityPortV1;
     wait: TwinRuntimeHostWaitPortV1;
     health: TwinRuntimeHostHealthPortV1;
     stop: TwinRuntimeHostStopPortV1;
@@ -327,6 +333,10 @@ export class TwinRuntimeHostV1 {
         if (!terminalResultV1(result)) {
           throw new Error("PHASE4_TWIN_RUNTIME_CYCLE_RESULT_INVALID");
         }
+        await this.deps.successor_viability.verifyAfterTerminal({
+          terminal_slot_id: result.slot_id,
+          terminal_logical_time: result.logical_time,
+        });
         terminalSlotCount += 1;
         await this.healthV1({
           status: result.status === "FAILED_TERMINAL_RECORDED"
