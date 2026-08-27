@@ -171,11 +171,11 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: { te
   const lateShadowArgs: any[] = [params.tenant_id, startTs, endTs];
   const lateShadowWhere: string[] = [`(payload_json ->> 'tenant_id') = $1`, `ts_ms >= $2`, `ts_ms <= $3`];
   let lateP = 4;
-  if (params.project_id) { lateShadowWhere.push(`(payload_json ->> 'project_id') = ${lateP++}`); lateShadowArgs.push(params.project_id); }
-  if (params.group_id) { lateShadowWhere.push(`(payload_json ->> 'group_id') = ${lateP++}`); lateShadowArgs.push(params.group_id); }
-  if (params.field_id) { lateShadowWhere.push(`(payload_json ->> 'field_id') = ${lateP++}`); lateShadowArgs.push(params.field_id); }
-  if (params.device_id) { lateShadowWhere.push(`sensor_id = ${lateP++}`); lateShadowArgs.push(params.device_id); }
-  lateShadowWhere.push(`created_at > to_timestamp(${lateP++} / 1000.0)`);
+  if (params.project_id) { lateShadowWhere.push("(payload_json ->> 'project_id') = $" + lateP++); lateShadowArgs.push(params.project_id); }
+  if (params.group_id) { lateShadowWhere.push("(payload_json ->> 'group_id') = $" + lateP++); lateShadowArgs.push(params.group_id); }
+  if (params.field_id) { lateShadowWhere.push("(payload_json ->> 'field_id') = $" + lateP++); lateShadowArgs.push(params.field_id); }
+  if (params.device_id) { lateShadowWhere.push("sensor_id = $" + lateP++); lateShadowArgs.push(params.device_id); }
+  lateShadowWhere.push("created_at > to_timestamp($" + lateP++ + " / 1000.0)");
   lateShadowArgs.push(nowMs);
 
   let lateBackfillShadowQueryAvailable = true;
