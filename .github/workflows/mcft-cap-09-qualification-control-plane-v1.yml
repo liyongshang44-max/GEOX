@@ -223,7 +223,20 @@ jobs:
           const token = process.env.GITHUB_TOKEN;
           const repo = process.env.GITHUB_REPOSITORY;
           if (!token || !repo) throw new Error('GITHUB_ACTIONS_READ_CONTEXT_REQUIRED');
-          const governedRequalificationBases = new Set([registry.frozen_subject_sha, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA]);
+          const governedRequalificationBaseList = requalification.durable_anchors?.rules?.governed_successor_predecessors;
+          if (!Array.isArray(governedRequalificationBaseList) || governedRequalificationBaseList.length === 0) {
+            throw new Error('REQUALIFICATION_GOVERNED_PREDECESSOR_SET_REQUIRED');
+          }
+          const governedRequalificationBases = new Set(governedRequalificationBaseList);
+          if (governedRequalificationBases.size !== governedRequalificationBaseList.length) {
+            throw new Error('REQUALIFICATION_GOVERNED_PREDECESSOR_SET_DUPLICATE');
+          }
+          if (![...governedRequalificationBases].every(sha => /^[0-9a-f]{40}$/.test(String(sha || '')))) {
+            throw new Error('REQUALIFICATION_GOVERNED_PREDECESSOR_SHA_INVALID');
+          }
+          if (!governedRequalificationBases.has(registry.frozen_subject_sha)) {
+            throw new Error('REQUALIFICATION_FROZEN_SUBJECT_PREDECESSOR_REQUIRED');
+          }
 
           async function apiMaybe(endpoint) {
             const response = await fetch(`https://api.github.com/repos/${repo}${endpoint}`, {
@@ -341,6 +354,8 @@ jobs:
       - name: Validate control-plane machine proof
         if: github.event_name == 'pull_request'
         shell: node {0}
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           const fs = require('node:fs');
           const proof = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json','utf8'));
@@ -352,7 +367,10 @@ jobs:
           if (cp2.status !== 'PASS' || cp2.v14_frozen_checks_not_applicable !== true) throw new Error('CP2_GENERATION_DIGEST_PROOF_NOT_PASS');
           if (evidence.status !== 'PASS' || evidence.all_durable_anchor_refs_resolvable !== true || evidence.all_live_refs_match_when_present !== true || evidence.all_requalification_live_refs_match !== true || evidence.requalification_evidence_count < 1) throw new Error('IMMUTABLE_DURABLE_EVIDENCE_NOT_RESOLVED');
           if (plan.status !== 'PASS' || plan.generation !== 'v13' || plan.unknown_changed_paths.length !== 0 || plan.resolver_errors.length !== 0 || plan.authority_errors.length !== 0) throw new Error('CONTROL_PLANE_PLAN_NOT_PASS');
-          if (plan.base_sha !== process.env.PHASE1_CLOSURE_SHA) throw new Error(`PHASE2_EXACT_PLAN_BASE_MUST_EQUAL_PHASE1_CLOSURE:${plan.base_sha}`);
+          const registry = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json','utf8'));
+          const governedBases = new Set(registry.requalification_evidence?.durable_anchors?.rules?.governed_successor_predecessors || []);
+          if (plan.base_sha !== process.env.PR_BASE_SHA) throw new Error(`CONTROL_PLANE_PLAN_BASE_MUST_EQUAL_PR_BASE:${plan.base_sha}:${process.env.PR_BASE_SHA}`);
+          if (!governedBases.has(plan.base_sha)) throw new Error(`CONTROL_PLANE_PLAN_BASE_NOT_GOVERNED:${plan.base_sha}`);
           const control = plan.decisions.find(x => x.check_id === 'CONTROL_PLANE_INTEGRITY');
           if (!control || control.status !== 'REQUALIFY') throw new Error('CONTROL_PLANE_SELF_CHANGE_MUST_REQUALIFY');
           for (const id of ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS']) {
