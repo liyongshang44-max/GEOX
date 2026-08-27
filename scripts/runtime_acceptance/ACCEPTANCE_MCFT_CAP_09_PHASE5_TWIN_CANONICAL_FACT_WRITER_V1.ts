@@ -49,7 +49,9 @@ async function main(){
       assert.deepEqual((await c.query(q,args)).rows[0],{status:"EXISTING_IDEMPOTENT_SUCCESS",canonical_fact_write_count:0});
       const er={type:"soil_moisture_observation_v1",payload:{object_id:"e",object_type:"soil_moisture_observation_v1",...s,logical_time:t}};
       await fail(c,"evidence",()=>c.query(q,[...vals(),"phase5-twin-writer","1","fact_e",t,JSON.stringify(er)]),/OBJECT_TYPE_NOT_AUTHORIZED/);
-      await c.query(`UPDATE public.twin_runtime_lease_v1 SET expires_at=transaction_timestamp()-interval '1 second'
+      await c.query(`UPDATE public.twin_runtime_lease_v1
+       SET lease_owner='phase5-twin-writer-takeover',fencing_token=2,
+           heartbeat_at=transaction_timestamp(),expires_at=transaction_timestamp()+interval '5 minutes'
        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6`,vals());
       await fail(c,"stale",()=>c.query(q,args),/PHASE5_TWIN_DB_WRITER_STALE_FENCE/);
       await c.query("ROLLBACK");
