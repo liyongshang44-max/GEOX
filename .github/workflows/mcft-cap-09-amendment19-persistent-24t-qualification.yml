@@ -56,10 +56,12 @@ jobs:
           frozen_successor_sha='3bbf096ee5cb73e8e0e0251dc400733d6cab501f'
           phase1_successor_sha='8943c752a354cb916cc7f144681203aa9a19f70b'
           phase2_closure_sha='c3346768a44b16b127378cb690ada1d8cfec1049'
+          phase3_closure_sha='0e874b254c695b32fd94c7dc7034fd71b8aa3bc3'
+          phase4_closure_sha='16ff7160473c0a25dc059db6b2b6b7ba07f54dd1'
           phase2_compatibility_path='scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_AM19_PHASE2_AUTHORITY_SYMBOL_COMPATIBILITY_V1.ts'
           frozen_historical_runner='scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'
           frozen_historical_runner_blob='ae3e47593ef35cba08946427304a0d3271bb86e9'
-          if [[ "$base_sha" != "$protected_main_sha" && "$base_sha" != "$frozen_successor_sha" && "$base_sha" != "$phase1_successor_sha" && "$base_sha" != "$phase2_closure_sha" ]]; then
+          if [[ "$base_sha" != "$protected_main_sha" && "$base_sha" != "$frozen_successor_sha" && "$base_sha" != "$phase1_successor_sha" && "$base_sha" != "$phase2_closure_sha" && "$base_sha" != "$phase3_closure_sha" && "$base_sha" != "$phase4_closure_sha" ]]; then
             echo "AM19_P24_PR_BASE_NOT_GOVERNED:${base_sha}" >&2
             exit 1
           fi
@@ -104,7 +106,9 @@ jobs:
           if grep -Eq "$v13_marker_regex" <<<"$changed"; then v13_marker_changed=true; fi
           if grep -Fxq "$phase2_compatibility_path" <<<"$changed"; then phase2_compatibility_changed=true; fi
           mode='historical-am19'
-          if [[ "$base_sha" == "$phase2_closure_sha" && "$phase2_frozen_authority_changed" == 'false' ]]; then
+          if [[ ( "$base_sha" == "$phase3_closure_sha" || "$base_sha" == "$phase4_closure_sha" ) && "$historical_sensitive_changed" == 'false' ]]; then
+            mode='production-hosting-successor'
+          elif [[ "$base_sha" == "$phase2_closure_sha" && "$phase2_frozen_authority_changed" == 'false' ]]; then
             test "$(git rev-parse "HEAD:${frozen_historical_runner}")" = "$frozen_historical_runner_blob" || { echo 'AM19_PHASE3_HISTORICAL_RUNNER_BLOB_DRIFT' >&2; exit 1; }
             mode='phase3-provider-maintenance-successor'
           elif [[ "$base_sha" == "$phase1_successor_sha" && "$phase2_compatibility_changed" == 'true' && "$phase2_frozen_authority_changed" == 'false' ]]; then
@@ -141,6 +145,11 @@ jobs:
               grep -Fq 'qualified_subject_sha' scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V1.cjs
             fi
           fi
+
+      - name: Record frozen AM19 compatibility route for production-hosting successor
+        if: steps.routing.outputs.mode == 'production-hosting-successor'
+        run: |
+          echo 'PASS: Phase3/Phase4 machine-closed production-hosting bases are governed successors; historical AM19 typecheck, selftests, and persistence-free semantics below remain mandatory. No durable live evidence is rebound.'
 
       - name: Record Amendment-19 T3 orchestration identity selftests not applicable to exact T4 runtime rebind
         if: steps.routing.outputs.mode == 't4-runtime-rebind-successor'
