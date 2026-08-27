@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { buildIngressPhysicalQcSnapshotV1 } from "../../evidence/ingress_physical_qc_snapshot_v1.js";
 
-export type RawSampleSourceV1 = "device" | "gateway" | "system" | "human" | "import" | "sim";
+export type RawSampleSourceV1 = "device" | "gateway" | "system" | "human" | "import" | "sim" | "unknown";
 export type RawSampleQualityV1 = "unknown" | "ok" | "suspect" | "bad";
 export type SeriesOverlayKindV1 = "marker" | "candidate" | "annotation";
 export type SeriesGapReasonV1 = "no_data" | "device_offline" | "unknown";
@@ -150,10 +150,10 @@ function parseJsonObject(v: unknown): Record<string, any> {
   return { ...(v as Record<string, any>) };
 }
 
-function normalizeSource(v: unknown): RawSampleSourceV1 {
-  const s = String(v ?? "device").trim();
-  if (s === "gateway" || s === "system" || s === "human" || s === "import" || s === "sim") return s;
-  return "device";
+export function normalizeRawSampleSourceV1(v: unknown): RawSampleSourceV1 {
+  const s = String(v ?? "").trim().toLowerCase();
+  if (s === "device" || s === "gateway" || s === "system" || s === "human" || s === "import" || s === "sim") return s;
+  return "unknown";
 }
 
 function normalizeQuality(v: unknown): RawSampleQualityV1 {
@@ -224,7 +224,7 @@ function normalizeRawSampleWriteInputV1(input: RawSampleWriteInputV1, tenant: Ra
   const group_id = asTrimmedString(input.group_id) ?? asTrimmedString(input.groupId) ?? asTrimmedString(payload.group_id) ?? tenant.group_id;
   const project_id = asTrimmedString(input.project_id) ?? asTrimmedString(input.projectId) ?? asTrimmedString(payload.project_id) ?? tenant.project_id;
   const field_id = asTrimmedString(input.field_id) ?? asTrimmedString(input.fieldId) ?? asTrimmedString(payload.field_id);
-  const source = normalizeSource(input.source ?? payload.source);
+  const source = normalizeRawSampleSourceV1(input.source ?? payload.source);
   const qc_quality = normalizeQuality(input.qc_quality ?? input.quality ?? payload.qc_quality ?? payload.quality);
   const sample_id = asTrimmedString(input.sample_id) ?? asTrimmedString(input.sampleId) ?? makeSampleId({ sensor_id, ts_ms, metric, value, unit });
   const fact_id = `raw_sample:${sample_id}`;
@@ -248,6 +248,7 @@ function normalizeRawSampleWriteInputV1(input: RawSampleWriteInputV1, tenant: Ra
     value,
     unit,
     qc_quality,
+    source,
     ingress_physical_qc,
     sample_kind: "raw",
     interpolated: false,
@@ -305,7 +306,7 @@ function rowToRawSampleEnvelopeV1(row: any): RawSampleEnvelopeV1 {
     value: Number(row.value),
     unit,
     qc_quality: normalizeQuality(row.qc_quality ?? payload.qc_quality),
-    source: normalizeSource(row.source ?? payload.source),
+    source: normalizeRawSampleSourceV1(row.source ?? payload.source),
     payload_json: payload,
     fact_id: `raw_sample:${sample_id}`,
     created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
