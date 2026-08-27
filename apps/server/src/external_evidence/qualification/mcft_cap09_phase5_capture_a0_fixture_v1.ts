@@ -129,8 +129,10 @@ async function main():Promise<void> {
   const subject=requiredEnvV1("GEOX_DEPLOYMENT_SUBJECT_COMMIT");
   if(!SUBJECT_RE.test(subject)) throw new Error("PHASE5_CAPTURE_SUBJECT_SHA_INVALID");
   const root=path.resolve(requiredEnvV1("GEOX_MCFT_CAP09_PHASE5_FIXTURE_OUTPUT_ROOT"));
-  fs.rmSync(root,{recursive:true,force:true});
   fs.mkdirSync(root,{recursive:true,mode:0o700});
+  for(const entry of fs.readdirSync(root)) {
+    fs.rmSync(path.join(root,entry),{recursive:true,force:true});
+  }
 
   const captureStartedAt=new Date().toISOString();
   const a0=nextHourV1(captureStartedAt);
