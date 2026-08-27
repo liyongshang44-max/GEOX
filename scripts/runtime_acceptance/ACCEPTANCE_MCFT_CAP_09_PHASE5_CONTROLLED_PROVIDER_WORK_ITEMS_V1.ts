@@ -90,6 +90,14 @@ async function main(): Promise<void> {
     request_id_prefix: "phase5-controlled-provider",
   });
   assert.equal(work.length, 3);
+  const rawHourlyOnly = factory.buildForTarget({
+    target_logical_time: TARGET,
+    requested_at: REQUESTED,
+    request_id_prefix: "phase5-controlled-provider-hourly-only",
+    source_families: ["KBS_RAW_HOURLY"],
+  });
+  assert.equal(rawHourlyOnly.length, 1);
+  assert.equal(rawHourlyOnly[0]!.dataset_id, "kbs_lter_raw_hourly_exact_interval_v1");
   assert.deepEqual(work.map(item => item.dataset_id), [
     "kbs_lter_current_weather_variate25_v1",
     "kbs_lter_raw_hourly_exact_interval_v1",
@@ -156,6 +164,8 @@ async function main(): Promise<void> {
     status: "PASS",
     factory_id: factory.factory_id,
     work_item_count: work.length,
+    explicit_source_family_selection_preserved: true,
+    production_default_all_source_families_preserved: true,
     product_soil_decoder_preserved: true,
     product_raw_hourly_decoder_preserved: true,
     product_gfs_bundle_composer_preserved: true,

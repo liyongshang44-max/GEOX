@@ -47,7 +47,7 @@ async function main(): Promise<void> {
           target_logical_time: target1,
           requested_at: "2026-08-27T08:55:00.000Z",
           request_id_prefix: "phase5.entrypoint.o01",
-          gfs_cycle: cycle,
+          source_families: ["KBS_RAW_HOURLY"],
         },
       ],
       responses: [
@@ -88,6 +88,11 @@ async function main(): Promise<void> {
       previous_result: null,
     });
     assert.equal(second?.target_logical_time, target1);
+    assert.deepEqual(second?.source_families, ["KBS_RAW_HOURLY"]);
+    assert.throws(
+      () => fixture.selectGfsCycle({ target_logical_time: target1 }),
+      /PHASE5_QUALIFICATION_GFS_CYCLE_NOT_DECLARED/,
+    );
     const exhausted = await planner.nextTarget({
       cycle_attempt: 2,
       successful_cycle_count: 2,
@@ -186,6 +191,8 @@ async function main(): Promise<void> {
       fixture_sha256_bound: true,
       fixture_path_escape_rejected: true,
       ordered_target_planner: true,
+      per_target_source_family_selection: true,
+      gfs_cycle_required_only_for_gfs_targets: true,
       production_process_factory_reused: true,
       direct_canonical_persistence_owned_by_entrypoint: false,
       phase5_durable_evidence_registered: false,

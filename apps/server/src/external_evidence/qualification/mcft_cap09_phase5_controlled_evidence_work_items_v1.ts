@@ -17,6 +17,9 @@ import type {
 import type {
   EvidenceRuntimeCycleWorkItemV1,
 } from "../mcft_cap09_evidence_runtime_cycle_service_v1.js";
+import type {
+  ProductionEvidenceSourceFamilyV1,
+} from "../mcft_cap09_production_evidence_work_items_v1.js";
 import {
   buildKbsVariate25SoilFetchRequestV1,
   KbsVariate25SoilEvidenceDecoderV1,
@@ -376,6 +379,18 @@ export class Phase5ControlledProviderWorkItemFactoryV1 implements EvidenceRuntim
       }),
     };
 
-    return [soil, rawHourly, gfs];
+    const byFamily: Readonly<Record<ProductionEvidenceSourceFamilyV1, EvidenceRuntimeCycleWorkItemV1>> = {
+      KBS_SOIL: soil,
+      KBS_RAW_HOURLY: rawHourly,
+      GFS_BUNDLE: gfs,
+    };
+    const requested = input.source_families ?? ["KBS_SOIL", "KBS_RAW_HOURLY", "GFS_BUNDLE"];
+    if (!Array.isArray(requested) || requested.length === 0 || new Set(requested).size !== requested.length) {
+      throw new Error("PHASE5_CONTROLLED_PROVIDER_SOURCE_FAMILIES_INVALID");
+    }
+    for (const family of requested) {
+      if (!(family in byFamily)) throw new Error("PHASE5_CONTROLLED_PROVIDER_SOURCE_FAMILY_INVALID");
+    }
+    return requested.map((family) => byFamily[family]);
   }
 }

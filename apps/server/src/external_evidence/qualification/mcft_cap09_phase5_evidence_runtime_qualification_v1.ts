@@ -37,7 +37,7 @@ export const MCFT_CAP09_PHASE5_CONTROLLED_FIXTURE_MANIFEST_SCHEMA_V1 =
 type EnvironmentV1 = Readonly<Record<string, string | undefined>>;
 
 export type Phase5QualificationTargetV1 = EvidenceRuntimeAcquisitionTargetV1 & {
-  gfs_cycle: string;
+  gfs_cycle?: string;
 };
 
 export type Phase5ControlledFixtureManifestResponseV1 = {
@@ -171,11 +171,37 @@ function parseManifestV1(file: string): Phase5ControlledFixtureManifestV1 {
     if (Date.parse(requested_at) > Date.parse(target_logical_time)) {
       throw new Error(`PHASE5_QUALIFICATION_REQUESTED_AFTER_TARGET:${index}`);
     }
+    const sourceFamilies = item.source_families === undefined
+      ? undefined
+      : Array.isArray(item.source_families)
+        ? item.source_families.map((value) => String(value))
+        : null;
+    if (
+      sourceFamilies === null
+      || (sourceFamilies !== undefined && (
+        sourceFamilies.length === 0
+        || new Set(sourceFamilies).size !== sourceFamilies.length
+        || sourceFamilies.some((value) => !["KBS_SOIL", "KBS_RAW_HOURLY", "GFS_BUNDLE"].includes(value))
+      ))
+    ) {
+      throw new Error(`PHASE5_QUALIFICATION_SOURCE_FAMILIES_INVALID:${index}`);
+    }
+    const effectiveFamilies = sourceFamilies ?? ["KBS_SOIL", "KBS_RAW_HOURLY", "GFS_BUNDLE"];
+    const gfsCycle = item.gfs_cycle === undefined
+      ? undefined
+      : canonicalCycleV1(String(item.gfs_cycle));
+    if (effectiveFamilies.includes("GFS_BUNDLE") && !gfsCycle) {
+      throw new Error(`PHASE5_QUALIFICATION_GFS_CYCLE_REQUIRED:${index}`);
+    }
+    if (!effectiveFamilies.includes("GFS_BUNDLE") && gfsCycle) {
+      throw new Error(`PHASE5_QUALIFICATION_GFS_CYCLE_WITHOUT_GFS_FORBIDDEN:${index}`);
+    }
     return {
       target_logical_time,
       requested_at,
       request_id_prefix,
-      gfs_cycle: canonicalCycleV1(String(item.gfs_cycle ?? "")),
+      ...(sourceFamilies ? { source_families: sourceFamilies as Phase5QualificationTargetV1["source_families"] } : {}),
+      ...(gfsCycle ? { gfs_cycle: gfsCycle } : {}),
     };
   });
 
@@ -275,7 +301,9 @@ implements Phase5ControlledEvidenceFixturePortV1 {
     this.manifest = parseManifestV1(path.resolve(input.manifest_path));
     this.root = path.resolve(input.fixture_root);
     this.targetCycles = new Map(
-      this.manifest.targets.map((row) => [row.target_logical_time, row.gfs_cycle]),
+      this.manifest.targets
+        .filter((row) => Boolean(row.gfs_cycle))
+        .map((row) => [row.target_logical_time, row.gfs_cycle!]),
     );
     this.responses = new Map(
       this.manifest.responses.map((row) => [responseKeyV1(row), row]),
@@ -292,6 +320,7 @@ implements Phase5ControlledEvidenceFixturePortV1 {
           target_logical_time: row.target_logical_time,
           requested_at: row.requested_at,
           request_id_prefix: row.request_id_prefix,
+          ...(row.source_families ? { source_families: row.source_families } : {}),
         };
       },
     };
