@@ -159,7 +159,7 @@ async function main(): Promise<void> {
   const filteredUrls: string[] = [];
   const filteredFetch = (async (input: string | URL | Request) => {
     filteredUrls.push(String(input));
-    return new Response(gribBytes(filteredUrls.length), {
+    return new Response(Buffer.from(gribBytes(filteredUrls.length)), {
       status: 200,
       headers: { "content-type": "application/octet-stream" },
     });

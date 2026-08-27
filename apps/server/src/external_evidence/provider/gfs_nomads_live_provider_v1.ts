@@ -356,16 +356,23 @@ export class GfsNomadsLiveProviderV1 {
           elapsed >= 0,
           "MCFT_CAP09_GFS_GRIB_FILTER_CADENCE_CLOCK_REGRESSION",
         );
-        const remaining =
+        let remaining =
           MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_MINIMUM_INTERVAL_MS_V1 - elapsed;
-        if (remaining > 0) await this.gribFilterCadence.wait_ms(remaining);
-        const afterWait = this.gribFilterCadence.now_ms();
-        requireConditionV1(
-          Number.isFinite(afterWait)
-            && afterWait - this.lastGribFilterRequestStartedAtMs
-              >= MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_MINIMUM_INTERVAL_MS_V1,
-          "MCFT_CAP09_GFS_GRIB_FILTER_MINIMUM_INTERVAL_NOT_OBSERVED",
-        );
+        while (remaining > 0) {
+          await this.gribFilterCadence.wait_ms(remaining);
+          const observed = this.gribFilterCadence.now_ms();
+          requireConditionV1(
+            Number.isFinite(observed),
+            "MCFT_CAP09_GFS_GRIB_FILTER_CADENCE_CLOCK_INVALID",
+          );
+          requireConditionV1(
+            observed >= before,
+            "MCFT_CAP09_GFS_GRIB_FILTER_CADENCE_CLOCK_REGRESSION",
+          );
+          remaining =
+            MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_MINIMUM_INTERVAL_MS_V1
+            - (observed - this.lastGribFilterRequestStartedAtMs);
+        }
       }
       const started = this.gribFilterCadence.now_ms();
       requireConditionV1(
