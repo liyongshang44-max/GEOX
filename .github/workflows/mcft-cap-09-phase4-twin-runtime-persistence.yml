@@ -154,6 +154,14 @@ jobs:
       - name: Prove schema-before-ACL migration order
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1.ts
 
+      - name: Apply production PostgreSQL init chain
+        run: |
+          set -euo pipefail
+          for file in docker/postgres/init/*.sql; do
+            echo "applying ${file}"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
+          done
+
       - name: Apply exact database-platform bootstrap and full migration inventory
         run: >-
           pnpm exec tsx -e "import('./apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts').then(m => m.runMcftCap07DatabasePlatformBootstrapFromEnvironmentV1())"
