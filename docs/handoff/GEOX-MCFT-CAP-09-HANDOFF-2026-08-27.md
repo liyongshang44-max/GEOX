@@ -1,20 +1,1979 @@
-# GEOX MCFT-CAP-09 Conversation Handoff — 2026-08-27 — Phase 2 Evidence Productization / KBS Raw Hourly Graph Frontier
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-08-27 — Phase 5 Production-Equivalent Containers / Accelerated Evidence Provider Frontier
 
 Status: **CONVERSATION HANDOFF / CURRENT FRONTIER — NOT MASTER-TASK AUTHORITY**
 
-Timestamp: **2026-08-27 01:41 +08:00**
+Timestamp: **2026-08-27 18:36 +08:00**
 
-Repository: `liyongshang44-max/GEOX`
+Repository: liyongshang44-max/GEOX
 
-Purpose: hand off the exact MCFT-CAP-09 engineering frontier after the Phase 2A production-Evidence extraction work in Draft PR #3299, including the completed governance/evidence work, the post-COMMIT visibility / EvidenceSupplyCursor boundary, the KBS Raw Hourly product-owned scientific core and TypeScript adapter, the current central-planner / EA5E2 graph blocker, the remaining GFS scientific-core debt, and the exact non-effects that must remain frozen.
+Purpose: hand off the exact MCFT-CAP-09 production-hosting migration frontier after Phase 2, Phase 3, and Phase 4 were machine-closed as stacked predecessors and Phase 5 was opened. This continuation records the Phase 3 Evidence Runtime authority/fencing/cursor repairs, the Phase 4 Twin Runtime host/DB-clock/restart/ACL/successor closure, the first Phase 5 production process and service-principal packaging, the current accelerated Evidence provider boundary, the still-open central applicability registration for Phase 5, the exact work that remains before an accelerated 24T can be called production-equivalent, and the failure modes that must not be reintroduced.
 
-> This document supersedes `docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-26.md` **for current conversation state only**.
+> This section supersedes the earlier Phase 2-only top-level state in this same 2026-08-27 handoff.
 >
-> The 2026-08-26 handoff remains a historical record of CP-5 closure, Phase 1 closure, and the initial Phase 2 frontier.
+> The original Phase 2 continuation is intentionally preserved in full below as a historical snapshot. Do not delete it: it explains how the current production-hosting lineage was reached.
 >
-> This handoff does **not** supersede `docs/SSOT.md`, the MCFT Master Task Line, any CAP Taskbook, accepted CAP-01→08 historical authority, immutable Formal-v4 NO-GO evidence, the qualification-control-plane authorities, or the frozen production-hosting architecture route.
+> The 2026-08-26 handoff remains the historical record of the initial Phase 2 takeover state.
+>
+> This handoff does **not** supersede docs/SSOT.md, the MCFT Master Task Line, the CAP-09 taskbook, accepted CAP-01→08 predecessor authority, immutable Formal evidence, the qualification control plane, or the frozen production-hosting architecture route.
 
 ---
+
+## C0. READ THIS FIRST — current authority reconstruction order
+
+Before changing MCFT-CAP-09 runtime, workflow, schema, database, provider, scheduler, container packaging, production ownership, Formal, Graduation, or qualification-control-plane logic, restore authority in this order:
+
+1. docs/SSOT.md and repository-level frozen authority;
+2. the digital-twin master task line / total task book;
+3. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md;
+4. accepted CAP-01→08 predecessor evidence;
+5. immutable Formal-v4 NO-GO / later accepted successor evidence;
+6. qualification-control-plane authorities and durable evidence registry;
+7. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md;
+8. Phase 2 closure c3346768a44b16b127378cb690ada1d8cfec1049;
+9. Phase 3 closure 0e874b254c695b32fd94c7dc7034fd71b8aa3bc3;
+10. Phase 4 closure 16ff7160473c0a25dc059db6b2b6b7ba07f54dd1;
+11. this handoff for the current Phase 5 conversation frontier;
+12. current exact-head GitHub Actions evidence for PR #3323.
+
+Do not infer current authority from branch names, PR titles, or an old green run alone. Exact SHA + exact dependency set + exact workflow evidence remain the governing unit.
+
+### C0.1 Frozen architecture that still governs everything
+
+The mandatory route remains:
+
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md
+
+Frozen topology:
+
+~~~text
+External Providers
+        ↓
+Evidence Runtime / Live Evidence Plane
+        ↓
+governed database Evidence
+        ↓
+Twin Runtime Plane
+        ↓
+canonical Twin state / Forecast / Scenario / checkpoint
+~~~
+
+Evidence Runtime and Twin Runtime are separate production roles.
+
+GitHub Actions remains:
+
+~~~text
+CI
+qualification
+deployment
+independent audit
+~~~
+
+GitHub Actions must **not** remain the routine production provider clock, Twin tick scheduler, or production cadence owner after Phase 6.
+
+### C0.2 Do not mix the three numbering systems
+
+Capability line:
+
+~~~text
+MCFT-CAP-01 → MCFT-CAP-09
+~~~
+
+Qualification-control-plane line:
+
+~~~text
+CP-0 → CP-5
+~~~
+
+Production-hosting migration line:
+
+~~~text
+Phase 0
+Phase 0A
+Phase 1
+Phase 2
+Phase 3
+Phase 4
+Phase 5
+Phase 6
+Phase 7
+~~~
+
+There is no frozen CP-6.
+
+Production-hosting Phase 6 means ownership cutover, not a new qualification-control-plane phase.
+
+### C0.3 B-Line is a separate engineering line
+
+A separate B-Line is being developed in parallel by another owner.
+
+Hard rule:
+
+~~~text
+MCFT-9 production-hosting line != B-Line semantic-convergence line
+~~~
+
+This MCFT-9 continuation must not:
+
+- merge B-Line work into this stack;
+- mutate B-Line branches or PRs;
+- use B-Line completion as a substitute for MCFT-9 qualification;
+- let Phase 5 container work become a semantic-convergence refactor.
+
+The two lines may be integrated only later under an explicit integration decision after MCFT-9 finishes its frozen migration scope.
+
+---
+
+## C1. Current task in one sentence
+
+**Continue Production Hosting Phase 5 by building a production-equivalent two-service accelerated qualification around the already machine-closed Phase 3 Evidence Runtime and Phase 4 Twin Runtime, using the same production host/canonicalizer/persistence/lease/cursor/runner paths and substituting only the explicitly frozen test-provider boundary and waiting clock, without starting Phase 6 ownership cutover or Phase 7 Formal-v5.**
+
+---
+
+## C2. Exact current repository / branch / PR state
+
+### C2.1 Protected main
+
+Protected main is still exactly:
+
+26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+
+It has not been moved by the Phase 2, Phase 3, Phase 4, Phase 5, or handoff work described here.
+
+Do not merge stacked production-hosting PRs merely to simplify development.
+
+### C2.2 Phase 2 closure
+
+Draft PR #3299:
+
+refactor(mcft-cap09): phase2a extract production Evidence provider seams
+
+Branch:
+
+feat/mcft-cap09-phase2-evidence-production-modules-v1
+
+Base:
+
+8943c752a354cb916cc7f144681203aa9a19f70b
+
+Exact Phase 2 closure head:
+
+c3346768a44b16b127378cb690ada1d8cfec1049
+
+Current repository facts at handoff:
+
+~~~text
+state      = open
+Draft      = true
+merged     = false
+commits    = 74
+files      = 28
+additions  = 4319
+deletions  = 368
+~~~
+
+Important closure evidence on c3346768…:
+
+- ordinary ci run 33032685968 = SUCCESS;
+- central qualification-control-plane run 33032685846 = SUCCESS;
+- EA5E2 runtime dependency graph run 33032685856 = SUCCESS;
+- successor runner run 33032685892 = SUCCESS;
+- EA5C2B1 KBS soil successor run 33032685984 = SUCCESS.
+
+Phase 2 is a historical closed predecessor for the current stack.
+
+### C2.3 Phase 3 closure
+
+Draft PR #3308:
+
+feat(mcft-cap09): phase3 durable Evidence Runtime foundation
+
+Base:
+
+c3346768a44b16b127378cb690ada1d8cfec1049
+
+Exact Phase 3 closure head:
+
+0e874b254c695b32fd94c7dc7034fd71b8aa3bc3
+
+Repository facts:
+
+~~~text
+state      = open
+Draft      = true
+merged     = false
+commits    = 73
+files      = 34
+additions  = 6111
+deletions  = 296
+~~~
+
+Important exact-head evidence:
+
+- Phase3 Evidence Runtime persistence run 33039951199 = SUCCESS;
+- qualification control plane run 33039951208 = SUCCESS;
+- EA5E2 graph run 33039951186 = SUCCESS;
+- successor runner run 33039951242 = SUCCESS;
+- AM19 persistent 24T compatibility run 33039951169 = SUCCESS;
+- EA5C2B1 successor run 33039951185 = SUCCESS.
+
+The generic ci run on that exact head was not the final production-hosting closure criterion because it exposed a migration-order integration defect later repaired in Phase 4. That defect is recorded below and must not be forgotten.
+
+Phase 3 is treated by the current stacked route as the machine-closed Evidence Runtime predecessor.
+
+### C2.4 Phase 4 closure
+
+Draft PR #3315:
+
+feat(mcft-cap09): build Phase4 Twin Runtime persistence
+
+Branch:
+
+feat/mcft-cap09-phase4-twin-runtime-persistence-v1
+
+Base:
+
+0e874b254c695b32fd94c7dc7034fd71b8aa3bc3
+
+Exact Phase 4 closure head:
+
+16ff7160473c0a25dc059db6b2b6b7ba07f54dd1
+
+Repository facts:
+
+~~~text
+state      = open
+Draft      = true
+merged     = false
+commits    = 39
+files      = 15
+additions  = 2708
+deletions  = 11
+~~~
+
+Exact-head closure runs:
+
+- ordinary ci run 33048911663 = SUCCESS;
+- Phase4 Twin Runtime persistence run 33048911787 = SUCCESS;
+- central qualification-control-plane run 33048911662 = SUCCESS;
+- EA5E2 graph run 33048911804 = SUCCESS;
+- successor runner run 33048911766 = SUCCESS.
+
+Central proved at closure:
+
+~~~text
+blocker_count = 0
+unknown_changed_paths = []
+~~~
+
+Phase 4 is frozen. Do not append new Phase 5 code to #3315.
+
+### C2.5 Current Phase 5 implementation PR
+
+Draft PR #3323:
+
+feat(mcft-cap09): build Phase5 production-equivalent containers
+
+Branch:
+
+feat/mcft-cap09-phase5-production-equivalent-containers-v1
+
+Exact base:
+
+16ff7160473c0a25dc059db6b2b6b7ba07f54dd1
+
+Current exact head at this handoff:
+
+8671ac74873d2312ee170870bc737927502a9206
+
+Repository facts:
+
+~~~text
+state      = open
+Draft      = true
+merged     = false
+commits    = 14
+files      = 9
+additions  = 1827
+deletions  = 2
+~~~
+
+Current changed files are only the first-layer Phase 5 packaging / principal boundary:
+
+- .github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml
+- apps/server/scripts/write_dist_entries.cjs
+- apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts
+- apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.ts
+- apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts
+- apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts
+- apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts
+- scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts
+- scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1.ts
+
+This exact changed-file list is important because the planned Phase 3 composition seam described later is **not yet committed** at this handoff.
+
+### C2.6 Current conversation handoff PR
+
+Docs-only Draft PR #3298 remains:
+
+docs(mcft-cap09): hand off Phase 2 KBS/graph frontier
+
+Branch:
+
+docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier
+
+Base:
+
+26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+
+Before this update its head was:
+
+29b82bc9b7a63490e3646e5bb28eeb56b649d952
+
+The handoff remains docs-only and must not perturb any implementation dependency graph.
+
+---
+
+## C3. Current production-hosting phase map
+
+~~~text
+CP-5 qualification control plane                    HISTORICAL CLOSED
+        ↓
+Phase 1 typed Runtime composition                   HISTORICAL CLOSED
+        ↓
+Phase 2 production Evidence productization          MACHINE CLOSED
+        exact = c3346768…
+        ↓
+Phase 3 durable Evidence Runtime                    MACHINE CLOSED
+        exact = 0e874b25…
+        ↓
+Phase 4 durable Twin Runtime                        MACHINE CLOSED
+        exact = 16ff7160…
+        ↓
+Phase 5 production-equivalent two-service 24T       IN PROGRESS  ← CURRENT
+        exact current head = 8671ac74…
+        ↓
+Phase 6 production ownership cutover                NOT STARTED / FORBIDDEN NOW
+        ↓
+Phase 7 fresh Formal-v5                             NOT ARMED
+~~~
+
+MCFT-CAP-09 remains:
+
+~~~text
+IN PROGRESS
+NOT COMPLETE
+NOT GRADUATED
+PHASE5 NOT CLOSED
+PHASE6 NOT STARTED
+FORMAL-V5 NOT ARMED
+PROTECTED MAIN UNCHANGED
+~~~
+
+---
+
+## C4. Phase 3 — what was actually fixed and why it matters to Phase 5
+
+Phase 3 was not just “add a durable cursor”. Several authority defects were found during audit and had to be corrected before Evidence Runtime could be trusted as a production predecessor.
+
+### C4.1 DB Evidence writer authority was repaired
+
+The Evidence Runtime database role must not have arbitrary INSERT authority over public.facts.
+
+The repaired design is:
+
+~~~text
+Evidence Runtime role
+        ↓
+no direct arbitrary facts INSERT
+        ↓
+governed SECURITY DEFINER Evidence append boundary
+        ↓
+record-type / scope / fence checks
+        ↓
+External Evidence canonical fact only
+~~~
+
+Machine qualification proved:
+
+- direct arbitrary INSERT facts is denied;
+- Twin canonical facts cannot be manufactured through the Evidence writer;
+- Evidence role cannot mutate Twin runtime state;
+- facts UPDATE / DELETE remain denied on the Evidence plane.
+
+This is a hard production boundary. Do not re-grant broad facts write authority for convenience in Phase 5 containers.
+
+### C4.2 Fencing was moved to the governed COMMIT boundary
+
+The original weakness was that stale Evidence ownership could be noticed only when advancing EvidenceSupplyCursor.
+
+That was insufficient: a stale owner could theoretically have written canonical Evidence before the cursor failed.
+
+The repair bound governed ingress to the current EvidenceProducerLeaseClaim and rechecked lease owner / fencing token / expiry inside the database write transaction.
+
+Required invariant:
+
+~~~text
+stale Evidence owner
+        ↓
+must fail before canonical fact insert / COMMIT
+        ↓
+stale canonical fact count = 0
+~~~
+
+Phase 5 duplicate Evidence-container qualification must preserve this exact property.
+
+### C4.3 EvidenceSupplyCursor became a two-axis durable model
+
+The earlier single watermark mixed two different concepts:
+
+1. when a publication became available to Runtime;
+2. whether observation/event-time data is continuous.
+
+That is wrong for real KBS publication behavior.
+
+Phase 3 split them.
+
+Publication axis:
+
+~~~text
+publication_available_through
+~~~
+
+Event-time axis:
+
+~~~text
+event_time_contiguous_from
+event_time_contiguous_through
+event_time_max_seen
+event_gap_count
+~~~
+
+A durable per-event ledger was added to support:
+
+- KBS daily batch;
+- true hourly publication;
+- outage / gap;
+- late backfill;
+- same-event governed revision;
+- publication order different from event-time order.
+
+Do not collapse this back into a single “latest timestamp”.
+
+### C4.4 Generic cadence/profile qualification was added
+
+At minimum, three supply models are now machine-qualified:
+
+~~~text
+KBS daily batch
+true hourly
+hourly outage + backfill + revision
+~~~
+
+For KBS daily batch, many hourly event records may share the same publication timestamp.
+
+Therefore:
+
+~~~text
+same publication timestamp != duplicate event
+daily batch != hourly publication
+~~~
+
+This directly constrains the Phase 5 accelerated provider adapter.
+
+### C4.5 Central applicability reached unknown_changed_paths = 0
+
+Phase 3 explicitly repaired the central resolver rather than hiding unknown paths with broad wildcards.
+
+The correct pattern remains:
+
+~~~text
+new production dependency
+        ↓
+exact resolver ownership
+        ↓
+machine applicability plan
+        ↓
+unknown_changed_paths = 0
+~~~
+
+Do not silence central by broad directory wildcarding.
+
+### C4.6 Phase 3 migration exposed a generic ordering bug later
+
+Phase 3 introduced same-day persistence and ACL migrations.
+
+The generic migration runner sorted files lexically, which caused:
+
+~~~text
+..._acl.sql
+before
+..._persistence.sql
+~~~
+
+in ordinary commercial bootstrap.
+
+The Phase 3 focused workflow did not reveal the defect because it manually applied persistence before ACL.
+
+Phase 4 repaired the generic migration ordering rule:
+
+~~~text
+same date:
+schema/data migrations
+        ↓
+ACL migration
+~~~
+
+This is a major lesson: a focused qualification workflow can accidentally mask production bootstrap ordering.
+
+Phase 5 must continue to run the full database-platform bootstrap, not only hand-picked migrations.
+
+---
+
+## C5. Phase 4 — machine-closed Twin Runtime foundation
+
+Phase 4 converted the already-qualified canonical Runtime graph into a long-running production-hostable Twin Runtime without creating a second execution algorithm.
+
+### C5.1 Long-running Twin Runtime host
+
+Product host:
+
+apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts
+
+Hard design:
+
+~~~text
+long-running process lifecycle
+        ↓
+PostgreSQL transaction-time clock
+        ↓
+existing ExternalFormalV3Amendment19RunnerV1.executeOneDueSlot()
+        ↓
+existing canonical tick / persistence graph
+~~~
+
+The host does not implement a simplified Twin algorithm.
+
+### C5.2 Product composition was lifted out of acceptance-only wiring
+
+Product composition:
+
+apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts
+
+It reuses:
+
+- PostgresPersistentSequentialSchedulerAdapterV1;
+- PostgresExternalFormalAmendment19EvidenceSourceV1;
+- PostgresNextTickRepositoryV1;
+- PostgresRuntimeRepositoryV1;
+- PostgresForecastScenarioRecoveryRepositoryV1;
+- ExternalFormalV3Amendment19PersistentTickServiceV1;
+- ExternalFormalV3Amendment19RunnerV1;
+- materializeExternalFormalA18CropContextV3.
+
+The rule established here is critical for Phase 5:
+
+**qualification and production packaging must instantiate this same graph, not a test-only runner.**
+
+### C5.3 Database clock is the Runtime time authority
+
+Phase 4 added:
+
+PostgresTwinRuntimeDatabaseClockV1
+
+Clock source:
+
+~~~sql
+SELECT transaction_timestamp() AS database_now
+~~~
+
+This avoids:
+
+~~~text
+Node wall-clock authority
+GitHub workflow clock authority
+container local-clock authority
+~~~
+
+for governed scheduler decisions.
+
+### C5.4 Durable RuntimeTickCursor and scheduler fencing were requalified
+
+Real PostgreSQL qualification proved:
+
+- oldest-due-first;
+- future-slot rejection;
+- same-owner idempotent claim;
+- duplicate owner rejection;
+- expired active slot recovery;
+- monotonic fencing-token advance;
+- stale fence rejection;
+- process restart reads durable cursor;
+- bounded O00→O03 catch-up;
+- no scheduler-only canonical fact write.
+
+### C5.5 Twin Runtime database ACL was separated from Evidence plane
+
+Independent privilege role:
+
+geox_mcft_cap09_twin_runtime_v1
+
+It may use only the governed Runtime/Twin/Forecast/Scenario persistence surface it actually needs.
+
+It is explicitly denied direct mutation of:
+
+~~~text
+external_evidence_producer_lease_v1
+external_evidence_supply_event_v1
+external_evidence_supply_cursor_v1
+~~~
+
+It reads governed Evidence through public.facts.
+
+This separation must remain true when Phase 5 introduces real LOGIN service principals.
+
+### C5.6 Read-only successor viability replaced old forcing-target control semantics
+
+The old V13 successor-viability path could mutate autonomous forcing-target control state.
+
+That was rejected for Phase 4 because it would reintroduce Evidence/forcing ownership into the Twin Runtime plane.
+
+Phase 4 instead added read-only successor viability:
+
+apps/server/src/runtime/twin_runtime/postgres_twin_runtime_successor_viability_v1.ts
+
+It proves after a terminal tick:
+
+~~~text
+terminal scheduler row exists
+RuntimeTickCursor last_terminal matches
+RuntimeTickCursor next slot matches
+canonical checkpoint next_tick_logical_time matches
+active slot count = 0
+~~~
+
+O23 is allowed only as range complete.
+
+It does not fetch providers and does not mutate EvidenceSupplyCursor or forcing target state.
+
+### C5.7 Phase 4 central closure
+
+Exact closure:
+
+16ff7160473c0a25dc059db6b2b6b7ba07f54dd1
+
+Machine result:
+
+~~~text
+blocker_count = 0
+unknown_changed_paths = []
+~~~
+
+Phase 4 durable evidence, DB-clock scheduler, restart/fencing, successor viability, Twin ACL, ordinary CI, graph, and successor qualification are all closed at that exact predecessor.
+
+Do not reopen Phase 4 merely because Phase 5 needs qualification seams. If Phase 5 must change a Phase 3 or Phase 4 source file, treat that as an explicit predecessor dependency change and requalify the affected predecessor.
+
+---
+
+## C6. Phase 5 — frozen purpose and allowed substitution
+
+Frozen Phase 5 route:
+
+~~~text
+Evidence Runtime
+       ↓
+governed database Evidence
+       ↓
+Twin Runtime
+       ↓
+canonical persisted Twin state / Forecast / Scenario / checkpoint
+~~~
+
+The accelerated clock substitutes **waiting only**.
+
+Phase 5 must test at least:
+
+~~~text
+normal progression
+restart of Evidence Runtime
+restart of Twin Runtime
+duplicate Evidence containers with fencing
+duplicate Twin containers with fencing
+DB reconnect
+idempotent retry
+missing Evidence backpressure
+no provider fallback from Twin Runtime
+no Twin-state mutation from Evidence Runtime
+checkpoint recovery
+cursor independence
+post-COMMIT visibility
+owner uniqueness
+~~~
+
+The system under qualification must remain production-equivalent except at explicitly permitted test boundaries.
+
+### C6.1 What may be substituted
+
+The frozen route allows an explicit test provider-adapter boundary for accelerated qualification.
+
+That means a controlled qualification provider may replace:
+
+~~~text
+real external network/provider availability
+~~~
+
+It must **not** replace:
+
+~~~text
+Evidence Runtime host
+Evidence cycle service
+raw retention
+canonicalizer
+governed fenced DB COMMIT
+post-COMMIT visibility
+EvidenceSupplyCursor
+Evidence lease/fencing
+Twin Runtime host
+canonical Twin runner
+Runtime scheduler
+RuntimeTickCursor
+checkpoint
+Twin persistence
+service DB principals
+~~~
+
+This distinction is now the central Phase 5 engineering rule.
+
+---
+
+## C7. Phase 5 first-layer production packaging — completed
+
+The first layer of Phase 5 is real product packaging, not the final two-container 24T yet.
+
+### C7.1 Shared production process lifecycle
+
+Product file:
+
+apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts
+
+It provides shared:
+
+- SIGTERM / SIGINT handling;
+- wait / backoff;
+- health lifecycle;
+- failure classification.
+
+This lifecycle belongs to product code, not scripts/runtime_acceptance.
+
+### C7.2 Twin Runtime production process
+
+Product file:
+
+apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts
+
+It directly composes the Phase 4 canonical Twin Runtime composition.
+
+Required process authority includes:
+
+~~~text
+GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL
+Twin-specific DB principal assertion
+Phase4 composeMcftCap09TwinRuntimeV1
+shared lifecycle
+~~~
+
+It must not acquire Evidence provider credentials.
+
+### C7.3 Stable compiled Twin Runtime entrypoint
+
+Production build now writes a stable compiled entry:
+
+apps/server/dist/runtime/mcft_cap09_twin_runtime.js
+
+Phase 5 workflow proves it exists and contains the Twin production process entry without importing acceptance scripts.
+
+### C7.4 Evidence Runtime production process factory
+
+Product file:
+
+apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts
+
+It directly composes the Phase 3 Evidence Runtime composition.
+
+Required process authority includes:
+
+~~~text
+GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL
+Evidence-specific S3 credentials
+Phase3 composeEvidenceRuntimeV1
+target planner
+shared lifecycle
+~~~
+
+Twin Runtime must not receive those S3 credentials.
+
+### C7.5 Evidence and Twin use different DB URLs
+
+Phase 5 does not rely on a single all-powerful runtime login.
+
+The two process contracts use separate database URLs.
+
+This is intentional even though both ultimately target the same PostgreSQL database.
+
+### C7.6 Independent PostgreSQL LOGIN principals
+
+Two LOGIN principals now exist:
+
+~~~text
+geox_mcft_cap09_evidence_runtime_login_v1
+geox_mcft_cap09_twin_runtime_login_v1
+~~~
+
+They are not the privilege roles themselves.
+
+Membership model:
+
+~~~text
+Evidence LOGIN
+        ↓
+inherits only geox_mcft_cap09_evidence_runtime_v1
+
+Twin LOGIN
+        ↓
+inherits only geox_mcft_cap09_twin_runtime_v1
+~~~
+
+Cross-plane membership is forbidden.
+
+The service principal bootstrap and runtime startup both verify expected identity.
+
+### C7.7 Phase 5 process/principal qualification is already green
+
+The first key Phase 5 run:
+
+33060881394
+
+completed SUCCESS.
+
+At the latest exact head 8671ac74…, Phase 5 process-packaging run:
+
+33061092188
+
+also completed SUCCESS.
+
+Those runs prove:
+
+- TypeScript;
+- production build;
+- production PostgreSQL init chain;
+- exact database-platform bootstrap + full migration inventory;
+- service-principal provisioning;
+- real Evidence/Twin login;
+- cross-plane DB privilege denial;
+- stable compiled Twin entrypoint;
+- process authority boundaries.
+
+This is **not** proof that Phase 5 as a whole is complete.
+
+---
+
+## C8. Current exact-head CI nuance — Phase 5 is green but central registration is not closed
+
+At current head:
+
+8671ac74873d2312ee170870bc737927502a9206
+
+important observed runs include:
+
+- Phase5 production-equivalent process-packaging run 33061092188 = SUCCESS;
+- ordinary ci = SUCCESS;
+- EA5E2 successor runner = SUCCESS;
+- EA5E2 runtime dependency graph run 33061092176 = FAILURE.
+
+The graph failure happens before full graph qualification:
+
+~~~text
+Generate central applicability plan = FAILURE
+Route EA5E2 from central planner = not reached
+full graph qualification = not reached
+~~~
+
+Current central plan reports these Phase 5 paths as unknown:
+
+- .github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml
+- apps/server/scripts/write_dist_entries.cjs
+- apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts
+- apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.ts
+- apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts
+- apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts
+- apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts
+- scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts
+- scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1.ts
+
+At that failure:
+
+~~~text
+authority_errors = []
+resolver_errors  = []
+~~~
+
+Therefore this red lane is a bounded central-applicability ownership gap, not evidence that the process packaging itself failed.
+
+Do not rebind the EA5E2 graph digest before central ownership is repaired and the graph generator actually runs.
+
+---
+
+## C9. Current critical Phase 5 frontier — accelerated Evidence provider boundary
+
+This is the most important unfinished engineering point.
+
+### C9.1 Why a tiny fake GFS payload is not acceptable
+
+The product GFS scientific decoder expects the real product scientific geometry / data contract.
+
+The current product SFLUX path expects native regular_gg N=768 scale, including the real point-count contract.
+
+Therefore it is not legitimate to create a tiny fake GRIB merely to make Phase 5 run quickly.
+
+That would prove:
+
+~~~text
+test-only decoder path
+~~~
+
+not:
+
+~~~text
+future production decoder / canonical Evidence path
+~~~
+
+The Phase 5 qualification must not “measure another implementation”.
+
+### C9.2 The correct permitted seam
+
+The converged design is to add an injectable work-item factory seam to:
+
+apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts
+
+Target API concept:
+
+~~~text
+composeEvidenceRuntimeV1(...)
+        ↓
+optional work_item_factory injection
+~~~
+
+Default production behavior must remain:
+
+~~~text
+ProductionEvidenceWorkItemFactoryV1
+~~~
+
+Only Phase 5 qualification supplies a controlled provider work-item factory.
+
+### C9.3 What the qualification seam must not bypass
+
+After the controlled provider work item enters the Evidence Runtime, the remainder must still be the exact production graph:
+
+~~~text
+Evidence Runtime host
+        ↓
+cycle
+        ↓
+raw retention
+        ↓
+canonicalizer
+        ↓
+fenced governed COMMIT
+        ↓
+post-COMMIT database visibility
+        ↓
+EvidenceSupplyCursor
+~~~
+
+No Phase 5 qualification adapter may write public.facts directly.
+
+No Phase 5 qualification adapter may advance EvidenceSupplyCursor directly.
+
+No Phase 5 qualification adapter may bypass raw retention.
+
+No Phase 5 qualification adapter may manufacture Twin state.
+
+### C9.4 Current implementation status of this seam
+
+**Not yet committed at this handoff.**
+
+Evidence:
+
+the current #3323 changed-file list does not include:
+
+apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts
+
+Therefore the next engineer must not assume the work-item seam already exists.
+
+The design is agreed; implementation and requalification remain.
+
+### C9.5 Phase 3 must be freshly requalified after the seam lands
+
+This is non-negotiable.
+
+The seam changes a Phase 3 composition source.
+
+Even if the default remains ProductionEvidenceWorkItemFactoryV1, the dependency subject changed.
+
+Therefore:
+
+~~~text
+modify Phase3 composition
+        ↓
+fresh Phase3 exact-head requalification
+        ↓
+do not carry old Phase3 durable evidence blindly
+~~~
+
+The qualification must prove:
+
+- default production composition still instantiates ProductionEvidenceWorkItemFactoryV1;
+- only the explicit Phase 5 qualification path injects the controlled factory;
+- no host / canonicalizer / DB / retention / lease / cursor path changes;
+- product process still uses the default production behavior unless explicitly configured for qualification.
+
+---
+
+## C10. Phase 5 work that remains
+
+Do not say “Phase 5 complete” until these are closed at one governed exact head.
+
+### C10.1 Central applicability registration
+
+Register all Phase 5 product / workflow / acceptance paths in the qualification control plane.
+
+Goal:
+
+~~~text
+unknown_changed_paths = []
+authority_errors = []
+resolver_errors = []
+~~~
+
+Prefer a bounded Phase 5 resolver or import closure. Do not use a broad wildcard to hide future dependencies.
+
+### C10.2 Implement the Evidence work-item factory seam
+
+Modify the Phase 3 Evidence composition with an optional injected factory.
+
+Default must remain ProductionEvidenceWorkItemFactoryV1.
+
+Add focused proof for default identity.
+
+### C10.3 Fresh Phase 3 requalification
+
+Because Phase 3 composition changes, rerun the exact Phase 3 qualification set and regenerate durable evidence only after the dependency set stabilizes.
+
+Do not register durable evidence early.
+
+### C10.4 Controlled qualification provider adapter
+
+Build a controlled provider boundary that can deterministically produce the provider work items required for accelerated Phase 5.
+
+It must replace only the external provider boundary.
+
+It must not replace scientific/canonical persistence semantics that are supposed to be production-owned.
+
+### C10.5 Evidence qualification process entrypoint
+
+Add a qualification entrypoint that launches the real Evidence process/composition with the controlled work-item factory.
+
+Keep the production entrypoint/default untouched.
+
+### C10.6 Dedicated Phase 5 qualification Compose
+
+Build a dedicated qualification topology, not an accidental production cutover.
+
+Expected roles:
+
+~~~text
+PostgreSQL
+Evidence Runtime container A
+optional duplicate Evidence Runtime container B
+Twin Runtime container A
+optional duplicate Twin Runtime container B
+controlled provider adapter / fixture boundary
+qualification clock/control harness
+~~~
+
+Do not mutate docker-compose.commercial_v1.yml into the production owner merely to run this test.
+
+### C10.7 Duplicate Evidence-container fencing
+
+Prove:
+
+~~~text
+two Evidence containers
+        ↓
+one valid producer owner
+        ↓
+stale/losing owner rejected before canonical COMMIT
+        ↓
+no duplicate canonical Evidence
+        ↓
+no duplicate cursor advance
+~~~
+
+### C10.8 Evidence Runtime restart
+
+Prove restart using durable:
+
+~~~text
+Evidence producer lease / fencing
+Evidence event ledger
+EvidenceSupplyCursor
+canonical facts
+raw retention references
+~~~
+
+Restart must not rely on in-memory target history.
+
+### C10.9 Duplicate Twin-container fencing
+
+Prove two Twin Runtime containers cannot both own the same governed Runtime slot.
+
+Use the existing Phase 4 database-clock lease/fencing path.
+
+Do not implement a container-level mutex that bypasses the database authority.
+
+### C10.10 Twin Runtime restart
+
+Prove restart reconstructs from:
+
+~~~text
+RuntimeTickCursor
+canonical checkpoint
+scheduler slot ledger
+canonical persisted Twin / Forecast / Scenario state
+~~~
+
+No provider fallback is allowed.
+
+### C10.11 DB reconnect and idempotent retry
+
+Prove both services recover safely from a transient PostgreSQL reconnect.
+
+Important distinctions:
+
+~~~text
+retry transport/process failure
+!=
+repeat semantic write
+~~~
+
+Idempotency/fencing must determine whether a write is new, repeated, stale, or conflicting.
+
+### C10.12 Missing Evidence backpressure
+
+When Evidence is unavailable or not yet eligible:
+
+~~~text
+Twin Runtime
+        ↓
+NOT_READY_PRECLAIM / backpressure
+        ↓
+no provider fallback
+        ↓
+no guessed evidence
+        ↓
+no cursor corruption
+~~~
+
+### C10.13 Cursor independence
+
+Prove simultaneously:
+
+~~~text
+EvidenceSupplyCursor
+!=
+RuntimeTickCursor
+~~~
+
+Evidence publication progress must not be inferred from Twin progress.
+
+Twin tick progress must not mutate Evidence supply state.
+
+### C10.14 Post-COMMIT visibility in the two-service topology
+
+Evidence must become consumable by Twin only after:
+
+~~~text
+fenced canonical COMMIT
+        ↓
+fresh DB readback
+        ↓
+exact identity verification
+        ↓
+EvidenceSupplyCursor advancement
+~~~
+
+The container topology must not weaken this ordering.
+
+### C10.15 Accelerated full 24T
+
+Only after all previous subproofs stabilize, execute the production-equivalent accelerated O00→O23.
+
+The accelerated clock may replace waiting.
+
+It must not replace:
+
+~~~text
+schema
+runtime config chain
+persistent repositories
+scheduler
+lease/fencing
+host
+runner
+health
+checkpoint
+canonical state propagation
+forecast
+Evidence ingress
+Evidence/Twin service separation
+~~~
+
+### C10.16 Final Phase 5 exact-head closure
+
+At one final exact head, require:
+
+- Phase5 dedicated qualification workflow PASS;
+- ordinary ci PASS;
+- central control plane PASS;
+- unknown_changed_paths = 0;
+- EA5E2 graph PASS;
+- successor runner PASS;
+- affected Phase3 fresh requalification PASS;
+- all duplicate/restart/backpressure/reconnect scenarios PASS;
+- accelerated 24T PASS;
+- durable Phase5 evidence registered only after dependency state is final;
+- no Phase6 ownership cutover;
+- no Formal-v5 arm.
+
+---
+
+## C11. Phase 6 and Phase 7 remain out of scope
+
+### C11.1 Phase 6 — not started
+
+Phase 6 is the actual ownership cutover.
+
+Only after Phase 5 production-equivalent qualification closes may the project consider:
+
+~~~text
+GitHub routine Evidence acquisition owner → removed
+GitHub routine Twin wake/tick owner → removed
+long-running service ownership → enabled
+deployment / audit workflows remain
+~~~
+
+At this handoff:
+
+**Phase 6 has not started.**
+
+Do not delete, disable, or rewrite current routine GitHub ownership paths yet.
+
+### C11.2 Phase 7 / Formal-v5 — not armed
+
+Formal-v5 remains forbidden until the frozen production-hosting prerequisites close.
+
+Do not interpret a green accelerated 24T as Formal qualification.
+
+Do not mutate Graduation.
+
+---
+
+## C12. Failure / repair history — high-value lessons that must survive the conversation
+
+### C12.1 Never test a different implementation just because it is easier to accelerate
+
+This is the most important Phase 5 rule.
+
+Bad pattern:
+
+~~~text
+engineering lane
+    uses simplified runner / fake decoder
+production lane
+    uses canonical core / real decoder
+~~~
+
+That can yield:
+
+~~~text
+engineering PASS
+production FAIL
+~~~
+
+Phase 5 must share the same canonical production graph.
+
+### C12.2 A fake tiny GFS GRIB is not a valid substitute for the product decoder
+
+If the product decoder requires the native scientific geometry, do not weaken it for qualification.
+
+Use the explicitly permitted provider-adapter seam instead.
+
+### C12.3 Accelerated clock substitutes waiting only
+
+Do not use acceleration to replace:
+
+- scheduler semantics;
+- lease expiry semantics;
+- persistence;
+- checkpoint;
+- DB readback;
+- canonical processing;
+- container ownership;
+- Evidence/Twin separation.
+
+### C12.4 Do not give both services one broad database login
+
+The two LOGIN principals are part of the production-equivalence claim.
+
+Do not regress to:
+
+~~~text
+one postgres superuser URL for both containers
+~~~
+
+because it makes cross-plane ACL proofs meaningless.
+
+### C12.5 Evidence S3 credentials belong only to Evidence Runtime
+
+Twin Runtime must not receive raw-provider / S3 acquisition credentials.
+
+If Twin needs raw-object access to continue, the architecture has regressed.
+
+### C12.6 Twin Runtime must never use provider fallback
+
+The correct missing-Evidence behavior is backpressure / fail-closed.
+
+Never “make the 24T pass” by letting Twin call the provider.
+
+### C12.7 Stale Evidence owner must fail before COMMIT
+
+Cursor failure after a stale canonical write is too late.
+
+Keep the Phase 3 DB fence at the governed canonical write boundary.
+
+### C12.8 Do not collapse publication cadence into event-time cadence
+
+KBS is a daily batch of many hourly events.
+
+Publication availability and event continuity are separate axes.
+
+Do not reintroduce:
+
+~~~text
+authority_pass = age <= N hours
+~~~
+
+as a universal Evidence admission rule.
+
+### C12.9 Backfill and revision are not the same as duplicate publication
+
+The durable event ledger distinguishes:
+
+- exact idempotent republish;
+- later availability update;
+- backfill of a missing event;
+- governed semantic revision at the same event time.
+
+Keep those cases explicit.
+
+### C12.10 Do not directly grant Evidence Runtime arbitrary INSERT facts
+
+The SECURITY DEFINER governed writer exists because table-level arbitrary INSERT is too broad.
+
+Phase 5 service LOGIN must inherit the privilege role, not bypass it.
+
+### C12.11 Do not directly grant Twin Runtime Evidence-plane coordination rights
+
+Twin consumes governed Evidence through facts.
+
+It must not mutate:
+
+- external_evidence_producer_lease_v1;
+- external_evidence_supply_event_v1;
+- external_evidence_supply_cursor_v1.
+
+### C12.12 Same-day migration ACL ordering matters
+
+The generic migration runner previously applied ACL before schema because of lexical ordering.
+
+Keep:
+
+~~~text
+same-day schema/data
+        ↓
+same-day ACL
+~~~
+
+and continue testing full bootstrap.
+
+### C12.13 Central unknown paths are supposed to fail closed
+
+The current Phase 5 graph red is useful.
+
+Do not hide the nine unknown Phase 5 paths with a broad wildcard.
+
+Register them deliberately.
+
+### C12.14 EA5E2 graph digest is not a magic constant
+
+Correct order:
+
+~~~text
+stabilize dependency set
+        ↓
+central ownership PASS
+        ↓
+run graph generator
+        ↓
+inspect expected digest
+        ↓
+legal carrier rebind if required
+~~~
+
+Do not guess or precompute the digest before the full graph step is reached.
+
+### C12.15 Strict lexical gates can be tripped by comments
+
+Earlier phases hit false positives because comments contained forbidden tokens such as RuntimeTickCursor.
+
+Do not weaken the gate.
+
+Fix scanner-safe comments when the dependency is not real.
+
+### C12.16 Historical gates must remain historical
+
+Do not rewrite old EA5C2B1, AM19, Formal, or predecessor gates to accept a new Phase 5 candidate.
+
+Use successor routing / fresh requalification.
+
+### C12.17 Durable evidence must be registered late
+
+Do not register a run before the dependency set is stable.
+
+Any later source/path change can invalidate the digest and force a new exact-head run.
+
+### C12.18 A green focused workflow does not equal stage closure
+
+Phase 5 process-packaging is green.
+
+Phase 5 is still incomplete because:
+
+- central ownership is not closed;
+- provider acceleration seam is not implemented;
+- duplicate/restart scenarios are not closed;
+- accelerated 24T is not run.
+
+### C12.19 Do not turn commercial Compose into production owner during Phase 5 qualification
+
+Phase 5 requires a dedicated production-equivalent qualification topology.
+
+Actual ownership cutover belongs to Phase 6.
+
+### C12.20 Do not mix the B-Line
+
+B-Line is a parallel project line.
+
+Do not “helpfully” resolve an MCFT-9 blocker by importing unintegrated B-Line semantics.
+
+---
+
+## C13. Recommended exact execution sequence from this handoff
+
+### Step 1 — lock the current Phase 5 exact head
+
+Verify:
+
+~~~text
+#3323 Draft = true
+#3323 base = 16ff7160473c0a25dc059db6b2b6b7ba07f54dd1
+#3323 head = expected current head
+protected main = 26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+~~~
+
+If head changed, do not reuse the exact run assumptions below blindly.
+
+### Step 2 — repair Phase 5 central applicability ownership
+
+Register all current nine Phase 5 paths.
+
+Rerun central applicability.
+
+Target:
+
+~~~text
+unknown_changed_paths = []
+~~~
+
+Do this before graph digest work.
+
+### Step 3 — implement the work_item_factory seam in Phase 3 composition
+
+Keep default:
+
+ProductionEvidenceWorkItemFactoryV1
+
+Inject only in explicit qualification composition.
+
+Add focused default-identity and injection-boundary tests.
+
+### Step 4 — rerun fresh Phase 3 qualification
+
+Because the Phase 3 composition source changed, obtain new exact-head Phase 3 evidence.
+
+Do not carry the old Phase 3 run solely because behavior is intended to be identical.
+
+### Step 5 — add controlled provider adapter / work-item factory
+
+Make it deterministic and explicit.
+
+Do not write canonical facts directly.
+
+### Step 6 — add Evidence qualification entrypoint
+
+Launch the same production Evidence host/process graph with only the provider work-item factory substituted.
+
+### Step 7 — add dedicated qualification Compose
+
+Keep commercial production ownership unchanged.
+
+Use real service LOGIN principals.
+
+### Step 8 — duplicate/restart/fencing matrix
+
+Execute:
+
+~~~text
+duplicate Evidence
+Evidence restart
+duplicate Twin
+Twin restart
+DB reconnect
+idempotent retry
+missing Evidence
+~~~
+
+### Step 9 — accelerated O00→O23
+
+Only after the topology and failure matrix are green.
+
+### Step 10 — final central / graph / durable evidence closure
+
+Run all required exact-head workflows.
+
+Register durable evidence only at the stable final Phase 5 dependency set.
+
+Then and only then evaluate opening Phase 6.
+
+---
+
+## C14. First 45 minutes for the next engineer
+
+### Minute 0–5 — restore authority
+
+Read:
+
+- docs/SSOT.md;
+- MCFT Master Task Line;
+- docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md;
+- frozen production-hosting route;
+- this current section;
+- the preserved historical Phase 2 snapshot below if a dependency history is unclear.
+
+### Minute 5–10 — verify stacked SHAs
+
+Confirm:
+
+~~~text
+main   = 26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+Phase2 = c3346768a44b16b127378cb690ada1d8cfec1049
+Phase3 = 0e874b254c695b32fd94c7dc7034fd71b8aa3bc3
+Phase4 = 16ff7160473c0a25dc059db6b2b6b7ba07f54dd1
+Phase5 base = 16ff7160…
+~~~
+
+### Minute 10–15 — inspect #3323 current changed files
+
+If mcft_cap09_evidence_runtime_composition_v1.ts is now changed, the work-item seam has started and Phase 3 fresh requalification is mandatory.
+
+If it is not changed, do not assume the seam exists.
+
+### Minute 15–20 — inspect central red
+
+Current known exact-head central red is unknown Phase 5 paths.
+
+Check whether that is still true before making any graph change.
+
+### Minute 20–30 — implement the smallest central ownership patch
+
+Use an exact Phase 5 resolver / bounded import closure.
+
+No wildcard.
+
+Rerun central.
+
+### Minute 30–45 — implement/inspect the qualification work-item seam
+
+Verify:
+
+~~~text
+production default factory unchanged
+qualification injection explicit
+no direct facts write
+no direct cursor write
+raw retention preserved
+canonicalizer preserved
+fenced COMMIT preserved
+post-COMMIT visibility preserved
+~~~
+
+---
+
+## C15. High-value exact file map
+
+### Frozen route / task authority
+
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md
+
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md
+
+### Central control plane
+
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+
+scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+
+.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml
+
+### Phase 3 Evidence Runtime
+
+apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts
+
+apps/server/src/external_evidence/mcft_cap09_evidence_runtime_cycle_service_v1.ts
+
+apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts
+
+apps/server/src/external_evidence/mcft_cap09_evidence_visibility_supply_cursor_v1.ts
+
+apps/server/src/external_evidence/mcft_cap09_evidence_supply_cadence_profile_v1.ts
+
+apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts
+
+apps/server/src/persistence/external_evidence/postgres_evidence_runtime_governed_ingress_v1.ts
+
+apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql
+
+apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql
+
+### Phase 4 Twin Runtime
+
+apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts
+
+apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts
+
+apps/server/src/runtime/twin_runtime/postgres_twin_runtime_successor_viability_v1.ts
+
+apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts
+
+apps/server/src/runtime/twin_runtime/postgres_external_formal_amendment19_evidence_source_v1.ts
+
+apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql
+
+.github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml
+
+### Phase 5 product packaging
+
+apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts
+
+apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts
+
+apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts
+
+apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts
+
+apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.ts
+
+apps/server/scripts/write_dist_entries.cjs
+
+.github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml
+
+scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts
+
+scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1.ts
+
+### EA5E2 graph
+
+scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs
+
+scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs
+
+.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml
+
+---
+
+## C16. Exact commits / runs worth preserving in the mental model
+
+### Phase 2 closure
+
+c3346768a44b16b127378cb690ada1d8cfec1049
+
+### Phase 3 closure
+
+0e874b254c695b32fd94c7dc7034fd71b8aa3bc3
+
+Central:
+
+33039951208 = SUCCESS
+
+Phase3:
+
+33039951199 = SUCCESS
+
+### Phase 4 closure
+
+16ff7160473c0a25dc059db6b2b6b7ba07f54dd1
+
+Central:
+
+33048911662 = SUCCESS
+
+Phase4:
+
+33048911787 = SUCCESS
+
+Ordinary ci:
+
+33048911663 = SUCCESS
+
+### Phase 5 initial packaging commits
+
+1c6d88d62b59998ec65897651f8b052c207c5546
+feat(mcft-cap09): add production process lifecycle adapters
+
+a65f0e610f3615b9d8f6c034c6c8855c85ff7157
+feat(mcft-cap09): add Twin Runtime production process
+
+d025f6dd4ac1ddca430c132760901e365294944d
+build(mcft-cap09): package Twin Runtime entrypoint
+
+158ab8cb7d171ae02c09ed410af37555287cf300
+feat(mcft-cap09): add Evidence Runtime production process factory
+
+e956cd4306f030d7abcc4771ef422735451bfdb3
+test(mcft-cap09): qualify Phase5 process boundaries
+
+89883b065e651cc64e12175d8bbf9757cc7bb407
+ci(mcft-cap09): qualify Phase5 production process packaging
+
+548633baba6f11eee23acc586198bec351cb844d
+feat(mcft-cap09): add isolated service database principals
+
+b34fcec573db272b55ac45c2da23ea3cb127a0ba
+fix(mcft-cap09): harden service principal bootstrap SQL
+
+c7d81ae84e359c74bf24d9e95347939930a279ee
+fix(mcft-cap09): verify Twin Runtime database principal on startup
+
+0627ecc41c0613b68c9950e1bf829b945020c62e
+fix(mcft-cap09): verify Evidence Runtime database principal on startup
+
+b9f7294ae403e6e4766735b8cd918ca308ede0d5
+test(mcft-cap09): qualify isolated service database principals
+
+d1741bbfc96d0855419b1b5cb084eab757b1d21a
+ci(mcft-cap09): qualify isolated Phase5 service principals
+
+5ae3a6acbfa2a5afb43fd997d865f1ae00ae4ede
+feat(mcft-cap09): add service principal bootstrap entry
+
+8671ac74873d2312ee170870bc737927502a9206
+build(mcft-cap09): package Phase5 principal bootstrap
+
+### Phase 5 key runs
+
+33060881394 = Phase5 process-packaging SUCCESS
+
+33061092188 = latest exact-head Phase5 process-packaging SUCCESS
+
+33061092176 = EA5E2 graph FAILURE at central applicability plan because current Phase5 paths are unregistered
+
+---
+
+## C17. Exact non-effects that still hold
+
+As of this handoff:
+
+- protected main remains unchanged;
+- #3299 remains Draft / unmerged;
+- #3308 remains Draft / unmerged;
+- #3315 remains Draft / unmerged;
+- #3323 remains Draft / unmerged;
+- B-Line is untouched;
+- production commercial Compose is not the new owner;
+- Phase 6 GitHub ownership cutover has not started;
+- Formal-v5 is not armed;
+- Graduation is not mutated;
+- Evidence Runtime is not allowed to mutate Twin canonical state;
+- Twin Runtime is not allowed to fetch provider/R2 fallback;
+- Twin Runtime does not receive Evidence S3 credentials;
+- Evidence and Twin service LOGIN principals remain separated;
+- accelerated 24T has not yet been executed as the Phase 5 production-equivalent proof;
+- Phase 5 is not complete;
+- MCFT-CAP-09 is not complete.
+
+---
+
+## C18. Current blockers / not-blockers
+
+### Current real blockers
+
+1. Phase 5 paths are not yet centrally registered, so EA5E2 graph routing fails closed at the planner.
+2. The controlled accelerated Evidence provider boundary is not yet implemented.
+3. Phase 3 work-item factory seam is not yet committed.
+4. Fresh Phase 3 requalification after that seam is still required.
+5. Dedicated qualification Compose is not yet built.
+6. duplicate Evidence / duplicate Twin fencing is not yet qualified.
+7. Evidence restart / Twin restart is not yet qualified in the Phase 5 two-service topology.
+8. DB reconnect / idempotent retry / missing Evidence backpressure is not yet qualified in that topology.
+9. accelerated O00→O23 has not yet run.
+10. final Phase 5 durable evidence / central closure is not yet registered.
+
+### Not blockers / already solved
+
+- Phase 2 provider productization;
+- Phase 3 durable Evidence Runtime;
+- Phase 3 DB writer authority;
+- stale Evidence pre-COMMIT fencing;
+- daily-batch-aware EvidenceSupplyCursor;
+- Phase 4 long-running Twin Runtime host;
+- DB-clock scheduler;
+- RuntimeTickCursor persistence;
+- Twin restart/fencing/checkpoint;
+- read-only successor viability;
+- Twin ACL;
+- same-day migration ACL ordering;
+- first-layer Phase 5 process packaging;
+- separate Evidence/Twin service principals;
+- stable compiled Twin entrypoint.
+
+Do not reopen solved layers unless a new dependency change actually invalidates them.
+
+---
+
+## C19. Handoff bottom line
+
+The project is no longer at the Phase 2 KBS/graph frontier preserved in the historical section below.
+
+The exact current state is:
+
+~~~text
+Phase 2
+production Evidence provider modules
+machine closed at c3346768…
+        ↓
+Phase 3
+durable Evidence Runtime
+DB writer authority
+pre-COMMIT fencing
+two-axis EvidenceSupplyCursor
+daily-batch / gap / backfill / revision qualification
+machine closed at 0e874b25…
+        ↓
+Phase 4
+long-running Twin Runtime
+DB-clock scheduler
+RuntimeTickCursor
+restart / fencing / checkpoint
+read-only successor viability
+Twin ACL
+machine closed at 16ff7160…
+        ↓
+Phase 5
+production-equivalent containers
+IN PROGRESS
+current head 8671ac74…
+        ↓
+shared process lifecycle exists
+Twin production process exists
+Evidence production process exists
+stable compiled Twin entry exists
+separate DB URLs exist
+independent Evidence/Twin LOGIN principals exist
+cross-plane DB denial is machine-proved
+Phase5 process-packaging is green
+        ↓
+BUT
+central Phase5 path ownership is not closed
+accelerated provider seam is not implemented
+Phase3 composition seam is not committed
+fresh Phase3 requalification remains
+dedicated qualification Compose remains
+duplicate/restart/reconnect/backpressure matrix remains
+accelerated full 24T remains
+        ↓
+Phase5 remains IN PROGRESS
+Phase6 ownership cutover NOT STARTED
+Formal-v5 NOT ARMED
+MCFT-CAP-09 NOT COMPLETE
+~~~
+
+The immediate next action is **not** to fake a small GFS product, not to start Phase 6, and not to modify commercial Compose into the production owner.
+
+The immediate sequence is:
+
+~~~text
+register current Phase5 paths centrally
+        ↓
+central unknown_changed_paths = 0
+        ↓
+implement optional work_item_factory seam in Phase3 composition
+production default remains ProductionEvidenceWorkItemFactoryV1
+        ↓
+fresh Phase3 requalification
+        ↓
+controlled Phase5 provider adapter
+        ↓
+same production Evidence host/cycle/retention/canonicalizer/fenced COMMIT/visibility/cursor
+        ↓
+dedicated qualification Compose
+        ↓
+duplicate/restart/fencing/backpressure/reconnect matrix
+        ↓
+accelerated O00→O23 with clock-only acceleration
+        ↓
+final central / graph / durable-evidence closure
+        ↓
+only then consider Phase6
+~~~
+
+Keep #3323 Draft.
+
+Keep #3315 frozen.
+
+Keep protected main untouched.
+
+Keep B-Line separate.
+
+Keep Phase 6 closed.
+
+Keep Formal-v5 unarmed.
+
+---
+
+# Historical snapshot retained below — original 2026-08-27 Phase 2 continuation
+
+The following section is the original 2026-08-27 Phase 2 frontier. It is intentionally retained so later engineers can reconstruct why the current Phase 3/4/5 architecture exists. Treat its “current” language as historical relative to the C0–C19 continuation above.
 
 ## 0. READ THIS FIRST — mandatory authority order
 
