@@ -73,7 +73,45 @@ function computeGapStats(samples: RawSampleRow[], startTs: number, endTs: number
 function latestSampleTs(samples: RawSampleRow[]): number | null { const latest = Math.max(...samples.map((x) => Number(x.ts_ms)).filter(Number.isFinite)); return Number.isFinite(latest) && latest > 0 ? latest : null; }
 function deriveFreshness(samples: RawSampleRow[], nowMs: number, maxAgeMs: number): AppleIIFreshnessV1 { const latest = latestSampleTs(samples); if (latest == null) return "unknown"; return nowMs - latest <= maxAgeMs ? "fresh" : "stale"; }
 function deriveDeviceHealth(row: any, nowMs: number, maxAgeMs: number, samples: RawSampleRow[]): AppleIIDeviceHealthSnapshotV1 { const deviceStatusPresent = row != null, sampleLatest = latestSampleTs(samples), sampleFresh = sampleLatest != null && nowMs - sampleLatest <= maxAgeMs, lastTelemetry = deviceStatusPresent ? toNumber(row?.last_telemetry_ts_ms) : null, lastHeartbeat = deviceStatusPresent ? toNumber(row?.last_heartbeat_ts_ms) : null, telemetryPresent = lastTelemetry != null, heartbeatPresent = lastHeartbeat != null, telemetryOnly = telemetryPresent && !heartbeatPresent, latestStatusTs = Math.max(lastTelemetry ?? 0, lastHeartbeat ?? 0), offline = deviceStatusPresent ? (!latestStatusTs || nowMs - latestStatusTs > maxAgeMs) : false, battery = deviceStatusPresent ? toNumber(row?.battery_percent) : null, rssi = deviceStatusPresent ? toNumber(row?.rssi_dbm) : null, reasonCodes: string[] = []; let status: AppleIIDeviceHealthStatusV1 = "UNKNOWN"; if (!deviceStatusPresent) { reasonCodes.push("DEVICE_STATUS_MISSING"); if (sampleFresh) reasonCodes.push("STATUS_UNKNOWN_BUT_SAMPLE_FRESH"); status = "UNKNOWN"; } else { if (!heartbeatPresent) reasonCodes.push("DEVICE_HEARTBEAT_MISSING"); if (telemetryOnly) reasonCodes.push("TELEMETRY_ONLY_DEVICE_HEALTH"); if (offline) status = "OFFLINE"; else if ((battery != null && battery <= 10) || (rssi != null && rssi <= -95)) status = "BAD"; else if (!heartbeatPresent || (battery != null && battery <= 20) || (rssi != null && rssi <= -85)) status = "DEGRADED"; else status = "GOOD"; } return { device_health_status: status, device_status_present: deviceStatusPresent, heartbeat_present: heartbeatPresent, telemetry_present: telemetryPresent, telemetry_only: telemetryOnly, status_unknown_but_sample_fresh: !deviceStatusPresent && sampleFresh, last_telemetry_ts_ms: lastTelemetry, last_heartbeat_ts_ms: lastHeartbeat, last_sample_ts_ms: sampleLatest, offline, battery_percent: battery, rssi_dbm: rssi, reason_codes: reasonCodes }; }
-async function readDeviceHealthStatusRowV1(db: DbConn, params: { tenant_id: string; project_id?: string | null; group_id?: string | null; field_id?: string | null; device_id?: string | null; candidate_device_ids?: Array<string | null | undefined> | null }): Promise<any | null> { const deviceIds = Array.from(new Set([params.device_id, ...(params.candidate_device_ids ?? [])].map(normalizeDeviceId).filter(Boolean))) as string[]; if (!deviceIds.length) return null; const selectCols = `SELECT last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm FROM device_status_index_v1`; for (const deviceId of deviceIds) { const attempts: Array<{ sql: string; args: unknown[] }> = [{ sql: `${selectCols} WHERE tenant_id = $1 AND device_id = $2 LIMIT 1`, args: [params.tenant_id, deviceId] }, { sql: `${selectCols} WHERE tenant_id = $1 AND field_id = $2 AND device_id = $3 LIMIT 1`, args: [params.tenant_id, params.field_id ?? "", deviceId] }, { sql: `${selectCols} WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND device_id = $4 LIMIT 1`, args: [params.tenant_id, params.project_id ?? "projectA", params.group_id ?? "groupA", deviceId] }]; for (const attempt of attempts) { try { const got = await db.query(attempt.sql, attempt.args); if (got.rows?.[0]) return got.rows[0]; } catch {} } } return null; }
+async function readDeviceHealthStatusRowV1(db: DbConn, params: {
+  tenant_id: string;
+  project_id?: string | null;
+  group_id?: string | null;
+  field_id?: string | null;
+  device_id?: string | null;
+  candidate_device_ids?: Array<string | null | undefined> | null;
+  decision_time_ms: number;
+}): Promise<any | null> {
+  const deviceIds = Array.from(
+    new Set([params.device_id, ...(params.candidate_device_ids ?? [])].map(normalizeDeviceId).filter(Boolean)),
+  ) as string[];
+  if (!deviceIds.length) return null;
+
+  for (const deviceId of deviceIds) {
+    const args: unknown[] = [params.tenant_id, deviceId];
+    const where = ["tenant_id = $1", "device_id = $2"];
+    let p = 3;
+    if (params.project_id) { where.push(`project_id = ${p++}`); args.push(params.project_id); }
+    if (params.group_id) { where.push(`group_id = ${p++}`); args.push(params.group_id); }
+    if (params.field_id) { where.push(`field_id = ${p++}`); args.push(params.field_id); }
+    where.push(`updated_ts_ms IS NOT NULL AND updated_ts_ms <= ${p++}`);
+    args.push(params.decision_time_ms);
+
+    try {
+      const got = await db.query(
+        `SELECT last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm, updated_ts_ms
+           FROM device_status_index_v1
+          WHERE ${where.join(" AND ")}
+          LIMIT 1`,
+        args,
+      );
+      if (got.rows?.[0]) return got.rows[0];
+    } catch {
+      // Missing/incompatible legacy status projection is treated as unavailable evidence.
+    }
+  }
+  return null;
+}
 function detectConflict(samples: RawSampleRow[]): AppleIIConflictDetectionV1 { if (!samples.length) return { sensor_drift_status: "UNKNOWN", conflict_status: "UNKNOWN", device_count: 0, conflicting_metric_count: 0, conflict_reasons: ["NO_SAMPLES"] }; const sensors = new Set(samples.map((x) => String(x.sensor_id ?? "").trim()).filter(Boolean)); const byMetric = new Map<string, number[]>(); for (const row of samples) { const metric = String(row.metric ?? "").trim(), value = Number(row.value); if (!metric || !Number.isFinite(value)) continue; const arr = byMetric.get(metric) ?? []; arr.push(value); byMetric.set(metric, arr); } const conflictReasons: string[] = []; let conflictingMetricCount = 0; for (const [metric, values] of byMetric.entries()) { if (values.length < 2) continue; const min = Math.min(...values), max = Math.max(...values), spread = max - min, threshold = metric.toLowerCase().includes("moisture") ? 20 : Math.max(10, Math.abs((min + max) / 2) * 0.5); if (spread > threshold) { conflictingMetricCount += 1; conflictReasons.push(`UNRESOLVED_CONFLICT:${metric}`); } } const suspectDrift = samples.some((x) => String(x.qc_quality ?? "").toLowerCase() === "suspect"), badDrift = samples.some((x) => String(x.qc_quality ?? "").toLowerCase() === "bad"); return { sensor_drift_status: badDrift ? "DRIFTING" : suspectDrift ? "SUSPECT" : "NONE", conflict_status: conflictingMetricCount > 0 ? "UNRESOLVED" : "NONE", device_count: sensors.size, conflicting_metric_count: conflictingMetricCount, conflict_reasons: conflictReasons }; }
 
 export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: { tenant_id: string; project_id?: string | null; group_id?: string | null; field_id: string; device_id?: string | null; now_ms?: number; observation_window_ms?: number; expected_sample_interval_ms?: number; min_sample_count?: number; min_coverage_ratio?: number; max_gap_ms?: number; freshness_max_age_ms?: number; formal_source_policy?: FormalSourcePolicyV1 | null }): Promise<AppleIIEvidenceSufficiencyV1> {
@@ -106,7 +144,7 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: { te
   );
   const formalSamples = qualityEligibleSamples.filter((sample) => physicalQcDecisions.get(sample.sample_id)?.eligible === true);
   const nonFormalSampleCount = samples.length - formalSamples.length;
-  const deviceStatusRow = await readDeviceHealthStatusRowV1(db, { ...params, candidate_device_ids: [inferSingleFormalSampleDeviceId(formalSamples)] });
+  const deviceStatusRow = await readDeviceHealthStatusRowV1(db, { ...params, decision_time_ms: nowMs, candidate_device_ids: [inferSingleFormalSampleDeviceId(formalSamples)] });
   const gapStats = computeGapStats(samples, startTs, endTs, expectedSampleIntervalMs), formalGapStats = computeGapStats(formalSamples, startTs, endTs, expectedSampleIntervalMs), coverageRatio = clamp01(gapStats.covered_ms / Math.max(1, endTs - startTs)), formalCoverageRatio = clamp01(formalGapStats.covered_ms / Math.max(1, endTs - startTs)), freshness = deriveFreshness(formalSamples, nowMs, freshnessMaxAgeMs);
   const timeCoverage: AppleIITimeCoverageV1 = { observation_window: { start_ts_ms: startTs, end_ts_ms: endTs }, coverage_ratio: Number(coverageRatio.toFixed(6)), sample_count: samples.length, formal_sample_count: formalSamples.length, non_formal_sample_count: nonFormalSampleCount, formal_coverage_ratio: Number(formalCoverageRatio.toFixed(6)), sample_source_lanes: buildSampleSourceLanes(samples, formalSourcePolicy), formal_metric_lanes: buildFormalMetricLanes(formalSamples), trigger_metric_evidence: buildTriggerMetricEvidence(formalSamples), formal_source_eligible: formalSamples.length > 0 && nonFormalSampleCount === 0, gap_count: formalGapStats.gap_count, max_gap_ms: formalGapStats.max_gap_ms, expected_sample_interval_ms: expectedSampleIntervalMs, freshness };
   const deviceHealth = deriveDeviceHealth(deviceStatusRow, nowMs, freshnessMaxAgeMs, formalSamples), conflicts = detectConflict(formalSamples);
