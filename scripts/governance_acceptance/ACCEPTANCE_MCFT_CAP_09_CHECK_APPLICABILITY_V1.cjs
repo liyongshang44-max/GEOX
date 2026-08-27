@@ -116,6 +116,7 @@ function main() {
     "LEGACY_AM19_PERSISTENT_24T",
     "PHASE1_TYPED_RUNTIME_COMPOSITION",
     "PHASE2_EVIDENCE_PROVIDER_MODULES",
+    "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
   ]) assert.equal(byId(controlOnly, id).status, "REQUIRED", `EXPANDED_DEPENDENCY_SET_REQUIRES_FRESH_PROOF:${id}`);
   for (const id of ["V13_PRODUCER_DRIVEN_QUALIFICATION", "END_TO_END_EVIDENCE_SUPPLY_DEADLINE", "EXACT_ONE_PRODUCTION_OWNER", "FORMAL_V5_ACTIVATION"]) {
     assert.equal(byId(controlOnly, id).status, "NOT_APPLICABLE", `PREMERGE_FUTURE_CHECK_MUST_BE_NA:${id}`);
@@ -139,6 +140,13 @@ function main() {
   assert.equal(legacy.status, "PASS");
   assert.equal(byId(legacy, "LEGACY_AM19_PERSISTENT_24T").status, "REQUALIFY");
   assert(byId(legacy, "LEGACY_AM19_PERSISTENT_24T").changed_dependencies.includes(legacyPath));
+
+  // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
+  const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
+  const phase3 = plan(authority, registry, [phase3Path]);
+  assert.equal(phase3.status, "PASS");
+  assert.equal(byId(phase3, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+  assert(byId(phase3, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes(phase3Path));
 
   // CP-4: runtime root changes invalidate v13 carry-forward by dependency closure.
   const runtimePath = "apps/server/src/runtime/twin_runtime/external_formal_forcing_autonomous_controller_service_v1.ts";
