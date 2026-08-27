@@ -1,6 +1,9 @@
 // apps/server/scripts/write_dist_entries.cjs
-// Purpose: create stable compiled Runtime entrypoints for the server, jobs worker, external database-platform bootstrap, and dedicated MCFT-CAP-07 one-shot migration workload.
-// Boundary: file packaging only; generated Runtime entrypoints do not share credentials or collapse one-shot database authority into the long-running server process.
+// Purpose: create stable compiled Runtime entrypoints for the server, jobs worker,
+// MCFT-CAP-09 production hosts, external database-platform bootstrap, and dedicated
+// MCFT-CAP-07 one-shot migration workload.
+// Boundary: file packaging only; generated Runtime entrypoints do not share credentials
+// or collapse independent Evidence/Twin/database authorities.
 
 const fs = require("node:fs");
 const path = require("node:path");
@@ -20,6 +23,16 @@ const entries = [
 
 runJobsRuntime().catch((error) => {
   console.error(\`FATAL: jobs runtime crashed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+  process.exit(1);
+});
+`,
+  },
+  {
+    name: path.join("runtime", "mcft_cap09_twin_runtime.js"),
+    content: `import { runMcftCap09TwinRuntimeProcessV1 } from "../apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.js";
+
+runMcftCap09TwinRuntimeProcessV1().catch((error) => {
+  console.error(\`FATAL: MCFT-CAP-09 Twin Runtime crashed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
   process.exit(1);
 });
 `,
