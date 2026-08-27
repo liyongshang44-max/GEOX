@@ -133,6 +133,8 @@ jobs:
           docker compose -f "$COMPOSE_FILE" --profile qualification-orchestration             run --rm --no-deps fixture-capture
           proof="$GEOX_PHASE5_FIXTURE_ROOT/capture-proof.json"
           test -f "$proof"
+          sudo chown "$(id -u):$(id -g)" "$proof"
+          chmod 600 "$proof"
           test "$(jq -r .status "$proof")" = "PASS"
           test "$(jq -r .subject_sha "$proof")" = "$GEOX_DEPLOYMENT_SUBJECT_COMMIT"
           test "$(jq -r .fake_grib_used "$proof")" = "false"
