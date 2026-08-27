@@ -1,5 +1,10 @@
 import { evaluateRawSampleStage1PhysicalQcV1 } from "../../evidence/raw_sample_stage1_physical_qc_v1.js";
 import { evaluateRawSampleObservationQualityV1 } from "../../evidence/raw_sample_measurement_quality_v1.js";
+import {
+  buildRawSampleEvidenceQualificationProjectionBatchV1,
+  projectRawSampleEvidenceQualificationV1,
+  type RawSampleEvidenceQualificationProjectionBatchV1,
+} from "../../evidence/raw_sample_evidence_qualification_projection_v1.js";
 import type { RawSampleQualityV1 } from "./raw_sample_fact_envelope_v1.js";
 import type { Pool, PoolClient } from "pg";
 
@@ -13,7 +18,7 @@ export type AppleIITriggerMetricEvidenceV1 = { irrigation_effectiveness: boolean
 export type AppleIITimeCoverageV1 = { observation_window: { start_ts_ms: number; end_ts_ms: number }; coverage_ratio: number; sample_count: number; formal_sample_count: number; non_formal_sample_count: number; formal_coverage_ratio: number; sample_source_lanes: Record<string, { sample_count: number; formal_eligible: boolean }>; formal_metric_lanes: Record<string, { sample_count: number }>; trigger_metric_evidence: AppleIITriggerMetricEvidenceV1; formal_source_eligible: boolean; gap_count: number; max_gap_ms: number; expected_sample_interval_ms: number; freshness: AppleIIFreshnessV1 };
 export type AppleIIDeviceHealthSnapshotV1 = { device_health_status: AppleIIDeviceHealthStatusV1; device_status_present: boolean; heartbeat_present: boolean; telemetry_present: boolean; telemetry_only: boolean; status_unknown_but_sample_fresh: boolean; last_telemetry_ts_ms: number | null; last_heartbeat_ts_ms: number | null; last_sample_ts_ms: number | null; offline: boolean; battery_percent: number | null; rssi_dbm: number | null; reason_codes: string[] };
 export type AppleIIConflictDetectionV1 = { sensor_drift_status: AppleIISensorDriftStatusV1; conflict_status: AppleIIConflictStatusV1; device_count: number; conflicting_metric_count: number; conflict_reasons: string[] };
-export type AppleIIEvidenceSufficiencyV1 = { evidence_sufficiency: AppleIIEvidenceSufficiencyStatusV1; reason_codes: string[]; time_coverage_v1: AppleIITimeCoverageV1; device_health_snapshot_v1: AppleIIDeviceHealthSnapshotV1; conflict_detection_v1: AppleIIConflictDetectionV1 };
+export type AppleIIEvidenceSufficiencyV1 = { evidence_sufficiency: AppleIIEvidenceSufficiencyStatusV1; reason_codes: string[]; time_coverage_v1: AppleIITimeCoverageV1; device_health_snapshot_v1: AppleIIDeviceHealthSnapshotV1; conflict_detection_v1: AppleIIConflictDetectionV1; canonical_evidence_qualification_projection_v1: RawSampleEvidenceQualificationProjectionBatchV1 };
 
 type DbConn = Pool | PoolClient;
 type RawSampleRow = { sample_id: string; sensor_id: string; ts_ms: number; metric: string; value: number; qc_quality: RawSampleQualityV1; source: AppleIISampleSourceV1; payload_json: any; created_at?: string | Date | null };
@@ -134,26 +139,59 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: { te
     ts_ms: Number(row.ts_ms),
     value: Number(row.value),
   })) as RawSampleRow[];
+  const allQualityDecisions = new Map(
+    samples.map((sample) => [sample.sample_id, evaluateRawSampleObservationQualityV1(sample.qc_quality)] as const),
+  );
+  const allPhysicalQcDecisions = new Map(
+    samples.map((sample) => [sample.sample_id, evaluateRawSampleStage1PhysicalQcV1(sample.payload_json)] as const),
+  );
   const sourceFormalSamples = samples.filter((sample) => isFormalSampleSource(sample.source, formalSourcePolicy));
   const nonFormalSourceSampleCount = samples.length - sourceFormalSamples.length;
-  const qualityDecisions = new Map(
-    sourceFormalSamples.map((sample) => [sample.sample_id, evaluateRawSampleObservationQualityV1(sample.qc_quality)] as const),
+  const qualityEligibleSamples = sourceFormalSamples.filter(
+    (sample) => allQualityDecisions.get(sample.sample_id)?.observation_pipeline_eligible === true,
   );
-  const qualityEligibleSamples = sourceFormalSamples.filter((sample) => qualityDecisions.get(sample.sample_id)?.observation_pipeline_eligible === true);
-  const physicalQcDecisions = new Map(
-    qualityEligibleSamples.map((sample) => [sample.sample_id, evaluateRawSampleStage1PhysicalQcV1(sample.payload_json)] as const),
+  const formalSamples = qualityEligibleSamples.filter(
+    (sample) => allPhysicalQcDecisions.get(sample.sample_id)?.eligible === true,
   );
-  const formalSamples = qualityEligibleSamples.filter((sample) => physicalQcDecisions.get(sample.sample_id)?.eligible === true);
   const nonFormalSampleCount = samples.length - formalSamples.length;
   const deviceStatusRow = await readDeviceHealthStatusRowV1(db, { ...params, decision_time_ms: nowMs, candidate_device_ids: [inferSingleFormalSampleDeviceId(formalSamples)] });
   const gapStats = computeGapStats(samples, startTs, endTs, expectedSampleIntervalMs), formalGapStats = computeGapStats(formalSamples, startTs, endTs, expectedSampleIntervalMs), coverageRatio = clamp01(gapStats.covered_ms / Math.max(1, endTs - startTs)), formalCoverageRatio = clamp01(formalGapStats.covered_ms / Math.max(1, endTs - startTs)), freshness = deriveFreshness(formalSamples, nowMs, freshnessMaxAgeMs);
   const timeCoverage: AppleIITimeCoverageV1 = { observation_window: { start_ts_ms: startTs, end_ts_ms: endTs }, coverage_ratio: Number(coverageRatio.toFixed(6)), sample_count: samples.length, formal_sample_count: formalSamples.length, non_formal_sample_count: nonFormalSampleCount, formal_coverage_ratio: Number(formalCoverageRatio.toFixed(6)), sample_source_lanes: buildSampleSourceLanes(samples, formalSourcePolicy), formal_metric_lanes: buildFormalMetricLanes(formalSamples), trigger_metric_evidence: buildTriggerMetricEvidence(formalSamples), formal_source_eligible: sourceFormalSamples.length > 0 && nonFormalSourceSampleCount === 0, gap_count: formalGapStats.gap_count, max_gap_ms: formalGapStats.max_gap_ms, expected_sample_interval_ms: expectedSampleIntervalMs, freshness };
   const deviceHealth = deriveDeviceHealth(deviceStatusRow, nowMs, freshnessMaxAgeMs, formalSamples), conflicts = detectConflict(formalSamples);
+  const formalSampleIds = new Set(formalSamples.map((sample) => sample.sample_id));
+  const canonicalEvidenceQualifications = samples.map((sample) =>
+    projectRawSampleEvidenceQualificationV1({
+      sample,
+      decision_time_ms: nowMs,
+      requested_scope: {
+        tenant_id: params.tenant_id,
+        project_id: params.project_id ?? null,
+        group_id: params.group_id ?? null,
+        field_id: params.field_id,
+      },
+      source_formal_eligible: isFormalSampleSource(sample.source, formalSourcePolicy),
+      quality_decision: allQualityDecisions.get(sample.sample_id)!,
+      physical_qc_decision: allPhysicalQcDecisions.get(sample.sample_id)!,
+      conflict_state: formalSampleIds.has(sample.sample_id) ? conflicts.conflict_status : "UNKNOWN",
+    }),
+  );
+  const canonicalEvidenceQualificationProjection = buildRawSampleEvidenceQualificationProjectionBatchV1(
+    canonicalEvidenceQualifications,
+  );
+
   const reasonCodes: string[] = [...deviceHealth.reason_codes];
-  const badQualitySampleCount = Array.from(qualityDecisions.values()).filter((decision) => decision.reason_code === "RAW_SAMPLE_QC_BAD").length;
-  const unknownQualitySampleCount = Array.from(qualityDecisions.values()).filter((decision) => decision.reason_code === "RAW_SAMPLE_QC_UNKNOWN").length;
-  const invalidPhysicalSampleCount = Array.from(physicalQcDecisions.values()).filter((decision) => decision.mode === "INELIGIBLE_INVALID").length;
-  const unknownPhysicalSampleCount = Array.from(physicalQcDecisions.values()).filter((decision) => decision.mode === "INELIGIBLE_UNKNOWN").length;
+  const badQualitySampleCount = sourceFormalSamples.filter(
+    (sample) => allQualityDecisions.get(sample.sample_id)?.reason_code === "RAW_SAMPLE_QC_BAD",
+  ).length;
+  const unknownQualitySampleCount = sourceFormalSamples.filter(
+    (sample) => allQualityDecisions.get(sample.sample_id)?.reason_code === "RAW_SAMPLE_QC_UNKNOWN",
+  ).length;
+  const invalidPhysicalSampleCount = qualityEligibleSamples.filter(
+    (sample) => allPhysicalQcDecisions.get(sample.sample_id)?.mode === "INELIGIBLE_INVALID",
+  ).length;
+  const unknownPhysicalSampleCount = qualityEligibleSamples.filter(
+    (sample) => allPhysicalQcDecisions.get(sample.sample_id)?.mode === "INELIGIBLE_UNKNOWN",
+  ).length;
   if (badQualitySampleCount > 0) reasonCodes.push("RAW_SAMPLE_QC_BAD_NOT_FORMAL");
   if (unknownQualitySampleCount > 0) reasonCodes.push("RAW_SAMPLE_QC_UNKNOWN_NOT_FORMAL");
   if (invalidPhysicalSampleCount > 0) reasonCodes.push("PHYSICAL_QC_INELIGIBLE_SAMPLE");
@@ -175,5 +213,6 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: { te
     time_coverage_v1: timeCoverage,
     device_health_snapshot_v1: deviceHealth,
     conflict_detection_v1: conflicts,
+    canonical_evidence_qualification_projection_v1: canonicalEvidenceQualificationProjection,
   };
 }

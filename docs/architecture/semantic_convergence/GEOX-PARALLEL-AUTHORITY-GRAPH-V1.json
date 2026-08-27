@@ -850,6 +850,40 @@
         "fingerprint": "raw_samples"
       },
       "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-031",
+      "from_producer": "canonical-evidence-qualification-shadow",
+      "to_consumer": "appleii-canonical-evidence-shadow",
+      "semantic_id": "evidence.qualification",
+      "connection_class": "MAINLINE",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts",
+        "callee_path": "apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.ts",
+        "fingerprint": "projectRawSampleEvidenceQualificationV1"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-032",
+      "from_producer": "canonical-evidence-qualification-shadow",
+      "to_consumer": "stage1-canonical-evidence-shadow-debug",
+      "semantic_id": "evidence.qualification",
+      "connection_class": "MAINLINE",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "RETURN_OBJECT_CHAIN",
+        "caller_path": "apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts",
+        "callee_path": "apps/server/src/domain/decision/stage1_action_boundary_v1.ts",
+        "fingerprint": "canonical_evidence_qualification_projection_v1"
+      },
+      "status": "CURRENT_PROVEN"
     }
   ],
   "connectivity_status_values": [
