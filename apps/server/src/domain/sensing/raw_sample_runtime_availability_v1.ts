@@ -52,15 +52,15 @@ export async function appendRawSampleRuntimeAvailabilityMarkerV1(
          'type', $3,
          'schema_version', '1.0.0',
          'sample_id', $1,
-         'raw_sample_fact_id', $4,
+         'raw_sample_fact_id', $4::text,
          'available_to_runtime_at', visible_raw_sample.available_to_runtime_at,
-         'visibility_proof', $5,
+         'visibility_proof', $5::text,
          'scope', jsonb_build_object(
-           'tenant_id', $6,
-           'project_id', $7,
-           'group_id', $8,
-           'field_id', $9,
-           'sensor_id', $10
+           'tenant_id', $6::text,
+           'project_id', $7::text,
+           'group_id', $8::text,
+           'field_id', $9::text,
+           'sensor_id', $10::text
          )
        )
        FROM visible_raw_sample
