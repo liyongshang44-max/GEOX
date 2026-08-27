@@ -1,0 +1,70 @@
+name: b04d4-runtime-availability-exact-head-r2
+
+on:
+  push:
+    branches:
+      - ci/bline-b04d4-runtime-availability-exact-head-r2-2026-08-27
+
+jobs:
+  exact-head:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build runtime workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Post-COMMIT availability marker fixtures
+        run: node --import tsx --test apps/server/src/domain/sensing/raw_sample_runtime_availability_marker_v1.test.ts
+
+      - name: Canonical temporal qualification fixtures
+        run: node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+
+      - name: Apple-II shadow integration and B-04d3r1 regressions
+        run: |
+          node --import tsx --test apps/server/src/domain/sensing/appleii_canonical_evidence_projection_v1.test.ts
+          node --import tsx --test apps/server/src/domain/sensing/raw_sample_authority_time_scope_v1.test.ts
+
+      - name: Stage-1 shadow non-authority regression
+        run: node --import tsx --test apps/server/src/domain/decision/stage1_canonical_evidence_shadow_visibility_v1.test.ts
+
+      - name: Prior B-04 physical-QC regressions
+        run: |
+          node --import tsx --test apps/server/src/evidence/physical_qc_v1.test.ts
+          node --import tsx --test apps/server/src/evidence/ingress_physical_qc_snapshot_v1.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_stage1_physical_qc_v1.test.ts
+          node --import tsx --test apps/server/src/evidence/stage1_physical_qc_consumption_guard_v1.test.ts
+          node --import tsx --test apps/server/src/domain/sensing/appleii_evidence_physical_qc_v1.test.ts
+          node --import tsx --test apps/server/src/services/device_observation_stage1_physical_qc_guard_v1.test.ts
+
+      - name: B-02 semantic linter
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Marker
+        run: |
+          echo "B04D4_EXACT_HEAD 5aedd0921e248166a65df6a69e105cec765edec5"
+          echo "B04D4_POST_COMMIT_RUNTIME_AVAILABILITY_AUTHORITY_PASS"
