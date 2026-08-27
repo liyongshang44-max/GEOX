@@ -23,8 +23,18 @@ import {
   ControlledHttpsByteClientV1,
 } from "../provider/https_external_evidence_transport_v1.js";
 import {
+  MCFT_CAP09_GFS_ACQUISITION_AUTHORITY_REF_V1,
   GfsNomadsLiveProviderV1,
+  candidateGfsCyclesV1,
   gfsDirectoryUrlV1,
+  gfsLeadWindowV1,
+  gfsPgrb2NamesV1,
+  gfsSfluxNamesV1,
+  parseGfsDirectoryInventoryV1,
+  parseGfsSfluxIndexV1,
+  type GfsCycleSelectionV1,
+  type GfsDirectoryInventoryV1,
+  type GfsNomadsRawObjectV1,
 } from "../provider/gfs_nomads_live_provider_v1.js";
 import {
   GfsNomadsRawBundleComposerV1,
@@ -37,6 +47,7 @@ import {
 
 const SUBJECT_RE=/^[0-9a-f]{40}$/;
 const HOUR_MS=3_600_000;
+const ROLLING_GFS_TARGET_COUNT=24;
 
 function requiredEnvV1(name:string):string {
   const value=String(process.env[name]??"").trim();
@@ -125,6 +136,153 @@ function gfsResponseV1(
   };
 }
 
+
+function capturedLeadV1(row:CapturedRawV1):number|null {
+  if(row.input.source_family==="GFS_DIRECTORY_LISTING") return null;
+  const match=row.input.request_id.match(/:f(\d{3})$/i);
+  if(!match) throw new Error("PHASE5_CAPTURE_GFS_LEAD_IDENTITY_REQUIRED:"+row.input.request_id);
+  return Number(match[1]);
+}
+
+function requireRetrievedByA0V1(raw:GfsNomadsRawObjectV1,a0:string,code:string):void {
+  if(Date.parse(raw.response.retrieved_at)>Date.parse(a0)) {
+    throw new Error(code+"_RETRIEVED_AFTER_A0");
+  }
+}
+
+async function retainCapturedGfsRawV1(input:{
+  retention:LocalPrivateCaptureRetentionV1;
+  raw:GfsNomadsRawObjectV1;
+  request_id:string;
+  a0:string;
+}):Promise<void> {
+  requireRetrievedByA0V1(input.raw,input.a0,"PHASE5_CAPTURE_EXTENDED_GFS");
+  await input.retention.retainRawEvidence({
+    retention_class:"PRIVATE_RESTRICTED_RAW_EVIDENCE",
+    request_id:input.request_id,
+    provider_id:"MCFT_CAP09_GFS_NOMADS_LIVE_PROVIDER_V1",
+    source_family:input.raw.kind,
+    source_locator:input.raw.response.final_locator,
+    final_locator:input.raw.response.final_locator,
+    content_type:input.raw.response.content_type||"application/octet-stream",
+    retrieved_at:input.raw.response.retrieved_at,
+    available_at:input.raw.response.retrieved_at,
+    use_policy_ref:MCFT_CAP09_GFS_ACQUISITION_AUTHORITY_REF_V1,
+    raw_sha256:input.raw.sha256,
+    raw_bytes:input.raw.response.bytes.byteLength,
+    bytes:input.raw.response.bytes,
+  });
+}
+
+function validateExtendedInventoryAtA0V1(input:{
+  inventory:GfsDirectoryInventoryV1;
+  cycle:string;
+  a0:string;
+  support_lead:number;
+  lead_end:number;
+}):void {
+  const a0Ms=Date.parse(input.a0);
+  for(let lead=input.support_lead;lead<=input.lead_end;lead+=1) {
+    for(const name of [...gfsPgrb2NamesV1(input.cycle,lead),...gfsSfluxNamesV1(input.cycle,lead)]) {
+      const rows=input.inventory.get(name)??[];
+      if(rows.length!==1 || rows[0]!.size_bytes<=0) {
+        throw new Error("PHASE5_CAPTURE_EXTENDED_GFS_INVENTORY_MISSING:"+name);
+      }
+      if(Date.parse(rows[0]!.availability_upper_bound)>a0Ms) {
+        throw new Error("PHASE5_CAPTURE_EXTENDED_GFS_INVENTORY_AFTER_A0:"+name);
+      }
+    }
+  }
+}
+
+type ExtendedCycleSelectionV1={
+  selection:GfsCycleSelectionV1;
+  directory_raw:GfsNomadsRawObjectV1;
+  directory_request_count:number;
+};
+
+async function selectExtendedCausalCycleV1(input:{
+  provider:GfsNomadsLiveProviderV1;
+  retention:LocalPrivateCaptureRetentionV1;
+  a0:string;
+  last_target:string;
+}):Promise<ExtendedCycleSelectionV1> {
+  const rejected:{cycle:string;reason:string}[]=[];
+  let directoryRequestCount=0;
+  for(const cycle of candidateGfsCyclesV1(input.a0)) {
+    try {
+      const raw=await input.provider.fetchDirectoryRaw(cycle);
+      directoryRequestCount+=1;
+      requireRetrievedByA0V1(raw,input.a0,"PHASE5_CAPTURE_GFS_DIRECTORY");
+      await retainCapturedGfsRawV1({
+        retention:input.retention,
+        raw,
+        request_id:`phase5.a0.capture:gfs:extended-directory:${String(directoryRequestCount).padStart(2,"0")}`,
+        a0:input.a0,
+      });
+      const inventory=parseGfsDirectoryInventoryV1(raw.response.bytes);
+      const a0Window=gfsLeadWindowV1(input.a0,cycle);
+      const lastWindow=gfsLeadWindowV1(input.last_target,cycle);
+      validateExtendedInventoryAtA0V1({
+        inventory,
+        cycle:a0Window.cycle,
+        a0:input.a0,
+        support_lead:a0Window.support_lead,
+        lead_end:lastWindow.lead_end,
+      });
+      return {
+        selection:{
+          ...a0Window,
+          directory_sha256:raw.sha256,
+          rejected_cycles:rejected,
+        },
+        directory_raw:raw,
+        directory_request_count:directoryRequestCount,
+      };
+    } catch(error) {
+      const reason=error instanceof Error?error.message:String(error);
+      rejected.push({cycle,reason:reason.slice(0,240)});
+    }
+  }
+  throw new Error("PHASE5_CAPTURE_NO_EXTENDED_CAUSAL_GFS_CYCLE:"+JSON.stringify(rejected));
+}
+
+function responsesForTargetV1(input:{
+  captured:readonly CapturedRawV1[];
+  target:string;
+  cycle:string;
+}):Phase5ControlledFixtureManifestResponseV1[] {
+  const window=gfsLeadWindowV1(input.target,input.cycle);
+  const selectedDirectoryRows=input.captured.filter(
+    row=>row.input.source_family==="GFS_DIRECTORY_LISTING"
+      && row.input.final_locator===gfsDirectoryUrlV1(input.cycle),
+  );
+  if(selectedDirectoryRows.length<1) throw new Error("PHASE5_CAPTURE_SELECTED_GFS_DIRECTORY_REQUIRED");
+  const selectedDirectory=selectedDirectoryRows[selectedDirectoryRows.length-1]!;
+  const directoryResponse=gfsResponseV1(selectedDirectory,input.target,input.cycle);
+  if(!directoryResponse) throw new Error("PHASE5_CAPTURE_SELECTED_GFS_DIRECTORY_RESPONSE_REQUIRED");
+  const responses:Phase5ControlledFixtureManifestResponseV1[]=[directoryResponse];
+  const families=[
+    "GFS_PGRB2_FILTER_RESPONSE",
+    "GFS_SFLUX_IDX",
+    "GFS_SFLUX_EXACT_GRIB_MESSAGE",
+  ] as const;
+  for(let lead=window.support_lead;lead<=window.lead_end;lead+=1) {
+    for(const family of families) {
+      const rows=input.captured.filter(
+        row=>row.input.source_family===family && capturedLeadV1(row)===lead,
+      );
+      if(rows.length!==1) {
+        throw new Error(`PHASE5_CAPTURE_GFS_RAW_CARDINALITY:${family}:F${String(lead).padStart(3,"0")}:${rows.length}`);
+      }
+      const response=gfsResponseV1(rows[0]!,input.target,input.cycle);
+      if(!response) throw new Error("PHASE5_CAPTURE_GFS_RESPONSE_REQUIRED");
+      responses.push(response);
+    }
+  }
+  return responses;
+}
+
 async function main():Promise<void> {
   const subject=requiredEnvV1("GEOX_DEPLOYMENT_SUBJECT_COMMIT");
   if(!SUBJECT_RE.test(subject)) throw new Error("PHASE5_CAPTURE_SUBJECT_SHA_INVALID");
@@ -136,10 +294,17 @@ async function main():Promise<void> {
 
   const captureStartedAt=new Date().toISOString();
   const a0=nextHourV1(captureStartedAt);
+  const rollingTargets=Array.from(
+    {length:ROLLING_GFS_TARGET_COUNT},
+    (_,index)=>addHoursV1(a0,index),
+  );
+  const lastRollingTarget=rollingTargets[rollingTargets.length-1]!;
 
-  // Product GFS selection runs first because it is the expensive acquisition. The exact
-  // target is already fixed to A0; if acquisition crosses A0, qualification fails rather
-  // than changing provider or rewriting timestamps.
+  // Phase5 accelerated 24T must satisfy the frozen Amendment-19 H1-at-each-boundary
+  // contract without inventing 24 provider cycles. Select one real GFS cycle that is
+  // already complete at A0 through the last rolling target's 72h window, retain every
+  // raw object before parse/decode, and later let the unchanged product composer/decoder
+  // rebuild one target-anchored 72h pair per rolling Evidence target.
   const captureRetention=new LocalPrivateCaptureRetentionV1(root);
   const byteClient=new ControlledHttpsByteClientV1({
     user_agent:"GEOX-MCFT-CAP09-PHASE5-A0-CAPTURE/1",
@@ -147,8 +312,49 @@ async function main():Promise<void> {
     timeout_ms:120_000,
   });
   const liveProvider=new GfsNomadsLiveProviderV1({byte_client:byteClient});
-  const composer=new GfsNomadsRawBundleComposerV1({
+  const extendedCycle=await selectExtendedCausalCycleV1({
     provider:liveProvider,
+    retention:captureRetention,
+    a0,
+    last_target:lastRollingTarget,
+  });
+  const cycle=extendedCycle.selection.cycle;
+
+  const frozenCycleProvider={
+    provider_id:liveProvider.provider_id,
+    async selectLatestCompleteCycle(
+      tick:Date|string,
+      retainThenParse:(raw:GfsNomadsRawObjectV1)=>Promise<GfsDirectoryInventoryV1>,
+    ):Promise<GfsCycleSelectionV1> {
+      if(new Date(tick).toISOString()!==a0) throw new Error("PHASE5_CAPTURE_FROZEN_GFS_TARGET_MISMATCH");
+      const inventory=await retainThenParse(extendedCycle.directory_raw);
+      const a0Window=gfsLeadWindowV1(a0,cycle);
+      validateExtendedInventoryAtA0V1({
+        inventory,
+        cycle,
+        a0,
+        support_lead:a0Window.support_lead,
+        lead_end:gfsLeadWindowV1(lastRollingTarget,cycle).lead_end,
+      });
+      return extendedCycle.selection;
+    },
+    fetchPgrb2FilteredRaw:(selectedCycle:Date|string,lead:number)=>{
+      if(new Date(selectedCycle).toISOString().replace(".000Z","Z")!==cycle) {
+        throw new Error("PHASE5_CAPTURE_FROZEN_GFS_CYCLE_MISMATCH");
+      }
+      return liveProvider.fetchPgrb2FilteredRaw(selectedCycle,lead);
+    },
+    fetchSfluxIndexRaw:(selectedCycle:Date|string,lead:number,tick:Date|string)=>{
+      if(new Date(tick).toISOString()!==a0) throw new Error("PHASE5_CAPTURE_FROZEN_GFS_SFLUX_TARGET_MISMATCH");
+      return liveProvider.fetchSfluxIndexRaw(selectedCycle,lead,tick);
+    },
+    fetchSfluxMessageRaw:(selectedCycle:Date|string,lead:number,tick:Date|string,selected:Parameters<GfsNomadsLiveProviderV1["fetchSfluxMessageRaw"]>[3])=>{
+      if(new Date(tick).toISOString()!==a0) throw new Error("PHASE5_CAPTURE_FROZEN_GFS_SFLUX_TARGET_MISMATCH");
+      return liveProvider.fetchSfluxMessageRaw(selectedCycle,lead,tick,selected);
+    },
+  };
+  const composer=new GfsNomadsRawBundleComposerV1({
+    provider:frozenCycleProvider,
     retention:captureRetention,
     clock:()=>new Date(),
   });
@@ -159,33 +365,53 @@ async function main():Promise<void> {
   if(Date.parse(composed.retrieved_at)>Date.parse(a0)) {
     throw new Error("PHASE5_CAPTURE_GFS_RETRIEVED_AFTER_A0");
   }
-  const cycle=composed.selected_cycle;
-  const gfsResponses=captureRetention.captured
-    .map(row=>gfsResponseV1(row,a0,cycle))
-    .filter((row):row is Phase5ControlledFixtureManifestResponseV1=>row!==null);
-  if(captureRetention.captured.length!==composed.raw_provider_object_count) {
-    throw new Error(
-      `PHASE5_CAPTURE_GFS_RETENTION_CARDINALITY_MISMATCH:${captureRetention.captured.length}:${composed.raw_provider_object_count}`,
-    );
+  if(composed.selected_cycle!==cycle) throw new Error("PHASE5_CAPTURE_GFS_SELECTED_CYCLE_DRIFT");
+
+  const extendedWindow=gfsLeadWindowV1(lastRollingTarget,cycle);
+  let extendedLeadCount=0;
+  for(let lead=composed.lead_end+1;lead<=extendedWindow.lead_end;lead+=1) {
+    const pgrb2=await liveProvider.fetchPgrb2FilteredRaw(cycle,lead);
+    await retainCapturedGfsRawV1({
+      retention:captureRetention,
+      raw:pgrb2,
+      request_id:`phase5.a0.capture:gfs:extended:pgrb2:f${String(lead).padStart(3,"0")}`,
+      a0,
+    });
+    const idxRaw=await liveProvider.fetchSfluxIndexRaw(cycle,lead,a0);
+    await retainCapturedGfsRawV1({
+      retention:captureRetention,
+      raw:idxRaw,
+      request_id:`phase5.a0.capture:gfs:extended:sflux-idx:f${String(lead).padStart(3,"0")}`,
+      a0,
+    });
+    const selected=parseGfsSfluxIndexV1(idxRaw.response.bytes,lead);
+    const messageRaw=await liveProvider.fetchSfluxMessageRaw(cycle,lead,a0,selected);
+    await retainCapturedGfsRawV1({
+      retention:captureRetention,
+      raw:messageRaw,
+      request_id:`phase5.a0.capture:gfs:extended:sflux-message:f${String(lead).padStart(3,"0")}`,
+      a0,
+    });
+    extendedLeadCount+=1;
   }
-  const selectedDirectoryLocator=gfsDirectoryUrlV1(cycle);
-  const retainedRejectedDirectoryCount=captureRetention.captured.filter(
-    row=>row.input.source_family==="GFS_DIRECTORY_LISTING"
-      && row.input.final_locator!==selectedDirectoryLocator,
-  ).length;
-  if(retainedRejectedDirectoryCount>composed.directory_rejection_count) {
-    throw new Error(
-      `PHASE5_CAPTURE_GFS_REJECTED_DIRECTORY_ACCOUNTING_INVALID:${retainedRejectedDirectoryCount}:${composed.directory_rejection_count}`,
-    );
+
+  const gfsResponsesByTarget=new Map<string,Phase5ControlledFixtureManifestResponseV1[]>();
+  for(const target of rollingTargets) {
+    gfsResponsesByTarget.set(target,responsesForTargetV1({
+      captured:captureRetention.captured,
+      target,
+      cycle,
+    }));
   }
-  const expectedReplayMemberCount=
-    composed.raw_provider_object_count-retainedRejectedDirectoryCount;
-  if(gfsResponses.filter(row=>row.kind==="GFS_DIRECTORY").length!==1) {
+  const a0GfsResponses=gfsResponsesByTarget.get(a0)!;
+  if(a0GfsResponses.filter(row=>row.kind==="GFS_DIRECTORY").length!==1) {
     throw new Error("PHASE5_CAPTURE_EXACT_SELECTED_GFS_DIRECTORY_REQUIRED");
   }
-  if(gfsResponses.length!==expectedReplayMemberCount) {
-    throw new Error(`PHASE5_CAPTURE_GFS_REPLAY_MEMBER_COUNT_MISMATCH:${gfsResponses.length}:${expectedReplayMemberCount}`);
-  }
+  const allCapturedByA0=captureRetention.captured.every(
+    row=>Date.parse(row.input.retrieved_at)<=Date.parse(a0)
+      && Date.parse(row.input.available_at)<=Date.parse(a0),
+  );
+  if(!allCapturedByA0) throw new Error("PHASE5_CAPTURE_GFS_RAW_AFTER_A0_FORBIDDEN");
 
   // Soil is acquired after GFS so the selected real observation is inside the strict
   // (A0-1h,A0] bootstrap window without backdating or synthetic substitution.
@@ -233,13 +459,15 @@ async function main():Promise<void> {
 
   const manifest:Phase5ControlledFixtureManifestV1={
     schema_version:MCFT_CAP09_PHASE5_CONTROLLED_FIXTURE_MANIFEST_SCHEMA_V1,
-    targets:[{
-      target_logical_time:a0,
+    targets:rollingTargets.map((target,index)=>({
+      target_logical_time:target,
       requested_at:captureStartedAt,
-      request_id_prefix:"phase5.a0",
-      source_families:["KBS_SOIL","GFS_BUNDLE"],
+      request_id_prefix:`phase5.rolling.${String(index).padStart(2,"0")}`,
+      source_families:index===0
+        ? ["KBS_SOIL","GFS_BUNDLE"] as const
+        : ["GFS_BUNDLE"] as const,
       gfs_cycle:cycle,
-    }],
+    })),
     responses:[
       {
         kind:"KBS_SOIL",
@@ -252,13 +480,25 @@ async function main():Promise<void> {
         available_at:soilRaw.response.available_at,
         sha256:soilSha,
       },
-      ...gfsResponses,
+      ...rollingTargets.flatMap(target=>gfsResponsesByTarget.get(target)!),
     ],
   };
   fs.writeFileSync(path.join(root,"manifest.json"),JSON.stringify(manifest,null,2)+"\n",{mode:0o600});
 
+  const gfsNetworkRequestCount=
+    extendedCycle.directory_request_count
+    +(composed.provider_request_count-1)
+    +extendedLeadCount*3;
+  const extendedRawChainSha=sha256V1(new TextEncoder().encode(
+    captureRetention.captured.map(row=>[
+      row.input.source_family,
+      row.input.final_locator,
+      row.input.raw_sha256,
+      row.input.retrieved_at,
+    ].join("|")).join("\n"),
+  ));
   const proof={
-    schema_version:"geox_mcft_cap09_phase5_a0_live_raw_capture_v2",
+    schema_version:"geox_mcft_cap09_phase5_a0_live_raw_capture_v3",
     status:"PASS",
     subject_sha:subject,
     capture_started_at:captureStartedAt,
@@ -269,15 +509,24 @@ async function main():Promise<void> {
     soil_observed_at:soilObserved,
     soil_retrieved_at:soilRaw.response.retrieved_at,
     soil_raw_sha256:soilSha,
+    rolling_gfs_target_count:rollingTargets.length,
+    rolling_gfs_first_target:rollingTargets[0],
+    rolling_gfs_last_target:lastRollingTarget,
+    gfs_single_causal_cycle_reused:true,
     gfs_selected_cycle:cycle,
     gfs_lead_start:composed.lead_start,
-    gfs_lead_end:composed.lead_end,
+    gfs_a0_lead_end:composed.lead_end,
+    gfs_extended_lead_end:extendedWindow.lead_end,
     gfs_support_lead:composed.support_lead,
-    gfs_provider_request_count:composed.provider_request_count,
-    gfs_raw_provider_object_count:composed.raw_provider_object_count,
-    gfs_directory_rejection_count:composed.directory_rejection_count,
-    gfs_replay_raw_object_count:gfsResponses.length,
+    gfs_extended_lead_count:extendedLeadCount,
+    gfs_network_request_count:gfsNetworkRequestCount,
+    gfs_a0_composer_provider_request_count:composed.provider_request_count,
+    gfs_retained_raw_object_count:captureRetention.captured.length,
+    gfs_directory_rejection_count:extendedCycle.selection.rejected_cycles.length,
+    gfs_manifest_response_alias_count:manifest.responses.filter(row=>row.kind.startsWith("GFS_")).length,
     gfs_raw_member_chain_sha256:composed.raw_member_chain_sha256,
+    gfs_extended_raw_chain_sha256:extendedRawChainSha,
+    all_gfs_raw_retrieved_by_a0:allCapturedByA0,
     a0_soil_window_exact:true,
     fake_grib_used:false,
     canonical_evidence_write_count:0,
