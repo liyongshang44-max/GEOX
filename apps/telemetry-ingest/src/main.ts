@@ -9,6 +9,7 @@ import mqtt from "mqtt"; // MQTT client for telemetry subscription.
 import { z } from "zod"; // Runtime schema validation for incoming telemetry payloads.
 import { updateAgronomySnapshot } from "../../server/src/projections/agronomy_signal_snapshot_v1"; // Refresh agronomy snapshot projection after telemetry commits.
 import { ensureDeviceObservationProjectionV1, writeObservationRunPipelineAndRefreshFieldV1 } from "../../server/src/services/device_observation_service_v1"; // raw_telemetry_v1 -> device_observation_v1 -> sensing pipeline -> read-model refresh.
+import { buildMqttObservationInputV1 } from "./mqtt_observation_input_v1"; // Source-preserving MQTT transport mapper.
 
 const TelemetryPayloadSchema = z.object({ // Define minimal telemetry payload schema.
   metric: z.string().min(1), // Metric name (e.g., soil_moisture).
