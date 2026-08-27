@@ -1,3 +1,4 @@
+import { evaluateRawSampleStage1PhysicalQcV1 } from "../../evidence/raw_sample_stage1_physical_qc_v1.js";
 import type { Pool, PoolClient } from "pg";
 
 export type AppleIIFreshnessV1 = "fresh" | "stale" | "unknown";
@@ -77,13 +78,21 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: { te
   const args: any[] = [params.tenant_id, startTs, endTs], where: string[] = [`(payload_json ->> 'tenant_id') = $1`, `ts_ms >= $2`, `ts_ms <= $3`]; let p = 4; if (params.group_id) { where.push(`(payload_json ->> 'group_id') = $${p++}`); args.push(params.group_id); } if (params.field_id) { where.push(`(payload_json ->> 'field_id') = $${p++}`); args.push(params.field_id); } if (params.device_id) { where.push(`sensor_id = $${p++}`); args.push(params.device_id); }
   const sampleRows = await db.query(`SELECT sample_id, sensor_id, ts_ms, metric, value, qc_quality, source, payload_json FROM raw_samples WHERE ${where.join(" AND ")} ORDER BY ts_ms ASC LIMIT 20000`, args);
   const samples = (sampleRows.rows ?? []).map((row: any) => ({ ...row, source: normalizeSampleSource(row.source), payload_json: parseJsonObject(row.payload_json), ts_ms: Number(row.ts_ms), value: Number(row.value) })) as RawSampleRow[];
-  const formalSamples = samples.filter((sample) => isFormalSampleSource(sample.source, formalSourcePolicy));
+  const sourceFormalSamples = samples.filter((sample) => isFormalSampleSource(sample.source, formalSourcePolicy));
+  const physicalQcDecisions = new Map(
+    sourceFormalSamples.map((sample) => [sample.sample_id, evaluateRawSampleStage1PhysicalQcV1(sample.payload_json)] as const),
+  );
+  const formalSamples = sourceFormalSamples.filter((sample) => physicalQcDecisions.get(sample.sample_id)?.eligible === true);
   const nonFormalSampleCount = samples.length - formalSamples.length;
   const deviceStatusRow = await readDeviceHealthStatusRowV1(db, { ...params, candidate_device_ids: [inferSingleFormalSampleDeviceId(formalSamples)] });
   const gapStats = computeGapStats(samples, startTs, endTs, expectedSampleIntervalMs), formalGapStats = computeGapStats(formalSamples, startTs, endTs, expectedSampleIntervalMs), coverageRatio = clamp01(gapStats.covered_ms / Math.max(1, endTs - startTs)), formalCoverageRatio = clamp01(formalGapStats.covered_ms / Math.max(1, endTs - startTs)), freshness = deriveFreshness(formalSamples, nowMs, freshnessMaxAgeMs);
   const timeCoverage: AppleIITimeCoverageV1 = { observation_window: { start_ts_ms: startTs, end_ts_ms: endTs }, coverage_ratio: Number(coverageRatio.toFixed(6)), sample_count: samples.length, formal_sample_count: formalSamples.length, non_formal_sample_count: nonFormalSampleCount, formal_coverage_ratio: Number(formalCoverageRatio.toFixed(6)), sample_source_lanes: buildSampleSourceLanes(samples, formalSourcePolicy), formal_metric_lanes: buildFormalMetricLanes(formalSamples), trigger_metric_evidence: buildTriggerMetricEvidence(formalSamples), formal_source_eligible: formalSamples.length > 0 && nonFormalSampleCount === 0, gap_count: formalGapStats.gap_count, max_gap_ms: formalGapStats.max_gap_ms, expected_sample_interval_ms: expectedSampleIntervalMs, freshness };
   const deviceHealth = deriveDeviceHealth(deviceStatusRow, nowMs, freshnessMaxAgeMs, formalSamples), conflicts = detectConflict(formalSamples);
   const reasonCodes: string[] = [...deviceHealth.reason_codes];
+  const invalidPhysicalSampleCount = Array.from(physicalQcDecisions.values()).filter((decision) => decision.mode === "INELIGIBLE_INVALID").length;
+  const unknownPhysicalSampleCount = Array.from(physicalQcDecisions.values()).filter((decision) => decision.mode === "INELIGIBLE_UNKNOWN").length;
+  if (invalidPhysicalSampleCount > 0) reasonCodes.push("PHYSICAL_QC_INELIGIBLE_SAMPLE");
+  if (unknownPhysicalSampleCount > 0) reasonCodes.push("PHYSICAL_QC_UNKNOWN_SAMPLE");
   if (nonFormalSampleCount > 0) reasonCodes.push("NON_FORMAL_SAMPLE_SOURCE");
   if (samples.some((sample) => sample.source === "sim")) reasonCodes.push("SIMULATED_SAMPLE_NOT_FORMAL");
   if (timeCoverage.formal_sample_count < minSampleCount) reasonCodes.push("INSUFFICIENT_FORMAL_SAMPLE_COUNT");
