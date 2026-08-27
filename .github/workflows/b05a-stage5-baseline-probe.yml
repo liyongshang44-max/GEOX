@@ -1,0 +1,27 @@
+name: b05a-stage5-baseline-probe
+
+on:
+  push:
+    branches:
+      - ci/bline-b05a-stage5-baseline-probe-2026-08-27
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+      - name: Exact baseline stage5 acceptance
+        run: node --import tsx --test apps/server/src/domain/agronomy/stage5.acceptance.test.ts
+      - run: echo "B05A_STAGE5_BASELINE_HEAD 140e8f106cb9274f8c8f3150b9fbff2defb5fcf1"
