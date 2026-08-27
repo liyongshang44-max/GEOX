@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "tsx src/main.ts",
     "once": "tsx src/main.ts --once",
-    "build": "node -e \"process.exit(0)\"",
-    "start": "tsx src/main.ts"
+    "build": "tsc --noEmit -p tsconfig.json",
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@geox/contracts": "workspace:*",
