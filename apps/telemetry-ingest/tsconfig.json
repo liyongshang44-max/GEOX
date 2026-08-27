@@ -1,7 +1,24 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "outDir": "dist"
+    "outDir": "dist",
+    "baseUrl": "../..",
+    "paths": {
+      "@geox/contracts": [
+        "packages/contracts/src/index.ts"
+      ],
+      "@geox/control-kernel": [
+        "packages/control-kernel/src/index.ts"
+      ],
+      "@geox/device-skills": [
+        "packages/device-skills/src/index.ts"
+      ],
+      "@geox/skill-registry": [
+        "packages/skill-registry/src/index.ts"
+      ]
+    }
   },
-  "include": ["src/**/*.ts"]
+  "include": [
+    "src/**/*.ts"
+  ]
 }
