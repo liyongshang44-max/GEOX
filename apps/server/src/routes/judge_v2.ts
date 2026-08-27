@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { requireAoActAnyScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { evaluateAgronomyJudgeV2 } from "../domain/judge/agronomy_judge_v2.js";
-import { evaluateEvidenceJudgeV2 } from "../domain/judge/evidence_judge_v2.js";
+import { evaluateEvidenceJudgeV2WithCanonicalShadow } from "../domain/judge/evidence_judge_v2.js";
 import { evaluateExecutionJudgeV2 } from "../domain/judge/execution_judge_v2.js";
 import { buildJudgeResultV2, insertJudgeResultV2, listJudgeResultsV2, loadJudgeResultV2 } from "../domain/judge/judge_result_v2.js";
 import { recordMemoryV1 } from "../services/field_memory_service.js";
@@ -55,7 +55,7 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
       if (!auth) return;
       const body = EvaluateEvidenceRequestSchema.parse((req as any).body ?? {});
       if (!requireTenantMatchOr404(reply, auth, body)) return;
-      const judgeResult = buildJudgeResultV2(evaluateEvidenceJudgeV2(body));
+      const judgeResult = buildJudgeResultV2(await evaluateEvidenceJudgeV2WithCanonicalShadow(pool, body));
       const inserted = await insertJudgeResultV2(pool, judgeResult);
       return reply.send({ ok: true, judge_result: inserted });
     } catch (error: any) {

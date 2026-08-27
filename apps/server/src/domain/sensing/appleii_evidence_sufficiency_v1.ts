@@ -150,67 +150,154 @@ function analyzeConflict(samples: RawSampleRow[]): AppleIIConflictAnalysisV1 {
   };
 }
 
-export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: { tenant_id: string; project_id?: string | null; group_id?: string | null; field_id: string; device_id?: string | null; now_ms?: number; observation_window_ms?: number; expected_sample_interval_ms?: number; min_sample_count?: number; min_coverage_ratio?: number; max_gap_ms?: number; freshness_max_age_ms?: number; formal_source_policy?: FormalSourcePolicyV1 | null }): Promise<AppleIIEvidenceSufficiencyV1> {
-  const nowMs = Number.isFinite(params.now_ms) ? Number(params.now_ms) : Date.now(), observationWindowMs = Number(params.observation_window_ms ?? 6 * 60 * 60 * 1000), expectedSampleIntervalMs = Number(params.expected_sample_interval_ms ?? 30 * 60 * 1000), minSampleCount = Number(params.min_sample_count ?? 3), minCoverageRatio = Number(params.min_coverage_ratio ?? 0.5), maxAllowedGapMs = Number(params.max_gap_ms ?? Math.max(expectedSampleIntervalMs * 2, 60 * 60 * 1000)), freshnessMaxAgeMs = Number(params.freshness_max_age_ms ?? Math.max(expectedSampleIntervalMs * 2, 60 * 60 * 1000)), formalSourcePolicy = buildFormalSourcePolicy(params.formal_source_policy), startTs = nowMs - observationWindowMs, endTs = nowMs;
-  const args: any[] = [params.tenant_id, startTs, endTs], where: string[] = [`(payload_json ->> 'tenant_id') = $1`, `ts_ms >= $2`, `ts_ms <= $3`];
+export type CanonicalRawSampleEvidenceQualificationParamsV1 = {
+  tenant_id: string;
+  project_id?: string | null;
+  group_id?: string | null;
+  field_id: string;
+  device_id?: string | null;
+  now_ms?: number;
+  observation_window_ms?: number;
+  formal_source_policy?: FormalSourcePolicyV1 | null;
+};
+
+type RawSampleEvidenceRuntimeContextV1 = {
+  now_ms: number;
+  start_ts_ms: number;
+  end_ts_ms: number;
+  formal_source_policy: Record<AppleIISampleSourceV1, boolean>;
+  samples: RawSampleRow[];
+  shadow_samples: RawSampleRow[];
+  all_quality_decisions: Map<string, ReturnType<typeof evaluateRawSampleObservationQualityV1>>;
+  all_physical_qc_decisions: Map<string, ReturnType<typeof evaluateRawSampleStage1PhysicalQcV1>>;
+  source_formal_samples: RawSampleRow[];
+  non_formal_source_sample_count: number;
+  quality_eligible_samples: RawSampleRow[];
+  formal_samples: RawSampleRow[];
+  non_formal_sample_count: number;
+  conflict_analysis: AppleIIConflictAnalysisV1;
+  canonical_evidence_qualification_projection_v1: RawSampleEvidenceQualificationProjectionBatchV1;
+};
+
+async function buildRawSampleEvidenceRuntimeContextV1(
+  db: DbConn,
+  params: CanonicalRawSampleEvidenceQualificationParamsV1,
+): Promise<RawSampleEvidenceRuntimeContextV1> {
+  const nowMs = Number.isFinite(params.now_ms) ? Number(params.now_ms) : Date.now();
+  const observationWindowMs = Number(params.observation_window_ms ?? 6 * 60 * 60 * 1000);
+  const formalSourcePolicy = buildFormalSourcePolicy(params.formal_source_policy);
+  const startTs = nowMs - observationWindowMs;
+  const endTs = nowMs;
+
+  const args: any[] = [params.tenant_id, startTs, endTs];
+  const where: string[] = [
+    `(payload_json ->> 'tenant_id') = $1`,
+    `ts_ms >= $2`,
+    `ts_ms <= $3`,
+  ];
   let p = 4;
-  if (params.project_id) { where.push(`(payload_json ->> 'project_id') = $${p++}`); args.push(params.project_id); }
-  if (params.group_id) { where.push(`(payload_json ->> 'group_id') = $${p++}`); args.push(params.group_id); }
-  if (params.field_id) { where.push(`(payload_json ->> 'field_id') = $${p++}`); args.push(params.field_id); }
-  if (params.device_id) { where.push(`sensor_id = $${p++}`); args.push(params.device_id); }
+  if (params.project_id) {
+    where.push(`(payload_json ->> 'project_id') = $${p++}`);
+    args.push(params.project_id);
+  }
+  if (params.group_id) {
+    where.push(`(payload_json ->> 'group_id') = $${p++}`);
+    args.push(params.group_id);
+  }
+  if (params.field_id) {
+    where.push(`(payload_json ->> 'field_id') = $${p++}`);
+    args.push(params.field_id);
+  }
+  if (params.device_id) {
+    where.push(`sensor_id = $${p++}`);
+    args.push(params.device_id);
+  }
   where.push(`created_at <= to_timestamp($${p++} / 1000.0)`);
   args.push(nowMs);
 
-  const sampleRows = await db.query(`SELECT sample_id, sensor_id, ts_ms, metric, value, qc_quality, source, payload_json, created_at,
-    (SELECT m.occurred_at
-       FROM markers m
-      WHERE m.marker_id = 'raw_sample_runtime_available_v1:' || raw_samples.sample_id
-        AND m.kind = 'raw_sample_runtime_available_v1'
-        AND m.source = 'system'
-      LIMIT 1) AS available_to_runtime_at
-    FROM raw_samples WHERE ${where.join(" AND ")} ORDER BY ts_ms ASC LIMIT 20000`, args);
+  const sampleRows = await db.query(
+    `SELECT sample_id, sensor_id, ts_ms, metric, value, qc_quality, source, payload_json, created_at,
+      (SELECT m.occurred_at
+         FROM markers m
+        WHERE m.marker_id = 'raw_sample_runtime_available_v1:' || raw_samples.sample_id
+          AND m.kind = 'raw_sample_runtime_available_v1'
+          AND m.source = 'system'
+        LIMIT 1) AS available_to_runtime_at
+      FROM raw_samples
+      WHERE ${where.join(" AND ")}
+      ORDER BY ts_ms ASC
+      LIMIT 20000`,
+    args,
+  );
   const samples = normalizeRawSampleRows(sampleRows.rows ?? []);
 
-  // B-04d3r1 shadow-only late-backfill audit. The authoritative Apple-II query
-  // above remains unchanged and continues to exclude data unavailable at the
-  // decision boundary. This second read may only expand the non-authoritative
-  // EvidenceQualificationV1 shadow; it must never affect legacy sufficiency.
+  // Shadow-only late-backfill read. It expands canonical qualification visibility
+  // without changing the existing Apple-II compatibility sample set.
   const lateShadowArgs: any[] = [params.tenant_id, startTs, endTs];
-  const lateShadowWhere: string[] = [`(payload_json ->> 'tenant_id') = $1`, `ts_ms >= $2`, `ts_ms <= $3`];
+  const lateShadowWhere: string[] = [
+    `(payload_json ->> 'tenant_id') = $1`,
+    `ts_ms >= $2`,
+    `ts_ms <= $3`,
+  ];
   let lateP = 4;
-  if (params.project_id) { lateShadowWhere.push("(payload_json ->> 'project_id') = $" + lateP++); lateShadowArgs.push(params.project_id); }
-  if (params.group_id) { lateShadowWhere.push("(payload_json ->> 'group_id') = $" + lateP++); lateShadowArgs.push(params.group_id); }
-  if (params.field_id) { lateShadowWhere.push("(payload_json ->> 'field_id') = $" + lateP++); lateShadowArgs.push(params.field_id); }
-  if (params.device_id) { lateShadowWhere.push("sensor_id = $" + lateP++); lateShadowArgs.push(params.device_id); }
+  if (params.project_id) {
+    lateShadowWhere.push("(payload_json ->> 'project_id') = $" + lateP++);
+    lateShadowArgs.push(params.project_id);
+  }
+  if (params.group_id) {
+    lateShadowWhere.push("(payload_json ->> 'group_id') = $" + lateP++);
+    lateShadowArgs.push(params.group_id);
+  }
+  if (params.field_id) {
+    lateShadowWhere.push("(payload_json ->> 'field_id') = $" + lateP++);
+    lateShadowArgs.push(params.field_id);
+  }
+  if (params.device_id) {
+    lateShadowWhere.push("sensor_id = $" + lateP++);
+    lateShadowArgs.push(params.device_id);
+  }
   lateShadowWhere.push("created_at > to_timestamp($" + lateP++ + " / 1000.0)");
   lateShadowArgs.push(nowMs);
 
   let lateBackfillShadowQueryAvailable = true;
   let lateBackfillShadowSamples: RawSampleRow[] = [];
   try {
-    const lateRows = await db.query(`SELECT sample_id, sensor_id, ts_ms, metric, value, qc_quality, source, payload_json, created_at,
-    (SELECT m.occurred_at
-       FROM markers m
-      WHERE m.marker_id = 'raw_sample_runtime_available_v1:' || raw_samples.sample_id
-        AND m.kind = 'raw_sample_runtime_available_v1'
-        AND m.source = 'system'
-      LIMIT 1) AS available_to_runtime_at
-    FROM raw_samples WHERE ${lateShadowWhere.join(" AND ")} ORDER BY ts_ms ASC LIMIT 20000`, lateShadowArgs);
+    const lateRows = await db.query(
+      `SELECT sample_id, sensor_id, ts_ms, metric, value, qc_quality, source, payload_json, created_at,
+        (SELECT m.occurred_at
+           FROM markers m
+          WHERE m.marker_id = 'raw_sample_runtime_available_v1:' || raw_samples.sample_id
+            AND m.kind = 'raw_sample_runtime_available_v1'
+            AND m.source = 'system'
+          LIMIT 1) AS available_to_runtime_at
+        FROM raw_samples
+        WHERE ${lateShadowWhere.join(" AND ")}
+        ORDER BY ts_ms ASC
+        LIMIT 20000`,
+      lateShadowArgs,
+    );
     lateBackfillShadowSamples = normalizeRawSampleRows(lateRows.rows ?? []);
   } catch {
     lateBackfillShadowQueryAvailable = false;
   }
 
-  // Existing test doubles may return the same rows for both raw-sample reads;
-  // preserve authoritative rows and deduplicate the shadow by immutable sample_id.
   const shadowSamples = dedupeRawSamplesById([...samples, ...lateBackfillShadowSamples]);
   const allQualityDecisions = new Map(
-    shadowSamples.map((sample) => [sample.sample_id, evaluateRawSampleObservationQualityV1(sample.qc_quality)] as const),
+    shadowSamples.map((sample) => [
+      sample.sample_id,
+      evaluateRawSampleObservationQualityV1(sample.qc_quality),
+    ] as const),
   );
   const allPhysicalQcDecisions = new Map(
-    shadowSamples.map((sample) => [sample.sample_id, evaluateRawSampleStage1PhysicalQcV1(sample.payload_json)] as const),
+    shadowSamples.map((sample) => [
+      sample.sample_id,
+      evaluateRawSampleStage1PhysicalQcV1(sample.payload_json),
+    ] as const),
   );
-  const sourceFormalSamples = samples.filter((sample) => isFormalSampleSource(sample.source, formalSourcePolicy));
+
+  const sourceFormalSamples = samples.filter((sample) =>
+    isFormalSampleSource(sample.source, formalSourcePolicy),
+  );
   const nonFormalSourceSampleCount = samples.length - sourceFormalSamples.length;
   const qualityEligibleSamples = sourceFormalSamples.filter(
     (sample) => allQualityDecisions.get(sample.sample_id)?.observation_pipeline_eligible === true,
@@ -219,11 +306,8 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: { te
     (sample) => allPhysicalQcDecisions.get(sample.sample_id)?.eligible === true,
   );
   const nonFormalSampleCount = samples.length - formalSamples.length;
-  const deviceStatusRow = await readDeviceHealthStatusRowV1(db, { ...params, decision_time_ms: nowMs, candidate_device_ids: [inferSingleFormalSampleDeviceId(formalSamples)] });
-  const gapStats = computeGapStats(samples, startTs, endTs, expectedSampleIntervalMs), formalGapStats = computeGapStats(formalSamples, startTs, endTs, expectedSampleIntervalMs), coverageRatio = clamp01(gapStats.covered_ms / Math.max(1, endTs - startTs)), formalCoverageRatio = clamp01(formalGapStats.covered_ms / Math.max(1, endTs - startTs)), freshness = deriveFreshness(formalSamples, nowMs, freshnessMaxAgeMs);
-  const timeCoverage: AppleIITimeCoverageV1 = { observation_window: { start_ts_ms: startTs, end_ts_ms: endTs }, coverage_ratio: Number(coverageRatio.toFixed(6)), sample_count: samples.length, formal_sample_count: formalSamples.length, non_formal_sample_count: nonFormalSampleCount, formal_coverage_ratio: Number(formalCoverageRatio.toFixed(6)), sample_source_lanes: buildSampleSourceLanes(samples, formalSourcePolicy), formal_metric_lanes: buildFormalMetricLanes(formalSamples), trigger_metric_evidence: buildTriggerMetricEvidence(formalSamples), formal_source_eligible: sourceFormalSamples.length > 0 && nonFormalSourceSampleCount === 0, gap_count: formalGapStats.gap_count, max_gap_ms: formalGapStats.max_gap_ms, expected_sample_interval_ms: expectedSampleIntervalMs, freshness };
-  const deviceHealth = deriveDeviceHealth(deviceStatusRow, nowMs, freshnessMaxAgeMs, formalSamples);
-  const conflictAnalysis = analyzeConflict(formalSamples), conflicts = conflictAnalysis.summary;
+
+  const conflictAnalysis = analyzeConflict(formalSamples);
   const formalSampleIds = new Set(formalSamples.map((sample) => sample.sample_id));
   const canonicalEvidenceQualifications = shadowSamples.map((sample) =>
     projectRawSampleEvidenceQualificationV1({
@@ -243,17 +327,141 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: { te
         : "UNKNOWN",
     }),
   );
-  const canonicalEvidenceQualificationProjectionBase = buildRawSampleEvidenceQualificationProjectionBatchV1(
+
+  const projectionBase = buildRawSampleEvidenceQualificationProjectionBatchV1(
     canonicalEvidenceQualifications,
   );
-  const canonicalEvidenceQualificationProjection: RawSampleEvidenceQualificationProjectionBatchV1 = lateBackfillShadowQueryAvailable
-    ? canonicalEvidenceQualificationProjectionBase
+  const projection: RawSampleEvidenceQualificationProjectionBatchV1 = lateBackfillShadowQueryAvailable
+    ? projectionBase
     : {
-        ...canonicalEvidenceQualificationProjectionBase,
-        limitations: [...canonicalEvidenceQualificationProjectionBase.limitations, "LATE_BACKFILL_SHADOW_QUERY_UNAVAILABLE"],
+        ...projectionBase,
+        limitations: [...projectionBase.limitations, "LATE_BACKFILL_SHADOW_QUERY_UNAVAILABLE"],
       };
 
+  return {
+    now_ms: nowMs,
+    start_ts_ms: startTs,
+    end_ts_ms: endTs,
+    formal_source_policy: formalSourcePolicy,
+    samples,
+    shadow_samples: shadowSamples,
+    all_quality_decisions: allQualityDecisions,
+    all_physical_qc_decisions: allPhysicalQcDecisions,
+    source_formal_samples: sourceFormalSamples,
+    non_formal_source_sample_count: nonFormalSourceSampleCount,
+    quality_eligible_samples: qualityEligibleSamples,
+    formal_samples: formalSamples,
+    non_formal_sample_count: nonFormalSampleCount,
+    conflict_analysis: conflictAnalysis,
+    canonical_evidence_qualification_projection_v1: projection,
+  };
+}
+
+/**
+ * Shared persisted canonical EvidenceQualification reader.
+ *
+ * This intentionally stops before Apple-II compatibility-only device health,
+ * coverage verdict, and evidence_sufficiency aggregation. Consumers that only
+ * need canonical qualification must use this helper rather than depend on the
+ * full Stage-1 compatibility wrapper.
+ */
+export async function buildCanonicalRawSampleEvidenceQualificationProjectionV1(
+  db: DbConn,
+  params: CanonicalRawSampleEvidenceQualificationParamsV1,
+): Promise<RawSampleEvidenceQualificationProjectionBatchV1> {
+  const context = await buildRawSampleEvidenceRuntimeContextV1(db, params);
+  return context.canonical_evidence_qualification_projection_v1;
+}
+
+export async function buildAppleIIEvidenceSufficiencyV1(
+  db: DbConn,
+  params: {
+    tenant_id: string;
+    project_id?: string | null;
+    group_id?: string | null;
+    field_id: string;
+    device_id?: string | null;
+    now_ms?: number;
+    observation_window_ms?: number;
+    expected_sample_interval_ms?: number;
+    min_sample_count?: number;
+    min_coverage_ratio?: number;
+    max_gap_ms?: number;
+    freshness_max_age_ms?: number;
+    formal_source_policy?: FormalSourcePolicyV1 | null;
+  },
+): Promise<AppleIIEvidenceSufficiencyV1> {
+  const nowMs = Number.isFinite(params.now_ms) ? Number(params.now_ms) : Date.now();
+  const observationWindowMs = Number(params.observation_window_ms ?? 6 * 60 * 60 * 1000);
+  const expectedSampleIntervalMs = Number(params.expected_sample_interval_ms ?? 30 * 60 * 1000);
+  const minSampleCount = Number(params.min_sample_count ?? 3);
+  const minCoverageRatio = Number(params.min_coverage_ratio ?? 0.5);
+  const maxAllowedGapMs = Number(
+    params.max_gap_ms ?? Math.max(expectedSampleIntervalMs * 2, 60 * 60 * 1000),
+  );
+  const freshnessMaxAgeMs = Number(
+    params.freshness_max_age_ms ?? Math.max(expectedSampleIntervalMs * 2, 60 * 60 * 1000),
+  );
+
+  const evidenceContext = await buildRawSampleEvidenceRuntimeContextV1(db, {
+    tenant_id: params.tenant_id,
+    project_id: params.project_id,
+    group_id: params.group_id,
+    field_id: params.field_id,
+    device_id: params.device_id,
+    now_ms: nowMs,
+    observation_window_ms: observationWindowMs,
+    formal_source_policy: params.formal_source_policy,
+  });
+
+  const {
+    samples,
+    all_quality_decisions: allQualityDecisions,
+    all_physical_qc_decisions: allPhysicalQcDecisions,
+    source_formal_samples: sourceFormalSamples,
+    non_formal_source_sample_count: nonFormalSourceSampleCount,
+    quality_eligible_samples: qualityEligibleSamples,
+    formal_samples: formalSamples,
+    non_formal_sample_count: nonFormalSampleCount,
+    conflict_analysis: conflictAnalysis,
+    canonical_evidence_qualification_projection_v1: canonicalEvidenceQualificationProjection,
+    formal_source_policy: formalSourcePolicy,
+    start_ts_ms: startTs,
+    end_ts_ms: endTs,
+  } = evidenceContext;
+
+  const deviceStatusRow = await readDeviceHealthStatusRowV1(db, {
+    ...params,
+    decision_time_ms: nowMs,
+    candidate_device_ids: [inferSingleFormalSampleDeviceId(formalSamples)],
+  });
+
+  const gapStats = computeGapStats(samples, startTs, endTs, expectedSampleIntervalMs);
+  const formalGapStats = computeGapStats(formalSamples, startTs, endTs, expectedSampleIntervalMs);
+  const coverageRatio = clamp01(gapStats.covered_ms / Math.max(1, endTs - startTs));
+  const formalCoverageRatio = clamp01(formalGapStats.covered_ms / Math.max(1, endTs - startTs));
+  const freshness = deriveFreshness(formalSamples, nowMs, freshnessMaxAgeMs);
+  const timeCoverage: AppleIITimeCoverageV1 = {
+    observation_window: { start_ts_ms: startTs, end_ts_ms: endTs },
+    coverage_ratio: Number(coverageRatio.toFixed(6)),
+    sample_count: samples.length,
+    formal_sample_count: formalSamples.length,
+    non_formal_sample_count: nonFormalSampleCount,
+    formal_coverage_ratio: Number(formalCoverageRatio.toFixed(6)),
+    sample_source_lanes: buildSampleSourceLanes(samples, formalSourcePolicy),
+    formal_metric_lanes: buildFormalMetricLanes(formalSamples),
+    trigger_metric_evidence: buildTriggerMetricEvidence(formalSamples),
+    formal_source_eligible: sourceFormalSamples.length > 0 && nonFormalSourceSampleCount === 0,
+    gap_count: formalGapStats.gap_count,
+    max_gap_ms: formalGapStats.max_gap_ms,
+    expected_sample_interval_ms: expectedSampleIntervalMs,
+    freshness,
+  };
+
+  const deviceHealth = deriveDeviceHealth(deviceStatusRow, nowMs, freshnessMaxAgeMs, formalSamples);
+  const conflicts = conflictAnalysis.summary;
   const reasonCodes: string[] = [...deviceHealth.reason_codes];
+
   const badQualitySampleCount = sourceFormalSamples.filter(
     (sample) => allQualityDecisions.get(sample.sample_id)?.reason_code === "RAW_SAMPLE_QC_BAD",
   ).length;
@@ -266,6 +474,7 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: { te
   const unknownPhysicalSampleCount = qualityEligibleSamples.filter(
     (sample) => allPhysicalQcDecisions.get(sample.sample_id)?.mode === "INELIGIBLE_UNKNOWN",
   ).length;
+
   if (badQualitySampleCount > 0) reasonCodes.push("RAW_SAMPLE_QC_BAD_NOT_FORMAL");
   if (unknownQualitySampleCount > 0) reasonCodes.push("RAW_SAMPLE_QC_UNKNOWN_NOT_FORMAL");
   if (invalidPhysicalSampleCount > 0) reasonCodes.push("PHYSICAL_QC_INELIGIBLE_SAMPLE");
@@ -278,9 +487,12 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: { te
   if (timeCoverage.freshness !== "fresh") reasonCodes.push("STALE_OR_UNKNOWN_FRESHNESS");
   if (!timeCoverage.formal_source_eligible) reasonCodes.push("FORMAL_SOURCE_NOT_ELIGIBLE");
   if (deviceHealth.device_health_status === "UNKNOWN") reasonCodes.push("DEVICE_HEALTH_UNKNOWN");
-  if (deviceHealth.device_health_status === "OFFLINE" || deviceHealth.device_health_status === "BAD") reasonCodes.push("DEVICE_HEALTH_NOT_GOOD");
+  if (deviceHealth.device_health_status === "OFFLINE" || deviceHealth.device_health_status === "BAD") {
+    reasonCodes.push("DEVICE_HEALTH_NOT_GOOD");
+  }
   if (conflicts.conflict_status === "UNRESOLVED") reasonCodes.push("UNRESOLVED_SENSOR_CONFLICT");
   if (conflicts.sensor_drift_status === "DRIFTING") reasonCodes.push("SENSOR_DRIFTING");
+
   return {
     evidence_sufficiency: reasonCodes.length ? "NEEDS_EVIDENCE" : "PASS",
     reason_codes: Array.from(new Set(reasonCodes)),
