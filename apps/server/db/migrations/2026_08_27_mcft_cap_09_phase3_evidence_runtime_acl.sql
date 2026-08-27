@@ -165,9 +165,21 @@ BEGIN
    WHERE fact_id = p_fact_id;
 
   IF FOUND THEN
-    IF v_existing_record <> p_record_json
-       OR v_existing_occurred_at <> p_occurred_at
-       OR v_existing_source <> 'mcft_cap09_external_formal_evidence_v1' THEN
+    -- A service restart/refetch may observe the same immutable source record at a
+    -- later publication/retrieval time. Reuse the first canonical fact only when
+    -- the immutable source and canonical science are identical. Publication time
+    -- is tracked separately by the Evidence supply event/cursor plane.
+    IF (v_existing_record ->> 'type') IS DISTINCT FROM v_type
+       OR (v_existing_record #>> '{payload,source_record_id}')
+          IS DISTINCT FROM (v_payload ->> 'source_record_id')
+       OR (v_existing_record #>> '{payload,source_record_hash}')
+          IS DISTINCT FROM (v_payload ->> 'source_record_hash')
+       OR (v_existing_record #>> '{payload,binding_id}')
+          IS DISTINCT FROM (v_payload ->> 'binding_id')
+       OR (v_existing_record #> '{payload,canonical_payload}')
+          IS DISTINCT FROM (v_payload -> 'canonical_payload')
+       OR v_existing_occurred_at IS DISTINCT FROM p_occurred_at
+       OR v_existing_source IS DISTINCT FROM 'mcft_cap09_external_formal_evidence_v1' THEN
       RAISE EXCEPTION 'PHASE3_EVIDENCE_DB_INGRESS_FACT_IDENTITY_CONFLICT';
     END IF;
     RETURN QUERY SELECT 'EXISTING_IDEMPOTENT_SUCCESS'::text, 0::integer;
