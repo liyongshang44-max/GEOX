@@ -259,7 +259,7 @@ function mapObservationMetricToPipelineShape(metric: string, valueNum: number, d
   return mapStage1ObservationMetricToPipelineObservationV1(metric, valueNum, device_id);
 }
 
-async function loadRecentFieldObservationsForPipelineV1(db: DeviceObservationDbConn, params: {
+export async function loadRecentFieldObservationsForPipelineV1(db: DeviceObservationDbConn, params: {
   tenant_id: string;
   project_id: string;
   group_id: string;
