@@ -7,6 +7,7 @@ on:
       - '.github/workflows/mcft-cap-09-rolling-**'
       - 'scripts/runtime_acceptance/*MCFT_CAP_09_EA5E2*'
       - 'scripts/runtime_acceptance/*MCFT_CAP_09_KBS*'
+      - 'scripts/runtime_acceptance/*MCFT_CAP_09_GFS*'
       - 'scripts/runtime_acceptance/*MCFT_CAP_09_ROLLING*'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2*'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING*'
@@ -59,7 +60,7 @@ jobs:
           python-version: '3.12'
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
-      - name: Install pinned KBS decoder stack
+      - name: Install pinned KBS/GFS decoder stack and prove product GFS core
         run: |
           python -m pip install --disable-pip-version-check \
             'eccodes==2.47.0' \
@@ -67,11 +68,128 @@ jobs:
             'numpy==1.26.4' \
             'refet==0.4.2'
           python -m eccodes selfcheck
+          python apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py selftest
+          python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py selftest-gfs-selection
           python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py selftest-et0-decimal-normalization
+      - name: Prove GFS product and successor qualification identity boundary
+        shell: python
+        run: |
+          import ast
+          import json
+          import pathlib
+          import re
+          import subprocess
+
+          root = pathlib.Path.cwd()
+          historical = "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py"
+          successor = "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py"
+          core = "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py"
+          graph = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs"
+          pinned_historical_blob = "ff2ad210387402a74731968e14746210fd2440dd"
+
+          actual_historical_blob = subprocess.check_output(
+              ["git", "rev-parse", f"HEAD:{historical}"], text=True
+          ).strip()
+          if actual_historical_blob != pinned_historical_blob:
+              raise SystemExit(f"GFS_PRODUCT_IDENTITY_HISTORICAL_EA4_DRIFT:{actual_historical_blob}")
+
+          successor_text = (root / successor).read_text(encoding="utf-8")
+          core_text = (root / core).read_text(encoding="utf-8")
+          graph_text = (root / graph).read_text(encoding="utf-8")
+          decode_start = successor_text.index("def command_decode_gfs")
+          decode_end = successor_text.index("def command_decode_kbs_late", decode_start)
+          decode_text = successor_text[decode_start:decode_end]
+
+          required = [
+              "mcft_cap09_gfs_scientific_core_v1.py",
+              "gfs_core.validate_complete_cycle_inventory_v1",
+              "gfs_core.decode_pgrb2_v1",
+              "gfs_core.decode_sflux_v1",
+              "gfs_core.assemble_72h_scientific_series_v1",
+              "product_gfs_scientific_core_used",
+          ]
+          for marker in required:
+              if marker not in successor_text:
+                  raise SystemExit(f"GFS_PRODUCT_IDENTITY_REQUIRED_MARKER_MISSING:{marker}")
+
+          for forbidden in [
+              "ea4.decode_pgrb2(",
+              "ea4.decode_sflux(",
+              "ea4.apcp(",
+              "ea4.block_start(",
+              "ea4.scalar_eto(",
+          ]:
+              if forbidden in decode_text:
+                  raise SystemExit(f"GFS_PRODUCT_IDENTITY_SECOND_SCIENTIFIC_PATH:{forbidden}")
+
+          tree = ast.parse(core_text, filename=core)
+          imported_modules = []
+          for node in ast.walk(tree):
+              if isinstance(node, ast.Import):
+                  imported_modules.extend(alias.name for alias in node.names)
+              elif isinstance(node, ast.ImportFrom):
+                  imported_modules.append(node.module or "")
+
+          forbidden_import_prefixes = (
+              "scripts.runtime_acceptance",
+              "urllib",
+              "requests",
+              "httpx",
+              "psycopg",
+              "psycopg2",
+              "sqlalchemy",
+          )
+          for module in imported_modules:
+              if any(module == prefix or module.startswith(prefix + ".") for prefix in forbidden_import_prefixes):
+                  raise SystemExit(f"GFS_PRODUCT_CORE_FORBIDDEN_IMPORT:{module}")
+              if "twin_runtime" in module.split("."):
+                  raise SystemExit(f"GFS_PRODUCT_CORE_RUNTIME_IMPORT_FORBIDDEN:{module}")
+
+          precise_forbidden_patterns = [
+              ("DIRECT_SQL", re.compile(r"\bINSERT\s+INTO\b", re.IGNORECASE)),
+              ("RUNTIME_TICK_CURSOR", re.compile(r"\bRuntimeTickCursor\b")),
+              ("OS_ENVIRON", re.compile(r"\bos\.environ\b")),
+              ("ACCEPTANCE_PATH", re.compile(r"scripts/runtime_acceptance")),
+          ]
+          for label, pattern in precise_forbidden_patterns:
+              if pattern.search(core_text):
+                  raise SystemExit(f"GFS_PRODUCT_CORE_FORBIDDEN_DEPENDENCY:{label}")
+
+          if core not in graph_text:
+              raise SystemExit("GFS_PRODUCT_CORE_NOT_IN_EA5E2_GRAPH")
+
+          result = {
+              "schema_version": "geox_mcft_cap09_gfs_product_scientific_core_identity_v1",
+              "status": "PASS",
+              "historical_ea4_probe_blob": actual_historical_blob,
+              "historical_ea4_probe_preserved": True,
+              "successor_imports_product_gfs_core": True,
+              "same_cycle_inventory_uses_product_core": True,
+              "pgrb2_decode_uses_product_core": True,
+              "sflux_decode_uses_product_core": True,
+              "apcp_and_72h_assembly_uses_product_core": True,
+              "solar_interval_and_et0_uses_product_core": True,
+              "second_gfs_scientific_path_in_successor_decode": False,
+              "product_core_import_modules": sorted(imported_modules),
+              "product_core_acceptance_dependency": False,
+              "product_core_network_dependency": False,
+              "product_core_database_dependency": False,
+              "product_core_runtime_mutation_dependency": False,
+              "provider_request_count": 0,
+              "database_write_count": 0,
+              "formal_effect": False,
+          }
+          out = root / "acceptance-output/MCFT_CAP_09_GFS_PRODUCT_SCIENTIFIC_CORE_IDENTITY_V1.json"
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          print(json.dumps(result, sort_keys=True))
+      - name: Prove product GFS acquisition provider boundary
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_PRODUCT_ACQUISITION_PROVIDER_V1.ts
       - name: Re-prove server and rolling T3R1 observer types
         run: |
           pnpm --filter @geox/server run typecheck
           pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/FETCH_MCFT_CAP_09_GFS_PRODUCT_RAW_BUNDLE_V1.ts \
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_V1.ts \
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts \
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts \
@@ -103,6 +221,8 @@ jobs:
         with:
           name: mcft-cap09-ea5e2-rolling-successor-v3-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: |
+            acceptance-output/MCFT_CAP_09_GFS_PRODUCT_SCIENTIFIC_CORE_IDENTITY_V1.json
+            acceptance-output/MCFT_CAP_09_GFS_PRODUCT_ACQUISITION_PROVIDER_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json
             acceptance-output/MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V3.json
           if-no-files-found: warn

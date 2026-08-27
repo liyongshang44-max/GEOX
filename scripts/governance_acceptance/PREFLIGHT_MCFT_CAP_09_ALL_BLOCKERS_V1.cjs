@@ -190,7 +190,7 @@ function main() {
         const diagnostic = runDiagnostic(decision.diagnostic_command);
         result = { ...common, execution: "DIAGNOSTIC_COMMAND", status: diagnostic.status, reason_code: diagnostic.status === "PASS" ? "DIAGNOSTIC_PASS" : "DIAGNOSTIC_FAIL", diagnostic_command: decision.diagnostic_command, diagnostic };
         if (diagnostic.status !== "PASS") blockers.push({ blocker_class: "DIAGNOSTIC_FAILURE", check_id: decision.check_id, detail: diagnostic });
-      } else if (decision.status === "REQUALIFY") {
+      } else {
         const evidence = resolveRequalificationEvidence(decision, authority, registry, stage, args.head || null);
         result = {
           ...common,
@@ -202,10 +202,13 @@ function main() {
           evidence_subject_sha: evidence.subject_sha ?? null,
           evidence_adjudication: evidence.candidates,
         };
-        if (evidence.status !== "PASS") blockers.push({ blocker_class: "INVALID_OR_MISSING_REQUALIFICATION_EVIDENCE", check_id: decision.check_id, detail: evidence });
-      } else {
-        result = { ...common, execution: "NO_DIAGNOSTIC_AVAILABLE", status: "FAIL", reason_code: "REQUIRED_WITHOUT_DIAGNOSTIC" };
-        blockers.push({ blocker_class: "UNRESOLVED_REQUIRED_CHECK", check_id: decision.check_id, detail: decision.reason_code });
+        if (evidence.status !== "PASS") {
+          blockers.push({
+            blocker_class: decision.status === "REQUIRED" ? "UNRESOLVED_REQUIRED_CHECK" : "INVALID_OR_MISSING_REQUALIFICATION_EVIDENCE",
+            check_id: decision.check_id,
+            detail: evidence,
+          });
+        }
       }
     } else {
       result = { ...common, execution: "FAIL_CLOSED", status: "FAIL" };

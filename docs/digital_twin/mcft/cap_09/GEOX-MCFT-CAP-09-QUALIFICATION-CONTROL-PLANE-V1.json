@@ -3,6 +3,11 @@
   "status": "CANDIDATE_SUCCESSOR_CONTROL_PLANE",
   "schema_version": 1,
   "frozen_successor_subject_sha": "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
+  "governed_successor_predecessor_shas": [
+    "3bbf096ee5cb73e8e0e0251dc400733d6cab501f",
+    "14653ba622bb12261a1ea79f3ea7e42be0b49f92",
+    "8943c752a354cb916cc7f144681203aa9a19f70b"
+  ],
   "stacked_predecessor_branch": "fix/mcft-cap09-v13-autonomous-forcing-foundation",
   "default_stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
   "allowed_stages": [
@@ -70,6 +75,7 @@
       ],
       "additional_exact_paths": [
         "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py",
+        "scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_AM19_PHASE2_AUTHORITY_SYMBOL_COMPATIBILITY_V1.ts",
         ".github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml"
       ]
     },
@@ -114,6 +120,29 @@
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE1_TYPED_RUNTIME_COMPOSITION_V1.cjs",
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PHASE1_TYPED_CAP08_REPLAY_EQUIVALENCE_LANE_V1.cjs",
         "scripts/runtime_acceptance/mcft_cap09_phase1_typed_replay_host_product_chain_v1.cjs"
+      ]
+    },
+    "PHASE2_EVIDENCE_PROVIDER_MODULES": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml",
+        "apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_evidence_visibility_supply_cursor_v1.ts",
+        "apps/server/src/external_evidence/provider/https_external_evidence_transport_v1.ts",
+        "apps/server/src/external_evidence/provider/kbs_raw_hourly_live_provider_v1.ts",
+        "apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.ts",
+        "apps/server/src/external_evidence/provider/gfs_nomads_live_provider_v1.ts",
+        "apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py",
+        "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py",
+        "apps/server/src/persistence/external_evidence/postgres_external_formal_evidence_visibility_v1.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PRODUCT_ADAPTER_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_PRODUCT_ACQUISITION_PROVIDER_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE2_POST_COMMIT_VISIBILITY_CURSOR_V1.ts",
+        "scripts/runtime_acceptance/FETCH_MCFT_CAP_09_GFS_PRODUCT_RAW_BUNDLE_V1.ts",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts",
+        "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py",
+        "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs"
       ]
     }
   },
@@ -218,14 +247,14 @@
         "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs"
       ],
       "resolver_ids": ["EA5E2_RUNTIME_GRAPH_V4"],
-      "historical_evidence_policy": "CARRY_ONLY_IF_IMMUTABLE_BINDING_AND_GENERATED_AUTHORITY_GRAPH_UNCHANGED",
+      "historical_evidence_policy": "FRESH_REQUALIFICATION_REQUIRED_AFTER_PHASE2_DEPENDENCY_SET_EXPANSION",
       "execution_workflow": ".github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml",
       "execution_workflow_status": "IMPLEMENTED_AT_FROZEN_SUBJECT",
       "fail_policy": "FAIL_CLOSED",
-      "carry_forward_policy": "ONLY_WHEN_EXTERNAL_AUTHORITY_GRAPH_UNCHANGED",
+      "carry_forward_policy": "NONE_AFTER_PHASE2_DEPENDENCY_SET_EXPANSION",
       "requalification_triggers": ["EA5E2_RUNTIME_GRAPH_V4"],
       "applicable_stages": ["SUCCESSOR_SUBJECT_PRE_MERGE", "POST_MERGE_V13_QUALIFICATION", "POST_GRADUATION_FORMAL_V5_ACTIVATION"],
-      "carry_forward_evidence_id": "EA5E2_RUNTIME_GRAPH_3BBF096E",
+      "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs"
     },
     {
@@ -236,14 +265,14 @@
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts"
       ],
       "resolver_ids": ["LEGACY_AM19_PERSISTENT_24T"],
-      "historical_evidence_policy": "HISTORICAL_ONLY_CARRY_WHEN_LEGACY_SENSITIVE_PATHS_UNCHANGED",
+      "historical_evidence_policy": "FRESH_SUCCESSOR_REQUALIFICATION_REQUIRED_AFTER_PHASE2_PROVIDER_EXTRACTION",
       "execution_workflow": ".github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml",
-      "execution_workflow_status": "IMPLEMENTED_AT_FROZEN_SUBJECT",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
       "fail_policy": "FAIL_CLOSED",
-      "carry_forward_policy": "ONLY_WHEN_LEGACY_SENSITIVE_PATHS_UNCHANGED",
+      "carry_forward_policy": "NONE_AFTER_PHASE2_PROVIDER_EXTRACTION",
       "requalification_triggers": ["LEGACY_AM19_PERSISTENT_24T"],
       "applicable_stages": ["SUCCESSOR_SUBJECT_PRE_MERGE"],
-      "carry_forward_evidence_id": "LEGACY_AM19_24T_SUCCESSOR_ROUTING_3BBF096E",
+      "carry_forward_evidence_id": null,
       "diagnostic_command": null
     },
     {
@@ -264,6 +293,25 @@
       "applicable_stages": ["SUCCESSOR_SUBJECT_PRE_MERGE"],
       "carry_forward_evidence_id": null,
       "diagnostic_command": null
+    },
+    {
+      "check_id": "PHASE2_EVIDENCE_PROVIDER_MODULES",
+      "owner": "MCFT_CAP09_PHASE2_EVIDENCE_PROVIDER_MODULES_QUALIFICATION",
+      "generation_scope": ["PHASE2_EVIDENCE_PROVIDER_MODULES"],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs"
+      ],
+      "resolver_ids": ["PHASE2_EVIDENCE_PROVIDER_MODULES"],
+      "historical_evidence_policy": "FRESH_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "execution_workflow": ".github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
+      "fail_policy": "FAIL_CLOSED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": ["PHASE2_EVIDENCE_PROVIDER_MODULES"],
+      "applicable_stages": ["SUCCESSOR_SUBJECT_PRE_MERGE"],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs"
     },
     {
       "check_id": "V13_PRODUCER_DRIVEN_QUALIFICATION",

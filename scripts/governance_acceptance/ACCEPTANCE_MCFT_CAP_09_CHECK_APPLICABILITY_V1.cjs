@@ -98,7 +98,8 @@ function main() {
   assert.deepEqual(failedV4Policy.errors, [], `FAILED_V4_AUTHORITY_POLICY_ERRORS:${JSON.stringify(failedV4Policy.errors)}`);
   assert(failedV4Policy.subjects.has("26c1383f7f45abb76c99e28ec3d06714e85d1b2c"), "FAILED_V4_SUBJECT_MUST_BE_FORBIDDEN");
 
-  // CP-4: known unchanged dependency. Control-plane-only maintenance must not invalidate frozen runtime evidence.
+  // CP-4: control-plane-only maintenance preserves carry-forward only for dependency sets
+  // that still exist unchanged at the frozen subject. Expanded Phase1/Phase2 sets require fresh proof.
   const controlOnly = plan(authority, registry, [AUTHORITY_PATH]);
   assert.equal(controlOnly.status, "PASS");
   assert.equal(controlOnly.unknown_changed_paths.length, 0);
@@ -109,9 +110,13 @@ function main() {
     "V13_HOLISTIC_SCHEMA",
     "V13_NEXT_TICK_VIABILITY",
     "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+  ]) assert.equal(byId(controlOnly, id).status, "CARRY_FORWARD", `CONTROL_ONLY_MUST_CARRY:${id}`);
+  for (const id of [
     "EA5E2_RUNTIME_DEPENDENCY_GRAPH",
     "LEGACY_AM19_PERSISTENT_24T",
-  ]) assert.equal(byId(controlOnly, id).status, "CARRY_FORWARD", `CONTROL_ONLY_MUST_CARRY:${id}`);
+    "PHASE1_TYPED_RUNTIME_COMPOSITION",
+    "PHASE2_EVIDENCE_PROVIDER_MODULES",
+  ]) assert.equal(byId(controlOnly, id).status, "REQUIRED", `EXPANDED_DEPENDENCY_SET_REQUIRES_FRESH_PROOF:${id}`);
   for (const id of ["V13_PRODUCER_DRIVEN_QUALIFICATION", "END_TO_END_EVIDENCE_SUPPLY_DEADLINE", "EXACT_ONE_PRODUCTION_OWNER", "FORMAL_V5_ACTIVATION"]) {
     assert.equal(byId(controlOnly, id).status, "NOT_APPLICABLE", `PREMERGE_FUTURE_CHECK_MUST_BE_NA:${id}`);
   }
@@ -237,6 +242,7 @@ function main() {
     central_check_contract_complete_and_resolvable: true,
     unimplemented_future_workflows_explicit_without_invented_paths: true,
     control_plane_only_change_does_not_invalidate_frozen_runtime_evidence: true,
+    expanded_dependency_sets_require_fresh_requalification: true,
     known_changed_dependency_requalifies: true,
     unknown_changed_path_fails_closed: true,
     shared_ingress_dependency_change_requalifies_ea5c1: true,

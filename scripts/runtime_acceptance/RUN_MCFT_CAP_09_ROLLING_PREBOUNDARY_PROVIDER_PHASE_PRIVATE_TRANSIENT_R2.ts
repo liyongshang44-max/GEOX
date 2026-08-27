@@ -41,7 +41,9 @@ import { PostgresExternalFormalEvidenceSourceV1 } from "../../apps/server/src/ru
 
 const execFileAsync = promisify(execFile);
 const PYTHON = process.env.PYTHON ?? "python3";
+const PNPM = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const PROVIDER_SCRIPT = path.resolve("scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py");
+const GFS_PRODUCT_BRIDGE = path.resolve("scripts/runtime_acceptance/FETCH_MCFT_CAP_09_GFS_PRODUCT_RAW_BUNDLE_V1.ts");
 const KBS_AUTHORITATIVE_LATE_DECODER_SCRIPT = path.resolve("scripts/runtime_acceptance/MCFT_CAP_09_KBS_AUTHORITATIVE_LATE_DECODER_V1.py");
 const OUTPUT_DIR = path.resolve("acceptance-output");
 const PRE_OUTPUT = path.join(OUTPUT_DIR, "MCFT_CAP_09_EA5E2_LIVE_PROVIDER_PREBOUNDARY_SAFE_PROOF.json");
@@ -395,39 +397,45 @@ function slotAuthority(target: string): ExternalFormalCollectorSlotAuthorityV1 {
   };
 }
 
-async function runPython(args: string[], deadlineMs?: number): Promise<{ stdout: string; stderr: string }> {
+function executionTimeoutMs(deadlineMs?: number): number {
   let timeoutMs = 20 * 60_000;
   if (deadlineMs !== undefined) {
     const remaining = deadlineMs - Date.now();
     if (remaining <= 0) throw new Error("EA5E2_PROVIDER_EXECUTION_DEADLINE_EXCEEDED");
     timeoutMs = Math.max(1_000, Math.min(timeoutMs, Math.floor(remaining)));
   }
-  const result = await execFileAsync(PYTHON, [PROVIDER_SCRIPT, ...args], { cwd: process.cwd(), maxBuffer: 32 * 1024 * 1024, timeout: timeoutMs });
+  return timeoutMs;
+}
+
+async function runPython(args: string[], deadlineMs?: number): Promise<{ stdout: string; stderr: string }> {
+  const result = await execFileAsync(PYTHON, [PROVIDER_SCRIPT, ...args], { cwd: process.cwd(), maxBuffer: 32 * 1024 * 1024, timeout: executionTimeoutMs(deadlineMs) });
+  return { stdout: String(result.stdout), stderr: String(result.stderr) };
+}
+
+async function runProductGfsBridge(args: string[], deadlineMs?: number): Promise<{ stdout: string; stderr: string }> {
+  const result = await execFileAsync(PNPM, ["exec", "tsx", GFS_PRODUCT_BRIDGE, ...args], { cwd: process.cwd(), maxBuffer: 32 * 1024 * 1024, timeout: executionTimeoutMs(deadlineMs) });
   return { stdout: String(result.stdout), stderr: String(result.stderr) };
 }
 
 async function runPythonScript(script: string, args: string[], deadlineMs?: number): Promise<{ stdout: string; stderr: string }> {
-  let timeoutMs = 20 * 60_000;
-  if (deadlineMs !== undefined) {
-    const remaining = deadlineMs - Date.now();
-    if (remaining <= 0) throw new Error("EA5E2_PROVIDER_EXECUTION_DEADLINE_EXCEEDED");
-    timeoutMs = Math.max(1_000, Math.min(timeoutMs, Math.floor(remaining)));
-  }
-  const result = await execFileAsync(PYTHON, [script, ...args], { cwd: process.cwd(), maxBuffer: 32 * 1024 * 1024, timeout: timeoutMs });
+  const result = await execFileAsync(PYTHON, [script, ...args], { cwd: process.cwd(), maxBuffer: 32 * 1024 * 1024, timeout: executionTimeoutMs(deadlineMs) });
   return { stdout: String(result.stdout), stderr: String(result.stderr) };
 }
 
-class PythonGfsRawBundleTransportV1 implements ExternalEvidenceTransportPortV1 {
+class ProductGfsRawBundleTransportV1 implements ExternalEvidenceTransportPortV1 {
   provider_request_count = 0;
   safe_meta: Record<string, unknown> | null = null;
   constructor(private readonly target: string, private readonly deadlineMs?: number) {}
   async fetchRawEvidence(_: ExternalEvidenceFetchRequestV1): Promise<ExternalEvidenceFetchResponseV1> {
-    const temp = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-ea5e2-gfs-"));
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-ea5e2-gfs-product-"));
     const bundle = path.join(temp, "gfs-raw-bundle.tar");
     const meta = path.join(temp, "gfs-safe-meta.json");
     try {
-      await runPython(["fetch-gfs", "--target", this.target, "--output", bundle, "--meta", meta], this.deadlineMs);
+      await runProductGfsBridge(["--target", this.target, "--output", bundle, "--meta", meta], this.deadlineMs);
       const safe = JSON.parse(fs.readFileSync(meta, "utf8")) as Record<string, unknown>;
+      if (safe.product_acquisition_provider_used !== true || safe.product_provider_id !== "MCFT_CAP09_GFS_NOMADS_LIVE_PROVIDER_V1") {
+        throw new Error("EA5E2_GFS_PRODUCT_ACQUISITION_IDENTITY_REQUIRED");
+      }
       this.safe_meta = safe;
       this.provider_request_count = Number(safe.provider_request_count);
       if (!Number.isSafeInteger(this.provider_request_count) || this.provider_request_count <= 0) throw new Error("EA5E2_GFS_PROVIDER_REQUEST_COUNT_INVALID");
@@ -794,7 +802,7 @@ async function main(): Promise<void> {
       const latestIngressStartMs = Date.parse(addMinutes(target, -MIN_INGRESS_MARGIN_MINUTES));
       if (Date.parse(phaseRequestedAt) > latestIngressStartMs) throw new Error("EA5E2_PREBOUNDARY_MINIMUM_INGRESS_MARGIN_LOST_BEFORE_GFS");
 
-      const gfsTransport = new PythonGfsRawBundleTransportV1(target, latestIngressStartMs);
+      const gfsTransport = new ProductGfsRawBundleTransportV1(target, latestIngressStartMs);
       const gfsPromise = collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1({
         dataset_id: `mcft_cap09_ea5e2_live_gfs_${target}`,
         scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
@@ -853,6 +861,8 @@ async function main(): Promise<void> {
         soil_polling_begins_at_authorized_window_open: true,
         gfs_soil_acquisition_parallel: true,
         gfs_same_cycle_pair: true,
+        gfs_product_acquisition_provider_used: gfsTransport.safe_meta?.product_acquisition_provider_used === true,
+        gfs_product_provider_id: gfsTransport.safe_meta?.product_provider_id ?? null,
         rehydration_manifest: {
           expected_records: semanticRows(allPre),
           gfs: { provenance: gfsResults[0].raw_provenance, ingested_at: gfsIngestedAt },
