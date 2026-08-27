@@ -59,6 +59,20 @@ export type RawSampleCanonicalProjectionV1 =
         | "CANONICAL_PROJECTION_INVALID_OBSERVED_AT";
     };
 
+export type RawSampleCanonicalEvidenceProjectionBatchV1 = {
+  schema_version: "raw_sample_canonical_evidence_projection_v1";
+  projection_mode: "SHADOW";
+  observations: CanonicalObservationV1[];
+  qualifications: EvidenceQualificationV1[];
+  omissions: Array<{
+    sample_id: string;
+    reason_code:
+      | "CANONICAL_PROJECTION_MISSING_CREATED_AT"
+      | "CANONICAL_PROJECTION_INVALID_CREATED_AT"
+      | "CANONICAL_PROJECTION_INVALID_OBSERVED_AT";
+  }>;
+};
+
 function toIso(ms: number): string | null {
   if (!Number.isFinite(ms) || ms <= 0) return null;
   const date = new Date(ms);
