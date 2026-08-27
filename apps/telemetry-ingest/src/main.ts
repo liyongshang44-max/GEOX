@@ -303,24 +303,24 @@ record = { // Telemetry record.
       [fact_id, occurredAtIso, 'device_telemetry', recordText]
     ); // Append raw telemetry/heartbeat fact.
 
-    await writeObservationRunPipelineAndRefreshFieldV1(clientConn, {
-      tenant_id: parsed.tenant_id,
-      project_id: process.env.GEOX_PROJECT_ID || "projectA",
-      group_id: process.env.GEOX_GROUP_ID || "groupA",
-      field_id,
-      device_id: parsed.device_id,
-      metric: metricNorm.metric,
-      observed_at_ts_ms: p.ts_ms,
-      value_num: valueNumForObservation,
-      value_text,
-      unit: metricNorm.unit,
-      confidence: "MEDIUM",
-      quality_flags: qualityFlags,
-      raw_fact_id: fact_id,
-      source_kind: parsed.kind,
-      credential_id: String(credRow.rows[0].credential_id ?? "") || null,
-      geo: parsed.kind === "telemetry" ? (record.payload.geo ?? null) : null,
-    });
+    if (parsed.kind === "telemetry") {
+      await writeObservationRunPipelineAndRefreshFieldV1(
+        clientConn,
+        buildMqttObservationInputV1({
+          tenant_id: parsed.tenant_id,
+          project_id: process.env.GEOX_PROJECT_ID || "projectA",
+          group_id: process.env.GEOX_GROUP_ID || "groupA",
+          field_id,
+          device_id: parsed.device_id,
+          metric: String((p as any).metric ?? ""),
+          value: (p as any).value,
+          unit: typeof (p as any).unit === "string" ? (p as any).unit : null,
+          ts_ms: p.ts_ms,
+          source_fact_id: fact_id,
+          quality_flags: qualityFlags,
+        })
+      );
+    }
 
     await updateAgronomySnapshot(clientConn, {
       field_id: field_id ?? null,
