@@ -1,0 +1,125 @@
+name: b05-closure-b09-removal-target-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b05-closure-b09-removal-target-exact-2026-08-27
+
+jobs:
+  exact-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Build runtime workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+      - name: Canonical B-02 governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+      - name: B-09 removal-target exactness
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const reg = JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const graph = JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json","utf8"));
+          const wrong = [];
+          for (const semantic of reg.semantics || []) {
+            for (const producer of semantic.registered_producers || []) {
+              if (producer.grandfathered_duplicate === true && producer.removal_target !== "B-09") {
+                wrong.push(`producer:${semantic.semantic_id}:${producer.producer_id}:${producer.removal_target}`);
+              }
+            }
+          }
+          for (const edge of graph.current_parallel_edges || []) {
+            if (edge.removal_target !== "B-09") {
+              wrong.push(`edge:${edge.edge_id}:${edge.removal_target}`);
+            }
+          }
+          if (wrong.length) throw new Error("B05_CLOSURE_NON_B09_REMOVAL_TARGET:" + wrong.join(","));
+          console.log("B05_CLOSURE_ALL_HISTORICAL_REMOVAL_TARGETS_B09_PASS");
+          NODE
+      - name: Linter rejects grandfathered producer removal before B-09
+        shell: bash
+        run: |
+          REG="docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json"
+          cp "$REG" "$REG.bak"
+          node <<'NODE'
+          const fs = require("fs");
+          const p = "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json";
+          const reg = JSON.parse(fs.readFileSync(p,"utf8"));
+          const semantic = reg.semantics.find((x) => (x.registered_producers || []).some((p) => p.grandfathered_duplicate === true));
+          const producer = semantic.registered_producers.find((p) => p.grandfathered_duplicate === true);
+          producer.removal_target = "B-05";
+          fs.writeFileSync(p, JSON.stringify(reg,null,2)+"\n");
+          console.log("INJECTED", semantic.semantic_id, producer.producer_id);
+          NODE
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs > /tmp/b05-removal-producer-negative.log 2>&1
+          RC=$?
+          set -e
+          cat /tmp/b05-removal-producer-negative.log
+          mv "$REG.bak" "$REG"
+          if [ "$RC" -eq 0 ]; then
+            echo "B05_CLOSURE_PRODUCER_NEGATIVE_NOT_REJECTED"
+            exit 1
+          fi
+          grep -q "GRANDFATHERED_REMOVAL_TARGET_NOT_B09" /tmp/b05-removal-producer-negative.log
+          echo "B05_CLOSURE_PRODUCER_NEGATIVE_GOVERNANCE_PASS"
+      - name: Linter rejects parallel authority removal before B-09
+        shell: bash
+        run: |
+          GRAPH="docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json"
+          cp "$GRAPH" "$GRAPH.bak"
+          node <<'NODE'
+          const fs = require("fs");
+          const p = "docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json";
+          const graph = JSON.parse(fs.readFileSync(p,"utf8"));
+          if (!(graph.current_parallel_edges || []).length) throw new Error("NO_PARALLEL_EDGE_FOR_NEGATIVE_PROOF");
+          graph.current_parallel_edges[0].removal_target = "B-06";
+          fs.writeFileSync(p, JSON.stringify(graph,null,2)+"\n");
+          console.log("INJECTED", graph.current_parallel_edges[0].edge_id);
+          NODE
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs > /tmp/b05-removal-edge-negative.log 2>&1
+          RC=$?
+          set -e
+          cat /tmp/b05-removal-edge-negative.log
+          mv "$GRAPH.bak" "$GRAPH"
+          if [ "$RC" -eq 0 ]; then
+            echo "B05_CLOSURE_EDGE_NEGATIVE_NOT_REJECTED"
+            exit 1
+          fi
+          grep -q "PARALLEL_REMOVAL_TARGET_NOT_B09" /tmp/b05-removal-edge-negative.log
+          echo "B05_CLOSURE_EDGE_NEGATIVE_GOVERNANCE_PASS"
+      - name: Restored B-02 governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+      - name: B-05a through B-05d regression suite
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+          node --import tsx --test apps/server/src/context/field_program_context_projection_v1.test.ts
+          node --import tsx --test apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.test.ts
+          node --import tsx --test apps/server/src/context/crop_skill_stage_compatibility_adapter_v1.test.ts
+      - name: B-03/B-04 regression boundary
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+          node --import tsx --test apps/server/src/domain/judge/evidence_judge_canonical_sufficiency_shadow_v1.test.ts
+      - name: Server build
+        run: pnpm --filter @geox/server build
+      - name: Marker
+        run: |
+          echo "B05_CLOSURE_EXACT_HEAD f240d76c38cb3f839556f768b578745f7b38627d"
+          echo "B05_CLOSURE_B09_REMOVAL_TARGET_GOVERNANCE_PASS"
