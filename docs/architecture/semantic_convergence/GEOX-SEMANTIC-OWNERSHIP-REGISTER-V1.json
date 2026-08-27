@@ -1395,7 +1395,7 @@
       "semantic_id": "decision.eligibility",
       "question": "May this candidate action proceed toward approval/production given qualified inputs?",
       "target_owner": "Decision Eligibility Runtime",
-      "canonical_output_type": "DecisionEligibilityDecisionV1 (B-07a contract frozen; B-07b Stage-1 criterion adapter registered; zero final runtime producer)",
+      "canonical_output_type": "DecisionEligibilityDecisionV1 (B-07a contract frozen; B-07b Stage-1 + B-07c Agronomy Judge criterion adapters registered; zero final runtime producer)",
       "current_state": "NOT_YET_UNIFIED",
       "target_phase": "B-07",
       "new_owner_creation": "FORBIDDEN",
@@ -1459,6 +1459,24 @@
           "runtime_edge": "INTENTIONAL_NONE",
           "new_runtime_consumer_creation": "FORBIDDEN",
           "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "agronomy-judge-eligibility-precursor-criterion-adapter",
+          "path": "apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.ts",
+          "role": "pure B-07c projection of Agronomy Judge V2 irrigation verdicts into STATE or QUALIFIED_EVIDENCE criterion assessments; emits no final eligibility verdict",
+          "authority_level": "ELIGIBILITY_CRITERION_ONLY_ADAPTER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectAgronomyJudgeEligibilityPrecursorV1",
+            "decisionEligibilityCriterionAssessmentV1Schema.parse"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
         }
       ],
       "registered_consumers": [],
@@ -1472,7 +1490,11 @@
         "B-07a activates no production eligibility producer; Stage-1 and Agronomy Judge remain grandfathered precursors until later bounded B-07 mapping and B-09 removal.",
         "B-07b registers a pure Stage-1 precursor/criterion adapter with direct_verdict_authority=NONE and no runtime consumer.",
         "B-07b forbids ELIGIBLE->PASS and NOT_ELIGIBLE->BLOCK shortcuts because Stage-1 does not cover the full eligibility factor set.",
-        "B-07b maps NEEDS_EVIDENCE only to a QUALIFIED_EVIDENCE=MISSING criterion; final action verdict remains a later Decision Eligibility runtime concern."
+        "B-07b maps NEEDS_EVIDENCE only to a QUALIFIED_EVIDENCE=MISSING criterion; final action verdict remains a later Decision Eligibility runtime concern.",
+        "B-07c registers a pure Agronomy Judge criterion adapter with direct_verdict_authority=NONE and no runtime consumer.",
+        "B-07c forbids WATER_DEFICIT->PASS, PASS->final PASS, and BLOCKED->BLOCK shortcuts.",
+        "B-07c requires explicit canonical CalculationResult refs for irrigation-state criteria and keeps legacy Judge calculation outputs non-authoritative.",
+        "B-07c maps recognized Evidence Judge overrides only to QUALIFIED_EVIDENCE=MISSING; final action verdict remains a later canonical runtime concern."
       ],
       "runtime_consumers": []
     },
@@ -2449,7 +2471,7 @@
     {
       "guard_id": "G-B02-17-decision-eligibility-criterion-instantiation",
       "semantic_id": "decision.eligibility",
-      "description": "B-07b permits exactly the registered Stage-1 precursor adapter to instantiate canonical eligibility criterion assessments; final DecisionEligibilityDecisionV1 producer remains separately guarded and empty.",
+      "description": "B-07c permits exactly the registered Stage-1 and Agronomy Judge precursor adapters to instantiate canonical eligibility criterion assessments; final DecisionEligibilityDecisionV1 producer remains separately guarded and empty.",
       "scan_roots": [
         "apps/server/src"
       ],
@@ -2466,7 +2488,8 @@
         ]
       },
       "registered_paths": [
-        "apps/server/src/domain/decision/stage1_eligibility_precursor_adapter_v1.ts"
+        "apps/server/src/domain/decision/stage1_eligibility_precursor_adapter_v1.ts",
+        "apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.ts"
       ],
       "failure": "UNREGISTERED_DECISION_ELIGIBILITY_CRITERION_PRODUCER"
     }
