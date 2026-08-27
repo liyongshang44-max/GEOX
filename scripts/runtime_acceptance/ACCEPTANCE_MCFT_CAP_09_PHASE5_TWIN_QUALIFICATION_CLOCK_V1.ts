@@ -47,7 +47,7 @@ async function main(): Promise<void> {
   );
 
   assert.equal(
-    MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1.production_database_clock_for_tick_authority,
+    MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1.database_clock_for_tick_authority,
     true,
   );
   assert.equal(
