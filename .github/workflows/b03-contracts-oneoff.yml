@@ -1,4 +1,4 @@
-name: b04b3-mqtt-ingress-convergence-oneoff
+name: b04b4-mqtt-runtime-durability-oneoff
 on:
   push:
     branches:
@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 133ef85a74a9e5f22172387803633e1b6077c0cf
+          ref: c15ba32bac52141041744ac7b10daa3901e26e2b
           fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
@@ -25,10 +25,35 @@ jobs:
         run: pnpm --filter @geox/server run typecheck
       - name: Build telemetry-ingest compile prerequisites
         run: pnpm --filter @geox/contracts build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build
-      - name: Telemetry ingest typecheck
-        run: pnpm --filter @geox/telemetry-ingest exec tsc --noEmit -p tsconfig.json
-      - name: MQTT mapper fixtures
+      - name: Telemetry ingest package build
+        run: pnpm --filter @geox/telemetry-ingest build
+      - name: MQTT source-preserving fixtures
         run: pnpm --filter @geox/telemetry-ingest exec node --import tsx --test src/mqtt_observation_input_v1.test.ts
+      - name: MQTT durable raw fixtures
+        run: pnpm --filter @geox/telemetry-ingest exec node --import tsx --test src/mqtt_durable_raw_v1.test.ts
+      - name: Commercial compose render
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox
+          GEOX_MCFT_MIGRATOR_PASSWORD: migrator
+          GEOX_RUNTIME_DATABASE_PASSWORD: runtime
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT: c15ba32bac52141041744ac7b10daa3901e26e2b
+          MINIO_ROOT_USER: minio
+          MINIO_ROOT_PASSWORD: minio123
+          MQTT_USERNAME: geox
+          MQTT_PASSWORD: geoxpass
+          CORS_ORIGINS: http://localhost
+          APP_SECRET: testsecret
+          PUBLIC_BASE_URL: http://localhost
+          GEOX_AO_ACT_TOKEN: operator_token
+          GEOX_EXECUTOR_TOKEN: operator_token
+        run: docker compose -f docker-compose.commercial_v1.yml config >/tmp/b04b4-compose.yml
+      - name: Telemetry ingest runtime image packaging probe
+        run: |
+          docker build             -f docker/runtime.Dockerfile             --build-arg "BUILD_COMMAND=pnpm --filter @geox/contracts build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/telemetry-ingest build"             -t geox/telemetry-ingest-b04b4 .
+          docker run --rm --entrypoint ./node_modules/.bin/tsx geox/telemetry-ingest-b04b4 --version
+          docker run --rm --entrypoint /bin/sh geox/telemetry-ingest-b04b4 -lc 'test -f apps/telemetry-ingest/src/main.ts && test -x node_modules/.bin/tsx'
       - name: B04a fixtures
         run: pnpm --filter @geox/server exec node --import tsx --test src/evidence/physical_qc_v1.test.ts
       - name: B04b1 fixtures
@@ -39,5 +64,5 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
       - name: Marker
         run: |
-          echo "B04B3_EXACT_HEAD $(git rev-parse HEAD)"
-          echo "B04B3_MQTT_INGRESS_CONVERGENCE_PASS"
+          echo "B04B4_EXACT_HEAD $(git rev-parse HEAD)"
+          echo "B04B4_MQTT_RUNTIME_DURABILITY_PASS"
