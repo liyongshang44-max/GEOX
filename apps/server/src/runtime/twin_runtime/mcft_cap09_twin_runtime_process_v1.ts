@@ -16,6 +16,12 @@ import {
   composeMcftCap09TwinRuntimeV1,
 } from "./mcft_cap09_twin_runtime_composition_v1.js";
 import type {
+  TwinRuntimeDatabaseClockPortV1,
+} from "./mcft_cap09_twin_runtime_host_v1.js";
+import type {
+  PersistentSequentialSchedulerClockAuthorityV1,
+} from "./postgres_persistent_sequential_scheduler_adapter_v1.js";
+import type {
   ExternalFormalV3Am19WindowManifestV1,
 } from "./external_formal_v3_amendment19_runner_v1.js";
 import {
@@ -38,7 +44,9 @@ export const MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1 = {
   raw_storage_credentials_allowed: false,
   evidence_supply_cursor_authority: false,
   process_clock_for_tick_authority: false,
-  database_clock_for_tick_authority: true,
+  production_database_clock_for_tick_authority: true,
+  qualification_clock_boundary:
+    "EXPLICIT_DATABASE_CLOCK_AND_SCHEDULER_AUTHORITY_INJECTION_WITH_PRODUCTION_DEFAULT",
   formal_arm_authority: false,
   production_owner_cutover: false,
 } as const;
@@ -183,6 +191,8 @@ export function readMcftCap09TwinRuntimeProcessConfigV1(
 
 export async function runMcftCap09TwinRuntimeProcessV1(input?: {
   env?: EnvironmentV1;
+  database_clock?: TwinRuntimeDatabaseClockPortV1;
+  scheduler_clock_authority?: PersistentSequentialSchedulerClockAuthorityV1;
 }): Promise<void> {
   const env = input?.env ?? process.env;
   const config = readMcftCap09TwinRuntimeProcessConfigV1(env);
@@ -221,6 +231,8 @@ export async function runMcftCap09TwinRuntimeProcessV1(input?: {
       health: new McftCap09ConsoleTwinHealthV1(),
       stop,
       failure_classifier: new McftCap09ProductionTwinFailureClassifierV1(),
+      database_clock: input?.database_clock,
+      scheduler_clock_authority: input?.scheduler_clock_authority,
     });
 
     await composition.host.run({
