@@ -51,6 +51,9 @@ const HOUR_MS=3_600_000;
 const ROLLING_GFS_TARGET_COUNT=24;
 const MIN_CAPTURE_RUNWAY_MINUTES=30;
 const SOIL_WINDOW_SETTLE_MINUTES=10;
+const SAME_REQUEST_MAX_ATTEMPTS=2;
+const SAME_REQUEST_RETRY_DELAY_MS=2_000;
+let sameRequestRetryCount=0;
 
 function requiredEnvV1(name:string):string {
   const value=String(process.env[name]??"").trim();
@@ -70,6 +73,32 @@ function addHoursV1(value:string,hours:number):string {
 }
 function addMinutesV1(value:string,minutes:number):string {
   return new Date(Date.parse(value)+minutes*60_000).toISOString();
+}
+async function sameRequestRetryV1<T>(
+  label:string,
+  operation:()=>Promise<T>,
+):Promise<T> {
+  let lastError:unknown;
+  for(let attempt=1;attempt<=SAME_REQUEST_MAX_ATTEMPTS;attempt+=1) {
+    try {
+      return await operation();
+    } catch(error) {
+      lastError=error;
+      if(attempt>=SAME_REQUEST_MAX_ATTEMPTS) break;
+      sameRequestRetryCount+=1;
+      process.stderr.write(
+        JSON.stringify({
+          event:"PHASE5_CAPTURE_SAME_REQUEST_RETRY",
+          label,
+          attempt,
+          max_attempts:SAME_REQUEST_MAX_ATTEMPTS,
+          error:error instanceof Error?error.message:String(error),
+        })+"\n",
+      );
+      await waitTimeoutV1(SAME_REQUEST_RETRY_DELAY_MS);
+    }
+  }
+  throw lastError;
 }
 function safeFileV1(value:string):string {
   return value.replace(/[^0-9A-Za-z_.-]+/g,"_");
@@ -217,7 +246,10 @@ async function selectExtendedCausalCycleV1(input:{
   let directoryRequestCount=0;
   for(const cycle of candidateGfsCyclesV1(input.a0)) {
     try {
-      const raw=await input.provider.fetchDirectoryRaw(cycle);
+      const raw=await sameRequestRetryV1(
+        `directory:${cycle}`,
+        ()=>input.provider.fetchDirectoryRaw(cycle),
+      );
       directoryRequestCount+=1;
       requireRetrievedByA0V1(raw,input.a0,"PHASE5_CAPTURE_GFS_DIRECTORY");
       await retainCapturedGfsRawV1({
@@ -348,15 +380,24 @@ async function main():Promise<void> {
       if(new Date(selectedCycle).toISOString().replace(".000Z","Z")!==cycle) {
         throw new Error("PHASE5_CAPTURE_FROZEN_GFS_CYCLE_MISMATCH");
       }
-      return liveProvider.fetchPgrb2FilteredRaw(selectedCycle,lead);
+      return sameRequestRetryV1(
+        `pgrb2:${new Date(selectedCycle).toISOString()}:f${String(lead).padStart(3,"0")}`,
+        ()=>liveProvider.fetchPgrb2FilteredRaw(selectedCycle,lead),
+      );
     },
     fetchSfluxIndexRaw:(selectedCycle:Date|string,lead:number,tick:Date|string)=>{
       if(new Date(tick).toISOString()!==a0) throw new Error("PHASE5_CAPTURE_FROZEN_GFS_SFLUX_TARGET_MISMATCH");
-      return liveProvider.fetchSfluxIndexRaw(selectedCycle,lead,tick);
+      return sameRequestRetryV1(
+        `sflux-index:${new Date(selectedCycle).toISOString()}:f${String(lead).padStart(3,"0")}`,
+        ()=>liveProvider.fetchSfluxIndexRaw(selectedCycle,lead,tick),
+      );
     },
     fetchSfluxMessageRaw:(selectedCycle:Date|string,lead:number,tick:Date|string,selected:Parameters<GfsNomadsLiveProviderV1["fetchSfluxMessageRaw"]>[3])=>{
       if(new Date(tick).toISOString()!==a0) throw new Error("PHASE5_CAPTURE_FROZEN_GFS_SFLUX_TARGET_MISMATCH");
-      return liveProvider.fetchSfluxMessageRaw(selectedCycle,lead,tick,selected);
+      return sameRequestRetryV1(
+        `sflux-message:${new Date(selectedCycle).toISOString()}:f${String(lead).padStart(3,"0")}`,
+        ()=>liveProvider.fetchSfluxMessageRaw(selectedCycle,lead,tick,selected),
+      );
     },
   };
   const composer=new GfsNomadsRawBundleComposerV1({
@@ -376,14 +417,20 @@ async function main():Promise<void> {
   const extendedWindow=gfsLeadWindowV1(lastRollingTarget,cycle);
   let extendedLeadCount=0;
   for(let lead=composed.lead_end+1;lead<=extendedWindow.lead_end;lead+=1) {
-    const pgrb2=await liveProvider.fetchPgrb2FilteredRaw(cycle,lead);
+    const pgrb2=await sameRequestRetryV1(
+      `extended-pgrb2:${cycle}:f${String(lead).padStart(3,"0")}`,
+      ()=>liveProvider.fetchPgrb2FilteredRaw(cycle,lead),
+    );
     await retainCapturedGfsRawV1({
       retention:captureRetention,
       raw:pgrb2,
       request_id:`phase5.a0.capture:gfs:extended:pgrb2:f${String(lead).padStart(3,"0")}`,
       a0,
     });
-    const idxRaw=await liveProvider.fetchSfluxIndexRaw(cycle,lead,a0);
+    const idxRaw=await sameRequestRetryV1(
+      `extended-sflux-index:${cycle}:f${String(lead).padStart(3,"0")}`,
+      ()=>liveProvider.fetchSfluxIndexRaw(cycle,lead,a0),
+    );
     await retainCapturedGfsRawV1({
       retention:captureRetention,
       raw:idxRaw,
@@ -391,7 +438,10 @@ async function main():Promise<void> {
       a0,
     });
     const selected=parseGfsSfluxIndexV1(idxRaw.response.bytes,lead);
-    const messageRaw=await liveProvider.fetchSfluxMessageRaw(cycle,lead,a0,selected);
+    const messageRaw=await sameRequestRetryV1(
+      `extended-sflux-message:${cycle}:f${String(lead).padStart(3,"0")}`,
+      ()=>liveProvider.fetchSfluxMessageRaw(cycle,lead,a0,selected),
+    );
     await retainCapturedGfsRawV1({
       retention:captureRetention,
       raw:messageRaw,
@@ -515,6 +565,9 @@ async function main():Promise<void> {
     capture_started_at:captureStartedAt,
     minimum_capture_runway_minutes:MIN_CAPTURE_RUNWAY_MINUTES,
     soil_window_settle_minutes:SOIL_WINDOW_SETTLE_MINUTES,
+    same_request_max_attempts:SAME_REQUEST_MAX_ATTEMPTS,
+    same_request_retry_count:sameRequestRetryCount,
+    cross_cycle_retry_authorized:false,
     soil_requested_at:soilRequestedAt,
     a0,
     o00:addHoursV1(a0,1),
