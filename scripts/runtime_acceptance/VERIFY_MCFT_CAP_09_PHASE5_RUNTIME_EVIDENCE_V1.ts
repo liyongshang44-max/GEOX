@@ -111,7 +111,8 @@ async function main(): Promise<void> {
 
     const soil = selected.get("soil_moisture_observation_v1")!;
     exactScope(soil);
-    assert.equal(soil.origin_source_kind, "KBS_LTER");
+    assert.equal(soil.origin_source_kind, "EXTERNAL_PUBLIC_RESEARCH_DATASET");
+    assert.equal(soil.origin_source_id, "KBS_LTER_CURRENT_WEATHER_VARIATE_25");
     const observedAt = canonicalIso(
       soil.role_time?.observed_at,
       "PHASE5_RUNTIME_EVIDENCE_SOIL_OBSERVED_INVALID",
