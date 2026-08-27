@@ -56,6 +56,8 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts'
       - 'apps/server/src/infra/migrations.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1.ts'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1.ts'
   merge_group:
     types: [checks_requested]
 
