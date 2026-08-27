@@ -194,6 +194,7 @@ jobs:
           files = [
               pathlib.Path("apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts"),
               pathlib.Path("apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts"),
+              pathlib.Path("apps/server/src/runtime/twin_runtime/postgres_twin_runtime_successor_viability_v1.ts"),
           ]
           text = "\n".join(p.read_text(encoding="utf-8") for p in files)
 
@@ -207,6 +208,8 @@ jobs:
               "external_evidence_supply_cursor_v1",
               "external_evidence_supply_event_v1",
               "external_evidence_producer_lease_v1",
+              "twin_external_formal_forcing_base_",
+              "twin_external_formal_forcing_controller_",
           ]
           for marker in forbidden_runtime_dependencies:
               if marker in text:
@@ -234,6 +237,7 @@ jobs:
               "PostgresForecastScenarioRecoveryRepositoryV1",
               "ExternalFormalV3Amendment19PersistentTickServiceV1",
               "ExternalFormalV3Amendment19RunnerV1",
+              "PostgresTwinRuntimeSuccessorViabilityV1",
               "TwinRuntimeHostV1",
           ]
           for marker in required_product_bindings:
