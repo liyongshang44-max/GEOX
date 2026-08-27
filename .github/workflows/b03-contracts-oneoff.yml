@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: c5b4c82af869751d13a96412f0d27522866ee8ad
+          ref: fc2745df43c3641cc6ca1479fcb6c7268b01e41b
           fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
