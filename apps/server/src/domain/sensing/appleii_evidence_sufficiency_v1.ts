@@ -91,10 +91,10 @@ async function readDeviceHealthStatusRowV1(db: DbConn, params: {
     const args: unknown[] = [params.tenant_id, deviceId];
     const where = ["tenant_id = $1", "device_id = $2"];
     let p = 3;
-    if (params.project_id) { where.push(`project_id = ${p++}`); args.push(params.project_id); }
-    if (params.group_id) { where.push(`group_id = ${p++}`); args.push(params.group_id); }
-    if (params.field_id) { where.push(`field_id = ${p++}`); args.push(params.field_id); }
-    where.push(`updated_ts_ms IS NOT NULL AND updated_ts_ms <= ${p++}`);
+    if (params.project_id) { where.push(`project_id = $${p++}`); args.push(params.project_id); }
+    if (params.group_id) { where.push(`group_id = $${p++}`); args.push(params.group_id); }
+    if (params.field_id) { where.push(`field_id = $${p++}`); args.push(params.field_id); }
+    where.push(`updated_ts_ms IS NOT NULL AND updated_ts_ms <= $${p++}`);
     args.push(params.decision_time_ms);
 
     try {
@@ -118,11 +118,11 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: { te
   const nowMs = Number.isFinite(params.now_ms) ? Number(params.now_ms) : Date.now(), observationWindowMs = Number(params.observation_window_ms ?? 6 * 60 * 60 * 1000), expectedSampleIntervalMs = Number(params.expected_sample_interval_ms ?? 30 * 60 * 1000), minSampleCount = Number(params.min_sample_count ?? 3), minCoverageRatio = Number(params.min_coverage_ratio ?? 0.5), maxAllowedGapMs = Number(params.max_gap_ms ?? Math.max(expectedSampleIntervalMs * 2, 60 * 60 * 1000)), freshnessMaxAgeMs = Number(params.freshness_max_age_ms ?? Math.max(expectedSampleIntervalMs * 2, 60 * 60 * 1000)), formalSourcePolicy = buildFormalSourcePolicy(params.formal_source_policy), startTs = nowMs - observationWindowMs, endTs = nowMs;
   const args: any[] = [params.tenant_id, startTs, endTs], where: string[] = [`(payload_json ->> 'tenant_id') = $1`, `ts_ms >= $2`, `ts_ms <= $3`];
   let p = 4;
-  if (params.project_id) { where.push(`(payload_json ->> 'project_id') = ${p++}`); args.push(params.project_id); }
-  if (params.group_id) { where.push(`(payload_json ->> 'group_id') = ${p++}`); args.push(params.group_id); }
-  if (params.field_id) { where.push(`(payload_json ->> 'field_id') = ${p++}`); args.push(params.field_id); }
-  if (params.device_id) { where.push(`sensor_id = ${p++}`); args.push(params.device_id); }
-  where.push(`created_at <= to_timestamp(${p++} / 1000.0)`);
+  if (params.project_id) { where.push(`(payload_json ->> 'project_id') = $${p++}`); args.push(params.project_id); }
+  if (params.group_id) { where.push(`(payload_json ->> 'group_id') = $${p++}`); args.push(params.group_id); }
+  if (params.field_id) { where.push(`(payload_json ->> 'field_id') = $${p++}`); args.push(params.field_id); }
+  if (params.device_id) { where.push(`sensor_id = $${p++}`); args.push(params.device_id); }
+  where.push(`created_at <= to_timestamp($${p++} / 1000.0)`);
   args.push(nowMs);
 
   const sampleRows = await db.query(`SELECT sample_id, sensor_id, ts_ms, metric, value, qc_quality, source, payload_json, created_at FROM raw_samples WHERE ${where.join(" AND ")} ORDER BY ts_ms ASC LIMIT 20000`, args);
