@@ -45,11 +45,11 @@ export async function appendRawSampleRuntimeAvailabilityMarkerV1(
      )
      INSERT INTO facts (fact_id, occurred_at, source, record_json)
      SELECT
-       $2,
+       $2::text,
        visible_raw_sample.available_to_runtime_at,
-       $3,
+       $3::text,
        jsonb_build_object(
-         'type', $3,
+         'type', $3::text,
          'schema_version', '1.0.0',
          'sample_id', $1,
          'raw_sample_fact_id', $4::text,
