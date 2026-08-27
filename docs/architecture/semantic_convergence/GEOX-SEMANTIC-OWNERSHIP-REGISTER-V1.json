@@ -2107,6 +2107,39 @@
         "Historical semantic-authority removal remains B-09 only."
       ],
       "runtime_consumers": []
+    },
+    {
+      "semantic_id": "decision.integration_ports",
+      "question": "Which typed authority-input and decision-producer seams may future MCFT, ADR, human, deterministic, and LLM integrations use without creating parallel authority?",
+      "target_owner": "Decision Runtime typed integration boundary",
+      "canonical_output_type": "Typed Decision Integration Ports V1 (B-08b contracts frozen; real MCFT/ADR/LLM bindings structurally disconnected)",
+      "current_state": "BOUNDARY_CLEAR_TARGET_NOT_YET_PRODUCT_CONNECTED",
+      "target_phase": "B-08",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "future-decision-integration-port-contracts",
+          "path": "apps/server/src/contracts/decision_integration_ports_v1.ts",
+          "role": "B-08b typed port contract reference; no production port output or real provider binding",
+          "authority_level": "FUTURE_TARGET_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "INTENTIONAL_ISOLATION",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        }
+      ],
+      "registered_consumers": [],
+      "notes": [
+        "B-08b freezes GovernedEvidencePort, ContextAuthorityPort, TwinDecisionInputPort, KnowledgeClaimInputPort, DeterministicCalculatorPort, HumanReasoningPort, and LLMReasoningPort typed contracts.",
+        "Decision-producer ports may output only CandidateDecisionV1 and never final eligibility/approval/task/device authority.",
+        "Real MCFT, ADR, and LLM bindings are structurally DISCONNECTED with null adapter/provider refs and INTENTIONAL_NONE runtime edges.",
+        "Real MCFT adapter, ADR runtime, and LLM provider remain a later program after B-line."
+      ],
+      "runtime_consumers": []
     }
   ],
   "static_guards": [
@@ -2609,6 +2642,50 @@
       },
       "registered_paths": [],
       "failure": "UNREGISTERED_DECISION_EPISODE_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-20-decision-producer-port-output-instantiation",
+      "semantic_id": "decision.integration_ports",
+      "description": "B-08b freezes typed decision-producer port output contracts but permits zero production instantiations; later registration must be explicit.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "decisionProducerPortOutputV1Schema.parse("
+        ]
+      },
+      "registered_paths": [],
+      "failure": "UNREGISTERED_DECISION_PRODUCER_PORT_OUTPUT"
+    },
+    {
+      "guard_id": "G-B02-21-future-integration-binding-instantiation",
+      "semantic_id": "decision.integration_ports",
+      "description": "B-08b permits zero production future MCFT/ADR/LLM binding descriptors; real integration remains disconnected until a later explicitly governed program.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "futureDecisionIntegrationBindingV1Schema.parse("
+        ]
+      },
+      "registered_paths": [],
+      "failure": "UNREGISTERED_FUTURE_DECISION_INTEGRATION_BINDING"
     }
   ],
   "connectivity_model": {
