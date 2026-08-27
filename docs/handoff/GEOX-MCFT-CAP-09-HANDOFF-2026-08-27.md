@@ -1,3 +1,1861 @@
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-08-28 Continuation — Phase 5 Exact-Head Production-Equivalent 24T / O00 Successor-Checkpoint Frontier
+
+Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
+
+Timestamp: **2026-08-28 01:17 +08:00**
+
+Repository: liyongshang44-max/GEOX
+
+Purpose: continue the same MCFT-CAP-09 Production Hosting Phase 5 handoff after the previous 2026-08-27 continuation. This section records the actual repository state reached after Phase 5 central registration, the Evidence work-item seam, fresh Phase 3/4 requalification, Twin canonical-fact DB hardening, migration of the useful #3319 scientific-runtime/two-service qualification capability into #3323, real NOMADS/KBS raw capture, and the first production-equivalent accelerated 24T run that crossed raw capture, Evidence canonical ingestion, and A0/24-slot preparation before failing at the first post-O00 Phase4 successor-checkpoint consistency check.
+
+> **This section is now the highest-priority conversation continuation in this file.**
+>
+> The previous top-level Phase 5 continuation beginning with `C0` is intentionally preserved in full below as the historical state before this later Phase 5 work.
+>
+> The original Phase 2 continuation remains preserved below that.
+>
+> Do not delete either historical section: together they preserve the full Phase2 → Phase3 → Phase4 → Phase5 reasoning chain.
+>
+> This handoff does **not** supersede `docs/SSOT.md`, the MCFT Master Task Line, the CAP-09 taskbook, accepted CAP-01→08 authority, immutable Formal evidence, the qualification control plane, or the frozen Production Hosting route.
+
+---
+
+## D0. READ THIS FIRST — the current frontier changed after the last conversational status message
+
+The last conversational status supplied by the user said run `33096293529` was still spending a long time in:
+
+`Capture real causal A0 soil and GFS raw objects`
+
+and that there was no new failure signal.
+
+That statement was correct at the moment it was written, but the repository advanced immediately afterward.
+
+The authoritative current GitHub result is now:
+
+```text
+#3323 exact head = a40260236c4716ba15fbb2511c5720713a524687
+24T run          = 33096293529
+24T conclusion   = FAILURE
+```
+
+The important correction is:
+
+```text
+Step 7  Capture real causal A0 soil and GFS raw objects                 SUCCESS
+Step 8  Run same Evidence process graph against captured raw            SUCCESS
+Step 9  Prepare A0 and exact 24-slot manifest from canonical Evidence   SUCCESS
+Step 10 Run O00-O07 then graceful Twin container stop                   FAILURE
+```
+
+The current runtime error is:
+
+```text
+PHASE4_SUCCESSOR_CHECKPOINT_TIME_MISMATCH
+```
+
+Therefore the project is **not stuck in provider acquisition** and is **not deadlocked**.
+
+The true current frontier is:
+
+```text
+real raw capture              CLOSED for this exact head/run
+        ↓
+same Evidence process graph   CLOSED for this exact head/run
+        ↓
+canonical Evidence DB         CLOSED for this exact head/run
+        ↓
+A0 + O00-O23 manifest         CLOSED for this exact head/run
+        ↓
+O00 Twin terminal commit      REACHED
+        ↓
+Phase4 successor viability    CURRENT BLOCKER
+        ↓
+O01-O07                       NOT REACHED
+restart
+O08-O23
+final verifier                NOT REACHED
+```
+
+Do not wait for live capture again as if Step 7 were still running.
+
+---
+
+## D1. Current task in one sentence
+
+**Keep #3323 as the sole Phase 5 implementation frontier and repair the exact post-O00 checkpoint/successor consistency defect exposed by the real production-equivalent two-service 24T, without weakening Phase4 successor viability, without changing the qualified Evidence/Twin production graph into a test-only graph, and without registering LEGACY_AM19 or Phase5 durable closure evidence until a fresh exact-head 24T actually completes O00→O23 including restart and final DB-isolation verification.**
+
+---
+
+## D2. Exact current repository / PR state
+
+### D2.1 Protected main
+
+Protected `main` remains exactly:
+
+```text
+26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+```
+
+GitHub reports it is protected.
+
+None of the Phase 5 work in this continuation has moved protected `main`.
+
+### D2.2 Frozen stacked predecessors
+
+Production-hosting predecessor chain remains:
+
+```text
+Phase2 closure = c3346768a44b16b127378cb690ada1d8cfec1049
+Phase3 closure = 0e874b254c695b32fd94c7dc7034fd71b8aa3bc3
+Phase4 closure = 16ff7160473c0a25dc059db6b2b6b7ba07f54dd1
+```
+
+Phase 5 remains stacked on Phase 4.
+
+### D2.3 Current Phase 5 main frontier — #3323
+
+Draft PR:
+
+```text
+#3323
+feat(mcft-cap09): build Phase5 production-equivalent containers
+```
+
+Branch:
+
+```text
+feat/mcft-cap09-phase5-production-equivalent-containers-v1
+```
+
+Base:
+
+```text
+16ff7160473c0a25dc059db6b2b6b7ba07f54dd1
+```
+
+Current exact head:
+
+```text
+a40260236c4716ba15fbb2511c5720713a524687
+```
+
+GitHub facts at this handoff:
+
+```text
+state         = open
+Draft         = true
+mergeable     = true
+commits       = 71
+changed_files = 41
+```
+
+**#3323 is the only current Phase 5 implementation frontier.**
+
+Do not split new Phase 5 semantics back into #3319.
+
+### D2.4 #3319 is now a historical capability source, not the active graph
+
+Draft PR #3319 remains open:
+
+```text
+#3319
+feat(mcft-cap09): qualify Phase5 two-service accelerated 24T
+head = 5c59a81a58f5ebf171d8206f821042c549d20e6d
+base = 16ff7160473c0a25dc059db6b2b6b7ba07f54dd1
+```
+
+It was audited and used only as the source of useful infrastructure ideas/capability:
+
+- scientific Runtime image;
+- two-service container orchestration;
+- 24T preparation/verification shape.
+
+Its old hosting/runtime assembly is **not authoritative** and must not be revived.
+
+The current rule is:
+
+```text
+#3319 infrastructure capability
+        ↓ migrate only the useful primitives
+#3323 latest production process graph
+        ↓
+qualification
+```
+
+not:
+
+```text
+run #3319 old hosting runtime beside #3323
+```
+
+### D2.5 Conversation handoff PR
+
+Docs-only Draft PR #3298 remains:
+
+```text
+branch = docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier
+base   = 26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+```
+
+Before this update:
+
+```text
+head         = 7b35a755e751dfc2d95dae90ce275ea8c04a3917
+commits      = 3
+changed_files= 2
+Draft        = true
+open         = true
+mergeable    = true
+```
+
+This continuation remains docs-only.
+
+Do not mix implementation mutation into #3298.
+
+---
+
+## D3. Current phase map
+
+```text
+Phase 2 production Evidence productization       MACHINE CLOSED predecessor
+        exact = c3346768…
+        ↓
+Phase 3 durable Evidence Runtime                 MACHINE CLOSED predecessor
+        exact closure = 0e874b25…
+        fresh successor anchors exist
+        ↓
+Phase 4 durable Twin Runtime                     MACHINE CLOSED predecessor
+        exact closure = 16ff7160…
+        fresh successor anchors exist
+        ↓
+Phase 5 production-equivalent containers / 24T   IN PROGRESS  ← CURRENT
+        exact head = a4026023…
+        raw capture / Evidence ingress / prepare crossed
+        O00 successor-checkpoint blocker
+        ↓
+Phase 6 production ownership cutover             NOT STARTED / FORBIDDEN
+        ↓
+Phase 7 fresh Formal-v5                          NOT ARMED
+```
+
+Current CAP-09 status:
+
+```text
+IN PROGRESS
+NOT COMPLETE
+NOT GRADUATED
+PHASE5 NOT CLOSED
+PHASE6 NOT STARTED
+FORMAL-V5 NOT ARMED
+PROTECTED MAIN UNCHANGED
+```
+
+---
+
+## D4. What was completed after the previous `8671ac74…` handoff
+
+The previous continuation stopped before the Evidence qualification seam, dedicated Compose, full central registration, Twin DB writer hardening, and real 24T were complete.
+
+Those areas have materially advanced.
+
+### D4.1 Phase 5 central exact-path ownership was repaired
+
+The old state had Phase5 paths in:
+
+```text
+unknown_changed_paths
+```
+
+with:
+
+```text
+authority_errors = []
+resolver_errors  = []
+```
+
+That gap has been closed.
+
+The current exact 24T workflow itself now passes:
+
+```text
+Require central exact-path ownership = SUCCESS
+```
+
+EA5E2 graph on current exact head is also SUCCESS.
+
+Do not reintroduce broad directory wildcards.
+
+### D4.2 Evidence `work_item_factory` seam landed and default production identity was preserved
+
+The agreed Phase3 composition seam was implemented.
+
+Production default remains the real:
+
+```text
+ProductionEvidenceWorkItemFactoryV1
+```
+
+Qualification may inject the controlled work-item factory at the explicit qualification boundary.
+
+The rest of the Evidence graph remains production-owned:
+
+```text
+Evidence host
+→ cycle service
+→ provider transport
+→ raw retention
+→ scientific decoder
+→ canonicalizer
+→ fenced governed DB COMMIT
+→ post-COMMIT visibility
+→ EvidenceSupplyCursor
+```
+
+### D4.3 Per-target Evidence source-family selection was added without changing the default
+
+Current target-level selection supports explicit source families such as:
+
+```text
+KBS_SOIL
+KBS_RAW_HOURLY
+GFS_BUNDLE
+```
+
+Production default remains all required source families.
+
+This seam exists so a qualification target can request only the source families that are semantically needed for that target.
+
+It is **not** permission to bypass the production Evidence pipeline.
+
+### D4.4 Evidence qualification entrypoint now uses the same production process graph
+
+A stable qualification entrypoint was added that delegates into the same Evidence process/composition graph while injecting only the controlled provider/work-item boundary.
+
+Do not create a second simplified Evidence runner.
+
+### D4.5 Twin accelerated-clock qualification entrypoint now uses the same production Twin process
+
+The Phase4 Twin composition/process now exposes explicit qualification clock seams while preserving production defaults:
+
+```text
+production host DB clock = PostgreSQL transaction time
+production scheduler clock = SYSTEM_DATABASE_UTC
+qualification override = explicit accelerated engineering clock only
+```
+
+The qualification Twin entrypoint calls the same:
+
+```text
+runMcftCap09TwinRuntimeProcessV1()
+```
+
+It does not reimplement scheduler, lease, runner, persistence, checkpoint, or successor semantics.
+
+### D4.6 Dedicated Phase5 qualification Compose now exists
+
+The current dedicated qualification topology includes separate services/roles for:
+
+- PostgreSQL;
+- private raw object store;
+- platform bootstrap;
+- Phase5 service-principal bootstrap;
+- fixture/raw capture;
+- Evidence Runtime;
+- qualification prepare;
+- Twin Runtime;
+- qualification verifier.
+
+It is qualification-only.
+
+It does not cut over production ownership.
+
+### D4.7 Per-container runtime lease identity was repaired
+
+An early Compose version accidentally fixed runtime lease owners in environment variables.
+
+That is unsafe for duplicate-container fencing because two containers could look like the same owner.
+
+The current rule is:
+
+```text
+long-running Evidence/Twin runtime
+        ↓
+HOSTNAME-derived default lease owner
+        ↓
+container-unique owner identity
+```
+
+Qualification bootstrap ownership is separate and short-lived.
+
+Do not put a fixed long-running Twin/Evidence owner back into Compose.
+
+### D4.8 Qualification bootstrap lease now expires naturally
+
+An intermediate implementation tried to release the bootstrap Twin lease by administrator UPDATE.
+
+That was rejected.
+
+Current qualification bootstrap uses a short TTL and:
+
+```text
+bootstrap_lease_release_mode = NATURAL_TTL_EXPIRY
+```
+
+The qualification orchestrator must not become a privileged lease-table repair mechanism.
+
+---
+
+## D5. Twin canonical-fact DB writer hardening — the major Phase 5 security repair
+
+The user explicitly required:
+
+```text
+Evidence/Twin DB layer must provide real bidirectional isolation
+```
+
+This is now materially implemented.
+
+### D5.1 Prior weakness
+
+Evidence Runtime had already been narrowed to a governed SECURITY DEFINER writer.
+
+Twin Runtime still had application paths that could directly:
+
+```sql
+INSERT INTO public.facts
+```
+
+through its runtime privilege role.
+
+That meant the separation was partly an application convention rather than a DB-enforced boundary.
+
+### D5.2 Current Twin writer design
+
+New/qualified boundary:
+
+```text
+Twin LOGIN
+   ↓
+geox_mcft_cap09_twin_runtime_v1 privilege role
+   ↓
+NO direct INSERT on public.facts
+   ↓
+EXECUTE only on fenced Twin SECURITY DEFINER writer
+   ↓
+NOLOGIN Twin writer owner
+   ↓
+scope + object family + lease owner + fencing token + expiry checks
+   ↓
+canonical Twin fact append
+```
+
+Key implementation:
+
+`apps/server/src/persistence/twin_runtime/postgres_mcft_cap09_twin_canonical_fact_writer_v1.ts`
+
+Phase 5 hardening migration:
+
+`apps/server/db/migrations/2026_08_27_mcft_cap_09_phase5_twin_fact_writer_acl.sql`
+
+### D5.3 DB function checks stale ownership before idempotent-existing success
+
+Hard invariant:
+
+```text
+stale owner
+   ↓
+must be rejected first
+   ↓
+must not reach "existing idempotent success" shortcut
+```
+
+This mirrors the Evidence-plane pre-COMMIT fencing requirement.
+
+### D5.4 Twin writer cannot manufacture Evidence fact families
+
+The DB function only authorizes the governed Twin canonical object families required by the current Runtime graph.
+
+Evidence families such as soil observations are rejected at the DB boundary.
+
+### D5.5 Evidence and Twin writer EXECUTE authority is cross-denied
+
+Required matrix:
+
+```text
+Evidence role → Evidence writer EXECUTE  yes
+Evidence role → Twin writer EXECUTE      no
+
+Twin role     → Twin writer EXECUTE      yes
+Twin role     → Evidence writer EXECUTE  no
+
+Twin role     → direct facts INSERT      no
+Evidence role → arbitrary facts INSERT   no
+```
+
+### D5.6 Current Phase 5 production composition explicitly injects the fenced writer
+
+The active production Twin composition uses:
+
+```text
+PostgresMcftCap09TwinCanonicalFactWriterV1
+```
+
+for the canonical A-record-set / Forecast / Scenario path used by the Phase5 Twin process.
+
+Do not remove this injection to make a test easier.
+
+### D5.7 Important nuance — do not mechanically delete every historical direct INSERT string
+
+Some historical/bootstrap repository methods retain old direct-write semantics for control-plane/prewindow bootstrap paths.
+
+The engineering goal is **not** “grep returns zero INSERT strings”.
+
+The real goal is:
+
+```text
+the deployed long-running Phase5 Twin LOGIN
+cannot directly insert facts
+and the current O00-O23 production Twin graph
+uses the fenced writer
+```
+
+Do not mutate frozen historical/bootstrap semantics merely for cosmetic source purity.
+
+---
+
+## D6. #3319 capability migration — what moved and what did not
+
+### D6.1 What was worth migrating
+
+From #3319:
+
+- a dedicated MCFT-CAP-09 scientific Runtime image;
+- required Python scientific dependencies;
+- two-service container orchestration pattern;
+- raw capture / prepare / verify orchestration concepts.
+
+### D6.2 Scientific Runtime image
+
+Current Phase5 image:
+
+`docker/mcft-cap09-runtime.Dockerfile`
+
+It carries the scientific stack required by the actual product decoders, including the real GFS/eccodes path.
+
+This was necessary because the generic commercial runtime image did not prove the scientific decoding environment required by the production GFS product path.
+
+### D6.3 What was explicitly not migrated
+
+Do not revive:
+
+```text
+apps/server/src/hosting/mcft_cap09_phase5_two_service_runtime_v1.ts
+```
+
+or any equivalent #3319 test-only runtime assembly.
+
+The authority rule is:
+
+```text
+scientific image / Compose / orchestration may migrate
+runtime algorithm may not
+```
+
+### D6.4 Current active execution graph
+
+Evidence:
+
+```text
+compiled qualification Evidence entry
+        ↓
+current Evidence production process
+        ↓
+current Phase3 product composition
+```
+
+Twin:
+
+```text
+compiled qualification Twin entry
+        ↓
+current Twin production process
+        ↓
+current Phase4 product composition
+        ↓
+ExternalFormalV3Amendment19RunnerV1
+        ↓
+canonical persistent tick graph
+```
+
+This is the core “do not test another implementation” requirement.
+
+---
+
+## D7. Live A0 raw capture and NOMADS provider repairs
+
+The exact-head 24T lane now performs real external raw acquisition.
+
+### D7.1 No fake GRIB
+
+The lane does **not** create a tiny synthetic GFS GRIB to satisfy the product decoder.
+
+It captures real provider bytes and later replays those bytes through the real product scientific decoder.
+
+### D7.2 A0 is chosen from real causal provider availability
+
+The live capture stage resolves a real A0 from causal:
+
+- KBS soil raw;
+- GFS raw bundle.
+
+The successful current run resolved:
+
+```text
+A0  = 2026-08-27T18:00:00.000Z
+O00 = 2026-08-27T19:00:00.000Z
+O07 = 2026-08-28T02:00:00.000Z
+O23 = 2026-08-28T18:00:00.000Z
+```
+
+### D7.3 Docker bind-mount EBUSY was a false infrastructure blocker
+
+The capture helper originally attempted to recursively remove the bind mount root itself.
+
+Docker correctly returned:
+
+```text
+EBUSY
+```
+
+Repair:
+
+- preserve the mount point;
+- clear only the directory contents.
+
+Do not `rmSync(root, recursive)` on a mounted fixture root.
+
+### D7.4 GFS retained-member 220 vs 219 was an accounting bug, not raw loss
+
+The product composer had captured all real raw members.
+
+The qualification helper incorrectly subtracted every directory rejection from retained-member count, including candidates rejected before any raw request happened.
+
+Repair:
+
+- count actual retained rejected-directory objects;
+- assert captured raw count equals product `raw_provider_object_count`;
+- do not weaken retention-before-parse.
+
+### D7.5 NOMADS F070 HTTP 302 exposed a real production acquisition problem
+
+The first fully live GFS attempt hit HTTP 302 around PGRB2 F070.
+
+The correct conclusion was not:
+
+```text
+accept 302
+follow arbitrary redirect
+qualification retry hack
+```
+
+The real issue was overly aggressive repeated use of the NOMADS Grib Filter CGI.
+
+### D7.6 NOMADS responsible-sharing cadence is now product behavior
+
+`GfsNomadsLiveProviderV1` now enforces the NOAA Grib Filter responsible-sharing cadence.
+
+Production minimum interval:
+
+```text
+10,000 ms
+```
+
+The cadence belongs in the product provider because that is the layer that knows which requests are Grib Filter CGI requests.
+
+It does not belong in the generic HTTPS transport or the qualification runner.
+
+### D7.7 Timer jitter must not create false <10s failures
+
+An initial cadence implementation measured at the wrong boundary and could fail because real timers wake slightly early.
+
+The final cadence logic was repaired to enforce the interval at the observed request-start boundary rather than trusting a timer request duration.
+
+Do not weaken the 10s requirement; measure it correctly.
+
+### D7.8 Test cadence may use a virtual/injected clock but production may not
+
+Focused acceptance may use an injected cadence port so the test suite does not literally wait 10 seconds.
+
+The live provider default still uses real elapsed time.
+
+Never let the test port become the production default.
+
+### D7.9 Root-owned proof files were an orchestration issue, not a semantic failure
+
+Capture/prepare containers can create root-owned proof files on bind mounts.
+
+The runner later needs to inspect/upload them.
+
+The workflow now explicitly hands proof metadata back to the runner.
+
+Do not confuse Linux bind-mount ownership with provider/Runtime failure.
+
+---
+
+## D8. Fresh predecessor anchors now exist and must not be confused with Phase 5 closure
+
+The current evidence registry contains fresh immutable successor anchors after the new Phase3/Phase4 seams.
+
+Important current anchors include:
+
+### D8.1 Phase 3 post-NOMADS-cadence anchor
+
+```text
+evidence_id = PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_76C920E1
+subject_sha = 76c920e15546b55b4a4f5e317cc9ad820b20b0f8
+run_id      = 33085589432
+conclusion  = success
+dependency_digest =
+  sha256:9569eb7630e736e70cfa56942e15a39a14c933c804e194c83050047fd67b8b94
+```
+
+### D8.2 Phase 4 post-Phase5-writer anchor
+
+```text
+evidence_id = PHASE4_TWIN_RUNTIME_FOUNDATION_REQUAL_76C920E1
+subject_sha = 76c920e15546b55b4a4f5e317cc9ad820b20b0f8
+run_id      = 33085589444
+conclusion  = success
+dependency_digest =
+  sha256:e503940c018c286bfaafa10b7ad71113c057727d356c71f0d3d709617539fe82
+```
+
+Earlier focused anchors such as the post-work-item Phase3 and post-clock-seam Phase4 anchors remain historical evidence in the registry.
+
+These fresh predecessor anchors are legitimate because they bind real successful runs.
+
+They are **not Phase5 durable closure evidence**.
+
+Do not use them as a substitute for successful production-equivalent 24T.
+
+---
+
+## D9. Current exact-head machine evidence on `a4026023…`
+
+Current exact head:
+
+```text
+a40260236c4716ba15fbb2511c5720713a524687
+```
+
+Exact-head workflows:
+
+```text
+ci
+run 33096293513
+SUCCESS
+
+mcft-cap-09-phase3-evidence-runtime-persistence
+run 33096293572
+SUCCESS
+
+mcft-cap-09-phase4-twin-runtime-persistence
+run 33096293581
+SUCCESS
+
+mcft-cap-09-phase5-production-equivalent-containers
+run 33096293662
+SUCCESS
+
+mcft-cap-09-ea5e2-runtime-dependency-graph
+run 33096293584
+SUCCESS
+
+mcft-cap-09-ea5e2-successor-runner-qualification
+run 33096293728
+SUCCESS
+
+mcft-cap-09-qualification-control-plane-v1
+run 33096293612
+FAILURE — bounded blocker inventory only
+
+mcft-cap-09-phase5-two-service-accelerated-24t
+run 33096293529
+FAILURE — Step 10 successor-checkpoint mismatch
+```
+
+This combination is important:
+
+```text
+Phase3/4/5 packaging and graph are green
+while
+the first real integrated 24T has exposed a runtime cross-component consistency defect
+```
+
+Do not interpret the Step 10 failure as “Phase4 was never qualified”.
+
+It is a new integration-scale successor/checkpoint interaction exposed by the current production-equivalent topology.
+
+---
+
+## D10. Current production-equivalent 24T — exact result of run `33096293529`
+
+### D10.1 What definitely passed
+
+On exact head `a4026023…`:
+
+1. checkout exact Phase5 subject — SUCCESS;
+2. require exact head/private qualification roots — SUCCESS;
+3. central exact-path ownership — SUCCESS;
+4. build exact scientific Runtime image — SUCCESS;
+5. isolated PostgreSQL + private raw store — SUCCESS;
+6. capture real causal A0 soil + GFS raw objects — SUCCESS;
+7. same Evidence process graph against captured raw — SUCCESS;
+8. A0 + exact 24-slot manifest from canonical Evidence DB — SUCCESS.
+
+The Evidence Runtime log reached:
+
+```text
+CYCLE_COMPLETED
+PLANNER_EXHAUSTED
+```
+
+Therefore this run proves that the following chain really executed together:
+
+```text
+real provider raw
+        ↓
+scientific runtime image
+        ↓
+current Evidence process
+        ↓
+raw retention
+        ↓
+current scientific decoder
+        ↓
+canonical Evidence ingress
+        ↓
+canonical Evidence DB
+        ↓
+qualification prepare reading canonical DB
+```
+
+This is a major frontier advance over all earlier static/packaging proofs.
+
+### D10.2 What happened at O00
+
+The Twin container started successfully.
+
+Observed health progression:
+
+```text
+STARTING
+cycle_attempt=0
+terminal_slot_count=0
+        ↓
+HEALTHY
+cycle_attempt=1
+terminal_slot_count=1
+detail=TERMINAL_SLOT_RECORDED
+        ↓
+DEGRADED
+cycle_attempt=2
+terminal_slot_count=1
+detail=FATAL_CYCLE_FAILURE
+```
+
+Fatal error:
+
+```text
+PHASE4_SUCCESSOR_CHECKPOINT_TIME_MISMATCH
+```
+
+Call stack:
+
+```text
+PostgresTwinRuntimeSuccessorViabilityV1.verifyAfterTerminal
+→ TwinRuntimeHostV1.run
+→ runMcftCap09TwinRuntimeProcessV1
+→ runMcftCap09Phase5TwinRuntimeQualificationV1
+```
+
+This means:
+
+- O00 reached terminal scheduler state;
+- successor viability ran after O00;
+- the host failed before O01 could proceed.
+
+### D10.3 O08-O23 and final verifier did not run
+
+Because Step 10 failed:
+
+```text
+Restart Twin container and recover O08-O23 from durable cursor = SKIPPED
+Verify exact 24T canonical and DB isolation closure            = SKIPPED
+```
+
+Therefore do not claim:
+
+- restart recovery PASS;
+- O00-O23 PASS;
+- 24 terminal ticks;
+- final DB-isolation verifier PASS;
+- Phase5 durable closure.
+
+### D10.4 Artifact retained for diagnosis
+
+Run `33096293529` uploaded:
+
+```text
+artifact id = 9657000663
+artifact name =
+  mcft-cap09-phase5-two-service-24t-a40260236c4716ba15fbb2511c5720713a524687
+artifact zip sha256 =
+  fee34a95e84962b47123adbaf1c23efe137fc51984ec6fbdb55483785e3c9297
+```
+
+The workflow uploads proof/log metadata, not the raw provider fixture as durable qualification evidence.
+
+Use this artifact/log evidence to diagnose Step 10.
+
+Do not register it as a successful Phase5 durable anchor.
+
+---
+
+## D11. Current real blocker — `PHASE4_SUCCESSOR_CHECKPOINT_TIME_MISMATCH`
+
+The relevant Phase4 successor check is in:
+
+`apps/server/src/runtime/twin_runtime/postgres_twin_runtime_successor_viability_v1.ts`
+
+For terminal slot O00 the checker computes:
+
+```text
+terminalTime
+        =
+schedule_start + slot_index * 1h
+
+expectedCheckpointNext
+        =
+terminalTime + 1h
+```
+
+For the current run:
+
+```text
+O00 terminalTime          = 2026-08-27T19:00:00.000Z
+expected checkpoint next  = 2026-08-27T20:00:00.000Z
+```
+
+The checker then reads the checkpoint referenced by:
+
+```text
+twin_runtime_checkpoint_latest_index_v1
+        JOIN
+public.facts
+```
+
+and requires both:
+
+```text
+checkpoint logical_time == O00 terminal time
+checkpoint next_tick_logical_time == O01
+```
+
+The observed failure proves at least one of those values did not match.
+
+### D11.1 Do not guess which side is wrong yet
+
+The current run was torn down after failure, so the next step must reproduce/diagnose the persisted values explicitly.
+
+The likely classes to distinguish are:
+
+1. latest checkpoint index points at the wrong checkpoint object;
+2. checkpoint canonical fact has the wrong outer logical time;
+3. checkpoint payload has the wrong `next_tick_logical_time`;
+4. successor viability is reading the canonical checkpoint path incorrectly;
+5. bootstrap/A0 checkpoint remains current when O00 commit should have advanced it;
+6. an accelerated-clock integration assumption has exposed a previously untested transaction/readback ordering issue.
+
+Do not select one by intuition.
+
+### D11.2 Exact diagnostic values to read on the next reproduction
+
+Immediately after O00 terminal commit and before cleanup, capture:
+
+```text
+scheduler cursor:
+  schedule_start_logical_time
+  next_slot_index
+  next_slot_id
+  next_logical_time
+  last_terminal_slot_id
+  last_terminal_logical_time
+
+terminal O00 scheduler row:
+  state
+  logical_time
+
+checkpoint latest index:
+  checkpoint_object_id
+  logical_time
+  source_fact_id
+
+checkpoint canonical fact:
+  payload.logical_time
+  payload.payload.next_tick_logical_time
+  object_id
+  determinism_hash
+  previous_checkpoint_ref
+  last_completed_tick_ref
+  last_posterior_state_ref
+  forecast_result_ref
+
+expected:
+  checkpoint logical_time = 2026-08-27T19:00:00.000Z
+  checkpoint next          = 2026-08-27T20:00:00.000Z
+```
+
+Also compare against the O00 A-record-set member:
+
+```text
+twin_runtime_checkpoint_v1
+```
+
+that was just committed.
+
+### D11.3 Do not weaken the successor check to make O01 run
+
+Forbidden repairs include:
+
+- skip `verifyAfterTerminal()`;
+- change mismatch from fatal to warning;
+- advance cursor manually;
+- force checkpoint index to O01 from workflow code;
+- delete the checkpoint check only in accelerated qualification;
+- replace the successor viability adapter with a test stub;
+- continue O01 after mismatch.
+
+The successor check exists precisely to prove the canonical checkpoint and durable scheduler cursor agree.
+
+The integrated run has found a real inconsistency.
+
+Preserve fail-closed behavior until the exact cause is understood.
+
+---
+
+## D12. Central control plane — only two legitimate blockers remain
+
+Current central run:
+
+```text
+33096293612
+```
+
+The first seven steps passed, including:
+
+- exact control-plane checkout;
+- successor predecessor / zero production binding checks;
+- central applicability semantics;
+- generation/durable-anchor/dependency-digest semantics;
+- immutable evidence references;
+- exact PR applicability plan.
+
+Failure is at:
+
+```text
+Enumerate all blockers without fail-fast
+```
+
+There are two material blockers.
+
+### D12.1 `LEGACY_AM19_PERSISTENT_24T`
+
+Reason:
+
+```text
+NO_VALID_REQUALIFICATION_EVIDENCE
+```
+
+Historical candidates remain valid workflow runs/anchors in many respects, but:
+
+```text
+dependency_digest_match = false
+```
+
+because GFS provider acquisition semantics changed when NOMADS responsible-sharing cadence became real product behavior.
+
+Therefore old AM19 24T evidence cannot simply carry forward.
+
+Correct repair:
+
+```text
+first finish/fix current integrated 24T
+        ↓
+stabilize exact dependency set
+        ↓
+fresh LEGACY_AM19_PERSISTENT_24T requalification
+        ↓
+only then bind new immutable evidence
+```
+
+Do not rebind old evidence to a new digest.
+
+### D12.2 `PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS`
+
+Reason:
+
+```text
+NO_VALID_REQUALIFICATION_EVIDENCE
+candidates = []
+```
+
+This is expected.
+
+There must be no Phase5 durable candidate until the integrated production-equivalent qualification actually succeeds.
+
+### D12.3 These blockers must not be “fixed” before 24T success
+
+Do not add:
+
+- fake Phase5 durable evidence;
+- hand-written success anchor;
+- carry-forward from packaging run;
+- durable anchor for failed run `33096293529`.
+
+The correct order remains:
+
+```text
+24T success
+        ↓
+fresh required requalification
+        ↓
+final dependency digests
+        ↓
+durable evidence registration
+        ↓
+central closure
+```
+
+---
+
+## D13. The current 24T qualification is not a late-exact KBS batch proof
+
+The current successful capture/prepare path establishes real causal A0 soil + GFS and then exercises the production Runtime graph.
+
+Do not silently reinterpret this run as proof of every KBS daily-batch temporal case.
+
+The KBS publication model remains:
+
+```text
+daily batch publication
+!= hourly publication
+```
+
+The current integrated 24T's primary purpose is production-equivalent process/container/persistence/restart qualification.
+
+Late-exact KBS batch semantics remain governed separately by the Phase3 cadence/event-time model and any explicit qualification that claims that case.
+
+Do not add a late-exact claim to Phase5 evidence unless the run actually exercised it.
+
+---
+
+## D14. High-value failure / repair history from this continuation
+
+These are the traps most likely to be reintroduced by the next engineer.
+
+### D14.1 Do not test a second implementation
+
+The entire Phase5 route is built around:
+
+```text
+qualification graph == future production graph
+except explicit provider/clock substitution
+```
+
+No simplified Evidence runner.
+
+No simplified Twin runner.
+
+No test scheduler.
+
+No test persistence repository.
+
+### D14.2 Do not use fake small GRIB
+
+The product GFS decoder expects the real product scientific geometry/contracts.
+
+A small fake payload can make a test green while proving the wrong decoder.
+
+### D14.3 Docker bind mount roots cannot be recursively removed like ordinary directories
+
+Bad:
+
+```text
+rm/rmSync(mount_root, recursive)
+```
+
+Good:
+
+```text
+preserve mount point
+clear children only
+```
+
+### D14.4 Raw capture accounting must follow actual requests, not abstract rejected candidates
+
+`directory_rejection_count` can include candidates rejected before a raw request occurs.
+
+Do not infer retained-object cardinality by subtracting every logical rejection.
+
+### D14.5 NOMADS Grib Filter must be responsibly paced
+
+Do not remove the production minimum request interval to make qualification faster.
+
+Do not turn HTTP 302 into an accepted success response.
+
+Do not add an unrestricted redirect fallback.
+
+### D14.6 Measure cadence at observed request boundaries
+
+Timers can wake slightly early.
+
+The invariant is the actual observed request-start interval.
+
+Do not use a timer's requested sleep duration as proof of elapsed time.
+
+### D14.7 Focused acceptance can fail on TypeScript/Fetch typing before testing semantics
+
+The earlier Response `BodyInit` problem was a compile/test harness issue.
+
+Keep focused acceptance compilable under the repository's actual Node/TypeScript environment.
+
+Do not misclassify a harness type error as provider failure.
+
+### D14.8 EA5E2 dependency graph digest must follow the real dependency set
+
+The GFS provider cadence change legitimately changed a governed dependency.
+
+Correct sequence:
+
+```text
+finish path set
+→ generate graph
+→ read expected digest
+→ legal carrier rebind
+→ rerun graph
+```
+
+Do not guess or hand-edit unrelated frozen digests.
+
+### D14.9 Root-owned proof metadata must be handed back to the runner
+
+Container bind mounts may create root-owned files.
+
+The runner must regain read/upload access explicitly.
+
+Do not grant broad container privileges to solve this.
+
+### D14.10 A green packaging workflow is not a green integrated 24T
+
+Current proof is the strongest example:
+
+```text
+Phase3 = green
+Phase4 = green
+Phase5 packaging = green
+EA5E2 graph = green
+        but
+integrated 24T = red at O00 successor viability
+```
+
+Do not infer closure from component-level greens.
+
+### D14.11 Do not bypass Phase4 successor viability
+
+The current failure is valuable precisely because the successor check stayed enabled in the real Twin host.
+
+Do not remove the guard.
+
+### D14.12 Do not register durable evidence before the runtime graph stabilizes
+
+The old LEGACY_AM19 anchors are now stale specifically because a legitimate product provider dependency changed.
+
+Durable registration must remain late.
+
+### D14.13 Do not mix B-Line
+
+B-Line remains outside this implementation line.
+
+No B-Line semantic refactor belongs in the O00 checkpoint repair.
+
+---
+
+## D15. Recommended exact execution sequence from the current frontier
+
+### Step 1 — freeze `a4026023…` as the diagnostic reference
+
+Do not reuse the old statement that capture is still running.
+
+Record:
+
+```text
+subject = a40260236c4716ba15fbb2511c5720713a524687
+run     = 33096293529
+error   = PHASE4_SUCCESSOR_CHECKPOINT_TIME_MISMATCH
+```
+
+### Step 2 — reproduce O00 with explicit checkpoint diagnostics
+
+Use the same:
+
+- scientific image;
+- real raw capture semantics;
+- Evidence process;
+- canonical DB;
+- prepare path;
+- Twin process.
+
+Add/read diagnostic evidence at the exact successor boundary.
+
+Do not stub the Runtime.
+
+### Step 3 — determine whether persistence or viability readback is wrong
+
+Compare:
+
+```text
+O00 committed checkpoint member
+checkpoint latest index
+checkpoint fact
+RuntimeTickCursor
+terminal scheduler row
+```
+
+The repair must target the actual inconsistency.
+
+### Step 4 — preserve fail-closed successor semantics
+
+Whatever changes, the post-terminal invariant must remain:
+
+```text
+terminal slot
++
+RuntimeTickCursor
++
+canonical checkpoint
++
+checkpoint next tick
+all agree
+```
+
+### Step 5 — fresh predecessor qualification if a Phase4 dependency changes
+
+If the repair touches:
+
+- Phase4 successor viability;
+- Phase4 persistence;
+- Twin composition;
+- checkpoint/cursor semantics;
+
+then run fresh Phase4 qualification and bind new predecessor evidence only after success.
+
+If the repair touches Phase3/Evidence dependencies, fresh Phase3 is also required.
+
+### Step 6 — rerun Phase5 packaging + EA5E2 graph
+
+Minimum before new 24T:
+
+```text
+Phase3 if applicable = SUCCESS
+Phase4 if applicable = SUCCESS
+Phase5 packaging      = SUCCESS
+EA5E2 graph           = SUCCESS
+ordinary CI           = SUCCESS
+central exact paths   = owned
+```
+
+### Step 7 — freeze one new exact head and rerun the full 24T
+
+Do not continue from the failed DB after code changes.
+
+Fresh isolated qualification state.
+
+Required execution:
+
+```text
+real A0 raw capture
+→ Evidence canonical ingestion
+→ A0 prepare
+→ O00-O07
+→ graceful SIGTERM
+→ restart same Twin image/process
+→ durable cursor recovery
+→ O08-O23
+→ final DB isolation / 24T verifier
+```
+
+### Step 8 — only after 24T SUCCESS, repair the two central durable blockers
+
+Then:
+
+1. fresh `LEGACY_AM19_PERSISTENT_24T` requalification;
+2. register Phase5 durable evidence;
+3. rerun central blocker inventory;
+4. require blocker_count=0;
+5. rerun graph/successor/CI as required.
+
+Only then discuss Phase5 closure.
+
+---
+
+## D16. First 30 minutes for the next engineer
+
+### Minute 0–5 — restore authority and exact state
+
+Read:
+
+```text
+docs/SSOT.md
+MCFT master task line
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md
+this handoff top continuation
+```
+
+Verify:
+
+```text
+main
+#3323 head/base
+#3323 Draft/open
+latest 24T run
+latest central run
+```
+
+### Minute 5–10 — read the failed 24T artifact/logs
+
+Primary run:
+
+```text
+33096293529
+```
+
+Primary error:
+
+```text
+PHASE4_SUCCESSOR_CHECKPOINT_TIME_MISMATCH
+```
+
+Do not start from old GFS 302 or capture EBUSY failures; those are already historical.
+
+### Minute 10–20 — trace O00 checkpoint end-to-end
+
+Files:
+
+```text
+apps/server/src/runtime/twin_runtime/postgres_twin_runtime_successor_viability_v1.ts
+apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_persistent_tick_service_v1.ts
+apps/server/src/runtime/twin_runtime/external_formal_cap04_a_record_set_builder_v1.ts
+apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts
+```
+
+Trace:
+
+```text
+build O00 checkpoint
+→ fenced fact append
+→ checkpoint latest index update
+→ scheduler terminal
+→ successor read-only verification
+```
+
+### Minute 20–30 — make the smallest diagnostic/fix
+
+Preferred first move:
+
+- capture actual checkpoint/index/cursor values;
+- prove which value diverges;
+- then patch exactly one semantic owner.
+
+Do not alter:
+
+- Evidence provider cadence;
+- scientific image;
+- canonical Evidence ingress;
+- service principals;
+- DB writer isolation;
+- central registration;
+- graph digest;
+
+unless evidence shows they are causally involved.
+
+---
+
+## D17. High-value exact file map for the current frontier
+
+### Phase5 exact-head 24T
+
+`.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml`
+
+`docker/mcft-cap09-runtime.Dockerfile`
+
+`docker-compose.mcft-cap09-phase5-qualification.yml`
+
+### Live raw capture
+
+`apps/server/src/external_evidence/qualification/mcft_cap09_phase5_capture_a0_fixture_v1.ts`
+
+### Evidence product/qualification graph
+
+`apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts`
+
+`apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts`
+
+`apps/server/src/external_evidence/mcft_cap09_production_evidence_work_items_v1.ts`
+
+`apps/server/src/external_evidence/qualification/mcft_cap09_phase5_controlled_evidence_work_items_v1.ts`
+
+`apps/server/src/external_evidence/qualification/mcft_cap09_phase5_evidence_runtime_qualification_v1.ts`
+
+### GFS live provider / cadence
+
+`apps/server/src/external_evidence/provider/gfs_nomads_live_provider_v1.ts`
+
+`apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts`
+
+### Twin current graph
+
+`apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts`
+
+`apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts`
+
+`apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_twin_runtime_qualification_v1.ts`
+
+### 24T prepare / verify
+
+`apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.ts`
+
+`apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_verify_24t_v1.ts`
+
+### Current O00 blocker
+
+`apps/server/src/runtime/twin_runtime/postgres_twin_runtime_successor_viability_v1.ts`
+
+`apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_persistent_tick_service_v1.ts`
+
+`apps/server/src/runtime/twin_runtime/external_formal_cap04_a_record_set_builder_v1.ts`
+
+`apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts`
+
+### Twin DB isolation
+
+`apps/server/src/persistence/twin_runtime/postgres_mcft_cap09_twin_canonical_fact_writer_v1.ts`
+
+`apps/server/db/migrations/2026_08_27_mcft_cap_09_phase5_twin_fact_writer_acl.sql`
+
+### Central control
+
+`docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json`
+
+`docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json`
+
+`scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs`
+
+`.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml`
+
+---
+
+## D18. Exact commits worth retaining from this continuation
+
+### Qualification clock / Compose frontier
+
+```text
+9b0f6eec4c4bb5f98e935947a4e1c06310990fc7
+feat(mcft-cap09): add dedicated Phase5 qualification Compose
+
+58ff5eb78baa58f289f3f280181977eec261aed6
+chore(mcft-cap09): anchor fresh Phase4 clock-seam qualification
+
+be3e77cf3ae6b0273a60b42748bd8ae467674b73
+fix(mcft-cap09): render qualification Compose profile in acceptance
+```
+
+### Twin DB writer hardening
+
+```text
+519b0ca6c89f03d50d9e0837749320be53300847
+feat(mcft-cap09): fence Twin canonical fact writer
+
+cbecbfee73561656856d632dd176c615a6dcb1ba
+chore(mcft-cap09): govern Twin DB writer hardening
+
+674b3347ae16299f4876045b40832040ccb64f30
+fix(mcft-cap09): model stale Twin fence legally
+```
+
+### Evidence source-family / 24T topology
+
+```text
+1ea2499cddbf5e4acf0ee63906eab2603df744e5
+feat(mcft-cap09): select Evidence source families per target
+
+6fbb1c4f9b7fea5ddc9dab8b45c10eef6442fe16
+feat(mcft-cap09): capture real A0 raw for Phase5 24T
+
+1cdc6dc6fc9976e5b23df242f42f5c530e3abd53
+feat(mcft-cap09): wire two-service 24T qualification topology
+
+512f2efe7fed4ef4cc547f14f81bbed5b73088f6
+chore(mcft-cap09): govern exact-head Phase5 24T lane
+```
+
+### Live capture repairs
+
+```text
+7ae8842fe4d19527057aba22442d91e7f745ec7a
+fix(mcft-cap09): preserve mounted fixture root during capture
+
+99ccfd8a2eee93676ccb89c93589db3dd16e39f8
+fix(mcft-cap09): account retained GFS replay members exactly
+
+11dfa7a4d7d8ebba781709ef80617286d1f7453b
+fix(mcft-cap09): pace NOMADS Grib Filter acquisition
+
+d306b74fdf5ee22db8ab2e1afbffba0bff6c517e
+fix(mcft-cap09): enforce NOMADS cadence at observed boundary
+
+76c920e15546b55b4a4f5e317cc9ad820b20b0f8
+test(mcft-cap09): align cadence client ceiling with product
+```
+
+### Fresh anchors / graph and proof handoff
+
+```text
+4267324353cbe6a46f460d6197b4a6c12ebf7685
+chore(mcft-cap09): anchor fresh Phase3/4 and rebind EA5E2 graph
+
+529a3242259871b14544d4e9d9b32b6efb72e6b7
+fix(mcft-cap09): hand capture proof metadata back to runner
+
+a40260236c4716ba15fbb2511c5720713a524687
+fix(mcft-cap09): return 24T proof metadata to runner
+```
+
+---
+
+## D19. Exact runs worth retaining
+
+### Current exact head `a4026023…`
+
+```text
+33096293513  ci                                            SUCCESS
+33096293572  Phase3 Evidence Runtime persistence           SUCCESS
+33096293581  Phase4 Twin Runtime persistence               SUCCESS
+33096293662  Phase5 production-equivalent packaging        SUCCESS
+33096293584  EA5E2 runtime dependency graph                SUCCESS
+33096293728  EA5E2 successor runner qualification          SUCCESS
+33096293612  qualification control plane                   FAILURE
+33096293529  production-equivalent accelerated 24T         FAILURE
+```
+
+### Fresh predecessor anchors
+
+```text
+33085589432  Phase3 post-NOMADS-cadence                    SUCCESS
+33085589444  Phase4 post-Phase5-writer                     SUCCESS
+```
+
+### Current integrated 24T failure point
+
+```text
+33096293529
+Step 7 capture       SUCCESS
+Step 8 Evidence      SUCCESS
+Step 9 prepare       SUCCESS
+Step 10 Twin O00-O07 FAILURE
+error:
+PHASE4_SUCCESSOR_CHECKPOINT_TIME_MISMATCH
+```
+
+---
+
+## D20. Phase 5 closure definition from this frontier
+
+Phase 5 is **not** closed.
+
+Do not close until one governed exact head proves all of the following together:
+
+- [x] separate Evidence/Twin LOGIN principals;
+- [x] Evidence-only raw-storage credentials;
+- [x] Twin has no provider/raw-storage fallback;
+- [x] DB-layer Evidence/Twin writer isolation;
+- [x] Twin direct facts INSERT denied for deployed runtime role;
+- [x] fenced Twin canonical writer;
+- [x] production clock default preserved;
+- [x] accelerated clock isolated to qualification;
+- [x] dedicated scientific Runtime image;
+- [x] dedicated qualification Compose;
+- [x] central exact-path ownership;
+- [x] real causal A0 soil/GFS raw capture;
+- [x] same Evidence process graph consumes captured raw;
+- [x] canonical Evidence DB is used by prepare;
+- [x] exact 24-slot manifest created;
+- [ ] O00-O07 completes without successor mismatch;
+- [ ] graceful Twin stop succeeds;
+- [ ] restart recovers from durable RuntimeTickCursor;
+- [ ] O08-O23 completes;
+- [ ] exact terminal slot count = 24;
+- [ ] final checkpoint/cursor consistency verifier PASS;
+- [ ] final Evidence/Twin DB isolation verifier PASS in integrated topology;
+- [ ] no Twin provider requests;
+- [ ] no Twin raw-storage credentials;
+- [ ] fresh LEGACY_AM19_PERSISTENT_24T requalification valid;
+- [ ] Phase5 durable evidence registered only after final dependency state;
+- [ ] central blocker_count = 0;
+- [ ] no unknown_changed_paths;
+- [ ] EA5E2 graph PASS at final exact head;
+- [ ] ordinary CI PASS;
+- [ ] Phase6 remains unstarted during Phase5 qualification;
+- [ ] Formal-v5 remains unarmed.
+
+Only then discuss Phase5 closure.
+
+---
+
+## D21. Current not-blockers
+
+Do not spend the next conversation reopening these unless new evidence points back to them:
+
+```text
+Phase3 work_item_factory default identity
+Phase3 Evidence lease/fencing/cursor
+Phase4 database clock default
+Phase4 scheduler lease/fencing
+Phase5 process packaging
+service-principal separation
+Twin DB writer isolation
+central exact-path registration
+EA5E2 graph digest
+scientific Runtime image
+Docker fixture mount EBUSY
+GFS raw retained-member accounting
+NOMADS high-rate F070 302 cause
+NOMADS 10s cadence timing
+capture proof file ownership
+real raw capture
+Evidence canonical ingestion
+A0/24-slot prepare
+```
+
+The active engineering problem is now much narrower:
+
+```text
+O00 canonical checkpoint
+↔ checkpoint latest index
+↔ RuntimeTickCursor
+↔ Phase4 successor viability
+```
+
+---
+
+## D22. Things not to do next
+
+Do not:
+
+1. wait for run `33096293529` as if it were still capturing — it has finished;
+2. rerun capture repeatedly without addressing the O00 successor failure;
+3. remove/relax `PHASE4_SUCCESSOR_CHECKPOINT_TIME_MISMATCH`;
+4. skip successor viability in qualification;
+5. force RuntimeTickCursor to O01;
+6. update checkpoint latest index from workflow code;
+7. create a qualification-only checkpoint adapter;
+8. switch Twin back to direct `facts INSERT`;
+9. restore broad Twin DB privileges;
+10. give Twin S3/provider credentials;
+11. remove NOMADS cadence to speed up 24T;
+12. accept arbitrary 302 responses;
+13. use fake GRIB;
+14. revive #3319 hosting runtime;
+15. split new Phase5 work into #3319;
+16. mutate protected main;
+17. register Phase5 durable evidence now;
+18. rebind LEGACY_AM19 old evidence to a new digest;
+19. start Phase6;
+20. arm Formal-v5;
+21. mix B-Line changes into this checkpoint repair.
+
+---
+
+## D23. Bottom line
+
+The previous conversation frontier was:
+
+```text
+"production-equivalent 24T is still spending time in live GFS capture"
+```
+
+That is now stale.
+
+The repository has moved to:
+
+```text
+a4026023 exact head
+        +
+real causal A0 soil/GFS capture SUCCESS
+        +
+same Evidence process graph SUCCESS
+        +
+canonical Evidence DB SUCCESS
+        +
+A0 / O00-O23 prepare SUCCESS
+        +
+O00 terminal slot recorded
+        ↓
+Phase4 read-only successor viability detects:
+PHASE4_SUCCESSOR_CHECKPOINT_TIME_MISMATCH
+        ↓
+O01 not entered
+restart not entered
+O08-O23 not entered
+final verifier not entered
+        ↓
+Phase5 remains IN PROGRESS
+```
+
+The next engineer should therefore **not** return to provider cadence or container packaging first.
+
+The next exact task is:
+
+```text
+reproduce O00
+        ↓
+read exact persisted checkpoint/index/cursor/terminal values
+        ↓
+identify whether the checkpoint write, latest-index projection,
+canonical record shape, or successor readback expectation is wrong
+        ↓
+repair the semantic owner without weakening the invariant
+        ↓
+fresh affected predecessor qualification
+        ↓
+one new frozen exact-head full 24T
+        ↓
+only after SUCCESS: fresh LEGACY_AM19 + Phase5 durable evidence
+        ↓
+central blocker_count = 0
+        ↓
+then discuss Phase5 closure
+```
+
+There is no deadlock.
+
+There is a bounded, newly exposed integrated Runtime consistency defect after the first real O00 terminal commit.
+
+---
+
+# Historical continuation retained below — previous 2026-08-27 Phase 5 packaging / accelerated-provider frontier
+
 # GEOX MCFT-CAP-09 Conversation Handoff — 2026-08-27 — Phase 5 Production-Equivalent Containers / Accelerated Evidence Provider Frontier
 
 Status: **CONVERSATION HANDOFF / CURRENT FRONTIER — NOT MASTER-TASK AUTHORITY**
