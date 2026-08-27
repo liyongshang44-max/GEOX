@@ -124,8 +124,11 @@ jobs:
           if grep -Eq '^scripts/runtime_acceptance/(MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py|RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts)$' <<<"$changed"; then
             grep -Fxq 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py' <<<"$changed" || { echo 'AM19_P24_DECODER_IMPLEMENTATION_CHANGE_REQUIRED' >&2; exit 1; }
             grep -Fxq 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts' <<<"$changed" || { echo 'AM19_P24_REHYDRATION_DECODER_IDENTITY_CHANGE_REQUIRED' >&2; exit 1; }
-            grep -Fq 'decode-gfs-v2' scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
-            grep -Fq 'MCFT_CAP09_EA5E2_GFS_RAW_BUNDLE_DECODER_V2' scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
+            grep -Fq 'GfsRawBundleEvidenceDecoderV1' scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
+            grep -Fq 'PRODUCT_GFS_BUNDLE_DECODER_RELATIVE' scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
+            grep -Fq 'assertProductGfsScientificCoreBinding' scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
+            grep -Fq 'gfs_bundle_decoder.decode_bundle_v1' scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py
+            grep -Fq 'product_gfs_raw_bundle_decoder_used' scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py
           elif grep -Fxq 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts' <<<"$changed"; then
             grep -Fxq 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts' <<<"$changed" || { echo 'AM19_P24_SUCCESSOR_QUALIFICATION_REFACTOR_REQUIRED' >&2; exit 1; }
             grep -Fq 'buildExternalFormalAmendment19WindowManifestV1' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts
