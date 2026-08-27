@@ -1,0 +1,127 @@
+name: mcft-cap-09-phase5-production-equivalent-containers
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml'
+      - 'apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts'
+      - 'apps/server/scripts/write_dist_entries.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts'
+      - 'docker/runtime.Dockerfile'
+      - 'apps/server/package.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-phase5-production-equivalent-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  process-packaging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prove Phase5 product and acceptance types
+        run: |
+          pnpm --filter @geox/server run typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts
+
+      - name: Build exact server production package
+        run: pnpm --filter @geox/server run build
+
+      - name: Prove Phase5 process authority separation
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts
+
+      - name: Prove stable compiled Twin Runtime entrypoint
+        run: |
+          test -f apps/server/dist/runtime/mcft_cap09_twin_runtime.js
+          grep -Fq 'runMcftCap09TwinRuntimeProcessV1' apps/server/dist/runtime/mcft_cap09_twin_runtime.js
+          ! grep -Rq 'scripts/runtime_acceptance' apps/server/dist/runtime/mcft_cap09_twin_runtime.js
+
+      - name: Prove Phase5 process source boundaries
+        shell: python
+        run: |
+          from pathlib import Path
+
+          lifecycle = Path('apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts').read_text()
+          twin = Path('apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts').read_text()
+          evidence = Path('apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts').read_text()
+
+          for marker in ['scripts/runtime_acceptance', 'GITHUB_RUN_ID', 'github.event']:
+              if marker in lifecycle + twin + evidence:
+                  raise SystemExit(f'PHASE5_PRODUCT_TEST_WIRING_FORBIDDEN:{marker}')
+
+          for marker in [
+              'GEOX_MCFT_CAP09_EVIDENCE_S3_ACCESS_KEY_ID',
+              'GEOX_MCFT_CAP09_EVIDENCE_S3_SECRET_ACCESS_KEY',
+              'GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL',
+          ]:
+              if marker in twin:
+                  # Twin source may mention these names only in a non-authority explanatory
+                  # check if ever introduced; direct env property access is always forbidden.
+                  forbidden_reads = [
+                      f'env.{marker}',
+                      f'env["{marker}"]',
+                      f"env['{marker}']",
+                  ]
+                  if any(item in twin for item in forbidden_reads):
+                      raise SystemExit(f'PHASE5_TWIN_EVIDENCE_CREDENTIAL_READ_FORBIDDEN:{marker}')
+
+          required_twin = [
+              'composeMcftCap09TwinRuntimeV1',
+              'GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL',
+              'createMcftCap09ProcessStopV1',
+          ]
+          for marker in required_twin:
+              if marker not in twin:
+                  raise SystemExit(f'PHASE5_TWIN_PROCESS_BINDING_MISSING:{marker}')
+
+          required_evidence = [
+              'composeEvidenceRuntimeV1',
+              'GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL',
+              'GEOX_MCFT_CAP09_EVIDENCE_S3_SECRET_ACCESS_KEY',
+              'target_planner',
+          ]
+          for marker in required_evidence:
+              if marker not in evidence:
+                  raise SystemExit(f'PHASE5_EVIDENCE_PROCESS_BINDING_MISSING:{marker}')
+
+          print('PHASE5_PROCESS_SOURCE_BOUNDARY_PASS')
+
+      - name: Upload Phase5 process packaging proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-phase5-process-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
