@@ -203,6 +203,8 @@ class QualificationTwinHealthPortV1 implements TwinRuntimeHostHealthPortV1 {
 }
 
 class QualificationEvidenceHealthPortV1 implements EvidenceRuntimeHostHealthPortV1 {
+  private observedStandbyCount = 0;
+
   constructor(
     private readonly delegate: EvidenceRuntimeHostHealthPortV1,
     private readonly stop: ProcessSignalStopPortV1,
@@ -211,10 +213,12 @@ class QualificationEvidenceHealthPortV1 implements EvidenceRuntimeHostHealthPort
 
   async recordHealth(event: EvidenceRuntimeHostHealthEventV1): Promise<void> {
     await this.delegate.recordHealth(event);
+    if (event.detail === "LEASE_HELD_BY_OTHER_OWNER") {
+      this.observedStandbyCount += 1;
+    }
     if (
       this.standbyCount !== null
-      && event.detail === "LEASE_HELD_BY_OTHER_OWNER"
-      && event.standby_cycle_count >= this.standbyCount
+      && this.observedStandbyCount >= this.standbyCount
     ) {
       this.stop.requestStopForQualification();
     }
