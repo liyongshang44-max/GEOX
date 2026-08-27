@@ -2074,6 +2074,39 @@
       "notes": [
         "Devtools outputs must not become a production semantic consumer or formal Evidence source without an explicit later authority decision."
       ]
+    },
+    {
+      "semantic_id": "decision.episode",
+      "question": "Which governed decision-time inputs, reasoning references, decision authorities, and downstream commercial-chain refs belong to one trace-only decision episode?",
+      "target_owner": "Decision Episode Runtime",
+      "canonical_output_type": "DecisionEpisodeV1 (B-08a contract frozen; no production assembler connected)",
+      "current_state": "BOUNDARY_CLEAR_TARGET_NOT_YET_PRODUCT_CONNECTED",
+      "target_phase": "B-08",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "future-decision-episode",
+          "path": "apps/server/src/contracts/decision_episode_v1.ts",
+          "role": "B-08a canonical DecisionEpisodeV1 contract reference; not a production assembler",
+          "authority_level": "FUTURE_TARGET_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "INTENTIONAL_ISOLATION",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        }
+      ],
+      "registered_consumers": [],
+      "notes": [
+        "DecisionEpisodeV1 is TRACE_ONLY and cannot create Candidate, Eligibility, Approval, Plan, Task, execution, or Acceptance authority.",
+        "B-08a requires CandidateDecision and DecisionEligibility refs while preserving downstream commercial-chain objects as references only.",
+        "B-08a connects no real MCFT adapter, ADR runtime, or LLM provider.",
+        "Historical semantic-authority removal remains B-09 only."
+      ],
+      "runtime_consumers": []
     }
   ],
   "static_guards": [
@@ -2554,6 +2587,28 @@
         "apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts"
       ],
       "failure": "UNREGISTERED_DECISION_ELIGIBILITY_RUNTIME_CONSUMER"
+    },
+    {
+      "guard_id": "G-B02-19-decision-episode-instantiation",
+      "semantic_id": "decision.episode",
+      "description": "B-08a freezes DecisionEpisodeV1 but permits zero production assemblers; later B-08 assembler registration must be explicit.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "decisionEpisodeV1Schema.parse("
+        ]
+      },
+      "registered_paths": [],
+      "failure": "UNREGISTERED_DECISION_EPISODE_PRODUCER"
     }
   ],
   "connectivity_model": {
