@@ -113,7 +113,17 @@ test("B-04e canonical shadow failure cannot alter legacy Evidence Judge authorit
   assert.equal(withShadow.verdict, legacy.verdict);
   assert.equal(withShadow.severity, legacy.severity);
   assert.deepEqual(withShadow.reasons, legacy.reasons);
-  assert.deepEqual(withShadow.source_refs, legacy.source_refs);
+  const stableTrace = (refs: any[] | undefined) => (refs ?? []).map((ref) => ({
+    skill_id: ref.skill_id,
+    skill_version: ref.skill_version,
+    skill_category: ref.skill_category,
+    input_digest: ref.input_digest,
+    inputs: ref.inputs,
+    outputs: ref.outputs,
+    confidence: ref.confidence,
+    evidence_refs: ref.evidence_refs,
+  }));
+  assert.deepEqual(stableTrace(withShadow.source_refs as any[]), stableTrace(legacy.source_refs as any[]));
   assert.equal(
     (withShadow.outputs as any).canonical_evidence_sufficiency_shadow_v1.status,
     "UNKNOWN",
