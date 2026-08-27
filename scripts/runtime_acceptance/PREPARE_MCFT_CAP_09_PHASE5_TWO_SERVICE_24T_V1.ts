@@ -4,7 +4,9 @@ import path from "node:path";
 
 import { Pool } from "pg";
 
+import { ASSIMILATED_CONTINUATION_OBSERVATION_QUANTITY_KIND_V1 } from "../../apps/server/src/domain/twin_runtime/assimilated_continuation_runtime_config_v1.js";
 import { semanticHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
+import { MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1 } from "../../apps/server/src/domain/twin_runtime/external_formal_evidence_binding_profile_v1.js";
 import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.js";
 import {
   buildExternalFormalAmendment19WindowManifestV1,
@@ -66,6 +68,59 @@ function canonicalHour(value: string, code: string): string {
 
 function addHours(value: string, hours: number): string {
   return new Date(Date.parse(value) + hours * 3_600_000).toISOString();
+}
+
+function addMinutes(value: string, minutes: number): string {
+  return new Date(Date.parse(value) + minutes * 60_000).toISOString();
+}
+
+function controlledBootstrapSoilV1(a0: string): CanonicalReplayEvidenceRecordV1 {
+  const observedAt = addMinutes(a0, -5);
+  const availableAt = addMinutes(a0, -4);
+  const canonicalPayload = {
+    quantity_kind: ASSIMILATED_CONTINUATION_OBSERVATION_QUANTITY_KIND_V1,
+    unit: "fraction",
+    value: 0.30,
+  };
+  const sourceId = "phase5_controlled_bootstrap_soil_" + a0;
+  return {
+    dataset_id: "mcft_cap09_phase5_bootstrap_engineering_fixture_v1",
+    source_record_id: sourceId,
+    source_record_hash: semanticHashV1({
+      sourceId,
+      observedAt,
+      availableAt,
+      canonicalPayload,
+    }),
+    record_type: "soil_moisture_observation_v1",
+    binding_id: MCFT_CAP09_EXTERNAL_FORMAL_SOIL_BINDING_ID_V1,
+    origin_source_kind: "CONTROLLED_PHASE5_BOOTSTRAP_FIXTURE",
+    origin_source_id: "PHASE5_BOOTSTRAP_SOIL_FIXTURE",
+    epistemic_class: "OBSERVED",
+    ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
+    available_to_runtime_at: availableAt,
+    role_time: {
+      observed_at: observedAt,
+      ingested_at: availableAt,
+    },
+    quality: { status: "PASS" },
+    source_payload: {
+      source_version: "phase5-bootstrap-v1",
+      unit: "fraction",
+      value: 0.30,
+    },
+    canonical_payload: canonicalPayload,
+    source_unit: "fraction",
+    canonical_unit: "fraction",
+    conversion_rule: {
+      id: "VWC_FRACTION_IDENTITY_V1",
+      version: "1",
+    },
+    limitations: [
+      "ENGINEERING_BOOTSTRAP_FIXTURE_ONLY",
+      "NOT_RUNTIME_EXTERNAL_EVIDENCE_AUTHORITY",
+    ],
+  };
 }
 
 function loadJson(file: string): Record<string, unknown> {
@@ -219,6 +274,7 @@ async function main(): Promise<void> {
       }
     }
 
+    const o00 = addHours(a0, 1);
     const soil = byType.get("soil_moisture_observation_v1")!;
     exactScope(soil);
     const soilObserved = eventTime(soil);
@@ -231,12 +287,11 @@ async function main(): Promise<void> {
       "PHASE5_PREPARE_SOIL_INGESTED_AT_INVALID",
     );
     if (
-      Date.parse(soilObserved) <= Date.parse(addHours(a0, -1))
-      || Date.parse(soilObserved) > Date.parse(a0)
-      || Date.parse(soilAvailable) > Date.parse(a0)
-      || Date.parse(soilIngested) > Date.parse(a0)
+      Date.parse(soilObserved) > Date.parse(o00)
+      || Date.parse(soilAvailable) > Date.parse(o00)
+      || Date.parse(soilIngested) > Date.parse(o00)
     ) {
-      throw new Error("PHASE5_PREPARE_SOIL_NOT_CAUSAL_A0_WINDOW");
+      throw new Error("PHASE5_PREPARE_SOIL_NOT_CAUSAL_O00");
     }
 
     for (const type of [
@@ -261,8 +316,8 @@ async function main(): Promise<void> {
           String(value ?? ""),
           "PHASE5_PREPARE_GFS_CAUSAL_TIME_INVALID:" + type,
         );
-        if (Date.parse(causal) > Date.parse(a0)) {
-          throw new Error("PHASE5_PREPARE_GFS_NOT_CAUSAL_A0:" + type);
+        if (Date.parse(causal) > Date.parse(o00)) {
+          throw new Error("PHASE5_PREPARE_GFS_NOT_CAUSAL_O00:" + type);
         }
       }
       const points = (record.canonical_payload as { points?: unknown })?.points;
@@ -318,7 +373,10 @@ async function main(): Promise<void> {
       runtime_config_repository: runtimeRepository,
       bootstrap_persistence: runtimeRepository,
       authority_snapshot_repository: new PostgresNextTickRepositoryV1(pool),
-      evidence_source: new FrozenPhase5A0EvidenceSourceV1(records, a0),
+      evidence_source: new FrozenPhase5A0EvidenceSourceV1(
+        [controlledBootstrapSoilV1(a0)],
+        a0,
+      ),
     });
     const bootstrapResult = await bootstrap.execute({
       bundle: bundle.persistence_bundle,
@@ -355,8 +413,9 @@ async function main(): Promise<void> {
       evidence_source: EVIDENCE_SOURCE,
       selected_evidence_record_count: records.length,
       required_evidence_types: [...REQUIRED_TYPES],
-      real_governed_evidence_only: true,
-      engineering_evidence_fixture_count: 0,
+      runtime_evidence_real_governed_only: true,
+      engineering_bootstrap_fixture_count: 1,
+      engineering_runtime_evidence_fixture_count: 0,
       hourly_runtime_config_count: bootstrapResult.hourly_runtime_config_count,
       scheduler_slot_write_count: bootstrapResult.scheduler_slot_write_count,
       formal_window_started: bootstrapResult.formal_window_started,
