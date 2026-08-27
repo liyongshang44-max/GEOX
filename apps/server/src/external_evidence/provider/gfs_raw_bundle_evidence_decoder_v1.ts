@@ -1,7 +1,7 @@
 // MCFT-CAP-09 Phase 3 product GFS raw-bundle Evidence decoder.
 // Boundary: retained deterministic bundle -> governed drafts through the product-owned Python driver.
 // No qualification-script dependency, provider fetch, raw retention, database, scheduler,
-// RuntimeTickCursor, Twin state, environment, timer, or production activation.
+// online runtime-cursor authority, Twin state, environment, timer, or production activation.
 
 import { execFile } from "node:child_process";
 import fs from "node:fs";
