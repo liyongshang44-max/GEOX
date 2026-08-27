@@ -59,7 +59,7 @@
         {
           "producer_id": "sensing-raw-sample-ingress",
           "path": "apps/server/src/routes/sensing_fact_envelope_v1.ts",
-          "role": "active raw_samples ingress that appends raw_sample_v1 evidence and invokes official observation pipeline for formal device/gateway samples",
+          "role": "active raw_samples ingress that appends raw_sample_v1 evidence, emits a post-COMMIT raw_sample_runtime_available_v1 provenance marker for conservative runtime-availability authority, and invokes the official observation pipeline for formal device/gateway samples",
           "authority_level": "INGRESS",
           "grandfathered_duplicate": false,
           "removal_target": null,
@@ -97,7 +97,7 @@
         {
           "consumer_id": "appleii-stage1-evidence-sufficiency",
           "path": "apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts",
-          "role": "reads raw_samples to compute Stage-1 formal evidence coverage/freshness/conflict sufficiency",
+          "role": "reads raw_samples plus the same-ingress post-COMMIT raw_sample_runtime_available_v1 provenance marker; legacy Apple-II sufficiency remains authoritative while the marker is also supplied to the canonical qualification shadow",
           "current": true,
           "connection_class": "MAINLINE",
           "activation": "API_ONLY",
@@ -223,7 +223,7 @@
         {
           "producer_id": "canonical-evidence-qualification-shadow",
           "path": "apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.ts",
-          "role": "maps already-established B-04 source/quality/physical/scope/conflict dimensions into B-03 EvidenceQualificationV1 as a non-authoritative shadow projection",
+          "role": "maps established B-04 source/quality/physical/scope/conflict dimensions plus B-04d4 marker-backed temporal availability into B-03 EvidenceQualificationV1 as a non-authoritative shadow projection",
           "authority_level": "SHADOW_PROJECTION",
           "grandfathered_duplicate": false,
           "removal_target": null,
@@ -270,7 +270,7 @@
         {
           "consumer_id": "appleii-canonical-evidence-shadow",
           "path": "apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts",
-          "role": "builds and carries the B-03 EvidenceQualificationV1 shadow batch alongside existing Apple-II compatibility sufficiency",
+          "role": "builds and carries the B-03 EvidenceQualificationV1 shadow batch alongside existing Apple-II compatibility sufficiency, including conservative post-COMMIT runtime-availability authority when the same-ingress marker exists",
           "current": true,
           "connection_class": "MAINLINE",
           "activation": "API_ONLY",

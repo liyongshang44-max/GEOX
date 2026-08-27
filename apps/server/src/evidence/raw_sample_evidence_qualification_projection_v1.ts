@@ -26,6 +26,7 @@ export type RawSampleEvidenceQualificationProjectionInputV1 = {
     source: RawSampleQualificationSourceV1;
     payload_json: Record<string, any>;
     created_at?: string | Date | null;
+    available_to_runtime_at?: string | Date | null;
   };
   decision_time_ms: number;
   requested_scope: {
@@ -92,7 +93,7 @@ function deriveSpatialAuthority(
   return "EXACT_SCOPE";
 }
 
-function createdAtMs(v: unknown): number | null {
+function timestampMs(v: unknown): number | null {
   if (v instanceof Date) {
     const ms = v.getTime();
     return Number.isFinite(ms) ? ms : null;
@@ -105,19 +106,22 @@ function createdAtMs(v: unknown): number | null {
 }
 
 /**
- * raw_samples.created_at is the row creation timestamp inside the append
- * transaction. It is not an exact post-COMMIT visibility timestamp.
+ * B-04d4 temporal authority is conservative and marker-backed.
  *
- * B-04d3 therefore never promotes created_at<=decision_time to temporal
- * ELIGIBLE. It can only prove negative cases (future event/backfill); otherwise
- * temporal authority remains UNKNOWN until a durable availability marker exists.
+ * raw_samples.created_at remains useful only for negative backfill proof.
+ * A system runtime-availability marker is emitted after the raw append COMMIT.
+ * If that marker time is not later than the decision boundary, the raw sample
+ * is proven committed by the decision time. A marker after the decision does
+ * not prove the sample was unavailable then, so that case remains UNKNOWN.
  */
 function deriveTemporalEligibility(input: {
   observed_at_ms: number;
   created_at: string | Date | null | undefined;
+  available_to_runtime_at: string | Date | null | undefined;
   decision_time_ms: number;
 }): {
   temporal_eligibility:
+    | "ELIGIBLE"
     | "FUTURE_RELATIVE_TO_DECISION"
     | "NOT_AVAILABLE_AT_DECISION"
     | "UNKNOWN";
@@ -136,11 +140,31 @@ function deriveTemporalEligibility(input: {
     };
   }
 
-  const createdMs = createdAtMs(input.created_at);
+  const createdMs = timestampMs(input.created_at);
   if (createdMs != null && createdMs > input.decision_time_ms) {
     return {
       temporal_eligibility: "NOT_AVAILABLE_AT_DECISION",
       reason_code: "RAW_SAMPLE_CREATED_AFTER_DECISION_TIME",
+    };
+  }
+
+  const availableMs = timestampMs(input.available_to_runtime_at);
+  if (availableMs != null) {
+    if (createdMs != null && availableMs < createdMs) {
+      return {
+        temporal_eligibility: "UNKNOWN",
+        reason_code: "RUNTIME_AVAILABILITY_MARKER_PRECEDES_RAW_CREATED_AT",
+      };
+    }
+    if (availableMs <= input.decision_time_ms) {
+      return {
+        temporal_eligibility: "ELIGIBLE",
+        reason_code: "POST_COMMIT_RUNTIME_AVAILABILITY_ESTABLISHED",
+      };
+    }
+    return {
+      temporal_eligibility: "UNKNOWN",
+      reason_code: "POST_COMMIT_RUNTIME_AVAILABILITY_MARKER_AFTER_DECISION",
     };
   }
 
@@ -170,14 +194,15 @@ function deriveRoleAndAuthority(input: {
   quality_decision: RawSampleObservationQualityDecisionV1;
   physical_validity: "PASS" | "FAIL" | "UNKNOWN";
   temporal_eligibility:
+    | "ELIGIBLE"
     | "FUTURE_RELATIVE_TO_DECISION"
     | "NOT_AVAILABLE_AT_DECISION"
     | "UNKNOWN";
   spatial_authority: "EXACT_SCOPE" | "LIMITED" | "OUT_OF_SCOPE" | "UNKNOWN";
   conflict_state: "NONE" | "UNRESOLVED" | "UNKNOWN";
 }): {
-  eligibility: "LIMITED" | "INELIGIBLE" | "UNKNOWN";
-  evidence_authority: "LIMITED" | "INELIGIBLE" | "UNKNOWN";
+  eligibility: "ELIGIBLE" | "LIMITED" | "INELIGIBLE" | "UNKNOWN";
+  evidence_authority: "QUALIFIED" | "LIMITED" | "INELIGIBLE" | "UNKNOWN";
   reason_codes: string[];
 } {
   const reasons: string[] = [];
@@ -222,12 +247,10 @@ function deriveRoleAndAuthority(input: {
     };
   }
 
-  // B-04d3 intentionally cannot emit fully qualified/eligible authority because
-  // exact post-COMMIT availability time is not yet represented by raw_samples.
   return {
-    eligibility: "UNKNOWN",
-    evidence_authority: "UNKNOWN",
-    reason_codes: ["B04D3_FULL_AUTHORITY_NOT_ESTABLISHED"],
+    eligibility: "ELIGIBLE",
+    evidence_authority: "QUALIFIED",
+    reason_codes: [],
   };
 }
 
@@ -253,6 +276,7 @@ export function projectRawSampleEvidenceQualificationV1(
   const temporal = deriveTemporalEligibility({
     observed_at_ms: Number(input.sample.ts_ms),
     created_at: input.sample.created_at,
+    available_to_runtime_at: input.sample.available_to_runtime_at,
     decision_time_ms: input.decision_time_ms,
   });
   const sourceAuthority = input.source_formal_eligible ? "QUALIFIED" : "UNQUALIFIED";
@@ -268,10 +292,12 @@ export function projectRawSampleEvidenceQualificationV1(
   const sourceRef = `raw_sample:${input.sample.sample_id}`;
   const evaluatedAt = new Date(input.decision_time_ms).toISOString();
   const limitations = [
-    "B04D3_SHADOW_NON_AUTHORITATIVE",
-    "RAW_SAMPLE_CREATED_AT_IS_NOT_POST_COMMIT_VISIBILITY_TIME",
+    "B04D4_SHADOW_NON_AUTHORITATIVE",
     "STAGE1_GATE_STILL_USES_EXISTING_APPLEII_COMPATIBILITY_SEMANTICS",
   ];
+  if (!input.sample.available_to_runtime_at) {
+    limitations.push("POST_COMMIT_RUNTIME_AVAILABILITY_AUTHORITY_NOT_ESTABLISHED");
+  }
   if (input.physical_qc_decision.mode === "LEGACY_UNCLASSIFIED") {
     limitations.push("LEGACY_RAW_SAMPLE_WITHOUT_INGRESS_PHYSICAL_QC");
   }
@@ -333,9 +359,9 @@ export function buildRawSampleEvidenceQualificationProjectionBatchV1(
     qualifications,
     counts,
     limitations: [
-      "B04D3_SHADOW_NON_AUTHORITATIVE",
+      "B04D4_SHADOW_NON_AUTHORITATIVE",
       "DO_NOT_USE_FOR_STAGE1_TRIGGER_ELIGIBILITY_YET",
-      "POST_COMMIT_RUNTIME_AVAILABILITY_AUTHORITY_NOT_ESTABLISHED",
+      "RUNTIME_AVAILABILITY_AUTHORITY_REQUIRES_POST_COMMIT_MARKER",
     ],
   };
 }
