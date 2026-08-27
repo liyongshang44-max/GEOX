@@ -19,6 +19,10 @@ const KBS_HOURLY_PROVIDER = "apps/server/src/external_evidence/provider/kbs_raw_
 const KBS_HOURLY_CORE = "apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py";
 const GFS_PROVIDER = "apps/server/src/external_evidence/provider/gfs_nomads_live_provider_v1.ts";
 const GFS_SCIENTIFIC_CORE = "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py";
+const GFS_BUNDLE_COMPOSER = "apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts";
+const GFS_BUNDLE_TRANSPORT = "apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.ts";
+const GFS_BUNDLE_DECODER = "apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts";
+const GFS_BUNDLE_PYTHON_DECODER = "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py";
 const THIS = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs";
 const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1_RESULT.json");
 
@@ -45,6 +49,10 @@ const ALLOWED_SENSITIVE_DELTA = new Set([
   KBS_HOURLY_CORE,
   GFS_PROVIDER,
   GFS_SCIENTIFIC_CORE,
+  GFS_BUNDLE_COMPOSER,
+  GFS_BUNDLE_TRANSPORT,
+  GFS_BUNDLE_DECODER,
+  GFS_BUNDLE_PYTHON_DECODER,
   WORKFLOW,
   THIS,
 ]);
@@ -94,7 +102,13 @@ try {
   const sensitive = changed.filter(isSensitive);
   const forbiddenSensitive = sensitive.filter((file) => !ALLOWED_SENSITIVE_DELTA.has(file));
   assert.deepEqual(forbiddenSensitive, [], "EA5C2B1_PHASE2_UNDECLARED_SENSITIVE_PATH");
-  for (const required of [EXECUTOR, TRANSPORT, PROVIDER, KBS_HOURLY_PROVIDER, KBS_HOURLY_CORE, GFS_PROVIDER, GFS_SCIENTIFIC_CORE, WORKFLOW, THIS]) {
+  for (const required of [
+    EXECUTOR, TRANSPORT, PROVIDER,
+    KBS_HOURLY_PROVIDER, KBS_HOURLY_CORE,
+    GFS_PROVIDER, GFS_SCIENTIFIC_CORE,
+    GFS_BUNDLE_COMPOSER, GFS_BUNDLE_TRANSPORT, GFS_BUNDLE_DECODER, GFS_BUNDLE_PYTHON_DECODER,
+    WORKFLOW, THIS,
+  ]) {
     assert.equal(sensitive.includes(required), true, `EA5C2B1_PHASE2_REQUIRED_DELTA_MISSING:${required}`);
   }
 
@@ -185,6 +199,53 @@ try {
     "subprocess",
   ]) assert.equal(gfsProvider.includes(forbidden), false, `EA5C2B1_PHASE2_GFS_PROVIDER_FORBIDDEN_DEPENDENCY:${forbidden}`);
 
+  const gfsBundleComposer = requireMarkers(GFS_BUNDLE_COMPOSER, [
+    "class GfsNomadsRawBundleComposerV1",
+    "retention_before_directory_parse",
+    "retention_before_sflux_idx_parse",
+    "retention_before_scientific_decode",
+    "selectLatestCompleteCycle",
+  ], "EA5C2B1_PHASE2_GFS_BUNDLE_COMPOSER_MARKER_MISSING");
+  const gfsBundleTransport = requireMarkers(GFS_BUNDLE_TRANSPORT, [
+    "class GfsNomadsBundleTransportV1",
+    "GfsNomadsRawBundleComposerV1",
+    "application/x-tar",
+    "DETERMINISTIC_AGGREGATE_OF_RETAINED_NOMADS_OBJECTS",
+  ], "EA5C2B1_PHASE2_GFS_BUNDLE_TRANSPORT_MARKER_MISSING");
+  const gfsBundleDecoder = requireMarkers(GFS_BUNDLE_DECODER, [
+    "class GfsRawBundleEvidenceDecoderV1",
+    "mcft_cap09_gfs_raw_bundle_decoder_v1.py",
+    "decode-bundle",
+    "FUTURE_WEATHER_ASSUMPTION",
+    "FUTURE_ET0_ASSUMPTION",
+  ], "EA5C2B1_PHASE2_GFS_BUNDLE_DECODER_MARKER_MISSING");
+  const gfsBundlePythonDecoder = requireMarkers(GFS_BUNDLE_PYTHON_DECODER, [
+    "core.decode_pgrb2_v1",
+    "core.decode_sflux_v1",
+    "core.assemble_72h_scientific_series_v1",
+    "build_drafts_v1",
+    "FUTURE_WEATHER_ASSUMPTION",
+    "FUTURE_ET0_ASSUMPTION",
+  ], "EA5C2B1_PHASE2_GFS_BUNDLE_PYTHON_DECODER_MARKER_MISSING");
+  for (const [label, text] of [
+    ["COMPOSER", gfsBundleComposer],
+    ["TRANSPORT", gfsBundleTransport],
+    ["DECODER", gfsBundleDecoder],
+    ["PYTHON_DECODER", gfsBundlePythonDecoder],
+  ]) {
+    for (const forbidden of [
+      "scripts/runtime_acceptance",
+      "acceptance-output",
+      "GITHUB_",
+      "RuntimeTickCursor",
+      "INSERT INTO twin_",
+      "UPDATE twin_",
+      "DELETE FROM twin_",
+    ]) {
+      assert.equal(text.includes(forbidden), false, `EA5C2B1_PHASE2_GFS_BUNDLE_${label}_FORBIDDEN_DEPENDENCY:${forbidden}`);
+    }
+  }
+
   const kbsHourlyCore = requireMarkers(KBS_HOURLY_CORE, [
     "class KbsRawHourlyScientificAuthorityV1",
     "class KbsRawHourlyExactIntervalV1",
@@ -247,6 +308,10 @@ try {
     product_gfs_acquisition_provider_uses_shared_https_client: true,
     product_gfs_scientific_core_declared_sensitive_delta: sensitive.includes(GFS_SCIENTIFIC_CORE),
     product_gfs_provider_declared_sensitive_delta: sensitive.includes(GFS_PROVIDER),
+    product_gfs_bundle_composer_declared_sensitive_delta: sensitive.includes(GFS_BUNDLE_COMPOSER),
+    product_gfs_bundle_transport_declared_sensitive_delta: sensitive.includes(GFS_BUNDLE_TRANSPORT),
+    product_gfs_bundle_decoder_declared_sensitive_delta: sensitive.includes(GFS_BUNDLE_DECODER),
+    product_gfs_bundle_python_decoder_declared_sensitive_delta: sensitive.includes(GFS_BUNDLE_PYTHON_DECODER),
     product_scientific_core_acceptance_dependency: false,
     product_scientific_core_github_identity_dependency: false,
     product_scientific_core_provider_fetch_dependency: false,
