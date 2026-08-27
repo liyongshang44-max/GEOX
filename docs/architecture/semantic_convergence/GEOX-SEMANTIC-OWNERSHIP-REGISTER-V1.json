@@ -1133,7 +1133,7 @@
       "semantic_id": "decision.candidate",
       "question": "What action should be considered?",
       "target_owner": "Decision Runtime",
-      "canonical_output_type": "CandidateDecisionV1 (B-06c persisted-recommendation and B-06d Rule Engine compatibility adapter capabilities registered; no runtime consumer connected)",
+      "canonical_output_type": "CandidateDecisionV1 (B-06c persisted-recommendation, B-06d Rule Engine, and B-06e root-zone scenario compatibility adapter capabilities registered; no runtime consumer connected)",
       "current_state": "DUPLICATE_AUTHORITY",
       "target_phase": "B-06",
       "new_owner_creation": "FORBIDDEN",
@@ -1203,7 +1203,7 @@
         {
           "producer_id": "legacy-operator-scenario-recommendation-writer",
           "path": "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts",
-          "role": "two preserved legacy scenario-to-recommendation POST routes; registered by Operator Module",
+          "role": "two preserved legacy scenario-to-recommendation POST routes; B-06e proves the root-zone shape is CandidateDecision-mappable while the ordinary scenario shape remains actionless/unmappable without additional source semantics",
           "authority_level": "ACTIVE_LEGACY_WRITER",
           "grandfathered_duplicate": true,
           "removal_target": "B-09",
@@ -1255,6 +1255,24 @@
           "runtime_edge": "INTENTIONAL_NONE",
           "new_runtime_consumer_creation": "FORBIDDEN",
           "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "root-zone-scenario-candidate-compatibility-adapter",
+          "path": "apps/server/src/domain/decision/root_zone_scenario_candidate_adapter_v1.ts",
+          "role": "pure B-06e compatibility projection from explicit ROOT_ZONE_SCENARIO_SELECTION decision_recommendation_v1 payload into CandidateDecisionV1; actionless ordinary scenario recommendation is deliberately not fabricated into a candidate",
+          "authority_level": "CANDIDATE_ONLY_ADAPTER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectRootZoneScenarioCandidateV1",
+            "candidateDecisionV1Schema.parse"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
         }
       ],
       "registered_consumers": [
@@ -1299,7 +1317,10 @@
         "B-06c uses the legacy top-level action_type as candidate action and does not elevate nested suggested_action operational labels.",
         "B-06d registers one pure AgronomyRecommendationV2 -> CandidateDecisionV1 compatibility adapter capability with no runtime consumer.",
         "B-06d does not promote Rule Engine crop_code/crop_stage/telemetry refs/expected effects/skill trace into canonical Context, Stage, Evidence, Calculation or action-parameter authority.",
-        "B-06d keeps Rule Engine candidate parameters empty because AgronomyRecommendationV2 does not define canonical execution parameters."
+        "B-06d keeps Rule Engine candidate parameters empty because AgronomyRecommendationV2 does not define canonical execution parameters.",
+        "B-06e registers one pure ROOT_ZONE_SCENARIO_SELECTION decision_recommendation_v1 -> CandidateDecisionV1 compatibility adapter capability with no runtime consumer.",
+        "B-06e preserves only explicit IRRIGATE/DAY0 or DELAYED_IRRIGATION/DAY3 candidate semantics and never promotes legacy scenario evidence/quality into canonical EvidenceQualification authority.",
+        "B-06e classifies the ordinary Operator scenario decision_recommendation_v1 shape as currently unmappable because it contains no action_type/proposed_action; no synthetic action is allowed."
       ],
       "runtime_consumers": [
         {
@@ -2302,7 +2323,7 @@
     {
       "guard_id": "G-B02-15-candidate-decision-instantiation",
       "semantic_id": "decision.candidate",
-      "description": "B-06c/B-06d permit exactly the registered persisted-recommendation and Rule Engine CandidateDecision compatibility adapters; any additional production instantiation requires explicit later B-06 registration.",
+      "description": "B-06c/B-06d/B-06e permit exactly the registered persisted-recommendation, Rule Engine, and root-zone scenario CandidateDecision compatibility adapters; any additional production instantiation requires explicit later B-06 registration.",
       "scan_roots": [
         "apps/server/src"
       ],
@@ -2320,7 +2341,8 @@
       },
       "registered_paths": [
         "apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.ts",
-        "apps/server/src/domain/decision/rule_engine_candidate_adapter_v1.ts"
+        "apps/server/src/domain/decision/rule_engine_candidate_adapter_v1.ts",
+        "apps/server/src/domain/decision/root_zone_scenario_candidate_adapter_v1.ts"
       ],
       "failure": "UNREGISTERED_CANDIDATE_DECISION_PRODUCER"
     }
