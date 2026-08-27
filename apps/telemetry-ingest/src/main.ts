@@ -98,6 +98,10 @@ function toQualityFlags(value: unknown): string[] { // Derive basic quality flag
   return ["OK"];
 } // End helper.
 
+function isDurableMqttObservationProjectionFailure(error: unknown): boolean {
+  return error instanceof Error && error.message === "DEVICE_OBSERVATION_VALUE_NOT_NUMERIC";
+}
+
 async function resolveTelemetryObservationFieldId(clientConn: import("pg").PoolClient, tenant_id: string, device_id: string): Promise<string | null> { // Attach latest field dimension for observation indexing.
   try {
     const q = await clientConn.query(
@@ -244,8 +248,10 @@ record = { // Telemetry record.
     const value_text = (p as any).value === undefined || (p as any).value === null ? null : String((p as any).value); // Text representation for projection.
 
     const clientConn = await pool.connect(); // Acquire a db connection for transaction.
+    let transactionOpen = false;
     try { // Transaction scope.
       await clientConn.query("BEGIN"); // Start transaction.
+      transactionOpen = true;
 
       const devExists = await clientConn.query(
         `SELECT 1 FROM device_index_v1 WHERE tenant_id = $1 AND device_id = $2 LIMIT 1`,
@@ -253,6 +259,7 @@ record = { // Telemetry record.
       ); // Check device registration.
       if ((devExists.rows ?? []).length < 1) { // Unregistered device.
         await clientConn.query("ROLLBACK"); // Rollback and drop message.
+        transactionOpen = false;
         const k = `drop_unregistered_device|${msgKeyBase}`; // Dedupe key.
         if (!seenRecently(k, 2000)) { // Avoid duplicate logs from QoS redelivery.
           // eslint-disable-next-line no-console
@@ -270,6 +277,7 @@ record = { // Telemetry record.
       ); // Fetch active credential for device.
       if ((credRow.rows ?? []).length < 1) { // No active credential.
       await clientConn.query("ROLLBACK"); // Rollback before return.
+      transactionOpen = false;
       const k = `drop_missing_credential|${msgKeyBase}`; // Dedupe key.
       if (!seenRecently(k, 2000)) { // Avoid repeated warnings.
         // eslint-disable-next-line no-console
@@ -281,6 +289,7 @@ record = { // Telemetry record.
     const expected_hash = String(credRow.rows[0].credential_hash ?? ""); // Stored credential hash.
     if (!expected_hash || expected_hash !== provided_hash) { // Credential mismatch.
       await clientConn.query("ROLLBACK"); // Rollback before return.
+      transactionOpen = false;
       const k = `drop_invalid_credential|${msgKeyBase}`; // Dedupe key.
       if (!seenRecently(k, 2000)) {
         // eslint-disable-next-line no-console
@@ -305,27 +314,56 @@ record = { // Telemetry record.
     ); // Append raw telemetry/heartbeat fact.
 
     if (parsed.kind === "telemetry") {
-      await writeObservationRunPipelineAndRefreshFieldV1(
-        clientConn,
-        buildMqttObservationInputV1({
+      try {
+        await writeObservationRunPipelineAndRefreshFieldV1(
+          clientConn,
+          buildMqttObservationInputV1({
+            tenant_id: parsed.tenant_id,
+            project_id: process.env.GEOX_PROJECT_ID || "projectA",
+            group_id: process.env.GEOX_GROUP_ID || "groupA",
+            field_id,
+            device_id: parsed.device_id,
+            metric: String((p as any).metric ?? ""),
+            value: (p as any).value,
+            unit: typeof (p as any).unit === "string" ? (p as any).unit : null,
+            ts_ms: p.ts_ms,
+            source_fact_id: fact_id,
+            quality_flags: qualityFlags,
+          })
+        );
+      } catch (err) {
+        if (!isDurableMqttObservationProjectionFailure(err)) throw err;
+
+        await clientConn.query("COMMIT");
+        transactionOpen = false;
+        // eslint-disable-next-line no-console
+        console.warn("[telemetry-ingest] durable_raw_projection_rejected", {
           tenant_id: parsed.tenant_id,
-          project_id: process.env.GEOX_PROJECT_ID || "projectA",
-          group_id: process.env.GEOX_GROUP_ID || "groupA",
-          field_id,
           device_id: parsed.device_id,
-          metric: String((p as any).metric ?? ""),
-          value: (p as any).value,
-          unit: typeof (p as any).unit === "string" ? (p as any).unit : null,
-          ts_ms: p.ts_ms,
-          source_fact_id: fact_id,
-          quality_flags: qualityFlags,
-        })
-      );
+          fact_id,
+          error: "DEVICE_OBSERVATION_VALUE_NOT_NUMERIC",
+        });
+        if (once) {
+          // eslint-disable-next-line no-console
+          console.log(JSON.stringify({
+            ok: false,
+            durable_raw: true,
+            fact_id,
+            kind: parsed.kind,
+            error: "DEVICE_OBSERVATION_VALUE_NOT_NUMERIC",
+          }));
+          client.end(true);
+          await pool.end();
+          process.exit(2);
+        }
+        return;
+      }
     }
 
     await updateAgronomySnapshot(clientConn, parsed.tenant_id, parsed.device_id); // Refresh agronomy signal snapshot from canonical telemetry projection.
 
     await clientConn.query("COMMIT"); // Commit all writes.
+    transactionOpen = false;
     if (once) {
       // eslint-disable-next-line no-console
       console.log(JSON.stringify({ ok: true, fact_id, kind: parsed.kind })); // Output one-shot result.
@@ -334,7 +372,10 @@ record = { // Telemetry record.
       process.exit(0);
     }
     } catch (err) {
-      await clientConn.query("ROLLBACK").catch(() => undefined);
+      if (transactionOpen) {
+        await clientConn.query("ROLLBACK").catch(() => undefined);
+        transactionOpen = false;
+      }
       // eslint-disable-next-line no-console
       console.error("[telemetry-ingest] process_error", { topic, error: String((err as Error)?.message ?? err) });
     } finally {
