@@ -499,6 +499,46 @@
         "artifact_absence_reason": "RUN_LEVEL_PHASE4_POST_PHASE5_WRITER_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
         "immutable_binding_sha256": "29743d126c6c143d370ffc1bb2b15a9436357b2af30d1fb9bb5afd1681df7a2b"
+      },
+      {
+        "evidence_id": "PHASE4_TWIN_RUNTIME_FOUNDATION_REQUAL_12473C49",
+        "check_id": "PHASE4_TWIN_RUNTIME_FOUNDATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "phase4-twin-runtime-foundation-post-rolling-gfs",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "12473c491b354e49305f22bfa24c8701ce5e3ff9",
+        "workflow_name": "mcft-cap-09-phase4-twin-runtime-persistence",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml",
+        "run_id": 33101400891,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "12473c491b354e49305f22bfa24c8701ce5e3ff9",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:b66bb22fb1b3dc2a90490b5a01c8f016e1cb2e1f9b652a250a535a73cd408d3e",
+        "artifact_absence_reason": "RUN_LEVEL_PHASE4_POST_ROLLING_GFS_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "ed9881d934a1436eec33b405585f456ef2ddd33bdda3d3645182d8676ff1c2a2"
+      },
+      {
+        "evidence_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_12473C49",
+        "check_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "phase5-two-service-production-equivalent-accelerated-24t",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "12473c491b354e49305f22bfa24c8701ce5e3ff9",
+        "workflow_name": "mcft-cap-09-phase5-two-service-accelerated-24t",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+        "run_id": 33101400822,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "12473c491b354e49305f22bfa24c8701ce5e3ff9",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:d208a87afd4f989228ced4e454156fe64e7b6bdcd6840334064faedf6e882c7b",
+        "artifact_absence_reason": "RUN_LEVEL_PHASE5_EXACT_HEAD_TWO_SERVICE_24T_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "0804d9ffbba8cde486089d8d93e9b08ad6ec943599b5408d4fa3caa11482420f"
       }
     ],
     "durable_anchors": {
@@ -657,6 +697,34 @@
             "base_sha": "16ff7160473c0a25dc059db6b2b6b7ba07f54dd1",
             "created_at": "2026-08-27T15:02:14Z",
             "updated_at": "2026-08-27T15:03:28Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE4_TWIN_RUNTIME_FOUNDATION_REQUAL_12473C49",
+          "run_id": 33101400891,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 102,
+            "workflow_path": ".github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml",
+            "workflow_name": "mcft-cap-09-phase4-twin-runtime-persistence",
+            "head_sha": "12473c491b354e49305f22bfa24c8701ce5e3ff9",
+            "base_sha": "16ff7160473c0a25dc059db6b2b6b7ba07f54dd1",
+            "created_at": "2026-08-27T18:01:34Z",
+            "updated_at": "2026-08-27T18:02:59Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_12473C49",
+          "run_id": 33101400822,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 43,
+            "workflow_path": ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+            "workflow_name": "mcft-cap-09-phase5-two-service-accelerated-24t",
+            "head_sha": "12473c491b354e49305f22bfa24c8701ce5e3ff9",
+            "base_sha": "16ff7160473c0a25dc059db6b2b6b7ba07f54dd1",
+            "created_at": "2026-08-27T18:01:34Z",
+            "updated_at": "2026-08-27T18:26:23Z"
           }
         }
       ],

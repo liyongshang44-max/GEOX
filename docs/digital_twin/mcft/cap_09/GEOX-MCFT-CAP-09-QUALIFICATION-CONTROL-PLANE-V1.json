@@ -568,7 +568,7 @@
         "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS"
       ],
       "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
-      "execution_workflow": ".github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml",
+      "execution_workflow": ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
       "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
       "fail_policy": "FAIL_CLOSED",
       "carry_forward_policy": "NONE",
