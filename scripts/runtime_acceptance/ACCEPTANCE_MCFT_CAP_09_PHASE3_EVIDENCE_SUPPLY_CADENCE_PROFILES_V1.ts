@@ -138,12 +138,9 @@ async function main(): Promise<void> {
   // PostgreSQL proof: same publication timestamp for a daily batch must not conflict.
   const pool = new Pool({ connectionString: DATABASE_URL, application_name: "mcft-cap09-phase3-cadence-profile-qualification" });
   try {
-    await pool.query(
-      "DELETE FROM external_evidence_supply_event_v1 WHERE tenant_id=$1; " +
-      "DELETE FROM external_evidence_supply_cursor_v1 WHERE tenant_id=$1; " +
-      "DELETE FROM external_evidence_producer_lease_v1 WHERE tenant_id=$1",
-      [SCOPE.tenant_id],
-    );
+    await pool.query("DELETE FROM external_evidence_supply_event_v1 WHERE tenant_id=$1", [SCOPE.tenant_id]);
+    await pool.query("DELETE FROM external_evidence_supply_cursor_v1 WHERE tenant_id=$1", [SCOPE.tenant_id]);
+    await pool.query("DELETE FROM external_evidence_producer_lease_v1 WHERE tenant_id=$1", [SCOPE.tenant_id]);
 
     const leaseRepo = new PostgresEvidenceProducerLeaseV1(pool, SCOPE);
     const claim = await leaseRepo.acquireLease({
