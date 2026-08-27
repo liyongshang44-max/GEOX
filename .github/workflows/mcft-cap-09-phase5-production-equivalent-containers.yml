@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml'
+      - '.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml'
       - 'apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts'
