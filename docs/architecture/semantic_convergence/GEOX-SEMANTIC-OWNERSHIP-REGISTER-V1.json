@@ -1395,7 +1395,7 @@
       "semantic_id": "decision.eligibility",
       "question": "May this candidate action proceed toward approval/production given qualified inputs?",
       "target_owner": "Decision Eligibility Runtime",
-      "canonical_output_type": "DecisionEligibilityDecisionV1 (B-07 target)",
+      "canonical_output_type": "DecisionEligibilityDecisionV1 (B-07a contract frozen; no production producer connected)",
       "current_state": "NOT_YET_UNIFIED",
       "target_phase": "B-07",
       "new_owner_creation": "FORBIDDEN",
@@ -1447,7 +1447,11 @@
       "notes": [
         "Normative target verdicts: PASS / DEGRADED / NEED_EVIDENCE / HUMAN_REVIEW / BLOCK.",
         "Evidence invalidity does not automatically imply action BLOCK.",
-        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only."
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only.",
+        "B-07a freezes DecisionEligibilityDecisionV1 with verdicts PASS/DEGRADED/NEED_EVIDENCE/HUMAN_REVIEW/BLOCK and authority_state=ELIGIBILITY_ONLY.",
+        "B-07a keeps EXPIRED in lifecycle_state rather than the eligibility verdict enum.",
+        "B-07a does not encode invalid EvidenceQualification -> automatic BLOCK; degraded independent support remains representable.",
+        "B-07a activates no production eligibility producer; Stage-1 and Agronomy Judge remain grandfathered precursors until later bounded B-07 mapping and B-09 removal."
       ],
       "runtime_consumers": []
     },
@@ -2398,6 +2402,28 @@
         "apps/server/src/domain/decision/agronomy_recommendation_v2_candidate_adapter_v1.ts"
       ],
       "failure": "UNREGISTERED_CANDIDATE_DECISION_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-16-decision-eligibility-instantiation",
+      "semantic_id": "decision.eligibility",
+      "description": "B-07a freezes the DecisionEligibilityDecisionV1 contract but permits zero production instantiations; later B-07 producer registration must be explicit.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "decisionEligibilityDecisionV1Schema.parse("
+        ]
+      },
+      "registered_paths": [],
+      "failure": "UNREGISTERED_DECISION_ELIGIBILITY_PRODUCER"
     }
   ],
   "connectivity_model": {
