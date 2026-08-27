@@ -1395,7 +1395,7 @@
       "semantic_id": "decision.eligibility",
       "question": "May this candidate action proceed toward approval/production given qualified inputs?",
       "target_owner": "Decision Eligibility Runtime",
-      "canonical_output_type": "DecisionEligibilityDecisionV1 (B-07a contract frozen; B-07b Stage-1 + B-07c Agronomy Judge criterion adapters registered; zero final runtime producer)",
+      "canonical_output_type": "DecisionEligibilityDecisionV1 (B-07d deterministic evaluator registered as capability island; no runtime consumer connected)",
       "current_state": "NOT_YET_UNIFIED",
       "target_phase": "B-07",
       "new_owner_creation": "FORBIDDEN",
@@ -1477,6 +1477,24 @@
           "runtime_edge": "INTENTIONAL_NONE",
           "new_runtime_consumer_creation": "FORBIDDEN",
           "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "decision-eligibility-evaluator-v1",
+          "path": "apps/server/src/domain/decision/decision_eligibility_evaluator_v1.ts",
+          "role": "pure B-07d deterministic aggregation of canonical eligibility criteria under an explicit policy_ref/required_criteria set into DecisionEligibilityDecisionV1",
+          "authority_level": "ELIGIBILITY_ONLY_CANONICAL_PRODUCER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "evaluateDecisionEligibilityV1",
+            "decisionEligibilityDecisionV1Schema.parse"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
         }
       ],
       "registered_consumers": [],
@@ -1494,7 +1512,11 @@
         "B-07c registers a pure Agronomy Judge criterion adapter with direct_verdict_authority=NONE and no runtime consumer.",
         "B-07c forbids WATER_DEFICIT->PASS, PASS->final PASS, and BLOCKED->BLOCK shortcuts.",
         "B-07c requires explicit canonical CalculationResult refs for irrigation-state criteria and keeps legacy Judge calculation outputs non-authoritative.",
-        "B-07c maps recognized Evidence Judge overrides only to QUALIFIED_EVIDENCE=MISSING; final action verdict remains a later canonical runtime concern."
+        "B-07c maps recognized Evidence Judge overrides only to QUALIFIED_EVIDENCE=MISSING; final action verdict remains a later canonical runtime concern.",
+        "B-07d registers the first canonical final DecisionEligibilityDecisionV1 producer as a pure deterministic capability island with no runtime consumer.",
+        "B-07d requires an explicit policy_ref and explicit required_criteria; there is no hidden default required set.",
+        "B-07d aggregation precedence is VIOLATED>REVIEW_REQUIRED>MISSING/UNKNOWN>DEGRADED>SATISFIED.",
+        "B-07d PASS remains ELIGIBILITY_ONLY and is not Approval."
       ],
       "runtime_consumers": []
     },
@@ -2449,7 +2471,7 @@
     {
       "guard_id": "G-B02-16-decision-eligibility-instantiation",
       "semantic_id": "decision.eligibility",
-      "description": "B-07a freezes the DecisionEligibilityDecisionV1 contract but permits zero production instantiations; later B-07 producer registration must be explicit.",
+      "description": "B-07d permits exactly the registered deterministic Decision Eligibility evaluator to instantiate DecisionEligibilityDecisionV1; any additional final eligibility producer requires explicit later registration.",
       "scan_roots": [
         "apps/server/src"
       ],
@@ -2465,7 +2487,9 @@
           "decisionEligibilityDecisionV1Schema.parse("
         ]
       },
-      "registered_paths": [],
+      "registered_paths": [
+        "apps/server/src/domain/decision/decision_eligibility_evaluator_v1.ts"
+      ],
       "failure": "UNREGISTERED_DECISION_ELIGIBILITY_PRODUCER"
     },
     {
