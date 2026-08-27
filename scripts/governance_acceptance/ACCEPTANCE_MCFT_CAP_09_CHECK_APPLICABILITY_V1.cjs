@@ -148,6 +148,19 @@ function main() {
   assert.equal(byId(phase3, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
   assert(byId(phase3, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes(phase3Path));
 
+  // CP-4: Phase3 cadence/fenced-writer dependencies must be centrally owned.
+  for (const phase3Path of [
+    "apps/server/src/external_evidence/mcft_cap09_evidence_supply_cadence_profile_v1.ts",
+    "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_governed_ingress_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_SUPPLY_CADENCE_PROFILES_V1.ts",
+  ]) {
+    const phase3Owned = plan(authority, registry, [phase3Path]);
+    assert.equal(phase3Owned.status, "PASS");
+    assert.equal(phase3Owned.unknown_changed_paths.length, 0);
+    assert.equal(byId(phase3Owned, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert(byId(phase3Owned, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes(phase3Path));
+  }
+
   // CP-4: runtime root changes invalidate v13 carry-forward by dependency closure.
   const runtimePath = "apps/server/src/runtime/twin_runtime/external_formal_forcing_autonomous_controller_service_v1.ts";
   const runtime = plan(authority, registry, [runtimePath]);
