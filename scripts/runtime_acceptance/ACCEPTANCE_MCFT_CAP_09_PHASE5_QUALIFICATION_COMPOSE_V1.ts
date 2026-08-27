@@ -151,6 +151,36 @@ async function main(): Promise<void> {
     assert.equal(/S3|FIXTURE|PROVIDER/i.test(key), false, `PHASE5_TWIN_PROVIDER_ENV_FORBIDDEN:${key}`);
   }
 
+  for (const [serviceName, serviceEnv, ownerKey] of [
+    ["evidence-runtime", evidenceEnv, "GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_LEASE_OWNER"],
+    ["twin-runtime", twinEnv, "GEOX_MCFT_CAP09_TWIN_RUNTIME_LEASE_OWNER"],
+  ] as const) {
+    assert.equal(
+      Object.prototype.hasOwnProperty.call(serviceEnv, ownerKey),
+      false,
+      `PHASE5_SCALED_SERVICE_FIXED_LEASE_OWNER_FORBIDDEN:${serviceName}:${ownerKey}`,
+    );
+  }
+
+  const evidenceProcessSource = fs.readFileSync(
+    path.resolve("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts"),
+    "utf8",
+  );
+  const twinProcessSource = fs.readFileSync(
+    path.resolve("apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts"),
+    "utf8",
+  );
+  assert.equal(
+    evidenceProcessSource.includes("evidence-runtime:\${env.HOSTNAME ?? os.hostname()}"),
+    true,
+    "PHASE5_EVIDENCE_CONTAINER_HOSTNAME_LEASE_OWNER_REQUIRED",
+  );
+  assert.equal(
+    twinProcessSource.includes("twin-runtime:\${env.HOSTNAME ?? os.hostname()}"),
+    true,
+    "PHASE5_TWIN_CONTAINER_HOSTNAME_LEASE_OWNER_REQUIRED",
+  );
+
   assert.equal(
     twinEnv.GEOX_MCFT_CAP09_PHASE5_ACCELERATED_CLOCK_ACK,
     "MCFT_CAP09_PHASE5_ACCELERATED_WAIT_AND_CLOCK_ONLY",
@@ -220,6 +250,7 @@ async function main(): Promise<void> {
     compiled_qualification_entrypoints: true,
     read_only_qualification_inputs: true,
     duplicate_instance_scaling_not_blocked_by_container_name: true,
+    duplicate_instance_lease_owner_defaults_are_container_unique: true,
     persistent_postgres_and_raw_storage: true,
     public_runtime_ports: 0,
     production_commercial_compose_mutated: false,
