@@ -5,6 +5,8 @@
 
 import type { Pool, PoolClient } from "pg";
 
+import { semanticHashV1 } from "../../domain/twin_runtime/canonical_identity_v1.js";
+
 import type {
   CanonicalizedExternalEvidenceResultV1,
 } from "../../external_evidence/mcft_cap09_external_collector_canonicalizer_v1.js";
@@ -128,6 +130,24 @@ export class PostgresEvidenceRuntimeGovernedIngressV1 implements ExternalFormalE
         throw new Error("PHASE3_EVIDENCE_DB_INGRESS_STATUS_WRITE_COUNT_MISMATCH");
       }
 
+      let committedRecordSemanticSha256 = result.record_semantic_sha256;
+      if (row.status === "EXISTING_IDEMPOTENT_SUCCESS") {
+        const existing = await client.query<{ record_json: unknown }>(
+          "SELECT record_json FROM public.facts WHERE fact_id=$1 LIMIT 2",
+          [prepared.fact_id],
+        );
+        if (existing.rows.length !== 1) {
+          throw new Error("PHASE3_EVIDENCE_DB_INGRESS_EXISTING_FACT_REQUIRED");
+        }
+        const envelope = existing.rows[0].record_json as {
+          payload?: unknown;
+        };
+        if (!envelope || typeof envelope !== "object" || !envelope.payload) {
+          throw new Error("PHASE3_EVIDENCE_DB_INGRESS_EXISTING_PAYLOAD_REQUIRED");
+        }
+        committedRecordSemanticSha256 = semanticHashV1(envelope.payload);
+      }
+
       // COMMIT is authorized only after the DB-side function has validated the current fence.
       await client.query("COMMIT");
       return {
@@ -140,6 +160,7 @@ export class PostgresEvidenceRuntimeGovernedIngressV1 implements ExternalFormalE
         retention_ref: prepared.raw_proof.retention_ref,
         raw_sha256: prepared.raw_proof.retained_sha256,
         raw_bytes: prepared.raw_proof.retained_bytes,
+        committed_record_semantic_sha256: committedRecordSemanticSha256,
         canonical_fact_write_count: writeCount as 0 | 1,
       };
     } catch (error) {

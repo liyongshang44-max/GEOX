@@ -23,6 +23,7 @@ import type {
 } from "./mcft_cap09_evidence_runtime_persistence_v1.js";
 import {
   ProductionEvidenceWorkItemFactoryV1,
+  type ProductionEvidenceSourceFamilyV1,
   type ProductionEvidenceWorkItemFactoryConfigV1,
 } from "./mcft_cap09_production_evidence_work_items_v1.js";
 import {
@@ -47,6 +48,7 @@ export type EvidenceRuntimeAcquisitionTargetV1 = {
   target_logical_time: string;
   requested_at: string;
   request_id_prefix: string;
+  source_families?: readonly ProductionEvidenceSourceFamilyV1[];
 };
 
 export interface EvidenceRuntimeAcquisitionTargetPlannerV1 {

@@ -39,6 +39,7 @@ import {
 } from "./postgres_external_formal_amendment19_evidence_source_v1.js";
 import {
   PostgresPersistentSequentialSchedulerAdapterV1,
+  type PersistentSequentialSchedulerClockAuthorityV1,
 } from "./postgres_persistent_sequential_scheduler_adapter_v1.js";
 import {
   PostgresTwinRuntimeSuccessorViabilityV1,
@@ -47,6 +48,7 @@ import {
   MCFT_CAP09_TWIN_RUNTIME_HOST_CONTRACT_V1,
   PostgresTwinRuntimeDatabaseClockV1,
   TwinRuntimeHostV1,
+  type TwinRuntimeDatabaseClockPortV1,
   type TwinRuntimeHostFailureClassifierV1,
   type TwinRuntimeHostHealthPortV1,
   type TwinRuntimeHostStopPortV1,
@@ -91,6 +93,8 @@ export type ComposeMcftCap09TwinRuntimeInputV1 = {
   health: TwinRuntimeHostHealthPortV1;
   stop: TwinRuntimeHostStopPortV1;
   failure_classifier: TwinRuntimeHostFailureClassifierV1;
+  scheduler_clock_authority?: PersistentSequentialSchedulerClockAuthorityV1;
+  host_clock?: TwinRuntimeDatabaseClockPortV1;
 };
 
 export type McftCap09TwinRuntimeCompositionV1 = {
@@ -141,7 +145,7 @@ export function composeMcftCap09TwinRuntimeV1(
       scope: input.manifest.scope,
       schedule_start_logical_time: input.manifest.o00_logical_time,
     },
-    { mode: "SYSTEM_DATABASE_UTC" },
+    input.scheduler_clock_authority ?? { mode: "SYSTEM_DATABASE_UTC" },
   );
 
   const tickService = new ExternalFormalV3Amendment19PersistentTickServiceV1(
@@ -183,7 +187,8 @@ export function composeMcftCap09TwinRuntimeV1(
   );
 
   const host = new TwinRuntimeHostV1({
-    database_clock: new PostgresTwinRuntimeDatabaseClockV1(input.pool),
+    database_clock:
+      input.host_clock ?? new PostgresTwinRuntimeDatabaseClockV1(input.pool),
     one_due_slot: runner,
     successor_viability: successorViability,
     wait: input.wait,

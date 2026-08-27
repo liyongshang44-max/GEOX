@@ -131,9 +131,25 @@ export function committedExternalEvidenceIdentityV1(
     throw new Error("PHASE2_VISIBLE_INGRESS_RAW_PROVENANCE_MISMATCH");
   }
 
-  const semanticHash = semanticHashV1(result.record);
-  if (semanticHash !== result.record_semantic_sha256) {
+  const requestedSemanticHash = semanticHashV1(result.record);
+  if (requestedSemanticHash !== result.record_semantic_sha256) {
     throw new Error("PHASE2_VISIBLE_INGRESS_RECORD_SEMANTIC_HASH_MISMATCH");
+  }
+  const receiptCommittedSemantic = typeof receipt.committed_record_semantic_sha256 === "string"
+    ? receipt.committed_record_semantic_sha256
+    : null;
+  const semanticHash = receipt.status === "EXISTING_IDEMPOTENT_SUCCESS"
+    ? requiredTextV1(
+        receiptCommittedSemantic,
+        "PHASE2_VISIBLE_INGRESS_EXISTING_COMMITTED_SEMANTIC_REQUIRED",
+      )
+    : requestedSemanticHash;
+  if (
+    receipt.status !== "EXISTING_IDEMPOTENT_SUCCESS"
+    && receiptCommittedSemantic !== null
+    && receiptCommittedSemantic !== requestedSemanticHash
+  ) {
+    throw new Error("PHASE2_VISIBLE_INGRESS_INSERTED_COMMITTED_SEMANTIC_MISMATCH");
   }
 
   return {
