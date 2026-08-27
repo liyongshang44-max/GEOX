@@ -54,6 +54,8 @@ on:
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts'
+      - 'apps/server/src/infra/migrations.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1.ts'
   merge_group:
     types: [checks_requested]
 
