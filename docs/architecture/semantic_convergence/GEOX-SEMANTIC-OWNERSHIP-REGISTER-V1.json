@@ -575,6 +575,25 @@
           "runtime_edge": "INTENTIONAL_NONE",
           "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
           "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "legacy-stage-compatibility-adapter",
+          "path": "apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.ts",
+          "role": "pure B-05c compatibility adapter from legacy stage-resolver semantics into QualifiedCropStageStateV1; UNKNOWN is preserved and legacy output never becomes canonical decision input",
+          "authority_level": "COMPATIBILITY_PROJECTION",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectLegacyCropStageCompatibilityV1",
+            "qualifiedCropStageStateV1Schema.parse",
+            "resolveCropStage"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
         }
       ],
       "registered_consumers": [],
@@ -582,7 +601,10 @@
         "UNKNOWN must remain UNKNOWN in canonical paths.",
         "Compatibility default/resolver output must not silently become authoritative stage.",
         "B-05a contract distinguishes UNKNOWN, COMPATIBILITY_NON_AUTHORITATIVE and TWIN_QUALIFIED representation.",
-        "No B-05a production runtime is authorized to instantiate QualifiedCropStageStateV1; future producer registration is required before runtime use."
+        "No B-05a production runtime is authorized to instantiate QualifiedCropStageStateV1; future producer registration is required before runtime use.",
+        "B-05c registers one capability-island QualifiedCropStageStateV1 compatibility adapter; this is not canonical stage authority and has no runtime consumer.",
+        "Negative DAP, invalid/future start date, unsupported crop and resolver unknown are represented as canonical UNKNOWN rather than normalized into a concrete legacy stage.",
+        "Historical stage authority is not removed in B-05; authority removal remains gated by B-09 shadow-compare discipline."
       ],
       "runtime_consumers": []
     },
@@ -2103,7 +2125,7 @@
     {
       "guard_id": "G-B02-12-qualified-crop-stage-instantiation",
       "semantic_id": "context.crop_stage",
-      "description": "B-05a exposes QualifiedCropStageStateV1 contract capability without activating a production stage authority; runtime instantiation requires explicit later registration.",
+      "description": "B-05c permits exactly registered QualifiedCropStageStateV1 compatibility projection paths; runtime authority/consumers require explicit later registration and B-09 authority-removal discipline.",
       "scan_roots": [
         "apps/server/src"
       ],
@@ -2119,7 +2141,9 @@
           "qualifiedCropStageStateV1Schema.parse("
         ]
       },
-      "registered_paths": [],
+      "registered_paths": [
+        "apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.ts"
+      ],
       "failure": "UNREGISTERED_QUALIFIED_CROP_STAGE_PRODUCER"
     }
   ],
