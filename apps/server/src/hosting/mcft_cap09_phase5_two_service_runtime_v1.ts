@@ -15,6 +15,10 @@ import {
   type EvidenceRuntimeAcquisitionTargetV1,
 } from "../external_evidence/mcft_cap09_evidence_runtime_composition_v1.js";
 import type {
+  EvidenceRuntimeHostHealthEventV1,
+  EvidenceRuntimeHostHealthPortV1,
+} from "../external_evidence/mcft_cap09_evidence_runtime_host_v1.js";
+import type {
   EvidenceRuntimeScopeV1,
 } from "../external_evidence/mcft_cap09_evidence_runtime_persistence_v1.js";
 import type {
@@ -165,19 +169,52 @@ implements TwinRuntimeDatabaseClockPortV1 {
   }
 }
 
-class StopAfterTerminalHealthPortV1 implements TwinRuntimeHostHealthPortV1 {
+class QualificationTwinHealthPortV1 implements TwinRuntimeHostHealthPortV1 {
   constructor(
     private readonly delegate: TwinRuntimeHostHealthPortV1,
     private readonly stop: ProcessSignalStopPortV1,
-    private readonly stopAfterTerminalTicks: number | null,
+    private readonly policy: {
+      terminal_ticks: number | null;
+      backpressure_count: number | null;
+      retryable_failure_count: number | null;
+      no_due_count: number | null;
+    },
   ) {}
 
   async recordHealth(event: TwinRuntimeHostHealthEventV1): Promise<void> {
     await this.delegate.recordHealth(event);
     if (
-      this.stopAfterTerminalTicks !== null
-      && event.detail === "TERMINAL_SLOT_RECORDED"
-      && event.terminal_slot_count >= this.stopAfterTerminalTicks
+      (this.policy.terminal_ticks !== null
+        && event.detail === "TERMINAL_SLOT_RECORDED"
+        && event.terminal_slot_count >= this.policy.terminal_ticks)
+      || (this.policy.backpressure_count !== null
+        && event.detail === "NOT_READY_PRECLAIM"
+        && event.preclaim_backpressure_count >= this.policy.backpressure_count)
+      || (this.policy.retryable_failure_count !== null
+        && event.detail === "RETRYABLE_CYCLE_FAILURE"
+        && event.retryable_failure_count >= this.policy.retryable_failure_count)
+      || (this.policy.no_due_count !== null
+        && event.detail === "NO_DUE_SLOT"
+        && event.no_due_slot_count >= this.policy.no_due_count)
+    ) {
+      this.stop.requestStopForQualification();
+    }
+  }
+}
+
+class QualificationEvidenceHealthPortV1 implements EvidenceRuntimeHostHealthPortV1 {
+  constructor(
+    private readonly delegate: EvidenceRuntimeHostHealthPortV1,
+    private readonly stop: ProcessSignalStopPortV1,
+    private readonly standbyCount: number | null,
+  ) {}
+
+  async recordHealth(event: EvidenceRuntimeHostHealthEventV1): Promise<void> {
+    await this.delegate.recordHealth(event);
+    if (
+      this.standbyCount !== null
+      && event.detail === "LEASE_HELD_BY_OTHER_OWNER"
+      && event.standby_cycle_count >= this.standbyCount
     ) {
       this.stop.requestStopForQualification();
     }
@@ -219,7 +256,22 @@ Promise<void> {
   });
   const stop = new ProcessSignalStopPortV1();
   stop.install();
-  const health = new JsonLineServiceHealthPortV1("EVIDENCE_RUNTIME");
+  const baseHealth = new JsonLineServiceHealthPortV1("EVIDENCE_RUNTIME");
+  const stopAfterStandby = optionalEnvV1(
+    "GEOX_MCFT_CAP09_STOP_AFTER_EVIDENCE_STANDBY_COUNT",
+  );
+  const health = new QualificationEvidenceHealthPortV1(
+    baseHealth,
+    stop,
+    stopAfterStandby === null
+      ? null
+      : integerEnvV1(
+          "GEOX_MCFT_CAP09_STOP_AFTER_EVIDENCE_STANDBY_COUNT",
+          1,
+          1,
+          1000,
+        ),
+  );
   const wait = new Phase5ServiceWaitPortV1(waitProfileFromEnvironmentV1());
   const classifier = new PostgresTransientFailureClassifierV1();
   const scope = scopeFromEnvironmentV1();
@@ -303,14 +355,29 @@ Promise<void> {
   const stop = new ProcessSignalStopPortV1();
   stop.install();
   const baseHealth = new JsonLineServiceHealthPortV1("TWIN_RUNTIME");
-  const stopAfter = optionalEnvV1("GEOX_MCFT_CAP09_STOP_AFTER_TERMINAL_TICKS");
-  const stopAfterTerminalTicks = stopAfter === null
-    ? null
-    : integerEnvV1("GEOX_MCFT_CAP09_STOP_AFTER_TERMINAL_TICKS", 24, 1, 24);
-  const health = new StopAfterTerminalHealthPortV1(
+  const optionalCount = (name: string, max: number): number | null =>
+    optionalEnvV1(name) === null ? null : integerEnvV1(name, 1, 1, max);
+  const health = new QualificationTwinHealthPortV1(
     baseHealth,
     stop,
-    stopAfterTerminalTicks,
+    {
+      terminal_ticks: optionalCount(
+        "GEOX_MCFT_CAP09_STOP_AFTER_TERMINAL_TICKS",
+        24,
+      ),
+      backpressure_count: optionalCount(
+        "GEOX_MCFT_CAP09_STOP_AFTER_BACKPRESSURE_COUNT",
+        1000,
+      ),
+      retryable_failure_count: optionalCount(
+        "GEOX_MCFT_CAP09_STOP_AFTER_RETRYABLE_FAILURE_COUNT",
+        1000,
+      ),
+      no_due_count: optionalCount(
+        "GEOX_MCFT_CAP09_STOP_AFTER_NO_DUE_COUNT",
+        1000,
+      ),
+    },
   );
   const wait = new Phase5ServiceWaitPortV1(waitProfileFromEnvironmentV1());
   const classifier = new PostgresTransientFailureClassifierV1();
