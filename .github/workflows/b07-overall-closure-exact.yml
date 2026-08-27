@@ -1,0 +1,262 @@
+name: b07-overall-closure-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b07-overall-closure-exact-2026-08-28
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ddcb5f75a77731f5f564b21f831d4c7a98ff726c
+          fetch-depth: 0
+
+      - name: Prove literal product head checkout
+        run: |
+          test "$(git rev-parse HEAD)" = "ddcb5f75a77731f5f564b21f831d4c7a98ff726c"
+          echo "B07_LITERAL_PRODUCT_HEAD_CHECKOUT_PASS"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-07 full contract runtime regression
+        run: |
+          node --import tsx --test apps/server/src/contracts/decision_eligibility_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/stage1_eligibility_precursor_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: B-07 ownership closure invariants
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const graph=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json","utf8"));
+          const sem=(id)=>{
+            const s=(reg.semantics||[]).find(x=>x.semantic_id===id);
+            if(!s) throw new Error("B07_CLOSURE_SEMANTIC_MISSING:"+id);
+            return s;
+          };
+
+          const elig=sem("decision.eligibility");
+          const cand=sem("decision.candidate");
+          const approval=sem("decision.approval");
+          const plan=sem("operation.plan");
+          const execution=sem("execution.task_receipt_acceptance");
+
+          if(elig.target_phase!=="B-07") throw new Error("B07_TARGET_PHASE_DRIFT");
+          if(elig.current_state!=="REGISTERED_CAPABILITY_ISLAND") throw new Error("B07_RUNTIME_NOT_ESTABLISHED:"+elig.current_state);
+          if(!String(elig.canonical_output_type||"").includes("DecisionEligibilityDecisionV1")) throw new Error("B07_CANONICAL_OUTPUT_MISSING");
+
+          const stage1=(elig.registered_producers||[]).find(x=>x.producer_id==="stage1-trigger-eligibility");
+          const judge=(elig.registered_producers||[]).find(x=>x.producer_id==="agronomy-judge-gate");
+          for(const p of [stage1,judge]){
+            if(!p) throw new Error("B07_HISTORICAL_PRECURSOR_MISSING");
+            if(!p.current||p.grandfathered_duplicate!==true||p.removal_target!=="B-09") throw new Error("B07_HISTORICAL_PRECURSOR_BOUNDARY_INVALID:"+p.producer_id);
+          }
+
+          const stageAdapter=(elig.registered_producers||[]).find(x=>x.producer_id==="stage1-eligibility-precursor-criterion-adapter");
+          const judgeAdapter=(elig.registered_producers||[]).find(x=>x.producer_id==="agronomy-judge-eligibility-precursor-criterion-adapter");
+          const evaluator=(elig.registered_producers||[]).find(x=>x.producer_id==="decision-eligibility-evaluator-v1");
+          for(const p of [stageAdapter,judgeAdapter,evaluator]){
+            if(!p) throw new Error("B07_CANONICAL_PRODUCER_MISSING");
+            if(p.grandfathered_duplicate) throw new Error("B07_CANONICAL_PRODUCER_MISCLASSIFIED_GRANDFATHERED:"+p.producer_id);
+            if(p.removal_target!==null) throw new Error("B07_CANONICAL_PRODUCER_REMOVAL_TARGET_INVALID:"+p.producer_id);
+            if(p.connection_class!=="REGISTERED_CAPABILITY_ISLAND"||p.activation!=="MANUAL") throw new Error("B07_CANONICAL_PRODUCER_NOT_CAPABILITY_ISLAND:"+p.producer_id);
+          }
+          if(stageAdapter.runtime_edge!=="INTENTIONAL_NONE"||judgeAdapter.runtime_edge!=="INTENTIONAL_NONE") throw new Error("B07_PRECURSOR_ADAPTER_RUNTIME_EDGE_DRIFT");
+          if(evaluator.runtime_edge!=="INTENTIONAL_NONE"||evaluator.new_runtime_consumer_creation!=="ALLOWED_ONLY_BY_EXPLICIT_REGISTER") throw new Error("B07_EVALUATOR_CONSUMER_POLICY_INVALID");
+
+          const consumers=elig.registered_consumers||[];
+          if(consumers.length!==1) throw new Error("B07_REGISTERED_CONSUMER_COUNT_INVALID:"+consumers.length);
+          const runtime=consumers[0];
+          if(runtime.consumer_id!=="decision-eligibility-runtime-seam-v1") throw new Error("B07_RUNTIME_CONSUMER_ID_INVALID");
+          if(runtime.path!=="apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts") throw new Error("B07_RUNTIME_CONSUMER_PATH_INVALID");
+          if(runtime.connection_class!=="REGISTERED_CAPABILITY_ISLAND"||runtime.activation!=="MANUAL"||runtime.runtime_edge!=="PROVEN") throw new Error("B07_RUNTIME_CONSUMER_BOUNDARY_INVALID");
+          if((elig.runtime_consumers||[]).length!==0) throw new Error("B07_EXTERNAL_RUNTIME_CONSUMER_PREMATURELY_CONNECTED");
+
+          if(cand.current_state!=="DUPLICATE_AUTHORITY") throw new Error("B07_B09_CANDIDATE_REMOVAL_PREMATURE");
+          if(approval.target_phase!=="KEEP"||approval.current_state!=="BOUNDARY_CLEAR") throw new Error("B07_APPROVAL_BOUNDARY_DRIFT");
+          if(plan.current_state!=="MULTIPLE_FORMATION_PATHS") throw new Error("B07_PLAN_HISTORY_PREMATURELY_COLLAPSED");
+          if(execution.target_phase!=="KEEP"||execution.current_state!=="BOUNDARY_CLEAR") throw new Error("B07_EXECUTION_BOUNDARY_DRIFT");
+
+          const badGrandfathered=[];
+          for(const s of reg.semantics||[]){
+            for(const p of s.registered_producers||[]){
+              if(p.grandfathered_duplicate===true&&p.removal_target!=="B-09"){
+                badGrandfathered.push({semantic_id:s.semantic_id,producer_id:p.producer_id,removal_target:p.removal_target});
+              }
+            }
+          }
+          if(badGrandfathered.length) throw new Error("B07_NON_B09_GRANDFATHERED_REMOVAL:"+JSON.stringify(badGrandfathered));
+
+          const badEdges=(graph.current_parallel_edges||[]).filter(e=>e.removal_target!=="B-09");
+          if(badEdges.length) throw new Error("B07_NON_B09_PARALLEL_REMOVAL:"+JSON.stringify(badEdges));
+
+          console.log("B07_OWNERSHIP_CLOSURE_INVARIANTS_PASS");
+          console.log(JSON.stringify({
+            current_state:elig.current_state,
+            historical_precursors:2,
+            criterion_adapters:2,
+            final_evaluators:1,
+            registered_domain_runtime_consumers:1,
+            external_runtime_consumers:0
+          }));
+          NODE
+
+      - name: B-07 static guard exactness
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const final=(reg.static_guards||[]).find(x=>x.guard_id==="G-B02-16-decision-eligibility-instantiation");
+          const criterion=(reg.static_guards||[]).find(x=>x.guard_id==="G-B02-17-decision-eligibility-criterion-instantiation");
+          const runtime=(reg.static_guards||[]).find(x=>x.guard_id==="G-B02-18-decision-eligibility-runtime-consumer");
+          if(!final||!criterion||!runtime) throw new Error("B07_CLOSURE_GUARD_MISSING");
+
+          const finalExpected=["apps/server/src/domain/decision/decision_eligibility_evaluator_v1.ts"];
+          const criterionExpected=[
+            "apps/server/src/domain/decision/stage1_eligibility_precursor_adapter_v1.ts",
+            "apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.ts"
+          ];
+          const runtimeExpected=["apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts"];
+          const same=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
+          if(!same(final.registered_paths||[],finalExpected)) throw new Error("B07_FINAL_GUARD_SET_INVALID");
+          if(!same(criterion.registered_paths||[],criterionExpected)) throw new Error("B07_CRITERION_GUARD_SET_INVALID");
+          if(!same(runtime.registered_paths||[],runtimeExpected)) throw new Error("B07_RUNTIME_GUARD_SET_INVALID");
+          console.log("B07_STATIC_GUARD_EXACTNESS_PASS");
+          NODE
+
+      - name: B-07 negative governance remains closed
+        shell: bash
+        run: |
+          FINAL="apps/server/src/.b07_closure_final_probe.ts"
+          CRIT="apps/server/src/.b07_closure_criterion_probe.ts"
+          RUNTIME="apps/server/src/domain/decision/.b07_closure_runtime_probe.ts"
+
+          printf '%s\n' 'decisionEligibilityDecisionV1Schema.parse(' > "$FINAL"
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs >/tmp/b07-final.log 2>&1
+          RC=$?
+          set -e
+          rm -f "$FINAL"
+          cat /tmp/b07-final.log
+          test "$RC" -ne 0
+          grep -q "UNREGISTERED_DECISION_ELIGIBILITY_PRODUCER" /tmp/b07-final.log
+
+          printf '%s\n' 'decisionEligibilityCriterionAssessmentV1Schema.parse(' > "$CRIT"
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs >/tmp/b07-criterion.log 2>&1
+          RC=$?
+          set -e
+          rm -f "$CRIT"
+          cat /tmp/b07-criterion.log
+          test "$RC" -ne 0
+          grep -q "UNREGISTERED_DECISION_ELIGIBILITY_CRITERION_PRODUCER" /tmp/b07-criterion.log
+
+          printf '%s\n' 'import { evaluateDecisionEligibilityV1 } from "./decision_eligibility_evaluator_v1.js";' > "$RUNTIME"
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs >/tmp/b07-runtime.log 2>&1
+          RC=$?
+          set -e
+          rm -f "$RUNTIME"
+          cat /tmp/b07-runtime.log
+          test "$RC" -ne 0
+          grep -q "UNREGISTERED_DECISION_ELIGIBILITY_RUNTIME_CONSUMER" /tmp/b07-runtime.log
+
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+          echo "B07_NEGATIVE_GOVERNANCE_PASS"
+
+      - name: B-07 has no external route Approval or downstream consumer
+        shell: bash
+        run: |
+          HITS="$(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n 'runDecisionEligibilityRuntimeV1' apps/server/src | grep -v '^apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts:' || true)"
+          if [ -n "$HITS" ]; then
+            echo "$HITS"
+            echo "B07_EXTERNAL_RUNTIME_CONSUMER_FOUND"
+            exit 1
+          fi
+
+          IMPORTS="$(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n 'decision_eligibility_runtime_v1.js' apps/server/src/routes apps/server/src/modules apps/server/src/domain/approval apps/server/src/domain/operations apps/server/src/domain/controlplane 2>/dev/null || true)"
+          if [ -n "$IMPORTS" ]; then
+            echo "$IMPORTS"
+            echo "B07_DOWNSTREAM_IMPORT_FOUND"
+            exit 1
+          fi
+          echo "B07_NO_EXTERNAL_DOWNSTREAM_CONSUMER_PASS"
+
+      - name: B-08 has not started
+        shell: bash
+        run: |
+          HITS="$(grep -R --include='*.ts' -n -E 'DecisionEpisodeV1|decision_episode_v1' apps/server/src 2>/dev/null || true)"
+          if [ -n "$HITS" ]; then
+            echo "$HITS"
+            echo "B07_B08_DECISION_EPISODE_PREMATURELY_STARTED"
+            exit 1
+          fi
+          echo "B07_B08_NOT_STARTED_PASS"
+
+      - name: B-07 exact stack ancestry
+        shell: bash
+        run: |
+          test "$(git rev-parse 9fb38385dc303853354c9524022a25558283a47c^)" = "1e057c25ca38ba6a8658b859bd93d2bb06ef88e7"
+          test "$(git rev-parse ecb3c83e2d2741de77bc846668cc6b89574e8139^)" = "9fb38385dc303853354c9524022a25558283a47c"
+          test "$(git rev-parse 366de72a7c4983f48d5ec200353b10e0eea8360b^)" = "ecb3c83e2d2741de77bc846668cc6b89574e8139"
+          test "$(git rev-parse 168e5c8a33edc29f18b810ad7223d5ec511b6bfa^)" = "366de72a7c4983f48d5ec200353b10e0eea8360b"
+          test "$(git rev-parse ddcb5f75a77731f5f564b21f831d4c7a98ff726c^)" = "168e5c8a33edc29f18b810ad7223d5ec511b6bfa"
+          echo "B07_STACK_ANCESTRY_PASS"
+
+      - name: B-06 full regression
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_decision_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_plan_candidate_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/prescription_action_spec_candidate_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/operation_plan_authority_candidate_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/agronomy_recommendation_v2_candidate_adapter_v1.contract.test.ts
+
+      - name: B-05 B-04 B-03 regression boundary
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+          node --import tsx --test apps/server/src/context/field_program_context_projection_v1.test.ts
+          node --import tsx --test apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.test.ts
+          node --import tsx --test apps/server/src/context/crop_skill_stage_compatibility_adapter_v1.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+          node --import tsx --test apps/server/src/domain/judge/evidence_judge_canonical_sufficiency_shadow_v1.test.ts
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Marker
+        run: |
+          echo "B07_OVERALL_PRODUCT_HEAD ddcb5f75a77731f5f564b21f831d4c7a98ff726c"
+          echo "B07_OVERALL_CLOSURE_PASS"
