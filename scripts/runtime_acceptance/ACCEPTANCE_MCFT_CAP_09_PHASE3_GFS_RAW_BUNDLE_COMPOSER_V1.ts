@@ -168,7 +168,7 @@ async function main(): Promise<void> {
     fetch_impl: filteredFetch,
     clock: () => new Date("2026-08-27T11:50:00.000Z"),
     user_agent: "GEOX-MCFT-CAP09-PHASE3-CADENCE-TEST/1",
-    max_raw_bytes: 1_000_000,
+    max_raw_bytes: 250_000_000,
     timeout_ms: 5_000,
   });
   const cadenceProvider = new GfsNomadsLiveProviderV1({
