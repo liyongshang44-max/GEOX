@@ -1,0 +1,81 @@
+name: b05a-context-stage-contracts-exact-r2
+
+on:
+  push:
+    branches:
+      - ci/bline-b05a-context-stage-contracts-exact-r2-2026-08-27
+
+jobs:
+  exact-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Build runtime workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+      - name: B-05a canonical context and stage contracts
+        run: node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+      - name: Legacy stage resolver compatibility
+        shell: bash
+        run: |
+          cat > .b05a_legacy_resolver_probe.ts <<'TS'
+          import assert from "node:assert/strict";
+          import { resolveCropStage } from "./apps/server/src/domain/agronomy/stage_resolver.ts";
+
+          const day = 24 * 60 * 60 * 1000;
+          const now = Date.parse("2026-08-27T09:50:00Z");
+
+          assert.equal(
+            resolveCropStage({ cropCode: "corn", explicitStage: "reproductive", daysAfterPlanting: 5 }),
+            "reproductive",
+          );
+          assert.equal(
+            resolveCropStage({ cropCode: "corn", daysAfterPlanting: 45 }),
+            "reproductive",
+          );
+          assert.equal(
+            resolveCropStage({ cropCode: "corn", startDate: now - 20 * day, now }),
+            "vegetative",
+          );
+          assert.equal(resolveCropStage({ cropCode: "corn" }), "unknown");
+
+          console.log("B05A_LEGACY_RESOLVER_EXPLICIT_PASS");
+          console.log("B05A_LEGACY_RESOLVER_DAP_PASS");
+          console.log("B05A_LEGACY_RESOLVER_STARTDATE_PASS");
+          console.log("B05A_LEGACY_RESOLVER_UNKNOWN_PASS");
+          TS
+          pnpm -w exec tsx .b05a_legacy_resolver_probe.ts
+          rm -f .b05a_legacy_resolver_probe.ts
+      - name: B-03/B-04 canonical evidence regression boundary
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+      - name: B-05a no runtime producer audit
+        shell: bash
+        run: |
+          if grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n             -e 'contextAssertionV1Schema.parse('             -e 'contextSnapshotV1Schema.parse('             -e 'qualifiedCropStageStateV1Schema.parse('             apps/server/src; then
+            echo "B05A_UNREGISTERED_RUNTIME_PRODUCER_FOUND"
+            exit 1
+          fi
+          echo "B05A_ZERO_RUNTIME_PRODUCERS_PASS"
+      - name: Server build
+        run: pnpm --filter @geox/server build
+      - name: Marker
+        run: |
+          echo "B05A_EXACT_HEAD 38b8255d2bc1ac511a83be9fbc186bd3aa8f3816"
+          echo "B05A_CONTEXT_STAGE_CONTRACTS_PASS"
