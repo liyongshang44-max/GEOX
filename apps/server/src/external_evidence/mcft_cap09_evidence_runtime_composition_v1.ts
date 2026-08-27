@@ -37,8 +37,8 @@ import {
   PostgresExternalFormalEvidenceVisibilityV1,
 } from "../persistence/external_evidence/postgres_external_formal_evidence_visibility_v1.js";
 import {
-  PostgresExternalFormalEvidenceIngressV1,
-} from "../persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.js";
+  PostgresEvidenceRuntimeGovernedIngressV1,
+} from "../persistence/external_evidence/postgres_evidence_runtime_governed_ingress_v1.js";
 
 export const MCFT_CAP09_EVIDENCE_RUNTIME_COMPOSITION_ID_V1 =
   "MCFT_CAP09_EVIDENCE_RUNTIME_COMPOSITION_V1" as const;
@@ -81,7 +81,6 @@ export function composeEvidenceRuntimeV1(input: {
   const retention = new S3CompatiblePrivateRawEvidenceRetentionAdapterV1(input.raw_retention);
   const leaseRepository = new PostgresEvidenceProducerLeaseV1(input.pool, input.scope);
   const visibility = new PostgresExternalFormalEvidenceVisibilityV1(input.pool);
-  const committedIngress = new PostgresExternalFormalEvidenceIngressV1(input.pool, retention);
   const workItemFactory = new ProductionEvidenceWorkItemFactoryV1({
     ...input.work_item_config,
     retention,
@@ -90,7 +89,16 @@ export function composeEvidenceRuntimeV1(input: {
   const cycleService = new EvidenceRuntimeCycleServiceV1({
     lease: leaseRepository,
     retention,
-    committed_ingress: committedIngress,
+    committed_ingress_factory: {
+      createForProducerClaim(claim) {
+        return new PostgresEvidenceRuntimeGovernedIngressV1(
+          input.pool,
+          retention,
+          input.scope,
+          claim,
+        );
+      },
+    },
     visibility,
     cursor_factory: {
       createForProducerClaim(claim) {
