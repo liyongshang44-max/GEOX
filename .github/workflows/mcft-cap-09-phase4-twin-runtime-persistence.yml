@@ -247,6 +247,8 @@ jobs:
               "ExternalFormalV3Amendment19RunnerV1",
               "PostgresTwinRuntimeSuccessorViabilityV1",
               "TwinRuntimeHostV1",
+              'input.scheduler_clock_authority ?? { mode: "SYSTEM_DATABASE_UTC" }',
+              "input.database_clock ?? new PostgresTwinRuntimeDatabaseClockV1(input.pool)",
           ]
           for marker in required_product_bindings:
               if marker not in composition:
