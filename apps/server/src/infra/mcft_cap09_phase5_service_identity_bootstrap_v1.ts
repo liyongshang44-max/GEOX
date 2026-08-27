@@ -268,6 +268,18 @@ async function assertRoleGraphV1(pool: Pool): Promise<number> {
 export async function runMcftCap09Phase5ServiceIdentityBootstrapV1(
   config: McftCap09Phase5ServiceIdentityBootstrapConfigV1,
 ): Promise<McftCap09Phase5ServiceIdentityBootstrapResultV1> {
+  const evidencePassword = requiredSecretV1(
+    config.evidence_service_password,
+    "PHASE5_EVIDENCE_SERVICE_PASSWORD_REQUIRED",
+  );
+  const twinPassword = requiredSecretV1(
+    config.twin_service_password,
+    "PHASE5_TWIN_SERVICE_PASSWORD_REQUIRED",
+  );
+  if (evidencePassword === twinPassword) {
+    throw new Error("PHASE5_SERVICE_IDENTITY_PASSWORD_REUSE_FORBIDDEN");
+  }
+
   const pool = new Pool({
     connectionString: requiredSecretV1(
       config.admin_database_url,
@@ -278,7 +290,11 @@ export async function runMcftCap09Phase5ServiceIdentityBootstrapV1(
   try {
     await assertAdministrativeSessionV1(pool);
     await assertPrivilegeRolesExistV1(pool);
-    await createOrNormalizeServiceRolesV1(pool, config);
+    await createOrNormalizeServiceRolesV1(pool, {
+      ...config,
+      evidence_service_password: evidencePassword,
+      twin_service_password: twinPassword,
+    });
     const directCount = await assertRoleGraphV1(pool);
     const database = await pool.query<{ name: string }>(
       "SELECT pg_catalog.current_database()::text AS name",
