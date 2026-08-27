@@ -968,7 +968,7 @@
       "semantic_id": "decision.calculation",
       "question": "What deterministic agronomic calculations are produced?",
       "target_owner": "Decision calculators",
-      "canonical_output_type": "CalculationResultV1 (B-06a contract exists; production producer not activated)",
+      "canonical_output_type": "CalculationResultV1 (B-06b compatibility adapter capability registered; no runtime consumer connected)",
       "current_state": "MULTI_CALCULATOR_EXPECTED",
       "target_phase": "B-06",
       "new_owner_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
@@ -999,6 +999,25 @@
           "activation": "ALWAYS",
           "runtime_edge": "PROVEN",
           "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "irrigation-calculation-result-compatibility-adapter",
+          "path": "apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.ts",
+          "role": "pure B-06b compatibility projection from existing irrigation requirement/deficit skill outputs into CalculationResultV1; legacy recommended_amount is not promoted; no route/job/runtime consumer connected",
+          "authority_level": "CALCULATION_ONLY_ADAPTER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectIrrigationRequirementCalculationResultV1",
+            "projectIrrigationDeficitCalculationResultV1",
+            "calculationResultV1Schema.parse"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
           "grandfathered_runtime_consumers": []
         },
         {
@@ -1084,7 +1103,10 @@
       "notes": [
         "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only.",
         "B-06a freezes CalculationResultV1 as CALCULATION_ONLY; calculators cannot directly declare CandidateDecision, eligibility, approval or execution authority.",
-        "B-06a activates no production CalculationResultV1 producer."
+        "B-06a activates no production CalculationResultV1 producer.",
+        "B-06b registers one pure CalculationResult compatibility adapter capability with no runtime consumer.",
+        "B-06b never promotes legacy skill evidence_refs into EvidenceQualification refs; canonical qualification refs must be supplied explicitly.",
+        "B-06b does not promote irrigation_deficit_skill_v1 recommended_amount into CalculationResultV1 because it is recommendation-like/candidate-like semantics."
       ],
       "runtime_consumers": [
         {
@@ -2213,7 +2235,7 @@
     {
       "guard_id": "G-B02-14-calculation-result-instantiation",
       "semantic_id": "decision.calculation",
-      "description": "B-06a freezes CalculationResultV1 as a contract only; production instantiation requires explicit later B-06 registration.",
+      "description": "B-06b permits exactly the registered irrigation CalculationResult compatibility adapter; any additional production instantiation requires explicit later B-06 registration.",
       "scan_roots": [
         "apps/server/src"
       ],
@@ -2229,7 +2251,9 @@
           "calculationResultV1Schema.parse("
         ]
       },
-      "registered_paths": [],
+      "registered_paths": [
+        "apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.ts"
+      ],
       "failure": "UNREGISTERED_CALCULATION_RESULT_PRODUCER"
     },
     {
