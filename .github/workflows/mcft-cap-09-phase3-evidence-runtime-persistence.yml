@@ -95,7 +95,7 @@ jobs:
           for marker in forbidden:
               if marker in text and marker != "RuntimeTickCursor":
                   raise SystemExit(f"PHASE3_EVIDENCE_PERSISTENCE_FORBIDDEN_DEPENDENCY:{marker}")
-          repo = files[1].read_text(encoding="utf-8")
+          repo = pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts").read_text(encoding="utf-8")
           if "twin_runtime_lease_v1" in repo:
               raise SystemExit("PHASE3_EVIDENCE_LEASE_MUST_BE_INDEPENDENT_FROM_TWIN_RUNTIME_LEASE")
           if "external_evidence_producer_lease_v1" not in repo or "external_evidence_supply_cursor_v1" not in repo:
