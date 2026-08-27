@@ -9,7 +9,10 @@ on:
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_cycle_service_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_production_evidence_work_items_v1.ts'
       - 'apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts'
+      - 'apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.ts'
       - 'apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts'
       - 'apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py'
       - 'apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py'
@@ -20,6 +23,7 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1.ts'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -87,7 +91,8 @@ jobs:
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_CYCLE_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1.ts
       - name: Prove durable Evidence lease and supply cursor semantics
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts
       - name: Prove one canonical Evidence Runtime supply cycle
@@ -116,6 +121,8 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql
       - name: Prove Evidence Runtime database ACL separation
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts
+      - name: Prove deployable Evidence Runtime composition
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1.ts
       - name: Prove Phase3 persistence boundary has no Twin runtime or cadence ownership
         shell: python
         run: |
@@ -124,7 +131,10 @@ jobs:
               pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.ts"),
               pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_cycle_service_v1.ts"),
               pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_production_evidence_work_items_v1.ts"),
               pathlib.Path("apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.ts"),
               pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts"),
           ]
           decoder_file = pathlib.Path("apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts")
@@ -179,5 +189,6 @@ jobs:
             acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1_RESULT.json
           if-no-files-found: warn
           retention-days: 90
