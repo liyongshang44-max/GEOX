@@ -67,6 +67,23 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Apply Phase3 Evidence persistence schema only
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql
+      - name: Prove product and acceptance types
+        run: |
+          pnpm --filter @geox/server run typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_CYCLE_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts
+      - name: Prove durable Evidence lease and supply cursor semantics
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts
+      - name: Prove one canonical Evidence Runtime supply cycle
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_CYCLE_V1.ts
+      - name: Prove long-running Evidence Runtime host lifecycle
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts
+      - name: Prove product GFS raw bundle composition
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts
       - name: Create isolated ACL qualification surface
         run: |
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
@@ -85,23 +102,6 @@ jobs:
           SQL
       - name: Apply Phase3 Evidence Runtime ACL
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql
-      - name: Prove product and acceptance types
-        run: |
-          pnpm --filter @geox/server run typecheck
-          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_CYCLE_V1.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts
-      - name: Prove durable Evidence lease and supply cursor semantics
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts
-      - name: Prove one canonical Evidence Runtime supply cycle
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_CYCLE_V1.ts
-      - name: Prove long-running Evidence Runtime host lifecycle
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts
-      - name: Prove product GFS raw bundle composition
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts
       - name: Prove Evidence Runtime database ACL separation
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts
       - name: Prove Phase3 persistence boundary has no Twin runtime or cadence ownership
