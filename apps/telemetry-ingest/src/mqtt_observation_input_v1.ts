@@ -1,4 +1,4 @@
-import type { DeviceObservationServiceV1Input } from "../../server/src/services/device_observation_service_v1";
+import type { DeviceObservationServiceV1Input } from "../../server/src/services/device_observation_service_v1.js";
 
 export type MqttTelemetryObservationInputV1 = {
   tenant_id: string;

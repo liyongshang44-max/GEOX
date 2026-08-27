@@ -215,7 +215,7 @@ services:
     working_dir: /app
     init: true
     restart: unless-stopped
-    command: ["./node_modules/.bin/tsx", "apps/telemetry-ingest/src/main.ts"]
+    command: ["node", "apps/telemetry-ingest/dist/apps/telemetry-ingest/src/main.js"]
     environment:
       DB_DRIVER: postgres
       DATABASE_URL: postgres://geox_runtime_v1:${GEOX_RUNTIME_DATABASE_PASSWORD:?GEOX_RUNTIME_DATABASE_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}

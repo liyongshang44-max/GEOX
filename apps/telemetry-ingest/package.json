@@ -2,12 +2,12 @@
   "name": "@geox/telemetry-ingest",
   "version": "0.1.0",
   "private": true,
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
     "dev": "tsx src/main.ts",
     "once": "tsx src/main.ts --once",
-    "build": "tsc --noEmit -p tsconfig.json",
-    "start": "tsx src/main.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/apps/telemetry-ingest/src/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

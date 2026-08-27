@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { PoolClient } from "pg";
 
-import { runMqttObservationProjectionV1 } from "./mqtt_durable_raw_v1";
+import { runMqttObservationProjectionV1 } from "./mqtt_durable_raw_v1.js";
 
 function fakeConn(): { conn: Pick<PoolClient, "query">; sql: string[] } {
   const sql: string[] = [];
