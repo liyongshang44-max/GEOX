@@ -866,7 +866,7 @@
         "callee_path": "apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.ts",
         "fingerprint": "projectRawSampleEvidenceQualificationV1"
       },
-      "status": "CURRENT_PROVEN_SHADOW"
+      "status": "CURRENT_PROVEN"
     },
     {
       "edge_id": "C-032",
@@ -883,7 +883,7 @@
         "callee_path": "apps/server/src/domain/decision/stage1_action_boundary_v1.ts",
         "fingerprint": "canonical_evidence_qualification_projection_v1"
       },
-      "status": "CURRENT_PROVEN_SHADOW"
+      "status": "CURRENT_PROVEN"
     }
   ],
   "connectivity_status_values": [
