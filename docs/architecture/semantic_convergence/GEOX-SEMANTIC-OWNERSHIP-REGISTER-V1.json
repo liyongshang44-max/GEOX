@@ -1833,7 +1833,7 @@
     {
       "guard_id": "G-B02-03-evidence-qualification-touchpoints",
       "semantic_id": "evidence.qualification",
-      "description": "Known Stage-1/Evidence-Judge production qualification entrypoints may not silently proliferate.",
+      "description": "Known Stage-1/Evidence-Judge production qualification entrypoints, including the B-04e canonical sufficiency wrapper, may not silently proliferate.",
       "scan_roots": [
         "apps/server/src"
       ],
@@ -1847,12 +1847,14 @@
       "match": {
         "any_of": [
           "evaluateFormalStage1TriggerGateV1(",
-          "evaluateEvidenceJudgeV2("
+          "evaluateEvidenceJudgeV2(",
+          "evaluateEvidenceJudgeV2WithCanonicalShadow("
         ]
       },
       "registered_paths": [
         "apps/server/src/domain/decision/stage1_action_boundary_v1.ts",
-        "apps/server/src/domain/judge/evidence_judge_v2.ts"
+        "apps/server/src/domain/judge/evidence_judge_v2.ts",
+        "apps/server/src/routes/judge_v2.ts"
       ],
       "failure": "UNREGISTERED_EVIDENCE_QUALIFICATION_TOUCHPOINT"
     },
