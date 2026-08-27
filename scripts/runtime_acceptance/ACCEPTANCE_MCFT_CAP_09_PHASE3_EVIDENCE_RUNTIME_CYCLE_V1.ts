@@ -162,6 +162,17 @@ function committedIngress(order: string[]): ExternalFormalEvidenceIngressPortV1 
   };
 }
 
+function committedIngressFactory(order: string[]) {
+  return {
+    createForProducerClaim(actualClaim: EvidenceProducerLeaseClaimV1) {
+      order.push("ingress_bound_to_lease");
+      assert.equal(actualClaim.lease_owner, "evidence-host-A");
+      assert.equal(actualClaim.fencing_token, 7n);
+      return committedIngress(order);
+    },
+  };
+}
+
 function visibility(order: string[]): ExternalEvidencePostCommitVisibilityPortV1 {
   return {
     async verifyCommittedEvidenceVisible(expected) {
@@ -221,7 +232,7 @@ async function main(): Promise<void> {
   const service = new EvidenceRuntimeCycleServiceV1({
     lease: leasePort(order),
     retention: retention(order),
-    committed_ingress: committedIngress(order),
+    committed_ingress_factory: committedIngressFactory(order),
     visibility: visibility(order),
     cursor_factory: cursorFactory(order),
     completion_clock: () => {
@@ -243,6 +254,7 @@ async function main(): Promise<void> {
   assert.deepEqual(order, [
     "lease_acquire",
     "lease_renew",
+    "ingress_bound_to_lease",
     "cursor_bound_to_lease",
     "provider_fetch",
     "raw_retention",
@@ -257,7 +269,7 @@ async function main(): Promise<void> {
   const blockedService = new EvidenceRuntimeCycleServiceV1({
     lease: leasePort(blockedOrder, true),
     retention: retention(blockedOrder),
-    committed_ingress: committedIngress(blockedOrder),
+    committed_ingress_factory: committedIngressFactory(blockedOrder),
     visibility: visibility(blockedOrder),
     cursor_factory: cursorFactory(blockedOrder),
     completion_clock: () => CANONICALIZED_AT,
