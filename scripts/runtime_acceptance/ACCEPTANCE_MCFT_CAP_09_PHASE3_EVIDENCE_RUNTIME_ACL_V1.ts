@@ -73,14 +73,14 @@ async function main(): Promise<void> {
       await client.query(
         `INSERT INTO public.external_evidence_producer_lease_v1
          (tenant_id,project_id,group_id,field_id,season_id,zone_id,lease_owner,fencing_token,acquired_at,expires_at,heartbeat_at)
-         VALUES ('tenantA','projectA','groupA','field_e3r1','season_2026','zone_root','acl-owner',1,
+         VALUES ('aclTenant','aclProject','aclGroup','aclField','aclSeason','aclZone','acl-owner',1,
                  transaction_timestamp(),transaction_timestamp()+interval '5 minutes',transaction_timestamp())`,
       );
       const updatedLease = await client.query(
         `UPDATE public.external_evidence_producer_lease_v1
             SET heartbeat_at=transaction_timestamp()
-          WHERE tenant_id='tenantA' AND project_id='projectA' AND group_id='groupA'
-            AND field_id='field_e3r1' AND season_id='season_2026' AND zone_id='zone_root'`,
+          WHERE tenant_id='aclTenant' AND project_id='aclProject' AND group_id='aclGroup'
+            AND field_id='aclField' AND season_id='aclSeason' AND zone_id='aclZone'`,
       );
       assert.equal(updatedLease.rowCount, 1);
 
@@ -89,7 +89,7 @@ async function main(): Promise<void> {
          (tenant_id,project_id,group_id,field_id,season_id,zone_id,binding_id,origin_source_id,
           fact_id,record_semantic_sha256,available_to_runtime_at,role_time,post_commit_db_readback_at,
           lease_owner,fencing_token)
-         VALUES ('tenantA','projectA','groupA','field_e3r1','season_2026','zone_root',
+         VALUES ('aclTenant','aclProject','aclGroup','aclField','aclSeason','aclZone',
                  'acl-binding','acl-source','phase3_acl_fact_1',
                  'sha256:${"a".repeat(64)}','2026-08-27T02:30:00.000Z','{}'::jsonb,
                  '2026-08-27T02:30:01.000Z','acl-owner',1)`,
