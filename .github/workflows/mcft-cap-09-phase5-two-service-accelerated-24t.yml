@@ -178,6 +178,8 @@ jobs:
         run: |
           set -euo pipefail
           docker compose -f "$COMPOSE_FILE" --profile qualification-orchestration             run --rm --no-deps qualification-prepare             2>&1 | tee "$GEOX_PHASE5_CONTROL_ROOT/prepare.log"
+          sudo chown "$(id -u):$(id -g)"             "$GEOX_PHASE5_CONTROL_ROOT/phase5-manifest.json"             "$GEOX_PHASE5_CONTROL_ROOT/prepare-proof.json"
+          chmod 600             "$GEOX_PHASE5_CONTROL_ROOT/phase5-manifest.json"             "$GEOX_PHASE5_CONTROL_ROOT/prepare-proof.json"
           test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/prepare-proof.json")" = "PASS"
           test "$(jq -r .engineering_bootstrap_fixture_count "$GEOX_PHASE5_CONTROL_ROOT/prepare-proof.json")" = "0"
           test "$(jq -r .bootstrap_lease_release_mode "$GEOX_PHASE5_CONTROL_ROOT/prepare-proof.json")" = "NATURAL_TTL_EXPIRY"
@@ -251,6 +253,8 @@ jobs:
           set -euo pipefail
           docker compose -f "$COMPOSE_FILE" --profile qualification-orchestration             run --rm --no-deps qualification-verify             2>&1 | tee "$GEOX_PHASE5_CONTROL_ROOT/verify.log"
           proof="$GEOX_PHASE5_CONTROL_ROOT/verify-proof.json"
+          sudo chown "$(id -u):$(id -g)" "$proof"
+          chmod 600 "$proof"
           test "$(jq -r .status "$proof")" = "PASS"
           test "$(jq -r .exact_24t_complete "$proof")" = "true"
           test "$(jq -r .terminal_tick_count "$proof")" = "24"
