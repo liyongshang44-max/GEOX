@@ -2,7 +2,7 @@
 // Wires product provider modules, private raw retention, governed ingress, post-COMMIT visibility,
 // independent EvidenceProducerLease/EvidenceSupplyCursor, canonical cycle service, and long-running host.
 // Boundary: target/cadence policy is injected; no Twin state, RuntimeTickCursor, action authority,
-// process.env, signal handler, or automatic production activation is defined here.
+// environment lookup, signal handler, or automatic production activation is defined here.
 
 import type { Pool } from "pg";
 
