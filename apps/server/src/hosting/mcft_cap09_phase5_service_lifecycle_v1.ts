@@ -27,6 +27,11 @@ import type {
 export const MCFT_CAP09_PHASE5_SERVICE_LIFECYCLE_ID_V1 =
   "MCFT_CAP09_PHASE5_SERVICE_LIFECYCLE_V1" as const;
 
+const PHASE5_SAFE_CONTENTION_ERRORS = new Set([
+  "LEASE_HELD_BY_OTHER_OWNER",
+  "SLOT_ALREADY_CLAIMED_BY_OTHER_OWNER",
+]);
+
 const POSTGRES_RETRYABLE_CODES = new Set([
   "08000", // connection exception
   "08001", // client unable to establish connection
@@ -161,6 +166,12 @@ function postgresCodeV1(error: unknown): string | null {
 export class PostgresTransientFailureClassifierV1
 implements EvidenceRuntimeHostFailureClassifierV1, TwinRuntimeHostFailureClassifierV1 {
   classify(error: unknown): "RETRYABLE" | "FATAL" {
+    if (
+      error instanceof Error
+      && PHASE5_SAFE_CONTENTION_ERRORS.has(error.message)
+    ) {
+      return "RETRYABLE";
+    }
     const code = postgresCodeV1(error);
     return code !== null && POSTGRES_RETRYABLE_CODES.has(code)
       ? "RETRYABLE"
