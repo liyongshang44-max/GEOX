@@ -439,6 +439,26 @@
         "artifact_absence_reason": "RUN_LEVEL_PHASE3_POST_WORK_ITEM_SEAM_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
         "immutable_binding_sha256": "15eae0a0b625918e2a3aa1fef764b72c4ec44d7e5418c0ddff7cadf8975925eb"
+      },
+      {
+        "evidence_id": "PHASE4_TWIN_RUNTIME_FOUNDATION_REQUAL_B6F0679F",
+        "check_id": "PHASE4_TWIN_RUNTIME_FOUNDATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "phase4-twin-runtime-foundation-post-clock-seam",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "b6f0679fa3ea06c932205187f4157c452e805ea0",
+        "workflow_name": "mcft-cap-09-phase4-twin-runtime-persistence",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml",
+        "run_id": 33068821211,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "b6f0679fa3ea06c932205187f4157c452e805ea0",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:e26630520603636925e390bad8d50c77d995bd077527acad95ec782913bb481f",
+        "artifact_absence_reason": "RUN_LEVEL_PHASE4_POST_CLOCK_SEAM_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "a55da97d4c05234d1eb06ff71db656d51e311501b8bc95bf7a49abb3ee33cc8a"
       }
     ],
     "durable_anchors": {
@@ -555,6 +575,20 @@
             "base_sha": "16ff7160473c0a25dc059db6b2b6b7ba07f54dd1",
             "created_at": "2026-08-27T11:20:49Z",
             "updated_at": "2026-08-27T11:21:57Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE4_TWIN_RUNTIME_FOUNDATION_REQUAL_B6F0679F",
+          "run_id": 33068821211,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 65,
+            "workflow_path": ".github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml",
+            "workflow_name": "mcft-cap-09-phase4-twin-runtime-persistence",
+            "head_sha": "b6f0679fa3ea06c932205187f4157c452e805ea0",
+            "base_sha": "16ff7160473c0a25dc059db6b2b6b7ba07f54dd1",
+            "created_at": "2026-08-27T11:45:56Z",
+            "updated_at": "2026-08-27T11:49:18Z"
           }
         }
       ],
