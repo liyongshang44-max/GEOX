@@ -594,6 +594,25 @@
           "runtime_edge": "INTENTIONAL_NONE",
           "new_runtime_consumer_creation": "FORBIDDEN",
           "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "crop-skill-stage-compatibility-adapter",
+          "path": "apps/server/src/context/crop_skill_stage_compatibility_adapter_v1.ts",
+          "role": "pure B-05d adapter from legacy CropSkill.resolveStage output into QualifiedCropStageStateV1; missing/malformed day input preserves UNKNOWN and skill output never becomes canonical decision authority",
+          "authority_level": "COMPATIBILITY_PROJECTION",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectCropSkillStageCompatibilityV1",
+            "qualifiedCropStageStateV1Schema.parse",
+            "crop_skill.resolveStage"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
         }
       ],
       "registered_consumers": [],
@@ -605,7 +624,9 @@
         "B-05c registers one capability-island QualifiedCropStageStateV1 compatibility adapter; this is not canonical stage authority and has no runtime consumer.",
         "Negative DAP, invalid/future start date, unsupported crop and resolver unknown are represented as canonical UNKNOWN rather than normalized into a concrete legacy stage.",
         "Historical stage authority is not removed in B-05; authority removal remains gated by B-09 shadow-compare discipline.",
-        "B-05c adapter is registered under both the crop-stage touchpoint guard and QualifiedCropStage instantiation guard."
+        "B-05c adapter is registered under both the crop-stage touchpoint guard and QualifiedCropStage instantiation guard.",
+        "B-05d registers crop-skill stage calculation as compatibility-only; missing day input cannot inherit legacy seedling defaults into canonical stage.",
+        "Explicit zero-day input is distinguishable from missing input: zero may produce compatibility seedling while missing remains UNKNOWN."
       ],
       "runtime_consumers": []
     },
@@ -2127,7 +2148,7 @@
     {
       "guard_id": "G-B02-12-qualified-crop-stage-instantiation",
       "semantic_id": "context.crop_stage",
-      "description": "B-05c permits exactly registered QualifiedCropStageStateV1 compatibility projection paths; runtime authority/consumers require explicit later registration and B-09 authority-removal discipline.",
+      "description": "B-05c/B-05d permit only explicitly registered QualifiedCropStageStateV1 compatibility projection paths; runtime authority/consumers require explicit later registration and B-09 authority-removal discipline.",
       "scan_roots": [
         "apps/server/src"
       ],
@@ -2144,9 +2165,35 @@
         ]
       },
       "registered_paths": [
-        "apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.ts"
+        "apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.ts",
+        "apps/server/src/context/crop_skill_stage_compatibility_adapter_v1.ts"
       ],
       "failure": "UNREGISTERED_QUALIFIED_CROP_STAGE_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-13-crop-skill-stage-touchpoints",
+      "semantic_id": "context.crop_stage",
+      "description": "Direct CropSkill.resolveStage production touchpoints are frozen: legacy rule_engine is grandfathered and B-05d adapter is capability-only; new unregistered direct skill-stage calls are forbidden.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          ".resolveStage({"
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/agronomy/rule_engine.ts",
+        "apps/server/src/context/crop_skill_stage_compatibility_adapter_v1.ts"
+      ],
+      "failure": "UNREGISTERED_CROP_SKILL_STAGE_TOUCHPOINT"
     }
   ],
   "connectivity_model": {
