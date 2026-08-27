@@ -392,6 +392,25 @@
           "runtime_edge": "PROVEN",
           "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
           "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "field-program-context-compatibility-projector",
+          "path": "apps/server/src/context/field_program_context_projection_v1.ts",
+          "role": "pure B-05b compatibility projection from typed FieldProgramV1 declarations into ContextAssertionV1/ContextSnapshotV1; no route/job/runtime consumer connected",
+          "authority_level": "COMPATIBILITY_PROJECTION",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectFieldProgramDeclaredContextV1",
+            "contextAssertionV1Schema.parse",
+            "contextSnapshotV1Schema.parse"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
         }
       ],
       "registered_consumers": [
@@ -418,7 +437,8 @@
         "B-05a freezes declared-context contract vocabulary only; no production Context Authority producer is activated yet.",
         "Crop stage is not a field of ContextSnapshotV1 and must not be smuggled into declared context authority.",
         "B-05b maps only typed FieldProgramV1 declaration fields; record_json-only crop_stage/days_after_planting extras are excluded from canonical Context projection.",
-        "FieldProgramV1 does not establish planting-event or management-history assertions unless those facts exist in a typed authority source."
+        "FieldProgramV1 does not establish planting-event or management-history assertions unless those facts exist in a typed authority source.",
+        "B-05b-r1 corrected the projector registration into registered_producers; stray producers key is forbidden."
       ],
       "runtime_consumers": [
         {
@@ -438,27 +458,6 @@
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN",
           "evidence_edge_id": "C-026"
-        }
-      ],
-      "producers": [
-        {
-          "producer_id": "field-program-context-compatibility-projector",
-          "path": "apps/server/src/context/field_program_context_projection_v1.ts",
-          "role": "pure B-05b compatibility projection from typed FieldProgramV1 declarations into ContextAssertionV1/ContextSnapshotV1; no route/job/runtime consumer connected",
-          "authority_level": "COMPATIBILITY_PROJECTION",
-          "grandfathered_duplicate": false,
-          "removal_target": null,
-          "current": true,
-          "fingerprints": [
-            "projectFieldProgramDeclaredContextV1",
-            "contextAssertionV1Schema.parse",
-            "contextSnapshotV1Schema.parse"
-          ],
-          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
-          "activation": "MANUAL",
-          "runtime_edge": "INTENTIONAL_NONE",
-          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
-          "grandfathered_runtime_consumers": []
         }
       ]
     },
