@@ -44,7 +44,7 @@ export const MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1 = {
   raw_storage_credentials_allowed: false,
   evidence_supply_cursor_authority: false,
   process_clock_for_tick_authority: false,
-  production_database_clock_for_tick_authority: true,
+  database_clock_for_tick_authority: true,
   qualification_clock_boundary:
     "EXPLICIT_DATABASE_CLOCK_AND_SCHEDULER_AUTHORITY_INJECTION_WITH_PRODUCTION_DEFAULT",
   formal_arm_authority: false,
