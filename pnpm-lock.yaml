@@ -60,6 +60,9 @@ importers:
       '@geox/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@geox/device-skills':
+        specifier: workspace:*
+        version: link:../../packages/device-skills
       pg:
         specifier: ^8.12.0
         version: 8.18.0
