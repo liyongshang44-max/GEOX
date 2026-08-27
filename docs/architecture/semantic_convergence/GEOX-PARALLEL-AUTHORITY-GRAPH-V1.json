@@ -422,7 +422,7 @@
         "kind": "DIRECT_CALL",
         "caller_path": "apps/server/src/routes/judge_v2.ts",
         "callee_path": "apps/server/src/domain/judge/evidence_judge_v2.ts",
-        "fingerprint": "evaluateEvidenceJudgeV2(body)"
+        "fingerprint": "evaluateEvidenceJudgeV2WithCanonicalShadow(pool, body) -> evaluateEvidenceJudgeV2(input)"
       },
       "status": "ROUTE_ONLY"
     },
@@ -884,6 +884,23 @@
         "fingerprint": "canonical_evidence_qualification_projection_v1"
       },
       "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-033",
+      "from_producer": "canonical-evidence-qualification-shadow",
+      "to_consumer": "evidence-judge-canonical-sufficiency-shadow",
+      "semantic_id": "evidence.qualification",
+      "connection_class": "ROUTE_ISLAND",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "RETURN_OBJECT_CHAIN",
+        "caller_path": "apps/server/src/domain/judge/evidence_judge_v2.ts",
+        "callee_path": "apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts",
+        "fingerprint": "evaluateEvidenceJudgeV2WithCanonicalShadow -> buildAppleIIEvidenceSufficiencyV1 -> canonical_evidence_qualification_projection_v1"
+      },
+      "status": "ROUTE_ONLY"
     }
   ],
   "connectivity_status_values": [

@@ -162,7 +162,7 @@
           "role": "formal-trigger evidence sufficiency/time coverage/freshness/device/conflict gate",
           "authority_level": "GRANDFATHERED_DUPLICATE",
           "grandfathered_duplicate": true,
-          "removal_target": "B-04",
+          "removal_target": "B-09",
           "current": true,
           "fingerprints": [
             "evaluateFormalStage1TriggerGateV1",
@@ -177,10 +177,10 @@
         {
           "producer_id": "evidence-judge-v2",
           "path": "apps/server/src/domain/judge/evidence_judge_v2.ts",
-          "role": "soil measurement quality plus freshness/heartbeat evidence verdict",
+          "role": "legacy compatibility Evidence Judge verdict that still recomputes soil physical/freshness semantics; B-04e adds a canonical qualification sufficiency shadow and B-09 owns eventual authority removal",
           "authority_level": "GRANDFATHERED_DUPLICATE",
           "grandfathered_duplicate": true,
-          "removal_target": "B-04",
+          "removal_target": "B-09",
           "current": true,
           "fingerprints": [
             "evaluateEvidenceJudgeV2",
@@ -284,6 +284,15 @@
           "connection_class": "MAINLINE",
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "evidence-judge-canonical-sufficiency-shadow",
+          "path": "apps/server/src/domain/judge/evidence_judge_v2.ts",
+          "role": "problem-specific sufficiency facade over persisted canonical EvidenceQualificationV1; shadow-only in B-04e and cannot change the legacy Evidence Judge verdict",
+          "current": true,
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
         }
       ],
       "notes": [
@@ -326,6 +335,15 @@
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN",
           "evidence_edge_id": "C-032"
+        },
+        {
+          "consumer_id": "evidence-judge-canonical-sufficiency-shadow",
+          "path": "apps/server/src/domain/judge/evidence_judge_v2.ts",
+          "producer_id": "canonical-evidence-qualification-shadow",
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-033"
         }
       ]
     },
