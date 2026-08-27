@@ -164,9 +164,14 @@ jobs:
       - name: Prove DB-clock Runtime cursor, fencing, restart and bounded catch-up
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts
 
+      - name: Create isolated successor-viability database
+        env:
+          PGPASSWORD: postgres
+        run: createdb -h 127.0.0.1 -U postgres phase4_successor
+
       - name: Prove read-only canonical successor viability
         env:
-          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/phase4_twin
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/phase4_successor
           MCFT_CAP_04_SINGLE_TICK_DESTRUCTIVE_ACCEPTANCE: '1'
           MCFT_CAP_09_PHASE4_SUCCESSOR_DESTRUCTIVE_ACCEPTANCE: '1'
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1.ts
