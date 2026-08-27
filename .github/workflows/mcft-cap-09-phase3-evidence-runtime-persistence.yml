@@ -120,17 +120,18 @@ jobs:
         shell: python
         run: |
           import pathlib
-          files = [
+          core_files = [
               pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.ts"),
               pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_cycle_service_v1.ts"),
               pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts"),
               pathlib.Path("apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts"),
-              pathlib.Path("apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts"),
               pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts"),
           ]
-          text = "\n".join(p.read_text(encoding="utf-8") for p in files)
-          forbidden = [
-              "RuntimeTickCursor",
+          decoder_file = pathlib.Path("apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts")
+          core_text = "\n".join(p.read_text(encoding="utf-8") for p in core_files)
+          decoder_text = decoder_file.read_text(encoding="utf-8")
+
+          core_forbidden = [
               "setInterval(",
               "setTimeout(",
               "process.env",
@@ -140,9 +141,27 @@ jobs:
               "UPDATE twin_",
               "DELETE FROM twin_",
           ]
-          for marker in forbidden:
-              if marker in text and marker != "RuntimeTickCursor":
-                  raise SystemExit(f"PHASE3_EVIDENCE_PERSISTENCE_FORBIDDEN_DEPENDENCY:{marker}")
+          for marker in core_forbidden:
+              if marker in core_text:
+                  raise SystemExit(f"PHASE3_EVIDENCE_CORE_FORBIDDEN_DEPENDENCY:{marker}")
+
+          decoder_forbidden = [
+              "setInterval(",
+              "setTimeout(",
+              "process.env",
+              "scripts/runtime_acceptance",
+              "INSERT INTO",
+              "UPDATE ",
+              "DELETE FROM",
+              "RuntimeTickCursor",
+          ]
+          for marker in decoder_forbidden:
+              if marker in decoder_text:
+                  raise SystemExit(f"PHASE3_EVIDENCE_DECODER_FORBIDDEN_DEPENDENCY:{marker}")
+          if 'from "node:child_process"' not in decoder_text:
+              raise SystemExit("PHASE3_EVIDENCE_DECODER_PRODUCT_PYTHON_BRIDGE_REQUIRED")
+          if "mcft_cap09_gfs_raw_bundle_decoder_v1.py" not in decoder_text:
+              raise SystemExit("PHASE3_EVIDENCE_DECODER_PRODUCT_DRIVER_BINDING_REQUIRED")
           repo = pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts").read_text(encoding="utf-8")
           if "twin_runtime_lease_v1" in repo:
               raise SystemExit("PHASE3_EVIDENCE_LEASE_MUST_BE_INDEPENDENT_FROM_TWIN_RUNTIME_LEASE")
