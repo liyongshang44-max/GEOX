@@ -1133,7 +1133,7 @@
       "semantic_id": "decision.candidate",
       "question": "What action should be considered?",
       "target_owner": "Decision Runtime",
-      "canonical_output_type": "CandidateDecisionV1 (B-06a contract exists; production producer not activated)",
+      "canonical_output_type": "CandidateDecisionV1 (B-06c legacy-recommendation compatibility adapter capability registered; no runtime consumer connected)",
       "current_state": "DUPLICATE_AUTHORITY",
       "target_phase": "B-06",
       "new_owner_creation": "FORBIDDEN",
@@ -1219,6 +1219,24 @@
           "grandfathered_runtime_consumers": [
             "operator-module-registration"
           ]
+        },
+        {
+          "producer_id": "legacy-recommendation-candidate-compatibility-adapter",
+          "path": "apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.ts",
+          "role": "pure B-06c compatibility projection from recommendation_v1/decision_recommendation_v1 payload semantics into CandidateDecisionV1; canonical Evidence/Context/Calculation refs remain explicit and no approval/plan/task runtime consumer is connected",
+          "authority_level": "CANDIDATE_ONLY_ADAPTER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectLegacyRecommendationCandidateV1",
+            "candidateDecisionV1Schema.parse"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
         }
       ],
       "registered_consumers": [
@@ -1256,7 +1274,11 @@
         "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only.",
         "B-06a freezes CandidateDecisionV1 with authority_state=CANDIDATE_ONLY.",
         "Decision Eligibility, Approval, ApprovedOperationPlan and ExecutableTask are deliberately absent from CandidateDecisionV1.",
-        "Legacy recommendation/decision_plan/prescription/operation-plan proposal mappings require later bounded B-06 adapters; B-06a activates no production CandidateDecisionV1 producer."
+        "Legacy recommendation/decision_plan/prescription/operation-plan proposal mappings require later bounded B-06 adapters; B-06a activates no production CandidateDecisionV1 producer.",
+        "B-06c registers one pure recommendation_v1/decision_recommendation_v1 -> CandidateDecisionV1 compatibility adapter capability with no runtime consumer.",
+        "B-06c never promotes legacy recommendation evidence_refs into canonical EvidenceQualification refs; canonical refs must be supplied explicitly.",
+        "B-06c rejects source objects that already carry downstream approval/plan/task/dispatch/receipt authority instead of collapsing them back into CandidateDecision.",
+        "B-06c uses the legacy top-level action_type as candidate action and does not elevate nested suggested_action operational labels."
       ],
       "runtime_consumers": [
         {
@@ -2259,7 +2281,7 @@
     {
       "guard_id": "G-B02-15-candidate-decision-instantiation",
       "semantic_id": "decision.candidate",
-      "description": "B-06a freezes CandidateDecisionV1 as a contract only; production instantiation requires explicit later B-06 registration.",
+      "description": "B-06c permits exactly the registered legacy-recommendation CandidateDecision compatibility adapter; any additional production instantiation requires explicit later B-06 registration.",
       "scan_roots": [
         "apps/server/src"
       ],
@@ -2275,7 +2297,9 @@
           "candidateDecisionV1Schema.parse("
         ]
       },
-      "registered_paths": [],
+      "registered_paths": [
+        "apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.ts"
+      ],
       "failure": "UNREGISTERED_CANDIDATE_DECISION_PRODUCER"
     }
   ],
