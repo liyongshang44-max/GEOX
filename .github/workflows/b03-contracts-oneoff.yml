@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: c15ba32bac52141041744ac7b10daa3901e26e2b
+          ref: d262f912c2b60cc4bf627aac5a34f7d41d963634
           fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
@@ -38,7 +38,7 @@ jobs:
           POSTGRES_DB: geox
           GEOX_MCFT_MIGRATOR_PASSWORD: migrator
           GEOX_RUNTIME_DATABASE_PASSWORD: runtime
-          GEOX_DEPLOYMENT_SUBJECT_COMMIT: c15ba32bac52141041744ac7b10daa3901e26e2b
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT: d262f912c2b60cc4bf627aac5a34f7d41d963634
           MINIO_ROOT_USER: minio
           MINIO_ROOT_PASSWORD: minio123
           MQTT_USERNAME: geox
