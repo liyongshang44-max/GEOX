@@ -10,6 +10,9 @@ on:
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_cycle_service_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts'
       - 'apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts'
+      - 'apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts'
+      - 'apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py'
+      - 'apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_visibility_supply_cursor_v1.ts'
       - 'apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts'
@@ -63,8 +66,17 @@ jobs:
         with:
           node-version: 20.11.1
           cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
+      - name: Install pinned GFS scientific stack and prove product decoder
+        run: |
+          python -m pip install --disable-pip-version-check             'eccodes==2.47.0'             'eccodeslib==2.47.3.23'             'numpy==1.26.4'             'refet==0.4.2'
+          python -m eccodes selfcheck
+          python apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py selftest
+          python apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py selftest
       - name: Apply Phase3 Evidence persistence schema only
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql
       - name: Prove product and acceptance types
@@ -113,6 +125,7 @@ jobs:
               pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_cycle_service_v1.ts"),
               pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts"),
               pathlib.Path("apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts"),
               pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts"),
           ]
           text = "\n".join(p.read_text(encoding="utf-8") for p in files)
