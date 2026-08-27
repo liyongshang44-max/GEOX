@@ -142,6 +142,8 @@ jobs:
           test "$(jq -r .rolling_gfs_target_count "$proof")" = "24"
           test "$(jq -r .gfs_single_causal_cycle_reused "$proof")" = "true"
           test "$(jq -r .all_gfs_raw_retrieved_by_a0 "$proof")" = "true"
+          test "$(jq -r .cross_cycle_retry_authorized "$proof")" = "false"
+          test "$(jq -r .same_request_max_attempts "$proof")" = "2"
           test "$(jq -r .gfs_extended_lead_count "$proof")" -ge "23"
           a0="$(jq -r .a0 "$proof")"
           o00="$(jq -r .o00 "$proof")"
