@@ -10,7 +10,7 @@ import {
 import type { PoolClient } from "pg";
 import { mapStage1ObservationMetricToPipelineObservationV1 } from "../domain/sensing/stage1_sensing_input_mapping_v1.js";
 import { runSensingInferencePipelineV1, type RunSensingInferencePipelineV1Result } from "../domain/sensing/run_sensing_inference_pipeline_v1.js";
-import { buildIngressPhysicalQcSnapshotV1 } from "../evidence/ingress_physical_qc_snapshot_v1.js";
+import { buildIngressPhysicalQcSnapshotV1 } from "../evidence/ingress_physical_qc_snapshot_v1.js";\nimport { evaluateStage1PhysicalQcConsumptionV1 } from "../evidence/stage1_physical_qc_consumption_guard_v1.js";
 import { refreshFieldReadModelsWithObservabilityV1 } from "./field_read_model_refresh_v1.js";
 
 export type DeviceObservationServiceV1Input = {
@@ -288,6 +288,10 @@ async function loadRecentFieldObservationsForPipelineV1(db: DeviceObservationDbC
       const evidenceLevel = String(payload?.evidence_level ?? "").trim().toUpperCase();
       const simulated = payload?.is_simulated === true || payload?.formal_eligible === false || sourceLane === "SIMULATED_DEV_ONLY" || sourceLane === "DEBUG_ONLY" || evidenceLevel === "DEBUG";
       if (simulated) return null;
+
+      const physicalConsumption = evaluateStage1PhysicalQcConsumptionV1(payload);
+      if (!physicalConsumption.eligible) return null;
+
       const valueNum = toFiniteNumber(row.value_num);
       if (!metric || !device_id || !observation_id || valueNum == null) return null;
       return {
