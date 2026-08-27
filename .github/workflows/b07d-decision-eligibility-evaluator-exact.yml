@@ -1,0 +1,115 @@
+name: b07d-decision-eligibility-evaluator-exact
+on:
+  push:
+    branches: [ci/bline-b07d-decision-eligibility-evaluator-exact-2026-08-28]
+jobs:
+  exact-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+      - name: B-02 governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+      - name: B-07d evaluator fixtures
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+      - name: B-07c B-07b B-07a regressions
+        run: |
+          node --import tsx --test apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/stage1_eligibility_precursor_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/decision_eligibility_v1.contract.test.ts
+      - name: B-07d governance exactness
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const fg=(reg.static_guards||[]).find(x=>x.guard_id==="G-B02-16-decision-eligibility-instantiation");
+          const cg=(reg.static_guards||[]).find(x=>x.guard_id==="G-B02-17-decision-eligibility-criterion-instantiation");
+          const fp="apps/server/src/domain/decision/decision_eligibility_evaluator_v1.ts";
+          const cp=[
+            "apps/server/src/domain/decision/stage1_eligibility_precursor_adapter_v1.ts",
+            "apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.ts"
+          ];
+          if(!fg||!cg) throw new Error("B07D_GUARD_MISSING");
+          if((fg.registered_paths||[]).length!==1||fg.registered_paths[0]!==fp) throw new Error("B07D_FINAL_PRODUCER_SET_INVALID");
+          if((cg.registered_paths||[]).length!==2||cg.registered_paths.some((x,i)=>x!==cp[i])) throw new Error("B07D_CRITERION_SET_INVALID");
+          const sem=reg.semantics.find(x=>x.semantic_id==="decision.eligibility");
+          const p=(sem?.registered_producers||[]).find(x=>x.producer_id==="decision-eligibility-evaluator-v1");
+          if(!p) throw new Error("B07D_PRODUCER_MISSING");
+          if(p.connection_class!=="REGISTERED_CAPABILITY_ISLAND"||p.activation!=="MANUAL"||p.runtime_edge!=="INTENTIONAL_NONE"||p.new_runtime_consumer_creation!=="FORBIDDEN") throw new Error("B07D_PRODUCER_BOUNDARY_INVALID");
+          console.log("B07D_GOVERNANCE_EXACTNESS_PASS");
+          NODE
+      - name: B-07d no runtime consumer
+        shell: bash
+        run: |
+          A="apps/server/src/domain/decision/decision_eligibility_evaluator_v1.ts"
+          H="$(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n 'evaluateDecisionEligibilityV1' apps/server/src | grep -v "^$A:" || true)"
+          test -z "$H" || { echo "$H"; exit 1; }
+          echo B07D_NO_RUNTIME_CONSUMER_PASS
+      - name: Reject second final eligibility producer
+        shell: bash
+        run: |
+          P="apps/server/src/.b07d_unregistered_final_probe.ts"
+          printf '%s\n' 'decisionEligibilityDecisionV1Schema.parse(' > "$P"
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs >/tmp/b07d-final-negative.log 2>&1
+          RC=$?
+          set -e
+          cat /tmp/b07d-final-negative.log
+          rm -f "$P"
+          test "$RC" -ne 0
+          grep -q "UNREGISTERED_DECISION_ELIGIBILITY_PRODUCER" /tmp/b07d-final-negative.log
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+          echo B07D_FINAL_NEGATIVE_GOVERNANCE_PASS
+      - name: Runtime surfaces untouched
+        shell: bash
+        run: |
+          git diff --exit-code 366de72a7c4983f48d5ec200353b10e0eea8360b 168e5c8a33edc29f18b810ad7223d5ec511b6bfa --             apps/server/src/domain/judge/agronomy_judge_v2.ts             apps/server/src/domain/judge/evidence_judge_v2.ts             apps/server/src/domain/decision/stage1_action_boundary_v1.ts             apps/server/src/routes/judge_v2.ts             apps/server/src/routes/appleii_stage1_evidence_gate_v1.ts             apps/server/src/domain/approval/recommendation_approval_request_builder_v1.ts             apps/server/src/routes/control_approval_request_v1.ts             apps/server/src/domain/operations             apps/server/src/domain/controlplane
+      - name: B-09-only removal boundary
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const graph=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json","utf8"));
+          const bad=(reg.semantics||[]).flatMap(s=>(s.registered_producers||[]).filter(p=>p.grandfathered_duplicate===true&&p.removal_target!=="B-09"));
+          if(bad.length) throw new Error("B07D_NON_B09_GRANDFATHERED_REMOVAL");
+          if((graph.current_parallel_edges||[]).some(e=>e.removal_target!=="B-09")) throw new Error("B07D_NON_B09_PARALLEL_REMOVAL");
+          console.log("B07D_B09_BOUNDARY_PASS");
+          NODE
+      - name: Earlier B-line regression
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_decision_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+      - name: Product diff bounded
+        shell: bash
+        run: |
+          git diff --name-only 366de72a7c4983f48d5ec200353b10e0eea8360b 168e5c8a33edc29f18b810ad7223d5ec511b6bfa >/tmp/b07d-files.txt
+          cat /tmp/b07d-files.txt
+          test "$(wc -l </tmp/b07d-files.txt | tr -d ' ')" = "4"
+          grep -qx "apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts" /tmp/b07d-files.txt
+          grep -qx "apps/server/src/domain/decision/decision_eligibility_evaluator_v1.ts" /tmp/b07d-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B07D-DECISION-ELIGIBILITY-EVALUATOR-V1.md" /tmp/b07d-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json" /tmp/b07d-files.txt
+      - name: Server build
+        run: pnpm --filter @geox/server build
+      - name: Marker
+        run: |
+          echo "B07D_EXACT_HEAD 168e5c8a33edc29f18b810ad7223d5ec511b6bfa"
+          echo B07D_DECISION_ELIGIBILITY_EVALUATOR_PASS
