@@ -351,7 +351,7 @@
       "semantic_id": "context.declared_identity",
       "question": "What field/season/crop/cultivar/planting/customer context is declared?",
       "target_owner": "Context Authority",
-      "canonical_output_type": "ContextAssertionV1 / ContextSnapshotV1 (B-05 target)",
+      "canonical_output_type": "ContextAssertionV1 / ContextSnapshotV1 (B-05a contracts exist; runtime owner not activated)",
       "current_state": "DISTRIBUTED_CONTEXT",
       "target_phase": "B-05",
       "new_owner_creation": "FORBIDDEN",
@@ -414,7 +414,10 @@
           "runtime_edge": "PROVEN"
         }
       ],
-      "notes": [],
+      "notes": [
+        "B-05a freezes declared-context contract vocabulary only; no production Context Authority producer is activated yet.",
+        "Crop stage is not a field of ContextSnapshotV1 and must not be smuggled into declared context authority."
+      ],
       "runtime_consumers": [
         {
           "consumer_id": "agronomy-rule-engine",
@@ -440,7 +443,7 @@
       "semantic_id": "context.crop_stage",
       "question": "What observed/estimated crop stage is authoritative for a decision?",
       "target_owner": "Twin Runtime using qualified Evidence plus Context",
-      "canonical_output_type": "QualifiedCropStageState (B-05 convergence; actual Twin contract later)",
+      "canonical_output_type": "QualifiedCropStageStateV1 (B-05a separation contract; actual Twin runtime binding later)",
       "current_state": "DUPLICATE_AUTHORITY",
       "target_phase": "B-05",
       "new_owner_creation": "FORBIDDEN",
@@ -555,7 +558,9 @@
       "registered_consumers": [],
       "notes": [
         "UNKNOWN must remain UNKNOWN in canonical paths.",
-        "Compatibility default/resolver output must not silently become authoritative stage."
+        "Compatibility default/resolver output must not silently become authoritative stage.",
+        "B-05a contract distinguishes UNKNOWN, COMPATIBILITY_NON_AUTHORITATIVE and TWIN_QUALIFIED representation.",
+        "No B-05a production runtime is authorized to instantiate QualifiedCropStageStateV1; future producer registration is required before runtime use."
       ],
       "runtime_consumers": []
     },
@@ -2047,6 +2052,51 @@
         "apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.ts"
       ],
       "failure": "UNREGISTERED_CANONICAL_EVIDENCE_QUALIFICATION_PROJECTOR"
+    },
+    {
+      "guard_id": "G-B02-11-canonical-context-instantiation",
+      "semantic_id": "context.declared_identity",
+      "description": "B-05a freezes ContextAssertionV1/ContextSnapshotV1 as contracts only; any production instantiation must be explicitly registered in a later B-05 phase.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "contextAssertionV1Schema.parse(",
+          "contextSnapshotV1Schema.parse("
+        ]
+      },
+      "registered_paths": [],
+      "failure": "UNREGISTERED_CANONICAL_CONTEXT_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-12-qualified-crop-stage-instantiation",
+      "semantic_id": "context.crop_stage",
+      "description": "B-05a exposes QualifiedCropStageStateV1 contract capability without activating a production stage authority; runtime instantiation requires explicit later registration.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "qualifiedCropStageStateV1Schema.parse("
+        ]
+      },
+      "registered_paths": [],
+      "failure": "UNREGISTERED_QUALIFIED_CROP_STAGE_PRODUCER"
     }
   ],
   "connectivity_model": {
