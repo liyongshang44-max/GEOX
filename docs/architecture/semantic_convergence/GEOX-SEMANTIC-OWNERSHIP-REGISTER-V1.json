@@ -968,7 +968,7 @@
       "semantic_id": "decision.calculation",
       "question": "What deterministic agronomic calculations are produced?",
       "target_owner": "Decision calculators",
-      "canonical_output_type": "CalculationResult plus trace (B-06 mapping target)",
+      "canonical_output_type": "CalculationResultV1 (B-06a contract exists; production producer not activated)",
       "current_state": "MULTI_CALCULATOR_EXPECTED",
       "target_phase": "B-06",
       "new_owner_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
@@ -1082,7 +1082,9 @@
         }
       ],
       "notes": [
-        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only."
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only.",
+        "B-06a freezes CalculationResultV1 as CALCULATION_ONLY; calculators cannot directly declare CandidateDecision, eligibility, approval or execution authority.",
+        "B-06a activates no production CalculationResultV1 producer."
       ],
       "runtime_consumers": [
         {
@@ -1109,7 +1111,7 @@
       "semantic_id": "decision.candidate",
       "question": "What action should be considered?",
       "target_owner": "Decision Runtime",
-      "canonical_output_type": "CandidateDecisionV1 (B-06 target)",
+      "canonical_output_type": "CandidateDecisionV1 (B-06a contract exists; production producer not activated)",
       "current_state": "DUPLICATE_AUTHORITY",
       "target_phase": "B-06",
       "new_owner_creation": "FORBIDDEN",
@@ -1229,7 +1231,10 @@
       "notes": [
         "Recommendation, decision_plan and prescription are historical/compatibility objects until mapped.",
         "Execution authority is always NONE at candidate level.",
-        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only."
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only.",
+        "B-06a freezes CandidateDecisionV1 with authority_state=CANDIDATE_ONLY.",
+        "Decision Eligibility, Approval, ApprovedOperationPlan and ExecutableTask are deliberately absent from CandidateDecisionV1.",
+        "Legacy recommendation/decision_plan/prescription/operation-plan proposal mappings require later bounded B-06 adapters; B-06a activates no production CandidateDecisionV1 producer."
       ],
       "runtime_consumers": [
         {
@@ -2204,6 +2209,50 @@
         "apps/server/src/context/crop_skill_stage_compatibility_adapter_v1.ts"
       ],
       "failure": "UNREGISTERED_CROP_SKILL_STAGE_TOUCHPOINT"
+    },
+    {
+      "guard_id": "G-B02-14-calculation-result-instantiation",
+      "semantic_id": "decision.calculation",
+      "description": "B-06a freezes CalculationResultV1 as a contract only; production instantiation requires explicit later B-06 registration.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "calculationResultV1Schema.parse("
+        ]
+      },
+      "registered_paths": [],
+      "failure": "UNREGISTERED_CALCULATION_RESULT_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-15-candidate-decision-instantiation",
+      "semantic_id": "decision.candidate",
+      "description": "B-06a freezes CandidateDecisionV1 as a contract only; production instantiation requires explicit later B-06 registration.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "candidateDecisionV1Schema.parse("
+        ]
+      },
+      "registered_paths": [],
+      "failure": "UNREGISTERED_CANDIDATE_DECISION_PRODUCER"
     }
   ],
   "connectivity_model": {
