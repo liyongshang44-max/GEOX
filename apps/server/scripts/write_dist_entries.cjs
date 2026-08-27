@@ -38,6 +38,16 @@ runMcftCap09TwinRuntimeProcessV1().catch((error) => {
 `,
   },
   {
+    name: path.join("qualification", "mcft_cap09_phase5_evidence_runtime.js"),
+    content: `import { runMcftCap09Phase5EvidenceRuntimeQualificationV1 } from "../apps/server/src/external_evidence/qualification/mcft_cap09_phase5_evidence_runtime_qualification_v1.js";
+
+runMcftCap09Phase5EvidenceRuntimeQualificationV1().catch((error) => {
+  console.error(\`FATAL: MCFT-CAP-09 Phase5 Evidence qualification Runtime crashed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+  process.exit(1);
+});
+`,
+  },
+  {
     name: path.join("database", "platform_bootstrap.js"),
     content: `import { runMcftCap07DatabasePlatformBootstrapFromEnvironmentV1 } from "../apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.js";
 import { runRuntimeSchemaCompatibilityBootstrapFromEnvironmentV1 } from "../apps/server/src/infra/runtime_schema_compatibility_bootstrap_v1.js";
