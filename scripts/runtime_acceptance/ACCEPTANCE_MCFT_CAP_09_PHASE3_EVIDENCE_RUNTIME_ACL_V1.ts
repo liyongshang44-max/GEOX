@@ -8,29 +8,35 @@ const DATABASE_URL = process.env.DATABASE_URL?.trim();
 if (!DATABASE_URL) throw new Error("DATABASE_URL_REQUIRED");
 
 async function expectDenied(pool: Pool, sql: string, params: unknown[] = []): Promise<void> {
+  const client = await pool.connect();
   let caught: unknown = null;
   try {
-    await pool.query("BEGIN");
-    await pool.query("SET LOCAL ROLE geox_mcft_cap09_evidence_runtime_v1");
-    await pool.query(sql, params);
-    await pool.query("ROLLBACK");
+    await client.query("BEGIN");
+    await client.query("SET LOCAL ROLE geox_mcft_cap09_evidence_runtime_v1");
+    await client.query(sql, params);
+    await client.query("ROLLBACK");
   } catch (error) {
     caught = error;
-    try { await pool.query("ROLLBACK"); } catch {}
+    try { await client.query("ROLLBACK"); } catch {}
+  } finally {
+    client.release();
   }
   assert(caught instanceof Error, `ACL_EXPECTED_DENIAL:${sql}`);
   assert.match(caught.message, /permission denied|must be owner|not allowed/i);
 }
 
-async function withRole(pool: Pool, fn: () => Promise<void>): Promise<void> {
-  await pool.query("BEGIN");
+async function withRole(pool: Pool, fn: (client: import("pg").PoolClient) => Promise<void>): Promise<void> {
+  const client = await pool.connect();
   try {
-    await pool.query("SET LOCAL ROLE geox_mcft_cap09_evidence_runtime_v1");
-    await fn();
-    await pool.query("COMMIT");
+    await client.query("BEGIN");
+    await client.query("SET LOCAL ROLE geox_mcft_cap09_evidence_runtime_v1");
+    await fn(client);
+    await client.query("COMMIT");
   } catch (error) {
-    await pool.query("ROLLBACK");
+    await client.query("ROLLBACK");
     throw error;
+  } finally {
+    client.release();
   }
 }
 
@@ -56,21 +62,21 @@ async function main(): Promise<void> {
       rolcanlogin: false,
     });
 
-    await withRole(pool, async () => {
-      await pool.query(
+    await withRole(pool, async (client) => {
+      await client.query(
         "INSERT INTO public.facts(fact_id,occurred_at,source,record_json) VALUES ($1,$2::timestamptz,$3,$4::jsonb)",
         ["phase3_acl_fact_1", "2026-08-27T02:30:00.000Z", "phase3_acl_qualification", JSON.stringify({ type: "acl_fixture", payload: { ok: true } })],
       );
-      const fact = await pool.query("SELECT fact_id FROM public.facts WHERE fact_id=$1", ["phase3_acl_fact_1"]);
+      const fact = await client.query("SELECT fact_id FROM public.facts WHERE fact_id=$1", ["phase3_acl_fact_1"]);
       assert.equal(fact.rows.length, 1);
 
-      await pool.query(
+      await client.query(
         `INSERT INTO public.external_evidence_producer_lease_v1
          (tenant_id,project_id,group_id,field_id,season_id,zone_id,lease_owner,fencing_token,acquired_at,expires_at,heartbeat_at)
          VALUES ('tenantA','projectA','groupA','field_e3r1','season_2026','zone_root','acl-owner',1,
                  transaction_timestamp(),transaction_timestamp()+interval '5 minutes',transaction_timestamp())`,
       );
-      const updatedLease = await pool.query(
+      const updatedLease = await client.query(
         `UPDATE public.external_evidence_producer_lease_v1
             SET heartbeat_at=transaction_timestamp()
           WHERE tenant_id='tenantA' AND project_id='projectA' AND group_id='groupA'
@@ -78,7 +84,7 @@ async function main(): Promise<void> {
       );
       assert.equal(updatedLease.rowCount, 1);
 
-      await pool.query(
+      await client.query(
         `INSERT INTO public.external_evidence_supply_cursor_v1
          (tenant_id,project_id,group_id,field_id,season_id,zone_id,binding_id,origin_source_id,
           fact_id,record_semantic_sha256,available_to_runtime_at,role_time,post_commit_db_readback_at,
@@ -88,7 +94,7 @@ async function main(): Promise<void> {
                  'sha256:${"a".repeat(64)}','2026-08-27T02:30:00.000Z','{}'::jsonb,
                  '2026-08-27T02:30:01.000Z','acl-owner',1)`,
       );
-      const cursor = await pool.query("SELECT fact_id FROM public.external_evidence_supply_cursor_v1 WHERE binding_id='acl-binding'");
+      const cursor = await client.query("SELECT fact_id FROM public.external_evidence_supply_cursor_v1 WHERE binding_id='acl-binding'");
       assert.equal(cursor.rows.length, 1);
     });
 
