@@ -552,6 +552,7 @@ function normalizeOverlayKindV1(kind: unknown, payload: Record<string, any>): Se
   const candidates = [kind, payload.kind, payload.type, payload.overlay_kind]
     .map((x) => String(x ?? "").trim().toLowerCase())
     .filter(Boolean);
+  if (candidates.includes(RAW_SAMPLE_RUNTIME_AVAILABILITY_MARKER_KIND_V1)) return null;
   if (containsForbiddenOverlayConclusionV1(candidates)) return null;
   for (const candidate of candidates) {
     if (OFFICIAL_SERIES_OVERLAY_KIND_SET_V1.has(candidate)) return candidate as SeriesOverlayKindV1;
