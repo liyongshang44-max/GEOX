@@ -54,6 +54,12 @@ jobs:
           docker build             -f docker/runtime.Dockerfile             --build-arg "BUILD_COMMAND=pnpm --filter @geox/contracts build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/telemetry-ingest build"             -t geox/telemetry-ingest-b04b4 .
           docker run --rm --entrypoint ./node_modules/.bin/tsx geox/telemetry-ingest-b04b4 --version
           docker run --rm --entrypoint /bin/sh geox/telemetry-ingest-b04b4 -lc 'test -f apps/telemetry-ingest/src/main.ts && test -x node_modules/.bin/tsx'
+          set +e
+          docker run --rm geox/telemetry-ingest-b04b4 ./node_modules/.bin/tsx apps/telemetry-ingest/src/main.ts >/tmp/b04b4-runtime-boot.log 2>&1
+          BOOT_RC=$?
+          set -e
+          test "$BOOT_RC" -ne 0
+          grep -F "DATABASE_URL_NOT_CONFIGURED" /tmp/b04b4-runtime-boot.log
       - name: B04a fixtures
         run: pnpm --filter @geox/server exec node --import tsx --test src/evidence/physical_qc_v1.test.ts
       - name: B04b1 fixtures
