@@ -195,7 +195,8 @@ async function main(): Promise<void> {
       const twinClient = await twinPool.connect();
       try {
         await twinClient.query("BEGIN");
-        await twinClient.query(
+        await permissionDeniedV1(
+          twinClient,
           `INSERT INTO public.facts(fact_id,occurred_at,source,record_json)
            VALUES ('phase5-twin-fact',transaction_timestamp(),
                    'phase5-twin','{"type":"phase5_twin_probe","payload":{}}'::jsonb)`,
@@ -241,7 +242,8 @@ async function main(): Promise<void> {
       evidence_login_can_mutate_evidence_lease: true,
       evidence_login_direct_fact_insert_denied: true,
       evidence_login_twin_runtime_lease_denied: true,
-      twin_login_can_append_canonical_fact: true,
+      twin_login_direct_fact_insert_denied: true,
+      twin_login_canonical_fact_writer_is_security_definer_only: true,
       twin_login_can_mutate_runtime_lease: true,
       twin_login_evidence_cursor_read_denied: true,
       twin_login_evidence_lease_mutation_denied: true,

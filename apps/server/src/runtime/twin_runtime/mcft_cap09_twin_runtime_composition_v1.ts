@@ -13,6 +13,9 @@ import {
   PostgresForecastScenarioRecoveryRepositoryV1,
 } from "../../persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.js";
 import {
+  PostgresMcftCap09TwinCanonicalFactWriterV1,
+} from "../../persistence/twin_runtime/postgres_mcft_cap09_twin_canonical_fact_writer_v1.js";
+import {
   PostgresNextTickRepositoryV1,
 } from "../../persistence/twin_runtime/postgres_next_tick_repository_v1.js";
 import {
@@ -80,6 +83,8 @@ export const MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_CONTRACT_V1 = {
   evidence_producer_lease_mutation_allowed: false,
   second_canonical_tick_path_allowed: false,
   production_container_activation: false,
+  canonical_fact_writer: "PostgresMcftCap09TwinCanonicalFactWriterV1",
+  direct_facts_insert_authority: false,
   formal_v5_arm: false,
 } as const;
 
@@ -136,7 +141,10 @@ export function composeMcftCap09TwinRuntimeV1(
   const runtimeRepository = new PostgresRuntimeRepositoryV1(input.pool);
   const nextTickRepository = new PostgresNextTickRepositoryV1(input.pool);
   const forecastScenarioRepository =
-    new PostgresForecastScenarioRecoveryRepositoryV1(input.pool);
+    new PostgresForecastScenarioRecoveryRepositoryV1(
+      input.pool,
+      new PostgresMcftCap09TwinCanonicalFactWriterV1(),
+    );
   const evidenceSource =
     new PostgresExternalFormalAmendment19EvidenceSourceV1(input.pool);
 
