@@ -21,7 +21,7 @@ export type AppleIIConflictDetectionV1 = { sensor_drift_status: AppleIISensorDri
 export type AppleIIEvidenceSufficiencyV1 = { evidence_sufficiency: AppleIIEvidenceSufficiencyStatusV1; reason_codes: string[]; time_coverage_v1: AppleIITimeCoverageV1; device_health_snapshot_v1: AppleIIDeviceHealthSnapshotV1; conflict_detection_v1: AppleIIConflictDetectionV1; canonical_evidence_qualification_projection_v1: RawSampleEvidenceQualificationProjectionBatchV1 };
 
 type DbConn = Pool | PoolClient;
-type RawSampleRow = { sample_id: string; sensor_id: string; ts_ms: number; metric: string; value: number; qc_quality: RawSampleQualityV1; source: AppleIISampleSourceV1; payload_json: any; created_at?: string | Date | null };
+type RawSampleRow = { sample_id: string; sensor_id: string; ts_ms: number; metric: string; value: number; qc_quality: RawSampleQualityV1; source: AppleIISampleSourceV1; payload_json: any; created_at?: string | Date | null; available_to_runtime_at?: string | Date | null };
 type FormalSourcePolicyV1 = Partial<Record<AppleIISampleSourceV1, boolean>>;
 const DEFAULT_FORMAL_SAMPLE_SOURCE_POLICY_V1: Record<AppleIISampleSourceV1, boolean> = { device: true, gateway: true, system: false, human: false, import: false, sim: false, unknown: false };
 const IRRIGATION_EFFECTIVENESS_FORMAL_METRICS_V1 = new Set([
@@ -161,7 +161,14 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: { te
   where.push(`created_at <= to_timestamp($${p++} / 1000.0)`);
   args.push(nowMs);
 
-  const sampleRows = await db.query(`SELECT sample_id, sensor_id, ts_ms, metric, value, qc_quality, source, payload_json, created_at FROM raw_samples WHERE ${where.join(" AND ")} ORDER BY ts_ms ASC LIMIT 20000`, args);
+  const sampleRows = await db.query(`SELECT sample_id, sensor_id, ts_ms, metric, value, qc_quality, source, payload_json, created_at,
+    (SELECT m.occurred_at
+       FROM markers m
+      WHERE m.marker_id = 'raw_sample_runtime_available_v1:' || raw_samples.sample_id
+        AND m.kind = 'raw_sample_runtime_available_v1'
+        AND m.source = 'system'
+      LIMIT 1) AS available_to_runtime_at
+    FROM raw_samples WHERE ${where.join(" AND ")} ORDER BY ts_ms ASC LIMIT 20000`, args);
   const samples = normalizeRawSampleRows(sampleRows.rows ?? []);
 
   // B-04d3r1 shadow-only late-backfill audit. The authoritative Apple-II query
@@ -181,7 +188,14 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: { te
   let lateBackfillShadowQueryAvailable = true;
   let lateBackfillShadowSamples: RawSampleRow[] = [];
   try {
-    const lateRows = await db.query(`SELECT sample_id, sensor_id, ts_ms, metric, value, qc_quality, source, payload_json, created_at FROM raw_samples WHERE ${lateShadowWhere.join(" AND ")} ORDER BY ts_ms ASC LIMIT 20000`, lateShadowArgs);
+    const lateRows = await db.query(`SELECT sample_id, sensor_id, ts_ms, metric, value, qc_quality, source, payload_json, created_at,
+    (SELECT m.occurred_at
+       FROM markers m
+      WHERE m.marker_id = 'raw_sample_runtime_available_v1:' || raw_samples.sample_id
+        AND m.kind = 'raw_sample_runtime_available_v1'
+        AND m.source = 'system'
+      LIMIT 1) AS available_to_runtime_at
+    FROM raw_samples WHERE ${lateShadowWhere.join(" AND ")} ORDER BY ts_ms ASC LIMIT 20000`, lateShadowArgs);
     lateBackfillShadowSamples = normalizeRawSampleRows(lateRows.rows ?? []);
   } catch {
     lateBackfillShadowQueryAvailable = false;

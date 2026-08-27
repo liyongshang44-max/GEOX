@@ -48,7 +48,7 @@ function baseInput(): RawSampleEvidenceQualificationProjectionInputV1 {
   };
 }
 
-test("otherwise-good raw sample remains LIMITED because exact post-COMMIT availability is not established", () => {
+test("otherwise-good raw sample without post-COMMIT marker remains LIMITED", () => {
   const q = projectRawSampleEvidenceQualificationV1(baseInput());
 
   assert.equal(q.schema_version, "evidence_qualification_v1");
@@ -64,7 +64,7 @@ test("otherwise-good raw sample remains LIMITED because exact post-COMMIT availa
   assert.equal(q.role_eligibility[0]?.role, STAGE1_FORMAL_EVIDENCE_ROLE_V1);
   assert.equal(q.role_eligibility[0]?.eligibility, "LIMITED");
   assert.ok(q.reason_codes.includes("POST_COMMIT_RUNTIME_AVAILABILITY_NOT_ESTABLISHED"));
-  assert.ok(q.limitations.includes("RAW_SAMPLE_CREATED_AT_IS_NOT_POST_COMMIT_VISIBILITY_TIME"));
+  assert.ok(q.limitations.includes("POST_COMMIT_RUNTIME_AVAILABILITY_AUTHORITY_NOT_ESTABLISHED"));
 });
 
 test("physical failure projects as INELIGIBLE without deleting source evidence", () => {
@@ -143,6 +143,60 @@ test("shadow batch reports authority distribution and cannot claim canonical PAS
     qualified: 0,
     limited: 1,
     ineligible: 1,
+    unknown: 0,
+  });
+  assert.ok(batch.limitations.includes("DO_NOT_USE_FOR_STAGE1_TRIGGER_ELIGIBILITY_YET"));
+});
+
+
+test("post-COMMIT runtime availability marker can qualify an otherwise-good shadow observation", () => {
+  const input = baseInput();
+  input.sample.sample_id = "rs_marker_qualified";
+  input.sample.available_to_runtime_at = new Date(decisionTime - 8 * 60_000).toISOString();
+
+  const q = projectRawSampleEvidenceQualificationV1(input);
+  assert.equal(q.temporal_eligibility, "ELIGIBLE");
+  assert.equal(q.evidence_authority, "QUALIFIED");
+  assert.equal(q.role_eligibility[0]?.eligibility, "ELIGIBLE");
+  assert.ok(q.reason_codes.includes("POST_COMMIT_RUNTIME_AVAILABILITY_ESTABLISHED"));
+});
+
+test("marker after decision remains temporal UNKNOWN rather than fabricating NOT_AVAILABLE", () => {
+  const input = baseInput();
+  input.sample.sample_id = "rs_marker_after_decision";
+  input.sample.available_to_runtime_at = new Date(decisionTime + 30_000).toISOString();
+
+  const q = projectRawSampleEvidenceQualificationV1(input);
+  assert.equal(q.temporal_eligibility, "UNKNOWN");
+  assert.equal(q.evidence_authority, "LIMITED");
+  assert.ok(q.reason_codes.includes("POST_COMMIT_RUNTIME_AVAILABILITY_MARKER_AFTER_DECISION"));
+  assert.ok(!q.reason_codes.includes("NOT_AVAILABLE_AT_DECISION"));
+});
+
+test("marker preceding raw created_at fails closed as temporal UNKNOWN", () => {
+  const input = baseInput();
+  input.sample.sample_id = "rs_invalid_marker_order";
+  input.sample.available_to_runtime_at = new Date(decisionTime - 11 * 60_000).toISOString();
+
+  const q = projectRawSampleEvidenceQualificationV1(input);
+  assert.equal(q.temporal_eligibility, "UNKNOWN");
+  assert.equal(q.evidence_authority, "LIMITED");
+  assert.ok(q.reason_codes.includes("RUNTIME_AVAILABILITY_MARKER_PRECEDES_RAW_CREATED_AT"));
+});
+
+test("shadow batch can report QUALIFIED evidence while remaining non-authoritative to Stage-1", () => {
+  const input = baseInput();
+  input.sample.sample_id = "rs_qualified_shadow";
+  input.sample.available_to_runtime_at = new Date(decisionTime - 8 * 60_000).toISOString();
+  const qualified = projectRawSampleEvidenceQualificationV1(input);
+
+  const batch = buildRawSampleEvidenceQualificationProjectionBatchV1([qualified]);
+  assert.equal(batch.authority_mode, "SHADOW_NON_AUTHORITATIVE");
+  assert.deepEqual(batch.counts, {
+    total: 1,
+    qualified: 1,
+    limited: 0,
+    ineligible: 0,
     unknown: 0,
   });
   assert.ok(batch.limitations.includes("DO_NOT_USE_FOR_STAGE1_TRIGGER_ELIGIBILITY_YET"));
