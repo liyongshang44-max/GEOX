@@ -77,8 +77,11 @@ REVOKE ALL PRIVILEGES
   ON TABLE
     public.external_evidence_producer_lease_v1,
     public.external_evidence_supply_event_v1,
-    public.external_evidence_supply_cursor_v1
+    public.external_evidence_supply_cursor_v1,
+    public.twin_external_formal_forcing_base_cursor_v1,
+    public.twin_external_formal_forcing_base_target_v1,
+    public.twin_external_formal_forcing_controller_lease_v1
   FROM geox_mcft_cap09_twin_runtime_v1;
 
 COMMENT ON ROLE geox_mcft_cap09_twin_runtime_v1 IS
-  'MCFT-CAP-09 Phase4 Twin Runtime privilege role: canonical Twin/Forecast/Scenario + independent Runtime scheduler state only; governed Evidence read through facts; zero EvidenceSupplyCursor/provider-acquisition authority.';
+  'MCFT-CAP-09 Phase4 Twin Runtime privilege role: canonical Twin/Forecast/Scenario + independent Runtime scheduler state only; governed Evidence read through facts; zero EvidenceSupplyCursor/provider-acquisition/legacy forcing-controller authority.';
