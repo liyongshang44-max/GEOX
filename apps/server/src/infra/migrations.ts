@@ -25,6 +25,19 @@ export type SqlMigrationRunSummary = {
 };
 
 function compareSqlMigrationNames(a: string, b: string): number {
+  // Preserve chronological ordering across migration dates. Within one date batch,
+  // schema/data migrations must precede ACL grants so permissions never reference
+  // relations/functions that have not been materialized yet.
+  const dateA = a.match(/^(\d{4}_\d{2}_\d{2})_/)?.[1] ?? "";
+  const dateB = b.match(/^(\d{4}_\d{2}_\d{2})_/)?.[1] ?? "";
+  if (dateA && dateB && dateA !== dateB) {
+    return dateA.localeCompare(dateB, undefined, { numeric: true, sensitivity: "base" });
+  }
+  if (dateA && dateB && dateA === dateB) {
+    const aclA = /_acl\.sql$/i.test(a) ? 1 : 0;
+    const aclB = /_acl\.sql$/i.test(b) ? 1 : 0;
+    if (aclA !== aclB) return aclA - aclB;
+  }
   return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
 }
 
