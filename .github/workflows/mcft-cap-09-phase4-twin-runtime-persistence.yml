@@ -112,9 +112,41 @@ jobs:
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_RESTART_BACKFILL_STALE_DETECTION.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1.ts
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts
+
+      - name: Transpile generated-support restart and successor qualifications
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const ts = require('typescript');
+          const files = [
+            'scripts/runtime_acceptance/mcft_cap09_s5_canonical_integration_support_v1.ts',
+            'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_RESTART_BACKFILL_STALE_DETECTION.ts',
+            'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1.ts',
+          ];
+          for (const file of files) {
+            const result = ts.transpileModule(fs.readFileSync(file, 'utf8'), {
+              fileName: file,
+              reportDiagnostics: true,
+              compilerOptions: {
+                target: ts.ScriptTarget.ES2022,
+                module: ts.ModuleKind.ESNext,
+                moduleResolution: ts.ModuleResolutionKind.Bundler,
+                esModuleInterop: true,
+              },
+            });
+            const errors = (result.diagnostics ?? []).filter(
+              diagnostic => diagnostic.category === ts.DiagnosticCategory.Error,
+            );
+            if (errors.length) {
+              for (const diagnostic of errors) {
+                console.error(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'));
+              }
+              throw new Error(`PHASE4_ACCEPTANCE_TRANSPILE_FAILED:${file}`);
+            }
+          }
+          console.log(JSON.stringify({ status: 'PASS', files }, null, 2));
+          NODE
 
       - name: Prove long-running Twin Runtime host contract
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts
