@@ -6,6 +6,7 @@ on:
       - '.github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_twin_runtime_successor_viability_v1.ts'
       - 'apps/server/src/infra/migrations.ts'
       - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql'
       - 'apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.ts'
@@ -23,6 +24,7 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1.ts'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -80,6 +82,29 @@ jobs:
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Extract frozen CAP04 PostgreSQL qualification support
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          source = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_DB.ts').read_text()
+          marker = 'async function deleteCap04GuardsV1()'
+          if marker not in source:
+              raise SystemExit('CAP04_SUPPORT_EXTRACTION_MARKER_MISSING')
+          support = source.split(marker, 1)[0]
+          replacements = {
+              'const pool = new Pool({ connectionString: databaseUrl });': 'export const pool = new Pool({ connectionString: databaseUrl });',
+              'function persistenceAdapterV1(': 'export function persistenceAdapterV1(',
+              'async function buildControlledAuthorityV1()': 'export async function buildControlledAuthorityV1()',
+              'async function seedControlledAuthorityV1(': 'export async function seedControlledAuthorityV1(',
+              'async function resetSchemaV1()': 'export async function resetSchemaV1()',
+          }
+          for old, new in replacements.items():
+              if old not in support:
+                  raise SystemExit(f'CAP04_SUPPORT_EXPORT_MARKER_MISSING:{old}')
+              support = support.replace(old, new, 1)
+          Path('scripts/runtime_acceptance/mcft_cap09_s5_canonical_integration_support_v1.ts').write_text(support)
+          PY
+
       - name: Prove product and focused acceptance types
         run: |
           pnpm --filter @geox/server run typecheck
@@ -88,7 +113,8 @@ jobs:
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_RESTART_BACKFILL_STALE_DETECTION.ts
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S4_RESTART_BACKFILL_STALE_DETECTION.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1.ts
 
       - name: Prove long-running Twin Runtime host contract
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts
@@ -105,6 +131,13 @@ jobs:
 
       - name: Prove DB-clock Runtime cursor, fencing, restart and bounded catch-up
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts
+
+      - name: Prove read-only canonical successor viability
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/phase4_twin
+          MCFT_CAP_04_SINGLE_TICK_DESTRUCTIVE_ACCEPTANCE: '1'
+          MCFT_CAP_09_PHASE4_SUCCESSOR_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1.ts
 
       - name: Prove canonical checkpoint restart and oldest-missed recovery
         env:
@@ -183,5 +216,6 @@ jobs:
             acceptance-output/MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_S4_POSTGRESQL_ACCEPTANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1_RESULT.json
           if-no-files-found: warn
           retention-days: 90
