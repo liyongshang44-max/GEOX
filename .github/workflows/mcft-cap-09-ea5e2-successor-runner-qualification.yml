@@ -69,6 +69,7 @@ jobs:
             'refet==0.4.2'
           python -m eccodes selfcheck
           python apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py selftest
+          python apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py selftest
           python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py selftest-gfs-selection
           python scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py selftest-et0-decimal-normalization
       - name: Prove GFS product and successor qualification identity boundary
@@ -84,6 +85,8 @@ jobs:
           historical = "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_EA4_LIVE_SOURCE_EXACT_HEAD_QUALIFICATION.py"
           successor = "scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py"
           core = "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py"
+          bundle_decoder = "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py"
+          ts_decoder = "apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts"
           graph = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs"
           pinned_historical_blob = "ff2ad210387402a74731968e14746210fd2440dd"
 
@@ -95,22 +98,35 @@ jobs:
 
           successor_text = (root / successor).read_text(encoding="utf-8")
           core_text = (root / core).read_text(encoding="utf-8")
+          bundle_decoder_text = (root / bundle_decoder).read_text(encoding="utf-8")
+          ts_decoder_text = (root / ts_decoder).read_text(encoding="utf-8")
           graph_text = (root / graph).read_text(encoding="utf-8")
           decode_start = successor_text.index("def command_decode_gfs")
           decode_end = successor_text.index("def command_decode_kbs_late", decode_start)
           decode_text = successor_text[decode_start:decode_end]
 
-          required = [
-              "mcft_cap09_gfs_scientific_core_v1.py",
-              "gfs_core.validate_complete_cycle_inventory_v1",
-              "gfs_core.decode_pgrb2_v1",
-              "gfs_core.decode_sflux_v1",
-              "gfs_core.assemble_72h_scientific_series_v1",
+          successor_required = [
+              "mcft_cap09_gfs_raw_bundle_decoder_v1.py",
+              "gfs_bundle_decoder.decode_bundle_v1",
+              "product_gfs_raw_bundle_decoder_used",
               "product_gfs_scientific_core_used",
           ]
-          for marker in required:
+          for marker in successor_required:
               if marker not in successor_text:
-                  raise SystemExit(f"GFS_PRODUCT_IDENTITY_REQUIRED_MARKER_MISSING:{marker}")
+                  raise SystemExit(f"GFS_PRODUCT_IDENTITY_SUCCESSOR_DELEGATION_MISSING:{marker}")
+
+          product_decoder_required = [
+              "core.decode_pgrb2_v1",
+              "core.decode_sflux_v1",
+              "core.assemble_72h_scientific_series_v1",
+              "build_drafts_v1",
+          ]
+          for marker in product_decoder_required:
+              if marker not in bundle_decoder_text:
+                  raise SystemExit(f"GFS_PRODUCT_IDENTITY_PRODUCT_DECODER_MARKER_MISSING:{marker}")
+
+          if "mcft_cap09_gfs_raw_bundle_decoder_v1.py" not in ts_decoder_text:
+              raise SystemExit("GFS_PRODUCT_IDENTITY_TS_DECODER_DRIVER_BINDING_MISSING")
 
           for forbidden in [
               "ea4.decode_pgrb2(",
@@ -122,13 +138,14 @@ jobs:
               if forbidden in decode_text:
                   raise SystemExit(f"GFS_PRODUCT_IDENTITY_SECOND_SCIENTIFIC_PATH:{forbidden}")
 
-          tree = ast.parse(core_text, filename=core)
           imported_modules = []
-          for node in ast.walk(tree):
-              if isinstance(node, ast.Import):
-                  imported_modules.extend(alias.name for alias in node.names)
-              elif isinstance(node, ast.ImportFrom):
-                  imported_modules.append(node.module or "")
+          for source_name, source_text in ((core, core_text), (bundle_decoder, bundle_decoder_text)):
+              tree = ast.parse(source_text, filename=source_name)
+              for node in ast.walk(tree):
+                  if isinstance(node, ast.Import):
+                      imported_modules.extend(alias.name for alias in node.names)
+                  elif isinstance(node, ast.ImportFrom):
+                      imported_modules.append(node.module or "")
 
           forbidden_import_prefixes = (
               "scripts.runtime_acceptance",
@@ -152,23 +169,24 @@ jobs:
               ("ACCEPTANCE_PATH", re.compile(r"scripts/runtime_acceptance")),
           ]
           for label, pattern in precise_forbidden_patterns:
-              if pattern.search(core_text):
+              if pattern.search(core_text) or pattern.search(bundle_decoder_text):
                   raise SystemExit(f"GFS_PRODUCT_CORE_FORBIDDEN_DEPENDENCY:{label}")
 
-          if core not in graph_text:
-              raise SystemExit("GFS_PRODUCT_CORE_NOT_IN_EA5E2_GRAPH")
+          for required_path in (core, bundle_decoder, ts_decoder):
+              if required_path not in graph_text:
+                  raise SystemExit(f"GFS_PRODUCT_PATH_NOT_IN_EA5E2_GRAPH:{required_path}")
 
           result = {
               "schema_version": "geox_mcft_cap09_gfs_product_scientific_core_identity_v1",
               "status": "PASS",
               "historical_ea4_probe_blob": actual_historical_blob,
               "historical_ea4_probe_preserved": True,
-              "successor_imports_product_gfs_core": True,
+              "successor_delegates_product_gfs_bundle_decoder": True,
               "same_cycle_inventory_uses_product_core": True,
-              "pgrb2_decode_uses_product_core": True,
-              "sflux_decode_uses_product_core": True,
-              "apcp_and_72h_assembly_uses_product_core": True,
-              "solar_interval_and_et0_uses_product_core": True,
+              "pgrb2_decode_uses_product_decoder_core": True,
+              "sflux_decode_uses_product_decoder_core": True,
+              "apcp_and_72h_assembly_uses_product_decoder_core": True,
+              "solar_interval_and_et0_uses_product_decoder_core": True,
               "second_gfs_scientific_path_in_successor_decode": False,
               "product_core_import_modules": sorted(imported_modules),
               "product_core_acceptance_dependency": False,

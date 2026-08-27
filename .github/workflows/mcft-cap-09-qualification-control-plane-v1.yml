@@ -28,6 +28,28 @@ on:
       - 'apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.ts'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs'
       - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs'
+      - '.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_SUPPLY_CADENCE_PROFILES_V1.ts'
+      - 'apps/server/src/persistence/external_evidence/postgres_evidence_runtime_governed_ingress_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_supply_cadence_profile_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_cycle_service_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_production_evidence_work_items_v1.ts'
+      - 'apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts'
+      - 'apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.ts'
+      - 'apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts'
+      - 'apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py'
+      - 'apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_CYCLE_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1.ts'
   merge_group:
     types: [checks_requested]
 
@@ -39,6 +61,7 @@ env:
   FROZEN_SUCCESSOR_SHA: '3bbf096ee5cb73e8e0e0251dc400733d6cab501f'
   CP5_CLOSURE_SHA: '14653ba622bb12261a1ea79f3ea7e42be0b49f92'
   PHASE1_CLOSURE_SHA: '8943c752a354cb916cc7f144681203aa9a19f70b'
+  PHASE2_CLOSURE_SHA: 'c3346768a44b16b127378cb690ada1d8cfec1049'
 
 concurrency:
   group: mcft-cap09-qualification-control-plane-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
@@ -63,7 +86,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             base='${{ github.event.pull_request.base.sha }}'
-            if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ]; then
+            if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ] && [ "$base" != "$PHASE2_CLOSURE_SHA" ]; then
               echo "MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:${base}" >&2
               exit 1
             fi
@@ -96,7 +119,7 @@ jobs:
           const assert = (condition, code, detail = null) => {
             if (!condition) failures.push({code, detail});
           };
-          const expectedPredecessors = [process.env.FROZEN_SUCCESSOR_SHA, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA];
+          const expectedPredecessors = [process.env.FROZEN_SUCCESSOR_SHA, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA, process.env.PHASE2_CLOSURE_SHA];
           const governedPredecessors = authority.governed_successor_predecessor_shas || [];
           assert(governedPredecessors.length === expectedPredecessors.length, 'GOVERNED_PREDECESSOR_CARDINALITY_MISMATCH', governedPredecessors);
           assert(new Set(governedPredecessors).size === governedPredecessors.length, 'GOVERNED_PREDECESSOR_DUPLICATE', governedPredecessors);
@@ -117,7 +140,7 @@ jobs:
           assert(registry.dependency_digest_strategy === DEPENDENCY_DIGEST_STRATEGY, 'DEPENDENCY_DIGEST_STRATEGY_MISMATCH', registry.dependency_digest_strategy);
           assert(registry.durable_anchors?.entries?.length === registry.entries.length, 'DURABLE_ANCHOR_CARDINALITY_MISMATCH', {anchors:registry.durable_anchors?.entries?.length, entries:registry.entries.length});
           const carryForwardIds = ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS'];
-          const requalificationIds = ['EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T','PHASE1_TYPED_RUNTIME_COMPOSITION','PHASE2_EVIDENCE_PROVIDER_MODULES'];
+          const requalificationIds = ['EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T','PHASE1_TYPED_RUNTIME_COMPOSITION','PHASE2_EVIDENCE_PROVIDER_MODULES','PHASE3_EVIDENCE_RUNTIME_FOUNDATION'];
           const v13ScopedIds = [...carryForwardIds, ...requalificationIds];
           for (const id of carryForwardIds) {
             const row = current.decisions.find(x => x.check_id === id);
@@ -200,7 +223,20 @@ jobs:
           const token = process.env.GITHUB_TOKEN;
           const repo = process.env.GITHUB_REPOSITORY;
           if (!token || !repo) throw new Error('GITHUB_ACTIONS_READ_CONTEXT_REQUIRED');
-          const governedRequalificationBases = new Set([registry.frozen_subject_sha, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA]);
+          const governedRequalificationBaseList = requalification.durable_anchors?.rules?.governed_successor_predecessors;
+          if (!Array.isArray(governedRequalificationBaseList) || governedRequalificationBaseList.length === 0) {
+            throw new Error('REQUALIFICATION_GOVERNED_PREDECESSOR_SET_REQUIRED');
+          }
+          const governedRequalificationBases = new Set(governedRequalificationBaseList);
+          if (governedRequalificationBases.size !== governedRequalificationBaseList.length) {
+            throw new Error('REQUALIFICATION_GOVERNED_PREDECESSOR_SET_DUPLICATE');
+          }
+          if (![...governedRequalificationBases].every(sha => /^[0-9a-f]{40}$/.test(String(sha || '')))) {
+            throw new Error('REQUALIFICATION_GOVERNED_PREDECESSOR_SHA_INVALID');
+          }
+          if (!governedRequalificationBases.has(registry.frozen_subject_sha)) {
+            throw new Error('REQUALIFICATION_FROZEN_SUBJECT_PREDECESSOR_REQUIRED');
+          }
 
           async function apiMaybe(endpoint) {
             const response = await fetch(`https://api.github.com/repos/${repo}${endpoint}`, {
@@ -318,6 +354,8 @@ jobs:
       - name: Validate control-plane machine proof
         if: github.event_name == 'pull_request'
         shell: node {0}
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           const fs = require('node:fs');
           const proof = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json','utf8'));
@@ -329,7 +367,10 @@ jobs:
           if (cp2.status !== 'PASS' || cp2.v14_frozen_checks_not_applicable !== true) throw new Error('CP2_GENERATION_DIGEST_PROOF_NOT_PASS');
           if (evidence.status !== 'PASS' || evidence.all_durable_anchor_refs_resolvable !== true || evidence.all_live_refs_match_when_present !== true || evidence.all_requalification_live_refs_match !== true || evidence.requalification_evidence_count < 1) throw new Error('IMMUTABLE_DURABLE_EVIDENCE_NOT_RESOLVED');
           if (plan.status !== 'PASS' || plan.generation !== 'v13' || plan.unknown_changed_paths.length !== 0 || plan.resolver_errors.length !== 0 || plan.authority_errors.length !== 0) throw new Error('CONTROL_PLANE_PLAN_NOT_PASS');
-          if (plan.base_sha !== process.env.PHASE1_CLOSURE_SHA) throw new Error(`PHASE2_EXACT_PLAN_BASE_MUST_EQUAL_PHASE1_CLOSURE:${plan.base_sha}`);
+          const registry = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json','utf8'));
+          const governedBases = new Set(registry.requalification_evidence?.durable_anchors?.rules?.governed_successor_predecessors || []);
+          if (plan.base_sha !== process.env.PR_BASE_SHA) throw new Error(`CONTROL_PLANE_PLAN_BASE_MUST_EQUAL_PR_BASE:${plan.base_sha}:${process.env.PR_BASE_SHA}`);
+          if (!governedBases.has(plan.base_sha)) throw new Error(`CONTROL_PLANE_PLAN_BASE_NOT_GOVERNED:${plan.base_sha}`);
           const control = plan.decisions.find(x => x.check_id === 'CONTROL_PLANE_INTEGRITY');
           if (!control || control.status !== 'REQUALIFY') throw new Error('CONTROL_PLANE_SELF_CHANGE_MUST_REQUALIFY');
           for (const id of ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS']) {

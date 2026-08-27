@@ -8,6 +8,7 @@ const path = require("node:path");
 
 const ROOT = path.resolve(__dirname, "../..");
 const PHASE1_BASE = "8943c752a354cb916cc7f144681203aa9a19f70b";
+const PHASE2_CLOSURE = "c3346768a44b16b127378cb690ada1d8cfec1049";
 const HISTORICAL_GATE = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs";
 const HISTORICAL_AUTHORITY = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C2B1-LIVE-KBS-SOIL-INGRESS-EXECUTOR-V1.json";
 const HISTORICAL_ACCEPTANCE = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS.ts";
@@ -19,6 +20,10 @@ const KBS_HOURLY_PROVIDER = "apps/server/src/external_evidence/provider/kbs_raw_
 const KBS_HOURLY_CORE = "apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py";
 const GFS_PROVIDER = "apps/server/src/external_evidence/provider/gfs_nomads_live_provider_v1.ts";
 const GFS_SCIENTIFIC_CORE = "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py";
+const GFS_BUNDLE_COMPOSER = "apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts";
+const GFS_BUNDLE_TRANSPORT = "apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.ts";
+const GFS_BUNDLE_DECODER = "apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts";
+const GFS_BUNDLE_PYTHON_DECODER = "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py";
 const THIS = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs";
 const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1_RESULT.json");
 
@@ -45,6 +50,10 @@ const ALLOWED_SENSITIVE_DELTA = new Set([
   KBS_HOURLY_CORE,
   GFS_PROVIDER,
   GFS_SCIENTIFIC_CORE,
+  GFS_BUNDLE_COMPOSER,
+  GFS_BUNDLE_TRANSPORT,
+  GFS_BUNDLE_DECODER,
+  GFS_BUNDLE_PYTHON_DECODER,
   WORKFLOW,
   THIS,
 ]);
@@ -78,13 +87,18 @@ function requireMarkers(file, markers, code) {
 
 try {
   const base = exactCommit(process.env.MCFT_BASE_SHA || PHASE1_BASE, "EA5C2B1_PHASE2_BASE_SHA_INVALID");
-  assert.equal(base, PHASE1_BASE, "EA5C2B1_PHASE2_EXACT_PHASE1_BASE_REQUIRED");
+  assert.ok(
+    base === PHASE1_BASE || base === PHASE2_CLOSURE,
+    "EA5C2B1_GOVERNED_PREDECESSOR_REQUIRED",
+  );
   assert.equal(git("merge-base", base, "HEAD"), base, "EA5C2B1_PHASE2_BASE_NOT_ANCESTOR");
 
+  // Historical/frozen authority remains pinned to the original Phase1 predecessor even
+  // when this gate requalifies a later stacked Phase3 successor on top of Phase2 closure.
   for (const file of FROZEN_DEPENDENCIES) {
     assert.equal(
       git("rev-parse", `HEAD:${file}`),
-      git("rev-parse", `${base}:${file}`),
+      git("rev-parse", `${PHASE1_BASE}:${file}`),
       `EA5C2B1_PHASE2_FROZEN_AUTHORITY_DRIFT:${file}`,
     );
   }
@@ -94,7 +108,22 @@ try {
   const sensitive = changed.filter(isSensitive);
   const forbiddenSensitive = sensitive.filter((file) => !ALLOWED_SENSITIVE_DELTA.has(file));
   assert.deepEqual(forbiddenSensitive, [], "EA5C2B1_PHASE2_UNDECLARED_SENSITIVE_PATH");
-  for (const required of [EXECUTOR, TRANSPORT, PROVIDER, KBS_HOURLY_PROVIDER, KBS_HOURLY_CORE, GFS_PROVIDER, GFS_SCIENTIFIC_CORE, WORKFLOW, THIS]) {
+  const requiredSensitive = base === PHASE1_BASE
+    ? [
+        EXECUTOR, TRANSPORT, PROVIDER,
+        KBS_HOURLY_PROVIDER, KBS_HOURLY_CORE,
+        GFS_PROVIDER, GFS_SCIENTIFIC_CORE,
+        WORKFLOW, THIS,
+      ]
+    : [
+        GFS_BUNDLE_COMPOSER,
+        GFS_BUNDLE_TRANSPORT,
+        GFS_BUNDLE_DECODER,
+        GFS_BUNDLE_PYTHON_DECODER,
+        WORKFLOW,
+        THIS,
+      ];
+  for (const required of requiredSensitive) {
     assert.equal(sensitive.includes(required), true, `EA5C2B1_PHASE2_REQUIRED_DELTA_MISSING:${required}`);
   }
 
@@ -185,6 +214,53 @@ try {
     "subprocess",
   ]) assert.equal(gfsProvider.includes(forbidden), false, `EA5C2B1_PHASE2_GFS_PROVIDER_FORBIDDEN_DEPENDENCY:${forbidden}`);
 
+  const gfsBundleComposer = requireMarkers(GFS_BUNDLE_COMPOSER, [
+    "class GfsNomadsRawBundleComposerV1",
+    "retention_before_directory_parse",
+    "retention_before_sflux_idx_parse",
+    "retention_before_scientific_decode",
+    "selectLatestCompleteCycle",
+  ], "EA5C2B1_PHASE2_GFS_BUNDLE_COMPOSER_MARKER_MISSING");
+  const gfsBundleTransport = requireMarkers(GFS_BUNDLE_TRANSPORT, [
+    "class GfsNomadsBundleTransportV1",
+    "GfsNomadsRawBundleComposerV1",
+    "application/x-tar",
+    "DETERMINISTIC_AGGREGATE_OF_RETAINED_NOMADS_OBJECTS",
+  ], "EA5C2B1_PHASE2_GFS_BUNDLE_TRANSPORT_MARKER_MISSING");
+  const gfsBundleDecoder = requireMarkers(GFS_BUNDLE_DECODER, [
+    "class GfsRawBundleEvidenceDecoderV1",
+    "mcft_cap09_gfs_raw_bundle_decoder_v1.py",
+    "decode-bundle",
+    "FUTURE_WEATHER_ASSUMPTION",
+    "FUTURE_ET0_ASSUMPTION",
+  ], "EA5C2B1_PHASE2_GFS_BUNDLE_DECODER_MARKER_MISSING");
+  const gfsBundlePythonDecoder = requireMarkers(GFS_BUNDLE_PYTHON_DECODER, [
+    "core.decode_pgrb2_v1",
+    "core.decode_sflux_v1",
+    "core.assemble_72h_scientific_series_v1",
+    "build_drafts_v1",
+    "FUTURE_WEATHER_ASSUMPTION",
+    "FUTURE_ET0_ASSUMPTION",
+  ], "EA5C2B1_PHASE2_GFS_BUNDLE_PYTHON_DECODER_MARKER_MISSING");
+  for (const [label, text] of [
+    ["COMPOSER", gfsBundleComposer],
+    ["TRANSPORT", gfsBundleTransport],
+    ["DECODER", gfsBundleDecoder],
+    ["PYTHON_DECODER", gfsBundlePythonDecoder],
+  ]) {
+    for (const forbidden of [
+      "scripts/runtime_acceptance",
+      "acceptance-output",
+      "GITHUB_",
+      "RuntimeTickCursor",
+      "INSERT INTO twin_",
+      "UPDATE twin_",
+      "DELETE FROM twin_",
+    ]) {
+      assert.equal(text.includes(forbidden), false, `EA5C2B1_PHASE2_GFS_BUNDLE_${label}_FORBIDDEN_DEPENDENCY:${forbidden}`);
+    }
+  }
+
   const kbsHourlyCore = requireMarkers(KBS_HOURLY_CORE, [
     "class KbsRawHourlyScientificAuthorityV1",
     "class KbsRawHourlyExactIntervalV1",
@@ -233,8 +309,12 @@ try {
   const result = {
     schema_version: "geox_mcft_cap09_ea5c2b1_phase2_successor_requalification_v1",
     status: "PASS",
-    classification: "PHASE2_EVIDENCE_PROVIDER_EXTRACTION_SUCCESSOR_REQUALIFICATION",
+    classification: base === PHASE1_BASE
+      ? "PHASE2_EVIDENCE_PROVIDER_EXTRACTION_SUCCESSOR_REQUALIFICATION"
+      : "PHASE3_EVIDENCE_PROVIDER_MAINTENANCE_REQUALIFICATION",
     governed_base_sha: base,
+    phase1_frozen_authority_sha: PHASE1_BASE,
+    phase2_closure_sha: PHASE2_CLOSURE,
     candidate_sha: git("rev-parse", "HEAD"),
     historical_ea5c2b1_gate_unchanged: true,
     historical_ea5c2b1_authority_unchanged: true,
@@ -247,6 +327,10 @@ try {
     product_gfs_acquisition_provider_uses_shared_https_client: true,
     product_gfs_scientific_core_declared_sensitive_delta: sensitive.includes(GFS_SCIENTIFIC_CORE),
     product_gfs_provider_declared_sensitive_delta: sensitive.includes(GFS_PROVIDER),
+    product_gfs_bundle_composer_declared_sensitive_delta: sensitive.includes(GFS_BUNDLE_COMPOSER),
+    product_gfs_bundle_transport_declared_sensitive_delta: sensitive.includes(GFS_BUNDLE_TRANSPORT),
+    product_gfs_bundle_decoder_declared_sensitive_delta: sensitive.includes(GFS_BUNDLE_DECODER),
+    product_gfs_bundle_python_decoder_declared_sensitive_delta: sensitive.includes(GFS_BUNDLE_PYTHON_DECODER),
     product_scientific_core_acceptance_dependency: false,
     product_scientific_core_github_identity_dependency: false,
     product_scientific_core_provider_fetch_dependency: false,

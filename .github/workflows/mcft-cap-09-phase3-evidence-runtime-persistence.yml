@@ -1,0 +1,203 @@
+name: mcft-cap-09-phase3-evidence-runtime-persistence
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_supply_cadence_profile_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_cycle_service_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_production_evidence_work_items_v1.ts'
+      - 'apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts'
+      - 'apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.ts'
+      - 'apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts'
+      - 'apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py'
+      - 'apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_visibility_supply_cursor_v1.ts'
+      - 'apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts'
+      - 'apps/server/src/persistence/external_evidence/postgres_evidence_runtime_governed_ingress_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_SUPPLY_CADENCE_PROFILES_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_CYCLE_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'apps/server/package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-phase3-evidence-persistence-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  postgres-evidence-persistence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: phase3_evidence
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d phase3_evidence"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/phase3_evidence
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install pinned GFS scientific stack and prove product decoder
+        run: |
+          python -m pip install --disable-pip-version-check             'eccodes==2.47.0'             'eccodeslib==2.47.3.23'             'numpy==1.26.4'             'refet==0.4.2'
+          python -m eccodes selfcheck
+          python apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py selftest
+          python apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py selftest
+      - name: Apply Phase3 Evidence persistence schema only
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql
+      - name: Prove product and acceptance types
+        run: |
+          pnpm --filter @geox/server run typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_SUPPLY_CADENCE_PROFILES_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_CYCLE_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1.ts
+      - name: Prove durable Evidence lease and supply cursor semantics
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts
+      - name: Prove generic Evidence cadence profiles
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_SUPPLY_CADENCE_PROFILES_V1.ts
+      - name: Prove one canonical Evidence Runtime supply cycle
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_CYCLE_V1.ts
+      - name: Prove long-running Evidence Runtime host lifecycle
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts
+      - name: Prove product GFS raw bundle composition
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts
+      - name: Create isolated ACL qualification surface
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE TABLE public.facts (
+            fact_id text PRIMARY KEY,
+            occurred_at timestamptz NOT NULL,
+            source text NOT NULL,
+            record_json jsonb NOT NULL,
+            ingested_at timestamptz NOT NULL DEFAULT transaction_timestamp()
+          );
+          CREATE TABLE public.twin_runtime_lease_v1 (id integer PRIMARY KEY);
+          CREATE TABLE public.twin_runtime_checkpoint_latest_index_v1 (id integer PRIMARY KEY, value text);
+          CREATE TABLE public.twin_shadow_online_scheduler_cursor_v1 (id integer PRIMARY KEY);
+          CREATE TABLE public.approvals (id integer PRIMARY KEY);
+          CREATE TABLE public.actions (id integer PRIMARY KEY);
+          SQL
+      - name: Apply Phase3 Evidence Runtime ACL
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql
+      - name: Prove Evidence Runtime database ACL separation
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts
+      - name: Prove deployable Evidence Runtime composition
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1.ts
+      - name: Prove Phase3 persistence boundary has no Twin runtime or cadence ownership
+        shell: python
+        run: |
+          import pathlib
+          core_files = [
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_supply_cadence_profile_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_cycle_service_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_production_evidence_work_items_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.ts"),
+              pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts"),
+              pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_runtime_governed_ingress_v1.ts"),
+          ]
+          decoder_file = pathlib.Path("apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts")
+          core_text = "\n".join(p.read_text(encoding="utf-8") for p in core_files)
+          decoder_text = decoder_file.read_text(encoding="utf-8")
+
+          core_forbidden = [
+              "setInterval(",
+              "setTimeout(",
+              "process.env",
+              "child_process",
+              "scripts/runtime_acceptance",
+              "INSERT INTO twin_",
+              "UPDATE twin_",
+              "DELETE FROM twin_",
+          ]
+          for marker in core_forbidden:
+              if marker in core_text:
+                  raise SystemExit(f"PHASE3_EVIDENCE_CORE_FORBIDDEN_DEPENDENCY:{marker}")
+
+          decoder_forbidden = [
+              "setInterval(",
+              "setTimeout(",
+              "process.env",
+              "scripts/runtime_acceptance",
+              "INSERT INTO",
+              "UPDATE ",
+              "DELETE FROM",
+              "RuntimeTickCursor",
+          ]
+          for marker in decoder_forbidden:
+              if marker in decoder_text:
+                  raise SystemExit(f"PHASE3_EVIDENCE_DECODER_FORBIDDEN_DEPENDENCY:{marker}")
+          if 'from "node:child_process"' not in decoder_text:
+              raise SystemExit("PHASE3_EVIDENCE_DECODER_PRODUCT_PYTHON_BRIDGE_REQUIRED")
+          if "mcft_cap09_gfs_raw_bundle_decoder_v1.py" not in decoder_text:
+              raise SystemExit("PHASE3_EVIDENCE_DECODER_PRODUCT_DRIVER_BINDING_REQUIRED")
+          repo = pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts").read_text(encoding="utf-8")
+          if "twin_runtime_lease_v1" in repo:
+              raise SystemExit("PHASE3_EVIDENCE_LEASE_MUST_BE_INDEPENDENT_FROM_TWIN_RUNTIME_LEASE")
+          if "external_evidence_producer_lease_v1" not in repo or "external_evidence_supply_cursor_v1" not in repo:
+              raise SystemExit("PHASE3_EVIDENCE_PERSISTENCE_TABLE_BINDING_REQUIRED")
+          print("PHASE3_EVIDENCE_PERSISTENCE_BOUNDARY_PASS")
+      - name: Upload Phase3 Evidence persistence proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-phase3-evidence-persistence-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_SUPPLY_CADENCE_PROFILES_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_CYCLE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
