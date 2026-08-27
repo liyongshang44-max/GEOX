@@ -1,4 +1,4 @@
-name: b04b2-durable-raw-ingress-oneoff
+name: b04b3-mqtt-ingress-convergence-oneoff
 on:
   push:
     branches:
@@ -6,38 +6,36 @@ on:
 permissions:
   contents: read
 jobs:
-  exact-head-durable-raw-ingress:
+  exact-head:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout exact B-04b2 target head
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          ref: 7cbd3b7489b5474b0469ea69fa220f033ea2ca20
+          ref: 830041f22d974cdf15afed37f734685c22addeee
           fetch-depth: 0
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --no-frozen-lockfile
       - name: Server typecheck
         run: pnpm --filter @geox/server run typecheck
-      - name: B-04a physical QC fixtures
+      - name: Telemetry ingest typecheck
+        run: pnpm --filter @geox/telemetry-ingest exec tsc --noEmit -p tsconfig.json
+      - name: MQTT mapper fixtures
+        run: pnpm --filter @geox/telemetry-ingest exec node --import tsx --test src/mqtt_observation_input_v1.test.ts
+      - name: B04a fixtures
         run: pnpm --filter @geox/server exec node --import tsx --test src/evidence/physical_qc_v1.test.ts
-      - name: B-04b1 ingress snapshot fixtures
+      - name: B04b1 fixtures
         run: pnpm --filter @geox/server exec node --import tsx --test src/evidence/ingress_physical_qc_snapshot_v1.test.ts
-      - name: B-04b1 observation persistence fixtures
-        run: pnpm --filter @geox/server exec node --import tsx --test src/services/device_observation_ingress_physical_qc_v1.test.ts
-      - name: B-04b2 durable raw ingress fixtures
+      - name: B04b2 fixtures
         run: pnpm --filter @geox/server exec node --import tsx --test src/services/telemetry_ingest_durable_raw_v1.test.ts
-      - name: B-02 semantic contract linter
+      - name: B02 linter
         run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
-      - name: Exact-head marker
+      - name: Marker
         run: |
-          echo "B04B2_EXACT_HEAD $(git rev-parse HEAD)"
-          echo "B04B2_DURABLE_RAW_INGRESS_PASS"
+          echo "B04B3_EXACT_HEAD $(git rev-parse HEAD)"
+          echo "B04B3_MQTT_INGRESS_CONVERGENCE_PASS"
