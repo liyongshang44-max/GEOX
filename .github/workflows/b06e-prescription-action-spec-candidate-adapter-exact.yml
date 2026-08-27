@@ -1,0 +1,151 @@
+name: b06e-prescription-action-spec-candidate-adapter-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b06e-prescription-action-spec-candidate-adapter-exact-2026-08-27
+
+jobs:
+  exact-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Build runtime workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+      - name: B-06e prescription action-spec CandidateDecision adapter
+        run: node --import tsx --test apps/server/src/domain/decision/prescription_action_spec_candidate_adapter_v1.contract.test.ts
+      - name: B-06d decision-plan CandidateDecision regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_plan_candidate_adapter_v1.contract.test.ts
+      - name: B-06c legacy recommendation CandidateDecision regression
+        run: node --import tsx --test apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.contract.test.ts
+      - name: B-06b CalculationResult adapter regression
+        run: node --import tsx --test apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.contract.test.ts
+      - name: B-06a canonical decision contract regression
+        run: node --import tsx --test apps/server/src/contracts/canonical_decision_v1.contract.test.ts
+      - name: B-06e guard register exactness
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const reg = JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const calcAdapter = "apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.ts";
+          const recAdapter = "apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.ts";
+          const planAdapter = "apps/server/src/domain/decision/decision_plan_candidate_adapter_v1.ts";
+          const prescriptionAdapter = "apps/server/src/domain/decision/prescription_action_spec_candidate_adapter_v1.ts";
+          const calcGuard = (reg.static_guards || []).find((x) => x.guard_id === "G-B02-14-calculation-result-instantiation");
+          const candGuard = (reg.static_guards || []).find((x) => x.guard_id === "G-B02-15-candidate-decision-instantiation");
+          if (!calcGuard || !candGuard) throw new Error("B06E_GUARD_MISSING");
+          const calcPaths = calcGuard.registered_paths || [];
+          const candPaths = candGuard.registered_paths || [];
+          if (calcPaths.length !== 1 || calcPaths[0] !== calcAdapter) throw new Error("B06E_CALC_PATH_SET_INVALID:" + JSON.stringify(calcPaths));
+          const expected = [recAdapter, planAdapter, prescriptionAdapter];
+          if (candPaths.length !== expected.length || candPaths.some((x,i) => x !== expected[i])) {
+            throw new Error("B06E_CAND_PATH_SET_INVALID:" + JSON.stringify(candPaths));
+          }
+          const cand = reg.semantics.find((x) => x.semantic_id === "decision.candidate");
+          const producer = (cand?.registered_producers || []).find((x) => x.producer_id === "prescription-action-spec-candidate-compatibility-adapter");
+          if (!producer) throw new Error("B06E_REGISTERED_PRODUCER_MISSING");
+          if (producer.connection_class !== "REGISTERED_CAPABILITY_ISLAND") throw new Error("B06E_PRODUCER_NOT_CAPABILITY_ISLAND");
+          if (producer.activation !== "MANUAL") throw new Error("B06E_PRODUCER_ACTIVATION_NOT_MANUAL");
+          if (producer.runtime_edge !== "INTENTIONAL_NONE") throw new Error("B06E_PRODUCER_RUNTIME_EDGE_NOT_NONE");
+          console.log("B06E_GUARD_REGISTER_EXACTNESS_PASS");
+          NODE
+      - name: B-06e adapter has no production runtime consumer
+        shell: bash
+        run: |
+          A="apps/server/src/domain/decision/prescription_action_spec_candidate_adapter_v1.ts"
+          S="projectPrescriptionActionSpecCandidateV1"
+          HITS="$(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n "$S" apps/server/src | grep -v "^$A:" || true)"
+          if [ -n "$HITS" ]; then
+            echo "$HITS"
+            echo "B06E_UNEXPECTED_RUNTIME_CONSUMER"
+            exit 1
+          fi
+          echo "B06E_NO_RUNTIME_CONSUMER_PASS"
+      - name: Linter rejects a fourth unregistered CandidateDecision producer
+        shell: bash
+        run: |
+          P="apps/server/src/.b06e_unregistered_candidate_probe.ts"
+          printf '%s\n' 'candidateDecisionV1Schema.parse(' > "$P"
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs > /tmp/b06e-candidate-negative.log 2>&1
+          RC=$?
+          set -e
+          cat /tmp/b06e-candidate-negative.log
+          rm -f "$P"
+          if [ "$RC" -eq 0 ]; then
+            echo "B06E_FOURTH_CANDIDATE_PRODUCER_NOT_REJECTED"
+            exit 1
+          fi
+          grep -q "UNREGISTERED_CANDIDATE_DECISION_PRODUCER" /tmp/b06e-candidate-negative.log
+          echo "B06E_FOURTH_CANDIDATE_NEGATIVE_GOVERNANCE_PASS"
+      - name: CalculationResult producer set remains unchanged
+        shell: bash
+        run: |
+          P="apps/server/src/.b06e_unregistered_calc_probe.ts"
+          printf '%s\n' 'calculationResultV1Schema.parse(' > "$P"
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs > /tmp/b06e-calc-negative.log 2>&1
+          RC=$?
+          set -e
+          cat /tmp/b06e-calc-negative.log
+          rm -f "$P"
+          if [ "$RC" -eq 0 ]; then
+            echo "B06E_SECOND_CALC_PRODUCER_NOT_REJECTED"
+            exit 1
+          fi
+          grep -q "UNREGISTERED_CALCULATION_RESULT_PRODUCER" /tmp/b06e-calc-negative.log
+          echo "B06E_SECOND_CALC_NEGATIVE_GOVERNANCE_PASS"
+      - name: Prescription runtime and approval surfaces untouched
+        shell: bash
+        run: |
+          git diff --exit-code a1c625a9627215f32dd6906ce0c02023bc14c0bb 10430d387d144c72ae68cb101c31e1f3f58d358d --             packages/contracts/src/prescription/prescription_contract_v1.ts             apps/server/src/domain/prescription/prescription_contract_v1.ts             apps/server/src/routes/prescriptions_v1.ts             apps/server/src/domain/approval             apps/server/src/domain/operations             apps/server/src/domain/controlplane             apps/server/src/routes/control_operation_plan_v1.ts
+          echo "B06E_PRESCRIPTION_APPROVAL_RUNTIME_SURFACES_UNTOUCHED_PASS"
+      - name: Product diff remains bounded
+        shell: bash
+        run: |
+          git diff --name-only a1c625a9627215f32dd6906ce0c02023bc14c0bb 10430d387d144c72ae68cb101c31e1f3f58d358d > /tmp/b06e-product-files.txt
+          cat /tmp/b06e-product-files.txt
+          test "$(wc -l < /tmp/b06e-product-files.txt | tr -d ' ')" = "4"
+          grep -qx "apps/server/src/domain/decision/prescription_action_spec_candidate_adapter_v1.contract.test.ts" /tmp/b06e-product-files.txt
+          grep -qx "apps/server/src/domain/decision/prescription_action_spec_candidate_adapter_v1.ts" /tmp/b06e-product-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B06E-PRESCRIPTION-ACTION-SPEC-CANDIDATE-ADAPTER-V1.md" /tmp/b06e-product-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json" /tmp/b06e-product-files.txt
+          echo "B06E_BOUNDED_PRODUCT_DIFF_PASS"
+      - name: Restored B-02 governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+      - name: B-05 overall regression boundary
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+          node --import tsx --test apps/server/src/context/field_program_context_projection_v1.test.ts
+          node --import tsx --test apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.test.ts
+          node --import tsx --test apps/server/src/context/crop_skill_stage_compatibility_adapter_v1.test.ts
+      - name: B-03/B-04 regression boundary
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+          node --import tsx --test apps/server/src/domain/judge/evidence_judge_canonical_sufficiency_shadow_v1.test.ts
+      - name: Server build
+        run: pnpm --filter @geox/server build
+      - name: Marker
+        run: |
+          echo "B06E_EXACT_HEAD 10430d387d144c72ae68cb101c31e1f3f58d358d"
+          echo "B06E_PRESCRIPTION_ACTION_SPEC_CANDIDATE_ADAPTER_PASS"
