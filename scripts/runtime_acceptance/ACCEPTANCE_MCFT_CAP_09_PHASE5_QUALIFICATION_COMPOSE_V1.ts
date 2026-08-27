@@ -82,11 +82,13 @@ async function main(): Promise<void> {
     GEOX_PHASE5_FIXTURE_ROOT: "/tmp/mcft-cap09-phase5-fixtures",
     GEOX_PHASE5_CONTROL_ROOT: "/tmp/mcft-cap09-phase5-control",
     GEOX_PHASE5_ACCELERATED_THROUGH_LOGICAL_TIME: "2026-08-28T07:00:00.000Z",
+    GEOX_PHASE5_A0: "2026-08-27T07:00:00.000Z",
+    GEOX_PHASE5_CREATED_AT: "2026-08-27T06:30:00.000Z",
   };
 
   const rendered = execFileSync(
     "docker",
-    ["compose", "-f", COMPOSE, "--profile", "qualification-runtime", "config", "--format", "json"],
+    ["compose", "-f", COMPOSE, "--profile", "qualification-runtime", "--profile", "qualification-orchestration", "config", "--format", "json"],
     { encoding: "utf8", env },
   );
   const config = JSON.parse(rendered) as {
@@ -100,6 +102,9 @@ async function main(): Promise<void> {
     "minio-init",
     "database-platform-bootstrap",
     "service-principal-bootstrap",
+    "fixture-capture",
+    "qualification-prepare",
+    "qualification-verify",
     "evidence-runtime",
     "twin-runtime",
   ]) {
@@ -110,6 +115,12 @@ async function main(): Promise<void> {
   const twin = services["twin-runtime"]!;
   const evidenceEnv = environmentMap(evidence.environment);
   const twinEnv = environmentMap(twin.environment);
+  const capture = services["fixture-capture"]!;
+  const prepare = services["qualification-prepare"]!;
+  const verify = services["qualification-verify"]!;
+  const captureEnv = environmentMap(capture.environment);
+  const prepareEnv = environmentMap(prepare.environment);
+  const verifyEnv = environmentMap(verify.environment);
 
   assert.match(
     commandText(evidence.command),
@@ -119,6 +130,9 @@ async function main(): Promise<void> {
     commandText(twin.command),
     /apps\/server\/dist\/qualification\/mcft_cap09_phase5_twin_runtime\.js/,
   );
+  assert.match(commandText(capture.command), /mcft_cap09_phase5_capture_a0_fixture\.js/);
+  assert.match(commandText(prepare.command), /mcft_cap09_phase5_prepare_24t\.js/);
+  assert.match(commandText(verify.command), /mcft_cap09_phase5_verify_24t\.js/);
   assert.match(
     evidenceEnv.GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL ?? "",
     /geox_mcft_cap09_evidence_runtime_login_v1/,
@@ -162,6 +176,23 @@ async function main(): Promise<void> {
     );
   }
 
+  for (const [serviceName, serviceEnv] of [
+    ["fixture-capture", captureEnv],
+    ["qualification-prepare", prepareEnv],
+    ["qualification-verify", verifyEnv],
+  ] as const) {
+    for (const key of Object.keys(serviceEnv)) {
+      if (serviceName !== "fixture-capture" && /S3|MINIO|PROVIDER/i.test(key)) {
+        throw new Error(`PHASE5_ORCHESTRATION_PROVIDER_SECRET_FORBIDDEN:${serviceName}:${key}`);
+      }
+    }
+  }
+  assert.equal(Object.keys(captureEnv).some(key => /DATABASE|S3|MINIO/i.test(key)), false);
+  assert.ok(prepareEnv.DATABASE_URL);
+  assert.ok(verifyEnv.DATABASE_URL);
+  assert.equal(Object.keys(prepareEnv).some(key => /S3|MINIO|PROVIDER/i.test(key)), false);
+  assert.equal(Object.keys(verifyEnv).some(key => /S3|MINIO|PROVIDER/i.test(key)), false);
+
   const evidenceProcessSource = fs.readFileSync(
     path.resolve("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts"),
     "utf8",
@@ -191,6 +222,9 @@ async function main(): Promise<void> {
   );
 
   assert.equal(evidence.image, twin.image);
+  assert.equal(capture.image, evidence.image);
+  assert.equal(prepare.image, evidence.image);
+  assert.equal(verify.image, evidence.image);
   assert.equal(String(evidence.restart ?? "no"), "no");
   assert.equal(String(twin.restart ?? "no"), "no");
   assert.equal("container_name" in evidence, false, "PHASE5_EVIDENCE_SCALE_MUST_NOT_BE_BLOCKED_BY_CONTAINER_NAME");
@@ -230,6 +264,21 @@ async function main(): Promise<void> {
   assert.ok(config.volumes?.mcft_cap09_phase5_pgdata);
   assert.ok(config.volumes?.mcft_cap09_phase5_raw);
 
+  const runtimeImage = fs.readFileSync(
+    path.resolve("docker/mcft-cap09-runtime.Dockerfile"),
+    "utf8",
+  );
+  for (const required of [
+    "eccodes==2.47.0",
+    "eccodeslib==2.47.3.23",
+    "numpy==1.26.4",
+    "refet==0.4.2",
+    "mcft_cap09_gfs_scientific_core_v1.py selftest",
+    "mcft_cap09_gfs_raw_bundle_decoder_v1.py selftest",
+  ]) {
+    assert.ok(runtimeImage.includes(required), `PHASE5_SCIENTIFIC_RUNTIME_IMAGE_REQUIREMENT_MISSING:${required}`);
+  }
+
   const source = fs.readFileSync(COMPOSE, "utf8");
   for (const forbidden of [
     "docker-compose.commercial_v1.yml",
@@ -248,6 +297,9 @@ async function main(): Promise<void> {
     separate_evidence_twin_database_logins: true,
     evidence_only_s3_and_fixture_credentials: true,
     compiled_qualification_entrypoints: true,
+    scientific_runtime_image_pinned: true,
+    live_raw_capture_has_no_database_or_s3_credentials: true,
+    prepare_verify_have_no_provider_or_s3_credentials: true,
     read_only_qualification_inputs: true,
     duplicate_instance_scaling_not_blocked_by_container_name: true,
     duplicate_instance_lease_owner_defaults_are_container_unique: true,
