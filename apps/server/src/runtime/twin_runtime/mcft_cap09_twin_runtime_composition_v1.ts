@@ -41,6 +41,9 @@ import {
   PostgresPersistentSequentialSchedulerAdapterV1,
 } from "./postgres_persistent_sequential_scheduler_adapter_v1.js";
 import {
+  PostgresTwinRuntimeSuccessorViabilityV1,
+} from "./postgres_twin_runtime_successor_viability_v1.js";
+import {
   MCFT_CAP09_TWIN_RUNTIME_HOST_CONTRACT_V1,
   PostgresTwinRuntimeDatabaseClockV1,
   TwinRuntimeHostV1,
@@ -66,6 +69,7 @@ export const MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_CONTRACT_V1 = {
   persistent_tick_service:
     "ExternalFormalV3Amendment19PersistentTickServiceV1",
   one_slot_runner: "ExternalFormalV3Amendment19RunnerV1",
+  successor_viability: "PostgresTwinRuntimeSuccessorViabilityV1",
   crop_context_materializer: "materializeExternalFormalA18CropContextV3",
   provider_request_allowed: false,
   raw_r2_fallback_allowed: false,
@@ -94,6 +98,7 @@ export type McftCap09TwinRuntimeCompositionV1 = {
   host: TwinRuntimeHostV1;
   runner: ExternalFormalV3Amendment19RunnerV1;
   scheduler: PostgresPersistentSequentialSchedulerAdapterV1;
+  successor_viability: PostgresTwinRuntimeSuccessorViabilityV1;
   evidence_source: PostgresExternalFormalAmendment19EvidenceSourceV1;
   runtime_repository: PostgresRuntimeRepositoryV1;
   next_tick_repository: PostgresNextTickRepositoryV1;
@@ -169,9 +174,18 @@ export function composeMcftCap09TwinRuntimeV1(
     tickService,
   );
 
+  const successorViability = new PostgresTwinRuntimeSuccessorViabilityV1(
+    input.pool,
+    {
+      scope: input.manifest.scope,
+      schedule_start_logical_time: input.manifest.o00_logical_time,
+    },
+  );
+
   const host = new TwinRuntimeHostV1({
     database_clock: new PostgresTwinRuntimeDatabaseClockV1(input.pool),
     one_due_slot: runner,
+    successor_viability: successorViability,
     wait: input.wait,
     health: input.health,
     stop: input.stop,
@@ -183,6 +197,7 @@ export function composeMcftCap09TwinRuntimeV1(
     host,
     runner,
     scheduler,
+    successor_viability: successorViability,
     evidence_source: evidenceSource,
     runtime_repository: runtimeRepository,
     next_tick_repository: nextTickRepository,
