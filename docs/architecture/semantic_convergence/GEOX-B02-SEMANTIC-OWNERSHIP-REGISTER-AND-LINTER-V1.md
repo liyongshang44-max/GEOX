@@ -180,7 +180,7 @@ It checks:
 - producer IDs are unique;
 - current registered producer/consumer paths exist;
 - declared producer fingerprints still exist;
-- every `grandfathered_duplicate` has a bounded B-04 through B-09 removal target;
+- every `grandfathered_duplicate` has `removal_target = B-09`; earlier replacement/convergence timing is expressed by the semantic `target_phase`;
 - weak/no-control grandfather registration is rejected.
 
 ### 3.2 Graph integrity
@@ -318,7 +318,8 @@ Current debt is represented explicitly, for example:
 {
   "grandfathered_duplicate": true,
   "new_owner_creation": "FORBIDDEN",
-  "removal_target": "B-06"
+  "target_phase": "B-06",
+  "removal_target": "B-09"
 }
 ```
 
@@ -330,17 +331,18 @@ It means:
 current behavior remains unchanged in B-02
 current duplicate remains visible
 new duplicate is forbidden
-later convergence phase owns authority removal
+the semantic `target_phase` owns replacement/convergence work; B-09 owns actual historical authority removal
 ```
 
-Current examples include:
+Current convergence examples include:
 
-- Stage-1 evidence qualification semantics -> B-04;
-- Evidence Judge raw qualification semantics -> B-04;
-- field-program/stage-resolver/rule-engine stage derivation -> B-05;
-- Agronomy Rule/Judge/Decision Engine candidate/calculation overlap -> B-06;
-- Agronomy Agent recommendation/direct-plan authority -> B-06;
-- legacy/projection physical-state ownership -> B-09.
+- Stage-1 / Evidence Judge evidence convergence -> semantic target phase B-04;
+- field-program/stage-resolver/rule-engine stage convergence -> semantic target phase B-05;
+- Agronomy Rule/Judge/Decision Engine candidate/calculation convergence -> semantic target phase B-06;
+- Decision Eligibility convergence -> semantic target phase B-07;
+- legacy/projection physical-state replacement remains governed by the Twin/MCFT target boundary.
+
+Under Amendment-01, these earlier target phases do not authorize deletion or authority removal. For every historical grandfathered duplicate, actual `removal_target` is B-09 after replacement, shadow comparison, divergence inventory and consumer migration.
 
 ---
 

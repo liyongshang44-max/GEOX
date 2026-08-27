@@ -5,7 +5,7 @@
   "repository": "liyongshang44-max/GEOX",
   "protected_main_baseline": "26c1383f7f45abb76c99e28ec3d06714e85d1b2c",
   "register": "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json",
-  "authority_note": "This graph is a machine-readable derived/proposal view over B-01 findings and the B-02 register. It does not supersede docs/SSOT.md, README_MIGRATION.md, frozen domain contracts, or proven runtime behavior.",
+  "authority_note": "This graph is a machine-readable derived/proposal view over B-01 findings and the B-02 register. It does not supersede docs/SSOT.md, README_MIGRATION.md, frozen domain contracts, or proven runtime behavior. Amendment-01 sequencing applies: semantic target_phase may be earlier, but historical parallel-authority removal_target is B-09 only.",
   "semantic_edges": [
     {
       "edge_id": "E-001",
@@ -142,7 +142,7 @@
       "producer_id": "stage1-formal-gate",
       "semantic_id": "evidence.qualification",
       "relation": "GRANDFATHERED_PRODUCER",
-      "removal_target": "B-04",
+      "removal_target": "B-09",
       "new_owner_creation": "FORBIDDEN"
     },
     {
@@ -150,7 +150,7 @@
       "producer_id": "evidence-judge-v2",
       "semantic_id": "evidence.qualification",
       "relation": "GRANDFATHERED_PRODUCER",
-      "removal_target": "B-04",
+      "removal_target": "B-09",
       "new_owner_creation": "FORBIDDEN"
     },
     {
@@ -158,7 +158,7 @@
       "producer_id": "stage-resolver",
       "semantic_id": "context.crop_stage",
       "relation": "GRANDFATHERED_PRODUCER",
-      "removal_target": "B-05",
+      "removal_target": "B-09",
       "new_owner_creation": "FORBIDDEN"
     },
     {
@@ -166,7 +166,7 @@
       "producer_id": "rule-engine-stage",
       "semantic_id": "context.crop_stage",
       "relation": "GRANDFATHERED_PRODUCER",
-      "removal_target": "B-05",
+      "removal_target": "B-09",
       "new_owner_creation": "FORBIDDEN"
     },
     {
@@ -182,7 +182,7 @@
       "producer_id": "agronomy-judge-calculation",
       "semantic_id": "decision.calculation",
       "relation": "GRANDFATHERED_MIXED_AUTHORITY",
-      "removal_target": "B-06",
+      "removal_target": "B-09",
       "new_owner_creation": "FORBIDDEN"
     },
     {
@@ -190,7 +190,7 @@
       "producer_id": "decision-engine-calculation",
       "semantic_id": "decision.calculation",
       "relation": "GRANDFATHERED_COMPOSITION_HOTSPOT",
-      "removal_target": "B-06",
+      "removal_target": "B-09",
       "new_owner_creation": "FORBIDDEN"
     },
     {
@@ -198,7 +198,7 @@
       "producer_id": "agronomy-agent-recommendation",
       "semantic_id": "decision.candidate",
       "relation": "GRANDFATHERED_PRODUCER",
-      "removal_target": "B-06",
+      "removal_target": "B-09",
       "new_owner_creation": "FORBIDDEN"
     },
     {
@@ -206,7 +206,7 @@
       "producer_id": "decision-engine-recommendation",
       "semantic_id": "decision.candidate",
       "relation": "GRANDFATHERED_PRODUCER",
-      "removal_target": "B-06",
+      "removal_target": "B-09",
       "new_owner_creation": "FORBIDDEN"
     },
     {
@@ -214,7 +214,7 @@
       "producer_id": "agronomy-agent-plan",
       "semantic_id": "operation.plan",
       "relation": "GRANDFATHERED_DIRECT_PLAN_PRODUCER",
-      "removal_target": "B-06",
+      "removal_target": "B-09",
       "new_owner_creation": "FORBIDDEN"
     },
     {
