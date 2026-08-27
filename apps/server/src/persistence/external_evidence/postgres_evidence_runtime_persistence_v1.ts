@@ -18,6 +18,13 @@ import {
   type EvidenceSupplyCursorAdvanceResultV1,
 } from "../../external_evidence/mcft_cap09_evidence_visibility_supply_cursor_v1.js";
 
+import {
+  evidenceSupplyCadenceProfileForBindingV1,
+  evidenceSupplyEventTimeV1,
+  summarizeEvidenceSupplyContinuityV1,
+  type EvidenceSupplyContinuityEventV1,
+} from "../../external_evidence/mcft_cap09_evidence_supply_cadence_profile_v1.js";
+
 export const MCFT_CAP09_POSTGRES_EVIDENCE_RUNTIME_PERSISTENCE_ID_V1 =
   "MCFT_CAP09_POSTGRES_EVIDENCE_RUNTIME_PERSISTENCE_V1" as const;
 
@@ -44,11 +51,34 @@ type CursorRowV1 = {
   fact_id: string;
   record_semantic_sha256: string;
   available_to_runtime_at: string | Date;
+  publication_available_through: string | Date;
+  latest_event_time: string | Date;
+  latest_source_record_id: string;
+  event_time_contiguous_from: string | Date;
+  event_time_contiguous_through: string | Date;
+  event_time_max_seen: string | Date;
+  event_gap_count: number;
+  revision_count: number;
+  publication_event_count: number;
+  cadence_profile_id: string;
   role_time: Record<string, unknown>;
   post_commit_db_readback_at: string | Date;
   lease_owner: string;
   fencing_token: string | number | bigint;
   advanced_at: string | Date;
+};
+
+type EventRowV1 = {
+  event_time: string | Date;
+  source_record_id: string;
+  fact_id: string;
+  record_semantic_sha256: string;
+  first_publication_available_at: string | Date;
+  last_publication_available_at: string | Date;
+  first_post_commit_db_readback_at: string | Date;
+  last_post_commit_db_readback_at: string | Date;
+  revision_count: number;
+  publication_count: number;
 };
 
 function requiredTextV1(value: unknown, code: string): string {
@@ -286,10 +316,10 @@ export class PostgresEvidenceSupplyCursorV1 implements DurableEvidenceSupplyCurs
       fencing_token: string | number | bigint;
       expired: boolean;
     }>(
-      `SELECT lease_owner,fencing_token,expires_at<=transaction_timestamp() AS expired
-         FROM external_evidence_producer_lease_v1
-        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
-        FOR UPDATE`,
+      "SELECT lease_owner,fencing_token,expires_at<=transaction_timestamp() AS expired " +
+      "FROM external_evidence_producer_lease_v1 " +
+      "WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 " +
+      "FOR UPDATE",
       scopeValuesV1(this.configuredScope),
     );
     if (result.rows.length !== 1) throw new Error("PHASE3_EVIDENCE_CURSOR_CURRENT_LEASE_REQUIRED");
@@ -308,17 +338,67 @@ export class PostgresEvidenceSupplyCursorV1 implements DurableEvidenceSupplyCurs
     lock: boolean,
   ): Promise<CursorRowV1 | null> {
     const result = await client.query<CursorRowV1>(
-      `SELECT binding_id,origin_source_id,fact_id,record_semantic_sha256,
-              available_to_runtime_at,role_time,post_commit_db_readback_at,
-              lease_owner,fencing_token,advanced_at
-         FROM external_evidence_supply_cursor_v1
-        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
-          AND binding_id=$7 AND origin_source_id=$8
-        ${lock ? "FOR UPDATE" : ""}`,
+      "SELECT binding_id,origin_source_id,fact_id,record_semantic_sha256," +
+      "available_to_runtime_at,publication_available_through,latest_event_time,latest_source_record_id," +
+      "event_time_contiguous_from,event_time_contiguous_through,event_time_max_seen,event_gap_count," +
+      "revision_count,publication_event_count,cadence_profile_id,role_time,post_commit_db_readback_at," +
+      "lease_owner,fencing_token,advanced_at " +
+      "FROM external_evidence_supply_cursor_v1 " +
+      "WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 " +
+      "AND binding_id=$7 AND origin_source_id=$8 " +
+      (lock ? "FOR UPDATE" : ""),
       [...scopeValuesV1(this.configuredScope), bindingId, originSourceId],
     );
     if (result.rows.length > 1) throw new Error("PHASE3_EVIDENCE_CURSOR_CARDINALITY_VIOLATION");
     return result.rows[0] ?? null;
+  }
+
+  private async selectEventV1(
+    client: EvidenceClientV1,
+    bindingId: string,
+    originSourceId: string,
+    eventTime: string,
+  ): Promise<EventRowV1 | null> {
+    const result = await client.query<EventRowV1>(
+      "SELECT event_time,source_record_id,fact_id,record_semantic_sha256," +
+      "first_publication_available_at,last_publication_available_at," +
+      "first_post_commit_db_readback_at,last_post_commit_db_readback_at," +
+      "revision_count,publication_count " +
+      "FROM external_evidence_supply_event_v1 " +
+      "WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 " +
+      "AND binding_id=$7 AND origin_source_id=$8 AND event_time=$9::timestamptz FOR UPDATE",
+      [...scopeValuesV1(this.configuredScope), bindingId, originSourceId, eventTime],
+    );
+    if (result.rows.length > 1) throw new Error("PHASE3_EVIDENCE_EVENT_CARDINALITY_VIOLATION");
+    return result.rows[0] ?? null;
+  }
+
+  private async continuityEventsV1(
+    client: EvidenceClientV1,
+    bindingId: string,
+    originSourceId: string,
+  ): Promise<EvidenceSupplyContinuityEventV1[]> {
+    const result = await client.query<{
+      event_time: string | Date;
+      last_publication_available_at: string | Date;
+      revision_count: number;
+      publication_count: number;
+    }>(
+      "SELECT event_time,last_publication_available_at,revision_count,publication_count " +
+      "FROM external_evidence_supply_event_v1 " +
+      "WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 " +
+      "AND binding_id=$7 AND origin_source_id=$8 ORDER BY event_time ASC",
+      [...scopeValuesV1(this.configuredScope), bindingId, originSourceId],
+    );
+    return result.rows.map((row) => ({
+      event_time: canonicalIsoV1(row.event_time, "PHASE3_EVIDENCE_EVENT_STORED_EVENT_TIME_INVALID"),
+      publication_available_at: canonicalIsoV1(
+        row.last_publication_available_at,
+        "PHASE3_EVIDENCE_EVENT_STORED_PUBLICATION_TIME_INVALID",
+      ),
+      revision_count: Number(row.revision_count),
+      publication_count: Number(row.publication_count),
+    }));
   }
 
   async advanceAfterVisibleEvidence(
@@ -334,6 +414,10 @@ export class PostgresEvidenceSupplyCursorV1 implements DurableEvidenceSupplyCurs
       input.visible_evidence.record_semantic_sha256,
       "PHASE3_EVIDENCE_CURSOR_SEMANTIC_HASH_REQUIRED",
     );
+    const sourceRecordId = requiredTextV1(
+      input.visible_evidence.source_record_id,
+      "PHASE3_EVIDENCE_CURSOR_SOURCE_RECORD_ID_REQUIRED",
+    );
     const availableAt = canonicalIsoV1(
       input.available_to_runtime_at,
       "PHASE3_EVIDENCE_CURSOR_AVAILABLE_AT_INVALID",
@@ -345,62 +429,130 @@ export class PostgresEvidenceSupplyCursorV1 implements DurableEvidenceSupplyCurs
     if (!input.role_time || typeof input.role_time !== "object" || Array.isArray(input.role_time)) {
       throw new Error("PHASE3_EVIDENCE_CURSOR_ROLE_TIME_OBJECT_REQUIRED");
     }
+    const eventTime = evidenceSupplyEventTimeV1({
+      record_type: input.visible_evidence.record_type,
+      role_time: input.role_time,
+    });
+    const profile = evidenceSupplyCadenceProfileForBindingV1(bindingId);
 
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
       await this.assertCurrentLeaseV1(client);
-      const current = await this.selectCursorV1(client, bindingId, originSourceId, true);
+      await this.selectCursorV1(client, bindingId, originSourceId, true);
+      const currentEvent = await this.selectEventV1(client, bindingId, originSourceId, eventTime);
 
-      if (current) {
-        const currentAvailableAt = canonicalIsoV1(
-          current.available_to_runtime_at,
-          "PHASE3_EVIDENCE_CURSOR_STORED_AVAILABLE_AT_INVALID",
-        );
-        if (current.fact_id === factId && current.record_semantic_sha256 === semantic) {
-          if (currentAvailableAt !== availableAt) {
-            throw new Error("PHASE3_EVIDENCE_CURSOR_IDEMPOTENT_AVAILABILITY_DRIFT");
-          }
-          await client.query("COMMIT");
-          return { status: "EXISTING_IDEMPOTENT_SUCCESS", fact_id: factId, record_semantic_sha256: semantic };
-        }
-        if (Date.parse(availableAt) < Date.parse(currentAvailableAt)) {
-          throw new Error("PHASE3_EVIDENCE_CURSOR_AVAILABILITY_REGRESSION");
-        }
-        if (Date.parse(availableAt) === Date.parse(currentAvailableAt)) {
-          throw new Error("PHASE3_EVIDENCE_CURSOR_EQUAL_WATERMARK_IDENTITY_CONFLICT");
-        }
-
-        const updated = await client.query(
-          `UPDATE external_evidence_supply_cursor_v1
-              SET fact_id=$9,record_semantic_sha256=$10,available_to_runtime_at=$11::timestamptz,
-                  role_time=$12::jsonb,post_commit_db_readback_at=$13::timestamptz,
-                  lease_owner=$14,fencing_token=$15,advanced_at=transaction_timestamp()
-            WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
-              AND binding_id=$7 AND origin_source_id=$8`,
-          [
-            ...scopeValuesV1(this.configuredScope),
-            bindingId,
-            originSourceId,
-            factId,
-            semantic,
-            availableAt,
-            JSON.stringify(input.role_time),
-            readbackAt,
-            this.producerClaim.lease_owner,
-            this.producerClaim.fencing_token.toString(),
-          ],
-        );
-        if (updated.rowCount !== 1) throw new Error("PHASE3_EVIDENCE_CURSOR_UPDATE_FAILED");
-      } else {
+      let exactIdempotent = false;
+      if (!currentEvent) {
         const inserted = await client.query(
-          `INSERT INTO external_evidence_supply_cursor_v1
-             (tenant_id,project_id,group_id,field_id,season_id,zone_id,
-              binding_id,origin_source_id,fact_id,record_semantic_sha256,
-              available_to_runtime_at,role_time,post_commit_db_readback_at,
-              lease_owner,fencing_token,advanced_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::timestamptz,$12::jsonb,
-                   $13::timestamptz,$14,$15,transaction_timestamp())`,
+          "INSERT INTO external_evidence_supply_event_v1 (" +
+          "tenant_id,project_id,group_id,field_id,season_id,zone_id,binding_id,origin_source_id,event_time," +
+          "source_record_id,fact_id,record_semantic_sha256,first_publication_available_at,last_publication_available_at," +
+          "first_post_commit_db_readback_at,last_post_commit_db_readback_at,revision_count,publication_count," +
+          "lease_owner,fencing_token,updated_at) " +
+          "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10,$11,$12,$13::timestamptz,$13::timestamptz," +
+          "$14::timestamptz,$14::timestamptz,0,1,$15,$16,transaction_timestamp())",
+          [
+            ...scopeValuesV1(this.configuredScope),
+            bindingId,
+            originSourceId,
+            eventTime,
+            sourceRecordId,
+            factId,
+            semantic,
+            availableAt,
+            readbackAt,
+            this.producerClaim.lease_owner,
+            this.producerClaim.fencing_token.toString(),
+          ],
+        );
+        if (inserted.rowCount !== 1) throw new Error("PHASE3_EVIDENCE_EVENT_INSERT_FAILED");
+      } else {
+        const currentAvailableAt = canonicalIsoV1(
+          currentEvent.last_publication_available_at,
+          "PHASE3_EVIDENCE_EVENT_STORED_PUBLICATION_TIME_INVALID",
+        );
+        const sameSemantic =
+          currentEvent.fact_id === factId
+          && currentEvent.record_semantic_sha256 === semantic
+          && currentEvent.source_record_id === sourceRecordId;
+
+        if (sameSemantic && Date.parse(availableAt) <= Date.parse(currentAvailableAt)) {
+          exactIdempotent = true;
+        } else if (sameSemantic) {
+          const updated = await client.query(
+            "UPDATE external_evidence_supply_event_v1 SET " +
+            "last_publication_available_at=$10::timestamptz,last_post_commit_db_readback_at=$11::timestamptz," +
+            "publication_count=publication_count+1,lease_owner=$12,fencing_token=$13,updated_at=transaction_timestamp() " +
+            "WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 " +
+            "AND binding_id=$7 AND origin_source_id=$8 AND event_time=$9::timestamptz",
+            [
+              ...scopeValuesV1(this.configuredScope),
+              bindingId,
+              originSourceId,
+              eventTime,
+              availableAt,
+              readbackAt,
+              this.producerClaim.lease_owner,
+              this.producerClaim.fencing_token.toString(),
+            ],
+          );
+          if (updated.rowCount !== 1) throw new Error("PHASE3_EVIDENCE_EVENT_REPUBLICATION_UPDATE_FAILED");
+        } else {
+          if (Date.parse(availableAt) <= Date.parse(currentAvailableAt)) {
+            throw new Error("PHASE3_EVIDENCE_EVENT_REVISION_PUBLICATION_ORDER_AMBIGUOUS");
+          }
+          const updated = await client.query(
+            "UPDATE external_evidence_supply_event_v1 SET " +
+            "source_record_id=$10,fact_id=$11,record_semantic_sha256=$12," +
+            "last_publication_available_at=$13::timestamptz,last_post_commit_db_readback_at=$14::timestamptz," +
+            "revision_count=revision_count+1,publication_count=publication_count+1," +
+            "lease_owner=$15,fencing_token=$16,updated_at=transaction_timestamp() " +
+            "WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 " +
+            "AND binding_id=$7 AND origin_source_id=$8 AND event_time=$9::timestamptz",
+            [
+              ...scopeValuesV1(this.configuredScope),
+              bindingId,
+              originSourceId,
+              eventTime,
+              sourceRecordId,
+              factId,
+              semantic,
+              availableAt,
+              readbackAt,
+              this.producerClaim.lease_owner,
+              this.producerClaim.fencing_token.toString(),
+            ],
+          );
+          if (updated.rowCount !== 1) throw new Error("PHASE3_EVIDENCE_EVENT_REVISION_UPDATE_FAILED");
+        }
+      }
+
+      const events = await this.continuityEventsV1(client, bindingId, originSourceId);
+      const summary = summarizeEvidenceSupplyContinuityV1(events, profile);
+
+      if (!exactIdempotent) {
+        const upsert = await client.query(
+          "INSERT INTO external_evidence_supply_cursor_v1 (" +
+          "tenant_id,project_id,group_id,field_id,season_id,zone_id,binding_id,origin_source_id," +
+          "fact_id,record_semantic_sha256,available_to_runtime_at,publication_available_through," +
+          "latest_event_time,latest_source_record_id,event_time_contiguous_from,event_time_contiguous_through," +
+          "event_time_max_seen,event_gap_count,revision_count,publication_event_count,cadence_profile_id," +
+          "role_time,post_commit_db_readback_at,lease_owner,fencing_token,advanced_at) " +
+          "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::timestamptz,$12::timestamptz,$13::timestamptz,$14," +
+          "$15::timestamptz,$16::timestamptz,$17::timestamptz,$18,$19,$20,$21,$22::jsonb,$23::timestamptz,$24,$25,transaction_timestamp()) " +
+          "ON CONFLICT (tenant_id,project_id,group_id,field_id,season_id,zone_id,binding_id,origin_source_id) DO UPDATE SET " +
+          "fact_id=EXCLUDED.fact_id,record_semantic_sha256=EXCLUDED.record_semantic_sha256," +
+          "available_to_runtime_at=EXCLUDED.available_to_runtime_at," +
+          "publication_available_through=EXCLUDED.publication_available_through," +
+          "latest_event_time=EXCLUDED.latest_event_time,latest_source_record_id=EXCLUDED.latest_source_record_id," +
+          "event_time_contiguous_from=EXCLUDED.event_time_contiguous_from," +
+          "event_time_contiguous_through=EXCLUDED.event_time_contiguous_through," +
+          "event_time_max_seen=EXCLUDED.event_time_max_seen,event_gap_count=EXCLUDED.event_gap_count," +
+          "revision_count=EXCLUDED.revision_count,publication_event_count=EXCLUDED.publication_event_count," +
+          "cadence_profile_id=EXCLUDED.cadence_profile_id,role_time=EXCLUDED.role_time," +
+          "post_commit_db_readback_at=EXCLUDED.post_commit_db_readback_at," +
+          "lease_owner=EXCLUDED.lease_owner,fencing_token=EXCLUDED.fencing_token,advanced_at=transaction_timestamp()",
           [
             ...scopeValuesV1(this.configuredScope),
             bindingId,
@@ -408,17 +560,31 @@ export class PostgresEvidenceSupplyCursorV1 implements DurableEvidenceSupplyCurs
             factId,
             semantic,
             availableAt,
+            summary.publication_available_through,
+            eventTime,
+            sourceRecordId,
+            summary.event_time_contiguous_from,
+            summary.event_time_contiguous_through,
+            summary.event_time_max_seen,
+            summary.event_gap_count,
+            summary.revision_count,
+            summary.publication_event_count,
+            summary.cadence_profile_id,
             JSON.stringify(input.role_time),
             readbackAt,
             this.producerClaim.lease_owner,
             this.producerClaim.fencing_token.toString(),
           ],
         );
-        if (inserted.rowCount !== 1) throw new Error("PHASE3_EVIDENCE_CURSOR_INSERT_FAILED");
+        if (upsert.rowCount !== 1) throw new Error("PHASE3_EVIDENCE_CURSOR_UPSERT_FAILED");
       }
 
       await client.query("COMMIT");
-      return { status: "ADVANCED", fact_id: factId, record_semantic_sha256: semantic };
+      return {
+        status: exactIdempotent ? "EXISTING_IDEMPOTENT_SUCCESS" : "ADVANCED",
+        fact_id: factId,
+        record_semantic_sha256: semantic,
+      };
     } catch (error) {
       await rollbackQuietlyV1(client);
       throw error;
@@ -436,12 +602,14 @@ export class PostgresEvidenceSupplyCursorV1 implements DurableEvidenceSupplyCurs
     const bindingId = requiredTextV1(input.binding_id, "PHASE3_EVIDENCE_CURSOR_BINDING_ID_REQUIRED");
     const originSourceId = requiredTextV1(input.origin_source_id, "PHASE3_EVIDENCE_CURSOR_ORIGIN_SOURCE_ID_REQUIRED");
     const result = await this.pool.query<CursorRowV1>(
-      `SELECT binding_id,origin_source_id,fact_id,record_semantic_sha256,
-              available_to_runtime_at,role_time,post_commit_db_readback_at,
-              lease_owner,fencing_token,advanced_at
-         FROM external_evidence_supply_cursor_v1
-        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
-          AND binding_id=$7 AND origin_source_id=$8`,
+      "SELECT binding_id,origin_source_id,fact_id,record_semantic_sha256," +
+      "available_to_runtime_at,publication_available_through,latest_event_time,latest_source_record_id," +
+      "event_time_contiguous_from,event_time_contiguous_through,event_time_max_seen,event_gap_count," +
+      "revision_count,publication_event_count,cadence_profile_id,role_time,post_commit_db_readback_at," +
+      "lease_owner,fencing_token,advanced_at " +
+      "FROM external_evidence_supply_cursor_v1 " +
+      "WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 " +
+      "AND binding_id=$7 AND origin_source_id=$8",
       [...scopeValuesV1(this.configuredScope), bindingId, originSourceId],
     );
     if (result.rows.length > 1) throw new Error("PHASE3_EVIDENCE_CURSOR_CARDINALITY_VIOLATION");
@@ -454,6 +622,16 @@ export class PostgresEvidenceSupplyCursorV1 implements DurableEvidenceSupplyCurs
       fact_id: row.fact_id,
       record_semantic_sha256: row.record_semantic_sha256,
       available_to_runtime_at: canonicalIsoV1(row.available_to_runtime_at, "PHASE3_EVIDENCE_CURSOR_STORED_AVAILABLE_AT_INVALID"),
+      publication_available_through: canonicalIsoV1(row.publication_available_through, "PHASE3_EVIDENCE_CURSOR_STORED_PUBLICATION_WATERMARK_INVALID"),
+      latest_event_time: canonicalIsoV1(row.latest_event_time, "PHASE3_EVIDENCE_CURSOR_STORED_LATEST_EVENT_TIME_INVALID"),
+      latest_source_record_id: row.latest_source_record_id,
+      event_time_contiguous_from: canonicalIsoV1(row.event_time_contiguous_from, "PHASE3_EVIDENCE_CURSOR_STORED_CONTIGUOUS_FROM_INVALID"),
+      event_time_contiguous_through: canonicalIsoV1(row.event_time_contiguous_through, "PHASE3_EVIDENCE_CURSOR_STORED_CONTIGUOUS_THROUGH_INVALID"),
+      event_time_max_seen: canonicalIsoV1(row.event_time_max_seen, "PHASE3_EVIDENCE_CURSOR_STORED_EVENT_MAX_INVALID"),
+      event_gap_count: Number(row.event_gap_count),
+      revision_count: Number(row.revision_count),
+      publication_event_count: Number(row.publication_event_count),
+      cadence_profile_id: row.cadence_profile_id,
       role_time: structuredClone(row.role_time),
       post_commit_db_readback_at: canonicalIsoV1(row.post_commit_db_readback_at, "PHASE3_EVIDENCE_CURSOR_STORED_READBACK_AT_INVALID"),
       lease_owner: row.lease_owner,
@@ -462,3 +640,4 @@ export class PostgresEvidenceSupplyCursorV1 implements DurableEvidenceSupplyCurs
     };
   }
 }
+
