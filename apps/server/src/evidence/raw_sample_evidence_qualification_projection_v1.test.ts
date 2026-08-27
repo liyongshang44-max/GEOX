@@ -5,11 +5,12 @@ import {
   buildRawSampleEvidenceQualificationProjectionBatchV1,
   projectRawSampleEvidenceQualificationV1,
   STAGE1_FORMAL_EVIDENCE_ROLE_V1,
+  type RawSampleEvidenceQualificationProjectionInputV1,
 } from "./raw_sample_evidence_qualification_projection_v1.js";
 
 const decisionTime = Date.parse("2026-08-27T06:00:00Z");
 
-function baseInput() {
+function baseInput(): RawSampleEvidenceQualificationProjectionInputV1 {
   return {
     sample: {
       sample_id: "rs_shadow_001",
