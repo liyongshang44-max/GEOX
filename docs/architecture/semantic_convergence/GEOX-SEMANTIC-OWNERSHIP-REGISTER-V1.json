@@ -2167,8 +2167,8 @@
       "semantic_id": "governance.semantic_authority_migration",
       "question": "Which grandfathered semantic authorities are replacement-backed, shadow-comparable, migration-ready, or explicitly unreplaced before B-09 removal?",
       "target_owner": "B-09 Semantic Authority Migration Governance",
-      "canonical_output_type": "SemanticMigrationInventoryV1 + SemanticShadowComparisonV1",
-      "current_state": "BOUNDARY_CLEAR_TARGET_NOT_YET_PRODUCT_CONNECTED",
+      "canonical_output_type": "SemanticMigrationInventoryV1 + SemanticShadowComparisonV1 (B-09b Evidence comparator registered as capability island; no runtime consumer and no authority removal)",
+      "current_state": "REGISTERED_CAPABILITY_ISLAND",
       "target_phase": "B-09",
       "new_owner_creation": "FORBIDDEN",
       "registered_producers": [
@@ -2185,6 +2185,25 @@
           "runtime_edge": "INTENTIONAL_NONE",
           "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
           "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "evidence-semantic-shadow-comparator-v1",
+          "path": "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts",
+          "role": "pure B-09b coarse sufficiency comparator for legacy Evidence Judge/Stage-1 versus the existing B-04 canonical EvidenceQualification sufficiency shadow",
+          "authority_level": "SHADOW_ONLY_COMPARATOR",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "compareEvidenceJudgeToCanonicalEvidenceShadowV1",
+            "compareStage1GateToCanonicalEvidenceShadowV1",
+            "semanticShadowComparisonV1Schema.parse"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
         }
       ],
       "registered_consumers": [],
@@ -2192,7 +2211,11 @@
         "B-09a covers every grandfathered producer in the replacement-readiness inventory before any authority removal.",
         "B-09a classifies Twin/Forecast as unreplaced because real MCFT remains disconnected.",
         "B-09a performs zero authority removal; shadow comparisons are SHADOW_ONLY and cannot authorize removal.",
-        "Consumer migration and removal remain later B-09 work after family-specific divergence evidence."
+        "Consumer migration and removal remain later B-09 work after family-specific divergence evidence.",
+        "B-09b registers one pure Evidence-family SemanticShadowComparisonV1 producer with no runtime consumer.",
+        "B-09b treats Stage-1 NOT_ELIGIBLE/NO_FORMAL_STAGE1_SIGNAL as INCOMPARABLE because trigger absence is not an evidence conclusion.",
+        "B-09b explicitly captures legacy rejection versus independent canonical evidence sufficiency as DIVERGENT.",
+        "B-09b performs no consumer migration and no authority removal."
       ],
       "runtime_consumers": []
     }
@@ -2747,7 +2770,7 @@
     {
       "guard_id": "G-B02-22-semantic-shadow-comparison-instantiation",
       "semantic_id": "governance.semantic_authority_migration",
-      "description": "B-09a freezes SemanticShadowComparisonV1 but permits zero production comparison producers; family-specific B-09 shadow producers must be explicitly registered.",
+      "description": "B-09b permits exactly the registered Evidence semantic shadow comparator to instantiate SemanticShadowComparisonV1; any additional family comparator requires explicit later B-09 registration.",
       "scan_roots": [
         "apps/server/src"
       ],
@@ -2763,7 +2786,9 @@
           "semanticShadowComparisonV1Schema.parse("
         ]
       },
-      "registered_paths": [],
+      "registered_paths": [
+        "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts"
+      ],
       "failure": "UNREGISTERED_SEMANTIC_SHADOW_COMPARISON_PRODUCER"
     }
   ],
