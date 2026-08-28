@@ -149,7 +149,9 @@ jobs:
                   process.stdout.write(JSON.stringify({status:"PASS",github_credential_count:0,github_hosts_blackholed:true,github_control_plane_reachable:false})+"\\n");
                 })().catch(e=>{console.error(e);process.exit(1);});
               ')"
-            printf '%s\n' "$out" | tail -n 1 | jq . > "$GEOX_PHASE5_CONTROL_ROOT/phase6-$service-github-blackout.json"
+            printf '%s\n' "$out" | awk '/^\{"status":"PASS"/{line=$0} END{if(line)print line; else exit 1}' \
+              | jq . > "$GEOX_PHASE5_CONTROL_ROOT/phase6-$service-github-blackout.json"
+            test -s "$GEOX_PHASE5_CONTROL_ROOT/phase6-$service-github-blackout.json"
             test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/phase6-$service-github-blackout.json")" = "PASS"
           done
 
