@@ -60,11 +60,11 @@ jobs:
           printf '%s\n' "${changed[@]}"
           test "${#changed[@]}" = "3"
           expected="$(cat <<'EOF'
-.github/workflows/mcft-cap-09-phase7-fresh-formal-v5-preparation.yml
-docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE7-FRESH-FORMAL-V5-PREPARATION-AUTHORITY-V1.json
-scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_FRESH_FORMAL_V5_PREPARATION_V1.cjs
-EOF
-)"
+          .github/workflows/mcft-cap-09-phase7-fresh-formal-v5-preparation.yml
+          docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE7-FRESH-FORMAL-V5-PREPARATION-AUTHORITY-V1.json
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_FRESH_FORMAL_V5_PREPARATION_V1.cjs
+          EOF
+          )"
           actual="$(printf '%s\n' "${changed[@]}")"
           test "$actual" = "$expected"
 
