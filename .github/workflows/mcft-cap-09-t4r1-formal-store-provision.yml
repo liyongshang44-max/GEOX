@@ -1,194 +1,164 @@
-name: mcft-cap-09-t4r1-formal-store-provision
+name: mcft-cap-09-phase7-fresh-formal-v5-preparation
 
 on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V2.json'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-FORMAL-V3-O01-RECOVERY-AUTHORITY-V1.json'
-  workflow_dispatch:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE7-FRESH-FORMAL-V5-PREPARATION-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_FRESH_FORMAL_V5_PREPARATION_V1.cjs'
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: mcft-cap09-t4r1-formal-store-provision-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'main' }}
-  cancel-in-progress: false
-
-env:
-  NODE_VERSION: '20.11.1'
-  PNPM_VERSION: '9.15.4'
-  SOURCE_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h
-  FORMAL_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v4
-  FAILED_FORMAL_ARCHIVE_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v3_failed_o01_32660018684
-  QUAL_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_v12
-  BLOCKED_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_blocked_v12
-  PREVIOUS_QUAL_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_v11
-  PREVIOUS_BLOCKED_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_blocked_v11
-  STORE_AUTHORITY_PATH: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V2.json
-  RECOVERY_AUTHORITY_PATH: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-FORMAL-V3-O01-RECOVERY-AUTHORITY-V1.json
-  RECOVERY_AUTHORITY_BLOB: 2a0451b625100f9cdfa398af105629553c7792ea
+  group: mcft-cap09-phase7-fresh-formal-v5-preparation-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: true
 
 jobs:
-  static-proof:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - name: Validate v4/v12 authority and archive-first provisioning contract
-        shell: node {0}
-        run: |
-          const fs=require('node:fs');
-          const p=JSON.parse(fs.readFileSync(process.env.STORE_AUTHORITY_PATH,'utf8'));
-          if(p.schema_version!=='geox_mcft_cap09_t4r1_actual_formal_store_authority_v2'||p.status!=='CANDIDATE')throw new Error('T4_FORMAL_STORE_V2_AUTHORITY_REQUIRED');
-          if(p.database_identity.database_name!==process.env.FORMAL_DATABASE_NAME)throw new Error('T4_FORMAL_STORE_V4_IDENTITY_REQUIRED');
-          if(p.database_identity.failed_predecessor_archive_database!==process.env.FAILED_FORMAL_ARCHIVE_DATABASE_NAME||p.database_identity.failed_predecessor_reuse_forbidden!==true)throw new Error('T4_FORMAL_STORE_FAILED_V3_ARCHIVE_REQUIRED');
-          if(p.database_identity.recovery_authority_ref!==process.env.RECOVERY_AUTHORITY_PATH||p.database_identity.recovery_authority_blob_sha!==process.env.RECOVERY_AUTHORITY_BLOB||p.database_identity.recovery_archive_required_before_provision!==true)throw new Error('T4_FORMAL_STORE_RECOVERY_AUTHORITY_REQUIRED');
-          if(p.database_identity.creation_mode!=='CREATE_DATABASE_TEMPLATE0_THEN_SCHEMA_ONLY_RESTORE'||p.database_identity.data_clone_forbidden!==true)throw new Error('T4_FORMAL_STORE_NO_DATA_CLONE_REQUIRED');
-          if(p.qualification_generation.fresh_qualification_required!==true||p.qualification_generation.qualification_database!==process.env.QUAL_DATABASE_NAME||p.qualification_generation.blocked_database!==process.env.BLOCKED_DATABASE_NAME||p.qualification_generation.previous_qualification_database!==process.env.PREVIOUS_QUAL_DATABASE_NAME||p.qualification_generation.previous_blocked_database!==process.env.PREVIOUS_BLOCKED_DATABASE_NAME||p.qualification_generation.previous_generation_reuse_forbidden!==true)throw new Error('T4_FORMAL_STORE_V12_GENERATION_REQUIRED');
-          if(p.qualification_generation.production_canonical_core_must_be_identical!==true||p.qualification_generation.qualification_clock_substitutes_wait_only!==true||p.qualification_generation.real_wall_clock_formal_still_required_after_qualification!==true)throw new Error('T4_FORMAL_STORE_CANONICAL_CORE_BOUNDARY_REQUIRED');
-          if(p.schema_contract.required_public_table_count!==26||p.schema_contract.column_fingerprint_md5!=='873a8e86f55d75a04a5f671627e98ae1'||p.schema_contract.constraint_fingerprint_md5!=='7803f7e7706e52eca3ca2aa4290ff5dd'||p.schema_contract.index_fingerprint_md5!=='ea5b3ba0392fd52fb471bc754e94ed35')throw new Error('T4_FORMAL_STORE_SCHEMA_CONTRACT_REQUIRED');
-          if(p.epoch_contract.failed_formal_v3_archive_required_before_v4_provision!==true||p.epoch_contract.failed_formal_v3_truncate_rebind_or_seed_forbidden!==true||p.epoch_contract.real_wall_clock_o00_o23_required!==true||p.epoch_contract.accelerated_clock_authorized_for_formal!==false)throw new Error('T4_FORMAL_STORE_REAL_CLOCK_AND_FAILED_V3_BOUNDARY_REQUIRED');
-      - name: Require exact recovery authority blob and fresh-generation tokens
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD:"$RECOVERY_AUTHORITY_PATH")" = "$RECOVERY_AUTHORITY_BLOB"
-          grep -Fq 'FORMAL_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v4' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
-          grep -Fq 'QUAL_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_v12' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
-          grep -Fq 'BLOCKED_DATABASE_NAME: geox_mcft_cap09_s6_accel24t_am19_blocked_v12' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
-          grep -Fq 'FAILED_FORMAL_ARCHIVE_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v3_failed_o01_32660018684' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
-      - name: Require static PR path has no live credentials or data-clone route
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -z "${SOURCE_DATABASE_URL:-}"
-          test -z "${DATABASE_URL:-}"
-          grep -Fq 'postgres:18-alpine' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
-          grep -Fq 'pg_dump --schema-only --no-owner --no-privileges' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
-          grep -Fq 'CREATE DATABASE "$name" TEMPLATE template0' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml
-          forbidden=$(grep -F 'CREATE DATABASE "$name" TEMPLATE "$SOURCE_DATABASE_NAME"' .github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml | grep -v 'forbidden=' || true)
-          test -z "$forbidden"
-
-  protected-main-provision:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
+  preparation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap09_phase7_preparation
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d mcft_cap09_phase7_preparation"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
     env:
-      SOURCE_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL }}
+      EXACT_PHASE6_HEAD: '48ceafe7c6e7d3d57a1dc17411fb4bf673486333'
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+      NODE_VERSION: '20.11.1'
+      PNPM_VERSION: '9.15.4'
+      DATABASE_URL: 'postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_phase7_preparation'
+      V13_COLUMN_FP: 'c61154d4439a82efc256bed461386781'
+      V13_CONSTRAINT_FP: '67a588bc5b8c3d213b03aa1dbfa4ff2b'
+      V13_INDEX_FP: '306e26a56d419c4e08fac0912ccfdda8'
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact Phase7 preparation subject
+        uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ env.SUBJECT_SHA }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Require exact protected main and immutable successor authorities
+
+      - name: Require exact Phase6 stacked base and three-file zero-effect boundary
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_REF" = 'refs/heads/main' || { echo 'T4_FORMAL_STORE_MAIN_REQUIRED' >&2; exit 1; }
-          git fetch --no-tags origin main
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || { echo 'T4_FORMAL_STORE_MAIN_DRIFT' >&2; exit 1; }
-          test "$(git rev-parse HEAD:"$RECOVERY_AUTHORITY_PATH")" = "$RECOVERY_AUTHORITY_BLOB" || { echo 'T4_FORMAL_STORE_RECOVERY_AUTHORITY_BLOB_DRIFT' >&2; exit 1; }
-          test -n "$SOURCE_DATABASE_URL" || { echo 'T4_FORMAL_STORE_SOURCE_SECRET_REQUIRED' >&2; exit 1; }
-      - name: Install PostgreSQL client
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client
-      - name: Derive masked admin and source URLs
-        shell: node {0}
-        run: |
-          const fs=require('node:fs');
-          const source=new URL(process.env.SOURCE_DATABASE_URL);
-          if(!['postgres:','postgresql:'].includes(source.protocol)||['localhost','127.0.0.1','::1'].includes(source.hostname))throw new Error('T4_FORMAL_STORE_REMOTE_POSTGRES_REQUIRED');
-          const sourceName=decodeURIComponent(source.pathname.replace(/^\//,''));
-          if(sourceName!==process.env.SOURCE_DATABASE_NAME)throw new Error(`T4_FORMAL_STORE_SOURCE_IDENTITY_DRIFT:${sourceName}`);
-          const admin=new URL(source.toString());admin.pathname='/postgres';
-          console.log(`::add-mask::${source.toString()}`);console.log(`::add-mask::${admin.toString()}`);
-          fs.appendFileSync(process.env.GITHUB_ENV,`ADMIN_DATABASE_URL=${admin.toString()}\n`);
-      - name: Require immutable failed-v3 archive and v11 predecessor stores before any v4/v12 create
-        shell: bash
-        run: |
-          set -euo pipefail
-          for name in "$FAILED_FORMAL_ARCHIVE_DATABASE_NAME" "$PREVIOUS_QUAL_DATABASE_NAME" "$PREVIOUS_BLOCKED_DATABASE_NAME"; do
-            exists=$(psql "$ADMIN_DATABASE_URL" -Atqc "SELECT 1 FROM pg_database WHERE datname='$name'")
-            test "$exists" = '1' || { echo "T4_FORMAL_STORE_PREDECESSOR_EVIDENCE_REQUIRED:$name" >&2; exit 1; }
-          done
-      - name: Create only fresh template0 v4/v12 databases idempotently
-        shell: bash
-        run: |
-          set -euo pipefail
-          for name in "$FORMAL_DATABASE_NAME" "$QUAL_DATABASE_NAME" "$BLOCKED_DATABASE_NAME"; do
-            exists=$(psql "$ADMIN_DATABASE_URL" -Atqc "SELECT 1 FROM pg_database WHERE datname='$name'")
-            if [ "$exists" != '1' ]; then
-              psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$name\" TEMPLATE template0"
-            fi
-          done
-      - name: Dump schema only from immutable T4 reference with PostgreSQL 18 client
-        shell: bash
-        run: |
-          set -euo pipefail
-          docker run --rm -e SOURCE_DATABASE_URL="$SOURCE_DATABASE_URL" postgres:18-alpine \
-            sh -c 'pg_dump --schema-only --no-owner --no-privileges "$SOURCE_DATABASE_URL"' > /tmp/t4-schema.sql
-          test -s /tmp/t4-schema.sql
-          ! grep -Eq '^COPY |^INSERT INTO ' /tmp/t4-schema.sql
-      - name: Restore schema only into each fresh store
-        shell: bash
-        run: |
-          set -euo pipefail
-          for name in "$FORMAL_DATABASE_NAME" "$QUAL_DATABASE_NAME" "$BLOCKED_DATABASE_NAME"; do
-            target=$(node -e 'const u=new URL(process.env.SOURCE_DATABASE_URL);u.pathname="/"+process.argv[1];process.stdout.write(u.toString())' "$name")
-            echo "::add-mask::$target"
-            count=$(psql "$target" -Atqc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
-            if [ "$count" = '0' ]; then
-              psql "$target" -v ON_ERROR_STOP=1 -f /tmp/t4-schema.sql >/dev/null
-            elif [ "$count" != '26' ]; then
-              echo "T4_FORMAL_STORE_PARTIAL_SCHEMA_FORBIDDEN:$name:$count" >&2; exit 1
-            fi
-          done
+          test "${{ github.event.pull_request.base.sha }}" = "$EXACT_PHASE6_HEAD"
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          mapfile -t changed < <(git diff --name-only "$EXACT_PHASE6_HEAD" HEAD | sort)
+          printf '%s\n' "${changed[@]}"
+          test "${#changed[@]}" = "3"
+          expected=$'.github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml\ndocs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE7-FRESH-FORMAL-V5-PREPARATION-AUTHORITY-V1.json\nscripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_FRESH_FORMAL_V5_PREPARATION_V1.cjs'
+          actual="$(printf '%s\n' "${changed[@]}")"
+          test "$actual" = "$expected"
+
+      - name: Verify immutable Phase6 closure artifact metadata
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const expected = [
+              {run:33146391000, artifact:9676455831, digest:'sha256:9a3a22b8b844fc1538d4a6986a9d3477b895208b1e88cdf13106f0f0dbf463d7'},
+              {run:33146390858, artifact:9675928222, digest:'sha256:c84c06eeb04db9aa228c3415db320e8cd6eaef3502407fbc192dc80f8833497d'},
+              {run:33146390954, artifact:9676026935, digest:'sha256:8af3b905af82e84b7ff9b200b715ae622dbd2c4551b7c4fe27c0d842e421af17'},
+              {run:32881283336, artifact:9575878791, digest:'sha256:04630f1f869ba99e9be40d55e24967e6e26671e80d3459fb9b28ce0694aaeb40'}
+            ];
+            const {owner,repo}=context.repo;
+            for(const e of expected){
+              const run=(await github.rest.actions.getWorkflowRun({owner,repo,run_id:e.run})).data;
+              if(run.conclusion!=='success') throw new Error('PHASE7_PREP_REQUIRED_RUN_NOT_SUCCESS:'+e.run);
+              const art=(await github.rest.actions.getArtifact({owner,repo,artifact_id:e.artifact})).data;
+              if(art.expired) throw new Error('PHASE7_PREP_REQUIRED_ARTIFACT_EXPIRED:'+e.artifact);
+              if(art.digest!==e.digest) throw new Error('PHASE7_PREP_REQUIRED_ARTIFACT_DIGEST_DRIFT:'+e.artifact);
+              if(e.run!==32881283336 && run.head_sha!==process.env.EXACT_PHASE6_HEAD) throw new Error('PHASE7_PREP_PHASE6_HEAD_DRIFT:'+e.run);
+              if(e.run===32881283336 && run.head_sha!=='3bbf096ee5cb73e8e0e0251dc400733d6cab501f') throw new Error('PHASE7_PREP_V13_ANCHOR_HEAD_DRIFT');
+            }
+
       - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-      - name: Install exact repository dependencies
+
+      - name: Install locked workspace
         run: pnpm install --frozen-lockfile
-      - name: Prove 26/26 exact schema and zero-state on all three fresh stores
-        shell: bash
+
+      - name: Validate Phase7 preparation governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_FRESH_FORMAL_V5_PREPARATION_V1.cjs
+
+      - name: Reconstruct immutable v13 29-table schema in ephemeral PostgreSQL
+        env:
+          MCFT_CAP09_V13_HOLISTIC_SCHEMA_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES.ts
+
+      - name: Require exact v13 schema fingerprints and zero production effect
+        shell: node {0}
         run: |
-          set -euo pipefail
-          mkdir -p acceptance-output/t4-store-provision
-          for name in "$FORMAL_DATABASE_NAME" "$QUAL_DATABASE_NAME" "$BLOCKED_DATABASE_NAME"; do
-            target=$(node -e 'const u=new URL(process.env.SOURCE_DATABASE_URL);u.pathname="/"+process.argv[1];process.stdout.write(u.toString())' "$name")
-            echo "::add-mask::$target"
-            DATABASE_URL="$target" pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_RUNTIME_ENVIRONMENT_V1.ts zero-state
-            cp acceptance-output/MCFT_CAP_09_RUNTIME_ENVIRONMENT_PREFLIGHT_RESULT.json "acceptance-output/t4-store-provision/${name}.json"
-            NAME="$name" node - <<'NODE'
           const fs=require('node:fs');
-          const p=JSON.parse(fs.readFileSync(`acceptance-output/t4-store-provision/${process.env.NAME}.json`,'utf8'));
-          const expected={column_fingerprint:'873a8e86f55d75a04a5f671627e98ae1',constraint_fingerprint:'7803f7e7706e52eca3ca2aa4290ff5dd',index_fingerprint:'ea5b3ba0392fd52fb471bc754e94ed35'};
-          if(p.status!=='PASS'||p.mode!=='zero-state'||p.database_identity.database_name!==process.env.NAME||p.required_table_count!==26||p.schema_complete!==true||p.zero_state_qualified!==true)throw new Error(`T4_FORMAL_STORE_PREFLIGHT_FAILED:${process.env.NAME}`);
-          for(const [k,v] of Object.entries(expected))if(p.schema_fingerprints?.[k]!==v)throw new Error(`T4_FORMAL_STORE_FINGERPRINT_DRIFT:${process.env.NAME}:${k}`);
-          for(const [rel,count] of Object.entries(p.zero_state_counts||{}))if(count!==0)throw new Error(`T4_FORMAL_STORE_NOT_ZERO:${process.env.NAME}:${rel}`);
-          NODE
-          done
-      - name: Upload immutable zero-state v4/v12 provisioning proof
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES_RESULT.json','utf8'));
+          if(p.status!=='PASS'||p.predecessor_public_table_count!==26||p.v13_required_public_table_count!==29||p.operational_table_delta!==3)throw new Error('PHASE7_PREP_V13_SCHEMA_CARDINALITY');
+          if(p.v13_column_fingerprint_md5!==process.env.V13_COLUMN_FP)throw new Error('PHASE7_PREP_COLUMN_FINGERPRINT_DRIFT');
+          if(p.v13_constraint_fingerprint_md5!==process.env.V13_CONSTRAINT_FP)throw new Error('PHASE7_PREP_CONSTRAINT_FINGERPRINT_DRIFT');
+          if(p.v13_index_fingerprint_md5!==process.env.V13_INDEX_FP)throw new Error('PHASE7_PREP_INDEX_FINGERPRINT_DRIFT');
+          if(p.canonical_facts_schema_unchanged!==true||p.all_new_relations_zero_state!==true)throw new Error('PHASE7_PREP_V13_SCHEMA_SEMANTIC_DRIFT');
+          if(p.production_workflow_effect!==false||p.formal_v4_mutation_performed!==false||p.mcft_cap09_completed!==false)throw new Error('PHASE7_PREP_V13_NONCLAIM_REGRESSION');
+
+      - name: Assemble machine preparation proof
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const g=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_PHASE7_FRESH_FORMAL_V5_PREPARATION_GOVERNANCE.json','utf8'));
+          const s=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES_RESULT.json','utf8'));
+          const out={
+            schema_version:'geox_mcft_cap09_phase7_fresh_formal_v5_preparation_proof_v1',
+            status:'PASS',
+            subject_sha:process.env.SUBJECT_SHA,
+            phase6_predecessor_sha:process.env.EXACT_PHASE6_HEAD,
+            phase6_accepted:true,
+            v13_schema_anchor_reproduced:true,
+            v13_public_table_count:s.v13_required_public_table_count,
+            v13_column_fingerprint_md5:s.v13_column_fingerprint_md5,
+            v13_constraint_fingerprint_md5:s.v13_constraint_fingerprint_md5,
+            v13_index_fingerprint_md5:s.v13_index_fingerprint_md5,
+            planned_fresh_stores:[
+              'geox_mcft_cap09_s6_accel24t_am19_v13',
+              'geox_mcft_cap09_s6_accel24t_am19_blocked_v13',
+              'geox_mcft_cap09_s6_formal_t4r1_24h_v5'
+            ],
+            failed_v4_reuse:false,
+            remote_database_provision_count:0,
+            runtime_database_write_count:0,
+            provider_request_count:0,
+            formal_v5_arm:false,
+            formal_v5_o00_started:false,
+            production_effect:false,
+            mcft_cap09_completed:false
+          };
+          if(g.status!=='PASS'||g.production_effect!==false)throw new Error('PHASE7_PREP_GOVERNANCE_PROOF_REQUIRED');
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_PHASE7_FRESH_FORMAL_V5_PREPARATION_PROOF.json',JSON.stringify(out,null,2)+'\n');
+
+      - name: Upload immutable Phase7 preparation proof
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-t4r1-formal-store-provision-${{ github.sha }}-${{ github.run_id }}
-          path: acceptance-output/t4-store-provision/*.json
+          name: mcft-cap09-phase7-fresh-formal-v5-preparation-${{ env.SUBJECT_SHA }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PHASE7_FRESH_FORMAL_V5_PREPARATION_GOVERNANCE.json
+            acceptance-output/MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE7_FRESH_FORMAL_V5_PREPARATION_PROOF.json
           if-no-files-found: error
           retention-days: 90

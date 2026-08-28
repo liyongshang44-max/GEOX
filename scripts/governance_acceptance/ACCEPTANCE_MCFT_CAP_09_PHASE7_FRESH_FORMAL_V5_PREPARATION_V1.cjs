@@ -5,7 +5,7 @@ const fs=require("node:fs");
 const cp=require("node:child_process");
 
 const AUTHORITY="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE7-FRESH-FORMAL-V5-PREPARATION-AUTHORITY-V1.json";
-const WORKFLOW=".github/workflows/mcft-cap-09-phase7-fresh-formal-v5-preparation.yml";
+const WORKFLOW=".github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml";
 const PHASE6="48ceafe7c6e7d3d57a1dc17411fb4bf673486333";
 
 function req(ok,code,detail){if(!ok)throw new Error(detail===undefined?code:code+":"+JSON.stringify(detail));}
