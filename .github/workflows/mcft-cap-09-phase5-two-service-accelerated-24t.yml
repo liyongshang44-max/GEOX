@@ -561,13 +561,31 @@ jobs:
           reached=0
           for attempt in $(seq 1 600); do
             failed="$(docker compose -f "$COMPOSE_FILE" exec -T postgres psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc "SELECT count(*) FROM twin_shadow_online_scheduler_slot_v1 WHERE state='FAILED';")"
-            test "$failed" = "0"
+            if [ "$failed" -ne 0 ]; then
+              echo "PHASE5_TWIN_FOCUSED_FAILED_SLOT_DETECTED:$failed" >&2
+              docker compose -f "$COMPOSE_FILE" exec -T postgres psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -x -c \
+                "SELECT slot_id,logical_time,state,lease_owner,fencing_token,tick_ref,health_ref,claimed_at,terminal_at,updated_at FROM twin_shadow_online_scheduler_slot_v1 ORDER BY logical_time;" >&2 || true
+              for cid in "${cids[@]}"; do
+                echo "--- TWIN CONTAINER $cid ---" >&2
+                docker logs "$cid" >&2 || true
+              done
+              exit 1
+            fi
             active="$(docker compose -f "$COMPOSE_FILE" exec -T postgres psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc "SELECT count(*) FROM twin_shadow_online_scheduler_slot_v1 WHERE state IN ('CLAIMED','RUNNING');")"
             test "$active" -le 1
             terminal="$(docker compose -f "$COMPOSE_FILE" exec -T postgres psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc "SELECT count(*) FROM twin_shadow_online_scheduler_slot_v1 WHERE state IN ('COMPLETED','DEGRADED');")"
             if [ "$terminal" -ge 8 ]; then reached=1; break; fi
             for cid in "${cids[@]}"; do
-              test "$(docker inspect -f '{{.State.Running}}' "$cid")" = "true" || { docker logs "$cid" >&2 || true; exit 1; }
+              if [ "$(docker inspect -f '{{.State.Running}}' "$cid")" != "true" ]; then
+                echo "PHASE5_TWIN_FOCUSED_CONTAINER_EXITED:$cid" >&2
+                for diag_cid in "${cids[@]}"; do
+                  echo "--- TWIN CONTAINER $diag_cid ---" >&2
+                  docker logs "$diag_cid" >&2 || true
+                done
+                docker compose -f "$COMPOSE_FILE" exec -T postgres psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -x -c \
+                  "SELECT slot_id,logical_time,state,lease_owner,fencing_token,tick_ref,health_ref,claimed_at,terminal_at,updated_at FROM twin_shadow_online_scheduler_slot_v1 ORDER BY logical_time;" >&2 || true
+                exit 1
+              fi
             done
             sleep 1
           done
