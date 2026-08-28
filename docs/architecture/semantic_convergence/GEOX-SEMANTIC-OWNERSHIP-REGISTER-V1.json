@@ -1256,10 +1256,10 @@
             "projectLegacyRecommendationCandidateV1",
             "candidateDecisionV1Schema.parse"
           ],
-          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
-          "activation": "MANUAL",
-          "runtime_edge": "INTENTIONAL_NONE",
-          "new_runtime_consumer_creation": "FORBIDDEN",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
           "grandfathered_runtime_consumers": []
         },
         {
@@ -1363,6 +1363,15 @@
           "connection_class": "ACTIVE_PARALLEL",
           "activation": "FEATURE_FLAG",
           "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+          "role": "B-09j shadow-only scoped recommendation source resolver and explicit runtime consumer of the formal decision-engine recommendation producer plus the existing B-06c CandidateDecision compatibility projector; no Decision Eligibility invocation",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
         }
       ],
       "notes": [
@@ -1392,7 +1401,10 @@
         "B-06g keeps evidence_basis and SkillTrace evidence as legacy provenance only; canonical EvidenceQualification refs remain explicit.",
         "B-06g runtime-validates the declared AgronomyRecommendationV2 action vocabulary instead of trusting the rule_engine type assertion.",
         "B-09i runtime provenance corpus on the formal/product decision-engine recommendation path proves that a persisted decision_recommendation_v1 source fact, immutable fact_id, scope, action, status, and occurred_at are resolvable, while no persisted CandidateDecisionV1 identity or canonical candidate_id exists on that path.",
-        "B-09i does not authorize deriving candidate_id from recommendation_id or fact_id, or promoting legacy evidence_refs, snapshot_id, crop_stage, or created_ts into canonical EvidenceQualification, Context, CropStage, or Candidate timestamps; the B-09h QUALIFIED_EVIDENCE criterion remains candidate-unbound and Decision Eligibility Runtime remains disconnected."
+        "B-09i does not authorize deriving candidate_id from recommendation_id or fact_id, or promoting legacy evidence_refs, snapshot_id, crop_stage, or created_ts into canonical EvidenceQualification, Context, CropStage, or Candidate timestamps; the B-09h QUALIFIED_EVIDENCE criterion remains candidate-unbound and Decision Eligibility Runtime remains disconnected.",
+        "B-09j establishes SOURCE_FACT_SCOPE_SHA256_V1 as an explicit shadow-only candidate identity policy for the bounded decision-engine recommendation path; recommendation_id is lookup provenance only and immutable source fact identity plus tenant/project/group scope form the hash material.",
+        "B-09j connects the existing B-06c adapter only to a registered shadow consumer, rejects missing/ambiguous/non-decision-engine recommendation sources, and preserves Context/Stage/Calculation refs as null/empty rather than promoting legacy snapshot/stage/effect semantics.",
+        "B-09j binds B-09h QUALIFIED_EVIDENCE support refs and CandidateDecision basis EvidenceQualification refs by exact-set equality; it still does not invoke B-07e because full canonical EvidenceQualification objects are not materialized at this seam."
       ],
       "runtime_consumers": [
         {
@@ -1412,6 +1424,24 @@
           "activation": "FEATURE_FLAG",
           "runtime_edge": "PROVEN",
           "evidence_edge_id": "C-023"
+        },
+        {
+          "consumer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+          "producer_id": "legacy-recommendation-candidate-compatibility-adapter",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-041"
+        },
+        {
+          "consumer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+          "producer_id": "decision-engine-recommendation",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-040"
         }
       ]
     },
@@ -1536,7 +1566,7 @@
           "connection_class": "ACTIVE_PARALLEL",
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN",
-          "new_runtime_consumer_creation": "FORBIDDEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
           "grandfathered_runtime_consumers": [
             "judge-v2-agronomy-qualified-evidence-criterion-shadow"
           ]
@@ -1556,6 +1586,15 @@
           "consumer_id": "judge-v2-agronomy-qualified-evidence-criterion-shadow",
           "path": "apps/server/src/routes/judge_v2.ts",
           "role": "B-09h attaches the shadow-only QUALIFIED_EVIDENCE criterion observation to Agronomy Judge outputs without feeding Decision Eligibility Runtime",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+          "role": "B-09j consumes only the B-09h shadow QUALIFIED_EVIDENCE criterion/support refs to prove exact Candidate basis continuity; it does not feed or invoke Decision Eligibility Runtime",
           "current": true,
           "connection_class": "ACTIVE_PARALLEL",
           "activation": "API_ONLY",
@@ -1598,6 +1637,15 @@
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN",
           "evidence_edge_id": "C-039"
+        },
+        {
+          "consumer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+          "producer_id": "agronomy-qualified-evidence-criterion-shadow-v1",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-043"
         }
       ]
     },
@@ -2235,7 +2283,7 @@
       "question": "Which grandfathered semantic authorities are replacement-backed, shadow-comparable, migration-ready, or explicitly unreplaced before B-09 removal?",
       "target_owner": "B-09 Semantic Authority Migration Governance",
       "canonical_output_type": "SemanticMigrationInventoryV1 + SemanticShadowComparisonV1 + EvidenceSemanticShadowInventoryV1 + EvidenceConsumerDependencyInventoryV1 + AgronomyEvidenceDependencyShadowBindingV1 + canonical EvidenceQualification provenance refs (B-09g shadow-only; no criterion cutover, consumer migration, or authority removal) + Agronomy Qualified Evidence Criterion Shadow V1 (B-09h; candidate-unbound and non-authoritative)",
-      "current_state": "AGRONOMY_QUALIFIED_EVIDENCE_CRITERION_SHADOW_ACTIVE",
+      "current_state": "CANDIDATE_REFERENTIAL_SHADOW_ACTIVE",
       "target_phase": "B-09",
       "new_owner_creation": "FORBIDDEN",
       "registered_producers": [
@@ -2310,11 +2358,30 @@
           "connection_class": "ACTIVE_PARALLEL",
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN",
-          "new_runtime_consumer_creation": "FORBIDDEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
           "grandfathered_runtime_consumers": [
             "judge-v2-agronomy-shadow-binding",
             "agronomy-qualified-evidence-criterion-shadow-v1"
           ]
+        },
+        {
+          "producer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+          "role": "B-09j shadow-only referential binding that proves scoped immutable recommendation source identity, deterministic CandidateDecision identity, and exact Candidate-to-B09h criterion EvidenceQualification ref continuity without invoking Decision Eligibility",
+          "authority_level": "SHADOW_ONLY_BINDING",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "buildDecisionRecommendationCandidateCriterionShadowBindingV1",
+            "decisionRecommendationCandidateCriterionShadowBindingV1Schema.parse",
+            "SOURCE_FACT_SCOPE_SHA256_V1"
+          ],
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
         }
       ],
       "registered_consumers": [
@@ -2349,6 +2416,24 @@
           "consumer_id": "agronomy-qualified-evidence-criterion-shadow-v1",
           "path": "apps/server/src/domain/decision/agronomy_qualified_evidence_criterion_shadow_v1.ts",
           "role": "B-09h consumes only the B-09f/B-09g shadow binding and projects a candidate-unbound SHADOW_NON_AUTHORITATIVE QUALIFIED_EVIDENCE criterion observation",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+          "role": "B-09j consumes the existing B-09f shadow binding only as non-authoritative provenance input; the dependency is explicitly registered rather than grandfathered",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "judge-v2-agronomy-candidate-criterion-referential-shadow",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "role": "Agronomy Judge route attaches the B-09j referential binding only after constructing the historical Agronomy Judge result; no verdict or downstream authority is changed",
           "current": true,
           "connection_class": "ACTIVE_PARALLEL",
           "activation": "API_ONLY",
@@ -2419,6 +2504,24 @@
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN",
           "evidence_edge_id": "C-038"
+        },
+        {
+          "consumer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+          "producer_id": "agronomy-evidence-dependency-shadow-binding-v1",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-042"
+        },
+        {
+          "consumer_id": "judge-v2-agronomy-candidate-criterion-referential-shadow",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "producer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-044"
         }
       ]
     }
