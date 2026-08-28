@@ -1003,6 +1003,91 @@
         "fingerprint": "projectAgronomyQualifiedEvidenceCriterionShadowV1(evidenceDependencyShadow) -> JudgeResultV2.outputs.agronomy_qualified_evidence_criterion_shadow_v1"
       },
       "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-040",
+      "from_producer": "decision-engine-recommendation",
+      "to_consumer": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+      "semantic_id": "decision.candidate",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "SCOPED_PERSISTED_READ",
+        "caller_path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+        "callee_path": "apps/server/src/routes/decision_engine_v1.ts",
+        "fingerprint": "B-09j queries scoped decision_recommendation_v1 facts and accepts only source=api/v1/recommendations/generate; recommendation_id resolves zero/one/multiple rows with ambiguity fail-closed"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-041",
+      "from_producer": "legacy-recommendation-candidate-compatibility-adapter",
+      "to_consumer": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+      "semantic_id": "decision.candidate",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+        "callee_path": "apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.ts",
+        "fingerprint": "validated scoped immutable decision_recommendation_v1 source + SOURCE_FACT_SCOPE_SHA256_V1 candidate_id + canonical criterion support refs -> projectLegacyRecommendationCandidateV1"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-042",
+      "from_producer": "agronomy-evidence-dependency-shadow-binding-v1",
+      "to_consumer": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+      "semantic_id": "governance.semantic_authority_migration",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "RETURN_OBJECT_CHAIN",
+        "caller_path": "apps/server/src/routes/judge_v2.ts",
+        "callee_path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+        "fingerprint": "B-09f canonical EvidenceQualification refs are supplied alongside B-09h criterion and must exactly match criterion support refs"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-043",
+      "from_producer": "agronomy-qualified-evidence-criterion-shadow-v1",
+      "to_consumer": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+      "semantic_id": "decision.eligibility",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "RETURN_OBJECT_CHAIN",
+        "caller_path": "apps/server/src/routes/judge_v2.ts",
+        "callee_path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+        "fingerprint": "B-09h CRITERION_PROJECTED QUALIFIED_EVIDENCE assessment -> exact support-ref continuity check against B-09j CandidateDecision basis"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-044",
+      "from_producer": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+      "to_consumer": "judge-v2-agronomy-candidate-criterion-referential-shadow",
+      "semantic_id": "governance.semantic_authority_migration",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/routes/judge_v2.ts",
+        "callee_path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+        "fingerprint": "Agronomy Judge route persists decision_recommendation_candidate_criterion_shadow_binding_v1 only after legacy JudgeResult construction; B-07e is not invoked"
+      },
+      "status": "CURRENT_PROVEN"
     }
   ],
   "connectivity_status_values": [
