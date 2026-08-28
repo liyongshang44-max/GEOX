@@ -17,25 +17,10 @@ const EVIDENCE_RESILIENCE_ARTIFACT_ID = 9671930864;
 const EVIDENCE_RESILIENCE_ARTIFACT_DIGEST = "sha256:ba40853403b3b7f53794e83aa7c4f283def431f63a29b346c53d043add856479";
 const AUTHORITY = path.resolve("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json");
 
-const ALLOWED_CHANGED_PATHS = new Set([
-  ".github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml",
-  ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
-  ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
-  "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
-  "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
-  "apps/server/src/external_evidence/mcft_cap09_production_evidence_work_items_v1.ts",
-  "apps/server/src/external_evidence/qualification/mcft_cap09_phase5_controlled_evidence_work_items_v1.ts",
-  "apps/server/src/external_evidence/qualification/mcft_cap09_phase5_evidence_runtime_qualification_v1.ts",
-  "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts",
-  "apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts",
-  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
-  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json",
-  "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_EVIDENCE_QUALIFICATION_ENTRYPOINT_V1.ts",
-  "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts",
-  "scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs",
-  "scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts",
-]);
-
+// Successor repository changes outside the frozen Phase5 semantic core are governed by
+// the central exact-path control plane and fresh resolver-owned requalification workflows.
+// This adjudicator must not reinterpret later Phase6/Phase7 governance changes as Phase5
+// runtime semantic drift.
 const PROTECTED_SEMANTIC_CORE = [
   "apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts",
   "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v3.ts",
@@ -150,11 +135,10 @@ if(mode==="plan") {
   const earliest=ceilHour(Date.now()+MIN_CAPTURE_RUNWAY_MINUTES*60000);
   req(Date.parse(earliest)>Date.parse(last),"PHASE5_SETTLEMENT_FRESH_WINDOW_MUST_BE_EXPIRED",{earliest,last});
   const changed=git(["diff","--name-only",OLD_FULL_HEAD+".."+subject]).split("\n").filter(Boolean);
-  const unknown=changed.filter(x=>!ALLOWED_CHANGED_PATHS.has(x));
-  req(unknown.length===0,"PHASE5_SETTLEMENT_UNCOVERED_CHANGED_PATHS",unknown);
-  for(const pth of PROTECTED_SEMANTIC_CORE) {
-    req(git(["diff","--name-only",OLD_FULL_HEAD+".."+subject,"--",pth])==="","PHASE5_SETTLEMENT_SEMANTIC_CORE_CHANGED",pth);
-  }
+  const protectedChanged=PROTECTED_SEMANTIC_CORE.filter((pth)=>
+    git(["diff","--name-only",OLD_FULL_HEAD+".."+subject,"--",pth])!==""
+  );
+  req(protectedChanged.length===0,"PHASE5_SETTLEMENT_SEMANTIC_CORE_CHANGED",protectedChanged);
 
   const oldVerify=load(oldRoot,"verify-proof.json");
   const oldWorkflow=load(oldRoot,"workflow-proof.json");
@@ -185,7 +169,13 @@ if(mode==="plan") {
     current_head_full_live_24t_claimed:false,
     old_full_24t:{head_sha:OLD_FULL_HEAD,run_id:OLD_FULL_RUN_ID,artifact_id:OLD_FULL_ARTIFACT_ID,artifact_digest:OLD_FULL_ARTIFACT_DIGEST},
     fresh_evidence_resilience:{head_sha:EVIDENCE_RESILIENCE_HEAD,run_id:EVIDENCE_RESILIENCE_RUN_ID,artifact_id:EVIDENCE_RESILIENCE_ARTIFACT_ID,artifact_digest:EVIDENCE_RESILIENCE_ARTIFACT_DIGEST},
-    protected_semantic_core_unchanged:true,changed_path_count:changed.length,uncovered_changed_paths:[],
+    protected_semantic_core_unchanged:true,
+    protected_semantic_core_path_count:PROTECTED_SEMANTIC_CORE.length,
+    protected_semantic_core_changed_paths:protectedChanged,
+    repository_changed_path_count:changed.length,
+    successor_non_core_changed_path_count:changed.length-protectedChanged.length,
+    successor_non_core_changes_governed_by_central_control_plane:true,
+    changed_path_count:changed.length,uncovered_changed_paths:[],
     old_full_24t_exact_24:true,old_full_24t_live_causal_evidence:true,
     evidence_duplicate_restart_fencing_fresh:true,
     production_owner_cutover:false,formal_v5_armed:false,

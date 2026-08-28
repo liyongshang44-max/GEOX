@@ -861,14 +861,16 @@ jobs:
             pnpm-workspace.yaml \
             docker \
             docker-compose.mcft-cap09-phase5-qualification.yml \
-            docker-compose.mcft-cap09-phase6-github-blackout.override.yml \
-            scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs \
-            scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts)"
+            docker-compose.mcft-cap09-phase6-github-blackout.override.yml)"
           if [ -n "$runtime_delta" ]; then
             echo "PHASE6_SUCCESSOR_RUNTIME_REQUALIFICATION_REQUIRED" >&2
             printf '%s\n' "$runtime_delta" >&2
             exit 1
           fi
+
+          mapfile -t qualification_delta < <(git diff --name-only "$PHASE6_ACCEPTED_HEAD"..HEAD -- \
+            scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs \
+            scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts | sort)
 
           mapfile -t db_delta < <(git diff --name-only "$PHASE6_ACCEPTED_HEAD"..HEAD -- apps/server/db/migrations | sort)
           allowed_acl='apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql'
@@ -887,6 +889,35 @@ jobs:
             done
             grep -Fq 'TO geox_mcft_cap09_evidence_runtime_v1' <<<"$acl"
             test -z "$(git diff --name-only "$PHASE6_ACCEPTED_HEAD"..HEAD -- apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql)"
+          fi
+
+          if [ "${#qualification_delta[@]}" -gt 0 ] || [ "${#db_delta[@]}" -gt 0 ]; then
+            plan="$RUNNER_TEMP/phase6-successor-requalification-plan.json"
+            node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs \
+              --base '${{ github.event.pull_request.base.sha }}' \
+              --head "$SUBJECT_SHA" \
+              --generation v13 \
+              --stage SUCCESSOR_SUBJECT_PRE_MERGE \
+              --out "$plan"
+            node - "$plan" "${#qualification_delta[@]}" "${#db_delta[@]}" <<'NODE'
+          const fs=require('node:fs');
+          const [planPath,qualificationCount,dbCount]=process.argv.slice(2);
+          const p=JSON.parse(fs.readFileSync(planPath,'utf8'));
+          if(p.status!=='PASS'||p.unknown_changed_paths.length||p.authority_errors.length||p.resolver_errors.length){
+            throw new Error('PHASE6_SUCCESSOR_REQUALIFICATION_PLAN_NOT_PASS');
+          }
+          const byId=(id)=>p.decisions.find(x=>x.check_id===id);
+          if(Number(qualificationCount)>0){
+            const phase5=byId('PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS');
+            if(!phase5||phase5.status!=='REQUALIFY') throw new Error('PHASE6_SUCCESSOR_QUALIFICATION_DELTA_REQUIRES_PHASE5_REQUALIFY');
+          }
+          if(Number(dbCount)>0){
+            for(const id of ['PHASE3_EVIDENCE_RUNTIME_FOUNDATION','PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS']){
+              const row=byId(id);
+              if(!row||row.status!=='REQUALIFY') throw new Error('PHASE6_SUCCESSOR_EVIDENCE_ACL_DELTA_REQUIRES_REQUALIFY:'+id);
+            }
+          }
+          NODE
           fi
 
       - name: Verify immutable accepted Phase6 runtime artifact
@@ -909,7 +940,12 @@ jobs:
         run: |
           const fs=require('node:fs'),cp=require('node:child_process');
           fs.mkdirSync('acceptance-output',{recursive:true});
-          const dbDelta=cp.execFileSync('git',['diff','--name-only',process.env.PHASE6_ACCEPTED_HEAD+'..HEAD','--','apps/server/db/migrations'],{encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean);
+          const diff=(paths)=>cp.execFileSync('git',['diff','--name-only',process.env.PHASE6_ACCEPTED_HEAD+'..HEAD','--',...paths],{encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean);
+          const dbDelta=diff(['apps/server/db/migrations']);
+          const qualificationDelta=diff([
+            'scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs',
+            'scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts'
+          ]);
           const out={
             schema_version:'geox_mcft_cap09_phase6_successor_carry_forward_v1',
             status:'PASS',
@@ -918,6 +954,8 @@ jobs:
             accepted_runtime_run_id:Number(process.env.PHASE6_RUNTIME_RUN_ID),
             accepted_runtime_artifact_id:Number(process.env.PHASE6_RUNTIME_ARTIFACT_ID),
             protected_runtime_delta_count:0,
+            qualification_support_delta_count:qualificationDelta.length,
+            phase5_requalification_required_on_qualification_delta:true,
             allowed_evidence_acl_delta_count:dbDelta.length,
             phase3_phase5_acl_requalification_required_on_acl_delta:true,
             phase6_runtime_reexecuted:false,
