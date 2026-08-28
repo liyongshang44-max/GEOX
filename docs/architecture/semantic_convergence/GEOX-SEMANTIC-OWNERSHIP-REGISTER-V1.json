@@ -2167,8 +2167,8 @@
       "semantic_id": "governance.semantic_authority_migration",
       "question": "Which grandfathered semantic authorities are replacement-backed, shadow-comparable, migration-ready, or explicitly unreplaced before B-09 removal?",
       "target_owner": "B-09 Semantic Authority Migration Governance",
-      "canonical_output_type": "SemanticMigrationInventoryV1 + SemanticShadowComparisonV1 + EvidenceSemanticShadowInventoryV1 (B-09d read-only persisted Evidence shadow inventory; no consumer migration and no authority removal)",
-      "current_state": "SHADOW_RUNTIME_OBSERVABLE",
+      "canonical_output_type": "SemanticMigrationInventoryV1 + SemanticShadowComparisonV1 + EvidenceSemanticShadowInventoryV1 + EvidenceConsumerDependencyInventoryV1 (B-09e analysis only; no consumer migration and no authority removal)",
+      "current_state": "EVIDENCE_CONSUMER_DEPENDENCIES_ANALYZED",
       "target_phase": "B-09",
       "new_owner_creation": "FORBIDDEN",
       "registered_producers": [
@@ -2207,6 +2207,25 @@
             "evidence-shadow-runtime-collector-v1",
             "evidence-shadow-inventory-read-model-v1"
           ]
+        },
+        {
+          "producer_id": "evidence-consumer-dependency-inventory-v1",
+          "path": "docs/architecture/semantic_convergence/GEOX-B09E-EVIDENCE-CONSUMER-DEPENDENCY-INVENTORY-V1.json",
+          "role": "B-09e machine-readable analysis of Evidence-family legacy consumer dependencies using the exact B-09e runtime corpus; reporting only and unable to migrate consumers or remove authority",
+          "authority_level": "REPORTING_ARTIFACT",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "evidence_consumer_dependency_inventory_v1",
+            "AGRONOMY_JUDGE_CALLER_INJECTED_VERDICT_DEPENDENCY_UNMIGRATED",
+            "STAGE1_EVIDENCE_AUTHORITY_NOT_COVERED_BY_EVIDENCE_JUDGE_RUNTIME_CORPUS"
+          ],
+          "connection_class": "REPORTING_ARTIFACT_PLANE",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
         }
       ],
       "registered_consumers": [
@@ -2242,7 +2261,11 @@
         "B-09c does not connect the Stage-1 comparator, migrate an authoritative consumer, change a legacy verdict, or remove authority.",
         "B-09d adds one read-only tenant-scoped inventory of persisted B-09c Evidence shadow comparisons.",
         "B-09d treats rows without a valid persisted comparison as UNOBSERVED rather than fabricating MATCH, divergence, or missing states.",
-        "B-09d inventory has no consumer-migration or authority-removal permission."
+        "B-09d inventory has no consumer-migration or authority-removal permission.",
+        "B-09e locks a runtime-corpus-backed Evidence consumer dependency inventory without changing any runtime consumer.",
+        "B-09e finds Agronomy Judge uses a caller-injected evidence_judge_verdict and does not load evidence_judge_id.",
+        "B-09e confirms B-07 criterion/Decision Eligibility is the target evidence-consequence boundary; direct canonical evidence-to-BLOCK replacement is forbidden.",
+        "B-09e confirms Stage-1 remains a separate unshadowed grandfathered Evidence authority, so family-wide Evidence authority removal remains forbidden."
       ],
       "runtime_consumers": [
         {
