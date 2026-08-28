@@ -181,7 +181,12 @@ class FixtureDecoder implements ExternalEvidenceDecoderPortV1{
         },
         canonical_payload:{
           snapshot_kind:"FUTURE_WEATHER_ASSUMPTION",
-          points:[{horizon:1,valid_from:this.base,valid_to:addHours(this.base,1),precipitation_mm:0}],
+          points:Array.from({length:72},(_,index)=>({
+            horizon:index+1,
+            valid_from:addHours(this.base,index),
+            valid_to:addHours(this.base,index+1),
+            precipitation_mm:0,
+          })),
         },
       },
       {
@@ -200,7 +205,12 @@ class FixtureDecoder implements ExternalEvidenceDecoderPortV1{
         },
         canonical_payload:{
           snapshot_kind:"FUTURE_ET0_ASSUMPTION",
-          points:[{horizon:1,valid_from:this.base,valid_to:addHours(this.base,1),et0_mm_per_hour:0.1}],
+          points:Array.from({length:72},(_,index)=>({
+            horizon:index+1,
+            valid_from:addHours(this.base,index),
+            valid_to:addHours(this.base,index+1),
+            et0_mm_per_hour:0.1,
+          })),
         },
       },
     ];
