@@ -1,0 +1,250 @@
+name: b09c-evidence-runtime-shadow-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b09c-evidence-runtime-shadow-exact-2026-08-28
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal product head checkout
+        run: |
+          git checkout b35efbccfdaccf543c982d9ef8643a08bd7214e9
+          test "$(git rev-parse HEAD)" = "b35efbccfdaccf543c982d9ef8643a08bd7214e9"
+          test "$(git rev-parse HEAD^)" = "742cddefb82a8faa5657a35ed5dce1ad10d41f17"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09c Evidence runtime shadow collector
+        run: node --import tsx --test apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.contract.test.ts
+
+      - name: B-09b comparator regression
+        run: node --import tsx --test apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.contract.test.ts
+
+      - name: B-09a migration inventory regression
+        run: node --import tsx --test apps/server/src/contracts/semantic_migration_v1.contract.test.ts
+
+      - name: B-09c machine topology exactness
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const graph=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json","utf8"));
+          const sem=(reg.semantics||[]).find(x=>x.semantic_id==="governance.semantic_authority_migration");
+          if(!sem) throw new Error("B09C_MIGRATION_SEMANTIC_MISSING");
+          if(sem.current_state!=="SHADOW_RUNTIME_ACTIVE") throw new Error("B09C_MIGRATION_STATE_INVALID:"+sem.current_state);
+
+          const p=(sem.registered_producers||[]).find(x=>x.producer_id==="evidence-semantic-shadow-comparator-v1");
+          if(!p) throw new Error("B09C_COMPARATOR_PRODUCER_MISSING");
+          if(p.connection_class!=="ACTIVE_PARALLEL"||p.activation!=="API_ONLY"||p.runtime_edge!=="PROVEN") {
+            throw new Error("B09C_COMPARATOR_CONNECTIVITY_INVALID");
+          }
+          if(p.authority_level!=="SHADOW_ONLY_COMPARATOR") throw new Error("B09C_COMPARATOR_AUTHORITY_INVALID");
+          if(p.new_runtime_consumer_creation!=="FORBIDDEN") throw new Error("B09C_NEW_RUNTIME_CONSUMER_NOT_FROZEN");
+          if(JSON.stringify(p.grandfathered_runtime_consumers)!==JSON.stringify(["evidence-shadow-runtime-collector-v1"])) {
+            throw new Error("B09C_ALLOWED_RUNTIME_CONSUMER_SET_INVALID:"+JSON.stringify(p.grandfathered_runtime_consumers));
+          }
+
+          const consumers=sem.registered_consumers||[];
+          if(consumers.length!==1||consumers[0].consumer_id!=="evidence-shadow-runtime-collector-v1") {
+            throw new Error("B09C_REGISTERED_CONSUMER_SET_INVALID:"+JSON.stringify(consumers.map(x=>x.consumer_id)));
+          }
+          const runtime=sem.runtime_consumers||[];
+          if(runtime.length!==1||runtime[0].consumer_id!=="evidence-shadow-runtime-collector-v1"||runtime[0].evidence_edge_id!=="C-034") {
+            throw new Error("B09C_RUNTIME_CONSUMER_SET_INVALID:"+JSON.stringify(runtime));
+          }
+
+          const edge=(graph.current_connectivity_edges||[]).find(x=>x.edge_id==="C-034");
+          if(!edge) throw new Error("B09C_CONNECTIVITY_EDGE_MISSING");
+          if(edge.from_producer!=="evidence-semantic-shadow-comparator-v1"||
+             edge.to_consumer!=="evidence-shadow-runtime-collector-v1"||
+             edge.semantic_id!=="governance.semantic_authority_migration"||
+             edge.connection_class!=="ACTIVE_PARALLEL"||
+             edge.activation!=="API_ONLY"||
+             edge.runtime_edge!=="PROVEN"||
+             edge.status!=="CURRENT_PROVEN") {
+            throw new Error("B09C_CONNECTIVITY_EDGE_INVALID:"+JSON.stringify(edge));
+          }
+
+          const guards=new Map((reg.static_guards||[]).map(g=>[g.guard_id,g]));
+          const exact=(id,paths)=>{
+            const g=guards.get(id);
+            if(!g) throw new Error("B09C_GUARD_MISSING:"+id);
+            if(JSON.stringify(g.registered_paths||[])!==JSON.stringify(paths)) {
+              throw new Error("B09C_GUARD_PATHS_INVALID:"+id+":"+JSON.stringify(g.registered_paths));
+            }
+          };
+          exact("G-B02-23-b09c-shadow-collector-route-attachment",[
+            "apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.ts",
+            "apps/server/src/routes/judge_v2.ts",
+          ]);
+          exact("G-B02-24-evidence-shadow-comparator-runtime-consumer",[
+            "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts",
+            "apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.ts",
+          ]);
+          exact("G-B02-25-stage1-shadow-comparator-runtime-disconnection",[
+            "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts",
+          ]);
+          console.log("B09C_MACHINE_TOPOLOGY_EXACT_PASS");
+          NODE
+
+      - name: B-09c route attachment and Stage-1 disconnection
+        shell: bash
+        run: |
+          COLLECTOR="collectEvidenceJudgeSemanticShadowComparisonV1("
+          EVIDENCE_COMPARE="compareEvidenceJudgeToCanonicalEvidenceShadowV1("
+          STAGE1_COMPARE="compareStage1GateToCanonicalEvidenceShadowV1("
+
+          mapfile -t COLLECTOR_HITS < <(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -l "$COLLECTOR" apps/server/src | sort)
+          printf '%s\\n' "${COLLECTOR_HITS[@]}"
+          test "${#COLLECTOR_HITS[@]}" = "2"
+          test "${COLLECTOR_HITS[0]}" = "apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.ts"
+          test "${COLLECTOR_HITS[1]}" = "apps/server/src/routes/judge_v2.ts"
+
+          mapfile -t EVIDENCE_HITS < <(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -l "$EVIDENCE_COMPARE" apps/server/src | sort)
+          printf '%s\\n' "${EVIDENCE_HITS[@]}"
+          test "${#EVIDENCE_HITS[@]}" = "2"
+          test "${EVIDENCE_HITS[0]}" = "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts"
+          test "${EVIDENCE_HITS[1]}" = "apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.ts"
+
+          mapfile -t STAGE1_HITS < <(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -l "$STAGE1_COMPARE" apps/server/src | sort)
+          printf '%s\\n' "${STAGE1_HITS[@]}"
+          test "${#STAGE1_HITS[@]}" = "1"
+          test "${STAGE1_HITS[0]}" = "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts"
+
+          grep -q "semantic_shadow_comparison_v1: semanticShadowComparison" apps/server/src/routes/judge_v2.ts
+          echo "B09C_ROUTE_AND_STAGE1_BOUNDARY_PASS"
+
+      - name: Historical Evidence semantics remain unchanged
+        shell: bash
+        run: |
+          git diff --exit-code 742cddefb82a8faa5657a35ed5dce1ad10d41f17 b35efbccfdaccf543c982d9ef8643a08bd7214e9 --             apps/server/src/domain/judge/evidence_judge_v2.ts             apps/server/src/domain/decision/stage1_action_boundary_v1.ts             apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts             apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.ts
+          echo "B09C_HISTORICAL_EVIDENCE_SEMANTICS_UNCHANGED_PASS"
+
+      - name: Grandfathered authority remains unchanged
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const cp=require("child_process");
+          const before=JSON.parse(cp.execFileSync("git",["show","742cddefb82a8faa5657a35ed5dce1ad10d41f17:docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json"],{encoding:"utf8"}));
+          const after=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const flatten=(reg)=>(reg.semantics||[]).flatMap(s=>(s.registered_producers||[])
+            .filter(p=>p.grandfathered_duplicate===true)
+            .map(p=>({semantic_id:s.semantic_id,...p})))
+            .sort((a,b)=>(a.semantic_id+"::"+a.producer_id).localeCompare(b.semantic_id+"::"+b.producer_id));
+          const b=flatten(before), a=flatten(after);
+          if(b.length!==29||a.length!==29) throw new Error("B09C_GRANDFATHERED_COUNT_INVALID:"+b.length+":"+a.length);
+          if(JSON.stringify(b)!==JSON.stringify(a)) throw new Error("B09C_GRANDFATHERED_AUTHORITY_MUTATED");
+          if(a.some(x=>x.removal_target!=="B-09")) throw new Error("B09C_NON_B09_REMOVAL_TARGET");
+          console.log("B09C_29_GRANDFATHERED_UNCHANGED_PASS");
+          NODE
+
+      - name: Parallel authority removal graph remains unchanged
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const cp=require("child_process");
+          const before=JSON.parse(cp.execFileSync("git",["show","742cddefb82a8faa5657a35ed5dce1ad10d41f17:docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json"],{encoding:"utf8"}));
+          const after=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json","utf8"));
+          if(JSON.stringify(before.current_parallel_edges)!==JSON.stringify(after.current_parallel_edges)) {
+            throw new Error("B09C_PARALLEL_AUTHORITY_EDGES_MUTATED");
+          }
+          const delta=(after.current_connectivity_edges||[]).length-(before.current_connectivity_edges||[]).length;
+          if(delta!==1) throw new Error("B09C_CONNECTIVITY_DELTA_INVALID:"+delta);
+          console.log("B09C_PARALLEL_AUTHORITY_GRAPH_UNCHANGED_PASS");
+          NODE
+
+      - name: B-09a inventory still forbids authority removal
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const inv=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-B09-REPLACEMENT-READINESS-V1.json","utf8"));
+          if(inv.authority_removal_performed!==false) throw new Error("B09C_AUTHORITY_REMOVAL_PERFORMED");
+          const evidence=(inv.families||[]).find(x=>x.semantic_id==="evidence.qualification");
+          if(!evidence) throw new Error("B09C_EVIDENCE_FAMILY_MISSING");
+          if(evidence.consumer_migration_state!=="PARTIAL") throw new Error("B09C_CONSUMER_MIGRATION_OVERCLAIMED");
+          if(evidence.authority_removal_state!=="PENDING_CONSUMER_MIGRATION") throw new Error("B09C_REMOVAL_STATE_INVALID");
+          console.log("B09C_ZERO_AUTHORITY_REMOVAL_PASS");
+          NODE
+
+      - name: Real MCFT ADR LLM remain disconnected
+        shell: bash
+        run: |
+          git diff --exit-code 742cddefb82a8faa5657a35ed5dce1ad10d41f17 b35efbccfdaccf543c982d9ef8643a08bd7214e9 --             docs/digital_twin             .github/workflows/mcft*             apps/server/src/modules             packages
+          if grep -R --include='*.ts' -nE 'futureDecisionIntegrationBindingV1Schema\.parse\(' apps/server/src | grep -v '\.test\.ts'; then
+            echo "B09C_REAL_FUTURE_INTEGRATION_BINDING_FOUND"
+            exit 1
+          fi
+          echo "B09C_REAL_INTEGRATIONS_REMAIN_DISCONNECTED_PASS"
+
+      - name: B-08 and B-07 regression
+        run: |
+          node --import tsx --test apps/server/src/contracts/decision_episode_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/decision_integration_ports_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_episode_assembler_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/decision_eligibility_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: Earlier B-line regression boundary
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_decision_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+
+      - name: Product diff remains bounded
+        shell: bash
+        run: |
+          git diff --name-only 742cddefb82a8faa5657a35ed5dce1ad10d41f17 b35efbccfdaccf543c982d9ef8643a08bd7214e9 > /tmp/b09c-files.txt
+          cat /tmp/b09c-files.txt
+          test "$(wc -l < /tmp/b09c-files.txt | tr -d ' ')" = "6"
+          grep -qx "apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.contract.test.ts" /tmp/b09c-files.txt
+          grep -qx "apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.ts" /tmp/b09c-files.txt
+          grep -qx "apps/server/src/routes/judge_v2.ts" /tmp/b09c-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09C-EVIDENCE-RUNTIME-SHADOW-COLLECTION-V1.md" /tmp/b09c-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json" /tmp/b09c-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json" /tmp/b09c-files.txt
+          git diff --check 742cddefb82a8faa5657a35ed5dce1ad10d41f17 b35efbccfdaccf543c982d9ef8643a08bd7214e9
+          echo "B09C_BOUNDED_PRODUCT_DIFF_PASS"
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Marker
+        run: |
+          echo "B09C_EXACT_HEAD b35efbccfdaccf543c982d9ef8643a08bd7214e9"
+          echo "B09C_EVIDENCE_RUNTIME_SHADOW_COLLECTION_PASS"
