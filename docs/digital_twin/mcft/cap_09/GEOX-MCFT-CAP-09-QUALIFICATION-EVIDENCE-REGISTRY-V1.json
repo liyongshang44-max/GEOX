@@ -658,7 +658,7 @@
         "dependency_digest": "sha256:084721793a3361ca215e908e9204a969f39b3645fc1f9dd0bb110f30b442a481",
         "artifact_absence_reason": "RUN_LEVEL_PHASE3_PRIVATE_CANDIDATE_IO_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
-        "immutable_binding_sha256": "b15c0bdf85ca39560a2875d0ad09d3d4df572f4544cc6984fdf7b074f7580300"
+        "immutable_binding_sha256": "d1c646a6bafc11fe531bf8382119e8386686ea0d4565d971d52c2178c43937a1"
       }
     ],
     "durable_anchors": {
