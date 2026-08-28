@@ -4,6 +4,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const cp = require("node:child_process");
 
 const {
   AUTHORITY_PATH,
@@ -15,6 +16,7 @@ const {
 
 const ROOT = path.resolve(__dirname, "../..");
 const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json");
+const CURRENT_HEAD_SHA = cp.execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" }).trim();
 
 function readJson(rel) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8"));
@@ -38,7 +40,7 @@ function plan(authority, registry, changedPaths, stage = "SUCCESSOR_SUBJECT_PRE_
     changedPaths,
     stage,
     baseSha: authority.frozen_successor_subject_sha,
-    headSha: authority.frozen_successor_subject_sha,
+    headSha: CURRENT_HEAD_SHA,
   });
 }
 
