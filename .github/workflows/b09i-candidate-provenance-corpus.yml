@@ -1,0 +1,445 @@
+name: b09i-candidate-provenance-corpus
+
+on:
+  push:
+    branches:
+      - ci/bline-b09i-candidate-provenance-corpus-2026-08-28
+
+jobs:
+  runtime-corpus:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Lock B-09h completed product head
+        run: |
+          git checkout 8acb1b9e39f84a498e0a794cae0837537a452383
+          test "$(git rev-parse HEAD)" = "8acb1b9e39f84a498e0a794cae0837537a452383"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install and build workspace dependencies
+        run: |
+          pnpm install --no-frozen-lockfile
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: Prepare isolated runtime
+        run: |
+          cat > .env.b09i <<'EOF_INNER'
+          GEOX_RUNTIME_ENV=pilot
+          POSTGRES_USER=landos
+          POSTGRES_PASSWORD=b09i-postgres-strong-2026
+          POSTGRES_DB=landos
+          GEOX_MCFT_MIGRATOR_PASSWORD=b09i-mcft-migrator-strong-2026
+          GEOX_RUNTIME_DATABASE_PASSWORD=b09i-runtime-database-strong-2026
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT=8acb1b9e39f84a498e0a794cae0837537a452383
+          GEOX_AO_ACT_TOKEN=admin_token
+          GEOX_EXECUTOR_TOKEN=tenant_a_admin_token
+          GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
+          GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT=http://127.0.0.1:9000
+          MINIO_ROOT_USER=geoxminio
+          MINIO_ROOT_PASSWORD=b09i-minio-strong-2026
+          MQTT_AUTH_REQUIRED=1
+          GEOX_MQTT_AUTH_REQUIRED=1
+          MQTT_USERNAME=geoxmqtt
+          MQTT_PASSWORD=b09i-mqtt-strong-2026
+          CORS_ORIGINS=https://b09i-ci.geox.invalid
+          GEOX_ALLOWED_ORIGINS=https://b09i-ci.geox.invalid
+          APP_SECRET=b09i-app-secret-strong-2026
+          GEOX_APP_SECRET=b09i-app-secret-strong-2026
+          PUBLIC_BASE_URL=https://b09i-ci.geox.invalid
+          GEOX_PUBLIC_BASE_URL=https://b09i-ci.geox.invalid
+          GEOX_EXECUTION_DEFAULT_DISABLED=1
+          GEOX_EXECUTION_ENABLE_EXPLICITLY=0
+          GEOX_EXECUTION_ENABLE_REASON=b09i-candidate-provenance-analysis
+          GEOX_DEVTOOLS_ENABLED=0
+          EOF_INNER
+          timeout 180 docker compose --env-file .env.b09i -f docker-compose.commercial_v1.yml up -d minio minio-init
+          timeout 180 docker compose --env-file .env.b09i -f docker-compose.commercial_v1.yml up -d postgres mqtt
+          timeout 120 bash -lc 'until docker compose --env-file .env.b09i -f docker-compose.commercial_v1.yml exec -T postgres pg_isready -U landos -d landos >/dev/null 2>&1; do sleep 2; done'
+          docker compose --env-file .env.b09i -f docker-compose.commercial_v1.yml exec -T postgres \
+            psql -v ON_ERROR_STOP=1 -U landos -d landos \
+            < apps/server/db/migrations/2026_06_06_c8_formal_e2e_telemetry_projection_v1.sql
+          timeout 300 docker compose --env-file .env.b09i -f docker-compose.commercial_v1.yml up -d server
+
+      - name: Wait for API
+        run: timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health >/dev/null; do sleep 2; done'
+
+      - name: Prove runtime schema boundary and preprovisioned projection access
+        env:
+          DATABASE_URL: postgres://landos:b09i-postgres-strong-2026@127.0.0.1:5433/landos
+        run: |
+          node <<'NODE'
+          const assert=require("assert/strict");
+          const {Pool}=require("pg");
+          const pool=new Pool({connectionString:process.env.DATABASE_URL});
+          (async()=>{
+            const q=await pool.query("SELECT to_regclass('public.device_observation_index_v1') IS NOT NULL AS projection_exists, has_schema_privilege('geox_runtime_v1','public','CREATE') AS runtime_schema_create, has_table_privilege('geox_runtime_v1','public.device_observation_index_v1','SELECT') AS runtime_select, has_table_privilege('geox_runtime_v1','public.device_observation_index_v1','INSERT') AS runtime_insert, has_table_privilege('geox_runtime_v1','public.device_observation_index_v1','UPDATE') AS runtime_update");
+            const row=q.rows[0];
+            assert.equal(row.projection_exists,true);
+            assert.equal(row.runtime_schema_create,false);
+            assert.equal(row.runtime_select,true);
+            assert.equal(row.runtime_insert,true);
+            assert.equal(row.runtime_update,true);
+            console.log("B09I_PREPROVISIONED_OBSERVATION_PROJECTION_RUNTIME_BOUNDARY_PASS");
+          })().finally(()=>pool.end()).catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Create exact recommendation-only runtime fixture and capture provenance
+        env:
+          DATABASE_URL: postgres://landos:b09i-postgres-strong-2026@127.0.0.1:5433/landos
+        run: |
+          mkdir -p acceptance-output
+          node --import tsx <<'NODE'
+          const fs=require("fs");
+          const assert=require("assert/strict");
+          const {createHash,randomUUID}=require("crypto");
+          const {Pool}=require("pg");
+
+          const base="http://127.0.0.1:3001";
+          const token="admin_token";
+          const pool=new Pool({connectionString:process.env.DATABASE_URL});
+          const runId="b09i_"+Date.now();
+          const scope={
+            tenant_id:"tenantA",
+            project_id:"projectA",
+            group_id:"groupA",
+            field_id:"field_"+runId,
+            season_id:"season_"+runId,
+            device_id:"dev_"+runId,
+            credential_id:"cred_"+runId,
+          };
+          const sha=(s)=>createHash("sha256").update(String(s)).digest("hex");
+
+          async function call(path,method="GET",body){
+            const res=await fetch(base+path,{
+              method,
+              headers:{
+                authorization:"Bearer "+token,
+                ...(body===undefined?{}:{"content-type":"application/json"})
+              },
+              body:body===undefined?undefined:JSON.stringify(body)
+            });
+            const text=await res.text();
+            let json=null; try{json=text?JSON.parse(text):null}catch{}
+            assert.equal(res.ok,true,method+" "+path+" failed "+res.status+" "+text);
+            assert.equal(json?.ok,true,method+" "+path+" json.ok!=true "+text);
+            return json;
+          }
+
+          async function upsertDevice(){
+            const ts=Date.now();
+            await pool.query("ALTER TABLE device_index_v1 ADD COLUMN IF NOT EXISTS device_mode TEXT NOT NULL DEFAULT 'physical'").catch(()=>undefined);
+            await pool.query("ALTER TABLE device_index_v1 ADD COLUMN IF NOT EXISTS last_credential_id TEXT NULL").catch(()=>undefined);
+            await pool.query("ALTER TABLE device_index_v1 ADD COLUMN IF NOT EXISTS last_credential_status TEXT NULL").catch(()=>undefined);
+            await pool.query("CREATE TABLE IF NOT EXISTS device_capability (tenant_id TEXT NOT NULL, device_id TEXT NOT NULL, capabilities JSONB NOT NULL DEFAULT '[]'::jsonb, updated_ts_ms BIGINT NOT NULL, PRIMARY KEY (tenant_id, device_id))");
+            await pool.query("CREATE TABLE IF NOT EXISTS device_binding_index_v1 (tenant_id TEXT NOT NULL, device_id TEXT NOT NULL, field_id TEXT NOT NULL, bound_ts_ms BIGINT NULL, PRIMARY KEY (tenant_id, device_id, field_id))");
+            await pool.query("CREATE TABLE IF NOT EXISTS device_credential_index_v1 (tenant_id TEXT NOT NULL, device_id TEXT NOT NULL, credential_id TEXT NOT NULL, credential_hash TEXT NOT NULL, status TEXT NOT NULL, issued_ts_ms BIGINT NOT NULL, revoked_ts_ms BIGINT NULL, created_ts_ms BIGINT NULL, updated_ts_ms BIGINT NULL, PRIMARY KEY (tenant_id, device_id, credential_id))");
+            await pool.query("CREATE TABLE IF NOT EXISTS device_status_index_v1 (tenant_id TEXT NOT NULL, project_id TEXT NULL, group_id TEXT NULL, field_id TEXT NULL, device_id TEXT NOT NULL, status TEXT NULL, last_telemetry_ts_ms BIGINT NULL, last_heartbeat_ts_ms BIGINT NULL, battery_percent INTEGER NULL, rssi_dbm INTEGER NULL, fw_ver TEXT NULL, updated_ts_ms BIGINT NOT NULL, PRIMARY KEY (tenant_id, device_id))");
+            await pool.query(
+              "INSERT INTO device_index_v1 (tenant_id,device_id,display_name,device_mode,created_ts_ms,last_credential_id,last_credential_status) VALUES ($1,$2,$3,'physical',$4,$5,'ACTIVE') ON CONFLICT (tenant_id,device_id) DO UPDATE SET display_name=EXCLUDED.display_name,device_mode='physical',last_credential_id=EXCLUDED.last_credential_id,last_credential_status='ACTIVE'",
+              [scope.tenant_id,scope.device_id,"B09i provenance device",ts,scope.credential_id]
+            );
+            await pool.query(
+              "INSERT INTO device_capability (tenant_id,device_id,capabilities,updated_ts_ms) VALUES ($1,$2,$3::jsonb,$4) ON CONFLICT (tenant_id,device_id) DO UPDATE SET capabilities=EXCLUDED.capabilities,updated_ts_ms=EXCLUDED.updated_ts_ms",
+              [scope.tenant_id,scope.device_id,JSON.stringify(["telemetry.soil_moisture","telemetry.water_pressure","telemetry.inlet_flow_lpm","telemetry.outlet_flow_lpm","telemetry.pressure_drop_kpa","device.irrigation.valve.open"]),ts]
+            );
+            await pool.query(
+              "INSERT INTO device_binding_index_v1 (tenant_id,device_id,field_id,bound_ts_ms) VALUES ($1,$2,$3,$4) ON CONFLICT (tenant_id,device_id,field_id) DO UPDATE SET bound_ts_ms=EXCLUDED.bound_ts_ms",
+              [scope.tenant_id,scope.device_id,scope.field_id,ts]
+            );
+            await pool.query(
+              "INSERT INTO device_credential_index_v1 (tenant_id,device_id,credential_id,credential_hash,status,issued_ts_ms,revoked_ts_ms,created_ts_ms,updated_ts_ms) VALUES ($1,$2,$3,$4,'ACTIVE',$5,NULL,$5,$5) ON CONFLICT (tenant_id,device_id,credential_id) DO UPDATE SET credential_hash=EXCLUDED.credential_hash,status='ACTIVE',revoked_ts_ms=NULL,updated_ts_ms=EXCLUDED.updated_ts_ms",
+              [scope.tenant_id,scope.device_id,scope.credential_id,sha(runId+":"+scope.device_id+":credential"),ts]
+            );
+            await pool.query(
+              "INSERT INTO device_status_index_v1 (tenant_id,project_id,group_id,field_id,device_id,status,last_telemetry_ts_ms,last_heartbeat_ts_ms,battery_percent,rssi_dbm,fw_ver,updated_ts_ms) VALUES ($1,$2,$3,$4,$5,'ONLINE',$6,$6,84,-52,'b09i',$6) ON CONFLICT (tenant_id,device_id) DO UPDATE SET project_id=EXCLUDED.project_id,group_id=EXCLUDED.group_id,field_id=EXCLUDED.field_id,status='ONLINE',last_telemetry_ts_ms=EXCLUDED.last_telemetry_ts_ms,last_heartbeat_ts_ms=EXCLUDED.last_heartbeat_ts_ms,battery_percent=EXCLUDED.battery_percent,rssi_dbm=EXCLUDED.rssi_dbm,updated_ts_ms=EXCLUDED.updated_ts_ms",
+              [scope.tenant_id,scope.project_id,scope.group_id,scope.field_id,scope.device_id,ts-30_000]
+            );
+          }
+
+          let writeObservationRunPipelineAndRefreshFieldV1;
+          let appendRawSampleV1;
+
+          async function appendCanonicalRaw(metric,unit,value,tsMs,seq){
+            return appendRawSampleV1(pool,{
+              sample_id:"rs_"+runId+"_"+metric+"_"+String(seq).padStart(3,"0"),
+              sensor_id:scope.device_id,
+              project_id:scope.project_id,
+              group_id:scope.group_id,
+              field_id:scope.field_id,
+              ts_ms:tsMs,
+              metric,
+              value,
+              unit,
+              qc_quality:"ok",
+              source:"device",
+              sample_kind:"raw",
+              interpolated:false,
+              synthetic:false,
+              fake_sample:false,
+              payload:{
+                tenant_id:scope.tenant_id,
+                project_id:scope.project_id,
+                group_id:scope.group_id,
+                field_id:scope.field_id,
+                device_id:scope.device_id,
+                credential_id:scope.credential_id,
+                formal_scenario_run_id:runId
+              }
+            },{
+              tenant_id:scope.tenant_id,
+              project_id:scope.project_id,
+              group_id:scope.group_id
+            });
+          }
+
+          async function postObservation(metric,unit,value,tsMs){
+            const client=await pool.connect();
+            try{
+              return await writeObservationRunPipelineAndRefreshFieldV1(client,{
+                tenant_id:scope.tenant_id,
+                project_id:scope.project_id,
+                group_id:scope.group_id,
+                device_id:scope.device_id,
+                field_id:scope.field_id,
+                metric,
+                value,
+                unit,
+                quality_flags:["OK"],
+                confidence:0.95,
+                observed_at_ts_ms:tsMs,
+                source_fact_id:"b09i_fixture:"+runId+":"+metric+":"+tsMs,
+                source_lane:"FORMAL_OPERATION",
+                is_simulated:false,
+                formal_eligible:true,
+                evidence_level:"FORMAL",
+                dev_source:"B09I_VALIDATION_FIXTURE"
+              });
+            }finally{
+              client.release();
+            }
+          }
+
+          (async()=>{
+            ({writeObservationRunPipelineAndRefreshFieldV1}=await import("./apps/server/src/services/device_observation_service_v1.ts"));
+            ({appendRawSampleV1}=await import("./apps/server/src/domain/sensing/raw_sample_fact_envelope_v1.ts"));
+            await upsertDevice();
+
+            await call("/api/v1/programs","POST",{
+              tenant_id:scope.tenant_id,
+              project_id:scope.project_id,
+              group_id:scope.group_id,
+              program_id:"prg_"+runId,
+              field_id:scope.field_id,
+              season_id:scope.season_id,
+              crop_code:"corn",
+              status:"ACTIVE",
+              goal_profile:{yield_priority:"high",quality_priority:"medium",residue_priority:"low",water_saving_priority:"medium",cost_priority:"medium"},
+              constraints:{forbid_pesticide_classes:[],forbid_fertilizer_types:[],max_irrigation_mm_per_day:null,manual_approval_required_for:[],allow_night_irrigation:true,max_irrigation_rounds_per_day:3},
+              budget:{max_cost_total:null,currency:"USD"},
+              execution_policy:{mode:"approval_required",auto_execute_allowed_task_types:[]}
+            });
+
+            const rawMetrics=[
+              ["soil_moisture","%",19],
+              ["inlet_flow_lpm","L/min",36],
+              ["outlet_flow_lpm","L/min",20],
+              ["pressure_drop_kpa","kPa",38]
+            ];
+            const rawStartTs=Date.now()-6*60*60*1000+60*1000;
+            let rawSeq=0;
+            for(const [metric,unit,baseValue] of rawMetrics){
+              for(let i=0;i<19;i++){
+                rawSeq+=1;
+                await appendCanonicalRaw(metric,unit,baseValue+i*0.01,rawStartTs+i*20*60*1000,rawSeq);
+              }
+            }
+            const markerCount=await pool.query(
+              "SELECT count(*)::int AS n FROM markers WHERE kind='raw_sample_runtime_available_v1' AND payload_json->>'field_id'=$1",
+              [scope.field_id]
+            );
+            assert.equal(Number(markerCount.rows[0]?.n||0),76,"post-commit availability markers missing");
+
+            const observations=[
+              ["soil_moisture","%",19.18],
+              ["signal_strength_dbm","dBm",-52],
+              ["battery_level_pct","%",84],
+              ["packet_loss_rate_pct","%",0.5],
+              ["inlet_flow_lpm","L/min",36.18],
+              ["outlet_flow_lpm","L/min",20.18],
+              ["pressure_drop_kpa","kPa",38.18]
+            ];
+            const observationStartTs=Date.now()-7*60*1000;
+            for(let i=0;i<observations.length;i++){
+              const [metric,unit,value]=observations[i];
+              await postObservation(metric,unit,value,observationStartTs+i*60*1000);
+            }
+
+            const recommendation=await call("/api/v1/recommendations/generate","POST",{
+              tenant_id:scope.tenant_id,
+              project_id:scope.project_id,
+              group_id:scope.group_id,
+              field_id:scope.field_id,
+              season_id:scope.season_id,
+              device_id:scope.device_id,
+              crop_code:"corn"
+            });
+            const recommendationId=String(recommendation?.recommendations?.[0]?.recommendation_id||"").trim();
+            assert.ok(recommendationId,"generated recommendation_id missing");
+
+            const q=await pool.query(
+              "SELECT fact_id,occurred_at,source,record_json FROM facts WHERE (record_json::jsonb->>'type')='decision_recommendation_v1' AND (record_json::jsonb#>>'{payload,tenant_id}')=$1 AND (record_json::jsonb#>>'{payload,project_id}')=$2 AND (record_json::jsonb#>>'{payload,group_id}')=$3 AND (record_json::jsonb#>>'{payload,recommendation_id}')=$4 ORDER BY occurred_at DESC,fact_id DESC LIMIT 1",
+              [scope.tenant_id,scope.project_id,scope.group_id,recommendationId]
+            );
+            assert.equal(q.rows.length,1,"generated recommendation fact not found");
+            const row=q.rows[0];
+            const payload=row.record_json?.payload||{};
+            assert.equal(String(row.source),"api/v1/recommendations/generate");
+
+            const forbiddenGenerateWrites=await pool.query(
+              "SELECT record_json::jsonb->>'type' AS type,count(*)::int AS n FROM facts WHERE source='api/v1/recommendations/generate' AND (record_json::jsonb->>'type') = ANY($1::text[]) GROUP BY type ORDER BY type",
+              [["approval_request_v1","approval_decision_v1","operation_plan_v1","operation_plan_transition_v1","ao_act_task_v0","ao_act_receipt_v1"]]
+            );
+            assert.deepEqual(forbiddenGenerateWrites.rows,[]);
+
+            const candidateFacts=await pool.query(
+              "SELECT count(*)::int AS n FROM facts WHERE (record_json::jsonb->>'type')='candidate_decision_v1'"
+            );
+            const table=await pool.query("SELECT to_regclass('public.candidate_decision_v1') AS reg");
+            const indexTable=await pool.query("SELECT to_regclass('public.candidate_decision_index_v1') AS reg");
+
+            const out={
+              schema_version:"b09i_candidate_provenance_runtime_corpus_v1",
+              product_head:"8acb1b9e39f84a498e0a794cae0837537a452383",
+              observation_scope_class:"SYNTHETIC_ACCEPTANCE_RUNTIME",
+              runtime_path:"PRODUCT_RAW_PERSISTENCE_PLUS_OBSERVATION_PIPELINE_TO_HTTP_RECOMMENDATION_PREAPPROVAL_ONLY",
+              source_fact:{
+                fact_id:String(row.fact_id),
+                occurred_at:new Date(row.occurred_at).toISOString(),
+                source:String(row.source),
+                type:"decision_recommendation_v1",
+                recommendation_id:String(payload.recommendation_id),
+                status:String(payload.status||""),
+                action_type:String(payload.action_type||""),
+                tenant_id:String(payload.tenant_id||""),
+                project_id:String(payload.project_id||""),
+                group_id:String(payload.group_id||""),
+                field_id:String(payload.field_id||""),
+                season_id:payload.season_id==null?null:String(payload.season_id),
+                snapshot_id:payload.snapshot_id==null?null:String(payload.snapshot_id),
+                crop_stage:payload.crop_stage==null?null:String(payload.crop_stage),
+                created_ts:payload.created_ts??null,
+                legacy_evidence_ref_count:Array.isArray(payload.evidence_refs)?payload.evidence_refs.length:0,
+                has_candidate_id:Object.prototype.hasOwnProperty.call(payload,"candidate_id"),
+                has_context_snapshot_ref:Object.prototype.hasOwnProperty.call(payload,"context_snapshot_ref"),
+                has_crop_stage_state_ref:Object.prototype.hasOwnProperty.call(payload,"crop_stage_state_ref"),
+                has_calculation_result_refs:Object.prototype.hasOwnProperty.call(payload,"calculation_result_refs")
+              },
+              candidate_persistence:{
+                candidate_decision_fact_count:Number(candidateFacts.rows[0]?.n||0),
+                candidate_decision_table_exists:Boolean(table.rows[0]?.reg),
+                candidate_decision_index_exists:Boolean(indexTable.rows[0]?.reg)
+              },
+              recommendation_generate_write_boundary:{
+                forbidden_downstream_fact_rows:forbiddenGenerateWrites.rows
+              },
+              b06c_projection_context_resolution:{
+                candidate_id:"MISSING_CANONICAL_IDENTITY_POLICY",
+                source_ref:"RESOLVABLE_FROM_IMMUTABLE_FACT_ID",
+                source_type:"RESOLVABLE_DECISION_RECOMMENDATION_V1",
+                scope:"RESOLVABLE_FROM_SCOPED_FACT_PAYLOAD",
+                evidence_qualification_refs:"NOT_ON_RECOMMENDATION__AVAILABLE_SEPARATELY_ONLY_THROUGH_B09G_B09H_WHEN_EVIDENCE_JUDGE_BOUND",
+                context_snapshot_ref:"MISSING_CANONICAL__LEGACY_SNAPSHOT_ID_MUST_NOT_BE_PROMOTED",
+                crop_stage_state_ref:"MISSING_CANONICAL__LEGACY_CROP_STAGE_MUST_NOT_BE_PROMOTED",
+                calculation_result_refs:"MISSING_CANONICAL",
+                interpretation_refs:"OPTIONAL_EMPTY_ALLOWED",
+                created_at:"RESOLVABLE_FROM_FACT_OCCURRED_AT",
+                decision_time:"NOT_CANONICALLY_ESTABLISHED"
+              },
+              conclusions:[
+                "CANONICAL_RAW_SAMPLE_PERSISTENCE_AND_POST_COMMIT_MARKERS_ESTABLISHED_BY_PRODUCT_HELPER",
+                "PERSISTED_RECOMMENDATION_SOURCE_IS_RESOLVABLE",
+                "NO_PERSISTED_CANDIDATE_DECISION_IDENTITY",
+                "B06C_ADAPTER_REQUIRES_EXTERNALLY_SUPPLIED_CANDIDATE_ID",
+                "LEGACY_SNAPSHOT_AND_CROP_STAGE_CANNOT_BE_PROMOTED_TO_CANONICAL_CONTEXT_OR_STAGE",
+                "CANONICAL_CALCULATION_RESULT_REFS_NOT_PRESENT",
+                "NOT_READY_FOR_DECISION_ELIGIBILITY_RUNTIME_BINDING",
+                "RECOMMENDATION_GENERATE_CREATED_NO_APPROVAL_PLAN_TASK_OR_RECEIPT",
+                "NO_CONSUMER_MIGRATION",
+                "NO_AUTHORITY_REMOVAL"
+              ]
+            };
+            assert.equal(out.source_fact.has_candidate_id,false);
+            assert.equal(out.source_fact.has_context_snapshot_ref,false);
+            assert.equal(out.source_fact.has_crop_stage_state_ref,false);
+            assert.equal(out.source_fact.has_calculation_result_refs,false);
+            assert.equal(out.candidate_persistence.candidate_decision_fact_count,0);
+            assert.equal(out.candidate_persistence.candidate_decision_table_exists,false);
+            assert.equal(out.candidate_persistence.candidate_decision_index_exists,false);
+            fs.writeFileSync("acceptance-output/b09i-candidate-provenance-runtime-corpus.json",JSON.stringify(out,null,2)+"\n");
+            console.log(JSON.stringify(out,null,2));
+            console.log("B09I_CANDIDATE_PROVENANCE_RUNTIME_CORPUS_PASS");
+          })().finally(()=>pool.end()).catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Diagnose recommendation fixture failure
+        if: failure()
+        env:
+          DATABASE_URL: postgres://landos:b09i-postgres-strong-2026@127.0.0.1:5433/landos
+        run: |
+          echo "=== SERVER LOGS ==="
+          docker compose --env-file .env.b09i -f docker-compose.commercial_v1.yml logs --no-color --tail=500 server || true
+          echo "=== RUNTIME DB DIAGNOSTIC ==="
+          node <<'NODE'
+          const {Pool}=require("pg");
+          const pool=new Pool({connectionString:process.env.DATABASE_URL});
+          (async()=>{
+            for(const sql of [
+              "SELECT count(*)::int AS n FROM raw_samples",
+              "SELECT sample_id,sensor_id,metric,value,qc_quality,source,payload_json FROM raw_samples ORDER BY created_at DESC LIMIT 3",
+              "SELECT count(*)::int AS n FROM facts WHERE (record_json::jsonb->>'type')='device_observation_v1'",
+              "SELECT fact_id,source,record_json FROM facts WHERE (record_json::jsonb->>'type')='device_observation_v1' ORDER BY occurred_at DESC LIMIT 3",
+              "SELECT to_regclass('public.derived_sensing_state_index_v1') AS reg",
+              "SELECT count(*)::int AS n FROM derived_sensing_state_index_v1",
+              "SELECT state_type,payload_json,fact_id FROM derived_sensing_state_index_v1 ORDER BY computed_at_ts_ms DESC LIMIT 10",
+              "SELECT count(*)::int AS n FROM skill_run_v1"
+            ]){
+              try{
+                const r=await pool.query(sql);
+                console.log("SQL",sql);
+                console.log(JSON.stringify(r.rows,null,2));
+              }catch(e){
+                console.log("SQL_ERROR",sql,String(e));
+              }
+            }
+          })().finally(()=>pool.end()).catch(e=>{console.error(e);process.exitCode=0});
+          NODE
+
+      - name: Upload runtime corpus
+        uses: actions/upload-artifact@v4
+        with:
+          name: b09i-candidate-provenance-runtime-corpus
+          path: acceptance-output/b09i-candidate-provenance-runtime-corpus.json
+          if-no-files-found: error
+
+      - name: Prove analysis did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "8acb1b9e39f84a498e0a794cae0837537a452383"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09I_CORPUS_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Stop isolated runtime
+        if: always()
+        run: docker compose --env-file .env.b09i -f docker-compose.commercial_v1.yml down -v || true
