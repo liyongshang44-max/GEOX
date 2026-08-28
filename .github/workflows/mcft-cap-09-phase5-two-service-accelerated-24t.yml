@@ -529,7 +529,9 @@ jobs:
             2>&1 | tee "$GEOX_PHASE5_CONTROL_ROOT/twin-fencing-seed.log"
           tail -n 1 "$GEOX_PHASE5_CONTROL_ROOT/twin-fencing-seed.log" | jq . > "$GEOX_PHASE5_CONTROL_ROOT/twin-fencing-seed-proof.json"
           test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/twin-fencing-seed-proof.json")" = "PASS"
-          test "$(jq -r .engineering_fixture_fact_count "$GEOX_PHASE5_CONTROL_ROOT/twin-fencing-seed-proof.json")" = "15"
+          test "$(jq -r .engineering_fixture_fact_count "$GEOX_PHASE5_CONTROL_ROOT/twin-fencing-seed-proof.json")" = "17"
+          test "$(jq -r .future_weather_fact_count "$GEOX_PHASE5_CONTROL_ROOT/twin-fencing-seed-proof.json")" = "8"
+          test "$(jq -r .future_et0_fact_count "$GEOX_PHASE5_CONTROL_ROOT/twin-fencing-seed-proof.json")" = "8"
           test "$(jq -r .live_evidence_claim "$GEOX_PHASE5_CONTROL_ROOT/twin-fencing-seed-proof.json")" = "false"
 
       - name: Prepare historical valid runtime-config chain for focused Twin fencing
@@ -596,6 +598,12 @@ jobs:
             index=$((index+1)); test "$(docker wait "$cid")" = "0"
             docker logs "$cid" > "$GEOX_PHASE5_CONTROL_ROOT/twin-o00-o07-$index.log" 2>&1 || true
           done
+          contention_seen=0
+          if grep -q '"detail":"RETRYABLE_CYCLE_FAILURE"' "$GEOX_PHASE5_CONTROL_ROOT/twin-o00-o07-1.log" \
+            || grep -q '"detail":"RETRYABLE_CYCLE_FAILURE"' "$GEOX_PHASE5_CONTROL_ROOT/twin-o00-o07-2.log"; then
+            contention_seen=1
+          fi
+          test "$contention_seen" = "1"
           cursor="$(docker compose -f "$COMPOSE_FILE" exec -T postgres psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc "SELECT next_slot_index FROM twin_shadow_online_scheduler_cursor_v1;")"
           test "$cursor" = "8"
           terminal="$(docker compose -f "$COMPOSE_FILE" exec -T postgres psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc "SELECT count(*) FROM twin_shadow_online_scheduler_slot_v1 WHERE state IN ('COMPLETED','DEGRADED');")"
@@ -611,6 +619,7 @@ jobs:
               qualification_fixture_seed:true,live_evidence_claim:false,full_24t_claim:false,
               duplicate_container_count:2,container_hostnames:[$host1,$host2],terminal_slot_count:8,
               distinct_terminal_lease_owner_count:$owners,distinct_fencing_token_count:8,
+              retryable_coordination_contention_observed:true,
               maximum_active_slots_per_scope:1,all_terminal_owners_are_real_container_hostnames:true,
               production_twin_process_graph_reused:true,provider_request_count:0,evidence_supply_cursor_mutation:false}' \
             > "$GEOX_PHASE5_CONTROL_ROOT/twin-duplicate-proof.json"

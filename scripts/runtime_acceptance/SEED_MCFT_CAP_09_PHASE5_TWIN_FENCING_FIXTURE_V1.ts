@@ -95,16 +95,16 @@ async function main():Promise<void> {
   const pool=new Pool({connectionString:env("DATABASE_URL"),max:2});
   try {
     const records:CanonicalReplayEvidenceRecordV1[]=[soil(a0)];
-    for(let i=0;i<7;i++) records.push(assumption("weather",addHours(a0,i),i+1),assumption("et0",addHours(a0,i),i+1));
+    for(let i=0;i<8;i++) records.push(assumption("weather",addHours(a0,i),i+1),assumption("et0",addHours(a0,i),i+1));
     for(const r of records) await insert(pool,r);
     const count=Number((await pool.query(
       "SELECT count(*)::int AS n FROM facts WHERE source=$1 AND record_json#>>'{payload,dataset_id}'=$2",
       [SOURCE,DATASET],
     )).rows[0]?.n??-1);
-    if(count!==15) throw new Error("PHASE5_TWIN_FENCING_SEED_EXACT_15_REQUIRED:"+count);
+    if(count!==17) throw new Error("PHASE5_TWIN_FENCING_SEED_EXACT_17_REQUIRED:"+count);
     const proof={
       schema_version:"geox_mcft_cap09_phase5_twin_fencing_fixture_seed_v1",status:"PASS",a0,
-      engineering_fixture_fact_count:count,soil_fact_count:1,future_weather_fact_count:7,future_et0_fact_count:7,
+      engineering_fixture_fact_count:count,soil_fact_count:1,future_weather_fact_count:8,future_et0_fact_count:8,
       fixture_disclosure:"CONTROLLED_ENGINEERING_FIXTURE_NOT_FORMAL_EXTERNAL_EVIDENCE",
       purpose:"TWIN_CONTAINER_DB_LEASE_FENCING_FOCUSED_QUALIFICATION_ONLY",
       live_evidence_claim:false,full_24t_claim:false,provider_request_count:0,
