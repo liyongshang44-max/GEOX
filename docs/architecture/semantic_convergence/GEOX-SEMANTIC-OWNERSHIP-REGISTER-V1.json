@@ -1390,7 +1390,9 @@
         "B-06g registers one pure AgronomyRecommendationV2 -> CandidateDecisionV1 compatibility adapter with no runtime consumer.",
         "B-06g never promotes legacy rule-engine crop_stage/crop_code into canonical Stage/Context authority.",
         "B-06g keeps evidence_basis and SkillTrace evidence as legacy provenance only; canonical EvidenceQualification refs remain explicit.",
-        "B-06g runtime-validates the declared AgronomyRecommendationV2 action vocabulary instead of trusting the rule_engine type assertion."
+        "B-06g runtime-validates the declared AgronomyRecommendationV2 action vocabulary instead of trusting the rule_engine type assertion.",
+        "B-09i runtime provenance corpus on the formal/product decision-engine recommendation path proves that a persisted decision_recommendation_v1 source fact, immutable fact_id, scope, action, status, and occurred_at are resolvable, while no persisted CandidateDecisionV1 identity or canonical candidate_id exists on that path.",
+        "B-09i does not authorize deriving candidate_id from recommendation_id or fact_id, or promoting legacy evidence_refs, snapshot_id, crop_stage, or created_ts into canonical EvidenceQualification, Context, CropStage, or Candidate timestamps; the B-09h QUALIFIED_EVIDENCE criterion remains candidate-unbound and Decision Eligibility Runtime remains disconnected."
       ],
       "runtime_consumers": [
         {
