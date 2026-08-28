@@ -60,6 +60,40 @@ function requestPrefixV1(value: string): string {
   return text;
 }
 
+export type ProductionEvidenceSourceFamilyV1 =
+  | "KBS_SOIL"
+  | "KBS_RAW_HOURLY"
+  | "GFS_BUNDLE";
+
+const ALL_PRODUCTION_EVIDENCE_SOURCE_FAMILIES_V1:
+  readonly ProductionEvidenceSourceFamilyV1[] = [
+    "KBS_SOIL",
+    "KBS_RAW_HOURLY",
+    "GFS_BUNDLE",
+  ];
+
+function normalizeSourceFamiliesV1(
+  value: readonly ProductionEvidenceSourceFamilyV1[] | undefined,
+): readonly ProductionEvidenceSourceFamilyV1[] {
+  const families = value ?? ALL_PRODUCTION_EVIDENCE_SOURCE_FAMILIES_V1;
+  if (!Array.isArray(families) || families.length === 0) {
+    throw new Error("PHASE3_EVIDENCE_WORK_SOURCE_FAMILIES_REQUIRED");
+  }
+  const seen = new Set<string>();
+  for (const family of families) {
+    if (!ALL_PRODUCTION_EVIDENCE_SOURCE_FAMILIES_V1.includes(family)) {
+      throw new Error("PHASE3_EVIDENCE_WORK_SOURCE_FAMILY_INVALID:" + String(family));
+    }
+    if (seen.has(family)) {
+      throw new Error("PHASE3_EVIDENCE_WORK_SOURCE_FAMILY_DUPLICATE:" + family);
+    }
+    seen.add(family);
+  }
+  return ALL_PRODUCTION_EVIDENCE_SOURCE_FAMILIES_V1.filter((family) =>
+    seen.has(family)
+  );
+}
+
 export type ProductionEvidenceWorkItemFactoryConfigV1 = {
   retention: RawEvidenceRetentionPortV1;
   fetch_impl?: typeof fetch;
@@ -82,10 +116,14 @@ export class ProductionEvidenceWorkItemFactoryV1 {
     target_logical_time: string;
     requested_at: string;
     request_id_prefix: string;
+    source_families?: readonly ProductionEvidenceSourceFamilyV1[];
+    restored_ingested_at?: string;
   }): readonly EvidenceRuntimeCycleWorkItemV1[] {
     const target = canonicalHourV1(input.target_logical_time, "PHASE3_EVIDENCE_WORK_TARGET_INVALID");
     const requestedAt = canonicalIsoV1(input.requested_at, "PHASE3_EVIDENCE_WORK_REQUESTED_AT_INVALID");
     const prefix = requestPrefixV1(input.request_id_prefix);
+
+    const sourceFamilies = normalizeSourceFamiliesV1(input.source_families);
 
     const soilRequest = buildKbsVariate25SoilFetchRequestV1({
       request_id: `${prefix}:soil`,
@@ -152,9 +190,18 @@ export class ProductionEvidenceWorkItemFactoryV1 {
         python_executable: this.config.python_executable,
         product_decoder_path: this.config.gfs_product_decoder_path,
         normalize_et0: true,
+        restored_ingested_at: input.restored_ingested_at,
       }),
     };
 
-    return [soil, rawHourly, gfs];
+    const byFamily: Readonly<Record<
+      ProductionEvidenceSourceFamilyV1,
+      EvidenceRuntimeCycleWorkItemV1
+    >> = {
+      KBS_SOIL: soil,
+      KBS_RAW_HOURLY: rawHourly,
+      GFS_BUNDLE: gfs,
+    };
+    return sourceFamilies.map((family) => byFamily[family]);
   }
 }

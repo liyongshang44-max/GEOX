@@ -1,0 +1,216 @@
+name: mcft-cap-09-phase5-production-equivalent-containers
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml'
+      - '.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml'
+      - 'apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts'
+      - 'apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts'
+      - 'apps/server/src/infra/migrations.ts'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase5_twin_fact_writer_acl.sql'
+      - 'apps/server/src/persistence/twin_runtime/postgres_mcft_cap09_twin_canonical_fact_writer_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_CANONICAL_FACT_WRITER_V1.ts'
+      - 'apps/server/scripts/write_dist_entries.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1.ts'
+      - 'apps/server/src/external_evidence/qualification/mcft_cap09_phase5_controlled_evidence_work_items_v1.ts'
+      - 'apps/server/src/external_evidence/qualification/mcft_cap09_phase5_evidence_runtime_qualification_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_twin_runtime_qualification_v1.ts'
+      - 'apps/server/src/external_evidence/qualification/mcft_cap09_phase5_capture_a0_fixture_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_verify_24t_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_CONTROLLED_PROVIDER_WORK_ITEMS_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_EVIDENCE_QUALIFICATION_ENTRYPOINT_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_QUALIFICATION_CLOCK_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_QUALIFICATION_COMPOSE_V1.ts'
+      - 'docker/runtime.Dockerfile'
+      - 'docker/mcft-cap09-runtime.Dockerfile'
+      - 'docker-compose.mcft-cap09-phase5-qualification.yml'
+      - 'docker/postgres/init/**'
+      - 'apps/server/package.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-phase5-production-equivalent-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  process-packaging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap09_phase5_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mcft_cap09_phase5_acceptance"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_phase5_acceptance
+      MCFT_CAP_09_PHASE5_DATABASE_NAME: mcft_cap09_phase5_acceptance
+      GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_phase5_acceptance
+      GEOX_MIGRATION_DATABASE_URL: postgres://geox_mcft_migrator_v1:phase5-migrator@127.0.0.1:5432/mcft_cap09_phase5_acceptance
+      GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:phase5-runtime@127.0.0.1:5432/mcft_cap09_phase5_acceptance
+      GEOX_MCFT_MIGRATOR_PASSWORD: phase5-migrator
+      GEOX_RUNTIME_DATABASE_PASSWORD: phase5-runtime
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prove Phase5 product and acceptance types
+        run: |
+          pnpm --filter @geox/server run typecheck
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_CONTROLLED_PROVIDER_WORK_ITEMS_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_EVIDENCE_QUALIFICATION_ENTRYPOINT_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_QUALIFICATION_CLOCK_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_QUALIFICATION_COMPOSE_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_CANONICAL_FACT_WRITER_V1.ts
+
+      - name: Prove controlled Evidence provider work-item boundary
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_CONTROLLED_PROVIDER_WORK_ITEMS_V1.ts
+
+      - name: Prove Evidence qualification process entrypoint boundary
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_EVIDENCE_QUALIFICATION_ENTRYPOINT_V1.ts
+
+      - name: Prove Twin qualification accelerated-clock boundary
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_QUALIFICATION_CLOCK_V1.ts
+
+      - name: Prove dedicated qualification Compose topology
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_QUALIFICATION_COMPOSE_V1.ts
+
+      - name: Build exact server production package
+        run: pnpm --filter @geox/server run build
+
+      - name: Prove Phase5 process authority separation
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts
+
+      - name: Apply production PostgreSQL init chain
+        run: |
+          set -euo pipefail
+          for file in docker/postgres/init/*.sql; do
+            echo "applying ${file}"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
+          done
+
+      - name: Apply exact database-platform bootstrap and full migration inventory
+        run: >-
+          pnpm exec tsx -e "import('./apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts').then(m => m.runMcftCap07DatabasePlatformBootstrapFromEnvironmentV1())"
+
+      - name: Prove isolated Evidence and Twin service principals
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1.ts
+
+      - name: Prove fenced Twin canonical-fact DB writer
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_CANONICAL_FACT_WRITER_V1.ts
+
+      - name: Prove stable compiled Runtime entrypoints
+        run: |
+          test -f apps/server/dist/runtime/mcft_cap09_twin_runtime.js
+          grep -Fq 'runMcftCap09TwinRuntimeProcessV1' apps/server/dist/runtime/mcft_cap09_twin_runtime.js
+          test -f apps/server/dist/qualification/mcft_cap09_phase5_evidence_runtime.js
+          grep -Fq 'runMcftCap09Phase5EvidenceRuntimeQualificationV1' apps/server/dist/qualification/mcft_cap09_phase5_evidence_runtime.js
+          test -f apps/server/dist/qualification/mcft_cap09_phase5_twin_runtime.js
+          grep -Fq 'runMcftCap09Phase5TwinRuntimeQualificationV1' apps/server/dist/qualification/mcft_cap09_phase5_twin_runtime.js
+          test -f apps/server/dist/qualification/mcft_cap09_phase5_capture_a0_fixture.js
+          test -f apps/server/dist/qualification/mcft_cap09_phase5_prepare_24t.js
+          test -f apps/server/dist/qualification/mcft_cap09_phase5_verify_24t.js
+          ! grep -Rq 'scripts/runtime_acceptance' apps/server/dist/runtime/mcft_cap09_twin_runtime.js apps/server/dist/qualification/mcft_cap09_phase5_evidence_runtime.js apps/server/dist/qualification/mcft_cap09_phase5_twin_runtime.js
+
+      - name: Prove Phase5 process source boundaries
+        shell: python
+        run: |
+          from pathlib import Path
+
+          lifecycle = Path('apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts').read_text()
+          twin = Path('apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts').read_text()
+          evidence = Path('apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts').read_text()
+          principals = Path('apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts').read_text()
+
+          for marker in ['scripts/runtime_acceptance', 'GITHUB_RUN_ID', 'github.event']:
+              if marker in lifecycle + twin + evidence + principals:
+                  raise SystemExit(f'PHASE5_PRODUCT_TEST_WIRING_FORBIDDEN:{marker}')
+
+          required_twin = [
+              'composeMcftCap09TwinRuntimeV1',
+              'GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL',
+              'assertMcftCap09ServicePrincipalV1(pool, "TWIN_RUNTIME")',
+              'createMcftCap09ProcessStopV1',
+          ]
+          for marker in required_twin:
+              if marker not in twin:
+                  raise SystemExit(f'PHASE5_TWIN_PROCESS_BINDING_MISSING:{marker}')
+
+          required_evidence = [
+              'composeEvidenceRuntimeV1',
+              'GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL',
+              'GEOX_MCFT_CAP09_EVIDENCE_S3_SECRET_ACCESS_KEY',
+              'assertMcftCap09ServicePrincipalV1(pool, "EVIDENCE_RUNTIME")',
+              'target_planner',
+          ]
+          for marker in required_evidence:
+              if marker not in evidence:
+                  raise SystemExit(f'PHASE5_EVIDENCE_PROCESS_BINDING_MISSING:{marker}')
+
+          if 'geox_mcft_cap09_evidence_runtime_login_v1' not in principals:
+              raise SystemExit('PHASE5_EVIDENCE_LOGIN_PRINCIPAL_REQUIRED')
+          if 'geox_mcft_cap09_twin_runtime_login_v1' not in principals:
+              raise SystemExit('PHASE5_TWIN_LOGIN_PRINCIPAL_REQUIRED')
+          if 'PHASE5_SERVICE_CROSS_PLANE_MEMBERSHIP_FORBIDDEN' not in principals and 'opposite' not in principals:
+              raise SystemExit('PHASE5_CROSS_PLANE_PRINCIPAL_GUARD_REQUIRED')
+
+          print('PHASE5_PROCESS_SOURCE_BOUNDARY_PASS')
+
+      - name: Upload Phase5 process packaging proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-phase5-process-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE5_CONTROLLED_PROVIDER_WORK_ITEMS_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE5_EVIDENCE_QUALIFICATION_ENTRYPOINT_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE5_TWIN_QUALIFICATION_CLOCK_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE5_QUALIFICATION_COMPOSE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE5_TWIN_CANONICAL_FACT_WRITER_V1_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90

@@ -1,0 +1,203 @@
+# MCFT-CAP-09 Production Hosting Phase 5 — dedicated production-equivalent qualification topology.
+#
+# Qualification only. No production ownership cutover.
+# Evidence/Twin services run compiled entrypoints that delegate to the same production
+# process/composition/host graphs. Qualification substitutes only controlled raw acquisition
+# and the explicitly acknowledged accelerated clock boundary.
+
+x-phase5-runtime-build: &phase5-runtime-build
+  context: .
+  dockerfile: docker/mcft-cap09-runtime.Dockerfile
+  args:
+    BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/server build
+
+x-phase5-runtime-image: &phase5-runtime-image
+  image: geox/mcft-cap09-phase5-qualification:${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?GEOX_DEPLOYMENT_SUBJECT_COMMIT is required}
+  working_dir: /app
+  init: true
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${GEOX_PHASE5_POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${GEOX_PHASE5_POSTGRES_PASSWORD:?GEOX_PHASE5_POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${GEOX_PHASE5_DATABASE_NAME:-geox_mcft_cap09_phase5_qualification}
+    volumes:
+      - mcft_cap09_phase5_pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\" -h 127.0.0.1 -p 5432"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  minio:
+    image: minio/minio:latest
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: ${GEOX_PHASE5_MINIO_ACCESS_KEY:?GEOX_PHASE5_MINIO_ACCESS_KEY is required}
+      MINIO_ROOT_PASSWORD: ${GEOX_PHASE5_MINIO_SECRET_KEY:?GEOX_PHASE5_MINIO_SECRET_KEY is required}
+    volumes:
+      - mcft_cap09_phase5_raw:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/minio/health/live > /dev/null"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  minio-init:
+    image: minio/mc:latest
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${GEOX_PHASE5_MINIO_ACCESS_KEY:?GEOX_PHASE5_MINIO_ACCESS_KEY is required}
+      MINIO_ROOT_PASSWORD: ${GEOX_PHASE5_MINIO_SECRET_KEY:?GEOX_PHASE5_MINIO_SECRET_KEY is required}
+      GEOX_PHASE5_RAW_BUCKET: ${GEOX_PHASE5_RAW_BUCKET:-mcft-cap09-phase5-raw}
+    entrypoint: ["/bin/sh", "-ceu"]
+    command:
+      - |
+        until mc alias set phase5 http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"; do sleep 1; done
+        mc mb --ignore-existing phase5/"$$GEOX_PHASE5_RAW_BUCKET"
+        mc stat phase5/"$$GEOX_PHASE5_RAW_BUCKET"
+        mc anonymous set private phase5/"$$GEOX_PHASE5_RAW_BUCKET" || true
+
+  database-platform-bootstrap:
+    <<: *phase5-runtime-image
+    build: *phase5-runtime-build
+    restart: "no"
+    command: ["node", "apps/server/dist/database/platform_bootstrap.js"]
+    environment:
+      GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: postgres://${GEOX_PHASE5_POSTGRES_USER:-postgres}:${GEOX_PHASE5_POSTGRES_PASSWORD:?GEOX_PHASE5_POSTGRES_PASSWORD is required}@postgres:5432/${GEOX_PHASE5_DATABASE_NAME:-geox_mcft_cap09_phase5_qualification}
+      GEOX_MIGRATION_DATABASE_URL: postgres://geox_mcft_migrator_v1:${GEOX_PHASE5_MIGRATOR_PASSWORD:?GEOX_PHASE5_MIGRATOR_PASSWORD is required}@postgres:5432/${GEOX_PHASE5_DATABASE_NAME:-geox_mcft_cap09_phase5_qualification}
+      GEOX_RUNTIME_DATABASE_URL: postgres://geox_runtime_v1:${GEOX_PHASE5_GENERIC_RUNTIME_PASSWORD:?GEOX_PHASE5_GENERIC_RUNTIME_PASSWORD is required}@postgres:5432/${GEOX_PHASE5_DATABASE_NAME:-geox_mcft_cap09_phase5_qualification}
+      GEOX_MCFT_MIGRATOR_PASSWORD: ${GEOX_PHASE5_MIGRATOR_PASSWORD:?GEOX_PHASE5_MIGRATOR_PASSWORD is required}
+      GEOX_RUNTIME_DATABASE_PASSWORD: ${GEOX_PHASE5_GENERIC_RUNTIME_PASSWORD:?GEOX_PHASE5_GENERIC_RUNTIME_PASSWORD is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  service-principal-bootstrap:
+    <<: *phase5-runtime-image
+    restart: "no"
+    command: ["node", "apps/server/dist/database/mcft_cap09_phase5_service_principals.js"]
+    environment:
+      GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: postgres://${GEOX_PHASE5_POSTGRES_USER:-postgres}:${GEOX_PHASE5_POSTGRES_PASSWORD:?GEOX_PHASE5_POSTGRES_PASSWORD is required}@postgres:5432/${GEOX_PHASE5_DATABASE_NAME:-geox_mcft_cap09_phase5_qualification}
+      GEOX_MCFT_CAP09_PHASE5_DATABASE_NAME: ${GEOX_PHASE5_DATABASE_NAME:-geox_mcft_cap09_phase5_qualification}
+      GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_PASSWORD: ${GEOX_PHASE5_EVIDENCE_DATABASE_PASSWORD:?GEOX_PHASE5_EVIDENCE_DATABASE_PASSWORD is required}
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_PASSWORD: ${GEOX_PHASE5_TWIN_DATABASE_PASSWORD:?GEOX_PHASE5_TWIN_DATABASE_PASSWORD is required}
+    depends_on:
+      database-platform-bootstrap:
+        condition: service_completed_successfully
+
+  fixture-capture:
+    <<: *phase5-runtime-image
+    profiles: ["qualification-orchestration"]
+    restart: "no"
+    command: ["node", "apps/server/dist/qualification/mcft_cap09_phase5_capture_a0_fixture.js"]
+    environment:
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?GEOX_DEPLOYMENT_SUBJECT_COMMIT is required}
+      GEOX_MCFT_CAP09_PHASE5_FIXTURE_OUTPUT_ROOT: /qualification/fixtures
+    volumes:
+      - ${GEOX_PHASE5_FIXTURE_ROOT:?GEOX_PHASE5_FIXTURE_ROOT is required}:/qualification/fixtures
+
+  qualification-prepare:
+    <<: *phase5-runtime-image
+    profiles: ["qualification-orchestration"]
+    restart: "no"
+    command: ["node", "apps/server/dist/qualification/mcft_cap09_phase5_prepare_24t.js"]
+    environment:
+      DATABASE_URL: postgres://${GEOX_PHASE5_POSTGRES_USER:-postgres}:${GEOX_PHASE5_POSTGRES_PASSWORD:?GEOX_PHASE5_POSTGRES_PASSWORD is required}@postgres:5432/${GEOX_PHASE5_DATABASE_NAME:-geox_mcft_cap09_phase5_qualification}
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?GEOX_DEPLOYMENT_SUBJECT_COMMIT is required}
+      GEOX_MCFT_CAP09_PHASE5_A0: ${GEOX_PHASE5_A0:?GEOX_PHASE5_A0 is required}
+      GEOX_MCFT_CAP09_PHASE5_CREATED_AT: ${GEOX_PHASE5_CREATED_AT:?GEOX_PHASE5_CREATED_AT is required}
+      GEOX_MCFT_CAP09_PHASE5_MANIFEST_OUTPUT: /qualification/control/phase5-manifest.json
+      GEOX_MCFT_CAP09_PHASE5_PREPARE_PROOF_OUTPUT: /qualification/control/prepare-proof.json
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_CROP_AUTHORITY_PATH: /app/docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_CONFIGURATION_MATRIX_PATH: /app/docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json
+    volumes:
+      - ${GEOX_PHASE5_CONTROL_ROOT:?GEOX_PHASE5_CONTROL_ROOT is required}:/qualification/control
+    depends_on:
+      service-principal-bootstrap:
+        condition: service_completed_successfully
+
+  qualification-verify:
+    <<: *phase5-runtime-image
+    profiles: ["qualification-orchestration"]
+    restart: "no"
+    command: ["node", "apps/server/dist/qualification/mcft_cap09_phase5_verify_24t.js"]
+    environment:
+      DATABASE_URL: postgres://${GEOX_PHASE5_POSTGRES_USER:-postgres}:${GEOX_PHASE5_POSTGRES_PASSWORD:?GEOX_PHASE5_POSTGRES_PASSWORD is required}@postgres:5432/${GEOX_PHASE5_DATABASE_NAME:-geox_mcft_cap09_phase5_qualification}
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?GEOX_DEPLOYMENT_SUBJECT_COMMIT is required}
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_MANIFEST_PATH: /qualification/control/phase5-manifest.json
+      GEOX_MCFT_CAP09_PHASE5_VERIFY_PROOF_OUTPUT: /qualification/control/verify-proof.json
+    volumes:
+      - ${GEOX_PHASE5_CONTROL_ROOT:?GEOX_PHASE5_CONTROL_ROOT is required}:/qualification/control
+    depends_on:
+      service-principal-bootstrap:
+        condition: service_completed_successfully
+
+  evidence-runtime:
+    <<: *phase5-runtime-image
+    profiles: ["qualification-runtime"]
+    restart: "no"
+    command: ["node", "apps/server/dist/qualification/mcft_cap09_phase5_evidence_runtime.js"]
+    environment:
+      GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL: postgres://geox_mcft_cap09_evidence_runtime_login_v1:${GEOX_PHASE5_EVIDENCE_DATABASE_PASSWORD:?GEOX_PHASE5_EVIDENCE_DATABASE_PASSWORD is required}@postgres:5432/${GEOX_PHASE5_DATABASE_NAME:-geox_mcft_cap09_phase5_qualification}
+      GEOX_MCFT_CAP09_TENANT_ID: ${GEOX_PHASE5_TENANT_ID:?GEOX_PHASE5_TENANT_ID is required}
+      GEOX_MCFT_CAP09_PROJECT_ID: ${GEOX_PHASE5_PROJECT_ID:?GEOX_PHASE5_PROJECT_ID is required}
+      GEOX_MCFT_CAP09_GROUP_ID: ${GEOX_PHASE5_GROUP_ID:?GEOX_PHASE5_GROUP_ID is required}
+      GEOX_MCFT_CAP09_FIELD_ID: ${GEOX_PHASE5_FIELD_ID:?GEOX_PHASE5_FIELD_ID is required}
+      GEOX_MCFT_CAP09_SEASON_ID: ${GEOX_PHASE5_SEASON_ID:?GEOX_PHASE5_SEASON_ID is required}
+      GEOX_MCFT_CAP09_ZONE_ID: ${GEOX_PHASE5_ZONE_ID:?GEOX_PHASE5_ZONE_ID is required}
+      GEOX_MCFT_CAP09_EVIDENCE_S3_ENDPOINT: http://minio:9000
+      GEOX_MCFT_CAP09_EVIDENCE_S3_BUCKET: ${GEOX_PHASE5_RAW_BUCKET:-mcft-cap09-phase5-raw}
+      GEOX_MCFT_CAP09_EVIDENCE_S3_REGION: ${GEOX_PHASE5_S3_REGION:-us-east-1}
+      GEOX_MCFT_CAP09_EVIDENCE_S3_ACCESS_KEY_ID: ${GEOX_PHASE5_MINIO_ACCESS_KEY:?GEOX_PHASE5_MINIO_ACCESS_KEY is required}
+      GEOX_MCFT_CAP09_EVIDENCE_S3_SECRET_ACCESS_KEY: ${GEOX_PHASE5_MINIO_SECRET_KEY:?GEOX_PHASE5_MINIO_SECRET_KEY is required}
+      GEOX_MCFT_CAP09_EVIDENCE_S3_ALLOW_INSECURE_HTTP_FOR_TEST: "1"
+      GEOX_MCFT_CAP09_PHASE5_FIXTURE_MANIFEST_PATH: /qualification/fixtures/manifest.json
+      GEOX_MCFT_CAP09_PHASE5_FIXTURE_ROOT: /qualification/fixtures
+      GEOX_MCFT_CAP09_PHASE5_PYTHON_EXECUTABLE: python
+      GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_LEASE_DURATION_SECONDS: ${GEOX_PHASE5_EVIDENCE_LEASE_DURATION_SECONDS:-300}
+      GEOX_MCFT_CAP09_EVIDENCE_SUCCESS_CADENCE_MS: ${GEOX_PHASE5_EVIDENCE_SUCCESS_CADENCE_MS:-100}
+      GEOX_MCFT_CAP09_EVIDENCE_LEASE_STANDBY_MS: ${GEOX_PHASE5_EVIDENCE_LEASE_STANDBY_MS:-100}
+      GEOX_MCFT_CAP09_EVIDENCE_RETRY_BASE_MS: ${GEOX_PHASE5_EVIDENCE_RETRY_BASE_MS:-100}
+      GEOX_MCFT_CAP09_EVIDENCE_RETRY_MAXIMUM_MS: ${GEOX_PHASE5_EVIDENCE_RETRY_MAXIMUM_MS:-1000}
+    volumes:
+      - ${GEOX_PHASE5_FIXTURE_ROOT:?GEOX_PHASE5_FIXTURE_ROOT is required}:/qualification/fixtures:ro
+    depends_on:
+      service-principal-bootstrap:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+
+  twin-runtime:
+    <<: *phase5-runtime-image
+    profiles: ["qualification-runtime"]
+    restart: "no"
+    command: ["node", "apps/server/dist/qualification/mcft_cap09_phase5_twin_runtime.js"]
+    environment:
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL: postgres://geox_mcft_cap09_twin_runtime_login_v1:${GEOX_PHASE5_TWIN_DATABASE_PASSWORD:?GEOX_PHASE5_TWIN_DATABASE_PASSWORD is required}@postgres:5432/${GEOX_PHASE5_DATABASE_NAME:-geox_mcft_cap09_phase5_qualification}
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_MANIFEST_PATH: /qualification/control/phase5-manifest.json
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_CROP_AUTHORITY_PATH: /app/docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_CONFIGURATION_MATRIX_PATH: /app/docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json
+      GEOX_MCFT_CAP09_PHASE5_ACCELERATED_THROUGH_LOGICAL_TIME: ${GEOX_PHASE5_ACCELERATED_THROUGH_LOGICAL_TIME:?GEOX_PHASE5_ACCELERATED_THROUGH_LOGICAL_TIME is required}
+      GEOX_MCFT_CAP09_PHASE5_ACCELERATED_CLOCK_ACK: MCFT_CAP09_PHASE5_ACCELERATED_WAIT_AND_CLOCK_ONLY
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_LEASE_DURATION_SECONDS: ${GEOX_PHASE5_TWIN_LEASE_DURATION_SECONDS:-300}
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_IDLE_POLL_MS: ${GEOX_PHASE5_TWIN_IDLE_POLL_MS:-100}
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_NOT_READY_POLL_MS: ${GEOX_PHASE5_TWIN_NOT_READY_POLL_MS:-100}
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_TERMINAL_POLL_MS: ${GEOX_PHASE5_TWIN_TERMINAL_POLL_MS:-0}
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_RETRY_BASE_MS: ${GEOX_PHASE5_TWIN_RETRY_BASE_MS:-100}
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_RETRY_MAXIMUM_MS: ${GEOX_PHASE5_TWIN_RETRY_MAXIMUM_MS:-1000}
+    volumes:
+      - ${GEOX_PHASE5_CONTROL_ROOT:?GEOX_PHASE5_CONTROL_ROOT is required}:/qualification/control:ro
+    depends_on:
+      service-principal-bootstrap:
+        condition: service_completed_successfully
+
+volumes:
+  mcft_cap09_phase5_pgdata:
+  mcft_cap09_phase5_raw:

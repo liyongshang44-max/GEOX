@@ -4,6 +4,7 @@
 // so orchestration can retain each response before parsing or scientific decode.
 
 import { createHash } from "node:crypto";
+import { setTimeout as waitTimeoutV1 } from "node:timers/promises";
 
 import {
   ControlledHttpsByteClientV1,
@@ -15,6 +16,15 @@ export const MCFT_CAP09_GFS_NOMADS_LIVE_PROVIDER_ID_V1 =
 
 export const MCFT_CAP09_GFS_ACQUISITION_AUTHORITY_REF_V1 =
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1.json" as const;
+
+export const MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_MINIMUM_INTERVAL_MS_V1 = 10_000 as const;
+export const MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_RESPONSIBLE_SHARING_REF_V1 =
+  "https://nomads.ncep.noaa.gov/info.php?page=gribfilter" as const;
+
+export type GfsNomadsGribFilterCadencePortV1 = {
+  now_ms(): number;
+  wait_ms(milliseconds: number): Promise<void>;
+};
 
 export const MCFT_CAP09_GFS_NOMADS_AUTHORITY_V1 = Object.freeze({
   production_root: "https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod",
@@ -72,6 +82,7 @@ export type GfsNomadsRawObjectV1 = {
 
 export type GfsNomadsLiveProviderConfigV1 = {
   byte_client: ControlledHttpsByteClientV1;
+  grib_filter_cadence?: GfsNomadsGribFilterCadencePortV1;
 };
 
 function requireConditionV1(condition: unknown, code: string): asserts condition {
@@ -309,10 +320,69 @@ function rawObjectV1(kind: GfsNomadsRawObjectV1["kind"], identity: string, respo
 export class GfsNomadsLiveProviderV1 {
   readonly provider_id = MCFT_CAP09_GFS_NOMADS_LIVE_PROVIDER_ID_V1;
   readonly authority_ref = MCFT_CAP09_GFS_ACQUISITION_AUTHORITY_REF_V1;
+  readonly grib_filter_responsible_sharing_ref =
+    MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_RESPONSIBLE_SHARING_REF_V1;
   private readonly byteClient: ControlledHttpsByteClientV1;
+  private readonly gribFilterCadence: GfsNomadsGribFilterCadencePortV1;
+  private lastGribFilterRequestStartedAtMs: number | null = null;
+  private gribFilterCadenceGate: Promise<void> = Promise.resolve();
 
   constructor(config: GfsNomadsLiveProviderConfigV1) {
     this.byteClient = config.byte_client;
+    this.gribFilterCadence = config.grib_filter_cadence ?? {
+      now_ms: () => Date.now(),
+      wait_ms: async (milliseconds) => {
+        await waitTimeoutV1(milliseconds);
+      },
+    };
+  }
+
+  private async waitForResponsibleGribFilterCadenceV1(): Promise<void> {
+    let releaseCadence!: () => void;
+    const prior = this.gribFilterCadenceGate;
+    this.gribFilterCadenceGate = new Promise<void>((resolve) => {
+      releaseCadence = resolve;
+    });
+    await prior;
+    try {
+      const before = this.gribFilterCadence.now_ms();
+      requireConditionV1(
+        Number.isFinite(before),
+        "MCFT_CAP09_GFS_GRIB_FILTER_CADENCE_CLOCK_INVALID",
+      );
+      if (this.lastGribFilterRequestStartedAtMs !== null) {
+        const elapsed = before - this.lastGribFilterRequestStartedAtMs;
+        requireConditionV1(
+          elapsed >= 0,
+          "MCFT_CAP09_GFS_GRIB_FILTER_CADENCE_CLOCK_REGRESSION",
+        );
+        let remaining =
+          MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_MINIMUM_INTERVAL_MS_V1 - elapsed;
+        while (remaining > 0) {
+          await this.gribFilterCadence.wait_ms(remaining);
+          const observed = this.gribFilterCadence.now_ms();
+          requireConditionV1(
+            Number.isFinite(observed),
+            "MCFT_CAP09_GFS_GRIB_FILTER_CADENCE_CLOCK_INVALID",
+          );
+          requireConditionV1(
+            observed >= before,
+            "MCFT_CAP09_GFS_GRIB_FILTER_CADENCE_CLOCK_REGRESSION",
+          );
+          remaining =
+            MCFT_CAP09_GFS_NOMADS_GRIB_FILTER_MINIMUM_INTERVAL_MS_V1
+            - (observed - this.lastGribFilterRequestStartedAtMs);
+        }
+      }
+      const started = this.gribFilterCadence.now_ms();
+      requireConditionV1(
+        Number.isFinite(started),
+        "MCFT_CAP09_GFS_GRIB_FILTER_CADENCE_CLOCK_INVALID",
+      );
+      this.lastGribFilterRequestStartedAtMs = started;
+    } finally {
+      releaseCadence();
+    }
   }
 
   async fetchDirectoryRaw(cycle: Date | string): Promise<GfsNomadsRawObjectV1> {
@@ -354,6 +424,7 @@ export class GfsNomadsLiveProviderV1 {
   }
 
   async fetchPgrb2FilteredRaw(cycle: Date | string, lead: number): Promise<GfsNomadsRawObjectV1> {
+    await this.waitForResponsibleGribFilterCadenceV1();
     const issue = canonicalUtcHourV1(cycle, "MCFT_CAP09_GFS_CYCLE_INVALID");
     const response = await this.byteClient.requestBytes({
       locator: gfsPgrb2FilterUrlV1(issue, lead),

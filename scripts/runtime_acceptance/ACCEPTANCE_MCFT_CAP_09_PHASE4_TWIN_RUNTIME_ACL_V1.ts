@@ -10,7 +10,7 @@ const OUT = path.resolve(
 );
 
 const POSITIVE_TABLE_PRIVILEGES: Record<string, readonly string[]> = {
-  facts: ["SELECT", "INSERT"],
+  facts: ["SELECT"],
   twin_runtime_lease_v1: ["SELECT", "INSERT", "UPDATE"],
   twin_shadow_online_scheduler_cursor_v1: ["SELECT", "INSERT", "UPDATE"],
   twin_shadow_online_scheduler_slot_v1: ["SELECT", "INSERT", "UPDATE"],
@@ -158,7 +158,9 @@ async function main(): Promise<void> {
       await client.query(`SET LOCAL ROLE ${ROLE}`);
 
       await client.query("SELECT fact_id FROM public.facts LIMIT 1");
-      await client.query(
+      await expectPermissionDenied(
+        client,
+        "facts_direct_insert",
         `INSERT INTO public.facts(fact_id,occurred_at,source,record_json)
          VALUES ('phase4_acl_probe_fact','2026-08-27T00:00:00.000Z','phase4_acl_probe',
                  '{"type":"phase4_acl_probe","payload":{"probe":true}}'::jsonb)`,
@@ -242,7 +244,9 @@ async function main(): Promise<void> {
       role_login: false,
       public_schema_create: false,
       governed_evidence_read_path: "public.facts",
-      facts_select_insert_only: true,
+      facts_select_only_directly: true,
+      facts_direct_insert_denied: true,
+      fenced_twin_writer_function_required: true,
       runtime_scheduler_cursor_lease_write_authorized: true,
       canonical_twin_forecast_scenario_write_authorized: true,
       evidence_plane_direct_access_denied: true,

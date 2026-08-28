@@ -13,6 +13,9 @@ import {
   PostgresForecastScenarioRecoveryRepositoryV1,
 } from "../../persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.js";
 import {
+  PostgresMcftCap09TwinCanonicalFactWriterV1,
+} from "../../persistence/twin_runtime/postgres_mcft_cap09_twin_canonical_fact_writer_v1.js";
+import {
   PostgresNextTickRepositoryV1,
 } from "../../persistence/twin_runtime/postgres_next_tick_repository_v1.js";
 import {
@@ -39,6 +42,7 @@ import {
 } from "./postgres_external_formal_amendment19_evidence_source_v1.js";
 import {
   PostgresPersistentSequentialSchedulerAdapterV1,
+  type PersistentSequentialSchedulerClockAuthorityV1,
 } from "./postgres_persistent_sequential_scheduler_adapter_v1.js";
 import {
   PostgresTwinRuntimeSuccessorViabilityV1,
@@ -47,6 +51,7 @@ import {
   MCFT_CAP09_TWIN_RUNTIME_HOST_CONTRACT_V1,
   PostgresTwinRuntimeDatabaseClockV1,
   TwinRuntimeHostV1,
+  type TwinRuntimeDatabaseClockPortV1,
   type TwinRuntimeHostFailureClassifierV1,
   type TwinRuntimeHostHealthPortV1,
   type TwinRuntimeHostStopPortV1,
@@ -60,7 +65,8 @@ export const MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_CONTRACT_V1 = {
   composition_id: MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_ID_V1,
   host_id: MCFT_CAP09_TWIN_RUNTIME_HOST_CONTRACT_V1.host_id,
   scheduler: "PostgresPersistentSequentialSchedulerAdapterV1",
-  scheduler_clock_mode: "SYSTEM_DATABASE_UTC",
+  scheduler_clock_mode: "SYSTEM_DATABASE_UTC_DEFAULT_WITH_EXPLICIT_ACCELERATED_ENGINEERING_SEAM",
+  host_clock_mode: "POSTGRES_TRANSACTION_TIMESTAMP_DEFAULT_WITH_EXPLICIT_QUALIFICATION_SEAM",
   next_tick_repository: "PostgresNextTickRepositoryV1",
   evidence_source: "PostgresExternalFormalAmendment19EvidenceSourceV1",
   evidence_authority: "GOVERNED_POSTGRES_FACTS_ONLY",
@@ -77,6 +83,8 @@ export const MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_CONTRACT_V1 = {
   evidence_producer_lease_mutation_allowed: false,
   second_canonical_tick_path_allowed: false,
   production_container_activation: false,
+  canonical_fact_writer: "PostgresMcftCap09TwinCanonicalFactWriterV1",
+  direct_facts_insert_authority: false,
   formal_v5_arm: false,
 } as const;
 
@@ -91,6 +99,8 @@ export type ComposeMcftCap09TwinRuntimeInputV1 = {
   health: TwinRuntimeHostHealthPortV1;
   stop: TwinRuntimeHostStopPortV1;
   failure_classifier: TwinRuntimeHostFailureClassifierV1;
+  database_clock?: TwinRuntimeDatabaseClockPortV1;
+  scheduler_clock_authority?: PersistentSequentialSchedulerClockAuthorityV1;
 };
 
 export type McftCap09TwinRuntimeCompositionV1 = {
@@ -131,7 +141,10 @@ export function composeMcftCap09TwinRuntimeV1(
   const runtimeRepository = new PostgresRuntimeRepositoryV1(input.pool);
   const nextTickRepository = new PostgresNextTickRepositoryV1(input.pool);
   const forecastScenarioRepository =
-    new PostgresForecastScenarioRecoveryRepositoryV1(input.pool);
+    new PostgresForecastScenarioRecoveryRepositoryV1(
+      input.pool,
+      new PostgresMcftCap09TwinCanonicalFactWriterV1(),
+    );
   const evidenceSource =
     new PostgresExternalFormalAmendment19EvidenceSourceV1(input.pool);
 
@@ -141,7 +154,7 @@ export function composeMcftCap09TwinRuntimeV1(
       scope: input.manifest.scope,
       schedule_start_logical_time: input.manifest.o00_logical_time,
     },
-    { mode: "SYSTEM_DATABASE_UTC" },
+    input.scheduler_clock_authority ?? { mode: "SYSTEM_DATABASE_UTC" },
   );
 
   const tickService = new ExternalFormalV3Amendment19PersistentTickServiceV1(
@@ -183,7 +196,8 @@ export function composeMcftCap09TwinRuntimeV1(
   );
 
   const host = new TwinRuntimeHostV1({
-    database_clock: new PostgresTwinRuntimeDatabaseClockV1(input.pool),
+    database_clock:
+      input.database_clock ?? new PostgresTwinRuntimeDatabaseClockV1(input.pool),
     one_due_slot: runner,
     successor_viability: successorViability,
     wait: input.wait,

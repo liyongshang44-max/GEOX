@@ -61,6 +61,33 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts'
       - 'apps/server/src/runtime/twin_runtime/postgres_twin_runtime_successor_viability_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1.ts'
+      - '.github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml'
+      - 'apps/server/scripts/write_dist_entries.cjs'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts'
+      - 'apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.ts'
+      - 'apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts'
+      - 'apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1.ts'
+      - 'apps/server/src/external_evidence/qualification/mcft_cap09_phase5_controlled_evidence_work_items_v1.ts'
+      - 'apps/server/src/external_evidence/qualification/mcft_cap09_phase5_evidence_runtime_qualification_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_twin_runtime_qualification_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_CONTROLLED_PROVIDER_WORK_ITEMS_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_EVIDENCE_QUALIFICATION_ENTRYPOINT_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_QUALIFICATION_CLOCK_V1.ts'
+      - 'docker-compose.mcft-cap09-phase5-qualification.yml'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_QUALIFICATION_COMPOSE_V1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_mcft_cap09_twin_canonical_fact_writer_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.ts'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase5_twin_fact_writer_acl.sql'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_CANONICAL_FACT_WRITER_V1.ts'
+      - '.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml'
+      - 'docker/mcft-cap09-runtime.Dockerfile'
+      - 'apps/server/src/external_evidence/qualification/mcft_cap09_phase5_capture_a0_fixture_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_verify_24t_v1.ts'
   merge_group:
     types: [checks_requested]
 
@@ -74,6 +101,7 @@ env:
   PHASE1_CLOSURE_SHA: '8943c752a354cb916cc7f144681203aa9a19f70b'
   PHASE2_CLOSURE_SHA: 'c3346768a44b16b127378cb690ada1d8cfec1049'
   PHASE3_CLOSURE_SHA: '0e874b254c695b32fd94c7dc7034fd71b8aa3bc3'
+  PHASE4_CLOSURE_SHA: '16ff7160473c0a25dc059db6b2b6b7ba07f54dd1'
 
 concurrency:
   group: mcft-cap09-qualification-control-plane-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
@@ -98,7 +126,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             base='${{ github.event.pull_request.base.sha }}'
-            if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ] && [ "$base" != "$PHASE2_CLOSURE_SHA" ] && [ "$base" != "$PHASE3_CLOSURE_SHA" ]; then
+            if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ] && [ "$base" != "$PHASE2_CLOSURE_SHA" ] && [ "$base" != "$PHASE3_CLOSURE_SHA" ] && [ "$base" != "$PHASE4_CLOSURE_SHA" ]; then
               echo "MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:${base}" >&2
               exit 1
             fi
@@ -131,7 +159,7 @@ jobs:
           const assert = (condition, code, detail = null) => {
             if (!condition) failures.push({code, detail});
           };
-          const expectedPredecessors = [process.env.FROZEN_SUCCESSOR_SHA, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA, process.env.PHASE2_CLOSURE_SHA, process.env.PHASE3_CLOSURE_SHA];
+          const expectedPredecessors = [process.env.FROZEN_SUCCESSOR_SHA, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA, process.env.PHASE2_CLOSURE_SHA, process.env.PHASE3_CLOSURE_SHA, process.env.PHASE4_CLOSURE_SHA];
           const governedPredecessors = authority.governed_successor_predecessor_shas || [];
           assert(governedPredecessors.length === expectedPredecessors.length, 'GOVERNED_PREDECESSOR_CARDINALITY_MISMATCH', governedPredecessors);
           assert(new Set(governedPredecessors).size === governedPredecessors.length, 'GOVERNED_PREDECESSOR_DUPLICATE', governedPredecessors);
@@ -152,7 +180,7 @@ jobs:
           assert(registry.dependency_digest_strategy === DEPENDENCY_DIGEST_STRATEGY, 'DEPENDENCY_DIGEST_STRATEGY_MISMATCH', registry.dependency_digest_strategy);
           assert(registry.durable_anchors?.entries?.length === registry.entries.length, 'DURABLE_ANCHOR_CARDINALITY_MISMATCH', {anchors:registry.durable_anchors?.entries?.length, entries:registry.entries.length});
           const carryForwardIds = ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS'];
-          const requalificationIds = ['EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T','PHASE1_TYPED_RUNTIME_COMPOSITION','PHASE2_EVIDENCE_PROVIDER_MODULES','PHASE3_EVIDENCE_RUNTIME_FOUNDATION','PHASE4_TWIN_RUNTIME_FOUNDATION'];
+          const requalificationIds = ['EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T','PHASE1_TYPED_RUNTIME_COMPOSITION','PHASE2_EVIDENCE_PROVIDER_MODULES','PHASE3_EVIDENCE_RUNTIME_FOUNDATION','PHASE4_TWIN_RUNTIME_FOUNDATION','PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS'];
           const v13ScopedIds = [...carryForwardIds, ...requalificationIds];
           for (const id of carryForwardIds) {
             const row = current.decisions.find(x => x.check_id === id);
@@ -183,6 +211,10 @@ jobs:
           assert(Boolean(phase4), 'PHASE4_TWIN_RUNTIME_FOUNDATION_DECISION_REQUIRED', {check_id:'PHASE4_TWIN_RUNTIME_FOUNDATION', missing:true});
           assert(phase4?.status === 'REQUALIFY' && phase4?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED', 'PHASE4_TWIN_RUNTIME_FOUNDATION_MUST_REQUALIFY', phase4);
           assert(phase4?.execution_workflow === '.github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml', 'PHASE4_TWIN_RUNTIME_FOUNDATION_WORKFLOW_MISMATCH', phase4);
+          const phase5 = current.decisions.find(x => x.check_id === 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS');
+          assert(Boolean(phase5), 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_DECISION_REQUIRED', {check_id:'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS', missing:true});
+          assert(phase5?.status === 'REQUALIFY' && phase5?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED', 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_MUST_REQUALIFY', phase5);
+          assert(phase5?.execution_workflow === '.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml', 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_WORKFLOW_MISMATCH', phase5);
           const future = planApplicability({
             authority, registry, changedPaths:[REGISTRY_PATH],
             stage:'SUCCESSOR_SUBJECT_PRE_MERGE', generation:'v14',
@@ -413,16 +445,26 @@ jobs:
           const priorStack = [
             ['PHASE1_TYPED_RUNTIME_COMPOSITION','.github/workflows/mcft-cap-09-phase1-typed-cap08-frozen-replay-equivalence-v1.yml'],
             ['PHASE2_EVIDENCE_PROVIDER_MODULES','.github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml'],
-            ['PHASE3_EVIDENCE_RUNTIME_FOUNDATION','.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml'],
+            ['PHASE4_TWIN_RUNTIME_FOUNDATION','.github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml'],
           ];
           for (const [id, workflow] of priorStack) {
             const row = plan.decisions.find(x => x.check_id === id);
-            if (!row || row.status !== 'REQUIRED' || row.reason_code !== 'APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE' || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length !== 0) throw new Error(`${id}_MUST_BE_UNCHANGED_STACK_PREDECESSOR:${row?.status}:${row?.reason_code}`);
+            if (!row) throw new Error(`${id}_APPLICABILITY_DECISION_REQUIRED`);
+            if (row.status === 'REQUIRED') {
+              if (row.reason_code !== 'APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE' || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length !== 0) throw new Error(`${id}_UNCHANGED_STACK_PREDECESSOR_INVALID:${row.reason_code}`);
+            } else if (row.status === 'REQUALIFY') {
+              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED'].includes(row.reason_code) || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length === 0) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID:${row.reason_code}`);
+            } else {
+              throw new Error(`${id}_UNEXPECTED_STATUS:${row.status}`);
+            }
             if (row.execution_workflow !== workflow) throw new Error(`${id}_WORKFLOW_MISMATCH`);
           }
-          const phase4 = plan.decisions.find(x => x.check_id === 'PHASE4_TWIN_RUNTIME_FOUNDATION');
-          if (!phase4 || phase4.status !== 'REQUALIFY' || phase4.reason_code !== 'GOVERNED_DEPENDENCY_CHANGED' || !Array.isArray(phase4.changed_dependencies) || phase4.changed_dependencies.length === 0) throw new Error(`PHASE4_TWIN_RUNTIME_FOUNDATION_MUST_REQUALIFY:${phase4?.status}:${phase4?.reason_code}`);
-          if (phase4.execution_workflow !== '.github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml') throw new Error('PHASE4_TWIN_RUNTIME_FOUNDATION_WORKFLOW_MISMATCH');
+          const phase3 = plan.decisions.find(x => x.check_id === 'PHASE3_EVIDENCE_RUNTIME_FOUNDATION');
+          if (!phase3 || phase3.status !== 'REQUALIFY' || phase3.reason_code !== 'GOVERNED_DEPENDENCY_CHANGED' || !Array.isArray(phase3.changed_dependencies) || !phase3.changed_dependencies.includes('apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts')) throw new Error(`PHASE3_EVIDENCE_RUNTIME_FOUNDATION_MUST_REQUALIFY_FOR_FACTORY_SEAM:${phase3?.status}:${phase3?.reason_code}`);
+          if (phase3.execution_workflow !== '.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml') throw new Error('PHASE3_EVIDENCE_RUNTIME_FOUNDATION_WORKFLOW_MISMATCH');
+          const phase5 = plan.decisions.find(x => x.check_id === 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS');
+          if (!phase5 || phase5.status !== 'REQUALIFY' || phase5.reason_code !== 'GOVERNED_DEPENDENCY_CHANGED' || !Array.isArray(phase5.changed_dependencies) || phase5.changed_dependencies.length === 0) throw new Error(`PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_MUST_REQUALIFY:${phase5?.status}:${phase5?.reason_code}`);
+          if (phase5.execution_workflow !== '.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml') throw new Error('PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_WORKFLOW_MISMATCH');
           if (preflight.status !== 'PASS' || preflight.generation !== 'v13' || preflight.non_fail_fast !== true || preflight.counts.blocker_count !== 0) throw new Error('ALL_BLOCKERS_PREFLIGHT_NOT_PASS');
           for (const source of [proof, cp2, evidence, plan, preflight]) {
             const effects = source.non_effects || source;
