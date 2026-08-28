@@ -852,11 +852,41 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
           git merge-base --is-ancestor "$PHASE6_ACCEPTED_HEAD" "$SUBJECT_SHA"
-          runtime_delta="$(git diff --name-only "$PHASE6_ACCEPTED_HEAD"..HEAD --             apps/server             docker             docker-compose.mcft-cap09-phase5-qualification.yml             docker-compose.mcft-cap09-phase6-github-blackout.override.yml             scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs             scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts)"
+          runtime_delta="$(git diff --name-only "$PHASE6_ACCEPTED_HEAD"..HEAD -- \
+            apps/server/src \
+            apps/server/scripts \
+            apps/server/package.json \
+            package.json \
+            pnpm-lock.yaml \
+            pnpm-workspace.yaml \
+            docker \
+            docker-compose.mcft-cap09-phase5-qualification.yml \
+            docker-compose.mcft-cap09-phase6-github-blackout.override.yml \
+            scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs \
+            scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts)"
           if [ -n "$runtime_delta" ]; then
             echo "PHASE6_SUCCESSOR_RUNTIME_REQUALIFICATION_REQUIRED" >&2
             printf '%s\n' "$runtime_delta" >&2
             exit 1
+          fi
+
+          mapfile -t db_delta < <(git diff --name-only "$PHASE6_ACCEPTED_HEAD"..HEAD -- apps/server/db/migrations | sort)
+          allowed_acl='apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql'
+          if [ "${#db_delta[@]}" -gt 1 ] || { [ "${#db_delta[@]}" -eq 1 ] && [ "${db_delta[0]}" != "$allowed_acl" ]; }; then
+            echo "PHASE6_SUCCESSOR_DATABASE_REQUALIFICATION_REQUIRED" >&2
+            printf '%s\n' "${db_delta[@]}" >&2
+            exit 1
+          fi
+          if [ "${#db_delta[@]}" -eq 1 ]; then
+            acl="$(cat "$allowed_acl")"
+            for table in \
+              twin_external_formal_forcing_base_cursor_v1 \
+              twin_external_formal_forcing_base_target_v1 \
+              twin_external_formal_forcing_controller_lease_v1; do
+              grep -Fq "$table" <<<"$acl"
+            done
+            grep -Fq 'TO geox_mcft_cap09_evidence_runtime_v1' <<<"$acl"
+            test -z "$(git diff --name-only "$PHASE6_ACCEPTED_HEAD"..HEAD -- apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql)"
           fi
 
       - name: Verify immutable accepted Phase6 runtime artifact
@@ -877,8 +907,9 @@ jobs:
       - name: Emit zero-effect Phase6 successor carry-forward proof
         shell: node {0}
         run: |
-          const fs=require('node:fs');
+          const fs=require('node:fs'),cp=require('node:child_process');
           fs.mkdirSync('acceptance-output',{recursive:true});
+          const dbDelta=cp.execFileSync('git',['diff','--name-only',process.env.PHASE6_ACCEPTED_HEAD+'..HEAD','--','apps/server/db/migrations'],{encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean);
           const out={
             schema_version:'geox_mcft_cap09_phase6_successor_carry_forward_v1',
             status:'PASS',
@@ -887,6 +918,8 @@ jobs:
             accepted_runtime_run_id:Number(process.env.PHASE6_RUNTIME_RUN_ID),
             accepted_runtime_artifact_id:Number(process.env.PHASE6_RUNTIME_ARTIFACT_ID),
             protected_runtime_delta_count:0,
+            allowed_evidence_acl_delta_count:dbDelta.length,
+            phase3_phase5_acl_requalification_required_on_acl_delta:true,
             phase6_runtime_reexecuted:false,
             immutable_phase6_evidence_verified:true,
             retired_owner_audit_passed:true,
