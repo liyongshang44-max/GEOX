@@ -71,6 +71,15 @@ function result(authority,enforce){
   for(const rel of unexpectedWorkflowRun)violations.push({class:"UNCLASSIFIED_CAP09_WORKFLOW_RUN",path:rel});
   for(const rel of preservedWorkflowRun)if(!workflowRun.includes(rel))violations.push({class:"PRESERVED_WORKFLOW_RUN_MISSING",path:rel});
 
+  const historicalBlobChecks=[];
+  for(const group of ["production_execution","provider_facing_audit_schedule"]){
+    for(const item of authority.retirement_targets[group]){
+      req(/^[0-9a-f]{40}$/.test(String(item.phase5_closure_blob_sha||"")),"PHASE6_HISTORICAL_BLOB_SHA_REQUIRED",item.path);
+      const actual=cp.execFileSync("git",["rev-parse",authority.phase5_closure_head+":"+item.path],{cwd:ROOT,encoding:"utf8"}).trim();
+      historicalBlobChecks.push({path:item.path,expected_blob_sha:item.phase5_closure_blob_sha,actual_blob_sha:actual,match:actual===item.phase5_closure_blob_sha});
+      if(actual!==item.phase5_closure_blob_sha)violations.push({class:"HISTORICAL_PHASE5_WORKFLOW_BLOB_DRIFT",path:item.path,expected:item.phase5_closure_blob_sha,actual});
+    }
+  }
   const activeRetired=retired.filter(rel=>{
     const row=byPath.get(rel); return row&&row.triggers.some(t=>forbiddenRetired.has(t));
   });
@@ -93,6 +102,9 @@ function result(authority,enforce){
     active_retired_owner_or_trigger_paths:activeRetired,
     retired_actions_write_count:retiredWithActionsWrite.length,
     retired_actions_write_paths:retiredWithActionsWrite,
+    historical_phase5_workflow_blob_count:historicalBlobChecks.length,
+    historical_phase5_workflow_blobs_all_match:historicalBlobChecks.every(x=>x.match),
+    historical_phase5_workflow_blob_checks:historicalBlobChecks,
     unclassified_scheduled_count:unexpectedScheduled.length,
     unclassified_workflow_run_count:unexpectedWorkflowRun.length,
     violations,
