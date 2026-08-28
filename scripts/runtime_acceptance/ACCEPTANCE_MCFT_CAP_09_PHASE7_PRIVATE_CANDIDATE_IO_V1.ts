@@ -49,7 +49,6 @@ function provenance(input:{
 }
 
 async function main():Promise<void>{
-  const fixedClock=()=>new Date("2026-08-28T10:00:00.000Z");
   const config={
     endpoint:required("PHASE7_PRIVATE_S3_ENDPOINT"),
     bucket:required("PHASE7_PRIVATE_S3_BUCKET"),
@@ -57,7 +56,6 @@ async function main():Promise<void>{
     access_key_id:required("PHASE7_PRIVATE_S3_ACCESS_KEY_ID"),
     secret_access_key:required("PHASE7_PRIVATE_S3_SECRET_ACCESS_KEY"),
     allow_insecure_http_for_test:true,
-    clock:fixedClock,
   };
   const rawWriter=new S3CompatiblePrivateRawEvidenceRetentionAdapterV1(config);
   const candidateStore=new S3CompatiblePrivateCandidateManifestStoreV1(config);
