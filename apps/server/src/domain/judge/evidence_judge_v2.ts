@@ -141,6 +141,12 @@ export type EvidenceJudgeCanonicalSufficiencyShadowV1 = {
   };
   reason_codes: string[];
   canonical_reason_codes: string[];
+  canonical_evidence_qualification_refs: string[];
+  canonical_evidence_qualification_refs_state:
+    | "AVAILABLE"
+    | "EMPTY_NO_CANONICAL_QUALIFICATIONS"
+    | "UNAVAILABLE";
+  canonical_evidence_qualification_ref_basis: "QUALIFICATION_ID_DIRECT";
   limitations: string[];
 };
 
@@ -163,6 +169,9 @@ function unavailableCanonicalSufficiencyShadowV1(reasonCode: string): EvidenceJu
     },
     reason_codes: [reasonCode],
     canonical_reason_codes: [],
+    canonical_evidence_qualification_refs: [],
+    canonical_evidence_qualification_refs_state: "UNAVAILABLE",
+    canonical_evidence_qualification_ref_basis: "QUALIFICATION_ID_DIRECT",
     limitations: [
       "B04E_SHADOW_NON_AUTHORITATIVE",
       "LEGACY_EVIDENCE_JUDGE_VERDICT_REMAINS_COMPATIBILITY_AUTHORITY_UNTIL_B09",
@@ -202,6 +211,16 @@ export function evaluateEvidenceJudgeCanonicalSufficiencyShadowV1(
   }
 
   const total = Number(batch.qualifications?.length ?? 0);
+  const canonicalEvidenceQualificationRefs = uniqueStrings(
+    (batch.qualifications ?? []).map((qualification) => qualification.qualification_id),
+  );
+  if (canonicalEvidenceQualificationRefs.length !== total) {
+    throw new Error("B09G_CANONICAL_EVIDENCE_QUALIFICATION_IDENTITY_MISSING_OR_DUPLICATE");
+  }
+  const canonicalEvidenceQualificationRefsState:
+    EvidenceJudgeCanonicalSufficiencyShadowV1["canonical_evidence_qualification_refs_state"] =
+      total === 0 ? "EMPTY_NO_CANONICAL_QUALIFICATIONS" : "AVAILABLE";
+
   let status: EvidenceJudgeCanonicalSufficiencyShadowV1["status"] = "NEEDS_EVIDENCE";
   let reasonCodes: string[];
 
@@ -228,8 +247,13 @@ export function evaluateEvidenceJudgeCanonicalSufficiencyShadowV1(
     },
     reason_codes: reasonCodes,
     canonical_reason_codes: uniqueStrings(canonicalReasonCodes),
+    canonical_evidence_qualification_refs: canonicalEvidenceQualificationRefs,
+    canonical_evidence_qualification_refs_state: canonicalEvidenceQualificationRefsState,
+    canonical_evidence_qualification_ref_basis: "QUALIFICATION_ID_DIRECT",
     limitations: [
       "B04E_SHADOW_NON_AUTHORITATIVE",
+      "B09G_QUALIFICATION_REFS_ARE_EXISTING_CANONICAL_PROJECTION_IDENTITIES",
+      "QUALIFICATION_REFS_DO_NOT_AUTHORIZE_DECISION_ELIGIBILITY",
       "CURRENT_CANONICAL_RUNTIME_PROJECTS_STAGE1_FORMAL_EVIDENCE_ROLE",
       "LEGACY_EVIDENCE_JUDGE_VERDICT_REMAINS_COMPATIBILITY_AUTHORITY_UNTIL_B09",
     ],

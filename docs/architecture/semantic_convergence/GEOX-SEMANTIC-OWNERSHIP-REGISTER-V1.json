@@ -309,7 +309,9 @@
         "Device/transport health is not measurement health.",
         "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only.",
         "B-09f adds a shadow-only referential consumer that resolves evidence_judge_id to the scoped persisted Evidence Judge; it is not the Agronomy Judge authoritative evidence gate.",
-        "C-004 remains NOT_PROVEN/NOT_WIRED for the historical caller-injected Agronomy verdict dependency; B-09f creates a separate shadow edge C-036 instead of overclaiming that dependency."
+        "C-004 remains NOT_PROVEN/NOT_WIRED for the historical caller-injected Agronomy verdict dependency; B-09f creates a separate shadow edge C-036 instead of overclaiming that dependency.",
+        "B-09g persists exact canonical EvidenceQualificationV1 qualification_id values in the existing Evidence Judge canonical sufficiency shadow; no new EvidenceQualification owner is created.",
+        "B-09g represents zero canonical qualifications as a known empty ref set and never fabricates a missing qualification object."
       ],
       "runtime_consumers": [
         {
@@ -2187,8 +2189,8 @@
       "semantic_id": "governance.semantic_authority_migration",
       "question": "Which grandfathered semantic authorities are replacement-backed, shadow-comparable, migration-ready, or explicitly unreplaced before B-09 removal?",
       "target_owner": "B-09 Semantic Authority Migration Governance",
-      "canonical_output_type": "SemanticMigrationInventoryV1 + SemanticShadowComparisonV1 + EvidenceSemanticShadowInventoryV1 + EvidenceConsumerDependencyInventoryV1 + AgronomyEvidenceDependencyShadowBindingV1 (B-09f referential shadow only; no criterion cutover, consumer migration, or authority removal)",
-      "current_state": "AGRONOMY_EVIDENCE_REFERENTIAL_SHADOW_ACTIVE",
+      "canonical_output_type": "SemanticMigrationInventoryV1 + SemanticShadowComparisonV1 + EvidenceSemanticShadowInventoryV1 + EvidenceConsumerDependencyInventoryV1 + AgronomyEvidenceDependencyShadowBindingV1 + canonical EvidenceQualification provenance refs (B-09g shadow-only; no criterion cutover, consumer migration, or authority removal)",
+      "current_state": "AGRONOMY_EVIDENCE_QUALIFICATION_PROVENANCE_SHADOW_READY",
       "target_phase": "B-09",
       "new_owner_creation": "FORBIDDEN",
       "registered_producers": [
@@ -2319,7 +2321,10 @@
         "B-09f makes evidence_judge_id observable as a scoped referential shadow binding without changing the caller-injected legacy evidence_judge_verdict authority.",
         "B-09f intentionally refuses criterion cutover because the persisted Evidence Judge output does not carry resolvable canonical EvidenceQualificationV1 refs required by B-07e provenance checks.",
         "B-09f preserves DIVERGENT and INCOMPARABLE comparison states as observations; neither is coerced to final Decision Eligibility.",
-        "B-09f performs zero consumer migration and zero authority removal."
+        "B-09f performs zero consumer migration and zero authority removal.",
+        "B-09g propagates direct canonical EvidenceQualification qualification_id refs through the existing Evidence Judge shadow into the B-09f referential binding.",
+        "B-09g may mark provenance READY_FOR_CRITERION_SHADOW while migration_readiness remains NOT_READY_FOR_CRITERION_CUTOVER.",
+        "B-09g adds no DecisionEligibility criterion producer and performs zero consumer migration and zero authority removal."
       ],
       "runtime_consumers": [
         {

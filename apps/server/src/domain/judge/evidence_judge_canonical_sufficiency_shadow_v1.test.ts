@@ -12,7 +12,7 @@ import type { RawSampleEvidenceQualificationProjectionBatchV1 } from "../../evid
 function qualification(sampleId: string, eligibility: "ELIGIBLE" | "LIMITED" | "INELIGIBLE" | "UNKNOWN", reasonCodes: string[] = []) {
   return {
     schema_version: "evidence_qualification_v1",
-    qualification_id: "q:" + sampleId,
+    qualification_id: "evidence_qualification_v1:q:" + sampleId,
     observation_id: "raw_sample:" + sampleId,
     source_ref: "raw_sample:" + sampleId,
     metric: "soil_moisture",
@@ -74,6 +74,12 @@ test("B-04e facade is SUFFICIENT when independent role-eligible evidence remains
   assert.deepEqual(shadow.reason_codes, ["CANONICAL_ROLE_ELIGIBLE_EVIDENCE_PRESENT"]);
   assert.ok(shadow.canonical_reason_codes.includes("PHYSICAL_VALIDITY_FAIL"));
   assert.equal(shadow.authority_mode, "SHADOW_NON_AUTHORITATIVE");
+  assert.deepEqual(shadow.canonical_evidence_qualification_refs, [
+    "evidence_qualification_v1:q:bad",
+    "evidence_qualification_v1:q:good",
+  ]);
+  assert.equal(shadow.canonical_evidence_qualification_refs_state, "AVAILABLE");
+  assert.equal(shadow.canonical_evidence_qualification_ref_basis, "QUALIFICATION_ID_DIRECT");
 });
 
 test("B-04e facade requests evidence when no canonical role-eligible evidence exists", () => {
@@ -87,6 +93,11 @@ test("B-04e facade requests evidence when no canonical role-eligible evidence ex
   assert.deepEqual(shadow.reason_codes, ["NO_ROLE_ELIGIBLE_CANONICAL_EVIDENCE"]);
   assert.ok(shadow.canonical_reason_codes.includes("POST_COMMIT_RUNTIME_AVAILABILITY_NOT_ESTABLISHED"));
   assert.ok(shadow.canonical_reason_codes.includes("CONFLICT_STATE_UNKNOWN"));
+  assert.deepEqual(shadow.canonical_evidence_qualification_refs, [
+    "evidence_qualification_v1:q:limited",
+    "evidence_qualification_v1:q:unknown",
+  ]);
+  assert.equal(shadow.canonical_evidence_qualification_refs_state, "AVAILABLE");
 });
 
 test("B-04e canonical shadow failure cannot alter legacy Evidence Judge authority", async () => {
@@ -132,6 +143,14 @@ test("B-04e canonical shadow failure cannot alter legacy Evidence Judge authorit
     (withShadow.outputs as any).canonical_evidence_sufficiency_shadow_v1.reason_codes,
     ["CANONICAL_EVIDENCE_SHADOW_READ_FAILED"],
   );
+  assert.deepEqual(
+    (withShadow.outputs as any).canonical_evidence_sufficiency_shadow_v1.canonical_evidence_qualification_refs,
+    [],
+  );
+  assert.equal(
+    (withShadow.outputs as any).canonical_evidence_sufficiency_shadow_v1.canonical_evidence_qualification_refs_state,
+    "UNAVAILABLE",
+  );
 });
 
 
@@ -148,5 +167,18 @@ test("B-04 missing observation is not fabricated and requests evidence", () => {
   });
   assert.deepEqual(shadow.reason_codes, ["NO_CANONICAL_EVIDENCE_QUALIFICATIONS"]);
   assert.deepEqual(shadow.canonical_reason_codes, []);
+  assert.deepEqual(shadow.canonical_evidence_qualification_refs, []);
+  assert.equal(shadow.canonical_evidence_qualification_refs_state, "EMPTY_NO_CANONICAL_QUALIFICATIONS");
+  assert.equal(shadow.canonical_evidence_qualification_ref_basis, "QUALIFICATION_ID_DIRECT");
   assert.equal(shadow.authority_mode, "SHADOW_NON_AUTHORITATIVE");
+});
+
+test("B-09g qualification refs are direct canonical identities and duplicate identity fails closed", () => {
+  const a = qualification("same", "ELIGIBLE");
+  const b = { ...qualification("other", "LIMITED"), qualification_id: a.qualification_id };
+
+  assert.throws(
+    () => evaluateEvidenceJudgeCanonicalSufficiencyShadowV1(batch([a, b] as any)),
+    /B09G_CANONICAL_EVIDENCE_QUALIFICATION_IDENTITY_MISSING_OR_DUPLICATE/,
+  );
 });

@@ -43,6 +43,9 @@ function evidenceJudge(overrides: Record<string, unknown> = {}) {
         counts: { total: 0, role_eligible: 0, role_limited: 0, role_ineligible: 0, role_unknown: 0 },
         reason_codes: ["NO_CANONICAL_EVIDENCE_QUALIFICATIONS"],
         canonical_reason_codes: [],
+        canonical_evidence_qualification_refs: [],
+        canonical_evidence_qualification_refs_state: "EMPTY_NO_CANONICAL_QUALIFICATIONS",
+        canonical_evidence_qualification_ref_basis: "QUALIFICATION_ID_DIRECT",
         limitations: ["fixture"],
       },
       semantic_shadow_comparison_v1: {
@@ -87,10 +90,12 @@ test("B-09f binds evidence_judge_id to persisted Judge and exposes DIVERGENT onl
   assert.equal(binding.legacy_verdict_match, true);
   assert.equal(binding.canonical_sufficiency_status, "NEEDS_EVIDENCE");
   assert.equal(binding.semantic_comparison_state, "DIVERGENT");
+  assert.deepEqual(binding.canonical_evidence_qualification_refs, []);
   assert.equal(
     binding.canonical_evidence_qualification_refs_state,
-    "NOT_PERSISTED_IN_EVIDENCE_JUDGE_OUTPUT",
+    "EMPTY_NO_CANONICAL_QUALIFICATIONS",
   );
+  assert.equal(binding.criterion_shadow_provenance_readiness, "READY_FOR_CRITERION_SHADOW");
   assert.equal(binding.migration_readiness, "NOT_READY_FOR_CRITERION_CUTOVER");
   assert.equal(binding.legacy_consumer_unchanged, true);
   assert.equal(binding.consumer_migration_performed, false);
@@ -135,6 +140,8 @@ test("B-09f rejects field-scope mismatch in the shadow binding", () => {
 test("B-09f preserves canonical UNKNOWN / INCOMPARABLE rather than coercing a criterion", () => {
   const row = evidenceJudge();
   row.outputs.canonical_evidence_sufficiency_shadow_v1.status = "UNKNOWN";
+  row.outputs.canonical_evidence_sufficiency_shadow_v1.canonical_evidence_qualification_refs = [];
+  row.outputs.canonical_evidence_sufficiency_shadow_v1.canonical_evidence_qualification_refs_state = "UNAVAILABLE";
   row.outputs.semantic_shadow_comparison_v1.comparison_state = "INCOMPARABLE";
   row.outputs.semantic_shadow_comparison_v1.divergences = [{
     dimension: "VERDICT",
@@ -149,6 +156,7 @@ test("B-09f preserves canonical UNKNOWN / INCOMPARABLE rather than coercing a cr
   assert.equal(binding.canonical_sufficiency_status, "UNKNOWN");
   assert.equal(binding.semantic_comparison_state, "INCOMPARABLE");
   assert.equal(binding.canonical_evidence_qualification_refs_state, "UNAVAILABLE");
+  assert.equal(binding.criterion_shadow_provenance_readiness, "NOT_READY");
   assert.equal("criterion" in (binding as any), false);
   assert.equal("verdict" in (binding as any), false);
 });
@@ -168,4 +176,66 @@ test("B-09f scoped lookup miss remains observational only", () => {
   assert.equal(binding.binding_state, "EVIDENCE_JUDGE_NOT_FOUND");
   assert.equal(binding.evidence_judge_ref, null);
   assert.equal(binding.consumer_migration_performed, false);
+});
+
+
+test("B-09g propagates exact persisted canonical EvidenceQualification identities without promoting a criterion", () => {
+  const row = evidenceJudge();
+  row.outputs.canonical_evidence_sufficiency_shadow_v1.status = "SUFFICIENT";
+  row.outputs.canonical_evidence_sufficiency_shadow_v1.canonical_evidence_qualification_refs = [
+    "evidence_qualification_v1:raw_sample:rs_1:1787896800000",
+    "evidence_qualification_v1:raw_sample:rs_2:1787896800000",
+  ];
+  row.outputs.canonical_evidence_sufficiency_shadow_v1.canonical_evidence_qualification_refs_state = "AVAILABLE";
+  row.outputs.semantic_shadow_comparison_v1.comparison_state = "MATCH";
+  row.outputs.semantic_shadow_comparison_v1.divergences = [];
+
+  const binding = projectAgronomyEvidenceDependencyShadowBindingV1(scope, row);
+
+  assert.equal(binding.binding_state, "BOUND");
+  assert.deepEqual(binding.canonical_evidence_qualification_refs, [
+    "evidence_qualification_v1:raw_sample:rs_1:1787896800000",
+    "evidence_qualification_v1:raw_sample:rs_2:1787896800000",
+  ]);
+  assert.equal(binding.canonical_evidence_qualification_refs_state, "AVAILABLE_FROM_PERSISTED_CANONICAL_SHADOW");
+  assert.equal(binding.criterion_shadow_provenance_readiness, "READY_FOR_CRITERION_SHADOW");
+  assert.equal(binding.migration_readiness, "NOT_READY_FOR_CRITERION_CUTOVER");
+  assert.equal("criterion" in (binding as any), false);
+  assert.equal("verdict" in (binding as any), false);
+});
+
+test("B-09g old persisted canonical shadows without qualification refs remain not provenance-ready", () => {
+  const row = evidenceJudge();
+  delete row.outputs.canonical_evidence_sufficiency_shadow_v1.canonical_evidence_qualification_refs;
+  delete row.outputs.canonical_evidence_sufficiency_shadow_v1.canonical_evidence_qualification_refs_state;
+  delete row.outputs.canonical_evidence_sufficiency_shadow_v1.canonical_evidence_qualification_ref_basis;
+
+  const binding = projectAgronomyEvidenceDependencyShadowBindingV1(scope, row);
+
+  assert.equal(binding.binding_state, "BOUND");
+  assert.deepEqual(binding.canonical_evidence_qualification_refs, []);
+  assert.equal(binding.canonical_evidence_qualification_refs_state, "LEGACY_SHADOW_WITHOUT_QUALIFICATION_REFS");
+  assert.equal(binding.criterion_shadow_provenance_readiness, "NOT_READY");
+  assert.equal(binding.migration_readiness, "NOT_READY_FOR_CRITERION_CUTOVER");
+});
+
+
+test("B-09g refuses provenance readiness when persisted ref basis is absent", () => {
+  const row = evidenceJudge();
+  row.outputs.canonical_evidence_sufficiency_shadow_v1.status = "SUFFICIENT";
+  row.outputs.canonical_evidence_sufficiency_shadow_v1.canonical_evidence_qualification_refs = [
+    "evidence_qualification_v1:raw_sample:rs_basisless:1787896800000",
+  ];
+  row.outputs.canonical_evidence_sufficiency_shadow_v1.canonical_evidence_qualification_refs_state = "AVAILABLE";
+  delete row.outputs.canonical_evidence_sufficiency_shadow_v1.canonical_evidence_qualification_ref_basis;
+  row.outputs.semantic_shadow_comparison_v1.comparison_state = "MATCH";
+  row.outputs.semantic_shadow_comparison_v1.divergences = [];
+
+  const binding = projectAgronomyEvidenceDependencyShadowBindingV1(scope, row);
+
+  assert.equal(binding.binding_state, "BOUND");
+  assert.deepEqual(binding.canonical_evidence_qualification_refs, []);
+  assert.equal(binding.canonical_evidence_qualification_refs_state, "UNAVAILABLE");
+  assert.equal(binding.criterion_shadow_provenance_readiness, "NOT_READY");
+  assert.equal(binding.migration_readiness, "NOT_READY_FOR_CRITERION_CUTOVER");
 });
