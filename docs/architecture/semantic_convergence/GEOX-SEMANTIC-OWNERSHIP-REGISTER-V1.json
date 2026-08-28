@@ -2167,8 +2167,8 @@
       "semantic_id": "governance.semantic_authority_migration",
       "question": "Which grandfathered semantic authorities are replacement-backed, shadow-comparable, migration-ready, or explicitly unreplaced before B-09 removal?",
       "target_owner": "B-09 Semantic Authority Migration Governance",
-      "canonical_output_type": "SemanticMigrationInventoryV1 + SemanticShadowComparisonV1 (B-09b Evidence comparator registered as capability island; no runtime consumer and no authority removal)",
-      "current_state": "REGISTERED_CAPABILITY_ISLAND",
+      "canonical_output_type": "SemanticMigrationInventoryV1 + SemanticShadowComparisonV1 (B-09c Evidence comparator has one bounded runtime shadow collector; no consumer migration and no authority removal)",
+      "current_state": "SHADOW_RUNTIME_ACTIVE",
       "target_phase": "B-09",
       "new_owner_creation": "FORBIDDEN",
       "registered_producers": [
@@ -2189,7 +2189,7 @@
         {
           "producer_id": "evidence-semantic-shadow-comparator-v1",
           "path": "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts",
-          "role": "pure B-09b coarse sufficiency comparator for legacy Evidence Judge/Stage-1 versus the existing B-04 canonical EvidenceQualification sufficiency shadow",
+          "role": "pure B-09b coarse sufficiency comparator now consumed by the single B-09c Evidence Judge runtime shadow collector; still SHADOW_ONLY and non-authoritative",
           "authority_level": "SHADOW_ONLY_COMPARATOR",
           "grandfathered_duplicate": false,
           "removal_target": null,
@@ -2199,14 +2199,26 @@
             "compareStage1GateToCanonicalEvidenceShadowV1",
             "semanticShadowComparisonV1Schema.parse"
           ],
-          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
-          "activation": "MANUAL",
-          "runtime_edge": "INTENTIONAL_NONE",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
           "new_runtime_consumer_creation": "FORBIDDEN",
-          "grandfathered_runtime_consumers": []
+          "grandfathered_runtime_consumers": [
+            "evidence-shadow-runtime-collector-v1"
+          ]
         }
       ],
-      "registered_consumers": [],
+      "registered_consumers": [
+        {
+          "consumer_id": "evidence-shadow-runtime-collector-v1",
+          "path": "apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.ts",
+          "role": "B-09c consumes the existing legacy Evidence Judge result plus B-04 canonical sufficiency shadow and emits one persisted SHADOW_ONLY comparison for the existing Judge result output envelope",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        }
+      ],
       "notes": [
         "B-09a covers every grandfathered producer in the replacement-readiness inventory before any authority removal.",
         "B-09a classifies Twin/Forecast as unreplaced because real MCFT remains disconnected.",
@@ -2215,9 +2227,21 @@
         "B-09b registers one pure Evidence-family SemanticShadowComparisonV1 producer with no runtime consumer.",
         "B-09b treats Stage-1 NOT_ELIGIBLE/NO_FORMAL_STAGE1_SIGNAL as INCOMPARABLE because trigger absence is not an evidence conclusion.",
         "B-09b explicitly captures legacy rejection versus independent canonical evidence sufficiency as DIVERGENT.",
-        "B-09b performs no consumer migration and no authority removal."
+        "B-09b performs no consumer migration and no authority removal.",
+        "B-09c connects exactly one Evidence Judge runtime shadow collector; the comparison is persisted in existing JudgeResultV2.outputs.",
+        "B-09c does not connect the Stage-1 comparator, migrate an authoritative consumer, change a legacy verdict, or remove authority."
       ],
-      "runtime_consumers": []
+      "runtime_consumers": [
+        {
+          "consumer_id": "evidence-shadow-runtime-collector-v1",
+          "path": "apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.ts",
+          "producer_id": "evidence-semantic-shadow-comparator-v1",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-034"
+        }
+      ]
     }
   ],
   "static_guards": [
@@ -2790,6 +2814,80 @@
         "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts"
       ],
       "failure": "UNREGISTERED_SEMANTIC_SHADOW_COMPARISON_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-23-b09c-shadow-collector-route-attachment",
+      "semantic_id": "governance.semantic_authority_migration",
+      "description": "B-09c permits the Evidence shadow collector definition and exactly one Judge route attachment; any additional call site requires explicit later B-09 registration.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "collectEvidenceJudgeSemanticShadowComparisonV1("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.ts",
+        "apps/server/src/routes/judge_v2.ts"
+      ],
+      "failure": "UNREGISTERED_B09C_EVIDENCE_SHADOW_COLLECTOR_CONSUMER"
+    },
+    {
+      "guard_id": "G-B02-24-evidence-shadow-comparator-runtime-consumer",
+      "semantic_id": "governance.semantic_authority_migration",
+      "description": "B-09c permits the Evidence comparator definition plus exactly one runtime collector call site.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "compareEvidenceJudgeToCanonicalEvidenceShadowV1("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts",
+        "apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.ts"
+      ],
+      "failure": "UNREGISTERED_B09C_EVIDENCE_COMPARATOR_RUNTIME_CONSUMER"
+    },
+    {
+      "guard_id": "G-B02-25-stage1-shadow-comparator-runtime-disconnection",
+      "semantic_id": "governance.semantic_authority_migration",
+      "description": "B-09c keeps the Stage-1 shadow comparator disconnected; only its pure definition may contain the comparator symbol outside tests.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "compareStage1GateToCanonicalEvidenceShadowV1("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts"
+      ],
+      "failure": "B09C_STAGE1_SHADOW_COMPARATOR_RUNTIME_CONSUMER_FORBIDDEN"
     }
   ],
   "connectivity_model": {
