@@ -1,3 +1,1737 @@
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-08-28 Continuation — Phase 7 Candidate Promotion Composition / Dual-Closure Governance Frontier
+
+Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
+
+Timestamp: **2026-08-28 22:35 +08:00**
+
+Repository: liyongshang44-max/GEOX
+
+Purpose: continue the same MCFT-CAP-09 Production Hosting route after Phase 6 closed and the first Phase 7 private-candidate I/O predecessor formally closed. This section records the accepted #3362 predecessor, the clean successor-branch checkpoint that existed before implementation was attached, the current #3364 capture/promotion composition implementation and machine proof, and the exact dual-dependency-closure governance defect that must be repaired before fresh requalification evidence may be registered.
+
+> **This section is now the highest-priority conversation continuation in this file.**
+>
+> The previous Phase 6 continuation beginning with E0 is intentionally preserved in full below as historical reasoning/evidence.
+>
+> The earlier Phase 5, Phase 4/3/2 continuations remain preserved below that.
+>
+> Do not delete or rewrite those historical sections. They explain why GitHub production ownership was retired, why private durable candidate state exists, why failed Formal-v4 state cannot be reused, and why current Phase 7 work must remain stacked and fail-closed.
+>
+> This handoff does **not** supersede docs/SSOT.md, the Digital Twin Master Task Line, the CAP-09 taskbook, accepted CAP-01→08 authority, immutable Formal evidence, the qualification control plane, or the frozen Production Hosting route.
+
+---
+
+## F0. READ THIS FIRST — the user-supplied clean-branch snapshot was correct, but the repository advanced afterward
+
+The handoff request supplied this checkpoint:
+
+~~~
+#3362 closure head = 46c9c7b6b59c113848fc69daff88fb183fccc954
+successor branch =
+  feat/mcft-cap09-phase7-candidate-promotion-composition-v1
+
+successor branch == 46c9c7b6...
+capture/promotion composition blobs = unattached
+candidate manifest upgrade blobs    = unattached
+focused acceptance blobs            = unattached
+~~~
+
+That was a valid intermediate state.
+
+The live repository has advanced since that snapshot.
+
+The authoritative current frontier is now:
+
+~~~
+Draft PR #3364
+feat(mcft-cap09): compose Phase7 private candidate fenced promotion
+
+base =
+  46c9c7b6b59c113848fc69daff88fb183fccc954
+
+current head =
+  fe9df68e2d446cdc6543cb50f92aadacf3c298d0
+
+commits       = 3
+changed_files = 8
+Draft         = true
+open          = true
+mergeable     = true
+~~~
+
+Therefore do **not** tell the next engineer that the successor branch is still clean or that the implementation exists only as unattached blobs.
+
+That statement is now historical context.
+
+Current implementation and qualification work is already attached to #3364.
+
+---
+
+## F1. Current task in one sentence
+
+**Close the Phase 7 private candidate capture/promotion composition by making its cross-plane dependency ownership truthful: the new Evidence-side adapter must participate in both the Phase 3 Evidence Runtime qualification closure and the existing V13 autonomous-forcing/fenced-promotion closure, then the affected exact-head workflows must fresh-requalify and durable evidence must be registered only after the final dependency sets stabilize; do this without production process wiring, without provider refetch during promotion, without arming Formal-v5, and without moving protected main.**
+
+---
+
+## F2. Authority reconstruction order for the next engineer
+
+Read in this order:
+
+1. docs/SSOT.md
+2. docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md
+3. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md
+4. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md
+5. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json
+6. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+7. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+8. #3362 terminal predecessor evidence
+9. #3364 current exact head / control-plane artifact
+10. this handoff, newest continuation first
+
+Weekly/status notes are operational context only.
+
+They are not authority.
+
+---
+
+## F3. Protected main remains untouched
+
+Protected main is still exactly:
+
+~~~
+26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+~~~
+
+Latest main commit message remains the historical merge of PR #3286.
+
+Neither #3362 nor #3364 is merged into protected main.
+
+No Phase 7 implementation in this continuation changes that fact.
+
+---
+
+## F4. #3362 is formally closed and is the exact Phase 7 predecessor
+
+Draft PR:
+
+~~~
+#3362
+feat(mcft-cap09): add Phase7 private candidate I/O foundation
+~~~
+
+Accepted head:
+
+~~~
+46c9c7b6b59c113848fc69daff88fb183fccc954
+~~~
+
+Stacked base:
+
+~~~
+d6c015b49d09960591185ff9c930e64dac7e2806
+~~~
+
+GitHub state:
+
+~~~
+open       = true
+Draft      = true
+mergeable  = true
+commits    = 6
+files      = 9
+~~~
+
+Closure is machine-evidence closure of the stacked predecessor.
+
+It does **not** mean protected main was merged.
+
+### F4.1 Exact-head workflow closure
+
+At 46c9c7b6... the full exact-head set is 12/12 SUCCESS:
+
+~~~
+33168990476  mcft-cap-08-authority-reconciliation                  SUCCESS
+33168990445  mcft-main-ruleset-readiness-v1                       SUCCESS
+33168990473  mcft-candidate-declaration-selftest-v2                SUCCESS
+33168990454  mcft-cap-09-phase6-runtime-independence               SUCCESS
+33168990422  mcft-cap-09-ea5e2-runtime-dependency-graph            SUCCESS
+33168990436  mcft-delivery-policy-v2                               SUCCESS
+33168990461  mcft-release-lane-v1                                  SUCCESS
+33168990545  mcft-cap-09-ea5e2-live-window-preflight-hardening     SUCCESS
+33168990459  mcft-cap-09-ea5e2-successor-runner-qualification      SUCCESS
+33168990430  mcft-cap-09-phase3-evidence-runtime-persistence       SUCCESS
+33168990431  mcft-cap-09-qualification-control-plane-v1            SUCCESS
+33168990490  ci                                                    SUCCESS
+~~~
+
+### F4.2 #3362 central closure proof
+
+Central run:
+
+~~~
+33168990431
+~~~
+
+Artifact:
+
+~~~
+artifact id =
+  9684863842
+
+artifact name =
+  mcft-cap09-qualification-control-plane-46c9c7b6b59c113848fc69daff88fb183fccc954
+
+artifact digest =
+  sha256:e93f9bfebf04caf09ebafa0125282f4b39ca5c4d204dd3087cae2517a79a5e88
+~~~
+
+Machine preflight:
+
+~~~
+status                = PASS
+planner_status        = PASS
+
+total_checks          = 16
+pass                  = 12
+fail                  = 0
+not_applicable        = 4
+carry_forward         = 4
+required              = 6
+requalify             = 2
+unknown               = 0
+forbidden             = 0
+
+authority_errors      = 0
+unknown_changed_paths = 0
+blocker_count         = 0
+blockers              = []
+~~~
+
+### F4.3 #3362 ordinary CI closure
+
+CI run:
+
+~~~
+33168990490
+~~~
+
+Jobs:
+
+~~~
+build-test = SUCCESS
+acceptance = SUCCESS
+~~~
+
+The acceptance job completed all repository commercial/customer-report gates, final runtime hygiene, artifact collection, and shutdown.
+
+### F4.4 Why #3362 matters
+
+#3362 established the durable private candidate I/O foundation.
+
+The important boundary was:
+
+~~~
+capture
+  may persist private candidate authority
+
+capture
+  must not write Formal facts
+
+promotion / rehydration
+  must not depend on GitHub artifacts
+
+promotion / rehydration
+  must not refetch providers
+
+private retained raw
+  remains private durable Evidence-plane authority
+~~~
+
+The successor work in #3364 is stacked exactly on this accepted head.
+
+---
+
+## F5. Important intermediate checkpoint — clean successor branch before attachment
+
+Immediately after #3362 closure, the successor branch was created:
+
+~~~
+feat/mcft-cap09-phase7-candidate-promotion-composition-v1
+~~~
+
+At that checkpoint it was exactly equal to:
+
+~~~
+46c9c7b6b59c113848fc69daff88fb183fccc954
+~~~
+
+No implementation commit had been attached yet.
+
+The following had been prepared only as unattached Git blobs:
+
+- capture/promotion composition;
+- candidate manifest upgrade;
+- focused acceptance.
+
+This checkpoint is worth preserving because it demonstrates that the next slice was deliberately staged before mutation.
+
+However, it is **not** the current frontier anymore.
+
+Do not reset the branch back to this state unless there is a concrete reason to discard #3364.
+
+---
+
+## F6. Current successor PR — #3364
+
+Current Draft PR:
+
+~~~
+#3364
+feat(mcft-cap09): compose Phase7 private candidate fenced promotion
+~~~
+
+Branch:
+
+~~~
+feat/mcft-cap09-phase7-candidate-promotion-composition-v1
+~~~
+
+Exact stacked base:
+
+~~~
+46c9c7b6b59c113848fc69daff88fb183fccc954
+~~~
+
+Current exact head:
+
+~~~
+fe9df68e2d446cdc6543cb50f92aadacf3c298d0
+~~~
+
+GitHub facts:
+
+~~~
+state         = open
+Draft         = true
+mergeable     = true
+commits       = 3
+changed_files = 8
+~~~
+
+Current changed files are:
+
+~~~
+.github/workflows/mcft-cap-09-phase6-runtime-independence.yml
+
+.github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml
+
+.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml
+
+apps/server/src/external_evidence/
+  mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts
+
+apps/server/src/external_evidence/
+  s3_compatible_private_candidate_manifest_store_v1.ts
+
+docs/digital_twin/mcft/cap_09/
+  GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+
+docs/digital_twin/mcft/cap_09/
+  GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+
+scripts/runtime_acceptance/
+  ACCEPTANCE_MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1.ts
+~~~
+
+This is now the sole current Phase 7 candidate-promotion implementation frontier.
+
+---
+
+## F7. #3364 exact commit progression
+
+The current three commits are:
+
+~~~
+bb68f98583e6f8158c3d9f826f29d90859529761
+feat(mcft-cap09): compose private candidate fenced promotion
+
+5f933c20a4c6b8a94fe5f2e9b9863fb005aa8eb4
+fix(mcft-cap09): narrow candidate replay timestamp
+
+fe9df68e2d446cdc6543cb50f92aadacf3c298d0
+fix(mcft-cap09): qualify full 72h promotion payload
+~~~
+
+Do not collapse these into a statement that the first implementation commit was already final.
+
+The second and third commits record real refinement of replay/promotion semantics and qualification payload coverage.
+
+---
+
+## F8. What the current capture/promotion composition is intended to do
+
+The new product adapter is:
+
+~~~
+apps/server/src/external_evidence/
+mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts
+~~~
+
+It bridges:
+
+~~~
+Phase3 Evidence/provider/private-candidate side
+        ↓
+private candidate manifest
+        ↓
+private retained raw references
+        ↓
+deterministic replay / decoder identity
+        ↓
+exact semantic-manifest equality
+        ↓
+existing V13 fenced exact-base promotion
+        ↓
+Formal facts
+        ↓
+controller attestation
+        ↓
+cursor advancement only after attestation
+~~~
+
+The design intentionally does **not** make GitHub artifact storage an operational authority.
+
+It intentionally does **not** authorize provider refetch during promotion.
+
+It intentionally does **not** write Formal facts during capture.
+
+It intentionally does **not** activate a production process graph in this slice.
+
+---
+
+## F9. Candidate manifest upgrade
+
+Current candidate manifest implementation is:
+
+~~~
+apps/server/src/external_evidence/
+s3_compatible_private_candidate_manifest_store_v1.ts
+~~~
+
+#3364 extends the candidate replay authority carried by that private manifest.
+
+The PR contract states that the v1 manifest remains backward-readable while optional deterministic replay-authority fields are added.
+
+The intended replay contract now includes enough authority to bind:
+
+- exact semantic record identity;
+- raw private retention references;
+- decoder identity / factory selection;
+- frozen canonical record ingestion time needed for deterministic replay;
+- exact replay equality before Formal mutation.
+
+Do not turn the manifest into a raw-value dump.
+
+The manifest remains a semantic/private-reference authority.
+
+---
+
+## F10. Current focused composition workflow is already machine green
+
+Workflow:
+
+~~~
+.github/workflows/
+mcft-cap-09-phase7-candidate-promotion-composition.yml
+~~~
+
+Exact-head run:
+
+~~~
+33178399042
+head = fe9df68e2d446cdc6543cb50f92aadacf3c298d0
+conclusion = SUCCESS
+~~~
+
+Artifact:
+
+~~~
+artifact id =
+  9688644422
+
+artifact name =
+  mcft-cap09-phase7-candidate-promotion-composition-fe9df68e2d446cdc6543cb50f92aadacf3c298d0
+
+artifact digest =
+  sha256:f32cec6ae5e11a8c132943856ada34400d32e7606d10dc39856e49fedbc25034
+~~~
+
+### F10.1 What the focused proof actually demonstrates
+
+Machine proof:
+
+~~~
+qualification_mode =
+  REAL_MINIO_PLUS_REAL_POSTGRES_V13_FENCED_PROMOTION
+
+capture_provider_work_item_count = 2
+capture_raw_object_count         = 2
+candidate_semantic_record_count  = 3
+
+candidate_manifest_private_readback = true
+replay_authority_fields_complete    = true
+
+promotion_provider_refetch_count          = 0
+promotion_github_artifact_rehydration_count = 0
+promotion_raw_store_write_count           = 0
+
+rehydration_semantic_manifest_exact_match = true
+rehydration_decoder_factory_count         = 2
+
+real_postgres_fenced_promotion             = true
+real_postgres_formal_fact_present_count    = 3
+exact_three_facts_single_fenced_transaction = true
+
+promotion_did_not_advance_cursor      = true
+controller_attestation_after_promotion = true
+cursor_advanced_only_after_attestation = true
+
+pre_mutation_failure_fails_closed = true
+capture_formal_database_write_count = 0
+~~~
+
+### F10.2 Explicit non-effects proved by the workflow
+
+The artifact also records:
+
+~~~
+production_process_graph_wiring = false
+production_owner_activation     = false
+formal_v5_store_provisioned     = false
+formal_v5_epoch_selected        = false
+formal_v5_armed                 = false
+o00_started                     = false
+protected_main_mutated          = false
+mcft_cap09_completed            = false
+~~~
+
+This is a bounded composition proof.
+
+It is not Formal-v5 activation.
+
+---
+
+## F11. Current Phase3 exact-head workflow is also green
+
+Exact-head Phase3 run:
+
+~~~
+33178399052
+mcft-cap-09-phase3-evidence-runtime-persistence
+head = fe9df68e2d446cdc6543cb50f92aadacf3c298d0
+conclusion = SUCCESS
+~~~
+
+Artifact:
+
+~~~
+artifact id =
+  9688644702
+
+artifact digest =
+  sha256:b42c5d978cddd738938675e93698cf39bc33c133c88eb2e3e9e61ecb8f58b9a4
+~~~
+
+The workflow passes, among other things:
+
+- product and acceptance type proof;
+- durable Evidence lease / supply cursor semantics;
+- one canonical Evidence Runtime cycle;
+- long-running Evidence Runtime host lifecycle;
+- GFS product bundle composition;
+- private candidate object store lifecycle;
+- retained-raw I/O;
+- Evidence Runtime ACL separation;
+- deployable Evidence Runtime composition;
+- no Twin runtime/cadence ownership.
+
+Important:
+
+**This green Phase3 run is valuable functional evidence, but it does not prove that the new adapter is currently owned by the Phase3 dependency resolver.**
+
+Those are separate questions.
+
+---
+
+## F12. Current ordinary CI is fully green
+
+Current CI run:
+
+~~~
+33178399092
+head = fe9df68e2d446cdc6543cb50f92aadacf3c298d0
+conclusion = SUCCESS
+~~~
+
+Jobs:
+
+~~~
+build-test = SUCCESS
+acceptance = SUCCESS
+~~~
+
+The full repository acceptance suite completed successfully.
+
+Therefore the current #3364 blocker is not ordinary compilation/build/commercial regression.
+
+---
+
+## F13. Current exact-head workflow matrix on #3364
+
+At fe9df68e...:
+
+~~~
+33178399132  mcft-main-ruleset-readiness-v1                       SUCCESS
+33178398864  mcft-release-lane-v1                                  SUCCESS
+33178398941  mcft-cap-09-ea5e2-live-window-preflight-hardening     SUCCESS
+33178398904  mcft-delivery-policy-v2                               SUCCESS
+33178399024  mcft-candidate-declaration-selftest-v2                SUCCESS
+33178398967  mcft-cap-09-phase6-runtime-independence               SUCCESS
+33178398983  mcft-cap-08-authority-reconciliation                  SUCCESS
+33178398921  mcft-cap-09-ea5e2-runtime-dependency-graph            SUCCESS
+33178399033  mcft-cap-09-ea5e2-successor-runner-qualification      SUCCESS
+33178399042  mcft-cap-09-phase7-candidate-promotion-composition    SUCCESS
+33178399052  mcft-cap-09-phase3-evidence-runtime-persistence       SUCCESS
+33178399092  ci                                                    SUCCESS
+33178399199  mcft-cap-09-qualification-control-plane-v1            FAILURE
+~~~
+
+So the exact-head matrix is:
+
+~~~
+12 SUCCESS
+1 FAILURE
+~~~
+
+The only red workflow is central control-plane.
+
+---
+
+## F14. Current central failure — exact facts
+
+Central run:
+
+~~~
+33178399199
+~~~
+
+Artifact:
+
+~~~
+artifact id =
+  9688800772
+
+artifact name =
+  mcft-cap09-qualification-control-plane-fe9df68e2d446cdc6543cb50f92aadacf3c298d0
+
+artifact digest =
+  sha256:e9b75bc6375e9fa0d44b50c9db20cef4510134b9f1f8ecbfa441b1dc66601935
+~~~
+
+Steps 1–7 are SUCCESS.
+
+Failure is only:
+
+~~~
+Step 8
+Enumerate all blockers without fail-fast
+~~~
+
+Current preflight counts:
+
+~~~
+total_checks          = 17
+pass                  = 11
+fail                  = 2
+not_applicable        = 4
+carry_forward         = 4
+required              = 6
+requalify             = 3
+unknown               = 0
+forbidden             = 0
+
+authority_errors      = 0
+unknown_changed_paths = 0
+blocker_count         = 2
+~~~
+
+Current machine blockers are:
+
+~~~
+PHASE3_EVIDENCE_RUNTIME_FOUNDATION
+  INVALID_OR_MISSING_REQUALIFICATION_EVIDENCE
+
+PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION
+  INVALID_OR_MISSING_REQUALIFICATION_EVIDENCE
+~~~
+
+If this were only an evidence-registration problem, the next action would be to bind fresh runs.
+
+It is **not** safe to do that yet.
+
+The dependency ownership is still semantically incomplete.
+
+---
+
+## F15. The critical governance defect — dedicated Phase7 ownership is not enough
+
+Current control plane added:
+
+~~~
+PHASE7_PRIVATE_CANDIDATE_PROMOTION_IMPORT_CLOSURE
+~~~
+
+with root:
+
+~~~
+apps/server/src/external_evidence/
+mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts
+~~~
+
+and additional exact paths for:
+
+~~~
+.github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml
+
+scripts/runtime_acceptance/
+ACCEPTANCE_MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1.ts
+~~~
+
+This is useful.
+
+It is not sufficient.
+
+The adapter crosses two pre-existing governance domains:
+
+~~~
+Evidence/private-candidate capture side
+        belongs to
+PHASE3_EVIDENCE_RUNTIME_FOUNDATION
+
+and
+
+autonomous controller / fenced Formal promotion side
+        belongs to
+V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE
+~~~
+
+A dedicated Phase7 closure may remain.
+
+It must not hide the adapter from either underlying domain.
+
+---
+
+## F16. Current proof that Phase3 does not fully see the adapter
+
+At current fe9df68e...:
+
+~~~
+PHASE3_EVIDENCE_RUNTIME_FOUNDATION
+kind = EXACT_PATH_SET
+~~~
+
+It owns the existing private candidate store and reader modules.
+
+It does **not** currently own:
+
+~~~
+apps/server/src/external_evidence/
+mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts
+~~~
+
+Current Phase3 central plan therefore says:
+
+~~~
+status = REQUALIFY
+
+changed_dependencies =
+  apps/server/src/external_evidence/
+  s3_compatible_private_candidate_manifest_store_v1.ts
+~~~
+
+It does **not** list the new capture/promotion adapter as a Phase3 changed dependency.
+
+That is incomplete because the adapter performs the capture-side composition that consumes the Phase3 Evidence/provider/private-candidate graph.
+
+The green run 33178399052 does not repair this ownership omission by itself.
+
+---
+
+## F17. Current proof that V13 incorrectly remains carry-forward
+
+Current resolver:
+
+~~~
+V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE
+kind = IMPORT_CLOSURE
+~~~
+
+Its roots include the existing autonomous controller, scheduler/viability, continuity/admission/lifecycle repositories, and:
+
+~~~
+apps/server/src/persistence/twin_runtime/
+postgres_external_formal_fenced_exact_base_fact_promotion_v1.ts
+~~~
+
+The new adapter imports/uses the fenced-promotion side.
+
+But the V13 closure is rooted in the existing V13 graph.
+
+Import closure follows dependencies **from those roots**.
+
+It does not automatically discover a new reverse-dependent adapter that imports the V13 promotion code.
+
+At fe9df68e... the new adapter is not part of:
+
+~~~
+V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE.roots
+~~~
+
+and is not in:
+
+~~~
+V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE.additional_exact_paths
+~~~
+
+Therefore central currently reports all three premerge V13 checks as unchanged carry-forward:
+
+~~~
+V13_AUTONOMOUS_FORCING_FOUNDATION
+  CARRY_FORWARD
+
+V13_HOLISTIC_SCHEMA
+  CARRY_FORWARD
+
+V13_NEXT_TICK_VIABILITY
+  CARRY_FORWARD
+~~~
+
+Their current V13 dependency digest remains:
+
+~~~
+sha256:41726256b3fd6a7a6f885696ce113aa92757097d4a3b5b55fab7340c43711979
+~~~
+
+and changed_dependencies is empty.
+
+This is the central semantic defect.
+
+The code now uses the V13 fenced promotion boundary, but V13 qualification does not know it changed.
+
+Do **not** accept this carry-forward as final.
+
+---
+
+## F18. Why current unknown_changed_paths = 0 does not mean ownership is correct
+
+Current central artifact says:
+
+~~~
+unknown_changed_paths = []
+authority_errors      = []
+resolver_errors       = []
+~~~
+
+This is true.
+
+It only means every changed file is known to *some* resolver.
+
+The new dedicated Phase7 import closure prevents an unknown-path failure.
+
+But dependency governance must answer a stronger question:
+
+~~~
+which established semantic/qualification domains must invalidate when this path changes?
+~~~
+
+For the new adapter, the correct answer is not only:
+
+~~~
+PHASE7_PRIVATE_CANDIDATE_PROMOTION_IMPORT_CLOSURE
+~~~
+
+It must also invalidate/requalify the underlying domains it composes:
+
+~~~
+PHASE3_EVIDENCE_RUNTIME_FOUNDATION
+V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE
+~~~
+
+This is why “central has no unknown paths” is not sufficient closure evidence.
+
+---
+
+## F19. Current two machine blockers must not be cleared yet
+
+Current central blockers are only:
+
+~~~
+Phase3 fresh evidence missing
+Phase7 composition fresh evidence missing
+~~~
+
+It would be technically possible to register runs:
+
+~~~
+33178399052
+33178399042
+~~~
+
+against the current dependency digests and attempt to make central green.
+
+Do **not** do that first.
+
+Why:
+
+1. the Phase3 dependency set is incomplete;
+2. the V13 dependency set is incomplete;
+3. after correct dual-domain registration, dependency digests/applicability will change;
+4. current evidence bindings would then become stale or misleading;
+5. V13 should stop carrying forward and require fresh requalification.
+
+Correct order:
+
+~~~
+fix ownership
+    ↓
+fix workflow trigger completeness
+    ↓
+rerun exact central plan
+    ↓
+confirm Phase3 sees adapter
+    ↓
+confirm V13 sees adapter
+    ↓
+fresh Phase3 + V13 + Phase7 qualification
+    ↓
+only then durable evidence registration
+    ↓
+final central blockers=[]
+~~~
+
+---
+
+## F20. Required next control-plane shape
+
+At minimum the next governance patch must make this source path visible to both underlying closures:
+
+~~~
+apps/server/src/external_evidence/
+mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts
+~~~
+
+### F20.1 Phase3 side
+
+PHASE3_EVIDENCE_RUNTIME_FOUNDATION must treat the adapter as a governed dependency because its capture half owns/uses:
+
+- provider work-item acquisition;
+- raw retention;
+- private candidate authority;
+- deterministic capture manifest semantics.
+
+The corresponding Phase3 workflow trigger must fire when that adapter changes.
+
+Do not merely add the path to the resolver and forget the workflow trigger.
+
+### F20.2 V13 side
+
+V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE must treat the adapter as a governed dependency because its promotion half owns/uses:
+
+- existing V13 autonomous forcing controller contract;
+- existing fenced exact-base Formal promotion;
+- controller attestation ordering;
+- cursor advancement after attestation.
+
+Because the adapter is a reverse dependent of existing V13 roots, relying on transitive import closure alone is insufficient.
+
+Use an explicit governed path/root relationship appropriate to the current control-plane model.
+
+### F20.3 Focused acceptance / workflow governance
+
+The dedicated Phase7 resolver/check may remain.
+
+Do not delete it merely because the adapter becomes shared.
+
+Audit whether these paths must also be shared dependencies for Phase3/V13:
+
+~~~
+.github/workflows/
+mcft-cap-09-phase7-candidate-promotion-composition.yml
+
+scripts/runtime_acceptance/
+ACCEPTANCE_MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1.ts
+~~~
+
+The key rule is:
+
+**a qualification that claims the capture or fenced-promotion boundary must itself not become an invisible dependency of the underlying domain.**
+
+Do not solve this with a broad directory wildcard.
+
+---
+
+## F21. Workflow trigger completeness is part of the fix
+
+Updating only the JSON resolver is not enough.
+
+For each check that becomes REQUALIFY because the shared adapter changed, the relevant execution workflow must actually be triggered on the successor PR.
+
+Audit at least:
+
+~~~
+Phase3:
+  .github/workflows/
+  mcft-cap-09-phase3-evidence-runtime-persistence.yml
+
+V13 premerge qualification:
+  .github/workflows/
+  mcft-cap-09-v13-autonomous-forcing-foundation.yml
+
+  .github/workflows/
+  mcft-cap-09-v13-holistic-schema-postgres.yml
+
+  .github/workflows/
+  mcft-cap-09-v13-next-tick-viability-postgres.yml
+
+and any fenced-promotion workflow whose proof is part of the V13 closure
+~~~
+
+Do not assume “resolver says REQUALIFY” means GitHub will automatically run the correct workflow.
+
+Earlier Phase3/Phase5 work already exposed this exact class of trigger-completeness defect.
+
+---
+
+## F22. What the next central plan must look like before evidence registration
+
+After the ownership/trigger patch, run the exact central planner **before** binding new evidence.
+
+Required observations:
+
+### Phase3
+
+Current wrong shape:
+
+~~~
+changed_dependencies =
+  candidate manifest store only
+~~~
+
+Required successor shape must include the new adapter as a governed Phase3 dependency.
+
+### V13
+
+Current wrong shape:
+
+~~~
+V13_AUTONOMOUS_FORCING_FOUNDATION = CARRY_FORWARD
+V13_HOLISTIC_SCHEMA               = CARRY_FORWARD
+V13_NEXT_TICK_VIABILITY           = CARRY_FORWARD
+~~~
+
+Required successor behavior:
+
+the adapter delta must invalidate the relevant V13 dependency closure and force the applicable premerge V13 checks to REQUALIFY.
+
+If V13 still says dependency digest unchanged / CARRY_FORWARD after the adapter is registered, stop.
+
+Do not register evidence.
+
+### Phase7 dedicated composition
+
+It should remain governed and fresh-qualified.
+
+### Control-plane hygiene
+
+Still require:
+
+~~~
+unknown_changed_paths = []
+authority_errors      = []
+resolver_errors       = []
+~~~
+
+---
+
+## F23. Fresh machine qualification sequence after the governance patch
+
+Once the dependency sets and triggers are stable:
+
+### Step 1 — freeze the new exact head
+
+Do not keep editing while fresh qualification is running unless a terminal error identifies a concrete defect.
+
+### Step 2 — run Phase3 fresh qualification
+
+Require the current product Evidence/private-candidate graph plus the new adapter dependency.
+
+Do not rely on 33178399052 as final durable evidence after the resolver changes.
+
+It remains valuable functional evidence from the pre-ownership-fix head.
+
+### Step 3 — run V13 fresh qualification
+
+At minimum require the applicable successor/premerge V13 workflows to execute against the exact new head.
+
+Do not carry forward 3bbf096e-era V13 evidence if the final dependency closure changed.
+
+### Step 4 — run dedicated Phase7 candidate/promotion composition
+
+Require the same strong proof already demonstrated at fe9df68e...:
+
+- private candidate readback;
+- zero provider refetch;
+- zero GitHub artifact rehydration;
+- exact semantic replay equality;
+- real Postgres fenced promotion;
+- exactly three facts in one fenced transaction;
+- cursor advances only after controller attestation;
+- pre-mutation failure fail-closed.
+
+### Step 5 — run ordinary CI
+
+Require:
+
+~~~
+build-test = SUCCESS
+acceptance = SUCCESS
+~~~
+
+### Step 6 — read generated final dependency digests
+
+Do not guess them.
+
+Do not reuse the current pre-fix Phase3 / Phase7 digests after the closure definitions change.
+
+### Step 7 — register durable requalification evidence
+
+Only bind successful runs from the final dependency state.
+
+### Step 8 — rerun central
+
+Require:
+
+~~~
+status         = PASS
+planner_status = PASS
+blocker_count  = 0
+blockers       = []
+
+unknown_changed_paths = []
+authority_errors      = []
+resolver_errors       = []
+~~~
+
+### Step 9 — only then declare #3364 closure
+
+Closure is exact-head machine closure.
+
+Not “the focused workflow was green once”.
+
+---
+
+## F24. Current #3364 positive evidence must still be preserved
+
+Although it cannot yet close the final governance state, do not discard current successful evidence.
+
+Keep:
+
+~~~
+Phase7 composition run =
+  33178399042
+
+Phase7 artifact =
+  9688644422
+
+Phase3 run =
+  33178399052
+
+Phase3 artifact =
+  9688644702
+
+CI run =
+  33178399092
+
+central diagnostic artifact =
+  9688800772
+~~~
+
+These runs prove the implementation is not currently failing because of compilation, MinIO, PostgreSQL fenced promotion, ordinary CI, or commercial acceptance.
+
+They are valuable diagnostic/engineering proof.
+
+They are simply not the final durable requalification evidence after dual-closure ownership is repaired.
+
+---
+
+## F25. Current real blocker / not-blocker table
+
+### Real current blocker
+
+~~~
+PHASE7_CANDIDATE_PROMOTION_DUAL_DEPENDENCY_OWNERSHIP_INCOMPLETE
+~~~
+
+Specifically:
+
+~~~
+new adapter not owned by Phase3 exact dependency set
++
+new adapter not owned by V13 autonomous forcing closure
++
+V13 incorrectly remains carry-forward
+~~~
+
+### Secondary expected blocker after ownership is repaired
+
+Fresh requalification evidence will be required for the newly changed dependency closures.
+
+This is expected.
+
+### Not current blockers
+
+The following are not current implementation blockers:
+
+- #3362 private candidate I/O foundation;
+- private MinIO candidate persistence;
+- retained-raw readback;
+- deterministic replay fields;
+- focused composition TypeScript build;
+- real PostgreSQL fenced exact-base promotion;
+- exactly-three Formal fact transaction;
+- controller attestation ordering;
+- cursor advancement ordering;
+- provider refetch;
+- GitHub artifact rehydration;
+- ordinary build-test;
+- commercial acceptance;
+- Phase6 runtime independence;
+- protected main drift;
+- Formal-v5 activation.
+
+The first group is currently green.
+
+The last items remain intentionally inactive.
+
+---
+
+## F26. High-value failure / repair history to preserve
+
+### F26.1 Do not register evidence before dependency ownership stabilizes
+
+This is the most important immediate trap.
+
+A green exact-head run is not enough if the resolver that decides what the run qualifies is incomplete.
+
+### F26.2 unknown_changed_paths=[] is necessary but not sufficient
+
+A path can be owned by the wrong/narrow closure and still fail to invalidate an underlying semantic domain.
+
+### F26.3 Import closure is directional
+
+A new adapter that imports an existing V13 module is a **reverse dependent** of the V13 root.
+
+A root-based import closure will not automatically discover it.
+
+Do not assume transitive import resolution works both directions.
+
+### F26.4 Dedicated Phase7 qualification does not replace underlying-domain requalification
+
+The adapter composes existing Phase3 and V13 authorities.
+
+Its own focused proof is additive.
+
+It is not a substitute for invalidating/requalifying those authorities when the shared dependency changes.
+
+### F26.5 Do not add a broad apps/server wildcard
+
+That would hide ownership errors and cause unrelated work to invalidate huge qualification surfaces.
+
+Use exact/shared dependencies.
+
+### F26.6 Do not modify historical V13 immutable evidence to make the digest match
+
+The correct result of a changed dependency closure is fresh requalification.
+
+Not rewritten history.
+
+### F26.7 Do not bind current fe9df68e runs to a dependency digest that did not include the adapter
+
+That would manufacture false provenance.
+
+### F26.8 Do not start Formal-v5 because candidate promotion now works
+
+Current proof explicitly says:
+
+~~~
+formal_v5_store_provisioned = false
+formal_v5_epoch_selected    = false
+formal_v5_armed             = false
+o00_started                 = false
+~~~
+
+Preserve that boundary.
+
+### F26.9 Do not wire this adapter into the production process graph in the governance-fix commit
+
+Current #3364 scope explicitly keeps:
+
+~~~
+production_process_graph_wiring = false
+production_owner_activation     = false
+~~~
+
+First close composition/qualification ownership.
+
+Production activation is a later bounded step.
+
+### F26.10 Do not make promotion refetch providers
+
+Promotion must rehydrate from private retained raw only.
+
+Current focused proof has:
+
+~~~
+promotion_provider_refetch_count = 0
+~~~
+
+Keep it zero.
+
+### F26.11 Do not reintroduce GitHub artifact rehydration
+
+Current focused proof has:
+
+~~~
+promotion_github_artifact_rehydration_count = 0
+~~~
+
+Runtime authority remains durable private object/database state.
+
+### F26.12 Do not advance the forcing cursor inside promotion before attestation
+
+Current proof deliberately establishes:
+
+~~~
+promotion_did_not_advance_cursor = true
+controller_attestation_after_promotion = true
+cursor_advanced_only_after_attestation = true
+~~~
+
+Do not collapse these stages.
+
+### F26.13 Do not weaken exact semantic-manifest equality
+
+The candidate manifest is the pre-mutation replay authority.
+
+If rehydration does not exactly match, fail before Formal mutation.
+
+### F26.14 Do not mix B-Line
+
+B-Line remains outside MCFT-CAP-09.
+
+No B-Line refactor belongs in the dual-closure governance fix.
+
+---
+
+## F27. First 30 minutes for the next engineer
+
+### Minute 0–5 — lock current GitHub truth
+
+Verify:
+
+~~~
+#3362 head =
+  46c9c7b6b59c113848fc69daff88fb183fccc954
+
+#3364 base =
+  46c9c7b6b59c113848fc69daff88fb183fccc954
+
+#3364 head =
+  fe9df68e2d446cdc6543cb50f92aadacf3c298d0
+  or a documented successor
+
+#3364 Draft = true
+#3364 merged = false
+
+protected main =
+  26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+~~~
+
+If #3364 head changed, re-read central plan before using any conclusion in this section.
+
+### Minute 5–10 — inspect central artifact first
+
+Current diagnostic reference:
+
+~~~
+run      = 33178399199
+artifact = 9688800772
+head     = fe9df68e...
+~~~
+
+Confirm:
+
+~~~
+unknown_changed_paths = []
+authority_errors      = []
+blocker_count         = 2
+~~~
+
+Then inspect the V13 decisions and confirm they are still incorrectly CARRY_FORWARD at this reference head.
+
+### Minute 10–15 — inspect exact resolver membership
+
+Check:
+
+~~~
+PHASE3_EVIDENCE_RUNTIME_FOUNDATION
+
+V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE
+
+PHASE7_PRIVATE_CANDIDATE_PROMOTION_IMPORT_CLOSURE
+~~~
+
+For the adapter:
+
+~~~
+apps/server/src/external_evidence/
+mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts
+~~~
+
+At this handoff reference head:
+
+~~~
+dedicated Phase7 closure = YES
+Phase3 closure           = NO
+V13 closure              = NO
+~~~
+
+### Minute 15–20 — patch dependency ownership
+
+Add the shared adapter to the correct Phase3 and V13 dependency closure definitions.
+
+Do not broaden unrelated roots.
+
+Do not remove dedicated Phase7 ownership.
+
+### Minute 20–25 — patch workflow trigger completeness
+
+Ensure the affected exact-head qualification workflows actually run when the shared adapter changes.
+
+Audit both:
+
+~~~
+Phase3
+V13
+~~~
+
+Do not assume central REQUALIFY alone schedules them.
+
+### Minute 25–30 — run central plan before evidence binding
+
+The first post-fix central plan is a diagnostic.
+
+Do not immediately register evidence.
+
+Verify:
+
+~~~
+Phase3 sees adapter change
+V13 sees adapter change
+Phase7 remains governed
+unknown paths = 0
+authority errors = 0
+resolver errors = 0
+~~~
+
+Only after that launch/accept fresh requalification evidence.
+
+---
+
+## F28. High-value exact file map
+
+### Frozen route
+
+~~~
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md
+~~~
+
+### V13 Formal-store authority
+
+~~~
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json
+~~~
+
+### Central control plane
+
+~~~
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+
+.github/workflows/
+mcft-cap-09-qualification-control-plane-v1.yml
+~~~
+
+### New Phase7 adapter
+
+~~~
+apps/server/src/external_evidence/
+mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts
+~~~
+
+### Private candidate manifest
+
+~~~
+apps/server/src/external_evidence/
+s3_compatible_private_candidate_manifest_store_v1.ts
+~~~
+
+### Private retained-raw reader predecessor
+
+~~~
+apps/server/src/external_evidence/
+s3_compatible_private_retained_raw_reader_v1.ts
+~~~
+
+### Phase7 focused workflow
+
+~~~
+.github/workflows/
+mcft-cap-09-phase7-candidate-promotion-composition.yml
+~~~
+
+### Phase7 focused acceptance
+
+~~~
+scripts/runtime_acceptance/
+ACCEPTANCE_MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1.ts
+~~~
+
+### Phase3 workflow
+
+~~~
+.github/workflows/
+mcft-cap-09-phase3-evidence-runtime-persistence.yml
+~~~
+
+### V13 fenced promotion implementation
+
+~~~
+apps/server/src/persistence/twin_runtime/
+postgres_external_formal_fenced_exact_base_fact_promotion_v1.ts
+~~~
+
+### V13 autonomous controller
+
+~~~
+apps/server/src/runtime/twin_runtime/
+external_formal_forcing_autonomous_controller_service_v1.ts
+~~~
+
+### V13 autonomous qualification workflow
+
+~~~
+.github/workflows/
+mcft-cap-09-v13-autonomous-forcing-foundation.yml
+~~~
+
+### V13 schema / viability qualification
+
+~~~
+.github/workflows/
+mcft-cap-09-v13-holistic-schema-postgres.yml
+
+.github/workflows/
+mcft-cap-09-v13-next-tick-viability-postgres.yml
+~~~
+
+---
+
+## F29. #3364 closure checklist
+
+Do not declare #3364 closed until one exact final head satisfies all of the following:
+
+### Dependency governance
+
+- [ ] new adapter is owned by PHASE3_EVIDENCE_RUNTIME_FOUNDATION;
+- [ ] new adapter is owned by V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE;
+- [ ] dedicated PHASE7_PRIVATE_CANDIDATE_PROMOTION_IMPORT_CLOSURE remains valid;
+- [ ] workflow trigger coverage is complete for each affected resolver;
+- [ ] unknown_changed_paths = 0;
+- [ ] authority_errors = 0;
+- [ ] resolver_errors = 0.
+
+### Phase3
+
+- [ ] final central plan shows adapter in Phase3 changed dependency closure;
+- [ ] fresh exact-head Phase3 workflow SUCCESS;
+- [ ] final Phase3 dependency digest read from machine output;
+- [ ] durable Phase3 requalification evidence valid.
+
+### V13
+
+- [ ] final central plan no longer incorrectly carries V13 forward;
+- [ ] applicable V13 premerge checks fresh-requalify;
+- [ ] fresh exact-head V13 workflow(s) SUCCESS;
+- [ ] V13 dependency digest reflects the shared adapter;
+- [ ] durable V13 evidence valid where required.
+
+### Phase7 composition
+
+- [ ] dedicated composition workflow SUCCESS on final governed state;
+- [ ] private candidate readback PASS;
+- [ ] provider refetch = 0;
+- [ ] GitHub artifact rehydration = 0;
+- [ ] exact semantic-manifest replay equality PASS;
+- [ ] real Postgres fenced promotion PASS;
+- [ ] exactly three Formal facts PASS;
+- [ ] cursor does not advance during promotion;
+- [ ] attestation precedes cursor advancement;
+- [ ] pre-mutation mismatch fails closed.
+
+### Repository
+
+- [ ] build-test SUCCESS;
+- [ ] acceptance SUCCESS;
+- [ ] Phase6 successor sentinel SUCCESS;
+- [ ] EA5E2 / successor governance still SUCCESS as applicable.
+
+### Final central closure
+
+- [ ] planner_status = PASS;
+- [ ] blocker_count = 0;
+- [ ] blockers = [];
+- [ ] all required durable evidence references valid.
+
+### Non-effects
+
+- [ ] protected main unchanged;
+- [ ] no production process wiring;
+- [ ] no production owner activation;
+- [ ] no remote Formal-v5 store provisioned;
+- [ ] no Formal-v5 epoch selected;
+- [ ] Formal-v5 not armed;
+- [ ] O00 not started;
+- [ ] MCFT-CAP-09 not declared complete.
+
+---
+
+## F30. What comes after #3364 — do not jump there early
+
+The current slice is still product composition / qualification.
+
+It does not authorize immediately skipping to a live Formal-v5 epoch.
+
+After #3364 closes, the next bounded Phase7 decision must be taken from the frozen Production Hosting route and V13 authority.
+
+Likely remaining categories include:
+
+- explicit production composition/owner wiring;
+- fresh Formal-v5 store/epoch authority;
+- post-Graduation activation gates;
+- fresh timing / exact-one-owner obligations;
+- eventual Formal-v5 O00→O23 execution.
+
+Do not collapse these into #3364 merely because candidate promotion works in isolated qualification.
+
+The correct progression remains governed and staged.
+
+---
+
+## F31. Current bottom line
+
+The project is no longer at the Phase6 runtime-independence frontier.
+
+It has now reached:
+
+~~~
+Phase5
+  CLOSED
+
+Phase6
+  CLOSED
+
+Phase7 private candidate I/O foundation
+  #3362 CLOSED
+  exact head = 46c9c7b6b59c113848fc69daff88fb183fccc954
+  12/12 exact-head workflows SUCCESS
+  central blockers = []
+
+        ↓
+
+Phase7 candidate capture / fenced promotion composition
+  #3364 IN PROGRESS
+  base = 46c9c7b6...
+  head = fe9df68e...
+  3 commits
+  8 files
+
+  focused composition = SUCCESS
+  Phase3 workflow      = SUCCESS
+  build-test           = SUCCESS
+  acceptance           = SUCCESS
+  Phase6 sentinel      = SUCCESS
+
+  central              = FAILURE
+  blocker_count        = 2
+
+        but
+
+  current real governance defect =
+    adapter is only in dedicated Phase7 closure
+    adapter is NOT in Phase3 closure
+    adapter is NOT in V13 closure
+    V13 therefore incorrectly CARRY_FORWARD
+
+        ↓
+
+next legitimate action =
+  repair dual dependency ownership
+  +
+  repair workflow trigger completeness
+  +
+  rerun central plan
+  +
+  require fresh Phase3/V13/Phase7 qualification
+  +
+  only then bind durable evidence
+  +
+  blockers=[]
+~~~
+
+The most important instruction to the next engineer is:
+
+**Do not make the current central red state green by registering the already-successful Phase3 and Phase7 runs before fixing shared dependency ownership.**
+
+That would prove the wrong dependency graph.
+
+First make the graph truthful.
+
+Then requalify it.
+
+Formal-v5 remains unarmed.
+
+Protected main remains untouched.
+
+
+---
+
+# Historical continuation preserved below
+
 # GEOX MCFT-CAP-09 Conversation Handoff — 2026-08-28 Continuation — Phase 6 GitHub Production-Owner Retirement / Runtime-Independence Frontier
 
 Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
