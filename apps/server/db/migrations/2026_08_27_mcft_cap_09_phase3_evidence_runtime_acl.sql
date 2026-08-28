@@ -49,6 +49,16 @@ GRANT SELECT, INSERT, UPDATE
   ON TABLE public.external_evidence_supply_cursor_v1
   TO geox_mcft_cap09_evidence_runtime_v1;
 
+-- Phase7 production forcing ownership remains inside the Evidence plane.
+-- These relations coordinate exact-base provider acquisition and physical ingress.
+-- They are explicitly denied to Twin Runtime by the Phase4 ACL migration.
+GRANT SELECT, INSERT, UPDATE
+  ON TABLE
+    public.twin_external_formal_forcing_base_cursor_v1,
+    public.twin_external_formal_forcing_base_target_v1,
+    public.twin_external_formal_forcing_controller_lease_v1
+  TO geox_mcft_cap09_evidence_runtime_v1;
+
 -- The SECURITY DEFINER owner is NOLOGIN and has only the privileges needed to
 -- verify the Evidence producer fence and append/read an External Evidence fact.
 GRANT SELECT, INSERT
@@ -201,7 +211,7 @@ GRANT EXECUTE ON FUNCTION public.mcft_cap09_evidence_runtime_append_fact_v1(
 ) TO geox_mcft_cap09_evidence_runtime_v1;
 
 COMMENT ON ROLE geox_mcft_cap09_evidence_runtime_v1 IS
-  'MCFT-CAP-09 Phase3 Evidence Runtime role: governed Evidence function + facts readback + Evidence lease/supply cursor only; no arbitrary facts INSERT or Twin Runtime authority.';
+  'MCFT-CAP-09 Evidence Runtime role: governed Evidence function + facts readback + Evidence lease/supply cursor + v13 forcing acquisition cursor/target/controller state; no arbitrary facts INSERT or Twin Runtime state authority.';
 
 COMMENT ON ROLE geox_mcft_cap09_evidence_writer_owner_v1 IS
   'MCFT-CAP-09 Phase3 NOLOGIN SECURITY DEFINER owner: narrow External Evidence fact append authority only.';
