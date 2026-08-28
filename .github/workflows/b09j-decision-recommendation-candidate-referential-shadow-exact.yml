@@ -1,0 +1,244 @@
+name: b09j-decision-recommendation-candidate-referential-shadow-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b09j-decision-recommendation-candidate-referential-shadow-exact-2026-08-28
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09j product head checkout
+        run: |
+          git checkout 03490b4ce54cdb35f2a2965193ed87fdcab24523
+          test "$(git rev-parse HEAD)" = "03490b4ce54cdb35f2a2965193ed87fdcab24523"
+          test "$(git rev-parse HEAD^)" = "39cab94721e73b055770b5c51d7a5073a26a28f6"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09j governance acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09J_DECISION_RECOMMENDATION_CANDIDATE_REFERENTIAL_SHADOW_V1.cjs
+
+      - name: B-09j contract regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.contract.test.ts
+
+      - name: B-06c CandidateDecision projector regression
+        run: node --import tsx --test apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.contract.test.ts
+
+      - name: B-09h criterion shadow regression
+        run: node --import tsx --test apps/server/src/domain/decision/agronomy_qualified_evidence_criterion_shadow_v1.contract.test.ts
+
+      - name: B-09g Evidence Judge provenance regression
+        run: node --import tsx --test apps/server/src/domain/judge/evidence_judge_canonical_sufficiency_shadow_v1.test.ts
+
+      - name: B-09f binding regression
+        run: node --import tsx --test apps/server/src/domain/decision/agronomy_evidence_dependency_shadow_binding_v1.contract.test.ts
+
+      - name: B-09d inventory regression
+        run: node --import tsx --test apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.contract.test.ts
+
+      - name: B-09c collector regression
+        run: node --import tsx --test apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.contract.test.ts
+
+      - name: B-09b comparator regression
+        run: node --import tsx --test apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.contract.test.ts
+
+      - name: B-09a migration contract regression
+        run: node --import tsx --test apps/server/src/contracts/semantic_migration_v1.contract.test.ts
+
+      - name: B-07 runtime continuity regressions
+        run: |
+          node --import tsx --test apps/server/src/domain/decision/stage1_eligibility_precursor_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: Lock B-09j governance boundaries
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const cp=require("child_process");
+          const base="39cab94721e73b055770b5c51d7a5073a26a28f6";
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const graph=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json","utf8"));
+          const readiness=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-B09-REPLACEMENT-READINESS-V1.json","utf8"));
+          const beforeReg=JSON.parse(cp.execFileSync("git",["show",base+":docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json"],{encoding:"utf8"}));
+          const beforeGraph=JSON.parse(cp.execFileSync("git",["show",base+":docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json"],{encoding:"utf8"}));
+          const beforeReadiness=JSON.parse(cp.execFileSync("git",["show",base+":docs/architecture/semantic_convergence/GEOX-B09-REPLACEMENT-READINESS-V1.json"],{encoding:"utf8"}));
+
+          const flatten=(r)=>(r.semantics||[]).flatMap(s=>(s.registered_producers||[])
+            .filter(p=>p.grandfathered_duplicate===true)
+            .map(p=>({semantic_id:s.semantic_id,...p})))
+            .sort((a,b)=>(a.semantic_id+"::"+a.producer_id).localeCompare(b.semantic_id+"::"+b.producer_id));
+          const beforeGrand=flatten(beforeReg),afterGrand=flatten(reg);
+          if(beforeGrand.length!==29||afterGrand.length!==29||JSON.stringify(beforeGrand)!==JSON.stringify(afterGrand)) throw new Error("B09J_GRANDFATHERED_AUTHORITY_MUTATED");
+
+          const beforeCand=(beforeReg.semantics||[]).find(s=>s.semantic_id==="decision.candidate");
+          const cand=(reg.semantics||[]).find(s=>s.semantic_id==="decision.candidate");
+          if(!beforeCand||!cand) throw new Error("B09J_CANDIDATE_REGISTER_MISSING");
+          if(JSON.stringify(beforeCand.registered_producers.map(p=>p.producer_id))!==JSON.stringify(cand.registered_producers.map(p=>p.producer_id))) throw new Error("B09J_CANDIDATE_PRODUCER_SET_CHANGED");
+
+          const consumer=(cand.runtime_consumers||[]).find(c=>c.consumer_id==="b09j-decision-recommendation-candidate-criterion-shadow-binding");
+          if(!consumer||consumer.producer_id!=="legacy-recommendation-candidate-compatibility-adapter"||consumer.evidence_edge_id!=="C-041") throw new Error("B09J_RUNTIME_CONSUMER_REGISTRATION_INVALID");
+
+          for(const guardId of ["G-B02-15-candidate-decision-instantiation","G-B02-17-decision-eligibility-criterion-instantiation","G-B02-18-decision-eligibility-runtime-consumer"]){
+            const a=(reg.static_guards||[]).find(g=>g.guard_id===guardId);
+            const b=(beforeReg.static_guards||[]).find(g=>g.guard_id===guardId);
+            if(JSON.stringify(a)!==JSON.stringify(b)) throw new Error("B09J_GUARD_MUTATED:"+guardId);
+          }
+
+          if(JSON.stringify(readiness)!==JSON.stringify(beforeReadiness)) throw new Error("B09J_REPLACEMENT_READINESS_MUTATED");
+          if(JSON.stringify(graph.current_parallel_edges)!==JSON.stringify(beforeGraph.current_parallel_edges)) throw new Error("B09J_PARALLEL_AUTHORITY_CHANGED");
+          if(JSON.stringify(graph.semantic_edges)!==JSON.stringify(beforeGraph.semantic_edges)) throw new Error("B09J_SEMANTIC_AUTHORITY_EDGES_CHANGED");
+          if(JSON.stringify(graph.forbidden_edges)!==JSON.stringify(beforeGraph.forbidden_edges)) throw new Error("B09J_FORBIDDEN_EDGES_CHANGED");
+
+          const beforeConn=beforeGraph.current_connectivity_edges||[];
+          const afterConn=graph.current_connectivity_edges||[];
+          if(afterConn.length!==beforeConn.length+5) throw new Error("B09J_CONNECTIVITY_DELTA_INVALID");
+          if(JSON.stringify(afterConn.slice(0,beforeConn.length))!==JSON.stringify(beforeConn)) throw new Error("B09J_PRIOR_CONNECTIVITY_MUTATED");
+          const newIds=afterConn.slice(beforeConn.length).map(e=>e.edge_id);
+          if(JSON.stringify(newIds)!==JSON.stringify(["C-040","C-041","C-042","C-043","C-044"])) throw new Error("B09J_CONNECTIVITY_IDS_INVALID");
+
+          console.log("B09J_29_GRANDFATHERED_UNCHANGED_PASS");
+          console.log("B09J_CANDIDATE_PRODUCER_SET_UNCHANGED_PASS");
+          console.log("B09J_REGISTERED_SHADOW_RUNTIME_CONSUMER_PASS");
+          console.log("B09J_GUARDS_UNCHANGED_PASS");
+          console.log("B09J_C040_C044_CONNECTIVITY_ONLY_PASS");
+          console.log("B09J_READINESS_AND_PARALLEL_AUTHORITY_UNCHANGED_PASS");
+          NODE
+
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only 39cab94721e73b055770b5c51d7a5073a26a28f6 03490b4ce54cdb35f2a2965193ed87fdcab24523 > /tmp/b09j-files.txt
+          cat /tmp/b09j-files.txt
+          test "$(wc -l < /tmp/b09j-files.txt | tr -d ' ')" = "7"
+          grep -qx "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts" /tmp/b09j-files.txt
+          grep -qx "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.contract.test.ts" /tmp/b09j-files.txt
+          grep -qx "apps/server/src/routes/judge_v2.ts" /tmp/b09j-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09J-DECISION-RECOMMENDATION-CANDIDATE-REFERENTIAL-SHADOW-V1.md" /tmp/b09j-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json" /tmp/b09j-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json" /tmp/b09j-files.txt
+          grep -qx "scripts/governance_acceptance/ACCEPTANCE_B09J_DECISION_RECOMMENDATION_CANDIDATE_REFERENTIAL_SHADOW_V1.cjs" /tmp/b09j-files.txt
+          git diff --check 39cab94721e73b055770b5c51d7a5073a26a28f6 03490b4ce54cdb35f2a2965193ed87fdcab24523
+          echo "B09J_BOUNDED_PRODUCT_DIFF_PASS"
+
+      - name: Protected domains schema workflow MCFT remain untouched
+        run: |
+          git diff --exit-code 39cab94721e73b055770b5c51d7a5073a26a28f6 03490b4ce54cdb35f2a2965193ed87fdcab24523 --             apps/server/db             packages             .github/workflows             docs/digital_twin             docker-compose.commercial_v1.yml
+          echo "B09J_SCHEMA_WORKFLOW_MCFT_UNTOUCHED_PASS"
+
+      - name: Prepare isolated runtime env
+        run: |
+          cat > .env.b09j <<'EOF_INNER'
+          GEOX_RUNTIME_ENV=pilot
+          POSTGRES_USER=landos
+          POSTGRES_PASSWORD=b09j-postgres-strong-2026
+          POSTGRES_DB=landos
+          GEOX_MCFT_MIGRATOR_PASSWORD=b09j-mcft-migrator-strong-2026
+          GEOX_RUNTIME_DATABASE_PASSWORD=b09j-runtime-database-strong-2026
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT=03490b4ce54cdb35f2a2965193ed87fdcab24523
+          GEOX_AO_ACT_TOKEN=admin_token
+          GEOX_EXECUTOR_TOKEN=tenant_a_admin_token
+          GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
+          GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT=http://127.0.0.1:9000
+          MINIO_ROOT_USER=geoxminio
+          MINIO_ROOT_PASSWORD=b09j-minio-strong-2026
+          MQTT_AUTH_REQUIRED=1
+          GEOX_MQTT_AUTH_REQUIRED=1
+          MQTT_USERNAME=geoxmqtt
+          MQTT_PASSWORD=b09j-mqtt-strong-2026
+          CORS_ORIGINS=https://b09j-ci.geox.invalid
+          GEOX_ALLOWED_ORIGINS=https://b09j-ci.geox.invalid
+          APP_SECRET=b09j-app-secret-strong-2026
+          GEOX_APP_SECRET=b09j-app-secret-strong-2026
+          PUBLIC_BASE_URL=https://b09j-ci.geox.invalid
+          GEOX_PUBLIC_BASE_URL=https://b09j-ci.geox.invalid
+          GEOX_EXECUTION_DEFAULT_DISABLED=1
+          GEOX_EXECUTION_ENABLE_EXPLICITLY=0
+          GEOX_EXECUTION_ENABLE_REASON=b09j-candidate-referential-shadow-validation
+          GEOX_DEVTOOLS_ENABLED=0
+          EOF_INNER
+
+      - name: Start isolated commercial runtime
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          timeout 180 docker compose --env-file .env.b09j -f docker-compose.commercial_v1.yml up -d minio minio-init
+          timeout 180 docker compose --env-file .env.b09j -f docker-compose.commercial_v1.yml up -d postgres mqtt
+          timeout 120 bash -lc 'until docker compose --env-file .env.b09j -f docker-compose.commercial_v1.yml exec -T postgres pg_isready -U landos -d landos >/dev/null 2>&1; do sleep 2; done'
+          docker compose --env-file .env.b09j -f docker-compose.commercial_v1.yml exec -T postgres \
+            psql -v ON_ERROR_STOP=1 -U landos -d landos \
+            < apps/server/db/migrations/2026_06_06_c8_formal_e2e_telemetry_projection_v1.sql
+          timeout 300 docker compose --env-file .env.b09j -f docker-compose.commercial_v1.yml up -d server
+          docker compose --env-file .env.b09j -f docker-compose.commercial_v1.yml ps
+
+      - name: Wait for API ready
+        run: |
+          set -euo pipefail
+          timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health >/dev/null; do sleep 2; done'
+          curl -fsS http://127.0.0.1:3001/api/health
+
+      - name: Materialize validation-only runtime proof script
+        run: |
+          git show "$GITHUB_SHA:scripts/validation/b09j_runtime_candidate_referential_shadow_proof.mjs" > .b09j_runtime_candidate_referential_shadow_proof.mjs
+          test -s .b09j_runtime_candidate_referential_shadow_proof.mjs
+
+      - name: Exact runtime candidate referential shadow proof
+        env:
+          DATABASE_URL: postgres://landos:b09j-postgres-strong-2026@127.0.0.1:5433/landos
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          node --import tsx ./.b09j_runtime_candidate_referential_shadow_proof.mjs
+
+      - name: Prove validation did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "03490b4ce54cdb35f2a2965193ed87fdcab24523"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09J_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Upload B-09j exact runtime proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: b09j-runtime-candidate-referential-shadow-proof
+          path: acceptance-output/b09j-runtime-candidate-referential-shadow-proof.json
+          if-no-files-found: error
+
+      - name: Stop isolated runtime
+        if: always()
+        run: docker compose --env-file .env.b09j -f docker-compose.commercial_v1.yml down -v || true
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Marker
+        run: |
+          echo "B09J_EXACT_HEAD 03490b4ce54cdb35f2a2965193ed87fdcab24523"
+          echo "B09J_DECISION_RECOMMENDATION_CANDIDATE_REFERENTIAL_SHADOW_PASS"
