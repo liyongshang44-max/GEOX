@@ -1,0 +1,264 @@
+name: b09d-evidence-shadow-inventory-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b09d-evidence-shadow-inventory-exact-2026-08-28
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal product head checkout
+        run: |
+          git checkout ac0d2d43c4914d53075de0ebc4e76bfeeca12d88
+          test "$(git rev-parse HEAD)" = "ac0d2d43c4914d53075de0ebc4e76bfeeca12d88"
+          test "$(git rev-parse HEAD^)" = "b35efbccfdaccf543c982d9ef8643a08bd7214e9"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09d Evidence shadow inventory
+        run: node --import tsx --test apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.contract.test.ts
+
+      - name: B-09c collector regression
+        run: node --import tsx --test apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.contract.test.ts
+
+      - name: B-09b comparator regression
+        run: node --import tsx --test apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.contract.test.ts
+
+      - name: B-09a migration inventory regression
+        run: node --import tsx --test apps/server/src/contracts/semantic_migration_v1.contract.test.ts
+
+      - name: B-09d machine topology exactness
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const graph=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json","utf8"));
+          const sem=(reg.semantics||[]).find(x=>x.semantic_id==="governance.semantic_authority_migration");
+          if(!sem) throw new Error("B09D_MIGRATION_SEMANTIC_MISSING");
+          if(sem.current_state!=="SHADOW_RUNTIME_OBSERVABLE") throw new Error("B09D_MIGRATION_STATE_INVALID:"+sem.current_state);
+
+          const p=(sem.registered_producers||[]).find(x=>x.producer_id==="evidence-semantic-shadow-comparator-v1");
+          if(!p) throw new Error("B09D_COMPARATOR_MISSING");
+          if(p.authority_level!=="SHADOW_ONLY_COMPARATOR") throw new Error("B09D_COMPARATOR_AUTHORITY_INVALID");
+          if(p.new_runtime_consumer_creation!=="FORBIDDEN") throw new Error("B09D_CONSUMER_GUARD_OPENED");
+          const allowed=["evidence-shadow-runtime-collector-v1","evidence-shadow-inventory-read-model-v1"];
+          if(JSON.stringify(p.grandfathered_runtime_consumers)!==JSON.stringify(allowed)) {
+            throw new Error("B09D_ALLOWED_CONSUMERS_INVALID:"+JSON.stringify(p.grandfathered_runtime_consumers));
+          }
+
+          const consumerIds=(sem.registered_consumers||[]).map(x=>x.consumer_id);
+          if(JSON.stringify(consumerIds)!==JSON.stringify(allowed)) {
+            throw new Error("B09D_REGISTERED_CONSUMERS_INVALID:"+JSON.stringify(consumerIds));
+          }
+          const inventoryConsumer=(sem.registered_consumers||[]).find(x=>x.consumer_id==="evidence-shadow-inventory-read-model-v1");
+          if(!inventoryConsumer ||
+             inventoryConsumer.connection_class!=="REPORTING_ARTIFACT_PLANE" ||
+             inventoryConsumer.activation!=="API_ONLY" ||
+             inventoryConsumer.runtime_edge!=="PROVEN") {
+            throw new Error("B09D_INVENTORY_CONSUMER_CLASS_INVALID");
+          }
+
+          const runtimeIds=(sem.runtime_consumers||[]).map(x=>x.consumer_id);
+          if(JSON.stringify(runtimeIds)!==JSON.stringify(allowed)) {
+            throw new Error("B09D_RUNTIME_CONSUMERS_INVALID:"+JSON.stringify(runtimeIds));
+          }
+
+          const c035=(graph.current_connectivity_edges||[]).find(x=>x.edge_id==="C-035");
+          if(!c035 ||
+             c035.from_producer!=="evidence-semantic-shadow-comparator-v1" ||
+             c035.to_consumer!=="evidence-shadow-inventory-read-model-v1" ||
+             c035.connection_class!=="REPORTING_ARTIFACT_PLANE" ||
+             c035.runtime_edge!=="PROVEN" ||
+             c035.status!=="CURRENT_PROVEN") {
+            throw new Error("B09D_C035_INVALID:"+JSON.stringify(c035));
+          }
+
+          const guards=new Map((reg.static_guards||[]).map(g=>[g.guard_id,g]));
+          const exact=(id,paths)=>{
+            const g=guards.get(id);
+            if(!g) throw new Error("B09D_GUARD_MISSING:"+id);
+            if(JSON.stringify(g.registered_paths||[])!==JSON.stringify(paths)) {
+              throw new Error("B09D_GUARD_PATHS_INVALID:"+id+":"+JSON.stringify(g.registered_paths));
+            }
+          };
+          exact("G-B02-26-b09d-evidence-shadow-inventory-read",[
+            "apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.ts",
+            "apps/server/src/routes/judge_v2.ts",
+          ]);
+          exact("G-B02-27-b09d-evidence-shadow-inventory-instantiation",[
+            "apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.ts",
+          ]);
+          console.log("B09D_MACHINE_TOPOLOGY_EXACT_PASS");
+          NODE
+
+      - name: B-09d read-only and bounded consumer surface
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const path=require("path");
+          const root="apps/server/src";
+          const walk=(dir)=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>{
+            const p=path.join(dir,e.name);
+            return e.isDirectory()?walk(p):e.isFile()&&p.endsWith(".ts")&&!p.endsWith(".test.ts")&&!p.endsWith(".acceptance.test.ts")?[p.replaceAll("\\","/")]:[];
+          });
+          const files=walk(root);
+          const hits=(needle)=>files.filter(f=>fs.readFileSync(f,"utf8").includes(needle)).sort();
+
+          const readHits=hits("readEvidenceSemanticShadowInventoryV1(");
+          const expectedRead=[
+            "apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.ts",
+            "apps/server/src/routes/judge_v2.ts",
+          ];
+          if(JSON.stringify(readHits)!==JSON.stringify(expectedRead)) throw new Error("B09D_READ_SURFACE_INVALID:"+JSON.stringify(readHits));
+
+          const parseHits=hits("evidenceSemanticShadowInventoryV1Schema.parse(");
+          const expectedParse=["apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.ts"];
+          if(JSON.stringify(parseHits)!==JSON.stringify(expectedParse)) throw new Error("B09D_INVENTORY_PRODUCER_SURFACE_INVALID:"+JSON.stringify(parseHits));
+
+          const stage1Hits=hits("compareStage1GateToCanonicalEvidenceShadowV1(");
+          const expectedStage1=["apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts"];
+          if(JSON.stringify(stage1Hits)!==JSON.stringify(expectedStage1)) throw new Error("B09D_STAGE1_COMPARATOR_CONNECTED:"+JSON.stringify(stage1Hits));
+
+          const inventory=fs.readFileSync("apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.ts","utf8");
+          for(const forbidden of ["insertJudgeResultV2(","createJudgeResultV2(","pool.query(","INSERT INTO ","UPDATE ","DELETE FROM ","approval","operation_plan","act_task"]) {
+            if(inventory.includes(forbidden)) throw new Error("B09D_INVENTORY_NOT_READ_ONLY:"+forbidden);
+          }
+
+          const route=fs.readFileSync("apps/server/src/routes/judge_v2.ts","utf8");
+          const start=route.indexOf('app.get("/api/v1/judge/shadow/evidence/inventory"');
+          const end=route.indexOf('app.post("/api/v1/judge/evidence/evaluate"',start);
+          if(start<0||end<0) throw new Error("B09D_ROUTE_BLOCK_MISSING");
+          const block=route.slice(start,end);
+          if(!block.includes("readEvidenceSemanticShadowInventoryV1(pool, input)")) throw new Error("B09D_ROUTE_READ_MISSING");
+          for(const forbidden of ["insertJudgeResultV2(","pool.query(","recordMemoryV1(","app.post("]) {
+            if(block.includes(forbidden)) throw new Error("B09D_ROUTE_NOT_READ_ONLY:"+forbidden);
+          }
+          console.log("B09D_READ_ONLY_SURFACE_PASS");
+          NODE
+
+      - name: Grandfathered historical authority remains unchanged
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const cp=require("child_process");
+          const before=JSON.parse(cp.execFileSync("git",["show","b35efbccfdaccf543c982d9ef8643a08bd7214e9:docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json"],{encoding:"utf8"}));
+          const after=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const flatten=(reg)=>(reg.semantics||[]).flatMap(s=>(s.registered_producers||[])
+            .filter(p=>p.grandfathered_duplicate===true)
+            .map(p=>({semantic_id:s.semantic_id,...p})))
+            .sort((a,b)=>(a.semantic_id+"::"+a.producer_id).localeCompare(b.semantic_id+"::"+b.producer_id));
+          const b=flatten(before),a=flatten(after);
+          if(b.length!==29||a.length!==29) throw new Error("B09D_GRANDFATHERED_COUNT_INVALID:"+b.length+":"+a.length);
+          if(JSON.stringify(b)!==JSON.stringify(a)) throw new Error("B09D_GRANDFATHERED_AUTHORITY_MUTATED");
+          if(a.some(x=>x.removal_target!=="B-09")) throw new Error("B09D_NON_B09_REMOVAL_TARGET");
+          console.log("B09D_29_GRANDFATHERED_UNCHANGED_PASS");
+          NODE
+
+      - name: Parallel authority removal graph remains unchanged
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const cp=require("child_process");
+          const before=JSON.parse(cp.execFileSync("git",["show","b35efbccfdaccf543c982d9ef8643a08bd7214e9:docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json"],{encoding:"utf8"}));
+          const after=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json","utf8"));
+          if(JSON.stringify(before.current_parallel_edges)!==JSON.stringify(after.current_parallel_edges)) throw new Error("B09D_PARALLEL_AUTHORITY_EDGES_MUTATED");
+          if((after.current_connectivity_edges||[]).length-(before.current_connectivity_edges||[]).length!==1) throw new Error("B09D_CONNECTIVITY_DELTA_INVALID");
+          console.log("B09D_PARALLEL_AUTHORITY_UNCHANGED_PASS");
+          NODE
+
+      - name: B-09a authority removal remains false
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const inv=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-B09-REPLACEMENT-READINESS-V1.json","utf8"));
+          if(inv.authority_removal_performed!==false) throw new Error("B09D_AUTHORITY_REMOVAL_PERFORMED");
+          const evidence=(inv.families||[]).find(x=>x.semantic_id==="evidence.qualification");
+          if(!evidence) throw new Error("B09D_EVIDENCE_FAMILY_MISSING");
+          if(evidence.consumer_migration_state!=="PARTIAL") throw new Error("B09D_CONSUMER_MIGRATION_OVERCLAIMED");
+          if(evidence.authority_removal_state!=="PENDING_CONSUMER_MIGRATION") throw new Error("B09D_REMOVAL_STATE_INVALID");
+          console.log("B09D_ZERO_AUTHORITY_REMOVAL_PASS");
+          NODE
+
+      - name: Historical Evidence semantics and MCFT remain untouched
+        shell: bash
+        run: |
+          git diff --exit-code b35efbccfdaccf543c982d9ef8643a08bd7214e9 ac0d2d43c4914d53075de0ebc4e76bfeeca12d88 --             apps/server/src/domain/judge/evidence_judge_v2.ts             apps/server/src/domain/decision/stage1_action_boundary_v1.ts             apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.ts             docs/digital_twin             .github/workflows/mcft*             apps/server/src/modules             packages
+          if grep -R --include='*.ts' -nE 'futureDecisionIntegrationBindingV1Schema\.parse\(' apps/server/src | grep -v '\.test\.ts'; then
+            echo "B09D_REAL_FUTURE_INTEGRATION_BINDING_FOUND"
+            exit 1
+          fi
+          echo "B09D_HISTORICAL_AND_INTEGRATION_BOUNDARY_PASS"
+
+      - name: B-08 and B-07 regression
+        run: |
+          node --import tsx --test apps/server/src/contracts/decision_episode_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/decision_integration_ports_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_episode_assembler_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/decision_eligibility_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: Earlier B-line regression boundary
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_decision_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+
+      - name: Product diff remains bounded
+        shell: bash
+        run: |
+          git diff --name-only b35efbccfdaccf543c982d9ef8643a08bd7214e9 ac0d2d43c4914d53075de0ebc4e76bfeeca12d88 > /tmp/b09d-files.txt
+          cat /tmp/b09d-files.txt
+          test "$(wc -l < /tmp/b09d-files.txt | tr -d ' ')" = "7"
+          grep -qx "apps/server/src/contracts/semantic_migration_v1.ts" /tmp/b09d-files.txt
+          grep -qx "apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.contract.test.ts" /tmp/b09d-files.txt
+          grep -qx "apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.ts" /tmp/b09d-files.txt
+          grep -qx "apps/server/src/routes/judge_v2.ts" /tmp/b09d-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09D-EVIDENCE-SHADOW-INVENTORY-V1.md" /tmp/b09d-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json" /tmp/b09d-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json" /tmp/b09d-files.txt
+          git diff --check b35efbccfdaccf543c982d9ef8643a08bd7214e9 ac0d2d43c4914d53075de0ebc4e76bfeeca12d88
+          echo "B09D_BOUNDED_PRODUCT_DIFF_PASS"
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Marker
+        run: |
+          echo "B09D_EXACT_HEAD ac0d2d43c4914d53075de0ebc4e76bfeeca12d88"
+          echo "B09D_EVIDENCE_SHADOW_INVENTORY_PASS"
