@@ -520,11 +520,12 @@ jobs:
             echo "GEOX_PHASE5_ACCELERATED_THROUGH_LOGICAL_TIME=2026-08-28T03:00:00.000Z"
           } >> "$GITHUB_ENV"
           docker compose -f "$COMPOSE_FILE" run --rm --no-deps \
+            --entrypoint /bin/sh \
             -e DATABASE_URL="postgres://$GEOX_PHASE5_POSTGRES_USER:$GEOX_PHASE5_POSTGRES_PASSWORD@postgres:5432/$GEOX_PHASE5_DATABASE_NAME" \
             -e GEOX_MCFT_CAP09_PHASE5_FOCUSED_A0="2026-08-27T19:00:00.000Z" \
             -e GEOX_MCFT_CAP09_PHASE5_FOCUSED_SEED_PROOF_OUTPUT="/tmp/twin-fencing-seed-proof.json" \
             database-platform-bootstrap \
-            pnpm exec tsx scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts \
+            -ceu 'node_modules/.bin/tsx scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts' \
             2>&1 | tee "$GEOX_PHASE5_CONTROL_ROOT/twin-fencing-seed.log"
           tail -n 1 "$GEOX_PHASE5_CONTROL_ROOT/twin-fencing-seed.log" | jq . > "$GEOX_PHASE5_CONTROL_ROOT/twin-fencing-seed-proof.json"
           test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/twin-fencing-seed-proof.json")" = "PASS"
