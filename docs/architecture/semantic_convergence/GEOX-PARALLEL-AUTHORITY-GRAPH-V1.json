@@ -405,7 +405,7 @@
         "kind": "CONTRACT_ONLY",
         "caller_path": "apps/server/src/routes/judge_v2.ts",
         "callee_path": "apps/server/src/domain/judge/agronomy_judge_v2.ts",
-        "fingerprint": "Agronomy request accepts evidence_judge_id/evidence_judge_verdict but does not load/run Evidence Judge"
+        "fingerprint": "Agronomy authority still consumes caller-supplied evidence_judge_verdict and does not load/run Evidence Judge inside evaluateAgronomyJudgeV2; B-09f scoped persisted shadow read is separately represented by C-036/C-037"
       },
       "status": "NOT_WIRED"
     },
@@ -933,6 +933,40 @@
         "caller_path": "apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.ts",
         "callee_path": "apps/server/src/domain/judge/judge_result_v2.ts",
         "fingerprint": "listJudgeResultsV2 -> JudgeResultV2.outputs.semantic_shadow_comparison_v1"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-036",
+      "from_producer": "evidence-judge-v2",
+      "to_consumer": "agronomy-evidence-dependency-shadow-binding",
+      "semantic_id": "evidence.qualification",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "SCOPED_PERSISTED_READ",
+        "caller_path": "apps/server/src/domain/decision/agronomy_evidence_dependency_shadow_binding_v1.ts",
+        "callee_path": "apps/server/src/domain/judge/judge_result_v2.ts",
+        "fingerprint": "buildAgronomyEvidenceDependencyShadowBindingV1 -> loadJudgeResultV2 scoped by tenant/project/group/evidence_judge_id"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-037",
+      "from_producer": "agronomy-evidence-dependency-shadow-binding-v1",
+      "to_consumer": "judge-v2-agronomy-shadow-binding",
+      "semantic_id": "governance.semantic_authority_migration",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/routes/judge_v2.ts",
+        "callee_path": "apps/server/src/domain/decision/agronomy_evidence_dependency_shadow_binding_v1.ts",
+        "fingerprint": "Agronomy Judge route attaches agronomy_evidence_dependency_shadow_v1 after legacy JudgeResult construction"
       },
       "status": "CURRENT_PROVEN"
     }

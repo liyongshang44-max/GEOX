@@ -293,12 +293,23 @@
           "connection_class": "ROUTE_ISLAND",
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "agronomy-evidence-dependency-shadow-binding",
+          "path": "apps/server/src/domain/decision/agronomy_evidence_dependency_shadow_binding_v1.ts",
+          "role": "B-09f shadow-only scoped reader of a persisted Evidence Judge result referenced by evidence_judge_id; verifies field/verdict/comparison observability without changing Agronomy authority",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
         }
       ],
       "notes": [
         "Must converge physical, temporal, source, spatial, conflict and role-eligibility semantics.",
         "Device/transport health is not measurement health.",
-        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only."
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only.",
+        "B-09f adds a shadow-only referential consumer that resolves evidence_judge_id to the scoped persisted Evidence Judge; it is not the Agronomy Judge authoritative evidence gate.",
+        "C-004 remains NOT_PROVEN/NOT_WIRED for the historical caller-injected Agronomy verdict dependency; B-09f creates a separate shadow edge C-036 instead of overclaiming that dependency."
       ],
       "runtime_consumers": [
         {
@@ -345,6 +356,15 @@
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN",
           "evidence_edge_id": "C-033"
+        },
+        {
+          "consumer_id": "agronomy-evidence-dependency-shadow-binding",
+          "path": "apps/server/src/domain/decision/agronomy_evidence_dependency_shadow_binding_v1.ts",
+          "producer_id": "evidence-judge-v2",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-036"
         }
       ]
     },
@@ -2167,8 +2187,8 @@
       "semantic_id": "governance.semantic_authority_migration",
       "question": "Which grandfathered semantic authorities are replacement-backed, shadow-comparable, migration-ready, or explicitly unreplaced before B-09 removal?",
       "target_owner": "B-09 Semantic Authority Migration Governance",
-      "canonical_output_type": "SemanticMigrationInventoryV1 + SemanticShadowComparisonV1 + EvidenceSemanticShadowInventoryV1 + EvidenceConsumerDependencyInventoryV1 (B-09e analysis only; no consumer migration and no authority removal)",
-      "current_state": "EVIDENCE_CONSUMER_DEPENDENCIES_ANALYZED",
+      "canonical_output_type": "SemanticMigrationInventoryV1 + SemanticShadowComparisonV1 + EvidenceSemanticShadowInventoryV1 + EvidenceConsumerDependencyInventoryV1 + AgronomyEvidenceDependencyShadowBindingV1 (B-09f referential shadow only; no criterion cutover, consumer migration, or authority removal)",
+      "current_state": "AGRONOMY_EVIDENCE_REFERENTIAL_SHADOW_ACTIVE",
       "target_phase": "B-09",
       "new_owner_creation": "FORBIDDEN",
       "registered_producers": [
@@ -2226,6 +2246,27 @@
           "runtime_edge": "INTENTIONAL_NONE",
           "new_runtime_consumer_creation": "FORBIDDEN",
           "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "agronomy-evidence-dependency-shadow-binding-v1",
+          "path": "apps/server/src/domain/decision/agronomy_evidence_dependency_shadow_binding_v1.ts",
+          "role": "B-09f shadow-only referential binding from Agronomy evidence_judge_id to a scoped persisted Evidence Judge result and its B-04/B-09c shadow evidence; cannot emit Decision Eligibility criterion authority",
+          "authority_level": "SHADOW_ONLY_BINDING",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "buildAgronomyEvidenceDependencyShadowBindingV1",
+            "agronomyEvidenceDependencyShadowBindingV1Schema.parse",
+            "NOT_READY_FOR_CRITERION_CUTOVER"
+          ],
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": [
+            "judge-v2-agronomy-shadow-binding"
+          ]
         }
       ],
       "registered_consumers": [
@@ -2244,6 +2285,15 @@
           "role": "B-09d read-only reporting inventory over persisted SemanticShadowComparisonV1 outputs; unobserved legacy rows are never fabricated into semantic comparison states",
           "current": true,
           "connection_class": "REPORTING_ARTIFACT_PLANE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "judge-v2-agronomy-shadow-binding",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "role": "B-09f attaches the referential Evidence dependency binding to Agronomy Judge outputs while preserving the historical Agronomy verdict byte-for-byte",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN"
         }
@@ -2265,7 +2315,11 @@
         "B-09e locks a runtime-corpus-backed Evidence consumer dependency inventory without changing any runtime consumer.",
         "B-09e finds Agronomy Judge uses a caller-injected evidence_judge_verdict and does not load evidence_judge_id.",
         "B-09e confirms B-07 criterion/Decision Eligibility is the target evidence-consequence boundary; direct canonical evidence-to-BLOCK replacement is forbidden.",
-        "B-09e confirms Stage-1 remains a separate unshadowed grandfathered Evidence authority, so family-wide Evidence authority removal remains forbidden."
+        "B-09e confirms Stage-1 remains a separate unshadowed grandfathered Evidence authority, so family-wide Evidence authority removal remains forbidden.",
+        "B-09f makes evidence_judge_id observable as a scoped referential shadow binding without changing the caller-injected legacy evidence_judge_verdict authority.",
+        "B-09f intentionally refuses criterion cutover because the persisted Evidence Judge output does not carry resolvable canonical EvidenceQualificationV1 refs required by B-07e provenance checks.",
+        "B-09f preserves DIVERGENT and INCOMPARABLE comparison states as observations; neither is coerced to final Decision Eligibility.",
+        "B-09f performs zero consumer migration and zero authority removal."
       ],
       "runtime_consumers": [
         {
@@ -2285,6 +2339,15 @@
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN",
           "evidence_edge_id": "C-035"
+        },
+        {
+          "consumer_id": "judge-v2-agronomy-shadow-binding",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "producer_id": "agronomy-evidence-dependency-shadow-binding-v1",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-037"
         }
       ]
     }
@@ -2982,6 +3045,55 @@
         "apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.ts"
       ],
       "failure": "UNREGISTERED_B09D_EVIDENCE_SHADOW_INVENTORY_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-28-b09f-agronomy-evidence-shadow-binding-call",
+      "semantic_id": "governance.semantic_authority_migration",
+      "description": "B-09f permits exactly the shadow binding implementation and the Agronomy Judge route attachment to call buildAgronomyEvidenceDependencyShadowBindingV1.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "buildAgronomyEvidenceDependencyShadowBindingV1("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/agronomy_evidence_dependency_shadow_binding_v1.ts",
+        "apps/server/src/routes/judge_v2.ts"
+      ],
+      "failure": "UNREGISTERED_B09F_AGRONOMY_EVIDENCE_SHADOW_BINDING_CONSUMER"
+    },
+    {
+      "guard_id": "G-B02-29-b09f-agronomy-evidence-shadow-binding-instantiation",
+      "semantic_id": "governance.semantic_authority_migration",
+      "description": "B-09f permits exactly one AgronomyEvidenceDependencyShadowBindingV1 producer.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "agronomyEvidenceDependencyShadowBindingV1Schema.parse("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/agronomy_evidence_dependency_shadow_binding_v1.ts"
+      ],
+      "failure": "UNREGISTERED_B09F_AGRONOMY_EVIDENCE_SHADOW_BINDING_PRODUCER"
     }
   ],
   "connectivity_model": {
