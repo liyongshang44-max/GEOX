@@ -7,7 +7,11 @@
 import type { Pool } from "pg";
 
 import type { TwinScopeKeyV1 } from "../runtime/twin_runtime/ports.js";
-import type { FormalForcingAcquisitionBudgetAdjudicationV1 } from "../domain/twin_runtime/external_formal_forcing_acquisition_budget_v1.js";
+import {
+  MCFT_CAP09_FORMAL_FORCING_ACQUISITION_BUDGET_AUTHORITY_ID_V1,
+  MCFT_CAP09_REQUIRED_FORCING_DELAY_CASES_V1,
+  type FormalForcingAcquisitionBudgetAdjudicationV1,
+} from "../domain/twin_runtime/external_formal_forcing_acquisition_budget_v1.js";
 import {
   ExternalFormalForcingAutonomousControllerServiceV1,
 } from "../runtime/twin_runtime/external_formal_forcing_autonomous_controller_service_v1.js";
@@ -99,6 +103,31 @@ function positiveInteger(value: unknown, code: string, maximum: number): number 
   if (!Number.isInteger(value) || Number(value) <= 0 || Number(value) > maximum) throw new Error(code);
   return Number(value);
 }
+function assertQualifiedBudget(value: FormalForcingAcquisitionBudgetAdjudicationV1): void {
+  if (
+    value?.authority_id !== MCFT_CAP09_FORMAL_FORCING_ACQUISITION_BUDGET_AUTHORITY_ID_V1
+    || value.status !== "PASS"
+    || !Number.isSafeInteger(value.real_sample_count)
+    || value.real_sample_count < 3
+    || value.controlled_delay_case_count !== MCFT_CAP09_REQUIRED_FORCING_DELAY_CASES_V1.length
+    || !Number.isSafeInteger(value.maximum_real_end_to_end_ms)
+    || value.maximum_real_end_to_end_ms < 0
+    || !Number.isSafeInteger(value.maximum_controlled_end_to_end_ms)
+    || value.maximum_controlled_end_to_end_ms < 0
+    || value.measured_envelope_ms !== Math.max(
+      value.maximum_real_end_to_end_ms,
+      value.maximum_controlled_end_to_end_ms,
+    )
+    || !Number.isSafeInteger(value.selected_budget_ms)
+    || value.selected_budget_ms <= value.measured_envelope_ms
+    || value.safety_margin_ms !== value.selected_budget_ms - value.measured_envelope_ms
+    || value.safety_margin_ms <= 0
+    || value.hardcoded_default_budget_minutes !== null
+    || value.selection_basis !== "MEASURED_ENVELOPE_PLUS_EXPLICIT_MARGIN"
+  ) {
+    throw new Error("POSTMERGE_V13_COMPOSITION_QUALIFIED_TIMING_BUDGET_REQUIRED");
+  }
+}
 
 export function composeMcftCap09V13ForcingProductionV1(
   input: McftCap09V13ForcingProductionCompositionConfigV1,
@@ -131,6 +160,7 @@ export function composeMcftCap09V13ForcingProductionV1(
 
   const controllerOwner = required(input.controller_owner, "POSTMERGE_V13_COMPOSITION_CONTROLLER_OWNER_REQUIRED");
   const producerOwner = required(input.producer_owner, "POSTMERGE_V13_COMPOSITION_PRODUCER_OWNER_REQUIRED");
+  assertQualifiedBudget(input.qualified_budget);
   const clock = input.clock ?? (() => new Date());
 
   const retention = new S3CompatiblePrivateRawEvidenceRetentionAdapterV1({
