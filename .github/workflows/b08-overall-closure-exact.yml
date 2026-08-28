@@ -1,0 +1,221 @@
+name: b08-overall-closure-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b08-overall-closure-exact-2026-08-28
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal product head checkout
+        run: |
+          git checkout 6702631be2f66587d4fa1230e0f97f6fd4e9b8b9
+          test "$(git rev-parse HEAD)" = "6702631be2f66587d4fa1230e0f97f6fd4e9b8b9"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-08 full contract and trace regression
+        run: |
+          node --import tsx --test apps/server/src/contracts/decision_episode_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/decision_integration_ports_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_episode_assembler_v1.contract.test.ts
+
+      - name: B-08 ownership closure invariants
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const ep=(reg.semantics||[]).find(x=>x.semantic_id==="decision.episode");
+          const ports=(reg.semantics||[]).find(x=>x.semantic_id==="decision.integration_ports");
+          if(!ep||!ports) throw new Error("B08_CLOSURE_SEMANTIC_MISSING");
+
+          if(ep.target_phase!=="B-08") throw new Error("B08_EPISODE_TARGET_PHASE_DRIFT");
+          if(ep.current_state!=="REGISTERED_CAPABILITY_ISLAND") throw new Error("B08_EPISODE_NOT_REGISTERED_CAPABILITY_ISLAND:"+ep.current_state);
+          if(!String(ep.canonical_output_type||"").includes("DecisionEpisodeV1")) throw new Error("B08_EPISODE_CANONICAL_TYPE_MISSING");
+
+          const assembler=(ep.registered_producers||[]).filter(x=>x.producer_id==="decision-episode-assembler-v1");
+          if(assembler.length!==1) throw new Error("B08_EPISODE_ASSEMBLER_SET_INVALID");
+          const a=assembler[0];
+          if(a.authority_level!=="TRACE_ONLY_CANONICAL_PRODUCER") throw new Error("B08_EPISODE_ASSEMBLER_AUTHORITY_INVALID");
+          if(a.connection_class!=="REGISTERED_CAPABILITY_ISLAND"||a.activation!=="MANUAL"||a.runtime_edge!=="INTENTIONAL_NONE") throw new Error("B08_EPISODE_ASSEMBLER_BOUNDARY_INVALID");
+          if((ep.runtime_consumers||[]).length!==0) throw new Error("B08_EPISODE_EXTERNAL_RUNTIME_CONSUMER_PRESENT");
+
+          if(ports.target_phase!=="B-08") throw new Error("B08_PORT_TARGET_PHASE_DRIFT");
+          if(ports.current_state!=="BOUNDARY_CLEAR_TARGET_NOT_YET_PRODUCT_CONNECTED") throw new Error("B08_PORT_REAL_INTEGRATION_STATE_INVALID:"+ports.current_state);
+          if(!String(ports.canonical_output_type||"").includes("Typed Decision Integration Ports V1")) throw new Error("B08_PORT_CANONICAL_TYPE_MISSING");
+          if((ports.runtime_consumers||[]).length!==0) throw new Error("B08_PORT_RUNTIME_CONSUMER_PRESENT");
+          if((ports.registered_consumers||[]).length!==0) throw new Error("B08_PORT_REGISTERED_CONSUMER_PRESENT");
+
+          const ref=(ports.registered_producers||[]).find(x=>x.producer_id==="future-decision-integration-port-contracts");
+          if(!ref) throw new Error("B08_PORT_CONTRACT_REFERENCE_MISSING");
+          if(ref.connection_class!=="INTENTIONAL_ISOLATION"||ref.runtime_edge!=="INTENTIONAL_NONE") throw new Error("B08_PORT_CONTRACT_NOT_ISOLATED");
+
+          console.log("B08_OWNERSHIP_CLOSURE_INVARIANTS_PASS");
+          NODE
+
+      - name: B-08 static guard exactness
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const ep=(reg.static_guards||[]).find(x=>x.guard_id==="G-B02-19-decision-episode-instantiation");
+          const po=(reg.static_guards||[]).find(x=>x.guard_id==="G-B02-20-decision-producer-port-output-instantiation");
+          const bind=(reg.static_guards||[]).find(x=>x.guard_id==="G-B02-21-future-integration-binding-instantiation");
+          if(!ep||!po||!bind) throw new Error("B08_STATIC_GUARD_MISSING");
+          const expectedEpisode="apps/server/src/domain/decision/decision_episode_assembler_v1.ts";
+          if((ep.registered_paths||[]).length!==1||ep.registered_paths[0]!==expectedEpisode) throw new Error("B08_EPISODE_GUARD_SET_INVALID");
+          if((po.registered_paths||[]).length!==0) throw new Error("B08_PORT_OUTPUT_PRODUCER_PREMATURELY_REGISTERED");
+          if((bind.registered_paths||[]).length!==0) throw new Error("B08_REAL_BINDING_PREMATURELY_REGISTERED");
+          console.log("B08_STATIC_GUARD_EXACTNESS_PASS");
+          NODE
+
+      - name: B-08 negative governance remains closed
+        shell: bash
+        run: |
+          EP="apps/server/src/.b08_closure_episode_probe.ts"
+          printf '%s\n' 'decisionEpisodeV1Schema.parse(' > "$EP"
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs >/tmp/b08-episode-negative.log 2>&1
+          EP_RC=$?
+          set -e
+          rm -f "$EP"
+          cat /tmp/b08-episode-negative.log
+          test "$EP_RC" -ne 0
+          grep -q "UNREGISTERED_DECISION_EPISODE_PRODUCER" /tmp/b08-episode-negative.log
+
+          PO="apps/server/src/.b08_closure_port_probe.ts"
+          printf '%s\n' 'decisionProducerPortOutputV1Schema.parse(' > "$PO"
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs >/tmp/b08-port-negative.log 2>&1
+          PO_RC=$?
+          set -e
+          rm -f "$PO"
+          cat /tmp/b08-port-negative.log
+          test "$PO_RC" -ne 0
+          grep -q "UNREGISTERED_DECISION_PRODUCER_PORT_OUTPUT" /tmp/b08-port-negative.log
+
+          BI="apps/server/src/.b08_closure_binding_probe.ts"
+          printf '%s\n' 'futureDecisionIntegrationBindingV1Schema.parse(' > "$BI"
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs >/tmp/b08-binding-negative.log 2>&1
+          BI_RC=$?
+          set -e
+          rm -f "$BI"
+          cat /tmp/b08-binding-negative.log
+          test "$BI_RC" -ne 0
+          grep -q "UNREGISTERED_FUTURE_DECISION_INTEGRATION_BINDING" /tmp/b08-binding-negative.log
+
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+          echo B08_NEGATIVE_GOVERNANCE_PASS
+
+      - name: Real MCFT ADR LLM integrations remain disconnected
+        shell: bash
+        run: |
+          PORT_IMPORTS="$(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n 'decision_integration_ports_v1' apps/server/src | grep -v '^apps/server/src/contracts/decision_integration_ports_v1.ts:' || true)"
+          PORT_OUTPUTS="$(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n 'decisionProducerPortOutputV1Schema.parse(' apps/server/src || true)"
+          BINDINGS="$(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n 'futureDecisionIntegrationBindingV1Schema.parse(' apps/server/src || true)"
+          if [ -n "$PORT_IMPORTS" ]; then echo "$PORT_IMPORTS"; exit 1; fi
+          if [ -n "$PORT_OUTPUTS" ]; then echo "$PORT_OUTPUTS"; exit 1; fi
+          if [ -n "$BINDINGS" ]; then echo "$BINDINGS"; exit 1; fi
+          echo B08_REAL_INTEGRATIONS_DISCONNECTED_PASS
+
+      - name: Decision Episode represents commercial chain without authority mutation
+        shell: bash
+        run: |
+          grep -q 'approval_request_ref' apps/server/src/contracts/decision_episode_v1.ts
+          grep -q 'approval_decision_ref' apps/server/src/contracts/decision_episode_v1.ts
+          grep -q 'approved_operation_plan_ref' apps/server/src/contracts/decision_episode_v1.ts
+          grep -q 'task_refs' apps/server/src/contracts/decision_episode_v1.ts
+          grep -q 'receipt_refs' apps/server/src/contracts/decision_episode_v1.ts
+          grep -q 'acceptance_refs' apps/server/src/contracts/decision_episode_v1.ts
+          grep -q 'outcome_evidence_refs' apps/server/src/contracts/decision_episode_v1.ts
+          grep -q 'z.literal("TRACE_ONLY")' apps/server/src/contracts/decision_episode_v1.ts
+          echo B08_COMMERCIAL_CHAIN_TRACE_PASS
+
+      - name: Approval execution boundaries remain untouched
+        shell: bash
+        run: |
+          git diff --exit-code ddcb5f75a77731f5f564b21f831d4c7a98ff726c 6702631be2f66587d4fa1230e0f97f6fd4e9b8b9 --             apps/server/src/routes             apps/server/src/modules             apps/server/src/domain/approval             apps/server/src/domain/operations             apps/server/src/domain/controlplane             apps/server/src/domain/judge             apps/server/src/jobs/agronomy_agent.ts             docs/digital_twin             packages/contracts
+          echo B08_AUTHORITY_BOUNDARIES_UNTOUCHED_PASS
+
+      - name: B-09 has not started and removal boundary remains B-09-only
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const graph=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json","utf8"));
+          const bad=(reg.semantics||[]).flatMap(s=>(s.registered_producers||[]).filter(p=>p.grandfathered_duplicate===true&&p.removal_target!=="B-09").map(p=>({semantic_id:s.semantic_id,producer_id:p.producer_id,removal_target:p.removal_target})));
+          if(bad.length) throw new Error("B08_NON_B09_GRANDFATHERED_REMOVAL:"+JSON.stringify(bad));
+          const badEdges=(graph.current_parallel_edges||[]).filter(e=>e.removal_target!=="B-09");
+          if(badEdges.length) throw new Error("B08_NON_B09_PARALLEL_REMOVAL:"+JSON.stringify(badEdges));
+          const cand=(reg.semantics||[]).find(x=>x.semantic_id==="decision.candidate");
+          const plan=(reg.semantics||[]).find(x=>x.semantic_id==="operation.plan");
+          if(cand?.current_state!=="DUPLICATE_AUTHORITY") throw new Error("B08_CANDIDATE_AUTHORITY_PREMATURELY_REMOVED");
+          if(plan?.current_state!=="MULTIPLE_FORMATION_PATHS") throw new Error("B08_PLAN_AUTHORITY_PREMATURELY_COLLAPSED");
+          console.log("B08_B09_NOT_STARTED_PASS");
+          NODE
+
+      - name: B-08 exact stack ancestry
+        shell: bash
+        run: |
+          git merge-base --is-ancestor 0e87d8b9e5c6a5ca2bbeb308e7e631aa18fa7b14 6702631be2f66587d4fa1230e0f97f6fd4e9b8b9
+          git merge-base --is-ancestor c3672de04880616b2cae9ac4aaeff03b759d7db0 6702631be2f66587d4fa1230e0f97f6fd4e9b8b9
+          test "$(git rev-parse 0e87d8b9e5c6a5ca2bbeb308e7e631aa18fa7b14^)" = "ddcb5f75a77731f5f564b21f831d4c7a98ff726c"
+          test "$(git rev-parse c3672de04880616b2cae9ac4aaeff03b759d7db0^)" = "0e87d8b9e5c6a5ca2bbeb308e7e631aa18fa7b14"
+          test "$(git rev-parse 6702631be2f66587d4fa1230e0f97f6fd4e9b8b9^)" = "c3672de04880616b2cae9ac4aaeff03b759d7db0"
+          echo B08_STACK_ANCESTRY_PASS
+
+      - name: B-07 full regression
+        run: |
+          node --import tsx --test apps/server/src/contracts/decision_eligibility_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/stage1_eligibility_precursor_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: B-06 B-05 B-04 B-03 regression boundary
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_decision_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Marker
+        run: |
+          echo "B08_OVERALL_PRODUCT_HEAD 6702631be2f66587d4fa1230e0f97f6fd4e9b8b9"
+          echo B08_OVERALL_CLOSURE_PASS
