@@ -659,6 +659,106 @@
         "artifact_absence_reason": "RUN_LEVEL_PHASE3_PRIVATE_CANDIDATE_IO_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
         "immutable_binding_sha256": "d1c646a6bafc11fe531bf8382119e8386686ea0d4565d971d52c2178c43937a1"
+      },
+      {
+        "evidence_id": "V13_AUTONOMOUS_FORCING_FOUNDATION_REQUAL_5B085FDF",
+        "check_id": "V13_AUTONOMOUS_FORCING_FOUNDATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "phase7-cross-plane-v13-autonomous-forcing-requalification",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "5b085fdfee7649f3618f408e82ac5b477bbab1b1",
+        "workflow_name": "mcft-cap-09-v13-autonomous-forcing-foundation",
+        "workflow_path": ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
+        "run_id": 33183741744,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "5b085fdfee7649f3618f408e82ac5b477bbab1b1",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:ad2a11be99762cfcd76663320875b494eb1308b3ea606d19d5dca3ed0351fcce",
+        "artifact_absence_reason": "RUN_LEVEL_PHASE7_CROSS_PLANE_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "ea9bf104b3abc6f32891c9f2fafc35bf48e0d7d72b230f19365c243a7ffdf9ba"
+      },
+      {
+        "evidence_id": "V13_HOLISTIC_SCHEMA_REQUAL_5B085FDF",
+        "check_id": "V13_HOLISTIC_SCHEMA",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "phase7-cross-plane-v13-holistic-schema-requalification",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "5b085fdfee7649f3618f408e82ac5b477bbab1b1",
+        "workflow_name": "mcft-cap-09-v13-holistic-schema-postgres",
+        "workflow_path": ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
+        "run_id": 33183741281,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "5b085fdfee7649f3618f408e82ac5b477bbab1b1",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:ad2a11be99762cfcd76663320875b494eb1308b3ea606d19d5dca3ed0351fcce",
+        "artifact_absence_reason": "RUN_LEVEL_PHASE7_CROSS_PLANE_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "d80d881cecdedb97c3ca36b6bb4ddc81859ce67bd0438463a7fecc3857381e9f"
+      },
+      {
+        "evidence_id": "V13_NEXT_TICK_VIABILITY_REQUAL_5B085FDF",
+        "check_id": "V13_NEXT_TICK_VIABILITY",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "phase7-cross-plane-v13-next-tick-requalification",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "5b085fdfee7649f3618f408e82ac5b477bbab1b1",
+        "workflow_name": "mcft-cap-09-v13-next-tick-viability-postgres",
+        "workflow_path": ".github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml",
+        "run_id": 33183741191,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "5b085fdfee7649f3618f408e82ac5b477bbab1b1",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:ad2a11be99762cfcd76663320875b494eb1308b3ea606d19d5dca3ed0351fcce",
+        "artifact_absence_reason": "RUN_LEVEL_PHASE7_CROSS_PLANE_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "29147854d9d5dffb271060bac5cfc28bd247883b481e4219744d9b540e48f80f"
+      },
+      {
+        "evidence_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_5B085FDF",
+        "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "phase7-cross-plane-private-candidate-promotion-evidence-runtime",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "5b085fdfee7649f3618f408e82ac5b477bbab1b1",
+        "workflow_name": "mcft-cap-09-phase3-evidence-runtime-persistence",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+        "run_id": 33183741830,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "5b085fdfee7649f3618f408e82ac5b477bbab1b1",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:fc2c58101bd232fa55703bfe0504845a725f2ba6bbf6e2f88f47e0fe76a612e5",
+        "artifact_absence_reason": "RUN_LEVEL_PHASE7_CROSS_PLANE_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "35273d088df1fada44fef10b83d97006427497fe5f5a6304373b0b3acb9ad241"
+      },
+      {
+        "evidence_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION_REQUAL_5B085FDF",
+        "check_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "phase7-private-candidate-promotion-composition",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "5b085fdfee7649f3618f408e82ac5b477bbab1b1",
+        "workflow_name": "mcft-cap-09-phase7-candidate-promotion-composition",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml",
+        "run_id": 33183742091,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "5b085fdfee7649f3618f408e82ac5b477bbab1b1",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:51dda298f971d88c71649ae8c3b4486fbcb12e42d8826543d6f8612e52a3472f",
+        "artifact_absence_reason": "RUN_LEVEL_PHASE7_CROSS_PLANE_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "af0d7fb8ddda19d56c2a86ede3ee955aeb88c937695325491581e09ca2801028"
       }
     ],
     "durable_anchors": {
@@ -930,6 +1030,76 @@
             "created_at": "2026-08-28T11:33:24Z",
             "updated_at": "2026-08-28T11:34:42Z"
           }
+        },
+        {
+          "evidence_id": "V13_AUTONOMOUS_FORCING_FOUNDATION_REQUAL_5B085FDF",
+          "run_id": 33183741744,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 76,
+            "workflow_path": ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
+            "workflow_name": "mcft-cap-09-v13-autonomous-forcing-foundation",
+            "head_sha": "5b085fdfee7649f3618f408e82ac5b477bbab1b1",
+            "base_sha": "46c9c7b6b59c113848fc69daff88fb183fccc954",
+            "created_at": "2026-08-28T15:09:17Z",
+            "updated_at": "2026-08-28T15:10:15Z"
+          }
+        },
+        {
+          "evidence_id": "V13_HOLISTIC_SCHEMA_REQUAL_5B085FDF",
+          "run_id": 33183741281,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 31,
+            "workflow_path": ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
+            "workflow_name": "mcft-cap-09-v13-holistic-schema-postgres",
+            "head_sha": "5b085fdfee7649f3618f408e82ac5b477bbab1b1",
+            "base_sha": "46c9c7b6b59c113848fc69daff88fb183fccc954",
+            "created_at": "2026-08-28T15:09:17Z",
+            "updated_at": "2026-08-28T15:09:57Z"
+          }
+        },
+        {
+          "evidence_id": "V13_NEXT_TICK_VIABILITY_REQUAL_5B085FDF",
+          "run_id": 33183741191,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 60,
+            "workflow_path": ".github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml",
+            "workflow_name": "mcft-cap-09-v13-next-tick-viability-postgres",
+            "head_sha": "5b085fdfee7649f3618f408e82ac5b477bbab1b1",
+            "base_sha": "46c9c7b6b59c113848fc69daff88fb183fccc954",
+            "created_at": "2026-08-28T15:09:17Z",
+            "updated_at": "2026-08-28T15:10:19Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_5B085FDF",
+          "run_id": 33183741830,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 184,
+            "workflow_path": ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+            "workflow_name": "mcft-cap-09-phase3-evidence-runtime-persistence",
+            "head_sha": "5b085fdfee7649f3618f408e82ac5b477bbab1b1",
+            "base_sha": "46c9c7b6b59c113848fc69daff88fb183fccc954",
+            "created_at": "2026-08-28T15:09:17Z",
+            "updated_at": "2026-08-28T15:11:00Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION_REQUAL_5B085FDF",
+          "run_id": 33183742091,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 8,
+            "workflow_path": ".github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml",
+            "workflow_name": "mcft-cap-09-phase7-candidate-promotion-composition",
+            "head_sha": "5b085fdfee7649f3618f408e82ac5b477bbab1b1",
+            "base_sha": "46c9c7b6b59c113848fc69daff88fb183fccc954",
+            "created_at": "2026-08-28T15:09:17Z",
+            "updated_at": "2026-08-28T15:10:31Z"
+          }
         }
       ],
       "rules": {
@@ -946,7 +1116,8 @@
           "75d4961279bd64dc1c9dd7d68aac189c72c98846",
           "48ceafe7c6e7d3d57a1dc17411fb4bf673486333",
           "c4249e5b7bd67d35d34813aceea6760f9d210ed0",
-          "d6c015b49d09960591185ff9c930e64dac7e2806"
+          "d6c015b49d09960591185ff9c930e64dac7e2806",
+          "46c9c7b6b59c113848fc69daff88fb183fccc954"
         ],
         "dependency_digest_must_match_current": true,
         "anchor_is_not_production_authority": true

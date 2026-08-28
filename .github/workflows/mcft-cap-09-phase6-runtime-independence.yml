@@ -840,14 +840,17 @@ jobs:
       PHASE6_RUNTIME_RUN_ID: '33146391000'
       PHASE6_RUNTIME_ARTIFACT_ID: '9676455831'
       PHASE6_RUNTIME_ARTIFACT_DIGEST: 'sha256:9a3a22b8b844fc1538d4a6986a9d3477b895208b1e88cdf13106f0f0dbf463d7'
-      PHASE7_EVIDENCE_FORCING_ACCEPTED_HEAD: 'd6c015b49d09960591185ff9c930e64dac7e2806'
-      PHASE7_EVIDENCE_FORCING_CONTROL_RUN_ID: '33165124372'
-      PHASE7_EVIDENCE_FORCING_CONTROL_ARTIFACT_ID: '9683343727'
-      PHASE7_EVIDENCE_FORCING_CONTROL_ARTIFACT_DIGEST: 'sha256:9b5cff857e4ab40d45ff7b397d58ce42136b6fd9582037274ae466b3b65003bc'
-      PHASE7_EVIDENCE_FORCING_TWO_SERVICE_RUN_ID: '33165124390'
-      PHASE7_EVIDENCE_FORCING_TWO_SERVICE_ARTIFACT_ID: '9683290494'
-      PHASE7_EVIDENCE_FORCING_TWO_SERVICE_ARTIFACT_DIGEST: 'sha256:93f52270c812c07406dbc189a4c6c4956699b8099549d4f23ff0fbeff269a8af'
-      PHASE7_EVIDENCE_FORCING_CI_RUN_ID: '33165124412'
+      PHASE7_ACCEPTED_PREDECESSOR_HEAD: '46c9c7b6b59c113848fc69daff88fb183fccc954'
+      PHASE7_ACCEPTED_CONTROL_RUN_ID: '33168990431'
+      PHASE7_ACCEPTED_CONTROL_ARTIFACT_ID: '9684863842'
+      PHASE7_ACCEPTED_CONTROL_ARTIFACT_DIGEST: 'sha256:e93f9bfebf04caf09ebafa0125282f4b39ca5c4d204dd3087cae2517a79a5e88'
+      PHASE7_ACCEPTED_PHASE3_RUN_ID: '33168990430'
+      PHASE7_ACCEPTED_PHASE3_ARTIFACT_ID: '9684809448'
+      PHASE7_ACCEPTED_PHASE3_ARTIFACT_DIGEST: 'sha256:272e9d83f4dc2e04064593882477401be55c70cf4626abb412eff0e08402fdb7'
+      PHASE7_ACCEPTED_PHASE6_SENTINEL_RUN_ID: '33168990454'
+      PHASE7_ACCEPTED_PHASE6_SENTINEL_ARTIFACT_ID: '9684782319'
+      PHASE7_ACCEPTED_PHASE6_SENTINEL_ARTIFACT_DIGEST: 'sha256:51066e43712b60932b90777ab8bb8ec34351503bbd1db5ff2ae089b4eaae68d0'
+      PHASE7_ACCEPTED_CI_RUN_ID: '33168990490'
       BASE_SHA: ${{ github.event.pull_request.base.sha }}
       SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
@@ -863,7 +866,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
-          test "$BASE_SHA" = "$PHASE7_EVIDENCE_FORCING_ACCEPTED_HEAD"
+          test "$BASE_SHA" = "$PHASE7_ACCEPTED_PREDECESSOR_HEAD"
           git merge-base --is-ancestor "$PHASE6_ACCEPTED_HEAD" "$BASE_SHA"
           git merge-base --is-ancestor "$BASE_SHA" "$SUBJECT_SHA"
 
@@ -872,8 +875,18 @@ jobs:
             apps/server/src/external_evidence/s3_compatible_private_candidate_manifest_store_v1.ts
             apps/server/src/external_evidence/s3_compatible_private_retained_raw_reader_v1.ts
           )
+          phase7_composition_paths=(
+            apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts
+          )
+          allowed_successor_runtime_paths=(
+            "${phase7_foundation_paths[@]}"
+            "${phase7_composition_paths[@]}"
+          )
           mapfile -t phase7_foundation_delta < <(
             git diff --name-only "$BASE_SHA"..HEAD -- "${phase7_foundation_paths[@]}" | sort
+          )
+          mapfile -t phase7_composition_delta < <(
+            git diff --name-only "$BASE_SHA"..HEAD -- "${phase7_composition_paths[@]}" | sort
           )
 
           runtime_delta="$(
@@ -887,7 +900,7 @@ jobs:
               docker \
               docker-compose.mcft-cap09-phase5-qualification.yml \
               docker-compose.mcft-cap09-phase6-github-blackout.override.yml \
-            | grep -F -x -v -f <(printf '%s\n' "${phase7_foundation_paths[@]}") || true
+            | grep -F -x -v -f <(printf '%s\n' "${allowed_successor_runtime_paths[@]}") || true
           )"
           if [ -n "$runtime_delta" ]; then
             echo "PHASE6_SUCCESSOR_RUNTIME_REQUALIFICATION_REQUIRED" >&2
@@ -895,17 +908,17 @@ jobs:
             exit 1
           fi
 
-          if [ "${#phase7_foundation_delta[@]}" -gt 0 ]; then
-            for module_path in "${phase7_foundation_paths[@]}"; do
+          if [ "${#phase7_foundation_delta[@]}" -gt 0 ] || [ "${#phase7_composition_delta[@]}" -gt 0 ]; then
+            for module_path in "${allowed_successor_runtime_paths[@]}"; do
               module_stem="$(basename "$module_path" .ts)"
               mapfile -t refs < <(git grep -l -F "$module_stem" -- apps/server/src || true)
               for ref in "${refs[@]}"; do
                 allowed=0
-                for allowed_path in "${phase7_foundation_paths[@]}"; do
+                for allowed_path in "${allowed_successor_runtime_paths[@]}"; do
                   [ "$ref" = "$allowed_path" ] && allowed=1
                 done
                 if [ "$allowed" != "1" ]; then
-                  echo "PHASE7_FOUNDATION_PREMATURE_PRODUCTION_WIRING:$module_stem:$ref" >&2
+                  echo "PHASE7_UNWIRED_SUCCESSOR_PREMATURE_PRODUCTION_WIRING:$module_stem:$ref" >&2
                   exit 1
                 fi
               done
@@ -935,7 +948,7 @@ jobs:
             test -z "$(git diff --name-only "$BASE_SHA"..HEAD -- apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql)"
           fi
 
-          if [ "${#phase7_foundation_delta[@]}" -gt 0 ] || [ "${#qualification_delta[@]}" -gt 0 ] || [ "${#db_delta[@]}" -gt 0 ]; then
+          if [ "${#phase7_foundation_delta[@]}" -gt 0 ] || [ "${#phase7_composition_delta[@]}" -gt 0 ] || [ "${#qualification_delta[@]}" -gt 0 ] || [ "${#db_delta[@]}" -gt 0 ]; then
             plan="$RUNNER_TEMP/phase6-successor-requalification-plan.json"
             node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs \
               --base "$BASE_SHA" \
@@ -943,9 +956,9 @@ jobs:
               --generation v13 \
               --stage SUCCESSOR_SUBJECT_PRE_MERGE \
               --out "$plan"
-            node - "$plan" "${#phase7_foundation_delta[@]}" "${#qualification_delta[@]}" "${#db_delta[@]}" <<'NODE'
+            node - "$plan" "${#phase7_foundation_delta[@]}" "${#phase7_composition_delta[@]}" "${#qualification_delta[@]}" "${#db_delta[@]}" <<'NODE'
           const fs=require('node:fs');
-          const [planPath,foundationCount,qualificationCount,dbCount]=process.argv.slice(2);
+          const [planPath,foundationCount,compositionCount,qualificationCount,dbCount]=process.argv.slice(2);
           const p=JSON.parse(fs.readFileSync(planPath,'utf8'));
           if(p.status!=='PASS'||p.unknown_changed_paths.length||p.authority_errors.length||p.resolver_errors.length){
             throw new Error('PHASE6_SUCCESSOR_REQUALIFICATION_PLAN_NOT_PASS');
@@ -955,6 +968,12 @@ jobs:
             const phase3=byId('PHASE3_EVIDENCE_RUNTIME_FOUNDATION');
             if(!phase3||phase3.status!=='REQUALIFY'){
               throw new Error('PHASE7_FOUNDATION_DELTA_REQUIRES_PHASE3_REQUALIFY');
+            }
+          }
+          if(Number(compositionCount)>0){
+            const phase7=byId('PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION');
+            if(!phase7||phase7.status!=='REQUALIFY'){
+              throw new Error('PHASE7_CANDIDATE_PROMOTION_DELTA_REQUIRES_PHASE7_COMPOSITION_REQUALIFY');
             }
           }
           if(Number(qualificationCount)>0){
@@ -979,11 +998,12 @@ jobs:
         with:
           script: |
             const {owner,repo}=context.repo;
-            const accepted=process.env.PHASE7_EVIDENCE_FORCING_ACCEPTED_HEAD;
+            const accepted=process.env.PHASE7_ACCEPTED_PREDECESSOR_HEAD;
             const runs=[
-              [Number(process.env.PHASE7_EVIDENCE_FORCING_CONTROL_RUN_ID),'control-plane'],
-              [Number(process.env.PHASE7_EVIDENCE_FORCING_TWO_SERVICE_RUN_ID),'two-service'],
-              [Number(process.env.PHASE7_EVIDENCE_FORCING_CI_RUN_ID),'ci'],
+              [Number(process.env.PHASE7_ACCEPTED_CONTROL_RUN_ID),'control-plane'],
+              [Number(process.env.PHASE7_ACCEPTED_PHASE3_RUN_ID),'phase3-evidence-runtime'],
+              [Number(process.env.PHASE7_ACCEPTED_PHASE6_SENTINEL_RUN_ID),'phase6-successor-sentinel'],
+              [Number(process.env.PHASE7_ACCEPTED_CI_RUN_ID),'ci'],
             ];
             for(const [runId,label] of runs){
               const run=(await github.rest.actions.getWorkflowRun({owner,repo,run_id:runId})).data;
@@ -992,8 +1012,9 @@ jobs:
               }
             }
             const artifacts=[
-              [Number(process.env.PHASE7_EVIDENCE_FORCING_CONTROL_ARTIFACT_ID),process.env.PHASE7_EVIDENCE_FORCING_CONTROL_ARTIFACT_DIGEST,'control-plane'],
-              [Number(process.env.PHASE7_EVIDENCE_FORCING_TWO_SERVICE_ARTIFACT_ID),process.env.PHASE7_EVIDENCE_FORCING_TWO_SERVICE_ARTIFACT_DIGEST,'two-service'],
+              [Number(process.env.PHASE7_ACCEPTED_CONTROL_ARTIFACT_ID),process.env.PHASE7_ACCEPTED_CONTROL_ARTIFACT_DIGEST,'control-plane'],
+              [Number(process.env.PHASE7_ACCEPTED_PHASE3_ARTIFACT_ID),process.env.PHASE7_ACCEPTED_PHASE3_ARTIFACT_DIGEST,'phase3-evidence-runtime'],
+              [Number(process.env.PHASE7_ACCEPTED_PHASE6_SENTINEL_ARTIFACT_ID),process.env.PHASE7_ACCEPTED_PHASE6_SENTINEL_ARTIFACT_DIGEST,'phase6-successor-sentinel'],
             ];
             for(const [artifactId,digest,label] of artifacts){
               const artifact=(await github.rest.actions.getArtifact({owner,repo,artifact_id:artifactId})).data;
@@ -1038,18 +1059,25 @@ jobs:
             'apps/server/src/external_evidence/s3_compatible_private_retained_raw_reader_v1.ts'
           ];
           const foundationDelta=diff(foundationPaths);
+          const compositionPaths=[
+            'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts'
+          ];
+          const compositionDelta=diff(compositionPaths);
           const out={
             schema_version:'geox_mcft_cap09_phase6_successor_carry_forward_v1',
             status:'PASS',
             subject_sha:process.env.SUBJECT_SHA,
             base_sha:process.env.BASE_SHA,
             accepted_phase6_head:process.env.PHASE6_ACCEPTED_HEAD,
-            accepted_successor_predecessor_head:process.env.PHASE7_EVIDENCE_FORCING_ACCEPTED_HEAD,
+            accepted_successor_predecessor_head:process.env.PHASE7_ACCEPTED_PREDECESSOR_HEAD,
             accepted_runtime_run_id:Number(process.env.PHASE6_RUNTIME_RUN_ID),
             accepted_runtime_artifact_id:Number(process.env.PHASE6_RUNTIME_ARTIFACT_ID),
             protected_runtime_delta_count:0,
             phase7_unwired_evidence_foundation_delta_count:foundationDelta.length,
             phase7_unwired_evidence_foundation_requires_phase3_requalification:true,
+            phase7_unwired_candidate_promotion_composition_delta_count:compositionDelta.length,
+            phase7_unwired_candidate_promotion_requires_dedicated_requalification:true,
+            production_process_graph_wiring:false,
             accepted_predecessor_machine_evidence_verified:true,
             qualification_support_delta_count:qualificationDelta.length,
             phase5_requalification_required_on_qualification_delta:true,

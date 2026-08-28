@@ -4,6 +4,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const cp = require("node:child_process");
 
 const {
   AUTHORITY_PATH,
@@ -15,6 +16,7 @@ const {
 
 const ROOT = path.resolve(__dirname, "../..");
 const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json");
+const CURRENT_HEAD_SHA = cp.execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" }).trim();
 
 function readJson(rel) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8"));
@@ -38,7 +40,7 @@ function plan(authority, registry, changedPaths, stage = "SUCCESSOR_SUBJECT_PRE_
     changedPaths,
     stage,
     baseSha: authority.frozen_successor_subject_sha,
-    headSha: authority.frozen_successor_subject_sha,
+    headSha: CURRENT_HEAD_SHA,
   });
 }
 
@@ -109,8 +111,13 @@ function main() {
     "V13_AUTONOMOUS_FORCING_FOUNDATION",
     "V13_HOLISTIC_SCHEMA",
     "V13_NEXT_TICK_VIABILITY",
-    "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
-  ]) assert.equal(byId(controlOnly, id).status, "CARRY_FORWARD", `CONTROL_ONLY_MUST_CARRY:${id}`);
+  ]) {
+    const row = byId(controlOnly, id);
+    assert.equal(row.status, "REQUALIFY", `EXPANDED_V13_RESOLVER_MUST_REQUALIFY:${id}`);
+    assert.equal(row.reason_code, "DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT", `EXPANDED_V13_RESOLVER_REASON_REQUIRED:${id}`);
+    assert.equal(row.dependency_digest_match, false, `EXPANDED_V13_RESOLVER_DIGEST_MUST_DIFFER:${id}`);
+  }
+  assert.equal(byId(controlOnly, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS").status, "CARRY_FORWARD", "UNCHANGED_EA5C1_MUST_CARRY");
   for (const id of [
     "EA5E2_RUNTIME_DEPENDENCY_GRAPH",
     "LEGACY_AM19_PERSISTENT_24T",
@@ -149,6 +156,23 @@ function main() {
   assert.equal(phase3.status, "PASS");
   assert.equal(byId(phase3, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
   assert(byId(phase3, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes(phase3Path));
+
+  // CP-4: the Phase7 capture/promotion adapter crosses three governed closures.
+  const phase7CrossPlaneAdapter = "apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts";
+  const phase7CrossPlane = plan(authority, registry, [phase7CrossPlaneAdapter]);
+  assert.equal(phase7CrossPlane.status, "PASS");
+  assert.equal(phase7CrossPlane.unknown_changed_paths.length, 0);
+  for (const id of [
+    "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+    "V13_AUTONOMOUS_FORCING_FOUNDATION",
+    "V13_HOLISTIC_SCHEMA",
+    "V13_NEXT_TICK_VIABILITY",
+    "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION",
+  ]) {
+    const row = byId(phase7CrossPlane, id);
+    assert.equal(row.status, "REQUALIFY", `PHASE7_CROSS_PLANE_ADAPTER_MUST_REQUALIFY:${id}`);
+    assert(row.changed_dependencies.includes(phase7CrossPlaneAdapter), `PHASE7_CROSS_PLANE_ADAPTER_DEPENDENCY_REQUIRED:${id}`);
+  }
 
   // CP-4: Phase3 cadence/fenced-writer dependencies must be centrally owned.
   for (const phase3Path of [
@@ -325,8 +349,9 @@ function main() {
     all_resolvers_materialized_without_missing_paths: true,
     central_check_contract_complete_and_resolvable: true,
     unimplemented_future_workflows_explicit_without_invented_paths: true,
-    control_plane_only_change_does_not_invalidate_frozen_runtime_evidence: true,
+    control_plane_only_change_preserves_only_resolvable_frozen_dependencies: true,
     expanded_dependency_sets_require_fresh_requalification: true,
+    phase7_cross_plane_adapter_requalifies_phase3_v13_and_phase7: true,
     known_changed_dependency_requalifies: true,
     unknown_changed_path_fails_closed: true,
     shared_ingress_dependency_change_requalifies_ea5c1: true,

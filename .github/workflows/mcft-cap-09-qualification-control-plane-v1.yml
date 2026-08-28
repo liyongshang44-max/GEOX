@@ -50,6 +50,13 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1.ts'
+      - 'apps/server/src/external_evidence/s3_compatible_private_evidence_object_client_v1.ts'
+      - 'apps/server/src/external_evidence/s3_compatible_private_candidate_manifest_store_v1.ts'
+      - 'apps/server/src/external_evidence/s3_compatible_private_retained_raw_reader_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_PRIVATE_CANDIDATE_IO_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1.ts'
+      - '.github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml'
       - '.github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts'
@@ -106,6 +113,7 @@ env:
   PHASE6_CLOSURE_SHA: '48ceafe7c6e7d3d57a1dc17411fb4bf673486333'
   PHASE7_PREPARATION_SHA: 'c4249e5b7bd67d35d34813aceea6760f9d210ed0'
   PHASE7_EVIDENCE_FORCING_SHA: 'd6c015b49d09960591185ff9c930e64dac7e2806'
+  PHASE7_PRIVATE_CANDIDATE_IO_SHA: '46c9c7b6b59c113848fc69daff88fb183fccc954'
 
 concurrency:
   group: mcft-cap09-qualification-control-plane-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
@@ -130,7 +138,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             base='${{ github.event.pull_request.base.sha }}'
-            if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ] && [ "$base" != "$PHASE2_CLOSURE_SHA" ] && [ "$base" != "$PHASE3_CLOSURE_SHA" ] && [ "$base" != "$PHASE4_CLOSURE_SHA" ] && [ "$base" != "$PHASE5_CLOSURE_SHA" ] && [ "$base" != "$PHASE6_CLOSURE_SHA" ] && [ "$base" != "$PHASE7_PREPARATION_SHA" ] && [ "$base" != "$PHASE7_EVIDENCE_FORCING_SHA" ]; then
+            if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ] && [ "$base" != "$PHASE2_CLOSURE_SHA" ] && [ "$base" != "$PHASE3_CLOSURE_SHA" ] && [ "$base" != "$PHASE4_CLOSURE_SHA" ] && [ "$base" != "$PHASE5_CLOSURE_SHA" ] && [ "$base" != "$PHASE6_CLOSURE_SHA" ] && [ "$base" != "$PHASE7_PREPARATION_SHA" ] && [ "$base" != "$PHASE7_EVIDENCE_FORCING_SHA" ] && [ "$base" != "$PHASE7_PRIVATE_CANDIDATE_IO_SHA" ]; then
               echo "MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:${base}" >&2
               exit 1
             fi
@@ -163,7 +171,7 @@ jobs:
           const assert = (condition, code, detail = null) => {
             if (!condition) failures.push({code, detail});
           };
-          const expectedPredecessors = [process.env.FROZEN_SUCCESSOR_SHA, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA, process.env.PHASE2_CLOSURE_SHA, process.env.PHASE3_CLOSURE_SHA, process.env.PHASE4_CLOSURE_SHA, process.env.PHASE5_CLOSURE_SHA, process.env.PHASE6_CLOSURE_SHA, process.env.PHASE7_PREPARATION_SHA, process.env.PHASE7_EVIDENCE_FORCING_SHA];
+          const expectedPredecessors = [process.env.FROZEN_SUCCESSOR_SHA, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA, process.env.PHASE2_CLOSURE_SHA, process.env.PHASE3_CLOSURE_SHA, process.env.PHASE4_CLOSURE_SHA, process.env.PHASE5_CLOSURE_SHA, process.env.PHASE6_CLOSURE_SHA, process.env.PHASE7_PREPARATION_SHA, process.env.PHASE7_EVIDENCE_FORCING_SHA, process.env.PHASE7_PRIVATE_CANDIDATE_IO_SHA];
           const governedPredecessors = authority.governed_successor_predecessor_shas || [];
           assert(governedPredecessors.length === expectedPredecessors.length, 'GOVERNED_PREDECESSOR_CARDINALITY_MISMATCH', governedPredecessors);
           assert(new Set(governedPredecessors).size === governedPredecessors.length, 'GOVERNED_PREDECESSOR_DUPLICATE', governedPredecessors);
@@ -183,13 +191,22 @@ jobs:
           assert(g.store_generation?.formal_database === 'geox_mcft_cap09_s6_formal_t4r1_24h_v5', 'FORMAL_STORE_GENERATION_MISMATCH', g.store_generation);
           assert(registry.dependency_digest_strategy === DEPENDENCY_DIGEST_STRATEGY, 'DEPENDENCY_DIGEST_STRATEGY_MISMATCH', registry.dependency_digest_strategy);
           assert(registry.durable_anchors?.entries?.length === registry.entries.length, 'DURABLE_ANCHOR_CARDINALITY_MISMATCH', {anchors:registry.durable_anchors?.entries?.length, entries:registry.entries.length});
-          const carryForwardIds = ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS'];
-          const requalificationIds = ['EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T','PHASE1_TYPED_RUNTIME_COMPOSITION','PHASE2_EVIDENCE_PROVIDER_MODULES','PHASE3_EVIDENCE_RUNTIME_FOUNDATION','PHASE4_TWIN_RUNTIME_FOUNDATION','PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS'];
+          const carryForwardIds = ['EA5C1_DURABLE_RAW_RESTRICTED_INGRESS'];
+          const v13RequalificationIds = ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY'];
+          const requalificationIds = [...v13RequalificationIds,'EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T','PHASE1_TYPED_RUNTIME_COMPOSITION','PHASE2_EVIDENCE_PROVIDER_MODULES','PHASE3_EVIDENCE_RUNTIME_FOUNDATION','PHASE4_TWIN_RUNTIME_FOUNDATION','PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS','PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION'];
           const v13ScopedIds = [...carryForwardIds, ...requalificationIds];
           for (const id of carryForwardIds) {
             const row = current.decisions.find(x => x.check_id === id);
             assert(Boolean(row) && row.status === 'CARRY_FORWARD' && row.dependency_digest_match === true, 'FROZEN_DIGEST_CARRY_FORWARD_REQUIRED', row || {check_id:id, missing:true});
             assert(/^sha256:[0-9a-f]{64}$/.test(row?.dependency_digest || ''), 'DEPENDENCY_DIGEST_REQUIRED', row || {check_id:id, missing:true});
+          }
+          const phase7Adapter = 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts';
+          for (const id of v13RequalificationIds) {
+            const row = current.decisions.find(x => x.check_id === id);
+            assert(Boolean(row) && row.status === 'REQUALIFY' && row.dependency_digest_match === false, 'V13_EXPANDED_DEPENDENCY_MUST_REQUALIFY', row || {check_id:id, missing:true});
+            assert(['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(row?.reason_code), 'V13_REQUALIFICATION_REASON_INVALID', row);
+            assert(Array.isArray(row?.changed_dependencies) && row.changed_dependencies.includes(phase7Adapter), 'V13_PHASE7_ADAPTER_DEPENDENCY_REQUIRED', row);
+            assert(/^sha256:[0-9a-f]{64}$/.test(row?.dependency_digest || ''), 'V13_REQUALIFICATION_DEPENDENCY_DIGEST_REQUIRED', row || {check_id:id, missing:true});
           }
           const ea5e2 = current.decisions.find(x => x.check_id === 'EA5E2_RUNTIME_DEPENDENCY_GRAPH');
           assert(Boolean(ea5e2), 'EA5E2_REQUALIFICATION_DECISION_REQUIRED', {check_id:'EA5E2_RUNTIME_DEPENDENCY_GRAPH', missing:true});
@@ -219,6 +236,10 @@ jobs:
           assert(Boolean(phase5), 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_DECISION_REQUIRED', {check_id:'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS', missing:true});
           assert(phase5?.status === 'REQUALIFY' && phase5?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED', 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_MUST_REQUALIFY', phase5);
           assert(phase5?.execution_workflow === '.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml', 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_WORKFLOW_MISMATCH', phase5);
+          const phase7Composition = current.decisions.find(x => x.check_id === 'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION');
+          assert(Boolean(phase7Composition), 'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION_DECISION_REQUIRED', {check_id:'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION', missing:true});
+          assert(phase7Composition?.status === 'REQUALIFY', 'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION_MUST_REQUALIFY', phase7Composition);
+          assert(phase7Composition?.execution_workflow === '.github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml', 'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION_WORKFLOW_MISMATCH', phase7Composition);
           const future = planApplicability({
             authority, registry, changedPaths:[REGISTRY_PATH],
             stage:'SUCCESSOR_SUBJECT_PRE_MERGE', generation:'v14',
@@ -429,17 +450,35 @@ jobs:
           if (!governedBases.has(plan.base_sha)) throw new Error(`CONTROL_PLANE_PLAN_BASE_NOT_GOVERNED:${plan.base_sha}`);
           const control = plan.decisions.find(x => x.check_id === 'CONTROL_PLANE_INTEGRITY');
           if (!control || control.status !== 'REQUALIFY') throw new Error('CONTROL_PLANE_SELF_CHANGE_MUST_REQUALIFY');
-          for (const id of ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS']) {
+          const phase7Adapter = 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts';
+          const phase7AdapterChanged = plan.changed_paths.includes(phase7Adapter);
+          const v13Checks = [
+            ['V13_AUTONOMOUS_FORCING_FOUNDATION','.github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml'],
+            ['V13_HOLISTIC_SCHEMA','.github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml'],
+            ['V13_NEXT_TICK_VIABILITY','.github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml'],
+          ];
+          for (const [id, workflow] of v13Checks) {
             const row = plan.decisions.find(x => x.check_id === id);
-            if (!row || row.status !== 'CARRY_FORWARD' || row.dependency_digest_match !== true) throw new Error(`FROZEN_EVIDENCE_MUST_CARRY_FORWARD_WITH_DIGEST:${id}:${row?.status}`);
+            if (!row) throw new Error(`${id}_APPLICABILITY_DECISION_REQUIRED`);
+            if (row.status === 'CARRY_FORWARD') {
+              if (row.dependency_digest_match !== true) throw new Error(`${id}_CARRY_FORWARD_REQUIRES_DIGEST_MATCH`);
+            } else if (row.status === 'REQUALIFY') {
+              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(row.reason_code) || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length === 0) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID:${row.reason_code}`);
+            } else {
+              throw new Error(`${id}_UNEXPECTED_STATUS:${row.status}`);
+            }
+            if (row.execution_workflow !== workflow) throw new Error(`${id}_WORKFLOW_MISMATCH`);
+            if (phase7AdapterChanged && (row.status !== 'REQUALIFY' || !row.changed_dependencies.includes(phase7Adapter))) throw new Error(`${id}_MUST_REQUALIFY_FOR_PHASE7_ADAPTER`);
           }
+          const ea5c1 = plan.decisions.find(x => x.check_id === 'EA5C1_DURABLE_RAW_RESTRICTED_INGRESS');
+          if (!ea5c1 || ea5c1.status !== 'CARRY_FORWARD' || ea5c1.dependency_digest_match !== true) throw new Error(`FROZEN_EVIDENCE_MUST_CARRY_FORWARD_WITH_DIGEST:EA5C1_DURABLE_RAW_RESTRICTED_INGRESS:${ea5c1?.status}`);
           for (const id of ['EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T']) {
             const row = plan.decisions.find(x => x.check_id === id);
             if (!row) throw new Error(`${id}_APPLICABILITY_DECISION_REQUIRED`);
             if (row.status === 'CARRY_FORWARD') {
               if (row.dependency_digest_match !== true) throw new Error(`${id}_CARRY_FORWARD_REQUIRES_DIGEST_MATCH`);
             } else if (row.status === 'REQUALIFY') {
-              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED'].includes(row.reason_code)) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID`);
+              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(row.reason_code)) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID`);
             } else if (row.status === 'REQUIRED') {
               if (row.reason_code !== 'APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE' || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length !== 0) throw new Error(`${id}_UNCHANGED_STACK_PREDECESSOR_INVALID`);
             } else {
@@ -457,7 +496,7 @@ jobs:
             if (row.status === 'REQUIRED') {
               if (row.reason_code !== 'APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE' || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length !== 0) throw new Error(`${id}_UNCHANGED_STACK_PREDECESSOR_INVALID:${row.reason_code}`);
             } else if (row.status === 'REQUALIFY') {
-              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED'].includes(row.reason_code) || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length === 0) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID:${row.reason_code}`);
+              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(row.reason_code) || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length === 0) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID:${row.reason_code}`);
             } else {
               throw new Error(`${id}_UNEXPECTED_STATUS:${row.status}`);
             }
@@ -465,19 +504,26 @@ jobs:
           }
           const phase3 = plan.decisions.find(x => x.check_id === 'PHASE3_EVIDENCE_RUNTIME_FOUNDATION');
           const phase5 = plan.decisions.find(x => x.check_id === 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS');
+          const phase7 = plan.decisions.find(x => x.check_id === 'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION');
           for (const [row, id, workflow] of [
             [phase3,'PHASE3_EVIDENCE_RUNTIME_FOUNDATION','.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml'],
             [phase5,'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS','.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml'],
+            [phase7,'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION','.github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml'],
           ]) {
             if (!row) throw new Error(`${id}_APPLICABILITY_DECISION_REQUIRED`);
             if (row.status === 'REQUIRED') {
               if (row.reason_code !== 'APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE' || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length !== 0) throw new Error(`${id}_UNCHANGED_STACK_PREDECESSOR_INVALID:${row.reason_code}`);
             } else if (row.status === 'REQUALIFY') {
-              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED'].includes(row.reason_code) || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length === 0) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID:${row.reason_code}`);
+              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(row.reason_code) || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length === 0) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID:${row.reason_code}`);
             } else {
               throw new Error(`${id}_UNEXPECTED_STATUS:${row.status}`);
             }
             if (row.execution_workflow !== workflow) throw new Error(`${id}_WORKFLOW_MISMATCH`);
+          }
+          if (phase7AdapterChanged) {
+            for (const [row, id] of [[phase3,'PHASE3_EVIDENCE_RUNTIME_FOUNDATION'],[phase7,'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION']]) {
+              if (!row || row.status !== 'REQUALIFY' || !row.changed_dependencies.includes(phase7Adapter)) throw new Error(`${id}_MUST_REQUALIFY_FOR_PHASE7_ADAPTER`);
+            }
           }
           if (preflight.status !== 'PASS' || preflight.generation !== 'v13' || preflight.non_fail_fast !== true || preflight.counts.blocker_count !== 0) throw new Error('ALL_BLOCKERS_PREFLIGHT_NOT_PASS');
           for (const source of [proof, cp2, evidence, plan, preflight]) {
