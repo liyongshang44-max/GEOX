@@ -19,6 +19,9 @@ on:
       - 'apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_twin_runtime_qualification_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_verify_24t_v1.ts'
+      - 'apps/server/src/external_evidence/s3_compatible_private_evidence_object_client_v1.ts'
+      - 'apps/server/src/external_evidence/s3_compatible_private_candidate_manifest_store_v1.ts'
+      - 'apps/server/src/external_evidence/s3_compatible_private_retained_raw_reader_v1.ts'
 
 permissions:
   contents: read
@@ -837,6 +840,15 @@ jobs:
       PHASE6_RUNTIME_RUN_ID: '33146391000'
       PHASE6_RUNTIME_ARTIFACT_ID: '9676455831'
       PHASE6_RUNTIME_ARTIFACT_DIGEST: 'sha256:9a3a22b8b844fc1538d4a6986a9d3477b895208b1e88cdf13106f0f0dbf463d7'
+      PHASE7_EVIDENCE_FORCING_ACCEPTED_HEAD: 'd6c015b49d09960591185ff9c930e64dac7e2806'
+      PHASE7_EVIDENCE_FORCING_CONTROL_RUN_ID: '33165124372'
+      PHASE7_EVIDENCE_FORCING_CONTROL_ARTIFACT_ID: '9683343727'
+      PHASE7_EVIDENCE_FORCING_CONTROL_ARTIFACT_DIGEST: 'sha256:9b5cff857e4ab40d45ff7b397d58ce42136b6fd9582037274ae466b3b65003bc'
+      PHASE7_EVIDENCE_FORCING_TWO_SERVICE_RUN_ID: '33165124390'
+      PHASE7_EVIDENCE_FORCING_TWO_SERVICE_ARTIFACT_ID: '9683290494'
+      PHASE7_EVIDENCE_FORCING_TWO_SERVICE_ARTIFACT_DIGEST: 'sha256:93f52270c812c07406dbc189a4c6c4956699b8099549d4f23ff0fbeff269a8af'
+      PHASE7_EVIDENCE_FORCING_CI_RUN_ID: '33165124412'
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
       SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - name: Checkout exact Phase6 successor subject
@@ -846,33 +858,65 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Require accepted Phase6 ancestry and no protected runtime drift
+      - name: Require accepted successor ancestry and classify current delta
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
-          git merge-base --is-ancestor "$PHASE6_ACCEPTED_HEAD" "$SUBJECT_SHA"
-          runtime_delta="$(git diff --name-only "$PHASE6_ACCEPTED_HEAD"..HEAD -- \
-            apps/server/src \
-            apps/server/scripts \
-            apps/server/package.json \
-            package.json \
-            pnpm-lock.yaml \
-            pnpm-workspace.yaml \
-            docker \
-            docker-compose.mcft-cap09-phase5-qualification.yml \
-            docker-compose.mcft-cap09-phase6-github-blackout.override.yml)"
+          test "$BASE_SHA" = "$PHASE7_EVIDENCE_FORCING_ACCEPTED_HEAD"
+          git merge-base --is-ancestor "$PHASE6_ACCEPTED_HEAD" "$BASE_SHA"
+          git merge-base --is-ancestor "$BASE_SHA" "$SUBJECT_SHA"
+
+          phase7_foundation_paths=(
+            apps/server/src/external_evidence/s3_compatible_private_evidence_object_client_v1.ts
+            apps/server/src/external_evidence/s3_compatible_private_candidate_manifest_store_v1.ts
+            apps/server/src/external_evidence/s3_compatible_private_retained_raw_reader_v1.ts
+          )
+          mapfile -t phase7_foundation_delta < <(
+            git diff --name-only "$BASE_SHA"..HEAD -- "${phase7_foundation_paths[@]}" | sort
+          )
+
+          runtime_delta="$(
+            git diff --name-only "$BASE_SHA"..HEAD -- \
+              apps/server/src \
+              apps/server/scripts \
+              apps/server/package.json \
+              package.json \
+              pnpm-lock.yaml \
+              pnpm-workspace.yaml \
+              docker \
+              docker-compose.mcft-cap09-phase5-qualification.yml \
+              docker-compose.mcft-cap09-phase6-github-blackout.override.yml \
+            | grep -F -x -v -f <(printf '%s\n' "${phase7_foundation_paths[@]}") || true
+          )"
           if [ -n "$runtime_delta" ]; then
             echo "PHASE6_SUCCESSOR_RUNTIME_REQUALIFICATION_REQUIRED" >&2
             printf '%s\n' "$runtime_delta" >&2
             exit 1
           fi
 
-          mapfile -t qualification_delta < <(git diff --name-only "$PHASE6_ACCEPTED_HEAD"..HEAD -- \
+          if [ "${#phase7_foundation_delta[@]}" -gt 0 ]; then
+            for module_path in "${phase7_foundation_paths[@]}"; do
+              module_stem="$(basename "$module_path" .ts)"
+              mapfile -t refs < <(git grep -l -F "$module_stem" -- apps/server/src || true)
+              for ref in "${refs[@]}"; do
+                allowed=0
+                for allowed_path in "${phase7_foundation_paths[@]}"; do
+                  [ "$ref" = "$allowed_path" ] && allowed=1
+                done
+                if [ "$allowed" != "1" ]; then
+                  echo "PHASE7_FOUNDATION_PREMATURE_PRODUCTION_WIRING:$module_stem:$ref" >&2
+                  exit 1
+                fi
+              done
+            done
+          fi
+
+          mapfile -t qualification_delta < <(git diff --name-only "$BASE_SHA"..HEAD -- \
             scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs \
             scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts | sort)
 
-          mapfile -t db_delta < <(git diff --name-only "$PHASE6_ACCEPTED_HEAD"..HEAD -- apps/server/db/migrations | sort)
+          mapfile -t db_delta < <(git diff --name-only "$BASE_SHA"..HEAD -- apps/server/db/migrations | sort)
           allowed_acl='apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql'
           if [ "${#db_delta[@]}" -gt 1 ] || { [ "${#db_delta[@]}" -eq 1 ] && [ "${db_delta[0]}" != "$allowed_acl" ]; }; then
             echo "PHASE6_SUCCESSOR_DATABASE_REQUALIFICATION_REQUIRED" >&2
@@ -888,37 +932,75 @@ jobs:
               grep -Fq "$table" <<<"$acl"
             done
             grep -Fq 'TO geox_mcft_cap09_evidence_runtime_v1' <<<"$acl"
-            test -z "$(git diff --name-only "$PHASE6_ACCEPTED_HEAD"..HEAD -- apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql)"
+            test -z "$(git diff --name-only "$BASE_SHA"..HEAD -- apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql)"
           fi
 
-          if [ "${#qualification_delta[@]}" -gt 0 ] || [ "${#db_delta[@]}" -gt 0 ]; then
+          if [ "${#phase7_foundation_delta[@]}" -gt 0 ] || [ "${#qualification_delta[@]}" -gt 0 ] || [ "${#db_delta[@]}" -gt 0 ]; then
             plan="$RUNNER_TEMP/phase6-successor-requalification-plan.json"
             node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs \
-              --base '${{ github.event.pull_request.base.sha }}' \
+              --base "$BASE_SHA" \
               --head "$SUBJECT_SHA" \
               --generation v13 \
               --stage SUCCESSOR_SUBJECT_PRE_MERGE \
               --out "$plan"
-            node - "$plan" "${#qualification_delta[@]}" "${#db_delta[@]}" <<'NODE'
+            node - "$plan" "${#phase7_foundation_delta[@]}" "${#qualification_delta[@]}" "${#db_delta[@]}" <<'NODE'
           const fs=require('node:fs');
-          const [planPath,qualificationCount,dbCount]=process.argv.slice(2);
+          const [planPath,foundationCount,qualificationCount,dbCount]=process.argv.slice(2);
           const p=JSON.parse(fs.readFileSync(planPath,'utf8'));
           if(p.status!=='PASS'||p.unknown_changed_paths.length||p.authority_errors.length||p.resolver_errors.length){
             throw new Error('PHASE6_SUCCESSOR_REQUALIFICATION_PLAN_NOT_PASS');
           }
           const byId=(id)=>p.decisions.find(x=>x.check_id===id);
+          if(Number(foundationCount)>0){
+            const phase3=byId('PHASE3_EVIDENCE_RUNTIME_FOUNDATION');
+            if(!phase3||phase3.status!=='REQUALIFY'){
+              throw new Error('PHASE7_FOUNDATION_DELTA_REQUIRES_PHASE3_REQUALIFY');
+            }
+          }
           if(Number(qualificationCount)>0){
             const phase5=byId('PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS');
-            if(!phase5||phase5.status!=='REQUALIFY') throw new Error('PHASE6_SUCCESSOR_QUALIFICATION_DELTA_REQUIRES_PHASE5_REQUALIFY');
+            if(!phase5||phase5.status!=='REQUALIFY'){
+              throw new Error('PHASE6_SUCCESSOR_QUALIFICATION_DELTA_REQUIRES_PHASE5_REQUALIFY');
+            }
           }
           if(Number(dbCount)>0){
             for(const id of ['PHASE3_EVIDENCE_RUNTIME_FOUNDATION','PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS']){
               const row=byId(id);
-              if(!row||row.status!=='REQUALIFY') throw new Error('PHASE6_SUCCESSOR_EVIDENCE_ACL_DELTA_REQUIRES_REQUALIFY:'+id);
+              if(!row||row.status!=='REQUALIFY'){
+                throw new Error('PHASE6_SUCCESSOR_EVIDENCE_ACL_DELTA_REQUIRES_REQUALIFY:'+id);
+              }
             }
           }
           NODE
           fi
+
+      - name: Verify immutable accepted successor predecessor
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner,repo}=context.repo;
+            const accepted=process.env.PHASE7_EVIDENCE_FORCING_ACCEPTED_HEAD;
+            const runs=[
+              [Number(process.env.PHASE7_EVIDENCE_FORCING_CONTROL_RUN_ID),'control-plane'],
+              [Number(process.env.PHASE7_EVIDENCE_FORCING_TWO_SERVICE_RUN_ID),'two-service'],
+              [Number(process.env.PHASE7_EVIDENCE_FORCING_CI_RUN_ID),'ci'],
+            ];
+            for(const [runId,label] of runs){
+              const run=(await github.rest.actions.getWorkflowRun({owner,repo,run_id:runId})).data;
+              if(run.conclusion!=='success'||run.head_sha!==accepted){
+                throw new Error('PHASE7_ACCEPTED_PREDECESSOR_RUN_INVALID:'+label);
+              }
+            }
+            const artifacts=[
+              [Number(process.env.PHASE7_EVIDENCE_FORCING_CONTROL_ARTIFACT_ID),process.env.PHASE7_EVIDENCE_FORCING_CONTROL_ARTIFACT_DIGEST,'control-plane'],
+              [Number(process.env.PHASE7_EVIDENCE_FORCING_TWO_SERVICE_ARTIFACT_ID),process.env.PHASE7_EVIDENCE_FORCING_TWO_SERVICE_ARTIFACT_DIGEST,'two-service'],
+            ];
+            for(const [artifactId,digest,label] of artifacts){
+              const artifact=(await github.rest.actions.getArtifact({owner,repo,artifact_id:artifactId})).data;
+              if(artifact.expired||artifact.digest!==digest){
+                throw new Error('PHASE7_ACCEPTED_PREDECESSOR_ARTIFACT_INVALID:'+label);
+              }
+            }
 
       - name: Verify immutable accepted Phase6 runtime artifact
         uses: actions/github-script@v7
@@ -940,20 +1022,35 @@ jobs:
         run: |
           const fs=require('node:fs'),cp=require('node:child_process');
           fs.mkdirSync('acceptance-output',{recursive:true});
-          const diff=(paths)=>cp.execFileSync('git',['diff','--name-only',process.env.PHASE6_ACCEPTED_HEAD+'..HEAD','--',...paths],{encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean);
+          const diff=(paths)=>cp.execFileSync(
+            'git',
+            ['diff','--name-only',process.env.BASE_SHA+'..HEAD','--',...paths],
+            {encoding:'utf8'}
+          ).trim().split(/\r?\n/).filter(Boolean);
           const dbDelta=diff(['apps/server/db/migrations']);
           const qualificationDelta=diff([
             'scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs',
             'scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts'
           ]);
+          const foundationPaths=[
+            'apps/server/src/external_evidence/s3_compatible_private_evidence_object_client_v1.ts',
+            'apps/server/src/external_evidence/s3_compatible_private_candidate_manifest_store_v1.ts',
+            'apps/server/src/external_evidence/s3_compatible_private_retained_raw_reader_v1.ts'
+          ];
+          const foundationDelta=diff(foundationPaths);
           const out={
             schema_version:'geox_mcft_cap09_phase6_successor_carry_forward_v1',
             status:'PASS',
             subject_sha:process.env.SUBJECT_SHA,
+            base_sha:process.env.BASE_SHA,
             accepted_phase6_head:process.env.PHASE6_ACCEPTED_HEAD,
+            accepted_successor_predecessor_head:process.env.PHASE7_EVIDENCE_FORCING_ACCEPTED_HEAD,
             accepted_runtime_run_id:Number(process.env.PHASE6_RUNTIME_RUN_ID),
             accepted_runtime_artifact_id:Number(process.env.PHASE6_RUNTIME_ARTIFACT_ID),
             protected_runtime_delta_count:0,
+            phase7_unwired_evidence_foundation_delta_count:foundationDelta.length,
+            phase7_unwired_evidence_foundation_requires_phase3_requalification:true,
+            accepted_predecessor_machine_evidence_verified:true,
             qualification_support_delta_count:qualificationDelta.length,
             phase5_requalification_required_on_qualification_delta:true,
             allowed_evidence_acl_delta_count:dbDelta.length,
@@ -965,7 +1062,10 @@ jobs:
             production_effect:false,
             mcft_cap09_completed:false
           };
-          fs.writeFileSync('acceptance-output/MCFT_CAP_09_PHASE6_SUCCESSOR_CARRY_FORWARD.json',JSON.stringify(out,null,2)+'\n');
+          fs.writeFileSync(
+            'acceptance-output/MCFT_CAP_09_PHASE6_SUCCESSOR_CARRY_FORWARD.json',
+            JSON.stringify(out,null,2)+'\n'
+          );
 
       - name: Upload Phase6 successor carry-forward proof
         uses: actions/upload-artifact@v4
