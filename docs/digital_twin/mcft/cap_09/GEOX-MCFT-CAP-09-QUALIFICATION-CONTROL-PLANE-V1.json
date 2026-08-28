@@ -13,7 +13,8 @@
     "75d4961279bd64dc1c9dd7d68aac189c72c98846",
     "48ceafe7c6e7d3d57a1dc17411fb4bf673486333",
     "c4249e5b7bd67d35d34813aceea6760f9d210ed0",
-    "d6c015b49d09960591185ff9c930e64dac7e2806"
+    "d6c015b49d09960591185ff9c930e64dac7e2806",
+    "46c9c7b6b59c113848fc69daff88fb183fccc954"
   ],
   "stacked_predecessor_branch": "fix/mcft-cap09-v13-autonomous-forcing-foundation",
   "default_stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
@@ -282,6 +283,16 @@
         "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
         "apps/server/src/external_evidence/provider/gfs_nomads_live_provider_v1.ts",
         "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts"
+      ]
+    },
+    "PHASE7_PRIVATE_CANDIDATE_PROMOTION_IMPORT_CLOSURE": {
+      "kind": "IMPORT_CLOSURE",
+      "roots": [
+        "apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts"
+      ],
+      "additional_exact_paths": [
+        ".github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1.ts"
       ]
     }
   },
@@ -613,6 +624,34 @@
       "carry_forward_policy": "NONE",
       "requalification_triggers": [
         "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": null
+    },
+    {
+      "check_id": "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION",
+      "owner": "MCFT_CAP09_PHASE7_PRIVATE_CANDIDATE_PROMOTION_QUALIFICATION",
+      "generation_scope": [
+        "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts"
+      ],
+      "resolver_ids": [
+        "PHASE7_PRIVATE_CANDIDATE_PROMOTION_IMPORT_CLOSURE"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "execution_workflow": ".github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
+      "fail_policy": "FAIL_CLOSED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "PHASE7_PRIVATE_CANDIDATE_PROMOTION_IMPORT_CLOSURE"
       ],
       "applicable_stages": [
         "SUCCESSOR_SUBJECT_PRE_MERGE"

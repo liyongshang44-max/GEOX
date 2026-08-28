@@ -36,6 +36,10 @@ export type ExternalFormalCandidateRawProvenanceV1 = {
   retrieved_at: string;
   available_at: string;
   use_policy_ref: string;
+  dataset_id?: string;
+  decoder_id?: string;
+  decoder_version?: string;
+  canonical_record_ingested_at?: string;
   source_issue_time?: string;
   source_event_time?: string;
 };
@@ -158,6 +162,28 @@ function rawProvenanceV1(input: ExternalFormalCandidateRawProvenanceV1): Externa
     available_at: canonicalIsoV1(input.available_at, "PHASE7_CANDIDATE_AVAILABLE_AT_INVALID"),
     use_policy_ref: requiredTextV1(input.use_policy_ref, "PHASE7_CANDIDATE_USE_POLICY_REQUIRED"),
   };
+  const replayFields = [
+    input.dataset_id,
+    input.decoder_id,
+    input.decoder_version,
+    input.canonical_record_ingested_at,
+  ];
+  const replayFieldCount = replayFields.filter((item) => item !== undefined).length;
+  if (replayFieldCount !== 0 && replayFieldCount !== replayFields.length) {
+    throw new Error("PHASE7_CANDIDATE_REPLAY_AUTHORITY_PARTIAL_FIELDS_FORBIDDEN");
+  }
+  if (replayFieldCount === replayFields.length) {
+    value.dataset_id = requiredTextV1(input.dataset_id, "PHASE7_CANDIDATE_DATASET_ID_REQUIRED");
+    value.decoder_id = requiredTextV1(input.decoder_id, "PHASE7_CANDIDATE_DECODER_ID_REQUIRED");
+    value.decoder_version = requiredTextV1(input.decoder_version, "PHASE7_CANDIDATE_DECODER_VERSION_REQUIRED");
+    value.canonical_record_ingested_at = canonicalIsoV1(
+      input.canonical_record_ingested_at,
+      "PHASE7_CANDIDATE_CANONICAL_RECORD_INGESTED_AT_INVALID",
+    );
+    if (Date.parse(value.available_at) > Date.parse(value.canonical_record_ingested_at)) {
+      throw new Error("PHASE7_CANDIDATE_CANONICAL_RECORD_INGESTED_BEFORE_AVAILABILITY");
+    }
+  }
   if (input.source_issue_time !== undefined) {
     value.source_issue_time = canonicalIsoV1(input.source_issue_time, "PHASE7_CANDIDATE_SOURCE_ISSUE_TIME_INVALID");
   }
