@@ -388,7 +388,11 @@ export class ExternalFormalPrivateCandidateCapturePromotionV1
     const capturedAt = canonicalIso(this.clock().toISOString(), "PHASE7_CAPTURE_CAPTURED_AT_INVALID");
     if (Date.parse(capturedAt) >= Date.parse(base)) throw new Error("PHASE7_CAPTURE_COMPLETED_AT_OR_AFTER_BASE");
     for (const raw of raws) {
-      if (Date.parse(raw.canonical_record_ingested_at) > Date.parse(capturedAt)) {
+      const ingestedAt = requiredText(
+        raw.canonical_record_ingested_at,
+        "PHASE7_CAPTURE_CANONICAL_RECORD_INGESTED_AT_REQUIRED",
+      );
+      if (Date.parse(ingestedAt) > Date.parse(capturedAt)) {
         throw new Error("PHASE7_CAPTURE_MANIFEST_BEFORE_CANONICAL_RECORD");
       }
     }
