@@ -10,6 +10,11 @@ const canonicalSufficiencyShadowSchema = z
     schema_version: z.literal("evidence_judge_canonical_sufficiency_shadow_v1"),
     authority_mode: z.literal("SHADOW_NON_AUTHORITATIVE"),
     status: z.enum(["SUFFICIENT", "NEEDS_EVIDENCE", "UNKNOWN"]),
+    canonical_evidence_qualification_refs: z.array(z.string().min(1)).optional(),
+    canonical_evidence_qualification_refs_state: z
+      .enum(["AVAILABLE", "EMPTY_NO_CANONICAL_QUALIFICATIONS", "UNAVAILABLE"])
+      .optional(),
+    canonical_evidence_qualification_ref_basis: z.literal("QUALIFICATION_ID_DIRECT").optional(),
   })
   .passthrough();
 
@@ -44,9 +49,16 @@ export const agronomyEvidenceDependencyShadowBindingV1Schema = z
     semantic_comparison_state: z
       .enum(["MATCH", "DIVERGENT", "INCOMPARABLE", "CANONICAL_MISSING", "LEGACY_MISSING"])
       .nullable(),
+    canonical_evidence_qualification_refs: z.array(z.string().min(1)),
     canonical_evidence_qualification_refs_state: z.enum([
       "UNAVAILABLE",
-      "NOT_PERSISTED_IN_EVIDENCE_JUDGE_OUTPUT",
+      "AVAILABLE_FROM_PERSISTED_CANONICAL_SHADOW",
+      "EMPTY_NO_CANONICAL_QUALIFICATIONS",
+      "LEGACY_SHADOW_WITHOUT_QUALIFICATION_REFS",
+    ]),
+    criterion_shadow_provenance_readiness: z.enum([
+      "READY_FOR_CRITERION_SHADOW",
+      "NOT_READY",
     ]),
     target_boundary: z.literal(
       "B07_QUALIFIED_EVIDENCE_CRITERION_THEN_DECISION_ELIGIBILITY",
@@ -87,6 +99,32 @@ function record(value: unknown): Record<string, unknown> {
     : {};
 }
 
+function qualificationRefDetail(
+  canonical: z.infer<typeof canonicalSufficiencyShadowSchema>,
+): {
+  refs: string[];
+  state: AgronomyEvidenceDependencyShadowBindingV1["canonical_evidence_qualification_refs_state"];
+} {
+  const refs = Array.from(new Set(canonical.canonical_evidence_qualification_refs ?? []));
+  const sourceState = canonical.canonical_evidence_qualification_refs_state;
+  const refBasis = canonical.canonical_evidence_qualification_ref_basis;
+
+  if (!sourceState) {
+    return { refs: [], state: "LEGACY_SHADOW_WITHOUT_QUALIFICATION_REFS" };
+  }
+  if (sourceState === "AVAILABLE") {
+    return refBasis === "QUALIFICATION_ID_DIRECT" && refs.length > 0
+      ? { refs, state: "AVAILABLE_FROM_PERSISTED_CANONICAL_SHADOW" }
+      : { refs: [], state: "UNAVAILABLE" };
+  }
+  if (sourceState === "EMPTY_NO_CANONICAL_QUALIFICATIONS") {
+    return refBasis === "QUALIFICATION_ID_DIRECT" && refs.length === 0
+      ? { refs: [], state: "EMPTY_NO_CANONICAL_QUALIFICATIONS" }
+      : { refs: [], state: "UNAVAILABLE" };
+  }
+  return { refs: [], state: "UNAVAILABLE" };
+}
+
 function buildBinding(
   input: AgronomyEvidenceDependencyShadowBindingInputV1,
   state: AgronomyEvidenceDependencyShadowBindingV1["binding_state"],
@@ -95,6 +133,9 @@ function buildBinding(
     canonicalStatus?: AgronomyEvidenceDependencyShadowBindingV1["canonical_sufficiency_status"];
     comparisonState?: AgronomyEvidenceDependencyShadowBindingV1["semantic_comparison_state"];
     legacyVerdictMatch?: boolean | null;
+    canonicalEvidenceQualificationRefs?: string[];
+    canonicalEvidenceQualificationRefsState?: AgronomyEvidenceDependencyShadowBindingV1["canonical_evidence_qualification_refs_state"];
+    criterionShadowProvenanceReadiness?: AgronomyEvidenceDependencyShadowBindingV1["criterion_shadow_provenance_readiness"];
     reasonCodes?: string[];
   } = {},
 ): AgronomyEvidenceDependencyShadowBindingV1 {
@@ -119,10 +160,11 @@ function buildBinding(
     legacy_verdict_match: detail.legacyVerdictMatch ?? null,
     canonical_sufficiency_status: canonicalStatus,
     semantic_comparison_state: comparisonState,
+    canonical_evidence_qualification_refs: Array.from(new Set(detail.canonicalEvidenceQualificationRefs ?? [])),
     canonical_evidence_qualification_refs_state:
-      canonicalStatus && canonicalStatus !== "UNKNOWN"
-        ? "NOT_PERSISTED_IN_EVIDENCE_JUDGE_OUTPUT"
-        : "UNAVAILABLE",
+      detail.canonicalEvidenceQualificationRefsState ?? "UNAVAILABLE",
+    criterion_shadow_provenance_readiness:
+      detail.criterionShadowProvenanceReadiness ?? "NOT_READY",
     target_boundary:
       "B07_QUALIFIED_EVIDENCE_CRITERION_THEN_DECISION_ELIGIBILITY",
     migration_readiness: "NOT_READY_FOR_CRITERION_CUTOVER",
@@ -131,8 +173,8 @@ function buildBinding(
       "B09F_SHADOW_BINDING_NON_AUTHORITATIVE",
       "AGRONOMY_LEGACY_VERDICT_REMAINS_UNCHANGED",
       "CANONICAL_EVIDENCE_SUFFICIENCY_SHADOW_IS_NOT_DECISION_ELIGIBILITY",
-      "EVIDENCE_QUALIFICATION_REFS_NOT_PERSISTED_IN_EVIDENCE_JUDGE_OUTPUT",
-      "NO_CANONICAL_CRITERION_CUTOVER_IN_B09F",
+      "CANONICAL_EVIDENCE_QUALIFICATION_REFS_ARE_SHADOW_PROVENANCE_ONLY",
+      "NO_CANONICAL_CRITERION_CUTOVER_IN_B09G",
       "NO_AUTHORITY_REMOVAL_IN_B09F",
     ],
     legacy_consumer_unchanged: true,
@@ -209,6 +251,8 @@ export function projectAgronomyEvidenceDependencyShadowBindingV1(
     });
   }
 
+  const qualificationRefs = qualificationRefDetail(canonicalParsed.data);
+
   const comparisonParsed = semanticShadowComparisonV1Schema.safeParse(
     outputs.semantic_shadow_comparison_v1,
   );
@@ -226,6 +270,8 @@ export function projectAgronomyEvidenceDependencyShadowBindingV1(
       canonicalStatus,
       comparisonState: comparison?.comparison_state ?? null,
       legacyVerdictMatch: true,
+      canonicalEvidenceQualificationRefs: qualificationRefs.refs,
+      canonicalEvidenceQualificationRefsState: qualificationRefs.state,
       reasonCodes: ["CANONICAL_EVIDENCE_SUFFICIENCY_UNKNOWN_AT_REFERENCED_JUDGE"],
     });
   }
@@ -235,6 +281,8 @@ export function projectAgronomyEvidenceDependencyShadowBindingV1(
       result,
       canonicalStatus,
       legacyVerdictMatch: true,
+      canonicalEvidenceQualificationRefs: qualificationRefs.refs,
+      canonicalEvidenceQualificationRefsState: qualificationRefs.state,
       reasonCodes: ["B09C_SEMANTIC_COMPARISON_MISSING_AT_REFERENCED_JUDGE"],
     });
   }
@@ -244,12 +292,22 @@ export function projectAgronomyEvidenceDependencyShadowBindingV1(
     canonicalStatus,
     comparisonState: comparison.comparison_state,
     legacyVerdictMatch: true,
+    canonicalEvidenceQualificationRefs: qualificationRefs.refs,
+    canonicalEvidenceQualificationRefsState: qualificationRefs.state,
+    criterionShadowProvenanceReadiness:
+      qualificationRefs.state === "AVAILABLE_FROM_PERSISTED_CANONICAL_SHADOW"
+      || qualificationRefs.state === "EMPTY_NO_CANONICAL_QUALIFICATIONS"
+        ? "READY_FOR_CRITERION_SHADOW"
+        : "NOT_READY",
     reasonCodes: [
       "PERSISTED_EVIDENCE_JUDGE_REFERENCE_BOUND",
       "CALLER_LEGACY_VERDICT_MATCHES_PERSISTED_EVIDENCE_JUDGE",
       "CANONICAL_SUFFICIENCY_SHADOW_OBSERVED",
       "B09C_SEMANTIC_COMPARISON_OBSERVED",
-      "CANONICAL_QUALIFICATION_REFS_STILL_REQUIRED_BEFORE_B07_CRITERION_CUTOVER",
+      qualificationRefs.state === "AVAILABLE_FROM_PERSISTED_CANONICAL_SHADOW"
+      || qualificationRefs.state === "EMPTY_NO_CANONICAL_QUALIFICATIONS"
+        ? "CANONICAL_QUALIFICATION_PROVENANCE_READY_FOR_B07_CRITERION_SHADOW"
+        : "CANONICAL_QUALIFICATION_REFS_STILL_REQUIRED_BEFORE_B07_CRITERION_SHADOW",
     ],
   });
 }
