@@ -102,6 +102,7 @@ env:
   PHASE2_CLOSURE_SHA: 'c3346768a44b16b127378cb690ada1d8cfec1049'
   PHASE3_CLOSURE_SHA: '0e874b254c695b32fd94c7dc7034fd71b8aa3bc3'
   PHASE4_CLOSURE_SHA: '16ff7160473c0a25dc059db6b2b6b7ba07f54dd1'
+  PHASE5_CLOSURE_SHA: '75d4961279bd64dc1c9dd7d68aac189c72c98846'
 
 concurrency:
   group: mcft-cap09-qualification-control-plane-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
@@ -126,7 +127,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             base='${{ github.event.pull_request.base.sha }}'
-            if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ] && [ "$base" != "$PHASE2_CLOSURE_SHA" ] && [ "$base" != "$PHASE3_CLOSURE_SHA" ] && [ "$base" != "$PHASE4_CLOSURE_SHA" ]; then
+            if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ] && [ "$base" != "$PHASE2_CLOSURE_SHA" ] && [ "$base" != "$PHASE3_CLOSURE_SHA" ] && [ "$base" != "$PHASE4_CLOSURE_SHA" ] && [ "$base" != "$PHASE5_CLOSURE_SHA" ]; then
               echo "MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:${base}" >&2
               exit 1
             fi
@@ -159,7 +160,7 @@ jobs:
           const assert = (condition, code, detail = null) => {
             if (!condition) failures.push({code, detail});
           };
-          const expectedPredecessors = [process.env.FROZEN_SUCCESSOR_SHA, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA, process.env.PHASE2_CLOSURE_SHA, process.env.PHASE3_CLOSURE_SHA, process.env.PHASE4_CLOSURE_SHA];
+          const expectedPredecessors = [process.env.FROZEN_SUCCESSOR_SHA, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA, process.env.PHASE2_CLOSURE_SHA, process.env.PHASE3_CLOSURE_SHA, process.env.PHASE4_CLOSURE_SHA, process.env.PHASE5_CLOSURE_SHA];
           const governedPredecessors = authority.governed_successor_predecessor_shas || [];
           assert(governedPredecessors.length === expectedPredecessors.length, 'GOVERNED_PREDECESSOR_CARDINALITY_MISMATCH', governedPredecessors);
           assert(new Set(governedPredecessors).size === governedPredecessors.length, 'GOVERNED_PREDECESSOR_DUPLICATE', governedPredecessors);
