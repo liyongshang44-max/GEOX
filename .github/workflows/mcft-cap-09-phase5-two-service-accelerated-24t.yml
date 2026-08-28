@@ -26,6 +26,17 @@ on:
       - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase5_twin_fact_writer_acl.sql'
       - 'scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs'
       - 'scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts'
+      - 'apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.ts'
+      - 'apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts'
+      - 'apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_CONTROLLED_PROVIDER_WORK_ITEMS_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_EVIDENCE_QUALIFICATION_ENTRYPOINT_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_QUALIFICATION_CLOCK_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_QUALIFICATION_COMPOSE_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_CANONICAL_FACT_WRITER_V1.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md'
   workflow_dispatch:
 
 permissions:
@@ -598,12 +609,19 @@ jobs:
             index=$((index+1)); test "$(docker wait "$cid")" = "0"
             docker logs "$cid" > "$GEOX_PHASE5_CONTROL_ROOT/twin-o00-o07-$index.log" 2>&1 || true
           done
-          contention_seen=0
-          if grep -q '"detail":"RETRYABLE_CYCLE_FAILURE"' "$GEOX_PHASE5_CONTROL_ROOT/twin-o00-o07-1.log" \
-            || grep -q '"detail":"RETRYABLE_CYCLE_FAILURE"' "$GEOX_PHASE5_CONTROL_ROOT/twin-o00-o07-2.log"; then
-            contention_seen=1
-          fi
-          test "$contention_seen" = "1"
+          retryable_seen=0
+          standby_only_seen=0
+          for log in \
+            "$GEOX_PHASE5_CONTROL_ROOT/twin-o00-o07-1.log" \
+            "$GEOX_PHASE5_CONTROL_ROOT/twin-o00-o07-2.log"; do
+            if grep -q '"detail":"RETRYABLE_CYCLE_FAILURE"' "$log"; then
+              retryable_seen=1
+            fi
+            if grep -q '"detail":"NO_DUE_SLOT"' "$log" \
+              && ! grep -q '"detail":"TERMINAL_SLOT_RECORDED"' "$log"; then
+              standby_only_seen=1
+            fi
+          done
           cursor="$(docker compose -f "$COMPOSE_FILE" exec -T postgres psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc "SELECT next_slot_index FROM twin_shadow_online_scheduler_cursor_v1;")"
           test "$cursor" = "8"
           terminal="$(docker compose -f "$COMPOSE_FILE" exec -T postgres psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc "SELECT count(*) FROM twin_shadow_online_scheduler_slot_v1 WHERE state IN ('COMPLETED','DEGRADED');")"
@@ -614,12 +632,35 @@ jobs:
           test "$invalid_owner" = "0"
           distinct_fences="$(docker compose -f "$COMPOSE_FILE" exec -T postgres psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc "SELECT count(DISTINCT fencing_token) FROM twin_shadow_online_scheduler_slot_v1 WHERE state IN ('COMPLETED','DEGRADED');")"
           test "$distinct_fences" = "8"
+
+          coordination_mode=""
+          if [ "$retryable_seen" = "1" ]; then
+            coordination_mode="RETRYABLE_CONTENTION"
+          elif [ "$owners" = "2" ]; then
+            coordination_mode="MULTI_OWNER_SERIAL_FENCING"
+          elif [ "$standby_only_seen" = "1" ]; then
+            coordination_mode="PASSIVE_STANDBY_NO_DUE_SLOT"
+          else
+            echo "PHASE5_TWIN_FOCUSED_COORDINATION_EVIDENCE_MISSING" >&2
+            exit 1
+          fi
+          if [ "$owners" = "1" ]; then
+            test "$standby_only_seen" = "1" || test "$retryable_seen" = "1"
+          fi
+          retryable_json=false; [ "$retryable_seen" = "1" ] && retryable_json=true
+          standby_json=false; [ "$standby_only_seen" = "1" ] && standby_json=true
+
           jq -n --arg host1 "$host1" --arg host2 "$host2" --argjson owners "$owners" \
+            --arg coordination_mode "$coordination_mode" \
+            --argjson retryable "$retryable_json" --argjson standby "$standby_json" \
             '{status:"PASS",schema_version:"geox_mcft_cap09_phase5_twin_duplicate_container_fencing_focused_v1",
               qualification_fixture_seed:true,live_evidence_claim:false,full_24t_claim:false,
               duplicate_container_count:2,container_hostnames:[$host1,$host2],terminal_slot_count:8,
               distinct_terminal_lease_owner_count:$owners,distinct_fencing_token_count:8,
-              retryable_coordination_contention_observed:true,
+              coordination_evidence_mode:$coordination_mode,
+              retryable_coordination_contention_observed:$retryable,
+              passive_standby_no_due_slot_observed:$standby,
+              coordination_or_standby_observed:true,
               maximum_active_slots_per_scope:1,all_terminal_owners_are_real_container_hostnames:true,
               production_twin_process_graph_reused:true,provider_request_count:0,evidence_supply_cursor_mutation:false}' \
             > "$GEOX_PHASE5_CONTROL_ROOT/twin-duplicate-proof.json"

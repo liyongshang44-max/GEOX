@@ -11,7 +11,8 @@
     "0e874b254c695b32fd94c7dc7034fd71b8aa3bc3",
     "16ff7160473c0a25dc059db6b2b6b7ba07f54dd1",
     "75d4961279bd64dc1c9dd7d68aac189c72c98846",
-    "48ceafe7c6e7d3d57a1dc17411fb4bf673486333"
+    "48ceafe7c6e7d3d57a1dc17411fb4bf673486333",
+    "c4249e5b7bd67d35d34813aceea6760f9d210ed0"
   ],
   "stacked_predecessor_branch": "fix/mcft-cap09-v13-autonomous-forcing-foundation",
   "default_stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
@@ -268,7 +269,10 @@
         "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_verify_24t_v1.ts",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
         "scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs",
-        "scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts"
+        "scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
+        "apps/server/src/external_evidence/provider/gfs_nomads_live_provider_v1.ts",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts"
       ]
     }
   },

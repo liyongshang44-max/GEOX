@@ -124,6 +124,12 @@ jobs:
           CREATE TABLE public.approvals (id integer PRIMARY KEY);
           CREATE TABLE public.actions (id integer PRIMARY KEY);
           SQL
+      - name: Apply v13 Evidence-plane forcing operational schema
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql
       - name: Apply Phase3 Evidence Runtime ACL
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql
       - name: Prove Evidence Runtime database ACL separation
