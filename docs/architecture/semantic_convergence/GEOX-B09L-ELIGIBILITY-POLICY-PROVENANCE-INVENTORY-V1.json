@@ -1,0 +1,223 @@
+{
+  "schema_version": "b09l_eligibility_policy_provenance_inventory_v1",
+  "phase": "B-09l",
+  "status": "ANALYSIS_ONLY_NO_EXISTING_PRODUCT_ELIGIBILITY_POLICY_AUTHORITY",
+  "authority_mode": "GOVERNANCE_ANALYSIS_ONLY",
+  "stacked_base_product_head": "f8f8c45c696bbabbbddb5a859597663d30c60223",
+  "analyzed_path": {
+    "recommendation_source": "api/v1/recommendations/generate",
+    "recommendation_fact_type": "decision_recommendation_v1",
+    "bounded_action_type": "IRRIGATE",
+    "field_program_fact_type": "field_program_v1",
+    "field_program_resolution": "decision_engine_v1 resolves program_id by explicit recommendation program_id or latest scoped field/season FieldProgram",
+    "scope_limit": "BOUNDED_FORMAL_PRODUCT_DECISION_ENGINE_RECOMMENDATION_PATH_ONLY"
+  },
+  "b09k_anchor": {
+    "product_head": "f8f8c45c696bbabbbddb5a859597663d30c60223",
+    "completion_pr": 3363,
+    "completion_comment_id": 5452482173,
+    "exact_validation_run_id": 33170326141,
+    "exact_validation_job_id": 98845620986,
+    "validation_head": "c3e3fa3204ec4abda99749cc047e405bf8f35503",
+    "general_ci_run_id": 33170441086,
+    "full_acceptance_job_id": 98846358167
+  },
+  "b07_policy_contract": {
+    "evaluator_path": "apps/server/src/domain/decision/decision_eligibility_evaluator_v1.ts",
+    "runtime_path": "apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts",
+    "evaluator_type": "DecisionEligibilityPolicyV1",
+    "required_fields": [
+      "policy_ref",
+      "required_criteria"
+    ],
+    "runtime_additional_requirement": "applicable_action_types",
+    "policy_ref_must_be_present_in_canonical_inputs_policy_refs": true,
+    "required_criteria_must_be_nonempty": true,
+    "required_criteria_must_be_unique": true,
+    "hidden_default_required_criteria": false,
+    "eligibility_pass_is_approval": false,
+    "approval_plan_task_execution_authority": false
+  },
+  "field_program_provenance": {
+    "contract_path": "packages/contracts/src/schema/field_program_v1.ts",
+    "route_path": "apps/server/src/routes/programs_core_v1.ts",
+    "persisted_source": "api/v1/programs -> field_program_v1",
+    "scope_fields": [
+      "tenant_id",
+      "project_id",
+      "group_id",
+      "program_id",
+      "field_id",
+      "season_id",
+      "crop_code"
+    ],
+    "policy_like_fields": {
+      "acceptance_policy_ref": {
+        "present": true,
+        "runtime_consumers": [
+          "apps/server/src/domain/acceptance/engine_v1.ts",
+          "apps/server/src/domain/planner/compiler_v1.ts"
+        ],
+        "semantic_role": "POST_EXECUTION_ACCEPTANCE_AND_PLANNER_LABELING",
+        "eligible_as_b07_policy_ref": false,
+        "reason": "NO_REQUIRED_CRITERIA_OR_APPLICABLE_ACTION_TYPES_CONTRACT_AND_POST_EXECUTION_ACCEPTANCE_SEMANTICS"
+      },
+      "evidence_policy_ref": {
+        "present": true,
+        "runtime_consumers": [],
+        "semantic_role": "DECLARED_BUT_CURRENTLY_UNCONSUMED",
+        "eligible_as_b07_policy_ref": false,
+        "reason": "NO_RUNTIME_CONSUMER_AND_NO_B07_POLICY_SHAPE"
+      },
+      "execution_policy": {
+        "present": true,
+        "fields": [
+          "mode",
+          "auto_execute_allowed_task_types"
+        ],
+        "semantic_role": "DOWNSTREAM_ACTION_MODE_AUTO_VS_APPROVAL_REQUIRED",
+        "eligible_as_b07_policy_ref": false,
+        "reason": "EXECUTION_AUTHORIZATION_MODE_IS_NOT_DECISION_ELIGIBILITY_CRITERION_POLICY"
+      },
+      "manual_approval_required_for": {
+        "present": true,
+        "semantic_role": "PROGRAM_CONSTRAINT_FOR_DOWNSTREAM_APPROVAL_GOVERNANCE",
+        "eligible_as_b07_policy_ref": false
+      },
+      "allow_night_irrigation": {
+        "present": true,
+        "semantic_role": "PROGRAM_EXECUTION_CONSTRAINT",
+        "eligible_as_b07_policy_ref": false
+      },
+      "max_irrigation_mm_per_day": {
+        "present": true,
+        "planner_consumer": "apps/server/src/domain/planner/compiler_v1.ts",
+        "semantic_role": "PLANNER_EXECUTION_RESOURCE_CONSTRAINT",
+        "eligible_as_b07_policy_ref": false
+      }
+    },
+    "may_anchor_future_eligibility_policy_scope": true,
+    "may_supply_existing_b07_policy_authority": false
+  },
+  "decision_engine_usage": {
+    "path": "apps/server/src/routes/decision_engine_v1.ts",
+    "recommendation_generation_reads_program_execution_policy": false,
+    "recommendation_generation_reads_manual_approval_required_for": false,
+    "recommendation_generation_reads_allow_night_irrigation": false,
+    "recommendation_generation_reads_max_irrigation_mm_per_day": false,
+    "recommendation_generation_reads_acceptance_policy_ref": false,
+    "recommendation_generation_reads_evidence_policy_ref": false,
+    "recommendation_generation_resolves_program_id": true,
+    "program_resolution_occurs_after_recommendation_candidates_are_built": true,
+    "implication": "FIELD_PROGRAM_IS_CURRENTLY_RELATIONAL_PROVENANCE_FOR_RECOMMENDATION_CHAIN_NOT_ELIGIBILITY_POLICY_AUTHORITY"
+  },
+  "planner_boundary": {
+    "path": "apps/server/src/domain/planner/compiler_v1.ts",
+    "reads_field_program_execution_policy": true,
+    "reads_acceptance_policy_ref": true,
+    "reads_max_irrigation_mm_per_day": true,
+    "outputs_candidate_action_mode": [
+      "AUTO",
+      "APPROVAL_REQUIRED",
+      "BLOCKED"
+    ],
+    "semantic_role": "PROGRAM_ACTION_COMPILATION_AND_EXECUTION_MODE",
+    "b07_policy_authority": false,
+    "reason": "PLANNER_COMPILER_IS_DOWNSTREAM_PROGRAM_ACTION_POLICY_AND_NOT_B07D_DECISION_ELIGIBILITY_POLICY"
+  },
+  "approval_boundary": {
+    "path": "apps/server/src/domain/approval/recommendation_approval_request_builder_v1.ts",
+    "human_approval_required": true,
+    "no_direct_execution": true,
+    "request_only": true,
+    "approval_decision_created": false,
+    "operation_plan_created": false,
+    "task_created": false,
+    "dispatch_created": false,
+    "semantic_role": "POST_CANDIDATE_OPERATOR_APPROVAL_REQUEST_BOUNDARY",
+    "eligible_as_pre_decision_b07_policy_authority": false,
+    "reason": "B07D_ELIGIBILITY_PASS_IS_NOT_APPROVAL_AND_APPROVAL_REQUEST_IS_DOWNSTREAM_OF_CANDIDATE"
+  },
+  "acceptance_boundary": {
+    "engine_path": "apps/server/src/domain/acceptance/engine_v1.ts",
+    "acceptance_policy_ref_input_present": true,
+    "current_verdict_basis": [
+      "action-specific acceptance skill",
+      "formal evidence policy derived from receipt",
+      "execution window presence",
+      "non-dev chain",
+      "variable-zone evidence when applicable"
+    ],
+    "acceptance_policy_ref_currently_selects_required_b07_criteria": false,
+    "semantic_role": "POST_EXECUTION_ACCEPTANCE",
+    "eligible_as_b07_policy_ref": false
+  },
+  "twin_kernel_policy_collision": {
+    "files": [
+      "docs/twin_kernel/P35_CANDIDATE_ELIGIBILITY_POLICY_V0.json",
+      "docs/twin_kernel/P46_RECOMMENDATION_ELIGIBILITY_POLICY_V0.json",
+      "docs/twin_kernel/TWIN_USE_ELIGIBILITY_POLICY_CONTRACT_V0.json"
+    ],
+    "same_name_family_only": true,
+    "same_authority_domain": false,
+    "direct_reuse_for_b07_forbidden": true,
+    "reasons": [
+      "P35_GOVERNS_TWIN_FORECAST_REVIEW_CANDIDACY_NOT_BLINE_DECISION_ELIGIBILITY",
+      "P46_GOVERNS_TWIN_RECOMMENDATION_GOVERNANCE_WITH_SEPARATE_POLICY_REFS",
+      "TWIN_USE_POLICY_EXPLICITLY_FORBIDS_RECOMMENDATION_ACTION_APPROVAL_AND_AO_ACT_AUTHORITY",
+      "BLINE_MUST_NOT_TOUCH_OR_IMPORT_MCFT_TWIN_KERNEL_AUTHORITY_WITHOUT_SEPARATE_AUTHORIZED_INTEGRATION"
+    ]
+  },
+  "repository_search_adjudication": {
+    "product_applicable_action_types_implementation_found": false,
+    "product_required_criteria_policy_ref_pair_found": false,
+    "product_eligibility_policy_registry_found": false,
+    "b07_policy_definition_exists_only_as_evaluator_contract": true,
+    "existing_product_policy_authority_for_bounded_irrigate_path": false
+  },
+  "readiness_adjudication": {
+    "field_program_scope_anchor_ready": true,
+    "explicit_product_eligibility_policy_authority_exists": false,
+    "safe_to_reuse_acceptance_policy_ref": false,
+    "safe_to_reuse_evidence_policy_ref": false,
+    "safe_to_reuse_execution_policy": false,
+    "safe_to_use_approval_request_as_permission_criterion": false,
+    "safe_to_import_twin_kernel_policy": false,
+    "ready_to_bind_b07_required_criteria": false,
+    "ready_to_invoke_b07e": false,
+    "ready_for_consumer_migration": false,
+    "ready_for_historical_authority_removal": false,
+    "unconditional_blockers": [
+      "NO_CANONICAL_BLINE_ELIGIBILITY_POLICY_DECLARATION",
+      "NO_SCOPED_POLICY_REF_PROVENANCE_FOR_BOUNDED_IRRIGATE_PATH",
+      "NO_EXPLICIT_REQUIRED_CRITERIA_DECLARATION",
+      "NO_EXPLICIT_APPLICABLE_ACTION_TYPES_DECLARATION"
+    ]
+  },
+  "prohibited_shortcuts": [
+    "DO_NOT_RENAME_ACCEPTANCE_POLICY_REF_AS_DECISION_ELIGIBILITY_POLICY_REF",
+    "DO_NOT_RENAME_EVIDENCE_POLICY_REF_AS_DECISION_ELIGIBILITY_POLICY_REF",
+    "DO_NOT_TREAT_EXECUTION_POLICY_MODE_AS_DECISION_ELIGIBILITY_VERDICT",
+    "DO_NOT_TREAT_HUMAN_APPROVAL_REQUIRED_AS_PRE_DECISION_PERMISSION_CRITERION",
+    "DO_NOT_TREAT_PLANNER_AUTO_APPROVAL_BLOCKED_MODE_AS_B07_ELIGIBILITY",
+    "DO_NOT_IMPORT_TWIN_KERNEL_P35_P46_POLICY_INTO_BLINE",
+    "DO_NOT_INVENT_REQUIRED_CRITERIA_OR_ACTION_TYPES_IN_B09L",
+    "DO_NOT_INVOKE_B07E_IN_B09L"
+  ],
+  "repository_effects": {
+    "runtime_implementation_added": false,
+    "route_added": false,
+    "schema_or_database_change": false,
+    "workflow_added": false,
+    "connectivity_edge_added": false,
+    "policy_contract_added": false,
+    "field_program_contract_changed": false,
+    "decision_eligibility_producer_added": false,
+    "replacement_readiness_changed": false,
+    "parallel_authority_graph_changed": false,
+    "mcft_or_twin_kernel_changed": false,
+    "consumer_migration_performed": false,
+    "authority_removal_performed": false
+  },
+  "next_permitted_step": "DEFINE_A_NEW_BLINE_SHADOW_ONLY_DECISION_ELIGIBILITY_POLICY_DECLARATION_CONTRACT_SCOPED_BY_FIELD_PROGRAM_OR_EQUIVALENT_CANONICAL_SOURCE_WITH_EXPLICIT_POLICY_REF_REQUIRED_CRITERIA_AND_APPLICABLE_ACTION_TYPES"
+}
