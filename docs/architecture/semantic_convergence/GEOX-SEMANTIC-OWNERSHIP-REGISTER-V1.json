@@ -2079,8 +2079,8 @@
       "semantic_id": "decision.episode",
       "question": "Which governed decision-time inputs, reasoning references, decision authorities, and downstream commercial-chain refs belong to one trace-only decision episode?",
       "target_owner": "Decision Episode Runtime",
-      "canonical_output_type": "DecisionEpisodeV1 (B-08a contract frozen; no production assembler connected)",
-      "current_state": "BOUNDARY_CLEAR_TARGET_NOT_YET_PRODUCT_CONNECTED",
+      "canonical_output_type": "DecisionEpisodeV1 (B-08c canonical trace assembler registered as capability island; no external route connected)",
+      "current_state": "REGISTERED_CAPABILITY_ISLAND",
       "target_phase": "B-08",
       "new_owner_creation": "FORBIDDEN",
       "registered_producers": [
@@ -2097,6 +2097,24 @@
           "runtime_edge": "INTENTIONAL_NONE",
           "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
           "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "decision-episode-assembler-v1",
+          "path": "apps/server/src/domain/decision/decision_episode_assembler_v1.ts",
+          "role": "canonical B-08c trace-only assembler over matched CandidateDecisionV1 and DecisionEligibilityDecisionV1 plus downstream commercial-chain references",
+          "authority_level": "TRACE_ONLY_CANONICAL_PRODUCER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "assembleDecisionEpisodeV1",
+            "decisionEpisodeV1Schema.parse"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
         }
       ],
       "registered_consumers": [],
@@ -2104,7 +2122,11 @@
         "DecisionEpisodeV1 is TRACE_ONLY and cannot create Candidate, Eligibility, Approval, Plan, Task, execution, or Acceptance authority.",
         "B-08a requires CandidateDecision and DecisionEligibility refs while preserving downstream commercial-chain objects as references only.",
         "B-08a connects no real MCFT adapter, ADR runtime, or LLM provider.",
-        "Historical semantic-authority removal remains B-09 only."
+        "Historical semantic-authority removal remains B-09 only.",
+        "B-08c registers the single canonical DecisionEpisodeV1 trace assembler as a capability island.",
+        "B-08c verifies Candidate/Eligibility identity, scope, context, stage, evidence and decision-time continuity before trace assembly.",
+        "B-08c downstream approval/plan/task/receipt/acceptance/outcome entries are reference-only and cannot create authority.",
+        "B-08c still connects no real MCFT adapter, ADR runtime or LLM provider."
       ],
       "runtime_consumers": []
     },
@@ -2624,7 +2646,7 @@
     {
       "guard_id": "G-B02-19-decision-episode-instantiation",
       "semantic_id": "decision.episode",
-      "description": "B-08a freezes DecisionEpisodeV1 but permits zero production assemblers; later B-08 assembler registration must be explicit.",
+      "description": "B-08c permits exactly the registered canonical Decision Episode assembler to instantiate DecisionEpisodeV1; any additional Episode producer requires explicit later registration.",
       "scan_roots": [
         "apps/server/src"
       ],
@@ -2640,7 +2662,9 @@
           "decisionEpisodeV1Schema.parse("
         ]
       },
-      "registered_paths": [],
+      "registered_paths": [
+        "apps/server/src/domain/decision/decision_episode_assembler_v1.ts"
+      ],
       "failure": "UNREGISTERED_DECISION_EPISODE_PRODUCER"
     },
     {
