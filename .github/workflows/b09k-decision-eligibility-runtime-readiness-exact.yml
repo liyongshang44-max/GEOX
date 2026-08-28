@@ -1,0 +1,106 @@
+name: b09k-decision-eligibility-runtime-readiness-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b09k-decision-eligibility-runtime-readiness-exact-2026-08-28
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09k product head checkout
+        run: |
+          git checkout f8f8c45c696bbabbbddb5a859597663d30c60223
+          test "$(git rev-parse HEAD)" = "f8f8c45c696bbabbbddb5a859597663d30c60223"
+          test "$(git rev-parse HEAD^)" = "03490b4ce54cdb35f2a2965193ed87fdcab24523"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09k governance acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09K_DECISION_ELIGIBILITY_RUNTIME_READINESS_INVENTORY_V1.cjs
+
+      - name: B-07e runtime seam contract
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: B-07c agronomy criterion adapter contract
+        run: node --import tsx --test apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.contract.test.ts
+
+      - name: B-06b CalculationResult adapter contract
+        run: node --import tsx --test apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.contract.test.ts
+
+      - name: B-05 Context contracts
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+          node --import tsx --test apps/server/src/context/field_program_context_projection_v1.test.ts
+
+      - name: B-04 qualification projector contract
+        run: node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+
+      - name: B-09j candidate referential shadow regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.contract.test.ts
+
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only 03490b4ce54cdb35f2a2965193ed87fdcab24523 f8f8c45c696bbabbbddb5a859597663d30c60223 > /tmp/b09k-files.txt
+          cat /tmp/b09k-files.txt
+          test "$(wc -l < /tmp/b09k-files.txt | tr -d ' ')" = "4"
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09K-DECISION-ELIGIBILITY-RUNTIME-READINESS-INVENTORY-V1.json" /tmp/b09k-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09K-DECISION-ELIGIBILITY-RUNTIME-READINESS-INVENTORY-V1.md" /tmp/b09k-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json" /tmp/b09k-files.txt
+          grep -qx "scripts/governance_acceptance/ACCEPTANCE_B09K_DECISION_ELIGIBILITY_RUNTIME_READINESS_INVENTORY_V1.cjs" /tmp/b09k-files.txt
+          git diff --check 03490b4ce54cdb35f2a2965193ed87fdcab24523 f8f8c45c696bbabbbddb5a859597663d30c60223
+          echo "B09K_BOUNDED_PRODUCT_DIFF_PASS"
+
+      - name: Runtime schema workflow graph MCFT remain untouched
+        run: |
+          git diff --exit-code 03490b4ce54cdb35f2a2965193ed87fdcab24523 f8f8c45c696bbabbbddb5a859597663d30c60223 -- \
+            apps/server/src \
+            apps/server/db \
+            packages \
+            .github/workflows \
+            docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json \
+            docs/architecture/semantic_convergence/GEOX-B09-REPLACEMENT-READINESS-V1.json \
+            docs/digital_twin \
+            docker-compose.commercial_v1.yml
+          echo "B09K_RUNTIME_SCHEMA_WORKFLOW_GRAPH_MCFT_UNTOUCHED_PASS"
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Prove validation did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "f8f8c45c696bbabbbddb5a859597663d30c60223"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09K_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Marker
+        run: |
+          echo "B09K_EXACT_HEAD f8f8c45c696bbabbbddb5a859597663d30c60223"
+          echo "B09K_DECISION_ELIGIBILITY_RUNTIME_READINESS_INVENTORY_PASS"
