@@ -10,7 +10,8 @@
     "c3346768a44b16b127378cb690ada1d8cfec1049",
     "0e874b254c695b32fd94c7dc7034fd71b8aa3bc3",
     "16ff7160473c0a25dc059db6b2b6b7ba07f54dd1",
-    "75d4961279bd64dc1c9dd7d68aac189c72c98846"
+    "75d4961279bd64dc1c9dd7d68aac189c72c98846",
+    "48ceafe7c6e7d3d57a1dc17411fb4bf673486333"
   ],
   "stacked_predecessor_branch": "fix/mcft-cap09-v13-autonomous-forcing-foundation",
   "default_stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
