@@ -22,6 +22,9 @@ on:
       - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_V1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FINAL_SEMANTIC_CLOSURE_V1.cjs'
       - 'scripts/governance_acceptance/REHEARSE_MCFT_CAP_09_FORMAL_24H_ORCHESTRATION_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs'
+      - '.github/workflows/mcft-cap-09-phase6-retire-github-production-execution.yml'
 
 permissions:
   contents: read
@@ -39,7 +42,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20.11.1'
+      - name: Route Phase6 retirement successor
+        id: phase6
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -f 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json'; then
+            status="$(node -e "const a=require('./docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json');process.stdout.write(String(a.status||''))")"
+            if [[ "$status" == PHASE6_* ]]; then
+              git merge-base --is-ancestor '75d4961279bd64dc1c9dd7d68aac189c72c98846' HEAD
+              node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs enforce >/tmp/mcft-cap09-phase6-owner-audit.json
+              echo 'active=true' >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo 'active=false' >> "$GITHUB_OUTPUT"
       - name: Prove final semantic closure from terminal readback back to qualification
+        if: steps.phase6.outputs.active != 'true'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FINAL_SEMANTIC_CLOSURE_V1.cjs
 
   deterministic-24h-orchestration-rehearsal:

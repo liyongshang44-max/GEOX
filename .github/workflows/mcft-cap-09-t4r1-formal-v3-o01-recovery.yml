@@ -1,291 +1,40 @@
+# Phase 6 retirement sentinel.
+# Complete pre-cutover implementation remains immutable at:
+# 75d4961279bd64dc1c9dd7d68aac189c72c98846:.github/workflows/mcft-cap-09-t4r1-formal-v3-o01-recovery.yml
+# historical blob: f2442c7e7255160156b90ad0c693e18a1db2c8bb
+# No production schedule, dispatch, workflow-run, push, or callable trigger remains.
 name: mcft-cap-09-t4r1-formal-v3-o01-recovery
 
 on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-t4r1-formal-v3-o01-recovery.yml'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-FORMAL-V3-O01-RECOVERY-AUTHORITY-V1.json'
-      - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_RUNTIME_ENVIRONMENT_V1.ts'
-  workflow_dispatch:
-    inputs:
-      recovery_ack:
-        description: 'Exact acknowledgement required to archive failed O01 v3 and reprovision zero-state logical v3'
-        required: true
-        type: string
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs'
+      - '.github/workflows/mcft-cap-09-phase6-retire-github-production-execution.yml'
 
 permissions:
   contents: read
-  actions: read
-
-concurrency:
-  group: mcft-cap09-t4r1-formal-v3-o01-recovery-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'main' }}
-  cancel-in-progress: false
-
-env:
-  NODE_VERSION: '20.11.1'
-  PNPM_VERSION: '9.15.4'
-  AUTHORITY_PATH: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-FORMAL-V3-O01-RECOVERY-AUTHORITY-V1.json
-  SOURCE_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h
-  ACTIVE_FORMAL_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v3
-  FAILED_O01_ARCHIVE_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v3_failed_o01_32660018684
-  PRIOR_PREBOOTSTRAP_ARCHIVE_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v3_failed_32646669506
-  FAILED_O01_SUBJECT_SHA: 18b690e8c2d92bfdc4eeea9eece0723c4181a996
-  FAILED_O01_RUN_ID: '32660018684'
-  FAILED_O01_ARTIFACT_ID: '9498479992'
-  FAILED_O01_ARTIFACT_NAME: mcft-cap09-am19-formal-cycle-NO-GO-18b690e8c2d92bfdc4eeea9eece0723c4181a996-32660018684
-  FAILED_O01_ARTIFACT_DIGEST: sha256:dd531b49138ee5b9046e9cc4d8dbd458572c62995de0cc08a2cad7f64e6ee0d2
-  REQUIRED_RECOVERY_ACK: ARCHIVE_FAILED_V3_O01_AND_REPROVISION_ZERO_STATE
 
 jobs:
-  static-proof:
-    if: github.event_name == 'pull_request'
+  phase6-retirement-sentinel:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          persist-credentials: false
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Validate exact O01 recovery authority
-        shell: node {0}
-        run: |
-          const fs=require('node:fs');
-          const a=JSON.parse(fs.readFileSync(process.env.AUTHORITY_PATH,'utf8'));
-          const i=a.incident;
-          const d=a.database_identity;
-          const r=a.failed_store_readback;
-          const c=a.recovery_contract;
-          if(a.schema_version!=='geox_mcft_cap09_t4r1_formal_v3_o01_recovery_authority_v1'||a.status!=='DORMANT_RECOVERY_ONLY')throw new Error('MCFT_CAP09_O01_RECOVERY_AUTHORITY_REQUIRED');
-          if(i.failed_subject_sha!==process.env.FAILED_O01_SUBJECT_SHA||i.workflow_run_id!==32660018684||i.artifact_id!==9498479992||i.artifact_digest!==process.env.FAILED_O01_ARTIFACT_DIGEST)throw new Error('MCFT_CAP09_O01_RECOVERY_INCIDENT_IDENTITY_REQUIRED');
-          if(i.arm_identity_hash!=='sha256:f43faae8da7e86b0e7f6e3714d97349abd9b73e33d603676648b4736793dbd94'||i.epoch_id!=='mcft_cap09_am19_formal_20260823170000000_18b690e8c2d9'||i.manifest_hash!=='sha256:9220f985bb0705e3e761218cab322bf4d46b226e3444ebbfccb6e7d0d75027c0')throw new Error('MCFT_CAP09_O01_RECOVERY_FORMAL_IDENTITY_REQUIRED');
-          if(i.terminal_result?.status!=='BLOCKED_TERMINAL_RECORDED'||i.terminal_result?.slot_id!=='O01'||i.terminal_result?.logical_time!=='2026-08-23T19:00:00.000Z'||i.terminal_result?.detail!=='AMENDMENT19_NO_CAUSAL_CURRENT_INTERVAL_FORCING_PAIR'||i.formal_epoch_no_go!==true)throw new Error('MCFT_CAP09_O01_RECOVERY_NO_GO_IDENTITY_REQUIRED');
-          if(d.active_logical_database_name!==process.env.ACTIVE_FORMAL_DATABASE_NAME||d.archive_database_name!==process.env.FAILED_O01_ARCHIVE_DATABASE_NAME||d.schema_reference_database_name!==process.env.SOURCE_DATABASE_NAME)throw new Error('MCFT_CAP09_O01_RECOVERY_DATABASE_IDENTITY_REQUIRED');
-          if(d.archive_before_reprovision_required!==true||d.archive_mutation_after_rename_forbidden!==true||d.data_clone_forbidden!==true||d.reprovision_mode!=='CREATE_DATABASE_TEMPLATE0_THEN_SCHEMA_ONLY_RESTORE')throw new Error('MCFT_CAP09_O01_RECOVERY_ARCHIVE_FIRST_REQUIRED');
-          if(r.public_table_count!==26||Object.keys(r.table_row_counts||{}).length!==26||r.table_row_counts.facts!==45||r.table_row_counts.twin_shadow_online_scheduler_slot_v1!==2||r.table_row_counts.twin_terminal_tick_uniqueness_v1!==1)throw new Error('MCFT_CAP09_O01_RECOVERY_EXACT_INVENTORY_REQUIRED');
-          if(r.scheduler_slots?.length!==2||r.scheduler_slots[0]?.slot_id!=='O00'||r.scheduler_slots[0]?.state!=='DEGRADED'||!r.scheduler_slots[0]?.tick_ref||r.scheduler_slots[1]?.slot_id!=='O01'||r.scheduler_slots[1]?.state!=='FAILED'||r.scheduler_slots[1]?.tick_ref!==null||r.o02_o23_slot_row_count!==0)throw new Error('MCFT_CAP09_O01_RECOVERY_EXACT_SLOT_LEDGER_REQUIRED');
-          if(r.scheduler_cursor?.next_slot_index!==2||r.scheduler_cursor?.next_slot_id!=='O02'||r.scheduler_cursor?.next_logical_time!=='2026-08-23T20:00:00.000Z')throw new Error('MCFT_CAP09_O01_RECOVERY_CURSOR_REQUIRED');
-          if(c.workflow_dispatch_only!==true||c.required_recovery_ack!==process.env.REQUIRED_RECOVERY_ACK||c.failed_v3_epoch_continuation_forbidden!==true||c.o02_through_o23_execution_forbidden!==true||c.successor_arm_forbidden!==true||c.a0_bootstrap_forbidden!==true||c.qualification_reexecution_required!==false||c.classification!=='CONTROL_PLANE_INCIDENT_RECOVERY')throw new Error('MCFT_CAP09_O01_RECOVERY_CONTROL_PLANE_BOUNDARY_REQUIRED');
-
-      - name: Require dormant archive-first no-continuation workflow contract
-        shell: bash
-        run: |
-          set -euo pipefail
-          f=.github/workflows/mcft-cap-09-t4r1-formal-v3-o01-recovery.yml
-          grep -Fq 'recovery_ack:' "$f"
-          grep -Fq 'RECOVERY_ACK: ${{ inputs.recovery_ack }}' "$f"
-          grep -Fq 'test "$RECOVERY_ACK" = "$REQUIRED_RECOVERY_ACK"' "$f"
-          grep -Fq 'ARCHIVE_FAILED_V3_O01_AND_REPROVISION_ZERO_STATE' "$f"
-          grep -Fq 'ALTER DATABASE \"$ACTIVE_FORMAL_DATABASE_NAME\" RENAME TO \"$FAILED_O01_ARCHIVE_DATABASE_NAME\"' "$f"
-          grep -Fq 'CREATE DATABASE \"$ACTIVE_FORMAL_DATABASE_NAME\" TEMPLATE template0' "$f"
-          grep -Fq 'pg_dump --schema-only --no-owner --no-privileges' "$f"
-          grep -Fq 'o02_o23_slot_row_count' "$AUTHORITY_PATH"
-          ! grep -Eq '^  schedule:|^  workflow_run:|^  workflow_call:' "$f"
-          ! grep -Fq 'gh workflow run' "$f"
-          ! grep -Eq 'DROP DATABASE|TRUNCATE|DELETE FROM facts|UPDATE facts' "$f"
-          ! grep -Eq '^COPY |^INSERT INTO ' "$f"
-
-  recover-failed-o01-v3:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    env:
-      SOURCE_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL }}
-      RECOVERY_ACK: ${{ inputs.recovery_ack }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
-
-      - name: Require explicit acknowledgement and exact protected main
+      - name: Prove immutable historical binding and retired trigger surface
         shell: bash
         run: |
           set -euo pipefail
-          test "$RECOVERY_ACK" = "$REQUIRED_RECOVERY_ACK" || { echo 'MCFT_CAP09_O01_RECOVERY_EXPLICIT_ACK_REQUIRED' >&2; exit 1; }
-          test "$GITHUB_REF" = 'refs/heads/main' || { echo 'MCFT_CAP09_O01_RECOVERY_MAIN_REQUIRED' >&2; exit 1; }
-          git fetch --no-tags origin main
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || { echo 'MCFT_CAP09_O01_RECOVERY_MAIN_DRIFT' >&2; exit 1; }
-          test -n "$SOURCE_DATABASE_URL" || { echo 'MCFT_CAP09_O01_RECOVERY_SOURCE_SECRET_REQUIRED' >&2; exit 1; }
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-
-      - name: Install PostgreSQL client and exact repository dependencies
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client unzip
-          pnpm install --frozen-lockfile
-
-      - name: Verify immutable O01 workflow run and artifact metadata
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs=require('node:fs');
-            const a=JSON.parse(fs.readFileSync(process.env.AUTHORITY_PATH,'utf8'));
-            const {owner,repo}=context.repo;
-            const run=(await github.rest.actions.getWorkflowRun({owner,repo,run_id:a.incident.workflow_run_id})).data;
-            if(run.status!=='completed'||run.conclusion!=='failure'||run.name!=='mcft-cap-09-amendment19-formal-live-runner'||run.path!=='.github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml'||run.event!=='schedule'||run.head_branch!=='main'||run.head_sha!==a.incident.failed_subject_sha)throw new Error('MCFT_CAP09_O01_RECOVERY_FAILED_RUN_IDENTITY_REQUIRED');
-            const artifact=(await github.rest.actions.getArtifact({owner,repo,artifact_id:a.incident.artifact_id})).data;
-            if(artifact.expired===true||artifact.id!==a.incident.artifact_id||artifact.name!==a.incident.artifact_name||artifact.digest!==a.incident.artifact_digest||artifact.workflow_run?.id!==a.incident.workflow_run_id||artifact.workflow_run?.head_sha!==a.incident.failed_subject_sha)throw new Error('MCFT_CAP09_O01_RECOVERY_ARTIFACT_IDENTITY_REQUIRED');
-
-      - name: Download exact immutable O01 artifact
-        uses: actions/download-artifact@v4
-        with:
-          artifact-ids: '9498479992'
-          path: /tmp/mcft-cap09-o01-artifact
-          merge-multiple: true
-          github-token: ${{ github.token }}
-          repository: ${{ github.repository }}
-          run-id: '32660018684'
-
-      - name: Verify exact O01 artifact payload before any database mutation
-        shell: node {0}
-        run: |
+          test "$(git rev-parse '75d4961279bd64dc1c9dd7d68aac189c72c98846:.github/workflows/mcft-cap-09-t4r1-formal-v3-o01-recovery.yml')" = 'f2442c7e7255160156b90ad0c693e18a1db2c8bb'
+          node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs selftest
+          node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs enforce >/tmp/mcft-cap09-phase6-owner-audit.json
+          node - <<'NODE'
           const fs=require('node:fs');
-          const a=JSON.parse(fs.readFileSync(process.env.AUTHORITY_PATH,'utf8'));
-          const p=JSON.parse(fs.readFileSync(`/tmp/mcft-cap09-o01-artifact/${a.incident.artifact_result_file}`,'utf8'));
-          const i=a.incident;
-          if(p.schema_version!=='geox_mcft_cap09_amendment19_formal_v3_production_runner_result_v1'||p.status!=='FAIL'||p.subject_sha!==i.failed_subject_sha||p.arm_identity_hash!==i.arm_identity_hash||p.epoch_id!==i.epoch_id||p.manifest_hash!==i.manifest_hash||p.formal_database_name!==i.formal_database_name)throw new Error('MCFT_CAP09_O01_RECOVERY_ARTIFACT_FORMAL_IDENTITY_REQUIRED');
-          if(p.cycle_started_at!==i.cycle_started_at||p.temporal_authority!==i.temporal_authority||p.scheduler_clock_mode!==i.scheduler_clock_mode||p.formal_epoch_no_go!==true||p.mcft_cap09_completed!==false)throw new Error('MCFT_CAP09_O01_RECOVERY_ARTIFACT_NO_GO_REQUIRED');
-          for(const k of ['runner_id','status','slot_id','logical_time','detail','claim_attempted','terminal_result_recorded','provider_request_count','r2_request_count'])if(p.result?.[k]!==i.terminal_result[k])throw new Error(`MCFT_CAP09_O01_RECOVERY_ARTIFACT_RESULT_DRIFT:${k}`);
-          if(p.provider_request_count!==0||p.r2_request_count!==0)throw new Error('MCFT_CAP09_O01_RECOVERY_ARTIFACT_ZERO_FETCH_REQUIRED');
-
-      - name: Derive masked admin/source/active/archive URLs
-        shell: node {0}
-        run: |
-          const fs=require('node:fs');
-          const source=new URL(process.env.SOURCE_DATABASE_URL);
-          if(!['postgres:','postgresql:'].includes(source.protocol)||['localhost','127.0.0.1','::1'].includes(source.hostname))throw new Error('MCFT_CAP09_O01_RECOVERY_REMOTE_POSTGRES_REQUIRED');
-          const sourceName=decodeURIComponent(source.pathname.replace(/^\//,''));
-          if(sourceName!==process.env.SOURCE_DATABASE_NAME)throw new Error(`MCFT_CAP09_O01_RECOVERY_SOURCE_IDENTITY_DRIFT:${sourceName}`);
-          const admin=new URL(source);admin.pathname='/postgres';
-          const active=new URL(source);active.pathname='/'+process.env.ACTIVE_FORMAL_DATABASE_NAME;
-          const archive=new URL(source);archive.pathname='/'+process.env.FAILED_O01_ARCHIVE_DATABASE_NAME;
-          for(const u of [source,admin,active,archive])console.log(`::add-mask::${u.toString()}`);
-          fs.appendFileSync(process.env.GITHUB_ENV,`ADMIN_DATABASE_URL=${admin.toString()}\nACTIVE_DATABASE_URL=${active.toString()}\nARCHIVE_DATABASE_URL=${archive.toString()}\n`);
-
-      - name: Freeze authority table-count inventory for exact verification
-        shell: bash
-        run: |
-          set -euo pipefail
-          node - <<'NODE' > /tmp/mcft-cap09-o01-row-counts.tsv
-          const fs=require('node:fs');
-          const a=JSON.parse(fs.readFileSync(process.env.AUTHORITY_PATH,'utf8'));
-          for(const [table,count] of Object.entries(a.failed_store_readback.table_row_counts))process.stdout.write(`${table}\t${count}\n`);
+          const p=JSON.parse(fs.readFileSync('/tmp/mcft-cap09-phase6-owner-audit.json','utf8'));
+          if(p.status!=='PASS'||p.active_retired_owner_or_trigger_count!==0||p.retired_actions_write_count!==0||p.historical_phase5_workflow_blobs_all_match!==true)throw new Error('PHASE6_RETIREMENT_SENTINEL_REQUIRED');
           NODE
-          test "$(wc -l < /tmp/mcft-cap09-o01-row-counts.tsv)" = '26'
-
-      - name: Verify exact failed store, archive first, and forbid O02-O23 history
-        shell: bash
-        run: |
-          set -euo pipefail
-          scope="tenant_id='tenant_mcft_external' AND project_id='project_mcft_cap09' AND group_id='group_public_research' AND field_id='field_kbs_mcse_t4r1' AND season_id='season_2026_corn' AND zone_id='zone_kbs_mcse_t4r1_crop_formal_v1'"
-          verify_failed_store() {
-            local url="$1"
-            local tables actual expected table slots cursor later terminal authority checkpoint health
-            tables=$(psql "$url" -Atqc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
-            test "$tables" = '26' || { echo "MCFT_CAP09_O01_RECOVERY_TABLE_COUNT_DRIFT:$tables" >&2; exit 1; }
-            while IFS=$'\t' read -r table expected; do
-              actual=$(psql "$url" -Atqc "SELECT count(*) FROM \"$table\"")
-              test "$actual" = "$expected" || { echo "MCFT_CAP09_O01_RECOVERY_ROW_COUNT_DRIFT:$table:$actual:$expected" >&2; exit 1; }
-            done < /tmp/mcft-cap09-o01-row-counts.tsv
-            slots=$(psql "$url" -Atqc "SELECT slot_id||'|'||to_char(logical_time AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"')||'|'||state||'|'||COALESCE(tick_ref,'<NULL>')||'|'||COALESCE(health_ref,'<NULL>')||'|'||to_char(terminal_at AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"') FROM twin_shadow_online_scheduler_slot_v1 WHERE $scope AND slot_id IN ('O00','O01') ORDER BY logical_time")
-            expected=$'O00|2026-08-23T18:00:00.000Z|DEGRADED|cap04_a_record_set_7cf09f50cbd4dd9eb33490a9|MCFT_CAP09_EXTERNAL_FORMAL_V3_AM19_RUNNER_V1:O00:DEGRADED|2026-08-23T18:01:19.984Z\nO01|2026-08-23T19:00:00.000Z|FAILED|<NULL>|MCFT_CAP09_EXTERNAL_FORMAL_V3_AM19_RUNNER_V1:O01:BLOCKED_NO_CAUSAL_FORCING|2026-08-23T19:04:00.041Z'
-            test "$slots" = "$expected" || { echo 'MCFT_CAP09_O01_RECOVERY_EXACT_O00_O01_LEDGER_REQUIRED' >&2; printf '%s\n' "$slots" >&2; exit 1; }
-            later=$(psql "$url" -Atqc "SELECT count(*) FROM twin_shadow_online_scheduler_slot_v1 WHERE $scope AND slot_id NOT IN ('O00','O01')")
-            test "$later" = '0' || { echo "MCFT_CAP09_O01_RECOVERY_O02_O23_FORBIDDEN:$later" >&2; exit 1; }
-            cursor=$(psql "$url" -Atqc "SELECT to_char(schedule_start_logical_time AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"')||'|'||next_slot_index||'|'||next_slot_id||'|'||to_char(next_logical_time AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"')||'|'||last_fencing_token FROM twin_shadow_online_scheduler_cursor_v1 WHERE $scope")
-            test "$cursor" = '2026-08-23T18:00:00.000Z|2|O02|2026-08-23T20:00:00.000Z|3' || { echo "MCFT_CAP09_O01_RECOVERY_CURSOR_DRIFT:$cursor" >&2; exit 1; }
-            terminal=$(psql "$url" -Atqc "SELECT lineage_id||'|'||revision_id||'|'||to_char(logical_time AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"')||'|'||terminal_tick_uniqueness_key_hash||'|'||operation_variant||'|'||record_set_id||'|'||aggregate_determinism_hash||'|'||source_tick_object_id FROM twin_terminal_tick_uniqueness_v1 WHERE $scope")
-            test "$terminal" = 'lineage_d6ab8c5713392f56b5cd606d|revision_50c8e64aa06d661e1d07bd42|2026-08-23T18:00:00.000Z|sha256:eda1c6b2a94853a10d48cef825ed2060675b4193038f049e8f7d6ec8bd5159a3|A2_BLOCKED_FORECAST|cap04_a_record_set_7cf09f50cbd4dd9eb33490a9|sha256:7cc85a6019cbfb17be1f8eab438849074b734e43cc4413b020feaa6aca88cf8d|twin_runtime_tick_c1aa5356139e450bc34b8472' || { echo 'MCFT_CAP09_O01_RECOVERY_TERMINAL_TICK_DRIFT' >&2; exit 1; }
-            authority=$(psql "$url" -Atqc "SELECT authority_kind||'|'||authority_ref||'|'||determinism_hash FROM twin_runtime_authority_snapshot_v1")
-            test "$authority" = 'REALITY_BINDING|GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V3|sha256:cc99277a8e918b04e26b4becf341fe8e56c0758257d633191ae549594185e397' || { echo 'MCFT_CAP09_O01_RECOVERY_AUTHORITY_SNAPSHOT_DRIFT' >&2; exit 1; }
-            checkpoint=$(psql "$url" -Atqc "SELECT checkpoint_object_id||'|'||lineage_id||'|'||revision_id||'|'||to_char(logical_time AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"')||'|'||determinism_hash||'|'||source_fact_id FROM twin_runtime_checkpoint_latest_index_v1 WHERE $scope")
-            test "$checkpoint" = 'twin_runtime_checkpoint_34195fdf04295f6b4e3e3ebd|lineage_d6ab8c5713392f56b5cd606d|revision_50c8e64aa06d661e1d07bd42|2026-08-23T18:00:00.000Z|sha256:b634138679d632934303c7ab12c03f1ecf8e38899501a938ffad490df278e625|fact_twin_runtime_checkpoint_34195fdf04295f6b4e3e3ebd' || { echo 'MCFT_CAP09_O01_RECOVERY_CHECKPOINT_DRIFT' >&2; exit 1; }
-            health=$(psql "$url" -Atqc "SELECT health_object_id||'|'||operation_status||'|'||to_char(logical_time AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"')||'|'||determinism_hash||'|'||source_fact_id FROM twin_runtime_health_latest_index_v1 WHERE $scope")
-            test "$health" = 'twin_runtime_health_f546fa63893cd17deac4cd43|CONTINUATION_STATE_ASSIMILATED_WITH_BLOCKED_FORECAST|2026-08-23T18:00:00.000Z|sha256:7437c59f92d4e9a9ddf5cf2be5dae203858a2a8cd1d062e20df75ceb7f4874cc|fact_twin_runtime_health_f546fa63893cd17deac4cd43' || { echo 'MCFT_CAP09_O01_RECOVERY_RUNTIME_HEALTH_DRIFT' >&2; exit 1; }
-          }
-
-          active_exists=$(psql "$ADMIN_DATABASE_URL" -Atqc "SELECT count(*) FROM pg_database WHERE datname='$ACTIVE_FORMAL_DATABASE_NAME'")
-          archive_exists=$(psql "$ADMIN_DATABASE_URL" -Atqc "SELECT count(*) FROM pg_database WHERE datname='$FAILED_O01_ARCHIVE_DATABASE_NAME'")
-          prior_archive_exists=$(psql "$ADMIN_DATABASE_URL" -Atqc "SELECT count(*) FROM pg_database WHERE datname='$PRIOR_PREBOOTSTRAP_ARCHIVE_DATABASE_NAME'")
-          test "$prior_archive_exists" = '1' || { echo 'MCFT_CAP09_O01_RECOVERY_PRIOR_ARCHIVE_REQUIRED' >&2; exit 1; }
-          if [ "$archive_exists" = '0' ]; then
-            test "$active_exists" = '1' || { echo 'MCFT_CAP09_O01_RECOVERY_FAILED_ACTIVE_REQUIRED' >&2; exit 1; }
-            verify_failed_store "$ACTIVE_DATABASE_URL"
-            active_sessions=$(psql "$ADMIN_DATABASE_URL" -Atqc "SELECT count(*) FROM pg_stat_activity WHERE datname='$ACTIVE_FORMAL_DATABASE_NAME' AND pid<>pg_backend_pid()")
-            test "$active_sessions" = '0' || { echo "MCFT_CAP09_O01_RECOVERY_ACTIVE_SESSIONS_FORBIDDEN:$active_sessions" >&2; exit 1; }
-            psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -c "ALTER DATABASE \"$ACTIVE_FORMAL_DATABASE_NAME\" RENAME TO \"$FAILED_O01_ARCHIVE_DATABASE_NAME\""
-          fi
-          verify_failed_store "$ARCHIVE_DATABASE_URL"
-
-      - name: Create fresh active v3 logical store only when absent
-        shell: bash
-        run: |
-          set -euo pipefail
-          active_exists=$(psql "$ADMIN_DATABASE_URL" -Atqc "SELECT count(*) FROM pg_database WHERE datname='$ACTIVE_FORMAL_DATABASE_NAME'")
-          if [ "$active_exists" = '0' ]; then
-            psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$ACTIVE_FORMAL_DATABASE_NAME\" TEMPLATE template0"
-          fi
-
-      - name: Dump schema only from immutable T4 reference with PostgreSQL 18 client
-        shell: bash
-        run: |
-          set -euo pipefail
-          docker run --rm -e SOURCE_DATABASE_URL="$SOURCE_DATABASE_URL" postgres:18-alpine \
-            sh -c 'pg_dump --schema-only --no-owner --no-privileges "$SOURCE_DATABASE_URL"' > /tmp/t4-schema.sql
-          test -s /tmp/t4-schema.sql
-          ! grep -Eq '^COPY |^INSERT INTO ' /tmp/t4-schema.sql
-
-      - name: Restore exact schema only into fresh active v3
-        shell: bash
-        run: |
-          set -euo pipefail
-          count=$(psql "$ACTIVE_DATABASE_URL" -Atqc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
-          if [ "$count" = '0' ]; then
-            psql "$ACTIVE_DATABASE_URL" -v ON_ERROR_STOP=1 -f /tmp/t4-schema.sql >/dev/null
-          elif [ "$count" != '26' ]; then
-            echo "MCFT_CAP09_O01_RECOVERY_PARTIAL_SCHEMA_FORBIDDEN:$count" >&2; exit 1
-          fi
-
-      - name: Prove fresh active v3 exact schema and zero-state
-        env:
-          DATABASE_URL: ${{ env.ACTIVE_DATABASE_URL }}
-        run: pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_RUNTIME_ENVIRONMENT_V1.ts zero-state
-
-      - name: Require exact fingerprints and write recovery proof
-        shell: node {0}
-        run: |
-          const fs=require('node:fs');
-          const a=JSON.parse(fs.readFileSync(process.env.AUTHORITY_PATH,'utf8'));
-          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_RUNTIME_ENVIRONMENT_PREFLIGHT_RESULT.json','utf8'));
-          const expected={column_fingerprint:a.zero_state_schema_contract.column_fingerprint_md5,constraint_fingerprint:a.zero_state_schema_contract.constraint_fingerprint_md5,index_fingerprint:a.zero_state_schema_contract.index_fingerprint_md5};
-          if(p.status!=='PASS'||p.mode!=='zero-state'||p.database_identity.database_name!==process.env.ACTIVE_FORMAL_DATABASE_NAME||p.required_table_count!==26||p.schema_complete!==true||p.zero_state_qualified!==true)throw new Error('MCFT_CAP09_O01_RECOVERY_ZERO_STATE_PREFLIGHT_REQUIRED');
-          for(const [k,v] of Object.entries(expected))if(p.schema_fingerprints?.[k]!==v)throw new Error(`MCFT_CAP09_O01_RECOVERY_FINGERPRINT_DRIFT:${k}`);
-          for(const [rel,count] of Object.entries(p.zero_state_counts||{}))if(count!==0)throw new Error(`MCFT_CAP09_O01_RECOVERY_ACTIVE_NOT_ZERO:${rel}:${count}`);
-          const proof={schema_version:'geox_mcft_cap09_t4r1_formal_v3_o01_recovery_result_v1',status:'PASS',deployment_subject_sha:process.env.GITHUB_SHA,failed_subject_sha:a.incident.failed_subject_sha,failed_workflow_run_id:a.incident.workflow_run_id,failed_artifact_id:a.incident.artifact_id,failed_artifact_digest:a.incident.artifact_digest,failed_epoch_id:a.incident.epoch_id,failed_arm_identity_hash:a.incident.arm_identity_hash,failed_manifest_hash:a.incident.manifest_hash,archived_failed_database:a.database_identity.archive_database_name,archive_inventory_match:true,o00_state:'DEGRADED',o01_state:'FAILED',o02_o23_slot_row_count:0,active_formal_database:a.database_identity.active_logical_database_name,active_zero_state:true,active_table_count:26,schema_fingerprints:expected,failed_v3_repaired:false,failed_v3_continued:false,o02_authorized:false,o02_executed:false,successor_formal_epoch_armed:false,a0_bootstrap_dispatched:false,rolling_dispatched:false,live_runner_dispatched:false,qualification_reexecution_required:false,qualification_database_rewrite_authorized:false,qualification_attestation_external_required:true,mcft_cap09_completed:false};
-          fs.writeFileSync('acceptance-output/MCFT_CAP_09_T4R1_FORMAL_V3_O01_RECOVERY_RESULT_V1.json',JSON.stringify(proof,null,2)+'\n');
-
-      - name: Upload immutable O01 recovery proof
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcft-cap09-t4r1-formal-v3-o01-recovery-${{ github.sha }}-${{ github.run_id }}
-          path: |
-            acceptance-output/MCFT_CAP_09_RUNTIME_ENVIRONMENT_PREFLIGHT_RESULT.json
-            acceptance-output/MCFT_CAP_09_T4R1_FORMAL_V3_O01_RECOVERY_RESULT_V1.json
-          if-no-files-found: error
-          retention-days: 90
