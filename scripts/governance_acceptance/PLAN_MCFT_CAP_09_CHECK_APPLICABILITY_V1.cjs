@@ -294,8 +294,8 @@ function gitCommitExists(root, sha) {
 function fileShaAtSubject(root, subjectSha, rel, allowWorkingTreeFallback) {
   if (gitCommitExists(root, subjectSha)) {
     const result = cp.spawnSync("git", ["show", `${subjectSha}:${rel}`], { cwd: root, encoding: null, maxBuffer: 64 * 1024 * 1024 });
-    if (result.status !== 0) return null;
-    return sha256(result.stdout);
+    if (result.status === 0) return sha256(result.stdout);
+    if (!allowWorkingTreeFallback) return null;
   }
   if (!allowWorkingTreeFallback || !exists(root, rel)) return null;
   return sha256(fs.readFileSync(path.join(root, rel)));
