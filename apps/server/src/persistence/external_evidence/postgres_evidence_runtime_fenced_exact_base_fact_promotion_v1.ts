@@ -14,7 +14,6 @@ import {
 import {
   MCFT_CAP09_EXACT_BASE_FACT_PROMOTION_ID_V1,
   validateExternalFormalExactBasePromotionInputV1,
-  type ExternalFormalExactBaseFactPromotionReceiptV1,
   type ExternalFormalExactBaseSemanticManifestRowV1,
 } from "../../runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.js";
 import type {
@@ -26,31 +25,14 @@ import {
   type ExternalFormalForcingControllerLeaseV1,
 } from "../../runtime/twin_runtime/postgres_external_formal_forcing_controller_lifecycle_v1.js";
 import type { TwinScopeKeyV1 } from "../../runtime/twin_runtime/ports.js";
+import {
+  MCFT_CAP09_POSTGRES_FENCED_EXACT_BASE_FACT_PROMOTION_ID_V1,
+  PostgresExternalFormalFencedPromotionFailureV1,
+  type PostgresExternalFormalFencedFactPromotionReceiptV1,
+} from "../twin_runtime/postgres_external_formal_fenced_exact_base_fact_promotion_v1.js";
 
 export const MCFT_CAP09_EVIDENCE_RUNTIME_FENCED_EXACT_BASE_FACT_PROMOTION_ID_V1 =
   "EVIDENCE_RUNTIME_FENCED_EXACT_BASE_FACT_PROMOTION_V1" as const;
-
-export type EvidenceRuntimeFencedPromotionMutationStateV1 =
-  | "NO_FORMAL_MUTATION"
-  | "UNKNOWN_FORMAL_MUTATION";
-
-export class EvidenceRuntimeFencedPromotionFailureV1 extends Error {
-  readonly failure_class: string;
-  readonly mutation_state: EvidenceRuntimeFencedPromotionMutationStateV1;
-  readonly formal_database_write_count: 0 | null;
-
-  constructor(input: {
-    failure_class: string;
-    mutation_state: EvidenceRuntimeFencedPromotionMutationStateV1;
-    cause?: unknown;
-  }) {
-    super(input.failure_class, input.cause === undefined ? undefined : { cause: input.cause });
-    this.name = "EvidenceRuntimeFencedPromotionFailureV1";
-    this.failure_class = input.failure_class;
-    this.mutation_state = input.mutation_state;
-    this.formal_database_write_count = input.mutation_state === "NO_FORMAL_MUTATION" ? 0 : null;
-  }
-}
 
 export type EvidenceRuntimeFencedExactBaseFactPromotionConfigV1 = {
   scope: TwinScopeKeyV1;
@@ -59,7 +41,7 @@ export type EvidenceRuntimeFencedExactBaseFactPromotionConfigV1 = {
 };
 
 export type EvidenceRuntimeFencedExactBaseFactPromotionReceiptV1 =
-  ExternalFormalExactBaseFactPromotionReceiptV1 & {
+  PostgresExternalFormalFencedFactPromotionReceiptV1 & {
     evidence_runtime_fenced_promotion_id:
       typeof MCFT_CAP09_EVIDENCE_RUNTIME_FENCED_EXACT_BASE_FACT_PROMOTION_ID_V1;
     database_fence_commit_succeeded: true;
@@ -158,7 +140,7 @@ export class PostgresEvidenceRuntimeFencedExactBaseFactPromotionV1 {
     try {
       validateAuthority(this.config, input.controller_lease, input.producer_claim, base);
     } catch (error) {
-      throw new EvidenceRuntimeFencedPromotionFailureV1({
+      throw new PostgresExternalFormalFencedPromotionFailureV1({
         failure_class: error instanceof Error ? error.message : String(error),
         mutation_state: "NO_FORMAL_MUTATION",
         cause: error,
@@ -181,7 +163,7 @@ export class PostgresEvidenceRuntimeFencedExactBaseFactPromotionV1 {
         await this.retentionVerifier.verifyRetainedRawEvidence(row.prepared.raw_proof);
       }
     } catch (error) {
-      throw new EvidenceRuntimeFencedPromotionFailureV1({
+      throw new PostgresExternalFormalFencedPromotionFailureV1({
         failure_class: "V13_EVIDENCE_FENCED_PRETRANSACTION_VALIDATION_FAILED:"
           + (error instanceof Error ? error.message : String(error)),
         mutation_state: "NO_FORMAL_MUTATION",
@@ -249,6 +231,7 @@ export class PostgresEvidenceRuntimeFencedExactBaseFactPromotionV1 {
 
       return {
         promotion_id: MCFT_CAP09_EXACT_BASE_FACT_PROMOTION_ID_V1,
+        fenced_promotion_id: MCFT_CAP09_POSTGRES_FENCED_EXACT_BASE_FACT_PROMOTION_ID_V1,
         status: "PASS",
         base_target_t: base,
         facts,
@@ -264,7 +247,7 @@ export class PostgresEvidenceRuntimeFencedExactBaseFactPromotionV1 {
       };
     } catch (error) {
       if (commitAttempted) {
-        throw new EvidenceRuntimeFencedPromotionFailureV1({
+        throw new PostgresExternalFormalFencedPromotionFailureV1({
           failure_class: "V13_EVIDENCE_FENCED_COMMIT_OUTCOME_UNKNOWN:"
             + (error instanceof Error ? error.message : String(error)),
           mutation_state: "UNKNOWN_FORMAL_MUTATION",
@@ -276,7 +259,7 @@ export class PostgresEvidenceRuntimeFencedExactBaseFactPromotionV1 {
           await client.query("ROLLBACK");
           transactionStarted = false;
         } catch (rollbackError) {
-          throw new EvidenceRuntimeFencedPromotionFailureV1({
+          throw new PostgresExternalFormalFencedPromotionFailureV1({
             failure_class: "V13_EVIDENCE_FENCED_ROLLBACK_OUTCOME_UNKNOWN:"
               + (rollbackError instanceof Error ? rollbackError.message : String(rollbackError)),
             mutation_state: "UNKNOWN_FORMAL_MUTATION",
@@ -284,7 +267,7 @@ export class PostgresEvidenceRuntimeFencedExactBaseFactPromotionV1 {
           });
         }
       }
-      throw new EvidenceRuntimeFencedPromotionFailureV1({
+      throw new PostgresExternalFormalFencedPromotionFailureV1({
         failure_class: error instanceof Error ? error.message : String(error),
         mutation_state: "NO_FORMAL_MUTATION",
         cause: error,
