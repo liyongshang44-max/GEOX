@@ -12,7 +12,8 @@
     "16ff7160473c0a25dc059db6b2b6b7ba07f54dd1",
     "75d4961279bd64dc1c9dd7d68aac189c72c98846",
     "48ceafe7c6e7d3d57a1dc17411fb4bf673486333",
-    "c4249e5b7bd67d35d34813aceea6760f9d210ed0"
+    "c4249e5b7bd67d35d34813aceea6760f9d210ed0",
+    "d6c015b49d09960591185ff9c930e64dac7e2806"
   ],
   "stacked_predecessor_branch": "fix/mcft-cap09-v13-autonomous-forcing-foundation",
   "default_stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
@@ -212,7 +213,15 @@
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_SUPPLY_CADENCE_PROFILES_V1.ts",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts"
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts",
+        "apps/server/src/external_evidence/s3_compatible_private_evidence_object_client_v1.ts",
+        "apps/server/src/external_evidence/s3_compatible_private_candidate_manifest_store_v1.ts",
+        "apps/server/src/external_evidence/s3_compatible_private_retained_raw_reader_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_PRIVATE_CANDIDATE_IO_V1.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "apps/server/package.json"
       ]
     },
     "PHASE4_TWIN_RUNTIME_FOUNDATION": {
