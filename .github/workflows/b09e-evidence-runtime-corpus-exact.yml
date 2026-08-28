@@ -1,0 +1,257 @@
+name: b09e-evidence-runtime-corpus-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b09e-evidence-runtime-corpus-exact-2026-08-28
+
+jobs:
+  exact-runtime-corpus:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09d product head checkout
+        run: |
+          git checkout ac0d2d43c4914d53075de0ebc4e76bfeeca12d88
+          test "$(git rev-parse HEAD)" = "ac0d2d43c4914d53075de0ebc4e76bfeeca12d88"
+          test "$(git rev-parse HEAD^)" = "b35efbccfdaccf543c982d9ef8643a08bd7214e9"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Prepare isolated runtime env
+        run: |
+          cat > .env.b09e <<'EOF_INNER'
+          GEOX_RUNTIME_ENV=pilot
+          POSTGRES_USER=landos
+          POSTGRES_PASSWORD=b09e-postgres-strong-2026
+          POSTGRES_DB=landos
+          GEOX_MCFT_MIGRATOR_PASSWORD=b09e-mcft-migrator-strong-2026
+          GEOX_RUNTIME_DATABASE_PASSWORD=b09e-runtime-database-strong-2026
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT=ac0d2d43c4914d53075de0ebc4e76bfeeca12d88
+          GEOX_AO_ACT_TOKEN=admin_token
+          GEOX_EXECUTOR_TOKEN=tenant_a_admin_token
+          GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
+          GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT=http://127.0.0.1:9000
+          MINIO_ROOT_USER=geoxminio
+          MINIO_ROOT_PASSWORD=b09e-minio-strong-2026
+          MQTT_AUTH_REQUIRED=1
+          GEOX_MQTT_AUTH_REQUIRED=1
+          MQTT_USERNAME=geoxmqtt
+          MQTT_PASSWORD=b09e-mqtt-strong-2026
+          CORS_ORIGINS=https://b09e-ci.geox.invalid
+          GEOX_ALLOWED_ORIGINS=https://b09e-ci.geox.invalid
+          APP_SECRET=b09e-app-secret-strong-2026
+          GEOX_APP_SECRET=b09e-app-secret-strong-2026
+          PUBLIC_BASE_URL=https://b09e-ci.geox.invalid
+          GEOX_PUBLIC_BASE_URL=https://b09e-ci.geox.invalid
+          GEOX_EXECUTION_DEFAULT_DISABLED=1
+          GEOX_EXECUTION_ENABLE_EXPLICITLY=0
+          GEOX_EXECUTION_ENABLE_REASON=b09e-shadow-corpus-validation
+          GEOX_DEVTOOLS_ENABLED=0
+          EOF_INNER
+
+      - name: Start isolated commercial runtime
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          timeout 180 docker compose --env-file .env.b09e -f docker-compose.commercial_v1.yml up -d minio minio-init
+          timeout 300 docker compose --env-file .env.b09e -f docker-compose.commercial_v1.yml up -d postgres mqtt server
+          docker compose --env-file .env.b09e -f docker-compose.commercial_v1.yml ps
+
+      - name: Wait for API ready
+        run: |
+          set -euo pipefail
+          timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health >/dev/null; do sleep 2; done'
+          curl -fsS http://127.0.0.1:3001/api/health
+
+      - name: Produce and persist MATCH DIVERGENT INCOMPARABLE corpus
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          node <<'NODE'
+          const fs = require("fs");
+          const assert = require("assert/strict");
+
+          const base = "http://127.0.0.1:3001";
+          const token = "admin_token";
+          const scope = { tenant_id: "tenantA", project_id: "projectA", group_id: "groupA" };
+          const suffix = Date.now();
+
+          async function call(path, method="GET", body) {
+            const res = await fetch(base + path, {
+              method,
+              headers: {
+                authorization: "Bearer " + token,
+                ...(body === undefined ? {} : {"content-type":"application/json"}),
+              },
+              body: body === undefined ? undefined : JSON.stringify(body),
+            });
+            const text = await res.text();
+            let json = null;
+            try { json = text ? JSON.parse(text) : null; } catch {}
+            assert.equal(res.ok, true, method+" "+path+" failed "+res.status+" "+text);
+            assert.equal(json?.ok, true, method+" "+path+" json.ok!=true "+text);
+            return json;
+          }
+
+          function cmpOf(json) {
+            return json?.judge_result?.outputs?.semantic_shadow_comparison_v1 ?? null;
+          }
+
+          (async()=>{
+            const now1 = Date.now();
+            const match = await call("/api/v1/judge/evidence/evaluate", "POST", {
+              ...scope,
+              field_id: "field_b09e_match_" + suffix,
+              device_id: "device_b09e_match_" + suffix,
+              soil_moisture: 0.5,
+              observed_at_ts_ms: now1 - 11*60*1000,
+              now_ts_ms: now1,
+              last_heartbeat_ts_ms: now1 - 60*1000,
+              last_telemetry_ts_ms: now1 - 60*1000,
+              evidence_refs: ["b09e:match"],
+            });
+            assert.equal(match.judge_result.verdict, "STALE_DATA");
+            assert.equal(cmpOf(match)?.comparison_state, "MATCH");
+            assert.equal(cmpOf(match)?.authority_state, "SHADOW_ONLY");
+            assert.equal(cmpOf(match)?.authority_removal_permitted, false);
+
+            const now2 = Date.now();
+            const divergent = await call("/api/v1/judge/evidence/evaluate", "POST", {
+              ...scope,
+              field_id: "field_b09e_divergent_" + suffix,
+              device_id: "device_b09e_divergent_" + suffix,
+              soil_moisture: 0.5,
+              observed_at_ts_ms: now2 - 60*1000,
+              now_ts_ms: now2,
+              last_heartbeat_ts_ms: now2 - 60*1000,
+              last_telemetry_ts_ms: now2 - 60*1000,
+              evidence_refs: ["b09e:divergent"],
+            });
+            assert.equal(divergent.judge_result.verdict, "PASS");
+            assert.equal(cmpOf(divergent)?.comparison_state, "DIVERGENT");
+            assert.equal(cmpOf(divergent)?.authority_state, "SHADOW_ONLY");
+            assert.equal(cmpOf(divergent)?.authority_removal_permitted, false);
+
+            const now3 = Date.now();
+            const incomparable = await call("/api/v1/judge/evidence/evaluate", "POST", {
+              ...scope,
+              device_id: "device_b09e_incomparable_" + suffix,
+              soil_moisture: 0.5,
+              observed_at_ts_ms: now3 - 60*1000,
+              now_ts_ms: now3,
+              last_heartbeat_ts_ms: now3 - 60*1000,
+              last_telemetry_ts_ms: now3 - 60*1000,
+              evidence_refs: ["b09e:incomparable"],
+            });
+            assert.equal(incomparable.judge_result.verdict, "PASS");
+            assert.equal(cmpOf(incomparable)?.comparison_state, "INCOMPARABLE");
+            assert.equal(cmpOf(incomparable)?.authority_state, "SHADOW_ONLY");
+            assert.equal(cmpOf(incomparable)?.authority_removal_permitted, false);
+
+            const ids = [
+              match.judge_result.judge_id,
+              divergent.judge_result.judge_id,
+              incomparable.judge_result.judge_id,
+            ];
+
+            for (const id of ids) {
+              const q = new URLSearchParams(scope).toString();
+              const read = await call("/api/v1/judge/results/" + encodeURIComponent(id) + "?" + q);
+              const cmp = read?.judge_result?.outputs?.semantic_shadow_comparison_v1;
+              assert(cmp, "persisted comparison missing for "+id);
+              assert.equal(cmp.authority_state, "SHADOW_ONLY");
+              assert.equal(cmp.authority_removal_permitted, false);
+            }
+
+            const q = new URLSearchParams({...scope, limit:"200"}).toString();
+            const invJson = await call("/api/v1/judge/shadow/evidence/inventory?" + q);
+            const inv = invJson.inventory;
+            assert.equal(inv.source, "JUDGE_RESULT_V2_PERSISTED_OUTPUTS");
+            assert.equal(inv.authority_state, "SHADOW_ONLY");
+            assert.equal(inv.authority_removal_permitted, false);
+            assert.equal(inv.consumer_migration_permitted, false);
+            assert.equal(inv.removal_readiness, "NOT_AUTHORIZED_BY_INVENTORY");
+            assert(inv.state_counts.MATCH >= 1, "MATCH runtime observation missing");
+            assert(inv.state_counts.DIVERGENT >= 1, "DIVERGENT runtime observation missing");
+            assert(inv.state_counts.INCOMPARABLE >= 1, "INCOMPARABLE runtime observation missing");
+            for (const id of ids) {
+              assert(inv.items.some(x=>x.judge_id===id), "inventory missing persisted judge "+id);
+            }
+
+            const out = {
+              schema_version: "b09e_evidence_runtime_corpus_v1",
+              product_head: "ac0d2d43c4914d53075de0ebc4e76bfeeca12d88",
+              scope,
+              observed_judge_ids: ids,
+              observations: {
+                MATCH: {
+                  judge_id: match.judge_result.judge_id,
+                  legacy_verdict: match.judge_result.verdict,
+                  comparison: cmpOf(match),
+                },
+                DIVERGENT: {
+                  judge_id: divergent.judge_result.judge_id,
+                  legacy_verdict: divergent.judge_result.verdict,
+                  comparison: cmpOf(divergent),
+                },
+                INCOMPARABLE: {
+                  judge_id: incomparable.judge_result.judge_id,
+                  legacy_verdict: incomparable.judge_result.verdict,
+                  comparison: cmpOf(incomparable),
+                },
+              },
+              inventory: {
+                observed_comparison_count: inv.observed_comparison_count,
+                unobserved_legacy_result_count: inv.unobserved_legacy_result_count,
+                malformed_comparison_count: inv.malformed_comparison_count,
+                state_counts: inv.state_counts,
+                authority_state: inv.authority_state,
+                authority_removal_permitted: inv.authority_removal_permitted,
+                consumer_migration_permitted: inv.consumer_migration_permitted,
+                removal_readiness: inv.removal_readiness,
+              },
+              nonclaims: [
+                "RUNTIME_CORPUS_DOES_NOT_PROVE_FIELD_LEVEL_SEMANTIC_EQUIVALENCE",
+                "RUNTIME_CORPUS_DOES_NOT_AUTHORIZE_CONSUMER_MIGRATION",
+                "RUNTIME_CORPUS_DOES_NOT_AUTHORIZE_AUTHORITY_REMOVAL",
+                "SYNTHETIC_ACCEPTANCE_SCOPE_IS_NOT_CUSTOMER_PRODUCTION_TRAFFIC"
+              ]
+            };
+            fs.writeFileSync("acceptance-output/b09e-evidence-runtime-corpus.json", JSON.stringify(out,null,2)+"\n");
+            console.log(JSON.stringify(out,null,2));
+            console.log("B09E_EVIDENCE_RUNTIME_CORPUS_PASS");
+          })().catch(err=>{console.error(err);process.exit(1)});
+          NODE
+
+      - name: Prove no product or MCFT mutation
+        run: |
+          test "$(git rev-parse HEAD)" = "ac0d2d43c4914d53075de0ebc4e76bfeeca12d88"
+          git status --short
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09E_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Upload runtime corpus
+        uses: actions/upload-artifact@v4
+        with:
+          name: b09e-evidence-runtime-corpus
+          path: acceptance-output/b09e-evidence-runtime-corpus.json
+          if-no-files-found: error
+
+      - name: Stop isolated runtime
+        if: always()
+        run: |
+          docker compose --env-file .env.b09e -f docker-compose.commercial_v1.yml down -v || true
