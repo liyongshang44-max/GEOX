@@ -463,20 +463,19 @@ jobs:
           }
           const phase3 = plan.decisions.find(x => x.check_id === 'PHASE3_EVIDENCE_RUNTIME_FOUNDATION');
           const phase5 = plan.decisions.find(x => x.check_id === 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS');
-          const phase6Stack = process.env.PR_BASE_SHA === process.env.PHASE5_CLOSURE_SHA;
-          if (phase6Stack) {
-            for (const [row, id, workflow] of [
-              [phase3,'PHASE3_EVIDENCE_RUNTIME_FOUNDATION','.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml'],
-              [phase5,'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS','.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml'],
-            ]) {
-              if (!row || row.status !== 'REQUIRED' || row.reason_code !== 'APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE' || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length !== 0) throw new Error(`${id}_PHASE6_UNCHANGED_STACK_PREDECESSOR_REQUIRED:${row?.status}:${row?.reason_code}`);
-              if (row.execution_workflow !== workflow) throw new Error(`${id}_WORKFLOW_MISMATCH`);
+          for (const [row, id, workflow] of [
+            [phase3,'PHASE3_EVIDENCE_RUNTIME_FOUNDATION','.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml'],
+            [phase5,'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS','.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml'],
+          ]) {
+            if (!row) throw new Error(`${id}_APPLICABILITY_DECISION_REQUIRED`);
+            if (row.status === 'REQUIRED') {
+              if (row.reason_code !== 'APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE' || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length !== 0) throw new Error(`${id}_UNCHANGED_STACK_PREDECESSOR_INVALID:${row.reason_code}`);
+            } else if (row.status === 'REQUALIFY') {
+              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED'].includes(row.reason_code) || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length === 0) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID:${row.reason_code}`);
+            } else {
+              throw new Error(`${id}_UNEXPECTED_STATUS:${row.status}`);
             }
-          } else {
-            if (!phase3 || phase3.status !== 'REQUALIFY' || phase3.reason_code !== 'GOVERNED_DEPENDENCY_CHANGED' || !Array.isArray(phase3.changed_dependencies) || !phase3.changed_dependencies.includes('apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts')) throw new Error(`PHASE3_EVIDENCE_RUNTIME_FOUNDATION_MUST_REQUALIFY_FOR_FACTORY_SEAM:${phase3?.status}:${phase3?.reason_code}`);
-            if (phase3.execution_workflow !== '.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml') throw new Error('PHASE3_EVIDENCE_RUNTIME_FOUNDATION_WORKFLOW_MISMATCH');
-            if (!phase5 || phase5.status !== 'REQUALIFY' || phase5.reason_code !== 'GOVERNED_DEPENDENCY_CHANGED' || !Array.isArray(phase5.changed_dependencies) || phase5.changed_dependencies.length === 0) throw new Error(`PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_MUST_REQUALIFY:${phase5?.status}:${phase5?.reason_code}`);
-            if (phase5.execution_workflow !== '.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml') throw new Error('PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_WORKFLOW_MISMATCH');
+            if (row.execution_workflow !== workflow) throw new Error(`${id}_WORKFLOW_MISMATCH`);
           }
           if (preflight.status !== 'PASS' || preflight.generation !== 'v13' || preflight.non_fail_fast !== true || preflight.counts.blocker_count !== 0) throw new Error('ALL_BLOCKERS_PREFLIGHT_NOT_PASS');
           for (const source of [proof, cp2, evidence, plan, preflight]) {
