@@ -1,0 +1,400 @@
+name: b09f-agronomy-evidence-shadow-binding-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b09f-agronomy-evidence-shadow-binding-exact-2026-08-28
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09f product head checkout
+        run: |
+          git checkout f3fa6e4a27f833859e6d5bea77a43a02272a265d
+          test "$(git rev-parse HEAD)" = "f3fa6e4a27f833859e6d5bea77a43a02272a265d"
+          test "$(git rev-parse HEAD^)" = "fc2eaf47da19c5adeb0f455cf50946b9f760c96b"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09f binding contract
+        run: node --import tsx --test apps/server/src/domain/decision/agronomy_evidence_dependency_shadow_binding_v1.contract.test.ts
+
+      - name: B-09e analysis regression
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09E_EVIDENCE_CONSUMER_DEPENDENCY_V1.cjs
+
+      - name: B-09d inventory regression
+        run: node --import tsx --test apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.contract.test.ts
+
+      - name: B-09c collector regression
+        run: node --import tsx --test apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.contract.test.ts
+
+      - name: B-09b comparator regression
+        run: node --import tsx --test apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.contract.test.ts
+
+      - name: B-09a migration inventory regression
+        run: node --import tsx --test apps/server/src/contracts/semantic_migration_v1.contract.test.ts
+
+      - name: B-07 Agronomy criterion regression
+        run: node --import tsx --test apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.contract.test.ts
+
+      - name: B-07 eligibility evaluator/runtime regression
+        run: |
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: Lock B-09f governance boundaries
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const cp=require("child_process");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const graph=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json","utf8"));
+          const readiness=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-B09-REPLACEMENT-READINESS-V1.json","utf8"));
+
+          const c004=(graph.current_connectivity_edges||[]).find(e=>e.edge_id==="C-004");
+          const c036=(graph.current_connectivity_edges||[]).find(e=>e.edge_id==="C-036");
+          const c037=(graph.current_connectivity_edges||[]).find(e=>e.edge_id==="C-037");
+          if(!c004||c004.runtime_edge!=="NOT_PROVEN"||c004.status!=="NOT_WIRED") throw new Error("B09F_C004_AUTHORITY_EDGE_CHANGED");
+          if(!c036||c036.runtime_edge!=="PROVEN"||c036.status!=="CURRENT_PROVEN"||c036.to_consumer!=="agronomy-evidence-dependency-shadow-binding") throw new Error("B09F_C036_INVALID");
+          if(!c037||c037.runtime_edge!=="PROVEN"||c037.status!=="CURRENT_PROVEN"||c037.to_consumer!=="judge-v2-agronomy-shadow-binding") throw new Error("B09F_C037_INVALID");
+
+          const criterionGuard=(reg.static_guards||[]).find(g=>g.guard_id==="G-B02-17-decision-eligibility-criterion-instantiation");
+          const expectedCriterionPaths=[
+            "apps/server/src/domain/decision/stage1_eligibility_precursor_adapter_v1.ts",
+            "apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.ts"
+          ];
+          if(!criterionGuard||JSON.stringify(criterionGuard.registered_paths)!==JSON.stringify(expectedCriterionPaths)) {
+            throw new Error("B09F_DECISION_ELIGIBILITY_CRITERION_PRODUCER_SET_CHANGED");
+          }
+
+          const stageGuard=(reg.static_guards||[]).find(g=>g.guard_id==="G-B02-25-stage1-shadow-comparator-runtime-disconnection");
+          if(!stageGuard||JSON.stringify(stageGuard.registered_paths)!==JSON.stringify(["apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts"])) {
+            throw new Error("B09F_STAGE1_COMPARATOR_CONNECTION_CHANGED");
+          }
+
+          if(readiness.authority_removal_performed!==false) throw new Error("B09F_AUTHORITY_REMOVAL_PERFORMED");
+          const family=(readiness.families||[]).find(x=>x.semantic_id==="evidence.qualification");
+          if(!family||family.consumer_migration_state!=="PARTIAL"||family.authority_removal_state!=="PENDING_CONSUMER_MIGRATION") {
+            throw new Error("B09F_EVIDENCE_READINESS_CHANGED");
+          }
+
+          const before=JSON.parse(cp.execFileSync("git",["show","fc2eaf47da19c5adeb0f455cf50946b9f760c96b:docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json"],{encoding:"utf8"}));
+          const flatten=(r)=>(r.semantics||[]).flatMap(s=>(s.registered_producers||[])
+            .filter(p=>p.grandfathered_duplicate===true)
+            .map(p=>({semantic_id:s.semantic_id,...p})))
+            .sort((a,b)=>(a.semantic_id+"::"+a.producer_id).localeCompare(b.semantic_id+"::"+b.producer_id));
+          const b=flatten(before),a=flatten(reg);
+          if(b.length!==29||a.length!==29||JSON.stringify(b)!==JSON.stringify(a)) {
+            throw new Error("B09F_GRANDFATHERED_AUTHORITY_MUTATED");
+          }
+
+          console.log("B09F_C004_REMAINS_NOT_WIRED_PASS");
+          console.log("B09F_C036_C037_SHADOW_EDGES_PASS");
+          console.log("B09F_B07_CRITERION_PRODUCER_SET_UNCHANGED_PASS");
+          console.log("B09F_STAGE1_COMPARATOR_DISCONNECTED_PASS");
+          console.log("B09F_READINESS_AND_29_GRANDFATHERED_UNCHANGED_PASS");
+          NODE
+
+      - name: Runtime schema MCFT remain untouched
+        run: |
+          git diff --exit-code fc2eaf47da19c5adeb0f455cf50946b9f760c96b f3fa6e4a27f833859e6d5bea77a43a02272a265d -- \
+            apps/server/db \
+            packages \
+            .github/workflows \
+            docs/digital_twin \
+            docker-compose.commercial_v1.yml
+          git diff --exit-code fc2eaf47da19c5adeb0f455cf50946b9f760c96b f3fa6e4a27f833859e6d5bea77a43a02272a265d -- \
+            apps/server/src/domain/judge/agronomy_judge_v2.ts \
+            apps/server/src/domain/judge/evidence_judge_v2.ts \
+            apps/server/src/domain/decision/stage1_action_boundary_v1.ts \
+            apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.ts \
+            apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts
+          echo "B09F_SCHEMA_MCFT_AUTHORITY_DOMAINS_UNTOUCHED_PASS"
+
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only fc2eaf47da19c5adeb0f455cf50946b9f760c96b f3fa6e4a27f833859e6d5bea77a43a02272a265d > /tmp/b09f-files.txt
+          cat /tmp/b09f-files.txt
+          test "$(wc -l < /tmp/b09f-files.txt | tr -d ' ')" = "6"
+          grep -qx "apps/server/src/domain/decision/agronomy_evidence_dependency_shadow_binding_v1.contract.test.ts" /tmp/b09f-files.txt
+          grep -qx "apps/server/src/domain/decision/agronomy_evidence_dependency_shadow_binding_v1.ts" /tmp/b09f-files.txt
+          grep -qx "apps/server/src/routes/judge_v2.ts" /tmp/b09f-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09F-AGRONOMY-EVIDENCE-REFERENTIAL-SHADOW-BINDING-V1.md" /tmp/b09f-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json" /tmp/b09f-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json" /tmp/b09f-files.txt
+          git diff --check fc2eaf47da19c5adeb0f455cf50946b9f760c96b f3fa6e4a27f833859e6d5bea77a43a02272a265d
+          echo "B09F_BOUNDED_PRODUCT_DIFF_PASS"
+
+      - name: Prepare isolated runtime env
+        run: |
+          cat > .env.b09f <<'EOF_INNER'
+          GEOX_RUNTIME_ENV=pilot
+          POSTGRES_USER=landos
+          POSTGRES_PASSWORD=b09f-postgres-strong-2026
+          POSTGRES_DB=landos
+          GEOX_MCFT_MIGRATOR_PASSWORD=b09f-mcft-migrator-strong-2026
+          GEOX_RUNTIME_DATABASE_PASSWORD=b09f-runtime-database-strong-2026
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT=f3fa6e4a27f833859e6d5bea77a43a02272a265d
+          GEOX_AO_ACT_TOKEN=admin_token
+          GEOX_EXECUTOR_TOKEN=tenant_a_admin_token
+          GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
+          GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT=http://127.0.0.1:9000
+          MINIO_ROOT_USER=geoxminio
+          MINIO_ROOT_PASSWORD=b09f-minio-strong-2026
+          MQTT_AUTH_REQUIRED=1
+          GEOX_MQTT_AUTH_REQUIRED=1
+          MQTT_USERNAME=geoxmqtt
+          MQTT_PASSWORD=b09f-mqtt-strong-2026
+          CORS_ORIGINS=https://b09f-ci.geox.invalid
+          GEOX_ALLOWED_ORIGINS=https://b09f-ci.geox.invalid
+          APP_SECRET=b09f-app-secret-strong-2026
+          GEOX_APP_SECRET=b09f-app-secret-strong-2026
+          PUBLIC_BASE_URL=https://b09f-ci.geox.invalid
+          GEOX_PUBLIC_BASE_URL=https://b09f-ci.geox.invalid
+          GEOX_EXECUTION_DEFAULT_DISABLED=1
+          GEOX_EXECUTION_ENABLE_EXPLICITLY=0
+          GEOX_EXECUTION_ENABLE_REASON=b09f-shadow-binding-validation
+          GEOX_DEVTOOLS_ENABLED=0
+          EOF_INNER
+
+      - name: Start isolated commercial runtime
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          timeout 180 docker compose --env-file .env.b09f -f docker-compose.commercial_v1.yml up -d minio minio-init
+          timeout 300 docker compose --env-file .env.b09f -f docker-compose.commercial_v1.yml up -d postgres mqtt server
+          docker compose --env-file .env.b09f -f docker-compose.commercial_v1.yml ps
+
+      - name: Wait for API ready
+        run: |
+          set -euo pipefail
+          timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health >/dev/null; do sleep 2; done'
+          curl -fsS http://127.0.0.1:3001/api/health
+
+      - name: Exact runtime referential shadow proof
+        run: |
+          mkdir -p acceptance-output
+          node <<'NODE'
+          const fs=require("fs");
+          const assert=require("assert/strict");
+          const base="http://127.0.0.1:3001";
+          const token="admin_token";
+          const scope={tenant_id:"tenantA",project_id:"projectA",group_id:"groupA"};
+          const suffix=Date.now();
+          const field="field_b09f_"+suffix;
+
+          async function call(path,method="GET",body){
+            const res=await fetch(base+path,{
+              method,
+              headers:{
+                authorization:"Bearer "+token,
+                ...(body===undefined?{}:{"content-type":"application/json"})
+              },
+              body:body===undefined?undefined:JSON.stringify(body)
+            });
+            const text=await res.text();
+            let json=null; try{json=text?JSON.parse(text):null}catch{}
+            assert.equal(res.ok,true,method+" "+path+" failed "+res.status+" "+text);
+            assert.equal(json?.ok,true,method+" "+path+" json.ok!=true "+text);
+            return json;
+          }
+          function shadow(j){
+            return j?.judge_result?.outputs?.agronomy_evidence_dependency_shadow_v1;
+          }
+          function legacyProjection(j){
+            const x=structuredClone(j.judge_result);
+            delete x.judge_id; delete x.created_at; delete x.created_ts_ms;
+            if(x.outputs) delete x.outputs.agronomy_evidence_dependency_shadow_v1;
+            return {
+              judge_kind:x.judge_kind, verdict:x.verdict, severity:x.severity,
+              reasons:x.reasons, inputs:x.inputs, outputs:x.outputs,
+              confidence:x.confidence, evidence_refs:x.evidence_refs, source_refs:x.source_refs
+            };
+          }
+
+          (async()=>{
+            const now=Date.now();
+            const evidence=await call("/api/v1/judge/evidence/evaluate","POST",{
+              ...scope,
+              field_id:field,
+              device_id:"device_b09f_"+suffix,
+              soil_moisture:0.5,
+              observed_at_ts_ms:now-60*1000,
+              now_ts_ms:now,
+              last_heartbeat_ts_ms:now-60*1000,
+              last_telemetry_ts_ms:now-60*1000,
+              evidence_refs:["b09f:runtime"]
+            });
+            assert.equal(evidence.judge_result.judge_kind,"EVIDENCE");
+            assert.equal(evidence.judge_result.verdict,"PASS");
+            assert.equal(
+              evidence.judge_result.outputs.semantic_shadow_comparison_v1.comparison_state,
+              "DIVERGENT"
+            );
+            assert.equal(
+              evidence.judge_result.outputs.canonical_evidence_sufficiency_shadow_v1.status,
+              "NEEDS_EVIDENCE"
+            );
+            const eid=evidence.judge_result.judge_id;
+
+            const agrBaseBody={
+              ...scope,
+              field_id:field,
+              soil_moisture:0.7,
+              target_soil_moisture:0.5,
+              root_zone_depth_mm:300,
+              rain_forecast_mm_72h:0,
+              et0_mm_72h:0,
+              crop_stage:"V6",
+              application_efficiency:0.8,
+              evidence_judge_verdict:"PASS",
+              evidence_refs:["b09f:runtime"]
+            };
+
+            const withoutId=await call("/api/v1/judge/agronomy/evaluate","POST",agrBaseBody);
+            assert.equal(shadow(withoutId).binding_state,"NOT_REQUESTED");
+            assert.equal(shadow(withoutId).consumer_migration_performed,false);
+            assert.equal(shadow(withoutId).authority_removal_permitted,false);
+
+            const bound=await call("/api/v1/judge/agronomy/evaluate","POST",{
+              ...agrBaseBody,evidence_judge_id:eid
+            });
+            const bs=shadow(bound);
+            assert.equal(bs.binding_state,"BOUND");
+            assert.equal(bs.evidence_judge_ref,"judge_result_v2:"+eid);
+            assert.equal(bs.legacy_verdict_match,true);
+            assert.equal(bs.canonical_sufficiency_status,"NEEDS_EVIDENCE");
+            assert.equal(bs.semantic_comparison_state,"DIVERGENT");
+            assert.equal(bs.canonical_evidence_qualification_refs_state,"NOT_PERSISTED_IN_EVIDENCE_JUDGE_OUTPUT");
+            assert.equal(bs.migration_readiness,"NOT_READY_FOR_CRITERION_CUTOVER");
+            assert.equal(bs.legacy_consumer_unchanged,true);
+            assert.equal(bs.consumer_migration_performed,false);
+            assert.equal(bs.authority_removal_permitted,false);
+            assert.equal("criterion" in bs,false);
+            assert.equal("verdict" in bs,false);
+            assert.deepEqual(legacyProjection(bound),legacyProjection(withoutId),
+              "referential shadow changed historical Agronomy result");
+
+            const staleBaseline=await call("/api/v1/judge/agronomy/evaluate","POST",{
+              ...agrBaseBody,evidence_judge_verdict:"STALE_DATA"
+            });
+            const mismatch=await call("/api/v1/judge/agronomy/evaluate","POST",{
+              ...agrBaseBody,evidence_judge_id:eid,evidence_judge_verdict:"STALE_DATA"
+            });
+            assert.equal(shadow(mismatch).binding_state,"LEGACY_VERDICT_MISMATCH");
+            assert.equal(shadow(mismatch).legacy_verdict_match,false);
+            assert.equal(shadow(mismatch).persisted_legacy_verdict,"PASS");
+            assert.equal(shadow(mismatch).request_legacy_verdict,"STALE_DATA");
+            assert.deepEqual(legacyProjection(mismatch),legacyProjection(staleBaseline),
+              "verdict-mismatch observation changed historical Agronomy behavior");
+
+            const crossField=await call("/api/v1/judge/agronomy/evaluate","POST",{
+              ...agrBaseBody,
+              field_id:field+"_other",
+              evidence_judge_id:eid
+            });
+            assert.equal(shadow(crossField).binding_state,"FIELD_SCOPE_MISMATCH");
+            assert.equal(shadow(crossField).authority_removal_permitted,false);
+
+            const missing=await call("/api/v1/judge/agronomy/evaluate","POST",{
+              ...agrBaseBody,
+              evidence_judge_id:"00000000-0000-4000-8000-000000000000"
+            });
+            assert.equal(shadow(missing).binding_state,"EVIDENCE_JUDGE_NOT_FOUND");
+            assert.equal(shadow(missing).consumer_migration_performed,false);
+
+            const persisted=await call(
+              "/api/v1/judge/results/"+encodeURIComponent(bound.judge_result.judge_id)+"?"+
+              new URLSearchParams(scope).toString()
+            );
+            assert.equal(
+              persisted.judge_result.outputs.agronomy_evidence_dependency_shadow_v1.binding_state,
+              "BOUND"
+            );
+            assert.equal(
+              persisted.judge_result.outputs.agronomy_evidence_dependency_shadow_v1.semantic_comparison_state,
+              "DIVERGENT"
+            );
+
+            const out={
+              schema_version:"b09f_runtime_referential_shadow_proof_v1",
+              product_head:"f3fa6e4a27f833859e6d5bea77a43a02272a265d",
+              evidence_judge_id:eid,
+              bound_agronomy_judge_id:bound.judge_result.judge_id,
+              bound_state:bs.binding_state,
+              comparison_state:bs.semantic_comparison_state,
+              canonical_sufficiency_status:bs.canonical_sufficiency_status,
+              canonical_evidence_qualification_refs_state:bs.canonical_evidence_qualification_refs_state,
+              migration_readiness:bs.migration_readiness,
+              legacy_consumer_unchanged:bs.legacy_consumer_unchanged,
+              consumer_migration_performed:bs.consumer_migration_performed,
+              authority_removal_permitted:bs.authority_removal_permitted,
+              mismatch_state:shadow(mismatch).binding_state,
+              cross_field_state:shadow(crossField).binding_state,
+              missing_state:shadow(missing).binding_state,
+              no_id_state:shadow(withoutId).binding_state,
+              nonclaims:[
+                "BOUND_DOES_NOT_MEAN_SEMANTIC_EQUIVALENCE",
+                "DIVERGENT_IS_PRESERVED_NOT_RESOLVED",
+                "NO_DECISION_ELIGIBILITY_CRITERION_CUTOVER",
+                "NO_CONSUMER_MIGRATION",
+                "NO_AUTHORITY_REMOVAL"
+              ]
+            };
+            fs.writeFileSync("acceptance-output/b09f-runtime-referential-shadow-proof.json",JSON.stringify(out,null,2)+"\n");
+            console.log(JSON.stringify(out,null,2));
+            console.log("B09F_RUNTIME_REFERENTIAL_SHADOW_PROOF_PASS");
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Prove no product mutation during runtime validation
+        run: |
+          test "$(git rev-parse HEAD)" = "f3fa6e4a27f833859e6d5bea77a43a02272a265d"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09F_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Upload B-09f runtime proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: b09f-runtime-referential-shadow-proof
+          path: acceptance-output/b09f-runtime-referential-shadow-proof.json
+          if-no-files-found: error
+
+      - name: Stop isolated runtime
+        if: always()
+        run: docker compose --env-file .env.b09f -f docker-compose.commercial_v1.yml down -v || true
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Marker
+        run: |
+          echo "B09F_EXACT_HEAD f3fa6e4a27f833859e6d5bea77a43a02272a265d"
+          echo "B09F_AGRONOMY_EVIDENCE_REFERENTIAL_SHADOW_BINDING_PASS"
