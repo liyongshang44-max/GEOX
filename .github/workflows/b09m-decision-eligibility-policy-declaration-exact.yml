@@ -1,0 +1,93 @@
+name: b09m-decision-eligibility-policy-declaration-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b09m-decision-eligibility-policy-declaration-exact-2026-08-28
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09m product head checkout
+        run: |
+          git checkout dd39f74e4e44de9c0626c063522904f8e255e89c
+          test "$(git rev-parse HEAD)" = "dd39f74e4e44de9c0626c063522904f8e255e89c"
+          test "$(git rev-parse HEAD^)" = "90e8518571bb42c5162811bf80158981057b40c4"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09m governance acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09M_DECISION_ELIGIBILITY_POLICY_DECLARATION_CONTRACT_V1.cjs
+
+      - name: B-09m policy declaration contract
+        run: node --import tsx --test apps/server/src/contracts/decision_eligibility_policy_declaration_v1.contract.test.ts
+
+      - name: B-07d evaluator contract regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+
+      - name: B-07e runtime contract regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: Prove existing policy/runtime surfaces are byte-identical
+        run: |
+          git diff --exit-code 90e8518571bb42c5162811bf80158981057b40c4 dd39f74e4e44de9c0626c063522904f8e255e89c --             packages/contracts/src/schema/field_program_v1.ts             apps/server/src/domain/decision/decision_eligibility_evaluator_v1.ts             apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts             apps/server/src/routes/decision_engine_v1.ts             apps/server/src/domain/planner/compiler_v1.ts             apps/server/src/domain/approval/recommendation_approval_request_builder_v1.ts             apps/server/src/routes/acceptance_v1.ts
+          echo "B09M_EXISTING_POLICY_RUNTIME_SURFACES_UNCHANGED_PASS"
+
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only 90e8518571bb42c5162811bf80158981057b40c4 dd39f74e4e44de9c0626c063522904f8e255e89c > /tmp/b09m-files.txt
+          cat /tmp/b09m-files.txt
+          test "$(wc -l < /tmp/b09m-files.txt | tr -d ' ')" = "5"
+          grep -qx "apps/server/src/contracts/decision_eligibility_policy_declaration_v1.contract.test.ts" /tmp/b09m-files.txt
+          grep -qx "apps/server/src/contracts/decision_eligibility_policy_declaration_v1.ts" /tmp/b09m-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09M-DECISION-ELIGIBILITY-POLICY-DECLARATION-CONTRACT-V1.md" /tmp/b09m-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json" /tmp/b09m-files.txt
+          grep -qx "scripts/governance_acceptance/ACCEPTANCE_B09M_DECISION_ELIGIBILITY_POLICY_DECLARATION_CONTRACT_V1.cjs" /tmp/b09m-files.txt
+          git diff --check 90e8518571bb42c5162811bf80158981057b40c4 dd39f74e4e44de9c0626c063522904f8e255e89c
+          echo "B09M_BOUNDED_PRODUCT_DIFF_PASS"
+
+      - name: Runtime schema workflow graph Twin MCFT remain untouched
+        run: |
+          git diff --exit-code 90e8518571bb42c5162811bf80158981057b40c4 dd39f74e4e44de9c0626c063522904f8e255e89c --             apps/server/src/domain             apps/server/src/routes             apps/server/src/jobs             apps/server/src/services             apps/server/db             packages             .github/workflows             docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json             docs/architecture/semantic_convergence/GEOX-B09-REPLACEMENT-READINESS-V1.json             docs/twin_kernel             docs/digital_twin             docker-compose.commercial_v1.yml
+          echo "B09M_RUNTIME_SCHEMA_WORKFLOW_GRAPH_TWIN_MCFT_UNTOUCHED_PASS"
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Prove validation did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "dd39f74e4e44de9c0626c063522904f8e255e89c"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09M_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Marker
+        run: |
+          echo "B09M_EXACT_HEAD dd39f74e4e44de9c0626c063522904f8e255e89c"
+          echo "B09M_DECISION_ELIGIBILITY_POLICY_DECLARATION_CONTRACT_PASS"
