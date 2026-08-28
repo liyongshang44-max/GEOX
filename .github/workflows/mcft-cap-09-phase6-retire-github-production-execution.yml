@@ -17,6 +17,7 @@ on:
       - '.github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml'
       - '.github/workflows/mcft-cap-09-formal-bootstrap-evidence-authority.yml'
       - '.github/workflows/mcft-cap-09-t4r1-formal-v3-o01-recovery.yml'
+      - '.github/workflows/mcft-cap-09-t4r1-formal-v3-prebootstrap-recovery.yml'
       - '.github/workflows/mcft-cap-09-ea5e2-rolling-operational-activation-live.yml'
       - '.github/workflows/mcft-cap-09-rolling-kbs-intersection.yml'
       - '.github/workflows/mcft-cap-09-kbs-batch-qualification-window.yml'
@@ -64,7 +65,7 @@ jobs:
           const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_AUDIT_V1.json','utf8'));
           if(p.status!=='PASS')throw new Error('PHASE6_GITHUB_OWNER_AUDIT_PASS_REQUIRED');
           for(const key of ['active_retired_owner_or_trigger_count','retired_actions_write_count','unclassified_scheduled_count','unclassified_workflow_run_count'])if(p[key]!==0)throw new Error('PHASE6_GITHUB_OWNER_ZERO_REQUIRED:'+key);
-          if(p.historical_phase5_workflow_blob_count!==16||p.historical_phase5_workflow_blobs_all_match!==true)throw new Error('PHASE6_HISTORICAL_WORKFLOW_BINDING_REQUIRED');
+          if(p.historical_phase5_workflow_blob_count!==17||p.historical_phase5_workflow_blobs_all_match!==true)throw new Error('PHASE6_HISTORICAL_WORKFLOW_BINDING_REQUIRED');
           const t=p.target_after_retirement;
           for(const key of ['github_provider_request_count_during_formal','github_formal_twin_db_mutation_count','github_production_tick_execution_count','github_hourly_wake_dependency_count'])if(t[key]!==0)throw new Error('PHASE6_HARD_ZERO_TARGET_REQUIRED:'+key);
           if(p.production_runtime_mutation!==false||p.formal_v5_armed!==false||p.mcft_cap09_completed!==false)throw new Error('PHASE6_NON_EFFECT_BOUNDARY_REQUIRED');

@@ -223,15 +223,35 @@ jobs:
             scripts/runtime_acceptance/POLL_MCFT_CAP_09_EA5E2_KBS_EXACT_T_AVAILABILITY.py
       - name: Preserve frozen exact-main Timing Evidence V2 as historical engineering evidence
         run: node scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_TIMING_BUDGET_EVIDENCE_V2.cjs
+      - name: Route Phase6 retirement successor
+        id: phase6
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -f 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json'; then
+            status="$(node -e "const a=require('./docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json');process.stdout.write(String(a.status||''))")"
+            if [[ "$status" == PHASE6_* ]]; then
+              git merge-base --is-ancestor '75d4961279bd64dc1c9dd7d68aac189c72c98846' HEAD
+              node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs enforce >/tmp/mcft-cap09-phase6-owner-audit.json
+              echo 'active=true' >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo 'active=false' >> "$GITHUB_OUTPUT"
       - name: Prove rolling pre-boundary capture authority boundary
+        if: steps.phase6.outputs.active != 'true'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_PREBOUNDARY_CAPTURE.cjs
       - name: Prove crop-legal actual-batch intersection authority boundary
+        if: steps.phase6.outputs.active != 'true'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_KBS_INTERSECTION.cjs
       - name: Prove rolling operational activation boundary
+        if: steps.phase6.outputs.active != 'true'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION.cjs
       - name: Re-prove rolling T3R1 runtime dependency graph V4
+        if: steps.phase6.outputs.active != 'true'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs
       - name: Reexecute exact-head rolling successor runner qualification V3
+        if: steps.phase6.outputs.active != 'true'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V3.cjs
       - name: Upload exact-head rolling successor V3 proof
         if: always()

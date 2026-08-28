@@ -45,7 +45,10 @@
         "scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs",
         "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
-        ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml"
+        ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json",
+        "scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs",
+        ".github/workflows/mcft-cap-09-phase6-retire-github-production-execution.yml"
       ]
     },
     "EA5E2_RUNTIME_GRAPH_V4": {

@@ -22,6 +22,9 @@ on:
       - 'scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_COMPLETION_V1.cjs'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-QUALIFICATION-COMPATIBILITY-CONTRACT-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V2.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs'
+      - '.github/workflows/mcft-cap-09-phase6-retire-github-production-execution.yml'
 
 permissions:
   contents: read
@@ -43,9 +46,26 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20.11.1'
+      - name: Route Phase6 retirement successor
+        id: phase6
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -f 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json'; then
+            status="$(node -e "const a=require('./docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json');process.stdout.write(String(a.status||''))")"
+            if [[ "$status" == PHASE6_* ]]; then
+              git merge-base --is-ancestor '75d4961279bd64dc1c9dd7d68aac189c72c98846' HEAD
+              node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs enforce >/tmp/mcft-cap09-phase6-owner-audit.json
+              echo 'active=true' >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo 'active=false' >> "$GITHUB_OUTPUT"
       - name: Classify governed successor as fresh qualification required
+        if: steps.phase6.outputs.active != 'true'
         run: node scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_FRESH_QUALIFICATION_REQUIRED_V1.cjs
       - name: Require fresh v12 qualification and forbid v11 carry-forward
+        if: steps.phase6.outputs.active != 'true'
         shell: node {0}
         run: |
           const fs=require('node:fs');
@@ -56,10 +76,13 @@ jobs:
           if(p.target_qualification_generation!=='v12'||p.target_formal_store_generation!=='v4'||p.predecessor_v11_reuse_authorized!==false||p.predecessor_failed_v3_continuation_authorized!==false)throw new Error('MCFT_CAP09_FRESH_SUCCESSOR_GENERATION_REQUIRED');
           if(p.qualification_database_rewrite_authorized!==false||p.formal_effect!==false||Number(p.formal_database_write_count)!==0||Number(p.scheduler_write_count)!==0||Number(p.runtime_write_count)!==0)throw new Error('MCFT_CAP09_FRESH_QUALIFICATION_FAIL_CLOSED_BOUNDARY_REQUIRED');
       - name: Prove pending v12 and Formal-v4 successor graph is atomically bound
+        if: steps.phase6.outputs.active != 'true'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V12_V4_SUCCESSOR_PENDING_V1.cjs
       - name: Audit remaining Graduation to Formal completion control plane
+        if: steps.phase6.outputs.active != 'true'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CLOSURE_CONTROL_PLANE_AUDIT_V1.cjs
       - name: Reprove reverse terminal semantic closure remains unchanged
+        if: steps.phase6.outputs.active != 'true'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FINAL_SEMANTIC_CLOSURE_V1.cjs
       - name: Rehearse deterministic 24h orchestration without provider or Formal DB
         run: node scripts/governance_acceptance/REHEARSE_MCFT_CAP_09_FORMAL_24H_ORCHESTRATION_V1.cjs

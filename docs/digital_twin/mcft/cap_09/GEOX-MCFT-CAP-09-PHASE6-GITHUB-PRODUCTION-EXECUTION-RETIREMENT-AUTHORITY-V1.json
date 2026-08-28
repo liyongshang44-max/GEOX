@@ -106,6 +106,12 @@
         "reason": "MANUAL_PROVIDER_FACING_LEGACY_OPERATIONAL_ACTIVATION",
         "phase5_closure_blob_sha": "b733743c7abc3ad03f28eb9d9d2eb643d8555b69",
         "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-t4r1-formal-v3-prebootstrap-recovery.yml",
+        "reason": "FAILED_FORMAL_V3_PREBOOTSTRAP_MUTATING_RECOVERY_MUST_REMAIN_FROZEN",
+        "phase5_closure_blob_sha": "2cf1583395d6657aeafd1dd7ecf27c652fc13015",
+        "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
       }
     ],
     "provider_facing_audit_schedule": [
