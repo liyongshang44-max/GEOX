@@ -2162,6 +2162,39 @@
         "Real MCFT adapter, ADR runtime, and LLM provider remain a later program after B-line."
       ],
       "runtime_consumers": []
+    },
+    {
+      "semantic_id": "governance.semantic_authority_migration",
+      "question": "Which grandfathered semantic authorities are replacement-backed, shadow-comparable, migration-ready, or explicitly unreplaced before B-09 removal?",
+      "target_owner": "B-09 Semantic Authority Migration Governance",
+      "canonical_output_type": "SemanticMigrationInventoryV1 + SemanticShadowComparisonV1",
+      "current_state": "BOUNDARY_CLEAR_TARGET_NOT_YET_PRODUCT_CONNECTED",
+      "target_phase": "B-09",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "b09a-migration-contract-reference",
+          "path": "apps/server/src/contracts/semantic_migration_v1.ts",
+          "role": "B-09a migration-readiness and shadow-comparison contract reference; no production comparison producer and no authority removal",
+          "authority_level": "FUTURE_TARGET_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "INTENTIONAL_ISOLATION",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        }
+      ],
+      "registered_consumers": [],
+      "notes": [
+        "B-09a covers every grandfathered producer in the replacement-readiness inventory before any authority removal.",
+        "B-09a classifies Twin/Forecast as unreplaced because real MCFT remains disconnected.",
+        "B-09a performs zero authority removal; shadow comparisons are SHADOW_ONLY and cannot authorize removal.",
+        "Consumer migration and removal remain later B-09 work after family-specific divergence evidence."
+      ],
+      "runtime_consumers": []
     }
   ],
   "static_guards": [
@@ -2710,6 +2743,28 @@
       },
       "registered_paths": [],
       "failure": "UNREGISTERED_FUTURE_DECISION_INTEGRATION_BINDING"
+    },
+    {
+      "guard_id": "G-B02-22-semantic-shadow-comparison-instantiation",
+      "semantic_id": "governance.semantic_authority_migration",
+      "description": "B-09a freezes SemanticShadowComparisonV1 but permits zero production comparison producers; family-specific B-09 shadow producers must be explicitly registered.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "semanticShadowComparisonV1Schema.parse("
+        ]
+      },
+      "registered_paths": [],
+      "failure": "UNREGISTERED_SEMANTIC_SHADOW_COMPARISON_PRODUCER"
     }
   ],
   "connectivity_model": {
