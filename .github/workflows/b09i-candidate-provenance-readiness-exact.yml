@@ -1,0 +1,189 @@
+name: b09i-candidate-provenance-readiness-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b09i-candidate-provenance-readiness-exact-2026-08-28
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09i product head checkout
+        run: |
+          git checkout 39cab94721e73b055770b5c51d7a5073a26a28f6
+          test "$(git rev-parse HEAD)" = "39cab94721e73b055770b5c51d7a5073a26a28f6"
+          test "$(git rev-parse HEAD^)" = "8acb1b9e39f84a498e0a794cae0837537a452383"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09i governance acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09I_CANDIDATE_PROVENANCE_READINESS_INVENTORY_V1.cjs
+
+      - name: B-06c candidate adapter regression
+        run: node --import tsx --test apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.contract.test.ts
+
+      - name: B-09h criterion shadow regression
+        run: |
+          node scripts/governance_acceptance/ACCEPTANCE_B09H_AGRONOMY_QUALIFIED_EVIDENCE_CRITERION_SHADOW_V1.cjs
+          node --import tsx --test apps/server/src/domain/decision/agronomy_qualified_evidence_criterion_shadow_v1.contract.test.ts
+
+      - name: B-09g Evidence Judge provenance regression
+        run: node --import tsx --test apps/server/src/domain/judge/evidence_judge_canonical_sufficiency_shadow_v1.test.ts
+
+      - name: B-09f binding regression
+        run: node --import tsx --test apps/server/src/domain/decision/agronomy_evidence_dependency_shadow_binding_v1.contract.test.ts
+
+      - name: B-09e dependency analysis regression
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09E_EVIDENCE_CONSUMER_DEPENDENCY_V1.cjs
+
+      - name: B-09d inventory regression
+        run: node --import tsx --test apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.contract.test.ts
+
+      - name: B-09c collector regression
+        run: node --import tsx --test apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.contract.test.ts
+
+      - name: B-09b comparator regression
+        run: node --import tsx --test apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.contract.test.ts
+
+      - name: B-09a migration inventory regression
+        run: node --import tsx --test apps/server/src/contracts/semantic_migration_v1.contract.test.ts
+
+      - name: B-07 predecessor and runtime regressions
+        run: |
+          node --import tsx --test apps/server/src/domain/decision/stage1_eligibility_precursor_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: Lock B-09i governance boundaries
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const cp=require("child_process");
+          const base="8acb1b9e39f84a498e0a794cae0837537a452383";
+          const head="39cab94721e73b055770b5c51d7a5073a26a28f6";
+          const readJson=p=>JSON.parse(fs.readFileSync(p,"utf8"));
+          const inv=readJson("docs/architecture/semantic_convergence/GEOX-B09I-CANDIDATE-PROVENANCE-READINESS-INVENTORY-V1.json");
+          const reg=readJson("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json");
+          const graph=readJson("docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json");
+          const readiness=readJson("docs/architecture/semantic_convergence/GEOX-B09-REPLACEMENT-READINESS-V1.json");
+          const beforeReg=JSON.parse(cp.execFileSync("git",["show",base+":docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json"],{encoding:"utf8"}));
+          const beforeGraph=JSON.parse(cp.execFileSync("git",["show",base+":docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json"],{encoding:"utf8"}));
+          const beforeReadiness=JSON.parse(cp.execFileSync("git",["show",base+":docs/architecture/semantic_convergence/GEOX-B09-REPLACEMENT-READINESS-V1.json"],{encoding:"utf8"}));
+
+          if(inv.stacked_base_product_head!==base) throw new Error("B09I_EXACT_BASE_MISMATCH");
+          if(inv.runtime_corpus.run_id!==33163943525) throw new Error("B09I_CORPUS_RUN_MISMATCH");
+          if(inv.runtime_corpus.artifact_id!==9682819929) throw new Error("B09I_CORPUS_ARTIFACT_MISMATCH");
+          if(inv.referential_binding_readiness.b09h_candidate_binding_state!=="NOT_BOUND") throw new Error("B09I_B09H_BOUND");
+          if(inv.referential_binding_readiness.ready_for_decision_eligibility_runtime_binding!==false) throw new Error("B09I_ELIGIBILITY_PREMATURE");
+
+          if(JSON.stringify(graph)!==JSON.stringify(beforeGraph)) throw new Error("B09I_GRAPH_MUTATED");
+          if(JSON.stringify(readiness)!==JSON.stringify(beforeReadiness)) throw new Error("B09I_READINESS_MUTATED");
+
+          const flatten=(r)=>(r.semantics||[]).flatMap(s=>(s.registered_producers||[])
+            .filter(p=>p.grandfathered_duplicate===true)
+            .map(p=>({semantic_id:s.semantic_id,...p})))
+            .sort((a,b)=>(a.semantic_id+"::"+a.producer_id).localeCompare(b.semantic_id+"::"+b.producer_id));
+          const before=flatten(beforeReg),after=flatten(reg);
+          if(before.length!==29||after.length!==29||JSON.stringify(before)!==JSON.stringify(after)) throw new Error("B09I_GRANDFATHERED_AUTHORITY_MUTATED");
+
+          const cand=(reg.semantics||[]).find(s=>s.semantic_id==="decision.candidate");
+          const beforeCand=(beforeReg.semantics||[]).find(s=>s.semantic_id==="decision.candidate");
+          if(JSON.stringify(cand.registered_producers)!==JSON.stringify(beforeCand.registered_producers)) throw new Error("B09I_CANDIDATE_PRODUCERS_MUTATED");
+          if(JSON.stringify(cand.runtime_consumers)!==JSON.stringify(beforeCand.runtime_consumers)) throw new Error("B09I_CANDIDATE_RUNTIME_CONSUMERS_MUTATED");
+
+          const guard15=(reg.static_guards||[]).find(g=>g.guard_id==="G-B02-15-candidate-decision-instantiation");
+          const beforeGuard15=(beforeReg.static_guards||[]).find(g=>g.guard_id==="G-B02-15-candidate-decision-instantiation");
+          const guard17=(reg.static_guards||[]).find(g=>g.guard_id==="G-B02-17-decision-eligibility-criterion-instantiation");
+          const beforeGuard17=(beforeReg.static_guards||[]).find(g=>g.guard_id==="G-B02-17-decision-eligibility-criterion-instantiation");
+          if(JSON.stringify(guard15)!==JSON.stringify(beforeGuard15)) throw new Error("B09I_CANDIDATE_INSTANTIATION_GUARD_MUTATED");
+          if(JSON.stringify(guard17)!==JSON.stringify(beforeGuard17)) throw new Error("B09I_CRITERION_INSTANTIATION_GUARD_MUTATED");
+
+          fs.mkdirSync("acceptance-output",{recursive:true});
+          fs.writeFileSync("acceptance-output/b09i-candidate-provenance-readiness-exact-proof.json",JSON.stringify({
+            schema_version:"b09i_candidate_provenance_readiness_exact_proof_v1",
+            product_head:head,
+            parent_head:base,
+            runtime_corpus_run_id:33163943525,
+            runtime_corpus_artifact_id:9682819929,
+            runtime_corpus_digest:"sha256:693df9ff04e32ea07656963c14eb715af44063d35d50dcc503197071ac5ea9d9",
+            candidate_identity_state:inv.b06c_projection_context_readiness.candidate_id.state,
+            b09h_candidate_binding_state:inv.referential_binding_readiness.b09h_candidate_binding_state,
+            decision_eligibility_runtime_ready:inv.referential_binding_readiness.ready_for_decision_eligibility_runtime_binding,
+            graph_unchanged:true,
+            readiness_unchanged:true,
+            grandfathered_authority_count:after.length,
+            consumer_migration_performed:false,
+            authority_removal_permitted:false
+          },null,2)+"\n");
+
+          console.log("B09I_29_GRANDFATHERED_UNCHANGED_PASS");
+          console.log("B09I_GRAPH_READINESS_UNCHANGED_PASS");
+          console.log("B09I_CANDIDATE_AND_CRITERION_PRODUCER_SETS_UNCHANGED_PASS");
+          console.log("B09I_CANDIDATE_BINDING_NOT_READY_PASS");
+          NODE
+
+      - name: Historical runtime schema workflow MCFT remain untouched
+        run: |
+          git diff --exit-code 8acb1b9e39f84a498e0a794cae0837537a452383 39cab94721e73b055770b5c51d7a5073a26a28f6 --             apps/server/src             apps/server/db             packages             .github/workflows             docs/digital_twin             docker-compose.commercial_v1.yml
+          echo "B09I_RUNTIME_SCHEMA_WORKFLOW_MCFT_UNTOUCHED_PASS"
+
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only 8acb1b9e39f84a498e0a794cae0837537a452383 39cab94721e73b055770b5c51d7a5073a26a28f6 > /tmp/b09i-files.txt
+          cat /tmp/b09i-files.txt
+          test "$(wc -l < /tmp/b09i-files.txt | tr -d ' ')" = "4"
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09I-CANDIDATE-PROVENANCE-READINESS-INVENTORY-V1.json" /tmp/b09i-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09I-CANDIDATE-PROVENANCE-READINESS-INVENTORY-V1.md" /tmp/b09i-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json" /tmp/b09i-files.txt
+          grep -qx "scripts/governance_acceptance/ACCEPTANCE_B09I_CANDIDATE_PROVENANCE_READINESS_INVENTORY_V1.cjs" /tmp/b09i-files.txt
+          git diff --check 8acb1b9e39f84a498e0a794cae0837537a452383 39cab94721e73b055770b5c51d7a5073a26a28f6
+          echo "B09I_BOUNDED_PRODUCT_DIFF_PASS"
+
+      - name: Prove validation did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "39cab94721e73b055770b5c51d7a5073a26a28f6"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09I_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Upload B-09i exact proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: b09i-candidate-provenance-readiness-exact-proof
+          path: acceptance-output/b09i-candidate-provenance-readiness-exact-proof.json
+          if-no-files-found: error
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Marker
+        run: |
+          echo "B09I_EXACT_HEAD 39cab94721e73b055770b5c51d7a5073a26a28f6"
+          echo "B09I_CANDIDATE_PROVENANCE_READINESS_ANALYSIS_PASS"
