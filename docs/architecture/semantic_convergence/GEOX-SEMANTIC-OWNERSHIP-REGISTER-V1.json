@@ -1404,7 +1404,8 @@
         "B-09i does not authorize deriving candidate_id from recommendation_id or fact_id, or promoting legacy evidence_refs, snapshot_id, crop_stage, or created_ts into canonical EvidenceQualification, Context, CropStage, or Candidate timestamps; the B-09h QUALIFIED_EVIDENCE criterion remains candidate-unbound and Decision Eligibility Runtime remains disconnected.",
         "B-09j establishes SOURCE_FACT_SCOPE_SHA256_V1 as an explicit shadow-only candidate identity policy for the bounded decision-engine recommendation path; recommendation_id is lookup provenance only and immutable source fact identity plus tenant/project/group scope form the hash material.",
         "B-09j connects the existing B-06c adapter only to a registered shadow consumer, rejects missing/ambiguous/non-decision-engine recommendation sources, and preserves Context/Stage/Calculation refs as null/empty rather than promoting legacy snapshot/stage/effect semantics.",
-        "B-09j binds B-09h QUALIFIED_EVIDENCE support refs and CandidateDecision basis EvidenceQualification refs by exact-set equality; it still does not invoke B-07e because full canonical EvidenceQualification objects are not materialized at this seam."
+        "B-09j binds B-09h QUALIFIED_EVIDENCE support refs and CandidateDecision basis EvidenceQualification refs by exact-set equality; it still does not invoke B-07e because full canonical EvidenceQualification objects are not materialized at this seam.",
+        "B-09k corrects the B-09j readiness interpretation: B-07e consumes canonical EvidenceQualification identity refs rather than full EvidenceQualification objects; B-04 can deterministically reconstruct the full qualification projection from persisted raw samples plus post-COMMIT availability markers at a fixed decision time, so object materialization at the B-09j seam is not itself the B-07e contract blocker."
       ],
       "runtime_consumers": [
         {
@@ -1626,7 +1627,9 @@
         "B-07e is the sole explicitly registered consumer of the B-07d evaluator; Approval and historical precursor authority remain separate.",
         "B-09h explicitly registers one additional SHADOW_ONLY criterion producer; it is not a replacement for B-07b/B-07c and is not connected to the B-07e Decision Eligibility Runtime.",
         "B-09h criterion support_refs come only from exact B-09g canonical EvidenceQualification qualification_id provenance.",
-        "B-09h keeps candidate_binding_state=NOT_BOUND, direct_verdict_authority=NONE, consumer_migration_performed=false and authority_removal_permitted=false."
+        "B-09h keeps candidate_binding_state=NOT_BOUND, direct_verdict_authority=NONE, consumer_migration_performed=false and authority_removal_permitted=false.",
+        "B-09k adjudicates the bounded decision-engine recommendation path as NOT_READY_FOR_B07E_RUNTIME_CONNECTION because B-07d/B-07e require one explicit product eligibility policy_ref plus required_criteria/applicable_action_types and the repository establishes no hidden default policy for this path.",
+        "B-09k preserves B-07e disconnection: B-09j proves Candidate identity plus QUALIFIED_EVIDENCE ref continuity, while canonical Context/CropStage/CalculationResult support and product Permission/ActionWindow/lifecycle provenance remain unbound or not established on the analyzed path; which of those are mandatory must be decided by the explicit product eligibility policy rather than invented by migration code."
       ],
       "runtime_consumers": [
         {
