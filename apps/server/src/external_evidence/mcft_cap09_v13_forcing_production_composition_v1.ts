@@ -7,6 +7,8 @@
 import type { Pool } from "pg";
 
 import type { TwinScopeKeyV1 } from "../runtime/twin_runtime/ports.js";
+import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../domain/twin_runtime/external_formal_runtime_config_v1.js";
+import { MCFT_CAP09_FORMAL_RAW_BUCKET_V1 } from "./producer_bound_transient_raw_evidence_reader_v1.js";
 import {
   MCFT_CAP09_FORMAL_FORCING_ACQUISITION_BUDGET_AUTHORITY_ID_V1,
   MCFT_CAP09_REQUIRED_FORCING_DELAY_CASES_V1,
@@ -99,6 +101,14 @@ function canonicalHour(value: unknown, code: string): string {
   }
   return text;
 }
+const SCOPE_KEYS = ["tenant_id","project_id","group_id","field_id","season_id","zone_id"] as const;
+function assertExternalFormalScope(scope: TwinScopeKeyV1): void {
+  for (const key of SCOPE_KEYS) {
+    if (scope[key] !== MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1[key]) {
+      throw new Error("POSTMERGE_V13_COMPOSITION_EXTERNAL_FORMAL_SCOPE_REQUIRED:" + key);
+    }
+  }
+}
 function positiveInteger(value: unknown, code: string, maximum: number): number {
   if (!Number.isInteger(value) || Number(value) <= 0 || Number(value) > maximum) throw new Error(code);
   return Number(value);
@@ -132,6 +142,10 @@ function assertQualifiedBudget(value: FormalForcingAcquisitionBudgetAdjudication
 export function composeMcftCap09V13ForcingProductionV1(
   input: McftCap09V13ForcingProductionCompositionConfigV1,
 ) {
+  assertExternalFormalScope(input.scope);
+  if (input.private_store.bucket !== MCFT_CAP09_FORMAL_RAW_BUCKET_V1) {
+    throw new Error("POSTMERGE_V13_COMPOSITION_FORMAL_RAW_BUCKET_REQUIRED");
+  }
   const epoch = required(input.epoch_id, "POSTMERGE_V13_COMPOSITION_EPOCH_REQUIRED");
   const subject = required(input.subject_sha, "POSTMERGE_V13_COMPOSITION_SUBJECT_REQUIRED");
   if (!/^[0-9a-f]{40}$/.test(subject)) throw new Error("POSTMERGE_V13_COMPOSITION_SUBJECT_INVALID");
