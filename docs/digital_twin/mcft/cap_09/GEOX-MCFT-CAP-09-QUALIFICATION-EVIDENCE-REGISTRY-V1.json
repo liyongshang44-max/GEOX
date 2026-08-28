@@ -578,7 +578,7 @@
         "dependency_digest": "sha256:1e31942278a8dd9d42faace9271bbb8618b4e9b899f54a5149e97b91b339f1a7",
         "artifact_absence_reason": "RUN_LEVEL_PHASE3_FINAL_PHASE5_SETTLEMENT_HEAD_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
-        "immutable_binding_sha256": "63e335debcc4b9f957c21da8443b482d08c1f6c737f88ba45d9ecc3e45f162b5"
+        "immutable_binding_sha256": "b87fc4eeae5676d7e37e1532899dd927e4d7ef352caef9e225feadbfaef2f761"
       },
       {
         "evidence_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_7F767921",
@@ -598,7 +598,7 @@
         "dependency_digest": "sha256:2b532defcb656ef122e325a1d1e145502ee89453e3ae35c66fab2d290054cca8",
         "artifact_absence_reason": "RUN_LEVEL_PHASE5_FINAL_TEMPORAL_SETTLEMENT_AND_REAL_CONTAINER_RESILIENCE_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
-        "immutable_binding_sha256": "47156358f08c1474af438ebae39e05f4c710484432be507a3a8730fa369cadcb"
+        "immutable_binding_sha256": "1e7e8dc0f2e8ff2aa161f82d6896dc25b5d2c1ae31fc8a55bf987637f91c8132"
       }
     ],
     "durable_anchors": {
