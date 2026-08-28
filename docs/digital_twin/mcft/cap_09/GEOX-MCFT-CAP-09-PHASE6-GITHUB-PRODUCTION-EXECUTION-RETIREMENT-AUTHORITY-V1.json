@@ -1,0 +1,213 @@
+{
+  "schema_version": "geox_mcft_cap09_phase6_github_production_execution_retirement_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1",
+  "status": "PHASE6_GITHUB_TRIGGER_RETIREMENT_IMPLEMENTED_PENDING_RUNTIME_INDEPENDENCE_PROOF",
+  "phase5_closure_head": "75d4961279bd64dc1c9dd7d68aac189c72c98846",
+  "route_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+  "target_role": {
+    "github_actions_may": [
+      "CI",
+      "QUALIFICATION",
+      "DEPLOYMENT",
+      "SCHEMA_MIGRATION",
+      "ONE_SHOT_GOVERNANCE_OR_CALIBRATION",
+      "READ_ONLY_INDEPENDENT_AUDIT",
+      "FINAL_READBACK_ADJUDICATION",
+      "EVIDENCE_REGISTRATION"
+    ],
+    "github_actions_must_not_own": [
+      "PRODUCTION_PROVIDER_CADENCE",
+      "PRODUCTION_PROVIDER_REQUEST_LOOP",
+      "EVIDENCE_SUPPLY_CURSOR",
+      "FORMAL_RUNTIME_WAKE_CADENCE",
+      "RUNTIME_TICK_CURSOR",
+      "PRODUCTION_SLOT_CLAIM",
+      "PRODUCTION_TWIN_TICK_EXECUTION",
+      "FORMAL_TWIN_CHECKPOINT_MUTATION",
+      "PRODUCTION_RETRY_RECOVERY_STATE"
+    ],
+    "hard_formal_targets": {
+      "github_provider_request_count": 0,
+      "github_formal_twin_db_mutation_count": 0,
+      "github_production_tick_execution_count": 0,
+      "github_hourly_wake_dependency_count": 0
+    }
+  },
+  "retirement_targets": {
+    "production_execution": [
+      {
+        "path": ".github/workflows/mcft-cap-09-rolling-preboundary-capture.yml",
+        "reason": "HISTORICAL_SCHEDULED_PROVIDER_REQUEST_LOOP",
+        "phase5_closure_blob_sha": "680d0e13fde308522dd58157be6d2d4e39063526",
+        "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-t4r1-rolling-hourly-scheduler.yml",
+        "reason": "ROUTINE_GITHUB_HOURLY_DISPATCH_OWNER",
+        "phase5_closure_blob_sha": "08ef440bad31f72e96df824104ef4021a40b3f86",
+        "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-t4r1-rolling-preboundary-capture.yml",
+        "reason": "PROVIDER_REQUEST_AND_DOWNSTREAM_FORMAL_EVIDENCE_DISPATCH",
+        "phase5_closure_blob_sha": "800cbd91a5d84801405affa6f372c0aa6388b173",
+        "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml",
+        "reason": "FORMAL_EVIDENCE_AND_RAW_RETENTION_MUTATION",
+        "phase5_closure_blob_sha": "c6e63a1c980175d920a390dc7aaac2425a52e9f9",
+        "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-amendment19-formal-arm.yml",
+        "reason": "AUTOMATIC_FORMAL_ACTIVATION_CHAIN",
+        "phase5_closure_blob_sha": "7f759d268ce6db8e72d7060a58f60d5b035123ae",
+        "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml",
+        "reason": "FORMAL_DATABASE_BOOTSTRAP_MUTATION",
+        "phase5_closure_blob_sha": "c387ce0749263dfa194ae416a4f2ee83e467740e",
+        "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml",
+        "reason": "SCHEDULED_FORMAL_RUNTIME_WAKE_SLOT_CLAIM_AND_TICK",
+        "phase5_closure_blob_sha": "760a43fb3393e0c7d112b5e5f3e94dce29b6375c",
+        "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-pre-runtime-hardening.yml",
+        "reason": "HISTORICAL_PROVIDER_AND_FORMAL_RUNNER_SCHEDULE",
+        "phase5_closure_blob_sha": "dcd80e91a357087fb3771f9490e623b0c7d6a05a",
+        "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml",
+        "reason": "HISTORICAL_SCHEDULED_FORMAL_TICK",
+        "phase5_closure_blob_sha": "2728266b5cb9dab49d42b590f5df558d61346728",
+        "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-formal-bootstrap-evidence-authority.yml",
+        "reason": "HISTORICAL_FORMAL_EVIDENCE_BOOTSTRAP_AND_HOURLY_TICK",
+        "phase5_closure_blob_sha": "a2cb8b5f43278daf6c6d07cf39cda6cc053f31c8",
+        "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-t4r1-formal-v3-o01-recovery.yml",
+        "reason": "FAILED_FORMAL_V4_MUTATING_RECOVERY_MUST_REMAIN_FROZEN",
+        "phase5_closure_blob_sha": "f2442c7e7255160156b90ad0c693e18a1db2c8bb",
+        "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-ea5e2-rolling-operational-activation-live.yml",
+        "reason": "MANUAL_PROVIDER_FACING_LEGACY_OPERATIONAL_ACTIVATION",
+        "phase5_closure_blob_sha": "b733743c7abc3ad03f28eb9d9d2eb643d8555b69",
+        "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-t4r1-formal-v3-prebootstrap-recovery.yml",
+        "reason": "FAILED_FORMAL_V3_PREBOOTSTRAP_MUTATING_RECOVERY_MUST_REMAIN_FROZEN",
+        "phase5_closure_blob_sha": "2cf1583395d6657aeafd1dd7ecf27c652fc13015",
+        "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
+      }
+    ],
+    "provider_facing_audit_schedule": [
+      {
+        "path": ".github/workflows/mcft-cap-09-rolling-kbs-intersection.yml",
+        "reason": "SCHEDULED_KBS_PROVIDER_REQUEST",
+        "phase5_closure_blob_sha": "ef0aa14b0956808257980aa76e082267f510a957",
+        "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-kbs-batch-qualification-window.yml",
+        "reason": "SCHEDULED_KBS_PROVIDER_REQUEST",
+        "phase5_closure_blob_sha": "3b1308d2310312fb63310e955201e44016fd240c",
+        "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-kbs-publication-cadence-observer.yml",
+        "reason": "SCHEDULED_KBS_PROVIDER_REQUEST",
+        "phase5_closure_blob_sha": "a619057d4c22e85fd71cfd3d6282aaec09cb0213",
+        "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-ea9b-current-main-window-observer.yml",
+        "reason": "SCHEDULED_KBS_AGLOG_PROVIDER_REQUEST",
+        "phase5_closure_blob_sha": "76df723da3f79afe8f5bfe49ae7f29980f826757",
+        "retirement_mode": "REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL"
+      }
+    ]
+  },
+  "preserved_automatic_github_workflows": {
+    "scheduled": [
+      {
+        "path": ".github/workflows/mcft-cap-09-s6-production-equivalent-shadow-simulator.yml",
+        "classification": "ISOLATED_NON_PRODUCTION_SIMULATION"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-amendment19-formal-final-readback.yml",
+        "classification": "READ_ONLY_FINAL_DB_AUDIT"
+      }
+    ],
+    "workflow_run": [
+      {
+        "path": ".github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml",
+        "classification": "QUALIFICATION_ONLY"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-amendment19-formal-graduation-wiring.yml",
+        "classification": "ZERO_EFFECT_ONE_SHOT_GOVERNANCE"
+      }
+    ]
+  },
+  "retirement_contract": {
+    "retired_workflow_allowed_top_level_triggers": [
+      "pull_request",
+      "merge_group"
+    ],
+    "forbidden_retired_workflow_triggers": [
+      "schedule",
+      "workflow_run",
+      "workflow_dispatch",
+      "repository_dispatch",
+      "workflow_call",
+      "push"
+    ],
+    "retired_workflow_actions_write_forbidden": true,
+    "historical_live_implementation_deletion_required": false,
+    "historical_artifact_deletion_forbidden": true,
+    "production_owner_retirement_is_trigger_and_authority_cutover": true,
+    "historical_live_implementation_bound_to_phase5_blob": true
+  },
+  "phase6_remaining_mandatory_proofs": [
+    "ZERO_RETIRED_GITHUB_PRODUCTION_OWNERS_AND_TRIGGERS",
+    "GITHUB_CONTROL_PLANE_OUTAGE_DOES_NOT_STOP_EVIDENCE_INGRESS",
+    "GITHUB_CONTROL_PLANE_OUTAGE_DOES_NOT_STOP_TWIN_RUNTIME",
+    "PROCESS_RESTART_RECOVERS_FROM_DURABLE_OPERATIONAL_AUTHORITY_WITHOUT_GITHUB_ARTIFACT_REHYDRATION"
+  ],
+  "non_effects": {
+    "protected_main_mutation": false,
+    "phase5_history_rewrite": false,
+    "formal_v5_arm": false,
+    "fresh_formal_v5_epoch_creation": false,
+    "production_container_activation": false,
+    "mcft_cap09_completed": false
+  },
+  "runtime_independence_proof": {
+    "status": "REQUIRED",
+    "workflow_path": ".github/workflows/mcft-cap-09-phase6-runtime-independence.yml",
+    "compose_base": "docker-compose.mcft-cap09-phase5-qualification.yml",
+    "compose_blackout_override": "docker-compose.mcft-cap09-phase6-github-blackout.override.yml",
+    "reuse_contract": "SAME_PHASE5_PRODUCTION_PROCESS_GRAPH_WITH_GITHUB_RUNTIME_NETWORK_BLACKOUT_ONLY",
+    "github_artifact_rehydration_forbidden": true,
+    "required_claims": [
+      "GITHUB_CONTROL_PLANE_OUTAGE_DOES_NOT_STOP_EVIDENCE_INGRESS",
+      "GITHUB_CONTROL_PLANE_OUTAGE_DOES_NOT_STOP_TWIN_RUNTIME",
+      "PROCESS_RESTART_RECOVERS_FROM_DURABLE_OPERATIONAL_AUTHORITY_WITHOUT_GITHUB_ARTIFACT_REHYDRATION"
+    ],
+    "formal_v5_activation_effect": false
+  }
+}

@@ -1,0 +1,83 @@
+name: mcft-cap-09-v13-exact-base-fact-promotion
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-v13-exact-base-fact-promotion.yml'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_EXACT_BASE_FACT_PROMOTION.ts'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  EXACT_PREDECESSOR_SHA: '26c1383f7f45abb76c99e28ec3d06714e85d1b2c'
+
+concurrency:
+  group: mcft-cap09-v13-exact-base-fact-promotion-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  exact-base-fact-promotion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Require exact predecessor and zero production wake
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            test "${{ github.event.pull_request.base.sha }}" = "$EXACT_PREDECESSOR_SHA"
+          fi
+          trigger_block="$(awk '/^on:/{capture=1} /^permissions:/{capture=0} capture{print}' .github/workflows/mcft-cap-09-v13-exact-base-fact-promotion.yml)"
+          ! grep -Eq '^  schedule:|^  workflow_dispatch:' <<<"$trigger_block"
+
+      - name: Typecheck exact-base promotion core
+        run: >-
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node
+          apps/server/src/runtime/twin_runtime/external_formal_exact_base_fact_promotion_v1.ts
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_EXACT_BASE_FACT_PROMOTION.ts
+
+      - name: Run recovery and mutation classification acceptance
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_EXACT_BASE_FACT_PROMOTION.ts
+
+      - name: Typecheck full server Runtime surface
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Validate fact-promotion machine proof
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_EXACT_BASE_FACT_PROMOTION_RESULT.json','utf8'));
+          for(const key of ['fresh_three_new_writes_supported','restart_three_existing_idempotent_supported','mixed_new_and_existing_supported','pre_ingress_validation_failure_proves_zero_mutation','append_exception_never_assumed_rolled_back','receipt_mismatch_after_confirmed_write_is_partial_mutation','exact_three_fact_presence_is_success_authority'])if(p[key]!==true)throw new Error(`V13_EXACT_BASE_FACT_PROMOTION_PROOF_MISSING:${key}`);
+          if(p.status!=='PASS'||p.new_write_count_equals_success_authority!==false||p.production_workflow_effect!==false||p.mcft_cap09_completed!==false)throw new Error('V13_EXACT_BASE_FACT_PROMOTION_NONCLAIM_REGRESSION');
+
+      - name: Upload exact-base fact promotion proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-v13-exact-base-fact-promotion-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_V13_EXACT_BASE_FACT_PROMOTION_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

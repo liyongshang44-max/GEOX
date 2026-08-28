@@ -10,6 +10,7 @@ on:
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_PREFLIGHT_V1.cjs'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts'
+      - 'scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_AM19_PHASE2_AUTHORITY_SYMBOL_COMPATIBILITY_V1.ts'
       - 'apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts'
   workflow_run:
     workflows: ['mcft-cap-09-rolling-preboundary-capture']
@@ -43,7 +44,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Require exact current protected-main base and governed qualification boundary
+      - name: Require governed qualification base and routing boundary
         id: routing
         shell: bash
         run: |
@@ -51,7 +52,19 @@ jobs:
           test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
           git fetch --no-tags origin main
           base_sha='${{ github.event.pull_request.base.sha }}'
-          test "$base_sha" = "$(git rev-parse origin/main)" || { echo 'AM19_P24_PR_BASE_MUST_EQUAL_CURRENT_PROTECTED_MAIN' >&2; exit 1; }
+          protected_main_sha="$(git rev-parse origin/main)"
+          frozen_successor_sha='3bbf096ee5cb73e8e0e0251dc400733d6cab501f'
+          phase1_successor_sha='8943c752a354cb916cc7f144681203aa9a19f70b'
+          phase2_closure_sha='c3346768a44b16b127378cb690ada1d8cfec1049'
+          phase3_closure_sha='0e874b254c695b32fd94c7dc7034fd71b8aa3bc3'
+          phase4_closure_sha='16ff7160473c0a25dc059db6b2b6b7ba07f54dd1'
+          phase2_compatibility_path='scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_AM19_PHASE2_AUTHORITY_SYMBOL_COMPATIBILITY_V1.ts'
+          frozen_historical_runner='scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts'
+          frozen_historical_runner_blob='ae3e47593ef35cba08946427304a0d3271bb86e9'
+          if [[ "$base_sha" != "$protected_main_sha" && "$base_sha" != "$frozen_successor_sha" && "$base_sha" != "$phase1_successor_sha" && "$base_sha" != "$phase2_closure_sha" && "$base_sha" != "$phase3_closure_sha" && "$base_sha" != "$phase4_closure_sha" ]]; then
+            echo "AM19_P24_PR_BASE_NOT_GOVERNED:${base_sha}" >&2
+            exit 1
+          fi
           changed=$(git diff --name-only "$base_sha" "$SUBJECT_SHA" | sort)
           t4_runtime_rebind_files="$(printf '%s\n' \
             '.github/workflows/mcft-cap-09-ea5e2-rolling-operational-activation-live.yml' \
@@ -71,8 +84,41 @@ jobs:
             '.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml' \
             '.github/workflows/mcft-cap-09-ea5b3-external-runtime-config-resolver.yml' \
             '.github/workflows/mcft-cap-09-ea5d1-external-bootstrap-persistence-qualification.yml' | sort)"
+          qualification_control_plane_files="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml' \
+            '.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml' \
+            '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs' \
+            'scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs' \
+            'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs' \
+            'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs' | sort)"
+          historical_sensitive_regex='^(scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py|scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts|scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts|apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts)$'
+          phase2_frozen_authority_regex='^(scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts|apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts)$'
+          v13_marker_regex='(^\.github/workflows/mcft-cap-09-v13-|^apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_|external_formal_v5_|external_formal_forcing_|external_formal_exact_base_|postgres_external_formal_forcing_|postgres_external_formal_next_tick_|postgres_external_formal_fenced_exact_base_|/ACCEPTANCE_MCFT_CAP_09_V13_|/VALIDATE_MCFT_CAP_09_V13_|GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3\.json$)'
+          historical_sensitive_changed=false
+          phase2_frozen_authority_changed=false
+          v13_marker_changed=false
+          phase2_compatibility_changed=false
+          if grep -Eq "$historical_sensitive_regex" <<<"$changed"; then historical_sensitive_changed=true; fi
+          if grep -Eq "$phase2_frozen_authority_regex" <<<"$changed"; then phase2_frozen_authority_changed=true; fi
+          if grep -Eq "$v13_marker_regex" <<<"$changed"; then v13_marker_changed=true; fi
+          if grep -Fxq "$phase2_compatibility_path" <<<"$changed"; then phase2_compatibility_changed=true; fi
           mode='historical-am19'
-          if [[ "$changed" == "$t4_runtime_rebind_files" ]]; then
+          if [[ ( "$base_sha" == "$phase3_closure_sha" || "$base_sha" == "$phase4_closure_sha" ) && "$historical_sensitive_changed" == 'false' ]]; then
+            mode='production-hosting-successor'
+          elif [[ "$base_sha" == "$phase2_closure_sha" && "$phase2_frozen_authority_changed" == 'false' ]]; then
+            test "$(git rev-parse "HEAD:${frozen_historical_runner}")" = "$frozen_historical_runner_blob" || { echo 'AM19_PHASE3_HISTORICAL_RUNNER_BLOB_DRIFT' >&2; exit 1; }
+            mode='phase3-provider-maintenance-successor'
+          elif [[ "$base_sha" == "$phase1_successor_sha" && "$phase2_compatibility_changed" == 'true' && "$phase2_frozen_authority_changed" == 'false' ]]; then
+            test "$(git rev-parse "HEAD:${frozen_historical_runner}")" = "$frozen_historical_runner_blob" || { echo 'AM19_PHASE2_HISTORICAL_RUNNER_BLOB_DRIFT' >&2; exit 1; }
+            mode='phase2-authority-symbol-compatibility'
+          elif [[ "$changed" == "$qualification_control_plane_files" && "$historical_sensitive_changed" == 'false' ]]; then
+            mode='qualification-control-plane-successor'
+          elif [[ "$v13_marker_changed" == 'true' && "$historical_sensitive_changed" == 'false' ]]; then
+            mode='v13-maintenance-successor'
+          elif [[ "$changed" == "$t4_runtime_rebind_files" ]]; then
             mode='t4-runtime-rebind-successor'
           elif [[ "$changed" == "$routing_repair_files" ]]; then
             mode='runtime-rebind-routing-repair'
@@ -82,8 +128,11 @@ jobs:
           if grep -Eq '^scripts/runtime_acceptance/(MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py|RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts)$' <<<"$changed"; then
             grep -Fxq 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py' <<<"$changed" || { echo 'AM19_P24_DECODER_IMPLEMENTATION_CHANGE_REQUIRED' >&2; exit 1; }
             grep -Fxq 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts' <<<"$changed" || { echo 'AM19_P24_REHYDRATION_DECODER_IDENTITY_CHANGE_REQUIRED' >&2; exit 1; }
-            grep -Fq 'decode-gfs-v2' scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
-            grep -Fq 'MCFT_CAP09_EA5E2_GFS_RAW_BUNDLE_DECODER_V2' scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
+            grep -Fq 'GfsRawBundleEvidenceDecoderV1' scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
+            grep -Fq 'PRODUCT_GFS_BUNDLE_DECODER_RELATIVE' scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
+            grep -Fq 'assertProductGfsScientificCoreBinding' scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
+            grep -Fq 'gfs_bundle_decoder.decode_bundle_v1' scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py
+            grep -Fq 'product_gfs_raw_bundle_decoder_used' scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py
           elif grep -Fxq 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts' <<<"$changed"; then
             grep -Fxq 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts' <<<"$changed" || { echo 'AM19_P24_SUCCESSOR_QUALIFICATION_REFACTOR_REQUIRED' >&2; exit 1; }
             grep -Fq 'buildExternalFormalAmendment19WindowManifestV1' scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts
@@ -97,10 +146,37 @@ jobs:
             fi
           fi
 
+      - name: Record frozen AM19 compatibility route for production-hosting successor
+        if: steps.routing.outputs.mode == 'production-hosting-successor'
+        run: |
+          echo 'PASS: Phase3/Phase4 machine-closed production-hosting bases are governed successors; historical AM19 typecheck, selftests, and persistence-free semantics below remain mandatory. No durable live evidence is rebound.'
+
       - name: Record Amendment-19 T3 orchestration identity selftests not applicable to exact T4 runtime rebind
         if: steps.routing.outputs.mode == 't4-runtime-rebind-successor'
         run: |
           echo 'PASS: exact T4 runtime rebind remains zero-write and does not reuse the T3R1 persistent orchestration identity.'
+
+      - name: Record frozen historical persistent-24T source not applicable to v13 maintenance
+        if: steps.routing.outputs.mode == 'v13-maintenance-successor'
+        run: |
+          echo 'PASS: v13 maintenance leaves the frozen historical persistent-24T source, rehydration, decoder, and window manifest unchanged.'
+
+      - name: Requalify CP-5 routing while preserving frozen historical source identity
+        if: steps.routing.outputs.mode == 'qualification-control-plane-successor'
+        shell: bash
+        run: |
+          set -euo pipefail
+          frozen='3bbf096ee5cb73e8e0e0251dc400733d6cab501f'
+          for file in \
+            scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_LIVE_PROVIDER_TWO_PHASE.py \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts \
+            scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts \
+            apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts; do
+            current_blob="$(git rev-parse "HEAD:${file}")"
+            frozen_blob="$(git rev-parse "${frozen}:${file}")"
+            test "$current_blob" = "$frozen_blob" || { echo "AM19_P24_CP5_FROZEN_HISTORICAL_SOURCE_DRIFT:${file}:${frozen_blob}:${current_blob}" >&2; exit 1; }
+          done
+          echo 'PASS: CP-5 requalifies successor routing while frozen T3 orchestration inputs remain byte-identical to the qualified predecessor.'
 
       - uses: pnpm/action-setup@v4
         with:
@@ -113,16 +189,26 @@ jobs:
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Typecheck server and qualification orchestration
+      - name: Typecheck server
         run: |
           set -euo pipefail
           pnpm --filter @geox/server run typecheck
+
+      - name: Prove successor AM19 compatibility against byte-frozen historical runner
+        if: steps.routing.outputs.mode == 'phase2-authority-symbol-compatibility' || steps.routing.outputs.mode == 'phase3-provider-maintenance-successor' || steps.routing.outputs.mode == 'production-hosting-successor'
+        run: pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_AM19_PHASE2_AUTHORITY_SYMBOL_COMPATIBILITY_V1.ts selftest
+
+      - name: Typecheck historical qualification orchestration
+        if: steps.routing.outputs.mode != 'v13-maintenance-successor' && steps.routing.outputs.mode != 'qualification-control-plane-successor' && steps.routing.outputs.mode != 'phase2-authority-symbol-compatibility' && steps.routing.outputs.mode != 'phase3-provider-maintenance-successor' && steps.routing.outputs.mode != 'production-hosting-successor'
+        run: |
+          set -euo pipefail
           pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
             apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts \
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts \
             scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts
 
       - name: Prove stable T3R1 credential seed normalization fail-closed
+        if: steps.routing.outputs.mode != 'v13-maintenance-successor' && steps.routing.outputs.mode != 'qualification-control-plane-successor' && steps.routing.outputs.mode != 'phase2-authority-symbol-compatibility' && steps.routing.outputs.mode != 'phase3-provider-maintenance-successor'
         shell: node {0}
         run: |
           function normalize(raw) {
@@ -151,12 +237,14 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_PREFLIGHT_V1.cjs
 
       - name: Run pure orchestration selftests
-        if: steps.routing.outputs.mode != 't4-runtime-rebind-successor'
+        if: steps.routing.outputs.mode != 't4-runtime-rebind-successor' && steps.routing.outputs.mode != 'v13-maintenance-successor' && steps.routing.outputs.mode != 'qualification-control-plane-successor' && steps.routing.outputs.mode != 'phase2-authority-symbol-compatibility' && steps.routing.outputs.mode != 'phase3-provider-maintenance-successor'
         run: |
           set -euo pipefail
           node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_V1.cjs selftest
           pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts selftest
-          pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts selftest
+          if [[ "${{ steps.routing.outputs.mode }}" != "production-hosting-successor" ]]; then
+            pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts selftest
+          fi
 
       - name: Reprove persistence-free canonical semantics
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_PERSISTENCE_FREE_24T.ts

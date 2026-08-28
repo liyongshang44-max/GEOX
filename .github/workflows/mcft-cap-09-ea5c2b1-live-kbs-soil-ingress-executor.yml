@@ -5,9 +5,22 @@ on:
     paths:
       - '.github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml'
       - 'apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts'
+      - 'apps/server/src/external_evidence/provider/https_external_evidence_transport_v1.ts'
+      - 'apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.ts'
+      - 'apps/server/src/external_evidence/provider/kbs_raw_hourly_live_provider_v1.ts'
+      - 'apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py'
+      - 'apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.ts'
+      - 'apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts'
+      - 'apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts'
+      - 'apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_visibility_supply_cursor_v1.ts'
+      - 'apps/server/src/persistence/external_evidence/postgres_external_formal_evidence_visibility_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PRODUCT_ADAPTER_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE2_POST_COMMIT_VISIBILITY_CURSOR_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C2B1-LIVE-KBS-SOIL-INGRESS-EXECUTOR-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs'
   merge_group:
     types: [checks_requested]
 
@@ -54,30 +67,55 @@ jobs:
           node-version: 20.11.1
           cache: pnpm
 
-      - name: Resolve exact EA5C2B1 base
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Resolve governed EA5C2B1 predecessor
         id: authority
         shell: bash
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            base_sha="${{ github.event.pull_request.base.sha }}"
           else
-            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            base_sha="${{ github.event.merge_group.base_sha }}"
           fi
+          phase1_sha="8943c752a354cb916cc7f144681203aa9a19f70b"
+          phase2_closure_sha="c3346768a44b16b127378cb690ada1d8cfec1049"
+          if [[ "$base_sha" != "$phase1_sha" && "$base_sha" != "$phase2_closure_sha" ]]; then
+            echo "EA5C2B1_GOVERNED_PREDECESSOR_REQUIRED: $base_sha" >&2
+            exit 1
+          fi
+          echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
 
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Syntax-check EA5C2B1 governance gate
-        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs
+      - name: Install frozen KBS scientific qualification oracle
+        run: python -m pip install --disable-pip-version-check 'numpy==1.26.4' 'refet==0.4.2'
 
-      - name: Validate exact EA5C2B1 authority and five-file boundary
+      - name: Syntax-check historical and Phase2 successor governance gates
+        run: |
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs
+
+      - name: Validate Phase2 successor boundary without rewriting historical EA5C2B1 authority
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs
+
+      - name: Prove KBS Raw Hourly product core preserves Amendment-11 late authority
+        run: python apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py selftest
+
+      - name: Prove focused KBS Raw Hourly product adapter and decoder boundary
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PRODUCT_ADAPTER_V1.ts
 
       - name: Typecheck server
         run: pnpm --filter @geox/server run typecheck
+
+      - name: Prove post-COMMIT visibility gates EvidenceSupplyCursor advance
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE2_POST_COMMIT_VISIBILITY_CURSOR_V1.ts
 
       - name: Start CI-only private S3-compatible regression store
         shell: bash
@@ -124,17 +162,23 @@ jobs:
         run: |
           const fs = require('fs');
           const r = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_RESULT.json','utf8'));
+          const phase2 = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_PHASE2_POST_COMMIT_VISIBILITY_CURSOR_V1_RESULT.json','utf8'));
+          const focused = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_KBS_RAW_HOURLY_PRODUCT_ADAPTER_V1_RESULT.json','utf8'));
           if (r.status !== 'PASS' || r.live_public_source_fetch_proved !== true || r.ea3_retention_before_decode_pipeline_used !== true || r.restricted_ea5c1_facts_ingress_used !== true) throw new Error('EA5C2B1_LIVE_PIPELINE_PROOF_REQUIRED');
           if (r.public_raw_value_emission_count !== 0 || r.raw_payload_embedded_in_fact !== false || r.runtime_public_provider_fetch_count !== 0) throw new Error('EA5C2B1_RAW_OR_RUNTIME_BOUNDARY_VIOLATION');
           if (r.ci_minio_is_formal_24h_durable_store !== false || r.formal_neon_write_performed !== false || r.persistent_formal_24h_raw_store_bound !== false || r.ea5c_complete !== false || r.ea5d_authorized !== false || r.formal_o00_start_authorized !== false) throw new Error('EA5C2B1_PREMATURE_FORMAL_EFFECT');
-          console.log(JSON.stringify({status:'PASS',live_kbs:true,ea3:true,ea5c1_ingress:true,public_raw_values:0,formal_store:false,formal_neon:false,ea5c:false,ea5d:false,ea5e:false,o00:false}));
+          if (phase2.status !== 'PASS' || phase2.missing_visibility_cursor_advance_count !== 0 || phase2.identity_drift_cursor_advance_count !== 0 || phase2.missing_receipt_cursor_advance_count !== 0 || phase2.postgres_visibility_read_only !== true || phase2.runtime_tick_cursor_mutation !== false || phase2.twin_state_mutation !== false || phase2.production_evidence_runtime_activation !== false || phase2.production_twin_runtime_activation !== false || phase2.formal_database_mutation !== false) throw new Error('PHASE2_VISIBILITY_CURSOR_BOUNDARY_PROOF_REQUIRED');
+          if (focused.status !== 'PASS' || focused.product_transport_instantiated !== true || focused.product_decoder_instantiated !== true || focused.exact_t_decode_proved !== true || focused.external_network_request_count !== 0 || focused.database_write_count !== 0 || focused.runtime_tick_cursor_mutation !== false || focused.twin_state_mutation !== false || focused.production_cadence_activation !== false || focused.formal_database_mutation !== false) throw new Error('KBS_RAW_HOURLY_FOCUSED_PRODUCT_ADAPTER_PROOF_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',live_kbs:true,ea3:true,ea5c1_ingress:true,post_commit_visibility:true,evidence_supply_cursor_ordering:true,kbs_raw_hourly_focused_product_adapter:true,public_raw_values:0,formal_store:false,formal_neon:false,ea5c:false,ea5d:false,ea5e:false,o00:false}));
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: mcft-cap-09-ea5c2b1-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           path: |
-            acceptance-output/MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR_GOVERNANCE_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_RESULT.json
+            acceptance-output/MCFT_CAP_09_KBS_RAW_HOURLY_PRODUCT_ADAPTER_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE2_POST_COMMIT_VISIBILITY_CURSOR_V1_RESULT.json
           if-no-files-found: warn
           retention-days: 90

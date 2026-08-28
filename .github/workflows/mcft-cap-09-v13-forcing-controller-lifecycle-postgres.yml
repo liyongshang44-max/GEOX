@@ -1,0 +1,110 @@
+name: mcft-cap-09-v13-forcing-controller-lifecycle-postgres
+
+on:
+  pull_request:
+    paths:
+      - "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql"
+      - "apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_controller_lifecycle_v1.ts"
+      - "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_FORCING_CONTROLLER_LIFECYCLE_POSTGRES.ts"
+      - ".github/workflows/mcft-cap-09-v13-forcing-controller-lifecycle-postgres.yml"
+  merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-v13-controller-lifecycle-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 20.11.1
+  PNPM_VERSION: 9.15.4
+  DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_v13_controller_lifecycle_acceptance
+  EXACT_PREDECESSOR_SHA: 26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+
+jobs:
+  controller-lifecycle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap09_v13_controller_lifecycle_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d mcft_cap09_v13_controller_lifecycle_acceptance"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verify isolated qualification boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            test "${{ github.event.pull_request.base.sha }}" = "$EXACT_PREDECESSOR_SHA"
+          fi
+          test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
+
+      - name: Targeted typecheck
+        run: >-
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck
+          --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node
+          apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_controller_lifecycle_v1.ts
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_FORCING_CONTROLLER_LIFECYCLE_POSTGRES.ts
+
+      - name: Real PostgreSQL controller lifecycle acceptance
+        env:
+          MCFT_CAP09_V13_CONTROLLER_LIFECYCLE_DESTRUCTIVE_ACCEPTANCE: "1"
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_FORCING_CONTROLLER_LIFECYCLE_POSTGRES.ts
+
+      - name: Full server typecheck
+        run: pnpm --filter @geox/server run typecheck
+
+      - name: Machine proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const p = 'acceptance-output/MCFT_CAP_09_V13_FORCING_CONTROLLER_LIFECYCLE_POSTGRES_RESULT.json';
+          const x = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (x.status !== 'PASS') throw new Error('CONTROLLER_LIFECYCLE_ACCEPTANCE_NOT_PASS');
+          if (x.concurrent_second_owner_denied !== true) throw new Error('SECOND_OWNER_NOT_DENIED');
+          if (x.expired_lease_takeover_token !== '2') throw new Error('TAKEOVER_FENCE_NOT_INCREMENTED');
+          if (x.stale_owner_terminal_denied !== true) throw new Error('STALE_OWNER_NOT_FENCED');
+          if (x.scope_identity_enforced !== true) throw new Error('SCOPE_IDENTITY_NOT_ENFORCED');
+          if (x.terminal_irreversible !== true) throw new Error('TERMINAL_NOT_IRREVERSIBLE');
+          if (x.production_workflow_effect !== false || x.formal_database_effect !== false) throw new Error('QUALIFICATION_BOUNDARY_VIOLATION');
+          if (x.mcft_cap09_completed !== false) throw new Error('CAP09_COMPLETION_MUST_REMAIN_FALSE');
+          NODE
+
+      - name: Upload controller lifecycle proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-v13-forcing-controller-lifecycle-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_V13_FORCING_CONTROLLER_LIFECYCLE_POSTGRES_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

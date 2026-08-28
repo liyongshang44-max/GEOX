@@ -8,6 +8,7 @@ on:
       - '.github/workflows/mcft-cap-09-ea5e2-successor-runner-qualification.yml'
       - '.github/workflows/mcft-cap-09-rolling-preboundary-capture.yml'
       - '.github/workflows/mcft-cap-09-rolling-kbs-intersection.yml'
+      - 'scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V3.cjs'
@@ -25,6 +26,9 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - 'apps/server/package.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs'
+      - '.github/workflows/mcft-cap-09-phase6-retire-github-production-execution.yml'
   workflow_dispatch:
 
 permissions:
@@ -35,19 +39,170 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact EA5E2 subject
+        uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Prove complete rolling T3R1 EA5E2 runtime dependency binding
+      - name: Require exact PR head identity
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+
+      - name: Generate central applicability plan
+        if: github.event_name == 'pull_request'
+        run: >-
+          node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+          --base '${{ github.event.pull_request.base.sha }}'
+          --head '${{ github.event.pull_request.head.sha }}'
+          --generation v13
+          --stage SUCCESSOR_SUBJECT_PRE_MERGE
+          --out acceptance-output/MCFT_CAP_09_EA5E2_APPLICABILITY_PLAN_V1.json
+
+      - name: Route EA5E2 from central planner
+        id: route
+        shell: node {0}
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          const fs = require('node:fs');
+          const out = 'acceptance-output/MCFT_CAP_09_EA5E2_PLANNER_ROUTE_V1_RESULT.json';
+          fs.mkdirSync('acceptance-output', {recursive:true});
+          let proof;
+          if (process.env.EVENT_NAME === 'workflow_dispatch') {
+            proof = {
+              schema_version:'geox_mcft_cap09_ea5e2_planner_route_v1',
+              status:'PASS', subject_sha:process.env.SUBJECT_SHA,
+              planner_status:'MANUAL_FULL_QUALIFICATION',
+              applicability:'REQUIRED', reason_code:'WORKFLOW_DISPATCH_FORCES_FULL_QUALIFICATION',
+              action:'FULL', carry_forward_evidence_id:null,
+              dependency_digest_match:false,
+              runtime_mutation:false, production_workflow_activation:false,
+              formal_database_mutation:false, provider_request:false,
+              graduation_effect:false, mcft_cap09_completed:false,
+            };
+          } else {
+            const plan = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_APPLICABILITY_PLAN_V1.json','utf8'));
+            const phase6AuthorityPath='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json';
+            const phase6Active=fs.existsSync(phase6AuthorityPath) && String(JSON.parse(fs.readFileSync(phase6AuthorityPath,'utf8')).status||'').startsWith('PHASE6_');
+            if (phase6Active) {
+              if (plan.status !== 'PASS') throw new Error(`EA5E2_PHASE6_CENTRAL_PLAN_NOT_PASS:${plan.status}`);
+              if ((plan.authority_errors || []).length) throw new Error('EA5E2_PHASE6_CENTRAL_PLAN_AUTHORITY_ERROR');
+              if ((plan.resolver_errors || []).length) throw new Error('EA5E2_PHASE6_CENTRAL_PLAN_RESOLVER_ERROR');
+              if ((plan.unknown_changed_paths || []).length) throw new Error(`EA5E2_PHASE6_UNKNOWN_CHANGED_PATH:${plan.unknown_changed_paths.join(',')}`);
+              const cp=require('node:child_process');
+              const audit=cp.spawnSync(process.execPath,['scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs','enforce'],{encoding:'utf8'});
+              if(audit.status!==0) throw new Error('EA5E2_PHASE6_OWNER_AUDIT_REQUIRED:'+String(audit.stderr||audit.stdout||''));
+              proof={
+                schema_version:'geox_mcft_cap09_ea5e2_planner_route_v1',
+                status:'PASS', subject_sha:process.env.SUBJECT_SHA,
+                planner_status:plan.status, generation:plan.generation, stage:plan.stage,
+                applicability:'PHASE6_RETIRED', reason_code:'GITHUB_PRODUCTION_EXECUTION_RETIRED',
+                action:'PHASE6_RETIRED', changed_dependencies:[],
+                carry_forward_evidence_id:null, immutable_evidence_binding:null,
+                dependency_digest:null, historical_dependency_digest:null,
+                dependency_digest_match:false, unknown_changed_paths:[],
+                runtime_mutation:false, production_workflow_activation:false,
+                formal_database_mutation:false, provider_request:false,
+                graduation_effect:false, mcft_cap09_completed:false,
+              };
+            } else {
+            if (plan.status !== 'PASS') throw new Error(`EA5E2_CENTRAL_PLAN_NOT_PASS:${plan.status}`);
+            if ((plan.authority_errors || []).length) throw new Error('EA5E2_CENTRAL_PLAN_AUTHORITY_ERROR');
+            if ((plan.resolver_errors || []).length) throw new Error('EA5E2_CENTRAL_PLAN_RESOLVER_ERROR');
+            if ((plan.unknown_changed_paths || []).length) throw new Error(`EA5E2_UNKNOWN_CHANGED_PATH:${plan.unknown_changed_paths.join(',')}`);
+            const row = (plan.decisions || []).find(x => x.check_id === 'EA5E2_RUNTIME_DEPENDENCY_GRAPH');
+            if (!row) throw new Error('EA5E2_APPLICABILITY_DECISION_REQUIRED');
+            let action;
+            if (row.status === 'CARRY_FORWARD') {
+              if (row.dependency_digest_match !== true) throw new Error('EA5E2_CARRY_FORWARD_DEPENDENCY_DIGEST_MUST_MATCH');
+              if (!/^sha256:[0-9a-f]{64}$/.test(row.dependency_digest || '')) throw new Error('EA5E2_CARRY_FORWARD_DEPENDENCY_DIGEST_REQUIRED');
+              if (!/^[0-9a-f]{64}$/.test(row.immutable_evidence_binding || '')) throw new Error('EA5E2_CARRY_FORWARD_IMMUTABLE_BINDING_REQUIRED');
+              if (!row.carry_forward_evidence_id || !row.historical_evidence_ref) throw new Error('EA5E2_CARRY_FORWARD_EVIDENCE_REF_REQUIRED');
+              const registry = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json','utf8'));
+              const entry = (registry.entries || []).find(x => x.evidence_id === row.carry_forward_evidence_id);
+              const anchor = (registry.durable_anchors?.entries || []).find(x => x.evidence_id === row.carry_forward_evidence_id);
+              if (!entry || !anchor || entry.check_id !== 'EA5E2_RUNTIME_DEPENDENCY_GRAPH' || entry.immutable_binding_sha256 !== row.immutable_evidence_binding || anchor.run_id !== entry.run_id || (anchor.artifact_id ?? null) !== (entry.artifact_id ?? null) || (anchor.artifact_digest ?? null) !== (entry.artifact_digest ?? null)) {
+                throw new Error('EA5E2_CARRY_FORWARD_DURABLE_EVIDENCE_BINDING_REQUIRED');
+              }
+              action = 'CARRY_FORWARD';
+            } else if (row.status === 'REQUALIFY' || row.status === 'REQUIRED') {
+              action = 'FULL';
+            } else if (row.status === 'NOT_APPLICABLE') {
+              action = 'NOT_APPLICABLE';
+            } else if (row.status === 'FORBIDDEN' || row.status === 'UNKNOWN') {
+              throw new Error(`EA5E2_APPLICABILITY_FAIL_CLOSED:${row.status}:${row.reason_code}`);
+            } else {
+              throw new Error(`EA5E2_UNEXPECTED_APPLICABILITY:${row.status}`);
+            }
+            proof = {
+              schema_version:'geox_mcft_cap09_ea5e2_planner_route_v1',
+              status:'PASS', subject_sha:process.env.SUBJECT_SHA,
+              planner_status:plan.status, generation:plan.generation, stage:plan.stage,
+              applicability:row.status, reason_code:row.reason_code,
+              action, changed_dependencies:row.changed_dependencies || [],
+              carry_forward_evidence_id:row.carry_forward_evidence_id || null,
+              immutable_evidence_binding:row.immutable_evidence_binding || null,
+              dependency_digest:row.dependency_digest || null,
+              historical_dependency_digest:row.historical_dependency_digest || null,
+              dependency_digest_match:row.dependency_digest_match === true,
+              unknown_changed_paths:plan.unknown_changed_paths || [],
+              runtime_mutation:false, production_workflow_activation:false,
+              formal_database_mutation:false, provider_request:false,
+              graduation_effect:false, mcft_cap09_completed:false,
+            };
+            }
+          }
+          fs.writeFileSync(out, JSON.stringify(proof,null,2)+'\n');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `action=${proof.action}\n`);
+          process.stdout.write(JSON.stringify(proof,null,2)+'\n');
+
+      - name: Run full EA5E2 runtime dependency qualification
+        if: steps.route.outputs.action == 'FULL'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs
 
-      - name: Upload metadata-only rolling dependency graph proof
+      - name: Validate full EA5E2 qualification proof
+        if: steps.route.outputs.action == 'FULL'
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+          const proof = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json','utf8'));
+          if (proof.status !== 'PASS') throw new Error(`EA5E2_FULL_QUALIFICATION_NOT_PASS:${proof.status}`);
+          if (!(proof.runtime_dependency_graph_paths || []).includes('.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml')) throw new Error('EA5E2_FULL_GRAPH_MUST_OWN_EXECUTION_WORKFLOW');
+
+      - name: Record carry-forward route
+        if: steps.route.outputs.action == 'CARRY_FORWARD'
+        run: echo 'EA5E2_CARRY_FORWARD_BY_DURABLE_EVIDENCE_AND_MATCHING_DEPENDENCY_DIGEST'
+
+      - name: Record not-applicable route
+        if: steps.route.outputs.action == 'NOT_APPLICABLE'
+        run: echo 'EA5E2_NOT_APPLICABLE_BY_CENTRAL_PLANNER'
+
+      - name: Record Phase6 retired production-graph route
+        if: steps.route.outputs.action == 'PHASE6_RETIRED'
+        run: echo 'EA5E2_PHASE6_GITHUB_PRODUCTION_EXECUTION_RETIRED_BY_AUTHORITY'
+
+      - name: Upload EA5E2 planner route proof
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-ea5e2-rolling-runtime-dependency-graph-v4-${{ github.sha }}
-          path: acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json
+          name: mcft-cap09-ea5e2-planner-route-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_EA5E2_PLANNER_ROUTE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_EA5E2_APPLICABILITY_PLAN_V1.json
           if-no-files-found: warn
+          retention-days: 90
+
+      - name: Upload full EA5E2 dependency graph proof
+        if: always() && steps.route.outputs.action == 'FULL'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-ea5e2-rolling-runtime-dependency-graph-v4-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json
+          if-no-files-found: error
           retention-days: 7

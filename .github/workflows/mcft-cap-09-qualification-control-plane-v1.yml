@@ -1,0 +1,550 @@
+name: mcft-cap-09-qualification-control-plane-v1
+
+on:
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json'
+      - 'scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs'
+      - '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'
+      - '.github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml'
+      - '.github/workflows/mcft-cap-09-phase1-typed-cap08-frozen-replay-equivalence-v1.yml'
+      - '.github/workflows/mcft-cap-08-s4-late-evidence-append-forward.yml'
+      - 'apps/server/src/runtime/twin_runtime/cap08_replay_host_composition_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/cap08_s4_append_forward_service_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/cap08_s4_t17_corrected_predecessor_resolver_v1.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_08_S4_SUCCESSOR_REQUALIFICATION_BOUNDARY_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE1_TYPED_CAP08_FROZEN_REPLAY_EQUIVALENCE_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE1_TYPED_RUNTIME_COMPOSITION_V1.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_PHASE1_TYPED_CAP08_REPLAY_EQUIVALENCE_LANE_V1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap09_phase1_typed_replay_host_product_chain_v1.cjs'
+      - '.github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml'
+      - '.github/workflows/mcft-cap-09-amendment19-persistent-24t-qualification.yml'
+      - 'apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts'
+      - 'apps/server/src/external_evidence/provider/https_external_evidence_transport_v1.ts'
+      - 'apps/server/src/external_evidence/provider/kbs_variate25_soil_provider_v1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs'
+      - '.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_SUPPLY_CADENCE_PROFILES_V1.ts'
+      - 'apps/server/src/persistence/external_evidence/postgres_evidence_runtime_governed_ingress_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_supply_cadence_profile_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_cycle_service_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_production_evidence_work_items_v1.ts'
+      - 'apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts'
+      - 'apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.ts'
+      - 'apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts'
+      - 'apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py'
+      - 'apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_CYCLE_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1.ts'
+      - 'apps/server/src/external_evidence/s3_compatible_private_evidence_object_client_v1.ts'
+      - 'apps/server/src/external_evidence/s3_compatible_private_candidate_manifest_store_v1.ts'
+      - 'apps/server/src/external_evidence/s3_compatible_private_retained_raw_reader_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_PRIVATE_CANDIDATE_IO_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1.ts'
+      - '.github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml'
+      - '.github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1.ts'
+      - 'apps/server/src/infra/migrations.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_MIGRATION_ORDER_V1.ts'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_twin_runtime_successor_viability_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1.ts'
+      - '.github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml'
+      - 'apps/server/scripts/write_dist_entries.cjs'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts'
+      - 'apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.ts'
+      - 'apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts'
+      - 'apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1.ts'
+      - 'apps/server/src/external_evidence/qualification/mcft_cap09_phase5_controlled_evidence_work_items_v1.ts'
+      - 'apps/server/src/external_evidence/qualification/mcft_cap09_phase5_evidence_runtime_qualification_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_twin_runtime_qualification_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_CONTROLLED_PROVIDER_WORK_ITEMS_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_EVIDENCE_QUALIFICATION_ENTRYPOINT_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_QUALIFICATION_CLOCK_V1.ts'
+      - 'docker-compose.mcft-cap09-phase5-qualification.yml'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_QUALIFICATION_COMPOSE_V1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_mcft_cap09_twin_canonical_fact_writer_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts'
+      - 'apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.ts'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase5_twin_fact_writer_acl.sql'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_CANONICAL_FACT_WRITER_V1.ts'
+      - '.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml'
+      - 'docker/mcft-cap09-runtime.Dockerfile'
+      - 'apps/server/src/external_evidence/qualification/mcft_cap09_phase5_capture_a0_fixture_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_verify_24t_v1.ts'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  FROZEN_SUCCESSOR_SHA: '3bbf096ee5cb73e8e0e0251dc400733d6cab501f'
+  CP5_CLOSURE_SHA: '14653ba622bb12261a1ea79f3ea7e42be0b49f92'
+  PHASE1_CLOSURE_SHA: '8943c752a354cb916cc7f144681203aa9a19f70b'
+  PHASE2_CLOSURE_SHA: 'c3346768a44b16b127378cb690ada1d8cfec1049'
+  PHASE3_CLOSURE_SHA: '0e874b254c695b32fd94c7dc7034fd71b8aa3bc3'
+  PHASE4_CLOSURE_SHA: '16ff7160473c0a25dc059db6b2b6b7ba07f54dd1'
+  PHASE5_CLOSURE_SHA: '75d4961279bd64dc1c9dd7d68aac189c72c98846'
+  PHASE6_CLOSURE_SHA: '48ceafe7c6e7d3d57a1dc17411fb4bf673486333'
+  PHASE7_PREPARATION_SHA: 'c4249e5b7bd67d35d34813aceea6760f9d210ed0'
+  PHASE7_EVIDENCE_FORCING_SHA: 'd6c015b49d09960591185ff9c930e64dac7e2806'
+  PHASE7_PRIVATE_CANDIDATE_IO_SHA: '46c9c7b6b59c113848fc69daff88fb183fccc954'
+
+concurrency:
+  group: mcft-cap09-qualification-control-plane-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  applicability-and-blocker-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact control-plane subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require governed successor predecessor and zero production bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base='${{ github.event.pull_request.base.sha }}'
+            if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ] && [ "$base" != "$PHASE2_CLOSURE_SHA" ] && [ "$base" != "$PHASE3_CLOSURE_SHA" ] && [ "$base" != "$PHASE4_CLOSURE_SHA" ] && [ "$base" != "$PHASE5_CLOSURE_SHA" ] && [ "$base" != "$PHASE6_CLOSURE_SHA" ] && [ "$base" != "$PHASE7_PREPARATION_SHA" ] && [ "$base" != "$PHASE7_EVIDENCE_FORCING_SHA" ] && [ "$base" != "$PHASE7_PRIVATE_CANDIDATE_IO_SHA" ]; then
+              echo "MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:${base}" >&2
+              exit 1
+            fi
+          fi
+          test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
+          test -z "${FORMAL_RAW_S3_ACCESS_KEY_ID:-}"
+          test -z "${R2_ACCESS_KEY_ID:-}"
+
+      - name: Prove central applicability semantics
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+
+      - name: Prove generation, durable-anchor, and dependency-digest semantics
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const cp = require('node:child_process');
+          const {
+            AUTHORITY_PATH,
+            REGISTRY_PATH,
+            DEPENDENCY_DIGEST_STRATEGY,
+            planApplicability,
+          } = require(path.join(process.cwd(),'scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'));
+          const authority = JSON.parse(fs.readFileSync(AUTHORITY_PATH, 'utf8'));
+          const registry = JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf8'));
+          const head = cp.execFileSync('git', ['rev-parse','HEAD'], {encoding:'utf8'}).trim();
+          const changedPaths = cp.execFileSync('git', ['diff','--name-only', `${authority.frozen_successor_subject_sha}...${head}`], {encoding:'utf8'})
+            .split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+          const failures = [];
+          const assert = (condition, code, detail = null) => {
+            if (!condition) failures.push({code, detail});
+          };
+          const expectedPredecessors = [process.env.FROZEN_SUCCESSOR_SHA, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA, process.env.PHASE2_CLOSURE_SHA, process.env.PHASE3_CLOSURE_SHA, process.env.PHASE4_CLOSURE_SHA, process.env.PHASE5_CLOSURE_SHA, process.env.PHASE6_CLOSURE_SHA, process.env.PHASE7_PREPARATION_SHA, process.env.PHASE7_EVIDENCE_FORCING_SHA, process.env.PHASE7_PRIVATE_CANDIDATE_IO_SHA];
+          const governedPredecessors = authority.governed_successor_predecessor_shas || [];
+          assert(governedPredecessors.length === expectedPredecessors.length, 'GOVERNED_PREDECESSOR_CARDINALITY_MISMATCH', governedPredecessors);
+          assert(new Set(governedPredecessors).size === governedPredecessors.length, 'GOVERNED_PREDECESSOR_DUPLICATE', governedPredecessors);
+          assert(governedPredecessors.every(x => /^[0-9a-f]{40}$/.test(x)), 'GOVERNED_PREDECESSOR_SHA_INVALID', governedPredecessors);
+          assert(expectedPredecessors.every(x => governedPredecessors.includes(x)), 'GOVERNED_PREDECESSOR_SET_MISMATCH', {expectedPredecessors, governedPredecessors});
+          const current = planApplicability({
+            authority, registry, changedPaths,
+            stage:'SUCCESSOR_SUBJECT_PRE_MERGE', generation:'v13',
+            baseSha:authority.frozen_successor_subject_sha, headSha:head,
+          });
+          const g = current.generation_context || {};
+          assert(current.status === 'PASS', 'CP2_CURRENT_PLAN_FAIL', {blockers:current.blockers, authority_errors:current.authority_errors, resolver_errors:current.resolver_errors});
+          assert(g.requested_generation === 'v13' && g.authoritative_generation === 'v13', 'V13_GENERATION_NOT_AUTHORIZED', g);
+          assert(g.authority_generation === 'geox_mcft_cap09_t4r1_actual_formal_store_authority_v3', 'AUTHORITY_GENERATION_MISMATCH', g.authority_generation);
+          assert(g.store_generation?.qualification_database === 'geox_mcft_cap09_s6_accel24t_am19_v13', 'QUALIFICATION_STORE_GENERATION_MISMATCH', g.store_generation);
+          assert(g.store_generation?.blocked_database === 'geox_mcft_cap09_s6_accel24t_am19_blocked_v13', 'BLOCKED_STORE_GENERATION_MISMATCH', g.store_generation);
+          assert(g.store_generation?.formal_database === 'geox_mcft_cap09_s6_formal_t4r1_24h_v5', 'FORMAL_STORE_GENERATION_MISMATCH', g.store_generation);
+          assert(registry.dependency_digest_strategy === DEPENDENCY_DIGEST_STRATEGY, 'DEPENDENCY_DIGEST_STRATEGY_MISMATCH', registry.dependency_digest_strategy);
+          assert(registry.durable_anchors?.entries?.length === registry.entries.length, 'DURABLE_ANCHOR_CARDINALITY_MISMATCH', {anchors:registry.durable_anchors?.entries?.length, entries:registry.entries.length});
+          const carryForwardIds = ['EA5C1_DURABLE_RAW_RESTRICTED_INGRESS'];
+          const v13RequalificationIds = ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY'];
+          const requalificationIds = [...v13RequalificationIds,'EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T','PHASE1_TYPED_RUNTIME_COMPOSITION','PHASE2_EVIDENCE_PROVIDER_MODULES','PHASE3_EVIDENCE_RUNTIME_FOUNDATION','PHASE4_TWIN_RUNTIME_FOUNDATION','PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS','PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION'];
+          const v13ScopedIds = [...carryForwardIds, ...requalificationIds];
+          for (const id of carryForwardIds) {
+            const row = current.decisions.find(x => x.check_id === id);
+            assert(Boolean(row) && row.status === 'CARRY_FORWARD' && row.dependency_digest_match === true, 'FROZEN_DIGEST_CARRY_FORWARD_REQUIRED', row || {check_id:id, missing:true});
+            assert(/^sha256:[0-9a-f]{64}$/.test(row?.dependency_digest || ''), 'DEPENDENCY_DIGEST_REQUIRED', row || {check_id:id, missing:true});
+          }
+          const phase7Adapter = 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts';
+          for (const id of v13RequalificationIds) {
+            const row = current.decisions.find(x => x.check_id === id);
+            assert(Boolean(row) && row.status === 'REQUALIFY' && row.dependency_digest_match === false, 'V13_EXPANDED_DEPENDENCY_MUST_REQUALIFY', row || {check_id:id, missing:true});
+            assert(['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(row?.reason_code), 'V13_REQUALIFICATION_REASON_INVALID', row);
+            assert(Array.isArray(row?.changed_dependencies) && row.changed_dependencies.includes(phase7Adapter), 'V13_PHASE7_ADAPTER_DEPENDENCY_REQUIRED', row);
+            assert(/^sha256:[0-9a-f]{64}$/.test(row?.dependency_digest || ''), 'V13_REQUALIFICATION_DEPENDENCY_DIGEST_REQUIRED', row || {check_id:id, missing:true});
+          }
+          const ea5e2 = current.decisions.find(x => x.check_id === 'EA5E2_RUNTIME_DEPENDENCY_GRAPH');
+          assert(Boolean(ea5e2), 'EA5E2_REQUALIFICATION_DECISION_REQUIRED', {check_id:'EA5E2_RUNTIME_DEPENDENCY_GRAPH', missing:true});
+          assert(ea5e2?.status === 'REQUALIFY' && ea5e2?.dependency_digest_match === false, 'EA5E2_CHANGED_DEPENDENCY_MUST_REQUALIFY', ea5e2);
+          assert(['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED'].includes(ea5e2?.reason_code), 'EA5E2_REQUALIFICATION_REASON_INVALID', ea5e2);
+          const persistent24 = current.decisions.find(x => x.check_id === 'LEGACY_AM19_PERSISTENT_24T');
+          assert(Boolean(persistent24), 'LEGACY_AM19_PERSISTENT_24T_REQUALIFICATION_DECISION_REQUIRED', {check_id:'LEGACY_AM19_PERSISTENT_24T', missing:true});
+          assert(persistent24?.status === 'REQUALIFY' && persistent24?.dependency_digest_match === false, 'LEGACY_AM19_PERSISTENT_24T_MUST_REQUALIFY', persistent24);
+          assert(['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED'].includes(persistent24?.reason_code), 'LEGACY_AM19_PERSISTENT_24T_REQUALIFICATION_REASON_INVALID', persistent24);
+          const phase1 = current.decisions.find(x => x.check_id === 'PHASE1_TYPED_RUNTIME_COMPOSITION');
+          assert(Boolean(phase1), 'PHASE1_TYPED_RUNTIME_COMPOSITION_DECISION_REQUIRED', {check_id:'PHASE1_TYPED_RUNTIME_COMPOSITION', missing:true});
+          assert(phase1?.status === 'REQUALIFY' && phase1?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED', 'PHASE1_TYPED_RUNTIME_COMPOSITION_MUST_REQUALIFY', phase1);
+          assert(phase1?.execution_workflow === '.github/workflows/mcft-cap-09-phase1-typed-cap08-frozen-replay-equivalence-v1.yml', 'PHASE1_TYPED_RUNTIME_COMPOSITION_WORKFLOW_MISMATCH', phase1);
+          const phase2 = current.decisions.find(x => x.check_id === 'PHASE2_EVIDENCE_PROVIDER_MODULES');
+          assert(Boolean(phase2), 'PHASE2_EVIDENCE_PROVIDER_MODULES_DECISION_REQUIRED', {check_id:'PHASE2_EVIDENCE_PROVIDER_MODULES', missing:true});
+          assert(phase2?.status === 'REQUALIFY' && phase2?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED', 'PHASE2_EVIDENCE_PROVIDER_MODULES_MUST_REQUALIFY', phase2);
+          assert(phase2?.execution_workflow === '.github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml', 'PHASE2_EVIDENCE_PROVIDER_MODULES_WORKFLOW_MISMATCH', phase2);
+          const phase3 = current.decisions.find(x => x.check_id === 'PHASE3_EVIDENCE_RUNTIME_FOUNDATION');
+          assert(Boolean(phase3), 'PHASE3_EVIDENCE_RUNTIME_FOUNDATION_DECISION_REQUIRED', {check_id:'PHASE3_EVIDENCE_RUNTIME_FOUNDATION', missing:true});
+          assert(phase3?.status === 'REQUALIFY' && phase3?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED', 'PHASE3_EVIDENCE_RUNTIME_FOUNDATION_MUST_REQUALIFY', phase3);
+          assert(phase3?.execution_workflow === '.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml', 'PHASE3_EVIDENCE_RUNTIME_FOUNDATION_WORKFLOW_MISMATCH', phase3);
+          const phase4 = current.decisions.find(x => x.check_id === 'PHASE4_TWIN_RUNTIME_FOUNDATION');
+          assert(Boolean(phase4), 'PHASE4_TWIN_RUNTIME_FOUNDATION_DECISION_REQUIRED', {check_id:'PHASE4_TWIN_RUNTIME_FOUNDATION', missing:true});
+          assert(phase4?.status === 'REQUALIFY' && phase4?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED', 'PHASE4_TWIN_RUNTIME_FOUNDATION_MUST_REQUALIFY', phase4);
+          assert(phase4?.execution_workflow === '.github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml', 'PHASE4_TWIN_RUNTIME_FOUNDATION_WORKFLOW_MISMATCH', phase4);
+          const phase5 = current.decisions.find(x => x.check_id === 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS');
+          assert(Boolean(phase5), 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_DECISION_REQUIRED', {check_id:'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS', missing:true});
+          assert(phase5?.status === 'REQUALIFY' && phase5?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED', 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_MUST_REQUALIFY', phase5);
+          assert(phase5?.execution_workflow === '.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml', 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_WORKFLOW_MISMATCH', phase5);
+          const phase7Composition = current.decisions.find(x => x.check_id === 'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION');
+          assert(Boolean(phase7Composition), 'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION_DECISION_REQUIRED', {check_id:'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION', missing:true});
+          assert(phase7Composition?.status === 'REQUALIFY', 'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION_MUST_REQUALIFY', phase7Composition);
+          assert(phase7Composition?.execution_workflow === '.github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml', 'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION_WORKFLOW_MISMATCH', phase7Composition);
+          const future = planApplicability({
+            authority, registry, changedPaths:[REGISTRY_PATH],
+            stage:'SUCCESSOR_SUBJECT_PRE_MERGE', generation:'v14',
+            baseSha:authority.frozen_successor_subject_sha, headSha:head,
+          });
+          assert(future.status === 'PASS', 'V14_NA_PLAN_MUST_BE_STRUCTURALLY_PASS', {blockers:future.blockers, authority_errors:future.authority_errors, resolver_errors:future.resolver_errors});
+          for (const id of v13ScopedIds) {
+            const row = future.decisions.find(x => x.check_id === id);
+            assert(Boolean(row) && row.status === 'NOT_APPLICABLE' && row.reason_code === 'GENERATION_NOT_APPLICABLE', 'V14_FROZEN_EVIDENCE_MUST_NOT_INHERIT_V13', row || {check_id:id, missing:true});
+          }
+          const proof = {
+            status:failures.length === 0 ? 'PASS' : 'FAIL',
+            acceptance_id:'MCFT_CAP09_CP2_GENERATION_DEPENDENCY_DIGEST_V1',
+            head_sha:head,
+            generation_context:g,
+            governed_successor_predecessor_shas:governedPredecessors,
+            durable_anchor_count:registry.durable_anchors?.entries?.length ?? null,
+            dependency_digest_strategy:DEPENDENCY_DIGEST_STRATEGY,
+            frozen_carry_forward_checks:carryForwardIds,
+            required_requalification_checks:requalificationIds,
+            current_decisions:current.decisions,
+            current_resolver_summaries:current.resolver_summaries,
+            current_authority_errors:current.authority_errors,
+            current_resolver_errors:current.resolver_errors,
+            future_decisions:future.decisions,
+            failures,
+            v14_frozen_checks_not_applicable:v13ScopedIds.every(id => {
+              const row = future.decisions.find(x => x.check_id === id);
+              return Boolean(row) && row.status === 'NOT_APPLICABLE' && row.reason_code === 'GENERATION_NOT_APPLICABLE';
+            }),
+            runtime_mutation:false, production_workflow_activation:false,
+            formal_database_mutation:false, provider_request:false,
+            graduation_effect:false, mcft_cap09_completed:false,
+          };
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_CP2_GENERATION_DEPENDENCY_DIGEST_V1_RESULT.json', JSON.stringify(proof,null,2)+'\n');
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_CP2_CURRENT_PLAN_DEBUG.json', JSON.stringify(current,null,2)+'\n');
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_CP2_FUTURE_PLAN_DEBUG.json', JSON.stringify(future,null,2)+'\n');
+          process.stdout.write(JSON.stringify(proof,null,2)+'\n');
+          if (failures.length) process.exitCode = 1;
+
+      - name: Resolve immutable qualification evidence references
+        if: github.event_name == 'pull_request'
+        shell: node {0}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          const fs = require('node:fs');
+          const registryPath = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json';
+          const outPath = 'acceptance-output/MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json';
+          const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+          const anchors = new Map((registry.durable_anchors?.entries || []).map(x => [x.evidence_id, x]));
+          const requalification = registry.requalification_evidence;
+          if (!requalification || requalification.binding_strategy !== 'MCFT_CAP09_REQUALIFICATION_RUN_BINDING_V1') throw new Error('REQUALIFICATION_EVIDENCE_REGISTRY_MISSING_OR_UNSUPPORTED');
+          if (!Array.isArray(requalification.entries) || requalification.entries.length === 0) throw new Error('REQUALIFICATION_EVIDENCE_REQUIRED');
+          const requalificationAnchors = new Map((requalification.durable_anchors?.entries || []).map(x => [x.evidence_id, x]));
+          const token = process.env.GITHUB_TOKEN;
+          const repo = process.env.GITHUB_REPOSITORY;
+          if (!token || !repo) throw new Error('GITHUB_ACTIONS_READ_CONTEXT_REQUIRED');
+          const governedRequalificationBaseList = requalification.durable_anchors?.rules?.governed_successor_predecessors;
+          if (!Array.isArray(governedRequalificationBaseList) || governedRequalificationBaseList.length === 0) {
+            throw new Error('REQUALIFICATION_GOVERNED_PREDECESSOR_SET_REQUIRED');
+          }
+          const governedRequalificationBases = new Set(governedRequalificationBaseList);
+          if (governedRequalificationBases.size !== governedRequalificationBaseList.length) {
+            throw new Error('REQUALIFICATION_GOVERNED_PREDECESSOR_SET_DUPLICATE');
+          }
+          if (![...governedRequalificationBases].every(sha => /^[0-9a-f]{40}$/.test(String(sha || '')))) {
+            throw new Error('REQUALIFICATION_GOVERNED_PREDECESSOR_SHA_INVALID');
+          }
+          if (!governedRequalificationBases.has(registry.frozen_subject_sha)) {
+            throw new Error('REQUALIFICATION_FROZEN_SUBJECT_PREDECESSOR_REQUIRED');
+          }
+
+          async function apiMaybe(endpoint) {
+            const response = await fetch(`https://api.github.com/repos/${repo}${endpoint}`, {
+              headers: { Authorization:`Bearer ${token}`, Accept:'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' },
+            });
+            if (response.status === 404 || response.status === 410) return null;
+            if (!response.ok) throw new Error(`GITHUB_REF_QUERY_FAILED:${endpoint}:${response.status}`);
+            return response.json();
+          }
+
+          async function main() {
+            const results = [];
+            for (const entry of registry.entries || []) {
+              const anchor = anchors.get(entry.evidence_id);
+              if (!anchor || anchor.run_id !== entry.run_id || (anchor.artifact_id ?? null) !== (entry.artifact_id ?? null) || (anchor.artifact_digest ?? null) !== (entry.artifact_digest ?? null)) {
+                throw new Error(`DURABLE_ANCHOR_MISMATCH:${entry.evidence_id}`);
+              }
+              const run = await apiMaybe(`/actions/runs/${entry.run_id}`);
+              if (run) {
+                if (run.conclusion !== 'success') throw new Error(`EVIDENCE_RUN_NOT_SUCCESS:${entry.evidence_id}:${run.conclusion}`);
+                if (run.head_sha !== entry.subject_sha) throw new Error(`EVIDENCE_RUN_SUBJECT_MISMATCH:${entry.evidence_id}:${run.head_sha}`);
+                if (run.name !== entry.workflow_name) throw new Error(`EVIDENCE_RUN_WORKFLOW_MISMATCH:${entry.evidence_id}:${run.name}`);
+              }
+              let artifactLiveResolved = false;
+              let artifactExpired = false;
+              if (entry.evidence_class === 'IMMUTABLE_WORKFLOW_ARTIFACT') {
+                const artifact = await apiMaybe(`/actions/artifacts/${entry.artifact_id}`);
+                if (artifact) {
+                  artifactExpired = artifact.expired === true;
+                  if (artifact.digest !== entry.artifact_digest) throw new Error(`EVIDENCE_ARTIFACT_DIGEST_MISMATCH:${entry.evidence_id}:${artifact.digest}`);
+                  if (artifact.workflow_run?.id !== entry.run_id) throw new Error(`EVIDENCE_ARTIFACT_RUN_MISMATCH:${entry.evidence_id}:${artifact.workflow_run?.id}`);
+                  artifactLiveResolved = !artifactExpired;
+                }
+              } else if (entry.evidence_class === 'IMMUTABLE_WORKFLOW_RUN') {
+                if (entry.artifact_id !== null || entry.artifact_digest !== null) throw new Error(`RUN_ONLY_EVIDENCE_MUST_NOT_CLAIM_ARTIFACT:${entry.evidence_id}`);
+              } else {
+                throw new Error(`UNKNOWN_EVIDENCE_CLASS:${entry.evidence_id}:${entry.evidence_class}`);
+              }
+              results.push({
+                evidence_id:entry.evidence_id, check_id:entry.check_id,
+                durable_anchor_resolved:true, run_id:entry.run_id,
+                live_run_resolved:Boolean(run), artifact_id:entry.artifact_id,
+                artifact_live_resolved:artifactLiveResolved,
+                artifact_expired_or_unavailable:entry.artifact_id !== null && !artifactLiveResolved,
+                artifact_expired:artifactExpired, artifact_digest:entry.artifact_digest,
+              });
+            }
+
+            const requalificationResults = [];
+            for (const entry of requalification.entries) {
+              const anchor = requalificationAnchors.get(entry.evidence_id);
+              const snapshot = anchor?.run_snapshot || null;
+              if (!anchor || anchor.run_id !== entry.run_id || !snapshot) throw new Error(`REQUALIFICATION_DURABLE_ANCHOR_MISMATCH:${entry.evidence_id}`);
+              if (entry.evidence_class !== 'IMMUTABLE_WORKFLOW_RUN' || entry.artifact_id !== null || entry.artifact_digest !== null) throw new Error(`REQUALIFICATION_RUN_ONLY_EVIDENCE_REQUIRED:${entry.evidence_id}`);
+              const run = await apiMaybe(`/actions/runs/${entry.run_id}`);
+              if (!run) throw new Error(`REQUALIFICATION_RUN_UNAVAILABLE:${entry.evidence_id}`);
+              if (run.conclusion !== 'success' || entry.run_conclusion !== 'success') throw new Error(`REQUALIFICATION_RUN_NOT_SUCCESS:${entry.evidence_id}:${run.conclusion}`);
+              if (run.head_sha !== entry.subject_sha || snapshot.head_sha !== entry.subject_sha) throw new Error(`REQUALIFICATION_RUN_SUBJECT_MISMATCH:${entry.evidence_id}:${run.head_sha}`);
+              if (run.name !== entry.workflow_name || snapshot.workflow_name !== entry.workflow_name) throw new Error(`REQUALIFICATION_RUN_WORKFLOW_MISMATCH:${entry.evidence_id}:${run.name}`);
+              if (run.path !== entry.workflow_path || snapshot.workflow_path !== entry.workflow_path) throw new Error(`REQUALIFICATION_RUN_PATH_MISMATCH:${entry.evidence_id}:${run.path}`);
+              if (run.event !== 'pull_request' || snapshot.event !== 'pull_request') throw new Error(`REQUALIFICATION_RUN_EVENT_MISMATCH:${entry.evidence_id}:${run.event}`);
+              const runBaseSha = run.pull_requests?.find(pr => pr?.base?.sha)?.base?.sha ?? null;
+              if (snapshot.base_sha !== runBaseSha || !governedRequalificationBases.has(runBaseSha)) throw new Error(`REQUALIFICATION_RUN_BASE_MISMATCH:${entry.evidence_id}:${runBaseSha}`);
+              requalificationResults.push({
+                evidence_id:entry.evidence_id, check_id:entry.check_id, run_id:entry.run_id,
+                live_run_resolved:true, run_conclusion:run.conclusion, head_sha:run.head_sha,
+                base_sha:runBaseSha, workflow_name:run.name, workflow_path:run.path, event:run.event,
+                durable_anchor_resolved:true,
+              });
+            }
+
+            const proof = {
+              status:'PASS', acceptance_id:'MCFT_CAP09_IMMUTABLE_EVIDENCE_REFS_V1',
+              frozen_subject_sha:registry.frozen_subject_sha, evidence_count:results.length,
+              requalification_evidence_count:requalificationResults.length,
+              all_durable_anchor_refs_resolvable:results.every(x => x.durable_anchor_resolved),
+              all_live_refs_match_when_present:true,
+              all_requalification_live_refs_match:requalificationResults.length === requalification.entries.length,
+              live_source_expiry_tolerated_only_with_durable_anchor:true,
+              runtime_mutation:false, production_workflow_activation:false,
+              formal_database_mutation:false, provider_request:false,
+              graduation_effect:false, mcft_cap09_completed:false, results,
+              requalification_results:requalificationResults,
+            };
+            fs.mkdirSync(require('node:path').dirname(outPath),{recursive:true});
+            fs.writeFileSync(outPath,JSON.stringify(proof,null,2)+'\n');
+            process.stdout.write(JSON.stringify(proof,null,2)+'\n');
+          }
+          main().catch(error => {
+            fs.mkdirSync(require('node:path').dirname(outPath),{recursive:true});
+            fs.writeFileSync(outPath,JSON.stringify({status:'FAIL',error:error instanceof Error?error.message:String(error)},null,2)+'\n');
+            console.error(error); process.exitCode=1;
+          });
+
+      - name: Generate exact PR applicability plan
+        if: github.event_name == 'pull_request'
+        run: >-
+          node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+          --base '${{ github.event.pull_request.base.sha }}'
+          --head '${{ github.event.pull_request.head.sha }}'
+          --generation v13
+          --stage SUCCESSOR_SUBJECT_PRE_MERGE
+          --out acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json
+
+      - name: Enumerate all blockers without fail-fast
+        if: github.event_name == 'pull_request'
+        run: >-
+          node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+          --base '${{ github.event.pull_request.base.sha }}'
+          --head '${{ github.event.pull_request.head.sha }}'
+          --generation v13
+          --stage SUCCESSOR_SUBJECT_PRE_MERGE
+          --out acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json
+
+      - name: Validate control-plane machine proof
+        if: github.event_name == 'pull_request'
+        shell: node {0}
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          const fs = require('node:fs');
+          const proof = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json','utf8'));
+          const cp2 = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CP2_GENERATION_DEPENDENCY_DIGEST_V1_RESULT.json','utf8'));
+          const evidence = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json','utf8'));
+          const plan = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json','utf8'));
+          const preflight = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json','utf8'));
+          if (proof.status !== 'PASS' || proof.regex_fallback_used !== false || proof.unknown_changed_path_fails_closed !== true) throw new Error('CONTROL_PLANE_SELFTEST_NOT_PASS');
+          if (cp2.status !== 'PASS' || cp2.v14_frozen_checks_not_applicable !== true) throw new Error('CP2_GENERATION_DIGEST_PROOF_NOT_PASS');
+          if (evidence.status !== 'PASS' || evidence.all_durable_anchor_refs_resolvable !== true || evidence.all_live_refs_match_when_present !== true || evidence.all_requalification_live_refs_match !== true || evidence.requalification_evidence_count < 1) throw new Error('IMMUTABLE_DURABLE_EVIDENCE_NOT_RESOLVED');
+          if (plan.status !== 'PASS' || plan.generation !== 'v13' || plan.unknown_changed_paths.length !== 0 || plan.resolver_errors.length !== 0 || plan.authority_errors.length !== 0) throw new Error('CONTROL_PLANE_PLAN_NOT_PASS');
+          const registry = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json','utf8'));
+          const governedBases = new Set(registry.requalification_evidence?.durable_anchors?.rules?.governed_successor_predecessors || []);
+          if (plan.base_sha !== process.env.PR_BASE_SHA) throw new Error(`CONTROL_PLANE_PLAN_BASE_MUST_EQUAL_PR_BASE:${plan.base_sha}:${process.env.PR_BASE_SHA}`);
+          if (!governedBases.has(plan.base_sha)) throw new Error(`CONTROL_PLANE_PLAN_BASE_NOT_GOVERNED:${plan.base_sha}`);
+          const control = plan.decisions.find(x => x.check_id === 'CONTROL_PLANE_INTEGRITY');
+          if (!control || control.status !== 'REQUALIFY') throw new Error('CONTROL_PLANE_SELF_CHANGE_MUST_REQUALIFY');
+          const phase7Adapter = 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts';
+          const phase7AdapterChanged = plan.changed_paths.includes(phase7Adapter);
+          const v13Checks = [
+            ['V13_AUTONOMOUS_FORCING_FOUNDATION','.github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml'],
+            ['V13_HOLISTIC_SCHEMA','.github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml'],
+            ['V13_NEXT_TICK_VIABILITY','.github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml'],
+          ];
+          for (const [id, workflow] of v13Checks) {
+            const row = plan.decisions.find(x => x.check_id === id);
+            if (!row) throw new Error(`${id}_APPLICABILITY_DECISION_REQUIRED`);
+            if (row.status === 'CARRY_FORWARD') {
+              if (row.dependency_digest_match !== true) throw new Error(`${id}_CARRY_FORWARD_REQUIRES_DIGEST_MATCH`);
+            } else if (row.status === 'REQUALIFY') {
+              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(row.reason_code) || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length === 0) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID:${row.reason_code}`);
+            } else {
+              throw new Error(`${id}_UNEXPECTED_STATUS:${row.status}`);
+            }
+            if (row.execution_workflow !== workflow) throw new Error(`${id}_WORKFLOW_MISMATCH`);
+            if (phase7AdapterChanged && (row.status !== 'REQUALIFY' || !row.changed_dependencies.includes(phase7Adapter))) throw new Error(`${id}_MUST_REQUALIFY_FOR_PHASE7_ADAPTER`);
+          }
+          const ea5c1 = plan.decisions.find(x => x.check_id === 'EA5C1_DURABLE_RAW_RESTRICTED_INGRESS');
+          if (!ea5c1 || ea5c1.status !== 'CARRY_FORWARD' || ea5c1.dependency_digest_match !== true) throw new Error(`FROZEN_EVIDENCE_MUST_CARRY_FORWARD_WITH_DIGEST:EA5C1_DURABLE_RAW_RESTRICTED_INGRESS:${ea5c1?.status}`);
+          for (const id of ['EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T']) {
+            const row = plan.decisions.find(x => x.check_id === id);
+            if (!row) throw new Error(`${id}_APPLICABILITY_DECISION_REQUIRED`);
+            if (row.status === 'CARRY_FORWARD') {
+              if (row.dependency_digest_match !== true) throw new Error(`${id}_CARRY_FORWARD_REQUIRES_DIGEST_MATCH`);
+            } else if (row.status === 'REQUALIFY') {
+              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(row.reason_code)) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID`);
+            } else if (row.status === 'REQUIRED') {
+              if (row.reason_code !== 'APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE' || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length !== 0) throw new Error(`${id}_UNCHANGED_STACK_PREDECESSOR_INVALID`);
+            } else {
+              throw new Error(`${id}_UNEXPECTED_STATUS:${row.status}`);
+            }
+          }
+          const priorStack = [
+            ['PHASE1_TYPED_RUNTIME_COMPOSITION','.github/workflows/mcft-cap-09-phase1-typed-cap08-frozen-replay-equivalence-v1.yml'],
+            ['PHASE2_EVIDENCE_PROVIDER_MODULES','.github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml'],
+            ['PHASE4_TWIN_RUNTIME_FOUNDATION','.github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml'],
+          ];
+          for (const [id, workflow] of priorStack) {
+            const row = plan.decisions.find(x => x.check_id === id);
+            if (!row) throw new Error(`${id}_APPLICABILITY_DECISION_REQUIRED`);
+            if (row.status === 'REQUIRED') {
+              if (row.reason_code !== 'APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE' || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length !== 0) throw new Error(`${id}_UNCHANGED_STACK_PREDECESSOR_INVALID:${row.reason_code}`);
+            } else if (row.status === 'REQUALIFY') {
+              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(row.reason_code) || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length === 0) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID:${row.reason_code}`);
+            } else {
+              throw new Error(`${id}_UNEXPECTED_STATUS:${row.status}`);
+            }
+            if (row.execution_workflow !== workflow) throw new Error(`${id}_WORKFLOW_MISMATCH`);
+          }
+          const phase3 = plan.decisions.find(x => x.check_id === 'PHASE3_EVIDENCE_RUNTIME_FOUNDATION');
+          const phase5 = plan.decisions.find(x => x.check_id === 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS');
+          const phase7 = plan.decisions.find(x => x.check_id === 'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION');
+          for (const [row, id, workflow] of [
+            [phase3,'PHASE3_EVIDENCE_RUNTIME_FOUNDATION','.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml'],
+            [phase5,'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS','.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml'],
+            [phase7,'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION','.github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml'],
+          ]) {
+            if (!row) throw new Error(`${id}_APPLICABILITY_DECISION_REQUIRED`);
+            if (row.status === 'REQUIRED') {
+              if (row.reason_code !== 'APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE' || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length !== 0) throw new Error(`${id}_UNCHANGED_STACK_PREDECESSOR_INVALID:${row.reason_code}`);
+            } else if (row.status === 'REQUALIFY') {
+              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(row.reason_code) || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length === 0) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID:${row.reason_code}`);
+            } else {
+              throw new Error(`${id}_UNEXPECTED_STATUS:${row.status}`);
+            }
+            if (row.execution_workflow !== workflow) throw new Error(`${id}_WORKFLOW_MISMATCH`);
+          }
+          if (phase7AdapterChanged) {
+            for (const [row, id] of [[phase3,'PHASE3_EVIDENCE_RUNTIME_FOUNDATION'],[phase7,'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION']]) {
+              if (!row || row.status !== 'REQUALIFY' || !row.changed_dependencies.includes(phase7Adapter)) throw new Error(`${id}_MUST_REQUALIFY_FOR_PHASE7_ADAPTER`);
+            }
+          }
+          if (preflight.status !== 'PASS' || preflight.generation !== 'v13' || preflight.non_fail_fast !== true || preflight.counts.blocker_count !== 0) throw new Error('ALL_BLOCKERS_PREFLIGHT_NOT_PASS');
+          for (const source of [proof, cp2, evidence, plan, preflight]) {
+            const effects = source.non_effects || source;
+            for (const key of ['runtime_mutation','production_workflow_activation','formal_database_mutation','provider_request','graduation_effect','mcft_cap09_completed']) {
+              if (effects[key] !== false) throw new Error(`CONTROL_PLANE_NON_EFFECT_VIOLATION:${key}`);
+            }
+          }
+
+      - name: Upload applicability and blocker inventory
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-qualification-control-plane-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_CP2_GENERATION_DEPENDENCY_DIGEST_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_CP2_CURRENT_PLAN_DEBUG.json
+            acceptance-output/MCFT_CAP_09_CP2_FUTURE_PLAN_DEBUG.json
+            acceptance-output/MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json
+            acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
