@@ -1,0 +1,122 @@
+name: mcft-cap-09-operational-source-qualification-off-main
+
+on:
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-OPERATIONAL-SOURCE-QUALIFICATION-V1.md'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ENVIROWEATHER-KBS-FIRST-SEEN-OBSERVER-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-MRMS-OPERATIONAL-PRECIPITATION-QUALIFICATION-V1.json'
+      - 'scripts/runtime_acceptance/OBSERVE_MCFT_CAP_09_ENVIROWEATHER_KBS_FIRST_SEEN.mjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_MRMS_OPERATIONAL_PRECIPITATION.py'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_OPERATIONAL_SOURCE_QUALIFICATION_OFF_MAIN_V1.cjs'
+      - '.github/workflows/mcft-cap-09-operational-source-qualification-off-main.yml'
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: mcft-cap09-source-qualification-off-main-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  PYTHON_VERSION: '3.12'
+  EXACT_FROZEN_MAIN: 'cf6bf3e69f2d7f40e7586308f4d846b3350efb1c'
+  SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  static-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact frozen protected-main base and off-main boundary
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_OPERATIONAL_SOURCE_QUALIFICATION_OFF_MAIN_V1.cjs
+
+      - name: Require protected main was not targeted by source implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event.pull_request.base.ref }}" = 'main'
+          test "${{ github.event.pull_request.base.sha }}" = "$EXACT_FROZEN_MAIN"
+          test "${{ github.event.pull_request.head.ref }}" = 'docs/mcft-cap09-operational-source-qualification-v1'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-source-qualification-static-${{ env.SUBJECT_SHA }}
+          path: acceptance-output/MCFT_CAP_09_OPERATIONAL_SOURCE_QUALIFICATION_OFF_MAIN_STATIC_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
+
+  mrms-product-retrieval:
+    needs: static-boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_SHA }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install exact GRIB decoder dependencies
+        run: |
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4
+          python -m eccodes selfcheck
+      - name: Qualify exact MRMS product retrieval and point coverage without values
+        env:
+          MCFT_SUBJECT_SHA: ${{ env.SUBJECT_SHA }}
+        run: python scripts/runtime_acceptance/PROBE_MCFT_CAP_09_MRMS_OPERATIONAL_PRECIPITATION.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-mrms-operational-precip-${{ env.SUBJECT_SHA }}
+          path: acceptance-output/MCFT_CAP_09_MRMS_OPERATIONAL_PRECIPITATION_QUALIFICATION_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  enviroweather-first-seen:
+    needs: static-boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_SHA }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium for bounded official-station watcher
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Observe independent first-seen transitions without provider values
+        env:
+          MCFT_SUBJECT_SHA: ${{ env.SUBJECT_SHA }}
+        run: node scripts/runtime_acceptance/OBSERVE_MCFT_CAP_09_ENVIROWEATHER_KBS_FIRST_SEEN.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-enviroweather-kbs-first-seen-${{ env.SUBJECT_SHA }}
+          path: acceptance-output/MCFT_CAP_09_ENVIROWEATHER_KBS_FIRST_SEEN_OBSERVER_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90

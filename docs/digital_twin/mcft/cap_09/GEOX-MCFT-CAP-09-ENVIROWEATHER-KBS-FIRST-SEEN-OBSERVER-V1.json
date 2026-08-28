@@ -1,0 +1,85 @@
+{
+  "schema_version": "geox_mcft_cap09_enviroweather_kbs_first_seen_observer_v1",
+  "record_status": "OFF_MAIN_SOURCE_QUALIFICATION_ONLY_NOT_RUNTIME_AUTHORITY",
+  "exact_base_protected_main": "cf6bf3e69f2d7f40e7586308f4d846b3350efb1c",
+  "source_page": "https://enviroweather.msu.edu/stations/kbs",
+  "station_slug": "kbs",
+  "station_label": "Hickory Corners",
+  "official_api": {
+    "base_url": "https://api.enviroweather.msu.edu/ewx-api/api",
+    "site_token_path": "/db2/siteToken",
+    "station_list_path": "/db2/places?show=ewxstation",
+    "documentation_repository": "enviroweather/enviroweather_py",
+    "documentation_commit": "e4c2d910b7e82bbbfde987bad78dfdbb482bd106",
+    "documentation_file": "doc/ewx_api_v1_intro.py"
+  },
+  "allowed_response_hosts": [
+    "api.enviroweather.msu.edu",
+    "enviroweather.msu.edu"
+  ],
+  "watch": {
+    "maximum_minutes": 75,
+    "poll_seconds": 300,
+    "page_response_settle_seconds": 15,
+    "discovery_grace_polls": 3,
+    "stop_after_forward_transitions": 3,
+    "maximum_candidate_responses_per_poll": 32,
+    "maximum_timestamp_values_per_response": 80
+  },
+  "weather_metadata_tokens": [
+    "observation",
+    "observed",
+    "temperature",
+    "temp",
+    "relative humidity",
+    "humidity",
+    "dew point",
+    "dewpoint",
+    "wind",
+    "precipitation",
+    "precip",
+    "rain",
+    "rainfall",
+    "solar",
+    "radiation",
+    "irradiance",
+    "soil moisture",
+    "soil temperature"
+  ],
+  "event_time_key_tokens": [
+    "time",
+    "date",
+    "datetime",
+    "timestamp",
+    "observed",
+    "observation",
+    "valid",
+    "sample"
+  ],
+  "output_policy": {
+    "station_metadata_allowed": true,
+    "timestamp_values_allowed": true,
+    "request_host_path_method_allowed": true,
+    "query_key_names_allowed": true,
+    "exact_station_slug_match_boolean_allowed": true,
+    "response_sha256_allowed": true,
+    "response_byte_count_allowed": true,
+    "raw_numeric_observation_values_allowed": false,
+    "raw_json_body_allowed": false,
+    "authorization_token_allowed": false,
+    "unfiltered_query_values_allowed": false,
+    "database_write_allowed": false,
+    "runtime_write_allowed": false,
+    "formal_write_allowed": false
+  },
+  "qualification_nonclaims": [
+    "NO_30_MINUTE_CADENCE_CLAIM_FROM_NOMINAL_SAMPLING",
+    "NO_EVENT_TIME_SEMANTICS_INFERENCE_FROM_FIELD_NAME_ALONE",
+    "NO_RUNTIME_PROVIDER_AUTHORITY",
+    "NO_SCHEDULER_AUTHORITY",
+    "NO_FORMAL_SOURCE_AUTHORITY",
+    "NO_COMMERCIAL_USE_AUTHORIZATION_CLAIM",
+    "NO_DATABASE_WRITE",
+    "NO_FORMAL_WINDOW_START"
+  ]
+}
