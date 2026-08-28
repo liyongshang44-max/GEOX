@@ -2747,5 +2747,23 @@
     "runtime_consumer_definition": "Repository evidence proves the current runtime wires the producer/output into this consumer. A persisted-data edge, direct call, module registration, route registration, or explicit same-request side effect may qualify when evidence is named.",
     "invariant": "CAN_CONSUME must never be represented as IS_WIRED without a current_connectivity_edge carrying repository evidence.",
     "scope_note": "unknown_unclassified_production_edge=0 means zero unknown edges within the explicit B-02 static/runtime-connectivity audit scope; the linter does not infer arbitrary TypeScript business semantics."
+  },
+  "b09_migration_control": {
+    "ledger_path": "docs/architecture/semantic_convergence/GEOX-B09-MIGRATION-LEDGER-V1.json",
+    "validator_path": "scripts/governance_acceptance/ACCEPTANCE_B09_MIGRATION_LEDGER_V1.cjs",
+    "phase": "B-09",
+    "current_subphase": "B-09a",
+    "status": "PRE_REMOVAL_INVENTORY",
+    "authoritative_product_base": "6702631be2f66587d4fa1230e0f97f6fd4e9b8b9",
+    "authority_removal_enabled": false,
+    "shadow_compare_execution_enabled": false,
+    "divergence_adjudication_enabled": false,
+    "consumer_migration_enabled": false,
+    "real_mcft_adr_llm_integration_enabled": false,
+    "notes": [
+      "B-09a is inventory/classification only; it does not mutate historical authority.",
+      "Every grandfathered producer is covered exactly once by GEOX-B09-MIGRATION-LEDGER-V1.json.",
+      "Real MCFT/ADR/LLM integrations remain disconnected; Twin state/forecast/scenario cannot claim a replacement in B-09a."
+    ]
   }
 }

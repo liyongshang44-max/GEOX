@@ -1,0 +1,1018 @@
+{
+  "schema_version": "b09_migration_ledger_v1",
+  "phase": "B-09",
+  "subphase": "B-09a",
+  "status": "PRE_REMOVAL_INVENTORY",
+  "repository": "liyongshang44-max/GEOX",
+  "authoritative_product_base": "6702631be2f66587d4fa1230e0f97f6fd4e9b8b9",
+  "source_register": "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json",
+  "source_parallel_graph": "docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json",
+  "frozen_order": [
+    "CANONICAL_REPLACEMENT_EXISTS",
+    "LEGACY_CANONICAL_SHADOW_COMPARISON",
+    "SEMANTIC_DIVERGENCE_INVENTORY",
+    "ACCEPTANCE_CONSUMER_MIGRATION",
+    "REMOVE_LEGACY_AUTHORITY",
+    "COMPATIBILITY_ONLY_NO_NEW_FEATURE",
+    "DISABLE_DEFAULT_WHERE_SAFE",
+    "DELETE_ONLY_AFTER_EXPLICIT_PREREQUISITES"
+  ],
+  "enums": {
+    "replacement_state": [
+      "PROVEN_REPLACEMENT",
+      "PARTIAL_REPLACEMENT",
+      "NO_REPLACEMENT"
+    ],
+    "shadow_compare_state": [
+      "NOT_STARTED",
+      "CAPABLE",
+      "RUNNING",
+      "COMPLETE"
+    ],
+    "divergence_state": [
+      "UNKNOWN",
+      "MATCH",
+      "ACCEPTABLE_DIFFERENCE",
+      "BLOCKING_DIFFERENCE"
+    ],
+    "consumer_migration_state": [
+      "NOT_REQUIRED",
+      "NOT_STARTED",
+      "PARTIAL",
+      "COMPLETE"
+    ],
+    "intended_disposition": [
+      "REMOVE_AUTHORITY_AFTER_GATES",
+      "COMPATIBILITY_ONLY_NO_NEW_FEATURE",
+      "RETAIN_UNTIL_EXTERNAL_REPLACEMENT",
+      "RETAIN_AS_NONAUTHORITATIVE_SOURCE"
+    ]
+  },
+  "b09a_global_invariants": {
+    "authority_removal_enabled": false,
+    "any_authority_removal_eligible": false,
+    "historical_removal_target_must_remain": "B-09",
+    "shadow_compare_complete_allowed": false,
+    "divergence_adjudication_allowed": false,
+    "consumer_migration_complete_allowed": false,
+    "runtime_authority_mutation_allowed": false,
+    "mass_deletion_allowed": false,
+    "real_mcft_adr_llm_integration_allowed": false
+  },
+  "summary": {
+    "grandfathered_entries": 29,
+    "proven_replacement": 8,
+    "partial_replacement": 14,
+    "no_replacement": 7,
+    "authority_removal_eligible": 0
+  },
+  "entries": [
+    {
+      "entry_id": "B09-context.crop_stage-context-builder-stage",
+      "semantic_id": "context.crop_stage",
+      "legacy_producer_id": "context-builder-stage",
+      "legacy_path": "apps/server/src/domain/agronomy/context_builder.ts",
+      "legacy_authority_level": "GRANDFATHERED_DUPLICATE",
+      "legacy_connection_class": "ACTIVE_PARALLEL",
+      "legacy_activation": "FEATURE_FLAG",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [],
+      "current_parallel_edge_ids": [],
+      "current_proven_consumer_ids": [],
+      "replacement_state": "PARTIAL_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:legacy-stage-compatibility-adapter",
+        "producer:field-program-context-compatibility-projector",
+        "path:apps/server/src/contracts/canonical_context_v1.ts"
+      ],
+      "future_target_refs": [
+        "producer:mcft-stage-reference"
+      ],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "Canonical context/stage seams exist, but the active context builder still derives stage in parallel."
+    },
+    {
+      "entry_id": "B09-context.crop_stage-decision-engine-stage",
+      "semantic_id": "context.crop_stage",
+      "legacy_producer_id": "decision-engine-stage",
+      "legacy_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "legacy_authority_level": "GRANDFATHERED_DUPLICATE",
+      "legacy_connection_class": "MAINLINE",
+      "legacy_activation": "API_ONLY",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [],
+      "current_parallel_edge_ids": [],
+      "current_proven_consumer_ids": [],
+      "replacement_state": "PARTIAL_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:legacy-stage-compatibility-adapter",
+        "path:apps/server/src/contracts/canonical_context_v1.ts"
+      ],
+      "future_target_refs": [
+        "producer:mcft-stage-reference"
+      ],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "Canonical stage contract/adapter exists, but the mainline decision-engine stage touchpoint remains active."
+    },
+    {
+      "entry_id": "B09-context.crop_stage-field-program-state-stage",
+      "semantic_id": "context.crop_stage",
+      "legacy_producer_id": "field-program-state-stage",
+      "legacy_path": "apps/server/src/projections/field_program_state_v1.ts",
+      "legacy_authority_level": "GRANDFATHERED_DUPLICATE",
+      "legacy_connection_class": "COMPATIBILITY",
+      "legacy_activation": "API_ONLY",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [],
+      "current_parallel_edge_ids": [],
+      "current_proven_consumer_ids": [],
+      "replacement_state": "PARTIAL_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:legacy-stage-compatibility-adapter",
+        "path:apps/server/src/contracts/canonical_context_v1.ts"
+      ],
+      "future_target_refs": [
+        "producer:mcft-stage-reference"
+      ],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "Projection-stage semantics can be mapped into the canonical stage vocabulary, but divergence and compatibility consumers are not yet adjudicated."
+    },
+    {
+      "entry_id": "B09-context.crop_stage-operation-state-stage",
+      "semantic_id": "context.crop_stage",
+      "legacy_producer_id": "operation-state-stage",
+      "legacy_path": "apps/server/src/routes/operation_state_v1.ts",
+      "legacy_authority_level": "GRANDFATHERED_DUPLICATE",
+      "legacy_connection_class": "COMPATIBILITY",
+      "legacy_activation": "API_ONLY",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [],
+      "current_parallel_edge_ids": [],
+      "current_proven_consumer_ids": [],
+      "replacement_state": "PARTIAL_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:legacy-stage-compatibility-adapter",
+        "path:apps/server/src/contracts/canonical_context_v1.ts"
+      ],
+      "future_target_refs": [
+        "producer:mcft-stage-reference"
+      ],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "Operation-state stage semantics have a canonical compatibility target but no completed shadow comparison or consumer migration."
+    },
+    {
+      "entry_id": "B09-context.crop_stage-rule-engine-stage",
+      "semantic_id": "context.crop_stage",
+      "legacy_producer_id": "rule-engine-stage",
+      "legacy_path": "apps/server/src/domain/agronomy/rule_engine.ts",
+      "legacy_authority_level": "GRANDFATHERED_DUPLICATE",
+      "legacy_connection_class": "ACTIVE_PARALLEL",
+      "legacy_activation": "FEATURE_FLAG",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [],
+      "current_parallel_edge_ids": [
+        "P-004"
+      ],
+      "current_proven_consumer_ids": [],
+      "replacement_state": "PARTIAL_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:crop-skill-stage-compatibility-adapter",
+        "path:apps/server/src/contracts/canonical_context_v1.ts"
+      ],
+      "future_target_refs": [
+        "producer:mcft-stage-reference"
+      ],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "Crop-skill stage compatibility mapping exists, but rule-engine stage semantics remain active and must be compared before authority removal."
+    },
+    {
+      "entry_id": "B09-context.crop_stage-stage-resolver",
+      "semantic_id": "context.crop_stage",
+      "legacy_producer_id": "stage-resolver",
+      "legacy_path": "apps/server/src/domain/agronomy/stage_resolver.ts",
+      "legacy_authority_level": "GRANDFATHERED_DUPLICATE",
+      "legacy_connection_class": "COMPATIBILITY",
+      "legacy_activation": "ALWAYS",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [],
+      "current_parallel_edge_ids": [
+        "P-003"
+      ],
+      "current_proven_consumer_ids": [],
+      "replacement_state": "PARTIAL_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:legacy-stage-compatibility-adapter",
+        "path:apps/server/src/contracts/canonical_context_v1.ts"
+      ],
+      "future_target_refs": [
+        "producer:mcft-stage-reference"
+      ],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "Legacy stage compatibility mapping exists and preserves UNKNOWN, but final canonical stage runtime binding remains separate; removal requires shadow comparison and consumer migration."
+    },
+    {
+      "entry_id": "B09-context.declared_identity-agronomy-context-builder",
+      "semantic_id": "context.declared_identity",
+      "legacy_producer_id": "agronomy-context-builder",
+      "legacy_path": "apps/server/src/domain/agronomy/context_builder.ts",
+      "legacy_authority_level": "GRANDFATHERED_DUPLICATE",
+      "legacy_connection_class": "ACTIVE_PARALLEL",
+      "legacy_activation": "FEATURE_FLAG",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [
+        "C-025",
+        "C-026"
+      ],
+      "current_parallel_edge_ids": [],
+      "current_proven_consumer_ids": [
+        "agronomy-rule-engine",
+        "decision-engine-route"
+      ],
+      "replacement_state": "PARTIAL_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:field-program-context-compatibility-projector",
+        "path:apps/server/src/contracts/canonical_context_v1.ts"
+      ],
+      "future_target_refs": [],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "Canonical context contracts/projector exist, but the active parallel Agronomy context builder still owns runtime context composition and needs shadow comparison plus consumer migration."
+    },
+    {
+      "entry_id": "B09-context.declared_identity-field-program-fact",
+      "semantic_id": "context.declared_identity",
+      "legacy_producer_id": "field-program-fact",
+      "legacy_path": "apps/server/src/jobs/agronomy_agent.ts",
+      "legacy_authority_level": "GRANDFATHERED_CONTEXT_SOURCE",
+      "legacy_connection_class": "ACTIVE_PARALLEL",
+      "legacy_activation": "FEATURE_FLAG",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [],
+      "current_parallel_edge_ids": [],
+      "current_proven_consumer_ids": [],
+      "replacement_state": "PARTIAL_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:field-program-context-compatibility-projector",
+        "path:apps/server/src/contracts/canonical_context_v1.ts"
+      ],
+      "future_target_refs": [],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "RETAIN_AS_NONAUTHORITATIVE_SOURCE",
+      "rationale": "Field-program facts remain legitimate declared-context source data, but must cease acting as independent context authority after canonical context projection is proven and consumers migrate."
+    },
+    {
+      "entry_id": "B09-decision.calculation-agronomy-judge-calculation",
+      "semantic_id": "decision.calculation",
+      "legacy_producer_id": "agronomy-judge-calculation",
+      "legacy_path": "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+      "legacy_authority_level": "GRANDFATHERED_MIXED_AUTHORITY",
+      "legacy_connection_class": "ROUTE_ISLAND",
+      "legacy_activation": "API_ONLY",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [
+        "C-006"
+      ],
+      "current_parallel_edge_ids": [
+        "P-006"
+      ],
+      "current_proven_consumer_ids": [
+        "judge-v2-agronomy-route"
+      ],
+      "replacement_state": "PARTIAL_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:irrigation-calculation-result-compatibility-adapter",
+        "producer:agronomy-judge-eligibility-precursor-criterion-adapter"
+      ],
+      "future_target_refs": [],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "Canonical irrigation calculation and eligibility criterion seams exist, but the active Judge route still computes and persists legacy mixed semantics."
+    },
+    {
+      "entry_id": "B09-decision.calculation-agronomy-rule-engine",
+      "semantic_id": "decision.calculation",
+      "legacy_producer_id": "agronomy-rule-engine",
+      "legacy_path": "apps/server/src/domain/agronomy/rule_engine.ts",
+      "legacy_authority_level": "GRANDFATHERED_CANDIDATE_PRODUCER",
+      "legacy_connection_class": "ACTIVE_PARALLEL",
+      "legacy_activation": "FEATURE_FLAG",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [],
+      "current_parallel_edge_ids": [],
+      "current_proven_consumer_ids": [],
+      "replacement_state": "PARTIAL_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:irrigation-calculation-result-compatibility-adapter",
+        "producer:agronomy-recommendation-v2-candidate-compatibility-adapter"
+      ],
+      "future_target_refs": [],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "Canonical CalculationResult/Candidate seams cover relevant irrigation/candidate outputs, but rule-engine mixed calculation behavior has not yet been shadow-compared end to end."
+    },
+    {
+      "entry_id": "B09-decision.calculation-decision-engine-calculation",
+      "semantic_id": "decision.calculation",
+      "legacy_producer_id": "decision-engine-calculation",
+      "legacy_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "legacy_authority_level": "GRANDFATHERED_COMPOSITION_HOTSPOT",
+      "legacy_connection_class": "MAINLINE",
+      "legacy_activation": "API_ONLY",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [],
+      "current_parallel_edge_ids": [
+        "P-007"
+      ],
+      "current_proven_consumer_ids": [],
+      "replacement_state": "PARTIAL_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:irrigation-calculation-result-compatibility-adapter",
+        "producer:legacy-recommendation-candidate-compatibility-adapter"
+      ],
+      "future_target_refs": [],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "Canonical calculation/candidate seams exist, but the mainline composition hotspot has not been shadow-compared or consumer-migrated."
+    },
+    {
+      "entry_id": "B09-decision.calculation-evaluate-irrigation-decision-v1",
+      "semantic_id": "decision.calculation",
+      "legacy_producer_id": "evaluate-irrigation-decision-v1",
+      "legacy_path": "apps/server/src/domain/decision_engine_v1.ts",
+      "legacy_authority_level": "ORPHANED_CAPABILITY",
+      "legacy_connection_class": "ORPHANED",
+      "legacy_activation": "NOT_REFERENCED",
+      "legacy_runtime_edge": "NONE",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [
+        "C-012"
+      ],
+      "current_parallel_edge_ids": [
+        "P-012"
+      ],
+      "current_proven_consumer_ids": [],
+      "replacement_state": "NO_REPLACEMENT",
+      "canonical_replacement_refs": [],
+      "future_target_refs": [
+        "producer:irrigation-calculation-result-compatibility-adapter"
+      ],
+      "shadow_compare_state": "NOT_STARTED",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_REQUIRED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "COMPATIBILITY_ONLY_NO_NEW_FEATURE",
+      "rationale": "The export is orphaned and not referenced at runtime; no exact semantic replacement is asserted in B-09a, so it is frozen as no-new-feature rather than deleted."
+    },
+    {
+      "entry_id": "B09-decision.candidate-agronomy-agent-recommendation",
+      "semantic_id": "decision.candidate",
+      "legacy_producer_id": "agronomy-agent-recommendation",
+      "legacy_path": "apps/server/src/jobs/agronomy_agent.ts",
+      "legacy_authority_level": "GRANDFATHERED_DUPLICATE",
+      "legacy_connection_class": "ACTIVE_PARALLEL",
+      "legacy_activation": "FEATURE_FLAG",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [
+        "C-023"
+      ],
+      "current_parallel_edge_ids": [
+        "P-008"
+      ],
+      "current_proven_consumer_ids": [
+        "agronomy-agent-plan-write"
+      ],
+      "replacement_state": "PROVEN_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:legacy-recommendation-candidate-compatibility-adapter"
+      ],
+      "future_target_refs": [],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "B-06c provides an exact bounded CandidateDecision compatibility mapping; the active Agronomy Agent consumer chain still requires shadow comparison and migration."
+    },
+    {
+      "entry_id": "B09-decision.candidate-decision-engine-recommendation",
+      "semantic_id": "decision.candidate",
+      "legacy_producer_id": "decision-engine-recommendation",
+      "legacy_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "legacy_authority_level": "GRANDFATHERED_DUPLICATE",
+      "legacy_connection_class": "MAINLINE",
+      "legacy_activation": "API_ONLY",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [],
+      "current_parallel_edge_ids": [
+        "P-009"
+      ],
+      "current_proven_consumer_ids": [],
+      "replacement_state": "PROVEN_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:legacy-recommendation-candidate-compatibility-adapter"
+      ],
+      "future_target_refs": [],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "B-06c provides the canonical CandidateDecision mapping, but the mainline writer remains authoritative until shadow/divergence and migration gates close."
+    },
+    {
+      "entry_id": "B09-decision.candidate-legacy-operator-scenario-recommendation-writer",
+      "semantic_id": "decision.candidate",
+      "legacy_producer_id": "legacy-operator-scenario-recommendation-writer",
+      "legacy_path": "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts",
+      "legacy_authority_level": "ACTIVE_LEGACY_WRITER",
+      "legacy_connection_class": "ACTIVE_LEGACY_WRITER",
+      "legacy_activation": "ALWAYS",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [
+        "C-016"
+      ],
+      "current_parallel_edge_ids": [
+        "P-011"
+      ],
+      "current_proven_consumer_ids": [
+        "operator-module-registration"
+      ],
+      "replacement_state": "PROVEN_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:legacy-recommendation-candidate-compatibility-adapter"
+      ],
+      "future_target_refs": [],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "The legacy decision_recommendation_v1 writer has an exact B-06c CandidateDecision mapping but remains an ALWAYS-active registered legacy writer."
+    },
+    {
+      "entry_id": "B09-decision.candidate-rule-engine-recommendation",
+      "semantic_id": "decision.candidate",
+      "legacy_producer_id": "rule-engine-recommendation",
+      "legacy_path": "apps/server/src/domain/agronomy/rule_engine.ts",
+      "legacy_authority_level": "GRANDFATHERED_DUPLICATE",
+      "legacy_connection_class": "ACTIVE_PARALLEL",
+      "legacy_activation": "FEATURE_FLAG",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [],
+      "current_parallel_edge_ids": [],
+      "current_proven_consumer_ids": [],
+      "replacement_state": "PROVEN_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:agronomy-recommendation-v2-candidate-compatibility-adapter"
+      ],
+      "future_target_refs": [],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "B-06g provides an exact AgronomyRecommendationV2 CandidateDecision compatibility mapping; runtime migration remains outstanding."
+    },
+    {
+      "entry_id": "B09-decision.eligibility-agronomy-judge-gate",
+      "semantic_id": "decision.eligibility",
+      "legacy_producer_id": "agronomy-judge-gate",
+      "legacy_path": "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+      "legacy_authority_level": "GRANDFATHERED_PRECURSOR",
+      "legacy_connection_class": "ROUTE_ISLAND",
+      "legacy_activation": "API_ONLY",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [],
+      "current_parallel_edge_ids": [],
+      "current_proven_consumer_ids": [],
+      "replacement_state": "PROVEN_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:agronomy-judge-eligibility-precursor-criterion-adapter",
+        "producer:decision-eligibility-evaluator-v1",
+        "path:apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts"
+      ],
+      "future_target_refs": [],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "B-07c/B-07d/B-07e provide the canonical criterion/final runtime mapping for Agronomy Judge eligibility semantics; legacy route authority remains until compare/migration."
+    },
+    {
+      "entry_id": "B09-decision.eligibility-stage1-trigger-eligibility",
+      "semantic_id": "decision.eligibility",
+      "legacy_producer_id": "stage1-trigger-eligibility",
+      "legacy_path": "apps/server/src/domain/decision/stage1_action_boundary_v1.ts",
+      "legacy_authority_level": "GRANDFATHERED_PRECURSOR",
+      "legacy_connection_class": "MAINLINE",
+      "legacy_activation": "API_ONLY",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [],
+      "current_parallel_edge_ids": [],
+      "current_proven_consumer_ids": [],
+      "replacement_state": "PROVEN_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:stage1-eligibility-precursor-criterion-adapter",
+        "producer:decision-eligibility-evaluator-v1",
+        "path:apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts"
+      ],
+      "future_target_refs": [],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "B-07b/B-07d/B-07e establish the canonical Stage-1 criterion and final eligibility runtime topology; legacy gate authority still requires shadow comparison and migration."
+    },
+    {
+      "entry_id": "B09-evidence.qualification-apple-ii-contract-semantics",
+      "semantic_id": "evidence.qualification",
+      "legacy_producer_id": "apple-ii-contract-semantics",
+      "legacy_path": "docs/audit/CONTRACT_ALIGNMENT_MATRIX_V1.md",
+      "legacy_authority_level": "REFERENCE_CONCEPT",
+      "legacy_connection_class": "COMPATIBILITY",
+      "legacy_activation": "MANUAL",
+      "legacy_runtime_edge": "INTENTIONAL_NONE",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [],
+      "current_parallel_edge_ids": [],
+      "current_proven_consumer_ids": [],
+      "replacement_state": "PROVEN_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "path:apps/server/src/contracts/canonical_evidence_v1.ts"
+      ],
+      "future_target_refs": [],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_REQUIRED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "COMPATIBILITY_ONLY_NO_NEW_FEATURE",
+      "rationale": "This is a compatibility/reference concept with no production runtime edge; the canonical Evidence contract replaces semantic ownership while the reference may remain for historical documentation."
+    },
+    {
+      "entry_id": "B09-evidence.qualification-evidence-judge-v2",
+      "semantic_id": "evidence.qualification",
+      "legacy_producer_id": "evidence-judge-v2",
+      "legacy_path": "apps/server/src/domain/judge/evidence_judge_v2.ts",
+      "legacy_authority_level": "GRANDFATHERED_DUPLICATE",
+      "legacy_connection_class": "ROUTE_ISLAND",
+      "legacy_activation": "API_ONLY",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [
+        "C-004",
+        "C-005"
+      ],
+      "current_parallel_edge_ids": [
+        "P-002"
+      ],
+      "current_proven_consumer_ids": [
+        "judge-v2-evidence-route"
+      ],
+      "replacement_state": "PARTIAL_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:canonical-evidence-qualification-shadow",
+        "producer:agronomy-judge-eligibility-precursor-criterion-adapter",
+        "producer:decision-eligibility-evaluator-v1"
+      ],
+      "future_target_refs": [],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "Canonical evidence qualification and eligibility mapping exist, but the Evidence Judge route remains active and exact divergence/consumer migration is not yet adjudicated."
+    },
+    {
+      "entry_id": "B09-evidence.qualification-stage1-formal-gate",
+      "semantic_id": "evidence.qualification",
+      "legacy_producer_id": "stage1-formal-gate",
+      "legacy_path": "apps/server/src/domain/decision/stage1_action_boundary_v1.ts",
+      "legacy_authority_level": "GRANDFATHERED_DUPLICATE",
+      "legacy_connection_class": "MAINLINE",
+      "legacy_activation": "API_ONLY",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [
+        "C-003"
+      ],
+      "current_parallel_edge_ids": [
+        "P-001"
+      ],
+      "current_proven_consumer_ids": [
+        "stage1-recommendation-path"
+      ],
+      "replacement_state": "PARTIAL_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:canonical-evidence-qualification-shadow",
+        "producer:stage1-eligibility-precursor-criterion-adapter",
+        "producer:decision-eligibility-evaluator-v1"
+      ],
+      "future_target_refs": [],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "Canonical EvidenceQualification shadow and canonical eligibility precursor/runtime exist, but Stage-1 remains an active formal-trigger authority and has not yet been shadow-compared or consumer-migrated."
+    },
+    {
+      "entry_id": "B09-operation.plan-agronomy-agent-plan",
+      "semantic_id": "operation.plan",
+      "legacy_producer_id": "agronomy-agent-plan",
+      "legacy_path": "apps/server/src/jobs/agronomy_agent.ts",
+      "legacy_authority_level": "GRANDFATHERED_DUPLICATE",
+      "legacy_connection_class": "ACTIVE_PARALLEL",
+      "legacy_activation": "FEATURE_FLAG",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [
+        "C-024"
+      ],
+      "current_parallel_edge_ids": [
+        "P-010"
+      ],
+      "current_proven_consumer_ids": [
+        "agronomy-agent-plan-persistence"
+      ],
+      "replacement_state": "PROVEN_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:control-operation-plan-route",
+        "producer:approval-operation-plan-path",
+        "producer:operation-plan-authority-classifier-candidate-compatibility-adapter"
+      ],
+      "future_target_refs": [],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "Approved plan authority already exists through governed approval-linked paths and B-06f classifies the legacy direct plan; active Agent plan creation still requires shadow comparison and consumer migration."
+    },
+    {
+      "entry_id": "B09-operation.plan-decision-engine-plan-touchpoint",
+      "semantic_id": "operation.plan",
+      "legacy_producer_id": "decision-engine-plan-touchpoint",
+      "legacy_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "legacy_authority_level": "GRANDFATHERED_DUPLICATE",
+      "legacy_connection_class": "COMPATIBILITY",
+      "legacy_activation": "API_ONLY",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [],
+      "current_parallel_edge_ids": [],
+      "current_proven_consumer_ids": [],
+      "replacement_state": "PARTIAL_REPLACEMENT",
+      "canonical_replacement_refs": [
+        "producer:control-operation-plan-route",
+        "producer:approval-operation-plan-path"
+      ],
+      "future_target_refs": [],
+      "shadow_compare_state": "CAPABLE",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "REMOVE_AUTHORITY_AFTER_GATES",
+      "rationale": "Current governed plan paths exist, but the exact legacy decision-engine plan lifecycle semantics require divergence inventory before authority can be removed."
+    },
+    {
+      "entry_id": "B09-operation.plan-flight-table-plan",
+      "semantic_id": "operation.plan",
+      "legacy_producer_id": "flight-table-plan",
+      "legacy_path": "apps/server/src/services/flight_table/flight_table_operation_v1.ts",
+      "legacy_authority_level": "COMPATIBILITY",
+      "legacy_connection_class": "DEVTOOLS_ONLY",
+      "legacy_activation": "API_ONLY",
+      "legacy_runtime_edge": "INTENTIONAL_NONE",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [],
+      "current_parallel_edge_ids": [],
+      "current_proven_consumer_ids": [],
+      "replacement_state": "NO_REPLACEMENT",
+      "canonical_replacement_refs": [],
+      "future_target_refs": [],
+      "shadow_compare_state": "NOT_STARTED",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_REQUIRED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "COMPATIBILITY_ONLY_NO_NEW_FEATURE",
+      "rationale": "Flight-table plan semantics are DEVTOOLS_ONLY and intentionally isolated; no production replacement is required to freeze them as compatibility/no-new-feature."
+    },
+    {
+      "entry_id": "B09-twin.forecast_scenario-legacy-root-zone-forecast-builder",
+      "semantic_id": "twin.forecast_scenario",
+      "legacy_producer_id": "legacy-root-zone-forecast-builder",
+      "legacy_path": "apps/server/src/domain/soil_water/root_zone_soil_water_forecast_builder_v1.ts",
+      "legacy_authority_level": "ACCEPTANCE_LIBRARY",
+      "legacy_connection_class": "ACCEPTANCE_LIBRARY_ISLAND",
+      "legacy_activation": "TEST_ACCEPTANCE_ONLY",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [
+        "C-014"
+      ],
+      "current_parallel_edge_ids": [],
+      "current_proven_consumer_ids": [
+        "root-zone-forecast-acceptance"
+      ],
+      "replacement_state": "NO_REPLACEMENT",
+      "canonical_replacement_refs": [],
+      "future_target_refs": [
+        "producer:mcft-forecast-scenario-reference"
+      ],
+      "shadow_compare_state": "NOT_STARTED",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "COMPATIBILITY_ONLY_NO_NEW_FEATURE",
+      "rationale": "Acceptance-library forecast behavior has no connected canonical Twin Forecast replacement."
+    },
+    {
+      "entry_id": "B09-twin.forecast_scenario-legacy-root-zone-scenario-builder",
+      "semantic_id": "twin.forecast_scenario",
+      "legacy_producer_id": "legacy-root-zone-scenario-builder",
+      "legacy_path": "apps/server/src/domain/soil_water/root_zone_irrigation_scenario_builder_v1.ts",
+      "legacy_authority_level": "ACCEPTANCE_LIBRARY",
+      "legacy_connection_class": "ACCEPTANCE_LIBRARY_ISLAND",
+      "legacy_activation": "TEST_ACCEPTANCE_ONLY",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [
+        "C-015"
+      ],
+      "current_parallel_edge_ids": [],
+      "current_proven_consumer_ids": [
+        "root-zone-scenario-acceptance"
+      ],
+      "replacement_state": "NO_REPLACEMENT",
+      "canonical_replacement_refs": [],
+      "future_target_refs": [
+        "producer:mcft-forecast-scenario-reference"
+      ],
+      "shadow_compare_state": "NOT_STARTED",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "COMPATIBILITY_ONLY_NO_NEW_FEATURE",
+      "rationale": "Acceptance-library Scenario behavior has no connected canonical Twin Scenario replacement."
+    },
+    {
+      "entry_id": "B09-twin.physical_state-derived-sensing-state-service",
+      "semantic_id": "twin.physical_state",
+      "legacy_producer_id": "derived-sensing-state-service",
+      "legacy_path": "apps/server/src/services/derived_sensing_state_service_v1.ts",
+      "legacy_authority_level": "PROJECTION_ONLY",
+      "legacy_connection_class": "COMPATIBILITY",
+      "legacy_activation": "API_ONLY",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [
+        "C-027"
+      ],
+      "current_parallel_edge_ids": [
+        "P-005"
+      ],
+      "current_proven_consumer_ids": [
+        "decision-engine-state"
+      ],
+      "replacement_state": "NO_REPLACEMENT",
+      "canonical_replacement_refs": [],
+      "future_target_refs": [
+        "producer:mcft-state-reference"
+      ],
+      "shadow_compare_state": "NOT_STARTED",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "RETAIN_UNTIL_EXTERNAL_REPLACEMENT",
+      "rationale": "Real MCFT state adapter is intentionally not connected at B-line exit; this active compatibility state source cannot lose authority merely for architectural neatness."
+    },
+    {
+      "entry_id": "B09-twin.physical_state-legacy-root-zone-state-builder",
+      "semantic_id": "twin.physical_state",
+      "legacy_producer_id": "legacy-root-zone-state-builder",
+      "legacy_path": "apps/server/src/domain/soil_water/root_zone_soil_water_state_builder_v1.ts",
+      "legacy_authority_level": "ACCEPTANCE_LIBRARY",
+      "legacy_connection_class": "ACCEPTANCE_LIBRARY_ISLAND",
+      "legacy_activation": "TEST_ACCEPTANCE_ONLY",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [
+        "C-013"
+      ],
+      "current_parallel_edge_ids": [],
+      "current_proven_consumer_ids": [
+        "root-zone-state-acceptance"
+      ],
+      "replacement_state": "NO_REPLACEMENT",
+      "canonical_replacement_refs": [],
+      "future_target_refs": [
+        "producer:mcft-state-reference"
+      ],
+      "shadow_compare_state": "NOT_STARTED",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "COMPATIBILITY_ONLY_NO_NEW_FEATURE",
+      "rationale": "This is acceptance-library state behavior with no connected MCFT replacement; retain for compatibility/testing and prohibit new production authority."
+    },
+    {
+      "entry_id": "B09-twin.physical_state-sensing-inference-pipeline",
+      "semantic_id": "twin.physical_state",
+      "legacy_producer_id": "sensing-inference-pipeline",
+      "legacy_path": "apps/server/src/domain/sensing/run_sensing_inference_pipeline_v1.ts",
+      "legacy_authority_level": "PROJECTION_OR_LEGACY",
+      "legacy_connection_class": "MAINLINE",
+      "legacy_activation": "API_ONLY",
+      "legacy_runtime_edge": "PROVEN",
+      "removal_target": "B-09",
+      "current_connectivity_edge_ids": [],
+      "current_parallel_edge_ids": [],
+      "current_proven_consumer_ids": [],
+      "replacement_state": "NO_REPLACEMENT",
+      "canonical_replacement_refs": [],
+      "future_target_refs": [
+        "producer:mcft-state-reference"
+      ],
+      "shadow_compare_state": "NOT_STARTED",
+      "shadow_evidence_refs": [],
+      "divergence_state": "UNKNOWN",
+      "divergence_refs": [],
+      "consumer_migration_state": "NOT_STARTED",
+      "consumer_migration_refs": [],
+      "authority_removal_eligible": false,
+      "authority_removal_refs": [],
+      "intended_disposition": "RETAIN_UNTIL_EXTERNAL_REPLACEMENT",
+      "rationale": "No connected canonical Twin State replacement exists; real MCFT integration is explicitly a later program."
+    }
+  ]
+}
