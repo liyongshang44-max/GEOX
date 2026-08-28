@@ -1,0 +1,187 @@
+name: b09b-evidence-shadow-comparator-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b09b-evidence-shadow-comparator-exact-2026-08-28
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal product head checkout
+        run: |
+          git checkout 742cddefb82a8faa5657a35ed5dce1ad10d41f17
+          test "$(git rev-parse HEAD)" = "742cddefb82a8faa5657a35ed5dce1ad10d41f17"
+          test "$(git rev-parse HEAD^)" = "afd914deab6cac927a085694e8a3270c8e0720d8"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09b Evidence semantic shadow comparator
+        run: node --import tsx --test apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.contract.test.ts
+
+      - name: B-09a migration inventory regression
+        run: node --import tsx --test apps/server/src/contracts/semantic_migration_v1.contract.test.ts
+
+      - name: B-09b guard exactness
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const sem=(reg.semantics||[]).find(x=>x.semantic_id==="governance.semantic_authority_migration");
+          if(!sem) throw new Error("B09B_MIGRATION_SEMANTIC_MISSING");
+          if(sem.current_state!=="REGISTERED_CAPABILITY_ISLAND") throw new Error("B09B_MIGRATION_STATE_INVALID");
+          const p=(sem.registered_producers||[]).find(x=>x.producer_id==="evidence-semantic-shadow-comparator-v1");
+          if(!p) throw new Error("B09B_COMPARATOR_PRODUCER_MISSING");
+          if(p.connection_class!=="REGISTERED_CAPABILITY_ISLAND"||p.activation!=="MANUAL"||p.runtime_edge!=="INTENTIONAL_NONE"||p.new_runtime_consumer_creation!=="FORBIDDEN") throw new Error("B09B_COMPARATOR_BOUNDARY_INVALID");
+          const guard=(reg.static_guards||[]).find(x=>x.guard_id==="G-B02-22-semantic-shadow-comparison-instantiation");
+          const expected="apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts";
+          if(!guard) throw new Error("B09B_SHADOW_GUARD_MISSING");
+          if((guard.registered_paths||[]).length!==1||guard.registered_paths[0]!==expected) throw new Error("B09B_SHADOW_PRODUCER_SET_INVALID:"+JSON.stringify(guard.registered_paths));
+          console.log("B09B_GUARD_EXACTNESS_PASS");
+          NODE
+
+      - name: B-09b comparator has no production runtime consumer
+        shell: bash
+        run: |
+          A="apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts"
+          for S in compareEvidenceJudgeToCanonicalEvidenceShadowV1 compareStage1GateToCanonicalEvidenceShadowV1; do
+            HITS="$(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n "$S" apps/server/src | grep -v "^$A:" || true)"
+            if [ -n "$HITS" ]; then
+              echo "$HITS"
+              echo "B09B_UNEXPECTED_RUNTIME_CONSUMER:$S"
+              exit 1
+            fi
+          done
+          echo "B09B_NO_RUNTIME_CONSUMER_PASS"
+
+      - name: Reject second shadow-comparison producer
+        shell: bash
+        run: |
+          P="apps/server/src/.b09b_unregistered_shadow_probe.ts"
+          printf '%s\n' 'semanticShadowComparisonV1Schema.parse(' > "$P"
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs > /tmp/b09b-shadow-negative.log 2>&1
+          RC=$?
+          set -e
+          cat /tmp/b09b-shadow-negative.log
+          rm -f "$P"
+          if [ "$RC" -eq 0 ]; then
+            echo "B09B_SECOND_SHADOW_PRODUCER_NOT_REJECTED"
+            exit 1
+          fi
+          grep -q "UNREGISTERED_SEMANTIC_SHADOW_COMPARISON_PRODUCER" /tmp/b09b-shadow-negative.log
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+          echo "B09B_SECOND_SHADOW_NEGATIVE_PASS"
+
+      - name: B-09a inventory still forbids authority removal
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const inv=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-B09-REPLACEMENT-READINESS-V1.json","utf8"));
+          if(inv.authority_removal_performed!==false) throw new Error("B09B_AUTHORITY_REMOVAL_PERFORMED");
+          const evidence=(inv.families||[]).find(x=>x.semantic_id==="evidence.qualification");
+          if(!evidence) throw new Error("B09B_EVIDENCE_FAMILY_MISSING");
+          if(evidence.consumer_migration_state!=="PARTIAL") throw new Error("B09B_EVIDENCE_CONSUMER_MIGRATION_OVERCLAIMED");
+          if(evidence.authority_removal_state!=="PENDING_CONSUMER_MIGRATION") throw new Error("B09B_EVIDENCE_REMOVAL_STATE_INVALID");
+          console.log("B09B_ZERO_AUTHORITY_REMOVAL_PASS");
+          NODE
+
+      - name: Historical Evidence runtime remains untouched
+        shell: bash
+        run: |
+          git diff --exit-code afd914deab6cac927a085694e8a3270c8e0720d8 742cddefb82a8faa5657a35ed5dce1ad10d41f17 --             apps/server/src/domain/judge/evidence_judge_v2.ts             apps/server/src/domain/decision/stage1_action_boundary_v1.ts             apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts             apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.ts             apps/server/src/routes/judge_v2.ts             apps/server/src/routes/decision_engine_v1.ts
+          echo "B09B_HISTORICAL_EVIDENCE_RUNTIME_UNTOUCHED_PASS"
+
+      - name: Grandfathered authority and parallel graph unchanged
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const cp=require("child_process");
+          const before=JSON.parse(cp.execFileSync("git",["show","afd914deab6cac927a085694e8a3270c8e0720d8:docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json"],{encoding:"utf8"}));
+          const after=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const flatten=(reg)=>(reg.semantics||[]).flatMap(s=>(s.registered_producers||[])
+            .filter(p=>p.grandfathered_duplicate===true)
+            .map(p=>({semantic_id:s.semantic_id,...p})))
+            .sort((a,b)=>(a.semantic_id+"::"+a.producer_id).localeCompare(b.semantic_id+"::"+b.producer_id));
+          if(JSON.stringify(flatten(before))!==JSON.stringify(flatten(after))) throw new Error("B09B_GRANDFATHERED_AUTHORITY_MUTATED");
+          console.log("B09B_GRANDFATHERED_AUTHORITY_UNCHANGED_PASS");
+          NODE
+          git diff --exit-code afd914deab6cac927a085694e8a3270c8e0720d8 742cddefb82a8faa5657a35ed5dce1ad10d41f17 -- docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json
+          echo "B09B_PARALLEL_GRAPH_UNCHANGED_PASS"
+
+      - name: Real MCFT ADR LLM remain disconnected
+        shell: bash
+        run: |
+          git diff --exit-code afd914deab6cac927a085694e8a3270c8e0720d8 742cddefb82a8faa5657a35ed5dce1ad10d41f17 --             docs/digital_twin             .github/workflows/mcft*             apps/server/src/modules             packages
+          if grep -R --include='*.ts' -nE 'futureDecisionIntegrationBindingV1Schema\.parse\(' apps/server/src | grep -v '\.test\.ts'; then
+            echo "B09B_REAL_FUTURE_INTEGRATION_BINDING_FOUND"
+            exit 1
+          fi
+          echo "B09B_REAL_INTEGRATIONS_REMAIN_DISCONNECTED_PASS"
+
+      - name: B-08 and B-07 regression
+        run: |
+          node --import tsx --test apps/server/src/contracts/decision_episode_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/decision_integration_ports_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_episode_assembler_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/decision_eligibility_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: Earlier B-line regression boundary
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_decision_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+
+      - name: Product diff remains bounded
+        shell: bash
+        run: |
+          git diff --name-only afd914deab6cac927a085694e8a3270c8e0720d8 742cddefb82a8faa5657a35ed5dce1ad10d41f17 > /tmp/b09b-files.txt
+          cat /tmp/b09b-files.txt
+          test "$(wc -l < /tmp/b09b-files.txt | tr -d ' ')" = "4"
+          grep -qx "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.contract.test.ts" /tmp/b09b-files.txt
+          grep -qx "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts" /tmp/b09b-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09B-EVIDENCE-SHADOW-COMPARATOR-V1.md" /tmp/b09b-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json" /tmp/b09b-files.txt
+          echo "B09B_BOUNDED_PRODUCT_DIFF_PASS"
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Marker
+        run: |
+          echo "B09B_EXACT_HEAD 742cddefb82a8faa5657a35ed5dce1ad10d41f17"
+          echo "B09B_EVIDENCE_SHADOW_COMPARATOR_PASS"
