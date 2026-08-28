@@ -135,7 +135,9 @@
         ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
         ".github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml",
         ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
-        ".github/workflows/mcft-cap-09-v13-fenced-fact-promotion-postgres.yml"
+        ".github/workflows/mcft-cap-09-v13-fenced-fact-promotion-postgres.yml",
+        "apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql",
+        "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts"
       ]
     },
     "PHASE1_TYPED_RUNTIME_COMPOSITION": {
@@ -225,7 +227,9 @@
         "package.json",
         "pnpm-lock.yaml",
         "pnpm-workspace.yaml",
-        "apps/server/package.json"
+        "apps/server/package.json",
+        "apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql",
+        "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts"
       ]
     },
     "PHASE4_TWIN_RUNTIME_FOUNDATION": {

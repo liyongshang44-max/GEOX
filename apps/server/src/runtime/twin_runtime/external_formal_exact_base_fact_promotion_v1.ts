@@ -94,7 +94,7 @@ function normalizedManifest(rows: readonly ExternalFormalExactBaseSemanticManife
   return rows.map((row) => ({ ...row })).sort((a, b) => a.record_type.localeCompare(b.record_type) || a.source_record_id.localeCompare(b.source_record_id));
 }
 
-function validateBeforeMutation(input: {
+export function validateExternalFormalExactBasePromotionInputV1(input: {
   base_target_t: string;
   results: readonly CanonicalizedExternalEvidenceResultV1[];
   expected_semantic_manifest: readonly ExternalFormalExactBaseSemanticManifestRowV1[];
@@ -141,7 +141,7 @@ export async function promoteExternalFormalExactBaseCanonicalFactsV1(
 ): Promise<ExternalFormalExactBaseFactPromotionReceiptV1> {
   let validated: { base: string; results: CanonicalizedExternalEvidenceResultV1[] };
   try {
-    validated = validateBeforeMutation(input);
+    validated = validateExternalFormalExactBasePromotionInputV1(input);
   } catch (error) {
     throw new ExternalFormalExactBaseFactPromotionFailureV1({
       failure_class: error instanceof Error ? error.message : String(error),
