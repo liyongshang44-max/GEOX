@@ -22,6 +22,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: mcft-cap09-phase6-runtime-independence-${{ github.event.pull_request.head.sha || github.sha }}
@@ -29,6 +30,7 @@ concurrency:
 
 jobs:
   production-equivalent-24t:
+    if: github.event.pull_request.base.sha == '75d4961279bd64dc1c9dd7d68aac189c72c98846'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
@@ -824,3 +826,80 @@ jobs:
           set +e
           docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" --profile qualification-runtime --profile qualification-orchestration             down -v --remove-orphans
           sudo rm -rf "${GEOX_PHASE5_FIXTURE_ROOT:-}" "${GEOX_PHASE5_CONTROL_ROOT:-}"
+
+
+  accepted-phase6-successor-sentinel:
+    if: github.event.pull_request.base.sha != '75d4961279bd64dc1c9dd7d68aac189c72c98846'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PHASE6_ACCEPTED_HEAD: '48ceafe7c6e7d3d57a1dc17411fb4bf673486333'
+      PHASE6_RUNTIME_RUN_ID: '33146391000'
+      PHASE6_RUNTIME_ARTIFACT_ID: '9676455831'
+      PHASE6_RUNTIME_ARTIFACT_DIGEST: 'sha256:9a3a22b8b844fc1538d4a6986a9d3477b895208b1e88cdf13106f0f0dbf463d7'
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout exact Phase6 successor subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require accepted Phase6 ancestry and no protected runtime drift
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          git merge-base --is-ancestor "$PHASE6_ACCEPTED_HEAD" "$SUBJECT_SHA"
+          runtime_delta="$(git diff --name-only "$PHASE6_ACCEPTED_HEAD"..HEAD --             apps/server             docker             docker-compose.mcft-cap09-phase5-qualification.yml             docker-compose.mcft-cap09-phase6-github-blackout.override.yml             scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs             scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts)"
+          if [ -n "$runtime_delta" ]; then
+            echo "PHASE6_SUCCESSOR_RUNTIME_REQUALIFICATION_REQUIRED" >&2
+            printf '%s\n' "$runtime_delta" >&2
+            exit 1
+          fi
+
+      - name: Verify immutable accepted Phase6 runtime artifact
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner,repo}=context.repo;
+            const runId=Number(process.env.PHASE6_RUNTIME_RUN_ID);
+            const artifactId=Number(process.env.PHASE6_RUNTIME_ARTIFACT_ID);
+            const run=(await github.rest.actions.getWorkflowRun({owner,repo,run_id:runId})).data;
+            if(run.conclusion!=='success'||run.head_sha!==process.env.PHASE6_ACCEPTED_HEAD)throw new Error('PHASE6_SUCCESSOR_ACCEPTED_RUN_INVALID');
+            const artifact=(await github.rest.actions.getArtifact({owner,repo,artifact_id:artifactId})).data;
+            if(artifact.expired||artifact.digest!==process.env.PHASE6_RUNTIME_ARTIFACT_DIGEST)throw new Error('PHASE6_SUCCESSOR_ACCEPTED_ARTIFACT_INVALID');
+
+      - name: Require retired owner audit still passes
+        run: node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs enforce
+
+      - name: Emit zero-effect Phase6 successor carry-forward proof
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          const out={
+            schema_version:'geox_mcft_cap09_phase6_successor_carry_forward_v1',
+            status:'PASS',
+            subject_sha:process.env.SUBJECT_SHA,
+            accepted_phase6_head:process.env.PHASE6_ACCEPTED_HEAD,
+            accepted_runtime_run_id:Number(process.env.PHASE6_RUNTIME_RUN_ID),
+            accepted_runtime_artifact_id:Number(process.env.PHASE6_RUNTIME_ARTIFACT_ID),
+            protected_runtime_delta_count:0,
+            phase6_runtime_reexecuted:false,
+            immutable_phase6_evidence_verified:true,
+            retired_owner_audit_passed:true,
+            formal_v5_armed:false,
+            production_effect:false,
+            mcft_cap09_completed:false
+          };
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_PHASE6_SUCCESSOR_CARRY_FORWARD.json',JSON.stringify(out,null,2)+'\n');
+
+      - name: Upload Phase6 successor carry-forward proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-phase6-successor-carry-forward-${{ env.SUBJECT_SHA }}
+          path: acceptance-output/MCFT_CAP_09_PHASE6_SUCCESSOR_CARRY_FORWARD.json
+          if-no-files-found: error
+          retention-days: 90
