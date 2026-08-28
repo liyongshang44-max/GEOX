@@ -901,6 +901,23 @@
         "fingerprint": "evaluateEvidenceJudgeV2WithCanonicalShadow -> buildCanonicalRawSampleEvidenceQualificationProjectionV1 -> canonical EvidenceQualificationV1 projection"
       },
       "status": "ROUTE_ONLY"
+    },
+    {
+      "edge_id": "C-034",
+      "from_producer": "evidence-semantic-shadow-comparator-v1",
+      "to_consumer": "evidence-shadow-runtime-collector-v1",
+      "semantic_id": "governance.semantic_authority_migration",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.ts",
+        "callee_path": "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts",
+        "fingerprint": "collectEvidenceJudgeSemanticShadowComparisonV1 -> compareEvidenceJudgeToCanonicalEvidenceShadowV1"
+      },
+      "status": "CURRENT_PROVEN"
     }
   ],
   "connectivity_status_values": [

@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { requireAoActAnyScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { evaluateAgronomyJudgeV2 } from "../domain/judge/agronomy_judge_v2.js";
+import { collectEvidenceJudgeSemanticShadowComparisonV1 } from "../domain/decision/evidence_semantic_shadow_runtime_collector_v1.js";
 import { evaluateEvidenceJudgeV2WithCanonicalShadow } from "../domain/judge/evidence_judge_v2.js";
 import { evaluateExecutionJudgeV2 } from "../domain/judge/execution_judge_v2.js";
 import { buildJudgeResultV2, insertJudgeResultV2, listJudgeResultsV2, loadJudgeResultV2 } from "../domain/judge/judge_result_v2.js";
@@ -56,7 +57,18 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
       const body = EvaluateEvidenceRequestSchema.parse((req as any).body ?? {});
       if (!requireTenantMatchOr404(reply, auth, body)) return;
       const judgeResult = buildJudgeResultV2(await evaluateEvidenceJudgeV2WithCanonicalShadow(pool, body));
-      const inserted = await insertJudgeResultV2(pool, judgeResult);
+      const semanticShadowComparison =
+        collectEvidenceJudgeSemanticShadowComparisonV1(judgeResult);
+      const judgeResultWithShadow = semanticShadowComparison
+        ? {
+            ...judgeResult,
+            outputs: {
+              ...(judgeResult.outputs ?? {}),
+              semantic_shadow_comparison_v1: semanticShadowComparison,
+            },
+          }
+        : judgeResult;
+      const inserted = await insertJudgeResultV2(pool, judgeResultWithShadow);
       return reply.send({ ok: true, judge_result: inserted });
     } catch (error: any) {
       return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });
