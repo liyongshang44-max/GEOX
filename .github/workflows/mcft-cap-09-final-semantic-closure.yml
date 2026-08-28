@@ -126,12 +126,13 @@ jobs:
           test "${{ github.event.pull_request.base.sha }}" = "$EXACT_PHASE6_HEAD"
           test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
           mapfile -t changed < <(git diff --name-only "$EXACT_PHASE6_HEAD" HEAD | sort)
-          test "${#changed[@]}" = "4"
+          test "${#changed[@]}" = "5"
           expected="$(printf '%s\\n' \
             '.github/workflows/mcft-cap-09-final-semantic-closure.yml' \
             '.github/workflows/mcft-cap-09-phase6-runtime-independence.yml' \
             '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json')"
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json')"
           actual="$(printf '%s\\n' "${changed[@]}")"
           test "$actual" = "$expected"
           test "$(git rev-parse HEAD:docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json)" = '34fd3e92e0e628cf0db16e10df3633337fe81a1a'
@@ -262,12 +263,13 @@ jobs:
           test "${{ github.event.pull_request.base.sha }}" = "$EXACT_PHASE6_HEAD"
           test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
           mapfile -t changed < <(git diff --name-only "$EXACT_PHASE6_HEAD" HEAD | sort)
-          test "${#changed[@]}" = "4"
+          test "${#changed[@]}" = "5"
           expected="$(printf '%s\\n' \
             '.github/workflows/mcft-cap-09-final-semantic-closure.yml' \
             '.github/workflows/mcft-cap-09-phase6-runtime-independence.yml' \
             '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json')"
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json')"
           actual="$(printf '%s\\n' "${changed[@]}")"
           test "$actual" = "$expected"
 
