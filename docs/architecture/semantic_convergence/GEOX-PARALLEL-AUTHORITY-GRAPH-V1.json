@@ -969,6 +969,40 @@
         "fingerprint": "Agronomy Judge route attaches agronomy_evidence_dependency_shadow_v1 after legacy JudgeResult construction"
       },
       "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-038",
+      "from_producer": "agronomy-evidence-dependency-shadow-binding-v1",
+      "to_consumer": "agronomy-qualified-evidence-criterion-shadow-v1",
+      "semantic_id": "governance.semantic_authority_migration",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "RETURN_OBJECT_CHAIN",
+        "caller_path": "apps/server/src/routes/judge_v2.ts",
+        "callee_path": "apps/server/src/domain/decision/agronomy_qualified_evidence_criterion_shadow_v1.ts",
+        "fingerprint": "evidenceDependencyShadow -> projectAgronomyQualifiedEvidenceCriterionShadowV1"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-039",
+      "from_producer": "agronomy-qualified-evidence-criterion-shadow-v1",
+      "to_consumer": "judge-v2-agronomy-qualified-evidence-criterion-shadow",
+      "semantic_id": "decision.eligibility",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/routes/judge_v2.ts",
+        "callee_path": "apps/server/src/domain/decision/agronomy_qualified_evidence_criterion_shadow_v1.ts",
+        "fingerprint": "projectAgronomyQualifiedEvidenceCriterionShadowV1(evidenceDependencyShadow) -> JudgeResultV2.outputs.agronomy_qualified_evidence_criterion_shadow_v1"
+      },
+      "status": "CURRENT_PROVEN"
     }
   ],
   "connectivity_status_values": [

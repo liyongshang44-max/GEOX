@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireAoActAnyScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { evaluateAgronomyJudgeV2 } from "../domain/judge/agronomy_judge_v2.js";
 import { buildAgronomyEvidenceDependencyShadowBindingV1 } from "../domain/decision/agronomy_evidence_dependency_shadow_binding_v1.js";
+import { projectAgronomyQualifiedEvidenceCriterionShadowV1 } from "../domain/decision/agronomy_qualified_evidence_criterion_shadow_v1.js";
 import { collectEvidenceJudgeSemanticShadowComparisonV1 } from "../domain/decision/evidence_semantic_shadow_runtime_collector_v1.js";
 import { readEvidenceSemanticShadowInventoryV1 } from "../domain/decision/evidence_semantic_shadow_inventory_v1.js";
 import { evaluateEvidenceJudgeV2WithCanonicalShadow } from "../domain/judge/evidence_judge_v2.js";
@@ -100,11 +101,14 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
       const judgeResult = buildJudgeResultV2(evaluateAgronomyJudgeV2(body));
       const evidenceDependencyShadow =
         await buildAgronomyEvidenceDependencyShadowBindingV1(pool, body);
+      const qualifiedEvidenceCriterionShadow =
+        projectAgronomyQualifiedEvidenceCriterionShadowV1(evidenceDependencyShadow);
       const judgeResultWithShadow = {
         ...judgeResult,
         outputs: {
           ...(judgeResult.outputs ?? {}),
           agronomy_evidence_dependency_shadow_v1: evidenceDependencyShadow,
+          agronomy_qualified_evidence_criterion_shadow_v1: qualifiedEvidenceCriterionShadow,
         },
       };
       const inserted = await insertJudgeResultV2(pool, judgeResultWithShadow);
