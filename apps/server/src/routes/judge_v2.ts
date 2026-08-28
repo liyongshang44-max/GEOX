@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireAoActAnyScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { evaluateAgronomyJudgeV2 } from "../domain/judge/agronomy_judge_v2.js";
 import { collectEvidenceJudgeSemanticShadowComparisonV1 } from "../domain/decision/evidence_semantic_shadow_runtime_collector_v1.js";
+import { readEvidenceSemanticShadowInventoryV1 } from "../domain/decision/evidence_semantic_shadow_inventory_v1.js";
 import { evaluateEvidenceJudgeV2WithCanonicalShadow } from "../domain/judge/evidence_judge_v2.js";
 import { evaluateExecutionJudgeV2 } from "../domain/judge/execution_judge_v2.js";
 import { buildJudgeResultV2, insertJudgeResultV2, listJudgeResultsV2, loadJudgeResultV2 } from "../domain/judge/judge_result_v2.js";
@@ -46,9 +47,23 @@ const ListByKindSchema = TenantSchema.extend({ judge_kind: z.enum(["EVIDENCE", "
 const ListByFieldSchema = TenantSchema.extend({ field_id: z.string().min(1), limit: z.coerce.number().int().min(1).max(200).optional() });
 const ListByTaskSchema = TenantSchema.extend({ task_id: z.string().min(1), limit: z.coerce.number().int().min(1).max(200).optional() });
 const ListByPrescriptionSchema = TenantSchema.extend({ prescription_id: z.string().min(1), limit: z.coerce.number().int().min(1).max(200).optional() });
+const EvidenceShadowInventoryQuerySchema = TenantSchema.extend({ field_id: z.string().min(1).optional(), limit: z.coerce.number().int().min(1).max(200).optional() });
 
 export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/judge/health", async () => ({ ok: true, module: "judge_v2" }));
+
+  app.get("/api/v1/judge/shadow/evidence/inventory", async (req, reply) => {
+    try {
+      const auth = requireAoActAnyScopeV0(req, reply, ["judge.read", "ao_act.index.read"]);
+      if (!auth) return;
+      const input = EvidenceShadowInventoryQuerySchema.parse((req as any).query ?? {});
+      if (!requireTenantMatchOr404(reply, auth, input)) return;
+      const inventory = await readEvidenceSemanticShadowInventoryV1(pool, input);
+      return reply.send({ ok: true, inventory });
+    } catch (error: any) {
+      return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });
+    }
+  });
 
   app.post("/api/v1/judge/evidence/evaluate", async (req, reply) => {
     try {

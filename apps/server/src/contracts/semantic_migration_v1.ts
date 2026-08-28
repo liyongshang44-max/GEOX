@@ -129,6 +129,57 @@ export const semanticShadowComparisonV1Schema = z
   })
   .strict();
 
+export const evidenceSemanticShadowInventoryItemV1Schema = z
+  .object({
+    judge_id: z.string().min(1),
+    comparison_id: z.string().min(1),
+    comparison_state: semanticShadowComparisonStateV1Schema,
+    decision_time: z.string().datetime({ offset: true }).nullable(),
+    scope_ref: z.string().min(1).nullable(),
+    divergence_codes: z.array(z.string().min(1)),
+    comparison_basis_refs: z.array(z.string().min(1)),
+    observed_at: z.string().datetime({ offset: true }),
+    authority_state: z.literal("SHADOW_ONLY"),
+    authority_removal_permitted: z.literal(false),
+  })
+  .strict();
+
+export const evidenceSemanticShadowInventoryV1Schema = z
+  .object({
+    schema_version: z.literal("evidence_semantic_shadow_inventory_v1"),
+    semantic_id: z.literal("evidence.qualification"),
+    source: z.literal("JUDGE_RESULT_V2_PERSISTED_OUTPUTS"),
+    scope: z
+      .object({
+        tenant_id: z.string().min(1),
+        project_id: z.string().min(1),
+        group_id: z.string().min(1),
+        field_id: z.string().min(1).nullable(),
+      })
+      .strict(),
+    observed_comparison_count: z.number().int().nonnegative(),
+    unobserved_legacy_result_count: z.number().int().nonnegative(),
+    malformed_comparison_count: z.number().int().nonnegative(),
+    state_counts: z
+      .object({
+        MATCH: z.number().int().nonnegative(),
+        DIVERGENT: z.number().int().nonnegative(),
+        INCOMPARABLE: z.number().int().nonnegative(),
+        CANONICAL_MISSING: z.number().int().nonnegative(),
+        LEGACY_MISSING: z.number().int().nonnegative(),
+      })
+      .strict(),
+    items: z.array(evidenceSemanticShadowInventoryItemV1Schema),
+    limitations: z.array(z.string().min(1)),
+    authority_state: z.literal("SHADOW_ONLY"),
+    authority_removal_permitted: z.literal(false),
+    consumer_migration_permitted: z.literal(false),
+    removal_readiness: z.literal("NOT_AUTHORIZED_BY_INVENTORY"),
+  })
+  .strict();
+
 export type SemanticMigrationInventoryV1 = z.infer<typeof semanticMigrationInventoryV1Schema>;
 export type SemanticMigrationFamilyReadinessV1 = z.infer<typeof semanticMigrationFamilyReadinessV1Schema>;
 export type SemanticShadowComparisonV1 = z.infer<typeof semanticShadowComparisonV1Schema>;
+export type EvidenceSemanticShadowInventoryItemV1 = z.infer<typeof evidenceSemanticShadowInventoryItemV1Schema>;
+export type EvidenceSemanticShadowInventoryV1 = z.infer<typeof evidenceSemanticShadowInventoryV1Schema>;
