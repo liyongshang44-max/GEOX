@@ -1,0 +1,132 @@
+{
+  "schema_version": "b09n_decision_eligibility_policy_source_authority_inventory_v1",
+  "phase": "B-09n",
+  "status": "ANALYSIS_ONLY_SOURCE_TOPOLOGY_RECOMMENDED_PRODUCT_AUTHORITY_NOT_GRANTED",
+  "authority_mode": "GOVERNANCE_ANALYSIS_ONLY",
+  "stacked_base_product_head": "dd39f74e4e44de9c0626c063522904f8e255e89c",
+  "contract_anchor": {
+    "path": "apps/server/src/contracts/decision_eligibility_policy_declaration_v1.ts",
+    "schema_version": "decision_eligibility_policy_declaration_v1",
+    "production_instances_registered": 0,
+    "guard_id": "G-B02-32-decision-eligibility-policy-declaration-instantiation"
+  },
+  "source_options": [
+    {
+      "option": "EXTEND_FIELD_PROGRAM_WITH_ELIGIBILITY_POLICY_PAYLOAD",
+      "current_source_path": "packages/contracts/src/schema/field_program_v1.ts",
+      "current_writer_path": "apps/server/src/routes/programs_core_v1.ts",
+      "strengths": [
+        "EXISTING_TENANT_PROJECT_GROUP_FIELD_SEASON_PROGRAM_SCOPE",
+        "RECOMMENDATION_CHAIN_CAN_RESOLVE_PROGRAM_ID",
+        "APPEND_ONLY_FACT_HISTORY_ALREADY_EXISTS"
+      ],
+      "risks": [
+        "FIELD_PROGRAM_ALREADY_MIXES_GOALS_CONSTRAINTS_EXECUTION_ACCEPTANCE_AND_EVIDENCE_REFERENCES",
+        "ELIGIBILITY_POLICY_CONTENT_WOULD_EXPAND_FIELD_PROGRAM_SEMANTIC_RESPONSIBILITY",
+        "POLICY_VERSION_CHANGE_WOULD_REQUIRE_WRITING_ANOTHER_WHOLE_FIELD_PROGRAM_FACT",
+        "LEGACY_FIELD_PROGRAM_CONSUMERS_COULD_ACCIDENTALLY_TREAT_ELIGIBILITY_POLICY_AS_EXECUTION_OR_APPROVAL_STATE"
+      ],
+      "adjudication": "POSSIBLE_SCOPE_ANCHOR_BUT_NOT_RECOMMENDED_AS_POLICY_DECLARATION_PAYLOAD"
+    },
+    {
+      "option": "SEPARATE_APPEND_ONLY_DECISION_ELIGIBILITY_POLICY_DECLARATION_FACT",
+      "proposed_fact_type": "decision_eligibility_policy_declaration_v1",
+      "proposed_payload_contract": "DecisionEligibilityPolicyDeclarationV1",
+      "scope_binding": "CANONICAL_DECISION_SCOPE_PLUS_EXPLICIT_PROGRAM_OR_EQUIVALENT_SCOPE_ANCHOR",
+      "strengths": [
+        "PRESERVES_FIELD_PROGRAM_SEMANTIC_BOUNDARY",
+        "POLICY_ID_AND_VERSION_HAVE_INDEPENDENT_IMMUTABLE_IDENTITY",
+        "POLICY_REF_CAN_RESOLVE_TO_ONE_DECLARATION_PAYLOAD",
+        "INDEPENDENT_EFFECTIVE_WINDOW_AND_SUPERSESSION",
+        "DECISION_TIME_AS_OF_SELECTION_CAN_BE_AUDITED",
+        "PRODUCTION_INSTANTIATION_CAN_BE_GOVERNED_EXPLICITLY_BY_G_B02_32"
+      ],
+      "current_writer_exists": false,
+      "current_route_exists": false,
+      "current_product_instance_exists": false,
+      "adjudication": "RECOMMENDED_SOURCE_TOPOLOGY_ONLY_NOT_IMPLEMENTATION_AUTHORITY"
+    },
+    {
+      "option": "STATIC_REPOSITORY_POLICY_FILE",
+      "strengths": [
+        "SIMPLE_VERSION_CONTROL"
+      ],
+      "risks": [
+        "NOT_TENANT_OR_PROGRAM_PRODUCT_DECLARATION_BY_DEFAULT",
+        "NO_PRODUCT_RUNTIME_FACT_IDENTITY",
+        "DECISION_TIME_AS_OF_PRODUCT_BINDING_IS_NOT_ESTABLISHED",
+        "REPOSITORY_CONFIG_AUTHORITY_COULD_BE_CONFUSED_WITH_CUSTOMER_PRODUCT_POLICY"
+      ],
+      "adjudication": "NOT_RECOMMENDED_FOR_BOUNDED_PRODUCT_POLICY_AUTHORITY"
+    },
+    {
+      "option": "REUSE_EXISTING_POLICY_LIKE_AUTHORITIES",
+      "candidates": [
+        "FieldProgram.acceptance_policy_ref",
+        "FieldProgram.evidence_policy_ref",
+        "FieldProgram.execution_policy",
+        "manual_approval_required_for",
+        "Twin Kernel P35/P46/TWIN_USE policy families"
+      ],
+      "adjudication": "FORBIDDEN_BY_B09L_PROVENANCE_BOUNDARY"
+    }
+  ],
+  "recommended_topology": {
+    "source_shape": "APPEND_ONLY_FACT",
+    "fact_type": "decision_eligibility_policy_declaration_v1",
+    "payload_contract": "DecisionEligibilityPolicyDeclarationV1",
+    "scope_anchor": "PROGRAM_ID_OR_EQUIVALENT_EXPLICIT_CANONICAL_SCOPE_SOURCE",
+    "field_program_role": "SCOPE_ANCHOR_ONLY_NOT_EMBEDDED_POLICY_AUTHORITY",
+    "recommendation_state": "RECOMMENDED_NOT_AUTHORIZED",
+    "product_authority_granted": false
+  },
+  "required_governance_before_writer": {
+    "decisions_not_yet_authorized": [
+      "WHO_OR_WHAT_MAY_DECLARE_PRODUCT_ELIGIBILITY_POLICY",
+      "WHICH_AUTHZ_SCOPE_AND_ROLE_MAY_WRITE_DECLARATIONS",
+      "WHETHER_WRITER_IS_API_MANUAL_CONFIG_OR_OTHER_GOVERNED_SOURCE",
+      "HOW_ONE_POLICY_REF_BINDS_TO_ONE_IMMUTABLE_DECLARATION",
+      "HOW_DUPLICATE_SAME_POLICY_REF_WITH_DIFFERENT_PAYLOAD_FAILS_CLOSED",
+      "HOW_MULTIPLE_APPLICABLE_POLICIES_OR_AMBIGUITY_FAIL_CLOSED",
+      "HOW_POLICY_IS_SELECTED_AS_OF_DECISION_TIME",
+      "HOW_SCOPE_ANCHOR_MUST_MATCH_CANDIDATE_SCOPE",
+      "WHETHER_AND_HOW_SUPERSESSION_IS_ALLOWED"
+    ],
+    "invariants_required_for_future_writer": [
+      "APPEND_ONLY_NO_IN_PLACE_MUTATION",
+      "NO_HIDDEN_DEFAULT_POLICY",
+      "NO_LATEST_WINS_ON_AMBIGUOUS_POLICY_IDENTITY",
+      "NO_POLICY_REF_REUSE_ACROSS_MATERIALLY_DIFFERENT_PAYLOADS",
+      "NO_SCOPE_MISMATCH",
+      "NO_B07E_RUNTIME_INVOCATION_AS_SIDE_EFFECT",
+      "NO_APPROVAL_PLAN_TASK_OR_EXECUTION_SIDE_EFFECT",
+      "REGISTER_PRODUCTION_DECLARATION_PATH_IN_G_B02_32_BEFORE_INSTANTIATION"
+    ]
+  },
+  "actual_product_policy_content": {
+    "policy_id": null,
+    "policy_version": null,
+    "policy_ref": null,
+    "applicable_action_types": null,
+    "required_criteria": null,
+    "source_authority": null,
+    "writer_authority": null,
+    "state": "INTENTIONALLY_UNDECIDED"
+  },
+  "repository_effects": {
+    "runtime_implementation_added": false,
+    "route_added": false,
+    "schema_or_database_change": false,
+    "workflow_added": false,
+    "connectivity_edge_added": false,
+    "policy_writer_added": false,
+    "policy_instance_added": false,
+    "g_b02_32_registered_paths_changed": false,
+    "replacement_readiness_changed": false,
+    "parallel_authority_graph_changed": false,
+    "mcft_or_twin_kernel_changed": false,
+    "consumer_migration_performed": false,
+    "authority_removal_performed": false
+  },
+  "next_permitted_step": "PRODUCT_GOVERNANCE_MUST_EXPLICITLY_AUTHORIZE_POLICY_DECLARATION_SOURCE_AND_WRITER_AUTHORITY_BEFORE_ANY_PRODUCTION_DECLARATION_PATH_OR_REAL_POLICY_INSTANCE_IS_ADDED"
+}
