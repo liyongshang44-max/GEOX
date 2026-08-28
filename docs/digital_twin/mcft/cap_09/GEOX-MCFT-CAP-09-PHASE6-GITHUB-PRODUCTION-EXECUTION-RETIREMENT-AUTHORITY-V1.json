@@ -195,5 +195,19 @@
     "fresh_formal_v5_epoch_creation": false,
     "production_container_activation": false,
     "mcft_cap09_completed": false
+  },
+  "runtime_independence_proof": {
+    "status": "REQUIRED",
+    "workflow_path": ".github/workflows/mcft-cap-09-phase6-runtime-independence.yml",
+    "compose_base": "docker-compose.mcft-cap09-phase5-qualification.yml",
+    "compose_blackout_override": "docker-compose.mcft-cap09-phase6-github-blackout.override.yml",
+    "reuse_contract": "SAME_PHASE5_PRODUCTION_PROCESS_GRAPH_WITH_GITHUB_RUNTIME_NETWORK_BLACKOUT_ONLY",
+    "github_artifact_rehydration_forbidden": true,
+    "required_claims": [
+      "GITHUB_CONTROL_PLANE_OUTAGE_DOES_NOT_STOP_EVIDENCE_INGRESS",
+      "GITHUB_CONTROL_PLANE_OUTAGE_DOES_NOT_STOP_TWIN_RUNTIME",
+      "PROCESS_RESTART_RECOVERS_FROM_DURABLE_OPERATIONAL_AUTHORITY_WITHOUT_GITHUB_ARTIFACT_REHYDRATION"
+    ],
+    "formal_v5_activation_effect": false
   }
 }

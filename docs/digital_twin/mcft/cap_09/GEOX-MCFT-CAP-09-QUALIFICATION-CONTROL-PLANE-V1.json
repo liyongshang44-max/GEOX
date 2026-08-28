@@ -66,7 +66,9 @@
         ".github/workflows/mcft-cap-09-t4r1-formal-v3-prebootstrap-recovery.yml",
         ".github/workflows/mcft-cap-09-t4r1-rolling-hourly-scheduler.yml",
         ".github/workflows/mcft-cap-09-t4r1-rolling-preboundary-capture.yml",
-        ".github/workflows/mcft-cap-09-t4r1-rolling-rehydration-live-proof.yml"
+        ".github/workflows/mcft-cap-09-t4r1-rolling-rehydration-live-proof.yml",
+        ".github/workflows/mcft-cap-09-phase6-runtime-independence.yml",
+        "docker-compose.mcft-cap09-phase6-github-blackout.override.yml"
       ]
     },
     "EA5E2_RUNTIME_GRAPH_V4": {

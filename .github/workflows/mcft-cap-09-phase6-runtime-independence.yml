@@ -1,0 +1,558 @@
+name: mcft-cap-09-phase6-runtime-independence
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-phase6-runtime-independence.yml'
+      - 'docker-compose.mcft-cap09-phase6-github-blackout.override.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - 'docker-compose.mcft-cap09-phase5-qualification.yml'
+      - 'docker/mcft-cap09-runtime.Dockerfile'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts'
+      - 'apps/server/src/external_evidence/qualification/mcft_cap09_phase5_evidence_runtime_qualification_v1.ts'
+      - 'apps/server/src/external_evidence/qualification/mcft_cap09_phase5_capture_a0_fixture_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_twin_runtime_qualification_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_verify_24t_v1.ts'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-phase6-runtime-independence-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  production-equivalent-24t:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      COMPOSE_FILE: docker-compose.mcft-cap09-phase5-qualification.yml
+      PHASE6_OVERRIDE_FILE: docker-compose.mcft-cap09-phase6-github-blackout.override.yml
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+      GEOX_PHASE5_POSTGRES_USER: postgres
+      GEOX_PHASE5_POSTGRES_PASSWORD: phase6-postgres-blackout
+      GEOX_PHASE5_DATABASE_NAME: geox_mcft_cap09_phase6_independence
+      GEOX_PHASE5_MIGRATOR_PASSWORD: phase6-migrator-blackout
+      GEOX_PHASE5_GENERIC_RUNTIME_PASSWORD: phase6-generic-runtime-blackout
+      GEOX_PHASE5_EVIDENCE_DATABASE_PASSWORD: phase6-evidence-blackout
+      GEOX_PHASE5_TWIN_DATABASE_PASSWORD: phase6-twin-blackout
+      GEOX_PHASE5_MINIO_ACCESS_KEY: phase6minio
+      GEOX_PHASE5_MINIO_SECRET_KEY: phase6minio-blackout-secret
+      GEOX_PHASE5_RAW_BUCKET: mcft-cap09-phase6-blackout-raw
+      GEOX_PHASE5_S3_REGION: us-east-1
+      GEOX_PHASE5_TENANT_ID: tenant_mcft_external
+      GEOX_PHASE5_PROJECT_ID: project_mcft_cap09
+      GEOX_PHASE5_GROUP_ID: group_public_research
+      GEOX_PHASE5_FIELD_ID: field_kbs_mcse_t4r1
+      GEOX_PHASE5_SEASON_ID: season_2026_corn
+      GEOX_PHASE5_ZONE_ID: zone_kbs_mcse_t4r1_crop_formal_v1
+      # Placeholders satisfy Compose interpolation before live capture. They are never
+      # consumed by prepare/Twin until replaced with the capture-bound values.
+      GEOX_PHASE5_A0: '2099-01-01T00:00:00.000Z'
+      GEOX_PHASE5_CREATED_AT: '2098-12-31T23:30:00.000Z'
+      GEOX_PHASE5_ACCELERATED_THROUGH_LOGICAL_TIME: '2099-01-02T00:00:00.000Z'
+
+    steps:
+      - name: Checkout exact Phase6 subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact head and create private qualification roots
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$GEOX_DEPLOYMENT_SUBJECT_COMMIT"
+          fixture_root="$RUNNER_TEMP/mcft-cap09-phase6-independence-$actual/fixtures"
+          control_root="$RUNNER_TEMP/mcft-cap09-phase6-independence-$actual/control"
+          mkdir -p "$fixture_root" "$control_root"
+          chmod 700 "$fixture_root" "$control_root"
+          {
+            echo "GEOX_PHASE5_FIXTURE_ROOT=$fixture_root"
+            echo "GEOX_PHASE5_CONTROL_ROOT=$control_root"
+          } >> "$GITHUB_ENV"
+
+      - name: Require Phase6 retirement authority, exact stacked base, and central ownership
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test '${{ github.event.pull_request.base.sha }}' = '75d4961279bd64dc1c9dd7d68aac189c72c98846'
+          git merge-base --is-ancestor '75d4961279bd64dc1c9dd7d68aac189c72c98846' "$GEOX_DEPLOYMENT_SUBJECT_COMMIT"
+          node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs enforce > "$GEOX_PHASE5_CONTROL_ROOT/phase6-owner-audit.json"
+          node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs \
+            --base '${{ github.event.pull_request.base.sha }}' --head "$GEOX_DEPLOYMENT_SUBJECT_COMMIT" \
+            --generation v13 --stage SUCCESSOR_SUBJECT_PRE_MERGE \
+            --out "$GEOX_PHASE5_CONTROL_ROOT/applicability-plan.json"
+          node - <<'NODE'
+          const fs=require('node:fs'),root=process.env.GEOX_PHASE5_CONTROL_ROOT;
+          const p=JSON.parse(fs.readFileSync(root+'/applicability-plan.json','utf8'));
+          const a=JSON.parse(fs.readFileSync(root+'/phase6-owner-audit.json','utf8'));
+          if(p.status!=='PASS'||p.unknown_changed_paths.length||p.authority_errors.length||p.resolver_errors.length)throw new Error('PHASE6_RUNTIME_CENTRAL_PLAN_NOT_PASS');
+          if(a.status!=='PASS'||a.active_retired_owner_or_trigger_count!==0||a.retired_actions_write_count!==0)throw new Error('PHASE6_RUNTIME_OWNER_RETIREMENT_REQUIRED');
+          NODE
+
+      - name: Require fresh no-artifact runtime-independence execution
+        id: temporal
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "mode=FULL_LIVE_24T" >> "$GITHUB_OUTPUT"
+          echo "GEOX_PHASE5_EXECUTION_MODE=FULL_LIVE_24T" >> "$GITHUB_ENV"
+          test ! -e "$RUNNER_TEMP/phase5-old-full-24t"
+          test ! -e "$RUNNER_TEMP/phase5-evidence-resilience-3349"
+
+      - name: Build exact scientific Runtime image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" build database-platform-bootstrap
+          image="geox/mcft-cap09-phase5-qualification:$GEOX_DEPLOYMENT_SUBJECT_COMMIT"
+          docker image inspect "$image" >/dev/null
+
+      - name: Start isolated PostgreSQL and private raw store
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" up -d postgres minio
+          docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" run --rm --no-deps minio-init
+          docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" run --rm --no-deps database-platform-bootstrap
+          docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" run --rm --no-deps service-principal-bootstrap
+
+      - name: Prove GitHub control plane is unreachable from Runtime containers
+        shell: bash
+        run: |
+          set -euo pipefail
+          for service in fixture-capture evidence-runtime twin-runtime; do
+            out="$(docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" --profile qualification-runtime --profile qualification-orchestration \
+              run --rm --no-deps --entrypoint node "$service" -e '
+                const dns=require("node:dns").promises;
+                (async()=>{
+                  const bad=Object.entries(process.env).filter(([k,v])=>/^(?:GITHUB_|GH_|ACTIONS_)/.test(k)&&String(v||"").trim());
+                  if(bad.length)throw new Error("PHASE6_RUNTIME_GITHUB_CREDENTIAL_FORBIDDEN:"+bad.map(([k])=>k).join(","));
+                  for(const host of ["github.com","api.github.com"]){
+                    const row=await dns.lookup(host);
+                    if(row.address!=="127.0.0.1")throw new Error("PHASE6_GITHUB_BLACKOUT_DNS_REQUIRED:"+host+":"+row.address);
+                    let reachable=false;
+                    try{const res=await fetch("https://"+host,{signal:AbortSignal.timeout(1200)});reachable=true;await res.body?.cancel();}catch{}
+                    if(reachable)throw new Error("PHASE6_GITHUB_CONTROL_PLANE_REACHABLE:"+host);
+                  }
+                  process.stdout.write(JSON.stringify({status:"PASS",github_credential_count:0,github_hosts_blackholed:true,github_control_plane_reachable:false})+"\\n");
+                })().catch(e=>{console.error(e);process.exit(1);});
+              ')"
+            printf '%s\n' "$out" | tail -n 1 | jq . > "$GEOX_PHASE5_CONTROL_ROOT/phase6-$service-github-blackout.json"
+            test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/phase6-$service-github-blackout.json")" = "PASS"
+          done
+
+      - name: Capture real causal A0 soil and GFS raw objects
+        if: steps.temporal.outputs.mode == 'FULL_LIVE_24T'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" --profile qualification-orchestration             run --rm --no-deps fixture-capture
+          proof="$GEOX_PHASE5_FIXTURE_ROOT/capture-proof.json"
+          test -f "$proof"
+          sudo chown "$(id -u):$(id -g)" "$proof"
+          chmod 600 "$proof"
+          test "$(jq -r .status "$proof")" = "PASS"
+          test "$(jq -r .subject_sha "$proof")" = "$GEOX_DEPLOYMENT_SUBJECT_COMMIT"
+          test "$(jq -r .fake_grib_used "$proof")" = "false"
+          test "$(jq -r .fixture_raw_upload_authorized "$proof")" = "false"
+          test "$(jq -r .rolling_gfs_target_count "$proof")" = "24"
+          test "$(jq -r .gfs_single_causal_cycle_reused "$proof")" = "true"
+          test "$(jq -r .all_gfs_raw_retrieved_by_a0 "$proof")" = "true"
+          test "$(jq -r .cross_cycle_retry_authorized "$proof")" = "false"
+          test "$(jq -r .same_request_max_attempts "$proof")" = "2"
+          test "$(jq -r .gfs_extended_lead_count "$proof")" -ge "23"
+          a0="$(jq -r .a0 "$proof")"
+          o00="$(jq -r .o00 "$proof")"
+          o23="$(jq -r .o23 "$proof")"
+          created="$(jq -r .capture_started_at "$proof")"
+          o07="$(date -u -d "$o00 +7 hours" '+%Y-%m-%dT%H:%M:%S.000Z')"
+          {
+            echo "GEOX_PHASE5_A0=$a0"
+            echo "GEOX_PHASE5_CREATED_AT=$created"
+            echo "GEOX_PHASE5_ACCELERATED_THROUGH_LOGICAL_TIME=$o23"
+            echo "GEOX_PHASE5_O00=$o00"
+            echo "GEOX_PHASE5_O07=$o07"
+            echo "GEOX_PHASE5_O23=$o23"
+          } >> "$GITHUB_ENV"
+          now="$(date -u +%s)"
+          boundary="$(date -u -d "$a0" +%s)"
+          if [ "$now" -ge "$boundary" ]; then
+            echo "PHASE5_24T_CAPTURE_MISSED_CAUSAL_A0_BOUNDARY" >&2
+            exit 1
+          fi
+
+      - name: Run duplicate Evidence containers with fenced takeover and restart recovery
+        if: steps.temporal.outputs.mode == 'FULL_LIVE_24T'
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GEOX_PHASE5_EVIDENCE_SUCCESS_CADENCE_MS=1000
+          export GEOX_PHASE5_EVIDENCE_LEASE_STANDBY_MS=200
+          docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" --profile qualification-runtime \
+            up -d --no-deps --scale evidence-runtime=2 evidence-runtime
+          mapfile -t cids < <(docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" ps -a -q evidence-runtime)
+          test "${#cids[@]}" = "2"
+
+          leader=""
+          standby=""
+          owner_before=""
+          fence_before=""
+          for attempt in $(seq 1 900); do
+            row="$(docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" exec -T postgres \
+              psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc \
+              "SELECT lease_owner||'|'||fencing_token::text FROM public.external_evidence_producer_lease_v1 LIMIT 1;")"
+            weather="$(docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" exec -T postgres \
+              psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc \
+              "SELECT count(*) FROM public.facts WHERE source='mcft_cap09_external_formal_evidence_v1' AND record_json->>'type'='future_weather_assumption_v1';")"
+            if [ -n "$row" ] && [ "$weather" -ge 4 ] && [ "$weather" -lt 24 ]; then
+              owner_before="${row%%|*}"
+              fence_before="${row##*|}"
+              for cid in "${cids[@]}"; do
+                host="$(docker inspect -f '{{.Config.Hostname}}' "$cid")"
+                if [ "$owner_before" = "evidence-runtime:$host" ]; then
+                  leader="$cid"
+                fi
+              done
+              if [ -n "$leader" ]; then
+                for cid in "${cids[@]}"; do
+                  if [ "$cid" != "$leader" ]; then standby="$cid"; fi
+                done
+                break
+              fi
+            fi
+            for cid in "${cids[@]}"; do
+              if [ "$(docker inspect -f '{{.State.Running}}' "$cid")" != "true" ]; then
+                docker logs "$cid" >&2 || true
+                exit 1
+              fi
+            done
+            sleep 1
+          done
+          test -n "$leader"
+          test -n "$standby"
+          test -n "$owner_before"
+          test -n "$fence_before"
+
+          docker kill --signal=SIGTERM "$leader" >/dev/null
+          first_exit="$(docker wait "$leader")"
+          test "$first_exit" = "0"
+
+          owner_after=""
+          fence_after=""
+          for attempt in $(seq 1 300); do
+            row="$(docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" exec -T postgres \
+              psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc \
+              "SELECT lease_owner||'|'||fencing_token::text FROM public.external_evidence_producer_lease_v1 WHERE expires_at>transaction_timestamp() LIMIT 1;")"
+            if [ -n "$row" ]; then
+              owner_after="${row%%|*}"
+              fence_after="${row##*|}"
+              standby_host="$(docker inspect -f '{{.Config.Hostname}}' "$standby")"
+              if [ "$owner_after" = "evidence-runtime:$standby_host" ] && [ "$fence_after" -gt "$fence_before" ]; then
+                break
+              fi
+            fi
+            sleep 1
+          done
+          test -n "$owner_after"
+          test "$owner_after" != "$owner_before"
+          test "$fence_after" -gt "$fence_before"
+
+          docker start "$leader" >/dev/null
+          restarted_standby_seen=0
+          for attempt in $(seq 1 120); do
+            if docker logs "$leader" 2>&1 | grep -q '"detail":"LEASE_HELD_BY_OTHER_OWNER"'; then
+              restarted_standby_seen=1
+              break
+            fi
+            if [ "$(docker inspect -f '{{.State.Running}}' "$leader")" != "true" ]; then
+              break
+            fi
+            sleep 1
+          done
+          test "$restarted_standby_seen" = "1"
+
+          reached=0
+          for attempt in $(seq 1 1800); do
+            counts="$(docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" exec -T postgres \
+              psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc \
+              "SELECT concat_ws('|', count(*) FILTER (WHERE record_json->>'type'='soil_moisture_observation_v1'), count(*) FILTER (WHERE record_json->>'type'='future_weather_assumption_v1'), count(*) FILTER (WHERE record_json->>'type'='future_et0_assumption_v1')) FROM public.facts WHERE source='mcft_cap09_external_formal_evidence_v1';")"
+            if [ "$counts" = "1|24|24" ]; then reached=1; break; fi
+            sleep 1
+          done
+          test "$reached" = "1"
+
+          leader_exit="$(docker wait "$leader")"
+          standby_exit="$(docker wait "$standby")"
+          test "$leader_exit" = "0"
+          test "$standby_exit" = "0"
+          docker logs "$leader" > "$GEOX_PHASE5_CONTROL_ROOT/evidence-runtime-leader-restarted.log" 2>&1 || true
+          docker logs "$standby" > "$GEOX_PHASE5_CONTROL_ROOT/evidence-runtime-standby-takeover.log" 2>&1 || true
+
+          now="$(date -u +%s)"
+          boundary="$(date -u -d "$GEOX_PHASE5_A0" +%s)"
+          if [ "$now" -gt "$boundary" ]; then
+            echo "PHASE5_24T_EVIDENCE_INGESTION_AFTER_A0" >&2
+            exit 1
+          fi
+
+          jq -n \
+            --arg owner_before "$owner_before" \
+            --arg owner_after "$owner_after" \
+            --argjson fence_before "$fence_before" \
+            --argjson fence_after "$fence_after" \
+            '{status:"PASS",schema_version:"geox_mcft_cap09_phase5_evidence_container_resilience_v1",
+              duplicate_container_count:2,graceful_active_container_stop:true,
+              restarted_original_container:true,restarted_container_observed_standby:true,
+              standby_takeover:true,owner_changed:true,fence_monotonic_takeover:($fence_after>$fence_before),
+              durable_restart_authority:"EVIDENCE_SUPPLY_CURSOR",
+              provider_graph_reused:true,twin_state_mutation:false}' \
+            > "$GEOX_PHASE5_CONTROL_ROOT/evidence-resilience-proof.json"
+
+      - name: Prepare A0 and exact 24-slot manifest from canonical Evidence DB
+        if: steps.temporal.outputs.mode == 'FULL_LIVE_24T'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" --profile qualification-orchestration             run --rm --no-deps qualification-prepare             2>&1 | tee "$GEOX_PHASE5_CONTROL_ROOT/prepare.log"
+          sudo chown "$(id -u):$(id -g)"             "$GEOX_PHASE5_CONTROL_ROOT/phase5-manifest.json"             "$GEOX_PHASE5_CONTROL_ROOT/prepare-proof.json"
+          chmod 600             "$GEOX_PHASE5_CONTROL_ROOT/phase5-manifest.json"             "$GEOX_PHASE5_CONTROL_ROOT/prepare-proof.json"
+          test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/prepare-proof.json")" = "PASS"
+          test "$(jq -r .engineering_bootstrap_fixture_count "$GEOX_PHASE5_CONTROL_ROOT/prepare-proof.json")" = "0"
+          test "$(jq -r .bootstrap_lease_release_mode "$GEOX_PHASE5_CONTROL_ROOT/prepare-proof.json")" = "NATURAL_TTL_EXPIRY"
+          test "$(jq -r .bootstrap_lease_duration_seconds "$GEOX_PHASE5_CONTROL_ROOT/prepare-proof.json")" = "1"
+          test "$(jq -r .subject_sha "$GEOX_PHASE5_CONTROL_ROOT/prepare-proof.json")" = "$GEOX_DEPLOYMENT_SUBJECT_COMMIT"
+          sleep 2
+
+      - name: Run duplicate Twin containers O00-O07 with DB fencing then graceful stop
+        if: steps.temporal.outputs.mode == 'FULL_LIVE_24T'
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GEOX_PHASE5_ACCELERATED_THROUGH_LOGICAL_TIME="$GEOX_PHASE5_O07"
+          docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" --profile qualification-runtime \
+            up -d --no-deps --scale twin-runtime=2 twin-runtime
+          mapfile -t cids < <(docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" ps -a -q twin-runtime)
+          test "${#cids[@]}" = "2"
+          host1="$(docker inspect -f '{{.Config.Hostname}}' "${cids[0]}")"
+          host2="$(docker inspect -f '{{.Config.Hostname}}' "${cids[1]}")"
+          test "$host1" != "$host2"
+
+          reached=0
+          for attempt in $(seq 1 600); do
+            failed="$(docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" exec -T postgres \
+              psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc \
+              "SELECT count(*) FROM public.twin_shadow_online_scheduler_slot_v1 WHERE state='FAILED';")"
+            if [ "$failed" -ne 0 ]; then
+              for cid in "${cids[@]}"; do docker logs "$cid" >&2 || true; done
+              exit 1
+            fi
+            active="$(docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" exec -T postgres \
+              psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc \
+              "SELECT count(*) FROM public.twin_shadow_online_scheduler_slot_v1 WHERE state IN ('CLAIMED','RUNNING');")"
+            if [ "$active" -gt 1 ]; then
+              echo "PHASE5_TWIN_DUPLICATE_ACTIVE_OWNER_VIOLATION:$active" >&2
+              exit 1
+            fi
+            terminal="$(docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" exec -T postgres \
+              psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc \
+              "SELECT count(*) FROM public.twin_shadow_online_scheduler_slot_v1 WHERE state IN ('COMPLETED','DEGRADED');")"
+            if [ "$terminal" -ge 8 ]; then reached=1; break; fi
+            for cid in "${cids[@]}"; do
+              if [ "$(docker inspect -f '{{.State.Running}}' "$cid")" != "true" ]; then
+                docker logs "$cid" >&2 || true
+                exit 1
+              fi
+            done
+            sleep 1
+          done
+          test "$reached" = "1"
+
+          for cid in "${cids[@]}"; do docker kill --signal=SIGTERM "$cid" >/dev/null; done
+          index=0
+          for cid in "${cids[@]}"; do
+            index=$((index+1))
+            exit_code="$(docker wait "$cid")"
+            docker logs "$cid" > "$GEOX_PHASE5_CONTROL_ROOT/twin-o00-o07-$index.log" 2>&1 || true
+            test "$exit_code" = "0"
+          done
+          cursor="$(docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" exec -T postgres \
+            psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc \
+            "SELECT next_slot_index FROM public.twin_shadow_online_scheduler_cursor_v1;")"
+          test "$cursor" = "8"
+          active="$(docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" exec -T postgres \
+            psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc \
+            "SELECT count(*) FROM public.twin_shadow_online_scheduler_slot_v1 WHERE state IN ('CLAIMED','RUNNING');")"
+          test "$active" = "0"
+          terminal="$(docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" exec -T postgres \
+            psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc \
+            "SELECT count(*) FROM public.twin_shadow_online_scheduler_slot_v1 WHERE state IN ('COMPLETED','DEGRADED');")"
+          test "$terminal" = "8"
+          distinct_owners="$(docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" exec -T postgres \
+            psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc \
+            "SELECT count(DISTINCT lease_owner) FROM public.twin_shadow_online_scheduler_slot_v1 WHERE state IN ('COMPLETED','DEGRADED');")"
+          test "$distinct_owners" -ge 1
+          test "$distinct_owners" -le 2
+
+          jq -n \
+            --arg host1 "$host1" --arg host2 "$host2" --argjson distinct_owners "$distinct_owners" \
+            '{status:"PASS",schema_version:"geox_mcft_cap09_phase5_twin_duplicate_container_fencing_v1",
+              duplicate_container_count:2,container_hostnames:[$host1,$host2],
+              terminal_slot_count:8,active_slot_count_after_stop:0,
+              distinct_terminal_lease_owner_count:$distinct_owners,
+              maximum_active_slots_per_scope:1,db_fencing_authority:true,
+              provider_request_count:0,evidence_supply_cursor_mutation:false}' \
+            > "$GEOX_PHASE5_CONTROL_ROOT/twin-duplicate-proof.json"
+
+      - name: Restart Twin container and recover O08-O23 from durable cursor
+        if: steps.temporal.outputs.mode == 'FULL_LIVE_24T'
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GEOX_PHASE5_ACCELERATED_THROUGH_LOGICAL_TIME="$GEOX_PHASE5_O23"
+          docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" rm -f twin-runtime >/dev/null
+          docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" --profile qualification-runtime \
+            up -d --no-deps --scale twin-runtime=1 --force-recreate twin-runtime
+          cid="$(docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" ps -q twin-runtime)"
+          test -n "$cid"
+          reached=0
+          for attempt in $(seq 1 600); do
+            failed="$(docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" exec -T postgres               psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc               "SELECT count(*) FROM public.twin_shadow_online_scheduler_slot_v1 WHERE state='FAILED';")"
+            if [ "$failed" -ne 0 ]; then
+              docker logs "$cid" >&2 || true
+              exit 1
+            fi
+            terminal="$(docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" exec -T postgres               psql -U "$GEOX_PHASE5_POSTGRES_USER" -d "$GEOX_PHASE5_DATABASE_NAME" -Atc               "SELECT count(*) FROM public.twin_shadow_online_scheduler_slot_v1 WHERE state IN ('COMPLETED','DEGRADED');")"
+            if [ "$terminal" -ge 24 ]; then reached=1; break; fi
+            if [ "$(docker inspect -f '{{.State.Running}}' "$cid")" != "true" ]; then
+              docker logs "$cid" >&2 || true
+              exit 1
+            fi
+            sleep 2
+          done
+          test "$reached" = "1"
+          docker kill --signal=SIGTERM "$cid" >/dev/null
+          exit_code="$(docker wait "$cid")"
+          docker logs "$cid" > "$GEOX_PHASE5_CONTROL_ROOT/twin-o08-o23.log" 2>&1 || true
+          test "$exit_code" = "0"
+
+      - name: Verify exact 24T canonical and DB isolation closure
+        if: steps.temporal.outputs.mode == 'FULL_LIVE_24T'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" --profile qualification-orchestration             run --rm --no-deps qualification-verify             2>&1 | tee "$GEOX_PHASE5_CONTROL_ROOT/verify.log"
+          proof="$GEOX_PHASE5_CONTROL_ROOT/verify-proof.json"
+          sudo chown "$(id -u):$(id -g)" "$proof"
+          chmod 600 "$proof"
+          test "$(jq -r .status "$proof")" = "PASS"
+          test "$(jq -r .exact_24t_complete "$proof")" = "true"
+          test "$(jq -r .terminal_tick_count "$proof")" = "24"
+          test "$(jq -r .forcing_mode_count "$proof")" = "24"
+          test "$(jq -r .db_layer_evidence_twin_bidirectional_isolation "$proof")" = "true"
+          test "$(jq -r .late_exact_kbs_batch_covered "$proof")" = "false"
+          test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/evidence-resilience-proof.json")" = "PASS"
+          test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/twin-duplicate-proof.json")" = "PASS"
+          jq -n             --arg subject "$GEOX_DEPLOYMENT_SUBJECT_COMMIT"             --arg a0 "$GEOX_PHASE5_A0"             --arg o00 "$GEOX_PHASE5_O00"             --arg o07 "$GEOX_PHASE5_O07"             --arg o23 "$GEOX_PHASE5_O23"             '{status:"PASS",schema_version:"geox_mcft_cap09_phase5_exact_head_24t_workflow_v1",
+              subject_sha:$subject,a0:$a0,o00:$o00,first_process_through:$o07,o23:$o23,
+              evidence_duplicate_container_count:2,evidence_container_restart_count:1,
+              evidence_fenced_standby_takeover:true,evidence_durable_cursor_restart_recovery:true,
+              twin_duplicate_container_count:2,twin_container_restart_count:1,
+              twin_db_fenced_owner_uniqueness:true,durable_cursor_restart_recovery:true,
+              same_exact_image_subject:true,raw_fixture_uploaded:false,
+              production_owner_cutover:false,formal_v5_armed:false}'             > "$GEOX_PHASE5_CONTROL_ROOT/workflow-proof.json"
+
+      - name: Assemble Phase6 GitHub-outage and durable-restart proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e "$RUNNER_TEMP/phase5-old-full-24t"
+          test ! -e "$RUNNER_TEMP/phase5-evidence-resilience-3349"
+          ! grep -Eq 'actions/[d]ownload-artifact' '.github/workflows/mcft-cap-09-phase6-runtime-independence.yml'
+          ! grep -Eq '/actions/[a]rtifacts/' '.github/workflows/mcft-cap-09-phase6-runtime-independence.yml'
+          ! grep -Eq 'secrets\.GITHUB_[T]OKEN' '.github/workflows/mcft-cap-09-phase6-runtime-independence.yml'
+          for service in fixture-capture evidence-runtime twin-runtime; do
+            test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/phase6-$service-github-blackout.json")" = "PASS"
+            test "$(jq -r .github_credential_count "$GEOX_PHASE5_CONTROL_ROOT/phase6-$service-github-blackout.json")" = "0"
+            test "$(jq -r .github_hosts_blackholed "$GEOX_PHASE5_CONTROL_ROOT/phase6-$service-github-blackout.json")" = "true"
+            test "$(jq -r .github_control_plane_reachable "$GEOX_PHASE5_CONTROL_ROOT/phase6-$service-github-blackout.json")" = "false"
+          done
+          test "$(jq -r .status "$GEOX_PHASE5_FIXTURE_ROOT/capture-proof.json")" = "PASS"
+          test "$(jq -r .fake_grib_used "$GEOX_PHASE5_FIXTURE_ROOT/capture-proof.json")" = "false"
+          test "$(jq -r .gfs_network_request_count "$GEOX_PHASE5_FIXTURE_ROOT/capture-proof.json")" -gt 0
+          test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/evidence-resilience-proof.json")" = "PASS"
+          test "$(jq -r .durable_restart_authority "$GEOX_PHASE5_CONTROL_ROOT/evidence-resilience-proof.json")" = "EVIDENCE_SUPPLY_CURSOR"
+          test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/twin-duplicate-proof.json")" = "PASS"
+          test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/verify-proof.json")" = "PASS"
+          test "$(jq -r .exact_24t_complete "$GEOX_PHASE5_CONTROL_ROOT/verify-proof.json")" = "true"
+          test "$(jq -r .terminal_tick_count "$GEOX_PHASE5_CONTROL_ROOT/verify-proof.json")" = "24"
+          test "$(jq -r .db_layer_evidence_twin_bidirectional_isolation "$GEOX_PHASE5_CONTROL_ROOT/verify-proof.json")" = "true"
+          test "$(jq -r .durable_cursor_restart_recovery "$GEOX_PHASE5_CONTROL_ROOT/workflow-proof.json")" = "true"
+          jq -n --arg subject "$GEOX_DEPLOYMENT_SUBJECT_COMMIT" --arg phase5 '75d4961279bd64dc1c9dd7d68aac189c72c98846' \
+            --argjson provider_requests "$(jq -r .gfs_network_request_count "$GEOX_PHASE5_FIXTURE_ROOT/capture-proof.json")" \
+            '{schema_version:"geox_mcft_cap09_phase6_runtime_independence_v1",status:"PASS",
+              subject_sha:$subject,phase5_closure_head:$phase5,same_phase5_production_process_graph_reused:true,
+              github_control_plane_network_blackout_from_runtime_containers:true,github_runtime_credential_count:0,
+              github_artifact_rehydration_count:0,live_provider_network_request_count:$provider_requests,
+              evidence_ingress_progressed_during_github_blackout:true,evidence_restart_from_durable_authority:true,
+              evidence_restart_authority:"EVIDENCE_SUPPLY_CURSOR",twin_runtime_progressed_during_github_blackout:true,
+              twin_restart_from_durable_authority:true,twin_restart_authority:"RUNTIME_TICK_CURSOR_AND_CANONICAL_CHECKPOINT",
+              github_provider_request_count_during_formal:0,github_formal_twin_db_mutation_count:0,
+              github_production_tick_execution_count:0,github_hourly_wake_dependency_count:0,
+              runtime_provider_fallback:false,evidence_to_twin_mutation_crossing:false,
+              production_container_activation:false,formal_v5_armed:false,mcft_cap09_completed:false}' \
+            > "$GEOX_PHASE5_CONTROL_ROOT/phase6-runtime-independence-proof.json"
+
+      - name: Upload Phase6 non-raw runtime-independence proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-phase6-runtime-independence-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            ${{ env.GEOX_PHASE5_FIXTURE_ROOT }}/capture-proof.json
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/phase5-manifest.json
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/prepare-proof.json
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/verify-proof.json
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/workflow-proof.json
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/phase6-runtime-independence-proof.json
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/phase6-fixture-capture-github-blackout.json
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/phase6-evidence-runtime-github-blackout.json
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/phase6-twin-runtime-github-blackout.json
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/phase6-owner-audit.json
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/evidence-resilience-proof.json
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/evidence-runtime-leader-restarted.log
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/evidence-runtime-standby-takeover.log
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/prepare.log
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/twin-duplicate-proof.json
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/twin-o00-o07-1.log
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/twin-o00-o07-2.log
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/twin-o08-o23.log
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/verify.log
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/temporal-viability-proof.json
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/temporal-settlement-proof.json
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/twin-fencing-seed-proof.json
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/twin-fencing-seed.log
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/old-full-verify-proof.json
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/old-full-workflow-proof.json
+            ${{ env.GEOX_PHASE5_CONTROL_ROOT }}/old-full-capture-proof.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Destroy qualification state and raw fixture
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          docker compose -f "$COMPOSE_FILE" -f "$PHASE6_OVERRIDE_FILE" --profile qualification-runtime --profile qualification-orchestration             down -v --remove-orphans
+          sudo rm -rf "${GEOX_PHASE5_FIXTURE_ROOT:-}" "${GEOX_PHASE5_CONTROL_ROOT:-}"
