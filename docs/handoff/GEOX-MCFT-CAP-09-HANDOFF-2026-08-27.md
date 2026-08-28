@@ -1,3 +1,1495 @@
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-08-28 Continuation — Phase 6 GitHub Production-Owner Retirement / Runtime-Independence Frontier
+
+Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
+
+Timestamp: **2026-08-28 13:29 +08:00**
+
+Repository: liyongshang44-max/GEOX
+
+Purpose: continue the same MCFT-CAP-09 Production Hosting route after Phase 5 formally closed. This section records the machine-accepted Phase 5 closure, the independent stacked Phase 6 ownership-cutover PR, the implemented retirement of GitHub production execution ownership, the remaining runtime-independence acceptance, the two parser-only blackout-probe failures already repaired, and the exact next steps before any fresh Formal-v5 epoch may be armed.
+
+> **This section is now the highest-priority conversation continuation in this file.**
+>
+> The previous Phase 5 continuation beginning with D0 is intentionally preserved in full below as historical reasoning/evidence.
+>
+> The earlier C continuation and original Phase 2 continuation remain preserved below that.
+>
+> Do not delete or rewrite those historical sections. They explain how the system reached the current Phase 6 frontier and why several apparently simpler shortcuts are forbidden.
+>
+> This handoff does **not** supersede docs/SSOT.md, the Digital Twin Master Task Line, the CAP-09 taskbook, accepted CAP-01→08 authority, immutable Formal evidence, the qualification control plane, or the frozen Production Hosting route.
+
+---
+
+## E0. READ THIS FIRST — authority reconstruction order changed because Phase 5 is now CLOSED
+
+The next engineer must reconstruct authority in this order:
+
+1. docs/SSOT.md
+2. docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md
+3. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md
+4. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md
+5. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json
+6. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+7. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+8. this handoff, newest continuation first
+9. weekly/status notes only as operational context, never as authority
+
+The essential phase transition is now:
+
+~~~
+Phase 5 production-equivalent graph
+        CLOSED
+        exact closure head = 75d4961279bd64dc1c9dd7d68aac189c72c98846
+        control-plane blockers = []
+        ↓
+Phase 6 GitHub production execution retirement
+        IMPLEMENTED at control-plane / workflow ownership layer
+        ↓
+Phase 6 runtime independence
+        CURRENT FRONTIER
+        exact head = 43529e13dbab2d21c6f4174a4c54a6122e166f1d
+        run = 33144759220
+        ↓
+Phase 7 fresh Formal-v5
+        FORBIDDEN UNTIL PHASE 6 TERMINAL PASS
+~~~
+
+Do **not** resume Phase 5 development unless Phase 6 proves a genuine Phase 5 regression.
+
+Do **not** arm Formal-v5 merely because GitHub production triggers have been retired.
+
+---
+
+## E1. Current task in one sentence
+
+**Finish Phase 6 by proving on the real production-equivalent Compose graph that Evidence Runtime and Twin Runtime remain operational while the GitHub control plane is blacked out, that both services recover from durable cursor/checkpoint authority after restart without GitHub artifact rehydration, and that the exact 24T still closes; do this without restoring any retired GitHub production owner, without introducing a fallback collector/scheduler, and without arming Formal-v5.**
+
+---
+
+## E2. Exact current repository / PR state
+
+### E2.1 Protected main
+
+Protected main remains exactly:
+
+~~~
+26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+~~~
+
+GitHub reports the branch is protected.
+
+Neither the Phase 5 closure work nor the Phase 6 stack has moved protected main.
+
+### E2.2 Phase 5 closure predecessor — #3323
+
+Draft PR:
+
+~~~
+#3323
+feat(mcft-cap09): build Phase5 production-equivalent containers
+~~~
+
+Branch:
+
+~~~
+feat/mcft-cap09-phase5-production-equivalent-containers-v1
+~~~
+
+Base:
+
+~~~
+16ff7160473c0a25dc059db6b2b6b7ba07f54dd1
+~~~
+
+Current / closure head:
+
+~~~
+75d4961279bd64dc1c9dd7d68aac189c72c98846
+~~~
+
+GitHub state at this handoff:
+
+~~~
+open       = true
+Draft      = true
+mergeable  = true
+commits    = 90
+files      = 46
+merged     = false
+~~~
+
+Important:
+
+**Phase 5 is closed by machine evidence at this head even though #3323 is still a stacked Draft PR and is not merged into protected main.**
+
+Do not confuse “Phase closed in the governed stacked development route” with “merged to main”.
+
+### E2.3 Current Phase 6 frontier — #3351
+
+Independent stacked Draft PR:
+
+~~~
+#3351
+feat(mcft-cap09): retire GitHub production execution ownership
+~~~
+
+Branch:
+
+~~~
+feat/mcft-cap09-phase6-retire-github-production-execution-v1
+~~~
+
+Base is locked exactly to the Phase 5 closure head:
+
+~~~
+75d4961279bd64dc1c9dd7d68aac189c72c98846
+~~~
+
+Current head:
+
+~~~
+43529e13dbab2d21c6f4174a4c54a6122e166f1d
+~~~
+
+GitHub state:
+
+~~~
+open          = true
+Draft         = true
+mergeable     = true
+commits       = 10
+changed_files = 31
+~~~
+
+This exact base relationship is mandatory.
+
+Do not rebase #3351 to protected main.
+
+Do not silently move its base away from the Phase 5 closure subject.
+
+### E2.4 Conversation handoff PR — #3298
+
+Docs-only Draft PR remains:
+
+~~~
+#3298
+branch = docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier
+base   = protected main @ 26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+~~~
+
+Before this continuation commit:
+
+~~~
+head          = aa894b42a288d62bbf1149bc3b7cc1de032552ba
+commits       = 4
+changed_files = 2
+Draft         = true
+open          = true
+mergeable     = true
+~~~
+
+#3298 must remain docs-only.
+
+No Phase 5 or Phase 6 implementation mutation belongs in this branch.
+
+---
+
+## E3. Current phase map
+
+~~~
+Phase 0 architecture route / invariants             FROZEN
+        ↓
+Phase 1 common Runtime composition                  CLOSED predecessor
+        ↓
+Phase 2 production Evidence modules                 CLOSED predecessor
+        ↓
+Phase 3 durable Evidence Runtime                    CLOSED predecessor
+        ↓
+Phase 4 durable Twin Runtime                        CLOSED predecessor
+        ↓
+Phase 5 production-equivalent two-service graph     CLOSED
+        exact closure = 75d496127...
+        blockers = []
+        ↓
+Phase 6 retire GitHub production execution          IMPLEMENTED
+        ↓
+Phase 6 runtime independence / blackout proof       IN PROGRESS  ← CURRENT
+        exact head = 43529e13...
+        run = 33144759220
+        ↓
+Phase 7 fresh Formal-v5                             NOT STARTED / FORBIDDEN
+~~~
+
+Current CAP-09 status:
+
+~~~
+IN PROGRESS
+PHASE5 CLOSED
+PHASE6 OWNERSHIP RETIREMENT IMPLEMENTED
+PHASE6 RUNTIME INDEPENDENCE NOT YET TERMINAL
+PHASE7 NOT STARTED
+FORMAL-V5 NOT ARMED
+PROTECTED MAIN UNCHANGED
+~~~
+
+---
+
+## E4. Phase 5 is formally closed — do not reopen the old blocker frontier
+
+Phase 5 closure head:
+
+~~~
+75d4961279bd64dc1c9dd7d68aac189c72c98846
+~~~
+
+The decisive current-head machine runs include:
+
+~~~
+33140680373  mcft-cap-09-amendment19-persistent-24t-qualification   SUCCESS
+33140680423  mcft-cap-09-phase3-evidence-runtime-persistence        SUCCESS
+33140680432  mcft-cap-09-phase4-twin-runtime-persistence            SUCCESS
+33140680393  mcft-cap-09-phase5-production-equivalent-containers    SUCCESS
+33140680396  mcft-cap-09-phase5-two-service-accelerated-24t         SUCCESS
+33140680425  mcft-cap-09-qualification-control-plane-v1             SUCCESS
+~~~
+
+Control-plane run 33140680425 machine output includes:
+
+~~~
+status        = PASS
+planner_status= PASS
+blocker_count = 0
+blockers      = []
+~~~
+
+The accepted evidence resolution includes:
+
+~~~
+LEGACY_AM19_PERSISTENT_24T                    PASS
+PHASE3_EVIDENCE_RUNTIME_FOUNDATION            PASS
+PHASE4_TWIN_RUNTIME_FOUNDATION                PASS
+PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS       PASS
+~~~
+
+The current valid registry evidence includes, among other durable entries:
+
+~~~
+PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_7F767921
+PHASE4_TWIN_RUNTIME_FOUNDATION_REQUAL_12473C49
+PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_7F767921
+LEGACY_AM19_PERSISTENT_24T_REQUAL_480C0746
+~~~
+
+### E4.1 Phase 5 closure did not fake a fresh late crop-window 24T
+
+A full fresh live 24T crop window had become temporally impossible under the frozen A18 crop-context guard.
+
+The accepted Phase 5 closure therefore used the explicit fail-closed temporal-settlement path:
+
+~~~
+immutable earlier full causal 24T
++
+fresh Evidence container restart/fencing proof
++
+fresh Twin container DB-fencing proof
++
+protected semantic-core equivalence
++
+central durable evidence adjudication
+~~~
+
+The current-head Phase5 run 33140680396 therefore shows:
+
+~~~
+fresh-live capture / full-live Steps 8-13  = SKIPPED by adjudicated temporal mode
+immutable baseline proof download          = SUCCESS
+fresh Evidence resilience proof download   = SUCCESS
+semantic equivalence adjudication           = SUCCESS
+focused historical canonical seed           = SUCCESS
+historical runtime-config prepare            = SUCCESS
+two real Twin containers O00-O07 fencing     = SUCCESS
+temporal settlement finalization             = SUCCESS
+artifact upload                              = SUCCESS
+~~~
+
+This is **not** permission to create future test-only shortcuts.
+
+The settlement was accepted only because the fresh full window had expired and the changed semantic surface was explicitly bounded and requalified.
+
+---
+
+## E5. Why Phase 6 exists
+
+The frozen Production Hosting route states that GitHub Actions may remain:
+
+- CI;
+- qualification;
+- deployment;
+- schema migration / one-shot governed work where explicitly permitted;
+- read-only audit;
+- final adjudication;
+- evidence registration.
+
+GitHub Actions must **not** own routine production behavior for Formal-v5 or later:
+
+~~~
+production provider cadence
+production provider request loop
+EvidenceSupplyCursor
+Formal runtime wake cadence
+RuntimeTickCursor
+production slot claim
+production Twin tick execution
+Formal Twin checkpoint mutation
+production retry / recovery state
+~~~
+
+Hard Formal target:
+
+~~~
+GitHub provider request count         = 0
+GitHub Formal Twin DB mutation count  = 0
+GitHub production tick execution      = 0
+GitHub hourly wake dependency         = 0
+~~~
+
+Phase 6 is therefore not cosmetic workflow cleanup.
+
+It is a production ownership cutover.
+
+---
+
+## E6. Phase 6 retirement authority now exists
+
+Authoritative file:
+
+~~~
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json
+~~~
+
+Current authority status:
+
+~~~
+PHASE6_GITHUB_TRIGGER_RETIREMENT_IMPLEMENTED_PENDING_RUNTIME_INDEPENDENCE_PROOF
+~~~
+
+It binds Phase 6 to:
+
+~~~
+phase5_closure_head =
+75d4961279bd64dc1c9dd7d68aac189c72c98846
+~~~
+
+The retirement authority explicitly records:
+
+~~~
+protected_main_mutation       = false
+phase5_history_rewrite        = false
+formal_v5_arm                 = false
+fresh_formal_v5_epoch_creation= false
+production_container_activation = false
+mcft_cap09_completed          = false
+~~~
+
+This is the correct current status.
+
+Ownership has been retired, but production activation / Formal-v5 has not occurred.
+
+---
+
+## E7. GitHub production owners retired in Phase 6
+
+### E7.1 Production-execution workflows retired to PR-only sentinels
+
+The authority identifies the following production-execution owners and replaces their live production triggers with PR-only sentinels:
+
+1. .github/workflows/mcft-cap-09-rolling-preboundary-capture.yml
+2. .github/workflows/mcft-cap-09-t4r1-rolling-hourly-scheduler.yml
+3. .github/workflows/mcft-cap-09-t4r1-rolling-preboundary-capture.yml
+4. .github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml
+5. .github/workflows/mcft-cap-09-amendment19-formal-arm.yml
+6. .github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml
+7. .github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml
+8. .github/workflows/mcft-cap-09-pre-runtime-hardening.yml
+9. .github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml
+10. .github/workflows/mcft-cap-09-formal-bootstrap-evidence-authority.yml
+11. .github/workflows/mcft-cap-09-t4r1-formal-v3-o01-recovery.yml
+12. .github/workflows/mcft-cap-09-ea5e2-rolling-operational-activation-live.yml
+13. .github/workflows/mcft-cap-09-t4r1-formal-v3-prebootstrap-recovery.yml
+
+These are retired because they previously represented provider-facing, scheduled, mutating, or failed-Formal recovery ownership that cannot remain a production executor under the frozen hosting route.
+
+### E7.2 Provider-facing scheduled audit/observer workflows also retired
+
+The following scheduled provider-facing observers were also removed from routine GitHub scheduling:
+
+1. .github/workflows/mcft-cap-09-rolling-kbs-intersection.yml
+2. .github/workflows/mcft-cap-09-kbs-batch-qualification-window.yml
+3. .github/workflows/mcft-cap-09-kbs-publication-cadence-observer.yml
+4. .github/workflows/mcft-cap-09-ea9b-current-main-window-observer.yml
+
+The reason is not that audit is forbidden.
+
+The reason is that a scheduled GitHub provider request is still a provider-facing cadence owner.
+
+### E7.3 Preserved automatic GitHub roles
+
+Not every scheduled/workflow_run action is forbidden.
+
+The retirement authority intentionally preserves bounded non-production roles, including:
+
+~~~
+mcft-cap-09-s6-production-equivalent-shadow-simulator.yml
+    ISOLATED_NON_PRODUCTION_SIMULATION
+
+mcft-cap-09-amendment19-formal-final-readback.yml
+    READ_ONLY_FINAL_DB_AUDIT
+
+mcft-cap-09-amendment19-persistent-24t-qualification.yml
+    QUALIFICATION_ONLY
+
+mcft-cap-09-amendment19-formal-graduation-wiring.yml
+    ZERO_EFFECT_ONE_SHOT_GOVERNANCE
+~~~
+
+Do not delete these merely because they are automatic.
+
+Classification matters.
+
+---
+
+## E8. Retirement is trigger/authority cutover, not historical erasure
+
+The retirement contract explicitly requires:
+
+~~~
+retired workflow allowed triggers =
+    pull_request
+    merge_group
+
+forbidden retired triggers =
+    schedule
+    workflow_run
+    workflow_dispatch
+    repository_dispatch
+    workflow_call
+    push
+~~~
+
+Also:
+
+~~~
+retired workflow actions:write              FORBIDDEN
+historical live implementation deletion     NOT REQUIRED
+historical artifact deletion                FORBIDDEN
+phase5 historical blob binding              REQUIRED
+~~~
+
+The historical implementations are intentionally retained/bound to their Phase 5 blob SHAs so the system can prove exactly what was retired.
+
+Do not “clean up” by deleting historical implementation bodies or old qualification artifacts.
+
+That would destroy retirement auditability.
+
+---
+
+## E9. Phase 6 implementation progression on #3351
+
+The current 10-commit progression is:
+
+~~~
+c2dc097879a0a6d3fe9f25afb87ef92de5d404e8
+feat(mcft-cap09): establish Phase6 GitHub owner retirement audit
+
+4d7416a4df793bfefb25f46ae4680275cc350ccb
+feat(mcft-cap09): retire GitHub production triggers
+
+36bb4541325ce552e1425f45f655c9b28d1ca82c
+fix(mcft-cap09): route Phase6 retirement successors
+
+15cd6ea630a55afd7295dfce22d8ed67aa0a81df
+fix(mcft-cap09): route EA5E2 through Phase6 retirement
+
+4d5b90c2875e25118fba09f5a05136017ef02bf6
+fix(mcft-cap09): govern Phase6 from Phase5 closure
+
+f4decec3281fc28f01a2d804c738407809689407
+fix(mcft-cap09): govern Phase6 retired graph preflight
+
+10d86530f4fd4cb17b89e254ee14aa9b76daf333
+fix(mcft-cap09): validate Phase6 unchanged Phase3 Phase5 stack
+
+62c58eae3dc9b0c0e92904762616b6e690d0768c
+test(mcft-cap09): prove Phase6 runtime independence
+
+406dacfcde35f26f1ce91a5bf3d6561f379371c8
+fix(mcft-cap09): parse Phase6 blackout probe deterministically
+
+43529e13dbab2d21c6f4174a4c54a6122e166f1d
+fix(mcft-cap09): emit blackout proof newline canonically
+~~~
+
+Current exact head is the last commit above.
+
+---
+
+## E10. Phase 6 owner-retirement machine gates are already green
+
+At current #3351 head, the following important runs are already SUCCESS:
+
+~~~
+33144759215
+mcft-cap-09-phase6-retire-github-production-execution
+SUCCESS
+
+33144759193
+mcft-cap-09-qualification-control-plane-v1
+SUCCESS
+
+33144759128
+mcft-cap-09-closure-control-plane-audit
+SUCCESS
+
+33144759239
+mcft-cap-09-ea5e2-runtime-dependency-graph
+SUCCESS
+
+33144759243
+mcft-release-lane-v1
+SUCCESS
+
+33144759205
+mcft-main-ruleset-readiness-v1
+SUCCESS
+
+33144759190
+mcft-cap-09-final-semantic-closure
+SUCCESS
+
+33144759130
+mcft-cap-09-ea5e2-successor-runner-qualification
+SUCCESS
+~~~
+
+Additional retired/sentinel workflows triggered by the PR also report SUCCESS.
+
+The normal CI build-test job at current head is SUCCESS:
+
+~~~
+Typecheck       SUCCESS
+Build           SUCCESS
+Server selfcheck SUCCESS
+~~~
+
+At the latest handoff refresh, the broader CI acceptance job was still executing downstream commercial/customer-report suites. It had already passed setup, service readiness, PR18I preflight, controlled pilot gate, frontend audit, Stage-1 fixture gate, and P1 smoke preflight.
+
+Do not conflate a still-running broad repository acceptance suite with the Phase 6 runtime-independence blocker.
+
+---
+
+## E11. Current Phase 6 runtime-independence workflow
+
+Workflow:
+
+~~~
+.github/workflows/mcft-cap-09-phase6-runtime-independence.yml
+~~~
+
+Compose base:
+
+~~~
+docker-compose.mcft-cap09-phase5-qualification.yml
+~~~
+
+GitHub-blackout override:
+
+~~~
+docker-compose.mcft-cap09-phase6-github-blackout.override.yml
+~~~
+
+Reuse contract from the retirement authority:
+
+~~~
+SAME_PHASE5_PRODUCTION_PROCESS_GRAPH_WITH_GITHUB_RUNTIME_NETWORK_BLACKOUT_ONLY
+~~~
+
+GitHub artifact rehydration:
+
+~~~
+FORBIDDEN
+~~~
+
+Required claims:
+
+~~~
+GITHUB_CONTROL_PLANE_OUTAGE_DOES_NOT_STOP_EVIDENCE_INGRESS
+
+GITHUB_CONTROL_PLANE_OUTAGE_DOES_NOT_STOP_TWIN_RUNTIME
+
+PROCESS_RESTART_RECOVERS_FROM_DURABLE_OPERATIONAL_AUTHORITY_WITHOUT_GITHUB_ARTIFACT_REHYDRATION
+~~~
+
+Also preserved from the frozen route:
+
+~~~
+EVIDENCE_RUNTIME_OUTAGE_DOES_NOT_CAUSE_TWIN_RUNTIME_PROVIDER_FALLBACK
+
+TWIN_RUNTIME_OUTAGE_DOES_NOT_ALLOW_EVIDENCE_RUNTIME_TO_ADVANCE_TWIN_STATE
+~~~
+
+---
+
+## E12. Exact current runtime-independence run
+
+Authoritative current run:
+
+~~~
+33144759220
+mcft-cap-09-phase6-runtime-independence
+run_number = 3
+head       = 43529e13dbab2d21c6f4174a4c54a6122e166f1d
+status     = in_progress
+~~~
+
+At the final handoff refresh, the step map is:
+
+~~~
+1  Set up job                                                     SUCCESS
+2  Checkout exact Phase6 subject                                  SUCCESS
+3  Require exact head / private qualification roots               SUCCESS
+4  Require retirement authority / stacked base / central owner    SUCCESS
+5  Require fresh no-artifact runtime-independence execution       SUCCESS
+6  Build exact scientific Runtime image                           SUCCESS
+7  Start isolated PostgreSQL and private raw store                SUCCESS
+8  Prove GitHub control plane unreachable from Runtime containers SUCCESS
+9  Capture real causal A0 soil and GFS raw objects                IN PROGRESS
+10 Duplicate Evidence containers / fenced takeover / restart      PENDING
+11 Prepare A0 + exact 24-slot manifest                            PENDING
+12 Duplicate Twin containers O00-O07 / DB fencing                 PENDING
+13 Restart Twin / recover O08-O23 from durable cursor             PENDING
+14 Verify exact 24T canonical + DB isolation                      PENDING
+15 Assemble GitHub-outage + durable-restart proof                 PENDING
+16 Upload non-raw runtime-independence proof                      PENDING
+17 Destroy qualification state / raw fixture                      PENDING
+~~~
+
+This is the true current frontier.
+
+The parser bug is no longer the current failure: Step 8 is now machine SUCCESS.
+
+---
+
+## E13. What the final Phase 6 runtime proof is actually proving
+
+The proof chain is deliberately stronger than “workflow YAML says GitHub is disabled”.
+
+It is:
+
+~~~
+Runtime containers start with GitHub control-plane network blackout
+        ↓
+no GitHub credentials / no reachable GitHub control-plane endpoint
+        ↓
+real causal soil/GFS acquisition still proceeds through Evidence Runtime
+        ↓
+duplicate Evidence containers use DB lease/fencing
+        ↓
+Evidence process restart recovers from durable EvidenceSupplyCursor
+        ↓
+canonical Evidence DB remains physically visible
+        ↓
+24-slot manifest prepared from canonical Evidence
+        ↓
+duplicate Twin containers use DB scheduler lease/fencing
+        ↓
+O00-O07 terminal progression
+        ↓
+Twin restart
+        ↓
+O08-O23 recovery from RuntimeTickCursor / checkpoint authority
+        ↓
+exact 24T final verifier
+        ↓
+Evidence/Twin DB separation remains intact
+        ↓
+no GitHub artifact rehydration was required
+~~~
+
+The only permitted change from the Phase 5 production graph is the GitHub runtime network blackout.
+
+The Runtime implementation itself must remain the same.
+
+---
+
+## E14. Two prior runtime-independence failures — both parser/probe defects, not architecture defects
+
+### E14.1 Run 1
+
+Head:
+
+~~~
+62c58eae3dc9b0c0e92904762616b6e690d0768c
+~~~
+
+Run:
+
+~~~
+33143611538
+run_number = 1
+conclusion = FAILURE
+~~~
+
+This was the initial runtime-independence proof implementation.
+
+It exposed the blackout-proof parsing path and led to commit:
+
+~~~
+406dacfcde35f26f1ce91a5bf3d6561f379371c8
+fix(mcft-cap09): parse Phase6 blackout probe deterministically
+~~~
+
+### E14.2 Run 2
+
+Head:
+
+~~~
+406dacfcde35f26f1ce91a5bf3d6561f379371c8
+~~~
+
+Run:
+
+~~~
+33143825049
+run_number = 2
+conclusion = FAILURE
+~~~
+
+It passed:
+
+~~~
+exact head / stacked base / central ownership
+fresh no-artifact requirement
+scientific image build
+PostgreSQL + private raw store
+~~~
+
+and failed only at:
+
+~~~
+Step 8
+Prove GitHub control plane is unreachable from Runtime containers
+~~~
+
+Exact machine symptom:
+
+~~~
+jq: parse error: Invalid numeric literal at line 2, column 0
+Process completed with exit code 5
+~~~
+
+The probe was emitting:
+
+~~~
+JSON.stringify(...)+ "\\n"
+~~~
+
+as a literal backslash-n sequence in the shell/Node quoting path rather than a canonical line ending consumable by jq.
+
+This is why the correct repair was **not** to weaken the blackout check.
+
+The repair was:
+
+~~~
+43529e13dbab2d21c6f4174a4c54a6122e166f1d
+fix(mcft-cap09): emit blackout proof newline canonically
+~~~
+
+Run 33144759220 has now passed the exact same Step 8.
+
+Therefore the parser bug is CLOSED.
+
+---
+
+## E15. Do not misclassify the current long-running Step 9
+
+Current Step 9 is:
+
+~~~
+Capture real causal A0 soil and GFS raw objects
+~~~
+
+This is intentionally live-provider work and can be long-running.
+
+It is not a deadlock merely because it spends minutes in provider acquisition.
+
+Do not repeat the earlier Phase 5 mistake of classifying a long provider capture as “stuck” without terminal evidence.
+
+The correct interpretation at this handoff is:
+
+~~~
+blackout precondition = SUCCESS
+runtime graph alive    = YES
+live causal capture    = IN PROGRESS
+architecture blocker  = NONE KNOWN
+~~~
+
+Only a terminal failure with a concrete error should create a new blocker.
+
+---
+
+## E16. What remains before Phase 6 can close
+
+The retirement authority itself lists the remaining mandatory proof families:
+
+~~~
+ZERO_RETIRED_GITHUB_PRODUCTION_OWNERS_AND_TRIGGERS
+
+GITHUB_CONTROL_PLANE_OUTAGE_DOES_NOT_STOP_EVIDENCE_INGRESS
+
+GITHUB_CONTROL_PLANE_OUTAGE_DOES_NOT_STOP_TWIN_RUNTIME
+
+PROCESS_RESTART_RECOVERS_FROM_DURABLE_OPERATIONAL_AUTHORITY_WITHOUT_GITHUB_ARTIFACT_REHYDRATION
+~~~
+
+The first item is already implemented/audited by the retirement workflow.
+
+The current run must provide the remaining runtime proof.
+
+Phase 6 is **not** closed until:
+
+1. run 33144759220 or a later exact-head successor is terminal SUCCESS;
+2. exact 24T final verifier passes;
+3. GitHub-blackout claims are in the uploaded non-raw proof;
+4. Evidence restart proof is durable-cursor based;
+5. Twin restart proof is durable RuntimeTickCursor/checkpoint based;
+6. no GitHub artifact rehydration path exists;
+7. no Runtime GitHub credential/control-plane dependency exists;
+8. no provider fallback appears in Twin Runtime;
+9. no Evidence-to-Twin state mutation appears;
+10. the qualification control plane is rerun on the final exact head and returns zero applicable blockers;
+11. evidence registration is durable and exact-head bound where required.
+
+---
+
+## E17. Current blocker / not-blocker table
+
+### Current real blocker
+
+There is no known code-level architecture blocker at this handoff.
+
+The only open requirement is:
+
+~~~
+PHASE6_RUNTIME_INDEPENDENCE_FINAL_MACHINE_ACCEPTANCE
+~~~
+
+Current state:
+
+~~~
+RUNNING
+not failed
+not closed
+~~~
+
+### Not blockers
+
+The following are **not** current blockers:
+
+- Phase 5 O00 successor checkpoint;
+- Phase 5 container resilience;
+- Phase 5 temporal settlement;
+- Phase 5 durable evidence registration;
+- LEGACY_AM19 persistent qualification;
+- Phase 3 Evidence Runtime;
+- Phase 4 Twin Runtime;
+- GitHub production trigger retirement;
+- retired-owner central audit;
+- Phase6 central exact-path ownership;
+- blackout JSON parser/newline bug;
+- protected main drift;
+- Formal-v5 scheduling.
+
+All of these are either closed, deliberately unchanged, or not yet permitted.
+
+---
+
+## E18. High-value failure / repair history to preserve
+
+### E18.1 Do not interpret Phase 5 closure as permission to skip Phase 6
+
+Phase 5 proved the production-equivalent graph.
+
+Phase 6 proves that GitHub is no longer part of that graph's runtime authority.
+
+These are separate obligations.
+
+### E18.2 Do not “retire GitHub” by deleting all workflows
+
+GitHub remains valid for CI, qualification, deployment, bounded governance, read-only audit, and evidence registration.
+
+Retirement is role-specific.
+
+### E18.3 Do not delete historical live workflow bodies
+
+The retirement authority binds retired paths to their Phase 5 blob SHAs.
+
+Historical bodies are audit evidence.
+
+### E18.4 Do not delete historical artifacts
+
+GitHub artifacts may remain independent audit evidence.
+
+The prohibition is only:
+
+~~~
+runtime recovery MUST NOT REQUIRE GitHub artifact rehydration
+~~~
+
+### E18.5 Do not restore schedule/workflow_run/workflow_dispatch to a retired sentinel
+
+A retired production owner is intentionally PR-only / merge-group-only.
+
+Restoring a live trigger recreates a second production owner.
+
+### E18.6 Do not add a GitHub fallback collector when Evidence Runtime is unavailable
+
+Forbidden architecture:
+
+~~~
+Evidence Runtime outage
+→ fallback GitHub production collector
+~~~
+
+### E18.7 Do not add a GitHub fallback Twin scheduler
+
+Forbidden architecture:
+
+~~~
+Twin Runtime outage
+→ GitHub hourly tick / manual rescue
+~~~
+
+### E18.8 Do not satisfy blackout by breaking all networking
+
+The blackout must make GitHub control-plane endpoints unavailable to Runtime containers while preserving:
+
+- PostgreSQL;
+- private raw store;
+- KBS/NOMADS/provider networking;
+- Evidence Runtime ↔ DB;
+- Twin Runtime ↔ DB.
+
+A general network outage proves nothing about GitHub independence.
+
+### E18.9 Do not pass GitHub credentials into Runtime containers
+
+The blackout proof explicitly checks for GitHub credentials.
+
+A hidden token plus unreachable hostname is not architectural independence.
+
+### E18.10 Do not confuse shell escaping with architecture failure
+
+The run-2 failure was:
+
+~~~
+literal "\\n"
+→ jq parse error
+~~~
+
+not:
+
+~~~
+GitHub blackout breaks Runtime
+~~~
+
+When a proof parser fails, inspect raw probe bytes before changing runtime semantics.
+
+### E18.11 Do not “fix” proof output by removing jq validation
+
+The correct repair was canonical newline emission.
+
+The jq parse gate remains useful and should stay.
+
+### E18.12 Do not use old GitHub artifacts to restart live cursor/checkpoint state
+
+Artifacts may support audit/adjudication only.
+
+Restart must use durable operational authority in PostgreSQL/object storage as defined by the production graph.
+
+### E18.13 Do not collapse EvidenceSupplyCursor and RuntimeTickCursor
+
+They remain separate ownership planes.
+
+Evidence Runtime owns EvidenceSupplyCursor.
+
+Twin Runtime owns RuntimeTickCursor/checkpoint/scheduler state.
+
+### E18.14 Do not let retirement sentinels write actions state
+
+Retired workflows have actions:write forbidden.
+
+### E18.15 Do not reuse failed Formal-v3/v4 state
+
+The retirement of historical recovery workflows does not convert failed Formal state into valid successor state.
+
+Phase 7 must create a fresh Formal-v5 store/epoch authority.
+
+### E18.16 Do not arm Formal-v5 while runtime-independence is still running
+
+Phase6 owner retirement alone is insufficient.
+
+The frozen route explicitly requires outage independence and artifact-free durable recovery before Formal-v5 activation.
+
+### E18.17 Do not mix B-Line
+
+B-Line remains a separate engineering line.
+
+No B-Line implementation should be pulled into #3351 merely because both concern production convergence.
+
+---
+
+## E19. Exact next execution sequence
+
+### Step 1 — freeze current Phase 6 head while run 33144759220 is active
+
+Do not mutate #3351 during the current live run unless a terminal machine failure identifies a concrete defect.
+
+Current subject:
+
+~~~
+43529e13dbab2d21c6f4174a4c54a6122e166f1d
+~~~
+
+### Step 2 — let real causal capture finish
+
+Require Step 9 terminal result.
+
+If it fails, classify the exact failure:
+
+- provider availability;
+- causal timing;
+- raw capture;
+- object retention;
+- blackout network override accidentally affecting provider access.
+
+Do not assume architecture failure.
+
+### Step 3 — require Evidence Runtime to continue under GitHub blackout
+
+Step 10 must prove:
+
+- two Evidence containers;
+- one effective lease owner;
+- fenced takeover;
+- restart;
+- durable cursor recovery;
+- no GitHub control-plane dependency.
+
+### Step 4 — require canonical Evidence DB → 24-slot prepare
+
+Step 11 must use canonical Evidence already produced under blackout.
+
+No GitHub artifact seed/rehydration.
+
+### Step 5 — require Twin Runtime to continue under GitHub blackout
+
+Step 12 must prove:
+
+- two Twin containers;
+- DB fencing;
+- one effective scheduler owner;
+- O00-O07 progression.
+
+### Step 6 — restart Twin and recover O08-O23
+
+Step 13 must recover from durable RuntimeTickCursor/checkpoint authority.
+
+No artifact restore.
+
+No workflow state replay.
+
+### Step 7 — exact 24T final verifier
+
+Step 14 must re-prove:
+
+- 24 terminal ticks;
+- canonical facts;
+- checkpoint/cursor consistency;
+- Evidence/Twin DB isolation;
+- no provider fallback;
+- no cross-plane mutation.
+
+### Step 8 — assemble Phase 6 proof
+
+Step 15 must explicitly record:
+
+~~~
+GitHub control plane unreachable
+Evidence ingress continued
+Twin Runtime continued
+Evidence restart recovered durably
+Twin restart recovered durably
+GitHub artifact rehydration count = 0
+~~~
+
+### Step 9 — if run SUCCESS, register final Phase 6 evidence if required by control plane
+
+Use the exact successful head/run.
+
+Do not bind failed run 1 or run 2.
+
+### Step 10 — rerun qualification/control-plane on the final exact head
+
+Require:
+
+~~~
+status        = PASS
+planner_status= PASS
+blocker_count = 0
+blockers      = []
+~~~
+
+for all applicable Phase6 successor checks.
+
+### Step 11 — only then declare Phase 6 CLOSED
+
+Do not merge/arm Formal-v5 merely because one runtime workflow is green if central evidence registration/adjudication is still pending.
+
+### Step 12 — only after Phase 6 closure, start Phase 7 fresh Formal-v5 planning
+
+Phase 7 must be a new epoch/store.
+
+No failed Formal-v4 continuation.
+
+---
+
+## E20. First 30 minutes for the next engineer
+
+### Minute 0–5 — restore exact state
+
+Read:
+
+~~~
+git / GitHub PR #3351
+base = 75d496127...
+head = 43529e13...
+run  = 33144759220
+~~~
+
+Confirm #3323 still points to the Phase 5 closure head.
+
+Confirm protected main remains 26c1383f....
+
+### Minute 5–10 — inspect run 33144759220
+
+Do not start with code review.
+
+Read the current terminal step.
+
+If still Step 9, wait/read provider logs.
+
+If later, inspect the first non-success step only.
+
+### Minute 10–15 — verify blackout proof remains green
+
+Step 8 must remain SUCCESS.
+
+If it regresses, inspect raw blackout JSON bytes before modifying Runtime code.
+
+### Minute 15–20 — inspect durable restart evidence
+
+For Evidence:
+
+~~~
+EvidenceSupplyCursor
+lease owner
+fencing token
+post-COMMIT visibility
+restart progression
+~~~
+
+For Twin:
+
+~~~
+RuntimeTickCursor
+scheduler slots
+checkpoint latest index
+canonical checkpoint
+lease owner
+fencing token
+~~~
+
+### Minute 20–25 — confirm no artifact rehydration
+
+Search the runtime-independence workflow and runtime logs for any path that downloads/restores GitHub Actions artifacts into live operational state.
+
+The count must remain zero.
+
+### Minute 25–30 — decide only from terminal machine evidence
+
+If all runtime steps pass, move to evidence registration/control-plane closure.
+
+If one step fails, fix only that exact defect.
+
+Do not reopen Phase 5 wholesale.
+
+---
+
+## E21. High-value exact file map
+
+### Frozen production hosting route
+
+~~~
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md
+~~~
+
+### Phase 6 retirement authority
+
+~~~
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json
+~~~
+
+### Central control plane
+
+~~~
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+
+scripts/governance_acceptance/
+PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+~~~
+
+### Phase 6 owner audit
+
+~~~
+scripts/governance_acceptance/
+AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs
+~~~
+
+### Phase 6 retirement workflow
+
+~~~
+.github/workflows/
+mcft-cap-09-phase6-retire-github-production-execution.yml
+~~~
+
+### Runtime-independence workflow
+
+~~~
+.github/workflows/
+mcft-cap-09-phase6-runtime-independence.yml
+~~~
+
+### GitHub blackout Compose override
+
+~~~
+docker-compose.mcft-cap09-phase6-github-blackout.override.yml
+~~~
+
+### Reused production-equivalent Compose base
+
+~~~
+docker-compose.mcft-cap09-phase5-qualification.yml
+~~~
+
+### Phase 5 closure execution workflow
+
+~~~
+.github/workflows/
+mcft-cap-09-phase5-two-service-accelerated-24t.yml
+~~~
+
+---
+
+## E22. Current authoritative runs worth retaining
+
+### Phase 5 closure head 75d496127...
+
+~~~
+33140680373  AM19 persistent 24T            SUCCESS
+33140680423  Phase3 Evidence persistence    SUCCESS
+33140680432  Phase4 Twin persistence        SUCCESS
+33140680393  Phase5 packaging               SUCCESS
+33140680396  Phase5 two-service 24T         SUCCESS
+33140680425  qualification control-plane    SUCCESS / blockers=[]
+~~~
+
+### Phase 6 current head 43529e13...
+
+~~~
+33144759215  Phase6 retirement workflow     SUCCESS
+33144759193  qualification control-plane    SUCCESS
+33144759128  closure control-plane audit    SUCCESS
+33144759239  EA5E2 dependency graph         SUCCESS
+33144759242  normal CI build-test           SUCCESS
+33144759220  runtime independence           IN PROGRESS
+~~~
+
+### Phase 6 failed parser/probe runs to retain for history
+
+~~~
+33143611538
+head = 62c58eae...
+runtime independence run 1
+FAILURE
+
+33143825049
+head = 406dacfc...
+runtime independence run 2
+FAILURE at blackout proof parser
+jq: Invalid numeric literal
+~~~
+
+These failures are useful because they show the blackout proof remained fail-closed while the parser was repaired.
+
+---
+
+## E23. Phase 6 closure definition
+
+Phase 6 is CLOSED only when all of the following are simultaneously true:
+
+~~~
+GitHub scheduled production Evidence owner count = 0
+GitHub scheduled production Twin owner count     = 0
+retired workflow_run production owner count      = 0
+retired downstream production trigger count      = 0
+Evidence Runtime effective owner count            = exactly 1
+Twin Runtime effective scheduler owner count      = exactly 1
+GitHub control-plane blackout does not stop Evidence ingress
+GitHub control-plane blackout does not stop Twin Runtime
+Evidence Runtime outage does not create Twin provider fallback
+Twin Runtime outage does not allow Evidence Runtime Twin mutation
+Evidence restart recovers from durable authority
+Twin restart recovers from durable authority
+GitHub artifact rehydration required for recovery = 0
+exact production-equivalent 24T verifier           = PASS
+all applicable central qualification gates         = PASS
+blockers                                            = []
+~~~
+
+Current state at this handoff:
+
+~~~
+ownership retirement      IMPLEMENTED / machine green
+blackout parser           CLOSED / Step 8 machine green
+runtime independence      IN PROGRESS
+Phase6 overall            NOT YET CLOSED
+Phase7                    FORBIDDEN
+~~~
+
+---
+
+## E24. Formal-v5 activation remains forbidden
+
+The frozen route requires Phase 0 through Phase 6 acceptance before Phase 7.
+
+Formal-v5 prerequisites still include:
+
+- production-equivalent two-service qualification accepted;
+- restart/recovery accepted for both services;
+- no Runtime provider fallback;
+- no Evidence-to-Twin mutation crossing;
+- GitHub production owner count zero;
+- exactly one effective Evidence owner;
+- exactly one effective Twin scheduler owner;
+- GitHub outage independence;
+- recovery without GitHub artifact rehydration;
+- all applicable qualification gates terminal and accepted;
+- fresh Formal-v5 store/epoch authority.
+
+Therefore:
+
+~~~
+DO NOT ARM FORMAL-V5 NOW
+~~~
+
+Phase 7 must be a fresh epoch.
+
+No failed Formal-v4 continuation or late repair is permitted.
+
+---
+
+## E25. Things not to do next
+
+Do not:
+
+1. modify protected main;
+2. rebase #3351 onto protected main;
+3. move #3351 base away from Phase5 closure head 75d496127...;
+4. reopen Phase5 unless a terminal Phase6 failure proves a genuine Phase5 regression;
+5. restore schedules to retired GitHub production workflows;
+6. restore workflow_run production ownership;
+7. add workflow_dispatch as a routine production rescue;
+8. add GitHub provider fallback;
+9. add GitHub Twin scheduler fallback;
+10. pass GitHub credentials into Evidence/Twin Runtime containers;
+11. use GitHub artifacts as live restart state;
+12. collapse EvidenceSupplyCursor and RuntimeTickCursor;
+13. weaken blackout networking so broadly that provider/DB access also fails;
+14. delete historical workflow implementations or artifacts;
+15. remove jq/proof parsing just to avoid parser failures;
+16. reuse failed Formal-v3/v4 state;
+17. arm Formal-v5 before Phase6 machine closure;
+18. mix B-Line work into MCFT-9 Phase6;
+19. treat broad CI acceptance runtime as the Phase6 runtime-independence proof;
+20. call run 33144759220 “stuck” merely because live provider capture is long-running.
+
+---
+
+## E26. Bottom line
+
+The project has crossed the major architectural boundary that the previous handoff was still working toward.
+
+The current truth is:
+
+~~~
+Phase5 production-equivalent hosting
+    CLOSED
+
+control-plane
+    blockers = []
+
+Phase6 GitHub production owner retirement
+    IMPLEMENTED
+    audit / retirement workflow / central control = SUCCESS
+
+Phase6 runtime-independence
+    exact head = 43529e13dbab2d21c6f4174a4c54a6122e166f1d
+    run        = 33144759220
+    Step 8 GitHub blackout proof = SUCCESS
+    Step 9 real causal capture   = IN PROGRESS
+
+known code blocker
+    NONE
+
+known parser blocker
+    CLOSED
+
+next legitimate action
+    finish the same-head runtime-independence proof
+    then register/adjudicate final Phase6 evidence
+    then require blockers=[]
+    only then start Phase7 fresh Formal-v5
+~~~
+
+There is no reason to continue changing architecture at the current frontier unless run 33144759220 produces a concrete terminal failure.
+
+The correct posture is:
+
+**preserve the exact Phase6 subject, let the real Compose graph complete the blackout/restart/24T proof, and treat Phase7 as forbidden until that proof and the final central adjudication are terminal.**
+
+---
+
+# Historical continuation preserved below
+
+The following content is intentionally preserved verbatim from the previous authoritative handoff frontier.
+
 # GEOX MCFT-CAP-09 Conversation Handoff — 2026-08-28 Continuation — Phase 5 Exact-Head Production-Equivalent 24T / O00 Successor-Checkpoint Frontier
 
 Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
