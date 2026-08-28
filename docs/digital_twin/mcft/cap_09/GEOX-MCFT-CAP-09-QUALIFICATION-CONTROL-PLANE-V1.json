@@ -49,7 +49,24 @@
         ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json",
         "scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs",
-        ".github/workflows/mcft-cap-09-phase6-retire-github-production-execution.yml"
+        ".github/workflows/mcft-cap-09-phase6-retire-github-production-execution.yml",
+        ".github/workflows/mcft-cap-09-amendment19-formal-a0-bootstrap.yml",
+        ".github/workflows/mcft-cap-09-amendment19-formal-arm.yml",
+        ".github/workflows/mcft-cap-09-amendment19-formal-hourly-evidence.yml",
+        ".github/workflows/mcft-cap-09-amendment19-formal-live-runner.yml",
+        ".github/workflows/mcft-cap-09-closure-control-plane-audit.yml",
+        ".github/workflows/mcft-cap-09-ea9b-current-main-window-observer.yml",
+        ".github/workflows/mcft-cap-09-final-semantic-closure.yml",
+        ".github/workflows/mcft-cap-09-formal-bootstrap-evidence-authority.yml",
+        ".github/workflows/mcft-cap-09-kbs-batch-qualification-window.yml",
+        ".github/workflows/mcft-cap-09-kbs-publication-cadence-observer.yml",
+        ".github/workflows/mcft-cap-09-pre-runtime-hardening.yml",
+        ".github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml",
+        ".github/workflows/mcft-cap-09-t4r1-formal-v3-o01-recovery.yml",
+        ".github/workflows/mcft-cap-09-t4r1-formal-v3-prebootstrap-recovery.yml",
+        ".github/workflows/mcft-cap-09-t4r1-rolling-hourly-scheduler.yml",
+        ".github/workflows/mcft-cap-09-t4r1-rolling-preboundary-capture.yml",
+        ".github/workflows/mcft-cap-09-t4r1-rolling-rehydration-live-proof.yml"
       ]
     },
     "EA5E2_RUNTIME_GRAPH_V4": {

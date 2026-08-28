@@ -16,6 +16,8 @@ const {
 const ROOT = path.resolve(__dirname, "../..");
 const DEFAULT_OUT = "acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json";
 const REQUALIFICATION_BINDING_STRATEGY = "MCFT_CAP09_REQUALIFICATION_RUN_BINDING_V1";
+const PHASE6_RETIREMENT_AUTHORITY_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json";
+const PHASE6_OWNER_AUDITOR_PATH = "scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs";
 const REQUALIFICATION_BINDING_FIELDS = [
   "evidence_id", "check_id", "evidence_class", "generation", "stage", "subject_sha",
   "workflow_name", "workflow_path", "run_id", "run_conclusion", "artifact_id", "artifact_digest",
@@ -69,6 +71,18 @@ function isAncestor(ancestor, descendant) {
 
 function expectedRequalificationBinding(entry) {
   return sha256(JSON.stringify(REQUALIFICATION_BINDING_FIELDS.map((key) => entry?.[key] ?? null)));
+}
+
+function phase6RetirementActive(head) {
+  const rel = PHASE6_RETIREMENT_AUTHORITY_PATH;
+  const abs = path.join(ROOT, rel);
+  if (!fs.existsSync(abs)) return false;
+  let authority;
+  try { authority = JSON.parse(fs.readFileSync(abs, "utf8")); }
+  catch { return false; }
+  const status = String(authority?.status || "");
+  const phase5 = String(authority?.phase5_closure_head || "");
+  return status.startsWith("PHASE6_") && /^[0-9a-f]{40}$/.test(phase5) && isAncestor(phase5, head);
 }
 
 function resolveRequalificationEvidence(decision, authority, registry, stage, head) {
@@ -156,6 +170,7 @@ function main() {
 
   const results = [];
   const blockers = [];
+  const phase6Active = phase6RetirementActive(args.head || "");
 
   for (const error of plan.authority_errors || []) blockers.push({ blocker_class: "AUTHORITY_DEFINITION_FAILURE", check_id: null, detail: error });
   for (const unknownPath of plan.unknown_changed_paths) blockers.push({ blocker_class: "UNKNOWN_CHANGED_PATH", check_id: null, detail: unknownPath });
@@ -186,7 +201,24 @@ function main() {
       };
       if (!valid) blockers.push({ blocker_class: "INVALID_CARRY_FORWARD_EVIDENCE_OR_DIGEST", check_id: decision.check_id, detail: decision.carry_forward_evidence_id });
     } else if (decision.status === "REQUALIFY" || decision.status === "REQUIRED") {
-      if (decision.diagnostic_command) {
+      if (phase6Active && decision.check_id === "EA5E2_RUNTIME_DEPENDENCY_GRAPH") {
+        const diagnostic = runDiagnostic(`node ${PHASE6_OWNER_AUDITOR_PATH} enforce`);
+        result = {
+          ...common,
+          execution: "PHASE6_GITHUB_PRODUCTION_EXECUTION_RETIREMENT_AUDIT",
+          status: diagnostic.status,
+          reason_code: diagnostic.status === "PASS"
+            ? "PHASE6_RETIRED_EA5E2_PRODUCTION_GRAPH_ACCEPTED"
+            : "PHASE6_RETIRED_EA5E2_PRODUCTION_GRAPH_AUDIT_FAIL",
+          diagnostic_command: `node ${PHASE6_OWNER_AUDITOR_PATH} enforce`,
+          diagnostic,
+        };
+        if (diagnostic.status !== "PASS") blockers.push({
+          blocker_class: "PHASE6_GITHUB_PRODUCTION_EXECUTION_RETIREMENT_FAILURE",
+          check_id: decision.check_id,
+          detail: diagnostic,
+        });
+      } else if (decision.diagnostic_command) {
         const diagnostic = runDiagnostic(decision.diagnostic_command);
         result = { ...common, execution: "DIAGNOSTIC_COMMAND", status: diagnostic.status, reason_code: diagnostic.status === "PASS" ? "DIAGNOSTIC_PASS" : "DIAGNOSTIC_FAIL", diagnostic_command: decision.diagnostic_command, diagnostic };
         if (diagnostic.status !== "PASS") blockers.push({ blocker_class: "DIAGNOSTIC_FAILURE", check_id: decision.check_id, detail: diagnostic });
