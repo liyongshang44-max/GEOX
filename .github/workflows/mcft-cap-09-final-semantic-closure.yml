@@ -231,3 +231,131 @@ jobs:
             acceptance-output/MCFT_CAP_09_PHASE7_FRESH_FORMAL_V5_PREPARATION_PROOF.json
           if-no-files-found: error
           retention-days: 90
+
+
+  phase7-v13-runtime-readiness:
+    if: github.event.pull_request.base.sha == '48ceafe7c6e7d3d57a1dc17411fb4bf673486333'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap09_phase7_v13_readiness
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d mcft_cap09_phase7_v13_readiness"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      EXACT_PHASE6_HEAD: '48ceafe7c6e7d3d57a1dc17411fb4bf673486333'
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+      NODE_VERSION: '20.11.1'
+      PNPM_VERSION: '9.15.4'
+      DATABASE_URL: 'postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_phase7_v13_readiness'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact Phase6 base and single governed changed path
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event.pull_request.base.sha }}" = "$EXACT_PHASE6_HEAD"
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          test "$(git diff --name-only "$EXACT_PHASE6_HEAD" HEAD)" = '.github/workflows/mcft-cap-09-final-semantic-closure.yml'
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Prove cursor-driven exact-base capture adapter
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          node scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_BASE_PREBOUNDARY_CAPTURE.cjs selftest > acceptance-output/MCFT_CAP_09_PHASE7_V13_CAPTURE_READINESS.json
+
+      - name: Prove atomic admission and autonomous controller graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          MCFT_CAP09_V13_ADMISSION_DESTRUCTIVE_ACCEPTANCE=1 pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_FORCING_SUPPLY_ADMISSION_POSTGRES.ts
+          MCFT_CAP09_V13_AUTONOMOUS_SERVICE_DESTRUCTIVE_ACCEPTANCE=1 pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_CONTROLLER_SERVICE_POSTGRES.ts
+
+      - name: Prove v5 next-tick viability graph
+        env:
+          MCFT_CAP09_V13_VIABILITY_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES.ts
+
+      - name: Validate readiness and preserve unqualified timing boundary
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const read=p=>JSON.parse(fs.readFileSync(p,'utf8'));
+          const capture=read('acceptance-output/MCFT_CAP_09_PHASE7_V13_CAPTURE_READINESS.json');
+          const admission=read('acceptance-output/MCFT_CAP_09_V13_FORCING_SUPPLY_ADMISSION_POSTGRES_RESULT.json');
+          const controller=read('acceptance-output/MCFT_CAP_09_V13_AUTONOMOUS_CONTROLLER_SERVICE_POSTGRES_RESULT.json');
+          const viability=read('acceptance-output/MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES_RESULT.json');
+          const authority=read('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json');
+          for(const [name,p] of Object.entries({capture,admission,controller,viability}))if(p.status!=='PASS')throw new Error('PHASE7_V13_READINESS_NOT_PASS:'+name);
+          if(capture.target_source!=='DURABLE_FORCING_CURSOR_NEXT_MISSING_REQUIRED_BASE'||capture.wall_clock_target_planner_used!==false||capture.production_workflow_effect!==false)throw new Error('PHASE7_CAPTURE_AUTHORITY_DRIFT');
+          if(admission.hardcoded_35_minute_budget_authorized!==false||admission.production_workflow_effect!==false)throw new Error('PHASE7_ADMISSION_AUTHORITY_DRIFT');
+          if(controller.wall_clock_target_planner_used!==false||controller.production_workflow_effect!==false)throw new Error('PHASE7_CONTROLLER_AUTHORITY_DRIFT');
+          if(viability.canonical_tick_core_changed!==false||viability.production_workflow_effect!==false)throw new Error('PHASE7_VIABILITY_AUTHORITY_DRIFT');
+          const t=authority.timing_authority||{};
+          if(t.authority_id!=='FORMAL_FORCING_ACQUISITION_BUDGET_V1'||t.status!=='UNQUALIFIED_UNTIL_EXACT_HEAD_TIMING_QUALIFICATION'||t.minimum_real_timing_sample_count!==3||t.controlled_delay_matrix_required!==true||t.fixed_35_minute_lead_authorized_for_v5!==false||t.hardcoded_replacement_budget_minutes!==null)throw new Error('PHASE7_TIMING_AUTHORITY_DRIFT');
+          const out={
+            schema_version:'geox_mcft_cap09_phase7_v13_runtime_readiness_v1',
+            status:'PASS',
+            subject_sha:process.env.SUBJECT_SHA,
+            phase6_predecessor_sha:process.env.EXACT_PHASE6_HEAD,
+            cursor_driven_capture_ready:true,
+            atomic_supply_admission_ready:true,
+            autonomous_controller_graph_ready:true,
+            v5_next_tick_viability_ready:true,
+            producer_driven_control_graph_ready:true,
+            preinsert_all_24_forcing_pairs_used:false,
+            timing_authority:'FORMAL_FORCING_ACQUISITION_BUDGET_V1',
+            required_real_timing_sample_count:3,
+            real_timing_sample_count:0,
+            controlled_delay_matrix_executed:false,
+            post_merge_v13_qualification_executed:false,
+            timing_budget_qualified:false,
+            remote_database_provision_count:0,
+            provider_request_count:0,
+            formal_v5_arm:false,
+            formal_v5_o00_started:false,
+            production_effect:false,
+            mcft_cap09_completed:false
+          };
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_PHASE7_V13_RUNTIME_READINESS.json',JSON.stringify(out,null,2)+'\n');
+
+      - name: Upload immutable v13 runtime-readiness proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-phase7-v13-runtime-readiness-${{ env.SUBJECT_SHA }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PHASE7_V13_CAPTURE_READINESS.json
+            acceptance-output/MCFT_CAP_09_V13_FORCING_SUPPLY_ADMISSION_POSTGRES_RESULT.json
+            acceptance-output/MCFT_CAP_09_V13_AUTONOMOUS_CONTROLLER_SERVICE_POSTGRES_RESULT.json
+            acceptance-output/MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE7_V13_RUNTIME_READINESS.json
+          if-no-files-found: error
+          retention-days: 90
