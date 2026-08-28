@@ -1,0 +1,113 @@
+name: b09l-eligibility-policy-provenance-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b09l-eligibility-policy-provenance-exact-2026-08-28
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09l product head checkout
+        run: |
+          git checkout 90e8518571bb42c5162811bf80158981057b40c4
+          test "$(git rev-parse HEAD)" = "90e8518571bb42c5162811bf80158981057b40c4"
+          test "$(git rev-parse HEAD^)" = "f8f8c45c696bbabbbddb5a859597663d30c60223"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09l governance acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09L_ELIGIBILITY_POLICY_PROVENANCE_INVENTORY_V1.cjs
+
+      - name: B-07d evaluator contract
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+
+      - name: B-07e runtime contract
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: Prove FieldProgram and B-09k source surfaces are byte-identical
+        run: |
+          git diff --exit-code f8f8c45c696bbabbbddb5a859597663d30c60223 90e8518571bb42c5162811bf80158981057b40c4 -- \
+            packages/contracts/src/schema/field_program_v1.ts \
+            apps/server/src/routes/programs_core_v1.ts \
+            apps/server/src/routes/decision_engine_v1.ts \
+            apps/server/src/domain/planner/compiler_v1.ts \
+            apps/server/src/domain/approval/recommendation_approval_request_builder_v1.ts \
+            apps/server/src/domain/acceptance/engine_v1.ts \
+            apps/server/src/domain/decision/decision_eligibility_evaluator_v1.ts \
+            apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts \
+            docs/architecture/semantic_convergence/GEOX-B09K-DECISION-ELIGIBILITY-RUNTIME-READINESS-INVENTORY-V1.json
+          echo "B09L_FIELD_PROGRAM_B09K_SOURCE_SURFACES_UNCHANGED_PASS"
+
+      - name: Approval request boundary regression
+        run: node scripts/governance_acceptance/ACCEPTANCE_RECOMMENDATION_APPROVAL_REQUEST_BOUNDARY_V1.cjs
+
+      - name: Acceptance evidence contract regression
+        run: node --import tsx --test apps/server/src/domain/acceptance/irrigation_evidence_contract_v1.test.ts
+
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only f8f8c45c696bbabbbddb5a859597663d30c60223 90e8518571bb42c5162811bf80158981057b40c4 > /tmp/b09l-files.txt
+          cat /tmp/b09l-files.txt
+          test "$(wc -l < /tmp/b09l-files.txt | tr -d ' ')" = "4"
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09L-ELIGIBILITY-POLICY-PROVENANCE-INVENTORY-V1.json" /tmp/b09l-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09L-ELIGIBILITY-POLICY-PROVENANCE-INVENTORY-V1.md" /tmp/b09l-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json" /tmp/b09l-files.txt
+          grep -qx "scripts/governance_acceptance/ACCEPTANCE_B09L_ELIGIBILITY_POLICY_PROVENANCE_INVENTORY_V1.cjs" /tmp/b09l-files.txt
+          git diff --check f8f8c45c696bbabbbddb5a859597663d30c60223 90e8518571bb42c5162811bf80158981057b40c4
+          echo "B09L_BOUNDED_PRODUCT_DIFF_PASS"
+
+      - name: Runtime schema workflow graph Twin MCFT remain untouched
+        run: |
+          git diff --exit-code f8f8c45c696bbabbbddb5a859597663d30c60223 90e8518571bb42c5162811bf80158981057b40c4 -- \
+            apps/server/src \
+            apps/server/db \
+            packages \
+            .github/workflows \
+            docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json \
+            docs/architecture/semantic_convergence/GEOX-B09-REPLACEMENT-READINESS-V1.json \
+            docs/twin_kernel \
+            docs/digital_twin \
+            docker-compose.commercial_v1.yml
+          echo "B09L_RUNTIME_SCHEMA_WORKFLOW_GRAPH_TWIN_MCFT_UNTOUCHED_PASS"
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Prove validation did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "90e8518571bb42c5162811bf80158981057b40c4"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09L_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Marker
+        run: |
+          echo "B09L_EXACT_HEAD 90e8518571bb42c5162811bf80158981057b40c4"
+          echo "B09L_ELIGIBILITY_POLICY_PROVENANCE_INVENTORY_PASS"
