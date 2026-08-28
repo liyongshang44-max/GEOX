@@ -441,10 +441,28 @@ jobs:
           if (!governedBases.has(plan.base_sha)) throw new Error(`CONTROL_PLANE_PLAN_BASE_NOT_GOVERNED:${plan.base_sha}`);
           const control = plan.decisions.find(x => x.check_id === 'CONTROL_PLANE_INTEGRITY');
           if (!control || control.status !== 'REQUALIFY') throw new Error('CONTROL_PLANE_SELF_CHANGE_MUST_REQUALIFY');
-          for (const id of ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY','EA5C1_DURABLE_RAW_RESTRICTED_INGRESS']) {
+          const phase7Adapter = 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts';
+          const phase7AdapterChanged = plan.changed_paths.includes(phase7Adapter);
+          const v13Checks = [
+            ['V13_AUTONOMOUS_FORCING_FOUNDATION','.github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml'],
+            ['V13_HOLISTIC_SCHEMA','.github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml'],
+            ['V13_NEXT_TICK_VIABILITY','.github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml'],
+          ];
+          for (const [id, workflow] of v13Checks) {
             const row = plan.decisions.find(x => x.check_id === id);
-            if (!row || row.status !== 'CARRY_FORWARD' || row.dependency_digest_match !== true) throw new Error(`FROZEN_EVIDENCE_MUST_CARRY_FORWARD_WITH_DIGEST:${id}:${row?.status}`);
+            if (!row) throw new Error(`${id}_APPLICABILITY_DECISION_REQUIRED`);
+            if (row.status === 'CARRY_FORWARD') {
+              if (row.dependency_digest_match !== true) throw new Error(`${id}_CARRY_FORWARD_REQUIRES_DIGEST_MATCH`);
+            } else if (row.status === 'REQUALIFY') {
+              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED'].includes(row.reason_code) || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length === 0) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID:${row.reason_code}`);
+            } else {
+              throw new Error(`${id}_UNEXPECTED_STATUS:${row.status}`);
+            }
+            if (row.execution_workflow !== workflow) throw new Error(`${id}_WORKFLOW_MISMATCH`);
+            if (phase7AdapterChanged && (row.status !== 'REQUALIFY' || !row.changed_dependencies.includes(phase7Adapter))) throw new Error(`${id}_MUST_REQUALIFY_FOR_PHASE7_ADAPTER`);
           }
+          const ea5c1 = plan.decisions.find(x => x.check_id === 'EA5C1_DURABLE_RAW_RESTRICTED_INGRESS');
+          if (!ea5c1 || ea5c1.status !== 'CARRY_FORWARD' || ea5c1.dependency_digest_match !== true) throw new Error(`FROZEN_EVIDENCE_MUST_CARRY_FORWARD_WITH_DIGEST:EA5C1_DURABLE_RAW_RESTRICTED_INGRESS:${ea5c1?.status}`);
           for (const id of ['EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T']) {
             const row = plan.decisions.find(x => x.check_id === id);
             if (!row) throw new Error(`${id}_APPLICABILITY_DECISION_REQUIRED`);
@@ -477,9 +495,11 @@ jobs:
           }
           const phase3 = plan.decisions.find(x => x.check_id === 'PHASE3_EVIDENCE_RUNTIME_FOUNDATION');
           const phase5 = plan.decisions.find(x => x.check_id === 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS');
+          const phase7 = plan.decisions.find(x => x.check_id === 'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION');
           for (const [row, id, workflow] of [
             [phase3,'PHASE3_EVIDENCE_RUNTIME_FOUNDATION','.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml'],
             [phase5,'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS','.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml'],
+            [phase7,'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION','.github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml'],
           ]) {
             if (!row) throw new Error(`${id}_APPLICABILITY_DECISION_REQUIRED`);
             if (row.status === 'REQUIRED') {
@@ -490,6 +510,11 @@ jobs:
               throw new Error(`${id}_UNEXPECTED_STATUS:${row.status}`);
             }
             if (row.execution_workflow !== workflow) throw new Error(`${id}_WORKFLOW_MISMATCH`);
+          }
+          if (phase7AdapterChanged) {
+            for (const [row, id] of [[phase3,'PHASE3_EVIDENCE_RUNTIME_FOUNDATION'],[phase7,'PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION']]) {
+              if (!row || row.status !== 'REQUALIFY' || !row.changed_dependencies.includes(phase7Adapter)) throw new Error(`${id}_MUST_REQUALIFY_FOR_PHASE7_ADAPTER`);
+            }
           }
           if (preflight.status !== 'PASS' || preflight.generation !== 'v13' || preflight.non_fail_fast !== true || preflight.counts.blocker_count !== 0) throw new Error('ALL_BLOCKERS_PREFLIGHT_NOT_PASS');
           for (const source of [proof, cp2, evidence, plan, preflight]) {

@@ -11,6 +11,7 @@ on:
       - 'apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_supply_admission_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_FENCED_FACT_PROMOTION_POSTGRES.ts'
       - '.github/workflows/mcft-cap-09-v13-fenced-fact-promotion-postgres.yml'
+      - 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts'
   merge_group:
     types: [checks_requested]
 
@@ -21,6 +22,7 @@ env:
   NODE_VERSION: '20.11.1'
   PNPM_VERSION: '9.15.4'
   EXACT_PREDECESSOR_SHA: '26c1383f7f45abb76c99e28ec3d06714e85d1b2c'
+  SUCCESSOR_REQUALIFICATION_BASE_SHA: '46c9c7b6b59c113848fc69daff88fb183fccc954'
   DATABASE_URL: 'postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_v13_fenced_fact'
 
 concurrency:
@@ -69,7 +71,11 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            test "${{ github.event.pull_request.base.sha }}" = "$EXACT_PREDECESSOR_SHA"
+            base="${{ github.event.pull_request.base.sha }}"
+            if [ "$base" != "$EXACT_PREDECESSOR_SHA" ] && [ "$base" != "$SUCCESSOR_REQUALIFICATION_BASE_SHA" ]; then
+              echo "V13_FENCED_PROMOTION_UNGOVERNED_BASE:${base}" >&2
+              exit 1
+            fi
           fi
           trigger_block="$(awk '/^on:/{capture=1} /^permissions:/{capture=0} capture{print}' .github/workflows/mcft-cap-09-v13-fenced-fact-promotion-postgres.yml)"
           ! grep -Eq '^  schedule:|^  workflow_dispatch:' <<<"$trigger_block"

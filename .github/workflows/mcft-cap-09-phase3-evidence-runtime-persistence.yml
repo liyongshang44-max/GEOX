@@ -39,6 +39,7 @@ on:
       - 'apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts'
       - 'apps/server/src/external_evidence/s3_compatible_private_evidence_object_client_v1.ts'
       - 'apps/server/src/external_evidence/s3_compatible_private_candidate_manifest_store_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts'
       - 'apps/server/src/external_evidence/s3_compatible_private_retained_raw_reader_v1.ts'
       - 'apps/server/src/persistence/external_evidence/postgres_external_formal_evidence_visibility_v1.ts'
       - 'apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts'

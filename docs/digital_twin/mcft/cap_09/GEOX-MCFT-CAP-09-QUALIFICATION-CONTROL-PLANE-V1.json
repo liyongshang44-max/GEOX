@@ -122,6 +122,7 @@
         "apps/server/src/persistence/twin_runtime/postgres_external_formal_fenced_exact_base_fact_promotion_v1.ts"
       ],
       "additional_exact_paths": [
+        "apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts",
         "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql",
         "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql",
         "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql",
@@ -217,6 +218,7 @@
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts",
         "apps/server/src/external_evidence/s3_compatible_private_evidence_object_client_v1.ts",
         "apps/server/src/external_evidence/s3_compatible_private_candidate_manifest_store_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts",
         "apps/server/src/external_evidence/s3_compatible_private_retained_raw_reader_v1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_PRIVATE_CANDIDATE_IO_V1.ts",
         "package.json",
