@@ -172,6 +172,47 @@ async function main(): Promise<void> {
                    'phase5-evidence',1,transaction_timestamp(),
                    transaction_timestamp()+interval '5 minutes',transaction_timestamp())`,
         );
+
+        await evidenceClient.query(
+          `INSERT INTO public.twin_external_formal_forcing_base_cursor_v1
+           (tenant_id,project_id,group_id,field_id,season_id,zone_id,epoch_id,subject_sha,
+            first_required_base,last_required_base,last_contiguous_eligible_base,next_missing_required_base,completed)
+           VALUES ('phase5','phase5','phase5','phase5','phase5','phase5',
+                   'phase7-service-principal-v13',$1,
+                   date_trunc('hour',transaction_timestamp())+interval '2 hours',
+                   date_trunc('hour',transaction_timestamp())+interval '2 hours',
+                   date_trunc('hour',transaction_timestamp())+interval '1 hour',
+                   date_trunc('hour',transaction_timestamp())+interval '2 hours',false)`,
+          ["b".repeat(40)],
+        );
+        await evidenceClient.query(
+          `INSERT INTO public.twin_external_formal_forcing_base_target_v1
+           (tenant_id,project_id,group_id,field_id,season_id,zone_id,epoch_id,subject_sha,
+            base_target_t,causal_deadline,state,idempotency_key)
+           VALUES ('phase5','phase5','phase5','phase5','phase5','phase5',
+                   'phase7-service-principal-v13',$1,
+                   date_trunc('hour',transaction_timestamp())+interval '2 hours',
+                   date_trunc('hour',transaction_timestamp())+interval '2 hours',
+                   'REQUIRED','phase7-service-principal-v13-target')`,
+          ["b".repeat(40)],
+        );
+        await evidenceClient.query(
+          `INSERT INTO public.twin_external_formal_forcing_controller_lease_v1
+           (tenant_id,project_id,group_id,field_id,season_id,zone_id,epoch_id,subject_sha,
+            lifecycle_state,lease_owner,fencing_token,lease_expires_at,acquired_at,renewed_at)
+           VALUES ('phase5','phase5','phase5','phase5','phase5','phase5',
+                   'phase7-service-principal-v13',$1,'ACTIVE','phase5-evidence-v13-controller',1,
+                   transaction_timestamp()+interval '5 minutes',
+                   transaction_timestamp(),transaction_timestamp())`,
+          ["b".repeat(40)],
+        );
+        const forcingOwned = await evidenceClient.query(
+          `SELECT
+             (SELECT count(*)::int FROM public.twin_external_formal_forcing_base_cursor_v1 WHERE epoch_id='phase7-service-principal-v13') AS cursor_n,
+             (SELECT count(*)::int FROM public.twin_external_formal_forcing_base_target_v1 WHERE epoch_id='phase7-service-principal-v13') AS target_n,
+             (SELECT count(*)::int FROM public.twin_external_formal_forcing_controller_lease_v1 WHERE epoch_id='phase7-service-principal-v13') AS controller_n`,
+        );
+        assert.deepEqual(forcingOwned.rows[0], { cursor_n: 1, target_n: 1, controller_n: 1 });
         await permissionDeniedV1(
           evidenceClient,
           `INSERT INTO public.facts(fact_id,occurred_at,source,record_json)
@@ -213,6 +254,19 @@ async function main(): Promise<void> {
           twinClient,
           "SELECT * FROM public.external_evidence_supply_cursor_v1 LIMIT 1",
         );
+
+        await permissionDeniedV1(
+          twinClient,
+          "SELECT * FROM public.twin_external_formal_forcing_base_cursor_v1 LIMIT 1",
+        );
+        await permissionDeniedV1(
+          twinClient,
+          "UPDATE public.twin_external_formal_forcing_base_target_v1 SET updated_at=updated_at WHERE false",
+        );
+        await permissionDeniedV1(
+          twinClient,
+          "SELECT * FROM public.twin_external_formal_forcing_controller_lease_v1 LIMIT 1",
+        );
         await permissionDeniedV1(
           twinClient,
           `UPDATE public.external_evidence_producer_lease_v1
@@ -240,9 +294,15 @@ async function main(): Promise<void> {
       cross_plane_role_membership: false,
       login_role_database_object_ownership_count: 0,
       evidence_login_can_mutate_evidence_lease: true,
+      evidence_login_can_mutate_v13_forcing_cursor: true,
+      evidence_login_can_mutate_v13_forcing_target: true,
+      evidence_login_can_mutate_v13_forcing_controller_lease: true,
       evidence_login_direct_fact_insert_denied: true,
       evidence_login_twin_runtime_lease_denied: true,
       twin_login_direct_fact_insert_denied: true,
+      twin_login_v13_forcing_cursor_read_denied: true,
+      twin_login_v13_forcing_target_mutation_denied: true,
+      twin_login_v13_forcing_controller_read_denied: true,
       twin_login_canonical_fact_writer_is_security_definer_only: true,
       twin_login_can_mutate_runtime_lease: true,
       twin_login_evidence_cursor_read_denied: true,
