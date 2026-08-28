@@ -1,0 +1,428 @@
+{
+  "schema_version": "semantic_migration_inventory_v1",
+  "phase": "B-09a",
+  "base_product_head": "6702631be2f66587d4fa1230e0f97f6fd4e9b8b9",
+  "migration_phase_state": "INVENTORY_AND_SHADOW_PLANNING_ONLY",
+  "authority_removal_performed": false,
+  "real_mcft_adapter_state": "DISCONNECTED",
+  "real_adr_runtime_state": "DISCONNECTED",
+  "real_llm_provider_state": "DISCONNECTED",
+  "families": [
+    {
+      "semantic_id": "context.crop_stage",
+      "canonical_replacement_refs": [
+        "apps/server/src/contracts/canonical_context_v1.ts",
+        "apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.ts",
+        "apps/server/src/context/crop_skill_stage_compatibility_adapter_v1.ts"
+      ],
+      "replacement_state": "REPLACEMENT_ESTABLISHED",
+      "shadow_state": "READY_FOR_SHADOW",
+      "consumer_migration_state": "NOT_STARTED",
+      "authority_removal_state": "FORBIDDEN_PENDING_SHADOW",
+      "producer_dispositions": [
+        {
+          "producer_id": "stage-resolver",
+          "path": "apps/server/src/domain/agronomy/stage_resolver.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        },
+        {
+          "producer_id": "context-builder-stage",
+          "path": "apps/server/src/domain/agronomy/context_builder.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        },
+        {
+          "producer_id": "rule-engine-stage",
+          "path": "apps/server/src/domain/agronomy/rule_engine.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        },
+        {
+          "producer_id": "decision-engine-stage",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        },
+        {
+          "producer_id": "field-program-state-stage",
+          "path": "apps/server/src/projections/field_program_state_v1.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        },
+        {
+          "producer_id": "operation-state-stage",
+          "path": "apps/server/src/routes/operation_state_v1.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        }
+      ],
+      "reason_codes": [
+        "CANONICAL_CROP_STAGE_STATE_EXISTS",
+        "UNKNOWN_PRESERVATION_REQUIRED"
+      ],
+      "limitations": [
+        "LEGACY_STAGE_DEFAULTS_MUST_BE_COMPARED_BEFORE_AUTHORITY_REMOVAL"
+      ]
+    },
+    {
+      "semantic_id": "context.declared_identity",
+      "canonical_replacement_refs": [
+        "apps/server/src/contracts/canonical_context_v1.ts",
+        "apps/server/src/context/field_program_context_projection_v1.ts"
+      ],
+      "replacement_state": "REPLACEMENT_ESTABLISHED",
+      "shadow_state": "READY_FOR_SHADOW",
+      "consumer_migration_state": "NOT_STARTED",
+      "authority_removal_state": "FORBIDDEN_PENDING_SHADOW",
+      "producer_dispositions": [
+        {
+          "producer_id": "field-program-fact",
+          "path": "apps/server/src/jobs/agronomy_agent.ts",
+          "disposition": "ROLE_RECLASSIFICATION_REQUIRED",
+          "reason_codes": [
+            "SOURCE_MAY_REMAIN_BUT_CONTEXT_AUTHORITY_ROLE_MUST_CONVERGE"
+          ]
+        },
+        {
+          "producer_id": "agronomy-context-builder",
+          "path": "apps/server/src/domain/agronomy/context_builder.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        }
+      ],
+      "reason_codes": [
+        "CANONICAL_CONTEXT_ASSERTION_SNAPSHOT_EXISTS"
+      ],
+      "limitations": [
+        "FIELD_PROGRAM_SOURCE_MAY_REMAIN_AS_INPUT_BUT_NOT_PARALLEL_CONTEXT_AUTHORITY"
+      ]
+    },
+    {
+      "semantic_id": "decision.calculation",
+      "canonical_replacement_refs": [
+        "apps/server/src/contracts/canonical_decision_v1.ts",
+        "apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.ts"
+      ],
+      "replacement_state": "PARTIAL_REPLACEMENT",
+      "shadow_state": "READY_FOR_SHADOW",
+      "consumer_migration_state": "NOT_STARTED",
+      "authority_removal_state": "FORBIDDEN_PARTIAL_REPLACEMENT",
+      "producer_dispositions": [
+        {
+          "producer_id": "agronomy-rule-engine",
+          "path": "apps/server/src/domain/agronomy/rule_engine.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        },
+        {
+          "producer_id": "agronomy-judge-calculation",
+          "path": "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        },
+        {
+          "producer_id": "decision-engine-calculation",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        },
+        {
+          "producer_id": "evaluate-irrigation-decision-v1",
+          "path": "apps/server/src/domain/decision_engine_v1.ts",
+          "disposition": "ORPHANED_FREEZE",
+          "reason_codes": [
+            "NO_ACTIVE_RUNTIME_CONSUMER",
+            "DELETE_ONLY_AFTER_EXPLICIT_PREREQUISITES"
+          ]
+        }
+      ],
+      "reason_codes": [
+        "IRRIGATION_REQUIREMENT_DEFICIT_CANONICAL_ADAPTERS_EXIST",
+        "NOT_ALL_LEGACY_CALCULATION_SEMANTICS_ARE_CANONICALIZED"
+      ],
+      "limitations": [
+        "PER_PRODUCER_EQUIVALENCE_MUST_BE_PROVEN_BEFORE_ANY_CALCULATION_AUTHORITY_REMOVAL"
+      ]
+    },
+    {
+      "semantic_id": "decision.candidate",
+      "canonical_replacement_refs": [
+        "apps/server/src/contracts/canonical_decision_v1.ts",
+        "apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.ts",
+        "apps/server/src/domain/decision/agronomy_recommendation_v2_candidate_adapter_v1.ts",
+        "apps/server/src/domain/decision/operation_plan_authority_candidate_adapter_v1.ts"
+      ],
+      "replacement_state": "REPLACEMENT_ESTABLISHED",
+      "shadow_state": "READY_FOR_SHADOW",
+      "consumer_migration_state": "NOT_STARTED",
+      "authority_removal_state": "FORBIDDEN_PENDING_SHADOW",
+      "producer_dispositions": [
+        {
+          "producer_id": "agronomy-agent-recommendation",
+          "path": "apps/server/src/jobs/agronomy_agent.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        },
+        {
+          "producer_id": "decision-engine-recommendation",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        },
+        {
+          "producer_id": "rule-engine-recommendation",
+          "path": "apps/server/src/domain/agronomy/rule_engine.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        },
+        {
+          "producer_id": "legacy-operator-scenario-recommendation-writer",
+          "path": "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        }
+      ],
+      "reason_codes": [
+        "CANDIDATE_DECISION_LATTICE_EXISTS",
+        "LEGACY_PRODUCERS_REMAIN_RUNTIME_AUTHORITY"
+      ],
+      "limitations": [
+        "CANONICAL_ADAPTER_AVAILABILITY_DOES_NOT_EQUAL_CONSUMER_MIGRATION"
+      ]
+    },
+    {
+      "semantic_id": "decision.eligibility",
+      "canonical_replacement_refs": [
+        "apps/server/src/contracts/decision_eligibility_v1.ts",
+        "apps/server/src/domain/decision/decision_eligibility_evaluator_v1.ts",
+        "apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts"
+      ],
+      "replacement_state": "REPLACEMENT_ESTABLISHED",
+      "shadow_state": "READY_FOR_SHADOW",
+      "consumer_migration_state": "NOT_STARTED",
+      "authority_removal_state": "FORBIDDEN_PENDING_SHADOW",
+      "producer_dispositions": [
+        {
+          "producer_id": "stage1-trigger-eligibility",
+          "path": "apps/server/src/domain/decision/stage1_action_boundary_v1.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        },
+        {
+          "producer_id": "agronomy-judge-gate",
+          "path": "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        }
+      ],
+      "reason_codes": [
+        "CANONICAL_ELIGIBILITY_RUNTIME_SEAM_EXISTS",
+        "LEGACY_PRECURSORS_STILL_ACTIVE"
+      ],
+      "limitations": [
+        "PRECURSOR_SEMANTICS_ARE_NOT_DIRECTLY_EQUAL_TO_FINAL_CANONICAL_VERDICT"
+      ]
+    },
+    {
+      "semantic_id": "evidence.qualification",
+      "canonical_replacement_refs": [
+        "apps/server/src/contracts/canonical_evidence_v1.ts",
+        "apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.ts",
+        "apps/server/src/domain/judge/evidence_judge_canonical_sufficiency_shadow_v1.ts"
+      ],
+      "replacement_state": "REPLACEMENT_ESTABLISHED",
+      "shadow_state": "EXISTING_PARTIAL_SHADOW",
+      "consumer_migration_state": "PARTIAL",
+      "authority_removal_state": "PENDING_CONSUMER_MIGRATION",
+      "producer_dispositions": [
+        {
+          "producer_id": "stage1-formal-gate",
+          "path": "apps/server/src/domain/decision/stage1_action_boundary_v1.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        },
+        {
+          "producer_id": "evidence-judge-v2",
+          "path": "apps/server/src/domain/judge/evidence_judge_v2.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        },
+        {
+          "producer_id": "apple-ii-contract-semantics",
+          "path": "docs/audit/CONTRACT_ALIGNMENT_MATRIX_V1.md",
+          "disposition": "REFERENCE_ONLY",
+          "reason_codes": [
+            "DOCUMENT_REFERENCE_NOT_RUNTIME_AUTHORITY"
+          ]
+        }
+      ],
+      "reason_codes": [
+        "CANONICAL_EVIDENCE_QUALIFICATION_EXISTS",
+        "LEGACY_STAGE1_AND_JUDGE_AUTHORITY_STILL_ACTIVE"
+      ],
+      "limitations": [
+        "B04_SHADOW_EXISTS_BUT_LEGACY_AUTHORITY_NOT_REMOVED"
+      ]
+    },
+    {
+      "semantic_id": "operation.plan",
+      "canonical_replacement_refs": [
+        "apps/server/src/routes/control_operation_plan_v1.ts",
+        "apps/server/src/routes/control_approval_request_v1.ts",
+        "apps/server/src/domain/decision/operation_plan_authority_candidate_adapter_v1.ts"
+      ],
+      "replacement_state": "REPLACEMENT_ESTABLISHED",
+      "shadow_state": "READY_FOR_SHADOW",
+      "consumer_migration_state": "NOT_STARTED",
+      "authority_removal_state": "FORBIDDEN_PENDING_SHADOW",
+      "producer_dispositions": [
+        {
+          "producer_id": "agronomy-agent-plan",
+          "path": "apps/server/src/jobs/agronomy_agent.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        },
+        {
+          "producer_id": "decision-engine-plan-touchpoint",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "disposition": "SHADOW_COMPARE_REQUIRED",
+          "reason_codes": [
+            "REPLACEMENT_OR_ADAPTER_EXISTS_BUT_EQUIVALENCE_NOT_YET_PROVEN"
+          ]
+        },
+        {
+          "producer_id": "flight-table-plan",
+          "path": "apps/server/src/services/flight_table/flight_table_operation_v1.ts",
+          "disposition": "REFERENCE_ONLY",
+          "reason_codes": [
+            "DEVTOOLS_COMPATIBILITY_PATH_NO_PRODUCT_RUNTIME_EDGE"
+          ]
+        }
+      ],
+      "reason_codes": [
+        "APPROVAL_DERIVED_PLAN_AUTHORITY_EXISTS",
+        "DIRECT_PLAN_PRODUCERS_REQUIRE_MIGRATION"
+      ],
+      "limitations": [
+        "AGRONOMY_AGENT_DIRECT_PLAN_MUST_NOT_BE_REMOVED_BEFORE_CANDIDATE_ELIGIBILITY_APPROVAL_MIGRATION"
+      ]
+    },
+    {
+      "semantic_id": "twin.forecast_scenario",
+      "canonical_replacement_refs": [
+        "apps/server/src/contracts/decision_integration_ports_v1.ts"
+      ],
+      "replacement_state": "UNREPLACED_EXTERNAL_DEPENDENCY",
+      "shadow_state": "NOT_READY",
+      "consumer_migration_state": "NOT_STARTED",
+      "authority_removal_state": "FORBIDDEN_UNREPLACED",
+      "producer_dispositions": [
+        {
+          "producer_id": "legacy-root-zone-forecast-builder",
+          "path": "apps/server/src/domain/soil_water/root_zone_soil_water_forecast_builder_v1.ts",
+          "disposition": "FREEZE_NO_NEW_FEATURE",
+          "reason_codes": [
+            "UNREPLACED_REAL_MCFT_DEPENDENCY"
+          ]
+        },
+        {
+          "producer_id": "legacy-root-zone-scenario-builder",
+          "path": "apps/server/src/domain/soil_water/root_zone_irrigation_scenario_builder_v1.ts",
+          "disposition": "FREEZE_NO_NEW_FEATURE",
+          "reason_codes": [
+            "UNREPLACED_REAL_MCFT_DEPENDENCY"
+          ]
+        }
+      ],
+      "reason_codes": [
+        "REAL_MCFT_ADAPTER_NOT_CONNECTED",
+        "FORECAST_SCENARIO_PORT_HAS_NO_REAL_PROVIDER"
+      ],
+      "limitations": [
+        "LEGACY_ACCEPTANCE_BUILDERS_REMAIN_VISIBLE_NO_NEW_FEATURE"
+      ]
+    },
+    {
+      "semantic_id": "twin.physical_state",
+      "canonical_replacement_refs": [
+        "apps/server/src/contracts/decision_integration_ports_v1.ts"
+      ],
+      "replacement_state": "UNREPLACED_EXTERNAL_DEPENDENCY",
+      "shadow_state": "NOT_READY",
+      "consumer_migration_state": "NOT_STARTED",
+      "authority_removal_state": "FORBIDDEN_UNREPLACED",
+      "producer_dispositions": [
+        {
+          "producer_id": "derived-sensing-state-service",
+          "path": "apps/server/src/services/derived_sensing_state_service_v1.ts",
+          "disposition": "FREEZE_NO_NEW_FEATURE",
+          "reason_codes": [
+            "UNREPLACED_REAL_MCFT_DEPENDENCY"
+          ]
+        },
+        {
+          "producer_id": "sensing-inference-pipeline",
+          "path": "apps/server/src/domain/sensing/run_sensing_inference_pipeline_v1.ts",
+          "disposition": "FREEZE_NO_NEW_FEATURE",
+          "reason_codes": [
+            "UNREPLACED_REAL_MCFT_DEPENDENCY"
+          ]
+        },
+        {
+          "producer_id": "legacy-root-zone-state-builder",
+          "path": "apps/server/src/domain/soil_water/root_zone_soil_water_state_builder_v1.ts",
+          "disposition": "FREEZE_NO_NEW_FEATURE",
+          "reason_codes": [
+            "UNREPLACED_REAL_MCFT_DEPENDENCY"
+          ]
+        }
+      ],
+      "reason_codes": [
+        "REAL_MCFT_ADAPTER_NOT_CONNECTED",
+        "TWIN_PORT_IS_ONLY_A_TYPED_SEAM"
+      ],
+      "limitations": [
+        "BLINE_MUST_NOT_PRETEND_TYPED_PORT_IS_A_TWIN_STATE_REPLACEMENT"
+      ]
+    }
+  ]
+}
