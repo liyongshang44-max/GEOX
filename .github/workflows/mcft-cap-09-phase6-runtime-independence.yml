@@ -146,7 +146,7 @@ jobs:
                     try{const res=await fetch("https://"+host,{signal:AbortSignal.timeout(1200)});reachable=true;await res.body?.cancel();}catch{}
                     if(reachable)throw new Error("PHASE6_GITHUB_CONTROL_PLANE_REACHABLE:"+host);
                   }
-                  process.stdout.write(JSON.stringify({status:"PASS",github_credential_count:0,github_hosts_blackholed:true,github_control_plane_reachable:false})+"\\n");
+                  process.stdout.write(JSON.stringify({status:"PASS",github_credential_count:0,github_hosts_blackholed:true,github_control_plane_reachable:false})+"\n");
                 })().catch(e=>{console.error(e);process.exit(1);});
               ')"
             printf '%s\n' "$out" | awk '/^\{"status":"PASS"/{line=$0} END{if(line)print line; else exit 1}' \
