@@ -2167,8 +2167,8 @@
       "semantic_id": "governance.semantic_authority_migration",
       "question": "Which grandfathered semantic authorities are replacement-backed, shadow-comparable, migration-ready, or explicitly unreplaced before B-09 removal?",
       "target_owner": "B-09 Semantic Authority Migration Governance",
-      "canonical_output_type": "SemanticMigrationInventoryV1 + SemanticShadowComparisonV1 (B-09c Evidence comparator has one bounded runtime shadow collector; no consumer migration and no authority removal)",
-      "current_state": "SHADOW_RUNTIME_ACTIVE",
+      "canonical_output_type": "SemanticMigrationInventoryV1 + SemanticShadowComparisonV1 + EvidenceSemanticShadowInventoryV1 (B-09d read-only persisted Evidence shadow inventory; no consumer migration and no authority removal)",
+      "current_state": "SHADOW_RUNTIME_OBSERVABLE",
       "target_phase": "B-09",
       "new_owner_creation": "FORBIDDEN",
       "registered_producers": [
@@ -2189,7 +2189,7 @@
         {
           "producer_id": "evidence-semantic-shadow-comparator-v1",
           "path": "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts",
-          "role": "pure B-09b coarse sufficiency comparator now consumed by the single B-09c Evidence Judge runtime shadow collector; still SHADOW_ONLY and non-authoritative",
+          "role": "pure B-09b coarse sufficiency comparator consumed by the bounded B-09c runtime collector and B-09d read-only persisted inventory; still SHADOW_ONLY and non-authoritative",
           "authority_level": "SHADOW_ONLY_COMPARATOR",
           "grandfathered_duplicate": false,
           "removal_target": null,
@@ -2204,7 +2204,8 @@
           "runtime_edge": "PROVEN",
           "new_runtime_consumer_creation": "FORBIDDEN",
           "grandfathered_runtime_consumers": [
-            "evidence-shadow-runtime-collector-v1"
+            "evidence-shadow-runtime-collector-v1",
+            "evidence-shadow-inventory-read-model-v1"
           ]
         }
       ],
@@ -2215,6 +2216,15 @@
           "role": "B-09c consumes the existing legacy Evidence Judge result plus B-04 canonical sufficiency shadow and emits one persisted SHADOW_ONLY comparison for the existing Judge result output envelope",
           "current": true,
           "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "evidence-shadow-inventory-read-model-v1",
+          "path": "apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.ts",
+          "role": "B-09d read-only reporting inventory over persisted SemanticShadowComparisonV1 outputs; unobserved legacy rows are never fabricated into semantic comparison states",
+          "current": true,
+          "connection_class": "REPORTING_ARTIFACT_PLANE",
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN"
         }
@@ -2229,7 +2239,10 @@
         "B-09b explicitly captures legacy rejection versus independent canonical evidence sufficiency as DIVERGENT.",
         "B-09b performs no consumer migration and no authority removal.",
         "B-09c connects exactly one Evidence Judge runtime shadow collector; the comparison is persisted in existing JudgeResultV2.outputs.",
-        "B-09c does not connect the Stage-1 comparator, migrate an authoritative consumer, change a legacy verdict, or remove authority."
+        "B-09c does not connect the Stage-1 comparator, migrate an authoritative consumer, change a legacy verdict, or remove authority.",
+        "B-09d adds one read-only tenant-scoped inventory of persisted B-09c Evidence shadow comparisons.",
+        "B-09d treats rows without a valid persisted comparison as UNOBSERVED rather than fabricating MATCH, divergence, or missing states.",
+        "B-09d inventory has no consumer-migration or authority-removal permission."
       ],
       "runtime_consumers": [
         {
@@ -2240,6 +2253,15 @@
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN",
           "evidence_edge_id": "C-034"
+        },
+        {
+          "consumer_id": "evidence-shadow-inventory-read-model-v1",
+          "path": "apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.ts",
+          "producer_id": "evidence-semantic-shadow-comparator-v1",
+          "connection_class": "REPORTING_ARTIFACT_PLANE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-035"
         }
       ]
     }
@@ -2888,6 +2910,55 @@
         "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts"
       ],
       "failure": "B09C_STAGE1_SHADOW_COMPARATOR_RUNTIME_CONSUMER_FORBIDDEN"
+    },
+    {
+      "guard_id": "G-B02-26-b09d-evidence-shadow-inventory-read",
+      "semantic_id": "governance.semantic_authority_migration",
+      "description": "B-09d permits exactly one read-only Evidence shadow inventory implementation and one Judge read-route attachment.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "readEvidenceSemanticShadowInventoryV1("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.ts",
+        "apps/server/src/routes/judge_v2.ts"
+      ],
+      "failure": "UNREGISTERED_B09D_EVIDENCE_SHADOW_INVENTORY_CONSUMER"
+    },
+    {
+      "guard_id": "G-B02-27-b09d-evidence-shadow-inventory-instantiation",
+      "semantic_id": "governance.semantic_authority_migration",
+      "description": "B-09d permits exactly one implementation path to instantiate EvidenceSemanticShadowInventoryV1.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "evidenceSemanticShadowInventoryV1Schema.parse("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.ts"
+      ],
+      "failure": "UNREGISTERED_B09D_EVIDENCE_SHADOW_INVENTORY_PRODUCER"
     }
   ],
   "connectivity_model": {
