@@ -1,0 +1,207 @@
+name: mcft-cap-09-current-rehydration-diagnostic-v5
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-current-rehydration-diagnostic-v5.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-current-rehydration-diagnostic-v5
+  cancel-in-progress: false
+
+env:
+  FROZEN_MAIN_SHA: 4e3460656e52166a63c7276e5e70de247f71c4b7
+  FROZEN_ARTIFACT_ID: '9409234348'
+  FROZEN_TARGET_T: '2026-08-20T14:00:00.000Z'
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  PYTHON_VERSION: '3.12'
+  DATABASE_URL: postgres://postgres:postgres@127.0.0.1:55435/ea5e2_readiness
+
+jobs:
+  exact-main-repeat-rehydration-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ea5e2_readiness
+        ports:
+          - 55435:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ea5e2_readiness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      MCFT_EA5E2_TRANSIENT_S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+      MCFT_EA5E2_TRANSIENT_S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+      MCFT_EA5E2_TRANSIENT_S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+      MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+      MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout frozen exact protected-main subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.FROZEN_MAIN_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require frozen subject is still protected main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$FROZEN_MAIN_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$FROZEN_MAIN_SHA" || { echo 'DIAGNOSTIC_PROTECTED_MAIN_DRIFT' >&2; exit 1; }
+
+      - name: Require private transient R2 bindings without disclosure
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in MCFT_EA5E2_TRANSIENT_S3_ENDPOINT MCFT_EA5E2_TRANSIENT_S3_BUCKET MCFT_EA5E2_TRANSIENT_S3_REGION MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID MCFT_EA5E2_TRANSIENT_S3_SECRET_ACCESS_KEY; do
+            test -n "${!name:-}" || { echo "DIAGNOSTIC_SECRET_REQUIRED:${name}" >&2; exit 1; }
+          done
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install exact repository and decoder dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            eccodes==2.47.0 \
+            eccodeslib==2.47.3.23 \
+            numpy==1.26.4 \
+            refet==0.4.2
+          python -m eccodes selfcheck
+
+      - name: Download exact immutable rolling candidate artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p rolling-candidate diagnostic-output
+          gh api -H 'Accept: application/vnd.github+json' "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${FROZEN_ARTIFACT_ID}/zip" > /tmp/candidate.zip
+          unzip -q /tmp/candidate.zip -d rolling-candidate
+          test -s rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json','utf8'));
+          if(p.producer_subject_sha!==process.env.FROZEN_MAIN_SHA||p.subject_sha!==process.env.FROZEN_MAIN_SHA||p.target_t!==process.env.FROZEN_TARGET_T) throw new Error('DIAGNOSTIC_CANDIDATE_IDENTITY_REQUIRED');
+          fs.writeFileSync('diagnostic-output/EXPECTED_SEMANTIC_ROWS.json',JSON.stringify(p.rehydration_manifest.expected_records,null,2)+'\n');
+          NODE
+
+      - name: Patch exact-main checkout for metadata-safe diagnostic only
+        shell: python {0}
+        run: |
+          from pathlib import Path
+          p = Path('scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts')
+          s = p.read_text(encoding='utf-8')
+          old = '  if (JSON.stringify(semanticRows(actual)) !== JSON.stringify(expected)) throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH");'
+          new = '''  if (JSON.stringify(semanticRows(actual)) !== JSON.stringify(expected)) {\n    const safeActual = actual.map((result) => ({\n      record_type: result.record.record_type,\n      source_record_id: result.record.source_record_id,\n      record_semantic_sha256: result.record_semantic_sha256,\n      role_time_sha256: `sha256:${crypto.createHash("sha256").update(JSON.stringify(result.record.role_time)).digest("hex")}`,\n      value_payload_sha256: `sha256:${crypto.createHash("sha256").update(JSON.stringify(result.record.value_payload)).digest("hex")}`,\n      source_payload_sha256: `sha256:${crypto.createHash("sha256").update(JSON.stringify(result.record.source_payload)).digest("hex")}`,\n      source_record_sha256: result.record.source_record_sha256,\n    })).sort((a, b) => a.record_type.localeCompare(b.record_type) || a.source_record_id.localeCompare(b.source_record_id));\n    console.error(JSON.stringify({ code: "MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH", expected, actual: safeActual }));\n    throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH");\n  }'''
+          if s.count(old) != 1:
+              raise SystemExit('DIAGNOSTIC_HASH_PATCH_TARGET_REQUIRED')
+          s = s.replace(old, new)
+          old_gate = '  if (!["push", "workflow_dispatch", "schedule", "workflow_run"].includes(process.env.GITHUB_EVENT_NAME ?? "") || process.env.GITHUB_REF !== "refs/heads/main" || process.env.GITHUB_SHA !== consumerSha) {\n    throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_EXACT_MAIN_REQUIRED");\n  }'
+          new_gate = '  if (process.env.MCFT_CAP09_DIAGNOSTIC_EXACT_MAIN_ACK !== "true" && (!["push", "workflow_dispatch", "schedule", "workflow_run"].includes(process.env.GITHUB_EVENT_NAME ?? "") || process.env.GITHUB_REF !== "refs/heads/main" || process.env.GITHUB_SHA !== consumerSha)) {\n    throw new Error("MCFT_CAP09_ROLLING_REHYDRATION_EXACT_MAIN_REQUIRED");\n  }'
+          if s.count(old_gate) != 1:
+              raise SystemExit('DIAGNOSTIC_MAIN_GATE_PATCH_TARGET_REQUIRED')
+          p.write_text(s.replace(old_gate, new_gate), encoding='utf-8')
+
+      - name: Repeat exact immutable rehydration five times
+        shell: bash
+        env:
+          MCFT_CAP09_CONSUMER_SUBJECT_SHA: ${{ env.FROZEN_MAIN_SHA }}
+          MCFT_CAP09_ROLLING_CANDIDATE_PATH: rolling-candidate/MCFT_CAP_09_ROLLING_PREBOUNDARY_CANDIDATE.json
+          MCFT_CAP09_ROLLING_REHYDRATION_ISOLATED_DB_ACK: 'true'
+          MCFT_CAP09_DIAGNOSTIC_EXACT_MAIN_ACK: 'true'
+          PYTHON: python
+        run: |
+          set -euo pipefail
+          : > diagnostic-output/attempt-status.tsv
+          for attempt in 1 2 3 4 5; do
+            set +e
+            pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts run >"diagnostic-output/attempt-${attempt}.log" 2>&1
+            rc=$?
+            set -e
+            if [ "$rc" -eq 0 ]; then
+              printf '%s\tPASS\n' "$attempt" >> diagnostic-output/attempt-status.tsv
+            elif grep -Fq 'MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH' "diagnostic-output/attempt-${attempt}.log"; then
+              printf '%s\tSEMANTIC_HASH_MISMATCH\n' "$attempt" >> diagnostic-output/attempt-status.tsv
+            else
+              printf '%s\tOTHER_FAILURE\n' "$attempt" >> diagnostic-output/attempt-status.tsv
+            fi
+          done
+          cat diagnostic-output/attempt-status.tsv
+
+      - name: Assemble metadata-only diagnostic summary
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const rows=fs.readFileSync('diagnostic-output/attempt-status.tsv','utf8').trim().split(/\n/).filter(Boolean).map(line=>{const [attempt,status]=line.split('\t');return {attempt:Number(attempt),status};});
+          if(rows.length!==5) throw new Error(`DIAGNOSTIC_FIVE_ATTEMPTS_REQUIRED:${rows.length}`);
+          const mismatchDetails=[];
+          for(const row of rows){
+            const text=fs.readFileSync(`diagnostic-output/attempt-${row.attempt}.log`,'utf8');
+            const line=text.split(/\n/).find(x=>x.includes('"code":"MCFT_CAP09_ROLLING_REHYDRATION_SEMANTIC_HASH_MISMATCH"'));
+            if(line){
+              const start=line.indexOf('{');
+              if(start>=0){try{mismatchDetails.push({attempt:row.attempt,...JSON.parse(line.slice(start))});}catch{}}
+            }
+          }
+          const summary={
+            schema_version:'geox_mcft_cap09_current_rehydration_diagnostic_v5',
+            status:'PASS',
+            diagnostic_only:true,
+            frozen_main_sha:process.env.FROZEN_MAIN_SHA,
+            frozen_artifact_id:Number(process.env.FROZEN_ARTIFACT_ID),
+            frozen_target_t:process.env.FROZEN_TARGET_T,
+            attempts:rows,
+            pass_count:rows.filter(x=>x.status==='PASS').length,
+            semantic_hash_mismatch_count:rows.filter(x=>x.status==='SEMANTIC_HASH_MISMATCH').length,
+            other_failure_count:rows.filter(x=>x.status==='OTHER_FAILURE').length,
+            mismatch_details:mismatchDetails,
+            provider_refetch_authorized:false,
+            r2_put_authorized:false,
+            r2_delete_authorized:false,
+            formal_database_write_authorized:false,
+            scheduler_write_authorized:false,
+            runtime_write_authorized:false,
+            formal_effect:false,
+            mcft_cap09_completed:false
+          };
+          fs.writeFileSync('diagnostic-output/MCFT_CAP_09_CURRENT_REHYDRATION_DIAGNOSTIC_V5.json',JSON.stringify(summary,null,2)+'\n');
+          if(summary.other_failure_count!==0) throw new Error(`DIAGNOSTIC_UNEXPECTED_FAILURE_CLASS:${summary.other_failure_count}`);
+          console.log(JSON.stringify({status:'PASS',pass_count:summary.pass_count,semantic_hash_mismatch_count:summary.semantic_hash_mismatch_count,other_failure_count:summary.other_failure_count}));
+
+      - name: Upload metadata-only diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-current-rehydration-diagnostic-v5-${{ env.FROZEN_MAIN_SHA }}-${{ github.run_id }}
+          path: |
+            diagnostic-output/EXPECTED_SEMANTIC_ROWS.json
+            diagnostic-output/attempt-status.tsv
+            diagnostic-output/attempt-*.log
+            diagnostic-output/MCFT_CAP_09_CURRENT_REHYDRATION_DIAGNOSTIC_V5.json
+          if-no-files-found: error
+          retention-days: 14
