@@ -473,8 +473,14 @@ function planApplicability({ root = ROOT, authority, registry, changedPaths, sta
       subject_digest: currentDependency.digest,
       immutable_evidence_binding: evidenceEntry?.immutable_binding_sha256 ?? null,
       diagnostic_command: check.diagnostic_command ?? null,
-      execution_workflow: check.execution_workflow ?? null,
-      execution_workflow_status: check.execution_workflow_status ?? null,
+      execution_workflow:
+        check.execution_workflows_by_stage && Object.prototype.hasOwnProperty.call(check.execution_workflows_by_stage, stage)
+          ? check.execution_workflows_by_stage[stage]
+          : check.execution_workflow ?? null,
+      execution_workflow_status:
+        check.execution_workflow_status_by_stage && Object.prototype.hasOwnProperty.call(check.execution_workflow_status_by_stage, stage)
+          ? check.execution_workflow_status_by_stage[stage]
+          : check.execution_workflow_status ?? null,
     });
   }
 

@@ -72,7 +72,8 @@
         ".github/workflows/mcft-cap-09-t4r1-rolling-preboundary-capture.yml",
         ".github/workflows/mcft-cap-09-t4r1-rolling-rehydration-live-proof.yml",
         ".github/workflows/mcft-cap-09-phase6-runtime-independence.yml",
-        "docker-compose.mcft-cap09-phase6-github-blackout.override.yml"
+        "docker-compose.mcft-cap09-phase6-github-blackout.override.yml",
+        ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml"
       ]
     },
     "EA5E2_RUNTIME_GRAPH_V4": {
@@ -325,7 +326,17 @@
         "POST_GRADUATION_FORMAL_V5_ACTIVATION"
       ],
       "carry_forward_evidence_id": null,
-      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs"
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs",
+      "execution_workflows_by_stage": {
+        "SUCCESSOR_SUBJECT_PRE_MERGE": ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+        "POST_MERGE_V13_QUALIFICATION": ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml",
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION": ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml"
+      },
+      "execution_workflow_status_by_stage": {
+        "SUCCESSOR_SUBJECT_PRE_MERGE": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
+        "POST_MERGE_V13_QUALIFICATION": "IMPLEMENTED_POST_MERGE_FRONTIER",
+        "POST_GRADUATION_FORMAL_V5_ACTIVATION": "IMPLEMENTED_POST_MERGE_FRONTIER"
+      }
     },
     {
       "check_id": "V13_AUTONOMOUS_FORCING_FOUNDATION",

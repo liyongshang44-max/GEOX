@@ -1,0 +1,111 @@
+name: mcft-cap-09-post-merge-v13-control-plane-v1
+
+on:
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json'
+      - 'scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs'
+      - '.github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml'
+      - 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts'
+      - 'apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts'
+      - 'apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql'
+      - 'apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_POSTMERGE_V13_PRODUCTION_COMPOSITION_V1.ts'
+      - '.github/workflows/mcft-cap-09-postmerge-v13-production-composition.yml'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+env:
+  POST_MERGE_V13_BASE_SHA: 'fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8'
+
+jobs:
+  post-merge-v13-control-plane:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact post-merge predecessor
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event.pull_request.base.ref }}" = "main"
+          test "${{ github.event.pull_request.base.sha }}" = "$POST_MERGE_V13_BASE_SHA"
+
+      - name: Generate post-merge V13 applicability plan
+        if: github.event_name == 'pull_request'
+        run: >-
+          node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+          --base '${{ github.event.pull_request.base.sha }}'
+          --head '${{ github.event.pull_request.head.sha }}'
+          --generation v13
+          --stage POST_MERGE_V13_QUALIFICATION
+          --out acceptance-output/MCFT_CAP_09_POST_MERGE_V13_PLAN.json
+
+      - name: Enumerate post-merge blockers without fail-fast
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set +e
+          node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs             --base '${{ github.event.pull_request.base.sha }}'             --head '${{ github.event.pull_request.head.sha }}'             --generation v13             --stage POST_MERGE_V13_QUALIFICATION             --out acceptance-output/MCFT_CAP_09_POST_MERGE_V13_BLOCKERS.json
+          code=$?
+          set -e
+          test -f acceptance-output/MCFT_CAP_09_POST_MERGE_V13_BLOCKERS.json
+          echo "preflight_exit_code=$code" >> "$GITHUB_OUTPUT"
+
+      - name: Validate truthful post-merge frontier
+        if: github.event_name == 'pull_request'
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const plan=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_POST_MERGE_V13_PLAN.json','utf8'));
+          const pre=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_POST_MERGE_V13_BLOCKERS.json','utf8'));
+          if(plan.status!=='PASS'||plan.stage!=='POST_MERGE_V13_QUALIFICATION'||plan.generation!=='v13')throw new Error('POST_MERGE_V13_PLAN_NOT_PASS');
+          if(plan.unknown_changed_paths.length||plan.authority_errors.length||plan.resolver_errors.length)throw new Error('POST_MERGE_V13_GOVERNANCE_UNRESOLVED');
+          if(pre.stage!=='POST_MERGE_V13_QUALIFICATION'||pre.non_fail_fast!==true)throw new Error('POST_MERGE_V13_PREFLIGHT_INVALID');
+          const required=new Set(['V13_PRODUCER_DRIVEN_QUALIFICATION','END_TO_END_EVIDENCE_SUPPLY_DEADLINE','EXACT_ONE_PRODUCTION_OWNER']);
+          const decisions=new Map(plan.decisions.map(x=>[x.check_id,x]));
+          for(const id of required){
+            const row=decisions.get(id);
+            if(!row||!['REQUIRED','REQUALIFY'].includes(row.status))throw new Error('POST_MERGE_REQUIRED_GATE_NOT_FAIL_CLOSED:'+id);
+          }
+          const effects=pre.non_effects||{};
+          for(const key of ['runtime_mutation','production_workflow_activation','formal_database_mutation','provider_request','graduation_effect','mcft_cap09_completed']){
+            if(effects[key]!==false)throw new Error('POST_MERGE_CONTROL_PLANE_NON_EFFECT_VIOLATION:'+key);
+          }
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_POST_MERGE_V13_FRONTIER_V1_RESULT.json',JSON.stringify({
+            status:'PASS',
+            stage:plan.stage,
+            planner_status:plan.status,
+            blocker_count:pre.counts.blocker_count,
+            blockers:pre.blockers,
+            required_unclosed_gates:[...required],
+            remote_store_provisioned:false,
+            production_owner_activated:false,
+            formal_v5_armed:false,
+            o00_started:false,
+            mcft_cap09_completed:false
+          },null,2)+'\n');
+
+      - name: Upload post-merge frontier proof
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-post-merge-v13-control-plane-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_POST_MERGE_V13_PLAN.json
+            acceptance-output/MCFT_CAP_09_POST_MERGE_V13_BLOCKERS.json
+            acceptance-output/MCFT_CAP_09_POST_MERGE_V13_FRONTIER_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
