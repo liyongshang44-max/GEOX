@@ -18,6 +18,9 @@ const SCOPE = {
   zone_id: "aclZone",
 };
 
+const V13_EPOCH = "phase7-acl-v13-epoch";
+const V13_SUBJECT = "a".repeat(40);
+
 async function expectDenied(pool: Pool, sql: string, params: unknown[] = []): Promise<Error> {
   const client = await pool.connect();
   let caught: unknown = null;
@@ -220,6 +223,53 @@ async function main(): Promise<void> {
                  '{}'::jsonb,'2026-08-27T02:30:01.000Z','acl-owner-A',1)`,
         [...Object.values(SCOPE), "sha256:" + "a".repeat(64)],
       );
+
+      // Phase7: forcing-base continuity is Evidence-plane operational state.
+      // The Evidence role must own it without gaining Twin Runtime state authority.
+      await client.query(
+        `INSERT INTO public.twin_external_formal_forcing_base_cursor_v1
+         (tenant_id,project_id,group_id,field_id,season_id,zone_id,epoch_id,subject_sha,
+          first_required_base,last_required_base,last_contiguous_eligible_base,next_missing_required_base,completed)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,
+                 date_trunc('hour',transaction_timestamp())+interval '2 hours',
+                 date_trunc('hour',transaction_timestamp())+interval '2 hours',
+                 date_trunc('hour',transaction_timestamp())+interval '1 hour',
+                 date_trunc('hour',transaction_timestamp())+interval '2 hours',false)`,
+        [...Object.values(SCOPE), V13_EPOCH, V13_SUBJECT],
+      );
+      await client.query(
+        `INSERT INTO public.twin_external_formal_forcing_base_target_v1
+         (tenant_id,project_id,group_id,field_id,season_id,zone_id,epoch_id,subject_sha,
+          base_target_t,causal_deadline,state,idempotency_key)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,
+                 date_trunc('hour',transaction_timestamp())+interval '2 hours',
+                 date_trunc('hour',transaction_timestamp())+interval '2 hours',
+                 'REQUIRED','phase7-acl-v13-target')`,
+        [...Object.values(SCOPE), V13_EPOCH, V13_SUBJECT],
+      );
+      await client.query(
+        `INSERT INTO public.twin_external_formal_forcing_controller_lease_v1
+         (tenant_id,project_id,group_id,field_id,season_id,zone_id,epoch_id,subject_sha,
+          lifecycle_state,lease_owner,fencing_token,lease_expires_at,acquired_at,renewed_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'ACTIVE','phase7-evidence-controller',1,
+                 transaction_timestamp()+interval '5 minutes',
+                 transaction_timestamp(),transaction_timestamp())`,
+        [...Object.values(SCOPE), V13_EPOCH, V13_SUBJECT],
+      );
+      await client.query(
+        `UPDATE public.twin_external_formal_forcing_base_target_v1
+            SET failure_class='PHASE7_ACL_WRITE_PROBE',updated_at=clock_timestamp()
+          WHERE epoch_id=$1`,
+        [V13_EPOCH],
+      );
+      const v13Rows = await client.query(
+        `SELECT
+           (SELECT count(*)::int FROM public.twin_external_formal_forcing_base_cursor_v1 WHERE epoch_id=$1) AS cursor_n,
+           (SELECT count(*)::int FROM public.twin_external_formal_forcing_base_target_v1 WHERE epoch_id=$1) AS target_n,
+           (SELECT count(*)::int FROM public.twin_external_formal_forcing_controller_lease_v1 WHERE epoch_id=$1) AS controller_n`,
+        [V13_EPOCH],
+      );
+      assert.deepEqual(v13Rows.rows[0], { cursor_n: 1, target_n: 1, controller_n: 1 });
     });
 
     // Even the governed function cannot be used to manufacture a Twin canonical fact.
@@ -297,6 +347,15 @@ async function main(): Promise<void> {
       "external_evidence_supply_event_v1:SELECT",
       "external_evidence_supply_event_v1:UPDATE",
       "facts:SELECT",
+      "twin_external_formal_forcing_base_cursor_v1:INSERT",
+      "twin_external_formal_forcing_base_cursor_v1:SELECT",
+      "twin_external_formal_forcing_base_cursor_v1:UPDATE",
+      "twin_external_formal_forcing_base_target_v1:INSERT",
+      "twin_external_formal_forcing_base_target_v1:SELECT",
+      "twin_external_formal_forcing_base_target_v1:UPDATE",
+      "twin_external_formal_forcing_controller_lease_v1:INSERT",
+      "twin_external_formal_forcing_controller_lease_v1:SELECT",
+      "twin_external_formal_forcing_controller_lease_v1:UPDATE",
     ]);
 
     const routineGrant = await pool.query<{ privilege_type: string }>(
@@ -322,6 +381,9 @@ async function main(): Promise<void> {
       security_definer_fixed_search_path: true,
       exact_table_grants: actual,
       facts_insert_table_grant: false,
+      evidence_runtime_v13_forcing_cursor_mutation: true,
+      evidence_runtime_v13_forcing_target_mutation: true,
+      evidence_runtime_v13_forcing_controller_lease_mutation: true,
       runtime_tick_cursor_mutation: false,
       twin_state_mutation: false,
       production_cadence_activation: false,
