@@ -432,7 +432,13 @@ function planApplicability({ root = ROOT, authority, registry, changedPaths, sta
       if (!evidenceIsStructurallyValid(evidenceEntry, authority, root, registry) || evidenceEntry.check_id !== check.check_id) {
         status = "UNKNOWN";
         reason_code = "CARRY_FORWARD_EVIDENCE_INVALID_OR_MISSING";
-      } else if (!currentDependency.digest || !historicalDependency.digest) {
+      } else if (!currentDependency.digest) {
+        status = "UNKNOWN";
+        reason_code = "DEPENDENCY_DIGEST_UNRESOLVABLE";
+      } else if (!historicalDependency.digest && historicalDependency.missing.length > 0) {
+        status = "REQUALIFY";
+        reason_code = "DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT";
+      } else if (!historicalDependency.digest) {
         status = "UNKNOWN";
         reason_code = "DEPENDENCY_DIGEST_UNRESOLVABLE";
       } else if (!dependencyDigestMatch) {
