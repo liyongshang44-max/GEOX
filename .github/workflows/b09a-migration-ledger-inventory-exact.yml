@@ -1,0 +1,187 @@
+name: b09a-migration-ledger-inventory-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b09a-migration-ledger-inventory-exact-2026-08-28
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal product head checkout
+        run: |
+          git checkout 24990152263714cb59a29bae960d1f96d9a3e63c
+          test "$(git rev-parse HEAD)" = "24990152263714cb59a29bae960d1f96d9a3e63c"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09a migration ledger validation
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09_MIGRATION_LEDGER_V1.cjs
+
+      - name: B-09a exact coverage and zero-removal proof
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const ledger=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-B09-MIGRATION-LEDGER-V1.json","utf8"));
+          if((ledger.entries||[]).length!==29) throw new Error("B09A_LEDGER_NOT_29");
+          if((ledger.entries||[]).some(e=>e.authority_removal_eligible!==false)) throw new Error("B09A_REMOVAL_ELIGIBLE_TRUE");
+          if((ledger.entries||[]).some(e=>(e.authority_removal_refs||[]).length!==0)) throw new Error("B09A_REMOVAL_REFS_PRESENT");
+          if(ledger.summary.authority_removal_eligible!==0) throw new Error("B09A_SUMMARY_REMOVAL_NONZERO");
+          if(ledger.b09a_global_invariants.authority_removal_enabled!==false) throw new Error("B09A_GLOBAL_REMOVAL_ENABLED");
+          const twin=(ledger.entries||[]).filter(e=>e.semantic_id==="twin.physical_state"||e.semantic_id==="twin.forecast_scenario");
+          if(twin.some(e=>e.replacement_state!=="NO_REPLACEMENT")) throw new Error("B09A_TWIN_REPLACEMENT_CLAIMED");
+          console.log("B09A_ZERO_REMOVAL_AND_TWIN_BOUNDARY_PASS");
+          NODE
+
+      - name: Reject premature authority-removal eligibility
+        shell: bash
+        run: |
+          P="docs/architecture/semantic_convergence/GEOX-B09-MIGRATION-LEDGER-V1.json"
+          cp "$P" /tmp/b09-ledger-original.json
+          node <<'NODE'
+          const fs=require("fs");
+          const p="docs/architecture/semantic_convergence/GEOX-B09-MIGRATION-LEDGER-V1.json";
+          const x=JSON.parse(fs.readFileSync(p,"utf8"));
+          x.entries[0].authority_removal_eligible=true;
+          fs.writeFileSync(p,JSON.stringify(x,null,2)+"\n");
+          NODE
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B09_MIGRATION_LEDGER_V1.cjs >/tmp/b09-removal-negative.log 2>&1
+          RC=$?
+          set -e
+          cat /tmp/b09-removal-negative.log
+          cp /tmp/b09-ledger-original.json "$P"
+          test "$RC" -ne 0
+          grep -q "B09A_AUTHORITY_REMOVAL_ELIGIBLE_FORBIDDEN" /tmp/b09-removal-negative.log
+          node scripts/governance_acceptance/ACCEPTANCE_B09_MIGRATION_LEDGER_V1.cjs
+          echo B09A_PREMATURE_REMOVAL_NEGATIVE_PASS
+
+      - name: Reject false Twin replacement claim
+        shell: bash
+        run: |
+          P="docs/architecture/semantic_convergence/GEOX-B09-MIGRATION-LEDGER-V1.json"
+          cp "$P" /tmp/b09-ledger-original.json
+          node <<'NODE'
+          const fs=require("fs");
+          const p="docs/architecture/semantic_convergence/GEOX-B09-MIGRATION-LEDGER-V1.json";
+          const x=JSON.parse(fs.readFileSync(p,"utf8"));
+          const e=x.entries.find(e=>e.legacy_producer_id==="derived-sensing-state-service");
+          e.replacement_state="PARTIAL_REPLACEMENT";
+          e.canonical_replacement_refs=["producer:mcft-state-reference"];
+          e.shadow_compare_state="CAPABLE";
+          fs.writeFileSync(p,JSON.stringify(x,null,2)+"\n");
+          NODE
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B09_MIGRATION_LEDGER_V1.cjs >/tmp/b09-twin-negative.log 2>&1
+          RC=$?
+          set -e
+          cat /tmp/b09-twin-negative.log
+          cp /tmp/b09-ledger-original.json "$P"
+          test "$RC" -ne 0
+          grep -q "B09A_TWIN_REAL_REPLACEMENT_MUST_NOT_BE_CLAIMED" /tmp/b09-twin-negative.log
+          node scripts/governance_acceptance/ACCEPTANCE_B09_MIGRATION_LEDGER_V1.cjs
+          echo B09A_TWIN_FALSE_REPLACEMENT_NEGATIVE_PASS
+
+      - name: Historical authority fields are unchanged
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const cp=require("node:child_process");
+          const path="docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json";
+          const before=JSON.parse(cp.execFileSync("git",["show","6702631be2f66587d4fa1230e0f97f6fd4e9b8b9:"+path],{encoding:"utf8"}));
+          const after=JSON.parse(fs.readFileSync(path,"utf8"));
+          const fields=[
+            "path","authority_level","grandfathered_duplicate","removal_target","current",
+            "connection_class","activation","runtime_edge","new_runtime_consumer_creation"
+          ];
+          const idx=(r)=>{
+            const m=new Map();
+            for(const s of r.semantics||[]) for(const p of s.registered_producers||[]) if(p.grandfathered_duplicate===true) m.set(p.producer_id,{semantic_id:s.semantic_id,p});
+            return m;
+          };
+          const a=idx(before), b=idx(after);
+          if(a.size!==b.size) throw new Error("B09A_GRANDFATHERED_COUNT_CHANGED:"+a.size+":"+b.size);
+          for(const [id,x] of a){
+            const y=b.get(id);
+            if(!y) throw new Error("B09A_GRANDFATHERED_REMOVED:"+id);
+            if(x.semantic_id!==y.semantic_id) throw new Error("B09A_GRANDFATHERED_SEMANTIC_CHANGED:"+id);
+            for(const f of fields){
+              if(JSON.stringify(x.p[f])!==JSON.stringify(y.p[f])) throw new Error("B09A_HISTORICAL_AUTHORITY_FIELD_CHANGED:"+id+":"+f);
+            }
+            if(JSON.stringify(x.p.grandfathered_runtime_consumers||[])!==JSON.stringify(y.p.grandfathered_runtime_consumers||[])) throw new Error("B09A_HISTORICAL_CONSUMERS_CHANGED:"+id);
+          }
+          console.log("B09A_HISTORICAL_AUTHORITY_FIELDS_UNCHANGED_PASS");
+          NODE
+
+      - name: Parallel authority graph is untouched
+        run: git diff --exit-code 6702631be2f66587d4fa1230e0f97f6fd4e9b8b9 24990152263714cb59a29bae960d1f96d9a3e63c -- docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json
+
+      - name: No runtime authority or real integration mutation
+        shell: bash
+        run: |
+          git diff --exit-code 6702631be2f66587d4fa1230e0f97f6fd4e9b8b9 24990152263714cb59a29bae960d1f96d9a3e63c --             apps/server/src             packages             docs/digital_twin             .github/workflows/mcft*
+          H1="$(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n 'decisionProducerPortOutputV1Schema.parse(' apps/server/src || true)"
+          H2="$(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n 'futureDecisionIntegrationBindingV1Schema.parse(' apps/server/src || true)"
+          test -z "$H1"
+          test -z "$H2"
+          echo B09A_RUNTIME_AND_REAL_INTEGRATION_UNTOUCHED_PASS
+
+      - name: B-08 B-07 and earlier regression
+        run: |
+          node --import tsx --test apps/server/src/contracts/decision_episode_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/decision_integration_ports_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_episode_assembler_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_decision_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+
+      - name: Product diff remains bounded
+        shell: bash
+        run: |
+          git diff --name-only 6702631be2f66587d4fa1230e0f97f6fd4e9b8b9 24990152263714cb59a29bae960d1f96d9a3e63c >/tmp/b09a-files.txt
+          cat /tmp/b09a-files.txt
+          test "$(wc -l </tmp/b09a-files.txt | tr -d ' ')" = "4"
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09-MIGRATION-LEDGER-V1.json" /tmp/b09a-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09A-MIGRATION-LEDGER-INVENTORY-V1.md" /tmp/b09a-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json" /tmp/b09a-files.txt
+          grep -qx "scripts/governance_acceptance/ACCEPTANCE_B09_MIGRATION_LEDGER_V1.cjs" /tmp/b09a-files.txt
+          echo B09A_BOUNDED_PRODUCT_DIFF_PASS
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Marker
+        run: |
+          echo "B09A_EXACT_HEAD 24990152263714cb59a29bae960d1f96d9a3e63c"
+          echo B09A_MIGRATION_LEDGER_INVENTORY_PASS
