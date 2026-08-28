@@ -1,0 +1,166 @@
+name: b09e-evidence-consumer-dependency-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b09e-evidence-consumer-dependency-exact-2026-08-28
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal product head checkout
+        run: |
+          git checkout fc2eaf47da19c5adeb0f455cf50946b9f760c96b
+          test "$(git rev-parse HEAD)" = "fc2eaf47da19c5adeb0f455cf50946b9f760c96b"
+          test "$(git rev-parse HEAD^)" = "ac0d2d43c4914d53075de0ebc4e76bfeeca12d88"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09e Evidence consumer dependency analysis
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09E_EVIDENCE_CONSUMER_DEPENDENCY_V1.cjs
+
+      - name: B-09d inventory regression
+        run: node --import tsx --test apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.contract.test.ts
+
+      - name: B-09c collector regression
+        run: node --import tsx --test apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.contract.test.ts
+
+      - name: B-09b comparator regression
+        run: node --import tsx --test apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.contract.test.ts
+
+      - name: B-09a migration inventory regression
+        run: node --import tsx --test apps/server/src/contracts/semantic_migration_v1.contract.test.ts
+
+      - name: B-07 Agronomy evidence criterion regression
+        run: node --import tsx --test apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.contract.test.ts
+
+      - name: B-07 eligibility evaluator/runtime regression
+        run: |
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: Lock exact dependency facts
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const inv=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-B09E-EVIDENCE-CONSUMER-DEPENDENCY-INVENTORY-V1.json","utf8"));
+          const deps=new Map((inv.dependencies||[]).map(x=>[x.dependency_id,x]));
+          const agr=deps.get("agronomy-caller-injected-evidence-verdict");
+          const stage=deps.get("stage1-separate-evidence-authority");
+          if(!agr||!stage) throw new Error("B09E_DEPENDENCIES_MISSING");
+          if(agr.runtime_edge!=="NOT_PROVEN") throw new Error("B09E_AGRONOMY_EDGE_OVERCLAIMED");
+          if(stage.runtime_edge!=="PROVEN") throw new Error("B09E_STAGE1_EDGE_UNDERCLAIMED");
+          if(JSON.stringify(agr.blocking_legacy_verdicts)!==JSON.stringify(["DEVICE_OFFLINE","INSUFFICIENT_EVIDENCE","STALE_DATA"])) {
+            throw new Error("B09E_BLOCKING_SET_INVALID:"+JSON.stringify(agr.blocking_legacy_verdicts));
+          }
+          if(!agr.notable_nonblocking_legacy_verdicts.includes("SENSOR_DRIFT")) {
+            throw new Error("B09E_SENSOR_DRIFT_FACT_MISSING");
+          }
+          if(agr.authority_removal_permitted!==false||stage.authority_removal_permitted!==false) {
+            throw new Error("B09E_REMOVAL_PERMISSION_OPENED");
+          }
+          const corpus=inv.runtime_corpus_evidence;
+          const expected={MATCH:1,DIVERGENT:1,INCOMPARABLE:1,CANONICAL_MISSING:0,LEGACY_MISSING:0};
+          if(JSON.stringify(corpus.state_counts)!==JSON.stringify(expected)) throw new Error("B09E_CORPUS_COUNTS_DRIFT");
+          if(corpus.observation_scope_class!=="SYNTHETIC_ACCEPTANCE_RUNTIME") throw new Error("B09E_CORPUS_SCOPE_OVERCLAIMED");
+          console.log("B09E_EXACT_DEPENDENCY_FACTS_PASS");
+          NODE
+
+      - name: Grandfathered authority and graph remain unchanged
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const cp=require("child_process");
+          const before=JSON.parse(cp.execFileSync("git",["show","ac0d2d43c4914d53075de0ebc4e76bfeeca12d88:docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json"],{encoding:"utf8"}));
+          const after=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const flatten=(reg)=>(reg.semantics||[]).flatMap(s=>(s.registered_producers||[])
+            .filter(p=>p.grandfathered_duplicate===true)
+            .map(p=>({semantic_id:s.semantic_id,...p})))
+            .sort((a,b)=>(a.semantic_id+"::"+a.producer_id).localeCompare(b.semantic_id+"::"+b.producer_id));
+          const b=flatten(before),a=flatten(after);
+          if(b.length!==29||a.length!==29) throw new Error("B09E_GRANDFATHERED_COUNT_INVALID:"+b.length+":"+a.length);
+          if(JSON.stringify(b)!==JSON.stringify(a)) throw new Error("B09E_GRANDFATHERED_AUTHORITY_MUTATED");
+          console.log("B09E_29_GRANDFATHERED_UNCHANGED_PASS");
+          NODE
+          git diff --exit-code ac0d2d43c4914d53075de0ebc4e76bfeeca12d88 fc2eaf47da19c5adeb0f455cf50946b9f760c96b -- docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json
+          echo "B09E_PARALLEL_AUTHORITY_GRAPH_UNCHANGED_PASS"
+
+      - name: B-09 readiness remains unchanged
+        shell: bash
+        run: |
+          git diff --exit-code ac0d2d43c4914d53075de0ebc4e76bfeeca12d88 fc2eaf47da19c5adeb0f455cf50946b9f760c96b -- docs/architecture/semantic_convergence/GEOX-B09-REPLACEMENT-READINESS-V1.json
+          node <<'NODE'
+          const fs=require("fs");
+          const inv=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-B09-REPLACEMENT-READINESS-V1.json","utf8"));
+          if(inv.authority_removal_performed!==false) throw new Error("B09E_AUTHORITY_REMOVAL_PERFORMED");
+          const ev=(inv.families||[]).find(x=>x.semantic_id==="evidence.qualification");
+          if(!ev) throw new Error("B09E_EVIDENCE_FAMILY_MISSING");
+          if(ev.consumer_migration_state!=="PARTIAL") throw new Error("B09E_CONSUMER_MIGRATION_CHANGED");
+          if(ev.authority_removal_state!=="PENDING_CONSUMER_MIGRATION") throw new Error("B09E_REMOVAL_STATE_CHANGED");
+          console.log("B09E_READINESS_UNCHANGED_PASS");
+          NODE
+
+      - name: Runtime schema MCFT remain untouched
+        shell: bash
+        run: |
+          git diff --exit-code ac0d2d43c4914d53075de0ebc4e76bfeeca12d88 fc2eaf47da19c5adeb0f455cf50946b9f760c96b --             apps/server/src             apps/server/db             packages             .github/workflows             docs/digital_twin             docker-compose.commercial_v1.yml
+          echo "B09E_RUNTIME_SCHEMA_MCFT_UNTOUCHED_PASS"
+
+      - name: Stage-1 comparator remains disconnected
+        shell: bash
+        run: |
+          mapfile -t HITS < <(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -l 'compareStage1GateToCanonicalEvidenceShadowV1(' apps/server/src | sort)
+          printf '%s\n' "${HITS[@]}"
+          test "${#HITS[@]}" = "1"
+          test "${HITS[0]}" = "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts"
+          echo "B09E_STAGE1_COMPARATOR_DISCONNECTED_PASS"
+
+      - name: Product diff remains bounded
+        shell: bash
+        run: |
+          git diff --name-only ac0d2d43c4914d53075de0ebc4e76bfeeca12d88 fc2eaf47da19c5adeb0f455cf50946b9f760c96b > /tmp/b09e-files.txt
+          cat /tmp/b09e-files.txt
+          test "$(wc -l < /tmp/b09e-files.txt | tr -d ' ')" = "4"
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09E-EVIDENCE-CONSUMER-DEPENDENCY-ANALYSIS-V1.md" /tmp/b09e-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09E-EVIDENCE-CONSUMER-DEPENDENCY-INVENTORY-V1.json" /tmp/b09e-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json" /tmp/b09e-files.txt
+          grep -qx "scripts/governance_acceptance/ACCEPTANCE_B09E_EVIDENCE_CONSUMER_DEPENDENCY_V1.cjs" /tmp/b09e-files.txt
+          git diff --check ac0d2d43c4914d53075de0ebc4e76bfeeca12d88 fc2eaf47da19c5adeb0f455cf50946b9f760c96b
+          echo "B09E_BOUNDED_PRODUCT_DIFF_PASS"
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Marker
+        run: |
+          echo "B09E_EXACT_HEAD fc2eaf47da19c5adeb0f455cf50946b9f760c96b"
+          echo "B09E_EVIDENCE_CONSUMER_DEPENDENCY_ANALYSIS_PASS"
