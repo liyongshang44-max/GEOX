@@ -639,6 +639,26 @@
         "artifact_absence_reason": "RUN_LEVEL_REQUALIFICATION_EVIDENCE_ONLY_ARTIFACT_NOT_BOUND_BY_CONTROL_PLANE",
         "immutable": true,
         "immutable_binding_sha256": "6167b58fdf14d967f59c1dd5adf5d649565545dd29e33bf7ee8bc60f60dc98dd"
+      },
+      {
+        "evidence_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_FAECA352",
+        "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "phase7-private-candidate-io-foundation",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "faeca35259df78924f769198b1e55114dd360117",
+        "workflow_name": "mcft-cap-09-phase3-evidence-runtime-persistence",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+        "run_id": 33167597944,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "faeca35259df78924f769198b1e55114dd360117",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:084721793a3361ca215e908e9204a969f39b3645fc1f9dd0bb110f30b442a481",
+        "artifact_absence_reason": "RUN_LEVEL_PHASE3_PRIVATE_CANDIDATE_IO_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "b15c0bdf85ca39560a2875d0ad09d3d4df572f4544cc6984fdf7b074f7580300"
       }
     ],
     "durable_anchors": {
@@ -895,6 +915,20 @@
             "base_sha": "c4249e5b7bd67d35d34813aceea6760f9d210ed0",
             "created_at": "2026-08-28T10:47:21Z",
             "updated_at": "2026-08-28T10:49:19Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_FAECA352",
+          "run_id": 33167597944,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 173,
+            "workflow_path": ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+            "workflow_name": "mcft-cap-09-phase3-evidence-runtime-persistence",
+            "head_sha": "faeca35259df78924f769198b1e55114dd360117",
+            "base_sha": "d6c015b49d09960591185ff9c930e64dac7e2806",
+            "created_at": "2026-08-28T11:33:24Z",
+            "updated_at": "2026-08-28T11:34:42Z"
           }
         }
       ],
