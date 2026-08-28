@@ -1,0 +1,167 @@
+name: b09a-replacement-readiness-shadow-plan-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b09a-replacement-readiness-shadow-plan-exact-2026-08-28
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal product head checkout
+        run: |
+          git checkout afd914deab6cac927a085694e8a3270c8e0720d8
+          test "$(git rev-parse HEAD)" = "afd914deab6cac927a085694e8a3270c8e0720d8"
+          test "$(git rev-parse HEAD^)" = "6702631be2f66587d4fa1230e0f97f6fd4e9b8b9"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09a migration inventory and shadow contract
+        run: node --import tsx --test apps/server/src/contracts/semantic_migration_v1.contract.test.ts
+
+      - name: B-09a guard exactness
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const reg=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const sem=(reg.semantics||[]).find(x=>x.semantic_id==="governance.semantic_authority_migration");
+          if(!sem) throw new Error("B09A_MIGRATION_SEMANTIC_MISSING");
+          if(sem.target_phase!=="B-09") throw new Error("B09A_TARGET_PHASE_INVALID");
+          if(sem.current_state!=="BOUNDARY_CLEAR_TARGET_NOT_YET_PRODUCT_CONNECTED") throw new Error("B09A_STATE_INVALID");
+          const guard=(reg.static_guards||[]).find(x=>x.guard_id==="G-B02-22-semantic-shadow-comparison-instantiation");
+          if(!guard) throw new Error("B09A_SHADOW_GUARD_MISSING");
+          if((guard.registered_paths||[]).length!==0) throw new Error("B09A_PREMATURE_SHADOW_PRODUCER_REGISTERED");
+          console.log("B09A_GUARD_EXACTNESS_PASS");
+          NODE
+
+      - name: Zero production shadow-comparison producers
+        shell: bash
+        run: |
+          HITS="$(grep -R --include='*.ts' --exclude='*.test.ts' --exclude='*.acceptance.test.ts' -n 'semanticShadowComparisonV1Schema.parse(' apps/server/src || true)"
+          if [ -n "$HITS" ]; then
+            echo "$HITS"
+            echo "B09A_UNEXPECTED_PRODUCTION_SHADOW_PRODUCER"
+            exit 1
+          fi
+          echo "B09A_ZERO_PRODUCTION_SHADOW_PRODUCERS_PASS"
+
+      - name: Reject unregistered shadow-comparison producer
+        shell: bash
+        run: |
+          P="apps/server/src/.b09a_unregistered_shadow_probe.ts"
+          printf '%s\n' 'semanticShadowComparisonV1Schema.parse(' > "$P"
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs > /tmp/b09a-shadow-negative.log 2>&1
+          RC=$?
+          set -e
+          cat /tmp/b09a-shadow-negative.log
+          rm -f "$P"
+          if [ "$RC" -eq 0 ]; then
+            echo "B09A_UNREGISTERED_SHADOW_PRODUCER_NOT_REJECTED"
+            exit 1
+          fi
+          grep -q "UNREGISTERED_SEMANTIC_SHADOW_COMPARISON_PRODUCER" /tmp/b09a-shadow-negative.log
+          node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+          echo "B09A_SHADOW_NEGATIVE_GOVERNANCE_PASS"
+
+      - name: Historical grandfathered authority objects remain unchanged
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require("fs");
+          const cp=require("child_process");
+          const before=JSON.parse(cp.execFileSync("git",["show","6702631be2f66587d4fa1230e0f97f6fd4e9b8b9:docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json"],{encoding:"utf8"}));
+          const after=JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json","utf8"));
+          const flatten=(reg)=>(reg.semantics||[]).flatMap(s=>(s.registered_producers||[])
+            .filter(p=>p.grandfathered_duplicate===true)
+            .map(p=>({semantic_id:s.semantic_id,...p})))
+            .sort((a,b)=>(a.semantic_id+"::"+a.producer_id).localeCompare(b.semantic_id+"::"+b.producer_id));
+          const a=flatten(before), b=flatten(after);
+          if(JSON.stringify(a)!==JSON.stringify(b)) throw new Error("B09A_GRANDFATHERED_AUTHORITY_OBJECT_MUTATION");
+          if(a.length!==29) throw new Error("B09A_EXPECTED_29_GRANDFATHERED_PRODUCERS:"+a.length);
+          if(a.some(x=>x.removal_target!=="B-09")) throw new Error("B09A_NON_B09_REMOVAL_TARGET");
+          console.log("B09A_GRANDFATHERED_AUTHORITY_UNCHANGED_PASS");
+          NODE
+
+      - name: Parallel Authority Graph remains unchanged
+        shell: bash
+        run: |
+          git diff --exit-code 6702631be2f66587d4fa1230e0f97f6fd4e9b8b9 afd914deab6cac927a085694e8a3270c8e0720d8 --             docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json
+          echo "B09A_PARALLEL_GRAPH_UNCHANGED_PASS"
+
+      - name: No runtime authority integration or provider mutation
+        shell: bash
+        run: |
+          git diff --exit-code 6702631be2f66587d4fa1230e0f97f6fd4e9b8b9 afd914deab6cac927a085694e8a3270c8e0720d8 --             apps/server/src/domain             apps/server/src/routes             apps/server/src/jobs             apps/server/src/modules             apps/server/src/services             apps/server/src/projections             packages             .github/workflows/mcft*             docs/digital_twin             scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09*
+          echo "B09A_RUNTIME_AND_MCFT_UNTOUCHED_PASS"
+
+      - name: B-08 full regression
+        run: |
+          node --import tsx --test apps/server/src/contracts/decision_episode_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/decision_integration_ports_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_episode_assembler_v1.contract.test.ts
+
+      - name: B-07 full regression
+        run: |
+          node --import tsx --test apps/server/src/contracts/decision_eligibility_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/stage1_eligibility_precursor_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: Earlier B-line regression boundary
+        run: |
+          node --import tsx --test apps/server/src/contracts/canonical_decision_v1.contract.test.ts
+          node --import tsx --test apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_context_v1.contract.test.ts
+          node --import tsx --test apps/server/src/contracts/canonical_evidence_v1.contract.test.ts
+          node --import tsx --test apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.test.ts
+
+      - name: Product diff remains bounded
+        shell: bash
+        run: |
+          git diff --name-only 6702631be2f66587d4fa1230e0f97f6fd4e9b8b9 afd914deab6cac927a085694e8a3270c8e0720d8 > /tmp/b09a-files.txt
+          cat /tmp/b09a-files.txt
+          test "$(wc -l < /tmp/b09a-files.txt | tr -d ' ')" = "5"
+          grep -qx "apps/server/src/contracts/semantic_migration_v1.contract.test.ts" /tmp/b09a-files.txt
+          grep -qx "apps/server/src/contracts/semantic_migration_v1.ts" /tmp/b09a-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09-REPLACEMENT-READINESS-V1.json" /tmp/b09a-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09A-REPLACEMENT-READINESS-SHADOW-PLAN-V1.md" /tmp/b09a-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json" /tmp/b09a-files.txt
+          echo "B09A_BOUNDED_PRODUCT_DIFF_PASS"
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Marker
+        run: |
+          echo "B09A_EXACT_HEAD afd914deab6cac927a085694e8a3270c8e0720d8"
+          echo "B09A_ZERO_AUTHORITY_REMOVAL_PASS"
