@@ -121,7 +121,8 @@
         "apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_controller_lifecycle_v1.ts",
         "apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_supply_admission_v1.ts",
         "apps/server/src/persistence/twin_runtime/postgres_external_formal_fenced_exact_base_fact_promotion_v1.ts",
-        "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.ts"
+        "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_process_v1.ts"
       ],
       "additional_exact_paths": [
         "apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts",
@@ -231,7 +232,8 @@
         "apps/server/package.json",
         "apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql",
         "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts",
-        "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.ts"
+        "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_process_v1.ts"
       ]
     },
     "PHASE4_TWIN_RUNTIME_FOUNDATION": {
