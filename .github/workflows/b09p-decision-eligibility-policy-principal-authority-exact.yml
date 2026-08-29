@@ -1,0 +1,92 @@
+name: b09p-decision-eligibility-policy-principal-authority-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b09p-decision-eligibility-policy-principal-authority-exact-2026-08-29
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09p product head checkout
+        run: |
+          git checkout 731fe7ef62392e46d984ceafcb1bd62b17815230
+          test "$(git rev-parse HEAD)" = "731fe7ef62392e46d984ceafcb1bd62b17815230"
+          test "$(git rev-parse HEAD^)" = "ff8968f5468c12fcfce30203622230bfd660d477"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09p governance acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09P_DECISION_ELIGIBILITY_POLICY_PRINCIPAL_AUTHORITY_INVENTORY_V1.cjs
+
+      - name: B-09m declaration contract regression
+        run: node --import tsx --test apps/server/src/contracts/decision_eligibility_policy_declaration_v1.contract.test.ts
+
+      - name: B-07d evaluator contract regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+
+      - name: B-07e runtime contract regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: Prove authz/runtime surfaces are byte-identical
+        run: |
+          git diff --exit-code ff8968f5468c12fcfce30203622230bfd660d477 731fe7ef62392e46d984ceafcb1bd62b17815230 --             apps/server/src/auth/ao_act_authz_v0.ts             apps/server/src/domain/auth/roles.ts             apps/server/src/contracts/decision_eligibility_policy_declaration_v1.ts             apps/server/src/domain/decision/decision_eligibility_evaluator_v1.ts             apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts
+          echo "B09P_AUTHZ_RUNTIME_SURFACES_UNCHANGED_PASS"
+
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only ff8968f5468c12fcfce30203622230bfd660d477 731fe7ef62392e46d984ceafcb1bd62b17815230 > /tmp/b09p-files.txt
+          cat /tmp/b09p-files.txt
+          test "$(wc -l < /tmp/b09p-files.txt | tr -d ' ')" = "4"
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09P-DECISION-ELIGIBILITY-POLICY-PRINCIPAL-AUTHORITY-INVENTORY-V1.json" /tmp/b09p-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-B09P-DECISION-ELIGIBILITY-POLICY-PRINCIPAL-AUTHORITY-INVENTORY-V1.md" /tmp/b09p-files.txt
+          grep -qx "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json" /tmp/b09p-files.txt
+          grep -qx "scripts/governance_acceptance/ACCEPTANCE_B09P_DECISION_ELIGIBILITY_POLICY_PRINCIPAL_AUTHORITY_INVENTORY_V1.cjs" /tmp/b09p-files.txt
+          git diff --check ff8968f5468c12fcfce30203622230bfd660d477 731fe7ef62392e46d984ceafcb1bd62b17815230
+          echo "B09P_BOUNDED_PRODUCT_DIFF_PASS"
+
+      - name: Runtime authz schema workflow graph Twin MCFT remain untouched
+        run: |
+          git diff --exit-code ff8968f5468c12fcfce30203622230bfd660d477 731fe7ef62392e46d984ceafcb1bd62b17815230 --             apps/server/src             apps/server/db             packages             .github/workflows             docs/architecture/semantic_convergence/GEOX-PARALLEL-AUTHORITY-GRAPH-V1.json             docs/architecture/semantic_convergence/GEOX-B09-REPLACEMENT-READINESS-V1.json             docs/twin_kernel             docs/digital_twin             docker-compose.commercial_v1.yml
+          echo "B09P_RUNTIME_AUTHZ_SCHEMA_WORKFLOW_GRAPH_TWIN_MCFT_UNTOUCHED_PASS"
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Prove validation did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "731fe7ef62392e46d984ceafcb1bd62b17815230"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09P_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Marker
+        run: |
+          echo "B09P_EXACT_HEAD 731fe7ef62392e46d984ceafcb1bd62b17815230"
+          echo "B09P_POLICY_PRINCIPAL_AUTHORITY_INVENTORY_PASS"
