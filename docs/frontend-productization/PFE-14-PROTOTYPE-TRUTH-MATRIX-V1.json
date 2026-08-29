@@ -1,0 +1,99 @@
+{
+  "schema_version": "geox_pfe14_prototype_truth_matrix_v1",
+  "record_status": "DESIGN_ONLY_NON_EFFECTIVE",
+  "repo_basis_main_sha": "6df2241f1470e1df930498782b42c6ba9e813b41",
+  "pfe14_authority_expected_status": "S4_BLOCKED_WAITING_MCFT09_SCHEDULER_AND_EVIDENCE_READ_CONTRACT",
+  "prototype_policy": {
+    "sample_scope_values_allowed": false,
+    "invented_runtime_values_allowed": false,
+    "invented_numeric_values_allowed": false,
+    "invented_timestamps_allowed": false,
+    "invented_server_verdicts_allowed": false,
+    "target_structure_without_runtime_values_allowed": true,
+    "current_api_values_require_named_source": true,
+    "accepted_artifact_values_require_run_identity": true
+  },
+  "allowed_value_classes": [
+    "CURRENT_STATIC_NONCLAIM",
+    "CURRENT_API_VALUE",
+    "ACCEPTED_ARTIFACT_VALUE",
+    "UNAVAILABLE_AUTHORITY",
+    "LABEL_ONLY"
+  ],
+  "forbidden_value_classes": [
+    "DESIGN_SAMPLE_VALUE",
+    "INVENTED_ID",
+    "INVENTED_TIMESTAMP",
+    "INVENTED_COUNT",
+    "INVENTED_PERCENTAGE",
+    "INVENTED_RUNTIME_VERDICT",
+    "INVENTED_AGRONOMIC_VALUE"
+  ],
+  "current_static_nonclaims": {
+    "runtime_context": "Replay-backed Demo",
+    "read_only": true,
+    "live_device": "Not connected",
+    "production_gateway": "Not online",
+    "field_pilot": "Not started",
+    "controlled_execution": "Disabled",
+    "source_file": "apps/web/src/layouts/OperatorLayout.tsx"
+  },
+  "current_primary_navigation": [
+    {"route":"/operator/twin","label":"Runtime Overview"},
+    {"route":"/operator/fields","label":"Fields"}
+  ],
+  "canonical_sources": {
+    "route_owner": "apps/web/src/app/routes/operatorFieldRuntimeRoutes.tsx",
+    "page_owner": "apps/web/src/features/operator/fieldRuntime/McftCanonicalFieldRuntimeRoutePage.tsx",
+    "api_owner": "apps/web/src/api/mcftFieldTwinRuntime.ts",
+    "pfe14_s1_read_contract": "docs/frontend-productization/PFE-14-S1-FRONTEND-READ-CONTRACT.json"
+  },
+  "blocked_s4_models": [
+    "runtime_context_shadow_online",
+    "scheduler_summary",
+    "evidence_availability",
+    "persistence_and_recovery",
+    "mcft09_runtime_degradation"
+  ],
+  "prototype_surfaces": [
+    {"id":"P01","name":"Runtime Overview","route":"/operator/twin","source_functions":["fetchOperatorTwinOverview","fetchOperatorTwinSourceIndexInventory"],"current_data_mode":"CURRENT_API_VALUE_OR_UNAVAILABLE_AUTHORITY","s4_overlay":"BLOCKED"},
+    {"id":"P02","name":"Exact Scope Navigator","route":"/operator/fields","source_functions":[],"current_data_mode":"CURRENT_API_VALUE_OR_EMPTY_SELECTION","s4_overlay":"NONE"},
+    {"id":"P03","name":"Field Runtime Overview","route":"/operator/fields/:fieldId","source_functions":["readMcftRuntime"],"current_data_mode":"CURRENT_API_VALUE","s4_overlay":"NO_SCHEDULER_INFERENCE"},
+    {"id":"P04","name":"Evidence","route":"/operator/fields/:fieldId/evidence","source_functions":["readMcftTrace","readMcftTimeline"],"current_data_mode":"CURRENT_API_VALUE","route_semantics":"ALIAS_TO_EVIDENCE_TRACE","s4_overlay":"EVIDENCE_AVAILABILITY_BLOCKED"},
+    {"id":"P05","name":"State","route":"/operator/fields/:fieldId/state","source_functions":["readMcftStates"],"current_data_mode":"CURRENT_API_VALUE","s4_overlay":"NONE"},
+    {"id":"P06","name":"Forecast","route":"/operator/fields/:fieldId/forecast","source_functions":["readMcftRuntime","readMcftForecasts"],"current_data_mode":"CURRENT_API_VALUE","s4_overlay":"SCENARIO_ELIGIBILITY_SERVER_ONLY"},
+    {"id":"P07","name":"Runtime Health","route":"/operator/fields/:fieldId/health","source_functions":["readMcftHealth"],"current_data_mode":"CURRENT_API_VALUE","s4_overlay":"SCHEDULER_RECOVERY_FIELDS_BLOCKED"},
+    {"id":"P08","name":"Audit","route":"/operator/fields/:fieldId/audit","source_functions":["readMcftTrace","readMcftTimeline"],"current_data_mode":"CURRENT_API_VALUE","route_semantics":"ALIAS_TO_EVIDENCE_TRACE","s4_overlay":"NONE"},
+    {"id":"P09","name":"Scenario","route":"/operator/fields/:fieldId/scenario","source_functions":["readMcftRuntime","readMcftScenarios"],"current_data_mode":"CURRENT_API_VALUE","s4_overlay":"NO_RECOMMENDATION"},
+    {"id":"P10","name":"Action Lifecycle","route":"/operator/fields/:fieldId/action-lifecycle","source_functions":["readMcftRuntime","readMcftActionLifecycle"],"current_data_mode":"CURRENT_API_VALUE","s4_overlay":"READ_ONLY"},
+    {"id":"P11","name":"Residual","route":"/operator/fields/:fieldId/residual","source_functions":["readMcftResiduals"],"current_data_mode":"CURRENT_API_VALUE","s4_overlay":"NO_CAUSAL_INFERENCE"},
+    {"id":"P12","name":"Calibration","route":"/operator/fields/:fieldId/calibration","source_functions":["readMcftModelGovernance"],"current_data_mode":"CURRENT_API_VALUE","s4_overlay":"NO_MODEL_ACTIVATION_ACTION"}
+  ],
+  "cross_surface_states": [
+    "LOADING",
+    "NO_SCOPE",
+    "RUNTIME_NOT_ESTABLISHED",
+    "SHADOW_NOT_AUTHORIZED",
+    "WAITING_FOR_FIRST_SLOT",
+    "RUNNING",
+    "COMPLETED",
+    "DEGRADED_STALE_EVIDENCE",
+    "DEGRADED_MISSING_DATA",
+    "BACKFILLING",
+    "RECOVERED",
+    "BLOCKED",
+    "FORBIDDEN",
+    "API_ERROR",
+    "CONTRACT_INCOMPLETE"
+  ],
+  "forbidden_prototype_tokens": [
+    "tenant_sample",
+    "project_sample",
+    "group_sample",
+    "field_sample",
+    "season_sample",
+    "zone_sample",
+    "SHADOW_ONLINE_SAMPLE"
+  ],
+  "next_action": "BUILD_STRUCTURE_ONLY_12_SURFACE_PROTOTYPE_WITHOUT_FABRICATED_VALUES"
+}
