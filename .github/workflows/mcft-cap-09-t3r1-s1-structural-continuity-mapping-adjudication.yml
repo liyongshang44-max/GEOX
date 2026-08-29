@@ -1,0 +1,93 @@
+name: mcft-cap-09-t3r1-s1-structural-continuity-mapping-adjudication
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap09-t3r1-s1-mapping-adjudication
+    paths:
+      - '.github/workflows/mcft-cap-09-t3r1-s1-structural-continuity-mapping-adjudication.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-S1-STRUCTURAL-CONTINUITY-MAPPING-ADJUDICATION-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-S1-STRUCTURAL-CONTINUITY-MAPPING-ADJUDICATION-V1.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_S1_STRUCTURAL_CONTINUITY_MAPPING_ADJUDICATION.cjs'
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-t3r1-s1-structural-continuity-mapping-adjudication.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-S1-STRUCTURAL-CONTINUITY-MAPPING-ADJUDICATION-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T3R1-S1-STRUCTURAL-CONTINUITY-MAPPING-ADJUDICATION-V1.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_S1_STRUCTURAL_CONTINUITY_MAPPING_ADJUDICATION.cjs'
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-t3r1-s1-mapping-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  exact-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Resolve exact base and subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo "base_sha=${{ github.event.merge_group.base_sha }}" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=23f224c701dbe0b8bd56eceff3741cb1c3dc1f78" >> "$GITHUB_OUTPUT"
+            echo "subject_sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Syntax-check adjudication gate
+        run: node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_S1_STRUCTURAL_CONTINUITY_MAPPING_ADJUDICATION.cjs
+
+      - name: Execute exact-boundary adjudication gate
+        env:
+          MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_S1_STRUCTURAL_CONTINUITY_MAPPING_ADJUDICATION.cjs
+
+      - name: Verify no lifecycle authority was manufactured
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const p = 'acceptance-output/MCFT_CAP_09_T3R1_S1_STRUCTURAL_CONTINUITY_MAPPING_ADJUDICATION_BOUNDARY.json';
+          const x = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (x.status !== 'PASS') throw new Error('T3R1_S1_MAPPING_PASS_REQUIRED');
+          if (x.structural_continuity_candidate_resolved !== true) throw new Error('T3R1_S1_MAPPING_CONTINUITY_REQUIRED');
+          if (x.direct_standing_crop_observation_from_sar_resolved !== false) throw new Error('T3R1_S1_MAPPING_DIRECT_CROP_FORBIDDEN');
+          if (x.harvest_exclusion_from_sar_resolved !== false) throw new Error('T3R1_S1_MAPPING_HARVEST_EXCLUSION_FORBIDDEN');
+          if (x.current_management_season_lifecycle_resolved !== false) throw new Error('T3R1_S1_MAPPING_LIFECYCLE_FORBIDDEN');
+          if (x.bounded_carry_forward_authorized !== false) throw new Error('T3R1_S1_MAPPING_CARRY_FORWARD_FORBIDDEN');
+          if (x.ea5e2_operational_activation_qualified !== false || x.formal_execution_count !== '0/24') throw new Error('T3R1_S1_MAPPING_ACTIVATION_FORBIDDEN');
+          NODE
+
+      - name: Upload adjudication artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t3r1-s1-mapping-${{ steps.authority.outputs.subject_sha }}
+          path: acceptance-output/MCFT_CAP_09_T3R1_S1_STRUCTURAL_CONTINUITY_MAPPING_ADJUDICATION_BOUNDARY.json
+          if-no-files-found: error
+          retention-days: 90
