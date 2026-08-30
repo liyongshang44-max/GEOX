@@ -1088,6 +1088,23 @@
         "fingerprint": "Agronomy Judge route persists decision_recommendation_candidate_criterion_shadow_binding_v1 only after legacy JudgeResult construction; B-07e is not invoked"
       },
       "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-045",
+      "from_producer": "decision-eligibility-policy-declaration-writer-v1",
+      "to_consumer": "decision-eligibility-policy-declaration-route-v1",
+      "semantic_id": "decision.eligibility",
+      "connection_class": "ROUTE_ISLAND",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/routes/decision_eligibility_policy_declarations_v1.ts",
+        "callee_path": "apps/server/src/domain/decision/decision_eligibility_policy_declaration_fact_v1.ts",
+        "fingerprint": "requireDecisionEligibilityPolicyDeclarationAuthorityV1 -> appendDecisionEligibilityPolicyDeclarationFactV1"
+      },
+      "status": "ROUTE_ONLY"
     }
   ],
   "connectivity_status_values": [

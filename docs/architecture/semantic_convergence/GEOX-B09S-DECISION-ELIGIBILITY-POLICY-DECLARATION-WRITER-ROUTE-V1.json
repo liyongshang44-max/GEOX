@@ -1,0 +1,88 @@
+{
+  "schema_version": "b09s_decision_eligibility_policy_declaration_writer_route_v1",
+  "phase": "B-09s",
+  "status": "IMPLEMENTED_AUTHORIZED_APPEND_ONLY_WRITER_NO_POLICY_INSTANCE",
+  "stacked_base_product_head": "65ac424bc663c8c8ec2f148c10bc7f2193eae255",
+  "authority_source": {
+    "governance_decision_id": "DEC-BLINE-ELIGIBILITY-POLICY-PRINCIPAL-001",
+    "dedicated_capability": "decision.eligibility.policy.declare",
+    "authorized_human_role": "agronomist",
+    "centralized_gate": "requireDecisionEligibilityPolicyDeclarationAuthorityV1"
+  },
+  "route": {
+    "method": "POST",
+    "path": "/api/v1/decision-eligibility/policy-declarations",
+    "caller_controls": [
+      "policy_id",
+      "policy_version",
+      "scope",
+      "applicable_action_types",
+      "required_criteria",
+      "lifecycle_semantics",
+      "provenance_refs",
+      "effective_from",
+      "effective_until",
+      "supersedes_policy_ref",
+      "limitations",
+      "change_reason"
+    ],
+    "server_derives": [
+      "schema_version",
+      "declaration_id",
+      "policy_ref",
+      "declaration_source_type",
+      "declaration_source_ref",
+      "declared_at",
+      "authority_state",
+      "fact_id",
+      "occurred_at",
+      "audit.changed_by_actor_id",
+      "audit.changed_by_token_id",
+      "audit.written_at"
+    ]
+  },
+  "persistence": {
+    "table": "facts",
+    "fact_type": "decision_eligibility_policy_declaration_v1",
+    "append_only": true,
+    "ddl_change": false,
+    "update_delete": false,
+    "global_policy_ref_lock": "pg_advisory_xact_lock(hashtext(policy_ref))",
+    "lookup_cardinality": "LIMIT_2",
+    "exact_same_intent": "IDEMPOTENT_RETURN_EXISTING",
+    "same_ref_changed_intent": "POLICY_REF_CONFLICT",
+    "multiple_existing_rows": "POLICY_REF_AMBIGUOUS",
+    "latest_wins": false,
+    "retroactive_new_effectivity": "FORBIDDEN_BY_SERVER_ASSIGNED_DECLARED_AT_AND_B09M_CONTRACT"
+  },
+  "governance": {
+    "g_b02_32_registered_paths": [
+      "apps/server/src/domain/decision/decision_eligibility_policy_declaration_fact_v1.ts"
+    ],
+    "connectivity_edge": "C-045",
+    "roles_ts_mutated": false,
+    "mcft_implementation_mutated": false
+  },
+  "intentionally_absent": {
+    "repository_policy_instance": false,
+    "default_policy_content": false,
+    "policy_selector_reader": false,
+    "as_of_policy_resolution": false,
+    "b07e_connection": false,
+    "approval_connection": false,
+    "execution_connection": false,
+    "consumer_migration": false,
+    "authority_removal": false
+  },
+  "next_gate": {
+    "state": "PRODUCT_POLICY_CONTENT_STILL_REQUIRED",
+    "required_before_b07e_connection": [
+      "authorize at least one real policy_id/policy_version",
+      "authorize applicable_action_types",
+      "authorize required_criteria",
+      "authorize canonical scope anchor and effective window",
+      "persist governed declaration",
+      "build fail-closed as-of selector with ambiguity handling"
+    ]
+  }
+}
