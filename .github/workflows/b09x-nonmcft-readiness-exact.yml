@@ -1,0 +1,101 @@
+name: b09x-nonmcft-readiness-exact
+
+on:
+  pull_request:
+    branches:
+      - docs/bline-b09x-candidate-context-time-nonmcft-readiness-v1
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09x product head
+        run: |
+          git checkout 6a3d869b7658e0733af2f74b15d291e738ae890a
+          test "$(git rev-parse HEAD)" = "6a3d869b7658e0733af2f74b15d291e738ae890a"
+          test "$(git rev-parse HEAD^)" = "3bee4dd84eaed71d834a253e8997464e89c488f7"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09x readiness acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09X_CANDIDATE_CONTEXT_TIME_NONMCFT_READINESS_V1.cjs
+
+      - name: B-09w predecessor proposal preservation
+        run: |
+          git diff --exit-code 3bee4dd84eaed71d834a253e8997464e89c488f7 6a3d869b7658e0733af2f74b15d291e738ae890a -- \
+            docs/architecture/semantic_convergence/GEOX-B09W-IRRIGATE-ELIGIBILITY-POLICY-CONTENT-DECISION-PACKAGE-V1.json \
+            docs/architecture/semantic_convergence/GEOX-B09W-IRRIGATE-ELIGIBILITY-POLICY-CONTENT-DECISION-PACKAGE-V1.md \
+            scripts/governance_acceptance/ACCEPTANCE_B09W_IRRIGATE_ELIGIBILITY_POLICY_CONTENT_DECISION_PACKAGE_V1.cjs
+          echo "B09W_PREDECESSOR_PROPOSAL_PRESERVED_PASS"
+
+      - name: B-09v selector contract regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.contract.test.ts
+
+      - name: B-09s writer regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_policy_declaration_fact_v1.contract.test.ts
+
+      - name: B-07d evaluator regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+
+      - name: B-07e runtime regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only 3bee4dd84eaed71d834a253e8997464e89c488f7 6a3d869b7658e0733af2f74b15d291e738ae890a > /tmp/b09x-files.txt
+          cat /tmp/b09x-files.txt
+          test "$(wc -l < /tmp/b09x-files.txt | tr -d ' ')" = "4"
+          git diff --check 3bee4dd84eaed71d834a253e8997464e89c488f7 6a3d869b7658e0733af2f74b15d291e738ae890a
+
+      - name: Prove production and MCFT surfaces unchanged
+        run: |
+          git diff --exit-code 3bee4dd84eaed71d834a253e8997464e89c488f7 6a3d869b7658e0733af2f74b15d291e738ae890a -- \
+            apps/server/src \
+            apps/server/db \
+            packages \
+            config \
+            .github/workflows \
+            docs/digital_twin \
+            docs/twin_kernel \
+            scripts/runtime_acceptance
+          echo "B09X_PRODUCTION_MCFT_UNCHANGED_PASS"
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Prove validation did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "6a3d869b7658e0733af2f74b15d291e738ae890a"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09X_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Marker
+        run: |
+          echo "B09X_EXACT_HEAD 6a3d869b7658e0733af2f74b15d291e738ae890a"
+          echo "B09X_NONMCFT_READINESS_PASS"
