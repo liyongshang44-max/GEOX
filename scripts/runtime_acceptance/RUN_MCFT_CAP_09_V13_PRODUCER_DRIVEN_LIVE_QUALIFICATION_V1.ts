@@ -121,7 +121,9 @@ async function main(): Promise<void> {
 
   const pool = new Pool({ connectionString: url, max: 4 });
   const epoch = "epoch_mcft_cap09_v13_producer_qual_" + subject.slice(0, 12);
-  const firstBase = canonicalHour(Date.now() + 18 * 3_600_000);
+  const firstBase = required("MCFT_QUALIFICATION_FIRST_BASE");
+  if (canonicalHour(Date.parse(firstBase)) !== firstBase) throw new Error("V13_LIVE_QUALIFICATION_FIRST_BASE_MUST_BE_CANONICAL_HOUR");
+  if (Date.parse(firstBase) <= Date.now()) throw new Error("V13_LIVE_QUALIFICATION_FIRST_BASE_MUST_BE_FUTURE");
   const bases = [firstBase, addHours(firstBase, 1), addHours(firstBase, 2)];
   const lastBase = bases[2]!;
   const controllerOwner = "mcft-cap09-v13-qualification-controller:" + subject.slice(0, 12);
