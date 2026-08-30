@@ -1,0 +1,101 @@
+name: b09y-decision-boundary-authority-exact
+
+on:
+  pull_request:
+    branches:
+      - docs/bline-b09y-candidate-decision-boundary-authority-r1-v1
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09y product head
+        run: |
+          git checkout 28b5809efefc94440cf9766f03d5b6f7d2b5944c
+          test "$(git rev-parse HEAD)" = "28b5809efefc94440cf9766f03d5b6f7d2b5944c"
+          test "$(git rev-parse HEAD^)" = "6a3d869b7658e0733af2f74b15d291e738ae890a"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09y decision package acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09Y_CANDIDATE_DECISION_BOUNDARY_AUTHORITY_DECISION_PACKAGE_V1.cjs
+
+      - name: B-09x predecessor readiness preservation
+        run: |
+          git diff --exit-code 6a3d869b7658e0733af2f74b15d291e738ae890a 28b5809efefc94440cf9766f03d5b6f7d2b5944c -- \
+            docs/architecture/semantic_convergence/GEOX-B09X-CANDIDATE-CONTEXT-TIME-NONMCFT-READINESS-V1.json \
+            docs/architecture/semantic_convergence/GEOX-B09X-CANDIDATE-CONTEXT-TIME-NONMCFT-READINESS-V1.md \
+            scripts/governance_acceptance/ACCEPTANCE_B09X_CANDIDATE_CONTEXT_TIME_NONMCFT_READINESS_V1.cjs
+          echo "B09X_PREDECESSOR_READINESS_PRESERVED_PASS"
+
+      - name: B-09v selector regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.contract.test.ts
+
+      - name: B-09s writer regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_policy_declaration_fact_v1.contract.test.ts
+
+      - name: B-07d evaluator regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+
+      - name: B-07e runtime regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only 6a3d869b7658e0733af2f74b15d291e738ae890a 28b5809efefc94440cf9766f03d5b6f7d2b5944c > /tmp/b09y-files.txt
+          cat /tmp/b09y-files.txt
+          test "$(wc -l < /tmp/b09y-files.txt | tr -d ' ')" = "4"
+          git diff --check 6a3d869b7658e0733af2f74b15d291e738ae890a 28b5809efefc94440cf9766f03d5b6f7d2b5944c
+
+      - name: Prove production and MCFT surfaces unchanged
+        run: |
+          git diff --exit-code 6a3d869b7658e0733af2f74b15d291e738ae890a 28b5809efefc94440cf9766f03d5b6f7d2b5944c -- \
+            apps/server/src \
+            apps/server/db \
+            packages \
+            config \
+            .github/workflows \
+            docs/digital_twin \
+            docs/twin_kernel \
+            scripts/runtime_acceptance
+          echo "B09Y_PRODUCTION_MCFT_UNCHANGED_PASS"
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Prove validation did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "28b5809efefc94440cf9766f03d5b6f7d2b5944c"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09Y_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Marker
+        run: |
+          echo "B09Y_EXACT_HEAD 28b5809efefc94440cf9766f03d5b6f7d2b5944c"
+          echo "B09Y_DECISION_BOUNDARY_AUTHORITY_PROPOSAL_PASS"
