@@ -40,7 +40,11 @@ async function currentRole(pool: Pool): Promise<string> {
 }
 async function publicTableCount(pool: Pool): Promise<number> {
   return Number((await pool.query<{ n: number }>(
-    "SELECT count(*)::int AS n FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'",
+    `SELECT count(*)::int AS n
+       FROM pg_catalog.pg_class relation
+       JOIN pg_catalog.pg_namespace namespace ON namespace.oid=relation.relnamespace
+      WHERE namespace.nspname='public'
+        AND relation.relkind IN ('r','p')`,
   )).rows[0]?.n ?? -1);
 }
 async function functionExists(pool: Pool): Promise<boolean> {
