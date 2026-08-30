@@ -7,7 +7,7 @@ export type AuthAction = "read" | "execute" | "write";
 
 export const ROLE_SCOPE_MATRIX_V1: Record<AuthRole, (AoActScopeV0 | "*")[]> = {
   admin: ["*"],
-  agronomist: ["water_response.verify","recommendation.write","recommendation.read","prescription.write","prescription.read","prescription.submit_approval","field.zone.read","field_memory.read","roi_ledger.read","skill.read","skill.trace.write","telemetry.read","inspection.read","inspection.write"],
+  agronomist: ["decision.eligibility.policy.declare","water_response.verify","recommendation.write","recommendation.read","prescription.write","prescription.read","prescription.submit_approval","field.zone.read","field_memory.read","roi_ledger.read","skill.read","skill.trace.write","telemetry.read","inspection.read","inspection.write"],
   approver: ["approval.read","approval.decide","prescription.read","recommendation.read","field.zone.read","inspection.read"],
   executor: ["action.read","action.receipt.submit","ao_act.receipt.write","evidence.artifact.write","field.zone.read","skill.run.write","telemetry.write"],
   operator: ["fields.read","water_response.verify","ao_act.receipt.write","evidence.artifact.write","operation.plan.create","operation.plan.transition","recommendation.approval_request","action.read","action.task.create","action.task.dispatch","action.receipt.submit","judge.execution.write","acceptance.evaluate","field.zone.read","skill.read","skill.run.write","telemetry.read","telemetry.write","inspection.read","inspection.write"],
