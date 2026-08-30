@@ -216,13 +216,12 @@ export function composeMcftCap09V13ForcingProducerCoreV1(
   return {
     producer_core_id: MCFT_CAP09_V13_FORCING_PRODUCER_CORE_ID_V1,
     contract: MCFT_CAP09_V13_FORCING_PRODUCER_CORE_CONTRACT_V1,
-    producer_core: producerCore,
     capture_promotion: capturePromotion,
-    fenced_promotion: producerCore.fenced_promotion,
-    retention: producerCore.retention,
-    candidate_store: producerCore.candidate_store,
-    raw_reader: producerCore.raw_reader,
-    work_item_factory: producerCore.work_item_factory,
+    fenced_promotion: fencedPromotion,
+    retention,
+    candidate_store: candidateStore,
+    raw_reader: rawReader,
+    work_item_factory: workItemFactory,
   };
 }
 
@@ -316,11 +315,12 @@ export function composeMcftCap09V13ForcingProductionV1(
     controller_lifecycle: lifecycle,
     forcing_continuity: continuity,
     forcing_admission: admission,
+    producer_core: producerCore,
     capture_promotion: capturePromotion,
-    fenced_promotion: fencedPromotion,
-    retention,
-    candidate_store: candidateStore,
-    raw_reader: rawReader,
-    work_item_factory: workItemFactory,
+    fenced_promotion: producerCore.fenced_promotion,
+    retention: producerCore.retention,
+    candidate_store: producerCore.candidate_store,
+    raw_reader: producerCore.raw_reader,
+    work_item_factory: producerCore.work_item_factory,
   };
 }
