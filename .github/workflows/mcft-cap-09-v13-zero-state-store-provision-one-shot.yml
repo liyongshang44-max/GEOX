@@ -112,42 +112,36 @@ jobs:
           );
           console.log(JSON.stringify({status:'PASS',credential_seed_database:seed,credential_fields_preserved:true}));
 
-      - name: Preflight Neon database creator authority and immutable predecessor inventory
+      - name: Diagnose existing creator-capable role membership without mutation
         shell: bash
         run: |
           set -euo pipefail
-          command -v psql >/dev/null
-
-          caps="$(psql "$SEED_DATABASE_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
-            SELECT
-              rolsuper::text,
-              rolcreatedb::text,
-              CASE
-                WHEN pg_catalog.to_regrole('neon_superuser') IS NULL THEN 'f'
-                ELSE pg_catalog.pg_has_role(current_user,'neon_superuser','MEMBER')::text
-              END
-            FROM pg_catalog.pg_roles
-            WHERE rolname=current_user")"
-          super="${caps%%|*}"
-          rest="${caps#*|}"
-          createdb="${rest%%|*}"
-          neon_member="${rest##*|}"
-
-          if [ "$super" != "t" ] && [ "$createdb" != "t" ] && [ "$neon_member" != "t" ]; then
-            echo "V13_PROVISION_NEON_DATABASE_CREATOR_AUTHORITY_REQUIRED" >&2
+          mapfile -t candidates < <(psql "$SEED_DATABASE_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT r.rolname,r.rolsuper::text,r.rolcreatedb::text
+              FROM pg_catalog.pg_roles r
+             WHERE r.rolname<>current_user
+               AND (r.rolsuper OR r.rolcreatedb)
+               AND pg_catalog.pg_has_role(current_user,r.oid,'MEMBER')
+             ORDER BY r.rolsuper DESC,r.rolcreatedb DESC,r.rolname")
+          echo "creator_candidate_count=${#candidates[@]}"
+          printf 'creator_candidate=%s\n' "${candidates[@]:-<none>}"
+          if [ "${#candidates[@]}" -ne 1 ]; then
+            echo "V13_PROVISION_UNIQUE_EXISTING_CREATOR_MEMBER_ROLE_REQUIRED:${#candidates[@]}" >&2
             exit 1
           fi
-
-          legacy="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c \
-            "SELECT count(*)::int FROM pg_catalog.pg_database WHERE datname IN ('$PREVIOUS_V12_DB','$PREVIOUS_BLOCKED_V12_DB','$FAILED_V4_DB')")"
-          test "$legacy" = "3" || {
-            echo "V13_PROVISION_PREDECESSOR_INVENTORY_DRIFT:$legacy" >&2
+          IFS='|' read -r candidate_name candidate_super candidate_createdb <<< "${candidates[0]}"
+          if ! [[ "$candidate_name" =~ ^[a-z_][a-z0-9_]*$ ]]; then
+            echo "V13_PROVISION_CREATOR_MEMBER_ROLE_NAME_UNSAFE" >&2
             exit 1
-          }
-
-          echo "creator_authority_present=true"
-          echo "neon_superuser_membership=$neon_member"
-          echo "predecessor_inventory_preserved=true"
+          fi
+          assumed="$(psql "$SEED_DATABASE_URL" -qAtF '|' -v ON_ERROR_STOP=1 -c "
+            SET ROLE \"$candidate_name\";
+            SELECT current_user::text,rolsuper::text,rolcreatedb::text
+              FROM pg_catalog.pg_roles
+             WHERE rolname=current_user;" | tail -n 1)"
+          echo "assumed_creator_capability=$assumed"
+          echo "V13_PROVISION_DIAGNOSTIC_ONLY_NO_MUTATION" >&2
+          exit 1
 
       - name: Preflight any pre-existing target as exact empty store
         shell: bash
