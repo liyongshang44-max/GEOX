@@ -12,8 +12,27 @@ BEGIN
 END
 $role$;
 
-ALTER ROLE geox_mcft_cap09_forcing_writer_owner_v1
-  NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+DO $role_safety$
+DECLARE
+  v_role record;
+BEGIN
+  SELECT rolcanlogin, rolinherit, rolsuper, rolcreatedb, rolcreaterole, rolreplication, rolbypassrls
+    INTO v_role
+    FROM pg_catalog.pg_roles
+   WHERE rolname='geox_mcft_cap09_forcing_writer_owner_v1';
+
+  IF NOT FOUND
+     OR v_role.rolcanlogin
+     OR v_role.rolinherit
+     OR v_role.rolsuper
+     OR v_role.rolcreatedb
+     OR v_role.rolcreaterole
+     OR v_role.rolreplication
+     OR v_role.rolbypassrls THEN
+    RAISE EXCEPTION 'MCFT_CAP09_V13_FORCING_WRITER_OWNER_ROLE_UNSAFE';
+  END IF;
+END
+$role_safety$;
 
 REVOKE ALL ON SCHEMA public FROM geox_mcft_cap09_forcing_writer_owner_v1;
 GRANT USAGE ON SCHEMA public TO geox_mcft_cap09_forcing_writer_owner_v1;
