@@ -1,0 +1,99 @@
+name: b09w-irrigate-policy-content-exact
+
+on:
+  pull_request:
+    branches:
+      - feat/bline-b09w-irrigate-eligibility-policy-content-decision-package-r1-v1
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09w product head
+        run: |
+          git checkout 3bee4dd84eaed71d834a253e8997464e89c488f7
+          test "$(git rev-parse HEAD)" = "3bee4dd84eaed71d834a253e8997464e89c488f7"
+          test "$(git rev-parse HEAD^)" = "cce900dfd4e9f412506c3988b3d63ff531ee56bb"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09w decision package acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09W_IRRIGATE_ELIGIBILITY_POLICY_CONTENT_DECISION_PACKAGE_V1.cjs
+
+      - name: B-09v selector contract regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.contract.test.ts
+
+      - name: B-09s writer regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_policy_declaration_fact_v1.contract.test.ts
+
+      - name: B-09s route regression
+        run: node --import tsx --test apps/server/src/routes/decision_eligibility_policy_declarations_v1.contract.test.ts
+
+      - name: B-09m declaration regression
+        run: node --import tsx --test apps/server/src/contracts/decision_eligibility_policy_declaration_v1.contract.test.ts
+
+      - name: B-07d evaluator regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+
+      - name: B-07e runtime regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only cce900dfd4e9f412506c3988b3d63ff531ee56bb 3bee4dd84eaed71d834a253e8997464e89c488f7 > /tmp/b09w-files.txt
+          cat /tmp/b09w-files.txt
+          test "$(wc -l < /tmp/b09w-files.txt | tr -d ' ')" = "4"
+          git diff --check cce900dfd4e9f412506c3988b3d63ff531ee56bb 3bee4dd84eaed71d834a253e8997464e89c488f7
+
+      - name: Prove production and MCFT surfaces unchanged
+        run: |
+          git diff --exit-code cce900dfd4e9f412506c3988b3d63ff531ee56bb 3bee4dd84eaed71d834a253e8997464e89c488f7 -- \
+            apps/server/src \
+            apps/server/db \
+            packages \
+            config \
+            .github/workflows \
+            docs/digital_twin \
+            docs/twin_kernel \
+            scripts/runtime_acceptance
+          echo "B09W_PRODUCTION_MCFT_UNCHANGED_PASS"
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Prove validation did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "3bee4dd84eaed71d834a253e8997464e89c488f7"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09W_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Marker
+        run: |
+          echo "B09W_EXACT_HEAD 3bee4dd84eaed71d834a253e8997464e89c488f7"
+          echo "B09W_POLICY_CONTENT_DECISION_PACKAGE_PASS"
