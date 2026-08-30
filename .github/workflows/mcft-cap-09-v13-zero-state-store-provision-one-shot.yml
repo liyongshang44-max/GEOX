@@ -117,14 +117,40 @@ jobs:
         run: |
           set -euo pipefail
           command -v psql >/dev/null
+
           caps="$(psql "$SEED_DATABASE_URL" -AtF '|' -v ON_ERROR_STOP=1 -c \
             "SELECT rolsuper::text,rolcreatedb::text FROM pg_catalog.pg_roles WHERE rolname=current_user")"
           super="${caps%%|*}"
           createdb="${caps##*|}"
+          creator_role_sql=""
+
           if [ "$super" != "t" ] && [ "$createdb" != "t" ]; then
-            echo "V13_PROVISION_DATABASE_CREATOR_AUTHORITY_REQUIRED" >&2
-            exit 1
+            mapfile -t candidates < <(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
+              SELECT pg_catalog.format('%I',r.rolname)
+                FROM pg_catalog.pg_roles r
+               WHERE r.rolname<>current_user
+                 AND (r.rolsuper OR r.rolcreatedb)
+                 AND pg_catalog.pg_has_role(current_user,r.oid,'MEMBER')
+               ORDER BY r.rolsuper DESC,r.rolcreatedb DESC,r.rolname")
+            if [ "${#candidates[@]}" -ne 1 ]; then
+              echo "V13_PROVISION_UNIQUE_EXISTING_CREATOR_MEMBER_ROLE_REQUIRED:${#candidates[@]}" >&2
+              exit 1
+            fi
+            creator_role_sql="${candidates[0]}"
+            assumed="$(psql "$SEED_DATABASE_URL" -qAtF '|' -v ON_ERROR_STOP=1 \
+              -c "SET ROLE $creator_role_sql" \
+              -c "SELECT rolsuper::text,rolcreatedb::text FROM pg_catalog.pg_roles WHERE rolname=current_user")"
+            assumed_super="${assumed%%|*}"
+            assumed_createdb="${assumed##*|}"
+            if [ "$assumed_super" != "t" ] && [ "$assumed_createdb" != "t" ]; then
+              echo "V13_PROVISION_ASSUMED_MEMBER_ROLE_LACKS_CREATOR_AUTHORITY" >&2
+              exit 1
+            fi
           fi
+
+          {
+            echo "CREATOR_ROLE_SQL=$creator_role_sql"
+          } >> "$GITHUB_ENV"
 
           legacy="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c \
             "SELECT count(*)::int FROM pg_catalog.pg_database WHERE datname IN ('$PREVIOUS_V12_DB','$PREVIOUS_BLOCKED_V12_DB','$FAILED_V4_DB')")"
@@ -134,6 +160,7 @@ jobs:
           }
 
           echo "creator_authority_present=true"
+          echo "creator_authority_via_existing_membership=$([ -n "$creator_role_sql" ] && echo true || echo false)"
           echo "predecessor_inventory_preserved=true"
 
       - name: Preflight any pre-existing target as exact empty store
@@ -184,17 +211,26 @@ jobs:
           blocked_before="$(exists "$BLOCKED_V13_DB")"
           v5_before="$(exists "$FORMAL_V5_DB")"
 
+          create_database() {
+            name="$1"
+            if [ -n "${CREATOR_ROLE_SQL:-}" ]; then
+              psql "$SEED_DATABASE_URL" -q -v ON_ERROR_STOP=1 \
+                -c "SET ROLE $CREATOR_ROLE_SQL" \
+                -c "CREATE DATABASE \"$name\" TEMPLATE template0;"
+            else
+              psql "$SEED_DATABASE_URL" -q -v ON_ERROR_STOP=1 \
+                -c "CREATE DATABASE \"$name\" TEMPLATE template0;"
+            fi
+          }
+
           if [ "$v13_before" = "0" ]; then
-            psql "$SEED_DATABASE_URL" -v ON_ERROR_STOP=1 -c \
-              "CREATE DATABASE \"$V13_DB\" TEMPLATE template0;"
+            create_database "$V13_DB"
           fi
           if [ "$blocked_before" = "0" ]; then
-            psql "$SEED_DATABASE_URL" -v ON_ERROR_STOP=1 -c \
-              "CREATE DATABASE \"$BLOCKED_V13_DB\" TEMPLATE template0;"
+            create_database "$BLOCKED_V13_DB"
           fi
           if [ "$v5_before" = "0" ]; then
-            psql "$SEED_DATABASE_URL" -v ON_ERROR_STOP=1 -c \
-              "CREATE DATABASE \"$FORMAL_V5_DB\" TEMPLATE template0;"
+            create_database "$FORMAL_V5_DB"
           fi
 
           for pair in \
