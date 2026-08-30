@@ -99,6 +99,15 @@ jobs:
               if [ "$functions" = "1" ]; then
                 fn="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT proname FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'")"
                 test "$fn" = "mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1" || { echo "V13_QUALIFICATION_FUNCTION_SET_MISMATCH:$name:$fn" >&2; exit 1; }
+                fn_owner="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "
+                  SELECT owner_role.rolname
+                    FROM pg_catalog.pg_proc p
+                    JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+                    JOIN pg_catalog.pg_roles owner_role ON owner_role.oid=p.proowner
+                   WHERE n.nspname='public'
+                     AND p.proname='mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1'")"
+                test "$fn_owner" = "geox_mcft_cap09_forcing_writer_owner_v1" || { echo "V13_QUALIFICATION_FUNCTION_OWNER_MISMATCH:$name:$fn_owner" >&2; exit 1; }
+                echo "${prefix}_FUNCTION_OWNER=$fn_owner" >> "$GITHUB_ENV"
               fi
             else
               echo "V13_QUALIFICATION_STORE_TABLE_CARDINALITY_UNSAFE:$name:$tables" >&2; exit 1
@@ -214,6 +223,8 @@ jobs:
             v13_exact_schema_initialized:process.env.V13_STORE_TABLE_COUNT==='29',
             blocked_v13_zero_state:process.env.BLOCKED_V13_STORE_TABLE_COUNT==='0',
             blocked_v13_exact_schema_initialized:process.env.BLOCKED_V13_STORE_TABLE_COUNT==='29',
+            v13_fenced_writer_function_owner:process.env.V13_STORE_FUNCTION_OWNER||null,
+            blocked_v13_fenced_writer_function_owner:process.env.BLOCKED_V13_STORE_FUNCTION_OWNER||null,
             formal_v5_zero_state:true,
             evidence_privilege_role_present:process.env.EVIDENCE_PRIVILEGE_PRESENT==='true',
             evidence_login_present:process.env.EVIDENCE_LOGIN_PRESENT==='true',
