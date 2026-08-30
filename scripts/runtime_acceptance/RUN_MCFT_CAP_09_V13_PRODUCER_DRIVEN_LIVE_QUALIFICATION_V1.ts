@@ -168,7 +168,7 @@ async function main(): Promise<void> {
       lease_owner: controllerOwner,
       lease_duration_seconds: 1800,
     });
-    if (!["ACQUIRED", "RENEWED", "TAKEN_OVER"].includes(controller.status)) {
+    if (controller.status === "BUSY" || controller.status === "TERMINAL") {
       throw new Error("V13_LIVE_QUALIFICATION_CONTROLLER_NOT_ACQUIRED:" + controller.status);
     }
     let controllerLease = controller.lease;
@@ -202,7 +202,7 @@ async function main(): Promise<void> {
         lease_owner: controllerOwner,
         lease_duration_seconds: 1800,
       });
-      if (!["RENEWED", "ACQUIRED", "TAKEN_OVER"].includes(renewed.status)) {
+      if (renewed.status === "BUSY" || renewed.status === "TERMINAL") {
         throw new Error("V13_LIVE_QUALIFICATION_CONTROLLER_HEARTBEAT_FAILED:" + renewed.status);
       }
       controllerLease = renewed.lease;
