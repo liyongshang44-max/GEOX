@@ -28,8 +28,13 @@ GRANT SELECT,UPDATE ON TABLE
 TO geox_mcft_cap09_forcing_writer_owner_v1;
 
 -- The Evidence privilege role owns forcing acquisition coordination in both
--- qualification and production. It remains denied arbitrary canonical-fact mutation.
-REVOKE INSERT,UPDATE,DELETE ON TABLE public.facts FROM geox_mcft_cap09_evidence_runtime_v1;
+-- qualification and production. On this V13 store it receives an exact object ACL:
+-- schema USAGE, facts SELECT, forcing coordination DML, and the fenced writer only.
+REVOKE ALL ON SCHEMA public FROM geox_mcft_cap09_evidence_runtime_v1;
+GRANT USAGE ON SCHEMA public TO geox_mcft_cap09_evidence_runtime_v1;
+REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM geox_mcft_cap09_evidence_runtime_v1;
+REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM geox_mcft_cap09_evidence_runtime_v1;
+REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM geox_mcft_cap09_evidence_runtime_v1;
 GRANT SELECT ON TABLE public.facts TO geox_mcft_cap09_evidence_runtime_v1;
 GRANT SELECT,INSERT,UPDATE ON TABLE
   public.twin_external_formal_forcing_base_cursor_v1,
