@@ -61,6 +61,12 @@ GRANT SELECT,INSERT,UPDATE ON TABLE
   public.twin_external_formal_forcing_controller_lease_v1
 TO geox_mcft_cap09_evidence_runtime_v1;
 
+-- Create/replace the SECURITY DEFINER function while explicitly SET ROLE to its
+-- final NOLOGIN owner. This is rerun-safe when the function already belongs to
+-- that owner and avoids ALTER OWNER semantics on Neon.
+GRANT CREATE ON SCHEMA public TO geox_mcft_cap09_forcing_writer_owner_v1;
+SET ROLE geox_mcft_cap09_forcing_writer_owner_v1;
+
 CREATE OR REPLACE FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
   p_tenant_id text,
   p_project_id text,
@@ -290,16 +296,28 @@ BEGIN
 END
 $function$;
 
--- PostgreSQL requires the target owner to hold CREATE on the containing schema
--- during ownership transfer. Grant it only for this exact transfer and revoke it
--- immediately; the live workflow also revokes it in always() cleanup.
-GRANT CREATE ON SCHEMA public TO geox_mcft_cap09_forcing_writer_owner_v1;
-
-ALTER FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
-  text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
-) OWNER TO geox_mcft_cap09_forcing_writer_owner_v1;
-
+RESET ROLE;
 REVOKE CREATE ON SCHEMA public FROM geox_mcft_cap09_forcing_writer_owner_v1;
+
+DO $owner_check$
+DECLARE
+  v_owner text;
+BEGIN
+  SELECT owner_role.rolname
+    INTO v_owner
+    FROM pg_catalog.pg_proc p
+    JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+    JOIN pg_catalog.pg_roles owner_role ON owner_role.oid=p.proowner
+   WHERE n.nspname='public'
+     AND p.proname='mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1'
+     AND pg_catalog.pg_get_function_identity_arguments(p.oid)=
+       'text, text, text, text, text, text, text, text, timestamp with time zone, text, bigint, text, bigint, text, jsonb';
+
+  IF v_owner IS DISTINCT FROM 'geox_mcft_cap09_forcing_writer_owner_v1' THEN
+    RAISE EXCEPTION 'MCFT_CAP09_V13_FENCED_WRITER_OWNER_MISMATCH:%', COALESCE(v_owner,'<missing>');
+  END IF;
+END
+$owner_check$;
 
 REVOKE ALL ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
   text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
