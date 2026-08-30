@@ -317,17 +317,22 @@ RESET ROLE;
 
 DO $owner_check$
 DECLARE
+  v_function oid;
   v_owner text;
 BEGIN
+  v_function:=pg_catalog.to_regprocedure(
+    'public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)'
+  );
+
+  IF v_function IS NULL THEN
+    RAISE EXCEPTION 'MCFT_CAP09_V13_FENCED_WRITER_FUNCTION_MISSING';
+  END IF;
+
   SELECT owner_role.rolname
     INTO v_owner
     FROM pg_catalog.pg_proc p
-    JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
     JOIN pg_catalog.pg_roles owner_role ON owner_role.oid=p.proowner
-   WHERE n.nspname='public'
-     AND p.proname='mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1'
-     AND pg_catalog.pg_get_function_identity_arguments(p.oid)=
-       'text, text, text, text, text, text, text, text, timestamp with time zone, text, bigint, text, bigint, text, jsonb';
+   WHERE p.oid=v_function;
 
   IF v_owner IS DISTINCT FROM 'geox_mcft_cap09_forcing_writer_owner_v1' THEN
     RAISE EXCEPTION 'MCFT_CAP09_V13_FENCED_WRITER_OWNER_MISMATCH:%', COALESCE(v_owner,'<missing>');
