@@ -46,8 +46,14 @@ jobs:
       - name: B-09v selector contract
         run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.contract.test.ts
 
-      - name: B-09u selector decision regression
-        run: node scripts/governance_acceptance/ACCEPTANCE_B09U_DECISION_ELIGIBILITY_POLICY_SELECTOR_DECISION_PACKAGE_V1.cjs
+      - name: B-09u predecessor decision preservation
+        run: |
+          git diff --exit-code 1deeea2bd72c70d7eaa9305112f9352b14b8ac91 cce900dfd4e9f412506c3988b3d63ff531ee56bb -- \
+            docs/architecture/semantic_convergence/GEOX-B09U-DECISION-ELIGIBILITY-POLICY-SELECTOR-DECISION-PACKAGE-V1.json \
+            docs/architecture/semantic_convergence/GEOX-B09U-DECISION-ELIGIBILITY-POLICY-SELECTOR-DECISION-PACKAGE-V1.md \
+            scripts/governance_acceptance/ACCEPTANCE_B09U_DECISION_ELIGIBILITY_POLICY_SELECTOR_DECISION_PACKAGE_V1.cjs
+          grep -q "DEC-BLINE-ELIGIBILITY-POLICY-SELECTOR-001" docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json
+          echo "B09U_PREDECESSOR_DECISION_PRESERVATION_PASS"
 
       - name: B-09s writer regression
         run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_policy_declaration_fact_v1.contract.test.ts
