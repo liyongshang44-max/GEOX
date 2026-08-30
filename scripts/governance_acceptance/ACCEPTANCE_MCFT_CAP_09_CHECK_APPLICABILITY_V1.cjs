@@ -307,8 +307,15 @@ function main() {
   assert.equal(missingArtifactResult.status, "FAIL");
   assert.equal(byId(missingArtifactResult, "V13_HOLISTIC_SCHEMA").status, "UNKNOWN");
 
-  // CP-4: a future obligation may be declared without inventing a workflow that does not exist yet.
-  for (const id of ["V13_PRODUCER_DRIVEN_QUALIFICATION", "END_TO_END_EVIDENCE_SUPPLY_DEADLINE", "EXACT_ONE_PRODUCTION_OWNER", "FORMAL_V5_ACTIVATION"]) {
+  // CP-4: step 4 may be implemented at the successor head without being treated as qualified.
+  const producerQualification = authority.checks.find((row) => row.check_id === "V13_PRODUCER_DRIVEN_QUALIFICATION");
+  assert.ok(producerQualification, "FUTURE_CHECK_REQUIRED:V13_PRODUCER_DRIVEN_QUALIFICATION");
+  assert.equal(producerQualification.execution_workflow_status, "IMPLEMENTED_AT_SUCCESSOR_HEAD");
+  assert.equal(producerQualification.execution_workflow, ".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml");
+  assert.equal(byId(plan(authority, registry, [], "POST_MERGE_V13_QUALIFICATION"), "V13_PRODUCER_DRIVEN_QUALIFICATION").status, "REQUIRED");
+
+  // Later obligations remain unimplemented and fail closed until their own activation step.
+  for (const id of ["END_TO_END_EVIDENCE_SUPPLY_DEADLINE", "EXACT_ONE_PRODUCTION_OWNER", "FORMAL_V5_ACTIVATION"]) {
     const check = authority.checks.find((row) => row.check_id === id);
     assert.ok(check, `FUTURE_CHECK_REQUIRED:${id}`);
     assert.equal(check.execution_workflow_status, "NOT_IMPLEMENTED_AT_FROZEN_SUBJECT");
