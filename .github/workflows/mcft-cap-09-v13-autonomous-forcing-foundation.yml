@@ -97,6 +97,7 @@ jobs:
           apps/server/src/domain/twin_runtime/external_formal_forcing_acquisition_budget_v1.ts
           apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts
           scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.ts
+          scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V1.ts
 
       - name: Run real PostgreSQL v13 foundation acceptance
         env:
