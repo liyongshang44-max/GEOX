@@ -58,6 +58,11 @@ jobs:
             process.exit(0);
           }
           const a=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(a.armed!==true){
+            console.log('LIVE_QUALIFICATION_ARM_FILE_PRESENT_BUT_DISABLED');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,'armed=false\\n');
+            process.exit(0);
+          }
           if(a.activation_step!=='RUN_PRODUCER_DRIVEN_V13_QUALIFICATION')throw new Error('V13_LIVE_ARM_STEP_MISMATCH');
           if(a.implementation_base_sha!==process.env.IMPLEMENTATION_BASE_SHA)throw new Error('V13_LIVE_ARM_BASE_MISMATCH');
           if(a.exact_branch!=='feat/mcft-cap09-v13-producer-driven-qualification-v1')throw new Error('V13_LIVE_ARM_BRANCH_MISMATCH');
