@@ -71,6 +71,32 @@ export const MCFT_CAP09_V13_FORCING_PRODUCTION_COMPOSITION_CONTRACT_V1 = {
 export type McftCap09V13ForcingPrivateStoreConfigV1 =
   S3CompatiblePrivateRawRetentionConfigV1;
 
+export const MCFT_CAP09_V13_FORCING_PRODUCER_CORE_ID_V1 =
+  "MCFT_CAP09_V13_FORCING_PRODUCER_CORE_V1" as const;
+
+export const MCFT_CAP09_V13_FORCING_PRODUCER_CORE_CONTRACT_V1 = {
+  producer_core_id: MCFT_CAP09_V13_FORCING_PRODUCER_CORE_ID_V1,
+  production_module_reuse: true,
+  provider_work_item_factory: "PRODUCTION_EVIDENCE_WORK_ITEM_FACTORY_V1",
+  candidate_capture_promotion: "MCFT_CAP09_PHASE7_PRIVATE_CANDIDATE_CAPTURE_PROMOTION_V1",
+  exact_base_fact_writer: "EVIDENCE_RUNTIME_FENCED_EXACT_BASE_FACT_PROMOTION_V1",
+  timing_budget_authority_required: false,
+  forcing_admission_authority: false,
+  controller_cadence_authority: false,
+  production_owner_activation_performed: false,
+  formal_v5_arm_performed: false,
+} as const;
+
+export type McftCap09V13ForcingProducerCoreConfigV1 = {
+  pool: Pool;
+  scope: TwinScopeKeyV1;
+  epoch_id: string;
+  subject_sha: string;
+  private_store: McftCap09V13ForcingPrivateStoreConfigV1;
+  clock?: () => Date;
+  work_item_config?: Omit<ProductionEvidenceWorkItemFactoryConfigV1, "retention" | "clock">;
+};
+
 export type McftCap09V13ForcingProductionCompositionConfigV1 = {
   pool: Pool;
   scope: TwinScopeKeyV1;
@@ -139,42 +165,16 @@ function assertQualifiedBudget(value: FormalForcingAcquisitionBudgetAdjudication
   }
 }
 
-export function composeMcftCap09V13ForcingProductionV1(
-  input: McftCap09V13ForcingProductionCompositionConfigV1,
+export function composeMcftCap09V13ForcingProducerCoreV1(
+  input: McftCap09V13ForcingProducerCoreConfigV1,
 ) {
   assertExternalFormalScope(input.scope);
   if (input.private_store.bucket !== MCFT_CAP09_FORMAL_RAW_BUCKET_V1) {
-    throw new Error("POSTMERGE_V13_COMPOSITION_FORMAL_RAW_BUCKET_REQUIRED");
+    throw new Error("POSTMERGE_V13_PRODUCER_CORE_FORMAL_RAW_BUCKET_REQUIRED");
   }
-  const epoch = required(input.epoch_id, "POSTMERGE_V13_COMPOSITION_EPOCH_REQUIRED");
-  const subject = required(input.subject_sha, "POSTMERGE_V13_COMPOSITION_SUBJECT_REQUIRED");
-  if (!/^[0-9a-f]{40}$/.test(subject)) throw new Error("POSTMERGE_V13_COMPOSITION_SUBJECT_INVALID");
-  const first = canonicalHour(input.first_required_base, "POSTMERGE_V13_COMPOSITION_FIRST_BASE_INVALID");
-  const last = canonicalHour(input.last_required_base, "POSTMERGE_V13_COMPOSITION_LAST_BASE_INVALID");
-  if (Date.parse(first) > Date.parse(last)) throw new Error("POSTMERGE_V13_COMPOSITION_BASE_WINDOW_INVALID");
-
-  const controllerLeaseSeconds = positiveInteger(
-    input.controller_lease_duration_seconds,
-    "POSTMERGE_V13_COMPOSITION_CONTROLLER_LEASE_INVALID",
-    1800,
-  );
-  const producerLeaseSeconds = positiveInteger(
-    input.producer_lease_duration_seconds,
-    "POSTMERGE_V13_COMPOSITION_PRODUCER_LEASE_INVALID",
-    1800,
-  );
-  const heartbeatMs = positiveInteger(
-    input.heartbeat_interval_ms,
-    "POSTMERGE_V13_COMPOSITION_HEARTBEAT_INVALID",
-    1_800_000,
-  );
-  if (heartbeatMs >= Math.min(controllerLeaseSeconds, producerLeaseSeconds) * 1000) {
-    throw new Error("POSTMERGE_V13_COMPOSITION_HEARTBEAT_OUTSIDE_LEASE");
-  }
-
-  const controllerOwner = required(input.controller_owner, "POSTMERGE_V13_COMPOSITION_CONTROLLER_OWNER_REQUIRED");
-  const producerOwner = required(input.producer_owner, "POSTMERGE_V13_COMPOSITION_PRODUCER_OWNER_REQUIRED");
-  assertQualifiedBudget(input.qualified_budget);
+  const epoch = required(input.epoch_id, "POSTMERGE_V13_PRODUCER_CORE_EPOCH_REQUIRED");
+  const subject = required(input.subject_sha, "POSTMERGE_V13_PRODUCER_CORE_SUBJECT_REQUIRED");
+  if (!/^[0-9a-f]{40}$/.test(subject)) throw new Error("POSTMERGE_V13_PRODUCER_CORE_SUBJECT_INVALID");
   const clock = input.clock ?? (() => new Date());
 
   const retention = new S3CompatiblePrivateRawEvidenceRetentionAdapterV1({
@@ -212,6 +212,66 @@ export function composeMcftCap09V13ForcingProductionV1(
     }),
     clock,
   });
+
+  return {
+    producer_core_id: MCFT_CAP09_V13_FORCING_PRODUCER_CORE_ID_V1,
+    contract: MCFT_CAP09_V13_FORCING_PRODUCER_CORE_CONTRACT_V1,
+    producer_core: producerCore,
+    capture_promotion: capturePromotion,
+    fenced_promotion: producerCore.fenced_promotion,
+    retention: producerCore.retention,
+    candidate_store: producerCore.candidate_store,
+    raw_reader: producerCore.raw_reader,
+    work_item_factory: producerCore.work_item_factory,
+  };
+}
+
+export function composeMcftCap09V13ForcingProductionV1(
+  input: McftCap09V13ForcingProductionCompositionConfigV1,
+) {
+  assertExternalFormalScope(input.scope);
+  if (input.private_store.bucket !== MCFT_CAP09_FORMAL_RAW_BUCKET_V1) {
+    throw new Error("POSTMERGE_V13_COMPOSITION_FORMAL_RAW_BUCKET_REQUIRED");
+  }
+  const epoch = required(input.epoch_id, "POSTMERGE_V13_COMPOSITION_EPOCH_REQUIRED");
+  const subject = required(input.subject_sha, "POSTMERGE_V13_COMPOSITION_SUBJECT_REQUIRED");
+  if (!/^[0-9a-f]{40}$/.test(subject)) throw new Error("POSTMERGE_V13_COMPOSITION_SUBJECT_INVALID");
+  const first = canonicalHour(input.first_required_base, "POSTMERGE_V13_COMPOSITION_FIRST_BASE_INVALID");
+  const last = canonicalHour(input.last_required_base, "POSTMERGE_V13_COMPOSITION_LAST_BASE_INVALID");
+  if (Date.parse(first) > Date.parse(last)) throw new Error("POSTMERGE_V13_COMPOSITION_BASE_WINDOW_INVALID");
+
+  const controllerLeaseSeconds = positiveInteger(
+    input.controller_lease_duration_seconds,
+    "POSTMERGE_V13_COMPOSITION_CONTROLLER_LEASE_INVALID",
+    1800,
+  );
+  const producerLeaseSeconds = positiveInteger(
+    input.producer_lease_duration_seconds,
+    "POSTMERGE_V13_COMPOSITION_PRODUCER_LEASE_INVALID",
+    1800,
+  );
+  const heartbeatMs = positiveInteger(
+    input.heartbeat_interval_ms,
+    "POSTMERGE_V13_COMPOSITION_HEARTBEAT_INVALID",
+    1_800_000,
+  );
+  if (heartbeatMs >= Math.min(controllerLeaseSeconds, producerLeaseSeconds) * 1000) {
+    throw new Error("POSTMERGE_V13_COMPOSITION_HEARTBEAT_OUTSIDE_LEASE");
+  }
+
+  const controllerOwner = required(input.controller_owner, "POSTMERGE_V13_COMPOSITION_CONTROLLER_OWNER_REQUIRED");
+  const producerOwner = required(input.producer_owner, "POSTMERGE_V13_COMPOSITION_PRODUCER_OWNER_REQUIRED");
+  assertQualifiedBudget(input.qualified_budget);
+  const producerCore = composeMcftCap09V13ForcingProducerCoreV1({
+    pool: input.pool,
+    scope: input.scope,
+    epoch_id: epoch,
+    subject_sha: subject,
+    private_store: input.private_store,
+    clock: input.clock,
+    work_item_config: input.work_item_config,
+  });
+  const { capture_promotion: capturePromotion } = producerCore;
 
   const continuity = new PostgresExternalFormalForcingBaseContinuityRepositoryV1(input.pool, {
     scope: input.scope,
