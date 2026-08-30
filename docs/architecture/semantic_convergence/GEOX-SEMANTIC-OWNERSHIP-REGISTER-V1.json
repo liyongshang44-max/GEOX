@@ -1684,7 +1684,11 @@
         "B-09t selection-readiness audit finds CandidateDecisionV1 carries canonical EvidenceScopeV1 but no policy scope anchor/program_id; therefore FieldProgram/program selection cannot be inferred from candidate field/season alone.",
         "B-09t records that legacy decision_recommendation_v1 may carry program_id, but B-06c/B-09j do not promote that value into canonical CandidateDecision authority. Rehydrating legacy program_id may be shadow provenance only, not authoritative policy selection.",
         "B-09t identifies canonical ContextSnapshot as the intended future bridge for a Program/equivalent anchor: B-05b DECLARED_FIELD_PROGRAM carries program_id, but the current B-09j candidate has context_snapshot_ref=null, so the bridge is not yet bound.",
-        "B-09t forbids implicit selector precedence before authorization: no latest-version wins, no newest-declaration wins, no field/season specificity ranking, no null-as-wildcard, no supersession override, and no evaluated_at fallback when candidate decision_time is absent."
+        "B-09t forbids implicit selector precedence before authorization: no latest-version wins, no newest-declaration wins, no field/season specificity ranking, no null-as-wildcard, no supersession override, and no evaluated_at fallback when candidate decision_time is absent.",
+        "B-09u converts the B-09t selector blockers into a proposed, machine-readable product-governance decision package. It remains RECOMMENDED_NOT_AUTHORIZED and creates no selector runtime.",
+        "B-09u recommends ContextSnapshot DECLARED_FIELD_PROGRAM as the v1 canonical Program anchor; exact nullable scope equality with no wildcard/specificity ranking; non-null Candidate.decision_time as the sole selection boundary; fail-closed on multiple applicable policies; and explicit append-only supersession semantics with a half-open effective window.",
+        "B-09u recommends causal policy selection require both declaration declared_at and persisted fact occurred_at to be at-or-before Candidate.decision_time, preventing retrospective policy availability.",
+        "B-09u preserves separation of policy selection from policy contents: no policy_id/version/ref, applicable_action_types, required_criteria, or real declaration instance is selected or created."
       ],
       "runtime_consumers": [
         {
