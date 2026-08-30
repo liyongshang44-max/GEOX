@@ -1,0 +1,105 @@
+name: b09v-decision-eligibility-policy-selector-r1-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b09v-decision-eligibility-policy-selector-r1-exact-2026-08-30
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09v product head
+        run: |
+          git checkout 847727c17ccf77b2c72ed8fe71102bcde747ce65
+          test "$(git rev-parse HEAD)" = "847727c17ccf77b2c72ed8fe71102bcde747ce65"
+          test "$(git rev-parse HEAD^)" = "1deeea2bd72c70d7eaa9305112f9352b14b8ac91"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09v selector governance acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09V_DECISION_ELIGIBILITY_POLICY_SELECTOR_V1.cjs
+
+      - name: B-09v selector contract
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.contract.test.ts
+
+      - name: B-09u selector decision regression
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09U_DECISION_ELIGIBILITY_POLICY_SELECTOR_DECISION_PACKAGE_V1.cjs
+
+      - name: B-09s writer regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_policy_declaration_fact_v1.contract.test.ts
+
+      - name: B-09s route regression
+        run: node --import tsx --test apps/server/src/routes/decision_eligibility_policy_declarations_v1.contract.test.ts
+
+      - name: B-09r authority regression
+        run: node --import tsx --test apps/server/src/auth/decision_eligibility_policy_declaration_authz_v1.contract.test.ts
+
+      - name: B-09m declaration regression
+        run: node --import tsx --test apps/server/src/contracts/decision_eligibility_policy_declaration_v1.contract.test.ts
+
+      - name: B-07d evaluator regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+
+      - name: B-07e runtime regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only 1deeea2bd72c70d7eaa9305112f9352b14b8ac91 847727c17ccf77b2c72ed8fe71102bcde747ce65 > /tmp/b09v-files.txt
+          cat /tmp/b09v-files.txt
+          test "$(wc -l < /tmp/b09v-files.txt | tr -d ' ')" = "7"
+          git diff --check 1deeea2bd72c70d7eaa9305112f9352b14b8ac91 847727c17ccf77b2c72ed8fe71102bcde747ce65
+
+      - name: Prove MCFT and external integration surfaces unchanged
+        run: |
+          git diff --exit-code 1deeea2bd72c70d7eaa9305112f9352b14b8ac91 847727c17ccf77b2c72ed8fe71102bcde747ce65 -- \
+            .github/workflows \
+            apps/server/db \
+            apps/server/src/external_evidence \
+            apps/server/src/runtime/twin_runtime \
+            apps/server/src/domain/twin_kernel \
+            docs/digital_twin \
+            docs/twin_kernel \
+            scripts/runtime_acceptance
+          echo "B09V_MCFT_EXTERNAL_INTEGRATION_SURFACES_UNCHANGED_PASS"
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Prove validation did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "847727c17ccf77b2c72ed8fe71102bcde747ce65"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09V_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Marker
+        run: |
+          echo "B09V_EXACT_HEAD 847727c17ccf77b2c72ed8fe71102bcde747ce65"
+          echo "B09V_DECISION_ELIGIBILITY_POLICY_SELECTOR_PASS"
