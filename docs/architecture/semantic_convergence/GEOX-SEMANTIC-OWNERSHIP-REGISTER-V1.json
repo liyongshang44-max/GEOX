@@ -1643,7 +1643,10 @@
         "B-09p classifies human role, service principal, and dual-control workflows as governance options only; no principal model, role set, scope token, writer path or policy contents are selected.",
         "B-09q authz-enforcement inventory corrects the simplified admin-wildcard model: requireAoActScopeV0 currently requires BOTH explicit token scope membership and role-matrix permission. admin role wildcard alone does not mint an otherwise-absent token scope.",
         "B-09q finds that a future dedicated policy-declaration scope would therefore be denied to an admin token unless that token explicitly carries the new scope; however, because admin role permission is wildcard, any admin token that is explicitly granted the scope would pass the role layer unless a separate principal-authority constraint is added.",
-        "B-09q recommends, without authorizing implementation, a centralized enforcement topology of dedicated token scope plus explicit product-author principal allowlist, preserving tenant/project/group scope and audit identity. Route-local role checks, global removal of admin wildcard, and hidden special-cases in isScopeAllowedForRoleV1 are not recommended."
+        "B-09q recommends, without authorizing implementation, a centralized enforcement topology of dedicated token scope plus explicit product-author principal allowlist, preserving tenant/project/group scope and audit identity. Route-local role checks, global removal of admin wildcard, and hidden special-cases in isScopeAllowedForRoleV1 are not recommended.",
+        "B-09r product-governance authorization freezes the dedicated declaration capability as decision.eligibility.policy.declare and the initial human policy-author principal set as agronomist only.",
+        "B-09r qualification discovered apps/server/src/domain/auth/roles.ts is an MCFT CAP-07 S5/S6 lifecycle-sensitive compatibility surface. B-Line therefore leaves ROLE_SCOPE_MATRIX_V1 byte-identical and enforces the new authority centrally as explicit token capability plus explicit product-author principal allowlist.",
+        "B-09r does not authorize service-principal authorship. A future governed service principal may only execute an already-authorized immutable declaration; no service-principal route/writer path is registered here."
       ],
       "runtime_consumers": [
         {
