@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - ci/bline-b09v-decision-eligibility-policy-selector-r1-exact-2026-08-30
+  pull_request:
+    branches:
+      - feat/bline-b09v-decision-eligibility-policy-selector-r1-v1
 
 jobs:
   exact-product-head:
