@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { Pool } from "pg";
-import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../apps/server/src/external_evidence/mcft_cap09_t4r1_external_formal_scope_v1.js";
+import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../apps/server/src/domain/twin_runtime/external_formal_runtime_config_v1.js";
 import {
   composeMcftCap09V13ForcingProducerCoreV1,
   MCFT_CAP09_V13_FORCING_PRODUCER_CORE_ID_V1,
