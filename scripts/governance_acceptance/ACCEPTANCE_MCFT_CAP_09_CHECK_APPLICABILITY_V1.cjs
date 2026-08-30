@@ -312,6 +312,7 @@ function main() {
   assert.ok(producerQualification, "FUTURE_CHECK_REQUIRED:V13_PRODUCER_DRIVEN_QUALIFICATION");
   assert.equal(producerQualification.execution_workflow_status, "IMPLEMENTED_AT_SUCCESSOR_HEAD");
   assert.equal(producerQualification.execution_workflow, ".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml");
+  assert.equal(producerQualification.diagnostic_command, null, "V13_PRODUCER_DRIVEN_QUALIFICATION_MUST_USE_IMMUTABLE_WORKFLOW_EVIDENCE_NOT_INLINE_DIAGNOSTIC");
   assert.equal(byId(plan(authority, registry, [], "POST_MERGE_V13_QUALIFICATION"), "V13_PRODUCER_DRIVEN_QUALIFICATION").status, "REQUIRED");
 
   // Later obligations remain unimplemented and fail closed until their own activation step.

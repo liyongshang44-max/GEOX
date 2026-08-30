@@ -709,7 +709,7 @@
         "POST_MERGE_V13_QUALIFICATION"
       ],
       "carry_forward_evidence_id": null,
-      "diagnostic_command": "pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V1.ts"
+      "diagnostic_command": null
     },
     {
       "check_id": "END_TO_END_EVIDENCE_SUPPLY_DEADLINE",
