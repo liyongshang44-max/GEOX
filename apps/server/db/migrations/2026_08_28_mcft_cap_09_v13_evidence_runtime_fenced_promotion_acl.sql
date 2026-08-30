@@ -62,8 +62,18 @@ GRANT SELECT,INSERT,UPDATE ON TABLE
 TO geox_mcft_cap09_evidence_runtime_v1;
 
 -- Create/replace the SECURITY DEFINER function while explicitly SET ROLE to its
--- final NOLOGIN owner. This is rerun-safe when the function already belongs to
--- that owner and avoids ALTER OWNER semantics on Neon.
+-- final NOLOGIN owner. Existing functions need a temporary self-EXECUTE grant so
+-- the PL/pgSQL validator can inspect the already-owned routine during replacement.
+DO $temp_writer_execute$
+BEGIN
+  IF pg_catalog.to_regprocedure(
+    'public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)'
+  ) IS NOT NULL THEN
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb) TO geox_mcft_cap09_forcing_writer_owner_v1';
+  END IF;
+END
+$temp_writer_execute$;
+
 GRANT CREATE ON SCHEMA public TO geox_mcft_cap09_forcing_writer_owner_v1;
 SET ROLE geox_mcft_cap09_forcing_writer_owner_v1;
 
@@ -298,6 +308,12 @@ $function$;
 
 RESET ROLE;
 REVOKE CREATE ON SCHEMA public FROM geox_mcft_cap09_forcing_writer_owner_v1;
+
+SET ROLE geox_mcft_cap09_forcing_writer_owner_v1;
+REVOKE EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
+  text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
+) FROM geox_mcft_cap09_forcing_writer_owner_v1;
+RESET ROLE;
 
 DO $owner_check$
 DECLARE
