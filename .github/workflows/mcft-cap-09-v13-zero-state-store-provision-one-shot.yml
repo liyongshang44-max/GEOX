@@ -31,13 +31,13 @@ jobs:
       PREVIOUS_V12_DB: geox_mcft_cap09_s6_accel24t_am19_v12
       PREVIOUS_BLOCKED_V12_DB: geox_mcft_cap09_s6_accel24t_am19_blocked_v12
       FAILED_V4_DB: geox_mcft_cap09_s6_formal_t4r1_24h_v4
-      SEED_DATABASE_URL: \${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+      SEED_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
 
     steps:
       - name: Checkout exact one-shot provisioning subject
         uses: actions/checkout@v4
         with:
-          ref: \${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -45,13 +45,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "\${{ github.event.pull_request.base.sha }}" = "$IMPLEMENTATION_SUBJECT_SHA"
+          test "${{ github.event.pull_request.base.sha }}" = "$IMPLEMENTATION_SUBJECT_SHA"
           git fetch origin main --quiet
           main_sha="$(git rev-parse origin/main)"
           test "$main_sha" = "$EXPECTED_PROTECTED_MAIN_SHA"
-          mapfile -t changed < <(git diff --name-only "\${{ github.event.pull_request.base.sha }}..\${{ github.event.pull_request.head.sha }}")
-          test "\${#changed[@]}" -eq 1
-          test "\${changed[0]}" = ".github/workflows/mcft-cap-09-v13-zero-state-store-provision-one-shot.yml"
+          mapfile -t changed < <(git diff --name-only "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}")
+          test "${#changed[@]}" -eq 1
+          test "${changed[0]}" = ".github/workflows/mcft-cap-09-v13-zero-state-store-provision-one-shot.yml"
 
       - name: Require V3 authority and exact activation step
         shell: node {0}
@@ -119,8 +119,8 @@ jobs:
           command -v psql >/dev/null
           caps="$(psql "$SEED_DATABASE_URL" -AtF '|' -v ON_ERROR_STOP=1 -c \
             "SELECT rolsuper::text,rolcreatedb::text FROM pg_catalog.pg_roles WHERE rolname=current_user")"
-          super="\${caps%%|*}"
-          createdb="\${caps##*|}"
+          super="${caps%%|*}"
+          createdb="${caps##*|}"
           if [ "$super" != "t" ] && [ "$createdb" != "t" ]; then
             echo "V13_PROVISION_DATABASE_CREATOR_AUTHORITY_REQUIRED" >&2
             exit 1
@@ -202,8 +202,8 @@ jobs:
             "$BLOCKED_V13_DB|$BLOCKED_V13_URL" \
             "$FORMAL_V5_DB|$FORMAL_V5_URL"
           do
-            name="\${pair%%|*}"
-            url="\${pair#*|}"
+            name="${pair%%|*}"
+            url="${pair#*|}"
             present="$(exists "$name")"
             test "$present" = "1"
             counts="$(psql "$url" -AtF '|' -v ON_ERROR_STOP=1 -c "
@@ -230,8 +230,8 @@ jobs:
             "operation": "PROVISION_ZERO_STATE_V13_BLOCKED_V13_AND_FORMAL_V5_STORES",
             "protected_main_sha": "$EXPECTED_PROTECTED_MAIN_SHA",
             "implementation_subject_sha": "$IMPLEMENTATION_SUBJECT_SHA",
-            "provisioning_subject_sha": "\${{ github.event.pull_request.head.sha }}",
-            "run_id": "\${{ github.run_id }}",
+            "provisioning_subject_sha": "${{ github.event.pull_request.head.sha }}",
+            "run_id": "${{ github.run_id }}",
             "credential_seed_database": "$SEED_DB_NAME",
             "created_count": $created_count,
             "targets": [
@@ -293,7 +293,7 @@ jobs:
       - name: Upload immutable zero-state provisioning proof
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-v13-zero-state-provision-\${{ github.event.pull_request.head.sha }}
+          name: mcft-cap09-v13-zero-state-provision-${{ github.event.pull_request.head.sha }}
           path: mcft-cap09-v13-zero-state-provision-proof.json
           if-no-files-found: error
           retention-days: 90
