@@ -290,9 +290,16 @@ BEGIN
 END
 $function$;
 
+-- PostgreSQL requires the target owner to hold CREATE on the containing schema
+-- during ownership transfer. Grant it only for this exact transfer and revoke it
+-- immediately; the live workflow also revokes it in always() cleanup.
+GRANT CREATE ON SCHEMA public TO geox_mcft_cap09_forcing_writer_owner_v1;
+
 ALTER FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
   text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
 ) OWNER TO geox_mcft_cap09_forcing_writer_owner_v1;
+
+REVOKE CREATE ON SCHEMA public FROM geox_mcft_cap09_forcing_writer_owner_v1;
 
 REVOKE ALL ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
   text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
