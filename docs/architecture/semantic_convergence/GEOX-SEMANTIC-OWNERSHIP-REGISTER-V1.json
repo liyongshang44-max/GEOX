@@ -1720,7 +1720,9 @@
         "DEC-BLINE-ELIGIBILITY-POLICY-SELECTOR-001 is explicitly authorized for selector/read-model implementation only; real product policy contents and B-07e connection remain separately gated.",
         "B-09v implements exact ContextSnapshot DECLARED_FIELD_PROGRAM Program anchoring, exact nullable scope equality, Candidate decision_time causal as-of selection, half-open effective windows, and fail-closed 0/1/>1 cardinality.",
         "B-09v validates same-policy/same-scope/same-anchor append-only supersession with predecessor existence/knowledge, acyclic chain and ambiguous-successor rejection; no latest/version precedence exists.",
-        "B-09v does not modify the current B-09j Candidate projection; context_snapshot_ref=null and decision_time=null therefore continue to fail closed rather than being repaired by legacy program_id or wall clock."
+        "B-09v does not modify the current B-09j Candidate projection; context_snapshot_ref=null and decision_time=null therefore continue to fail closed rather than being repaired by legacy program_id or wall clock.",
+        "B-09w proposes DEC-BLINE-IRRIGATE-ELIGIBILITY-POLICY-CONTENT-001 as RECOMMENDED_NOT_AUTHORIZED: IRRIGATE baseline required criteria QUALIFIED_EVIDENCE, CONTEXT, STATE, FORECAST and ACTION_WINDOW; proposal creates no real policy declaration instance.",
+        "B-09w explicitly preserves current readiness gaps: B-09j context_snapshot_ref/decision_time remain null, canonical State/Forecast/ActionWindow support remains unbound, B-07e remains disconnected, and MCFT/ADR/LLM/Approval/Execution/consumer migration/authority removal remain untouched."
       ],
       "runtime_consumers": [
         {
