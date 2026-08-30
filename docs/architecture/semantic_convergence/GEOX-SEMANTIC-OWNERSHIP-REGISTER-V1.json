@@ -1571,6 +1571,27 @@
           "grandfathered_runtime_consumers": [
             "judge-v2-agronomy-qualified-evidence-criterion-shadow"
           ]
+        },
+        {
+          "producer_id": "decision-eligibility-policy-declaration-writer-v1",
+          "path": "apps/server/src/domain/decision/decision_eligibility_policy_declaration_fact_v1.ts",
+          "role": "B-09s authorized append-only writer for DecisionEligibilityPolicyDeclarationV1 facts; server derives policy/declaration identity, declaration source, declared_at and POLICY_DECLARATION_ONLY authority while caller supplies policy contents",
+          "authority_level": "POLICY_DECLARATION_AUTHORITY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "appendDecisionEligibilityPolicyDeclarationFactV1",
+            "decisionEligibilityPolicyDeclarationV1Schema.parse(",
+            "pg_advisory_xact_lock(hashtext($1))",
+            "POLICY_REF_CONFLICT",
+            "POLICY_REF_AMBIGUOUS"
+          ],
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
         }
       ],
       "registered_consumers": [
@@ -1598,6 +1619,15 @@
           "role": "B-09j consumes only the B-09h shadow QUALIFIED_EVIDENCE criterion/support refs to prove exact Candidate basis continuity; it does not feed or invoke Decision Eligibility Runtime",
           "current": true,
           "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "decision-eligibility-policy-declaration-route-v1",
+          "path": "apps/server/src/routes/decision_eligibility_policy_declarations_v1.ts",
+          "role": "authorized human API ingress for append-only DecisionEligibility policy declarations; requires centralized B-09r policy-author authority and does not evaluate B-07e",
+          "current": true,
+          "connection_class": "ROUTE_ISLAND",
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN"
         }
@@ -1646,7 +1676,11 @@
         "B-09q recommends, without authorizing implementation, a centralized enforcement topology of dedicated token scope plus explicit product-author principal allowlist, preserving tenant/project/group scope and audit identity. Route-local role checks, global removal of admin wildcard, and hidden special-cases in isScopeAllowedForRoleV1 are not recommended.",
         "B-09r product-governance authorization freezes the dedicated declaration capability as decision.eligibility.policy.declare and the initial human policy-author principal set as agronomist only.",
         "B-09r qualification discovered apps/server/src/domain/auth/roles.ts is an MCFT CAP-07 S5/S6 lifecycle-sensitive compatibility surface. B-Line therefore leaves ROLE_SCOPE_MATRIX_V1 byte-identical and enforces the new authority centrally as explicit token capability plus explicit product-author principal allowlist.",
-        "B-09r does not authorize service-principal authorship. A future governed service principal may only execute an already-authorized immutable declaration; no service-principal route/writer path is registered here."
+        "B-09r does not authorize service-principal authorship. A future governed service principal may only execute an already-authorized immutable declaration; no service-principal route/writer path is registered here.",
+        "B-09s activates the first governed production DecisionEligibilityPolicyDeclarationV1 instantiation path: authorized agronomist API -> centralized B-09r authority gate -> append-only facts writer.",
+        "B-09s keeps policy contents caller-supplied and creates no repository/config policy instance or defaults. The writer derives declaration_id, policy_ref, declaration_source_type/ref, declared_at and POLICY_DECLARATION_ONLY authority so callers cannot forge provenance or authority state.",
+        "B-09s enforces one global immutable policy_ref -> one declaration intent using a transaction-scoped PostgreSQL advisory lock and LIMIT 2 historical lookup. Same intent is idempotent; changed content is POLICY_REF_CONFLICT; multiple historical rows are POLICY_REF_AMBIGUOUS; latest-wins is forbidden.",
+        "B-09s preserves B-07e disconnection. No policy selection/as-of reader, eligibility evaluation, approval, execution, consumer migration or historical authority removal is introduced."
       ],
       "runtime_consumers": [
         {
@@ -1666,6 +1700,15 @@
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN",
           "evidence_edge_id": "C-043"
+        },
+        {
+          "consumer_id": "decision-eligibility-policy-declaration-route-v1",
+          "path": "apps/server/src/routes/decision_eligibility_policy_declarations_v1.ts",
+          "producer_id": "decision-eligibility-policy-declaration-writer-v1",
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-045"
         }
       ]
     },
@@ -3318,7 +3361,7 @@
     {
       "guard_id": "G-B02-32-decision-eligibility-policy-declaration-instantiation",
       "semantic_id": "decision.eligibility",
-      "description": "B-09m freezes DecisionEligibilityPolicyDeclarationV1 with zero production declaration instances; any later production policy declaration source must be explicitly registered before it may instantiate this contract.",
+      "description": "B-09s registers the unique governed production DecisionEligibilityPolicyDeclarationV1 instantiation path. Any additional production declaration source remains forbidden until explicitly registered.",
       "scan_roots": [
         "apps/server/src"
       ],
@@ -3334,7 +3377,9 @@
           "decisionEligibilityPolicyDeclarationV1Schema.parse("
         ]
       },
-      "registered_paths": [],
+      "registered_paths": [
+        "apps/server/src/domain/decision/decision_eligibility_policy_declaration_fact_v1.ts"
+      ],
       "failure": "UNREGISTERED_DECISION_ELIGIBILITY_POLICY_DECLARATION_PRODUCER"
     }
   ],
