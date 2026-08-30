@@ -139,7 +139,8 @@ jobs:
             creator_role_sql="${candidates[0]}"
             assumed="$(psql "$SEED_DATABASE_URL" -qAtF '|' -v ON_ERROR_STOP=1 \
               -c "SET ROLE $creator_role_sql" \
-              -c "SELECT rolsuper::text,rolcreatedb::text FROM pg_catalog.pg_roles WHERE rolname=current_user")"
+              -c "SELECT rolsuper::text,rolcreatedb::text FROM pg_catalog.pg_roles WHERE rolname=current_user" \
+              | tail -n 1)"
             assumed_super="${assumed%%|*}"
             assumed_createdb="${assumed##*|}"
             if [ "$assumed_super" != "t" ] && [ "$assumed_createdb" != "t" ]; then
