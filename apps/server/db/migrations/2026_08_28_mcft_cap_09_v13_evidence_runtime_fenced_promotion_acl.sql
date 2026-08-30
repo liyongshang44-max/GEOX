@@ -27,6 +27,16 @@ GRANT SELECT,UPDATE ON TABLE
   public.twin_external_formal_forcing_base_target_v1
 TO geox_mcft_cap09_forcing_writer_owner_v1;
 
+-- The Evidence privilege role owns forcing acquisition coordination in both
+-- qualification and production. It remains denied arbitrary canonical-fact mutation.
+REVOKE INSERT,UPDATE,DELETE ON TABLE public.facts FROM geox_mcft_cap09_evidence_runtime_v1;
+GRANT SELECT ON TABLE public.facts TO geox_mcft_cap09_evidence_runtime_v1;
+GRANT SELECT,INSERT,UPDATE ON TABLE
+  public.twin_external_formal_forcing_base_cursor_v1,
+  public.twin_external_formal_forcing_base_target_v1,
+  public.twin_external_formal_forcing_controller_lease_v1
+TO geox_mcft_cap09_evidence_runtime_v1;
+
 CREATE OR REPLACE FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
   p_tenant_id text,
   p_project_id text,
