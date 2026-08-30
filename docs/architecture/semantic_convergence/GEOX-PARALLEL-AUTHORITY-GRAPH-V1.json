@@ -1105,6 +1105,23 @@
         "fingerprint": "requireDecisionEligibilityPolicyDeclarationAuthorityV1 -> appendDecisionEligibilityPolicyDeclarationFactV1"
       },
       "status": "ROUTE_ONLY"
+    },
+    {
+      "edge_id": "C-046",
+      "from_producer": "decision-eligibility-policy-declaration-writer-v1",
+      "to_consumer": "decision-eligibility-policy-selector-v1",
+      "semantic_id": "decision.eligibility",
+      "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+      "activation": "MANUAL",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "SCOPED_PERSISTED_AS_OF_READ",
+        "caller_path": "apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.ts",
+        "callee_path": "apps/server/src/domain/decision/decision_eligibility_policy_declaration_fact_v1.ts",
+        "fingerprint": "readAndSelectDecisionEligibilityPolicyV1 -> exact nullable scope + PROGRAM anchor + occurred_at <= CandidateDecision.decision_time persisted declaration read"
+      },
+      "status": "CURRENT_PROVEN"
     }
   ],
   "connectivity_status_values": [
