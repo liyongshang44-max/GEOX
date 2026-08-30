@@ -1722,7 +1722,10 @@
         "B-09v validates same-policy/same-scope/same-anchor append-only supersession with predecessor existence/knowledge, acyclic chain and ambiguous-successor rejection; no latest/version precedence exists.",
         "B-09v does not modify the current B-09j Candidate projection; context_snapshot_ref=null and decision_time=null therefore continue to fail closed rather than being repaired by legacy program_id or wall clock.",
         "B-09w proposes DEC-BLINE-IRRIGATE-ELIGIBILITY-POLICY-CONTENT-001 as RECOMMENDED_NOT_AUTHORIZED: IRRIGATE baseline required criteria QUALIFIED_EVIDENCE, CONTEXT, STATE, FORECAST and ACTION_WINDOW; proposal creates no real policy declaration instance.",
-        "B-09w explicitly preserves current readiness gaps: B-09j context_snapshot_ref/decision_time remain null, canonical State/Forecast/ActionWindow support remains unbound, B-07e remains disconnected, and MCFT/ADR/LLM/Approval/Execution/consumer migration/authority removal remain untouched."
+        "B-09w explicitly preserves current readiness gaps: B-09j context_snapshot_ref/decision_time remain null, canonical State/Forecast/ActionWindow support remains unbound, B-07e remains disconnected, and MCFT/ADR/LLM/Approval/Execution/consumer migration/authority removal remain untouched.",
+        "B-09x finds no current canonical CandidateDecision.decision_time source on the bounded recommendation path: legacy created_ts is explicitly non-promoted by B-06c, persisted fact occurred_at is persistence time only, and wall-clock/evaluated_at/latest fallbacks remain forbidden.",
+        "B-09x classifies Context as structurally ready but temporally blocked: FieldProgram facts are append-only and B-05b can project DECLARED_FIELD_PROGRAM, but current Program readers are latest-state readers; canonical binding requires an as-of read bounded by a separately established Candidate decision_time.",
+        "B-09x classifies STATE as B-Line-local capability-not-bound via B-06b CalculationResult plus B-07c, ACTION_WINDOW as vocabulary-only with no canonical producer, and FORECAST as frozen on incomplete MCFT-9 plus separate integration authorization."
       ],
       "runtime_consumers": [
         {
