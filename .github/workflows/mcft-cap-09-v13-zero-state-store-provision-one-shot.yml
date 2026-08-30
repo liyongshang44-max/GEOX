@@ -1,0 +1,299 @@
+name: mcft-cap-09-v13-zero-state-store-provision-one-shot
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - feat/mcft-cap09-postmerge-v13-production-composition-v1
+    paths:
+      - '.github/workflows/mcft-cap-09-v13-zero-state-store-provision-one-shot.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-v13-zero-state-store-provision-one-shot
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    if: >-
+      github.event.pull_request.base.sha == '46367333d228a2b90a86ff6a33aebc334f3d73a2' &&
+      github.head_ref == 'ops/mcft-cap09-v13-zero-state-provision-20260830'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      EXPECTED_PROTECTED_MAIN_SHA: fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+      IMPLEMENTATION_SUBJECT_SHA: 46367333d228a2b90a86ff6a33aebc334f3d73a2
+      V13_DB: geox_mcft_cap09_s6_accel24t_am19_v13
+      BLOCKED_V13_DB: geox_mcft_cap09_s6_accel24t_am19_blocked_v13
+      FORMAL_V5_DB: geox_mcft_cap09_s6_formal_t4r1_24h_v5
+      PREVIOUS_V12_DB: geox_mcft_cap09_s6_accel24t_am19_v12
+      PREVIOUS_BLOCKED_V12_DB: geox_mcft_cap09_s6_accel24t_am19_blocked_v12
+      FAILED_V4_DB: geox_mcft_cap09_s6_formal_t4r1_24h_v4
+      SEED_DATABASE_URL: \${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+
+    steps:
+      - name: Checkout exact one-shot provisioning subject
+        uses: actions/checkout@v4
+        with:
+          ref: \${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact implementation base, protected main, and one-file diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "\${{ github.event.pull_request.base.sha }}" = "$IMPLEMENTATION_SUBJECT_SHA"
+          git fetch origin main --quiet
+          main_sha="$(git rev-parse origin/main)"
+          test "$main_sha" = "$EXPECTED_PROTECTED_MAIN_SHA"
+          mapfile -t changed < <(git diff --name-only "\${{ github.event.pull_request.base.sha }}..\${{ github.event.pull_request.head.sha }}")
+          test "\${#changed[@]}" -eq 1
+          test "\${changed[0]}" = ".github/workflows/mcft-cap-09-v13-zero-state-store-provision-one-shot.yml"
+
+      - name: Require V3 authority and exact activation step
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const a=JSON.parse(fs.readFileSync(
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json',
+            'utf8'
+          ));
+          if(a.status!=='CANDIDATE') throw new Error('V13_PROVISION_V3_CANDIDATE_REQUIRED');
+          if(a.database_identity?.database_name!==process.env.FORMAL_V5_DB) throw new Error('V13_PROVISION_FORMAL_V5_DB_MISMATCH');
+          if(a.qualification_generation?.qualification_database!==process.env.V13_DB) throw new Error('V13_PROVISION_QUAL_DB_MISMATCH');
+          if(a.qualification_generation?.blocked_database!==process.env.BLOCKED_V13_DB) throw new Error('V13_PROVISION_BLOCKED_DB_MISMATCH');
+          if(a.database_identity?.fresh_zero_state_required!==true) throw new Error('V13_PROVISION_FRESH_ZERO_STATE_REQUIRED');
+          if(a.database_identity?.failed_predecessor_reuse_forbidden!==true) throw new Error('V13_PROVISION_FAILED_V4_REUSE_MUST_BE_FORBIDDEN');
+          if(a.database_identity?.data_clone_from_failed_v4_forbidden!==true) throw new Error('V13_PROVISION_FAILED_V4_CLONE_MUST_BE_FORBIDDEN');
+          if(a.qualification_generation?.previous_generation_reuse_forbidden!==true) throw new Error('V13_PROVISION_V12_REUSE_MUST_BE_FORBIDDEN');
+          if(a.database_identity?.v12_or_v4_cleanup_for_capacity_forbidden!==true) throw new Error('V13_PROVISION_ADHOC_CLEANUP_MUST_BE_FORBIDDEN');
+          const seq=a.activation_sequence||[];
+          if(seq[2]!=='PROVISION_ZERO_STATE_V13_BLOCKED_V13_AND_FORMAL_V5_STORES') throw new Error('V13_PROVISION_SEQUENCE_MISMATCH');
+          console.log(JSON.stringify({
+            status:'PASS',
+            authority:a.schema_version,
+            activation_step:seq[2],
+            exact_targets:[process.env.V13_DB,process.env.BLOCKED_V13_DB,process.env.FORMAL_V5_DB]
+          }));
+
+      - name: Normalize existing governed database credential seed
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const raw=String(process.env.SEED_DATABASE_URL||'').trim();
+          if(!raw) throw new Error('V13_PROVISION_DATABASE_SECRET_REQUIRED');
+          const u=new URL(raw);
+          if(!['postgres:','postgresql:'].includes(u.protocol)) throw new Error('V13_PROVISION_POSTGRES_URL_REQUIRED');
+          if(['localhost','127.0.0.1','::1'].includes(u.hostname)) throw new Error('V13_PROVISION_REMOTE_DATABASE_REQUIRED');
+          const seed=decodeURIComponent(u.pathname.replace(/^\/+/,''));
+          const allowed=new Set([
+            'geox_mcft_cap09_s6_formal_t3r1_24h',
+            'geox_mcft_cap09_s6_formal_t3r1_24h_v3',
+            process.env.FAILED_V4_DB,
+            process.env.PREVIOUS_V12_DB,
+            process.env.PREVIOUS_BLOCKED_V12_DB
+          ]);
+          if(!allowed.has(seed)) throw new Error('V13_PROVISION_CREDENTIAL_SEED_DATABASE_FORBIDDEN:'+seed);
+          function target(name){
+            const x=new URL(raw);
+            x.pathname='/'+name;
+            const value=x.toString();
+            console.log('::add-mask::'+value);
+            return value;
+          }
+          fs.appendFileSync(process.env.GITHUB_ENV,
+            'SEED_DB_NAME='+seed+'\n'+
+            'V13_URL='+target(process.env.V13_DB)+'\n'+
+            'BLOCKED_V13_URL='+target(process.env.BLOCKED_V13_DB)+'\n'+
+            'FORMAL_V5_URL='+target(process.env.FORMAL_V5_DB)+'\n'
+          );
+          console.log(JSON.stringify({status:'PASS',credential_seed_database:seed,credential_fields_preserved:true}));
+
+      - name: Preflight database creator authority and immutable predecessor inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v psql >/dev/null
+          caps="$(psql "$SEED_DATABASE_URL" -AtF '|' -v ON_ERROR_STOP=1 -c \
+            "SELECT rolsuper::text,rolcreatedb::text FROM pg_catalog.pg_roles WHERE rolname=current_user")"
+          super="\${caps%%|*}"
+          createdb="\${caps##*|}"
+          if [ "$super" != "t" ] && [ "$createdb" != "t" ]; then
+            echo "V13_PROVISION_DATABASE_CREATOR_AUTHORITY_REQUIRED" >&2
+            exit 1
+          fi
+
+          legacy="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c \
+            "SELECT count(*)::int FROM pg_catalog.pg_database WHERE datname IN ('$PREVIOUS_V12_DB','$PREVIOUS_BLOCKED_V12_DB','$FAILED_V4_DB')")"
+          test "$legacy" = "3" || {
+            echo "V13_PROVISION_PREDECESSOR_INVENTORY_DRIFT:$legacy" >&2
+            exit 1
+          }
+
+          echo "creator_authority_present=true"
+          echo "predecessor_inventory_preserved=true"
+
+      - name: Preflight any pre-existing target as exact empty store
+        shell: bash
+        run: |
+          set -euo pipefail
+          db_exists() {
+            psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c \
+              "SELECT count(*)::int FROM pg_catalog.pg_database WHERE datname='$1'"
+          }
+          assert_empty_if_exists() {
+            name="$1"
+            url="$2"
+            present="$(db_exists "$name")"
+            test "$present" = "0" || test "$present" = "1"
+            if [ "$present" = "1" ]; then
+              counts="$(psql "$url" -AtF '|' -v ON_ERROR_STOP=1 -c "
+                SELECT
+                  (SELECT count(*)::int
+                     FROM pg_catalog.pg_class c
+                     JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+                    WHERE n.nspname='public'
+                      AND c.relkind IN ('r','p','v','m','S','f')),
+                  (SELECT count(*)::int
+                     FROM pg_catalog.pg_proc p
+                     JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+                    WHERE n.nspname='public')")"
+              test "$counts" = "0|0" || {
+                echo "V13_PROVISION_PREEXISTING_TARGET_NOT_ZERO_STATE:$name:$counts" >&2
+                exit 1
+              }
+            fi
+          }
+          assert_empty_if_exists "$V13_DB" "$V13_URL"
+          assert_empty_if_exists "$BLOCKED_V13_DB" "$BLOCKED_V13_URL"
+          assert_empty_if_exists "$FORMAL_V5_DB" "$FORMAL_V5_URL"
+
+      - name: Provision only missing exact zero-state targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          exists() {
+            psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c \
+              "SELECT count(*)::int FROM pg_catalog.pg_database WHERE datname='$1'"
+          }
+
+          v13_before="$(exists "$V13_DB")"
+          blocked_before="$(exists "$BLOCKED_V13_DB")"
+          v5_before="$(exists "$FORMAL_V5_DB")"
+
+          if [ "$v13_before" = "0" ]; then
+            psql "$SEED_DATABASE_URL" -v ON_ERROR_STOP=1 -c \
+              "CREATE DATABASE \"$V13_DB\" TEMPLATE template0;"
+          fi
+          if [ "$blocked_before" = "0" ]; then
+            psql "$SEED_DATABASE_URL" -v ON_ERROR_STOP=1 -c \
+              "CREATE DATABASE \"$BLOCKED_V13_DB\" TEMPLATE template0;"
+          fi
+          if [ "$v5_before" = "0" ]; then
+            psql "$SEED_DATABASE_URL" -v ON_ERROR_STOP=1 -c \
+              "CREATE DATABASE \"$FORMAL_V5_DB\" TEMPLATE template0;"
+          fi
+
+          for pair in \
+            "$V13_DB|$V13_URL" \
+            "$BLOCKED_V13_DB|$BLOCKED_V13_URL" \
+            "$FORMAL_V5_DB|$FORMAL_V5_URL"
+          do
+            name="\${pair%%|*}"
+            url="\${pair#*|}"
+            present="$(exists "$name")"
+            test "$present" = "1"
+            counts="$(psql "$url" -AtF '|' -v ON_ERROR_STOP=1 -c "
+              SELECT
+                (SELECT count(*)::int
+                   FROM pg_catalog.pg_class c
+                   JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+                  WHERE n.nspname='public'
+                    AND c.relkind IN ('r','p','v','m','S','f')),
+                (SELECT count(*)::int
+                   FROM pg_catalog.pg_proc p
+                   JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+                  WHERE n.nspname='public')")"
+            test "$counts" = "0|0" || {
+              echo "V13_PROVISION_POSTCREATE_NOT_ZERO_STATE:$name:$counts" >&2
+              exit 1
+            }
+          done
+
+          created_count=$(( (1-v13_before) + (1-blocked_before) + (1-v5_before) ))
+          cat > mcft-cap09-v13-zero-state-provision-proof.json <<JSON
+          {
+            "status": "PASS",
+            "operation": "PROVISION_ZERO_STATE_V13_BLOCKED_V13_AND_FORMAL_V5_STORES",
+            "protected_main_sha": "$EXPECTED_PROTECTED_MAIN_SHA",
+            "implementation_subject_sha": "$IMPLEMENTATION_SUBJECT_SHA",
+            "provisioning_subject_sha": "\${{ github.event.pull_request.head.sha }}",
+            "run_id": "\${{ github.run_id }}",
+            "credential_seed_database": "$SEED_DB_NAME",
+            "created_count": $created_count,
+            "targets": [
+              {
+                "database_name": "$V13_DB",
+                "fresh_zero_state": true,
+                "public_relation_count": 0,
+                "public_routine_count": 0,
+                "created_by_this_run": $([ "$v13_before" = "0" ] && echo true || echo false)
+              },
+              {
+                "database_name": "$BLOCKED_V13_DB",
+                "fresh_zero_state": true,
+                "public_relation_count": 0,
+                "public_routine_count": 0,
+                "created_by_this_run": $([ "$blocked_before" = "0" ] && echo true || echo false)
+              },
+              {
+                "database_name": "$FORMAL_V5_DB",
+                "fresh_zero_state": true,
+                "public_relation_count": 0,
+                "public_routine_count": 0,
+                "created_by_this_run": $([ "$v5_before" = "0" ] && echo true || echo false)
+              }
+            ],
+            "predecessor_v12_preserved": true,
+            "predecessor_blocked_v12_preserved": true,
+            "failed_v4_preserved": true,
+            "failed_v4_reused": false,
+            "failed_v4_cloned": false,
+            "v12_reused": false,
+            "cleanup_performed": false,
+            "schema_migration_performed": false,
+            "provider_request_count": 0,
+            "production_owner_activation": false,
+            "formal_v5_arm": false,
+            "a0_bootstrap": false,
+            "o00_started": false,
+            "mcft_cap09_completed": false
+          }
+          JSON
+
+      - name: Validate one-shot provisioning proof
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('mcft-cap09-v13-zero-state-provision-proof.json','utf8'));
+          if(p.status!=='PASS'||p.operation!=='PROVISION_ZERO_STATE_V13_BLOCKED_V13_AND_FORMAL_V5_STORES') throw new Error('V13_PROVISION_PROOF_PASS_REQUIRED');
+          if(p.protected_main_sha!==process.env.EXPECTED_PROTECTED_MAIN_SHA||p.implementation_subject_sha!==process.env.IMPLEMENTATION_SUBJECT_SHA) throw new Error('V13_PROVISION_PROOF_SUBJECT_MISMATCH');
+          const names=p.targets?.map(x=>x.database_name);
+          const expected=[process.env.V13_DB,process.env.BLOCKED_V13_DB,process.env.FORMAL_V5_DB];
+          if(JSON.stringify(names)!==JSON.stringify(expected)) throw new Error('V13_PROVISION_PROOF_TARGET_MISMATCH');
+          if(p.targets.some(x=>x.fresh_zero_state!==true||x.public_relation_count!==0||x.public_routine_count!==0)) throw new Error('V13_PROVISION_PROOF_ZERO_STATE_REQUIRED');
+          for(const key of ['predecessor_v12_preserved','predecessor_blocked_v12_preserved','failed_v4_preserved']) if(p[key]!==true) throw new Error('V13_PROVISION_PROOF_PREDECESSOR_PRESERVATION:'+key);
+          for(const key of ['failed_v4_reused','failed_v4_cloned','v12_reused','cleanup_performed','schema_migration_performed','production_owner_activation','formal_v5_arm','a0_bootstrap','o00_started','mcft_cap09_completed']) if(p[key]!==false) throw new Error('V13_PROVISION_PROOF_NON_EFFECT:'+key);
+          if(p.provider_request_count!==0) throw new Error('V13_PROVISION_PROOF_PROVIDER_REQUEST_FORBIDDEN');
+          console.log(JSON.stringify(p,null,2));
+
+      - name: Upload immutable zero-state provisioning proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-v13-zero-state-provision-\${{ github.event.pull_request.head.sha }}
+          path: mcft-cap09-v13-zero-state-provision-proof.json
+          if-no-files-found: error
+          retention-days: 90
