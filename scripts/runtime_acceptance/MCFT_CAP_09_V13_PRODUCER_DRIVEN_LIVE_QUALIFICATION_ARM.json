@@ -7,5 +7,6 @@
   "production_owner_activation_authorized": false,
   "formal_v5_arm_authorized": false,
   "a0_authorized": false,
-  "o00_authorized": false
+  "o00_authorized": false,
+  "qualification_first_base": null
 }
