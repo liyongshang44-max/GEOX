@@ -143,6 +143,11 @@ jobs:
               echo "MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:${base}" >&2
               exit 1
             fi
+            stage="SUCCESSOR_SUBJECT_PRE_MERGE"
+            if [ "$base" = "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ]; then
+              stage="POST_MERGE_V13_QUALIFICATION"
+            fi
+            echo "MCFT_CAP09_PR_STAGE=$stage" >> "$GITHUB_ENV"
           fi
           test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
           test -z "${FORMAL_RAW_S3_ACCESS_KEY_ID:-}"
@@ -416,7 +421,7 @@ jobs:
           --base '${{ github.event.pull_request.base.sha }}'
           --head '${{ github.event.pull_request.head.sha }}'
           --generation v13
-          --stage SUCCESSOR_SUBJECT_PRE_MERGE
+          --stage "$MCFT_CAP09_PR_STAGE"
           --out acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json
 
       - name: Enumerate all blockers without fail-fast
@@ -426,7 +431,7 @@ jobs:
           --base '${{ github.event.pull_request.base.sha }}'
           --head '${{ github.event.pull_request.head.sha }}'
           --generation v13
-          --stage SUCCESSOR_SUBJECT_PRE_MERGE
+          --stage "$MCFT_CAP09_PR_STAGE"
           --out acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json
 
       - name: Validate control-plane machine proof
@@ -434,6 +439,7 @@ jobs:
         shell: node {0}
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA: ${{ env.POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA }}
         run: |
           const fs = require('node:fs');
           const proof = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json','utf8'));
@@ -449,6 +455,10 @@ jobs:
           const governedBases = new Set(registry.requalification_evidence?.durable_anchors?.rules?.governed_successor_predecessors || []);
           if (plan.base_sha !== process.env.PR_BASE_SHA) throw new Error(`CONTROL_PLANE_PLAN_BASE_MUST_EQUAL_PR_BASE:${plan.base_sha}:${process.env.PR_BASE_SHA}`);
           if (!governedBases.has(plan.base_sha)) throw new Error(`CONTROL_PLANE_PLAN_BASE_NOT_GOVERNED:${plan.base_sha}`);
+          const expectedStage = process.env.PR_BASE_SHA === process.env.POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA
+            ? 'POST_MERGE_V13_QUALIFICATION'
+            : 'SUCCESSOR_SUBJECT_PRE_MERGE';
+          if (plan.stage !== expectedStage || preflight.stage !== expectedStage) throw new Error(`CONTROL_PLANE_STAGE_ROUTE_MISMATCH:${plan.stage}:${preflight.stage}:${expectedStage}`);
           const control = plan.decisions.find(x => x.check_id === 'CONTROL_PLANE_INTEGRITY');
           if (!control || control.status !== 'REQUALIFY') throw new Error('CONTROL_PLANE_SELF_CHANGE_MUST_REQUALIFY');
           const phase7Adapter = 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts';
