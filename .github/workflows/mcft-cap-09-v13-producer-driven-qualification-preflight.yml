@@ -77,18 +77,45 @@ jobs:
             'FORMAL_V5_URL='+target(process.env.FORMAL_V5_DB)+'\n'
           );
 
-      - name: Require exact fresh zero-state store inventory
+      - name: Require safe qualification-store inventory and untouched Formal-v5
         shell: bash
         run: |
           set -euo pipefail
-          for pair in "$V13_DB|$V13_URL" "$BLOCKED_V13_DB|$BLOCKED_V13_URL" "$FORMAL_V5_DB|$FORMAL_V5_URL"; do
-            name="${pair%%|*}"; url="${pair#*|}"
-            counts="$(psql "$url" -AtF '|' -v ON_ERROR_STOP=1 -c "
-              SELECT
-                (SELECT count(*)::int FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m','S','f')),
-                (SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public')")"
-            test "$counts" = "0|0" || { echo "V13_QUALIFICATION_STORE_NOT_ZERO_STATE:$name:$counts" >&2; exit 1; }
-          done
+          inspect_qualification_store() {
+            name="$1"; url="$2"; prefix="$3"
+            tables="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'")"
+            functions="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'")"
+            if [ "$tables" = "0" ]; then
+              test "$functions" = "0" || { echo "V13_QUALIFICATION_EMPTY_STORE_FUNCTION_DRIFT:$name:$functions" >&2; exit 1; }
+            elif [ "$tables" = "29" ]; then
+              test "$functions" = "0" || test "$functions" = "1" || { echo "V13_QUALIFICATION_FUNCTION_CARDINALITY_UNSAFE:$name:$functions" >&2; exit 1; }
+              delta="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "
+                SELECT string_agg(table_name,',' ORDER BY table_name)
+                  FROM information_schema.tables
+                 WHERE table_schema='public' AND table_name LIKE 'twin_external_formal_forcing_%_v1'")"
+              test "$delta" = "twin_external_formal_forcing_base_cursor_v1,twin_external_formal_forcing_base_target_v1,twin_external_formal_forcing_controller_lease_v1" || {
+                echo "V13_QUALIFICATION_FORCING_RELATION_SET_MISMATCH:$name:$delta" >&2; exit 1;
+              }
+              if [ "$functions" = "1" ]; then
+                fn="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT proname FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'")"
+                test "$fn" = "mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1" || { echo "V13_QUALIFICATION_FUNCTION_SET_MISMATCH:$name:$fn" >&2; exit 1; }
+              fi
+            else
+              echo "V13_QUALIFICATION_STORE_TABLE_CARDINALITY_UNSAFE:$name:$tables" >&2; exit 1
+            fi
+            {
+              echo "${prefix}_TABLE_COUNT=$tables"
+              echo "${prefix}_FUNCTION_COUNT=$functions"
+            } >> "$GITHUB_ENV"
+          }
+          inspect_qualification_store "$V13_DB" "$V13_URL" V13_STORE
+          inspect_qualification_store "$BLOCKED_V13_DB" "$BLOCKED_V13_URL" BLOCKED_V13_STORE
+
+          formal_counts="$(psql "$FORMAL_V5_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT
+              (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'),
+              (SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public')")"
+          test "$formal_counts" = "0|0" || { echo "FORMAL_V5_MUTATION_FORBIDDEN:$formal_counts" >&2; exit 1; }
 
       - name: Inspect pre-activation Evidence role topology without mutation
         shell: bash
@@ -97,7 +124,7 @@ jobs:
           roles="$(psql "$SEED_DATABASE_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
             SELECT rolname,rolcanlogin::text,rolinherit::text,rolsuper::text,rolcreatedb::text,rolcreaterole::text
               FROM pg_catalog.pg_roles
-             WHERE rolname IN ('geox_mcft_cap09_evidence_runtime_v1','geox_mcft_cap09_evidence_runtime_login_v1')
+             WHERE rolname IN ('geox_mcft_cap09_evidence_runtime_v1','geox_mcft_cap09_evidence_runtime_login_v1','geox_mcft_cap09_forcing_writer_owner_v1')
              ORDER BY rolname")"
           printf '%s\n' "$roles"
 
@@ -126,6 +153,19 @@ jobs:
             admin_can_establish_temp_membership=true
           else
             admin_can_establish_temp_membership=true
+          fi
+
+          if grep -q '^geox_mcft_cap09_forcing_writer_owner_v1|' <<<"$roles"; then
+            grep -Fx 'geox_mcft_cap09_forcing_writer_owner_v1|false|false|false|false|false' <<<"$roles"
+            writer_can_set="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT pg_catalog.pg_has_role(current_user,'geox_mcft_cap09_forcing_writer_owner_v1','SET')::text")"
+            writer_can_admin="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
+              SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members m
+                JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
+                JOIN pg_catalog.pg_roles member ON member.oid=m.member
+               WHERE granted.rolname='geox_mcft_cap09_forcing_writer_owner_v1'
+                 AND member.rolname=current_user
+                 AND m.admin_option)::text")"
+            test "$writer_can_set" = "true" || test "$writer_can_admin" = "true"
           fi
 
           if grep -q '^geox_mcft_cap09_evidence_runtime_login_v1|' <<<"$roles"; then
@@ -170,8 +210,10 @@ jobs:
             subject_sha:process.env.GITHUB_SHA,
             implementation_base_sha:'46367333d228a2b90a86ff6a33aebc334f3d73a2',
             protected_main_sha:'fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8',
-            v13_zero_state:true,
-            blocked_v13_zero_state:true,
+            v13_zero_state:process.env.V13_STORE_TABLE_COUNT==='0',
+            v13_exact_schema_initialized:process.env.V13_STORE_TABLE_COUNT==='29',
+            blocked_v13_zero_state:process.env.BLOCKED_V13_STORE_TABLE_COUNT==='0',
+            blocked_v13_exact_schema_initialized:process.env.BLOCKED_V13_STORE_TABLE_COUNT==='29',
             formal_v5_zero_state:true,
             evidence_privilege_role_present:process.env.EVIDENCE_PRIVILEGE_PRESENT==='true',
             evidence_login_present:process.env.EVIDENCE_LOGIN_PRESENT==='true',
