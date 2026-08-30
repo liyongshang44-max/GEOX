@@ -1,0 +1,70 @@
+{
+  "schema_version": "b09r_decision_eligibility_policy_authority_enforcement_v1",
+  "phase": "B-09r",
+  "status": "AUTHORIZED_ENFORCEMENT_IMPLEMENTED_NO_POLICY_INSTANCE",
+  "governance_decision_id": "DEC-BLINE-ELIGIBILITY-POLICY-PRINCIPAL-001",
+  "authorization_state": "AUTHORIZED_BY_PRODUCT_GOVERNANCE",
+  "stacked_base_product_head": "8526be4611290484ccaa8550969a013b408ff557",
+  "dedicated_scope": {
+    "scope": "decision.eligibility.policy.declare",
+    "semantics": "MAY_AUTHOR_A_DECISION_ELIGIBILITY_POLICY_DECLARATION_ONLY",
+    "does_not_imply": [
+      "POLICY_CONTENT_DEFAULTS",
+      "DECISION_ELIGIBILITY_VERDICT",
+      "APPROVAL_AUTHORITY",
+      "EXECUTION_AUTHORITY",
+      "SERVICE_PRINCIPAL_AUTHORSHIP"
+    ]
+  },
+  "human_principal_authority": {
+    "allowed_roles": [
+      "agronomist"
+    ],
+    "denied_by_product_policy": [
+      "admin",
+      "approver",
+      "operator",
+      "executor",
+      "auditor",
+      "support",
+      "viewer",
+      "client"
+    ]
+  },
+  "enforcement_topology": {
+    "authentication_and_scope_context": "requireAoActAuthV0",
+    "explicit_capability_check": "auth.scopes includes decision.eligibility.policy.declare",
+    "centralized_principal_predicate": "isDecisionEligibilityPolicyDeclarationHumanAuthorRoleV1",
+    "centralized_authority_helper": "requireDecisionEligibilityPolicyDeclarationAuthorityV1",
+    "shared_role_matrix_dependency": false,
+    "shared_role_matrix_mutated": false,
+    "fail_closed_errors": [
+      "AUTH_SCOPE_DENIED",
+      "AUTH_POLICY_PRINCIPAL_DENIED"
+    ]
+  },
+  "mcft_boundary_adjudication": {
+    "discovered_during_candidate_qualification_run": 33289032771,
+    "failed_step": "Run lifecycle-aware S5 acceptance",
+    "machine_result": "SUCCESSOR_WRAPPER_MODE_NOT_APPLICABLE",
+    "typecheck_and_build_before_failure": "SUCCESS",
+    "cause_class": "SHARED_ROLES_TS_IS_MCFT_CAP07_LIFECYCLE_SENSITIVE_DIFF_SURFACE",
+    "bline_response": "REMOVE_ROLES_TS_MUTATION_AND_DO_NOT_MODIFY_MCFT_WORKFLOW"
+  },
+  "service_principal_boundary": {
+    "policy_authorship_authorized": false,
+    "execution_of_pre_authorized_immutable_declaration": "AUTHORIZED_IN_PRINCIPLE_NOT_IMPLEMENTED"
+  },
+  "intentionally_not_implemented": {
+    "route": false,
+    "append_only_writer": false,
+    "policy_instance": false,
+    "policy_ref": false,
+    "required_criteria": false,
+    "applicable_action_types": false,
+    "b07e_runtime_connection": false,
+    "consumer_migration": false,
+    "authority_removal": false,
+    "g_b02_32_registered_paths": 0
+  }
+}

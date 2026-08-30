@@ -55,6 +55,7 @@ export type AoActScopeV0 =
   | "field.zone.read"
   | "security.audit.read"
   | "security.admin"
+  | "decision.eligibility.policy.declare"
   | "skill.read"
   | "skill.binding.write"
   | "skill.definition.write"
@@ -325,6 +326,41 @@ export function requireAoActScopeV0(
   }
 
   return authContextFromRecord(rec);
+}
+
+
+export const DECISION_ELIGIBILITY_POLICY_DECLARATION_SCOPE_V1: AoActScopeV0 =
+  "decision.eligibility.policy.declare";
+
+export const DECISION_ELIGIBILITY_POLICY_DECLARATION_HUMAN_ROLES_V1 = [
+  "agronomist",
+] as const satisfies readonly AoActRoleV0[];
+
+export function isDecisionEligibilityPolicyDeclarationHumanAuthorRoleV1(
+  role: AoActRoleV0
+): boolean {
+  return (DECISION_ELIGIBILITY_POLICY_DECLARATION_HUMAN_ROLES_V1 as readonly AoActRoleV0[]).includes(role);
+}
+
+export function requireDecisionEligibilityPolicyDeclarationAuthorityV1(
+  req: FastifyRequest,
+  reply: FastifyReply,
+  opts: { tokenFilePath?: string } = {}
+): AoActAuthContextV0 | null {
+  const auth = requireAoActAuthV0(req, reply, opts);
+  if (!auth) return null;
+
+  if (!auth.scopes.includes(DECISION_ELIGIBILITY_POLICY_DECLARATION_SCOPE_V1)) {
+    reply.status(403).send({ ok: false, error: "AUTH_SCOPE_DENIED" });
+    return null;
+  }
+
+  if (!isDecisionEligibilityPolicyDeclarationHumanAuthorRoleV1(auth.role)) {
+    reply.status(403).send({ ok: false, error: "AUTH_POLICY_PRINCIPAL_DENIED" });
+    return null;
+  }
+
+  return auth;
 }
 
 
