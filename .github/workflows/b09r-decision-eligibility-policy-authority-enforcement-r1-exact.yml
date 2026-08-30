@@ -1,0 +1,67 @@
+name: b09r-decision-eligibility-policy-authority-enforcement-r1-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b09r-decision-eligibility-policy-authority-enforcement-r1-exact-2026-08-30
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prove literal revised B-09r product head
+        run: |
+          git checkout 65ac424bc663c8c8ec2f148c10bc7f2193eae255
+          test "$(git rev-parse HEAD)" = "65ac424bc663c8c8ec2f148c10bc7f2193eae255"
+          test "$(git rev-parse HEAD^)" = "8526be4611290484ccaa8550969a013b408ff557"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+      - name: B-09r governance acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09R_DECISION_ELIGIBILITY_POLICY_AUTHORITY_ENFORCEMENT_V1.cjs
+      - name: B-09r authz contract
+        run: node --import tsx --test apps/server/src/auth/decision_eligibility_policy_declaration_authz_v1.contract.test.ts
+      - name: B-09m declaration contract regression
+        run: node --import tsx --test apps/server/src/contracts/decision_eligibility_policy_declaration_v1.contract.test.ts
+      - name: B-07d evaluator regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+      - name: B-07e runtime regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+      - name: Prove shared role matrix and MCFT-sensitive surfaces byte-identical
+        run: |
+          git diff --exit-code 8526be4611290484ccaa8550969a013b408ff557 65ac424bc663c8c8ec2f148c10bc7f2193eae255 --             apps/server/src/domain/auth/roles.ts             apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts             apps/server/src/modules/field/registerFieldModule.ts             apps/server/src/routes/field_runtime_scope_options_v1.ts             scripts/frontend_acceptance/ACCEPTANCE_MCFT_CAP_07_S5_OPERATOR_INTEGRATION.cjs             .github/workflows/mcft-cap-07-s5-operator-integration.yml
+          echo "B09R_MCFT_CAP07_SENSITIVE_SURFACES_UNCHANGED_PASS"
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only 8526be4611290484ccaa8550969a013b408ff557 65ac424bc663c8c8ec2f148c10bc7f2193eae255 > /tmp/b09r-files.txt
+          cat /tmp/b09r-files.txt
+          test "$(wc -l < /tmp/b09r-files.txt | tr -d ' ')" = "6"
+          git diff --check 8526be4611290484ccaa8550969a013b408ff557 65ac424bc663c8c8ec2f148c10bc7f2193eae255
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+      - name: Server build
+        run: pnpm --filter @geox/server build
+      - name: Prove no validation mutation
+        run: |
+          test "$(git rev-parse HEAD)" = "65ac424bc663c8c8ec2f148c10bc7f2193eae255"
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - name: Marker
+        run: |
+          echo "B09R_REVISED_EXACT_HEAD 65ac424bc663c8c8ec2f148c10bc7f2193eae255"
+          echo "B09R_REVISED_POLICY_AUTHORITY_ENFORCEMENT_PASS"
