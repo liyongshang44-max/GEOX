@@ -173,10 +173,31 @@ jobs:
             END IF;
           END
           $role$;
-          ALTER ROLE geox_mcft_cap09_evidence_runtime_v1
-            NOLOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
-          GRANT geox_mcft_cap09_evidence_runtime_v1 TO CURRENT_USER;
           SQL
+          role_state="$(psql "$SEED_DATABASE_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT rolcanlogin::text,rolinherit::text,rolsuper::text,rolcreatedb::text,rolcreaterole::text,rolreplication::text,rolbypassrls::text
+              FROM pg_catalog.pg_roles
+             WHERE rolname='$EVIDENCE_ROLE'")"
+          test "$role_state" = "false|true|false|false|false|false|false" || {
+            echo "V13_LIVE_EVIDENCE_PRIVILEGE_ROLE_UNSAFE:$role_state" >&2; exit 1;
+          }
+          can_admin="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
+            SELECT EXISTS (
+              SELECT 1
+                FROM pg_catalog.pg_auth_members m
+                JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
+                JOIN pg_catalog.pg_roles member ON member.oid=m.member
+               WHERE granted.rolname='$EVIDENCE_ROLE'
+                 AND member.rolname=current_user
+                 AND m.admin_option
+            )::text")"
+          can_set_before="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT pg_catalog.pg_has_role(current_user,'$EVIDENCE_ROLE','SET')::text")"
+          test "$can_admin" = "true" || test "$can_set_before" = "true" || {
+            echo "V13_LIVE_EVIDENCE_TEMP_MEMBERSHIP_CANNOT_BE_ESTABLISHED" >&2; exit 1;
+          }
+          psql "$SEED_DATABASE_URL" -v ON_ERROR_STOP=1 -c "GRANT $EVIDENCE_ROLE TO CURRENT_USER"
+          can_set_after="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT pg_catalog.pg_has_role(current_user,'$EVIDENCE_ROLE','SET')::text")"
+          test "$can_set_after" = "true" || { echo "V13_LIVE_EVIDENCE_TEMP_MEMBERSHIP_NOT_EFFECTIVE" >&2; exit 1; }
           login_count="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT count(*)::int FROM pg_catalog.pg_roles WHERE rolname='$EVIDENCE_LOGIN_ROLE'")"
           test "$login_count" = "0" || { echo "V13_LIVE_PRODUCTION_LOGIN_MUST_NOT_EXIST:$login_count" >&2; exit 1; }
 
@@ -294,10 +315,20 @@ jobs:
           END
           $cleanup$;
           SQL
-          membership="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
+          can_set="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
+            SELECT CASE
+              WHEN EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='$EVIDENCE_ROLE')
+              THEN pg_catalog.pg_has_role(current_user,'$EVIDENCE_ROLE','SET')::text
+              ELSE 'false'
+            END")"
+          test "$can_set" = "false" || { echo "V13_LIVE_TEMP_EVIDENCE_SET_MEMBERSHIP_LEAK:$can_set" >&2; exit 1; }
+          self_grants="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
             SELECT count(*)::int
               FROM pg_catalog.pg_auth_members m
               JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
               JOIN pg_catalog.pg_roles member ON member.oid=m.member
-             WHERE granted.rolname='$EVIDENCE_ROLE' AND member.rolname=current_user")"
-          test "$membership" = "0"
+              JOIN pg_catalog.pg_roles grantor ON grantor.oid=m.grantor
+             WHERE granted.rolname='$EVIDENCE_ROLE'
+               AND member.rolname=current_user
+               AND grantor.rolname=current_user")"
+          test "$self_grants" = "0" || { echo "V13_LIVE_TEMP_EVIDENCE_SELF_GRANT_LEAK:$self_grants" >&2; exit 1; }

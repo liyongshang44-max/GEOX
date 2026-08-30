@@ -104,14 +104,28 @@ jobs:
           privilege_present=false
           login_present=false
           login_membership=false
+          admin_can_assume=false
+          admin_can_establish_temp_membership=false
 
           if grep -q '^geox_mcft_cap09_evidence_runtime_v1|' <<<"$roles"; then
             privilege_present=true
             grep -Fx 'geox_mcft_cap09_evidence_runtime_v1|false|true|false|false|false' <<<"$roles"
-            assumed="$(psql "$SEED_DATABASE_URL" -qAt -v ON_ERROR_STOP=1 -c "
-              SET ROLE geox_mcft_cap09_evidence_runtime_v1;
-              SELECT current_user::text;" | tail -n 1)"
-            test "$assumed" = "geox_mcft_cap09_evidence_runtime_v1"
+            can_set="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT pg_catalog.pg_has_role(current_user,'geox_mcft_cap09_evidence_runtime_v1','SET')::text")"
+            can_admin="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
+              SELECT EXISTS (
+                SELECT 1
+                  FROM pg_catalog.pg_auth_members m
+                  JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
+                  JOIN pg_catalog.pg_roles member ON member.oid=m.member
+                 WHERE granted.rolname='geox_mcft_cap09_evidence_runtime_v1'
+                   AND member.rolname=current_user
+                   AND m.admin_option
+              )::text")"
+            if [ "$can_set" = "true" ]; then admin_can_assume=true; fi
+            test "$can_set" = "true" || test "$can_admin" = "true"
+            admin_can_establish_temp_membership=true
+          else
+            admin_can_establish_temp_membership=true
           fi
 
           if grep -q '^geox_mcft_cap09_evidence_runtime_login_v1|' <<<"$roles"; then
@@ -132,6 +146,8 @@ jobs:
             echo "EVIDENCE_PRIVILEGE_PRESENT=$privilege_present"
             echo "EVIDENCE_LOGIN_PRESENT=$login_present"
             echo "EVIDENCE_LOGIN_MEMBERSHIP=$login_membership"
+            echo "EVIDENCE_ADMIN_CAN_ASSUME=$admin_can_assume"
+            echo "EVIDENCE_ADMIN_CAN_ESTABLISH_TEMP_MEMBERSHIP=$admin_can_establish_temp_membership"
           } >> "$GITHUB_ENV"
 
       - name: Require exact private raw-store credential surface
@@ -162,7 +178,8 @@ jobs:
             evidence_login_exact_membership:process.env.EVIDENCE_LOGIN_MEMBERSHIP==='true',
             evidence_runtime_database_url_secret_present:Boolean(process.env.EVIDENCE_RUNTIME_DATABASE_URL_SECRET),
             evidence_runtime_password_secret_present:Boolean(process.env.EVIDENCE_RUNTIME_PASSWORD_SECRET),
-            admin_can_assume_evidence_privilege_role_for_qualification:true,
+            admin_can_assume_evidence_privilege_role_for_qualification:process.env.EVIDENCE_ADMIN_CAN_ASSUME==='true',
+            admin_can_establish_temporary_evidence_membership_for_qualification:process.env.EVIDENCE_ADMIN_CAN_ESTABLISH_TEMP_MEMBERSHIP==='true',
             private_raw_bucket_exact:true,
             remote_mutation_count:0,
             provider_request_count:0,
