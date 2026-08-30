@@ -67,7 +67,10 @@ jobs:
           if(a.implementation_base_sha!==process.env.IMPLEMENTATION_BASE_SHA)throw new Error('V13_LIVE_ARM_BASE_MISMATCH');
           if(a.exact_branch!=='feat/mcft-cap09-v13-producer-driven-qualification-v1')throw new Error('V13_LIVE_ARM_BRANCH_MISMATCH');
           if(a.formal_v5_arm_authorized!==false||a.production_owner_activation_authorized!==false||a.a0_authorized!==false||a.o00_authorized!==false)throw new Error('V13_LIVE_ARM_LATER_STAGE_EFFECT_FORBIDDEN');
+          if(typeof a.qualification_first_base!=='string'||!/:00:00\.000Z$/.test(a.qualification_first_base)||new Date(a.qualification_first_base).toISOString()!==a.qualification_first_base)throw new Error('V13_LIVE_ARM_FIRST_BASE_CANONICAL_HOUR_REQUIRED');
+          if(Date.parse(a.qualification_first_base)<=Date.now()+6*60*60*1000)throw new Error('V13_LIVE_ARM_FIRST_BASE_MUST_LEAD_BY_MORE_THAN_6H');
           fs.appendFileSync(process.env.GITHUB_OUTPUT,'armed=true\n');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'qualification_first_base='+a.qualification_first_base+'\n');
 
       - name: Require exact frozen subject and authority
         if: steps.arm.outputs.armed == 'true'
@@ -231,6 +234,7 @@ jobs:
         env:
           MCFT_CAP09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION: '1'
           MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+          MCFT_QUALIFICATION_FIRST_BASE: ${{ steps.arm.outputs.qualification_first_base }}
           DATABASE_URL: ${{ env.V13_EVIDENCE_URL }}
           BLOCKED_DATABASE_URL: ${{ env.BLOCKED_EVIDENCE_URL }}
           MCFT_CAP09_FORMAL_RAW_ENDPOINT: ${{ env.S3_ENDPOINT }}
