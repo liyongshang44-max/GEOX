@@ -1592,6 +1592,25 @@
           "runtime_edge": "PROVEN",
           "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
           "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "decision-eligibility-policy-selector-v1",
+          "path": "apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.ts",
+          "role": "B-09v canonical fail-closed as-of selector over authorized immutable DecisionEligibilityPolicyDeclarationV1 facts; returns policy-selection state only and does not emit DecisionEligibilityDecisionV1",
+          "authority_level": "POLICY_SELECTION_ONLY_CANONICAL_PRODUCER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "selectDecisionEligibilityPolicyFromFactsV1",
+            "readAndSelectDecisionEligibilityPolicyV1",
+            "POLICY_SUPERSESSION_AMBIGUOUS"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
         }
       ],
       "registered_consumers": [
@@ -1629,6 +1648,15 @@
           "current": true,
           "connection_class": "ROUTE_ISLAND",
           "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "decision-eligibility-policy-selector-v1",
+          "path": "apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.ts",
+          "role": "B-09v reads exact-scope/PROGRAM-anchor append-only policy declarations as-of CandidateDecision.decision_time; no B-07e caller is connected",
+          "current": true,
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
           "runtime_edge": "PROVEN"
         }
       ],
@@ -1688,7 +1716,11 @@
         "B-09u converts the B-09t selector blockers into a proposed, machine-readable product-governance decision package. It remains RECOMMENDED_NOT_AUTHORIZED and creates no selector runtime.",
         "B-09u recommends ContextSnapshot DECLARED_FIELD_PROGRAM as the v1 canonical Program anchor; exact nullable scope equality with no wildcard/specificity ranking; non-null Candidate.decision_time as the sole selection boundary; fail-closed on multiple applicable policies; and explicit append-only supersession semantics with a half-open effective window.",
         "B-09u recommends causal policy selection require both declaration declared_at and persisted fact occurred_at to be at-or-before Candidate.decision_time, preventing retrospective policy availability.",
-        "B-09u preserves separation of policy selection from policy contents: no policy_id/version/ref, applicable_action_types, required_criteria, or real declaration instance is selected or created."
+        "B-09u preserves separation of policy selection from policy contents: no policy_id/version/ref, applicable_action_types, required_criteria, or real declaration instance is selected or created.",
+        "DEC-BLINE-ELIGIBILITY-POLICY-SELECTOR-001 is explicitly authorized for selector/read-model implementation only; real product policy contents and B-07e connection remain separately gated.",
+        "B-09v implements exact ContextSnapshot DECLARED_FIELD_PROGRAM Program anchoring, exact nullable scope equality, Candidate decision_time causal as-of selection, half-open effective windows, and fail-closed 0/1/>1 cardinality.",
+        "B-09v validates same-policy/same-scope/same-anchor append-only supersession with predecessor existence/knowledge, acyclic chain and ambiguous-successor rejection; no latest/version precedence exists.",
+        "B-09v does not modify the current B-09j Candidate projection; context_snapshot_ref=null and decision_time=null therefore continue to fail closed rather than being repaired by legacy program_id or wall clock."
       ],
       "runtime_consumers": [
         {
@@ -1717,6 +1749,15 @@
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN",
           "evidence_edge_id": "C-045"
+        },
+        {
+          "consumer_id": "decision-eligibility-policy-selector-v1",
+          "path": "apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.ts",
+          "producer_id": "decision-eligibility-policy-declaration-writer-v1",
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-046"
         }
       ]
     },
@@ -3389,6 +3430,30 @@
         "apps/server/src/domain/decision/decision_eligibility_policy_declaration_fact_v1.ts"
       ],
       "failure": "UNREGISTERED_DECISION_ELIGIBILITY_POLICY_DECLARATION_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-33-decision-eligibility-policy-selector-runtime-consumer",
+      "semantic_id": "decision.eligibility",
+      "description": "B-09v permits the canonical policy selector definition only; any external route/B-07e/other call site must be explicitly authorized and registered later.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "readAndSelectDecisionEligibilityPolicyV1("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.ts"
+      ],
+      "failure": "UNREGISTERED_DECISION_ELIGIBILITY_POLICY_SELECTOR_RUNTIME_CONSUMER"
     }
   ],
   "connectivity_model": {
