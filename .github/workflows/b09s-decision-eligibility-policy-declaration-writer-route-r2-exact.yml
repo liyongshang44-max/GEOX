@@ -1,0 +1,91 @@
+name: b09s-decision-eligibility-policy-declaration-writer-route-r2-exact
+
+on:
+  push:
+    branches:
+      - ci/bline-b09s-decision-eligibility-policy-declaration-writer-route-r2-exact-2026-08-30
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal revised B-09s r2 product head
+        run: |
+          git checkout 3eadd13966ae7797852b3dc9e8d1535a093e6852
+          test "$(git rev-parse HEAD)" = "3eadd13966ae7797852b3dc9e8d1535a093e6852"
+          test "$(git rev-parse HEAD^)" = "65ac424bc663c8c8ec2f148c10bc7f2193eae255"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09s governance acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09S_DECISION_ELIGIBILITY_POLICY_DECLARATION_WRITER_ROUTE_V1.cjs
+
+      - name: B-09s writer contract
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_policy_declaration_fact_v1.contract.test.ts
+
+      - name: B-09s route contract
+        run: node --import tsx --test apps/server/src/routes/decision_eligibility_policy_declarations_v1.contract.test.ts
+
+      - name: B-09r authority regression
+        run: node --import tsx --test apps/server/src/auth/decision_eligibility_policy_declaration_authz_v1.contract.test.ts
+
+      - name: B-09m declaration contract regression
+        run: node --import tsx --test apps/server/src/contracts/decision_eligibility_policy_declaration_v1.contract.test.ts
+
+      - name: B-07d evaluator regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+
+      - name: B-07e runtime regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only 65ac424bc663c8c8ec2f148c10bc7f2193eae255 3eadd13966ae7797852b3dc9e8d1535a093e6852 > /tmp/b09s-files.txt
+          cat /tmp/b09s-files.txt
+          test "$(wc -l < /tmp/b09s-files.txt | tr -d ' ')" = "10"
+          git diff --check 65ac424bc663c8c8ec2f148c10bc7f2193eae255 3eadd13966ae7797852b3dc9e8d1535a093e6852
+
+      - name: Prove MCFT and frozen authority surfaces unchanged
+        run: |
+          git diff --exit-code 65ac424bc663c8c8ec2f148c10bc7f2193eae255 3eadd13966ae7797852b3dc9e8d1535a093e6852 --             apps/server/src/domain/auth/roles.ts             apps/server/src/auth/ao_act_authz_v0.ts             apps/server/src/contracts/decision_eligibility_policy_declaration_v1.ts             apps/server/src/domain/decision/decision_eligibility_evaluator_v1.ts             apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts             apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts             apps/server/src/modules/field/registerFieldModule.ts             apps/server/src/routes/field_runtime_scope_options_v1.ts             scripts/frontend_acceptance/ACCEPTANCE_MCFT_CAP_07_S5_OPERATOR_INTEGRATION.cjs             .github/workflows/mcft-cap-07-s5-operator-integration.yml             apps/server/src/persistence/twin_runtime             apps/server/src/runtime/twin_runtime             apps/server/src/external_evidence             config/auth             docs/twin_kernel             docs/digital_twin             docker-compose.commercial_v1.yml
+          echo "B09S_MCFT_AND_FROZEN_AUTHORITY_SURFACES_UNCHANGED_PASS"
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Prove validation did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "3eadd13966ae7797852b3dc9e8d1535a093e6852"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09S_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Marker
+        run: |
+          echo "B09S_R2_EXACT_HEAD 3eadd13966ae7797852b3dc9e8d1535a093e6852"
+          echo "B09S_R2_POLICY_DECLARATION_WRITER_ROUTE_PASS"
