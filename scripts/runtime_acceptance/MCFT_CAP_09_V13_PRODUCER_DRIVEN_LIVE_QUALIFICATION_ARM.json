@@ -1,0 +1,11 @@
+{
+  "schema_version": "geox_mcft_cap09_v13_producer_driven_live_qualification_arm_v1",
+  "armed": false,
+  "activation_step": "RUN_PRODUCER_DRIVEN_V13_QUALIFICATION",
+  "implementation_base_sha": "46367333d228a2b90a86ff6a33aebc334f3d73a2",
+  "exact_branch": "feat/mcft-cap09-v13-producer-driven-qualification-v1",
+  "production_owner_activation_authorized": false,
+  "formal_v5_arm_authorized": false,
+  "a0_authorized": false,
+  "o00_authorized": false
+}
