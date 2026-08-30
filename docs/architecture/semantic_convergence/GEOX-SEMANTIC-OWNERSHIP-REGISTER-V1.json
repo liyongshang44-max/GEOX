@@ -1680,7 +1680,11 @@
         "B-09s activates the first governed production DecisionEligibilityPolicyDeclarationV1 instantiation path: authorized agronomist API -> centralized B-09r authority gate -> append-only facts writer.",
         "B-09s keeps policy contents caller-supplied and creates no repository/config policy instance or defaults. The writer derives declaration_id, policy_ref, declaration_source_type/ref, declared_at and POLICY_DECLARATION_ONLY authority so callers cannot forge provenance or authority state.",
         "B-09s enforces one global immutable policy_ref -> one declaration intent using a transaction-scoped PostgreSQL advisory lock and LIMIT 2 historical lookup. Same intent is idempotent; changed content is POLICY_REF_CONFLICT; multiple historical rows are POLICY_REF_AMBIGUOUS; latest-wins is forbidden.",
-        "B-09s preserves B-07e disconnection. No policy selection/as-of reader, eligibility evaluation, approval, execution, consumer migration or historical authority removal is introduced."
+        "B-09s preserves B-07e disconnection. No policy selection/as-of reader, eligibility evaluation, approval, execution, consumer migration or historical authority removal is introduced.",
+        "B-09t selection-readiness audit finds CandidateDecisionV1 carries canonical EvidenceScopeV1 but no policy scope anchor/program_id; therefore FieldProgram/program selection cannot be inferred from candidate field/season alone.",
+        "B-09t records that legacy decision_recommendation_v1 may carry program_id, but B-06c/B-09j do not promote that value into canonical CandidateDecision authority. Rehydrating legacy program_id may be shadow provenance only, not authoritative policy selection.",
+        "B-09t identifies canonical ContextSnapshot as the intended future bridge for a Program/equivalent anchor: B-05b DECLARED_FIELD_PROGRAM carries program_id, but the current B-09j candidate has context_snapshot_ref=null, so the bridge is not yet bound.",
+        "B-09t forbids implicit selector precedence before authorization: no latest-version wins, no newest-declaration wins, no field/season specificity ranking, no null-as-wildcard, no supersession override, and no evaluated_at fallback when candidate decision_time is absent."
       ],
       "runtime_consumers": [
         {
