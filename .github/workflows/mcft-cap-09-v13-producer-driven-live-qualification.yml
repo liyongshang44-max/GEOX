@@ -130,8 +130,11 @@ jobs:
           function target(name,asEvidence=false){
             const u=new URL(raw);
             u.pathname='/'+name;
-            if(asEvidence)u.searchParams.set('options','-c role='+process.env.EVIDENCE_ROLE);
-            const v=u.toString();
+            let v=u.toString();
+            if(asEvidence){
+              const separator=u.search?'&':'?';
+              v+=separator+'options='+encodeURIComponent('-c role='+process.env.EVIDENCE_ROLE);
+            }
             console.log('::add-mask::'+v);
             return v;
           }
