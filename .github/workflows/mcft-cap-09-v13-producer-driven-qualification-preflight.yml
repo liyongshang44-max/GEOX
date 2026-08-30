@@ -90,7 +90,7 @@ jobs:
             test "$counts" = "0|0" || { echo "V13_QUALIFICATION_STORE_NOT_ZERO_STATE:$name:$counts" >&2; exit 1; }
           done
 
-      - name: Inspect Evidence role topology without mutation
+      - name: Inspect pre-activation Evidence role topology without mutation
         shell: bash
         run: |
           set -euo pipefail
@@ -100,9 +100,20 @@ jobs:
              WHERE rolname IN ('geox_mcft_cap09_evidence_runtime_v1','geox_mcft_cap09_evidence_runtime_login_v1')
              ORDER BY rolname")"
           printf '%s\n' "$roles"
-          grep -Fx 'geox_mcft_cap09_evidence_runtime_v1|false|true|false|false|false' <<<"$roles"
+
+          privilege_present=false
           login_present=false
           login_membership=false
+
+          if grep -q '^geox_mcft_cap09_evidence_runtime_v1|' <<<"$roles"; then
+            privilege_present=true
+            grep -Fx 'geox_mcft_cap09_evidence_runtime_v1|false|true|false|false|false' <<<"$roles"
+            assumed="$(psql "$SEED_DATABASE_URL" -qAt -v ON_ERROR_STOP=1 -c "
+              SET ROLE geox_mcft_cap09_evidence_runtime_v1;
+              SELECT current_user::text;" | tail -n 1)"
+            test "$assumed" = "geox_mcft_cap09_evidence_runtime_v1"
+          fi
+
           if grep -q '^geox_mcft_cap09_evidence_runtime_login_v1|' <<<"$roles"; then
             login_present=true
             grep -Fx 'geox_mcft_cap09_evidence_runtime_login_v1|true|true|false|false|false' <<<"$roles"
@@ -116,11 +127,9 @@ jobs:
             test "$membership" = "1"
             login_membership=true
           fi
-          assumed="$(psql "$SEED_DATABASE_URL" -qAt -v ON_ERROR_STOP=1 -c "
-            SET ROLE geox_mcft_cap09_evidence_runtime_v1;
-            SELECT current_user::text;" | tail -n 1)"
-          test "$assumed" = "geox_mcft_cap09_evidence_runtime_v1"
+
           {
+            echo "EVIDENCE_PRIVILEGE_PRESENT=$privilege_present"
             echo "EVIDENCE_LOGIN_PRESENT=$login_present"
             echo "EVIDENCE_LOGIN_MEMBERSHIP=$login_membership"
           } >> "$GITHUB_ENV"
@@ -148,7 +157,7 @@ jobs:
             v13_zero_state:true,
             blocked_v13_zero_state:true,
             formal_v5_zero_state:true,
-            evidence_privilege_role_present:true,
+            evidence_privilege_role_present:process.env.EVIDENCE_PRIVILEGE_PRESENT==='true',
             evidence_login_present:process.env.EVIDENCE_LOGIN_PRESENT==='true',
             evidence_login_exact_membership:process.env.EVIDENCE_LOGIN_MEMBERSHIP==='true',
             evidence_runtime_database_url_secret_present:Boolean(process.env.EVIDENCE_RUNTIME_DATABASE_URL_SECRET),
