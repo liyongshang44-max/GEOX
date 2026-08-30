@@ -216,6 +216,10 @@ jobs:
           for url in "$V13_EVIDENCE_URL" "$BLOCKED_EVIDENCE_URL"; do
             role="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT current_user")"
             test "$role" = "$EVIDENCE_ROLE"
+            schema_usage="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_schema_privilege(current_user,'public','USAGE')::text")"
+            test "$schema_usage" = "true"
+            schema_create="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_schema_privilege(current_user,'public','CREATE')::text")"
+            test "$schema_create" = "false"
             insert_fact="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_table_privilege(current_user,'public.facts','INSERT')::text")"
             test "$insert_fact" = "false"
             execute_writer="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_function_privilege(current_user,'public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)','EXECUTE')::text")"
