@@ -1,3 +1,1919 @@
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-08-31 Continuation — Post-Merge V13 Producer-Driven Qualification / Fresh-Evidence Rebind / Pre-Arm Frontier
+
+Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
+
+Timestamp: **2026-08-31 00:57 +08:00**
+
+Repository: `liyongshang44-max/GEOX`
+
+Purpose: continue the same MCFT-CAP-09 frozen Production Hosting activation route after Phase 7 closure, post-merge V13 production composition, local implementation preflight, and fresh zero-state V13/blocked-V13/Formal-v5 provisioning. This continuation records the current #3376 producer-driven qualification implementation, the exact fresh requalification-evidence repair, the new exact-base post-merge stage router, the still-disabled live arm, the current machine requalification state, and the precise criteria that must hold before live step 4 may be armed.
+
+> **This G-section is now the highest-priority conversation continuation in this file.**
+>
+> The previous Phase 7 continuation beginning with F0 is intentionally preserved in full below as historical reasoning/evidence.
+>
+> The earlier Phase 6 / Phase 5 / Phase 4 / Phase 3 / Phase 2 continuations remain preserved below that.
+>
+> Do not delete or rewrite those historical sections. They explain why production ownership was retired, why private durable candidate state exists, why V13 fenced promotion was required, why failed Formal-v4 cannot be reused, and why immutable evidence must follow the final dependency graph rather than precede it.
+>
+> This handoff does **not** supersede `docs/SSOT.md`, the Digital Twin Master Task Line, the CAP-09 taskbook, accepted CAP-01→08 authority, the V3 Formal-store authority, immutable workflow evidence, the qualification control plane, or the frozen Production Hosting route.
+
+---
+
+## G0. READ THIS FIRST — the request snapshot was correct, and the live repository advanced again during handoff reconstruction
+
+The user supplied the following current-state snapshot:
+
+```text
+remote read-only preflight = SUCCESS
+live qualification         = armed=false; all database/provider mutation skipped
+qualification-control-plane = rerunning the new stage router
+central                     = blocker inventory
+CI                          = typecheck PASS; build/runs continuing
+Formal-v5 arm               = false
+production owner activation = false
+A0 / O00                    = false
+
+interpretation:
+normal machine requalification
+not a deadlock
+```
+
+That snapshot was correct when supplied.
+
+During this handoff reconstruction the repository advanced one more time.
+
+The authoritative current implementation frontier is now:
+
+```text
+Draft PR #3376
+feat(mcft-cap09): qualify producer-driven v13 supply graph
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+current head =
+  dd3b69ffab831356208dbce204af6a7b65cde6d0
+
+base PR / implementation predecessor =
+  #3367
+  feat(mcft-cap09): build post-merge v13 production composition
+  head = 46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+#3376 state =
+  Draft
+  open
+  mergeable = true
+  mergeable_state = unstable
+  commits = 31 from #3367 head
+  changed files = 16
+```
+
+Protected `main` is now:
+
+```text
+fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+```
+
+Do **not** reuse the older handoff statement that protected `main` is still `26c1383f...`.
+
+That was correct for the older Phase 7 continuation and is intentionally preserved below as history.
+
+At this continuation frontier:
+
+```text
+remote producer-driven qualification is NOT armed
+qualification_first_base = null
+production owner activation = false
+Formal-v5 arm = false
+A0 = not started
+O00 = not started
+```
+
+The live qualification workflow may show `SUCCESS` while unarmed.
+
+That does **not** mean producer-driven qualification has occurred.
+
+It means the arm resolver succeeded and every mutation step was skipped.
+
+---
+
+## G1. Current task in one sentence
+
+**Finish the exact-head machine requalification of #3376 after the fresh immutable-evidence rebind and exact-base post-merge stage-router repair; inspect the newly generated blocker list, and only if stale dependency-evidence blockers are gone and the remaining blockers are the true future obligations (step 4 live producer-driven qualification, step 5 timing budget, production-owner/graduation obligations) may the single live arm be changed from `armed=false` to `armed=true`, with Formal-v5, production owner, A0, and O00 still forbidden.**
+
+This is **not** a request to start Formal.
+
+This is **not** a request to freeze timing authority early.
+
+This is **not** a request to register old successful runs against a changed dependency graph.
+
+This is **not** a deadlock investigation.
+
+It is an exact-head machine requalification frontier.
+
+---
+
+## G2. Authority reconstruction order for the next engineer
+
+Read in this order:
+
+1. `docs/SSOT.md`
+2. `docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md`
+3. `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md`
+4. `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md`
+5. `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json`
+6. `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json`
+7. `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json`
+8. #3367 exact post-merge production-composition subject
+9. #3375 immutable provisioning proof / closed one-shot ops PR
+10. #3376 current exact head
+11. #3376 latest qualification-control-plane blocker artifact when it completes
+12. this G-section, newest continuation first
+
+Weekly/status notes are operational context only.
+
+They are not authority.
+
+---
+
+## G3. Repository / PR topology at handoff time
+
+### G3.1 Protected main
+
+```text
+protected main =
+  fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+```
+
+Do not move it as part of this handoff.
+
+### G3.2 #3367 — accepted implementation predecessor for current qualification stack
+
+```text
+#3367
+feat(mcft-cap09): build post-merge v13 production composition
+
+state = open / Draft / unmerged
+base  = fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+head  = 46367333d228a2b90a86ff6a33aebc334f3d73a2
+mergeable = true
+```
+
+#3376 is stacked directly on this exact head.
+
+### G3.3 #3375 — one-shot zero-state provisioning subject
+
+```text
+#3375
+ops(mcft-cap09): provision fresh v13 and Formal-v5 stores
+
+state = CLOSED
+merged = false
+base = 46367333d228a2b90a86ff6a33aebc334f3d73a2
+head = af49e6819624a2cd7129308dacde9f880f71b194
+```
+
+This PR was intentionally closed without merge after immutable provisioning proof was captured.
+
+Do not reopen it to run qualification.
+
+### G3.4 #3376 — current active engineering frontier
+
+```text
+#3376
+feat(mcft-cap09): qualify producer-driven v13 supply graph
+
+state = open / Draft / unmerged
+base = 46367333d228a2b90a86ff6a33aebc334f3d73a2
+head = dd3b69ffab831356208dbce204af6a7b65cde6d0
+mergeable = true
+```
+
+This is the branch to continue.
+
+Do not return to #3364 or old Phase 7 branches.
+
+### G3.5 Docs-only handoff PR
+
+The handoff remains isolated in:
+
+```text
+#3298
+docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier
+```
+
+Its base is intentionally historical and behind current `main`.
+
+Do not rebase it just to make the handoff update.
+
+The handoff PR is documentation-only and must remain isolated from #3367/#3376 runtime work.
+
+---
+
+## G4. Frozen V3 activation sequence — exact current position
+
+V3 authority defines:
+
+```text
+1  MERGE_EXACT_V13_SUCCESSOR_SUBJECT
+2  CAPACITY_PREFLIGHT_AND_SAFE_SUPERSEDED_GENERATION_CLEANUP_IF_REQUIRED
+3  PROVISION_ZERO_STATE_V13_BLOCKED_V13_AND_FORMAL_V5_STORES
+4  RUN_PRODUCER_DRIVEN_V13_QUALIFICATION
+5  FREEZE_EXACT_HEAD_END_TO_END_TIMING_BUDGET
+6  OPEN_NEW_MACHINE_ONLY_GRADUATION_GATE
+7  PROVE_EXACT_ONE_PRODUCTION_OWNER_AND_RETIRED_TRIGGER_ZERO
+8  ARM_FRESH_V5_EPOCH
+9  BOOTSTRAP_FRESH_A0
+10 RUN_REAL_WALL_CLOCK_O00_O23_WITH_ZERO_ROUTINE_MANUAL_RESCUE
+11 RUN_AUTOMATIC_FINAL_READBACK
+12 FINAL_READ_ONLY_COMPLETION_ADJUDICATION
+```
+
+Current status:
+
+```text
+1  COMPLETE
+2  COMPLETE
+3  COMPLETE
+4  IMPLEMENTED / MACHINE-REQUALIFYING / NOT ARMED
+5  NOT STARTED
+6  NOT STARTED
+7  NOT STARTED
+8  NOT STARTED
+9  NOT STARTED
+10 NOT STARTED
+11 NOT STARTED
+12 NOT STARTED
+```
+
+Do not reorder these steps.
+
+Most importantly:
+
+```text
+step 4 must not manufacture a step-5 timing authority
+step 5 must not be frozen before real timing qualification
+step 7 must not be treated as implied by a working qualification harness
+step 8 must not begin before machine graduation and exact-one-owner proof
+```
+
+---
+
+## G5. What was completed before the current #3376 frontier
+
+### G5.1 #3367 post-merge production-composition implementation
+
+#3367 established the production-safe V13 composition/process boundary on exact head:
+
+```text
+46367333d228a2b90a86ff6a33aebc334f3d73a2
+```
+
+Important implementation properties already proved:
+
+```text
+composition construction performs zero provider/DB activation
+invalid timing budget fails closed before I/O
+process construction remains NOT_ACTIVATED
+deployment env cannot define Formal subject/epoch/base/timing authority
+direct facts INSERT is not required
+production owner activation is not automatic
+Formal-v5 arm is not automatic
+O00 is not automatic
+```
+
+### G5.2 Operator-executed local fenced-writer preflight — useful but non-authoritative
+
+A local PostgreSQL 16 preflight on exact #3367 head proved:
+
+```text
+Evidence facts SELECT                     = true
+Evidence direct facts INSERT              = false
+fenced writer present                     = true
+Evidence fenced writer EXECUTE            = true
+
+direct facts INSERT negative test          = denied
+forbidden row count                        = 0
+
+first exact-three append                   = 3 inserted / 0 existing
+idempotent retry                           = 0 inserted / 3 existing
+stale controller                           = rejected
+stale producer                             = rejected
+second-fact identity conflict              = entire attempted append rolled back
+forcing cursor mutation during promotion   = none
+```
+
+The atomic rollback proof was:
+
+```text
+first attempted fact  = 0
+intentional conflict  = 1 pre-existing row
+third attempted fact  = 0
+```
+
+This is strong implementation evidence.
+
+It is **not** immutable GitHub qualification evidence.
+
+Do not cite it as discharge of a machine blocker.
+
+### G5.3 Operator-executed local production-process preflight
+
+Also passed on exact #3367 head:
+
+```text
+composition_zero_db_access          = true
+provider_request_count              = 0
+composition_auto_activation         = false
+process_activation_state            = NOT_ACTIVATED
+process_application_table_mutation  = false
+invalid_timing_budget_fail_closed   = true
+remote_store_provisioning           = false
+production_owner_activation         = false
+formal_v5_arm                       = false
+o00_started                         = false
+authoritative_post_merge_qualification = false
+```
+
+Again:
+
+```text
+implementation preflight != authoritative qualification
+```
+
+### G5.4 Remote zero-state provisioning is COMPLETE
+
+The user explicitly authorized provisioning.
+
+The one-shot remote provisioning run is:
+
+```text
+run = 33294259585
+job = 99211107914
+status = SUCCESS
+
+provisioning subject =
+  af49e6819624a2cd7129308dacde9f880f71b194
+
+artifact =
+  9726904605
+
+artifact digest =
+  sha256:0e09f03d78e99ebc6d7df5520c865fb0b1947c040dcfc3b2d1551a982f7c6162
+```
+
+Exactly three fresh stores were created:
+
+```text
+geox_mcft_cap09_s6_accel24t_am19_v13
+geox_mcft_cap09_s6_accel24t_am19_blocked_v13
+geox_mcft_cap09_s6_formal_t4r1_24h_v5
+```
+
+Machine proof:
+
+```text
+created_count = 3
+
+each target:
+  created_by_this_run    = true
+  fresh_zero_state       = true
+  public_relation_count  = 0
+  public_routine_count   = 0
+```
+
+Hard preservation/non-effects:
+
+```text
+v12 qualification preserved = true
+blocked-v12 preserved       = true
+failed-v4 preserved         = true
+
+failed-v4 reused            = false
+failed-v4 cloned            = false
+v12 reused                  = false
+cleanup performed           = false
+schema migration performed  = false
+provider_request_count      = 0
+production owner activation = false
+Formal-v5 arm               = false
+A0 bootstrap                = false
+O00 started                 = false
+MCFT-CAP-09 completion      = false
+```
+
+Do not provision these databases again.
+
+---
+
+## G6. Why #3376 exists
+
+The frozen next activation step is:
+
+```text
+RUN_PRODUCER_DRIVEN_V13_QUALIFICATION
+```
+
+The V3 authority requires:
+
+```text
+generation = v13
+fresh qualification = required
+qualification clock = accelerated engineering only
+qualification clock substitutes wait only
+producer supply graph must be exercised
+preinsert all 24 hourly forcing pairs = forbidden
+production canonical core must be identical
+real wall-clock Formal remains required later
+```
+
+Therefore qualification cannot be a toy runner.
+
+It must share production canonical provider/retention/candidate/promotion semantics while remaining clearly pre-budget and pre-production-owner.
+
+That is the purpose of #3376.
+
+---
+
+## G7. #3376 implementation — grouped by engineering concern
+
+#3376 currently contains 31 commits from the exact #3367 head.
+
+The important evolution is:
+
+### G7.1 Shared V13 producer core
+
+Initial extraction:
+
+```text
+39f1e82df164a8a2a96497959b865bc2e6c1e927
+refactor(mcft-cap09): share v13 producer core across hosts
+```
+
+The product wiring shared by production and qualification now covers:
+
+```text
+ProductionEvidenceWorkItemFactoryV1
+S3-compatible private raw retention
+private candidate manifest store
+private retained-raw reader
+ProductionExternalFormalCandidateRehydrationDecoderFactoryV1
+PostgresEvidenceRuntimeFencedExactBaseFactPromotionV1
+ExternalFormalPrivateCandidateCapturePromotionV1
+```
+
+The key invariant is:
+
+```text
+qualification provider/canonical core == production provider/canonical core
+```
+
+Qualification does not get a simplified scientific algorithm.
+
+### G7.2 Read-only remote qualification preflight
+
+Added:
+
+```text
+.github/workflows/mcft-cap-09-v13-producer-driven-qualification-preflight.yml
+```
+
+It validates without mutation:
+
+```text
+exact frozen authority
+fresh zero-state inventory
+pre-activation Evidence role topology
+private Formal raw S3 credential surface
+zero production-owner activation
+```
+
+Latest current-head run at handoff time:
+
+```text
+33323715629
+mcft-cap-09-v13-producer-driven-qualification-preflight
+SUCCESS
+```
+
+Therefore the three fresh stores still satisfy the pre-arm boundary.
+
+### G7.3 V13 Evidence ACL hardening
+
+The V13 fenced-promotion ACL was extended so the Evidence NOLOGIN privilege role can coordinate the exact V13 forcing state without gaining arbitrary canonical-fact mutation.
+
+Current intended ACL:
+
+```text
+public schema USAGE       = allowed
+public schema CREATE      = denied
+
+facts SELECT              = allowed
+facts INSERT              = denied
+facts UPDATE              = denied
+facts DELETE              = denied
+
+forcing cursor SELECT/INSERT/UPDATE      = allowed
+forcing target SELECT/INSERT/UPDATE      = allowed
+controller lease SELECT/INSERT/UPDATE    = allowed
+
+fenced writer EXECUTE     = allowed
+```
+
+The migration deliberately does **not** create extra persistence tables.
+
+This preserves the V3:
+
+```text
+v13_required_public_table_count = 29
+```
+
+Do not apply the full Phase3 Evidence persistence migration into the V13 qualification store merely because it is convenient.
+
+That would mix planes and violate the 29-table V13 schema contract.
+
+### G7.4 Guarded live qualification harness
+
+Added:
+
+```text
+scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V1.ts
+
+.github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml
+```
+
+The intended live producer graph is:
+
+```text
+controller lease/fence
+  ↓
+claim next missing required base
+  ↓
+production provider work items
+  ↓
+private raw retention
+  ↓
+private candidate manifest
+  ↓
+candidate rehydration
+  ↓
+Evidence Runtime fenced exact-three writer
+  ↓
+post-COMMIT physical fact readback
+  ↓
+controller attestation
+  ↓
+cursor advancement
+```
+
+Exactly three sequential future bases are planned.
+
+This is **not** a 24T preinsert shortcut.
+
+### G7.5 Blocked-v13 negative lane
+
+The live harness also reserves the fresh blocked-v13 store to prove:
+
+```text
+deadline-missed base
+  ↓
+fail closed before provider request
+  ↓
+provider_request_count = 0
+  ↓
+formal fact mutation = 0
+```
+
+This is part of step 4.
+
+### G7.6 Fixed deterministic base window
+
+A major re-run safety repair was made.
+
+The first implementation derived the qualification base window from:
+
+```text
+Date.now() + 18h
+```
+
+That is unsafe.
+
+The same exact head could be retried later and silently target a different base window while the cursor already contains the first attempt.
+
+The current design requires the base window to be frozen in the arm authority:
+
+```text
+qualification_first_base
+```
+
+Current value:
+
+```text
+null
+```
+
+When live qualification is actually armed it must be a canonical UTC hour and must lead the arm time by more than six hours.
+
+Same exact head + rerun must therefore reuse the same base window.
+
+---
+
+## G8. Current arm authority — exact non-effects
+
+Current file:
+
+```text
+scripts/runtime_acceptance/MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_ARM.json
+```
+
+At current head:
+
+```json
+{
+  "schema_version": "geox_mcft_cap09_v13_producer_driven_live_qualification_arm_v1",
+  "armed": false,
+  "activation_step": "RUN_PRODUCER_DRIVEN_V13_QUALIFICATION",
+  "implementation_base_sha": "46367333d228a2b90a86ff6a33aebc334f3d73a2",
+  "exact_branch": "feat/mcft-cap09-v13-producer-driven-qualification-v1",
+  "production_owner_activation_authorized": false,
+  "formal_v5_arm_authorized": false,
+  "a0_authorized": false,
+  "o00_authorized": false,
+  "qualification_first_base": null
+}
+```
+
+This is the strongest current statement of what has **not** happened.
+
+Do not infer live qualification from a green workflow while this remains false.
+
+---
+
+## G9. Latest unarmed live workflow result — SUCCESS means SKIPPED mutation
+
+Latest current-head run:
+
+```text
+33323715621
+mcft-cap-09-v13-producer-driven-live-qualification
+SUCCESS
+```
+
+But inspect its steps.
+
+Only the arm resolver and checkout/post-checkout ran.
+
+The following were all skipped:
+
+```text
+Require exact frozen subject and authority
+scientific dependency installation
+database URL normalization
+Formal-v5 untouched check
+qualification-only Evidence role establishment
+29-table V13 schema initialization
+Evidence ACL proof
+producer-driven provider run
+machine proof validation
+Formal-v5 reproof
+artifact upload
+temporary qualification-membership cleanup
+```
+
+Therefore:
+
+```text
+live workflow SUCCESS
+  !=
+producer-driven qualification SUCCESS
+```
+
+At current frontier:
+
+```text
+database mutation count from live qualification = 0
+provider request count from live qualification  = 0
+```
+
+---
+
+## G10. Production identity boundary — do not create production LOGIN early
+
+The read-only preflight established that production Evidence Runtime LOGIN/password bindings do not yet exist as an active production owner.
+
+This is intentional.
+
+Step 4 qualification may use a qualification-only NOLOGIN Evidence privilege role and temporary qualification membership.
+
+It must **not** create or activate the production LOGIN owner.
+
+The production owner belongs to the later activation sequence:
+
+```text
+OPEN_NEW_MACHINE_ONLY_GRADUATION_GATE
+  ↓
+PROVE_EXACT_ONE_PRODUCTION_OWNER_AND_RETIRED_TRIGGER_ZERO
+```
+
+Do not collapse these stages.
+
+---
+
+## G11. Timing authority remains deliberately unqualified
+
+V3 still says:
+
+```text
+authority_id =
+  FORMAL_FORCING_ACQUISITION_BUDGET_V1
+
+status =
+  UNQUALIFIED_UNTIL_EXACT_HEAD_TIMING_QUALIFICATION
+
+fixed_35_minute_lead_authorized_for_v5 = false
+
+hardcoded_replacement_budget_minutes = null
+```
+
+The final timing budget must cover:
+
+```text
+GITHUB_WAKE_DELAY
+JOB_START_AND_SETUP
+PROVIDER_CAPTURE
+RETAINED_RAW_AND_CANDIDATE
+PROMOTION_QUEUE_AND_SETUP
+REHYDRATION_PROMOTION_NEON_COMMIT_POST_COMMIT_READBACK
+CONTROLLED_CROSS_WAKE_CAPTURE_OVERLAP
+EXPLICIT_SAFETY_MARGIN
+```
+
+Requirements include:
+
+```text
+minimum real timing samples = 3
+controlled delay matrix = required
+```
+
+Step 4 may collect real producer-graph timing observations.
+
+It must not mark:
+
+```text
+timing_budget_qualified = true
+timing_budget_frozen = true
+```
+
+Step 5 owns that decision.
+
+---
+
+## G12. Why fresh machine requalification became necessary
+
+The #3376 changes altered governed dependency closures.
+
+Therefore old green runs could no longer be treated as fresh evidence merely because their workflow names still matched.
+
+The control plane correctly found:
+
+```text
+run/workflow/subject may be historically valid
+but
+dependency_digest_match = false
+```
+
+Affected requalification domains included:
+
+```text
+V13_AUTONOMOUS_FORCING_FOUNDATION
+V13_HOLISTIC_SCHEMA
+V13_NEXT_TICK_VIABILITY
+PHASE3_EVIDENCE_RUNTIME_FOUNDATION
+PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION
+```
+
+This was not a runtime regression.
+
+It was an immutable evidence freshness problem.
+
+The correct repair was:
+
+```text
+finalize current dependency graph
+  ↓
+run exact-head workflows
+  ↓
+read current resolver digests
+  ↓
+bind fresh immutable workflow evidence
+  ↓
+rerun control plane
+```
+
+Never invert that order.
+
+---
+
+## G13. Fresh exact-head requalification evidence obtained on 4c3a0f0f...
+
+Exact evidence subject:
+
+```text
+4c3a0f0f2941b0fcd09ea75a218d86cbcdbf48cd
+```
+
+The required fresh current-head runs succeeded:
+
+```text
+V13 foundation
+  run = 33316468291
+  dependency digest =
+    sha256:828426bdf7894ab28649410624f10da3c3db03decaff213db3f26311721c7c0f
+
+V13 holistic schema
+  run = 33316468400
+  dependency digest =
+    sha256:828426bdf7894ab28649410624f10da3c3db03decaff213db3f26311721c7c0f
+
+V13 next-tick viability
+  run = 33316468433
+  dependency digest =
+    sha256:828426bdf7894ab28649410624f10da3c3db03decaff213db3f26311721c7c0f
+
+Phase3 Evidence Runtime
+  run = 33316468331
+  dependency digest =
+    sha256:4e616c0a47081696328f6dc117e13a7faba61c886f9dc25ee132a96cf0deeea3
+
+Phase7 private candidate promotion composition
+  run = 33316468424
+  dependency digest =
+    sha256:ed493304a8aa4add2c1879677630d462ce378782386c412bdfbddaab258293c1
+```
+
+Phase7 had required a new current-stack route because the workflow previously only accepted the historical Phase7 predecessor.
+
+The new route is still exact-SHA governed.
+
+It does not admit arbitrary bases.
+
+---
+
+## G14. Fresh immutable evidence binding commit
+
+Fresh evidence was registered in:
+
+```text
+244afc658d0675ba87e96390182068ee6435c642
+gov(mcft-cap09): bind fresh postmerge v13 requalification evidence
+```
+
+It added immutable evidence records for:
+
+```text
+V13_AUTONOMOUS_FORCING_FOUNDATION_POSTMERGE_4C3A0F0F
+V13_HOLISTIC_SCHEMA_POSTMERGE_4C3A0F0F
+V13_NEXT_TICK_VIABILITY_POSTMERGE_4C3A0F0F
+PHASE3_EVIDENCE_RUNTIME_FOUNDATION_POSTMERGE_4C3A0F0F
+PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION_POSTMERGE_4C3A0F0F
+```
+
+It also added the exact predecessor:
+
+```text
+46367333d228a2b90a86ff6a33aebc334f3d73a2
+```
+
+to the registry's governed successor-predecessor set.
+
+That predecessor registration is important.
+
+Without it the new fresh run evidence could still be rejected even if its run and digest were correct.
+
+The immutable binding SHA values were generated by the existing registry algorithm.
+
+Do not hand-edit or invent them.
+
+---
+
+## G15. The exact-base stage-router defect found after evidence binding
+
+After the fresh evidence rebind, another control-plane defect remained.
+
+The qualification workflow still planned every PR as:
+
+```text
+SUCCESSOR_SUBJECT_PRE_MERGE
+```
+
+But #3376 is not a pre-merge successor subject.
+
+Its base is the exact post-merge V13 composition head:
+
+```text
+46367333d228a2b90a86ff6a33aebc334f3d73a2
+```
+
+Therefore its control-plane stage must be:
+
+```text
+POST_MERGE_V13_QUALIFICATION
+```
+
+The repair is current head:
+
+```text
+dd3b69ffab831356208dbce204af6a7b65cde6d0
+fix(mcft-cap09): route postmerge qualification stage by exact base
+```
+
+The workflow now derives stage from the exact PR base:
+
+```text
+base == POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA
+  -> POST_MERGE_V13_QUALIFICATION
+
+other governed historical successor bases
+  -> SUCCESSOR_SUBJECT_PRE_MERGE
+```
+
+The machine proof also verifies:
+
+```text
+plan.stage == expectedStage
+preflight.stage == expectedStage
+```
+
+This is a stage-routing repair.
+
+It is not a relaxation of base governance.
+
+---
+
+## G16. Current exact-head machine state at handoff time
+
+Current exact head:
+
+```text
+dd3b69ffab831356208dbce204af6a7b65cde6d0
+```
+
+### G16.1 Current SUCCESS lanes
+
+At handoff time:
+
+```text
+33323715629  v13 producer-driven qualification read-only preflight  SUCCESS
+33323715621  live qualification workflow                             SUCCESS
+              IMPORTANT: armed=false; mutation steps skipped
+
+33323715530  Phase3 Evidence Runtime persistence                     SUCCESS
+33323715559  Phase7 candidate-promotion composition                  SUCCESS
+33323715554  V13 autonomous forcing foundation                       SUCCESS
+33323715612  V13 holistic schema                                    SUCCESS
+33323715623  V13 next-tick viability                                 SUCCESS
+33323715610  V13 fenced fact promotion                              SUCCESS
+
+33323715606  post-merge V13 central control plane                   SUCCESS
+```
+
+The user's supplied snapshot said central was still enumerating blocker inventory.
+
+That was a valid intermediate state.
+
+During handoff reconstruction it completed SUCCESS.
+
+### G16.2 Current qualification-control-plane
+
+Run:
+
+```text
+33323715641
+mcft-cap-09-qualification-control-plane-v1
+```
+
+At the handoff timestamp:
+
+```text
+status = IN_PROGRESS
+```
+
+Completed successfully:
+
+```text
+checkout exact subject
+governed predecessor / zero production bindings
+central applicability semantics
+generation / durable-anchor / dependency-digest semantics
+immutable evidence reference resolution
+exact PR applicability plan
+```
+
+Currently running:
+
+```text
+Enumerate all blockers without fail-fast
+```
+
+Pending:
+
+```text
+Validate control-plane machine proof
+Upload applicability and blocker inventory
+```
+
+This run is the next authoritative blocker-list source.
+
+Do not infer its final blocker set before it completes.
+
+### G16.3 Current ordinary CI
+
+Run:
+
+```text
+33323715594
+ci
+```
+
+At handoff time:
+
+```text
+build-test = SUCCESS
+acceptance = IN_PROGRESS
+```
+
+Acceptance already passed:
+
+```text
+commercial compose rendering
+acceptance runtime dependencies readiness
+PR18I formal-chain preflight
+controlled-pilot seed
+C8 formal chain backend P0
+Playwright frontend audit
+Controlled Pilot strict release gate
+Stage-1 fixture raw sample contract
+P1 smoke idempotency
+customer report boundary wiring
+customer report boundary suite
+```
+
+Currently running:
+
+```text
+Run acceptance suite
+```
+
+Do not claim full CI SUCCESS until the acceptance job finishes.
+
+### G16.4 Expected red historical sentinel
+
+Current head may still show:
+
+```text
+mcft-cap-09-phase6-runtime-independence = FAILURE
+```
+
+This is a retired/superseded stage sentinel on a later qualification stack.
+
+Do not treat it as the active step-4 runtime blocker unless its failure moves into a currently-owned qualification dependency.
+
+---
+
+## G17. Why the current state is normal machine requalification, not a deadlock
+
+The pipeline is making forward progress.
+
+Evidence:
+
+```text
+new exact-head Phase3 run = SUCCESS
+new exact-head Phase7 run = SUCCESS
+new exact-head V13 foundation = SUCCESS
+new exact-head holistic schema = SUCCESS
+new exact-head next-tick = SUCCESS
+new exact-head fenced promotion = SUCCESS
+read-only remote preflight = SUCCESS
+central post-merge control plane = SUCCESS
+
+qualification-control-plane:
+  passed steps 1–7
+  is executing blocker enumeration
+
+CI:
+  build-test = SUCCESS
+  acceptance is actively running
+```
+
+Nothing here indicates a hung provider acquisition or stuck database transaction.
+
+The active work is:
+
+```text
+machine plan
+  ↓
+machine blocker inventory
+  ↓
+acceptance completion
+```
+
+Do not restart the architecture from scratch.
+
+---
+
+## G18. Exact expected next decision point
+
+The next engineer should wait for:
+
+```text
+run 33323715641
+qualification-control-plane
+step 8 blocker inventory
+```
+
+Then inspect:
+
+```text
+blocker_count
+blockers[]
+unknown_changed_paths
+authority_errors
+resolver_errors
+current dependency digests
+stage
+```
+
+The desired result is:
+
+```text
+stale evidence / dependency-digest blockers = gone
+unknown_changed_paths = []
+authority_errors = []
+resolver_errors = []
+stage = POST_MERGE_V13_QUALIFICATION
+```
+
+The remaining blockers should be only the real future obligations expected at this point, conceptually:
+
+```text
+RUN_PRODUCER_DRIVEN_V13_QUALIFICATION
+FREEZE_EXACT_HEAD_END_TO_END_TIMING_BUDGET
+machine-only graduation / exact production owner obligations
+```
+
+Do not hard-code that list from memory.
+
+Read the actual generated artifact.
+
+If an unexpected stale evidence blocker remains, fix the dependency/evidence truth before arm.
+
+---
+
+## G19. Arm criteria — all must hold before changing armed=false
+
+Do **not** arm just because current provider modules compile.
+
+Before arm:
+
+### Machine state
+
+```text
+qualification-control-plane completed
+new blocker list inspected
+no stale dependency-evidence blockers
+unknown_changed_paths = []
+authority_errors = []
+resolver_errors = []
+post-merge stage route correct
+ordinary CI acceptance terminal and acceptable
+current exact-head runtime lanes terminal and acceptable
+```
+
+### Store state
+
+Read-only preflight must still prove:
+
+```text
+v13 qualification store = allowed zero-state / expected pre-init state
+blocked-v13 store        = allowed zero-state / expected pre-init state
+Formal-v5                = untouched zero-state
+```
+
+### Arm mutation
+
+The arm change should be narrow:
+
+```text
+armed = true
+qualification_first_base = one fixed canonical UTC hour
+```
+
+and preserve:
+
+```text
+production_owner_activation_authorized = false
+formal_v5_arm_authorized = false
+a0_authorized = false
+o00_authorized = false
+```
+
+The first base must satisfy the live guard:
+
+```text
+canonical UTC hour
+>
+arm time + 6 hours
+```
+
+Choose it well inside the provider forecast horizon.
+
+Do not derive it dynamically at runtime.
+
+---
+
+## G20. What live step 4 is allowed to mutate
+
+Once correctly armed, step 4 may initialize and mutate only the qualification surfaces required to prove V13 producer-driven qualification.
+
+Allowed conceptual effects:
+
+```text
+qualification-only NOLOGIN Evidence privilege role
+temporary qualification membership
+V13 29-table qualification schema/ACL
+blocked-V13 29-table qualification schema/ACL
+V13 forcing controller/cursor/target state
+private raw objects
+private candidate manifests
+exact-three fenced Formal-evidence facts in qualification DB
+post-COMMIT attestation / cursor advance
+blocked negative qualification state
+```
+
+Required cleanup/non-effects:
+
+```text
+temporary admin-to-Evidence qualification membership revoked
+production LOGIN owner not created/activated
+Formal-v5 untouched
+step-5 timing authority remains unqualified
+A0 not started
+O00 not started
+```
+
+---
+
+## G21. What live step 4 must prove
+
+The live proof must distinguish the production canonical core from production activation authority.
+
+Expected machine proof includes:
+
+```text
+production_canonical_core_identical = true
+provider_supply_graph_exercised = true
+private_raw_retention_exercised = true
+private_candidate_manifest_exercised = true
+candidate_rehydration_exercised = true
+fenced_evidence_writer_exercised = true
+post_commit_physical_readback_exercised = true
+controller_fencing_exercised = true
+producer_fencing_exercised = true
+
+processed_base_count = 3
+real_producer_graph_timing_observation_count = 3
+
+preinsert_all_24_hourly_forcing_pairs = false
+direct_facts_insert_privilege = false
+
+qualification_only_prebudget_admission_boundary = true
+production_admission_exercised = false
+
+timing_budget_qualified = false
+timing_budget_frozen = false
+controlled_delay_matrix_executed = false
+
+blocked_negative.status = PASS
+blocked_negative.provider_request_count = 0
+blocked_negative.fail_closed_before_provider = true
+
+production_owner_activation = false
+formal_v5_arm = false
+a0_bootstrap = false
+o00_started = false
+mcft_cap09_completed = false
+```
+
+If the workflow succeeds without producing these semantics, step 4 is not closed.
+
+---
+
+## G22. Critical pitfalls / things already learned the hard way
+
+### G22.1 Do not register evidence before the dependency graph is final
+
+This was the major Phase7/V13 governance lesson.
+
+A workflow can be green and still be stale evidence if:
+
+```text
+dependency_digest_match = false
+```
+
+Never register successful runs merely to make blocker_count zero.
+
+First make the graph truthful.
+
+Then rerun.
+
+Then bind.
+
+### G22.2 Dedicated Phase7 ownership is not enough for cross-plane adapters
+
+The private capture/promotion adapter spans:
+
+```text
+Phase3 Evidence capture
+  ↔
+V13 fenced Formal promotion
+```
+
+A dedicated Phase7 closure is necessary but not sufficient.
+
+Cross-plane dependencies must also appear in the owning Phase3 and V13 governed closures where semantically required.
+
+### G22.3 Reverse imports are not discovered by a root-down import closure
+
+The earlier V13 defect existed because:
+
+```text
+new adapter imports V13 promotion
+```
+
+rather than:
+
+```text
+V13 controller root imports new adapter
+```
+
+A root-down import closure therefore did not see the adapter.
+
+Do not assume an import graph discovers reverse dependencies.
+
+### G22.4 `IMPLEMENTED_AT_SUCCESSOR_HEAD` is not `QUALIFIED`
+
+The applicability self-test had to be updated to express:
+
+```text
+workflow exists
+  !=
+machine obligation discharged
+```
+
+Check 13 remains REQUIRED until live evidence exists.
+
+Do not turn implementation presence into qualification truth.
+
+### G22.5 Post-merge qualification is not a pre-merge successor stage
+
+The new exact-base stage router exists because planning #3376 as:
+
+```text
+SUCCESSOR_SUBJECT_PRE_MERGE
+```
+
+was semantically wrong.
+
+Its exact base is the post-merge V13 composition subject.
+
+Therefore:
+
+```text
+POST_MERGE_V13_QUALIFICATION
+```
+
+is the correct stage.
+
+Do not revert this router.
+
+### G22.6 A green unarmed live workflow is intentionally not a live qualification
+
+Always inspect the step list.
+
+If mutation steps are skipped:
+
+```text
+SUCCESS == arm resolver / no-op success
+```
+
+not qualification success.
+
+### G22.7 Do not use a dynamic `Date.now()` qualification base window
+
+A retry on the same subject would target a different window.
+
+That can conflict with the already-initialized forcing cursor.
+
+The base window must be frozen in the arm authority.
+
+### G22.8 Do not apply full Phase3 Evidence persistence into the 29-table V13 qualification store
+
+That mixes persistence planes and breaks the frozen V13 schema count.
+
+Use only the V13 schema and V13 Evidence ACL required for qualification.
+
+### G22.9 Do not create the production LOGIN during qualification
+
+Step 4 is not production-owner cutover.
+
+Qualification may use a NOLOGIN privilege role and temporary membership.
+
+Production LOGIN/owner activation belongs later.
+
+### G22.10 Exact schema ACL matters
+
+Do not rely on PostgreSQL default PUBLIC privileges.
+
+Evidence role must explicitly prove:
+
+```text
+public.USAGE = true
+public.CREATE = false
+facts.INSERT = false
+fenced-writer.EXECUTE = true
+```
+
+### G22.11 Neon `neon_superuser` semantics are not ordinary PostgreSQL superuser semantics
+
+During provisioning the seed login itself did not show ordinary `CREATEDB`/superuser attributes.
+
+The privilege came through Neon role membership.
+
+Do not add ad-hoc role elevation because the attribute surface looks unfamiliar.
+
+Do not reuse the closed provisioning PR as a qualification runner.
+
+### G22.12 Literal `\n` bugs have already occurred twice in this task line
+
+Phase6 blackout parsing previously failed because output contained a literal backslash-n instead of a newline.
+
+The live arm output path was also hardened to avoid this class.
+
+When writing GitHub output/env files:
+
+```text
+verify actual newline semantics
+do not trust escaped string appearance
+```
+
+### G22.13 TypeScript union narrowing must be explicit
+
+Using:
+
+```ts
+["ACQUIRED","RENEWED","TAKEN_OVER"].includes(result.status)
+```
+
+did not narrow the union enough for `.lease`.
+
+The live harness now explicitly rejects terminal/busy states before reading the lease.
+
+Do not reintroduce loose status narrowing.
+
+### G22.14 A retired Phase6 red workflow on a later stack is not automatically a current blocker
+
+Always ask:
+
+```text
+does the current control-plane own this lane at this stage?
+```
+
+Do not confuse historical stage sentinels with current machine blockers.
+
+---
+
+## G23. High-value current file map
+
+### Frozen authority
+
+```text
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md
+```
+
+### Qualification control plane / evidence
+
+```text
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+
+scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+
+.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml
+.github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml
+```
+
+### Shared producer core
+
+```text
+apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.ts
+apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts
+apps/server/src/external_evidence/mcft_cap09_production_evidence_work_items_v1.ts
+```
+
+### V13 persistence / fencing
+
+```text
+apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql
+apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql
+apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql
+apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql
+
+apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts
+apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts
+apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_controller_lifecycle_v1.ts
+```
+
+### Step-4 qualification
+
+```text
+.github/workflows/mcft-cap-09-v13-producer-driven-qualification-preflight.yml
+.github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml
+
+scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V1.ts
+scripts/runtime_acceptance/MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_ARM.json
+```
+
+### Requalification workflows
+
+```text
+.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml
+.github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml
+.github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml
+.github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml
+.github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml
+.github/workflows/mcft-cap-09-v13-fenced-fact-promotion-postgres.yml
+```
+
+---
+
+## G24. Exact commits worth retaining in the mental model
+
+### #3367 exact implementation predecessor
+
+```text
+46367333d228a2b90a86ff6a33aebc334f3d73a2
+chore(mcft-cap09): bind post-merge v13 requalification evidence
+```
+
+### Shared producer-core start
+
+```text
+39f1e82df164a8a2a96497959b865bc2e6c1e927
+refactor(mcft-cap09): share v13 producer core across hosts
+```
+
+### Live qualification harness
+
+```text
+80332b64e0c8363e5dd19a067adfaebe15e38d6b
+feat(mcft-cap09): add producer-driven v13 live qualification harness
+
+d646e1067dd8ae259a3c81210b3aa9b9a726e05e
+ci(mcft-cap09): add guarded producer-driven v13 live qualification
+```
+
+### Disabled arm registration
+
+```text
+e65fa879838cb36e0986372e28b215742424f79f
+gov(mcft-cap09): register disabled v13 live qualification arm
+```
+
+### Exact ACL / fixed base-window hardening
+
+```text
+238ebbab029fdcdaf6459a94eab248879fb046ce
+fix(mcft-cap09): make v13 Evidence ACL exact per database
+
+4ed927729b52c36cfc0f90539d61476193b095a7
+fix(mcft-cap09): freeze v13 qualification base window in arm authority
+
+25d3332484be55fa8f83d149e12c87aa46343545
+gov(mcft-cap09): require fixed base in v13 live arm
+```
+
+### Applicability semantic repair
+
+```text
+73bf66b5515113dfe5f365dbad36bb0769b6de13
+test(mcft-cap09): distinguish implemented v13 qualification from qualified
+```
+
+### Phase7 current-stack route
+
+```text
+4c3a0f0f2941b0fcd09ea75a218d86cbcdbf48cd
+ci(mcft-cap09): admit exact postmerge Phase7 requalification
+```
+
+### Fresh evidence binding
+
+```text
+244afc658d0675ba87e96390182068ee6435c642
+gov(mcft-cap09): bind fresh postmerge v13 requalification evidence
+```
+
+### Current exact head / post-merge stage router
+
+```text
+dd3b69ffab831356208dbce204af6a7b65cde6d0
+fix(mcft-cap09): route postmerge qualification stage by exact base
+```
+
+---
+
+## G25. Exact machine runs worth retaining
+
+### Provisioning
+
+```text
+33294259585  zero-state provisioning                       SUCCESS
+99211107914  provisioning job                              SUCCESS
+9726904605   provisioning artifact
+sha256:0e09f03d78e99ebc6d7df5520c865fb0b1947c040dcfc3b2d1551a982f7c6162
+```
+
+### Fresh 4c3a0f0f requalification set
+
+```text
+33316468291  V13 foundation                                SUCCESS
+33316468400  V13 holistic schema                           SUCCESS
+33316468433  V13 next-tick                                 SUCCESS
+33316468331  Phase3 Evidence Runtime                       SUCCESS
+33316468424  Phase7 candidate-promotion composition        SUCCESS
+```
+
+### Current dd3b69ff head
+
+```text
+33323715629  remote read-only preflight                    SUCCESS
+33323715621  live qualification workflow                   SUCCESS / UNARMED SKIP
+33323715530  Phase3 Evidence Runtime                       SUCCESS
+33323715559  Phase7 candidate-promotion composition        SUCCESS
+33323715554  V13 foundation                                SUCCESS
+33323715612  V13 holistic schema                           SUCCESS
+33323715623  V13 next-tick                                 SUCCESS
+33323715610  V13 fenced promotion                          SUCCESS
+33323715606  post-merge central                            SUCCESS
+
+33323715641  qualification-control-plane                   IN PROGRESS at blocker inventory
+33323715594  ordinary CI                                   build-test SUCCESS / acceptance IN PROGRESS
+```
+
+---
+
+## G26. First 30 minutes for the next engineer
+
+### Minute 0–5 — restore exact authority
+
+Read G0–G5 above, then verify:
+
+```text
+main == fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+
+#3367 head ==
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+#3376 base ==
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+#3376 head ==
+  dd3b69ffab831356208dbce204af6a7b65cde6d0
+  unless the repository has legitimately advanced after this handoff
+```
+
+If #3376 head advanced:
+
+do not reuse old blocker conclusions blindly.
+
+### Minute 5–10 — read current blocker artifact
+
+Check run:
+
+```text
+33323715641
+```
+
+If it has completed, read:
+
+```text
+acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json
+```
+
+Record:
+
+```text
+stage
+blocker_count
+blockers[]
+unknown_changed_paths
+authority_errors
+resolver_errors
+```
+
+### Minute 10–15 — verify ordinary CI terminal state
+
+Check:
+
+```text
+33323715594
+```
+
+Do not arm with an unexplained acceptance failure.
+
+### Minute 15–20 — recheck arm and store boundary
+
+Confirm:
+
+```text
+armed = false
+qualification_first_base = null
+
+production owner activation = false
+Formal-v5 arm = false
+A0 = false
+O00 = false
+```
+
+Run/read the read-only preflight again if the head changed materially.
+
+### Minute 20–30 — make the arm decision
+
+If:
+
+```text
+stale evidence blockers are gone
+stage router = POST_MERGE_V13_QUALIFICATION
+unknown_changed_paths = []
+authority_errors = []
+resolver_errors = []
+CI is acceptable
+only true future obligations remain
+```
+
+then prepare the narrow arm patch:
+
+```text
+armed = true
+qualification_first_base = <fixed canonical future UTC hour>
+```
+
+Nothing else.
+
+Then run live qualification and inspect its immutable artifact before touching step 5.
+
+---
+
+## G27. Things not to do in the next conversation
+
+Do not:
+
+1. re-provision the three fresh stores;
+2. reopen or merge #3375;
+3. merge #3376 merely to simplify the stack;
+4. arm before reading the new blocker list;
+5. use a green unarmed live workflow as qualification evidence;
+6. register an old run against a new dependency digest;
+7. suppress a stale evidence blocker by weakening `dependency_digest_must_match_current`;
+8. broaden predecessor governance to arbitrary branch/base;
+9. revert the exact post-merge stage router;
+10. treat `IMPLEMENTED_AT_SUCCESSOR_HEAD` as `QUALIFIED`;
+11. make `qualification_first_base` dynamic again;
+12. preinsert all 24 hourly forcing pairs;
+13. bypass the production provider/canonical core with a simplified qualification algorithm;
+14. give Evidence Runtime direct `facts INSERT`;
+15. apply full Phase3 persistence into the 29-table V13 qualification store;
+16. create the production Evidence LOGIN during step 4;
+17. activate a production cadence owner;
+18. freeze the timing budget from only producer-graph timings;
+19. use a hardcoded 35-minute Formal lead;
+20. arm Formal-v5;
+21. bootstrap A0;
+22. start O00;
+23. clean v12 or failed-v4 for convenience;
+24. reuse/clone failed-v4;
+25. interpret the retired Phase6 sentinel as proof that current V13 qualification is broken;
+26. modify protected `main` as part of handoff continuation;
+27. rewrite historical F/E/D/C sections to make them look consistent with today's state.
+
+---
+
+## G28. Handoff bottom line
+
+The project is no longer at:
+
+```text
+Phase 7 candidate-promotion dual-closure repair
+```
+
+and it is not yet at:
+
+```text
+producer-driven V13 qualification complete
+```
+
+The precise current state is:
+
+```text
+Phase7 closure completed
+  +
+post-merge V13 production composition exists
+  +
+local fenced-writer/process implementation preflight passed
+  +
+fresh V13 / blocked-V13 / Formal-v5 stores provisioned
+  +
+producer-driven qualification implementation exists
+  +
+qualification shares the production canonical producer core
+  +
+V13 Evidence ACL is exact and direct facts INSERT remains forbidden
+  +
+live qualification is explicitly two-state and currently disabled
+  +
+qualification base window is deterministic and arm-owned
+  +
+Phase3 / Phase7 / V13 foundation-holistic-next-fenced exact-head workflows are green
+  +
+fresh immutable requalification evidence has been rebound
+  +
+post-merge exact-base stage router has been repaired
+  +
+central post-merge control plane is green
+  ↓
+qualification-control-plane is currently enumerating the new blocker list
+  +
+ordinary CI acceptance is still running
+  +
+live producer/provider/database mutation has not started
+  +
+timing authority remains UNQUALIFIED
+  +
+production owner remains inactive
+  +
+Formal-v5 remains unarmed
+  +
+A0/O00 remain not started
+```
+
+Therefore the immediate next action is:
+
+```text
+wait for the current exact-head qualification blocker inventory
+  ↓
+read the actual machine blocker list
+  ↓
+confirm stale evidence blockers are gone
+  ↓
+confirm only true step4/step5/owner obligations remain
+  ↓
+confirm ordinary CI acceptance is terminal/acceptable
+  ↓
+only then:
+    armed = true
+    qualification_first_base = fixed canonical future UTC hour
+  ↓
+run real producer-driven V13 qualification
+  ↓
+read immutable live proof
+  ↓
+only after step 4 closes:
+    design/run exact-head timing qualification
+    freeze timing authority
+```
+
+This is a normal machine requalification frontier.
+
+It is not a deadlock.
+
+Keep #3376 Draft.
+
+Keep protected `main` untouched.
+
+Keep the live arm false until machine blockers are truthful.
+
+Keep Formal-v5 unarmed.
+
+Keep production owner inactive.
+
+Keep A0 / O00 closed.
+
+---
+
 # GEOX MCFT-CAP-09 Conversation Handoff — 2026-08-28 Continuation — Phase 7 Candidate Promotion Composition / Dual-Closure Governance Frontier
 
 Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
