@@ -1,22 +1,1788 @@
-# GEOX MCFT-CAP-09 Conversation Handoff — 2026-08-31 Continuation — Post-Merge V13 Producer-Driven Qualification / Fresh-Evidence Rebind / Pre-Arm Frontier
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-08-31 Continuation — Production Operational DB / Neon Schema-ACL Materialization / Exact-One-Owner Frontier
 
 Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
 
-Timestamp: **2026-08-31 00:57 +08:00**
+Timestamp: **2026-08-31 21:37 +08:00**
 
 Repository: `liyongshang44-max/GEOX`
 
-Purpose: continue the same MCFT-CAP-09 frozen Production Hosting activation route after Phase 7 closure, post-merge V13 production composition, local implementation preflight, and fresh zero-state V13/blocked-V13/Formal-v5 provisioning. This continuation records the current #3376 producer-driven qualification implementation, the exact fresh requalification-evidence repair, the new exact-base post-merge stage router, the still-disabled live arm, the current machine requalification state, and the precise criteria that must hold before live step 4 may be armed.
+Purpose: continue the same MCFT-CAP-09 frozen Production Hosting activation route after producer-driven V13 qualification and exact-head timing closure. This continuation records the machine-closed Step 4/Step 5 evidence, the exact-one-production-owner graduation frontier, the dedicated production operational PostgreSQL authority and one-shot database provisioning, the isolated 41-table/ACL/login bundle qualification, the current Neon schema/ACL materialization attempts, the third-attempt rollback-safe failure at a restricted ALTER ROLE attribute, and the exact sequence required before service-login provisioning, non-GitHub host binding, owner activation, Formal-v5, A0, or O00 may proceed.
 
-> **This G-section is now the highest-priority conversation continuation in this file.**
+> **This H-section is now the highest-priority conversation continuation in this file.**
 >
-> The previous Phase 7 continuation beginning with F0 is intentionally preserved in full below as historical reasoning/evidence.
+> The previous post-merge V13 qualification continuation beginning with G0 is intentionally preserved in full below as historical reasoning/evidence.
 >
-> The earlier Phase 6 / Phase 5 / Phase 4 / Phase 3 / Phase 2 continuations remain preserved below that.
+> The earlier Phase 7 / Phase 6 / Phase 5 / Phase 4 / Phase 3 / Phase 2 continuations remain preserved below that.
 >
-> Do not delete or rewrite those historical sections. They explain why production ownership was retired, why private durable candidate state exists, why V13 fenced promotion was required, why failed Formal-v4 cannot be reused, and why immutable evidence must follow the final dependency graph rather than precede it.
+> Do not delete or rewrite those historical sections. They explain why production ownership was retired, why private durable candidate state exists, why V13 fenced promotion was required, why failed Formal-v4 cannot be reused, why Step 4 and Step 5 use independent dependency closures, and why immutable evidence must follow the final dependency graph rather than precede it.
 >
 > This handoff does **not** supersede `docs/SSOT.md`, the Digital Twin Master Task Line, the CAP-09 taskbook, accepted CAP-01→08 authority, the V3 Formal-store authority, immutable workflow evidence, the qualification control plane, or the frozen Production Hosting route.
+
+---
+
+
+## H0. READ THIS FIRST — Step 4 and Step 5 are closed; the live frontier is now production-owner provisioning, and the latest exact head failed the third Neon schema/ACL attempt
+
+The previous G-section was correct when written.
+
+It described #3376 before live producer-driven qualification was armed.
+
+That is no longer the current frontier.
+
+The authoritative product PR remains:
+
+\`\`\`text
+#3376
+feat(mcft-cap09): qualify producer-driven v13 supply graph
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+current exact head =
+  b9f5cacf5e1fb7ec72eb53d9a15918fb1998501b
+
+state =
+  Draft
+  open
+  unmerged
+  mergeable = true
+\`\`\`
+
+Protected \`main\` remains:
+
+\`\`\`text
+fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+\`\`\`
+
+The product branch has advanced substantially since G0.
+
+The machine facts at this handoff are now:
+
+\`\`\`text
+Step 4 producer-driven V13 qualification       = CLOSED
+Step 5 exact-head end-to-end timing            = CLOSED
+Step 5 controlled-delay execution              = CLOSED
+Step 5 frozen budget                           = CLOSED
+production operational DB identity             = FROZEN
+production operational DB                      = CREATED / ZERO-STATE BEFORE MATERIALIZATION
+isolated 41-table schema/ACL/login bundle       = PASS
+exact-one-production-owner gate                = OPEN / NOT CLOSED
+production operational schema+ACL materializer = IMPLEMENTED
+schema+ACL remote attempt #1                    = FAIL / ROLLED BACK
+schema+ACL remote attempt #2                    = FAIL / ROLLED BACK
+schema+ACL remote attempt #3                    = FAIL / CURRENT HEAD
+production schema+ACL arm                      = CURRENTLY TRUE AT b9f5cacf...
+production LOGIN bootstrap                     = NOT STARTED REMOTELY
+runtime credential binding                     = NOT STARTED
+non-GitHub production host binding             = NOT ESTABLISHED
+Evidence effective owner                       = NOT PROVEN
+Twin effective scheduler owner                 = NOT PROVEN
+Formal-v5 arm                                  = false
+A0                                             = not started
+O00                                            = not started
+MCFT-CAP-09                                    = NOT COMPLETE
+\`\`\`
+
+The single most important resume fact is:
+
+> **The current exact head is still armed for schema+ACL materialization even though the third one-shot attempt failed. The next engineer must disarm that arm before changing the materializer or migrations.**
+
+Do not immediately re-run the transaction.
+
+Do not start LOGIN provisioning.
+
+Do not start a runtime host.
+
+Do not arm Formal-v5.
+
+First disarm, then prove rollback zero-state.
+
+---
+
+## H1. Current task in one sentence
+
+**Finish the Neon-portable one-shot materialization of the frozen 41-table Production Hosting schema and Evidence/Twin ACL/fenced-writer bundle into the already-created dedicated operational database \`geox_mcft_cap09_production_runtime_v1\`, while preserving transactional rollback and zero LOGIN/runtime/owner effects; only after that may service-principal provisioning, runtime credential binding, non-GitHub host binding, and exact-one-owner activation proceed as separate machine-governed stages.**
+
+This is no longer a Step-4 producer qualification task.
+
+This is no longer a Step-5 timing task.
+
+It is not a Formal-v5 activation task.
+
+It is not an A0/O00 task.
+
+It is a production-owner provisioning/graduation task whose immediate sub-frontier is Neon-safe schema+ACL materialization.
+
+---
+
+## H2. Authority reconstruction order for the next engineer
+
+Read in this order:
+
+1. \`docs/SSOT.md\`
+2. \`docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md\`
+3. \`docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md\`
+4. \`docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md\`
+5. \`docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json\`
+6. \`docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json\`
+7. \`docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json\`
+8. \`docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json\`
+9. \`docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json\`
+10. \`docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json\`
+11. \`docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OPERATIONAL-DATABASE-CANDIDATE-V1.json\`
+12. \`scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_ARM_V1.json\`
+13. \`scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_MATERIALIZATION_V1.ts\`
+14. the four ACL migrations listed in H14 below
+15. #3376 exact head \`b9f5cacf5e1fb7ec72eb53d9a15918fb1998501b\`
+16. QCP run \`33391978825\`
+17. schema/ACL materialization run \`33391978663\`
+18. this H-section
+
+The weekly report remains operational context only.
+
+Do not use it as authority.
+
+---
+
+## H3. Repository / PR topology at handoff time
+
+### H3.1 Protected main
+
+\`\`\`text
+protected main =
+  fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+\`\`\`
+
+Do not move protected \`main\` as part of this continuation.
+
+### H3.2 #3376 — active product frontier
+
+\`\`\`text
+#3376
+feat(mcft-cap09): qualify producer-driven v13 supply graph
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+head =
+  b9f5cacf5e1fb7ec72eb53d9a15918fb1998501b
+
+state =
+  Draft / open / unmerged
+
+mergeable =
+  true
+\`\`\`
+
+Continue this branch.
+
+Do not return to old Phase 5 / Phase 6 / Phase 7 implementation branches.
+
+### H3.3 Docs-only handoff PR
+
+The handoff remains isolated in:
+
+\`\`\`text
+#3298
+docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier
+\`\`\`
+
+Its base remains intentionally historical:
+
+\`\`\`text
+26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+\`\`\`
+
+Do not rebase #3298 merely because protected \`main\` is now \`fa6e260d...\`.
+
+The docs PR must remain documentation-only.
+
+### H3.4 Important head-drift rule
+
+This conversation saw multiple legitimate concurrent branch advances.
+
+Example:
+
+\`\`\`text
+expected local frontier:
+  f4f36b01...
+
+observed remote frontier:
+  6feb2d10...
+\`\`\`
+
+The correct response was to re-read the new head and continue from it.
+
+Do not force-push over a newer product head.
+
+Before every commit to #3376:
+
+\`\`\`text
+GET /pulls/3376
+verify current head
+only fast-forward if the expected parent still matches
+\`\`\`
+
+---
+
+## H4. Frozen activation route — exact current position
+
+The frozen V3 sequence remains:
+
+\`\`\`text
+1  MERGE_EXACT_V13_SUCCESSOR_SUBJECT
+2  CAPACITY_PREFLIGHT_AND_SAFE_SUPERSEDED_GENERATION_CLEANUP_IF_REQUIRED
+3  PROVISION_ZERO_STATE_V13_BLOCKED_V13_AND_FORMAL_V5_STORES
+4  RUN_PRODUCER_DRIVEN_V13_QUALIFICATION
+5  FREEZE_EXACT_HEAD_END_TO_END_TIMING_BUDGET
+6  OPEN_NEW_MACHINE_ONLY_GRADUATION_GATE
+7  PROVE_EXACT_ONE_PRODUCTION_OWNER_AND_RETIRED_TRIGGER_ZERO
+8  ARM_FRESH_V5_EPOCH
+9  BOOTSTRAP_FRESH_A0
+10 RUN_REAL_WALL_CLOCK_O00_O23_WITH_ZERO_ROUTINE_MANUAL_RESCUE
+11 RUN_AUTOMATIC_FINAL_READBACK
+12 FINAL_READ_ONLY_COMPLETION_ADJUDICATION
+\`\`\`
+
+Current status:
+
+\`\`\`text
+1  COMPLETE
+2  COMPLETE
+3  COMPLETE
+4  COMPLETE
+5  COMPLETE
+6  COMPLETE — machine-only graduation gate opened
+7  IN PROGRESS — exact-one owner remains the single QCP blocker
+8  NOT STARTED
+9  NOT STARTED
+10 NOT STARTED
+11 NOT STARTED
+12 NOT STARTED
+\`\`\`
+
+Step 7 currently contains the following engineering sub-stages:
+
+\`\`\`text
+7.a  prove retired GitHub production owners/triggers = 0       COMPLETE
+7.b  freeze production operational DB identity                 COMPLETE
+7.c  create dedicated operational DB as empty zero-state       COMPLETE
+7.d  materialize production host schema + ACL/fenced writers   IN PROGRESS
+7.e  create/bind two runtime LOGIN service principals          NOT STARTED REMOTELY
+7.f  bind two runtime DB URLs/passwords                        NOT STARTED
+7.g  bind non-GitHub production host                           NOT STARTED
+7.h  start exactly one Evidence effective owner                NOT STARTED
+7.i  start exactly one Twin effective scheduler owner          NOT STARTED
+7.j  prove independent live fenced leases                      NOT STARTED
+7.k  register EXACT_ONE_PRODUCTION_OWNER durable evidence      NOT STARTED
+\`\`\`
+
+Do not collapse these into one mutation.
+
+---
+
+## H5. Step 4 closure — producer-driven V13 qualification is durable and remains valid
+
+The live producer-driven qualification was eventually armed and completed.
+
+The accepted exact-head live run is:
+
+\`\`\`text
+workflow =
+  mcft-cap-09-v13-producer-driven-live-qualification
+
+run =
+  33326960144
+
+subject =
+  ae3f82fea3ad4dc131376db3768b268f3c3d5025
+
+status =
+  SUCCESS
+\`\`\`
+
+The durable registry binding is:
+
+\`\`\`text
+V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_AE3F82FE
+\`\`\`
+
+Current QCP at \`b9f5cacf...\` still reports:
+
+\`\`\`text
+V13_PRODUCER_DRIVEN_QUALIFICATION
+  status = PASS
+  reason = DURABLE_REQUALIFICATION_EVIDENCE_AND_DEPENDENCY_DIGEST_VALID
+  dependency_digest_match = true inside evidence adjudication
+\`\`\`
+
+Do not re-arm Step 4.
+
+PR-level workflow path matching can still rerun the old live workflow and produce a red sentinel.
+
+That is not permission to re-run provider mutation.
+
+---
+
+## H6. Step 5 closure — exact timing authority is frozen and durable
+
+Step 5 used two independent evidence classes:
+
+1. real exact-head timing samples;
+2. controlled delay / overlap execution.
+
+### H6.1 Real timing measurement
+
+\`\`\`text
+workflow =
+  mcft-cap-09-v13-exact-head-timing-measurement
+
+run =
+  33357328641
+
+subject =
+  c12e40b9a2c1d48abf4861331d7301c362f58bfc
+
+real samples =
+  3
+
+bases =
+  2026-08-31T13:00:00.000Z
+  2026-08-31T14:00:00.000Z
+  2026-08-31T15:00:00.000Z
+\`\`\`
+
+Measured end-to-end samples were approximately:
+
+\`\`\`text
+sample1 = 991,554 ms
+sample2 = 850,380 ms
+sample3 = 863,516 ms
+\`\`\`
+
+Sample 1 decomposition included approximately:
+
+\`\`\`text
+wake delay                         6.6 s
+job start/setup                   24.4 s
+provider/canonical capture       751.8 s
+raw + candidate retention        182.3 s
+promotion queue/setup              2.6 s
+rehydration/commit/readback       23.7 s
+\`\`\`
+
+### H6.2 Controlled-delay execution
+
+\`\`\`text
+workflow =
+  mcft-cap-09-v13-controlled-timing-delay-matrix
+
+run =
+  33361390478
+
+status =
+  SUCCESS
+\`\`\`
+
+This was added because the first aggregate only constructed a delay envelope mathematically.
+
+The final authority does not treat a constructed array as executed delay proof.
+
+### H6.3 Frozen budget
+
+\`\`\`text
+selected_budget_ms =
+  2,081,804
+
+selection_basis =
+  MEASURED_ENVELOPE_PLUS_EXPLICIT_MARGIN
+
+hardcoded_default_budget_minutes =
+  null
+
+35-minute hardcoded authority =
+  false
+\`\`\`
+
+Frozen validator:
+
+\`\`\`text
+workflow =
+  mcft-cap-09-v13-frozen-timing-authority
+
+run =
+  33361592444
+
+status =
+  SUCCESS
+\`\`\`
+
+The durable timing evidence initially failed because the wrong digest layer was registered.
+
+The correct check-level dependency digest was:
+
+\`\`\`text
+sha256:857b9011f042fc561f00d0e65e47a6cfc5c35d4efa4a4bae3f2ca8fd1de84c66
+\`\`\`
+
+After the registry binding was corrected at:
+
+\`\`\`text
+cfad3acdcc3c89f9fda0008ffa96a9fdefc06015
+\`\`\`
+
+QCP reduced to one blocker.
+
+At the current head, Step 5 remains valid.
+
+Do not reopen it.
+
+---
+
+## H7. QCP current machine fact — exactly one blocker remains
+
+The latest exact-head QCP run inspected for this handoff is:
+
+\`\`\`text
+workflow =
+  mcft-cap-09-qualification-control-plane-v1
+
+run =
+  33391978825
+
+head =
+  b9f5cacf5e1fb7ec72eb53d9a15918fb1998501b
+
+artifact =
+  9758104683
+
+artifact digest =
+  sha256:8070ed1682da78e101a379aa0cb31701e26793f0ac51f6aae8d4ca1dd19dfeab
+\`\`\`
+
+Machine result:
+
+\`\`\`text
+V13_PRODUCER_DRIVEN_QUALIFICATION     = PASS
+END_TO_END_EVIDENCE_SUPPLY_DEADLINE  = PASS
+EXACT_ONE_PRODUCTION_OWNER            = FAIL
+FORMAL_V5_ACTIVATION                  = NOT_APPLICABLE
+
+blocker_count =
+  1
+
+blocker =
+  EXACT_ONE_PRODUCTION_OWNER
+\`\`\`
+
+The exact owner check currently has:
+
+\`\`\`text
+reason_code =
+  NO_VALID_REQUALIFICATION_EVIDENCE
+
+execution =
+  DURABLE_REQUALIFICATION_EVIDENCE
+\`\`\`
+
+This is the only QCP blocker.
+
+Do not chase unrelated red PR workflows unless QCP says they are relevant.
+
+---
+
+## H8. Exact-one-owner semantics — LOGIN is not an owner
+
+The owner graduation audit established:
+
+\`\`\`text
+GitHub scheduled production Evidence owners       = 0
+GitHub scheduled production Twin owners           = 0
+retired workflow_run production owners            = 0
+retired downstream production triggers            = 0
+\`\`\`
+
+The future valid topology must be:
+
+\`\`\`text
+Evidence Runtime effective owner count =
+  exactly 1
+
+Twin Runtime scheduler effective owner count =
+  exactly 1
+\`\`\`
+
+These are independent planes.
+
+Evidence uses its own producer lease/fence.
+
+Twin uses its own scheduler lease/fence.
+
+A production LOGIN role is only an identity.
+
+A DB membership is only authorization.
+
+Neither proves an effective owner.
+
+A qualification Compose process is not the production owner.
+
+A GitHub Actions job is explicitly forbidden from becoming routine production hosting.
+
+The owner closure requires:
+
+\`\`\`text
+non-GitHub host binding
++
+live runtime process
++
+correct service identity
++
+live independent fenced lease
++
+exact owner count
+\`\`\`
+
+Only then may \`EXACT_ONE_PRODUCTION_OWNER\` close.
+
+---
+
+## H9. Provisioning bundle was proven in isolated PostgreSQL before remote mutation
+
+Before creating a production operational database, the complete provisioning bundle was qualified in isolated PostgreSQL.
+
+The important run supplied during this continuation was:
+
+\`\`\`text
+mcft-cap-09-production-owner-provisioning-bundle-postgres
+run = 33370602233
+status = SUCCESS
+\`\`\`
+
+The bundle proved:
+
+\`\`\`text
+production-host schema table count = 41
+all application rows               = 0
+
+Evidence privilege role            = correct
+Twin privilege role                = correct
+Evidence LOGIN                     = correct
+Twin LOGIN                         = correct
+exact one membership per LOGIN     = correct
+
+Evidence/Twin ACL separation       = PASS
+fenced writer boundaries           = PASS
+direct facts INSERT denial         = PASS
+cross-plane writer denial          = PASS
+\`\`\`
+
+Associated CI:
+
+\`\`\`text
+run = 33370602198
+status = SUCCESS
+\`\`\`
+
+Associated QCP at that intermediate frontier:
+
+\`\`\`text
+run = 33370602342
+
+blocker =
+  EXACT_ONE_PRODUCTION_OWNER
+\`\`\`
+
+This isolated success proves implementation capability.
+
+It does not prove Neon portability.
+
+That distinction became important in the three remote materialization attempts below.
+
+---
+
+## H10. Production operational DB authority audit — why a dedicated DB was required
+
+The repository already froze an important topology fact:
+
+> Evidence Runtime and Twin Runtime use **two separate runtime URLs / identities targeting one shared PostgreSQL operational database**.
+
+However, before this continuation there was no frozen name for that database.
+
+The following existing databases were explicitly rejected as operational reuse candidates:
+
+\`\`\`text
+geox_mcft_cap09_s6_formal_t3r1_24h
+geox_mcft_cap09_s6_accel24t_am19_v13
+geox_mcft_cap09_s6_accel24t_am19_blocked_v13
+geox_mcft_cap09_s6_formal_t4r1_24h_v4
+geox_mcft_cap09_s6_formal_t4r1_24h_v5
+geox_mcft_cap09_s6_accel24t_am19_v12
+geox_mcft_cap09_s6_accel24t_am19_blocked_v12
+\`\`\`
+
+Important correction from an earlier intermediate hypothesis:
+
+\`\`\`text
+Formal-v5 store is NOT the production operational DB.
+\`\`\`
+
+It remains a separate fresh Formal store.
+
+The new dedicated operational identity is:
+
+\`\`\`text
+geox_mcft_cap09_production_runtime_v1
+\`\`\`
+
+Authority file:
+
+\`\`\`text
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-PRODUCTION-OPERATIONAL-DATABASE-CANDIDATE-V1.json
+\`\`\`
+
+Frozen purpose:
+
+\`\`\`text
+SHARED_OPERATIONAL_POSTGRES_FOR_EVIDENCE_AND_TWIN_RUNTIME
+\`\`\`
+
+Required topology:
+
+\`\`\`text
+Evidence + Twin same PostgreSQL DB          = true
+Evidence + Twin separate login URLs         = true
+Formal-v5 separate                          = true
+V13 qualification separate                  = true
+blocked-V13 separate                        = true
+\`\`\`
+
+---
+
+## H11. Dedicated operational DB creation — complete and immutable
+
+Candidate qualification:
+
+\`\`\`text
+subject =
+  f94f875f1d2026f883e1142f31371ad7ea7f805f
+
+workflow =
+  mcft-cap-09-production-operational-database-candidate-preflight
+
+run =
+  33375040615
+
+artifact =
+  9751530463
+
+artifact digest =
+  sha256:af86e97f6d0fa1e9bda493a97ce34c00f4941b28a3aae2b669ab2862c91d8193
+
+candidate present before provisioning =
+  false
+
+unique creator membership =
+  neon_superuser
+\`\`\`
+
+One-shot provisioning:
+
+\`\`\`text
+subject =
+  b27f00fa324ba02dbf92e108b43f108dec45ecd5
+
+workflow =
+  mcft-cap-09-production-operational-database-provision-one-shot
+
+run =
+  33375907417
+
+status =
+  SUCCESS
+
+artifact =
+  9751846155
+
+artifact digest =
+  sha256:1530fb351a83838b3b25f0d6d35ea71c7cd5580dcfc8f7be3b8950cac7473cc1
+\`\`\`
+
+Provision result:
+
+\`\`\`text
+database =
+  geox_mcft_cap09_production_runtime_v1
+
+created_by_this_run =
+  true
+
+fresh_zero_state =
+  true
+
+public_relation_count =
+  0
+
+public_routine_count =
+  0
+
+protected_store_count_preserved =
+  6
+\`\`\`
+
+Binding commit:
+
+\`\`\`text
+088054a743205d4f4a7eb7892fa54765a71a314e
+gov(mcft-cap09): bind provisioned operational database
+\`\`\`
+
+The DB provisioning arm is now:
+
+\`\`\`text
+armed = false
+create_database_authorized = false
+\`\`\`
+
+Do not re-run CREATE DATABASE.
+
+PR-level reruns of the one-shot provisioning workflow can show red after disarm.
+
+That is a completed-sentinel condition.
+
+Do not “fix” it by re-arming database creation.
+
+---
+
+## H12. Operational schema/ACL readiness — capability was qualified before materialization
+
+The dedicated operational database was kept zero-state before schema materialization.
+
+The readiness lane proved the remote provisioning identity had enough capability to attempt the transaction.
+
+Important intermediate machine fact supplied during this continuation:
+
+\`\`\`text
+schema/ACL readiness run =
+  33376505516
+
+status =
+  PASS
+
+target =
+  geox_mcft_cap09_production_runtime_v1
+
+target_zero_state =
+  true
+
+provisioning identity =
+  CREATEROLE / CREATEDB capable
+
+public schema CREATE =
+  available to provisioning identity
+\`\`\`
+
+The actual materialization path was then introduced at:
+
+\`\`\`text
+0b5772c2ec4d2ea392295e431cb63191af268873
+feat(mcft-cap09): add operational schema acl materialization
+\`\`\`
+
+The materializer applies:
+
+\`\`\`text
+9 schema/persistence migration inputs
++
+4 ACL migration inputs
+\`\`\`
+
+inside one PostgreSQL transaction.
+
+The required postcondition is:
+
+\`\`\`text
+41 tables
+all application rows = 0
+Evidence/Twin NOLOGIN privilege roles
+fenced writer functions
+cross-plane denial
+direct facts INSERT denied
+production LOGIN roles still absent
+runtime not started
+owner not activated
+Formal-v5 not armed
+\`\`\`
+
+---
+
+## H13. Materialization attempt chronology — three failures, each exposed a deeper Neon portability constraint
+
+### H13.1 Attempt 1 — missing SET membership for writer-owner roles
+
+Arm commit:
+
+\`\`\`text
+dd5e14cdbb59aba9599be253480a6f445ceda91c
+gov(mcft-cap09): arm operational schema acl materialization
+\`\`\`
+
+Run:
+
+\`\`\`text
+33390970742
+mcft-cap-09-production-operational-schema-acl-materialize-one-shot
+FAILURE
+\`\`\`
+
+Root cause:
+
+\`\`\`text
+ALTER FUNCTION ... OWNER TO <NOLOGIN writer owner>
+\`\`\`
+
+requires the provisioning role to be able to SET ROLE to the new owner.
+
+The Neon provisioning identity had \`CREATEROLE\`, but did not automatically have SET membership in the three NOLOGIN writer-owner roles.
+
+Correct fix:
+
+\`\`\`text
+precreate exact writer-owner roles
+GRANT each writer-owner role TO CURRENT_USER
+verify pg_has_role(...,'SET')
+apply bundle
+REVOKE each membership
+verify residual membership count = 0
+\`\`\`
+
+Disarm / rollback-proof commit:
+
+\`\`\`text
+86793d53a69aa4d8a56c085250894958507e393d
+\`\`\`
+
+The following unarmed run was SUCCESS.
+
+Remote DB was machine-proven zero-state again.
+
+### H13.2 Attempt 2 — writer owner lacked temporary CREATE on schema public
+
+Fix commit for temporary SET membership:
+
+\`\`\`text
+35b6597d5f317378eb02c6c11fc3f8d13a824b8b
+fix(mcft-cap09): scope temporary writer owner membership
+\`\`\`
+
+Second arm:
+
+\`\`\`text
+5ee685c261fd6a5ba56d46bbb48c8ff5d20be8b1
+\`\`\`
+
+Run:
+
+\`\`\`text
+33391493729
+mcft-cap-09-production-operational-schema-acl-materialize-one-shot
+FAILURE
+\`\`\`
+
+Root cause:
+
+\`\`\`text
+ALTER FUNCTION ... OWNER TO <writer owner>
+\`\`\`
+
+also requires the target owner role to have \`CREATE\` on the target schema.
+
+The isolated PostgreSQL bundle had been executed with superuser-like authority and did not expose this Neon constraint.
+
+The correct portability fix was deliberately placed in the migrations themselves:
+
+\`\`\`text
+GRANT CREATE ON SCHEMA public TO <NOLOGIN writer owner>
+ALTER FUNCTION ... OWNER TO <NOLOGIN writer owner>
+REVOKE CREATE ON SCHEMA public FROM <NOLOGIN writer owner>
+\`\`\`
+
+This preserves the final privilege matrix.
+
+It does not widen runtime privilege.
+
+Disarm after attempt 2:
+
+\`\`\`text
+82c8ee76bc71074cd32b009ce8d223530538073a
+gov(mcft-cap09): disarm second schema acl attempt
+\`\`\`
+
+The unarmed materializer and readiness runs at this head were SUCCESS.
+
+### H13.3 Neon CREATE-window portability fix
+
+Commit:
+
+\`\`\`text
+a43ea249b7679135196c7a34640961b3a7b815ae
+fix(mcft-cap09): make writer ownership transfer Neon-safe
+\`\`\`
+
+Changed:
+
+\`\`\`text
+apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql
+apps/server/db/migrations/2026_08_27_mcft_cap_09_phase5_twin_fact_writer_acl.sql
+scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_BUNDLE_POSTGRES_V1.ts
+\`\`\`
+
+This fix is conceptually correct and should be retained.
+
+### H13.4 Attempt 3 — current exact frontier: restricted ALTER ROLE attribute
+
+Third arm commit / current head:
+
+\`\`\`text
+b9f5cacf5e1fb7ec72eb53d9a15918fb1998501b
+gov(mcft-cap09): arm Neon-safe schema acl materialization
+\`\`\`
+
+Materialization run:
+
+\`\`\`text
+33391978663
+FAILURE
+\`\`\`
+
+Artifact:
+
+\`\`\`text
+9757824594
+digest = sha256:c3fa129348e218a064f083dbd326a436c16dfbf5b9cec053619c99c2b700c868
+\`\`\`
+
+Exact failure:
+
+\`\`\`text
+error =
+  permission denied to alter role
+
+PostgreSQL code =
+  42501
+
+detail =
+  Only roles with the SUPERUSER attribute may change the SUPERUSER attribute.
+\`\`\`
+
+The failure occurs while applying the ACL files.
+
+The relevant migrations currently contain idempotent role-hardening statements such as:
+
+\`\`\`sql
+ALTER ROLE geox_mcft_cap09_twin_runtime_v1
+  NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+\`\`\`
+
+and:
+
+\`\`\`sql
+ALTER ROLE geox_mcft_cap09_twin_writer_owner_v1
+  NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+\`\`\`
+
+On Neon, the provisioning identity is not an actual PostgreSQL SUPERUSER.
+
+Even restating \`NOSUPERUSER\` through \`ALTER ROLE\` is treated as changing the SUPERUSER attribute and is rejected.
+
+This is the current root cause.
+
+---
+
+## H14. Immediate next action — exact order
+
+### H14.1 First: disarm attempt 3
+
+Current arm at handoff:
+
+\`\`\`json
+{
+  "armed": true,
+  "database_name": "geox_mcft_cap09_production_runtime_v1",
+  "production_host_schema_materialization_authorized": true,
+  "runtime_acl_materialization_authorized": true,
+  "service_login_bootstrap_authorized": false,
+  "runtime_credential_binding_authorized": false,
+  "runtime_process_start_authorized": false,
+  "production_owner_activation_authorized": false,
+  "formal_v5_arm_authorized": false,
+  "a0_authorized": false,
+  "o00_authorized": false
+}
+\`\`\`
+
+The very next product commit should set:
+
+\`\`\`text
+armed = false
+production_host_schema_materialization_authorized = false
+runtime_acl_materialization_authorized = false
+\`\`\`
+
+and leave every later authorization false.
+
+Do this before changing migrations.
+
+### H14.2 Second: prove rollback zero-state
+
+Run:
+
+\`\`\`text
+mcft-cap-09-production-operational-schema-acl-readiness
+\`\`\`
+
+with the arm false.
+
+Require:
+
+\`\`\`text
+target database =
+  geox_mcft_cap09_production_runtime_v1
+
+tables =
+  0
+
+routines =
+  0
+
+production LOGIN roles =
+  absent
+
+runtime started =
+  false
+
+owner activated =
+  false
+\`\`\`
+
+Also verify no temporary writer-owner membership remains on the provisioning identity.
+
+Do not infer rollback only from PostgreSQL transactional semantics.
+
+Machine-prove it.
+
+### H14.3 Third: fix role hardening for Neon non-superuser provisioning
+
+Do **not** simply remove \`NOSUPERUSER\` and immediately re-arm.
+
+Audit every \`ALTER ROLE\` attribute in the ACL bundle for Neon privilege requirements.
+
+Preferred design:
+
+1. \`CREATE ROLE ...\` may state the complete safe attributes when the role does not exist.
+2. For an existing role, avoid reasserting restricted attributes that the provisioning identity is not permitted to change.
+3. Read \`pg_catalog.pg_roles\` and fail closed if an existing role has unsafe attributes.
+4. Treat negative security attributes as postconditions, not as privileged no-op ALTERs.
+5. Keep final required states explicit:
+   - \`rolsuper = false\`
+   - \`rolcreatedb = false\`
+   - \`rolcreaterole = false\`
+   - \`rolreplication = false\`
+   - \`rolbypassrls = false\`
+   - runtime/writer LOGIN state exactly as frozen
+   - Twin runtime/writer \`NOINHERIT\` where frozen
+6. If a safe attribute can be changed by CREATEROLE, do so only if needed.
+7. Never require actual SUPERUSER.
+
+At minimum inspect:
+
+\`\`\`text
+apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql
+apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql
+apps/server/db/migrations/2026_08_27_mcft_cap_09_phase5_twin_fact_writer_acl.sql
+apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql
+\`\`\`
+
+### H14.4 Fourth: strengthen isolated acceptance so it no longer hides Neon privilege problems
+
+The existing isolated bundle is valuable but ran with stronger authority than Neon.
+
+Add a provisioning-admin test mode that behaves like:
+
+\`\`\`text
+LOGIN
+NOSUPERUSER
+CREATEROLE
+CREATEDB
+not owner-activated
+\`\`\`
+
+and execute the ACL materialization through that identity.
+
+The test must catch:
+
+\`\`\`text
+SET ROLE requirements
+schema CREATE ownership-transfer requirements
+restricted ALTER ROLE attributes
+residual role membership
+residual schema CREATE privilege
+\`\`\`
+
+before another remote arm.
+
+### H14.5 Fifth: only then allow attempt 4
+
+Attempt 4 must still authorize only:
+
+\`\`\`text
+schema materialization = true
+runtime ACL materialization = true
+\`\`\`
+
+Still false:
+
+\`\`\`text
+service LOGIN bootstrap
+runtime credential binding
+runtime process start
+production owner activation
+Formal-v5 arm
+A0
+O00
+\`\`\`
+
+If attempt 4 succeeds:
+
+1. immediately disarm;
+2. run read-only readiness against the materialized DB;
+3. verify 41 tables / zero rows;
+4. verify expected routines/fenced writers;
+5. verify Evidence/Twin ACL matrix;
+6. verify direct facts INSERT denial;
+7. verify cross-plane writer denial;
+8. verify temporary memberships = 0;
+9. verify temporary schema CREATE privilege = 0;
+10. verify both production LOGIN roles are still absent;
+11. bind the immutable materialization run/artifact into the provisioning authority.
+
+Only then start the LOGIN/credential stage.
+
+---
+
+## H15. Readiness failures while armed are expected sentinels
+
+At the current third-arm head:
+
+\`\`\`text
+mcft-cap-09-production-operational-schema-acl-readiness
+run = 33391978274
+conclusion = failure
+\`\`\`
+
+The failure is:
+
+\`\`\`text
+SCHEMA_ACL_READINESS_MUST_BE_UNARMED
+\`\`\`
+
+This does **not** mean the DB is non-zero or corrupted.
+
+The readiness workflow is deliberately a read-only unarmed gate.
+
+When the execution arm is true, readiness must fail closed.
+
+Do not “fix” this workflow to accept \`armed=true\`.
+
+Disarm first, then use readiness to prove rollback state.
+
+---
+
+## H16. Current workflow interpretation at b9f5 — which reds matter
+
+At \`b9f5cacf...\` the following important workflows are green:
+
+\`\`\`text
+CI                                               SUCCESS
+producer-driven qualification preflight          SUCCESS
+frozen timing authority                          SUCCESS
+controlled timing delay matrix                    SUCCESS
+Phase3 Evidence runtime persistence               SUCCESS
+Phase4 Twin runtime persistence                   SUCCESS
+Phase7 candidate promotion composition            SUCCESS
+V13 foundation / holistic schema / next tick      SUCCESS
+V13 fenced promotion                              SUCCESS
+post-merge V13 control plane                      SUCCESS
+production owner provisioning bundle postgres     SUCCESS
+QCP governance selftests                          successful before blocker enumeration
+\`\`\`
+
+The following reds are not all equivalent:
+
+### Actionable red
+
+\`\`\`text
+mcft-cap-09-production-operational-schema-acl-materialize-one-shot
+33391978663
+FAIL
+\`\`\`
+
+This is the current engineering root cause.
+
+### Expected sentinel red
+
+\`\`\`text
+mcft-cap-09-production-operational-schema-acl-readiness
+33391978274
+FAIL because arm=true
+\`\`\`
+
+### Expected completed one-shot / old-stage reds
+
+Examples include:
+
+\`\`\`text
+production operational DB provision one-shot
+owner graduation gate
+old producer-driven live qualification
+old Phase6/runtime-independence PR-path reruns
+some historical production-equivalent container workflows
+\`\`\`
+
+Do not chase these merely because the PR check list is red.
+
+Use QCP.
+
+QCP says the only active blocker is:
+
+\`\`\`text
+EXACT_ONE_PRODUCTION_OWNER
+\`\`\`
+
+---
+
+## H17. Provisioning stages that remain after schema+ACL succeeds
+
+The production-owner provisioning authority currently binds:
+
+\`\`\`text
+target database =
+  geox_mcft_cap09_production_runtime_v1
+
+topology =
+  Evidence and Twin use separate login URLs
+  both URLs target one shared operational PostgreSQL database
+\`\`\`
+
+After schema+ACL succeeds, the remaining provisioning sequence is:
+
+\`\`\`text
+1. create/bind:
+   geox_mcft_cap09_evidence_runtime_login_v1
+
+2. create/bind:
+   geox_mcft_cap09_twin_runtime_login_v1
+
+3. prove exact memberships:
+   Evidence LOGIN -> Evidence privilege role only
+   Twin LOGIN     -> Twin privilege role only
+
+4. bind:
+   GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL
+   GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_PASSWORD
+   GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL
+   GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_PASSWORD
+
+5. verify both LOGIN identities can connect
+   without starting either runtime process
+\`\`\`
+
+Provisioning completion still does not prove owner activation.
+
+Keep runtime start false.
+
+---
+
+## H18. Non-GitHub hosting remains a separate unsolved authority
+
+The repository has working long-running process implementations:
+
+\`\`\`text
+apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts
+apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts
+\`\`\`
+
+They already expose independent lease-owner boundaries.
+
+But the repository still does not contain a frozen production binding to:
+
+\`\`\`text
+systemd
+Kubernetes
+ECS
+a dedicated VM/container host
+or another explicit non-GitHub production runtime
+\`\`\`
+
+The qualification Compose stack is not that authority.
+
+GitHub Actions is forbidden from becoming the routine owner.
+
+Therefore after service-principal provisioning, the next machine authority must bind the real non-GitHub host before process activation.
+
+Do not invent a host name or platform from convention.
+
+Freeze it explicitly.
+
+---
+
+## H19. Formal-v5 remains separate from the operational DB
+
+Never conflate:
+
+\`\`\`text
+geox_mcft_cap09_production_runtime_v1
+\`\`\`
+
+with:
+
+\`\`\`text
+geox_mcft_cap09_s6_formal_t4r1_24h_v5
+\`\`\`
+
+The first is:
+
+\`\`\`text
+shared operational PostgreSQL for Evidence + Twin runtime
+\`\`\`
+
+The second is:
+
+\`\`\`text
+fresh Formal-v5 store
+\`\`\`
+
+Current expected Formal-v5 state remains:
+
+\`\`\`text
+zero-state
+pre-arm
+not owner-provisioning target
+\`\`\`
+
+Schema/ACL materialization into the operational DB must not touch Formal-v5.
+
+Production owner activation must not imply Formal-v5 activation.
+
+Formal-v5 is still Step 8, after exact-one-owner proof.
+
+---
+
+## H20. Pitfalls already hit — do not repeat them
+
+### H20.1 Wrong dependency digest layer
+
+For durable QCP evidence, do not register the resolver-summary catalog digest if the check-level materialized digest is different.
+
+This already caused Step 5 to appear stale after a valid frozen timing run.
+
+Always read the check-level digest that the evidence adjudicator compares.
+
+### H20.2 Constructed delay matrix is not executed delay proof
+
+The first timing aggregate constructed six controlled cases mathematically.
+
+That was not enough to claim \`controlled_delay_matrix_executed=true\`.
+
+The final authority correctly binds a separate controlled-delay execution artifact.
+
+Do not regress this distinction.
+
+### H20.3 PR \`paths\` evaluates the whole PR diff
+
+Later registry-only commits can rerun old workflows because GitHub sees files changed anywhere in the PR diff.
+
+A rerun is not automatically a requalification requirement.
+
+Use QCP applicability/digest logic.
+
+### H20.4 Pull-request \`GITHUB_SHA\` can be a merge SHA
+
+For exact-head evidence use:
+
+\`\`\`text
+github.event.pull_request.head.sha
+\`\`\`
+
+not the synthetic PR merge commit.
+
+This was already fixed in owner-graduation artifacts.
+
+### H20.5 Seed credential DB is not production operational DB
+
+\`GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL\` can be used as a seed credential source.
+
+Its pathname must not be interpreted as the production operational DB identity.
+
+The operational DB is now frozen separately.
+
+### H20.6 Do not reuse a Formal or qualification store
+
+Do not reuse:
+
+\`\`\`text
+T3R1
+V13 qualification
+blocked V13
+Formal-v4
+Formal-v5
+\`\`\`
+
+as the operational DB.
+
+The independent operational DB already exists.
+
+### H20.7 A completed one-shot may turn red after disarm
+
+The operational DB creation one-shot should not be made idempotently “green forever” by recreating or mutating the DB.
+
+Its authority/artifact proves completion.
+
+Do not re-arm it.
+
+### H20.8 Readiness is supposed to fail while execution arm is true
+
+Do not modify readiness to permit armed state.
+
+That would destroy the preflight/execution separation.
+
+### H20.9 \`neon_superuser\` membership is not actual PostgreSQL SUPERUSER
+
+The provisioning identity can have useful creator/admin capability without \`rolsuper=true\`.
+
+Never assume superuser semantics from the role name.
+
+### H20.10 PostgreSQL DDL is transactional here — but still prove rollback
+
+The schema+ACL bundle intentionally runs inside one transaction.
+
+A failure should roll back DDL/role grants created in that transaction.
+
+Still run a read-only zero-state proof after every failed attempt.
+
+### H20.11 OWNER transfer needs SET membership
+
+\`ALTER FUNCTION ... OWNER TO role\` requires membership/SET authority on the target role for this provisioning identity.
+
+Use temporary membership.
+
+Revoke it.
+
+Assert zero residual membership.
+
+### H20.12 OWNER transfer also needs target schema CREATE
+
+The new function owner needs CREATE on the target schema during ownership transfer.
+
+Grant it only around the transfer.
+
+Revoke immediately.
+
+Assert final CREATE privilege is absent.
+
+### H20.13 \`ALTER ROLE ... NOSUPERUSER\` is not a harmless no-op on Neon
+
+This is the current third-attempt failure.
+
+A non-superuser cannot change the SUPERUSER attribute, even to false.
+
+Do not use privileged ALTER statements merely to restate already-safe negative attributes.
+
+Validate catalog postconditions instead.
+
+### H20.14 Isolated superuser tests can hide managed-Postgres portability bugs
+
+The isolated bundle passed before remote Neon materialization.
+
+That success did not prove non-superuser provisioning portability.
+
+Add a non-superuser CREATEROLE/CREATEDB acceptance path.
+
+### H20.15 LOGIN role != effective owner
+
+Do not close owner graduation after creating LOGIN roles.
+
+You still need non-GitHub host + live process + fenced lease + exact count.
+
+### H20.16 Evidence and Twin owners must remain independent
+
+Do not create one generic “MCFT production owner” process that collapses the two planes.
+
+They have independent lease/fence semantics.
+
+### H20.17 Do not bind runtime secrets before schema/ACL is closed
+
+The current failure is before service LOGIN provisioning.
+
+Keep credentials out of the materialization transaction.
+
+### H20.18 Tool-generation string interpolation can look like a repository failure
+
+A workflow-generation attempt previously failed locally because Bash array expansion syntax was interpreted by the outer JavaScript template.
+
+No commit was written.
+
+When generating YAML through JavaScript, avoid unescaped shell interpolation syntax or use placeholders.
+
+### H20.19 Never overwrite unexpected head drift
+
+If #3376 advances unexpectedly, re-read the commits.
+
+Do not force the branch back to the head you expected.
+
+---
+
+## H21. Current exact commit chronology from Step 5 closure to this handoff
+
+High-value resume chain:
+
+\`\`\`text
+cfad3acdcc3c89f9fda0008ffa96a9fdefc06015
+  bind check-level frozen timing digest
+
+64ed543d9d898ff4bcf89541a139a1e4ccefea14
+  open machine-only production owner graduation gate
+
+1f89f2aeb8151e2f3755f3ec67bf97ae08faa278
+  sharpen owner graduation inventory
+
+8073f45edf6cc2c306de3aa6169fd164efd4f32e
+  split production owner provisioning readiness
+
+4e783b5611e29ae687cbc88dfb5fd0657bdc446c
+  intermediate owner target binding
+
+40da2514929bf44d8f3db4e27b630ab0317941c1
+  accept bound provisioning target
+
+95937b6234047791e52630a169d02b684800666a
+  qualify owner provisioning bundle
+
+1b55b0c82cc61a532f7e36dc84c5cc2ecd034d2d
+6e9575961b507f05f1375280b0c859040fe0a4a2
+  keep production operational database unresolved until authority audit
+
+f4f36b01b9d5e26dc1e580e82216a164466e216d
+  productize production host projection persistence
+
+279c3da88daffb997070f2282e59217af32c5865
+  qualify dedicated operational database candidate
+
+f94f875f1d2026f883e1142f31371ad7ea7f805f
+  execute operational database creator preflight
+
+b27f00fa324ba02dbf92e108b43f108dec45ecd5
+  arm empty operational database provisioning
+
+088054a743205d4f4a7eb7892fa54765a71a314e
+  bind provisioned operational database
+
+6feb2d10675a53cfab16dd30651c8294ff9ae398
+  qualify operational schema ACL capability
+
+0b5772c2ec4d2ea392295e431cb63191af268873
+  add operational schema ACL materialization
+
+dd5e14cdbb59aba9599be253480a6f445ceda91c
+  attempt 1 arm
+
+86793d53a69aa4d8a56c085250894958507e393d
+  disarm attempt 1 / rollback proof frontier
+
+35b6597d5f317378eb02c6c11fc3f8d13a824b8b
+  temporary writer-owner SET membership fix
+
+5ee685c261fd6a5ba56d46bbb48c8ff5d20be8b1
+  attempt 2 arm
+
+82c8ee76bc71074cd32b009ce8d223530538073a
+  disarm attempt 2
+
+a43ea249b7679135196c7a34640961b3a7b815ae
+  temporary public CREATE around OWNER transfer
+
+b9f5cacf5e1fb7ec72eb53d9a15918fb1998501b
+  attempt 3 arm / CURRENT EXACT HEAD
+\`\`\`
+
+---
+
+## H22. What is completed versus what is not
+
+### Completed
+
+\`\`\`text
+post-merge V13 production composition
+fresh V13 / blocked-V13 / Formal-v5 store provisioning
+producer-driven V13 qualification
+fresh immutable evidence rebind
+exact-base post-merge QCP router
+real 3-sample timing measurement
+controlled delay execution
+frozen timing authority
+durable Step-5 evidence
+GitHub production owner retirement proof
+machine-only owner graduation gate
+owner provisioning readiness model
+isolated 41-table + ACL + dual LOGIN provisioning bundle
+production operational DB authority audit
+dedicated operational DB candidate qualification
+dedicated operational DB creation
+operational DB immutable proof binding
+operational schema/ACL readiness
+transactional schema/ACL one-shot materializer
+temporary writer-owner SET membership fix
+temporary schema CREATE ownership-transfer fix
+\`\`\`
+
+### Not completed
+
+\`\`\`text
+Neon-safe operational schema+ACL materialization
+production LOGIN creation on the operational DB
+runtime DB URL/password binding
+non-GitHub host authority
+Evidence effective owner activation
+Twin effective scheduler owner activation
+exact-one-owner durable evidence
+Formal-v5 activation
+A0
+O00-O23
+automatic final readback
+final CAP-09 completion
+\`\`\`
+
+---
+
+## H23. Next engineer first 30 minutes
+
+### Minute 0-5
+
+Read:
+
+\`\`\`text
+#3376 current head
+schema/ACL arm
+materializer
+Phase4 Twin ACL migration
+Phase5 Twin writer ACL migration
+run 33391978663 logs
+QCP run 33391978825 artifact
+\`\`\`
+
+Verify current head is still:
+
+\`\`\`text
+b9f5cacf5e1fb7ec72eb53d9a15918fb1998501b
+\`\`\`
+
+If not, stop and reconstruct the delta.
+
+### Minute 5-10
+
+Disarm schema+ACL.
+
+Do not modify migrations in the same commit.
+
+Let the unarmed materializer/readiness run.
+
+### Minute 10-15
+
+Machine-prove rollback:
+
+\`\`\`text
+tables = 0
+routines = 0
+LOGIN roles absent
+runtime not started
+owner not activated
+\`\`\`
+
+Check temporary role memberships.
+
+### Minute 15-25
+
+Patch Neon role hardening:
+
+- remove privileged no-op SUPERUSER attribute changes;
+- audit other restricted ALTER ROLE attributes;
+- validate catalog state explicitly;
+- preserve all final negative-security postconditions;
+- add non-superuser provisioning acceptance.
+
+Run CI and isolated provisioning bundle.
+
+### Minute 25-30
+
+Only if all local/isolated machine checks are green:
+
+prepare attempt 4 arm.
+
+Do not arm if the previous rollback proof is missing.
+
+---
+
+## H24. Final non-effect assertions at this handoff
+
+At the current frontier:
+
+\`\`\`text
+production operational DB exists =
+  true
+
+production operational DB schema materialized =
+  false / latest attempt failed transactionally
+
+production LOGIN roles =
+  not yet created remotely
+
+runtime credential bindings =
+  not yet bound
+
+runtime process start =
+  false
+
+production owner activation =
+  false
+
+GitHub production owner =
+  retired / zero
+
+Formal-v5 arm =
+  false
+
+Formal-v5 routine mutation =
+  false
+
+A0 =
+  not started
+
+O00 =
+  not started
+
+MCFT-CAP-09 complete =
+  false
+\`\`\`
+
+The owner blocker is real.
+
+The schema/ACL failure is a provisioning portability issue, not a reason to weaken the runtime ACL or owner model.
+
+---
+
+## H25. One-line continuation command
+
+**Disarm \`MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_ARM_V1.json\`, prove \`geox_mcft_cap09_production_runtime_v1\` rolled back to zero-state, make the Phase4/Twin-writer role-hardening SQL Neon-safe by replacing privileged no-op \`ALTER ROLE ... NOSUPERUSER\` restatements with fail-closed catalog validation, strengthen the isolated bundle to run as a non-superuser provisioning admin, and only then execute a fourth schema+ACL-only one-shot; keep LOGIN bootstrap, secrets, runtime start, production owner activation, Formal-v5, A0, and O00 false.**
 
 ---
 
