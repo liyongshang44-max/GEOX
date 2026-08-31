@@ -1015,10 +1015,10 @@
         "artifact_digest": null,
         "dependency_subject_sha": "e052fd459ffa4a479ae1299b12b08f8d06dc6c42",
         "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
-        "dependency_digest": "sha256:d6fa12863381f5caeea2115b159de5f8cdfa60b9fcc0e4015c2fa9c8bf76bd34",
+        "dependency_digest": "sha256:857b9011f042fc561f00d0e65e47a6cfc5c35d4efa4a4bae3f2ca8fd1de84c66",
         "artifact_absence_reason": "RUN_LEVEL_POST_MERGE_V13_FROZEN_TIMING_AUTHORITY_EVIDENCE_ONLY",
         "immutable": true,
-        "immutable_binding_sha256": "fb429d7605e1b076b78ce43e308b2300c83185e2bbd967a5f398cff1367429d6"
+        "immutable_binding_sha256": "5976a87f521096b66fe89ec134ed5e52a0df44cab0e78d8064c8d111ad973b70"
       }
     ],
     "durable_anchors": {
