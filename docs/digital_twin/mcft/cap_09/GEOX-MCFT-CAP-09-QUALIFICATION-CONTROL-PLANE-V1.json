@@ -372,6 +372,7 @@
         ".github/workflows/mcft-cap-09-production-operational-database-provision-one-shot.yml",
         "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_ARM_V1.json",
         ".github/workflows/mcft-cap-09-production-operational-schema-acl-readiness.yml",
+        "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_READINESS_V2.cjs",
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_MATERIALIZATION_V1.ts",
         ".github/workflows/mcft-cap-09-production-operational-schema-acl-materialize-one-shot.yml"
       ]

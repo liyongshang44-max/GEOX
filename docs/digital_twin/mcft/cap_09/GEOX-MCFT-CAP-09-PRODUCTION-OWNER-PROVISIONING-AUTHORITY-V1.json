@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_owner_provisioning_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1",
-  "status": "TARGET_DATABASE_BOUND_PROVISIONING_NOT_ARMED",
+  "status": "SCHEMA_ACL_MATERIALIZED_SERVICE_LOGIN_NOT_ARMED",
   "owner_graduation_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json",
   "provisioning_sequence": [
     "BIND_EXACT_PRODUCTION_DATABASE",
@@ -24,7 +24,9 @@
     "provision_run_id": 33375907417,
     "provision_artifact_id": 9751846155,
     "provision_artifact_digest": "sha256:1530fb351a83838b3b25f0d6d35ea71c7cd5580dcfc8f7be3b8950cac7473cc1",
-    "expected_pre_schema_state": "EMPTY_ZERO_STATE"
+    "expected_pre_schema_state": "EMPTY_ZERO_STATE",
+    "current_schema_state": "MATERIALIZED_41_TABLE_ZERO_ROW",
+    "schema_acl_materialization_complete": true
   },
   "required_existing_privilege_roles": [
     "geox_mcft_cap09_evidence_runtime_v1",
@@ -37,7 +39,11 @@
   "implementation_refs": {
     "twin_acl_migration": "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql",
     "service_principal_module": "apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts",
-    "service_principal_bootstrap": "apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.ts"
+    "service_principal_bootstrap": "apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.ts",
+    "schema_acl_materializer": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_MATERIALIZATION_V1.ts",
+    "schema_acl_readiness_v2": "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_READINESS_V2.cjs",
+    "schema_acl_readiness_workflow": ".github/workflows/mcft-cap-09-production-operational-schema-acl-readiness.yml",
+    "delegated_provisioning_bundle": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_BUNDLE_POSTGRES_V1.ts"
   },
   "credential_bindings_required": [
     "GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL",
@@ -62,7 +68,10 @@
     "formal_v5_arm": false,
     "formal_v5_mutation": false,
     "a0_bootstrap": false,
-    "o00_started": false
+    "o00_started": false,
+    "runtime_schema_acl_materialization_performed": true,
+    "production_login_creation": false,
+    "runtime_credential_binding": false
   },
   "formal_v5_store_reference": {
     "database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v5",
@@ -73,5 +82,62 @@
     "provisioning_subject_sha": "af49e6819624a2cd7129308dacde9f880f71b194",
     "provisioning_artifact_id": 9726904605,
     "provisioning_artifact_digest": "sha256:0e09f03d78e99ebc6d7df5520c865fb0b1947c040dcfc3b2d1551a982f7c6162"
+  },
+  "current_stage": "SCHEMA_ACL_COMPLETE_PRE_LOGIN",
+  "schema_acl_materialization_evidence": {
+    "status": "IMMUTABLE_SUCCESS",
+    "workflow": "mcft-cap-09-production-operational-schema-acl-materialize-one-shot",
+    "subject_sha": "577e9a9793937c9dec3d0c4e37764ecb31f3c77d",
+    "run_id": 33403255312,
+    "artifact_id": 9762088357,
+    "artifact_digest": "sha256:d860c68bfc1cdb6de94edb30ec3b4e24a681f9f6ba9eb07bffabe0ee2ebaf928",
+    "database_name": "geox_mcft_cap09_production_runtime_v1",
+    "production_host_table_count": 41,
+    "all_table_rows_zero": true,
+    "runtime_routine_count": 3,
+    "evidence_direct_facts_insert": false,
+    "twin_direct_facts_insert": false,
+    "evidence_writer_cross_plane_matrix_pass": true,
+    "twin_writer_cross_plane_matrix_pass": true,
+    "v13_fenced_promotion_cross_plane_matrix_pass": true,
+    "provisioning_admin_writer_owner_set_membership_residual_count": 0,
+    "provisioning_admin_writer_owner_self_grant_residual_count": 0,
+    "service_login_created": false,
+    "schema_acl_disarmed_after_success": true
+  },
+  "post_materialization_readiness_evidence": {
+    "status": "IMMUTABLE_SUCCESS",
+    "workflow": "mcft-cap-09-production-operational-schema-acl-readiness",
+    "stage": "MATERIALIZED_41_TABLE_ZERO_ROW",
+    "subject_sha": "eb32accff83e45a348d1f02d3d2be1929ebd5510",
+    "run_id": 33403727446,
+    "artifact_id": 9762290065,
+    "artifact_digest": "sha256:cd2cf28f9b6b6d56b6dd76ef4ab6602122599f62ec15354a0df36a286a8a23c7",
+    "database_name": "geox_mcft_cap09_production_runtime_v1",
+    "production_host_table_count": 41,
+    "all_table_rows_zero": true,
+    "runtime_routine_count": 3,
+    "service_login_role_count": 0,
+    "provisioning_admin_writer_owner_effective_set_role_count": 0,
+    "provisioning_admin_writer_owner_self_grant_residual_count": 0,
+    "writer_owner_schema_create_residual_count": 0,
+    "evidence_direct_facts_insert": false,
+    "twin_direct_facts_insert": false,
+    "evidence_writer_cross_plane_matrix_pass": true,
+    "twin_writer_cross_plane_matrix_pass": true,
+    "v13_fenced_promotion_cross_plane_matrix_pass": true,
+    "schema_acl_arm": false
+  },
+  "completed_provisioning_stages": [
+    "BIND_EXACT_PRODUCTION_DATABASE",
+    "MATERIALIZE_PRODUCTION_HOST_SCHEMA_AND_RUNTIME_ACL",
+    "PROVE_POST_MATERIALIZATION_READ_ONLY_STATE"
+  ],
+  "next_stage": {
+    "stage": "SERVICE_LOGIN_AND_RUNTIME_CREDENTIAL_BINDING",
+    "status": "NOT_ARMED",
+    "separate_machine_authority_required": true,
+    "runtime_process_start_forbidden": true,
+    "production_owner_activation_forbidden": true
   }
 }

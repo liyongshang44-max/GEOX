@@ -8,44 +8,64 @@ const ARM=path.join(ROOT,"scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNE
 const PRINCIPALS=path.join(ROOT,"apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts");
 const BOOTSTRAP=path.join(ROOT,"apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.ts");
 const TWIN_ACL=path.join(ROOT,"apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql");
+const SCHEMA_READINESS=path.join(ROOT,"scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_READINESS_V2.cjs");
 const OUT=path.join(ROOT,"acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_PREFLIGHT_V1_RESULT.json");
 function req(ok,code){if(!ok)throw new Error(code);}
 function j(p){return JSON.parse(fs.readFileSync(p,"utf8"));}
 function t(p){return fs.readFileSync(p,"utf8");}
 function write(v){fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify(v,null,2)+"\n");console.log(JSON.stringify(v,null,2));}
 try{
-  const a=j(AUTH), arm=j(ARM), principals=t(PRINCIPALS), bootstrap=t(BOOTSTRAP), twinAcl=t(TWIN_ACL);
-  req([
-    "READINESS_ONLY_PROVISIONING_NOT_ARMED",
-    "TARGET_BOUND_READINESS_ONLY_PROVISIONING_NOT_ARMED",
-    "READINESS_ONLY_PRODUCTION_OPERATIONAL_DATABASE_UNRESOLVED",
-    "TARGET_DATABASE_BOUND_PROVISIONING_NOT_ARMED"
-  ].includes(a.status),"OWNER_PROVISIONING_AUTHORITY_STATUS_REQUIRED");
-  req(
-    (a.target_database?.status==="NOT_BOUND"&&a.target_database?.database_name===null)
-    || (a.target_database?.status==="PRODUCTION_OPERATIONAL_DATABASE_IDENTITY_NOT_ESTABLISHED"&&a.target_database?.database_name===null)
-    || (a.target_database?.status==="BOUND"&&typeof a.target_database?.database_name==="string"&&a.target_database.database_name.length>0),
-    "OWNER_PROVISIONING_TARGET_BINDING_INVALID"
-  );
-  if(a.formal_v5_store_reference){
-    req(a.formal_v5_store_reference.owner_provisioning_target===false,"OWNER_PROVISIONING_FORMAL_V5_TARGET_FORBIDDEN");
-  }
-  req(arm.armed===false,"OWNER_PROVISIONING_MUST_NOT_BE_ARMED");
+  const a=j(AUTH), arm=j(ARM), principals=t(PRINCIPALS), bootstrap=t(BOOTSTRAP), twinAcl=t(TWIN_ACL), schemaReadiness=t(SCHEMA_READINESS);
+  req(a.status==="SCHEMA_ACL_MATERIALIZED_SERVICE_LOGIN_NOT_ARMED","OWNER_PROVISIONING_SCHEMA_ACL_BOUND_STATUS_REQUIRED");
+  req(a.current_stage==="SCHEMA_ACL_COMPLETE_PRE_LOGIN","OWNER_PROVISIONING_PRE_LOGIN_STAGE_REQUIRED");
+  req(a.target_database?.status==="BOUND"&&a.target_database?.database_name==="geox_mcft_cap09_production_runtime_v1","OWNER_PROVISIONING_TARGET_BINDING_INVALID");
+  req(a.target_database?.current_schema_state==="MATERIALIZED_41_TABLE_ZERO_ROW"&&a.target_database?.schema_acl_materialization_complete===true,"OWNER_PROVISIONING_SCHEMA_STATE_REQUIRED");
+  const m=a.schema_acl_materialization_evidence;
+  req(m?.status==="IMMUTABLE_SUCCESS","OWNER_PROVISIONING_SCHEMA_EVIDENCE_REQUIRED");
+  req(m?.subject_sha==="577e9a9793937c9dec3d0c4e37764ecb31f3c77d","OWNER_PROVISIONING_SCHEMA_EVIDENCE_SUBJECT_MISMATCH");
+  req(m?.run_id===33403255312&&m?.artifact_id===9762088357,"OWNER_PROVISIONING_SCHEMA_EVIDENCE_IDENTITY_MISMATCH");
+  req(m?.artifact_digest==="sha256:d860c68bfc1cdb6de94edb30ec3b4e24a681f9f6ba9eb07bffabe0ee2ebaf928","OWNER_PROVISIONING_SCHEMA_EVIDENCE_DIGEST_MISMATCH");
+  req(m?.production_host_table_count===41&&m?.all_table_rows_zero===true&&m?.runtime_routine_count===3,"OWNER_PROVISIONING_SCHEMA_EVIDENCE_SHAPE_MISMATCH");
+  req(m?.evidence_direct_facts_insert===false&&m?.twin_direct_facts_insert===false,"OWNER_PROVISIONING_DIRECT_FACTS_INSERT_FORBIDDEN");
+  req(m?.evidence_writer_cross_plane_matrix_pass===true&&m?.twin_writer_cross_plane_matrix_pass===true&&m?.v13_fenced_promotion_cross_plane_matrix_pass===true,"OWNER_PROVISIONING_CROSS_PLANE_EVIDENCE_REQUIRED");
+  req(m?.provisioning_admin_writer_owner_set_membership_residual_count===0&&m?.provisioning_admin_writer_owner_self_grant_residual_count===0,"OWNER_PROVISIONING_TEMP_ROLE_AUTHORITY_RESIDUAL");
+  req(m?.service_login_created===false&&m?.schema_acl_disarmed_after_success===true,"OWNER_PROVISIONING_SCHEMA_NON_EFFECT_REQUIRED");
+  const r=a.post_materialization_readiness_evidence;
+  req(r?.status==="IMMUTABLE_SUCCESS"&&r?.stage==="MATERIALIZED_41_TABLE_ZERO_ROW","OWNER_PROVISIONING_POST_READINESS_REQUIRED");
+  req(r?.subject_sha==="eb32accff83e45a348d1f02d3d2be1929ebd5510","OWNER_PROVISIONING_POST_READINESS_SUBJECT_MISMATCH");
+  req(r?.run_id===33403727446&&r?.artifact_id===9762290065,"OWNER_PROVISIONING_POST_READINESS_IDENTITY_MISMATCH");
+  req(r?.artifact_digest==="sha256:cd2cf28f9b6b6d56b6dd76ef4ab6602122599f62ec15354a0df36a286a8a23c7","OWNER_PROVISIONING_POST_READINESS_DIGEST_MISMATCH");
+  req(r?.production_host_table_count===41&&r?.all_table_rows_zero===true&&r?.runtime_routine_count===3,"OWNER_PROVISIONING_POST_READINESS_SHAPE_MISMATCH");
+  req(r?.service_login_role_count===0&&r?.provisioning_admin_writer_owner_effective_set_role_count===0&&r?.provisioning_admin_writer_owner_self_grant_residual_count===0&&r?.writer_owner_schema_create_residual_count===0,"OWNER_PROVISIONING_POST_READINESS_RESIDUAL_AUTHORITY");
+  req(r?.schema_acl_arm===false,"OWNER_PROVISIONING_SCHEMA_ARM_MUST_BE_FALSE");
+  if(a.formal_v5_store_reference) req(a.formal_v5_store_reference.owner_provisioning_target===false,"OWNER_PROVISIONING_FORMAL_V5_TARGET_FORBIDDEN");
+  req(a.next_stage?.status==="NOT_ARMED"&&a.next_stage?.separate_machine_authority_required===true,"OWNER_PROVISIONING_NEXT_STAGE_NOT_ARMED_REQUIRED");
+  req(arm.armed===false&&arm.exact_target_database_name===null,"OWNER_PROVISIONING_MUST_NOT_BE_ARMED");
   for(const k of ["phase4_twin_acl_materialization_authorized","service_login_bootstrap_authorized","runtime_credential_binding_authorized","runtime_process_start_authorized","production_owner_activation_authorized","formal_v5_arm_authorized","a0_authorized","o00_authorized"]) req(arm[k]===false,"OWNER_PROVISIONING_LATER_AUTHORITY_FALSE:"+k);
   for(const marker of ["geox_mcft_cap09_evidence_runtime_login_v1","geox_mcft_cap09_twin_runtime_login_v1","PHASE5_SERVICE_PRIVILEGE_ROLES_REQUIRED","PHASE5_SERVICE_BOOTSTRAP_DATABASE_MISMATCH"]) req(principals.includes(marker),"OWNER_PROVISIONING_PRINCIPAL_CONTRACT_REQUIRED:"+marker);
   for(const marker of ["GEOX_DB_PLATFORM_ADMIN_DATABASE_URL","GEOX_MCFT_CAP09_PHASE5_DATABASE_NAME","GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_PASSWORD","GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_PASSWORD"]) req(bootstrap.includes(marker),"OWNER_PROVISIONING_BOOTSTRAP_BINDING_REQUIRED:"+marker);
   req(twinAcl.includes("CREATE ROLE geox_mcft_cap09_twin_runtime_v1"),"OWNER_PROVISIONING_TWIN_ROLE_MIGRATION_REQUIRED");
   req(twinAcl.includes("NOLOGIN NOINHERIT"),"OWNER_PROVISIONING_TWIN_ROLE_NOINHERIT_REQUIRED");
+  req(schemaReadiness.includes("MATERIALIZED_41_TABLE_ZERO_ROW")&&schemaReadiness.includes("SCHEMA_ACL_PRODUCTION_LOGIN_MUST_BE_ABSENT"),"OWNER_PROVISIONING_SCHEMA_READINESS_CONTRACT_REQUIRED");
+  req(a.non_effects?.runtime_schema_acl_materialization_performed===true,"OWNER_PROVISIONING_SCHEMA_MATERIALIZATION_EFFECT_REQUIRED");
+  for(const k of ["production_login_creation","runtime_credential_binding","runtime_process_start","production_owner_activation","provider_request","formal_v5_arm","formal_v5_mutation","a0_bootstrap","o00_started"]) req(a.non_effects?.[k]===false,"OWNER_PROVISIONING_UNAUTHORIZED_EFFECT:"+k);
   write({
     schema_version:"geox_mcft_cap09_production_owner_provisioning_preflight_v1",
     status:"PASS",
-    provisioning_status:"READINESS_PASS_NOT_ARMED",
-    exact_target_database_bound:a.target_database?.status==="BOUND",
-    target_database_name:a.target_database?.database_name??null,
-    twin_privilege_role_materialization_path_present:true,
+    provisioning_status:"SCHEMA_ACL_COMPLETE_PRE_LOGIN_NOT_ARMED",
+    exact_target_database_bound:true,
+    target_database_name:a.target_database.database_name,
+    materialization_run_id:m.run_id,
+    materialization_artifact_id:m.artifact_id,
+    post_materialization_readiness_run_id:r.run_id,
+    post_materialization_readiness_artifact_id:r.artifact_id,
+    schema_acl_materialized:true,
+    schema_acl_readback_proven:true,
     dual_login_bootstrap_path_present:true,
     runtime_credential_bindings_required:4,
     provisioning_arm:false,
+    service_login_bootstrap_authorized:false,
+    runtime_credential_binding_authorized:false,
     provisioning_performed:false,
     runtime_process_start:false,
     production_owner_activation:false,
