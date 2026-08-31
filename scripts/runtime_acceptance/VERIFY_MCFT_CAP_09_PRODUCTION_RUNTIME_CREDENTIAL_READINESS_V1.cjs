@@ -51,11 +51,9 @@ function sanitizedRoleUrl(raw, expectedRole, expectedPassword, seed) {
     expectedRole,
     "RUNTIME_CREDENTIAL_LOGIN_ROLE_MISMATCH:" + expectedRole,
   );
-  assert.equal(
-    decodeURIComponent(url.password),
-    expectedPassword,
-    "RUNTIME_CREDENTIAL_PASSWORD_MISMATCH:" + expectedRole,
-  );
+  if (decodeURIComponent(url.password) !== expectedPassword) {
+    throw new Error("RUNTIME_CREDENTIAL_PASSWORD_MISMATCH:" + expectedRole);
+  }
   assert.equal(
     decodeURIComponent(url.pathname.replace(/^\//, "")),
     TARGET_DB,
