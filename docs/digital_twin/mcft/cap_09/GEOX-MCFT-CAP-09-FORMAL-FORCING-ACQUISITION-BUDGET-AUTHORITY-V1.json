@@ -1,0 +1,54 @@
+{
+  "schema_version": "geox_mcft_cap09_formal_forcing_acquisition_budget_authority_v1",
+  "authority_id": "FORMAL_FORCING_ACQUISITION_BUDGET_V1",
+  "status": "UNQUALIFIED_PENDING_EXACT_HEAD_TIMING_MEASUREMENT",
+  "supersedes_timing_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json#/timing_authority",
+  "step4_closure": {
+    "subject_sha": "ae3f82fea3ad4dc131376db3768b268f3c3d5025",
+    "workflow_name": "mcft-cap-09-v13-producer-driven-live-qualification",
+    "run_id": 33326960144,
+    "artifact_id": 9737109358,
+    "artifact_digest": "sha256:0fd1e6a4683b3c35873b674f6b32b299c0283d6ad5076a569b5afc96baa36f29",
+    "status": "PASS"
+  },
+  "measurement_authority": {
+    "workflow_name": "mcft-cap-09-v13-exact-head-timing-measurement",
+    "workflow_path": ".github/workflows/mcft-cap-09-v13-exact-head-timing-measurement.yml",
+    "measurement_subject_sha": null,
+    "run_id": null,
+    "run_conclusion": null,
+    "artifact_id": null,
+    "artifact_name": null,
+    "artifact_digest": null
+  },
+  "budget_must_cover": [
+    "GITHUB_WAKE_DELAY",
+    "JOB_START_AND_SETUP",
+    "PROVIDER_CAPTURE",
+    "RETAINED_RAW_AND_CANDIDATE",
+    "PROMOTION_QUEUE_AND_SETUP",
+    "REHYDRATION_PROMOTION_NEON_COMMIT_POST_COMMIT_READBACK",
+    "CONTROLLED_CROSS_WAKE_CAPTURE_OVERLAP",
+    "EXPLICIT_SAFETY_MARGIN"
+  ],
+  "minimum_real_timing_sample_count": 3,
+  "controlled_delay_matrix_required": true,
+  "controlled_delay_policy_id": "OBSERVED_COMPONENT_MAX_PLUS_ONE_EXTRA_OBSERVED_TARGET_PHASE_V1",
+  "cross_wake_capture_overlap_model": "ONE_ADDITIONAL_FULL_CAPTURE_WORKLOAD_SERIALIZED_ON_COMPONENTWISE_REAL_MAXIMA",
+  "safety_margin_policy_id": "MAX_REAL_END_TO_END_SPREAD_OR_COMPONENTWISE_WAKE_PLUS_SETUP_V1",
+  "acquisition_start_deadline": "BASE_MINUS_QUALIFIED_END_TO_END_BUDGET",
+  "physical_formal_visibility_deadline": "BASE",
+  "fixed_35_minute_lead_authorized_for_v5": false,
+  "hardcoded_replacement_budget_minutes": null,
+  "qualified_budget": null,
+  "timing_budget_qualified": false,
+  "timing_budget_frozen": false,
+  "non_effects": {
+    "production_owner_activation": false,
+    "formal_v5_arm": false,
+    "formal_v5_mutation": false,
+    "a0_bootstrap": false,
+    "o00_started": false,
+    "mcft_cap09_completed": false
+  }
+}

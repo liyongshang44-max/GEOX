@@ -1,0 +1,109 @@
+name: mcft-cap-09-v13-frozen-timing-authority
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-v13-frozen-timing-authority.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json'
+      - 'scripts/runtime_acceptance/VALIDATE_MCFT_CAP_09_V13_FROZEN_TIMING_AUTHORITY_V1.ts'
+      - 'apps/server/src/domain/twin_runtime/external_formal_forcing_acquisition_budget_v1.ts'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate-frozen-timing-authority:
+    if: >-
+      github.head_ref == 'feat/mcft-cap09-v13-producer-driven-qualification-v1' &&
+      github.event.pull_request.base.sha == '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact frozen timing subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require frozen authority and resolve immutable measurement binding
+        id: authority
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const a=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json','utf8'));
+          if(a.status!=='QUALIFIED_AND_FROZEN_FROM_EXACT_HEAD_TIMING_MEASUREMENT'||a.timing_budget_qualified!==true||a.timing_budget_frozen!==true)throw new Error('V13_TIMING_AUTHORITY_NOT_FROZEN');
+          const m=a.measurement_authority||{};
+          if(!/^[0-9a-f]{40}$/.test(String(m.measurement_subject_sha||'')))throw new Error('V13_TIMING_MEASUREMENT_SUBJECT_REQUIRED');
+          if(!Number.isSafeInteger(m.run_id)||m.run_id<=0||!Number.isSafeInteger(m.artifact_id)||m.artifact_id<=0)throw new Error('V13_TIMING_MEASUREMENT_RUN_ARTIFACT_REQUIRED');
+          if(!/^sha256:[0-9a-f]{64}$/.test(String(m.artifact_digest||''))||!m.artifact_name)throw new Error('V13_TIMING_MEASUREMENT_ARTIFACT_BINDING_REQUIRED');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,[
+            'subject_sha='+m.measurement_subject_sha,
+            'run_id='+m.run_id,
+            'artifact_id='+m.artifact_id,
+            'artifact_name='+m.artifact_name,
+            'artifact_digest='+m.artifact_digest,
+            'workflow_name='+m.workflow_name,
+            'workflow_path='+m.workflow_path,
+          ].join('\n')+'\n');
+
+      - name: Verify measurement run and artifact identity
+        shell: node {0}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+          RUN_ID: ${{ steps.authority.outputs.run_id }}
+          ARTIFACT_ID: ${{ steps.authority.outputs.artifact_id }}
+          ARTIFACT_NAME: ${{ steps.authority.outputs.artifact_name }}
+          ARTIFACT_DIGEST: ${{ steps.authority.outputs.artifact_digest }}
+          WORKFLOW_NAME: ${{ steps.authority.outputs.workflow_name }}
+          WORKFLOW_PATH: ${{ steps.authority.outputs.workflow_path }}
+          CURRENT_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          const cp=require('node:child_process');
+          const headers={Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
+          async function get(path){const r=await fetch('https://api.github.com/repos/'+process.env.REPO+path,{headers});if(!r.ok)throw new Error('GITHUB_QUERY_FAILED:'+path+':'+r.status);return r.json();}
+          async function main(){
+            const run=await get('/actions/runs/'+process.env.RUN_ID);
+            if(run.conclusion!=='success'||run.head_sha!==process.env.SUBJECT_SHA||run.name!==process.env.WORKFLOW_NAME||run.path!==process.env.WORKFLOW_PATH||run.event!=='pull_request')throw new Error('TIMING_MEASUREMENT_RUN_IDENTITY_MISMATCH');
+            if(cp.spawnSync('git',['merge-base','--is-ancestor',process.env.SUBJECT_SHA,process.env.CURRENT_HEAD],{stdio:'ignore'}).status!==0)throw new Error('TIMING_MEASUREMENT_SUBJECT_NOT_ANCESTOR');
+            const artifact=await get('/actions/artifacts/'+process.env.ARTIFACT_ID);
+            if(artifact.expired===true||artifact.name!==process.env.ARTIFACT_NAME||artifact.digest!==process.env.ARTIFACT_DIGEST||String(artifact.workflow_run?.id)!==String(process.env.RUN_ID))throw new Error('TIMING_MEASUREMENT_ARTIFACT_IDENTITY_MISMATCH');
+          }
+          main().catch(e=>{console.error(e);process.exitCode=1;});
+
+      - name: Download immutable timing measurement
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.authority.outputs.artifact_name }}
+          path: timing-measurement
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.authority.outputs.run_id }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install exact repository
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate frozen timing authority against immutable measurement
+        env:
+          MCFT_TIMING_MEASUREMENT_PROOF: timing-measurement/MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V1_RESULT.json
+        run: pnpm exec tsx scripts/runtime_acceptance/VALIDATE_MCFT_CAP_09_V13_FROZEN_TIMING_AUTHORITY_V1.ts
+
+      - name: Upload frozen timing authority proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-v13-frozen-timing-authority-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_V13_FROZEN_TIMING_AUTHORITY_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
