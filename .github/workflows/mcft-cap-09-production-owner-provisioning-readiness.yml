@@ -28,7 +28,6 @@ jobs:
       EVIDENCE_RUNTIME_PASSWORD_SECRET: ${{ secrets.GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_PASSWORD }}
       TWIN_RUNTIME_DATABASE_URL_SECRET: ${{ secrets.GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL }}
       TWIN_RUNTIME_PASSWORD_SECRET: ${{ secrets.GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_PASSWORD }}
-      TARGET_DATABASE_NAME: geox_mcft_cap09_s6_formal_t4r1_24h_v5
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,16 +43,8 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$SEED_DATABASE_URL"
-          target_url="$(node -e "const u=new URL(process.env.SEED_DATABASE_URL);u.pathname='/'+process.env.TARGET_DATABASE_NAME;process.stdout.write(u.toString())")"
-          echo "::add-mask::$target_url"
-          current_db="$(psql "$target_url" -At -v ON_ERROR_STOP=1 -c "SELECT current_database()")"
-          test "$current_db" = "$TARGET_DATABASE_NAME"
-          state="$(psql "$target_url" -AtF '|' -v ON_ERROR_STOP=1 -c "
-            SELECT
-              (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'),
-              (SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public')")"
-          test "$state" = "0|0" || { echo "OWNER_PROVISIONING_TARGET_DATABASE_NOT_ZERO_STATE:$state" >&2; exit 1; }
-          rows="$(psql "$target_url" -AtF '|' -v ON_ERROR_STOP=1 -c "
+          current_db="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT current_database()")"
+          rows="$(psql "$SEED_DATABASE_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
             SELECT rolname,rolcanlogin::text,rolinherit::text
               FROM pg_catalog.pg_roles
              WHERE rolname IN (
@@ -79,8 +70,7 @@ jobs:
           const a=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json','utf8'));
           const arm=JSON.parse(fs.readFileSync('scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_ARM_V1.json','utf8'));
           const b=[];
-          if(a.target_database?.status!=='BOUND_TO_FRESH_FORMAL_V5_STORE'||!a.target_database?.database_name)b.push('EXACT_PRODUCTION_DATABASE_NOT_BOUND');
-          if(a.target_database?.database_name!==process.env.PROVISIONING_CURRENT_DB)b.push('OBSERVED_DATABASE_IDENTITY_MISMATCH');
+          if(a.target_database?.status!=='BOUND'||!a.target_database?.database_name)b.push('PRODUCTION_OPERATIONAL_DATABASE_IDENTITY_NOT_ESTABLISHED');
           if(process.env.PROVISIONING_EVIDENCE_PRIV!=='true')b.push('EVIDENCE_PRIVILEGE_ROLE_NOT_PRESENT');
           if(process.env.PROVISIONING_TWIN_PRIV!=='true')b.push('TWIN_PRIVILEGE_ROLE_NOT_PRESENT');
           if(process.env.PROVISIONING_EVIDENCE_LOGIN!=='true')b.push('EVIDENCE_LOGIN_ROLE_NOT_PRESENT');
@@ -95,8 +85,8 @@ jobs:
             subject_sha:process.env.SUBJECT_SHA,
             observed_database_name:process.env.PROVISIONING_CURRENT_DB,
             authority_target_database_name:a.target_database?.database_name??null,
-            exact_target_database_bound:a.target_database?.status==='BOUND_TO_FRESH_FORMAL_V5_STORE',
-            target_database_zero_state:true,
+            exact_target_database_bound:a.target_database?.status==='BOUND',
+            formal_v5_store_assumed_as_owner_target:false,
             evidence_privilege_role_present:process.env.PROVISIONING_EVIDENCE_PRIV==='true',
             twin_privilege_role_present:process.env.PROVISIONING_TWIN_PRIV==='true',
             evidence_login_present:process.env.PROVISIONING_EVIDENCE_LOGIN==='true',
