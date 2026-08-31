@@ -96,7 +96,12 @@ async function main(){
       await pool.query(
         `CREATE ROLE ${role} NOLOGIN ${inherit?"INHERIT":"NOINHERIT"} NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS`,
       );
-      await pool.query(`GRANT ${role} TO CURRENT_USER`);
+      const beforeSet=(await pool.query<{ok:boolean}>(
+        "SELECT pg_catalog.pg_has_role(current_user,$1,'SET') AS ok",
+        [role],
+      )).rows[0]?.ok;
+      assert.equal(beforeSet,false,`OWNER_PROVISIONING_AUTOMATIC_ADMIN_GRANT_MUST_NOT_ENABLE_SET:${role}`);
+      await pool.query(`GRANT ${role} TO CURRENT_USER WITH SET TRUE`);
       const canSet=(await pool.query<{ok:boolean}>(
         "SELECT pg_catalog.pg_has_role(current_user,$1,'SET') AS ok",
         [role],
@@ -115,10 +120,35 @@ async function main(){
          JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
          JOIN pg_catalog.pg_roles member ON member.oid=m.member
         WHERE member.rolname=current_user
-          AND granted.rolname=ANY($1::text[])`,
+          AND granted.rolname=ANY($1::text[])
+          AND m.set_option`,
       [WRITER_OWNER_ROLES.map(([role])=>role)],
     )).rows[0]?.n);
-    assert.equal(residual,0,"OWNER_PROVISIONING_TEMP_OWNER_MEMBERSHIP_MUST_BE_REVOKED");
+    assert.equal(residual,0,"OWNER_PROVISIONING_TEMP_OWNER_SET_MEMBERSHIP_MUST_BE_REVOKED");
+    for(const [role] of WRITER_OWNER_ROLES){
+      const canSet=(await pool.query<{ok:boolean}>(
+        "SELECT pg_catalog.pg_has_role(current_user,$1,'SET') AS ok",
+        [role],
+      )).rows[0]?.ok;
+      assert.equal(canSet,false,`OWNER_PROVISIONING_EFFECTIVE_SET_AUTHORITY_MUST_BE_ZERO:${role}`);
+    }
+    const managementRows=(await pool.query<{
+      role_name:string;admin_option:boolean;inherit_option:boolean;set_option:boolean;
+    }>(
+      `SELECT granted.rolname AS role_name,m.admin_option,m.inherit_option,m.set_option
+         FROM pg_catalog.pg_auth_members m
+         JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
+         JOIN pg_catalog.pg_roles member ON member.oid=m.member
+        WHERE member.rolname=current_user
+          AND granted.rolname=ANY($1::text[])
+        ORDER BY granted.rolname`,
+      [WRITER_OWNER_ROLES.map(([role])=>role)],
+    )).rows;
+    assert.equal(managementRows.length,3,"OWNER_PROVISIONING_AUTOMATIC_ADMIN_RELATION_REQUIRED");
+    assert.ok(
+      managementRows.every(row=>row.admin_option===true&&row.inherit_option===false&&row.set_option===false),
+      "OWNER_PROVISIONING_AUTOMATIC_ADMIN_RELATION_MUST_BE_MANAGEMENT_ONLY",
+    );
 
     const routines=(await pool.query<{proname:string}>(
       "SELECT p.proname FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' ORDER BY p.proname",
@@ -220,6 +250,9 @@ async function main(){
       provisioning_admin_createrole:true,
       provisioning_admin_createdb:true,
       provisioning_admin_writer_owner_membership_residual_count:residual,
+      provisioning_admin_writer_owner_set_membership_residual_count:residual,
+      provisioning_admin_writer_owner_management_membership_count:managementRows.length,
+      provisioning_admin_writer_owner_management_only:true,
       evidence_privilege_role_safe:true,
       twin_privilege_role_safe:true,
       dual_login_bootstrap:true,
