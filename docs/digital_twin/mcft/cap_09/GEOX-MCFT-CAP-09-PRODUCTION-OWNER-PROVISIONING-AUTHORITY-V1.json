@@ -169,7 +169,12 @@
     "pre_url_zero_state_evidence_bound": true,
     "production_neon_project_id": "delicate-glade-62464340",
     "production_neon_branch_id": "br-cold-dust-a6j6aymz",
-    "production_neon_branch_name": "main"
+    "production_neon_branch_name": "main",
+    "runtime_endpoint_metadata_bound": true,
+    "runtime_endpoint_hostname": "ep-odd-poetry-a6peeo8g.us-west-2.aws.neon.tech",
+    "runtime_endpoint_port": "5432",
+    "runtime_endpoint_sslmode": "require",
+    "runtime_endpoint_channel_binding": "require"
   },
   "service_login_pre_arm_evidence": {
     "status": "IMMUTABLE_READY_UNARMED",
@@ -320,5 +325,24 @@
       "result_status": "SKIPPED_NOT_ARMED",
       "runtime_credential_binding": false
     }
+  },
+  "runtime_endpoint_metadata_evidence": {
+    "status": "IMMUTABLE_SUCCESS_NON_SECRET",
+    "workflow": "mcft-cap-09-production-runtime-credential-readiness",
+    "subject_sha": "0a457afad141fd55fa0b3cfb2443445cb17890c9",
+    "run_id": 33418849758,
+    "artifact_id": 9768092291,
+    "artifact_digest": "sha256:27a91f5bdd9900fdf0d4556d3575e88391a6afec7a2d2a0b0b19306436872492",
+    "neon_project_id": "delicate-glade-62464340",
+    "neon_branch_id": "br-cold-dust-a6j6aymz",
+    "neon_branch_name": "main",
+    "protocol": "postgresql:",
+    "hostname": "ep-odd-poetry-a6peeo8g.us-west-2.aws.neon.tech",
+    "port": "5432",
+    "database_name": "geox_mcft_cap09_production_runtime_v1",
+    "sslmode": "require",
+    "channel_binding": "require",
+    "contains_username": false,
+    "contains_password": false
   }
 }
