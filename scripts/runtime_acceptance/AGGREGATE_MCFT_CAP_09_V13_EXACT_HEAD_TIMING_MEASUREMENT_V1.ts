@@ -134,7 +134,7 @@ function main(): void {
     exact_sequential_bases: bases,
     real_samples: realSamples,
     componentwise_real_maxima: baseline,
-    controlled_delay_matrix_executed: true,
+    controlled_delay_matrix_constructed: true,\n    controlled_delay_matrix_executed: false,
     controlled_delay_policy_id: "OBSERVED_COMPONENT_MAX_PLUS_ONE_EXTRA_OBSERVED_TARGET_PHASE_V1",
     cross_wake_capture_overlap_model: "ONE_ADDITIONAL_FULL_CAPTURE_WORKLOAD_SERIALIZED_ON_COMPONENTWISE_REAL_MAXIMA",
     controlled_delay_cases: controlledCases,
