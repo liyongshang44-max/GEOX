@@ -1,0 +1,104 @@
+name: mcft-cap-09-production-operational-database-candidate-preflight
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-production-operational-database-candidate-preflight.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OPERATIONAL-DATABASE-CANDIDATE-V1.json'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_PROVISION_ARM_V1.json'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_CANDIDATE_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_BUNDLE_POSTGRES_V1.ts'
+
+permissions:
+  contents: read
+
+jobs:
+  candidate-preflight:
+    if: >-
+      github.head_ref == 'feat/mcft-cap09-v13-producer-driven-qualification-v1' &&
+      github.event.pull_request.base.sha == '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+      SEED_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+      CANDIDATE_DB: geox_mcft_cap09_production_runtime_v1
+      V13_DB: geox_mcft_cap09_s6_accel24t_am19_v13
+      BLOCKED_V13_DB: geox_mcft_cap09_s6_accel24t_am19_blocked_v13
+      FORMAL_V5_DB: geox_mcft_cap09_s6_formal_t4r1_24h_v5
+      FAILED_V4_DB: geox_mcft_cap09_s6_formal_t4r1_24h_v4
+      PREVIOUS_V12_DB: geox_mcft_cap09_s6_accel24t_am19_v12
+      PREVIOUS_BLOCKED_V12_DB: geox_mcft_cap09_s6_accel24t_am19_blocked_v12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate static candidate contract
+        run: node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_CANDIDATE_V1.cjs
+
+      - name: Prove candidate absence, creator authority, and preserved stores
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SEED_DATABASE_URL"
+          candidate_present="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT count(*)::int FROM pg_catalog.pg_database WHERE datname='$CANDIDATE_DB'")"
+          test "$candidate_present" = "0" || { echo "OPERATIONAL_DB_CANDIDATE_ALREADY_EXISTS:$candidate_present" >&2; exit 1; }
+
+          mapfile -t creators < <(psql "$SEED_DATABASE_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT r.rolname,r.rolsuper::text,r.rolcreatedb::text
+              FROM pg_catalog.pg_roles r
+             WHERE r.rolname<>current_user
+               AND (r.rolsuper OR r.rolcreatedb)
+               AND pg_catalog.pg_has_role(current_user,r.oid,'MEMBER')
+             ORDER BY r.rolsuper DESC,r.rolcreatedb DESC,r.rolname")
+          test "\${#creators[@]}" = "1"
+          test "\${creators[0]}" = "neon_superuser|false|true"
+
+          preserved="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
+            SELECT count(*)::int FROM pg_catalog.pg_database
+             WHERE datname IN ('$V13_DB','$BLOCKED_V13_DB','$FORMAL_V5_DB','$FAILED_V4_DB','$PREVIOUS_V12_DB','$PREVIOUS_BLOCKED_V12_DB')")"
+          test "$preserved" = "6" || { echo "OPERATIONAL_DB_PREDECESSOR_STORE_INVENTORY_DRIFT:$preserved" >&2; exit 1; }
+
+          echo "PRESERVED_STORE_COUNT=$preserved" >> "$GITHUB_ENV"
+
+      - name: Emit immutable candidate qualification proof
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p={
+            schema_version:'geox_mcft_cap09_production_operational_database_candidate_qualification_v1',
+            status:'PASS',
+            subject_sha:process.env.SUBJECT_SHA,
+            candidate_database_name:process.env.CANDIDATE_DB,
+            candidate_database_present:false,
+            unique_creator_membership:'neon_superuser',
+            preserved_store_count:Number(process.env.PRESERVED_STORE_COUNT),
+            formal_v5_store_reused:false,
+            v13_store_reused:false,
+            blocked_v13_store_reused:false,
+            failed_v4_reused:false,
+            database_created:false,
+            schema_migration_performed:false,
+            service_login_created:false,
+            runtime_process_start:false,
+            production_owner_activation:false,
+            provider_request_count:0,
+            formal_v5_arm:false,
+            a0_bootstrap:false,
+            o00_started:false
+          };
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_CANDIDATE_V1_RESULT.json',JSON.stringify(p,null,2)+'\n');
+          console.log(JSON.stringify(p,null,2));
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-production-operational-database-candidate-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_CANDIDATE_PREFLIGHT_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_CANDIDATE_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

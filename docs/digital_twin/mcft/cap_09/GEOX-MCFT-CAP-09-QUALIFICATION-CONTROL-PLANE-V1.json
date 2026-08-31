@@ -364,7 +364,12 @@
         "apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql",
         "apps/server/db/migrations/2026_08_31_mcft_cap_09_production_host_projection_persistence.sql",
         "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql",
-        "apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql"
+        "apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OPERATIONAL-DATABASE-CANDIDATE-V1.json",
+        "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_PROVISION_ARM_V1.json",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_CANDIDATE_V1.cjs",
+        ".github/workflows/mcft-cap-09-production-operational-database-candidate-preflight.yml",
+        ".github/workflows/mcft-cap-09-production-operational-database-provision-one-shot.yml"
       ]
     }
   },

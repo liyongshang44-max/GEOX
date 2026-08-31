@@ -1,0 +1,47 @@
+{
+  "schema_version": "geox_mcft_cap09_production_operational_database_candidate_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-OPERATIONAL-DATABASE-CANDIDATE-V1",
+  "status": "CANDIDATE_NOT_PROVISIONED",
+  "candidate_database_name": "geox_mcft_cap09_production_runtime_v1",
+  "purpose": "SHARED_OPERATIONAL_POSTGRES_FOR_EVIDENCE_AND_TWIN_RUNTIME",
+  "topology": {
+    "evidence_and_twin_same_database": true,
+    "evidence_and_twin_separate_login_urls": true,
+    "formal_v5_store_separate": true,
+    "v13_qualification_store_separate": true,
+    "blocked_v13_store_separate": true
+  },
+  "forbidden_database_names": [
+    "geox_mcft_cap09_s6_formal_t3r1_24h",
+    "geox_mcft_cap09_s6_accel24t_am19_v13",
+    "geox_mcft_cap09_s6_accel24t_am19_blocked_v13",
+    "geox_mcft_cap09_s6_formal_t4r1_24h_v4",
+    "geox_mcft_cap09_s6_formal_t4r1_24h_v5",
+    "geox_mcft_cap09_s6_accel24t_am19_v12",
+    "geox_mcft_cap09_s6_accel24t_am19_blocked_v12"
+  ],
+  "provisioning_bundle_ref": ".github/workflows/mcft-cap-09-production-owner-provisioning-bundle-postgres.yml",
+  "provisioning_bundle_required_table_count": 41,
+  "provisioning_arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_PROVISION_ARM_V1.json",
+  "qualification_requirements": [
+    "CANDIDATE_NAME_NOT_FORBIDDEN",
+    "CANDIDATE_DATABASE_CURRENTLY_ABSENT",
+    "UNIQUE_NEON_CREATOR_MEMBERSHIP_PRESENT",
+    "PREDECESSOR_AND_FRESH_FORMAL_STORES_PRESERVED",
+    "PROVISIONING_BUNDLE_POSTGRES_PASS",
+    "ZERO_PROVIDER_REQUEST",
+    "ZERO_PRODUCTION_OWNER_ACTIVATION",
+    "ZERO_FORMAL_V5_ARM"
+  ],
+  "non_effects": {
+    "database_created": false,
+    "schema_migration_performed": false,
+    "service_login_created": false,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "provider_request": false,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false
+  }
+}
