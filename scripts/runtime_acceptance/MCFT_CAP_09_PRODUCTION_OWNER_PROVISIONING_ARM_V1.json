@@ -1,10 +1,10 @@
 {
   "schema_version": "geox_mcft_cap09_production_owner_provisioning_arm_v1",
-  "armed": true,
-  "exact_target_database_name": "geox_mcft_cap09_production_runtime_v1",
+  "armed": false,
+  "exact_target_database_name": null,
   "phase4_twin_acl_materialization_authorized": false,
   "service_login_bootstrap_authorized": false,
-  "runtime_credential_binding_authorized": true,
+  "runtime_credential_binding_authorized": false,
   "runtime_process_start_authorized": false,
   "production_owner_activation_authorized": false,
   "formal_v5_arm_authorized": false,
