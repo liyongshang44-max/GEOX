@@ -15,12 +15,20 @@ function t(p){return fs.readFileSync(p,"utf8");}
 function write(v){fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify(v,null,2)+"\n");console.log(JSON.stringify(v,null,2));}
 try{
   const a=j(AUTH), arm=j(ARM), principals=t(PRINCIPALS), bootstrap=t(BOOTSTRAP), twinAcl=t(TWIN_ACL);
-  req(["READINESS_ONLY_PROVISIONING_NOT_ARMED","TARGET_BOUND_READINESS_ONLY_PROVISIONING_NOT_ARMED"].includes(a.status),"OWNER_PROVISIONING_AUTHORITY_STATUS_REQUIRED");
+  req([
+    "READINESS_ONLY_PROVISIONING_NOT_ARMED",
+    "TARGET_BOUND_READINESS_ONLY_PROVISIONING_NOT_ARMED",
+    "READINESS_ONLY_PRODUCTION_OPERATIONAL_DATABASE_UNRESOLVED"
+  ].includes(a.status),"OWNER_PROVISIONING_AUTHORITY_STATUS_REQUIRED");
   req(
     (a.target_database?.status==="NOT_BOUND"&&a.target_database?.database_name===null)
-    || (a.target_database?.status==="BOUND_TO_FRESH_FORMAL_V5_STORE"&&a.target_database?.database_name==="geox_mcft_cap09_s6_formal_t4r1_24h_v5"),
+    || (a.target_database?.status==="PRODUCTION_OPERATIONAL_DATABASE_IDENTITY_NOT_ESTABLISHED"&&a.target_database?.database_name===null)
+    || (a.target_database?.status==="BOUND"&&typeof a.target_database?.database_name==="string"&&a.target_database.database_name.length>0),
     "OWNER_PROVISIONING_TARGET_BINDING_INVALID"
   );
+  if(a.formal_v5_store_reference){
+    req(a.formal_v5_store_reference.owner_provisioning_target===false,"OWNER_PROVISIONING_FORMAL_V5_TARGET_FORBIDDEN");
+  }
   req(arm.armed===false,"OWNER_PROVISIONING_MUST_NOT_BE_ARMED");
   for(const k of ["phase4_twin_acl_materialization_authorized","service_login_bootstrap_authorized","runtime_credential_binding_authorized","runtime_process_start_authorized","production_owner_activation_authorized","formal_v5_arm_authorized","a0_authorized","o00_authorized"]) req(arm[k]===false,"OWNER_PROVISIONING_LATER_AUTHORITY_FALSE:"+k);
   for(const marker of ["geox_mcft_cap09_evidence_runtime_login_v1","geox_mcft_cap09_twin_runtime_login_v1","PHASE5_SERVICE_PRIVILEGE_ROLES_REQUIRED","PHASE5_SERVICE_BOOTSTRAP_DATABASE_MISMATCH"]) req(principals.includes(marker),"OWNER_PROVISIONING_PRINCIPAL_CONTRACT_REQUIRED:"+marker);
