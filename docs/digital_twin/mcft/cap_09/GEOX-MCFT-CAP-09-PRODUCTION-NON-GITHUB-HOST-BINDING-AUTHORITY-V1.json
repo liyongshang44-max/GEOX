@@ -80,7 +80,11 @@
     "recommended_region": "OREGON_USA",
     "platform_selection_status": "RECOMMENDED_NOT_AUTHORIZED",
     "cost_bearing_external_resource": true,
-    "explicit_external_platform_authority_required": true
+    "explicit_external_platform_authority_required": true,
+    "render_candidate_binding_schema_defined": true,
+    "render_workspace_owner_id_status": "UNBOUND",
+    "render_evidence_service_id_status": "UNBOUND",
+    "render_twin_service_id_status": "UNBOUND"
   },
   "non_effects": {
     "external_host_provisioning": false,
@@ -240,5 +244,38 @@
       "user_or_external_account_authority_required_before_selection": true
     },
     "platform_selected": false
+  },
+  "render_candidate_binding_contract": {
+    "status": "CANDIDATE_SCHEMA_DEFINED_NOT_AUTHORIZED",
+    "platform_provider": "RENDER",
+    "workspace_owner_id": null,
+    "region": "oregon",
+    "service_type": "background_worker",
+    "blueprint_type": "worker",
+    "runtime": "docker",
+    "evidence_runtime": {
+      "service_name": "geox-mcft-cap09-evidence-runtime-v1",
+      "service_id": null,
+      "runtime_role": "EVIDENCE_RUNTIME"
+    },
+    "twin_runtime": {
+      "service_name": "geox-mcft-cap09-twin-runtime-v1",
+      "service_id": null,
+      "runtime_role": "TWIN_RUNTIME"
+    },
+    "required_post_creation_identity_proof": [
+      "EXACT_RENDER_WORKSPACE_OWNER_ID",
+      "EXACT_BACKGROUND_WORKER_SERVICE_TYPE",
+      "EXACT_OREGON_REGION",
+      "EXACT_DISTINCT_SERVICE_IDS",
+      "EXACT_SERVICE_NAMES",
+      "EXACT_RUNTIME_ROLE_BINDING",
+      "GITHUB_ACTIONS_NOT_EXECUTION_HOST"
+    ],
+    "deployment_configuration_not_authorized": true,
+    "service_creation_not_authorized": true,
+    "runtime_secret_injection_not_authorized": true,
+    "runtime_start_not_authorized": true,
+    "production_owner_activation_not_authorized": true
   }
 }
