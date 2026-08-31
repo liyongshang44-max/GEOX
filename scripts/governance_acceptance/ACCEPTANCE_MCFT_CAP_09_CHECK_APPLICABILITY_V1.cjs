@@ -315,8 +315,34 @@ function main() {
   assert.equal(producerQualification.diagnostic_command, null, "V13_PRODUCER_DRIVEN_QUALIFICATION_MUST_USE_IMMUTABLE_WORKFLOW_EVIDENCE_NOT_INLINE_DIAGNOSTIC");
   assert.equal(byId(plan(authority, registry, [], "POST_MERGE_V13_QUALIFICATION"), "V13_PRODUCER_DRIVEN_QUALIFICATION").status, "REQUIRED");
 
-  // Later obligations remain unimplemented and fail closed until their own activation step.
-  for (const id of ["END_TO_END_EVIDENCE_SUPPLY_DEADLINE", "EXACT_ONE_PRODUCTION_OWNER", "FORMAL_V5_ACTIVATION"]) {
+  // Step 5 may be implemented without being treated as qualified. Its dependency
+  // closure is deliberately separate from Step 4 so timing work cannot invalidate
+  // the already-closed producer-driven qualification.
+  const timingQualification = authority.checks.find((row) => row.check_id === "END_TO_END_EVIDENCE_SUPPLY_DEADLINE");
+  assert.ok(timingQualification, "FUTURE_CHECK_REQUIRED:END_TO_END_EVIDENCE_SUPPLY_DEADLINE");
+  assert.deepEqual(timingQualification.resolver_ids, ["V13_TIMING_QUALIFICATION_CLOSURE"]);
+  assert.equal(timingQualification.execution_workflow_status, "IMPLEMENTED_AT_SUCCESSOR_HEAD");
+  assert.equal(timingQualification.execution_workflow, ".github/workflows/mcft-cap-09-v13-frozen-timing-authority.yml");
+  assert.equal(timingQualification.diagnostic_command, null);
+  const timingPaths = new Set(resolved.resolved.V13_TIMING_QUALIFICATION_CLOSURE.paths);
+  const step4Paths = new Set(resolved.resolved.V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE.paths);
+  for (const timingOnlyPath of [
+    ".github/workflows/mcft-cap-09-v13-exact-head-timing-measurement.yml",
+    ".github/workflows/mcft-cap-09-v13-exact-head-timing-sample.yml",
+    ".github/workflows/mcft-cap-09-v13-frozen-timing-authority.yml",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V1.ts",
+    "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V1.ts",
+    "scripts/runtime_acceptance/VALIDATE_MCFT_CAP_09_V13_FROZEN_TIMING_AUTHORITY_V1.ts",
+    "scripts/runtime_acceptance/MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_ARM_V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json",
+  ]) {
+    assert(timingPaths.has(timingOnlyPath), `TIMING_CLOSURE_PATH_REQUIRED:${timingOnlyPath}`);
+    assert(!step4Paths.has(timingOnlyPath), `TIMING_PATH_MUST_NOT_REOPEN_STEP4:${timingOnlyPath}`);
+  }
+  assert.equal(byId(plan(authority, registry, [], "POST_MERGE_V13_QUALIFICATION"), "END_TO_END_EVIDENCE_SUPPLY_DEADLINE").status, "REQUIRED");
+
+  // Owner / Formal-v5 remain unimplemented and fail closed until their own activation step.
+  for (const id of ["EXACT_ONE_PRODUCTION_OWNER", "FORMAL_V5_ACTIVATION"]) {
     const check = authority.checks.find((row) => row.check_id === id);
     assert.ok(check, `FUTURE_CHECK_REQUIRED:${id}`);
     assert.equal(check.execution_workflow_status, "NOT_IMPLEMENTED_AT_FROZEN_SUBJECT");

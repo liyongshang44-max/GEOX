@@ -310,6 +310,21 @@
         ".github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1.ts"
       ]
+    },
+    "V13_TIMING_QUALIFICATION_CLOSURE": {
+      "kind": "IMPORT_CLOSURE",
+      "roots": [
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V1.ts",
+        "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V1.ts",
+        "scripts/runtime_acceptance/VALIDATE_MCFT_CAP_09_V13_FROZEN_TIMING_AUTHORITY_V1.ts"
+      ],
+      "additional_exact_paths": [
+        ".github/workflows/mcft-cap-09-v13-exact-head-timing-measurement.yml",
+        ".github/workflows/mcft-cap-09-v13-exact-head-timing-sample.yml",
+        ".github/workflows/mcft-cap-09-v13-frozen-timing-authority.yml",
+        "scripts/runtime_acceptance/MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_ARM_V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json"
+      ]
     }
   },
   "checks": [
@@ -718,18 +733,19 @@
         "V13"
       ],
       "authority_refs": [
-        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json"
       ],
       "resolver_ids": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_TIMING_QUALIFICATION_CLOSURE"
       ],
       "historical_evidence_policy": "FRESH_EXACT_HEAD_REAL_TIMING_EVIDENCE_REQUIRED",
-      "execution_workflow": null,
-      "execution_workflow_status": "NOT_IMPLEMENTED_AT_FROZEN_SUBJECT",
+      "execution_workflow": ".github/workflows/mcft-cap-09-v13-frozen-timing-authority.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
       "fail_policy": "FAIL_CLOSED_UNTIL_TIMING_BUDGET_QUALIFIED",
       "carry_forward_policy": "NONE",
       "requalification_triggers": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_TIMING_QUALIFICATION_CLOSURE"
       ],
       "applicable_stages": [
         "POST_MERGE_V13_QUALIFICATION"
