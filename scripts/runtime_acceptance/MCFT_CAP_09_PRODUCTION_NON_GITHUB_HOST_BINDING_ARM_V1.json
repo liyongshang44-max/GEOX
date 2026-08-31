@@ -1,0 +1,21 @@
+{
+  "schema_version": "geox_mcft_cap09_production_non_github_host_binding_arm_v1",
+  "armed": false,
+  "platform_selection_authorized": false,
+  "platform_provider": null,
+  "platform_account_or_project_id": null,
+  "region_or_location": null,
+  "evidence_service_id": null,
+  "evidence_service_name": null,
+  "twin_service_id": null,
+  "twin_service_name": null,
+  "service_creation_authorized": false,
+  "host_identity_binding_authorized": false,
+  "runtime_secret_injection_authorized": false,
+  "deployment_authorized": false,
+  "runtime_process_start_authorized": false,
+  "production_owner_activation_authorized": false,
+  "formal_v5_arm_authorized": false,
+  "a0_authorized": false,
+  "o00_authorized": false
+}
