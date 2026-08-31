@@ -75,7 +75,12 @@
     "runtime_start_separate": true,
     "production_owner_activation_separate": true,
     "pre_platform_checkpoint_evidence_bound": true,
-    "pre_platform_checkpoint_subject_sha": "776c6a6b9765abd608e8f469729451784c24c868"
+    "pre_platform_checkpoint_subject_sha": "776c6a6b9765abd608e8f469729451784c24c868",
+    "recommended_platform_candidate": "RENDER_BACKGROUND_WORKER",
+    "recommended_region": "OREGON_USA",
+    "platform_selection_status": "RECOMMENDED_NOT_AUTHORIZED",
+    "cost_bearing_external_resource": true,
+    "explicit_external_platform_authority_required": true
   },
   "non_effects": {
     "external_host_provisioning": false,
@@ -165,5 +170,75 @@
   "completed_binding_stages": [
     "DEFINE_PLATFORM_NEUTRAL_NON_GITHUB_HOST_IDENTITY_CONTRACT",
     "PROVE_UNBOUND_HOST_IDENTITY_AUTHORITY_ZERO_EFFECT"
-  ]
+  ],
+  "platform_evaluation": {
+    "evaluated_at": "2026-09-01",
+    "status": "RECOMMENDED_CANDIDATE_NOT_SELECTED",
+    "requirements": [
+      "TWO_DISTINCT_LONG_RUNNING_BACKGROUND_CONTAINER_SERVICES",
+      "NO_GITHUB_ACTIONS_PRODUCTION_EXECUTION",
+      "DOCKER_SUPPORT",
+      "RUNTIME_SECRET_INJECTION",
+      "STABLE_PLATFORM_SERVICE_IDENTITIES",
+      "GRACEFUL_SIGTERM_SUPPORT",
+      "US_WEST_REGION_PREFERRED_FOR_NEON_US_WEST_2",
+      "NO_HTTP_INGRESS_REQUIRED"
+    ],
+    "candidates": [
+      {
+        "platform_provider": "RENDER",
+        "service_class": "BACKGROUND_WORKER",
+        "preferred_region": "OREGON_USA",
+        "docker_supported": true,
+        "runtime_secrets_supported": true,
+        "continuous_background_worker_supported": true,
+        "no_http_ingress_required": true,
+        "operational_complexity": "LOW",
+        "selection_rank": 1
+      },
+      {
+        "platform_provider": "RAILWAY",
+        "service_class": "SERVICE",
+        "preferred_region": "US_WEST_METAL_CALIFORNIA",
+        "docker_supported": true,
+        "runtime_secrets_supported": true,
+        "continuous_service_supported": true,
+        "operational_complexity": "LOW",
+        "selection_rank": 2
+      },
+      {
+        "platform_provider": "FLY_IO",
+        "service_class": "MACHINE",
+        "preferred_region": "SJC",
+        "docker_supported": true,
+        "continuous_machine_supported": true,
+        "operational_complexity": "MEDIUM",
+        "selection_rank": 3
+      },
+      {
+        "platform_provider": "AWS",
+        "service_class": "ECS_FARGATE_SERVICE",
+        "preferred_region": "US_WEST_2",
+        "docker_supported": true,
+        "continuous_service_supported": true,
+        "operational_complexity": "HIGH",
+        "selection_rank": 4
+      }
+    ],
+    "recommended_candidate": {
+      "platform_provider": "RENDER",
+      "service_class": "BACKGROUND_WORKER",
+      "preferred_region": "OREGON_USA",
+      "reason_codes": [
+        "DIRECT_MATCH_FOR_CONTINUOUS_NON_HTTP_BACKGROUND_PROCESS",
+        "DISTINCT_SERVICE_IDENTITIES",
+        "DOCKER_AND_RUNTIME_SECRET_SUPPORT",
+        "LOWER_CONTROL_PLANE_COMPLEXITY_THAN_FLY_OR_ECS",
+        "WESTERN_US_REGION_AVAILABLE"
+      ],
+      "cost_bearing_external_resource": true,
+      "user_or_external_account_authority_required_before_selection": true
+    },
+    "platform_selected": false
+  }
 }
