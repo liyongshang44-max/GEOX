@@ -41,6 +41,27 @@ async function main(){
     const tables=Number((await pool.query("SELECT count(*)::int AS n FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'")).rows[0]?.n);
     assert.equal(tables,41,"OWNER_PROVISIONING_EXACT_41_TABLE_HOST_SCHEMA_REQUIRED");
     await apply(pool,ACL_FILES);
+    const routines=(await pool.query<{proname:string}>(
+      "SELECT p.proname FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' ORDER BY p.proname",
+    )).rows.map(r=>r.proname);
+    assert.deepEqual(routines,[
+      "mcft_cap09_evidence_runtime_append_fact_v1",
+      "mcft_cap09_twin_runtime_append_fact_v1",
+      "mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1",
+    ],"OWNER_PROVISIONING_EXACT_3_RUNTIME_ROUTINES_REQUIRED");
+    const preLoginRoleNames=[
+      "geox_mcft_cap09_evidence_runtime_v1",
+      "geox_mcft_cap09_evidence_writer_owner_v1",
+      "geox_mcft_cap09_forcing_writer_owner_v1",
+      "geox_mcft_cap09_twin_runtime_v1",
+      "geox_mcft_cap09_twin_writer_owner_v1",
+    ];
+    const preLoginRoles=(await pool.query<{rolname:string,rolcanlogin:boolean}>(
+      "SELECT rolname,rolcanlogin FROM pg_catalog.pg_roles WHERE rolname=ANY($1::text[]) ORDER BY rolname",
+      [preLoginRoleNames],
+    )).rows;
+    assert.deepEqual(preLoginRoles.map(r=>r.rolname),preLoginRoleNames,"OWNER_PROVISIONING_EXACT_5_NOLOGIN_ROLES_REQUIRED");
+    assert.ok(preLoginRoles.every(r=>r.rolcanlogin===false),"OWNER_PROVISIONING_PRELOGIN_ROLES_MUST_BE_NOLOGIN");
     await bootstrapMcftCap09Phase5ServicePrincipalsV1({
       admin_database_url:url,
       expected_database_name:db,
@@ -85,6 +106,10 @@ async function main(){
       status:"PASS",
       formal_v13_core_table_count:29,
       production_host_table_count:tables,
+      runtime_routine_count:routines.length,
+      runtime_routine_names:routines,
+      pre_login_nologin_role_count:preLoginRoles.length,
+      pre_login_nologin_role_names:preLoginRoles.map(r=>r.rolname),
       all_table_rows_zero:true,
       acl_bundle_applied:true,
       evidence_privilege_role_safe:true,

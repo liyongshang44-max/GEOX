@@ -1,0 +1,124 @@
+name: mcft-cap-09-production-operational-schema-acl-readiness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-production-operational-schema-acl-readiness.yml'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_ARM_V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OPERATIONAL-DATABASE-CANDIDATE-V1.json'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_BUNDLE_POSTGRES_V1.ts'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase5_twin_fact_writer_acl.sql'
+      - 'apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql'
+
+permissions:
+  contents: read
+
+jobs:
+  capability-readiness:
+    if: >-
+      github.head_ref == 'feat/mcft-cap09-v13-producer-driven-qualification-v1' &&
+      github.event.pull_request.base.sha == '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+      SEED_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+      TARGET_DB: geox_mcft_cap09_production_runtime_v1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require provisioned empty operational database and unarmed schema stage
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const db=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OPERATIONAL-DATABASE-CANDIDATE-V1.json','utf8'));
+          const arm=JSON.parse(fs.readFileSync('scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_ARM_V1.json','utf8'));
+          if(db.status!=='PROVISIONED_EMPTY_ZERO_STATE'||db.candidate_database_name!==process.env.TARGET_DB)throw new Error('SCHEMA_ACL_OPERATIONAL_DB_PROVISIONED_REQUIRED');
+          if(db.provisioning?.run_id!==33375907417||db.provisioning?.artifact_id!==9751846155||db.provisioning?.fresh_zero_state!==true)throw new Error('SCHEMA_ACL_OPERATIONAL_DB_IMMUTABLE_PROOF_REQUIRED');
+          if(arm.armed!==false||arm.production_host_schema_materialization_authorized!==false||arm.runtime_acl_materialization_authorized!==false)throw new Error('SCHEMA_ACL_READINESS_MUST_BE_UNARMED');
+          for(const k of ['service_login_bootstrap_authorized','runtime_credential_binding_authorized','runtime_process_start_authorized','production_owner_activation_authorized','formal_v5_arm_authorized','a0_authorized','o00_authorized'])if(arm[k]!==false)throw new Error('SCHEMA_ACL_LATER_AUTHORITY_FORBIDDEN:'+k);
+
+      - name: Inventory target ownership and Neon role authority without mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          target_url="$(node -e "const u=new URL(process.env.SEED_DATABASE_URL);u.pathname='/'+process.env.TARGET_DB;process.stdout.write(u.toString())")"
+          echo "::add-mask::$target_url"
+
+          state="$(psql "$target_url" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT
+              (SELECT count(*)::int FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m','S','f')),
+              (SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public')")"
+          test "$state" = "0|0" || { echo "SCHEMA_ACL_TARGET_NOT_EMPTY:$state" >&2; exit 1; }
+
+          caps="$(psql "$target_url" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT
+              current_user::text,
+              (SELECT pg_catalog.pg_get_userbyid(datdba) FROM pg_catalog.pg_database WHERE datname=current_database()),
+              (SELECT pg_catalog.pg_get_userbyid(nspowner) FROM pg_catalog.pg_namespace WHERE nspname='public'),
+              (SELECT rolcreaterole::text FROM pg_catalog.pg_roles WHERE rolname=current_user),
+              (SELECT rolcreatedb::text FROM pg_catalog.pg_roles WHERE rolname=current_user),
+              pg_catalog.pg_has_role(current_user,'neon_superuser','SET')::text,
+              pg_catalog.pg_has_role(current_user,'neon_superuser','MEMBER')::text,
+              (SELECT rolcreaterole::text FROM pg_catalog.pg_roles WHERE rolname='neon_superuser'),
+              (SELECT rolcreatedb::text FROM pg_catalog.pg_roles WHERE rolname='neon_superuser'),
+              has_schema_privilege(current_user,'public','CREATE')::text")"
+          IFS='|' read -r current_user db_owner schema_owner current_createrole current_createdb neon_set neon_member neon_createrole neon_createdb schema_create <<<"$caps"
+
+          {
+            echo "SCHEMA_ACL_CURRENT_USER=$current_user"
+            echo "SCHEMA_ACL_DB_OWNER=$db_owner"
+            echo "SCHEMA_ACL_SCHEMA_OWNER=$schema_owner"
+            echo "SCHEMA_ACL_CURRENT_CREATEROLE=$current_createrole"
+            echo "SCHEMA_ACL_CURRENT_CREATEDB=$current_createdb"
+            echo "SCHEMA_ACL_NEON_SET=$neon_set"
+            echo "SCHEMA_ACL_NEON_MEMBER=$neon_member"
+            echo "SCHEMA_ACL_NEON_CREATEROLE=$neon_createrole"
+            echo "SCHEMA_ACL_NEON_CREATEDB=$neon_createdb"
+            echo "SCHEMA_ACL_SCHEMA_CREATE=$schema_create"
+          } >> "$GITHUB_ENV"
+
+      - name: Emit schema ACL capability proof
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p={
+            schema_version:'geox_mcft_cap09_production_operational_schema_acl_readiness_v1',
+            status:'PASS',
+            subject_sha:process.env.SUBJECT_SHA,
+            database_name:process.env.TARGET_DB,
+            current_user:process.env.SCHEMA_ACL_CURRENT_USER,
+            database_owner:process.env.SCHEMA_ACL_DB_OWNER,
+            public_schema_owner:process.env.SCHEMA_ACL_SCHEMA_OWNER,
+            current_user_createrole:process.env.SCHEMA_ACL_CURRENT_CREATEROLE==='true',
+            current_user_createdb:process.env.SCHEMA_ACL_CURRENT_CREATEDB==='true',
+            neon_superuser_set:process.env.SCHEMA_ACL_NEON_SET==='true',
+            neon_superuser_member:process.env.SCHEMA_ACL_NEON_MEMBER==='true',
+            neon_superuser_createrole:process.env.SCHEMA_ACL_NEON_CREATEROLE==='true',
+            neon_superuser_createdb:process.env.SCHEMA_ACL_NEON_CREATEDB==='true',
+            current_user_schema_create:process.env.SCHEMA_ACL_SCHEMA_CREATE==='true',
+            target_zero_state:true,
+            schema_acl_arm:false,
+            schema_migration_performed:false,
+            service_login_created:false,
+            runtime_process_start:false,
+            production_owner_activation:false,
+            provider_request_count:0,
+            formal_v5_arm:false
+          };
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_READINESS_V1_RESULT.json',JSON.stringify(p,null,2)+'\n');
+          console.log(JSON.stringify(p,null,2));
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-production-operational-schema-acl-readiness-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_READINESS_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
