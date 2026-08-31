@@ -20,6 +20,10 @@ const ARM = path.join(
   ROOT,
   "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_ARM_V1.json",
 );
+const HOST_ARM = path.join(
+  ROOT,
+  "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json",
+);
 const OUT = path.join(
   ROOT,
   "acceptance-output/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_PREFLIGHT_V1_RESULT.json",
@@ -48,6 +52,7 @@ try {
   const owner = j(OWNER);
   const route = t(ROUTE);
   const arm = j(ARM);
+  const hostArm = j(HOST_ARM);
 
   req(
     owner.status === "RUNTIME_CREDENTIAL_BINDING_COMPLETE_NON_GITHUB_HOST_NOT_BOUND",
@@ -318,6 +323,35 @@ try {
     a.next_stage?.runtime_start_separate === true &&
       a.next_stage?.production_owner_activation_separate === true,
     "HOST_BINDING_EFFECT_SEPARATION_REQUIRED",
+  );
+  req(
+    a.host_binding_arm_ref === "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json" &&
+      a.host_binding_arm_status === "UNARMED" &&
+      a.next_stage?.host_binding_arm_ref === a.host_binding_arm_ref &&
+      a.next_stage?.host_binding_arm_status === "UNARMED",
+    "HOST_BINDING_SEPARATE_ARM_REFERENCE_REQUIRED",
+  );
+  req(
+    hostArm.schema_version === "geox_mcft_cap09_production_non_github_host_binding_arm_v1" &&
+      hostArm.armed === false &&
+      hostArm.platform_selection_authorized === false &&
+      hostArm.platform_provider === null &&
+      hostArm.platform_account_or_project_id === null &&
+      hostArm.region_or_location === null &&
+      hostArm.evidence_service_id === null &&
+      hostArm.evidence_service_name === null &&
+      hostArm.twin_service_id === null &&
+      hostArm.twin_service_name === null &&
+      hostArm.service_creation_authorized === false &&
+      hostArm.host_identity_binding_authorized === false &&
+      hostArm.runtime_secret_injection_authorized === false &&
+      hostArm.deployment_authorized === false &&
+      hostArm.runtime_process_start_authorized === false &&
+      hostArm.production_owner_activation_authorized === false &&
+      hostArm.formal_v5_arm_authorized === false &&
+      hostArm.a0_authorized === false &&
+      hostArm.o00_authorized === false,
+    "HOST_BINDING_SEPARATE_ARM_MUST_REMAIN_ZERO_STATE",
   );
 
   for (const key of [
