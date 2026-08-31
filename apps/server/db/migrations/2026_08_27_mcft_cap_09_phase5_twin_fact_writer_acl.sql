@@ -78,8 +78,12 @@ BEGIN
  RETURN QUERY SELECT 'INSERTED'::text,1::integer;
 END
 $function$;
+-- Keep schema CREATE as a temporary provisioning-only capability required
+-- for PostgreSQL OWNER transfer; the NOLOGIN writer owner must not retain it.
+GRANT CREATE ON SCHEMA public TO geox_mcft_cap09_twin_writer_owner_v1;
 ALTER FUNCTION public.mcft_cap09_twin_runtime_append_fact_v1(text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb)
  OWNER TO geox_mcft_cap09_twin_writer_owner_v1;
+REVOKE CREATE ON SCHEMA public FROM geox_mcft_cap09_twin_writer_owner_v1;
 REVOKE ALL ON FUNCTION public.mcft_cap09_twin_runtime_append_fact_v1(text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.mcft_cap09_twin_runtime_append_fact_v1(text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb) FROM geox_mcft_cap09_twin_writer_owner_v1;
 GRANT EXECUTE ON FUNCTION public.mcft_cap09_twin_runtime_append_fact_v1(text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb) TO geox_mcft_cap09_twin_runtime_v1;

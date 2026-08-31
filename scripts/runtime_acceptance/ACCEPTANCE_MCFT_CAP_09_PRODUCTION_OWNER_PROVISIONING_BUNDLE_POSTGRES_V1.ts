@@ -101,6 +101,16 @@ async function main(){
       if(n!==0)nonzero++;
     }
     assert.equal(nonzero,0,"OWNER_PROVISIONING_ALL_TABLES_MUST_REMAIN_ZERO_STATE");
+    const writerOwnerSchemaCreate=(await pool.query<{rolname:string,can_create:boolean}>(
+      "SELECT r.rolname,has_schema_privilege(r.rolname,'public','CREATE') AS can_create FROM pg_catalog.pg_roles r WHERE r.rolname=ANY($1::text[]) ORDER BY r.rolname",
+      [[
+        "geox_mcft_cap09_evidence_writer_owner_v1",
+        "geox_mcft_cap09_twin_writer_owner_v1",
+        "geox_mcft_cap09_forcing_writer_owner_v1",
+      ]],
+    )).rows;
+    assert.equal(writerOwnerSchemaCreate.length,3);
+    assert.ok(writerOwnerSchemaCreate.every((row)=>row.can_create===false),"OWNER_PROVISIONING_WRITER_OWNER_SCHEMA_CREATE_MUST_BE_REVOKED");
     const result={
       schema_version:"geox_mcft_cap09_production_owner_provisioning_bundle_postgres_v1",
       status:"PASS",
@@ -116,6 +126,7 @@ async function main(){
       twin_privilege_role_safe:true,
       dual_login_bootstrap:true,
       exact_one_role_membership_each:true,
+      writer_owner_schema_create_residual_count:0,
       runtime_process_start:false,
       production_owner_activation:false,
       provider_request_count:0,

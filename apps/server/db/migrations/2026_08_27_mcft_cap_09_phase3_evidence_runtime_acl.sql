@@ -196,9 +196,13 @@ BEGIN
 END
 $function$;
 
+-- PostgreSQL requires the new function owner to have CREATE on the containing
+-- schema during OWNER transfer. Grant it only for that ownership window.
+GRANT CREATE ON SCHEMA public TO geox_mcft_cap09_evidence_writer_owner_v1;
 ALTER FUNCTION public.mcft_cap09_evidence_runtime_append_fact_v1(
   text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb
 ) OWNER TO geox_mcft_cap09_evidence_writer_owner_v1;
+REVOKE CREATE ON SCHEMA public FROM geox_mcft_cap09_evidence_writer_owner_v1;
 
 REVOKE ALL ON FUNCTION public.mcft_cap09_evidence_runtime_append_fact_v1(
   text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb
