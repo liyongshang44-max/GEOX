@@ -73,10 +73,13 @@ jobs:
           if(hostAuth.status!=='HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND'||hostAuth.production_execution_host_class!=='NON_GITHUB_LONG_RUNNING_SERVICE')throw new Error('OWNER_PROVISIONING_HOST_AUTHORITY_REQUIRED');
           if(hostAuth.github_actions?.production_execution_host_allowed!==false)throw new Error('OWNER_PROVISIONING_GITHUB_EXECUTION_HOST_FORBIDDEN');
           if(hostAuth.binding_state?.platform_selected!==false||hostAuth.binding_state?.evidence_host_identity_bound!==false||hostAuth.binding_state?.twin_host_identity_bound!==false||hostAuth.binding_state?.exact_two_runtime_service_identities_bound!==false||hostAuth.binding_state?.binding_authorized!==false)throw new Error('OWNER_PROVISIONING_HOST_AUTHORITY_MUST_REMAIN_UNBOUND');
+          if(hostAuth.platform_evaluation?.status!=='RECOMMENDED_CANDIDATE_NOT_SELECTED'||hostAuth.platform_evaluation?.recommended_candidate?.platform_provider!=='RENDER')throw new Error('OWNER_PROVISIONING_RENDER_PLATFORM_RECOMMENDATION_REQUIRED');
+          if(hostAuth.render_candidate_binding_contract?.status!=='CANDIDATE_SCHEMA_DEFINED_NOT_AUTHORIZED'||hostAuth.render_candidate_binding_contract?.workspace_owner_id!==null||hostAuth.render_candidate_binding_contract?.evidence_runtime?.service_id!==null||hostAuth.render_candidate_binding_contract?.twin_runtime?.service_id!==null)throw new Error('OWNER_PROVISIONING_RENDER_CANDIDATE_MUST_REMAIN_UNBOUND');
           const remaining=[
-            'EXTERNAL_NON_GITHUB_PLATFORM_NOT_SELECTED',
-            'EVIDENCE_NON_GITHUB_SERVICE_IDENTITY_NOT_BOUND',
-            'TWIN_NON_GITHUB_SERVICE_IDENTITY_NOT_BOUND',
+            'RENDER_PLATFORM_SELECTION_NOT_AUTHORIZED',
+            'RENDER_WORKSPACE_OWNER_ID_NOT_BOUND',
+            'RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND',
+            'RENDER_TWIN_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND',
             'NON_GITHUB_HOST_BINDING_NOT_AUTHORIZED'
           ];
           const p={
@@ -108,6 +111,12 @@ jobs:
             runtime_credential_binding_complete:true,
             host_binding_authority_defined:true,
             production_execution_host_class:hostAuth.production_execution_host_class,
+            recommended_platform_candidate:'RENDER_BACKGROUND_WORKER',
+            recommended_region:'OREGON_USA',
+            render_candidate_schema_defined:true,
+            render_workspace_owner_id_bound:false,
+            render_evidence_service_id_bound:false,
+            render_twin_service_id_bound:false,
             external_platform_selected:false,
             evidence_host_identity_bound:false,
             twin_host_identity_bound:false,
@@ -119,7 +128,7 @@ jobs:
             non_github_host_binding_authorized:false,
             host_binding_ready_for_external_identity:false,
             provisioning_ready:false,
-            next_stage:'NON_GITHUB_HOST_BINDING_REQUIRES_EXTERNAL_PLATFORM_AND_EXACT_TWO_SERVICE_IDENTITIES',
+            next_stage:'AUTHORIZE_RENDER_AND_BIND_WORKSPACE_PLUS_EXACT_TWO_BACKGROUND_WORKER_SERVICE_IDS',
             remaining_provisioning_blockers:remaining,
             provisioning_performed:true,
             runtime_process_start:false,
