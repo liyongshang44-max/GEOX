@@ -139,7 +139,8 @@
     "MATERIALIZE_PRODUCTION_HOST_SCHEMA_AND_RUNTIME_ACL",
     "PROVE_POST_MATERIALIZATION_READ_ONLY_STATE",
     "PROVE_SERVICE_LOGIN_ONE_SHOT_FAILS_CLOSED_UNARMED",
-    "PROVE_SERVICE_LOGIN_PRE_ARM_ZERO_STATE"
+    "PROVE_SERVICE_LOGIN_PRE_ARM_ZERO_STATE",
+    "PROVE_EXACT_TWO_BOOTSTRAP_PASSWORD_SECRETS_PRESENT_AND_RUNTIME_URLS_ABSENT"
   ],
   "next_stage": {
     "stage": "SERVICE_LOGIN_BOOTSTRAP",
@@ -181,6 +182,34 @@
       "all_table_rows_zero": true,
       "service_login_role_count": 0,
       "credential_secrets_present": 0
+    }
+  },
+  "service_login_password_ready_evidence": {
+    "status": "IMMUTABLE_SUCCESS",
+    "subject_sha": "48e73962cc4f04625de3d43c2269c48dcb868470",
+    "owner_provisioning_readiness": {
+      "workflow": "mcft-cap-09-production-owner-provisioning-readiness",
+      "run_id": 33415798359,
+      "artifact_id": 9766980169,
+      "artifact_digest": "sha256:1b693e8259b08d7834d1c1acd6dd385ffbd914ae9eb0297ba5d056baf3798b8d",
+      "status": "PASS_SERVICE_LOGIN_PRE_ARM_READINESS",
+      "password_secret_authority_ready": true,
+      "bootstrap_password_secret_count": 2,
+      "production_login_role_count": 0,
+      "runtime_database_url_secrets_present": 0
+    },
+    "service_login_readiness": {
+      "workflow": "mcft-cap-09-production-service-login-readiness",
+      "run_id": 33415798444,
+      "artifact_id": 9766985457,
+      "artifact_digest": "sha256:0904687298e322695390d601461ce8caad50b102eb9b01d12de0058620b53265",
+      "stage": "SERVICE_LOGIN_PASSWORDS_BOUND_PRE_ARM",
+      "production_host_table_count": 41,
+      "runtime_routine_count": 3,
+      "all_table_rows_zero": true,
+      "service_login_role_count": 0,
+      "bootstrap_password_secret_count": 2,
+      "runtime_database_url_binding": false
     }
   }
 }
