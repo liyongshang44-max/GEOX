@@ -18,6 +18,14 @@ const SERVICE_LOGIN_VERIFIER = path.join(
   ROOT,
   "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_SERVICE_LOGIN_READINESS_V1.cjs",
 );
+const ARM = path.join(
+  ROOT,
+  "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_ARM_V1.json",
+);
+const AUTHORITY = path.join(
+  ROOT,
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json",
+);
 const TARGET_DB = "geox_mcft_cap09_production_runtime_v1";
 const EVIDENCE_LOGIN = "geox_mcft_cap09_evidence_runtime_login_v1";
 const TWIN_LOGIN = "geox_mcft_cap09_twin_runtime_login_v1";
@@ -139,28 +147,111 @@ function main() {
     channel_binding: seed.searchParams.get("channel_binding"),
   };
 
-  const childEnv = {
-    ...process.env,
-    EVIDENCE_RUNTIME_DATABASE_URL_SECRET: "",
-    TWIN_RUNTIME_DATABASE_URL_SECRET: "",
-  };
-  execFileSync(
-    process.execPath,
-    [SERVICE_LOGIN_VERIFIER],
-    { cwd: ROOT, env: childEnv, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
-  );
-  const login = JSON.parse(fs.readFileSync(SERVICE_LOGIN_OUT, "utf8"));
-  assert.equal(login.status, "PASS", "RUNTIME_CREDENTIAL_SERVICE_LOGIN_READINESS_REQUIRED");
-  assert.equal(
-    login.stage,
-    "SERVICE_LOGIN_COMPLETE_PRE_RUNTIME_CREDENTIAL_BINDING",
-    "RUNTIME_CREDENTIAL_SERVICE_LOGIN_STAGE_REQUIRED",
-  );
-  assert.equal(login.service_login_role_count, 2);
-  assert.equal(login.exact_one_privilege_membership_each, true);
-  assert.equal(login.evidence_login_connectivity_proven, true);
-  assert.equal(login.twin_login_connectivity_proven, true);
-  assert.equal(login.all_table_rows_zero, true);
+  const arm = JSON.parse(fs.readFileSync(ARM, "utf8"));
+  const authority = JSON.parse(fs.readFileSync(AUTHORITY, "utf8"));
+  const credentialArm =
+    arm.armed === true &&
+    arm.runtime_credential_binding_authorized === true;
+
+  if (arm.armed === true) {
+    assert.equal(
+      credentialArm,
+      true,
+      "RUNTIME_CREDENTIAL_ONLY_CREDENTIAL_BINDING_ARM_ALLOWED",
+    );
+    assert.equal(
+      arm.exact_target_database_name,
+      TARGET_DB,
+      "RUNTIME_CREDENTIAL_ARM_DATABASE_MISMATCH",
+    );
+    for (const key of [
+      "phase4_twin_acl_materialization_authorized",
+      "service_login_bootstrap_authorized",
+      "runtime_process_start_authorized",
+      "production_owner_activation_authorized",
+      "formal_v5_arm_authorized",
+      "a0_authorized",
+      "o00_authorized",
+    ]) {
+      assert.equal(
+        arm[key],
+        false,
+        "RUNTIME_CREDENTIAL_LATER_AUTHORITY_FORBIDDEN:" + key,
+      );
+    }
+
+    const ready = authority.runtime_credential_url_ready_evidence;
+    assert.equal(
+      ready?.status,
+      "IMMUTABLE_SUCCESS_PRE_ARM",
+      "RUNTIME_CREDENTIAL_URL_READY_EVIDENCE_REQUIRED",
+    );
+    assert.equal(
+      ready?.subject_sha,
+      "a3278aec6c2134356d6a5de39da32760dbd43a71",
+      "RUNTIME_CREDENTIAL_URL_READY_SUBJECT_MISMATCH",
+    );
+    assert.equal(
+      ready?.runtime_credential_readiness?.artifact_digest,
+      "sha256:45a7109537ba10011f7dfb9a72bfc6c2b2064ae3ff6e7bf4d62e4e12fea59f69",
+      "RUNTIME_CREDENTIAL_URL_READY_DIGEST_MISMATCH",
+    );
+    assert.equal(
+      ready?.runtime_credential_readiness?.runtime_credential_pre_arm_ready,
+      true,
+      "RUNTIME_CREDENTIAL_URL_READY_SHAPE_REQUIRED",
+    );
+    assert.equal(
+      ready?.runtime_credential_readiness?.runtime_database_url_secret_count,
+      2,
+      "RUNTIME_CREDENTIAL_URL_READY_EXACT_TWO_REQUIRED",
+    );
+  } else {
+    assert.equal(
+      arm.exact_target_database_name,
+      null,
+      "RUNTIME_CREDENTIAL_UNARMED_TARGET_MUST_BE_NULL",
+    );
+    for (const key of [
+      "phase4_twin_acl_materialization_authorized",
+      "service_login_bootstrap_authorized",
+      "runtime_credential_binding_authorized",
+      "runtime_process_start_authorized",
+      "production_owner_activation_authorized",
+      "formal_v5_arm_authorized",
+      "a0_authorized",
+      "o00_authorized",
+    ]) {
+      assert.equal(
+        arm[key],
+        false,
+        "RUNTIME_CREDENTIAL_UNARMED_AUTHORITY_MUST_BE_FALSE:" + key,
+      );
+    }
+
+    const childEnv = {
+      ...process.env,
+      EVIDENCE_RUNTIME_DATABASE_URL_SECRET: "",
+      TWIN_RUNTIME_DATABASE_URL_SECRET: "",
+    };
+    execFileSync(
+      process.execPath,
+      [SERVICE_LOGIN_VERIFIER],
+      { cwd: ROOT, env: childEnv, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    );
+    const login = JSON.parse(fs.readFileSync(SERVICE_LOGIN_OUT, "utf8"));
+    assert.equal(login.status, "PASS", "RUNTIME_CREDENTIAL_SERVICE_LOGIN_READINESS_REQUIRED");
+    assert.equal(
+      login.stage,
+      "SERVICE_LOGIN_COMPLETE_PRE_RUNTIME_CREDENTIAL_BINDING",
+      "RUNTIME_CREDENTIAL_SERVICE_LOGIN_STAGE_REQUIRED",
+    );
+    assert.equal(login.service_login_role_count, 2);
+    assert.equal(login.exact_one_privilege_membership_each, true);
+    assert.equal(login.evidence_login_connectivity_proven, true);
+    assert.equal(login.twin_login_connectivity_proven, true);
+    assert.equal(login.all_table_rows_zero, true);
+  }
 
   const evidenceUrlRaw = String(process.env.EVIDENCE_RUNTIME_DATABASE_URL_SECRET || "").trim();
   const twinUrlRaw = String(process.env.TWIN_RUNTIME_DATABASE_URL_SECRET || "").trim();
@@ -228,7 +319,9 @@ function main() {
   write({
     schema_version: "geox_mcft_cap09_production_runtime_credential_readiness_v1",
     status: "PASS",
-    stage: "RUNTIME_CREDENTIAL_URLS_BOUND_PRE_ARM",
+    stage: credentialArm
+      ? "RUNTIME_CREDENTIAL_URLS_BOUND_ARMED_RECHECK"
+      : "RUNTIME_CREDENTIAL_URLS_BOUND_PRE_ARM",
     subject_sha: subjectSha,
     database_name: TARGET_DB,
     service_login_role_count: 2,
@@ -243,6 +336,7 @@ function main() {
     evidence_runtime_url_connectivity_proven: true,
     twin_runtime_url_connectivity_proven: true,
     runtime_credential_pre_arm_ready: true,
+    credential_arm_observed: credentialArm,
     runtime_credential_binding: false,
     runtime_process_start: false,
     production_owner_activation: false,
