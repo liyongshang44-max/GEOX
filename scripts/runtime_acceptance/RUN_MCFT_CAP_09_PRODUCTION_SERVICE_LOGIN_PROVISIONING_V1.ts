@@ -176,7 +176,22 @@ async function main(): Promise<void> {
     assert.equal(arm[key], false, "SERVICE_LOGIN_PROVISION_LATER_AUTHORITY_FORBIDDEN:" + key);
   }
 
-  assert.equal(authority.current_stage, "SCHEMA_ACL_COMPLETE_PRE_LOGIN");
+  assert.equal(authority.current_stage, "SERVICE_LOGIN_PRE_ARM_READY");
+  assert.equal(
+    authority.service_login_password_ready_evidence?.status,
+    "IMMUTABLE_SUCCESS",
+    "SERVICE_LOGIN_PROVISION_PASSWORD_READY_EVIDENCE_REQUIRED",
+  );
+  assert.equal(
+    authority.service_login_password_ready_evidence?.owner_provisioning_readiness?.bootstrap_password_secret_count,
+    2,
+    "SERVICE_LOGIN_PROVISION_EXACT_TWO_BOUND_PASSWORDS_REQUIRED",
+  );
+  assert.equal(
+    authority.service_login_password_ready_evidence?.owner_provisioning_readiness?.runtime_database_url_secrets_present,
+    0,
+    "SERVICE_LOGIN_PROVISION_RUNTIME_URLS_MUST_REMAIN_UNBOUND",
+  );
   assert.equal(authority.target_database?.database_name, TARGET_DB);
   assert.equal(authority.target_database?.current_schema_state, "MATERIALIZED_41_TABLE_ZERO_ROW");
   assert.equal(authority.target_database?.schema_acl_materialization_complete, true);
