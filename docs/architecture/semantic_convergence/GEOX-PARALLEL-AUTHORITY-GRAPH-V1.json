@@ -1122,6 +1122,91 @@
         "fingerprint": "readAndSelectDecisionEligibilityPolicyV1 -> exact nullable scope + PROGRAM anchor + occurred_at <= CandidateDecision.decision_time persisted declaration read"
       },
       "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-047",
+      "from_producer": "decision-engine-calculation",
+      "to_consumer": "b09ae-irrigate-state-calculation-shadow-binding",
+      "semantic_id": "decision.calculation",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "SCOPED_PERSISTED_READ",
+        "caller_path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+        "callee_path": "apps/server/src/routes/decision_engine_v1.ts",
+        "fingerprint": "B-09ae re-reads only candidateShadow.source_fact_id from decision_recommendation_v1 and validates source=api/v1/recommendations/generate plus exact tenant/project/group/recommendation identity before consuming persisted skill_trace"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-048",
+      "from_producer": "irrigation-calculation-result-compatibility-adapter",
+      "to_consumer": "b09ae-irrigate-state-calculation-shadow-binding",
+      "semantic_id": "decision.calculation",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+        "callee_path": "apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.ts",
+        "fingerprint": "projectIrrigationRequirementCalculationResultV1(requirementOutput, canonicalContext) with canonical EvidenceQualification refs and same immutable recommendation source"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-049",
+      "from_producer": "agronomy-judge-eligibility-precursor-criterion-adapter",
+      "to_consumer": "b09ae-irrigate-state-calculation-shadow-binding",
+      "semantic_id": "decision.eligibility",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+        "callee_path": "apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.ts",
+        "fingerprint": "projectAgronomyJudgeEligibilityPrecursorV1 is invoked only after exact Judge/source-input congruence and explicit canonical CalculationResult support; B-07e is never called"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-050",
+      "from_producer": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+      "to_consumer": "b09ae-irrigate-state-calculation-shadow-binding",
+      "semantic_id": "governance.semantic_authority_migration",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "RETURN_OBJECT_CHAIN",
+        "caller_path": "apps/server/src/routes/judge_v2.ts",
+        "callee_path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+        "fingerprint": "candidateCriterionReferentialShadow is passed directly to buildIrrigateStateCalculationShadowBindingV1; the exact B-09j candidate/source fact identity is mandatory"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-051",
+      "from_producer": "b09ae-irrigate-state-calculation-shadow-binding-v1",
+      "to_consumer": "judge-v2-agronomy-irrigate-state-calculation-shadow",
+      "semantic_id": "governance.semantic_authority_migration",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/routes/judge_v2.ts",
+        "callee_path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+        "fingerprint": "buildIrrigateStateCalculationShadowBindingV1(...) -> JudgeResultV2.outputs.irrigate_state_calculation_shadow_binding_v1 after legacy JudgeResult construction"
+      },
+      "status": "CURRENT_PROVEN"
     }
   ],
   "connectivity_status_values": [
