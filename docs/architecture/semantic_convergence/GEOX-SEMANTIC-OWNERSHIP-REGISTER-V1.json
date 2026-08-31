@@ -1130,7 +1130,9 @@
         "B-06b never promotes legacy skill evidence_refs into EvidenceQualification refs; canonical qualification refs must be supplied explicitly.",
         "B-06b does not promote irrigation_deficit_skill_v1 recommended_amount into CalculationResultV1 because it is recommendation-like/candidate-like semantics.",
         "B-06g maps only the rule engine's recommendation output into CandidateDecisionV1; expected_effect is not promoted into CalculationResultV1.",
-        "The grandfathered agronomy-rule-engine producer remains historical mixed/candidate behavior until B-09; B-06g adds no CalculationResult runtime producer."
+        "The grandfathered agronomy-rule-engine producer remains historical mixed/candidate behavior until B-09; B-06g adds no CalculationResult runtime producer.",
+        "B-09ae proposes DEC-BLINE-IRRIGATE-STATE-CALCULATION-SHADOW-BINDING-001 as RECOMMENDED_NOT_AUTHORIZED: the same immutable decision_recommendation_v1 source fact used by B-09j should supply persisted irrigation_requirement_skill_v1 skill_trace.outputs.requirement to the existing B-06b CalculationResult adapter.",
+        "B-09ae forbids promoting legacy skill_trace.evidence_refs; canonical EvidenceQualification refs must come from the exact B-09j/B-09h ref continuity set. Candidate/context/decision_time remain unchanged until separately authorized."
       ],
       "runtime_consumers": [
         {
@@ -1743,7 +1745,9 @@
         "B-09ac selects no concrete offset/duration/min/max/IRRIGATE value and does not implement successor contract, writer/route compatibility, selector compatibility, ActionWindow producer, B07e, or MCFT integration.",
         "B-09ad finds ActionWindow numeric horizon NOT READY: no authorized action-specific product/agronomy source currently declares IRRIGATE start_offset_seconds or duration_seconds, so no value may be selected or backfilled.",
         "B-09ad rejects 72h forecast coverage, FieldProgram daily irrigation/night constraints, policy effective_until, EvidenceQualification temporal state, AO-ACT/Twin/ProblemState windows and engineering convenience constants as numeric ActionWindow authority.",
-        "B-09ad sets blocker NO_AUTHORIZED_ACTION_SPECIFIC_HORIZON_VALUE_BASIS and recommends DO_NOT_CHOOSE_NUMERIC_VALUE_YET; Forecast-dependent dynamic horizon remains frozen on incomplete MCFT-9 plus separate integration authorization."
+        "B-09ad sets blocker NO_AUTHORIZED_ACTION_SPECIFIC_HORIZON_VALUE_BASIS and recommends DO_NOT_CHOOSE_NUMERIC_VALUE_YET; Forecast-dependent dynamic horizon remains frozen on incomplete MCFT-9 plus separate integration authorization.",
+        "B-09ae recommends reusing existing B-07c as the STATE criterion producer only after Agronomy Judge request inputs exactly match the persisted recommendation skill_trace inputs and canonical CalculationResult refs are supplied.",
+        "B-09ae forbids latest/later JudgeResult from rewriting original Candidate STATE. Changed inputs leave STATE unbound; exact-congruent PASS against a source recommendation that required requirement_detected=true is semantic mismatch and fails closed."
       ],
       "runtime_consumers": [
         {
