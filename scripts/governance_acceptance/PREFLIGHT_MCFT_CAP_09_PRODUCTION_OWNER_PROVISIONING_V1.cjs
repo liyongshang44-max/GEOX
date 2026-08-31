@@ -17,8 +17,8 @@ function t(p){return fs.readFileSync(p,"utf8");}
 function write(v){fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify(v,null,2)+"\n");console.log(JSON.stringify(v,null,2));}
 try{
   const a=j(AUTH), arm=j(ARM), principals=t(PRINCIPALS), bootstrap=t(BOOTSTRAP), twinAcl=t(TWIN_ACL), schemaReadiness=t(SCHEMA_READINESS), serviceLoginReadiness=t(SERVICE_LOGIN_READINESS);
-  req(a.status==="SERVICE_LOGIN_MATERIALIZED_RUNTIME_CREDENTIAL_BINDING_NOT_ARMED","OWNER_PROVISIONING_SERVICE_LOGIN_MATERIALIZED_STATUS_REQUIRED");
-  req(a.current_stage==="SERVICE_LOGIN_COMPLETE_PRE_RUNTIME_CREDENTIAL_BINDING","OWNER_PROVISIONING_SERVICE_LOGIN_COMPLETE_STAGE_REQUIRED");
+  req(a.status==="RUNTIME_CREDENTIAL_BINDING_COMPLETE_NON_GITHUB_HOST_NOT_BOUND","OWNER_PROVISIONING_RUNTIME_CREDENTIAL_COMPLETE_STATUS_REQUIRED");
+  req(a.current_stage==="RUNTIME_CREDENTIAL_BINDING_COMPLETE_PRE_HOST_BINDING","OWNER_PROVISIONING_RUNTIME_CREDENTIAL_COMPLETE_STAGE_REQUIRED");
   req(a.target_database?.status==="BOUND"&&a.target_database?.database_name==="geox_mcft_cap09_production_runtime_v1","OWNER_PROVISIONING_TARGET_BINDING_INVALID");
   req(a.target_database?.current_schema_state==="MATERIALIZED_41_TABLE_ZERO_ROW"&&a.target_database?.schema_acl_materialization_complete===true,"OWNER_PROVISIONING_SCHEMA_STATE_REQUIRED");
   const m=a.schema_acl_materialization_evidence;
@@ -82,6 +82,26 @@ try{
   req(runtimeUrlReady?.owner_provisioning_readiness?.run_id===33419987686&&runtimeUrlReady?.owner_provisioning_readiness?.job_id===99584540483&&runtimeUrlReady?.owner_provisioning_readiness?.artifact_id===9769057446,"OWNER_PROVISIONING_RUNTIME_URL_READY_OWNER_IDENTITY_MISMATCH");
   req(runtimeUrlReady?.owner_provisioning_readiness?.artifact_digest==="sha256:51a745cb1c36332287f7ffabe8a58a3a89a8c153d3754ff5881afae3b355694b","OWNER_PROVISIONING_RUNTIME_URL_READY_OWNER_DIGEST_MISMATCH");
   req(runtimeUrlReady?.owner_provisioning_readiness?.status==="PASS_RUNTIME_CREDENTIAL_URL_READY_PRE_ARM"&&runtimeUrlReady?.owner_provisioning_readiness?.provisioning_ready===true&&runtimeUrlReady?.owner_provisioning_readiness?.runtime_credential_pre_arm_ready===true&&Array.isArray(runtimeUrlReady?.owner_provisioning_readiness?.remaining_provisioning_blockers)&&runtimeUrlReady.owner_provisioning_readiness.remaining_provisioning_blockers.length===1&&runtimeUrlReady.owner_provisioning_readiness.remaining_provisioning_blockers[0]==="RUNTIME_CREDENTIAL_BINDING_NOT_AUTHORIZED","OWNER_PROVISIONING_RUNTIME_URL_READY_OWNER_SHAPE_MISMATCH");
+  const credentialWrite=a.runtime_credential_binding_evidence;
+  req(credentialWrite?.status==="IMMUTABLE_SUCCESS","OWNER_PROVISIONING_RUNTIME_CREDENTIAL_BINDING_EVIDENCE_REQUIRED");
+  req(credentialWrite?.subject_sha==="939add917b4d97b499d326267e7943c6c1e8e161"&&credentialWrite?.run_id===33422916643&&credentialWrite?.job_id===99589432250&&credentialWrite?.artifact_id===9769604043,"OWNER_PROVISIONING_RUNTIME_CREDENTIAL_BINDING_IDENTITY_MISMATCH");
+  req(credentialWrite?.artifact_digest==="sha256:038d593e81b9917299113897a873d24779d5fe638e0f7baea55426bd0dbe3d59","OWNER_PROVISIONING_RUNTIME_CREDENTIAL_BINDING_DIGEST_MISMATCH");
+  req(credentialWrite?.stage==="RUNTIME_CREDENTIAL_BINDING_COMPLETE_NON_GITHUB_HOST_NOT_BOUND"&&credentialWrite?.runtime_database_url_secret_count===2&&credentialWrite?.exact_database_name_match===true&&credentialWrite?.exact_login_username_match===true&&credentialWrite?.exact_password_pairing_match===true&&credentialWrite?.exact_seed_host_port_match===true&&credentialWrite?.exact_one_privilege_membership_each===true&&credentialWrite?.evidence_runtime_url_connectivity_proven===true&&credentialWrite?.twin_runtime_url_connectivity_proven===true&&credentialWrite?.runtime_credential_binding===true,"OWNER_PROVISIONING_RUNTIME_CREDENTIAL_BINDING_SHAPE_MISMATCH");
+  req(credentialWrite?.runtime_process_start===false&&credentialWrite?.production_owner_activation===false&&credentialWrite?.provider_request_count===0&&credentialWrite?.formal_v5_arm===false&&credentialWrite?.a0_bootstrap===false&&credentialWrite?.o00_started===false&&credentialWrite?.disarmed_after_success===true,"OWNER_PROVISIONING_RUNTIME_CREDENTIAL_BINDING_NON_EFFECT_REQUIRED");
+
+  const credentialRead=a.runtime_credential_post_binding_readiness_evidence;
+  req(credentialRead?.status==="IMMUTABLE_SUCCESS","OWNER_PROVISIONING_RUNTIME_CREDENTIAL_POST_READINESS_REQUIRED");
+  req(credentialRead?.subject_sha==="d02400b8073bbdeb9c8de2a7add7e897fa3f2613"&&credentialRead?.run_id===33422981303&&credentialRead?.job_id===99589642403&&credentialRead?.artifact_id===9769642560,"OWNER_PROVISIONING_RUNTIME_CREDENTIAL_POST_READINESS_IDENTITY_MISMATCH");
+  req(credentialRead?.artifact_digest==="sha256:32ef92e742167d69b4c67d285ab49cb863310cc35b7744759ef0fb5993e31d97","OWNER_PROVISIONING_RUNTIME_CREDENTIAL_POST_READINESS_DIGEST_MISMATCH");
+  req(credentialRead?.stage==="RUNTIME_CREDENTIAL_URLS_BOUND_PRE_ARM"&&credentialRead?.runtime_database_url_secret_count===2&&credentialRead?.exact_database_name_match===true&&credentialRead?.exact_login_username_match===true&&credentialRead?.exact_password_pairing_match===true&&credentialRead?.exact_seed_host_port_match===true&&credentialRead?.exact_one_privilege_membership_each===true&&credentialRead?.evidence_runtime_url_connectivity_proven===true&&credentialRead?.twin_runtime_url_connectivity_proven===true&&credentialRead?.credential_arm_observed===false,"OWNER_PROVISIONING_RUNTIME_CREDENTIAL_POST_READINESS_SHAPE_MISMATCH");
+  req(credentialRead?.runtime_process_start===false&&credentialRead?.production_owner_activation===false&&credentialRead?.provider_request_count===0&&credentialRead?.formal_v5_arm===false&&credentialRead?.a0_bootstrap===false&&credentialRead?.o00_started===false,"OWNER_PROVISIONING_RUNTIME_CREDENTIAL_POST_READINESS_NON_EFFECT_REQUIRED");
+
+  const credentialSentinel=a.runtime_credential_post_disarm_sentinel_evidence;
+  req(credentialSentinel?.status==="IMMUTABLE_SUCCESS","OWNER_PROVISIONING_RUNTIME_CREDENTIAL_POST_DISARM_SENTINEL_REQUIRED");
+  req(credentialSentinel?.one_shot?.run_id===33422981304&&credentialSentinel?.one_shot?.job_id===99589643139&&credentialSentinel?.one_shot?.artifact_id===9769694525&&credentialSentinel?.one_shot?.result_status==="SKIPPED_NOT_ARMED","OWNER_PROVISIONING_RUNTIME_CREDENTIAL_POST_DISARM_ONE_SHOT_REQUIRED");
+  req(credentialSentinel?.one_shot?.artifact_digest==="sha256:fa48b1476580d0714d186313f6dee9d06d7bc842e8be65480b3f9cd86ce506ca","OWNER_PROVISIONING_RUNTIME_CREDENTIAL_POST_DISARM_ONE_SHOT_DIGEST_MISMATCH");
+  req(credentialSentinel?.owner_readiness?.run_id===33422981420&&credentialSentinel?.owner_readiness?.job_id===99589642615&&credentialSentinel?.owner_readiness?.artifact_id===9769700493&&credentialSentinel?.owner_readiness?.status==="PASS_RUNTIME_CREDENTIAL_URL_READY_PRE_ARM"&&credentialSentinel?.owner_readiness?.arm===false,"OWNER_PROVISIONING_RUNTIME_CREDENTIAL_POST_DISARM_OWNER_READY_REQUIRED");
+  req(credentialSentinel?.owner_readiness?.artifact_digest==="sha256:e3758ffa64eb7cc7bdabc90bf8f7583406334408bc6b41eafc2bf9e3fc6c9cd7","OWNER_PROVISIONING_RUNTIME_CREDENTIAL_POST_DISARM_OWNER_DIGEST_MISMATCH");
   const endpoint=a.runtime_endpoint_metadata_evidence;
   req(endpoint?.status==="IMMUTABLE_SUCCESS_NON_SECRET","OWNER_PROVISIONING_RUNTIME_ENDPOINT_EVIDENCE_REQUIRED");
   req(endpoint?.subject_sha==="0a457afad141fd55fa0b3cfb2443445cb17890c9"&&endpoint?.run_id===33418849758&&endpoint?.artifact_id===9768092291,"OWNER_PROVISIONING_RUNTIME_ENDPOINT_IDENTITY_MISMATCH");
@@ -90,9 +110,10 @@ try{
   req(endpoint?.protocol==="postgresql:"&&endpoint?.hostname==="ep-odd-poetry-a6peeo8g.us-west-2.aws.neon.tech"&&endpoint?.port==="5432"&&endpoint?.database_name==="geox_mcft_cap09_production_runtime_v1"&&endpoint?.sslmode==="require"&&endpoint?.channel_binding==="require","OWNER_PROVISIONING_RUNTIME_ENDPOINT_SHAPE_MISMATCH");
   req(endpoint?.contains_username===false&&endpoint?.contains_password===false,"OWNER_PROVISIONING_RUNTIME_ENDPOINT_MUST_BE_NON_SECRET");
   if(a.formal_v5_store_reference) req(a.formal_v5_store_reference.owner_provisioning_target===false,"OWNER_PROVISIONING_FORMAL_V5_TARGET_FORBIDDEN");
-  req(a.next_stage?.stage==="RUNTIME_CREDENTIAL_BINDING"&&a.next_stage?.status==="NOT_ARMED"&&a.next_stage?.separate_machine_authority_required===true,"OWNER_PROVISIONING_RUNTIME_CREDENTIAL_NEXT_STAGE_REQUIRED");
-  req(Array.isArray(a.next_stage?.required_runtime_url_secrets)&&a.next_stage.required_runtime_url_secrets.length===2&&Array.isArray(a.next_stage?.required_password_secrets_already_bound)&&a.next_stage.required_password_secrets_already_bound.length===2,"OWNER_PROVISIONING_RUNTIME_CREDENTIAL_SECRET_SET_REQUIRED");
-  req(a.next_stage?.runtime_url_secret_readiness_semantics==="ZERO_OR_EXACT_TWO_ONLY"&&a.next_stage?.partial_runtime_url_secret_state_forbidden===true&&a.next_stage?.service_login_stage_complete===true,"OWNER_PROVISIONING_RUNTIME_URL_READINESS_SEMANTICS_REQUIRED");
+  req(a.next_stage?.stage==="NON_GITHUB_HOST_BINDING"&&a.next_stage?.status==="NOT_STARTED"&&a.next_stage?.separate_machine_authority_required===true,"OWNER_PROVISIONING_NON_GITHUB_HOST_NEXT_STAGE_REQUIRED");
+  req(a.next_stage?.runtime_credential_stage_complete===true&&a.next_stage?.runtime_database_name==="geox_mcft_cap09_production_runtime_v1","OWNER_PROVISIONING_RUNTIME_CREDENTIAL_STAGE_COMPLETE_REQUIRED");
+  req(Array.isArray(a.next_stage?.runtime_database_url_secrets_bound)&&a.next_stage.runtime_database_url_secrets_bound.length===2&&a.next_stage?.non_github_host_identity_required===true&&a.next_stage?.non_github_host_identity_status==="NOT_YET_BOUND","OWNER_PROVISIONING_NON_GITHUB_HOST_IDENTITY_REQUIRED");
+  req(a.next_stage?.runtime_process_start_forbidden===true&&a.next_stage?.production_owner_activation_forbidden===true&&a.next_stage?.formal_v5_arm_forbidden===true&&a.next_stage?.a0_forbidden===true&&a.next_stage?.o00_forbidden===true,"OWNER_PROVISIONING_NON_GITHUB_HOST_NON_EFFECT_BOUNDARY_REQUIRED");
   req(arm.armed===false&&arm.exact_target_database_name===null,"OWNER_PROVISIONING_MUST_NOT_BE_ARMED");
   for(const k of ["phase4_twin_acl_materialization_authorized","service_login_bootstrap_authorized","runtime_credential_binding_authorized","runtime_process_start_authorized","production_owner_activation_authorized","formal_v5_arm_authorized","a0_authorized","o00_authorized"]) req(arm[k]===false,"OWNER_PROVISIONING_LATER_AUTHORITY_FALSE:"+k);
   for(const marker of ["geox_mcft_cap09_evidence_runtime_login_v1","geox_mcft_cap09_twin_runtime_login_v1","PHASE5_SERVICE_PRIVILEGE_ROLES_REQUIRED","PHASE5_SERVICE_BOOTSTRAP_DATABASE_MISMATCH"]) req(principals.includes(marker),"OWNER_PROVISIONING_PRINCIPAL_CONTRACT_REQUIRED:"+marker);
@@ -101,15 +122,15 @@ try{
   req(twinAcl.includes("NOLOGIN NOINHERIT"),"OWNER_PROVISIONING_TWIN_ROLE_NOINHERIT_REQUIRED");
   req(schemaReadiness.includes("MATERIALIZED_41_TABLE_ZERO_ROW")&&schemaReadiness.includes("SCHEMA_ACL_PRODUCTION_LOGIN_MUST_BE_ABSENT"),"OWNER_PROVISIONING_SCHEMA_READINESS_HISTORICAL_CONTRACT_REQUIRED");
   req(serviceLoginReadiness.includes("SERVICE_LOGIN_COMPLETE_PRE_RUNTIME_CREDENTIAL_BINDING")&&serviceLoginReadiness.includes("SERVICE_LOGIN_READINESS_EXACT_ONE_MEMBERSHIP"),"OWNER_PROVISIONING_SERVICE_LOGIN_READINESS_CONTRACT_REQUIRED");
-  req(a.next_stage?.runtime_credential_readiness_capability==="IMPLEMENTED_DUAL_STATE_READ_ONLY"&&a.next_stage?.runtime_credential_one_shot_capability==="IMPLEMENTED_UNARMED"&&a.next_stage?.pre_url_zero_state_evidence_bound===true&&a.next_stage?.runtime_url_ready_evidence_bound===true&&a.next_stage?.runtime_url_ready_status==="READY_FOR_SEPARATE_ARM","OWNER_PROVISIONING_RUNTIME_CREDENTIAL_CAPABILITY_REQUIRED");
-  req(a.next_stage?.runtime_endpoint_metadata_bound===true&&a.next_stage?.runtime_endpoint_hostname===endpoint.hostname&&a.next_stage?.runtime_endpoint_port===endpoint.port&&a.next_stage?.runtime_endpoint_sslmode===endpoint.sslmode&&a.next_stage?.runtime_endpoint_channel_binding===endpoint.channel_binding,"OWNER_PROVISIONING_RUNTIME_ENDPOINT_NEXT_STAGE_BINDING_REQUIRED");
+  req(credentialWrite?.runtime_credential_binding===true&&credentialRead?.credential_arm_observed===false,"OWNER_PROVISIONING_RUNTIME_CREDENTIAL_CLOSURE_REQUIRED");
   req(a.non_effects?.runtime_schema_acl_materialization_performed===true,"OWNER_PROVISIONING_SCHEMA_MATERIALIZATION_EFFECT_REQUIRED");
   req(a.non_effects?.runtime_schema_and_identity_provisioning_performed===true&&a.non_effects?.production_login_creation===true,"OWNER_PROVISIONING_SERVICE_LOGIN_EFFECT_REQUIRED");
-  for(const k of ["runtime_credential_binding","runtime_process_start","production_owner_activation","provider_request","formal_v5_arm","formal_v5_mutation","a0_bootstrap","o00_started"]) req(a.non_effects?.[k]===false,"OWNER_PROVISIONING_UNAUTHORIZED_EFFECT:"+k);
+  req(a.non_effects?.runtime_credential_binding===true,"OWNER_PROVISIONING_RUNTIME_CREDENTIAL_BINDING_EFFECT_REQUIRED");
+  for(const k of ["runtime_process_start","production_owner_activation","provider_request","formal_v5_arm","formal_v5_mutation","a0_bootstrap","o00_started"]) req(a.non_effects?.[k]===false,"OWNER_PROVISIONING_UNAUTHORIZED_EFFECT:"+k);
   write({
     schema_version:"geox_mcft_cap09_production_owner_provisioning_preflight_v1",
     status:"PASS",
-    provisioning_status:"SERVICE_LOGIN_MATERIALIZED_RUNTIME_CREDENTIAL_BINDING_NOT_ARMED",
+    provisioning_status:"RUNTIME_CREDENTIAL_BINDING_COMPLETE_NON_GITHUB_HOST_NOT_BOUND",
     exact_target_database_bound:true,
     target_database_name:a.target_database.database_name,
     materialization_run_id:m.run_id,
@@ -124,6 +145,9 @@ try{
     service_login_post_materialization_readback_proven:true,
     dual_login_bootstrap_path_present:true,
     runtime_credential_bindings_required:4,
+    runtime_credential_binding_complete:true,
+    next_stage:"NON_GITHUB_HOST_BINDING",
+    non_github_host_identity_bound:false,
     provisioning_arm:false,
     service_login_bootstrap_authorized:false,
     runtime_credential_binding_authorized:false,
