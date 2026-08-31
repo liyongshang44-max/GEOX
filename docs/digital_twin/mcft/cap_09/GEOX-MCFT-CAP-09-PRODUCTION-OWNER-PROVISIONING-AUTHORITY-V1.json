@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_owner_provisioning_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1",
-  "status": "SERVICE_LOGIN_MATERIALIZED_RUNTIME_CREDENTIAL_BINDING_NOT_ARMED",
+  "status": "RUNTIME_CREDENTIAL_BINDING_COMPLETE_NON_GITHUB_HOST_NOT_BOUND",
   "owner_graduation_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json",
   "provisioning_sequence": [
     "BIND_EXACT_PRODUCTION_DATABASE",
@@ -77,7 +77,7 @@
     "o00_started": false,
     "runtime_schema_acl_materialization_performed": true,
     "production_login_creation": true,
-    "runtime_credential_binding": false
+    "runtime_credential_binding": true
   },
   "formal_v5_store_reference": {
     "database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v5",
@@ -89,7 +89,7 @@
     "provisioning_artifact_id": 9726904605,
     "provisioning_artifact_digest": "sha256:0e09f03d78e99ebc6d7df5520c865fb0b1947c040dcfc3b2d1551a982f7c6162"
   },
-  "current_stage": "SERVICE_LOGIN_COMPLETE_PRE_RUNTIME_CREDENTIAL_BINDING",
+  "current_stage": "RUNTIME_CREDENTIAL_BINDING_COMPLETE_PRE_HOST_BINDING",
   "schema_acl_materialization_evidence": {
     "status": "IMMUTABLE_SUCCESS",
     "workflow": "mcft-cap-09-production-operational-schema-acl-materialize-one-shot",
@@ -145,40 +145,29 @@
     "VERIFY_LOGIN_CONNECTIVITY_WITHOUT_STARTING_RUNTIME_HOSTS",
     "PROVE_RUNTIME_CREDENTIAL_ONE_SHOT_FAILS_CLOSED_UNARMED",
     "PROVE_RUNTIME_URL_ZERO_STATE_AFTER_SERVICE_LOGIN_CLOSURE",
-    "PROVE_EXACT_TWO_RUNTIME_DATABASE_URLS_MATCH_IDENTITIES_AND_CONNECT"
+    "PROVE_EXACT_TWO_RUNTIME_DATABASE_URLS_MATCH_IDENTITIES_AND_CONNECT",
+    "BIND_RUNTIME_DATABASE_URL_CREDENTIALS_WITHOUT_STARTING_RUNTIME",
+    "VERIFY_RUNTIME_DATABASE_URL_CREDENTIALS_POST_DISARM"
   ],
   "next_stage": {
-    "stage": "RUNTIME_CREDENTIAL_BINDING",
-    "status": "NOT_ARMED",
+    "stage": "NON_GITHUB_HOST_BINDING",
+    "status": "NOT_STARTED",
     "separate_machine_authority_required": true,
-    "required_runtime_url_secrets": [
+    "runtime_credential_stage_complete": true,
+    "runtime_database_name": "geox_mcft_cap09_production_runtime_v1",
+    "evidence_runtime_login_role": "geox_mcft_cap09_evidence_runtime_login_v1",
+    "twin_runtime_login_role": "geox_mcft_cap09_twin_runtime_login_v1",
+    "runtime_database_url_secrets_bound": [
       "GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL",
       "GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL"
     ],
-    "required_password_secrets_already_bound": [
-      "GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_PASSWORD",
-      "GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_PASSWORD"
-    ],
-    "runtime_url_secret_readiness_semantics": "ZERO_OR_EXACT_TWO_ONLY",
-    "partial_runtime_url_secret_state_forbidden": true,
-    "service_login_stage_complete": true,
+    "non_github_host_identity_required": true,
+    "non_github_host_identity_status": "NOT_YET_BOUND",
     "runtime_process_start_forbidden": true,
     "production_owner_activation_forbidden": true,
-    "non_github_host_binding_not_started": true,
-    "runtime_credential_readiness_capability": "IMPLEMENTED_DUAL_STATE_READ_ONLY",
-    "runtime_credential_one_shot_capability": "IMPLEMENTED_UNARMED",
-    "pre_url_zero_state_evidence_bound": true,
-    "production_neon_project_id": "delicate-glade-62464340",
-    "production_neon_branch_id": "br-cold-dust-a6j6aymz",
-    "production_neon_branch_name": "main",
-    "runtime_endpoint_metadata_bound": true,
-    "runtime_endpoint_hostname": "ep-odd-poetry-a6peeo8g.us-west-2.aws.neon.tech",
-    "runtime_endpoint_port": "5432",
-    "runtime_endpoint_sslmode": "require",
-    "runtime_endpoint_channel_binding": "require",
-    "runtime_url_ready_evidence_bound": true,
-    "runtime_url_ready_subject_sha": "a3278aec6c2134356d6a5de39da32760dbd43a71",
-    "runtime_url_ready_status": "READY_FOR_SEPARATE_ARM"
+    "formal_v5_arm_forbidden": true,
+    "a0_forbidden": true,
+    "o00_forbidden": true
   },
   "service_login_pre_arm_evidence": {
     "status": "IMMUTABLE_READY_UNARMED",
@@ -384,6 +373,85 @@
       "remaining_provisioning_blockers": [
         "RUNTIME_CREDENTIAL_BINDING_NOT_AUTHORIZED"
       ]
+    }
+  },
+  "runtime_credential_binding_evidence": {
+    "status": "IMMUTABLE_SUCCESS",
+    "workflow": "mcft-cap-09-production-runtime-credential-bind-one-shot",
+    "subject_sha": "939add917b4d97b499d326267e7943c6c1e8e161",
+    "run_id": 33422916643,
+    "job_id": 99589432250,
+    "artifact_id": 9769604043,
+    "artifact_digest": "sha256:038d593e81b9917299113897a873d24779d5fe638e0f7baea55426bd0dbe3d59",
+    "stage": "RUNTIME_CREDENTIAL_BINDING_COMPLETE_NON_GITHUB_HOST_NOT_BOUND",
+    "database_name": "geox_mcft_cap09_production_runtime_v1",
+    "service_login_role_count": 2,
+    "bootstrap_password_secret_count": 2,
+    "runtime_database_url_secret_count": 2,
+    "exact_database_name_match": true,
+    "exact_login_username_match": true,
+    "exact_password_pairing_match": true,
+    "exact_seed_host_port_match": true,
+    "exact_one_privilege_membership_each": true,
+    "evidence_runtime_url_connectivity_proven": true,
+    "twin_runtime_url_connectivity_proven": true,
+    "runtime_credential_binding": true,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "provider_request_count": 0,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false,
+    "disarmed_after_success": true
+  },
+  "runtime_credential_post_binding_readiness_evidence": {
+    "status": "IMMUTABLE_SUCCESS",
+    "workflow": "mcft-cap-09-production-runtime-credential-readiness",
+    "subject_sha": "d02400b8073bbdeb9c8de2a7add7e897fa3f2613",
+    "run_id": 33422981303,
+    "job_id": 99589642403,
+    "artifact_id": 9769642560,
+    "artifact_digest": "sha256:32ef92e742167d69b4c67d285ab49cb863310cc35b7744759ef0fb5993e31d97",
+    "stage": "RUNTIME_CREDENTIAL_URLS_BOUND_PRE_ARM",
+    "database_name": "geox_mcft_cap09_production_runtime_v1",
+    "service_login_role_count": 2,
+    "bootstrap_password_secret_count": 2,
+    "runtime_database_url_secret_count": 2,
+    "exact_database_name_match": true,
+    "exact_login_username_match": true,
+    "exact_password_pairing_match": true,
+    "exact_seed_host_port_match": true,
+    "exact_one_privilege_membership_each": true,
+    "evidence_runtime_url_connectivity_proven": true,
+    "twin_runtime_url_connectivity_proven": true,
+    "credential_arm_observed": false,
+    "runtime_credential_binding_observed_by_readiness": false,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "provider_request_count": 0,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false
+  },
+  "runtime_credential_post_disarm_sentinel_evidence": {
+    "status": "IMMUTABLE_SUCCESS",
+    "subject_sha": "d02400b8073bbdeb9c8de2a7add7e897fa3f2613",
+    "one_shot": {
+      "workflow": "mcft-cap-09-production-runtime-credential-bind-one-shot",
+      "run_id": 33422981304,
+      "job_id": 99589643139,
+      "artifact_id": 9769694525,
+      "artifact_digest": "sha256:fa48b1476580d0714d186313f6dee9d06d7bc842e8be65480b3f9cd86ce506ca",
+      "result_status": "SKIPPED_NOT_ARMED"
+    },
+    "owner_readiness": {
+      "workflow": "mcft-cap-09-production-owner-provisioning-readiness",
+      "run_id": 33422981420,
+      "job_id": 99589642615,
+      "artifact_id": 9769700493,
+      "artifact_digest": "sha256:e3758ffa64eb7cc7bdabc90bf8f7583406334408bc6b41eafc2bf9e3fc6c9cd7",
+      "status": "PASS_RUNTIME_CREDENTIAL_URL_READY_PRE_ARM",
+      "arm": false
     }
   }
 }
