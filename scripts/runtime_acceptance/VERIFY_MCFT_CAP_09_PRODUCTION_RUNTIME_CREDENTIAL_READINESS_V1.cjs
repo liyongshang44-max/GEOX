@@ -133,6 +133,13 @@ function main() {
   if (!["postgres:", "postgresql:"].includes(seed.protocol)) {
     throw new Error("RUNTIME_CREDENTIAL_SEED_POSTGRES_URL_REQUIRED");
   }
+  const endpointMetadata = {
+    protocol: seed.protocol,
+    hostname: seed.hostname,
+    port: normalizedPort(seed),
+    sslmode: seed.searchParams.get("sslmode"),
+    channel_binding: seed.searchParams.get("channel_binding"),
+  };
 
   const childEnv = {
     ...process.env,
@@ -177,6 +184,7 @@ function main() {
       service_login_role_count: 2,
       bootstrap_password_secret_count: 2,
       runtime_database_url_secret_count: 0,
+      runtime_endpoint_metadata: endpointMetadata,
       exact_one_privilege_membership_each: true,
       evidence_login_connectivity_proven: true,
       twin_login_connectivity_proven: true,
@@ -228,6 +236,7 @@ function main() {
     service_login_role_count: 2,
     bootstrap_password_secret_count: 2,
     runtime_database_url_secret_count: 2,
+    runtime_endpoint_metadata: endpointMetadata,
     exact_database_name_match: true,
     exact_login_username_match: true,
     exact_password_pairing_match: true,
