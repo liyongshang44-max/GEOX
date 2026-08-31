@@ -4,6 +4,7 @@ const fs=require("node:fs");
 const path=require("node:path");
 const ROOT=path.resolve(__dirname,"../..");
 const AUTH=path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json");
+const HOST_AUTH=path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json");
 const ARM=path.join(ROOT,"scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_ARM_V1.json");
 const PRINCIPALS=path.join(ROOT,"apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts");
 const BOOTSTRAP=path.join(ROOT,"apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.ts");
@@ -16,7 +17,7 @@ function j(p){return JSON.parse(fs.readFileSync(p,"utf8"));}
 function t(p){return fs.readFileSync(p,"utf8");}
 function write(v){fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify(v,null,2)+"\n");console.log(JSON.stringify(v,null,2));}
 try{
-  const a=j(AUTH), arm=j(ARM), principals=t(PRINCIPALS), bootstrap=t(BOOTSTRAP), twinAcl=t(TWIN_ACL), schemaReadiness=t(SCHEMA_READINESS), serviceLoginReadiness=t(SERVICE_LOGIN_READINESS);
+  const a=j(AUTH), hostAuth=j(HOST_AUTH), arm=j(ARM), principals=t(PRINCIPALS), bootstrap=t(BOOTSTRAP), twinAcl=t(TWIN_ACL), schemaReadiness=t(SCHEMA_READINESS), serviceLoginReadiness=t(SERVICE_LOGIN_READINESS);
   req(a.status==="RUNTIME_CREDENTIAL_BINDING_COMPLETE_NON_GITHUB_HOST_NOT_BOUND","OWNER_PROVISIONING_RUNTIME_CREDENTIAL_COMPLETE_STATUS_REQUIRED");
   req(a.current_stage==="RUNTIME_CREDENTIAL_BINDING_COMPLETE_PRE_HOST_BINDING","OWNER_PROVISIONING_RUNTIME_CREDENTIAL_COMPLETE_STAGE_REQUIRED");
   req(a.target_database?.status==="BOUND"&&a.target_database?.database_name==="geox_mcft_cap09_production_runtime_v1","OWNER_PROVISIONING_TARGET_BINDING_INVALID");
@@ -114,6 +115,15 @@ try{
   req(a.next_stage?.runtime_credential_stage_complete===true&&a.next_stage?.runtime_database_name==="geox_mcft_cap09_production_runtime_v1","OWNER_PROVISIONING_RUNTIME_CREDENTIAL_STAGE_COMPLETE_REQUIRED");
   req(Array.isArray(a.next_stage?.runtime_database_url_secrets_bound)&&a.next_stage.runtime_database_url_secrets_bound.length===2&&a.next_stage?.non_github_host_identity_required===true&&a.next_stage?.non_github_host_identity_status==="NOT_YET_BOUND","OWNER_PROVISIONING_NON_GITHUB_HOST_IDENTITY_REQUIRED");
   req(a.next_stage?.runtime_process_start_forbidden===true&&a.next_stage?.production_owner_activation_forbidden===true&&a.next_stage?.formal_v5_arm_forbidden===true&&a.next_stage?.a0_forbidden===true&&a.next_stage?.o00_forbidden===true,"OWNER_PROVISIONING_NON_GITHUB_HOST_NON_EFFECT_BOUNDARY_REQUIRED");
+  req(a.next_stage?.host_binding_authority_ref==="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json","OWNER_PROVISIONING_HOST_BINDING_AUTHORITY_REF_REQUIRED");
+  req(a.next_stage?.host_binding_authority_status==="HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND"&&a.next_stage?.host_binding_platform_selected===false&&a.next_stage?.evidence_host_identity_bound===false&&a.next_stage?.twin_host_identity_bound===false&&a.next_stage?.exact_two_runtime_service_identities_bound===false,"OWNER_PROVISIONING_HOST_BINDING_UNBOUND_FRONTIER_REQUIRED");
+  req(hostAuth.status==="HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND"&&hostAuth.production_execution_host_class==="NON_GITHUB_LONG_RUNNING_SERVICE","OWNER_PROVISIONING_HOST_AUTHORITY_STATUS_REQUIRED");
+  req(hostAuth.github_actions?.production_execution_host_allowed===false,"OWNER_PROVISIONING_GITHUB_EXECUTION_HOST_FORBIDDEN");
+  req(hostAuth.host_identity_contract?.evidence_runtime?.runtime_role==="EVIDENCE_RUNTIME"&&hostAuth.host_identity_contract?.twin_runtime?.runtime_role==="TWIN_RUNTIME","OWNER_PROVISIONING_HOST_RUNTIME_ROLES_REQUIRED");
+  req(hostAuth.host_identity_contract?.evidence_runtime?.service_identity===null&&hostAuth.host_identity_contract?.twin_runtime?.service_identity===null,"OWNER_PROVISIONING_HOST_IDENTITIES_MUST_REMAIN_UNBOUND");
+  req(hostAuth.binding_state?.platform_selected===false&&hostAuth.binding_state?.evidence_host_identity_bound===false&&hostAuth.binding_state?.twin_host_identity_bound===false&&hostAuth.binding_state?.exact_two_runtime_service_identities_bound===false&&hostAuth.binding_state?.binding_authorized===false,"OWNER_PROVISIONING_HOST_BINDING_STATE_REQUIRED");
+  req(hostAuth.next_stage?.stage==="BIND_REAL_NON_GITHUB_PLATFORM_SERVICE_IDENTITIES"&&hostAuth.next_stage?.status==="BLOCKED_ON_EXTERNAL_PLATFORM_AND_SERVICE_IDENTITIES","OWNER_PROVISIONING_HOST_AUTHORITY_NEXT_STAGE_REQUIRED");
+  for(const k of ["external_host_provisioning","deployment","runtime_process_start","production_owner_activation","provider_request","formal_v5_arm","a0_bootstrap","o00_started"]) req(hostAuth.non_effects?.[k]===false,"OWNER_PROVISIONING_HOST_AUTHORITY_NON_EFFECT_REQUIRED:"+k);
   req(arm.armed===false&&arm.exact_target_database_name===null,"OWNER_PROVISIONING_MUST_NOT_BE_ARMED");
   for(const k of ["phase4_twin_acl_materialization_authorized","service_login_bootstrap_authorized","runtime_credential_binding_authorized","runtime_process_start_authorized","production_owner_activation_authorized","formal_v5_arm_authorized","a0_authorized","o00_authorized"]) req(arm[k]===false,"OWNER_PROVISIONING_LATER_AUTHORITY_FALSE:"+k);
   for(const marker of ["geox_mcft_cap09_evidence_runtime_login_v1","geox_mcft_cap09_twin_runtime_login_v1","PHASE5_SERVICE_PRIVILEGE_ROLES_REQUIRED","PHASE5_SERVICE_BOOTSTRAP_DATABASE_MISMATCH"]) req(principals.includes(marker),"OWNER_PROVISIONING_PRINCIPAL_CONTRACT_REQUIRED:"+marker);
@@ -147,6 +157,11 @@ try{
     runtime_credential_bindings_required:4,
     runtime_credential_binding_complete:true,
     next_stage:"NON_GITHUB_HOST_BINDING",
+    host_binding_authority_defined:true,
+    external_platform_selected:false,
+    evidence_host_identity_bound:false,
+    twin_host_identity_bound:false,
+    exact_two_runtime_service_identities_bound:false,
     non_github_host_identity_bound:false,
     provisioning_arm:false,
     service_login_bootstrap_authorized:false,
