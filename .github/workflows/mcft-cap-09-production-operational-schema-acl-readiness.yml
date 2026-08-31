@@ -65,21 +65,31 @@ jobs:
                     'geox_mcft_cap09_evidence_writer_owner_v1',
                     'geox_mcft_cap09_twin_writer_owner_v1',
                     'geox_mcft_cap09_forcing_writer_owner_v1'
-                  ))")"
+                  )
+                  AND m.set_option)")"
+
+          membership_rows="$(psql "$target_url" -At -v ON_ERROR_STOP=1 -c "
+            SELECT COALESCE(string_agg(
+              granted.rolname || ':admin=' || m.admin_option::text ||
+              ':inherit=' || m.inherit_option::text ||
+              ':set=' || m.set_option::text ||
+              ':grantor=' || pg_catalog.pg_get_userbyid(m.grantor),
+              ';' ORDER BY granted.rolname, m.grantor
+            ),'')
+              FROM pg_catalog.pg_auth_members m
+              JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
+              JOIN pg_catalog.pg_roles member ON member.oid=m.member
+             WHERE member.rolname=current_user
+               AND granted.rolname IN (
+                 'geox_mcft_cap09_evidence_writer_owner_v1',
+                 'geox_mcft_cap09_twin_writer_owner_v1',
+                 'geox_mcft_cap09_forcing_writer_owner_v1'
+               )")"
+          echo "SCHEMA_ACL_WRITER_OWNER_MEMBERSHIP_ROWS=$membership_rows"
+
           if [ "$state" != "0|0|0|0" ]; then
-            residual_names="$(psql "$target_url" -At -v ON_ERROR_STOP=1 -c "
-              SELECT COALESCE(string_agg(granted.rolname,',' ORDER BY granted.rolname),'')
-                FROM pg_catalog.pg_auth_members m
-                JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
-                JOIN pg_catalog.pg_roles member ON member.oid=m.member
-               WHERE member.rolname=current_user
-                 AND granted.rolname IN (
-                   'geox_mcft_cap09_evidence_writer_owner_v1',
-                   'geox_mcft_cap09_twin_writer_owner_v1',
-                   'geox_mcft_cap09_forcing_writer_owner_v1'
-                 )")"
             echo "SCHEMA_ACL_ROLLBACK_NOT_CLEAN:$state" >&2
-            echo "SCHEMA_ACL_ROLLBACK_RESIDUAL_MEMBERSHIPS:$residual_names" >&2
+            echo "SCHEMA_ACL_ROLLBACK_RESIDUAL_SET_MEMBERSHIPS:$membership_rows" >&2
             exit 1
           fi
 
@@ -108,6 +118,7 @@ jobs:
             echo "SCHEMA_ACL_NEON_CREATEROLE=$neon_createrole"
             echo "SCHEMA_ACL_NEON_CREATEDB=$neon_createdb"
             echo "SCHEMA_ACL_SCHEMA_CREATE=$schema_create"
+            echo "SCHEMA_ACL_WRITER_OWNER_MEMBERSHIP_ROWS=$membership_rows"
           } >> "$GITHUB_ENV"
 
       - name: Emit schema ACL capability proof
@@ -132,6 +143,8 @@ jobs:
             target_zero_state:true,
             service_login_role_count:0,
             provisioning_admin_writer_owner_membership_residual_count:0,
+            provisioning_admin_writer_owner_set_membership_residual_count:0,
+            writer_owner_management_membership_rows:process.env.SCHEMA_ACL_WRITER_OWNER_MEMBERSHIP_ROWS||'',
             rollback_clean:true,
             schema_acl_arm:false,
             schema_migration_performed:false,
