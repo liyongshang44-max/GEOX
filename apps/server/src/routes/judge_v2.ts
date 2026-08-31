@@ -7,6 +7,7 @@ import { evaluateAgronomyJudgeV2 } from "../domain/judge/agronomy_judge_v2.js";
 import { buildAgronomyEvidenceDependencyShadowBindingV1 } from "../domain/decision/agronomy_evidence_dependency_shadow_binding_v1.js";
 import { projectAgronomyQualifiedEvidenceCriterionShadowV1 } from "../domain/decision/agronomy_qualified_evidence_criterion_shadow_v1.js";
 import { buildDecisionRecommendationCandidateCriterionShadowBindingV1 } from "../domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.js";
+import { buildCandidateDecisionBoundaryContextBindingV1 } from "../domain/decision/candidate_decision_boundary_context_binding_v1.js";
 import { buildIrrigateStateCalculationShadowBindingV1 } from "../domain/decision/irrigate_state_calculation_shadow_binding_v1.js";
 import { collectEvidenceJudgeSemanticShadowComparisonV1 } from "../domain/decision/evidence_semantic_shadow_runtime_collector_v1.js";
 import { readEvidenceSemanticShadowInventoryV1 } from "../domain/decision/evidence_semantic_shadow_inventory_v1.js";
@@ -44,6 +45,7 @@ const EvaluateAgronomyRequestSchema = TenantSchema.extend({
   evidence_judge_verdict: z.string().min(1).optional(),
   evidence_refs: z.array(z.unknown()).optional(),
   source_refs: z.array(z.unknown()).optional(),
+  field_program_fact_id: z.string().min(1).optional(),
 });
 const EvaluateExecutionRequestSchema = TenantSchema.extend({ prescription_id: z.string().min(1).optional(), field_id: z.string().min(1).optional(), device_id: z.string().min(1).optional(), receipt: z.object({ receipt_id: z.string().min(1).optional(), task_id: z.string().min(1).optional(), status: z.string().min(1).optional(), evidence_refs: z.array(z.unknown()).optional() }).nullable().optional(), as_executed: z.object({ as_executed_id: z.string().min(1).optional(), task_id: z.string().min(1).optional() }).nullable().optional(), as_applied: z.object({ as_applied_id: z.string().min(1).optional() }).nullable().optional(), pre_soil_moisture: z.number().optional(), post_soil_moisture: z.number().optional(), evidence_refs: z.array(z.unknown()).optional(), source_refs: z.array(z.unknown()).optional() });
 const ReadJudgeRequestSchema = TenantSchema.extend({ judge_id: z.string().min(1) });
@@ -105,10 +107,28 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
         await buildAgronomyEvidenceDependencyShadowBindingV1(pool, body);
       const qualifiedEvidenceCriterionShadow =
         projectAgronomyQualifiedEvidenceCriterionShadowV1(evidenceDependencyShadow);
+      const decisionBoundaryContextBinding =
+        await buildCandidateDecisionBoundaryContextBindingV1(
+          pool,
+          body,
+          qualifiedEvidenceCriterionShadow.criterion_assessment?.support_refs ?? [],
+        );
+      const boundaryBoundCandidateInput =
+        decisionBoundaryContextBinding.binding_state === "BOUND"
+          ? {
+              ...body,
+              expected_source_fact_id:
+                decisionBoundaryContextBinding.source_recommendation_fact_id,
+              context_snapshot_ref:
+                decisionBoundaryContextBinding.context_snapshot_ref,
+              decision_time:
+                decisionBoundaryContextBinding.decision_time,
+            }
+          : body;
       const candidateCriterionReferentialShadow =
         await buildDecisionRecommendationCandidateCriterionShadowBindingV1(
           pool,
-          body,
+          boundaryBoundCandidateInput,
           evidenceDependencyShadow,
           qualifiedEvidenceCriterionShadow,
         );
@@ -125,6 +145,8 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
           ...(judgeResult.outputs ?? {}),
           agronomy_evidence_dependency_shadow_v1: evidenceDependencyShadow,
           agronomy_qualified_evidence_criterion_shadow_v1: qualifiedEvidenceCriterionShadow,
+          candidate_decision_boundary_context_binding_v1:
+            decisionBoundaryContextBinding,
           decision_recommendation_candidate_criterion_shadow_binding_v1:
             candidateCriterionReferentialShadow,
           irrigate_state_calculation_shadow_binding_v1:

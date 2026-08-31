@@ -1207,6 +1207,74 @@
         "fingerprint": "buildIrrigateStateCalculationShadowBindingV1(...) -> JudgeResultV2.outputs.irrigate_state_calculation_shadow_binding_v1 after legacy JudgeResult construction"
       },
       "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-052",
+      "from_producer": "field-program-context-compatibility-projector",
+      "to_consumer": "b09y-candidate-decision-boundary-context-binding",
+      "semantic_id": "context.declared_identity",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+        "callee_path": "apps/server/src/context/field_program_context_projection_v1.ts",
+        "fingerprint": "projectFieldProgramDeclaredContextV1 receives exact field_program_fact_v1 source_ref plus boundary decision_time and deterministic snapshot_id; legacy latest reader is not used"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-053",
+      "from_producer": "decision-engine-recommendation",
+      "to_consumer": "b09y-candidate-decision-boundary-context-binding",
+      "semantic_id": "decision.candidate",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "SCOPED_PERSISTED_READ",
+        "caller_path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+        "callee_path": "apps/server/src/routes/decision_engine_v1.ts",
+        "fingerprint": "B-09y reads tenant/project/group/recommendation_id with LIMIT 2 before boundary, fails closed on ambiguity, derives candidate identity from immutable fact_id, then rechecks the exact fact_id inside the boundary transaction"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-054",
+      "from_producer": "b09y-candidate-decision-boundary-context-binding-v1",
+      "to_consumer": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+      "semantic_id": "governance.semantic_authority_migration",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "RETURN_OBJECT_CHAIN",
+        "caller_path": "apps/server/src/routes/judge_v2.ts",
+        "callee_path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+        "fingerprint": "when B-09y is BOUND, route passes expected_source_fact_id + context_snapshot_ref + decision_time to B-09j; B-09j then performs exact fact_id read and projects Candidate with the same boundary"
+      },
+      "status": "CURRENT_PROVEN"
+    },
+    {
+      "edge_id": "C-055",
+      "from_producer": "b09y-candidate-decision-boundary-context-binding-v1",
+      "to_consumer": "judge-v2-agronomy-boundary-context-shadow",
+      "semantic_id": "governance.semantic_authority_migration",
+      "connection_class": "ACTIVE_PARALLEL",
+      "activation": "API_ONLY",
+      "runtime_edge": "PROVEN",
+      "contract_compatible": true,
+      "evidence": {
+        "kind": "DIRECT_CALL",
+        "caller_path": "apps/server/src/routes/judge_v2.ts",
+        "callee_path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+        "fingerprint": "buildCandidateDecisionBoundaryContextBindingV1(...) -> JudgeResultV2.outputs.candidate_decision_boundary_context_binding_v1 before B-09j/B-09ae shadow composition"
+      },
+      "status": "CURRENT_PROVEN"
     }
   ],
   "connectivity_status_values": [
