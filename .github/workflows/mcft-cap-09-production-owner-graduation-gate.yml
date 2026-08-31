@@ -34,6 +34,7 @@ jobs:
       EVIDENCE_RUNTIME_PASSWORD_SECRET: ${{ secrets.GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_PASSWORD }}
       TWIN_RUNTIME_DATABASE_URL_SECRET: ${{ secrets.GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL }}
       TWIN_RUNTIME_PASSWORD_SECRET: ${{ secrets.GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_PASSWORD }}
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
 
     steps:
       - name: Checkout exact graduation subject
@@ -72,7 +73,7 @@ jobs:
             evidence_priv=true
           fi
           if grep -q '^geox_mcft_cap09_twin_runtime_v1|' <<<"$rows"; then
-            grep -Fx 'geox_mcft_cap09_twin_runtime_v1|false|true|false|false|false' <<<"$rows"
+            grep -Fx 'geox_mcft_cap09_twin_runtime_v1|false|false|false|false|false' <<<"$rows"
             twin_priv=true
           fi
           if grep -q '^geox_mcft_cap09_evidence_runtime_login_v1|' <<<"$rows"; then
@@ -113,31 +114,46 @@ jobs:
           const gh=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_AUDIT_V1.json','utf8'));
           if(pre.status!=='PASS'||gh.status!=='PASS')throw new Error('OWNER_GRADUATION_PREFLIGHT_REQUIRED');
           for(const key of ['active_retired_owner_or_trigger_count','retired_actions_write_count','unclassified_scheduled_count','unclassified_workflow_run_count'])if(gh[key]!==0)throw new Error('OWNER_GITHUB_ZERO_REQUIRED:'+key);
+          const evidencePrivilege=process.env.OWNER_EVIDENCE_PRIVILEGE_PRESENT==='true';
+          const twinPrivilege=process.env.OWNER_TWIN_PRIVILEGE_PRESENT==='true';
+          const evidenceLogin=process.env.OWNER_EVIDENCE_LOGIN_PRESENT==='true';
+          const twinLogin=process.env.OWNER_TWIN_LOGIN_PRESENT==='true';
+          const evidenceUrl=Boolean(process.env.EVIDENCE_RUNTIME_DATABASE_URL_SECRET);
+          const evidencePassword=Boolean(process.env.EVIDENCE_RUNTIME_PASSWORD_SECRET);
+          const twinUrl=Boolean(process.env.TWIN_RUNTIME_DATABASE_URL_SECRET);
+          const twinPassword=Boolean(process.env.TWIN_RUNTIME_PASSWORD_SECRET);
+          const blockers=['NON_GITHUB_PRODUCTION_HOSTING_BINDING_NOT_ESTABLISHED'];
+          if(!evidencePrivilege)blockers.push('EVIDENCE_PRIVILEGE_ROLE_NOT_PRESENT');
+          if(!twinPrivilege)blockers.push('TWIN_PRIVILEGE_ROLE_NOT_PRESENT');
+          if(!evidenceLogin)blockers.push('EVIDENCE_LOGIN_ROLE_NOT_PRESENT');
+          if(!twinLogin)blockers.push('TWIN_LOGIN_ROLE_NOT_PRESENT');
+          if(!evidenceUrl)blockers.push('EVIDENCE_RUNTIME_DATABASE_URL_SECRET_NOT_BOUND');
+          if(!evidencePassword)blockers.push('EVIDENCE_RUNTIME_PASSWORD_SECRET_NOT_BOUND');
+          if(!twinUrl)blockers.push('TWIN_RUNTIME_DATABASE_URL_SECRET_NOT_BOUND');
+          if(!twinPassword)blockers.push('TWIN_RUNTIME_PASSWORD_SECRET_NOT_BOUND');
+          blockers.push('EVIDENCE_EFFECTIVE_OWNER_NOT_PROVEN','TWIN_EFFECTIVE_SCHEDULER_OWNER_NOT_PROVEN');
           const proof={
             schema_version:'geox_mcft_cap09_production_owner_graduation_gate_v1',
             status:'PREFLIGHT_PASS_CUTOVER_NOT_PERFORMED',
-            subject_sha:process.env.GITHUB_SHA,
+            subject_sha:process.env.SUBJECT_SHA,
             timing_budget_frozen:true,
             selected_budget_ms:pre.selected_budget_ms,
             github_retired_owner_and_trigger_count_zero:true,
-            evidence_privilege_role_present:process.env.OWNER_EVIDENCE_PRIVILEGE_PRESENT==='true',
-            twin_privilege_role_present:process.env.OWNER_TWIN_PRIVILEGE_PRESENT==='true',
-            evidence_login_present:process.env.OWNER_EVIDENCE_LOGIN_PRESENT==='true',
-            twin_login_present:process.env.OWNER_TWIN_LOGIN_PRESENT==='true',
-            evidence_runtime_database_url_secret_present:Boolean(process.env.EVIDENCE_RUNTIME_DATABASE_URL_SECRET),
-            evidence_runtime_password_secret_present:Boolean(process.env.EVIDENCE_RUNTIME_PASSWORD_SECRET),
-            twin_runtime_database_url_secret_present:Boolean(process.env.TWIN_RUNTIME_DATABASE_URL_SECRET),
-            twin_runtime_password_secret_present:Boolean(process.env.TWIN_RUNTIME_PASSWORD_SECRET),
+            evidence_privilege_role_present:evidencePrivilege,
+            twin_privilege_role_present:twinPrivilege,
+            evidence_login_present:evidenceLogin,
+            twin_login_present:twinLogin,
+            evidence_runtime_database_url_secret_present:evidenceUrl,
+            evidence_runtime_password_secret_present:evidencePassword,
+            twin_runtime_database_url_secret_present:twinUrl,
+            twin_runtime_password_secret_present:twinPassword,
+            production_owner_provisioning_required:!evidencePrivilege||!twinPrivilege||!evidenceLogin||!twinLogin||!evidenceUrl||!evidencePassword||!twinUrl||!twinPassword,
             login_presence_is_effective_owner_proof:false,
             non_github_hosting_binding_established:false,
             evidence_effective_owner_count:null,
             twin_effective_scheduler_owner_count:null,
             exact_one_production_owner_proven:false,
-            blocking_conditions:[
-              'NON_GITHUB_PRODUCTION_HOSTING_BINDING_NOT_ESTABLISHED',
-              'EVIDENCE_EFFECTIVE_OWNER_NOT_PROVEN',
-              'TWIN_EFFECTIVE_SCHEDULER_OWNER_NOT_PROVEN'
-            ],
+            blocking_conditions:blockers,
             remote_mutation_count:0,
             production_login_creation:false,
             production_owner_activation:false,
