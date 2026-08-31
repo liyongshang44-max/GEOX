@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_operational_database_candidate_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-OPERATIONAL-DATABASE-CANDIDATE-V1",
-  "status": "CANDIDATE_NOT_PROVISIONED",
+  "status": "QUALIFIED_CANDIDATE_PROVISION_ARMED",
   "candidate_database_name": "geox_mcft_cap09_production_runtime_v1",
   "purpose": "SHARED_OPERATIONAL_POSTGRES_FOR_EVIDENCE_AND_TWIN_RUNTIME",
   "topology": {
@@ -43,5 +43,18 @@
     "formal_v5_arm": false,
     "a0_bootstrap": false,
     "o00_started": false
+  },
+  "candidate_qualification": {
+    "subject_sha": "f94f875f1d2026f883e1142f31371ad7ea7f805f",
+    "workflow_name": "mcft-cap-09-production-operational-database-candidate-preflight",
+    "workflow_path": ".github/workflows/mcft-cap-09-production-operational-database-candidate-preflight.yml",
+    "run_id": 33375040615,
+    "run_conclusion": "success",
+    "artifact_id": 9751530463,
+    "artifact_name": "mcft-cap09-production-operational-database-candidate-f94f875f1d2026f883e1142f31371ad7ea7f805f",
+    "artifact_digest": "sha256:af86e97f6d0fa1e9bda493a97ce34c00f4941b28a3aae2b669ab2862c91d8193",
+    "candidate_database_present": false,
+    "unique_creator_membership": "neon_superuser",
+    "preserved_store_count": 6
   }
 }

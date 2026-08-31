@@ -39,7 +39,16 @@ jobs:
       - name: Validate static candidate contract
         run: node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_CANDIDATE_V1.cjs
 
+      - name: Resolve candidate qualification mode
+        id: mode
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const arm=JSON.parse(fs.readFileSync('scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_PROVISION_ARM_V1.json','utf8'));
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'armed='+String(arm.armed===true)+'\n');
+
       - name: Prove candidate absence, creator authority, and preserved stores
+        if: steps.mode.outputs.armed == 'false'
         shell: bash
         run: |
           set -euo pipefail
@@ -64,7 +73,32 @@ jobs:
 
           echo "PRESERVED_STORE_COUNT=$preserved" >> "$GITHUB_ENV"
 
+      - name: Validate immutable candidate qualification binding when armed
+        if: steps.mode.outputs.armed == 'true'
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const a=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OPERATIONAL-DATABASE-CANDIDATE-V1.json','utf8'));
+          const q=a.candidate_qualification||{};
+          if(a.status!=='QUALIFIED_CANDIDATE_PROVISION_ARMED'||q.run_id!==33375040615||q.artifact_id!==9751530463||q.candidate_database_present!==false||q.unique_creator_membership!=='neon_superuser'||q.preserved_store_count!==6)throw new Error('OPERATIONAL_DB_BOUND_QUALIFICATION_REQUIRED');
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_CANDIDATE_V1_RESULT.json',JSON.stringify({
+            schema_version:'geox_mcft_cap09_production_operational_database_candidate_qualification_binding_v1',
+            status:'PASS',
+            subject_sha:process.env.SUBJECT_SHA,
+            qualification_subject_sha:q.subject_sha,
+            qualification_run_id:q.run_id,
+            qualification_artifact_id:q.artifact_id,
+            candidate_database_name:a.candidate_database_name,
+            candidate_database_present_at_qualification:false,
+            provisioning_arm:true,
+            database_created_by_this_workflow:false,
+            production_owner_activation:false,
+            formal_v5_arm:false
+          },null,2)+'\n');
+
       - name: Emit immutable candidate qualification proof
+        if: steps.mode.outputs.armed == 'false'
         shell: node {0}
         run: |
           const fs=require('node:fs');

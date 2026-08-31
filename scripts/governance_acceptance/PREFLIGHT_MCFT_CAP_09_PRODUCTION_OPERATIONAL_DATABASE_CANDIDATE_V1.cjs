@@ -13,7 +13,7 @@ function t(p){return fs.readFileSync(p,"utf8");}
 function write(v){fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify(v,null,2)+"\n");console.log(JSON.stringify(v,null,2));}
 try{
   const a=j(AUTH), arm=j(ARM), bundle=t(BUNDLE);
-  req(a.status==="CANDIDATE_NOT_PROVISIONED","OPERATIONAL_DB_CANDIDATE_STATUS_REQUIRED");
+  req(["CANDIDATE_NOT_PROVISIONED","QUALIFIED_CANDIDATE_PROVISION_ARMED"].includes(a.status),"OPERATIONAL_DB_CANDIDATE_STATUS_REQUIRED");
   req(/^[a-z_][a-z0-9_]*$/.test(a.candidate_database_name),"OPERATIONAL_DB_CANDIDATE_NAME_INVALID");
   req(!a.forbidden_database_names.includes(a.candidate_database_name),"OPERATIONAL_DB_CANDIDATE_FORBIDDEN_NAME");
   req(a.topology?.evidence_and_twin_same_database===true,"OPERATIONAL_DB_SHARED_RUNTIME_DB_REQUIRED");
@@ -21,14 +21,24 @@ try{
   req(a.topology?.formal_v5_store_separate===true,"OPERATIONAL_DB_FORMAL_V5_SEPARATION_REQUIRED");
   req(a.provisioning_bundle_required_table_count===41,"OPERATIONAL_DB_41_TABLE_BUNDLE_REQUIRED");
   req(bundle.includes("OWNER_PROVISIONING_EXACT_41_TABLE_HOST_SCHEMA_REQUIRED"),"OPERATIONAL_DB_BUNDLE_ACCEPTANCE_REQUIRED");
-  req(arm.armed===false,"OPERATIONAL_DB_PROVISION_ARM_MUST_BE_FALSE");
-  for(const k of ["create_database_authorized","apply_production_host_schema_authorized","apply_runtime_acl_authorized","service_login_bootstrap_authorized","runtime_credential_binding_authorized","runtime_process_start_authorized","production_owner_activation_authorized","formal_v5_arm_authorized","a0_authorized","o00_authorized"]) req(arm[k]===false,"OPERATIONAL_DB_LATER_AUTHORITY_FALSE:"+k);
+  if(arm.armed===true){
+    req(a.status==="QUALIFIED_CANDIDATE_PROVISION_ARMED","OPERATIONAL_DB_ARM_REQUIRES_QUALIFIED_STATUS");
+    req(arm.create_database_authorized===true,"OPERATIONAL_DB_CREATE_AUTHORITY_REQUIRED");
+    const q=a.candidate_qualification||{};
+    req(q.subject_sha==="f94f875f1d2026f883e1142f31371ad7ea7f805f","OPERATIONAL_DB_QUALIFICATION_SUBJECT_REQUIRED");
+    req(q.run_id===33375040615&&q.run_conclusion==="success","OPERATIONAL_DB_QUALIFICATION_RUN_REQUIRED");
+    req(q.artifact_id===9751530463&&/^sha256:[0-9a-f]{64}$/.test(String(q.artifact_digest||"")),"OPERATIONAL_DB_QUALIFICATION_ARTIFACT_REQUIRED");
+    req(q.candidate_database_present===false&&q.unique_creator_membership==="neon_superuser"&&q.preserved_store_count===6,"OPERATIONAL_DB_QUALIFICATION_FACTS_REQUIRED");
+  }else{
+    req(arm.create_database_authorized===false,"OPERATIONAL_DB_UNARMED_CREATE_FORBIDDEN");
+  }
+  for(const k of ["apply_production_host_schema_authorized","apply_runtime_acl_authorized","service_login_bootstrap_authorized","runtime_credential_binding_authorized","runtime_process_start_authorized","production_owner_activation_authorized","formal_v5_arm_authorized","a0_authorized","o00_authorized"]) req(arm[k]===false,"OPERATIONAL_DB_LATER_AUTHORITY_FALSE:"+k);
   write({
     schema_version:"geox_mcft_cap09_production_operational_database_candidate_preflight_v1",
     status:"PASS",
     candidate_database_name:a.candidate_database_name,
     candidate_is_fact:false,
-    provisioning_arm:false,
+    provisioning_arm:arm.armed===true,
     database_created:false,
     schema_migration_performed:false,
     service_login_created:false,
