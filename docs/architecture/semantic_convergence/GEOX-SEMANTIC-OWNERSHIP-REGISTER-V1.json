@@ -1734,7 +1734,10 @@
         "B-09z finds no currently authorized ActionWindow horizon source. B-09y boundary and B-09w IRRIGATE policy content remain separately unauthorized, B-07e remains disconnected, and MCFT Forecast remains frozen.",
         "B-09aa inventories ActionWindow horizon authority and finds current_authorized_horizon_source=NONE: irrigation 72h forecast inputs are calculation horizons, FieldProgram constraints are not candidate actionability duration, policy effective_from/effective_until is policy lifecycle, and canonical Evidence/Context/Calculation/Candidate contracts expose no common valid_until authority.",
         "B-09aa rejects implicit ActionWindow derivations from 72h forecast, policy effective_until, hardcoded 6h/12h/24h constants, downstream AO-ACT windows, ProblemState/Twin windows, or MCFT scientific/runtime windows.",
-        "B-09aa recommends START_WITH_EXPLICIT_POLICY_ONLY_V1 as the next governance option because dynamic agronomic/action-input-validity composition lacks canonical expiry semantics and Forecast remains frozen on incomplete MCFT-9; this recommendation is not authorization."
+        "B-09aa recommends START_WITH_EXPLICIT_POLICY_ONLY_V1 as the next governance option because dynamic agronomic/action-input-validity composition lacks canonical expiry semantics and Forecast remains frozen on incomplete MCFT-9; this recommendation is not authorization.",
+        "B-09ab proposes DEC-BLINE-ACTION-WINDOW-HORIZON-AUTHORITY-TOPOLOGY-001 as RECOMMENDED_NOT_AUTHORIZED: v1 ActionWindow horizon authority should live in a successor Decision Eligibility policy-content contract rather than a separately selected parallel horizon-policy family.",
+        "B-09ab preserves DecisionEligibilityPolicyDeclarationV1 as immutable predecessor semantics; existing v1 declarations must not receive inferred/default ActionWindow horizons. A successor policy requiring ACTION_WINDOW must carry explicit horizon authority or fail closed.",
+        "B-09ab selects topology only, not numerical duration/mode/start-offset/unit/dynamic-shortening semantics; no writer, selector, ActionWindow producer, B07e, Approval/Execution or MCFT mutation is authorized."
       ],
       "runtime_consumers": [
         {
