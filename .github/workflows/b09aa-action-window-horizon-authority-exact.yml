@@ -1,0 +1,91 @@
+name: b09aa-action-window-horizon-authority-exact
+
+on:
+  pull_request:
+    branches:
+      - docs/bline-b09aa-action-window-horizon-authority-inventory-v1
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09aa product head
+        run: |
+          git checkout 93b00ec51eca95b6388f236ce73b4fa6d4e10c49
+          test "$(git rev-parse HEAD)" = "93b00ec51eca95b6388f236ce73b4fa6d4e10c49"
+          test "$(git rev-parse HEAD^)" = "4ab816a5cd612392b8d47e8849754d017418beca"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09aa horizon inventory acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09AA_ACTION_WINDOW_HORIZON_AUTHORITY_INVENTORY_V1.cjs
+
+      - name: B-09z predecessor preservation
+        run: |
+          git diff --exit-code 4ab816a5cd612392b8d47e8849754d017418beca 93b00ec51eca95b6388f236ce73b4fa6d4e10c49 -- \
+            docs/architecture/semantic_convergence/GEOX-B09Z-ACTION-WINDOW-SEMANTICS-DECISION-PACKAGE-V1.json \
+            docs/architecture/semantic_convergence/GEOX-B09Z-ACTION-WINDOW-SEMANTICS-DECISION-PACKAGE-V1.md \
+            scripts/governance_acceptance/ACCEPTANCE_B09Z_ACTION_WINDOW_SEMANTICS_DECISION_PACKAGE_V1.cjs
+          echo "B09Z_PREDECESSOR_PRESERVED_PASS"
+
+      - name: B-09v selector regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.contract.test.ts
+
+      - name: B-07d evaluator regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+
+      - name: B-07e runtime regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only 4ab816a5cd612392b8d47e8849754d017418beca 93b00ec51eca95b6388f236ce73b4fa6d4e10c49 > /tmp/b09aa-files.txt
+          cat /tmp/b09aa-files.txt
+          test "$(wc -l < /tmp/b09aa-files.txt | tr -d ' ')" = "4"
+          git diff --check 4ab816a5cd612392b8d47e8849754d017418beca 93b00ec51eca95b6388f236ce73b4fa6d4e10c49
+
+      - name: Prove production and MCFT surfaces unchanged
+        run: |
+          git diff --exit-code 4ab816a5cd612392b8d47e8849754d017418beca 93b00ec51eca95b6388f236ce73b4fa6d4e10c49 -- \
+            apps/server/src apps/server/db packages config .github/workflows docs/digital_twin docs/twin_kernel scripts/runtime_acceptance
+          echo "B09AA_PRODUCTION_MCFT_UNCHANGED_PASS"
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Prove validation did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "93b00ec51eca95b6388f236ce73b4fa6d4e10c49"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09AA_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Marker
+        run: |
+          echo "B09AA_EXACT_HEAD 93b00ec51eca95b6388f236ce73b4fa6d4e10c49"
+          echo "B09AA_HORIZON_AUTHORITY_INVENTORY_PASS"
