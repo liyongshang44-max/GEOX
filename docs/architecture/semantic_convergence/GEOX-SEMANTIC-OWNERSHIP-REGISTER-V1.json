@@ -1740,7 +1740,10 @@
         "B-09ab selects topology only, not numerical duration/mode/start-offset/unit/dynamic-shortening semantics; no writer, selector, ActionWindow producer, B07e, Approval/Execution or MCFT mutation is authorized.",
         "B-09ac proposes DEC-BLINE-ELIGIBILITY-POLICY-V2-ACTION-WINDOW-CONTRACT-001 as RECOMMENDED_NOT_AUTHORIZED: a successor Eligibility policy may carry action_window_policy anchored to canonical Candidate decision_time with explicit start_offset_seconds and duration_seconds, half-open interval semantics, and no hidden defaults.",
         "B-09ac couples ACTION_WINDOW criterion presence to action_window_policy presence and preserves DecisionEligibilityPolicyDeclarationV1 as immutable predecessor semantics with no automatic/backfilled horizon.",
-        "B-09ac selects no concrete offset/duration/min/max/IRRIGATE value and does not implement successor contract, writer/route compatibility, selector compatibility, ActionWindow producer, B07e, or MCFT integration."
+        "B-09ac selects no concrete offset/duration/min/max/IRRIGATE value and does not implement successor contract, writer/route compatibility, selector compatibility, ActionWindow producer, B07e, or MCFT integration.",
+        "B-09ad finds ActionWindow numeric horizon NOT READY: no authorized action-specific product/agronomy source currently declares IRRIGATE start_offset_seconds or duration_seconds, so no value may be selected or backfilled.",
+        "B-09ad rejects 72h forecast coverage, FieldProgram daily irrigation/night constraints, policy effective_until, EvidenceQualification temporal state, AO-ACT/Twin/ProblemState windows and engineering convenience constants as numeric ActionWindow authority.",
+        "B-09ad sets blocker NO_AUTHORIZED_ACTION_SPECIFIC_HORIZON_VALUE_BASIS and recommends DO_NOT_CHOOSE_NUMERIC_VALUE_YET; Forecast-dependent dynamic horizon remains frozen on incomplete MCFT-9 plus separate integration authorization."
       ],
       "runtime_consumers": [
         {
