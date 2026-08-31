@@ -132,8 +132,16 @@ async function main(){
         "geox_mcft_cap09_twin_writer_owner_v1",
         "geox_mcft_cap09_forcing_writer_owner_v1",
       ]){
-        await pool.query("GRANT "+role+" TO CURRENT_USER");
-        const canSet=(await pool.query<{ok:boolean}>("SELECT pg_catalog.pg_has_role(current_user,$1,'SET') AS ok",[role])).rows[0]?.ok;
+        const beforeSet=(await pool.query<{ok:boolean}>(
+          "SELECT pg_catalog.pg_has_role(current_user,$1,'SET') AS ok",
+          [role],
+        )).rows[0]?.ok;
+        assert.equal(beforeSet,false,"OP_SCHEMA_ACL_PREEXISTING_SET_AUTHORITY_FORBIDDEN:"+role);
+        await pool.query("GRANT "+role+" TO CURRENT_USER WITH SET TRUE");
+        const canSet=(await pool.query<{ok:boolean}>(
+          "SELECT pg_catalog.pg_has_role(current_user,$1,'SET') AS ok",
+          [role],
+        )).rows[0]?.ok;
         assert.equal(canSet,true,"OP_SCHEMA_ACL_TEMP_SET_MEMBERSHIP_REQUIRED:"+role);
       }
 
@@ -154,12 +162,24 @@ async function main(){
           JOIN pg_catalog.pg_roles member ON member.oid=m.member
          WHERE member.rolname=current_user
            AND granted.rolname=ANY($1::text[])
+           AND m.set_option
       `,[[
         "geox_mcft_cap09_evidence_writer_owner_v1",
         "geox_mcft_cap09_twin_writer_owner_v1",
         "geox_mcft_cap09_forcing_writer_owner_v1",
       ]])).rows[0]?.n);
-      assert.equal(residual,0,"OP_SCHEMA_ACL_TEMP_OWNER_MEMBERSHIP_MUST_BE_REVOKED");
+      assert.equal(residual,0,"OP_SCHEMA_ACL_TEMP_OWNER_SET_MEMBERSHIP_MUST_BE_REVOKED");
+      for(const role of [
+        "geox_mcft_cap09_evidence_writer_owner_v1",
+        "geox_mcft_cap09_twin_writer_owner_v1",
+        "geox_mcft_cap09_forcing_writer_owner_v1",
+      ]){
+        const canSet=(await pool.query<{ok:boolean}>(
+          "SELECT pg_catalog.pg_has_role(current_user,$1,'SET') AS ok",
+          [role],
+        )).rows[0]?.ok;
+        assert.equal(canSet,false,"OP_SCHEMA_ACL_EFFECTIVE_SET_AUTHORITY_MUST_BE_ZERO:"+role);
+      }
       await pool.query("COMMIT");
     }catch(e){
       await pool.query("ROLLBACK");
@@ -233,6 +253,8 @@ async function main(){
       twin_writer_cross_plane_matrix_pass:true,
       v13_fenced_promotion_cross_plane_matrix_pass:true,
       provisioning_admin_writer_owner_membership_residual_count:0,
+      provisioning_admin_writer_owner_set_membership_residual_count:0,
+      effective_writer_owner_set_authority_zero:true,
       service_login_created:false,
       schema_migration_performed:true,
       runtime_process_start:false,
