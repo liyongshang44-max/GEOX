@@ -4,14 +4,30 @@
 -- function whose owner has a deliberately narrow fact/lease privilege set.
 
 DO $role$
+DECLARE
+  v_role record;
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'geox_mcft_cap09_evidence_runtime_v1') THEN
     CREATE ROLE geox_mcft_cap09_evidence_runtime_v1
-      NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
+      NOLOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'geox_mcft_cap09_evidence_writer_owner_v1') THEN
     CREATE ROLE geox_mcft_cap09_evidence_writer_owner_v1
-      NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
+      NOLOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+  END IF;
+
+  SELECT rolcanlogin,rolinherit,rolsuper,rolcreatedb,rolcreaterole,rolreplication,rolbypassrls
+    INTO v_role FROM pg_catalog.pg_roles WHERE rolname='geox_mcft_cap09_evidence_runtime_v1';
+  IF NOT FOUND OR v_role.rolcanlogin OR NOT v_role.rolinherit OR v_role.rolsuper
+     OR v_role.rolcreatedb OR v_role.rolcreaterole OR v_role.rolreplication OR v_role.rolbypassrls THEN
+    RAISE EXCEPTION 'MCFT_CAP09_EVIDENCE_RUNTIME_ROLE_UNSAFE';
+  END IF;
+
+  SELECT rolcanlogin,rolinherit,rolsuper,rolcreatedb,rolcreaterole,rolreplication,rolbypassrls
+    INTO v_role FROM pg_catalog.pg_roles WHERE rolname='geox_mcft_cap09_evidence_writer_owner_v1';
+  IF NOT FOUND OR v_role.rolcanlogin OR NOT v_role.rolinherit OR v_role.rolsuper
+     OR v_role.rolcreatedb OR v_role.rolcreaterole OR v_role.rolreplication OR v_role.rolbypassrls THEN
+    RAISE EXCEPTION 'MCFT_CAP09_EVIDENCE_WRITER_OWNER_ROLE_UNSAFE';
   END IF;
 END
 $role$;
