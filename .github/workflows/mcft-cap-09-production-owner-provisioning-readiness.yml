@@ -64,17 +64,17 @@ jobs:
           if(Object.values(secretState).some(Boolean))throw new Error('OWNER_PROVISIONING_UNAUTHORIZED_RUNTIME_CREDENTIAL_SECRET_PRESENT');
           const remaining=[
             'SERVICE_LOGIN_BOOTSTRAP_NOT_AUTHORIZED',
-            'RUNTIME_CREDENTIAL_BINDING_NOT_AUTHORIZED',
+            'EVIDENCE_RUNTIME_BOOTSTRAP_PASSWORD_SECRET_NOT_BOUND',
+            'TWIN_RUNTIME_BOOTSTRAP_PASSWORD_SECRET_NOT_BOUND',
             'EVIDENCE_LOGIN_ROLE_NOT_PRESENT',
             'TWIN_LOGIN_ROLE_NOT_PRESENT',
-            'EVIDENCE_RUNTIME_DATABASE_URL_SECRET_NOT_BOUND',
-            'EVIDENCE_RUNTIME_PASSWORD_SECRET_NOT_BOUND',
-            'TWIN_RUNTIME_DATABASE_URL_SECRET_NOT_BOUND',
-            'TWIN_RUNTIME_PASSWORD_SECRET_NOT_BOUND'
+            'RUNTIME_CREDENTIAL_BINDING_NOT_AUTHORIZED',
+            'EVIDENCE_RUNTIME_DATABASE_URL_SECRET_INTENTIONALLY_NOT_BOUND_UNTIL_7F',
+            'TWIN_RUNTIME_DATABASE_URL_SECRET_INTENTIONALLY_NOT_BOUND_UNTIL_7F'
           ];
           const p={
             schema_version:'geox_mcft_cap09_production_owner_provisioning_readiness_v2',
-            status:'PASS_PRE_LOGIN_READINESS',
+            status:'PASS_SERVICE_LOGIN_PRE_ARM_READINESS',
             subject_sha:process.env.SUBJECT_SHA,
             observed_database_name:schema.database_name,
             authority_target_database_name:a.target_database?.database_name??null,
@@ -94,8 +94,10 @@ jobs:
             service_login_bootstrap_authorized:false,
             runtime_credential_binding_authorized:false,
             pre_login_stage_ready:true,
+            service_login_pre_arm_ready:true,
+            password_secret_authority_ready:false,
             provisioning_ready:false,
-            next_stage:'SERVICE_LOGIN_AND_RUNTIME_CREDENTIAL_BINDING_REQUIRES_SEPARATE_AUTHORITY',
+            next_stage:'SERVICE_LOGIN_BOOTSTRAP_REQUIRES_PASSWORD_SECRET_AUTHORITY_AND_SEPARATE_ARM',
             remaining_provisioning_blockers:remaining,
             provisioning_performed:false,
             runtime_process_start:false,
