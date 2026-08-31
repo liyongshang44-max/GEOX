@@ -1,0 +1,91 @@
+name: b09z-action-window-semantics-exact
+
+on:
+  pull_request:
+    branches:
+      - docs/bline-b09z-action-window-semantics-v1
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09z product head
+        run: |
+          git checkout 4ab816a5cd612392b8d47e8849754d017418beca
+          test "$(git rev-parse HEAD)" = "4ab816a5cd612392b8d47e8849754d017418beca"
+          test "$(git rev-parse HEAD^)" = "28b5809efefc94440cf9766f03d5b6f7d2b5944c"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09z decision package acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09Z_ACTION_WINDOW_SEMANTICS_DECISION_PACKAGE_V1.cjs
+
+      - name: B-09y predecessor preservation
+        run: |
+          git diff --exit-code 28b5809efefc94440cf9766f03d5b6f7d2b5944c 4ab816a5cd612392b8d47e8849754d017418beca -- \
+            docs/architecture/semantic_convergence/GEOX-B09Y-CANDIDATE-DECISION-BOUNDARY-AUTHORITY-DECISION-PACKAGE-V1.json \
+            docs/architecture/semantic_convergence/GEOX-B09Y-CANDIDATE-DECISION-BOUNDARY-AUTHORITY-DECISION-PACKAGE-V1.md \
+            scripts/governance_acceptance/ACCEPTANCE_B09Y_CANDIDATE_DECISION_BOUNDARY_AUTHORITY_DECISION_PACKAGE_V1.cjs
+          echo "B09Y_PREDECESSOR_PRESERVED_PASS"
+
+      - name: B-09v selector regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.contract.test.ts
+
+      - name: B-07d evaluator regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+
+      - name: B-07e runtime regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only 28b5809efefc94440cf9766f03d5b6f7d2b5944c 4ab816a5cd612392b8d47e8849754d017418beca > /tmp/b09z-files.txt
+          cat /tmp/b09z-files.txt
+          test "$(wc -l < /tmp/b09z-files.txt | tr -d ' ')" = "4"
+          git diff --check 28b5809efefc94440cf9766f03d5b6f7d2b5944c 4ab816a5cd612392b8d47e8849754d017418beca
+
+      - name: Prove production and MCFT surfaces unchanged
+        run: |
+          git diff --exit-code 28b5809efefc94440cf9766f03d5b6f7d2b5944c 4ab816a5cd612392b8d47e8849754d017418beca -- \
+            apps/server/src apps/server/db packages config .github/workflows docs/digital_twin docs/twin_kernel scripts/runtime_acceptance
+          echo "B09Z_PRODUCTION_MCFT_UNCHANGED_PASS"
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Prove validation did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "4ab816a5cd612392b8d47e8849754d017418beca"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09Z_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Marker
+        run: |
+          echo "B09Z_EXACT_HEAD 4ab816a5cd612392b8d47e8849754d017418beca"
+          echo "B09Z_ACTION_WINDOW_SEMANTICS_PROPOSAL_PASS"
