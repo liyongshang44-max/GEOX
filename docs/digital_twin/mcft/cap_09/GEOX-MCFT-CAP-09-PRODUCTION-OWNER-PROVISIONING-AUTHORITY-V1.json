@@ -167,7 +167,14 @@
     "production_owner_activation_forbidden": true,
     "formal_v5_arm_forbidden": true,
     "a0_forbidden": true,
-    "o00_forbidden": true
+    "o00_forbidden": true,
+    "host_binding_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
+    "host_binding_authority_status": "HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND",
+    "host_binding_readiness_workflow": ".github/workflows/mcft-cap-09-production-non-github-host-binding-readiness.yml",
+    "host_binding_platform_selected": false,
+    "evidence_host_identity_bound": false,
+    "twin_host_identity_bound": false,
+    "exact_two_runtime_service_identities_bound": false
   },
   "service_login_pre_arm_evidence": {
     "status": "IMMUTABLE_READY_UNARMED",
