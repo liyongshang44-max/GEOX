@@ -1,0 +1,74 @@
+name: b09ad-action-window-horizon-value-readiness-exact
+
+on:
+  pull_request:
+    branches:
+      - docs/bline-b09ad-action-window-horizon-value-readiness-v1
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prove literal B-09ad product head
+        run: |
+          git checkout 9c758d4951c5e54d5571b14f438dd7ddfd49b84d
+          test "$(git rev-parse HEAD)" = "9c758d4951c5e54d5571b14f438dd7ddfd49b84d"
+          test "$(git rev-parse HEAD^)" = "6787989f509d96ffb0500ad7999955189b5a76c2"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+      - name: B-09ad readiness acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09AD_ACTION_WINDOW_HORIZON_VALUE_READINESS_V1.cjs
+      - name: B-09ac predecessor preservation
+        run: |
+          git diff --exit-code 6787989f509d96ffb0500ad7999955189b5a76c2 9c758d4951c5e54d5571b14f438dd7ddfd49b84d -- \
+            docs/architecture/semantic_convergence/GEOX-B09AC-ELIGIBILITY-POLICY-V2-ACTION-WINDOW-CONTRACT-SHAPE-DECISION-PACKAGE-V1.json \
+            docs/architecture/semantic_convergence/GEOX-B09AC-ELIGIBILITY-POLICY-V2-ACTION-WINDOW-CONTRACT-SHAPE-DECISION-PACKAGE-V1.md \
+            scripts/governance_acceptance/ACCEPTANCE_B09AC_ELIGIBILITY_POLICY_V2_ACTION_WINDOW_CONTRACT_SHAPE_V1.cjs
+          echo "B09AC_PREDECESSOR_PRESERVED_PASS"
+      - name: B-09v selector regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.contract.test.ts
+      - name: B-07d evaluator regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_evaluator_v1.contract.test.ts
+      - name: B-07e runtime regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_eligibility_runtime_v1.contract.test.ts
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only 6787989f509d96ffb0500ad7999955189b5a76c2 9c758d4951c5e54d5571b14f438dd7ddfd49b84d > /tmp/b09ad-files.txt
+          cat /tmp/b09ad-files.txt
+          test "$(wc -l < /tmp/b09ad-files.txt | tr -d ' ')" = "4"
+          git diff --check 6787989f509d96ffb0500ad7999955189b5a76c2 9c758d4951c5e54d5571b14f438dd7ddfd49b84d
+      - name: Prove production and MCFT surfaces unchanged
+        run: |
+          git diff --exit-code 6787989f509d96ffb0500ad7999955189b5a76c2 9c758d4951c5e54d5571b14f438dd7ddfd49b84d -- \
+            apps/server/src apps/server/db packages config .github/workflows docs/digital_twin docs/twin_kernel scripts/runtime_acceptance
+          echo "B09AD_PRODUCTION_MCFT_UNCHANGED_PASS"
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+      - name: Server build
+        run: pnpm --filter @geox/server build
+      - name: Prove validation did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "9c758d4951c5e54d5571b14f438dd7ddfd49b84d"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09AD_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+      - name: Marker
+        run: |
+          echo "B09AD_EXACT_HEAD 9c758d4951c5e54d5571b14f438dd7ddfd49b84d"
+          echo "B09AD_HORIZON_VALUE_READINESS_PASS"
