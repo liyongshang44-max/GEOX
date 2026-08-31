@@ -1026,7 +1026,7 @@
         {
           "producer_id": "irrigation-calculation-result-compatibility-adapter",
           "path": "apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.ts",
-          "role": "pure B-06b compatibility projection from existing irrigation requirement/deficit skill outputs into CalculationResultV1; legacy recommended_amount is not promoted; no route/job/runtime consumer connected",
+          "role": "B-06b compatibility projection from the exact persisted irrigation requirement skill output into CalculationResultV1; consumed only by the authorized B-09ae shadow composition; no final eligibility/approval/execution authority",
           "authority_level": "CALCULATION_ONLY_ADAPTER",
           "grandfathered_duplicate": false,
           "removal_target": null,
@@ -1036,10 +1036,10 @@
             "projectIrrigationDeficitCalculationResultV1",
             "calculationResultV1Schema.parse"
           ],
-          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
-          "activation": "MANUAL",
-          "runtime_edge": "INTENTIONAL_NONE",
-          "new_runtime_consumer_creation": "FORBIDDEN",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
           "grandfathered_runtime_consumers": []
         },
         {
@@ -1120,6 +1120,15 @@
           "connection_class": "LOCAL_DIRECT_CALL",
           "activation": "ALWAYS",
           "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "b09ae-irrigate-state-calculation-shadow-binding",
+          "path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+          "role": "authorized B-09ae shadow composition consuming the exact persisted decision-engine irrigation skill trace and existing B-06b CalculationResult adapter; no B-07e invocation",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
         }
       ],
       "notes": [
@@ -1132,7 +1141,8 @@
         "B-06g maps only the rule engine's recommendation output into CandidateDecisionV1; expected_effect is not promoted into CalculationResultV1.",
         "The grandfathered agronomy-rule-engine producer remains historical mixed/candidate behavior until B-09; B-06g adds no CalculationResult runtime producer.",
         "B-09ae proposes DEC-BLINE-IRRIGATE-STATE-CALCULATION-SHADOW-BINDING-001 as RECOMMENDED_NOT_AUTHORIZED: the same immutable decision_recommendation_v1 source fact used by B-09j should supply persisted irrigation_requirement_skill_v1 skill_trace.outputs.requirement to the existing B-06b CalculationResult adapter.",
-        "B-09ae forbids promoting legacy skill_trace.evidence_refs; canonical EvidenceQualification refs must come from the exact B-09j/B-09h ref continuity set. Candidate/context/decision_time remain unchanged until separately authorized."
+        "B-09ae forbids promoting legacy skill_trace.evidence_refs; canonical EvidenceQualification refs must come from the exact B-09j/B-09h ref continuity set. Candidate/context/decision_time remain unchanged until separately authorized.",
+        "B-09ae is explicitly authorized to consume the exact persisted IRRIGATE recommendation skill_trace and the B-06b CalculationResult compatibility adapter in one API-only shadow composition; all other new consumers still require explicit register governance."
       ],
       "runtime_consumers": [
         {
@@ -1152,6 +1162,24 @@
           "activation": "ALWAYS",
           "runtime_edge": "PROVEN",
           "evidence_edge_id": "C-009"
+        },
+        {
+          "consumer_id": "b09ae-irrigate-state-calculation-shadow-binding",
+          "path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+          "producer_id": "decision-engine-calculation",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-047"
+        },
+        {
+          "consumer_id": "b09ae-irrigate-state-calculation-shadow-binding",
+          "path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+          "producer_id": "irrigation-calculation-result-compatibility-adapter",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-048"
         }
       ]
     },
@@ -1523,7 +1551,7 @@
         {
           "producer_id": "agronomy-judge-eligibility-precursor-criterion-adapter",
           "path": "apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.ts",
-          "role": "pure B-07c projection of Agronomy Judge V2 irrigation verdicts into STATE or QUALIFIED_EVIDENCE criterion assessments; emits no final eligibility verdict",
+          "role": "B-07c criterion-only projection of Agronomy Judge V2 into STATE or QUALIFIED_EVIDENCE; consumed only by the authorized B-09ae shadow composition and still emits no final eligibility verdict",
           "authority_level": "ELIGIBILITY_CRITERION_ONLY_ADAPTER",
           "grandfathered_duplicate": false,
           "removal_target": null,
@@ -1532,10 +1560,10 @@
             "projectAgronomyJudgeEligibilityPrecursorV1",
             "decisionEligibilityCriterionAssessmentV1Schema.parse"
           ],
-          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
-          "activation": "MANUAL",
-          "runtime_edge": "INTENTIONAL_NONE",
-          "new_runtime_consumer_creation": "FORBIDDEN",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
           "grandfathered_runtime_consumers": []
         },
         {
@@ -1663,6 +1691,15 @@
           "connection_class": "REGISTERED_CAPABILITY_ISLAND",
           "activation": "MANUAL",
           "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "b09ae-irrigate-state-calculation-shadow-binding",
+          "path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+          "role": "B-09ae consumes the existing B-07c precursor only after exact Judge/source-input congruence and explicit canonical CalculationResult support; final Decision Eligibility remains disconnected",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
         }
       ],
       "notes": [
@@ -1749,7 +1786,8 @@
         "B-09ae recommends reusing existing B-07c as the STATE criterion producer only after Agronomy Judge request inputs exactly match the persisted recommendation skill_trace inputs and canonical CalculationResult refs are supplied.",
         "B-09ae forbids latest/later JudgeResult from rewriting original Candidate STATE. Changed inputs leave STATE unbound; exact-congruent PASS against a source recommendation that required requirement_detected=true is semantic mismatch and fails closed.",
         "B-09af consolidates the current qualified-but-unauthorized non-MCFT Eligibility gates: B-09ae STATE shadow binding is the highest-value immediate implementation authorization, followed by B-09y decision-boundary/Context shadow; ActionWindow remains blocked on B-09ad numeric authority and FORECAST remains frozen on MCFT-9.",
-        "B-09af keeps B-07e disconnected until selected policy, decision_time, Context, STATE, FORECAST and ACTION_WINDOW plus exact criterion provenance are bound at one canonical decision boundary; generic continuation is not authorization."
+        "B-09af keeps B-07e disconnected until selected policy, decision_time, Context, STATE, FORECAST and ACTION_WINDOW plus exact criterion provenance are bound at one canonical decision boundary; generic continuation is not authorization.",
+        "B-09ae explicitly activates the existing B-07c precursor only inside a shadow composition after same-source CalculationResult projection and exact Judge/source-input congruence; B-07e remains disconnected."
       ],
       "runtime_consumers": [
         {
@@ -1787,6 +1825,15 @@
           "activation": "MANUAL",
           "runtime_edge": "PROVEN",
           "evidence_edge_id": "C-046"
+        },
+        {
+          "consumer_id": "b09ae-irrigate-state-calculation-shadow-binding",
+          "path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+          "producer_id": "agronomy-judge-eligibility-precursor-criterion-adapter",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-049"
         }
       ]
     },
@@ -2523,6 +2570,25 @@
           "runtime_edge": "PROVEN",
           "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
           "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "b09ae-irrigate-state-calculation-shadow-binding-v1",
+          "path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+          "role": "B-09ae shadow-only composition proving same-source recommendation skill calculation continuity and exact-input STATE criterion binding without changing legacy Judge or final Decision Eligibility",
+          "authority_level": "SHADOW_ONLY_BINDING",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "buildIrrigateStateCalculationShadowBindingV1",
+            "irrigateStateCalculationShadowBindingV1Schema.parse",
+            "SOURCE_FACT_SCOPE_CALCULATOR_SHA256_V1"
+          ],
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
         }
       ],
       "registered_consumers": [
@@ -2579,6 +2645,24 @@
           "connection_class": "ACTIVE_PARALLEL",
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "b09ae-irrigate-state-calculation-shadow-binding",
+          "path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+          "role": "B-09ae consumes the already-bound B-09j Candidate/source identity as shadow provenance before projecting CalculationResult/STATE",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "judge-v2-agronomy-irrigate-state-calculation-shadow",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "role": "Agronomy Judge route persists the B-09ae shadow composition after constructing the historical Judge result; verdict and downstream authority remain unchanged",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
         }
       ],
       "notes": [
@@ -2607,7 +2691,8 @@
         "B-09g may mark provenance READY_FOR_CRITERION_SHADOW while migration_readiness remains NOT_READY_FOR_CRITERION_CUTOVER.",
         "B-09g adds no DecisionEligibility criterion producer and performs zero consumer migration and zero authority removal.",
         "B-09h projects a candidate-unbound shadow-only QUALIFIED_EVIDENCE criterion from the B-09g canonical qualification provenance.",
-        "B-09h never sends the criterion to Decision Eligibility Runtime and keeps consumer_migration_performed=false / authority_removal_permitted=false."
+        "B-09h never sends the criterion to Decision Eligibility Runtime and keeps consumer_migration_performed=false / authority_removal_permitted=false.",
+        "User-authorized B-09ae runtime implementation registers only the same-source CalculationResult/STATE shadow chain; no consumer migration, final eligibility connection, MCFT integration, approval/execution mutation, or authority removal."
       ],
       "runtime_consumers": [
         {
@@ -2663,6 +2748,24 @@
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN",
           "evidence_edge_id": "C-044"
+        },
+        {
+          "consumer_id": "b09ae-irrigate-state-calculation-shadow-binding",
+          "path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+          "producer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-050"
+        },
+        {
+          "consumer_id": "judge-v2-agronomy-irrigate-state-calculation-shadow",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "producer_id": "b09ae-irrigate-state-calculation-shadow-binding-v1",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-051"
         }
       ]
     }
