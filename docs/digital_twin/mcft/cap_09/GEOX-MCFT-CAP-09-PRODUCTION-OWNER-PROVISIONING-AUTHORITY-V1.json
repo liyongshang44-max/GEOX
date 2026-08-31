@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_owner_provisioning_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1",
-  "status": "SERVICE_LOGIN_PRE_ARM_READY_PASSWORD_SECRET_AUTHORITY_REQUIRED",
+  "status": "SERVICE_LOGIN_MATERIALIZED_RUNTIME_CREDENTIAL_BINDING_NOT_ARMED",
   "owner_graduation_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json",
   "provisioning_sequence": [
     "BIND_EXACT_PRODUCTION_DATABASE",
@@ -67,7 +67,7 @@
   "arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_ARM_V1.json",
   "non_effects": {
     "operational_database_created": true,
-    "runtime_schema_and_identity_provisioning_performed": false,
+    "runtime_schema_and_identity_provisioning_performed": true,
     "production_owner_activation": false,
     "runtime_process_start": false,
     "provider_request": false,
@@ -76,7 +76,7 @@
     "a0_bootstrap": false,
     "o00_started": false,
     "runtime_schema_acl_materialization_performed": true,
-    "production_login_creation": false,
+    "production_login_creation": true,
     "runtime_credential_binding": false
   },
   "formal_v5_store_reference": {
@@ -89,7 +89,7 @@
     "provisioning_artifact_id": 9726904605,
     "provisioning_artifact_digest": "sha256:0e09f03d78e99ebc6d7df5520c865fb0b1947c040dcfc3b2d1551a982f7c6162"
   },
-  "current_stage": "SERVICE_LOGIN_PRE_ARM_READY",
+  "current_stage": "SERVICE_LOGIN_COMPLETE_PRE_RUNTIME_CREDENTIAL_BINDING",
   "schema_acl_materialization_evidence": {
     "status": "IMMUTABLE_SUCCESS",
     "workflow": "mcft-cap-09-production-operational-schema-acl-materialize-one-shot",
@@ -140,24 +140,28 @@
     "PROVE_POST_MATERIALIZATION_READ_ONLY_STATE",
     "PROVE_SERVICE_LOGIN_ONE_SHOT_FAILS_CLOSED_UNARMED",
     "PROVE_SERVICE_LOGIN_PRE_ARM_ZERO_STATE",
-    "PROVE_EXACT_TWO_BOOTSTRAP_PASSWORD_SECRETS_PRESENT_AND_RUNTIME_URLS_ABSENT"
+    "PROVE_EXACT_TWO_BOOTSTRAP_PASSWORD_SECRETS_PRESENT_AND_RUNTIME_URLS_ABSENT",
+    "BOOTSTRAP_TWO_LOGIN_PRINCIPALS_WITH_EXACT_ONE_ROLE_MEMBERSHIP",
+    "VERIFY_LOGIN_CONNECTIVITY_WITHOUT_STARTING_RUNTIME_HOSTS"
   ],
   "next_stage": {
-    "stage": "SERVICE_LOGIN_BOOTSTRAP",
-    "status": "BLOCKED_ON_PASSWORD_SECRET_AUTHORITY_AND_SEPARATE_ARM",
+    "stage": "RUNTIME_CREDENTIAL_BINDING",
+    "status": "NOT_ARMED",
     "separate_machine_authority_required": true,
-    "required_bootstrap_secrets": [
+    "required_runtime_url_secrets": [
+      "GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL",
+      "GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL"
+    ],
+    "required_password_secrets_already_bound": [
       "GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_PASSWORD",
       "GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_PASSWORD"
     ],
-    "runtime_database_url_secrets_must_remain_absent": true,
-    "runtime_credential_binding_remains_separate": true,
+    "runtime_url_secret_readiness_semantics": "ZERO_OR_EXACT_TWO_ONLY",
+    "partial_runtime_url_secret_state_forbidden": true,
+    "service_login_stage_complete": true,
     "runtime_process_start_forbidden": true,
     "production_owner_activation_forbidden": true,
-    "service_login_one_shot_capability": "IMPLEMENTED_UNARMED",
-    "service_login_readiness_capability": "IMPLEMENTED_DUAL_STATE_READ_ONLY",
-    "password_secret_readiness_semantics": "ZERO_OR_EXACT_TWO_ONLY",
-    "partial_password_secret_state_forbidden": true
+    "non_github_host_binding_not_started": true
   },
   "service_login_pre_arm_evidence": {
     "status": "IMMUTABLE_READY_UNARMED",
@@ -211,5 +215,66 @@
       "bootstrap_password_secret_count": 2,
       "runtime_database_url_binding": false
     }
+  },
+  "service_login_materialization_evidence": {
+    "status": "IMMUTABLE_SUCCESS",
+    "workflow": "mcft-cap-09-production-service-login-provision-one-shot",
+    "subject_sha": "5979f15749b0aa7e40a27daf14b957661345d8cd",
+    "run_id": 33416708461,
+    "artifact_id": 9767296933,
+    "artifact_digest": "sha256:f77622ffd4e60556b5437b52f72e95704be45b5e9bc50ef2b0cf78db82ef0ac7",
+    "database_name": "geox_mcft_cap09_production_runtime_v1",
+    "production_host_table_count": 41,
+    "runtime_routine_count": 3,
+    "all_table_rows_zero": true,
+    "evidence_login_role": "geox_mcft_cap09_evidence_runtime_login_v1",
+    "twin_login_role": "geox_mcft_cap09_twin_runtime_login_v1",
+    "exact_one_privilege_membership_each": true,
+    "login_roles_have_no_direct_public_acl": true,
+    "login_roles_own_zero_database_objects": true,
+    "evidence_login_connectivity_proven": true,
+    "twin_login_connectivity_proven": true,
+    "runtime_database_url_binding": false,
+    "runtime_credential_binding": false,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "provider_request_count": 0,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false,
+    "disarmed_after_success": true
+  },
+  "service_login_post_materialization_readiness_evidence": {
+    "status": "IMMUTABLE_SUCCESS",
+    "workflow": "mcft-cap-09-production-service-login-readiness",
+    "subject_sha": "8621c82d72f836cce74efa0a7c1614ba304df714",
+    "run_id": 33416853051,
+    "artifact_id": 9767373040,
+    "artifact_digest": "sha256:182cd68ceeda358e340697e4c8a5a88b8a734b411f721f1eccceaaa134dbfffd",
+    "stage": "SERVICE_LOGIN_COMPLETE_PRE_RUNTIME_CREDENTIAL_BINDING",
+    "database_name": "geox_mcft_cap09_production_runtime_v1",
+    "production_host_table_count": 41,
+    "runtime_routine_count": 3,
+    "all_table_rows_zero": true,
+    "service_login_role_count": 2,
+    "exact_one_privilege_membership_each": true,
+    "login_roles_have_no_direct_public_acl": true,
+    "login_roles_own_zero_database_objects": true,
+    "evidence_login_connectivity_proven": true,
+    "twin_login_connectivity_proven": true,
+    "credential_secret_state": {
+      "evidence_runtime_database_url": false,
+      "evidence_runtime_password": true,
+      "twin_runtime_database_url": false,
+      "twin_runtime_password": true
+    },
+    "runtime_database_url_binding": false,
+    "runtime_credential_binding": false,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "provider_request_count": 0,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false
   }
 }
