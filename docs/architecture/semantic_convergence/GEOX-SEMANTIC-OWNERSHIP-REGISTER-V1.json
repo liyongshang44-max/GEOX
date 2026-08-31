@@ -375,7 +375,7 @@
       "question": "What field/season/crop/cultivar/planting/customer context is declared?",
       "target_owner": "Context Authority",
       "canonical_output_type": "ContextAssertionV1 / ContextSnapshotV1 (B-05a contracts exist; runtime owner not activated)",
-      "current_state": "DISTRIBUTED_CONTEXT",
+      "current_state": "BOUNDARY_SCOPED_CONTEXT_SHADOW_ACTIVE",
       "target_phase": "B-05",
       "new_owner_creation": "FORBIDDEN",
       "registered_producers": [
@@ -419,7 +419,7 @@
         {
           "producer_id": "field-program-context-compatibility-projector",
           "path": "apps/server/src/context/field_program_context_projection_v1.ts",
-          "role": "pure B-05b compatibility projection from typed FieldProgramV1 declarations into ContextAssertionV1/ContextSnapshotV1; no route/job/runtime consumer connected",
+          "role": "B-05b typed FieldProgram -> ContextSnapshot compatibility projector, now explicitly consumed only by authorized B-09y exact immutable FieldProgram boundary/context binding; default legacy projection behavior remains available",
           "authority_level": "COMPATIBILITY_PROJECTION",
           "grandfathered_duplicate": false,
           "removal_target": null,
@@ -429,9 +429,9 @@
             "contextAssertionV1Schema.parse",
             "contextSnapshotV1Schema.parse"
           ],
-          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
-          "activation": "MANUAL",
-          "runtime_edge": "INTENTIONAL_NONE",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
           "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
           "grandfathered_runtime_consumers": []
         }
@@ -454,6 +454,15 @@
           "connection_class": "MAINLINE",
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "b09y-candidate-decision-boundary-context-binding",
+          "path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+          "role": "authorized B-09y exact FieldProgram fact consumer creating one boundary-time ContextSnapshot with exact immutable source_ref; no latest Program fallback",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
         }
       ],
       "notes": [
@@ -462,7 +471,8 @@
         "B-05b maps only typed FieldProgramV1 declaration fields; record_json-only crop_stage/days_after_planting extras are excluded from canonical Context projection.",
         "FieldProgramV1 does not establish planting-event or management-history assertions unless those facts exist in a typed authority source.",
         "B-05b-r1 corrected the projector registration into registered_producers; stray producers key is forbidden.",
-        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only."
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only.",
+        "B-09y authorizes one exact immutable FieldProgram fact selector per Candidate boundary. B-05b is consumed only through explicit B02 registration; legacy latest Program readers remain forbidden for canonical Context anchoring."
       ],
       "runtime_consumers": [
         {
@@ -482,6 +492,15 @@
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN",
           "evidence_edge_id": "C-026"
+        },
+        {
+          "consumer_id": "b09y-candidate-decision-boundary-context-binding",
+          "path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+          "producer_id": "field-program-context-compatibility-projector",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-052"
         }
       ]
     },
@@ -1402,6 +1421,15 @@
           "connection_class": "ACTIVE_PARALLEL",
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "b09y-candidate-decision-boundary-context-binding",
+          "path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+          "role": "B-09y pre-Candidate boundary resolver reads one scoped decision_recommendation_v1 fact before canonical boundary-bound Candidate projection; ambiguity fails closed and no latest wins",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
         }
       ],
       "notes": [
@@ -1438,7 +1466,8 @@
         "B-09k corrects the B-09j readiness interpretation: B-07e consumes canonical EvidenceQualification identity refs rather than full EvidenceQualification objects; B-04 can deterministically reconstruct the full qualification projection from persisted raw samples plus post-COMMIT availability markers at a fixed decision time, so object materialization at the B-09j seam is not itself the B-07e contract blocker.",
         "B-09y proposes DEC-BLINE-CANDIDATE-DECISION-BOUNDARY-001 as RECOMMENDED_NOT_AUTHORIZED: canonical Candidate decision_time must come from one server-created immutable boundary envelope, not legacy created_ts, persistence occurred_at, request/evaluator/wall-clock/latest timestamps.",
         "B-09y recommends that the same causal boundary propagate to CandidateDecision, ContextSnapshot, CalculationResult, B-09v selector and future DecisionEligibility; post-boundary reads may affect canonical Candidate semantics only when explicitly as-of bounded to the same boundary and immutably referenced.",
-        "B-09y forbids the existing field/season ORDER BY occurred_at DESC LIMIT 1 Program fallback from canonical Context/policy anchoring; canonical Program binding requires an explicit selector verified against one exact scoped immutable FieldProgram fact."
+        "B-09y forbids the existing field/season ORDER BY occurred_at DESC LIMIT 1 Program fallback from canonical Context/policy anchoring; canonical Program binding requires an explicit selector verified against one exact scoped immutable FieldProgram fact.",
+        "B-09y creates server-time boundary/context before boundary-bound B-09j Candidate projection. recommendation fact occurred_at and legacy created_ts remain provenance only and never become CandidateDecision.decision_time."
       ],
       "runtime_consumers": [
         {
@@ -1476,6 +1505,15 @@
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN",
           "evidence_edge_id": "C-040"
+        },
+        {
+          "consumer_id": "b09y-candidate-decision-boundary-context-binding",
+          "path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+          "producer_id": "decision-engine-recommendation",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-053"
         }
       ]
     },
@@ -2589,6 +2627,26 @@
           "runtime_edge": "PROVEN",
           "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
           "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "b09y-candidate-decision-boundary-context-binding-v1",
+          "path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+          "role": "authorized B-09y shadow canonical boundary/context writer: one candidate-scoped server-created decision boundary, exact recommendation fact, exact FieldProgram fact and ContextSnapshot fact; no B-07e or MCFT integration",
+          "authority_level": "BOUNDARY_ONLY_SHADOW_BINDING",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "buildCandidateDecisionBoundaryContextBindingV1",
+            "candidateDecisionBoundaryEnvelopeV1Schema",
+            "pg_advisory_xact_lock(hashtext($1))",
+            "EXACT_IMMUTABLE_REFS_OR_SAME_DECISION_TIME_AS_OF_ONLY"
+          ],
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
         }
       ],
       "registered_consumers": [
@@ -2663,6 +2721,15 @@
           "connection_class": "ACTIVE_PARALLEL",
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "judge-v2-agronomy-boundary-context-shadow",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "role": "Agronomy Judge route persists B-09y boundary/context shadow output before B-09j Candidate and B-09ae Calculation/STATE shadow outputs; legacy Judge verdict remains unchanged",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
         }
       ],
       "notes": [
@@ -2692,7 +2759,8 @@
         "B-09g adds no DecisionEligibility criterion producer and performs zero consumer migration and zero authority removal.",
         "B-09h projects a candidate-unbound shadow-only QUALIFIED_EVIDENCE criterion from the B-09g canonical qualification provenance.",
         "B-09h never sends the criterion to Decision Eligibility Runtime and keeps consumer_migration_performed=false / authority_removal_permitted=false.",
-        "User-authorized B-09ae runtime implementation registers only the same-source CalculationResult/STATE shadow chain; no consumer migration, final eligibility connection, MCFT integration, approval/execution mutation, or authority removal."
+        "User-authorized B-09ae runtime implementation registers only the same-source CalculationResult/STATE shadow chain; no consumer migration, final eligibility connection, MCFT integration, approval/execution mutation, or authority removal.",
+        "DEC-BLINE-CANDIDATE-DECISION-BOUNDARY-001 is now user-authorized for B-09y implementation. Runtime scope is boundary/context shadow binding only; Forecast remains frozen, B-07e disconnected, no Approval/Execution authority, no migration/removal."
       ],
       "runtime_consumers": [
         {
@@ -2766,6 +2834,24 @@
           "activation": "API_ONLY",
           "runtime_edge": "PROVEN",
           "evidence_edge_id": "C-051"
+        },
+        {
+          "consumer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+          "producer_id": "b09y-candidate-decision-boundary-context-binding-v1",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-054"
+        },
+        {
+          "consumer_id": "judge-v2-agronomy-boundary-context-shadow",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "producer_id": "b09y-candidate-decision-boundary-context-binding-v1",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-055"
         }
       ]
     }

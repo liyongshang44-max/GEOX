@@ -19,6 +19,9 @@ export type DecisionRecommendationCandidateCriterionShadowInputV1 = {
   season_id?: string | null;
   device_id?: string | null;
   recommendation_id?: string | null;
+  expected_source_fact_id?: string | null;
+  context_snapshot_ref?: string | null;
+  decision_time?: string | null;
 };
 
 export type DecisionRecommendationCandidateSourceFactV1 = {
@@ -222,6 +225,7 @@ export function projectDecisionRecommendationCandidateCriterionShadowBindingV1(
   const sourceType = text(sourceRecord.type);
   const sourceFactId = text(sourceFact.fact_id);
   const sourceOccurredAt = iso(sourceFact.occurred_at);
+  const expectedSourceFactId = text(input.expected_source_fact_id);
   const common = {
     source_fact_count: 1,
     source_fact_id: sourceFactId || null,
@@ -229,6 +233,13 @@ export function projectDecisionRecommendationCandidateCriterionShadowBindingV1(
     source_fact_source: text(sourceFact.source) || null,
     source_fact_occurred_at: sourceOccurredAt,
   };
+
+  if (expectedSourceFactId && sourceFactId !== expectedSourceFactId) {
+    return result(input, "SOURCE_SCOPE_MISMATCH", {
+      ...common,
+      reason_codes: ["B09J_BOUNDARY_EXPECTED_SOURCE_FACT_ID_MISMATCH"],
+    });
+  }
 
   if (sourceType !== "decision_recommendation_v1") {
     return result(input, "SOURCE_TYPE_INVALID", {
@@ -340,13 +351,13 @@ export function projectDecisionRecommendationCandidateCriterionShadowBindingV1(
         zone_id: sourceScope.zone_id || null,
       },
       evidence_qualification_refs: criterionRefs,
-      context_snapshot_ref: null,
+      context_snapshot_ref: text(input.context_snapshot_ref) || null,
       crop_stage_state_ref: null,
       calculation_result_refs: [],
       interpretation_refs: [],
       legacy_source_refs: ["legacy_recommendation_id:" + recommendationId],
       created_at: sourceOccurredAt,
-      decision_time: null,
+      decision_time: text(input.decision_time) || null,
     });
 
     const candidateRefs = unique(candidate.basis.evidence_qualification_refs);
@@ -416,18 +427,38 @@ export async function buildDecisionRecommendationCandidateCriterionShadowBinding
   }
 
   try {
-    const query = await pool.query(
-      `SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
-         FROM facts
-        WHERE (record_json::jsonb->>'type') = 'decision_recommendation_v1'
-          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-          AND (record_json::jsonb#>>'{payload,project_id}') = $2
-          AND (record_json::jsonb#>>'{payload,group_id}') = $3
-          AND (record_json::jsonb#>>'{payload,recommendation_id}') = $4
-        ORDER BY occurred_at DESC, fact_id DESC
-        LIMIT 2`,
-      [input.tenant_id, input.project_id, input.group_id, recommendationId],
-    );
+    const expectedSourceFactId = text(input.expected_source_fact_id);
+    const query = expectedSourceFactId
+      ? await pool.query(
+          `SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
+             FROM facts
+            WHERE fact_id = $1
+              AND (record_json::jsonb->>'type') = 'decision_recommendation_v1'
+              AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+              AND (record_json::jsonb#>>'{payload,project_id}') = $3
+              AND (record_json::jsonb#>>'{payload,group_id}') = $4
+              AND (record_json::jsonb#>>'{payload,recommendation_id}') = $5
+            LIMIT 2`,
+          [
+            expectedSourceFactId,
+            input.tenant_id,
+            input.project_id,
+            input.group_id,
+            recommendationId,
+          ],
+        )
+      : await pool.query(
+          `SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
+             FROM facts
+            WHERE (record_json::jsonb->>'type') = 'decision_recommendation_v1'
+              AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+              AND (record_json::jsonb#>>'{payload,project_id}') = $2
+              AND (record_json::jsonb#>>'{payload,group_id}') = $3
+              AND (record_json::jsonb#>>'{payload,recommendation_id}') = $4
+            ORDER BY occurred_at DESC, fact_id DESC
+            LIMIT 2`,
+          [input.tenant_id, input.project_id, input.group_id, recommendationId],
+        );
     return projectDecisionRecommendationCandidateCriterionShadowBindingV1(
       input,
       (query.rows ?? []) as DecisionRecommendationCandidateSourceFactV1[],
