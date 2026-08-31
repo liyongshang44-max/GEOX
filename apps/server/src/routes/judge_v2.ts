@@ -7,6 +7,7 @@ import { evaluateAgronomyJudgeV2 } from "../domain/judge/agronomy_judge_v2.js";
 import { buildAgronomyEvidenceDependencyShadowBindingV1 } from "../domain/decision/agronomy_evidence_dependency_shadow_binding_v1.js";
 import { projectAgronomyQualifiedEvidenceCriterionShadowV1 } from "../domain/decision/agronomy_qualified_evidence_criterion_shadow_v1.js";
 import { buildDecisionRecommendationCandidateCriterionShadowBindingV1 } from "../domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.js";
+import { buildIrrigateStateCalculationShadowBindingV1 } from "../domain/decision/irrigate_state_calculation_shadow_binding_v1.js";
 import { collectEvidenceJudgeSemanticShadowComparisonV1 } from "../domain/decision/evidence_semantic_shadow_runtime_collector_v1.js";
 import { readEvidenceSemanticShadowInventoryV1 } from "../domain/decision/evidence_semantic_shadow_inventory_v1.js";
 import { evaluateEvidenceJudgeV2WithCanonicalShadow } from "../domain/judge/evidence_judge_v2.js";
@@ -111,6 +112,13 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
           evidenceDependencyShadow,
           qualifiedEvidenceCriterionShadow,
         );
+      const irrigateStateCalculationShadow =
+        await buildIrrigateStateCalculationShadowBindingV1(
+          pool,
+          body,
+          judgeResult as unknown as Record<string, unknown>,
+          candidateCriterionReferentialShadow,
+        );
       const judgeResultWithShadow = {
         ...judgeResult,
         outputs: {
@@ -119,6 +127,8 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
           agronomy_qualified_evidence_criterion_shadow_v1: qualifiedEvidenceCriterionShadow,
           decision_recommendation_candidate_criterion_shadow_binding_v1:
             candidateCriterionReferentialShadow,
+          irrigate_state_calculation_shadow_binding_v1:
+            irrigateStateCalculationShadow,
         },
       };
       const inserted = await insertJudgeResultV2(pool, judgeResultWithShadow);
