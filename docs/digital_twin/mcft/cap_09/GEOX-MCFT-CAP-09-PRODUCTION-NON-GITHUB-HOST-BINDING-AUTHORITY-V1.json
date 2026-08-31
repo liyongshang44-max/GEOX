@@ -73,7 +73,9 @@
     "external_platform_selection_required": true,
     "external_service_provisioning_or_existing_identity_required": true,
     "runtime_start_separate": true,
-    "production_owner_activation_separate": true
+    "production_owner_activation_separate": true,
+    "pre_platform_checkpoint_evidence_bound": true,
+    "pre_platform_checkpoint_subject_sha": "776c6a6b9765abd608e8f469729451784c24c868"
   },
   "non_effects": {
     "external_host_provisioning": false,
@@ -84,5 +86,84 @@
     "formal_v5_arm": false,
     "a0_bootstrap": false,
     "o00_started": false
-  }
+  },
+  "pre_platform_checkpoint_evidence": {
+    "status": "IMMUTABLE_SUCCESS_UNBOUND",
+    "subject_sha": "776c6a6b9765abd608e8f469729451784c24c868",
+    "host_binding_readiness": {
+      "workflow": "mcft-cap-09-production-non-github-host-binding-readiness",
+      "run_id": 33424840577,
+      "job_id": 99595800927,
+      "artifact_id": 9770470060,
+      "artifact_digest": "sha256:8dac5bb17b540357cd3d0e0570d09d5e08b762575f46538633285a40823d3d5d",
+      "status": "PASS",
+      "stage": "HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND",
+      "production_execution_host_class": "NON_GITHUB_LONG_RUNNING_SERVICE",
+      "platform_selected": false,
+      "evidence_host_identity_bound": false,
+      "twin_host_identity_bound": false,
+      "exact_two_runtime_service_identities_bound": false,
+      "binding_authorized": false
+    },
+    "owner_provisioning_readiness": {
+      "workflow": "mcft-cap-09-production-owner-provisioning-readiness",
+      "run_id": 33424840821,
+      "job_id": 99595802577,
+      "artifact_id": 9770513889,
+      "artifact_digest": "sha256:5cac056bc45d7caae7c7edb57358c78605844d2b75cabcb610d8d68e72f80d3a",
+      "status": "PASS_NON_GITHUB_HOST_BINDING_FRONTIER",
+      "remaining_provisioning_blockers": [
+        "EXTERNAL_NON_GITHUB_PLATFORM_NOT_SELECTED",
+        "EVIDENCE_NON_GITHUB_SERVICE_IDENTITY_NOT_BOUND",
+        "TWIN_NON_GITHUB_SERVICE_IDENTITY_NOT_BOUND",
+        "NON_GITHUB_HOST_BINDING_NOT_AUTHORIZED"
+      ]
+    },
+    "post_merge_v13_control_plane": {
+      "workflow": "mcft-cap-09-post-merge-v13-control-plane-v1",
+      "run_id": 33424840808,
+      "job_id": 99595803072,
+      "artifact_id": 9770641030,
+      "artifact_digest": "sha256:a138206e91680f0bdb6197d31151f705c26b8af494b675013ef5528a34b5a9a5",
+      "conclusion": "success",
+      "blocker_count": 1,
+      "only_blocker": "EXACT_ONE_PRODUCTION_OWNER",
+      "producer_driven_qualification_status": "PASS",
+      "end_to_end_evidence_supply_deadline_status": "PASS"
+    },
+    "qualification_control_plane": {
+      "workflow": "mcft-cap-09-qualification-control-plane-v1",
+      "run_id": 33424840454,
+      "job_id": 99595803951,
+      "artifact_id": 9770726672,
+      "artifact_digest": "sha256:9c8d760f176b6f5bf002f7cc26493f32e62315ccb2332d39e2340121d1103a2f",
+      "conclusion": "EXPECTED_FAILURE_OWNER_UNCLOSED",
+      "unknown_changed_path_count": 0,
+      "authority_error_count": 0,
+      "blocker_count": 1,
+      "only_blocker": "EXACT_ONE_PRODUCTION_OWNER"
+    },
+    "ci": {
+      "workflow": "ci",
+      "run_id": 33424840590,
+      "build_test_job_id": 99595801142,
+      "build_test_conclusion": "success",
+      "acceptance_job_id": 99598179824,
+      "acceptance_conclusion": "success"
+    },
+    "non_effects": {
+      "external_host_provisioning": false,
+      "deployment": false,
+      "runtime_process_start": false,
+      "production_owner_activation": false,
+      "provider_request": false,
+      "formal_v5_arm": false,
+      "a0_bootstrap": false,
+      "o00_started": false
+    }
+  },
+  "completed_binding_stages": [
+    "DEFINE_PLATFORM_NEUTRAL_NON_GITHUB_HOST_IDENTITY_CONTRACT",
+    "PROVE_UNBOUND_HOST_IDENTITY_AUTHORITY_ZERO_EFFECT"
+  ]
 }

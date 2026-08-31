@@ -90,6 +90,94 @@ try {
     a.status === "HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND",
     "HOST_BINDING_UNBOUND_STATUS_REQUIRED",
   );
+  const checkpoint = a.pre_platform_checkpoint_evidence;
+  req(
+    checkpoint?.status === "IMMUTABLE_SUCCESS_UNBOUND" &&
+      checkpoint?.subject_sha === "776c6a6b9765abd608e8f469729451784c24c868",
+    "HOST_BINDING_PRE_PLATFORM_CHECKPOINT_REQUIRED",
+  );
+  req(
+    checkpoint?.host_binding_readiness?.run_id === 33424840577 &&
+      checkpoint?.host_binding_readiness?.job_id === 99595800927 &&
+      checkpoint?.host_binding_readiness?.artifact_id === 9770470060 &&
+      checkpoint?.host_binding_readiness?.artifact_digest ===
+        "sha256:8dac5bb17b540357cd3d0e0570d09d5e08b762575f46538633285a40823d3d5d",
+    "HOST_BINDING_READINESS_CHECKPOINT_IDENTITY_MISMATCH",
+  );
+  req(
+    checkpoint?.host_binding_readiness?.stage === "HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND" &&
+      checkpoint?.host_binding_readiness?.platform_selected === false &&
+      checkpoint?.host_binding_readiness?.evidence_host_identity_bound === false &&
+      checkpoint?.host_binding_readiness?.twin_host_identity_bound === false &&
+      checkpoint?.host_binding_readiness?.exact_two_runtime_service_identities_bound === false &&
+      checkpoint?.host_binding_readiness?.binding_authorized === false,
+    "HOST_BINDING_READINESS_CHECKPOINT_SHAPE_MISMATCH",
+  );
+  req(
+    checkpoint?.owner_provisioning_readiness?.run_id === 33424840821 &&
+      checkpoint?.owner_provisioning_readiness?.job_id === 99595802577 &&
+      checkpoint?.owner_provisioning_readiness?.artifact_id === 9770513889 &&
+      checkpoint?.owner_provisioning_readiness?.artifact_digest ===
+        "sha256:5cac056bc45d7caae7c7edb57358c78605844d2b75cabcb610d8d68e72f80d3a" &&
+      checkpoint?.owner_provisioning_readiness?.status === "PASS_NON_GITHUB_HOST_BINDING_FRONTIER",
+    "HOST_BINDING_OWNER_CHECKPOINT_IDENTITY_MISMATCH",
+  );
+  req(
+    Array.isArray(checkpoint?.owner_provisioning_readiness?.remaining_provisioning_blockers) &&
+      checkpoint.owner_provisioning_readiness.remaining_provisioning_blockers.length === 4 &&
+      checkpoint.owner_provisioning_readiness.remaining_provisioning_blockers.includes("EXTERNAL_NON_GITHUB_PLATFORM_NOT_SELECTED") &&
+      checkpoint.owner_provisioning_readiness.remaining_provisioning_blockers.includes("EVIDENCE_NON_GITHUB_SERVICE_IDENTITY_NOT_BOUND") &&
+      checkpoint.owner_provisioning_readiness.remaining_provisioning_blockers.includes("TWIN_NON_GITHUB_SERVICE_IDENTITY_NOT_BOUND") &&
+      checkpoint.owner_provisioning_readiness.remaining_provisioning_blockers.includes("NON_GITHUB_HOST_BINDING_NOT_AUTHORIZED"),
+    "HOST_BINDING_OWNER_CHECKPOINT_BLOCKERS_MISMATCH",
+  );
+  req(
+    checkpoint?.post_merge_v13_control_plane?.run_id === 33424840808 &&
+      checkpoint?.post_merge_v13_control_plane?.artifact_id === 9770641030 &&
+      checkpoint?.post_merge_v13_control_plane?.artifact_digest ===
+        "sha256:a138206e91680f0bdb6197d31151f705c26b8af494b675013ef5528a34b5a9a5" &&
+      checkpoint?.post_merge_v13_control_plane?.conclusion === "success" &&
+      checkpoint?.post_merge_v13_control_plane?.blocker_count === 1 &&
+      checkpoint?.post_merge_v13_control_plane?.only_blocker === "EXACT_ONE_PRODUCTION_OWNER" &&
+      checkpoint?.post_merge_v13_control_plane?.producer_driven_qualification_status === "PASS" &&
+      checkpoint?.post_merge_v13_control_plane?.end_to_end_evidence_supply_deadline_status === "PASS",
+    "HOST_BINDING_POST_MERGE_CHECKPOINT_MISMATCH",
+  );
+  req(
+    checkpoint?.qualification_control_plane?.run_id === 33424840454 &&
+      checkpoint?.qualification_control_plane?.artifact_id === 9770726672 &&
+      checkpoint?.qualification_control_plane?.artifact_digest ===
+        "sha256:9c8d760f176b6f5bf002f7cc26493f32e62315ccb2332d39e2340121d1103a2f" &&
+      checkpoint?.qualification_control_plane?.conclusion === "EXPECTED_FAILURE_OWNER_UNCLOSED" &&
+      checkpoint?.qualification_control_plane?.unknown_changed_path_count === 0 &&
+      checkpoint?.qualification_control_plane?.authority_error_count === 0 &&
+      checkpoint?.qualification_control_plane?.blocker_count === 1 &&
+      checkpoint?.qualification_control_plane?.only_blocker === "EXACT_ONE_PRODUCTION_OWNER",
+    "HOST_BINDING_QCP_CHECKPOINT_MISMATCH",
+  );
+  req(
+    checkpoint?.ci?.run_id === 33424840590 &&
+      checkpoint?.ci?.build_test_job_id === 99595801142 &&
+      checkpoint?.ci?.build_test_conclusion === "success" &&
+      checkpoint?.ci?.acceptance_job_id === 99598179824 &&
+      checkpoint?.ci?.acceptance_conclusion === "success",
+    "HOST_BINDING_CI_CHECKPOINT_MISMATCH",
+  );
+  for (const key of [
+    "external_host_provisioning",
+    "deployment",
+    "runtime_process_start",
+    "production_owner_activation",
+    "provider_request",
+    "formal_v5_arm",
+    "a0_bootstrap",
+    "o00_started",
+  ]) {
+    req(
+      checkpoint?.non_effects?.[key] === false,
+      "HOST_BINDING_CHECKPOINT_NON_EFFECT_REQUIRED:" + key,
+    );
+  }
   req(
     a.predecessor_stage === "RUNTIME_CREDENTIAL_BINDING_COMPLETE_PRE_HOST_BINDING" &&
       a.runtime_credential_binding_required === true,
@@ -226,6 +314,7 @@ try {
     twin_host_identity_bound: false,
     exact_two_runtime_service_identities_bound: false,
     binding_authorized: false,
+    pre_platform_checkpoint_evidence_bound: true,
     remaining_blockers: [
       "EXTERNAL_NON_GITHUB_PLATFORM_NOT_SELECTED",
       "EVIDENCE_NON_GITHUB_SERVICE_IDENTITY_NOT_BOUND",
