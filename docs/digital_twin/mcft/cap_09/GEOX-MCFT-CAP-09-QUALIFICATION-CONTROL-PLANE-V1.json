@@ -331,6 +331,21 @@
         "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql",
         "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql"
       ]
+    },
+    "PRODUCTION_OWNER_GRADUATION_CLOSURE": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-production-owner-graduation-gate.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json",
+        "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_CUTOVER_ARM_V1.json",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_V1.cjs",
+        "scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json",
+        "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts",
+        "apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts"
+      ]
     }
   },
   "checks": [
@@ -767,18 +782,19 @@
         "FORMAL_V5_ACTIVATION"
       ],
       "authority_refs": [
-        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json"
       ],
       "resolver_ids": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "PRODUCTION_OWNER_GRADUATION_CLOSURE"
       ],
       "historical_evidence_policy": "NO_HISTORICAL_SUBSTITUTE_FOR_LIVE_OWNER_INVENTORY",
-      "execution_workflow": null,
-      "execution_workflow_status": "NOT_IMPLEMENTED_AT_FROZEN_SUBJECT",
+      "execution_workflow": ".github/workflows/mcft-cap-09-production-owner-graduation-gate.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
       "fail_policy": "FAIL_CLOSED_UNTIL_EXACT_ONE_OWNER_AND_RETIRED_TRIGGER_ZERO_PROVEN",
       "carry_forward_policy": "NONE",
       "requalification_triggers": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "PRODUCTION_OWNER_GRADUATION_CLOSURE"
       ],
       "applicable_stages": [
         "POST_MERGE_V13_QUALIFICATION",

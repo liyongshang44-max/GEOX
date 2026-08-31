@@ -343,13 +343,33 @@ function main() {
   }
   assert.equal(byId(plan(authority, registry, [], "POST_MERGE_V13_QUALIFICATION"), "END_TO_END_EVIDENCE_SUPPLY_DEADLINE").status, "REQUIRED");
 
-  // Owner / Formal-v5 remain unimplemented and fail closed until their own activation step.
-  for (const id of ["EXACT_ONE_PRODUCTION_OWNER", "FORMAL_V5_ACTIVATION"]) {
-    const check = authority.checks.find((row) => row.check_id === id);
-    assert.ok(check, `FUTURE_CHECK_REQUIRED:${id}`);
-    assert.equal(check.execution_workflow_status, "NOT_IMPLEMENTED_AT_FROZEN_SUBJECT");
-    assert.equal(check.execution_workflow, null);
+  // Production-owner graduation has its own bounded closure. The workflow is
+  // intentionally fail-closed while the arm is false / non-GitHub host binding is absent,
+  // so a read-only preflight success cannot be registered as exact-owner closure evidence.
+  const ownerQualification = authority.checks.find((row) => row.check_id === "EXACT_ONE_PRODUCTION_OWNER");
+  assert.ok(ownerQualification, "FUTURE_CHECK_REQUIRED:EXACT_ONE_PRODUCTION_OWNER");
+  assert.deepEqual(ownerQualification.resolver_ids, ["PRODUCTION_OWNER_GRADUATION_CLOSURE"]);
+  assert.equal(ownerQualification.execution_workflow_status, "IMPLEMENTED_AT_SUCCESSOR_HEAD");
+  assert.equal(ownerQualification.execution_workflow, ".github/workflows/mcft-cap-09-production-owner-graduation-gate.yml");
+  assert.equal(ownerQualification.diagnostic_command, null);
+  const ownerPaths = new Set(resolved.resolved.PRODUCTION_OWNER_GRADUATION_CLOSURE.paths);
+  for (const ownerOnlyPath of [
+    ".github/workflows/mcft-cap-09-production-owner-graduation-gate.yml",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json",
+    "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_CUTOVER_ARM_V1.json",
+    "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_V1.cjs",
+  ]) {
+    assert(ownerPaths.has(ownerOnlyPath), `OWNER_CLOSURE_PATH_REQUIRED:${ownerOnlyPath}`);
+    assert(!timingPaths.has(ownerOnlyPath), `OWNER_PATH_MUST_NOT_REOPEN_TIMING:${ownerOnlyPath}`);
+    assert(!step4Paths.has(ownerOnlyPath), `OWNER_PATH_MUST_NOT_REOPEN_STEP4:${ownerOnlyPath}`);
   }
+  assert.equal(byId(plan(authority, registry, [], "POST_MERGE_V13_QUALIFICATION"), "EXACT_ONE_PRODUCTION_OWNER").status, "REQUIRED");
+
+  // Formal-v5 remains unimplemented and fail closed until owner graduation closes.
+  const formalActivation = authority.checks.find((row) => row.check_id === "FORMAL_V5_ACTIVATION");
+  assert.ok(formalActivation, "FUTURE_CHECK_REQUIRED:FORMAL_V5_ACTIVATION");
+  assert.equal(formalActivation.execution_workflow_status, "NOT_IMPLEMENTED_AT_FROZEN_SUBJECT");
+  assert.equal(formalActivation.execution_workflow, null);
 
   // CP-4: a failed-v4 subject is forbidden for carry-forward by the actual Formal-store authority.
   const failedV4Registry = clone(registry);
