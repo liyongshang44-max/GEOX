@@ -1,6 +1,6 @@
 {
   "schema_version": "geox_mcft_cap09_v13_exact_head_timing_measurement_arm_v1",
-  "armed": true,
+  "armed": false,
   "activation_step": "RUN_EXACT_HEAD_REAL_TIMING_MEASUREMENT",
   "implementation_base_sha": "46367333d228a2b90a86ff6a33aebc334f3d73a2",
   "exact_branch": "feat/mcft-cap09-v13-producer-driven-qualification-v1",
@@ -9,5 +9,5 @@
   "formal_v5_arm_authorized": false,
   "a0_authorized": false,
   "o00_authorized": false,
-  "measurement_first_base": "2026-08-31T13:00:00.000Z"
+  "measurement_first_base": null
 }
