@@ -13,6 +13,9 @@ const SCHEMA_FILES=[
   "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql",
   "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql",
   "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql",
+  "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql",
+  "apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql",
+  "apps/server/db/migrations/2026_08_31_mcft_cap_09_production_host_projection_persistence.sql",
 ] as const;
 const ACL_FILES=[
   "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql",
@@ -36,7 +39,7 @@ async function main(){
     await pool.query("CREATE SCHEMA public");
     await apply(pool,SCHEMA_FILES);
     const tables=Number((await pool.query("SELECT count(*)::int AS n FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'")).rows[0]?.n);
-    assert.equal(tables,29,"OWNER_PROVISIONING_EXACT_29_TABLE_SCHEMA_REQUIRED");
+    assert.equal(tables,41,"OWNER_PROVISIONING_EXACT_41_TABLE_HOST_SCHEMA_REQUIRED");
     await apply(pool,ACL_FILES);
     await bootstrapMcftCap09Phase5ServicePrincipalsV1({
       admin_database_url:url,
@@ -80,7 +83,8 @@ async function main(){
     const result={
       schema_version:"geox_mcft_cap09_production_owner_provisioning_bundle_postgres_v1",
       status:"PASS",
-      schema_table_count:tables,
+      formal_v13_core_table_count:29,
+      production_host_table_count:tables,
       all_table_rows_zero:true,
       acl_bundle_applied:true,
       evidence_privilege_role_safe:true,
