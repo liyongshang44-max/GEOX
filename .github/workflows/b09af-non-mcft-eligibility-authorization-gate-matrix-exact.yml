@@ -1,0 +1,68 @@
+name: b09af-non-mcft-eligibility-authorization-gate-matrix-exact
+
+on:
+  pull_request:
+    branches:
+      - docs/bline-b09af-non-mcft-eligibility-authorization-gate-matrix-v1
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prove literal B-09af product head
+        run: |
+          git checkout c1273e37dc3f3c44d76439997d905f2c565c6510
+          test "$(git rev-parse HEAD)" = "c1273e37dc3f3c44d76439997d905f2c565c6510"
+          test "$(git rev-parse HEAD^)" = "6c102cb8ef7c361a3cc0ca9fbf04b22b659b8fe8"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+      - name: B-09af gate-matrix acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09AF_NON_MCFT_ELIGIBILITY_AUTHORIZATION_GATE_MATRIX_V1.cjs
+      - name: B-09ae predecessor preservation
+        run: |
+          git diff --exit-code 6c102cb8ef7c361a3cc0ca9fbf04b22b659b8fe8 c1273e37dc3f3c44d76439997d905f2c565c6510 -- \
+            docs/architecture/semantic_convergence/GEOX-B09AE-IRRIGATE-STATE-CALCULATION-SHADOW-BINDING-DECISION-PACKAGE-V1.json \
+            docs/architecture/semantic_convergence/GEOX-B09AE-IRRIGATE-STATE-CALCULATION-SHADOW-BINDING-DECISION-PACKAGE-V1.md \
+            scripts/governance_acceptance/ACCEPTANCE_B09AE_IRRIGATE_STATE_CALCULATION_SHADOW_BINDING_V1.cjs
+          echo "B09AE_PREDECESSOR_PRESERVED_PASS"
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only 6c102cb8ef7c361a3cc0ca9fbf04b22b659b8fe8 c1273e37dc3f3c44d76439997d905f2c565c6510 > /tmp/b09af-files.txt
+          cat /tmp/b09af-files.txt
+          test "$(wc -l < /tmp/b09af-files.txt | tr -d ' ')" = "4"
+          git diff --check 6c102cb8ef7c361a3cc0ca9fbf04b22b659b8fe8 c1273e37dc3f3c44d76439997d905f2c565c6510
+      - name: Prove runtime and MCFT surfaces unchanged
+        run: |
+          git diff --exit-code 6c102cb8ef7c361a3cc0ca9fbf04b22b659b8fe8 c1273e37dc3f3c44d76439997d905f2c565c6510 -- \
+            apps/server/src apps/server/db packages config .github/workflows docs/digital_twin docs/twin_kernel scripts/runtime_acceptance
+          echo "B09AF_RUNTIME_MCFT_UNCHANGED_PASS"
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+      - name: Server build
+        run: pnpm --filter @geox/server build
+      - name: Prove validation did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "c1273e37dc3f3c44d76439997d905f2c565c6510"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09AF_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+      - name: Marker
+        run: |
+          echo "B09AF_EXACT_HEAD c1273e37dc3f3c44d76439997d905f2c565c6510"
+          echo "B09AF_AUTHORIZATION_GATE_MATRIX_PASS"
