@@ -316,14 +316,20 @@
       "roots": [
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V1.ts",
         "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V1.ts",
-        "scripts/runtime_acceptance/VALIDATE_MCFT_CAP_09_V13_FROZEN_TIMING_AUTHORITY_V1.ts"
+        "scripts/runtime_acceptance/VALIDATE_MCFT_CAP_09_V13_FROZEN_TIMING_AUTHORITY_V1.ts",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_CONTROLLED_TIMING_DELAY_MATRIX_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_CONTROLLER_SERVICE_POSTGRES.ts"
       ],
       "additional_exact_paths": [
         ".github/workflows/mcft-cap-09-v13-exact-head-timing-measurement.yml",
         ".github/workflows/mcft-cap-09-v13-exact-head-timing-sample.yml",
         ".github/workflows/mcft-cap-09-v13-frozen-timing-authority.yml",
         "scripts/runtime_acceptance/MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_ARM_V1.json",
-        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json"
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json",
+        ".github/workflows/mcft-cap-09-v13-controlled-timing-delay-matrix.yml",
+        "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql",
+        "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql",
+        "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql"
       ]
     }
   },

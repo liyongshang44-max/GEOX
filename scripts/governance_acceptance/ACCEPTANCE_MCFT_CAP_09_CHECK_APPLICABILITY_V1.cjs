@@ -335,6 +335,8 @@ function main() {
     "scripts/runtime_acceptance/VALIDATE_MCFT_CAP_09_V13_FROZEN_TIMING_AUTHORITY_V1.ts",
     "scripts/runtime_acceptance/MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_ARM_V1.json",
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json",
+    ".github/workflows/mcft-cap-09-v13-controlled-timing-delay-matrix.yml",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_CONTROLLED_TIMING_DELAY_MATRIX_V1.ts",
   ]) {
     assert(timingPaths.has(timingOnlyPath), `TIMING_CLOSURE_PATH_REQUIRED:${timingOnlyPath}`);
     assert(!step4Paths.has(timingOnlyPath), `TIMING_PATH_MUST_NOT_REOPEN_STEP4:${timingOnlyPath}`);
