@@ -138,6 +138,14 @@ async function main(){
         )).rows[0]?.ok;
         assert.equal(beforeSet,false,"OP_SCHEMA_ACL_PREEXISTING_SET_AUTHORITY_FORBIDDEN:"+role);
         await pool.query("GRANT "+role+" TO CURRENT_USER WITH SET TRUE");
+        await pool.query("GRANT "+role+" TO CURRENT_USER WITH INHERIT FALSE");
+        const tempGrant=(await pool.query<{inherit_option:boolean;set_option:boolean}>(
+          "SELECT inherit_option,set_option FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid JOIN pg_catalog.pg_roles member ON member.oid=m.member JOIN pg_catalog.pg_roles grantor ON grantor.oid=m.grantor WHERE granted.rolname=$1 AND member.rolname=current_user AND grantor.rolname=current_user",
+          [role],
+        )).rows;
+        assert.equal(tempGrant.length,1,"OP_SCHEMA_ACL_EXACT_ONE_TEMP_SELF_GRANT_REQUIRED:"+role);
+        assert.equal(tempGrant[0]?.inherit_option,false,"OP_SCHEMA_ACL_TEMP_INHERIT_FORBIDDEN:"+role);
+        assert.equal(tempGrant[0]?.set_option,true,"OP_SCHEMA_ACL_TEMP_SET_OPTION_REQUIRED:"+role);
         const canSet=(await pool.query<{ok:boolean}>(
           "SELECT pg_catalog.pg_has_role(current_user,$1,'SET') AS ok",
           [role],
@@ -179,6 +187,11 @@ async function main(){
           [role],
         )).rows[0]?.ok;
         assert.equal(canSet,false,"OP_SCHEMA_ACL_EFFECTIVE_SET_AUTHORITY_MUST_BE_ZERO:"+role);
+        const selfGrants=Number((await pool.query(
+          "SELECT count(*)::int AS n FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid JOIN pg_catalog.pg_roles member ON member.oid=m.member JOIN pg_catalog.pg_roles grantor ON grantor.oid=m.grantor WHERE granted.rolname=$1 AND member.rolname=current_user AND grantor.rolname=current_user",
+          [role],
+        )).rows[0]?.n);
+        assert.equal(selfGrants,0,"OP_SCHEMA_ACL_TEMP_SELF_GRANT_MUST_BE_ZERO:"+role);
       }
       await pool.query("COMMIT");
     }catch(e){
@@ -255,6 +268,7 @@ async function main(){
       provisioning_admin_writer_owner_membership_residual_count:0,
       provisioning_admin_writer_owner_set_membership_residual_count:0,
       effective_writer_owner_set_authority_zero:true,
+      provisioning_admin_writer_owner_self_grant_residual_count:0,
       service_login_created:false,
       schema_migration_performed:true,
       runtime_process_start:false,
