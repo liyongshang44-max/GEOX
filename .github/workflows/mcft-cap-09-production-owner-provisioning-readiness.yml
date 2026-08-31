@@ -61,7 +61,9 @@ jobs:
             twin_runtime_database_url:Boolean(process.env.TWIN_RUNTIME_DATABASE_URL_SECRET),
             twin_runtime_password:Boolean(process.env.TWIN_RUNTIME_PASSWORD_SECRET)
           };
-          if(Object.values(secretState).some(Boolean))throw new Error('OWNER_PROVISIONING_UNAUTHORIZED_RUNTIME_CREDENTIAL_SECRET_PRESENT');
+          if(secretState.evidence_runtime_database_url||secretState.twin_runtime_database_url)throw new Error('OWNER_PROVISIONING_RUNTIME_DATABASE_URL_SECRET_MUST_WAIT_FOR_7F');
+          const passwordSecretCount=Number(secretState.evidence_runtime_password)+Number(secretState.twin_runtime_password);
+          if(![0,2].includes(passwordSecretCount))throw new Error('OWNER_PROVISIONING_PARTIAL_PASSWORD_SECRET_STATE_FORBIDDEN');
           const remaining=[
             'SERVICE_LOGIN_BOOTSTRAP_NOT_AUTHORIZED',
             'EVIDENCE_RUNTIME_BOOTSTRAP_PASSWORD_SECRET_NOT_BOUND',
@@ -95,9 +97,10 @@ jobs:
             runtime_credential_binding_authorized:false,
             pre_login_stage_ready:true,
             service_login_pre_arm_ready:true,
-            password_secret_authority_ready:false,
-            provisioning_ready:false,
-            next_stage:'SERVICE_LOGIN_BOOTSTRAP_REQUIRES_PASSWORD_SECRET_AUTHORITY_AND_SEPARATE_ARM',
+            password_secret_authority_ready:passwordSecretCount===2,
+            bootstrap_password_secret_count:passwordSecretCount,
+            provisioning_ready:passwordSecretCount===2,
+            next_stage:passwordSecretCount===2?'SERVICE_LOGIN_BOOTSTRAP_READY_FOR_SEPARATE_ARM':'SERVICE_LOGIN_BOOTSTRAP_REQUIRES_PASSWORD_SECRET_AUTHORITY_AND_SEPARATE_ARM',
             remaining_provisioning_blockers:remaining,
             provisioning_performed:false,
             runtime_process_start:false,

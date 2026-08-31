@@ -154,7 +154,9 @@
     "runtime_process_start_forbidden": true,
     "production_owner_activation_forbidden": true,
     "service_login_one_shot_capability": "IMPLEMENTED_UNARMED",
-    "service_login_readiness_capability": "IMPLEMENTED_DUAL_STATE_READ_ONLY"
+    "service_login_readiness_capability": "IMPLEMENTED_DUAL_STATE_READ_ONLY",
+    "password_secret_readiness_semantics": "ZERO_OR_EXACT_TWO_ONLY",
+    "partial_password_secret_state_forbidden": true
   },
   "service_login_pre_arm_evidence": {
     "status": "IMMUTABLE_READY_UNARMED",

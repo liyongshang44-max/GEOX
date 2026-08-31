@@ -211,11 +211,22 @@ function main() {
   const loginCount = Number(counts[3]);
 
   if (loginCount === 0) {
-    assert.equal(Object.values(secrets).some(Boolean), false, "SERVICE_LOGIN_READINESS_PRELOGIN_SECRET_FORBIDDEN");
+    assert.equal(secrets.evidence_runtime_database_url, false, "SERVICE_LOGIN_READINESS_EVIDENCE_URL_MUST_WAIT_FOR_7F");
+    assert.equal(secrets.twin_runtime_database_url, false, "SERVICE_LOGIN_READINESS_TWIN_URL_MUST_WAIT_FOR_7F");
+    const passwordCount =
+      Number(secrets.evidence_runtime_password) +
+      Number(secrets.twin_runtime_password);
+    assert.ok(
+      passwordCount === 0 || passwordCount === 2,
+      "SERVICE_LOGIN_READINESS_PARTIAL_PASSWORD_SECRET_STATE_FORBIDDEN",
+    );
     write({
       schema_version: "geox_mcft_cap09_production_service_login_readiness_v1",
       status: "PASS",
-      stage: "PRE_LOGIN_ZERO_STATE",
+      stage:
+        passwordCount === 2
+          ? "SERVICE_LOGIN_PASSWORDS_BOUND_PRE_ARM"
+          : "PRE_LOGIN_ZERO_STATE",
       subject_sha: subjectSha,
       database_name: TARGET_DB,
       production_host_table_count: 41,
@@ -223,6 +234,7 @@ function main() {
       all_table_rows_zero: true,
       service_login_role_count: 0,
       credential_secret_state: secrets,
+      bootstrap_password_secret_count: passwordCount,
       runtime_database_url_binding: false,
       runtime_credential_binding: false,
       runtime_process_start: false,
