@@ -1737,7 +1737,10 @@
         "B-09aa recommends START_WITH_EXPLICIT_POLICY_ONLY_V1 as the next governance option because dynamic agronomic/action-input-validity composition lacks canonical expiry semantics and Forecast remains frozen on incomplete MCFT-9; this recommendation is not authorization.",
         "B-09ab proposes DEC-BLINE-ACTION-WINDOW-HORIZON-AUTHORITY-TOPOLOGY-001 as RECOMMENDED_NOT_AUTHORIZED: v1 ActionWindow horizon authority should live in a successor Decision Eligibility policy-content contract rather than a separately selected parallel horizon-policy family.",
         "B-09ab preserves DecisionEligibilityPolicyDeclarationV1 as immutable predecessor semantics; existing v1 declarations must not receive inferred/default ActionWindow horizons. A successor policy requiring ACTION_WINDOW must carry explicit horizon authority or fail closed.",
-        "B-09ab selects topology only, not numerical duration/mode/start-offset/unit/dynamic-shortening semantics; no writer, selector, ActionWindow producer, B07e, Approval/Execution or MCFT mutation is authorized."
+        "B-09ab selects topology only, not numerical duration/mode/start-offset/unit/dynamic-shortening semantics; no writer, selector, ActionWindow producer, B07e, Approval/Execution or MCFT mutation is authorized.",
+        "B-09ac proposes DEC-BLINE-ELIGIBILITY-POLICY-V2-ACTION-WINDOW-CONTRACT-001 as RECOMMENDED_NOT_AUTHORIZED: a successor Eligibility policy may carry action_window_policy anchored to canonical Candidate decision_time with explicit start_offset_seconds and duration_seconds, half-open interval semantics, and no hidden defaults.",
+        "B-09ac couples ACTION_WINDOW criterion presence to action_window_policy presence and preserves DecisionEligibilityPolicyDeclarationV1 as immutable predecessor semantics with no automatic/backfilled horizon.",
+        "B-09ac selects no concrete offset/duration/min/max/IRRIGATE value and does not implement successor contract, writer/route compatibility, selector compatibility, ActionWindow producer, B07e, or MCFT integration."
       ],
       "runtime_consumers": [
         {
