@@ -1,0 +1,83 @@
+name: b09y-decision-boundary-context-exact
+
+on:
+  pull_request:
+    branches:
+      - feat/bline-b09y-decision-boundary-context-binding-v1
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09y implementation head
+        run: |
+          git checkout c0e4e32ee10cd856f248c43d1eaff9f4a5b56814
+          test "$(git rev-parse HEAD)" = "c0e4e32ee10cd856f248c43d1eaff9f4a5b56814"
+          test "$(git rev-parse HEAD^)" = "adc04f715b8e0c2f4b0ce8da37853f1bca13baa3"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09y runtime acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09Y_DECISION_BOUNDARY_CONTEXT_RUNTIME_V1.cjs
+
+      - name: B-09y contract tests
+        run: node --import tsx --test apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.contract.test.ts
+
+      - name: B-05b Context regression
+        run: node --import tsx --test apps/server/src/context/field_program_context_projection_v1.test.ts
+
+      - name: B-09j Candidate regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.contract.test.ts
+
+      - name: B-09ae STATE/Calculation regression
+        run: node --import tsx --test apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.contract.test.ts
+
+      - name: Judge V2 regression
+        run: node --import tsx --test apps/server/src/domain/judge/agronomy_judge_v2.test.ts
+
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only adc04f715b8e0c2f4b0ce8da37853f1bca13baa3 c0e4e32ee10cd856f248c43d1eaff9f4a5b56814 > /tmp/b09y-files.txt
+          cat /tmp/b09y-files.txt
+          test "$(wc -l < /tmp/b09y-files.txt | tr -d ' ')" = "8"
+          git diff --check adc04f715b8e0c2f4b0ce8da37853f1bca13baa3 c0e4e32ee10cd856f248c43d1eaff9f4a5b56814
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Prove validation did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "c0e4e32ee10cd856f248c43d1eaff9f4a5b56814"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09Y_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Marker
+        run: |
+          echo "B09Y_RUNTIME_EXACT_HEAD c0e4e32ee10cd856f248c43d1eaff9f4a5b56814"
+          echo "B09Y_BOUNDARY_CONTEXT_RUNTIME_PASS"
