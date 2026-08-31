@@ -178,30 +178,44 @@ async function provisionOneV1(
   const spec = specV1(input.kind);
   await assertLoginRoleSafeV1(pool, spec.login_role);
 
+  const password = requiredTextV1(
+    input.password,
+    "PHASE5_SERVICE_PASSWORD_REQUIRED",
+  );
   const exists = await pool.query<{ present: boolean }>(
     "SELECT EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE rolname=$1) AS present",
     [spec.login_role],
   );
   if (exists.rows[0]?.present !== true) {
     await pool.query(
-      await formattedSqlV1(pool, "CREATE ROLE %I", [spec.login_role]),
+      await formattedSqlV1(
+        pool,
+        "CREATE ROLE %I LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD %L",
+        [spec.login_role, password],
+      ),
     );
+  } else {
+    const shape = await pool.query<{ rolcanlogin: boolean; rolinherit: boolean }>(
+      "SELECT rolcanlogin,rolinherit FROM pg_catalog.pg_roles WHERE rolname=$1",
+      [spec.login_role],
+    );
+    if (
+      shape.rows[0]?.rolcanlogin !== true
+      || shape.rows[0]?.rolinherit !== true
+    ) {
+      throw new Error(`PHASE5_SERVICE_LOGIN_ROLE_SHAPE_REQUIRED:${spec.login_role}`);
+    }
   }
 
-  await pool.query(
-    await formattedSqlV1(
-      pool,
-      "ALTER ROLE %I LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS",
-      [spec.login_role],
-    ),
-  );
+  // Existing roles are validated from pg_roles. Do not re-declare privileged
+  // SUPERUSER/REPLICATION/BYPASSRLS attributes with no-op ALTER ROLE clauses.
   await pool.query(
     await formattedSqlV1(pool, "ALTER ROLE %I RESET ALL", [spec.login_role]),
   );
   await pool.query(
     await formattedSqlV1(pool, "ALTER ROLE %I PASSWORD %L", [
       spec.login_role,
-      requiredTextV1(input.password, "PHASE5_SERVICE_PASSWORD_REQUIRED"),
+      password,
     ]),
   );
 
