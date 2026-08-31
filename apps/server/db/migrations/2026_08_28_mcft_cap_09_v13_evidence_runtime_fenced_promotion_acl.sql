@@ -38,7 +38,6 @@ REVOKE ALL ON SCHEMA public FROM geox_mcft_cap09_forcing_writer_owner_v1;
 GRANT USAGE ON SCHEMA public TO geox_mcft_cap09_forcing_writer_owner_v1;
 REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM geox_mcft_cap09_forcing_writer_owner_v1;
 REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM geox_mcft_cap09_forcing_writer_owner_v1;
-REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM geox_mcft_cap09_forcing_writer_owner_v1;
 
 GRANT SELECT,INSERT ON TABLE public.facts TO geox_mcft_cap09_forcing_writer_owner_v1;
 GRANT SELECT,UPDATE ON TABLE
@@ -53,7 +52,6 @@ REVOKE ALL ON SCHEMA public FROM geox_mcft_cap09_evidence_runtime_v1;
 GRANT USAGE ON SCHEMA public TO geox_mcft_cap09_evidence_runtime_v1;
 REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM geox_mcft_cap09_evidence_runtime_v1;
 REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM geox_mcft_cap09_evidence_runtime_v1;
-REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM geox_mcft_cap09_evidence_runtime_v1;
 GRANT SELECT ON TABLE public.facts TO geox_mcft_cap09_evidence_runtime_v1;
 GRANT SELECT,INSERT,UPDATE ON TABLE
   public.twin_external_formal_forcing_base_cursor_v1,
@@ -62,18 +60,9 @@ GRANT SELECT,INSERT,UPDATE ON TABLE
 TO geox_mcft_cap09_evidence_runtime_v1;
 
 -- Create/replace the SECURITY DEFINER function while explicitly SET ROLE to its
--- final NOLOGIN owner. Existing functions need a temporary self-EXECUTE grant so
--- the PL/pgSQL validator can inspect the already-owned routine during replacement.
-DO $temp_writer_execute$
-BEGIN
-  IF pg_catalog.to_regprocedure(
-    'public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)'
-  ) IS NOT NULL THEN
-    EXECUTE 'GRANT EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb) TO geox_mcft_cap09_forcing_writer_owner_v1';
-  END IF;
-END
-$temp_writer_execute$;
-
+-- final NOLOGIN owner. Function ownership already carries the authority required
+-- to replace an existing owner-matched routine; no provisioning-admin EXECUTE
+-- grant is needed.
 GRANT CREATE ON SCHEMA public TO geox_mcft_cap09_forcing_writer_owner_v1;
 SET ROLE geox_mcft_cap09_forcing_writer_owner_v1;
 
@@ -309,12 +298,6 @@ $function$;
 RESET ROLE;
 REVOKE CREATE ON SCHEMA public FROM geox_mcft_cap09_forcing_writer_owner_v1;
 
-SET ROLE geox_mcft_cap09_forcing_writer_owner_v1;
-REVOKE EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
-  text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
-) FROM geox_mcft_cap09_forcing_writer_owner_v1;
-RESET ROLE;
-
 DO $owner_check$
 DECLARE
   v_function oid;
@@ -340,6 +323,7 @@ BEGIN
 END
 $owner_check$;
 
+SET ROLE geox_mcft_cap09_forcing_writer_owner_v1;
 REVOKE ALL ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
   text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
 ) FROM PUBLIC;
@@ -356,9 +340,11 @@ BEGIN
 END
 $revoke_twin$;
 
-COMMENT ON ROLE geox_mcft_cap09_forcing_writer_owner_v1 IS
-  'MCFT-CAP-09 post-merge v13 NOLOGIN exact-base forcing writer owner: narrow facts append plus forcing row-lock authority only.';
 COMMENT ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
   text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
 ) IS
   'Evidence Runtime-only exact-base append: current controller+producer fences, exact three governed forcing facts, one transaction, zero cursor advancement.';
+RESET ROLE;
+
+COMMENT ON ROLE geox_mcft_cap09_forcing_writer_owner_v1 IS
+  'MCFT-CAP-09 post-merge v13 NOLOGIN exact-base forcing writer owner: narrow facts append plus forcing row-lock authority only.';

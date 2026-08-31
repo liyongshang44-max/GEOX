@@ -35,8 +35,6 @@ REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public
   FROM geox_mcft_cap09_twin_runtime_v1;
 REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public
   FROM geox_mcft_cap09_twin_runtime_v1;
-REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public
-  FROM geox_mcft_cap09_twin_runtime_v1;
 
 -- Canonical fact authority: append and read only.
 GRANT SELECT, INSERT

@@ -23,7 +23,6 @@ REVOKE ALL ON SCHEMA public FROM geox_mcft_cap09_twin_writer_owner_v1;
 GRANT USAGE ON SCHEMA public TO geox_mcft_cap09_twin_writer_owner_v1;
 REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM geox_mcft_cap09_twin_writer_owner_v1;
 REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM geox_mcft_cap09_twin_writer_owner_v1;
-REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM geox_mcft_cap09_twin_writer_owner_v1;
 GRANT SELECT,INSERT ON TABLE public.facts TO geox_mcft_cap09_twin_writer_owner_v1;
 GRANT SELECT,UPDATE ON TABLE public.twin_runtime_lease_v1 TO geox_mcft_cap09_twin_writer_owner_v1;
 
@@ -93,7 +92,8 @@ GRANT CREATE ON SCHEMA public TO geox_mcft_cap09_twin_writer_owner_v1;
 ALTER FUNCTION public.mcft_cap09_twin_runtime_append_fact_v1(text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb)
  OWNER TO geox_mcft_cap09_twin_writer_owner_v1;
 REVOKE CREATE ON SCHEMA public FROM geox_mcft_cap09_twin_writer_owner_v1;
+SET ROLE geox_mcft_cap09_twin_writer_owner_v1;
 REVOKE ALL ON FUNCTION public.mcft_cap09_twin_runtime_append_fact_v1(text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.mcft_cap09_twin_runtime_append_fact_v1(text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb) FROM geox_mcft_cap09_twin_writer_owner_v1;
 GRANT EXECUTE ON FUNCTION public.mcft_cap09_twin_runtime_append_fact_v1(text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb) TO geox_mcft_cap09_twin_runtime_v1;
+RESET ROLE;
 COMMENT ON ROLE geox_mcft_cap09_twin_writer_owner_v1 IS 'MCFT-CAP-09 Phase5 NOLOGIN fenced Twin canonical fact writer owner.';

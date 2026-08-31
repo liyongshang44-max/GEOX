@@ -40,11 +40,9 @@ GRANT USAGE ON SCHEMA public TO geox_mcft_cap09_evidence_writer_owner_v1;
 -- Deny-by-default over all currently materialized application objects.
 REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM geox_mcft_cap09_evidence_runtime_v1;
 REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM geox_mcft_cap09_evidence_runtime_v1;
-REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM geox_mcft_cap09_evidence_runtime_v1;
 
 REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM geox_mcft_cap09_evidence_writer_owner_v1;
 REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM geox_mcft_cap09_evidence_writer_owner_v1;
-REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM geox_mcft_cap09_evidence_writer_owner_v1;
 
 -- Evidence Runtime may read governed facts for fresh post-COMMIT visibility.
 -- It MUST NOT have arbitrary INSERT/UPDATE/DELETE authority on public.facts.
@@ -220,23 +218,24 @@ ALTER FUNCTION public.mcft_cap09_evidence_runtime_append_fact_v1(
 ) OWNER TO geox_mcft_cap09_evidence_writer_owner_v1;
 REVOKE CREATE ON SCHEMA public FROM geox_mcft_cap09_evidence_writer_owner_v1;
 
+-- Function ACL is owner-scoped. The delegated provisioning admin intentionally
+-- does not inherit writer-owner authority, so execute the owner-sensitive ACL and
+-- function comment while explicitly SET ROLE to the final NOLOGIN owner.
+SET ROLE geox_mcft_cap09_evidence_writer_owner_v1;
 REVOKE ALL ON FUNCTION public.mcft_cap09_evidence_runtime_append_fact_v1(
   text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb
 ) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.mcft_cap09_evidence_runtime_append_fact_v1(
-  text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb
-) FROM geox_mcft_cap09_evidence_writer_owner_v1;
 GRANT EXECUTE ON FUNCTION public.mcft_cap09_evidence_runtime_append_fact_v1(
   text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb
 ) TO geox_mcft_cap09_evidence_runtime_v1;
+COMMENT ON FUNCTION public.mcft_cap09_evidence_runtime_append_fact_v1(
+  text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb
+) IS
+  'Phase3 fenced External Evidence-only fact append. Rejects stale owner before INSERT and rejects all non-authorized/Twin canonical fact families.';
+RESET ROLE;
 
 COMMENT ON ROLE geox_mcft_cap09_evidence_runtime_v1 IS
   'MCFT-CAP-09 Evidence Runtime role: governed Evidence function + facts readback + Evidence lease/supply cursor + v13 forcing acquisition cursor/target/controller state; no arbitrary facts INSERT or Twin Runtime state authority.';
 
 COMMENT ON ROLE geox_mcft_cap09_evidence_writer_owner_v1 IS
   'MCFT-CAP-09 Phase3 NOLOGIN SECURITY DEFINER owner: narrow External Evidence fact append authority only.';
-
-COMMENT ON FUNCTION public.mcft_cap09_evidence_runtime_append_fact_v1(
-  text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb
-) IS
-  'Phase3 fenced External Evidence-only fact append. Rejects stale owner before INSERT and rejects all non-authorized/Twin canonical fact families.';
