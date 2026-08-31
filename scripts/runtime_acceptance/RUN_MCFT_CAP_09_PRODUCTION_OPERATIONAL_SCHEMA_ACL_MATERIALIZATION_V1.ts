@@ -100,6 +100,33 @@ async function main(){
         END
         $roles$;
       `);
+      const ownerRoles=(await pool.query<{
+        rolname:string;rolcanlogin:boolean;rolinherit:boolean;rolsuper:boolean;
+        rolcreatedb:boolean;rolcreaterole:boolean;rolreplication:boolean;rolbypassrls:boolean;
+      }>(
+        "SELECT rolname,rolcanlogin,rolinherit,rolsuper,rolcreatedb,rolcreaterole,rolreplication,rolbypassrls FROM pg_catalog.pg_roles WHERE rolname=ANY($1::text[]) ORDER BY rolname",
+        [[
+          "geox_mcft_cap09_evidence_writer_owner_v1",
+          "geox_mcft_cap09_forcing_writer_owner_v1",
+          "geox_mcft_cap09_twin_writer_owner_v1",
+        ]],
+      )).rows;
+      assert.equal(ownerRoles.length,3,"OP_SCHEMA_ACL_EXACT_WRITER_OWNER_ROLES_REQUIRED");
+      const expectedInherit=new Map<string,boolean>([
+        ["geox_mcft_cap09_evidence_writer_owner_v1",true],
+        ["geox_mcft_cap09_forcing_writer_owner_v1",false],
+        ["geox_mcft_cap09_twin_writer_owner_v1",false],
+      ]);
+      for(const role of ownerRoles){
+        assert.equal(role.rolcanlogin,false,"OP_SCHEMA_ACL_WRITER_OWNER_LOGIN_FORBIDDEN:"+role.rolname);
+        assert.equal(role.rolinherit,expectedInherit.get(role.rolname),"OP_SCHEMA_ACL_WRITER_OWNER_INHERIT_MISMATCH:"+role.rolname);
+        assert.equal(role.rolsuper,false,"OP_SCHEMA_ACL_WRITER_OWNER_SUPERUSER_FORBIDDEN:"+role.rolname);
+        assert.equal(role.rolcreatedb,false,"OP_SCHEMA_ACL_WRITER_OWNER_CREATEDB_FORBIDDEN:"+role.rolname);
+        assert.equal(role.rolcreaterole,false,"OP_SCHEMA_ACL_WRITER_OWNER_CREATEROLE_FORBIDDEN:"+role.rolname);
+        assert.equal(role.rolreplication,false,"OP_SCHEMA_ACL_WRITER_OWNER_REPLICATION_FORBIDDEN:"+role.rolname);
+        assert.equal(role.rolbypassrls,false,"OP_SCHEMA_ACL_WRITER_OWNER_BYPASSRLS_FORBIDDEN:"+role.rolname);
+      }
+
       for(const role of [
         "geox_mcft_cap09_evidence_writer_owner_v1",
         "geox_mcft_cap09_twin_writer_owner_v1",
