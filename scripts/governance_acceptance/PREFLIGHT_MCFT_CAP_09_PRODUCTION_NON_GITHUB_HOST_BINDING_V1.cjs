@@ -91,9 +91,11 @@ try {
     a.authority_id === "GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1",
     "HOST_BINDING_AUTHORITY_ID_REQUIRED",
   );
+  const platformAuthorizedPreIdentity =
+    a.status === "RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND";
   req(
-    a.status === "HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND",
-    "HOST_BINDING_UNBOUND_STATUS_REQUIRED",
+    a.status === "HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND" || platformAuthorizedPreIdentity,
+    "HOST_BINDING_AUTHORITY_STATUS_REQUIRED",
   );
   const checkpoint = a.pre_platform_checkpoint_evidence;
   req(
@@ -253,36 +255,78 @@ try {
   );
 
   const b = a.binding_state || {};
-  for (const key of [
-    "platform_selected",
-    "evidence_host_identity_bound",
-    "twin_host_identity_bound",
-    "exact_two_runtime_service_identities_bound",
-    "binding_authorized",
-  ]) {
-    req(b[key] === false, "HOST_BINDING_UNBOUND_STATE_REQUIRED:" + key);
+  if (platformAuthorizedPreIdentity) {
+    req(b.platform_selected === true, "HOST_BINDING_RENDER_PLATFORM_SELECTED_REQUIRED");
+    for (const key of [
+      "evidence_host_identity_bound",
+      "twin_host_identity_bound",
+      "exact_two_runtime_service_identities_bound",
+      "binding_authorized",
+    ]) req(b[key] === false, "HOST_BINDING_PRE_IDENTITY_STATE_REQUIRED:" + key);
+  } else {
+    for (const key of [
+      "platform_selected",
+      "evidence_host_identity_bound",
+      "twin_host_identity_bound",
+      "exact_two_runtime_service_identities_bound",
+      "binding_authorized",
+    ]) req(b[key] === false, "HOST_BINDING_UNBOUND_STATE_REQUIRED:" + key);
   }
 
   req(
     a.next_stage?.stage === "BIND_REAL_NON_GITHUB_PLATFORM_SERVICE_IDENTITIES" &&
-      a.next_stage?.status === "BLOCKED_ON_EXTERNAL_PLATFORM_AND_SERVICE_IDENTITIES" &&
-      a.next_stage?.external_platform_selection_required === true &&
       a.next_stage?.external_service_provisioning_or_existing_identity_required === true,
     "HOST_BINDING_NEXT_STAGE_REQUIRED",
   );
+  if (platformAuthorizedPreIdentity) {
+    req(
+      a.next_stage?.status === "RENDER_PLATFORM_AUTHORIZED_AWAITING_SAFE_SERVICE_IDENTITY_PROVISIONING" &&
+        a.next_stage?.external_platform_selection_required === false &&
+        a.next_stage?.safe_zero_runtime_identity_provisioning_required === true &&
+        a.next_stage?.safe_zero_runtime_identity_provisioning_status === "NOT_PROVEN" &&
+        a.next_stage?.standard_render_create_service_initial_deploy_allowed === false &&
+        a.next_stage?.create_then_suspend_race_allowed === false,
+      "HOST_BINDING_AUTHORIZED_PRE_IDENTITY_NEXT_STAGE_REQUIRED",
+    );
+  } else {
+    req(
+      a.next_stage?.status === "BLOCKED_ON_EXTERNAL_PLATFORM_AND_SERVICE_IDENTITIES" &&
+        a.next_stage?.external_platform_selection_required === true,
+      "HOST_BINDING_UNAUTHORIZED_NEXT_STAGE_REQUIRED",
+    );
+  }
   req(
-    a.platform_evaluation?.status === "RECOMMENDED_CANDIDATE_NOT_SELECTED" &&
-      a.platform_evaluation?.recommended_candidate?.platform_provider === "RENDER" &&
+    a.platform_evaluation?.recommended_candidate?.platform_provider === "RENDER" &&
       a.platform_evaluation?.recommended_candidate?.service_class === "BACKGROUND_WORKER" &&
       a.platform_evaluation?.recommended_candidate?.preferred_region === "OREGON_USA" &&
       a.platform_evaluation?.recommended_candidate?.cost_bearing_external_resource === true &&
-      a.platform_evaluation?.recommended_candidate?.user_or_external_account_authority_required_before_selection === true &&
-      a.platform_evaluation?.platform_selected === false,
+      a.platform_evaluation?.recommended_candidate?.user_or_external_account_authority_required_before_selection === true,
     "HOST_BINDING_PLATFORM_RECOMMENDATION_BOUNDARY_REQUIRED",
   );
+  if (platformAuthorizedPreIdentity) {
+    req(
+      a.platform_evaluation?.status === "SELECTED_AUTHORIZED" &&
+        a.platform_evaluation?.platform_selected === true &&
+        a.platform_evaluation?.selected_candidate?.platform_provider === "RENDER" &&
+        a.platform_evaluation?.selected_candidate?.service_class === "BACKGROUND_WORKER" &&
+        a.platform_evaluation?.selected_candidate?.preferred_region === "OREGON_USA" &&
+        a.platform_evaluation?.selected_candidate?.selection_authorized === true &&
+        a.platform_evaluation?.selected_candidate?.service_creation_authorized === true &&
+        a.platform_evaluation?.selected_candidate?.host_identity_binding_authorized === true &&
+        a.platform_evaluation?.selected_candidate?.runtime_start_authorized === false,
+      "HOST_BINDING_RENDER_SELECTION_AUTHORITY_REQUIRED",
+    );
+  } else {
+    req(
+      a.platform_evaluation?.status === "RECOMMENDED_CANDIDATE_NOT_SELECTED" &&
+        a.platform_evaluation?.platform_selected === false,
+      "HOST_BINDING_RENDER_SELECTION_MUST_REMAIN_UNAUTHORIZED",
+    );
+  }
   const render = a.render_candidate_binding_contract;
   req(
-    render?.status === "CANDIDATE_SCHEMA_DEFINED_NOT_AUTHORIZED" &&
+    (render?.status === "CANDIDATE_SCHEMA_DEFINED_NOT_AUTHORIZED" ||
+      render?.status === "AUTHORIZED_FOR_IDENTITY_PROVISIONING_UNBOUND") &&
       render?.platform_provider === "RENDER" &&
       render?.workspace_owner_id === null &&
       render?.region === "oregon" &&
@@ -300,24 +344,37 @@ try {
       render?.twin_runtime?.runtime_role === "TWIN_RUNTIME",
     "HOST_BINDING_RENDER_SERVICE_IDENTITY_CANDIDATES_REQUIRED",
   );
+  req(render?.service_creation_not_authorized === !platformAuthorizedPreIdentity, "HOST_BINDING_RENDER_SERVICE_CREATION_AUTHORITY_MISMATCH");
   for (const key of [
     "deployment_configuration_not_authorized",
-    "service_creation_not_authorized",
     "runtime_secret_injection_not_authorized",
     "runtime_start_not_authorized",
     "production_owner_activation_not_authorized",
-  ]) {
-    req(render?.[key] === true, "HOST_BINDING_RENDER_EFFECT_AUTHORITY_MUST_REMAIN_FALSE:" + key);
+  ]) req(render?.[key] === true, "HOST_BINDING_RENDER_EFFECT_AUTHORITY_MUST_REMAIN_FALSE:" + key);
+  if (platformAuthorizedPreIdentity) {
+    req(
+      render?.safe_zero_runtime_identity_provisioning_required === true &&
+        render?.safe_zero_runtime_identity_provisioning_status === "NOT_PROVEN" &&
+        render?.standard_create_service_initial_deploy_allowed === false &&
+        render?.create_then_suspend_race_allowed === false,
+      "HOST_BINDING_RENDER_ZERO_RUNTIME_PROVISIONING_GUARD_REQUIRED",
+    );
   }
   req(
     a.next_stage?.recommended_platform_candidate === "RENDER_BACKGROUND_WORKER" &&
       a.next_stage?.recommended_region === "OREGON_USA" &&
-      a.next_stage?.platform_selection_status === "RECOMMENDED_NOT_AUTHORIZED" &&
+      a.next_stage?.platform_selection_status === (platformAuthorizedPreIdentity ? "AUTHORIZED_SELECTED" : "RECOMMENDED_NOT_AUTHORIZED") &&
       a.next_stage?.render_candidate_binding_schema_defined === true &&
       a.next_stage?.render_workspace_owner_id_status === "UNBOUND" &&
       a.next_stage?.render_evidence_service_id_status === "UNBOUND" &&
       a.next_stage?.render_twin_service_id_status === "UNBOUND",
     "HOST_BINDING_RENDER_NEXT_STAGE_BOUNDARY_REQUIRED",
+  );
+  req(
+    a.next_stage?.platform_selection_authorized === platformAuthorizedPreIdentity &&
+      a.next_stage?.service_creation_authorized === platformAuthorizedPreIdentity &&
+      a.next_stage?.host_identity_binding_authorized === platformAuthorizedPreIdentity,
+    "HOST_BINDING_EXTERNAL_AUTHORITY_PROJECTION_REQUIRED",
   );
   req(
     a.next_stage?.runtime_start_separate === true &&
@@ -334,16 +391,16 @@ try {
   req(
     hostArm.schema_version === "geox_mcft_cap09_production_non_github_host_binding_arm_v1" &&
       hostArm.armed === false &&
-      hostArm.platform_selection_authorized === false &&
-      hostArm.platform_provider === null &&
+      hostArm.platform_selection_authorized === platformAuthorizedPreIdentity &&
+      hostArm.platform_provider === (platformAuthorizedPreIdentity ? "RENDER" : null) &&
       hostArm.platform_account_or_project_id === null &&
-      hostArm.region_or_location === null &&
+      hostArm.region_or_location === (platformAuthorizedPreIdentity ? "oregon" : null) &&
       hostArm.evidence_service_id === null &&
-      hostArm.evidence_service_name === null &&
+      hostArm.evidence_service_name === (platformAuthorizedPreIdentity ? "geox-mcft-cap09-evidence-runtime-v1" : null) &&
       hostArm.twin_service_id === null &&
-      hostArm.twin_service_name === null &&
-      hostArm.service_creation_authorized === false &&
-      hostArm.host_identity_binding_authorized === false &&
+      hostArm.twin_service_name === (platformAuthorizedPreIdentity ? "geox-mcft-cap09-twin-runtime-v1" : null) &&
+      hostArm.service_creation_authorized === platformAuthorizedPreIdentity &&
+      hostArm.host_identity_binding_authorized === platformAuthorizedPreIdentity &&
       hostArm.runtime_secret_injection_authorized === false &&
       hostArm.deployment_authorized === false &&
       hostArm.runtime_process_start_authorized === false &&
@@ -351,8 +408,9 @@ try {
       hostArm.formal_v5_arm_authorized === false &&
       hostArm.a0_authorized === false &&
       hostArm.o00_authorized === false,
-    "HOST_BINDING_SEPARATE_ARM_MUST_REMAIN_ZERO_STATE",
+    "HOST_BINDING_SEPARATE_ARM_AUTHORITY_STATE_REQUIRED",
   );
+  if (platformAuthorizedPreIdentity) req(hostArm.safe_zero_runtime_identity_provisioning_required === true, "HOST_BINDING_ARM_ZERO_RUNTIME_PROVISIONING_GUARD_REQUIRED");
 
   for (const key of [
     "external_host_provisioning",
@@ -387,18 +445,27 @@ try {
   write({
     schema_version: "geox_mcft_cap09_production_non_github_host_binding_preflight_v1",
     status: "PASS",
-    stage: "NON_GITHUB_HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND",
+    stage: platformAuthorizedPreIdentity ? "RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND" : "NON_GITHUB_HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND",
     subject_sha: subjectSha,
     production_execution_host_class: a.production_execution_host_class,
     evidence_runtime_role: a.host_identity_contract.evidence_runtime.runtime_role,
     twin_runtime_role: a.host_identity_contract.twin_runtime.runtime_role,
-    platform_selected: false,
+    platform_selected: platformAuthorizedPreIdentity,
+    platform_selection_authorized: platformAuthorizedPreIdentity,
+    service_creation_authorized: platformAuthorizedPreIdentity,
+    host_identity_binding_authorized: platformAuthorizedPreIdentity,
     evidence_host_identity_bound: false,
     twin_host_identity_bound: false,
     exact_two_runtime_service_identities_bound: false,
     binding_authorized: false,
     pre_platform_checkpoint_evidence_bound: true,
-    remaining_blockers: [
+    remaining_blockers: platformAuthorizedPreIdentity ? [
+      "RENDER_WORKSPACE_OWNER_ID_NOT_BOUND",
+      "RENDER_ZERO_RUNTIME_IDENTITY_PROVISIONING_PATH_NOT_PROVEN",
+      "RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",
+      "RENDER_TWIN_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",
+      "NON_GITHUB_HOST_BINDING_NOT_COMPLETE",
+    ] : [
       "RENDER_PLATFORM_SELECTION_NOT_AUTHORIZED",
       "RENDER_WORKSPACE_OWNER_ID_NOT_BOUND",
       "RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",

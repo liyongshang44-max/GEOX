@@ -127,6 +127,52 @@ try {
     process.exit(0);
   }
 
+  const platformAuthorizedPreIdentity =
+    a.status === "RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND" &&
+    b.platform_selected === true &&
+    b.evidence_host_identity_bound === false &&
+    b.twin_host_identity_bound === false &&
+    b.exact_two_runtime_service_identities_bound === false &&
+    b.binding_authorized === false &&
+    evidence === null &&
+    twin === null;
+  if (platformAuthorizedPreIdentity) {
+    assert(a.next_stage?.platform_selection_authorized === true && a.next_stage?.service_creation_authorized === true && a.next_stage?.host_identity_binding_authorized === true, "HOST_BINDING_READINESS_EXTERNAL_AUTHORITY_REQUIRED");
+    assert(a.render_candidate_binding_contract?.workspace_owner_id === null && a.render_candidate_binding_contract?.evidence_runtime?.service_id === null && a.render_candidate_binding_contract?.twin_runtime?.service_id === null, "HOST_BINDING_READINESS_RENDER_IDENTITIES_MUST_REMAIN_UNBOUND");
+    assert(a.render_candidate_binding_contract?.safe_zero_runtime_identity_provisioning_required === true && a.render_candidate_binding_contract?.safe_zero_runtime_identity_provisioning_status === "NOT_PROVEN" && a.render_candidate_binding_contract?.standard_create_service_initial_deploy_allowed === false && a.render_candidate_binding_contract?.create_then_suspend_race_allowed === false, "HOST_BINDING_READINESS_ZERO_RUNTIME_PROVISIONING_GUARD_REQUIRED");
+    write({
+      schema_version: "geox_mcft_cap09_production_non_github_host_binding_readiness_v1",
+      status: "PASS",
+      stage: "RENDER_PLATFORM_AUTHORIZED_AWAITING_SAFE_SERVICE_IDENTITIES",
+      subject_sha: subjectSha,
+      production_execution_host_class: a.production_execution_host_class,
+      platform_selected: true,
+      platform_provider: "RENDER",
+      region_or_location: "oregon",
+      platform_selection_authorized: true,
+      service_creation_authorized: true,
+      host_identity_binding_authorized: true,
+      evidence_host_identity_bound: false,
+      twin_host_identity_bound: false,
+      exact_two_runtime_service_identities_bound: false,
+      binding_authorized: false,
+      remaining_blockers: [
+        "RENDER_WORKSPACE_OWNER_ID_NOT_BOUND",
+        "RENDER_ZERO_RUNTIME_IDENTITY_PROVISIONING_PATH_NOT_PROVEN",
+        "RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",
+        "RENDER_TWIN_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",
+        "NON_GITHUB_HOST_BINDING_NOT_COMPLETE",
+      ],
+      runtime_process_start: false,
+      production_owner_activation: false,
+      provider_request_count: 0,
+      formal_v5_arm: false,
+      a0_bootstrap: false,
+      o00_started: false,
+    });
+    process.exit(0);
+  }
+
   assert(b.platform_selected === true, "HOST_BINDING_READINESS_PLATFORM_SELECTED_REQUIRED");
   assert(b.evidence_host_identity_bound === true, "HOST_BINDING_READINESS_EVIDENCE_IDENTITY_BOUND_REQUIRED");
   assert(b.twin_host_identity_bound === true, "HOST_BINDING_READINESS_TWIN_IDENTITY_BOUND_REQUIRED");
