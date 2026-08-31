@@ -66,8 +66,8 @@ jobs:
           if(![0,2].includes(passwordSecretCount))throw new Error('OWNER_PROVISIONING_PARTIAL_PASSWORD_SECRET_STATE_FORBIDDEN');
           const remaining=[
             'SERVICE_LOGIN_BOOTSTRAP_NOT_AUTHORIZED',
-            'EVIDENCE_RUNTIME_BOOTSTRAP_PASSWORD_SECRET_NOT_BOUND',
-            'TWIN_RUNTIME_BOOTSTRAP_PASSWORD_SECRET_NOT_BOUND',
+            ...(secretState.evidence_runtime_password?[]:['EVIDENCE_RUNTIME_BOOTSTRAP_PASSWORD_SECRET_NOT_BOUND']),
+            ...(secretState.twin_runtime_password?[]:['TWIN_RUNTIME_BOOTSTRAP_PASSWORD_SECRET_NOT_BOUND']),
             'EVIDENCE_LOGIN_ROLE_NOT_PRESENT',
             'TWIN_LOGIN_ROLE_NOT_PRESENT',
             'RUNTIME_CREDENTIAL_BINDING_NOT_AUTHORIZED',
