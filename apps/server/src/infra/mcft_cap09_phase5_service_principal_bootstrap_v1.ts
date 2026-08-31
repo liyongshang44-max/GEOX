@@ -3,7 +3,7 @@
 
 import {
   bootstrapMcftCap09Phase5ServicePrincipalsV1,
-} from "./mcft_cap09_phase5_service_principal_v1.js";
+} from "./mcft_cap09_phase5_service_principal_provisioning_v1.js";
 
 function requiredEnvV1(name: string): string {
   const value = String(process.env[name] ?? "").trim();

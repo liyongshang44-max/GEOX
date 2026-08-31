@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { Pool } from "pg";
-import { bootstrapMcftCap09Phase5ServicePrincipalsV1 } from "../../apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.js";
+import { bootstrapMcftCap09Phase5ServicePrincipalsV1 } from "../../apps/server/src/infra/mcft_cap09_phase5_service_principal_provisioning_v1.js";
 
 const ROOT=process.cwd();
 const OUT=path.join(ROOT,"acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_BUNDLE_POSTGRES_V1_RESULT.json");
@@ -91,7 +91,7 @@ async function main(){
     assert.equal(tables,41,"OWNER_PROVISIONING_EXACT_41_TABLE_HOST_SCHEMA_REQUIRED");
 
     // Mirror the real one-shot materializer: owner roles are safe NOLOGIN roles and
-    // delegated admin receives SET membership only for the ownership-transfer window.
+    // delegated admin receives transient SET+INHERIT membership only for the owner-sensitive migration window.
     for(const [role,inherit] of WRITER_OWNER_ROLES){
       await pool.query(
         `CREATE ROLE ${role} NOLOGIN ${inherit?"INHERIT":"NOINHERIT"} NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS`,
@@ -102,13 +102,13 @@ async function main(){
       )).rows[0]?.ok;
       assert.equal(beforeSet,false,`OWNER_PROVISIONING_AUTOMATIC_ADMIN_GRANT_MUST_NOT_ENABLE_SET:${role}`);
       await pool.query(`GRANT ${role} TO CURRENT_USER WITH SET TRUE`);
-      await pool.query(`GRANT ${role} TO CURRENT_USER WITH INHERIT FALSE`);
+      await pool.query(`GRANT ${role} TO CURRENT_USER WITH INHERIT TRUE`);
       const tempGrant=(await pool.query<{inherit_option:boolean;set_option:boolean}>(
         "SELECT inherit_option,set_option FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid JOIN pg_catalog.pg_roles member ON member.oid=m.member JOIN pg_catalog.pg_roles grantor ON grantor.oid=m.grantor WHERE granted.rolname=$1 AND member.rolname=current_user AND grantor.rolname=current_user",
         [role],
       )).rows;
       assert.equal(tempGrant.length,1,`OWNER_PROVISIONING_EXACT_ONE_TEMP_SELF_GRANT_REQUIRED:${role}`);
-      assert.equal(tempGrant[0]?.inherit_option,false,`OWNER_PROVISIONING_TEMP_INHERIT_FORBIDDEN:${role}`);
+      assert.equal(tempGrant[0]?.inherit_option,true,`OWNER_PROVISIONING_TEMP_INHERIT_REQUIRED:${role}`);
       assert.equal(tempGrant[0]?.set_option,true,`OWNER_PROVISIONING_TEMP_SET_OPTION_REQUIRED:${role}`);
       const canSet=(await pool.query<{ok:boolean}>(
         "SELECT pg_catalog.pg_has_role(current_user,$1,'SET') AS ok",

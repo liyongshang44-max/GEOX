@@ -6,12 +6,14 @@ import { Pool, type PoolClient } from "pg";
 
 import {
   assertMcftCap09ServicePrincipalV1,
-  bootstrapMcftCap09Phase5ServicePrincipalsV1,
   MCFT_CAP09_EVIDENCE_RUNTIME_LOGIN_ROLE_V1,
   MCFT_CAP09_EVIDENCE_RUNTIME_PRIVILEGE_ROLE_V1,
   MCFT_CAP09_TWIN_RUNTIME_LOGIN_ROLE_V1,
   MCFT_CAP09_TWIN_RUNTIME_PRIVILEGE_ROLE_V1,
 } from "../../apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.js";
+import {
+  bootstrapMcftCap09Phase5ServicePrincipalsV1,
+} from "../../apps/server/src/infra/mcft_cap09_phase5_service_principal_provisioning_v1.js";
 
 const OUT = path.resolve(
   "acceptance-output/MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1_RESULT.json",

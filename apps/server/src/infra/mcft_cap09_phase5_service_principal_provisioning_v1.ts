@@ -1,8 +1,9 @@
-// MCFT-CAP-09 Production Hosting Phase 5: service login principals.
+// MCFT-CAP-09 Production Hosting Phase 5: provisioning-only service LOGIN bootstrap.
 //
-// Phase3/Phase4 define NOLOGIN privilege roles. This module provisions two separate
-// LOGIN principals whose only role membership is the corresponding Evidence/Twin
-// privilege role. Passwords are runtime bootstrap inputs and never live in migrations.
+// Keep this module outside the Evidence/Twin runtime import closure. Runtime identity
+// assertion remains frozen in mcft_cap09_phase5_service_principal_v1.ts; Neon-specific
+// delegated provisioning hardening belongs here so production-host portability does
+// not invalidate an already-qualified V13 runtime dependency digest.
 
 import { Pool } from "pg";
 
@@ -139,8 +140,16 @@ async function assertLoginRoleSafeV1(
     throw new Error(`PHASE5_SERVICE_LOGIN_ROLE_UNSAFE:${roleName}`);
   }
 
-  const memberships = await pool.query<{ role_name: string }>(
-    `SELECT granted.rolname AS role_name
+  const memberships = await pool.query<{
+    role_name: string;
+    admin_option: boolean;
+    inherit_option: boolean;
+    set_option: boolean;
+  }>(
+    `SELECT granted.rolname AS role_name,
+            membership.admin_option,
+            membership.inherit_option,
+            membership.set_option
        FROM pg_catalog.pg_auth_members membership
        JOIN pg_catalog.pg_roles granted ON granted.oid=membership.roleid
       WHERE membership.member=$1
@@ -162,8 +171,54 @@ async function assertLoginRoleSafeV1(
     || row.rolinherit !== true
     || names.length !== 1
     || names[0] !== expectedPrivilegeRole
+    || memberships.rows[0]?.admin_option !== false
+    || memberships.rows[0]?.inherit_option !== true
+    || memberships.rows[0]?.set_option !== false
   ) {
     throw new Error(`PHASE5_SERVICE_LOGIN_ROLE_EXACT_MEMBERSHIP_REQUIRED:${roleName}`);
+  }
+}
+
+async function assertLoginRoleNoDirectPublicAclV1(
+  pool: Pool,
+  roleName: string,
+): Promise<void> {
+  const direct = await pool.query<{
+    relation_grants: number;
+    routine_grants: number;
+    schema_grants: number;
+  }>(
+    `WITH target AS (
+       SELECT oid FROM pg_catalog.pg_roles WHERE rolname=$1
+     )
+     SELECT
+       (SELECT count(*)::int
+          FROM pg_catalog.pg_class object
+          JOIN pg_catalog.pg_namespace namespace ON namespace.oid=object.relnamespace
+          CROSS JOIN LATERAL pg_catalog.aclexplode(object.relacl) acl
+          JOIN target ON target.oid=acl.grantee
+         WHERE namespace.nspname='public') AS relation_grants,
+       (SELECT count(*)::int
+          FROM pg_catalog.pg_proc routine
+          JOIN pg_catalog.pg_namespace namespace ON namespace.oid=routine.pronamespace
+          CROSS JOIN LATERAL pg_catalog.aclexplode(routine.proacl) acl
+          JOIN target ON target.oid=acl.grantee
+         WHERE namespace.nspname='public') AS routine_grants,
+       (SELECT count(*)::int
+          FROM pg_catalog.pg_namespace namespace
+          CROSS JOIN LATERAL pg_catalog.aclexplode(namespace.nspacl) acl
+          JOIN target ON target.oid=acl.grantee
+         WHERE namespace.nspname='public') AS schema_grants`,
+    [roleName],
+  );
+  const row = direct.rows[0];
+  if (
+    row === undefined
+    || row.relation_grants !== 0
+    || row.routine_grants !== 0
+    || row.schema_grants !== 0
+  ) {
+    throw new Error(`PHASE5_SERVICE_LOGIN_ROLE_DIRECT_PUBLIC_ACL_FORBIDDEN:${roleName}`);
   }
 }
 
@@ -178,71 +233,80 @@ async function provisionOneV1(
   const spec = specV1(input.kind);
   await assertLoginRoleSafeV1(pool, spec.login_role);
 
+  const password = requiredTextV1(
+    input.password,
+    "PHASE5_SERVICE_PASSWORD_REQUIRED",
+  );
   const exists = await pool.query<{ present: boolean }>(
     "SELECT EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE rolname=$1) AS present",
     [spec.login_role],
   );
   if (exists.rows[0]?.present !== true) {
     await pool.query(
-      await formattedSqlV1(pool, "CREATE ROLE %I", [spec.login_role]),
+      await formattedSqlV1(
+        pool,
+        "CREATE ROLE %I LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD %L",
+        [spec.login_role, password],
+      ),
     );
+  } else {
+    const shape = await pool.query<{ rolcanlogin: boolean; rolinherit: boolean }>(
+      "SELECT rolcanlogin,rolinherit FROM pg_catalog.pg_roles WHERE rolname=$1",
+      [spec.login_role],
+    );
+    if (
+      shape.rows[0]?.rolcanlogin !== true
+      || shape.rows[0]?.rolinherit !== true
+    ) {
+      throw new Error(`PHASE5_SERVICE_LOGIN_ROLE_SHAPE_REQUIRED:${spec.login_role}`);
+    }
   }
 
-  await pool.query(
-    await formattedSqlV1(
-      pool,
-      "ALTER ROLE %I LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS",
-      [spec.login_role],
-    ),
-  );
+  // Existing roles are validated from pg_roles. Do not re-declare privileged
+  // SUPERUSER/REPLICATION/BYPASSRLS attributes with no-op ALTER ROLE clauses.
   await pool.query(
     await formattedSqlV1(pool, "ALTER ROLE %I RESET ALL", [spec.login_role]),
   );
   await pool.query(
     await formattedSqlV1(pool, "ALTER ROLE %I PASSWORD %L", [
       spec.login_role,
-      requiredTextV1(input.password, "PHASE5_SERVICE_PASSWORD_REQUIRED"),
+      password,
     ]),
   );
 
-  for (const objectKind of ["TABLES", "SEQUENCES", "FUNCTIONS"] as const) {
-    await pool.query(
-      await formattedSqlV1(
-        pool,
-        `REVOKE ALL ON ALL ${objectKind} IN SCHEMA public FROM %I`,
-        [spec.login_role],
-      ),
-    );
-  }
-  await pool.query(
-    await formattedSqlV1(
-      pool,
-      "REVOKE ALL ON SCHEMA public FROM %I",
-      [spec.login_role],
-    ),
-  );
+  // Do not attempt privileged blanket REVOKE against writer-owned objects.
+  // A new LOGIN has no direct grants; an existing LOGIN must already be clean.
+  await assertLoginRoleNoDirectPublicAclV1(pool, spec.login_role);
 
-  // Remove any previously allowed opposite-plane membership before establishing the
-  // exact one-role membership. Unexpected third-party memberships fail closed above.
-  for (const privilegeRole of [
-    MCFT_CAP09_EVIDENCE_RUNTIME_PRIVILEGE_ROLE_V1,
-    MCFT_CAP09_TWIN_RUNTIME_PRIVILEGE_ROLE_V1,
-  ]) {
+  const currentMemberships = await pool.query<{ role_name: string }>(
+    `SELECT granted.rolname AS role_name
+       FROM pg_catalog.pg_auth_members membership
+       JOIN pg_catalog.pg_roles granted ON granted.oid=membership.roleid
+       JOIN pg_catalog.pg_roles member ON member.oid=membership.member
+      WHERE member.rolname=$1
+      ORDER BY granted.rolname`,
+    [spec.login_role],
+  );
+  const currentNames = currentMemberships.rows.map((row) => row.role_name);
+  if (currentNames.some((name) => name !== spec.privilege_role)) {
+    throw new Error(`PHASE5_SERVICE_LOGIN_ROLE_OPPOSITE_MEMBERSHIP_FORBIDDEN:${spec.login_role}`);
+  }
+  if (!currentNames.includes(spec.privilege_role)) {
     await pool.query(
       await formattedSqlV1(
         pool,
-        "REVOKE %I FROM %I",
-        [privilegeRole, spec.login_role],
+        "GRANT %I TO %I WITH SET FALSE",
+        [spec.privilege_role, spec.login_role],
+      ),
+    );
+    await pool.query(
+      await formattedSqlV1(
+        pool,
+        "GRANT %I TO %I WITH INHERIT TRUE",
+        [spec.privilege_role, spec.login_role],
       ),
     );
   }
-  await pool.query(
-    await formattedSqlV1(
-      pool,
-      "GRANT %I TO %I",
-      [spec.privilege_role, spec.login_role],
-    ),
-  );
   await pool.query(
     await formattedSqlV1(
       pool,
@@ -251,6 +315,7 @@ async function provisionOneV1(
     ),
   );
 
+  await assertLoginRoleNoDirectPublicAclV1(pool, spec.login_role);
   await assertLoginRoleSafeV1(pool, spec.login_role, spec.privilege_role);
 }
 
@@ -325,29 +390,3 @@ export async function bootstrapMcftCap09Phase5ServicePrincipalsV1(input: {
   }
 }
 
-export async function assertMcftCap09ServicePrincipalV1(
-  pool: Pick<Pool, "query">,
-  kind: McftCap09ServicePrincipalKindV1,
-): Promise<void> {
-  const spec = specV1(kind);
-  const opposite = kind === "EVIDENCE_RUNTIME"
-    ? MCFT_CAP09_TWIN_RUNTIME_PRIVILEGE_ROLE_V1
-    : MCFT_CAP09_EVIDENCE_RUNTIME_PRIVILEGE_ROLE_V1;
-  const result = await pool.query<{
-    current_user: string;
-    privilege_usage: boolean;
-    opposite_usage: boolean;
-  }>(
-    `SELECT current_user::text AS current_user,
-            pg_catalog.pg_has_role(current_user,$1,'USAGE') AS privilege_usage,
-            pg_catalog.pg_has_role(current_user,$2,'USAGE') AS opposite_usage`,
-    [spec.privilege_role, opposite],
-  );
-  const row = result.rows[0];
-  if (!row || row.current_user !== spec.login_role) {
-    throw new Error(`PHASE5_SERVICE_PRINCIPAL_IDENTITY_MISMATCH:${kind}`);
-  }
-  if (row.privilege_usage !== true || row.opposite_usage !== false) {
-    throw new Error(`PHASE5_SERVICE_PRINCIPAL_MEMBERSHIP_MISMATCH:${kind}`);
-  }
-}
