@@ -54,8 +54,8 @@ jobs:
                AND (r.rolsuper OR r.rolcreatedb)
                AND pg_catalog.pg_has_role(current_user,r.oid,'MEMBER')
              ORDER BY r.rolsuper DESC,r.rolcreatedb DESC,r.rolname")
-          test "\${#creators[@]}" = "1"
-          test "\${creators[0]}" = "neon_superuser|false|true"
+          test "${#creators[@]}" = "1"
+          test "${creators[0]}" = "neon_superuser|false|true"
 
           preserved="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
             SELECT count(*)::int FROM pg_catalog.pg_database

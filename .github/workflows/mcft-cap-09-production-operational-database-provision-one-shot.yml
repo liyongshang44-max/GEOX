@@ -56,8 +56,8 @@ jobs:
                AND (r.rolsuper OR r.rolcreatedb)
                AND pg_catalog.pg_has_role(current_user,r.oid,'MEMBER')
              ORDER BY r.rolsuper DESC,r.rolcreatedb DESC,r.rolname")
-          test "\${#creators[@]}" = "1"
-          test "\${creators[0]}" = "neon_superuser|false|true"
+          test "${#creators[@]}" = "1"
+          test "${creators[0]}" = "neon_superuser|false|true"
 
       - name: Create only the dedicated empty operational database
         shell: bash
