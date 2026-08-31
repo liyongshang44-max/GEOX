@@ -1,0 +1,124 @@
+{
+  "schema_version": "b09z_action_window_semantics_decision_package_v1",
+  "phase": "B-09z",
+  "status": "RECOMMENDED_NOT_AUTHORIZED",
+  "authority_mode": "PRODUCT_GOVERNANCE_DECISION_PACKAGE_ONLY",
+  "stacked_base_product_head": "28b5809efefc94440cf9766f03d5b6f7d2b5944c",
+  "decision_id": "DEC-BLINE-ACTION-WINDOW-SEMANTICS-001",
+  "semantic_question": "For how long, and from what instant, may one canonical Candidate remain eligible to proceed toward Approval?",
+  "proposed_semantics": {
+    "canonical_type_name": "DecisionActionWindowV1",
+    "authority_state": "ELIGIBILITY_ACTION_WINDOW_ONLY",
+    "purpose": "eligibility actionability interval only; not execution schedule, dispatch window, model activation window, ProblemState evidence window, Twin candidate-pointer review window, policy effective window, or MCFT scientific/runtime window",
+    "candidate_ref_required": true,
+    "exact_scope_required": true,
+    "decision_time_required": true,
+    "window_start_required": true,
+    "window_end_required": true,
+    "finite_window_required": true,
+    "open_ended_window_forbidden": true,
+    "window_start_before_window_end_required": true,
+    "window_start_must_not_precede_decision_time": true,
+    "horizon_source_ref_required": true,
+    "support_refs_required": true,
+    "policy_ref_required": true,
+    "deterministic_evaluation_as_of_required": true
+  },
+  "lifecycle_mapping": {
+    "evaluation_time_source": "explicit evaluated_at/as_of input, never hidden Date.now inside pure evaluator",
+    "NOT_YET_ACTIVE": "evaluated_at < window_start",
+    "ACTIVE": "window_start <= evaluated_at < window_end",
+    "EXPIRED": "evaluated_at >= window_end",
+    "UNKNOWN": "missing/invalid/ambiguous window provenance or boundary",
+    "criterion_mapping": {
+      "NOT_YET_ACTIVE": "ACTION_WINDOW is never SATISFIED; exact mapping remains a later B07d lifecycle decision",
+      "ACTIVE": "ACTION_WINDOW = SATISFIED when provenance and refs are valid",
+      "EXPIRED": "ACTION_WINDOW = VIOLATED",
+      "UNKNOWN": "ACTION_WINDOW = UNKNOWN"
+    }
+  },
+  "horizon_authority": {
+    "hidden_default_duration_forbidden": true,
+    "hardcoded_duration_forbidden": true,
+    "field_program_execution_schedule_forbidden": true,
+    "ao_act_time_window_forbidden_as_source_authority": true,
+    "problem_state_window_forbidden_as_source_authority": true,
+    "twin_candidate_expiry_window_forbidden_as_source_authority": true,
+    "mcft_forecast_or_evidence_window_forbidden_as_source_authority": true,
+    "recommended_source_shape": "explicit governed actionability-horizon policy/ref independently bound to the Candidate policy/context line; exact authority remains a later governance decision",
+    "current_authorized_horizon_source": "NONE"
+  },
+  "relationship_to_b09y": {
+    "boundary_dependency": "B09y decision-boundary semantics must be authorized and bound before a real ActionWindow can be instantiated",
+    "decision_time_role": "causal lower-bound anchor only; does not determine duration",
+    "post_boundary_rule": "ActionWindow support may reference only immutable inputs known at/before the same decision boundary, except later explicit policy/lifecycle evaluation that cannot rewrite the original Candidate"
+  },
+  "relationship_to_b09w": {
+    "required_criterion": "ACTION_WINDOW",
+    "policy_profile_state": "B09w IRRIGATE content remains NOT AUTHORIZED",
+    "policy_ref_role": "one selected eligibility policy_ref must be included as support, but its current declaration contract does not encode actionability duration",
+    "no_implicit_horizon_from_policy_effective_window": true
+  },
+  "rejected_reuse_candidates": [
+    {
+      "source": "docs/twin_kernel/P47_AO_ACT_TIME_WINDOW_POLICY_V0.json",
+      "reason": "downstream AO-ACT authorization/task time window"
+    },
+    {
+      "source": "docs/twin_kernel/P35_CANDIDATE_EXPIRY_USE_WINDOW_POLICY_V0.json",
+      "reason": "Twin candidate pointer calibration/review use window"
+    },
+    {
+      "source": "docs/twin_kernel/P44_ACTIVATION_WINDOW_CANARY_POLICY_V0.json",
+      "reason": "model activation/canary window"
+    },
+    {
+      "source": "ProblemStateV1.window",
+      "reason": "evidence/problem lifecycle window, not Eligibility actionability authority"
+    },
+    {
+      "source": "MCFT/Twin forecast/evidence windows",
+      "reason": "scientific/runtime windows; MCFT-9 incomplete and separate authority domain"
+    }
+  ],
+  "current_readiness": {
+    "canonical_action_window_contract": "NONE",
+    "canonical_action_window_producer": "NONE",
+    "authorized_horizon_source": "NONE",
+    "b09y_decision_boundary": "PROPOSAL_COMPLETE_NOT_AUTHORIZED",
+    "b09w_irrigate_policy_content": "PROPOSAL_COMPLETE_NOT_AUTHORIZED",
+    "b07e": "DISCONNECTED",
+    "mcft_forecast": "FROZEN_EXTERNAL_DEPENDENCY"
+  },
+  "authorization_effect_if_accepted": {
+    "authorizes": [
+      "ACTION_WINDOW semantic separation",
+      "finite interval and lifecycle classification rules",
+      "requirement for explicit horizon source authority",
+      "future contract/topology design under B02"
+    ],
+    "does_not_authorize": [
+      "hardcoded or default horizon",
+      "real ActionWindow producer",
+      "real ActionWindow instance",
+      "B09y boundary implementation",
+      "B09w policy declaration",
+      "B07e connection",
+      "AO-ACT/Approval/Execution changes",
+      "MCFT/Twin integration",
+      "consumer migration",
+      "authority removal"
+    ]
+  },
+  "non_effects": {
+    "runtime_change": false,
+    "schema_change": false,
+    "db_change": false,
+    "route_change": false,
+    "graph_edge_change": false,
+    "action_window_instance": false,
+    "b07e_connection": false,
+    "mcft_change": false,
+    "authority_removal": false
+  }
+}
