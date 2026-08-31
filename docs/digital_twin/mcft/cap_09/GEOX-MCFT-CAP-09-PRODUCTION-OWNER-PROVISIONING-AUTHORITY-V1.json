@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_owner_provisioning_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1",
-  "status": "READINESS_ONLY_PROVISIONING_NOT_ARMED",
+  "status": "TARGET_BOUND_READINESS_ONLY_PROVISIONING_NOT_ARMED",
   "owner_graduation_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json",
   "provisioning_sequence": [
     "BIND_EXACT_PRODUCTION_DATABASE",
@@ -15,9 +15,15 @@
     "PROVISIONING_COMPLETE_OWNER_ACTIVATION_STILL_FALSE"
   ],
   "target_database": {
-    "status": "NOT_BOUND",
-    "database_name": null,
-    "admin_database_url_binding": null
+    "status": "BOUND_TO_FRESH_FORMAL_V5_STORE",
+    "database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v5",
+    "database_identity_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json#/database_identity",
+    "provisioning_run_id": 33294259585,
+    "provisioning_subject_sha": "af49e6819624a2cd7129308dacde9f880f71b194",
+    "provisioning_artifact_id": 9726904605,
+    "provisioning_artifact_digest": "sha256:0e09f03d78e99ebc6d7df5520c865fb0b1947c040dcfc3b2d1551a982f7c6162",
+    "database_reprovision_forbidden": true,
+    "formal_v5_arm_implied": false
   },
   "required_existing_privilege_roles": [
     "geox_mcft_cap09_evidence_runtime_v1",
