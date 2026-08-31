@@ -1,0 +1,128 @@
+{
+  "schema_version": "b09ac_eligibility_policy_v2_action_window_contract_shape_decision_package_v1",
+  "phase": "B-09ac",
+  "status": "RECOMMENDED_NOT_AUTHORIZED",
+  "authority_mode": "PRODUCT_GOVERNANCE_DECISION_PACKAGE_ONLY",
+  "stacked_base_product_head": "88ed1f6139f12b2ca61d1c494d2ec979b1f96500",
+  "decision_id": "DEC-BLINE-ELIGIBILITY-POLICY-V2-ACTION-WINDOW-CONTRACT-001",
+  "problem_statement": "B09ab recommends that ActionWindow horizon authority live in a successor Eligibility policy contract. B09ac proposes the minimum deterministic field shape without selecting any concrete policy value or implementing the successor contract.",
+  "proposed_successor_contract": {
+    "nominal_name": "DecisionEligibilityPolicyDeclarationV2",
+    "predecessor": "DecisionEligibilityPolicyDeclarationV1",
+    "predecessor_mutation": false,
+    "successor_required": true,
+    "proposed_new_field": "action_window_policy",
+    "field_cardinality": "NULLABLE_AT_POLICY_LEVEL_BUT_REQUIRED_IFF_ACTION_WINDOW_IS_REQUIRED_CRITERION",
+    "field_shape": {
+      "authority_state": "ELIGIBILITY_ACTIONABILITY_HORIZON_ONLY",
+      "anchor": "CANDIDATE_DECISION_TIME",
+      "start_offset_seconds": "EXPLICIT_NONNEGATIVE_SAFE_INTEGER",
+      "duration_seconds": "EXPLICIT_POSITIVE_SAFE_INTEGER",
+      "interval_semantics": "HALF_OPEN_[START_END)",
+      "derivation_mode": "POLICY_ONLY_V1"
+    }
+  },
+  "deterministic_materialization_rule": {
+    "input_decision_time": "CandidateDecisionV1.decision_time",
+    "window_start_formula": "decision_time + start_offset_seconds",
+    "window_end_formula": "window_start + duration_seconds",
+    "hidden_wall_clock_forbidden": true,
+    "hidden_default_offset_forbidden": true,
+    "hidden_default_duration_forbidden": true,
+    "overflow_or_invalid_arithmetic": "FAIL_CLOSED",
+    "missing_decision_time": "FAIL_CLOSED",
+    "missing_action_window_policy_when_required": "FAIL_CLOSED"
+  },
+  "criterion_coupling_rule": {
+    "if_required_criteria_contains_ACTION_WINDOW": "action_window_policy MUST be non-null and valid",
+    "if_required_criteria_excludes_ACTION_WINDOW": "action_window_policy MUST be null",
+    "reason": "prevent unused or hidden actionability authority from being carried by policies that do not require ACTION_WINDOW"
+  },
+  "unit_and_representation_adjudication": {
+    "duration_unit": "SECONDS",
+    "reason": [
+      "repository exposes no established reusable duration convention",
+      "explicit integer seconds are language/database agnostic and avoid calendar-duration ambiguity",
+      "field names encode the unit directly",
+      "absolute timestamps remain materialized Candidate-window outputs, not reusable policy content"
+    ],
+    "iso8601_duration_string": "NOT_RECOMMENDED_V1",
+    "milliseconds": "NOT_RECOMMENDED_V1",
+    "absolute_window_start_end_in_policy": "FORBIDDEN"
+  },
+  "lifecycle_examples_non_authoritative": [
+    {
+      "example": "start_offset_seconds=0",
+      "meaning": "window may become ACTIVE at decision_time when all other eligibility conditions are satisfied",
+      "concrete_policy_value_authorized": false
+    },
+    {
+      "example": "start_offset_seconds>0",
+      "meaning": "supports NOT_YET_ACTIVE before the policy-authorized actionability interval begins",
+      "concrete_policy_value_authorized": false
+    }
+  ],
+  "explicit_non_selections": {
+    "actual_start_offset_seconds": null,
+    "actual_duration_seconds": null,
+    "maximum_allowed_duration_seconds": null,
+    "minimum_allowed_duration_seconds": null,
+    "irrigate_specific_value": null,
+    "dynamic_agronomic_shortening": false,
+    "forecast_dependent_shortening": false
+  },
+  "versioning_and_identity": {
+    "v1_declarations_remain_valid": true,
+    "v1_policy_refs_not_reinterpreted": true,
+    "v2_policy_identity_must_be_explicit": true,
+    "no_automatic_v1_to_v2_upgrade": true,
+    "no_default_action_window_backfill": true,
+    "selector_compatibility_requires_separate_design": true,
+    "writer_route_compatibility_requires_separate_design": true
+  },
+  "relationship_to_other_authorities": {
+    "b09y_decision_boundary": "ANCHOR_DEPENDENCY_ONLY_NOT_AUTHORIZED_FOR_IMPLEMENTATION",
+    "b09z_action_window_semantics": "PROPOSAL_COMPLETE_NOT_AUTHORIZED",
+    "b09ab_topology": "PROPOSAL_COMPLETE_NOT_AUTHORIZED",
+    "b09w_irrigate_policy_content": "PROPOSAL_COMPLETE_NOT_AUTHORIZED",
+    "mcft_forecast": "FROZEN_EXTERNAL_DEPENDENCY_NOT_USED_IN_POLICY_ONLY_V1",
+    "approval_execution": "DOWNSTREAM_UNCHANGED"
+  },
+  "authorization_effect_if_accepted": {
+    "authorizes": [
+      "successor policy contract field semantics for action_window_policy",
+      "seconds-based relative offset/duration representation",
+      "criterion coupling and fail-closed validation rules",
+      "later contract implementation under B02 governance"
+    ],
+    "does_not_authorize": [
+      "any concrete offset or duration value",
+      "successor contract implementation",
+      "writer or route mutation",
+      "selector compatibility implementation",
+      "ActionWindow producer or instance",
+      "B09y boundary implementation",
+      "real Eligibility policy declaration",
+      "B07e connection",
+      "MCFT/Twin integration",
+      "Approval/AO-ACT/Execution change",
+      "consumer migration",
+      "authority removal"
+    ]
+  },
+  "non_effects": {
+    "runtime_change": false,
+    "schema_change": false,
+    "db_change": false,
+    "route_change": false,
+    "graph_edge_change": false,
+    "existing_v1_contract_change": false,
+    "successor_contract_implemented": false,
+    "concrete_horizon_value_selected": false,
+    "policy_fact_written": false,
+    "action_window_producer": false,
+    "b07e_connection": false,
+    "mcft_change": false,
+    "authority_removal": false
+  }
+}
