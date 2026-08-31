@@ -84,7 +84,12 @@
     "render_candidate_binding_schema_defined": true,
     "render_workspace_owner_id_status": "UNBOUND",
     "render_evidence_service_id_status": "UNBOUND",
-    "render_twin_service_id_status": "UNBOUND"
+    "render_twin_service_id_status": "UNBOUND",
+    "host_binding_arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json",
+    "host_binding_arm_status": "UNARMED",
+    "platform_selection_authorized": false,
+    "service_creation_authorized": false,
+    "host_identity_binding_authorized": false
   },
   "non_effects": {
     "external_host_provisioning": false,
@@ -277,5 +282,7 @@
     "runtime_secret_injection_not_authorized": true,
     "runtime_start_not_authorized": true,
     "production_owner_activation_not_authorized": true
-  }
+  },
+  "host_binding_arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json",
+  "host_binding_arm_status": "UNARMED"
 }
