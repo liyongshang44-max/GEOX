@@ -30,13 +30,16 @@ function assertionId(programId: string, kind: string): string {
 export function projectFieldProgramDeclaredContextV1(input: {
   field_program: FieldProgramV1;
   decision_time?: string | null;
+  source_ref?: string | null;
+  snapshot_id?: string | null;
 }): {
   assertions: ContextAssertionV1[];
   snapshot: ContextSnapshotV1;
 } {
   const program = input.field_program;
   const payload = program.payload;
-  const sourceRef = `field_program_v1:${payload.program_id}`;
+  const explicitSourceRef = String(input.source_ref ?? "").trim();
+  const sourceRef = explicitSourceRef || `field_program_v1:${payload.program_id}`;
   const assertedAt = isoFromProgramTimestamp(payload.updated_ts, payload.created_ts);
 
   const scope = {
@@ -121,7 +124,8 @@ export function projectFieldProgramDeclaredContextV1(input: {
 
   const snapshot = contextSnapshotV1Schema.parse({
     schema_version: "context_snapshot_v1",
-    snapshot_id: `context_snapshot:field_program:${payload.program_id}:${payload.updated_ts}`,
+    snapshot_id: String(input.snapshot_id ?? "").trim()
+      || `context_snapshot:field_program:${payload.program_id}:${payload.updated_ts}`,
     scope,
     decision_time: input.decision_time ?? null,
     assertions,
