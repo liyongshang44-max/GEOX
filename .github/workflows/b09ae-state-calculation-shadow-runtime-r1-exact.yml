@@ -1,0 +1,83 @@
+name: b09ae-state-calculation-shadow-runtime-r1-exact
+
+on:
+  pull_request:
+    branches:
+      - feat/bline-b09ae-irrigate-state-calculation-shadow-binding-r1-v1
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09ae r1 implementation head
+        run: |
+          git checkout a934b332dbe0aba4ac3663b3bd8bfcf499375272
+          test "$(git rev-parse HEAD)" = "a934b332dbe0aba4ac3663b3bd8bfcf499375272"
+          test "$(git rev-parse HEAD^)" = "c1273e37dc3f3c44d76439997d905f2c565c6510"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09ae runtime acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09AE_STATE_CALCULATION_SHADOW_RUNTIME_V1.cjs
+
+      - name: B-09ae contract tests
+        run: node --import tsx --test apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.contract.test.ts
+
+      - name: B-06b CalculationResult regression
+        run: node --import tsx --test apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.contract.test.ts
+
+      - name: B-07c STATE precursor regression
+        run: node --import tsx --test apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.contract.test.ts
+
+      - name: B-09j Candidate binding regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.contract.test.ts
+
+      - name: Judge V2 domain regression
+        run: node --import tsx --test apps/server/src/domain/judge/agronomy_judge_v2.test.ts
+
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only c1273e37dc3f3c44d76439997d905f2c565c6510 a934b332dbe0aba4ac3663b3bd8bfcf499375272 > /tmp/b09ae-runtime-files.txt
+          cat /tmp/b09ae-runtime-files.txt
+          test "$(wc -l < /tmp/b09ae-runtime-files.txt | tr -d ' ')" = "6"
+          git diff --check c1273e37dc3f3c44d76439997d905f2c565c6510 a934b332dbe0aba4ac3663b3bd8bfcf499375272
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Prove validation did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "a934b332dbe0aba4ac3663b3bd8bfcf499375272"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09AE_R1_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Marker
+        run: |
+          echo "B09AE_R1_RUNTIME_EXACT_HEAD a934b332dbe0aba4ac3663b3bd8bfcf499375272"
+          echo "B09AE_R1_STATE_CALCULATION_SHADOW_RUNTIME_PASS"
