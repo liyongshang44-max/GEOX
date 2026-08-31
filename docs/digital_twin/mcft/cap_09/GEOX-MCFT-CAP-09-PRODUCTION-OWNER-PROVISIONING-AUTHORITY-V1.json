@@ -144,7 +144,8 @@
     "BOOTSTRAP_TWO_LOGIN_PRINCIPALS_WITH_EXACT_ONE_ROLE_MEMBERSHIP",
     "VERIFY_LOGIN_CONNECTIVITY_WITHOUT_STARTING_RUNTIME_HOSTS",
     "PROVE_RUNTIME_CREDENTIAL_ONE_SHOT_FAILS_CLOSED_UNARMED",
-    "PROVE_RUNTIME_URL_ZERO_STATE_AFTER_SERVICE_LOGIN_CLOSURE"
+    "PROVE_RUNTIME_URL_ZERO_STATE_AFTER_SERVICE_LOGIN_CLOSURE",
+    "PROVE_EXACT_TWO_RUNTIME_DATABASE_URLS_MATCH_IDENTITIES_AND_CONNECT"
   ],
   "next_stage": {
     "stage": "RUNTIME_CREDENTIAL_BINDING",
@@ -174,7 +175,10 @@
     "runtime_endpoint_hostname": "ep-odd-poetry-a6peeo8g.us-west-2.aws.neon.tech",
     "runtime_endpoint_port": "5432",
     "runtime_endpoint_sslmode": "require",
-    "runtime_endpoint_channel_binding": "require"
+    "runtime_endpoint_channel_binding": "require",
+    "runtime_url_ready_evidence_bound": true,
+    "runtime_url_ready_subject_sha": "a3278aec6c2134356d6a5de39da32760dbd43a71",
+    "runtime_url_ready_status": "READY_FOR_SEPARATE_ARM"
   },
   "service_login_pre_arm_evidence": {
     "status": "IMMUTABLE_READY_UNARMED",
@@ -344,5 +348,42 @@
     "channel_binding": "require",
     "contains_username": false,
     "contains_password": false
+  },
+  "runtime_credential_url_ready_evidence": {
+    "status": "IMMUTABLE_SUCCESS_PRE_ARM",
+    "subject_sha": "a3278aec6c2134356d6a5de39da32760dbd43a71",
+    "runtime_credential_readiness": {
+      "workflow": "mcft-cap-09-production-runtime-credential-readiness",
+      "run_id": 33419987709,
+      "job_id": 99584523875,
+      "artifact_id": 9769056212,
+      "artifact_digest": "sha256:45a7109537ba10011f7dfb9a72bfc6c2b2064ae3ff6e7bf4d62e4e12fea59f69",
+      "stage": "RUNTIME_CREDENTIAL_URLS_BOUND_PRE_ARM",
+      "runtime_database_url_secret_count": 2,
+      "exact_database_name_match": true,
+      "exact_login_username_match": true,
+      "exact_password_pairing_match": true,
+      "exact_seed_host_port_match": true,
+      "exact_one_privilege_membership_each": true,
+      "evidence_runtime_url_connectivity_proven": true,
+      "twin_runtime_url_connectivity_proven": true,
+      "runtime_credential_pre_arm_ready": true,
+      "runtime_credential_binding": false,
+      "runtime_process_start": false,
+      "production_owner_activation": false
+    },
+    "owner_provisioning_readiness": {
+      "workflow": "mcft-cap-09-production-owner-provisioning-readiness",
+      "run_id": 33419987686,
+      "job_id": 99584540483,
+      "artifact_id": 9769057446,
+      "artifact_digest": "sha256:51a745cb1c36332287f7ffabe8a58a3a89a8c153d3754ff5881afae3b355694b",
+      "status": "PASS_RUNTIME_CREDENTIAL_URL_READY_PRE_ARM",
+      "provisioning_ready": true,
+      "runtime_credential_pre_arm_ready": true,
+      "remaining_provisioning_blockers": [
+        "RUNTIME_CREDENTIAL_BINDING_NOT_AUTHORIZED"
+      ]
+    }
   }
 }
