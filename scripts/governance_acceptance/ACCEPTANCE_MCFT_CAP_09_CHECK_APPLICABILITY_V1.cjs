@@ -358,6 +358,10 @@ function main() {
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json",
     "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_CUTOVER_ARM_V1.json",
     "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_V1.cjs",
+    ".github/workflows/mcft-cap-09-production-owner-provisioning-readiness.yml",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json",
+    "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_ARM_V1.json",
+    "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_V1.cjs",
   ]) {
     assert(ownerPaths.has(ownerOnlyPath), `OWNER_CLOSURE_PATH_REQUIRED:${ownerOnlyPath}`);
     assert(!timingPaths.has(ownerOnlyPath), `OWNER_PATH_MUST_NOT_REOPEN_TIMING:${ownerOnlyPath}`);

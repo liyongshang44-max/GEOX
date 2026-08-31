@@ -1,0 +1,59 @@
+{
+  "schema_version": "geox_mcft_cap09_production_owner_provisioning_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1",
+  "status": "READINESS_ONLY_PROVISIONING_NOT_ARMED",
+  "owner_graduation_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json",
+  "provisioning_sequence": [
+    "BIND_EXACT_PRODUCTION_DATABASE",
+    "PROVE_PHASE3_EVIDENCE_PRIVILEGE_ROLE_PRESENT",
+    "MATERIALIZE_PHASE4_TWIN_PRIVILEGE_ROLE_ON_EXACT_PRODUCTION_DATABASE",
+    "PROVE_BOTH_PRIVILEGE_ROLES_SAFE_AND_CROSS_PLANE_ISOLATED",
+    "BIND_EVIDENCE_AND_TWIN_RUNTIME_PASSWORDS",
+    "BOOTSTRAP_TWO_LOGIN_PRINCIPALS_WITH_EXACT_ONE_ROLE_MEMBERSHIP",
+    "BIND_TWO_RUNTIME_DATABASE_URLS",
+    "VERIFY_LOGIN_CONNECTIVITY_WITHOUT_STARTING_RUNTIME_HOSTS",
+    "PROVISIONING_COMPLETE_OWNER_ACTIVATION_STILL_FALSE"
+  ],
+  "target_database": {
+    "status": "NOT_BOUND",
+    "database_name": null,
+    "admin_database_url_binding": null
+  },
+  "required_existing_privilege_roles": [
+    "geox_mcft_cap09_evidence_runtime_v1",
+    "geox_mcft_cap09_twin_runtime_v1"
+  ],
+  "login_roles_to_provision": [
+    "geox_mcft_cap09_evidence_runtime_login_v1",
+    "geox_mcft_cap09_twin_runtime_login_v1"
+  ],
+  "implementation_refs": {
+    "twin_acl_migration": "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql",
+    "service_principal_module": "apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts",
+    "service_principal_bootstrap": "apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.ts"
+  },
+  "credential_bindings_required": [
+    "GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL",
+    "GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_PASSWORD",
+    "GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL",
+    "GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_PASSWORD"
+  ],
+  "identity_semantics": {
+    "provisioning_completion_is_effective_owner_activation": false,
+    "login_connectivity_is_effective_owner_activation": false,
+    "runtime_process_start_forbidden_in_provisioning": true,
+    "provider_request_forbidden_in_provisioning": true,
+    "formal_v5_effect_forbidden": true
+  },
+  "arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_ARM_V1.json",
+  "non_effects": {
+    "provisioning_performed": false,
+    "production_owner_activation": false,
+    "runtime_process_start": false,
+    "provider_request": false,
+    "formal_v5_arm": false,
+    "formal_v5_mutation": false,
+    "a0_bootstrap": false,
+    "o00_started": false
+  }
+}

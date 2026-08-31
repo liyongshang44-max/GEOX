@@ -1,0 +1,119 @@
+name: mcft-cap-09-production-owner-provisioning-readiness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-production-owner-provisioning-readiness.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_ARM_V1.json'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_V1.cjs'
+      - 'apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts'
+      - 'apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.ts'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql'
+
+permissions:
+  contents: read
+
+jobs:
+  provisioning-readiness:
+    if: >-
+      github.head_ref == 'feat/mcft-cap09-v13-producer-driven-qualification-v1' &&
+      github.event.pull_request.base.sha == '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+      SEED_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+      EVIDENCE_RUNTIME_DATABASE_URL_SECRET: ${{ secrets.GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL }}
+      EVIDENCE_RUNTIME_PASSWORD_SECRET: ${{ secrets.GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_PASSWORD }}
+      TWIN_RUNTIME_DATABASE_URL_SECRET: ${{ secrets.GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL }}
+      TWIN_RUNTIME_PASSWORD_SECRET: ${{ secrets.GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate static provisioning contract
+        run: node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_V1.cjs
+
+      - name: Inventory current target prerequisites without mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SEED_DATABASE_URL"
+          current_db="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT current_database()")"
+          rows="$(psql "$SEED_DATABASE_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT rolname,rolcanlogin::text,rolinherit::text
+              FROM pg_catalog.pg_roles
+             WHERE rolname IN (
+               'geox_mcft_cap09_evidence_runtime_v1',
+               'geox_mcft_cap09_twin_runtime_v1',
+               'geox_mcft_cap09_evidence_runtime_login_v1',
+               'geox_mcft_cap09_twin_runtime_login_v1'
+             )
+             ORDER BY rolname")"
+          printf '%s\n' "$rows"
+          {
+            echo "PROVISIONING_CURRENT_DB=$current_db"
+            echo "PROVISIONING_EVIDENCE_PRIV=$([[ "$rows" == *'geox_mcft_cap09_evidence_runtime_v1|false|true'* ]] && echo true || echo false)"
+            echo "PROVISIONING_TWIN_PRIV=$([[ "$rows" == *'geox_mcft_cap09_twin_runtime_v1|false|false'* ]] && echo true || echo false)"
+            echo "PROVISIONING_EVIDENCE_LOGIN=$([[ "$rows" == *'geox_mcft_cap09_evidence_runtime_login_v1|true|true'* ]] && echo true || echo false)"
+            echo "PROVISIONING_TWIN_LOGIN=$([[ "$rows" == *'geox_mcft_cap09_twin_runtime_login_v1|true|true'* ]] && echo true || echo false)"
+          } >> "$GITHUB_ENV"
+
+      - name: Emit exact provisioning blocker inventory
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const a=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json','utf8'));
+          const arm=JSON.parse(fs.readFileSync('scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_ARM_V1.json','utf8'));
+          const b=[];
+          if(a.target_database?.status!=='BOUND'||!a.target_database?.database_name)b.push('EXACT_PRODUCTION_DATABASE_NOT_BOUND');
+          if(process.env.PROVISIONING_EVIDENCE_PRIV!=='true')b.push('EVIDENCE_PRIVILEGE_ROLE_NOT_PRESENT');
+          if(process.env.PROVISIONING_TWIN_PRIV!=='true')b.push('TWIN_PRIVILEGE_ROLE_NOT_PRESENT');
+          if(process.env.PROVISIONING_EVIDENCE_LOGIN!=='true')b.push('EVIDENCE_LOGIN_ROLE_NOT_PRESENT');
+          if(process.env.PROVISIONING_TWIN_LOGIN!=='true')b.push('TWIN_LOGIN_ROLE_NOT_PRESENT');
+          if(!process.env.EVIDENCE_RUNTIME_DATABASE_URL_SECRET)b.push('EVIDENCE_RUNTIME_DATABASE_URL_SECRET_NOT_BOUND');
+          if(!process.env.EVIDENCE_RUNTIME_PASSWORD_SECRET)b.push('EVIDENCE_RUNTIME_PASSWORD_SECRET_NOT_BOUND');
+          if(!process.env.TWIN_RUNTIME_DATABASE_URL_SECRET)b.push('TWIN_RUNTIME_DATABASE_URL_SECRET_NOT_BOUND');
+          if(!process.env.TWIN_RUNTIME_PASSWORD_SECRET)b.push('TWIN_RUNTIME_PASSWORD_SECRET_NOT_BOUND');
+          const p={
+            schema_version:'geox_mcft_cap09_production_owner_provisioning_readiness_v1',
+            status:'READINESS_ONLY',
+            subject_sha:process.env.SUBJECT_SHA,
+            observed_database_name:process.env.PROVISIONING_CURRENT_DB,
+            authority_target_database_name:a.target_database?.database_name??null,
+            exact_target_database_bound:a.target_database?.status==='BOUND',
+            evidence_privilege_role_present:process.env.PROVISIONING_EVIDENCE_PRIV==='true',
+            twin_privilege_role_present:process.env.PROVISIONING_TWIN_PRIV==='true',
+            evidence_login_present:process.env.PROVISIONING_EVIDENCE_LOGIN==='true',
+            twin_login_present:process.env.PROVISIONING_TWIN_LOGIN==='true',
+            evidence_runtime_database_url_secret_present:Boolean(process.env.EVIDENCE_RUNTIME_DATABASE_URL_SECRET),
+            evidence_runtime_password_secret_present:Boolean(process.env.EVIDENCE_RUNTIME_PASSWORD_SECRET),
+            twin_runtime_database_url_secret_present:Boolean(process.env.TWIN_RUNTIME_DATABASE_URL_SECRET),
+            twin_runtime_password_secret_present:Boolean(process.env.TWIN_RUNTIME_PASSWORD_SECRET),
+            provisioning_arm:arm.armed===true,
+            provisioning_ready:b.length===0,
+            blockers:b,
+            provisioning_performed:false,
+            runtime_process_start:false,
+            production_owner_activation:false,
+            provider_request_count:0,
+            formal_v5_arm:false,
+            a0_bootstrap:false,
+            o00_started:false
+          };
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_READINESS_V1_RESULT.json',JSON.stringify(p,null,2)+'\n');
+          console.log(JSON.stringify(p,null,2));
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-production-owner-provisioning-readiness-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_PREFLIGHT_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_READINESS_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
