@@ -80,11 +80,67 @@ async function main(){
 
     await pool.query("BEGIN");
     try{
+      // Production provisioning authority is allowed to create these NOLOGIN writer-owner
+      // identities, but the provisioning login must gain SET membership only transiently.
+      await pool.query(`
+        DO $roles$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='geox_mcft_cap09_evidence_writer_owner_v1') THEN
+            CREATE ROLE geox_mcft_cap09_evidence_writer_owner_v1
+              NOLOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='geox_mcft_cap09_twin_writer_owner_v1') THEN
+            CREATE ROLE geox_mcft_cap09_twin_writer_owner_v1
+              NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='geox_mcft_cap09_forcing_writer_owner_v1') THEN
+            CREATE ROLE geox_mcft_cap09_forcing_writer_owner_v1
+              NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+          END IF;
+        END
+        $roles$;
+      `);
+      for(const role of [
+        "geox_mcft_cap09_evidence_writer_owner_v1",
+        "geox_mcft_cap09_twin_writer_owner_v1",
+        "geox_mcft_cap09_forcing_writer_owner_v1",
+      ]){
+        await pool.query("GRANT "+role+" TO CURRENT_USER");
+        const canSet=(await pool.query<{ok:boolean}>("SELECT pg_catalog.pg_has_role(current_user,$1,'SET') AS ok",[role])).rows[0]?.ok;
+        assert.equal(canSet,true,"OP_SCHEMA_ACL_TEMP_SET_MEMBERSHIP_REQUIRED:"+role);
+      }
+
       await apply(pool,SCHEMA_FILES);
       await apply(pool,ACL_FILES);
+
+      for(const role of [
+        "geox_mcft_cap09_evidence_writer_owner_v1",
+        "geox_mcft_cap09_twin_writer_owner_v1",
+        "geox_mcft_cap09_forcing_writer_owner_v1",
+      ]){
+        await pool.query("REVOKE "+role+" FROM CURRENT_USER");
+      }
+      const residual=Number((await pool.query(`
+        SELECT count(*)::int AS n
+          FROM pg_catalog.pg_auth_members m
+          JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
+          JOIN pg_catalog.pg_roles member ON member.oid=m.member
+         WHERE member.rolname=current_user
+           AND granted.rolname=ANY($1::text[])
+      `,[[
+        "geox_mcft_cap09_evidence_writer_owner_v1",
+        "geox_mcft_cap09_twin_writer_owner_v1",
+        "geox_mcft_cap09_forcing_writer_owner_v1",
+      ]])).rows[0]?.n);
+      assert.equal(residual,0,"OP_SCHEMA_ACL_TEMP_OWNER_MEMBERSHIP_MUST_BE_REVOKED");
       await pool.query("COMMIT");
     }catch(e){
       await pool.query("ROLLBACK");
+      const rollback=(await pool.query<{tables:number,routines:number}>(
+        "SELECT (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE') AS tables,(SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public') AS routines"
+      )).rows[0]!;
+      assert.equal(rollback.tables,0,"OP_SCHEMA_ACL_ROLLBACK_TABLES_MUST_BE_ZERO");
+      assert.equal(rollback.routines,0,"OP_SCHEMA_ACL_ROLLBACK_ROUTINES_MUST_BE_ZERO");
       throw e;
     }
 
@@ -149,6 +205,7 @@ async function main(){
       evidence_writer_cross_plane_matrix_pass:true,
       twin_writer_cross_plane_matrix_pass:true,
       v13_fenced_promotion_cross_plane_matrix_pass:true,
+      provisioning_admin_writer_owner_membership_residual_count:0,
       service_login_created:false,
       schema_migration_performed:true,
       runtime_process_start:false,
