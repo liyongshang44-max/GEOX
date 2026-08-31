@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_operational_database_candidate_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-OPERATIONAL-DATABASE-CANDIDATE-V1",
-  "status": "QUALIFIED_CANDIDATE_PROVISION_ARMED",
+  "status": "PROVISIONED_EMPTY_ZERO_STATE",
   "candidate_database_name": "geox_mcft_cap09_production_runtime_v1",
   "purpose": "SHARED_OPERATIONAL_POSTGRES_FOR_EVIDENCE_AND_TWIN_RUNTIME",
   "topology": {
@@ -34,7 +34,6 @@
     "ZERO_FORMAL_V5_ARM"
   ],
   "non_effects": {
-    "database_created": false,
     "schema_migration_performed": false,
     "service_login_created": false,
     "runtime_process_start": false,
@@ -56,5 +55,24 @@
     "candidate_database_present": false,
     "unique_creator_membership": "neon_superuser",
     "preserved_store_count": 6
+  },
+  "provisioning": {
+    "subject_sha": "b27f00fa324ba02dbf92e108b43f108dec45ecd5",
+    "workflow_name": "mcft-cap-09-production-operational-database-provision-one-shot",
+    "workflow_path": ".github/workflows/mcft-cap-09-production-operational-database-provision-one-shot.yml",
+    "run_id": 33375907417,
+    "run_conclusion": "success",
+    "artifact_id": 9751846155,
+    "artifact_name": "mcft-cap09-production-operational-database-provision-b27f00fa324ba02dbf92e108b43f108dec45ecd5",
+    "artifact_digest": "sha256:1530fb351a83838b3b25f0d6d35ea71c7cd5580dcfc8f7be3b8950cac7473cc1",
+    "database_name": "geox_mcft_cap09_production_runtime_v1",
+    "created_by_this_run": true,
+    "fresh_zero_state": true,
+    "public_relation_count": 0,
+    "public_routine_count": 0,
+    "protected_store_count_preserved": 6
+  },
+  "effects": {
+    "database_created": true
   }
 }

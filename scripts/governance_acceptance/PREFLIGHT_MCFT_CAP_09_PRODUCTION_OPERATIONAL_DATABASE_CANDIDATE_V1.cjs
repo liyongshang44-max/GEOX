@@ -13,7 +13,7 @@ function t(p){return fs.readFileSync(p,"utf8");}
 function write(v){fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify(v,null,2)+"\n");console.log(JSON.stringify(v,null,2));}
 try{
   const a=j(AUTH), arm=j(ARM), bundle=t(BUNDLE);
-  req(["CANDIDATE_NOT_PROVISIONED","QUALIFIED_CANDIDATE_PROVISION_ARMED"].includes(a.status),"OPERATIONAL_DB_CANDIDATE_STATUS_REQUIRED");
+  req(["CANDIDATE_NOT_PROVISIONED","QUALIFIED_CANDIDATE_PROVISION_ARMED","PROVISIONED_EMPTY_ZERO_STATE"].includes(a.status),"OPERATIONAL_DB_CANDIDATE_STATUS_REQUIRED");
   req(/^[a-z_][a-z0-9_]*$/.test(a.candidate_database_name),"OPERATIONAL_DB_CANDIDATE_NAME_INVALID");
   req(!a.forbidden_database_names.includes(a.candidate_database_name),"OPERATIONAL_DB_CANDIDATE_FORBIDDEN_NAME");
   req(a.topology?.evidence_and_twin_same_database===true,"OPERATIONAL_DB_SHARED_RUNTIME_DB_REQUIRED");
@@ -31,13 +31,22 @@ try{
     req(q.candidate_database_present===false&&q.unique_creator_membership==="neon_superuser"&&q.preserved_store_count===6,"OPERATIONAL_DB_QUALIFICATION_FACTS_REQUIRED");
   }else{
     req(arm.create_database_authorized===false,"OPERATIONAL_DB_UNARMED_CREATE_FORBIDDEN");
+    if(a.status==="PROVISIONED_EMPTY_ZERO_STATE"){
+      const p=a.provisioning||{};
+      req(p.subject_sha==="b27f00fa324ba02dbf92e108b43f108dec45ecd5","OPERATIONAL_DB_PROVISION_SUBJECT_REQUIRED");
+      req(p.run_id===33375907417&&p.run_conclusion==="success","OPERATIONAL_DB_PROVISION_RUN_REQUIRED");
+      req(p.artifact_id===9751846155&&/^sha256:[0-9a-f]{64}$/.test(String(p.artifact_digest||"")),"OPERATIONAL_DB_PROVISION_ARTIFACT_REQUIRED");
+      req(p.database_name===a.candidate_database_name&&p.created_by_this_run===true&&p.fresh_zero_state===true&&p.public_relation_count===0&&p.public_routine_count===0&&p.protected_store_count_preserved===6,"OPERATIONAL_DB_PROVISION_FACTS_REQUIRED");
+    }
   }
   for(const k of ["apply_production_host_schema_authorized","apply_runtime_acl_authorized","service_login_bootstrap_authorized","runtime_credential_binding_authorized","runtime_process_start_authorized","production_owner_activation_authorized","formal_v5_arm_authorized","a0_authorized","o00_authorized"]) req(arm[k]===false,"OPERATIONAL_DB_LATER_AUTHORITY_FALSE:"+k);
   write({
     schema_version:"geox_mcft_cap09_production_operational_database_candidate_preflight_v1",
     status:"PASS",
     candidate_database_name:a.candidate_database_name,
-    candidate_is_fact:false,
+    candidate_is_fact:a.status==="PROVISIONED_EMPTY_ZERO_STATE",
+    operational_database_identity_established:a.status==="PROVISIONED_EMPTY_ZERO_STATE",
+    database_provisioned_by_bound_run:a.status==="PROVISIONED_EMPTY_ZERO_STATE",
     provisioning_arm:arm.armed===true,
     database_created:false,
     schema_migration_performed:false,

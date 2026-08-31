@@ -18,7 +18,8 @@ try{
   req([
     "READINESS_ONLY_PROVISIONING_NOT_ARMED",
     "TARGET_BOUND_READINESS_ONLY_PROVISIONING_NOT_ARMED",
-    "READINESS_ONLY_PRODUCTION_OPERATIONAL_DATABASE_UNRESOLVED"
+    "READINESS_ONLY_PRODUCTION_OPERATIONAL_DATABASE_UNRESOLVED",
+    "TARGET_DATABASE_BOUND_PROVISIONING_NOT_ARMED"
   ].includes(a.status),"OWNER_PROVISIONING_AUTHORITY_STATUS_REQUIRED");
   req(
     (a.target_database?.status==="NOT_BOUND"&&a.target_database?.database_name===null)
@@ -39,7 +40,8 @@ try{
     schema_version:"geox_mcft_cap09_production_owner_provisioning_preflight_v1",
     status:"PASS",
     provisioning_status:"READINESS_PASS_NOT_ARMED",
-    exact_target_database_bound:false,
+    exact_target_database_bound:a.target_database?.status==="BOUND",
+    target_database_name:a.target_database?.database_name??null,
     twin_privilege_role_materialization_path_present:true,
     dual_login_bootstrap_path_present:true,
     runtime_credential_bindings_required:4,

@@ -45,10 +45,14 @@ jobs:
         run: |
           const fs=require('node:fs');
           const arm=JSON.parse(fs.readFileSync('scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_PROVISION_ARM_V1.json','utf8'));
-          fs.appendFileSync(process.env.GITHUB_OUTPUT,'armed='+String(arm.armed===true)+'\n');
+          const auth=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OPERATIONAL-DATABASE-CANDIDATE-V1.json','utf8'));
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,
+            'armed='+String(arm.armed===true)+'\n'+
+            'provisioned='+String(auth.status==='PROVISIONED_EMPTY_ZERO_STATE')+'\n'
+          );
 
       - name: Prove candidate absence, creator authority, and preserved stores
-        if: steps.mode.outputs.armed == 'false'
+        if: steps.mode.outputs.armed == 'false' && steps.mode.outputs.provisioned == 'false'
         shell: bash
         run: |
           set -euo pipefail

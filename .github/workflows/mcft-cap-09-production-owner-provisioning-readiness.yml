@@ -43,8 +43,17 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$SEED_DATABASE_URL"
-          current_db="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT current_database()")"
-          rows="$(psql "$SEED_DATABASE_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+          target_db="$(node -e "const a=require('./docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json');if(a.target_database?.status!=='BOUND'||!a.target_database?.database_name)process.exit(2);process.stdout.write(a.target_database.database_name)")"
+          target_url="$(node -e "const u=new URL(process.env.SEED_DATABASE_URL);u.pathname='/'+process.argv[1];process.stdout.write(u.toString())" "$target_db")"
+          echo "::add-mask::$target_url"
+          current_db="$(psql "$target_url" -At -v ON_ERROR_STOP=1 -c "SELECT current_database()")"
+          test "$current_db" = "$target_db"
+          state="$(psql "$target_url" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT
+              (SELECT count(*)::int FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m','S','f')),
+              (SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public')")"
+          test "$state" = "0|0" || { echo "OWNER_PROVISIONING_TARGET_NOT_PRE_SCHEMA_ZERO_STATE:$state" >&2; exit 1; }
+          rows="$(psql "$target_url" -AtF '|' -v ON_ERROR_STOP=1 -c "
             SELECT rolname,rolcanlogin::text,rolinherit::text
               FROM pg_catalog.pg_roles
              WHERE rolname IN (
@@ -57,6 +66,7 @@ jobs:
           printf '%s\n' "$rows"
           {
             echo "PROVISIONING_CURRENT_DB=$current_db"
+            echo "PROVISIONING_TARGET_ZERO_STATE=true"
             echo "PROVISIONING_EVIDENCE_PRIV=$([[ "$rows" == *'geox_mcft_cap09_evidence_runtime_v1|false|true'* ]] && echo true || echo false)"
             echo "PROVISIONING_TWIN_PRIV=$([[ "$rows" == *'geox_mcft_cap09_twin_runtime_v1|false|false'* ]] && echo true || echo false)"
             echo "PROVISIONING_EVIDENCE_LOGIN=$([[ "$rows" == *'geox_mcft_cap09_evidence_runtime_login_v1|true|true'* ]] && echo true || echo false)"
@@ -87,6 +97,7 @@ jobs:
             authority_target_database_name:a.target_database?.database_name??null,
             exact_target_database_bound:a.target_database?.status==='BOUND',
             formal_v5_store_assumed_as_owner_target:false,
+            target_database_zero_state:process.env.PROVISIONING_TARGET_ZERO_STATE==='true',
             evidence_privilege_role_present:process.env.PROVISIONING_EVIDENCE_PRIV==='true',
             twin_privilege_role_present:process.env.PROVISIONING_TWIN_PRIV==='true',
             evidence_login_present:process.env.PROVISIONING_EVIDENCE_LOGIN==='true',
