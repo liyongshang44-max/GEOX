@@ -266,6 +266,55 @@ try {
     "HOST_BINDING_NEXT_STAGE_REQUIRED",
   );
   req(
+    a.platform_evaluation?.status === "RECOMMENDED_CANDIDATE_NOT_SELECTED" &&
+      a.platform_evaluation?.recommended_candidate?.platform_provider === "RENDER" &&
+      a.platform_evaluation?.recommended_candidate?.service_class === "BACKGROUND_WORKER" &&
+      a.platform_evaluation?.recommended_candidate?.preferred_region === "OREGON_USA" &&
+      a.platform_evaluation?.recommended_candidate?.cost_bearing_external_resource === true &&
+      a.platform_evaluation?.recommended_candidate?.user_or_external_account_authority_required_before_selection === true &&
+      a.platform_evaluation?.platform_selected === false,
+    "HOST_BINDING_PLATFORM_RECOMMENDATION_BOUNDARY_REQUIRED",
+  );
+  const render = a.render_candidate_binding_contract;
+  req(
+    render?.status === "CANDIDATE_SCHEMA_DEFINED_NOT_AUTHORIZED" &&
+      render?.platform_provider === "RENDER" &&
+      render?.workspace_owner_id === null &&
+      render?.region === "oregon" &&
+      render?.service_type === "background_worker" &&
+      render?.blueprint_type === "worker" &&
+      render?.runtime === "docker",
+    "HOST_BINDING_RENDER_CANDIDATE_SCHEMA_REQUIRED",
+  );
+  req(
+    render?.evidence_runtime?.service_name === "geox-mcft-cap09-evidence-runtime-v1" &&
+      render?.evidence_runtime?.service_id === null &&
+      render?.evidence_runtime?.runtime_role === "EVIDENCE_RUNTIME" &&
+      render?.twin_runtime?.service_name === "geox-mcft-cap09-twin-runtime-v1" &&
+      render?.twin_runtime?.service_id === null &&
+      render?.twin_runtime?.runtime_role === "TWIN_RUNTIME",
+    "HOST_BINDING_RENDER_SERVICE_IDENTITY_CANDIDATES_REQUIRED",
+  );
+  for (const key of [
+    "deployment_configuration_not_authorized",
+    "service_creation_not_authorized",
+    "runtime_secret_injection_not_authorized",
+    "runtime_start_not_authorized",
+    "production_owner_activation_not_authorized",
+  ]) {
+    req(render?.[key] === true, "HOST_BINDING_RENDER_EFFECT_AUTHORITY_MUST_REMAIN_FALSE:" + key);
+  }
+  req(
+    a.next_stage?.recommended_platform_candidate === "RENDER_BACKGROUND_WORKER" &&
+      a.next_stage?.recommended_region === "OREGON_USA" &&
+      a.next_stage?.platform_selection_status === "RECOMMENDED_NOT_AUTHORIZED" &&
+      a.next_stage?.render_candidate_binding_schema_defined === true &&
+      a.next_stage?.render_workspace_owner_id_status === "UNBOUND" &&
+      a.next_stage?.render_evidence_service_id_status === "UNBOUND" &&
+      a.next_stage?.render_twin_service_id_status === "UNBOUND",
+    "HOST_BINDING_RENDER_NEXT_STAGE_BOUNDARY_REQUIRED",
+  );
+  req(
     a.next_stage?.runtime_start_separate === true &&
       a.next_stage?.production_owner_activation_separate === true,
     "HOST_BINDING_EFFECT_SEPARATION_REQUIRED",
@@ -316,9 +365,10 @@ try {
     binding_authorized: false,
     pre_platform_checkpoint_evidence_bound: true,
     remaining_blockers: [
-      "EXTERNAL_NON_GITHUB_PLATFORM_NOT_SELECTED",
-      "EVIDENCE_NON_GITHUB_SERVICE_IDENTITY_NOT_BOUND",
-      "TWIN_NON_GITHUB_SERVICE_IDENTITY_NOT_BOUND",
+      "RENDER_PLATFORM_SELECTION_NOT_AUTHORIZED",
+      "RENDER_WORKSPACE_OWNER_ID_NOT_BOUND",
+      "RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",
+      "RENDER_TWIN_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",
       "NON_GITHUB_HOST_BINDING_NOT_AUTHORIZED",
     ],
     external_host_provisioning: false,
