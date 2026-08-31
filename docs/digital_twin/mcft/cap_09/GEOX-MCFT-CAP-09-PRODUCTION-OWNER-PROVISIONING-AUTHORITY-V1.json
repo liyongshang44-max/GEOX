@@ -142,7 +142,9 @@
     "PROVE_SERVICE_LOGIN_PRE_ARM_ZERO_STATE",
     "PROVE_EXACT_TWO_BOOTSTRAP_PASSWORD_SECRETS_PRESENT_AND_RUNTIME_URLS_ABSENT",
     "BOOTSTRAP_TWO_LOGIN_PRINCIPALS_WITH_EXACT_ONE_ROLE_MEMBERSHIP",
-    "VERIFY_LOGIN_CONNECTIVITY_WITHOUT_STARTING_RUNTIME_HOSTS"
+    "VERIFY_LOGIN_CONNECTIVITY_WITHOUT_STARTING_RUNTIME_HOSTS",
+    "PROVE_RUNTIME_CREDENTIAL_ONE_SHOT_FAILS_CLOSED_UNARMED",
+    "PROVE_RUNTIME_URL_ZERO_STATE_AFTER_SERVICE_LOGIN_CLOSURE"
   ],
   "next_stage": {
     "stage": "RUNTIME_CREDENTIAL_BINDING",
@@ -161,7 +163,13 @@
     "service_login_stage_complete": true,
     "runtime_process_start_forbidden": true,
     "production_owner_activation_forbidden": true,
-    "non_github_host_binding_not_started": true
+    "non_github_host_binding_not_started": true,
+    "runtime_credential_readiness_capability": "IMPLEMENTED_DUAL_STATE_READ_ONLY",
+    "runtime_credential_one_shot_capability": "IMPLEMENTED_UNARMED",
+    "pre_url_zero_state_evidence_bound": true,
+    "production_neon_project_id": "delicate-glade-62464340",
+    "production_neon_branch_id": "br-cold-dust-a6j6aymz",
+    "production_neon_branch_name": "main"
   },
   "service_login_pre_arm_evidence": {
     "status": "IMMUTABLE_READY_UNARMED",
@@ -276,5 +284,41 @@
     "formal_v5_arm": false,
     "a0_bootstrap": false,
     "o00_started": false
+  },
+  "runtime_credential_pre_url_evidence": {
+    "status": "IMMUTABLE_READY_UNARMED",
+    "subject_sha": "e29e31937a3af3b528535478973bb0cda49b7ce4",
+    "owner_provisioning_readiness": {
+      "workflow": "mcft-cap-09-production-owner-provisioning-readiness",
+      "run_id": 33417815916,
+      "artifact_id": 9767765459,
+      "artifact_digest": "sha256:eca64850d29830357c62b2b0d29d1760f46b7cb9e5bf89ff966eac03fa6f0ad3",
+      "result_status": "PASS_RUNTIME_CREDENTIAL_PRE_ARM_READINESS",
+      "runtime_database_url_secret_count": 0,
+      "service_login_stage_complete": true,
+      "runtime_credential_binding_authorized": false
+    },
+    "runtime_credential_readiness": {
+      "workflow": "mcft-cap-09-production-runtime-credential-readiness",
+      "run_id": 33417815882,
+      "artifact_id": 9767784698,
+      "artifact_digest": "sha256:c3dda4860b407e71b3cf4a73c5610cb6de8c091010b2324d983a234f8f2f72dc",
+      "stage": "SERVICE_LOGIN_COMPLETE_RUNTIME_URLS_ABSENT",
+      "service_login_role_count": 2,
+      "bootstrap_password_secret_count": 2,
+      "runtime_database_url_secret_count": 0,
+      "exact_one_privilege_membership_each": true,
+      "evidence_login_connectivity_proven": true,
+      "twin_login_connectivity_proven": true,
+      "runtime_credential_pre_arm_ready": false
+    },
+    "one_shot": {
+      "workflow": "mcft-cap-09-production-runtime-credential-bind-one-shot",
+      "run_id": 33417815784,
+      "artifact_id": 9767769787,
+      "artifact_digest": "sha256:685a29cd950ce2a7a8d913323f247e1852f68cd601a7aea916efd63078aaf353",
+      "result_status": "SKIPPED_NOT_ARMED",
+      "runtime_credential_binding": false
+    }
   }
 }
