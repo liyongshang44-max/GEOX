@@ -139,8 +139,16 @@ async function assertLoginRoleSafeV1(
     throw new Error(`PHASE5_SERVICE_LOGIN_ROLE_UNSAFE:${roleName}`);
   }
 
-  const memberships = await pool.query<{ role_name: string }>(
-    `SELECT granted.rolname AS role_name
+  const memberships = await pool.query<{
+    role_name: string;
+    admin_option: boolean;
+    inherit_option: boolean;
+    set_option: boolean;
+  }>(
+    `SELECT granted.rolname AS role_name,
+            membership.admin_option,
+            membership.inherit_option,
+            membership.set_option
        FROM pg_catalog.pg_auth_members membership
        JOIN pg_catalog.pg_roles granted ON granted.oid=membership.roleid
       WHERE membership.member=$1
@@ -162,8 +170,54 @@ async function assertLoginRoleSafeV1(
     || row.rolinherit !== true
     || names.length !== 1
     || names[0] !== expectedPrivilegeRole
+    || memberships.rows[0]?.admin_option !== false
+    || memberships.rows[0]?.inherit_option !== true
+    || memberships.rows[0]?.set_option !== false
   ) {
     throw new Error(`PHASE5_SERVICE_LOGIN_ROLE_EXACT_MEMBERSHIP_REQUIRED:${roleName}`);
+  }
+}
+
+async function assertLoginRoleNoDirectPublicAclV1(
+  pool: Pool,
+  roleName: string,
+): Promise<void> {
+  const direct = await pool.query<{
+    relation_grants: number;
+    routine_grants: number;
+    schema_grants: number;
+  }>(
+    `WITH target AS (
+       SELECT oid FROM pg_catalog.pg_roles WHERE rolname=$1
+     )
+     SELECT
+       (SELECT count(*)::int
+          FROM pg_catalog.pg_class object
+          JOIN pg_catalog.pg_namespace namespace ON namespace.oid=object.relnamespace
+          CROSS JOIN LATERAL pg_catalog.aclexplode(object.relacl) acl
+          JOIN target ON target.oid=acl.grantee
+         WHERE namespace.nspname='public') AS relation_grants,
+       (SELECT count(*)::int
+          FROM pg_catalog.pg_proc routine
+          JOIN pg_catalog.pg_namespace namespace ON namespace.oid=routine.pronamespace
+          CROSS JOIN LATERAL pg_catalog.aclexplode(routine.proacl) acl
+          JOIN target ON target.oid=acl.grantee
+         WHERE namespace.nspname='public') AS routine_grants,
+       (SELECT count(*)::int
+          FROM pg_catalog.pg_namespace namespace
+          CROSS JOIN LATERAL pg_catalog.aclexplode(namespace.nspacl) acl
+          JOIN target ON target.oid=acl.grantee
+         WHERE namespace.nspname='public') AS schema_grants`,
+    [roleName],
+  );
+  const row = direct.rows[0];
+  if (
+    row === undefined
+    || row.relation_grants !== 0
+    || row.routine_grants !== 0
+    || row.schema_grants !== 0
+  ) {
+    throw new Error(`PHASE5_SERVICE_LOGIN_ROLE_DIRECT_PUBLIC_ACL_FORBIDDEN:${roleName}`);
   }
 }
 
@@ -219,44 +273,39 @@ async function provisionOneV1(
     ]),
   );
 
-  for (const objectKind of ["TABLES", "SEQUENCES", "FUNCTIONS"] as const) {
-    await pool.query(
-      await formattedSqlV1(
-        pool,
-        `REVOKE ALL ON ALL ${objectKind} IN SCHEMA public FROM %I`,
-        [spec.login_role],
-      ),
-    );
-  }
-  await pool.query(
-    await formattedSqlV1(
-      pool,
-      "REVOKE ALL ON SCHEMA public FROM %I",
-      [spec.login_role],
-    ),
-  );
+  // Do not attempt privileged blanket REVOKE against writer-owned objects.
+  // A new LOGIN has no direct grants; an existing LOGIN must already be clean.
+  await assertLoginRoleNoDirectPublicAclV1(pool, spec.login_role);
 
-  // Remove any previously allowed opposite-plane membership before establishing the
-  // exact one-role membership. Unexpected third-party memberships fail closed above.
-  for (const privilegeRole of [
-    MCFT_CAP09_EVIDENCE_RUNTIME_PRIVILEGE_ROLE_V1,
-    MCFT_CAP09_TWIN_RUNTIME_PRIVILEGE_ROLE_V1,
-  ]) {
+  const currentMemberships = await pool.query<{ role_name: string }>(
+    `SELECT granted.rolname AS role_name
+       FROM pg_catalog.pg_auth_members membership
+       JOIN pg_catalog.pg_roles granted ON granted.oid=membership.roleid
+       JOIN pg_catalog.pg_roles member ON member.oid=membership.member
+      WHERE member.rolname=$1
+      ORDER BY granted.rolname`,
+    [spec.login_role],
+  );
+  const currentNames = currentMemberships.rows.map((row) => row.role_name);
+  if (currentNames.some((name) => name !== spec.privilege_role)) {
+    throw new Error(`PHASE5_SERVICE_LOGIN_ROLE_OPPOSITE_MEMBERSHIP_FORBIDDEN:${spec.login_role}`);
+  }
+  if (!currentNames.includes(spec.privilege_role)) {
     await pool.query(
       await formattedSqlV1(
         pool,
-        "REVOKE %I FROM %I",
-        [privilegeRole, spec.login_role],
+        "GRANT %I TO %I WITH SET FALSE",
+        [spec.privilege_role, spec.login_role],
+      ),
+    );
+    await pool.query(
+      await formattedSqlV1(
+        pool,
+        "GRANT %I TO %I WITH INHERIT TRUE",
+        [spec.privilege_role, spec.login_role],
       ),
     );
   }
-  await pool.query(
-    await formattedSqlV1(
-      pool,
-      "GRANT %I TO %I",
-      [spec.privilege_role, spec.login_role],
-    ),
-  );
   await pool.query(
     await formattedSqlV1(
       pool,
@@ -265,6 +314,7 @@ async function provisionOneV1(
     ),
   );
 
+  await assertLoginRoleNoDirectPublicAclV1(pool, spec.login_role);
   await assertLoginRoleSafeV1(pool, spec.login_role, spec.privilege_role);
 }
 
