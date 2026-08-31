@@ -1,0 +1,91 @@
+name: b09ae-irrigate-state-calculation-shadow-binding-exact
+
+on:
+  pull_request:
+    branches:
+      - docs/bline-b09ae-irrigate-state-calculation-shadow-binding-decision-v1
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09ae product head
+        run: |
+          git checkout 6c102cb8ef7c361a3cc0ca9fbf04b22b659b8fe8
+          test "$(git rev-parse HEAD)" = "6c102cb8ef7c361a3cc0ca9fbf04b22b659b8fe8"
+          test "$(git rev-parse HEAD^)" = "9c758d4951c5e54d5571b14f438dd7ddfd49b84d"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/device-skills build
+          pnpm --filter @geox/skill-registry build
+
+      - name: B-02 semantic governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: B-09ae decision-package acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09AE_IRRIGATE_STATE_CALCULATION_SHADOW_BINDING_V1.cjs
+
+      - name: B-09ad predecessor preservation
+        run: |
+          git diff --exit-code 9c758d4951c5e54d5571b14f438dd7ddfd49b84d 6c102cb8ef7c361a3cc0ca9fbf04b22b659b8fe8 -- \
+            docs/architecture/semantic_convergence/GEOX-B09AD-ACTION-WINDOW-HORIZON-VALUE-READINESS-V1.json \
+            docs/architecture/semantic_convergence/GEOX-B09AD-ACTION-WINDOW-HORIZON-VALUE-READINESS-V1.md \
+            scripts/governance_acceptance/ACCEPTANCE_B09AD_ACTION_WINDOW_HORIZON_VALUE_READINESS_V1.cjs
+          echo "B09AD_PREDECESSOR_PRESERVED_PASS"
+
+      - name: B-06b CalculationResult adapter regression
+        run: node --import tsx --test apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.contract.test.ts
+
+      - name: B-07c STATE precursor regression
+        run: node --import tsx --test apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.contract.test.ts
+
+      - name: B-09j Candidate binding regression
+        run: node --import tsx --test apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.contract.test.ts
+
+      - name: Product diff remains bounded
+        run: |
+          git diff --name-only 9c758d4951c5e54d5571b14f438dd7ddfd49b84d 6c102cb8ef7c361a3cc0ca9fbf04b22b659b8fe8 > /tmp/b09ae-files.txt
+          cat /tmp/b09ae-files.txt
+          test "$(wc -l < /tmp/b09ae-files.txt | tr -d ' ')" = "4"
+          git diff --check 9c758d4951c5e54d5571b14f438dd7ddfd49b84d 6c102cb8ef7c361a3cc0ca9fbf04b22b659b8fe8
+
+      - name: Prove runtime/MCFT surfaces unchanged
+        run: |
+          git diff --exit-code 9c758d4951c5e54d5571b14f438dd7ddfd49b84d 6c102cb8ef7c361a3cc0ca9fbf04b22b659b8fe8 -- \
+            apps/server/src apps/server/db packages config .github/workflows docs/digital_twin docs/twin_kernel scripts/runtime_acceptance
+          echo "B09AE_RUNTIME_MCFT_UNCHANGED_PASS"
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server typecheck
+
+      - name: Server build
+        run: pnpm --filter @geox/server build
+
+      - name: Prove validation did not mutate product
+        run: |
+          test "$(git rev-parse HEAD)" = "6c102cb8ef7c361a3cc0ca9fbf04b22b659b8fe8"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          echo "B09AE_VALIDATION_ONLY_NO_PRODUCT_MUTATION_PASS"
+
+      - name: Marker
+        run: |
+          echo "B09AE_EXACT_HEAD 6c102cb8ef7c361a3cc0ca9fbf04b22b659b8fe8"
+          echo "B09AE_STATE_CALCULATION_SHADOW_BINDING_PROPOSAL_PASS"
