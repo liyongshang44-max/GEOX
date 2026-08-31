@@ -1,3 +1,1904 @@
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-01 Continuation — 7.e/7.f Durable Closure / Non-GitHub Host Authority / Render Selection Frontier
+
+Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
+
+Timestamp: **2026-09-01 03:07 +08:00**
+
+Repository: `liyongshang44-max/GEOX`
+
+Purpose: continue the same MCFT-CAP-09 frozen Production Hosting / exact-one-owner activation route after the dedicated Neon operational database, schema/ACL materialization, production service LOGIN bootstrap, and runtime credential binding have all reached durable machine closure. The repository-local 7.g non-GitHub host authority is now substantially complete and fail-closed. The real frontier has moved outside GitHub: an external long-running execution platform must be explicitly selected and two distinct production service identities must exist before host identity binding can proceed.
+
+> **This I-section is now the highest-priority conversation continuation in this file.**
+>
+> The H-section immediately below is intentionally preserved in full as the historical snapshot from the third Neon schema/ACL materialization failure.
+>
+> Do not rewrite H merely because its then-current blocker is now closed. H explains the portability failures, rollback discipline, operational-DB authority, and why service LOGIN / credential / host / owner stages were deliberately split.
+>
+> G and all earlier Phase 7 / Phase 6 / Phase 5 / Phase 4 / Phase 3 / Phase 2 sections also remain historical evidence and must remain intact.
+>
+> This handoff does **not** supersede `docs/SSOT.md`, the Digital Twin Master Task Line, the CAP-09 taskbook, Production Hosting architecture/route, QCP, evidence registry, immutable workflow artifacts, accepted CAP-01→08 authorities, or the frozen Formal-store authorities.
+
+---
+
+## I0. READ THIS FIRST — 7.e and 7.f are CLOSED; 7.g repository work is essentially closed; the real blocker is external Render platform authority
+
+The H-section was correct when written.
+
+At H0 the exact product frontier had failed the third Neon schema/ACL one-shot and was still armed.
+
+That is no longer the current frontier.
+
+The authoritative product PR remains:
+
+```text
+#3376
+feat(mcft-cap09): qualify producer-driven v13 supply graph
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+current exact head =
+  c9b01c2f2ad4d88ad0083883f818b592f3b3f999
+
+state =
+  Draft
+  open
+  unmerged
+
+mergeable =
+  true
+
+mergeable_state observed at handoff =
+  unstable
+```
+
+Protected `main` remains:
+
+```text
+fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+```
+
+The machine facts at this handoff are now:
+
+```text
+Step 4 producer-driven V13 qualification              = DURABLE VALID
+Step 5 end-to-end timing / frozen budget              = DURABLE VALID
+production operational DB identity                    = BOUND
+production operational DB                             = CREATED
+production operational schema                         = MATERIALIZED
+production tables                                     = 41
+runtime routines                                      = 3
+all production table rows                             = 0
+Evidence/Twin schema ACL                              = MATERIALIZED / VERIFIED
+service LOGIN principals                              = 2 / CREATED / VERIFIED
+runtime password secrets                              = 2 / BOUND
+runtime DATABASE_URL secrets                          = 2 / BOUND / VERIFIED
+runtime credential binding                            = CLOSED
+non-GitHub host identity authority                    = DEFINED / UNBOUND
+host platform                                         = NOT SELECTED
+Evidence non-GitHub service identity                  = NOT BOUND
+Twin non-GitHub service identity                      = NOT BOUND
+host binding arm                                      = UNARMED
+runtime process start                                 = false
+production owner activation                           = false
+Formal-v5                                             = not armed
+A0                                                    = not started
+O00                                                   = not started
+MCFT-CAP-09                                           = NOT COMPLETE
+```
+
+The exact repository-local 7.g frontier is:
+
+```text
+production execution host class =
+  NON_GITHUB_LONG_RUNNING_SERVICE
+
+GitHub Actions as production execution host =
+  FORBIDDEN
+
+required runtime service identities =
+  EXACTLY TWO DISTINCT LONG-RUNNING SERVICE IDENTITIES
+
+required roles =
+  EVIDENCE_RUNTIME
+  TWIN_RUNTIME
+
+recommended platform candidate =
+  Render Background Worker
+
+recommended region =
+  Oregon, USA
+
+platform state =
+  RECOMMENDED_NOT_AUTHORIZED
+```
+
+The current host preflight/owner readiness reports five explicit blockers:
+
+```text
+RENDER_PLATFORM_SELECTION_NOT_AUTHORIZED
+RENDER_WORKSPACE_OWNER_ID_NOT_BOUND
+RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND
+RENDER_TWIN_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND
+NON_GITHUB_HOST_BINDING_NOT_AUTHORIZED
+```
+
+These are **not five independent actions**.
+
+The first real external authority blocker is:
+
+```text
+RENDER_PLATFORM_SELECTION_NOT_AUTHORIZED
+```
+
+The workspace owner ID, the two Render service IDs, and the final host-binding authorization are downstream consequences of selecting/provisioning the external platform.
+
+Do not invent those IDs.
+
+Do not create cost-bearing Render resources without explicit external authority.
+
+---
+
+## I1. Current task in one sentence
+
+**Obtain explicit external authority for a real non-GitHub long-running production platform, provision or identify two distinct long-running service identities for GEOX Evidence Runtime and GEOX Twin Runtime, bind those exact identities through the 7.g machine authority without starting either runtime, and only then continue toward exact-one-production-owner activation as a separate governed stage.**
+
+This is no longer:
+
+- a Neon database creation task;
+- a schema/ACL portability task;
+- a service LOGIN task;
+- a runtime credential task;
+- a Step-4 V13 qualification task;
+- a Step-5 timing task;
+- a Formal-v5 task;
+- an A0/O00 task.
+
+The immediate work is **external production host identity authority**.
+
+---
+
+## I2. Authority reconstruction order for the next engineer
+
+Read in this order:
+
+1. `docs/SSOT.md`
+2. `docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md`
+3. `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md`
+4. `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md`
+5. `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json`
+6. `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json`
+7. `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json`
+8. `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json`
+9. `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json`
+10. `docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json`
+11. `scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json`
+12. `scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_V1.cjs`
+13. `scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_READINESS_V1.cjs`
+14. `.github/workflows/mcft-cap-09-production-non-github-host-binding-readiness.yml`
+15. #3376 exact head `c9b01c2f2ad4d88ad0083883f818b592f3b3f999`
+16. host readiness run `33428321125`
+17. owner readiness run `33428321721`
+18. post-merge control-plane run `33428321122`
+19. QCP run `33428320529`
+20. this I-section
+
+The weekly report remains context only.
+
+Do not use a weekly summary to override the machine authorities above.
+
+---
+
+## I3. Repository / PR topology at handoff time
+
+### I3.1 Protected main
+
+```text
+protected main =
+  fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+```
+
+Do not move protected `main` as part of this continuation.
+
+### I3.2 #3376 — active product frontier
+
+```text
+#3376
+feat(mcft-cap09): qualify producer-driven v13 supply graph
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+head =
+  c9b01c2f2ad4d88ad0083883f818b592f3b3f999
+
+state =
+  Draft / open / unmerged
+
+mergeable =
+  true
+```
+
+Continue from the exact remote head.
+
+Do not return to old Phase5/6/7 branches.
+
+Do not squash historical arm/disarm commits merely because they are noisy; they are part of the machine-authority trace.
+
+### I3.3 Docs-only handoff PR
+
+The conversation handoff remains isolated in:
+
+```text
+#3298
+branch =
+  docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier
+
+base =
+  26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+```
+
+Its intentionally historical base is unchanged.
+
+Do not rebase it merely because protected `main` is now `fa6e260d...`.
+
+The docs PR must remain docs-only.
+
+---
+
+## I4. Frozen activation route — exact current position
+
+The frozen route remains:
+
+```text
+1  MERGE_EXACT_V13_SUCCESSOR_SUBJECT
+2  CAPACITY_PREFLIGHT_AND_SAFE_SUPERSEDED_GENERATION_CLEANUP_IF_REQUIRED
+3  PROVISION_ZERO_STATE_V13_BLOCKED_V13_AND_FORMAL_V5_STORES
+4  RUN_PRODUCER_DRIVEN_V13_QUALIFICATION
+5  FREEZE_EXACT_HEAD_END_TO_END_TIMING_BUDGET
+6  OPEN_NEW_MACHINE_ONLY_GRADUATION_GATE
+7  PROVE_EXACT_ONE_PRODUCTION_OWNER_AND_RETIRED_TRIGGER_ZERO
+8  ARM_FRESH_V5_EPOCH
+9  BOOTSTRAP_FRESH_A0
+10 RUN_REAL_WALL_CLOCK_O00_O23_WITH_ZERO_ROUTINE_MANUAL_RESCUE
+11 RUN_AUTOMATIC_FINAL_READBACK
+12 FINAL_READ_ONLY_COMPLETION_ADJUDICATION
+```
+
+Current status:
+
+```text
+1  COMPLETE
+2  COMPLETE
+3  COMPLETE
+4  COMPLETE / durable evidence valid
+5  COMPLETE / durable timing evidence valid
+6  COMPLETE
+7  IN PROGRESS
+   7.a operational DB authority              COMPLETE
+   7.b operational DB creation               COMPLETE
+   7.c schema/ACL materialization             COMPLETE
+   7.d schema/ACL readback                    COMPLETE
+   7.e service LOGIN bootstrap                COMPLETE
+   7.f runtime credential binding             COMPLETE
+   7.g non-GitHub host identity binding       IN PROGRESS / external authority boundary
+   7.h runtime start / effective owner proof  NOT STARTED
+8  NOT STARTED
+9  NOT STARTED
+10 NOT STARTED
+11 NOT STARTED
+12 NOT STARTED
+```
+
+QCP therefore correctly continues to report:
+
+```text
+EXACT_ONE_PRODUCTION_OWNER
+```
+
+as the single qualification blocker.
+
+That is expected until the production host and effective owner stages are actually closed.
+
+---
+
+## I5. Evolution from H-section to this I-section
+
+H ended at the third remote schema/ACL failure:
+
+```text
+permission denied to alter role
+Only roles with the SUPERUSER attribute may change the SUPERUSER attribute
+```
+
+The important subsequent evolution was:
+
+1. **Disarm first.**
+2. Prove the failed one-shot left no residual schema/ACL/login/membership mutation.
+3. Audit the ACL bundle for Neon-restricted role mutation.
+4. Discover that the qualified V13 runtime dependency had accidentally absorbed Neon-provisioning hardening.
+5. Restore the already-qualified V13 runtime files to their accepted dependency closure.
+6. Move Neon-specific LOGIN bootstrap behavior into a provisioning-only module.
+7. Change delegated temporary writer-owner membership to the Neon-compatible transient `SET + INHERIT` path while retaining complete REVOKE cleanup.
+8. Re-run the isolated `NOSUPERUSER + CREATEROLE + CREATEDB` PostgreSQL bundle.
+9. Recover the accepted Step-4 dependency digest and durable qualification evidence.
+10. Materialize the production schema/ACL successfully.
+11. Close 7.e service LOGIN.
+12. Close 7.f runtime credential binding.
+13. Define 7.g host identity authority and stop at the first cost-bearing external authority.
+
+This distinction matters:
+
+> Neon portability was solved in the **provisioning plane**, not by silently mutating the already-qualified V13 runtime dependency closure.
+
+That is why Step 4 remains durable valid.
+
+---
+
+## I6. Schema/ACL closure after H — the third failure did not become a fourth blind retry
+
+The dedicated production operational DB remains:
+
+```text
+geox_mcft_cap09_production_runtime_v1
+```
+
+Database creation evidence remains bound:
+
+```text
+provision subject =
+  b27f00fa324ba02dbf92e108b43f108dec45ecd5
+
+run =
+  33375907417
+
+artifact =
+  9751846155
+
+digest =
+  sha256:1530fb351a83838b3b25f0d6d35ea71c7cd5580dcfc8f7be3b8950cac7473cc1
+```
+
+The successful schema/ACL materialization is now immutable:
+
+```text
+workflow =
+  mcft-cap-09-production-operational-schema-acl-materialize-one-shot
+
+subject =
+  577e9a9793937c9dec3d0c4e37764ecb31f3c77d
+
+run =
+  33403255312
+
+artifact =
+  9762088357
+
+digest =
+  sha256:d860c68bfc1cdb6de94edb30ec3b4e24a681f9f6ba9eb07bffabe0ee2ebaf928
+```
+
+Machine-proven shape:
+
+```text
+database =
+  geox_mcft_cap09_production_runtime_v1
+
+tables =
+  41
+
+runtime routines =
+  3
+
+all table rows =
+  0
+
+Evidence direct facts INSERT =
+  false
+
+Twin direct facts INSERT =
+  false
+
+Evidence writer cross-plane matrix =
+  PASS
+
+Twin writer cross-plane matrix =
+  PASS
+
+V13 fenced-promotion cross-plane matrix =
+  PASS
+
+residual provisioning-admin writer-owner SET membership =
+  0
+
+residual self-grant membership =
+  0
+
+service LOGIN created at schema stage =
+  false
+
+schema/ACL arm after success =
+  disarmed
+```
+
+The isolated delegated provisioning bundle run that proved the portability fix before remote mutation was:
+
+```text
+33410969463 = SUCCESS
+```
+
+The important architectural repair was to keep:
+
+```text
+apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts
+```
+
+as the qualified runtime identity/assertion surface, while moving Neon-portable bootstrap logic into a provisioning-only module.
+
+Do not put provisioning-specific ALTER/GRANT behavior back into the runtime import closure.
+
+---
+
+## I7. Step 4 / Step 5 durable evidence remained valid through production-host work
+
+The production-host work was deliberately restricted to:
+
+```text
+PRODUCTION_OWNER_GRADUATION_CLOSURE
+```
+
+The host/credential paths must not become dependencies of Step 4 or Step 5.
+
+Current control-plane evidence still shows:
+
+### I7.1 Producer-driven V13 qualification
+
+```text
+check =
+  V13_PRODUCER_DRIVEN_QUALIFICATION
+
+status =
+  PASS
+
+evidence =
+  V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_AE3F82FE
+
+evidence run =
+  33326960144
+
+evidence subject =
+  ae3f82fea3ad4dc131376db3768b268f3c3d5025
+
+dependency digest =
+  sha256:e8f8474457c360be51c18a55993d28fb0c5f5a31e5deb955b13a75c55514317b
+```
+
+### I7.2 End-to-end evidence supply timing
+
+```text
+check =
+  END_TO_END_EVIDENCE_SUPPLY_DEADLINE
+
+status =
+  PASS
+
+evidence =
+  END_TO_END_EVIDENCE_SUPPLY_DEADLINE_POSTMERGE_E052FD45
+
+evidence run =
+  33361592444
+
+evidence subject =
+  e052fd459ffa4a479ae1299b12b08f8d06dc6c42
+
+dependency digest =
+  sha256:857b9011f042fc561f00d0e65e47a6cfc5c35d4efa4a4bae3f2ca8fd1de84c66
+```
+
+Do not re-run live provider qualification merely because 7.g changes.
+
+If a future host change unexpectedly requalifies Step 4/5, first treat that as a resolver ownership bug unless the changed path genuinely affects those runtime dependency closures.
+
+---
+
+## I8. 7.e — production service LOGIN bootstrap is CLOSED
+
+The two production LOGIN principals now exist:
+
+```text
+geox_mcft_cap09_evidence_runtime_login_v1
+geox_mcft_cap09_twin_runtime_login_v1
+```
+
+They are separate identities.
+
+They connect to the same operational PostgreSQL database.
+
+They must never be collapsed into one shared LOGIN.
+
+### I8.1 Pre-arm zero-state
+
+Before real LOGIN creation, machine evidence proved:
+
+```text
+workflow =
+  mcft-cap-09-production-service-login-readiness
+
+run =
+  33412230037
+
+artifact =
+  9765598508
+
+digest =
+  sha256:52fcbcd4dc7ef2c3c3f5f7a7c4bd797817ec0a3d66beda3b9f6de608e023849d
+
+stage =
+  PRE_LOGIN_ZERO_STATE
+
+tables =
+  41
+
+routines =
+  3
+
+rows =
+  0
+
+LOGIN count =
+  0
+
+credential secrets present =
+  0
+```
+
+The unarmed one-shot sentinel also passed:
+
+```text
+run =
+  33412229773
+
+artifact =
+  9765577185
+
+digest =
+  sha256:b47fd25c56a357826f16bba47885d98d4fce0c22f35a1ac0c95002ed5b39c0bf
+
+result =
+  SKIPPED_NOT_ARMED
+
+DB I/O =
+  false
+```
+
+### I8.2 Password secret readiness
+
+Two bootstrap password secrets were added externally and then machine-proven:
+
+```text
+GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_PASSWORD
+GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_PASSWORD
+```
+
+Password-ready owner readiness:
+
+```text
+run =
+  33415798359
+
+artifact =
+  9766980169
+
+digest =
+  sha256:1b693e8259b08d7834d1c1acd6dd385ffbd914ae9eb0297ba5d056baf3798b8d
+```
+
+Independent service-login readiness:
+
+```text
+run =
+  33415798444
+
+artifact =
+  9766985457
+
+digest =
+  sha256:0904687298e322695390d601461ce8caad50b102eb9b01d12de0058620b53265
+```
+
+### I8.3 First real 7.e arm failed before DB I/O
+
+The first real LOGIN bootstrap attempt failed at a stale authority-stage assertion.
+
+The runner still expected:
+
+```text
+SCHEMA_ACL_COMPLETE_PRE_LOGIN
+```
+
+after the machine authority had already advanced to:
+
+```text
+SERVICE_LOGIN_PRE_ARM_READY
+```
+
+This was a control-plane metadata mismatch, not a PostgreSQL mutation failure.
+
+The arm was immediately disarmed.
+
+Independent readback proved:
+
+```text
+service_login_role_count = 0
+```
+
+before retry.
+
+### I8.4 Successful LOGIN bootstrap
+
+The corrected one-shot succeeded:
+
+```text
+subject =
+  5979f15749b0aa7e40a27daf14b957661345d8cd
+
+workflow =
+  mcft-cap-09-production-service-login-provision-one-shot
+
+run =
+  33416708461
+
+artifact =
+  9767296933
+
+digest =
+  sha256:f77622ffd4e60556b5437b52f72e95704be45b5e9bc50ef2b0cf78db82ef0ac7
+```
+
+Machine proof:
+
+```text
+tables = 41
+routines = 3
+all rows = 0
+two LOGIN principals = present
+exact-one privilege membership each = true
+direct public ACL on LOGIN roles = 0
+database object ownership by LOGIN roles = 0
+Evidence LOGIN connectivity = proven
+Twin LOGIN connectivity = proven
+runtime DATABASE_URL binding = false at this stage
+runtime start = false
+production owner activation = false
+Formal-v5/A0/O00 = false
+```
+
+The arm was immediately disarmed after success.
+
+Independent post-materialization readback:
+
+```text
+subject =
+  8621c82d72f836cce74efa0a7c1614ba304df714
+
+run =
+  33416853051
+
+artifact =
+  9767373040
+
+digest =
+  sha256:182cd68ceeda358e340697e4c8a5a88b8a734b411f721f1eccceaaa134dbfffd
+
+stage =
+  SERVICE_LOGIN_COMPLETE_PRE_RUNTIME_CREDENTIAL_BINDING
+```
+
+7.e is closed.
+
+Do not recreate the LOGIN roles.
+
+Do not rotate their passwords casually.
+
+---
+
+## I9. 7.f — runtime DATABASE_URL credential binding is CLOSED
+
+The two runtime URL secrets now exist:
+
+```text
+GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL
+GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL
+```
+
+The non-secret Neon endpoint metadata was independently frozen as:
+
+```text
+project =
+  delicate-glade-62464340
+
+branch =
+  br-cold-dust-a6j6aymz
+
+branch name =
+  main
+
+host =
+  ep-odd-poetry-a6peeo8g.us-west-2.aws.neon.tech
+
+port =
+  5432
+
+database =
+  geox_mcft_cap09_production_runtime_v1
+
+sslmode =
+  require
+
+channel_binding =
+  require
+```
+
+Non-secret endpoint evidence:
+
+```text
+subject =
+  0a457afad141fd55fa0b3cfb2443445cb17890c9
+
+run =
+  33418849758
+
+artifact =
+  9768092291
+
+digest =
+  sha256:27a91f5bdd9900fdf0d4556d3575e88391a6afec7a2d2a0b0b19306436872492
+```
+
+### I9.1 URL-zero pre-arm checkpoint
+
+Before the two URL secrets existed:
+
+```text
+runtime credential readiness run =
+  33417815882
+
+artifact =
+  9767784698
+
+digest =
+  sha256:c3dda4860b407e71b3cf4a73c5610cb6de8c091010b2324d983a234f8f2f72dc
+
+stage =
+  SERVICE_LOGIN_COMPLETE_RUNTIME_URLS_ABSENT
+```
+
+Unarmed binding sentinel:
+
+```text
+run =
+  33417815784
+
+artifact =
+  9767769787
+
+digest =
+  sha256:685a29cd950ce2a7a8d913323f247e1852f68cd601a7aea916efd63078aaf353
+
+result =
+  SKIPPED_NOT_ARMED
+```
+
+### I9.2 Secret-handling mistakes discovered before arm
+
+Several real operational pitfalls were exposed here.
+
+#### Clipboard overwrite
+
+PowerShell generated the correct URL into the clipboard, but copying the next command from chat replaced the clipboard.
+
+That caused a literal command string to enter a GitHub URL secret.
+
+Never assume `Set-Clipboard` survives a later Ctrl+C.
+
+#### Evidence/Twin URL swap
+
+At one point the Evidence URL secret contained the Twin username.
+
+The dual-state verifier correctly failed:
+
+```text
+RUNTIME_CREDENTIAL_LOGIN_ROLE_MISMATCH
+```
+
+Do not “eyeball” these URLs.
+
+Always rely on machine verification.
+
+#### Secret mismatch logging
+
+The first verifier used an assertion form that could include the mismatched secret value in the error log.
+
+That was repaired before continuing.
+
+Future secret comparison failures must emit **error codes only**, never actual or expected password/URL values.
+
+### I9.3 URL-ready pre-arm proof
+
+After correcting the secrets:
+
+```text
+runtime readiness =
+  PASS_RUNTIME_CREDENTIAL_URLS_BOUND_PRE_ARM
+
+exact two URL secrets =
+  true
+
+exact database =
+  true
+
+exact LOGIN username =
+  true
+
+exact password pairing =
+  true
+
+exact seed host/port =
+  true
+
+Evidence URL connectivity =
+  true
+
+Twin URL connectivity =
+  true
+```
+
+The armed path was gated on immutable URL-ready evidence before mutation authority was allowed.
+
+### I9.4 First 7.f arm self-conflict
+
+The first 7.f arm was:
+
+```text
+225a4ca7d0e8850eb5dfd1a3ec0adf05360b0ab3
+gov(mcft-cap09): arm runtime credential binding only
+```
+
+It exposed a verifier self-conflict.
+
+The correct response was:
+
+```text
+0584f7665d38d00490e011abc54404aebcde20df
+gov(mcft-cap09): disarm after credential verifier self-conflict
+```
+
+Then the armed credential recheck was separated from the service-login readiness path and hardened.
+
+Do not leave an arm true while fixing the verifier.
+
+### I9.5 Successful 7.f bind and closure
+
+Successful re-arm subject:
+
+```text
+939add917b4d97b499d326267e7943c6c1e8e161
+```
+
+Immutable binding evidence:
+
+```text
+workflow =
+  mcft-cap-09-production-runtime-credential-bind-one-shot
+
+run =
+  33422916643
+
+job =
+  99589432250
+
+artifact =
+  9769604043
+
+digest =
+  sha256:038d593e81b9917299113897a873d24779d5fe638e0f7baea55426bd0dbe3d59
+
+stage =
+  RUNTIME_CREDENTIAL_BINDING_COMPLETE_NON_GITHUB_HOST_NOT_BOUND
+```
+
+Machine proof:
+
+```text
+service LOGIN count = 2
+bootstrap password secret count = 2
+runtime DATABASE_URL secret count = 2
+exact database match = true
+exact username match = true
+exact password pairing = true
+exact endpoint host/port match = true
+exact-one role membership = true
+Evidence runtime URL connectivity = true
+Twin runtime URL connectivity = true
+runtime credential binding = true
+runtime process start = false
+production owner activation = false
+Formal-v5/A0/O00 = false
+```
+
+Immediate disarm:
+
+```text
+d02400b8073bbdeb9c8de2a7add7e897fa3f2613
+```
+
+Independent post-disarm readback:
+
+```text
+run =
+  33422981303
+
+job =
+  99589642403
+
+artifact =
+  9769642560
+
+digest =
+  sha256:32ef92e742167d69b4c67d285ab49cb863310cc35b7744759ef0fb5993e31d97
+
+stage =
+  RUNTIME_CREDENTIAL_URLS_BOUND_PRE_ARM
+```
+
+7.f is closed.
+
+Do not reopen credential binding merely because host selection is pending.
+
+---
+
+## I10. 7.g — platform-neutral non-GitHub host identity authority
+
+7.g introduced a new explicit authority:
+
+```text
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json
+```
+
+Its current status is:
+
+```text
+HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND
+```
+
+Its predecessor is:
+
+```text
+RUNTIME_CREDENTIAL_BINDING_COMPLETE_PRE_HOST_BINDING
+```
+
+The required production execution class is:
+
+```text
+NON_GITHUB_LONG_RUNNING_SERVICE
+```
+
+GitHub Actions is explicitly forbidden as the production execution host.
+
+GitHub Actions may still perform:
+
+```text
+CI
+QUALIFICATION
+DEPLOYMENT
+READ_ONLY_AUDIT
+FINAL_READBACK_ADJUDICATION
+```
+
+but may not be the long-running Evidence or Twin process.
+
+### I10.1 Exact service identity contract
+
+Each runtime service identity must contain:
+
+```text
+platform_provider
+platform_account_or_project_id
+region_or_location
+service_id
+service_name
+execution_class
+runtime_role
+```
+
+Execution class must be:
+
+```text
+LONG_RUNNING_SERVICE
+```
+
+Canonical runtime roles remain:
+
+```text
+Evidence:
+  service role = GEOX_EVIDENCE_RUNTIME
+  DB LOGIN = geox_mcft_cap09_evidence_runtime_login_v1
+
+Twin:
+  service role = GEOX_TWIN_RUNTIME
+  DB LOGIN = geox_mcft_cap09_twin_runtime_login_v1
+```
+
+Both use:
+
+```text
+geox_mcft_cap09_production_runtime_v1
+```
+
+### I10.2 Separation constraints
+
+Machine-enforced constraints include:
+
+```text
+Evidence and Twin service identities must be distinct
+shared platform provider may be allowed
+shared platform account/project may be allowed
+shared region may be allowed
+GitHub Actions service identity is forbidden
+ephemeral CI runner identity is forbidden
+role collapse is forbidden
+Evidence host must not own Twin scheduler lease
+Twin host must not own Evidence producer lease
+```
+
+The dual-state host verifier supports:
+
+```text
+UNBOUND state:
+  PASS
+  no effects
+
+BOUND state:
+  PASS only if exact-two valid non-GitHub identities exist
+  service IDs distinct
+  roles exact
+  runtime still not started
+```
+
+This is intentional.
+
+“Host identity bound” and “runtime started” are different stages.
+
+---
+
+## I11. 7.g separate arm is fully zero-state
+
+The independent host-binding arm is:
+
+```text
+scripts/runtime_acceptance/
+MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json
+```
+
+At the exact handoff head it is:
+
+```text
+armed = false
+
+platform_selection_authorized = false
+platform_provider = null
+platform_account_or_project_id = null
+region_or_location = null
+
+evidence_service_id = null
+evidence_service_name = null
+twin_service_id = null
+twin_service_name = null
+
+service_creation_authorized = false
+host_identity_binding_authorized = false
+runtime_secret_injection_authorized = false
+deployment_authorized = false
+runtime_process_start_authorized = false
+production_owner_activation_authorized = false
+formal_v5_arm_authorized = false
+a0_authorized = false
+o00_authorized = false
+```
+
+Do not reuse the older owner-provisioning arm for platform selection.
+
+7.g has a separate authority because platform selection/service creation are cost-bearing external effects.
+
+---
+
+## I12. 7.g pre-platform checkpoint is already durable
+
+The platform-neutral zero-effect checkpoint was bound before choosing a vendor.
+
+Subject:
+
+```text
+776c6a6b9765abd608e8f469729451784c24c868
+```
+
+Host readiness:
+
+```text
+run =
+  33424840577
+
+job =
+  99595800927
+
+artifact =
+  9770470060
+
+digest =
+  sha256:8dac5bb17b540357cd3d0e0570d09d5e08b762575f46538633285a40823d3d5d
+
+stage =
+  HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND
+```
+
+Owner readiness:
+
+```text
+run =
+  33424840821
+
+job =
+  99595802577
+
+artifact =
+  9770513889
+
+digest =
+  sha256:5cac056bc45d7caae7c7edb57358c78605844d2b75cabcb610d8d68e72f80d3a
+
+status =
+  PASS_NON_GITHUB_HOST_BINDING_FRONTIER
+```
+
+Post-merge control-plane:
+
+```text
+run =
+  33424840808
+
+job =
+  99595803072
+
+artifact =
+  9770641030
+
+digest =
+  sha256:a138206e91680f0bdb6197d31151f705c26b8af494b675013ef5528a34b5a9a5
+
+blocker_count =
+  1
+
+only blocker =
+  EXACT_ONE_PRODUCTION_OWNER
+```
+
+QCP:
+
+```text
+run =
+  33424840454
+
+job =
+  99595803951
+
+artifact =
+  9770726672
+
+digest =
+  sha256:9c8d760f176b6f5bf002f7cc26493f32e62315ccb2332d39e2340121d1103a2f
+
+conclusion =
+  EXPECTED_FAILURE_OWNER_UNCLOSED
+
+unknown changed paths =
+  0
+
+authority errors =
+  0
+
+blocker_count =
+  1
+
+only blocker =
+  EXACT_ONE_PRODUCTION_OWNER
+```
+
+CI for that checkpoint also had both build-test and acceptance SUCCESS.
+
+This proves the platform recommendation work did not reopen Step 4 or Step 5.
+
+---
+
+## I13. Current exact-head 7.g machine evidence
+
+Exact product head:
+
+```text
+c9b01c2f2ad4d88ad0083883f818b592f3b3f999
+gov(mcft-cap09): gate owner readiness on host zero-state
+```
+
+### I13.1 Host readiness
+
+```text
+workflow =
+  mcft-cap-09-production-non-github-host-binding-readiness
+
+run =
+  33428321125
+
+job =
+  99607259548
+
+conclusion =
+  SUCCESS
+
+artifact =
+  9771766630
+
+digest =
+  sha256:7170fc4d4a752ab7d37c7dfa7d25347f00513005962a9c6be822e940d463ca14
+```
+
+Current preflight/readiness shape:
+
+```text
+status = PASS
+stage = HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND
+platform_selected = false
+evidence_host_identity_bound = false
+twin_host_identity_bound = false
+exact_two_runtime_service_identities_bound = false
+binding_authorized = false
+runtime_process_start = false
+production_owner_activation = false
+provider_request_count = 0
+Formal-v5 = false
+A0 = false
+O00 = false
+```
+
+### I13.2 Owner provisioning readiness
+
+```text
+workflow =
+  mcft-cap-09-production-owner-provisioning-readiness
+
+run =
+  33428321721
+
+job =
+  99607261774
+
+conclusion =
+  SUCCESS
+
+artifact =
+  9771786592
+
+digest =
+  sha256:2a59ceb78f12d9920fd66a1381ca9eb589edd488fcce0de9186ebafff7026774
+
+status =
+  PASS_NON_GITHUB_HOST_BINDING_FRONTIER
+```
+
+It re-proves at current head:
+
+```text
+target DB bound = true
+schema/ACL evidence bound = true
+service LOGIN evidence bound = true
+runtime credential binding evidence bound = true
+runtime credential post-readiness evidence bound = true
+tables = 41
+routines = 3
+all rows = 0
+Evidence LOGIN present = true
+Twin LOGIN present = true
+two runtime URL secrets = present
+exact DB/user/password/endpoint checks = true
+host authority = still unbound
+```
+
+### I13.3 Post-merge control plane
+
+```text
+run =
+  33428321122
+
+job =
+  99607259908
+
+conclusion =
+  SUCCESS
+
+artifact =
+  9771937949
+
+digest =
+  sha256:fa5a2d6cefe55523084736ec4d3f281ddae1432265d6ed1412305cb1cdfef4f7
+```
+
+Step 4/5 remain valid.
+
+### I13.4 QCP expected red sentinel
+
+```text
+run =
+  33428320529
+
+job =
+  99607266634
+
+artifact =
+  9772008924
+
+digest =
+  sha256:2d33af3d031dcb08c44bec1be85d6af156e7e9854ee9abe812fe660c219eb82a
+
+conclusion =
+  FAILURE
+```
+
+That failure is expected because the blocker inventory intentionally returns non-zero while a qualification blocker exists.
+
+Machine summary:
+
+```text
+unknown changed paths = 0
+authority errors = 0
+blocker count = 1
+only blocker = EXACT_ONE_PRODUCTION_OWNER
+```
+
+Do not “fix” QCP by making a blocker-bearing run green.
+
+---
+
+## I14. Render platform audit — recommended candidate, not selected authority
+
+Repository-side platform evaluation compared:
+
+```text
+1  Render Background Worker / Oregon
+2  Railway Service / US West Metal California
+3  Fly.io Machine / SJC
+4  AWS ECS Fargate Service / us-west-2
+```
+
+Current recommendation:
+
+```text
+platform_provider =
+  RENDER
+
+service_class =
+  BACKGROUND_WORKER
+
+preferred_region =
+  OREGON_USA
+
+status =
+  RECOMMENDED_CANDIDATE_NOT_SELECTED
+```
+
+Reason codes:
+
+```text
+DIRECT_MATCH_FOR_CONTINUOUS_NON_HTTP_BACKGROUND_PROCESS
+DISTINCT_SERVICE_IDENTITIES
+DOCKER_AND_RUNTIME_SECRET_SUPPORT
+LOWER_CONTROL_PLANE_COMPLEXITY_THAN_FLY_OR_ECS
+WESTERN_US_REGION_AVAILABLE
+```
+
+The candidate schema is frozen as:
+
+```text
+provider =
+  RENDER
+
+region =
+  oregon
+
+service_type =
+  background_worker
+
+blueprint_type =
+  worker
+
+runtime =
+  docker
+
+Evidence candidate service name =
+  geox-mcft-cap09-evidence-runtime-v1
+
+Twin candidate service name =
+  geox-mcft-cap09-twin-runtime-v1
+```
+
+Still unbound:
+
+```text
+workspace_owner_id = null
+Evidence service_id = null
+Twin service_id = null
+```
+
+The authority explicitly marks:
+
+```text
+deployment_configuration_not_authorized = true
+service_creation_not_authorized = true
+runtime_secret_injection_not_authorized = true
+runtime_start_not_authorized = true
+production_owner_activation_not_authorized = true
+```
+
+Render Background Worker is a cost-bearing external resource.
+
+There is no free Background Worker instance to treat as a harmless test allocation.
+
+Therefore:
+
+> **Recommendation is not authorization.**
+
+Do not create two Render workers merely because the repository ranks Render first.
+
+---
+
+## I15. Current blocker semantics — the first actionable blocker versus dependent blockers
+
+Current 7.g readiness emits:
+
+```text
+RENDER_PLATFORM_SELECTION_NOT_AUTHORIZED
+RENDER_WORKSPACE_OWNER_ID_NOT_BOUND
+RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND
+RENDER_TWIN_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND
+NON_GITHUB_HOST_BINDING_NOT_AUTHORIZED
+```
+
+Interpret them in order.
+
+### First external authority
+
+```text
+RENDER_PLATFORM_SELECTION_NOT_AUTHORIZED
+```
+
+This is the actual present decision boundary.
+
+### Only after explicit platform selection
+
+Then establish:
+
+```text
+exact Render workspace owner ID
+exact Evidence Background Worker service ID
+exact Twin Background Worker service ID
+```
+
+The two service IDs must be distinct.
+
+### Only after those identities exist
+
+Then arm/bind host identity:
+
+```text
+NON_GITHUB_HOST_BINDING_NOT_AUTHORIZED
+```
+
+Binding must still have these non-effects:
+
+```text
+deployment = false
+runtime secret injection = false unless separately authorized
+runtime process start = false
+production owner activation = false
+Formal-v5 = false
+A0 = false
+O00 = false
+```
+
+Do not collapse platform selection, service creation, secret injection, deployment, runtime start, and owner activation into one “deploy production” action.
+
+---
+
+## I16. Exact next plan
+
+### I16.1 Obtain external platform authority
+
+The next conversation must first resolve:
+
+```text
+Is Render Background Worker / Oregon explicitly authorized
+for the two production long-running service identities?
+```
+
+Because this creates cost-bearing external resources, explicit authority is required.
+
+### I16.2 If Render is authorized
+
+Do **not** immediately start services.
+
+First determine/create:
+
+```text
+Render workspace owner ID
+Evidence Background Worker service ID
+Twin Background Worker service ID
+```
+
+Expected names:
+
+```text
+geox-mcft-cap09-evidence-runtime-v1
+geox-mcft-cap09-twin-runtime-v1
+```
+
+Expected class/region/runtime:
+
+```text
+background_worker
+Oregon
+Docker
+```
+
+### I16.3 Bind host identities only
+
+Populate the host-binding arm with the exact external identity values.
+
+Authorize only the minimum stage necessary.
+
+Do not enable:
+
+```text
+runtime_process_start_authorized
+production_owner_activation_authorized
+formal_v5_arm_authorized
+a0_authorized
+o00_authorized
+```
+
+unless a later stage explicitly requires them.
+
+### I16.4 Run dual-state verifier
+
+The verifier must transition from:
+
+```text
+HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND
+```
+
+to:
+
+```text
+EXACT_TWO_NON_GITHUB_SERVICE_IDENTITIES_BOUND_PRE_RUNTIME_START
+```
+
+It must prove:
+
+```text
+platform selected = true
+Evidence identity bound = true
+Twin identity bound = true
+exact-two identities = true
+service IDs distinct = true
+GitHub Actions is not execution host
+runtime process start = false
+production owner activation = false
+```
+
+### I16.5 Disarm after successful binding
+
+Never leave 7.g armed after the one-shot identity binding.
+
+### I16.6 Only then design the next host/deployment/runtime-start stage
+
+The next stage after identity binding is still **not automatically production owner activation**.
+
+It must separately govern:
+
+```text
+runtime secret injection
+deployment configuration
+actual long-running process start
+effective Evidence producer ownership
+effective Twin scheduler ownership
+retired trigger zero
+exact-one-production-owner proof
+```
+
+Only after exact-one owner is durable may Formal-v5 become relevant.
+
+---
+
+## I17. Important pitfalls from this continuation
+
+### I17.1 Disarm before diagnosis
+
+This rule prevented repeated damage in both 7.e and 7.f.
+
+If an armed one-shot fails:
+
+```text
+1. disarm
+2. prove remote residual state
+3. diagnose
+4. patch
+5. requalify unarmed
+6. re-arm
+```
+
+Never patch while leaving an arm true.
+
+### I17.2 Superuser tests can hide Neon portability bugs
+
+The original isolated PostgreSQL superuser path failed to expose:
+
+- missing SET ROLE membership;
+- temporary CREATE ON SCHEMA public requirement;
+- restricted ALTER ROLE attributes.
+
+The correct isolated path must model:
+
+```text
+NOSUPERUSER
+CREATEROLE
+CREATEDB
+```
+
+not root-equivalent PostgreSQL.
+
+### I17.3 Do not modify a qualified runtime closure to solve provisioning
+
+The Step-4 V13 dependency digest was accidentally disturbed by Neon provisioning hardening.
+
+The fix was architectural separation.
+
+Keep runtime identity/assertion and provisioning mutation in different modules.
+
+### I17.4 Temporary membership must be proven removed
+
+Transient `SET + INHERIT` membership is acceptable only inside the controlled provisioning window.
+
+Post-transaction residual membership must be zero.
+
+### I17.5 Head drift is real
+
+This branch advances rapidly.
+
+Before every write:
+
+```text
+GET #3376
+read exact remote head
+compare expected parent
+fast-forward only
+```
+
+Do not force-push over an unexpected head.
+
+### I17.6 Workflow status can lag branch state
+
+This conversation temporarily looked “stuck” because GitHub runner/job views lagged behind branch commits.
+
+Do not infer the current product frontier solely from one pending workflow response.
+
+Always re-read:
+
+```text
+PR head
+commit history
+current authority
+current arm
+exact-head workflows
+```
+
+### I17.7 Concurrency queues can make an armed run appear stuck
+
+A stale unarmed one-shot occupied a `cancel-in-progress:false` concurrency group before the first 7.e arm.
+
+Do not bypass the concurrency guard with a second side-channel workflow.
+
+Wait for or safely clear the stale zero-effect run.
+
+### I17.8 Clipboard is not secret storage
+
+After generating a DATABASE_URL into the clipboard, copying another command overwrote it.
+
+That caused literal command text to be pasted as a secret.
+
+A secret-generation workflow should preferably:
+
+- validate before copy;
+- avoid printing secrets;
+- go directly from generator to secret field;
+- never rely on clipboard persistence across additional Ctrl+C operations.
+
+### I17.9 Evidence/Twin credentials must not be swapped
+
+The verifier caught a Twin username inside the Evidence URL.
+
+Keep:
+
+```text
+Evidence password ↔ Evidence LOGIN ↔ Evidence URL
+Twin password     ↔ Twin LOGIN     ↔ Twin URL
+```
+
+exactly paired.
+
+### I17.10 Secret mismatch assertions must not reveal values
+
+Do not use assertion helpers that serialize actual/expected secret values into logs.
+
+For secret comparisons:
+
+```text
+if (actual !== expected) throw new Error("ERROR_CODE_ONLY")
+```
+
+### I17.11 Expected-red versus actionable-red
+
+QCP red with exactly:
+
+```text
+EXACT_ONE_PRODUCTION_OWNER
+```
+
+is currently expected.
+
+A host readiness failure, unknown changed path, authority error, Step4/5 durable-evidence invalidation, or unexpected runtime effect would be actionable red.
+
+Do not conflate them.
+
+### I17.12 Recommended external platform is not machine authority
+
+The repository can rank Render first.
+
+It cannot create cost-bearing Render workers merely from that recommendation.
+
+External platform selection is a user/account authority.
+
+---
+
+## I18. What must remain false at resume time
+
+At the exact handoff head, all of these must remain false:
+
+```text
+7.g host-binding arm.armed
+platform_selection_authorized
+service_creation_authorized
+host_identity_binding_authorized
+runtime_secret_injection_authorized
+deployment_authorized
+runtime_process_start_authorized
+production_owner_activation_authorized
+Formal-v5 arm
+A0
+O00
+```
+
+And the older owner-provisioning arm must also remain fully unarmed.
+
+If the next engineer finds any of these true unexpectedly:
+
+> stop, do not continue, and perform authority/remote-effect audit first.
+
+---
+
+## I19. Exact current product status for fast resume
+
+```text
+protected main =
+  fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+
+product PR =
+  #3376
+
+product base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+product head =
+  c9b01c2f2ad4d88ad0083883f818b592f3b3f999
+
+product PR =
+  Draft / open / unmerged / mergeable
+```
+
+Production database:
+
+```text
+geox_mcft_cap09_production_runtime_v1
+41 tables
+3 routines
+all rows zero
+```
+
+Runtime identities:
+
+```text
+Evidence LOGIN = present / verified
+Twin LOGIN = present / verified
+Evidence DATABASE_URL = bound / verified
+Twin DATABASE_URL = bound / verified
+```
+
+Host identities:
+
+```text
+platform = unselected
+Render = recommended only
+workspace owner ID = unbound
+Evidence service ID = unbound
+Twin service ID = unbound
+runtime process = not started
+```
+
+Control plane:
+
+```text
+Step 4 = PASS via durable evidence
+Step 5 = PASS via durable evidence
+post-merge = SUCCESS
+QCP = expected FAILURE
+only QCP blocker = EXACT_ONE_PRODUCTION_OWNER
+```
+
+7.g host frontier:
+
+```text
+host readiness = SUCCESS
+owner readiness = SUCCESS
+host authority = zero-effect / UNBOUND
+first actionable external blocker = RENDER_PLATFORM_SELECTION_NOT_AUTHORIZED
+```
+
+---
+
+## I20. Resume checklist
+
+The next engineer should do exactly this:
+
+1. Read this I-section.
+2. Verify #3376 still points to `c9b01c2f...` or audit any newer head.
+3. Re-read both arm JSON files; both must be unarmed.
+4. Re-read the host-binding authority.
+5. Confirm current host readiness still reports UNBOUND with no runtime effects.
+6. Confirm post-merge still has Step4/Step5 PASS.
+7. Confirm QCP still has only `EXACT_ONE_PRODUCTION_OWNER`.
+8. Do **not** touch Neon schema, LOGIN, or runtime URL secrets.
+9. Resolve explicit external platform authority.
+10. If Render/Oregon is authorized, obtain/create exact workspace + two distinct Background Worker service IDs.
+11. Bind identities through the separate 7.g arm without runtime start.
+12. Disarm.
+13. Run independent host identity readback.
+14. Only then open the deployment/runtime-start/effective-owner frontier.
+
+---
+
+## I21. Final one-sentence continuation
+
+**MCFT-CAP-09 has completed the dedicated Neon operational database, 41-table/ACL materialization, two production LOGIN principals, and two verified runtime DATABASE_URL credential bindings while preserving Step4/Step5 durable qualification; repository-local 7.g host governance is now zero-effect and machine-ready, and the next real action is explicit external authorization of the recommended Render Background Worker / Oregon platform before any workspace/service IDs, deployment, runtime process, production owner, Formal-v5, A0, or O00 may be activated.**
+
+
+---
+
 # GEOX MCFT-CAP-09 Conversation Handoff — 2026-08-31 Continuation — Production Operational DB / Neon Schema-ACL Materialization / Exact-One-Owner Frontier
 
 Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
