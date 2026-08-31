@@ -1,0 +1,88 @@
+{
+  "schema_version": "geox_mcft_cap09_production_non_github_host_binding_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1",
+  "status": "HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND",
+  "architecture_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+  "predecessor_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json",
+  "predecessor_stage": "RUNTIME_CREDENTIAL_BINDING_COMPLETE_PRE_HOST_BINDING",
+  "runtime_credential_binding_required": true,
+  "production_execution_host_class": "NON_GITHUB_LONG_RUNNING_SERVICE",
+  "github_actions": {
+    "production_execution_host_allowed": false,
+    "allowed_roles": [
+      "CI",
+      "QUALIFICATION",
+      "DEPLOYMENT",
+      "READ_ONLY_AUDIT",
+      "FINAL_READBACK_ADJUDICATION"
+    ]
+  },
+  "host_identity_contract": {
+    "common_required_fields": [
+      "platform_provider",
+      "platform_account_or_project_id",
+      "region_or_location",
+      "service_id",
+      "service_name",
+      "execution_class",
+      "runtime_role"
+    ],
+    "execution_class_required": "LONG_RUNNING_SERVICE",
+    "evidence_runtime": {
+      "runtime_role": "EVIDENCE_RUNTIME",
+      "service_identity": null
+    },
+    "twin_runtime": {
+      "runtime_role": "TWIN_RUNTIME",
+      "service_identity": null
+    },
+    "constraints": {
+      "evidence_and_twin_service_identities_must_be_distinct": true,
+      "shared_platform_provider_allowed": true,
+      "shared_platform_account_or_project_allowed": true,
+      "shared_region_allowed": true,
+      "github_actions_service_identity_forbidden": true,
+      "ephemeral_ci_runner_identity_forbidden": true,
+      "role_collapse_forbidden": true,
+      "evidence_host_must_not_own_twin_scheduler_lease": true,
+      "twin_host_must_not_own_evidence_producer_lease": true
+    }
+  },
+  "canonical_runtime_roles": {
+    "evidence_runtime": {
+      "service_role": "GEOX_EVIDENCE_RUNTIME",
+      "database_login_role": "geox_mcft_cap09_evidence_runtime_login_v1",
+      "production_database": "geox_mcft_cap09_production_runtime_v1"
+    },
+    "twin_runtime": {
+      "service_role": "GEOX_TWIN_RUNTIME",
+      "database_login_role": "geox_mcft_cap09_twin_runtime_login_v1",
+      "production_database": "geox_mcft_cap09_production_runtime_v1"
+    }
+  },
+  "binding_state": {
+    "platform_selected": false,
+    "evidence_host_identity_bound": false,
+    "twin_host_identity_bound": false,
+    "exact_two_runtime_service_identities_bound": false,
+    "binding_authorized": false
+  },
+  "next_stage": {
+    "stage": "BIND_REAL_NON_GITHUB_PLATFORM_SERVICE_IDENTITIES",
+    "status": "BLOCKED_ON_EXTERNAL_PLATFORM_AND_SERVICE_IDENTITIES",
+    "external_platform_selection_required": true,
+    "external_service_provisioning_or_existing_identity_required": true,
+    "runtime_start_separate": true,
+    "production_owner_activation_separate": true
+  },
+  "non_effects": {
+    "external_host_provisioning": false,
+    "deployment": false,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "provider_request": false,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false
+  }
+}
