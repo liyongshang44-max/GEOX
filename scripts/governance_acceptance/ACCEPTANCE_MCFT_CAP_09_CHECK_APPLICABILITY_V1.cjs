@@ -364,6 +364,8 @@ function main() {
     "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_V1.cjs",
     ".github/workflows/mcft-cap-09-production-owner-provisioning-bundle-postgres.yml",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_BUNDLE_POSTGRES_V1.ts",
+    ".github/workflows/mcft-cap-09-production-service-login-provision-one-shot.yml",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_SERVICE_LOGIN_PROVISIONING_V1.ts",
     ".github/workflows/mcft-cap-09-production-operational-database-candidate-preflight.yml",
     ".github/workflows/mcft-cap-09-production-operational-database-provision-one-shot.yml",
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OPERATIONAL-DATABASE-CANDIDATE-V1.json",
