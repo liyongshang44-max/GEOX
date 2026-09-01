@@ -188,7 +188,9 @@
     "service_creation_authorized": false,
     "host_identity_binding_authorized": true,
     "local_24h_host_preflight_required": true,
-    "local_24h_host_preflight_status": "NOT_PROVEN",
+    "local_24h_host_preflight_status": "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT",
+    "local_24h_host_preflight_evidence_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-LOCAL-OPERATOR-HOST-STATIC-ADMISSION-EVIDENCE-V1.json",
+    "local_24h_host_preflight_evidence_sha256": "sha256:4560fd10d6d1905f917be3c47b50a8751cd9caf3d84f8d5057e7e770d5325499",
     "evidence_production_compiled_entrypoint_status": "PACKAGED_FAIL_CLOSED_TARGET_PLANNER_UNBOUND",
     "evidence_production_target_planner_status": "NOT_BOUND",
     "render_path_status": "RETIRED_HTTP_402_NO_SERVICE_CREATED"

@@ -4,12 +4,14 @@ const fs=require("node:fs");
 const path=require("node:path");
 const os=require("node:os");
 const cp=require("node:child_process");
+const crypto=require("node:crypto");
 const ROOT=process.cwd();
 const AUTH=path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json");
 const OWNER=path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json");
 const ROUTE=path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md");
 const OWNER_ARM=path.join(ROOT,"scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_ARM_V1.json");
 const HOST_ARM=path.join(ROOT,"scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json");
+const LOCAL_STATIC_EVIDENCE=path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-LOCAL-OPERATOR-HOST-STATIC-ADMISSION-EVIDENCE-V1.json");
 const OUT=path.join(ROOT,"acceptance-output/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_PREFLIGHT_V1_RESULT.json");
 const j=p=>JSON.parse(fs.readFileSync(p,"utf8"));
 const req=(v,c)=>{if(!v)throw new Error(c)};
@@ -243,6 +245,13 @@ try{
   req(machineContract?.schema_version==="geox_mcft_cap09_local_operator_host_machine_preflight_contract_v1"&&machineContract?.classification==="PRE_RUNTIME_STATIC_MACHINE_ADMISSION","LOCAL_MACHINE_PREFLIGHT_CONTRACT_REQUIRED");
   req(machineContract.minimum_logical_cpu_count===2&&machineContract.minimum_host_total_memory_gib===4&&machineContract.minimum_docker_cpu_count===2&&machineContract.minimum_docker_memory_gib===3.5&&machineContract.nominal_docker_memory_class_gib===4&&machineContract.minimum_repo_disk_free_gib===5,"LOCAL_MACHINE_RESOURCE_FLOOR_REQUIRED");
   req(machineContract.durable_log_root==="~/.geox/mcft-cap09/logs"&&machineContract.network_provider_request_forbidden===true&&machineContract.network_database_connection_forbidden===true&&machineContract.runtime_secret_read_forbidden===true&&machineContract.container_start_forbidden===true,"LOCAL_MACHINE_PREFLIGHT_NON_EFFECT_CONTRACT_REQUIRED");
+  const staticEvidence=j(LOCAL_STATIC_EVIDENCE);
+  const staticEvidenceDigest="sha256:"+crypto.createHash("sha256").update(fs.readFileSync(LOCAL_STATIC_EVIDENCE)).digest("hex");
+  req(machineContract.status==="PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT","LOCAL_MACHINE_PREFLIGHT_PASS_STATUS_REQUIRED");
+  req(local?.machine_preflight_evidence?.status==="IMMUTABLE_PASS"&&local.machine_preflight_evidence.evidence_ref==="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-LOCAL-OPERATOR-HOST-STATIC-ADMISSION-EVIDENCE-V1.json"&&local.machine_preflight_evidence.evidence_sha256===staticEvidenceDigest,"LOCAL_MACHINE_PREFLIGHT_EVIDENCE_BINDING_REQUIRED");
+  req(staticEvidence.status==="PASS"&&staticEvidence.subject_sha==="39b0a76926a34b776698fb7ba1807b88a190ca77"&&staticEvidence.host?.host_id===local.host_id&&staticEvidence.host?.host_id_match===true&&staticEvidence.classification?.resource_floor_pass===true&&Array.isArray(staticEvidence.classification?.blockers)&&staticEvidence.classification.blockers.length===0,"LOCAL_MACHINE_PREFLIGHT_EVIDENCE_PASS_REQUIRED");
+  req(staticEvidence.non_effects?.provider_request_count===0&&staticEvidence.non_effects?.runtime_secret_read===false&&staticEvidence.non_effects?.database_connection_attempted===false&&staticEvidence.non_effects?.container_start_count===0&&staticEvidence.non_effects?.runtime_process_start===false&&staticEvidence.non_effects?.production_owner_activation===false&&staticEvidence.non_effects?.formal_v5_arm===false&&staticEvidence.non_effects?.a0_bootstrap===false&&staticEvidence.non_effects?.o00_started===false,"LOCAL_MACHINE_PREFLIGHT_EVIDENCE_NON_EFFECT_REQUIRED");
+  req(staticEvidence.classification?.actual_24h_uptime_proven===false&&staticEvidence.classification?.actual_24h_network_continuity_proven===false&&staticEvidence.classification?.actual_runtime_restart_policy_proven===false,"LOCAL_MACHINE_PREFLIGHT_MUST_NOT_CLAIM_RUNTIME_WINDOW");
   req(local?.host_id_scheme==="GEOX_LOCAL_HOST_UUID_V1"&&local?.host_id_state_file==="~/.geox/mcft-cap09/local-host-id-v1","LOCAL_HOST_ID_SCHEME_REQUIRED");
   req(local?.container_id_is_authority===false&&local?.compose_project_name==="geox-mcft-cap09-production-v1","LOCAL_HOST_STABLE_IDENTITY_CONTRACT_REQUIRED");
   req(local?.evidence_runtime?.service_name==="geox-mcft-cap09-evidence-runtime-v1"&&local?.evidence_runtime?.runtime_role==="EVIDENCE_RUNTIME"&&local?.evidence_runtime?.execution_class==="LONG_RUNNING_SERVICE","LOCAL_EVIDENCE_SERVICE_CONTRACT_REQUIRED");
@@ -297,10 +306,7 @@ try{
       "LOCAL_TWIN_LONG_RUNNING_SERVICE_IDENTITY_NOT_BOUND",
       "LOCAL_24H_HOST_PREFLIGHT_NOT_PROVEN",
       "NON_GITHUB_HOST_BINDING_NOT_COMPLETE"
-    ]:[
-      "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
-      "LOCAL_24H_HOST_PREFLIGHT_NOT_PROVEN"
-    ],
+    ]:["EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"],
     external_host_provisioning:false,
     deployment:false,
     runtime_process_start:false,

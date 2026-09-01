@@ -86,7 +86,7 @@
   },
   "next_stage": {
     "stage": "QUALIFY_LOCAL_24H_HOST_AND_BIND_PRODUCTION_EVIDENCE_TARGET_PLANNER",
-    "status": "LOCAL_HOST_IDENTITIES_BOUND_PRE_RUNTIME_START",
+    "status": "LOCAL_STATIC_MACHINE_ADMISSION_COMPLETE_TARGET_PLANNER_UNBOUND",
     "external_platform_selection_required": false,
     "external_service_provisioning_or_existing_identity_required": false,
     "runtime_start_separate": true,
@@ -107,7 +107,9 @@
     "host_identity_binding_authorized": true,
     "container_or_runtime_start_authorized": false,
     "local_24h_host_preflight_required": true,
-    "local_24h_host_preflight_status": "NOT_PROVEN",
+    "local_24h_host_preflight_status": "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT",
+    "local_24h_host_preflight_evidence_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-LOCAL-OPERATOR-HOST-STATIC-ADMISSION-EVIDENCE-V1.json",
+    "local_24h_host_preflight_evidence_sha256": "sha256:4560fd10d6d1905f917be3c47b50a8751cd9caf3d84f8d5057e7e770d5325499",
     "evidence_production_compiled_entrypoint_status": "PACKAGED_FAIL_CLOSED_TARGET_PLANNER_UNBOUND",
     "evidence_production_target_planner_status": "NOT_BOUND"
   },
@@ -444,7 +446,7 @@
     "machine_preflight_contract": {
       "schema_version": "geox_mcft_cap09_local_operator_host_machine_preflight_contract_v1",
       "classification": "PRE_RUNTIME_STATIC_MACHINE_ADMISSION",
-      "status": "AUTHORIZED_NOT_YET_PROVEN_ON_CURRENT_EXACT_HEAD",
+      "status": "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT",
       "minimum_logical_cpu_count": 2,
       "minimum_host_total_memory_gib": 4,
       "minimum_docker_cpu_count": 2,
@@ -471,6 +473,21 @@
       ],
       "nominal_docker_memory_class_gib": 4,
       "docker_reported_memory_tolerance_basis": "DOCKER_DESKTOP_LINUX_VM_MEMTOTAL_MAY_REPORT_BELOW_NOMINAL_ALLOCATION_DUE_TO_VM_KERNEL_AND_PLATFORM_OVERHEAD"
+    },
+    "machine_preflight_evidence": {
+      "status": "IMMUTABLE_PASS",
+      "evidence_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-LOCAL-OPERATOR-HOST-STATIC-ADMISSION-EVIDENCE-V1.json",
+      "evidence_sha256": "sha256:4560fd10d6d1905f917be3c47b50a8751cd9caf3d84f8d5057e7e770d5325499",
+      "subject_sha": "39b0a76926a34b776698fb7ba1807b88a190ca77",
+      "observed_at": "2026-09-01T09:20:41.017Z",
+      "host_id": "fae5f756-ef25-40d5-9777-5b2c3d4837a1",
+      "static_machine_admission_pass": true,
+      "actual_24h_runtime_window_proven": false,
+      "runtime_process_start": false,
+      "production_owner_activation": false,
+      "formal_v5_arm": false,
+      "a0_bootstrap": false,
+      "o00_started": false
     }
   },
   "host_binding_evidence": {

@@ -2,10 +2,12 @@
 
 const fs=require("node:fs");
 const path=require("node:path");
+const crypto=require("node:crypto");
 const ROOT=process.cwd();
 const AUTH=path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json");
 const OWNER=path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json");
 const HOST_ARM=path.join(ROOT,"scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json");
+const LOCAL_STATIC_EVIDENCE=path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-LOCAL-OPERATOR-HOST-STATIC-ADMISSION-EVIDENCE-V1.json");
 const OUT=path.join(ROOT,"acceptance-output/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_READINESS_V1_RESULT.json");
 const j=p=>JSON.parse(fs.readFileSync(p,"utf8"));
 const req=(v,c)=>{if(!v)throw new Error(c)};
@@ -55,6 +57,12 @@ try{
   req(evidence?.service_id===expectedEvidence&&twin?.service_id===expectedTwin&&expectedEvidence!==expectedTwin,"LOCAL_SERVICE_IDENTITIES_REQUIRED");
   req(evidence.execution_class==="LONG_RUNNING_SERVICE"&&evidence.runtime_role==="EVIDENCE_RUNTIME"&&twin.execution_class==="LONG_RUNNING_SERVICE"&&twin.runtime_role==="TWIN_RUNTIME","LOCAL_SERVICE_RUNTIME_ROLES_REQUIRED");
   req(a.binding_state?.local_host_id_bound===true&&a.binding_state?.evidence_host_identity_bound===true&&a.binding_state?.twin_host_identity_bound===true&&a.binding_state?.exact_two_runtime_service_identities_bound===true&&a.binding_state?.binding_authorized===true,"LOCAL_BOUND_STATE_REQUIRED");
+  const staticEvidence=j(LOCAL_STATIC_EVIDENCE);
+  const staticEvidenceDigest="sha256:"+crypto.createHash("sha256").update(fs.readFileSync(LOCAL_STATIC_EVIDENCE)).digest("hex");
+  req(a.next_stage?.local_24h_host_preflight_status==="PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT"&&a.next_stage?.local_24h_host_preflight_evidence_sha256===staticEvidenceDigest,"LOCAL_STATIC_MACHINE_ADMISSION_BINDING_REQUIRED");
+  req(local?.machine_preflight_contract?.status==="PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT"&&local?.machine_preflight_evidence?.status==="IMMUTABLE_PASS"&&local.machine_preflight_evidence.evidence_sha256===staticEvidenceDigest,"LOCAL_STATIC_MACHINE_ADMISSION_STATUS_REQUIRED");
+  req(staticEvidence.status==="PASS"&&staticEvidence.subject_sha==="39b0a76926a34b776698fb7ba1807b88a190ca77"&&staticEvidence.host?.host_id===hostId&&staticEvidence.classification?.resource_floor_pass===true&&staticEvidence.classification?.blockers?.length===0,"LOCAL_STATIC_MACHINE_ADMISSION_EVIDENCE_REQUIRED");
+  req(staticEvidence.classification?.actual_24h_uptime_proven===false&&staticEvidence.classification?.actual_24h_network_continuity_proven===false&&staticEvidence.classification?.actual_runtime_restart_policy_proven===false&&staticEvidence.non_effects?.runtime_process_start===false,"LOCAL_STATIC_MACHINE_ADMISSION_NONCLAIM_REQUIRED");
   write({
     schema_version:"geox_mcft_cap09_production_non_github_host_binding_readiness_v1",
     status:"PASS",
@@ -72,10 +80,7 @@ try{
     evidence_host:{service_id:expectedEvidence,service_name:evidence.service_name,runtime_role:"EVIDENCE_RUNTIME"},
     twin_host:{service_id:expectedTwin,service_name:twin.service_name,runtime_role:"TWIN_RUNTIME"},
     service_ids_distinct:true,
-    remaining_blockers:[
-      "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
-      "LOCAL_24H_HOST_PREFLIGHT_NOT_PROVEN"
-    ],
+    remaining_blockers:["EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"],
     github_actions_execution_host:false,runtime_process_start:false,production_owner_activation:false,provider_request_count:0,formal_v5_arm:false,a0_bootstrap:false,o00_started:false
   });
 }catch(e){

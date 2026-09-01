@@ -393,6 +393,7 @@ function main() {
     ".github/workflows/mcft-cap-09-production-runtime-credential-readiness.yml",
     "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_RUNTIME_CREDENTIAL_READINESS_V1.cjs",
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-LOCAL-OPERATOR-HOST-STATIC-ADMISSION-EVIDENCE-V1.json",
     "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json",
     "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_V1.cjs",
     "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_READINESS_V1.cjs",
