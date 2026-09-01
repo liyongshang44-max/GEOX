@@ -86,6 +86,10 @@ export type NitrogenNeedAssessmentV1 = {
 
   sample_id?: string | null;
   lab_import_id?: string | null;
+  sampling_acceptance_fact_id?: string | null;
+  sampling_plan_fact_id?: string | null;
+  sample_receipt_fact_id?: string | null;
+  lab_result_fact_id?: string | null;
 
   skill_signal_refs?: FertilizationSkillSignalRefV1[];
   sensing_state_refs?: FertilizationSensingStateRefV1[];
