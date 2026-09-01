@@ -67,6 +67,9 @@ jobs:
       - name: B-Line Acceptance no Formal Memory side effect
         run: pnpm run ci:governance:bline-acceptance-no-formal-memory-side-effect
 
+      - name: B-Line Formal Memory reviewed promotion proof
+        run: pnpm run ci:governance:bline-formal-memory-reviewed-promotion-proof
+
       - name: Route response ownership guard
         run: pnpm run ci:route-response-ownership
 
