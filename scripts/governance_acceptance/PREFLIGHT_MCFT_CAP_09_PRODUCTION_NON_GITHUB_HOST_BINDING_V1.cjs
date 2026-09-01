@@ -38,7 +38,19 @@ try{
   req(render?.status==="RETIRED_HTTP_402_PAYMENT_REQUIRED_NO_SERVICE_CREATED"&&render?.external_resource_count===0&&render?.retirement_evidence?.http_status===402&&render?.retirement_evidence?.exact_service_id_count===0,"RENDER_RETIREMENT_EVIDENCE_REQUIRED");
   req(a.platform_evaluation?.selected_candidate?.platform_provider==="LOCAL_OPERATOR_MANAGED_DOCKER"&&a.platform_evaluation?.platform_selected===true,"LOCAL_HOST_SELECTION_REQUIRED");
   req(a.external_platform_authorization?.platform_provider==="LOCAL_OPERATOR_MANAGED_DOCKER"&&a.external_platform_authorization?.runtime_process_start_authorized===false,"LOCAL_HOST_AUTHORIZATION_BOUNDARY_REQUIRED");
-  req(hostArm.platform_provider==="LOCAL_OPERATOR_MANAGED_DOCKER"&&hostArm.platform_account_or_project_id===null&&hostArm.region_or_location==="OPERATOR_LOCAL_MACHINE","LOCAL_HOST_ARM_SELECTION_REQUIRED");
+  req(
+    hostArm.platform_provider==="LOCAL_OPERATOR_MANAGED_DOCKER" &&
+    hostArm.region_or_location==="OPERATOR_LOCAL_MACHINE" &&
+    (
+      hostArm.platform_account_or_project_id===null ||
+      (
+        typeof local?.host_id==="string" &&
+        local.host_id.length>0 &&
+        hostArm.platform_account_or_project_id==="local-host:"+local.host_id
+      )
+    ),
+    "LOCAL_HOST_ARM_SELECTION_REQUIRED",
+  );
   req(hostArm.armed===false&&hostArm.runtime_secret_injection_authorized===false&&hostArm.deployment_authorized===false&&hostArm.runtime_process_start_authorized===false&&hostArm.production_owner_activation_authorized===false&&hostArm.formal_v5_arm_authorized===false&&hostArm.a0_authorized===false&&hostArm.o00_authorized===false,"LOCAL_HOST_ARM_NON_EFFECT_REQUIRED");
   req(ownerArm.armed===false&&ownerArm.runtime_process_start_authorized===false&&ownerArm.production_owner_activation_authorized===false&&ownerArm.formal_v5_arm_authorized===false&&ownerArm.a0_authorized===false&&ownerArm.o00_authorized===false,"OWNER_ARM_MUST_REMAIN_FALSE");
   const unbound=a.status==="LOCAL_OPERATOR_MANAGED_DOCKER_HOST_AUTHORIZED_IDENTITIES_UNBOUND";
