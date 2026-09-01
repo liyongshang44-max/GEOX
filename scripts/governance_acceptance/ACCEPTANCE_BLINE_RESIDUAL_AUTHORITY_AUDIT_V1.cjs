@@ -81,6 +81,7 @@ const SEMANTIC_NOUN =
 const failures = [];
 const warnings = [];
 const findings = new Map();
+const authoritySurfaceByPath = new Map();
 
 const rel = p => path.relative(ROOT, p).split(path.sep).join("/");
 const readJson = p => JSON.parse(fs.readFileSync(p, "utf8"));
@@ -126,6 +127,60 @@ function nearFactWrite(content, token) {
     new RegExp(typeLit + "[\\s\\S]{0,900}" + insert, "i").test(content);
 }
 
+function configureAuthoritySurfaces(inv) {
+  authoritySurfaceByPath.clear();
+  for (const surface of Array.isArray(inv?.surfaces) ? inv.surfaces : []) {
+    const sourcePath = String(surface?.source_path ?? "").trim();
+    const authorityClass = String(surface?.authority_class ?? "").trim().toUpperCase();
+    if (!sourcePath) continue;
+    if (!/(WRITER|PRODUCER|SERVICE|BUILDER|AUTHORITY|PERSISTENCE|FORMALIZATION|TRANSITION)/.test(authorityClass)) continue;
+    authoritySurfaceByPath.set(sourcePath, {
+      families: Array.isArray(surface.semantic_family) ? surface.semantic_family.map(String) : [],
+      authority_class: authorityClass,
+    });
+  }
+}
+
+function resolveRelativeImport(importerAbs, specifier) {
+  if (!specifier.startsWith(".")) return null;
+  const raw = path.resolve(path.dirname(importerAbs), specifier);
+  const candidates = [raw];
+  if (raw.endsWith(".js")) candidates.push(raw.slice(0, -3) + ".ts");
+  if (raw.endsWith(".mjs")) candidates.push(raw.slice(0, -4) + ".ts");
+  if (!path.extname(raw)) candidates.push(raw + ".ts", raw + ".js", raw + ".cjs");
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return rel(candidate);
+  }
+  return null;
+}
+
+function scanAuthorityCallsites(abs, content, production) {
+  const importerPath = rel(abs);
+  const importRe = /import\s*\{([\s\S]*?)\}\s*from\s*["']([^"']+)["']/g;
+  let match;
+  while ((match = importRe.exec(content)) !== null) {
+    const importedFrom = resolveRelativeImport(abs, String(match[2] ?? ""));
+    if (!importedFrom) continue;
+    const authority = authoritySurfaceByPath.get(importedFrom);
+    if (!authority) continue;
+
+    const bindings = String(match[1] ?? "").split(",").map(x => x.trim()).filter(Boolean);
+    for (const binding of bindings) {
+      if (binding.startsWith("type ")) continue;
+      const parts = binding.split(/\s+as\s+/i).map(x => x.trim());
+      const importedName = parts[0];
+      const localName = parts[1] || importedName;
+      if (!/^(?:record|create|insert|write|append|persist|upsert|submit|approve|reject|transition|execute|formalize|build|issue|dispatch|claim|ack|apply|save|runQueued)/i.test(importedName)) continue;
+      const callRe = new RegExp("\\b" + esc(localName) + "\\s*\\(", "m");
+      if (!callRe.test(content)) continue;
+      const families = authority.families.length ? authority.families : ["cross_family.authority_callsite"];
+      for (const family of families) {
+        add(importerPath, family, "AUTHORITY_CALLSITE", "calls:" + importedFrom + "#" + importedName, production);
+      }
+    }
+  }
+}
+
 function scan(abs, production) {
   const p = rel(abs);
   if (p === SELF) return;
@@ -142,6 +197,8 @@ function scan(abs, production) {
   for (const [table, family] of Object.entries(TABLES)) {
     if (low.includes(table)) families.add(family);
   }
+
+  scanAuthorityCallsites(abs, content, production);
 
   const specialPlanner = content.includes("CandidateActionV1") && content.includes("execution_policy");
   const specialFallback = content.includes("DEFAULT_SOIL_MOISTURE") && content.includes("effectiveSoilMoisture");
@@ -281,7 +338,9 @@ function main() {
   }
   if (failures.length) return finish(new Set(), new Set());
 
-  const invSet = inventoryPaths(readJson(INVENTORY));
+  const inventory = readJson(INVENTORY);
+  configureAuthoritySurfaces(inventory);
+  const invSet = inventoryPaths(inventory);
   const b02Set = registeredB02Paths(readJson(B02_REGISTER));
   const classified = new Set([...invSet, ...b02Set]);
 
@@ -296,7 +355,7 @@ function main() {
 
   const hardKinds = new Set([
     "PERSISTENCE_WRITER","SEMANTIC_BUILDER","AUTHORITY_DERIVER",
-    "HTTP_AUTHORITY_PRODUCER","PERSISTENCE_AUTHORITY_RISK"
+    "HTTP_AUTHORITY_PRODUCER","AUTHORITY_CALLSITE","PERSISTENCE_AUTHORITY_RISK"
   ]);
   const hard = [];
   const touches = [];
