@@ -81,7 +81,7 @@ Compatibility readers that only have `sample_id` may resolve it only when exactl
 
 `import_id` is a business locator, not a globally unique fact identity.
 
-New lab fact identity is deterministically derived from a canonical JSON tuple containing tenant/project/group, sample identity, exact receipt fact, exact plan fact, and `import_id`. The lab fact also persists the exact receipt and plan references. Historical `sl_<import_id>` facts remain readable through unique chain lookup; multiple matches fail closed.
+New lab fact identity is deterministically derived from a canonical JSON tuple containing tenant/project/group, sample identity, exact receipt fact, exact plan fact, and `import_id`. The lab fact also persists the exact receipt and plan references. Historical `sl_<import_id>` facts that do not carry exact receipt/plan/scope refs are **not** Formal Sampling authority and are not auto-bound from `sample_id` / `import_id`. Formal use requires a newly established exact chain; multiple exact candidates fail closed.
 
 If `import_id` is omitted, more than one candidate lab fact is an explicit ambiguity; no latest fallback is permitted.
 
@@ -149,7 +149,8 @@ no latest-wins Sampling authority selector
 duplicate receipt for the same exact plan + sample -> 409
 same sample_id on a different plan -> allowed
 ambiguous sample_id-only lab locator -> 409 until sample_receipt_fact_id is supplied
-historical receipt/lab/Acceptance ambiguity -> fail closed
+historical receipt ambiguity -> fail closed
+legacy Lab/Acceptance without exact parent refs -> not formal authority; no inferred fallback
 legacy receipt without sampling_plan_fact_id -> duplicate create blocked by exact plan_id/sample_id scope
 legacy receipt with conflicting non-empty plan fact ref but same plan_id/sample_id -> duplicate create still blocked; corrupted provenance is never shadowed by a replacement fact
 lab import requires exact receipt -> exact plan continuity
