@@ -2309,7 +2309,7 @@
     {
       "source_path": "apps/server/src/store/pg_store.ts",
       "entrypoint": "shared PgStore persistence abstraction",
-      "activation_mode": "INFRASTRUCTURE_STORE",
+      "activation_mode": "PERSISTENCE_ONLY",
       "writes": [
         "arbitrary caller-provided facts to public.facts"
       ],
@@ -2319,7 +2319,7 @@
       "semantic_family": [
         "governance.fact_ledger"
       ],
-      "authority_class": "GENERIC_FACT_STORE_INFRASTRUCTURE_WRITER",
+      "authority_class": "FACT_LEDGER_PERSISTENCE_ONLY",
       "runtime_reachable": "PROVEN_OR_REFERENCED",
       "feature_flag": null,
       "downstream_consumers": [
@@ -2327,7 +2327,15 @@
       ],
       "removal_target": "KEEP STORAGE ABSTRACTION; SEMANTIC AUTHORITY MUST BE OWNED BY CALLERS AND MACHINE-INVENTORIED",
       "surface_id": "RES-086",
-      "b02_registered": false
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "PERSISTENCE_ONLY",
+      "underlying_semantic_families": [
+        "cross_family.caller_owned"
+      ],
+      "authority_owner": "CALLER_OWNED_SEMANTICS",
+      "writer_scope": "generic PgStore persists caller-provided fact envelopes without deriving their semantic meaning",
+      "audit_note": "Storage abstraction is a direct facts-ledger writer but semantic authority belongs to each caller."
     },
     {
       "source_path": "apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts",
@@ -2503,8 +2511,7 @@
         "canonical telemetry metric contracts"
       ],
       "semantic_family": [
-        "evidence.raw_observation",
-        "governance.fact_ledger"
+        "evidence.raw_observation"
       ],
       "authority_class": "TELEMETRY_INGEST_DAEMON_AND_OBSERVATION_ACTIVATION",
       "runtime_reachable": "PROVEN_LONG_RUNNING_PROCESS",
@@ -2516,7 +2523,8 @@
       ],
       "removal_target": "KEEP TRANSPORT INGEST; PRESERVE SOURCE/EVENT-TIME PROVENANCE; CANONICAL OBSERVATION/EQ MUST REMAIN EXPLICIT",
       "surface_id": "RES-093",
-      "b02_registered": false
+      "b02_registered": false,
+      "audit_note": "Telemetry daemon activates observation ingestion but does not itself receive a generic fact-ledger disposition; writer authority is tracked at the called ingestion services."
     },
     {
       "source_path": "packages/device-skills/src/index.ts",
@@ -3789,7 +3797,7 @@
       "surface_id": "RES-144",
       "source_path": "apps/server/src/routes/agronomy_v0.ts",
       "entrypoint": "active registration graph; parent=apps/server/src/modules/agronomy/registerAgronomyModule.ts",
-      "activation_mode": "ACTIVE_COMPATIBILITY",
+      "activation_mode": "LEGACY_COMPATIBILITY",
       "writes": [
         "active route/service semantic state or delegated persistence"
       ],
@@ -3801,13 +3809,21 @@
         "agronomy.interpretation",
         "governance.fact_ledger"
       ],
-      "authority_class": "ACTIVE_RUNTIME_COMPATIBILITY_EXPLICITLY_DISPOSED",
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [],
       "removal_target": "canonical Agronomy Interpretation / Candidate adapters ; RETIRE_LEGACY_V0_WRITER_AFTER_SEMANTIC_CUTOVER",
       "b02_registered": true,
-      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+      "audit_note": "Direct legacy facts writer; keep compatibility until agronomy semantic cutover.",
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "agronomy.interpretation",
+        "decision.candidate"
+      ],
+      "authority_owner": "LEGACY_AGRONOMY_V0",
+      "writer_scope": "legacy agronomy report/interpretation facts"
     },
     {
       "surface_id": "RES-145",
@@ -7674,17 +7690,18 @@
     "rule": "ACTIVE_RUNTIME_SURFACE_WITHOUT_DISPOSITION_IS_FAIL_CLOSED"
   },
   "fact_ledger_closure": {
-    "status": "FULL_PATH_ADJUDICATION_PENDING_EXACT_MACHINE_PROOF",
+    "status": "FULL_PATH_ADJUDICATION_PENDING_DYNAMIC_EXACT_PROOF",
     "source_exact_ci": "33509893507 / job 99862739754",
-    "expected_writer_count": 63,
-    "adjudicated_writer_count": 63,
+    "expected_writer_count": 65,
+    "adjudicated_writer_count": 65,
     "disposition_counts": {
       "SEED_MIGRATION": 2,
       "SEMANTIC_FACT_WRITER": 28,
-      "LEGACY_COMPATIBILITY": 13,
+      "LEGACY_COMPATIBILITY": 14,
       "MCFT_FROZEN": 12,
       "READ_SIDE_EFFECT_P0": 1,
-      "DEVTOOLS_ONLY": 7
+      "DEVTOOLS_ONLY": 7,
+      "PERSISTENCE_ONLY": 1
     },
     "invariant": "governance.fact_ledger is persistence topology only; it never substitutes for underlying semantic authority ownership"
   }
