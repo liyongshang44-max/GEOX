@@ -100,8 +100,8 @@ async function main(): Promise<void> {
     const pointerA = new PostgresKbsRawHourlyPublicationBaselinePointerV1(pool, SCOPE, claimA);
     const first = baseline({
       digestChar: "a",
-      latest: "2026-09-01T18:00:00.000Z",
-      storedAt: "2026-09-01T18:05:00.000Z",
+      latest: "2026-08-31T18:00:00.000Z",
+      storedAt: "2026-08-31T18:05:00.000Z",
     });
     const firstAdvance = await pointerA.advanceCurrentBaselinePointer({
       claim: claimA,
@@ -121,8 +121,8 @@ async function main(): Promise<void> {
 
     const second = baseline({
       digestChar: "b",
-      latest: "2026-09-01T19:00:00.000Z",
-      storedAt: "2026-09-01T19:05:00.000Z",
+      latest: "2026-08-31T19:00:00.000Z",
+      storedAt: "2026-08-31T19:05:00.000Z",
     });
     await expectReject(
       () => pointerA.advanceCurrentBaselinePointer({
@@ -178,8 +178,8 @@ async function main(): Promise<void> {
 
     const nonMonotone = baseline({
       digestChar: "d",
-      latest: "2026-09-01T19:00:00.000Z",
-      storedAt: "2026-09-01T19:06:00.000Z",
+      latest: "2026-08-31T19:00:00.000Z",
+      storedAt: "2026-08-31T19:06:00.000Z",
     });
     await expectReject(
       () => pointerB.advanceCurrentBaselinePointer({
