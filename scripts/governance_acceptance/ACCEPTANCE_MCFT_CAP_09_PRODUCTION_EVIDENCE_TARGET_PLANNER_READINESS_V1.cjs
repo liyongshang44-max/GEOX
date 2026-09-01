@@ -152,6 +152,14 @@ try {
   assert.equal(kbsPublicationCycle.includes("setInterval("), false, "KBS_CYCLE_CADENCE_OWNERSHIP_FORBIDDEN");
   assert.equal(kbsPublicationCycle.includes("process.env"), false, "KBS_CYCLE_ENV_AUTHORITY_FORBIDDEN");
 
+  const gfsPartialAdapter = read(authority.gfs_partial_pair_rehydration_adapter_ref);
+  includes(gfsPartialAdapter, "VerifiedRetainedRawReadbackTransportV1", "GFS_PARTIAL_REPLAY_TRANSPORT_REQUIRED");
+  includes(gfsPartialAdapter, "ExistingRetainedRawVerificationBarrierV1", "GFS_PARTIAL_REPLAY_RETENTION_REQUIRED");
+  includes(gfsPartialAdapter, "readReplayProvenance", "GFS_PARTIAL_FACT_READ_REQUIRED");
+  includes(gfsPartialAdapter, "readRetainedRawEvidence", "GFS_PARTIAL_PRIVATE_RAW_READ_REQUIRED");
+  includes(gfsPartialAdapter, "provider_request_count: 0", "GFS_PARTIAL_ZERO_PROVIDER_REQUIRED");
+  assert.equal(gfsPartialAdapter.includes("process.env"), false, "GFS_PARTIAL_ENV_FORBIDDEN");
+
   const gfsReplayReader = read(authority.gfs_fact_replay_provenance_reader_ref);
   includes(gfsReplayReader, "mcft-cap09-retained-replay:", "GFS_REPLAY_DETERMINISTIC_REQUEST_ID_REQUIRED");
   includes(gfsReplayReader, "replaySourceLocator = finalLocator", "GFS_REPLAY_FINAL_LOCATOR_DERIVATION_REQUIRED");
@@ -176,7 +184,7 @@ try {
     "KBS_STALE_PAIR_REPAIR_CAPABILITY_BLOCKER_FORBIDDEN",
   );
   includes(purePlanner, "GFS_TARGET_ALREADY_DURABLE", "GFS_DURABLE_TARGET_DEDUP_REQUIRED");
-  includes(purePlanner, "GFS_PARTIAL_PAIR_REHYDRATION_REQUIRED", "GFS_PARTIAL_PAIR_REHYDRATION_PLAN_REQUIRED");
+  includes(purePlanner, "GFS_PARTIAL_PAIR_REHYDRATE", "GFS_PARTIAL_PAIR_REHYDRATION_ACTION_REQUIRED");
   includes(purePlanner, "KBS_SOIL_CURRENT_ACQUIRE", "SOIL_EXPLICIT_DUE_ACTION_REQUIRED");
   assert.equal(purePlanner.includes("Date.now"), false, "PURE_PLANNER_WALL_CLOCK_READ_FORBIDDEN");
   assert.equal(purePlanner.includes("process.env"), false, "PURE_PLANNER_ENV_READ_FORBIDDEN");
@@ -204,7 +212,6 @@ try {
   assert.deepEqual(authority.unconditional_blockers, [
     "KBS_RAW_HOURLY_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED",
     "KBS_RAW_HOURLY_PRODUCTION_BASELINE_POINTER_SCHEMA_NOT_MATERIALIZED",
-    "GFS_PARTIAL_PAIR_PRODUCTION_REHYDRATION_ADAPTER_NOT_IMPLEMENTED",
     "KBS_SOIL_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED",
     "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
   ]);
@@ -256,7 +263,12 @@ try {
   assert.equal(authority.source_specific_requirements.gfs_bundle.replay_source_locator_from_final_locator, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.exact_fact_replay_provenance_read_port_implemented, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.restored_ingested_at_replay_input_available, true);
-  assert.equal(authority.source_specific_requirements.gfs_bundle.partial_pair_production_rehydration_adapter_implemented, false);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.current_shape_bindable, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.partial_pair_production_rehydration_adapter_implemented, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.retained_replay_uses_same_evidence_runtime_cycle_service, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.per_work_item_retention_override_implemented, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.existing_side_idempotent_missing_side_insert_proven, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.zero_provider_refetch_rehydration_proven, true);
   assert.equal(authority.source_specific_requirements.kbs_soil.pure_planner_decision_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.single_fetch_multi_interval_path_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.single_private_retention_per_batch_implemented, true);
@@ -284,7 +296,7 @@ try {
     status: "PASS",
     subject_sha: subject,
     authority_status: authority.status,
-    current_frontier: "GFS_PARTIAL_PAIR_ZERO_PROVIDER_REHYDRATION_ADAPTER_REQUIRED",
+    current_frontier: "EXPLICIT_KBS_BATCH_AND_SOIL_DUE_AUTHORITIES_REQUIRED",
     kbs_planner_cycle_wiring_aligned: true,
     gfs_replay_provenance_foundation_implemented: true,
     kbs_publication_cycle_adapter_implemented: true,

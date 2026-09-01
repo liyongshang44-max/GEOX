@@ -358,6 +358,15 @@ function main() {
     assert(byId(replayPlan, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(replayPath));
   }
 
+  // CP-4: GFS partial-pair rehydration is Phase3-owned and owner-visible.
+  for (const gfsPartialPath of ["apps/server/src/external_evidence/mcft_cap09_gfs_partial_pair_rehydration_v1.ts", "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_PARTIAL_PAIR_REHYDRATION_V1.ts"]) {
+    const gfsPartialPlan = plan(authority, registry, [gfsPartialPath]);
+    assert.equal(gfsPartialPlan.status, "PASS");
+    assert.equal(gfsPartialPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(gfsPartialPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(gfsPartialPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+  }
+
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
   const phase3 = plan(authority, registry, [phase3Path]);

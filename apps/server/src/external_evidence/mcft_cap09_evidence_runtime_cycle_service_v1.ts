@@ -32,6 +32,7 @@ export type EvidenceRuntimeCycleWorkItemV1 = {
   request: ExternalEvidenceFetchRequestV1;
   transport: ExternalEvidenceTransportPortV1;
   decoder: ExternalEvidenceDecoderPortV1;
+  retention?: RawEvidenceRetentionPortV1;
 };
 
 export interface EvidenceSupplyCursorFactoryV1 {
@@ -163,7 +164,7 @@ export class EvidenceRuntimeCycleServiceV1 {
         },
         {
           transport: item.transport,
-          retention: this.deps.retention,
+          retention: item.retention ?? this.deps.retention,
           decoder: item.decoder,
         },
         this.deps.completion_clock,

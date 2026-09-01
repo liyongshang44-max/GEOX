@@ -66,33 +66,29 @@ export type ProductionEvidenceSourceDecisionV1 =
             bindable_to_current_work_item_factory: true;
           }
         | {
+            kind: "GFS_PARTIAL_PAIR_REHYDRATE";
+            requested_at: string;
+            target_logical_time: string;
+            cycle_key: string;
+            cycle_issued_at: string;
+            available_role: "WEATHER" | "FUTURE_ET0";
+            bindable_to_current_cycle_service: true;
+          }
+        | {
             kind: "KBS_SOIL_CURRENT_ACQUIRE";
             requested_at: string;
             latest_observed_event_time: string | null;
             bindable_to_current_work_item_factory: true;
           };
     }
-  | {
-      source_family: "GFS_BUNDLE";
-      status: "BLOCKED_CAPABILITY";
-      authority_ref: string;
-      blocker: "GFS_PARTIAL_PAIR_PRODUCTION_REHYDRATION_ADAPTER_NOT_IMPLEMENTED";
-      operation: {
-        kind: "GFS_PARTIAL_PAIR_REHYDRATION_REQUIRED";
-        requested_at: string;
-        target_logical_time: string;
-        cycle_key: string;
-        cycle_issued_at: string;
-        available_role: "WEATHER" | "FUTURE_ET0";
-        bindable_to_current_cycle_service: false;
-      };
+  ;
     };
 
 export type ProductionEvidenceSourcePlanV1 = {
   planner_id: typeof MCFT_CAP09_PRODUCTION_EVIDENCE_SOURCE_PLANNER_ID_V1;
   planning_time: string;
   activation_fence_time: string;
-  status: "NOT_DUE" | "ACTIONABLE" | "BLOCKED_CAPABILITY";
+  status: "NOT_DUE" | "ACTIONABLE";
   decisions: readonly ProductionEvidenceSourceDecisionV1[];
   blockers: readonly string[];
   action_count: number;
@@ -280,17 +276,16 @@ export function planProductionEvidenceSourcesV1(input: {
         const availableRole = partial.weather ? "WEATHER" as const : "FUTURE_ET0" as const;
         decisions.push({
           source_family: "GFS_BUNDLE",
-          status: "BLOCKED_CAPABILITY",
+          status: "ACTION",
           authority_ref: authorityRefV1(gfsDue.authority_ref),
-          blocker: "GFS_PARTIAL_PAIR_PRODUCTION_REHYDRATION_ADAPTER_NOT_IMPLEMENTED",
           operation: {
-            kind: "GFS_PARTIAL_PAIR_REHYDRATION_REQUIRED",
+            kind: "GFS_PARTIAL_PAIR_REHYDRATE",
             requested_at: gfsDue.requested_at,
             target_logical_time: target,
             cycle_key: partial.cycle_key,
             cycle_issued_at: partial.cycle_issued_at,
             available_role: availableRole,
-            bindable_to_current_cycle_service: false,
+            bindable_to_current_cycle_service: true,
           },
         });
       } else {
@@ -327,20 +322,10 @@ export function planProductionEvidenceSourcesV1(input: {
     });
   }
 
-  const blockers = [...new Set(
-    decisions
-      .filter((decision) => decision.status === "BLOCKED_CAPABILITY")
-      .map((decision) => decision.blocker),
-  )].sort();
+  const blockers: string[] = [];
   const actionCount = decisions.filter((decision) => decision.status === "ACTION").length;
-  const blockedCapabilityCount = decisions.filter(
-    (decision) => decision.status === "BLOCKED_CAPABILITY",
-  ).length;
-  const status = blockedCapabilityCount > 0
-    ? "BLOCKED_CAPABILITY" as const
-    : actionCount > 0
-      ? "ACTIONABLE" as const
-      : "NOT_DUE" as const;
+  const blockedCapabilityCount = 0;
+  const status = actionCount > 0 ? "ACTIONABLE" as const : "NOT_DUE" as const;
 
   return {
     planner_id: MCFT_CAP09_PRODUCTION_EVIDENCE_SOURCE_PLANNER_ID_V1,

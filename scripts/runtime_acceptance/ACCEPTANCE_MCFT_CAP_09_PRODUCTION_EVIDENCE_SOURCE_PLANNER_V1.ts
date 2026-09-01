@@ -349,10 +349,23 @@ function main(): void {
       kbs_soil: notDue("authority://soil/not-due"),
     },
   });
-  assert.equal(gfsPartial.status, "BLOCKED_CAPABILITY");
-  assert.deepEqual(gfsPartial.blockers, [
-    "GFS_PARTIAL_PAIR_PRODUCTION_REHYDRATION_ADAPTER_NOT_IMPLEMENTED",
-  ]);
+  assert.equal(gfsPartial.status, "ACTIONABLE");
+  assert.deepEqual(gfsPartial.blockers, []);
+  assert.equal(gfsPartial.action_count, 1);
+  assert.equal(gfsPartial.blocked_capability_count, 0);
+  const gfsPartialDecision = gfsPartial.decisions[1];
+  assert.equal(gfsPartialDecision?.status, "ACTION");
+  assert.equal(
+    gfsPartialDecision?.status === "ACTION" ? gfsPartialDecision.operation.kind : null,
+    "GFS_PARTIAL_PAIR_REHYDRATE",
+  );
+  assert.equal(
+    gfsPartialDecision?.status === "ACTION"
+      && gfsPartialDecision.operation.kind === "GFS_PARTIAL_PAIR_REHYDRATE"
+      ? gfsPartialDecision.operation.bindable_to_current_cycle_service
+      : null,
+    true,
+  );
 
   const soilAction = planProductionEvidenceSourcesV1({
     planning_time: PLANNING_TIME,
