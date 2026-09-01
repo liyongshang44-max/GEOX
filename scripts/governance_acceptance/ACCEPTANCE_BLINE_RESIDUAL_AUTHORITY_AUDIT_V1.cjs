@@ -18,7 +18,10 @@ const PROD_ROOTS = [
   "apps/executor/src",
   "apps/judge/src",
   "apps/telemetry-ingest/src",
-  "apps/web/src"
+  "apps/web/src",
+  "packages/device-skills/src",
+  "packages/skill-registry/src",
+  "packages/control-kernel/src"
 ];
 const AUX_ROOTS = ["apps/server/scripts", "packages/contracts", "scripts", ".github/workflows"];
 const EXTS = [".ts", ".tsx", ".js", ".jsx", ".cjs", ".mjs", ".sql", ".yml", ".yaml"];
@@ -62,7 +65,10 @@ const TYPE_TOKENS = {
   DecisionEligibilityDecisionV1: "decision.eligibility",
   DecisionEligibilityCriterionV1: "decision.eligibility",
   DecisionEpisodeV1: "governance.trace_projection",
-  ExternalOperationSourceEvidenceV1: "execution.result_evidence"
+  ExternalOperationSourceEvidenceV1: "execution.result_evidence",
+  ControlVerdictV0: "decision.control_gate",
+  CapabilityResolution: "execution.adapter_resolution",
+  SkillBindingRecord: "governance.skill_binding"
 };
 
 const TABLES = {
@@ -241,8 +247,13 @@ function scan(abs, production) {
 
   const specialPlanner = content.includes("CandidateActionV1") && content.includes("execution_policy");
   const specialFallback = content.includes("DEFAULT_SOIL_MOISTURE") && content.includes("effectiveSoilMoisture");
+  const specialControlVerdict = content.includes('type: "control_verdict_v0"') && content.includes("verdict:");
+  const specialDeviceCapability = p.startsWith("packages/device-skills/src/") &&
+    content.includes("resolveTaskCapabilityViaDeviceSkills");
+  const specialSkillBinding = p.startsWith("packages/skill-registry/src/") &&
+    content.includes("resolveRuleSkillBindings");
   const genericFactsWriter = /\bINSERT\s+INTO\s+facts\b/i.test(content);
-  if (!families.size && !specialPlanner && !specialFallback && !genericFactsWriter) return;
+  if (!families.size && !specialPlanner && !specialFallback && !specialControlVerdict && !specialDeviceCapability && !specialSkillBinding && !genericFactsWriter) return;
 
   for (const f of families) add(p, f, "SEMANTIC_TOUCHPOINT", "semantic-token-or-type", production);
   if (genericFactsWriter) {
@@ -305,6 +316,15 @@ function scan(abs, production) {
   }
   if (specialFallback) {
     add(p, "evidence.raw_observation", "PERSISTENCE_AUTHORITY_RISK", "fabricated-observation-fallback", production);
+  }
+  if (specialControlVerdict) {
+    add(p, "decision.control_gate", "AUTHORITY_DERIVER", "legacy-control-verdict-allow-deny-undetermined", production);
+  }
+  if (specialDeviceCapability) {
+    add(p, "execution.adapter_resolution", "AUTHORITY_DERIVER", "device-skill-task-capability-resolution", production);
+  }
+  if (specialSkillBinding) {
+    add(p, "governance.skill_binding", "AUTHORITY_DERIVER", "skill-binding-selection", production);
   }
 
   if (p.startsWith("apps/server/db/migrations/")) {
