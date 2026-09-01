@@ -70,6 +70,9 @@ jobs:
       - name: B-Line Formal Memory reviewed promotion proof
         run: pnpm run ci:governance:bline-formal-memory-reviewed-promotion-proof
 
+      - name: B-Line legacy Twin no direct Formal Memory
+        run: pnpm run ci:governance:bline-legacy-twin-no-direct-formal-memory
+
       - name: Route response ownership guard
         run: pnpm run ci:route-response-ownership
 
