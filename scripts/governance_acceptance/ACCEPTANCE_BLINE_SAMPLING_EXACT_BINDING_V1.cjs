@@ -30,8 +30,8 @@ function forbid(key, tokens) {
 
 need("service", [
   "createHash",
-  "deterministicReceiptIdentityV1",
-  "deterministicAcceptanceIdentityV1",
+  "deterministicReceiptFactIdV1",
+  "deterministicAcceptanceFactIdV1",
   "const factId = `sp_${plan_id}`",
   "const fact_id = `sl_${import_id}`",
   "AMBIGUOUS:sample_receipt_v1",
@@ -152,8 +152,9 @@ const stats = {
     && source.route.includes("sampling_plan_fact_id: plan.fact_id"),
   acceptance_exact_refs: ["sampling_plan_fact_id", "sample_receipt_fact_id", "lab_result_fact_id"].every((x) => source.service.includes(x) && source.route.includes(x)),
   acceptance_exact_chain_idempotent: source.service.includes("CONFLICT:sampling_acceptance_exact_chain_verdict") && source.service.includes("idempotent: true"),
-  receipt_identity_race_safe: source.service.includes("deterministicReceiptIdentityV1") && source.samplingApi.includes("concurrent_duplicate_sample_id_serialized"),
-  acceptance_identity_race_safe: source.service.includes("deterministicAcceptanceIdentityV1") && source.samplingApi.includes("concurrent_acceptance_identity_stable"),
+  receipt_identity_race_safe: source.service.includes("deterministicReceiptFactIdV1") && source.samplingApi.includes("concurrent_duplicate_sample_id_serialized"),
+  acceptance_identity_race_safe: source.service.includes("deterministicAcceptanceFactIdV1") && source.samplingApi.includes("concurrent_acceptance_identity_stable"),
+  opaque_business_ids_preserved: source.service.includes("const receipt_id = randomUUID();") && source.service.includes("const acceptance_id = randomUUID();"),
   plan_fact_continuity: source.projection.includes("SAMPLING_OPERATION_RELATION_EXACT_PLAN_REF_MISSING")
     && source.fertilization.includes("SAMPLING_RECEIPT_PLAN_FACT_REF_MISMATCH")
     && source.fertilization.includes("SAMPLING_LAB_PLAN_FACT_REF_MISMATCH"),
