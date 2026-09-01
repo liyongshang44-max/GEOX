@@ -590,24 +590,27 @@
         "field_memory_v1"
       ],
       "reads": [
-        "exact acceptance_result_v1 and formal gate state",
-        "exact operation/receipt/evidence-bound observation candidates",
-        "exact committed field_memory_record_v1 promotion proof",
-        "exact field_memory_candidate_v1 and independent reviewed basis facts"
+        "exact acceptance_result_v1 formal gate state and exact field/task scope",
+        "exact outcome_review_v1 reviewed outcome evidence",
+        "exact roi_boundary_v1 review-eligible P27 boundary",
+        "exact RECORDED roi_ledger_v1 plus accounting basis facts",
+        "exact field_memory_candidate_v1 plus four independent P29 basis facts",
+        "exact same_field_only committed field_memory_record_v1 plus five independent P30 promotion basis facts",
+        "exact operation/receipt/evidence-bound observation candidates"
       ],
       "semantic_family": [
         "field_memory"
       ],
-      "authority_class": "FORMAL_FIELD_MEMORY_PROJECTION_WRITER_REQUIRES_REVIEWED_PROMOTION",
+      "authority_class": "FORMAL_FIELD_MEMORY_PROJECTION_WRITER_REQUIRES_EXACT_P26_P30_CHAIN",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "recommendation memory context",
         "reports"
       ],
-      "removal_target": "KEEP WRITER AS MATERIALIZATION ONLY; REQUIRE EXACT P29 CANDIDATE + P30 REVIEWED COMMIT PROOF; NO ACCEPTANCE-ALONE AUTHORITY",
+      "removal_target": "KEEP AS MATERIALIZATION ONLY; EXACT P26→P27→P28→P29→P30 CHAIN REQUIRED; REVIEW_ONLY RECORD BLOCKED; NO ACCEPTANCE-ALONE AUTHORITY",
       "b02_registered": true,
-      "audit_note": "B-Line Formal Field Memory convergence removes latest/default provenance debt and requires a committed reviewed promotion proof before customer-visible/learning-eligible materialization."
+      "audit_note": "Customer-visible materialization is a projection of an already committed same-field record. It does not create Outcome/ROI/Candidate/Promotion authority, invoke P31 state estimation, or update a model."
     },
     {
       "surface_id": "RES-021",
@@ -1294,23 +1297,23 @@
         "FORMAL_FIELD_MEMORY indirectly through createFormalFieldMemoryFromAcceptanceV1"
       ],
       "reads": [
-        "exact acceptance_id and operation_plan_id",
+        "exact acceptance_id, operation_plan_id, field and act_task scope",
         "exact field_memory_record_ref",
-        "field_memory_service exact provenance + reviewed promotion verifier"
+        "field_memory_service exact P26-P30 provenance + reviewed promotion verifier"
       ],
       "semantic_family": [
         "field_memory"
       ],
-      "authority_class": "FORMAL_FIELD_MEMORY_PROMOTION_PROOF_COMPATIBILITY_ENTRYPOINT",
+      "authority_class": "FORMAL_FIELD_MEMORY_EXACT_CHAIN_COMPATIBILITY_ENTRYPOINT",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "formal Field Memory readers",
         "learning-eligible memory consumers"
       ],
-      "removal_target": "KEEP COMPATIBILITY ROUTE NAME; MATERIALIZE ONLY AFTER EXACT COMMITTED P29/P30 PROOF; ROUTE MUST NOT CREATE PROMOTION AUTHORITY",
+      "removal_target": "KEEP COMPATIBILITY ROUTE NAME; MATERIALIZE ONLY AFTER EXACT SAME-FIELD P26→P30 PROOF; ROUTE MUST NOT CREATE ANY P26-P30 AUTHORITY",
       "b02_registered": false,
-      "audit_note": "Acceptance remains provenance only. Route now requires field_memory_record_ref and delegates proof verification before any formal memory materialization."
+      "audit_note": "Acceptance remains necessary provenance only. Route consumes a pre-authorized exact chain and fails closed for review-only, cross-scope, missing Outcome/ROI, or ambiguous proof."
     },
     {
       "surface_id": "RES-048",
@@ -7924,25 +7927,30 @@
       "activation_mode": "ACTIVE_SERVICE_CALL_CHAIN",
       "writes": [],
       "reads": [
-        "exact field_memory_record_v1",
+        "exact acceptance_result_v1",
+        "exact outcome_review_v1",
+        "exact roi_boundary_v1",
+        "exact RECORDED roi_ledger_v1",
+        "exact ROI cost/value/accounting-policy basis facts",
         "exact field_memory_candidate_v1",
         "four exact P29 candidate-basis facts",
+        "exact same_field_only committed field_memory_record_v1",
         "five exact P30 promotion-basis facts"
       ],
       "semantic_family": [
         "field_memory",
         "governance.trace_projection"
       ],
-      "authority_class": "FORMAL_FIELD_MEMORY_PROMOTION_PROOF_VERIFIER_NOT_PROMOTION_WRITER",
+      "authority_class": "FORMAL_FIELD_MEMORY_P26_P30_EXACT_CHAIN_VERIFIER_NOT_WRITER",
       "runtime_reachable": "PROVEN_VIA_FIELD_MEMORY_ROUTE",
       "feature_flag": null,
       "downstream_consumers": [
         "apps/server/src/services/field_memory_service.ts"
       ],
-      "removal_target": "KEEP FAIL-CLOSED PROOF VERIFIER; NEVER CREATE P29/P30 FACTS OR PROMOTION AUTHORITY",
+      "removal_target": "KEEP FAIL-CLOSED VERIFIER; NEVER CREATE P26-P30 FACTS, P31 RUNTIME CONTEXT, MODEL UPDATE, OR PROMOTION AUTHORITY",
       "b02_registered": false,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
-      "audit_note": "Consumes already-authorized P29/P30 facts only; exact tenant/project/group, operation, acceptance, candidate, policy and independent basis refs are required."
+      "audit_note": "Verifies exact tenant/project/group, operation, task, field, Acceptance, P27 Outcome/ROI boundary, P28 recorded ledger/accounting basis, P29 candidate basis, P30 promotion basis and same-field reuse boundary. review_only_no_runtime_use is rejected."
     },
     {
       "surface_id": "RES-304",
