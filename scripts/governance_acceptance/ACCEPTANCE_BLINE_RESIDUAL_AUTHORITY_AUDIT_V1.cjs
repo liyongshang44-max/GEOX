@@ -234,7 +234,7 @@ function scan(abs, production) {
 
   const specialPlanner = content.includes("CandidateActionV1") && content.includes("execution_policy");
   const specialFallback = content.includes("DEFAULT_SOIL_MOISTURE") && content.includes("effectiveSoilMoisture");
-  const genericFactsWriter = /\\bINSERT\\s+INTO\\s+facts\\b/i.test(content);
+  const genericFactsWriter = /\bINSERT\s+INTO\s+facts\b/i.test(content);
   if (!families.size && !specialPlanner && !specialFallback && !genericFactsWriter) return;
 
   for (const f of families) add(p, f, "SEMANTIC_TOUCHPOINT", "semantic-token-or-type", production);
