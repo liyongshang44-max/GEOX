@@ -50,6 +50,8 @@ async function main() {
     concurrent_duplicate_sample_id_serialized: false,
     concurrent_acceptance_identity_stable: false,
     shared_import_id_is_chain_local: false,
+    sample_id_reuse_across_plans_allowed: false,
+    ambiguous_sample_locator_requires_exact_receipt_ref: false,
     auth_missing_rejected_401: false,
     auth_invalid_rejected_401: false,
     tenant_boundary_rejected_404: false,
@@ -155,12 +157,15 @@ async function main() {
   const concurrentReceiptStatuses = concurrentReceipts.map((x) => x.status).sort((a, b) => a - b);
   assert.deepEqual(concurrentReceiptStatuses, [200, 409], 'concurrent duplicate receipt creation must serialize to one success and one 409');
   const concurrentReceiptConflict = concurrentReceipts.find((x) => x.status === 409);
+  const concurrentReceiptSuccess = concurrentReceipts.find((x) => x.status === 200);
   assert.equal(concurrentReceiptConflict?.json?.error, 'DUPLICATE:sample_id', 'concurrent duplicate receipt must use DUPLICATE:sample_id');
+  assert.ok(concurrentReceiptSuccess?.json?.fact_id, 'concurrent receipt winner fact_id required');
   checks.concurrent_duplicate_sample_id_serialized = true;
 
   const sharedImportId = `shared-import-${now}`;
   const concurrentLab = await postJson('/api/v1/sampling/lab-result', {
     sample_id: concurrentSampleId,
+    sample_receipt_fact_id: concurrentReceiptSuccess.json.fact_id,
     import_id: sharedImportId,
     imported_at_ts: now + 20,
     metrics: { ph: 6.6, nitrate_n_mg_kg: 2.4 },
@@ -204,6 +209,7 @@ async function main() {
   assert.equal(sharedImportSecondReceipt.status, 200, 'second sample for shared import identity must succeed');
   const sharedImportSecondLab = await postJson('/api/v1/sampling/lab-result', {
     sample_id: sharedImportSecondSampleId,
+    sample_receipt_fact_id: sharedImportSecondReceipt.json?.fact_id,
     import_id: sharedImportId,
     imported_at_ts: now + 40,
     metrics: { ph: 6.8, nitrate_n_mg_kg: 2.2 },
@@ -251,6 +257,53 @@ async function main() {
   const sampleLookup = await fetch(`${baseUrl}/api/v1/sampling/sample/${ids.sample_id}`, { method: 'GET', headers: { authorization: `Bearer ${token}` } });
   assert.equal(sampleLookup.status, 200, 'sample lookup should succeed for created sample');
   checks.sample_lookup_works = true;
+
+  const reusePlan = await postJson('/api/v1/sampling/plan', {
+    ...scopedBody,
+    reason: 'MANUAL_REQUEST',
+    sample_type: 'SOIL',
+    required_points: 2,
+    evidence_refs: [],
+  });
+  assert.equal(reusePlan.status, 200, 'second plan for same business sample id must succeed');
+  const reusedSampleReceipt = await postJson('/api/v1/sampling/receipt', {
+    ...scopedBody,
+    plan_id: reusePlan.json?.plan_id,
+    sample_id: ids.sample_id,
+    collected_at_ts: now + 50,
+    collector_actor_id: 'collector-reused-sample-id',
+    sample_type: 'SOIL',
+    evidence_refs: [{ kind: 'raw_sample_v1', ref_id: 'raw-reused-sample-id' }],
+    chain_of_custody_status: 'RECORDED',
+  });
+  assert.equal(reusedSampleReceipt.status, 200, 'same sample_id on a different exact plan must be allowed');
+  assert.notEqual(reusedSampleReceipt.json?.fact_id, goodReceipt.json?.fact_id, 'same sample_id on different plans must have distinct receipt fact identities');
+  checks.sample_id_reuse_across_plans_allowed = true;
+
+  const ambiguousLab = await postJson('/api/v1/sampling/lab-result', {
+    sample_id: ids.sample_id,
+    imported_at_ts: now + 60,
+    metrics: { ph: 6.4 },
+    units: { ph: 'pH' },
+    evidence_refs: [{ kind: 'import_run_v1', ref_id: 'import-ambiguous-sample' }],
+    quality_status: 'PASS',
+  });
+  assert.equal(ambiguousLab.status, 409, 'sample_id-only lab import must fail when more than one receipt matches');
+  assert.equal(ambiguousLab.json?.error, 'AMBIGUOUS:sample_receipt_v1', 'ambiguous sample locator must expose receipt ambiguity');
+
+  const exactReceiptLab = await postJson('/api/v1/sampling/lab-result', {
+    sample_id: ids.sample_id,
+    sample_receipt_fact_id: goodReceipt.json?.fact_id,
+    import_id: `exact-receipt-import-${now}`,
+    imported_at_ts: now + 70,
+    metrics: { ph: 6.4 },
+    units: { ph: 'pH' },
+    evidence_refs: [{ kind: 'import_run_v1', ref_id: 'import-exact-receipt' }],
+    quality_status: 'PASS',
+  });
+  assert.equal(exactReceiptLab.status, 200, 'exact sample_receipt_fact_id must resolve lab import despite business-id ambiguity');
+  assert.equal(exactReceiptLab.json?.sample_receipt_fact_id, goodReceipt.json?.fact_id, 'lab result must echo the exact receipt fact binding');
+  checks.ambiguous_sample_locator_requires_exact_receipt_ref = true;
 
   const noAuth = await postJsonWithAuth('/api/v1/sampling/plan', {
     ...scopedBody,
