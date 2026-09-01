@@ -28,14 +28,25 @@
       "A path may be authority-capable without writing to the database.",
       "Pure builders, projection/status derivations, API routes, jobs, workers, migrations, SQL functions/triggers, scripts and external adapters are in scope.",
       "Runtime reachability is classified separately from code capability.",
-      "No finding may be allowlisted before it is classified."
+      "No finding may be allowlisted before it is classified.",
+      "B02 topology consistency is not repository completeness proof.",
+      "Active runtime reachability is independently closed from registerDomainModules through nested register/install calls.",
+      "Read-only/projection disposition does not exempt a route from semantic-write detection."
     ]
   },
   "scan_roots": [
     "apps/server/src",
     "apps/server/db/migrations",
-    "apps/server/scripts",
     "apps/executor/src",
+    "apps/judge/src",
+    "apps/telemetry-ingest/src",
+    "apps/web/src",
+    "packages/device-skills/src",
+    "packages/skill-registry/src",
+    "packages/control-kernel/src",
+    "docker/postgres/init",
+    "config/judge",
+    "apps/server/scripts",
     "packages/contracts",
     "scripts",
     ".github/workflows"
@@ -403,8 +414,8 @@
     {
       "surface_id": "RES-013",
       "source_path": "apps/server/src/routes/v1/operator_twin.ts",
-      "entrypoint": "not registered by current Operator Module",
-      "activation_mode": "NOT_REFERENCED_CURRENT_MODULE_GRAPH",
+      "entrypoint": "registerOperatorModule -> operator_twin_read_legacy_v1.ts / operator_twin_write_legacy_v1.ts -> registerOperatorTwinReadRoutes / legacy POST registration",
+      "activation_mode": "ACTIVE_LEGACY_READ_WRITE_CORE_VIA_COMPATIBILITY_WRAPPERS",
       "writes": [
         "contains decision_recommendation_v1 fact-write code"
       ],
@@ -415,13 +426,17 @@
         "decision.candidate",
         "presentation.read_model"
       ],
-      "authority_class": "STALE_ORPHAN_AUTHORITY_CAPABLE_SURFACE",
-      "runtime_reachable": "NOT_PROVEN",
+      "authority_class": "ACTIVE_LEGACY_MIXED_CANDIDATE_READ_WRITE_SURFACE",
+      "runtime_reachable": "PROVEN",
       "feature_flag": null,
-      "downstream_consumers": [],
-      "removal_target": "REMOVE_OR_ARCHIVE_AFTER_REPLACEMENT_PROOF",
+      "downstream_consumers": [
+        "apps/server/src/routes/v1/operator_twin_read_legacy_v1.ts",
+        "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts",
+        "apps/server/src/modules/operator/registerOperatorModule.ts"
+      ],
+      "removal_target": "KEEP READ COMPATIBILITY; MOVE WRITE AUTHORITY TO CANONICAL CANDIDATE SUBMISSION THEN RETIRE LEGACY WRITER AFTER CUTOVER",
       "b02_registered": false,
-      "audit_note": "File header says read-only while the file contains recommendation writer code; current registerOperatorModule uses split legacy read/write modules instead."
+      "audit_note": "Previous STALE_ORPHAN classification was factually wrong. Split legacy read/write wrappers still call into this file, and the write wrapper re-registers two POST surfaces. File header says read-only/no recommendation writes while implementation persists decision_recommendation_v1."
     },
     {
       "surface_id": "RES-014",
@@ -3340,6 +3355,411 @@
       "removal_target": "KEEP ONLY AS EXPLICIT SIMULATION/DEV TOOL OR RETIRE; NEVER PROMOTE SYNTHETIC RECEIPT TO FORMAL EXECUTION AUTHORITY",
       "b02_registered": false,
       "audit_note": "The CLI constructs synthetic execution_time/resource_usage, execution_coverage.ref=simulated and logs_refs=stdout, then posts ao_act_receipt_v0. Formal evidence policy currently fail-closes this receipt alone because source lane is UNKNOWN and stdout is not a formal-log kind."
+    },
+    {
+      "surface_id": "RES-127",
+      "source_path": "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts",
+      "entrypoint": "registerOperatorModule -> registerOperatorTwinWriteLegacyRoutesV1",
+      "activation_mode": "ACTIVE_LEGACY_COMPATIBILITY_WRITER",
+      "writes": [
+        "registers two legacy scenario-to-recommendation POST surfaces through operator_twin.ts"
+      ],
+      "reads": [
+        "operator_twin.ts legacy route implementation"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "ACTIVE_LEGACY_CANDIDATE_COMPATIBILITY_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "operator product clients",
+        "apps/server/src/routes/v1/operator_twin.ts"
+      ],
+      "removal_target": "CUTOVER TO CANONICAL CANDIDATE SUBMISSION THEN RETIRE LEGACY POST WRAPPER",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-128",
+      "source_path": "apps/server/src/routes/control_approval_request_v1.ts",
+      "entrypoint": "registerCoreV1Routes -> v1/approvals.ts -> registerApprovalRequestV1Routes",
+      "activation_mode": "PRIMARY_API_RUNTIME",
+      "writes": [
+        "ApprovalRequest/ApprovalDecision facts and approval-derived lifecycle effects"
+      ],
+      "reads": [
+        "candidate/recommendation/plan facts"
+      ],
+      "semantic_family": [
+        "decision.approval",
+        "decision.candidate",
+        "operation.plan"
+      ],
+      "authority_class": "ACTIVE_APPROVAL_ROUTE_AUTHORITY",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "approval service",
+        "operation-plan builder",
+        "operator approval surfaces"
+      ],
+      "removal_target": "KEEP AS CANONICAL APPROVAL FACADE; REGISTER EXACT DOWNSTREAM AUTHORITY BOUNDARIES",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-129",
+      "source_path": "apps/server/src/routes/control_operation_plan_v1.ts",
+      "entrypoint": "registerOperatorModule -> registerOperationPlanV1Routes",
+      "activation_mode": "PRIMARY_OPERATOR_API_RUNTIME",
+      "writes": [
+        "operation_plan_transition_v1 facts",
+        "operation_plan_index_v1 lifecycle projection"
+      ],
+      "reads": [
+        "operation_plan_v1 and transition facts"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "authority_class": "ACTIVE_OPERATION_PLAN_TRANSITION_FACADE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "operator plan lifecycle clients",
+        "task/execution runtime"
+      ],
+      "removal_target": "KEEP AS EXPLICIT PLAN TRANSITION FACADE AFTER LIFECYCLE SEMANTICS ARE CONVERGED",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-130",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "entrypoint": "primary /api/v1/actions/* and compatibility AO-ACT registration paths",
+      "activation_mode": "PRIMARY_EXECUTION_API_RUNTIME",
+      "writes": [
+        "AO-ACT Task",
+        "AO-ACT Receipt",
+        "OperationPlan lifecycle/projection state",
+        "dispatch/skill runtime effects"
+      ],
+      "reads": [
+        "OperationPlan",
+        "task/dispatch queues",
+        "device-skill resolution",
+        "receipt facts"
+      ],
+      "semantic_family": [
+        "execution.task",
+        "execution.receipt",
+        "operation.plan",
+        "execution.adapter_resolution"
+      ],
+      "authority_class": "ACTIVE_MIXED_AO_ACT_EXECUTION_ORCHESTRATOR",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "task_service",
+        "executor/outbox",
+        "operator execution surfaces"
+      ],
+      "removal_target": "KEEP PRIMARY API; REMOVE TASK->PLAN ACKED COLLAPSE AND CONVERGE INTERNAL AUTHORITY TO CANONICAL EXECUTION LIFECYCLE",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-131",
+      "source_path": "apps/server/src/projections/field_program_state_v1.ts",
+      "entrypoint": "field-program state read model used by active field/program APIs",
+      "activation_mode": "ACTIVE_PROJECTION",
+      "writes": [
+        "in-memory Program lifecycle projection"
+      ],
+      "reads": [
+        "operation/recommendation/acceptance facts"
+      ],
+      "semantic_family": [
+        "operation.plan",
+        "presentation.read_model"
+      ],
+      "authority_class": "CROSS_FAMILY_PROGRAM_LIFECYCLE_PROJECTION_DERIVER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "field program product read models"
+      ],
+      "removal_target": "KEEP PROJECTION; SPLIT ACKED/DISPATCHED/RUNNING SEMANTICS SO TASK OR ACK CANNOT IMPLY EXECUTING",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-132",
+      "source_path": "apps/server/src/routes/operation_state_v1.ts",
+      "entrypoint": "registerReportingModule -> registerOperationStateV1Routes",
+      "activation_mode": "ACTIVE_GET_ROUTE_WITH_SEMANTIC_SIDE_EFFECT",
+      "writes": [
+        "skill_run fact through ensureSkillRunFact",
+        "rule performance feedback through updateRulePerformance"
+      ],
+      "reads": [
+        "operation/task/receipt/acceptance/read-model facts"
+      ],
+      "semantic_family": [
+        "presentation.read_model",
+        "governance.skill_binding"
+      ],
+      "authority_class": "READ_MODEL_ROUTE_WITH_HIDDEN_LEARNING_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "operator/reporting UI",
+        "skill/rule learning feedback"
+      ],
+      "removal_target": "MAKE GET/READ MODEL ZERO-PERSISTENCE; MOVE LEARNING UPDATE TO EXPLICIT ACCEPTANCE->OUTCOME->LEARNING EVENT",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-133",
+      "source_path": "apps/server/src/domain/acceptance/engine_v1.ts",
+      "entrypoint": "apps/server/src/routes/acceptance_v1.ts",
+      "activation_mode": "ACTIVE_DOMAIN_DERIVER",
+      "writes": [
+        "in-memory canonical Acceptance verdict calculation"
+      ],
+      "reads": [
+        "execution/evidence/judge inputs"
+      ],
+      "semantic_family": [
+        "acceptance.verdict"
+      ],
+      "authority_class": "CANONICAL_ACCEPTANCE_VERDICT_DERIVER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "acceptance_v1 route"
+      ],
+      "removal_target": "KEEP AS CANONICAL ACCEPTANCE CALCULATION AUTHORITY",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-134",
+      "source_path": "apps/server/src/domain/evidence/formal_evidence_policy_v1.ts",
+      "entrypoint": "Acceptance and formal-evidence qualification callsites",
+      "activation_mode": "ACTIVE_VERSIONED_POLICY",
+      "writes": [
+        "in-memory evidence eligibility/classification"
+      ],
+      "reads": [
+        "EvidenceArtifact/source lane/debug/simulation provenance"
+      ],
+      "semantic_family": [
+        "evidence.qualification",
+        "acceptance.verdict"
+      ],
+      "authority_class": "FORMAL_EVIDENCE_ELIGIBILITY_POLICY_AUTHORITY",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "acceptance engine/routes",
+        "formal trigger gates",
+        "devtools negative boundaries"
+      ],
+      "removal_target": "KEEP AS EXPLICIT VERSIONED POLICY AUTHORITY; NO HIDDEN DEFAULT POLICY",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-135",
+      "source_path": "apps/server/src/routes/water_response_verification_v1.ts",
+      "entrypoint": "registerAcceptanceModule -> registerWaterResponseVerificationV1Routes",
+      "activation_mode": "ACTIVE_OUTCOME_API_RUNTIME",
+      "writes": [
+        "water_response_verification_v1/index outcome records"
+      ],
+      "reads": [
+        "Acceptance/AsExecuted evidence"
+      ],
+      "semantic_family": [
+        "outcome.evidence"
+      ],
+      "authority_class": "ACTIVE_OUTCOME_VERIFICATION_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "ROI/Field Memory/learning lanes"
+      ],
+      "removal_target": "KEEP AS EXPLICIT ACCEPTANCE->OUTCOME BOUNDARY",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-136",
+      "source_path": "apps/server/src/routes/v1/twin_kernel.ts",
+      "entrypoint": "registerTwinKernelModule -> registerTwinKernelV1Routes",
+      "activation_mode": "ACTIVE_LEGACY_TWIN_API_RUNTIME",
+      "writes": [
+        "legacy FieldStateSnapshot",
+        "ForecastRun",
+        "ScenarioSet",
+        "CalibrationReplay",
+        "FieldLearningCandidate",
+        "DecisionCycle records"
+      ],
+      "reads": [
+        "legacy Twin Kernel source indexes and prior objects"
+      ],
+      "semantic_family": [
+        "twin.state",
+        "twin.forecast",
+        "twin.scenario",
+        "governance.trace_projection"
+      ],
+      "authority_class": "LEGACY_TWIN_MULTI_AUTHORITY_ROUTE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "legacy operator/twin workflows",
+        "replay/shadow products"
+      ],
+      "removal_target": "FREEZE AS LEGACY SHADOW/REPLAY AUTHORITY; POST-MCFT TYPED CUTOVER REMOVES STATE/FORECAST/SCENARIO AUTHORITY",
+      "b02_registered": false,
+      "audit_note": "B-Line must not modify MCFT implementation while declaring these legacy writers non-canonical."
+    },
+    {
+      "surface_id": "RES-137",
+      "source_path": "apps/server/src/domain/twin_kernel/field_state_snapshot_v1.ts",
+      "entrypoint": "POST field-state-snapshots via routes/v1/twin_kernel.ts",
+      "activation_mode": "ACTIVE_LEGACY_TWIN_DERIVER",
+      "writes": [
+        "legacy Field State Snapshot payload/persistence inputs"
+      ],
+      "reads": [
+        "legacy source-index facts"
+      ],
+      "semantic_family": [
+        "twin.state"
+      ],
+      "authority_class": "LEGACY_TWIN_STATE_DERIVER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "routes/v1/twin_kernel.ts"
+      ],
+      "removal_target": "KEEP SHADOW/REPLAY ONLY; REPLACE STATE AUTHORITY WITH MCFT AFTER MCFT COMPLETE",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-138",
+      "source_path": "apps/server/src/domain/twin_kernel/forecast_run_v1.ts",
+      "entrypoint": "POST forecast-runs via routes/v1/twin_kernel.ts",
+      "activation_mode": "ACTIVE_LEGACY_TWIN_DERIVER",
+      "writes": [
+        "legacy ForecastRun payload/persistence inputs"
+      ],
+      "reads": [
+        "legacy state/weather inputs"
+      ],
+      "semantic_family": [
+        "twin.forecast"
+      ],
+      "authority_class": "LEGACY_TWIN_FORECAST_DERIVER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "routes/v1/twin_kernel.ts"
+      ],
+      "removal_target": "KEEP SHADOW/REPLAY ONLY; REPLACE FORECAST AUTHORITY WITH MCFT AFTER MCFT COMPLETE",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-139",
+      "source_path": "apps/server/src/domain/twin_kernel/scenario_set_v1.ts",
+      "entrypoint": "POST scenario-sets via routes/v1/twin_kernel.ts",
+      "activation_mode": "ACTIVE_LEGACY_TWIN_DERIVER",
+      "writes": [
+        "legacy ScenarioSet payload/persistence inputs"
+      ],
+      "reads": [
+        "legacy ForecastRun/State inputs"
+      ],
+      "semantic_family": [
+        "twin.scenario"
+      ],
+      "authority_class": "LEGACY_TWIN_SCENARIO_DERIVER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "routes/v1/twin_kernel.ts",
+        "legacy operator scenario surfaces"
+      ],
+      "removal_target": "KEEP SHADOW/REPLAY ONLY; CUT OVER TO GOVERNED/MCFT-DERIVED SCENARIO INPUTS AFTER MCFT COMPLETE",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-140",
+      "source_path": "apps/server/src/domain/twin_kernel/calibration_replay_v1.ts",
+      "entrypoint": "POST calibration-replays via routes/v1/twin_kernel.ts",
+      "activation_mode": "ACTIVE_LEGACY_REPLAY_DERIVER",
+      "writes": [
+        "calibration replay objects"
+      ],
+      "reads": [
+        "Twin/Outcome history"
+      ],
+      "semantic_family": [
+        "governance.trace_projection"
+      ],
+      "authority_class": "LEGACY_TWIN_CALIBRATION_REPLAY_CAPABILITY",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "field learning candidate creation"
+      ],
+      "removal_target": "KEEP REPLAY CAPABILITY; RE-ADJUDICATE LEARNING AUTHORITY AFTER OUTCOME/Learning LANE CLOSURE",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-141",
+      "source_path": "apps/server/src/domain/twin_kernel/field_learning_candidate_v1.ts",
+      "entrypoint": "POST field-learning-candidates via routes/v1/twin_kernel.ts",
+      "activation_mode": "ACTIVE_LEGACY_LEARNING_DERIVER",
+      "writes": [
+        "field_learning_candidate_v1 objects"
+      ],
+      "reads": [
+        "calibration replay/outcome-like inputs"
+      ],
+      "semantic_family": [
+        "field_memory"
+      ],
+      "authority_class": "LEGACY_TWIN_LEARNING_CANDIDATE_DERIVER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "legacy learning review/promotion gates"
+      ],
+      "removal_target": "KEEP AS NON-ACTIVATING CANDIDATE/REPLAY CAPABILITY; REDEFINE AUTHORITY UNDER GOVERNED OUTCOME/LEARNING LANE",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-142",
+      "source_path": "apps/server/src/routes/v1/twin_kernel_production_ingestion.ts",
+      "entrypoint": "registerTwinKernelModule -> registerTwinKernelProductionIngestionRoutes",
+      "activation_mode": "ACTIVE_LEGACY_MAPPING_WRITER",
+      "writes": [
+        "production_ingestion source refs",
+        "decision-cycle mapping objects"
+      ],
+      "reads": [
+        "external/production-shaped source references"
+      ],
+      "semantic_family": [
+        "governance.trace_projection"
+      ],
+      "authority_class": "LEGACY_TWIN_PRODUCTION_INGESTION_MAPPING_ADAPTER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "Twin Kernel decision-cycle trace"
+      ],
+      "removal_target": "KEEP AS SOURCE/TRACE MAPPING ONLY; MUST NOT BECOME CANONICAL STATE/FORECAST AUTHORITY",
+      "b02_registered": false
     }
   ],
   "cross_branch_surfaces": [
@@ -3368,5 +3788,17 @@
       "runtime_reachable": "NOT_ON_THIS_AUDIT_HEAD",
       "removal_target": "KEEP_AND_REGISTER_WHEN_REPLAYED_TO_FINAL_INTEGRATION"
     }
-  ]
+  ],
+  "scan_files": [
+    "docker-compose.yml",
+    "docker-compose.prod.yml",
+    "docker-compose.staging.yml",
+    "docker-compose.commercial_v1.yml"
+  ],
+  "active_runtime_surface_closure": {
+    "registry": "docs/architecture/semantic_convergence/GEOX-BLINE-ACTIVE-RUNTIME-SURFACE-DISPOSITION-V1.json",
+    "root": "apps/server/src/modules/domain/registerDomainModules.ts",
+    "proof": "scripts/governance_acceptance/ACCEPTANCE_BLINE_ACTIVE_RUNTIME_SURFACE_CLOSURE_V1.cjs",
+    "rule": "ACTIVE_RUNTIME_SURFACE_WITHOUT_DISPOSITION_IS_FAIL_CLOSED"
+  }
 }
