@@ -76,13 +76,9 @@ Within exact tenant/project/group scope:
 
 ### Lab result
 
-`import_id` deterministically resolves to:
+`import_id` is a business locator, not a globally unique fact identity.
 
-```text
-sl_<import_id>
-```
-
-The lab fact must also bind the exact receipt fact and exact plan fact.
+New lab fact identity is deterministically derived from a canonical JSON tuple containing tenant/project/group, sample identity, exact receipt fact, exact plan fact, and `import_id`. The lab fact also persists the exact receipt and plan references. Historical `sl_<import_id>` facts remain readable through unique chain lookup; multiple matches fail closed.
 
 If `import_id` is omitted, more than one candidate lab fact is an explicit ambiguity; no latest fallback is permitted.
 
