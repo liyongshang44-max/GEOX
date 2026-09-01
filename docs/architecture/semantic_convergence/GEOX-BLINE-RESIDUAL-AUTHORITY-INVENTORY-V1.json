@@ -2654,6 +2654,54 @@
       "audit_note": "Pure evaluator emits ALLOW/DENY/UNDETERMINED; evaluated_at_ts uses Date.now and verdict_id includes a random suffix, so it must not be promoted to causal decision authority unchanged.",
       "surface_id": "RES-099",
       "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/domain/sensing/fertility_inference_v1.ts",
+      "entrypoint": "server sensing callers → thin @geox/device-skills facade",
+      "activation_mode": "ACTIVE_SERVER_FACADE",
+      "writes": [
+        "in-memory FertilityInferenceV1Result via shared device-skills core"
+      ],
+      "reads": [
+        "DeviceObservationV1Input / SensingObservationAggregateV1"
+      ],
+      "semantic_family": [
+        "twin.state",
+        "evidence.qualification"
+      ],
+      "authority_class": "FERTILITY_INFERENCE_AUTHORITY_FACADE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "run_sensing_inference_pipeline_v1",
+        "fertility inference callers"
+      ],
+      "removal_target": "KEEP THIN FACADE; CANONICAL STATE/EQ AUTHORITY MUST REMAIN EXPLICIT DOWNSTREAM",
+      "surface_id": "RES-100",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/domain/skill_registry/agronomy_rule_registry.ts",
+      "entrypoint": "legacy agronomy skill registry module",
+      "activation_mode": "DEFAULT_FAIL_CLOSED_LEGACY_MODULE",
+      "writes": [
+        "indirect skill_binding_v1 facts through @geox/skill-registry injected dependency"
+      ],
+      "reads": [
+        "skill binding projection and tenant/crop rule selection"
+      ],
+      "semantic_family": [
+        "governance.skill_binding"
+      ],
+      "authority_class": "LEGACY_SKILL_BINDING_ACTIVATION_FACADE",
+      "runtime_reachable": "ONLY_WHEN_GEOX_DISABLE_LEGACY_SKILLS=false",
+      "feature_flag": "GEOX_DISABLE_LEGACY_SKILLS",
+      "downstream_consumers": [
+        "legacy agronomy rule skill selection"
+      ],
+      "removal_target": "KEEP DEFAULT DISABLED; DO NOT REACTIVATE AS PARALLEL RECOMMENDATION/CONTROL AUTHORITY WITHOUT EXPLICIT GOVERNANCE",
+      "surface_id": "RES-101",
+      "b02_registered": false
     }
   ],
   "cross_branch_surfaces": [
