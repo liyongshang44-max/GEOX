@@ -35,7 +35,7 @@ if (!legacy.includes('app.post("/api/delivery/evidence_export/v1/jobs"') ||
 if (!legacy.includes('requireAoActScopeV0(req, reply, "ao_act.index.read")')) {
   fail("legacy export must remain read-authorized packaging only");
 }
-if (!stable.includes("(record_json::jsonb->>'type')='acceptance_result_v1'")) {
+if (!/record_json\?\.type[\s\S]{0,80}===\s*["']acceptance_result_v1["']/.test(stable)) {
   fail("stable evidence export must continue to consume existing canonical Acceptance");
 }
 if (/job\.acceptance_fact_id|job\.acceptance_result/.test(executor)) {
