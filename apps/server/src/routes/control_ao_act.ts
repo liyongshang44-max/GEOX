@@ -1981,11 +1981,14 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
         return reply.status(approvalDecision.status || 400).send(approvalDecision.json ?? { ok: false, error: "APPROVAL_DECISION_FAILED" });
       }
       const operation_plan_id = String(approvalDecision.json.operation_plan_id ?? "").trim();
+      const act_task_id = String(approvalDecision.json.act_task_id ?? "").trim();
       if (!operation_plan_id) return reply.status(500).send({ ok: false, error: "MISSING_OPERATION_PLAN_ID" });
+      if (!act_task_id) return reply.status(500).send({ ok: false, error: "MISSING_ACT_TASK_ID" });
       return reply.send({
         ok: true,
         operation_id,
         operation_plan_id,
+        act_task_id,
         command_id
       });
     } catch (e: any) {
