@@ -2079,14 +2079,17 @@
       ],
       "reads": [
         "field-scoped assessment/recommendation/prescription inputs",
-        "caller zone_applications on acceptance"
+        "exact bridge prescription_contract_v1 acceptance_conditions",
+        "exact as_executed_record_v1",
+        "exact as_applied_map_v1 VARIABLE_BY_ZONE evidence",
+        "exact AO-ACT receipt fact via AsExecuted receipt_refs"
       ],
       "semantic_family": [
         "decision.candidate",
         "action.prescription_spec",
         "acceptance.verdict"
       ],
-      "authority_class": "ACTIVE_FERTILIZATION_DOMAIN_AUTHORITY_SERVICE_WITH_ACCEPTANCE_P0",
+      "authority_class": "ACTIVE_FERTILIZATION_DOMAIN_AUTHORITY_SERVICE_WITH_EXACT_EXECUTION_ACCEPTANCE",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
@@ -2094,8 +2097,8 @@
         "fertilization variable bridge",
         "approval/execution surfaces"
       ],
-      "removal_target": "KEEP DOMAIN ASSESSMENT/CALCULATION; CONVERGE RECOMMENDATION/PRESCRIPTION/ACCEPTANCE TO CANONICAL BOUNDARIES; FIX P0-RES-009",
-      "audit_note": "P0-RES-009: acceptance PASS can be computed from caller-supplied zone_applications without receipt/AsExecuted verification.",
+      "removal_target": "KEEP DOMAIN ASSESSMENT/CALCULATION; ACCEPTANCE CONSUMES EXACT RECEIPT→ASEXECUTED→ASAPPLIED ONLY; NO CALLER EXECUTION ASSERTION AUTHORITY",
+      "audit_note": "P0-RES-009 repaired in stacked exact-execution package: caller zone/evidence assertions rejected; PASS derives only from exact AsApplied zone evidence and exact variable-prescription acceptance_conditions.",
       "surface_id": "RES-077",
       "b02_registered": false
     },
@@ -2407,7 +2410,9 @@
         "variable prescription bridge outputs"
       ],
       "reads": [
-        "tenant-scoped fertilization API inputs"
+        "tenant-scoped fertilization API inputs",
+        "exact fertilization prescription before field auth",
+        "exact execution identity tuple for acceptance"
       ],
       "semantic_family": [
         "decision.candidate",
@@ -2415,7 +2420,7 @@
         "decision.approval",
         "acceptance.verdict"
       ],
-      "authority_class": "ACTIVE_FERTILIZATION_AUTHORITY_ROUTE_WITH_ACCEPTANCE_P0",
+      "authority_class": "ACTIVE_FERTILIZATION_FACADE_WITH_DEDICATED_ACCEPTANCE_SCOPE",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
@@ -2423,8 +2428,8 @@
         "variable prescription bridge",
         "approval/execution consumers"
       ],
-      "removal_target": "KEEP PRODUCT FACADE; CONVERGE TO CANONICAL CANDIDATE/ACTION-SPEC/APPROVAL/ACCEPTANCE PORTS; FIX P0-RES-009",
-      "audit_note": "P0-RES-009: active acceptance route currently permits caller assertions to drive fertilization PASS without canonical execution evidence verification.",
+      "removal_target": "KEEP PRODUCT FACADE; ACCEPTANCE REQUIRES acceptance.evaluate + PRE-WRITE FIELD AUTH + EXACT EXECUTION PROVENANCE",
+      "audit_note": "Acceptance endpoint no longer shares fields.write/prescription.write authority and no longer writes before field allowlist validation.",
       "surface_id": "RES-089",
       "b02_registered": false
     },
@@ -7307,7 +7312,7 @@
       "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
       "feature_flag": null,
       "downstream_consumers": [],
-      "removal_target": "Fail closed caller-supplied zone assertion and converge Acceptance",
+      "removal_target": "KEEP FERTILIZATION FACT WRITER; ACCEPTANCE WRITES ONLY AFTER EXACT EXECUTION PROVENANCE",
       "b02_registered": false,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "ledger_disposition": "SEMANTIC_FACT_WRITER",
@@ -7319,7 +7324,7 @@
       ],
       "authority_owner": "FERTILIZATION_DOMAIN",
       "writer_scope": "assessment/recommendation/prescription/acceptance facts",
-      "audit_note": "Active fertilization domain service with mixed semantic families."
+      "audit_note": "Assessment/recommendation/prescription writer semantics unchanged. fertilization_acceptance_v1 now binds exact bridge prescription, receipt, AsExecuted and AsApplied identities."
     },
     {
       "surface_id": "RES-280",
