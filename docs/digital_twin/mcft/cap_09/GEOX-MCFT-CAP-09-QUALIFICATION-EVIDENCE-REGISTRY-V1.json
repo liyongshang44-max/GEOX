@@ -1099,6 +1099,26 @@
         "artifact_absence_reason": "RUN_LEVEL_POST_MERGE_V13_PRODUCER_DRIVEN_QUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
         "immutable_binding_sha256": "b45934b1faf3549b8a62a9762a005648b9b56c0c049e96b0e4ca475110831c8a"
+      },
+      {
+        "evidence_id": "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_C4650503_CORRECTED",
+        "check_id": "V13_PRODUCER_DRIVEN_QUALIFICATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "post-merge-v13-producer-driven-live-qualification",
+        "stage": "POST_MERGE_V13_QUALIFICATION",
+        "subject_sha": "c4650503bfe2362464c01739a9bbe33b1b330269",
+        "workflow_name": "mcft-cap-09-v13-producer-driven-live-qualification",
+        "workflow_path": ".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml",
+        "run_id": 33472486099,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "c4650503bfe2362464c01739a9bbe33b1b330269",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:64e3728cfde29b37e2ab1913781bb0369e70897d8cff817d05c2e4959075094f",
+        "artifact_absence_reason": "RUN_LEVEL_POST_MERGE_V13_PRODUCER_DRIVEN_QUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "025c7d2a449dc7bd9183a048c6adf2238b50795b53358c4962b948a5f60e482f"
       }
     ],
     "durable_anchors": {
@@ -1667,6 +1687,20 @@
         },
         {
           "evidence_id": "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_C4650503",
+          "run_id": 33472486099,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 182,
+            "workflow_path": ".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml",
+            "workflow_name": "mcft-cap-09-v13-producer-driven-live-qualification",
+            "head_sha": "c4650503bfe2362464c01739a9bbe33b1b330269",
+            "base_sha": "46367333d228a2b90a86ff6a33aebc334f3d73a2",
+            "created_at": "2026-09-01T05:09:04Z",
+            "updated_at": "2026-09-01T05:52:33Z"
+          }
+        },
+        {
+          "evidence_id": "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_C4650503_CORRECTED",
           "run_id": 33472486099,
           "run_snapshot": {
             "event": "pull_request",
