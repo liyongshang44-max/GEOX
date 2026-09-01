@@ -3,7 +3,7 @@
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1",
   "status": "GFS_PARTIAL_PAIR_REHYDRATION_IMPLEMENTED_DUE_AUTHORITIES_NEXT",
   "stage": "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START",
-  "subject_predecessor_sha": "2f818a52b93e0afcefcf5adf09fe6e9de32a9c6c",
+  "subject_predecessor_sha": "97b1e73a6a073e13af17354f862f731f75566df4",
   "host_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
   "production_process_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
   "production_composition_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
@@ -95,7 +95,9 @@
       "retained_replay_uses_same_evidence_runtime_cycle_service": true,
       "per_work_item_retention_override_implemented": true,
       "existing_side_idempotent_missing_side_insert_proven": true,
-      "zero_provider_refetch_rehydration_proven": true
+      "zero_provider_refetch_rehydration_proven": true,
+      "canonical_fact_content_type_persisted": true,
+      "replay_envelope_content_type_restored": true
     },
     "kbs_soil": {
       "publication_mode": "IRREGULAR_PROVIDER_DEFINED_EVENT",
@@ -207,7 +209,8 @@
     "GFS_PARTIAL_PAIR_ZERO_PROVIDER_REFETCH",
     "GFS_PARTIAL_PAIR_SAME_EVIDENCE_RUNTIME_CYCLE_SERVICE",
     "GFS_PARTIAL_PAIR_EXISTING_SIDE_IDEMPOTENT_MISSING_SIDE_INSERT",
-    "EVIDENCE_RUNTIME_PER_WORK_ITEM_RETENTION_OVERRIDE"
+    "EVIDENCE_RUNTIME_PER_WORK_ITEM_RETENTION_OVERRIDE",
+    "CANONICAL_FACT_REPLAY_CONTENT_TYPE_PERSISTED"
   ],
   "current_entrypoint": {
     "status": "PACKAGED_FAIL_CLOSED_PURE_PLANNER_NOT_PRODUCTION_BOUND",

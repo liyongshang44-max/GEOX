@@ -165,9 +165,13 @@ try {
   includes(gfsReplayReader, "replaySourceLocator = finalLocator", "GFS_REPLAY_FINAL_LOCATOR_DERIVATION_REQUIRED");
   includes(gfsReplayReader, "externalFormalEvidenceFactIdV1", "GFS_REPLAY_FACT_ID_RECOMPUTE_REQUIRED");
   includes(gfsReplayReader, "FACT_REPLAY_RECORD_SEMANTIC_HASH_MISMATCH", "GFS_REPLAY_SEMANTIC_HASH_REQUIRED");
+  includes(gfsReplayReader, "FACT_REPLAY_CONTENT_TYPE_REQUIRED", "GFS_REPLAY_CONTENT_TYPE_REQUIRED");
   includes(gfsReplayReader, "database_write_count: 0", "GFS_REPLAY_READ_ONLY_REQUIRED");
   assert.equal(gfsReplayReader.includes("fetch("), false, "GFS_REPLAY_PROVIDER_FETCH_FORBIDDEN");
   assert.equal(gfsReplayReader.includes("process.env"), false, "GFS_REPLAY_ENV_AUTHORITY_FORBIDDEN");
+
+  const replayCanonicalizer = read("apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts");
+  includes(replayCanonicalizer, "content_type: input.provenance.content_type", "CANONICAL_REPLAY_CONTENT_TYPE_PERSISTENCE_REQUIRED");
 
   const purePlanner = read(authority.pure_source_planner_ref);
   includes(purePlanner, "planProductionEvidenceSourcesV1", "PURE_SOURCE_SPECIFIC_PLANNER_REQUIRED");
@@ -269,6 +273,8 @@ try {
   assert.equal(authority.source_specific_requirements.gfs_bundle.per_work_item_retention_override_implemented, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.existing_side_idempotent_missing_side_insert_proven, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.zero_provider_refetch_rehydration_proven, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.canonical_fact_content_type_persisted, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.replay_envelope_content_type_restored, true);
   assert.equal(authority.source_specific_requirements.kbs_soil.pure_planner_decision_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.single_fetch_multi_interval_path_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.single_private_retention_per_batch_implemented, true);

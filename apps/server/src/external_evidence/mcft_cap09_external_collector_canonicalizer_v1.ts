@@ -296,6 +296,7 @@ function canonicalizeDraft(input: {
     provider_id: input.provenance.provider_id,
     source_family: input.provenance.source_family,
     final_locator: input.provenance.final_locator,
+    content_type: input.provenance.content_type,
     source_issue_time: input.provenance.source_issue_time ?? null,
     source_event_time: input.provenance.source_event_time ?? null,
     retrieved_at: input.provenance.retrieved_at,

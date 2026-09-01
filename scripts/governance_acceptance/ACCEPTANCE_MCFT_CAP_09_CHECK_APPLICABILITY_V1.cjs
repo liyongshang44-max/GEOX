@@ -307,8 +307,10 @@ function main() {
     const result = plan(authority, registry, [kbsPointerRemediationPath]);
     assert.equal(result.status, "PASS");
     assert.equal(result.unknown_changed_paths.length, 0);
-    assert.equal(byId(result, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
-    assert(byId(result, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(kbsPointerRemediationPath));
+    assert.equal(byId(result, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const postMergeResult = plan(authority, registry, [kbsPointerRemediationPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(postMergeResult, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(postMergeResult, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(kbsPointerRemediationPath));
   }
 
   // CP-4: KBS retained snapshot comparison is Phase3-owned; focused proof is owner-closure-owned.
@@ -342,9 +344,11 @@ function main() {
     assert.equal(result.status, "PASS");
     assert.equal(result.unknown_changed_paths.length, 0);
     assert.equal(byId(result, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
-    assert.equal(byId(result, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert.equal(byId(result, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
     assert(byId(result, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes(kbsPublicationCyclePath));
-    assert(byId(result, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(kbsPublicationCyclePath));
+    const postMergeResult = plan(authority, registry, [kbsPublicationCyclePath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(postMergeResult, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(postMergeResult, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(kbsPublicationCyclePath));
   }
 
   // CP-4: exact fact replay provenance is Phase3-owned and production-owner-visible.
@@ -353,9 +357,11 @@ function main() {
     assert.equal(replayPlan.status, "PASS");
     assert.equal(replayPlan.unknown_changed_paths.length, 0);
     assert.equal(byId(replayPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
-    assert.equal(byId(replayPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert.equal(byId(replayPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
     assert(byId(replayPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes(replayPath));
-    assert(byId(replayPlan, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(replayPath));
+    const replayPostMergePlan = plan(authority, registry, [replayPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(replayPostMergePlan, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(replayPostMergePlan, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(replayPath));
   }
 
   // CP-4: GFS partial-pair rehydration is Phase3-owned and owner-visible.
@@ -364,7 +370,10 @@ function main() {
     assert.equal(gfsPartialPlan.status, "PASS");
     assert.equal(gfsPartialPlan.unknown_changed_paths.length, 0);
     assert.equal(byId(gfsPartialPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
-    assert.equal(byId(gfsPartialPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert.equal(byId(gfsPartialPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const gfsPartialPostMergePlan = plan(authority, registry, [gfsPartialPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(gfsPartialPostMergePlan, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(gfsPartialPostMergePlan, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(gfsPartialPath));
   }
 
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.

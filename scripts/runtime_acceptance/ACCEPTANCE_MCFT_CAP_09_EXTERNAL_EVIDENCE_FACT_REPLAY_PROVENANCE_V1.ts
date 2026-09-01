@@ -135,6 +135,7 @@ async function main(): Promise<void> {
     const rawPublic = canonical.record.source_payload.raw_provenance as Record<string, unknown>;
     assert.equal(rawPublic.request_id, undefined);
     assert.equal(rawPublic.source_locator, undefined);
+    assert.equal(rawPublic.content_type, "application/x-tar");
 
     const ingress = new PostgresExternalFormalEvidenceIngressV1(pool, {
       async verifyRetainedRawEvidence(input) {
@@ -160,6 +161,7 @@ async function main(): Promise<void> {
     const replay = await reader.readReplayProvenance(expected);
     assert.equal(replay.raw_provenance.request_id, "mcft-cap09-retained-replay:" + committed.fact_id);
     assert.equal(replay.raw_provenance.source_locator, SOURCE_LOCATOR);
+    assert.equal(replay.raw_provenance.content_type, "application/x-tar");
     assert.equal(replay.dataset_id, canonical.record.dataset_id);
     assert.equal(replay.replay_request_id_derivation, "FACT_ID_V1");
     assert.equal(replay.replay_source_locator_derivation, "FINAL_LOCATOR_V1");
