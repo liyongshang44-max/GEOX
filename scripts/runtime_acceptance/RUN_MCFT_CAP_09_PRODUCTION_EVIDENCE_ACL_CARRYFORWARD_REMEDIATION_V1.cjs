@@ -65,8 +65,18 @@ try{
  assert.equal(fnExec(url,"geox_mcft_cap09_evidence_runtime_v1","mcft_cap09_twin_runtime_append_fact_v1(text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb)"),false,"ACL_REMEDIATION_FRESH_TWIN_FUNCTION_EVIDENCE_FORBIDDEN");
  assert.equal(fnExec(url,"geox_mcft_cap09_twin_runtime_v1","mcft_cap09_twin_runtime_append_fact_v1(text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb)"),true,"ACL_REMEDIATION_FRESH_TWIN_FUNCTION_REQUIRED");
 
+ const exactLoginRoleRows=q(url,[
+  "SELECT rolname||'|login='||rolcanlogin::text||'|inherit='||rolinherit::text||'|super='||rolsuper::text||'|createdb='||rolcreatedb::text||'|createrole='||rolcreaterole::text||'|replication='||rolreplication::text||'|bypassrls='||rolbypassrls::text",
+  "FROM pg_catalog.pg_roles",
+  "WHERE rolname IN ('geox_mcft_cap09_evidence_runtime_login_v1','geox_mcft_cap09_twin_runtime_login_v1')",
+  "ORDER BY rolname"
+ ].join("\n")).split(/\r?\n/).filter(Boolean);
+ assert.deepEqual(exactLoginRoleRows,[
+  "geox_mcft_cap09_evidence_runtime_login_v1|login=true|inherit=true|super=false|createdb=false|createrole=false|replication=false|bypassrls=false",
+  "geox_mcft_cap09_twin_runtime_login_v1|login=true|inherit=true|super=false|createdb=false|createrole=false|replication=false|bypassrls=false"
+ ],"ACL_REMEDIATION_FRESH_EXACT_TWO_RESTRICTED_SERVICE_LOGINS_REQUIRED");
  const exactMemberships=q(url,[
-  "SELECT member.rolname||'>'||granted.rolname",
+  "SELECT member.rolname||'|privilege='||granted.rolname||'|admin='||m.admin_option::text||'|inherit='||m.inherit_option::text||'|set='||m.set_option::text",
   "FROM pg_catalog.pg_auth_members m",
   "JOIN pg_catalog.pg_roles member ON member.oid=m.member",
   "JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid",
@@ -74,9 +84,24 @@ try{
   "ORDER BY member.rolname,granted.rolname"
  ].join("\n")).split(/\r?\n/).filter(Boolean);
  assert.deepEqual(exactMemberships,[
-  "geox_mcft_cap09_evidence_runtime_login_v1>geox_mcft_cap09_evidence_runtime_v1",
-  "geox_mcft_cap09_twin_runtime_login_v1>geox_mcft_cap09_twin_runtime_v1"
- ],"ACL_REMEDIATION_FRESH_LOGIN_MEMBERSHIP_REQUIRED");
+  "geox_mcft_cap09_evidence_runtime_login_v1|privilege=geox_mcft_cap09_evidence_runtime_v1|admin=false|inherit=true|set=false",
+  "geox_mcft_cap09_twin_runtime_login_v1|privilege=geox_mcft_cap09_twin_runtime_v1|admin=false|inherit=true|set=false"
+ ],"ACL_REMEDIATION_FRESH_EXACT_ONE_PRIVILEGE_MEMBERSHIP_EACH_REQUIRED");
+ const loginDirectAclCount=Number(q(url,[
+  "WITH target AS (SELECT oid FROM pg_catalog.pg_roles WHERE rolname IN ('geox_mcft_cap09_evidence_runtime_login_v1','geox_mcft_cap09_twin_runtime_login_v1'))",
+  "SELECT ((SELECT count(*) FROM pg_catalog.pg_class object JOIN pg_catalog.pg_namespace namespace ON namespace.oid=object.relnamespace CROSS JOIN LATERAL pg_catalog.aclexplode(object.relacl) acl WHERE namespace.nspname='public' AND acl.grantee IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_proc routine JOIN pg_catalog.pg_namespace namespace ON namespace.oid=routine.pronamespace CROSS JOIN LATERAL pg_catalog.aclexplode(routine.proacl) acl WHERE namespace.nspname='public' AND acl.grantee IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_namespace namespace CROSS JOIN LATERAL pg_catalog.aclexplode(namespace.nspacl) acl WHERE namespace.nspname='public' AND acl.grantee IN (SELECT oid FROM target)))::int"
+ ].join("\n"))||"0");
+ assert.equal(loginDirectAclCount,0,"ACL_REMEDIATION_FRESH_SERVICE_LOGIN_DIRECT_PUBLIC_ACL_FORBIDDEN");
+ const loginOwnedObjectCount=Number(q(url,[
+  "WITH target AS (SELECT oid FROM pg_catalog.pg_roles WHERE rolname IN ('geox_mcft_cap09_evidence_runtime_login_v1','geox_mcft_cap09_twin_runtime_login_v1'))",
+  "SELECT ((SELECT count(*) FROM pg_catalog.pg_database d WHERE d.datdba IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_namespace n WHERE n.nspowner IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_class c WHERE c.relowner IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_proc p WHERE p.proowner IN (SELECT oid FROM target)))::int"
+ ].join("\n"))||"0");
+ assert.equal(loginOwnedObjectCount,0,"ACL_REMEDIATION_FRESH_SERVICE_LOGIN_OBJECT_OWNERSHIP_FORBIDDEN");
 
  const unsafeOwnerSet=Number(q(url,[
   "SELECT count(*)::int",
@@ -98,6 +123,8 @@ try{
  const before=Object.fromEntries(tables.map(t=>[t,matrix(url,t)]));
  for(const t of tables)assert.equal(before[t][3],false,"ACL_REMEDIATION_TARGET_DELETE_PRESTATE_FORBIDDEN:"+t);
  const loginBefore=q(url,"SELECT count(*)::int FROM pg_catalog.pg_roles WHERE rolname IN ('geox_mcft_cap09_evidence_runtime_login_v1','geox_mcft_cap09_twin_runtime_login_v1')");
+ const loginMembershipsBefore=exactMemberships.slice();
+ const loginRolesBefore=exactLoginRoleRows.slice();
  const totalBefore=freshRows;
 
  const sql=[
@@ -116,8 +143,24 @@ try{
  const fn=b(q(url,"SELECT has_function_privilege('geox_mcft_cap09_evidence_runtime_v1','public.mcft_cap09_evidence_runtime_append_fact_v1(text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb)','EXECUTE')::text"));assert.equal(fn,true);
  const loginAfter=q(url,"SELECT count(*)::int FROM pg_catalog.pg_roles WHERE rolname IN ('geox_mcft_cap09_evidence_runtime_login_v1','geox_mcft_cap09_twin_runtime_login_v1')");
  assert.equal(loginAfter,loginBefore,"ACL_REMEDIATION_LOGIN_COUNT_MUST_NOT_CHANGE");
+ const loginMembershipsAfter=q(url,[
+  "SELECT member.rolname||'|privilege='||granted.rolname||'|admin='||m.admin_option::text||'|inherit='||m.inherit_option::text||'|set='||m.set_option::text",
+  "FROM pg_catalog.pg_auth_members m",
+  "JOIN pg_catalog.pg_roles member ON member.oid=m.member",
+  "JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid",
+  "WHERE member.rolname IN ('geox_mcft_cap09_evidence_runtime_login_v1','geox_mcft_cap09_twin_runtime_login_v1')",
+  "ORDER BY member.rolname,granted.rolname"
+ ].join("\n")).split(/\r?\n/).filter(Boolean);
+ assert.deepEqual(loginMembershipsAfter,loginMembershipsBefore,"ACL_REMEDIATION_LOGIN_MEMBERSHIPS_MUST_NOT_CHANGE");
+ const loginRolesAfter=q(url,[
+  "SELECT rolname||'|login='||rolcanlogin::text||'|inherit='||rolinherit::text||'|super='||rolsuper::text||'|createdb='||rolcreatedb::text||'|createrole='||rolcreaterole::text||'|replication='||rolreplication::text||'|bypassrls='||rolbypassrls::text",
+  "FROM pg_catalog.pg_roles",
+  "WHERE rolname IN ('geox_mcft_cap09_evidence_runtime_login_v1','geox_mcft_cap09_twin_runtime_login_v1')",
+  "ORDER BY rolname"
+ ].join("\n")).split(/\r?\n/).filter(Boolean);
+ assert.deepEqual(loginRolesAfter,loginRolesBefore,"ACL_REMEDIATION_LOGIN_ROLE_ATTRIBUTES_MUST_NOT_CHANGE");
  const tableNames=q(url,"SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE' ORDER BY table_name").split(/\r?\n/).filter(Boolean);
  let totalAfter=0;for(const t of tableNames)totalAfter+=Number(q(url,'SELECT count(*)::int FROM public."'+t.replaceAll('"','""')+'"'));
  assert.equal(totalAfter,totalBefore,"ACL_REMEDIATION_ROW_COUNT_MUST_NOT_CHANGE");
- write({schema_version:"geox_mcft_cap09_production_evidence_acl_carryforward_remediation_v1",status:"PASS_REMEDIATION_APPLIED",subject_sha:subject,database_name:TARGET,before_acl:before,after_acl:after,total_rows_before:totalBefore,total_rows_after:totalAfter,phase3_append_function_execute:true,login_count_unchanged:true,database_mutation:true,acl_only_mutation:true,row_mutation:false,schema_mutation:false,role_mutation:false,credential_mutation:false,runtime_process_start:false,production_owner_activation:false,provider_request_count:0,formal_v5_arm:false,a0_bootstrap:false,o00_started:false});
+ write({schema_version:"geox_mcft_cap09_production_evidence_acl_carryforward_remediation_v1",status:"PASS_REMEDIATION_APPLIED",subject_sha:subject,database_name:TARGET,before_acl:before,after_acl:after,total_rows_before:totalBefore,total_rows_after:totalAfter,phase3_append_function_execute:true,login_count_unchanged:true,login_memberships_unchanged:true,login_role_attributes_unchanged:true,service_login_direct_public_acl_count:loginDirectAclCount,service_login_owned_object_count:loginOwnedObjectCount,database_mutation:true,acl_only_mutation:true,row_mutation:false,schema_mutation:false,role_mutation:false,credential_mutation:false,runtime_process_start:false,production_owner_activation:false,provider_request_count:0,formal_v5_arm:false,a0_bootstrap:false,o00_started:false});
 }catch(e){write({status:"FAIL",subject_sha:String(process.env.SUBJECT_SHA||""),error:e instanceof Error?e.message:String(e),runtime_process_start:false,production_owner_activation:false,formal_v5_arm:false,a0_bootstrap:false,o00_started:false});process.exitCode=1;}
