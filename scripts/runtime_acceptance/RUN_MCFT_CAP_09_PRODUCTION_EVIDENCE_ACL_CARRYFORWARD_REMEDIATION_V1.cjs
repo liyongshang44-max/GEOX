@@ -28,10 +28,15 @@ try{
  }
  assert.equal(arm.exact_target_database_name,TARGET,"ACL_REMEDIATION_ARM_TARGET_REQUIRED");
  assert.equal(arm.production_evidence_acl_carryforward_remediation_authorized,true,"ACL_REMEDIATION_AUTHORITY_REQUIRED");
- assert.equal(arm.expected_preflight_subject_sha,subject,"ACL_REMEDIATION_PREFLIGHT_SUBJECT_BINDING_REQUIRED");
+ assert.equal(arm.same_workflow_fresh_preflight_required,true,"ACL_REMEDIATION_SAME_WORKFLOW_PREFLIGHT_REQUIRED");
+ assert.equal(arm.preflight_subject_binding,"CURRENT_WORKFLOW_SUBJECT_SHA","ACL_REMEDIATION_PREFLIGHT_BINDING_MODE_REQUIRED");
  for(const k of ["runtime_process_start_authorized","production_owner_activation_authorized","formal_v5_arm_authorized","a0_authorized","o00_authorized"])assert.equal(arm[k],false,"ACL_REMEDIATION_LATER_AUTHORITY_FORBIDDEN:"+k);
  assert.equal(pref.status,"PASS_REMEDIATION_REQUIRED","ACL_REMEDIATION_REQUIRED_PREFLIGHT_REQUIRED");
  assert.equal(pref.subject_sha,subject,"ACL_REMEDIATION_PREFLIGHT_HEAD_MISMATCH");
+ assert.equal(pref.arm_observed,true,"ACL_REMEDIATION_ARMED_PREFLIGHT_REQUIRED");
+ assert.equal(pref.remediation_authorized_observed,true,"ACL_REMEDIATION_AUTHORIZED_PREFLIGHT_REQUIRED");
+ assert.equal(pref.same_workflow_fresh_preflight_required,true,"ACL_REMEDIATION_FRESH_PREFLIGHT_CONTRACT_REQUIRED");
+ assert.equal(pref.preflight_subject_binding,"CURRENT_WORKFLOW_SUBJECT_SHA","ACL_REMEDIATION_PREFLIGHT_BINDING_MISMATCH");
  assert.equal(pref.database_name,TARGET);
  assert.equal(pref.total_application_rows,0);
 

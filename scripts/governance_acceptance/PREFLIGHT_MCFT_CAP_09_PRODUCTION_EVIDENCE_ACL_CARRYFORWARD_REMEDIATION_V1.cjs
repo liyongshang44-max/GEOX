@@ -25,6 +25,12 @@ try{
  const a=j(AUTH),arm=j(ARM);
  assert.equal(a.status,"BLOCKED_ON_WRITER_OWNER_SELF_GRANT_CLEANUP_NOT_AUTHORIZED");
  assert.equal(a.target.database_name,TARGET);
+ const remediationAuthorized=arm.production_evidence_acl_carryforward_remediation_authorized===true;
+ assert.equal(remediationAuthorized,arm.armed===true,"ACL_REMEDIATION_ARM_AUTHORIZATION_COHERENCE_REQUIRED");
+ assert.equal(arm.same_workflow_fresh_preflight_required,true,"ACL_REMEDIATION_SAME_WORKFLOW_PREFLIGHT_REQUIRED");
+ assert.equal(arm.preflight_subject_binding,"CURRENT_WORKFLOW_SUBJECT_SHA","ACL_REMEDIATION_PREFLIGHT_BINDING_MODE_REQUIRED");
+ if(arm.armed===true)assert.equal(arm.exact_target_database_name,TARGET,"ACL_REMEDIATION_ARM_TARGET_REQUIRED");
+ else assert.equal(arm.exact_target_database_name,null,"ACL_REMEDIATION_UNARMED_TARGET_MUST_BE_NULL");
  assert.equal(arm.runtime_process_start_authorized,false);
  assert.equal(arm.production_owner_activation_authorized,false);
  assert.equal(arm.formal_v5_arm_authorized,false);
@@ -230,6 +236,9 @@ try{
   remediation_scope_exact:missing,
   remediation_target_tables_owned_by_current_user:phase3Tables.every(t=>objectOwners["table:"+t]===currentUser),
   arm_observed:arm.armed===true,
+  remediation_authorized_observed:remediationAuthorized,
+  same_workflow_fresh_preflight_required:arm.same_workflow_fresh_preflight_required===true,
+  preflight_subject_binding:arm.preflight_subject_binding,
   database_mutation:false,row_mutation:false,schema_mutation:false,role_mutation:false,
   runtime_process_start:false,production_owner_activation:false,provider_request_count:0,formal_v5_arm:false,a0_bootstrap:false,o00_started:false
  });

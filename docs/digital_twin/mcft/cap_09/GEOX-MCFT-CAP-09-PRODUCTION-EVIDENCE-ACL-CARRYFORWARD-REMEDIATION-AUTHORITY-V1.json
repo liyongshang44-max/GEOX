@@ -196,5 +196,13 @@
     "set_option": true,
     "effective_set_authority": true,
     "required_resolution": "SEPARATE_EXACT_SELF_GRANT_CLEANUP_AUTHORITY"
+  },
+  "authorization_binding": {
+    "model": "SAME_WORKFLOW_FRESH_PREFLIGHT_CURRENT_SUBJECT_V1",
+    "commit_sha_self_reference_forbidden": true,
+    "preflight_must_run_before_mutation_in_same_workflow_job": true,
+    "preflight_subject_must_equal_workflow_subject_sha": true,
+    "runner_must_revalidate_live_prestate_before_mutation": true,
+    "later_stage_authorities_must_remain_false": true
   }
 }

@@ -22,9 +22,10 @@ try{
  }
  assert.equal(arm.exact_target_database_name,TARGET,"WRITER_OWNER_CLEANUP_ARM_TARGET_REQUIRED");
  assert.equal(arm.production_writer_owner_self_grant_cleanup_authorized,true,"WRITER_OWNER_CLEANUP_AUTHORITY_REQUIRED");
- assert.equal(arm.expected_preflight_subject_sha,subject,"WRITER_OWNER_CLEANUP_PREFLIGHT_SUBJECT_BINDING_REQUIRED");
+ assert.equal(arm.same_workflow_fresh_preflight_required,true,"WRITER_OWNER_CLEANUP_SAME_WORKFLOW_PREFLIGHT_REQUIRED");
+ assert.equal(arm.preflight_subject_binding,"CURRENT_WORKFLOW_SUBJECT_SHA","WRITER_OWNER_CLEANUP_PREFLIGHT_BINDING_MODE_REQUIRED");
  for(const k of ["production_evidence_acl_carryforward_remediation_authorized","runtime_process_start_authorized","production_owner_activation_authorized","formal_v5_arm_authorized","a0_authorized","o00_authorized"])assert.equal(arm[k],false,"WRITER_OWNER_CLEANUP_LATER_AUTHORITY_FORBIDDEN:"+k);
- const pref=JSON.parse(fs.readFileSync(PREF,"utf8"));assert.equal(pref.status,"PASS_CLEANUP_REQUIRED");assert.equal(pref.subject_sha,subject);assert.equal(pref.database_name,TARGET);
+ const pref=JSON.parse(fs.readFileSync(PREF,"utf8"));assert.equal(pref.status,"PASS_CLEANUP_REQUIRED");assert.equal(pref.subject_sha,subject);assert.equal(pref.database_name,TARGET);assert.equal(pref.arm_observed,true,"WRITER_OWNER_CLEANUP_ARMED_PREFLIGHT_REQUIRED");assert.equal(pref.cleanup_authorized_observed,true,"WRITER_OWNER_CLEANUP_AUTHORIZED_PREFLIGHT_REQUIRED");assert.equal(pref.same_workflow_fresh_preflight_required,true,"WRITER_OWNER_CLEANUP_FRESH_PREFLIGHT_CONTRACT_REQUIRED");assert.equal(pref.preflight_subject_binding,"CURRENT_WORKFLOW_SUBJECT_SHA","WRITER_OWNER_CLEANUP_PREFLIGHT_BINDING_MISMATCH");
  const seed=String(process.env.SEED_DATABASE_URL||"").trim();assert.ok(seed);const u=new URL(seed);u.pathname="/"+TARGET;const url=u.toString();
  assert.equal(q(url,"SELECT current_user"),"neondb_owner","WRITER_OWNER_CLEANUP_CURRENT_USER_DRIFT");
  const before=memberships(url);assert.deepEqual(before,pref.writer_owner_memberships,"WRITER_OWNER_CLEANUP_MEMBERSHIP_PRESTATE_DRIFT");

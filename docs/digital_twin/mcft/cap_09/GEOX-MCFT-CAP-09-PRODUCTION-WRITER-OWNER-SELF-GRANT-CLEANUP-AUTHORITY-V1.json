@@ -84,5 +84,13 @@
     "stage": "EXACT_SELF_GRANT_CLEANUP",
     "status": "BLOCKED_ON_EXPLICIT_USER_AUTHORIZATION",
     "after_success": "RERUN_LIVE_SCHEMA_READINESS_THEN_REAUTHORIZE_EXACT_NINE_ACL_REMEDIATION"
+  },
+  "authorization_binding": {
+    "model": "SAME_WORKFLOW_FRESH_PREFLIGHT_CURRENT_SUBJECT_V1",
+    "commit_sha_self_reference_forbidden": true,
+    "preflight_must_run_before_mutation_in_same_workflow_job": true,
+    "preflight_subject_must_equal_workflow_subject_sha": true,
+    "runner_must_revalidate_live_prestate_before_mutation": true,
+    "later_stage_authorities_must_remain_false": true
   }
 }

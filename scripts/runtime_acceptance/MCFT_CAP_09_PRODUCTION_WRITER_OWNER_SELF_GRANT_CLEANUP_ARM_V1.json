@@ -3,11 +3,12 @@
   "armed": false,
   "exact_target_database_name": null,
   "production_writer_owner_self_grant_cleanup_authorized": false,
-  "expected_preflight_subject_sha": null,
   "production_evidence_acl_carryforward_remediation_authorized": false,
   "runtime_process_start_authorized": false,
   "production_owner_activation_authorized": false,
   "formal_v5_arm_authorized": false,
   "a0_authorized": false,
-  "o00_authorized": false
+  "o00_authorized": false,
+  "same_workflow_fresh_preflight_required": true,
+  "preflight_subject_binding": "CURRENT_WORKFLOW_SUBJECT_SHA"
 }
