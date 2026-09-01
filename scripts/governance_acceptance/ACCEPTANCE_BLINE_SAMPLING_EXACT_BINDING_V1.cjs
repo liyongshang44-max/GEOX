@@ -51,7 +51,9 @@ need("route", [
   "sample_receipt_fact_id: receipt.fact_id",
   "lab_result_fact_id: labResult.fact_id",
   "sampling_plan_fact_id: plan.fact_id",
-  "sampling_plan_fact_id: String(receiptRecord.sampling_plan_fact_id ?? \"\")",
+  "MISSING_EXACT:sample_receipt_plan_ref",
+  "const plan = await service.findPlanById(receiptPlanId)",
+  "sampling_plan_fact_id: plan.fact_id",
   "MISMATCH:sampling_plan_fact_id",
   "MISMATCH:lab_sampling_plan_fact_id",
   "handleSamplingServiceError",
@@ -126,6 +128,9 @@ const stats = {
   failures: failures.length,
   service_latest_selector_absent: !source.service.includes("ORDER BY occurred_at DESC"),
   projection_latest_selector_absent: !source.projection.includes("ORDER BY occurred_at DESC"),
+  lab_import_exact_plan_preflight: source.route.includes("MISSING_EXACT:sample_receipt_plan_ref")
+    && source.route.includes("const plan = await service.findPlanById(receiptPlanId)")
+    && source.route.includes("sampling_plan_fact_id: plan.fact_id"),
   acceptance_exact_refs: ["sampling_plan_fact_id", "sample_receipt_fact_id", "lab_result_fact_id"].every((x) => source.service.includes(x) && source.route.includes(x)),
   acceptance_exact_chain_idempotent: source.service.includes("CONFLICT:sampling_acceptance_exact_chain_verdict") && source.service.includes("idempotent: true"),
   plan_fact_continuity: source.projection.includes("SAMPLING_OPERATION_RELATION_EXACT_PLAN_REF_MISSING")
