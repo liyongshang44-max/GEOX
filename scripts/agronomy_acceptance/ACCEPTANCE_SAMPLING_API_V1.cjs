@@ -172,9 +172,9 @@ async function main() {
     );
 
     const legacyDuplicate = await postJson('/api/v1/sampling/receipt', {
+      ...scopedBody,
       plan_id: planRes.json.plan_id,
       sample_id: legacySampleId,
-      ...scopedBody,
       collected_at_ts: now + 2,
       collector_actor_id: 'collector-after-legacy',
       sample_type: 'SOIL',
