@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { Pool } = require('pg');
 const { waitForHealth } = require('./_common.cjs');
 
-const baseUrl = process.env.SAMPLING_API_BASE_URL || process.env.API_BASE_URL || 'http://127.0.0.1:3000';
+const baseUrl = process.env.SAMPLING_API_BASE_URL || process.env.API_BASE_URL || process.env.BASE_URL || process.env.GEOX_BASE_URL || 'http://127.0.0.1:3000';
 const token = process.env.ADMIN_TOKEN || process.env.AO_ACT_TOKEN || 'admin_token';
 const tenantScope = {
   tenant_id: process.env.TENANT_ID || 'tenantA',
@@ -49,6 +49,7 @@ async function main() {
     sample_lookup_works: false,
     duplicate_sample_id_rejected_409: false,
     legacy_receipt_duplicate_blocked_409: false,
+    legacy_unbound_lab_not_formal: false,
     legacy_wrong_plan_fact_duplicate_blocked_409: false,
     concurrent_duplicate_sample_id_serialized: false,
     concurrent_acceptance_identity_stable: false,
@@ -228,6 +229,61 @@ async function main() {
   } finally {
     await pool.query('DELETE FROM facts WHERE fact_id = ANY($1::text[])', [[legacyFactId, legacyWrongPlanRefFactId]]).catch(() => undefined);
     await pool.end();
+  }
+
+  const legacyLabSampleId = `${ids.sample_id}-legacy-lab`;
+  const legacyLabReceipt = await postJson('/api/v1/sampling/receipt', {
+    plan_id: planRes.json.plan_id,
+    sample_id: legacyLabSampleId,
+    ...scopedBody,
+    collected_at_ts: now + 5,
+    collector_actor_id: 'collector-legacy-lab',
+    sample_type: 'SOIL',
+    evidence_refs: [{ kind: 'raw_sample_v1', ref_id: 'raw-legacy-lab' }],
+    chain_of_custody_status: 'RECORDED',
+  });
+  assert.equal(legacyLabReceipt.status, 200, 'legacy-lab exact receipt setup must succeed');
+
+  const legacyLabImportId = `legacy-import-${now}`;
+  const legacyLabFactId = `legacy_sl_${now}`;
+  const legacyLabPool = new Pool({ connectionString: databaseUrl });
+  try {
+    await legacyLabPool.query(
+      `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+       VALUES ($1, now(), 'sampling-legacy-lab-regression', $2::jsonb)
+       ON CONFLICT (fact_id) DO UPDATE SET record_json = EXCLUDED.record_json, occurred_at = now()`,
+      [
+        legacyLabFactId,
+        JSON.stringify({
+          type: 'lab_result_import_v1',
+          schema_version: '1',
+          import_id: legacyLabImportId,
+          sample_id: legacyLabSampleId,
+          imported_at_ts: now + 6,
+          lab_name: 'legacy-unscoped-lab',
+          metrics: { nitrate_n_mg_kg: 2.3 },
+          units: { nitrate_n_mg_kg: 'mg/kg' },
+          evidence_refs: [{ kind: 'import_run_v1', ref_id: 'legacy-import-run' }],
+          quality_status: 'PASS',
+        }),
+      ],
+    );
+
+    const legacyLabAcceptance = await postJson('/api/v1/sampling/acceptance/evaluate', {
+      plan_id: planRes.json.plan_id,
+      sample_id: legacyLabSampleId,
+      import_id: legacyLabImportId,
+    });
+    assert.equal(legacyLabAcceptance.status, 200, 'legacy unbound lab must fail closed as insufficient evidence rather than transport error');
+    assert.equal(legacyLabAcceptance.json?.verdict, 'INSUFFICIENT_EVIDENCE', 'legacy unbound PASS lab must not establish Sampling PASS');
+    assert.ok(
+      Array.isArray(legacyLabAcceptance.json?.reasons) && legacyLabAcceptance.json.reasons.includes('MISSING_LAB_RESULT_IMPORT'),
+      'legacy unbound lab must remain invisible to exact Sampling chain',
+    );
+    checks.legacy_unbound_lab_not_formal = true;
+  } finally {
+    await legacyLabPool.query('DELETE FROM facts WHERE fact_id = $1', [legacyLabFactId]).catch(() => undefined);
+    await legacyLabPool.end();
   }
 
   const concurrentSampleId = `${ids.sample_id}-concurrent`;
