@@ -2322,9 +2322,9 @@
       "surface_role": "AUTHORITY",
       "delegates_to": [],
       "replacement_path": [
-        "canonical fertilization candidate/spec/acceptance chain"
+        "fertilization facade -> dedicated acceptance.evaluate -> exact bridge prescription -> exact AsExecuted -> exact AsApplied zone evidence"
       ],
-      "sunset_condition": "FAIL_CLOSED_ACCEPTANCE_PROVENANCE_REQUIRED",
+      "sunset_condition": "KEEP PRODUCT FACADE WHILE NO CALLER EXECUTION ASSERTION AUTHORITY AND EXACT EXECUTION PROVENANCE GATE PASSES",
       "semantic_family": [
         "decision.candidate",
         "action.prescription_spec",
