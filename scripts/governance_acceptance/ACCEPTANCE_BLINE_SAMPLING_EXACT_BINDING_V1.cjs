@@ -30,6 +30,7 @@ function forbid(key, tokens) {
 
 need("service", [
   "createHash",
+  "JSON.stringify(canonicalParts)",
   "deterministicReceiptFactIdV1",
   "deterministicAcceptanceFactIdV1",
   "const factId = `sp_${plan_id}`",
@@ -155,6 +156,7 @@ const stats = {
   receipt_identity_race_safe: source.service.includes("deterministicReceiptFactIdV1") && source.samplingApi.includes("concurrent_duplicate_sample_id_serialized"),
   acceptance_identity_race_safe: source.service.includes("deterministicAcceptanceFactIdV1") && source.samplingApi.includes("concurrent_acceptance_identity_stable"),
   opaque_business_ids_preserved: source.service.includes("const receipt_id = randomUUID();") && source.service.includes("const acceptance_id = randomUUID();"),
+  identity_tuple_canonical_encoding: source.service.includes("JSON.stringify(canonicalParts)") && !source.service.includes('.join("\\n")'),
   plan_fact_continuity: source.projection.includes("SAMPLING_OPERATION_RELATION_EXACT_PLAN_REF_MISSING")
     && source.fertilization.includes("SAMPLING_RECEIPT_PLAN_FACT_REF_MISMATCH")
     && source.fertilization.includes("SAMPLING_LAB_PLAN_FACT_REF_MISMATCH"),
