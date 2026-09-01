@@ -13,6 +13,7 @@ on:
       - '.github/workflows/mcft-cap-09-v13-fenced-fact-promotion-postgres.yml'
       - 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts'
       - 'apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql'
+      - 'apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql'
       - 'apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.ts'
   merge_group:

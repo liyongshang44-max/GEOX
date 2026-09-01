@@ -12,6 +12,7 @@ on:
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts'
       - 'apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql'
+      - 'apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql'
       - 'apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_production_evidence_work_items_v1.ts'
@@ -178,6 +179,10 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql
       - name: Apply Phase3 Evidence Runtime ACL
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql
+      - name: Reproduce V13 successor ACL reset
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql
+      - name: Apply forward Phase3 ACL carry-forward remediation
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql
       - name: Prove Evidence Runtime database ACL separation
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts
       - name: Prove deployable Evidence Runtime composition

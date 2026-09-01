@@ -150,6 +150,23 @@ function main() {
   assert.equal(byId(legacy, "LEGACY_AM19_PERSISTENT_24T").status, "REQUALIFY");
   assert(byId(legacy, "LEGACY_AM19_PERSISTENT_24T").changed_dependencies.includes(legacyPath));
 
+  // CP-4: forward ACL carry-forward remediation crosses Phase3, V13,
+  // production-equivalent containers, and production-owner provisioning.
+  const evidenceAclCarryforwardPath = "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql";
+  const evidenceAclCarryforward = plan(authority, registry, [evidenceAclCarryforwardPath]);
+  assert.equal(evidenceAclCarryforward.status, "PASS");
+  assert.equal(evidenceAclCarryforward.unknown_changed_paths.length, 0);
+  for (const id of [
+    "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+    "V13_AUTONOMOUS_FORCING_FOUNDATION",
+    "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+    "EXACT_ONE_PRODUCTION_OWNER",
+  ]) {
+    const row = byId(evidenceAclCarryforward, id);
+    assert.equal(row.status, "REQUALIFY", "EVIDENCE_ACL_CARRYFORWARD_MUST_REQUALIFY:" + id);
+    assert(row.changed_dependencies.includes(evidenceAclCarryforwardPath), "EVIDENCE_ACL_CARRYFORWARD_DEPENDENCY_REQUIRED:" + id);
+  }
+
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
   const phase3 = plan(authority, registry, [phase3Path]);

@@ -144,7 +144,8 @@
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_FENCED_FACT_PROMOTION_POSTGRES.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES.ts",
         "scripts/runtime_acceptance/MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_ARM.json",
-        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V1.ts"
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V1.ts",
+        "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql"
       ]
     },
     "PHASE1_TYPED_RUNTIME_COMPOSITION": {
@@ -238,7 +239,8 @@
         "apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql",
         "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts",
         "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.ts",
-        "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_process_v1.ts"
+        "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_process_v1.ts",
+        "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql"
       ]
     },
     "PHASE4_TWIN_RUNTIME_FOUNDATION": {
@@ -298,7 +300,8 @@
         "scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts",
         "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
         "apps/server/src/external_evidence/provider/gfs_nomads_live_provider_v1.ts",
-        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts"
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts",
+        "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql"
       ]
     },
     "PHASE7_PRIVATE_CANDIDATE_PROMOTION_IMPORT_CLOSURE": {
@@ -387,7 +390,8 @@
         ".github/workflows/mcft-cap-09-production-operational-schema-acl-readiness.yml",
         "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_READINESS_V2.cjs",
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_MATERIALIZATION_V1.ts",
-        ".github/workflows/mcft-cap-09-production-operational-schema-acl-materialize-one-shot.yml"
+        ".github/workflows/mcft-cap-09-production-operational-schema-acl-materialize-one-shot.yml",
+        "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql"
       ]
     }
   },
