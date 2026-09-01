@@ -80,8 +80,6 @@ export type ProductionEvidenceSourceDecisionV1 =
             latest_observed_event_time: string | null;
             bindable_to_current_work_item_factory: true;
           };
-    }
-  ;
     };
 
 export type ProductionEvidenceSourcePlanV1 = {
