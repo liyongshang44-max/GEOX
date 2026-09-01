@@ -354,6 +354,7 @@ export class SamplingServiceV1 {
     sample_id: string,
     import_id: string | undefined,
     sampleReceiptFactId: string,
+    scope: SamplingScopeV1,
   ): Promise<SamplingFactRowV1 | null> {
     if (import_id) {
       const result = await this.pool.query(
@@ -363,8 +364,11 @@ export class SamplingServiceV1 {
             AND (record_json::jsonb->>'sample_id') = $1
             AND (record_json::jsonb->>'import_id') = $2
             AND (record_json::jsonb->>'sample_receipt_fact_id') = $3
+            AND (record_json::jsonb->>'tenant_id') = $4
+            AND (record_json::jsonb->>'project_id') = $5
+            AND (record_json::jsonb->>'group_id') = $6
           LIMIT 2`,
-        [sample_id, import_id, sampleReceiptFactId],
+        [sample_id, import_id, sampleReceiptFactId, ...scopeParams(scope)],
       );
       if ((result.rows?.length ?? 0) > 1) throw new SamplingServiceErrorV1("AMBIGUOUS:lab_result_import_v1", 409);
       return (result.rows?.[0] as SamplingFactRowV1 | undefined) ?? null;
@@ -376,8 +380,11 @@ export class SamplingServiceV1 {
         WHERE (record_json::jsonb->>'type') = 'lab_result_import_v1'
           AND (record_json::jsonb->>'sample_id') = $1
           AND (record_json::jsonb->>'sample_receipt_fact_id') = $2
+          AND (record_json::jsonb->>'tenant_id') = $3
+          AND (record_json::jsonb->>'project_id') = $4
+          AND (record_json::jsonb->>'group_id') = $5
         LIMIT 2`,
-      [sample_id, sampleReceiptFactId],
+      [sample_id, sampleReceiptFactId, ...scopeParams(scope)],
     );
     if ((result.rows?.length ?? 0) > 1) throw new SamplingServiceErrorV1("AMBIGUOUS:lab_result_import_v1", 409);
     return (result.rows?.[0] as SamplingFactRowV1 | undefined) ?? null;
