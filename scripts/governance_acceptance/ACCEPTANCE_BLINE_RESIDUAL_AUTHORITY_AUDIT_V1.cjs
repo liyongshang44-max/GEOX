@@ -39,6 +39,22 @@ const REQUIRED = [
   "authority_class","runtime_reachable","feature_flag","downstream_consumers","removal_target"
 ];
 
+const LEDGER_DISPOSITIONS = new Set([
+  "SEMANTIC_FACT_WRITER",
+  "LEGACY_COMPATIBILITY",
+  "MCFT_FROZEN",
+  "DEVTOOLS_ONLY",
+  "SEED_MIGRATION",
+  "READ_SIDE_EFFECT_P0"
+]);
+const LEDGER_REQUIRED = [
+  "ledger_disposition",
+  "underlying_semantic_families",
+  "authority_owner",
+  "writer_scope",
+  "capability_disposition"
+];
+
 const TOKENS = {
   canonical_observation_v1: "evidence.raw_observation",
   evidence_qualification_v1: "evidence.qualification",
@@ -471,6 +487,7 @@ function scan(abs, production) {
 function inventoryCoverage(inv) {
   const paths = new Set();
   const familiesByPath = new Map();
+  const ledgerPathRows = new Map();
   if (inv.schema_version !== "bline_residual_authority_inventory_v1") failures.push("INVENTORY_SCHEMA_VERSION_INVALID");
   if (inv.enforcement?.failure_code !== "UNREGISTERED_AUTHORITY_CAPABLE_PATH") failures.push("INVENTORY_FAILURE_CODE_INVALID");
   for (const s of Array.isArray(inv.surfaces) ? inv.surfaces : []) {
@@ -478,18 +495,51 @@ function inventoryCoverage(inv) {
     const p = String(s.source_path || "").trim();
     if (!id) failures.push("INVENTORY_SURFACE_ID_MISSING");
     for (const k of REQUIRED) if (!Object.hasOwn(s, k)) failures.push("INVENTORY_FIELD_MISSING:" + id + ":" + k);
+    const normalizedFamilies = (Array.isArray(s.semantic_family) ? s.semantic_family : [])
+      .map(x => String(x || "").trim())
+      .filter(Boolean);
+    if (normalizedFamilies.includes("governance.fact_ledger")) {
+      if (!p) failures.push("LEDGER_DISPOSITION_PATH_MISSING:" + id);
+      if (ledgerPathRows.has(p)) failures.push("LEDGER_DISPOSITION_DUPLICATE_PATH:" + p);
+      ledgerPathRows.set(p, id);
+      for (const k of LEDGER_REQUIRED) {
+        if (!Object.hasOwn(s, k)) failures.push("LEDGER_DISPOSITION_FIELD_MISSING:" + id + ":" + k);
+      }
+      const disposition = String(s.ledger_disposition || "").trim();
+      if (!LEDGER_DISPOSITIONS.has(disposition)) failures.push("LEDGER_DISPOSITION_INVALID:" + id + ":" + disposition);
+      if (String(s.capability_disposition || "") !== "ADJUDICATED_EXACT_PATH_AND_FAMILY") {
+        failures.push("LEDGER_CAPABILITY_NOT_EXACTLY_ADJUDICATED:" + id);
+      }
+      const underlying = Array.isArray(s.underlying_semantic_families)
+        ? s.underlying_semantic_families.map(x => String(x || "").trim()).filter(Boolean)
+        : [];
+      if (!underlying.length) failures.push("LEDGER_UNDERLYING_FAMILIES_MISSING:" + id);
+      if (underlying.includes("governance.fact_ledger")) failures.push("LEDGER_SELF_OWNERSHIP_FORBIDDEN:" + id);
+      if (!String(s.authority_owner || "").trim()) failures.push("LEDGER_AUTHORITY_OWNER_MISSING:" + id);
+      if (!String(s.writer_scope || "").trim()) failures.push("LEDGER_WRITER_SCOPE_MISSING:" + id);
+      if (!String(s.authority_class || "").startsWith("FACT_LEDGER_")) failures.push("LEDGER_AUTHORITY_CLASS_INVALID:" + id);
+      if (disposition === "SEED_MIGRATION" && !p.endsWith(".sql")) failures.push("LEDGER_SEED_NOT_SQL:" + id + ":" + p);
+      if (disposition === "MCFT_FROZEN" && !/MCFT/i.test(String(s.authority_owner || "") + " " + String(s.removal_target || ""))) {
+        failures.push("LEDGER_MCFT_FROZEN_OWNER_MISSING:" + id);
+      }
+      if (disposition === "READ_SIDE_EFFECT_P0" && !/REMOVE|ZERO|READ/i.test(String(s.removal_target || ""))) {
+        failures.push("LEDGER_READ_SIDE_EFFECT_REMEDIATION_MISSING:" + id);
+      }
+    }
     if (p) {
       paths.add(p);
       const families = familiesByPath.get(p) || new Set();
-      for (const family of Array.isArray(s.semantic_family) ? s.semantic_family : []) {
-        const normalized = String(family || "").trim();
-        if (normalized) families.add(normalized);
-      }
+      for (const normalized of normalizedFamilies) families.add(normalized);
       familiesByPath.set(p, families);
       if (!fs.existsSync(path.join(ROOT, p))) failures.push("INVENTORY_CURRENT_PATH_MISSING:" + id + ":" + p);
     }
   }
-  return { paths, familiesByPath };
+  const expected = Number(inv.fact_ledger_closure?.expected_writer_count);
+  const adjudicated = Number(inv.fact_ledger_closure?.adjudicated_writer_count);
+  if (!Number.isInteger(expected) || expected <= 0) failures.push("LEDGER_EXPECTED_COUNT_INVALID");
+  if (!Number.isInteger(adjudicated) || adjudicated !== expected) failures.push("LEDGER_ADJUDICATED_COUNT_MISMATCH");
+  if (Number.isInteger(expected) && ledgerPathRows.size !== expected) failures.push("LEDGER_EXACT_PATH_COUNT_MISMATCH:" + ledgerPathRows.size + ":" + expected);
+  return { paths, familiesByPath, ledgerPathRows };
 }
 
 function registeredB02Paths(reg) {
@@ -625,7 +675,7 @@ function main() {
     unregistered_touchpoints: touches.length,
     authority_capabilities: hard,
     semantic_touchpoints: touches,
-    proof_rule: "HARD_AUTHORITY_REQUIRES_EXACT_PATH_PLUS_SEMANTIC_FAMILY_IN_RESIDUAL_INVENTORY"
+    proof_rule: "HARD_AUTHORITY_REQUIRES_EXACT_PATH_PLUS_SEMANTIC_FAMILY; FACT_LEDGER_REQUIRES_EXPLICIT_WRITER_DISPOSITION_UNDERLYING_FAMILY_OWNER_SCOPE"
   }));
 
   finish(invSet, b02Set);
