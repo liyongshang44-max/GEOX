@@ -2,7 +2,7 @@
   "schema_version": "geox_mcft_cap09_production_gfs_target_due_readiness_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-GFS-TARGET-DUE-READINESS-V1",
   "status": "ESTABLISHED_FENCE_BOUND_SCHEMA_NOT_MATERIALIZED_NO_ACTIVE_INSTANCE",
-  "subject_predecessor_sha": "de7d5aaa24ed24f86ae53f5f98ea90b3c8f68dc0",
+  "subject_predecessor_sha": "3abee9e9c57e011af7912785910503f6a59cf2eb",
   "authority_basis": {
     "amendment_19_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-PROVIDER-RUNTIME-CADENCE-DECOUPLING-AUTHORITY.md",
     "pre_runtime_hardening_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-RUNTIME-HARDENING-AUTHORITY-V1.json",
@@ -20,7 +20,10 @@
     "gap_handling": "FAIL_CLOSED",
     "provider_creates_target_logical_time": false,
     "runtime_tick_cursor_may_drive_target_progression": false,
-    "wall_clock_floor_may_create_target": false
+    "wall_clock_floor_may_create_target": false,
+    "durable_target_pair_history_source": "APPEND_ONLY_CANONICAL_EXTERNAL_EVIDENCE_FACT_PAIRS",
+    "supply_cursor_cycle_summary_may_establish_hourly_target_completion": false,
+    "same_provider_cycle_multiple_hourly_targets_must_remain_distinct": true
   },
   "due_policy": {
     "warm_start": {
@@ -56,7 +59,10 @@
     "source_plan_execution_seam_implemented": true,
     "provider_attempt_fence_binding_implemented": true,
     "gfs_due_window_passthrough_implemented": true,
-    "partial_rehydration_zero_provider_budget_consumption": true
+    "partial_rehydration_zero_provider_budget_consumption": true,
+    "canonical_hourly_target_pair_history_reader_implemented": true,
+    "source_planner_exact_target_dedup_uses_canonical_history": true,
+    "provider_attempt_fence_after_lease_exact_target_recheck": true
   },
   "blockers": [
     "PRODUCTION_GFS_RETRY_SCHEMA_NOT_MATERIALIZED"
@@ -103,5 +109,14 @@
     "provider_not_due_behavior": "NONFAILURE_STANDBY_ZERO_PROVIDER_REQUEST",
     "attempt_budget_exhausted_behavior": "FAIL_CLOSED",
     "missed_window_behavior": "FAIL_CLOSED"
+  },
+  "canonical_target_history": {
+    "contract_ref": "apps/server/src/external_evidence/mcft_cap09_gfs_target_pair_history_v1.ts",
+    "postgres_repository_ref": "apps/server/src/persistence/external_evidence/postgres_gfs_target_pair_history_v1.ts",
+    "acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts",
+    "store": "public.facts",
+    "evidence_runtime_select_acl_already_established": true,
+    "new_schema_required": false,
+    "provider_cycle_cursor_summary_is_completion_authority": false
   }
 }

@@ -193,6 +193,7 @@ function main(): void {
     planning_time: PLANNING_TIME,
     horizon: horizon(),
     progress: baseProgress(),
+    gfs_completed_target_logical_times: [],
     due_state: {
       kbs_raw_hourly: notDue("authority://kbs/not-due"),
       gfs_bundle: notDue("authority://gfs/not-due"),
@@ -208,6 +209,7 @@ function main(): void {
     planning_time: PLANNING_TIME,
     horizon: horizon(),
     progress: baseProgress(),
+    gfs_completed_target_logical_times: [],
     due_state: {
       kbs_raw_hourly: due("authority://kbs/due-fixture"),
       gfs_bundle: notDue("authority://gfs/not-due"),
@@ -242,6 +244,7 @@ function main(): void {
     planning_time: PLANNING_TIME,
     horizon: horizon(),
     progress: bootstrapProgress,
+    gfs_completed_target_logical_times: [],
     due_state: {
       kbs_raw_hourly: due("authority://kbs/bootstrap-due-fixture"),
       gfs_bundle: notDue("authority://gfs/not-due"),
@@ -267,6 +270,7 @@ function main(): void {
     planning_time: PLANNING_TIME,
     horizon: horizon(),
     progress: skewProgress,
+    gfs_completed_target_logical_times: [],
     due_state: {
       kbs_raw_hourly: due("authority://kbs/due-fixture"),
       gfs_bundle: notDue("authority://gfs/not-due"),
@@ -287,6 +291,7 @@ function main(): void {
     planning_time: PLANNING_TIME,
     horizon: horizon(),
     progress: baseProgress(),
+    gfs_completed_target_logical_times: [],
     due_state: {
       kbs_raw_hourly: notDue("authority://kbs/not-due"),
       gfs_bundle: gfsDue("authority://gfs/due-fixture", "2026-09-01T20:00:00.000Z"),
@@ -327,6 +332,7 @@ function main(): void {
     planning_time: PLANNING_TIME,
     horizon: horizon(),
     progress: durableProgress,
+    gfs_completed_target_logical_times: ["2026-09-01T20:00:00.000Z"],
     due_state: {
       kbs_raw_hourly: notDue("authority://kbs/not-due"),
       gfs_bundle: gfsDue("authority://gfs/due-fixture", "2026-09-01T20:00:00.000Z"),
@@ -358,6 +364,7 @@ function main(): void {
     planning_time: PLANNING_TIME,
     horizon: horizon(),
     progress: partialProgress,
+    gfs_completed_target_logical_times: [],
     due_state: {
       kbs_raw_hourly: notDue("authority://kbs/not-due"),
       gfs_bundle: gfsDue("authority://gfs/due-fixture", "2026-09-01T20:00:00.000Z"),
@@ -396,10 +403,47 @@ function main(): void {
     "fact_" + "1".repeat(64),
   );
 
+  const overwrittenCycleSummary = baseProgress();
+  overwrittenCycleSummary.gfs_bundle = {
+    cycles: [gfsCycle({
+      cycle_key: "20260901t180000z",
+      issued_at: "2026-09-01T18:00:00.000Z",
+      target: "2026-09-01T21:00:00.000Z",
+      state: "PAIRED",
+    })],
+    complete_pair_count: 1,
+    partial_pair_count: 0,
+  };
+  const cursorSummaryMustNotSkipMissingTarget = planProductionEvidenceSourcesV1({
+    planning_time: PLANNING_TIME,
+    horizon: horizon(),
+    progress: overwrittenCycleSummary,
+    gfs_completed_target_logical_times: [],
+    due_state: {
+      kbs_raw_hourly: notDue("authority://kbs/not-due"),
+      gfs_bundle: gfsDue("authority://gfs/due-fixture", "2026-09-01T20:00:00.000Z"),
+      kbs_soil: notDue("authority://soil/not-due"),
+    },
+  });
+  assert.equal(cursorSummaryMustNotSkipMissingTarget.decisions[1]?.status === "ACTION"
+    ? cursorSummaryMustNotSkipMissingTarget.decisions[1].operation.kind : null,"GFS_BUNDLE_ACQUIRE");
+  assert.throws(() => planProductionEvidenceSourcesV1({
+    planning_time: PLANNING_TIME,
+    horizon: horizon(),
+    progress: overwrittenCycleSummary,
+    gfs_completed_target_logical_times: ["2026-09-01T21:00:00.000Z"],
+    due_state: {
+      kbs_raw_hourly: notDue("authority://kbs/not-due"),
+      gfs_bundle: gfsDue("authority://gfs/due-fixture", "2026-09-01T20:00:00.000Z"),
+      kbs_soil: notDue("authority://soil/not-due"),
+    },
+  }), /GFS_CANONICAL_TARGET_HISTORY_GAP/);
+
   const soilAction = planProductionEvidenceSourcesV1({
     planning_time: PLANNING_TIME,
     horizon: horizon(),
     progress: baseProgress(),
+    gfs_completed_target_logical_times: [],
     due_state: {
       kbs_raw_hourly: notDue("authority://kbs/not-due"),
       gfs_bundle: notDue("authority://gfs/not-due"),
@@ -420,7 +464,8 @@ function main(): void {
       planning_time: "2026-09-01T18:59:59.000Z",
       horizon: horizon(),
       progress: baseProgress(),
-      due_state: {
+      gfs_completed_target_logical_times: [],
+    due_state: {
         kbs_raw_hourly: notDue("authority://kbs/not-due"),
         gfs_bundle: notDue("authority://gfs/not-due"),
         kbs_soil: notDue("authority://soil/not-due"),
@@ -434,7 +479,8 @@ function main(): void {
       planning_time: PLANNING_TIME,
       horizon: horizon(),
       progress: baseProgress(),
-      due_state: {
+      gfs_completed_target_logical_times: [],
+    due_state: {
         kbs_raw_hourly: {
           ...due("authority://kbs/due-fixture"),
           requested_at: "2026-09-01T18:59:59.000Z",
@@ -455,6 +501,9 @@ function main(): void {
     kbs_pair_skew_routes_to_idempotent_cycle_repair: true,
     gfs_action_uses_explicit_target: true,
     gfs_durable_target_is_not_reacquired: true,
+    gfs_hourly_completion_authority_is_canonical_fact_history: true,
+    gfs_cycle_summary_cannot_skip_missing_hourly_target: true,
+    gfs_canonical_target_history_gap_fail_closed: true,
     gfs_partial_pair_rehydration_gap_machine_visible: true,
     gfs_partial_plan_carries_exact_progress_snapshot: true,
     soil_action_requires_explicit_due_input: true,

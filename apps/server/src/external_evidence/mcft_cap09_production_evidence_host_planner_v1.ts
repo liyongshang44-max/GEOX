@@ -7,6 +7,7 @@ import type { EvidenceRuntimeHostPlannerV1 } from "./mcft_cap09_evidence_runtime
 import type { EvidenceRuntimeScopeV1 } from "./mcft_cap09_evidence_runtime_persistence_v1.js";
 import type { EvidenceSourceSpecificProgressReaderV1 } from "./mcft_cap09_evidence_source_progress_v1.js";
 import type { EvidenceSourcePollScheduleReadPortV1 } from "./mcft_cap09_evidence_source_poll_schedule_v1.js";
+import type { GfsCanonicalTargetPairHistoryReadPortV1 } from "./mcft_cap09_gfs_target_pair_history_v1.js";
 import {
   MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY_CLASS_V1,
   materializeProductionEvidenceAcquisitionHorizonV1,
@@ -45,6 +46,7 @@ export class ProductionEvidenceHostPlannerV1 implements EvidenceRuntimeHostPlann
     planning_clock:ProductionEvidencePlanningClockV1;
     progress_reader:Pick<EvidenceSourceSpecificProgressReaderV1,"readProgress">;
     source_poll_schedule:EvidenceSourcePollScheduleReadPortV1;
+    gfs_target_pair_history:GfsCanonicalTargetPairHistoryReadPortV1;
     source_plan_executor:Pick<ProductionEvidenceSourcePlanExecutorV1,"buildAttempt">;
   }){
     const a=deps.runtime_start_authority;
@@ -61,10 +63,11 @@ export class ProductionEvidenceHostPlannerV1 implements EvidenceRuntimeHostPlann
 
   async nextAttemptPlan():ReturnType<EvidenceRuntimeHostPlannerV1["nextAttemptPlan"]>{
     const planningTime=isoV1(this.deps.planning_clock.now(),"PRODUCTION_EVIDENCE_HOST_PLANNER_CLOCK_INVALID");
-    const [progress,rawSchedule,soilSchedule]=await Promise.all([
+    const [progress,rawSchedule,soilSchedule,gfsTargetHistory]=await Promise.all([
       this.deps.progress_reader.readProgress({scope:this.deps.scope}),
       this.deps.source_poll_schedule.readSourcePollSchedule({scope:this.deps.scope,source_family:"KBS_RAW_HOURLY"}),
       this.deps.source_poll_schedule.readSourcePollSchedule({scope:this.deps.scope,source_family:"KBS_SOIL"}),
+      this.deps.gfs_target_pair_history.readGfsTargetPairHistory({scope:this.deps.scope,from_target_logical_time:this.formalA0}),
     ]);
     const rawDue=evaluateProductionEvidenceSourceDueV1({source_family:"KBS_RAW_HOURLY",planning_time:planningTime,activation_fence_time:this.horizon.activation_fence_time,schedule:rawSchedule});
     const soilDue=evaluateProductionEvidenceSourceDueV1({source_family:"KBS_SOIL",planning_time:planningTime,activation_fence_time:this.horizon.activation_fence_time,schedule:soilSchedule});
@@ -72,9 +75,7 @@ export class ProductionEvidenceHostPlannerV1 implements EvidenceRuntimeHostPlann
       planning_time:planningTime,
       activation_fence_time:this.horizon.activation_fence_time,
       formal_a0_logical_time:this.formalA0,
-      durable_paired_targets:progress.gfs_bundle.cycles
-        .filter(c=>c.state==="PAIRED"&&c.paired_valid_from!==null)
-        .map(c=>({paired_valid_from:c.paired_valid_from!})),
+      durable_paired_targets:gfsTargetHistory.pairs.map(pair=>({paired_valid_from:pair.target_logical_time})),
     });
     if(gfs.status==="MISSED_WINDOW")throw new Error("PRODUCTION_EVIDENCE_HOST_PLANNER_GFS_MISSED_WINDOW:"+gfs.target_logical_time);
     const gfsDue:ProductionEvidenceGfsDueStateV1=gfs.status==="DUE"
@@ -83,6 +84,7 @@ export class ProductionEvidenceHostPlannerV1 implements EvidenceRuntimeHostPlann
 
     const sourcePlan=planProductionEvidenceSourcesV1({
       planning_time:planningTime,horizon:this.horizon,progress,
+      gfs_completed_target_logical_times:gfsTargetHistory.pairs.map(pair=>pair.target_logical_time),
       due_state:{kbs_raw_hourly:rawDue,gfs_bundle:gfsDue,kbs_soil:soilDue},
     });
     const selected=selectNextProductionEvidenceActionV1(sourcePlan.decisions);

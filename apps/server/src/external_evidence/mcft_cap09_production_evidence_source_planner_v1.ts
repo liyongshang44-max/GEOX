@@ -178,18 +178,10 @@ function progressTargetV1(
   return candidate === null ? null : hourV1(candidate, code);
 }
 
-function latestDurableGfsTargetV1(
-  cycles: readonly GfsCyclePairProgressV1[],
-): string | null {
-  const targets = cycles
-    .filter((cycle) => cycle.state === "PAIRED")
-    .map((cycle) => progressTargetV1(
-      cycle,
-      "PRODUCTION_EVIDENCE_SOURCE_PLANNER_GFS_PAIRED_TARGET_INVALID",
-    ))
-    .filter((value): value is string => value !== null);
-  if (targets.length === 0) return null;
-  return targets.sort((a, b) => Date.parse(b) - Date.parse(a))[0]!;
+function canonicalCompletedGfsTargetsV1(values: readonly string[]): readonly string[] {
+  const normalized=values.map(value=>hourV1(value,"PRODUCTION_EVIDENCE_SOURCE_PLANNER_GFS_CANONICAL_TARGET_INVALID"));
+  if(new Set(normalized).size!==normalized.length) throw new Error("PRODUCTION_EVIDENCE_SOURCE_PLANNER_GFS_CANONICAL_TARGET_DUPLICATE");
+  return [...normalized].sort((a,b)=>Date.parse(a)-Date.parse(b));
 }
 
 function partialGfsForTargetV1(
@@ -224,6 +216,7 @@ export function planProductionEvidenceSourcesV1(input: {
   planning_time: string;
   horizon: ProductionEvidenceAcquisitionHorizonV1;
   progress: EvidenceSourceSpecificProgressV1;
+  gfs_completed_target_logical_times?: readonly string[];
   due_state: ProductionEvidenceSourceDueStateSetV1;
 }): ProductionEvidenceSourcePlanV1 {
   const planningTime = isoV1(
@@ -280,8 +273,13 @@ export function planProductionEvidenceSourcesV1(input: {
     if(Date.parse(dueWindowStart)>=Date.parse(dueWindowEnd)) throw new Error("PRODUCTION_EVIDENCE_SOURCE_PLANNER_GFS_DUE_WINDOW_ORDER_INVALID");
     if(Date.parse(gfsDue.requested_at)<Date.parse(dueWindowStart)||Date.parse(gfsDue.requested_at)>=Date.parse(dueWindowEnd)) throw new Error("PRODUCTION_EVIDENCE_SOURCE_PLANNER_GFS_REQUEST_OUTSIDE_DUE_WINDOW");
     if(gfsDue.max_attempts_per_target_window!==MCFT_CAP09_GFS_MAX_ATTEMPTS_PER_TARGET_WINDOW_V1||gfsDue.retry_minimum_interval_seconds!==MCFT_CAP09_GFS_RETRY_MINIMUM_INTERVAL_SECONDS_V1) throw new Error("PRODUCTION_EVIDENCE_SOURCE_PLANNER_GFS_RETRY_POLICY_MISMATCH");
-    const durableTarget = latestDurableGfsTargetV1(input.progress.gfs_bundle.cycles);
-    if (durableTarget && Date.parse(durableTarget) >= Date.parse(target)) {
+    if(input.gfs_completed_target_logical_times===undefined){
+      throw new Error("PRODUCTION_EVIDENCE_SOURCE_PLANNER_GFS_CANONICAL_TARGET_HISTORY_REQUIRED");
+    }
+    const completedTargets=canonicalCompletedGfsTargetsV1(input.gfs_completed_target_logical_times);
+    const exactCompleted=completedTargets.includes(target);
+    const laterCompleted=completedTargets.find(value=>Date.parse(value)>Date.parse(target))??null;
+    if (exactCompleted) {
       decisions.push({
         source_family: "GFS_BUNDLE",
         status: "NOT_DUE",
@@ -289,6 +287,9 @@ export function planProductionEvidenceSourcesV1(input: {
         authority_ref: authorityRefV1(gfsDue.authority_ref),
       });
     } else {
+      if(laterCompleted){
+        throw new Error("PRODUCTION_EVIDENCE_SOURCE_PLANNER_GFS_CANONICAL_TARGET_HISTORY_GAP:"+target+":"+laterCompleted);
+      }
       const partial = partialGfsForTargetV1(input.progress.gfs_bundle.cycles, target);
       if (partial) {
         const availableRole = partial.weather ? "WEATHER" as const : "FUTURE_ET0" as const;

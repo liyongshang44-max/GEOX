@@ -283,7 +283,10 @@
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLAN_EXECUTOR_V1.ts",
         "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_provider_attempt_fence_v1.ts",
         "apps/server/src/external_evidence/mcft_cap09_production_provider_attempt_fence_v1.ts",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_V1.ts"
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_gfs_target_pair_history_v1.ts",
+        "apps/server/src/persistence/external_evidence/postgres_gfs_target_pair_history_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts"
       ]
     },
     "PHASE4_TWIN_RUNTIME_FOUNDATION": {
@@ -496,7 +499,10 @@
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLAN_EXECUTOR_V1.ts",
         "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_provider_attempt_fence_v1.ts",
         "apps/server/src/external_evidence/mcft_cap09_production_provider_attempt_fence_v1.ts",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_V1.ts"
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_gfs_target_pair_history_v1.ts",
+        "apps/server/src/persistence/external_evidence/postgres_gfs_target_pair_history_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts"
       ]
     }
   },

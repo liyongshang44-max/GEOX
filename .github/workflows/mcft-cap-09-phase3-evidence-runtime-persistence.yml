@@ -10,6 +10,9 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_RETRY_SCHEDULE_POSTGRES_V1.ts'
       - 'apps/server/src/persistence/external_evidence/postgres_gfs_retry_schedule_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_gfs_retry_schedule_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts'
+      - 'apps/server/src/persistence/external_evidence/postgres_gfs_target_pair_history_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_gfs_target_pair_history_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EVIDENCE_SOURCE_POLL_SCHEDULE_POSTGRES_V1.ts'
       - 'apps/server/db/migrations/2026_09_01_mcft_cap_09_evidence_source_poll_schedule.sql'
       - 'apps/server/src/persistence/external_evidence/postgres_evidence_source_poll_schedule_v1.ts'
@@ -168,13 +171,16 @@ jobs:
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLAN_EXECUTOR_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EVIDENCE_SOURCE_POLL_SCHEDULE_POSTGRES_V1.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_RETRY_SCHEDULE_POSTGRES_V1.ts
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_RETRY_SCHEDULE_POSTGRES_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts
       - name: Prove durable Evidence lease and supply cursor semantics
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts
       - name: Prove durable fenced source poll schedule and restart throttle
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EVIDENCE_SOURCE_POLL_SCHEDULE_POSTGRES_V1.ts
       - name: Prove durable GFS retry throttle and per-target attempt budget
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_RETRY_SCHEDULE_POSTGRES_V1.ts
+      - name: Prove canonical GFS hourly target-pair history
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts
       - name: Prove fenced KBS publication baseline current pointer
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1.ts
       - name: Prove retained KBS snapshot historical-prefix comparison
@@ -364,6 +370,7 @@ jobs:
             acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_EVIDENCE_SOURCE_POLL_SCHEDULE_POSTGRES_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_GFS_RETRY_SCHEDULE_POSTGRES_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_SUPPLY_CADENCE_PROFILES_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_CYCLE_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_HOST_V1_RESULT.json

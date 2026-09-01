@@ -1,9 +1,9 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_target_planner_readiness_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1",
-  "status": "PROVIDER_ATTEMPT_FENCE_BOUND_SCHEMA_MATERIALIZATION_NEXT",
+  "status": "GFS_CANONICAL_HOURLY_TARGET_HISTORY_CORRECTED_SCHEMA_MATERIALIZATION_NEXT",
   "stage": "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START",
-  "subject_predecessor_sha": "de7d5aaa24ed24f86ae53f5f98ea90b3c8f68dc0",
+  "subject_predecessor_sha": "3abee9e9c57e011af7912785910503f6a59cf2eb",
   "host_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
   "production_process_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
   "production_composition_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
@@ -77,10 +77,10 @@
     "gfs_bundle": {
       "publication_mode": "SIX_HOUR_PROVIDER_CYCLES_WITH_HOURLY_TARGET_WINDOWS",
       "cursor_partition": "BINDING_ID_PLUS_CYCLE_SPECIFIC_ORIGIN_SOURCE_ID",
-      "required_planning_semantics": "CROSS_CYCLE_LATEST_VALID_FROM_PAIR_PROGRESS",
-      "current_read_port_shape": "BINDING_SET_CROSS_CYCLE_PROGRESS_WITH_EXACT_CYCLE_PAIRING",
+      "required_planning_semantics": "PROVIDER_CYCLE_PROGRESS_PLUS_APPEND_ONLY_CANONICAL_HOURLY_TARGET_PAIR_HISTORY",
+      "current_read_port_shape": "CURSOR_CYCLE_PROGRESS_PLUS_CANONICAL_FACT_TARGET_HISTORY",
       "current_shape_bindable": false,
-      "reason": "GFS_TARGET_DUE_RETRY_REHYDRATION_SINGLE_HOST_EXECUTION_AND_PROVIDER_FENCE_ARE_IMPLEMENTED_PRODUCTION_RETRY_SCHEMA_AND_ACTIVE_TARGET_INSTANCE_REMAIN_UNBOUND",
+      "reason": "GFS_TARGET_DUE_RETRY_REHYDRATION_SINGLE_HOST_EXECUTION_PROVIDER_FENCE_AND_CANONICAL_HOURLY_TARGET_HISTORY_ARE_IMPLEMENTED_PRODUCTION_SCHEMAS_AND_ACTIVE_TARGET_INSTANCE_REMAIN_UNBOUND",
       "required_foundation": [
         "CROSS_CYCLE_GFS_PROGRESS_READ_PORT",
         "WEATHER_ET0_PAIR_SKEW_FAIL_CLOSED",
@@ -124,7 +124,13 @@
       "production_execution_provider_fence_bound": true,
       "provider_not_due_zero_fetch": true,
       "gfs_partial_rehydration_consumes_provider_attempt_budget": false,
-      "execution_shape_bindable_after_schema_materialization": true
+      "execution_shape_bindable_after_schema_materialization": true,
+      "canonical_hourly_target_pair_history_implemented": true,
+      "hourly_target_completion_authority": "APPEND_ONLY_CANONICAL_EXTERNAL_EVIDENCE_FACT_PAIRS",
+      "supply_cursor_cycle_summary_hourly_target_completion_authorized": false,
+      "source_planner_exact_target_dedup_uses_canonical_history": true,
+      "provider_fence_after_lease_exact_target_recheck": true,
+      "same_provider_cycle_multiple_hourly_targets_preserved": true
     },
     "kbs_soil": {
       "publication_mode": "IRREGULAR_PROVIDER_DEFINED_EVENT",
@@ -166,7 +172,8 @@
       "EVIDENCE_SUPPLY_CURSOR",
       "KBS_PUBLICATION_BASELINE_POINTER",
       "SOURCE_POLL_SCHEDULE",
-      "GFS_RETRY_SCHEDULE"
+      "GFS_RETRY_SCHEDULE",
+      "CANONICAL_GFS_HOURLY_TARGET_PAIR_HISTORY"
     ],
     "provider_attempt_fence_binding_implemented": true,
     "provider_not_due_nonfailure_standby_implemented": true
@@ -299,7 +306,11 @@
     "GFS_DURABLE_RETRY_BUDGET_CLAIM_BOUND_BEFORE_FETCH",
     "PROVIDER_NOT_DUE_NONFAILURE_HOST_STANDBY",
     "GFS_PARTIAL_REHYDRATION_ZERO_PROVIDER_BUDGET_CONSUMPTION",
-    "GFS_DUE_WINDOW_CARRIED_FROM_PLANNER_TO_FENCE_WITHOUT_REPLANNING"
+    "GFS_DUE_WINDOW_CARRIED_FROM_PLANNER_TO_FENCE_WITHOUT_REPLANNING",
+    "GFS_CANONICAL_HOURLY_TARGET_PAIR_HISTORY_READER",
+    "GFS_CURSOR_SUMMARY_REMOVED_AS_HOURLY_TARGET_COMPLETION_AUTHORITY",
+    "GFS_SOURCE_PLANNER_EXACT_TARGET_CANONICAL_DEDUP",
+    "GFS_AFTER_LEASE_STALE_PLAN_CANONICAL_RECHECK"
   ],
   "current_entrypoint": {
     "status": "PACKAGED_FAIL_CLOSED_PURE_PLANNER_NOT_PRODUCTION_BOUND",
@@ -370,5 +381,8 @@
   "production_source_plan_executor_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLAN_EXECUTOR_V1.ts",
   "provider_attempt_fence_contract_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_provider_attempt_fence_v1.ts",
   "provider_attempt_fence_factory_ref": "apps/server/src/external_evidence/mcft_cap09_production_provider_attempt_fence_v1.ts",
-  "provider_attempt_fence_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_V1.ts"
+  "provider_attempt_fence_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_V1.ts",
+  "gfs_target_pair_history_contract_ref": "apps/server/src/external_evidence/mcft_cap09_gfs_target_pair_history_v1.ts",
+  "gfs_target_pair_history_postgres_ref": "apps/server/src/persistence/external_evidence/postgres_gfs_target_pair_history_v1.ts",
+  "gfs_target_pair_history_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts"
 }

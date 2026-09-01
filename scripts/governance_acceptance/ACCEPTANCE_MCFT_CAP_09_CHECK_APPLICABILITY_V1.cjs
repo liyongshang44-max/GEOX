@@ -473,6 +473,18 @@ function main() {
     assert(byId(providerFencePostMerge,"EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(providerFencePath));
   }
 
+  // CP-4: canonical GFS hourly target history is Phase3-owned and owner-visible post-merge.
+  for (const gfsTargetHistoryPath of ["apps/server/src/external_evidence/mcft_cap09_gfs_target_pair_history_v1.ts","apps/server/src/persistence/external_evidence/postgres_gfs_target_pair_history_v1.ts","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts"]) {
+    const historyPlan = plan(authority, registry, [gfsTargetHistoryPath]);
+    assert.equal(historyPlan.status, "PASS");
+    assert.equal(historyPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(historyPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(historyPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const historyPostMerge = plan(authority, registry, [gfsTargetHistoryPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(historyPostMerge, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(historyPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(gfsTargetHistoryPath));
+  }
+
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
   const phase3 = plan(authority, registry, [phase3Path]);

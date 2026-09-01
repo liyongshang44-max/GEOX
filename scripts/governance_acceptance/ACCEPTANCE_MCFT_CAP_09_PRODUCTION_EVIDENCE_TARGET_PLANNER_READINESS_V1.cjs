@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "PROVIDER_ATTEMPT_FENCE_BOUND_SCHEMA_MATERIALIZATION_NEXT");
+  assert.equal(authority.status, "GFS_CANONICAL_HOURLY_TARGET_HISTORY_CORRECTED_SCHEMA_MATERIALIZATION_NEXT");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "de7d5aaa24ed24f86ae53f5f98ea90b3c8f68dc0");
+  assert.equal(authority.subject_predecessor_sha, "3abee9e9c57e011af7912785910503f6a59cf2eb");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -50,10 +50,23 @@ try {
   includes(cursor, "readSupplyCursorsByBindings", "EVIDENCE_CURSOR_BINDING_SET_READ_REQUIRED");
   includes(cursor, "binding_id = ANY($7::text[])", "EVIDENCE_CURSOR_BINDING_SET_SQL_REQUIRED");
 
+  const gfsTargetHistory = read(authority.gfs_target_pair_history_postgres_ref);
+  includes(gfsTargetHistory, "FROM public.facts", "GFS_TARGET_HISTORY_CANONICAL_FACT_READ_REQUIRED");
+  includes(gfsTargetHistory, "GFS_TARGET_HISTORY_CROSS_CYCLE_PAIR_FORBIDDEN", "GFS_TARGET_HISTORY_CROSS_CYCLE_FAIL_CLOSED_REQUIRED");
+  includes(gfsTargetHistory, "source_record_id", "GFS_TARGET_HISTORY_SOURCE_RECORD_ID_VALIDATION_REQUIRED");
+  assert.equal(gfsTargetHistory.includes("RuntimeTickCursor"), false, "GFS_TARGET_HISTORY_RUNTIME_CURSOR_FORBIDDEN");
+  assert.equal(authority.source_specific_requirements.gfs_bundle.hourly_target_completion_authority, "APPEND_ONLY_CANONICAL_EXTERNAL_EVIDENCE_FACT_PAIRS");
+  assert.equal(authority.source_specific_requirements.gfs_bundle.supply_cursor_cycle_summary_hourly_target_completion_authorized, false);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.source_planner_exact_target_dedup_uses_canonical_history, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.provider_fence_after_lease_exact_target_recheck, true);
+
   const gfsTargetDueReadiness = json(authority.gfs_target_due_readiness_ref);
   assert.equal(gfsTargetDueReadiness.status, "ESTABLISHED_FENCE_BOUND_SCHEMA_NOT_MATERIALIZED_NO_ACTIVE_INSTANCE");
   assert.equal(gfsTargetDueReadiness.target_progression.first_target_rule, "TARGET_EQUALS_FORMAL_A0");
   assert.equal(gfsTargetDueReadiness.target_progression.provider_creates_target_logical_time, false);
+  assert.equal(gfsTargetDueReadiness.target_progression.durable_target_pair_history_source, "APPEND_ONLY_CANONICAL_EXTERNAL_EVIDENCE_FACT_PAIRS");
+  assert.equal(gfsTargetDueReadiness.target_progression.supply_cursor_cycle_summary_may_establish_hourly_target_completion, false);
+  assert.equal(gfsTargetDueReadiness.implementation_readiness.provider_attempt_fence_after_lease_exact_target_recheck, true);
   assert.equal(gfsTargetDueReadiness.target_progression.runtime_tick_cursor_may_drive_target_progression, false);
   assert.equal(gfsTargetDueReadiness.due_policy.subsequent.earliest_start_lead_minutes, 70);
   assert.equal(gfsTargetDueReadiness.due_policy.subsequent.latest_start_lead_minutes_exclusive, 30);

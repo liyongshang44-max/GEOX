@@ -3,6 +3,7 @@
 import type { EvidenceRuntimeProviderAttemptFencePortV1 } from "./mcft_cap09_evidence_runtime_provider_attempt_fence_v1.js";
 import type { EvidenceSourcePollScheduleClaimPortV1 } from "./mcft_cap09_evidence_source_poll_schedule_v1.js";
 import type { GfsRetrySchedulePortV1 } from "./mcft_cap09_gfs_retry_schedule_v1.js";
+import type { GfsCanonicalTargetPairHistoryReadPortV1 } from "./mcft_cap09_gfs_target_pair_history_v1.js";
 import type { ProductionEvidenceSourceDecisionV1 } from "./mcft_cap09_production_evidence_source_planner_v1.js";
 
 export const MCFT_CAP09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_FACTORY_ID_V1 =
@@ -21,6 +22,7 @@ export class ProductionEvidenceProviderAttemptFenceFactoryV1 {
   constructor(private readonly deps:{
     source_poll_schedule: EvidenceSourcePollScheduleClaimPortV1;
     gfs_retry_schedule: GfsRetrySchedulePortV1;
+    gfs_target_pair_history: GfsCanonicalTargetPairHistoryReadPortV1;
     activation_fence_time:string;
   }){
     this.activationFenceTime=isoV1(deps.activation_fence_time,"PRODUCTION_PROVIDER_ATTEMPT_FENCE_ACTIVATION_FENCE_INVALID");
@@ -42,6 +44,15 @@ export class ProductionEvidenceProviderAttemptFenceFactoryV1 {
     }
     if(op.kind==="GFS_BUNDLE_ACQUIRE"){
       return {claimBeforeProviderFetch:async({claim})=>{
+        const history=await this.deps.gfs_target_pair_history.readGfsTargetPairHistory({
+          scope:claim.scope,from_target_logical_time:op.target_logical_time
+        });
+        const completed=history.pairs.map(pair=>pair.target_logical_time);
+        if(completed.includes(op.target_logical_time)){
+          return {status:"NOT_DUE" as const,durable_coordination_write_count:0 as const};
+        }
+        const later=completed.find(target=>Date.parse(target)>Date.parse(op.target_logical_time))??null;
+        if(later) throw new Error("PRODUCTION_PROVIDER_ATTEMPT_GFS_CANONICAL_TARGET_HISTORY_GAP:"+op.target_logical_time+":"+later);
         const r=await this.deps.gfs_retry_schedule.claimGfsAttemptBeforeProviderFetch({
           claim,target_logical_time:op.target_logical_time,requested_at:op.requested_at,
           due_window_start:op.due_window_start,due_window_end_exclusive:op.due_window_end_exclusive
