@@ -62,8 +62,10 @@ function isTerminalStatus(value: unknown): boolean { const status = normalizeSta
 function isRetryableStatus(value: unknown): boolean { const status = normalizeStatus(value); return status === "DISPATCH_FAILED" || status === "EXECUTION_FAILED" || status === "INVALID_EXECUTION" || status === "STATE_WRITE_FAILED"; }
 function statusOfTask(task: TaskFact | null, state: OperationStateV1 | null, dispatch: DispatchFact | null): string | null {
   if (state?.receipt_id) return "RECEIPT_RECEIVED";
-  if (state?.final_status) return String(state.final_status);
+  const projectedStatus = state?.final_status ? normalizeStatus(state.final_status) : "";
+  if (projectedStatus && (isTerminalStatus(projectedStatus) || isRetryableStatus(projectedStatus))) return String(state?.final_status);
   if (dispatch?.status) return dispatch.status;
+  if (state?.final_status) return String(state.final_status);
   const payload = task?.record_json?.payload ?? null;
   return safeText(payload?.status ?? payload?.task_status ?? payload?.dispatch_status) || "TASK_CREATED";
 }
