@@ -1,0 +1,51 @@
+name: b09ag-residual-authority-audit-exact
+
+on:
+  pull_request:
+    branches:
+      - docs/bline-b09ag-residual-authority-audit-v1
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09ag product head
+        run: |
+          git checkout 38d2eb0aff25f3b320e822ca7b176a929b075bb7
+          test "$(git rev-parse HEAD)" = "38d2eb0aff25f3b320e822ca7b176a929b075bb7"
+          test "$(git rev-parse HEAD^)" = "3450f932e345e1d0b880a45b9f2613eba9833fcb"
+
+      - name: Fetch frozen external audit snapshots
+        run: |
+          git fetch --no-tags origin fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+          git fetch --no-tags origin refs/pull/3346/head
+          git cat-file -e fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8^{commit}
+          git cat-file -e 605d256d5e4a02a18fee89e5a6db755af3f97e18^{commit}
+          git cat-file -e 3450f932e345e1d0b880a45b9f2613eba9833fcb^{commit}
+
+      - name: B-09ag reverse residual authority audit
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09AG_RESIDUAL_AUTHORITY_AUDIT_V1.cjs
+
+      - name: Existing B-02 governance remains unchanged
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: Product diff remains governance-only
+        run: |
+          git diff --name-only 3450f932e345e1d0b880a45b9f2613eba9833fcb 38d2eb0aff25f3b320e822ca7b176a929b075bb7 > /tmp/b09ag-files.txt
+          cat /tmp/b09ag-files.txt
+          test "$(wc -l < /tmp/b09ag-files.txt | tr -d ' ')" = "4"
+          git diff --check 3450f932e345e1d0b880a45b9f2613eba9833fcb 38d2eb0aff25f3b320e822ca7b176a929b075bb7
+
+      - name: Prove runtime MCFT and product code unchanged
+        run: |
+          git diff --exit-code 3450f932e345e1d0b880a45b9f2613eba9833fcb 38d2eb0aff25f3b320e822ca7b176a929b075bb7 --             apps packages .github/workflows config docs/digital_twin docs/twin_kernel
+          echo B09AG_NO_PRODUCT_OR_MCFT_MUTATION_PASS
+
+      - name: Marker
+        run: |
+          echo B09AG_EXACT_HEAD=38d2eb0aff25f3b320e822ca7b176a929b075bb7
+          echo B09AG_RESIDUAL_AUTHORITY_AUDIT_ATTEMPT_COMPLETE
