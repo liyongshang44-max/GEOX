@@ -32,6 +32,8 @@ need("service", [
   "createHash",
   "JSON.stringify(canonicalParts)",
   "deterministicReceiptFactIdV1",
+  "sampling_plan_fact_id, sample_id",
+  "findReceiptByFactId",
   "deterministicAcceptanceFactIdV1",
   "const factId = `sp_${plan_id}`",
   "deterministicLabResultFactIdV1",
@@ -57,6 +59,8 @@ forbid("service", [
 need("route", [
   "const planRecord = plan.record_json",
   "sample_receipt_fact_id: receipt.fact_id",
+  "body.sample_receipt_fact_id",
+  "findReceiptByFactId",
   "lab_result_fact_id: labResult.fact_id",
   "sampling_plan_fact_id: plan.fact_id",
   "MISSING_EXACT:sample_receipt_plan_ref",
@@ -122,6 +126,8 @@ need("samplingApi", [
   "concurrent_duplicate_sample_id_serialized",
   "concurrent_acceptance_identity_stable",
   "shared_import_id_is_chain_local",
+  "sample_id_reuse_across_plans_allowed",
+  "ambiguous_sample_locator_requires_exact_receipt_ref",
   "Promise.all",
   "concurrent exact-chain acceptance must converge on one fact_id",
 ]);
@@ -162,6 +168,8 @@ const stats = {
   identity_tuple_canonical_encoding: source.service.includes("JSON.stringify(canonicalParts)") && !source.service.includes('.join("\\n")'),
   lab_identity_chain_scoped: source.service.includes("deterministicLabResultFactIdV1") && !source.service.includes("const fact_id = `sl_${import_id}`"),
   shared_import_runtime_proven: source.samplingApi.includes("shared_import_id_is_chain_local"),
+  sample_id_not_global_identity: source.samplingApi.includes("sample_id_reuse_across_plans_allowed") && source.service.includes("input.sampling_plan_fact_id, input.sample_id"),
+  ambiguous_sample_locator_requires_exact_ref: source.samplingApi.includes("ambiguous_sample_locator_requires_exact_receipt_ref") && source.route.includes("findReceiptByFactId"),
   plan_fact_continuity: source.projection.includes("SAMPLING_OPERATION_RELATION_EXACT_PLAN_REF_MISSING")
     && source.fertilization.includes("SAMPLING_RECEIPT_PLAN_FACT_REF_MISMATCH")
     && source.fertilization.includes("SAMPLING_LAB_PLAN_FACT_REF_MISMATCH"),
