@@ -351,8 +351,8 @@ function scan(abs, production) {
   // Runtime adapters may create authority through typed HTTP boundaries rather than direct SQL.
   const receiptHttpProducer =
     p.startsWith("apps/executor/src/") &&
-    /\/api\/v1\/ao-act\/receipts(?:\/uplink)?/.test(content) &&
-    /(?:fetch\s*\(|postJson\s*\()/.test(content);
+    /(?:\/api\/v1\/ao-act\/receipts(?:\/uplink)?|\/api\/control\/ao_act\/receipt)/.test(content) &&
+    /(?:fetch\s*\(|postJson\s*\(|httpJson\s*\()/.test(content);
   if (receiptHttpProducer) {
     add(p, "execution.receipt", "HTTP_AUTHORITY_PRODUCER", "ao-act-receipt-http-producer", production);
   }
