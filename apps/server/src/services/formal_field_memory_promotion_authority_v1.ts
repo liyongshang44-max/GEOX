@@ -9,6 +9,11 @@ export type FormalFieldMemoryTenantTripleV1 = {
 };
 
 export type FormalFieldMemoryPromotionAuthorityV1 = {
+  acceptance_fact_id: string;
+  acceptance_payload: Record<string, any>;
+  acceptance_occurred_at: string | null;
+  act_task_id: string;
+  field_id: string;
   field_memory_record_fact_id: string;
   field_memory_record_id: string;
   field_memory_candidate_fact_id: string;
@@ -21,6 +26,7 @@ export type FormalFieldMemoryPromotionAuthorityV1 = {
 
 type FactRow = {
   fact_id: string;
+  occurred_at?: unknown;
   record_json: any;
 };
 
@@ -83,11 +89,6 @@ function policyRefs(payload: Record<string, any>): string[] {
   return Array.isArray(meta.policy_refs) ? meta.policy_refs.map(text).filter(Boolean) : [];
 }
 
-function matchesAcceptanceRef(payload: Record<string, any>, acceptanceFactId: string, acceptanceId: string): boolean {
-  const ref = text(payload.acceptance_result_fact_id ?? payload.acceptance_id);
-  return ref === acceptanceFactId || ref === acceptanceId;
-}
-
 function requireSameOperationAndTask(
   payload: Record<string, any>,
   operationPlanId: string,
@@ -116,7 +117,7 @@ async function loadExactFact(
   factId: string,
 ): Promise<FactRow | null> {
   const q = await db.query(
-    `SELECT fact_id, record_json::jsonb AS record_json
+    `SELECT fact_id, occurred_at, record_json::jsonb AS record_json
        FROM facts
       WHERE fact_id = $4
         AND (record_json::jsonb->>'type') = $5
@@ -240,34 +241,40 @@ export async function requireFormalFieldMemoryPromotionAuthorityV1(
   tenant: FormalFieldMemoryTenantTripleV1,
   input: {
     field_memory_record_ref: string;
-    acceptance_fact_id: string;
     acceptance_id: string;
     operation_plan_id: string;
-    act_task_id: string;
-    field_id: string;
   },
 ): Promise<FormalFieldMemoryPromotionAuthorityV1> {
   const fieldMemoryRecordRef = text(input.field_memory_record_ref);
   if (!fieldMemoryRecordRef) throw new Error("FIELD_MEMORY_RECORD_REF_REQUIRED");
 
-  const acceptanceRow = await loadExactFact(db, tenant, "acceptance_result_v1", input.acceptance_fact_id);
+  // Exact identity flows from the already-committed P30 record backwards.
+  // Route acceptance_id is only a payload consistency check; it never selects a fact.
+  const recordRow = await loadCommittedRecord(db, tenant, fieldMemoryRecordRef);
+  const recordPayload = payloadOf(recordRow);
+  const acceptanceFactId = text(recordPayload.acceptance_result_fact_id);
+  if (!acceptanceFactId) throw new Error("FIELD_MEMORY_RECORD_ACCEPTANCE_FACT_REF_MISSING");
+
+  const acceptanceRow = await loadExactFact(db, tenant, "acceptance_result_v1", acceptanceFactId);
   if (!acceptanceRow) throw new Error("FIELD_MEMORY_ACCEPTANCE_FACT_NOT_FOUND");
   const acceptancePayload = payloadOf(acceptanceRow);
-  requireSameOperationAndTask(acceptancePayload, input.operation_plan_id, input.act_task_id, "FIELD_MEMORY_ACCEPTANCE");
+  const actTaskId = text(acceptancePayload.act_task_id ?? acceptancePayload.task_id);
+  const fieldId = text(acceptancePayload.field_id);
+  if (!actTaskId) throw new Error("FIELD_MEMORY_ACCEPTANCE_TASK_REF_MISSING");
+  if (!fieldId) throw new Error("FIELD_MEMORY_ACCEPTANCE_FIELD_REF_MISSING");
+
+  requireSameOperationAndTask(acceptancePayload, input.operation_plan_id, actTaskId, "FIELD_MEMORY_ACCEPTANCE");
   if (text(acceptancePayload.acceptance_id) !== input.acceptance_id) throw new Error("FIELD_MEMORY_ACCEPTANCE_ID_MISMATCH");
-  if (text(acceptancePayload.field_id) !== input.field_id) throw new Error("FIELD_MEMORY_ACCEPTANCE_FIELD_MISMATCH");
+  if (text(acceptancePayload.field_id) !== fieldId) throw new Error("FIELD_MEMORY_ACCEPTANCE_FIELD_MISMATCH");
   if (text(acceptancePayload.verdict).toUpperCase() !== "PASS") throw new Error("FIELD_MEMORY_ACCEPTANCE_VERDICT_NOT_PASS");
   if (acceptancePayload.formal_acceptance !== true) throw new Error("FIELD_MEMORY_ACCEPTANCE_NOT_FORMAL");
   if (acceptancePayload.formal_evidence_passed !== true) throw new Error("FIELD_MEMORY_ACCEPTANCE_EVIDENCE_NOT_FORMAL");
   if (acceptancePayload.is_simulated === true) throw new Error("FIELD_MEMORY_ACCEPTANCE_SIMULATED_BLOCKED");
 
-  const recordRow = await loadCommittedRecord(db, tenant, fieldMemoryRecordRef);
-  const recordPayload = payloadOf(recordRow);
-
   if (text(recordPayload.record_state) !== "RECORD_COMMITTED") throw new Error("FIELD_MEMORY_RECORD_NOT_COMMITTED");
-  requireSameOperationAndTask(recordPayload, input.operation_plan_id, input.act_task_id, "FIELD_MEMORY_RECORD");
-  if (text(recordPayload.field_id) !== input.field_id) throw new Error("FIELD_MEMORY_RECORD_FIELD_MISMATCH");
-  if (!matchesAcceptanceRef(recordPayload, input.acceptance_fact_id, input.acceptance_id)) throw new Error("FIELD_MEMORY_RECORD_ACCEPTANCE_MISMATCH");
+  requireSameOperationAndTask(recordPayload, input.operation_plan_id, actTaskId, "FIELD_MEMORY_RECORD");
+  if (text(recordPayload.field_id) !== fieldId) throw new Error("FIELD_MEMORY_RECORD_FIELD_MISMATCH");
+  if (text(recordPayload.acceptance_result_fact_id) !== acceptanceRow.fact_id) throw new Error("FIELD_MEMORY_RECORD_ACCEPTANCE_MISMATCH");
   if (!policyRefs(recordPayload).includes("FIELD_MEMORY_RECORD_GATE_CONTRACT_V0")) throw new Error("FIELD_MEMORY_RECORD_POLICY_REF_MISSING");
   if (text(recordPayload.record_scope) === "review_only_no_runtime_use") throw new Error("FIELD_MEMORY_RECORD_REVIEW_ONLY_SCOPE_BLOCKED");
   if (text(recordPayload.record_scope) !== "same_field_only") throw new Error("FIELD_MEMORY_RECORD_SCOPE_NOT_SAME_FIELD_ONLY");
@@ -282,8 +289,8 @@ export async function requireFormalFieldMemoryPromotionAuthorityV1(
 
   if (text(candidatePayload.field_memory_candidate_id) !== candidateId) throw new Error("FIELD_MEMORY_CANDIDATE_ID_MISMATCH");
   if (text(candidatePayload.candidate_state) !== "CANDIDATE_RECORDED") throw new Error("FIELD_MEMORY_CANDIDATE_NOT_RECORDED");
-  requireSameOperationAndTask(candidatePayload, input.operation_plan_id, input.act_task_id, "FIELD_MEMORY_CANDIDATE");
-  if (!matchesAcceptanceRef(candidatePayload, input.acceptance_fact_id, input.acceptance_id)) throw new Error("FIELD_MEMORY_CANDIDATE_ACCEPTANCE_MISMATCH");
+  requireSameOperationAndTask(candidatePayload, input.operation_plan_id, actTaskId, "FIELD_MEMORY_CANDIDATE");
+  if (text(candidatePayload.acceptance_result_fact_id) !== acceptanceRow.fact_id) throw new Error("FIELD_MEMORY_CANDIDATE_ACCEPTANCE_MISMATCH");
   if (!policyRefs(candidatePayload).includes("FIELD_MEMORY_CANDIDATE_GATE_CONTRACT_V0")) throw new Error("FIELD_MEMORY_CANDIDATE_POLICY_REF_MISSING");
 
   const roiLedgerFactId = text(candidatePayload.roi_ledger_fact_id);
@@ -295,7 +302,7 @@ export async function requireFormalFieldMemoryPromotionAuthorityV1(
     ["ROI_LEDGER", text(recordPayload.roi_ledger_fact_id), roiLedgerFactId],
     ["ROI_BOUNDARY", text(recordPayload.roi_boundary_fact_id), roiBoundaryFactId],
     ["OUTCOME_REVIEW", text(recordPayload.outcome_review_fact_id), outcomeReviewFactId],
-    ["ACCEPTANCE", text(recordPayload.acceptance_result_fact_id), input.acceptance_fact_id],
+    ["ACCEPTANCE", text(recordPayload.acceptance_result_fact_id), acceptanceRow.fact_id],
   ] as const) {
     if (!recordRef || recordRef !== candidateRef) throw new Error(`FIELD_MEMORY_RECORD_CANDIDATE_${label}_CHAIN_MISMATCH`);
   }
@@ -303,8 +310,8 @@ export async function requireFormalFieldMemoryPromotionAuthorityV1(
   const outcomeRow = await loadExactFact(db, tenant, "outcome_review_v1", outcomeReviewFactId);
   if (!outcomeRow) throw new Error("FIELD_MEMORY_OUTCOME_REVIEW_NOT_FOUND");
   const outcomePayload = payloadOf(outcomeRow);
-  requireSameOperationAndTask(outcomePayload, input.operation_plan_id, input.act_task_id, "FIELD_MEMORY_OUTCOME_REVIEW");
-  if (!matchesAcceptanceRef(outcomePayload, input.acceptance_fact_id, input.acceptance_id)) throw new Error("FIELD_MEMORY_OUTCOME_REVIEW_ACCEPTANCE_MISMATCH");
+  requireSameOperationAndTask(outcomePayload, input.operation_plan_id, actTaskId, "FIELD_MEMORY_OUTCOME_REVIEW");
+  if (text(outcomePayload.acceptance_result_fact_id) !== acceptanceRow.fact_id) throw new Error("FIELD_MEMORY_OUTCOME_REVIEW_ACCEPTANCE_MISMATCH");
   if (text(outcomePayload.review_state) !== "REVIEWED") throw new Error("FIELD_MEMORY_OUTCOME_REVIEW_NOT_REVIEWED");
   if (text(outcomePayload.source_verdict).toUpperCase() !== "PASS") throw new Error("FIELD_MEMORY_OUTCOME_REVIEW_SOURCE_VERDICT_NOT_PASS");
   if (outcomePayload.formal_acceptance !== true) throw new Error("FIELD_MEMORY_OUTCOME_REVIEW_ACCEPTANCE_NOT_FORMAL");
@@ -316,8 +323,8 @@ export async function requireFormalFieldMemoryPromotionAuthorityV1(
   const roiBoundaryRow = await loadExactFact(db, tenant, "roi_boundary_v1", roiBoundaryFactId);
   if (!roiBoundaryRow) throw new Error("FIELD_MEMORY_ROI_BOUNDARY_NOT_FOUND");
   const roiBoundaryPayload = payloadOf(roiBoundaryRow);
-  requireSameOperationAndTask(roiBoundaryPayload, input.operation_plan_id, input.act_task_id, "FIELD_MEMORY_ROI_BOUNDARY");
-  if (!matchesAcceptanceRef(roiBoundaryPayload, input.acceptance_fact_id, input.acceptance_id)) throw new Error("FIELD_MEMORY_ROI_BOUNDARY_ACCEPTANCE_MISMATCH");
+  requireSameOperationAndTask(roiBoundaryPayload, input.operation_plan_id, actTaskId, "FIELD_MEMORY_ROI_BOUNDARY");
+  if (text(roiBoundaryPayload.acceptance_result_fact_id) !== acceptanceRow.fact_id) throw new Error("FIELD_MEMORY_ROI_BOUNDARY_ACCEPTANCE_MISMATCH");
   if (text(roiBoundaryPayload.outcome_review_fact_id) !== outcomeReviewFactId) throw new Error("FIELD_MEMORY_ROI_BOUNDARY_OUTCOME_REVIEW_MISMATCH");
   if (roiBoundaryPayload.roi_review_eligible !== true) throw new Error("FIELD_MEMORY_ROI_BOUNDARY_NOT_REVIEW_ELIGIBLE");
   if (text(roiBoundaryPayload.required_future_roi_gate) !== "P28") throw new Error("FIELD_MEMORY_ROI_BOUNDARY_P28_GATE_MISSING");
@@ -326,8 +333,8 @@ export async function requireFormalFieldMemoryPromotionAuthorityV1(
   const roiLedgerRow = await loadExactFact(db, tenant, "roi_ledger_v1", roiLedgerFactId);
   if (!roiLedgerRow) throw new Error("FIELD_MEMORY_ROI_LEDGER_NOT_FOUND");
   const roiLedgerPayload = payloadOf(roiLedgerRow);
-  requireSameOperationAndTask(roiLedgerPayload, input.operation_plan_id, input.act_task_id, "FIELD_MEMORY_ROI_LEDGER");
-  if (!matchesAcceptanceRef(roiLedgerPayload, input.acceptance_fact_id, input.acceptance_id)) throw new Error("FIELD_MEMORY_ROI_LEDGER_ACCEPTANCE_MISMATCH");
+  requireSameOperationAndTask(roiLedgerPayload, input.operation_plan_id, actTaskId, "FIELD_MEMORY_ROI_LEDGER");
+  if (text(roiLedgerPayload.acceptance_result_fact_id) !== acceptanceRow.fact_id) throw new Error("FIELD_MEMORY_ROI_LEDGER_ACCEPTANCE_MISMATCH");
   if (text(roiLedgerPayload.outcome_review_fact_id) !== outcomeReviewFactId) throw new Error("FIELD_MEMORY_ROI_LEDGER_OUTCOME_REVIEW_MISMATCH");
   if (text(roiLedgerPayload.roi_boundary_fact_id) !== roiBoundaryFactId) throw new Error("FIELD_MEMORY_ROI_LEDGER_BOUNDARY_MISMATCH");
   if (text(roiLedgerPayload.ledger_state) !== "RECORDED") throw new Error("FIELD_MEMORY_ROI_LEDGER_NOT_RECORDED");
@@ -374,6 +381,11 @@ export async function requireFormalFieldMemoryPromotionAuthorityV1(
   if (text(reuseBoundary.scope) !== "same_field_only") throw new Error("FIELD_MEMORY_RECORD_REUSE_BOUNDARY_SCOPE_MISMATCH");
 
   return {
+    acceptance_fact_id: acceptanceRow.fact_id,
+    acceptance_payload: acceptancePayload,
+    acceptance_occurred_at: acceptanceRow.occurred_at == null ? null : String(acceptanceRow.occurred_at),
+    act_task_id: actTaskId,
+    field_id: fieldId,
     field_memory_record_fact_id: recordRow.fact_id,
     field_memory_record_id: text(recordPayload.field_memory_record_id) || recordRow.fact_id,
     field_memory_candidate_fact_id: candidateRow.fact_id,
