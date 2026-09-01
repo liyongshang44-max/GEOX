@@ -1,9 +1,9 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_target_planner_readiness_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1",
-  "status": "FOUNDATION_BLOCKED_NOT_BINDABLE",
+  "status": "HOST_NOT_DUE_FOUNDATION_IMPLEMENTED_REMAINING_BLOCKERS",
   "stage": "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START",
-  "subject_predecessor_sha": "e9a5d7ecd4cf46dcf76165cf90fd0ba0b3ccb931",
+  "subject_predecessor_sha": "852ae1d222379865414fd94bcabcd8faa54e3b91",
   "host_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
   "production_process_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
   "production_composition_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
@@ -60,10 +60,12 @@
     }
   },
   "host_lifecycle_gap": {
-    "current_null_semantics": "PLANNER_EXHAUSTED_AND_PROCESS_STOP",
+    "current_null_semantics": "PLANNER_EXHAUSTED_AND_PROCESS_STOP_FOR_FINITE_QUALIFICATION",
     "current_empty_work_items_semantics": "FATAL_FORBIDDEN",
-    "required_long_running_semantics": "NOT_DUE_WAIT_WITHOUT_PROCESS_EXIT_OR_PROVIDER_REQUEST",
-    "current_shape_bindable": false
+    "long_running_not_due_semantics": "NON_TERMINAL_WAIT_WITHOUT_CYCLE_DATABASE_OR_PROVIDER_EXECUTION",
+    "not_due_wait_implemented": true,
+    "not_due_wait_reason": "PLANNER_NOT_DUE",
+    "production_planner_still_bindable": false
   },
   "bootstrap_authority_gap": {
     "production_acquisition_start_or_bounded_backfill_horizon_established": false,
@@ -75,18 +77,21 @@
     "PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_AUTHORITY_NOT_ESTABLISHED",
     "KBS_DAILY_BATCH_SINGLE_FETCH_MULTI_INTERVAL_PATH_NOT_IMPLEMENTED",
     "GFS_CROSS_CYCLE_PAIR_PROGRESS_READ_PORT_NOT_IMPLEMENTED",
-    "EVIDENCE_HOST_NOT_DUE_WAIT_STATE_NOT_IMPLEMENTED",
     "KBS_SOIL_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED",
     "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"
   ],
   "implementation_order": [
-    "ADD_NON_TERMINAL_NOT_DUE_HOST_STATE",
     "ADD_READ_ONLY_SOURCE_SPECIFIC_PROGRESS_PORTS",
     "ADD_KBS_SINGLE_FETCH_MULTI_INTERVAL_PRODUCT_PATH",
     "ESTABLISH_EXPLICIT_BOOTSTRAP_AND_BACKFILL_HORIZON_AUTHORITY",
     "IMPLEMENT_PURE_SOURCE_SPECIFIC_PLANNER",
     "PROVE_RESTART_PAIR_SKEW_BATCH_REUSE_AND_ZERO_DUE_PROVIDER_REQUEST",
     "BIND_COMPILED_ENTRYPOINT_UNDER_SEPARATE_RUNTIME_START_AUTHORITY"
+  ],
+  "implemented_foundation": [
+    "NON_TERMINAL_NOT_DUE_HOST_STATE",
+    "NOT_DUE_SKIPS_CYCLE_DATABASE_PROVIDER_AND_WORK_ITEM_FACTORY",
+    "NOT_DUE_USES_BOUNDED_PRODUCTION_WAIT_PORT"
   ],
   "current_entrypoint": {
     "status": "PACKAGED_FAIL_CLOSED_TARGET_PLANNER_UNBOUND",

@@ -122,13 +122,14 @@ implements EvidenceRuntimeHostWaitPortV1 {
   }
 
   async waitAfterAttempt(input: {
-    reason: "SUCCESS_CADENCE" | "LEASE_STANDBY" | "RETRY_BACKOFF";
+    reason: "SUCCESS_CADENCE" | "PLANNER_NOT_DUE" | "LEASE_STANDBY" | "RETRY_BACKOFF";
     cycle_attempt: number;
     consecutive_failure_count: number;
   }): Promise<void> {
     let waitMs: number;
     switch (input.reason) {
       case "SUCCESS_CADENCE":
+      case "PLANNER_NOT_DUE":
         waitMs = this.successCadenceMs;
         break;
       case "LEASE_STANDBY":

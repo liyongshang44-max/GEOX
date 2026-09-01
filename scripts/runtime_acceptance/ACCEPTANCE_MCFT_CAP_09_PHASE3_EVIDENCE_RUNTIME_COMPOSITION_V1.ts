@@ -208,6 +208,44 @@ async function main(): Promise<void> {
   assert.equal(injectedFactoryCalls, 1);
   assert.equal(databaseCalls, 0);
 
+  let notDueStopped = false;
+  let notDueFactoryCalls = 0;
+  const notDueComposition = composeEvidenceRuntimeV1({
+    pool: fakePool,
+    scope: {
+      tenant_id: "tenantA", project_id: "projectA", group_id: "groupA",
+      field_id: "field_e3r1", season_id: "season_2026", zone_id: "zone_root",
+    },
+    raw_retention: {
+      endpoint: "https://s3.example.invalid", bucket: "phase3-evidence-private",
+      region: "us-test-1", access_key_id: "qualification-access",
+      secret_access_key: "qualification-secret", clock: () => new Date(REQUESTED),
+    },
+    target_planner: { async nextTarget() { return { status: "NOT_DUE" as const }; } },
+    wait: { async waitAfterAttempt(input) { assert.equal(input.reason, "PLANNER_NOT_DUE"); notDueStopped = true; } },
+    health: { async recordHealth() {} },
+    stop: { stopRequested: () => notDueStopped },
+    failure_classifier: { classify: () => "FATAL" },
+    completion_clock: () => REQUESTED,
+    work_item_factory: {
+      factory_id: "MCFT_CAP09_NOT_DUE_FACTORY_MUST_REMAIN_IDLE",
+      buildForTarget() { notDueFactoryCalls += 1; return []; },
+    },
+  });
+  const notDueResult = await notDueComposition.host.run({
+    scope: {
+      tenant_id: "tenantA", project_id: "projectA", group_id: "groupA",
+      field_id: "field_e3r1", season_id: "season_2026", zone_id: "zone_root",
+    },
+    lease_owner: "phase3-not-due-test",
+    lease_duration_seconds: 300,
+  });
+  assert.equal(notDueResult.stop_reason, "STOP_REQUESTED");
+  assert.equal(notDueResult.cycle_attempt_count, 0);
+  assert.equal(notDueResult.not_due_wait_count, 1);
+  assert.equal(notDueFactoryCalls, 0);
+  assert.equal(databaseCalls, 0);
+
   assert.throws(
     () => composeEvidenceRuntimeV1({
       pool: fakePool,
@@ -269,6 +307,7 @@ async function main(): Promise<void> {
     injected_work_item_factory_calls: injectedFactoryCalls,
     work_item_factory_and_config_mutually_exclusive: true,
     same_canonical_cycle_service_path: true,
+    planner_not_due_skips_work_item_factory_database_and_provider: true,
     production_activation: false,
     runtime_tick_cursor_mutation: false,
     twin_state_mutation: false,

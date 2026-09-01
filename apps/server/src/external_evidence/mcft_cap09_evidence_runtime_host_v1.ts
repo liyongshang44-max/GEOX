@@ -27,6 +27,7 @@ export type EvidenceRuntimeHostHealthEventV1 = {
     | "HOST_START"
     | "CYCLE_COMPLETED"
     | "LEASE_HELD_BY_OTHER_OWNER"
+    | "PLANNER_NOT_DUE"
     | "RETRYABLE_CYCLE_FAILURE"
     | "FATAL_CYCLE_FAILURE"
     | "STOP_REQUESTED"
@@ -39,12 +40,16 @@ export interface EvidenceRuntimeHostPlannerV1 {
     successful_cycle_count: number;
     consecutive_failure_count: number;
     previous_result: ExecuteEvidenceRuntimeCycleResultV1 | null;
-  }): Promise<readonly EvidenceRuntimeCycleWorkItemV1[] | null>;
+  }): Promise<readonly EvidenceRuntimeCycleWorkItemV1[] | EvidenceRuntimeHostNotDueV1 | null>;
 }
+
+export type EvidenceRuntimeHostNotDueV1 = {
+  status: "NOT_DUE";
+};
 
 export interface EvidenceRuntimeHostWaitPortV1 {
   waitAfterAttempt(input: {
-    reason: "SUCCESS_CADENCE" | "LEASE_STANDBY" | "RETRY_BACKOFF";
+    reason: "SUCCESS_CADENCE" | "PLANNER_NOT_DUE" | "LEASE_STANDBY" | "RETRY_BACKOFF";
     cycle_attempt: number;
     consecutive_failure_count: number;
   }): Promise<void>;
@@ -75,12 +80,19 @@ export type RunEvidenceRuntimeHostResultV1 = {
   cycle_attempt_count: number;
   successful_cycle_count: number;
   standby_cycle_count: number;
+  not_due_wait_count: number;
   retryable_failure_count: number;
   last_cycle_result: ExecuteEvidenceRuntimeCycleResultV1 | null;
   durable_restart_checkpoint: "EVIDENCE_SUPPLY_CURSOR";
   runtime_tick_cursor_mutation: false;
   twin_state_mutation: false;
 };
+
+function isNotDuePlanV1(
+  value: readonly EvidenceRuntimeCycleWorkItemV1[] | EvidenceRuntimeHostNotDueV1,
+): value is EvidenceRuntimeHostNotDueV1 {
+  return !Array.isArray(value);
+}
 
 export class EvidenceRuntimeHostV1 {
   readonly host_id = MCFT_CAP09_EVIDENCE_RUNTIME_HOST_ID_V1;
@@ -102,6 +114,7 @@ export class EvidenceRuntimeHostV1 {
     let cycleAttempt = 0;
     let successfulCycles = 0;
     let standbyCycles = 0;
+    let notDueWaits = 0;
     let retryableFailures = 0;
     let consecutiveFailures = 0;
     let previousResult: ExecuteEvidenceRuntimeCycleResultV1 | null = null;
@@ -130,6 +143,7 @@ export class EvidenceRuntimeHostV1 {
           cycle_attempt_count: cycleAttempt,
           successful_cycle_count: successfulCycles,
           standby_cycle_count: standbyCycles,
+          not_due_wait_count: notDueWaits,
           retryable_failure_count: retryableFailures,
           last_cycle_result: previousResult,
           durable_restart_checkpoint: "EVIDENCE_SUPPLY_CURSOR",
@@ -159,12 +173,33 @@ export class EvidenceRuntimeHostV1 {
           cycle_attempt_count: cycleAttempt,
           successful_cycle_count: successfulCycles,
           standby_cycle_count: standbyCycles,
+          not_due_wait_count: notDueWaits,
           retryable_failure_count: retryableFailures,
           last_cycle_result: previousResult,
           durable_restart_checkpoint: "EVIDENCE_SUPPLY_CURSOR",
           runtime_tick_cursor_mutation: false,
           twin_state_mutation: false,
         };
+      }
+      if (isNotDuePlanV1(workItems)) {
+        if (workItems.status !== "NOT_DUE" || Object.keys(workItems).length !== 1) {
+          throw new Error("PHASE3_EVIDENCE_HOST_PLANNER_STATE_INVALID");
+        }
+        notDueWaits += 1;
+        consecutiveFailures = 0;
+        await this.healthV1({
+          status: "STANDBY",
+          cycle_attempt: cycleAttempt,
+          successful_cycle_count: successfulCycles,
+          consecutive_failure_count: consecutiveFailures,
+          detail: "PLANNER_NOT_DUE",
+        });
+        await this.deps.wait.waitAfterAttempt({
+          reason: "PLANNER_NOT_DUE",
+          cycle_attempt: cycleAttempt,
+          consecutive_failure_count: consecutiveFailures,
+        });
+        continue;
       }
       if (!Array.isArray(workItems) || workItems.length === 0) {
         throw new Error("PHASE3_EVIDENCE_HOST_PLANNER_EMPTY_WORK_ITEMS_FORBIDDEN");

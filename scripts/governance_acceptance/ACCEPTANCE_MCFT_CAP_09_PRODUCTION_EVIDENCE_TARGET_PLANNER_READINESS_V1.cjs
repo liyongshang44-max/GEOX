@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "FOUNDATION_BLOCKED_NOT_BINDABLE");
+  assert.equal(authority.status, "HOST_NOT_DUE_FOUNDATION_IMPLEMENTED_REMAINING_BLOCKERS");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "e9a5d7ecd4cf46dcf76165cf90fd0ba0b3ccb931");
+  assert.equal(authority.subject_predecessor_sha, "852ae1d222379865414fd94bcabcd8faa54e3b91");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -46,7 +46,8 @@ try {
   const host = read(authority.host_lifecycle_ref);
   includes(host, '"PLANNER_EXHAUSTED"', "EVIDENCE_HOST_NULL_TERMINAL_STATE_REQUIRED");
   includes(host, "PHASE3_EVIDENCE_HOST_PLANNER_EMPTY_WORK_ITEMS_FORBIDDEN", "EVIDENCE_HOST_EMPTY_WORK_FATAL_REQUIRED");
-  assert.equal(host.includes("NOT_DUE"), false, "EVIDENCE_HOST_NOT_DUE_MUST_REMAIN_UNIMPLEMENTED");
+  includes(host, 'status: "NOT_DUE"', "EVIDENCE_HOST_NOT_DUE_STATE_REQUIRED");
+  includes(host, 'reason: "PLANNER_NOT_DUE"', "EVIDENCE_HOST_NOT_DUE_WAIT_REQUIRED");
 
   const fixture = read("apps/server/src/external_evidence/qualification/mcft_cap09_phase5_evidence_runtime_qualification_v1.ts");
   includes(fixture, "createTargetPlanner(input?", "PHASE5_MANIFEST_PLANNER_REQUIRED");
@@ -64,7 +65,6 @@ try {
     "PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_AUTHORITY_NOT_ESTABLISHED",
     "KBS_DAILY_BATCH_SINGLE_FETCH_MULTI_INTERVAL_PATH_NOT_IMPLEMENTED",
     "GFS_CROSS_CYCLE_PAIR_PROGRESS_READ_PORT_NOT_IMPLEMENTED",
-    "EVIDENCE_HOST_NOT_DUE_WAIT_STATE_NOT_IMPLEMENTED",
     "KBS_SOIL_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED",
     "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
   ]);
@@ -74,6 +74,8 @@ try {
   assert.equal(authority.adjudication.runtime_tick_cursor_may_drive_evidence_acquisition, false);
   assert.equal(authority.current_entrypoint.binding_authorized, false);
   assert.equal(authority.current_entrypoint.failure_code, "MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND");
+  assert.equal(authority.host_lifecycle_gap.not_due_wait_implemented, true);
+  assert.equal(authority.host_lifecycle_gap.production_planner_still_bindable, false);
 
   for (const [key, expected] of Object.entries({
     runtime_secret_read: false,
@@ -93,11 +95,12 @@ try {
     status: "PASS",
     subject_sha: subject,
     authority_status: authority.status,
-    current_frontier: "SOURCE_SPECIFIC_PLANNER_FOUNDATION_REQUIRED",
+    current_frontier: "SOURCE_SPECIFIC_PROGRESS_PORTS_REQUIRED",
     unconditional_blockers: authority.unconditional_blockers,
     static_machine_admission: "PASS_PARENT_SUBJECT",
     production_target_planner_bound: false,
     compiled_entrypoint_fail_closed: true,
+    planner_not_due_wait_implemented: true,
     database_connection_attempted: false,
     provider_request_count: 0,
     runtime_process_start: false,

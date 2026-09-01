@@ -142,6 +142,7 @@ async function main(): Promise<void> {
   assert.equal(result.cycle_attempt_count, 3);
   assert.equal(result.successful_cycle_count, 1);
   assert.equal(result.standby_cycle_count, 1);
+  assert.equal(result.not_due_wait_count, 0);
   assert.equal(result.retryable_failure_count, 1);
   assert.equal(result.durable_restart_checkpoint, "EVIDENCE_SUPPLY_CURSOR");
   assert.deepEqual(waits, ["RETRY_BACKOFF", "LEASE_STANDBY", "SUCCESS_CADENCE"]);
@@ -191,6 +192,43 @@ async function main(): Promise<void> {
   assert.equal(stopped.stop_reason, "STOP_REQUESTED");
   assert.equal(plannerCalls, 0);
 
+  let notDueStopped = false;
+  let notDueCycleCalls = 0;
+  const notDueHealth: EvidenceRuntimeHostHealthEventV1[] = [];
+  const notDueWaits: string[] = [];
+  const notDueHost = new EvidenceRuntimeHostV1({
+    cycle_service: {
+      async executeCycle() {
+        notDueCycleCalls += 1;
+        throw new Error("PHASE3_HOST_NOT_DUE_CYCLE_MUST_NOT_EXECUTE");
+      },
+    },
+    planner: { async nextWorkItems() { return { status: "NOT_DUE" as const }; } },
+    wait: {
+      async waitAfterAttempt(input) {
+        notDueWaits.push(input.reason);
+        notDueStopped = true;
+      },
+    },
+    health: { async recordHealth(event) { notDueHealth.push(structuredClone(event)); } },
+    stop: { stopRequested: () => notDueStopped },
+    failure_classifier: { classify: () => "FATAL" },
+  });
+  const notDueResult = await notDueHost.run({
+    scope: SCOPE,
+    lease_owner: "host-not-due",
+    lease_duration_seconds: 300,
+  });
+  assert.equal(notDueResult.stop_reason, "STOP_REQUESTED");
+  assert.equal(notDueResult.cycle_attempt_count, 0);
+  assert.equal(notDueResult.not_due_wait_count, 1);
+  assert.equal(notDueCycleCalls, 0);
+  assert.deepEqual(notDueWaits, ["PLANNER_NOT_DUE"]);
+  assert.deepEqual(
+    notDueHealth.map((event) => [event.status, event.detail]),
+    [["STARTING", "HOST_START"], ["STANDBY", "PLANNER_NOT_DUE"], ["STOPPING", "STOP_REQUESTED"]],
+  );
+
   const source = fs.readFileSync(
     path.resolve("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts"),
     "utf8",
@@ -220,6 +258,7 @@ async function main(): Promise<void> {
     successful_cycle_waited_for_cadence: true,
     fatal_failure_fail_closed: true,
     immediate_stop_skips_planner_and_cycle: true,
+    planner_not_due_waits_without_cycle_or_provider: true,
     durable_restart_checkpoint: result.durable_restart_checkpoint,
     host_processes_evidence_only_via_cycle_service: true,
     provider_direct_call_from_host: false,

@@ -55,13 +55,17 @@ export type EvidenceRuntimeAcquisitionTargetV1 = {
   restored_ingested_at?: string;
 };
 
+export type EvidenceRuntimeAcquisitionNotDueV1 = {
+  status: "NOT_DUE";
+};
+
 export interface EvidenceRuntimeAcquisitionTargetPlannerV1 {
   nextTarget(input: {
     cycle_attempt: number;
     successful_cycle_count: number;
     consecutive_failure_count: number;
     previous_result: ExecuteEvidenceRuntimeCycleResultV1 | null;
-  }): Promise<EvidenceRuntimeAcquisitionTargetV1 | null>;
+  }): Promise<EvidenceRuntimeAcquisitionTargetV1 | EvidenceRuntimeAcquisitionNotDueV1 | null>;
 }
 
 export interface EvidenceRuntimeWorkItemFactoryV1 {
@@ -128,6 +132,12 @@ export function composeEvidenceRuntimeV1(input: {
     async nextWorkItems(state) {
       const target = await input.target_planner.nextTarget(state);
       if (target === null) return null;
+      if ("status" in target) {
+        if (target.status !== "NOT_DUE" || Object.keys(target).length !== 1) {
+          throw new Error("PHASE3_EVIDENCE_RUNTIME_TARGET_PLANNER_STATE_INVALID");
+        }
+        return target;
+      }
       return workItemFactory.buildForTarget(target);
     },
   };
