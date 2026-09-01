@@ -475,7 +475,7 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
   const before_value = num((metrics as any).before_soil_moisture ?? (metrics as any).before_value);
   const after_value = num((metrics as any).after_soil_moisture ?? (metrics as any).after_value);
   const delta_value = num((metrics as any).soil_moisture_delta ?? (after_value != null && before_value != null ? after_value - before_value : undefined));
-  const confidence = num((metrics as any).confidence) ?? 0.8;
+  const confidence = num((metrics as any).confidence) ?? null;
   const skill_refs = Array.isArray(input.skill_refs) ? input.skill_refs : [];
   const firstSkillRef = skill_refs.find((x: any) => String(x?.skill_id ?? "").trim());
   const skill_id = String(input.skill_id ?? "").trim() || String(firstSkillRef?.skill_id ?? "").trim() || undefined;
@@ -485,6 +485,14 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
   const summary_text = input.summary?.trim() || `Field memory recorded: ${memory_type}`;
   const occurred_at = new Date().toISOString();
   const trust = classifyMemoryLaneV1(memory_type, input);
+  const projectId = textOrNull(input.project_id);
+  const groupId = textOrNull(input.group_id);
+  if (trust.memory_lane === "FORMAL_FIELD_MEMORY") {
+    if (!projectId || !groupId) throw new Error("FORMAL_FIELD_MEMORY_SCOPE_REQUIRED");
+    if (memory_type === "FIELD_RESPONSE_MEMORY" && (before_value == null || after_value == null)) {
+      throw new Error("FORMAL_FIELD_RESPONSE_OBSERVATION_PAIR_REQUIRED");
+    }
+  }
   const source_type = String(input.source_type ?? "").trim() || sourceTypeForMemory(memory_type);
   const source_id = String(input.source_id ?? "").trim() || trust.formal_acceptance_id || input.operation_id || skill_trace_ref || memory_id;
 
@@ -505,7 +513,7 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
       $39
     )`,
     [
-      memory_id, tenant_id, input.project_id ?? "projectA", input.group_id ?? "groupA", input.field_id, input.season_id ?? null, null,
+      memory_id, tenant_id, projectId ?? "projectA", groupId ?? "groupA", input.field_id, input.season_id ?? null, null,
       memory_type, metric_key, metric_value ?? null, null, before_value ?? null, after_value ?? null, null, delta_value ?? null,
       JSON.stringify((metrics as any).target_range ?? null), confidence, source_type,
       source_id, input.operation_id ?? null, input.recommendation_id ?? null,
@@ -518,7 +526,7 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
   );
 
   return {
-    memory_id, tenant_id, project_id: input.project_id ?? "projectA", group_id: input.group_id ?? "groupA", field_id: input.field_id, season_id: input.season_id, memory_type,
+    memory_id, tenant_id, project_id: projectId ?? "projectA", group_id: groupId ?? "groupA", field_id: input.field_id, season_id: input.season_id, memory_type,
     metric_key, metric_value, before_value, after_value, delta_value, confidence,
     source_type, source_id,
     operation_id: input.operation_id, recommendation_id: input.recommendation_id, prescription_id: input.prescription_id,
