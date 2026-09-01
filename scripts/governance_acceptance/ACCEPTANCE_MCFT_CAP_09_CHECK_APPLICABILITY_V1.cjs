@@ -211,6 +211,10 @@ function main() {
     "apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_snapshot_v1.ts",
     "apps/server/src/external_evidence/kbs_raw_hourly_publication_baseline_store_v1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_V1.ts",
+    "apps/server/db/migrations/2026_09_01_mcft_cap_09_kbs_publication_baseline_pointer.sql",
+    "apps/server/src/external_evidence/mcft_cap09_kbs_publication_baseline_pointer_v1.ts",
+    "apps/server/src/persistence/external_evidence/postgres_kbs_publication_baseline_pointer_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1.ts",
   ]) {
     const horizonPlanner = plan(authority, registry, [horizonPlannerPath]);
     assert.equal(horizonPlanner.status, "PASS");
@@ -242,6 +246,23 @@ function main() {
   assert.equal(kbsPublicationProof.status, "PASS");
   assert.equal(kbsPublicationProof.unknown_changed_paths.length, 0);
   assert.equal(byId(kbsPublicationProof, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+
+  // CP-4: KBS publication baseline pointer schema/contract/repository are Phase3-owned.
+  for (const kbsBaselinePointerRuntimePath of [
+    "apps/server/db/migrations/2026_09_01_mcft_cap_09_kbs_publication_baseline_pointer.sql",
+    "apps/server/src/external_evidence/mcft_cap09_kbs_publication_baseline_pointer_v1.ts",
+    "apps/server/src/persistence/external_evidence/postgres_kbs_publication_baseline_pointer_v1.ts",
+  ]) {
+    const result = plan(authority, registry, [kbsBaselinePointerRuntimePath]);
+    assert.equal(result.status, "PASS");
+    assert.equal(result.unknown_changed_paths.length, 0);
+    assert.equal(byId(result, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert(byId(result, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes(kbsBaselinePointerRuntimePath));
+  }
+  const kbsBaselinePointerProof = plan(authority, registry, ["scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1.ts"]);
+  assert.equal(kbsBaselinePointerProof.status, "PASS");
+  assert.equal(kbsBaselinePointerProof.unknown_changed_paths.length, 0);
+  assert.equal(byId(kbsBaselinePointerProof, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
 
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";

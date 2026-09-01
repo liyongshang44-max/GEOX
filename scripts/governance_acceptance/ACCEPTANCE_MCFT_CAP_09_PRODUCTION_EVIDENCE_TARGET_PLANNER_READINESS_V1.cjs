@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "KBS_BASELINE_MANIFEST_AND_DIFF_CORE_IMPLEMENTED_REMAINING_POINTER_ADAPTER_BLOCKERS");
+  assert.equal(authority.status, "KBS_FENCED_BASELINE_POINTER_IMPLEMENTED_ISOLATED_PRODUCTION_SCHEMA_NOT_MATERIALIZED");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "da98afdf72877b918176b429410a5b3de06e0b9b");
+  assert.equal(authority.subject_predecessor_sha, "95dfa68fc801a327ae286901e5d5705a612b6859");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -94,6 +94,20 @@ try {
   includes(kbsBaselineStore, "PRIVATE_KBS_RAW_HOURLY_PUBLICATION_BASELINE", "KBS_PRIVATE_BASELINE_OBJECT_CLASS_REQUIRED");
   includes(kbsBaselineStore, "current_pointer_bound: false", "KBS_BASELINE_POINTER_MUST_REMAIN_UNBOUND");
   assert.equal(kbsBaselineStore.includes("INSERT INTO"), false, "KBS_BASELINE_STORE_DATABASE_WRITE_FORBIDDEN");
+  const kbsBaselinePointerContract = read(authority.kbs_publication_baseline_pointer_contract_ref);
+  includes(kbsBaselinePointerContract, "KbsRawHourlyPublicationBaselinePointerPortV1", "KBS_BASELINE_POINTER_CONTRACT_REQUIRED");
+  includes(kbsBaselinePointerContract, "expected_previous_digest", "KBS_BASELINE_POINTER_PREDECESSOR_CAS_REQUIRED");
+  const kbsBaselinePointerRepo = read(authority.kbs_publication_baseline_pointer_repository_ref);
+  includes(kbsBaselinePointerRepo, "KBS_BASELINE_POINTER_STALE_FENCE", "KBS_BASELINE_POINTER_STALE_FENCE_REQUIRED");
+  includes(kbsBaselinePointerRepo, "KBS_BASELINE_POINTER_EXPECTED_PREDECESSOR_MISMATCH", "KBS_BASELINE_POINTER_CAS_REQUIRED");
+  includes(kbsBaselinePointerRepo, "KBS_BASELINE_POINTER_LATEST_EVENT_MUST_STRICTLY_ADVANCE", "KBS_BASELINE_POINTER_MONOTONE_LATEST_REQUIRED");
+  includes(kbsBaselinePointerRepo, "kbs_raw_hourly_baseline_writer_fencing_token", "KBS_BASELINE_POINTER_WRITER_FENCE_REQUIRED");
+  assert.equal(kbsBaselinePointerRepo.includes("RuntimeTickCursor"), true, "KBS_BASELINE_POINTER_BOUNDARY_COMMENT_REQUIRED");
+  assert.equal(kbsBaselinePointerRepo.includes("fetch("), false, "KBS_BASELINE_POINTER_PROVIDER_FETCH_FORBIDDEN");
+  const kbsBaselinePointerMigration = read(authority.kbs_publication_baseline_pointer_migration_ref);
+  includes(kbsBaselinePointerMigration, "ALTER TABLE public.external_evidence_producer_lease_v1", "KBS_BASELINE_POINTER_LEASE_EXTENSION_REQUIRED");
+  assert.equal(kbsBaselinePointerMigration.includes("CREATE TABLE"), false, "KBS_BASELINE_POINTER_NEW_TABLE_FORBIDDEN");
+
   const purePlanner = read(authority.pure_source_planner_ref);
   includes(purePlanner, "planProductionEvidenceSourcesV1", "PURE_SOURCE_SPECIFIC_PLANNER_REQUIRED");
   includes(purePlanner, "KBS_RAW_HOURLY_PUBLICATION_BASELINE_REQUIRED", "KBS_PUBLICATION_BASELINE_PLAN_REQUIRED");
@@ -126,7 +140,7 @@ try {
 
   assert.deepEqual(authority.unconditional_blockers, [
     "KBS_RAW_HOURLY_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED",
-    "KBS_RAW_HOURLY_DURABLE_BASELINE_POINTER_NOT_IMPLEMENTED",
+    "KBS_RAW_HOURLY_PRODUCTION_BASELINE_POINTER_SCHEMA_NOT_MATERIALIZED",
     "KBS_RAW_HOURLY_PUBLICATION_DIFF_NO_CHANGE_ADAPTER_NOT_IMPLEMENTED",
     "KBS_RAW_HOURLY_PAIR_SKEW_REPAIR_NOT_IMPLEMENTED",
     "GFS_PARTIAL_PAIR_PRODUCTION_REHYDRATION_ADAPTER_NOT_IMPLEMENTED",
@@ -149,7 +163,12 @@ try {
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.no_change_discovery_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.content_addressed_private_baseline_manifest_store_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.baseline_manifest_idempotent_readback_implemented, true);
-  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.durable_baseline_current_pointer_implemented, false);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.durable_baseline_current_pointer_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.fenced_baseline_pointer_compare_and_set_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.baseline_pointer_preserves_writer_identity_across_takeover, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.baseline_pointer_restart_readback_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_baseline_pointer_schema_materialized, false);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_durable_baseline_available, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.durable_publication_baseline_implemented, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.publication_diff_no_change_adapter_implemented, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.fixed_latest_24_rows_bootstrap_authorized, false);
@@ -184,7 +203,8 @@ try {
     status: "PASS",
     subject_sha: subject,
     authority_status: authority.status,
-    current_frontier: "KBS_FENCED_BASELINE_POINTER_REQUIRED",
+    current_frontier: "PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_MATERIALIZATION_REQUIRED",
+    kbs_fenced_baseline_pointer_implemented_isolated: true,
     kbs_content_addressed_baseline_manifest_store_implemented: true,
     kbs_forward_delta_no_change_discovery_implemented: true,
     kbs_complete_table_bootstrap_corrected: true,

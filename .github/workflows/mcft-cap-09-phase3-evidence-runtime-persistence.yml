@@ -7,6 +7,10 @@ on:
       - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql'
       - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1.ts'
+      - 'apps/server/src/persistence/external_evidence/postgres_kbs_publication_baseline_pointer_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_kbs_publication_baseline_pointer_v1.ts'
+      - 'apps/server/db/migrations/2026_09_01_mcft_cap_09_kbs_publication_baseline_pointer.sql'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_supply_cadence_profile_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_cycle_service_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts'
@@ -109,6 +113,10 @@ jobs:
           python apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py selftest
       - name: Apply Phase3 Evidence persistence schema only
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql
+      - name: Apply idempotent KBS publication baseline pointer extension
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_09_01_mcft_cap_09_kbs_publication_baseline_pointer.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_09_01_mcft_cap_09_kbs_publication_baseline_pointer.sql
       - name: Prove product and acceptance types
         run: |
           pnpm --filter @geox/server run typecheck
@@ -121,9 +129,12 @@ jobs:
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_PRIVATE_CANDIDATE_IO_V1.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_V1.ts
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1.ts
       - name: Prove durable Evidence lease and supply cursor semantics
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts
+      - name: Prove fenced KBS publication baseline current pointer
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1.ts
       - name: Prove generic Evidence cadence profiles
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_SUPPLY_CADENCE_PROFILES_V1.ts
       - name: Prove one canonical Evidence Runtime supply cycle
@@ -209,6 +220,8 @@ jobs:
               pathlib.Path("apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts"),
               pathlib.Path("apps/server/src/external_evidence/provider/gfs_nomads_bundle_transport_v1.ts"),
               pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts"),
+              pathlib.Path("apps/server/src/persistence/external_evidence/postgres_kbs_publication_baseline_pointer_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/mcft_cap09_kbs_publication_baseline_pointer_v1.ts"),
               pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_runtime_governed_ingress_v1.ts"),
           ]
           decoder_file = pathlib.Path("apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts")
@@ -270,5 +283,6 @@ jobs:
             acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE7_PRIVATE_CANDIDATE_IO_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_KBS_PUBLICATION_BASELINE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1_RESULT.json
           if-no-files-found: warn
           retention-days: 90
