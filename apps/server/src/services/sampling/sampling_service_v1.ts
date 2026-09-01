@@ -248,10 +248,7 @@ export class SamplingServiceV1 {
           AND (record_json::jsonb->>'group_id') = $4
           AND (
             (record_json::jsonb->>'sampling_plan_fact_id') = $5
-            OR (
-              COALESCE(record_json::jsonb->>'sampling_plan_fact_id', '') = ''
-              AND (record_json::jsonb->>'plan_id') = $6
-            )
+            OR (record_json::jsonb->>'plan_id') = $6
           )
         LIMIT 2`,
       [
