@@ -102,6 +102,14 @@ async function main() {
     const acceptance = requireOk(await fetchJson(`${base}/api/v1/sampling/acceptance/evaluate`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_id, import_id: lab.import_id } }), 'evaluate sampling acceptance');
     checks.acceptance_api_live_called = true;
     checks.sampling_acceptance_evaluated = ['PASS', 'FAIL', 'INSUFFICIENT_EVIDENCE'].includes(acceptance.verdict);
+    assert.equal(acceptance.sampling_plan_fact_id, plan.fact_id, 'sampling acceptance must bind exact plan fact');
+    assert.equal(acceptance.sample_receipt_fact_id, receipt.fact_id, 'sampling acceptance must bind exact receipt fact');
+    assert.equal(acceptance.lab_result_fact_id, lab.fact_id, 'sampling acceptance must bind exact lab fact');
+    const exactAcceptanceFact = await pool.query('SELECT record_json FROM facts WHERE fact_id=$1', [acceptance.fact_id]);
+    assert.equal(exactAcceptanceFact.rowCount, 1, 'exact sampling acceptance fact must exist');
+    assert.equal(exactAcceptanceFact.rows[0].record_json?.sampling_plan_fact_id, plan.fact_id, 'persisted plan fact ref mismatch');
+    assert.equal(exactAcceptanceFact.rows[0].record_json?.sample_receipt_fact_id, receipt.fact_id, 'persisted receipt fact ref mismatch');
+    assert.equal(exactAcceptanceFact.rows[0].record_json?.lab_result_fact_id, lab.fact_id, 'persisted lab fact ref mismatch');
 
     const sample = requireOk(await fetchJson(`${base}/api/v1/sampling/sample/${sample_id}`, { method: 'GET', token }), 'fetch sample by sample_id');
     assert.equal(
