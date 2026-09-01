@@ -61,6 +61,9 @@ jobs:
       - name: B-Line P0-RES-007 evidence export boundary
         run: pnpm run ci:governance:bline-p0-res007-evidence-export-boundary
 
+      - name: B-Line operator dispatch intent boundary
+        run: pnpm run ci:governance:bline-operator-dispatch-intent
+
       - name: Route response ownership guard
         run: pnpm run ci:route-response-ownership
 
@@ -183,6 +186,18 @@ jobs:
           export GEOX_ACCEPTANCE_TOKEN="$GEOX_AO_ACT_TOKEN"
           export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
           pnpm run ci:root-zone-scenario-submit-recommendation
+
+      - name: B-Line operator dispatch intent runtime
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export GEOX_ACCEPTANCE_TOKEN="$GEOX_AO_ACT_TOKEN"
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          pnpm run ci:runtime:bline-operator-dispatch-intent
 
       - name: Run PR18I formal-chain preflight gate
         timeout-minutes: 30

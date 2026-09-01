@@ -252,7 +252,9 @@
     "ci:governance:bline-p0-res007-evidence-export-boundary": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_P0_RES007_EVIDENCE_EXPORT_NO_ACCEPTANCE_AUTHORITY_V1.cjs",
     "ci:governance:bline-active-runtime-surface-closure": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_ACTIVE_RUNTIME_SURFACE_CLOSURE_V1.cjs",
     "ci:governance:bline-operation-state-read-only": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_OPERATION_STATE_READ_ONLY_V1.cjs",
-    "ci:governance:bline-execution-plan-task-lifecycle": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_EXECUTION_PLAN_TASK_LIFECYCLE_V1.cjs"
+    "ci:governance:bline-execution-plan-task-lifecycle": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_EXECUTION_PLAN_TASK_LIFECYCLE_V1.cjs",
+    "ci:governance:bline-operator-dispatch-intent": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_OPERATOR_DISPATCH_INTENT_V1.cjs",
+    "ci:runtime:bline-operator-dispatch-intent": "node scripts/runtime_acceptance/ACCEPTANCE_BLINE_OPERATOR_DISPATCH_INTENT_RUNTIME_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"
