@@ -583,16 +583,16 @@
       "semantic_family": [
         "field_memory"
       ],
-      "authority_class": "CURRENT_FIELD_MEMORY_WRITER_WITH_LATEST_PAIR_P0",
+      "authority_class": "CURRENT_FIELD_MEMORY_WRITER_WITH_CAUSAL_PAIR_AND_FORMAL_CONFIDENCE_P0S",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "recommendation memory context",
         "reports"
       ],
-      "removal_target": "KEEP_FIELD_MEMORY_SERVICE; REMOVE_LATEST_TWO_DEVICE_FALLBACK; REQUIRE_CAUSAL_OPERATION_BOUND_OBSERVATION_PAIR",
+      "removal_target": "KEEP_FIELD_MEMORY_SERVICE; REMOVE_LATEST_TWO_DEVICE_FALLBACK; REMOVE FABRICATED FORMAL CONFIDENCE; REQUIRE CAUSAL OPERATION-BOUND OBSERVATION/CONFIDENCE PROVENANCE",
       "b02_registered": true,
-      "audit_note": "P0-RES-008: formal-memory service can fall back to two latest field observations without operation/receipt/acceptance time binding."
+      "audit_note": "P0-RES-008: formal-memory service can fall back to two latest field observations without operation/receipt/acceptance time binding. P0-RES-011: recordMemoryV1 defaults missing confidence to 0.8; canonical formal acceptance does not supply confidence, so 0.8 becomes FORMAL_ACCEPTED/customer-visible/learning-eligible. Latent scope debt: project_id/group_id default to projectA/groupA, although all currently identified production callers pass scope explicitly."
     },
     {
       "surface_id": "RES-021",
@@ -2701,6 +2701,411 @@
       ],
       "removal_target": "KEEP DEFAULT DISABLED; DO NOT REACTIVATE AS PARALLEL RECOMMENDATION/CONTROL AUTHORITY WITHOUT EXPLICIT GOVERNANCE",
       "surface_id": "RES-101",
+      "b02_registered": false
+    },
+    {
+      "source_path": "packages/control-kernel/src/ruleset/evaluator.ts",
+      "entrypoint": "Control Kernel pure-library evaluateRuleSetV0; no current app runtime caller proven",
+      "activation_mode": "REGISTERED_CAPABILITY_ISLAND",
+      "writes": [
+        "in-memory ControlVerdictV0 ALLOW/DENY/UNDETERMINED"
+      ],
+      "reads": [
+        "ControlRuleSetV0",
+        "PermissionSet candidate_actions",
+        "allowed FieldMap inputs",
+        "template rules"
+      ],
+      "semantic_family": [
+        "decision.control_gate"
+      ],
+      "authority_class": "LEGACY_CONTROL_VERDICT_RULESET_EVALUATOR",
+      "runtime_reachable": "NOT_PROVEN_CURRENT_APP_CALLER",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "DO NOT EQUATE WITH DECISION_ELIGIBILITY OR DISPATCH AUTHORITY; RETAIN ISOLATED OR RETIRE AFTER CANONICAL CONTROL/ELIGIBILITY BOUNDARY",
+      "audit_note": "evaluateRuleSetV0 is the actual verdict derivation. It uses Date.now() and a timestamp+random verdict_id, so output is not suitable as causal decision authority unchanged.",
+      "surface_id": "RES-102",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/judge/src/problem_state.ts",
+      "entrypoint": "standalone @geox/judge pipeline",
+      "activation_mode": "STANDALONE_JUDGE_CAPABILITY",
+      "writes": [
+        "in-memory problem_state_v1"
+      ],
+      "reads": [
+        "Judge stage outcomes",
+        "evidence sufficiency/time/QC/conflict/marker state"
+      ],
+      "semantic_family": [
+        "judge.problem_state"
+      ],
+      "authority_class": "STANDALONE_JUDGE_PROBLEM_STATE_DERIVER",
+      "runtime_reachable": "CAPABILITY_PRESENT; NO COMPOSE SERVICE FOUND",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "apps/judge pipeline",
+        "AO-SENSE/LB candidate derivation"
+      ],
+      "removal_target": "KEEP ISOLATED OR RETIRE; DO NOT TREAT AS MCFT STATE OR CANONICAL DECISION STATE",
+      "surface_id": "RES-103",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/judge/src/ao_sense.ts",
+      "entrypoint": "standalone @geox/judge pipeline after ProblemState",
+      "activation_mode": "STANDALONE_JUDGE_CAPABILITY",
+      "writes": [
+        "in-memory ao_sense_v1 verification/watch requests"
+      ],
+      "reads": [
+        "ProblemStateV1"
+      ],
+      "semantic_family": [
+        "judge.sensing_request"
+      ],
+      "authority_class": "STANDALONE_JUDGE_SENSING_REQUEST_DERIVER",
+      "runtime_reachable": "CAPABILITY_PRESENT; NO COMPOSE SERVICE FOUND",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "standalone Judge response"
+      ],
+      "removal_target": "KEEP AS SENSING/VERIFICATION REQUEST ONLY; NEVER CONTROL OR EXECUTION DIRECTIVE",
+      "audit_note": "Source explicitly states AO-SENSE is sensing/verification only, not control.",
+      "surface_id": "RES-104",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/judge/src/lb_candidate.ts",
+      "entrypoint": "standalone @geox/judge pipeline",
+      "activation_mode": "STANDALONE_JUDGE_CAPABILITY",
+      "writes": [
+        "in-memory lb_candidate_v1 learning-boundary candidates"
+      ],
+      "reads": [
+        "ProblemStateV1",
+        "Judge config/rule outcomes"
+      ],
+      "semantic_family": [
+        "judge.learning_candidate"
+      ],
+      "authority_class": "STANDALONE_JUDGE_LEARNING_CANDIDATE_DERIVER",
+      "runtime_reachable": "CAPABILITY_PRESENT; NO COMPOSE SERVICE FOUND",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "standalone Judge response"
+      ],
+      "removal_target": "KEEP ISOLATED; NEVER EQUATE LB candidate with CandidateDecision or DecisionEligibility",
+      "surface_id": "RES-105",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/judge/src/pipeline.ts",
+      "entrypoint": "JudgeRuntime.run → runJudgePipeline",
+      "activation_mode": "STANDALONE_JUDGE_ORCHESTRATOR",
+      "writes": [
+        "in-memory problem_state_v1",
+        "ao_sense_v1",
+        "optional lb_candidate_v1"
+      ],
+      "reads": [
+        "AppleI facts",
+        "config/judge/default.json",
+        "validated config_patch",
+        "stage rules"
+      ],
+      "semantic_family": [
+        "judge.problem_state",
+        "judge.sensing_request",
+        "judge.learning_candidate"
+      ],
+      "authority_class": "STANDALONE_JUDGE_SEMANTIC_ORCHESTRATOR",
+      "runtime_reachable": "EXPLICIT STANDALONE SERVER CAPABILITY; NO REPO COMPOSE ACTIVATION FOUND",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "standalone /api/judge/run"
+      ],
+      "removal_target": "KEEP ISOLATED OR RETIRE; MAIN SERVER judge_v2 IS SEPARATE REGISTERED AUTHORITY FAMILY",
+      "surface_id": "RES-106",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/judge/src/runtime.ts",
+      "entrypoint": "standalone Judge server runtime",
+      "activation_mode": "STANDALONE_RUNTIME_WRAPPER",
+      "writes": [
+        "no persistence; forces persist=false",
+        "returns Judge pipeline semantic objects"
+      ],
+      "reads": [
+        "AppleIReader",
+        "Judge pipeline"
+      ],
+      "semantic_family": [
+        "judge.problem_state",
+        "judge.sensing_request",
+        "judge.learning_candidate"
+      ],
+      "authority_class": "STANDALONE_JUDGE_NONPERSISTING_RUNTIME",
+      "runtime_reachable": "EXPLICIT SERVER CAPABILITY; NO COMPOSE SERVICE FOUND",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "standalone Judge routes"
+      ],
+      "removal_target": "KEEP persist=false IF RETAINED; DO NOT ATTACH PERSISTENCE WITHOUT NEW AUTHORITY REVIEW",
+      "surface_id": "RES-107",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/judge/src/server.ts",
+      "entrypoint": "@geox/judge start script",
+      "activation_mode": "EXPLICIT_STANDALONE_FASTIFY_SERVER",
+      "writes": [
+        "none directly"
+      ],
+      "reads": [
+        "DATABASE_URL",
+        "AppleIReader",
+        "JudgeRuntime"
+      ],
+      "semantic_family": [
+        "judge.problem_state",
+        "judge.sensing_request",
+        "judge.learning_candidate"
+      ],
+      "authority_class": "STANDALONE_JUDGE_SERVER_ACTIVATION_SURFACE",
+      "runtime_reachable": "PACKAGE START SCRIPT EXISTS; NO COMPOSE SERVICE OR MAIN-SERVER ROUTING FOUND",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "standalone network clients if manually started"
+      ],
+      "removal_target": "KEEP UNDEPLOYED OR ADD EXPLICIT AUTH/DEPLOYMENT GOVERNANCE BEFORE ANY ACTIVATION",
+      "audit_note": "Standalone server has permissive CORS and no main-server authz layer; not classified P0 because repo deployment graph does not start it.",
+      "surface_id": "RES-108",
+      "b02_registered": false
+    },
+    {
+      "source_path": "config/judge/default.json",
+      "entrypoint": "apps/judge/src/config/ssot.ts loadDefaultConfig → pipeline",
+      "activation_mode": "STANDALONE_JUDGE_ACTIVE_CONFIG_SSOT",
+      "writes": [
+        "none"
+      ],
+      "reads": [
+        "rule thresholds for sufficiency/time coverage/QC/reference/conflict/marker policy"
+      ],
+      "semantic_family": [
+        "judge.problem_state"
+      ],
+      "authority_class": "STANDALONE_JUDGE_THRESHOLD_CONFIG_AUTHORITY",
+      "runtime_reachable": "PROVEN IF STANDALONE JUDGE STARTED",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "apps/judge pipeline stage rules"
+      ],
+      "removal_target": "KEEP VERSIONED/EXPLICIT IF STANDALONE JUDGE RETAINED; DO NOT SILENTLY MAP TO CANONICAL EQ/STATE POLICY",
+      "surface_id": "RES-109",
+      "b02_registered": false
+    },
+    {
+      "source_path": "config/judge/ruleset_v1.json",
+      "entrypoint": "apps/judge/src/config/index.ts and generated-rules build pipeline",
+      "activation_mode": "LEGACY_GENERATED_RULESET_CONFIG_SOURCE",
+      "writes": [
+        "none"
+      ],
+      "reads": [
+        "Judge rule thresholds/schema values"
+      ],
+      "semantic_family": [
+        "judge.problem_state"
+      ],
+      "authority_class": "STANDALONE_JUDGE_ALTERNATE_RULESET_CONFIG_AUTHORITY",
+      "runtime_reachable": "LOADER/GENERATOR PRESENT; CURRENT pipeline.ts USES default.json INSTEAD",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "config/index.ts",
+        "generated ruleset build artifacts"
+      ],
+      "removal_target": "RESOLVE DOUBLE-SSOT DEBT: CHOOSE ONE JUDGE CONFIG AUTHORITY OR EXPLICITLY VERSION/ADAPT BOTH",
+      "audit_note": "This file is declared SSOT by config/index.ts while pipeline.ts loads default.json via ssot.ts; they are not currently one runtime path.",
+      "surface_id": "RES-110",
+      "b02_registered": false
+    },
+    {
+      "source_path": "docker/postgres/init/001_schema.sql",
+      "entrypoint": "Postgres docker-entrypoint-initdb.d on fresh database",
+      "activation_mode": "FRESH_DATABASE_BOOTSTRAP_SCHEMA",
+      "writes": [
+        "field_memory_v1 schema and semantic defaults among broader base schema"
+      ],
+      "reads": [],
+      "semantic_family": [
+        "field_memory",
+        "governance.bootstrap"
+      ],
+      "authority_class": "BOOTSTRAP_SCHEMA_WITH_FIELD_MEMORY_SEMANTIC_DEFAULTS",
+      "runtime_reachable": "PROVEN ON FRESH DB WHEN BASE OR COMMERCIAL COMPOSE POSTGRES INIT MOUNT IS USED",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "field_memory writers",
+        "runtime schema consumers"
+      ],
+      "removal_target": "KEEP SCHEMA BOOTSTRAP; REMOVE/NEUTRALIZE SEMANTIC DEFAULTS THAT CAN FABRICATE SCOPE/CONFIDENCE AUTHORITY",
+      "surface_id": "RES-111",
+      "b02_registered": false
+    },
+    {
+      "source_path": "docker/postgres/init/003_p1_skill_seed.sql",
+      "entrypoint": "Postgres docker-entrypoint-initdb.d on fresh database",
+      "activation_mode": "FRESH_DATABASE_BOOTSTRAP_SEMANTIC_SEED",
+      "writes": [
+        "ACTIVE skill_definition_v1 facts",
+        "ACTIVE skill_binding_v1 facts including before_dispatch/before_acceptance and mock_valve_control_skill_v1 → irrigation_simulator binding"
+      ],
+      "reads": [],
+      "semantic_family": [
+        "governance.skill_binding",
+        "execution.adapter_resolution"
+      ],
+      "authority_class": "PRODUCTION_INHERITED_ACTIVE_SKILL_BOOTSTRAP_SEED",
+      "runtime_reachable": "PROVEN ON FRESH DB; BASE+PROD OFFICIAL COMMAND AND COMMERCIAL COMPOSE MOUNT docker/postgres/init",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "skill_registry_read_v1",
+        "resolveDeviceSkillBindingForTask",
+        "control_ao_act skill runtime"
+      ],
+      "removal_target": "SEPARATE DEMO/PILOT SEEDS FROM PROD BOOTSTRAP; PROD MUST REQUIRE EXPLICIT GOVERNED SKILL/BINDING PROVISIONING",
+      "audit_note": "Current AO-ACT resolver can consume the seeded ACTIVE mock_valve_control_skill_v1 binding for IRRIGATE/irrigation_simulator and create a PENDING technical skill_run. No proof found that this alone bypasses formal non-simulated acceptance.",
+      "surface_id": "RES-112",
+      "b02_registered": false
+    },
+    {
+      "source_path": "docker/postgres/init/004_field_memory_v1_full_contract.sql",
+      "entrypoint": "Postgres docker-entrypoint-initdb.d on fresh database",
+      "activation_mode": "FRESH_DATABASE_BOOTSTRAP_SCHEMA",
+      "writes": [
+        "field_memory_v1 full contract/default alignment"
+      ],
+      "reads": [
+        "existing field_memory_v1 schema"
+      ],
+      "semantic_family": [
+        "field_memory",
+        "governance.bootstrap"
+      ],
+      "authority_class": "BOOTSTRAP_FIELD_MEMORY_CONTRACT_WITH_SEMANTIC_DEFAULTS",
+      "runtime_reachable": "PROVEN ON FRESH DB WHEN POSTGRES INIT MOUNT IS USED",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "field_memory writers"
+      ],
+      "removal_target": "KEEP CONTRACT ALIGNMENT; SEMANTIC SCOPE/CONFIDENCE DEFAULTS MUST NOT CREATE FORMAL AUTHORITY",
+      "surface_id": "RES-113",
+      "b02_registered": false
+    },
+    {
+      "source_path": "docker-compose.yml",
+      "entrypoint": "official base Compose used by dev/staging/prod deployment profile",
+      "activation_mode": "BASE_DEPLOYMENT_COMPOSITION",
+      "writes": [
+        "activates docker/postgres/init on fresh Postgres database"
+      ],
+      "reads": [
+        "docker/postgres/init",
+        "runtime images/services"
+      ],
+      "semantic_family": [
+        "governance.bootstrap"
+      ],
+      "authority_class": "POSTGRES_SEMANTIC_BOOTSTRAP_ACTIVATION",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "fresh database bootstrap",
+        "all base-compose services"
+      ],
+      "removal_target": "KEEP BASE COMPOSE; ENVIRONMENT-SPECIFIC SEMANTIC SEEDS MUST NOT BE IMPLICITLY INHERITED BY PROD",
+      "surface_id": "RES-114",
+      "b02_registered": false
+    },
+    {
+      "source_path": "docker-compose.prod.yml",
+      "entrypoint": "official prod overlay used with docker-compose.yml",
+      "activation_mode": "PRODUCTION_DEPLOYMENT_CONFIG",
+      "writes": [
+        "deployment environment/config only"
+      ],
+      "reads": [
+        "base Compose services and inherited Postgres init mount"
+      ],
+      "semantic_family": [
+        "execution.activation_policy",
+        "governance.bootstrap"
+      ],
+      "authority_class": "PRODUCTION_EXECUTION_SECURITY_PROFILE",
+      "runtime_reachable": "PROVEN BY docs/delivery/GEOX_Deployment_Profiles_v1.md",
+      "feature_flag": "GEOX_EXECUTION_DEFAULT_DISABLED=1",
+      "downstream_consumers": [
+        "server runtime security preflight"
+      ],
+      "removal_target": "KEEP PRODUCTION SECURITY PROFILE; ADD REAL EXECUTION ROUTE/PROCESS GATE OR RENAME DECLARATION TO AVOID FALSE KILL-SWITCH SEMANTICS",
+      "audit_note": "GEOX_EXECUTION_DEFAULT_DISABLED is currently only consumed by runtime_security_v1 startup status; it is not itself an AO-ACT route gate.",
+      "surface_id": "RES-115",
+      "b02_registered": false
+    },
+    {
+      "source_path": "docker-compose.staging.yml",
+      "entrypoint": "official staging overlay used with docker-compose.yml",
+      "activation_mode": "STAGING_DEPLOYMENT_CONFIG",
+      "writes": [
+        "deployment environment/config only"
+      ],
+      "reads": [
+        "base Compose services and inherited Postgres init mount"
+      ],
+      "semantic_family": [
+        "execution.activation_policy",
+        "governance.bootstrap"
+      ],
+      "authority_class": "STAGING_EXECUTION_SECURITY_PROFILE",
+      "runtime_reachable": "PROVEN BY deployment profile",
+      "feature_flag": "GEOX_EXECUTION_DEFAULT_DISABLED=1",
+      "downstream_consumers": [
+        "server runtime security preflight"
+      ],
+      "removal_target": "KEEP STAGING SECURITY PROFILE; EXECUTION DEFAULT-DISABLED DECLARATION MUST MATCH ACTUAL RUNTIME GATING",
+      "surface_id": "RES-116",
+      "b02_registered": false
+    },
+    {
+      "source_path": "docker-compose.commercial_v1.yml",
+      "entrypoint": "commercial/pilot Compose baseline",
+      "activation_mode": "COMMERCIAL_PILOT_DEPLOYMENT_COMPOSITION",
+      "writes": [
+        "activates docker/postgres/init on fresh Postgres",
+        "starts server/jobs/executor/telemetry-ingest and MCFT bootstrap/migration services"
+      ],
+      "reads": [
+        "docker/postgres/init",
+        "runtime package builds",
+        "external environment/secrets"
+      ],
+      "semantic_family": [
+        "governance.bootstrap",
+        "execution.activation_policy"
+      ],
+      "authority_class": "COMMERCIAL_RUNTIME_AND_SEMANTIC_BOOTSTRAP_ACTIVATION",
+      "runtime_reachable": "PROVEN_EXPLICIT_COMPOSE_PROFILE",
+      "feature_flag": "GEOX_EXECUTION_DEFAULT_DISABLED defaults to 1; GEOX_EXECUTION_ENABLE_EXPLICITLY defaults to 0",
+      "downstream_consumers": [
+        "commercial controlled-pilot runtime"
+      ],
+      "removal_target": "SEPARATE PROD/PILOT AUTHORITY PROVISIONING FROM DEMO SEEDS; KEEP MCFT OWNERSHIP UNMODIFIED",
+      "surface_id": "RES-117",
       "b02_registered": false
     }
   ],
