@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_writer_owner_self_grant_cleanup_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-WRITER-OWNER-SELF-GRANT-CLEANUP-AUTHORITY-V1",
-  "status": "EXACT_SELF_GRANT_CLEANUP_AUTHORIZED",
+  "status": "EXACT_SELF_GRANT_CLEANUP_APPLIED",
   "root_cause": {
     "code": "PROVISIONING_ADMIN_FORCING_WRITER_OWNER_SELF_GRANT_RESIDUAL",
     "origin_attribution": "NOT_PROVEN",
@@ -64,7 +64,7 @@
   "runner_ref": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_V1.cjs",
   "workflow_ref": ".github/workflows/mcft-cap-09-production-writer-owner-self-grant-cleanup.yml",
   "authorization": {
-    "production_writer_owner_self_grant_cleanup_authorized": true,
+    "production_writer_owner_self_grant_cleanup_authorized": false,
     "production_evidence_acl_carryforward_remediation_authorized": false,
     "runtime_process_start_authorized": false,
     "production_owner_activation_authorized": false,
@@ -87,9 +87,9 @@
     "o00_started": false
   },
   "next_stage": {
-    "stage": "EXACT_SELF_GRANT_CLEANUP",
-    "status": "AUTHORIZED_PENDING_SAME_WORKFLOW_FRESH_PREFLIGHT_AND_EXACT_REVOKE",
-    "after_success": "RERUN_LIVE_SCHEMA_READINESS_THEN_REAUTHORIZE_EXACT_NINE_ACL_REMEDIATION"
+    "stage": "EXACT_NINE_PRIVILEGE_REMEDIATION",
+    "status": "CLEANUP_APPLIED_EXACT_NINE_NOT_AUTHORIZED",
+    "after_success": "RERUN_LIVE_SCHEMA_READINESS_AND_EXACT_NINE_PREFLIGHT_BEFORE_SEPARATE_AUTHORIZATION"
   },
   "authorization_binding": {
     "model": "SAME_WORKFLOW_FRESH_PREFLIGHT_CURRENT_SUBJECT_V1",
@@ -115,6 +115,27 @@
   "user_authorization": {
     "explicit": true,
     "scope": "PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_ONLY",
-    "observed_date": "2026-09-01"
+    "observed_date": "2026-09-01",
+    "consumed_by_run_id": 33481272545
+  },
+  "execution_evidence": {
+    "status": "IMMUTABLE_SUCCESS",
+    "subject_sha": "9480a52b35c598e80c426a37fa9c2db352568771",
+    "workflow": "mcft-cap-09-production-writer-owner-self-grant-cleanup",
+    "run_id": 33481272545,
+    "artifact_id": 9790060543,
+    "artifact_digest": "sha256:9607dee6f3e0f957aad3318d415a4fa8c46d1c27b23ec990e7d4a782856b7886",
+    "result_status": "PASS_CLEANUP_APPLIED",
+    "exact_target_self_grant_count_after": 0,
+    "all_writer_owner_effective_set_authority_zero": true,
+    "cloud_admin_management_memberships_preserved": true,
+    "exact_nine_phase3_acl_privileges_still_missing": true,
+    "total_application_rows_after": 0,
+    "public_table_acl_unchanged": true,
+    "public_function_acl_unchanged": true,
+    "public_schema_acl_unchanged": true,
+    "service_login_role_attributes_unchanged": true,
+    "service_login_memberships_unchanged": true,
+    "service_login_object_ownership_zero": true
   }
 }

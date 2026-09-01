@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_acl_carryforward_remediation_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1",
-  "status": "BLOCKED_ON_WRITER_OWNER_SELF_GRANT_CLEANUP_NOT_AUTHORIZED",
+  "status": "LIVE_EXACT_NINE_REMEDIATION_READY_NOT_AUTHORIZED",
   "root_cause": {
     "code": "V13_DENY_BY_DEFAULT_RESET_DROPPED_PHASE3_EVIDENCE_TABLE_PRIVILEGES",
     "predecessor_acl": "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql",
@@ -172,9 +172,12 @@
     "stale_reason": "LIVE_WRITER_OWNER_SELF_GRANT_RESIDUAL_DISCOVERED_AFTER_IMMUTABLE_PREFLIGHT"
   },
   "next_stage": {
-    "stage": "WRITER_OWNER_SELF_GRANT_CLEANUP_THEN_EXACT_NINE_PRIVILEGE_REMEDIATION",
-    "status": "BLOCKED_ON_EXPLICIT_USER_AUTHORIZATION_FOR_SELF_GRANT_CLEANUP",
+    "stage": "EXACT_NINE_PRIVILEGE_REMEDIATION",
+    "status": "READY_NOT_AUTHORIZED_PENDING_FRESH_LIVE_PREFLIGHT_AND_EXPLICIT_USER_AUTHORIZATION",
     "cleanup_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-WRITER-OWNER-SELF-GRANT-CLEANUP-AUTHORITY-V1.json",
+    "cleanup_run_id": 33481272545,
+    "cleanup_artifact_id": 9790060543,
+    "cleanup_artifact_digest": "sha256:9607dee6f3e0f957aad3318d415a4fa8c46d1c27b23ec990e7d4a782856b7886",
     "exact_missing_privilege_count": 9,
     "exact_nine_acl_mutation_authorized": false,
     "role_or_membership_mutation_under_exact_nine_authority": false,
@@ -185,20 +188,12 @@
     "o00": false
   },
   "blocking_live_prestate": {
-    "code": "PROVISIONING_ADMIN_FORCING_WRITER_OWNER_SELF_GRANT_RESIDUAL",
-    "origin_attribution": "NOT_PROVEN",
-    "live_schema_readiness_run_id": 33476371200,
-    "live_schema_readiness_head_sha": "9ae9e24ad4a86645fd36b7ed366a3cfd4086d9c1",
-    "live_acl_preflight_run_id": 33476370907,
-    "live_acl_preflight_head_sha": "9ae9e24ad4a86645fd36b7ed366a3cfd4086d9c1",
-    "member_role": "neondb_owner",
-    "granted_role": "geox_mcft_cap09_forcing_writer_owner_v1",
-    "grantor_role": "neondb_owner",
-    "admin_option": false,
-    "inherit_option": true,
-    "set_option": true,
-    "effective_set_authority": true,
-    "required_resolution": "SEPARATE_EXACT_SELF_GRANT_CLEANUP_AUTHORITY"
+    "code": "RESOLVED_BY_EXACT_SELF_GRANT_CLEANUP",
+    "resolved": true,
+    "resolution_run_id": 33481272545,
+    "resolution_subject_sha": "9480a52b35c598e80c426a37fa9c2db352568771",
+    "writer_owner_self_grant_residual_count_zero": true,
+    "writer_owner_effective_set_authority_zero": true
   },
   "authorization_binding": {
     "model": "SAME_WORKFLOW_FRESH_PREFLIGHT_CURRENT_SUBJECT_V1",
@@ -221,5 +216,15 @@
     "exact_nine_missing": "PASS_REMEDIATION_REQUIRED",
     "exact_nine_materialized": "PASS_ALREADY_MATERIALIZED",
     "partial_acl_state": "FAIL_CLOSED"
+  },
+  "cleanup_resolution": {
+    "status": "APPLIED_AND_VERIFIED",
+    "subject_sha": "9480a52b35c598e80c426a37fa9c2db352568771",
+    "run_id": 33481272545,
+    "artifact_id": 9790060543,
+    "artifact_digest": "sha256:9607dee6f3e0f957aad3318d415a4fa8c46d1c27b23ec990e7d4a782856b7886",
+    "writer_owner_self_grant_residual_count_zero": true,
+    "writer_owner_effective_set_authority_zero": true,
+    "exact_nine_privileges_still_missing": true
   }
 }

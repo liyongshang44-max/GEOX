@@ -1,8 +1,8 @@
 {
   "schema_version": "geox_mcft_cap09_production_writer_owner_self_grant_cleanup_arm_v1",
-  "armed": true,
-  "exact_target_database_name": "geox_mcft_cap09_production_runtime_v1",
-  "production_writer_owner_self_grant_cleanup_authorized": true,
+  "armed": false,
+  "exact_target_database_name": null,
+  "production_writer_owner_self_grant_cleanup_authorized": false,
   "production_evidence_acl_carryforward_remediation_authorized": false,
   "runtime_process_start_authorized": false,
   "production_owner_activation_authorized": false,
