@@ -14,13 +14,13 @@ function extractOperationReport(json) {
 async function main() {
   await waitForHealth(baseUrl);
 
-  const operationId = env('SAMPLING_REPORT_OPERATION_ID');
+  const now = Date.now();
+  const operationId = env('SAMPLING_REPORT_OPERATION_ID', `sampling-report-${now}`);
   const scope = {
     tenant_id: env('TENANT_ID', 'tenantA'),
     project_id: env('PROJECT_ID', 'projectA'),
     group_id: env('GROUP_ID', 'groupA'),
   };
-  const now = Date.now();
   const field_id = `f-${now}`;
   const sample_id = `s-${now}`;
 
