@@ -71,7 +71,8 @@ Within exact tenant/project/group scope:
 - zero receipt facts = missing;
 - one receipt fact = exact identity;
 - more than one = explicit ambiguity and fail closed;
-- product creation of a second receipt with the same sample identity is rejected.
+- product creation of a second receipt with the same sample identity is rejected;
+- receipt fact identity is deterministically derived from tenant/project/group + sample_id, so concurrent duplicate creation converges at the facts primary key instead of racing past a precheck.
 
 ### Lab result
 
@@ -94,6 +95,8 @@ If `import_id` is omitted, more than one candidate lab fact is an explicit ambig
 - `lab_result_fact_id`.
 
 Re-evaluating the same exact source chain is idempotent and returns the existing Acceptance identity.
+
+The Acceptance fact identity is deterministically derived from the exact plan/receipt/lab chain plus scope/sample/import identity. Concurrent evaluations therefore converge on one fact identity; the loser reloads the committed row and returns idempotent=true.
 
 If historical data contains more than one Acceptance for the same exact chain, or the same exact chain would now produce a different verdict/reason set, the path fails closed.
 
@@ -148,6 +151,8 @@ duplicate sample receipt creation -> 409
 historical receipt/lab/Acceptance ambiguity -> fail closed
 lab import requires exact receipt -> exact plan continuity
 repeat exact Sampling Acceptance -> same fact identity
+concurrent duplicate receipt creation -> exactly one success + one duplicate conflict
+concurrent exact Sampling Acceptance evaluation -> one shared fact/acceptance identity
 report visibility requires exact chain
 Fertilization SAMPLING_LAB -> exact sampling_acceptance_fact_id
 ```
