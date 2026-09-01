@@ -1,0 +1,617 @@
+{
+  "phase": "B-10A",
+  "title": "Residual Authority Audit V1",
+  "enforcement_model": {
+    "scope": "REPOSITORY_WIDE_AUTHORITY_CAPABLE_SURFACES",
+    "unregistered_authority_capable_path": "FAIL",
+    "business_behavior_change": "FORBIDDEN",
+    "mcft_implementation_change": "FORBIDDEN"
+  },
+  "scan_policy": {
+    "roots": [
+      "apps/server/src",
+      "apps/server/db/migrations",
+      "apps/executor/src",
+      "packages/contracts/src",
+      "scripts/runtime_acceptance",
+      "scripts/governance_acceptance",
+      ".github/workflows"
+    ],
+    "extensions": [
+      ".ts",
+      ".tsx",
+      ".js",
+      ".cjs",
+      ".mjs",
+      ".sql",
+      ".yml",
+      ".yaml"
+    ],
+    "ignore_path_fragments": [
+      "node_modules",
+      "/dist/",
+      ".test.",
+      "/__tests__/",
+      "/fixtures/"
+    ]
+  },
+  "required_surface_fields": [
+    "path",
+    "entrypoint",
+    "activation_mode",
+    "writes",
+    "reads",
+    "semantic_family",
+    "authority_class",
+    "semantic_role",
+    "runtime_reachable",
+    "feature_flag",
+    "downstream_consumers",
+    "removal_target",
+    "current_tree",
+    "detection_required"
+  ],
+  "detectors": [
+    {
+      "detector_id": "D-CANDIDATE-PERSISTED-WRITER",
+      "semantic_family": "decision.candidate",
+      "kind": "PERSISTED_WRITER",
+      "all_of": [
+        "decision_recommendation_v1"
+      ],
+      "capability_any_of": [
+        "INSERT INTO facts",
+        "insertFact(",
+        "appendFact(",
+        "appendSkillRunFact("
+      ]
+    },
+    {
+      "detector_id": "D-CANDIDATE-PURE-BUILDER",
+      "semantic_family": "decision.candidate",
+      "kind": "SEMANTIC_BUILDER",
+      "any_of": [
+        "CandidateDecisionV1",
+        "CandidateActionV1",
+        "CANDIDATE_ONLY"
+      ],
+      "capability_any_of": [
+        "re:export\\s+(?:async\\s+)?function\\s+(?:build|compile|project|create)",
+        "Schema.parse(",
+        "Schema.safeParse("
+      ]
+    },
+    {
+      "detector_id": "D-APPROVAL-WRITER",
+      "semantic_family": "decision.approval",
+      "kind": "PERSISTED_WRITER",
+      "any_of": [
+        "approval_request_v1",
+        "approval_decision_v1"
+      ],
+      "capability_any_of": [
+        "INSERT INTO facts",
+        "insertFact(",
+        "appendFact(",
+        "createApprovalRequestV1("
+      ]
+    },
+    {
+      "detector_id": "D-PRESCRIPTION-AUTHORITY",
+      "semantic_family": "action.specification",
+      "kind": "PERSISTED_OR_POLICY_SURFACE",
+      "all_of": [
+        "prescription_contract_v1"
+      ],
+      "capability_any_of": [
+        "INSERT INTO prescription_contract_v1",
+        "UPDATE prescription_contract_v1",
+        "deriveApprovalRequirement",
+        "READY_FOR_APPROVAL"
+      ]
+    },
+    {
+      "detector_id": "D-OPERATION-PLAN-WRITER",
+      "semantic_family": "operation.plan",
+      "kind": "PERSISTED_WRITER",
+      "all_of": [
+        "operation_plan_v1"
+      ],
+      "capability_any_of": [
+        "INSERT INTO facts",
+        "insertFact(",
+        "createOperationPlanFromRecommendation",
+        "buildOperationPlan"
+      ]
+    },
+    {
+      "detector_id": "D-TASK-WRITER",
+      "semantic_family": "execution.task",
+      "kind": "TASK_PRODUCER",
+      "all_of": [
+        "ao_act_task_v0"
+      ],
+      "capability_any_of": [
+        "INSERT INTO facts",
+        "insertFact(",
+        "buildAoActTask",
+        "createTask"
+      ]
+    },
+    {
+      "detector_id": "D-DISPATCH-INTENT-WRITER",
+      "semantic_family": "execution.dispatch_intent",
+      "kind": "DISPATCH_INTENT_OR_STATUS_WRITER",
+      "any_of": [
+        "ao_act_dispatch_v1",
+        "RETRY_DISPATCHED"
+      ],
+      "capability_any_of": [
+        "INSERT INTO facts",
+        "writeDispatchFact("
+      ]
+    },
+    {
+      "detector_id": "D-DISPATCH-QUEUE-AUTHORITY",
+      "semantic_family": "execution.dispatch_delivery",
+      "kind": "QUEUE_STATE_AUTHORITY",
+      "all_of": [
+        "dispatch_queue_v1",
+        "DISPATCHED"
+      ],
+      "capability_any_of": [
+        "UPDATE dispatch_queue_v1",
+        "SET state = 'DISPATCHED'",
+        "transitionDispatchQueueState("
+      ]
+    },
+    {
+      "detector_id": "D-EXECUTOR-DISPATCH-AUTHORITY",
+      "semantic_family": "execution.dispatch_delivery",
+      "kind": "EXECUTOR_ADAPTER_RUNTIME",
+      "all_of": [
+        "writeDispatchState",
+        "adapter.execute"
+      ],
+      "any_of": [
+        "DISPATCHED",
+        "ACKED"
+      ],
+      "capability_any_of": [
+        "writeDispatchState(args, task, \"DISPATCHED\")",
+        "adapter.execute("
+      ]
+    },
+    {
+      "detector_id": "D-RECEIPT-WRITER",
+      "semantic_family": "execution.receipt",
+      "kind": "RECEIPT_PRODUCER",
+      "any_of": [
+        "human_work_receipt_v1",
+        "ao_act_receipt_v1",
+        "/api/v1/actions/receipt"
+      ],
+      "capability_any_of": [
+        "INSERT INTO facts",
+        "app.inject(",
+        "appendReceiptV1(",
+        "buildAoActReceipt"
+      ]
+    },
+    {
+      "detector_id": "D-AS-EXECUTED-WRITER",
+      "semantic_family": "execution.as_executed",
+      "kind": "AS_EXECUTED_PRODUCER",
+      "any_of": [
+        "as_executed_record_v1",
+        "AsExecutedRecordV1"
+      ],
+      "capability_any_of": [
+        "INSERT INTO",
+        "UPDATE ",
+        "re:export\\s+(?:async\\s+)?function\\s+(?:build|create|persist|record)"
+      ]
+    },
+    {
+      "detector_id": "D-ACCEPTANCE-WRITER",
+      "semantic_family": "acceptance.verdict",
+      "kind": "ACCEPTANCE_PRODUCER",
+      "all_of": [
+        "acceptance_result_v1"
+      ],
+      "capability_any_of": [
+        "INSERT INTO facts",
+        "insertFact(",
+        "re:export\\s+(?:async\\s+)?function\\s+(?:build|create|evaluate)"
+      ]
+    },
+    {
+      "detector_id": "D-FIELD-MEMORY-WRITER",
+      "semantic_family": "outcome.field_memory",
+      "kind": "MEMORY_PRODUCER",
+      "all_of": [
+        "field_memory_v1"
+      ],
+      "capability_any_of": [
+        "INSERT INTO",
+        "UPDATE ",
+        "recordFieldMemory",
+        "writeFieldMemory"
+      ]
+    },
+    {
+      "detector_id": "D-ROI-WRITER",
+      "semantic_family": "outcome.roi",
+      "kind": "ROI_PRODUCER",
+      "any_of": [
+        "roi_ledger_v1",
+        "roi_entry_v1"
+      ],
+      "capability_any_of": [
+        "INSERT INTO",
+        "UPDATE ",
+        "recordRoi",
+        "createRoi"
+      ]
+    },
+    {
+      "detector_id": "D-CONTEXT-INSTANTIATION",
+      "semantic_family": "context.snapshot",
+      "kind": "CANONICAL_INSTANTIATION",
+      "any_of": [
+        "ContextSnapshot",
+        "context_snapshot_v1"
+      ],
+      "capability_any_of": [
+        "Schema.parse(",
+        "Schema.safeParse(",
+        "INSERT INTO facts",
+        "buildContextSnapshot"
+      ]
+    },
+    {
+      "detector_id": "D-ELIGIBILITY-INSTANTIATION",
+      "semantic_family": "decision.eligibility",
+      "kind": "ELIGIBILITY_PRODUCER",
+      "any_of": [
+        "DecisionEligibility",
+        "decision_eligibility"
+      ],
+      "capability_any_of": [
+        "Schema.parse(",
+        "Schema.safeParse(",
+        "evaluateDecisionEligibility",
+        "INSERT INTO facts"
+      ]
+    },
+    {
+      "detector_id": "D-TWIN-DISPATCH-PROJECTION",
+      "semantic_family": "presentation.execution_state",
+      "kind": "STATUS_PROJECTION",
+      "all_of": [
+        "DISPATCHED",
+        "act_task_id"
+      ],
+      "capability_any_of": [
+        "state_machine",
+        "buildStateMachine",
+        "current_stage",
+        "complete:"
+      ]
+    },
+    {
+      "detector_id": "D-SQL-AUTHORITY-FUNCTION-TRIGGER",
+      "semantic_family": "database.authority_logic",
+      "kind": "SQL_FUNCTION_OR_TRIGGER",
+      "any_of": [
+        "decision_recommendation",
+        "approval_",
+        "operation_plan",
+        "ao_act",
+        "dispatch",
+        "receipt",
+        "as_executed",
+        "acceptance",
+        "field_memory",
+        "roi_"
+      ],
+      "capability_any_of": [
+        "CREATE FUNCTION",
+        "CREATE OR REPLACE FUNCTION",
+        "CREATE TRIGGER",
+        "EXECUTE FUNCTION"
+      ]
+    }
+  ],
+  "registered_surfaces": [
+    {
+      "path": "apps/server/src/domain/planner/compiler_v1.ts",
+      "entrypoint": "GET /api/v1/programs/:program_id/actions",
+      "activation_mode": "API_READ_ROUTE",
+      "writes": [],
+      "reads": [
+        "field_program_v1",
+        "acceptance_result_v1"
+      ],
+      "semantic_family": [
+        "planning.option",
+        "decision.candidate"
+      ],
+      "authority_class": "LEGACY_PLANNING_PROJECTION",
+      "semantic_role": "CandidateActionV1; execution_policy is not DecisionEligibility",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "B-10C_RECLASSIFY_TO_PLANNING_OPTION",
+      "current_tree": true,
+      "detection_required": true
+    },
+    {
+      "path": "apps/server/src/routes/programs_core_v1.ts",
+      "entrypoint": "registerProgramsV1Routes",
+      "activation_mode": "API",
+      "writes": [
+        "field_program facts"
+      ],
+      "reads": [],
+      "semantic_family": [
+        "program.context",
+        "planning.option"
+      ],
+      "authority_class": "PRODUCT_ROUTE",
+      "semantic_role": "Program API including CandidateAction projection",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "B-10_RECLASSIFY_OR_KEEP",
+      "current_tree": true,
+      "detection_required": false
+    },
+    {
+      "path": "apps/server/src/jobs/agronomy_agent.ts",
+      "entrypoint": "scheduled agronomy job",
+      "activation_mode": "BACKGROUND_JOB",
+      "writes": [
+        "decision_recommendation_v1",
+        "operation_plan_v1"
+      ],
+      "reads": [],
+      "semantic_family": [
+        "decision.candidate",
+        "operation.plan",
+        "evidence.raw_observation"
+      ],
+      "authority_class": "ACTIVE_LEGACY_WRITER",
+      "semantic_role": "DEFAULT_SOIL_MOISTURE fallback plus direct plan",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "B-10C_SHADOW_THEN_REMOVE_AUTHORITY",
+      "current_tree": true,
+      "detection_required": true
+    },
+    {
+      "path": "apps/server/src/routes/decision_engine_v1.ts",
+      "entrypoint": "/api/v1/recommendations/generate",
+      "activation_mode": "API",
+      "writes": [
+        "decision_recommendation_v1"
+      ],
+      "reads": [
+        "latest weather",
+        "latest sensing",
+        "resolveCropStage"
+      ],
+      "semantic_family": [
+        "decision.candidate",
+        "context.crop_stage",
+        "twin.forecast"
+      ],
+      "authority_class": "ACTIVE_LEGACY_ORCHESTRATOR",
+      "semantic_role": "product facade plus authority-bearing input resolution",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "B-10C_DEMOTE_TO_FACADE",
+      "current_tree": true,
+      "detection_required": true
+    },
+    {
+      "path": "apps/server/src/domain/prescription/prescription_contract_v1.ts",
+      "entrypoint": "prescriptions_v1.ts",
+      "activation_mode": "DOMAIN_SERVICE",
+      "writes": [
+        "prescription_contract_v1"
+      ],
+      "reads": [],
+      "semantic_family": [
+        "action.specification",
+        "decision.approval"
+      ],
+      "authority_class": "ACTION_SPEC_WITH_EMBEDDED_POLICY",
+      "semantic_role": "action spec plus derived approval_requirement/status",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "B-10C_KEEP_ACTION_SPEC_MOVE_POLICY_AUTHORITY",
+      "current_tree": true,
+      "detection_required": true
+    },
+    {
+      "path": "apps/server/src/routes/prescriptions_v1.ts",
+      "entrypoint": "registerPrescriptionModule",
+      "activation_mode": "API",
+      "writes": [
+        "prescription",
+        "approval request"
+      ],
+      "reads": [],
+      "semantic_family": [
+        "action.specification",
+        "decision.approval"
+      ],
+      "authority_class": "PRODUCT_ROUTE",
+      "semantic_role": "Prescription API and approval handoff",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "B-10_RECLASSIFY_OR_KEEP",
+      "current_tree": true,
+      "detection_required": false
+    },
+    {
+      "path": "apps/server/src/routes/v1/operator_dispatch_actions.ts",
+      "entrypoint": "registerOperatorModule",
+      "activation_mode": "API",
+      "writes": [
+        "ao_act_dispatch_v1 DISPATCHED"
+      ],
+      "reads": [],
+      "semantic_family": [
+        "execution.dispatch_intent"
+      ],
+      "authority_class": "AMBIGUOUS_DISPATCH_STATUS_WRITER",
+      "semantic_role": "operator intent currently labelled DISPATCHED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "B-10D_RENAME_TO_DISPATCH_INTENT",
+      "current_tree": true,
+      "detection_required": true
+    },
+    {
+      "path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entrypoint": "AO-ACT control plane",
+      "activation_mode": "API",
+      "writes": [
+        "ao_act_task_v0",
+        "dispatch_queue_v1"
+      ],
+      "reads": [],
+      "semantic_family": [
+        "execution.task",
+        "execution.dispatch_delivery",
+        "execution.receipt"
+      ],
+      "authority_class": "CURRENT_CONTROL_PLANE_AUTHORITY",
+      "semantic_role": "queue claim maps READY to DISPATCHED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "B-10D_SPLIT_DELIVERY_STATES",
+      "current_tree": true,
+      "detection_required": true
+    },
+    {
+      "path": "apps/executor/src/run_dispatch_once.ts",
+      "entrypoint": "executor runtime",
+      "activation_mode": "WORKER_ENTRYPOINT",
+      "writes": [
+        "dispatch state",
+        "receipt"
+      ],
+      "reads": [],
+      "semantic_family": [
+        "execution.dispatch_delivery",
+        "execution.receipt"
+      ],
+      "authority_class": "EXECUTION_ADAPTER_RUNTIME",
+      "semantic_role": "DISPATCHED before adapter.execute then ACKED/FAILED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "B-10D_SPLIT_DELIVERY_STATES",
+      "current_tree": true,
+      "detection_required": true
+    },
+    {
+      "path": "apps/server/src/routes/human_executors_v1.ts",
+      "entrypoint": "registerExecutionModule",
+      "activation_mode": "API_AND_WORKER",
+      "writes": [
+        "assignment state",
+        "HumanWorkReceiptV1 via /api/v1/actions/receipt"
+      ],
+      "reads": [],
+      "semantic_family": [
+        "execution.human_adapter",
+        "execution.receipt"
+      ],
+      "authority_class": "HUMAN_EXECUTION_ADAPTER",
+      "semantic_role": "human lifecycle converges to AO-ACT receipt",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": "WORK_ASSIGNMENT_ALLOW_SUBMIT_FROM_ACCEPTED",
+      "downstream_consumers": [],
+      "removal_target": "KEEP_REGISTER_AS_HUMAN_ADAPTER",
+      "current_tree": true,
+      "detection_required": true
+    },
+    {
+      "path": "apps/server/src/domain/twin_kernel/decision_cycle_v1.ts",
+      "entrypoint": "twin_kernel routes",
+      "activation_mode": "DOMAIN_READ_MODEL",
+      "writes": [],
+      "reads": [],
+      "semantic_family": [
+        "presentation.execution_state",
+        "twin.trace"
+      ],
+      "authority_class": "TRACE_PROJECTION_ONLY",
+      "semantic_role": "marks DISPATCHED from act_task_id presence",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "B-10D_FIX_STATUS_PROJECTION",
+      "current_tree": true,
+      "detection_required": true
+    },
+    {
+      "path": "apps/server/src/domain/soil_water/root_zone_scenario_recommendation_submission_builder_v1.ts",
+      "entrypoint": "stale operator_twin.ts",
+      "activation_mode": "PURE_BUILDER",
+      "writes": [],
+      "reads": [],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "AUTHORITY_CAPABLE_ORPHAN_BUILDER",
+      "semantic_role": "builds candidate recommendation payload",
+      "runtime_reachable": "NOT_PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "B-10C_REGISTER_OR_RETIRE",
+      "current_tree": true,
+      "detection_required": true
+    },
+    {
+      "path": "apps/server/src/routes/v1/operator_twin.ts",
+      "entrypoint": "not registered by current registerOperatorModule",
+      "activation_mode": "STALE_ROUTE_FILE",
+      "writes": [
+        "contains decision_recommendation_v1 writer code"
+      ],
+      "reads": [],
+      "semantic_family": [
+        "decision.candidate",
+        "presentation.read_model"
+      ],
+      "authority_class": "AUTHORITY_CAPABLE_ORPHAN_ROUTE",
+      "semantic_role": "read-only header contradicts contained writer code",
+      "runtime_reachable": "NOT_PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "B-10C_RETIRE_OR_REGISTER",
+      "current_tree": true,
+      "detection_required": true
+    }
+  ],
+  "out_of_tree_frontiers": [
+    {
+      "repository": "liyongshang44-max/GEOX",
+      "pr": "#3346",
+      "head": "605d256d5e4a02a18fee89e5a6db755af3f97e18",
+      "semantic_family": "execution.external_operation_source_evidence",
+      "classification": "SOURCE_EVIDENCE_ONLY_EXTERNAL_ADAPTER_FRONTIER"
+    }
+  ]
+}

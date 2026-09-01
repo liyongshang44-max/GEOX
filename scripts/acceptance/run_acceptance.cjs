@@ -13,6 +13,12 @@ const reportHtmlPath = path.join(outputDir, 'report.html');
 const STEP_DEFINITIONS_BY_SUITE = {
   legacy: [
     {
+      id: 'B10A_RESIDUAL_AUTHORITY_AUDIT',
+      command: 'node scripts/governance_acceptance/ACCEPTANCE_B10A_RESIDUAL_AUTHORITY_AUDIT_V1.cjs',
+      logFile: 'B10A_RESIDUAL_AUTHORITY_AUDIT.log',
+      notes: 'Fails closed on authority-capable repository paths absent from B-02 or the B-10A residual inventory.'
+    },
+    {
       id: 'SERVER_SELFCHECK',
       pnpmArgs: ['--filter', '@geox/server', 'run', 'test:p1:selfcheck'],
       logFile: 'SERVER_SELFCHECK.log',
