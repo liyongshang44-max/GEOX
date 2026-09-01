@@ -107,7 +107,7 @@ sampling_plan_v1 fact
 -> sampling_acceptance_v1 fact
 ```
 
-Business identifiers such as `sample_id` or `import_id` may locate an exact fact only when identity is unique and verified. If multiple candidate facts exist, the path must fail closed rather than select the latest timestamp.
+Business identifiers such as `sample_id` or `import_id` may locate an exact fact only when identity is unique and verified. `sample_id` is not declared globally unique: receipt identity is scoped by the exact Sampling Plan, and the same sample_id may exist under a different plan. Lab import may bind an explicit `sample_receipt_fact_id`; sample_id-only compatibility lookup is permitted only when exactly one receipt matches. If multiple candidate facts exist, the path must fail closed rather than select the latest timestamp.
 
 Re-evaluating the same exact plan/receipt/lab source chain is idempotent. It must return the existing `sampling_acceptance_v1` identity. If the same exact chain would now produce a different verdict/reason set, the service must fail closed rather than silently create a second Acceptance.
 
