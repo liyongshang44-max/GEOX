@@ -65,7 +65,21 @@
         "learning_eligible=true"
       ],
       "semantic_risk": "missing outcome measurement is converted into fabricated numeric outcome memory and can become learning input",
-      "required_direction": "formal memory must use measured/qualified observation pairs or remain unknown; no numeric fallback may gain FORMAL_ACCEPTED or learning authority"
+      "required_direction": "formal memory must use measured/qualified observation pairs or remain unknown; no numeric fallback may gain FORMAL_ACCEPTED or learning authority",
+      "repair": {
+        "status": "IMPLEMENTED_PENDING_EXACT_HEAD_QUALIFICATION",
+        "branch": "fix/bline-p0-formal-field-memory-provenance-v1",
+        "changes": [
+          "Acceptance route no longer auto-creates Formal Field Memory",
+          "formalization requires exact tenant/project/group scope",
+          "formalization removes field-wide latest-two device observation fallback",
+          "receipt observation binding requires exact Acceptance receipt_id",
+          "ambiguous Acceptance/Evidence/Receipt provenance fails closed",
+          "recordMemoryV1 no longer fabricates project/group or confidence",
+          "formal target_range is no longer defaulted",
+          "successor migration and fresh bootstrap remove confidence DEFAULT 0.8 / NOT NULL"
+        ]
+      }
     },
     {
       "finding_id": "P0-RES-005",
@@ -123,7 +137,7 @@
       "semantic_risk": "evidence export can create authoritative-looking acceptance independently of the formal Acceptance Engine and evidence gate",
       "required_direction": "export must consume existing canonical acceptance/evidence; exporting must never mint an Acceptance verdict",
       "repair": {
-        "status": "IMPLEMENTED_PENDING_EXACT_HEAD_QUALIFICATION",
+        "status": "QUALIFIED_COMPLETE",
         "pr": 3434,
         "branch": "fix/bline-p0-res007-evidence-export-acceptance-authority-v1",
         "changes": [
@@ -132,6 +146,17 @@
           "deprecated acceptance_fact_id and acceptance_result status fields remain null-only",
           "executor logging no longer consumes legacy export Acceptance fields",
           "build-test guard enforces packaging-only boundary"
+        ],
+        "exact_head": "ca4259f0d6743886f55d288c7d4cfa223b7bcefc",
+        "build_test_job": 99779749502,
+        "full_acceptance_job": 99780158588,
+        "evidence": [
+          "build-test SUCCESS",
+          "full acceptance SUCCESS",
+          "C8 formal-chain backend P0 SUCCESS",
+          "Controlled Pilot strict release SUCCESS",
+          "frontend runtime audit SUCCESS",
+          "COMMERCIAL MVP0 release SUCCESS"
         ]
       }
     },
@@ -152,7 +177,21 @@
         "the resulting pair is persisted as FORMAL_FIELD_MEMORY with FORMAL_ACCEPTED and learning_eligible=true"
       ],
       "semantic_risk": "latest field observations can be misattributed as the before/after outcome of an unrelated accepted operation and enter formal learning memory",
-      "required_direction": "formal field-response memory must bind an observation pair causally to the accepted operation or fail closed; latest-two field fallback is forbidden"
+      "required_direction": "formal field-response memory must bind an observation pair causally to the accepted operation or fail closed; latest-two field fallback is forbidden",
+      "repair": {
+        "status": "IMPLEMENTED_PENDING_EXACT_HEAD_QUALIFICATION",
+        "branch": "fix/bline-p0-formal-field-memory-provenance-v1",
+        "changes": [
+          "Acceptance route no longer auto-creates Formal Field Memory",
+          "formalization requires exact tenant/project/group scope",
+          "formalization removes field-wide latest-two device observation fallback",
+          "receipt observation binding requires exact Acceptance receipt_id",
+          "ambiguous Acceptance/Evidence/Receipt provenance fails closed",
+          "recordMemoryV1 no longer fabricates project/group or confidence",
+          "formal target_range is no longer defaulted",
+          "successor migration and fresh bootstrap remove confidence DEFAULT 0.8 / NOT NULL"
+        ]
+      }
     },
     {
       "finding_id": "P0-RES-009",
@@ -208,7 +247,110 @@
         "recordMemoryV1 persists the derived 0.8 into field_memory_v1.confidence"
       ],
       "semantic_risk": "absence of confidence evidence is converted into a fabricated numeric confidence and promoted into customer-visible, learning-eligible formal memory",
-      "required_direction": "formal memory confidence must be provenance-bound to measured/qualified evidence or remain unknown/null and fail closed where a numeric confidence is required; arbitrary numeric defaults cannot acquire formal authority"
+      "required_direction": "formal memory confidence must be provenance-bound to measured/qualified evidence or remain unknown/null and fail closed where a numeric confidence is required; arbitrary numeric defaults cannot acquire formal authority",
+      "repair": {
+        "status": "IMPLEMENTED_PENDING_EXACT_HEAD_QUALIFICATION",
+        "branch": "fix/bline-p0-formal-field-memory-provenance-v1",
+        "changes": [
+          "Acceptance route no longer auto-creates Formal Field Memory",
+          "formalization requires exact tenant/project/group scope",
+          "formalization removes field-wide latest-two device observation fallback",
+          "receipt observation binding requires exact Acceptance receipt_id",
+          "ambiguous Acceptance/Evidence/Receipt provenance fails closed",
+          "recordMemoryV1 no longer fabricates project/group or confidence",
+          "formal target_range is no longer defaulted",
+          "successor migration and fresh bootstrap remove confidence DEFAULT 0.8 / NOT NULL"
+        ]
+      }
+    },
+    {
+      "finding_id": "P0-RES-012",
+      "severity": "P0",
+      "title": "Formal Field Memory accepted missing-scope facts through null-wildcard tenant/project/group matching",
+      "paths": [
+        "apps/server/src/services/field_memory_service.ts",
+        "apps/server/src/routes/field_memory_v1.ts"
+      ],
+      "evidence": [
+        "formalization queries used COALESCE(payload.tenant_id, requested_tenant)=requested_tenant and equivalent project/group expressions",
+        "a legacy Acceptance/Evidence/Receipt missing scope fields could therefore match the authenticated request scope",
+        "the resulting memory can be FORMAL_FIELD_MEMORY, customer_visible_memory=true and learning_eligible=true"
+      ],
+      "semantic_risk": "missing scope provenance can be silently promoted into a formal learning record for the caller's requested tenant/project/group",
+      "required_direction": "formalization must require exact tenant/project/group values on authoritative source records and fail closed on missing or ambiguous scope",
+      "repair": {
+        "status": "IMPLEMENTED_PENDING_EXACT_HEAD_QUALIFICATION",
+        "branch": "fix/bline-p0-formal-field-memory-provenance-v1",
+        "changes": [
+          "Acceptance route no longer auto-creates Formal Field Memory",
+          "formalization requires exact tenant/project/group scope",
+          "formalization removes field-wide latest-two device observation fallback",
+          "receipt observation binding requires exact Acceptance receipt_id",
+          "ambiguous Acceptance/Evidence/Receipt provenance fails closed",
+          "recordMemoryV1 no longer fabricates project/group or confidence",
+          "formal target_range is no longer defaulted",
+          "successor migration and fresh bootstrap remove confidence DEFAULT 0.8 / NOT NULL"
+        ]
+      }
+    },
+    {
+      "finding_id": "P0-RES-013",
+      "severity": "P0",
+      "title": "Formal Field Memory receipt resolution broadened exact Acceptance into latest task/operation receipt authority",
+      "paths": [
+        "apps/server/src/services/field_memory_service.ts"
+      ],
+      "evidence": [
+        "AcceptanceResultV1 already carries receipt_id and evidence_refs",
+        "receipt resolver also matched act_task_id/task_id/operation_plan_id and ordered candidates by occurred_at DESC",
+        "the first receipt containing an observation pair could be selected even when it was not the exact receipt bound to the Acceptance"
+      ],
+      "semantic_risk": "a later receipt for the same task/operation can silently become the outcome evidence of an earlier Acceptance",
+      "required_direction": "formalization must bind the exact receipt identity declared by Acceptance and reject missing/ambiguous receipt provenance",
+      "repair": {
+        "status": "IMPLEMENTED_PENDING_EXACT_HEAD_QUALIFICATION",
+        "branch": "fix/bline-p0-formal-field-memory-provenance-v1",
+        "changes": [
+          "Acceptance route no longer auto-creates Formal Field Memory",
+          "formalization requires exact tenant/project/group scope",
+          "formalization removes field-wide latest-two device observation fallback",
+          "receipt observation binding requires exact Acceptance receipt_id",
+          "ambiguous Acceptance/Evidence/Receipt provenance fails closed",
+          "recordMemoryV1 no longer fabricates project/group or confidence",
+          "formal target_range is no longer defaulted",
+          "successor migration and fresh bootstrap remove confidence DEFAULT 0.8 / NOT NULL"
+        ]
+      }
+    },
+    {
+      "finding_id": "P0-RES-014",
+      "severity": "P0",
+      "title": "Formal Field Memory fabricated target range 0.22-0.28 when Acceptance supplied no target-range evidence",
+      "paths": [
+        "apps/server/src/services/field_memory_service.ts",
+        "apps/server/src/routes/acceptance_v1.ts"
+      ],
+      "evidence": [
+        "explicit formalization defaulted target_range to {min:0.22,max:0.28}",
+        "the former automatic Acceptance→Field Memory path also wrote {min:0.22,max:0.28}",
+        "the value entered a customer-visible, learning-eligible Formal Field Memory without a cited policy or measurement source"
+      ],
+      "semantic_risk": "an uncited agronomic target can be persisted as formal learning truth and later influence downstream interpretation",
+      "required_direction": "target range must be copied only from explicitly bound authoritative inputs; otherwise remain unknown",
+      "repair": {
+        "status": "IMPLEMENTED_PENDING_EXACT_HEAD_QUALIFICATION",
+        "branch": "fix/bline-p0-formal-field-memory-provenance-v1",
+        "changes": [
+          "Acceptance route no longer auto-creates Formal Field Memory",
+          "formalization requires exact tenant/project/group scope",
+          "formalization removes field-wide latest-two device observation fallback",
+          "receipt observation binding requires exact Acceptance receipt_id",
+          "ambiguous Acceptance/Evidence/Receipt provenance fails closed",
+          "recordMemoryV1 no longer fabricates project/group or confidence",
+          "formal target_range is no longer defaulted",
+          "successor migration and fresh bootstrap remove confidence DEFAULT 0.8 / NOT NULL"
+        ]
+      }
     }
   ]
 }

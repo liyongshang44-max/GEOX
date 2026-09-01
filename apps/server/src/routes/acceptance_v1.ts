@@ -12,7 +12,6 @@ import { buildAcceptanceResultFromEvidenceArtifactsV1 } from "../domain/acceptan
 import { evidencePolicyFromReceiptV1, type FormalEvidenceSourceLaneV1, type FormalEvidencePolicyResultV1 } from "../domain/evidence/formal_evidence_policy_v1.js";
 import { appendSkillRunFact, appendSkillTraceFact, digestJson } from "../domain/skill_registry/facts.js";
 import { listJudgeResultsV2, loadJudgeResultV2 } from "../domain/judge/judge_result_v2.js";
-import { recordMemoryV1 } from "../services/field_memory_service.js";
 import { createFailSafeEventV1, createManualTakeoverV1 } from "../services/fail_safe_service_v1.js";
 import { auditContextFromRequestV1, recordSecurityAuditEventV1 } from "../services/security_audit_service_v1.js";
 
@@ -538,41 +537,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
 
       await pool.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [acceptanceFactId, FACT_SOURCE_ACCEPTANCE_V1, acceptanceRecord]);
 
-      if (acceptanceRecord.payload.verdict === "PASS" && acceptanceRecord.payload.formal_acceptance === true && field_id) {
-        const observedParams = (receiptPayload?.observed_parameters ?? {}) as Record<string, unknown>;
-        const soilMoistureDeltaRaw = Number(observedParams?.soil_moisture_delta);
-        const pre_soil_moisture = Number(observedParams?.pre_soil_moisture ?? observedParams?.before_soil_moisture ?? 0.18);
-        const post_soil_moisture = Number(observedParams?.post_soil_moisture ?? observedParams?.after_soil_moisture ?? (Number.isFinite(pre_soil_moisture) && Number.isFinite(soilMoistureDeltaRaw) ? pre_soil_moisture + soilMoistureDeltaRaw : 0.24));
-        const opId = typeof taskPayload.operation_plan_id === "string" ? taskPayload.operation_plan_id : (typeof taskPayload.operation_id === "string" ? taskPayload.operation_id : body.act_task_id);
-        const evidenceRefs = [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds, acceptanceFactId];
-        await recordMemoryV1(pool, tenant.tenant_id, {
-          type: "FIELD_RESPONSE_MEMORY",
-          operation_id: opId,
-          task_id: body.act_task_id,
-          field_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id,
-          acceptance_id: acceptanceFactId,
-          formal_acceptance_id: acceptanceFactId,
-          memory_lane: "FORMAL_FIELD_MEMORY",
-          trust_level: "FORMAL_ACCEPTED",
-          source_lane: "FORMAL_OPERATION",
-          customer_visible_memory: true,
-          learning_eligible: true,
-          metrics: {
-            before_soil_moisture: Number.isFinite(pre_soil_moisture) ? pre_soil_moisture : 0.18,
-            after_soil_moisture: Number.isFinite(post_soil_moisture) ? post_soil_moisture : 0.24,
-            soil_moisture_delta: Number.isFinite(soilMoistureDeltaRaw) ? soilMoistureDeltaRaw : undefined,
-            target_range: { min: 0.22, max: 0.28 },
-            success: true,
-            acceptance_passed: true,
-          },
-          evidence_refs: evidenceRefs,
-          summary: `Formal acceptance passed for task ${body.act_task_id}`,
-        });
-      }
-
-      if (acceptanceRecord.payload.verdict === "FAIL" || acceptanceRecord.payload.verdict === "PARTIAL" || acceptanceRecord.payload.verdict === "NEEDS_REVIEW" || acceptanceRecord.payload.verdict === "INSUFFICIENT_EVIDENCE") {
+      // Formal Acceptance and Formal Field Memory are separate authorities.\n      // Customer-visible/learning-eligible Field Memory is created only through the explicit\n      // /api/v1/field-memory/from-acceptance formalization boundary.\n\n      if (acceptanceRecord.payload.verdict === "FAIL" || acceptanceRecord.payload.verdict === "PARTIAL" || acceptanceRecord.payload.verdict === "NEEDS_REVIEW" || acceptanceRecord.payload.verdict === "INSUFFICIENT_EVIDENCE") {
         const trigger = acceptanceRecord.payload.verdict === "FAIL" ? "ACCEPTANCE_FAILED" : "ACCEPTANCE_NEEDS_REVIEW";
         const fs = await createFailSafeEventV1(pool, { ...tenant, act_task_id: body.act_task_id, field_id: field_id ?? null, trigger_type: trigger as any, severity: acceptanceRecord.payload.verdict === "FAIL" ? "HIGH" : "MEDIUM", reason_code: trigger, blocked_action: "acceptance.evaluate", source: "api/v1/acceptance/evaluate" });
         await createManualTakeoverV1(pool, { ...tenant, fail_safe_event_id: fs.fail_safe_event_id, act_task_id: body.act_task_id, field_id: field_id ?? null, reason_code: trigger });

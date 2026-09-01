@@ -521,26 +521,25 @@
       "entrypoint": "acceptance API route",
       "activation_mode": "API_ONLY",
       "writes": [
-        "acceptance_result_v1",
-        "formal Field Memory on qualifying PASS"
+        "acceptance_result_v1"
       ],
       "reads": [
         "execution evidence / receipt / as-executed chain"
       ],
       "semantic_family": [
-        "acceptance.verdict",
-        "field_memory"
+        "acceptance.verdict"
       ],
-      "authority_class": "CURRENT_ACCEPTANCE_RUNTIME",
+      "authority_class": "CURRENT_ACCEPTANCE_RUNTIME_ACCEPTANCE_ONLY",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
-        "Field Memory",
+        "explicit Field Memory formalization",
         "water-response/manual downstreams",
         "reports"
       ],
-      "removal_target": "KEEP_SPLIT_ACCEPTANCE_FROM_OUTCOME_MEMORY",
-      "b02_registered": true
+      "removal_target": "KEEP ACCEPTANCE AUTHORITY; FORMAL FIELD MEMORY IS A SEPARATE EXPLICIT AUTHORITY",
+      "b02_registered": true,
+      "audit_note": "P0-RES-004 repair: /api/v1/acceptance/evaluate no longer auto-writes Formal Field Memory."
     },
     {
       "surface_id": "RES-019",
@@ -576,23 +575,22 @@
         "field_memory_v1"
       ],
       "reads": [
-        "acceptance_result_v1 and formal gate state",
-        "acceptance/evidence/receipt observation candidates",
-        "device_observation_index_v1 latest-two fallback"
+        "exact-scope acceptance_result_v1 and formal gate state",
+        "explicit Acceptance metrics/evidence artifact refs/exact receipt_id observation candidates"
       ],
       "semantic_family": [
         "field_memory"
       ],
-      "authority_class": "CURRENT_FIELD_MEMORY_WRITER_WITH_CAUSAL_PAIR_AND_FORMAL_CONFIDENCE_P0S",
+      "authority_class": "CURRENT_FIELD_MEMORY_WRITER_EXACT_PROVENANCE_REPAIR_PENDING_QUALIFICATION",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "recommendation memory context",
         "reports"
       ],
-      "removal_target": "KEEP_FIELD_MEMORY_SERVICE; REMOVE_LATEST_TWO_DEVICE_FALLBACK; REMOVE FABRICATED FORMAL CONFIDENCE; REQUIRE CAUSAL OPERATION-BOUND OBSERVATION/CONFIDENCE PROVENANCE",
+      "removal_target": "KEEP_FIELD_MEMORY_SERVICE; REQUIRE EXACT SCOPE/RECEIPT/OBSERVATION PROVENANCE; UNKNOWN CONFIDENCE/TARGET RANGE REMAIN UNKNOWN",
       "b02_registered": true,
-      "audit_note": "P0-RES-008: formal-memory service can fall back to two latest field observations without operation/receipt/acceptance time binding. P0-RES-011: recordMemoryV1 defaults missing confidence to 0.8; canonical formal acceptance does not supply confidence, so 0.8 becomes FORMAL_ACCEPTED/customer-visible/learning-eligible. Latent scope debt: project_id/group_id default to projectA/groupA, although all currently identified production callers pass scope explicitly."
+      "audit_note": "P0-RES-008/011/012/013/014 repair implemented on successor: latest-two device fallback removed; null-scope wildcard removed; exact receipt binding required; confidence/target range defaults removed; ambiguity fails closed."
     },
     {
       "surface_id": "RES-021",
@@ -1277,16 +1275,16 @@
       "semantic_family": [
         "field_memory"
       ],
-      "authority_class": "FORMAL_FIELD_MEMORY_ENTRYPOINT_WITH_LATEST_PAIR_P0",
+      "authority_class": "FORMAL_FIELD_MEMORY_EXPLICIT_FAIL_CLOSED_ENTRYPOINT",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "formal Field Memory readers",
         "learning-eligible memory consumers"
       ],
-      "removal_target": "KEEP EXPLICIT FORMALIZATION ENTRYPOINT; REQUIRE CAUSALLY BOUND OBSERVATION PAIR AND REMOVE LATEST-TWO FALLBACK",
+      "removal_target": "KEEP EXPLICIT FORMALIZATION ENTRYPOINT; EXACT SCOPE/RECEIPT/OBSERVATION PROVENANCE REQUIRED",
       "b02_registered": false,
-      "audit_note": "P0-RES-008: active route can reach latest-two device observation fallback in field_memory_service."
+      "audit_note": "Repair successor removes latest-two and null-wildcard authority; route exposes ambiguity/provenance failures as 422."
     },
     {
       "surface_id": "RES-048",

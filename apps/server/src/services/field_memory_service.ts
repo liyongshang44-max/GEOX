@@ -208,6 +208,7 @@ type ObservationPairV1 = {
   before_soil_moisture: number;
   after_soil_moisture: number;
   soil_moisture_delta: number;
+  confidence?: number;
   evidence_refs: unknown[];
   source: string;
 };
@@ -224,6 +225,28 @@ function normalizeEvidenceRefs(value: unknown): unknown[] {
   return Array.isArray(value) ? value.filter((item) => item != null) : [];
 }
 
+function evidenceRefIdsV1(value: unknown): string[] {
+  const refs = normalizeEvidenceRefs(value);
+  const ids: string[] = [];
+  for (const ref of refs) {
+    if (typeof ref === "string") {
+      const id = ref.trim();
+      if (id) ids.push(id);
+      continue;
+    }
+    if (!ref || typeof ref !== "object") continue;
+    const obj = ref as Record<string, unknown>;
+    for (const key of ["ref_id", "ref", "fact_id", "artifact_id", "evidence_id"]) {
+      const id = textOrNull(obj[key]);
+      if (id) {
+        ids.push(id);
+        break;
+      }
+    }
+  }
+  return Array.from(new Set(ids));
+}
+
 async function tableExists(db: DbConn, tableName: string): Promise<boolean> {
   const q = await db.query(`SELECT to_regclass($1)::text AS table_name`, [`public.${tableName}`]);
   return Boolean((q.rows?.[0] as any)?.table_name);
@@ -236,13 +259,14 @@ async function loadAcceptanceResultForMemoryV1(db: DbConn, tenant: TenantTriple,
       WHERE (record_json::jsonb->>'type') = 'acceptance_result_v1'
         AND COALESCE(record_json::jsonb#>>'{payload,acceptance_id}', fact_id) = $4
         AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $5
-        AND COALESCE(record_json::jsonb#>>'{payload,tenant_id}', $1) = $1
-        AND COALESCE(record_json::jsonb#>>'{payload,project_id}', $2) = $2
-        AND COALESCE(record_json::jsonb#>>'{payload,group_id}', $3) = $3
-      ORDER BY occurred_at DESC, fact_id DESC
-      LIMIT 1`,
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+        AND (record_json::jsonb#>>'{payload,project_id}') = $2
+        AND (record_json::jsonb#>>'{payload,group_id}') = $3
+      ORDER BY fact_id
+      LIMIT 2`,
     [tenant.tenant_id, tenant.project_id, tenant.group_id, input.acceptance_id, input.operation_plan_id]
   );
+  if ((q.rows ?? []).length > 1) throw new Error("ACCEPTANCE_AMBIGUOUS");
   const row = q.rows?.[0] as any;
   if (!row) return null;
   return { fact_id: String(row.fact_id ?? ""), occurred_at: row.occurred_at == null ? null : String(row.occurred_at), payload: parseJsonMaybe(row.record_json)?.payload ?? {} };
@@ -267,10 +291,12 @@ function observationPairFromPayload(payload: any, evidenceRef: unknown, source: 
   if (before !== undefined && after === undefined && delta !== undefined) after = before + delta;
   if (after !== undefined && before === undefined && delta !== undefined) before = after - delta;
   if (before === undefined || after === undefined) return null;
+  const confidence = finiteFromKeys(observed, ["confidence", "measurement_confidence", "observation_confidence"]);
   return {
     before_soil_moisture: before,
     after_soil_moisture: after,
     soil_moisture_delta: delta ?? after - before,
+    ...(confidence !== undefined ? { confidence } : {}),
     evidence_refs: evidenceRef == null ? [] : [evidenceRef],
     source,
   };
@@ -292,8 +318,7 @@ async function loadAcceptanceObservationPairV1(acceptance: AcceptanceResultForMe
 }
 
 async function loadEvidenceArtifactObservationPairV1(db: DbConn, tenant: TenantTriple, acceptance: AcceptanceResultForMemoryV1, operationPlanId: string): Promise<ObservationPairV1 | null> {
-  const payload = acceptance.payload ?? {};
-  const evidenceRefs = normalizeEvidenceRefs(payload.evidence_refs).map((ref) => String(ref).trim()).filter(Boolean);
+  const evidenceRefs = evidenceRefIdsV1(acceptance.payload?.evidence_refs);
   if (evidenceRefs.length === 0) return null;
   const q = await db.query(
     `SELECT fact_id, record_json::jsonb AS record_json
@@ -304,86 +329,55 @@ async function loadEvidenceArtifactObservationPairV1(db: DbConn, tenant: TenantT
           OR (record_json::jsonb#>>'{payload,evidence_id}') = ANY($4::text[])
           OR (record_json::jsonb#>>'{payload,artifact_id}') = ANY($4::text[])
         )
-        AND COALESCE(record_json::jsonb#>>'{payload,operation_plan_id}', record_json::jsonb#>>'{payload,operation_id}', $5) = $5
-        AND COALESCE(record_json::jsonb#>>'{payload,tenant_id}', $1) = $1
-        AND COALESCE(record_json::jsonb#>>'{payload,project_id}', $2) = $2
-        AND COALESCE(record_json::jsonb#>>'{payload,group_id}', $3) = $3
-      ORDER BY occurred_at DESC, fact_id DESC
-      LIMIT 10`,
+        AND COALESCE(record_json::jsonb#>>'{payload,operation_plan_id}', record_json::jsonb#>>'{payload,operation_id}') = $5
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+        AND (record_json::jsonb#>>'{payload,project_id}') = $2
+        AND (record_json::jsonb#>>'{payload,group_id}') = $3
+      ORDER BY fact_id
+      LIMIT 20`,
     [tenant.tenant_id, tenant.project_id, tenant.group_id, evidenceRefs, operationPlanId]
   );
+  const pairs: ObservationPairV1[] = [];
   for (const row of q.rows ?? []) {
     const fact = parseJsonMaybe((row as any).record_json) ?? {};
     const factPayload = fact.payload ?? {};
     const candidates = [factPayload?.metrics, factPayload?.observed_parameters, factPayload?.metric_payload, factPayload];
     for (const candidate of candidates) {
       const pair = observationPairFromPayload(candidate, { kind: "evidence_artifact", ref: String((row as any).fact_id ?? "") }, "evidence_artifact_metric_payload");
-      if (pair) return pair;
+      if (pair) {
+        pairs.push(pair);
+        break;
+      }
     }
   }
-  return null;
+  if (pairs.length > 1) throw new Error("OBSERVATION_PAIR_AMBIGUOUS");
+  return pairs[0] ?? null;
 }
 
 async function loadReceiptObservationPairV1(db: DbConn, tenant: TenantTriple, acceptance: AcceptanceResultForMemoryV1, operationPlanId: string): Promise<ObservationPairV1 | null> {
-  const payload = acceptance.payload ?? {};
-  const evidenceRefs = normalizeEvidenceRefs(payload.evidence_refs).map((ref) => String(ref).trim()).filter(Boolean);
+  const receiptId = textOrNull(acceptance.payload?.receipt_id);
+  if (!receiptId) return null;
   const q = await db.query(
     `SELECT fact_id, record_json::jsonb AS record_json
        FROM facts
       WHERE (record_json::jsonb->>'type') IN ('ao_act_receipt_v0','ao_act_receipt_v1')
         AND (
-          (cardinality($4::text[]) > 0 AND fact_id = ANY($4::text[]))
-          OR (record_json::jsonb#>>'{payload,act_task_id}') = $5
-          OR (record_json::jsonb#>>'{payload,task_id}') = $5
-          OR (record_json::jsonb#>>'{payload,operation_plan_id}') = $6
+          fact_id = $4
+          OR (record_json::jsonb#>>'{payload,receipt_id}') = $4
         )
-        AND COALESCE(record_json::jsonb#>>'{payload,tenant_id}', $1) = $1
-        AND COALESCE(record_json::jsonb#>>'{payload,project_id}', $2) = $2
-        AND COALESCE(record_json::jsonb#>>'{payload,group_id}', $3) = $3
-      ORDER BY occurred_at DESC, fact_id DESC
-      LIMIT 5`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, evidenceRefs, String(payload?.act_task_id ?? payload?.task_id ?? "").trim(), operationPlanId]
-  );
-  for (const row of q.rows ?? []) {
-    const fact = parseJsonMaybe((row as any).record_json) ?? {};
-    const pair = observationPairFromPayload(fact.payload ?? {}, { kind: "receipt_fact", ref: String((row as any).fact_id ?? "") }, "receipt_observed_parameters");
-    if (pair) return pair;
-  }
-  return null;
-}
-
-async function loadDeviceObservationPairV1(db: DbConn, tenant: TenantTriple, fieldId: string): Promise<ObservationPairV1 | null> {
-  if (!fieldId || !(await tableExists(db, "device_observation_index_v1"))) return null;
-  const q = await db.query(
-    `SELECT fact_id, value_num, metric, observed_at_ts_ms
-       FROM device_observation_index_v1
-      WHERE tenant_id = $1
-        AND project_id = $2
-        AND group_id = $3
-        AND field_id = $4
-        AND metric IN ('soil_moisture_percent', 'soil_moisture_after_percent', 'soil_moisture', 'soil_moisture_pct', 'soil_moisture_vwc', 'moisture_pct')
-        AND value_num IS NOT NULL
-      ORDER BY observed_at_ts_ms DESC
+        AND COALESCE(record_json::jsonb#>>'{payload,operation_plan_id}', record_json::jsonb#>>'{payload,operation_id}') = $5
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+        AND (record_json::jsonb#>>'{payload,project_id}') = $2
+        AND (record_json::jsonb#>>'{payload,group_id}') = $3
+      ORDER BY fact_id
       LIMIT 2`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, fieldId]
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, receiptId, operationPlanId]
   );
-  const rows = q.rows ?? [];
-  if (rows.length < 2) return null;
-  const afterRow = rows[0] as any;
-  const beforeRow = rows[1] as any;
-  const before = num(beforeRow.value_num);
-  const after = num(afterRow.value_num);
-  if (before === undefined || after === undefined) return null;
-  return {
-    before_soil_moisture: before,
-    after_soil_moisture: after,
-    soil_moisture_delta: after - before,
-    evidence_refs: [
-      { kind: "device_observation", ref: String(beforeRow.fact_id ?? ""), role: "before" },
-      { kind: "device_observation", ref: String(afterRow.fact_id ?? ""), role: "after" },
-    ],
-    source: "device_observation_index_v1",
-  };
+  if ((q.rows ?? []).length > 1) throw new Error("RECEIPT_AMBIGUOUS");
+  const row = q.rows?.[0] as any;
+  if (!row) return null;
+  const fact = parseJsonMaybe(row.record_json) ?? {};
+  return observationPairFromPayload(fact.payload ?? {}, { kind: "receipt_fact", ref: String(row.fact_id ?? "") }, "receipt_observed_parameters");
 }
 
 async function findExistingFormalFieldMemoryV1(db: DbConn, tenant: TenantTriple, formalAcceptanceId: string): Promise<any | null> {
@@ -435,8 +429,7 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
   if (!fieldId) throw new Error("ACCEPTANCE_FIELD_ID_MISSING");
   const acceptancePair = await loadAcceptanceObservationPairV1(acceptance);
   const evidencePair = acceptancePair ?? await loadEvidenceArtifactObservationPairV1(db, tenant, acceptance, input.operation_plan_id);
-  const receiptPair = evidencePair ?? await loadReceiptObservationPairV1(db, tenant, acceptance, input.operation_plan_id);
-  const observationPair = receiptPair ?? await loadDeviceObservationPairV1(db, tenant, fieldId);
+  const observationPair = evidencePair ?? await loadReceiptObservationPairV1(db, tenant, acceptance, input.operation_plan_id);
   if (!observationPair) throw new Error("OBSERVATION_PAIR_NOT_FOUND");
 
   const evidenceRefs = normalizeEvidenceRefs([
@@ -467,7 +460,8 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
       before_soil_moisture: observationPair.before_soil_moisture,
       after_soil_moisture: observationPair.after_soil_moisture,
       soil_moisture_delta: observationPair.soil_moisture_delta,
-      target_range: acceptance.payload?.metrics?.target_range ?? { min: 0.22, max: 0.28 },
+      confidence: observationPair.confidence,
+      target_range: acceptance.payload?.metrics?.target_range,
       success: true,
       acceptance_passed: true,
       observation_source: observationPair.source,
@@ -485,12 +479,16 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
 
 export async function recordMemoryV1(db: DbConn, tenant_id: string, input: RecordMemoryInput): Promise<FieldMemoryV1> {
   const memory_type = normalizeMemoryType(input.type);
+  const project_id = String(input.project_id ?? "").trim();
+  const group_id = String(input.group_id ?? "").trim();
+  if (!project_id) throw new Error("FIELD_MEMORY_PROJECT_ID_REQUIRED");
+  if (!group_id) throw new Error("FIELD_MEMORY_GROUP_ID_REQUIRED");
   const memory_id = String(input.memory_id ?? "").trim() || crypto.randomUUID();
   const metrics = input.metrics ?? {};
   const before_value = num((metrics as any).before_soil_moisture ?? (metrics as any).before_value);
   const after_value = num((metrics as any).after_soil_moisture ?? (metrics as any).after_value);
   const delta_value = num((metrics as any).soil_moisture_delta ?? (after_value != null && before_value != null ? after_value - before_value : undefined));
-  const confidence = num((metrics as any).confidence) ?? 0.8;
+  const confidence = num((metrics as any).confidence);
   const skill_refs = Array.isArray(input.skill_refs) ? input.skill_refs : [];
   const firstSkillRef = skill_refs.find((x: any) => String(x?.skill_id ?? "").trim());
   const skill_id = String(input.skill_id ?? "").trim() || String(firstSkillRef?.skill_id ?? "").trim() || undefined;
@@ -520,9 +518,9 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
       $39
     )`,
     [
-      memory_id, tenant_id, input.project_id ?? "projectA", input.group_id ?? "groupA", input.field_id, input.season_id ?? null, null,
+      memory_id, tenant_id, project_id, group_id, input.field_id, input.season_id ?? null, null,
       memory_type, metric_key, metric_value ?? null, null, before_value ?? null, after_value ?? null, null, delta_value ?? null,
-      JSON.stringify((metrics as any).target_range ?? null), confidence, source_type,
+      JSON.stringify((metrics as any).target_range ?? null), confidence ?? null, source_type,
       source_id, input.operation_id ?? null, input.recommendation_id ?? null,
       input.prescription_id ?? null, input.task_id ?? null, input.acceptance_id ?? null, input.roi_id ?? null, skill_id,
       skill_trace_ref, JSON.stringify(input.evidence_refs ?? []), summary_text,
@@ -533,8 +531,8 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
   );
 
   return {
-    memory_id, tenant_id, project_id: input.project_id ?? "projectA", group_id: input.group_id ?? "groupA", field_id: input.field_id, season_id: input.season_id, memory_type,
-    metric_key, metric_value, before_value, after_value, delta_value, confidence,
+    memory_id, tenant_id, project_id, group_id, field_id: input.field_id, season_id: input.season_id, memory_type,
+    metric_key, metric_value, before_value, after_value, delta_value, ...(confidence !== undefined ? { confidence } : {}),
     source_type, source_id,
     operation_id: input.operation_id, recommendation_id: input.recommendation_id, prescription_id: input.prescription_id,
     task_id: input.task_id, acceptance_id: input.acceptance_id, roi_id: input.roi_id,
