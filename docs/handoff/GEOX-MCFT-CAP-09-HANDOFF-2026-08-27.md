@@ -1,3 +1,2241 @@
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-01 Continuation — Local 24h Host / Evidence ACL Carry-forward / Producer Qualification Closure
+
+Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
+
+Timestamp: **2026-09-01 13:54 +08:00**
+
+Repository: liyongshang44-max/GEOX
+
+Purpose: continue the same MCFT-CAP-09 frozen Production Hosting / exact-one-owner activation route after the external Render-host path was deliberately retired, a durable local operator-managed Docker host identity was bound, a hidden Phase3→V13 Evidence ACL carry-forward regression was discovered and isolated, and the fresh V13 producer-driven live qualification was re-executed on the current product head. The current machine frontier is no longer provider acquisition itself: the newest producer run is terminal SUCCESS. The remaining near-term route is fresh producer evidence-registry binding → QCP convergence → exact-nine-privilege production ACL remediation → local 24h host preflight / Evidence target-planner closure → separately authorized runtime/owner activation.
+
+> **This J-section is now the highest-priority conversation continuation in this file.**
+>
+> The I-section immediately below remains intentionally preserved in full as the historical Render-selection / 7.e / 7.f closure snapshot.
+>
+> Do not rewrite I merely because Render was later retired and the selected non-GitHub host became the operator-managed local machine. I records the exact reasoning that produced the platform-neutral 7.g boundary and the external-host constraints.
+>
+> H and all earlier Phase 7 / Phase 6 / Phase 5 / Phase 4 / Phase 3 / Phase 2 sections remain historical evidence and must remain intact.
+>
+> This handoff does **not** supersede docs/SSOT.md, the Digital Twin Master Task Line, the CAP-09 taskbook, Production Hosting architecture/route, QCP, evidence registry, immutable workflow artifacts, accepted CAP-01→08 authorities, or the frozen Formal-store authorities.
+
+---
+
+## J0. READ THIS FIRST — the new-head producer live qualification is SUCCESS; the real frontier is registry/QCP → exact-nine ACL remediation → local 24h host readiness
+
+The user snapshot immediately before this handoff correctly said the workflow was not deadlocked and was sitting in real GFS/KBS provider acquisition.
+
+That live fact has advanced.
+
+The authoritative product PR remains:
+
+~~~text
+#3376
+feat(mcft-cap09): qualify producer-driven v13 supply graph
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+current exact head =
+  c4650503bfe2362464c01739a9bbe33b1b330269
+
+state =
+  Draft
+  open
+  unmerged
+
+mergeable =
+  true
+~~~
+
+Protected main remains:
+
+~~~text
+fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+~~~
+
+The newest live producer qualification is now:
+
+~~~text
+workflow =
+  mcft-cap-09-v13-producer-driven-live-qualification
+
+run =
+  33472486099
+
+subject =
+  c4650503bfe2362464c01739a9bbe33b1b330269
+
+status =
+  SUCCESS
+
+artifact =
+  9787923706
+
+artifact digest =
+  sha256:c2a7c09714916eb95075f30eea0ea227f02d9b5b1642fb31cdd4ada1375161ff
+~~~
+
+It successfully passed:
+
+~~~text
+explicit live arm
+→ frozen authority
+→ exact qualification store identity
+→ qualification-only NOLOGIN Evidence privilege role
+→ exact 29-table V13 qualification schema
+→ Evidence ACL precheck
+→ real producer-driven GFS/KBS acquisition
+→ candidate/raw retention
+→ fenced promotion
+→ post-COMMIT readback
+→ machine non-effect validation
+→ Formal-v5 untouched readback
+→ artifact upload
+→ temporary qualification membership cleanup
+~~~
+
+The producer proof itself records:
+
+~~~text
+first required base =
+  2026-09-01T14:00:00.000Z
+
+last required base =
+  2026-09-01T16:00:00.000Z
+
+processed bases =
+  3
+
+exact sequential bases =
+  14:00Z
+  15:00Z
+  16:00Z
+
+provider supply graph exercised =
+  true
+
+production canonical core identical =
+  true
+
+private raw retention exercised =
+  true
+
+private candidate manifest exercised =
+  true
+
+candidate rehydration exercised =
+  true
+
+fenced Evidence writer exercised =
+  true
+
+post-COMMIT physical readback exercised =
+  true
+
+controller fencing exercised =
+  true
+
+producer fencing exercised =
+  true
+
+production admission exercised =
+  false
+
+qualification-only pre-budget admission boundary =
+  true
+
+blocked negative provider request count =
+  0
+
+blocked negative fails closed before provider =
+  true
+
+Formal-v5 =
+  untouched
+~~~
+
+Therefore the current continuation is **not**:
+
+~~~text
+wait for provider acquisition
+~~~
+
+It is now:
+
+~~~text
+bind fresh producer SUCCESS into durable requalification evidence
+→ rerun QCP on the exact new head
+→ preserve expected EXACT_ONE_PRODUCTION_OWNER blocker
+→ execute the already-qualified exact-nine production ACL remediation only after explicit authorization
+→ reprove live schema readiness
+→ finish local 24h host preflight and production Evidence target-planner authority
+→ only then open runtime start / exact-one-owner activation
+~~~
+
+Do not re-open Render.
+
+Do not start the local 24h runtime yet.
+
+Do not mutate Neon ACL until the exact-nine remediation is separately authorized.
+
+Do not arm Formal-v5, A0, or O00.
+
+---
+
+## J1. Current task in one sentence
+
+**Close the fresh producer-driven V13 requalification at the durable evidence-registry/QCP layer, then apply the already-proven exact-nine Phase3 Evidence ACL carry-forward to the production operational database under a separate one-shot authority, reprove the local host and DB as production-ready, bind the real production Evidence target/cadence planner, and only after those boundaries are closed proceed to separately authorized Evidence/Twin runtime start and exact-one-production-owner proof.**
+
+This is no longer:
+
+- a Render billing task;
+- a Render service-identity provisioning task;
+- a Neon database creation task;
+- a 41-table schema bootstrap task;
+- a service LOGIN creation task;
+- a runtime DATABASE_URL task;
+- a GFS algorithm design task;
+- a Formal-v5 arm task;
+- an A0/O00 task.
+
+The near-term work is:
+
+~~~text
+producer durable evidence closure
++
+production Evidence ACL carry-forward
++
+local long-running host pre-runtime qualification
++
+production target-planner authority
+~~~
+
+---
+
+## J2. Authority reconstruction order for the next engineer
+
+Read in this order:
+
+1. docs/SSOT.md
+2. docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md
+3. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md
+4. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md
+5. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json
+6. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+7. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+8. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json
+9. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json
+10. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json
+11. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1.json
+12. scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_ARM_V1.json
+13. scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_V1.cjs
+14. scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_V1.cjs
+15. apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql
+16. scripts/runtime_acceptance/MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_ARM.json
+17. scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V1.ts
+18. apps/server/src/external_evidence/qualification/mcft_cap09_phase5_capture_a0_fixture_v1.ts
+19. #3376 exact head c4650503bfe2362464c01739a9bbe33b1b330269
+20. producer SUCCESS run 33472486099
+21. producer artifact 9787923706 / sha256:c2a7c097...
+22. current QCP run 33472486113
+23. current live schema readiness run 33472486050
+24. current host readiness run 33472486145
+25. current owner readiness run 33472486007
+26. exact-nine ACL preflight run 33467789345
+27. exact-nine ACL artifact 9785476347
+28. this J-section
+
+The weekly report remains context only.
+
+Do not use a weekly summary to override the machine authorities above.
+
+---
+
+## J3. Repository / PR topology at handoff time
+
+### J3.1 Protected main
+
+~~~text
+protected main =
+  fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+~~~
+
+Do not move protected main as part of this continuation.
+
+### J3.2 #3376 — active product frontier
+
+~~~text
+#3376
+feat(mcft-cap09): qualify producer-driven v13 supply graph
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+head =
+  c4650503bfe2362464c01739a9bbe33b1b330269
+
+state =
+  Draft / open / unmerged
+
+mergeable =
+  true
+~~~
+
+The newest head was created by legitimate parallel work:
+
+~~~text
+commit =
+  c4650503bfe2362464c01739a9bbe33b1b330269
+
+parent =
+  c8bb5f240c85725761794947e6f485a7013a9d3a
+
+message =
+  gov(mcft-cap09): bind fresh v13 foundation requalification
+
+changed files =
+  exactly 1
+
+file =
+  docs/digital_twin/mcft/cap_09/
+  GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+
+runtime changes =
+  none
+~~~
+
+That commit added fresh durable registry evidence for the three V13 foundation checks.
+
+It did **not** yet add the new producer-driven live SUCCESS run 33472486099.
+
+### J3.3 Docs-only handoff PR
+
+The handoff remains isolated in:
+
+~~~text
+#3298
+
+branch =
+  docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier
+
+base =
+  26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+~~~
+
+Its historical base remains intentional.
+
+Do not rebase #3298 merely because protected main is much newer.
+
+The docs PR must remain docs-only.
+
+### J3.4 Head drift is now an operational fact, not an exceptional event
+
+This continuation saw concurrent heads:
+
+~~~text
+local/expected head
+→ parallel registry-only head
+→ both old-head and new-head long-running provider workflows still executing
+~~~
+
+A concrete example:
+
+~~~text
+old concurrent head =
+  c8bb5f240c85725761794947e6f485a7013a9d3a
+
+old-head producer run =
+  33471669881
+
+new authoritative head =
+  c4650503bfe2362464c01739a9bbe33b1b330269
+
+new-head producer run =
+  33472486099
+~~~
+
+At the time the new-head run completed, the old-head run could still be in progress.
+
+Do not treat an older in-flight run as the current exact-head closure merely because it eventually finishes.
+
+Always:
+
+~~~text
+GET #3376
+→ read exact remote head
+→ classify changed files
+→ determine whether the workflow subject is current exact head
+→ only then register durable evidence
+~~~
+
+Do not force-push over legitimate parallel work.
+
+---
+
+## J4. Frozen activation route — exact current position
+
+The frozen route remains:
+
+~~~text
+1  MERGE_EXACT_V13_SUCCESSOR_SUBJECT
+2  CAPACITY_PREFLIGHT_AND_SAFE_SUPERSEDED_GENERATION_CLEANUP_IF_REQUIRED
+3  PROVISION_ZERO_STATE_V13_BLOCKED_V13_AND_FORMAL_V5_STORES
+4  RUN_PRODUCER_DRIVEN_V13_QUALIFICATION
+5  FREEZE_EXACT_HEAD_END_TO_END_TIMING_BUDGET
+6  OPEN_NEW_MACHINE_ONLY_GRADUATION_GATE
+7  PROVE_EXACT_ONE_PRODUCTION_OWNER_AND_RETIRED_TRIGGER_ZERO
+8  ARM_FRESH_V5_EPOCH
+9  BOOTSTRAP_FRESH_A0
+10 RUN_REAL_WALL_CLOCK_O00_O23_WITH_ZERO_ROUTINE_MANUAL_RESCUE
+11 RUN_AUTOMATIC_FINAL_READBACK
+12 FINAL_READ_ONLY_COMPLETION_ADJUDICATION
+~~~
+
+Current status:
+
+~~~text
+1  COMPLETE
+2  COMPLETE
+3  COMPLETE
+
+4  FRESH LIVE EXECUTION =
+     SUCCESS at run 33472486099
+   DURABLE REGISTRY BINDING FOR THIS NEW DEPENDENCY DIGEST =
+     NOT YET COMPLETE
+
+5  COMPLETE / durable timing evidence still valid
+
+6  COMPLETE
+
+7  IN PROGRESS
+   7.a dedicated operational DB authority/creation      COMPLETE
+   7.b 41-table / 3-routine schema materialization      COMPLETE
+   7.c service LOGIN principals                         COMPLETE
+   7.d runtime DATABASE_URL credential binding          COMPLETE
+   7.e external Render host candidate                   RETIRED
+   7.f local operator-managed host selection            COMPLETE
+   7.g local host + exact-two service identities        BOUND
+   7.h production Evidence ACL carry-forward            PRECHECK PROVEN / MUTATION NOT AUTHORIZED
+   7.i local 24h host machine preflight                  NOT PROVEN
+   7.j production Evidence target planner                NOT BOUND
+   7.k runtime process start / effective owner proof     NOT STARTED
+   7.l exact live independent fenced leases              NOT STARTED
+   7.m EXACT_ONE_PRODUCTION_OWNER durable evidence       NOT CLOSED
+
+8  NOT STARTED
+9  NOT STARTED
+10 NOT STARTED
+11 NOT STARTED
+12 NOT STARTED
+~~~
+
+Do not collapse J4 sub-stages.
+
+In particular:
+
+~~~text
+host identity bound
+!=
+runtime started
+
+LOGIN exists
+!=
+effective production owner
+
+local machine available for 24h
+!=
+24h production host preflight proven
+
+producer live qualification SUCCESS
+!=
+durable QCP evidence bound
+
+schema exists
+!=
+current successor ACL carry-forward complete
+~~~
+
+---
+
+## J5. Render was deliberately retired; local operator-managed Docker is the selected non-GitHub host class
+
+The I-section stopped at a Render Background Worker recommendation.
+
+The actual external experiment then proved:
+
+~~~text
+Render API credential =
+  usable
+
+authority gate =
+  passed
+
+Create Service attempts =
+  reached Render API
+
+HTTP result =
+  402 Payment Required
+
+Evidence srv-* created =
+  false
+
+Twin srv-* created =
+  false
+
+external Render service count =
+  0
+~~~
+
+The first failed Render bootstrap also exposed a shell-safety issue:
+
+~~~text
+command substitution
+→ subshell
+→ parent emergency-suspend inventory could miss a newly created service id
+~~~
+
+That was repaired before any successful creation could occur.
+
+The Render execution path was then disarmed and ultimately retired.
+
+Because the operator can keep the local machine running continuously for 24 hours, cloud hosting is not a technical requirement for this qualification stage.
+
+The selected host class is now:
+
+~~~text
+platform_provider =
+  LOCAL_OPERATOR_MANAGED_DOCKER
+
+location =
+  OPERATOR_LOCAL_MACHINE
+
+production_execution_host_class =
+  NON_GITHUB_LONG_RUNNING_SERVICE
+
+GitHub Actions production execution host =
+  forbidden
+~~~
+
+Do not reopen Render billing merely because I contains the old recommendation.
+
+---
+
+## J6. Local host identity binding is CLOSED; runtime start is still forbidden
+
+The operator generated a persistent local host UUID in:
+
+~~~text
+~/.geox/mcft-cap09/local-host-id-v1
+~~~
+
+Observed bound host id:
+
+~~~text
+fae5f756-ef25-40d5-9777-5b2c3d4837a1
+~~~
+
+This is not a secret.
+
+It is the durable governed identity of the operator-managed host.
+
+Do not delete or regenerate it casually.
+
+The two production logical service identities are deterministically bound as:
+
+~~~text
+Evidence Runtime =
+  local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/
+  geox-mcft-cap09-evidence-runtime-v1
+
+Twin Runtime =
+  local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/
+  geox-mcft-cap09-twin-runtime-v1
+~~~
+
+The exact authority status at the current product head is:
+
+~~~text
+LOCAL_OPERATOR_MANAGED_DOCKER_HOST_IDENTITIES_BOUND
+~~~
+
+Machine binding state:
+
+~~~text
+platform_selected =
+  true
+
+local_host_id_bound =
+  true
+
+evidence_host_identity_bound =
+  true
+
+twin_host_identity_bound =
+  true
+
+exact_two_runtime_service_identities_bound =
+  true
+
+binding_authorized =
+  true
+~~~
+
+The container id is explicitly **not** the service authority.
+
+Container recreation must not change these logical service identities.
+
+Current exact-head readiness:
+
+~~~text
+service-login readiness =
+  33472486130
+  SUCCESS
+
+runtime-credential readiness =
+  33472486098
+  SUCCESS
+
+non-GitHub host readiness =
+  33472486145
+  SUCCESS
+
+owner provisioning readiness =
+  33472486007
+  SUCCESS
+
+CI =
+  33472486114
+  SUCCESS
+~~~
+
+The local lifecycle contract remains:
+
+~~~text
+continuous operator window =
+  24h
+
+host sleep during window =
+  forbidden
+
+host shutdown/reboot during window =
+  forbidden
+
+Docker engine =
+  must remain running
+
+restart policy =
+  unless-stopped
+
+system UTC clock =
+  required
+
+stable network =
+  required
+
+durable logs =
+  required
+~~~
+
+Current local 24h machine preflight status remains:
+
+~~~text
+NOT_PROVEN
+~~~
+
+Do not start the 24h runtime yet.
+
+---
+
+## J7. Evidence production packaging seam was closed fail-closed; the real production target planner is still NOT BOUND
+
+Twin Runtime already had a compiled production entrypoint.
+
+Evidence Runtime did not.
+
+A production Evidence entrypoint was therefore added:
+
+~~~text
+apps/server/dist/runtime/mcft_cap09_evidence_runtime.js
+~~~
+
+It references the real production Evidence process factory but deliberately fails closed with:
+
+~~~text
+MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND
+~~~
+
+Current authority records:
+
+~~~text
+Evidence production compiled entrypoint =
+  PACKAGED_FAIL_CLOSED_TARGET_PLANNER_UNBOUND
+
+Evidence production target planner =
+  NOT_BOUND
+~~~
+
+This is intentional.
+
+The Phase5 qualification planner is manifest-driven and accelerated.
+
+It must not be silently promoted into production scheduling authority.
+
+The V13 autonomous forcing controller also does not establish wall-clock target selection; it operates on a supplied base.
+
+Therefore:
+
+~~~text
+local Docker host ready
++
+compiled Evidence entrypoint exists
+~~~
+
+still does **not** authorize:
+
+~~~text
+production cadence
+production wall-clock target selection
+provider wake scheduling
+Evidence Runtime start
+~~~
+
+A real production target/cadence authority must be bound separately.
+
+---
+
+## J8. A hidden Phase3 → V13 ACL regression was found; historical migrations must not be rewritten
+
+A full Phase5 process-graph requalification exposed:
+
+~~~text
+permission denied
+on
+external_evidence_producer_lease_v1
+~~~
+
+The root cause was not the local host route.
+
+The root cause was migration composition.
+
+The earlier Phase3 ACL granted the Evidence runtime role its predecessor Evidence-plane table/function authority.
+
+The later V13 fenced-promotion ACL intentionally executed deny-by-default resets such as:
+
+~~~text
+REVOKE ALL PRIVILEGES ON ALL TABLES ...
+REVOKE ALL PRIVILEGES ON ALL FUNCTIONS ...
+~~~
+
+and then re-granted the V13 forcing surface.
+
+That successor ACL did not carry forward all predecessor Phase3 Evidence table privileges.
+
+This is a real migration-composition bug.
+
+Do **not** edit the historical V13 migration in place.
+
+It already participated in durable production materialization evidence.
+
+Changing that historical SQL would break:
+
+~~~text
+executed database state
+↔
+repository blob identity
+↔
+immutable materialization evidence
+~~~
+
+The repair is forward-only:
+
+~~~text
+apps/server/db/migrations/
+2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql
+~~~
+
+The forward migration restores predecessor authority without granting a new semantic capability.
+
+Isolated requalification after the forward migration:
+
+~~~text
+Phase3 Evidence Runtime =
+  run 33466354508
+  SUCCESS
+
+V13 fenced promotion =
+  run 33466354564
+  SUCCESS
+
+Phase5 production-equivalent containers =
+  run 33466354473
+  SUCCESS
+~~~
+
+This proves:
+
+~~~text
+Phase3 predecessor surface restored
++
+V13 forcing surface preserved
++
+full migration inventory process graph works
+~~~
+
+It does not by itself mutate the live production operational DB.
+
+---
+
+## J9. Production Neon live ACL is now narrowed to exactly 9 missing privileges
+
+The live production operational database remains:
+
+~~~text
+geox_mcft_cap09_production_runtime_v1
+~~~
+
+Its important current shape is still:
+
+~~~text
+tables =
+  41
+
+routines =
+  3
+
+all application rows =
+  0
+
+production LOGINs =
+  exact 2
+~~~
+
+A dedicated read-only remediation preflight was built.
+
+The durable preflight evidence is:
+
+~~~text
+workflow =
+  mcft-cap-09-production-evidence-acl-carryforward-remediation
+
+run =
+  33467789345
+
+subject =
+  eba9774ec8b7415044f59cf9e41e97be47c74c29
+
+artifact =
+  9785476347
+
+artifact digest =
+  sha256:3bb9c1bc35f1099b44e6c7e57f2c822540d39297ad71deb49cfa1e87614dd9f5
+
+result =
+  PASS_REMEDIATION_REQUIRED
+
+runner =
+  SKIPPED_NOT_ARMED
+~~~
+
+Current authority status:
+
+~~~text
+EXACT_NINE_PRIVILEGE_REMEDIATION_PREFLIGHT_PROVEN_NOT_AUTHORIZED
+~~~
+
+The **only** authorized future mutation surface is:
+
+~~~text
+external_evidence_producer_lease_v1:
+  SELECT
+  INSERT
+  UPDATE
+
+external_evidence_supply_event_v1:
+  SELECT
+  INSERT
+  UPDATE
+
+external_evidence_supply_cursor_v1:
+  SELECT
+  INSERT
+  UPDATE
+~~~
+
+That is exactly 9 privileges.
+
+The preflight also proves the surrounding surface is already correct:
+
+~~~text
+facts ACL exact =
+  true
+
+V13 coordination ACL exact =
+  true
+
+Phase3 append function EXECUTE matrix exact =
+  true
+
+V13 append function EXECUTE matrix exact =
+  true
+
+Twin append function EXECUTE matrix exact =
+  true
+
+exact two LOGIN memberships =
+  true
+
+target tables owned by current user =
+  true
+
+current user =
+  neondb_owner
+
+all application rows =
+  0
+~~~
+
+Therefore the future remediation does **not** need:
+
+~~~text
+schema DDL
+row DML
+role creation
+role membership changes
+temporary SET ROLE
+function ACL mutation
+credential mutation
+runtime start
+owner activation
+~~~
+
+The remediation arm is currently:
+
+~~~text
+armed =
+  false
+
+production_evidence_acl_carryforward_remediation_authorized =
+  false
+
+runtime_process_start_authorized =
+  false
+
+production_owner_activation_authorized =
+  false
+
+formal_v5_arm_authorized =
+  false
+
+a0_authorized =
+  false
+
+o00_authorized =
+  false
+~~~
+
+Current exact-head production schema readiness:
+
+~~~text
+run =
+  33472486050
+
+result =
+  FAILURE
+~~~
+
+That red result is expected until the exact-nine ACL remediation is explicitly authorized and applied.
+
+Do not hide it.
+
+Do not call the DB fully production-ready before it turns green after remediation.
+
+---
+
+## J10. Important diagnostic pitfall — PostgreSQL boolean text is true/false, not only t/f
+
+The first full ACL diagnostic appeared to say that the Evidence role had lost:
+
+- facts SELECT;
+- all three V13 forcing coordination permissions;
+- Phase3 function EXECUTE;
+- other function matrices.
+
+That conclusion was false.
+
+The diagnostic parser did:
+
+~~~text
+boolean = value === "t"
+~~~
+
+while psql expressions cast to text returned:
+
+~~~text
+true
+false
+~~~
+
+The raw ACL catalog rows contradicted the parsed booleans.
+
+After correcting the parser to accept both:
+
+~~~text
+t / f
+true / false
+~~~
+
+the live state narrowed to the real defect:
+
+~~~text
+only the three Phase3 lease/supply tables
+×
+SELECT / INSERT / UPDATE
+=
+9 missing privileges
+~~~
+
+Do not carry the earlier false broad-ACL diagnosis forward.
+
+Also use exact PostgreSQL function signatures with has_function_privilege.
+
+A bare overloaded function name can fail or resolve incorrectly.
+
+---
+
+## J11. Production schema readiness also needed a post-7.e dual-state repair
+
+An older schema/ACL readiness verifier still encoded:
+
+~~~text
+production LOGIN count must be 0
+~~~
+
+That was correct before 7.e.
+
+It became stale after durable service-login closure.
+
+The correct verifier now supports:
+
+~~~text
+PRE-7.e:
+  exact production LOGIN count = 0
+
+POST-7.e durable closure:
+  exact production LOGIN count = 2
+  exact Evidence login → Evidence privilege role
+  exact Twin login → Twin privilege role
+  no extra membership
+~~~
+
+This repair was state-machine alignment, not a privilege relaxation.
+
+Do not restore the old unconditional zero-LOGIN assertion.
+
+Do not weaken it to an arbitrary count.
+
+---
+
+## J12. Producer-driven live qualification — stale time window was repaired without expanding authority
+
+The producer live arm requires:
+
+~~~text
+qualification_first_base =
+  canonical UTC hour
+
+first base =
+  more than 6h ahead at workflow start
+~~~
+
+An earlier arm base had become stale as the conversation continued.
+
+The qualification-only base was refreshed to:
+
+~~~text
+2026-09-01T14:00:00.000Z
+~~~
+
+The runner consumes only three sequential bases:
+
+~~~text
+14:00Z
+15:00Z
+16:00Z
+~~~
+
+This change did **not** authorize:
+
+~~~text
+production owner activation
+Formal-v5
+A0
+O00
+~~~
+
+Those remained false.
+
+The current producer arm file is still armed for this qualification lane.
+
+Do not casually flip it while registering evidence.
+
+The arm file itself is part of the V13 governed dependency set.
+
+A casual arm/disarm edit changes the dependency digest and can immediately make the just-earned live evidence stale.
+
+Any later disarm must therefore follow the stage-aware evidence/QCP design, not an intuitive cleanup edit.
+
+---
+
+## J13. GFS live acquisition reliability — one real 120s timeout occurred, but the current new-head run succeeded
+
+A prior exact-head producer run failed in the real provider step:
+
+~~~text
+run =
+  33471488524
+
+subject =
+  e878b4487c240bf0b75ea6e7a4a2846e321640c5
+
+failed step =
+  Run producer-driven live v13 qualification
+~~~
+
+Exact stack:
+
+~~~text
+TimeoutError:
+  The operation was aborted due to timeout
+
+ControlledHttpsByteClientV1.requestBytes
+→ GfsNomadsLiveProviderV1.fetchPgrb2FilteredRaw
+→ GfsNomadsRawBundleComposerV1.compose
+→ GfsNomadsBundleTransportV1.fetchRawEvidence
+~~~
+
+The relevant controlled HTTPS request budget was 120 seconds.
+
+Do not misclassify that as a schema, database, host, or fencing failure.
+
+It is a live NOMADS acquisition reliability event.
+
+Phase5 already contains a bounded same-request retry pattern:
+
+~~~text
+file =
+  apps/server/src/external_evidence/qualification/
+  mcft_cap09_phase5_capture_a0_fixture_v1.ts
+
+SAME_REQUEST_MAX_ATTEMPTS =
+  2
+
+SAME_REQUEST_RETRY_DELAY_MS =
+  2000
+~~~
+
+The Phase5 helper retries the **same request**, not a cross-cycle semantic substitution.
+
+The current new-head live run 33472486099 succeeded without requiring a new shared retry policy.
+
+Therefore the correct current conclusion is:
+
+~~~text
+one live GFS timeout occurred
++
+a later exact-head live run succeeded
+=
+not enough evidence to declare a deterministic acquisition defect
+~~~
+
+Do **not** immediately add arbitrary retries merely because one request timed out.
+
+If the same timeout recurs materially:
+
+1. do not keep blind-rerunning workflows;
+2. audit the exact request identity and failure frequency;
+3. promote a bounded same-request policy into the shared production acquisition layer;
+4. preserve the same-request semantics;
+5. do not silently switch GFS cycles or source identity;
+6. requalify the shared policy through Phase5 and producer-driven live qualification.
+
+Do not copy a qualification-only retry helper into production as a second implementation.
+
+The architectural requirement remains:
+
+~~~text
+qualification acquisition policy
+==
+future production acquisition policy
+~~~
+
+---
+
+## J14. New-head producer SUCCESS details — this is now the accepted live execution candidate
+
+Current authoritative producer run:
+
+~~~text
+33472486099
+~~~
+
+Subject:
+
+~~~text
+c4650503bfe2362464c01739a9bbe33b1b330269
+~~~
+
+Terminal result:
+
+~~~text
+SUCCESS
+~~~
+
+Important machine proof:
+
+~~~text
+schema_version =
+  geox_mcft_cap09_v13_producer_driven_live_qualification_v1
+
+status =
+  PASS
+
+activation_step =
+  RUN_PRODUCER_DRIVEN_V13_QUALIFICATION
+
+qualification database =
+  geox_mcft_cap09_s6_accel24t_am19_v13
+
+blocked database =
+  geox_mcft_cap09_s6_accel24t_am19_blocked_v13
+
+first base =
+  2026-09-01T14:00:00.000Z
+
+last base =
+  2026-09-01T16:00:00.000Z
+
+processed base count =
+  3
+
+real producer graph timing observation count =
+  3
+
+provider refetch during promotion =
+  0
+
+production admission exercised =
+  false
+
+blocked negative =
+  PASS
+
+blocked negative base =
+  2026-09-01T04:00:00.000Z
+
+blocked failure class =
+  REQUIRED_FORMAL_FORCING_BASE_DEADLINE_MISSED
+
+blocked provider_request_count =
+  0
+
+blocked fail_closed_before_provider =
+  true
+~~~
+
+Artifact:
+
+~~~text
+id =
+  9787923706
+
+digest =
+  sha256:c2a7c09714916eb95075f30eea0ea227f02d9b5b1642fb31cdd4ada1375161ff
+~~~
+
+The run uploaded immutable machine proof and cleaned up temporary qualification memberships.
+
+Formal-v5 was re-proven untouched after the live execution.
+
+This run is now the live execution candidate to bind into the durable producer requalification registry.
+
+Do not use the older AE3F82FE producer run for the current dependency digest.
+
+---
+
+## J15. Fresh V13 foundation requalification is already registry-bound at c465
+
+The parallel c465 commit updated only the qualification evidence registry.
+
+It bound the current fresh foundation requalification runs:
+
+~~~text
+V13_AUTONOMOUS_FORCING_FOUNDATION
+
+subject =
+  c8bb5f240c85725761794947e6f485a7013a9d3a
+
+run =
+  33471669814
+
+status =
+  SUCCESS
+~~~
+
+~~~text
+V13_HOLISTIC_SCHEMA
+
+subject =
+  c8bb5f240c85725761794947e6f485a7013a9d3a
+
+run =
+  33471669871
+
+status =
+  SUCCESS
+~~~
+
+~~~text
+V13_NEXT_TICK_VIABILITY
+
+subject =
+  c8bb5f240c85725761794947e6f485a7013a9d3a
+
+run =
+  33471669797
+
+status =
+  SUCCESS
+~~~
+
+Their current resolver dependency digest is:
+
+~~~text
+sha256:64e3728cfde29b37e2ab1913781bb0369e70897d8cff817d05c2e4959075094f
+~~~
+
+The registry commit itself does not change the runtime dependency closure.
+
+That is why the c8bb foundation runs remain valid ancestor evidence at c465.
+
+The producer check has the same current V13 resolver dependency digest:
+
+~~~text
+sha256:64e3728cfde29b37e2ab1913781bb0369e70897d8cff817d05c2e4959075094f
+~~~
+
+But the producer entry is not yet updated for run 33472486099.
+
+That is the immediate durable-evidence task.
+
+---
+
+## J16. Current QCP is structurally healthy; it failed before the new producer run finished
+
+Current exact-head QCP:
+
+~~~text
+workflow =
+  mcft-cap-09-qualification-control-plane-v1
+
+run =
+  33472486113
+
+subject =
+  c4650503bfe2362464c01739a9bbe33b1b330269
+
+artifact =
+  9787147405
+
+artifact digest =
+  sha256:738b381ff7a8d999cbddcbac93c227d4c6d50c2ec982e77d5d913e9d2fd9ce24
+
+result =
+  FAILURE
+~~~
+
+This failure is **not** a central-governance structural error.
+
+Machine facts:
+
+~~~text
+authority_errors =
+  0
+
+unknown_changed_paths =
+  0
+
+blocker_count =
+  2
+~~~
+
+The two blockers were:
+
+~~~text
+V13_PRODUCER_DRIVEN_QUALIFICATION
+  reason =
+    NO_VALID_REQUALIFICATION_EVIDENCE
+
+EXACT_ONE_PRODUCTION_OWNER
+  reason =
+    NO_VALID_REQUALIFICATION_EVIDENCE
+~~~
+
+The old producer evidence:
+
+~~~text
+V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_AE3F82FE
+~~~
+
+was rejected because:
+
+~~~text
+dependency_digest_match =
+  false
+~~~
+
+The current required producer digest is:
+
+~~~text
+sha256:64e3728cfde29b37e2ab1913781bb0369e70897d8cff817d05c2e4959075094f
+~~~
+
+QCP finished at approximately 05:16Z.
+
+The new producer run did not finish until approximately 05:52Z.
+
+Therefore QCP could not possibly consume run 33472486099 yet.
+
+Do not read QCP run 33472486113 as evidence that the new producer run failed.
+
+The next QCP should be run **after** binding the producer SUCCESS into the registry.
+
+Expected convergence:
+
+~~~text
+V13_PRODUCER_DRIVEN_QUALIFICATION =
+  PASS via fresh durable evidence
+
+END_TO_END_EVIDENCE_SUPPLY_DEADLINE =
+  continue PASS
+
+EXACT_ONE_PRODUCTION_OWNER =
+  remain FAIL until owner closure is actually proven
+
+FORMAL_V5_ACTIVATION =
+  remain NOT_APPLICABLE
+~~~
+
+If the producer blocker remains after a correct registry binding, treat that as an immutable-binding / dependency-digest / evidence-registry bug and inspect exact adjudication fields.
+
+Do not re-run the public providers first.
+
+---
+
+## J17. Step 5 timing authority remains durable valid
+
+The current QCP still reports the end-to-end timing check as valid durable evidence.
+
+Current check:
+
+~~~text
+END_TO_END_EVIDENCE_SUPPLY_DEADLINE
+~~~
+
+Current durable evidence:
+
+~~~text
+END_TO_END_EVIDENCE_SUPPLY_DEADLINE_POSTMERGE_E052FD45
+~~~
+
+Run:
+
+~~~text
+33361592444
+~~~
+
+Dependency digest:
+
+~~~text
+sha256:857b9011f042fc561f00d0e65e47a6cfc5c35d4efa4a4bae3f2ca8fd1de84c66
+~~~
+
+Current QCP reason remains:
+
+~~~text
+DURABLE_REQUALIFICATION_EVIDENCE_AND_DEPENDENCY_DIGEST_VALID
+~~~
+
+Do not reopen Step 5 merely because the V13 forcing dependency set changed elsewhere.
+
+The timing resolver is a separate dependency closure.
+
+---
+
+## J18. Current exact-head machine matrix
+
+At c4650503bfe2362464c01739a9bbe33b1b330269:
+
+~~~text
+service-login readiness
+  run 33472486130
+  SUCCESS
+
+runtime-credential readiness
+  run 33472486098
+  SUCCESS
+
+non-GitHub host readiness
+  run 33472486145
+  SUCCESS
+
+owner provisioning readiness
+  run 33472486007
+  SUCCESS
+
+CI
+  run 33472486114
+  SUCCESS
+
+V13 Autonomous fresh foundation
+  registry-bound ancestor run 33471669814
+  SUCCESS
+
+V13 Holistic fresh foundation
+  registry-bound ancestor run 33471669871
+  SUCCESS
+
+V13 Next-Tick fresh foundation
+  registry-bound ancestor run 33471669797
+  SUCCESS
+
+V13 Producer live
+  run 33472486099
+  SUCCESS
+  durable registry binding for this run still pending
+
+production operational schema ACL readiness
+  run 33472486050
+  FAILURE
+  expected exact-nine Phase3 ACL carry-forward blocker
+
+QCP
+  run 33472486113
+  FAILURE
+  authority_errors = 0
+  unknown_changed_paths = 0
+  blocker_count = 2
+  producer durable evidence + exact-one owner
+
+production owner activation
+  false
+
+runtime process start
+  false
+
+Formal-v5
+  not armed
+
+A0
+  not started
+
+O00
+  not started
+
+MCFT-CAP-09
+  NOT COMPLETE
+~~~
+
+This is not a deadlock.
+
+It is a controlled sequence of remaining machine authorities.
+
+---
+
+## J19. Immediate next plan — exact order
+
+### J19.1 Reconfirm #3376 exact head before touching the registry
+
+Expected:
+
+~~~text
+c4650503bfe2362464c01739a9bbe33b1b330269
+~~~
+
+If the remote head moved:
+
+1. inspect the diff;
+2. determine whether any V13 governed dependency changed;
+3. recompute the producer dependency digest;
+4. do not blindly register c465 evidence against a new incompatible head.
+
+A registry-only descendant may preserve the same runtime digest.
+
+A runtime/workflow/arm/migration change may not.
+
+### J19.2 Bind producer run 33472486099 into the durable evidence registry
+
+Target check:
+
+~~~text
+V13_PRODUCER_DRIVEN_QUALIFICATION
+~~~
+
+Use:
+
+~~~text
+workflow =
+  mcft-cap-09-v13-producer-driven-live-qualification
+
+workflow path =
+  .github/workflows/
+  mcft-cap-09-v13-producer-driven-live-qualification.yml
+
+run =
+  33472486099
+
+run conclusion =
+  success
+
+subject =
+  c4650503bfe2362464c01739a9bbe33b1b330269
+
+dependency digest =
+  sha256:64e3728cfde29b37e2ab1913781bb0369e70897d8cff817d05c2e4959075094f
+
+artifact cross-check =
+  9787923706
+  sha256:c2a7c09714916eb95075f30eea0ea227f02d9b5b1642fb31cdd4ada1375161ff
+~~~
+
+Follow the registry's existing immutable-binding algorithm exactly.
+
+Do not guess immutable_binding_sha256.
+
+Do not reuse the old AE3F82FE binding hash.
+
+### J19.3 Rerun exact-head QCP
+
+Target:
+
+~~~text
+authority_errors =
+  0
+
+unknown_changed_paths =
+  0
+
+V13_PRODUCER_DRIVEN_QUALIFICATION =
+  PASS
+~~~
+
+Expected remaining owner blocker:
+
+~~~text
+EXACT_ONE_PRODUCTION_OWNER
+~~~
+
+Do not attempt to remove that blocker by registry fiction.
+
+It requires real production-owner closure.
+
+### J19.4 Request explicit user authorization for the exact-nine production ACL remediation
+
+Only after the fresh producer evidence/QCP layer is clean, request the already-bounded one-shot authority.
+
+The authorization must remain scoped to:
+
+~~~text
+3 tables
+×
+SELECT / INSERT / UPDATE
+=
+9 GRANT privileges
+~~~
+
+Do not bundle runtime start into this authorization.
+
+### J19.5 Apply one-shot ACL remediation and immediately reprove
+
+Required postconditions:
+
+~~~text
+41 tables unchanged
+3 routines unchanged
+all rows still 0
+exact 2 LOGINs unchanged
+exact memberships unchanged
+facts matrix unchanged
+V13 forcing matrix unchanged
+3 Phase3 table matrices now exact
+no schema DDL
+no row DML
+no role/membership mutation
+no credential mutation
+runtime start = false
+owner activation = false
+Formal-v5/A0/O00 = false
+~~~
+
+Then disarm the ACL remediation one-shot and run independent readback.
+
+### J19.6 Reprove production schema readiness
+
+Target:
+
+~~~text
+mcft-cap-09-production-operational-schema-acl-readiness
+=
+SUCCESS
+~~~
+
+Do not proceed to local runtime start while this lane remains red.
+
+### J19.7 Run local operator-host 24h preflight
+
+Only after DB ACL closure.
+
+The host preflight must prove:
+
+~~~text
+bound UUID exact
+clean exact repo head
+Docker daemon available
+Linux container engine
+Docker Compose available
+AC sleep disabled
+network time source valid
+sufficient local resources
+stable network
+durable log path
+no runtime secret read during read-only probe
+no DB mutation
+no container start
+~~~
+
+Do not treat “user says the PC can stay on” as machine proof.
+
+### J19.8 Bind real production Evidence target/cadence planner
+
+Do not use the Phase5 manifest planner as production authority.
+
+Do not infer a wall-clock planner from the V13 controller.
+
+This is a separate semantic authority.
+
+### J19.9 Only then open runtime start / exact-one-owner activation
+
+Future owner closure must prove:
+
+~~~text
+Evidence Runtime effective owner count =
+  exactly 1
+
+Twin Runtime scheduler effective owner count =
+  exactly 1
+
+Evidence service identity =
+  exact bound local-docker identity
+
+Twin service identity =
+  exact bound local-docker identity
+
+independent Evidence lease/fence =
+  live
+
+independent Twin scheduler lease/fence =
+  live
+
+GitHub production owner count =
+  0
+~~~
+
+Only after that may EXACT_ONE_PRODUCTION_OWNER get durable evidence.
+
+Formal-v5 remains downstream.
+
+---
+
+## J20. What the user needs to do right now
+
+At this handoff:
+
+~~~text
+PowerShell action =
+  none
+
+Docker runtime start =
+  do not start yet
+
+Render action =
+  none
+
+cloud billing =
+  none
+
+Neon manual SQL =
+  do not execute manually
+
+Formal-v5 =
+  do not arm
+
+A0/O00 =
+  do not start
+~~~
+
+The next likely user authority request is the exact-nine production ACL remediation.
+
+Do not ask the user to paste database secrets.
+
+Do not ask the user to manually run GRANT statements if the machine-governed one-shot can execute them.
+
+After ACL closure, the user will be needed again for the local host preflight / 24h runtime window.
+
+---
+
+## J21. Pitfalls discovered in this continuation — preserve all of these
+
+### J21.1 Parallel head drift can coexist with long-running provider workflows
+
+A live provider workflow may still be running for an old subject after a new registry-only head appears.
+
+Never infer current closure from the newest-completed run without checking its subject SHA.
+
+Never cancel or overwrite parallel work reflexively.
+
+### J21.2 Long provider acquisition is not automatically a deadlock
+
+The producer workflow can spend tens of minutes inside real GFS/KBS acquisition.
+
+Inspect:
+
+~~~text
+workflow status
+job status
+active step
+provider timestamps
+~~~
+
+before calling it stuck.
+
+Run 33472486099 spent roughly 42 minutes in the real producer step and still finished SUCCESS.
+
+### J21.3 A single provider timeout does not authorize arbitrary retry semantics
+
+The e878 run hit a real 120s GFS NOMADS timeout.
+
+The later c465 run succeeded.
+
+This currently supports:
+
+~~~text
+transient/reliability risk exists
+~~~
+
+not:
+
+~~~text
+shared provider implementation is deterministically broken
+~~~
+
+If retry is productized, reuse a bounded same-request policy and qualify it.
+
+Do not add cross-cycle fallback merely to make CI green.
+
+### J21.4 Phase5 retry logic is qualification code until intentionally productized
+
+The existing 2-attempt / 2s helper is evidence that the bounded retry policy was already qualified in Phase5.
+
+It is not automatically the shared production authority.
+
+If promoted, place it in the shared acquisition layer and make both qualification and future production use it.
+
+### J21.5 Do not rewrite executed historical migrations
+
+The V13 ACL reset bug must be repaired with a forward-only migration.
+
+Editing the executed August migration would invalidate materialization traceability.
+
+### J21.6 psql text booleans can be true/false
+
+Do not assume only t/f.
+
+Read raw catalog rows when a broad ACL diagnosis contradicts known state.
+
+### J21.7 Function privilege checks need exact signatures
+
+Use the exact regprocedure signature.
+
+Do not rely on a bare function name.
+
+### J21.8 Schema readiness has pre-login and post-login states
+
+Do not bring back the old unconditional LOGIN-count-zero assertion.
+
+Post-7.e exact two LOGINs are correct.
+
+### J21.9 LOGIN is not effective owner
+
+The existence of:
+
+~~~text
+geox_mcft_cap09_evidence_runtime_login_v1
+geox_mcft_cap09_twin_runtime_login_v1
+~~~
+
+does not close EXACT_ONE_PRODUCTION_OWNER.
+
+### J21.10 Docker container ids are not durable service identities
+
+The governed identities are derived from the persistent host UUID + service name.
+
+Container recreation must not change authority.
+
+### J21.11 Do not delete the local host UUID state file
+
+The bound host identity depends on:
+
+~~~text
+~/.geox/mcft-cap09/local-host-id-v1
+~~~
+
+Regenerating it would create a new host identity and reopen 7.g binding.
+
+### J21.12 Phase5 Compose is not the final production 24h runtime
+
+It is qualification-only and includes accelerated-clock / local-service assumptions.
+
+Do not run it for 24h and call that Formal production closure.
+
+### J21.13 Evidence production entrypoint is intentionally fail-closed
+
+Until the production target planner is bound:
+
+~~~text
+MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND
+~~~
+
+is the correct behavior.
+
+Do not remove the fail-close merely to start Docker.
+
+### J21.14 Remediation preflight must remain read-only until explicit authorization
+
+Current exact-nine ACL runner must remain:
+
+~~~text
+SKIPPED_NOT_ARMED
+~~~
+
+until a separate user authority is granted.
+
+### J21.15 Do not casually disarm the producer live arm before registry/QCP closure
+
+The producer arm file is a governed V13 dependency.
+
+Changing it changes the dependency digest.
+
+A well-intentioned cleanup commit can instantly stale the just-earned producer evidence.
+
+### J21.16 Artifact success is not durable registry closure
+
+Run 33472486099 and artifact 9787923706 are real immutable execution facts.
+
+QCP still needs a repository-versioned durable evidence binding.
+
+Do not equate “artifact exists” with “check closed.”
+
+### J21.17 A red QCP can be expected and still structurally healthy
+
+Current QCP has:
+
+~~~text
+authority_errors = 0
+unknown_changed_paths = 0
+~~~
+
+Its red status comes from missing/invalid durable requalification evidence and owner closure.
+
+Do not weaken QCP just to make the workflow green.
+
+---
+
+## J22. High-value exact file map
+
+### Local host / identity
+
+~~~text
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json
+
+scripts/runtime_acceptance/
+MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json
+
+scripts/governance_acceptance/
+PREFLIGHT_MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_V1.cjs
+
+scripts/runtime_acceptance/
+VERIFY_MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_READINESS_V1.cjs
+~~~
+
+### Production owner / runtime credentials
+
+~~~text
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json
+
+scripts/runtime_acceptance/
+VERIFY_MCFT_CAP_09_PRODUCTION_RUNTIME_CREDENTIAL_READINESS_V1.cjs
+~~~
+
+### Evidence production runtime packaging
+
+~~~text
+apps/server/src/external_evidence/
+mcft_cap09_evidence_runtime_process_v1.ts
+
+apps/server/src/external_evidence/
+mcft_cap09_evidence_runtime_composition_v1.ts
+
+apps/server/dist/runtime/
+mcft_cap09_evidence_runtime.js
+
+apps/server/scripts/
+write_dist_entries.cjs
+~~~
+
+### Twin production runtime
+
+~~~text
+apps/server/src/runtime/twin_runtime/
+mcft_cap09_twin_runtime_process_v1.ts
+
+apps/server/src/runtime/twin_runtime/
+mcft_cap09_twin_runtime_composition_v1.ts
+
+apps/server/dist/runtime/
+mcft_cap09_twin_runtime.js
+~~~
+
+### ACL carry-forward
+
+~~~text
+apps/server/db/migrations/
+2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql
+
+apps/server/db/migrations/
+2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql
+
+apps/server/db/migrations/
+2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql
+
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1.json
+
+scripts/runtime_acceptance/
+MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_ARM_V1.json
+
+scripts/governance_acceptance/
+PREFLIGHT_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_V1.cjs
+
+scripts/runtime_acceptance/
+RUN_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_V1.cjs
+~~~
+
+### GFS acquisition / retry evidence
+
+~~~text
+apps/server/src/external_evidence/provider/
+https_external_evidence_transport_v1.ts
+
+apps/server/src/external_evidence/provider/
+gfs_nomads_live_provider_v1.ts
+
+apps/server/src/external_evidence/provider/
+gfs_nomads_raw_bundle_composer_v1.ts
+
+apps/server/src/external_evidence/provider/
+gfs_nomads_bundle_transport_v1.ts
+
+apps/server/src/external_evidence/qualification/
+mcft_cap09_phase5_capture_a0_fixture_v1.ts
+~~~
+
+### Producer live qualification
+
+~~~text
+scripts/runtime_acceptance/
+MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_ARM.json
+
+scripts/runtime_acceptance/
+RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V1.ts
+
+.github/workflows/
+mcft-cap-09-v13-producer-driven-live-qualification.yml
+~~~
+
+### Central QCP / evidence
+
+~~~text
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+
+scripts/governance_acceptance/
+PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+~~~
+
+---
+
+## J23. Current machine facts that must not be accidentally downgraded
+
+The next engineer may encounter red workflows while heads move.
+
+Do not lose these already-established facts:
+
+~~~text
+production operational DB exists =
+  true
+
+production table count =
+  41
+
+runtime routine count =
+  3
+
+all production application rows =
+  0
+
+service LOGIN count =
+  exact 2
+
+runtime DATABASE_URL credentials =
+  exact 2 / bound / verified
+
+Render services created =
+  0
+
+Render execution path =
+  retired
+
+local host UUID =
+  bound
+
+local Evidence service identity =
+  bound
+
+local Twin service identity =
+  bound
+
+host readiness =
+  PASS
+
+owner provisioning readiness =
+  PASS
+
+production runtime start =
+  false
+
+production owner activation =
+  false
+
+Formal-v5 =
+  not armed
+
+A0 =
+  not started
+
+O00 =
+  not started
+~~~
+
+A fresh producer run or ACL repair must not silently reopen any of those closures.
+
+---
+
+## J24. Completion statement at this handoff
+
+The correct current statement is:
+
+~~~text
+Render host route =
+  RETIRED / ZERO SERVICES CREATED
+
+Local operator-managed non-GitHub host identity =
+  BOUND
+
+Evidence/Twin exact-two long-running logical service identities =
+  BOUND
+
+Local 24h machine preflight =
+  NOT YET PROVEN
+
+Evidence production compiled entrypoint =
+  PACKAGED / FAIL-CLOSED
+
+Evidence production target planner =
+  NOT BOUND
+
+Phase3→V13 forward ACL carry-forward implementation =
+  ISOLATED QUALIFIED
+
+Production live ACL carry-forward =
+  EXACT 9 PRIVILEGES MISSING
+  PREFLIGHT PROVEN
+  NOT AUTHORIZED
+  NOT APPLIED
+
+V13 Autonomous / Holistic / Next-Tick fresh requalification =
+  SUCCESS / REGISTRY BOUND
+
+V13 Producer live fresh requalification =
+  SUCCESS at run 33472486099
+  REGISTRY BINDING PENDING
+
+Step 5 timing =
+  DURABLE VALID
+
+QCP =
+  STRUCTURALLY HEALTHY
+  authority_errors = 0
+  unknown_changed_paths = 0
+  producer evidence + exact-owner blockers at run 33472486113
+
+Production owner =
+  NOT ACTIVATED
+
+Formal-v5 =
+  NOT ARMED
+
+A0 / O00 =
+  NOT STARTED
+
+MCFT-CAP-09 =
+  IN PROGRESS / NOT COMPLETE
+~~~
+
+The actual immediate frontier is:
+
+~~~text
+33472486099 producer SUCCESS
+→ bind fresh producer durable evidence
+→ exact-head QCP
+→ exact-nine production ACL authorization/remediation
+→ live schema readiness green
+→ local 24h host preflight
+→ production Evidence target planner
+→ runtime start / exact-one-owner proof
+~~~
+
+---
+
+## J25. Final handoff sentence
+
+The next engineer should **not rerun public providers first, should not reopen Render, and should not start the local 24h Docker runtime yet**. Begin by verifying #3376 still descends from c4650503..., bind producer SUCCESS run 33472486099 against the current V13 dependency digest sha256:64e3728c... using the exact registry immutable-binding algorithm, rerun QCP until the producer blocker disappears, then request explicit authorization for the already-proven exact-nine Phase3 Evidence ACL carry-forward. After live schema readiness is green, qualify the bound local host and real production Evidence target/cadence authority before any runtime/owner activation. Formal-v5, A0, and O00 remain downstream and forbidden at this frontier.
+
+---
+
 # GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-01 Continuation — 7.e/7.f Durable Closure / Non-GitHub Host Authority / Render Selection Frontier
 
 Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
