@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "KBS_FENCED_BASELINE_POINTER_IMPLEMENTED_ISOLATED_PRODUCTION_SCHEMA_NOT_MATERIALIZED");
+  assert.equal(authority.status, "KBS_FENCED_BASELINE_POINTER_IMPLEMENTED_PRODUCTION_REMEDIATION_READY_NOT_AUTHORIZED");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "95dfa68fc801a327ae286901e5d5705a612b6859");
+  assert.equal(authority.subject_predecessor_sha, "3da9aacaffacd8ff90dfb55468b68d2190bdf7dd");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -108,6 +108,22 @@ try {
   includes(kbsBaselinePointerMigration, "ALTER TABLE public.external_evidence_producer_lease_v1", "KBS_BASELINE_POINTER_LEASE_EXTENSION_REQUIRED");
   assert.equal(kbsBaselinePointerMigration.includes("CREATE TABLE"), false, "KBS_BASELINE_POINTER_NEW_TABLE_FORBIDDEN");
 
+  const kbsProductionPointerRemediationAuthority = json(authority.kbs_production_baseline_pointer_schema_remediation_authority_ref);
+  assert.equal(kbsProductionPointerRemediationAuthority.status, "READY_NOT_AUTHORIZED");
+  assert.equal(kbsProductionPointerRemediationAuthority.target.database_name, "geox_mcft_cap09_production_runtime_v1");
+  assert.equal(kbsProductionPointerRemediationAuthority.target.expected_table_count, 41);
+  assert.equal(kbsProductionPointerRemediationAuthority.target.new_table_count_authorized, 0);
+  assert.equal(kbsProductionPointerRemediationAuthority.authorization.production_kbs_baseline_pointer_schema_remediation_authorized, false);
+  assert.equal(kbsProductionPointerRemediationAuthority.authorization.runtime_process_start_authorized, false);
+  assert.equal(kbsProductionPointerRemediationAuthority.migration_ref, authority.kbs_publication_baseline_pointer_migration_ref);
+  const kbsProductionPointerArm = json(authority.kbs_production_baseline_pointer_schema_remediation_arm_ref);
+  assert.equal(kbsProductionPointerArm.armed, false);
+  assert.equal(kbsProductionPointerArm.exact_target_database_name, null);
+  assert.equal(kbsProductionPointerArm.production_kbs_baseline_pointer_schema_remediation_authorized, false);
+  const kbsProductionPointerWorkflow = read(authority.kbs_production_baseline_pointer_schema_remediation_workflow_ref);
+  includes(kbsProductionPointerWorkflow, "Read-only exact production KBS pointer schema preflight", "KBS_POINTER_PRODUCTION_READ_ONLY_PREFLIGHT_REQUIRED");
+  includes(kbsProductionPointerWorkflow, "Apply pointer schema only when separately armed", "KBS_POINTER_PRODUCTION_SEPARATE_ARM_REQUIRED");
+
   const purePlanner = read(authority.pure_source_planner_ref);
   includes(purePlanner, "planProductionEvidenceSourcesV1", "PURE_SOURCE_SPECIFIC_PLANNER_REQUIRED");
   includes(purePlanner, "KBS_RAW_HOURLY_PUBLICATION_BASELINE_REQUIRED", "KBS_PUBLICATION_BASELINE_PLAN_REQUIRED");
@@ -167,6 +183,8 @@ try {
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.fenced_baseline_pointer_compare_and_set_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.baseline_pointer_preserves_writer_identity_across_takeover, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.baseline_pointer_restart_readback_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_baseline_pointer_schema_remediation_capability_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_baseline_pointer_schema_remediation_authorized, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_baseline_pointer_schema_materialized, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_durable_baseline_available, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.durable_publication_baseline_implemented, true);
@@ -203,7 +221,9 @@ try {
     status: "PASS",
     subject_sha: subject,
     authority_status: authority.status,
-    current_frontier: "PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_MATERIALIZATION_REQUIRED",
+    current_frontier: "PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_AUTHORIZATION_REQUIRED",
+    production_kbs_baseline_pointer_schema_remediation_capability_implemented: true,
+    production_kbs_baseline_pointer_schema_remediation_authorized: false,
     kbs_fenced_baseline_pointer_implemented_isolated: true,
     kbs_content_addressed_baseline_manifest_store_implemented: true,
     kbs_forward_delta_no_change_discovery_implemented: true,

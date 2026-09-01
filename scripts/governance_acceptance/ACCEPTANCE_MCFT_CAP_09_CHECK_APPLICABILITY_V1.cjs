@@ -215,6 +215,11 @@ function main() {
     "apps/server/src/external_evidence/mcft_cap09_kbs_publication_baseline_pointer_v1.ts",
     "apps/server/src/persistence/external_evidence/postgres_kbs_publication_baseline_pointer_v1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1.ts",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-KBS-BASELINE-POINTER-SCHEMA-REMEDIATION-AUTHORITY-V1.json",
+    "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_ARM_V1.json",
+    "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_V1.cjs",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_V1.cjs",
+    ".github/workflows/mcft-cap-09-production-kbs-baseline-pointer-schema-remediation.yml",
   ]) {
     const horizonPlanner = plan(authority, registry, [horizonPlannerPath]);
     assert.equal(horizonPlanner.status, "PASS");
@@ -263,6 +268,15 @@ function main() {
   assert.equal(kbsBaselinePointerProof.status, "PASS");
   assert.equal(kbsBaselinePointerProof.unknown_changed_paths.length, 0);
   assert.equal(byId(kbsBaselinePointerProof, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+
+  // CP-4: production KBS pointer schema remediation control surfaces are owner-closure-owned.
+  for (const kbsPointerRemediationPath of ["docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-KBS-BASELINE-POINTER-SCHEMA-REMEDIATION-AUTHORITY-V1.json","scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_ARM_V1.json","scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_V1.cjs","scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_V1.cjs",".github/workflows/mcft-cap-09-production-kbs-baseline-pointer-schema-remediation.yml"]) {
+    const result = plan(authority, registry, [kbsPointerRemediationPath]);
+    assert.equal(result.status, "PASS");
+    assert.equal(result.unknown_changed_paths.length, 0);
+    assert.equal(byId(result, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(result, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(kbsPointerRemediationPath));
+  }
 
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";

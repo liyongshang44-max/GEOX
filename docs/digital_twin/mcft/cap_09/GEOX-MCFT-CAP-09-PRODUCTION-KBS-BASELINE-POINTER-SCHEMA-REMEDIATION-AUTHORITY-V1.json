@@ -1,0 +1,84 @@
+{
+  "schema_version": "geox_mcft_cap09_production_kbs_baseline_pointer_schema_remediation_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-KBS-BASELINE-POINTER-SCHEMA-REMEDIATION-AUTHORITY-V1",
+  "status": "READY_NOT_AUTHORIZED",
+  "subject_predecessor_sha": "3da9aacaffacd8ff90dfb55468b68d2190bdf7dd",
+  "purpose": "Forward-only materialization of the already-qualified KBS publication baseline pointer columns on the exact production operational database.",
+  "target": {
+    "database_name": "geox_mcft_cap09_production_runtime_v1",
+    "expected_table_count": 41,
+    "expected_routine_count": 3,
+    "target_table": "external_evidence_producer_lease_v1",
+    "expected_pointer_columns": [
+      "kbs_raw_hourly_baseline_ref",
+      "kbs_raw_hourly_baseline_digest",
+      "kbs_raw_hourly_baseline_manifest_bytes",
+      "kbs_raw_hourly_baseline_latest_event_time",
+      "kbs_raw_hourly_baseline_stored_at",
+      "kbs_raw_hourly_baseline_writer_owner",
+      "kbs_raw_hourly_baseline_writer_fencing_token",
+      "kbs_raw_hourly_baseline_advanced_at"
+    ],
+    "expected_pointer_constraints": [
+      "external_evidence_producer_lease_v1_kbs_baseline_all_or_none",
+      "external_evidence_producer_lease_v1_kbs_baseline_digest",
+      "external_evidence_producer_lease_v1_kbs_baseline_ref",
+      "external_evidence_producer_lease_v1_kbs_baseline_bytes",
+      "external_evidence_producer_lease_v1_kbs_baseline_latest_hour",
+      "external_evidence_producer_lease_v1_kbs_baseline_writer_fence",
+      "external_evidence_producer_lease_v1_kbs_baseline_chronology"
+    ],
+    "table_count_must_remain": 41,
+    "new_table_count_authorized": 0
+  },
+  "migration_ref": "apps/server/db/migrations/2026_09_01_mcft_cap_09_kbs_publication_baseline_pointer.sql",
+  "arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_ARM_V1.json",
+  "preflight_ref": "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_V1.cjs",
+  "runner_ref": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_V1.cjs",
+  "workflow_ref": ".github/workflows/mcft-cap-09-production-kbs-baseline-pointer-schema-remediation.yml",
+  "authorized_mutation_scope": {
+    "schema_ddl_allowed": true,
+    "exact_table": "public.external_evidence_producer_lease_v1",
+    "operation_class": "ALTER_EXISTING_TABLE_ADD_NULLABLE_POINTER_COLUMNS_CONSTRAINTS_AND_COMMENTS",
+    "row_dml_allowed": false,
+    "role_or_membership_mutation_allowed": false,
+    "function_or_routine_mutation_allowed": false,
+    "new_table_allowed": false,
+    "drop_or_rename_allowed": false
+  },
+  "authorization": {
+    "production_kbs_baseline_pointer_schema_remediation_authorized": false,
+    "runtime_process_start_authorized": false,
+    "production_owner_activation_authorized": false,
+    "formal_v5_arm_authorized": false,
+    "a0_authorized": false,
+    "o00_authorized": false
+  },
+  "authorization_binding": {
+    "model": "SAME_WORKFLOW_FRESH_PREFLIGHT_CURRENT_SUBJECT_V1",
+    "preflight_must_run_before_mutation_in_same_workflow_job": true,
+    "preflight_subject_must_equal_workflow_subject_sha": true,
+    "authority_and_arm_authorization_must_match": true,
+    "partial_pointer_schema_state_forbidden": true,
+    "already_materialized_armed_rerun_forbidden": true
+  },
+  "state_model": {
+    "absent": "PASS_REMEDIATION_REQUIRED",
+    "complete": "PASS_ALREADY_MATERIALIZED",
+    "partial": "FAIL_CLOSED",
+    "ready_unarmed": "READY_NOT_AUTHORIZED",
+    "ready_armed": "AUTHORIZED"
+  },
+  "non_effects": {
+    "current_production_database_mutation": false,
+    "row_mutation": false,
+    "role_mutation": false,
+    "credential_mutation": false,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "provider_request": false,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false
+  }
+}
