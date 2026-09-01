@@ -4,7 +4,8 @@
   "snapshots": {
     "protected_main": "fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8",
     "bline_authoritative": "3450f932e345e1d0b880a45b9f2613eba9833fcb",
-    "active_deere_pr_3346": "605d256d5e4a02a18fee89e5a6db755af3f97e18"
+    "active_deere_pr_3346": "605d256d5e4a02a18fee89e5a6db755af3f97e18",
+    "active_deere_pr_3346_base": "26c1383f7f45abb76c99e28ec3d06714e85d1b2c"
   },
   "scan_roots": [
     "apps/server/src",
@@ -240,9 +241,10 @@
     ]
   },
   "classification_rule": {
-    "production_authority_capable": "A production-root file mentioning a high-risk semantic object is authority-capable when it writes facts/tables, exposes a mutating route/worker, or exports a builder/create/project/derive/compile producer transform.",
+    "production_authority_capable": "Production full-tree: direct fact writer, high-risk table writer, job/worker carrying a high-risk semantic object, or domain/service/executor semantic producer transform. Routes/projections are producer-capable only on direct high-risk writes; route reachability is recorded in inventory rather than inferred from any mutating endpoint in the same file.",
     "support_authority_capable": "A migration/workflow/runtime script is support-plane authority-capable only when it creates/mutates high-risk storage, triggers production mutation, or acts as a runtime writer; pure tests/readers are support references.",
-    "missing_inventory_failure_code": "UNREGISTERED_AUTHORITY_CAPABLE_PATH"
+    "missing_inventory_failure_code": "UNREGISTERED_AUTHORITY_CAPABLE_PATH",
+    "support_plane": "Tests, contracts, acceptance scripts and GitHub workflows are scanned and reported. MCFT/runtime support-plane files are not promoted to B-Line semantic producers merely because they seed or validate facts."
   },
   "audit_policy": {
     "dual_snapshot_required": true,
@@ -251,6 +253,13 @@
     "no_business_behavior_change": true,
     "no_authority_removal": true,
     "no_mcft_mutation": true,
-    "no_b07e_connection": true
+    "no_b07e_connection": true,
+    "deere_diff_only": true,
+    "test_files_are_support_plane": true
+  },
+  "snapshot_scan_modes": {
+    "protected_main": "FULL_TREE",
+    "bline_authoritative": "FULL_TREE",
+    "active_deere_pr_3346": "PR_DIFF_ONLY"
   }
 }

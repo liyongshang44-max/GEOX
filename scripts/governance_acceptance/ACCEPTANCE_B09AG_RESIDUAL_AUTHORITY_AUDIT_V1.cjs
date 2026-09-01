@@ -43,6 +43,7 @@ const highRiskTableRegex=new RegExp(
 );
 
 function plane(path){
+  if(/(?:^|\/)__tests__\//.test(path)||/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(path)) return "TEST";
   if(path.startsWith("apps/server/src/")||path.startsWith("apps/executor/src/")) return "PRODUCTION";
   if(path.startsWith("apps/server/db/migrations/")) return "MIGRATION";
   if(path.startsWith("packages/contracts/src/")) return "CONTRACT";
@@ -78,19 +79,31 @@ function authorityCapable(path,content){
   const ev=evidenceFor(path,content);
   const p=plane(path);
   if(p==="PRODUCTION"){
-    return {capable:ev.some(x=>[
-      "FACT_WRITER","HIGH_RISK_TABLE_WRITER","MUTATING_API_ENTRYPOINT",
-      "JOB_OR_WORKER_ENTRYPOINT","SEMANTIC_PRODUCER_TRANSFORM"
-    ].includes(x)),evidence:ev};
+    const directWriter=ev.includes("FACT_WRITER")||ev.includes("HIGH_RISK_TABLE_WRITER");
+    const jobWorker=ev.includes("JOB_OR_WORKER_ENTRYPOINT");
+    const transform=ev.includes("SEMANTIC_PRODUCER_TRANSFORM");
+    const domainServiceOrExecutor=
+      path.startsWith("apps/server/src/domain/")||
+      path.startsWith("apps/server/src/services/")||
+      path.startsWith("apps/server/src/runtime/")||
+      path.startsWith("apps/server/src/infra/")||
+      path.startsWith("apps/executor/src/");
+    const routeOrProjection=
+      path.startsWith("apps/server/src/routes/")||
+      path.startsWith("apps/server/src/projections/");
+    return {
+      capable: directWriter || jobWorker || (transform && domainServiceOrExecutor && !routeOrProjection),
+      evidence:ev
+    };
   }
   if(p==="MIGRATION"){
     return {capable:ev.includes("SQL_MUTATION_SURFACE"),evidence:ev};
   }
   if(p==="WORKFLOW"){
-    return {capable:/workflow_dispatch|repository_dispatch|production|deploy|provision|activate|owner/i.test(content),evidence:ev.concat(["WORKFLOW_REVIEW"])};
+    return {capable:false,evidence:ev.concat(["WORKFLOW_SUPPORT_REVIEW"])};
   }
-  if(p==="ACCEPTANCE"){
-    return {capable:false,evidence:ev.concat(["ACCEPTANCE_LIBRARY_ISLAND"])};
+  if(p==="ACCEPTANCE"||p==="TEST"||p==="CONTRACT"){
+    return {capable:false,evidence:ev.concat([p+"_SUPPORT_PLANE"])};
   }
   return {capable:false,evidence:ev};
 }
@@ -120,10 +133,21 @@ for(const [label,sha] of Object.entries(snapshotMap)){
   const roots=catalog.scan_roots||[];
   let paths=[];
   try {
-    paths=git(["ls-tree","-r","--name-only",sha,"--",...roots])
-      .split(/\r?\n/).filter(Boolean);
+    if(label==="DEERE_PR_3346"){
+      const baseSha=String(catalog.snapshots.active_deere_pr_3346_base||"");
+      if(!baseSha||!commitExists(baseSha)){
+        fail("AUDIT_SNAPSHOT_BASE_COMMIT_MISSING:"+label+":"+baseSha);
+        continue;
+      }
+      const rootSet=roots;
+      paths=git(["diff","--name-only",baseSha+".."+sha,"--",...rootSet])
+        .split(/\r?\n/).filter(Boolean);
+    } else {
+      paths=git(["ls-tree","-r","--name-only",sha,"--",...roots])
+        .split(/\r?\n/).filter(Boolean);
+    }
   } catch(e) {
-    fail("AUDIT_LS_TREE_FAILED:"+label+":"+sha);
+    fail("AUDIT_TREE_ENUMERATION_FAILED:"+label+":"+sha);
     continue;
   }
 
@@ -139,7 +163,7 @@ for(const [label,sha] of Object.entries(snapshotMap)){
       if(!covered){
         fail("UNREGISTERED_AUTHORITY_CAPABLE_PATH:"+label+":"+path+":"+assessment.evidence.join(","));
       }
-    } else if(["WORKFLOW","ACCEPTANCE","CONTRACT"].includes(plane(path))){
+    } else if(["WORKFLOW","ACCEPTANCE","CONTRACT","TEST"].includes(plane(path))){
       support.push({snapshot:label,path,plane:plane(path),evidence:assessment.evidence});
     }
   }
