@@ -17,7 +17,7 @@ async function main(){
  a=await planner.nextAttemptPlan({cycle_attempt:2,successful_cycle_count:2,consecutive_failure_count:0,previous_result:null});assert(a&&!("status" in a));assert.equal(selected.at(-1),"KBS_RAW_HOURLY:KBS_RAW_HOURLY_PUBLICATION_CYCLE");
  rawNext="2026-09-02T19:16:00.000Z";
  a=await planner.nextAttemptPlan({cycle_attempt:3,successful_cycle_count:3,consecutive_failure_count:0,previous_result:null});assert.deepEqual(a,{status:"NOT_DUE"});
- now=A0;await assert.rejects(()=>planner.nextAttemptPlan({cycle_attempt:4,successful_cycle_count:3,consecutive_failure_count:0,previous_result:null}),/GFS_MISSED_WINDOW/);
+ now="2026-09-02T20:30:00.000Z";await assert.rejects(()=>planner.nextAttemptPlan({cycle_attempt:4,successful_cycle_count:3,consecutive_failure_count:0,previous_result:null}),/GFS_MISSED_WINDOW/);
  const source=fs.readFileSync(path.resolve("apps/server/src/external_evidence/mcft_cap09_production_evidence_host_planner_v1.ts"),"utf8");for(const x of ["process.env","Date.now","fetch(","RuntimeTickCursor","INSERT INTO","UPDATE ","DELETE FROM"])assert.equal(source.includes(x),false);
  const proof={status:"PASS",explicit_runtime_start_authority_required:true,explicit_formal_a0_required:true,gfs_selected_first_under_hard_deadline:true,soil_selected_after_gfs_not_due:true,daily_batch_selected_after_soil_throttled:true,all_not_due_returns_host_not_due:true,gfs_missed_window_fail_closed:true,durable_state_replanned_each_attempt:true,provider_request_count:0,database_write_count:0,runtime_tick_cursor_access:false,production_entrypoint_bound:false,runtime_process_start:false};fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify(proof,null,2)+"\n");console.log(JSON.stringify(proof,null,2));
 }
