@@ -233,25 +233,6 @@ async function tableExists(db: DbConn, tableName: string): Promise<boolean> {
   return Boolean((q.rows?.[0] as any)?.table_name);
 }
 
-async function loadAcceptanceResultForMemoryV1(db: DbConn, tenant: TenantTriple, input: { operation_plan_id: string; acceptance_id: string }): Promise<AcceptanceResultForMemoryV1 | null> {
-  const q = await db.query(
-    `SELECT fact_id, occurred_at, record_json::jsonb AS record_json
-       FROM facts
-      WHERE (record_json::jsonb->>'type') = 'acceptance_result_v1'
-        AND ((record_json::jsonb#>>'{payload,acceptance_id}') = $4 OR fact_id = $4)
-        AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $5
-        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-        AND (record_json::jsonb#>>'{payload,project_id}') = $2
-        AND (record_json::jsonb#>>'{payload,group_id}') = $3
-      ORDER BY occurred_at DESC, fact_id DESC
-      LIMIT 1`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, input.acceptance_id, input.operation_plan_id]
-  );
-  const row = q.rows?.[0] as any;
-  if (!row) return null;
-  return { fact_id: String(row.fact_id ?? ""), occurred_at: row.occurred_at == null ? null : String(row.occurred_at), payload: parseJsonMaybe(row.record_json)?.payload ?? {} };
-}
-
 function acceptanceGateBool(payload: any, key: string): boolean {
   return bool(payload?.[key] ?? payload?.formal_gate?.[key]);
 }
@@ -405,24 +386,25 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
   acceptance_id: string;
   field_memory_record_ref: string;
 }): Promise<{ idempotent: boolean; acceptance: { acceptance_id: string; operation_plan_id: string; verdict: string }; field_memory: any }> {
-  const acceptance = await loadAcceptanceResultForMemoryV1(db, tenant, input);
-  if (!acceptance) throw new Error("ACCEPTANCE_NOT_FOUND");
+  // Exact Acceptance identity is derived from the committed P30 record.
+  // The route-level acceptance_id is a consistency assertion only; there is no
+  // "latest Acceptance" lookup in the Formal Field Memory authority path.
+  const promotionAuthority = await requireFormalFieldMemoryPromotionAuthorityV1(db, tenant, {
+    field_memory_record_ref: input.field_memory_record_ref,
+    acceptance_id: input.acceptance_id,
+    operation_plan_id: input.operation_plan_id,
+  });
+
+  const acceptance: AcceptanceResultForMemoryV1 = {
+    fact_id: promotionAuthority.acceptance_fact_id,
+    occurred_at: promotionAuthority.acceptance_occurred_at,
+    payload: promotionAuthority.acceptance_payload,
+  };
   validateFormalFieldMemoryAcceptanceV1(acceptance.payload);
 
   const formalAcceptanceId = textOrNull(acceptance.payload?.acceptance_id) ?? acceptance.fact_id;
-  const fieldId = textOrNull(acceptance.payload?.field_id);
-  if (!fieldId) throw new Error("ACCEPTANCE_FIELD_ID_MISSING");
-  const actTaskId = textOrNull(acceptance.payload?.act_task_id ?? acceptance.payload?.task_id);
-  if (!actTaskId) throw new Error("ACCEPTANCE_ACT_TASK_ID_MISSING");
-
-  const promotionAuthority = await requireFormalFieldMemoryPromotionAuthorityV1(db, tenant, {
-    field_memory_record_ref: input.field_memory_record_ref,
-    acceptance_fact_id: acceptance.fact_id,
-    acceptance_id: formalAcceptanceId,
-    operation_plan_id: input.operation_plan_id,
-    act_task_id: actTaskId,
-    field_id: fieldId,
-  });
+  const fieldId = promotionAuthority.field_id;
+  const actTaskId = promotionAuthority.act_task_id;
 
   const existing = await findExistingFormalFieldMemoryV1(db, tenant, formalAcceptanceId);
   if (existing) {
