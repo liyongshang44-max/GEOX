@@ -162,8 +162,11 @@ export async function buildSamplingReportViewV1(pool: Pool, params: SamplingScop
         AND (record_json::jsonb->>'sample_id')=$1
         AND (record_json::jsonb->>'sample_receipt_fact_id')=$2
         AND (record_json::jsonb->>'sampling_plan_fact_id')=$3
+        AND (record_json::jsonb->>'tenant_id')=$4
+        AND (record_json::jsonb->>'project_id')=$5
+        AND (record_json::jsonb->>'group_id')=$6
       LIMIT 2`,
-    [sampleId, receiptRow.fact_id, planRow.fact_id],
+    [sampleId, receiptRow.fact_id, planRow.fact_id, ...scope],
   );
   if (lab.ambiguous) {
     return {
