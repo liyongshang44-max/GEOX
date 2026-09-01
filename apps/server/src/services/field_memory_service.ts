@@ -3,6 +3,8 @@ import type { Pool, PoolClient } from "pg";
 
 import type { FieldMemoryTypeV1, FieldMemoryV1 } from "@geox/contracts";
 
+import { requireFormalFieldMemoryPromotionAuthorityV1 } from "./formal_field_memory_promotion_authority_v1.js";
+
 type DbConn = Pool | PoolClient;
 
 type FieldMemoryLaneV1 =
@@ -401,12 +403,20 @@ function memoryIdFromOperation(operationId: string): string {
 export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant: TenantTriple, input: {
   operation_plan_id: string;
   acceptance_id: string;
+  field_memory_record_ref: string;
 }): Promise<{ idempotent: boolean; acceptance: { acceptance_id: string; operation_plan_id: string; verdict: string }; field_memory: any }> {
   const acceptance = await loadAcceptanceResultForMemoryV1(db, tenant, input);
   if (!acceptance) throw new Error("ACCEPTANCE_NOT_FOUND");
   validateFormalFieldMemoryAcceptanceV1(acceptance.payload);
 
   const formalAcceptanceId = textOrNull(acceptance.payload?.acceptance_id) ?? acceptance.fact_id;
+  const promotionAuthority = await requireFormalFieldMemoryPromotionAuthorityV1(db, tenant, {
+    field_memory_record_ref: input.field_memory_record_ref,
+    acceptance_fact_id: acceptance.fact_id,
+    acceptance_id: formalAcceptanceId,
+    operation_plan_id: input.operation_plan_id,
+  });
+
   const existing = await findExistingFormalFieldMemoryV1(db, tenant, formalAcceptanceId);
   if (existing) {
     return {
@@ -425,6 +435,10 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
 
   const evidenceRefs = normalizeEvidenceRefs([
     { kind: "acceptance_fact", ref: acceptance.fact_id, acceptance_id: formalAcceptanceId },
+    { kind: "field_memory_record_v1", ref: promotionAuthority.field_memory_record_fact_id, record_id: promotionAuthority.field_memory_record_id },
+    { kind: "field_memory_candidate_v1", ref: promotionAuthority.field_memory_candidate_fact_id, candidate_id: promotionAuthority.field_memory_candidate_id },
+    ...promotionAuthority.candidate_basis_refs,
+    ...promotionAuthority.promotion_basis_refs,
     ...normalizeEvidenceRefs(acceptance.payload?.evidence_refs),
     ...observationPair.evidence_refs,
   ]);
@@ -432,8 +446,8 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
   const memory = await recordMemoryV1(db, tenant.tenant_id, {
     type: "FIELD_RESPONSE_MEMORY",
     memory_id: memoryIdFromOperation(input.operation_plan_id),
-    source_type: "acceptance_result_v1",
-    source_id: formalAcceptanceId,
+    source_type: "field_memory_record_v1",
+    source_id: promotionAuthority.field_memory_record_fact_id,
     project_id: tenant.project_id,
     group_id: tenant.group_id,
     operation_id: input.operation_plan_id,
@@ -446,7 +460,7 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
     source_lane: "FORMAL_OPERATION",
     customer_visible_memory: true,
     learning_eligible: true,
-    trust_reasons: ["FORMAL_ACCEPTANCE_PASS", "FORMAL_FIELD_OBSERVATION_PAIR_FOUND"],
+    trust_reasons: ["FORMAL_ACCEPTANCE_PASS", "FORMAL_FIELD_OBSERVATION_PAIR_FOUND", "P29_FIELD_MEMORY_CANDIDATE_BOUND", "P30_REVIEWED_PROMOTION_COMMITTED"],
     metrics: {
       before_soil_moisture: observationPair.before_soil_moisture,
       after_soil_moisture: observationPair.after_soil_moisture,
@@ -458,7 +472,7 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
       observation_source: observationPair.source,
     },
     evidence_refs: evidenceRefs,
-    summary: `Formal field response memory from acceptance ${formalAcceptanceId}`,
+    summary: `Formal field response memory promoted from ${promotionAuthority.field_memory_record_id} with acceptance ${formalAcceptanceId}`,
   });
 
   return {
