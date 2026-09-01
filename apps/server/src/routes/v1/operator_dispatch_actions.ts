@@ -52,6 +52,7 @@ function normalizeStatus(value: unknown): string {
   if (!raw) return "TASK_CREATED";
   if (raw.includes("RECEIPT")) return "RECEIPT_RECEIVED";
   if (raw.includes("ACK")) return "ACKED";
+  if (raw.includes("DISPATCH") && (raw.includes("REQUEST") || raw.includes("PENDING"))) return "DISPATCH_PENDING";
   if (raw.includes("DISPATCH")) return raw.includes("FAILED") ? "DISPATCH_FAILED" : "DISPATCHED";
   if (raw.includes("FAILED") || raw.includes("INVALID")) return "EXECUTION_FAILED";
   if (raw.includes("SUCCESS") || raw.includes("DONE") || raw.includes("COMPLETED")) return "COMPLETED";
@@ -91,7 +92,7 @@ async function readLatestDispatchFacts(pool: Pool, auth: AoActAuthContextV0, tas
   if (taskIds.length === 0) return new Map();
   const res = await pool.query(`SELECT DISTINCT ON (record_json::jsonb#>>'{payload,act_task_id}') fact_id, occurred_at, record_json FROM facts WHERE (record_json::jsonb->>'type') = 'ao_act_dispatch_v1' AND (record_json::jsonb#>>'{payload,tenant_id}') = $1 AND (record_json::jsonb#>>'{payload,project_id}') = $2 AND (record_json::jsonb#>>'{payload,group_id}') = $3 AND (record_json::jsonb#>>'{payload,act_task_id}') = ANY($4::text[]) ORDER BY record_json::jsonb#>>'{payload,act_task_id}', occurred_at DESC, fact_id DESC`, [auth.tenant_id, auth.project_id, auth.group_id, taskIds]);
   const out = new Map<string, DispatchFact>();
-  for (const row of res.rows ?? []) { const record = parseRecordJson(row.record_json); const taskId = safeText(record?.payload?.act_task_id); if (!taskId) continue; out.set(taskId, { fact_id: String(row.fact_id ?? ""), occurred_at: String(row.occurred_at ?? ""), status: safeText(record?.payload?.status) || "DISPATCHED", reason: nullableText(record?.payload?.reason ?? record?.payload?.failure_reason) }); }
+  for (const row of res.rows ?? []) { const record = parseRecordJson(row.record_json); const taskId = safeText(record?.payload?.act_task_id); if (!taskId) continue; out.set(taskId, { fact_id: String(row.fact_id ?? ""), occurred_at: String(row.occurred_at ?? ""), status: safeText(record?.payload?.status) || "DISPATCH_REQUESTED", reason: nullableText(record?.payload?.reason ?? record?.payload?.failure_reason) }); }
   return out;
 }
 async function readStatesByTask(pool: Pool, auth: AoActAuthContextV0): Promise<Map<string, OperationStateV1>> { const states = await projectOperationStateV1(pool, { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id }); const out = new Map<string, OperationStateV1>(); for (const state of states) { if (state.act_task_id) out.set(state.act_task_id, state); } return out; }
@@ -103,17 +104,50 @@ function buildPermission(auth: AoActAuthContextV0, task: TaskFact | null, state:
   const current = statusOfTask(task, state, dispatch);
   if (state?.receipt_id || isTerminalStatus(current)) return { allowed: false, role, reason: "任务已完成或已产生回执，不能再次派发。" };
   if (action === "TASK_DISPATCH") {
-    if (normalizeStatus(current) === "DISPATCHED" || normalizeStatus(current) === "ACKED") return { allowed: false, role, reason: "任务已派发，不能重复派发。" };
+    if (["DISPATCH_PENDING", "DISPATCHED", "ACKED"].includes(normalizeStatus(current))) return { allowed: false, role, reason: "任务已提交派发或已进入派发链路，不能重复提交。" };
     return { allowed: true, role, reason: null };
   }
   if (!isRetryableStatus(current)) return { allowed: false, role, reason: "当前任务状态不允许 retry，只有失败状态可重试。" };
   return { allowed: true, role, reason: null };
 }
 function taskPayload(task: TaskFact | null): any { return task?.record_json?.payload ?? {}; }
-async function writeDispatchFact(pool: Pool, auth: AoActAuthContextV0, task: TaskFact, action: OperatorDispatchActionType, status: "DISPATCHED" | "RETRY_DISPATCHED", note: string | null): Promise<void> {
+async function writeDispatchIntentFact(
+  pool: Pool,
+  auth: AoActAuthContextV0,
+  task: TaskFact,
+  action: OperatorDispatchActionType,
+  status: "DISPATCH_REQUESTED" | "RETRY_DISPATCH_REQUESTED",
+  note: string | null,
+): Promise<void> {
   const payload = taskPayload(task);
-  const record = { type: "ao_act_dispatch_v1", payload: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id, act_task_id: safeText(payload.act_task_id), task_fact_id: task.fact_id, operation_id: payload.operation_id ?? payload.operation_plan_id ?? null, operation_plan_id: payload.operation_plan_id ?? payload.operation_id ?? null, action_type: payload.action_type ?? null, status, operator_action_type: action, reason: note, actor_id: auth.actor_id, token_id: auth.token_id, role: auth.role, dispatched_at: nowIso() } };
-  await pool.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [randomUUID(), "api/v1/operator/dispatch/action", record]);
+  const requested_at = nowIso();
+  const record = {
+    type: "ao_act_dispatch_v1",
+    payload: {
+      tenant_id: auth.tenant_id,
+      project_id: auth.project_id,
+      group_id: auth.group_id,
+      act_task_id: safeText(payload.act_task_id),
+      task_fact_id: task.fact_id,
+      operation_id: payload.operation_id ?? payload.operation_plan_id ?? null,
+      operation_plan_id: payload.operation_plan_id ?? payload.operation_id ?? null,
+      action_type: payload.action_type ?? null,
+      status,
+      operator_action_type: action,
+      dispatch_intent: true,
+      delivery_confirmed: false,
+      acknowledgement_confirmed: false,
+      reason: note,
+      actor_id: auth.actor_id,
+      token_id: auth.token_id,
+      role: auth.role,
+      requested_at,
+    },
+  };
+  await pool.query(
+    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+    [randomUUID(), "api/v1/operator/dispatch/action", record],
+  );
 }
 function buildWorklistItem(auth: AoActAuthContextV0, task: TaskFact, state: OperationStateV1 | null, dispatch: DispatchFact | null): Record<string, unknown> {
   const payload = taskPayload(task);
@@ -121,7 +155,10 @@ function buildWorklistItem(auth: AoActAuthContextV0, task: TaskFact, state: Oper
   const current = statusOfTask(task, state, dispatch);
   const dispatchPermission = buildPermission(auth, task, state, dispatch, "TASK_DISPATCH");
   const retryPermission = buildPermission(auth, task, state, dispatch, "TASK_RETRY_DISPATCH");
-  return { task_id: taskId, act_task_id: taskId, receipt_id: state?.receipt_id ?? null, operation_id: state?.operation_id ?? payload.operation_id ?? payload.operation_plan_id ?? null, operation_plan_id: state?.operation_plan_id ?? payload.operation_plan_id ?? payload.operation_id ?? null, field_id: state?.field_id ?? payload.field_id ?? null, field_name: null, operation_name: state?.action_type ?? payload.action_type ?? null, status: normalizeStatus(current), execution_mode: payload.executor_id?.kind ?? payload.executor_kind ?? payload.execution_mode ?? null, task_created_at: task.occurred_at, dispatched_at: dispatch?.occurred_at ?? null, acked_at: null, receipt_received_at: state?.receipt_id ? new Date(state.last_event_ts || Date.now()).toISOString() : null, executor_text: payload.executor_id?.id ?? payload.executor_id ?? payload.device_id ?? null, failure_reason: dispatch?.reason ?? state?.invalid_reason ?? null, can_dispatch: dispatchPermission.allowed, can_retry: retryPermission.allowed, permission_reason: dispatchPermission.reason ?? retryPermission.reason, permissions: { can_dispatch: dispatchPermission.allowed, can_retry: retryPermission.allowed, reason: dispatchPermission.reason ?? retryPermission.reason, role: safeText(auth.role) || null } };
+  const normalizedDispatchStatus = dispatch?.status ? normalizeStatus(dispatch.status) : null;
+  const dispatchRequestedAt = normalizedDispatchStatus === "DISPATCH_PENDING" ? dispatch?.occurred_at ?? null : null;
+  const dispatchedAt = normalizedDispatchStatus === "DISPATCHED" || normalizedDispatchStatus === "ACKED" ? dispatch?.occurred_at ?? null : null;
+  return { task_id: taskId, act_task_id: taskId, receipt_id: state?.receipt_id ?? null, operation_id: state?.operation_id ?? payload.operation_id ?? payload.operation_plan_id ?? null, operation_plan_id: state?.operation_plan_id ?? payload.operation_plan_id ?? payload.operation_id ?? null, field_id: state?.field_id ?? payload.field_id ?? null, field_name: null, operation_name: state?.action_type ?? payload.action_type ?? null, status: normalizeStatus(current), execution_mode: payload.executor_id?.kind ?? payload.executor_kind ?? payload.execution_mode ?? null, task_created_at: task.occurred_at, dispatch_requested_at: dispatchRequestedAt, dispatched_at: dispatchedAt, acked_at: null, receipt_received_at: state?.receipt_id ? new Date(state.last_event_ts || Date.now()).toISOString() : null, executor_text: payload.executor_id?.id ?? payload.executor_id ?? payload.device_id ?? null, failure_reason: dispatch?.reason ?? state?.invalid_reason ?? null, can_dispatch: dispatchPermission.allowed, can_retry: retryPermission.allowed, permission_reason: dispatchPermission.reason ?? retryPermission.reason, permissions: { can_dispatch: dispatchPermission.allowed, can_retry: retryPermission.allowed, reason: dispatchPermission.reason ?? retryPermission.reason, role: safeText(auth.role) || null } };
 }
 async function handleDispatchAction(req: any, reply: any, pool: Pool, action: OperatorDispatchActionType): Promise<void> {
   const auth = requireAoActAnyScopeV0(req, reply, ["action.task.dispatch", "ao_act.task.write"]);
@@ -138,9 +175,9 @@ async function handleDispatchAction(req: any, reply: any, pool: Pool, action: Op
   if (!taskId || !task) return sendFailure(reply, pool, auth, buildResponse({ ok: false, action_id: aid, audit_id: auid, action_type: action, target_id: taskId, status_before: null, status_after: null, role, allowed: false, reason: "AO-ACT task 未生成，不能派发。", message: "AO-ACT task 未生成，不能派发。", error_code: "TARGET_NOT_FOUND" }));
   const permission = buildPermission(auth, task, state, latestDispatch, action);
   if (!permission.allowed) return sendFailure(reply, pool, auth, buildResponse({ ok: false, action_id: aid, audit_id: auid, action_type: action, target_id: taskId, status_before: statusBefore, status_after: statusBefore, role, allowed: false, reason: permission.reason, message: permission.reason ?? "当前任务状态不可派发。", error_code: task ? "INVALID_STATE" : "TARGET_NOT_FOUND" }));
-  const nextStatus = action === "TASK_DISPATCH" ? "DISPATCHED" : "RETRY_DISPATCHED";
-  const success = buildResponse({ ok: true, action_id: aid, audit_id: auid, action_type: action, target_id: taskId, status_before: statusBefore, status_after: nextStatus, role, allowed: true, reason: null, message: action === "TASK_DISPATCH" ? "任务已派发。" : "任务已重新派发。" });
-  try { await writeAuditFact(pool, auth, success); await writeDispatchFact(pool, auth, task, action, nextStatus, nullableText((req.body as any)?.note ?? (req.body as any)?.reason)); } catch { return reply.status(500).send(buildResponse({ ok: false, action_id: aid, audit_id: auid, action_type: action, target_id: taskId, status_before: statusBefore, status_after: statusBefore, role, allowed: true, reason: "状态写入失败，请刷新后重试。", message: "状态写入失败，请刷新后重试。", error_code: "STATE_WRITE_FAILED" })); }
+  const nextStatus = action === "TASK_DISPATCH" ? "DISPATCH_REQUESTED" : "RETRY_DISPATCH_REQUESTED";
+  const success = buildResponse({ ok: true, action_id: aid, audit_id: auid, action_type: action, target_id: taskId, status_before: statusBefore, status_after: nextStatus, role, allowed: true, reason: null, message: action === "TASK_DISPATCH" ? "派发请求已提交，等待执行运行时接管。" : "重新派发请求已提交，等待执行运行时接管。" });
+  try { await writeAuditFact(pool, auth, success); await writeDispatchIntentFact(pool, auth, task, action, nextStatus, nullableText((req.body as any)?.note ?? (req.body as any)?.reason)); } catch { return reply.status(500).send(buildResponse({ ok: false, action_id: aid, audit_id: auid, action_type: action, target_id: taskId, status_before: statusBefore, status_after: statusBefore, role, allowed: true, reason: "状态写入失败，请刷新后重试。", message: "状态写入失败，请刷新后重试。", error_code: "STATE_WRITE_FAILED" })); }
   return reply.send(success);
 }
 function parseLimit(value: unknown): number { const n = Number(value); if (!Number.isFinite(n) || n <= 0) return 100; return Math.min(Math.floor(n), 300); }
@@ -153,7 +190,7 @@ export function registerOperatorDispatchActionRoutes(app: FastifyInstance, pool:
     const taskIds = tasks.map((task) => safeText(task.record_json?.payload?.act_task_id)).filter(Boolean);
     const [statesByTask, dispatchByTask] = await Promise.all([readStatesByTask(pool, auth), readLatestDispatchFacts(pool, auth, taskIds)]);
     const items = tasks.map((task) => { const taskId = safeText(task.record_json?.payload?.act_task_id); return buildWorklistItem(auth, task, statesByTask.get(taskId) ?? null, dispatchByTask.get(taskId) ?? null); });
-    return reply.send({ source: "operator_dispatch_api", dataScope: "OFFICIAL_OPERATOR_API", generated_at: new Date().toISOString(), items, writeReady: true, message: "Operator dispatch actions are controlled by backend AO-ACT task state and receipt readiness." });
+    return reply.send({ source: "operator_dispatch_api", dataScope: "OFFICIAL_OPERATOR_API", generated_at: new Date().toISOString(), items, writeReady: true, message: "Operator actions record dispatch intent only; executor/runtime delivery and acknowledgement remain separate authorities." });
   });
   app.post("/api/v1/operator/dispatch/:taskId/dispatch", async (req, reply) => handleDispatchAction(req, reply, pool, "TASK_DISPATCH"));
   app.post("/api/v1/operator/dispatch/:taskId/retry", async (req, reply) => handleDispatchAction(req, reply, pool, "TASK_RETRY_DISPATCH"));
