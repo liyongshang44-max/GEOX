@@ -49,6 +49,7 @@ async function main() {
     duplicate_sample_id_rejected_409: false,
     concurrent_duplicate_sample_id_serialized: false,
     concurrent_acceptance_identity_stable: false,
+    shared_import_id_is_chain_local: false,
     auth_missing_rejected_401: false,
     auth_invalid_rejected_401: false,
     tenant_boundary_rejected_404: false,
@@ -157,8 +158,10 @@ async function main() {
   assert.equal(concurrentReceiptConflict?.json?.error, 'DUPLICATE:sample_id', 'concurrent duplicate receipt must use DUPLICATE:sample_id');
   checks.concurrent_duplicate_sample_id_serialized = true;
 
+  const sharedImportId = `shared-import-${now}`;
   const concurrentLab = await postJson('/api/v1/sampling/lab-result', {
     sample_id: concurrentSampleId,
+    import_id: sharedImportId,
     imported_at_ts: now + 20,
     metrics: { ph: 6.6, nitrate_n_mg_kg: 2.4 },
     units: { ph: 'pH', nitrate_n_mg_kg: 'mg/kg' },
@@ -186,6 +189,31 @@ async function main() {
     'concurrent exact-chain acceptance must have one creator and one idempotent observer',
   );
   checks.concurrent_acceptance_identity_stable = true;
+
+  const sharedImportSecondSampleId = `${ids.sample_id}-shared-import-second`;
+  const sharedImportSecondReceipt = await postJson('/api/v1/sampling/receipt', {
+    ...scopedBody,
+    plan_id: planRes.json.plan_id,
+    sample_id: sharedImportSecondSampleId,
+    collected_at_ts: now + 30,
+    collector_actor_id: 'collector-shared-import-second',
+    sample_type: 'SOIL',
+    evidence_refs: [{ kind: 'raw_sample_v1', ref_id: 'raw-shared-import-second' }],
+    chain_of_custody_status: 'RECORDED',
+  });
+  assert.equal(sharedImportSecondReceipt.status, 200, 'second sample for shared import identity must succeed');
+  const sharedImportSecondLab = await postJson('/api/v1/sampling/lab-result', {
+    sample_id: sharedImportSecondSampleId,
+    import_id: sharedImportId,
+    imported_at_ts: now + 40,
+    metrics: { ph: 6.8, nitrate_n_mg_kg: 2.2 },
+    units: { ph: 'pH', nitrate_n_mg_kg: 'mg/kg' },
+    evidence_refs: [{ kind: 'import_run_v1', ref_id: 'import-shared-second' }],
+    quality_status: 'PASS',
+  });
+  assert.equal(sharedImportSecondLab.status, 200, 'same business import_id on a different exact sample chain must not collide');
+  assert.notEqual(sharedImportSecondLab.json?.fact_id, concurrentLab.json?.fact_id, 'shared business import_id across different exact chains must produce distinct fact identities');
+  checks.shared_import_id_is_chain_local = true;
 
   const labMissingSample = await postJson('/api/v1/sampling/lab-result', {
     sample_id: 'missing-sample',
