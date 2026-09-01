@@ -1,3 +1,1520 @@
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-01 Continuation — Local Static Admission / Source-Specific Planner / Host NOT_DUE Frontier
+
+Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
+
+Timestamp: **2026-09-01 18:52 +08:00**
+
+Repository: liyongshang44-max/GEOX
+
+Purpose: continue the same MCFT-CAP-09 frozen Production Hosting / exact-one-owner activation route after the J-section frontier has materially advanced. The producer durable evidence, writer-owner self-grant cleanup, exact-nine production Evidence ACL remediation, and production schema/ACL readiness are now closed. The operator-managed local Docker host has immutable static-admission evidence bound into the host authority and GitHub readiness. The production Evidence target-planner gap has been converted from an informal blocker into a source-specific machine readiness frontier, and the Evidence host now has a non-terminal `NOT_DUE` lifecycle that waits without invoking the cycle, database, provider, or work-item factory. The real current frontier is source-specific progress/read ports and acquisition-horizon authority → production Evidence target planner binding → separately authorized runtime start / exact-one effective owner proof.
+
+> **This K-section is now the highest-priority conversation continuation in this file.**
+>
+> The J-section immediately below remains intentionally preserved in full as the historical producer/ACL/local-host preflight frontier.
+>
+> Do not rewrite J merely because the exact-nine ACL remediation, static host admission, planner readiness machine gate, and host `NOT_DUE` foundation were completed later. J records the exact path that produced those closures.
+>
+> I, H, and all earlier Phase 7 / Phase 6 / Phase 5 / Phase 4 / Phase 3 / Phase 2 sections remain historical evidence and must remain intact.
+>
+> This handoff does **not** supersede docs/SSOT.md, the Digital Twin Master Task Line, the CAP-09 taskbook, Production Hosting architecture/route, QCP, evidence registry, immutable workflow artifacts, accepted CAP-01→08 authorities, or the frozen Formal-store authorities.
+
+---
+
+## K0. READ THIS FIRST — database/ACL and static host admission are closed; the real product frontier is source-specific Evidence planning before runtime start
+
+The J-section frontier has advanced substantially.
+
+The authoritative product PR is now:
+
+~~~text
+#3376
+feat(mcft-cap09): qualify producer-driven v13 supply graph
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+current exact head =
+  3423f16556a9cd00869f43d9c2f21ce8a5303705
+
+state =
+  Draft
+  open
+  unmerged
+
+mergeable =
+  true
+~~~
+
+Protected main remains:
+
+~~~text
+fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+~~~
+
+The three newest completed fronts are exactly:
+
+~~~text
+1. 7.i local static machine admission evidence
+   → normalized from the real operator host
+   → bound durably into the non-GitHub host authority
+   → revalidated by GitHub host-readiness
+
+2. 7.j source-specific production Evidence planner blocker frontier
+   → machine authority + validator + workflow created
+   → exact blockers frozen
+   → compiled production entrypoint remains fail-closed
+
+3. Evidence host non-terminal NOT_DUE foundation
+   → planner may return explicit NOT_DUE
+   → host waits with PLANNER_NOT_DUE
+   → zero cycle / DB / provider / work-item-factory execution while not due
+~~~
+
+This does **not** mean the production Evidence target planner is bound.
+
+The machine planner readiness says:
+
+~~~text
+status =
+  PASS
+
+authority_status =
+  HOST_NOT_DUE_FOUNDATION_IMPLEMENTED_REMAINING_BLOCKERS
+
+current_frontier =
+  SOURCE_SPECIFIC_PROGRESS_PORTS_REQUIRED
+
+production_target_planner_bound =
+  false
+
+compiled_entrypoint_fail_closed =
+  true
+~~~
+
+Therefore the current continuation is:
+
+~~~text
+add source-specific read-only progress ports
+→ add KBS daily-batch single-fetch/multi-interval product path
+→ establish explicit production acquisition horizon authority
+→ implement pure source-specific planner
+→ prove restart / pair-skew / batch reuse / zero-due provider-request semantics
+→ bind compiled Evidence entrypoint only under a separate runtime-start authority
+→ then prove exact-one effective Evidence/Twin owners and independent fenced leases
+→ only then enter Formal-v5 → A0 → O00–O23
+~~~
+
+Do not reopen Render.
+
+Do not rerun the already-closed ACL remediation.
+
+Do not reinterpret planner-readiness PASS as planner-bound PASS.
+
+Do not start the Evidence/Twin runtime yet.
+
+Do not activate the production owner yet.
+
+Do not arm Formal-v5, A0, or O00.
+
+---
+
+## K1. Current task in one sentence
+
+**Convert the now-machine-defined source-specific production Evidence planning gaps into explicit read-only progress ports, KBS/GFS/soil due semantics, and a governed production acquisition horizon; then implement and bind the real production Evidence target planner while preserving the host's non-terminal NOT_DUE behavior, and only after that request separate runtime-start authority and prove exact-one effective production owners.**
+
+This is no longer:
+
+- a producer live-qualification acquisition task;
+- an Evidence ACL repair task;
+- a writer-owner self-grant cleanup task;
+- a production schema materialization task;
+- a service LOGIN task;
+- a runtime DATABASE_URL task;
+- a Render task;
+- a local static machine-admission task;
+- a generic `floor(now)` scheduler task;
+- a Formal-v5 / A0 / O00 task.
+
+The near-term work is now:
+
+~~~text
+source-specific Evidence progress semantics
++
+production acquisition-horizon authority
++
+pure target planner
++
+non-terminal long-running host semantics
+~~~
+
+---
+
+## K2. Authority reconstruction order for the next engineer
+
+Read in this order:
+
+1. docs/SSOT.md
+2. docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md
+3. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md
+4. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md
+5. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json
+6. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-LOCAL-OPERATOR-HOST-STATIC-ADMISSION-EVIDENCE-V1.json
+7. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json
+8. scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_TARGET_PLANNER_READINESS_V1.cjs
+9. .github/workflows/mcft-cap-09-production-evidence-target-planner-readiness.yml
+10. apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts
+11. apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts
+12. apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts
+13. apps/server/src/external_evidence/mcft_cap09_production_evidence_work_items_v1.ts
+14. apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.ts
+15. apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts
+16. apps/server/src/external_evidence/mcft_cap09_evidence_supply_cadence_profile_v1.ts
+17. apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts
+18. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-CADENCE-DECOUPLING-AUTHORITY-V1.json
+19. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+20. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+21. #3376 exact head 3423f16556a9cd00869f43d9c2f21ce8a5303705
+22. host-readiness run 33495520557
+23. planner-readiness run 33495520565
+24. schema/ACL readiness run 33495520549
+25. QCP run 33495520614
+26. CI run 33495520653
+27. producer durable evidence run 33472486099
+28. this K-section
+
+The weekly report remains context only.
+
+Do not use a weekly summary to override these machine authorities.
+
+---
+
+## K3. Repository / PR topology at handoff time
+
+### K3.1 Protected main
+
+~~~text
+protected main =
+  fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+
+protected =
+  true
+~~~
+
+Do not move protected main as part of this continuation.
+
+### K3.2 #3376 — active product frontier
+
+~~~text
+#3376
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+head =
+  3423f16556a9cd00869f43d9c2f21ce8a5303705
+
+state =
+  Draft / open / unmerged
+
+mergeable =
+  true
+~~~
+
+The five commits after the J-era local-preflight diagnostic head `d5283ef...` are:
+
+~~~text
+39b0a76926a34b776698fb7ba1807b88a190ca77
+  gov(mcft-cap09): keep local probe evidence outside control-plane ownership
+
+e9a5d7ecd4cf46dcf76165cf90fd0ba0b3ccb931
+  gov(mcft-cap09): bind local static machine admission evidence
+
+852ae1d222379865414fd94bcabcd8faa54e3b91
+  gov(mcft-cap09): qualify production evidence planner frontier
+
+ebacbcf3abb69bbe5b5b62f3ec8a5c58cf433719
+  feat(mcft-cap09): add evidence planner not-due state
+
+3423f16556a9cd00869f43d9c2f21ce8a5303705
+  test(mcft-cap09): narrow not-due planner results
+~~~
+
+These are legitimate same-frontier commits.
+
+Do not reset to `d5283ef...`.
+
+Do not treat `39b0...` as the current product head; it is the exact subject of the operator-returned static machine evidence, which was later normalized and durably bound at descendant heads.
+
+### K3.3 Docs-only handoff PR
+
+The handoff remains isolated in:
+
+~~~text
+#3298
+
+branch =
+  docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier
+
+base =
+  26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+~~~
+
+Its historical base remains intentional.
+
+Do not rebase #3298 merely because protected main and #3376 are newer.
+
+The docs PR must remain docs-only.
+
+---
+
+## K4. Frozen activation route — exact current position
+
+The frozen route remains:
+
+~~~text
+1  MERGE_EXACT_V13_SUCCESSOR_SUBJECT
+2  CAPACITY_PREFLIGHT_AND_SAFE_SUPERSEDED_GENERATION_CLEANUP_IF_REQUIRED
+3  PROVISION_ZERO_STATE_V13_BLOCKED_V13_AND_FORMAL_V5_STORES
+4  RUN_PRODUCER_DRIVEN_V13_QUALIFICATION
+5  FREEZE_EXACT_HEAD_END_TO_END_TIMING_BUDGET
+6  OPEN_NEW_MACHINE_ONLY_GRADUATION_GATE
+7  PROVE_EXACT_ONE_PRODUCTION_OWNER_AND_RETIRED_TRIGGER_ZERO
+8  ARM_FRESH_V5_EPOCH
+9  BOOTSTRAP_FRESH_A0
+10 RUN_REAL_WALL_CLOCK_O00_O23_WITH_ZERO_ROUTINE_MANUAL_RESCUE
+11 RUN_AUTOMATIC_FINAL_READBACK
+12 FINAL_READ_ONLY_COMPLETION_ADJUDICATION
+~~~
+
+Current status:
+
+~~~text
+1  COMPLETE
+2  COMPLETE
+3  COMPLETE
+4  COMPLETE / durable corrected producer evidence valid
+5  COMPLETE / durable timing evidence valid
+6  COMPLETE
+
+7  IN PROGRESS
+   7.a dedicated operational DB authority/creation            COMPLETE
+   7.b 41-table / 3-routine schema materialization            COMPLETE
+   7.c service LOGIN principals                               COMPLETE
+   7.d runtime DATABASE_URL credential binding                COMPLETE
+   7.e Render execution path                                  RETIRED
+   7.f local operator-managed host selection                  COMPLETE
+   7.g local host + exact-two service identities              BOUND
+   7.h writer-owner self-grant cleanup                        COMPLETE / DISARMED
+   7.h2 exact-nine Phase3 Evidence ACL carry-forward          COMPLETE / DISARMED
+   7.i local static machine admission                         COMPLETE / IMMUTABLE EVIDENCE BOUND
+   7.i2 actual 24h uptime/network/log/restart window proof     NOT YET PROVEN
+   7.j production Evidence planner readiness frontier         MACHINE-QUALIFIED / PLANNER NOT BOUND
+   7.j1 non-terminal host NOT_DUE foundation                  IMPLEMENTED / ACCEPTED
+   7.j2 source-specific progress ports                        NOT IMPLEMENTED
+   7.j3 acquisition bootstrap/backfill horizon authority      NOT ESTABLISHED
+   7.j4 real production target planner binding                NOT BOUND
+   7.k runtime process start                                  NOT AUTHORIZED / NOT STARTED
+   7.l exact independent fenced runtime leases                NOT STARTED
+   7.m EXACT_ONE_PRODUCTION_OWNER durable evidence            NOT CLOSED
+
+8  NOT STARTED
+9  NOT STARTED
+10 NOT STARTED
+11 NOT STARTED
+12 NOT STARTED
+~~~
+
+Do not collapse these sub-stages.
+
+Especially:
+
+~~~text
+static host admission PASS
+!=
+24h runtime window proven
+
+planner-readiness workflow PASS
+!=
+production planner bound
+
+NOT_DUE host state implemented
+!=
+due policy established
+
+schema/ACL readiness SUCCESS
+!=
+runtime owner active
+
+QCP blocker_count = 1
+!=
+all pre-runtime product blockers are gone
+~~~
+
+The last distinction is critical: QCP currently has exactly one qualification blocker (`EXACT_ONE_PRODUCTION_OWNER`), while the separate planner-readiness authority intentionally exposes five pre-runtime product blockers.
+
+---
+
+## K5. Writer-owner cleanup and exact-nine ACL remediation are now closed production mutations
+
+The J-section stopped before these mutations.
+
+They were later executed only after separate explicit user authorizations.
+
+### K5.1 Writer-owner self-grant cleanup
+
+The exact production mutation was:
+
+~~~text
+REVOKE geox_mcft_cap09_forcing_writer_owner_v1
+FROM CURRENT_USER
+GRANTED BY CURRENT_USER
+RESTRICT
+~~~
+
+Machine evidence:
+
+~~~text
+subject =
+  9480a52b35c598e80c426a37fa9c2db352568771
+
+workflow run =
+  33481272545
+
+artifact =
+  9790060543
+
+artifact digest =
+  sha256:9607dee6f3e0f957aad3318d415a4fa8c46d1c27b23ec990e7d4a782856b7886
+
+result =
+  PASS_CLEANUP_APPLIED
+~~~
+
+Postconditions:
+
+- self-grant count became zero;
+- all three writer-owner effective SET authorities became false;
+- cloud_admin management memberships were preserved;
+- application rows remained zero;
+- public table/function/schema ACL remained unchanged;
+- service-login roles/memberships remained unchanged;
+- runtime did not start.
+
+The cleanup was then disarmed and later re-proved `PASS_ALREADY_CLEAN`.
+
+### K5.2 Exact-nine Phase3 Evidence ACL remediation
+
+The exact mutation added only:
+
+~~~text
+SELECT
+INSERT
+UPDATE
+~~~
+
+to exactly:
+
+~~~text
+external_evidence_producer_lease_v1
+external_evidence_supply_event_v1
+external_evidence_supply_cursor_v1
+~~~
+
+That is exactly 9 privileges.
+
+Machine evidence:
+
+~~~text
+subject =
+  39c87dd7cbdca7d86561dc66f2c93f9e37cd4916
+
+workflow run =
+  33483019771
+
+artifact =
+  9790736650
+
+artifact digest =
+  sha256:1f87228c7e177f19f6b23b96bec1afc8478b30f3c421f5ec0cf6ed4745dae78d
+
+result =
+  PASS_REMEDIATION_APPLIED
+~~~
+
+For each target table:
+
+~~~text
+before =
+  SELECT=false
+  INSERT=false
+  UPDATE=false
+  DELETE=false
+
+after =
+  SELECT=true
+  INSERT=true
+  UPDATE=true
+  DELETE=false
+~~~
+
+Non-target ACL, function ACL, schema ACL, role memberships, service-login state, writer-owner state, and rows remained unchanged.
+
+The exact-nine arm was then disarmed and later re-proved `PASS_ALREADY_MATERIALIZED`.
+
+Do not rerun either mutation.
+
+---
+
+## K6. Production schema / LOGIN / credentials are now clean on the current exact head
+
+Current exact-head production schema readiness:
+
+~~~text
+workflow =
+  mcft-cap-09-production-operational-schema-acl-readiness
+
+run =
+  33495520549
+
+subject =
+  3423f16556a9cd00869f43d9c2f21ce8a5303705
+
+conclusion =
+  SUCCESS
+
+artifact =
+  9795556420
+
+artifact digest =
+  sha256:1814064722724aabb6aed3b3fc2080342ca8afdae9729c59ae66f842c80d637f
+~~~
+
+Current exact-head service LOGIN readiness:
+
+~~~text
+run =
+  33495520761
+
+conclusion =
+  SUCCESS
+
+artifact =
+  9795552844
+
+artifact digest =
+  sha256:45fa66d878c03014b0add9b8808ff61268c82052feea62be15929e39ff7adb14
+~~~
+
+Current exact-head runtime credential readiness:
+
+~~~text
+run =
+  33495520608
+
+conclusion =
+  SUCCESS
+
+artifact =
+  9795545433
+
+artifact digest =
+  sha256:f216846b25ade61180de9a244417b86c44d7643ec2f935e6de6f5e6b8ed65dcc
+~~~
+
+Current owner-provisioning readiness is also SUCCESS:
+
+~~~text
+run =
+  33495520604
+
+artifact =
+  9795553731
+
+artifact digest =
+  sha256:e28eaa64466e3ee0c5a4e08607bbaeced3b671508538b1f2b7a9ec24e941cf78
+~~~
+
+These readiness passes do **not** activate the production runtime or owner.
+
+---
+
+## K7. 7.i local static machine admission is now immutable and bound
+
+The real operator host probe was normalized into:
+
+~~~text
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-LOCAL-OPERATOR-HOST-STATIC-ADMISSION-EVIDENCE-V1.json
+~~~
+
+Evidence identity:
+
+~~~text
+status =
+  PASS
+
+evidence_class =
+  OPERATOR_RETURNED_MACHINE_PREFLIGHT_NORMALIZED
+
+subject_sha =
+  39b0a76926a34b776698fb7ba1807b88a190ca77
+
+observed_at =
+  2026-09-01T09:20:41.017Z
+
+evidence sha256 =
+  sha256:4560fd10d6d1905f917be3c47b50a8751cd9caf3d84f8d5057e7e770d5325499
+~~~
+
+Exact host identity:
+
+~~~text
+host_id =
+  fae5f756-ef25-40d5-9777-5b2c3d4837a1
+
+host_id_match =
+  true
+~~~
+
+Observed host facts:
+
+~~~text
+platform =
+  win32
+
+architecture =
+  x64
+
+logical CPUs =
+  8
+
+host total memory =
+  7.8 GiB
+
+host free memory at probe =
+  0.62 GiB
+
+repo disk free =
+  31.41 GiB
+
+Docker daemon =
+  available
+
+Docker server =
+  Linux x86_64
+
+Docker CPUs =
+  8
+
+Docker reported memory =
+  3.72 GiB
+
+Docker Compose =
+  2.40.3-desktop.1
+
+AC sleep =
+  0 seconds
+
+DC sleep =
+  180 seconds
+
+Windows Time service =
+  Running
+
+Windows Time source =
+  time.windows.com,0x9
+
+durable log root =
+  ~/.geox/mcft-cap09/logs
+  exists
+  writable
+  outside OS temp
+
+active network =
+  WLAN
+  IPv4 default route present
+  IPv4 DNS present
+~~~
+
+Classification:
+
+~~~text
+resource_floor_pass =
+  true
+
+blockers =
+  []
+
+actual_24h_uptime_proven =
+  false
+
+actual_24h_network_continuity_proven =
+  false
+
+actual_runtime_restart_policy_proven =
+  false
+~~~
+
+This is intentionally **static admission**, not a false claim that the 24h runtime window already occurred.
+
+The evidence was durably bound by:
+
+~~~text
+e9a5d7ecd4cf46dcf76165cf90fd0ba0b3ccb931
+gov(mcft-cap09): bind local static machine admission evidence
+~~~
+
+Current exact-head GitHub host readiness:
+
+~~~text
+workflow =
+  mcft-cap-09-production-non-github-host-binding-readiness
+
+run =
+  33495520557
+
+subject =
+  3423f16556a9cd00869f43d9c2f21ce8a5303705
+
+conclusion =
+  SUCCESS
+
+artifact =
+  9795536489
+
+artifact digest =
+  sha256:80707a38a7f4e45e54666bc5c94864ce072e7212fb2545ec617b88089cded351
+
+stage =
+  EXACT_TWO_LOCAL_OPERATOR_MANAGED_SERVICE_IDENTITIES_BOUND_PRE_RUNTIME_START
+~~~
+
+Its only remaining host-level blocker is:
+
+~~~text
+EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND
+~~~
+
+Do not ask the operator to rerun the static machine probe merely because the product head is now a descendant. The normalized immutable evidence is explicitly bound as parent-subject evidence by digest.
+
+---
+
+## K8. The local-probe worktree bug was fixed without globally hiding acceptance-output
+
+A subtle mistake occurred during 7.i hardening.
+
+The first attempted fix added:
+
+~~~text
+acceptance-output/
+~~~
+
+to `.gitignore`.
+
+That was too broad because acceptance outputs are part of control-plane diagnostics and must not be globally hidden from governance.
+
+The corrected commit is:
+
+~~~text
+39b0a76926a34b776698fb7ba1807b88a190ca77
+gov(mcft-cap09): keep local probe evidence outside control-plane ownership
+~~~
+
+It did two things:
+
+1. removed the broad `acceptance-output/` gitignore;
+2. changed the local-machine probe so that only untracked local machine evidence paths under `acceptance-output/` are excluded from the **governed worktree-clean classification**, while all other changes remain visible and fail-closed.
+
+Do not re-add a blanket `acceptance-output/` ignore.
+
+Do not use `git clean` or `git reset --hard` to make the machine probe green.
+
+---
+
+## K9. 7.j is now a machine-qualified planner blocker frontier, not an informal TODO
+
+The planner readiness authority was created at:
+
+~~~text
+852ae1d222379865414fd94bcabcd8faa54e3b91
+gov(mcft-cap09): qualify production evidence planner frontier
+~~~
+
+The current authority is:
+
+~~~text
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json
+~~~
+
+Current exact-head planner readiness:
+
+~~~text
+workflow =
+  mcft-cap-09-production-evidence-target-planner-readiness
+
+run =
+  33495520565
+
+subject =
+  3423f16556a9cd00869f43d9c2f21ce8a5303705
+
+conclusion =
+  SUCCESS
+
+artifact =
+  9795544250
+
+artifact digest =
+  sha256:a0fb03f624a4c77e6fa45fdb85a2aa2bee45b3c95c7a1bc5bf9d5231753fed02
+~~~
+
+Machine result:
+
+~~~text
+status =
+  PASS
+
+authority_status =
+  HOST_NOT_DUE_FOUNDATION_IMPLEMENTED_REMAINING_BLOCKERS
+
+current_frontier =
+  SOURCE_SPECIFIC_PROGRESS_PORTS_REQUIRED
+
+static_machine_admission =
+  PASS_PARENT_SUBJECT
+
+production_target_planner_bound =
+  false
+
+compiled_entrypoint_fail_closed =
+  true
+
+planner_not_due_wait_implemented =
+  true
+
+database_connection_attempted =
+  false
+
+provider_request_count =
+  0
+
+runtime_process_start =
+  false
+~~~
+
+The PASS means:
+
+~~~text
+the planner frontier is correctly classified and fail-closed
+~~~
+
+It does **not** mean:
+
+~~~text
+the production planner exists or is bound
+~~~
+
+---
+
+## K10. Exact 7.j unconditional blockers
+
+The current machine authority exposes exactly five unconditional blockers:
+
+~~~text
+1. PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_AUTHORITY_NOT_ESTABLISHED
+
+2. KBS_DAILY_BATCH_SINGLE_FETCH_MULTI_INTERVAL_PATH_NOT_IMPLEMENTED
+
+3. GFS_CROSS_CYCLE_PAIR_PROGRESS_READ_PORT_NOT_IMPLEMENTED
+
+4. KBS_SOIL_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED
+
+5. EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND
+~~~
+
+These are product/runtime-preparation blockers, not QCP graduation blockers.
+
+### K10.1 KBS RAW HOURLY
+
+Frozen publication mode:
+
+~~~text
+DAILY_BATCH_OF_HOURLY_EVENTS
+~~~
+
+Required production semantics:
+
+~~~text
+one retained provider batch
+→ may advance multiple exact hourly events
+~~~
+
+The current product shape still effectively assumes:
+
+~~~text
+one provider fetch
++
+one exact interval decode
+per target
+~~~
+
+That shape is not production-bindable because repeating the entire KBS CSV fetch for every hourly row is not an authorized production plan.
+
+Required foundation:
+
+- batch watermark discovery or equivalent due state;
+- single-fetch / multi-interval retain-decode-canonicalize path;
+- durable rainfall + historical ET0 pair progress;
+- no-new-batch `NOT_DUE` handling without provider hammering.
+
+### K10.2 GFS bundle
+
+Frozen publication mode:
+
+~~~text
+six-hour provider cycles
++
+hourly target windows
+~~~
+
+The durable cursor key remains:
+
+~~~text
+(binding_id, origin_source_id)
+~~~
+
+GFS `origin_source_id` is cycle-specific.
+
+Therefore one fixed-origin cursor cannot represent production restart across cycles.
+
+Required foundation:
+
+- cross-cycle GFS progress read port;
+- weather/ET0 pair-skew fail-closed;
+- partial-pair replay with restored `ingested_at`;
+- provider cycle selection remains inside the product provider.
+
+### K10.3 KBS soil
+
+Publication mode is provider-defined / irregular.
+
+It must not be forced onto hourly or GFS cadence.
+
+Required foundation:
+
+- explicit soil poll due policy;
+- latest observed-event progress read;
+- idempotent no-change handling.
+
+### K10.4 Bootstrap/backfill horizon
+
+The repository still lacks explicit authority for:
+
+~~~text
+production acquisition start
+or
+bounded backfill horizon
+~~~
+
+It may **not** be invented from:
+
+- current wall clock alone;
+- Phase5 fixture targets;
+- a Formal epoch before Formal authority exists;
+- deployment environment variables.
+
+---
+
+## K11. Why existing planners/cursors cannot be silently promoted
+
+The current planner adjudication explicitly freezes:
+
+~~~text
+Phase5 fixture manifest may be production planner =
+  false
+
+V13 forcing controller may be general Evidence planner =
+  false
+
+wall-clock floor alone may select all source targets =
+  false
+
+Formal epoch/base authority may come from deployment env =
+  false
+
+RuntimeTickCursor may drive Evidence acquisition =
+  false
+
+EvidenceSupplyCursor remains Evidence Runtime owned =
+  true
+
+source-specific planning required =
+  true
+~~~
+
+Three specific anti-shortcuts matter.
+
+### K11.1 Phase5 manifest planner is qualification-only
+
+Phase5 works because it has frozen manifest/cycle targets.
+
+It cannot define open-ended production due state.
+
+### K11.2 V13 Formal base continuity cannot drive pre-Formal Evidence acquisition
+
+The forcing continuity repository requires:
+
+~~~text
+epoch_id
+subject_sha
+first_required_base
+last_required_base
+~~~
+
+Using that to drive Evidence Runtime before Formal activation would create a circular authority dependency.
+
+### K11.3 EvidenceSupplyCursor is necessary but not sufficient
+
+It is Evidence-owned and valid for restart/idempotency, but the GFS cycle-specific origin partition means a single exact-origin read cannot answer cross-cycle latest-progress questions.
+
+Do not paper over this with `successful_cycle_count`; it resets on process restart.
+
+---
+
+## K12. Evidence host non-terminal NOT_DUE foundation is implemented and accepted
+
+The implementation commit is:
+
+~~~text
+ebacbcf3abb69bbe5b5b62f3ec8a5c58cf433719
+feat(mcft-cap09): add evidence planner not-due state
+~~~
+
+The narrowing/compatibility acceptance commit is:
+
+~~~text
+3423f16556a9cd00869f43d9c2f21ce8a5303705
+test(mcft-cap09): narrow not-due planner results
+~~~
+
+The host now distinguishes:
+
+~~~text
+null
+=
+finite planner exhausted
+=
+PLANNER_EXHAUSTED / process may stop
+
+{ status: "NOT_DUE" }
+=
+long-running planner has no due work yet
+=
+non-terminal wait
+~~~
+
+For `NOT_DUE`:
+
+~~~text
+wait reason =
+  PLANNER_NOT_DUE
+
+cycle execution =
+  zero
+
+database call =
+  zero
+
+provider call =
+  zero
+
+work-item factory call =
+  zero
+
+host termination =
+  no, unless stop signal is separately requested
+~~~
+
+Current exact-head Phase3 host acceptance proves:
+
+~~~text
+planner_not_due_waits_without_cycle_or_provider =
+  true
+~~~
+
+Current exact-head composition acceptance proves:
+
+~~~text
+planner_not_due_skips_work_item_factory_database_and_provider =
+  true
+~~~
+
+This is the correct foundation for a long-running Evidence host.
+
+But `NOT_DUE` does not itself decide **when** KBS/GFS/soil are due. That remains the planner/frontier work.
+
+---
+
+## K13. Current QCP state — exactly one qualification blocker, but do not confuse that with planner readiness
+
+Current QCP:
+
+~~~text
+workflow =
+  mcft-cap-09-qualification-control-plane-v1
+
+run =
+  33495520614
+
+subject =
+  3423f16556a9cd00869f43d9c2f21ce8a5303705
+
+conclusion =
+  expected FAILURE at blocker inventory
+
+artifact =
+  9795859756
+
+artifact digest =
+  sha256:ee54d5ba4653daa7bd7ab20a17373c9fef1b1e320d03627826349a86c6c72d1a
+~~~
+
+Machine summary:
+
+~~~text
+authority_errors =
+  0
+
+unknown_changed_paths =
+  0
+
+blocker_count =
+  1
+~~~
+
+The only QCP blocker is:
+
+~~~text
+EXACT_ONE_PRODUCTION_OWNER
+
+reason =
+  NO_VALID_REQUALIFICATION_EVIDENCE
+~~~
+
+Producer durable evidence remains valid:
+
+~~~text
+check =
+  V13_PRODUCER_DRIVEN_QUALIFICATION
+
+status =
+  PASS
+
+reason =
+  DURABLE_REQUALIFICATION_EVIDENCE_AND_DEPENDENCY_DIGEST_VALID
+
+evidence_id =
+  V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_C4650503_CORRECTED
+
+evidence_run_id =
+  33472486099
+
+dependency_digest =
+  sha256:64e3728cfde29b37e2ab1913781bb0369e70897d8cff817d05c2e4959075094f
+~~~
+
+Step 5 timing also remains durable-valid.
+
+Critical interpretation:
+
+~~~text
+QCP blocker_count = 1
+~~~
+
+does not mean:
+
+~~~text
+runtime may start now
+~~~
+
+The planner readiness authority is a separate product pre-runtime gate and still exposes five unconditional blockers.
+
+---
+
+## K14. Current exact-head CI and workflow machine facts
+
+General CI:
+
+~~~text
+workflow =
+  ci
+
+run =
+  33495520653
+
+subject =
+  3423f16556a9cd00869f43d9c2f21ce8a5303705
+
+conclusion =
+  SUCCESS
+
+artifact =
+  9795845378
+
+artifact digest =
+  sha256:df9f48a590d5cdc556d8fcca3541cbe076d975a8dd392d83e5f80aab38e8577a
+~~~
+
+Other important current-head successes include:
+
+~~~text
+production non-GitHub host readiness =
+  SUCCESS
+
+production Evidence target planner readiness =
+  SUCCESS
+
+production schema/ACL readiness =
+  SUCCESS
+
+service LOGIN readiness =
+  SUCCESS
+
+runtime credential readiness =
+  SUCCESS
+
+owner provisioning readiness =
+  SUCCESS
+
+production Evidence ACL carry-forward remediation poststate =
+  SUCCESS
+
+writer-owner self-grant cleanup poststate =
+  SUCCESS
+
+V13 autonomous forcing foundation =
+  SUCCESS
+
+V13 holistic schema =
+  SUCCESS
+
+V13 next-tick viability =
+  SUCCESS
+
+post-merge V13 control plane =
+  SUCCESS
+~~~
+
+Some current-head workflows are intentionally red.
+
+Do not misclassify these as regressions without reading their gate reason:
+
+~~~text
+mcft-cap-09-v13-producer-driven-live-qualification
+  fails at "Resolve explicit live arm"
+  → no provider execution occurs
+  → corrected durable producer evidence remains authoritative
+
+mcft-cap-09-production-operational-database-provision-one-shot
+  fails at "Require explicit database-provision arm"
+  → database already exists
+  → no provisioning mutation occurs
+
+mcft-cap-09-production-owner-graduation-gate
+  intentionally fails closed at real owner cutover boundary
+
+QCP
+  intentionally fails with exactly EXACT_ONE_PRODUCTION_OWNER
+~~~
+
+The authoritative way to judge the frontier is the machine reason, not the UI color alone.
+
+---
+
+## K15. Exact implementation order from the planner authority
+
+The machine authority freezes the next order as:
+
+~~~text
+1. ADD_READ_ONLY_SOURCE_SPECIFIC_PROGRESS_PORTS
+
+2. ADD_KBS_SINGLE_FETCH_MULTI_INTERVAL_PRODUCT_PATH
+
+3. ESTABLISH_EXPLICIT_BOOTSTRAP_AND_BACKFILL_HORIZON_AUTHORITY
+
+4. IMPLEMENT_PURE_SOURCE_SPECIFIC_PLANNER
+
+5. PROVE_RESTART_PAIR_SKEW_BATCH_REUSE_AND_ZERO_DUE_PROVIDER_REQUEST
+
+6. BIND_COMPILED_ENTRYPOINT_UNDER_SEPARATE_RUNTIME_START_AUTHORITY
+~~~
+
+Do not reorder this casually.
+
+In particular:
+
+- do not implement the planner before it has the progress ports it needs;
+- do not invent the bootstrap horizon inside the planner;
+- do not bind the compiled entrypoint merely because the pure planner unit tests pass;
+- do not start runtime in the same commit that creates/binds the planner;
+- do not activate the owner before real runtime identity/lease proof exists.
+
+---
+
+## K16. What is still not proven on the local 24h host
+
+The static admission is closed.
+
+The following are intentionally still false in the immutable evidence:
+
+~~~text
+actual_24h_uptime_proven =
+  false
+
+actual_24h_network_continuity_proven =
+  false
+
+actual_runtime_restart_policy_proven =
+  false
+~~~
+
+The later real runtime window must still prove:
+
+~~~text
+24H_HOST_UPTIME
+NETWORK_CONTINUITY
+DURABLE_LOG_CONTINUITY
+RESTART_POLICY_UNLESS_STOPPED
+~~~
+
+This proof belongs to the actual authorized runtime window.
+
+Do not fabricate it from a one-time machine probe.
+
+Do not mark MCFT-CAP-09 complete merely because static admission passed.
+
+---
+
+## K17. Production runtime / owner / Formal boundaries remain closed
+
+Current non-effects remain:
+
+~~~text
+runtime secret read by planner readiness =
+  false
+
+database connection by planner readiness =
+  false
+
+provider request by planner readiness =
+  0
+
+container start =
+  0
+
+production Evidence runtime start =
+  false
+
+production Twin runtime start =
+  false
+
+production owner activation =
+  false
+
+Formal-v5 arm =
+  false
+
+A0 bootstrap =
+  false
+
+O00 start =
+  false
+
+MCFT-CAP-09 completion =
+  false
+~~~
+
+The next runtime start still requires a **separate explicit authorization** after 7.j closes.
+
+The owner activation remains a separate later authority.
+
+Formal-v5 remains later still.
+
+---
+
+## K18. Pitfalls already hit — do not repeat them
+
+### K18.1 Do not globally ignore acceptance-output
+
+The local probe must not self-pollute the governed worktree check, but globally ignoring all acceptance outputs hides governance evidence.
+
+Use the 39b0 behavior, not a blanket gitignore.
+
+### K18.2 Do not require a new same-head physical host probe after every descendant commit
+
+The immutable static machine evidence is explicitly parent-subject evidence, bound by digest.
+
+Requiring the operator to rerun the host probe on every docs/test descendant would turn a physical-machine fact into meaningless head churn.
+
+Reprobe only when a governed machine-admission dependency actually changes.
+
+### K18.3 Docker 3.72 GiB is the accepted nominal 4-GiB class in this contract
+
+The admission contract intentionally uses:
+
+~~~text
+minimum Docker reported memory =
+  3.5 GiB
+
+nominal class =
+  4 GiB
+~~~
+
+Do not reintroduce the old mechanical `>=4.00 GiB reported` false blocker.
+
+### K18.4 Windows Time must be a real service/source fact
+
+The first probe saw W32Time unavailable.
+
+The operator explicitly restored it and later immutable evidence records:
+
+~~~text
+service state =
+  Running
+
+source =
+  time.windows.com,0x9
+
+status readable =
+  true
+~~~
+
+Do not infer time health from the desktop clock alone.
+
+### K18.5 Do not promote the Phase5 planner
+
+It is qualification-manifest semantics, not open production scheduling authority.
+
+### K18.6 Do not use Formal/V13 base continuity to drive pre-Formal Evidence acquisition
+
+That creates a circular dependency on a Formal epoch that does not yet exist.
+
+### K18.7 Do not use `successful_cycle_count` as durable progress
+
+It resets on process restart.
+
+Durable progress must come from Evidence-owned persistence/read models.
+
+### K18.8 Do not collapse null and NOT_DUE
+
+~~~text
+null
+→ finite exhaustion / stop semantics
+
+NOT_DUE
+→ long-running idle wait semantics
+~~~
+
+Conflating them would make production Evidence host exit whenever no source is due.
+
+### K18.9 Do not let NOT_DUE call provider or database
+
+The accepted foundation explicitly proves zero provider/database/cycle/work-item-factory activity in the NOT_DUE branch.
+
+### K18.10 Do not reopen already-consumed production mutation authorities
+
+Writer-owner cleanup and exact-nine ACL remediation are complete and disarmed.
+
+Do not "re-run for confidence".
+
+Use read-only poststate/readiness.
+
+---
+
+## K19. Immediate next actions for the next engineer
+
+Start with:
+
+~~~text
+1. GET #3376
+2. require exact remote head
+3. classify any head drift before changing anything
+4. rerun/read current planner-readiness and host-readiness only as needed
+~~~
+
+If the exact product head is still:
+
+~~~text
+3423f16556a9cd00869f43d9c2f21ce8a5303705
+~~~
+
+continue directly at:
+
+~~~text
+SOURCE_SPECIFIC_PROGRESS_PORTS_REQUIRED
+~~~
+
+The concrete next implementation work is:
+
+1. audit the existing Evidence persistence interface for the smallest read-only source-family progress ports;
+2. add the GFS cross-cycle pair-progress read model without allowing Twin Runtime ownership;
+3. add KBS batch/progress read semantics that can support one-fetch/multi-interval advancement;
+4. define soil latest-event progress/due input;
+5. prove these ports are read-only and have zero provider/runtime effects;
+6. only then implement the KBS single-fetch/multi-interval product path;
+7. separately establish production acquisition start/backfill horizon authority;
+8. then build the pure source-specific planner;
+9. use the existing `NOT_DUE` host state for no-due outcomes;
+10. do not bind the compiled production entrypoint until a separate runtime-start authority is explicitly opened.
+
+After the planner is truly bound and exact-head qualification is green:
+
+~~~text
+separate runtime-start authorization
+→ start exact two local long-running services
+→ prove Evidence/Twin lease separation
+→ prove exact-one effective owner
+→ bind durable EXACT_ONE_PRODUCTION_OWNER evidence
+→ rerun QCP
+→ only then Formal-v5
+→ A0
+→ O00–O23
+~~~
+
+---
+
+## K20. Current one-line frontier
+
+~~~text
+producer durable evidence PASS
++ writer-owner cleanup CLOSED
++ exact-nine ACL remediation CLOSED
++ production schema/ACL SUCCESS
++ local static machine admission IMMUTABLE PASS
++ exact-two local service identities BOUND
++ planner frontier MACHINE-QUALIFIED
++ host NOT_DUE NON-TERMINAL FOUNDATION IMPLEMENTED
+
+→ SOURCE_SPECIFIC_PROGRESS_PORTS_REQUIRED
+→ KBS_SINGLE_FETCH_MULTI_INTERVAL_PATH
+→ ACQUISITION_HORIZON_AUTHORITY
+→ PURE_SOURCE_SPECIFIC_PLANNER
+→ SEPARATE_RUNTIME_START_AUTHORITY
+→ EXACT_ONE_EFFECTIVE_OWNER / LEASE CLOSURE
+→ Formal-v5 → A0 → O00–O23
+~~~
+
+The current production Evidence compiled entrypoint must remain:
+
+~~~text
+PACKAGED_FAIL_CLOSED_TARGET_PLANNER_UNBOUND
+~~~
+
+until 7.j is actually complete.
+
+---
+
 # GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-01 Continuation — Local 24h Host / Evidence ACL Carry-forward / Producer Qualification Closure
 
 Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
