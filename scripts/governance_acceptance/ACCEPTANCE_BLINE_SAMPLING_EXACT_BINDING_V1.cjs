@@ -39,6 +39,7 @@ need("service", [
   "deterministicLabResultFactIdV1",
   "AMBIGUOUS:sample_receipt_v1",
   "AMBIGUOUS:lab_result_import_v1",
+  "scope: SamplingScopeV1",
   "sample_receipt_fact_id') = $3",
   "LIMIT 2",
   "DUPLICATE:sample_id",
@@ -68,6 +69,8 @@ need("route", [
   "sampling_plan_fact_id: plan.fact_id",
   "MISMATCH:sampling_plan_fact_id",
   "MISMATCH:lab_sampling_plan_fact_id",
+  "MISMATCH:lab_field_id",
+  "tenantMatchesAuth(labRecord, auth)",
   "handleSamplingServiceError",
 ]);
 forbid("route", [
@@ -85,6 +88,9 @@ need("projection", [
   "customer_visible_eligible: exactChain",
   "receiptJson?.sampling_plan_fact_id === planRow.fact_id",
   "labJson?.sampling_plan_fact_id === planRow.fact_id",
+  "record_json::jsonb->>'tenant_id')=$4",
+  "record_json::jsonb->>'project_id')=$5",
+  "record_json::jsonb->>'group_id')=$6",
   "LIMIT 2",
 ]);
 forbid("projection", [
@@ -170,6 +176,7 @@ const stats = {
   shared_import_runtime_proven: source.samplingApi.includes("shared_import_id_is_chain_local"),
   sample_id_not_global_identity: source.samplingApi.includes("sample_id_reuse_across_plans_allowed") && source.service.includes("input.sampling_plan_fact_id, input.sample_id"),
   ambiguous_sample_locator_requires_exact_ref: source.samplingApi.includes("ambiguous_sample_locator_requires_exact_receipt_ref") && source.route.includes("findReceiptByFactId"),
+  lab_scope_continuity_enforced: source.route.includes("tenantMatchesAuth(labRecord, auth)") && source.route.includes("MISMATCH:lab_field_id") && source.projection.includes("record_json::jsonb->>'tenant_id')=$4"),
   plan_fact_continuity: source.projection.includes("SAMPLING_OPERATION_RELATION_EXACT_PLAN_REF_MISSING")
     && source.fertilization.includes("SAMPLING_RECEIPT_PLAN_FACT_REF_MISMATCH")
     && source.fertilization.includes("SAMPLING_LAB_PLAN_FACT_REF_MISMATCH"),
