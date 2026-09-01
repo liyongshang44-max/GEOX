@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "SOURCE_DUE_POLICIES_IMPLEMENTED_SCHEMA_MATERIALIZATION_NEXT");
+  assert.equal(authority.status, "SOURCE_DUE_POLICIES_AND_SCHEMA_REMEDIATION_READY_NOT_AUTHORIZED");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "1b0954fcbbe359cc94d542db753dab2ffb86e260");
+  assert.equal(authority.subject_predecessor_sha, "4731574a35bd55526d5d9acb021a26068348a0c5");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -126,6 +126,24 @@ try {
   const kbsProductionPointerWorkflow = read(authority.kbs_production_baseline_pointer_schema_remediation_workflow_ref);
   includes(kbsProductionPointerWorkflow, "Read-only exact production KBS pointer schema preflight", "KBS_POINTER_PRODUCTION_READ_ONLY_PREFLIGHT_REQUIRED");
   includes(kbsProductionPointerWorkflow, "Apply pointer schema only when separately armed", "KBS_POINTER_PRODUCTION_SEPARATE_ARM_REQUIRED");
+
+  const sourcePollRemediationAuthority = json(authority.source_poll_schedule_schema_remediation_authority_ref);
+  assert.equal(sourcePollRemediationAuthority.status, "READY_NOT_AUTHORIZED");
+  assert.equal(sourcePollRemediationAuthority.target.database_name, "geox_mcft_cap09_production_runtime_v1");
+  assert.equal(sourcePollRemediationAuthority.target.expected_table_count, 41);
+  assert.equal(sourcePollRemediationAuthority.target.new_table_count_authorized, 0);
+  assert.equal(sourcePollRemediationAuthority.authorization.production_evidence_source_poll_schedule_schema_remediation_authorized, false);
+  assert.equal(sourcePollRemediationAuthority.authorization.runtime_process_start_authorized, false);
+  assert.equal(sourcePollRemediationAuthority.migration_ref, authority.source_poll_schedule_migration_ref);
+  const sourcePollRemediationArm = json(authority.source_poll_schedule_schema_remediation_arm_ref);
+  assert.equal(sourcePollRemediationArm.armed, false);
+  assert.equal(sourcePollRemediationArm.exact_target_database_name, null);
+  assert.equal(sourcePollRemediationArm.production_evidence_source_poll_schedule_schema_remediation_authorized, false);
+  const sourcePollRemediationWorkflow = read(authority.source_poll_schedule_schema_remediation_workflow_ref);
+  includes(sourcePollRemediationWorkflow, "Read-only exact production source poll schema preflight", "SOURCE_POLL_PRODUCTION_READ_ONLY_PREFLIGHT_REQUIRED");
+  includes(sourcePollRemediationWorkflow, "Apply source poll schema only when separately armed", "SOURCE_POLL_PRODUCTION_SEPARATE_ARM_REQUIRED");
+  assert.equal(authority.source_poll_schedule_schema_remediation_capability_implemented, true);
+  assert.equal(authority.source_poll_schedule_schema_remediation_authorized, false);
 
   const kbsSnapshotComparison = read(authority.kbs_publication_snapshot_comparison_ref);
   includes(kbsSnapshotComparison, "HISTORICAL_DRIFT", "KBS_HISTORICAL_DRIFT_STATE_REQUIRED");

@@ -467,7 +467,12 @@
         "apps/server/db/migrations/2026_09_01_mcft_cap_09_evidence_source_poll_schedule.sql",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_DUE_POLICY_V1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EVIDENCE_SOURCE_POLL_SCHEDULE_POSTGRES_V1.ts",
-        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1.json"
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-POLL-SCHEDULE-SCHEMA-REMEDIATION-AUTHORITY-V1.json",
+        "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_ARM_V1.json",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_V1.cjs",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_V1.cjs",
+        ".github/workflows/mcft-cap-09-production-evidence-source-poll-schedule-schema-remediation.yml"
       ]
     }
   },

@@ -1,0 +1,83 @@
+name: mcft-cap-09-production-evidence-source-poll-schedule-schema-remediation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-production-evidence-source-poll-schedule-schema-remediation.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-POLL-SCHEDULE-SCHEMA-REMEDIATION-AUTHORITY-V1.json'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_ARM_V1.json'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_V1.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_V1.cjs'
+      - 'apps/server/db/migrations/2026_09_01_mcft_cap_09_evidence_source_poll_schedule.sql'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-production-evidence-source-poll-schedule-schema-remediation
+  cancel-in-progress: false
+
+jobs:
+  isolated-schema-postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Prove forward migration preserves table count and is idempotent
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql
+          test "$(psql "$DATABASE_URL" -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'")" = "3"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_09_01_mcft_cap_09_evidence_source_poll_schedule.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_09_01_mcft_cap_09_evidence_source_poll_schedule.sql
+          test "$(psql "$DATABASE_URL" -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'")" = "3"
+          test "$(psql "$DATABASE_URL" -Atc "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='external_evidence_producer_lease_v1' AND column_name IN ('kbs_raw_hourly_poll_last_started_at','kbs_raw_hourly_poll_next_eligible_at','kbs_raw_hourly_poll_writer_owner','kbs_raw_hourly_poll_writer_fencing_token','kbs_soil_poll_last_started_at','kbs_soil_poll_next_eligible_at','kbs_soil_poll_writer_owner','kbs_soil_poll_writer_fencing_token')")" = "8"
+          test "$(psql "$DATABASE_URL" -Atc "SELECT count(*) FROM pg_catalog.pg_constraint WHERE conrelid='public.external_evidence_producer_lease_v1'::regclass AND conname IN ('external_evidence_producer_lease_v1_kbs_raw_poll_all_or_none','external_evidence_producer_lease_v1_kbs_raw_poll_chronology','external_evidence_producer_lease_v1_kbs_raw_poll_fence','external_evidence_producer_lease_v1_kbs_soil_poll_all_or_none','external_evidence_producer_lease_v1_kbs_soil_poll_chronology','external_evidence_producer_lease_v1_kbs_soil_poll_fence')")" = "6"
+
+  preflight-and-remediate:
+    needs: isolated-schema-postgres
+    if: >-
+      github.head_ref == 'feat/mcft-cap09-v13-producer-driven-qualification-v1' &&
+      github.event.pull_request.base.sha == '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+      SEED_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Read-only exact production source poll schema preflight
+        run: node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_V1.cjs
+      - name: Apply source poll schema only when separately armed
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_V1.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-production-evidence-source-poll-schedule-schema-remediation-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_PREFLIGHT_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

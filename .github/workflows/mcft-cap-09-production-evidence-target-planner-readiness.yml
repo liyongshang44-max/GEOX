@@ -5,6 +5,11 @@ on:
     paths:
       - '.github/workflows/mcft-cap-09-production-evidence-target-planner-readiness.yml'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json'
+      - '.github/workflows/mcft-cap-09-production-evidence-source-poll-schedule-schema-remediation.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_V1.cjs'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_V1.cjs'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_ARM_V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-POLL-SCHEDULE-SCHEMA-REMEDIATION-AUTHORITY-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_TARGET_PLANNER_READINESS_V1.cjs'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts'

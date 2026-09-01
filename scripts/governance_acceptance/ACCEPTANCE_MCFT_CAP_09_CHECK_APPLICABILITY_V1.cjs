@@ -388,6 +388,17 @@ function main() {
     assert(byId(sourcePollPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(sourcePollPath));
   }
 
+  // CP-4: source-poll production schema remediation controls are owner-closure-owned.
+  for (const sourcePollRemediationPath of ["docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-POLL-SCHEDULE-SCHEMA-REMEDIATION-AUTHORITY-V1.json","scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_ARM_V1.json","scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_V1.cjs","scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_V1.cjs",".github/workflows/mcft-cap-09-production-evidence-source-poll-schedule-schema-remediation.yml"]) {
+    const sourcePollRemediationPlan = plan(authority, registry, [sourcePollRemediationPath]);
+    assert.equal(sourcePollRemediationPlan.status, "PASS");
+    assert.equal(sourcePollRemediationPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(sourcePollRemediationPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const sourcePollRemediationPostMerge = plan(authority, registry, [sourcePollRemediationPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(sourcePollRemediationPostMerge, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(sourcePollRemediationPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(sourcePollRemediationPath));
+  }
+
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
   const phase3 = plan(authority, registry, [phase3Path]);
