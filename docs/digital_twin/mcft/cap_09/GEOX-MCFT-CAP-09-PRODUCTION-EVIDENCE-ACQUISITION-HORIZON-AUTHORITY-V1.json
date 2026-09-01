@@ -3,7 +3,7 @@
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1",
   "status": "ESTABLISHED_FULL_TABLE_BASELINE_POLICY_NO_ACTIVE_INSTANCE",
   "stage": "POST_SOURCE_PROGRESS_AND_KBS_BATCH_PATH_PRE_PURE_PLANNER",
-  "subject_predecessor_sha": "f6c11495ac2242e962521e9bfc29f13ab679345c",
+  "subject_predecessor_sha": "1b0954fcbbe359cc94d542db753dab2ffb86e260",
   "authority_basis": {
     "master_task_line_ref": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md",
     "taskbook_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
@@ -12,7 +12,8 @@
     "cadence_decoupling_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-PROVIDER-RUNTIME-CADENCE-DECOUPLING-AUTHORITY.md",
     "planner_readiness_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json",
     "kbs_publication_observer_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-PUBLICATION-CADENCE-OBSERVER-V1.md",
-    "kbs_product_provider_ref": "apps/server/src/external_evidence/provider/kbs_raw_hourly_live_provider_v1.ts"
+    "kbs_product_provider_ref": "apps/server/src/external_evidence/provider/kbs_raw_hourly_live_provider_v1.ts",
+    "source_due_policy_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1.json"
   },
   "decisive_ruling": {
     "acquisition_horizon_must_be_explicit": true,
@@ -43,7 +44,9 @@
       "non_authoritative_daily_batch_operating_profile_may_define_promotion_set": false,
       "earlier_historical_table_scan_for_bootstrap_promotion_authorized": false,
       "raw_retention_before_diff_and_decode_required": true,
-      "real_provider_chronology_required": true
+      "real_provider_chronology_required": true,
+      "explicit_poll_due_policy_established": true,
+      "minimum_poll_interval_seconds": 900
     },
     "gfs_bundle": {
       "mode": "FIRST_PROVIDER_SELECTED_CYCLE_FETCH_STARTED_AT_OR_AFTER_ACTIVATION_FENCE",
@@ -56,7 +59,8 @@
       "mode": "FIRST_CURRENT_PROVIDER_RESPONSE_FETCH_STARTED_AT_OR_AFTER_ACTIVATION_FENCE",
       "bounded_backfill_unit": "ONE_CURRENT_PROVIDER_RESPONSE",
       "historical_event_scan_authorized": false,
-      "explicit_poll_due_policy_established": false
+      "explicit_poll_due_policy_established": true,
+      "minimum_poll_interval_seconds": 300
     }
   },
   "restart_policy": {
@@ -67,7 +71,9 @@
     "runtime_tick_cursor_fallback_authorized": false,
     "successful_cycle_count_fallback_authorized": false,
     "kbs_publication_baseline_must_be_durable_when_no_evidence_progress": true,
-    "in_memory_only_kbs_baseline_sufficient_for_production": false
+    "in_memory_only_kbs_baseline_sufficient_for_production": false,
+    "source_poll_schedule_must_be_durable": true,
+    "no_change_may_advance_poll_schedule_without_evidence_progress": true
   },
   "runtime_start_binding": {
     "active_horizon_instance_bound": false,

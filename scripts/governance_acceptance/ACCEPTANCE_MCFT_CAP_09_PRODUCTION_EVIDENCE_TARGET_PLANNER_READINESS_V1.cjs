@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "GFS_PARTIAL_PAIR_REHYDRATION_IMPLEMENTED_DUE_AUTHORITIES_NEXT");
+  assert.equal(authority.status, "SOURCE_DUE_POLICIES_IMPLEMENTED_SCHEMA_MATERIALIZATION_NEXT");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "97b1e73a6a073e13af17354f862f731f75566df4");
+  assert.equal(authority.subject_predecessor_sha, "1b0954fcbbe359cc94d542db753dab2ffb86e260");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -173,6 +173,20 @@ try {
   const replayCanonicalizer = read("apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts");
   includes(replayCanonicalizer, "content_type: input.provenance.content_type", "CANONICAL_REPLAY_CONTENT_TYPE_PERSISTENCE_REQUIRED");
 
+  const duePolicy = read(authority.source_due_policy_authority_ref);
+  includes(duePolicy, '"minimum_poll_interval_seconds": 900', "KBS_RAW_DUE_INTERVAL_REQUIRED");
+  includes(duePolicy, '"minimum_poll_interval_seconds": 300', "KBS_SOIL_DUE_INTERVAL_REQUIRED");
+  includes(duePolicy, '"provider_observed_cadence_is_due_authority": false', "OBSERVED_CADENCE_AUTHORITY_FORBIDDEN");
+  const duePolicyRuntime = read("apps/server/src/external_evidence/mcft_cap09_production_evidence_source_due_policy_v1.ts");
+  includes(duePolicyRuntime, "GEOX_OPERATIONAL_THROTTLE_NOT_PROVIDER_CADENCE", "DUE_POLICY_OPERATIONAL_SEMANTICS_REQUIRED");
+  assert.equal(duePolicyRuntime.includes("Date.now"), false, "DUE_POLICY_WALL_CLOCK_FORBIDDEN");
+  assert.equal(duePolicyRuntime.includes("process.env"), false, "DUE_POLICY_ENV_FORBIDDEN");
+  const pollScheduleRepo = read(authority.source_poll_schedule_repository_ref);
+  includes(pollScheduleRepo, "claimPollBeforeProviderFetch", "SOURCE_POLL_FENCED_CLAIM_REQUIRED");
+  includes(pollScheduleRepo, "EVIDENCE_SOURCE_POLL_STALE_FENCE", "SOURCE_POLL_STALE_FENCE_REQUIRED");
+  includes(pollScheduleRepo, "nextProductionEvidenceSourcePollEligibleAtV1", "SOURCE_POLL_NEXT_ELIGIBLE_REQUIRED");
+  assert.equal(pollScheduleRepo.includes("RuntimeTickCursor"), false, "SOURCE_POLL_RUNTIME_TICK_CURSOR_FORBIDDEN");
+
   const purePlanner = read(authority.pure_source_planner_ref);
   includes(purePlanner, "planProductionEvidenceSourcesV1", "PURE_SOURCE_SPECIFIC_PLANNER_REQUIRED");
   includes(purePlanner, "KBS_RAW_HOURLY_PUBLICATION_CYCLE", "KBS_PUBLICATION_CYCLE_PLAN_REQUIRED");
@@ -214,9 +228,8 @@ try {
   includes(packager, "MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND", "PRODUCTION_ENTRYPOINT_FAIL_CLOSED_REQUIRED");
 
   assert.deepEqual(authority.unconditional_blockers, [
-    "KBS_RAW_HOURLY_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED",
+    "PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_NOT_MATERIALIZED",
     "KBS_RAW_HOURLY_PRODUCTION_BASELINE_POINTER_SCHEMA_NOT_MATERIALIZED",
-    "KBS_SOIL_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED",
     "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
   ]);
   assert.equal(authority.adjudication.phase5_fixture_manifest_may_be_production_planner, false);
@@ -251,6 +264,10 @@ try {
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.planner_cycle_service_binding_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_baseline_pointer_schema_materialized, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_durable_baseline_available, false);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.explicit_due_policy_established, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.minimum_poll_interval_seconds, 900);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.durable_poll_schedule_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.fenced_poll_claim_before_provider_attempt_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.durable_publication_baseline_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.historical_prefix_snapshot_comparison_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.historical_revision_backfill_fail_closed, true);
@@ -276,6 +293,11 @@ try {
   assert.equal(authority.source_specific_requirements.gfs_bundle.canonical_fact_content_type_persisted, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.replay_envelope_content_type_restored, true);
   assert.equal(authority.source_specific_requirements.kbs_soil.pure_planner_decision_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_soil.explicit_due_policy_established, true);
+  assert.equal(authority.source_specific_requirements.kbs_soil.minimum_poll_interval_seconds, 300);
+  assert.equal(authority.source_specific_requirements.kbs_soil.durable_poll_schedule_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_soil.fenced_poll_claim_before_provider_attempt_implemented, true);
+  assert.equal(authority.production_source_poll_schedule_schema_materialized, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.single_fetch_multi_interval_path_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.single_private_retention_per_batch_implemented, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.cross_cycle_progress_read_port_implemented, true);

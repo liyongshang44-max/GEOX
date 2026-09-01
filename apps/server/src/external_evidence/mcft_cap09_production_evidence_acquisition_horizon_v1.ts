@@ -30,6 +30,8 @@ export type ProductionEvidenceAcquisitionHorizonV1 = {
     fixed_latest_24_rows_assumption_authorized: false;
     non_authoritative_daily_batch_operating_profile_may_define_promotion_set: false;
     revision_or_backfill_before_previous_latest_auto_promotion_authorized: false;
+    explicit_poll_due_policy_established: true;
+    minimum_poll_interval_seconds: 900;
   };
   gfs_bundle: {
     bootstrap_mode: "FIRST_PROVIDER_SELECTED_CYCLE_FETCH_STARTED_AT_OR_AFTER_ACTIVATION_FENCE";
@@ -41,7 +43,8 @@ export type ProductionEvidenceAcquisitionHorizonV1 = {
     bootstrap_mode: "FIRST_CURRENT_PROVIDER_RESPONSE_FETCH_STARTED_AT_OR_AFTER_ACTIVATION_FENCE";
     bounded_backfill_unit: "ONE_CURRENT_PROVIDER_RESPONSE";
     historical_event_scan_authorized: false;
-    explicit_poll_due_policy_established: false;
+    explicit_poll_due_policy_established: true;
+    minimum_poll_interval_seconds: 300;
   };
   restart: {
     durable_progress_present: "RESUME_FROM_EVIDENCE_OWNED_DURABLE_SOURCE_PROGRESS";
@@ -100,6 +103,8 @@ export function materializeProductionEvidenceAcquisitionHorizonV1(
       fixed_latest_24_rows_assumption_authorized: false,
       non_authoritative_daily_batch_operating_profile_may_define_promotion_set: false,
       revision_or_backfill_before_previous_latest_auto_promotion_authorized: false,
+      explicit_poll_due_policy_established: true,
+      minimum_poll_interval_seconds: 900,
     },
     gfs_bundle: {
       bootstrap_mode:
@@ -113,7 +118,8 @@ export function materializeProductionEvidenceAcquisitionHorizonV1(
         "FIRST_CURRENT_PROVIDER_RESPONSE_FETCH_STARTED_AT_OR_AFTER_ACTIVATION_FENCE",
       bounded_backfill_unit: "ONE_CURRENT_PROVIDER_RESPONSE",
       historical_event_scan_authorized: false,
-      explicit_poll_due_policy_established: false,
+      explicit_poll_due_policy_established: true,
+      minimum_poll_interval_seconds: 300,
     },
     restart: {
       durable_progress_present:

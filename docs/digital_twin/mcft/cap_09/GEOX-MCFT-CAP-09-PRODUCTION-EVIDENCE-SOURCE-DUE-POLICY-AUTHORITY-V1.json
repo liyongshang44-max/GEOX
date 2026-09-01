@@ -1,0 +1,66 @@
+{
+  "schema_version": "geox_mcft_cap09_production_evidence_source_due_policy_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1",
+  "status": "ESTABLISHED_NOT_BOUND",
+  "subject_predecessor_sha": "1b0954fcbbe359cc94d542db753dab2ffb86e260",
+  "authority_basis": {
+    "master_task_line_ref": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md",
+    "taskbook_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+    "production_hosting_route_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+    "planner_readiness_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json",
+    "kbs_cadence_design_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-PROVIDER-CADENCE-INTELLIGENCE-DESIGN-V1.md"
+  },
+  "decisive_ruling": {
+    "due_policy_owner": "GEOX_EVIDENCE_RUNTIME_OPERATIONAL_SCHEDULING",
+    "provider_observed_cadence_is_due_authority": false,
+    "formal_scheduler_cadence_is_due_authority": false,
+    "runtime_tick_cursor_may_drive_provider_polling": false,
+    "evidence_supply_cursor_may_be_falsely_advanced_on_no_change": false,
+    "durable_poll_claim_required_before_provider_attempt": true,
+    "restart_must_preserve_next_poll_eligible_at": true,
+    "stale_plan_must_be_rechecked_under_current_evidence_producer_fence": true,
+    "planning_time_must_be_explicit": true
+  },
+  "source_policies": {
+    "kbs_raw_hourly": {
+      "minimum_poll_interval_seconds": 900,
+      "interval_semantics": "GEOX_OPERATIONAL_THROTTLE_NOT_PROVIDER_CADENCE",
+      "provider_publication_profile": "DAILY_BATCH_OF_HOURLY_EVENTS",
+      "publication_profile_is_interval_authority": false,
+      "first_poll_due_at_or_after_activation_fence": true,
+      "no_change_advances_poll_schedule_but_not_evidence_cursor": true
+    },
+    "kbs_soil": {
+      "minimum_poll_interval_seconds": 300,
+      "interval_semantics": "GEOX_OPERATIONAL_THROTTLE_NOT_PROVIDER_CADENCE",
+      "provider_publication_profile": "IRREGULAR_PROVIDER_DEFINED_EVENT",
+      "historical_observed_cadence_is_interval_authority": false,
+      "first_poll_due_at_or_after_activation_fence": true,
+      "unchanged_latest_event_advances_poll_schedule_but_not_evidence_cursor": true
+    }
+  },
+  "durable_state": {
+    "contract_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_source_poll_schedule_v1.ts",
+    "postgres_repository_ref": "apps/server/src/persistence/external_evidence/postgres_evidence_source_poll_schedule_v1.ts",
+    "migration_ref": "apps/server/db/migrations/2026_09_01_mcft_cap_09_evidence_source_poll_schedule.sql",
+    "storage_surface": "EXISTING_EXTERNAL_EVIDENCE_PRODUCER_LEASE_ROW",
+    "new_table_count": 0,
+    "current_production_schema_materialized": false
+  },
+  "binding": {
+    "production_due_state_materializer_implemented": true,
+    "production_entrypoint_bound": false,
+    "runtime_start_binding_authorized": false
+  },
+  "non_effects": {
+    "production_database_mutation": false,
+    "provider_request_count": 0,
+    "evidence_cursor_mutation": false,
+    "runtime_tick_cursor_mutation": false,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false
+  }
+}

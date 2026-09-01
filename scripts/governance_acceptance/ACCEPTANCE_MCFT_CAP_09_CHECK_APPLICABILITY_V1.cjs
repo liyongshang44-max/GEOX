@@ -376,6 +376,18 @@ function main() {
     assert(byId(gfsPartialPostMergePlan, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(gfsPartialPath));
   }
 
+  // CP-4: source due policy and durable poll schedule are Phase3-owned and owner-visible post-merge.
+  for (const sourcePollPath of ["apps/server/src/external_evidence/mcft_cap09_evidence_source_poll_schedule_v1.ts","apps/server/src/external_evidence/mcft_cap09_production_evidence_source_due_policy_v1.ts","apps/server/src/persistence/external_evidence/postgres_evidence_source_poll_schedule_v1.ts","apps/server/db/migrations/2026_09_01_mcft_cap_09_evidence_source_poll_schedule.sql","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_DUE_POLICY_V1.ts","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EVIDENCE_SOURCE_POLL_SCHEDULE_POSTGRES_V1.ts","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1.json"]) {
+    const sourcePollPlan = plan(authority, registry, [sourcePollPath]);
+    assert.equal(sourcePollPlan.status, "PASS");
+    assert.equal(sourcePollPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(sourcePollPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(sourcePollPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const sourcePollPostMerge = plan(authority, registry, [sourcePollPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(sourcePollPostMerge, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(sourcePollPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(sourcePollPath));
+  }
+
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
   const phase3 = plan(authority, registry, [phase3Path]);

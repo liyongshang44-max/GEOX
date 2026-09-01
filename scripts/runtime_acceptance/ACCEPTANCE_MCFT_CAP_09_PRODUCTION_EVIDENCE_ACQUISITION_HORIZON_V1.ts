@@ -46,6 +46,8 @@ function main(): void {
     horizon.kbs_raw_hourly.revision_or_backfill_before_previous_latest_auto_promotion_authorized,
     false,
   );
+  assert.equal(horizon.kbs_raw_hourly.explicit_poll_due_policy_established, true);
+  assert.equal(horizon.kbs_raw_hourly.minimum_poll_interval_seconds, 900);
 
   assert.equal(
     horizon.gfs_bundle.bootstrap_mode,
@@ -60,7 +62,8 @@ function main(): void {
     "FIRST_CURRENT_PROVIDER_RESPONSE_FETCH_STARTED_AT_OR_AFTER_ACTIVATION_FENCE",
   );
   assert.equal(horizon.kbs_soil.historical_event_scan_authorized, false);
-  assert.equal(horizon.kbs_soil.explicit_poll_due_policy_established, false);
+  assert.equal(horizon.kbs_soil.explicit_poll_due_policy_established, true);
+  assert.equal(horizon.kbs_soil.minimum_poll_interval_seconds, 300);
 
   assert.equal(
     horizon.restart.durable_progress_present,
@@ -113,7 +116,10 @@ function main(): void {
     gfs_bootstrap_bounded_by_one_provider_selected_cycle: true,
     soil_bootstrap_bounded_by_one_current_response: true,
     restart_resumes_from_evidence_owned_durable_progress: true,
-    soil_explicit_due_policy_established: false,
+    soil_explicit_due_policy_established: true,
+    kbs_raw_hourly_explicit_due_policy_established: true,
+    kbs_raw_hourly_operational_poll_interval_seconds: 900,
+    kbs_soil_operational_poll_interval_seconds: 300,
     database_connection_attempted: false,
     provider_request_count: 0,
     evidence_cursor_mutation_count: 0,
