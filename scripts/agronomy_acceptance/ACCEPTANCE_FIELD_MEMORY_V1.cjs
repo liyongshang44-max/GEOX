@@ -784,7 +784,7 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
     memory_query_by_operation: currentChainMemoryLinked,
     memory_linked_to_current_chain: currentChainMemoryLinked,
     memory_query_by_id_all_exist: byIdsExist,
-    memory_has_confidence: byScopeItems.every((item) => Number(item?.confidence) > 0),
+    memory_confidence_is_provenance_safe: byScopeItems.every((item) => item?.confidence == null || (Number.isFinite(Number(item.confidence)) && Number(item.confidence) >= 0 && Number(item.confidence) <= 1)),
     memory_has_summary_text: byScopeItems.every((item) => String(item?.summary_text ?? "").trim().length > 0),
     memory_has_evidence_refs: byScopeItems.every((item) => Array.isArray(item?.evidence_refs)),
     skill_memory_has_skill_trace_ref: byScopeItems.filter((x)=>x.memory_type==='SKILL_PERFORMANCE_MEMORY').every((x)=>String(x.skill_trace_ref??'').trim().length>0),
