@@ -26,6 +26,12 @@ const PROD_ROOTS = [
   "config/judge"
 ];
 const AUX_ROOTS = ["apps/server/scripts", "packages/contracts", "scripts", ".github/workflows"];
+const PROD_FILES = [
+  "docker-compose.yml",
+  "docker-compose.prod.yml",
+  "docker-compose.staging.yml",
+  "docker-compose.commercial_v1.yml"
+];
 const EXTS = [".ts", ".tsx", ".js", ".jsx", ".cjs", ".mjs", ".sql", ".json", ".yml", ".yaml"];
 
 const REQUIRED = [
@@ -292,8 +298,15 @@ function scan(abs, production) {
     p.startsWith("docker/postgres/init/") &&
     content.includes("field_memory_v1") &&
     (content.includes("DEFAULT 'projectA'") || content.includes("DEFAULT 0.8"));
+  const bootstrapInitActivation =
+    p.startsWith("docker-compose") &&
+    content.includes("./docker/postgres/init:/docker-entrypoint-initdb.d:ro");
+  const executionDeploymentProfile =
+    p.startsWith("docker-compose") &&
+    content.includes("GEOX_EXECUTION_DEFAULT_DISABLED") &&
+    (content.includes("GEOX_RUNTIME_ENV") || p === "docker-compose.prod.yml" || p === "docker-compose.staging.yml");
   const genericFactsWriter = /\bINSERT\s+INTO\s+facts\b/i.test(content);
-  if (!families.size && !specialPlanner && !specialFallback && !specialControlVerdict && !specialDeviceCapability && !specialDeviceSensing && !specialSkillBinding && !specialStandaloneJudge && !specialJudgeConfig && !semanticDefaultRisk && !genericFactsWriter) return;
+  if (!families.size && !specialPlanner && !specialFallback && !specialControlVerdict && !specialDeviceCapability && !specialDeviceSensing && !specialSkillBinding && !specialStandaloneJudge && !specialJudgeConfig && !semanticDefaultRisk && !bootstrapInitActivation && !executionDeploymentProfile && !genericFactsWriter) return;
 
   for (const f of families) add(p, f, "SEMANTIC_TOUCHPOINT", "semantic-token-or-type", production);
   if (genericFactsWriter) {
@@ -379,6 +392,12 @@ function scan(abs, production) {
   }
   if (semanticDefaultRisk) {
     add(p, "field_memory", "SEMANTIC_DEFAULT_AUTHORITY_RISK", "bootstrap-field-memory-defaults", production);
+  }
+  if (bootstrapInitActivation) {
+    add(p, "governance.bootstrap", "BOOTSTRAP_ACTIVATION", "postgres-init-semantic-seed-mount", production);
+  }
+  if (executionDeploymentProfile) {
+    add(p, "execution.activation_policy", "CONFIG_AUTHORITY", "execution-default-disabled-deployment-profile", production);
   }
 
   if (p.startsWith("apps/server/db/migrations/")) {
@@ -466,13 +485,17 @@ function main() {
   for (const root of PROD_ROOTS) {
     for (const f of listFiles(root)) if (!isTest(rel(f))) scan(f, true);
   }
+  for (const file of PROD_FILES) {
+    const abs = path.join(ROOT, file);
+    if (fs.existsSync(abs)) scan(abs, true);
+  }
   for (const root of AUX_ROOTS) {
     for (const f of listFiles(root)) scan(f, false);
   }
 
   const hardKinds = new Set([
     "PERSISTENCE_WRITER","GENERIC_FACT_WRITER","SEMANTIC_BUILDER","AUTHORITY_DERIVER",
-    "CONFIG_AUTHORITY","SEMANTIC_DEFAULT_AUTHORITY_RISK",
+    "CONFIG_AUTHORITY","SEMANTIC_DEFAULT_AUTHORITY_RISK","BOOTSTRAP_ACTIVATION",
     "HTTP_AUTHORITY_PRODUCER","AUTHORITY_CALLSITE","PERSISTENCE_AUTHORITY_RISK"
   ]);
   const hard = [];
