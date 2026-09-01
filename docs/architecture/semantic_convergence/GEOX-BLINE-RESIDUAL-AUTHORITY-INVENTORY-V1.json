@@ -3760,6 +3760,463 @@
       ],
       "removal_target": "KEEP AS SOURCE/TRACE MAPPING ONLY; MUST NOT BECOME CANONICAL STATE/FORECAST AUTHORITY",
       "b02_registered": false
+    },
+    {
+      "surface_id": "RES-143",
+      "source_path": "apps/server/src/routes/agronomy_inference_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/agronomy/registerAgronomyModule.ts",
+      "activation_mode": "ACTIVE_DERIVER",
+      "writes": [
+        "semantic output / delegated persistence according to active route implementation"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "agronomy.interpretation",
+        "evidence.qualification"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_DERIVER_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "governed agronomy inference result ; KEEP_DERIVER_NO_DIRECT_ACTION_AUTHORITY",
+      "b02_registered": true,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-144",
+      "source_path": "apps/server/src/routes/agronomy_v0.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/agronomy/registerAgronomyModule.ts",
+      "activation_mode": "ACTIVE_COMPATIBILITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "agronomy.interpretation",
+        "governance.fact_ledger"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_COMPATIBILITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical Agronomy Interpretation / Candidate adapters ; RETIRE_LEGACY_V0_WRITER_AFTER_SEMANTIC_CUTOVER",
+      "b02_registered": true,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-145",
+      "source_path": "apps/server/src/routes/alert_workflow_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/execution/registerExecutionModule.ts",
+      "activation_mode": "ACTIVE_AUTHORITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "governance.trace_projection",
+        "operation.plan"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_AUTHORITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "explicit alert-operation workflow relation ; KEEP_OPERATIONAL_WORKFLOW_AUTHORITY",
+      "b02_registered": false,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-146",
+      "source_path": "apps/server/src/routes/appleii_stage1_evidence_gate_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/decision/registerDecisionModule.ts",
+      "activation_mode": "ACTIVE_COMPATIBILITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "evidence.qualification",
+        "decision.control_gate"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_COMPATIBILITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical DecisionEligibility/Control boundary ; RETIRE_STAGE1_PRECURSOR_AFTER_GOVERNED_BOUNDARY_ADJUDICATION",
+      "b02_registered": false,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-147",
+      "source_path": "apps/server/src/routes/decision_eligibility_policy_declarations_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/decision/registerDecisionModule.ts",
+      "activation_mode": "ACTIVE_AUTHORITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "decision.eligibility"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_AUTHORITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical DecisionEligibility policy authority ; KEEP_VERSIONED_POLICY_DECLARATION_AUTHORITY",
+      "b02_registered": true,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-148",
+      "source_path": "apps/server/src/routes/device_heartbeat_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/sensing/registerSensingModule.ts",
+      "activation_mode": "ACTIVE_AUTHORITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "device.state"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_AUTHORITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical device health state ; KEEP_DEVICE_HEALTH_AUTHORITY",
+      "b02_registered": false,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-149",
+      "source_path": "apps/server/src/routes/field_crop_context_hooks_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/decision/registerDecisionModule.ts,apps/server/src/modules/prescription/registerPrescriptionModule.ts",
+      "activation_mode": "ACTIVE_ADAPTER",
+      "writes": [
+        "semantic output / delegated persistence according to active route implementation"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "context.snapshot",
+        "context.declared_identity"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_ADAPTER_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical ContextAuthorityPort ; RETIRE_HOOK_COMPATIBILITY_AFTER_TYPED_CONTEXT_CUTOVER",
+      "b02_registered": false,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-150",
+      "source_path": "apps/server/src/routes/field_tags_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/field/registerFieldModule.ts",
+      "activation_mode": "ACTIVE_AUTHORITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "context.declared_identity"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_AUTHORITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical field metadata authority ; KEEP_EXPLICIT_METADATA_AUTHORITY",
+      "b02_registered": false,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-151",
+      "source_path": "apps/server/src/routes/judge_v2.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/judge/registerJudgeModule.ts",
+      "activation_mode": "ACTIVE_DERIVER",
+      "writes": [
+        "semantic output / delegated persistence according to active route implementation"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "evidence.qualification",
+        "acceptance.verdict",
+        "field_memory"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_DERIVER_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical judge result / execution evidence qualification ; REMOVE_DIRECT_MEMORY_SIDE_EFFECT_IF_PRESENT",
+      "b02_registered": true,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-152",
+      "source_path": "apps/server/src/routes/management_zones_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/field/registerFieldModule.ts",
+      "activation_mode": "ACTIVE_AUTHORITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "context.snapshot",
+        "field.spatial_identity"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_AUTHORITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical management-zone authority ; KEEP_SPATIAL_CONTEXT_AUTHORITY",
+      "b02_registered": false,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-153",
+      "source_path": "apps/server/src/routes/raw.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/sensing/registerSensingModule.ts",
+      "activation_mode": "ACTIVE_COMPATIBILITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_COMPATIBILITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical evidence ingestion ; RETIRE_LEGACY_RAW_WRITER_AFTER_INGESTION_CUTOVER",
+      "b02_registered": true,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-154",
+      "source_path": "apps/server/src/routes/sensing_fact_envelope_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/sensing/registerSensingModule.ts",
+      "activation_mode": "ACTIVE_ADAPTER",
+      "writes": [
+        "semantic output / delegated persistence according to active route implementation"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "evidence.qualification"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_ADAPTER_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical EvidenceQualification ingress ; KEEP_AS_EVIDENCE_ADAPTER",
+      "b02_registered": true,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-155",
+      "source_path": "apps/server/src/routes/skill_runtime_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/decision/registerDecisionModule.ts",
+      "activation_mode": "ACTIVE_AUTHORITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "execution.adapter_resolution",
+        "governance.skill_binding"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_AUTHORITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical governed skill runtime ; KEEP_RUNTIME_EXECUTION_WITH_APPROVAL_BOUNDARIES",
+      "b02_registered": true,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-156",
+      "source_path": "apps/server/src/routes/skills_rules_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/decision/registerDecisionModule.ts",
+      "activation_mode": "ACTIVE_AUTHORITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "governance.skill_binding"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_AUTHORITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical versioned skill binding policy ; KEEP_EXPLICIT_SKILL_BINDING_AUTHORITY",
+      "b02_registered": false,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-157",
+      "source_path": "apps/server/src/routes/skills_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/decision/registerDecisionModule.ts",
+      "activation_mode": "ACTIVE_COMPATIBILITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "governance.skill_binding"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_COMPATIBILITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "bindings/override + canonical skill registry services ; RETIRE_LEGACY_ENABLE_DISABLE_MUTATION_SURFACES_AT_DECLARED_SUNSET",
+      "b02_registered": false,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-158",
+      "source_path": "apps/server/src/routes/telemetry_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/sensing/registerSensingModule.ts",
+      "activation_mode": "ACTIVE_AUTHORITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "device.state"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_AUTHORITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical telemetry/evidence ingestion ; KEEP_INGRESS_WITH_QUALIFICATION_BOUNDARY",
+      "b02_registered": true,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-159",
+      "source_path": "apps/server/src/routes/weather_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/sensing/registerSensingModule.ts",
+      "activation_mode": "ACTIVE_AUTHORITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "twin.forecast"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_AUTHORITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "governed weather/forecast source adapter ; MCFT_FORECAST_AUTHORITY_MUST_REMAIN_SEPARATE_UNTIL_TYPED_CUTOVER",
+      "b02_registered": false,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-160",
+      "source_path": "apps/server/src/domain/decision_engine_v1.ts",
+      "entrypoint": "apps/server/src/routes/decision_engine_v1.ts -> getHardRuleRecommendationBlueprintV1; evaluateIrrigationDecisionV1 remains separately orphaned",
+      "activation_mode": "PARTIAL_ACTIVE_BY_CAPABILITY",
+      "writes": [
+        "in-memory hard-rule recommendation blueprint",
+        "in-memory legacy irrigation decision result"
+      ],
+      "reads": [
+        "HARD_RULE_POLICY_CONFIG_V1",
+        "legacy irrigation threshold inputs"
+      ],
+      "semantic_family": [
+        "decision.candidate",
+        "decision.calculation"
+      ],
+      "authority_class": "LEGACY_MIXED_DECISION_POLICY_DERIVER_WITH_ORPHANED_SUBCAPABILITY",
+      "runtime_reachable": "PROVEN_FOR_HARD_RULE_BLUEPRINT__NONE_FOR_EVALUATE_IRRIGATION_DECISION",
+      "downstream_consumers": [
+        "apps/server/src/routes/decision_engine_v1.ts"
+      ],
+      "removal_target": "SPLIT POLICY/CALCULATION FROM CANDIDATE AUTHORITY; RETIRE ORPHANED LEGACY EVALUATOR AFTER PROOF",
+      "audit_note": "Capability-level classification required: the file is not uniformly active or orphaned.",
+      "feature_flag": null,
+      "b02_registered": true
+    },
+    {
+      "surface_id": "RES-161",
+      "source_path": "apps/server/src/domain/water_response/water_response_verification_from_acceptance_v1.ts",
+      "entrypoint": "apps/server/src/routes/water_response_verification_v1.ts",
+      "activation_mode": "ACTIVE_BUILDER",
+      "writes": [
+        "in-memory water-response verification object used by active outcome persistence route"
+      ],
+      "reads": [
+        "AcceptanceResult",
+        "AsExecuted / execution evidence"
+      ],
+      "semantic_family": [
+        "outcome.evidence",
+        "acceptance.verdict",
+        "execution.as_executed"
+      ],
+      "authority_class": "ACCEPTANCE_TO_OUTCOME_VERIFICATION_BUILDER",
+      "runtime_reachable": "PROVEN",
+      "downstream_consumers": [
+        "apps/server/src/routes/water_response_verification_v1.ts"
+      ],
+      "removal_target": "KEEP AS EXPLICIT Acceptance -> OutcomeEvidence BOUNDARY",
+      "audit_note": "Outcome verification is downstream of Acceptance and must not be collapsed into Acceptance or Field Memory.",
+      "feature_flag": null,
+      "b02_registered": true
     }
   ],
   "cross_branch_surfaces": [
