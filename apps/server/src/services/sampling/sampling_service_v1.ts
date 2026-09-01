@@ -310,10 +310,50 @@ export class SamplingServiceV1 {
     verdict: SamplingVerdict;
     reasons: string[];
     evidence_refs: EvidenceRef[];
-  }): Promise<{ acceptance_id: string; fact_id: string }> {
+  }): Promise<{ acceptance_id: string; fact_id: string; idempotent: boolean }> {
     if (!input.tenant_id || !input.project_id || !input.group_id) {
       throw new SamplingServiceErrorV1("INVALID_ACCEPTANCE_SCOPE", 400);
     }
+
+    const existing = await this.pool.query(
+      `SELECT fact_id, record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type') = 'sampling_acceptance_v1'
+          AND (record_json::jsonb->>'tenant_id') = $1
+          AND (record_json::jsonb->>'project_id') = $2
+          AND (record_json::jsonb->>'group_id') = $3
+          AND (record_json::jsonb->>'sampling_plan_fact_id') = $4
+          AND (record_json::jsonb->>'sample_receipt_fact_id') IS NOT DISTINCT FROM $5::text
+          AND (record_json::jsonb->>'lab_result_fact_id') IS NOT DISTINCT FROM $6::text
+          AND (record_json::jsonb->>'sample_id') = $7
+          AND COALESCE(record_json::jsonb->>'import_id', '') = COALESCE($8::text, '')
+        LIMIT 2`,
+      [
+        input.tenant_id,
+        input.project_id,
+        input.group_id,
+        input.sampling_plan_fact_id,
+        input.sample_receipt_fact_id ?? null,
+        input.lab_result_fact_id ?? null,
+        input.sample_id,
+        input.import_id ?? null,
+      ],
+    );
+    if ((existing.rows?.length ?? 0) > 1) {
+      throw new SamplingServiceErrorV1("AMBIGUOUS:sampling_acceptance_v1", 409);
+    }
+    if (existing.rows?.[0]) {
+      const existingRecord = existing.rows[0].record_json ?? {};
+      const existingReasons = Array.isArray(existingRecord.reasons) ? existingRecord.reasons.map(String) : [];
+      if (String(existingRecord.verdict ?? "") !== input.verdict
+        || JSON.stringify(existingReasons) !== JSON.stringify(input.reasons)) {
+        throw new SamplingServiceErrorV1("CONFLICT:sampling_acceptance_exact_chain_verdict", 409);
+      }
+      const acceptanceId = String(existingRecord.acceptance_id ?? "").trim();
+      if (!acceptanceId) throw new SamplingServiceErrorV1("INVALID:sampling_acceptance_identity", 409);
+      return { acceptance_id: acceptanceId, fact_id: String(existing.rows[0].fact_id), idempotent: true };
+    }
+
     const acceptance_id = randomUUID();
     const fact_id = `sa_${acceptance_id}`;
 
@@ -338,7 +378,7 @@ export class SamplingServiceV1 {
     };
 
     await this.insertFact({ fact_id, occurred_at: new Date().toISOString(), source: "api_v1_sampling", record_json });
-    return { acceptance_id, fact_id };
+    return { acceptance_id, fact_id, idempotent: false };
   }
 
   async getPlan(plan_id: string): Promise<SamplingFactRowV1 | null> {
