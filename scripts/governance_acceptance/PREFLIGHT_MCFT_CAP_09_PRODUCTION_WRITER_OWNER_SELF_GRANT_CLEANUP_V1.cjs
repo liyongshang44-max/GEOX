@@ -5,6 +5,7 @@ const ROOT=process.cwd(),TARGET="geox_mcft_cap09_production_runtime_v1";
 const EVIDENCE_LOGIN="geox_mcft_cap09_evidence_runtime_login_v1",TWIN_LOGIN="geox_mcft_cap09_twin_runtime_login_v1";
 const EVIDENCE_PRIVILEGE="geox_mcft_cap09_evidence_runtime_v1",TWIN_PRIVILEGE="geox_mcft_cap09_twin_runtime_v1";
 const AUTH=path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-WRITER-OWNER-SELF-GRANT-CLEANUP-AUTHORITY-V1.json");
+const ACL_AUTH=path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1.json");
 const ARM=path.join(ROOT,"scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_ARM_V1.json");
 const OUT=path.join(ROOT,"acceptance-output/MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_PREFLIGHT_V1_RESULT.json");
 const q=(url,sql)=>cp.execFileSync("psql",[url,"-X","-v","ON_ERROR_STOP=1","-AtF","|","-c",sql],{encoding:"utf8"}).trim();
@@ -16,6 +17,7 @@ try{
  const seed=String(process.env.SEED_DATABASE_URL||"").trim();assert.ok(seed,"WRITER_OWNER_CLEANUP_SEED_URL_REQUIRED");
  const u=new URL(seed);u.pathname="/"+TARGET;const url=u.toString();
  const authority=JSON.parse(fs.readFileSync(AUTH,"utf8"));
+ const aclAuthority=JSON.parse(fs.readFileSync(ACL_AUTH,"utf8"));
  const arm=JSON.parse(fs.readFileSync(ARM,"utf8"));
  assert.equal(authority.target.database_name,TARGET,"WRITER_OWNER_CLEANUP_AUTHORITY_TARGET_REQUIRED");
  const cleanupAuthorized=arm.production_writer_owner_self_grant_cleanup_authorized===true;
@@ -110,10 +112,13 @@ try{
  }
  const targetTables=["external_evidence_producer_lease_v1","external_evidence_supply_event_v1","external_evidence_supply_cursor_v1"];
  const missing=[];for(const t of targetTables){const m=matrix(url,t);for(const [i,p] of [[0,"SELECT"],[1,"INSERT"],[2,"UPDATE"]])if(!m[i])missing.push(t+":"+p);assert.equal(m[3],false,"WRITER_OWNER_CLEANUP_DELETE_FORBIDDEN:"+t);}
- assert.deepEqual(missing,[
+ const exactNine=[
   "external_evidence_producer_lease_v1:SELECT","external_evidence_producer_lease_v1:INSERT","external_evidence_producer_lease_v1:UPDATE",
   "external_evidence_supply_event_v1:SELECT","external_evidence_supply_event_v1:INSERT","external_evidence_supply_event_v1:UPDATE",
   "external_evidence_supply_cursor_v1:SELECT","external_evidence_supply_cursor_v1:INSERT","external_evidence_supply_cursor_v1:UPDATE"
- ],"WRITER_OWNER_CLEANUP_EXACT_NINE_ACL_PRESTATE_REQUIRED");
- write({schema_version:"geox_mcft_cap09_production_writer_owner_self_grant_cleanup_preflight_v1",status:preflightStatus,subject_sha:subject,database_name:TARGET,current_user:currentUser,table_count:tableCount,routine_count:routineCount,total_application_rows:totalRows,service_login_role_count:serviceLoginRoleRows.length,service_login_roles_restricted:true,service_login_memberships:serviceLoginMembershipRows,exact_one_privilege_membership_each:true,service_login_direct_public_acl_count:loginDirectAclCount,service_login_owned_object_count:loginOwnedObjectCount,writer_owner_memberships:membershipRows,writer_owner_effective_set:caps,cleanup_required:cleanupRequired,already_clean:alreadyClean,exact_nine_missing_privileges:missing,authority_status:authority.status,authority_authorized_observed:authorityAuthorized,arm_observed:arm.armed===true,cleanup_authorized_observed:cleanupAuthorized,same_workflow_fresh_preflight_required:arm.same_workflow_fresh_preflight_required===true,preflight_subject_binding:arm.preflight_subject_binding,database_mutation:false,row_mutation:false,schema_mutation:false,table_acl_mutation:false,function_acl_mutation:false,role_attribute_mutation:false,membership_mutation:false,runtime_process_start:false,production_owner_activation:false,formal_v5_arm:false,a0_bootstrap:false,o00_started:false});
+ ];
+ const aclPreRemediation=JSON.stringify(missing)===JSON.stringify(exactNine);
+ const aclPostRemediation=missing.length===0&&aclAuthority.status==="LIVE_EXACT_NINE_REMEDIATION_APPLIED"&&aclAuthority.authorization.production_evidence_acl_carryforward_remediation_authorized===false;
+ assert.equal(Number(aclPreRemediation)+Number(aclPostRemediation),1,"WRITER_OWNER_CLEANUP_ACL_STATE_MUST_BE_EXACT_PRE_OR_POST_REMEDIATION");
+ write({schema_version:"geox_mcft_cap09_production_writer_owner_self_grant_cleanup_preflight_v1",status:preflightStatus,subject_sha:subject,database_name:TARGET,current_user:currentUser,table_count:tableCount,routine_count:routineCount,total_application_rows:totalRows,service_login_role_count:serviceLoginRoleRows.length,service_login_roles_restricted:true,service_login_memberships:serviceLoginMembershipRows,exact_one_privilege_membership_each:true,service_login_direct_public_acl_count:loginDirectAclCount,service_login_owned_object_count:loginOwnedObjectCount,writer_owner_memberships:membershipRows,writer_owner_effective_set:caps,cleanup_required:cleanupRequired,already_clean:alreadyClean,exact_nine_missing_privileges:missing,exact_nine_acl_state:aclPostRemediation?"POST_REMEDIATION_MATERIALIZED":"PRE_REMEDIATION_MISSING",acl_remediation_authority_status:aclAuthority.status,authority_status:authority.status,authority_authorized_observed:authorityAuthorized,arm_observed:arm.armed===true,cleanup_authorized_observed:cleanupAuthorized,same_workflow_fresh_preflight_required:arm.same_workflow_fresh_preflight_required===true,preflight_subject_binding:arm.preflight_subject_binding,database_mutation:false,row_mutation:false,schema_mutation:false,table_acl_mutation:false,function_acl_mutation:false,role_attribute_mutation:false,membership_mutation:false,runtime_process_start:false,production_owner_activation:false,formal_v5_arm:false,a0_bootstrap:false,o00_started:false});
 }catch(e){write({status:"FAIL",subject_sha:String(process.env.SUBJECT_SHA||""),error:e instanceof Error?e.message:String(e),database_mutation:false,membership_mutation:false,runtime_process_start:false,production_owner_activation:false,formal_v5_arm:false,a0_bootstrap:false,o00_started:false});process.exitCode=1;}

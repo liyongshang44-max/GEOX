@@ -418,6 +418,9 @@ function main() {
     "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_V1.cjs",
     "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_V1.cjs",
     ".github/workflows/mcft-cap-09-production-evidence-acl-carryforward-remediation.yml",
+    ".github/workflows/mcft-cap-09-production-evidence-target-planner-readiness.yml",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_TARGET_PLANNER_READINESS_V1.cjs",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json",
   ]) {
     assert(ownerPaths.has(ownerOnlyPath), `OWNER_CLOSURE_PATH_REQUIRED:${ownerOnlyPath}`);
     assert(!timingPaths.has(ownerOnlyPath), `OWNER_PATH_MUST_NOT_REOPEN_TIMING:${ownerOnlyPath}`);
