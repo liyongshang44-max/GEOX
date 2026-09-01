@@ -49,6 +49,7 @@ async function main() {
     sample_lookup_works: false,
     duplicate_sample_id_rejected_409: false,
     legacy_receipt_duplicate_blocked_409: false,
+    legacy_wrong_plan_fact_duplicate_blocked_409: false,
     concurrent_duplicate_sample_id_serialized: false,
     concurrent_acceptance_identity_stable: false,
     shared_import_id_is_chain_local: false,
@@ -143,6 +144,8 @@ async function main() {
 
   const legacySampleId = `${ids.sample_id}-legacy-format`;
   const legacyFactId = `legacy_sr_${now}`;
+  const legacyWrongPlanRefSampleId = `${ids.sample_id}-legacy-wrong-plan-ref`;
+  const legacyWrongPlanRefFactId = `legacy_sr_wrong_plan_ref_${now}`;
   const databaseUrl = process.env.DATABASE_URL;
   assert.ok(databaseUrl, 'DATABASE_URL required for legacy receipt regression');
   const pool = new Pool({ connectionString: databaseUrl });
@@ -184,8 +187,46 @@ async function main() {
     assert.equal(legacyDuplicate.status, 409, 'legacy receipt must block deterministic duplicate creation');
     assert.equal(legacyDuplicate.json?.error, 'DUPLICATE:sample_id', 'legacy receipt duplicate error code mismatch');
     checks.legacy_receipt_duplicate_blocked_409 = true;
+
+    await pool.query(
+      `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+       VALUES ($1, now(), 'sampling-legacy-corrupt-regression', $2::jsonb)
+       ON CONFLICT (fact_id) DO UPDATE SET record_json = EXCLUDED.record_json, occurred_at = now()`,
+      [
+        legacyWrongPlanRefFactId,
+        JSON.stringify({
+          type: 'sample_receipt_v1',
+          schema_version: '1',
+          sample_id: legacyWrongPlanRefSampleId,
+          plan_id: planRes.json.plan_id,
+          sampling_plan_fact_id: 'sp_corrupted_wrong_plan_ref',
+          tenant_id: tenantScope.tenant_id,
+          project_id: tenantScope.project_id,
+          group_id: tenantScope.group_id,
+          field_id: ids.field_id,
+          collected_at_ts: now - 2,
+          collector_actor_id: 'legacy-corrupt-collector',
+          sample_type: 'SOIL',
+          evidence_refs: [{ kind: 'raw_sample_v1', ref_id: 'legacy-corrupt-raw' }],
+          chain_of_custody_status: 'RECORDED',
+        }),
+      ],
+    );
+    const corruptLegacyDuplicate = await postJson('/api/v1/sampling/receipt', {
+      ...scopedBody,
+      plan_id: planRes.json.plan_id,
+      sample_id: legacyWrongPlanRefSampleId,
+      collected_at_ts: now + 3,
+      collector_actor_id: 'collector-after-corrupt-legacy',
+      sample_type: 'SOIL',
+      evidence_refs: [{ kind: 'raw_sample_v1', ref_id: 'raw-after-corrupt-legacy' }],
+      chain_of_custody_status: 'RECORDED',
+    });
+    assert.equal(corruptLegacyDuplicate.status, 409, 'legacy receipt with wrong exact plan ref must still block same-plan duplicate creation');
+    assert.equal(corruptLegacyDuplicate.json?.error, 'DUPLICATE:sample_id', 'corrupted legacy receipt duplicate error code mismatch');
+    checks.legacy_wrong_plan_fact_duplicate_blocked_409 = true;
   } finally {
-    await pool.query('DELETE FROM facts WHERE fact_id = $1', [legacyFactId]).catch(() => undefined);
+    await pool.query('DELETE FROM facts WHERE fact_id = ANY($1::text[])', [[legacyFactId, legacyWrongPlanRefFactId]]).catch(() => undefined);
     await pool.end();
   }
 
