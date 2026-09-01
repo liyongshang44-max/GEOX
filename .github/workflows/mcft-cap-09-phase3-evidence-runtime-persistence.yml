@@ -120,7 +120,7 @@ jobs:
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_GFS_RAW_BUNDLE_COMPOSER_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_ACL_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_PRIVATE_CANDIDATE_IO_V1.ts
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_PRIVATE_CANDIDATE_IO_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_V1.ts
       - name: Prove durable Evidence lease and supply cursor semantics
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts
