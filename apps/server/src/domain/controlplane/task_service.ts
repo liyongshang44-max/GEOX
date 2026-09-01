@@ -2292,7 +2292,6 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
     if (decision !== "APPROVE") return badRequest(reply, "OPERATION_PLAN_APPROVAL_REQUIRED");
 
-    if (decision === "APPROVE") {
       const proposal = requestPayload.proposal; // Reuse request proposal as AO-ACT task input.
       const preDecisionPlanPayload = operationPlan?.record_json?.payload ?? {};
       const approvalDeviceId =
@@ -2502,7 +2501,6 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           created_at_ts: Date.now()
         }
       }); // Wrapper fact gives Commercial v1 stable semantics without changing v0 core.
-    }
 
     const createdTaskFact = await loadLatestFactByTypeAndKey(
       pool,
