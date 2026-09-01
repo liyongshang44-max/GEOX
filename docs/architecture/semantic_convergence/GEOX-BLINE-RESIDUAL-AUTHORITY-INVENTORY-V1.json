@@ -1170,7 +1170,8 @@
         "Flight Table skill/report learning views"
       ],
       "removal_target": "KEEP TECHNICAL_DEVTOOLS LANE; MUST NEVER PROMOTE TO FORMAL_FIELD_MEMORY OR LEARNING AUTHORITY",
-      "b02_registered": false
+      "b02_registered": false,
+      "audit_note": "Flight Table remains technical/devtools memory only; runtime schema helper no longer creates projectA/groupA defaults."
     },
     {
       "surface_id": "RES-043",
@@ -2983,16 +2984,17 @@
         "field_memory",
         "governance.bootstrap"
       ],
-      "authority_class": "BOOTSTRAP_SCHEMA_WITH_FIELD_MEMORY_SEMANTIC_DEFAULTS",
+      "authority_class": "BOOTSTRAP_SCHEMA_WITH_EXPLICIT_FIELD_MEMORY_SCOPE",
       "runtime_reachable": "PROVEN ON FRESH DB WHEN BASE OR COMMERCIAL COMPOSE POSTGRES INIT MOUNT IS USED",
       "feature_flag": null,
       "downstream_consumers": [
         "field_memory writers",
         "runtime schema consumers"
       ],
-      "removal_target": "KEEP SCHEMA BOOTSTRAP; REMOVE/NEUTRALIZE SEMANTIC DEFAULTS THAT CAN FABRICATE SCOPE/CONFIDENCE AUTHORITY",
+      "removal_target": "KEEP BOOTSTRAP; PROJECT/GROUP HAVE NO FABRICATED DEFAULT; FORMAL SCOPE MUST BE EXPLICIT",
       "surface_id": "RES-111",
-      "b02_registered": false
+      "b02_registered": false,
+      "audit_note": "B-Line Formal Field Memory convergence removes projectA/groupA defaults from fresh bootstrap."
     },
     {
       "source_path": "docker/postgres/init/003_p1_skill_seed.sql",
@@ -3034,15 +3036,16 @@
         "field_memory",
         "governance.bootstrap"
       ],
-      "authority_class": "BOOTSTRAP_FIELD_MEMORY_CONTRACT_WITH_SEMANTIC_DEFAULTS",
+      "authority_class": "BOOTSTRAP_FIELD_MEMORY_CONTRACT_WITH_EXPLICIT_SCOPE",
       "runtime_reachable": "PROVEN ON FRESH DB WHEN POSTGRES INIT MOUNT IS USED",
       "feature_flag": null,
       "downstream_consumers": [
         "field_memory writers"
       ],
-      "removal_target": "KEEP CONTRACT ALIGNMENT; SEMANTIC SCOPE/CONFIDENCE DEFAULTS MUST NOT CREATE FORMAL AUTHORITY",
+      "removal_target": "KEEP BOOTSTRAP; PROJECT/GROUP HAVE NO FABRICATED DEFAULT; FORMAL SCOPE MUST BE EXPLICIT",
       "surface_id": "RES-113",
-      "b02_registered": false
+      "b02_registered": false,
+      "audit_note": "B-Line Formal Field Memory convergence removes projectA/groupA defaults from fresh bootstrap."
     },
     {
       "source_path": "docker-compose.yml",
@@ -7940,6 +7943,31 @@
       "b02_registered": false,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "audit_note": "Consumes already-authorized P29/P30 facts only; exact tenant/project/group, operation, acceptance, candidate, policy and independent basis refs are required."
+    },
+    {
+      "surface_id": "RES-304",
+      "source_path": "apps/server/db/migrations/2026_09_01_field_memory_scope_defaults_removed_v1.sql",
+      "entrypoint": "database migration runner",
+      "activation_mode": "MIGRATION_ONLY",
+      "writes": [
+        "field_memory_v1 schema defaults only"
+      ],
+      "reads": [
+        "field_memory_v1 schema metadata"
+      ],
+      "semantic_family": [
+        "field_memory"
+      ],
+      "authority_class": "FIELD_MEMORY_SCOPE_DEFAULT_REMOVAL_MIGRATION",
+      "runtime_reachable": "NOT_LONG_RUNNING_RUNTIME",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "field_memory_v1 writers"
+      ],
+      "removal_target": "KEEP; PROJECT/GROUP DEFAULTS MUST REMAIN ABSENT",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Forward-only repair preserves historical migration records while removing active schema scope fabrication."
     }
   ],
   "cross_branch_surfaces": [
