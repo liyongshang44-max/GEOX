@@ -46,15 +46,12 @@ function samplingIdentityHashV1(parts: Array<string | null | undefined>): string
   return createHash("sha256").update(parts.map((part) => String(part ?? "")).join("\n"), "utf8").digest("hex");
 }
 
-function deterministicReceiptIdentityV1(scope: SamplingScopeV1, sample_id: string): { receipt_id: string; fact_id: string } {
+function deterministicReceiptFactIdV1(scope: SamplingScopeV1, sample_id: string): string {
   const digest = samplingIdentityHashV1(["sample_receipt_v1", ...scopeParams(scope), sample_id]);
-  return {
-    receipt_id: `sample_receipt_${digest.slice(0, 32)}`,
-    fact_id: `sr_${digest}`,
-  };
+  return `sr_${digest}`;
 }
 
-function deterministicAcceptanceIdentityV1(input: {
+function deterministicAcceptanceFactIdV1(input: {
   tenant_id: string;
   project_id: string;
   group_id: string;
@@ -63,7 +60,7 @@ function deterministicAcceptanceIdentityV1(input: {
   lab_result_fact_id?: string | null;
   sample_id: string;
   import_id?: string | null;
-}): { acceptance_id: string; fact_id: string } {
+}): string {
   const digest = samplingIdentityHashV1([
     "sampling_acceptance_v1",
     input.tenant_id,
@@ -75,10 +72,7 @@ function deterministicAcceptanceIdentityV1(input: {
     input.sample_id,
     input.import_id ?? null,
   ]);
-  return {
-    acceptance_id: `sampling_acceptance_${digest.slice(0, 32)}`,
-    fact_id: `sa_${digest}`,
-  };
+  return `sa_${digest}`;
 }
 
 export class SamplingServiceV1 {
@@ -213,7 +207,8 @@ export class SamplingServiceV1 {
     const existing = await this.findReceiptBySampleId(input.sample_id, scope);
     if (existing) throw new SamplingServiceErrorV1("DUPLICATE:sample_id", 409);
 
-    const { receipt_id, fact_id } = deterministicReceiptIdentityV1(scope, input.sample_id);
+    const receipt_id = randomUUID();
+    const fact_id = deterministicReceiptFactIdV1(scope, input.sample_id);
 
     const record_json: Record<string, unknown> = {
       type: "sample_receipt_v1",
@@ -404,7 +399,8 @@ export class SamplingServiceV1 {
     const before = resolveExisting((await findExisting()).rows ?? []);
     if (before) return { ...before, idempotent: true };
 
-    const { acceptance_id, fact_id } = deterministicAcceptanceIdentityV1(input);
+    const acceptance_id = randomUUID();
+    const fact_id = deterministicAcceptanceFactIdV1(input);
     const record_json: Record<string, unknown> = {
       type: "sampling_acceptance_v1",
       schema_version: "1",
