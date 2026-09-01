@@ -250,10 +250,14 @@ function scan(abs, production) {
   const specialControlVerdict = content.includes('type: "control_verdict_v0"') && content.includes("verdict:");
   const specialDeviceCapability = p.startsWith("packages/device-skills/src/") &&
     content.includes("resolveTaskCapabilityViaDeviceSkills");
+  const specialDeviceSensing = p.startsWith("packages/device-skills/src/") &&
+    (content.includes("inferDerivedSensingStateViaDeviceSkills") ||
+     content.includes("inferFertilityFromDeviceObservationV1") ||
+     content.includes("inferFertilityFromObservationAggregateV1"));
   const specialSkillBinding = p.startsWith("packages/skill-registry/src/") &&
     content.includes("resolveRuleSkillBindings");
   const genericFactsWriter = /\bINSERT\s+INTO\s+facts\b/i.test(content);
-  if (!families.size && !specialPlanner && !specialFallback && !specialControlVerdict && !specialDeviceCapability && !specialSkillBinding && !genericFactsWriter) return;
+  if (!families.size && !specialPlanner && !specialFallback && !specialControlVerdict && !specialDeviceCapability && !specialDeviceSensing && !specialSkillBinding && !genericFactsWriter) return;
 
   for (const f of families) add(p, f, "SEMANTIC_TOUCHPOINT", "semantic-token-or-type", production);
   if (genericFactsWriter) {
@@ -322,6 +326,9 @@ function scan(abs, production) {
   }
   if (specialDeviceCapability) {
     add(p, "execution.adapter_resolution", "AUTHORITY_DERIVER", "device-skill-task-capability-resolution", production);
+  }
+  if (specialDeviceSensing) {
+    add(p, "twin.state", "AUTHORITY_DERIVER", "device-skill-derived-sensing-state", production);
   }
   if (specialSkillBinding) {
     add(p, "governance.skill_binding", "AUTHORITY_DERIVER", "skill-binding-selection", production);
