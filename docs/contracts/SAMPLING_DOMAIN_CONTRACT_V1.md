@@ -35,6 +35,7 @@
   receipt_id: string;
   sample_id: string;
   plan_id: string;
+  sampling_plan_fact_id: string;
   tenant_id: string;
   project_id: string;
   group_id: string;
@@ -58,6 +59,7 @@
   import_id: string;
   sample_id: string;
   sample_receipt_fact_id: string;
+  sampling_plan_fact_id: string;
   plan_id: string;
   tenant_id: string;
   project_id: string;
