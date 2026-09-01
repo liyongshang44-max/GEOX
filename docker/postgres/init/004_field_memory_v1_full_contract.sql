@@ -41,8 +41,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_device_observation_index_v1_fact_id
   ON device_observation_index_v1 (fact_id);
 
 ALTER TABLE field_memory_v1
-  ADD COLUMN IF NOT EXISTS project_id TEXT NOT NULL DEFAULT 'projectA',
-  ADD COLUMN IF NOT EXISTS group_id TEXT NOT NULL DEFAULT 'groupA',
+  ADD COLUMN IF NOT EXISTS project_id TEXT NOT NULL,
+  ADD COLUMN IF NOT EXISTS group_id TEXT NOT NULL,
   ADD COLUMN IF NOT EXISTS season_id TEXT,
   ADD COLUMN IF NOT EXISTS crop_id TEXT,
   ADD COLUMN IF NOT EXISTS metric_key TEXT,

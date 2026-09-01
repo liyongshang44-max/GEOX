@@ -7,6 +7,7 @@ const PROJECT_ID = 'projectA';
 const GROUP_ID = 'groupA';
 const FORMAL_OP = 'op_plan_c8_irrigation_formal_001';
 const FORMAL_ACC = 'acc_c8_irrigation_formal_001';
+const FORMAL_FIELD_MEMORY_RECORD = 'fm_record_c8_irrigation_001';
 const FORMAL_RECEIPT = 'receipt_c8_irrigation_formal_001';
 const FORMAL_TASK = 'act_c8_irrigation_formal_001';
 const FORMAL_FIELD = 'field_c8_demo';
@@ -123,12 +124,39 @@ async function assertRuntimeOpenApi() {
   for (const name of ['FormalFieldMemoryFromAcceptanceRequest', 'FormalFieldMemoryFromAcceptanceResponse', 'RoiLedgerFormalizeFromAcceptanceRequest', 'RoiLedgerFormalizeFromAcceptanceResponse']) {
     assert(Boolean(schemas[name]), `OpenAPI missing schema ${name}`, Object.keys(schemas).filter((x) => x.includes('Acceptance') || x.includes('Formal')));
   }
+  assert(
+    Array.isArray(schemas.FormalFieldMemoryFromAcceptanceRequest?.required)
+      && schemas.FormalFieldMemoryFromAcceptanceRequest.required.includes('field_memory_record_ref'),
+    'OpenAPI field-memory request must require reviewed promotion proof',
+    schemas.FormalFieldMemoryFromAcceptanceRequest
+  );
 }
 
 async function cleanupP0Rows(client) {
   await client.query(`DELETE FROM as_applied_map_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND task_id LIKE 'p0_%'`, [TENANT, PROJECT_ID, GROUP_ID]).catch(() => {});
   await client.query(`DELETE FROM as_executed_record_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND task_id LIKE 'p0_%'`, [TENANT, PROJECT_ID, GROUP_ID]).catch(() => {});
   await client.query(`DELETE FROM facts WHERE fact_id LIKE 'p0_%'`).catch(() => {});
+}
+
+async function cloneFactPayload(client, sourceFactId, targetFactId, mutator) {
+  const source = await client.query(
+    `SELECT record_json::jsonb AS record_json FROM facts WHERE fact_id = $1 LIMIT 1`,
+    [sourceFactId],
+  );
+  assert(source.rows.length === 1, 'source fact missing for P0 clone', { source_fact_id: sourceFactId });
+  const original = source.rows[0].record_json || {};
+  const originalPayload = original.payload && typeof original.payload === 'object' ? original.payload : {};
+  const nextPayload = mutator({ ...originalPayload });
+  const nextRecord = { ...original, payload: nextPayload };
+  await client.query(
+    `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+     VALUES ($1, now(), 'field-memory-p0-negative-clone', $2::jsonb)
+     ON CONFLICT (fact_id) DO UPDATE
+       SET record_json = EXCLUDED.record_json,
+           occurred_at = now(),
+           source = EXCLUDED.source`,
+    [targetFactId, JSON.stringify(nextRecord)],
+  );
 }
 
 async function insertAcceptance(client, id, patch) {
@@ -234,7 +262,9 @@ async function assertRoiFormalization(client, asExecutedId) {
   assert(missing.status === 404 && missing.json?.error === 'AS_EXECUTED_NOT_FOUND', 'ROI missing as_executed negative failed', httpDetail(missing));
 }
 async function assertFieldMemory(client) {
-  const body = scoped({ operation_plan_id: FORMAL_OP, acceptance_id: FORMAL_ACC });
+  const canonicalRecordFactId = `full_review_seed_${TENANT}_field_memory_record_c8_001`;
+  const canonicalCandidateFactId = `full_review_seed_${TENANT}_field_memory_candidate_c8_001`;
+  const body = scoped({ operation_plan_id: FORMAL_OP, acceptance_id: FORMAL_ACC, field_memory_record_ref: FORMAL_FIELD_MEMORY_RECORD });
   const first = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body });
   assert(first.status === 200, 'Field Memory from acceptance positive case failed', httpDetail(first));
   assert(first.json.field_memory?.memory_lane === 'FORMAL_FIELD_MEMORY', 'field memory lane mismatch', first.json.field_memory);
@@ -248,13 +278,67 @@ async function assertFieldMemory(client) {
   const count = await client.query(`SELECT count(*)::int AS count FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND formal_acceptance_id=$4 AND memory_type='FIELD_RESPONSE_MEMORY' AND memory_lane='FORMAL_FIELD_MEMORY'`, [TENANT, PROJECT_ID, GROUP_ID, FORMAL_ACC]);
   assert(Number(count.rows[0].count) === 1, 'field memory duplicated formal FIELD_RESPONSE_MEMORY', count.rows[0]);
 
-  await insertAcceptance(client, 'p0_fm_no_chain', { chain_validation_passed: false });
-  const noChain = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: 'p0_fm_no_chain' }) });
+  await insertAcceptance(client, 'p0_fm_no_chain', { chain_validation_passed: false, act_task_id: FORMAL_TASK, task_id: FORMAL_TASK });
+  const noChainRecordFactId = 'p0_fm_record_no_chain';
+  await cloneFactPayload(client, canonicalRecordFactId, noChainRecordFactId, (payload) => ({
+    ...payload,
+    field_memory_record_id: 'p0_fm_record_no_chain',
+    acceptance_result_fact_id: 'p0_fm_no_chain',
+  }));
+  const noChain = await http('/api/v1/field-memory/from-acceptance', {
+    method: 'POST',
+    body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: 'p0_fm_no_chain', field_memory_record_ref: noChainRecordFactId }),
+  });
   assert(noChain.status === 422 && noChain.json?.error === 'CHAIN_VALIDATION_NOT_PASSED', 'field memory chain negative failed', httpDetail(noChain));
 
-  await insertAcceptance(client, 'p0_fm_no_obs', { operation_plan_id: 'op_plan_p0_no_obs', field_id: 'p0_no_observations_field', evidence_refs: [] });
-  const noObs = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: 'op_plan_p0_no_obs', acceptance_id: 'p0_fm_no_obs' }) });
-  assert(noObs.status === 422 && noObs.json?.error === 'OBSERVATION_PAIR_NOT_FOUND', 'field memory missing observation pair negative failed', httpDetail(noObs));
+  await insertAcceptance(client, 'p0_fm_other_acceptance', { operation_plan_id: FORMAL_OP, field_id: FORMAL_FIELD, act_task_id: FORMAL_TASK, task_id: FORMAL_TASK });
+  const reusedPromotion = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: 'p0_fm_other_acceptance', field_memory_record_ref: FORMAL_FIELD_MEMORY_RECORD }) });
+  assert(reusedPromotion.status === 422 && reusedPromotion.json?.error === 'FIELD_MEMORY_ACCEPTANCE_ID_MISMATCH', 'field memory promotion proof must not be reusable across acceptance identities', httpDetail(reusedPromotion));
+
+  const reviewOnlyFactId = 'p0_fm_record_review_only';
+  await cloneFactPayload(client, canonicalRecordFactId, reviewOnlyFactId, (payload) => ({
+    ...payload,
+    field_memory_record_id: 'p0_fm_record_review_only',
+    record_scope: 'review_only_no_runtime_use',
+    reuse_boundary: { ...(payload.reuse_boundary || {}), scope: 'review_only_no_runtime_use' },
+  }));
+  const reviewOnly = await http('/api/v1/field-memory/from-acceptance', {
+    method: 'POST',
+    body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: FORMAL_ACC, field_memory_record_ref: reviewOnlyFactId }),
+  });
+  assert(
+    reviewOnly.status === 422 && reviewOnly.json?.error === 'FIELD_MEMORY_RECORD_REVIEW_ONLY_SCOPE_BLOCKED',
+    'review_only_no_runtime_use record must never materialize as product Formal Field Memory',
+    httpDetail(reviewOnly),
+  );
+
+  const missingChainCandidateFactId = 'p0_fm_candidate_missing_roi_chain';
+  const missingChainCandidateId = 'p0_fm_candidate_missing_roi_chain';
+  await cloneFactPayload(client, canonicalCandidateFactId, missingChainCandidateFactId, (payload) => {
+    const next = {
+      ...payload,
+      field_memory_candidate_id: missingChainCandidateId,
+    };
+    delete next.roi_ledger_fact_id;
+    return next;
+  });
+
+  const missingChainRecordFactId = 'p0_fm_record_missing_roi_chain';
+  await cloneFactPayload(client, canonicalRecordFactId, missingChainRecordFactId, (payload) => ({
+    ...payload,
+    field_memory_record_id: 'p0_fm_record_missing_roi_chain',
+    field_memory_candidate_fact_id: missingChainCandidateFactId,
+    field_memory_candidate_id: missingChainCandidateId,
+  }));
+  const missingSourceChain = await http('/api/v1/field-memory/from-acceptance', {
+    method: 'POST',
+    body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: FORMAL_ACC, field_memory_record_ref: missingChainRecordFactId }),
+  });
+  assert(
+    missingSourceChain.status === 422 && missingSourceChain.json?.error === 'FIELD_MEMORY_P26_P29_SOURCE_CHAIN_REF_MISSING',
+    'candidate without exact P27/P28 source chain must not materialize Formal Field Memory',
+    httpDetail(missingSourceChain),
+  );
 }
 function findBy(arr, pred) { return Array.isArray(arr) ? arr.find(pred) : null; }
 

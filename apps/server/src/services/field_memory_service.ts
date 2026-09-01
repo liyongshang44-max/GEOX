@@ -3,6 +3,8 @@ import type { Pool, PoolClient } from "pg";
 
 import type { FieldMemoryTypeV1, FieldMemoryV1 } from "@geox/contracts";
 
+import { requireFormalFieldMemoryPromotionAuthorityV1 } from "./formal_field_memory_promotion_authority_v1.js";
+
 type DbConn = Pool | PoolClient;
 
 type FieldMemoryLaneV1 =
@@ -231,25 +233,6 @@ async function tableExists(db: DbConn, tableName: string): Promise<boolean> {
   return Boolean((q.rows?.[0] as any)?.table_name);
 }
 
-async function loadAcceptanceResultForMemoryV1(db: DbConn, tenant: TenantTriple, input: { operation_plan_id: string; acceptance_id: string }): Promise<AcceptanceResultForMemoryV1 | null> {
-  const q = await db.query(
-    `SELECT fact_id, occurred_at, record_json::jsonb AS record_json
-       FROM facts
-      WHERE (record_json::jsonb->>'type') = 'acceptance_result_v1'
-        AND ((record_json::jsonb#>>'{payload,acceptance_id}') = $4 OR fact_id = $4)
-        AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $5
-        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-        AND (record_json::jsonb#>>'{payload,project_id}') = $2
-        AND (record_json::jsonb#>>'{payload,group_id}') = $3
-      ORDER BY occurred_at DESC, fact_id DESC
-      LIMIT 1`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, input.acceptance_id, input.operation_plan_id]
-  );
-  const row = q.rows?.[0] as any;
-  if (!row) return null;
-  return { fact_id: String(row.fact_id ?? ""), occurred_at: row.occurred_at == null ? null : String(row.occurred_at), payload: parseJsonMaybe(row.record_json)?.payload ?? {} };
-}
-
 function acceptanceGateBool(payload: any, key: string): boolean {
   return bool(payload?.[key] ?? payload?.formal_gate?.[key]);
 }
@@ -401,12 +384,28 @@ function memoryIdFromOperation(operationId: string): string {
 export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant: TenantTriple, input: {
   operation_plan_id: string;
   acceptance_id: string;
+  field_memory_record_ref: string;
 }): Promise<{ idempotent: boolean; acceptance: { acceptance_id: string; operation_plan_id: string; verdict: string }; field_memory: any }> {
-  const acceptance = await loadAcceptanceResultForMemoryV1(db, tenant, input);
-  if (!acceptance) throw new Error("ACCEPTANCE_NOT_FOUND");
+  // Exact Acceptance identity is derived from the committed P30 record.
+  // The route-level acceptance_id is a consistency assertion only; there is no
+  // "latest Acceptance" lookup in the Formal Field Memory authority path.
+  const promotionAuthority = await requireFormalFieldMemoryPromotionAuthorityV1(db, tenant, {
+    field_memory_record_ref: input.field_memory_record_ref,
+    acceptance_id: input.acceptance_id,
+    operation_plan_id: input.operation_plan_id,
+  });
+
+  const acceptance: AcceptanceResultForMemoryV1 = {
+    fact_id: promotionAuthority.acceptance_fact_id,
+    occurred_at: promotionAuthority.acceptance_occurred_at,
+    payload: promotionAuthority.acceptance_payload,
+  };
   validateFormalFieldMemoryAcceptanceV1(acceptance.payload);
 
   const formalAcceptanceId = textOrNull(acceptance.payload?.acceptance_id) ?? acceptance.fact_id;
+  const fieldId = promotionAuthority.field_id;
+  const actTaskId = promotionAuthority.act_task_id;
+
   const existing = await findExistingFormalFieldMemoryV1(db, tenant, formalAcceptanceId);
   if (existing) {
     return {
@@ -416,8 +415,6 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
     };
   }
 
-  const fieldId = textOrNull(acceptance.payload?.field_id);
-  if (!fieldId) throw new Error("ACCEPTANCE_FIELD_ID_MISSING");
   const acceptancePair = await loadAcceptanceObservationPairV1(acceptance);
   const evidencePair = acceptancePair ?? await loadEvidenceArtifactObservationPairV1(db, tenant, acceptance, input.operation_plan_id);
   const observationPair = evidencePair ?? await loadReceiptObservationPairV1(db, tenant, acceptance, input.operation_plan_id);
@@ -425,6 +422,12 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
 
   const evidenceRefs = normalizeEvidenceRefs([
     { kind: "acceptance_fact", ref: acceptance.fact_id, acceptance_id: formalAcceptanceId },
+    { kind: "field_memory_record_v1", ref: promotionAuthority.field_memory_record_fact_id, record_id: promotionAuthority.field_memory_record_id },
+    { kind: "field_memory_candidate_v1", ref: promotionAuthority.field_memory_candidate_fact_id, candidate_id: promotionAuthority.field_memory_candidate_id },
+    ...promotionAuthority.source_chain_refs,
+    ...promotionAuthority.accounting_basis_refs,
+    ...promotionAuthority.candidate_basis_refs,
+    ...promotionAuthority.promotion_basis_refs,
     ...normalizeEvidenceRefs(acceptance.payload?.evidence_refs),
     ...observationPair.evidence_refs,
   ]);
@@ -432,12 +435,12 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
   const memory = await recordMemoryV1(db, tenant.tenant_id, {
     type: "FIELD_RESPONSE_MEMORY",
     memory_id: memoryIdFromOperation(input.operation_plan_id),
-    source_type: "acceptance_result_v1",
-    source_id: formalAcceptanceId,
+    source_type: "field_memory_record_v1",
+    source_id: promotionAuthority.field_memory_record_fact_id,
     project_id: tenant.project_id,
     group_id: tenant.group_id,
     operation_id: input.operation_plan_id,
-    task_id: textOrNull(acceptance.payload?.act_task_id ?? acceptance.payload?.task_id) ?? undefined,
+    task_id: actTaskId,
     field_id: fieldId,
     acceptance_id: formalAcceptanceId,
     formal_acceptance_id: formalAcceptanceId,
@@ -446,7 +449,7 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
     source_lane: "FORMAL_OPERATION",
     customer_visible_memory: true,
     learning_eligible: true,
-    trust_reasons: ["FORMAL_ACCEPTANCE_PASS", "FORMAL_FIELD_OBSERVATION_PAIR_FOUND"],
+    trust_reasons: ["FORMAL_ACCEPTANCE_PASS", "FORMAL_FIELD_OBSERVATION_PAIR_FOUND", "P29_FIELD_MEMORY_CANDIDATE_BOUND", "P30_REVIEWED_PROMOTION_COMMITTED"],
     metrics: {
       before_soil_moisture: observationPair.before_soil_moisture,
       after_soil_moisture: observationPair.after_soil_moisture,
@@ -458,7 +461,7 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
       observation_source: observationPair.source,
     },
     evidence_refs: evidenceRefs,
-    summary: `Formal field response memory from acceptance ${formalAcceptanceId}`,
+    summary: `Formal field response memory promoted from ${promotionAuthority.field_memory_record_id} with acceptance ${formalAcceptanceId}`,
   });
 
   return {

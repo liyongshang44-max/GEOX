@@ -536,26 +536,25 @@
       "entrypoint": "acceptance API route",
       "activation_mode": "API_ONLY",
       "writes": [
-        "acceptance_result_v1",
-        "formal Field Memory on qualifying PASS"
+        "acceptance_result_v1"
       ],
       "reads": [
         "execution evidence / receipt / as-executed chain"
       ],
       "semantic_family": [
-        "acceptance.verdict",
-        "field_memory"
+        "acceptance.verdict"
       ],
       "authority_class": "CURRENT_ACCEPTANCE_RUNTIME",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
-        "Field Memory",
-        "water-response/manual downstreams",
+        "outcome verification",
+        "Field Memory promotion candidates",
         "reports"
       ],
-      "removal_target": "KEEP_SPLIT_ACCEPTANCE_FROM_OUTCOME_MEMORY",
-      "b02_registered": true
+      "removal_target": "KEEP_ACCEPTANCE_ONLY; NO_DIRECT_FORMAL_FIELD_MEMORY_SIDE_EFFECT",
+      "b02_registered": true,
+      "audit_note": "B-Line Formal Field Memory convergence phase 1 removes direct Acceptance -> FORMAL_FIELD_MEMORY persistence."
     },
     {
       "surface_id": "RES-019",
@@ -591,24 +590,27 @@
         "field_memory_v1"
       ],
       "reads": [
-        "acceptance_result_v1 and formal gate state",
-        "acceptance/evidence/receipt observation candidates",
-        "device_observation_index_v1 latest-two fallback",
-        "tenant/project/group scope predicates that currently allow missing-source-field fallback"
+        "exact acceptance_result_v1 formal gate state and exact field/task scope",
+        "exact outcome_review_v1 reviewed outcome evidence",
+        "exact roi_boundary_v1 review-eligible P27 boundary",
+        "exact RECORDED roi_ledger_v1 plus accounting basis facts",
+        "exact field_memory_candidate_v1 plus four independent P29 basis facts",
+        "exact same_field_only committed field_memory_record_v1 plus five independent P30 promotion basis facts",
+        "exact operation/receipt/evidence-bound observation candidates"
       ],
       "semantic_family": [
         "field_memory"
       ],
-      "authority_class": "CURRENT_FIELD_MEMORY_WRITER_WITH_PROVENANCE_P0S",
+      "authority_class": "FORMAL_FIELD_MEMORY_PROJECTION_WRITER_REQUIRES_EXACT_P26_P30_CHAIN",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "recommendation memory context",
         "reports"
       ],
-      "removal_target": "KEEP_FIELD_MEMORY_SERVICE; REMOVE_LATEST_TWO_DEVICE_FALLBACK; REMOVE FABRICATED FORMAL CONFIDENCE; REQUIRE EXACT TENANT/PROJECT/GROUP AND EXACT RECEIPT/OPERATION-BOUND OBSERVATION/CONFIDENCE PROVENANCE",
+      "removal_target": "KEEP AS MATERIALIZATION ONLY; EXACT P26→P27→P28→P29→P30 CHAIN REQUIRED; REVIEW_ONLY RECORD BLOCKED; NO ACCEPTANCE-ALONE AUTHORITY",
       "b02_registered": true,
-      "audit_note": "P0-RES-008: latest-two device observations can be bound to an unrelated accepted operation. P0-RES-011: missing formal confidence becomes 0.8. P0-RES-012: missing tenant/project/group on Acceptance/Evidence/Receipt is treated as caller scope via COALESCE null-wildcard predicates."
+      "audit_note": "Customer-visible materialization is a projection of an already committed same-field record. It does not create Outcome/ROI/Candidate/Promotion authority, invoke P31 state estimation, or update a model."
     },
     {
       "surface_id": "RES-021",
@@ -1072,25 +1074,28 @@
       "activation_mode": "ACTIVE_EXPLICIT_API",
       "writes": [
         "roi_entry_v1",
-        "field_memory_v1"
+        "decision_cycle_v1 formal refs"
       ],
       "reads": [
-        "Twin decision-cycle/formalization inputs"
+        "Twin decision-cycle/formalization inputs",
+        "canonical proof-gated Field Memory materializer result"
       ],
       "semantic_family": [
         "roi",
         "field_memory",
         "governance.trace_projection"
       ],
-      "authority_class": "TWIN_EXPLICIT_FORMALIZATION_WRITER",
+      "authority_class": "TWIN_ROI_WRITER_AND_FORMAL_MEMORY_COMPATIBILITY_FACADE",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "Twin Kernel business closure",
-        "ROI/Field Memory readers"
+        "ROI readers",
+        "canonical Field Memory service"
       ],
-      "removal_target": "CONVERGE TO SINGLE ACCEPTANCE→OUTCOME FORMALIZATION CONTRACT; NO IMPLICIT AUTO-FORMALIZATION",
-      "b02_registered": false
+      "removal_target": "KEEP ROI LEGACY AUTHORITY SEPARATE; FIELD MEMORY MUST DELEGATE TO CANONICAL REVIEWED-PROMOTION MATERIALIZER",
+      "b02_registered": false,
+      "audit_note": "Direct field_memory_v1 INSERT removed. Field Memory endpoint now requires field_memory_record_ref and delegates to canonical proof-gated materializer."
     },
     {
       "surface_id": "RES-040",
@@ -1099,24 +1104,28 @@
       "activation_mode": "ACTIVE_EXPLICIT_API",
       "writes": [
         "roi_entry_v1",
-        "field_memory_v1 operator workflow records"
+        "operator_formalization_action_v0",
+        "decision_cycle_v1 formal refs"
       ],
       "reads": [
-        "Twin decision-cycle/operator workflow inputs"
+        "Twin decision-cycle/operator workflow inputs",
+        "canonical proof-gated Field Memory materializer result"
       ],
       "semantic_family": [
         "roi",
         "field_memory",
         "governance.trace_projection"
       ],
-      "authority_class": "TWIN_OPERATOR_FORMALIZATION_WRITER",
+      "authority_class": "TWIN_OPERATOR_AUDIT_FACADE_NO_DIRECT_FORMAL_MEMORY_AUTHORITY",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
-        "Twin Kernel operator workflow/read models"
+        "Twin Kernel operator workflow/read models",
+        "canonical Field Memory service"
       ],
-      "removal_target": "CONVERGE WITH SINGLE FORMALIZATION AUTHORITY; PRESERVE EXPLICIT HUMAN ACTION PROVENANCE",
-      "b02_registered": false
+      "removal_target": "KEEP HUMAN REVIEW/AUDIT FACADE; NO DIRECT FIELD_MEMORY_V1 WRITE; REQUIRE CANONICAL REVIEWED-PROMOTION MATERIALIZER",
+      "b02_registered": false,
+      "audit_note": "Operator review/action provenance remains explicit, but caller memory_statement is audit payload only and cannot mint Formal Field Memory."
     },
     {
       "surface_id": "RES-041",
@@ -1164,7 +1173,8 @@
         "Flight Table skill/report learning views"
       ],
       "removal_target": "KEEP TECHNICAL_DEVTOOLS LANE; MUST NEVER PROMOTE TO FORMAL_FIELD_MEMORY OR LEARNING AUTHORITY",
-      "b02_registered": false
+      "b02_registered": false,
+      "audit_note": "Flight Table remains technical/devtools memory only; runtime schema helper no longer creates projectA/groupA defaults."
     },
     {
       "surface_id": "RES-043",
@@ -1287,22 +1297,23 @@
         "FORMAL_FIELD_MEMORY indirectly through createFormalFieldMemoryFromAcceptanceV1"
       ],
       "reads": [
-        "exact acceptance_id and operation_plan_id",
-        "field_memory_service observation-pair resolution"
+        "exact acceptance_id, operation_plan_id, field and act_task scope",
+        "exact field_memory_record_ref",
+        "field_memory_service exact P26-P30 provenance + reviewed promotion verifier"
       ],
       "semantic_family": [
         "field_memory"
       ],
-      "authority_class": "FORMAL_FIELD_MEMORY_ENTRYPOINT_WITH_PROVENANCE_P0S",
+      "authority_class": "FORMAL_FIELD_MEMORY_EXACT_CHAIN_COMPATIBILITY_ENTRYPOINT",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "formal Field Memory readers",
         "learning-eligible memory consumers"
       ],
-      "removal_target": "KEEP EXPLICIT FORMALIZATION ENTRYPOINT; REQUIRE EXACT-SCOPED ACCEPTANCE + EXACT RECEIPT/EVIDENCE IDENTITY + CAUSAL OBSERVATION PAIR + EXPLICIT CONFIDENCE",
+      "removal_target": "KEEP COMPATIBILITY ROUTE NAME; MATERIALIZE ONLY AFTER EXACT SAME-FIELD P26→P30 PROOF; ROUTE MUST NOT CREATE ANY P26-P30 AUTHORITY",
       "b02_registered": false,
-      "audit_note": "P0-RES-008/011/012: route reaches latest-pair fallback, fabricated confidence, and null-wildcard source-scope matching in field_memory_service."
+      "audit_note": "Acceptance remains necessary provenance only. Route consumes a pre-authorized exact chain and fails closed for review-only, cross-scope, missing Outcome/ROI, or ambiguous proof."
     },
     {
       "surface_id": "RES-048",
@@ -2976,16 +2987,17 @@
         "field_memory",
         "governance.bootstrap"
       ],
-      "authority_class": "BOOTSTRAP_SCHEMA_WITH_FIELD_MEMORY_SEMANTIC_DEFAULTS",
+      "authority_class": "BOOTSTRAP_SCHEMA_WITH_EXPLICIT_FIELD_MEMORY_SCOPE",
       "runtime_reachable": "PROVEN ON FRESH DB WHEN BASE OR COMMERCIAL COMPOSE POSTGRES INIT MOUNT IS USED",
       "feature_flag": null,
       "downstream_consumers": [
         "field_memory writers",
         "runtime schema consumers"
       ],
-      "removal_target": "KEEP SCHEMA BOOTSTRAP; REMOVE/NEUTRALIZE SEMANTIC DEFAULTS THAT CAN FABRICATE SCOPE/CONFIDENCE AUTHORITY",
+      "removal_target": "KEEP BOOTSTRAP; PROJECT/GROUP HAVE NO FABRICATED DEFAULT; FORMAL SCOPE MUST BE EXPLICIT",
       "surface_id": "RES-111",
-      "b02_registered": false
+      "b02_registered": false,
+      "audit_note": "B-Line Formal Field Memory convergence removes projectA/groupA defaults from fresh bootstrap."
     },
     {
       "source_path": "docker/postgres/init/003_p1_skill_seed.sql",
@@ -3027,15 +3039,16 @@
         "field_memory",
         "governance.bootstrap"
       ],
-      "authority_class": "BOOTSTRAP_FIELD_MEMORY_CONTRACT_WITH_SEMANTIC_DEFAULTS",
+      "authority_class": "BOOTSTRAP_FIELD_MEMORY_CONTRACT_WITH_EXPLICIT_SCOPE",
       "runtime_reachable": "PROVEN ON FRESH DB WHEN POSTGRES INIT MOUNT IS USED",
       "feature_flag": null,
       "downstream_consumers": [
         "field_memory writers"
       ],
-      "removal_target": "KEEP CONTRACT ALIGNMENT; SEMANTIC SCOPE/CONFIDENCE DEFAULTS MUST NOT CREATE FORMAL AUTHORITY",
+      "removal_target": "KEEP BOOTSTRAP; PROJECT/GROUP HAVE NO FABRICATED DEFAULT; FORMAL SCOPE MUST BE EXPLICIT",
       "surface_id": "RES-113",
-      "b02_registered": false
+      "b02_registered": false,
+      "audit_note": "B-Line Formal Field Memory convergence removes projectA/groupA defaults from fresh bootstrap."
     },
     {
       "source_path": "docker-compose.yml",
@@ -3984,24 +3997,27 @@
       "entrypoint": "active registration graph; parent=apps/server/src/modules/judge/registerJudgeModule.ts",
       "activation_mode": "ACTIVE_DERIVER",
       "writes": [
-        "semantic output / delegated persistence according to active route implementation"
+        "judge_result_v2 delegated persistence",
+        "TECHNICAL_EXECUTION_MEMORY via recordMemoryV1"
       ],
       "reads": [
         "active request/runtime inputs",
         "delegated domain/service inputs"
       ],
       "semantic_family": [
-        "evidence.qualification",
-        "acceptance.verdict",
+        "judge.result",
         "field_memory"
       ],
-      "authority_class": "ACTIVE_RUNTIME_DERIVER_EXPLICITLY_DISPOSED",
+      "authority_class": "JUDGE_RESULT_DERIVER_WITH_TECHNICAL_EXECUTION_MEMORY_SIDE_EFFECT",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
-      "downstream_consumers": [],
-      "removal_target": "canonical judge result / execution evidence qualification ; REMOVE_DIRECT_MEMORY_SIDE_EFFECT_IF_PRESENT",
+      "downstream_consumers": [
+        "Judge result readers",
+        "technical execution-memory diagnostics"
+      ],
+      "removal_target": "KEEP TECHNICAL EXECUTION MEMORY SIDE EFFECT; MUST REMAIN NON_CUSTOMER_VISIBLE, NON_LEARNING_ELIGIBLE, AND NEVER FORMAL_FIELD_MEMORY",
       "b02_registered": true,
-      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+      "audit_note": "Exact source proof: memory_lane=TECHNICAL_EXECUTION_MEMORY, trust_level=TECHNICAL_SIGNAL, customer_visible_memory=false, learning_eligible=false. No Formal Field Memory authority."
     },
     {
       "surface_id": "RES-152",
@@ -5644,10 +5660,10 @@
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [],
-      "removal_target": "Keep exact Acceptance provenance; move semantic authority to Acceptance -> Outcome -> Memory formalization",
+      "removal_target": "Keep exact Acceptance as necessary provenance only; committed reviewed promotion proof is required for Formal Field Memory",
       "b02_registered": true,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
-      "audit_note": "Field Memory formalization consumes accepted operation evidence; #3436 improved provenance but direct Acceptance->Memory boundary remains debt."
+      "audit_note": "Acceptance is consumed but is not sufficient authority after B-Line Formal Field Memory convergence."
     },
     {
       "surface_id": "RES-223",
@@ -6505,18 +6521,17 @@
       "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
       "feature_flag": null,
       "downstream_consumers": [],
-      "removal_target": "Keep Acceptance; split Acceptance -> Outcome -> Memory",
+      "removal_target": "Keep Acceptance; downstream Outcome -> Candidate -> reviewed Promotion/Commit owns Formal Memory",
       "b02_registered": true,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "ledger_disposition": "SEMANTIC_FACT_WRITER",
       "underlying_semantic_families": [
         "acceptance.verdict",
-        "field_memory",
         "execution.as_executed"
       ],
       "authority_owner": "ACCEPTANCE_RUNTIME",
-      "writer_scope": "Acceptance facts plus current direct formal-memory side effect",
-      "audit_note": "Current canonical Acceptance route still directly formalizes Field Memory on formal PASS."
+      "writer_scope": "Acceptance facts only; Field Memory is downstream and separately governed",
+      "audit_note": "Direct formal-memory side effect removed in B-Line Formal Field Memory convergence phase 1."
     },
     {
       "surface_id": "RES-253",
@@ -7907,6 +7922,63 @@
       "b02_registered": false,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "audit_note": "Exact final propagated tuple from dynamic authority-callsite proof. This path is a devtools consumer, not a production binding-policy owner."
+    },
+    {
+      "surface_id": "RES-303",
+      "source_path": "apps/server/src/services/formal_field_memory_promotion_authority_v1.ts",
+      "entrypoint": "field_memory_service -> requireFormalFieldMemoryPromotionAuthorityV1",
+      "activation_mode": "ACTIVE_SERVICE_CALL_CHAIN",
+      "writes": [],
+      "reads": [
+        "exact acceptance_result_v1",
+        "exact outcome_review_v1",
+        "exact roi_boundary_v1",
+        "exact RECORDED roi_ledger_v1",
+        "exact ROI cost/value/accounting-policy basis facts",
+        "exact field_memory_candidate_v1",
+        "four exact P29 candidate-basis facts",
+        "exact same_field_only committed field_memory_record_v1",
+        "five exact P30 promotion-basis facts"
+      ],
+      "semantic_family": [
+        "field_memory",
+        "governance.trace_projection"
+      ],
+      "authority_class": "FORMAL_FIELD_MEMORY_P26_P30_EXACT_CHAIN_VERIFIER_NOT_WRITER",
+      "runtime_reachable": "PROVEN_VIA_FIELD_MEMORY_ROUTE",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "apps/server/src/services/field_memory_service.ts"
+      ],
+      "removal_target": "KEEP FAIL-CLOSED VERIFIER; NEVER CREATE P26-P30 FACTS, P31 RUNTIME CONTEXT, MODEL UPDATE, OR PROMOTION AUTHORITY",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Verifies exact tenant/project/group, operation, task, field, Acceptance, P27 Outcome/ROI boundary, P28 recorded ledger/accounting basis, P29 candidate basis, P30 promotion basis and same-field reuse boundary. review_only_no_runtime_use is rejected."
+    },
+    {
+      "surface_id": "RES-304",
+      "source_path": "apps/server/db/migrations/2026_09_01_field_memory_scope_defaults_removed_v1.sql",
+      "entrypoint": "database migration runner",
+      "activation_mode": "MIGRATION_ONLY",
+      "writes": [
+        "field_memory_v1 schema defaults only"
+      ],
+      "reads": [
+        "field_memory_v1 schema metadata"
+      ],
+      "semantic_family": [
+        "field_memory"
+      ],
+      "authority_class": "FIELD_MEMORY_SCOPE_DEFAULT_REMOVAL_MIGRATION",
+      "runtime_reachable": "NOT_LONG_RUNNING_RUNTIME",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "field_memory_v1 writers"
+      ],
+      "removal_target": "KEEP; PROJECT/GROUP DEFAULTS MUST REMAIN ABSENT",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Forward-only repair preserves historical migration records while removing active schema scope fabrication."
     }
   ],
   "cross_branch_surfaces": [

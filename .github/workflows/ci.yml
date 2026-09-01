@@ -64,6 +64,18 @@ jobs:
       - name: B-Line operator dispatch intent boundary
         run: pnpm run ci:governance:bline-operator-dispatch-intent
 
+      - name: B-Line Acceptance no Formal Memory side effect
+        run: pnpm run ci:governance:bline-acceptance-no-formal-memory-side-effect
+
+      - name: B-Line Formal Memory reviewed promotion proof
+        run: pnpm run ci:governance:bline-formal-memory-reviewed-promotion-proof
+
+      - name: B-Line legacy Twin no direct Formal Memory
+        run: pnpm run ci:governance:bline-legacy-twin-no-direct-formal-memory
+
+      - name: B-Line Formal Memory scope provenance
+        run: pnpm run ci:governance:bline-formal-memory-scope-provenance
+
       - name: Route response ownership guard
         run: pnpm run ci:route-response-ownership
 
