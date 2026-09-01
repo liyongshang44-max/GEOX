@@ -91,6 +91,32 @@ q(targetUrl,[
 assert.equal(Number(q(targetUrl,"SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'")),41);
 assert.equal(Number(q(targetUrl,"SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'")),3);
 
+// Normalize repository machine-authority fixtures inside this isolated workspace so the
+// full lifecycle proof is deterministic on both unarmed and armed production heads.
+{
+ const a=j(cleanupAuthorityPath),arm=j(cleanupArmPath);
+ a.status="LIVE_EXACT_SELF_GRANT_PROVEN_CLEANUP_NOT_AUTHORIZED";
+ a.authorization.production_writer_owner_self_grant_cleanup_authorized=false;
+ a.authorization.production_evidence_acl_carryforward_remediation_authorized=false;
+ a.next_stage.status="BLOCKED_ON_EXPLICIT_USER_AUTHORIZATION";
+ arm.armed=false;arm.exact_target_database_name=null;
+ arm.production_writer_owner_self_grant_cleanup_authorized=false;
+ arm.production_evidence_acl_carryforward_remediation_authorized=false;
+ arm.runtime_process_start_authorized=false;arm.production_owner_activation_authorized=false;
+ arm.formal_v5_arm_authorized=false;arm.a0_authorized=false;arm.o00_authorized=false;
+ w(cleanupAuthorityPath,a);w(cleanupArmPath,arm);
+}
+{
+ const a=j(aclAuthorityPath),arm=j(aclArmPath);
+ a.status="BLOCKED_ON_WRITER_OWNER_SELF_GRANT_CLEANUP_NOT_AUTHORIZED";
+ a.authorization.production_evidence_acl_carryforward_remediation_authorized=false;
+ arm.armed=false;arm.exact_target_database_name=null;
+ arm.production_evidence_acl_carryforward_remediation_authorized=false;
+ arm.runtime_process_start_authorized=false;arm.production_owner_activation_authorized=false;
+ arm.formal_v5_arm_authorized=false;arm.a0_authorized=false;arm.o00_authorized=false;
+ w(aclAuthorityPath,a);w(aclArmPath,arm);
+}
+
 // 1. Unarmed cleanup prestate.
 run("scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_V1.cjs",seedUrl);
 assert.equal(j(cleanupPrefOut).status,"PASS_CLEANUP_REQUIRED");
