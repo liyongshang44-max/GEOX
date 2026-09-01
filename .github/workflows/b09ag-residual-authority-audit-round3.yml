@@ -1,0 +1,40 @@
+name: b09ag-residual-authority-audit-round3
+
+on:
+  pull_request:
+    branches:
+      - docs/bline-b09ag-residual-authority-audit-v1
+
+jobs:
+  exact-product-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove literal B-09ag round3 product head
+        run: |
+          git checkout c0aae037661884561b73971f40326121df5857db
+          test "$(git rev-parse HEAD)" = "c0aae037661884561b73971f40326121df5857db"
+
+      - name: Fetch frozen audit snapshots
+        run: |
+          git fetch --no-tags origin fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+          git fetch --no-tags origin 26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+          git fetch --no-tags origin refs/pull/3346/head
+          git cat-file -e fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8^{commit}
+          git cat-file -e 3450f932e345e1d0b880a45b9f2613eba9833fcb^{commit}
+          git cat-file -e 605d256d5e4a02a18fee89e5a6db755af3f97e18^{commit}
+
+      - name: B-09ag reverse residual authority audit
+        run: node scripts/governance_acceptance/ACCEPTANCE_B09AG_RESIDUAL_AUTHORITY_AUDIT_V1.cjs
+
+      - name: Existing B-02 governance
+        if: always()
+        run: node scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs
+
+      - name: Prove no product or MCFT mutation
+        if: always()
+        run: |
+          git diff --exit-code 3450f932e345e1d0b880a45b9f2613eba9833fcb c0aae037661884561b73971f40326121df5857db --             apps packages .github/workflows config docs/digital_twin docs/twin_kernel
