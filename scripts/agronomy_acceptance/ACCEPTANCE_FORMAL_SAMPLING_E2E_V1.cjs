@@ -111,6 +111,15 @@ async function main() {
     assert.equal(exactAcceptanceFact.rows[0].record_json?.sample_receipt_fact_id, receipt.fact_id, 'persisted receipt fact ref mismatch');
     assert.equal(exactAcceptanceFact.rows[0].record_json?.lab_result_fact_id, lab.fact_id, 'persisted lab fact ref mismatch');
 
+    const repeatedAcceptance = requireOk(await fetchJson(`${base}/api/v1/sampling/acceptance/evaluate`, {
+      method: 'POST',
+      token,
+      body: { plan_id: plan.plan_id, sample_id, import_id: lab.import_id },
+    }), 'repeat sampling acceptance');
+    assert.equal(repeatedAcceptance.fact_id, acceptance.fact_id, 'same exact sampling chain must keep one acceptance fact');
+    assert.equal(repeatedAcceptance.acceptance_id, acceptance.acceptance_id, 'same exact sampling chain must keep one acceptance id');
+    assert.equal(repeatedAcceptance.idempotent, true, 'repeat sampling acceptance must report idempotent=true');
+
     const sample = requireOk(await fetchJson(`${base}/api/v1/sampling/sample/${sample_id}`, { method: 'GET', token }), 'fetch sample by sample_id');
     assert.equal(
       sample.fact?.record_json?.sample_id,
