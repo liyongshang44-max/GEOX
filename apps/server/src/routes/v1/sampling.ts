@@ -141,6 +141,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     if (!auth) return reply;
     const body: any = req.body ?? {};
     if (!isNonEmptyString(body.sample_id)) return badRequest(reply, "MISSING_OR_INVALID:sample_id");
+    if (body.sample_receipt_fact_id != null && !isNonEmptyString(body.sample_receipt_fact_id)) return badRequest(reply, "MISSING_OR_INVALID:sample_receipt_fact_id");
     if (!isIntMs(body.imported_at_ts)) return badRequest(reply, "MISSING_OR_INVALID:imported_at_ts");
     if (!isObjectRecord(body.metrics)) return badRequest(reply, "MISSING_OR_INVALID:metrics");
     if (!isObjectRecord(body.units)) return badRequest(reply, "MISSING_OR_INVALID:units");
@@ -148,7 +149,9 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     if (!isNonEmptyString(body.quality_status) || !QUALITY_STATUSES.has(body.quality_status)) return badRequest(reply, "MISSING_OR_INVALID:quality_status");
 
     try {
-      const receipt = await service.findReceiptBySampleId(body.sample_id, auth);
+      const receipt = isNonEmptyString(body.sample_receipt_fact_id)
+        ? await service.findReceiptByFactId(body.sample_receipt_fact_id, body.sample_id, auth)
+        : await service.findReceiptBySampleId(body.sample_id, auth);
       if (!receipt) return reply.status(404).send({ ok: false, error: "NOT_FOUND:sample_receipt" });
       const receiptRecord = receipt.record_json;
       if (!tenantMatchesAuth(receiptRecord, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
@@ -191,7 +194,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     if (!tenantMatchesAuth(planRecord, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
 
     try {
-      const receipt = await service.findReceiptBySampleId(body.sample_id, auth);
+      const receipt = await service.findReceiptBySampleId(body.sample_id, auth, plan.fact_id);
       if (!receipt) {
         const created = await service.createAcceptance({
           plan_id: body.plan_id,
