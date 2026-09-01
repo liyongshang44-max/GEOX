@@ -265,10 +265,17 @@ function assertFieldMemoryExportContract(exported) {
   assert(exported.manifest?.field_memory_contract?.authority_proof_type === 'field_memory_record_v1', 'manifest field memory authority proof type mismatch', exported.manifest?.field_memory_contract);
   assert(exported.manifest?.field_memory_contract?.authority_proof_id === 'fm_record_c8_irrigation_001', 'manifest field memory authority proof id mismatch', exported.manifest?.field_memory_contract);
   assert(exported.manifest?.governance_acceptance?.static_formal_memory_is_only_pass_source === false, 'manifest must state static formal memory is not the pass source', exported.manifest?.governance_acceptance);
+  assert(exported.manifest?.governance_acceptance?.controlled_p26_p30_proof_is_pre_authorized_fixture_only === true, 'manifest must keep P26-P30 proof fixture-only', exported.manifest?.governance_acceptance);
   assert(exported.manifest?.governance_acceptance?.controlled_p29_p30_proof_is_pre_authorized_fixture_only === true, 'manifest must keep P29/P30 proof fixture-only', exported.manifest?.governance_acceptance);
+  assert(exported.manifest?.governance_acceptance?.field_memory_route_does_not_create_p26_p30_authority === true, 'field-memory route must not claim P26-P30 authority', exported.manifest?.governance_acceptance);
   assert(exported.manifest?.governance_acceptance?.field_memory_route_does_not_create_p29_or_p30_authority === true, 'field-memory route must not claim P29/P30 authority', exported.manifest?.governance_acceptance);
+  assert(firstPayload(exported, 'outcome_review_v1')?.review_state === 'REVIEWED', 'P27 outcome review proof missing', exported.facts_by_type?.outcome_review_v1);
+  assert(firstPayload(exported, 'roi_boundary_v1')?.roi_review_eligible === true, 'P27 ROI boundary proof missing', exported.facts_by_type?.roi_boundary_v1);
+  assert(firstPayload(exported, 'roi_ledger_v1')?.ledger_state === 'RECORDED', 'P28 ROI ledger proof missing', exported.facts_by_type?.roi_ledger_v1);
   assert(firstPayload(exported, 'field_memory_candidate_v1')?.candidate_state === 'CANDIDATE_RECORDED', 'P29 field memory candidate proof missing', exported.facts_by_type?.field_memory_candidate_v1);
-  assert(firstPayload(exported, 'field_memory_record_v1')?.record_state === 'RECORD_COMMITTED', 'P30 field memory record proof missing', exported.facts_by_type?.field_memory_record_v1);
+  const memoryRecordProof = firstPayload(exported, 'field_memory_record_v1');
+  assert(memoryRecordProof?.record_state === 'RECORD_COMMITTED', 'P30 field memory record proof missing', exported.facts_by_type?.field_memory_record_v1);
+  assert(memoryRecordProof?.record_scope === 'same_field_only', 'P30 field memory record must be same_field_only for product materialization', memoryRecordProof);
 
   const formal = optionalRows.find((x) => x.memory_id === FORMAL_MEMORY);
   assertFormalFieldMemory(formal);
@@ -311,7 +318,7 @@ async function main() {
     'BOUNDARY_AVAILABLE', 'formal_chain_summary', 'pending_chain_summary', 'tok_admin_actor', 'CONFIRMED',
   ]);
   need('seed approval/as-executed/ROI/field-memory flow', seed, ['actor_id', 'tok_admin_actor', 'actor_role', 'operation_approver', '/api/v1/as-executed/from-receipt', '/api/v1/roi-ledger/from-as-executed', '/api/v1/roi-ledger/formalize-from-acceptance', '/api/v1/field-memory/from-acceptance', 'FIELD_MEMORY_RECORD_ID', 'field_memory_record_ref: FIELD_MEMORY_RECORD_ID', 'ROI_INTERIM_SIGNAL_READBACK_REQUIRED', 'isInterimRoiForAsExecuted', 'FORMAL_FIELD_MEMORY_REQUIRED', 'CUSTOMER_FORMAL_MEMORY_REQUIRED', 'TECHNICAL_SKILL_MEMORY']);
-  need('seed P29/P30 formal-memory proof fixture', c8Dataset, ['field_memory_candidate_v1', 'field_memory_record_v1', 'CANDIDATE_RECORDED', 'RECORD_COMMITTED', 'FIELD_MEMORY_CANDIDATE_GATE_CONTRACT_V0', 'FIELD_MEMORY_RECORD_GATE_CONTRACT_V0', 'controlled_fixture_only: true']);
+  need('seed P26-P30 formal-memory proof fixture', c8Dataset, ['outcome_review_v1', 'roi_boundary_v1', 'roi_ledger_v1', 'field_memory_candidate_v1', 'field_memory_record_v1', 'REVIEWED', 'RECORDED', 'CANDIDATE_RECORDED', 'RECORD_COMMITTED', "record_scope: 'same_field_only'", 'OUTCOME_ROI_BOUNDARY_GATE_CONTRACT_V0', 'ROI_BOUNDARY_PAYLOAD_SCHEMA_V0', 'ROI_LEDGER_GATE_CONTRACT_V0', 'FIELD_MEMORY_CANDIDATE_GATE_CONTRACT_V0', 'FIELD_MEMORY_RECORD_GATE_CONTRACT_V0', 'controlled_fixture_only: true']);
   need('seed irrigation requirement H2 flow', seed, ['irrigation_requirement_v1', 'irrigation_requirement_index_v1', 'insertIrrigationRequirementIndexRows', 'gross_irrigation_requirement_mm']);
   need('seed irrigation requirement H4 amount-source flow', c8Dataset, ['formalRequirementAmountSource', 'amount_source_chain', 'planned_amount_source', 'amount_mm', 'source_requirement_id']);
   need('seed irrigation requirement H5 skill-calculation flow', c8Dataset, ['runC8IrrigationRequirementSkillV1', 'irrigationRequirementSkillInput', 'irrigationRequirementSkillOutput', 'calculation_trace', 'SKILL_CALCULATED']);
