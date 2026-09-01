@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "KBS_SINGLE_FETCH_MULTI_INTERVAL_PATH_IMPLEMENTED_REMAINING_BLOCKERS");
+  assert.equal(authority.status, "ACQUISITION_HORIZON_AUTHORITY_ESTABLISHED_REMAINING_BLOCKERS");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "8a9a03195b50ddaaa33f23b65622ed99bca4bb5a");
+  assert.equal(authority.subject_predecessor_sha, "cda440d64930ab7e887209eb7c08f2f0529a58cf");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -57,6 +57,27 @@ try {
   includes(sourceProgress, "PRODUCTION_EVIDENCE_GFS_PAIR_VALID_FROM_SKEW", "GFS_PAIR_SKEW_FAIL_CLOSED_REQUIRED");
   includes(sourceProgress, "MCFT_CAP09_KBS_SOIL_ORIGIN_SOURCE_ID_V1", "SOIL_LATEST_PROGRESS_REQUIRED");
 
+  const horizonAuthority = json(authority.acquisition_horizon_authority_ref);
+  assert.equal(horizonAuthority.status, "ESTABLISHED_PRE_RUNTIME_START_POLICY_NO_ACTIVE_INSTANCE");
+  assert.equal(horizonAuthority.decisive_ruling.activation_fence_source, "SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY");
+  assert.equal(horizonAuthority.decisive_ruling.activation_fence_may_come_from_wall_clock_alone, false);
+  assert.equal(horizonAuthority.decisive_ruling.formal_forcing_budget_may_define_bootstrap_horizon, false);
+  assert.equal(horizonAuthority.decisive_ruling.fixed_historical_lookback_hours, null);
+  assert.equal(horizonAuthority.bootstrap_policy.kbs_raw_hourly.earlier_batch_fetch_authorized, false);
+  assert.equal(horizonAuthority.bootstrap_policy.gfs_bundle.historical_cycle_sweep_authorized, false);
+  assert.equal(horizonAuthority.bootstrap_policy.kbs_soil.historical_event_scan_authorized, false);
+  assert.equal(horizonAuthority.bootstrap_policy.kbs_soil.explicit_poll_due_policy_established, false);
+  assert.equal(horizonAuthority.restart_policy.bootstrap_rewind_authorized, false);
+  assert.equal(horizonAuthority.runtime_start_binding.active_horizon_instance_bound, false);
+
+  const horizonContract = read(authority.acquisition_horizon_contract_ref);
+  includes(horizonContract, "materializeProductionEvidenceAcquisitionHorizonV1", "PRODUCTION_EVIDENCE_HORIZON_TYPED_CONTRACT_REQUIRED");
+  includes(horizonContract, "MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY", "PRODUCTION_EVIDENCE_HORIZON_RUNTIME_START_AUTHORITY_CLASS_REQUIRED");
+  includes(horizonContract, "EXACT_EVENT_ROWS_PRESENT_IN_THAT_SINGLE_RETAINED_BATCH", "PRODUCTION_EVIDENCE_HORIZON_KBS_BATCH_BOUND_REQUIRED");
+  includes(horizonContract, "ONE_PROVIDER_SELECTED_CYCLE", "PRODUCTION_EVIDENCE_HORIZON_GFS_CYCLE_BOUND_REQUIRED");
+  assert.equal(horizonContract.includes("Date.now"), false, "PRODUCTION_EVIDENCE_HORIZON_WALL_CLOCK_READ_FORBIDDEN");
+  assert.equal(horizonContract.includes("process.env"), false, "PRODUCTION_EVIDENCE_HORIZON_ENV_READ_FORBIDDEN");
+
   const host = read(authority.host_lifecycle_ref);
   includes(host, '"PLANNER_EXHAUSTED"', "EVIDENCE_HOST_NULL_TERMINAL_STATE_REQUIRED");
   includes(host, "PHASE3_EVIDENCE_HOST_PLANNER_EMPTY_WORK_ITEMS_FORBIDDEN", "EVIDENCE_HOST_EMPTY_WORK_FATAL_REQUIRED");
@@ -76,7 +97,6 @@ try {
   includes(packager, "MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND", "PRODUCTION_ENTRYPOINT_FAIL_CLOSED_REQUIRED");
 
   assert.deepEqual(authority.unconditional_blockers, [
-    "PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_AUTHORITY_NOT_ESTABLISHED",
     "KBS_SOIL_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED",
     "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
   ]);
@@ -86,6 +106,10 @@ try {
   assert.equal(authority.adjudication.runtime_tick_cursor_may_drive_evidence_acquisition, false);
   assert.equal(authority.current_entrypoint.binding_authorized, false);
   assert.equal(authority.current_entrypoint.failure_code, "MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND");
+  assert.equal(authority.bootstrap_authority_gap.production_acquisition_start_or_bounded_backfill_horizon_established, true);
+  assert.equal(authority.bootstrap_authority_gap.active_runtime_start_horizon_instance_bound, false);
+  assert.equal(authority.bootstrap_authority_gap.activation_fence_source, "SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY");
+  assert.equal(authority.bootstrap_authority_gap.may_inherit_formal_forcing_budget_as_bootstrap_horizon, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.single_fetch_multi_interval_path_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.single_private_retention_per_batch_implemented, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.cross_cycle_progress_read_port_implemented, true);
@@ -112,7 +136,9 @@ try {
     status: "PASS",
     subject_sha: subject,
     authority_status: authority.status,
-    current_frontier: "ACQUISITION_HORIZON_AUTHORITY_REQUIRED",
+    current_frontier: "PURE_SOURCE_SPECIFIC_PLANNER_REQUIRED",
+    acquisition_horizon_authority_established: true,
+    active_runtime_start_horizon_instance_bound: false,
     kbs_single_fetch_multi_interval_path_implemented: true,
     source_specific_progress_ports_implemented: true,
     unconditional_blockers: authority.unconditional_blockers,

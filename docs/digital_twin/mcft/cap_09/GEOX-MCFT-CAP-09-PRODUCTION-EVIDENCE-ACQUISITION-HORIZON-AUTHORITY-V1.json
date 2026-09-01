@@ -1,0 +1,77 @@
+{
+  "schema_version": "geox_mcft_cap09_production_evidence_acquisition_horizon_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1",
+  "status": "ESTABLISHED_PRE_RUNTIME_START_POLICY_NO_ACTIVE_INSTANCE",
+  "stage": "POST_SOURCE_PROGRESS_AND_KBS_BATCH_PATH_PRE_PURE_PLANNER",
+  "subject_predecessor_sha": "cda440d64930ab7e887209eb7c08f2f0529a58cf",
+  "authority_basis": {
+    "master_task_line_ref": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md",
+    "taskbook_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+    "production_hosting_route_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+    "provider_watermark_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDER-AVAILABILITY-WATERMARK-AUTHORITY.md",
+    "cadence_decoupling_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-PROVIDER-RUNTIME-CADENCE-DECOUPLING-AUTHORITY.md",
+    "planner_readiness_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json"
+  },
+  "decisive_ruling": {
+    "acquisition_horizon_must_be_explicit": true,
+    "activation_fence_source": "SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY",
+    "activation_fence_may_come_from_wall_clock_alone": false,
+    "activation_fence_may_come_from_deployment_environment": false,
+    "activation_fence_may_come_from_phase5_fixture": false,
+    "activation_fence_may_come_from_formal_epoch_before_formal_authority": false,
+    "runtime_tick_cursor_may_define_evidence_horizon": false,
+    "formal_forcing_budget_may_define_bootstrap_horizon": false,
+    "fixed_historical_lookback_hours": null,
+    "historical_provider_sweep_authorized": false
+  },
+  "bootstrap_policy": {
+    "kbs_raw_hourly": {
+      "mode": "FIRST_RETAINED_PROVIDER_BATCH_FETCH_STARTED_AT_OR_AFTER_ACTIVATION_FENCE",
+      "bounded_backfill_unit": "EXACT_EVENT_ROWS_PRESENT_IN_THAT_SINGLE_RETAINED_BATCH",
+      "earlier_batch_fetch_authorized": false,
+      "fixed_hour_lookback_authorized": false,
+      "raw_retention_before_decode_required": true,
+      "real_provider_chronology_required": true
+    },
+    "gfs_bundle": {
+      "mode": "FIRST_PROVIDER_SELECTED_CYCLE_FETCH_STARTED_AT_OR_AFTER_ACTIVATION_FENCE",
+      "bounded_backfill_unit": "ONE_PROVIDER_SELECTED_CYCLE",
+      "historical_cycle_sweep_authorized": false,
+      "provider_cycle_selection_owner": "PRODUCT_GFS_PROVIDER",
+      "same_cycle_weather_et0_pair_required": true
+    },
+    "kbs_soil": {
+      "mode": "FIRST_CURRENT_PROVIDER_RESPONSE_FETCH_STARTED_AT_OR_AFTER_ACTIVATION_FENCE",
+      "bounded_backfill_unit": "ONE_CURRENT_PROVIDER_RESPONSE",
+      "historical_event_scan_authorized": false,
+      "explicit_poll_due_policy_established": false
+    }
+  },
+  "restart_policy": {
+    "durable_progress_present": "RESUME_FROM_EVIDENCE_OWNED_DURABLE_SOURCE_PROGRESS",
+    "bootstrap_rewind_authorized": false,
+    "phase5_manifest_fallback_authorized": false,
+    "formal_epoch_fallback_authorized": false,
+    "runtime_tick_cursor_fallback_authorized": false,
+    "successful_cycle_count_fallback_authorized": false
+  },
+  "runtime_start_binding": {
+    "active_horizon_instance_bound": false,
+    "required_runtime_start_authority_class": "MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY",
+    "binding_occurs_only_under_separate_runtime_start_authority": true
+  },
+  "non_effects": {
+    "production_target_planner_bound": false,
+    "runtime_secret_read": false,
+    "database_connection_attempted": false,
+    "provider_request_count": 0,
+    "evidence_cursor_mutation": false,
+    "runtime_tick_cursor_mutation": false,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false,
+    "mcft_cap09_completed": false
+  }
+}

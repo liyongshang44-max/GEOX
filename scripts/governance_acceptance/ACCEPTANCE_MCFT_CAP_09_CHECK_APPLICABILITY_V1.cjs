@@ -196,6 +196,23 @@ function main() {
   assert.equal(sourceProgressProof.unknown_changed_paths.length, 0);
   assert.equal(byId(sourceProgressProof, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
 
+  // CP-4: acquisition-horizon runtime contract is Phase3-owned; policy/proof are planner-owner closure paths.
+  const horizonRuntime = plan(authority, registry, ["apps/server/src/external_evidence/mcft_cap09_production_evidence_acquisition_horizon_v1.ts"]);
+  assert.equal(horizonRuntime.status, "PASS");
+  assert.equal(horizonRuntime.unknown_changed_paths.length, 0);
+  assert.equal(byId(horizonRuntime, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+  assert(byId(horizonRuntime, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes("apps/server/src/external_evidence/mcft_cap09_production_evidence_acquisition_horizon_v1.ts"));
+
+  for (const horizonPlannerPath of [
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_V1.ts",
+  ]) {
+    const horizonPlanner = plan(authority, registry, [horizonPlannerPath]);
+    assert.equal(horizonPlanner.status, "PASS");
+    assert.equal(horizonPlanner.unknown_changed_paths.length, 0);
+    assert.equal(byId(horizonPlanner, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+  }
+
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
   const phase3 = plan(authority, registry, [phase3Path]);
@@ -443,6 +460,9 @@ function main() {
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_MULTI_INTERVAL_PRODUCT_PATH_V1.ts",
     "apps/server/src/external_evidence/mcft_cap09_evidence_source_progress_v1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PROGRESS_V1.ts",
+    "apps/server/src/external_evidence/mcft_cap09_production_evidence_acquisition_horizon_v1.ts",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_V1.ts",
   ]) {
     assert(ownerPaths.has(ownerOnlyPath), `OWNER_CLOSURE_PATH_REQUIRED:${ownerOnlyPath}`);
     assert(!timingPaths.has(ownerOnlyPath), `OWNER_PATH_MUST_NOT_REOPEN_TIMING:${ownerOnlyPath}`);
