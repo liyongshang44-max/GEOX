@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const { assert, env, fetchJson, requireOk, waitForHealth } = require('./_common.cjs');
 
-const baseUrl = env('SAMPLING_API_BASE_URL', env('API_BASE_URL', 'http://127.0.0.1:3000'));
+const baseUrl = env('SAMPLING_API_BASE_URL', env('API_BASE_URL', env('BASE_URL', env('GEOX_BASE_URL', 'http://127.0.0.1:3000'))));
 const token = env('ADMIN_TOKEN', env('AO_ACT_TOKEN', 'admin_token'));
 
 function extractOperationReport(json) {
