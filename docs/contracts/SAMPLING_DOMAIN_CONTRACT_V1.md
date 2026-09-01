@@ -118,5 +118,6 @@ Re-evaluating the same exact plan/receipt/lab source chain is idempotent. It mus
 - sampling_acceptance PASS ≠ operation success
 - manual sample data 不得直接写 ProblemState conclusion
 - lab result 不得直接写 ROI / Field Memory / customer success
+- legacy `sample_receipt_v1` without `sampling_plan_fact_id` still blocks duplicate receipt creation for the same tenant/project/group + plan_id + sample_id; migration absence must not reopen latest-wins or duplicate writer authority
 - Sampling formal chain 不得使用 `ORDER BY occurred_at DESC LIMIT 1` 作为 authority selector
 - ambiguous receipt/lab/acceptance identity 必须 fail closed
