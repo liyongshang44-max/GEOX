@@ -2447,15 +2447,16 @@
       "activation_parent": [
         "apps/server/src/modules/operator/registerOperatorModule.ts"
       ],
-      "surface_role": "COMPATIBILITY",
-      "delegates_to": [],
+      "surface_role": "PRIMARY_COMPATIBILITY",
+      "delegates_to": [
+        "canonical dispatch queue/executor for actual delivery"
+      ],
       "replacement_path": [
         "DispatchIntent -> canonical queue/outbox delivery"
       ],
-      "sunset_condition": "CHANGE_TO_DISPATCH_REQUESTED_INTENT_BEFORE_CLOSURE",
+      "sunset_condition": "KEEP INTENT-ONLY FACADE; DELIVERY/ACK AUTHORITY FORBIDDEN",
       "semantic_family": [
-        "execution.dispatch_intent",
-        "execution.dispatch_delivery"
+        "execution.dispatch_intent"
       ],
       "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
       "owner": "BLINE"
