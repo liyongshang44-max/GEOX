@@ -424,6 +424,18 @@ function main() {
     assert(byId(gfsTargetDuePostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(gfsTargetDuePath));
   }
 
+  // CP-4: durable GFS retry schedule is Phase3-owned and owner-visible post-merge.
+  for (const gfsRetryPath of ["apps/server/src/external_evidence/mcft_cap09_gfs_retry_schedule_v1.ts","apps/server/src/persistence/external_evidence/postgres_gfs_retry_schedule_v1.ts","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_RETRY_SCHEDULE_POSTGRES_V1.ts"]) {
+    const gfsRetryPlan = plan(authority, registry, [gfsRetryPath]);
+    assert.equal(gfsRetryPlan.status, "PASS");
+    assert.equal(gfsRetryPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(gfsRetryPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(gfsRetryPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const gfsRetryPostMerge = plan(authority, registry, [gfsRetryPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(gfsRetryPostMerge, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(gfsRetryPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(gfsRetryPath));
+  }
+
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
   const phase3 = plan(authority, registry, [phase3Path]);

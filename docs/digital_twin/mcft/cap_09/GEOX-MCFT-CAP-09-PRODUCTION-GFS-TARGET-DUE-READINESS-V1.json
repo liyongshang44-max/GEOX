@@ -2,7 +2,7 @@
   "schema_version": "geox_mcft_cap09_production_gfs_target_due_readiness_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-GFS-TARGET-DUE-READINESS-V1",
   "status": "ESTABLISHED_NO_ACTIVE_INSTANCE",
-  "subject_predecessor_sha": "aedcfc377a345322aa22727d46b2a3dd6ff24174",
+  "subject_predecessor_sha": "6cb65b7091886994d4c5854b2a064021ec2d8f6b",
   "authority_basis": {
     "amendment_19_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-PROVIDER-RUNTIME-CADENCE-DECOUPLING-AUTHORITY.md",
     "pre_runtime_hardening_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-RUNTIME-HARDENING-AUTHORITY-V1.json",
@@ -51,12 +51,11 @@
   },
   "implementation_readiness": {
     "pure_target_due_policy_implemented": true,
-    "durable_gfs_retry_throttle_implemented": false,
-    "durable_gfs_attempt_budget_implemented": false,
+    "durable_gfs_retry_throttle_implemented": true,
+    "durable_gfs_attempt_budget_implemented": true,
     "source_plan_execution_seam_implemented": false
   },
   "blockers": [
-    "GFS_DURABLE_RETRY_THROTTLE_AND_ATTEMPT_BUDGET_NOT_IMPLEMENTED",
     "HETEROGENEOUS_SOURCE_PLAN_EXECUTION_SEAM_NOT_IMPLEMENTED"
   ],
   "forbidden_shortcuts": [
@@ -77,5 +76,19 @@
     "formal_v5_arm": false,
     "a0_bootstrap": false,
     "o00_started": false
+  },
+  "durable_retry_state": {
+    "contract_ref": "apps/server/src/external_evidence/mcft_cap09_gfs_retry_schedule_v1.ts",
+    "postgres_repository_ref": "apps/server/src/persistence/external_evidence/postgres_gfs_retry_schedule_v1.ts",
+    "migration_ref": "apps/server/db/migrations/2026_09_01_mcft_cap_09_evidence_source_poll_schedule.sql",
+    "acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_RETRY_SCHEDULE_POSTGRES_V1.ts",
+    "storage_surface": "EXISTING_EXTERNAL_EVIDENCE_PRODUCER_LEASE_ROW",
+    "per_target_attempt_budget": 3,
+    "retry_minimum_interval_seconds": 60,
+    "target_rewind_forbidden": true,
+    "target_skip_forbidden": true,
+    "owner_takeover_preserves_state": true,
+    "stale_fence_rejected": true,
+    "current_production_schema_materialized": false
   }
 }

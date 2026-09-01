@@ -2,8 +2,8 @@
   "schema_version": "geox_mcft_cap09_production_evidence_source_poll_schedule_schema_remediation_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-POLL-SCHEDULE-SCHEMA-REMEDIATION-AUTHORITY-V1",
   "status": "READY_NOT_AUTHORIZED",
-  "subject_predecessor_sha": "4731574a35bd55526d5d9acb021a26068348a0c5",
-  "purpose": "Forward-only materialization of already-qualified Evidence source poll schedule columns on the exact production operational database.",
+  "subject_predecessor_sha": "6cb65b7091886994d4c5854b2a064021ec2d8f6b",
+  "purpose": "Forward-only materialization of already-qualified KBS/soil poll schedule plus durable GFS retry target/throttle/attempt-budget columns on the exact production operational database.",
   "target": {
     "database_name": "geox_mcft_cap09_production_runtime_v1",
     "expected_table_count": 41,
@@ -17,7 +17,13 @@
       "kbs_soil_poll_last_started_at",
       "kbs_soil_poll_next_eligible_at",
       "kbs_soil_poll_writer_owner",
-      "kbs_soil_poll_writer_fencing_token"
+      "kbs_soil_poll_writer_fencing_token",
+      "gfs_poll_target_logical_time",
+      "gfs_poll_attempt_count",
+      "gfs_poll_last_started_at",
+      "gfs_poll_next_eligible_at",
+      "gfs_poll_writer_owner",
+      "gfs_poll_writer_fencing_token"
     ],
     "expected_schedule_constraints": [
       "external_evidence_producer_lease_v1_kbs_raw_poll_all_or_none",
@@ -25,7 +31,12 @@
       "external_evidence_producer_lease_v1_kbs_raw_poll_fence",
       "external_evidence_producer_lease_v1_kbs_soil_poll_all_or_none",
       "external_evidence_producer_lease_v1_kbs_soil_poll_chronology",
-      "external_evidence_producer_lease_v1_kbs_soil_poll_fence"
+      "external_evidence_producer_lease_v1_kbs_soil_poll_fence",
+      "external_evidence_producer_lease_v1_gfs_poll_all_or_none",
+      "external_evidence_producer_lease_v1_gfs_poll_attempt_budget",
+      "external_evidence_producer_lease_v1_gfs_poll_target_hour",
+      "external_evidence_producer_lease_v1_gfs_poll_chronology",
+      "external_evidence_producer_lease_v1_gfs_poll_fence"
     ],
     "table_count_must_remain": 41,
     "new_table_count_authorized": 0
@@ -38,7 +49,7 @@
   "authorized_mutation_scope": {
     "schema_ddl_allowed": true,
     "exact_table": "public.external_evidence_producer_lease_v1",
-    "operation_class": "ALTER_EXISTING_TABLE_ADD_NULLABLE_SOURCE_POLL_SCHEDULE_COLUMNS_CONSTRAINTS_AND_COMMENTS",
+    "operation_class": "ALTER_EXISTING_TABLE_ADD_NULLABLE_SOURCE_POLL_AND_GFS_RETRY_SCHEDULE_COLUMNS_CONSTRAINTS_AND_COMMENTS",
     "row_dml_allowed": false,
     "role_or_membership_mutation_allowed": false,
     "function_or_routine_mutation_allowed": false,
