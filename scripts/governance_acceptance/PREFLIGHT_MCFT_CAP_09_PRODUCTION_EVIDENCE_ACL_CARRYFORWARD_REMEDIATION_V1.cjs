@@ -70,26 +70,117 @@ try{
  ],"ACL_REMEDIATION_LOGIN_MEMBERSHIP_DRIFT");
 
  const currentUser=q(url,"SELECT current_user");
- const grantCapability={};
- for(const t of phase3Tables){
-  const g=q(url,[
-    "SELECT",
-    "has_table_privilege(current_user,'public."+t+"','SELECT WITH GRANT OPTION')::text,",
-    "has_table_privilege(current_user,'public."+t+"','INSERT WITH GRANT OPTION')::text,",
-    "has_table_privilege(current_user,'public."+t+"','UPDATE WITH GRANT OPTION')::text"
-  ].join("\n")).split("|").map(b);
-  grantCapability[t]={select:g[0],insert:g[1],update:g[2]};
-  if(missing.some(x=>x.startsWith(t+":"))&&!g.every(Boolean))unsafe.push(t+":GRANT_OPTION_MISSING");
+ const currentRole=q(url,[
+  "SELECT rolname,rolcreaterole::text,rolcreatedb::text,rolsuper::text,rolinherit::text",
+  "FROM pg_catalog.pg_roles WHERE rolname=current_user"
+ ].join("\n")).split("|");
+ const neonCaps=q(url,[
+  "SELECT",
+  "pg_catalog.pg_has_role(current_user,'neon_superuser','MEMBER')::text,",
+  "pg_catalog.pg_has_role(current_user,'neon_superuser','SET')::text"
+ ].join("\n")).split("|").map(b);
+
+ const writerOwnerMembershipRows=q(url,[
+  "SELECT granted.rolname||'|admin='||m.admin_option::text||'|inherit='||m.inherit_option::text||'|set='||m.set_option::text||'|grantor='||pg_catalog.pg_get_userbyid(m.grantor)",
+  "FROM pg_catalog.pg_auth_members m",
+  "JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid",
+  "JOIN pg_catalog.pg_roles member ON member.oid=m.member",
+  "WHERE member.rolname=current_user",
+  "AND granted.rolname IN ('geox_mcft_cap09_evidence_writer_owner_v1','geox_mcft_cap09_forcing_writer_owner_v1','geox_mcft_cap09_twin_writer_owner_v1')",
+  "ORDER BY granted.rolname"
+ ].join("\n")).split(/\r?\n/).filter(Boolean);
+
+ const objectOwners={};
+ for(const t of ["facts",...phase3Tables,...v13Tables]){
+  objectOwners["table:"+t]=q(url,[
+   "SELECT owner_role.rolname",
+   "FROM pg_catalog.pg_class c",
+   "JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace",
+   "JOIN pg_catalog.pg_roles owner_role ON owner_role.oid=c.relowner",
+   "WHERE n.nspname='public' AND c.relname='"+t+"'"
+  ].join("\n"));
  }
- if(unsafe.length)throw new Error("ACL_REMEDIATION_UNSAFE_PRESTATE:"+unsafe.join(","));
- const status=missing.length?"PASS_REMEDIATION_REQUIRED":"PASS_ALREADY_MATERIALIZED";
+ for(const fnName of [
+  "mcft_cap09_evidence_runtime_append_fact_v1",
+  "mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1",
+  "mcft_cap09_twin_runtime_append_fact_v1"
+ ]){
+  objectOwners["function:"+fnName]=q(url,[
+   "SELECT owner_role.rolname",
+   "FROM pg_catalog.pg_proc p",
+   "JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace",
+   "JOIN pg_catalog.pg_roles owner_role ON owner_role.oid=p.proowner",
+   "WHERE n.nspname='public' AND p.proname='"+fnName+"'"
+  ].join("\n"));
+ }
+
+ const tableAclRows=q(url,[
+  "SELECT c.relname||'|owner='||owner_role.rolname||'|acl='||COALESCE(c.relacl::text,'<null>')",
+  "FROM pg_catalog.pg_class c",
+  "JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace",
+  "JOIN pg_catalog.pg_roles owner_role ON owner_role.oid=c.relowner",
+  "WHERE n.nspname='public'",
+  "AND c.relname IN ('facts','external_evidence_producer_lease_v1','external_evidence_supply_event_v1','external_evidence_supply_cursor_v1','twin_external_formal_forcing_base_cursor_v1','twin_external_formal_forcing_base_target_v1','twin_external_formal_forcing_controller_lease_v1')",
+  "ORDER BY c.relname"
+ ].join("\n")).split(/\r?\n/).filter(Boolean);
+
+ const routineAclRows=q(url,[
+  "SELECT p.proname||'|owner='||owner_role.rolname||'|acl='||COALESCE(p.proacl::text,'<null>')",
+  "FROM pg_catalog.pg_proc p",
+  "JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace",
+  "JOIN pg_catalog.pg_roles owner_role ON owner_role.oid=p.proowner",
+  "WHERE n.nspname='public'",
+  "AND p.proname IN ('mcft_cap09_evidence_runtime_append_fact_v1','mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1','mcft_cap09_twin_runtime_append_fact_v1')",
+  "ORDER BY p.proname"
+ ].join("\n")).split(/\r?\n/).filter(Boolean);
+
+ const ownerSetCapabilities={};
+ for(const roleName of [
+  "geox_mcft_cap09_evidence_writer_owner_v1",
+  "geox_mcft_cap09_forcing_writer_owner_v1",
+  "geox_mcft_cap09_twin_writer_owner_v1"
+ ]){
+  ownerSetCapabilities[roleName]={
+   member:b(q(url,"SELECT pg_catalog.pg_has_role(current_user,'"+roleName+"','MEMBER')::text")),
+   set:b(q(url,"SELECT pg_catalog.pg_has_role(current_user,'"+roleName+"','SET')::text"))
+  };
+ }
+
+ const diagnostics=[];
+ if(JSON.stringify(facts)!==JSON.stringify([true,false,false,false]))diagnostics.push("facts:MATRIX_DRIFT");
+ if(!fn)diagnostics.push("phase3_append_function:EXECUTE_MISSING");
+ for(const t of v13Tables){
+  const m=matrix(url,t,role);
+  if(JSON.stringify(m)!==JSON.stringify([true,true,true,false]))diagnostics.push(t+":V13_MATRIX_DRIFT");
+ }
+ for(const t of phase3Tables){
+  const m=matrix(url,t,role);
+  if(JSON.stringify(m)!==JSON.stringify([true,true,true,false]))diagnostics.push(t+":PHASE3_MATRIX_DRIFT");
+ }
+
+ const status=diagnostics.length?"PASS_DIAGNOSTIC_REMEDIATION_REQUIRED":"PASS_ALREADY_MATERIALIZED";
+
  write({
   schema_version:"geox_mcft_cap09_production_evidence_acl_carryforward_remediation_preflight_v1",
   status,subject_sha:subject,database_name:TARGET,current_user:currentUser,
   table_count:tableCount,routine_count:routineCount,total_application_rows:totalRows,
   observed_acl:observed,phase3_append_function_execute:fn,
-  missing_privileges:missing,grant_capability:grantCapability,
+  missing_privileges:missing,diagnostics,
   exact_login_memberships:loginRows,
+  current_role:{
+    rolname:currentRole[0]||null,
+    rolcreaterole:b(currentRole[1]),
+    rolcreatedb:b(currentRole[2]),
+    rolsuper:b(currentRole[3]),
+    rolinherit:b(currentRole[4])
+  },
+  neon_superuser_member:neonCaps[0]||false,
+  neon_superuser_set:neonCaps[1]||false,
+  writer_owner_memberships:writerOwnerMembershipRows,
+  writer_owner_set_capabilities:ownerSetCapabilities,
+  object_owners:objectOwners,
+  table_acl_rows:tableAclRows,
+  routine_acl_rows:routineAclRows,
   arm_observed:arm.armed===true,
   database_mutation:false,row_mutation:false,schema_mutation:false,role_mutation:false,
   runtime_process_start:false,production_owner_activation:false,provider_request_count:0,formal_v5_arm:false,a0_bootstrap:false,o00_started:false
