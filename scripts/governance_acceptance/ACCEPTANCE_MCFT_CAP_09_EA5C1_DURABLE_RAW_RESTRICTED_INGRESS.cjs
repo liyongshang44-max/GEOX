@@ -24,6 +24,7 @@ const rawAdapterPath = "apps/server/src/external_evidence/s3_compatible_raw_evid
 const collectorPath = "apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts";
 const ingressPath = "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts";
 const acceptancePath = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts";
+const successorAcceptancePath = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_SUCCESSOR_REPLAY_COMPLETE_INGRESS_V1.ts";
 const gatePath = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs";
 const workflowPath = ".github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml";
 const historicalExpectedChanged = [authorityPath, rawAdapterPath, ingressPath, acceptancePath, gatePath, workflowPath].sort();
@@ -159,8 +160,22 @@ const workflow = fs.readFileSync(workflowPath, "utf8");
 for (const marker of [
   "postgres:18", "minio/minio", "ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts",
   "ACCEPTANCE_MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER.ts", "ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.ts",
-  "MCFT_SUBJECT_SHA", "Verify raw bucket stays private"
+  "MCFT_SUBJECT_SHA", "Verify raw bucket stays private", "EA5C1_EXACT_HISTORICAL_BASE",
+  successorAcceptancePath
 ]) if (!workflow.includes(marker)) fail(`EA5C1_WORKFLOW_PROOF_MARKER_MISSING:${marker}`);
+
+if (validationMode === "SUCCESSOR_MAINTENANCE_REVALIDATION") {
+  const successorAcceptance = fs.readFileSync(successorAcceptancePath, "utf8");
+  for (const marker of [
+    "request_id: requestId",
+    "source_locator: finalLocator",
+    "replay_complete_raw_provenance_required: true",
+  ]) {
+    if (!successorAcceptance.includes(marker)) {
+      fail(`EA5C1_SUCCESSOR_REPLAY_COMPLETE_PROOF_MARKER_MISSING:${marker}`);
+    }
+  }
+}
 
 const result = {
   schema_version: "geox_mcft_cap09_ea5c1_governance_result_v2",

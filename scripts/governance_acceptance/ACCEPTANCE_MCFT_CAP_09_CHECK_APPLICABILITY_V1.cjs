@@ -149,6 +149,16 @@ function main() {
   assert.equal(ea5c1Check.execution_workflow_status, "IMPLEMENTED_AT_SUCCESSOR_HEAD");
   assert.equal(ea5c1Check.execution_workflow, ".github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml");
 
+  const successorEa5c1AcceptancePath = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_SUCCESSOR_REPLAY_COMPLETE_INGRESS_V1.ts";
+  const successorEa5c1AcceptancePlan = plan(authority, registry, [successorEa5c1AcceptancePath]);
+  assert.equal(successorEa5c1AcceptancePlan.status, "PASS");
+  assert.equal(successorEa5c1AcceptancePlan.unknown_changed_paths.length, 0);
+  assert.equal(byId(successorEa5c1AcceptancePlan, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS").status, "REQUALIFY");
+  assert(
+    byId(successorEa5c1AcceptancePlan, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS")
+      .changed_dependencies.includes(successorEa5c1AcceptancePath),
+  );
+
   // CP-4: shared collector maintenance has a legal successor requalification route.
   const collectorPath = "apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts";
   const collectorChange = plan(authority, registry, [collectorPath]);

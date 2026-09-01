@@ -8,6 +8,7 @@ on:
       - 'apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts'
       - 'apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_SUCCESSOR_REPLAY_COMPLETE_INGRESS_V1.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C1-DURABLE-RAW-RESTRICTED-INGRESS-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs'
   merge_group:
@@ -121,9 +122,16 @@ jobs:
           EA5C1_S3_BUCKET: geox-mcft-cap09-formal-raw-v1
           EA5C1_S3_ACCESS_KEY: minioadmin
           EA5C1_S3_SECRET_KEY: minioadmin123
+          EA5C1_EXACT_HISTORICAL_BASE: b9e212f98dd1d0c1e8fff5e9f93f369167e6f065
+          EA5C1_CURRENT_BASE: ${{ steps.authority.outputs.base_sha }}
         run: |
-          set -o pipefail
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts 2>&1 | tee acceptance-output/EA5C1_FOCUSED_ACCEPTANCE.log
+          set -euo pipefail
+          if [ "$EA5C1_CURRENT_BASE" = "$EA5C1_EXACT_HISTORICAL_BASE" ]; then
+            proof="scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts"
+          else
+            proof="scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_SUCCESSOR_REPLAY_COMPLETE_INGRESS_V1.ts"
+          fi
+          pnpm exec tsx "$proof" 2>&1 | tee acceptance-output/EA5C1_FOCUSED_ACCEPTANCE.log
 
       - name: Re-prove EA3 retention-before-decode collector boundary
         env:
