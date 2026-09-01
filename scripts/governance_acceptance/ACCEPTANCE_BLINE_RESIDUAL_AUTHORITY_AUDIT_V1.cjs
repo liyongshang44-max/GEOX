@@ -266,7 +266,11 @@ function scan(abs, production) {
 
   const specialPlanner = content.includes("CandidateActionV1") && content.includes("execution_policy");
   const specialFallback = content.includes("DEFAULT_SOIL_MOISTURE") && content.includes("effectiveSoilMoisture");
-  const specialControlVerdict = content.includes('type: "control_verdict_v0"') && content.includes("verdict:");
+  const specialControlVerdict =
+    p.endsWith("/ruleset/evaluator.ts") &&
+    content.includes("evaluateRuleSetV0") &&
+    content.includes('type: "control_verdict_v0"') &&
+    content.includes("verdict:");
   const specialDeviceCapability = p.startsWith("packages/device-skills/src/") &&
     content.includes("resolveTaskCapabilityViaDeviceSkills");
   const specialDeviceSensing = p.startsWith("packages/device-skills/src/") &&
@@ -280,6 +284,7 @@ function scan(abs, production) {
     (content.includes("problem_state_v1") || content.includes("ao_sense_v1") || content.includes("lb_candidate_v1"));
   const specialJudgeConfig =
     p.startsWith("config/judge/") &&
+    !p.endsWith(".schema.json") &&
     content.includes('"sufficiency"') &&
     content.includes('"time_coverage"') &&
     content.includes('"qc"');
