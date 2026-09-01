@@ -239,7 +239,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
         return reply.send({ ok: true, ...created, verdict: "INSUFFICIENT_EVIDENCE", reasons: ["MISSING_RECEIPT_EVIDENCE_REFS"] });
       }
 
-      const labResult = await service.findLabResultBySampleId(body.sample_id, body.import_id, receipt.fact_id);
+      const labResult = await service.findLabResultBySampleId(body.sample_id, body.import_id, receipt.fact_id, auth);
       if (!labResult) {
         const created = await service.createAcceptance({
           plan_id: body.plan_id,
@@ -260,6 +260,8 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
       }
 
       const labRecord = labResult.record_json;
+      if (!tenantMatchesAuth(labRecord, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+      if (String(labRecord.field_id ?? "") !== String(planRecord.field_id ?? "")) return badRequest(reply, "MISMATCH:lab_field_id");
       if (labRecord.sample_id !== body.sample_id) return badRequest(reply, "MISMATCH:sample_id");
       if (labRecord.sample_receipt_fact_id !== receipt.fact_id) return badRequest(reply, "MISMATCH:sample_receipt_fact_id");
       if (labRecord.sampling_plan_fact_id !== plan.fact_id) return badRequest(reply, "MISMATCH:lab_sampling_plan_fact_id");
