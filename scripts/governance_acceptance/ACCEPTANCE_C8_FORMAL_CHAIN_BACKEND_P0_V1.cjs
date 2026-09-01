@@ -262,6 +262,8 @@ async function assertRoiFormalization(client, asExecutedId) {
   assert(missing.status === 404 && missing.json?.error === 'AS_EXECUTED_NOT_FOUND', 'ROI missing as_executed negative failed', httpDetail(missing));
 }
 async function assertFieldMemory(client) {
+  const canonicalRecordFactId = `full_review_seed_${TENANT}_field_memory_record_c8_001`;
+  const canonicalCandidateFactId = `full_review_seed_${TENANT}_field_memory_candidate_c8_001`;
   const body = scoped({ operation_plan_id: FORMAL_OP, acceptance_id: FORMAL_ACC, field_memory_record_ref: FORMAL_FIELD_MEMORY_RECORD });
   const first = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body });
   assert(first.status === 200, 'Field Memory from acceptance positive case failed', httpDetail(first));
@@ -276,16 +278,22 @@ async function assertFieldMemory(client) {
   const count = await client.query(`SELECT count(*)::int AS count FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND formal_acceptance_id=$4 AND memory_type='FIELD_RESPONSE_MEMORY' AND memory_lane='FORMAL_FIELD_MEMORY'`, [TENANT, PROJECT_ID, GROUP_ID, FORMAL_ACC]);
   assert(Number(count.rows[0].count) === 1, 'field memory duplicated formal FIELD_RESPONSE_MEMORY', count.rows[0]);
 
-  await insertAcceptance(client, 'p0_fm_no_chain', { chain_validation_passed: false });
-  const noChain = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: 'p0_fm_no_chain', field_memory_record_ref: FORMAL_FIELD_MEMORY_RECORD }) });
+  await insertAcceptance(client, 'p0_fm_no_chain', { chain_validation_passed: false, act_task_id: FORMAL_TASK, task_id: FORMAL_TASK });
+  const noChainRecordFactId = 'p0_fm_record_no_chain';
+  await cloneFactPayload(client, canonicalRecordFactId, noChainRecordFactId, (payload) => ({
+    ...payload,
+    field_memory_record_id: 'p0_fm_record_no_chain',
+    acceptance_result_fact_id: 'p0_fm_no_chain',
+  }));
+  const noChain = await http('/api/v1/field-memory/from-acceptance', {
+    method: 'POST',
+    body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: 'p0_fm_no_chain', field_memory_record_ref: noChainRecordFactId }),
+  });
   assert(noChain.status === 422 && noChain.json?.error === 'CHAIN_VALIDATION_NOT_PASSED', 'field memory chain negative failed', httpDetail(noChain));
 
-  await insertAcceptance(client, 'p0_fm_other_acceptance', { operation_plan_id: FORMAL_OP, field_id: FORMAL_FIELD });
+  await insertAcceptance(client, 'p0_fm_other_acceptance', { operation_plan_id: FORMAL_OP, field_id: FORMAL_FIELD, act_task_id: FORMAL_TASK, task_id: FORMAL_TASK });
   const reusedPromotion = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: 'p0_fm_other_acceptance', field_memory_record_ref: FORMAL_FIELD_MEMORY_RECORD }) });
-  assert(reusedPromotion.status === 422 && reusedPromotion.json?.error === 'FIELD_MEMORY_RECORD_ACCEPTANCE_MISMATCH', 'field memory promotion proof must not be reusable across acceptance identities', httpDetail(reusedPromotion));
-
-  const canonicalRecordFactId = `full_review_seed_${TENANT}_field_memory_record_c8_001`;
-  const canonicalCandidateFactId = `full_review_seed_${TENANT}_field_memory_candidate_c8_001`;
+  assert(reusedPromotion.status === 422 && reusedPromotion.json?.error === 'FIELD_MEMORY_ACCEPTANCE_ID_MISMATCH', 'field memory promotion proof must not be reusable across acceptance identities', httpDetail(reusedPromotion));
 
   const reviewOnlyFactId = 'p0_fm_record_review_only';
   await cloneFactPayload(client, canonicalRecordFactId, reviewOnlyFactId, (payload) => ({
