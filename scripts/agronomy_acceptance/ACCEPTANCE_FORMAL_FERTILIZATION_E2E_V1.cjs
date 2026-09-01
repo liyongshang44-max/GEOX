@@ -4,7 +4,7 @@ const { assert, env, fetchJson, requireOk, waitForHealth } = require('./_common.
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const id = (p) => `${p}_${randomUUID().replace(/-/g, '').slice(0, 18)}`;
-const pctDeviation = (planned, actual) => planned > 0 ? Math.abs(actual - planned) / planned : 1;
+const pctDeviation = (planned, actual) => planned > 0 ? (Math.abs(actual - planned) / planned) * 100 : 100;
 
 function tokenEnv(name, fallback) { return env(name, env('AO_ACT_TOKEN', fallback)); }
 function truthy(x) { return x === true; }
