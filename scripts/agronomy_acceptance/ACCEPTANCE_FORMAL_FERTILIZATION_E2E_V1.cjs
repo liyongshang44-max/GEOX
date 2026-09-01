@@ -64,13 +64,14 @@ async function createSamplingChain(base, token, scope, field_id, sample_id, metr
   return { plan, receipt, lab, sampling_acceptance: null };
 }
 
-async function createFormalAssessment(base, token, scope, field_id, sample_id, lab_import_id, status = 'LOW_N_RISK') {
+async function createFormalAssessment(base, token, scope, field_id, sample_id, lab_import_id, sampling_acceptance_fact_id, status = 'LOW_N_RISK') {
   return post(base, '/api/v1/fertilization/nitrogen-assessment', token, {
     ...scope,
     field_id,
     trigger_source: 'SAMPLING_LAB',
     sample_id,
     lab_import_id,
+    sampling_acceptance_fact_id,
     sample_type: 'SOIL',
     status,
     metrics: { nitrate_n_mg_kg: 2.1, ammonium_n_mg_kg: 0.7, organic_matter_percent: 1.4 },
@@ -294,7 +295,7 @@ async function run() {
     await ensureFertilizerDevice(pool, scope, field_id, device_id);
 
     const sampling = await createSamplingChain(base, adminToken, scope, field_id, sample_id, { nitrate_n_mg_kg: 2.1, ammonium_n_mg_kg: 0.7, organic_matter_percent: 1.4 }, 'PASS', true);
-    const formalResp = await createFormalAssessment(base, adminToken, scope, field_id, sample_id, sampling.lab.import_id, 'LOW_N_RISK');
+    const formalResp = await createFormalAssessment(base, adminToken, scope, field_id, sample_id, sampling.lab.import_id, sampling.sampling_acceptance.fact_id, 'LOW_N_RISK');
     const formal = requireOk(formalResp, 'formal nitrogen assessment');
     checks.sampling_lab_formal_trigger_creates_low_n_risk = formal.assessment?.trigger_source === 'SAMPLING_LAB'
       && formal.assessment?.evidence_tier === 'FORMAL'
@@ -326,13 +327,13 @@ async function run() {
     negative.ec_high_salinity_risk_blocks_nitrogen_prescription = checks.ec_salinity_risk_does_not_trigger_nitrogen_prescription;
 
     const invalidSampleId = `sample_invalid_${runId}`;
-    const invalid = await createSamplingChain(base, adminToken, scope, field_id, invalidSampleId, { nitrate_n_mg_kg: 1.8 }, 'INVALID', false);
-    const invalidFormal = await createFormalAssessment(base, adminToken, scope, field_id, invalidSampleId, invalid.lab.import_id, 'LOW_N_RISK');
+    const invalid = await createSamplingChain(base, adminToken, scope, field_id, invalidSampleId, { nitrate_n_mg_kg: 1.8 }, 'INVALID', true);
+    const invalidFormal = await createFormalAssessment(base, adminToken, scope, field_id, invalidSampleId, invalid.lab.import_id, invalid.sampling_acceptance.fact_id, 'LOW_N_RISK');
     negative.lab_result_quality_status_invalid_assessment_not_low_n_risk = invalidFormal.status >= 400 || invalidFormal.json?.ok === false;
 
     const noAcceptSampleId = `sample_noaccept_${runId}`;
     const noAccept = await createSamplingChain(base, adminToken, scope, field_id, noAcceptSampleId, { nitrate_n_mg_kg: 1.9 }, 'PASS', false);
-    const noAcceptFormal = await createFormalAssessment(base, adminToken, scope, field_id, noAcceptSampleId, noAccept.lab.import_id, 'LOW_N_RISK');
+    const noAcceptFormal = await createFormalAssessment(base, adminToken, scope, field_id, noAcceptSampleId, noAccept.lab.import_id, null, 'LOW_N_RISK');
     negative.sampling_acceptance_not_pass_assessment_not_formal_low_n_risk = noAcceptFormal.status >= 400 || noAcceptFormal.json?.ok === false;
 
     const formalZoneRates = [
