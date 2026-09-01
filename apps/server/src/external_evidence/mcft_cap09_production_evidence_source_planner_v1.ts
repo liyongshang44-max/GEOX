@@ -85,6 +85,8 @@ export type ProductionEvidenceSourceDecisionV1 =
             cycle_issued_at: string;
             available_role: "WEATHER" | "FUTURE_ET0";
             partial_progress: GfsCyclePairProgressV1;
+            due_window_start: string;
+            due_window_end_exclusive: string;
             bindable_to_current_cycle_service: true;
           }
         | {
@@ -302,6 +304,8 @@ export function planProductionEvidenceSourcesV1(input: {
             cycle_issued_at: partial.cycle_issued_at,
             available_role: availableRole,
             partial_progress: partial,
+            due_window_start: dueWindowStart,
+            due_window_end_exclusive: dueWindowEnd,
             bindable_to_current_cycle_service: true,
           },
         });
