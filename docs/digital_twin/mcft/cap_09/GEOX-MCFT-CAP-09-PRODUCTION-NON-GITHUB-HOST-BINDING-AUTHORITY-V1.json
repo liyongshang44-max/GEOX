@@ -448,9 +448,9 @@
       "minimum_logical_cpu_count": 2,
       "minimum_host_total_memory_gib": 4,
       "minimum_docker_cpu_count": 2,
-      "minimum_docker_memory_gib": 4,
+      "minimum_docker_memory_gib": 3.5,
       "minimum_repo_disk_free_gib": 5,
-      "resource_floor_basis": "MINIMUM_OPERATIONAL_ADMISSION_FLOOR_FOR_TWO_NODE_LONG_RUNNING_SERVICES_USING_EXTERNAL_POSTGRES_AND_PRIVATE_OBJECT_STORAGE_NOT_A_PERFORMANCE_SLA",
+      "resource_floor_basis": "MINIMUM_OPERATIONAL_ADMISSION_FLOOR_FOR_TWO_NODE_LONG_RUNNING_SERVICES_USING_EXTERNAL_POSTGRES_AND_PRIVATE_OBJECT_STORAGE_NOT_A_PERFORMANCE_SLA_DOCKER_REPORTED_MEMORY_3_5GIB_REPRESENTS_NOMINAL_4GIB_CLASS",
       "durable_log_root": "~/.geox/mcft-cap09/logs",
       "durable_log_root_must_exist": true,
       "durable_log_root_must_be_writable": true,
@@ -468,7 +468,9 @@
         "NETWORK_CONTINUITY",
         "DURABLE_LOG_CONTINUITY",
         "RESTART_POLICY_UNLESS_STOPPED"
-      ]
+      ],
+      "nominal_docker_memory_class_gib": 4,
+      "docker_reported_memory_tolerance_basis": "DOCKER_DESKTOP_LINUX_VM_MEMTOTAL_MAY_REPORT_BELOW_NOMINAL_ALLOCATION_DUE_TO_VM_KERNEL_AND_PLATFORM_OVERHEAD"
     }
   },
   "host_binding_evidence": {

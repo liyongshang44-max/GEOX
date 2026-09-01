@@ -82,6 +82,15 @@ function runLocalMachineProbe(){
     blockers.push("LOCAL_PREFLIGHT_WINDOWS_HOST_REQUIRED");
   }
 
+  let timeService=null;
+  if(process.platform==="win32"){
+    const ts=safeRun("powershell.exe",["-NoProfile","-NonInteractive","-Command",
+      "$s=Get-CimInstance Win32_Service -Filter \"Name='W32Time'\"; if($null -eq $s){throw 'W32TIME_SERVICE_NOT_FOUND'}; [pscustomobject]@{state=[string]$s.State;start_mode=[string]$s.StartMode}|ConvertTo-Json -Compress"
+    ]);
+    if(ts.ok){try{timeService=JSON.parse(ts.stdout);}catch{}}
+    add(Boolean(timeService),"LOCAL_PREFLIGHT_WINDOWS_TIME_SERVICE_READ_REQUIRED");
+    add(String(timeService?.state||"").toLowerCase()==="running","LOCAL_PREFLIGHT_WINDOWS_TIME_SERVICE_RUNNING_REQUIRED");
+  }
   const timeSource=process.platform==="win32"?safeRun("w32tm",["/query","/source"]):{ok:false,stdout:"",error:"WINDOWS_ONLY"};
   const timeStatus=process.platform==="win32"?safeRun("w32tm",["/query","/status"]):{ok:false,stdout:"",error:"WINDOWS_ONLY"};
   const source=String(timeSource.stdout||"").trim();
@@ -168,6 +177,8 @@ function runLocalMachineProbe(){
     active_power_scheme:power?.active_scheme??null,
     ac_sleep_seconds:power?.ac_sleep_seconds??null,
     dc_sleep_seconds:power?.dc_sleep_seconds??null,
+    windows_time_service_state:timeService?.state??null,
+    windows_time_service_start_mode:timeService?.start_mode??null,
     windows_time_source:source||null,
     windows_time_status_readable:timeStatus.ok,
     system_utc_now:new Date().toISOString(),
@@ -225,7 +236,7 @@ try{
   req(local?.platform_provider==="LOCAL_OPERATOR_MANAGED_DOCKER"&&local?.region_or_location==="OPERATOR_LOCAL_MACHINE","LOCAL_HOST_CONTRACT_REQUIRED");
   const machineContract=local?.machine_preflight_contract;
   req(machineContract?.schema_version==="geox_mcft_cap09_local_operator_host_machine_preflight_contract_v1"&&machineContract?.classification==="PRE_RUNTIME_STATIC_MACHINE_ADMISSION","LOCAL_MACHINE_PREFLIGHT_CONTRACT_REQUIRED");
-  req(machineContract.minimum_logical_cpu_count===2&&machineContract.minimum_host_total_memory_gib===4&&machineContract.minimum_docker_cpu_count===2&&machineContract.minimum_docker_memory_gib===4&&machineContract.minimum_repo_disk_free_gib===5,"LOCAL_MACHINE_RESOURCE_FLOOR_REQUIRED");
+  req(machineContract.minimum_logical_cpu_count===2&&machineContract.minimum_host_total_memory_gib===4&&machineContract.minimum_docker_cpu_count===2&&machineContract.minimum_docker_memory_gib===3.5&&machineContract.nominal_docker_memory_class_gib===4&&machineContract.minimum_repo_disk_free_gib===5,"LOCAL_MACHINE_RESOURCE_FLOOR_REQUIRED");
   req(machineContract.durable_log_root==="~/.geox/mcft-cap09/logs"&&machineContract.network_provider_request_forbidden===true&&machineContract.network_database_connection_forbidden===true&&machineContract.runtime_secret_read_forbidden===true&&machineContract.container_start_forbidden===true,"LOCAL_MACHINE_PREFLIGHT_NON_EFFECT_CONTRACT_REQUIRED");
   req(local?.host_id_scheme==="GEOX_LOCAL_HOST_UUID_V1"&&local?.host_id_state_file==="~/.geox/mcft-cap09/local-host-id-v1","LOCAL_HOST_ID_SCHEME_REQUIRED");
   req(local?.container_id_is_authority===false&&local?.compose_project_name==="geox-mcft-cap09-production-v1","LOCAL_HOST_STABLE_IDENTITY_CONTRACT_REQUIRED");

@@ -19,6 +19,7 @@ tmp/
 temp/
 
 # acceptance outputs / artifacts
+acceptance-output/
 acceptance/
 *.zip
 
