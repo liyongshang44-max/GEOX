@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "HOST_NOT_DUE_FOUNDATION_IMPLEMENTED_REMAINING_BLOCKERS");
+  assert.equal(authority.status, "SOURCE_SPECIFIC_PROGRESS_PORTS_IMPLEMENTED_REMAINING_BLOCKERS");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "852ae1d222379865414fd94bcabcd8faa54e3b91");
+  assert.equal(authority.subject_predecessor_sha, "3423f16556a9cd00869f43d9c2f21ce8a5303705");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -42,6 +42,15 @@ try {
 
   const cursor = read(authority.durable_cursor_ref);
   includes(cursor, "binding_id=$7 AND origin_source_id=$8", "EVIDENCE_CURSOR_EXACT_BINDING_ORIGIN_READ_REQUIRED");
+  includes(cursor, "readSupplyCursorsByBindings", "EVIDENCE_CURSOR_BINDING_SET_READ_REQUIRED");
+  includes(cursor, "binding_id = ANY($7::text[])", "EVIDENCE_CURSOR_BINDING_SET_SQL_REQUIRED");
+
+  const sourceProgress = read(authority.source_progress_ref);
+  includes(sourceProgress, "EvidenceSourceSpecificProgressReaderV1", "SOURCE_PROGRESS_READER_REQUIRED");
+  includes(sourceProgress, "MCFT_CAP09_KBS_RAIN_ORIGIN_SOURCE_ID_V1", "KBS_PAIR_PROGRESS_REQUIRED");
+  includes(sourceProgress, "gfsCycleIdentityV1", "GFS_CROSS_CYCLE_PROGRESS_REQUIRED");
+  includes(sourceProgress, "PRODUCTION_EVIDENCE_GFS_PAIR_VALID_FROM_SKEW", "GFS_PAIR_SKEW_FAIL_CLOSED_REQUIRED");
+  includes(sourceProgress, "MCFT_CAP09_KBS_SOIL_ORIGIN_SOURCE_ID_V1", "SOIL_LATEST_PROGRESS_REQUIRED");
 
   const host = read(authority.host_lifecycle_ref);
   includes(host, '"PLANNER_EXHAUSTED"', "EVIDENCE_HOST_NULL_TERMINAL_STATE_REQUIRED");
@@ -64,7 +73,6 @@ try {
   assert.deepEqual(authority.unconditional_blockers, [
     "PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_AUTHORITY_NOT_ESTABLISHED",
     "KBS_DAILY_BATCH_SINGLE_FETCH_MULTI_INTERVAL_PATH_NOT_IMPLEMENTED",
-    "GFS_CROSS_CYCLE_PAIR_PROGRESS_READ_PORT_NOT_IMPLEMENTED",
     "KBS_SOIL_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED",
     "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
   ]);
@@ -74,6 +82,9 @@ try {
   assert.equal(authority.adjudication.runtime_tick_cursor_may_drive_evidence_acquisition, false);
   assert.equal(authority.current_entrypoint.binding_authorized, false);
   assert.equal(authority.current_entrypoint.failure_code, "MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND");
+  assert.equal(authority.source_specific_requirements.gfs_bundle.cross_cycle_progress_read_port_implemented, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.weather_et0_pair_skew_fail_closed, true);
+  assert.equal(authority.source_specific_requirements.kbs_soil.latest_observed_event_progress_read_implemented, true);
   assert.equal(authority.host_lifecycle_gap.not_due_wait_implemented, true);
   assert.equal(authority.host_lifecycle_gap.production_planner_still_bindable, false);
 
@@ -95,7 +106,8 @@ try {
     status: "PASS",
     subject_sha: subject,
     authority_status: authority.status,
-    current_frontier: "SOURCE_SPECIFIC_PROGRESS_PORTS_REQUIRED",
+    current_frontier: "KBS_SINGLE_FETCH_MULTI_INTERVAL_PATH_REQUIRED",
+    source_specific_progress_ports_implemented: true,
     unconditional_blockers: authority.unconditional_blockers,
     static_machine_admission: "PASS_PARENT_SUBJECT",
     production_target_planner_bound: false,

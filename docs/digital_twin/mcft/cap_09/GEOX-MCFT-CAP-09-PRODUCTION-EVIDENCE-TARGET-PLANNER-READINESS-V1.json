@@ -1,9 +1,9 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_target_planner_readiness_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1",
-  "status": "HOST_NOT_DUE_FOUNDATION_IMPLEMENTED_REMAINING_BLOCKERS",
+  "status": "SOURCE_SPECIFIC_PROGRESS_PORTS_IMPLEMENTED_REMAINING_BLOCKERS",
   "stage": "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START",
-  "subject_predecessor_sha": "852ae1d222379865414fd94bcabcd8faa54e3b91",
+  "subject_predecessor_sha": "3423f16556a9cd00869f43d9c2f21ce8a5303705",
   "host_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
   "production_process_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
   "production_composition_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
@@ -32,13 +32,14 @@
         "SINGLE_FETCH_MULTI_INTERVAL_RETAIN_DECODE_CANONICALIZE",
         "DURABLE_RAINFALL_AND_HISTORICAL_ET0_PAIR_PROGRESS",
         "NO_NEW_BATCH_NOT_DUE_STATE_WITHOUT_PROVIDER_HAMMERING"
-      ]
+      ],
+      "progress_read_port": "READ_ONLY_RAINFALL_HISTORICAL_ET0_PAIR_PROGRESS_IMPLEMENTED"
     },
     "gfs_bundle": {
       "publication_mode": "SIX_HOUR_PROVIDER_CYCLES_WITH_HOURLY_TARGET_WINDOWS",
       "cursor_partition": "BINDING_ID_PLUS_CYCLE_SPECIFIC_ORIGIN_SOURCE_ID",
       "required_planning_semantics": "CROSS_CYCLE_LATEST_VALID_FROM_PAIR_PROGRESS",
-      "current_read_port_shape": "EXACT_BINDING_ID_PLUS_EXACT_ORIGIN_SOURCE_ID_ONLY",
+      "current_read_port_shape": "BINDING_SET_CROSS_CYCLE_PROGRESS_WITH_EXACT_CYCLE_PAIRING",
       "current_shape_bindable": false,
       "reason": "A_NEW_GFS_CYCLE_CREATES_NEW_ORIGIN_IDENTITIES_AND_CANNOT_RESTART_FROM_ONE_FIXED_ORIGIN",
       "required_foundation": [
@@ -46,7 +47,9 @@
         "WEATHER_ET0_PAIR_SKEW_FAIL_CLOSED",
         "PARTIAL_PAIR_REPLAY_WITH_RESTORED_INGESTED_AT",
         "PROVIDER_CYCLE_SELECTION_REMAINS_IN_PRODUCT_PROVIDER"
-      ]
+      ],
+      "cross_cycle_progress_read_port_implemented": true,
+      "weather_et0_pair_skew_fail_closed": true
     },
     "kbs_soil": {
       "publication_mode": "IRREGULAR_PROVIDER_DEFINED_EVENT",
@@ -56,7 +59,8 @@
         "EXPLICIT_SOIL_POLL_DUE_POLICY",
         "LATEST_OBSERVED_EVENT_PROGRESS_READ",
         "IDEMPOTENT_NO_CHANGE_HANDLING"
-      ]
+      ],
+      "latest_observed_event_progress_read_implemented": true
     }
   },
   "host_lifecycle_gap": {
@@ -76,12 +80,10 @@
   "unconditional_blockers": [
     "PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_AUTHORITY_NOT_ESTABLISHED",
     "KBS_DAILY_BATCH_SINGLE_FETCH_MULTI_INTERVAL_PATH_NOT_IMPLEMENTED",
-    "GFS_CROSS_CYCLE_PAIR_PROGRESS_READ_PORT_NOT_IMPLEMENTED",
     "KBS_SOIL_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED",
     "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"
   ],
   "implementation_order": [
-    "ADD_READ_ONLY_SOURCE_SPECIFIC_PROGRESS_PORTS",
     "ADD_KBS_SINGLE_FETCH_MULTI_INTERVAL_PRODUCT_PATH",
     "ESTABLISH_EXPLICIT_BOOTSTRAP_AND_BACKFILL_HORIZON_AUTHORITY",
     "IMPLEMENT_PURE_SOURCE_SPECIFIC_PLANNER",
@@ -91,7 +93,11 @@
   "implemented_foundation": [
     "NON_TERMINAL_NOT_DUE_HOST_STATE",
     "NOT_DUE_SKIPS_CYCLE_DATABASE_PROVIDER_AND_WORK_ITEM_FACTORY",
-    "NOT_DUE_USES_BOUNDED_PRODUCTION_WAIT_PORT"
+    "NOT_DUE_USES_BOUNDED_PRODUCTION_WAIT_PORT",
+    "READ_ONLY_BINDING_SET_CURSOR_PROGRESS_PORT",
+    "KBS_RAINFALL_HISTORICAL_ET0_PAIR_PROGRESS",
+    "GFS_CROSS_CYCLE_PAIR_PROGRESS_WITH_SKEW_FAIL_CLOSED",
+    "KBS_SOIL_LATEST_EVENT_PROGRESS_READ"
   ],
   "current_entrypoint": {
     "status": "PACKAGED_FAIL_CLOSED_TARGET_PLANNER_UNBOUND",
@@ -109,5 +115,7 @@
     "a0_bootstrap": false,
     "o00_started": false,
     "mcft_cap09_completed": false
-  }
+  },
+  "source_progress_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_source_progress_v1.ts",
+  "source_progress_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PROGRESS_V1.ts"
 }
