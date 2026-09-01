@@ -39,6 +39,7 @@
     "ci:web:views-boundary": "pnpm --filter @geox/web lint:views-boundary",
     "ci:web:operation-detail-hooks": "pnpm --filter @geox/web lint:operation-detail-hooks",
     "ci:governance:contract-alignment": "node scripts/governance_acceptance/ACCEPTANCE_CONTRACT_ALIGNMENT_V1.cjs",
+    "ci:governance:bline-residual-authority-audit": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_RESIDUAL_AUTHORITY_AUDIT_V1.cjs",
     "ci:governance:fact-envelope": "node scripts/governance_acceptance/ACCEPTANCE_FACT_ENVELOPE_V1.cjs",
     "ci:governance:appleii-time-coverage": "node scripts/governance_acceptance/ACCEPTANCE_APPLEII_TIME_COVERAGE_V1.cjs",
     "ci:governance:problem-state-uncertainty": "node scripts/governance_acceptance/ACCEPTANCE_PROBLEM_STATE_UNCERTAINTY_V1.cjs",

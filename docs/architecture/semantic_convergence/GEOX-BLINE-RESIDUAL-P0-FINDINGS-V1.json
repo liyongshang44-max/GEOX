@@ -1,0 +1,228 @@
+{
+  "schema_version": "bline_residual_p0_findings_v1",
+  "status": "ACTIVE_AUDIT_EVIDENCE",
+  "audit_head_basis": "fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8",
+  "business_behavior_changed": false,
+  "mcft_implementation_changed": false,
+  "findings": [
+    {
+      "finding_id": "P0-RES-001",
+      "severity": "P0",
+      "title": "Operator dispatch intent is persisted as DISPATCHED",
+      "path": "apps/server/src/routes/v1/operator_dispatch_actions.ts",
+      "evidence": [
+        "writeDispatchFact writes fact type ao_act_dispatch_v1",
+        "TASK_DISPATCH maps nextStatus to DISPATCHED",
+        "the write occurs directly in the operator action route"
+      ],
+      "semantic_risk": "operator request is represented using the same term later used by runtime dispatch delivery",
+      "required_direction": "operator action must become dispatch intent/request; canonical AO-ACT runtime must own delivery/acceptance state"
+    },
+    {
+      "finding_id": "P0-RES-002",
+      "severity": "P0",
+      "title": "AO-ACT DISPATCHED has multiple incompatible meanings",
+      "paths": [
+        "apps/server/src/routes/v1/operator_dispatch_actions.ts",
+        "apps/server/src/domain/controlplane/task_service.ts",
+        "apps/executor/src/run_dispatch_once.ts"
+      ],
+      "evidence": [
+        "operator route writes ao_act_dispatch_v1.status=DISPATCHED",
+        "dispatch queue claim changes READY to DISPATCHED while leasing the item",
+        "executor writes DISPATCHED before adapter.execute()",
+        "executor writes ACKED only after adapter success"
+      ],
+      "semantic_risk": "operator intent, lease/claim, and adapter-send stage are conflated",
+      "required_direction": "split dispatch_intent, claim/lease, send/delivery, provider acknowledgement and receipt semantics"
+    },
+    {
+      "finding_id": "P0-RES-003",
+      "severity": "P0",
+      "title": "Agronomy Agent fabricates missing soil moisture before decision production",
+      "path": "apps/server/src/jobs/agronomy_agent.ts",
+      "evidence": [
+        "DEFAULT_SOIL_MOISTURE=30",
+        "missing telemetry falls back to DEFAULT_SOIL_MOISTURE",
+        "effectiveSoilMoisture is supplied to recommendation generation",
+        "the job writes decision_recommendation_v1 and can create operation_plan_v1"
+      ],
+      "semantic_risk": "missing evidence becomes an authoritative numeric observation and can influence downstream action",
+      "required_direction": "shadow legacy calculator through qualified evidence; missing evidence must remain missing/unknown; remove direct OperationPlan authority after comparison"
+    },
+    {
+      "finding_id": "P0-RES-004",
+      "severity": "P0",
+      "title": "Formal Acceptance can write fabricated field-response measurements into formal learning memory",
+      "path": "apps/server/src/routes/acceptance_v1.ts",
+      "evidence": [
+        "formal acceptance may pass on formal coverage/as-applied/flow-meter/variable-zone evidence without requiring pre/post soil-moisture fields",
+        "when verdict=PASS and formal_acceptance=true, missing pre_soil_moisture falls back to 0.18",
+        "missing post_soil_moisture can fall back to 0.24",
+        "the resulting memory is written as FORMAL_FIELD_MEMORY",
+        "trust_level=FORMAL_ACCEPTED",
+        "customer_visible_memory=true",
+        "learning_eligible=true"
+      ],
+      "semantic_risk": "missing outcome measurement is converted into fabricated numeric outcome memory and can become learning input",
+      "required_direction": "formal memory must use measured/qualified observation pairs or remain unknown; no numeric fallback may gain FORMAL_ACCEPTED or learning authority"
+    },
+    {
+      "finding_id": "P0-RES-005",
+      "severity": "P0_AUDIT",
+      "title": "B-02 does not prove whole-repository producer completeness",
+      "paths": [
+        "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs"
+      ],
+      "evidence": [
+        "B02 linter_scope is STATIC_EXPLICIT_ONLY",
+        "planner/compiler_v1.ts and programs_core_v1.ts were absent from B-09y register/graph",
+        "operator_dispatch_actions.ts, human_executors_v1.ts, twin decision cycle and other active surfaces were absent",
+        "the prior general CI did not directly execute the B02 linter"
+      ],
+      "semantic_risk": "B02 PASS could coexist with unregistered authority-capable paths",
+      "required_direction": "whole-repository residual authority reverse scan must gate unregistered producers/derivers before authority removal"
+    },
+    {
+      "finding_id": "P0-RES-006",
+      "severity": "P0_AUDIT",
+      "title": "Formal ROI and Field Memory have active under-registered writer surfaces",
+      "paths": [
+        "apps/server/src/routes/v1/twin_kernel_formalization.ts",
+        "apps/server/src/routes/v1/twin_kernel_operator_workflow.ts",
+        "apps/server/src/routes/field_memory_v1.ts",
+        "apps/server/src/services/field_memory_service.ts",
+        "apps/server/src/routes/acceptance_v1.ts"
+      ],
+      "evidence": [
+        "Twin Kernel formalization exposes active POST routes that persist roi_entry_v1 and field_memory_v1",
+        "Twin Kernel operator workflow exposes explicit formalization actions",
+        "field-memory route creates formal Field Memory from Acceptance",
+        "Acceptance route also writes formal Field Memory through field_memory_service"
+      ],
+      "semantic_risk": "multiple valid-looking writer surfaces exist but are not completely represented in B-Line machine ownership inventory",
+      "required_direction": "inventory every writer and establish a single formalization authority contract before cutover"
+    },
+    {
+      "finding_id": "P0-RES-007",
+      "severity": "P0",
+      "title": "Evidence export job mints parallel Acceptance PASS/FAIL authority",
+      "paths": [
+        "apps/server/src/routes/delivery_evidence_export_v1.ts",
+        "apps/server/src/modules/evidence/registerEvidenceModule.ts",
+        "apps/server/src/jobs/runtime.ts"
+      ],
+      "evidence": [
+        "registerEvidenceModule registers registerDeliveryEvidenceExportV1Routes",
+        "jobs/runtime.ts executes fetchPendingJobs/runQueuedEvidenceExportJob",
+        "runEvidenceExportJob appends acceptance_result_v1 to facts",
+        "verdict is computed as taskFacts.length > 0 ? PASS : FAIL",
+        "the route requires only ao_act.index.read for job creation"
+      ],
+      "semantic_risk": "evidence export can create authoritative-looking acceptance independently of the formal Acceptance Engine and evidence gate",
+      "required_direction": "export must consume existing canonical acceptance/evidence; exporting must never mint an Acceptance verdict"
+    },
+    {
+      "finding_id": "P0-RES-008",
+      "severity": "P0",
+      "title": "Formal Field Memory can bind unrelated latest device observations as operation outcome",
+      "paths": [
+        "apps/server/src/routes/field_memory_v1.ts",
+        "apps/server/src/services/field_memory_service.ts"
+      ],
+      "evidence": [
+        "POST /api/v1/field-memory/from-acceptance calls createFormalFieldMemoryFromAcceptanceV1",
+        "after acceptance/evidence/receipt observation-pair lookup misses, the service falls back to loadDeviceObservationPairV1",
+        "loadDeviceObservationPairV1 filters only tenant/project/group/field/metric and value_num",
+        "it orders device_observation_index_v1 by observed_at_ts_ms DESC and LIMIT 2",
+        "no operation_plan_id, receipt_id, acceptance occurred_at, execution interval, or causal window constrains the selected pair",
+        "the resulting pair is persisted as FORMAL_FIELD_MEMORY with FORMAL_ACCEPTED and learning_eligible=true"
+      ],
+      "semantic_risk": "latest field observations can be misattributed as the before/after outcome of an unrelated accepted operation and enter formal learning memory",
+      "required_direction": "formal field-response memory must bind an observation pair causally to the accepted operation or fail closed; latest-two field fallback is forbidden"
+    },
+    {
+      "finding_id": "P0-RES-009",
+      "severity": "P0",
+      "title": "Fertilization acceptance can mint PASS from caller-supplied zone assertions without execution evidence verification",
+      "paths": [
+        "apps/server/src/routes/v1/fertilization.ts",
+        "apps/server/src/services/fertilization/fertilization_service_v1.ts"
+      ],
+      "evidence": [
+        "registerCoreV1Routes unconditionally registers registerFertilizationV1Routes",
+        "POST /api/v1/fertilization/acceptance/evaluate forwards request body into FertilizationServiceV1.evaluateAcceptance",
+        "the write authorization accepts any of fields.write, prescription.write, acceptance.evaluate, or security.admin",
+        "evaluateAcceptance computes zone_results directly from input.zone_applications",
+        "receipt_id, act_task_id, operation_plan_id and as_applied_id are copied from caller input but are not loaded or verified",
+        "no AO-ACT receipt, AsExecuted record, evidence artifact, or canonical Acceptance fact is required before acceptance_status=PASS",
+        "ALL_REQUIRED_ZONES_PASS can therefore be produced from caller assertions alone"
+      ],
+      "semantic_risk": "caller-provided execution claims can be promoted into an authoritative-looking fertilization acceptance PASS without proving execution provenance",
+      "required_direction": "fertilization acceptance must consume exact canonical execution evidence / receipt / AsExecuted bindings and fail closed on missing provenance; acceptance evaluation should require the dedicated acceptance authority scope"
+    },
+    {
+      "finding_id": "P0-RES-010",
+      "severity": "P0",
+      "title": "Sampling acceptance uses latest-wins receipt/lab selection when exact source identity is not supplied",
+      "paths": [
+        "apps/server/src/routes/v1/sampling.ts",
+        "apps/server/src/services/sampling/sampling_service_v1.ts"
+      ],
+      "evidence": [
+        "POST /api/v1/sampling/acceptance/evaluate makes import_id optional",
+        "findReceiptBySampleId selects sample_receipt_v1 by sample_id ORDER BY occurred_at DESC LIMIT 1",
+        "findLabResultBySampleId without import_id uses the shared FIND_FACT_SQL ORDER BY occurred_at DESC LIMIT 1",
+        "createReceipt can append multiple receipts for the same sample_id because receipt_id is independently generated",
+        "createLabResult can append multiple imports for the same sample_id because import_id may be independently generated",
+        "the selected receipt/lab rows determine PASS/FAIL/INSUFFICIENT_EVIDENCE"
+      ],
+      "semantic_risk": "later receipt or lab facts can silently change which evidence is treated as authoritative for sampling acceptance without an explicit exact source binding",
+      "required_direction": "sampling acceptance must bind exact receipt and lab-import identities (or an explicit immutable version relation) and fail closed on ambiguity; latest-wins selection is forbidden"
+    },
+    {
+      "finding_id": "P0-RES-011",
+      "severity": "P0",
+      "title": "Formal Field Memory fabricates confidence=0.8 when no confidence evidence is supplied",
+      "paths": [
+        "apps/server/src/services/field_memory_service.ts",
+        "apps/server/src/routes/acceptance_v1.ts",
+        "apps/server/src/routes/v1/twin_kernel_formalization.ts",
+        "apps/server/src/routes/v1/twin_kernel_operator_workflow.ts",
+        "apps/server/db/migrations/2026_05_06_field_memory_v1_full_contract.sql",
+        "docker/postgres/init/001_schema.sql",
+        "docker/postgres/init/004_field_memory_v1_full_contract.sql"
+      ],
+      "evidence": [
+        "recordMemoryV1 computes confidence as num(metrics.confidence) ?? 0.8",
+        "the canonical acceptance formal-memory call supplies before/after soil moisture, target range, success and acceptance_passed but no metrics.confidence",
+        "that Acceptance path sets memory_lane=FORMAL_FIELD_MEMORY, trust_level=FORMAL_ACCEPTED, customer_visible_memory=true and learning_eligible=true, so the fabricated 0.8 enters formal learning",
+        "field_memory_v1 schema/bootstrap declares confidence NUMERIC NOT NULL DEFAULT 0.8",
+        "Twin Kernel formalization and operator-workflow writers insert memory_type=FORMAL_FIELD_MEMORY and memory_status=FORMAL_MEMORY_WRITTEN without a confidence column, so PostgreSQL silently supplies 0.8",
+        "Twin Kernel legacy formalization rows currently leave customer_visible_memory/learning_eligible at false defaults, so their fabricated confidence is an internal formalization semantic defect rather than the same customer-learning escalation as the Acceptance path",
+        "Flight Table technical writer supplies explicit confidence values and does not require the database default"
+      ],
+      "semantic_risk": "absence of confidence evidence is converted into a fabricated numeric confidence at both service and schema layers; the Acceptance path promotes it into customer-visible, learning-eligible formal memory, while legacy Twin Kernel formalization objects also acquire an unsupported numeric confidence",
+      "required_direction": "remove the field_memory_v1 confidence default as an authority source; formal memory must carry provenance-bound explicit confidence or fail closed, while technical/dev writers may supply their own explicit confidence"
+    },
+    {
+      "finding_id": "P0-RES-012",
+      "severity": "P0",
+      "title": "Formal Field Memory source selection treats missing scope as caller scope",
+      "paths": [
+        "apps/server/src/services/field_memory_service.ts",
+        "apps/server/src/routes/field_memory_v1.ts"
+      ],
+      "evidence": [
+        "loadAcceptanceResultForMemoryV1 uses COALESCE(payload.tenant_id, $1) = $1 and equivalent project/group predicates",
+        "loadEvidenceArtifactObservationPairV1 uses the same COALESCE fallback for tenant/project/group and also defaults missing operation binding to the requested operation_plan_id",
+        "loadReceiptObservationPairV1 uses the same COALESCE fallback for tenant/project/group",
+        "POST /api/v1/field-memory/from-acceptance supplies the authenticated caller tenant triple to these selectors",
+        "a source fact with missing scope fields is therefore treated as belonging to the caller scope instead of failing closed"
+      ],
+      "semantic_risk": "unscoped or partially scoped Acceptance/Evidence/Receipt facts can acquire caller tenant scope during Formal Field Memory materialization, violating exact provenance and null-wildcard prohibitions",
+      "required_direction": "formal-memory source facts must carry and exactly match tenant/project/group and required operation/receipt identities; missing scope is a hard rejection, never a wildcard"
+    }
+  ]
+}
