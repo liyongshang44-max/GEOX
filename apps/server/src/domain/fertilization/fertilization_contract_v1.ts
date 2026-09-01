@@ -232,6 +232,11 @@ export const FERTILIZATION_DOMAIN_HARD_RULES_V1 = {
   recommendation_not_prescription: "fertilization_recommendation ≠ fertilization prescription",
   prescription_not_approved_operation: "fertilization_prescription ≠ approved operation",
   receipt_success_not_acceptance_pass: "receipt success ≠ fertilization acceptance PASS",
+  caller_zone_assertion_not_execution_evidence: "caller-supplied zone application assertions ≠ execution evidence",
+  exact_execution_chain_required: "fertilization acceptance requires exact receipt -> AsExecuted -> AsApplied identity continuity",
+  zone_result_from_as_applied_only: "fertilization acceptance zone results must be derived from exact AsApplied VARIABLE_BY_ZONE evidence",
+  acceptance_threshold_policy_exact: "fertilization acceptance thresholds come from exact variable prescription acceptance_conditions in 0-100 percent units",
+  write_scope_not_acceptance_authority: "fields.write / prescription.write ≠ acceptance.evaluate authority",
   operation_average_must_not_hide_zone_failure: "operation-level average 不得掩盖 zone-level over/under application",
   acceptance_pass_must_not_write_roi_field_memory_customer_success: "fertilization acceptance PASS 不得直接写 ROI / Field Memory / customer success",
 } as const;
