@@ -152,6 +152,15 @@ try {
   assert.equal(kbsPublicationCycle.includes("setInterval("), false, "KBS_CYCLE_CADENCE_OWNERSHIP_FORBIDDEN");
   assert.equal(kbsPublicationCycle.includes("process.env"), false, "KBS_CYCLE_ENV_AUTHORITY_FORBIDDEN");
 
+  const gfsReplayReader = read(authority.gfs_fact_replay_provenance_reader_ref);
+  includes(gfsReplayReader, "FACT_REPLAY_RAW_REQUEST_ID_REQUIRED", "GFS_REPLAY_REQUEST_ID_REQUIRED");
+  includes(gfsReplayReader, "FACT_REPLAY_RAW_SOURCE_LOCATOR_REQUIRED", "GFS_REPLAY_SOURCE_LOCATOR_REQUIRED");
+  includes(gfsReplayReader, "externalFormalEvidenceFactIdV1", "GFS_REPLAY_FACT_ID_RECOMPUTE_REQUIRED");
+  includes(gfsReplayReader, "FACT_REPLAY_RECORD_SEMANTIC_HASH_MISMATCH", "GFS_REPLAY_SEMANTIC_HASH_REQUIRED");
+  includes(gfsReplayReader, "database_write_count: 0", "GFS_REPLAY_READ_ONLY_REQUIRED");
+  assert.equal(gfsReplayReader.includes("fetch("), false, "GFS_REPLAY_PROVIDER_FETCH_FORBIDDEN");
+  assert.equal(gfsReplayReader.includes("process.env"), false, "GFS_REPLAY_ENV_AUTHORITY_FORBIDDEN");
+
   const purePlanner = read(authority.pure_source_planner_ref);
   includes(purePlanner, "planProductionEvidenceSourcesV1", "PURE_SOURCE_SPECIFIC_PLANNER_REQUIRED");
   includes(purePlanner, "KBS_RAW_HOURLY_PUBLICATION_BASELINE_REQUIRED", "KBS_PUBLICATION_BASELINE_PLAN_REQUIRED");
@@ -228,6 +237,10 @@ try {
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.fixed_latest_24_rows_bootstrap_authorized, false);
   assert.equal(authority.source_specific_requirements.gfs_bundle.pure_planner_decision_implemented, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.durable_target_dedup_implemented, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.canonical_fact_request_id_persisted, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.canonical_fact_source_locator_persisted, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.exact_fact_replay_provenance_read_port_implemented, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.restored_ingested_at_replay_input_available, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.partial_pair_production_rehydration_adapter_implemented, false);
   assert.equal(authority.source_specific_requirements.kbs_soil.pure_planner_decision_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.single_fetch_multi_interval_path_implemented, true);
@@ -256,7 +269,8 @@ try {
     status: "PASS",
     subject_sha: subject,
     authority_status: authority.status,
-    current_frontier: "GFS_PARTIAL_PAIR_PRODUCTION_REHYDRATION_ADAPTER_REQUIRED",
+    current_frontier: "GFS_PARTIAL_PAIR_ZERO_PROVIDER_REHYDRATION_ADAPTER_REQUIRED",
+    gfs_replay_provenance_foundation_implemented: true,
     kbs_publication_cycle_adapter_implemented: true,
     shared_verified_retained_raw_replay_primitive_implemented: true,
     kbs_historical_prefix_snapshot_comparison_implemented: true,

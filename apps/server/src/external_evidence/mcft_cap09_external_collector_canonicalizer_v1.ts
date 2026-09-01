@@ -293,8 +293,10 @@ function canonicalizeDraft(input: {
     conversion_rule_version: input.draft.conversion_rule.conversion_rule_version,
   };
   const rawProvenancePublic = {
+    request_id: input.provenance.request_id,
     provider_id: input.provenance.provider_id,
     source_family: input.provenance.source_family,
+    source_locator: input.provenance.source_locator,
     final_locator: input.provenance.final_locator,
     source_issue_time: input.provenance.source_issue_time ?? null,
     source_event_time: input.provenance.source_event_time ?? null,

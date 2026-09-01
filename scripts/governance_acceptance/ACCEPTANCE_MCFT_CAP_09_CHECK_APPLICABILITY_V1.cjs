@@ -337,6 +337,17 @@ function main() {
     assert(byId(result, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(kbsPublicationCyclePath));
   }
 
+  // CP-4: exact fact replay provenance is Phase3-owned and production-owner-visible.
+  for (const replayPath of ["apps/server/src/persistence/external_evidence/postgres_external_evidence_fact_replay_provenance_v1.ts","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_V1.ts"]) {
+    const replayPlan = plan(authority, registry, [replayPath]);
+    assert.equal(replayPlan.status, "PASS");
+    assert.equal(replayPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(replayPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(replayPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(replayPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes(replayPath));
+    assert(byId(replayPlan, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(replayPath));
+  }
+
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
   const phase3 = plan(authority, registry, [phase3Path]);

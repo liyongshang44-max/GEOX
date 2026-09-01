@@ -60,6 +60,8 @@ on:
       - 'apps/server/src/external_evidence/mcft_cap09_kbs_raw_hourly_publication_cycle_service_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1.ts'
       - 'apps/server/src/persistence/external_evidence/postgres_external_formal_evidence_visibility_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_V1.ts'
+      - 'apps/server/src/persistence/external_evidence/postgres_external_evidence_fact_replay_provenance_v1.ts'
       - 'apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_PRIVATE_CANDIDATE_IO_V1.ts'
@@ -139,7 +141,8 @@ jobs:
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_SNAPSHOT_COMPARISON_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1.ts
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_V1.ts
       - name: Prove durable Evidence lease and supply cursor semantics
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts
       - name: Prove fenced KBS publication baseline current pointer
@@ -205,6 +208,8 @@ jobs:
           CREATE TABLE public.approvals (id integer PRIMARY KEY);
           CREATE TABLE public.actions (id integer PRIMARY KEY);
           SQL
+      - name: Prove replay-complete External Evidence fact provenance readback
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_V1.ts
       - name: Apply v13 Evidence-plane forcing operational schema
         run: |
           set -euo pipefail
@@ -240,6 +245,7 @@ jobs:
               pathlib.Path("apps/server/src/external_evidence/mcft_cap09_kbs_raw_hourly_publication_cycle_service_v1.ts"),
               pathlib.Path("apps/server/src/external_evidence/verified_retained_raw_replay_v1.ts"),
 
+              pathlib.Path("apps/server/src/persistence/external_evidence/postgres_external_evidence_fact_replay_provenance_v1.ts"),
               pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_runtime_governed_ingress_v1.ts"),
           ]
           decoder_file = pathlib.Path("apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts")
@@ -325,5 +331,6 @@ jobs:
             acceptance-output/MCFT_CAP_09_KBS_PUBLICATION_SNAPSHOT_COMPARISON_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_V1_RESULT.json
           if-no-files-found: warn
           retention-days: 90
