@@ -233,9 +233,9 @@ async function main() {
 
   const legacyLabSampleId = `${ids.sample_id}-legacy-lab`;
   const legacyLabReceipt = await postJson('/api/v1/sampling/receipt', {
+    ...scopedBody,
     plan_id: planRes.json.plan_id,
     sample_id: legacyLabSampleId,
-    ...scopedBody,
     collected_at_ts: now + 5,
     collector_actor_id: 'collector-legacy-lab',
     sample_type: 'SOIL',
