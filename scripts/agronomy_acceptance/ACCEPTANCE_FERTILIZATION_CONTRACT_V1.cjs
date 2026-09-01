@@ -121,6 +121,7 @@ function assertAll(text, required, label) {
   const requiredAcceptanceFields = [
     'fertilization_acceptance_id',
     'fertilization_prescription_id',
+    'variable_prescription_id',
     'tenant_id',
     'project_id',
     'group_id',
@@ -128,6 +129,7 @@ function assertAll(text, required, label) {
     'operation_plan_id',
     'act_task_id',
     'receipt_id',
+    'as_executed_id',
     'as_applied_id',
     'acceptance_status',
     'zone_results',
@@ -142,6 +144,9 @@ function assertAll(text, required, label) {
     'operation_rollup_policy',
     'ALL_REQUIRED_ZONES_PASS',
     'NEEDS_REVIEW_ON_MISSING_ZONE',
+    'acceptance_policy',
+    'amount_tolerance_percent',
+    'required_coverage_percent',
     'evaluated_at_ts',
   ];
 
@@ -169,6 +174,11 @@ function assertAll(text, required, label) {
     'fertilization_recommendation ≠ fertilization prescription',
     'fertilization_prescription ≠ approved operation',
     'receipt success ≠ fertilization acceptance PASS',
+    'caller-supplied zone application assertions ≠ execution evidence',
+    'fertilization acceptance requires exact receipt -> AsExecuted -> AsApplied identity continuity',
+    'fertilization acceptance zone results must be derived from exact AsApplied VARIABLE_BY_ZONE evidence',
+    'fertilization acceptance thresholds come from exact variable prescription acceptance_conditions in 0-100 percent units',
+    'fields.write / prescription.write ≠ acceptance.evaluate authority',
     'operation-level average 不得掩盖 zone-level over/under application',
     'fertilization acceptance PASS 不得直接写 ROI / Field Memory / customer success',
   ];
