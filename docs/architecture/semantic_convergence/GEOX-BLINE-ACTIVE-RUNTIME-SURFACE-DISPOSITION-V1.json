@@ -1,0 +1,954 @@
+{
+  "schema_version": "bline_active_runtime_surface_disposition_v1",
+  "status": "FAIL_CLOSED_DISCOVERY",
+  "base_repair_head": "6da28604865eaf3c299d9ffaa102db4544947e75",
+  "proof_hardening_source": "#3433 f2271f411794f8e9e582b5bf36164836dbf89a6d",
+  "root_registry": "apps/server/src/modules/domain/registerDomainModules.ts",
+  "required_fields": [
+    "source_path",
+    "activation_parent",
+    "surface_role",
+    "delegates_to",
+    "replacement_path",
+    "sunset_condition",
+    "semantic_family",
+    "runtime_reachable",
+    "owner"
+  ],
+  "allowed_surface_roles": [
+    "AUTHORITY",
+    "DERIVER",
+    "ADAPTER",
+    "COMPATIBILITY",
+    "PROJECTION",
+    "READ_ONLY",
+    "ACTIVATION_ONLY",
+    "INFRASTRUCTURE"
+  ],
+  "invariants": [
+    "ACTIVE_RUNTIME_SURFACE_WITHOUT_DISPOSITION = FAIL",
+    "AUTHORITY_CAPABILITY_WITHOUT_INVENTORY = FAIL",
+    "STALE_ORPHAN_CLASSIFICATION_CONTRADICTS_MODULE_GRAPH = FAIL",
+    "READ_ROUTE_WITH_SEMANTIC_WRITE = FAIL",
+    "LEGACY_TWIN_AUTHORITY_NOT_DECLARED = FAIL",
+    "INVENTORY_METADATA_DRIFT = FAIL"
+  ],
+  "surfaces": [
+    {
+      "surface_id": "ARS-001",
+      "source_path": "apps/server/src/modules/domain/registerDomainModules.ts",
+      "activation_parent": [
+        "apps/server/src/app.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/registerCoreV1Routes.ts",
+        "apps/server/src/modules/devtools/registerDevtoolsModule.ts",
+        "apps/server/src/modules/sensing/registerSensingModule.ts",
+        "apps/server/src/modules/field/registerFieldModule.ts",
+        "apps/server/src/modules/field_memory/registerFieldMemoryModule.ts",
+        "apps/server/src/modules/decision/registerDecisionModule.ts",
+        "apps/server/src/modules/execution/registerExecutionModule.ts",
+        "apps/server/src/modules/evidence/registerEvidenceModule.ts",
+        "apps/server/src/modules/judge/registerJudgeModule.ts",
+        "apps/server/src/modules/acceptance/registerAcceptanceModule.ts",
+        "apps/server/src/modules/reporting/registerReportingModule.ts",
+        "apps/server/src/modules/commercial/registerCommercialModule.ts",
+        "apps/server/src/modules/agronomy/registerAgronomyModule.ts",
+        "apps/server/src/modules/prescription/registerPrescriptionModule.ts",
+        "apps/server/src/modules/as_executed/registerAsExecutedModule.ts",
+        "apps/server/src/modules/roi/registerRoiLedgerModule.ts",
+        "apps/server/src/modules/operator/registerOperatorModule.ts",
+        "apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts",
+        "apps/server/src/modules/runtime_health/registerRuntimeHealthModule.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_APP_COMPOSITION",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-002",
+      "source_path": "apps/server/src/routes/registerCoreV1Routes.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/v1/runtime_features_v1.ts",
+        "apps/server/src/routes/v1/ao_act.ts",
+        "apps/server/src/routes/v1/approvals.ts",
+        "apps/server/src/routes/v1/devices.ts",
+        "apps/server/src/routes/v1/sense.ts",
+        "apps/server/src/routes/v1/sampling.ts",
+        "apps/server/src/routes/v1/fertilization.ts",
+        "apps/server/src/routes/v1/inspection.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-003",
+      "source_path": "apps/server/src/modules/devtools/registerDevtoolsModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/sim_config.ts",
+        "apps/server/src/routes/device_simulator_v1.ts",
+        "apps/server/src/routes/dev/flight_table_v1.ts",
+        "apps/server/src/routes/dev/flight_table_skills_v1.ts",
+        "apps/server/src/routes/dev/flight_table_run_control_v1.ts",
+        "apps/server/src/routes/dev/flight_table_telemetry_v1.ts",
+        "apps/server/src/routes/dev/flight_table_decision_v1.ts",
+        "apps/server/src/routes/dev/flight_table_operation_v1.ts",
+        "apps/server/src/routes/dev/flight_table_evidence_v1.ts",
+        "apps/server/src/routes/dev/flight_table_report_learning_v1.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-004",
+      "source_path": "apps/server/src/modules/sensing/registerSensingModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/raw.ts",
+        "apps/server/src/routes/telemetry_v1.ts",
+        "apps/server/src/routes/device_heartbeat_v1.ts",
+        "apps/server/src/routes/device_status_v1.ts",
+        "apps/server/src/routes/weather_v1.ts",
+        "apps/server/src/routes/sensing_fact_envelope_v1.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-005",
+      "source_path": "apps/server/src/modules/field/registerFieldModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/fields_v1.ts",
+        "apps/server/src/routes/field_runtime_scope_options_v1.ts",
+        "apps/server/src/routes/field_tags_v1.ts",
+        "apps/server/src/routes/field_timeline_v1.ts",
+        "apps/server/src/routes/field_program_state_v1.ts",
+        "apps/server/src/routes/field_portfolio_v1.ts",
+        "apps/server/src/routes/programs_v1.ts",
+        "apps/server/src/routes/management_zones_v1.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-006",
+      "source_path": "apps/server/src/modules/field_memory/registerFieldMemoryModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/field_memory_v1.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-007",
+      "source_path": "apps/server/src/modules/decision/registerDecisionModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/field_crop_context_hooks_v1.ts",
+        "apps/server/src/routes/value_chain_roi_hooks_v1.ts",
+        "apps/server/src/routes/appleii_stage1_evidence_gate_v1.ts",
+        "apps/server/src/routes/decision_eligibility_policy_declarations_v1.ts",
+        "apps/server/src/routes/decision_engine_v1.ts",
+        "apps/server/src/routes/skills_rules_v1.ts",
+        "apps/server/src/routes/skills_v1.ts",
+        "apps/server/src/routes/skill_runs_v1.ts",
+        "apps/server/src/routes/skill_runtime_v1.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-008",
+      "source_path": "apps/server/src/modules/execution/registerExecutionModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/human_executors_v1.ts",
+        "apps/server/src/routes/human_ops_v1.ts",
+        "apps/server/src/routes/controlplane_v1.ts",
+        "apps/server/src/routes/scheduling_conflicts_v1.ts",
+        "apps/server/src/routes/alerts_v1.ts",
+        "apps/server/src/routes/alert_workflow_v1.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-009",
+      "source_path": "apps/server/src/modules/evidence/registerEvidenceModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/evidence_bundle_v1.ts",
+        "apps/server/src/routes/evidence_report_v1.ts",
+        "apps/server/src/routes/evidence_export_jobs_v1.ts",
+        "apps/server/src/routes/delivery_evidence_export_v1.ts",
+        "apps/server/src/routes/audit_export_v1.ts",
+        "apps/server/src/routes/evidence_artifact_from_as_executed_v1.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-010",
+      "source_path": "apps/server/src/modules/judge/registerJudgeModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/judge_v2.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-011",
+      "source_path": "apps/server/src/modules/acceptance/registerAcceptanceModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/acceptance_v1.ts",
+        "apps/server/src/routes/water_response_verification_v1.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-012",
+      "source_path": "apps/server/src/modules/reporting/registerReportingModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/operation_report_chain_hook_v1.ts",
+        "apps/server/src/routes/field_report_semantics_hook_v1.ts",
+        "apps/server/src/routes/customer_scope_response_hook_v1.ts",
+        "apps/server/src/routes/operation_state_v1.ts",
+        "apps/server/src/routes/reports_v1.ts",
+        "apps/server/src/routes/reports_dashboard_v1.ts",
+        "apps/server/src/routes/dashboard_v1.ts",
+        "apps/server/src/routes/customer_v1.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-013",
+      "source_path": "apps/server/src/modules/commercial/registerCommercialModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/auth_v1.ts",
+        "apps/server/src/routes/billing_v1.ts",
+        "apps/server/src/routes/sla_v1.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-014",
+      "source_path": "apps/server/src/modules/agronomy/registerAgronomyModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/agronomy_v0.ts",
+        "apps/server/src/routes/agronomy_media_v1.ts",
+        "apps/server/src/routes/agronomy_interpretation_v1.ts",
+        "apps/server/src/routes/agronomy_inference_v1.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-015",
+      "source_path": "apps/server/src/modules/prescription/registerPrescriptionModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/field_crop_context_hooks_v1.ts",
+        "apps/server/src/routes/prescriptions_v1.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-016",
+      "source_path": "apps/server/src/modules/as_executed/registerAsExecutedModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/as_executed_v1.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-017",
+      "source_path": "apps/server/src/modules/roi/registerRoiLedgerModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/roi_ledger_v1.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-018",
+      "source_path": "apps/server/src/modules/operator/registerOperatorModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/v1/operator.ts",
+        "apps/server/src/routes/v1/operator_approval_read.ts",
+        "apps/server/src/routes/v1/operator_approval_actions.ts",
+        "apps/server/src/routes/v1/operator_acceptance_actions.ts",
+        "apps/server/src/routes/v1/operator_dispatch_actions.ts",
+        "apps/server/src/routes/v1/operator_learning_validation.ts",
+        "apps/server/src/routes/v1/operator_device_offline_actions.ts",
+        "apps/server/src/routes/v1/operator_twin_read_legacy_v1.ts",
+        "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts",
+        "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts",
+        "apps/server/src/routes/openapi_mcft_field_twin_read_v1.ts",
+        "apps/server/src/routes/v1/operator_evidence_twin.ts",
+        "apps/server/src/routes/v1/operator_twin_h31_h45_closure.ts",
+        "apps/server/src/routes/control_operation_plan_v1.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-019",
+      "source_path": "apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/v1/twin_kernel.ts",
+        "apps/server/src/routes/v1/twin_kernel_production_ingestion.ts",
+        "apps/server/src/routes/v1/twin_kernel_formalization.ts",
+        "apps/server/src/routes/v1/twin_kernel_operator_workflow.ts",
+        "apps/server/src/routes/v1/twin_kernel_business_closure.ts",
+        "apps/server/src/routes/v1/twin_kernel_trace.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-020",
+      "source_path": "apps/server/src/modules/runtime_health/registerRuntimeHealthModule.ts",
+      "activation_parent": [
+        "apps/server/src/modules/domain/registerDomainModules.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/runtime_health_service_gate_v1.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "NONE_WHILE_MODULE_REMAINS_PRODUCT_ACTIVE",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE_AUDIT_CLASSIFICATION"
+    },
+    {
+      "surface_id": "ARS-021",
+      "source_path": "apps/server/src/routes/v1/ao_act.ts",
+      "activation_parent": [
+        "apps/server/src/routes/registerCoreV1Routes.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/control_ao_act.ts"
+      ],
+      "replacement_path": [
+        "apps/server/src/routes/control_ao_act.ts"
+      ],
+      "sunset_condition": "KEEP PRIMARY /api/v1 FACADE; INTERNAL AUTHORITY MUST CONVERGE",
+      "semantic_family": [
+        "execution.task",
+        "execution.receipt",
+        "operation.plan"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-022",
+      "source_path": "apps/server/src/routes/v1/approvals.ts",
+      "activation_parent": [
+        "apps/server/src/routes/registerCoreV1Routes.ts"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/routes/control_approval_request_v1.ts"
+      ],
+      "replacement_path": [
+        "apps/server/src/routes/control_approval_request_v1.ts"
+      ],
+      "sunset_condition": "KEEP PRIMARY /api/v1 FACADE",
+      "semantic_family": [
+        "decision.approval"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-023",
+      "source_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "activation_parent": [
+        "apps/server/src/modules/decision/registerDecisionModule.ts"
+      ],
+      "surface_role": "COMPATIBILITY",
+      "delegates_to": [
+        "apps/server/src/domain/decision_engine_v1.ts"
+      ],
+      "replacement_path": [
+        "canonical CandidateDecision composition"
+      ],
+      "sunset_condition": "LEGACY AUTHORITY RETIRED AFTER CANDIDATE/ELIGIBILITY CUTOVER",
+      "semantic_family": [
+        "decision.candidate",
+        "decision.calculation",
+        "context.crop_stage"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-024",
+      "source_path": "apps/server/src/routes/v1/operator_twin_read_legacy_v1.ts",
+      "activation_parent": [
+        "apps/server/src/modules/operator/registerOperatorModule.ts"
+      ],
+      "surface_role": "COMPATIBILITY",
+      "delegates_to": [
+        "apps/server/src/routes/v1/operator_twin.ts"
+      ],
+      "replacement_path": [
+        "canonical operator/MCFT read model"
+      ],
+      "sunset_condition": "RETIRE AFTER LEGACY READ CLIENT CUTOVER",
+      "semantic_family": [
+        "presentation.read_model"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-025",
+      "source_path": "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts",
+      "activation_parent": [
+        "apps/server/src/modules/operator/registerOperatorModule.ts"
+      ],
+      "surface_role": "COMPATIBILITY",
+      "delegates_to": [
+        "apps/server/src/routes/v1/operator_twin.ts"
+      ],
+      "replacement_path": [
+        "canonical CandidateDecision submission"
+      ],
+      "sunset_condition": "RETIRE AFTER CANDIDATE SUBMISSION CUTOVER",
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-026",
+      "source_path": "apps/server/src/routes/v1/operator_twin.ts",
+      "activation_parent": [
+        "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts"
+      ],
+      "surface_role": "AUTHORITY",
+      "delegates_to": [],
+      "replacement_path": [
+        "canonical CandidateDecision adapter + canonical read model"
+      ],
+      "sunset_condition": "REMOVE LEGACY WRITE AUTHORITY AFTER SHADOW/CUTOVER",
+      "semantic_family": [
+        "decision.candidate",
+        "presentation.read_model"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-027",
+      "source_path": "apps/server/src/routes/control_approval_request_v1.ts",
+      "activation_parent": [
+        "apps/server/src/routes/v1/approvals.ts"
+      ],
+      "surface_role": "AUTHORITY",
+      "delegates_to": [],
+      "replacement_path": [
+        "canonical Approval service"
+      ],
+      "sunset_condition": "KEEP; CONVERGE INTERNAL AUTHORITY",
+      "semantic_family": [
+        "decision.approval",
+        "decision.candidate",
+        "operation.plan"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-028",
+      "source_path": "apps/server/src/routes/control_operation_plan_v1.ts",
+      "activation_parent": [
+        "apps/server/src/modules/operator/registerOperatorModule.ts"
+      ],
+      "surface_role": "AUTHORITY",
+      "delegates_to": [],
+      "replacement_path": [
+        "canonical OperationPlan lifecycle service"
+      ],
+      "sunset_condition": "KEEP EXPLICIT PLAN TRANSITION FACADE",
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-029",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "activation_parent": [
+        "apps/server/src/routes/v1/ao_act.ts"
+      ],
+      "surface_role": "AUTHORITY",
+      "delegates_to": [],
+      "replacement_path": [
+        "canonical AO-ACT execution runtime"
+      ],
+      "sunset_condition": "KEEP PRIMARY API; REMOVE TASK->PLAN ACKED COLLAPSE",
+      "semantic_family": [
+        "execution.task",
+        "execution.receipt",
+        "operation.plan",
+        "execution.adapter_resolution"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-030",
+      "source_path": "apps/server/src/routes/operation_state_v1.ts",
+      "activation_parent": [
+        "apps/server/src/modules/reporting/registerReportingModule.ts"
+      ],
+      "surface_role": "PROJECTION",
+      "delegates_to": [
+        "apps/server/src/domain/skill_registry/facts.ts"
+      ],
+      "replacement_path": [
+        "pure operation read model"
+      ],
+      "sunset_condition": "GET SIDE EFFECTS MUST BE REMOVED BEFORE CLOSURE",
+      "semantic_family": [
+        "presentation.read_model",
+        "governance.skill_binding"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-031",
+      "source_path": "apps/server/src/routes/acceptance_v1.ts",
+      "activation_parent": [
+        "apps/server/src/modules/acceptance/registerAcceptanceModule.ts"
+      ],
+      "surface_role": "AUTHORITY",
+      "delegates_to": [
+        "apps/server/src/domain/acceptance/engine_v1.ts",
+        "apps/server/src/domain/evidence/formal_evidence_policy_v1.ts"
+      ],
+      "replacement_path": [
+        "Acceptance -> Outcome -> Memory formalization"
+      ],
+      "sunset_condition": "DIRECT Acceptance->FieldMemory AUTHORITY MUST BE ADJUDICATED",
+      "semantic_family": [
+        "acceptance.verdict",
+        "field_memory"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-032",
+      "source_path": "apps/server/src/routes/water_response_verification_v1.ts",
+      "activation_parent": [
+        "apps/server/src/modules/acceptance/registerAcceptanceModule.ts"
+      ],
+      "surface_role": "AUTHORITY",
+      "delegates_to": [
+        "apps/server/src/domain/water_response/water_response_verification_from_acceptance_v1.ts"
+      ],
+      "replacement_path": [
+        "canonical OutcomeEvidence boundary"
+      ],
+      "sunset_condition": "KEEP",
+      "semantic_family": [
+        "outcome.evidence"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-033",
+      "source_path": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts",
+      "activation_parent": [
+        "apps/server/src/modules/operator/registerOperatorModule.ts"
+      ],
+      "surface_role": "READ_ONLY",
+      "delegates_to": [],
+      "replacement_path": [
+        "MCFT canonical read API"
+      ],
+      "sunset_condition": "MCFT_FROZEN_NO_BLINE_MODIFICATION",
+      "semantic_family": [
+        "presentation.read_model",
+        "twin.state",
+        "twin.forecast"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "MCFT_FROZEN"
+    },
+    {
+      "surface_id": "ARS-034",
+      "source_path": "apps/server/src/routes/v1/operator_evidence_twin.ts",
+      "activation_parent": [
+        "apps/server/src/modules/operator/registerOperatorModule.ts"
+      ],
+      "surface_role": "READ_ONLY",
+      "delegates_to": [],
+      "replacement_path": [
+        "governed operator evidence read model"
+      ],
+      "sunset_condition": "KEEP READ-ONLY",
+      "semantic_family": [
+        "presentation.read_model"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-035",
+      "source_path": "apps/server/src/routes/v1/operator_twin_h31_h45_closure.ts",
+      "activation_parent": [
+        "apps/server/src/modules/operator/registerOperatorModule.ts"
+      ],
+      "surface_role": "READ_ONLY",
+      "delegates_to": [],
+      "replacement_path": [
+        "canonical closure projection"
+      ],
+      "sunset_condition": "KEEP READ-ONLY",
+      "semantic_family": [
+        "presentation.read_model"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-036",
+      "source_path": "apps/server/src/routes/v1/twin_kernel.ts",
+      "activation_parent": [
+        "apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts"
+      ],
+      "surface_role": "AUTHORITY",
+      "delegates_to": [
+        "apps/server/src/domain/twin_kernel/field_state_snapshot_v1.ts",
+        "apps/server/src/domain/twin_kernel/forecast_run_v1.ts",
+        "apps/server/src/domain/twin_kernel/scenario_set_v1.ts",
+        "apps/server/src/domain/twin_kernel/calibration_replay_v1.ts",
+        "apps/server/src/domain/twin_kernel/field_learning_candidate_v1.ts"
+      ],
+      "replacement_path": [
+        "MCFT typed ports + governed replay/learning lanes"
+      ],
+      "sunset_condition": "LEGACY TWIN AUTHORITY FROZEN UNTIL POST-MCFT CUTOVER",
+      "semantic_family": [
+        "twin.state",
+        "twin.forecast",
+        "twin.scenario",
+        "governance.trace_projection"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-037",
+      "source_path": "apps/server/src/routes/v1/twin_kernel_production_ingestion.ts",
+      "activation_parent": [
+        "apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts"
+      ],
+      "surface_role": "ADAPTER",
+      "delegates_to": [],
+      "replacement_path": [
+        "source/replay/trace mapping only"
+      ],
+      "sunset_condition": "MUST NEVER BECOME CANONICAL STATE/FORECAST AUTHORITY",
+      "semantic_family": [
+        "governance.trace_projection"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-038",
+      "source_path": "apps/server/src/routes/v1/twin_kernel_formalization.ts",
+      "activation_parent": [
+        "apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts"
+      ],
+      "surface_role": "AUTHORITY",
+      "delegates_to": [],
+      "replacement_path": [
+        "single Acceptance->Outcome formalization service"
+      ],
+      "sunset_condition": "CONVERGE DUPLICATE ROI/MEMORY WRITERS",
+      "semantic_family": [
+        "field_memory",
+        "roi"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-039",
+      "source_path": "apps/server/src/routes/v1/twin_kernel_operator_workflow.ts",
+      "activation_parent": [
+        "apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts"
+      ],
+      "surface_role": "COMPATIBILITY",
+      "delegates_to": [],
+      "replacement_path": [
+        "human command facade over one formalization service"
+      ],
+      "sunset_condition": "REMOVE INDEPENDENT TRUTH AFTER SERVICE CONVERGENCE",
+      "semantic_family": [
+        "field_memory",
+        "roi"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-040",
+      "source_path": "apps/server/src/routes/v1/twin_kernel_business_closure.ts",
+      "activation_parent": [
+        "apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts"
+      ],
+      "surface_role": "PROJECTION",
+      "delegates_to": [],
+      "replacement_path": [
+        "canonical business-closure read model"
+      ],
+      "sunset_condition": "KEEP READ-ONLY/DERIVED",
+      "semantic_family": [
+        "presentation.read_model"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-041",
+      "source_path": "apps/server/src/routes/v1/twin_kernel_trace.ts",
+      "activation_parent": [
+        "apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts"
+      ],
+      "surface_role": "READ_ONLY",
+      "delegates_to": [],
+      "replacement_path": [
+        "DecisionEpisode/trace readback"
+      ],
+      "sunset_condition": "KEEP READ-ONLY",
+      "semantic_family": [
+        "governance.trace_projection"
+      ],
+      "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
+      "owner": "BLINE"
+    }
+  ]
+}
