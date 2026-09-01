@@ -13,6 +13,10 @@ import type {
   NitrogenNeedAssessmentStatusV1,
   NitrogenNeedMetricsV1,
 } from "../../domain/fertilization/fertilization_contract_v1.js";
+import {
+  FertilizationAcceptanceExactExecutionErrorV1,
+  requireFertilizationAcceptanceExactExecutionV1,
+} from "./fertilization_acceptance_exact_execution_v1.js";
 
 type TenantScopeV1 = {
   tenant_id: string;
@@ -491,87 +495,92 @@ export class FertilizationServiceV1 {
 
   async evaluateAcceptance(input: TenantScopeV1 & {
     fertilization_prescription_id: string;
-    receipt_id?: string | null;
-    act_task_id?: string | null;
-    operation_plan_id?: string | null;
-    as_applied_id?: string | null;
-    receipt_status?: string | null;
+    receipt_id: string;
+    act_task_id: string;
+    operation_plan_id: string;
+    as_executed_id: string;
+    as_applied_id: string;
     zone_applications?: unknown;
     evidence_refs?: unknown;
   }): Promise<{ acceptance: Record<string, unknown>; fact_id: string }> {
     ensureTenantScope(input);
     const fertilization_prescription_id = nonEmptyText(input.fertilization_prescription_id);
     if (!fertilization_prescription_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:fertilization_prescription_id", 400);
+    if (input.zone_applications !== undefined || input.evidence_refs !== undefined) {
+      throw new FertilizationServiceErrorV1("CALLER_EXECUTION_ASSERTIONS_FORBIDDEN", 400);
+    }
+
+    const operation_plan_id = nonEmptyText(input.operation_plan_id);
+    const act_task_id = nonEmptyText(input.act_task_id);
+    const receipt_id = nonEmptyText(input.receipt_id);
+    const as_executed_id = nonEmptyText(input.as_executed_id);
+    const as_applied_id = nonEmptyText(input.as_applied_id);
+    if (!operation_plan_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:operation_plan_id", 400);
+    if (!act_task_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:act_task_id", 400);
+    if (!receipt_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:receipt_id", 400);
+    if (!as_executed_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:as_executed_id", 400);
+    if (!as_applied_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:as_applied_id", 400);
+
     const prescriptionRow = await this.getPrescription(input, fertilization_prescription_id);
     if (!prescriptionRow) throw new FertilizationServiceErrorV1("NOT_FOUND:fertilization_prescription", 404);
     const prescription = prescriptionRow.record_json;
 
-    const apps = Array.isArray(input.zone_applications) ? input.zone_applications : [];
-    const requiredZones = prescription.zone_rates.filter((z) => z.required !== false);
-    const zone_results = requiredZones.map((zone) => {
-      const app = apps.find((entry: any) => String(entry?.zone_id ?? "") === zone.zone_id) as any;
-      const actual_n_kg_ha = finiteOrNull(app?.actual_n_kg_ha ?? app?.applied_n_kg_ha ?? app?.actual_rate);
-      const coverage_percent = finiteOrNull(app?.coverage_percent);
-      const deviation_percent = actual_n_kg_ha == null || zone.planned_n_kg_ha <= 0
-        ? null
-        : Math.abs(actual_n_kg_ha - zone.planned_n_kg_ha) / zone.planned_n_kg_ha;
-      const reasons: string[] = [];
-      let result: "PASS" | "FAIL" | "NEEDS_REVIEW" = "PASS";
-      if (!app) {
-        result = "NEEDS_REVIEW";
-        reasons.push("MISSING_ZONE_APPLICATION");
-      } else if (actual_n_kg_ha == null) {
-        result = "NEEDS_REVIEW";
-        reasons.push("MISSING_ACTUAL_N_KG_HA");
-      } else if (coverage_percent != null && coverage_percent < 0.9) {
-        result = "FAIL";
-        reasons.push("ZONE_COVERAGE_BELOW_THRESHOLD");
-      } else if (deviation_percent != null && deviation_percent > 0.15) {
-        result = "FAIL";
-        reasons.push("ZONE_N_DEVIATION_EXCEEDED");
-      } else {
-        reasons.push("ZONE_APPLICATION_WITHIN_TOLERANCE");
+    let proof;
+    try {
+      proof = await requireFertilizationAcceptanceExactExecutionV1(
+        this.pool,
+        {
+          tenant_id: input.tenant_id,
+          project_id: input.project_id,
+          group_id: input.group_id,
+          fertilization_prescription_id,
+          operation_plan_id,
+          act_task_id,
+          receipt_id,
+          as_executed_id,
+          as_applied_id,
+        },
+        prescription,
+      );
+    } catch (error) {
+      if (error instanceof FertilizationAcceptanceExactExecutionErrorV1) {
+        throw new FertilizationServiceErrorV1(error.message, error.statusCode);
       }
-      return {
-        zone_id: zone.zone_id,
-        planned_n_kg_ha: zone.planned_n_kg_ha,
-        actual_n_kg_ha,
-        coverage_percent,
-        deviation_percent,
-        result,
-        reasons,
-      };
-    });
+      throw error;
+    }
 
+    const zone_results = proof.zone_results;
     let acceptance_status: FertilizationAcceptanceStatusV1 = "PASS";
     if (zone_results.length < 1 || zone_results.some((z) => z.result === "NEEDS_REVIEW")) acceptance_status = "NEEDS_REVIEW";
     if (zone_results.some((z) => z.result === "FAIL")) acceptance_status = "FAIL";
-    if (apps.length < 1) acceptance_status = "NEEDS_REVIEW";
 
     const acceptance = {
       type: "fertilization_acceptance_v1",
       schema_version: "1",
       fertilization_acceptance_id: randomUUID(),
       fertilization_prescription_id,
+      variable_prescription_id: proof.variable_prescription_id,
       tenant_id: prescription.tenant_id,
       project_id: prescription.project_id,
       group_id: prescription.group_id,
       field_id: prescription.field_id,
-      operation_plan_id: nonEmptyText(input.operation_plan_id),
-      act_task_id: nonEmptyText(input.act_task_id),
-      receipt_id: nonEmptyText(input.receipt_id),
-      as_applied_id: nonEmptyText(input.as_applied_id),
+      operation_plan_id,
+      act_task_id,
+      receipt_id,
+      as_executed_id,
+      as_applied_id,
       acceptance_status,
       zone_results,
       operation_rollup_policy: "ALL_REQUIRED_ZONES_PASS",
       reasons: acceptance_status === "PASS" ? ["ALL_REQUIRED_ZONES_PASS"] : ["ZONE_LEVEL_EVIDENCE_REQUIRED"],
-      evidence_refs: uniqueEvidenceRefs([
-        ...normalizeEvidenceRefs(input.evidence_refs, false),
-        { kind: "fertilization_prescription_v1", ref_id: fertilization_prescription_id },
-      ]),
+      evidence_refs: proof.evidence_refs,
+      acceptance_policy: {
+        source: "prescription_contract_v1.acceptance_conditions",
+        amount_tolerance_percent: proof.amount_tolerance_percent,
+        required_coverage_percent: proof.required_coverage_percent,
+      },
       evaluated_at_ts: nowTs(),
     };
     const inserted = await this.insertFact(acceptance, "fac");
     return { acceptance, fact_id: inserted.fact_id };
-  }
-}
+  }}
