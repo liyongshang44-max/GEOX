@@ -138,6 +138,27 @@ async function cleanupP0Rows(client) {
   await client.query(`DELETE FROM facts WHERE fact_id LIKE 'p0_%'`).catch(() => {});
 }
 
+async function cloneFactPayload(client, sourceFactId, targetFactId, mutator) {
+  const source = await client.query(
+    `SELECT record_json::jsonb AS record_json FROM facts WHERE fact_id = $1 LIMIT 1`,
+    [sourceFactId],
+  );
+  assert(source.rows.length === 1, 'source fact missing for P0 clone', { source_fact_id: sourceFactId });
+  const original = source.rows[0].record_json || {};
+  const originalPayload = original.payload && typeof original.payload === 'object' ? original.payload : {};
+  const nextPayload = mutator({ ...originalPayload });
+  const nextRecord = { ...original, payload: nextPayload };
+  await client.query(
+    `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+     VALUES ($1, now(), 'field-memory-p0-negative-clone', $2::jsonb)
+     ON CONFLICT (fact_id) DO UPDATE
+       SET record_json = EXCLUDED.record_json,
+           occurred_at = now(),
+           source = EXCLUDED.source`,
+    [targetFactId, JSON.stringify(nextRecord)],
+  );
+}
+
 async function insertAcceptance(client, id, patch) {
   const payload = scoped({
     acceptance_id: id,
@@ -262,6 +283,54 @@ async function assertFieldMemory(client) {
   await insertAcceptance(client, 'p0_fm_other_acceptance', { operation_plan_id: FORMAL_OP, field_id: FORMAL_FIELD });
   const reusedPromotion = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: 'p0_fm_other_acceptance', field_memory_record_ref: FORMAL_FIELD_MEMORY_RECORD }) });
   assert(reusedPromotion.status === 422 && reusedPromotion.json?.error === 'FIELD_MEMORY_RECORD_ACCEPTANCE_MISMATCH', 'field memory promotion proof must not be reusable across acceptance identities', httpDetail(reusedPromotion));
+
+  const canonicalRecordFactId = `full_review_seed_${TENANT}_field_memory_record_c8_001`;
+  const canonicalCandidateFactId = `full_review_seed_${TENANT}_field_memory_candidate_c8_001`;
+
+  const reviewOnlyFactId = 'p0_fm_record_review_only';
+  await cloneFactPayload(client, canonicalRecordFactId, reviewOnlyFactId, (payload) => ({
+    ...payload,
+    field_memory_record_id: 'p0_fm_record_review_only',
+    record_scope: 'review_only_no_runtime_use',
+    reuse_boundary: { ...(payload.reuse_boundary || {}), scope: 'review_only_no_runtime_use' },
+  }));
+  const reviewOnly = await http('/api/v1/field-memory/from-acceptance', {
+    method: 'POST',
+    body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: FORMAL_ACC, field_memory_record_ref: reviewOnlyFactId }),
+  });
+  assert(
+    reviewOnly.status === 422 && reviewOnly.json?.error === 'FIELD_MEMORY_RECORD_REVIEW_ONLY_SCOPE_BLOCKED',
+    'review_only_no_runtime_use record must never materialize as product Formal Field Memory',
+    httpDetail(reviewOnly),
+  );
+
+  const missingChainCandidateFactId = 'p0_fm_candidate_missing_roi_chain';
+  const missingChainCandidateId = 'p0_fm_candidate_missing_roi_chain';
+  await cloneFactPayload(client, canonicalCandidateFactId, missingChainCandidateFactId, (payload) => {
+    const next = {
+      ...payload,
+      field_memory_candidate_id: missingChainCandidateId,
+    };
+    delete next.roi_ledger_fact_id;
+    return next;
+  });
+
+  const missingChainRecordFactId = 'p0_fm_record_missing_roi_chain';
+  await cloneFactPayload(client, canonicalRecordFactId, missingChainRecordFactId, (payload) => ({
+    ...payload,
+    field_memory_record_id: 'p0_fm_record_missing_roi_chain',
+    field_memory_candidate_fact_id: missingChainCandidateFactId,
+    field_memory_candidate_id: missingChainCandidateId,
+  }));
+  const missingSourceChain = await http('/api/v1/field-memory/from-acceptance', {
+    method: 'POST',
+    body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: FORMAL_ACC, field_memory_record_ref: missingChainRecordFactId }),
+  });
+  assert(
+    missingSourceChain.status === 422 && missingSourceChain.json?.error === 'FIELD_MEMORY_P26_P29_SOURCE_CHAIN_REF_MISSING',
+    'candidate without exact P27/P28 source chain must not materialize Formal Field Memory',
+    httpDetail(missingSourceChain),
+  );
 }
 function findBy(arr, pred) { return Array.isArray(arr) ? arr.find(pred) : null; }
 
