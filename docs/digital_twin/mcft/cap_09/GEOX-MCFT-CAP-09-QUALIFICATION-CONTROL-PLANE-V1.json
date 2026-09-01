@@ -74,7 +74,13 @@
         ".github/workflows/mcft-cap-09-t4r1-rolling-rehydration-live-proof.yml",
         ".github/workflows/mcft-cap-09-phase6-runtime-independence.yml",
         "docker-compose.mcft-cap09-phase6-github-blackout.override.yml",
-        ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml"
+        ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-WRITER-OWNER-SELF-GRANT-CLEANUP-AUTHORITY-V1.json",
+        "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_ARM_V1.json",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_V1.cjs",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_POSTGRES_V1.cjs",
+        ".github/workflows/mcft-cap-09-production-writer-owner-self-grant-cleanup.yml"
       ]
     },
     "EA5E2_RUNTIME_GRAPH_V4": {

@@ -23,7 +23,7 @@ try{
  const seed=String(process.env.SEED_DATABASE_URL||"").trim(); assert.ok(seed,"ACL_REMEDIATION_SEED_URL_REQUIRED");
  const u=new URL(seed);u.pathname="/"+TARGET;const url=u.toString();
  const a=j(AUTH),arm=j(ARM);
- assert.equal(a.status,"EXACT_NINE_PRIVILEGE_REMEDIATION_PREFLIGHT_PROVEN_NOT_AUTHORIZED");
+ assert.equal(a.status,"BLOCKED_ON_WRITER_OWNER_SELF_GRANT_CLEANUP_NOT_AUTHORIZED");
  assert.equal(a.target.database_name,TARGET);
  assert.equal(arm.runtime_process_start_authorized,false);
  assert.equal(arm.production_owner_activation_authorized,false);
@@ -89,6 +89,17 @@ try{
   "AND granted.rolname IN ('geox_mcft_cap09_evidence_writer_owner_v1','geox_mcft_cap09_forcing_writer_owner_v1','geox_mcft_cap09_twin_writer_owner_v1')",
   "ORDER BY granted.rolname"
  ].join("\n")).split(/\r?\n/).filter(Boolean);
+ const writerOwnerSelfGrantRows=q(url,[
+  "SELECT granted.rolname||'|member='||member.rolname||'|grantor='||grantor.rolname||'|admin='||m.admin_option::text||'|inherit='||m.inherit_option::text||'|set='||m.set_option::text",
+  "FROM pg_catalog.pg_auth_members m",
+  "JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid",
+  "JOIN pg_catalog.pg_roles member ON member.oid=m.member",
+  "JOIN pg_catalog.pg_roles grantor ON grantor.oid=m.grantor",
+  "WHERE member.rolname=current_user",
+  "AND grantor.rolname=current_user",
+  "AND granted.rolname IN ('geox_mcft_cap09_evidence_writer_owner_v1','geox_mcft_cap09_forcing_writer_owner_v1','geox_mcft_cap09_twin_writer_owner_v1')",
+  "ORDER BY granted.rolname"
+ ].join("\n")).split(/\r?\n/).filter(Boolean);
 
  const objectOwners={};
  for(const t of ["facts",...phase3Tables,...v13Tables]){
@@ -148,6 +159,10 @@ try{
 
  const diagnostics=[];
  unsafe.length=0;
+ for(const [roleName,caps] of Object.entries(ownerSetCapabilities)){
+  if(caps.set)unsafe.push(roleName+":EFFECTIVE_SET_AUTHORITY_FORBIDDEN");
+ }
+ if(writerOwnerSelfGrantRows.length)unsafe.push("WRITER_OWNER_SELF_GRANT_RESIDUAL:"+writerOwnerSelfGrantRows.join(";"));
  if(JSON.stringify(facts)!==JSON.stringify([true,false,false,false]))unsafe.push("facts:MATRIX_DRIFT");
  if(!fn)unsafe.push("phase3_append_function:EXECUTE_MISSING");
  for(const t of v13Tables){
@@ -206,6 +221,7 @@ try{
   neon_superuser_member:neonCaps[0]||false,
   neon_superuser_set:neonCaps[1]||false,
   writer_owner_memberships:writerOwnerMembershipRows,
+  writer_owner_self_grants:writerOwnerSelfGrantRows,
   writer_owner_set_capabilities:ownerSetCapabilities,
   object_owners:objectOwners,
   table_acl_rows:tableAclRows,

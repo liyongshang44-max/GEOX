@@ -73,6 +73,23 @@ try{
   "geox_mcft_cap09_twin_runtime_login_v1>geox_mcft_cap09_twin_runtime_v1"
  ],"ACL_REMEDIATION_FRESH_LOGIN_MEMBERSHIP_REQUIRED");
 
+ const unsafeOwnerSet=Number(q(url,[
+  "SELECT count(*)::int",
+  "FROM pg_catalog.pg_roles r",
+  "WHERE r.rolname IN ('geox_mcft_cap09_evidence_writer_owner_v1','geox_mcft_cap09_forcing_writer_owner_v1','geox_mcft_cap09_twin_writer_owner_v1')",
+  "AND pg_catalog.pg_has_role(current_user,r.oid,'SET')"
+ ].join("\n")));
+ assert.equal(unsafeOwnerSet,0,"ACL_REMEDIATION_EFFECTIVE_WRITER_OWNER_SET_AUTHORITY_MUST_BE_ZERO");
+ const writerOwnerSelfGrantCount=Number(q(url,[
+  "SELECT count(*)::int",
+  "FROM pg_catalog.pg_auth_members m",
+  "JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid",
+  "JOIN pg_catalog.pg_roles member ON member.oid=m.member",
+  "JOIN pg_catalog.pg_roles grantor ON grantor.oid=m.grantor",
+  "WHERE member.rolname=current_user AND grantor.rolname=current_user",
+  "AND granted.rolname IN ('geox_mcft_cap09_evidence_writer_owner_v1','geox_mcft_cap09_forcing_writer_owner_v1','geox_mcft_cap09_twin_writer_owner_v1')"
+ ].join("\n")));
+ assert.equal(writerOwnerSelfGrantCount,0,"ACL_REMEDIATION_WRITER_OWNER_SELF_GRANT_RESIDUAL_MUST_BE_ZERO");
  const before=Object.fromEntries(tables.map(t=>[t,matrix(url,t)]));
  for(const t of tables)assert.equal(before[t][3],false,"ACL_REMEDIATION_TARGET_DELETE_PRESTATE_FORBIDDEN:"+t);
  const loginBefore=q(url,"SELECT count(*)::int FROM pg_catalog.pg_roles WHERE rolname IN ('geox_mcft_cap09_evidence_runtime_login_v1','geox_mcft_cap09_twin_runtime_login_v1')");

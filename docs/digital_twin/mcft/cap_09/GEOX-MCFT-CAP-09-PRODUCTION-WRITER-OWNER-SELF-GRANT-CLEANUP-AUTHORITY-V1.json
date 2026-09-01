@@ -1,0 +1,88 @@
+{
+  "schema_version": "geox_mcft_cap09_production_writer_owner_self_grant_cleanup_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-WRITER-OWNER-SELF-GRANT-CLEANUP-AUTHORITY-V1",
+  "status": "LIVE_EXACT_SELF_GRANT_PROVEN_CLEANUP_NOT_AUTHORIZED",
+  "root_cause": {
+    "code": "PROVISIONING_ADMIN_FORCING_WRITER_OWNER_SELF_GRANT_RESIDUAL",
+    "origin_attribution": "NOT_PROVEN",
+    "intended_materialization_postcondition": "ZERO_PROVISIONING_ADMIN_WRITER_OWNER_SELF_GRANTS_AND_ZERO_EFFECTIVE_SET_AUTHORITY",
+    "live_schema_readiness_run_id": 33476371200,
+    "live_acl_preflight_run_id": 33476370907
+  },
+  "target": {
+    "database_name": "geox_mcft_cap09_production_runtime_v1",
+    "required_current_user": "neondb_owner",
+    "granted_role": "geox_mcft_cap09_forcing_writer_owner_v1",
+    "member_role": "neondb_owner",
+    "grantor_role": "neondb_owner",
+    "exact_membership_options": {
+      "admin": false,
+      "inherit": true,
+      "set": true
+    }
+  },
+  "authorized_mutation_scope": {
+    "membership_revoke_only": true,
+    "exact_statement_semantics": "REVOKE geox_mcft_cap09_forcing_writer_owner_v1 FROM CURRENT_USER GRANTED BY CURRENT_USER RESTRICT",
+    "preserve_other_grantors": true,
+    "preserve_cloud_admin_management_memberships": true,
+    "table_acl_mutation_allowed": false,
+    "function_acl_mutation_allowed": false,
+    "role_attribute_mutation_allowed": false,
+    "role_create_drop_allowed": false,
+    "schema_ddl_allowed": false,
+    "row_dml_allowed": false,
+    "credential_mutation_allowed": false
+  },
+  "required_prestate": {
+    "table_count": 41,
+    "routine_count": 3,
+    "all_application_rows_zero": true,
+    "exact_two_service_login_memberships": true,
+    "exact_nine_phase3_acl_privileges_still_missing": true,
+    "evidence_writer_owner_effective_set": false,
+    "forcing_writer_owner_effective_set": true,
+    "twin_writer_owner_effective_set": false,
+    "exact_target_self_grant_count": 1
+  },
+  "required_poststate": {
+    "exact_target_self_grant_count": 0,
+    "all_writer_owner_effective_set_authority_zero": true,
+    "cloud_admin_management_memberships_preserved": true,
+    "exact_nine_phase3_acl_privileges_unchanged": true,
+    "table_and_function_acl_unchanged": true,
+    "application_row_count_unchanged": true
+  },
+  "arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_ARM_V1.json",
+  "preflight_ref": "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_V1.cjs",
+  "runner_ref": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_V1.cjs",
+  "workflow_ref": ".github/workflows/mcft-cap-09-production-writer-owner-self-grant-cleanup.yml",
+  "authorization": {
+    "production_writer_owner_self_grant_cleanup_authorized": false,
+    "production_evidence_acl_carryforward_remediation_authorized": false,
+    "runtime_process_start_authorized": false,
+    "production_owner_activation_authorized": false,
+    "formal_v5_arm_authorized": false,
+    "a0_authorized": false,
+    "o00_authorized": false
+  },
+  "non_effects": {
+    "production_database_mutation": false,
+    "row_mutation": false,
+    "schema_mutation": false,
+    "table_acl_mutation": false,
+    "function_acl_mutation": false,
+    "role_attribute_mutation": false,
+    "credential_mutation": false,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false
+  },
+  "next_stage": {
+    "stage": "EXACT_SELF_GRANT_CLEANUP",
+    "status": "BLOCKED_ON_EXPLICIT_USER_AUTHORIZATION",
+    "after_success": "RERUN_LIVE_SCHEMA_READINESS_THEN_REAUTHORIZE_EXACT_NINE_ACL_REMEDIATION"
+  }
+}
