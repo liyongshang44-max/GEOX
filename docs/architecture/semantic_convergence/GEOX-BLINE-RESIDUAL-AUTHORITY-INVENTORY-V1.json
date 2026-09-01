@@ -8015,6 +8015,31 @@
       "removal_target": "KEEP FAIL-CLOSED READ MODEL; NEVER SELECT LATEST FACT TO CREATE CUSTOMER-VISIBLE ELIGIBILITY",
       "b02_registered": false,
       "audit_note": "Previously selected latest relation/receipt/lab/acceptance and could affect customer_visible_eligible. Now ambiguity blocks visibility; relation→plan→receipt→lab→acceptance exact plan-fact continuity is required."
+    },
+    {
+      "surface_id": "RES-306",
+      "source_path": "apps/server/src/routes/reports_v1.ts",
+      "entrypoint": "Reporting Module active report routes -> buildSamplingReportViewV1",
+      "activation_mode": "ACTIVE_REPORT_PROJECTION_CONSUMER",
+      "writes": [],
+      "reads": [
+        "fail-closed SamplingReportViewV1 projection output",
+        "sampling exact-chain eligibility/blocking reasons via delegated projection"
+      ],
+      "semantic_family": [
+        "presentation.read_model",
+        "evidence.qualification"
+      ],
+      "authority_class": "REPORT_ROUTE_SAMPLING_PROJECTION_CONSUMER_NO_EVIDENCE_AUTHORITY",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "operator/customer operation report responses"
+      ],
+      "removal_target": "KEEP READ-MODEL CONSUMER; NEVER MINT, REQUALIFY, OR SELECT SAMPLING EVIDENCE AUTHORITY",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "reports_v1 delegates Sampling source identity and eligibility derivation to buildSamplingReportViewV1. It performs no Sampling fact write and owns no EvidenceQualification decision; ARS-102 remains PROJECTION / zero-semantic-write."
     }
   ],
   "cross_branch_surfaces": [
