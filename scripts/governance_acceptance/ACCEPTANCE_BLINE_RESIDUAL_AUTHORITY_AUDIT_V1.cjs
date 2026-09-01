@@ -12,9 +12,16 @@ const B02_REGISTER = path.join(BASE, "GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json")
 const B02_LINTER = path.join(ROOT, "scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs");
 const SELF = "scripts/governance_acceptance/ACCEPTANCE_BLINE_RESIDUAL_AUTHORITY_AUDIT_V1.cjs";
 
-const PROD_ROOTS = ["apps/server/src", "apps/server/db/migrations", "apps/executor/src"];
-const AUX_ROOTS = ["apps/server/scripts", "scripts", ".github/workflows"];
-const EXTS = [".ts", ".js", ".cjs", ".mjs", ".sql", ".yml", ".yaml"];
+const PROD_ROOTS = [
+  "apps/server/src",
+  "apps/server/db/migrations",
+  "apps/executor/src",
+  "apps/judge/src",
+  "apps/telemetry-ingest/src",
+  "apps/web/src"
+];
+const AUX_ROOTS = ["apps/server/scripts", "packages/contracts", "scripts", ".github/workflows"];
+const EXTS = [".ts", ".tsx", ".js", ".jsx", ".cjs", ".mjs", ".sql", ".yml", ".yaml"];
 
 const REQUIRED = [
   "source_path","entrypoint","activation_mode","writes","reads","semantic_family",
