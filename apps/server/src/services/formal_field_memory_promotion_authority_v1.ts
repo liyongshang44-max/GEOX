@@ -13,6 +13,8 @@ export type FormalFieldMemoryPromotionAuthorityV1 = {
   field_memory_record_id: string;
   field_memory_candidate_fact_id: string;
   field_memory_candidate_id: string;
+  source_chain_refs: Array<{ kind: string; ref_id: string }>;
+  accounting_basis_refs: Array<{ kind: string; ref_id: string }>;
   candidate_basis_refs: Array<{ kind: string; ref_id: string }>;
   promotion_basis_refs: Array<{ kind: string; ref_id: string }>;
 };
@@ -61,9 +63,19 @@ function payloadOf(row: FactRow): Record<string, any> {
 function refs(value: unknown): Array<{ kind: string; ref_id: string }> {
   if (!Array.isArray(value)) return [];
   return value
-    .map((item) => record(item))
-    .map((item) => ({ kind: text(item.kind), ref_id: text(item.ref_id ?? item.ref) }))
-    .filter((item) => item.kind && item.ref_id);
+    .map((item) => {
+      if (typeof item === "string") return { kind: "", ref_id: text(item) };
+      const obj = record(item);
+      return { kind: text(obj.kind), ref_id: text(obj.ref_id ?? obj.ref) };
+    })
+    .filter((item) => item.ref_id);
+}
+
+function objectRef(value: unknown): { kind: string; ref_id: string } | null {
+  const obj = record(value);
+  const ref_id = text(obj.ref_id ?? obj.ref);
+  if (!ref_id) return null;
+  return { kind: text(obj.kind), ref_id };
 }
 
 function policyRefs(payload: Record<string, any>): string[] {
@@ -74,6 +86,27 @@ function policyRefs(payload: Record<string, any>): string[] {
 function matchesAcceptanceRef(payload: Record<string, any>, acceptanceFactId: string, acceptanceId: string): boolean {
   const ref = text(payload.acceptance_result_fact_id ?? payload.acceptance_id);
   return ref === acceptanceFactId || ref === acceptanceId;
+}
+
+function requireSameOperationAndTask(
+  payload: Record<string, any>,
+  operationPlanId: string,
+  actTaskId: string,
+  prefix: string,
+): void {
+  if (text(payload.operation_plan_id) !== operationPlanId) throw new Error(`${prefix}_OPERATION_MISMATCH`);
+  if (text(payload.act_task_id ?? payload.task_id) !== actTaskId) throw new Error(`${prefix}_TASK_MISMATCH`);
+}
+
+function requireAllowedSourceLane(payload: Record<string, any>, prefix: string): void {
+  const sourceLane = text(payload.source_lane);
+  if (!sourceLane) throw new Error(`${prefix}_SOURCE_LANE_MISSING`);
+  if (/DEBUG|SIMULATED|DEV(?:ELOPMENT)?/i.test(sourceLane)) throw new Error(`${prefix}_SOURCE_LANE_BLOCKED`);
+}
+
+function ensureDistinct(left: Iterable<string>, right: Iterable<string>, code: string): void {
+  const leftSet = new Set(Array.from(left).filter(Boolean));
+  if (Array.from(right).some((item) => item && leftSet.has(item))) throw new Error(code);
 }
 
 async function loadExactFact(
@@ -120,11 +153,62 @@ async function requireBasisRefs(
     const payload = payloadOf(row);
     if (payload.formal_eligible !== true) throw new Error(`${prefix}_NOT_FORMAL_ELIGIBLE:${kind}`);
     if (text(payload.classification) !== expectedClassification) throw new Error(`${prefix}_CLASSIFICATION_MISMATCH:${kind}`);
+    requireAllowedSourceLane(payload, prefix);
     selected.push(item);
   }
 
   if (new Set(selected.map((item) => item.ref_id)).size !== selected.length) {
     throw new Error(`${prefix}_REF_REUSE_FORBIDDEN`);
+  }
+  return selected;
+}
+
+async function requireAccountingBasisRefs(
+  db: DbConn,
+  tenant: FormalFieldMemoryTenantTripleV1,
+  ledgerPayload: Record<string, any>,
+): Promise<Array<{ kind: string; ref_id: string }>> {
+  const costRefs = refs(ledgerPayload.cost_basis_refs);
+  const valueRefs = refs(ledgerPayload.value_basis_refs);
+  const policyRef = objectRef(ledgerPayload.accounting_policy_ref);
+
+  if (!costRefs.length) throw new Error("FIELD_MEMORY_ROI_COST_BASIS_REF_MISSING");
+  if (!valueRefs.length) throw new Error("FIELD_MEMORY_ROI_VALUE_BASIS_REF_MISSING");
+  if (!policyRef) throw new Error("FIELD_MEMORY_ROI_ACCOUNTING_POLICY_REF_MISSING");
+
+  const selected: Array<{ kind: string; ref_id: string }> = [];
+  for (const item of costRefs) {
+    if (item.kind !== "roi_cost_basis_v1") throw new Error("FIELD_MEMORY_ROI_COST_BASIS_KIND_MISMATCH");
+    const row = await loadExactFact(db, tenant, item.kind, item.ref_id);
+    if (!row) throw new Error("FIELD_MEMORY_ROI_COST_BASIS_FACT_NOT_FOUND");
+    const payload = payloadOf(row);
+    if (payload.formal_eligible !== true) throw new Error("FIELD_MEMORY_ROI_COST_BASIS_NOT_FORMAL_ELIGIBLE");
+    if (text(payload.classification) !== "ACCOUNTING_SOURCE") throw new Error("FIELD_MEMORY_ROI_COST_BASIS_CLASSIFICATION_MISMATCH");
+    requireAllowedSourceLane(payload, "FIELD_MEMORY_ROI_COST_BASIS");
+    selected.push(item);
+  }
+  for (const item of valueRefs) {
+    if (item.kind !== "roi_value_basis_v1") throw new Error("FIELD_MEMORY_ROI_VALUE_BASIS_KIND_MISMATCH");
+    const row = await loadExactFact(db, tenant, item.kind, item.ref_id);
+    if (!row) throw new Error("FIELD_MEMORY_ROI_VALUE_BASIS_FACT_NOT_FOUND");
+    const payload = payloadOf(row);
+    if (payload.formal_eligible !== true) throw new Error("FIELD_MEMORY_ROI_VALUE_BASIS_NOT_FORMAL_ELIGIBLE");
+    if (text(payload.classification) !== "ACCOUNTING_SOURCE") throw new Error("FIELD_MEMORY_ROI_VALUE_BASIS_CLASSIFICATION_MISMATCH");
+    requireAllowedSourceLane(payload, "FIELD_MEMORY_ROI_VALUE_BASIS");
+    selected.push(item);
+  }
+
+  if (policyRef.kind !== "roi_accounting_policy_v1") throw new Error("FIELD_MEMORY_ROI_ACCOUNTING_POLICY_KIND_MISMATCH");
+  const policyRow = await loadExactFact(db, tenant, policyRef.kind, policyRef.ref_id);
+  if (!policyRow) throw new Error("FIELD_MEMORY_ROI_ACCOUNTING_POLICY_FACT_NOT_FOUND");
+  const policyPayload = payloadOf(policyRow);
+  if (policyPayload.formal_eligible !== true) throw new Error("FIELD_MEMORY_ROI_ACCOUNTING_POLICY_NOT_FORMAL_ELIGIBLE");
+  if (text(policyPayload.classification) !== "POLICY_SOURCE") throw new Error("FIELD_MEMORY_ROI_ACCOUNTING_POLICY_CLASSIFICATION_MISMATCH");
+  requireAllowedSourceLane(policyPayload, "FIELD_MEMORY_ROI_ACCOUNTING_POLICY");
+  selected.push(policyRef);
+
+  if (new Set(selected.map((item) => item.ref_id)).size !== selected.length) {
+    throw new Error("FIELD_MEMORY_ROI_ACCOUNTING_BASIS_REF_REUSE_FORBIDDEN");
   }
   return selected;
 }
@@ -159,18 +243,34 @@ export async function requireFormalFieldMemoryPromotionAuthorityV1(
     acceptance_fact_id: string;
     acceptance_id: string;
     operation_plan_id: string;
+    act_task_id: string;
+    field_id: string;
   },
 ): Promise<FormalFieldMemoryPromotionAuthorityV1> {
   const fieldMemoryRecordRef = text(input.field_memory_record_ref);
   if (!fieldMemoryRecordRef) throw new Error("FIELD_MEMORY_RECORD_REF_REQUIRED");
 
+  const acceptanceRow = await loadExactFact(db, tenant, "acceptance_result_v1", input.acceptance_fact_id);
+  if (!acceptanceRow) throw new Error("FIELD_MEMORY_ACCEPTANCE_FACT_NOT_FOUND");
+  const acceptancePayload = payloadOf(acceptanceRow);
+  requireSameOperationAndTask(acceptancePayload, input.operation_plan_id, input.act_task_id, "FIELD_MEMORY_ACCEPTANCE");
+  if (text(acceptancePayload.acceptance_id) !== input.acceptance_id) throw new Error("FIELD_MEMORY_ACCEPTANCE_ID_MISMATCH");
+  if (text(acceptancePayload.field_id) !== input.field_id) throw new Error("FIELD_MEMORY_ACCEPTANCE_FIELD_MISMATCH");
+  if (text(acceptancePayload.verdict).toUpperCase() !== "PASS") throw new Error("FIELD_MEMORY_ACCEPTANCE_VERDICT_NOT_PASS");
+  if (acceptancePayload.formal_acceptance !== true) throw new Error("FIELD_MEMORY_ACCEPTANCE_NOT_FORMAL");
+  if (acceptancePayload.formal_evidence_passed !== true) throw new Error("FIELD_MEMORY_ACCEPTANCE_EVIDENCE_NOT_FORMAL");
+  if (acceptancePayload.is_simulated === true) throw new Error("FIELD_MEMORY_ACCEPTANCE_SIMULATED_BLOCKED");
+
   const recordRow = await loadCommittedRecord(db, tenant, fieldMemoryRecordRef);
   const recordPayload = payloadOf(recordRow);
 
   if (text(recordPayload.record_state) !== "RECORD_COMMITTED") throw new Error("FIELD_MEMORY_RECORD_NOT_COMMITTED");
-  if (text(recordPayload.operation_plan_id) !== input.operation_plan_id) throw new Error("FIELD_MEMORY_RECORD_OPERATION_MISMATCH");
+  requireSameOperationAndTask(recordPayload, input.operation_plan_id, input.act_task_id, "FIELD_MEMORY_RECORD");
+  if (text(recordPayload.field_id) !== input.field_id) throw new Error("FIELD_MEMORY_RECORD_FIELD_MISMATCH");
   if (!matchesAcceptanceRef(recordPayload, input.acceptance_fact_id, input.acceptance_id)) throw new Error("FIELD_MEMORY_RECORD_ACCEPTANCE_MISMATCH");
   if (!policyRefs(recordPayload).includes("FIELD_MEMORY_RECORD_GATE_CONTRACT_V0")) throw new Error("FIELD_MEMORY_RECORD_POLICY_REF_MISSING");
+  if (text(recordPayload.record_scope) === "review_only_no_runtime_use") throw new Error("FIELD_MEMORY_RECORD_REVIEW_ONLY_SCOPE_BLOCKED");
+  if (text(recordPayload.record_scope) !== "same_field_only") throw new Error("FIELD_MEMORY_RECORD_SCOPE_NOT_SAME_FIELD_ONLY");
 
   const candidateFactId = text(recordPayload.field_memory_candidate_fact_id);
   const candidateId = text(recordPayload.field_memory_candidate_id);
@@ -182,10 +282,60 @@ export async function requireFormalFieldMemoryPromotionAuthorityV1(
 
   if (text(candidatePayload.field_memory_candidate_id) !== candidateId) throw new Error("FIELD_MEMORY_CANDIDATE_ID_MISMATCH");
   if (text(candidatePayload.candidate_state) !== "CANDIDATE_RECORDED") throw new Error("FIELD_MEMORY_CANDIDATE_NOT_RECORDED");
-  if (text(candidatePayload.operation_plan_id) !== input.operation_plan_id) throw new Error("FIELD_MEMORY_CANDIDATE_OPERATION_MISMATCH");
+  requireSameOperationAndTask(candidatePayload, input.operation_plan_id, input.act_task_id, "FIELD_MEMORY_CANDIDATE");
   if (!matchesAcceptanceRef(candidatePayload, input.acceptance_fact_id, input.acceptance_id)) throw new Error("FIELD_MEMORY_CANDIDATE_ACCEPTANCE_MISMATCH");
   if (!policyRefs(candidatePayload).includes("FIELD_MEMORY_CANDIDATE_GATE_CONTRACT_V0")) throw new Error("FIELD_MEMORY_CANDIDATE_POLICY_REF_MISSING");
 
+  const roiLedgerFactId = text(candidatePayload.roi_ledger_fact_id);
+  const roiBoundaryFactId = text(candidatePayload.roi_boundary_fact_id);
+  const outcomeReviewFactId = text(candidatePayload.outcome_review_fact_id);
+  if (!roiLedgerFactId || !roiBoundaryFactId || !outcomeReviewFactId) throw new Error("FIELD_MEMORY_P26_P29_SOURCE_CHAIN_REF_MISSING");
+
+  for (const [label, recordRef, candidateRef] of [
+    ["ROI_LEDGER", text(recordPayload.roi_ledger_fact_id), roiLedgerFactId],
+    ["ROI_BOUNDARY", text(recordPayload.roi_boundary_fact_id), roiBoundaryFactId],
+    ["OUTCOME_REVIEW", text(recordPayload.outcome_review_fact_id), outcomeReviewFactId],
+    ["ACCEPTANCE", text(recordPayload.acceptance_result_fact_id), input.acceptance_fact_id],
+  ] as const) {
+    if (!recordRef || recordRef !== candidateRef) throw new Error(`FIELD_MEMORY_RECORD_CANDIDATE_${label}_CHAIN_MISMATCH`);
+  }
+
+  const outcomeRow = await loadExactFact(db, tenant, "outcome_review_v1", outcomeReviewFactId);
+  if (!outcomeRow) throw new Error("FIELD_MEMORY_OUTCOME_REVIEW_NOT_FOUND");
+  const outcomePayload = payloadOf(outcomeRow);
+  requireSameOperationAndTask(outcomePayload, input.operation_plan_id, input.act_task_id, "FIELD_MEMORY_OUTCOME_REVIEW");
+  if (!matchesAcceptanceRef(outcomePayload, input.acceptance_fact_id, input.acceptance_id)) throw new Error("FIELD_MEMORY_OUTCOME_REVIEW_ACCEPTANCE_MISMATCH");
+  if (text(outcomePayload.review_state) !== "REVIEWED") throw new Error("FIELD_MEMORY_OUTCOME_REVIEW_NOT_REVIEWED");
+  if (text(outcomePayload.source_verdict).toUpperCase() !== "PASS") throw new Error("FIELD_MEMORY_OUTCOME_REVIEW_SOURCE_VERDICT_NOT_PASS");
+  if (outcomePayload.formal_acceptance !== true) throw new Error("FIELD_MEMORY_OUTCOME_REVIEW_ACCEPTANCE_NOT_FORMAL");
+  if (outcomePayload.formal_evidence_passed !== true) throw new Error("FIELD_MEMORY_OUTCOME_REVIEW_EVIDENCE_NOT_FORMAL");
+  if (!refs(outcomePayload.measurement_refs).length) throw new Error("FIELD_MEMORY_OUTCOME_REVIEW_MEASUREMENT_REFS_MISSING");
+  if (!Object.keys(record(outcomePayload.comparison_basis)).length) throw new Error("FIELD_MEMORY_OUTCOME_REVIEW_COMPARISON_BASIS_MISSING");
+  if (!policyRefs(outcomePayload).includes("OUTCOME_ROI_BOUNDARY_GATE_CONTRACT_V0")) throw new Error("FIELD_MEMORY_OUTCOME_REVIEW_POLICY_REF_MISSING");
+
+  const roiBoundaryRow = await loadExactFact(db, tenant, "roi_boundary_v1", roiBoundaryFactId);
+  if (!roiBoundaryRow) throw new Error("FIELD_MEMORY_ROI_BOUNDARY_NOT_FOUND");
+  const roiBoundaryPayload = payloadOf(roiBoundaryRow);
+  requireSameOperationAndTask(roiBoundaryPayload, input.operation_plan_id, input.act_task_id, "FIELD_MEMORY_ROI_BOUNDARY");
+  if (!matchesAcceptanceRef(roiBoundaryPayload, input.acceptance_fact_id, input.acceptance_id)) throw new Error("FIELD_MEMORY_ROI_BOUNDARY_ACCEPTANCE_MISMATCH");
+  if (text(roiBoundaryPayload.outcome_review_fact_id) !== outcomeReviewFactId) throw new Error("FIELD_MEMORY_ROI_BOUNDARY_OUTCOME_REVIEW_MISMATCH");
+  if (roiBoundaryPayload.roi_review_eligible !== true) throw new Error("FIELD_MEMORY_ROI_BOUNDARY_NOT_REVIEW_ELIGIBLE");
+  if (text(roiBoundaryPayload.required_future_roi_gate) !== "P28") throw new Error("FIELD_MEMORY_ROI_BOUNDARY_P28_GATE_MISSING");
+  if (!policyRefs(roiBoundaryPayload).includes("ROI_BOUNDARY_PAYLOAD_SCHEMA_V0")) throw new Error("FIELD_MEMORY_ROI_BOUNDARY_POLICY_REF_MISSING");
+
+  const roiLedgerRow = await loadExactFact(db, tenant, "roi_ledger_v1", roiLedgerFactId);
+  if (!roiLedgerRow) throw new Error("FIELD_MEMORY_ROI_LEDGER_NOT_FOUND");
+  const roiLedgerPayload = payloadOf(roiLedgerRow);
+  requireSameOperationAndTask(roiLedgerPayload, input.operation_plan_id, input.act_task_id, "FIELD_MEMORY_ROI_LEDGER");
+  if (!matchesAcceptanceRef(roiLedgerPayload, input.acceptance_fact_id, input.acceptance_id)) throw new Error("FIELD_MEMORY_ROI_LEDGER_ACCEPTANCE_MISMATCH");
+  if (text(roiLedgerPayload.outcome_review_fact_id) !== outcomeReviewFactId) throw new Error("FIELD_MEMORY_ROI_LEDGER_OUTCOME_REVIEW_MISMATCH");
+  if (text(roiLedgerPayload.roi_boundary_fact_id) !== roiBoundaryFactId) throw new Error("FIELD_MEMORY_ROI_LEDGER_BOUNDARY_MISMATCH");
+  if (text(roiLedgerPayload.ledger_state) !== "RECORDED") throw new Error("FIELD_MEMORY_ROI_LEDGER_NOT_RECORDED");
+  if (!policyRefs(roiLedgerPayload).includes("ROI_LEDGER_GATE_CONTRACT_V0")) throw new Error("FIELD_MEMORY_ROI_LEDGER_POLICY_REF_MISSING");
+
+  if (text(candidatePayload.roi_ledger_id) !== text(roiLedgerPayload.roi_ledger_id)) throw new Error("FIELD_MEMORY_CANDIDATE_ROI_LEDGER_ID_MISMATCH");
+
+  const accountingBasis = await requireAccountingBasisRefs(db, tenant, roiLedgerPayload);
   const candidateBasis = await requireBasisRefs(
     db,
     tenant,
@@ -201,16 +351,40 @@ export async function requireFormalFieldMemoryPromotionAuthorityV1(
     "FIELD_MEMORY_PROMOTION_BASIS",
   );
 
-  const candidateIds = new Set(candidateBasis.map((item) => item.ref_id));
-  if (promotionBasis.some((item) => candidateIds.has(item.ref_id))) {
-    throw new Error("FIELD_MEMORY_PROMOTION_BASIS_MUST_BE_DISTINCT_FROM_CANDIDATE_BASIS");
-  }
+  const candidateIds = candidateBasis.map((item) => item.ref_id);
+  const promotionIds = promotionBasis.map((item) => item.ref_id);
+  const accountingIds = accountingBasis.map((item) => item.ref_id);
+  const acceptanceEvidenceIds = refs(acceptancePayload.evidence_refs).map((item) => item.ref_id);
+  const outcomeMeasurementIds = refs(outcomePayload.measurement_refs).map((item) => item.ref_id);
+
+  ensureDistinct(candidateIds, promotionIds, "FIELD_MEMORY_PROMOTION_BASIS_MUST_BE_DISTINCT_FROM_CANDIDATE_BASIS");
+  ensureDistinct(candidateIds, accountingIds, "FIELD_MEMORY_CANDIDATE_BASIS_MUST_BE_DISTINCT_FROM_ACCOUNTING_BASIS");
+  ensureDistinct(promotionIds, accountingIds, "FIELD_MEMORY_PROMOTION_BASIS_MUST_BE_DISTINCT_FROM_ACCOUNTING_BASIS");
+  ensureDistinct(candidateIds, acceptanceEvidenceIds, "FIELD_MEMORY_CANDIDATE_BASIS_MUST_BE_DISTINCT_FROM_ACCEPTANCE_EVIDENCE");
+  ensureDistinct(candidateIds, outcomeMeasurementIds, "FIELD_MEMORY_CANDIDATE_BASIS_MUST_BE_DISTINCT_FROM_OUTCOME_MEASUREMENTS");
+  ensureDistinct(promotionIds, acceptanceEvidenceIds, "FIELD_MEMORY_PROMOTION_BASIS_MUST_BE_DISTINCT_FROM_ACCEPTANCE_EVIDENCE");
+  ensureDistinct(promotionIds, outcomeMeasurementIds, "FIELD_MEMORY_PROMOTION_BASIS_MUST_BE_DISTINCT_FROM_OUTCOME_MEASUREMENTS");
+  ensureDistinct(accountingIds, acceptanceEvidenceIds, "FIELD_MEMORY_ACCOUNTING_BASIS_MUST_BE_DISTINCT_FROM_ACCEPTANCE_EVIDENCE");
+  ensureDistinct(accountingIds, outcomeMeasurementIds, "FIELD_MEMORY_ACCOUNTING_BASIS_MUST_BE_DISTINCT_FROM_OUTCOME_MEASUREMENTS");
+
+  const reuseBoundary = record(recordPayload.reuse_boundary);
+  const reuseBoundaryRef = text(reuseBoundary.ref_id ?? reuseBoundary.ref);
+  const reusePromotionRef = promotionBasis.find((item) => item.kind === "reuse_boundary_review_v1")?.ref_id ?? "";
+  if (!reuseBoundaryRef || reuseBoundaryRef !== reusePromotionRef) throw new Error("FIELD_MEMORY_RECORD_REUSE_BOUNDARY_REF_MISMATCH");
+  if (text(reuseBoundary.scope) !== "same_field_only") throw new Error("FIELD_MEMORY_RECORD_REUSE_BOUNDARY_SCOPE_MISMATCH");
 
   return {
     field_memory_record_fact_id: recordRow.fact_id,
     field_memory_record_id: text(recordPayload.field_memory_record_id) || recordRow.fact_id,
     field_memory_candidate_fact_id: candidateRow.fact_id,
     field_memory_candidate_id: candidateId,
+    source_chain_refs: [
+      { kind: "acceptance_result_v1", ref_id: acceptanceRow.fact_id },
+      { kind: "outcome_review_v1", ref_id: outcomeRow.fact_id },
+      { kind: "roi_boundary_v1", ref_id: roiBoundaryRow.fact_id },
+      { kind: "roi_ledger_v1", ref_id: roiLedgerRow.fact_id },
+    ],
+    accounting_basis_refs: accountingBasis,
     candidate_basis_refs: candidateBasis,
     promotion_basis_refs: promotionBasis,
   };
