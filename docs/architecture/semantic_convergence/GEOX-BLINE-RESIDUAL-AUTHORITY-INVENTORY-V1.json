@@ -3310,6 +3310,35 @@
       "removal_target": "DO_NOT_MODIFY_IN_BLINE; FINAL_TYPED_INTEGRATION ONLY AFTER MCFT COMPLETE",
       "surface_id": "RES-125",
       "b02_registered": false
+    },
+    {
+      "surface_id": "RES-126",
+      "source_path": "apps/executor/src/run_once.ts",
+      "entrypoint": "@geox/executor package scripts once / dev:once",
+      "activation_mode": "EXPLICIT_LEGACY_EXECUTOR_CLI",
+      "writes": [
+        "ao_act_receipt_v0 through POST /api/control/ao_act/receipt",
+        "legacy delivery evidence export job trigger"
+      ],
+      "reads": [
+        "AO-ACT index",
+        "task rows without latest receipt"
+      ],
+      "semantic_family": [
+        "execution.receipt",
+        "execution.result_evidence"
+      ],
+      "authority_class": "LEGACY_SIMULATED_EXECUTION_RECEIPT_HTTP_PRODUCER",
+      "runtime_reachable": "PROVEN_EXPLICIT_CLI",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "legacy AO-ACT receipt path",
+        "operation/read-model projections",
+        "Acceptance gate as non-formal evidence unless additional formal evidence exists"
+      ],
+      "removal_target": "KEEP ONLY AS EXPLICIT SIMULATION/DEV TOOL OR RETIRE; NEVER PROMOTE SYNTHETIC RECEIPT TO FORMAL EXECUTION AUTHORITY",
+      "b02_registered": false,
+      "audit_note": "The CLI constructs synthetic execution_time/resource_usage, execution_coverage.ref=simulated and logs_refs=stdout, then posts ao_act_receipt_v0. Formal evidence policy currently fail-closes this receipt alone because source lane is UNKNOWN and stdout is not a formal-log kind."
     }
   ],
   "cross_branch_surfaces": [
