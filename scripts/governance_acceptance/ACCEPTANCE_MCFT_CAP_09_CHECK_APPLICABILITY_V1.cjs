@@ -436,6 +436,19 @@ function main() {
     assert(byId(gfsRetryPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(gfsRetryPath));
   }
 
+  // CP-4: single-host attempt seam is Phase3-owned and owner-visible post-merge.
+  {
+    const attemptPath = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_attempt_v1.ts";
+    const attemptPlan = plan(authority, registry, [attemptPath]);
+    assert.equal(attemptPlan.status, "PASS");
+    assert.equal(attemptPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(attemptPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(attemptPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const attemptPostMerge = plan(authority, registry, [attemptPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(attemptPostMerge, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(attemptPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(attemptPath));
+  }
+
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
   const phase3 = plan(authority, registry, [phase3Path]);

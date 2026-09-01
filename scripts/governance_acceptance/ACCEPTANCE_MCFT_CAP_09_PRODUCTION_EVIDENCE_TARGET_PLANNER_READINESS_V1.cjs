@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "GFS_DURABLE_RETRY_IMPLEMENTED_SINGLE_HOST_EXECUTION_SEAM_NEXT");
+  assert.equal(authority.status, "SINGLE_HOST_EXECUTION_SEAM_IMPLEMENTED_SOURCE_PLAN_ADAPTER_NEXT");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "6cb65b7091886994d4c5854b2a064021ec2d8f6b");
+  assert.equal(authority.subject_predecessor_sha, "5100364393f49c5c38f9a8ba87e844e946d82430");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -265,9 +265,17 @@ try {
 
   const host = read(authority.host_lifecycle_ref);
   includes(host, '"PLANNER_EXHAUSTED"', "EVIDENCE_HOST_NULL_TERMINAL_STATE_REQUIRED");
-  includes(host, "PHASE3_EVIDENCE_HOST_PLANNER_EMPTY_WORK_ITEMS_FORBIDDEN", "EVIDENCE_HOST_EMPTY_WORK_FATAL_REQUIRED");
+  includes(host, "PHASE3_EVIDENCE_HOST_ATTEMPT_PLAN_INVALID", "EVIDENCE_HOST_ATTEMPT_PLAN_FAIL_CLOSED_REQUIRED");
   includes(host, 'status: "NOT_DUE"', "EVIDENCE_HOST_NOT_DUE_STATE_REQUIRED");
   includes(host, 'reason: "PLANNER_NOT_DUE"', "EVIDENCE_HOST_NOT_DUE_WAIT_REQUIRED");
+  includes(host, '"ATTEMPT_COMPLETED"', "EVIDENCE_HOST_ATTEMPT_HEALTH_REQUIRED");
+  includes(host, "EVIDENCE_PLANE_DURABLE_PROGRESS_SET", "EVIDENCE_HOST_DURABLE_PROGRESS_SET_REQUIRED");
+  assert.equal(host.includes("EvidenceRuntimeCycleServiceV1"), false, "EVIDENCE_HOST_DIRECT_CYCLE_SERVICE_FORBIDDEN");
+  const hostAttempt = read(authority.host_attempt_contract_ref);
+  includes(hostAttempt, "EvidenceRuntimeHostAttemptPlanV1", "EVIDENCE_HOST_ATTEMPT_PLAN_CONTRACT_REQUIRED");
+  includes(hostAttempt, '"KBS_RAW_HOURLY_PUBLICATION_CYCLE"', "EVIDENCE_HOST_KBS_ATTEMPT_KIND_REQUIRED");
+  includes(hostAttempt, '"GFS_PARTIAL_PAIR_REHYDRATION"', "EVIDENCE_HOST_GFS_REHYDRATION_ATTEMPT_KIND_REQUIRED");
+  includes(hostAttempt, "buildCanonicalWorkItemAttemptPlanV1", "EVIDENCE_HOST_CANONICAL_ATTEMPT_ADAPTER_REQUIRED");
 
   const fixture = read("apps/server/src/external_evidence/qualification/mcft_cap09_phase5_evidence_runtime_qualification_v1.ts");
   includes(fixture, "createTargetPlanner(input?", "PHASE5_MANIFEST_PLANNER_REQUIRED");
@@ -285,7 +293,7 @@ try {
     "PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_NOT_MATERIALIZED",
     "KBS_RAW_HOURLY_PRODUCTION_BASELINE_POINTER_SCHEMA_NOT_MATERIALIZED",
     "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
-    "HETEROGENEOUS_SOURCE_PLAN_EXECUTION_SEAM_NOT_IMPLEMENTED",
+    "PRODUCTION_SOURCE_PLAN_EXECUTOR_ADAPTER_NOT_IMPLEMENTED",
   ]);
   assert.equal(authority.adjudication.phase5_fixture_manifest_may_be_production_planner, false);
   assert.equal(authority.adjudication.v13_forcing_controller_may_be_general_evidence_planner, false);
@@ -371,6 +379,12 @@ try {
   assert.equal(authority.source_specific_requirements.kbs_soil.latest_observed_event_progress_read_implemented, true);
   assert.equal(authority.host_lifecycle_gap.not_due_wait_implemented, true);
   assert.equal(authority.host_lifecycle_gap.production_planner_still_bindable, false);
+  assert.equal(authority.host_lifecycle_gap.heterogeneous_source_plan_execution_seam_implemented, true);
+  assert.equal(authority.host_lifecycle_gap.kbs_publication_cycle_can_share_single_host_lifecycle, true);
+  assert.equal(authority.host_lifecycle_gap.gfs_partial_rehydration_can_share_single_host_lifecycle, true);
+  assert.equal(authority.host_lifecycle_gap.second_evidence_host_authorized, false);
+  assert.equal(authority.host_lifecycle_gap.production_source_plan_executor_adapter_implemented, false);
+  assert.equal(authority.host_lifecycle_gap.durable_restart_authority, "EVIDENCE_PLANE_DURABLE_PROGRESS_SET");
 
   for (const [key, expected] of Object.entries({
     runtime_secret_read: false,

@@ -9,8 +9,11 @@ import type { Pool } from "pg";
 import {
   EvidenceRuntimeCycleServiceV1,
   type EvidenceRuntimeCycleWorkItemV1,
-  type ExecuteEvidenceRuntimeCycleResultV1,
 } from "./mcft_cap09_evidence_runtime_cycle_service_v1.js";
+import {
+  buildCanonicalWorkItemAttemptPlanV1,
+  type EvidenceRuntimeHostAttemptResultV1,
+} from "./mcft_cap09_evidence_runtime_host_attempt_v1.js";
 import {
   EvidenceRuntimeHostV1,
   type EvidenceRuntimeHostFailureClassifierV1,
@@ -64,7 +67,7 @@ export interface EvidenceRuntimeAcquisitionTargetPlannerV1 {
     cycle_attempt: number;
     successful_cycle_count: number;
     consecutive_failure_count: number;
-    previous_result: ExecuteEvidenceRuntimeCycleResultV1 | null;
+    previous_result: EvidenceRuntimeHostAttemptResultV1 | null;
   }): Promise<EvidenceRuntimeAcquisitionTargetV1 | EvidenceRuntimeAcquisitionNotDueV1 | null>;
 }
 
@@ -129,7 +132,7 @@ export function composeEvidenceRuntimeV1(input: {
   });
 
   const planner: EvidenceRuntimeHostPlannerV1 = {
-    async nextWorkItems(state) {
+    async nextAttemptPlan(state) {
       const target = await input.target_planner.nextTarget(state);
       if (target === null) return null;
       if ("status" in target) {
@@ -138,12 +141,15 @@ export function composeEvidenceRuntimeV1(input: {
         }
         return target;
       }
-      return workItemFactory.buildForTarget(target);
+      return buildCanonicalWorkItemAttemptPlanV1({
+        attempt_id: target.request_id_prefix,
+        cycle_service: cycleService,
+        work_items: workItemFactory.buildForTarget(target),
+      });
     },
   };
 
   const host = new EvidenceRuntimeHostV1({
-    cycle_service: cycleService,
     planner,
     wait: input.wait,
     health: input.health,

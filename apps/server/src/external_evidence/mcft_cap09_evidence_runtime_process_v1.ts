@@ -251,7 +251,7 @@ export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
       lease_owner: config.lease_owner,
       lease_duration_seconds: config.lease_duration_seconds,
     });
-    const finalClaim = result.last_cycle_result?.lease_claim ?? null;
+    const finalClaim = result.last_attempt_result?.lease_claim ?? null;
     if (finalClaim && finalClaim.lease_owner === config.lease_owner) {
       await composition.lease_repository.releaseLease({ claim: finalClaim });
     }
