@@ -151,7 +151,7 @@
   ],
   "next_stage": {
     "stage": "NON_GITHUB_HOST_BINDING",
-    "status": "PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_NOT_YET_BOUND",
+    "status": "WORKSPACE_BOUND_SERVICE_IDENTITIES_NOT_YET_BOUND",
     "separate_machine_authority_required": true,
     "runtime_credential_stage_complete": true,
     "runtime_database_name": "geox_mcft_cap09_production_runtime_v1",
@@ -169,7 +169,7 @@
     "a0_forbidden": true,
     "o00_forbidden": true,
     "host_binding_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
-    "host_binding_authority_status": "RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND",
+    "host_binding_authority_status": "RENDER_WORKSPACE_BOUND_SERVICE_IDENTITIES_UNBOUND",
     "host_binding_readiness_workflow": ".github/workflows/mcft-cap-09-production-non-github-host-binding-readiness.yml",
     "host_binding_platform_selected": true,
     "evidence_host_identity_bound": false,
@@ -181,7 +181,9 @@
     "service_creation_authorized": true,
     "host_identity_binding_authorized": true,
     "safe_zero_runtime_identity_provisioning_required": true,
-    "safe_zero_runtime_identity_provisioning_status": "NOT_PROVEN"
+    "safe_zero_runtime_identity_provisioning_status": "NOT_PROVEN",
+    "render_workspace_owner_id": "tea-dab2cfvavr4c73ejavog",
+    "render_workspace_owner_id_bound": true
   },
   "service_login_pre_arm_evidence": {
     "status": "IMMUTABLE_READY_UNARMED",

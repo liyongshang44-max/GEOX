@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_non_github_host_binding_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1",
-  "status": "RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND",
+  "status": "RENDER_WORKSPACE_BOUND_SERVICE_IDENTITIES_UNBOUND",
   "architecture_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
   "predecessor_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json",
   "predecessor_stage": "RUNTIME_CREDENTIAL_BINDING_COMPLETE_PRE_HOST_BINDING",
@@ -65,11 +65,12 @@
     "evidence_host_identity_bound": false,
     "twin_host_identity_bound": false,
     "exact_two_runtime_service_identities_bound": false,
-    "binding_authorized": false
+    "binding_authorized": false,
+    "workspace_owner_id_bound": true
   },
   "next_stage": {
     "stage": "BIND_REAL_NON_GITHUB_PLATFORM_SERVICE_IDENTITIES",
-    "status": "RENDER_PLATFORM_AUTHORIZED_AWAITING_SAFE_SERVICE_IDENTITY_PROVISIONING",
+    "status": "RENDER_WORKSPACE_BOUND_AWAITING_SAFE_SERVICE_IDENTITY_PROVISIONING",
     "external_platform_selection_required": false,
     "external_service_provisioning_or_existing_identity_required": true,
     "runtime_start_separate": true,
@@ -82,7 +83,7 @@
     "cost_bearing_external_resource": true,
     "explicit_external_platform_authority_required": true,
     "render_candidate_binding_schema_defined": true,
-    "render_workspace_owner_id_status": "UNBOUND",
+    "render_workspace_owner_id_status": "BOUND",
     "render_evidence_service_id_status": "UNBOUND",
     "render_twin_service_id_status": "UNBOUND",
     "host_binding_arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json",
@@ -93,7 +94,8 @@
     "safe_zero_runtime_identity_provisioning_required": true,
     "safe_zero_runtime_identity_provisioning_status": "NOT_PROVEN",
     "standard_render_create_service_initial_deploy_allowed": false,
-    "create_then_suspend_race_allowed": false
+    "create_then_suspend_race_allowed": false,
+    "render_workspace_owner_id": "tea-dab2cfvavr4c73ejavog"
   },
   "non_effects": {
     "external_host_provisioning": false,
@@ -183,7 +185,8 @@
   "completed_binding_stages": [
     "DEFINE_PLATFORM_NEUTRAL_NON_GITHUB_HOST_IDENTITY_CONTRACT",
     "PROVE_UNBOUND_HOST_IDENTITY_AUTHORITY_ZERO_EFFECT",
-    "AUTHORIZE_RENDER_BACKGROUND_WORKER_OREGON_PLATFORM"
+    "AUTHORIZE_RENDER_BACKGROUND_WORKER_OREGON_PLATFORM",
+    "BIND_RENDER_WORKSPACE_OWNER_ID"
   ],
   "platform_evaluation": {
     "evaluated_at": "2026-09-01",
@@ -265,9 +268,9 @@
     }
   },
   "render_candidate_binding_contract": {
-    "status": "AUTHORIZED_FOR_IDENTITY_PROVISIONING_UNBOUND",
+    "status": "WORKSPACE_BOUND_AUTHORIZED_FOR_IDENTITY_PROVISIONING",
     "platform_provider": "RENDER",
-    "workspace_owner_id": null,
+    "workspace_owner_id": "tea-dab2cfvavr4c73ejavog",
     "region": "oregon",
     "service_type": "background_worker",
     "blueprint_type": "worker",
@@ -316,6 +319,7 @@
     "production_owner_activation_authorized": false,
     "formal_v5_arm_authorized": false,
     "a0_authorized": false,
-    "o00_authorized": false
+    "o00_authorized": false,
+    "workspace_owner_id": "tea-dab2cfvavr4c73ejavog"
   }
 }

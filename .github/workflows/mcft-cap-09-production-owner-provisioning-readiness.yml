@@ -72,19 +72,21 @@ jobs:
           if(a.next_stage?.stage!=='NON_GITHUB_HOST_BINDING'||a.next_stage?.non_github_host_identity_status!=='NOT_YET_BOUND')throw new Error('OWNER_PROVISIONING_NON_GITHUB_HOST_FRONTIER_REQUIRED');
           if(a.next_stage?.host_binding_authority_status!==hostAuth.status)throw new Error('OWNER_PROVISIONING_HOST_BINDING_AUTHORITY_STATUS_MISMATCH');
           if(hostAuth.production_execution_host_class!=='NON_GITHUB_LONG_RUNNING_SERVICE'||hostAuth.github_actions?.production_execution_host_allowed!==false)throw new Error('OWNER_PROVISIONING_HOST_AUTHORITY_REQUIRED');
-          const platformAuthorized=hostAuth.status==='RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND';
+          const workspaceBound=hostAuth.status==='RENDER_WORKSPACE_BOUND_SERVICE_IDENTITIES_UNBOUND';
+          const platformAuthorized=hostAuth.status==='RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND'||workspaceBound;
           const legacyUnbound=hostAuth.status==='HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND';
           if(!platformAuthorized&&!legacyUnbound)throw new Error('OWNER_PROVISIONING_HOST_AUTHORITY_STATE_UNKNOWN');
           if(platformAuthorized){
             if(hostAuth.binding_state?.platform_selected!==true||hostAuth.binding_state?.evidence_host_identity_bound!==false||hostAuth.binding_state?.twin_host_identity_bound!==false||hostAuth.binding_state?.exact_two_runtime_service_identities_bound!==false||hostAuth.binding_state?.binding_authorized!==false)throw new Error('OWNER_PROVISIONING_RENDER_AUTHORIZED_PRE_IDENTITY_STATE_REQUIRED');
             if(hostAuth.platform_evaluation?.status!=='SELECTED_AUTHORIZED'||hostAuth.platform_evaluation?.platform_selected!==true)throw new Error('OWNER_PROVISIONING_RENDER_PLATFORM_SELECTION_REQUIRED');
-            if(hostAuth.render_candidate_binding_contract?.status!=='AUTHORIZED_FOR_IDENTITY_PROVISIONING_UNBOUND'||hostAuth.render_candidate_binding_contract?.workspace_owner_id!==null||hostAuth.render_candidate_binding_contract?.evidence_runtime?.service_id!==null||hostAuth.render_candidate_binding_contract?.twin_runtime?.service_id!==null)throw new Error('OWNER_PROVISIONING_RENDER_IDENTITIES_MUST_REMAIN_UNBOUND');
+            if(hostAuth.render_candidate_binding_contract?.status!==(workspaceBound?'WORKSPACE_BOUND_AUTHORIZED_FOR_IDENTITY_PROVISIONING':'AUTHORIZED_FOR_IDENTITY_PROVISIONING_UNBOUND')||hostAuth.render_candidate_binding_contract?.workspace_owner_id!==(workspaceBound?'tea-dab2cfvavr4c73ejavog':null)||hostAuth.render_candidate_binding_contract?.evidence_runtime?.service_id!==null||hostAuth.render_candidate_binding_contract?.twin_runtime?.service_id!==null)throw new Error('OWNER_PROVISIONING_RENDER_IDENTITIES_MUST_REMAIN_UNBOUND');
+            if(workspaceBound&&(a.next_stage?.render_workspace_owner_id_bound!==true||a.next_stage?.render_workspace_owner_id!=='tea-dab2cfvavr4c73ejavog'||hostArm.platform_account_or_project_id!=='tea-dab2cfvavr4c73ejavog'))throw new Error('OWNER_PROVISIONING_RENDER_WORKSPACE_BINDING_REQUIRED');
             if(hostAuth.render_candidate_binding_contract?.safe_zero_runtime_identity_provisioning_status!=='NOT_PROVEN'||hostAuth.render_candidate_binding_contract?.standard_create_service_initial_deploy_allowed!==false||hostAuth.render_candidate_binding_contract?.create_then_suspend_race_allowed!==false)throw new Error('OWNER_PROVISIONING_RENDER_ZERO_RUNTIME_GUARD_REQUIRED');
             if(hostArm.armed!==false||hostArm.platform_selection_authorized!==true||hostArm.platform_provider!=='RENDER'||hostArm.region_or_location!=='oregon'||hostArm.service_creation_authorized!==true||hostArm.host_identity_binding_authorized!==true||hostArm.runtime_process_start_authorized!==false||hostArm.production_owner_activation_authorized!==false)throw new Error('OWNER_PROVISIONING_RENDER_AUTHORIZATION_ARM_REQUIRED');
           } else {
             if(hostAuth.binding_state?.platform_selected!==false||hostAuth.binding_state?.evidence_host_identity_bound!==false||hostAuth.binding_state?.twin_host_identity_bound!==false||hostAuth.binding_state?.exact_two_runtime_service_identities_bound!==false||hostAuth.binding_state?.binding_authorized!==false)throw new Error('OWNER_PROVISIONING_HOST_AUTHORITY_MUST_REMAIN_UNBOUND');
           }
-          const remaining=platformAuthorized?['RENDER_WORKSPACE_OWNER_ID_NOT_BOUND','RENDER_ZERO_RUNTIME_IDENTITY_PROVISIONING_PATH_NOT_PROVEN','RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND','RENDER_TWIN_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND','NON_GITHUB_HOST_BINDING_NOT_COMPLETE']:['RENDER_PLATFORM_SELECTION_NOT_AUTHORIZED','RENDER_WORKSPACE_OWNER_ID_NOT_BOUND','RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND','RENDER_TWIN_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND','NON_GITHUB_HOST_BINDING_NOT_AUTHORIZED'];
+          const remaining=workspaceBound?['RENDER_ZERO_RUNTIME_IDENTITY_PROVISIONING_PATH_NOT_PROVEN','RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND','RENDER_TWIN_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND','NON_GITHUB_HOST_BINDING_NOT_COMPLETE']:platformAuthorized?['RENDER_WORKSPACE_OWNER_ID_NOT_BOUND','RENDER_ZERO_RUNTIME_IDENTITY_PROVISIONING_PATH_NOT_PROVEN','RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND','RENDER_TWIN_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND','NON_GITHUB_HOST_BINDING_NOT_COMPLETE']:['RENDER_PLATFORM_SELECTION_NOT_AUTHORIZED','RENDER_WORKSPACE_OWNER_ID_NOT_BOUND','RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND','RENDER_TWIN_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND','NON_GITHUB_HOST_BINDING_NOT_AUTHORIZED'];
           const p={
             schema_version:'geox_mcft_cap09_production_owner_provisioning_readiness_v4',
             status:'PASS_NON_GITHUB_HOST_BINDING_FRONTIER',
@@ -110,14 +112,14 @@ jobs:
             runtime_credential_binding_complete:true,host_binding_authority_defined:true,
             production_execution_host_class:hostAuth.production_execution_host_class,
             recommended_platform_candidate:'RENDER_BACKGROUND_WORKER',recommended_region:'OREGON_USA',render_candidate_schema_defined:true,
-            render_workspace_owner_id_bound:false,render_evidence_service_id_bound:false,render_twin_service_id_bound:false,
+            render_workspace_owner_id_bound:workspaceBound,render_workspace_owner_id:workspaceBound?'tea-dab2cfvavr4c73ejavog':null,render_evidence_service_id_bound:false,render_twin_service_id_bound:false,
             external_platform_selected:platformAuthorized,platform_selection_authorized:platformAuthorized,service_creation_authorized:platformAuthorized,host_identity_binding_authorized:platformAuthorized,
             evidence_host_identity_bound:false,twin_host_identity_bound:false,exact_two_runtime_service_identities_bound:false,
             provisioning_arm:false,service_login_bootstrap_authorized:false,runtime_credential_binding_authorized:false,
             non_github_host_identity_bound:false,non_github_host_binding_authorized:platformAuthorized,host_binding_ready_for_external_identity:platformAuthorized,
             safe_zero_runtime_identity_provisioning_status:platformAuthorized?'NOT_PROVEN':null,
             provisioning_ready:false,
-            next_stage:platformAuthorized?'BIND_RENDER_WORKSPACE_AND_PROVE_ZERO_RUNTIME_SERVICE_IDENTITY_PROVISIONING':'AUTHORIZE_RENDER_AND_BIND_WORKSPACE_PLUS_EXACT_TWO_BACKGROUND_WORKER_SERVICE_IDS',
+            next_stage:workspaceBound?'PROVE_ZERO_RUNTIME_SERVICE_IDENTITY_PROVISIONING_AND_BIND_EXACT_TWO_WORKERS':platformAuthorized?'BIND_RENDER_WORKSPACE_AND_PROVE_ZERO_RUNTIME_SERVICE_IDENTITY_PROVISIONING':'AUTHORIZE_RENDER_AND_BIND_WORKSPACE_PLUS_EXACT_TWO_BACKGROUND_WORKER_SERVICE_IDS',
             remaining_provisioning_blockers:remaining,provisioning_performed:true,
             runtime_process_start:false,production_owner_activation:false,provider_request_count:0,formal_v5_arm:false,a0_bootstrap:false,o00_started:false
           };

@@ -111,24 +111,35 @@ try{
   req(endpoint?.protocol==="postgresql:"&&endpoint?.hostname==="ep-odd-poetry-a6peeo8g.us-west-2.aws.neon.tech"&&endpoint?.port==="5432"&&endpoint?.database_name==="geox_mcft_cap09_production_runtime_v1"&&endpoint?.sslmode==="require"&&endpoint?.channel_binding==="require","OWNER_PROVISIONING_RUNTIME_ENDPOINT_SHAPE_MISMATCH");
   req(endpoint?.contains_username===false&&endpoint?.contains_password===false,"OWNER_PROVISIONING_RUNTIME_ENDPOINT_MUST_BE_NON_SECRET");
   if(a.formal_v5_store_reference) req(a.formal_v5_store_reference.owner_provisioning_target===false,"OWNER_PROVISIONING_FORMAL_V5_TARGET_FORBIDDEN");
-  const platformAuthorizedPreIdentity=a.next_stage?.status==="PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_NOT_YET_BOUND";
+  const workspaceBoundPreIdentity=a.next_stage?.status==="WORKSPACE_BOUND_SERVICE_IDENTITIES_NOT_YET_BOUND";
+  const platformAuthorizedPreIdentity=a.next_stage?.status==="PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_NOT_YET_BOUND"||workspaceBoundPreIdentity;
   req(a.next_stage?.stage==="NON_GITHUB_HOST_BINDING"&&(a.next_stage?.status==="NOT_STARTED"||platformAuthorizedPreIdentity)&&a.next_stage?.separate_machine_authority_required===true,"OWNER_PROVISIONING_NON_GITHUB_HOST_NEXT_STAGE_REQUIRED");
   req(a.next_stage?.runtime_credential_stage_complete===true&&a.next_stage?.runtime_database_name==="geox_mcft_cap09_production_runtime_v1","OWNER_PROVISIONING_RUNTIME_CREDENTIAL_STAGE_COMPLETE_REQUIRED");
   req(Array.isArray(a.next_stage?.runtime_database_url_secrets_bound)&&a.next_stage.runtime_database_url_secrets_bound.length===2&&a.next_stage?.non_github_host_identity_required===true&&a.next_stage?.non_github_host_identity_status==="NOT_YET_BOUND","OWNER_PROVISIONING_NON_GITHUB_HOST_IDENTITY_REQUIRED");
   req(a.next_stage?.runtime_process_start_forbidden===true&&a.next_stage?.production_owner_activation_forbidden===true&&a.next_stage?.formal_v5_arm_forbidden===true&&a.next_stage?.a0_forbidden===true&&a.next_stage?.o00_forbidden===true,"OWNER_PROVISIONING_NON_GITHUB_HOST_NON_EFFECT_BOUNDARY_REQUIRED");
   req(a.next_stage?.host_binding_authority_ref==="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json","OWNER_PROVISIONING_HOST_BINDING_AUTHORITY_REF_REQUIRED");
-  req(a.next_stage?.host_binding_authority_status===(platformAuthorizedPreIdentity?"RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND":"HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND")&&a.next_stage?.host_binding_platform_selected===platformAuthorizedPreIdentity&&a.next_stage?.evidence_host_identity_bound===false&&a.next_stage?.twin_host_identity_bound===false&&a.next_stage?.exact_two_runtime_service_identities_bound===false,"OWNER_PROVISIONING_HOST_BINDING_FRONTIER_REQUIRED");
-  req(hostAuth.status===(platformAuthorizedPreIdentity?"RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND":"HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND")&&hostAuth.production_execution_host_class==="NON_GITHUB_LONG_RUNNING_SERVICE","OWNER_PROVISIONING_HOST_AUTHORITY_STATUS_REQUIRED");
+  const expectedHostStatus=workspaceBoundPreIdentity?"RENDER_WORKSPACE_BOUND_SERVICE_IDENTITIES_UNBOUND":platformAuthorizedPreIdentity?"RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND":"HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND";
+  req(a.next_stage?.host_binding_authority_status===expectedHostStatus&&a.next_stage?.host_binding_platform_selected===platformAuthorizedPreIdentity&&a.next_stage?.evidence_host_identity_bound===false&&a.next_stage?.twin_host_identity_bound===false&&a.next_stage?.exact_two_runtime_service_identities_bound===false,"OWNER_PROVISIONING_HOST_BINDING_FRONTIER_REQUIRED");
+  req(hostAuth.status===expectedHostStatus&&hostAuth.production_execution_host_class==="NON_GITHUB_LONG_RUNNING_SERVICE","OWNER_PROVISIONING_HOST_AUTHORITY_STATUS_REQUIRED");
   req(hostAuth.github_actions?.production_execution_host_allowed===false,"OWNER_PROVISIONING_GITHUB_EXECUTION_HOST_FORBIDDEN");
   req(hostAuth.host_identity_contract?.evidence_runtime?.runtime_role==="EVIDENCE_RUNTIME"&&hostAuth.host_identity_contract?.twin_runtime?.runtime_role==="TWIN_RUNTIME","OWNER_PROVISIONING_HOST_RUNTIME_ROLES_REQUIRED");
   req(hostAuth.host_identity_contract?.evidence_runtime?.service_identity===null&&hostAuth.host_identity_contract?.twin_runtime?.service_identity===null,"OWNER_PROVISIONING_HOST_IDENTITIES_MUST_REMAIN_UNBOUND");
   req(hostAuth.binding_state?.platform_selected===platformAuthorizedPreIdentity&&hostAuth.binding_state?.evidence_host_identity_bound===false&&hostAuth.binding_state?.twin_host_identity_bound===false&&hostAuth.binding_state?.exact_two_runtime_service_identities_bound===false&&hostAuth.binding_state?.binding_authorized===false,"OWNER_PROVISIONING_HOST_BINDING_STATE_REQUIRED");
-  req(hostAuth.next_stage?.stage==="BIND_REAL_NON_GITHUB_PLATFORM_SERVICE_IDENTITIES"&&hostAuth.next_stage?.status===(platformAuthorizedPreIdentity?"RENDER_PLATFORM_AUTHORIZED_AWAITING_SAFE_SERVICE_IDENTITY_PROVISIONING":"BLOCKED_ON_EXTERNAL_PLATFORM_AND_SERVICE_IDENTITIES"),"OWNER_PROVISIONING_HOST_AUTHORITY_NEXT_STAGE_REQUIRED");
+  req(hostAuth.next_stage?.stage==="BIND_REAL_NON_GITHUB_PLATFORM_SERVICE_IDENTITIES"&&hostAuth.next_stage?.status===(workspaceBoundPreIdentity?"RENDER_WORKSPACE_BOUND_AWAITING_SAFE_SERVICE_IDENTITY_PROVISIONING":platformAuthorizedPreIdentity?"RENDER_PLATFORM_AUTHORIZED_AWAITING_SAFE_SERVICE_IDENTITY_PROVISIONING":"BLOCKED_ON_EXTERNAL_PLATFORM_AND_SERVICE_IDENTITIES"),"OWNER_PROVISIONING_HOST_AUTHORITY_NEXT_STAGE_REQUIRED");
   if(platformAuthorizedPreIdentity){
     req(a.next_stage?.platform_selection_authorized===true&&a.next_stage?.service_creation_authorized===true&&a.next_stage?.host_identity_binding_authorized===true,"OWNER_PROVISIONING_RENDER_EXTERNAL_AUTHORITY_REQUIRED");
     req(a.next_stage?.safe_zero_runtime_identity_provisioning_required===true&&a.next_stage?.safe_zero_runtime_identity_provisioning_status==="NOT_PROVEN","OWNER_PROVISIONING_RENDER_ZERO_RUNTIME_GUARD_REQUIRED");
     req(hostAuth.platform_evaluation?.status==="SELECTED_AUTHORIZED"&&hostAuth.platform_evaluation?.platform_selected===true,"OWNER_PROVISIONING_RENDER_SELECTION_REQUIRED");
-    req(hostAuth.render_candidate_binding_contract?.status==="AUTHORIZED_FOR_IDENTITY_PROVISIONING_UNBOUND"&&hostAuth.render_candidate_binding_contract?.workspace_owner_id===null&&hostAuth.render_candidate_binding_contract?.evidence_runtime?.service_id===null&&hostAuth.render_candidate_binding_contract?.twin_runtime?.service_id===null,"OWNER_PROVISIONING_RENDER_IDENTITIES_MUST_REMAIN_UNBOUND");
+    req(
+      hostAuth.render_candidate_binding_contract?.status===(workspaceBoundPreIdentity?"WORKSPACE_BOUND_AUTHORIZED_FOR_IDENTITY_PROVISIONING":"AUTHORIZED_FOR_IDENTITY_PROVISIONING_UNBOUND")&&
+      hostAuth.render_candidate_binding_contract?.workspace_owner_id===(workspaceBoundPreIdentity?"tea-dab2cfvavr4c73ejavog":null)&&
+      hostAuth.render_candidate_binding_contract?.evidence_runtime?.service_id===null&&
+      hostAuth.render_candidate_binding_contract?.twin_runtime?.service_id===null,
+      "OWNER_PROVISIONING_RENDER_IDENTITIES_MUST_REMAIN_UNBOUND"
+    );
+    if(workspaceBoundPreIdentity){
+      req(a.next_stage?.render_workspace_owner_id_bound===true&&a.next_stage?.render_workspace_owner_id==="tea-dab2cfvavr4c73ejavog","OWNER_PROVISIONING_RENDER_WORKSPACE_BINDING_REQUIRED");
+    }
     req(hostAuth.render_candidate_binding_contract?.safe_zero_runtime_identity_provisioning_status==="NOT_PROVEN"&&hostAuth.render_candidate_binding_contract?.standard_create_service_initial_deploy_allowed===false&&hostAuth.render_candidate_binding_contract?.create_then_suspend_race_allowed===false,"OWNER_PROVISIONING_RENDER_ZERO_RUNTIME_PATH_MUST_REMAIN_FAIL_CLOSED");
   }
   for(const k of ["external_host_provisioning","deployment","runtime_process_start","production_owner_activation","provider_request","formal_v5_arm","a0_bootstrap","o00_started"]) req(hostAuth.non_effects?.[k]===false,"OWNER_PROVISIONING_HOST_AUTHORITY_NON_EFFECT_REQUIRED:"+k);
@@ -166,7 +177,9 @@ try{
     runtime_credential_binding_complete:true,
     next_stage:"NON_GITHUB_HOST_BINDING",
     host_binding_authority_defined:true,
-    external_platform_selected:false,
+    external_platform_selected:platformAuthorizedPreIdentity,
+    render_workspace_owner_id_bound:workspaceBoundPreIdentity,
+    render_workspace_owner_id:workspaceBoundPreIdentity?"tea-dab2cfvavr4c73ejavog":null,
     evidence_host_identity_bound:false,
     twin_host_identity_bound:false,
     exact_two_runtime_service_identities_bound:false,

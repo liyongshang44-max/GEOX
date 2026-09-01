@@ -127,8 +127,11 @@ try {
     process.exit(0);
   }
 
+  const workspaceBoundPreIdentity =
+    a.status === "RENDER_WORKSPACE_BOUND_SERVICE_IDENTITIES_UNBOUND";
   const platformAuthorizedPreIdentity =
-    a.status === "RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND" &&
+    (a.status === "RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND" ||
+      workspaceBoundPreIdentity) &&
     b.platform_selected === true &&
     b.evidence_host_identity_bound === false &&
     b.twin_host_identity_bound === false &&
@@ -138,17 +141,27 @@ try {
     twin === null;
   if (platformAuthorizedPreIdentity) {
     assert(a.next_stage?.platform_selection_authorized === true && a.next_stage?.service_creation_authorized === true && a.next_stage?.host_identity_binding_authorized === true, "HOST_BINDING_READINESS_EXTERNAL_AUTHORITY_REQUIRED");
-    assert(a.render_candidate_binding_contract?.workspace_owner_id === null && a.render_candidate_binding_contract?.evidence_runtime?.service_id === null && a.render_candidate_binding_contract?.twin_runtime?.service_id === null, "HOST_BINDING_READINESS_RENDER_IDENTITIES_MUST_REMAIN_UNBOUND");
+    assert(
+      a.render_candidate_binding_contract?.workspace_owner_id ===
+        (workspaceBoundPreIdentity ? "tea-dab2cfvavr4c73ejavog" : null) &&
+        a.render_candidate_binding_contract?.evidence_runtime?.service_id === null &&
+        a.render_candidate_binding_contract?.twin_runtime?.service_id === null,
+      "HOST_BINDING_READINESS_RENDER_IDENTITIES_MUST_REMAIN_UNBOUND",
+    );
     assert(a.render_candidate_binding_contract?.safe_zero_runtime_identity_provisioning_required === true && a.render_candidate_binding_contract?.safe_zero_runtime_identity_provisioning_status === "NOT_PROVEN" && a.render_candidate_binding_contract?.standard_create_service_initial_deploy_allowed === false && a.render_candidate_binding_contract?.create_then_suspend_race_allowed === false, "HOST_BINDING_READINESS_ZERO_RUNTIME_PROVISIONING_GUARD_REQUIRED");
     write({
       schema_version: "geox_mcft_cap09_production_non_github_host_binding_readiness_v1",
       status: "PASS",
-      stage: "RENDER_PLATFORM_AUTHORIZED_AWAITING_SAFE_SERVICE_IDENTITIES",
+      stage: workspaceBoundPreIdentity
+        ? "RENDER_WORKSPACE_BOUND_AWAITING_SAFE_SERVICE_IDENTITIES"
+        : "RENDER_PLATFORM_AUTHORIZED_AWAITING_SAFE_SERVICE_IDENTITIES",
       subject_sha: subjectSha,
       production_execution_host_class: a.production_execution_host_class,
       platform_selected: true,
       platform_provider: "RENDER",
       region_or_location: "oregon",
+      workspace_owner_id_bound: workspaceBoundPreIdentity,
+      platform_account_or_project_id: workspaceBoundPreIdentity ? "tea-dab2cfvavr4c73ejavog" : null,
       platform_selection_authorized: true,
       service_creation_authorized: true,
       host_identity_binding_authorized: true,
@@ -156,7 +169,12 @@ try {
       twin_host_identity_bound: false,
       exact_two_runtime_service_identities_bound: false,
       binding_authorized: false,
-      remaining_blockers: [
+      remaining_blockers: workspaceBoundPreIdentity ? [
+        "RENDER_ZERO_RUNTIME_IDENTITY_PROVISIONING_PATH_NOT_PROVEN",
+        "RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",
+        "RENDER_TWIN_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",
+        "NON_GITHUB_HOST_BINDING_NOT_COMPLETE",
+      ] : [
         "RENDER_WORKSPACE_OWNER_ID_NOT_BOUND",
         "RENDER_ZERO_RUNTIME_IDENTITY_PROVISIONING_PATH_NOT_PROVEN",
         "RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",

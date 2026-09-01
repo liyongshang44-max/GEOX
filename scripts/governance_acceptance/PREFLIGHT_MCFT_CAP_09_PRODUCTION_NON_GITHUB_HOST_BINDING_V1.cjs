@@ -91,8 +91,11 @@ try {
     a.authority_id === "GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1",
     "HOST_BINDING_AUTHORITY_ID_REQUIRED",
   );
+  const workspaceBoundPreIdentity =
+    a.status === "RENDER_WORKSPACE_BOUND_SERVICE_IDENTITIES_UNBOUND";
   const platformAuthorizedPreIdentity =
-    a.status === "RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND";
+    a.status === "RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND" ||
+    workspaceBoundPreIdentity;
   req(
     a.status === "HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND" || platformAuthorizedPreIdentity,
     "HOST_BINDING_AUTHORITY_STATUS_REQUIRED",
@@ -326,9 +329,10 @@ try {
   const render = a.render_candidate_binding_contract;
   req(
     (render?.status === "CANDIDATE_SCHEMA_DEFINED_NOT_AUTHORIZED" ||
-      render?.status === "AUTHORIZED_FOR_IDENTITY_PROVISIONING_UNBOUND") &&
+      render?.status === "AUTHORIZED_FOR_IDENTITY_PROVISIONING_UNBOUND" ||
+      render?.status === "WORKSPACE_BOUND_AUTHORIZED_FOR_IDENTITY_PROVISIONING") &&
       render?.platform_provider === "RENDER" &&
-      render?.workspace_owner_id === null &&
+      render?.workspace_owner_id === (workspaceBoundPreIdentity ? "tea-dab2cfvavr4c73ejavog" : null) &&
       render?.region === "oregon" &&
       render?.service_type === "background_worker" &&
       render?.blueprint_type === "worker" &&
@@ -365,7 +369,8 @@ try {
       a.next_stage?.recommended_region === "OREGON_USA" &&
       a.next_stage?.platform_selection_status === (platformAuthorizedPreIdentity ? "AUTHORIZED_SELECTED" : "RECOMMENDED_NOT_AUTHORIZED") &&
       a.next_stage?.render_candidate_binding_schema_defined === true &&
-      a.next_stage?.render_workspace_owner_id_status === "UNBOUND" &&
+      a.next_stage?.render_workspace_owner_id_status === (workspaceBoundPreIdentity ? "BOUND" : "UNBOUND") &&
+      a.next_stage?.render_workspace_owner_id === (workspaceBoundPreIdentity ? "tea-dab2cfvavr4c73ejavog" : undefined) &&
       a.next_stage?.render_evidence_service_id_status === "UNBOUND" &&
       a.next_stage?.render_twin_service_id_status === "UNBOUND",
     "HOST_BINDING_RENDER_NEXT_STAGE_BOUNDARY_REQUIRED",
@@ -393,7 +398,7 @@ try {
       hostArm.armed === false &&
       hostArm.platform_selection_authorized === platformAuthorizedPreIdentity &&
       hostArm.platform_provider === (platformAuthorizedPreIdentity ? "RENDER" : null) &&
-      hostArm.platform_account_or_project_id === null &&
+      hostArm.platform_account_or_project_id === (workspaceBoundPreIdentity ? "tea-dab2cfvavr4c73ejavog" : null) &&
       hostArm.region_or_location === (platformAuthorizedPreIdentity ? "oregon" : null) &&
       hostArm.evidence_service_id === null &&
       hostArm.evidence_service_name === (platformAuthorizedPreIdentity ? "geox-mcft-cap09-evidence-runtime-v1" : null) &&
@@ -445,12 +450,18 @@ try {
   write({
     schema_version: "geox_mcft_cap09_production_non_github_host_binding_preflight_v1",
     status: "PASS",
-    stage: platformAuthorizedPreIdentity ? "RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND" : "NON_GITHUB_HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND",
+    stage: workspaceBoundPreIdentity
+      ? "RENDER_WORKSPACE_BOUND_SERVICE_IDENTITIES_UNBOUND"
+      : platformAuthorizedPreIdentity
+        ? "RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND"
+        : "NON_GITHUB_HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND",
     subject_sha: subjectSha,
     production_execution_host_class: a.production_execution_host_class,
     evidence_runtime_role: a.host_identity_contract.evidence_runtime.runtime_role,
     twin_runtime_role: a.host_identity_contract.twin_runtime.runtime_role,
     platform_selected: platformAuthorizedPreIdentity,
+    workspace_owner_id_bound: workspaceBoundPreIdentity,
+    platform_account_or_project_id: workspaceBoundPreIdentity ? "tea-dab2cfvavr4c73ejavog" : null,
     platform_selection_authorized: platformAuthorizedPreIdentity,
     service_creation_authorized: platformAuthorizedPreIdentity,
     host_identity_binding_authorized: platformAuthorizedPreIdentity,
@@ -459,7 +470,12 @@ try {
     exact_two_runtime_service_identities_bound: false,
     binding_authorized: false,
     pre_platform_checkpoint_evidence_bound: true,
-    remaining_blockers: platformAuthorizedPreIdentity ? [
+    remaining_blockers: workspaceBoundPreIdentity ? [
+      "RENDER_ZERO_RUNTIME_IDENTITY_PROVISIONING_PATH_NOT_PROVEN",
+      "RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",
+      "RENDER_TWIN_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",
+      "NON_GITHUB_HOST_BINDING_NOT_COMPLETE",
+    ] : platformAuthorizedPreIdentity ? [
       "RENDER_WORKSPACE_OWNER_ID_NOT_BOUND",
       "RENDER_ZERO_RUNTIME_IDENTITY_PROVISIONING_PATH_NOT_PROVEN",
       "RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",
