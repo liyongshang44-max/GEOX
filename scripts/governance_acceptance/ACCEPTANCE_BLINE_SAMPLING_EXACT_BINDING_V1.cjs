@@ -32,6 +32,9 @@ need("service", [
   "AMBIGUOUS:sample_receipt_v1",
   "AMBIGUOUS:lab_result_import_v1",
   "DUPLICATE:sample_id",
+  "AMBIGUOUS:sampling_acceptance_v1",
+  "CONFLICT:sampling_acceptance_exact_chain_verdict",
+  "idempotent: true",
   "sampling_plan_fact_id",
   "sample_receipt_fact_id",
   "lab_result_fact_id",
@@ -98,6 +101,7 @@ need("samplingContract", [
   "lab_result_fact_id",
   "latest-wins source selection",
   "ambiguous receipt/lab/acceptance identity",
+  "same exact plan/receipt/lab source chain is idempotent",
 ]);
 need("fertilizationContract", [
   "sampling_acceptance_fact_id",
@@ -123,6 +127,7 @@ const stats = {
   service_latest_selector_absent: !source.service.includes("ORDER BY occurred_at DESC"),
   projection_latest_selector_absent: !source.projection.includes("ORDER BY occurred_at DESC"),
   acceptance_exact_refs: ["sampling_plan_fact_id", "sample_receipt_fact_id", "lab_result_fact_id"].every((x) => source.service.includes(x) && source.route.includes(x)),
+  acceptance_exact_chain_idempotent: source.service.includes("CONFLICT:sampling_acceptance_exact_chain_verdict") && source.service.includes("idempotent: true"),
   plan_fact_continuity: source.projection.includes("SAMPLING_OPERATION_RELATION_EXACT_PLAN_REF_MISSING")
     && source.fertilization.includes("SAMPLING_RECEIPT_PLAN_FACT_REF_MISMATCH")
     && source.fertilization.includes("SAMPLING_LAB_PLAN_FACT_REF_MISMATCH"),
