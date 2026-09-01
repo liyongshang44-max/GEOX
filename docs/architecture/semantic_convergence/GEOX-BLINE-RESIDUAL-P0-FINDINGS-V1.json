@@ -209,6 +209,24 @@
       ],
       "semantic_risk": "absence of confidence evidence is converted into a fabricated numeric confidence and promoted into customer-visible, learning-eligible formal memory",
       "required_direction": "formal memory confidence must be provenance-bound to measured/qualified evidence or remain unknown/null and fail closed where a numeric confidence is required; arbitrary numeric defaults cannot acquire formal authority"
+    },
+    {
+      "finding_id": "P0-RES-012",
+      "severity": "P0",
+      "title": "Formal Field Memory source selection treats missing scope as caller scope",
+      "paths": [
+        "apps/server/src/services/field_memory_service.ts",
+        "apps/server/src/routes/field_memory_v1.ts"
+      ],
+      "evidence": [
+        "loadAcceptanceResultForMemoryV1 uses COALESCE(payload.tenant_id, $1) = $1 and equivalent project/group predicates",
+        "loadEvidenceArtifactObservationPairV1 uses the same COALESCE fallback for tenant/project/group and also defaults missing operation binding to the requested operation_plan_id",
+        "loadReceiptObservationPairV1 uses the same COALESCE fallback for tenant/project/group",
+        "POST /api/v1/field-memory/from-acceptance supplies the authenticated caller tenant triple to these selectors",
+        "a source fact with missing scope fields is therefore treated as belonging to the caller scope instead of failing closed"
+      ],
+      "semantic_risk": "unscoped or partially scoped Acceptance/Evidence/Receipt facts can acquire caller tenant scope during Formal Field Memory materialization, violating exact provenance and null-wildcard prohibitions",
+      "required_direction": "formal-memory source facts must carry and exactly match tenant/project/group and required operation/receipt identities; missing scope is a hard rejection, never a wildcard"
     }
   ]
 }
