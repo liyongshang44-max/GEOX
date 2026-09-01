@@ -882,17 +882,20 @@
         "apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts"
       ],
       "surface_role": "AUTHORITY",
-      "delegates_to": [],
-      "replacement_path": [
-        "single Acceptance->Outcome formalization service"
+      "delegates_to": [
+        "apps/server/src/services/field_memory_service.ts"
       ],
-      "sunset_condition": "CONVERGE DUPLICATE ROI/MEMORY WRITERS",
+      "replacement_path": [
+        "ROI remains legacy explicit formalization; Field Memory -> canonical reviewed-promotion materializer"
+      ],
+      "sunset_condition": "NO_DIRECT_FIELD_MEMORY_WRITE; ROI convergence is separate debt",
       "semantic_family": [
+        "roi",
         "field_memory",
-        "roi"
+        "governance.trace_projection"
       ],
       "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
-      "owner": "BLINE"
+      "owner": "BLINE_LEGACY_TWIN_ROI_AND_MEMORY_FACADE"
     },
     {
       "surface_id": "ARS-039",
@@ -901,17 +904,19 @@
         "apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts"
       ],
       "surface_role": "COMPATIBILITY",
-      "delegates_to": [],
-      "replacement_path": [
-        "human command facade over one formalization service"
+      "delegates_to": [
+        "apps/server/src/services/field_memory_service.ts"
       ],
-      "sunset_condition": "REMOVE INDEPENDENT TRUTH AFTER SERVICE CONVERGENCE",
+      "replacement_path": [
+        "human review/audit facade -> canonical reviewed-promotion Field Memory materializer"
+      ],
+      "sunset_condition": "KEEP HUMAN AUDIT; NO INDEPENDENT FIELD_MEMORY TRUTH",
       "semantic_family": [
         "field_memory",
         "roi"
       ],
       "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
-      "owner": "BLINE"
+      "owner": "BLINE_HUMAN_FORMALIZATION_FACADE"
     },
     {
       "surface_id": "ARS-040",
