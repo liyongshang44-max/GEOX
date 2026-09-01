@@ -157,6 +157,8 @@ function resolveRelativeImport(importerAbs, specifier) {
 function scanAuthorityCallsites(abs, content, production) {
   const importerPath = rel(abs);
   const importRe = /import\s*\{([\s\S]*?)\}\s*from\s*["']([^"']+)["']/g;
+  const writeLikeName = /^(?:record|create|insert|write|append|persist|upsert|submit|approve|reject|transition|execute|formalize|build|issue|dispatch|claim|ack|apply|save|runQueued)/i;
+  const writeLikeMethodPattern = "(?:record|create|insert|write|append|persist|upsert|submit|approve|reject|transition|execute|formalize|build|issue|dispatch|claim|ack|apply|save|runQueued)[A-Za-z0-9_$]*";
   let match;
   while ((match = importRe.exec(content)) !== null) {
     const importedFrom = resolveRelativeImport(abs, String(match[2] ?? ""));
@@ -170,12 +172,42 @@ function scanAuthorityCallsites(abs, content, production) {
       const parts = binding.split(/\s+as\s+/i).map(x => x.trim());
       const importedName = parts[0];
       const localName = parts[1] || importedName;
-      if (!/^(?:record|create|insert|write|append|persist|upsert|submit|approve|reject|transition|execute|formalize|build|issue|dispatch|claim|ack|apply|save|runQueued)/i.test(importedName)) continue;
-      const callRe = new RegExp("\\b" + esc(localName) + "\\s*\\(", "m");
-      if (!callRe.test(content)) continue;
       const families = authority.families.length ? authority.families : ["cross_family.authority_callsite"];
-      for (const family of families) {
-        add(importerPath, family, "AUTHORITY_CALLSITE", "calls:" + importedFrom + "#" + importedName, production);
+
+      if (writeLikeName.test(importedName)) {
+        const callRe = new RegExp("\\b" + esc(localName) + "\\s*\\(", "m");
+        if (callRe.test(content)) {
+          for (const family of families) {
+            add(importerPath, family, "AUTHORITY_CALLSITE", "calls:" + importedFrom + "#" + importedName, production);
+          }
+        }
+      }
+
+      const instanceRe = new RegExp(
+        "\\b(?:const|let|var)\\s+([A-Za-z_$][A-Za-z0-9_$]*)\\s*=\\s*new\\s+" + esc(localName) + "\\s*\\(",
+        "g"
+      );
+      let instanceMatch;
+      while ((instanceMatch = instanceRe.exec(content)) !== null) {
+        const instanceName = String(instanceMatch[1] ?? "");
+        if (!instanceName) continue;
+        const methodRe = new RegExp(
+          "\\b" + esc(instanceName) + "\\s*\\.\\s*(" + writeLikeMethodPattern + ")\\s*\\(",
+          "g"
+        );
+        let methodMatch;
+        while ((methodMatch = methodRe.exec(content)) !== null) {
+          const methodName = String(methodMatch[1] ?? "");
+          for (const family of families) {
+            add(
+              importerPath,
+              family,
+              "AUTHORITY_CALLSITE",
+              "class-call:" + importedFrom + "#" + importedName + "." + methodName,
+              production
+            );
+          }
+        }
       }
     }
   }
