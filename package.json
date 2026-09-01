@@ -249,7 +249,8 @@
     "ci:governance:water-response-verification-from-acceptance-boundary": "node scripts/governance_acceptance/ACCEPTANCE_WATER_RESPONSE_VERIFICATION_FROM_ACCEPTANCE_V1_BOUNDARY.cjs",
     "ci:runtime:water-response-verification-from-acceptance": "node scripts/runtime_acceptance/ACCEPTANCE_WATER_RESPONSE_VERIFICATION_FROM_ACCEPTANCE_V1_RUNTIME.cjs",
     "ci:water-response-verification-from-acceptance": "pnpm run ci:governance:water-response-verification-from-acceptance-boundary && pnpm run ci:runtime:water-response-verification-from-acceptance",
-    "ci:governance:bline-p0-res007-evidence-export-boundary": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_P0_RES007_EVIDENCE_EXPORT_NO_ACCEPTANCE_AUTHORITY_V1.cjs"
+    "ci:governance:bline-p0-res007-evidence-export-boundary": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_P0_RES007_EVIDENCE_EXPORT_NO_ACCEPTANCE_AUTHORITY_V1.cjs",
+    "ci:governance:bline-active-runtime-surface-closure": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_ACTIVE_RUNTIME_SURFACE_CLOSURE_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"
