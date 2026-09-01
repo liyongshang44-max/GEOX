@@ -2315,6 +2315,195 @@
       "removal_target": "KEEP STORAGE ABSTRACTION; SEMANTIC AUTHORITY MUST BE OWNED BY CALLERS AND MACHINE-INVENTORIED",
       "surface_id": "RES-086",
       "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/external_evidence/formal_live_kbs_soil_ingress_executor_v1.ts",
+      "entrypoint": "MCFT-CAP-09 external-evidence collector composition",
+      "activation_mode": "MCFT_OWNED_COLLECTOR_EXECUTOR",
+      "writes": [
+        "restricted canonical External Evidence through PostgresExternalFormalEvidenceIngressV1"
+      ],
+      "reads": [
+        "public KBS soil source through collector-side transport",
+        "durable raw retention/canonicalization result"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "evidence.qualification"
+      ],
+      "authority_class": "MCFT_EXTERNAL_EVIDENCE_INGRESS_EXECUTOR",
+      "runtime_reachable": "MCFT_OWNED; DO_NOT_MODIFY_FROM_BLINE",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "MCFT Evidence Runtime"
+      ],
+      "removal_target": "DO_NOT_MODIFY_IN_BLINE; FINAL_TYPED_INTEGRATION_ONLY_AFTER_MCFT_COMPLETE",
+      "audit_note": "File boundary is collector-side only; public fetch is forbidden inside Runtime and durable raw retention precedes facts ingress.",
+      "surface_id": "RES-087",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/routes/dev/flight_table_v1.ts",
+      "entrypoint": "registerFlightTableV1Routes dev API",
+      "activation_mode": "DEVTOOLS_API_FEATURE_GATED",
+      "writes": [
+        "indirect Flight Table field/geometry/device/formal-scenario artifacts through dev services"
+      ],
+      "reads": [
+        "Flight Table run state and dev scenario inputs"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "governance.trace_projection"
+      ],
+      "authority_class": "DEVTOOLS_FLIGHT_TABLE_ACTIVATION_ROUTE",
+      "runtime_reachable": "PROVEN_WHEN_ENABLE_FLIGHT_TABLE_API",
+      "feature_flag": "ENABLE_FLIGHT_TABLE_API",
+      "downstream_consumers": [
+        "Flight Table dev verification"
+      ],
+      "removal_target": "KEEP DEVTOOLS-ONLY; NEVER PROMOTE FLIGHT TABLE GENERATED FACTS TO FORMAL PRODUCT AUTHORITY",
+      "surface_id": "RES-088",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/routes/v1/fertilization.ts",
+      "entrypoint": "registerCoreV1Routes → registerFertilizationV1Routes",
+      "activation_mode": "ACTIVE_PRODUCT_API",
+      "writes": [
+        "indirect nitrogen assessment/recommendation/prescription/fertilization acceptance facts",
+        "variable prescription bridge outputs"
+      ],
+      "reads": [
+        "tenant-scoped fertilization API inputs"
+      ],
+      "semantic_family": [
+        "decision.candidate",
+        "action.prescription_spec",
+        "decision.approval",
+        "acceptance.verdict"
+      ],
+      "authority_class": "ACTIVE_FERTILIZATION_AUTHORITY_ROUTE_WITH_ACCEPTANCE_P0",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "fertilization domain service",
+        "variable prescription bridge",
+        "approval/execution consumers"
+      ],
+      "removal_target": "KEEP PRODUCT FACADE; CONVERGE TO CANONICAL CANDIDATE/ACTION-SPEC/APPROVAL/ACCEPTANCE PORTS; FIX P0-RES-009",
+      "audit_note": "P0-RES-009: active acceptance route currently permits caller assertions to drive fertilization PASS without canonical execution evidence verification.",
+      "surface_id": "RES-089",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/routes/v1/inspection.ts",
+      "entrypoint": "registerCoreV1Routes → registerInspectionV1Routes",
+      "activation_mode": "ACTIVE_PRODUCT_API",
+      "writes": [
+        "indirect inspection request/observation/signal/assessment/review/inspection-acceptance facts"
+      ],
+      "reads": [
+        "inspection API inputs and exact inspection-domain facts"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "evidence.qualification",
+        "acceptance.verdict"
+      ],
+      "authority_class": "ACTIVE_INSPECTION_EVIDENCE_AUTHORITY_ROUTE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "pest/disease inspection service",
+        "inspection projection/reporting"
+      ],
+      "removal_target": "KEEP DOMAIN EVIDENCE WORKFLOW; INSPECTION_ACCEPTANCE MUST REMAIN EVIDENCE-COMPLETENESS, NOT OPERATION ACCEPTANCE",
+      "audit_note": "Acceptance endpoint requires dedicated acceptance.evaluate/security.admin scopes; service documents PASS as inspection evidence-chain complete, not spray/execution acceptance.",
+      "surface_id": "RES-090",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/routes/v1/sampling.ts",
+      "entrypoint": "registerCoreV1Routes → registerSamplingV1Routes",
+      "activation_mode": "ACTIVE_PRODUCT_API",
+      "writes": [
+        "indirect sampling plan/receipt/lab-result/sampling-acceptance facts"
+      ],
+      "reads": [
+        "sampling plan/receipt/lab evidence"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "evidence.qualification",
+        "acceptance.verdict"
+      ],
+      "authority_class": "ACTIVE_SAMPLING_EVIDENCE_AUTHORITY_ROUTE_WITH_LATEST_P0",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "sampling service",
+        "fertilization evidence consumers"
+      ],
+      "removal_target": "KEEP SAMPLING WORKFLOW; REQUIRE EXACT RECEIPT/LAB-IMPORT BINDING; FIX P0-RES-010",
+      "audit_note": "P0-RES-010: acceptance selection currently permits latest-wins receipt/lab selection when exact import identity is omitted.",
+      "surface_id": "RES-091",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/services/appleii_problem_state_pipeline_v1.ts",
+      "entrypoint": "Apple II sensing/judge pipeline call chain",
+      "activation_mode": "ACTIVE_SENSING_PIPELINE_SERVICE",
+      "writes": [
+        "problem_state_v1 and uncertainty_v1 through appendProblemStateAndUncertaintyFactsV1"
+      ],
+      "reads": [
+        "stage1 sensing/judge summary",
+        "field/device scope"
+      ],
+      "semantic_family": [
+        "twin.state",
+        "evidence.qualification"
+      ],
+      "authority_class": "LEGACY_PROBLEM_STATE_UNCERTAINTY_ACTIVATION_SERVICE",
+      "runtime_reachable": "PROVEN_CALLER",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "field read-model refresh",
+        "sensing/problem-state consumers"
+      ],
+      "removal_target": "CONVERGE TO CANONICAL STATE/EVIDENCE; DO NOT ACTIVATE AS PARALLEL MCFT STATE AUTHORITY",
+      "surface_id": "RES-092",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/telemetry-ingest/src/main.ts",
+      "entrypoint": "telemetry-ingest long-running MQTT process",
+      "activation_mode": "ACTIVE_EXTERNAL_INGEST_DAEMON",
+      "writes": [
+        "raw telemetry facts",
+        "device_observation_v1 and downstream sensing/read-model side effects"
+      ],
+      "reads": [
+        "MQTT telemetry/heartbeat topics",
+        "device credentials",
+        "canonical telemetry metric contracts"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "governance.fact_ledger"
+      ],
+      "authority_class": "TELEMETRY_INGEST_DAEMON_AND_OBSERVATION_ACTIVATION",
+      "runtime_reachable": "PROVEN_LONG_RUNNING_PROCESS",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "DeviceObservation service",
+        "sensing pipeline",
+        "agronomy/read models"
+      ],
+      "removal_target": "KEEP TRANSPORT INGEST; PRESERVE SOURCE/EVENT-TIME PROVENANCE; CANONICAL OBSERVATION/EQ MUST REMAIN EXPLICIT",
+      "surface_id": "RES-093",
+      "b02_registered": false
     }
   ],
   "cross_branch_surfaces": [
