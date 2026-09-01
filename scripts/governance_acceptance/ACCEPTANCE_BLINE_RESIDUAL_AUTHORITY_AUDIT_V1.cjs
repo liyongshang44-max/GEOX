@@ -21,10 +21,12 @@ const PROD_ROOTS = [
   "apps/web/src",
   "packages/device-skills/src",
   "packages/skill-registry/src",
-  "packages/control-kernel/src"
+  "packages/control-kernel/src",
+  "docker/postgres/init",
+  "config/judge"
 ];
 const AUX_ROOTS = ["apps/server/scripts", "packages/contracts", "scripts", ".github/workflows"];
-const EXTS = [".ts", ".tsx", ".js", ".jsx", ".cjs", ".mjs", ".sql", ".yml", ".yaml"];
+const EXTS = [".ts", ".tsx", ".js", ".jsx", ".cjs", ".mjs", ".sql", ".json", ".yml", ".yaml"];
 
 const REQUIRED = [
   "source_path","entrypoint","activation_mode","writes","reads","semantic_family",
@@ -68,7 +70,10 @@ const TYPE_TOKENS = {
   ExternalOperationSourceEvidenceV1: "execution.result_evidence",
   ControlVerdictV0: "decision.control_gate",
   CapabilityResolution: "execution.adapter_resolution",
-  SkillBindingRecord: "governance.skill_binding"
+  SkillBindingRecord: "governance.skill_binding",
+  ProblemStateV1: "judge.problem_state",
+  AoSenseV1: "judge.sensing_request",
+  LBCandidateV1: "judge.learning_candidate"
 };
 
 const TABLES = {
@@ -270,8 +275,20 @@ function scan(abs, production) {
      content.includes("inferFertilityFromObservationAggregateV1"));
   const specialSkillBinding = p.startsWith("packages/skill-registry/src/") &&
     content.includes("resolveRuleSkillBindings");
+  const specialStandaloneJudge =
+    p.startsWith("apps/judge/src/") &&
+    (content.includes("problem_state_v1") || content.includes("ao_sense_v1") || content.includes("lb_candidate_v1"));
+  const specialJudgeConfig =
+    p.startsWith("config/judge/") &&
+    content.includes('"sufficiency"') &&
+    content.includes('"time_coverage"') &&
+    content.includes('"qc"');
+  const semanticDefaultRisk =
+    p.startsWith("docker/postgres/init/") &&
+    content.includes("field_memory_v1") &&
+    (content.includes("DEFAULT 'projectA'") || content.includes("DEFAULT 0.8"));
   const genericFactsWriter = /\bINSERT\s+INTO\s+facts\b/i.test(content);
-  if (!families.size && !specialPlanner && !specialFallback && !specialControlVerdict && !specialDeviceCapability && !specialDeviceSensing && !specialSkillBinding && !genericFactsWriter) return;
+  if (!families.size && !specialPlanner && !specialFallback && !specialControlVerdict && !specialDeviceCapability && !specialDeviceSensing && !specialSkillBinding && !specialStandaloneJudge && !specialJudgeConfig && !semanticDefaultRisk && !genericFactsWriter) return;
 
   for (const f of families) add(p, f, "SEMANTIC_TOUCHPOINT", "semantic-token-or-type", production);
   if (genericFactsWriter) {
@@ -346,6 +363,17 @@ function scan(abs, production) {
   }
   if (specialSkillBinding) {
     add(p, "governance.skill_binding", "AUTHORITY_DERIVER", "skill-binding-selection", production);
+  }
+  if (specialStandaloneJudge) {
+    if (content.includes("problem_state_v1")) add(p, "judge.problem_state", "AUTHORITY_DERIVER", "standalone-judge-problem-state", production);
+    if (content.includes("ao_sense_v1")) add(p, "judge.sensing_request", "AUTHORITY_DERIVER", "standalone-judge-sensing-request", production);
+    if (content.includes("lb_candidate_v1")) add(p, "judge.learning_candidate", "AUTHORITY_DERIVER", "standalone-judge-learning-candidate", production);
+  }
+  if (specialJudgeConfig) {
+    add(p, "judge.problem_state", "CONFIG_AUTHORITY", "standalone-judge-threshold-config", production);
+  }
+  if (semanticDefaultRisk) {
+    add(p, "field_memory", "SEMANTIC_DEFAULT_AUTHORITY_RISK", "bootstrap-field-memory-defaults", production);
   }
 
   if (p.startsWith("apps/server/db/migrations/")) {
@@ -439,6 +467,7 @@ function main() {
 
   const hardKinds = new Set([
     "PERSISTENCE_WRITER","GENERIC_FACT_WRITER","SEMANTIC_BUILDER","AUTHORITY_DERIVER",
+    "CONFIG_AUTHORITY","SEMANTIC_DEFAULT_AUTHORITY_RISK",
     "HTTP_AUTHORITY_PRODUCER","AUTHORITY_CALLSITE","PERSISTENCE_AUTHORITY_RISK"
   ]);
   const hard = [];
