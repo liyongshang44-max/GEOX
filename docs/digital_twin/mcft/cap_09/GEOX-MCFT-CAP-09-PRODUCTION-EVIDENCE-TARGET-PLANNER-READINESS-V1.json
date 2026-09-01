@@ -1,9 +1,9 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_target_planner_readiness_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1",
-  "status": "SOURCE_SPECIFIC_PROGRESS_PORTS_IMPLEMENTED_REMAINING_BLOCKERS",
+  "status": "KBS_SINGLE_FETCH_MULTI_INTERVAL_PATH_IMPLEMENTED_REMAINING_BLOCKERS",
   "stage": "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START",
-  "subject_predecessor_sha": "3423f16556a9cd00869f43d9c2f21ce8a5303705",
+  "subject_predecessor_sha": "8a9a03195b50ddaaa33f23b65622ed99bca4bb5a",
   "host_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
   "production_process_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
   "production_composition_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
@@ -24,16 +24,18 @@
     "kbs_raw_hourly": {
       "publication_mode": "DAILY_BATCH_OF_HOURLY_EVENTS",
       "required_planning_semantics": "ONE_RETAINED_PROVIDER_BATCH_MAY_ADVANCE_MULTIPLE_EXACT_HOURLY_EVENTS",
-      "current_product_shape": "ONE_PROVIDER_FETCH_PLUS_ONE_EXACT_INTERVAL_DECODE_PER_TARGET",
+      "current_product_shape": "ONE_PROVIDER_FETCH_PLUS_ONE_PRIVATE_RETENTION_PLUS_MULTI_EXACT_INTERVAL_DECODE_PER_BATCH",
       "current_shape_bindable": false,
-      "reason": "REPEATING_THE_FULL_CSV_FETCH_FOR_EACH_HOURLY_ROW_IS_NOT_AN_AUTHORIZED_PRODUCTION_PLAN",
+      "reason": "SINGLE_FETCH_MULTI_INTERVAL_PATH_IMPLEMENTED_BUT_DUE_AND_ACQUISITION_HORIZON_AUTHORITY_REMAIN_UNBOUND",
       "required_foundation": [
         "BATCH_WATERMARK_DISCOVERY_OR_EQUIVALENT_DUE_STATE",
         "SINGLE_FETCH_MULTI_INTERVAL_RETAIN_DECODE_CANONICALIZE",
         "DURABLE_RAINFALL_AND_HISTORICAL_ET0_PAIR_PROGRESS",
         "NO_NEW_BATCH_NOT_DUE_STATE_WITHOUT_PROVIDER_HAMMERING"
       ],
-      "progress_read_port": "READ_ONLY_RAINFALL_HISTORICAL_ET0_PAIR_PROGRESS_IMPLEMENTED"
+      "progress_read_port": "READ_ONLY_RAINFALL_HISTORICAL_ET0_PAIR_PROGRESS_IMPLEMENTED",
+      "single_fetch_multi_interval_path_implemented": true,
+      "single_private_retention_per_batch_implemented": true
     },
     "gfs_bundle": {
       "publication_mode": "SIX_HOUR_PROVIDER_CYCLES_WITH_HOURLY_TARGET_WINDOWS",
@@ -79,12 +81,10 @@
   },
   "unconditional_blockers": [
     "PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_AUTHORITY_NOT_ESTABLISHED",
-    "KBS_DAILY_BATCH_SINGLE_FETCH_MULTI_INTERVAL_PATH_NOT_IMPLEMENTED",
     "KBS_SOIL_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED",
     "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"
   ],
   "implementation_order": [
-    "ADD_KBS_SINGLE_FETCH_MULTI_INTERVAL_PRODUCT_PATH",
     "ESTABLISH_EXPLICIT_BOOTSTRAP_AND_BACKFILL_HORIZON_AUTHORITY",
     "IMPLEMENT_PURE_SOURCE_SPECIFIC_PLANNER",
     "PROVE_RESTART_PAIR_SKEW_BATCH_REUSE_AND_ZERO_DUE_PROVIDER_REQUEST",
@@ -97,7 +97,9 @@
     "READ_ONLY_BINDING_SET_CURSOR_PROGRESS_PORT",
     "KBS_RAINFALL_HISTORICAL_ET0_PAIR_PROGRESS",
     "GFS_CROSS_CYCLE_PAIR_PROGRESS_WITH_SKEW_FAIL_CLOSED",
-    "KBS_SOIL_LATEST_EVENT_PROGRESS_READ"
+    "KBS_SOIL_LATEST_EVENT_PROGRESS_READ",
+    "KBS_DAILY_BATCH_SINGLE_FETCH_MULTI_INTERVAL_PRODUCT_PATH",
+    "KBS_ONE_PRIVATE_RETENTION_REUSED_ACROSS_MULTI_INTERVAL_DECODE"
   ],
   "current_entrypoint": {
     "status": "PACKAGED_FAIL_CLOSED_TARGET_PLANNER_UNBOUND",
@@ -117,5 +119,6 @@
     "mcft_cap09_completed": false
   },
   "source_progress_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_source_progress_v1.ts",
-  "source_progress_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PROGRESS_V1.ts"
+  "source_progress_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PROGRESS_V1.ts",
+  "kbs_multi_interval_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_MULTI_INTERVAL_PRODUCT_PATH_V1.ts"
 }

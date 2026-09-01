@@ -21,6 +21,7 @@ import {
   buildKbsRawHourlyFetchRequestV1,
   KbsRawHourlyExactIntervalDecoderV1,
   KbsRawHourlyLiveTransportV1,
+  KbsRawHourlyMultiIntervalDecoderV1,
 } from "./provider/kbs_raw_hourly_live_provider_v1.js";
 import {
   GfsNomadsLiveProviderV1,
@@ -203,5 +204,38 @@ export class ProductionEvidenceWorkItemFactoryV1 {
       GFS_BUNDLE: gfs,
     };
     return sourceFamilies.map((family) => byFamily[family]);
+  }
+
+  buildKbsRawHourlyBatch(input: {
+    target_logical_times: readonly string[];
+    requested_at: string;
+    request_id_prefix: string;
+  }): EvidenceRuntimeCycleWorkItemV1 {
+    const requestedAt = canonicalIsoV1(
+      input.requested_at,
+      "PHASE3_EVIDENCE_KBS_BATCH_REQUESTED_AT_INVALID",
+    );
+    const prefix = requestPrefixV1(input.request_id_prefix);
+    const decoder = new KbsRawHourlyMultiIntervalDecoderV1(
+      input.target_logical_times,
+      {
+        python_executable: this.config.python_executable,
+        clock: this.clock,
+      },
+    );
+    const request = buildKbsRawHourlyFetchRequestV1({
+      request_id: `${prefix}:kbs-raw-hourly-batch`,
+      requested_at: requestedAt,
+    });
+    return {
+      work_item_id: `${prefix}:kbs-raw-hourly-batch`,
+      dataset_id: "kbs_lter_raw_hourly_multi_interval_batch_v1",
+      request,
+      transport: new KbsRawHourlyLiveTransportV1({
+        fetch_impl: this.config.fetch_impl,
+        clock: this.clock,
+      }),
+      decoder,
+    };
   }
 }
