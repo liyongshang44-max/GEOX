@@ -149,7 +149,7 @@ jobs:
             done
             [ "$(jq -r '.suspended' <<<"$svc")" = "suspended" ] || { echo "Service failed to reach suspended state: $sid" >&2; return 33; }
 
-            jq -e --arg id "$sid" --arg name "$name" --arg owner "$RENDER_OWNER_ID" --arg image "$RENDER_IMAGE_PATH" --arg cmd "$RENDER_BOOTSTRAP_COMMAND"               '.id==$id and .name==$name and .ownerId==$owner and .type=="background_worker" and .imagePath==$image and .autoDeploy=="no" and .suspended=="suspended" and .serviceDetails.runtime=="image" and .serviceDetails.region=="oregon" and .serviceDetails.plan=="0.5c-512mb" and .serviceDetails.numInstances==1 and .serviceDetails.envSpecificDetails.dockerCommand==$cmd' <<<"$svc" >/dev/null
+            jq -e --arg id "$sid" --arg name "$name" --arg owner "$RENDER_OWNER_ID" --arg image "$RENDER_IMAGE_PATH" --arg cmd "$RENDER_BOOTSTRAP_COMMAND"               '.id==$id and .name==$name and .ownerId==$owner and .type=="background_worker" and .imagePath==$image and .autoDeploy==false and .suspended=="suspended" and .env=="image" and .region=="oregon" and .plan=="0.5c-512mb" and .numInstances==1 and .dockerCommand==$cmd' <<<"$svc" >/dev/null
 
             envs="$(api_get "$API/services/$sid/env-vars?limit=100")"
             secrets="$(api_get "$API/services/$sid/secret-files?limit=100")"
