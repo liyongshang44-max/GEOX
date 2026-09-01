@@ -87,6 +87,7 @@ export async function buildSamplingReportViewV1(pool: Pool, params: SamplingScop
   if (!plan && operationIds.length < 1) return emptySamplingReportView();
 
   let resolvedPlanId: string | null = plan;
+  let relationPlanFactId: string | null = null;
 
   if (!resolvedPlanId && operationIds.length > 0) {
     const relation = await queryAtMostOne(
@@ -106,11 +107,15 @@ export async function buildSamplingReportViewV1(pool: Pool, params: SamplingScop
     );
     if (relation.ambiguous) return emptySamplingReportView(["AMBIGUOUS_SAMPLING_OPERATION_RELATION"]);
     resolvedPlanId = toText(relation.row?.record_json?.plan_id);
+    relationPlanFactId = toText(relation.row?.record_json?.sampling_plan_fact_id);
+    if (resolvedPlanId && (!relationPlanFactId || relationPlanFactId !== `sp_${resolvedPlanId}`)) {
+      return emptySamplingReportView(["SAMPLING_OPERATION_RELATION_EXACT_PLAN_REF_MISSING"]);
+    }
   }
 
   if (!resolvedPlanId) return emptySamplingReportView();
 
-  const planFactId = `sp_${resolvedPlanId}`;
+  const planFactId = relationPlanFactId ?? `sp_${resolvedPlanId}`;
   const planResult = await pool.query(
     `SELECT fact_id, record_json
        FROM facts
@@ -136,8 +141,9 @@ export async function buildSamplingReportViewV1(pool: Pool, params: SamplingScop
         AND (record_json::jsonb->>'project_id')=$2
         AND (record_json::jsonb->>'group_id')=$3
         AND (record_json::jsonb->>'plan_id')=$4
+        AND (record_json::jsonb->>'sampling_plan_fact_id')=$5
       LIMIT 2`,
-    [...scope, resolvedPlanId],
+    [...scope, resolvedPlanId, planRow.fact_id],
   );
   if (receipt.ambiguous) return blockedFromPlan(resolvedPlanId, planJson, ["AMBIGUOUS_SAMPLE_RECEIPT_FOR_PLAN"]);
   const receiptRow = receipt.row;
@@ -155,8 +161,9 @@ export async function buildSamplingReportViewV1(pool: Pool, params: SamplingScop
       WHERE (record_json::jsonb->>'type')='lab_result_import_v1'
         AND (record_json::jsonb->>'sample_id')=$1
         AND (record_json::jsonb->>'sample_receipt_fact_id')=$2
+        AND (record_json::jsonb->>'sampling_plan_fact_id')=$3
       LIMIT 2`,
-    [sampleId, receiptRow.fact_id],
+    [sampleId, receiptRow.fact_id, planRow.fact_id],
   );
   if (lab.ambiguous) {
     return {
@@ -211,6 +218,8 @@ export async function buildSamplingReportViewV1(pool: Pool, params: SamplingScop
   const exactChain =
     Boolean(labRow)
     && Boolean(acceptance.row)
+    && receiptJson?.sampling_plan_fact_id === planRow.fact_id
+    && labJson?.sampling_plan_fact_id === planRow.fact_id
     && acceptanceJson?.sampling_plan_fact_id === planRow.fact_id
     && acceptanceJson?.sample_receipt_fact_id === receiptRow.fact_id
     && acceptanceJson?.lab_result_fact_id === labRow?.fact_id
