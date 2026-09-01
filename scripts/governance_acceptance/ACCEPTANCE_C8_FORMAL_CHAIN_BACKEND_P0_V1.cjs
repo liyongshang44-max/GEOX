@@ -7,6 +7,7 @@ const PROJECT_ID = 'projectA';
 const GROUP_ID = 'groupA';
 const FORMAL_OP = 'op_plan_c8_irrigation_formal_001';
 const FORMAL_ACC = 'acc_c8_irrigation_formal_001';
+const FORMAL_FIELD_MEMORY_RECORD = 'fm_record_c8_irrigation_001';
 const FORMAL_RECEIPT = 'receipt_c8_irrigation_formal_001';
 const FORMAL_TASK = 'act_c8_irrigation_formal_001';
 const FORMAL_FIELD = 'field_c8_demo';
@@ -123,6 +124,12 @@ async function assertRuntimeOpenApi() {
   for (const name of ['FormalFieldMemoryFromAcceptanceRequest', 'FormalFieldMemoryFromAcceptanceResponse', 'RoiLedgerFormalizeFromAcceptanceRequest', 'RoiLedgerFormalizeFromAcceptanceResponse']) {
     assert(Boolean(schemas[name]), `OpenAPI missing schema ${name}`, Object.keys(schemas).filter((x) => x.includes('Acceptance') || x.includes('Formal')));
   }
+  assert(
+    Array.isArray(schemas.FormalFieldMemoryFromAcceptanceRequest?.required)
+      && schemas.FormalFieldMemoryFromAcceptanceRequest.required.includes('field_memory_record_ref'),
+    'OpenAPI field-memory request must require reviewed promotion proof',
+    schemas.FormalFieldMemoryFromAcceptanceRequest
+  );
 }
 
 async function cleanupP0Rows(client) {
@@ -234,7 +241,7 @@ async function assertRoiFormalization(client, asExecutedId) {
   assert(missing.status === 404 && missing.json?.error === 'AS_EXECUTED_NOT_FOUND', 'ROI missing as_executed negative failed', httpDetail(missing));
 }
 async function assertFieldMemory(client) {
-  const body = scoped({ operation_plan_id: FORMAL_OP, acceptance_id: FORMAL_ACC });
+  const body = scoped({ operation_plan_id: FORMAL_OP, acceptance_id: FORMAL_ACC, field_memory_record_ref: FORMAL_FIELD_MEMORY_RECORD });
   const first = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body });
   assert(first.status === 200, 'Field Memory from acceptance positive case failed', httpDetail(first));
   assert(first.json.field_memory?.memory_lane === 'FORMAL_FIELD_MEMORY', 'field memory lane mismatch', first.json.field_memory);
@@ -249,12 +256,12 @@ async function assertFieldMemory(client) {
   assert(Number(count.rows[0].count) === 1, 'field memory duplicated formal FIELD_RESPONSE_MEMORY', count.rows[0]);
 
   await insertAcceptance(client, 'p0_fm_no_chain', { chain_validation_passed: false });
-  const noChain = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: 'p0_fm_no_chain' }) });
+  const noChain = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: 'p0_fm_no_chain', field_memory_record_ref: FORMAL_FIELD_MEMORY_RECORD }) });
   assert(noChain.status === 422 && noChain.json?.error === 'CHAIN_VALIDATION_NOT_PASSED', 'field memory chain negative failed', httpDetail(noChain));
 
-  await insertAcceptance(client, 'p0_fm_no_obs', { operation_plan_id: 'op_plan_p0_no_obs', field_id: 'p0_no_observations_field', evidence_refs: [] });
-  const noObs = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: 'op_plan_p0_no_obs', acceptance_id: 'p0_fm_no_obs' }) });
-  assert(noObs.status === 422 && noObs.json?.error === 'OBSERVATION_PAIR_NOT_FOUND', 'field memory missing observation pair negative failed', httpDetail(noObs));
+  await insertAcceptance(client, 'p0_fm_other_acceptance', { operation_plan_id: FORMAL_OP, field_id: FORMAL_FIELD });
+  const reusedPromotion = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: 'p0_fm_other_acceptance', field_memory_record_ref: FORMAL_FIELD_MEMORY_RECORD }) });
+  assert(reusedPromotion.status === 422 && reusedPromotion.json?.error === 'FIELD_MEMORY_RECORD_ACCEPTANCE_MISMATCH', 'field memory promotion proof must not be reusable across acceptance identities', httpDetail(reusedPromotion));
 }
 function findBy(arr, pred) { return Array.isArray(arr) ? arr.find(pred) : null; }
 
