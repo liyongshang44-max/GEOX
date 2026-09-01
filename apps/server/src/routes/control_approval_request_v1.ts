@@ -138,6 +138,159 @@ function buildInternalBaseUrl(req: any): string {
   return `${proto}://127.0.0.1:${localPort}`; // Loop back into the same server instance.
 }
 
+async function ensureCompatibilityApprovalPlanReadyV1(
+  pool: Pool,
+  input: {
+    tenant: TenantTriple;
+    operation_plan_id: string;
+    approval_request_id: string;
+    approval_decision_fact_id: string;
+    proposal: any;
+    request_payload: any;
+    actor_id: string;
+    token_id: string;
+  }
+): Promise<{ operation_plan_fact_id: string; created: boolean }> {
+  const existing = await pool.query(
+    `SELECT fact_id, record_json::jsonb AS record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type')='operation_plan_v1'
+        AND (record_json::jsonb#>>'{payload,tenant_id}')=$1
+        AND (record_json::jsonb#>>'{payload,project_id}')=$2
+        AND (record_json::jsonb#>>'{payload,group_id}')=$3
+        AND (record_json::jsonb#>>'{payload,operation_plan_id}')=$4
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 1`,
+    [input.tenant.tenant_id, input.tenant.project_id, input.tenant.group_id, input.operation_plan_id]
+  );
+  if ((existing.rowCount ?? 0) > 0) {
+    const record = parseRecordJsonMaybe(existing.rows[0].record_json) ?? existing.rows[0].record_json;
+    const payload = record?.payload ?? {};
+    if (String(payload.approval_request_id ?? "").trim() !== input.approval_request_id) {
+      throw new Error("OPERATION_PLAN_APPROVAL_REQUEST_MISMATCH");
+    }
+    const status = String(payload.status ?? "").trim().toUpperCase();
+    if (status !== "READY" && status !== "READY_TO_DISPATCH") {
+      throw new Error("OPERATION_PLAN_NOT_READY_FOR_TASK");
+    }
+    return { operation_plan_fact_id: String(existing.rows[0].fact_id), created: false };
+  }
+
+  const proposal = input.proposal ?? {};
+  const requestPayload = input.request_payload ?? {};
+  const fieldId = String(
+    requestPayload.field_id
+      ?? proposal?.meta?.field_id
+      ?? proposal?.target?.ref
+      ?? ""
+  ).trim();
+  if (!fieldId) throw new Error("OPERATION_PLAN_FIELD_ID_REQUIRED");
+  const zoneIdRaw = requestPayload.zone_id ?? proposal?.meta?.zone_id ?? null;
+  const zoneId = zoneIdRaw === null || zoneIdRaw === undefined ? null : String(zoneIdRaw).trim() || null;
+  const nowTs = Date.now();
+  const basePayload = {
+    tenant_id: input.tenant.tenant_id,
+    project_id: input.tenant.project_id,
+    group_id: input.tenant.group_id,
+    operation_plan_id: input.operation_plan_id,
+    operation_id: input.operation_plan_id,
+    program_id: requestPayload.program_id ?? proposal?.meta?.program_id ?? null,
+    field_id: fieldId,
+    spatial_scope: { field_id: fieldId, zone_id: zoneId },
+    season_id: requestPayload.season_id ?? proposal?.meta?.season_id ?? null,
+    approval_request_id: input.approval_request_id,
+    approval_decision: "APPROVE",
+    approval_decision_fact_id: input.approval_decision_fact_id,
+    action_type: proposal?.action_type ?? null,
+    target: proposal?.target ?? null,
+    parameters: proposal?.parameters ?? {},
+    act_task_id: null,
+    receipt_fact_id: null,
+    actor_id: input.actor_id,
+    token_id: input.token_id,
+    source: "legacy_approval_compatibility_ready_plan_v1",
+    created_ts: nowTs,
+  };
+
+  const createdFactId = randomUUID();
+  await pool.query(
+    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+    [createdFactId, "api/v1/approvals/approve", { type: "operation_plan_v1", payload: { ...basePayload, status: "CREATED", updated_ts: nowTs } }]
+  );
+
+  const approvedTransitionFactId = randomUUID();
+  await pool.query(
+    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+    [approvedTransitionFactId, "api/v1/approvals/approve", {
+      type: "operation_plan_transition_v1",
+      payload: {
+        ...basePayload,
+        from_status: "CREATED",
+        status: "APPROVED",
+        to_status: "APPROVED",
+        trigger: "approval_decision",
+        decision: "APPROVE",
+        decision_fact_id: input.approval_decision_fact_id,
+        created_ts: Date.now()
+      }
+    }]
+  );
+
+  const approvedFactId = randomUUID();
+  await pool.query(
+    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+    [approvedFactId, "api/v1/approvals/approve", { type: "operation_plan_v1", payload: { ...basePayload, status: "APPROVED", updated_ts: Date.now() } }]
+  );
+
+  const readyTransitionFactId = randomUUID();
+  await pool.query(
+    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+    [readyTransitionFactId, "api/v1/approvals/approve", {
+      type: "operation_plan_transition_v1",
+      payload: {
+        ...basePayload,
+        from_status: "APPROVED",
+        status: "READY",
+        to_status: "READY",
+        trigger: "approval_ready_for_task",
+        decision: "APPROVE",
+        decision_fact_id: input.approval_decision_fact_id,
+        created_ts: Date.now()
+      }
+    }]
+  );
+
+  const readyFactId = randomUUID();
+  const readyTs = Date.now();
+  await pool.query(
+    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+    [readyFactId, "api/v1/approvals/approve", { type: "operation_plan_v1", payload: { ...basePayload, status: "READY", updated_ts: readyTs } }]
+  );
+  await upsertOperationPlanIndexV1(pool, {
+    operation_plan_id: input.operation_plan_id,
+    tenant_id: input.tenant.tenant_id,
+    project_id: input.tenant.project_id,
+    group_id: input.tenant.group_id,
+    field_id: fieldId,
+    zone_id: zoneId,
+    spatial_scope_json: { field_id: fieldId, zone_id: zoneId },
+    season_id: basePayload.season_id ?? null,
+    program_id: basePayload.program_id ?? null,
+    recommendation_id: String(requestPayload.recommendation_id ?? proposal?.meta?.recommendation_id ?? "").trim() || null,
+    recommendation_fact_id: null,
+    approval_request_id: input.approval_request_id,
+    approval_decision: "APPROVE",
+    approval_decision_fact_id: input.approval_decision_fact_id,
+    status: "READY",
+    act_task_id: null,
+    receipt_fact_id: null,
+    source_fact_id: readyFactId,
+    created_ts: nowTs,
+    updated_ts: readyTs,
+  });
+  return { operation_plan_fact_id: readyFactId, created: true };
+}
+
 
 function logLegacyApprovalWarning(req: any, legacyPath: string): void {
   try {
@@ -549,6 +702,32 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
       return reply.send({ ok: true, request_id, decision_id, decision: "APPROVED", auto_task_issue_skipped: true, act_task_id: null, ao_act_fact_id: null });
     }
 
+    const decision_fact_id = randomUUID();
+    const autoTaskDecisionRecord = {
+      type: "approval_decision_v1",
+      payload: {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        decision_id,
+        request_id,
+        approval_request_id: request_id,
+        approval_id: request_id,
+        decision: "APPROVED",
+        act_task_id: null,
+        ao_act_fact_id: null,
+        actor_id: auth.actor_id,
+        token_id: auth.token_id,
+        created_at_ts: Date.now(),
+        auto_task_issued: false,
+        task_issue_intent: true
+      }
+    };
+    await pool.query(
+      "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+      [decision_fact_id, "api/v1/approvals/approve", autoTaskDecisionRecord]
+    );
+
     const operationPlanId =
       String(payload.operation_plan_id ?? proposal?.meta?.operation_plan_id ?? proposal?.parameters?.operation_plan_id ?? "").trim()
       || `opl_${request_id}`;
@@ -574,6 +753,17 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
       meta: normalizeAoActMeta(proposal.meta)
     };
 
+    await ensureCompatibilityApprovalPlanReadyV1(pool, {
+      tenant,
+      operation_plan_id: operationPlanId,
+      approval_request_id: request_id,
+      approval_decision_fact_id: decision_fact_id,
+      proposal,
+      request_payload: approvedRequestRecord.payload,
+      actor_id: auth.actor_id,
+      token_id: auth.token_id,
+    });
+
     const aoResp = await fetch(`${buildInternalBaseUrl(req)}/api/v1/actions/task`, {
       method: "POST",
       headers: {
@@ -593,32 +783,6 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
 
     const act_task_id = String(aoJson.act_task_id ?? "");
     const ao_fact_id = String(aoJson.fact_id ?? "");
-    const created_at_ts = Date.now();
-    const decision_record = {
-      type: "approval_decision_v1",
-      payload: {
-        tenant_id: tenant.tenant_id,
-        project_id: tenant.project_id,
-        group_id: tenant.group_id,
-        decision_id,
-        request_id,
-        approval_request_id: request_id,
-        approval_id: request_id,
-        decision: "APPROVED",
-        act_task_id,
-        ao_act_fact_id: ao_fact_id,
-        actor_id: auth.actor_id,
-        token_id: auth.token_id,
-        created_at_ts,
-        auto_task_issued: true
-      }
-    };
-
-    const decision_fact_id = randomUUID();
-    await pool.query(
-      "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
-      [decision_fact_id, "api/v1/approvals/approve", decision_record]
-    );
 
     return reply.send({
       ok: true,
