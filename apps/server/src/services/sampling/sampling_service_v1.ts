@@ -77,6 +77,7 @@ export class SamplingServiceV1 {
       project_id: input.project_id,
       group_id: input.group_id,
       field_id: input.field_id,
+      sampling_plan_fact_id: input.sampling_plan_fact_id,
       zone_id: input.zone_id ?? null,
       reason: input.reason,
       sample_type: input.sample_type,
@@ -156,6 +157,7 @@ export class SamplingServiceV1 {
     project_id: string;
     group_id: string;
     field_id: string;
+    sampling_plan_fact_id: string;
     zone_id?: string | null;
     collected_at_ts: number;
     collector_actor_id: string;
@@ -226,6 +228,7 @@ export class SamplingServiceV1 {
     evidence_refs: EvidenceRef[];
     quality_status: string;
     sample_receipt_fact_id: string;
+    sampling_plan_fact_id: string;
     plan_id: string;
     tenant_id: string;
     project_id: string;
@@ -241,6 +244,7 @@ export class SamplingServiceV1 {
       import_id,
       sample_id: input.sample_id,
       sample_receipt_fact_id: input.sample_receipt_fact_id,
+      sampling_plan_fact_id: input.sampling_plan_fact_id,
       plan_id: input.plan_id,
       tenant_id: input.tenant_id,
       project_id: input.project_id,
