@@ -141,6 +141,26 @@
       ],
       "semantic_risk": "latest field observations can be misattributed as the before/after outcome of an unrelated accepted operation and enter formal learning memory",
       "required_direction": "formal field-response memory must bind an observation pair causally to the accepted operation or fail closed; latest-two field fallback is forbidden"
+    },
+    {
+      "finding_id": "P0-RES-009",
+      "severity": "P0",
+      "title": "Fertilization acceptance can mint PASS from caller-supplied zone assertions without execution evidence verification",
+      "paths": [
+        "apps/server/src/routes/v1/fertilization.ts",
+        "apps/server/src/services/fertilization/fertilization_service_v1.ts"
+      ],
+      "evidence": [
+        "registerCoreV1Routes unconditionally registers registerFertilizationV1Routes",
+        "POST /api/v1/fertilization/acceptance/evaluate forwards request body into FertilizationServiceV1.evaluateAcceptance",
+        "the write authorization accepts any of fields.write, prescription.write, acceptance.evaluate, or security.admin",
+        "evaluateAcceptance computes zone_results directly from input.zone_applications",
+        "receipt_id, act_task_id, operation_plan_id and as_applied_id are copied from caller input but are not loaded or verified",
+        "no AO-ACT receipt, AsExecuted record, evidence artifact, or canonical Acceptance fact is required before acceptance_status=PASS",
+        "ALL_REQUIRED_ZONES_PASS can therefore be produced from caller assertions alone"
+      ],
+      "semantic_risk": "caller-provided execution claims can be promoted into an authoritative-looking fertilization acceptance PASS without proving execution provenance",
+      "required_direction": "fertilization acceptance must consume exact canonical execution evidence / receipt / AsExecuted bindings and fail closed on missing provenance; acceptance evaluation should require the dedicated acceptance authority scope"
     }
   ]
 }
