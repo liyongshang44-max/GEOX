@@ -177,6 +177,13 @@ function main() {
   assert.equal(ownerCarryforward.status, "REQUALIFY", "EVIDENCE_ACL_CARRYFORWARD_OWNER_CLOSURE_MUST_REQUALIFY");
   assert(ownerCarryforward.changed_dependencies.includes(evidenceAclCarryforwardPath), "EVIDENCE_ACL_CARRYFORWARD_OWNER_DEPENDENCY_REQUIRED");
 
+  // CP-4: planner-readiness focused proofs are centrally owned and may not become unknown paths.
+  const kbsMultiIntervalPlannerProofPath = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_MULTI_INTERVAL_PRODUCT_PATH_V1.ts";
+  const kbsMultiIntervalPlannerProof = plan(authority, registry, [kbsMultiIntervalPlannerProofPath]);
+  assert.equal(kbsMultiIntervalPlannerProof.status, "PASS");
+  assert.equal(kbsMultiIntervalPlannerProof.unknown_changed_paths.length, 0);
+  assert.equal(byId(kbsMultiIntervalPlannerProof, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
   const phase3 = plan(authority, registry, [phase3Path]);
@@ -421,6 +428,7 @@ function main() {
     ".github/workflows/mcft-cap-09-production-evidence-target-planner-readiness.yml",
     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_TARGET_PLANNER_READINESS_V1.cjs",
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_MULTI_INTERVAL_PRODUCT_PATH_V1.ts",
   ]) {
     assert(ownerPaths.has(ownerOnlyPath), `OWNER_CLOSURE_PATH_REQUIRED:${ownerOnlyPath}`);
     assert(!timingPaths.has(ownerOnlyPath), `OWNER_PATH_MUST_NOT_REOPEN_TIMING:${ownerOnlyPath}`);
