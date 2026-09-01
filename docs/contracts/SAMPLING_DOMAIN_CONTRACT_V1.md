@@ -32,6 +32,7 @@
 
 ```ts
 {
+  receipt_id: string;
   sample_id: string;
   plan_id: string;
   tenant_id: string;
@@ -56,6 +57,12 @@
 {
   import_id: string;
   sample_id: string;
+  sample_receipt_fact_id: string;
+  plan_id: string;
+  tenant_id: string;
+  project_id: string;
+  group_id: string;
+  field_id: string;
   imported_at_ts: number;
   lab_name?: string | null;
   metrics: Record<string, number | string | null>;
@@ -65,6 +72,41 @@
 }
 ```
 
+### sampling_acceptance_v1
+
+```ts
+{
+  acceptance_id: string;
+  plan_id: string;
+  sample_id: string;
+  import_id?: string | null;
+  tenant_id: string;
+  project_id: string;
+  group_id: string;
+  field_id: string;
+  sampling_plan_fact_id: string;
+  sample_receipt_fact_id?: string | null;
+  lab_result_fact_id?: string | null;
+  verdict: "PASS" | "FAIL" | "INSUFFICIENT_EVIDENCE";
+  reasons: string[];
+  evaluated_at_ts: number;
+  evidence_refs: Array<{ kind: string; ref_id: string }>;
+}
+```
+
+## Exact identity rule
+
+Formal Sampling must bind the exact fact chain:
+
+```text
+sampling_plan_v1 fact
+-> sample_receipt_v1 fact
+-> lab_result_import_v1 fact
+-> sampling_acceptance_v1 fact
+```
+
+Business identifiers such as `sample_id` or `import_id` may locate an exact fact only when identity is unique and verified. If multiple candidate facts exist, the path must fail closed rather than select the latest timestamp.
+
 ## Hard rules
 
 - sample_receipt created ≠ lab result valid
@@ -72,3 +114,5 @@
 - sampling_acceptance PASS ≠ operation success
 - manual sample data 不得直接写 ProblemState conclusion
 - lab result 不得直接写 ROI / Field Memory / customer success
+- Sampling formal chain 不得使用 `ORDER BY occurred_at DESC LIMIT 1` 作为 authority selector
+- ambiguous receipt/lab/acceptance identity 必须 fail closed
