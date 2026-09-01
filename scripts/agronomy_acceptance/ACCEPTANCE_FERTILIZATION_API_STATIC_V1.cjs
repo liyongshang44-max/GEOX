@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 
 const root = path.resolve(__dirname, '..', '..');
 const servicePath = path.join(root, 'apps/server/src/services/fertilization/fertilization_service_v1.ts');
+const exactExecutionPath = path.join(root, 'apps/server/src/services/fertilization/fertilization_acceptance_exact_execution_v1.ts');
 const routePath = path.join(root, 'apps/server/src/routes/v1/fertilization.ts');
 const registerPath = path.join(root, 'apps/server/src/routes/registerCoreV1Routes.ts');
 
@@ -23,6 +24,7 @@ function assertRegex(text, pattern, label) {
 
 (function main() {
   const service = read(servicePath);
+  const exactExecution = read(exactExecutionPath);
   const route = read(routePath);
   const register = read(registerPath);
 
@@ -93,13 +95,28 @@ function assertRegex(text, pattern, label) {
 
   const requiredAcceptanceRules = [
     'fertilization_acceptance_v1',
-    'zone_applications',
+    'CALLER_EXECUTION_ASSERTIONS_FORBIDDEN',
+    'as_executed_id',
+    'as_applied_id',
     'zone_results',
-    'actual_n_kg_ha',
-    'coverage_percent',
-    'deviation_percent',
-    'ZONE_N_DEVIATION_EXCEEDED',
     'ALL_REQUIRED_ZONES_PASS',
+    'requireFertilizationAcceptanceExactExecutionV1',
+  ];
+
+  const requiredExactExecutionRules = [
+    'prescription_contract_v1',
+    'fert_bridge_',
+    'as_executed_record_v1',
+    'as_applied_map_v1',
+    'receipt_refs',
+    'FERTILIZATION_AS_EXECUTED_NOT_CONFIRMED',
+    'VARIABLE_BY_ZONE',
+    'required_coverage_percent',
+    'amount_tolerance_percent',
+    'ZONE_COVERAGE_BELOW_THRESHOLD',
+    'ZONE_N_DEVIATION_EXCEEDED',
+    'as_executed_record_v1',
+    'as_applied_map_v1',
   ];
 
   const requiredAuthRules = [
@@ -126,7 +143,12 @@ function assertRegex(text, pattern, label) {
   assertAll(service, requiredRecommendationRules, 'recommendation rules');
   assertAll(service, requiredPrescriptionRules, 'prescription rules');
   assertAll(service, requiredAcceptanceRules, 'acceptance rules');
+  assertAll(exactExecution, requiredExactExecutionRules, 'exact execution acceptance rules');
   assertAll(route, requiredAuthRules, 'route auth and isolation rules');
+  assertAll(route, ['requireFertilizationAcceptanceAuth', '["acceptance.evaluate"]'], 'dedicated fertilization acceptance auth');
+  assert.equal(service.includes('const apps = Array.isArray(input.zone_applications)'), false, 'caller zone applications must not drive acceptance');
+  assert.equal(service.includes('coverage_percent < 0.9'), false, 'fractional coverage threshold must not drive fertilization acceptance');
+  assert.equal(service.includes('deviation_percent > 0.15'), false, 'fractional deviation threshold must not drive fertilization acceptance');
 
   assertAll(register, ['registerFertilizationV1Routes', './v1/fertilization.js'], 'core route registration');
 
