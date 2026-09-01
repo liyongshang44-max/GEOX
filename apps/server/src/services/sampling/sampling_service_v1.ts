@@ -47,8 +47,8 @@ function samplingIdentityHashV1(parts: Array<string | null | undefined>): string
   return createHash("sha256").update(JSON.stringify(canonicalParts), "utf8").digest("hex");
 }
 
-function deterministicReceiptFactIdV1(scope: SamplingScopeV1, sample_id: string): string {
-  const digest = samplingIdentityHashV1(["sample_receipt_v1", ...scopeParams(scope), sample_id]);
+function deterministicReceiptFactIdV1(scope: SamplingScopeV1, sampling_plan_fact_id: string, sample_id: string): string {
+  const digest = samplingIdentityHashV1(["sample_receipt_v1", ...scopeParams(scope), sampling_plan_fact_id, sample_id]);
   return `sr_${digest}`;
 }
 
@@ -189,7 +189,11 @@ export class SamplingServiceV1 {
     return (result.rows?.[0] as SamplingFactRowV1 | undefined) ?? null;
   }
 
-  async findReceiptBySampleId(sample_id: string, scope: SamplingScopeV1): Promise<SamplingFactRowV1 | null> {
+  async findReceiptBySampleId(
+    sample_id: string,
+    scope: SamplingScopeV1,
+    samplingPlanFactId?: string | null,
+  ): Promise<SamplingFactRowV1 | null> {
     const result = await this.pool.query(
       `SELECT fact_id, occurred_at, source, record_json
          FROM facts
@@ -198,10 +202,31 @@ export class SamplingServiceV1 {
           AND (record_json::jsonb->>'tenant_id') = $2
           AND (record_json::jsonb->>'project_id') = $3
           AND (record_json::jsonb->>'group_id') = $4
+          AND ($5::text IS NULL OR (record_json::jsonb->>'sampling_plan_fact_id') = $5)
         LIMIT 2`,
-      [sample_id, ...scopeParams(scope)],
+      [sample_id, ...scopeParams(scope), samplingPlanFactId ?? null],
     );
     if ((result.rows?.length ?? 0) > 1) throw new SamplingServiceErrorV1("AMBIGUOUS:sample_receipt_v1", 409);
+    return (result.rows?.[0] as SamplingFactRowV1 | undefined) ?? null;
+  }
+
+  async findReceiptByFactId(
+    factId: string,
+    sample_id: string,
+    scope: SamplingScopeV1,
+  ): Promise<SamplingFactRowV1 | null> {
+    const result = await this.pool.query(
+      `SELECT fact_id, occurred_at, source, record_json
+         FROM facts
+        WHERE fact_id = $1
+          AND (record_json::jsonb->>'type') = 'sample_receipt_v1'
+          AND (record_json::jsonb->>'sample_id') = $2
+          AND (record_json::jsonb->>'tenant_id') = $3
+          AND (record_json::jsonb->>'project_id') = $4
+          AND (record_json::jsonb->>'group_id') = $5
+        LIMIT 1`,
+      [factId, sample_id, ...scopeParams(scope)],
+    );
     return (result.rows?.[0] as SamplingFactRowV1 | undefined) ?? null;
   }
 
@@ -227,11 +252,11 @@ export class SamplingServiceV1 {
     override_reason?: string;
   }): Promise<{ receipt_id: string; fact_id: string }> {
     const scope = { tenant_id: input.tenant_id, project_id: input.project_id, group_id: input.group_id };
-    const existing = await this.findReceiptBySampleId(input.sample_id, scope);
+    const existing = await this.findReceiptBySampleId(input.sample_id, scope, input.sampling_plan_fact_id);
     if (existing) throw new SamplingServiceErrorV1("DUPLICATE:sample_id", 409);
 
     const receipt_id = randomUUID();
-    const fact_id = deterministicReceiptFactIdV1(scope, input.sample_id);
+    const fact_id = deterministicReceiptFactIdV1(scope, input.sampling_plan_fact_id, input.sample_id);
 
     const record_json: Record<string, unknown> = {
       type: "sample_receipt_v1",
