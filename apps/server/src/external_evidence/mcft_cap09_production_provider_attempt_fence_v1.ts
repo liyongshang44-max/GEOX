@@ -50,7 +50,7 @@ export class ProductionEvidenceProviderAttemptFenceFactoryV1 {
         if(r.status==="NOT_DUE") return {status:"NOT_DUE" as const,durable_coordination_write_count:0 as const};
         if(r.status==="ATTEMPT_BUDGET_EXHAUSTED") throw new Error("PRODUCTION_PROVIDER_ATTEMPT_GFS_ATTEMPT_BUDGET_EXHAUSTED:"+op.target_logical_time);
         if(r.status==="MISSED_WINDOW") throw new Error("PRODUCTION_PROVIDER_ATTEMPT_GFS_MISSED_WINDOW:"+op.target_logical_time);
-        const unreachable:never=r; throw new Error("PRODUCTION_PROVIDER_ATTEMPT_GFS_FENCE_RESULT_INVALID:"+String(unreachable));
+        throw new Error("PRODUCTION_PROVIDER_ATTEMPT_GFS_FENCE_RESULT_INVALID:"+r.status);
       }};
     }
     if(op.kind==="GFS_PARTIAL_PAIR_REHYDRATE") return null;
