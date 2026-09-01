@@ -45,9 +45,12 @@ function runLocalMachineProbe(){
 
   const gitHead=safeRun("git",["rev-parse","HEAD"]);
   const gitBranch=safeRun("git",["branch","--show-current"]);
-  const gitStatus=safeRun("git",["status","--porcelain=v1"]);
+  const gitStatus=safeRun("git",["status","--porcelain=v1","--untracked-files=all"]);
+  const gitStatusLines=gitStatus.ok?gitStatus.stdout.split(/\r?\n/).map((line)=>line.trimEnd()).filter(Boolean):[];
+  const ignoredMachineEvidence=gitStatusLines.filter((line)=>/^\?\? acceptance-output\//.test(line));
+  const governedWorktreeLines=gitStatusLines.filter((line)=>!/^\?\? acceptance-output\//.test(line));
   add(gitHead.ok&&gitHead.stdout===expected,"LOCAL_PREFLIGHT_EXACT_SUBJECT_REQUIRED");
-  add(gitStatus.ok&&gitStatus.stdout.length===0,"LOCAL_PREFLIGHT_WORKTREE_MUST_BE_CLEAN");
+  add(gitStatus.ok&&governedWorktreeLines.length===0,"LOCAL_PREFLIGHT_WORKTREE_MUST_BE_CLEAN");
 
   const dockerVersion=safeRun("docker",["version","--format","{{json .Server}}"]);
   let dockerServer=null;
@@ -154,7 +157,9 @@ function runLocalMachineProbe(){
     observed_subject_sha:gitHead.ok?gitHead.stdout:null,
     exact_subject_match:gitHead.ok&&gitHead.stdout===expected,
     git_branch:gitBranch.ok?(gitBranch.stdout||"DETACHED"):null,
-    git_worktree_clean:gitStatus.ok&&gitStatus.stdout.length===0,
+    git_worktree_clean:gitStatus.ok&&governedWorktreeLines.length===0,
+    git_worktree_observed_changes:governedWorktreeLines,
+    ignored_machine_evidence_paths:ignoredMachineEvidence.map((line)=>line.slice(3)),
     local_host_id_state_file:hostFile,
     bound_host_id:boundHostId||null,
     observed_host_id:observedHostId||null,
