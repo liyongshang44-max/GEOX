@@ -1,5 +1,5 @@
 // MCFT-CAP-09 read-only canonical GFS hourly target-pair history.
-// Reads public.facts only. No cursor mutation, provider I/O, RuntimeTickCursor,
+// Reads public.facts only. No cursor mutation, provider I/O, Twin scheduler cursor,
 // Twin state, environment, wall clock, or production activation.
 
 import type { Pool } from "pg";
