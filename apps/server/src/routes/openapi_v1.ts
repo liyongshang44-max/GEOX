@@ -1127,11 +1127,11 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         },
         FieldMemorySummaryItemV1: {
           type: "object",
-          required: ["memory_id","memory_type","metric_key","confidence","summary_text","evidence_refs","occurred_at"],
+          required: ["memory_id","memory_type","metric_key","summary_text","evidence_refs","occurred_at"],
           properties: {
             memory_id: { type: "string" }, memory_type: { type: "string" }, metric_key: { type: "string" },
             before_value: { type: "number", nullable: true }, after_value: { type: "number", nullable: true },
-            delta_value: { type: "number", nullable: true }, confidence: { type: "number" },
+            delta_value: { type: "number", nullable: true }, confidence: { type: "number", nullable: true },
             summary_text: { type: "string" }, evidence_refs: { type: "array", items: {} },
             skill_id: { type: "string", nullable: true }, skill_trace_ref: { type: "string", nullable: true },
             occurred_at: { type: "string", format: "date-time" }

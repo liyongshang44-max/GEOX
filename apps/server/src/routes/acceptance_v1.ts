@@ -12,7 +12,7 @@ import { buildAcceptanceResultFromEvidenceArtifactsV1 } from "../domain/acceptan
 import { evidencePolicyFromReceiptV1, type FormalEvidenceSourceLaneV1, type FormalEvidencePolicyResultV1 } from "../domain/evidence/formal_evidence_policy_v1.js";
 import { appendSkillRunFact, appendSkillTraceFact, digestJson } from "../domain/skill_registry/facts.js";
 import { listJudgeResultsV2, loadJudgeResultV2 } from "../domain/judge/judge_result_v2.js";
-import { recordMemoryV1 } from "../services/field_memory_service.js";
+import { extractFormalFieldObservationPairV1, recordMemoryV1 } from "../services/field_memory_service.js";
 import { createFailSafeEventV1, createManualTakeoverV1 } from "../services/fail_safe_service_v1.js";
 import { auditContextFromRequestV1, recordSecurityAuditEventV1 } from "../services/security_audit_service_v1.js";
 
@@ -42,6 +42,7 @@ const EvaluateRequestSchema = z.object({
   project_id: z.string().min(1),
   group_id: z.string().min(1),
   act_task_id: z.string().min(1),
+  receipt_id: z.string().min(1).optional(),
   judge_result_ids: z.array(z.string().min(1)).optional(),
   execution_judge_id: z.string().min(1).optional()
 });
@@ -109,7 +110,8 @@ async function loadTaskFact(pool: Pool, actTaskId: string, tenant: TenantTriple)
   return { fact_id: String(r.rows[0].fact_id), occurred_at: r.rows[0].occurred_at ? String(r.rows[0].occurred_at) : null, record_json: normalizeRecordJson(r.rows[0].record_json) };
 }
 
-async function loadReceiptFact(pool: Pool, actTaskId: string, tenant: TenantTriple): Promise<{ fact_id: string; record_json: any } | null> {
+async function loadReceiptFact(pool: Pool, actTaskId: string, tenant: TenantTriple, receiptId?: string): Promise<{ fact_id: string; record_json: any } | null> {
+  const exactReceiptId = String(receiptId ?? "").trim() || null;
   const sql = `
     SELECT fact_id, (record_json::jsonb) AS record_json
     FROM facts
@@ -118,11 +120,13 @@ async function loadReceiptFact(pool: Pool, actTaskId: string, tenant: TenantTrip
       AND (record_json::jsonb)#>>'{payload,tenant_id}' = $2
       AND (record_json::jsonb)#>>'{payload,project_id}' = $3
       AND (record_json::jsonb)#>>'{payload,group_id}' = $4
+      AND ($5::text IS NULL OR fact_id = $5 OR (record_json::jsonb)#>>'{payload,receipt_id}' = $5)
     ORDER BY occurred_at DESC, fact_id DESC
-    LIMIT 1
+    LIMIT 2
   `;
-  const r = await pool.query(sql, [actTaskId, tenant.tenant_id, tenant.project_id, tenant.group_id]);
+  const r = await pool.query(sql, [actTaskId, tenant.tenant_id, tenant.project_id, tenant.group_id, exactReceiptId]);
   if (!r.rows?.length) return null;
+  if (r.rows.length > 1) throw new Error("RECEIPT_SOURCE_AMBIGUOUS");
   return { fact_id: String(r.rows[0].fact_id), record_json: normalizeRecordJson(r.rows[0].record_json) };
 }
 
@@ -413,7 +417,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
 
   app.post("/api/v1/acceptance/evaluate", async (req, reply) => {
     try {
-      const auth = requireAoActAnyScopeV0(req, reply, ["acceptance.evaluate", "ao_act.task.write"]);
+      const auth = requireAoActAnyScopeV0(req, reply, ["acceptance.evaluate"]);
       if (!auth) return;
       if (!requireAcceptanceEvaluateRoleV1(reply, auth)) return;
       const body = EvaluateRequestSchema.parse((req as any).body ?? {});
@@ -422,7 +426,15 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
 
       const taskFact = await loadTaskFact(pool, body.act_task_id, tenant);
       if (!taskFact) return reply.status(404).send({ ok: false, error: "TASK_NOT_FOUND" });
-      const receiptFact = await loadReceiptFact(pool, body.act_task_id, tenant);
+      let receiptFact: Awaited<ReturnType<typeof loadReceiptFact>>;
+      try {
+        receiptFact = await loadReceiptFact(pool, body.act_task_id, tenant, body.receipt_id);
+      } catch (error: any) {
+        if (String(error?.message ?? "") === "RECEIPT_SOURCE_AMBIGUOUS") {
+          return reply.status(409).send({ ok: false, error: "RECEIPT_SOURCE_AMBIGUOUS" });
+        }
+        throw error;
+      }
       if (!receiptFact) return reply.status(404).send({ ok: false, error: "RECEIPT_NOT_FOUND" });
 
       const taskPayload = taskFact.record_json?.payload ?? {};
@@ -539,37 +551,41 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
       await pool.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [acceptanceFactId, FACT_SOURCE_ACCEPTANCE_V1, acceptanceRecord]);
 
       if (acceptanceRecord.payload.verdict === "PASS" && acceptanceRecord.payload.formal_acceptance === true && field_id) {
-        const observedParams = (receiptPayload?.observed_parameters ?? {}) as Record<string, unknown>;
-        const soilMoistureDeltaRaw = Number(observedParams?.soil_moisture_delta);
-        const pre_soil_moisture = Number(observedParams?.pre_soil_moisture ?? observedParams?.before_soil_moisture ?? 0.18);
-        const post_soil_moisture = Number(observedParams?.post_soil_moisture ?? observedParams?.after_soil_moisture ?? (Number.isFinite(pre_soil_moisture) && Number.isFinite(soilMoistureDeltaRaw) ? pre_soil_moisture + soilMoistureDeltaRaw : 0.24));
-        const opId = typeof taskPayload.operation_plan_id === "string" ? taskPayload.operation_plan_id : (typeof taskPayload.operation_id === "string" ? taskPayload.operation_id : body.act_task_id);
-        const evidenceRefs = [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds, acceptanceFactId];
-        await recordMemoryV1(pool, tenant.tenant_id, {
-          type: "FIELD_RESPONSE_MEMORY",
-          operation_id: opId,
-          task_id: body.act_task_id,
-          field_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id,
-          acceptance_id: acceptanceFactId,
-          formal_acceptance_id: acceptanceFactId,
-          memory_lane: "FORMAL_FIELD_MEMORY",
-          trust_level: "FORMAL_ACCEPTED",
-          source_lane: "FORMAL_OPERATION",
-          customer_visible_memory: true,
-          learning_eligible: true,
-          metrics: {
-            before_soil_moisture: Number.isFinite(pre_soil_moisture) ? pre_soil_moisture : 0.18,
-            after_soil_moisture: Number.isFinite(post_soil_moisture) ? post_soil_moisture : 0.24,
-            soil_moisture_delta: Number.isFinite(soilMoistureDeltaRaw) ? soilMoistureDeltaRaw : undefined,
-            target_range: { min: 0.22, max: 0.28 },
-            success: true,
-            acceptance_passed: true,
-          },
-          evidence_refs: evidenceRefs,
-          summary: `Formal acceptance passed for task ${body.act_task_id}`,
-        });
+        const opId = typeof taskPayload.operation_plan_id === "string" ? taskPayload.operation_plan_id.trim() : "";
+        const observationPair = extractFormalFieldObservationPairV1(
+          receiptPayload,
+          { kind: "receipt_fact", ref: receiptFact.fact_id },
+          "acceptance_receipt_observed_parameters"
+        );
+        if (opId && observationPair) {
+          const evidenceRefs = [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds, acceptanceFactId];
+          await recordMemoryV1(pool, tenant.tenant_id, {
+            type: "FIELD_RESPONSE_MEMORY",
+            operation_id: opId,
+            task_id: body.act_task_id,
+            field_id,
+            project_id: tenant.project_id,
+            group_id: tenant.group_id,
+            acceptance_id: acceptanceFactId,
+            formal_acceptance_id: acceptanceFactId,
+            memory_lane: "FORMAL_FIELD_MEMORY",
+            trust_level: "FORMAL_ACCEPTED",
+            source_lane: "FORMAL_OPERATION",
+            customer_visible_memory: true,
+            learning_eligible: true,
+            metrics: {
+              before_soil_moisture: observationPair.before_soil_moisture,
+              after_soil_moisture: observationPair.after_soil_moisture,
+              soil_moisture_delta: observationPair.soil_moisture_delta,
+              confidence: observationPair.confidence,
+              target_range: observationPair.target_range,
+              success: true,
+              acceptance_passed: true,
+            },
+            evidence_refs: evidenceRefs,
+            summary: `Formal acceptance passed for task ${body.act_task_id}`,
+          });
+        }
       }
 
       if (acceptanceRecord.payload.verdict === "FAIL" || acceptanceRecord.payload.verdict === "PARTIAL" || acceptanceRecord.payload.verdict === "NEEDS_REVIEW" || acceptanceRecord.payload.verdict === "INSUFFICIENT_EVIDENCE") {
