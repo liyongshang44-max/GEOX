@@ -75,6 +75,8 @@ jobs:
 
       - name: B-Line Formal Memory scope provenance
         run: pnpm run ci:governance:bline-formal-memory-scope-provenance
+      - name: B-Line Fertilization acceptance exact execution
+        run: pnpm run ci:governance:bline-fertilization-acceptance-exact-execution
 
       - name: Route response ownership guard
         run: pnpm run ci:route-response-ownership
