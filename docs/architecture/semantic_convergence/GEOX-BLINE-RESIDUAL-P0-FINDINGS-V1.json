@@ -1,0 +1,108 @@
+{
+  "schema_version": "bline_residual_p0_findings_v1",
+  "status": "ACTIVE_AUDIT_EVIDENCE",
+  "audit_head_basis": "fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8",
+  "business_behavior_changed": false,
+  "mcft_implementation_changed": false,
+  "findings": [
+    {
+      "finding_id": "P0-RES-001",
+      "severity": "P0",
+      "title": "Operator dispatch intent is persisted as DISPATCHED",
+      "path": "apps/server/src/routes/v1/operator_dispatch_actions.ts",
+      "evidence": [
+        "writeDispatchFact writes fact type ao_act_dispatch_v1",
+        "TASK_DISPATCH maps nextStatus to DISPATCHED",
+        "the write occurs directly in the operator action route"
+      ],
+      "semantic_risk": "operator request is represented using the same term later used by runtime dispatch delivery",
+      "required_direction": "operator action must become dispatch intent/request; canonical AO-ACT runtime must own delivery/acceptance state"
+    },
+    {
+      "finding_id": "P0-RES-002",
+      "severity": "P0",
+      "title": "AO-ACT DISPATCHED has multiple incompatible meanings",
+      "paths": [
+        "apps/server/src/routes/v1/operator_dispatch_actions.ts",
+        "apps/server/src/domain/controlplane/task_service.ts",
+        "apps/executor/src/run_dispatch_once.ts"
+      ],
+      "evidence": [
+        "operator route writes ao_act_dispatch_v1.status=DISPATCHED",
+        "dispatch queue claim changes READY to DISPATCHED while leasing the item",
+        "executor writes DISPATCHED before adapter.execute()",
+        "executor writes ACKED only after adapter success"
+      ],
+      "semantic_risk": "operator intent, lease/claim, and adapter-send stage are conflated",
+      "required_direction": "split dispatch_intent, claim/lease, send/delivery, provider acknowledgement and receipt semantics"
+    },
+    {
+      "finding_id": "P0-RES-003",
+      "severity": "P0",
+      "title": "Agronomy Agent fabricates missing soil moisture before decision production",
+      "path": "apps/server/src/jobs/agronomy_agent.ts",
+      "evidence": [
+        "DEFAULT_SOIL_MOISTURE=30",
+        "missing telemetry falls back to DEFAULT_SOIL_MOISTURE",
+        "effectiveSoilMoisture is supplied to recommendation generation",
+        "the job writes decision_recommendation_v1 and can create operation_plan_v1"
+      ],
+      "semantic_risk": "missing evidence becomes an authoritative numeric observation and can influence downstream action",
+      "required_direction": "shadow legacy calculator through qualified evidence; missing evidence must remain missing/unknown; remove direct OperationPlan authority after comparison"
+    },
+    {
+      "finding_id": "P0-RES-004",
+      "severity": "P0",
+      "title": "Formal Acceptance can write fabricated field-response measurements into formal learning memory",
+      "path": "apps/server/src/routes/acceptance_v1.ts",
+      "evidence": [
+        "formal acceptance may pass on formal coverage/as-applied/flow-meter/variable-zone evidence without requiring pre/post soil-moisture fields",
+        "when verdict=PASS and formal_acceptance=true, missing pre_soil_moisture falls back to 0.18",
+        "missing post_soil_moisture can fall back to 0.24",
+        "the resulting memory is written as FORMAL_FIELD_MEMORY",
+        "trust_level=FORMAL_ACCEPTED",
+        "customer_visible_memory=true",
+        "learning_eligible=true"
+      ],
+      "semantic_risk": "missing outcome measurement is converted into fabricated numeric outcome memory and can become learning input",
+      "required_direction": "formal memory must use measured/qualified observation pairs or remain unknown; no numeric fallback may gain FORMAL_ACCEPTED or learning authority"
+    },
+    {
+      "finding_id": "P0-RES-005",
+      "severity": "P0_AUDIT",
+      "title": "B-02 does not prove whole-repository producer completeness",
+      "paths": [
+        "docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_B02_SEMANTIC_CONTRACT_LINTER_V1.cjs"
+      ],
+      "evidence": [
+        "B02 linter_scope is STATIC_EXPLICIT_ONLY",
+        "planner/compiler_v1.ts and programs_core_v1.ts were absent from B-09y register/graph",
+        "operator_dispatch_actions.ts, human_executors_v1.ts, twin decision cycle and other active surfaces were absent",
+        "the prior general CI did not directly execute the B02 linter"
+      ],
+      "semantic_risk": "B02 PASS could coexist with unregistered authority-capable paths",
+      "required_direction": "whole-repository residual authority reverse scan must gate unregistered producers/derivers before authority removal"
+    },
+    {
+      "finding_id": "P0-RES-006",
+      "severity": "P0_AUDIT",
+      "title": "Formal ROI and Field Memory have active under-registered writer surfaces",
+      "paths": [
+        "apps/server/src/routes/v1/twin_kernel_formalization.ts",
+        "apps/server/src/routes/v1/twin_kernel_operator_workflow.ts",
+        "apps/server/src/routes/field_memory_v1.ts",
+        "apps/server/src/services/field_memory_service.ts",
+        "apps/server/src/routes/acceptance_v1.ts"
+      ],
+      "evidence": [
+        "Twin Kernel formalization exposes active POST routes that persist roi_entry_v1 and field_memory_v1",
+        "Twin Kernel operator workflow exposes explicit formalization actions",
+        "field-memory route creates formal Field Memory from Acceptance",
+        "Acceptance route also writes formal Field Memory through field_memory_service"
+      ],
+      "semantic_risk": "multiple valid-looking writer surfaces exist but are not completely represented in B-Line machine ownership inventory",
+      "required_direction": "inventory every writer and establish a single formalization authority contract before cutover"
+    }
+  ]
+}
