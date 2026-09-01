@@ -87,7 +87,13 @@ ordered(compatibilityPlan, [
 ], "LEGACY_PLAN_LIFECYCLE_ORDER_INVALID");
 assert(compatibilityPlan.includes('approval_decision_fact_id: input.approval_decision_fact_id'), "LEGACY_PLAN_DECISION_PROVENANCE_MISSING");
 
-// 5. Read models cannot promote ready/dispatch/ack/task-exists into execution.
+// 5. Manual bootstrap returns explicit Task linkage; consumers must not derive Task existence from Plan detail.
+const manualRoute = between(ao, 'app.post("/api/v1/operations/manual"', '\n\n}');
+assert(manualRoute.includes("const act_task_id = String(approvalDecision.json.act_task_id"), "MANUAL_BOOTSTRAP_EXPLICIT_TASK_LINKAGE_MISSING");
+assert(manualRoute.includes("MISSING_ACT_TASK_ID"), "MANUAL_BOOTSTRAP_TASK_LINKAGE_FAIL_CLOSED_MISSING");
+assert(manualRoute.includes("act_task_id,"), "MANUAL_BOOTSTRAP_RESPONSE_TASK_LINKAGE_MISSING");
+
+// 6. Read models cannot promote ready/dispatch/ack/task-exists into execution.
 assert(!operationState.includes('["DONE", "SUCCEEDED", "SUCCESS", "EXECUTED", "ACKED"]'), "ACKED_RECEIPT_EXECUTED_INFLATION_FORBIDDEN");
 assert(!operationState.includes('["READY", "DISPATCHED"].includes(status)) return "TASK_CREATED"'), "PLAN_STATUS_TASK_SYNTHESIS_FORBIDDEN");
 assert(!operationState.includes('["EXECUTING", "RUNNING", "IN_PROGRESS", "DISPATCHED", "READY", "APPROVED"].includes(s)'), "PREEXECUTION_RUNNING_INFLATION_FORBIDDEN");
@@ -101,6 +107,7 @@ console.log("BLINE_EXECUTION_PLAN_TASK_LIFECYCLE_STATS " + JSON.stringify({
   variable_auto_ack: false,
   task_service_decision_before_ready_before_task: true,
   legacy_approval_decision_before_ready_before_task: true,
+  manual_bootstrap_explicit_task_linkage: true,
   projection_preexecution_inflation: false,
   failures: failures.length
 }));
