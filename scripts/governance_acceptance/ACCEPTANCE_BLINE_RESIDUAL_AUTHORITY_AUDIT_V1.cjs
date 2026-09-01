@@ -305,8 +305,12 @@ function scan(abs, production) {
     p.startsWith("docker-compose") &&
     content.includes("GEOX_EXECUTION_DEFAULT_DISABLED") &&
     (content.includes("GEOX_RUNTIME_ENV") || p === "docker-compose.prod.yml" || p === "docker-compose.staging.yml");
+  const databaseAutomation =
+    p.endsWith(".sql") &&
+    (/(?:CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION)[\s\S]*?RETURNS\s+trigger/i.test(content) ||
+     /CREATE\s+TRIGGER\s+/i.test(content));
   const genericFactsWriter = /\bINSERT\s+INTO\s+facts\b/i.test(content);
-  if (!families.size && !specialPlanner && !specialFallback && !specialControlVerdict && !specialDeviceCapability && !specialDeviceSensing && !specialSkillBinding && !specialStandaloneJudge && !specialJudgeConfig && !semanticDefaultRisk && !bootstrapInitActivation && !executionDeploymentProfile && !genericFactsWriter) return;
+  if (!families.size && !specialPlanner && !specialFallback && !specialControlVerdict && !specialDeviceCapability && !specialDeviceSensing && !specialSkillBinding && !specialStandaloneJudge && !specialJudgeConfig && !semanticDefaultRisk && !bootstrapInitActivation && !executionDeploymentProfile && !databaseAutomation && !genericFactsWriter) return;
 
   for (const f of families) add(p, f, "SEMANTIC_TOUCHPOINT", "semantic-token-or-type", production);
   if (genericFactsWriter) {
@@ -399,6 +403,9 @@ function scan(abs, production) {
   if (executionDeploymentProfile) {
     add(p, "execution.activation_policy", "CONFIG_AUTHORITY", "execution-default-disabled-deployment-profile", production);
   }
+  if (databaseAutomation) {
+    add(p, "governance.database_automation", "DATABASE_AUTOMATION_AUTHORITY", "sql-trigger-or-trigger-function", production);
+  }
 
   if (p.startsWith("apps/server/db/migrations/")) {
     for (const [table, family] of Object.entries(TABLES)) {
@@ -468,6 +475,24 @@ function finish(invSet, b02Set) {
   }
 }
 
+function assertScannerSentinels() {
+  const sentinels = [
+    ["apps/server/src/services/fertilization/fertilization_service_v1.ts", "GENERIC_FACT_WRITER"],
+    ["apps/server/src/routes/delivery_evidence_export_v1.ts", "GENERIC_FACT_WRITER"],
+    ["docker/postgres/init/003_p1_skill_seed.sql", "GENERIC_FACT_WRITER"],
+    ["packages/control-kernel/src/ruleset/evaluator.ts", "AUTHORITY_DERIVER"],
+    ["apps/judge/src/problem_state.ts", "AUTHORITY_DERIVER"],
+    ["docker-compose.yml", "BOOTSTRAP_ACTIVATION"],
+    ["apps/server/db/migrations/2026_05_14_variable_task_no_auto_acked_v1.sql", "DATABASE_AUTOMATION_AUTHORITY"]
+  ];
+  for (const [p, kind] of sentinels) {
+    const finding = findings.get(p);
+    if (!finding || !finding.kinds.has(kind)) {
+      failures.push("SCANNER_SENTINEL_MISSING:" + p + ":" + kind);
+    }
+  }
+}
+
 function main() {
   for (const p of [INVENTORY, B02_REGISTER, B02_LINTER]) {
     if (!fs.existsSync(p)) failures.push("REQUIRED_FILE_MISSING:" + rel(p));
@@ -493,9 +518,11 @@ function main() {
     for (const f of listFiles(root)) scan(f, false);
   }
 
+  assertScannerSentinels();
+
   const hardKinds = new Set([
     "PERSISTENCE_WRITER","GENERIC_FACT_WRITER","SEMANTIC_BUILDER","AUTHORITY_DERIVER",
-    "CONFIG_AUTHORITY","SEMANTIC_DEFAULT_AUTHORITY_RISK","BOOTSTRAP_ACTIVATION",
+    "CONFIG_AUTHORITY","SEMANTIC_DEFAULT_AUTHORITY_RISK","BOOTSTRAP_ACTIVATION","DATABASE_AUTOMATION_AUTHORITY",
     "HTTP_AUTHORITY_PRODUCER","AUTHORITY_CALLSITE","PERSISTENCE_AUTHORITY_RISK"
   ]);
   const hard = [];
