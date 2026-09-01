@@ -2292,7 +2292,7 @@
         "agronomy evidence consumers"
       ],
       "removal_target": "KEEP SAMPLING EVIDENCE ACCEPTANCE; EXACT PLAN/RECEIPT/LAB FACT BINDING REQUIRED; AMBIGUITY FAILS CLOSED",
-      "audit_note": "Latest-wins removed. Receipt identity is exact-plan scoped; lab identity is exact-chain scoped and lab reads require tenant/project/group continuity; caller-supplied sample_id/import_id remain business locators rather than global fact keys. Sampling Acceptance persists exact plan/receipt/lab refs, validates lab field/scope, and is race-safe idempotent.",
+      "audit_note": "Latest-wins removed. Receipt creation is exact-plan scoped and blocks both legacy missing-plan-ref rows and corrupted same-plan rows with conflicting plan refs, preventing shadow replacement. Lab identity/read scope and Sampling Acceptance remain exact-chain fail-closed; sample_id/import_id are business locators, not global fact authority.",
       "surface_id": "RES-084",
       "b02_registered": false
     },
