@@ -25,6 +25,7 @@ import type {
 import type {
   ProductionEvidenceWorkItemFactoryV1,
 } from "./mcft_cap09_production_evidence_work_items_v1.js";
+import type { ProductionEvidenceProviderAttemptFenceFactoryV1 } from "./mcft_cap09_production_provider_attempt_fence_v1.js";
 
 export const MCFT_CAP09_PRODUCTION_EVIDENCE_SOURCE_PLAN_EXECUTOR_ID_V1 =
   "MCFT_CAP09_PRODUCTION_EVIDENCE_SOURCE_PLAN_EXECUTOR_V1" as const;
@@ -54,7 +55,7 @@ function normalizeResultV1(input: {
     | "KBS_RAW_HOURLY_PUBLICATION_CYCLE"
     | "GFS_PARTIAL_PAIR_REHYDRATION";
   lease_claim: EvidenceRuntimeHostAttemptResultV1["lease_claim"];
-  status: "COMPLETED" | "LEASE_HELD_BY_OTHER_OWNER";
+  status: "COMPLETED" | "LEASE_HELD_BY_OTHER_OWNER" | "PROVIDER_NOT_DUE";
   canonical_record_count: number;
   visible_ingress_count: number;
   evidence_supply_cursor_advance_count: number;
@@ -95,6 +96,7 @@ export class ProductionEvidenceSourcePlanExecutorV1 {
     >;
     runtime_start_authority_ref: string;
     activation_fence_time: string;
+    provider_attempt_fence_factory: Pick<ProductionEvidenceProviderAttemptFenceFactoryV1, "buildForDecision">;
   }) {
     textV1(
       deps.runtime_start_authority_ref,
@@ -114,6 +116,8 @@ export class ProductionEvidenceSourcePlanExecutorV1 {
     const prefix = requestPrefixV1(operation.kind, operation.requested_at);
 
     if (operation.kind === "KBS_RAW_HOURLY_PUBLICATION_CYCLE") {
+      const providerFence=this.deps.provider_attempt_fence_factory.buildForDecision(decision);
+      if(!providerFence) throw new Error("PRODUCTION_SOURCE_PLAN_EXECUTOR_KBS_PROVIDER_FENCE_REQUIRED");
       const attemptId = prefix;
       return {
         attempt_id: attemptId,
@@ -128,7 +132,11 @@ export class ProductionEvidenceSourcePlanExecutorV1 {
             runtime_start_authority_ref:
               this.deps.runtime_start_authority_ref,
             activation_fence_time: this.deps.activation_fence_time,
+            provider_attempt_fence: providerFence,
           });
+          if(result.status==="PROVIDER_NOT_DUE"){
+            return normalizeResultV1({attempt_id:attemptId,attempt_kind:"KBS_RAW_HOURLY_PUBLICATION_CYCLE",lease_claim:result.lease_claim,status:"PROVIDER_NOT_DUE",canonical_record_count:0,visible_ingress_count:0,evidence_supply_cursor_advance_count:0});
+          }
           if (result.status === "LEASE_HELD_BY_OTHER_OWNER") {
             return normalizeResultV1({
               attempt_id: attemptId,
@@ -163,6 +171,7 @@ export class ProductionEvidenceSourcePlanExecutorV1 {
     }
 
     if (operation.kind === "GFS_PARTIAL_PAIR_REHYDRATE") {
+      if(this.deps.provider_attempt_fence_factory.buildForDecision(decision)!==null) throw new Error("PRODUCTION_SOURCE_PLAN_EXECUTOR_GFS_REHYDRATION_PROVIDER_FENCE_FORBIDDEN");
       const attemptId = prefix + ":" + operation.cycle_key;
       return {
         attempt_id: attemptId,
@@ -213,10 +222,13 @@ export class ProductionEvidenceSourcePlanExecutorV1 {
         + String(unreachable),
       );
     }
+    const providerFence=this.deps.provider_attempt_fence_factory.buildForDecision(decision);
+    if(!providerFence) throw new Error("PRODUCTION_SOURCE_PLAN_EXECUTOR_PROVIDER_FENCE_REQUIRED");
     return buildCanonicalWorkItemAttemptPlanV1({
       attempt_id: prefix,
       cycle_service: this.deps.cycle_service,
       work_items: [workItem],
+      provider_attempt_fence: providerFence,
     });
   }
 }

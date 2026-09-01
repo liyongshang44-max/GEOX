@@ -122,7 +122,7 @@ implements EvidenceRuntimeHostWaitPortV1 {
   }
 
   async waitAfterAttempt(input: {
-    reason: "SUCCESS_CADENCE" | "PLANNER_NOT_DUE" | "LEASE_STANDBY" | "RETRY_BACKOFF";
+    reason: "SUCCESS_CADENCE" | "PLANNER_NOT_DUE" | "PROVIDER_NOT_DUE" | "LEASE_STANDBY" | "RETRY_BACKOFF";
     cycle_attempt: number;
     consecutive_failure_count: number;
   }): Promise<void> {
@@ -130,6 +130,7 @@ implements EvidenceRuntimeHostWaitPortV1 {
     switch (input.reason) {
       case "SUCCESS_CADENCE":
       case "PLANNER_NOT_DUE":
+      case "PROVIDER_NOT_DUE":
         waitMs = this.successCadenceMs;
         break;
       case "LEASE_STANDBY":

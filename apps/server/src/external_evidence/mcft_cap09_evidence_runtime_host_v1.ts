@@ -36,6 +36,7 @@ export type EvidenceRuntimeHostHealthEventV1 = {
     | "ATTEMPT_COMPLETED"
     | "LEASE_HELD_BY_OTHER_OWNER"
     | "PLANNER_NOT_DUE"
+    | "PROVIDER_NOT_DUE"
     | "RETRYABLE_ATTEMPT_FAILURE"
     | "FATAL_ATTEMPT_FAILURE"
     | "STOP_REQUESTED"
@@ -60,6 +61,7 @@ export interface EvidenceRuntimeHostWaitPortV1 {
     reason:
       | "SUCCESS_CADENCE"
       | "PLANNER_NOT_DUE"
+      | "PROVIDER_NOT_DUE"
       | "LEASE_STANDBY"
       | "RETRY_BACKOFF";
     cycle_attempt: number;
@@ -112,6 +114,7 @@ function validateAttemptResultV1(
   if (
     result.status !== "COMPLETED"
     && result.status !== "LEASE_HELD_BY_OTHER_OWNER"
+    && result.status !== "PROVIDER_NOT_DUE"
   ) throw new Error("PHASE3_EVIDENCE_HOST_ATTEMPT_RESULT_STATUS_INVALID");
 }
 
@@ -272,6 +275,12 @@ export class EvidenceRuntimeHostV1 {
             cycle_attempt: cycleAttempt,
             consecutive_failure_count: consecutiveFailures,
           });
+          continue;
+        }
+        if(result.status==="PROVIDER_NOT_DUE"){
+          notDueWaits+=1; consecutiveFailures=0;
+          await this.healthV1({status:"STANDBY",cycle_attempt:cycleAttempt,successful_cycle_count:successfulCycles,consecutive_failure_count:consecutiveFailures,detail:"PROVIDER_NOT_DUE"});
+          await this.deps.wait.waitAfterAttempt({reason:"PROVIDER_NOT_DUE",cycle_attempt:cycleAttempt,consecutive_failure_count:consecutiveFailures});
           continue;
         }
         successfulCycles += 1;

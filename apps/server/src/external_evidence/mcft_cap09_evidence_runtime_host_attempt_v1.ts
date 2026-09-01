@@ -10,6 +10,7 @@ import type {
   EvidenceProducerLeaseClaimV1,
   EvidenceRuntimeScopeV1,
 } from "./mcft_cap09_evidence_runtime_persistence_v1.js";
+import type { EvidenceRuntimeProviderAttemptFencePortV1 } from "./mcft_cap09_evidence_runtime_provider_attempt_fence_v1.js";
 
 export const MCFT_CAP09_EVIDENCE_RUNTIME_HOST_ATTEMPT_CONTRACT_ID_V1 =
   "MCFT_CAP09_EVIDENCE_RUNTIME_HOST_ATTEMPT_V1" as const;
@@ -29,7 +30,7 @@ export type EvidenceRuntimeHostAttemptResultV1 = {
   attempt_contract_id: typeof MCFT_CAP09_EVIDENCE_RUNTIME_HOST_ATTEMPT_CONTRACT_ID_V1;
   attempt_id: string;
   attempt_kind: EvidenceRuntimeHostAttemptKindV1;
-  status: "COMPLETED" | "LEASE_HELD_BY_OTHER_OWNER";
+  status: "COMPLETED" | "LEASE_HELD_BY_OTHER_OWNER" | "PROVIDER_NOT_DUE";
   lease_claim: EvidenceProducerLeaseClaimV1 | null;
   canonical_record_count: number;
   visible_ingress_count: number;
@@ -55,6 +56,7 @@ export function buildCanonicalWorkItemAttemptPlanV1(input: {
   attempt_id: string;
   cycle_service: Pick<EvidenceRuntimeCycleServiceV1, "executeCycle">;
   work_items: readonly EvidenceRuntimeCycleWorkItemV1[];
+  provider_attempt_fence?: EvidenceRuntimeProviderAttemptFencePortV1;
 }): EvidenceRuntimeHostAttemptPlanV1 {
   const attemptId = textV1(
     input.attempt_id,
@@ -73,6 +75,7 @@ export function buildCanonicalWorkItemAttemptPlanV1(input: {
         lease_owner: execution.lease_owner,
         lease_duration_seconds: execution.lease_duration_seconds,
         work_items: workItems,
+        provider_attempt_fence: input.provider_attempt_fence,
       });
       return {
         attempt_contract_id:

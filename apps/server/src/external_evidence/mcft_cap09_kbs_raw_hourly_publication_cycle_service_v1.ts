@@ -30,6 +30,7 @@ import type {
   EvidenceProducerLeasePortV1,
   EvidenceRuntimeScopeV1,
 } from "./mcft_cap09_evidence_runtime_persistence_v1.js";
+import type { EvidenceRuntimeProviderAttemptFencePortV1 } from "./mcft_cap09_evidence_runtime_provider_attempt_fence_v1.js";
 import {
   MCFT_CAP09_KBS_PUBLICATION_BASELINE_SCHEMA_V1,
   type KbsRawHourlyPublicationBaselineManifestV1,
@@ -65,6 +66,7 @@ export const MCFT_CAP09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_SERVICE_ID_V1 =
 
 export type KbsRawHourlyPublicationCycleStatusV1 =
   | "LEASE_HELD_BY_OTHER_OWNER"
+  | "PROVIDER_NOT_DUE"
   | "BASELINE_INITIALIZED"
   | "NO_CHANGE"
   | "BLOCKED_HISTORICAL_DRIFT"
@@ -397,13 +399,15 @@ export class KbsRawHourlyPublicationCycleServiceV1 {
     before?: string | null;
     after?: string | null;
     blocked?: string | null;
+    providerRequests?: 0 | 1;
+    rawRetentionAttempts?: 0 | 1;
   }): KbsRawHourlyPublicationCycleResultV1 {
     return {
       service_id: this.service_id,
       status: input.status,
       lease_claim: input.claim,
-      provider_request_count: input.claim ? 1 : 0,
-      raw_retention_attempt_count: input.claim ? 1 : 0,
+      provider_request_count: input.providerRequests ?? (input.claim ? 1 : 0),
+      raw_retention_attempt_count: input.rawRetentionAttempts ?? (input.claim ? 1 : 0),
       retained_raw_read_count: input.reads,
       forward_event_times: [...(input.forward ?? [])],
       canonical_record_count: input.canonical ?? 0,
@@ -428,6 +432,7 @@ export class KbsRawHourlyPublicationCycleServiceV1 {
     request_id_prefix: string;
     runtime_start_authority_ref: string;
     activation_fence_time: string;
+    provider_attempt_fence?: EvidenceRuntimeProviderAttemptFencePortV1;
   }): Promise<KbsRawHourlyPublicationCycleResultV1> {
     const owner = requiredTextV1(input.lease_owner, "KBS_PUBLICATION_CYCLE_LEASE_OWNER_REQUIRED");
     if (!Number.isSafeInteger(input.lease_duration_seconds) || input.lease_duration_seconds <= 0) {
@@ -460,6 +465,12 @@ export class KbsRawHourlyPublicationCycleServiceV1 {
       });
     }
     exactScopeV1(claim.scope, input.scope, "KBS_PUBLICATION_CYCLE_LEASE_SCOPE_MISMATCH");
+
+    if(input.provider_attempt_fence){
+      const fence=await input.provider_attempt_fence.claimBeforeProviderFetch({claim});
+      if(fence.status==="NOT_DUE") return this.resultV1({status:"PROVIDER_NOT_DUE",claim,reads:0,providerRequests:0,rawRetentionAttempts:0});
+      if(fence.status!=="AUTHORIZED") throw new Error("KBS_PUBLICATION_CYCLE_PROVIDER_ATTEMPT_FENCE_RESULT_INVALID");
+    }
 
     const publication = this.deps.publication_fetch_factory.buildKbsRawHourlyPublicationFetch({
       requested_at: requestedAt,

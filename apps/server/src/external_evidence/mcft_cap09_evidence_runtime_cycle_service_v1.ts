@@ -22,6 +22,7 @@ import type {
   EvidenceProducerLeasePortV1,
   EvidenceRuntimeScopeV1,
 } from "./mcft_cap09_evidence_runtime_persistence_v1.js";
+import type { EvidenceRuntimeProviderAttemptFencePortV1 } from "./mcft_cap09_evidence_runtime_provider_attempt_fence_v1.js";
 
 export const MCFT_CAP09_EVIDENCE_RUNTIME_CYCLE_SERVICE_ID_V1 =
   "MCFT_CAP09_EVIDENCE_RUNTIME_CYCLE_SERVICE_V1" as const;
@@ -48,6 +49,7 @@ export type ExecuteEvidenceRuntimeCycleInputV1 = {
   lease_owner: string;
   lease_duration_seconds: number;
   work_items: readonly EvidenceRuntimeCycleWorkItemV1[];
+  provider_attempt_fence?: EvidenceRuntimeProviderAttemptFencePortV1;
 };
 
 export type ExecuteEvidenceRuntimeCycleResultV1 =
@@ -55,6 +57,17 @@ export type ExecuteEvidenceRuntimeCycleResultV1 =
       service_id: typeof MCFT_CAP09_EVIDENCE_RUNTIME_CYCLE_SERVICE_ID_V1;
       status: "LEASE_HELD_BY_OTHER_OWNER";
       lease_claim: null;
+      work_item_count: 0;
+      canonical_record_count: 0;
+      visible_ingress_count: 0;
+      evidence_supply_cursor_advance_count: 0;
+      twin_state_mutation: false;
+      runtime_tick_cursor_mutation: false;
+    }
+  | {
+      service_id: typeof MCFT_CAP09_EVIDENCE_RUNTIME_CYCLE_SERVICE_ID_V1;
+      status: "PROVIDER_NOT_DUE";
+      lease_claim: EvidenceProducerLeaseClaimV1;
       work_item_count: 0;
       canonical_record_count: 0;
       visible_ingress_count: 0;
@@ -131,6 +144,14 @@ export class EvidenceRuntimeCycleServiceV1 {
         twin_state_mutation: false,
         runtime_tick_cursor_mutation: false,
       };
+    }
+
+    if (input.provider_attempt_fence) {
+      const fence=await input.provider_attempt_fence.claimBeforeProviderFetch({claim});
+      if(fence.status==="NOT_DUE"){
+        return {service_id:this.service_id,status:"PROVIDER_NOT_DUE",lease_claim:claim,work_item_count:0,canonical_record_count:0,visible_ingress_count:0,evidence_supply_cursor_advance_count:0,twin_state_mutation:false,runtime_tick_cursor_mutation:false};
+      }
+      if(fence.status!=="AUTHORIZED") throw new Error("PHASE3_EVIDENCE_PROVIDER_ATTEMPT_FENCE_RESULT_INVALID");
     }
 
     let canonicalRecordCount = 0;

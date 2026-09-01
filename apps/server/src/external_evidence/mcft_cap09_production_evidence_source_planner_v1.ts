@@ -10,6 +10,10 @@ import type {
 import type {
   ProductionEvidenceAcquisitionHorizonV1,
 } from "./mcft_cap09_production_evidence_acquisition_horizon_v1.js";
+import {
+  MCFT_CAP09_GFS_MAX_ATTEMPTS_PER_TARGET_WINDOW_V1,
+  MCFT_CAP09_GFS_RETRY_MINIMUM_INTERVAL_SECONDS_V1,
+} from "./mcft_cap09_production_gfs_target_due_policy_v1.js";
 
 export const MCFT_CAP09_PRODUCTION_EVIDENCE_SOURCE_PLANNER_ID_V1 =
   "MCFT_CAP09_PRODUCTION_EVIDENCE_SOURCE_PLANNER_V1" as const;
@@ -31,6 +35,10 @@ export type ProductionEvidenceGfsDueStateV1 =
   | ProductionEvidenceNotDueStateV1
   | (ProductionEvidenceDueStateV1 & {
       target_logical_time: string;
+      due_window_start: string;
+      due_window_end_exclusive: string;
+      max_attempts_per_target_window: typeof MCFT_CAP09_GFS_MAX_ATTEMPTS_PER_TARGET_WINDOW_V1;
+      retry_minimum_interval_seconds: typeof MCFT_CAP09_GFS_RETRY_MINIMUM_INTERVAL_SECONDS_V1;
     });
 
 export type ProductionEvidenceSourceDueStateSetV1 = {
@@ -63,6 +71,10 @@ export type ProductionEvidenceSourceDecisionV1 =
             kind: "GFS_BUNDLE_ACQUIRE";
             target_logical_time: string;
             requested_at: string;
+            due_window_start: string;
+            due_window_end_exclusive: string;
+            max_attempts_per_target_window: typeof MCFT_CAP09_GFS_MAX_ATTEMPTS_PER_TARGET_WINDOW_V1;
+            retry_minimum_interval_seconds: typeof MCFT_CAP09_GFS_RETRY_MINIMUM_INTERVAL_SECONDS_V1;
             bindable_to_current_work_item_factory: true;
           }
         | {
@@ -261,6 +273,11 @@ export function planProductionEvidenceSourcesV1(input: {
       gfsDue.target_logical_time,
       "PRODUCTION_EVIDENCE_SOURCE_PLANNER_GFS_TARGET_INVALID",
     );
+    const dueWindowStart=isoV1(gfsDue.due_window_start,"PRODUCTION_EVIDENCE_SOURCE_PLANNER_GFS_DUE_WINDOW_START_INVALID");
+    const dueWindowEnd=isoV1(gfsDue.due_window_end_exclusive,"PRODUCTION_EVIDENCE_SOURCE_PLANNER_GFS_DUE_WINDOW_END_INVALID");
+    if(Date.parse(dueWindowStart)>=Date.parse(dueWindowEnd)) throw new Error("PRODUCTION_EVIDENCE_SOURCE_PLANNER_GFS_DUE_WINDOW_ORDER_INVALID");
+    if(Date.parse(gfsDue.requested_at)<Date.parse(dueWindowStart)||Date.parse(gfsDue.requested_at)>=Date.parse(dueWindowEnd)) throw new Error("PRODUCTION_EVIDENCE_SOURCE_PLANNER_GFS_REQUEST_OUTSIDE_DUE_WINDOW");
+    if(gfsDue.max_attempts_per_target_window!==MCFT_CAP09_GFS_MAX_ATTEMPTS_PER_TARGET_WINDOW_V1||gfsDue.retry_minimum_interval_seconds!==MCFT_CAP09_GFS_RETRY_MINIMUM_INTERVAL_SECONDS_V1) throw new Error("PRODUCTION_EVIDENCE_SOURCE_PLANNER_GFS_RETRY_POLICY_MISMATCH");
     const durableTarget = latestDurableGfsTargetV1(input.progress.gfs_bundle.cycles);
     if (durableTarget && Date.parse(durableTarget) >= Date.parse(target)) {
       decisions.push({
@@ -297,6 +314,10 @@ export function planProductionEvidenceSourcesV1(input: {
             kind: "GFS_BUNDLE_ACQUIRE",
             target_logical_time: target,
             requested_at: gfsDue.requested_at,
+            due_window_start: dueWindowStart,
+            due_window_end_exclusive: dueWindowEnd,
+            max_attempts_per_target_window: gfsDue.max_attempts_per_target_window,
+            retry_minimum_interval_seconds: gfsDue.retry_minimum_interval_seconds,
             bindable_to_current_work_item_factory: true,
           },
         });
