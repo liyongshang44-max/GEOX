@@ -3541,11 +3541,12 @@ function applyP13OpenApiAlignment(spec: any) {
     },
     OperationManualResponse: {
       type: "object",
-      required: ["ok", "operation_id", "operation_plan_id", "command_id"],
+      required: ["ok", "operation_id", "operation_plan_id", "act_task_id", "command_id"],
       properties: {
         ok: { type: "boolean" },
         operation_id: { type: "string" },
         operation_plan_id: { type: "string" },
+        act_task_id: { type: "string" },
         command_id: { type: "string" },
         reused: { type: "boolean" },
       },

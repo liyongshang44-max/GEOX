@@ -143,7 +143,7 @@ function deriveStage(programStatusRaw: string, pendingPlanStatus: string | null)
   if (s === "ARCHIVED") return "ARCHIVED";
   if (pendingPlanStatus) {
     const ps = pendingPlanStatus.toUpperCase();
-    if (["EXECUTING", "RUNNING", "IN_PROGRESS", "DISPATCHED", "ACKED"].includes(ps)) return "EXECUTING";
+    if (["EXECUTING", "RUNNING", "IN_PROGRESS"].includes(ps)) return "EXECUTING";
     return "EXECUTION_PENDING";
   }
   return "SETUP";

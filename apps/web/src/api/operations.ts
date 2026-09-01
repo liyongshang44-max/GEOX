@@ -78,6 +78,7 @@ export type ManualOperationCreateResponse = {
   ok?: boolean;
   operation_id?: string;
   operation_plan_id?: string;
+  act_task_id?: string;
   idempotent?: boolean;
   error?: string;
 };

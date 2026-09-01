@@ -663,9 +663,9 @@
       "surface_role": "AUTHORITY",
       "delegates_to": [],
       "replacement_path": [
-        "canonical Approval service"
+        "canonical ApprovalDecision -> OperationPlan -> Task boundary"
       ],
-      "sunset_condition": "KEEP; CONVERGE INTERNAL AUTHORITY",
+      "sunset_condition": "KEEP APPROVAL FACADE; AUTO-TASK COMPATIBILITY ORDERED DECISION->READY PLAN->TASK",
       "semantic_family": [
         "decision.approval",
         "decision.candidate",
@@ -701,9 +701,9 @@
       "surface_role": "AUTHORITY",
       "delegates_to": [],
       "replacement_path": [
-        "canonical AO-ACT execution runtime"
+        "canonical AO-ACT execution runtime with explicit Plan readiness boundary"
       ],
-      "sunset_condition": "KEEP PRIMARY API; REMOVE TASK->PLAN ACKED COLLAPSE",
+      "sunset_condition": "KEEP PRIMARY API; PLAN-BEFORE-TASK ZERO-AUTO-ACK ENFORCED",
       "semantic_family": [
         "execution.task",
         "execution.receipt",
@@ -1015,7 +1015,7 @@
       "replacement_path": [
         "canonical AO-ACT execution runtime"
       ],
-      "sunset_condition": "KEEP_CORE_EXECUTION_RUNTIME",
+      "sunset_condition": "KEEP CORE EXECUTION RUNTIME; LEGACY APPROVAL ORCHESTRATION ORDERED DECISION->READY PLAN->TASK",
       "semantic_family": [
         "execution.task",
         "execution.dispatch_delivery",

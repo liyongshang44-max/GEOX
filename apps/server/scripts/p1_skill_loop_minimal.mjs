@@ -324,22 +324,8 @@ async function createOperation(actionType, suffix, fieldId) {
     body: JSON.stringify(body),
   });
   assert.ok(out.operation_plan_id, "operation 创建失败：缺少 operation_plan_id");
-  return { commandId, operationPlanId: out.operation_plan_id };
-}
-
-async function waitForTask(operationPlanId) {
-  for (let i = 0; i < 10; i += 1) {
-    const detail = await requestWithRetry(`/api/v1/operations/${encodeURIComponent(operationPlanId)}/detail`, { method: "GET" });
-    const taskId = detail?.operation?.act_task_id;
-    if (taskId) {
-      return {
-        taskId,
-        detail,
-      };
-    }
-    await sleep(300);
-  }
-  throw new Error(`operation ${operationPlanId} 未就绪：无法读取 act_task_id`);
+  assert.ok(out.act_task_id, "operation 创建失败：缺少显式 act_task_id linkage");
+  return { commandId, operationPlanId: out.operation_plan_id, actTaskId: out.act_task_id };
 }
 
 async function submitReceipt(operationPlanId, actTaskId, evidenceKinds, fieldId) {
@@ -531,14 +517,12 @@ async function main() {
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     successAttempts = attempt;
     successOp = await createOperation("IRRIGATE", `success_${attempt}`, SMOKE_SUCCESS_BIND_TARGET);
-    const successTask = await waitForTask(successOp.operationPlanId);
-    const successTaskId = successTask.taskId;
-    console.log("[p1-smoke][success][waitTask]", {
+    const successTaskId = successOp.actTaskId;
+    console.log("[p1-smoke][success][taskLinkage]", {
       attempt,
       operation_plan_id: successOp.operationPlanId,
       act_task_id: successTaskId,
-      detail_task: successTask?.detail?.operation?.task ?? successTask?.detail?.task ?? null,
-      detail_status: successTask?.detail?.operation?.final_status ?? successTask?.detail?.final_status ?? null,
+      linkage_source: "operations_manual_response",
     });
     const successDispatchState = await setDispatchState(successTaskId, "ACKED");
     console.log("[p1-smoke][success][setDispatchState]", { attempt, ...successDispatchState });
@@ -597,8 +581,7 @@ async function main() {
   if (!successOp) throw new Error("success lane did not produce operation");
 
   const invalidOp = await createOperation("IRRIGATE", "invalid", SMOKE_FAILURE_BIND_TARGET);
-  const invalidTask = await waitForTask(invalidOp.operationPlanId);
-  const invalidTaskId = invalidTask.taskId;
+  const invalidTaskId = invalidOp.actTaskId;
   await setDispatchState(invalidTaskId, "ACKED");
   await submitReceipt(invalidOp.operationPlanId, invalidTaskId, ["sim_trace"], SMOKE_FAILURE_BIND_TARGET);
   const invalidFinalState = await waitForFinalState(invalidOp.operationPlanId);

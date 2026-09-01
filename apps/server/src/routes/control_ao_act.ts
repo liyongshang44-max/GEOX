@@ -467,12 +467,12 @@ async function loadLatestApprovalRequestStatusV0(
   return status || null;
 }
 
-async function ensureVariableOperationPlanV1(
+async function ensureReadyVariableOperationPlanV1(
   pool: Pool,
   input: {
     tenant: TenantTripleV0;
     operation_plan_id: string;
-    act_command_id: string;
+    act_command_id: string | null;
     prescription: any;
     approval_request_id: string;
     actor_id: string;
@@ -515,7 +515,9 @@ async function ensureVariableOperationPlanV1(
       season_id: prescription.season_id ?? null,
       operation_type: String(prescription.operation_type ?? "IRRIGATION"),
       action_type: "IRRIGATE",
-      status: "ACKED",
+      status: "READY_TO_DISPATCH",
+      dispatch_status: "NOT_DISPATCHED",
+      ack_status: "ACK_REQUIRED",
       operation_amount: operationAmount,
       variable_plan: variablePlan,
       device_requirements: prescription.device_requirements ?? {},
@@ -527,6 +529,7 @@ async function ensureVariableOperationPlanV1(
       updated_at_ts: nowTs,
       meta: {
         command_id: input.act_command_id,
+        status_contract: "TASK_CREATED_READY_TO_DISPATCH_NOT_ACKED",
         variable_prescription: true,
         prescription_id: String(prescription.prescription_id ?? ""),
         recommendation_id: String(prescription.recommendation_id ?? ""),
@@ -548,8 +551,9 @@ async function ensureVariableOperationPlanV1(
         group_id: input.tenant.group_id,
         operation_plan_id: input.operation_plan_id,
         from_status: null,
-        to_status: "ACKED",
-        reason: "VARIABLE_ACTION_TASK_CREATED",
+        status: "READY_TO_DISPATCH",
+        to_status: "READY_TO_DISPATCH",
+        reason: "VARIABLE_PRESCRIPTION_READY_FOR_TASK",
         actor_id: input.actor_id,
         token_id: input.token_id,
         created_at_ts: nowTs,
@@ -559,25 +563,16 @@ async function ensureVariableOperationPlanV1(
   return { operation_plan_id: input.operation_plan_id, operation_plan_fact_id: operationPlanFactId, created: true };
 }
 
-async function ensureOperationPlanForApprovedActionTaskV1(
+async function requireReadyOperationPlanForApprovedActionTaskV1(
   pool: Pool,
   input: {
     tenant: TenantTripleV0;
     operation_plan_id: string;
     approval_request_id: string;
-    recommendation_id: string | null;
-    field_id: string | null;
-    season_id: string | null;
-    action_type: string;
-    act_task_id: string;
-    device_id: string | null;
-    actor_id: string;
-    token_id: string;
-    source: string;
   }
-): Promise<{ operation_plan_id: string; operation_plan_fact_id: string; created: boolean }> {
-  const existing = await pool.query(
-    `SELECT fact_id
+): Promise<{ operation_plan_id: string; operation_plan_fact_id: string }> {
+  const planRes = await pool.query(
+    `SELECT fact_id, record_json::jsonb AS record_json
        FROM facts
       WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
         AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $1
@@ -588,40 +583,56 @@ async function ensureOperationPlanForApprovedActionTaskV1(
       LIMIT 1`,
     [input.operation_plan_id, input.tenant.tenant_id, input.tenant.project_id, input.tenant.group_id],
   );
-  if ((existing.rowCount ?? 0) > 0) {
-    return { operation_plan_id: input.operation_plan_id, operation_plan_fact_id: String(existing.rows[0].fact_id), created: false };
+  if ((planRes.rowCount ?? 0) !== 1) throw new Error("OPERATION_PLAN_REQUIRED_BEFORE_TASK");
+
+  const planRecord = normalizeRecordJson(planRes.rows[0].record_json);
+  const planPayload = planRecord?.payload ?? {};
+  if (String(planPayload.approval_request_id ?? "").trim() !== String(input.approval_request_id ?? "").trim()) {
+    throw new Error("OPERATION_PLAN_APPROVAL_REQUEST_MISMATCH");
   }
 
-  const nowTs = Date.now();
-  const factId = randomUUID();
-  await pool.query(
-    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
-    [factId, FACT_SOURCE_AO_ACT_V0, {
-      type: "operation_plan_v1",
-      payload: {
-        tenant_id: input.tenant.tenant_id,
-        project_id: input.tenant.project_id,
-        group_id: input.tenant.group_id,
-        operation_plan_id: input.operation_plan_id,
-        operation_id: input.operation_plan_id,
-        approval_request_id: input.approval_request_id,
-        recommendation_id: input.recommendation_id,
-        field_id: input.field_id,
-        season_id: input.season_id,
-        action_type: input.action_type,
-        status: "ACKED",
-        act_task_id: input.act_task_id,
-        device_id: input.device_id,
-        source: input.source,
-        actor_id: input.actor_id,
-        token_id: input.token_id,
-        created_at_ts: nowTs,
-        updated_at_ts: nowTs,
-      }
-    }],
+  const transitionRes = await pool.query(
+    `SELECT record_json::jsonb AS record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type') = 'operation_plan_transition_v1'
+        AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $1
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+        AND (record_json::jsonb#>>'{payload,project_id}') = $3
+        AND (record_json::jsonb#>>'{payload,group_id}') = $4
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 1`,
+    [input.operation_plan_id, input.tenant.tenant_id, input.tenant.project_id, input.tenant.group_id],
   );
+  const transitionRecord = transitionRes.rows?.[0]?.record_json ? normalizeRecordJson(transitionRes.rows[0].record_json) : null;
+  const planStatus = String(planPayload.status ?? "").trim().toUpperCase();
+  const transitionStatus = String(
+    transitionRecord?.payload?.status
+      ?? transitionRecord?.payload?.to_status
+      ?? ""
+  ).trim().toUpperCase();
+  const readyStatuses = new Set(["READY", "READY_TO_DISPATCH"]);
+  if (!readyStatuses.has(planStatus) && !readyStatuses.has(transitionStatus)) {
+    throw new Error("OPERATION_PLAN_NOT_READY_FOR_TASK");
+  }
 
-  return { operation_plan_id: input.operation_plan_id, operation_plan_fact_id: factId, created: true };
+  const existingTask = await pool.query(
+    `SELECT fact_id
+       FROM facts
+      WHERE (record_json::jsonb->>'type') = 'ao_act_task_v0'
+        AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $1
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+        AND (record_json::jsonb#>>'{payload,project_id}') = $3
+        AND (record_json::jsonb#>>'{payload,group_id}') = $4
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 1`,
+    [input.operation_plan_id, input.tenant.tenant_id, input.tenant.project_id, input.tenant.group_id],
+  );
+  if ((existingTask.rowCount ?? 0) > 0) throw new Error("OPERATION_PLAN_TASK_ALREADY_CREATED");
+
+  return {
+    operation_plan_id: input.operation_plan_id,
+    operation_plan_fact_id: String(planRes.rows[0].fact_id),
+  };
 }
 
 
@@ -857,10 +868,12 @@ async function createAoActTaskCoreV1(input: {
     const enableAoActPrecheck = isFeatureEnabledV0("GEOX_ENABLE_AO_ACT_PRECHECK_V1", true);
     const hardRulePrecheck = enableAoActPrecheck ? evaluateAoActHardRulePrecheckV1({ scope: { tenant_id: taskTenant.tenant_id, project_id: taskTenant.project_id }, constraints: hardRuleConstraints, source: hardRuleSource }) : { action_hints: [] as string[], reason_codes: [] as string[], reason_details: [] as Array<{ code: string; action_hint: "irrigate_first" | "inspect"; source: "request_constraints" | "field_fertility_state_v1" }>, source: hardRuleSource };
 
-    const act_task_id = `act_${randomUUID().replace(/-/g, "")}`;
-    await ensureOperationPlanForApprovedActionTaskV1(pool, {
-      tenant: taskTenant, operation_plan_id: parsedBody.operation_plan_id, approval_request_id: parsedBody.approval_request_id, recommendation_id: String(parsedBody.meta?.recommendation_id ?? "").trim() || null, field_id: String(parsedBody.field_id ?? parsedBody.meta?.field_id ?? parsedBody.target?.ref ?? "").trim() || null, season_id: String(parsedBody.season_id ?? parsedBody.meta?.season_id ?? "").trim() || null, action_type: String(parsedBody.action_type ?? "").trim() || "IRRIGATE", act_task_id, device_id: String(parsedBody.meta?.device_id ?? "").trim() || null, actor_id: String(auth.actor_id ?? "").trim(), token_id: String(auth.token_id ?? "").trim(), source: "approval_auto_task_issue"
+    await requireReadyOperationPlanForApprovedActionTaskV1(pool, {
+      tenant: taskTenant,
+      operation_plan_id: parsedBody.operation_plan_id,
+      approval_request_id: parsedBody.approval_request_id,
     });
+    const act_task_id = `act_${randomUUID().replace(/-/g, "")}`;
 
     const created_at_ts = Date.now();
     const record_json = { type: "ao_act_task_v0", payload: { tenant_id: taskTenant.tenant_id, project_id: taskTenant.project_id, group_id: taskTenant.group_id, operation_plan_id: parsedBody.operation_plan_id, approval_request_id: parsedBody.approval_request_id, program_id: parsedBody.program_id ?? parsedBody.meta?.program_id ?? null, field_id: parsedBody.field_id ?? parsedBody.meta?.field_id ?? null, season_id: parsedBody.season_id ?? parsedBody.meta?.season_id ?? null, act_task_id, issuer: parsedBody.issuer, action_type: parsedBody.action_type, task_type: String(parsedBody.meta?.task_type ?? parsedBody.action_type).trim() || parsedBody.action_type, target: parsedBody.target, time_window: parsedBody.time_window, parameter_schema: parsedBody.parameter_schema, parameters: parsedBody.parameters, constraints: hardRuleConstraints, precheck: hardRulePrecheck, created_at_ts, meta: parsedBody.meta } };
@@ -1424,6 +1437,16 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
         now_ts_ms: Date.now(),
       });
 
+      const operationPlanAnchor = await ensureReadyVariableOperationPlanV1(pool, {
+        tenant,
+        operation_plan_id: body.operation_plan_id,
+        act_command_id: null,
+        prescription,
+        approval_request_id: body.approval_request_id,
+        actor_id: auth.actor_id,
+        token_id: auth.token_id,
+      });
+
       const created = await createAoActTaskCoreV1({
         pool,
         req,
@@ -1457,16 +1480,6 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
           operation_plan_id: body.operation_plan_id,
           device_id: body.device_id
         }
-      });
-
-      const operationPlanAnchor = await ensureVariableOperationPlanV1(pool, {
-        tenant,
-        operation_plan_id: body.operation_plan_id,
-        act_command_id: actTaskId,
-        prescription,
-        approval_request_id: body.approval_request_id,
-        actor_id: auth.actor_id,
-        token_id: auth.token_id,
       });
 
       return {
@@ -1968,11 +1981,14 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
         return reply.status(approvalDecision.status || 400).send(approvalDecision.json ?? { ok: false, error: "APPROVAL_DECISION_FAILED" });
       }
       const operation_plan_id = String(approvalDecision.json.operation_plan_id ?? "").trim();
+      const act_task_id = String(approvalDecision.json.act_task_id ?? "").trim();
       if (!operation_plan_id) return reply.status(500).send({ ok: false, error: "MISSING_OPERATION_PLAN_ID" });
+      if (!act_task_id) return reply.status(500).send({ ok: false, error: "MISSING_ACT_TASK_ID" });
       return reply.send({
         ok: true,
         operation_id,
         operation_plan_id,
+        act_task_id,
         command_id
       });
     } catch (e: any) {
