@@ -3421,8 +3421,9 @@
         "operation-plan builder",
         "operator approval surfaces"
       ],
-      "removal_target": "KEEP AS CANONICAL APPROVAL FACADE; REGISTER EXACT DOWNSTREAM AUTHORITY BOUNDARIES",
-      "b02_registered": false
+      "removal_target": "KEEP APPROVAL FACADE; legacy auto-task compatibility must persist immutable Decision, then READY Plan, then Task",
+      "b02_registered": false,
+      "audit_note": "External approve->act_task_id behavior retained; internal authority inversion removed."
     },
     {
       "surface_id": "RES-129",
@@ -3480,8 +3481,9 @@
         "executor/outbox",
         "operator execution surfaces"
       ],
-      "removal_target": "KEEP PRIMARY API; REMOVE TASK->PLAN ACKED COLLAPSE AND CONVERGE INTERNAL AUTHORITY TO CANONICAL EXECUTION LIFECYCLE",
-      "b02_registered": false
+      "removal_target": "KEEP PRIMARY API; PLAN MUST PRE-EXIST IN READY/READY_TO_DISPATCH BEFORE TASK; TASK CORE MUST NEVER CREATE/ACK PLAN",
+      "b02_registered": false,
+      "audit_note": "Execution lifecycle repair removes Task->Plan reverse construction. Variable lane now writes READY_TO_DISPATCH + ACK_REQUIRED before Task."
     },
     {
       "surface_id": "RES-131",
@@ -3504,8 +3506,9 @@
       "downstream_consumers": [
         "field program product read models"
       ],
-      "removal_target": "KEEP PROJECTION; SPLIT ACKED/DISPATCHED/RUNNING SEMANTICS SO TASK OR ACK CANNOT IMPLY EXECUTING",
-      "b02_registered": false
+      "removal_target": "KEEP PROJECTION; EXECUTING derives only from EXECUTING/RUNNING/IN_PROGRESS, never READY/DISPATCHED/ACKED",
+      "b02_registered": false,
+      "audit_note": "Execution lifecycle repair prevents dispatch or ack states from promoting Program stage to EXECUTING."
     },
     {
       "surface_id": "RES-132",
@@ -4859,10 +4862,10 @@
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [],
-      "removal_target": "Keep runtime but converge Plan lifecycle; Task creation must not imply ACKED/EXECUTING",
+      "removal_target": "KEEP compatibility orchestrator only with ApprovalDecision -> Plan CREATED -> APPROVED -> READY -> Task ordering",
       "b02_registered": true,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
-      "audit_note": "task_service has active Plan lifecycle orchestration mixed with Task/Receipt behavior."
+      "audit_note": "Legacy approval orchestration is retained for compatibility but authority inversion is removed; Task cannot precede Decision/READY."
     },
     {
       "surface_id": "RES-189",
@@ -5837,7 +5840,7 @@
       "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
       "feature_flag": null,
       "downstream_consumers": [],
-      "removal_target": "Converge cross-family authority; Task creation must not imply Plan ACKED/Acceptance",
+      "removal_target": "Converge cross-family authority; approval compatibility path must preserve Decision->Plan ready->Task ordering",
       "b02_registered": true,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "ledger_disposition": "SEMANTIC_FACT_WRITER",
@@ -5851,7 +5854,7 @@
       ],
       "authority_owner": "AO_ACT_RUNTIME",
       "writer_scope": "mixed Task/Dispatch/Receipt plus legacy Plan/Approval/Acceptance orchestration",
-      "audit_note": "Large active runtime writes multiple semantic fact types; explicit mixed-authority debt."
+      "audit_note": "Large active runtime remains mixed; execution lifecycle ordering is now fail-closed and no Task-created trigger promotes Plan readiness."
     },
     {
       "surface_id": "RES-231",
@@ -6621,7 +6624,7 @@
       "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
       "feature_flag": null,
       "downstream_consumers": [],
-      "removal_target": "Keep primary API; remove Task->Plan ACKED and lifecycle conflation",
+      "removal_target": "Keep primary API; Task core is downstream-only of ready Plan and approved request",
       "b02_registered": true,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "ledger_disposition": "SEMANTIC_FACT_WRITER",
@@ -6633,7 +6636,7 @@
       ],
       "authority_owner": "AO_ACT_RUNTIME",
       "writer_scope": "primary Task/Receipt/Plan/dispatch execution facts",
-      "audit_note": "Primary AO-ACT mixed execution orchestrator."
+      "audit_note": "Primary AO-ACT writer remains mixed, but Task creation no longer owns Plan creation/ACK authority."
     },
     {
       "surface_id": "RES-257",
@@ -6684,7 +6687,7 @@
       "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
       "feature_flag": null,
       "downstream_consumers": [],
-      "removal_target": "Keep canonical Approval facade; Plan remains explicit downstream boundary",
+      "removal_target": "Keep Approval facade; Plan is an explicit downstream boundary before Task issue",
       "b02_registered": true,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "ledger_disposition": "SEMANTIC_FACT_WRITER",
@@ -6694,7 +6697,7 @@
       ],
       "authority_owner": "APPROVAL_RUNTIME",
       "writer_scope": "ApprovalRequest/Decision and approved-decision Plan facts",
-      "audit_note": "Active approval writer and approved-decision Plan construction route."
+      "audit_note": "Auto-task branch writes Decision first, then compatibility Plan CREATED->APPROVED->READY, then calls Task core."
     },
     {
       "surface_id": "RES-259",
