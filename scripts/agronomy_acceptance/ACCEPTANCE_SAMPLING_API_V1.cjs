@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const { Pool } = require('pg');
 const { waitForHealth } = require('./_common.cjs');
 
 const baseUrl = process.env.SAMPLING_API_BASE_URL || process.env.API_BASE_URL || 'http://127.0.0.1:3000';
@@ -47,6 +48,7 @@ async function main() {
     invalid_quality_status_blocked: false,
     sample_lookup_works: false,
     duplicate_sample_id_rejected_409: false,
+    legacy_receipt_duplicate_blocked_409: false,
     concurrent_duplicate_sample_id_serialized: false,
     concurrent_acceptance_identity_stable: false,
     shared_import_id_is_chain_local: false,
@@ -138,6 +140,54 @@ async function main() {
   assert.equal(duplicateReceipt.status, 409, 'duplicate sample_id must fail closed with 409');
   assert.equal(duplicateReceipt.json?.error, 'DUPLICATE:sample_id', 'duplicate sample_id error code mismatch');
   checks.duplicate_sample_id_rejected_409 = true;
+
+  const legacySampleId = `${ids.sample_id}-legacy-format`;
+  const legacyFactId = `legacy_sr_${now}`;
+  const databaseUrl = process.env.DATABASE_URL;
+  assert.ok(databaseUrl, 'DATABASE_URL required for legacy receipt regression');
+  const pool = new Pool({ connectionString: databaseUrl });
+  try {
+    await pool.query(
+      `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+       VALUES ($1, now(), 'sampling-legacy-regression', $2::jsonb)
+       ON CONFLICT (fact_id) DO UPDATE SET record_json = EXCLUDED.record_json, occurred_at = now()`,
+      [
+        legacyFactId,
+        JSON.stringify({
+          type: 'sample_receipt_v1',
+          schema_version: '1',
+          sample_id: legacySampleId,
+          plan_id: planRes.json.plan_id,
+          tenant_id: tenantScope.tenant_id,
+          project_id: tenantScope.project_id,
+          group_id: tenantScope.group_id,
+          field_id: ids.field_id,
+          collected_at_ts: now - 1,
+          collector_actor_id: 'legacy-collector',
+          sample_type: 'SOIL',
+          evidence_refs: [{ kind: 'raw_sample_v1', ref_id: 'legacy-raw' }],
+          chain_of_custody_status: 'RECORDED',
+        }),
+      ],
+    );
+
+    const legacyDuplicate = await postJson('/api/v1/sampling/receipt', {
+      plan_id: planRes.json.plan_id,
+      sample_id: legacySampleId,
+      ...scopedBody,
+      collected_at_ts: now + 2,
+      collector_actor_id: 'collector-after-legacy',
+      sample_type: 'SOIL',
+      evidence_refs: [{ kind: 'raw_sample_v1', ref_id: 'raw-after-legacy' }],
+      chain_of_custody_status: 'RECORDED',
+    });
+    assert.equal(legacyDuplicate.status, 409, 'legacy receipt must block deterministic duplicate creation');
+    assert.equal(legacyDuplicate.json?.error, 'DUPLICATE:sample_id', 'legacy receipt duplicate error code mismatch');
+    checks.legacy_receipt_duplicate_blocked_409 = true;
+  } finally {
+    await pool.query('DELETE FROM facts WHERE fact_id = $1', [legacyFactId]).catch(() => undefined);
+    await pool.end();
+  }
 
   const concurrentSampleId = `${ids.sample_id}-concurrent`;
   const concurrentReceiptBody = {
