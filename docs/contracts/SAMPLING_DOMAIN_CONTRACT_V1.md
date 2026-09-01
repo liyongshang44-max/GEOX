@@ -119,5 +119,6 @@ Re-evaluating the same exact plan/receipt/lab source chain is idempotent. It mus
 - manual sample data 不得直接写 ProblemState conclusion
 - lab result 不得直接写 ROI / Field Memory / customer success
 - legacy `sample_receipt_v1` without `sampling_plan_fact_id` still blocks duplicate receipt creation for the same tenant/project/group + plan_id + sample_id; migration absence must not reopen latest-wins or duplicate writer authority
-- Sampling formal chain 不得使用 `ORDER BY occurred_at DESC LIMIT 1` 作为 authority selector
+- legacy `lab_result_import_v1` without exact `sample_receipt_fact_id` / `sampling_plan_fact_id` / scope refs is not Formal Sampling authority and must not be auto-bound by `sample_id` / `import_id`; formal use requires a newly established exact chain
+- Sampling formal chain 不得使用 latest-wins source selection；包括不得使用 `ORDER BY occurred_at DESC LIMIT 1` 作为 authority selector
 - ambiguous receipt/lab/acceptance identity 必须 fail closed
