@@ -3496,8 +3496,7 @@
       "entrypoint": "registerReportingModule -> registerOperationStateV1Routes",
       "activation_mode": "ACTIVE_GET_ROUTE_WITH_SEMANTIC_SIDE_EFFECT",
       "writes": [
-        "skill_run fact through ensureSkillRunFact",
-        "rule performance feedback through updateRulePerformance"
+        "NONE_BY_GET_OR_READ_MODEL"
       ],
       "reads": [
         "operation/task/receipt/acceptance/read-model facts"
@@ -3506,15 +3505,16 @@
         "presentation.read_model",
         "governance.skill_binding"
       ],
-      "authority_class": "READ_MODEL_ROUTE_WITH_HIDDEN_LEARNING_WRITER",
+      "authority_class": "READ_MODEL_ZERO_SEMANTIC_PERSISTENCE",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "operator/reporting UI",
         "skill/rule learning feedback"
       ],
-      "removal_target": "MAKE GET/READ MODEL ZERO-PERSISTENCE; MOVE LEARNING UPDATE TO EXPLICIT ACCEPTANCE->OUTCOME->LEARNING EVENT",
-      "b02_registered": false
+      "removal_target": "KEEP AS PURE READ MODEL; learning updates require explicit Outcome/Learning event",
+      "b02_registered": false,
+      "audit_note": "Previously hidden GET-side skill/performance writes removed on stacked repair."
     },
     {
       "surface_id": "RES-133",
@@ -6888,9 +6888,9 @@
       "surface_id": "RES-266",
       "source_path": "apps/server/src/routes/operation_state_v1.ts",
       "entrypoint": "exact governance.fact_ledger writer capability adjudication",
-      "activation_mode": "READ_SIDE_EFFECT_P0",
+      "activation_mode": "READ_MODEL_ZERO_WRITE",
       "writes": [
-        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+        "NONE_BY_GET_OR_READ_MODEL"
       ],
       "reads": [
         "writer-specific validated upstream inputs/provenance"
@@ -6898,22 +6898,22 @@
       "semantic_family": [
         "governance.fact_ledger"
       ],
-      "authority_class": "FACT_LEDGER_READ_SIDE_EFFECT_P0",
+      "authority_class": "FACT_LEDGER_READ_MODEL_ZERO_WRITE",
       "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
       "feature_flag": null,
       "downstream_consumers": [],
-      "removal_target": "REMOVE GET semantic persistence; learning writes must originate from Acceptance->Outcome->Learning event",
+      "removal_target": "KEEP GET/read model zero semantic persistence; learning facts originate only from explicit Outcome/Learning workflows",
       "b02_registered": true,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
-      "ledger_disposition": "READ_SIDE_EFFECT_P0",
+      "ledger_disposition": "READ_MODEL_ZERO_WRITE",
       "underlying_semantic_families": [
         "governance.skill_binding",
         "learning.feedback",
         "presentation.read_model"
       ],
       "authority_owner": "REPORTING_READ_MODEL",
-      "writer_scope": "GET detail currently writes skill_run and rule_performance facts",
-      "audit_note": "Read route side effect intentionally remains fail-closed P0."
+      "writer_scope": "none in request-time read model; onReady schema preparation is infrastructure-only",
+      "audit_note": "Repair branch removed ensureSkillRunFact/updateRulePerformance/recordRulePerformance and all facts DML from operation_state GET implementation."
     },
     {
       "surface_id": "RES-267",
