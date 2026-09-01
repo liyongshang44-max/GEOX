@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_acl_carryforward_remediation_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1",
-  "status": "LIVE_EXACT_NINE_REMEDIATION_READY_NOT_AUTHORIZED",
+  "status": "LIVE_EXACT_NINE_REMEDIATION_AUTHORIZED",
   "root_cause": {
     "code": "V13_DENY_BY_DEFAULT_RESET_DROPPED_PHASE3_EVIDENCE_TABLE_PRIVILEGES",
     "predecessor_acl": "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql",
@@ -104,7 +104,7 @@
   "arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_ARM_V1.json",
   "workflow_ref": ".github/workflows/mcft-cap-09-production-evidence-acl-carryforward-remediation.yml",
   "authorization": {
-    "production_evidence_acl_carryforward_remediation_authorized": false,
+    "production_evidence_acl_carryforward_remediation_authorized": true,
     "runtime_process_start_authorized": false,
     "production_owner_activation_authorized": false,
     "formal_v5_arm_authorized": false,
@@ -173,13 +173,13 @@
   },
   "next_stage": {
     "stage": "EXACT_NINE_PRIVILEGE_REMEDIATION",
-    "status": "READY_NOT_AUTHORIZED_PENDING_FRESH_LIVE_PREFLIGHT_AND_EXPLICIT_USER_AUTHORIZATION",
+    "status": "AUTHORIZED_PENDING_SAME_WORKFLOW_FRESH_PREFLIGHT_AND_EXACT_NINE_ACL_ONLY_REMEDIATION",
     "cleanup_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-WRITER-OWNER-SELF-GRANT-CLEANUP-AUTHORITY-V1.json",
     "cleanup_run_id": 33481272545,
     "cleanup_artifact_id": 9790060543,
     "cleanup_artifact_digest": "sha256:9607dee6f3e0f957aad3318d415a4fa8c46d1c27b23ec990e7d4a782856b7886",
     "exact_missing_privilege_count": 9,
-    "exact_nine_acl_mutation_authorized": false,
+    "exact_nine_acl_mutation_authorized": true,
     "role_or_membership_mutation_under_exact_nine_authority": false,
     "runtime_start": false,
     "production_owner_activation": false,
@@ -226,5 +226,10 @@
     "writer_owner_self_grant_residual_count_zero": true,
     "writer_owner_effective_set_authority_zero": true,
     "exact_nine_privileges_still_missing": true
+  },
+  "user_authorization": {
+    "explicit": true,
+    "scope": "PRODUCTION_EXACT_NINE_EVIDENCE_ACL_REMEDIATION_ONLY",
+    "observed_date": "2026-09-01"
   }
 }
