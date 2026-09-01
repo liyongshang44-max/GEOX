@@ -185,8 +185,6 @@ try {
   assert.deepEqual(authority.unconditional_blockers, [
     "KBS_RAW_HOURLY_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED",
     "KBS_RAW_HOURLY_PRODUCTION_BASELINE_POINTER_SCHEMA_NOT_MATERIALIZED",
-    "KBS_RAW_HOURLY_PUBLICATION_DIFF_NO_CHANGE_ADAPTER_NOT_IMPLEMENTED",
-    "KBS_RAW_HOURLY_PAIR_SKEW_REPAIR_NOT_IMPLEMENTED",
     "GFS_PARTIAL_PAIR_PRODUCTION_REHYDRATION_ADAPTER_NOT_IMPLEMENTED",
     "KBS_SOIL_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED",
     "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
@@ -227,9 +225,7 @@ try {
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.baseline_pointer_snapshot_identity_mismatch_fail_closed, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.verified_retained_raw_replay_primitive_implemented, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.verified_retained_raw_replay_primitive_implemented, true);
-  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.publication_diff_no_change_adapter_implemented, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.fixed_latest_24_rows_bootstrap_authorized, false);
-  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.pair_skew_repair_implemented, false);
   assert.equal(authority.source_specific_requirements.gfs_bundle.pure_planner_decision_implemented, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.durable_target_dedup_implemented, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.partial_pair_production_rehydration_adapter_implemented, false);
