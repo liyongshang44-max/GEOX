@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_acl_carryforward_remediation_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1",
-  "status": "LIVE_EXACT_NINE_REMEDIATION_AUTHORIZED",
+  "status": "LIVE_EXACT_NINE_REMEDIATION_APPLIED",
   "root_cause": {
     "code": "V13_DENY_BY_DEFAULT_RESET_DROPPED_PHASE3_EVIDENCE_TABLE_PRIVILEGES",
     "predecessor_acl": "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql",
@@ -104,7 +104,7 @@
   "arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_ARM_V1.json",
   "workflow_ref": ".github/workflows/mcft-cap-09-production-evidence-acl-carryforward-remediation.yml",
   "authorization": {
-    "production_evidence_acl_carryforward_remediation_authorized": true,
+    "production_evidence_acl_carryforward_remediation_authorized": false,
     "runtime_process_start_authorized": false,
     "production_owner_activation_authorized": false,
     "formal_v5_arm_authorized": false,
@@ -172,15 +172,10 @@
     "stale_reason": "LIVE_WRITER_OWNER_SELF_GRANT_RESIDUAL_DISCOVERED_AFTER_IMMUTABLE_PREFLIGHT"
   },
   "next_stage": {
-    "stage": "EXACT_NINE_PRIVILEGE_REMEDIATION",
-    "status": "AUTHORIZED_PENDING_SAME_WORKFLOW_FRESH_PREFLIGHT_AND_EXACT_NINE_ACL_ONLY_REMEDIATION",
-    "cleanup_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-WRITER-OWNER-SELF-GRANT-CLEANUP-AUTHORITY-V1.json",
-    "cleanup_run_id": 33481272545,
-    "cleanup_artifact_id": 9790060543,
-    "cleanup_artifact_digest": "sha256:9607dee6f3e0f957aad3318d415a4fa8c46d1c27b23ec990e7d4a782856b7886",
-    "exact_missing_privilege_count": 9,
-    "exact_nine_acl_mutation_authorized": true,
-    "role_or_membership_mutation_under_exact_nine_authority": false,
+    "stage": "POST_REMEDIATION_SCHEMA_READINESS",
+    "status": "EXACT_NINE_APPLIED_PENDING_POSTSTATE_READBACK",
+    "exact_missing_privilege_count": 0,
+    "exact_nine_acl_mutation_authorized": false,
     "runtime_start": false,
     "production_owner_activation": false,
     "formal_v5": false,
@@ -230,6 +225,32 @@
   "user_authorization": {
     "explicit": true,
     "scope": "PRODUCTION_EXACT_NINE_EVIDENCE_ACL_REMEDIATION_ONLY",
-    "observed_date": "2026-09-01"
+    "observed_date": "2026-09-01",
+    "consumed_by_run_id": 33483019771
+  },
+  "execution_evidence": {
+    "status": "IMMUTABLE_SUCCESS",
+    "subject_sha": "39c87dd7cbdca7d86561dc66f2c93f9e37cd4916",
+    "workflow": "mcft-cap-09-production-evidence-acl-carryforward-remediation",
+    "run_id": 33483019771,
+    "artifact_id": 9790736650,
+    "artifact_digest": "sha256:1f87228c7e177f19f6b23b96bec1afc8478b30f3c421f5ec0cf6ed4745dae78d",
+    "result_status": "PASS_REMEDIATION_APPLIED",
+    "before_target_acl": "SELECT=false INSERT=false UPDATE=false DELETE=false",
+    "after_target_acl": "SELECT=true INSERT=true UPDATE=true DELETE=false",
+    "exact_nine_privileges_applied": true,
+    "total_application_rows_after": 0,
+    "phase3_append_function_execute": true,
+    "login_count_unchanged": true,
+    "login_memberships_unchanged": true,
+    "login_role_attributes_unchanged": true,
+    "service_login_direct_public_acl_count": 0,
+    "service_login_owned_object_count": 0,
+    "non_target_table_acl_unchanged": true,
+    "function_acl_unchanged": true,
+    "public_schema_acl_unchanged": true,
+    "role_memberships_unchanged": true,
+    "writer_owner_effective_set_zero": true,
+    "writer_owner_self_grant_count_zero": true
   }
 }
