@@ -18,5 +18,7 @@
   "formal_v5_arm_authorized": false,
   "a0_authorized": false,
   "o00_authorized": false,
-  "safe_zero_runtime_identity_provisioning_required": true
+  "safe_zero_runtime_identity_provisioning_required": true,
+  "service_creation_execution_blocked_by_runtime_start_boundary": true,
+  "provider_zero_runtime_identity_provisioning_status": "PROVEN_UNAVAILABLE_ON_RENDER_API_V1"
 }

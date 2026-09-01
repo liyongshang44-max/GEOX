@@ -70,7 +70,7 @@
   },
   "next_stage": {
     "stage": "BIND_REAL_NON_GITHUB_PLATFORM_SERVICE_IDENTITIES",
-    "status": "RENDER_WORKSPACE_BOUND_AWAITING_SAFE_SERVICE_IDENTITY_PROVISIONING",
+    "status": "RENDER_WORKSPACE_BOUND_BLOCKED_ON_RUNTIME_START_BOUNDARY",
     "external_platform_selection_required": false,
     "external_service_provisioning_or_existing_identity_required": true,
     "runtime_start_separate": true,
@@ -92,10 +92,12 @@
     "service_creation_authorized": true,
     "host_identity_binding_authorized": true,
     "safe_zero_runtime_identity_provisioning_required": true,
-    "safe_zero_runtime_identity_provisioning_status": "NOT_PROVEN",
+    "safe_zero_runtime_identity_provisioning_status": "PROVEN_UNAVAILABLE_ON_RENDER_API_V1",
     "standard_render_create_service_initial_deploy_allowed": false,
     "create_then_suspend_race_allowed": false,
-    "render_workspace_owner_id": "tea-dab2cfvavr4c73ejavog"
+    "render_workspace_owner_id": "tea-dab2cfvavr4c73ejavog",
+    "service_creation_execution_status": "BLOCKED_BY_RUNTIME_START_BOUNDARY",
+    "new_runtime_start_authority_required_to_create_render_workers": true
   },
   "non_effects": {
     "external_host_provisioning": false,
@@ -300,9 +302,11 @@
     "runtime_start_not_authorized": true,
     "production_owner_activation_not_authorized": true,
     "safe_zero_runtime_identity_provisioning_required": true,
-    "safe_zero_runtime_identity_provisioning_status": "NOT_PROVEN",
+    "safe_zero_runtime_identity_provisioning_status": "PROVEN_UNAVAILABLE_ON_RENDER_API_V1",
     "standard_create_service_initial_deploy_allowed": false,
-    "create_then_suspend_race_allowed": false
+    "create_then_suspend_race_allowed": false,
+    "service_creation_execution_status": "BLOCKED_BY_RUNTIME_START_BOUNDARY",
+    "zero_runtime_identity_creation_supported": false
   },
   "host_binding_arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json",
   "host_binding_arm_status": "UNARMED",
@@ -320,6 +324,30 @@
     "formal_v5_arm_authorized": false,
     "a0_authorized": false,
     "o00_authorized": false,
-    "workspace_owner_id": "tea-dab2cfvavr4c73ejavog"
+    "workspace_owner_id": "tea-dab2cfvavr4c73ejavog",
+    "service_creation_execution_blocked_by_runtime_start_boundary": true
+  },
+  "provider_semantic_evidence": {
+    "status": "IMMUTABLE_EXTERNAL_CONTRACT_EVIDENCE",
+    "checked_at": "2026-09-01",
+    "provider": "RENDER",
+    "sources": [
+      "https://api-docs.render.com/openapi/render-public-api-1.json",
+      "https://api-docs.render.com/reference/create-service",
+      "https://api-docs.render.com/reference/suspend-service-1"
+    ],
+    "background_worker_create_contract": {
+      "service_type": "background_worker",
+      "runtime_required": true,
+      "num_instances_minimum": 1,
+      "num_instances_default": 1,
+      "zero_instance_create_allowed": false
+    },
+    "suspend_contract": {
+      "endpoint": "POST /v1/services/{serviceId}/suspend",
+      "service_id_required_before_suspend": true
+    },
+    "adjudication": "ZERO_RUNTIME_SERVICE_IDENTITY_PROVISIONING_NOT_AVAILABLE_VIA_RENDER_PUBLIC_API_V1",
+    "create_then_suspend_satisfies_zero_runtime_boundary": false
   }
 }

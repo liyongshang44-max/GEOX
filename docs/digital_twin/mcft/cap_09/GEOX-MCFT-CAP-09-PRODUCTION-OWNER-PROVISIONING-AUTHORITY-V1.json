@@ -181,9 +181,11 @@
     "service_creation_authorized": true,
     "host_identity_binding_authorized": true,
     "safe_zero_runtime_identity_provisioning_required": true,
-    "safe_zero_runtime_identity_provisioning_status": "NOT_PROVEN",
+    "safe_zero_runtime_identity_provisioning_status": "PROVEN_UNAVAILABLE_ON_RENDER_API_V1",
     "render_workspace_owner_id": "tea-dab2cfvavr4c73ejavog",
-    "render_workspace_owner_id_bound": true
+    "render_workspace_owner_id_bound": true,
+    "service_creation_execution_status": "BLOCKED_BY_RUNTIME_START_BOUNDARY",
+    "new_runtime_start_authority_required_to_create_render_workers": true
   },
   "service_login_pre_arm_evidence": {
     "status": "IMMUTABLE_READY_UNARMED",

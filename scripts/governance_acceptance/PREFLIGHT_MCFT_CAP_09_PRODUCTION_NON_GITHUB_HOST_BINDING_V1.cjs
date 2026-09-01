@@ -96,6 +96,8 @@ try {
   const platformAuthorizedPreIdentity =
     a.status === "RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND" ||
     workspaceBoundPreIdentity;
+  const expectedZeroRuntimeProvisioningStatus =
+    workspaceBoundPreIdentity ? "PROVEN_UNAVAILABLE_ON_RENDER_API_V1" : "NOT_PROVEN";
   req(
     a.status === "HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND" || platformAuthorizedPreIdentity,
     "HOST_BINDING_AUTHORITY_STATUS_REQUIRED",
@@ -285,11 +287,11 @@ try {
     req(
       a.next_stage?.status ===
         (workspaceBoundPreIdentity
-          ? "RENDER_WORKSPACE_BOUND_AWAITING_SAFE_SERVICE_IDENTITY_PROVISIONING"
+          ? "RENDER_WORKSPACE_BOUND_BLOCKED_ON_RUNTIME_START_BOUNDARY"
           : "RENDER_PLATFORM_AUTHORIZED_AWAITING_SAFE_SERVICE_IDENTITY_PROVISIONING") &&
         a.next_stage?.external_platform_selection_required === false &&
         a.next_stage?.safe_zero_runtime_identity_provisioning_required === true &&
-        a.next_stage?.safe_zero_runtime_identity_provisioning_status === "NOT_PROVEN" &&
+        a.next_stage?.safe_zero_runtime_identity_provisioning_status === expectedZeroRuntimeProvisioningStatus &&
         a.next_stage?.standard_render_create_service_initial_deploy_allowed === false &&
         a.next_stage?.create_then_suspend_race_allowed === false,
       "HOST_BINDING_AUTHORIZED_PRE_IDENTITY_NEXT_STAGE_REQUIRED",
@@ -361,7 +363,7 @@ try {
   if (platformAuthorizedPreIdentity) {
     req(
       render?.safe_zero_runtime_identity_provisioning_required === true &&
-        render?.safe_zero_runtime_identity_provisioning_status === "NOT_PROVEN" &&
+        render?.safe_zero_runtime_identity_provisioning_status === expectedZeroRuntimeProvisioningStatus &&
         render?.standard_create_service_initial_deploy_allowed === false &&
         render?.create_then_suspend_race_allowed === false,
       "HOST_BINDING_RENDER_ZERO_RUNTIME_PROVISIONING_GUARD_REQUIRED",
@@ -418,7 +420,19 @@ try {
       hostArm.o00_authorized === false,
     "HOST_BINDING_SEPARATE_ARM_AUTHORITY_STATE_REQUIRED",
   );
-  if (platformAuthorizedPreIdentity) req(hostArm.safe_zero_runtime_identity_provisioning_required === true, "HOST_BINDING_ARM_ZERO_RUNTIME_PROVISIONING_GUARD_REQUIRED");
+  if (platformAuthorizedPreIdentity) {
+    req(hostArm.safe_zero_runtime_identity_provisioning_required === true, "HOST_BINDING_ARM_ZERO_RUNTIME_PROVISIONING_GUARD_REQUIRED");
+    if (workspaceBoundPreIdentity) {
+      req(hostArm.provider_zero_runtime_identity_provisioning_status === "PROVEN_UNAVAILABLE_ON_RENDER_API_V1" &&
+        hostArm.service_creation_execution_blocked_by_runtime_start_boundary === true,
+        "HOST_BINDING_RENDER_RUNTIME_START_BOUNDARY_BLOCK_REQUIRED");
+      req(a.provider_semantic_evidence?.background_worker_create_contract?.num_instances_minimum === 1 &&
+        a.provider_semantic_evidence?.background_worker_create_contract?.zero_instance_create_allowed === false &&
+        a.provider_semantic_evidence?.suspend_contract?.service_id_required_before_suspend === true &&
+        a.provider_semantic_evidence?.create_then_suspend_satisfies_zero_runtime_boundary === false,
+        "HOST_BINDING_RENDER_PROVIDER_SEMANTIC_EVIDENCE_REQUIRED");
+    }
+  }
 
   for (const key of [
     "external_host_provisioning",
@@ -454,7 +468,7 @@ try {
     schema_version: "geox_mcft_cap09_production_non_github_host_binding_preflight_v1",
     status: "PASS",
     stage: workspaceBoundPreIdentity
-      ? "RENDER_WORKSPACE_BOUND_SERVICE_IDENTITIES_UNBOUND"
+      ? "RENDER_WORKSPACE_BOUND_BLOCKED_ON_ZERO_RUNTIME_SERVICE_CREATION"
       : platformAuthorizedPreIdentity
         ? "RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND"
         : "NON_GITHUB_HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND",
@@ -474,7 +488,7 @@ try {
     binding_authorized: false,
     pre_platform_checkpoint_evidence_bound: true,
     remaining_blockers: workspaceBoundPreIdentity ? [
-      "RENDER_ZERO_RUNTIME_IDENTITY_PROVISIONING_PATH_NOT_PROVEN",
+      "RENDER_ZERO_RUNTIME_IDENTITY_PROVISIONING_UNAVAILABLE_WITHOUT_RUNTIME_START",
       "RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",
       "RENDER_TWIN_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",
       "NON_GITHUB_HOST_BINDING_NOT_COMPLETE",

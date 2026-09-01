@@ -113,6 +113,7 @@ try{
   if(a.formal_v5_store_reference) req(a.formal_v5_store_reference.owner_provisioning_target===false,"OWNER_PROVISIONING_FORMAL_V5_TARGET_FORBIDDEN");
   const workspaceBoundPreIdentity=a.next_stage?.status==="WORKSPACE_BOUND_SERVICE_IDENTITIES_NOT_YET_BOUND";
   const platformAuthorizedPreIdentity=a.next_stage?.status==="PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_NOT_YET_BOUND"||workspaceBoundPreIdentity;
+  const expectedZeroRuntimeProvisioningStatus=workspaceBoundPreIdentity?"PROVEN_UNAVAILABLE_ON_RENDER_API_V1":"NOT_PROVEN";
   req(a.next_stage?.stage==="NON_GITHUB_HOST_BINDING"&&(a.next_stage?.status==="NOT_STARTED"||platformAuthorizedPreIdentity)&&a.next_stage?.separate_machine_authority_required===true,"OWNER_PROVISIONING_NON_GITHUB_HOST_NEXT_STAGE_REQUIRED");
   req(a.next_stage?.runtime_credential_stage_complete===true&&a.next_stage?.runtime_database_name==="geox_mcft_cap09_production_runtime_v1","OWNER_PROVISIONING_RUNTIME_CREDENTIAL_STAGE_COMPLETE_REQUIRED");
   req(Array.isArray(a.next_stage?.runtime_database_url_secrets_bound)&&a.next_stage.runtime_database_url_secrets_bound.length===2&&a.next_stage?.non_github_host_identity_required===true&&a.next_stage?.non_github_host_identity_status==="NOT_YET_BOUND","OWNER_PROVISIONING_NON_GITHUB_HOST_IDENTITY_REQUIRED");
@@ -125,10 +126,10 @@ try{
   req(hostAuth.host_identity_contract?.evidence_runtime?.runtime_role==="EVIDENCE_RUNTIME"&&hostAuth.host_identity_contract?.twin_runtime?.runtime_role==="TWIN_RUNTIME","OWNER_PROVISIONING_HOST_RUNTIME_ROLES_REQUIRED");
   req(hostAuth.host_identity_contract?.evidence_runtime?.service_identity===null&&hostAuth.host_identity_contract?.twin_runtime?.service_identity===null,"OWNER_PROVISIONING_HOST_IDENTITIES_MUST_REMAIN_UNBOUND");
   req(hostAuth.binding_state?.platform_selected===platformAuthorizedPreIdentity&&hostAuth.binding_state?.evidence_host_identity_bound===false&&hostAuth.binding_state?.twin_host_identity_bound===false&&hostAuth.binding_state?.exact_two_runtime_service_identities_bound===false&&hostAuth.binding_state?.binding_authorized===false,"OWNER_PROVISIONING_HOST_BINDING_STATE_REQUIRED");
-  req(hostAuth.next_stage?.stage==="BIND_REAL_NON_GITHUB_PLATFORM_SERVICE_IDENTITIES"&&hostAuth.next_stage?.status===(workspaceBoundPreIdentity?"RENDER_WORKSPACE_BOUND_AWAITING_SAFE_SERVICE_IDENTITY_PROVISIONING":platformAuthorizedPreIdentity?"RENDER_PLATFORM_AUTHORIZED_AWAITING_SAFE_SERVICE_IDENTITY_PROVISIONING":"BLOCKED_ON_EXTERNAL_PLATFORM_AND_SERVICE_IDENTITIES"),"OWNER_PROVISIONING_HOST_AUTHORITY_NEXT_STAGE_REQUIRED");
+  req(hostAuth.next_stage?.stage==="BIND_REAL_NON_GITHUB_PLATFORM_SERVICE_IDENTITIES"&&hostAuth.next_stage?.status===(workspaceBoundPreIdentity?"RENDER_WORKSPACE_BOUND_BLOCKED_ON_RUNTIME_START_BOUNDARY":platformAuthorizedPreIdentity?"RENDER_PLATFORM_AUTHORIZED_AWAITING_SAFE_SERVICE_IDENTITY_PROVISIONING":"BLOCKED_ON_EXTERNAL_PLATFORM_AND_SERVICE_IDENTITIES"),"OWNER_PROVISIONING_HOST_AUTHORITY_NEXT_STAGE_REQUIRED");
   if(platformAuthorizedPreIdentity){
     req(a.next_stage?.platform_selection_authorized===true&&a.next_stage?.service_creation_authorized===true&&a.next_stage?.host_identity_binding_authorized===true,"OWNER_PROVISIONING_RENDER_EXTERNAL_AUTHORITY_REQUIRED");
-    req(a.next_stage?.safe_zero_runtime_identity_provisioning_required===true&&a.next_stage?.safe_zero_runtime_identity_provisioning_status==="NOT_PROVEN","OWNER_PROVISIONING_RENDER_ZERO_RUNTIME_GUARD_REQUIRED");
+    req(a.next_stage?.safe_zero_runtime_identity_provisioning_required===true&&a.next_stage?.safe_zero_runtime_identity_provisioning_status===expectedZeroRuntimeProvisioningStatus,"OWNER_PROVISIONING_RENDER_ZERO_RUNTIME_GUARD_REQUIRED");
     req(hostAuth.platform_evaluation?.status==="SELECTED_AUTHORIZED"&&hostAuth.platform_evaluation?.platform_selected===true,"OWNER_PROVISIONING_RENDER_SELECTION_REQUIRED");
     req(
       hostAuth.render_candidate_binding_contract?.status===(workspaceBoundPreIdentity?"WORKSPACE_BOUND_AUTHORIZED_FOR_IDENTITY_PROVISIONING":"AUTHORIZED_FOR_IDENTITY_PROVISIONING_UNBOUND")&&
@@ -139,8 +140,10 @@ try{
     );
     if(workspaceBoundPreIdentity){
       req(a.next_stage?.render_workspace_owner_id_bound===true&&a.next_stage?.render_workspace_owner_id==="tea-dab2cfvavr4c73ejavog","OWNER_PROVISIONING_RENDER_WORKSPACE_BINDING_REQUIRED");
+      req(a.next_stage?.service_creation_execution_status==="BLOCKED_BY_RUNTIME_START_BOUNDARY"&&a.next_stage?.new_runtime_start_authority_required_to_create_render_workers===true,"OWNER_PROVISIONING_RENDER_RUNTIME_START_BOUNDARY_REQUIRED");
+      req(hostAuth.provider_semantic_evidence?.background_worker_create_contract?.num_instances_minimum===1&&hostAuth.provider_semantic_evidence?.background_worker_create_contract?.zero_instance_create_allowed===false&&hostAuth.provider_semantic_evidence?.suspend_contract?.service_id_required_before_suspend===true&&hostAuth.provider_semantic_evidence?.create_then_suspend_satisfies_zero_runtime_boundary===false,"OWNER_PROVISIONING_RENDER_PROVIDER_SEMANTIC_EVIDENCE_REQUIRED");
     }
-    req(hostAuth.render_candidate_binding_contract?.safe_zero_runtime_identity_provisioning_status==="NOT_PROVEN"&&hostAuth.render_candidate_binding_contract?.standard_create_service_initial_deploy_allowed===false&&hostAuth.render_candidate_binding_contract?.create_then_suspend_race_allowed===false,"OWNER_PROVISIONING_RENDER_ZERO_RUNTIME_PATH_MUST_REMAIN_FAIL_CLOSED");
+    req(hostAuth.render_candidate_binding_contract?.safe_zero_runtime_identity_provisioning_status===expectedZeroRuntimeProvisioningStatus&&hostAuth.render_candidate_binding_contract?.standard_create_service_initial_deploy_allowed===false&&hostAuth.render_candidate_binding_contract?.create_then_suspend_race_allowed===false,"OWNER_PROVISIONING_RENDER_ZERO_RUNTIME_PATH_MUST_REMAIN_FAIL_CLOSED");
   }
   for(const k of ["external_host_provisioning","deployment","runtime_process_start","production_owner_activation","provider_request","formal_v5_arm","a0_bootstrap","o00_started"]) req(hostAuth.non_effects?.[k]===false,"OWNER_PROVISIONING_HOST_AUTHORITY_NON_EFFECT_REQUIRED:"+k);
   req(arm.armed===false&&arm.exact_target_database_name===null,"OWNER_PROVISIONING_MUST_NOT_BE_ARMED");
