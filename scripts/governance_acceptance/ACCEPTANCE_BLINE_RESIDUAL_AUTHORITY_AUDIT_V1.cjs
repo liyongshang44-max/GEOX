@@ -45,7 +45,8 @@ const LEDGER_DISPOSITIONS = new Set([
   "MCFT_FROZEN",
   "DEVTOOLS_ONLY",
   "SEED_MIGRATION",
-  "READ_SIDE_EFFECT_P0"
+  "READ_SIDE_EFFECT_P0",
+  "READ_MODEL_ZERO_WRITE"
 ]);
 const LEDGER_REQUIRED = [
   "ledger_disposition",
