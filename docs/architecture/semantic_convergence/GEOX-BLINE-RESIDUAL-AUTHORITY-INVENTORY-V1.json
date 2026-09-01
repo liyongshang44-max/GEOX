@@ -4217,6 +4217,397 @@
       "audit_note": "Outcome verification is downstream of Acceptance and must not be collapsed into Acceptance or Field Memory.",
       "feature_flag": null,
       "b02_registered": true
+    },
+    {
+      "surface_id": "RES-162",
+      "source_path": "apps/server/src/domain/agronomy/agronomy_engine.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "ORPHANED_CAPABILITY",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.calculation"
+      ],
+      "authority_class": "ORPHANED_LEGACY_IRRIGATION_THRESHOLD_CALCULATOR",
+      "runtime_reachable": "NOT_PROVEN_CURRENT_CALLER",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Retain only as calculation logic if explicitly adapted; no Candidate authority; no new runtime consumer before canonical adapter",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "evaluateAgronomy is reachable only through evaluateIrrigationDecisionV1 in domain/decision_engine_v1.ts; that exported legacy evaluator has no current repository caller."
+    },
+    {
+      "surface_id": "RES-163",
+      "source_path": "apps/server/src/domain/agronomy/crop_catalog.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "ORPHANED_CAPABILITY",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.calculation"
+      ],
+      "authority_class": "ORPHANED_LEGACY_CROP_THRESHOLD_CONFIG_AUTHORITY",
+      "runtime_reachable": "NOT_PROVEN_CURRENT_CALLER",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Version or migrate threshold data behind Calculation authority if reused; forbid direct Candidate use",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "getCropProfile is consumed by the same orphaned evaluateIrrigationDecisionV1 sub-capability; current active hard-rule blueprint does not use it."
+    },
+    {
+      "surface_id": "RES-164",
+      "source_path": "apps/server/src/domain/agronomy/rule_engine.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "FEATURE_FLAG",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "context.crop_stage"
+      ],
+      "authority_class": "ACTIVE_LEGACY_STAGE_DEFAULT_AUTHORITY",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Replace concrete seedling fallback with QualifiedCropStageState/ContextAuthority semantics; removal target B-09",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Active Agronomy Agent path reaches rule_engine; normalizeSkillStage can manufacture seedling from missing/legacy stage semantics."
+    },
+    {
+      "surface_id": "RES-165",
+      "source_path": "apps/server/src/domain/agronomy/rule_engine.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "FEATURE_FLAG",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "ACTIVE_LEGACY_RULE_RECOMMENDATION_DERIVER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep deterministic rule/calculation logic but remove direct recommendation/Candidate authority after shadow cutover",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Active Agronomy Agent calls agronomy/engine -> rule_engine and persists recommendation/plan downstream."
+    },
+    {
+      "surface_id": "RES-166",
+      "source_path": "apps/server/src/domain/agronomy/stage_resolver.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "ALWAYS_COMPATIBILITY",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "context.crop_stage"
+      ],
+      "authority_class": "ACTIVE_LEGACY_CROP_STAGE_DERIVER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Replace decision-time authority with qualified crop-stage state; keep compatibility only until B-09 cutover",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02 already records explicit/DAP/startDate derivation as grandfathered duplicate."
+    },
+    {
+      "surface_id": "RES-167",
+      "source_path": "apps/server/src/domain/approval/recommendation_approval_request_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "API_ONLY",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "CANDIDATE_CONSUMER_TO_APPROVAL_ADAPTER_NOT_CANDIDATE_OWNER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep as Approval boundary consumer; Candidate authority remains upstream",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Pure builder consumes candidate-shaped recommendation and produces approval submission; no DB/write/random/time authority in builder."
+    },
+    {
+      "surface_id": "RES-168",
+      "source_path": "apps/server/src/domain/controlplane/ao_act_receipt_from_task_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "API_ONLY",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "DOWNSTREAM_RECEIPT_BUILDER_CANDIDATE_PROVENANCE_TOUCHPOINT_NOT_OWNER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep receipt construction downstream; do not treat candidate provenance fields as Candidate authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Current B02 owner is execution.receipt helper; scanner candidate hit is semantic touchpoint, not candidate production."
+    },
+    {
+      "surface_id": "RES-169",
+      "source_path": "apps/server/src/domain/decision/agronomy_recommendation_v2_candidate_adapter_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "MANUAL_CAPABILITY_ISLAND",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "CANONICAL_CANDIDATE_COMPATIBILITY_ADAPTER",
+      "runtime_reachable": "INTENTIONAL_NONE",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep registered adapter; activate only through explicit governed consumer",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02 B-06g: pure AgronomyRecommendationV2 -> CandidateDecisionV1 adapter; legacy context/evidence/effect semantics are not promoted."
+    },
+    {
+      "surface_id": "RES-170",
+      "source_path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "API_ONLY_SHADOW",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "context.snapshot"
+      ],
+      "authority_class": "B09Y_BOUNDARY_CONTEXT_SHADOW_PRODUCER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep B-09y exact immutable FieldProgram/context boundary; no B-07e/MCFT authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Authorized B-09y boundary-scoped ContextSnapshot producer."
+    },
+    {
+      "surface_id": "RES-171",
+      "source_path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "API_ONLY_SHADOW",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "B09Y_CANDIDATE_BOUNDARY_SHADOW_BINDING",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep exact boundary/provenance binding; no final eligibility/approval authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B09y consumes exact recommendation and boundary context; ambiguity/latest fallback forbidden."
+    },
+    {
+      "surface_id": "RES-172",
+      "source_path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "API_ONLY_SHADOW",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "B09J_CANDIDATE_CRITERION_SHADOW_BINDING",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep shadow identity/ref continuity; do not invoke DecisionEligibility until separately authorized",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02 records shadow-only scoped recommendation source + Candidate identity continuity."
+    },
+    {
+      "surface_id": "RES-173",
+      "source_path": "apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "API_ONLY_SHADOW",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.calculation"
+      ],
+      "authority_class": "CANONICAL_CALCULATION_RESULT_ADAPTER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep calculation-only adapter; no Candidate/Eligibility/Approval authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B-06b adapter is consumed by authorized B-09ae shadow composition."
+    },
+    {
+      "surface_id": "RES-174",
+      "source_path": "apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "API_ONLY_SHADOW",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "CANONICAL_CANDIDATE_COMPATIBILITY_ADAPTER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep legacy recommendation -> Candidate adapter with explicit canonical refs only",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02 B-06c/B-09j: legacy evidence/context/stage fields are not promoted to canonical authority."
+    },
+    {
+      "surface_id": "RES-175",
+      "source_path": "apps/server/src/domain/decision/operation_plan_authority_candidate_adapter_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "MANUAL_CAPABILITY_ISLAND",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "CANDIDATE_COMPATIBILITY_CLASSIFIER_CAPABILITY_ISLAND",
+      "runtime_reachable": "INTENTIONAL_NONE",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep exact grandfathered proposal classifier only; reject approval-derived/downstream plans",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02 B-06f pure classifier/adapter; no runtime consumer."
+    },
+    {
+      "surface_id": "RES-176",
+      "source_path": "apps/server/src/domain/decision/prescription_action_spec_candidate_adapter_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "MANUAL_CAPABILITY_ISLAND",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "CANDIDATE_ACTION_SPEC_COMPATIBILITY_ADAPTER",
+      "runtime_reachable": "INTENTIONAL_NONE",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep pre-approval ActionSpecification -> Candidate adapter; no approval/timing/device authority promotion",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02 B-06e pure compatibility projection; downstream statuses fail closed."
+    },
+    {
+      "surface_id": "RES-177",
+      "source_path": "apps/server/src/domain/operations/operation_plan_from_approval_decision_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "API_ONLY",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "CANDIDATE_PROVENANCE_CONSUMER_TO_PLAN_NOT_CANDIDATE_OWNER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep ApprovalDecision -> OperationPlan builder; candidate authority remains upstream",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Builder creates OperationPlan only after approved decision and explicitly keeps act_task_id null; scanner candidate hit is provenance/touchpoint."
+    },
+    {
+      "surface_id": "RES-178",
+      "source_path": "apps/server/src/domain/prescription/prescription_contract_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "ACTIVE_PRODUCT_CONTRACT",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "LEGACY_MIXED_ACTION_SPEC_CANDIDATE_TOUCHPOINT",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Preserve ActionSpecification contract; remove upstream Candidate/Approval authority and bind canonical Candidate -> spec",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Prescription is an action specification boundary; candidate semantics are compatibility provenance, not final decision owner."
     }
   ],
   "cross_branch_surfaces": [
