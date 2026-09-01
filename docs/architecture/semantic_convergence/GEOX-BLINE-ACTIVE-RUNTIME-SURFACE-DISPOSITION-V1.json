@@ -724,15 +724,14 @@
         "apps/server/src/domain/skill_registry/facts.ts"
       ],
       "replacement_path": [
-        "pure operation read model"
+        "pure operation read model; explicit Outcome/Learning writer lane"
       ],
-      "sunset_condition": "GET SIDE EFFECTS MUST BE REMOVED BEFORE CLOSURE",
+      "sunset_condition": "KEEP_DERIVED_ZERO_SEMANTIC_WRITE",
       "semantic_family": [
-        "presentation.read_model",
-        "governance.skill_binding"
+        "presentation.read_model"
       ],
       "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
-      "owner": "BLINE"
+      "owner": "BLINE_READ_MODEL"
     },
     {
       "surface_id": "ARS-031",

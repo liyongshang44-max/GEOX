@@ -41,10 +41,16 @@ jobs:
         continue-on-error: true
         run: pnpm run ci:governance:bline-active-runtime-surface-closure
 
+      - name: B-Line operation state read-only
+        id: bline_operation_state_read_only
+        continue-on-error: true
+        run: pnpm run ci:governance:bline-operation-state-read-only
+
       - name: B-Line closure fail-closed result
         run: |
           test "${{ steps.bline_residual.outcome }}" = "success"
           test "${{ steps.bline_active_runtime.outcome }}" = "success"
+          test "${{ steps.bline_operation_state_read_only.outcome }}" = "success"
 
       - name: B-Line P0-RES-007 evidence export boundary
         run: pnpm run ci:governance:bline-p0-res007-evidence-export-boundary

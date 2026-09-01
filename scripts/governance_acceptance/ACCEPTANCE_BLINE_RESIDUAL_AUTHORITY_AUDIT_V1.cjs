@@ -45,7 +45,9 @@ const LEDGER_DISPOSITIONS = new Set([
   "MCFT_FROZEN",
   "DEVTOOLS_ONLY",
   "SEED_MIGRATION",
-  "READ_SIDE_EFFECT_P0"
+  "READ_SIDE_EFFECT_P0",
+  "READ_MODEL_ZERO_WRITE",
+  "PERSISTENCE_ONLY"
 ]);
 const LEDGER_REQUIRED = [
   "ledger_disposition",
@@ -183,9 +185,28 @@ function configureAuthoritySurfaces(inv) {
     const authorityClass = String(surface?.authority_class ?? "").trim().toUpperCase();
     if (!sourcePath) continue;
     if (!/(WRITER|PRODUCER|SERVICE|BUILDER|AUTHORITY|PERSISTENCE|FORMALIZATION|TRANSITION|BRIDGE|REPOSITORY|ADAPTER)/.test(authorityClass)) continue;
+
+    const semanticFamilies = Array.isArray(surface.semantic_family)
+      ? surface.semantic_family.map(String).map(x => x.trim()).filter(Boolean)
+      : [];
+    const isLedger = semanticFamilies.includes("governance.fact_ledger");
+    let families = semanticFamilies.filter(x => x !== "governance.fact_ledger");
+
+    if (isLedger) {
+      const disposition = String(surface.ledger_disposition || "").trim();
+      if (["PERSISTENCE_ONLY","SEED_MIGRATION","DEVTOOLS_ONLY","READ_MODEL_ZERO_WRITE"].includes(disposition)) {
+        continue;
+      }
+      families = Array.isArray(surface.underlying_semantic_families)
+        ? surface.underlying_semantic_families.map(String).map(x => x.trim()).filter(Boolean)
+        : [];
+    }
+
+    if (!families.length) continue;
+    const existing = authoritySurfaceByPath.get(sourcePath) || { families: [], authority_class: "" };
     authoritySurfaceByPath.set(sourcePath, {
-      families: Array.isArray(surface.semantic_family) ? surface.semantic_family.map(String) : [],
-      authority_class: authorityClass,
+      families: [...new Set([...(existing.families || []), ...families])],
+      authority_class: [existing.authority_class, authorityClass].filter(Boolean).join("|"),
     });
   }
 }
@@ -534,11 +555,6 @@ function inventoryCoverage(inv) {
       if (!fs.existsSync(path.join(ROOT, p))) failures.push("INVENTORY_CURRENT_PATH_MISSING:" + id + ":" + p);
     }
   }
-  const expected = Number(inv.fact_ledger_closure?.expected_writer_count);
-  const adjudicated = Number(inv.fact_ledger_closure?.adjudicated_writer_count);
-  if (!Number.isInteger(expected) || expected <= 0) failures.push("LEDGER_EXPECTED_COUNT_INVALID");
-  if (!Number.isInteger(adjudicated) || adjudicated !== expected) failures.push("LEDGER_ADJUDICATED_COUNT_MISMATCH");
-  if (Number.isInteger(expected) && ledgerPathRows.size !== expected) failures.push("LEDGER_EXACT_PATH_COUNT_MISMATCH:" + ledgerPathRows.size + ":" + expected);
   return { paths, familiesByPath, ledgerPathRows };
 }
 
@@ -628,6 +644,32 @@ function main() {
 
   assertScannerSentinels();
 
+  const directLedgerWriterPaths = new Set(
+    [...findings.values()]
+      .filter(x => x.production)
+      .filter(x => {
+        const capability = x.capabilities.get("governance.fact_ledger");
+        return Boolean(capability && capability.kinds.has("GENERIC_FACT_WRITER"));
+      })
+      .map(x => x.path)
+  );
+  const expectedLedgerCount = Number(inventory.fact_ledger_closure?.expected_writer_count);
+  const adjudicatedLedgerCount = Number(inventory.fact_ledger_closure?.adjudicated_writer_count);
+  if (!Number.isInteger(expectedLedgerCount) || expectedLedgerCount <= 0) failures.push("LEDGER_EXPECTED_COUNT_INVALID");
+  if (!Number.isInteger(adjudicatedLedgerCount) || adjudicatedLedgerCount !== expectedLedgerCount) failures.push("LEDGER_ADJUDICATED_COUNT_MISMATCH");
+  if (Number.isInteger(expectedLedgerCount) && directLedgerWriterPaths.size !== expectedLedgerCount) {
+    failures.push("LEDGER_DISCOVERED_WRITER_COUNT_MISMATCH:" + directLedgerWriterPaths.size + ":" + expectedLedgerCount);
+  }
+  if (coverage.ledgerPathRows.size !== directLedgerWriterPaths.size) {
+    failures.push("LEDGER_EXACT_PATH_COUNT_MISMATCH:" + coverage.ledgerPathRows.size + ":" + directLedgerWriterPaths.size);
+  }
+  for (const p of directLedgerWriterPaths) {
+    if (!coverage.ledgerPathRows.has(p)) failures.push("LEDGER_DIRECT_WRITER_WITHOUT_DISPOSITION:" + p);
+  }
+  for (const p of coverage.ledgerPathRows.keys()) {
+    if (!directLedgerWriterPaths.has(p)) failures.push("LEDGER_DISPOSITION_WITHOUT_DIRECT_WRITER:" + p);
+  }
+
   const hardKinds = new Set([
     "PERSISTENCE_WRITER","GENERIC_FACT_WRITER","SEMANTIC_BUILDER","AUTHORITY_DERIVER",
     "CONFIG_AUTHORITY","SEMANTIC_DEFAULT_AUTHORITY_RISK","BOOTSTRAP_ACTIVATION","DATABASE_AUTOMATION_AUTHORITY",
@@ -673,6 +715,8 @@ function main() {
     b02_classified_paths: b02Set.size,
     unregistered_authority_capabilities: hard.length,
     unregistered_touchpoints: touches.length,
+    fact_ledger_direct_writer_count: directLedgerWriterPaths.size,
+    fact_ledger_disposition_count: coverage.ledgerPathRows.size,
     authority_capabilities: hard,
     semantic_touchpoints: touches,
     proof_rule: "HARD_AUTHORITY_REQUIRES_EXACT_PATH_PLUS_SEMANTIC_FAMILY; FACT_LEDGER_REQUIRES_EXPLICIT_WRITER_DISPOSITION_UNDERLYING_FAMILY_OWNER_SCOPE"
