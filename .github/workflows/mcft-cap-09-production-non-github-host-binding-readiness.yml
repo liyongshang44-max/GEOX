@@ -1,6 +1,12 @@
 name: mcft-cap-09-production-non-github-host-binding-readiness
 
 on:
+  workflow_dispatch:
+    inputs:
+      authority:
+        description: 'Must equal ALLOW_RENDER_INERT_IDENTITY_BOOTSTRAP'
+        required: true
+        type: string
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-production-non-github-host-binding-readiness.yml'
@@ -46,3 +52,136 @@ jobs:
             acceptance-output/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_READINESS_V1_RESULT.json
           if-no-files-found: error
           retention-days: 90
+
+  render-inert-identity-bootstrap:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.ref_name == 'feat/mcft-cap09-v13-producer-driven-qualification-v1' &&
+      inputs.authority == 'ALLOW_RENDER_INERT_IDENTITY_BOOTSTRAP'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      SUBJECT_SHA: ${{ github.sha }}
+      RENDER_API_KEY: ${{ secrets.GEOX_MCFT_CAP09_RENDER_API_KEY }}
+      RENDER_OWNER_ID: 'tea-dab2cfvavr4c73ejavog'
+      RENDER_IMAGE_PATH: 'docker.io/library/alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b'
+      RENDER_BOOTSTRAP_COMMAND: "sh -c 'trap \"exit 0\" TERM INT; while :; do sleep 3600; done'"
+      EVIDENCE_SERVICE_NAME: 'geox-mcft-cap09-evidence-runtime-v1'
+      TWIN_SERVICE_NAME: 'geox-mcft-cap09-twin-runtime-v1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prove inert identity-bootstrap authority
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const a=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json','utf8'));
+          const arm=JSON.parse(fs.readFileSync('scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json','utf8'));
+          const req=(v,c)=>{if(!v)throw new Error(c)};
+          req(a.status==='RENDER_WORKSPACE_BOUND_SERVICE_IDENTITIES_UNBOUND','BOOTSTRAP_HOST_STATUS_REQUIRED');
+          req(a.render_candidate_binding_contract?.workspace_owner_id==='tea-dab2cfvavr4c73ejavog','BOOTSTRAP_WORKSPACE_REQUIRED');
+          req(a.render_candidate_binding_contract?.evidence_runtime?.service_id===null&&a.render_candidate_binding_contract?.twin_runtime?.service_id===null,'BOOTSTRAP_SERVICE_IDS_MUST_BE_UNBOUND');
+          req(a.provider_semantic_evidence?.inert_identity_bootstrap?.authority_code==='ALLOW_RENDER_INERT_IDENTITY_BOOTSTRAP'&&a.provider_semantic_evidence?.inert_identity_bootstrap?.status==='AUTHORIZED','BOOTSTRAP_AUTHORITY_REQUIRED');
+          req(a.provider_semantic_evidence?.inert_identity_bootstrap?.image_path==='docker.io/library/alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b','BOOTSTRAP_IMAGE_REQUIRED');
+          req(a.provider_semantic_evidence?.inert_identity_bootstrap?.docker_command==="sh -c 'trap \"exit 0\" TERM INT; while :; do sleep 3600; done'",'BOOTSTRAP_COMMAND_REQUIRED');
+          req(arm.inert_identity_bootstrap_authorized===true&&arm.inert_identity_bootstrap_start_authorized===true&&arm.inert_identity_bootstrap_armed===true,'BOOTSTRAP_ARM_REQUIRED');
+          req(arm.runtime_secret_injection_authorized===false&&arm.deployment_authorized===false&&arm.runtime_process_start_authorized===false&&arm.production_owner_activation_authorized===false,'PRODUCTION_RUNTIME_AUTHORITY_MUST_REMAIN_FALSE');
+          req(arm.production_runtime_artifact_deployment_authorized===false&&arm.production_runtime_secret_injection_authorized===false,'PRODUCTION_RUNTIME_EFFECT_MUST_REMAIN_FALSE');
+          console.log(JSON.stringify({status:'PASS',authority:'ALLOW_RENDER_INERT_IDENTITY_BOOTSTRAP',production_runtime_start:false,production_owner_activation:false},null,2));
+
+      - name: Create exactly two inert Render identities and suspend
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${RENDER_API_KEY:-}" || { echo "GEOX_MCFT_CAP09_RENDER_API_KEY is not configured"; exit 2; }
+          API='https://api.render.com/v1'
+          mkdir -p acceptance-output
+          created_ids=()
+
+          api_get() {
+            curl --fail-with-body --silent --show-error               -H "Accept: application/json"               -H "Authorization: Bearer ${RENDER_API_KEY}"               "$1"
+          }
+          api_post() {
+            local url="$1"; local body="${2:-}"
+            if [ -n "$body" ]; then
+              curl --fail-with-body --silent --show-error -X POST                 -H "Accept: application/json"                 -H "Content-Type: application/json"                 -H "Authorization: Bearer ${RENDER_API_KEY}"                 --data "$body" "$url"
+            else
+              curl --fail-with-body --silent --show-error -X POST                 -H "Accept: application/json"                 -H "Authorization: Bearer ${RENDER_API_KEY}"                 "$url"
+            fi
+          }
+          emergency_suspend() {
+            set +e
+            for sid in "${created_ids[@]:-}"; do
+              [ -n "$sid" ] && api_post "$API/services/$sid/suspend" >/dev/null 2>&1
+            done
+          }
+          trap emergency_suspend ERR INT TERM
+
+          create_or_adopt_bootstrap() {
+            local name="$1"
+            local found count sid response body svc envs secrets groups linked events instances
+            found="$(api_get "$API/services?name=$name&ownerId=$RENDER_OWNER_ID&includePreviews=false&limit=20")"
+            count="$(jq --arg n "$name" '[.[] | (.service? // .) | select(.name==$n)] | length' <<<"$found")"
+            if [ "$count" -gt 1 ]; then
+              echo "Ambiguous existing Render service name: $name" >&2
+              return 31
+            fi
+            if [ "$count" -eq 1 ]; then
+              sid="$(jq -r --arg n "$name" '.[] | (.service? // .) | select(.name==$n) | .id' <<<"$found")"
+            else
+              body="$(jq -n                 --arg name "$name"                 --arg owner "$RENDER_OWNER_ID"                 --arg image "$RENDER_IMAGE_PATH"                 --arg cmd "$RENDER_BOOTSTRAP_COMMAND"                 '{type:"background_worker",name:$name,ownerId:$owner,image:{ownerId:$owner,imagePath:$image},autoDeploy:"no",envVars:[],secretFiles:[],serviceDetails:{runtime:"image",envSpecificDetails:{dockerCommand:$cmd},numInstances:1,plan:"0.5c-512mb",region:"oregon",maxShutdownDelaySeconds:10}}')"
+              response="$(api_post "$API/services" "$body")"
+              sid="$(jq -r '.service.id // empty' <<<"$response")"
+              [[ "$sid" == srv-* ]] || { echo "Render did not return a service id for $name" >&2; return 32; }
+              created_ids+=("$sid")
+            fi
+
+            api_post "$API/services/$sid/suspend" >/dev/null
+            svc=""
+            for _ in $(seq 1 40); do
+              svc="$(api_get "$API/services/$sid")"
+              [ "$(jq -r '.suspended' <<<"$svc")" = "suspended" ] && break
+              sleep 2
+            done
+            [ "$(jq -r '.suspended' <<<"$svc")" = "suspended" ] || { echo "Service failed to reach suspended state: $sid" >&2; return 33; }
+
+            jq -e --arg id "$sid" --arg name "$name" --arg owner "$RENDER_OWNER_ID" --arg image "$RENDER_IMAGE_PATH" --arg cmd "$RENDER_BOOTSTRAP_COMMAND"               '.id==$id and .name==$name and .ownerId==$owner and .type=="background_worker" and .imagePath==$image and .autoDeploy=="no" and .suspended=="suspended" and .serviceDetails.runtime=="image" and .serviceDetails.region=="oregon" and .serviceDetails.plan=="0.5c-512mb" and .serviceDetails.numInstances==1 and .serviceDetails.envSpecificDetails.dockerCommand==$cmd' <<<"$svc" >/dev/null
+
+            envs="$(api_get "$API/services/$sid/env-vars?limit=100")"
+            secrets="$(api_get "$API/services/$sid/secret-files?limit=100")"
+            [ "$(jq 'length' <<<"$envs")" -eq 0 ] || { echo "Direct env vars present on $sid" >&2; return 34; }
+            [ "$(jq 'length' <<<"$secrets")" -eq 0 ] || { echo "Secret files present on $sid" >&2; return 35; }
+
+            groups="$(api_get "$API/env-groups?ownerId=$RENDER_OWNER_ID&limit=100")"
+            linked="$(jq --arg id "$sid" '[.. | objects | .serviceLinks? // empty | .[]? | select(.id==$id)] | length' <<<"$groups")"
+            [ "$linked" -eq 0 ] || { echo "Environment group linked to $sid" >&2; return 36; }
+
+            events="$(api_get "$API/services/$sid/events?type=service_suspended&limit=100")"
+            [ "$(jq 'length' <<<"$events")" -ge 1 ] || { echo "No service_suspended event for $sid" >&2; return 37; }
+            instances="$(api_get "$API/services/$sid/instances")"
+
+            jq -n --arg id "$sid" --arg name "$name" --argjson service "$svc" --argjson events "$events" --argjson instances "$instances"               '{service_id:$id,service_name:$name,suspended:true,direct_env_var_count:0,direct_secret_file_count:0,linked_environment_group_count:0,service:$service,suspend_events:$events,instances_readback:$instances}'
+          }
+
+          evidence="$(create_or_adopt_bootstrap "$EVIDENCE_SERVICE_NAME")"
+          evidence_id="$(jq -r '.service_id' <<<"$evidence")"
+          twin="$(create_or_adopt_bootstrap "$TWIN_SERVICE_NAME")"
+          twin_id="$(jq -r '.service_id' <<<"$twin")"
+          [ "$evidence_id" != "$twin_id" ] || { echo "Render service IDs must be distinct" >&2; exit 38; }
+
+          jq -n --arg schema 'geox_mcft_cap09_render_inert_identity_bootstrap_result_v1' --arg subject "$SUBJECT_SHA" --arg authority 'ALLOW_RENDER_INERT_IDENTITY_BOOTSTRAP' --arg owner "$RENDER_OWNER_ID" --arg image "$RENDER_IMAGE_PATH" --arg cmd "$RENDER_BOOTSTRAP_COMMAND" --argjson evidence "$evidence" --argjson twin "$twin"             '{schema_version:$schema,status:"PASS_INERT_IDENTITIES_CREATED_AND_SUSPENDED",subject_sha:$subject,authority:$authority,workspace_owner_id:$owner,image_path:$image,docker_command:$cmd,evidence:$evidence,twin:$twin,exact_two_distinct_service_ids:true,production_runtime_artifact_deployment:false,production_secret_injection:false,evidence_runtime_activation:false,twin_runtime_activation:false,production_owner_activation:false,formal_v5_arm:false,a0:false,o00:false}'             | tee acceptance-output/MCFT_CAP_09_RENDER_INERT_IDENTITY_BOOTSTRAP_RESULT_V1.json
+
+          trap - ERR INT TERM
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-render-inert-identity-bootstrap-${{ github.sha }}
+          path: acceptance-output/MCFT_CAP_09_RENDER_INERT_IDENTITY_BOOTSTRAP_RESULT_V1.json
+          if-no-files-found: error
+          retention-days: 90
+
