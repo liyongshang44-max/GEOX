@@ -269,6 +269,7 @@ export async function requireFormalFieldMemoryPromotionAuthorityV1(
   if (text(acceptancePayload.verdict).toUpperCase() !== "PASS") throw new Error("FIELD_MEMORY_ACCEPTANCE_VERDICT_NOT_PASS");
   if (acceptancePayload.formal_acceptance !== true) throw new Error("FIELD_MEMORY_ACCEPTANCE_NOT_FORMAL");
   if (acceptancePayload.formal_evidence_passed !== true) throw new Error("FIELD_MEMORY_ACCEPTANCE_EVIDENCE_NOT_FORMAL");
+  if (acceptancePayload.chain_validation_passed !== true) throw new Error("CHAIN_VALIDATION_NOT_PASSED");
   if (acceptancePayload.is_simulated === true) throw new Error("FIELD_MEMORY_ACCEPTANCE_SIMULATED_BLOCKED");
 
   if (text(recordPayload.record_state) !== "RECORD_COMMITTED") throw new Error("FIELD_MEMORY_RECORD_NOT_COMMITTED");
