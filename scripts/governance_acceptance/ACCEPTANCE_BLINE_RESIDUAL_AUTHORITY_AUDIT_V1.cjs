@@ -154,7 +154,21 @@ function configureAuthoritySurfaces(inv) {
   }
 }
 
-function resolveRelativeImport(importerAbs, specifier) {
+function resolveAuthorityImport(importerAbs, specifier) {
+  if (specifier.startsWith("@geox/")) {
+    const rest = specifier.slice("@geox/".length);
+    const parts = rest.split("/");
+    const pkg = parts.shift();
+    if (!pkg) return null;
+    const subpath = parts.join("/");
+    const base = path.join(ROOT, "packages", pkg, "src");
+    const raw = subpath ? path.join(base, subpath) : path.join(base, "index");
+    const candidates = [raw, raw + ".ts", raw + ".tsx", raw + ".js", path.join(raw, "index.ts")];
+    for (const candidate of candidates) {
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return rel(candidate);
+    }
+    return null;
+  }
   if (!specifier.startsWith(".")) return null;
   const raw = path.resolve(path.dirname(importerAbs), specifier);
   const candidates = [raw];
@@ -170,11 +184,11 @@ function resolveRelativeImport(importerAbs, specifier) {
 function scanAuthorityCallsites(abs, content, production) {
   const importerPath = rel(abs);
   const importRe = /import\s*\{([\s\S]*?)\}\s*from\s*["']([^"']+)["']/g;
-  const writeLikeName = /^(?:record|create|insert|write|append|persist|upsert|submit|approve|reject|transition|execute|formalize|build|issue|dispatch|claim|ack|apply|save|runQueued)/i;
-  const writeLikeMethodPattern = "(?:record|create|insert|write|append|persist|upsert|submit|approve|reject|transition|execute|formalize|build|issue|dispatch|claim|ack|apply|save|runQueued)[A-Za-z0-9_$]*";
+  const writeLikeName = /^(?:record|create|insert|write|append|persist|upsert|submit|approve|reject|transition|execute|formalize|build|derive|evaluate|resolve|infer|select|route|issue|dispatch|claim|ack|apply|save|runQueued)/i;
+  const writeLikeMethodPattern = "(?:record|create|insert|write|append|persist|upsert|submit|approve|reject|transition|execute|formalize|build|derive|evaluate|resolve|infer|select|route|issue|dispatch|claim|ack|apply|save|runQueued)[A-Za-z0-9_$]*";
   let match;
   while ((match = importRe.exec(content)) !== null) {
-    const importedFrom = resolveRelativeImport(abs, String(match[2] ?? ""));
+    const importedFrom = resolveAuthorityImport(abs, String(match[2] ?? ""));
     if (!importedFrom) continue;
     const authority = authoritySurfaceByPath.get(importedFrom);
     if (!authority) continue;
