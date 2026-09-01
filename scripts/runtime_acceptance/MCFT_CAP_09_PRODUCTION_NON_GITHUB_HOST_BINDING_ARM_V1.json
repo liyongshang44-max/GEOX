@@ -19,6 +19,18 @@
   "a0_authorized": false,
   "o00_authorized": false,
   "safe_zero_runtime_identity_provisioning_required": true,
-  "service_creation_execution_blocked_by_runtime_start_boundary": true,
-  "provider_zero_runtime_identity_provisioning_status": "PROVEN_UNAVAILABLE_ON_RENDER_API_V1"
+  "service_creation_execution_blocked_by_runtime_start_boundary": false,
+  "provider_zero_runtime_identity_provisioning_status": "ZERO_INSTANCE_UNAVAILABLE_INERT_BOOTSTRAP_AUTHORIZED",
+  "inert_identity_bootstrap_authority": "ALLOW_RENDER_INERT_IDENTITY_BOOTSTRAP",
+  "inert_identity_bootstrap_authorized": true,
+  "inert_identity_bootstrap_start_authorized": true,
+  "inert_identity_bootstrap_armed": true,
+  "inert_identity_bootstrap_image_path": "docker.io/library/alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b",
+  "inert_identity_bootstrap_docker_command": "sh -c 'trap \"exit 0\" TERM INT; while :; do sleep 3600; done'",
+  "inert_identity_bootstrap_plan": "0.5c-512mb",
+  "inert_identity_bootstrap_num_instances": 1,
+  "inert_identity_bootstrap_auto_deploy": "no",
+  "inert_identity_bootstrap_suspend_immediately_required": true,
+  "production_runtime_artifact_deployment_authorized": false,
+  "production_runtime_secret_injection_authorized": false
 }

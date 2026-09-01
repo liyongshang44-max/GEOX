@@ -97,7 +97,7 @@ try {
     a.status === "RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND" ||
     workspaceBoundPreIdentity;
   const expectedZeroRuntimeProvisioningStatus =
-    workspaceBoundPreIdentity ? "PROVEN_UNAVAILABLE_ON_RENDER_API_V1" : "NOT_PROVEN";
+    workspaceBoundPreIdentity ? "ZERO_INSTANCE_UNAVAILABLE_INERT_BOOTSTRAP_AUTHORIZED" : "NOT_PROVEN";
   req(
     a.status === "HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND" || platformAuthorizedPreIdentity,
     "HOST_BINDING_AUTHORITY_STATUS_REQUIRED",
@@ -287,7 +287,7 @@ try {
     req(
       a.next_stage?.status ===
         (workspaceBoundPreIdentity
-          ? "RENDER_WORKSPACE_BOUND_BLOCKED_ON_RUNTIME_START_BOUNDARY"
+          ? "RENDER_INERT_IDENTITY_BOOTSTRAP_AUTHORIZED_AWAITING_EXECUTION"
           : "RENDER_PLATFORM_AUTHORIZED_AWAITING_SAFE_SERVICE_IDENTITY_PROVISIONING") &&
         a.next_stage?.external_platform_selection_required === false &&
         a.next_stage?.safe_zero_runtime_identity_provisioning_required === true &&
@@ -423,13 +423,37 @@ try {
   if (platformAuthorizedPreIdentity) {
     req(hostArm.safe_zero_runtime_identity_provisioning_required === true, "HOST_BINDING_ARM_ZERO_RUNTIME_PROVISIONING_GUARD_REQUIRED");
     if (workspaceBoundPreIdentity) {
-      req(hostArm.provider_zero_runtime_identity_provisioning_status === "PROVEN_UNAVAILABLE_ON_RENDER_API_V1" &&
-        hostArm.service_creation_execution_blocked_by_runtime_start_boundary === true,
-        "HOST_BINDING_RENDER_RUNTIME_START_BOUNDARY_BLOCK_REQUIRED");
+      req(
+        hostArm.provider_zero_runtime_identity_provisioning_status === "ZERO_INSTANCE_UNAVAILABLE_INERT_BOOTSTRAP_AUTHORIZED" &&
+        hostArm.service_creation_execution_blocked_by_runtime_start_boundary === false &&
+        hostArm.inert_identity_bootstrap_authority === "ALLOW_RENDER_INERT_IDENTITY_BOOTSTRAP" &&
+        hostArm.inert_identity_bootstrap_authorized === true &&
+        hostArm.inert_identity_bootstrap_start_authorized === true &&
+        hostArm.inert_identity_bootstrap_armed === true &&
+        hostArm.inert_identity_bootstrap_image_path === "docker.io/library/alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b" &&
+        hostArm.inert_identity_bootstrap_docker_command === "sh -c 'trap \"exit 0\" TERM INT; while :; do sleep 3600; done'" &&
+        hostArm.inert_identity_bootstrap_plan === "0.5c-512mb" &&
+        hostArm.inert_identity_bootstrap_num_instances === 1 &&
+        hostArm.inert_identity_bootstrap_auto_deploy === "no" &&
+        hostArm.inert_identity_bootstrap_suspend_immediately_required === true &&
+        hostArm.production_runtime_artifact_deployment_authorized === false &&
+        hostArm.production_runtime_secret_injection_authorized === false,
+        "HOST_BINDING_RENDER_INERT_BOOTSTRAP_AUTHORITY_REQUIRED",
+      );
       req(a.provider_semantic_evidence?.background_worker_create_contract?.num_instances_minimum === 1 &&
         a.provider_semantic_evidence?.background_worker_create_contract?.zero_instance_create_allowed === false &&
         a.provider_semantic_evidence?.suspend_contract?.service_id_required_before_suspend === true &&
-        a.provider_semantic_evidence?.create_then_suspend_satisfies_zero_runtime_boundary === false,
+        a.provider_semantic_evidence?.create_then_suspend_satisfies_zero_runtime_boundary === false &&
+        a.provider_semantic_evidence?.inert_identity_bootstrap?.authority_code === "ALLOW_RENDER_INERT_IDENTITY_BOOTSTRAP" &&
+        a.provider_semantic_evidence?.inert_identity_bootstrap?.status === "AUTHORIZED" &&
+        a.provider_semantic_evidence?.inert_identity_bootstrap?.image_path === "docker.io/library/alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b" &&
+        a.provider_semantic_evidence?.inert_identity_bootstrap?.docker_command === "sh -c 'trap \"exit 0\" TERM INT; while :; do sleep 3600; done'" &&
+        a.provider_semantic_evidence?.inert_identity_bootstrap?.creation_payload_must_have_empty_env_vars === true &&
+        a.provider_semantic_evidence?.inert_identity_bootstrap?.creation_payload_must_have_empty_secret_files === true &&
+        a.provider_semantic_evidence?.inert_identity_bootstrap?.environment_group_linking_forbidden === true &&
+        a.provider_semantic_evidence?.inert_identity_bootstrap?.suspend_immediately_after_service_id_acquisition === true &&
+        a.provider_semantic_evidence?.inert_identity_bootstrap?.later_real_worker_transition?.allowed_under_this_authority === false &&
+        a.provider_semantic_evidence?.inert_identity_bootstrap?.later_real_worker_transition?.configuration_patch_auto_deploy_expected === false,
         "HOST_BINDING_RENDER_PROVIDER_SEMANTIC_EVIDENCE_REQUIRED");
     }
   }
@@ -468,7 +492,7 @@ try {
     schema_version: "geox_mcft_cap09_production_non_github_host_binding_preflight_v1",
     status: "PASS",
     stage: workspaceBoundPreIdentity
-      ? "RENDER_WORKSPACE_BOUND_BLOCKED_ON_ZERO_RUNTIME_SERVICE_CREATION"
+      ? "RENDER_WORKSPACE_BOUND_INERT_IDENTITY_BOOTSTRAP_AUTHORIZED"
       : platformAuthorizedPreIdentity
         ? "RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND"
         : "NON_GITHUB_HOST_IDENTITY_AUTHORITY_DEFINED_UNBOUND",
@@ -488,7 +512,7 @@ try {
     binding_authorized: false,
     pre_platform_checkpoint_evidence_bound: true,
     remaining_blockers: workspaceBoundPreIdentity ? [
-      "RENDER_ZERO_RUNTIME_IDENTITY_PROVISIONING_UNAVAILABLE_WITHOUT_RUNTIME_START",
+      "RENDER_INERT_IDENTITY_BOOTSTRAP_NOT_YET_EXECUTED",
       "RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",
       "RENDER_TWIN_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",
       "NON_GITHUB_HOST_BINDING_NOT_COMPLETE",

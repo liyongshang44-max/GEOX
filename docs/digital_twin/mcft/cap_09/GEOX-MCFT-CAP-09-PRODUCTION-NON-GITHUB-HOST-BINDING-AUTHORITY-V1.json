@@ -70,7 +70,7 @@
   },
   "next_stage": {
     "stage": "BIND_REAL_NON_GITHUB_PLATFORM_SERVICE_IDENTITIES",
-    "status": "RENDER_WORKSPACE_BOUND_BLOCKED_ON_RUNTIME_START_BOUNDARY",
+    "status": "RENDER_INERT_IDENTITY_BOOTSTRAP_AUTHORIZED_AWAITING_EXECUTION",
     "external_platform_selection_required": false,
     "external_service_provisioning_or_existing_identity_required": true,
     "runtime_start_separate": true,
@@ -92,12 +92,15 @@
     "service_creation_authorized": true,
     "host_identity_binding_authorized": true,
     "safe_zero_runtime_identity_provisioning_required": true,
-    "safe_zero_runtime_identity_provisioning_status": "PROVEN_UNAVAILABLE_ON_RENDER_API_V1",
+    "safe_zero_runtime_identity_provisioning_status": "ZERO_INSTANCE_UNAVAILABLE_INERT_BOOTSTRAP_AUTHORIZED",
     "standard_render_create_service_initial_deploy_allowed": false,
     "create_then_suspend_race_allowed": false,
     "render_workspace_owner_id": "tea-dab2cfvavr4c73ejavog",
-    "service_creation_execution_status": "BLOCKED_BY_RUNTIME_START_BOUNDARY",
-    "new_runtime_start_authority_required_to_create_render_workers": true
+    "service_creation_execution_status": "AUTHORIZED_INERT_BOOTSTRAP_ONLY",
+    "new_runtime_start_authority_required_to_create_render_workers": false,
+    "inert_identity_bootstrap_authority": "ALLOW_RENDER_INERT_IDENTITY_BOOTSTRAP",
+    "inert_identity_bootstrap_execution_required": true,
+    "inert_identity_bootstrap_execution_status": "NOT_YET_EXECUTED"
   },
   "non_effects": {
     "external_host_provisioning": false,
@@ -188,7 +191,8 @@
     "DEFINE_PLATFORM_NEUTRAL_NON_GITHUB_HOST_IDENTITY_CONTRACT",
     "PROVE_UNBOUND_HOST_IDENTITY_AUTHORITY_ZERO_EFFECT",
     "AUTHORIZE_RENDER_BACKGROUND_WORKER_OREGON_PLATFORM",
-    "BIND_RENDER_WORKSPACE_OWNER_ID"
+    "BIND_RENDER_WORKSPACE_OWNER_ID",
+    "AUTHORIZE_RENDER_INERT_IDENTITY_BOOTSTRAP"
   ],
   "platform_evaluation": {
     "evaluated_at": "2026-09-01",
@@ -302,11 +306,16 @@
     "runtime_start_not_authorized": true,
     "production_owner_activation_not_authorized": true,
     "safe_zero_runtime_identity_provisioning_required": true,
-    "safe_zero_runtime_identity_provisioning_status": "PROVEN_UNAVAILABLE_ON_RENDER_API_V1",
+    "safe_zero_runtime_identity_provisioning_status": "ZERO_INSTANCE_UNAVAILABLE_INERT_BOOTSTRAP_AUTHORIZED",
     "standard_create_service_initial_deploy_allowed": false,
     "create_then_suspend_race_allowed": false,
-    "service_creation_execution_status": "BLOCKED_BY_RUNTIME_START_BOUNDARY",
-    "zero_runtime_identity_creation_supported": false
+    "service_creation_execution_status": "AUTHORIZED_INERT_BOOTSTRAP_ONLY",
+    "zero_runtime_identity_creation_supported": false,
+    "inert_identity_bootstrap_authorized": true,
+    "inert_identity_bootstrap_start_authorized": true,
+    "inert_identity_bootstrap_must_suspend_immediately": true,
+    "production_runtime_artifact_deployment_authorized": false,
+    "production_runtime_secret_injection_authorized": false
   },
   "host_binding_arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json",
   "host_binding_arm_status": "UNARMED",
@@ -325,7 +334,10 @@
     "a0_authorized": false,
     "o00_authorized": false,
     "workspace_owner_id": "tea-dab2cfvavr4c73ejavog",
-    "service_creation_execution_blocked_by_runtime_start_boundary": true
+    "service_creation_execution_blocked_by_runtime_start_boundary": false,
+    "inert_identity_bootstrap_authorized": true,
+    "inert_identity_bootstrap_start_authorized": true,
+    "production_runtime_start_authorized": false
   },
   "provider_semantic_evidence": {
     "status": "IMMUTABLE_EXTERNAL_CONTRACT_EVIDENCE",
@@ -347,7 +359,58 @@
       "endpoint": "POST /v1/services/{serviceId}/suspend",
       "service_id_required_before_suspend": true
     },
-    "adjudication": "ZERO_RUNTIME_SERVICE_IDENTITY_PROVISIONING_NOT_AVAILABLE_VIA_RENDER_PUBLIC_API_V1",
-    "create_then_suspend_satisfies_zero_runtime_boundary": false
+    "adjudication": "ZERO_INSTANCE_CREATION_UNAVAILABLE_BUT_SEPARATE_INERT_IDENTITY_BOOTSTRAP_IS_GOVERNABLE",
+    "create_then_suspend_satisfies_zero_runtime_boundary": false,
+    "inert_identity_bootstrap": {
+      "authority_code": "ALLOW_RENDER_INERT_IDENTITY_BOOTSTRAP",
+      "status": "AUTHORIZED",
+      "image_source": "DOCKER_OFFICIAL_IMAGE",
+      "image_path": "docker.io/library/alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b",
+      "image_index_digest": "sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b",
+      "image_policy": "PINNED_MULTIARCH_INDEX_DIGEST",
+      "service_type": "background_worker",
+      "runtime": "image",
+      "plan": "0.5c-512mb",
+      "region": "oregon",
+      "num_instances": 1,
+      "auto_deploy": "no",
+      "docker_command": "sh -c 'trap \"exit 0\" TERM INT; while :; do sleep 3600; done'",
+      "workload_semantics": [
+        "NO_GEOX_PRODUCTION_RUNTIME_ARTIFACT",
+        "NO_REPOSITORY_SOURCE",
+        "NO_DATABASE_ACCESS",
+        "NO_PROVIDER_ACCESS",
+        "NO_APPLICATION_CODE_EXECUTION",
+        "SIGTERM_TRAP_AND_SLEEP_ONLY"
+      ],
+      "creation_payload_must_have_empty_env_vars": true,
+      "creation_payload_must_have_empty_secret_files": true,
+      "environment_id_must_be_omitted": true,
+      "environment_group_linking_forbidden": true,
+      "suspend_immediately_after_service_id_acquisition": true,
+      "required_post_suspend_readback": [
+        "EXACT_SERVICE_ID",
+        "EXACT_SERVICE_NAME",
+        "EXACT_WORKSPACE_OWNER_ID",
+        "EXACT_BACKGROUND_WORKER_TYPE",
+        "EXACT_IMAGE_DIGEST",
+        "EXACT_DOCKER_COMMAND",
+        "EXACT_OREGON_REGION",
+        "EXACT_0_5C_512MB_PLAN",
+        "AUTO_DEPLOY_NO",
+        "SUSPENDED_STATUS",
+        "SERVICE_SUSPENDED_EVENT",
+        "DIRECT_ENV_VAR_COUNT_ZERO",
+        "DIRECT_SECRET_FILE_COUNT_ZERO",
+        "LINKED_ENVIRONMENT_GROUP_COUNT_ZERO"
+      ],
+      "later_real_worker_transition": {
+        "allowed_under_this_authority": false,
+        "service_configuration_patch_allowed_under_later_authority": true,
+        "configuration_patch_auto_deploy_expected": false,
+        "explicit_deploy_authority_required": true,
+        "service_id_must_remain_stable": true
+      }
+    }
   }
 }

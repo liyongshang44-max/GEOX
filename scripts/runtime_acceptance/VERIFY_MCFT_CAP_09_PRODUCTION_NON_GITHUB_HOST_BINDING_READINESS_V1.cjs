@@ -130,7 +130,7 @@ try {
   const workspaceBoundPreIdentity =
     a.status === "RENDER_WORKSPACE_BOUND_SERVICE_IDENTITIES_UNBOUND";
   const expectedZeroRuntimeProvisioningStatus =
-    workspaceBoundPreIdentity ? "PROVEN_UNAVAILABLE_ON_RENDER_API_V1" : "NOT_PROVEN";
+    workspaceBoundPreIdentity ? "ZERO_INSTANCE_UNAVAILABLE_INERT_BOOTSTRAP_AUTHORIZED" : "NOT_PROVEN";
   const platformAuthorizedPreIdentity =
     (a.status === "RENDER_PLATFORM_AUTHORIZED_SERVICE_IDENTITIES_UNBOUND" ||
       workspaceBoundPreIdentity) &&
@@ -155,14 +155,19 @@ try {
       assert(a.provider_semantic_evidence?.background_worker_create_contract?.num_instances_minimum === 1 &&
         a.provider_semantic_evidence?.background_worker_create_contract?.zero_instance_create_allowed === false &&
         a.provider_semantic_evidence?.suspend_contract?.service_id_required_before_suspend === true &&
-        a.provider_semantic_evidence?.create_then_suspend_satisfies_zero_runtime_boundary === false,
+        a.provider_semantic_evidence?.create_then_suspend_satisfies_zero_runtime_boundary === false &&
+        a.provider_semantic_evidence?.inert_identity_bootstrap?.authority_code === "ALLOW_RENDER_INERT_IDENTITY_BOOTSTRAP" &&
+        a.provider_semantic_evidence?.inert_identity_bootstrap?.status === "AUTHORIZED" &&
+        a.provider_semantic_evidence?.inert_identity_bootstrap?.image_path === "docker.io/library/alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b" &&
+        a.provider_semantic_evidence?.inert_identity_bootstrap?.docker_command === "sh -c 'trap \"exit 0\" TERM INT; while :; do sleep 3600; done'" &&
+        a.provider_semantic_evidence?.inert_identity_bootstrap?.later_real_worker_transition?.allowed_under_this_authority === false,
         "HOST_BINDING_READINESS_RENDER_PROVIDER_SEMANTIC_EVIDENCE_REQUIRED");
     }
     write({
       schema_version: "geox_mcft_cap09_production_non_github_host_binding_readiness_v1",
       status: "PASS",
       stage: workspaceBoundPreIdentity
-        ? "RENDER_WORKSPACE_BOUND_BLOCKED_ON_ZERO_RUNTIME_SERVICE_CREATION"
+        ? "RENDER_WORKSPACE_BOUND_INERT_IDENTITY_BOOTSTRAP_AUTHORIZED"
         : "RENDER_PLATFORM_AUTHORIZED_AWAITING_SAFE_SERVICE_IDENTITIES",
       subject_sha: subjectSha,
       production_execution_host_class: a.production_execution_host_class,
@@ -179,7 +184,7 @@ try {
       exact_two_runtime_service_identities_bound: false,
       binding_authorized: false,
       remaining_blockers: workspaceBoundPreIdentity ? [
-        "RENDER_ZERO_RUNTIME_IDENTITY_PROVISIONING_UNAVAILABLE_WITHOUT_RUNTIME_START",
+        "RENDER_INERT_IDENTITY_BOOTSTRAP_NOT_YET_EXECUTED",
         "RENDER_EVIDENCE_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",
         "RENDER_TWIN_BACKGROUND_WORKER_SERVICE_ID_NOT_BOUND",
         "NON_GITHUB_HOST_BINDING_NOT_COMPLETE",
