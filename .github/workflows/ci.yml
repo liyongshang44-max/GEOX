@@ -64,6 +64,9 @@ jobs:
       - name: B-Line operator dispatch intent boundary
         run: pnpm run ci:governance:bline-operator-dispatch-intent
 
+      - name: B-Line Acceptance no Formal Memory side effect
+        run: pnpm run ci:governance:bline-acceptance-no-formal-memory-side-effect
+
       - name: Route response ownership guard
         run: pnpm run ci:route-response-ownership
 
