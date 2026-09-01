@@ -24,6 +24,12 @@ const forbid = (key, tokens) => {
   for (const token of tokens) if (source[key].includes(token)) fail(`${key.toUpperCase()}_FORBIDDEN:${token}`);
 };
 
+forbid("service", [
+  "loadAcceptanceResultForMemoryV1",
+  "fact_id = $4)",
+  "ORDER BY occurred_at DESC, fact_id DESC\n      LIMIT 1",
+]);
+
 need("route", [
   "field_memory_record_ref",
   "MISSING_FIELD_MEMORY_RECORD_REF",
@@ -32,6 +38,8 @@ need("route", [
 
 need("service", [
   "requireFormalFieldMemoryPromotionAuthorityV1",
+  "Exact Acceptance identity is derived from the committed P30 record.",
+  "there is no",
   "field_memory_record_ref: string",
   "P29_FIELD_MEMORY_CANDIDATE_BOUND",
   "P30_REVIEWED_PROMOTION_COMMITTED",
@@ -39,6 +47,9 @@ need("service", [
 ]);
 
 need("verifier", [
+  "const recordRow = await loadCommittedRecord(db, tenant, fieldMemoryRecordRef);",
+  "const acceptanceFactId = text(recordPayload.acceptance_result_fact_id);",
+  'loadExactFact(db, tenant, "acceptance_result_v1", acceptanceFactId)',
   "OUTCOME_ROI_BOUNDARY_GATE_CONTRACT_V0",
   "ROI_BOUNDARY_PAYLOAD_SCHEMA_V0",
   "ROI_LEDGER_GATE_CONTRACT_V0",
@@ -79,6 +90,8 @@ need("verifier", [
 ]);
 
 forbid("verifier", [
+  "matchesAcceptanceRef",
+  "input.acceptance_fact_id",
   "P30_09_FIELD_MEMORY_RECORD_GATE_V0.cjs",
   "P29_09_FIELD_MEMORY_CANDIDATE_GATE_V0.cjs",
   "child_process",
@@ -147,6 +160,8 @@ console.log("BLINE_FORMAL_MEMORY_REVIEWED_PROMOTION_PROOF_STATS " + JSON.stringi
   c8_has_candidate: source.dataset.includes("field_memory_candidate_v1"),
   c8_has_committed_record: source.dataset.includes("field_memory_record_v1"),
   review_only_scope_blocked: source.verifier.includes("FIELD_MEMORY_RECORD_REVIEW_ONLY_SCOPE_BLOCKED"),
+  acceptance_identity_record_first: source.verifier.includes("const acceptanceFactId = text(recordPayload.acceptance_result_fact_id);"),
+  latest_acceptance_selector_absent: !source.service.includes("loadAcceptanceResultForMemoryV1"),
   same_field_scope_required: source.verifier.includes("FIELD_MEMORY_RECORD_SCOPE_NOT_SAME_FIELD_ONLY"),
   frozen_runner_invoked_by_verifier: /P(?:29|30)_09_FIELD_MEMORY/.test(source.verifier),
   judge_memory_lane_technical_only: source.judge.includes('memory_lane: "TECHNICAL_EXECUTION_MEMORY"') && !source.judge.includes('memory_lane: "FORMAL_FIELD_MEMORY"'),
