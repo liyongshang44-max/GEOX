@@ -171,6 +171,19 @@ jobs:
           docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -c 'set -eu; mc alias set local http://127.0.0.1:9000 geoxminio ci-pilot-minio-strong-2026; mc ls local; mc stat local/evidence-exports-v1'
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
+      - name: B-Line root-zone exact scenario binding runtime
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export API_BASE_URL=http://127.0.0.1:3001
+          export GEOX_ACCEPTANCE_TOKEN="$GEOX_AO_ACT_TOKEN"
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          pnpm run ci:root-zone-scenario-submit-recommendation
+
       - name: Run PR18I formal-chain preflight gate
         timeout-minutes: 30
         run: |

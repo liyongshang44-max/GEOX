@@ -294,11 +294,29 @@ async function proveRejections(pool) {
 
   await proveRejectedSubmitCreatesNoRecommendation(
     pool,
-    "scope mismatch",
-    makeScenario(`${RUN_ID}_scope`),
+    "zone exact-binding miss",
+    makeScenario(`${RUN_ID}_scope_zone`),
     "IRRIGATE_20MM_DAY0",
     { zone_id: `${RUN_ID}_other_zone` },
-    "REJECTED_SCOPE_MISMATCH",
+    "REJECTED_SCENARIO_NOT_FOUND",
+  );
+
+  await proveRejectedSubmitCreatesNoRecommendation(
+    pool,
+    "project exact-binding miss",
+    makeScenario(`${RUN_ID}_scope_project`),
+    "IRRIGATE_20MM_DAY0",
+    { project_id: `${RUN_ID}_other_project` },
+    "REJECTED_SCENARIO_NOT_FOUND",
+  );
+
+  await proveRejectedSubmitCreatesNoRecommendation(
+    pool,
+    "group exact-binding miss",
+    makeScenario(`${RUN_ID}_scope_group`),
+    "IRRIGATE_20MM_DAY0",
+    { group_id: `${RUN_ID}_other_group` },
+    "REJECTED_SCENARIO_NOT_FOUND",
   );
 
   await proveRejectedSubmitCreatesNoRecommendation(
