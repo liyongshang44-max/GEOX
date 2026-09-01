@@ -590,24 +590,24 @@
         "field_memory_v1"
       ],
       "reads": [
-        "acceptance_result_v1 and formal gate state",
-        "acceptance/evidence/receipt observation candidates",
-        "device_observation_index_v1 latest-two fallback",
-        "tenant/project/group scope predicates that currently allow missing-source-field fallback"
+        "exact acceptance_result_v1 and formal gate state",
+        "exact operation/receipt/evidence-bound observation candidates",
+        "exact committed field_memory_record_v1 promotion proof",
+        "exact field_memory_candidate_v1 and independent reviewed basis facts"
       ],
       "semantic_family": [
         "field_memory"
       ],
-      "authority_class": "CURRENT_FIELD_MEMORY_WRITER_WITH_PROVENANCE_P0S",
+      "authority_class": "FORMAL_FIELD_MEMORY_PROJECTION_WRITER_REQUIRES_REVIEWED_PROMOTION",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "recommendation memory context",
         "reports"
       ],
-      "removal_target": "KEEP_FIELD_MEMORY_SERVICE; REMOVE_LATEST_TWO_DEVICE_FALLBACK; REMOVE FABRICATED FORMAL CONFIDENCE; REQUIRE EXACT TENANT/PROJECT/GROUP AND EXACT RECEIPT/OPERATION-BOUND OBSERVATION/CONFIDENCE PROVENANCE",
+      "removal_target": "KEEP WRITER AS MATERIALIZATION ONLY; REQUIRE EXACT P29 CANDIDATE + P30 REVIEWED COMMIT PROOF; NO ACCEPTANCE-ALONE AUTHORITY",
       "b02_registered": true,
-      "audit_note": "P0-RES-008: latest-two device observations can be bound to an unrelated accepted operation. P0-RES-011: missing formal confidence becomes 0.8. P0-RES-012: missing tenant/project/group on Acceptance/Evidence/Receipt is treated as caller scope via COALESCE null-wildcard predicates."
+      "audit_note": "B-Line Formal Field Memory convergence removes latest/default provenance debt and requires a committed reviewed promotion proof before customer-visible/learning-eligible materialization."
     },
     {
       "surface_id": "RES-021",
@@ -1287,21 +1287,22 @@
       ],
       "reads": [
         "exact acceptance_id and operation_plan_id",
-        "field_memory_service observation-pair resolution"
+        "exact field_memory_record_ref",
+        "field_memory_service exact provenance + reviewed promotion verifier"
       ],
       "semantic_family": [
         "field_memory"
       ],
-      "authority_class": "FORMAL_FIELD_MEMORY_ENTRYPOINT_WITH_PROVENANCE_P0S",
+      "authority_class": "FORMAL_FIELD_MEMORY_PROMOTION_PROOF_COMPATIBILITY_ENTRYPOINT",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "formal Field Memory readers",
         "learning-eligible memory consumers"
       ],
-      "removal_target": "KEEP EXPLICIT FORMALIZATION ENTRYPOINT; REQUIRE EXACT-SCOPED ACCEPTANCE + EXACT RECEIPT/EVIDENCE IDENTITY + CAUSAL OBSERVATION PAIR + EXPLICIT CONFIDENCE",
+      "removal_target": "KEEP COMPATIBILITY ROUTE NAME; MATERIALIZE ONLY AFTER EXACT COMMITTED P29/P30 PROOF; ROUTE MUST NOT CREATE PROMOTION AUTHORITY",
       "b02_registered": false,
-      "audit_note": "P0-RES-008/011/012: route reaches latest-pair fallback, fabricated confidence, and null-wildcard source-scope matching in field_memory_service."
+      "audit_note": "Acceptance remains provenance only. Route now requires field_memory_record_ref and delegates proof verification before any formal memory materialization."
     },
     {
       "surface_id": "RES-048",
@@ -5643,10 +5644,10 @@
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [],
-      "removal_target": "Keep exact Acceptance provenance; move semantic authority to Acceptance -> Outcome -> Memory formalization",
+      "removal_target": "Keep exact Acceptance as necessary provenance only; committed reviewed promotion proof is required for Formal Field Memory",
       "b02_registered": true,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
-      "audit_note": "Field Memory formalization consumes accepted operation evidence; #3436 improved provenance but direct Acceptance->Memory boundary remains debt."
+      "audit_note": "Acceptance is consumed but is not sufficient authority after B-Line Formal Field Memory convergence."
     },
     {
       "surface_id": "RES-223",
@@ -7905,6 +7906,33 @@
       "b02_registered": false,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "audit_note": "Exact final propagated tuple from dynamic authority-callsite proof. This path is a devtools consumer, not a production binding-policy owner."
+    },
+    {
+      "surface_id": "RES-303",
+      "source_path": "apps/server/src/services/formal_field_memory_promotion_authority_v1.ts",
+      "entrypoint": "field_memory_service -> requireFormalFieldMemoryPromotionAuthorityV1",
+      "activation_mode": "ACTIVE_SERVICE_CALL_CHAIN",
+      "writes": [],
+      "reads": [
+        "exact field_memory_record_v1",
+        "exact field_memory_candidate_v1",
+        "four exact P29 candidate-basis facts",
+        "five exact P30 promotion-basis facts"
+      ],
+      "semantic_family": [
+        "field_memory",
+        "governance.trace_projection"
+      ],
+      "authority_class": "FORMAL_FIELD_MEMORY_PROMOTION_PROOF_VERIFIER_NOT_PROMOTION_WRITER",
+      "runtime_reachable": "PROVEN_VIA_FIELD_MEMORY_ROUTE",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "apps/server/src/services/field_memory_service.ts"
+      ],
+      "removal_target": "KEEP FAIL-CLOSED PROOF VERIFIER; NEVER CREATE P29/P30 FACTS OR PROMOTION AUTHORITY",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Consumes already-authorized P29/P30 facts only; exact tenant/project/group, operation, acceptance, candidate, policy and independent basis refs are required."
     }
   ],
   "cross_branch_surfaces": [
