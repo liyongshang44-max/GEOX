@@ -1677,16 +1677,18 @@
         "apps/server/src/modules/field_memory/registerFieldMemoryModule.ts"
       ],
       "surface_role": "AUTHORITY",
-      "delegates_to": [],
-      "replacement_path": [
-        "Outcome -> explicit FieldMemory formalization"
+      "delegates_to": [
+        "apps/server/src/services/field_memory_service.ts"
       ],
-      "sunset_condition": "KEEP_EXPLICIT_FORMALIZATION_ENDPOINT",
+      "replacement_path": [
+        "OutcomeEvidence -> FieldMemoryCandidate -> reviewed Promotion/Commit proof -> Formal Field Memory materialization"
+      ],
+      "sunset_condition": "KEEP COMPATIBILITY ENTRYPOINT ONLY WHILE EXACT REVIEWED PROMOTION PROOF IS REQUIRED",
       "semantic_family": [
         "field_memory"
       ],
       "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
-      "owner": "BLINE"
+      "owner": "BLINE_FIELD_MEMORY_MATERIALIZATION"
     },
     {
       "surface_id": "ARS-082",
