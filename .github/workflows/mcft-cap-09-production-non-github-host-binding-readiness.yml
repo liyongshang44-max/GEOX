@@ -55,9 +55,11 @@ jobs:
 
   render-inert-identity-bootstrap:
     if: >-
-      github.event_name == 'workflow_dispatch' &&
-      github.ref_name == 'feat/mcft-cap09-v13-producer-driven-qualification-v1' &&
-      inputs.authority == 'ALLOW_RENDER_INERT_IDENTITY_BOOTSTRAP'
+      (github.event_name == 'pull_request' &&
+       github.head_ref == 'feat/mcft-cap09-v13-producer-driven-qualification-v1') ||
+      (github.event_name == 'workflow_dispatch' &&
+       github.ref_name == 'feat/mcft-cap09-v13-producer-driven-qualification-v1' &&
+       inputs.authority == 'ALLOW_RENDER_INERT_IDENTITY_BOOTSTRAP')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
@@ -76,12 +78,20 @@ jobs:
           persist-credentials: false
 
       - name: Prove inert identity-bootstrap authority
+        id: bootstrap_gate
         shell: node {0}
         run: |
           const fs=require('node:fs');
           const a=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json','utf8'));
           const arm=JSON.parse(fs.readFileSync('scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json','utf8'));
           const req=(v,c)=>{if(!v)throw new Error(c)};
+          const requested=arm.execution_requested===true;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'execute='+(requested?'true':'false')+'\n');
+          if(!requested){
+            console.log(JSON.stringify({status:'PASS_NOT_REQUESTED',authority:'ALLOW_RENDER_INERT_IDENTITY_BOOTSTRAP',external_mutation:false},null,2));
+            process.exit(0);
+          }
+          req(arm.execution_request_authority==='ALLOW_RENDER_INERT_IDENTITY_BOOTSTRAP'&&arm.execution_request_one_shot===true&&arm.execution_request_consumed===false,'BOOTSTRAP_EXECUTION_REQUEST_REQUIRED');
           req(a.status==='RENDER_WORKSPACE_BOUND_SERVICE_IDENTITIES_UNBOUND','BOOTSTRAP_HOST_STATUS_REQUIRED');
           req(a.render_candidate_binding_contract?.workspace_owner_id==='tea-dab2cfvavr4c73ejavog','BOOTSTRAP_WORKSPACE_REQUIRED');
           req(a.render_candidate_binding_contract?.evidence_runtime?.service_id===null&&a.render_candidate_binding_contract?.twin_runtime?.service_id===null,'BOOTSTRAP_SERVICE_IDS_MUST_BE_UNBOUND');
@@ -91,9 +101,10 @@ jobs:
           req(arm.inert_identity_bootstrap_authorized===true&&arm.inert_identity_bootstrap_start_authorized===true&&arm.inert_identity_bootstrap_armed===true,'BOOTSTRAP_ARM_REQUIRED');
           req(arm.runtime_secret_injection_authorized===false&&arm.deployment_authorized===false&&arm.runtime_process_start_authorized===false&&arm.production_owner_activation_authorized===false,'PRODUCTION_RUNTIME_AUTHORITY_MUST_REMAIN_FALSE');
           req(arm.production_runtime_artifact_deployment_authorized===false&&arm.production_runtime_secret_injection_authorized===false,'PRODUCTION_RUNTIME_EFFECT_MUST_REMAIN_FALSE');
-          console.log(JSON.stringify({status:'PASS',authority:'ALLOW_RENDER_INERT_IDENTITY_BOOTSTRAP',production_runtime_start:false,production_owner_activation:false},null,2));
+          console.log(JSON.stringify({status:'PASS_EXECUTION_REQUESTED',authority:'ALLOW_RENDER_INERT_IDENTITY_BOOTSTRAP',production_runtime_start:false,production_owner_activation:false},null,2));
 
       - name: Create exactly two inert Render identities and suspend
+        if: steps.bootstrap_gate.outputs.execute == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -178,7 +189,7 @@ jobs:
           trap - ERR INT TERM
 
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: steps.bootstrap_gate.outputs.execute == 'true' && always()
         with:
           name: mcft-cap09-render-inert-identity-bootstrap-${{ github.sha }}
           path: acceptance-output/MCFT_CAP_09_RENDER_INERT_IDENTITY_BOOTSTRAP_RESULT_V1.json

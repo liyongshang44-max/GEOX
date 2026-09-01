@@ -32,5 +32,10 @@
   "inert_identity_bootstrap_auto_deploy": "no",
   "inert_identity_bootstrap_suspend_immediately_required": true,
   "production_runtime_artifact_deployment_authorized": false,
-  "production_runtime_secret_injection_authorized": false
+  "production_runtime_secret_injection_authorized": false,
+  "execution_requested": true,
+  "execution_request_authority": "ALLOW_RENDER_INERT_IDENTITY_BOOTSTRAP",
+  "execution_request_scope": "CREATE_EXACT_TWO_INERT_RENDER_BACKGROUND_WORKER_IDENTITIES_AND_SUSPEND",
+  "execution_request_one_shot": true,
+  "execution_request_consumed": false
 }
