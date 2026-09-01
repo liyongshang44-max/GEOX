@@ -118,6 +118,9 @@ export function registerFieldMemoryV1Routes(app: FastifyInstance, pool: Pool): v
       if (code === "FIELD_MEMORY_RECORD_AMBIGUOUS" || code.includes("_REF_AMBIGUOUS:")) {
         return reply.status(409).send({ ok: false, error: code });
       }
+      if (code.startsWith("FIELD_MEMORY_")) {
+        return reply.status(422).send({ ok: false, error: code });
+      }
       if ([
         "ACCEPTANCE_VERDICT_NOT_PASS",
         "ACCEPTANCE_NOT_FORMAL",
