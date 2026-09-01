@@ -410,11 +410,18 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
   validateFormalFieldMemoryAcceptanceV1(acceptance.payload);
 
   const formalAcceptanceId = textOrNull(acceptance.payload?.acceptance_id) ?? acceptance.fact_id;
+  const fieldId = textOrNull(acceptance.payload?.field_id);
+  if (!fieldId) throw new Error("ACCEPTANCE_FIELD_ID_MISSING");
+  const actTaskId = textOrNull(acceptance.payload?.act_task_id ?? acceptance.payload?.task_id);
+  if (!actTaskId) throw new Error("ACCEPTANCE_ACT_TASK_ID_MISSING");
+
   const promotionAuthority = await requireFormalFieldMemoryPromotionAuthorityV1(db, tenant, {
     field_memory_record_ref: input.field_memory_record_ref,
     acceptance_fact_id: acceptance.fact_id,
     acceptance_id: formalAcceptanceId,
     operation_plan_id: input.operation_plan_id,
+    act_task_id: actTaskId,
+    field_id: fieldId,
   });
 
   const existing = await findExistingFormalFieldMemoryV1(db, tenant, formalAcceptanceId);
@@ -426,8 +433,6 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
     };
   }
 
-  const fieldId = textOrNull(acceptance.payload?.field_id);
-  if (!fieldId) throw new Error("ACCEPTANCE_FIELD_ID_MISSING");
   const acceptancePair = await loadAcceptanceObservationPairV1(acceptance);
   const evidencePair = acceptancePair ?? await loadEvidenceArtifactObservationPairV1(db, tenant, acceptance, input.operation_plan_id);
   const observationPair = evidencePair ?? await loadReceiptObservationPairV1(db, tenant, acceptance, input.operation_plan_id);
@@ -437,6 +442,8 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
     { kind: "acceptance_fact", ref: acceptance.fact_id, acceptance_id: formalAcceptanceId },
     { kind: "field_memory_record_v1", ref: promotionAuthority.field_memory_record_fact_id, record_id: promotionAuthority.field_memory_record_id },
     { kind: "field_memory_candidate_v1", ref: promotionAuthority.field_memory_candidate_fact_id, candidate_id: promotionAuthority.field_memory_candidate_id },
+    ...promotionAuthority.source_chain_refs,
+    ...promotionAuthority.accounting_basis_refs,
     ...promotionAuthority.candidate_basis_refs,
     ...promotionAuthority.promotion_basis_refs,
     ...normalizeEvidenceRefs(acceptance.payload?.evidence_refs),
@@ -451,7 +458,7 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
     project_id: tenant.project_id,
     group_id: tenant.group_id,
     operation_id: input.operation_plan_id,
-    task_id: textOrNull(acceptance.payload?.act_task_id ?? acceptance.payload?.task_id) ?? undefined,
+    task_id: actTaskId,
     field_id: fieldId,
     acceptance_id: formalAcceptanceId,
     formal_acceptance_id: formalAcceptanceId,
