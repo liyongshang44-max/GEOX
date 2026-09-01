@@ -256,6 +256,28 @@ jobs:
           export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
           node scripts/governance_acceptance/ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1.cjs --base-url http://127.0.0.1:3001 --tenant tenantA 2>&1 | tee acceptance-output/c8-formal-chain-backend-p0.log
 
+      - name: Run Sampling exact-chain scenario release gate
+        timeout-minutes: 20
+        run: |
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export GEOX_BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          pnpm run ci:scenario:sampling
+
+      - name: Run Fertilization Sampling-consumer regression gate
+        timeout-minutes: 25
+        run: |
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export GEOX_BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          pnpm run ci:scenario:fertilization
+
       - name: Install Playwright Chromium for frontend audit
         timeout-minutes: 5
         run: |
