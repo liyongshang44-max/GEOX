@@ -2292,7 +2292,7 @@
         "agronomy evidence consumers"
       ],
       "removal_target": "KEEP SAMPLING EVIDENCE ACCEPTANCE; EXACT PLAN/RECEIPT/LAB FACT BINDING REQUIRED; AMBIGUITY FAILS CLOSED",
-      "audit_note": "Latest-wins source selection removed. Plan/import identities resolve deterministically; sample receipt ambiguity returns 409; duplicate sample_id is rejected; lab import requires exact plan continuity; Sampling Acceptance persists exact plan/receipt/lab refs and is idempotent per exact source chain.",
+      "audit_note": "Latest-wins source selection removed. Plan/import identities resolve deterministically; receipt fact identity is deterministic per scope+sample_id and duplicate/concurrent duplicate creation fails closed; lab import requires exact plan continuity; Sampling Acceptance persists exact plan/receipt/lab refs, uses deterministic exact-chain identity, and is race-safe idempotent.",
       "surface_id": "RES-084",
       "b02_registered": false
     },
@@ -2485,7 +2485,7 @@
         "fertilization evidence consumers"
       ],
       "removal_target": "KEEP SAMPLING WORKFLOW; NEVER REINTRODUCE LATEST-WINS SOURCE AUTHORITY",
-      "audit_note": "Route consumes exact fact rows, rejects duplicate/ambiguous receipt identity, verifies exact plan continuity before lab import, persists exact plan/receipt/lab refs into sampling_acceptance_v1, and returns an idempotent Acceptance identity for repeated exact-chain evaluation.",
+      "audit_note": "Route consumes exact fact rows, rejects duplicate/ambiguous receipt identity, verifies exact plan continuity before lab import, persists exact plan/receipt/lab refs into sampling_acceptance_v1, and returns one deterministic Acceptance identity for repeated or concurrent exact-chain evaluation.",
       "surface_id": "RES-091",
       "b02_registered": false
     },
@@ -7593,7 +7593,7 @@
       ],
       "authority_owner": "SAMPLING_DOMAIN",
       "writer_scope": "sampling plan/receipt/lab/acceptance facts",
-      "audit_note": "Sampling plan/receipt/lab/acceptance chain records exact fact identity. Duplicate receipt creation is blocked, ambiguous historical identity fails closed, and repeated Acceptance evaluation is exact-chain idempotent."
+      "audit_note": "Sampling plan/receipt/lab/acceptance chain records exact fact identity. Receipt and Acceptance fact identities are deterministic at their semantic uniqueness boundaries, duplicate/concurrent receipt creation is blocked, ambiguous historical identity fails closed, and repeated/concurrent Acceptance evaluation converges idempotently."
     },
     {
       "surface_id": "RES-289",
