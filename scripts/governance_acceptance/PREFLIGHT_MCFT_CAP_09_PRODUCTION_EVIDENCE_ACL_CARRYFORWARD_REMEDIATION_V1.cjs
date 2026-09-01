@@ -23,7 +23,7 @@ try{
  const seed=String(process.env.SEED_DATABASE_URL||"").trim(); assert.ok(seed,"ACL_REMEDIATION_SEED_URL_REQUIRED");
  const u=new URL(seed);u.pathname="/"+TARGET;const url=u.toString();
  const a=j(AUTH),arm=j(ARM);
- assert.equal(a.status,"EXACT_NINE_PRIVILEGE_REMEDIATION_READY_NOT_AUTHORIZED");
+ assert.equal(a.status,"EXACT_NINE_PRIVILEGE_REMEDIATION_PREFLIGHT_PROVEN_NOT_AUTHORIZED");
  assert.equal(a.target.database_name,TARGET);
  assert.equal(arm.runtime_process_start_authorized,false);
  assert.equal(arm.production_owner_activation_authorized,false);
