@@ -1,0 +1,256 @@
+{
+  "schema_version": "b09ag_authority_object_catalog_v1",
+  "phase": "B-09ag",
+  "snapshots": {
+    "protected_main": "fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8",
+    "bline_authoritative": "3450f932e345e1d0b880a45b9f2613eba9833fcb",
+    "active_deere_pr_3346": "605d256d5e4a02a18fee89e5a6db755af3f97e18"
+  },
+  "scan_roots": [
+    "apps/server/src",
+    "apps/executor/src",
+    "apps/server/db/migrations",
+    "packages/contracts/src",
+    ".github/workflows",
+    "scripts/runtime_acceptance",
+    "scripts/governance_acceptance"
+  ],
+  "production_roots": [
+    "apps/server/src",
+    "apps/executor/src"
+  ],
+  "support_roots": [
+    "apps/server/db/migrations",
+    "packages/contracts/src",
+    ".github/workflows",
+    "scripts/runtime_acceptance",
+    "scripts/governance_acceptance"
+  ],
+  "semantic_objects": [
+    {
+      "family": "evidence.observation",
+      "signatures": [
+        "CanonicalObservationV1",
+        "canonical_observation_v1"
+      ]
+    },
+    {
+      "family": "evidence.qualification",
+      "signatures": [
+        "EvidenceQualificationV1",
+        "evidence_qualification_v1"
+      ]
+    },
+    {
+      "family": "context.snapshot",
+      "signatures": [
+        "ContextSnapshotV1",
+        "context_snapshot_v1"
+      ]
+    },
+    {
+      "family": "context.crop_stage",
+      "signatures": [
+        "QualifiedCropStageStateV1",
+        "crop_stage_state_ref"
+      ]
+    },
+    {
+      "family": "twin.state",
+      "signatures": [
+        "root_zone_soil_water_state_v1",
+        "TwinDecisionInputPort"
+      ]
+    },
+    {
+      "family": "twin.forecast",
+      "signatures": [
+        "root_zone_soil_water_forecast_v1",
+        "ForecastV1",
+        "forecast_refs"
+      ]
+    },
+    {
+      "family": "twin.scenario",
+      "signatures": [
+        "irrigation_scenario_set_v1",
+        "ScenarioSetV1",
+        "scenario_refs"
+      ]
+    },
+    {
+      "family": "decision.calculation",
+      "signatures": [
+        "CalculationResultV1",
+        "calculation_result_v1",
+        "calculation_result_refs"
+      ]
+    },
+    {
+      "family": "decision.candidate",
+      "signatures": [
+        "CandidateDecisionV1",
+        "decision_recommendation_v1",
+        "CandidateActionV1"
+      ]
+    },
+    {
+      "family": "decision.eligibility",
+      "signatures": [
+        "DecisionEligibilityDecisionV1",
+        "decision_eligibility_decision_v1",
+        "DecisionEligibilityPolicyDeclarationV1"
+      ]
+    },
+    {
+      "family": "decision.approval_request",
+      "signatures": [
+        "approval_request_v1"
+      ]
+    },
+    {
+      "family": "decision.approval_decision",
+      "signatures": [
+        "approval_decision_v1"
+      ]
+    },
+    {
+      "family": "action.prescription",
+      "signatures": [
+        "prescription_contract_v1",
+        "PrescriptionV1"
+      ]
+    },
+    {
+      "family": "operation.plan",
+      "signatures": [
+        "operation_plan_v1",
+        "operation_plan_transition_v1"
+      ]
+    },
+    {
+      "family": "execution.task",
+      "signatures": [
+        "ao_act_task_v0",
+        "ao_act_task_v1"
+      ]
+    },
+    {
+      "family": "execution.dispatch",
+      "signatures": [
+        "ao_act_dispatch_v1",
+        "DISPATCHED",
+        "RETRY_DISPATCHED"
+      ]
+    },
+    {
+      "family": "execution.human_adapter",
+      "signatures": [
+        "human_work_receipt_v1",
+        "work_assignment_index_v1"
+      ]
+    },
+    {
+      "family": "execution.receipt",
+      "signatures": [
+        "ao_act_receipt_v0",
+        "ao_act_receipt_v1"
+      ]
+    },
+    {
+      "family": "execution.as_executed",
+      "signatures": [
+        "as_executed_v1",
+        "as_executed"
+      ]
+    },
+    {
+      "family": "acceptance.verdict",
+      "signatures": [
+        "acceptance_result_v1",
+        "AcceptanceResultV1"
+      ]
+    },
+    {
+      "family": "outcome.memory",
+      "signatures": [
+        "field_memory_v1",
+        "FieldMemory"
+      ]
+    },
+    {
+      "family": "outcome.roi",
+      "signatures": [
+        "roi_ledger_v1",
+        "RoiLedger"
+      ]
+    },
+    {
+      "family": "external.operation_source",
+      "signatures": [
+        "ExternalOperationSourceEvidenceV1",
+        "external_operation_source_evidence_v1",
+        "deere_field_operation_adapter_v1"
+      ]
+    }
+  ],
+  "authority_markers": {
+    "direct_fact_write": [
+      "INSERT INTO facts",
+      "insertFact(",
+      "appendFact(",
+      "fact_id = await insert"
+    ],
+    "relational_write": [
+      "INSERT INTO ",
+      "UPDATE ",
+      "DELETE FROM ",
+      "CREATE TRIGGER",
+      "CREATE FUNCTION"
+    ],
+    "route_entrypoint": [
+      "app.post(",
+      "app.put(",
+      "app.patch(",
+      "app.delete(",
+      "post(\"/api",
+      "put(\"/api",
+      "patch(\"/api"
+    ],
+    "worker_entrypoint": [
+      "setInterval(",
+      "startAssignmentExpiryWorker",
+      "runAgronomyAgentOnce",
+      "worker/"
+    ],
+    "producer_transform": [
+      "export function build",
+      "export async function build",
+      "export function create",
+      "export async function create",
+      "export function project",
+      "export function derive",
+      "export async function compile",
+      "export function compile"
+    ],
+    "feature_flag": [
+      "process.env",
+      "isFeatureEnabled",
+      "FEATURE_FLAG"
+    ]
+  },
+  "classification_rule": {
+    "production_authority_capable": "A production-root file mentioning a high-risk semantic object is authority-capable when it writes facts/tables, exposes a mutating route/worker, or exports a builder/create/project/derive/compile producer transform.",
+    "support_authority_capable": "A migration/workflow/runtime script is support-plane authority-capable only when it creates/mutates high-risk storage, triggers production mutation, or acts as a runtime writer; pure tests/readers are support references.",
+    "missing_inventory_failure_code": "UNREGISTERED_AUTHORITY_CAPABLE_PATH"
+  },
+  "audit_policy": {
+    "dual_snapshot_required": true,
+    "active_external_pr_snapshot_required": true,
+    "current_main_drift_requires_reaudit": true,
+    "no_business_behavior_change": true,
+    "no_authority_removal": true,
+    "no_mcft_mutation": true,
+    "no_b07e_connection": true
+  }
+}

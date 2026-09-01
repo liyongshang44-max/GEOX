@@ -1,0 +1,1116 @@
+{
+  "schema_version": "b09ag_residual_authority_inventory_v1",
+  "phase": "B-09ag",
+  "status": "DISCOVERY_BASELINE_NOT_YET_EXHAUSTIVE",
+  "snapshots": {
+    "MAIN": "fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8",
+    "BLINE": "3450f932e345e1d0b880a45b9f2613eba9833fcb",
+    "DEERE_PR_3346": "605d256d5e4a02a18fee89e5a6db755af3f97e18"
+  },
+  "entries": [
+    {
+      "id": "RA-001",
+      "path": "apps/server/src/jobs/agronomy_agent.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "runAgronomyAgentOnce",
+        "job/feature-flag runtime"
+      ],
+      "activation_mode": "FEATURE_FLAG",
+      "writes": [
+        "recommendation_v1",
+        "decision_recommendation_v1",
+        "operation_plan_v1",
+        "operation_plan_transition_v1"
+      ],
+      "reads": [
+        "latest soil telemetry",
+        "latest FieldProgram",
+        "pending operation plans",
+        "recent recommendations"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "decision.candidate",
+        "operation.plan"
+      ],
+      "authority_class": "ACTIVE_LEGACY_MIXED_AUTHORITY",
+      "representation": "LEGACY_WRITER",
+      "runtime_reachable": true,
+      "feature_flag": true,
+      "downstream_consumers": [
+        "program/report projections",
+        "operation chain"
+      ],
+      "ownership_registration": "PARTIAL_EXISTING",
+      "finding": "CONFIRMED_SEMANTIC_DEFECT",
+      "risk": "P0",
+      "finding_detail": "Missing soil telemetry increments no_telemetry but does not stop; DEFAULT_SOIL_MOISTURE=30 is then used in recommendation facts and followed by direct operation_plan_v1 creation.",
+      "removal_target": "B-09_NON_MCFT_DEBT_CLOSURE"
+    },
+    {
+      "id": "RA-002",
+      "path": "apps/server/src/domain/planner/compiler_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "GET /api/v1/programs/:program_id/actions via programs_core_v1"
+      ],
+      "activation_mode": "API_ONLY",
+      "writes": [],
+      "reads": [
+        "latest field_program_v1",
+        "latest acceptance_result_v1",
+        "resource usage",
+        "SLA"
+      ],
+      "semantic_family": [
+        "planning.option",
+        "execution.policy_interpretation"
+      ],
+      "authority_class": "ACTIVE_PLANNING_POLICY_INTERPRETER",
+      "representation": "LEGACY_RUNTIME",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "programs_core_v1 candidate_actions response"
+      ],
+      "ownership_registration": "ABSENT",
+      "finding": "CONFIRMED_AUTHORITY_AMBIGUITY",
+      "risk": "P1",
+      "finding_detail": "Produces CandidateActionV1 mode AUTO/APPROVAL_REQUIRED/BLOCKED from FieldProgram.execution_policy. AUTO is downstream execution-policy meaning, not DecisionEligibility.",
+      "removal_target": "B-09_NON_MCFT_DEBT_CLOSURE"
+    },
+    {
+      "id": "RA-003",
+      "path": "apps/server/src/routes/programs_core_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "/api/v1/programs/* routes"
+      ],
+      "activation_mode": "API_ONLY",
+      "writes": [
+        "field_program_v1",
+        "field_program_transition_v1",
+        "resource_usage",
+        "cost_record_v1",
+        "sla_evaluation_v1",
+        "field_program_note_v1"
+      ],
+      "reads": [
+        "latest field_program_v1",
+        "planner compiler",
+        "program projections"
+      ],
+      "semantic_family": [
+        "context.declared_identity",
+        "planning.option",
+        "program.lifecycle"
+      ],
+      "authority_class": "PROGRAM_ROUTE_AND_CONTEXT_WRITER",
+      "representation": "LEGACY_RUNTIME",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "planner/compiler_v1",
+        "program portfolio/state/timeline",
+        "B-09y exact FieldProgram selector"
+      ],
+      "ownership_registration": "ABSENT",
+      "finding": "CONFIRMED_UNDER_REGISTERED",
+      "risk": "P1",
+      "finding_detail": "Runtime route both mutates FieldProgram facts and exposes planner candidate_actions; latest Program readers remain in legacy API surface.",
+      "removal_target": "REGISTER_AND_CONSTRAIN"
+    },
+    {
+      "id": "RA-004",
+      "path": "apps/server/src/routes/prescriptions_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "POST /api/v1/prescriptions/from-recommendation",
+        "POST /api/v1/prescriptions/variable/from-recommendation",
+        "POST /api/v1/prescriptions/:prescription_id/submit-approval"
+      ],
+      "activation_mode": "API_ONLY",
+      "writes": [
+        "prescription_contract_v1 via domain service",
+        "approval_request_v1 via delegated service",
+        "prescription status"
+      ],
+      "reads": [
+        "decision_recommendation_v1",
+        "prescription_contract_v1"
+      ],
+      "semantic_family": [
+        "action.prescription",
+        "decision.approval_request"
+      ],
+      "authority_class": "ACTION_SPEC_AND_APPROVAL_SUBMISSION_ADAPTER",
+      "representation": "RUNTIME_ADAPTER",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "approval request service",
+        "AO-ACT variable task path"
+      ],
+      "ownership_registration": "ABSENT",
+      "finding": "CONFIRMED_UNDER_REGISTERED_BOUNDARY_HEALTHY",
+      "risk": "P1",
+      "finding_detail": "Prescription materializes action specification and can submit an approval request; it does not itself decide approval/eligibility.",
+      "removal_target": "REGISTER_AND_CONSTRAIN"
+    },
+    {
+      "id": "RA-005",
+      "path": "apps/server/src/domain/prescription/prescription_contract_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "prescriptions_v1 route"
+      ],
+      "activation_mode": "LOCAL_DIRECT_CALL",
+      "writes": [
+        "prescription_contract_v1"
+      ],
+      "reads": [
+        "decision_recommendation_v1",
+        "management zones/skill trace"
+      ],
+      "semantic_family": [
+        "action.prescription"
+      ],
+      "authority_class": "ACTION_SPEC_MATERIALIZER",
+      "representation": "CURRENT_PRODUCT_CONTRACT",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "prescriptions_v1",
+        "control_ao_act",
+        "as_executed/ROI"
+      ],
+      "ownership_registration": "PARTIAL_VIA_CANDIDATE_ADAPTER_ONLY",
+      "finding": "AUTHORITY_CAPABLE_REQUIRES_FULL_REGISTRATION",
+      "risk": "P1",
+      "removal_target": "KEEP_AS_ACTION_SPEC"
+    },
+    {
+      "id": "RA-006",
+      "path": "apps/server/src/routes/decision_engine_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "/api/v1/recommendations/generate and related decision routes"
+      ],
+      "activation_mode": "API_ONLY",
+      "writes": [
+        "decision_recommendation_v1",
+        "input facts and compatibility operation-chain touchpoints"
+      ],
+      "reads": [
+        "sensing/weather/crop stage/context/program/approval/task facts"
+      ],
+      "semantic_family": [
+        "decision.calculation",
+        "decision.candidate",
+        "context.crop_stage",
+        "twin.forecast_scenario"
+      ],
+      "authority_class": "GRANDFATHERED_COMPOSITION_HOTSPOT",
+      "representation": "LEGACY_FACADE_TARGET",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "approval/prescription/reporting/B-09 shadow"
+      ],
+      "ownership_registration": "EXISTING",
+      "finding": "CONFIRMED_DEBT_REGISTERED",
+      "risk": "P1",
+      "removal_target": "DEMOTE_TO_FACADE_ORCHESTRATOR"
+    },
+    {
+      "id": "RA-007",
+      "path": "apps/server/src/domain/soil_water/root_zone_scenario_recommendation_submission_builder_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "operator twin/scenario submission path"
+      ],
+      "activation_mode": "LOCAL_DIRECT_CALL",
+      "writes": [],
+      "reads": [
+        "root_zone forecast/scenario candidate inputs"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "CANDIDATE_ONLY_BUILDER",
+      "representation": "BOUNDARY_HEALTHY_BUILDER",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "operator scenario submission route"
+      ],
+      "ownership_registration": "ABSENT",
+      "finding": "CONFIRMED_UNDER_REGISTERED_BOUNDARY_HEALTHY",
+      "risk": "P2",
+      "finding_detail": "Explicit human_approval_required=true, no_direct_execution=true and no downstream writes.",
+      "removal_target": "REGISTER_KEEP"
+    },
+    {
+      "id": "RA-008",
+      "path": "apps/server/src/domain/twin_kernel/decision_cycle_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "Twin kernel workflow consumers"
+      ],
+      "activation_mode": "LOCAL_DIRECT_CALL",
+      "writes": [],
+      "reads": [
+        "recommendation/approval/plan/task/dispatch/receipt/acceptance/ROI/memory refs"
+      ],
+      "semantic_family": [
+        "governance.trace",
+        "twin.decision_bus"
+      ],
+      "authority_class": "TRACE_ONLY_STATE_MACHINE",
+      "representation": "BOUNDARY_HEALTHY_TRACE",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "Twin operator workflow"
+      ],
+      "ownership_registration": "ABSENT",
+      "finding": "CONFIRMED_UNDER_REGISTERED_BOUNDARY_HEALTHY",
+      "risk": "P2",
+      "finding_detail": "Explicitly forbids forecast/scenario/recommendation auto-jump to task and checks approval/task/receipt/acceptance ordering.",
+      "removal_target": "REGISTER_KEEP"
+    },
+    {
+      "id": "RA-009",
+      "path": "apps/server/src/routes/v1/operator_dispatch_actions.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "POST /api/v1/operator/dispatch/:taskId/dispatch",
+        "POST /api/v1/operator/dispatch/:taskId/retry"
+      ],
+      "activation_mode": "API_ONLY",
+      "writes": [
+        "ao_act_dispatch_v1",
+        "operator_action_audit_v1"
+      ],
+      "reads": [
+        "ao_act_task_v0",
+        "operation state",
+        "latest ao_act_dispatch_v1"
+      ],
+      "semantic_family": [
+        "execution.dispatch_intent",
+        "execution.dispatch_delivery"
+      ],
+      "authority_class": "PARALLEL_SYNTHETIC_DISPATCH_WRITER",
+      "representation": "ACTIVE_LEGACY_WRITER",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "operator worklist/status projection"
+      ],
+      "ownership_registration": "ABSENT",
+      "finding": "CONFIRMED_SEMANTIC_DEFECT",
+      "risk": "P0",
+      "finding_detail": "Operator route directly writes status DISPATCHED/RETRY_DISPATCHED without canonical queue/outbox/adapter delivery proof. Current main code search shows ao_act_dispatch_v1 writer only here.",
+      "removal_target": "REPLACE_WITH_DISPATCH_INTENT_TO_CANONICAL_AO_ACT"
+    },
+    {
+      "id": "RA-010",
+      "path": "apps/server/src/routes/human_executors_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "human executor/work assignment APIs",
+        "startAssignmentExpiryWorker"
+      ],
+      "activation_mode": "API_AND_WORKER",
+      "writes": [
+        "work_assignment_index_v1",
+        "work_assignment_audit_v1",
+        "work_assignment_status_changed_v1",
+        "human_work_receipt_v1 transient payload"
+      ],
+      "reads": [
+        "ao_act_task_v0",
+        "assignment state"
+      ],
+      "semantic_family": [
+        "execution.human_adapter",
+        "execution.receipt"
+      ],
+      "authority_class": "HUMAN_EXECUTION_ADAPTER",
+      "representation": "RUNTIME_ADAPTER",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "/api/v1/actions/receipt",
+        "assignment projections"
+      ],
+      "ownership_registration": "ABSENT",
+      "finding": "CONFIRMED_UNDER_REGISTERED_BOUNDARY_HEALTHY",
+      "risk": "P1",
+      "finding_detail": "Human submit delegates canonical receipt write to /api/v1/actions/receipt before marking assignment SUBMITTED.",
+      "removal_target": "REGISTER_AS_EXECUTION_ADAPTER"
+    },
+    {
+      "id": "RA-011",
+      "path": "apps/server/src/routes/control_ao_act.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "AO-ACT v1 routes"
+      ],
+      "activation_mode": "API_ONLY",
+      "writes": [
+        "ao_act_task_v0",
+        "ao_act_receipt_v0",
+        "operation_plan_v1/transition compatibility paths",
+        "execution attempt facts"
+      ],
+      "reads": [
+        "approval_request_v1",
+        "operation plan",
+        "prescription",
+        "device skill binding"
+      ],
+      "semantic_family": [
+        "execution.task",
+        "execution.dispatch_delivery",
+        "execution.receipt"
+      ],
+      "authority_class": "CURRENT_EXECUTION_BOUNDARY",
+      "representation": "CANONICAL_EXECUTION_RUNTIME",
+      "runtime_reachable": true,
+      "feature_flag": true,
+      "downstream_consumers": [
+        "executor adapters",
+        "acceptance/as-executed"
+      ],
+      "ownership_registration": "EXISTING_COLLAPSED_FAMILY",
+      "finding": "REGISTERED_BUT_SEMANTIC_FAMILY_TOO_COARSE",
+      "risk": "P1",
+      "removal_target": "SPLIT_EXECUTION_FAMILY_NO_BEHAVIOR_CHANGE_FIRST"
+    },
+    {
+      "id": "RA-012",
+      "path": "apps/executor/src/run_once.ts",
+      "snapshot_scope": [
+        "MAIN"
+      ],
+      "entrypoints": [
+        "explicit run-once executor adapter"
+      ],
+      "activation_mode": "MANUAL_RUN_ONCE",
+      "writes": [
+        "ao_act_receipt_v0 via API"
+      ],
+      "reads": [
+        "AO-ACT index/tasks"
+      ],
+      "semantic_family": [
+        "execution.external_adapter",
+        "execution.receipt"
+      ],
+      "authority_class": "EXECUTION_ADAPTER",
+      "representation": "RUNTIME_ADAPTER",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "AO-ACT receipt",
+        "evidence export"
+      ],
+      "ownership_registration": "ABSENT_FROM_BLINE_REGISTER",
+      "finding": "REVERSE_SCAN_DISCOVERED_REQUIRES_REGISTRATION",
+      "risk": "P1",
+      "removal_target": "REGISTER_KEEP"
+    },
+    {
+      "id": "RA-013",
+      "path": "apps/server/src/domain/approval/recommendation_approval_request_builder_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "control approval routes"
+      ],
+      "activation_mode": "LOCAL_DIRECT_CALL",
+      "writes": [],
+      "reads": [
+        "decision_recommendation_v1"
+      ],
+      "semantic_family": [
+        "decision.approval_request"
+      ],
+      "authority_class": "APPROVAL_REQUEST_BUILDER",
+      "representation": "CURRENT_AUTHORITY_HELPER",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "control_approval_request_v1"
+      ],
+      "ownership_registration": "EXISTING",
+      "finding": "REGISTERED_EXISTING_AUTHORITY",
+      "risk": "P2",
+      "removal_target": "KEEP"
+    },
+    {
+      "id": "RA-014",
+      "path": "apps/server/src/domain/approval/recommendation_approval_decision_builder_v1.ts",
+      "snapshot_scope": [
+        "MAIN"
+      ],
+      "entrypoints": [
+        "approval decision route"
+      ],
+      "activation_mode": "LOCAL_DIRECT_CALL",
+      "writes": [],
+      "reads": [
+        "decision_recommendation_v1",
+        "approval request"
+      ],
+      "semantic_family": [
+        "decision.approval_decision"
+      ],
+      "authority_class": "APPROVAL_DECISION_BUILDER",
+      "representation": "CURRENT_AUTHORITY_HELPER",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "operation plan builder"
+      ],
+      "ownership_registration": "NOT_EXPLICIT_IN_BLINE_REGISTER",
+      "finding": "REVERSE_SCAN_DISCOVERED_REQUIRES_CLASSIFICATION",
+      "risk": "P1",
+      "removal_target": "REGISTER_KEEP"
+    },
+    {
+      "id": "RA-015",
+      "path": "apps/server/src/routes/control_approval_request_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "approval request/decision APIs"
+      ],
+      "activation_mode": "API_ONLY",
+      "writes": [
+        "approval_request_v1",
+        "approval_decision_v1",
+        "operation_plan_v1 compatibility path"
+      ],
+      "reads": [
+        "decision_recommendation_v1"
+      ],
+      "semantic_family": [
+        "decision.approval_request",
+        "decision.approval_decision",
+        "operation.plan"
+      ],
+      "authority_class": "CURRENT_APPROVAL_AUTHORITY",
+      "representation": "MAINLINE_RUNTIME",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "operation plan/task chain"
+      ],
+      "ownership_registration": "EXISTING_PARTIAL",
+      "finding": "REGISTERED_EXISTING_AUTHORITY_NEEDS_SPLIT_REVIEW",
+      "risk": "P1",
+      "removal_target": "KEEP_WITH_EXACT_SEMANTIC_SPLIT"
+    },
+    {
+      "id": "RA-016",
+      "path": "apps/server/src/domain/operations/operation_plan_from_approval_decision_builder_v1.ts",
+      "snapshot_scope": [
+        "MAIN"
+      ],
+      "entrypoints": [
+        "approved-decision operation plan runtime"
+      ],
+      "activation_mode": "LOCAL_DIRECT_CALL",
+      "writes": [],
+      "reads": [
+        "approval_decision_v1",
+        "decision_recommendation_v1"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "authority_class": "APPROVAL_TO_PLAN_BUILDER",
+      "representation": "CURRENT_AUTHORITY_HELPER",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "control_operation_plan/runtime"
+      ],
+      "ownership_registration": "ABSENT_FROM_BLINE_REGISTER",
+      "finding": "REVERSE_SCAN_DISCOVERED_REQUIRES_REGISTRATION",
+      "risk": "P1",
+      "removal_target": "REGISTER_KEEP"
+    },
+    {
+      "id": "RA-017",
+      "path": "apps/server/src/routes/control_operation_plan_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "operation plan APIs"
+      ],
+      "activation_mode": "API_ONLY",
+      "writes": [
+        "operation_plan_v1",
+        "operation_plan_transition_v1"
+      ],
+      "reads": [
+        "approval decisions/plan state"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "authority_class": "CURRENT_PLAN_PATH",
+      "representation": "MAINLINE_RUNTIME",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "AO-ACT task builder"
+      ],
+      "ownership_registration": "EXISTING",
+      "finding": "REGISTERED_EXISTING_AUTHORITY",
+      "risk": "P2",
+      "removal_target": "KEEP"
+    },
+    {
+      "id": "RA-018",
+      "path": "apps/server/src/domain/controlplane/ao_act_task_from_operation_plan_builder_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "task-from-ready-plan runtime"
+      ],
+      "activation_mode": "LOCAL_DIRECT_CALL",
+      "writes": [],
+      "reads": [
+        "operation_plan_v1",
+        "approval_request_v1"
+      ],
+      "semantic_family": [
+        "execution.task"
+      ],
+      "authority_class": "TASK_BUILDER",
+      "representation": "CURRENT_AUTHORITY_HELPER",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "task_service/control_ao_act"
+      ],
+      "ownership_registration": "NOT_EXPLICIT_IN_COLLAPSED_REGISTER",
+      "finding": "REVERSE_SCAN_DISCOVERED_REQUIRES_REGISTRATION",
+      "risk": "P1",
+      "removal_target": "REGISTER_KEEP"
+    },
+    {
+      "id": "RA-019",
+      "path": "apps/server/src/domain/controlplane/task_service.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "AO-ACT controlplane"
+      ],
+      "activation_mode": "API_ONLY",
+      "writes": [
+        "ao_act_task_v0",
+        "approval/plan/acceptance compatibility facts"
+      ],
+      "reads": [
+        "approval_decision_v1",
+        "operation_plan_v1"
+      ],
+      "semantic_family": [
+        "execution.task"
+      ],
+      "authority_class": "CURRENT_TASK_AUTHORITY",
+      "representation": "MAINLINE_RUNTIME",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "control_ao_act",
+        "executor"
+      ],
+      "ownership_registration": "EXISTING",
+      "finding": "REGISTERED_EXISTING_AUTHORITY",
+      "risk": "P2",
+      "removal_target": "KEEP"
+    },
+    {
+      "id": "RA-020",
+      "path": "apps/server/src/domain/controlplane/ao_act_receipt_from_task_builder_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "receipt-from-task route"
+      ],
+      "activation_mode": "LOCAL_DIRECT_CALL",
+      "writes": [],
+      "reads": [
+        "task/plan/recommendation context"
+      ],
+      "semantic_family": [
+        "execution.receipt"
+      ],
+      "authority_class": "RECEIPT_BUILDER",
+      "representation": "CURRENT_AUTHORITY_HELPER",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "control_ao_act receipt persistence"
+      ],
+      "ownership_registration": "EXISTING_COLLAPSED",
+      "finding": "REGISTERED_EXISTING_AUTHORITY_NEEDS_SPLIT",
+      "risk": "P1",
+      "removal_target": "REGISTER_UNDER_RECEIPT_FAMILY"
+    },
+    {
+      "id": "RA-021",
+      "path": "apps/server/src/domain/execution/as_executed_from_ao_act_receipt_v1.ts",
+      "snapshot_scope": [
+        "MAIN"
+      ],
+      "entrypoints": [
+        "as-executed materialization"
+      ],
+      "activation_mode": "LOCAL_DIRECT_CALL",
+      "writes": [],
+      "reads": [
+        "ao_act_receipt_v0"
+      ],
+      "semantic_family": [
+        "execution.as_executed"
+      ],
+      "authority_class": "RECEIPT_TO_AS_EXECUTED_BUILDER",
+      "representation": "DERIVED_EXECUTION_RECORD",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "as_executed route/evidence/acceptance"
+      ],
+      "ownership_registration": "ABSENT_FROM_BLINE_REGISTER",
+      "finding": "REVERSE_SCAN_DISCOVERED_REQUIRES_REGISTRATION",
+      "risk": "P1",
+      "removal_target": "REGISTER_KEEP"
+    },
+    {
+      "id": "RA-022",
+      "path": "apps/server/src/domain/execution/as_executed_v1.ts",
+      "snapshot_scope": [
+        "MAIN"
+      ],
+      "entrypoints": [
+        "as-executed service/routes"
+      ],
+      "activation_mode": "LOCAL_DIRECT_CALL",
+      "writes": [
+        "as_executed relational records"
+      ],
+      "reads": [
+        "prescription/receipt/task"
+      ],
+      "semantic_family": [
+        "execution.as_executed"
+      ],
+      "authority_class": "AS_EXECUTED_MATERIALIZER",
+      "representation": "DERIVED_EXECUTION_RECORD",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "acceptance/evidence/ROI"
+      ],
+      "ownership_registration": "ABSENT_FROM_BLINE_REGISTER",
+      "finding": "REVERSE_SCAN_DISCOVERED_REQUIRES_CLASSIFICATION",
+      "risk": "P1",
+      "removal_target": "REGISTER_KEEP"
+    },
+    {
+      "id": "RA-023",
+      "path": "apps/server/src/domain/acceptance/acceptance_result_from_evidence_artifacts_v1.ts",
+      "snapshot_scope": [
+        "MAIN"
+      ],
+      "entrypoints": [
+        "acceptance runtime"
+      ],
+      "activation_mode": "LOCAL_DIRECT_CALL",
+      "writes": [],
+      "reads": [
+        "as_executed/evidence artifacts"
+      ],
+      "semantic_family": [
+        "acceptance.verdict"
+      ],
+      "authority_class": "ACCEPTANCE_RESULT_BUILDER",
+      "representation": "CURRENT_ACCEPTANCE_HELPER",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "acceptance route/ROI/memory"
+      ],
+      "ownership_registration": "ABSENT_FROM_BLINE_REGISTER",
+      "finding": "REVERSE_SCAN_DISCOVERED_REQUIRES_REGISTRATION",
+      "risk": "P1",
+      "removal_target": "REGISTER_KEEP"
+    },
+    {
+      "id": "RA-024",
+      "path": "apps/server/src/routes/acceptance_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "acceptance APIs"
+      ],
+      "activation_mode": "API_ONLY",
+      "writes": [
+        "acceptance_result_v1"
+      ],
+      "reads": [
+        "ao_act_task_v0",
+        "ao_act_receipt_v0",
+        "operation plan/as-executed evidence"
+      ],
+      "semantic_family": [
+        "acceptance.verdict"
+      ],
+      "authority_class": "CURRENT_ACCEPTANCE_RUNTIME",
+      "representation": "MAINLINE_RUNTIME",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "field memory/ROI/verification"
+      ],
+      "ownership_registration": "EXISTING_UNDER_POST_ACCEPTANCE_FAMILY",
+      "finding": "REGISTERED_BUT_SEMANTIC_FAMILY_TOO_COARSE",
+      "risk": "P1",
+      "removal_target": "SPLIT_ACCEPTANCE_FAMILY"
+    },
+    {
+      "id": "RA-025",
+      "path": "apps/server/src/services/field_memory_service.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "post-acceptance field memory flows"
+      ],
+      "activation_mode": "LOCAL_DIRECT_CALL",
+      "writes": [
+        "field_memory_v1"
+      ],
+      "reads": [
+        "acceptance/receipt/outcome context"
+      ],
+      "semantic_family": [
+        "outcome.memory"
+      ],
+      "authority_class": "FIELD_MEMORY_WRITER",
+      "representation": "POST_ACCEPTANCE_RUNTIME",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "reports/operator learning"
+      ],
+      "ownership_registration": "CONSUMER_ONLY_EXISTING",
+      "finding": "AUTHORITY_WRITER_UNDER_REGISTERED",
+      "risk": "P1",
+      "removal_target": "REGISTER_KEEP"
+    },
+    {
+      "id": "RA-026",
+      "path": "apps/server/src/domain/roi/roi_ledger_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "ROI routes/services"
+      ],
+      "activation_mode": "LOCAL_DIRECT_CALL",
+      "writes": [
+        "roi_ledger_v1"
+      ],
+      "reads": [
+        "prescription/as_executed/acceptance/cost"
+      ],
+      "semantic_family": [
+        "outcome.roi"
+      ],
+      "authority_class": "ROI_LEDGER_WRITER",
+      "representation": "POST_ACCEPTANCE_RUNTIME",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "reports/operator learning"
+      ],
+      "ownership_registration": "ABSENT_EXPLICIT_SEMANTIC",
+      "finding": "AUTHORITY_WRITER_UNDER_REGISTERED",
+      "risk": "P1",
+      "removal_target": "REGISTER_KEEP"
+    },
+    {
+      "id": "RA-027",
+      "path": "apps/server/src/domain/soil_water/root_zone_soil_water_forecast_builder_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "root-zone acceptance/operator twin paths"
+      ],
+      "activation_mode": "TEST_OR_OPERATOR_PATH",
+      "writes": [],
+      "reads": [
+        "soil-water state/weather forcing"
+      ],
+      "semantic_family": [
+        "twin.forecast"
+      ],
+      "authority_class": "LEGACY_FORECAST_BUILDER",
+      "representation": "LEGACY_OR_ACCEPTANCE_LIBRARY",
+      "runtime_reachable": "REQUIRES_REACHABILITY_RECHECK",
+      "feature_flag": false,
+      "downstream_consumers": [
+        "scenario builder/operator twin"
+      ],
+      "ownership_registration": "EXISTING_AS_ACCEPTANCE_LIBRARY",
+      "finding": "REGISTERED_BUT_REACHABILITY_REAUDIT_REQUIRED",
+      "risk": "P1",
+      "removal_target": "WAIT_MCFT"
+    },
+    {
+      "id": "RA-028",
+      "path": "apps/server/src/domain/soil_water/root_zone_irrigation_scenario_builder_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "root-zone scenario paths"
+      ],
+      "activation_mode": "TEST_OR_OPERATOR_PATH",
+      "writes": [],
+      "reads": [
+        "root_zone_soil_water_forecast_v1"
+      ],
+      "semantic_family": [
+        "twin.scenario"
+      ],
+      "authority_class": "LEGACY_SCENARIO_BUILDER",
+      "representation": "LEGACY_OR_ACCEPTANCE_LIBRARY",
+      "runtime_reachable": "REQUIRES_REACHABILITY_RECHECK",
+      "feature_flag": false,
+      "downstream_consumers": [
+        "scenario recommendation submission"
+      ],
+      "ownership_registration": "EXISTING_AS_ACCEPTANCE_LIBRARY",
+      "finding": "REGISTERED_BUT_REACHABILITY_REAUDIT_REQUIRED",
+      "risk": "P1",
+      "removal_target": "WAIT_MCFT"
+    },
+    {
+      "id": "RA-029",
+      "path": "apps/server/src/domain/decision_engine_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "none confirmed"
+      ],
+      "activation_mode": "NOT_REFERENCED",
+      "writes": [],
+      "reads": [
+        "decision input structure"
+      ],
+      "semantic_family": [
+        "decision.calculation"
+      ],
+      "authority_class": "ORPHANED_CAPABILITY",
+      "representation": "ORPHANED",
+      "runtime_reachable": false,
+      "feature_flag": false,
+      "downstream_consumers": [],
+      "ownership_registration": "EXISTING",
+      "finding": "REGISTERED_ORPHANED",
+      "risk": "P3",
+      "removal_target": "B-09"
+    },
+    {
+      "id": "RA-030",
+      "path": "apps/server/src/domain/operation_reconciliation/external_operation_source_evidence_v1.ts",
+      "snapshot_scope": [
+        "DEERE_PR_3346"
+      ],
+      "entrypoints": [
+        "Deere adapter PR only"
+      ],
+      "activation_mode": "NOT_IN_CURRENT_ANCESTRY",
+      "writes": [],
+      "reads": [
+        "external operation normalized input"
+      ],
+      "semantic_family": [
+        "external.operation_source",
+        "evidence.raw_observation"
+      ],
+      "authority_class": "SOURCE_EVIDENCE_CONTRACT",
+      "representation": "SOURCE_EVIDENCE_ONLY",
+      "runtime_reachable": false,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "future reconciliation only"
+      ],
+      "ownership_registration": "NOT_APPLICABLE_ACTIVE_PR",
+      "finding": "ACTIVE_PR_BOUNDARY_HEALTHY",
+      "risk": "P2",
+      "finding_detail": "PR explicitly forbids direct Receipt/Acceptance/Twin/CanonicalObservation promotion.",
+      "removal_target": "REGISTER_ON_INTEGRATION"
+    },
+    {
+      "id": "RA-031",
+      "path": "apps/server/src/adapters/external_operations/john_deere/deere_field_operation_adapter_v1.ts",
+      "snapshot_scope": [
+        "DEERE_PR_3346"
+      ],
+      "entrypoints": [
+        "John Deere external-operation adapter"
+      ],
+      "activation_mode": "NOT_IN_CURRENT_ANCESTRY",
+      "writes": [],
+      "reads": [
+        "John Deere FieldOperation payload"
+      ],
+      "semantic_family": [
+        "external.operation_source"
+      ],
+      "authority_class": "EXTERNAL_SOURCE_ADAPTER",
+      "representation": "ADAPTER_SOURCE_ONLY",
+      "runtime_reachable": false,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "ExternalOperationSourceEvidenceV1"
+      ],
+      "ownership_registration": "NOT_APPLICABLE_ACTIVE_PR",
+      "finding": "ACTIVE_PR_BOUNDARY_HEALTHY",
+      "risk": "P2",
+      "removal_target": "REGISTER_ON_INTEGRATION"
+    },
+    {
+      "id": "RA-032",
+      "path": "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts",
+      "snapshot_scope": [
+        "MAIN",
+        "BLINE"
+      ],
+      "entrypoints": [
+        "legacy operator twin write route"
+      ],
+      "activation_mode": "ALWAYS",
+      "writes": [
+        "decision_recommendation_v1 legacy scenario writer"
+      ],
+      "reads": [
+        "operator twin inputs"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "ACTIVE_LEGACY_WRITER",
+      "representation": "LEGACY_WRITER",
+      "runtime_reachable": true,
+      "feature_flag": false,
+      "downstream_consumers": [
+        "operator/approval chain"
+      ],
+      "ownership_registration": "EXISTING",
+      "finding": "REGISTERED_EXISTING_LEGACY",
+      "risk": "P1",
+      "removal_target": "B-09"
+    }
+  ],
+  "confirmed_summary": {
+    "confirmed_semantic_defects": [
+      "RA-001",
+      "RA-009"
+    ],
+    "confirmed_authority_ambiguity": [
+      "RA-002"
+    ],
+    "confirmed_under_registered_healthy": [
+      "RA-007",
+      "RA-008",
+      "RA-010",
+      "RA-030",
+      "RA-031"
+    ],
+    "confirmed_under_registered_runtime": [
+      "RA-003",
+      "RA-004",
+      "RA-012",
+      "RA-016",
+      "RA-018",
+      "RA-021",
+      "RA-023",
+      "RA-025",
+      "RA-026"
+    ],
+    "current_main_and_bline_must_both_be_scanned": true
+  },
+  "closure_rule": {
+    "exhaustive_only_when_reverse_scanner_passes": true,
+    "ownership_register_updates_deferred_to_next_package": true,
+    "authority_removal_forbidden": true,
+    "behavior_change_forbidden": true
+  }
+}
