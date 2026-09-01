@@ -191,6 +191,18 @@ function main(): void {
   assert.equal(evidenceSource.includes("composeEvidenceRuntimeV1"), true);
   assert.equal(evidenceSource.includes("lease_repository.releaseLease"), true);
   assert.equal(
+    distWriter.includes('path.join("runtime", "mcft_cap09_evidence_runtime.js")'),
+    true,
+  );
+  assert.equal(
+    distWriter.includes("runMcftCap09EvidenceRuntimeProcessV1"),
+    true,
+  );
+  assert.equal(
+    distWriter.includes("MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"),
+    true,
+  );
+  assert.equal(
     distWriter.includes('path.join("runtime", "mcft_cap09_twin_runtime.js")'),
     true,
   );
@@ -214,6 +226,8 @@ function main(): void {
     evidence_graceful_current_fence_release: true,
     twin_duplicate_coordination_contention_retryable: true,
     twin_stale_fence_corruption_fatal: true,
+    stable_compiled_evidence_entrypoint: true,
+    evidence_entrypoint_fail_closed_without_target_planner: true,
     stable_compiled_twin_entrypoint: true,
     test_script_dependency_in_product_process: false,
     production_owner_cutover: false,

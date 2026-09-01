@@ -28,6 +28,14 @@ runJobsRuntime().catch((error) => {
 `,
   },
   {
+    name: path.join("runtime", "mcft_cap09_evidence_runtime.js"),
+    content: `import { runMcftCap09EvidenceRuntimeProcessV1 } from "../apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.js";
+
+void runMcftCap09EvidenceRuntimeProcessV1;
+throw new Error("MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND");
+`,
+  },
+  {
     name: path.join("runtime", "mcft_cap09_twin_runtime.js"),
     content: `import { runMcftCap09TwinRuntimeProcessV1 } from "../apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.js";
 

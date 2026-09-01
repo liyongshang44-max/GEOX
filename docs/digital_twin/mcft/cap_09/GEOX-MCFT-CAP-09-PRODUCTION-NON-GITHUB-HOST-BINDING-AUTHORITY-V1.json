@@ -92,7 +92,7 @@
     "container_or_runtime_start_authorized": false,
     "local_24h_host_preflight_required": true,
     "local_24h_host_preflight_status": "NOT_PROVEN",
-    "evidence_production_compiled_entrypoint_status": "MISSING",
+    "evidence_production_compiled_entrypoint_status": "PACKAGED_FAIL_CLOSED_TARGET_PLANNER_UNBOUND",
     "evidence_production_target_planner_status": "NOT_BOUND"
   },
   "non_effects": {
@@ -187,7 +187,8 @@
     "BIND_RENDER_WORKSPACE_OWNER_ID",
     "AUTHORIZE_RENDER_INERT_IDENTITY_BOOTSTRAP",
     "RETIRE_RENDER_EXECUTION_PATH_HTTP_402_NO_SERVICE_CREATED",
-    "AUTHORIZE_LOCAL_OPERATOR_MANAGED_DOCKER_HOST"
+    "AUTHORIZE_LOCAL_OPERATOR_MANAGED_DOCKER_HOST",
+    "PACKAGE_EVIDENCE_PRODUCTION_ENTRYPOINT_FAIL_CLOSED"
   ],
   "platform_evaluation": {
     "evaluated_at": "2026-09-01",
@@ -394,8 +395,10 @@
       "execution_class": "LONG_RUNNING_SERVICE",
       "runtime_role": "EVIDENCE_RUNTIME",
       "production_process_factory": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
-      "compiled_entrypoint_status": "MISSING",
-      "target_planner_status": "NOT_BOUND"
+      "compiled_entrypoint_status": "PACKAGED_FAIL_CLOSED_TARGET_PLANNER_UNBOUND",
+      "target_planner_status": "NOT_BOUND",
+      "compiled_entrypoint": "apps/server/dist/runtime/mcft_cap09_evidence_runtime.js",
+      "compiled_entrypoint_fail_closed_code": "MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"
     },
     "twin_runtime": {
       "service_name": "geox-mcft-cap09-twin-runtime-v1",

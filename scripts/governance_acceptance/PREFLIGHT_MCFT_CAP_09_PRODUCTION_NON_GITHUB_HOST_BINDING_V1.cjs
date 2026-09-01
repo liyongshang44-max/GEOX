@@ -31,6 +31,7 @@ try{
   req(local?.host_id_scheme==="GEOX_LOCAL_HOST_UUID_V1"&&local?.host_id_state_file==="~/.geox/mcft-cap09/local-host-id-v1","LOCAL_HOST_ID_SCHEME_REQUIRED");
   req(local?.container_id_is_authority===false&&local?.compose_project_name==="geox-mcft-cap09-production-v1","LOCAL_HOST_STABLE_IDENTITY_CONTRACT_REQUIRED");
   req(local?.evidence_runtime?.service_name==="geox-mcft-cap09-evidence-runtime-v1"&&local?.evidence_runtime?.runtime_role==="EVIDENCE_RUNTIME"&&local?.evidence_runtime?.execution_class==="LONG_RUNNING_SERVICE","LOCAL_EVIDENCE_SERVICE_CONTRACT_REQUIRED");
+  req(local?.evidence_runtime?.compiled_entrypoint==="apps/server/dist/runtime/mcft_cap09_evidence_runtime.js"&&local?.evidence_runtime?.compiled_entrypoint_status==="PACKAGED_FAIL_CLOSED_TARGET_PLANNER_UNBOUND"&&local?.evidence_runtime?.compiled_entrypoint_fail_closed_code==="MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"&&local?.evidence_runtime?.target_planner_status==="NOT_BOUND","LOCAL_EVIDENCE_PACKAGING_BOUNDARY_REQUIRED");
   req(local?.twin_runtime?.service_name==="geox-mcft-cap09-twin-runtime-v1"&&local?.twin_runtime?.runtime_role==="TWIN_RUNTIME"&&local?.twin_runtime?.execution_class==="LONG_RUNNING_SERVICE","LOCAL_TWIN_SERVICE_CONTRACT_REQUIRED");
   req(local?.lifecycle_contract?.continuous_operator_window_hours===24&&local?.lifecycle_contract?.host_sleep_forbidden===true&&local?.lifecycle_contract?.docker_engine_must_remain_running===true&&local?.lifecycle_contract?.restart_policy_required==="unless-stopped","LOCAL_24H_LIFECYCLE_CONTRACT_REQUIRED");
   const render=a.render_candidate_binding_contract;
@@ -70,7 +71,6 @@ try{
       "LOCAL_24H_HOST_PREFLIGHT_NOT_PROVEN",
       "NON_GITHUB_HOST_BINDING_NOT_COMPLETE"
     ]:[
-      "EVIDENCE_PRODUCTION_COMPILED_ENTRYPOINT_NOT_PACKAGED",
       "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
       "LOCAL_24H_HOST_PREFLIGHT_NOT_PROVEN"
     ],

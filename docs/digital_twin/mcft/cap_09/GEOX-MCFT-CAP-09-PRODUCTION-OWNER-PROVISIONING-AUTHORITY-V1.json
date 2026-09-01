@@ -187,7 +187,7 @@
     "host_identity_binding_authorized": true,
     "local_24h_host_preflight_required": true,
     "local_24h_host_preflight_status": "NOT_PROVEN",
-    "evidence_production_compiled_entrypoint_status": "MISSING",
+    "evidence_production_compiled_entrypoint_status": "PACKAGED_FAIL_CLOSED_TARGET_PLANNER_UNBOUND",
     "evidence_production_target_planner_status": "NOT_BOUND",
     "render_path_status": "RETIRED_HTTP_402_NO_SERVICE_CREATED"
   },
