@@ -4608,6 +4608,1064 @@
       "b02_registered": false,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "audit_note": "Prescription is an action specification boundary; candidate semantics are compatibility provenance, not final decision owner."
+    },
+    {
+      "surface_id": "RES-179",
+      "source_path": "apps/server/src/domain/agronomy/engine.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "context.crop_stage"
+      ],
+      "authority_class": "ACTIVE_AGRONOMY_ENGINE_CONSUMER_OF_LEGACY_STAGE_RULES",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep as recommendation composition only until legacy stage authority is replaced",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "generateAgronomyRecommendation calls rule_engine.evaluateRules; it consumes AgronomyContext/stage semantics and does not itself establish canonical crop-stage authority."
+    },
+    {
+      "surface_id": "RES-180",
+      "source_path": "apps/server/src/routes/dashboard_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "context.crop_stage"
+      ],
+      "authority_class": "PROJECTION_CALLSITE_TO_LEGACY_STAGE_POLICY_SUGGESTIONS",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep dashboard projection-only; never treat dashboard policy suggestions as Context authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Dashboard calls buildPolicySuggestionsFromStats; B02 classifies dashboard as PROJECTION_ONLY."
+    },
+    {
+      "surface_id": "RES-181",
+      "source_path": "apps/server/src/domain/approval/recommendation_approval_request_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "decision.approval"
+      ],
+      "authority_class": "CURRENT_APPROVAL_REQUEST_BUILDER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep as canonical Approval request boundary consumer of Candidate",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Pure builder transforms candidate/recommendation input to ApprovalRequest payload; this is Approval authority, not Candidate authority."
+    },
+    {
+      "surface_id": "RES-182",
+      "source_path": "apps/server/src/domain/controlplane/ao_act_receipt_from_task_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "decision.approval"
+      ],
+      "authority_class": "DOWNSTREAM_RECEIPT_APPROVAL_PROVENANCE_VALIDATOR_NOT_APPROVAL_OWNER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep downstream validation; no new Approval authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Receipt builder checks approved-task lineage; approval references are provenance preconditions, not an ApprovalDecision producer."
+    },
+    {
+      "surface_id": "RES-183",
+      "source_path": "apps/server/src/domain/controlplane/ao_act_task_from_operation_plan_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "decision.approval"
+      ],
+      "authority_class": "TASK_BUILDER_APPROVAL_PROVENANCE_CONSUMER_NOT_APPROVAL_OWNER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep Plan->Task builder downstream of Approval",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Builder consumes an approved/ready plan lineage; approval semantics are provenance, not a new approval verdict."
+    },
+    {
+      "surface_id": "RES-184",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "decision.approval"
+      ],
+      "authority_class": "LEGACY_EXECUTION_ORCHESTRATOR_APPROVAL_TOUCHPOINT",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Converge approval transitions behind canonical Approval service; execution runtime must not mint independent approval truth",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Active task_service contains approval/request/decision orchestration touchpoints inside the large AO-ACT runtime."
+    },
+    {
+      "surface_id": "RES-185",
+      "source_path": "apps/server/src/domain/operations/operation_plan_from_approval_decision_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "decision.approval"
+      ],
+      "authority_class": "APPROVAL_DECISION_TO_PLAN_CONSUMER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep explicit ApprovedDecision -> OperationPlan boundary",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Builder requires approved decision and creates Plan; it consumes Approval authority rather than creating a second Approval authority."
+    },
+    {
+      "surface_id": "RES-186",
+      "source_path": "apps/server/src/domain/controlplane/ao_act_receipt_from_task_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "authority_class": "RECEIPT_TO_PLAN_LIFECYCLE_TOUCHPOINT",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep receipt-driven plan transition only after exact Receipt semantics; remove cross-family status conflation",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Receipt builder can affect plan lifecycle/index after execution evidence; plan semantics must remain downstream of exact receipt."
+    },
+    {
+      "surface_id": "RES-187",
+      "source_path": "apps/server/src/domain/controlplane/ao_act_task_from_operation_plan_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "authority_class": "PLAN_TO_TASK_CONSUMER_NOT_PLAN_OWNER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep Plan->Task builder; Plan must already exist in correct pre-dispatch state",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Task builder consumes OperationPlan and must not create/upgrade Plan authority."
+    },
+    {
+      "surface_id": "RES-188",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "authority_class": "ACTIVE_LEGACY_PLAN_LIFECYCLE_ORCHESTRATOR",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep runtime but converge Plan lifecycle; Task creation must not imply ACKED/EXECUTING",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "task_service has active Plan lifecycle orchestration mixed with Task/Receipt behavior."
+    },
+    {
+      "surface_id": "RES-189",
+      "source_path": "apps/server/src/domain/decision/operation_plan_authority_candidate_adapter_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "authority_class": "PLAN_AUTHORITY_CLASSIFIER_COMPATIBILITY_ADAPTER",
+      "runtime_reachable": "INTENTIONAL_NONE",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep exact classifier capability island; no runtime Plan mutation",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B-06f classifies legacy operation_plan provenance to decide whether candidate projection is legal; it is not a Plan writer."
+    },
+    {
+      "surface_id": "RES-190",
+      "source_path": "apps/server/src/domain/execution/as_executed_from_ao_act_receipt_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "authority_class": "AS_EXECUTED_PLAN_PROVENANCE_CONSUMER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep Plan reference as provenance only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "AsExecuted builder carries operation-plan identity from Receipt lineage; it does not own Plan lifecycle."
+    },
+    {
+      "surface_id": "RES-191",
+      "source_path": "apps/server/src/routes/alerts_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "authority_class": "ALERT_OPERATION_RELATION_CALLSITE_NOT_PLAN_LIFECYCLE_OWNER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep alert-operation relation explicit; no alert action may advance Plan lifecycle",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Alert route calls alert_workflow relation/upsert helpers; this links alerts to operations but must not become canonical OperationPlan lifecycle authority."
+    },
+    {
+      "surface_id": "RES-192",
+      "source_path": "apps/server/src/domain/controlplane/ao_act_receipt_from_task_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.receipt"
+      ],
+      "authority_class": "CURRENT_RECEIPT_BUILDER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep exact Task->Receipt construction boundary",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02 already identifies this as CURRENT_RECEIPT_HELPER."
+    },
+    {
+      "surface_id": "RES-193",
+      "source_path": "apps/server/src/domain/execution/as_executed_from_ao_act_receipt_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.receipt"
+      ],
+      "authority_class": "RECEIPT_CONSUMER_TO_AS_EXECUTED",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep canonical Receipt -> AsExecuted adapter",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Receipt is input provenance; output authority is AsExecuted."
+    },
+    {
+      "surface_id": "RES-194",
+      "source_path": "apps/server/src/routes/as_executed_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.receipt"
+      ],
+      "authority_class": "AS_EXECUTED_ROUTE_RECEIPT_CONSUMER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep route as canonical Receipt -> AsExecuted facade",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Route validates/loads Receipt to create AsExecuted; does not mint independent Receipt truth."
+    },
+    {
+      "surface_id": "RES-195",
+      "source_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.receipt"
+      ],
+      "authority_class": "LEGACY_RECEIPT_WRITE_COMPATIBILITY_SURFACE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Move receipt creation to canonical AO-ACT Receipt service and retire decision-engine receipt write path",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Active decision facade still contains /actions/receipt/from-task and receipt persistence; this is real duplicate execution authority debt."
+    },
+    {
+      "surface_id": "RES-196",
+      "source_path": "apps/server/src/services/field_memory_service.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.receipt"
+      ],
+      "authority_class": "FIELD_MEMORY_RECEIPT_PROVENANCE_CONSUMER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep exact Receipt binding only; no Receipt authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Field Memory uses exact receipt/operation provenance after #3436 hardening; it consumes Receipt authority."
+    },
+    {
+      "surface_id": "RES-197",
+      "source_path": "apps/server/src/domain/controlplane/ao_act_receipt_from_task_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.task"
+      ],
+      "authority_class": "RECEIPT_BUILDER_TASK_PROVENANCE_CONSUMER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep Receipt downstream of exact Task identity",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Task references are immutable receipt provenance, not Task production."
+    },
+    {
+      "surface_id": "RES-198",
+      "source_path": "apps/server/src/domain/execution/as_executed_from_ao_act_receipt_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.task"
+      ],
+      "authority_class": "AS_EXECUTED_TASK_PROVENANCE_CONSUMER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep Task lineage as provenance only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "AsExecuted builder carries Task lineage from Receipt; not a Task authority."
+    },
+    {
+      "surface_id": "RES-199",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.adapter_resolution"
+      ],
+      "authority_class": "ACTIVE_DEVICE_SKILL_CAPABILITY_RESOLUTION_CALLSITE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep typed adapter-resolution callsite; dispatch delivery remains separate",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "task_service calls resolveTaskCapabilityViaDeviceSkillsResult before execution routing."
+    },
+    {
+      "surface_id": "RES-200",
+      "source_path": "apps/server/src/domain/sensing/fertility_inference_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.adapter_resolution"
+      ],
+      "authority_class": "SCANNER_CROSS_FAMILY_OVERREACH_FERTILITY_INFERENCE_NOT_EXECUTION_ADAPTER_RESOLUTION",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep fertility inference under sensing/Evidence/State; do not classify it as execution adapter authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "The called device-skills functions infer fertility from observations; this is sensing inference, not task adapter selection."
+    },
+    {
+      "surface_id": "RES-201",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "twin.state"
+      ],
+      "authority_class": "SCANNER_CROSS_FAMILY_OVERREACH_DEVICE_CAPABILITY_RESOLUTION_NOT_TWIN_STATE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep execution capability resolution separate from canonical Twin State",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "The detector associates device-skills library with twin.state, but this callsite resolves task capability and does not establish field/twin state."
+    },
+    {
+      "surface_id": "RES-202",
+      "source_path": "apps/server/src/domain/sensing/run_sensing_inference_pipeline_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "twin.state"
+      ],
+      "authority_class": "ACTIVE_LEGACY_DERIVED_SENSING_STATE_PRODUCER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep as legacy/projection state until canonical Twin State port cutover; removal target B-09/post-MCFT as applicable",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02 classifies sensing inference pipeline as PROJECTION_OR_LEGACY derived-state producer."
+    },
+    {
+      "surface_id": "RES-203",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "twin.state"
+      ],
+      "authority_class": "SCANNER_CROSS_FAMILY_OVERREACH_EXECUTION_CAPABILITY_RESOLUTION_NOT_TWIN_STATE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep AO-ACT execution boundary; never treat device-skill resolution as canonical Twin State",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "control_ao_act calls device capability resolution; it is execution adapter selection, not a State producer."
+    },
+    {
+      "surface_id": "RES-204",
+      "source_path": "apps/server/src/domain/execution/as_executed_from_ao_act_receipt_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "action.prescription_spec"
+      ],
+      "authority_class": "AS_EXECUTED_PRESCRIPTION_SPEC_CONSUMER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep exact ActionSpecification provenance into AsExecuted",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Action spec is input/provenance; output authority is AsExecuted."
+    },
+    {
+      "surface_id": "RES-205",
+      "source_path": "apps/server/src/domain/roi/roi_ledger_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "action.prescription_spec"
+      ],
+      "authority_class": "ROI_ACTION_SPEC_PROVENANCE_CONSUMER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep ROI downstream of action spec + execution + outcome",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "ROI calculation may read prescribed action values but does not own ActionSpecification."
+    },
+    {
+      "surface_id": "RES-206",
+      "source_path": "apps/server/src/routes/as_executed_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "action.prescription_spec"
+      ],
+      "authority_class": "AS_EXECUTED_ROUTE_ACTION_SPEC_CONSUMER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep ActionSpecification input to canonical AsExecuted adapter",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Route consumes prescription/action spec to normalize actual execution; no ActionSpecification authority."
+    },
+    {
+      "surface_id": "RES-207",
+      "source_path": "apps/server/src/domain/roi/roi_ledger_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.as_executed"
+      ],
+      "authority_class": "ROI_AS_EXECUTED_CONSUMER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep ROI strictly downstream of AsExecuted/Outcome",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "ROI derives value/effect metrics from actual execution; no AsExecuted authority."
+    },
+    {
+      "surface_id": "RES-208",
+      "source_path": "apps/server/src/routes/acceptance_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.as_executed"
+      ],
+      "authority_class": "ACCEPTANCE_AS_EXECUTED_CONSUMER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep Acceptance downstream of AsExecuted/Evidence/Judge",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Acceptance route consumes execution evidence/AsExecuted; it must not redefine AsExecuted."
+    },
+    {
+      "surface_id": "RES-209",
+      "source_path": "apps/server/src/routes/water_response_verification_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.as_executed"
+      ],
+      "authority_class": "OUTCOME_VERIFICATION_AS_EXECUTED_CONSUMER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep OutcomeEvidence downstream of Acceptance + AsExecuted",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Water-response verification consumes execution evidence; it does not own AsExecuted."
+    },
+    {
+      "surface_id": "RES-210",
+      "source_path": "apps/server/src/domain/acceptance/evidence_policy.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "evidence.qualification"
+      ],
+      "authority_class": "FORMAL_EVIDENCE_POLICY_COMPATIBILITY_CALLSITE",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep single versioned formal evidence policy authority in formal_evidence_policy_v1",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Wrapper/callsite delegates qualification/admission semantics to evaluateFormalEvidencePolicyV1."
+    },
+    {
+      "surface_id": "RES-211",
+      "source_path": "apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "evidence.qualification"
+      ],
+      "authority_class": "ACTIVE_LEGACY_EVIDENCE_SUFFICIENCY_PLUS_CANONICAL_SHADOW_CONSUMER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep legacy sufficiency only until B-09; canonical qualification shadow remains separate",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02: Apple-II sufficiency is legacy authoritative while canonical EvidenceQualification shadow is carried alongside."
+    },
+    {
+      "surface_id": "RES-212",
+      "source_path": "apps/server/src/domain/sensing/run_sensing_inference_pipeline_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "evidence.qualification"
+      ],
+      "authority_class": "SENSING_INFERENCE_EVIDENCE_CONSUMER_CALLSITE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep qualified sensing inference boundary; do not equate inference with canonical EvidenceQualification producer",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Pipeline calls fertility inference over observation aggregates; qualification semantics remain explicit downstream."
+    },
+    {
+      "surface_id": "RES-213",
+      "source_path": "apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "evidence.qualification"
+      ],
+      "authority_class": "CANONICAL_EVIDENCE_QUALIFICATION_SHADOW_PROJECTION",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep B-04/B-03 shadow projection; activation authority remains separately governed",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02 explicitly classifies this as SHADOW_PROJECTION using established dimensions and marker-backed temporal availability."
+    },
+    {
+      "surface_id": "RES-214",
+      "source_path": "apps/server/src/projections/operation_evidence_summary_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "evidence.qualification"
+      ],
+      "authority_class": "EVIDENCE_SUMMARY_POLICY_CALLSITE_PROJECTION",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep as projection consuming versioned evidence policy; not an independent qualification policy",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Operation evidence summary invokes formal evidence policy to label/report evidence."
+    },
+    {
+      "surface_id": "RES-215",
+      "source_path": "packages/device-skills/src/index.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "evidence.qualification"
+      ],
+      "authority_class": "DEVICE_SKILL_INFERENCE_LIBRARY_NOT_CANONICAL_EVIDENCE_QUALIFICATION_OWNER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep typed inference library; canonical EvidenceQualification remains server Evidence authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Fertility inference APIs derive sensing/inference outputs; they do not establish canonical qualification verdict ownership."
+    },
+    {
+      "surface_id": "RES-216",
+      "source_path": "apps/server/src/domain/acceptance/evidence_policy.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "acceptance.verdict"
+      ],
+      "authority_class": "ACCEPTANCE_EVIDENCE_ADMISSION_POLICY_CALLSITE_NOT_VERDICT_OWNER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep evidence admission separate from final Acceptance engine",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Wrapper delegates formal evidence admissibility; it does not itself compute final Acceptance verdict."
+    },
+    {
+      "surface_id": "RES-217",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "acceptance.verdict"
+      ],
+      "authority_class": "ACTIVE_LEGACY_ACCEPTANCE_CREATION_IN_EXECUTION_RUNTIME",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Converge Acceptance creation into canonical Acceptance service; execution runtime must not own duplicate verdict authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "task_service contains createAcceptance/acceptance_result_v1 behavior inside AO-ACT runtime."
+    },
+    {
+      "surface_id": "RES-218",
+      "source_path": "apps/server/src/domain/planner/compiler_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "acceptance.verdict"
+      ],
+      "authority_class": "PLANNER_ACCEPTANCE_POLICY_REFERENCE_TOUCHPOINT_NOT_VERDICT_OWNER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep planner producing planning options only; Acceptance stays downstream of execution",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Planner carries acceptance/evidence policy references in CandidateAction/plan material but does not execute formal Acceptance evaluation."
+    },
+    {
+      "surface_id": "RES-219",
+      "source_path": "apps/server/src/domain/roi/roi_ledger_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "acceptance.verdict"
+      ],
+      "authority_class": "ROI_ACCEPTANCE_CONSUMER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep ROI downstream of canonical Acceptance/Outcome",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "ROI uses acceptance outcome/provenance; it cannot own Acceptance verdict."
+    },
+    {
+      "surface_id": "RES-220",
+      "source_path": "apps/server/src/projections/operation_evidence_summary_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "acceptance.verdict"
+      ],
+      "authority_class": "EVIDENCE_SUMMARY_ACCEPTANCE_POLICY_PROJECTION_CALLSITE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep projection-only evidence admission labels; final Acceptance belongs to engine",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Policy callsite supports read model/report semantics, not final acceptance."
+    },
+    {
+      "surface_id": "RES-221",
+      "source_path": "apps/server/src/routes/water_response_verification_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "acceptance.verdict"
+      ],
+      "authority_class": "OUTCOME_ROUTE_ACCEPTANCE_CONSUMER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep explicit Acceptance -> OutcomeEvidence boundary",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Route requires Acceptance as input to build water-response verification; no Acceptance verdict production."
+    },
+    {
+      "surface_id": "RES-222",
+      "source_path": "apps/server/src/services/field_memory_service.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "acceptance.verdict"
+      ],
+      "authority_class": "FIELD_MEMORY_ACCEPTANCE_CONSUMER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep exact Acceptance provenance; move semantic authority to Acceptance -> Outcome -> Memory formalization",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Field Memory formalization consumes accepted operation evidence; #3436 improved provenance but direct Acceptance->Memory boundary remains debt."
+    },
+    {
+      "surface_id": "RES-223",
+      "source_path": "apps/server/src/routes/judge_v2.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "context.snapshot"
+      ],
+      "authority_class": "B09Y_CONTEXT_SHADOW_CALLSITE_CONSUMER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep Judge historical verdict unchanged; context shadow remains separate B09y authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Judge route calls B09y exact boundary/context shadow builder and persists shadow output; route does not own ContextSnapshot authority."
+    },
+    {
+      "surface_id": "RES-224",
+      "source_path": "apps/server/src/routes/v1/operator_twin.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "twin.scenario"
+      ],
+      "authority_class": "LEGACY_OPERATOR_SCENARIO_CONSUMER_TO_CANDIDATE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep legacy scenario read/submit compatibility; scenario authority stays legacy Twin/MCFT-derived and candidate source binding must fail closed",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Operator Twin consumes ScenarioSet to build recommendation/candidate submission; it is not ScenarioSet authority."
     }
   ],
   "cross_branch_surfaces": [
