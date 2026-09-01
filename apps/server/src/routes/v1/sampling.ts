@@ -152,12 +152,20 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
       if (!receipt) return reply.status(404).send({ ok: false, error: "NOT_FOUND:sample_receipt" });
       const receiptRecord = receipt.record_json;
       if (!tenantMatchesAuth(receiptRecord, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+      const receiptPlanId = String(receiptRecord.plan_id ?? "").trim();
+      const receiptPlanFactId = String(receiptRecord.sampling_plan_fact_id ?? "").trim();
+      if (!receiptPlanId || !receiptPlanFactId) return badRequest(reply, "MISSING_EXACT:sample_receipt_plan_ref");
+      const plan = await service.findPlanById(receiptPlanId);
+      if (!plan) return reply.status(404).send({ ok: false, error: "NOT_FOUND:sampling_plan_v1" });
+      if (plan.fact_id !== receiptPlanFactId) return badRequest(reply, "MISMATCH:sampling_plan_fact_id");
+      if (!tenantMatchesAuth(plan.record_json, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+      if (String(plan.record_json.field_id ?? "") !== String(receiptRecord.field_id ?? "")) return badRequest(reply, "MISMATCH:plan_field_id");
 
       const created = await service.createLabResult({
         ...body,
         sample_receipt_fact_id: receipt.fact_id,
-        sampling_plan_fact_id: String(receiptRecord.sampling_plan_fact_id ?? ""),
-        plan_id: String(receiptRecord.plan_id ?? ""),
+        sampling_plan_fact_id: plan.fact_id,
+        plan_id: receiptPlanId,
         tenant_id: auth.tenant_id,
         project_id: auth.project_id,
         group_id: auth.group_id,
