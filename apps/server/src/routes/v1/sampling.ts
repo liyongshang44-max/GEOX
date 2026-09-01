@@ -129,7 +129,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     }
 
     try {
-      const created = await service.createReceipt(body);
+      const created = await service.createReceipt({ ...body, sampling_plan_fact_id: plan.fact_id });
       return reply.send({ ok: true, ...created, sampling_plan_fact_id: plan.fact_id });
     } catch (error) {
       return handleSamplingServiceError(reply, error);
@@ -156,6 +156,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
       const created = await service.createLabResult({
         ...body,
         sample_receipt_fact_id: receipt.fact_id,
+        sampling_plan_fact_id: String(receiptRecord.sampling_plan_fact_id ?? ""),
         plan_id: String(receiptRecord.plan_id ?? ""),
         tenant_id: auth.tenant_id,
         project_id: auth.project_id,
@@ -204,6 +205,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
 
       const receiptRecord = receipt.record_json;
       if (receiptRecord.plan_id !== body.plan_id) return badRequest(reply, "MISMATCH:plan_id");
+      if (receiptRecord.sampling_plan_fact_id !== plan.fact_id) return badRequest(reply, "MISMATCH:sampling_plan_fact_id");
       if (receiptRecord.sample_id !== body.sample_id) return badRequest(reply, "MISMATCH:sample_id");
       if (!tenantMatchesAuth(receiptRecord, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
       if (!tenantMatchesAuth(receiptRecord, planRecord)) return badRequest(reply, "MISMATCH:receipt_scope");
@@ -249,6 +251,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
       const labRecord = labResult.record_json;
       if (labRecord.sample_id !== body.sample_id) return badRequest(reply, "MISMATCH:sample_id");
       if (labRecord.sample_receipt_fact_id !== receipt.fact_id) return badRequest(reply, "MISMATCH:sample_receipt_fact_id");
+      if (labRecord.sampling_plan_fact_id !== plan.fact_id) return badRequest(reply, "MISMATCH:lab_sampling_plan_fact_id");
       if (labRecord.plan_id !== body.plan_id) return badRequest(reply, "MISMATCH:lab_plan_id");
 
       const quality = String(labRecord.quality_status ?? "").toUpperCase();
