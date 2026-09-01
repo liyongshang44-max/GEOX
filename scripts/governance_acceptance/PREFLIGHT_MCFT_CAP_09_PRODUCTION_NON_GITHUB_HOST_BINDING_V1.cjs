@@ -2,6 +2,8 @@
 
 const fs=require("node:fs");
 const path=require("node:path");
+const os=require("node:os");
+const cp=require("node:child_process");
 const ROOT=process.cwd();
 const AUTH=path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json");
 const OWNER=path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json");
@@ -12,6 +14,141 @@ const OUT=path.join(ROOT,"acceptance-output/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HO
 const j=p=>JSON.parse(fs.readFileSync(p,"utf8"));
 const req=(v,c)=>{if(!v)throw new Error(c)};
 const write=v=>{fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify(v,null,2)+"\n");console.log(JSON.stringify(v,null,2));};
+const LOCAL_OUT=path.join(ROOT,"acceptance-output/MCFT_CAP_09_LOCAL_OPERATOR_HOST_MACHINE_PREFLIGHT_V1_RESULT.json");
+const run=(exe,args)=>cp.execFileSync(exe,args,{encoding:"utf8",windowsHide:true}).trim();
+const safeRun=(exe,args)=>{
+  try{return {ok:true,stdout:run(exe,args),error:null};}
+  catch(error){return {ok:false,stdout:String(error?.stdout||"").trim(),error:error instanceof Error?error.message:String(error)};}
+};
+function runLocalMachineProbe(){
+  const expectedArg=process.argv.find((x)=>x.startsWith("--expected-subject="));
+  const expected=String(expectedArg?.slice("--expected-subject=".length)||"").trim().toLowerCase();
+  const blockers=[];
+  const add=(ok,code)=>{if(!ok)blockers.push(code);};
+
+  add(/^[0-9a-f]{40}$/.test(expected),"LOCAL_PREFLIGHT_EXPECTED_SUBJECT_SHA_REQUIRED");
+
+  const a=j(AUTH);
+  const local=a.local_operator_managed_host_contract||{};
+  const boundHostId=String(local.host_id||"").trim().toLowerCase();
+  add(a.status==="LOCAL_OPERATOR_MANAGED_DOCKER_HOST_IDENTITIES_BOUND","LOCAL_PREFLIGHT_BOUND_HOST_AUTHORITY_REQUIRED");
+  add(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(boundHostId),"LOCAL_PREFLIGHT_BOUND_HOST_UUID_REQUIRED");
+
+  const hostFile=path.join(os.homedir(),".geox","mcft-cap09","local-host-id-v1");
+  let observedHostId="";
+  try{observedHostId=fs.readFileSync(hostFile,"utf8").trim().toLowerCase();}
+  catch{}
+  add(observedHostId===boundHostId,"LOCAL_PREFLIGHT_HOST_ID_FILE_MISMATCH");
+
+  const gitHead=safeRun("git",["rev-parse","HEAD"]);
+  const gitBranch=safeRun("git",["branch","--show-current"]);
+  const gitStatus=safeRun("git",["status","--porcelain=v1"]);
+  add(gitHead.ok&&gitHead.stdout===expected,"LOCAL_PREFLIGHT_EXACT_SUBJECT_REQUIRED");
+  add(gitStatus.ok&&gitStatus.stdout.length===0,"LOCAL_PREFLIGHT_WORKTREE_MUST_BE_CLEAN");
+
+  const dockerVersion=safeRun("docker",["version","--format","{{json .Server}}"]);
+  let dockerServer=null;
+  if(dockerVersion.ok){try{dockerServer=JSON.parse(dockerVersion.stdout);}catch{}}
+  add(Boolean(dockerServer),"LOCAL_PREFLIGHT_DOCKER_DAEMON_REQUIRED");
+
+  const dockerInfoRaw=safeRun("docker",["info","--format","{{json .}}"]);
+  let dockerInfo=null;
+  if(dockerInfoRaw.ok){try{dockerInfo=JSON.parse(dockerInfoRaw.stdout);}catch{}}
+  add(Boolean(dockerInfo),"LOCAL_PREFLIGHT_DOCKER_INFO_REQUIRED");
+  add(!dockerInfo||String(dockerInfo.OSType||dockerInfo.OperatingSystem||"").toLowerCase().includes("linux"),"LOCAL_PREFLIGHT_LINUX_CONTAINER_ENGINE_REQUIRED");
+
+  const compose=safeRun("docker",["compose","version","--short"]);
+  add(compose.ok&&compose.stdout.length>0,"LOCAL_PREFLIGHT_DOCKER_COMPOSE_REQUIRED");
+
+  let power=null;
+  if(process.platform==="win32"){
+    const ps=[
+      "$ErrorActionPreference='Stop'",
+      "$m=[regex]::Match((powercfg /getactivescheme | Out-String),'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}')",
+      "if(-not $m.Success){throw 'ACTIVE_POWER_SCHEME_NOT_FOUND'}",
+      "$g=$m.Value",
+      "$k='HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\User\\PowerSchemes\\'+$g+'\\238C9FA8-0AAD-41ED-83F4-97BE242C8F20\\29f6c1db-86da-48c5-9fdb-f2b67b1f44da'",
+      "$v=Get-ItemProperty -LiteralPath $k",
+      "[pscustomobject]@{active_scheme=$g.ToLowerInvariant();ac_sleep_seconds=[int64]$v.ACSettingIndex;dc_sleep_seconds=[int64]$v.DCSettingIndex}|ConvertTo-Json -Compress"
+    ].join(";");
+    const p=safeRun("powershell.exe",["-NoProfile","-NonInteractive","-Command",ps]);
+    if(p.ok){try{power=JSON.parse(p.stdout);}catch{}}
+    add(Boolean(power),"LOCAL_PREFLIGHT_POWER_POLICY_READ_REQUIRED");
+    add(!power||Number(power.ac_sleep_seconds)===0,"LOCAL_PREFLIGHT_AC_SLEEP_MUST_BE_DISABLED");
+  }else{
+    blockers.push("LOCAL_PREFLIGHT_WINDOWS_HOST_REQUIRED");
+  }
+
+  const timeSource=process.platform==="win32"?safeRun("w32tm",["/query","/source"]):{ok:false,stdout:"",error:"WINDOWS_ONLY"};
+  const timeStatus=process.platform==="win32"?safeRun("w32tm",["/query","/status"]):{ok:false,stdout:"",error:"WINDOWS_ONLY"};
+  const source=String(timeSource.stdout||"").trim();
+  const sourceLower=source.toLowerCase();
+  add(timeSource.ok&&source.length>0,"LOCAL_PREFLIGHT_TIME_SOURCE_REQUIRED");
+  add(timeStatus.ok,"LOCAL_PREFLIGHT_TIME_STATUS_REQUIRED");
+  add(!sourceLower.includes("local cmos clock")&&!sourceLower.includes("free-running system clock"),"LOCAL_PREFLIGHT_NETWORK_TIME_SOURCE_REQUIRED");
+
+  let diskFreeGiB=null;
+  try{
+    if(typeof fs.statfsSync==="function"){
+      const s=fs.statfsSync(ROOT);
+      diskFreeGiB=Number((Number(s.bavail)*Number(s.bsize)/1024/1024/1024).toFixed(2));
+    }
+  }catch{}
+
+  const out={
+    schema_version:"geox_mcft_cap09_local_operator_host_machine_preflight_v1",
+    status:blockers.length===0?"PASS":"FAIL",
+    expected_subject_sha:expected||null,
+    observed_subject_sha:gitHead.ok?gitHead.stdout:null,
+    exact_subject_match:gitHead.ok&&gitHead.stdout===expected,
+    git_branch:gitBranch.ok?(gitBranch.stdout||"DETACHED"):null,
+    git_worktree_clean:gitStatus.ok&&gitStatus.stdout.length===0,
+    local_host_id_state_file:hostFile,
+    bound_host_id:boundHostId||null,
+    observed_host_id:observedHostId||null,
+    host_id_match:Boolean(boundHostId)&&observedHostId===boundHostId,
+    platform:process.platform,
+    architecture:process.arch,
+    os_release:os.release(),
+    cpu_count:os.cpus().length,
+    host_total_memory_gib:Number((os.totalmem()/1024/1024/1024).toFixed(2)),
+    host_free_memory_gib:Number((os.freemem()/1024/1024/1024).toFixed(2)),
+    repo_disk_free_gib:diskFreeGiB,
+    docker_daemon_available:Boolean(dockerServer),
+    docker_server_version:dockerServer?.Version??dockerServer?.VersionString??null,
+    docker_server_os:dockerInfo?.OSType??null,
+    docker_server_architecture:dockerInfo?.Architecture??null,
+    docker_server_cpu_count:dockerInfo?.NCPU??null,
+    docker_server_memory_gib:dockerInfo?.MemTotal?Number((Number(dockerInfo.MemTotal)/1024/1024/1024).toFixed(2)):null,
+    docker_compose_available:compose.ok&&compose.stdout.length>0,
+    docker_compose_version:compose.ok?compose.stdout:null,
+    active_power_scheme:power?.active_scheme??null,
+    ac_sleep_seconds:power?.ac_sleep_seconds??null,
+    dc_sleep_seconds:power?.dc_sleep_seconds??null,
+    windows_time_source:source||null,
+    windows_time_status_readable:timeStatus.ok,
+    system_utc_now:new Date().toISOString(),
+    blockers,
+    runtime_secret_read:false,
+    database_connection_attempted:false,
+    provider_request_count:0,
+    container_start_count:0,
+    runtime_process_start:false,
+    production_owner_activation:false,
+    formal_v5_arm:false,
+    a0_bootstrap:false,
+    o00_started:false
+  };
+  fs.mkdirSync(path.dirname(LOCAL_OUT),{recursive:true});
+  fs.writeFileSync(LOCAL_OUT,JSON.stringify(out,null,2)+"\n");
+  console.log(JSON.stringify(out,null,2));
+  process.exitCode=blockers.length===0?0:1;
+}
+
+if(process.argv.includes("--local-machine-probe")){
+  runLocalMachineProbe();
+  return;
+}
 try{
   const subject=String(process.env.SUBJECT_SHA||"");
   req(/^[0-9a-f]{40}$/.test(subject),"HOST_BINDING_SUBJECT_SHA_REQUIRED");
