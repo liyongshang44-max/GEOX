@@ -6,6 +6,7 @@ const cp=require("node:child_process");
 
 const CATALOG="docs/architecture/semantic_convergence/GEOX-B09AG-AUTHORITY-OBJECT-CATALOG-V1.json";
 const INVENTORY="docs/architecture/semantic_convergence/GEOX-B09AG-RESIDUAL-AUTHORITY-INVENTORY-V1.json";
+const OWNERSHIP="docs/architecture/semantic_convergence/GEOX-SEMANTIC-OWNERSHIP-REGISTER-V1.json";
 
 function fail(msg){ console.error("FAIL "+msg); process.exitCode=1; }
 function readJson(p){ return JSON.parse(fs.readFileSync(p,"utf8")); }
@@ -20,6 +21,15 @@ function escapeRe(s){ return s.replace(/[-\/\\^$*+?.()|[\]{}]/g,"\\$&"); }
 
 const catalog=readJson(CATALOG);
 const inventory=readJson(INVENTORY);
+const ownership=readJson(OWNERSHIP);
+const existingProducerPaths=new Set();
+for(const semantic of ownership.semantics||[]){
+  for(const producer of semantic.registered_producers||[]){
+    if(producer.current!==false && String(producer.path||"").trim()){
+      existingProducerPaths.add(String(producer.path).trim());
+    }
+  }
+}
 const snapshotMap={
   MAIN:catalog.snapshots.protected_main,
   BLINE:catalog.snapshots.bline_authoritative,
@@ -87,6 +97,7 @@ function authorityCapable(path,content){
       path.startsWith("apps/server/src/services/")||
       path.startsWith("apps/server/src/runtime/")||
       path.startsWith("apps/server/src/infra/")||
+      path.startsWith("apps/server/src/adapters/")||
       path.startsWith("apps/executor/src/");
     const routeOrProjection=
       path.startsWith("apps/server/src/routes/")||
@@ -97,7 +108,11 @@ function authorityCapable(path,content){
     };
   }
   if(p==="MIGRATION"){
-    return {capable:ev.includes("SQL_MUTATION_SURFACE"),evidence:ev};
+    const persistentSqlAuthority=/(CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION|CREATE\s+TRIGGER)/i.test(content);
+    return {
+      capable:persistentSqlAuthority,
+      evidence:ev.concat(persistentSqlAuthority?["PERSISTENT_SQL_FUNCTION_OR_TRIGGER"]:["MIGRATION_BACKFILL_SUPPORT"])
+    };
   }
   if(p==="WORKFLOW"){
     return {capable:false,evidence:ev.concat(["WORKFLOW_SUPPORT_REVIEW"])};
@@ -154,14 +169,19 @@ for(const [label,sha] of Object.entries(snapshotMap)){
   for(const path of paths){
     if(!/\.(?:ts|tsx|js|cjs|mjs|sql|json|ya?ml)$/.test(path)) continue;
     const content=show(sha,path);
-    if(content==null||!semanticRegex.test(content)) continue;
+    if(content==null) continue;
+    const semanticHit=semanticRegex.test(content)||semanticRegex.test(path);
+    if(!semanticHit) continue;
     const assessment=authorityCapable(path,content);
     if(assessment.capable){
       discovered.push({snapshot:label,sha,path,plane:plane(path),evidence:assessment.evidence});
       const candidates=inventoryByPath.get(path)||[];
-      const covered=candidates.some(entry=>(entry.snapshot_scope||[]).includes(label));
-      if(!covered){
+      const coveredByResidual=candidates.some(entry=>(entry.snapshot_scope||[]).includes(label));
+      const coveredByExistingProducer=existingProducerPaths.has(path);
+      if(!coveredByResidual && !coveredByExistingProducer){
         fail("UNREGISTERED_AUTHORITY_CAPABLE_PATH:"+label+":"+path+":"+assessment.evidence.join(","));
+      } else if(coveredByExistingProducer && !coveredByResidual){
+        console.log("B09AG_EXISTING_PRODUCER_COVERAGE "+JSON.stringify({snapshot:label,path}));
       }
     } else if(["WORKFLOW","ACCEPTANCE","CONTRACT","TEST"].includes(plane(path))){
       support.push({snapshot:label,path,plane:plane(path),evidence:assessment.evidence});
