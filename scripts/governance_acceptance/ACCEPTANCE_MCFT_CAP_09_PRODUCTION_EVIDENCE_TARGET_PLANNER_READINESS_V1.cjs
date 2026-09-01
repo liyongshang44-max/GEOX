@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "KBS_HISTORICAL_PREFIX_COMPARISON_IMPLEMENTED_REMEDIATION_READY_NOT_AUTHORIZED");
+  assert.equal(authority.status, "VERIFIED_RETAINED_RAW_REPLAY_PRIMITIVE_EXTRACTED_KBS_CYCLE_ADAPTER_NEXT");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "ac753bcef691a20c6f1429cd6d86e6a5a59a45d9");
+  assert.equal(authority.subject_predecessor_sha, "63c56f2e732f568f927c554dddb64e4a7b788ec3");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -131,6 +131,17 @@ try {
   assert.equal(kbsSnapshotComparison.includes("fetch("), false, "KBS_SNAPSHOT_COMPARISON_PROVIDER_FETCH_FORBIDDEN");
   assert.equal(kbsSnapshotComparison.includes("INSERT INTO"), false, "KBS_SNAPSHOT_COMPARISON_DB_WRITE_FORBIDDEN");
 
+  const retainedReplay = read(authority.verified_retained_raw_replay_ref);
+  includes(retainedReplay, "VerifiedRetainedRawReadbackTransportV1", "VERIFIED_RETAINED_RAW_TRANSPORT_REQUIRED");
+  includes(retainedReplay, "ExistingRetainedRawVerificationBarrierV1", "VERIFIED_RETAINED_RAW_BARRIER_REQUIRED");
+  includes(retainedReplay, "provider_refetch_count = 0", "VERIFIED_RETAINED_RAW_ZERO_REFETCH_REQUIRED");
+  includes(retainedReplay, "raw_store_write_count = 0", "VERIFIED_RETAINED_RAW_ZERO_REWRITE_REQUIRED");
+  includes(retainedReplay, "RETAINED_REPLAY_VERIFIED_READ_RECEIPT_MISMATCH", "VERIFIED_RETAINED_RAW_RECEIPT_IDENTITY_REQUIRED");
+  const phase7ReplayConsumer = read("apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts");
+  includes(phase7ReplayConsumer, "VerifiedRetainedRawReadbackTransportV1", "PHASE7_SHARED_REPLAY_TRANSPORT_REQUIRED");
+  includes(phase7ReplayConsumer, "ExistingRetainedRawVerificationBarrierV1", "PHASE7_SHARED_REPLAY_BARRIER_REQUIRED");
+  assert.equal(phase7ReplayConsumer.includes("class PrivateCandidateReadbackTransportV1"), false, "PHASE7_LOCAL_REPLAY_TRANSPORT_DUPLICATE_FORBIDDEN");
+
   const purePlanner = read(authority.pure_source_planner_ref);
   includes(purePlanner, "planProductionEvidenceSourcesV1", "PURE_SOURCE_SPECIFIC_PLANNER_REQUIRED");
   includes(purePlanner, "KBS_RAW_HOURLY_PUBLICATION_BASELINE_REQUIRED", "KBS_PUBLICATION_BASELINE_PLAN_REQUIRED");
@@ -198,6 +209,8 @@ try {
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.historical_prefix_snapshot_comparison_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.historical_revision_backfill_fail_closed, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.baseline_pointer_snapshot_identity_mismatch_fail_closed, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.verified_retained_raw_replay_primitive_implemented, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.verified_retained_raw_replay_primitive_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.publication_diff_no_change_adapter_implemented, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.fixed_latest_24_rows_bootstrap_authorized, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.pair_skew_repair_implemented, false);
@@ -232,6 +245,7 @@ try {
     subject_sha: subject,
     authority_status: authority.status,
     current_frontier: "KBS_RETAINED_SNAPSHOT_CYCLE_ADAPTER_REQUIRED",
+    shared_verified_retained_raw_replay_primitive_implemented: true,
     kbs_historical_prefix_snapshot_comparison_implemented: true,
     production_kbs_baseline_pointer_schema_remediation_capability_implemented: true,
     production_kbs_baseline_pointer_schema_remediation_authorized: false,

@@ -291,6 +291,20 @@ function main() {
   assert.equal(kbsSnapshotComparisonProof.unknown_changed_paths.length, 0);
   assert.equal(byId(kbsSnapshotComparisonProof, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
 
+  // CP-4: shared verified retained-raw replay is governed by both Phase3 and Phase7 import closure.
+  const retainedReplayShared = plan(authority, registry, ["apps/server/src/external_evidence/verified_retained_raw_replay_v1.ts"]);
+  assert.equal(retainedReplayShared.status, "PASS");
+  assert.equal(retainedReplayShared.unknown_changed_paths.length, 0);
+  assert.equal(byId(retainedReplayShared, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+  assert.equal(byId(retainedReplayShared, "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION").status, "REQUALIFY");
+  assert(byId(retainedReplayShared, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes("apps/server/src/external_evidence/verified_retained_raw_replay_v1.ts"));
+  assert(byId(retainedReplayShared, "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION").changed_dependencies.includes("apps/server/src/external_evidence/verified_retained_raw_replay_v1.ts"));
+  const retainedReplayProof = plan(authority, registry, ["scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1.ts"]);
+  assert.equal(retainedReplayProof.status, "PASS");
+  assert.equal(retainedReplayProof.unknown_changed_paths.length, 0);
+  assert.equal(byId(retainedReplayProof, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+  assert.equal(byId(retainedReplayProof, "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION").status, "REQUALIFY");
+
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
   const phase3 = plan(authority, registry, [phase3Path]);

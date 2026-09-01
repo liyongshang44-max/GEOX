@@ -29,12 +29,8 @@ import {
   collectRetainDecodeCanonicalizeExternalEvidenceWithCompletionClockV1,
   type CanonicalizedExternalEvidenceResultV1,
   type ExternalEvidenceDecoderPortV1,
-  type ExternalEvidenceFetchRequestV1,
-  type ExternalEvidenceFetchResponseV1,
-  type ExternalEvidenceTransportPortV1,
-  type RawEvidenceRetentionInputV1,
   type RawEvidenceRetentionPortV1,
-  type RawEvidenceRetentionReceiptV1,
+  type VerifiedRawEvidenceProvenanceV1,
 } from "./mcft_cap09_external_collector_canonicalizer_v1.js";
 import type {
   ProductionEvidenceWorkItemFactoryV1,
@@ -61,8 +57,12 @@ import {
 } from "./s3_compatible_private_candidate_manifest_store_v1.js";
 import type {
   S3CompatiblePrivateRetainedRawReaderV1,
-  PrivateRetainedRawReadReceiptV1,
 } from "./s3_compatible_private_retained_raw_reader_v1.js";
+import {
+  buildVerifiedRetainedRawReplayRequestV1,
+  ExistingRetainedRawVerificationBarrierV1,
+  VerifiedRetainedRawReadbackTransportV1,
+} from "./verified_retained_raw_replay_v1.js";
 
 export const MCFT_CAP09_PHASE7_PRIVATE_CANDIDATE_CAPTURE_PROMOTION_ID_V1 =
   "MCFT_CAP09_PHASE7_PRIVATE_CANDIDATE_CAPTURE_PROMOTION_V1" as const;
@@ -235,92 +235,26 @@ function rawCandidate(
     ...(raw.source_event_time ? {source_event_time:raw.source_event_time} : {}),
   };
 }
-function allowedHosts(raw: ExternalFormalCandidateRawProvenanceV1): string[] {
-  const hosts = new Set<string>();
-  for (const locator of [raw.source_locator, raw.final_locator]) {
-    let parsed: URL;
-    try { parsed = new URL(locator); } catch { throw new Error("PHASE7_REHYDRATION_LOCATOR_INVALID"); }
-    if (parsed.protocol !== "https:") throw new Error("PHASE7_REHYDRATION_LOCATOR_HTTPS_REQUIRED");
-    hosts.add(parsed.hostname);
-  }
-  return [...hosts].sort();
-}
-function reconstructedRequest(raw: ExternalFormalCandidateRawProvenanceV1): ExternalEvidenceFetchRequestV1 {
+function candidateReplayProvenanceV1(
+  raw: ExternalFormalCandidateRawProvenanceV1,
+): VerifiedRawEvidenceProvenanceV1 {
   return {
     request_id: raw.request_id,
     provider_id: raw.provider_id,
     source_family: raw.source_family,
-    locator: raw.source_locator,
-    allowed_final_hosts: allowedHosts(raw),
+    source_locator: raw.source_locator,
+    final_locator: raw.final_locator,
+    content_type: raw.content_type,
+    retrieved_at: raw.retrieved_at,
+    available_at: raw.available_at,
+    raw_sha256: raw.retained_sha256,
+    raw_bytes: raw.retained_bytes,
+    retention_ref: raw.retention_ref,
+    retained_at: raw.retained_at,
     use_policy_ref: raw.use_policy_ref,
-    requested_at: raw.retrieved_at,
-    ...(raw.source_issue_time ? {source_issue_time:raw.source_issue_time} : {}),
-    ...(raw.source_event_time ? {source_event_time:raw.source_event_time} : {}),
-    expected_content_type_prefixes: [raw.content_type],
-    limitations: [
-      "PRIVATE_RESTRICTED_RAW_EVIDENCE",
-      "PRIVATE_CANDIDATE_REHYDRATION",
-      "NO_PROVIDER_REFETCH",
-      "NO_RAW_STORE_WRITE",
-    ],
+    ...(raw.source_issue_time ? { source_issue_time: raw.source_issue_time } : {}),
+    ...(raw.source_event_time ? { source_event_time: raw.source_event_time } : {}),
   };
-}
-
-class PrivateCandidateReadbackTransportV1 implements ExternalEvidenceTransportPortV1 {
-  readonly provider_refetch_count = 0;
-  constructor(
-    private readonly raw: ExternalFormalCandidateRawProvenanceV1,
-    private readonly read: PrivateRetainedRawReadReceiptV1,
-  ) {}
-  async fetchRawEvidence(request: ExternalEvidenceFetchRequestV1): Promise<ExternalEvidenceFetchResponseV1> {
-    if (
-      request.request_id !== this.raw.request_id
-      || request.provider_id !== this.raw.provider_id
-      || request.source_family !== this.raw.source_family
-      || request.locator !== this.raw.source_locator
-    ) throw new Error("PHASE7_REHYDRATION_REQUEST_IDENTITY_MISMATCH");
-    return {
-      status: 200,
-      final_locator: this.raw.final_locator,
-      content_type: this.raw.content_type,
-      retrieved_at: this.raw.retrieved_at,
-      available_at: this.raw.available_at,
-      bytes: this.read.bytes,
-    };
-  }
-}
-
-class ExistingRetainedRawVerificationBarrierV1 implements RawEvidenceRetentionPortV1 {
-  readonly raw_store_write_count = 0;
-  constructor(
-    private readonly raw: ExternalFormalCandidateRawProvenanceV1,
-    private readonly read: PrivateRetainedRawReadReceiptV1,
-  ) {}
-  async retainRawEvidence(input: RawEvidenceRetentionInputV1): Promise<RawEvidenceRetentionReceiptV1> {
-    if (
-      input.raw_sha256 !== this.raw.retained_sha256
-      || input.raw_bytes !== this.raw.retained_bytes
-      || input.raw_sha256 !== this.read.retained_sha256
-      || input.raw_bytes !== this.read.retained_bytes
-      || input.request_id !== this.raw.request_id
-      || input.provider_id !== this.raw.provider_id
-      || input.source_family !== this.raw.source_family
-      || input.source_locator !== this.raw.source_locator
-      || input.final_locator !== this.raw.final_locator
-      || input.content_type !== this.raw.content_type
-      || input.retrieved_at !== this.raw.retrieved_at
-      || input.available_at !== this.raw.available_at
-      || input.use_policy_ref !== this.raw.use_policy_ref
-    ) throw new Error("PHASE7_REHYDRATION_EXISTING_RETENTION_BARRIER_MISMATCH");
-    return {
-      retention_class: "PRIVATE_RESTRICTED_RAW_EVIDENCE",
-      retention_ref: this.raw.retention_ref,
-      retained_sha256: this.raw.retained_sha256,
-      retained_bytes: this.raw.retained_bytes,
-      retained_at: this.read.retained_at,
-      externally_publishable: false,
-    };
-  }
 }
 
 export class ExternalFormalPrivateCandidateCapturePromotionV1
@@ -478,12 +412,21 @@ export class ExternalFormalPrivateCandidateCapturePromotionV1
         {
           dataset_id: datasetId,
           scope: { ...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 },
-          request: reconstructedRequest(raw),
+          request: buildVerifiedRetainedRawReplayRequestV1(
+            candidateReplayProvenanceV1(raw),
+            { purpose_limitations: ["PRIVATE_CANDIDATE_REHYDRATION"] },
+          ),
           canonicalized_at: now,
         },
         {
-          transport: new PrivateCandidateReadbackTransportV1(raw, rawRead),
-          retention: new ExistingRetainedRawVerificationBarrierV1(raw, rawRead),
+          transport: new VerifiedRetainedRawReadbackTransportV1(
+            candidateReplayProvenanceV1(raw),
+            rawRead,
+          ),
+          retention: new ExistingRetainedRawVerificationBarrierV1(
+            candidateReplayProvenanceV1(raw),
+            rawRead,
+          ),
           decoder,
         },
       );
