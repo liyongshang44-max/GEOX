@@ -66,13 +66,16 @@ No timestamp ordering is used.
 
 `sample_id` is not treated as a fact identity.
 
-Within exact tenant/project/group scope:
+`sample_id` is not declared globally unique by the frozen Sampling contract, so B-Line does not create such a policy.
 
-- zero receipt facts = missing;
-- one receipt fact = exact identity;
-- more than one = explicit ambiguity and fail closed;
-- product creation of a second receipt with the same sample identity is rejected;
-- receipt **fact identity** is deterministically derived from a canonical JSON tuple of tenant/project/group + sample_id, so concurrent duplicate creation converges at the facts primary key instead of racing past a precheck; the externally returned `receipt_id` remains an opaque UUID.
+Receipt semantic uniqueness is bounded by exact tenant/project/group + `sampling_plan_fact_id` + `sample_id`:
+
+- the same `sample_id` may appear under a different Sampling Plan;
+- a second receipt for the same exact plan + sample identity is rejected;
+- receipt **fact identity** is deterministically derived from a canonical JSON tuple containing scope + exact plan fact + sample_id, so concurrent duplicate creation converges at the facts primary key;
+- the externally returned `receipt_id` remains an opaque UUID.
+
+Compatibility readers that only have `sample_id` may resolve it only when exactly one receipt exists in scope. Multiple matches are explicit ambiguity; they are never timestamp-ranked.
 
 ### Lab result
 
@@ -143,7 +146,9 @@ The package requires:
 
 ```text
 no latest-wins Sampling authority selector
-duplicate sample receipt creation -> 409
+duplicate receipt for the same exact plan + sample -> 409
+same sample_id on a different plan -> allowed
+ambiguous sample_id-only lab locator -> 409 until sample_receipt_fact_id is supplied
 historical receipt/lab/Acceptance ambiguity -> fail closed
 lab import requires exact receipt -> exact plan continuity
 repeat exact Sampling Acceptance -> same fact identity
