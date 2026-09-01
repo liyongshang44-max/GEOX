@@ -133,7 +133,7 @@ function configureAuthoritySurfaces(inv) {
     const sourcePath = String(surface?.source_path ?? "").trim();
     const authorityClass = String(surface?.authority_class ?? "").trim().toUpperCase();
     if (!sourcePath) continue;
-    if (!/(WRITER|PRODUCER|SERVICE|BUILDER|AUTHORITY|PERSISTENCE|FORMALIZATION|TRANSITION)/.test(authorityClass)) continue;
+    if (!/(WRITER|PRODUCER|SERVICE|BUILDER|AUTHORITY|PERSISTENCE|FORMALIZATION|TRANSITION|BRIDGE|REPOSITORY|ADAPTER)/.test(authorityClass)) continue;
     authoritySurfaceByPath.set(sourcePath, {
       families: Array.isArray(surface.semantic_family) ? surface.semantic_family.map(String) : [],
       authority_class: authorityClass,
