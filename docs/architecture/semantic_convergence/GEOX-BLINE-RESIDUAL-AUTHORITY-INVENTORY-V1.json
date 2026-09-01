@@ -28,14 +28,25 @@
       "A path may be authority-capable without writing to the database.",
       "Pure builders, projection/status derivations, API routes, jobs, workers, migrations, SQL functions/triggers, scripts and external adapters are in scope.",
       "Runtime reachability is classified separately from code capability.",
-      "No finding may be allowlisted before it is classified."
+      "No finding may be allowlisted before it is classified.",
+      "B02 topology consistency is not repository completeness proof.",
+      "Active runtime reachability is independently closed from registerDomainModules through nested register/install calls.",
+      "Read-only/projection disposition does not exempt a route from semantic-write detection."
     ]
   },
   "scan_roots": [
     "apps/server/src",
     "apps/server/db/migrations",
-    "apps/server/scripts",
     "apps/executor/src",
+    "apps/judge/src",
+    "apps/telemetry-ingest/src",
+    "apps/web/src",
+    "packages/device-skills/src",
+    "packages/skill-registry/src",
+    "packages/control-kernel/src",
+    "docker/postgres/init",
+    "config/judge",
+    "apps/server/scripts",
     "packages/contracts",
     "scripts",
     ".github/workflows"
@@ -403,8 +414,8 @@
     {
       "surface_id": "RES-013",
       "source_path": "apps/server/src/routes/v1/operator_twin.ts",
-      "entrypoint": "not registered by current Operator Module",
-      "activation_mode": "NOT_REFERENCED_CURRENT_MODULE_GRAPH",
+      "entrypoint": "registerOperatorModule -> operator_twin_read_legacy_v1.ts / operator_twin_write_legacy_v1.ts -> registerOperatorTwinReadRoutes / legacy POST registration",
+      "activation_mode": "ACTIVE_LEGACY_READ_WRITE_CORE_VIA_COMPATIBILITY_WRAPPERS",
       "writes": [
         "contains decision_recommendation_v1 fact-write code"
       ],
@@ -415,13 +426,17 @@
         "decision.candidate",
         "presentation.read_model"
       ],
-      "authority_class": "STALE_ORPHAN_AUTHORITY_CAPABLE_SURFACE",
-      "runtime_reachable": "NOT_PROVEN",
+      "authority_class": "ACTIVE_LEGACY_MIXED_CANDIDATE_READ_WRITE_SURFACE",
+      "runtime_reachable": "PROVEN",
       "feature_flag": null,
-      "downstream_consumers": [],
-      "removal_target": "REMOVE_OR_ARCHIVE_AFTER_REPLACEMENT_PROOF",
+      "downstream_consumers": [
+        "apps/server/src/routes/v1/operator_twin_read_legacy_v1.ts",
+        "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts",
+        "apps/server/src/modules/operator/registerOperatorModule.ts"
+      ],
+      "removal_target": "KEEP READ COMPATIBILITY; MOVE WRITE AUTHORITY TO CANONICAL CANDIDATE SUBMISSION THEN RETIRE LEGACY WRITER AFTER CUTOVER",
       "b02_registered": false,
-      "audit_note": "File header says read-only while the file contains recommendation writer code; current registerOperatorModule uses split legacy read/write modules instead."
+      "audit_note": "Previous STALE_ORPHAN classification was factually wrong. Split legacy read/write wrappers still call into this file, and the write wrapper re-registers two POST surfaces. File header says read-only/no recommendation writes while implementation persists decision_recommendation_v1."
     },
     {
       "surface_id": "RES-014",
@@ -3340,6 +3355,4283 @@
       "removal_target": "KEEP ONLY AS EXPLICIT SIMULATION/DEV TOOL OR RETIRE; NEVER PROMOTE SYNTHETIC RECEIPT TO FORMAL EXECUTION AUTHORITY",
       "b02_registered": false,
       "audit_note": "The CLI constructs synthetic execution_time/resource_usage, execution_coverage.ref=simulated and logs_refs=stdout, then posts ao_act_receipt_v0. Formal evidence policy currently fail-closes this receipt alone because source lane is UNKNOWN and stdout is not a formal-log kind."
+    },
+    {
+      "surface_id": "RES-127",
+      "source_path": "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts",
+      "entrypoint": "registerOperatorModule -> registerOperatorTwinWriteLegacyRoutesV1",
+      "activation_mode": "ACTIVE_LEGACY_COMPATIBILITY_WRITER",
+      "writes": [
+        "registers two legacy scenario-to-recommendation POST surfaces through operator_twin.ts"
+      ],
+      "reads": [
+        "operator_twin.ts legacy route implementation"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "ACTIVE_LEGACY_CANDIDATE_COMPATIBILITY_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "operator product clients",
+        "apps/server/src/routes/v1/operator_twin.ts"
+      ],
+      "removal_target": "CUTOVER TO CANONICAL CANDIDATE SUBMISSION THEN RETIRE LEGACY POST WRAPPER",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-128",
+      "source_path": "apps/server/src/routes/control_approval_request_v1.ts",
+      "entrypoint": "registerCoreV1Routes -> v1/approvals.ts -> registerApprovalRequestV1Routes",
+      "activation_mode": "PRIMARY_API_RUNTIME",
+      "writes": [
+        "ApprovalRequest/ApprovalDecision facts and approval-derived lifecycle effects"
+      ],
+      "reads": [
+        "candidate/recommendation/plan facts"
+      ],
+      "semantic_family": [
+        "decision.approval",
+        "decision.candidate",
+        "operation.plan"
+      ],
+      "authority_class": "ACTIVE_APPROVAL_ROUTE_AUTHORITY",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "approval service",
+        "operation-plan builder",
+        "operator approval surfaces"
+      ],
+      "removal_target": "KEEP AS CANONICAL APPROVAL FACADE; REGISTER EXACT DOWNSTREAM AUTHORITY BOUNDARIES",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-129",
+      "source_path": "apps/server/src/routes/control_operation_plan_v1.ts",
+      "entrypoint": "registerOperatorModule -> registerOperationPlanV1Routes",
+      "activation_mode": "PRIMARY_OPERATOR_API_RUNTIME",
+      "writes": [
+        "operation_plan_transition_v1 facts",
+        "operation_plan_index_v1 lifecycle projection"
+      ],
+      "reads": [
+        "operation_plan_v1 and transition facts"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "authority_class": "ACTIVE_OPERATION_PLAN_TRANSITION_FACADE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "operator plan lifecycle clients",
+        "task/execution runtime"
+      ],
+      "removal_target": "KEEP AS EXPLICIT PLAN TRANSITION FACADE AFTER LIFECYCLE SEMANTICS ARE CONVERGED",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-130",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "entrypoint": "primary /api/v1/actions/* and compatibility AO-ACT registration paths",
+      "activation_mode": "PRIMARY_EXECUTION_API_RUNTIME",
+      "writes": [
+        "AO-ACT Task",
+        "AO-ACT Receipt",
+        "OperationPlan lifecycle/projection state",
+        "dispatch/skill runtime effects"
+      ],
+      "reads": [
+        "OperationPlan",
+        "task/dispatch queues",
+        "device-skill resolution",
+        "receipt facts"
+      ],
+      "semantic_family": [
+        "execution.task",
+        "execution.receipt",
+        "operation.plan",
+        "execution.adapter_resolution"
+      ],
+      "authority_class": "ACTIVE_MIXED_AO_ACT_EXECUTION_ORCHESTRATOR",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "task_service",
+        "executor/outbox",
+        "operator execution surfaces"
+      ],
+      "removal_target": "KEEP PRIMARY API; REMOVE TASK->PLAN ACKED COLLAPSE AND CONVERGE INTERNAL AUTHORITY TO CANONICAL EXECUTION LIFECYCLE",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-131",
+      "source_path": "apps/server/src/projections/field_program_state_v1.ts",
+      "entrypoint": "field-program state read model used by active field/program APIs",
+      "activation_mode": "ACTIVE_PROJECTION",
+      "writes": [
+        "in-memory Program lifecycle projection"
+      ],
+      "reads": [
+        "operation/recommendation/acceptance facts"
+      ],
+      "semantic_family": [
+        "operation.plan",
+        "presentation.read_model"
+      ],
+      "authority_class": "CROSS_FAMILY_PROGRAM_LIFECYCLE_PROJECTION_DERIVER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "field program product read models"
+      ],
+      "removal_target": "KEEP PROJECTION; SPLIT ACKED/DISPATCHED/RUNNING SEMANTICS SO TASK OR ACK CANNOT IMPLY EXECUTING",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-132",
+      "source_path": "apps/server/src/routes/operation_state_v1.ts",
+      "entrypoint": "registerReportingModule -> registerOperationStateV1Routes",
+      "activation_mode": "ACTIVE_GET_ROUTE_WITH_SEMANTIC_SIDE_EFFECT",
+      "writes": [
+        "skill_run fact through ensureSkillRunFact",
+        "rule performance feedback through updateRulePerformance"
+      ],
+      "reads": [
+        "operation/task/receipt/acceptance/read-model facts"
+      ],
+      "semantic_family": [
+        "presentation.read_model",
+        "governance.skill_binding"
+      ],
+      "authority_class": "READ_MODEL_ROUTE_WITH_HIDDEN_LEARNING_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "operator/reporting UI",
+        "skill/rule learning feedback"
+      ],
+      "removal_target": "MAKE GET/READ MODEL ZERO-PERSISTENCE; MOVE LEARNING UPDATE TO EXPLICIT ACCEPTANCE->OUTCOME->LEARNING EVENT",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-133",
+      "source_path": "apps/server/src/domain/acceptance/engine_v1.ts",
+      "entrypoint": "apps/server/src/routes/acceptance_v1.ts",
+      "activation_mode": "ACTIVE_DOMAIN_DERIVER",
+      "writes": [
+        "in-memory canonical Acceptance verdict calculation"
+      ],
+      "reads": [
+        "execution/evidence/judge inputs"
+      ],
+      "semantic_family": [
+        "acceptance.verdict"
+      ],
+      "authority_class": "CANONICAL_ACCEPTANCE_VERDICT_DERIVER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "acceptance_v1 route"
+      ],
+      "removal_target": "KEEP AS CANONICAL ACCEPTANCE CALCULATION AUTHORITY",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-134",
+      "source_path": "apps/server/src/domain/evidence/formal_evidence_policy_v1.ts",
+      "entrypoint": "Acceptance and formal-evidence qualification callsites",
+      "activation_mode": "ACTIVE_VERSIONED_POLICY",
+      "writes": [
+        "in-memory evidence eligibility/classification"
+      ],
+      "reads": [
+        "EvidenceArtifact/source lane/debug/simulation provenance"
+      ],
+      "semantic_family": [
+        "evidence.qualification",
+        "acceptance.verdict"
+      ],
+      "authority_class": "FORMAL_EVIDENCE_ELIGIBILITY_POLICY_AUTHORITY",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "acceptance engine/routes",
+        "formal trigger gates",
+        "devtools negative boundaries"
+      ],
+      "removal_target": "KEEP AS EXPLICIT VERSIONED POLICY AUTHORITY; NO HIDDEN DEFAULT POLICY",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-135",
+      "source_path": "apps/server/src/routes/water_response_verification_v1.ts",
+      "entrypoint": "registerAcceptanceModule -> registerWaterResponseVerificationV1Routes",
+      "activation_mode": "ACTIVE_OUTCOME_API_RUNTIME",
+      "writes": [
+        "water_response_verification_v1/index outcome records"
+      ],
+      "reads": [
+        "Acceptance/AsExecuted evidence"
+      ],
+      "semantic_family": [
+        "outcome.evidence"
+      ],
+      "authority_class": "ACTIVE_OUTCOME_VERIFICATION_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "ROI/Field Memory/learning lanes"
+      ],
+      "removal_target": "KEEP AS EXPLICIT ACCEPTANCE->OUTCOME BOUNDARY",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-136",
+      "source_path": "apps/server/src/routes/v1/twin_kernel.ts",
+      "entrypoint": "registerTwinKernelModule -> registerTwinKernelV1Routes",
+      "activation_mode": "ACTIVE_LEGACY_TWIN_API_RUNTIME",
+      "writes": [
+        "legacy FieldStateSnapshot",
+        "ForecastRun",
+        "ScenarioSet",
+        "CalibrationReplay",
+        "FieldLearningCandidate",
+        "DecisionCycle records"
+      ],
+      "reads": [
+        "legacy Twin Kernel source indexes and prior objects"
+      ],
+      "semantic_family": [
+        "twin.state",
+        "twin.forecast",
+        "twin.scenario",
+        "governance.trace_projection"
+      ],
+      "authority_class": "LEGACY_TWIN_MULTI_AUTHORITY_ROUTE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "legacy operator/twin workflows",
+        "replay/shadow products"
+      ],
+      "removal_target": "FREEZE AS LEGACY SHADOW/REPLAY AUTHORITY; POST-MCFT TYPED CUTOVER REMOVES STATE/FORECAST/SCENARIO AUTHORITY",
+      "b02_registered": false,
+      "audit_note": "B-Line must not modify MCFT implementation while declaring these legacy writers non-canonical."
+    },
+    {
+      "surface_id": "RES-137",
+      "source_path": "apps/server/src/domain/twin_kernel/field_state_snapshot_v1.ts",
+      "entrypoint": "POST field-state-snapshots via routes/v1/twin_kernel.ts",
+      "activation_mode": "ACTIVE_LEGACY_TWIN_DERIVER",
+      "writes": [
+        "legacy Field State Snapshot payload/persistence inputs"
+      ],
+      "reads": [
+        "legacy source-index facts"
+      ],
+      "semantic_family": [
+        "twin.state"
+      ],
+      "authority_class": "LEGACY_TWIN_STATE_DERIVER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "routes/v1/twin_kernel.ts"
+      ],
+      "removal_target": "KEEP SHADOW/REPLAY ONLY; REPLACE STATE AUTHORITY WITH MCFT AFTER MCFT COMPLETE",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-138",
+      "source_path": "apps/server/src/domain/twin_kernel/forecast_run_v1.ts",
+      "entrypoint": "POST forecast-runs via routes/v1/twin_kernel.ts",
+      "activation_mode": "ACTIVE_LEGACY_TWIN_DERIVER",
+      "writes": [
+        "legacy ForecastRun payload/persistence inputs"
+      ],
+      "reads": [
+        "legacy state/weather inputs"
+      ],
+      "semantic_family": [
+        "twin.forecast"
+      ],
+      "authority_class": "LEGACY_TWIN_FORECAST_DERIVER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "routes/v1/twin_kernel.ts"
+      ],
+      "removal_target": "KEEP SHADOW/REPLAY ONLY; REPLACE FORECAST AUTHORITY WITH MCFT AFTER MCFT COMPLETE",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-139",
+      "source_path": "apps/server/src/domain/twin_kernel/scenario_set_v1.ts",
+      "entrypoint": "POST scenario-sets via routes/v1/twin_kernel.ts",
+      "activation_mode": "ACTIVE_LEGACY_TWIN_DERIVER",
+      "writes": [
+        "legacy ScenarioSet payload/persistence inputs"
+      ],
+      "reads": [
+        "legacy ForecastRun/State inputs"
+      ],
+      "semantic_family": [
+        "twin.scenario"
+      ],
+      "authority_class": "LEGACY_TWIN_SCENARIO_DERIVER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "routes/v1/twin_kernel.ts",
+        "legacy operator scenario surfaces"
+      ],
+      "removal_target": "KEEP SHADOW/REPLAY ONLY; CUT OVER TO GOVERNED/MCFT-DERIVED SCENARIO INPUTS AFTER MCFT COMPLETE",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-140",
+      "source_path": "apps/server/src/domain/twin_kernel/calibration_replay_v1.ts",
+      "entrypoint": "POST calibration-replays via routes/v1/twin_kernel.ts",
+      "activation_mode": "ACTIVE_LEGACY_REPLAY_DERIVER",
+      "writes": [
+        "calibration replay objects"
+      ],
+      "reads": [
+        "Twin/Outcome history"
+      ],
+      "semantic_family": [
+        "governance.trace_projection"
+      ],
+      "authority_class": "LEGACY_TWIN_CALIBRATION_REPLAY_CAPABILITY",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "field learning candidate creation"
+      ],
+      "removal_target": "KEEP REPLAY CAPABILITY; RE-ADJUDICATE LEARNING AUTHORITY AFTER OUTCOME/Learning LANE CLOSURE",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-141",
+      "source_path": "apps/server/src/domain/twin_kernel/field_learning_candidate_v1.ts",
+      "entrypoint": "POST field-learning-candidates via routes/v1/twin_kernel.ts",
+      "activation_mode": "ACTIVE_LEGACY_LEARNING_DERIVER",
+      "writes": [
+        "field_learning_candidate_v1 objects"
+      ],
+      "reads": [
+        "calibration replay/outcome-like inputs"
+      ],
+      "semantic_family": [
+        "field_memory"
+      ],
+      "authority_class": "LEGACY_TWIN_LEARNING_CANDIDATE_DERIVER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "legacy learning review/promotion gates"
+      ],
+      "removal_target": "KEEP AS NON-ACTIVATING CANDIDATE/REPLAY CAPABILITY; REDEFINE AUTHORITY UNDER GOVERNED OUTCOME/LEARNING LANE",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-142",
+      "source_path": "apps/server/src/routes/v1/twin_kernel_production_ingestion.ts",
+      "entrypoint": "registerTwinKernelModule -> registerTwinKernelProductionIngestionRoutes",
+      "activation_mode": "ACTIVE_LEGACY_MAPPING_WRITER",
+      "writes": [
+        "production_ingestion source refs",
+        "decision-cycle mapping objects"
+      ],
+      "reads": [
+        "external/production-shaped source references"
+      ],
+      "semantic_family": [
+        "governance.trace_projection"
+      ],
+      "authority_class": "LEGACY_TWIN_PRODUCTION_INGESTION_MAPPING_ADAPTER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "Twin Kernel decision-cycle trace"
+      ],
+      "removal_target": "KEEP AS SOURCE/TRACE MAPPING ONLY; MUST NOT BECOME CANONICAL STATE/FORECAST AUTHORITY",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-143",
+      "source_path": "apps/server/src/routes/agronomy_inference_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/agronomy/registerAgronomyModule.ts",
+      "activation_mode": "ACTIVE_DERIVER",
+      "writes": [
+        "semantic output / delegated persistence according to active route implementation"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "agronomy.interpretation",
+        "evidence.qualification"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_DERIVER_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "governed agronomy inference result ; KEEP_DERIVER_NO_DIRECT_ACTION_AUTHORITY",
+      "b02_registered": true,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-144",
+      "source_path": "apps/server/src/routes/agronomy_v0.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/agronomy/registerAgronomyModule.ts",
+      "activation_mode": "ACTIVE_COMPATIBILITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "agronomy.interpretation",
+        "governance.fact_ledger"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_COMPATIBILITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical Agronomy Interpretation / Candidate adapters ; RETIRE_LEGACY_V0_WRITER_AFTER_SEMANTIC_CUTOVER",
+      "b02_registered": true,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-145",
+      "source_path": "apps/server/src/routes/alert_workflow_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/execution/registerExecutionModule.ts",
+      "activation_mode": "ACTIVE_AUTHORITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "governance.trace_projection",
+        "operation.plan"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_AUTHORITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "explicit alert-operation workflow relation ; KEEP_OPERATIONAL_WORKFLOW_AUTHORITY",
+      "b02_registered": false,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-146",
+      "source_path": "apps/server/src/routes/appleii_stage1_evidence_gate_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/decision/registerDecisionModule.ts",
+      "activation_mode": "ACTIVE_COMPATIBILITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "evidence.qualification",
+        "decision.control_gate"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_COMPATIBILITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical DecisionEligibility/Control boundary ; RETIRE_STAGE1_PRECURSOR_AFTER_GOVERNED_BOUNDARY_ADJUDICATION",
+      "b02_registered": false,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-147",
+      "source_path": "apps/server/src/routes/decision_eligibility_policy_declarations_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/decision/registerDecisionModule.ts",
+      "activation_mode": "ACTIVE_AUTHORITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "decision.eligibility"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_AUTHORITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical DecisionEligibility policy authority ; KEEP_VERSIONED_POLICY_DECLARATION_AUTHORITY",
+      "b02_registered": true,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-148",
+      "source_path": "apps/server/src/routes/device_heartbeat_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/sensing/registerSensingModule.ts",
+      "activation_mode": "ACTIVE_AUTHORITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "device.state"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_AUTHORITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical device health state ; KEEP_DEVICE_HEALTH_AUTHORITY",
+      "b02_registered": false,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-149",
+      "source_path": "apps/server/src/routes/field_crop_context_hooks_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/decision/registerDecisionModule.ts,apps/server/src/modules/prescription/registerPrescriptionModule.ts",
+      "activation_mode": "ACTIVE_ADAPTER",
+      "writes": [
+        "semantic output / delegated persistence according to active route implementation"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "context.snapshot",
+        "context.declared_identity"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_ADAPTER_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical ContextAuthorityPort ; RETIRE_HOOK_COMPATIBILITY_AFTER_TYPED_CONTEXT_CUTOVER",
+      "b02_registered": false,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-150",
+      "source_path": "apps/server/src/routes/field_tags_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/field/registerFieldModule.ts",
+      "activation_mode": "ACTIVE_AUTHORITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "context.declared_identity"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_AUTHORITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical field metadata authority ; KEEP_EXPLICIT_METADATA_AUTHORITY",
+      "b02_registered": false,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-151",
+      "source_path": "apps/server/src/routes/judge_v2.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/judge/registerJudgeModule.ts",
+      "activation_mode": "ACTIVE_DERIVER",
+      "writes": [
+        "semantic output / delegated persistence according to active route implementation"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "evidence.qualification",
+        "acceptance.verdict",
+        "field_memory"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_DERIVER_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical judge result / execution evidence qualification ; REMOVE_DIRECT_MEMORY_SIDE_EFFECT_IF_PRESENT",
+      "b02_registered": true,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-152",
+      "source_path": "apps/server/src/routes/management_zones_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/field/registerFieldModule.ts",
+      "activation_mode": "ACTIVE_AUTHORITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "context.snapshot",
+        "field.spatial_identity"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_AUTHORITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical management-zone authority ; KEEP_SPATIAL_CONTEXT_AUTHORITY",
+      "b02_registered": false,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-153",
+      "source_path": "apps/server/src/routes/raw.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/sensing/registerSensingModule.ts",
+      "activation_mode": "ACTIVE_COMPATIBILITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_COMPATIBILITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical evidence ingestion ; RETIRE_LEGACY_RAW_WRITER_AFTER_INGESTION_CUTOVER",
+      "b02_registered": true,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-154",
+      "source_path": "apps/server/src/routes/sensing_fact_envelope_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/sensing/registerSensingModule.ts",
+      "activation_mode": "ACTIVE_ADAPTER",
+      "writes": [
+        "semantic output / delegated persistence according to active route implementation"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "evidence.qualification"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_ADAPTER_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical EvidenceQualification ingress ; KEEP_AS_EVIDENCE_ADAPTER",
+      "b02_registered": true,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-155",
+      "source_path": "apps/server/src/routes/skill_runtime_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/decision/registerDecisionModule.ts",
+      "activation_mode": "ACTIVE_AUTHORITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "execution.adapter_resolution",
+        "governance.skill_binding"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_AUTHORITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical governed skill runtime ; KEEP_RUNTIME_EXECUTION_WITH_APPROVAL_BOUNDARIES",
+      "b02_registered": true,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-156",
+      "source_path": "apps/server/src/routes/skills_rules_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/decision/registerDecisionModule.ts",
+      "activation_mode": "ACTIVE_AUTHORITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "governance.skill_binding"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_AUTHORITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical versioned skill binding policy ; KEEP_EXPLICIT_SKILL_BINDING_AUTHORITY",
+      "b02_registered": false,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-157",
+      "source_path": "apps/server/src/routes/skills_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/decision/registerDecisionModule.ts",
+      "activation_mode": "ACTIVE_COMPATIBILITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "governance.skill_binding"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_COMPATIBILITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "bindings/override + canonical skill registry services ; RETIRE_LEGACY_ENABLE_DISABLE_MUTATION_SURFACES_AT_DECLARED_SUNSET",
+      "b02_registered": false,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-158",
+      "source_path": "apps/server/src/routes/telemetry_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/sensing/registerSensingModule.ts",
+      "activation_mode": "ACTIVE_AUTHORITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "device.state"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_AUTHORITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "canonical telemetry/evidence ingestion ; KEEP_INGRESS_WITH_QUALIFICATION_BOUNDARY",
+      "b02_registered": true,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-159",
+      "source_path": "apps/server/src/routes/weather_v1.ts",
+      "entrypoint": "active registration graph; parent=apps/server/src/modules/sensing/registerSensingModule.ts",
+      "activation_mode": "ACTIVE_AUTHORITY",
+      "writes": [
+        "active route/service semantic state or delegated persistence"
+      ],
+      "reads": [
+        "active request/runtime inputs",
+        "delegated domain/service inputs"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "twin.forecast"
+      ],
+      "authority_class": "ACTIVE_RUNTIME_AUTHORITY_EXPLICITLY_DISPOSED",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "governed weather/forecast source adapter ; MCFT_FORECAST_AUTHORITY_MUST_REMAIN_SEPARATE_UNTIL_TYPED_CUTOVER",
+      "b02_registered": false,
+      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+    },
+    {
+      "surface_id": "RES-160",
+      "source_path": "apps/server/src/domain/decision_engine_v1.ts",
+      "entrypoint": "apps/server/src/routes/decision_engine_v1.ts -> getHardRuleRecommendationBlueprintV1; evaluateIrrigationDecisionV1 remains separately orphaned",
+      "activation_mode": "PARTIAL_ACTIVE_BY_CAPABILITY",
+      "writes": [
+        "in-memory hard-rule recommendation blueprint",
+        "in-memory legacy irrigation decision result"
+      ],
+      "reads": [
+        "HARD_RULE_POLICY_CONFIG_V1",
+        "legacy irrigation threshold inputs"
+      ],
+      "semantic_family": [
+        "decision.candidate",
+        "decision.calculation"
+      ],
+      "authority_class": "LEGACY_MIXED_DECISION_POLICY_DERIVER_WITH_ORPHANED_SUBCAPABILITY",
+      "runtime_reachable": "PROVEN_FOR_HARD_RULE_BLUEPRINT__NONE_FOR_EVALUATE_IRRIGATION_DECISION",
+      "downstream_consumers": [
+        "apps/server/src/routes/decision_engine_v1.ts"
+      ],
+      "removal_target": "SPLIT POLICY/CALCULATION FROM CANDIDATE AUTHORITY; RETIRE ORPHANED LEGACY EVALUATOR AFTER PROOF",
+      "audit_note": "Capability-level classification required: the file is not uniformly active or orphaned.",
+      "feature_flag": null,
+      "b02_registered": true
+    },
+    {
+      "surface_id": "RES-161",
+      "source_path": "apps/server/src/domain/water_response/water_response_verification_from_acceptance_v1.ts",
+      "entrypoint": "apps/server/src/routes/water_response_verification_v1.ts",
+      "activation_mode": "ACTIVE_BUILDER",
+      "writes": [
+        "in-memory water-response verification object used by active outcome persistence route"
+      ],
+      "reads": [
+        "AcceptanceResult",
+        "AsExecuted / execution evidence"
+      ],
+      "semantic_family": [
+        "outcome.evidence",
+        "acceptance.verdict",
+        "execution.as_executed"
+      ],
+      "authority_class": "ACCEPTANCE_TO_OUTCOME_VERIFICATION_BUILDER",
+      "runtime_reachable": "PROVEN",
+      "downstream_consumers": [
+        "apps/server/src/routes/water_response_verification_v1.ts"
+      ],
+      "removal_target": "KEEP AS EXPLICIT Acceptance -> OutcomeEvidence BOUNDARY",
+      "audit_note": "Outcome verification is downstream of Acceptance and must not be collapsed into Acceptance or Field Memory.",
+      "feature_flag": null,
+      "b02_registered": true
+    },
+    {
+      "surface_id": "RES-162",
+      "source_path": "apps/server/src/domain/agronomy/agronomy_engine.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "ORPHANED_CAPABILITY",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.calculation"
+      ],
+      "authority_class": "ORPHANED_LEGACY_IRRIGATION_THRESHOLD_CALCULATOR",
+      "runtime_reachable": "NOT_PROVEN_CURRENT_CALLER",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Retain only as calculation logic if explicitly adapted; no Candidate authority; no new runtime consumer before canonical adapter",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "evaluateAgronomy is reachable only through evaluateIrrigationDecisionV1 in domain/decision_engine_v1.ts; that exported legacy evaluator has no current repository caller."
+    },
+    {
+      "surface_id": "RES-163",
+      "source_path": "apps/server/src/domain/agronomy/crop_catalog.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "ORPHANED_CAPABILITY",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.calculation"
+      ],
+      "authority_class": "ORPHANED_LEGACY_CROP_THRESHOLD_CONFIG_AUTHORITY",
+      "runtime_reachable": "NOT_PROVEN_CURRENT_CALLER",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Version or migrate threshold data behind Calculation authority if reused; forbid direct Candidate use",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "getCropProfile is consumed by the same orphaned evaluateIrrigationDecisionV1 sub-capability; current active hard-rule blueprint does not use it."
+    },
+    {
+      "surface_id": "RES-164",
+      "source_path": "apps/server/src/domain/agronomy/rule_engine.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "FEATURE_FLAG",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "context.crop_stage"
+      ],
+      "authority_class": "ACTIVE_LEGACY_STAGE_DEFAULT_AUTHORITY",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Replace concrete seedling fallback with QualifiedCropStageState/ContextAuthority semantics; removal target B-09",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Active Agronomy Agent path reaches rule_engine; normalizeSkillStage can manufacture seedling from missing/legacy stage semantics."
+    },
+    {
+      "surface_id": "RES-165",
+      "source_path": "apps/server/src/domain/agronomy/rule_engine.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "FEATURE_FLAG",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "ACTIVE_LEGACY_RULE_RECOMMENDATION_DERIVER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep deterministic rule/calculation logic but remove direct recommendation/Candidate authority after shadow cutover",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Active Agronomy Agent calls agronomy/engine -> rule_engine and persists recommendation/plan downstream."
+    },
+    {
+      "surface_id": "RES-166",
+      "source_path": "apps/server/src/domain/agronomy/stage_resolver.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "ALWAYS_COMPATIBILITY",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "context.crop_stage"
+      ],
+      "authority_class": "ACTIVE_LEGACY_CROP_STAGE_DERIVER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Replace decision-time authority with qualified crop-stage state; keep compatibility only until B-09 cutover",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02 already records explicit/DAP/startDate derivation as grandfathered duplicate."
+    },
+    {
+      "surface_id": "RES-167",
+      "source_path": "apps/server/src/domain/approval/recommendation_approval_request_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "API_ONLY",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "CANDIDATE_CONSUMER_TO_APPROVAL_ADAPTER_NOT_CANDIDATE_OWNER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep as Approval boundary consumer; Candidate authority remains upstream",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Pure builder consumes candidate-shaped recommendation and produces approval submission; no DB/write/random/time authority in builder."
+    },
+    {
+      "surface_id": "RES-168",
+      "source_path": "apps/server/src/domain/controlplane/ao_act_receipt_from_task_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "API_ONLY",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "DOWNSTREAM_RECEIPT_BUILDER_CANDIDATE_PROVENANCE_TOUCHPOINT_NOT_OWNER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep receipt construction downstream; do not treat candidate provenance fields as Candidate authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Current B02 owner is execution.receipt helper; scanner candidate hit is semantic touchpoint, not candidate production."
+    },
+    {
+      "surface_id": "RES-169",
+      "source_path": "apps/server/src/domain/decision/agronomy_recommendation_v2_candidate_adapter_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "MANUAL_CAPABILITY_ISLAND",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "CANONICAL_CANDIDATE_COMPATIBILITY_ADAPTER",
+      "runtime_reachable": "INTENTIONAL_NONE",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep registered adapter; activate only through explicit governed consumer",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02 B-06g: pure AgronomyRecommendationV2 -> CandidateDecisionV1 adapter; legacy context/evidence/effect semantics are not promoted."
+    },
+    {
+      "surface_id": "RES-170",
+      "source_path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "API_ONLY_SHADOW",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "context.snapshot"
+      ],
+      "authority_class": "B09Y_BOUNDARY_CONTEXT_SHADOW_PRODUCER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep B-09y exact immutable FieldProgram/context boundary; no B-07e/MCFT authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Authorized B-09y boundary-scoped ContextSnapshot producer."
+    },
+    {
+      "surface_id": "RES-171",
+      "source_path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "API_ONLY_SHADOW",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "B09Y_CANDIDATE_BOUNDARY_SHADOW_BINDING",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep exact boundary/provenance binding; no final eligibility/approval authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B09y consumes exact recommendation and boundary context; ambiguity/latest fallback forbidden."
+    },
+    {
+      "surface_id": "RES-172",
+      "source_path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "API_ONLY_SHADOW",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "B09J_CANDIDATE_CRITERION_SHADOW_BINDING",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep shadow identity/ref continuity; do not invoke DecisionEligibility until separately authorized",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02 records shadow-only scoped recommendation source + Candidate identity continuity."
+    },
+    {
+      "surface_id": "RES-173",
+      "source_path": "apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "API_ONLY_SHADOW",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.calculation"
+      ],
+      "authority_class": "CANONICAL_CALCULATION_RESULT_ADAPTER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep calculation-only adapter; no Candidate/Eligibility/Approval authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B-06b adapter is consumed by authorized B-09ae shadow composition."
+    },
+    {
+      "surface_id": "RES-174",
+      "source_path": "apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "API_ONLY_SHADOW",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "CANONICAL_CANDIDATE_COMPATIBILITY_ADAPTER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep legacy recommendation -> Candidate adapter with explicit canonical refs only",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02 B-06c/B-09j: legacy evidence/context/stage fields are not promoted to canonical authority."
+    },
+    {
+      "surface_id": "RES-175",
+      "source_path": "apps/server/src/domain/decision/operation_plan_authority_candidate_adapter_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "MANUAL_CAPABILITY_ISLAND",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "CANDIDATE_COMPATIBILITY_CLASSIFIER_CAPABILITY_ISLAND",
+      "runtime_reachable": "INTENTIONAL_NONE",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep exact grandfathered proposal classifier only; reject approval-derived/downstream plans",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02 B-06f pure classifier/adapter; no runtime consumer."
+    },
+    {
+      "surface_id": "RES-176",
+      "source_path": "apps/server/src/domain/decision/prescription_action_spec_candidate_adapter_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "MANUAL_CAPABILITY_ISLAND",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "CANDIDATE_ACTION_SPEC_COMPATIBILITY_ADAPTER",
+      "runtime_reachable": "INTENTIONAL_NONE",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep pre-approval ActionSpecification -> Candidate adapter; no approval/timing/device authority promotion",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02 B-06e pure compatibility projection; downstream statuses fail closed."
+    },
+    {
+      "surface_id": "RES-177",
+      "source_path": "apps/server/src/domain/operations/operation_plan_from_approval_decision_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "API_ONLY",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "CANDIDATE_PROVENANCE_CONSUMER_TO_PLAN_NOT_CANDIDATE_OWNER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep ApprovalDecision -> OperationPlan builder; candidate authority remains upstream",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Builder creates OperationPlan only after approved decision and explicitly keeps act_task_id null; scanner candidate hit is provenance/touchpoint."
+    },
+    {
+      "surface_id": "RES-178",
+      "source_path": "apps/server/src/domain/prescription/prescription_contract_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 residual hard proof",
+      "activation_mode": "ACTIVE_PRODUCT_CONTRACT",
+      "writes": [
+        "in-memory semantic output or downstream-bound typed payload as described by authority_class"
+      ],
+      "reads": [
+        "family-specific upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "LEGACY_MIXED_ACTION_SPEC_CANDIDATE_TOUCHPOINT",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Preserve ActionSpecification contract; remove upstream Candidate/Approval authority and bind canonical Candidate -> spec",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Prescription is an action specification boundary; candidate semantics are compatibility provenance, not final decision owner."
+    },
+    {
+      "surface_id": "RES-179",
+      "source_path": "apps/server/src/domain/agronomy/engine.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "context.crop_stage"
+      ],
+      "authority_class": "ACTIVE_AGRONOMY_ENGINE_CONSUMER_OF_LEGACY_STAGE_RULES",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep as recommendation composition only until legacy stage authority is replaced",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "generateAgronomyRecommendation calls rule_engine.evaluateRules; it consumes AgronomyContext/stage semantics and does not itself establish canonical crop-stage authority."
+    },
+    {
+      "surface_id": "RES-180",
+      "source_path": "apps/server/src/routes/dashboard_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "context.crop_stage"
+      ],
+      "authority_class": "PROJECTION_CALLSITE_TO_LEGACY_STAGE_POLICY_SUGGESTIONS",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep dashboard projection-only; never treat dashboard policy suggestions as Context authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Dashboard calls buildPolicySuggestionsFromStats; B02 classifies dashboard as PROJECTION_ONLY."
+    },
+    {
+      "surface_id": "RES-181",
+      "source_path": "apps/server/src/domain/approval/recommendation_approval_request_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "decision.approval"
+      ],
+      "authority_class": "CURRENT_APPROVAL_REQUEST_BUILDER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep as canonical Approval request boundary consumer of Candidate",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Pure builder transforms candidate/recommendation input to ApprovalRequest payload; this is Approval authority, not Candidate authority."
+    },
+    {
+      "surface_id": "RES-182",
+      "source_path": "apps/server/src/domain/controlplane/ao_act_receipt_from_task_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "decision.approval"
+      ],
+      "authority_class": "DOWNSTREAM_RECEIPT_APPROVAL_PROVENANCE_VALIDATOR_NOT_APPROVAL_OWNER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep downstream validation; no new Approval authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Receipt builder checks approved-task lineage; approval references are provenance preconditions, not an ApprovalDecision producer."
+    },
+    {
+      "surface_id": "RES-183",
+      "source_path": "apps/server/src/domain/controlplane/ao_act_task_from_operation_plan_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "decision.approval"
+      ],
+      "authority_class": "TASK_BUILDER_APPROVAL_PROVENANCE_CONSUMER_NOT_APPROVAL_OWNER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep Plan->Task builder downstream of Approval",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Builder consumes an approved/ready plan lineage; approval semantics are provenance, not a new approval verdict."
+    },
+    {
+      "surface_id": "RES-184",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "decision.approval"
+      ],
+      "authority_class": "LEGACY_EXECUTION_ORCHESTRATOR_APPROVAL_TOUCHPOINT",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Converge approval transitions behind canonical Approval service; execution runtime must not mint independent approval truth",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Active task_service contains approval/request/decision orchestration touchpoints inside the large AO-ACT runtime."
+    },
+    {
+      "surface_id": "RES-185",
+      "source_path": "apps/server/src/domain/operations/operation_plan_from_approval_decision_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "decision.approval"
+      ],
+      "authority_class": "APPROVAL_DECISION_TO_PLAN_CONSUMER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep explicit ApprovedDecision -> OperationPlan boundary",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Builder requires approved decision and creates Plan; it consumes Approval authority rather than creating a second Approval authority."
+    },
+    {
+      "surface_id": "RES-186",
+      "source_path": "apps/server/src/domain/controlplane/ao_act_receipt_from_task_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "authority_class": "RECEIPT_TO_PLAN_LIFECYCLE_TOUCHPOINT",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep receipt-driven plan transition only after exact Receipt semantics; remove cross-family status conflation",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Receipt builder can affect plan lifecycle/index after execution evidence; plan semantics must remain downstream of exact receipt."
+    },
+    {
+      "surface_id": "RES-187",
+      "source_path": "apps/server/src/domain/controlplane/ao_act_task_from_operation_plan_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "authority_class": "PLAN_TO_TASK_CONSUMER_NOT_PLAN_OWNER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep Plan->Task builder; Plan must already exist in correct pre-dispatch state",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Task builder consumes OperationPlan and must not create/upgrade Plan authority."
+    },
+    {
+      "surface_id": "RES-188",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "authority_class": "ACTIVE_LEGACY_PLAN_LIFECYCLE_ORCHESTRATOR",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep runtime but converge Plan lifecycle; Task creation must not imply ACKED/EXECUTING",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "task_service has active Plan lifecycle orchestration mixed with Task/Receipt behavior."
+    },
+    {
+      "surface_id": "RES-189",
+      "source_path": "apps/server/src/domain/decision/operation_plan_authority_candidate_adapter_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "authority_class": "PLAN_AUTHORITY_CLASSIFIER_COMPATIBILITY_ADAPTER",
+      "runtime_reachable": "INTENTIONAL_NONE",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep exact classifier capability island; no runtime Plan mutation",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B-06f classifies legacy operation_plan provenance to decide whether candidate projection is legal; it is not a Plan writer."
+    },
+    {
+      "surface_id": "RES-190",
+      "source_path": "apps/server/src/domain/execution/as_executed_from_ao_act_receipt_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "authority_class": "AS_EXECUTED_PLAN_PROVENANCE_CONSUMER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep Plan reference as provenance only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "AsExecuted builder carries operation-plan identity from Receipt lineage; it does not own Plan lifecycle."
+    },
+    {
+      "surface_id": "RES-191",
+      "source_path": "apps/server/src/routes/alerts_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "authority_class": "ALERT_OPERATION_RELATION_CALLSITE_NOT_PLAN_LIFECYCLE_OWNER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep alert-operation relation explicit; no alert action may advance Plan lifecycle",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Alert route calls alert_workflow relation/upsert helpers; this links alerts to operations but must not become canonical OperationPlan lifecycle authority."
+    },
+    {
+      "surface_id": "RES-192",
+      "source_path": "apps/server/src/domain/controlplane/ao_act_receipt_from_task_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.receipt"
+      ],
+      "authority_class": "CURRENT_RECEIPT_BUILDER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep exact Task->Receipt construction boundary",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02 already identifies this as CURRENT_RECEIPT_HELPER."
+    },
+    {
+      "surface_id": "RES-193",
+      "source_path": "apps/server/src/domain/execution/as_executed_from_ao_act_receipt_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.receipt"
+      ],
+      "authority_class": "RECEIPT_CONSUMER_TO_AS_EXECUTED",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep canonical Receipt -> AsExecuted adapter",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Receipt is input provenance; output authority is AsExecuted."
+    },
+    {
+      "surface_id": "RES-194",
+      "source_path": "apps/server/src/routes/as_executed_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.receipt"
+      ],
+      "authority_class": "AS_EXECUTED_ROUTE_RECEIPT_CONSUMER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep route as canonical Receipt -> AsExecuted facade",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Route validates/loads Receipt to create AsExecuted; does not mint independent Receipt truth."
+    },
+    {
+      "surface_id": "RES-195",
+      "source_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.receipt"
+      ],
+      "authority_class": "LEGACY_RECEIPT_WRITE_COMPATIBILITY_SURFACE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Move receipt creation to canonical AO-ACT Receipt service and retire decision-engine receipt write path",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Active decision facade still contains /actions/receipt/from-task and receipt persistence; this is real duplicate execution authority debt."
+    },
+    {
+      "surface_id": "RES-196",
+      "source_path": "apps/server/src/services/field_memory_service.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.receipt"
+      ],
+      "authority_class": "FIELD_MEMORY_RECEIPT_PROVENANCE_CONSUMER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep exact Receipt binding only; no Receipt authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Field Memory uses exact receipt/operation provenance after #3436 hardening; it consumes Receipt authority."
+    },
+    {
+      "surface_id": "RES-197",
+      "source_path": "apps/server/src/domain/controlplane/ao_act_receipt_from_task_builder_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.task"
+      ],
+      "authority_class": "RECEIPT_BUILDER_TASK_PROVENANCE_CONSUMER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep Receipt downstream of exact Task identity",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Task references are immutable receipt provenance, not Task production."
+    },
+    {
+      "surface_id": "RES-198",
+      "source_path": "apps/server/src/domain/execution/as_executed_from_ao_act_receipt_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.task"
+      ],
+      "authority_class": "AS_EXECUTED_TASK_PROVENANCE_CONSUMER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep Task lineage as provenance only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "AsExecuted builder carries Task lineage from Receipt; not a Task authority."
+    },
+    {
+      "surface_id": "RES-199",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.adapter_resolution"
+      ],
+      "authority_class": "ACTIVE_DEVICE_SKILL_CAPABILITY_RESOLUTION_CALLSITE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep typed adapter-resolution callsite; dispatch delivery remains separate",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "task_service calls resolveTaskCapabilityViaDeviceSkillsResult before execution routing."
+    },
+    {
+      "surface_id": "RES-200",
+      "source_path": "apps/server/src/domain/sensing/fertility_inference_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.adapter_resolution"
+      ],
+      "authority_class": "SCANNER_CROSS_FAMILY_OVERREACH_FERTILITY_INFERENCE_NOT_EXECUTION_ADAPTER_RESOLUTION",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep fertility inference under sensing/Evidence/State; do not classify it as execution adapter authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "The called device-skills functions infer fertility from observations; this is sensing inference, not task adapter selection."
+    },
+    {
+      "surface_id": "RES-201",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "twin.state"
+      ],
+      "authority_class": "SCANNER_CROSS_FAMILY_OVERREACH_DEVICE_CAPABILITY_RESOLUTION_NOT_TWIN_STATE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep execution capability resolution separate from canonical Twin State",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "The detector associates device-skills library with twin.state, but this callsite resolves task capability and does not establish field/twin state."
+    },
+    {
+      "surface_id": "RES-202",
+      "source_path": "apps/server/src/domain/sensing/run_sensing_inference_pipeline_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "twin.state"
+      ],
+      "authority_class": "ACTIVE_LEGACY_DERIVED_SENSING_STATE_PRODUCER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep as legacy/projection state until canonical Twin State port cutover; removal target B-09/post-MCFT as applicable",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02 classifies sensing inference pipeline as PROJECTION_OR_LEGACY derived-state producer."
+    },
+    {
+      "surface_id": "RES-203",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "twin.state"
+      ],
+      "authority_class": "SCANNER_CROSS_FAMILY_OVERREACH_EXECUTION_CAPABILITY_RESOLUTION_NOT_TWIN_STATE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep AO-ACT execution boundary; never treat device-skill resolution as canonical Twin State",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "control_ao_act calls device capability resolution; it is execution adapter selection, not a State producer."
+    },
+    {
+      "surface_id": "RES-204",
+      "source_path": "apps/server/src/domain/execution/as_executed_from_ao_act_receipt_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "action.prescription_spec"
+      ],
+      "authority_class": "AS_EXECUTED_PRESCRIPTION_SPEC_CONSUMER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep exact ActionSpecification provenance into AsExecuted",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Action spec is input/provenance; output authority is AsExecuted."
+    },
+    {
+      "surface_id": "RES-205",
+      "source_path": "apps/server/src/domain/roi/roi_ledger_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "action.prescription_spec"
+      ],
+      "authority_class": "ROI_ACTION_SPEC_PROVENANCE_CONSUMER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep ROI downstream of action spec + execution + outcome",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "ROI calculation may read prescribed action values but does not own ActionSpecification."
+    },
+    {
+      "surface_id": "RES-206",
+      "source_path": "apps/server/src/routes/as_executed_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "action.prescription_spec"
+      ],
+      "authority_class": "AS_EXECUTED_ROUTE_ACTION_SPEC_CONSUMER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep ActionSpecification input to canonical AsExecuted adapter",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Route consumes prescription/action spec to normalize actual execution; no ActionSpecification authority."
+    },
+    {
+      "surface_id": "RES-207",
+      "source_path": "apps/server/src/domain/roi/roi_ledger_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.as_executed"
+      ],
+      "authority_class": "ROI_AS_EXECUTED_CONSUMER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep ROI strictly downstream of AsExecuted/Outcome",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "ROI derives value/effect metrics from actual execution; no AsExecuted authority."
+    },
+    {
+      "surface_id": "RES-208",
+      "source_path": "apps/server/src/routes/acceptance_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.as_executed"
+      ],
+      "authority_class": "ACCEPTANCE_AS_EXECUTED_CONSUMER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep Acceptance downstream of AsExecuted/Evidence/Judge",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Acceptance route consumes execution evidence/AsExecuted; it must not redefine AsExecuted."
+    },
+    {
+      "surface_id": "RES-209",
+      "source_path": "apps/server/src/routes/water_response_verification_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.as_executed"
+      ],
+      "authority_class": "OUTCOME_VERIFICATION_AS_EXECUTED_CONSUMER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep OutcomeEvidence downstream of Acceptance + AsExecuted",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Water-response verification consumes execution evidence; it does not own AsExecuted."
+    },
+    {
+      "surface_id": "RES-210",
+      "source_path": "apps/server/src/domain/acceptance/evidence_policy.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "evidence.qualification"
+      ],
+      "authority_class": "FORMAL_EVIDENCE_POLICY_COMPATIBILITY_CALLSITE",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep single versioned formal evidence policy authority in formal_evidence_policy_v1",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Wrapper/callsite delegates qualification/admission semantics to evaluateFormalEvidencePolicyV1."
+    },
+    {
+      "surface_id": "RES-211",
+      "source_path": "apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "evidence.qualification"
+      ],
+      "authority_class": "ACTIVE_LEGACY_EVIDENCE_SUFFICIENCY_PLUS_CANONICAL_SHADOW_CONSUMER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep legacy sufficiency only until B-09; canonical qualification shadow remains separate",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02: Apple-II sufficiency is legacy authoritative while canonical EvidenceQualification shadow is carried alongside."
+    },
+    {
+      "surface_id": "RES-212",
+      "source_path": "apps/server/src/domain/sensing/run_sensing_inference_pipeline_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "evidence.qualification"
+      ],
+      "authority_class": "SENSING_INFERENCE_EVIDENCE_CONSUMER_CALLSITE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep qualified sensing inference boundary; do not equate inference with canonical EvidenceQualification producer",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Pipeline calls fertility inference over observation aggregates; qualification semantics remain explicit downstream."
+    },
+    {
+      "surface_id": "RES-213",
+      "source_path": "apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "evidence.qualification"
+      ],
+      "authority_class": "CANONICAL_EVIDENCE_QUALIFICATION_SHADOW_PROJECTION",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep B-04/B-03 shadow projection; activation authority remains separately governed",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "B02 explicitly classifies this as SHADOW_PROJECTION using established dimensions and marker-backed temporal availability."
+    },
+    {
+      "surface_id": "RES-214",
+      "source_path": "apps/server/src/projections/operation_evidence_summary_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "evidence.qualification"
+      ],
+      "authority_class": "EVIDENCE_SUMMARY_POLICY_CALLSITE_PROJECTION",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep as projection consuming versioned evidence policy; not an independent qualification policy",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Operation evidence summary invokes formal evidence policy to label/report evidence."
+    },
+    {
+      "surface_id": "RES-215",
+      "source_path": "packages/device-skills/src/index.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "evidence.qualification"
+      ],
+      "authority_class": "DEVICE_SKILL_INFERENCE_LIBRARY_NOT_CANONICAL_EVIDENCE_QUALIFICATION_OWNER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep typed inference library; canonical EvidenceQualification remains server Evidence authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Fertility inference APIs derive sensing/inference outputs; they do not establish canonical qualification verdict ownership."
+    },
+    {
+      "surface_id": "RES-216",
+      "source_path": "apps/server/src/domain/acceptance/evidence_policy.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "acceptance.verdict"
+      ],
+      "authority_class": "ACCEPTANCE_EVIDENCE_ADMISSION_POLICY_CALLSITE_NOT_VERDICT_OWNER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep evidence admission separate from final Acceptance engine",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Wrapper delegates formal evidence admissibility; it does not itself compute final Acceptance verdict."
+    },
+    {
+      "surface_id": "RES-217",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "acceptance.verdict"
+      ],
+      "authority_class": "ACTIVE_LEGACY_ACCEPTANCE_CREATION_IN_EXECUTION_RUNTIME",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Converge Acceptance creation into canonical Acceptance service; execution runtime must not own duplicate verdict authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "task_service contains createAcceptance/acceptance_result_v1 behavior inside AO-ACT runtime."
+    },
+    {
+      "surface_id": "RES-218",
+      "source_path": "apps/server/src/domain/planner/compiler_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "acceptance.verdict"
+      ],
+      "authority_class": "PLANNER_ACCEPTANCE_POLICY_REFERENCE_TOUCHPOINT_NOT_VERDICT_OWNER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep planner producing planning options only; Acceptance stays downstream of execution",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Planner carries acceptance/evidence policy references in CandidateAction/plan material but does not execute formal Acceptance evaluation."
+    },
+    {
+      "surface_id": "RES-219",
+      "source_path": "apps/server/src/domain/roi/roi_ledger_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "acceptance.verdict"
+      ],
+      "authority_class": "ROI_ACCEPTANCE_CONSUMER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep ROI downstream of canonical Acceptance/Outcome",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "ROI uses acceptance outcome/provenance; it cannot own Acceptance verdict."
+    },
+    {
+      "surface_id": "RES-220",
+      "source_path": "apps/server/src/projections/operation_evidence_summary_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "acceptance.verdict"
+      ],
+      "authority_class": "EVIDENCE_SUMMARY_ACCEPTANCE_POLICY_PROJECTION_CALLSITE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep projection-only evidence admission labels; final Acceptance belongs to engine",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Policy callsite supports read model/report semantics, not final acceptance."
+    },
+    {
+      "surface_id": "RES-221",
+      "source_path": "apps/server/src/routes/water_response_verification_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "acceptance.verdict"
+      ],
+      "authority_class": "OUTCOME_ROUTE_ACCEPTANCE_CONSUMER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep explicit Acceptance -> OutcomeEvidence boundary",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Route requires Acceptance as input to build water-response verification; no Acceptance verdict production."
+    },
+    {
+      "surface_id": "RES-222",
+      "source_path": "apps/server/src/services/field_memory_service.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "acceptance.verdict"
+      ],
+      "authority_class": "FIELD_MEMORY_ACCEPTANCE_CONSUMER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep exact Acceptance provenance; move semantic authority to Acceptance -> Outcome -> Memory formalization",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Field Memory formalization consumes accepted operation evidence; #3436 improved provenance but direct Acceptance->Memory boundary remains debt."
+    },
+    {
+      "surface_id": "RES-223",
+      "source_path": "apps/server/src/routes/judge_v2.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "context.snapshot"
+      ],
+      "authority_class": "B09Y_CONTEXT_SHADOW_CALLSITE_CONSUMER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep Judge historical verdict unchanged; context shadow remains separate B09y authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Judge route calls B09y exact boundary/context shadow builder and persists shadow output; route does not own ContextSnapshot authority."
+    },
+    {
+      "surface_id": "RES-224",
+      "source_path": "apps/server/src/routes/v1/operator_twin.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific output/touchpoint as classified by authority_class"
+      ],
+      "reads": [
+        "exact upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "twin.scenario"
+      ],
+      "authority_class": "LEGACY_OPERATOR_SCENARIO_CONSUMER_TO_CANDIDATE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep legacy scenario read/submit compatibility; scenario authority stays legacy Twin/MCFT-derived and candidate source binding must fail closed",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Operator Twin consumes ScenarioSet to build recommendation/candidate submission; it is not ScenarioSet authority."
+    },
+    {
+      "surface_id": "RES-225",
+      "source_path": "apps/server/src/domain/sensing/run_sensing_inference_pipeline_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific touchpoint only as classified"
+      ],
+      "reads": [
+        "upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.adapter_resolution"
+      ],
+      "authority_class": "SCANNER_CROSS_FAMILY_OVERREACH_SENSING_INFERENCE_NOT_EXECUTION_ADAPTER_RESOLUTION",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep under sensing/Evidence/State; do not assign execution adapter authority.",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "The call resolves fertility inference over observation aggregates; this is sensing/Evidence/derived-state inference, not AO-ACT task adapter selection."
+    },
+    {
+      "surface_id": "RES-226",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific touchpoint only as classified"
+      ],
+      "reads": [
+        "upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "decision.approval"
+      ],
+      "authority_class": "EXECUTION_ROUTE_APPROVAL_PROVENANCE_CONSUMER_NOT_APPROVAL_OWNER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep AO-ACT downstream of canonical Approval; remove any approval-state collapse during execution convergence.",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "control_ao_act consumes approved-plan / approval lineage before Task construction. The ApprovalDecision remains upstream; this route must not mint an independent approval verdict."
+    },
+    {
+      "surface_id": "RES-227",
+      "source_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific touchpoint only as classified"
+      ],
+      "reads": [
+        "upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.task"
+      ],
+      "authority_class": "LEGACY_RECEIPT_ROUTE_TASK_PROVENANCE_CONSUMER_NOT_TASK_OWNER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Move receipt compatibility to canonical AO-ACT Receipt service; Task authority remains task_service/control AO-ACT.",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "The decision-engine receipt-from-task compatibility path loads/validates an existing Task and builds a Receipt. Task identity is upstream provenance, not Task creation authority."
+    },
+    {
+      "surface_id": "RES-228",
+      "source_path": "apps/server/db/migrations/2026_05_02_mvp0_skill_registry_seed.sql",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEED_MIGRATION",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEED_MIGRATION",
+      "runtime_reachable": "DEPLOYMENT_ONLY",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep seed idempotent; no runtime semantic authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEED_MIGRATION",
+      "underlying_semantic_families": [
+        "governance.skill_binding"
+      ],
+      "authority_owner": "DEPLOYMENT_BOOTSTRAP",
+      "writer_scope": "deterministic seed facts only",
+      "audit_note": "Writes skill_definition/skill_binding bootstrap facts; deployment seed does not become runtime decision authority."
+    },
+    {
+      "surface_id": "RES-229",
+      "source_path": "apps/server/src/domain/approval/approval_request_service_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep canonical ApprovalRequest service",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "decision.approval"
+      ],
+      "authority_owner": "APPROVAL_SERVICE",
+      "writer_scope": "ApprovalRequest creation",
+      "audit_note": "Validated scoped ApprovalRequest fact writer."
+    },
+    {
+      "surface_id": "RES-230",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Converge cross-family authority; Task creation must not imply Plan ACKED/Acceptance",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "execution.task",
+        "execution.dispatch_delivery",
+        "execution.receipt",
+        "operation.plan",
+        "decision.approval",
+        "acceptance.verdict"
+      ],
+      "authority_owner": "AO_ACT_RUNTIME",
+      "writer_scope": "mixed Task/Dispatch/Receipt plus legacy Plan/Approval/Acceptance orchestration",
+      "audit_note": "Large active runtime writes multiple semantic fact types; explicit mixed-authority debt."
+    },
+    {
+      "surface_id": "RES-231",
+      "source_path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep shadow-only until separately authorized typed integration",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "context.snapshot",
+        "decision.candidate"
+      ],
+      "authority_owner": "B09Y_SHADOW_BOUNDARY",
+      "writer_scope": "shadow boundary/context facts only",
+      "audit_note": "Exact immutable FieldProgram/Candidate decision-time context binding; no final Eligibility/Approval authority."
+    },
+    {
+      "surface_id": "RES-232",
+      "source_path": "apps/server/src/domain/decision/decision_eligibility_policy_declaration_fact_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep explicit versioned policy authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "decision.eligibility"
+      ],
+      "authority_owner": "DECISION_ELIGIBILITY_POLICY",
+      "writer_scope": "versioned policy declaration facts",
+      "audit_note": "Scoped fail-closed policy declaration writer."
+    },
+    {
+      "surface_id": "RES-233",
+      "source_path": "apps/server/src/domain/sensing/problem_state_uncertainty_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep as diagnostic/evidence derivation; no direct Candidate authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "judge.problem_state",
+        "evidence.qualification"
+      ],
+      "authority_owner": "SENSING_PROBLEM_STATE",
+      "writer_scope": "problem-state and uncertainty facts",
+      "audit_note": "Deterministic uncertainty/problem-state envelope writer."
+    },
+    {
+      "surface_id": "RES-234",
+      "source_path": "apps/server/src/domain/sensing/raw_sample_fact_envelope_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep canonical raw evidence ingress",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "evidence.raw_observation"
+      ],
+      "authority_owner": "SENSING_INGRESS",
+      "writer_scope": "raw sample facts plus runtime-availability provenance marker",
+      "audit_note": "Rejects synthetic/interpolated samples and records exact ingress provenance."
+    },
+    {
+      "surface_id": "RES-235",
+      "source_path": "apps/server/src/domain/skill_registry/facts.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep explicit skill registry authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "governance.skill_binding"
+      ],
+      "authority_owner": "SKILL_REGISTRY",
+      "writer_scope": "skill definition/binding/run/trace facts",
+      "audit_note": "Shared fact writer for versioned skill governance/runtime records."
+    },
+    {
+      "surface_id": "RES-236",
+      "source_path": "apps/server/src/jobs/agronomy_agent.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Shadow then remove Candidate/Plan authority at B-09 cutover",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "decision.candidate",
+        "operation.plan"
+      ],
+      "authority_owner": "LEGACY_AGRONOMY_AGENT",
+      "writer_scope": "recommendation and legacy plan proposal facts",
+      "audit_note": "Active legacy agent can persist recommendation and operation plan semantics."
+    },
+    {
+      "surface_id": "RES-237",
+      "source_path": "apps/server/src/modules/legacy/registerLegacyMonitoringModule.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Retain compatibility only; canonical evidence ingress owns new semantics",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "evidence.raw_observation",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "LEGACY_MONITORING",
+      "writer_scope": "marker/canopy/raw-sample compatibility facts",
+      "audit_note": "Legacy monitoring module persists observation/marker facts."
+    },
+    {
+      "surface_id": "RES-238",
+      "source_path": "apps/server/src/persistence/calibration/postgres_calibration_governance_repository_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "B-Line inventory only; no implementation change before MCFT typed cutover",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "twin.calibration",
+        "twin.learning"
+      ],
+      "authority_owner": "MCFT_TWIN_RUNTIME",
+      "writer_scope": "typed calibration/shadow-evaluation persistence",
+      "audit_note": "MCFT/Twin persistence repository; semantic object authority is upstream typed runtime."
+    },
+    {
+      "surface_id": "RES-239",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_approval_plan_evidence_repository_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "B-Line inventory only; no implementation change",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "decision.approval",
+        "operation.plan",
+        "evidence.qualification"
+      ],
+      "authority_owner": "MCFT_TWIN_RUNTIME",
+      "writer_scope": "approved-plan replay evidence persistence",
+      "audit_note": "Typed MCFT replay-evidence repository."
+    },
+    {
+      "surface_id": "RES-240",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; B-Line only records ownership until typed cutover",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "twin.state",
+        "twin.forecast",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "MCFT_TWIN_RUNTIME",
+      "writer_scope": "canonical runtime/state/forecast/checkpoint persistence",
+      "audit_note": "Runtime repository persists canonical MCFT/Twin record sets and projections."
+    },
+    {
+      "surface_id": "RES-241",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_cap08_s4_append_forward_repository_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; no B-Line implementation edits",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "twin.state",
+        "twin.forecast",
+        "twin.scenario",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "MCFT_CAP08_RUNTIME",
+      "writer_scope": "CAP08 authority-bound append/transition facts",
+      "audit_note": "CAP08 transition/append authority persistence."
+    },
+    {
+      "surface_id": "RES-242",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_cap08_t17_transition_repository_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; no B-Line implementation edits",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "twin.state",
+        "twin.forecast",
+        "twin.scenario",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "MCFT_CAP08_RUNTIME",
+      "writer_scope": "CAP08 authority-bound append/transition facts",
+      "audit_note": "CAP08 transition/append authority persistence."
+    },
+    {
+      "surface_id": "RES-243",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; inventory ownership only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "evidence.raw_observation",
+        "evidence.qualification"
+      ],
+      "authority_owner": "MCFT_EVIDENCE_RUNTIME",
+      "writer_scope": "canonicalized external formal evidence facts",
+      "audit_note": "External formal evidence ingress belongs to MCFT boundary."
+    },
+    {
+      "surface_id": "RES-244",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; B-Line must not create parallel learning authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "twin.feedback",
+        "outcome.evidence"
+      ],
+      "authority_owner": "MCFT_TWIN_RUNTIME",
+      "writer_scope": "decision/action-feedback/residual persistence",
+      "audit_note": "Typed feedback-cycle persistence repository."
+    },
+    {
+      "surface_id": "RES-245",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; legacy Twin replacement target after cutover",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "twin.forecast",
+        "twin.scenario"
+      ],
+      "authority_owner": "MCFT_TWIN_RUNTIME",
+      "writer_scope": "forecast/scenario canonical persistence",
+      "audit_note": "Canonical MCFT/Twin forecast/scenario repository."
+    },
+    {
+      "surface_id": "RES-246",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_immutable_decision_action_commit_repository_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; inventory ownership only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "twin.decision_record",
+        "outcome.evidence"
+      ],
+      "authority_owner": "MCFT_TWIN_RUNTIME",
+      "writer_scope": "immutable decision/action feedback commits",
+      "audit_note": "Typed immutable decision/action commit repository."
+    },
+    {
+      "surface_id": "RES-247",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; B-Line only records ownership until typed cutover",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "twin.state",
+        "twin.forecast",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "MCFT_TWIN_RUNTIME",
+      "writer_scope": "canonical runtime/state/forecast/checkpoint persistence",
+      "audit_note": "Runtime repository persists canonical MCFT/Twin record sets and projections."
+    },
+    {
+      "surface_id": "RES-248",
+      "source_path": "apps/server/src/projections/irrigation_scenario_set_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Freeze legacy authority; replace with MCFT/governed scenario input after cutover",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "twin.scenario"
+      ],
+      "authority_owner": "LEGACY_TWIN_SCENARIO",
+      "writer_scope": "legacy irrigation ScenarioSet fact + index",
+      "audit_note": "Active projection also persists scenario_set semantic facts."
+    },
+    {
+      "surface_id": "RES-249",
+      "source_path": "apps/server/src/projections/manual_execution_quality_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep derived-only; must not become Receipt/Acceptance authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "execution.result_evidence"
+      ],
+      "authority_owner": "EXECUTION_QUALITY_PROJECTION",
+      "writer_scope": "derived manual execution quality snapshot facts",
+      "audit_note": "Projection persists quality snapshot fact derived from Task/Receipt lineage."
+    },
+    {
+      "surface_id": "RES-250",
+      "source_path": "apps/server/src/projections/water_state_estimate_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Freeze as legacy state projection; canonical State moves to MCFT typed port",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "twin.state"
+      ],
+      "authority_owner": "LEGACY_WATER_STATE",
+      "writer_scope": "water-state estimate facts + index",
+      "audit_note": "Active water-state estimate writer."
+    },
+    {
+      "surface_id": "RES-251",
+      "source_path": "apps/server/src/projections/weather_forecast_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep source/forecast adapter; canonical forecast authority remains explicit under MCFT cutover",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "twin.forecast",
+        "evidence.raw_observation"
+      ],
+      "authority_owner": "WEATHER_FORECAST_INGRESS",
+      "writer_scope": "forecast facts + index",
+      "audit_note": "External weather forecast projection persists forecast facts."
+    },
+    {
+      "surface_id": "RES-252",
+      "source_path": "apps/server/src/routes/acceptance_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep Acceptance; split Acceptance -> Outcome -> Memory",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "acceptance.verdict",
+        "field_memory",
+        "execution.as_executed"
+      ],
+      "authority_owner": "ACCEPTANCE_RUNTIME",
+      "writer_scope": "Acceptance facts plus current direct formal-memory side effect",
+      "audit_note": "Current canonical Acceptance route still directly formalizes Field Memory on formal PASS."
+    },
+    {
+      "surface_id": "RES-253",
+      "source_path": "apps/server/src/routes/agronomy_inference_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep deriver; no direct Candidate/Execution authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "agronomy.interpretation",
+        "evidence.qualification"
+      ],
+      "authority_owner": "AGRONOMY_INFERENCE",
+      "writer_scope": "agronomy inference result facts",
+      "audit_note": "Active agronomy inference API persists inference results."
+    },
+    {
+      "surface_id": "RES-254",
+      "source_path": "apps/server/src/routes/agronomy_media_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep observation ingress under Evidence qualification",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "evidence.raw_observation"
+      ],
+      "authority_owner": "AGRONOMY_OBSERVATION_INGRESS",
+      "writer_scope": "agronomy observation facts",
+      "audit_note": "Active media/observation ingestion writer."
+    },
+    {
+      "surface_id": "RES-255",
+      "source_path": "apps/server/src/routes/alerts_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep alert operational authority; never conflate ACK with execution/acceptance",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "governance.trace_projection"
+      ],
+      "authority_owner": "ALERT_RUNTIME",
+      "writer_scope": "alert rule/event/notification operational facts",
+      "audit_note": "Active alert state and audit writer."
+    },
+    {
+      "surface_id": "RES-256",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep primary API; remove Task->Plan ACKED and lifecycle conflation",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "execution.task",
+        "execution.receipt",
+        "operation.plan",
+        "execution.adapter_resolution"
+      ],
+      "authority_owner": "AO_ACT_RUNTIME",
+      "writer_scope": "primary Task/Receipt/Plan/dispatch execution facts",
+      "audit_note": "Primary AO-ACT mixed execution orchestrator."
+    },
+    {
+      "surface_id": "RES-257",
+      "source_path": "apps/server/src/routes/control_ao_sense.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep AO-SENSE separate from AO-ACT execution authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "execution.task",
+        "execution.receipt",
+        "evidence.raw_observation"
+      ],
+      "authority_owner": "AO_SENSE_RUNTIME",
+      "writer_scope": "sensing task/receipt facts",
+      "audit_note": "Active sensing task/receipt API."
+    },
+    {
+      "surface_id": "RES-258",
+      "source_path": "apps/server/src/routes/control_approval_request_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep canonical Approval facade; Plan remains explicit downstream boundary",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "decision.approval",
+        "operation.plan"
+      ],
+      "authority_owner": "APPROVAL_RUNTIME",
+      "writer_scope": "ApprovalRequest/Decision and approved-decision Plan facts",
+      "audit_note": "Active approval writer and approved-decision Plan construction route."
+    },
+    {
+      "surface_id": "RES-259",
+      "source_path": "apps/server/src/routes/control_operation_plan_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep as explicit Plan transition facade after lifecycle repair",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "operation.plan"
+      ],
+      "authority_owner": "OPERATION_PLAN_RUNTIME",
+      "writer_scope": "explicit OperationPlan transition/submission facts",
+      "audit_note": "Active plan transition writer."
+    },
+    {
+      "surface_id": "RES-260",
+      "source_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep API facade; converge internals to governed ports then retire duplicate write authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "decision.candidate",
+        "decision.calculation",
+        "operation.plan",
+        "execution.task",
+        "execution.receipt"
+      ],
+      "authority_owner": "LEGACY_DECISION_FACADE",
+      "writer_scope": "recommendation/plan/receipt compatibility facts",
+      "audit_note": "Active legacy facade contains recommendation plus execution compatibility writers."
+    },
+    {
+      "surface_id": "RES-261",
+      "source_path": "apps/server/src/routes/devices_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep device registry/capability authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "device.identity",
+        "execution.adapter_resolution"
+      ],
+      "authority_owner": "DEVICE_REGISTRY",
+      "writer_scope": "device identity/credential/capability facts",
+      "audit_note": "Active device identity/capability writer."
+    },
+    {
+      "surface_id": "RES-262",
+      "source_path": "apps/server/src/routes/evidence_artifact_from_as_executed_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep canonical Receipt->AsExecuted->EvidenceArtifact boundary",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "execution.as_executed",
+        "execution.result_evidence"
+      ],
+      "authority_owner": "EVIDENCE_ARTIFACT_RUNTIME",
+      "writer_scope": "AsExecuted-linked evidence artifact/submission facts",
+      "audit_note": "Explicit evidence artifact persistence entrypoint."
+    },
+    {
+      "surface_id": "RES-263",
+      "source_path": "apps/server/src/routes/evidence_export_jobs_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Packaging only; no Acceptance/decision authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "evidence.packaging"
+      ],
+      "authority_owner": "EVIDENCE_EXPORT_INFRA",
+      "writer_scope": "export-job lifecycle/package metadata facts",
+      "audit_note": "Evidence export job state is operational packaging metadata."
+    },
+    {
+      "surface_id": "RES-264",
+      "source_path": "apps/server/src/routes/fields_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep field identity/context authority; separate trace-only facts",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "field.identity",
+        "context.declared_identity",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "FIELD_RUNTIME",
+      "writer_scope": "field/device binding/geometry/season facts",
+      "audit_note": "Active field and field-context writer."
+    },
+    {
+      "surface_id": "RES-265",
+      "source_path": "apps/server/src/routes/human_executors_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep human adapter -> canonical Receipt; harden default evidence semantics",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "execution.task",
+        "execution.result_evidence",
+        "execution.receipt"
+      ],
+      "authority_owner": "HUMAN_EXECUTION_RUNTIME",
+      "writer_scope": "service-team/executor/work-assignment/human receipt facts",
+      "audit_note": "Active human execution writer."
+    },
+    {
+      "surface_id": "RES-266",
+      "source_path": "apps/server/src/routes/operation_state_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "READ_SIDE_EFFECT_P0",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_READ_SIDE_EFFECT_P0",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "REMOVE GET semantic persistence; learning writes must originate from Acceptance->Outcome->Learning event",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "READ_SIDE_EFFECT_P0",
+      "underlying_semantic_families": [
+        "governance.skill_binding",
+        "learning.feedback",
+        "presentation.read_model"
+      ],
+      "authority_owner": "REPORTING_READ_MODEL",
+      "writer_scope": "GET detail currently writes skill_run and rule_performance facts",
+      "audit_note": "Read route side effect intentionally remains fail-closed P0."
+    },
+    {
+      "surface_id": "RES-267",
+      "source_path": "apps/server/src/routes/programs_core_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep product facade; split planning from downstream execution authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "decision.planning_option",
+        "context.declared_identity",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "FIELD_PROGRAM_RUNTIME",
+      "writer_scope": "FieldProgram/transition/note/resource/cost facts",
+      "audit_note": "Active FieldProgram writer plus planning/action surface."
+    },
+    {
+      "surface_id": "RES-268",
+      "source_path": "apps/server/src/routes/raw.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Retire after canonical Evidence ingress cutover",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "evidence.raw_observation"
+      ],
+      "authority_owner": "LEGACY_RAW_INGRESS",
+      "writer_scope": "legacy raw facts",
+      "audit_note": "Legacy raw route persists generic facts."
+    },
+    {
+      "surface_id": "RES-269",
+      "source_path": "apps/server/src/routes/v1/operator_acceptance_actions.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep human command facade; Acceptance truth stays canonical service",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "acceptance.verdict",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "OPERATOR_COMMAND_FACADE",
+      "writer_scope": "operator audit/review-request facts",
+      "audit_note": "Compatibility operator Acceptance command surface."
+    },
+    {
+      "surface_id": "RES-270",
+      "source_path": "apps/server/src/routes/v1/operator_approval_actions.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep human command facade; converge to canonical Approval service",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "decision.approval",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "OPERATOR_COMMAND_FACADE",
+      "writer_scope": "operator approval audit/decision facts",
+      "audit_note": "Compatibility operator Approval command writer."
+    },
+    {
+      "surface_id": "RES-271",
+      "source_path": "apps/server/src/routes/v1/operator_device_offline_actions.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep human command facade; device/alert services own state",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "device.state",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "OPERATOR_COMMAND_FACADE",
+      "writer_scope": "device-offline operator audit facts",
+      "audit_note": "Compatibility operator device action writer."
+    },
+    {
+      "surface_id": "RES-272",
+      "source_path": "apps/server/src/routes/v1/operator_dispatch_actions.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Change DISPATCHED write to DISPATCH_REQUESTED intent then canonical queue/outbox",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "execution.dispatch_intent",
+        "execution.dispatch_delivery"
+      ],
+      "authority_owner": "OPERATOR_COMMAND_FACADE",
+      "writer_scope": "operator dispatch intent/audit facts",
+      "audit_note": "Known dispatch status authority debt."
+    },
+    {
+      "surface_id": "RES-273",
+      "source_path": "apps/server/src/routes/v1/operator_twin.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Fail closed exact scope; cut write authority to canonical Candidate adapter after cutover",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "decision.candidate",
+        "twin.scenario",
+        "presentation.read_model"
+      ],
+      "authority_owner": "LEGACY_OPERATOR_TWIN",
+      "writer_scope": "legacy scenario-recommendation submission/recommendation facts",
+      "audit_note": "Active legacy mixed read/write Twin surface."
+    },
+    {
+      "surface_id": "RES-274",
+      "source_path": "apps/server/src/routes/water_response_verification_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep explicit Acceptance->OutcomeEvidence boundary",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "outcome.evidence"
+      ],
+      "authority_owner": "OUTCOME_VERIFICATION",
+      "writer_scope": "water-response verification/submission facts",
+      "audit_note": "Active outcome verification writer."
+    },
+    {
+      "surface_id": "RES-275",
+      "source_path": "apps/server/src/runtime/twin_runtime/cap08_s3_decision_action_provider_service_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; B-Line inventory only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "twin.decision_record",
+        "decision.approval",
+        "operation.plan",
+        "execution.receipt",
+        "outcome.evidence"
+      ],
+      "authority_owner": "MCFT_CAP08_RUNTIME",
+      "writer_scope": "CAP08 replay/decision/action evidence facts",
+      "audit_note": "MCFT CAP08 decision/action provider runtime."
+    },
+    {
+      "surface_id": "RES-276",
+      "source_path": "apps/server/src/runtime/twin_runtime/cap08_s3_outcome_completion_evidence_service_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; B-Line inventory only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "outcome.evidence",
+        "evidence.raw_observation"
+      ],
+      "authority_owner": "MCFT_CAP08_RUNTIME",
+      "writer_scope": "CAP08 completion/outcome evidence facts",
+      "audit_note": "MCFT CAP08 outcome completion evidence service."
+    },
+    {
+      "surface_id": "RES-277",
+      "source_path": "apps/server/src/services/derived_sensing_state_service_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep projection until canonical Twin State cutover; no new state authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "twin.state",
+        "evidence.qualification"
+      ],
+      "authority_owner": "LEGACY_DERIVED_SENSING_STATE",
+      "writer_scope": "derived sensing state facts + index",
+      "audit_note": "Active derived sensing state service."
+    },
+    {
+      "surface_id": "RES-278",
+      "source_path": "apps/server/src/services/device_observation_service_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep canonical observation ingress; qualification remains separate",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "evidence.raw_observation"
+      ],
+      "authority_owner": "DEVICE_OBSERVATION_INGRESS",
+      "writer_scope": "normalized device observation facts",
+      "audit_note": "Active normalized device observation writer."
+    },
+    {
+      "surface_id": "RES-279",
+      "source_path": "apps/server/src/services/fertilization/fertilization_service_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Fail closed caller-supplied zone assertion and converge Acceptance",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "decision.candidate",
+        "action.prescription_spec",
+        "evidence.qualification",
+        "acceptance.verdict"
+      ],
+      "authority_owner": "FERTILIZATION_DOMAIN",
+      "writer_scope": "assessment/recommendation/prescription/acceptance facts",
+      "audit_note": "Active fertilization domain service with mixed semantic families."
+    },
+    {
+      "surface_id": "RES-280",
+      "source_path": "apps/server/src/services/flight_table/flight_table_devices_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "DEVTOOLS_ONLY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_DEVTOOLS_ONLY",
+      "runtime_reachable": "FEATURE_GATED_DEVTOOLS",
+      "feature_flag": "ENABLE_FLIGHT_TABLE_API",
+      "downstream_consumers": [],
+      "removal_target": "Never promote to production authority; explicit DEVTOOLS only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "DEVTOOLS_ONLY",
+      "underlying_semantic_families": [
+        "devtools.simulation"
+      ],
+      "authority_owner": "FLIGHT_TABLE_DEVTOOLS",
+      "writer_scope": "dev/flight-table deterministic simulation facts",
+      "audit_note": "Flight Table services are development/simulation assembly and evidence lanes."
+    },
+    {
+      "surface_id": "RES-281",
+      "source_path": "apps/server/src/services/flight_table/flight_table_evidence_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "DEVTOOLS_ONLY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_DEVTOOLS_ONLY",
+      "runtime_reachable": "FEATURE_GATED_DEVTOOLS",
+      "feature_flag": "ENABLE_FLIGHT_TABLE_API",
+      "downstream_consumers": [],
+      "removal_target": "Never promote to production authority; explicit DEVTOOLS only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "DEVTOOLS_ONLY",
+      "underlying_semantic_families": [
+        "devtools.simulation"
+      ],
+      "authority_owner": "FLIGHT_TABLE_DEVTOOLS",
+      "writer_scope": "dev/flight-table deterministic simulation facts",
+      "audit_note": "Flight Table services are development/simulation assembly and evidence lanes."
+    },
+    {
+      "surface_id": "RES-282",
+      "source_path": "apps/server/src/services/flight_table/flight_table_field_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "DEVTOOLS_ONLY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_DEVTOOLS_ONLY",
+      "runtime_reachable": "FEATURE_GATED_DEVTOOLS",
+      "feature_flag": "ENABLE_FLIGHT_TABLE_API",
+      "downstream_consumers": [],
+      "removal_target": "Never promote to production authority; explicit DEVTOOLS only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "DEVTOOLS_ONLY",
+      "underlying_semantic_families": [
+        "devtools.simulation"
+      ],
+      "authority_owner": "FLIGHT_TABLE_DEVTOOLS",
+      "writer_scope": "dev/flight-table deterministic simulation facts",
+      "audit_note": "Flight Table services are development/simulation assembly and evidence lanes."
+    },
+    {
+      "surface_id": "RES-283",
+      "source_path": "apps/server/src/services/flight_table/flight_table_geometry_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "DEVTOOLS_ONLY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_DEVTOOLS_ONLY",
+      "runtime_reachable": "FEATURE_GATED_DEVTOOLS",
+      "feature_flag": "ENABLE_FLIGHT_TABLE_API",
+      "downstream_consumers": [],
+      "removal_target": "Never promote to production authority; explicit DEVTOOLS only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "DEVTOOLS_ONLY",
+      "underlying_semantic_families": [
+        "devtools.simulation"
+      ],
+      "authority_owner": "FLIGHT_TABLE_DEVTOOLS",
+      "writer_scope": "dev/flight-table deterministic simulation facts",
+      "audit_note": "Flight Table services are development/simulation assembly and evidence lanes."
+    },
+    {
+      "surface_id": "RES-284",
+      "source_path": "apps/server/src/services/flight_table/flight_table_operation_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "DEVTOOLS_ONLY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_DEVTOOLS_ONLY",
+      "runtime_reachable": "FEATURE_GATED_DEVTOOLS",
+      "feature_flag": "ENABLE_FLIGHT_TABLE_API",
+      "downstream_consumers": [],
+      "removal_target": "Never promote to production authority; explicit DEVTOOLS only",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "DEVTOOLS_ONLY",
+      "underlying_semantic_families": [
+        "devtools.simulation"
+      ],
+      "authority_owner": "FLIGHT_TABLE_DEVTOOLS",
+      "writer_scope": "dev/flight-table deterministic simulation facts",
+      "audit_note": "Flight Table services are development/simulation assembly and evidence lanes."
+    },
+    {
+      "surface_id": "RES-285",
+      "source_path": "apps/server/src/services/flight_table/flight_table_skills_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "DEVTOOLS_ONLY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_DEVTOOLS_ONLY",
+      "runtime_reachable": "FEATURE_GATED_DEVTOOLS",
+      "feature_flag": "ENABLE_FLIGHT_TABLE_API",
+      "downstream_consumers": [],
+      "removal_target": "Never promote to production authority; explicit DEVTOOLS only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "DEVTOOLS_ONLY",
+      "underlying_semantic_families": [
+        "devtools.simulation"
+      ],
+      "authority_owner": "FLIGHT_TABLE_DEVTOOLS",
+      "writer_scope": "dev/flight-table deterministic simulation facts",
+      "audit_note": "Flight Table services are development/simulation assembly and evidence lanes."
+    },
+    {
+      "surface_id": "RES-286",
+      "source_path": "apps/server/src/services/flight_table/flight_table_telemetry_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "DEVTOOLS_ONLY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_DEVTOOLS_ONLY",
+      "runtime_reachable": "FEATURE_GATED_DEVTOOLS",
+      "feature_flag": "ENABLE_FLIGHT_TABLE_API",
+      "downstream_consumers": [],
+      "removal_target": "Never promote to production authority; explicit DEVTOOLS only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "DEVTOOLS_ONLY",
+      "underlying_semantic_families": [
+        "devtools.simulation"
+      ],
+      "authority_owner": "FLIGHT_TABLE_DEVTOOLS",
+      "writer_scope": "dev/flight-table deterministic simulation facts",
+      "audit_note": "Flight Table services are development/simulation assembly and evidence lanes."
+    },
+    {
+      "surface_id": "RES-287",
+      "source_path": "apps/server/src/services/inspection/pest_disease_inspection_service_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep exact evidence/acceptance chain",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "evidence.raw_observation",
+        "evidence.qualification",
+        "acceptance.verdict"
+      ],
+      "authority_owner": "INSPECTION_DOMAIN",
+      "writer_scope": "inspection request/observation/assessment/review/acceptance facts",
+      "audit_note": "Active inspection domain service."
+    },
+    {
+      "surface_id": "RES-288",
+      "source_path": "apps/server/src/services/sampling/sampling_service_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Remove latest-wins source selection; require exact binding",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "evidence.raw_observation",
+        "evidence.qualification",
+        "acceptance.verdict"
+      ],
+      "authority_owner": "SAMPLING_DOMAIN",
+      "writer_scope": "sampling plan/receipt/lab/acceptance facts",
+      "audit_note": "Active sampling domain service."
+    },
+    {
+      "surface_id": "RES-289",
+      "source_path": "apps/server/src/services/telemetry_ingest_service_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep telemetry ingress; EvidenceQualification remains explicit downstream",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "evidence.raw_observation",
+        "device.state"
+      ],
+      "authority_owner": "TELEMETRY_INGRESS",
+      "writer_scope": "raw telemetry facts + projections",
+      "audit_note": "Active telemetry ingest writer."
+    },
+    {
+      "surface_id": "RES-290",
+      "source_path": "docker/postgres/init/003_p1_skill_seed.sql",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEED_MIGRATION",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEED_MIGRATION",
+      "runtime_reachable": "DEPLOYMENT_ONLY",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep seed idempotent; no runtime semantic authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEED_MIGRATION",
+      "underlying_semantic_families": [
+        "governance.skill_binding"
+      ],
+      "authority_owner": "DEPLOYMENT_BOOTSTRAP",
+      "writer_scope": "deterministic seed facts only",
+      "audit_note": "Writes skill_definition/skill_binding bootstrap facts; deployment seed does not become runtime decision authority."
     }
   ],
   "cross_branch_surfaces": [
@@ -3368,5 +7660,32 @@
       "runtime_reachable": "NOT_ON_THIS_AUDIT_HEAD",
       "removal_target": "KEEP_AND_REGISTER_WHEN_REPLAYED_TO_FINAL_INTEGRATION"
     }
-  ]
+  ],
+  "scan_files": [
+    "docker-compose.yml",
+    "docker-compose.prod.yml",
+    "docker-compose.staging.yml",
+    "docker-compose.commercial_v1.yml"
+  ],
+  "active_runtime_surface_closure": {
+    "registry": "docs/architecture/semantic_convergence/GEOX-BLINE-ACTIVE-RUNTIME-SURFACE-DISPOSITION-V1.json",
+    "root": "apps/server/src/modules/domain/registerDomainModules.ts",
+    "proof": "scripts/governance_acceptance/ACCEPTANCE_BLINE_ACTIVE_RUNTIME_SURFACE_CLOSURE_V1.cjs",
+    "rule": "ACTIVE_RUNTIME_SURFACE_WITHOUT_DISPOSITION_IS_FAIL_CLOSED"
+  },
+  "fact_ledger_closure": {
+    "status": "FULL_PATH_ADJUDICATION_PENDING_EXACT_MACHINE_PROOF",
+    "source_exact_ci": "33509893507 / job 99862739754",
+    "expected_writer_count": 63,
+    "adjudicated_writer_count": 63,
+    "disposition_counts": {
+      "SEED_MIGRATION": 2,
+      "SEMANTIC_FACT_WRITER": 28,
+      "LEGACY_COMPATIBILITY": 13,
+      "MCFT_FROZEN": 12,
+      "READ_SIDE_EFFECT_P0": 1,
+      "DEVTOOLS_ONLY": 7
+    },
+    "invariant": "governance.fact_ledger is persistence topology only; it never substitutes for underlying semantic authority ownership"
+  }
 }

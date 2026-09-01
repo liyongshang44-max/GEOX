@@ -39,6 +39,22 @@ const REQUIRED = [
   "authority_class","runtime_reachable","feature_flag","downstream_consumers","removal_target"
 ];
 
+const LEDGER_DISPOSITIONS = new Set([
+  "SEMANTIC_FACT_WRITER",
+  "LEGACY_COMPATIBILITY",
+  "MCFT_FROZEN",
+  "DEVTOOLS_ONLY",
+  "SEED_MIGRATION",
+  "READ_SIDE_EFFECT_P0"
+]);
+const LEDGER_REQUIRED = [
+  "ledger_disposition",
+  "underlying_semantic_families",
+  "authority_owner",
+  "writer_scope",
+  "capability_disposition"
+];
+
 const TOKENS = {
   canonical_observation_v1: "evidence.raw_observation",
   evidence_qualification_v1: "evidence.qualification",
@@ -134,12 +150,21 @@ function isTest(p) {
 
 function add(p, family, kind, reason, production) {
   const x = findings.get(p) || {
-    path: p, production: false, families: new Set(), kinds: new Set(), reasons: new Set()
+    path: p,
+    production: false,
+    families: new Set(),
+    kinds: new Set(),
+    reasons: new Set(),
+    capabilities: new Map()
   };
   x.production ||= production;
   x.families.add(family);
   x.kinds.add(kind);
   x.reasons.add(reason);
+  const capability = x.capabilities.get(family) || { kinds: new Set(), reasons: new Set() };
+  capability.kinds.add(kind);
+  capability.reasons.add(reason);
+  x.capabilities.set(family, capability);
   findings.set(p, x);
 }
 
@@ -298,6 +323,27 @@ function scan(abs, production) {
     p.startsWith("docker/postgres/init/") &&
     content.includes("field_memory_v1") &&
     (content.includes("DEFAULT 'projectA'") || content.includes("DEFAULT 0.8"));
+  const legacyDecisionPolicy =
+    p === "apps/server/src/domain/decision_engine_v1.ts" &&
+    content.includes("HARD_RULE_POLICY_CONFIG_V1") &&
+    content.includes("evaluateHardRuleHintsV1") &&
+    content.includes("getHardRuleRecommendationBlueprintV1");
+  const legacyAgronomyDecision =
+    p === "apps/server/src/domain/agronomy/agronomy_engine.ts" &&
+    content.includes("evaluateAgronomy") &&
+    content.includes("should_irrigate");
+  const legacyCropCatalogPolicy =
+    p === "apps/server/src/domain/agronomy/crop_catalog.ts" &&
+    content.includes("CROP_CATALOG") &&
+    content.includes("soil_moisture_min");
+  const legacyCropStageAuthority =
+    p === "apps/server/src/domain/agronomy/stage_resolver.ts" &&
+    content.includes("resolveCropStage") &&
+    content.includes("CROP_STAGE_ALLOWLIST");
+  const legacyRuleEngineAuthority =
+    p === "apps/server/src/domain/agronomy/rule_engine.ts" &&
+    content.includes("evaluateRulesByInput") &&
+    content.includes("confidence: 0.8");
   const bootstrapInitActivation =
     p.startsWith("docker-compose") &&
     content.includes("./docker/postgres/init:/docker-entrypoint-initdb.d:ro");
@@ -310,7 +356,7 @@ function scan(abs, production) {
     (/(?:CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION)[\s\S]*?RETURNS\s+trigger/i.test(content) ||
      /CREATE\s+TRIGGER\s+/i.test(content));
   const genericFactsWriter = /\bINSERT\s+INTO\s+facts\b/i.test(content);
-  if (!families.size && !specialPlanner && !specialFallback && !specialControlVerdict && !specialDeviceCapability && !specialDeviceSensing && !specialSkillBinding && !specialStandaloneJudge && !specialJudgeConfig && !semanticDefaultRisk && !bootstrapInitActivation && !executionDeploymentProfile && !databaseAutomation && !genericFactsWriter) return;
+  if (!families.size && !specialPlanner && !specialFallback && !specialControlVerdict && !specialDeviceCapability && !specialDeviceSensing && !specialSkillBinding && !specialStandaloneJudge && !specialJudgeConfig && !semanticDefaultRisk && !legacyDecisionPolicy && !legacyAgronomyDecision && !legacyCropCatalogPolicy && !legacyCropStageAuthority && !legacyRuleEngineAuthority && !bootstrapInitActivation && !executionDeploymentProfile && !databaseAutomation && !genericFactsWriter) return;
 
   for (const f of families) add(p, f, "SEMANTIC_TOUCHPOINT", "semantic-token-or-type", production);
   if (genericFactsWriter) {
@@ -397,6 +443,22 @@ function scan(abs, production) {
   if (semanticDefaultRisk) {
     add(p, "field_memory", "SEMANTIC_DEFAULT_AUTHORITY_RISK", "bootstrap-field-memory-defaults", production);
   }
+  if (legacyDecisionPolicy) {
+    add(p, "decision.candidate", "AUTHORITY_DERIVER", "legacy-hard-rule-recommendation-blueprint", production);
+  }
+  if (legacyAgronomyDecision) {
+    add(p, "decision.calculation", "AUTHORITY_DERIVER", "legacy-irrigation-threshold-decision", production);
+  }
+  if (legacyCropCatalogPolicy) {
+    add(p, "decision.calculation", "CONFIG_AUTHORITY", "legacy-crop-threshold-catalog", production);
+  }
+  if (legacyCropStageAuthority) {
+    add(p, "context.crop_stage", "AUTHORITY_DERIVER", "legacy-crop-stage-resolution", production);
+  }
+  if (legacyRuleEngineAuthority) {
+    add(p, "decision.candidate", "AUTHORITY_DERIVER", "legacy-rule-recommendation-derivation", production);
+    add(p, "context.crop_stage", "SEMANTIC_DEFAULT_AUTHORITY_RISK", "legacy-seedling-stage-fallback", production);
+  }
   if (bootstrapInitActivation) {
     add(p, "governance.bootstrap", "BOOTSTRAP_ACTIVATION", "postgres-init-semantic-seed-mount", production);
   }
@@ -422,8 +484,10 @@ function scan(abs, production) {
   }
 }
 
-function inventoryPaths(inv) {
-  const out = new Set();
+function inventoryCoverage(inv) {
+  const paths = new Set();
+  const familiesByPath = new Map();
+  const ledgerPathRows = new Map();
   if (inv.schema_version !== "bline_residual_authority_inventory_v1") failures.push("INVENTORY_SCHEMA_VERSION_INVALID");
   if (inv.enforcement?.failure_code !== "UNREGISTERED_AUTHORITY_CAPABLE_PATH") failures.push("INVENTORY_FAILURE_CODE_INVALID");
   for (const s of Array.isArray(inv.surfaces) ? inv.surfaces : []) {
@@ -431,12 +495,51 @@ function inventoryPaths(inv) {
     const p = String(s.source_path || "").trim();
     if (!id) failures.push("INVENTORY_SURFACE_ID_MISSING");
     for (const k of REQUIRED) if (!Object.hasOwn(s, k)) failures.push("INVENTORY_FIELD_MISSING:" + id + ":" + k);
+    const normalizedFamilies = (Array.isArray(s.semantic_family) ? s.semantic_family : [])
+      .map(x => String(x || "").trim())
+      .filter(Boolean);
+    if (normalizedFamilies.includes("governance.fact_ledger")) {
+      if (!p) failures.push("LEDGER_DISPOSITION_PATH_MISSING:" + id);
+      if (ledgerPathRows.has(p)) failures.push("LEDGER_DISPOSITION_DUPLICATE_PATH:" + p);
+      ledgerPathRows.set(p, id);
+      for (const k of LEDGER_REQUIRED) {
+        if (!Object.hasOwn(s, k)) failures.push("LEDGER_DISPOSITION_FIELD_MISSING:" + id + ":" + k);
+      }
+      const disposition = String(s.ledger_disposition || "").trim();
+      if (!LEDGER_DISPOSITIONS.has(disposition)) failures.push("LEDGER_DISPOSITION_INVALID:" + id + ":" + disposition);
+      if (String(s.capability_disposition || "") !== "ADJUDICATED_EXACT_PATH_AND_FAMILY") {
+        failures.push("LEDGER_CAPABILITY_NOT_EXACTLY_ADJUDICATED:" + id);
+      }
+      const underlying = Array.isArray(s.underlying_semantic_families)
+        ? s.underlying_semantic_families.map(x => String(x || "").trim()).filter(Boolean)
+        : [];
+      if (!underlying.length) failures.push("LEDGER_UNDERLYING_FAMILIES_MISSING:" + id);
+      if (underlying.includes("governance.fact_ledger")) failures.push("LEDGER_SELF_OWNERSHIP_FORBIDDEN:" + id);
+      if (!String(s.authority_owner || "").trim()) failures.push("LEDGER_AUTHORITY_OWNER_MISSING:" + id);
+      if (!String(s.writer_scope || "").trim()) failures.push("LEDGER_WRITER_SCOPE_MISSING:" + id);
+      if (!String(s.authority_class || "").startsWith("FACT_LEDGER_")) failures.push("LEDGER_AUTHORITY_CLASS_INVALID:" + id);
+      if (disposition === "SEED_MIGRATION" && !p.endsWith(".sql")) failures.push("LEDGER_SEED_NOT_SQL:" + id + ":" + p);
+      if (disposition === "MCFT_FROZEN" && !/MCFT/i.test(String(s.authority_owner || "") + " " + String(s.removal_target || ""))) {
+        failures.push("LEDGER_MCFT_FROZEN_OWNER_MISSING:" + id);
+      }
+      if (disposition === "READ_SIDE_EFFECT_P0" && !/REMOVE|ZERO|READ/i.test(String(s.removal_target || ""))) {
+        failures.push("LEDGER_READ_SIDE_EFFECT_REMEDIATION_MISSING:" + id);
+      }
+    }
     if (p) {
-      out.add(p);
+      paths.add(p);
+      const families = familiesByPath.get(p) || new Set();
+      for (const normalized of normalizedFamilies) families.add(normalized);
+      familiesByPath.set(p, families);
       if (!fs.existsSync(path.join(ROOT, p))) failures.push("INVENTORY_CURRENT_PATH_MISSING:" + id + ":" + p);
     }
   }
-  return out;
+  const expected = Number(inv.fact_ledger_closure?.expected_writer_count);
+  const adjudicated = Number(inv.fact_ledger_closure?.adjudicated_writer_count);
+  if (!Number.isInteger(expected) || expected <= 0) failures.push("LEDGER_EXPECTED_COUNT_INVALID");
+  if (!Number.isInteger(adjudicated) || adjudicated !== expected) failures.push("LEDGER_ADJUDICATED_COUNT_MISMATCH");
+  if (Number.isInteger(expected) && ledgerPathRows.size !== expected) failures.push("LEDGER_EXACT_PATH_COUNT_MISMATCH:" + ledgerPathRows.size + ":" + expected);
+  return { paths, familiesByPath, ledgerPathRows };
 }
 
 function registeredB02Paths(reg) {
@@ -483,7 +586,10 @@ function assertScannerSentinels() {
     ["packages/control-kernel/src/ruleset/evaluator.ts", "AUTHORITY_DERIVER"],
     ["apps/judge/src/problem_state.ts", "AUTHORITY_DERIVER"],
     ["docker-compose.yml", "BOOTSTRAP_ACTIVATION"],
-    ["apps/server/db/migrations/2026_05_14_variable_task_no_auto_acked_v1.sql", "DATABASE_AUTOMATION_AUTHORITY"]
+    ["apps/server/db/migrations/2026_05_14_variable_task_no_auto_acked_v1.sql", "DATABASE_AUTOMATION_AUTHORITY"],
+    ["apps/server/src/domain/decision_engine_v1.ts", "AUTHORITY_DERIVER"],
+    ["apps/server/src/domain/agronomy/stage_resolver.ts", "AUTHORITY_DERIVER"],
+    ["apps/server/src/domain/agronomy/rule_engine.ts", "SEMANTIC_DEFAULT_AUTHORITY_RISK"]
   ];
   for (const [p, kind] of sentinels) {
     const finding = findings.get(p);
@@ -501,9 +607,11 @@ function main() {
 
   const inventory = readJson(INVENTORY);
   configureAuthoritySurfaces(inventory);
-  const invSet = inventoryPaths(inventory);
+  const coverage = inventoryCoverage(inventory);
+  const invSet = coverage.paths;
+  const invFamiliesByPath = coverage.familiesByPath;
   const b02Set = registeredB02Paths(readJson(B02_REGISTER));
-  const classified = new Set([...invSet, ...b02Set]);
+  const touchClassified = new Set([...invSet, ...b02Set]);
 
   runB02();
 
@@ -529,7 +637,16 @@ function main() {
   const touches = [];
 
   for (const x of findings.values()) {
-    if (classified.has(x.path)) continue;
+    const registeredFamilies = invFamiliesByPath.get(x.path) || new Set();
+    for (const [family, capability] of x.capabilities.entries()) {
+      const kinds = [...capability.kinds].sort();
+      const reasons = [...capability.reasons].sort();
+      const hardHit = kinds.some(k => hardKinds.has(k));
+      if (x.production && hardHit && !registeredFamilies.has(family)) {
+        hard.push({ path: x.path, family, production: true, kinds, reasons });
+      }
+    }
+    if (touchClassified.has(x.path)) continue;
     const n = {
       path: x.path,
       production: x.production,
@@ -537,16 +654,14 @@ function main() {
       kinds: [...x.kinds].sort(),
       reasons: [...x.reasons].sort()
     };
-    const hardHit = n.kinds.some(k => hardKinds.has(k));
-    if (n.production && hardHit) hard.push(n);
-    else touches.push(n);
+    if (!n.production || !n.kinds.some(k => hardKinds.has(k))) touches.push(n);
   }
 
-  hard.sort((a,b) => a.path.localeCompare(b.path));
+  hard.sort((a,b) => a.path.localeCompare(b.path) || a.family.localeCompare(b.family));
   touches.sort((a,b) => a.path.localeCompare(b.path));
 
   for (const x of hard) {
-    failures.push("UNREGISTERED_AUTHORITY_CAPABLE_PATH:" + x.path + ":" + x.families.join(",") + ":" + x.kinds.join(","));
+    failures.push("UNREGISTERED_AUTHORITY_CAPABLE_PATH:" + x.path + ":" + x.family + ":" + x.kinds.join(","));
   }
   for (const x of touches) {
     warnings.push("UNREGISTERED_SEMANTIC_TOUCHPOINT:" + x.path + ":" + x.families.join(",") + ":" + x.kinds.join(","));
@@ -554,11 +669,13 @@ function main() {
 
   console.log("BLINE_RESIDUAL_DISCOVERY " + JSON.stringify({
     production_findings: [...findings.values()].filter(x => x.production).length,
-    classified_paths: classified.size,
-    unregistered_authority_paths: hard.length,
+    inventory_paths: invSet.size,
+    b02_classified_paths: b02Set.size,
+    unregistered_authority_capabilities: hard.length,
     unregistered_touchpoints: touches.length,
-    authority_paths: hard,
-    semantic_touchpoints: touches
+    authority_capabilities: hard,
+    semantic_touchpoints: touches,
+    proof_rule: "HARD_AUTHORITY_REQUIRES_EXACT_PATH_PLUS_SEMANTIC_FAMILY; FACT_LEDGER_REQUIRES_EXPLICIT_WRITER_DISPOSITION_UNDERLYING_FAMILY_OWNER_SCOPE"
   }));
 
   finish(invSet, b02Set);
