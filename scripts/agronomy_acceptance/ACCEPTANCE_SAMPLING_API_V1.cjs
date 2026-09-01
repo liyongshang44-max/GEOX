@@ -46,6 +46,7 @@ async function main() {
     lab_result_requires_evidence_refs: false,
     invalid_quality_status_blocked: false,
     sample_lookup_works: false,
+    duplicate_sample_id_rejected_409: false,
     auth_missing_rejected_401: false,
     auth_invalid_rejected_401: false,
     tenant_boundary_rejected_404: false,
@@ -118,6 +119,20 @@ async function main() {
     chain_of_custody_status: 'RECORDED',
   });
   assert.equal(goodReceipt.status, 200, 'good receipt should succeed');
+
+  const duplicateReceipt = await postJson('/api/v1/sampling/receipt', {
+    plan_id: planRes.json.plan_id,
+    sample_id: ids.sample_id,
+    ...scopedBody,
+    collected_at_ts: now + 1,
+    collector_actor_id: 'collector-duplicate',
+    sample_type: 'SOIL',
+    evidence_refs: [{ kind: 'raw_sample_v1', ref_id: 'raw-duplicate' }],
+    chain_of_custody_status: 'RECORDED',
+  });
+  assert.equal(duplicateReceipt.status, 409, 'duplicate sample_id must fail closed with 409');
+  assert.equal(duplicateReceipt.json?.error, 'DUPLICATE:sample_id', 'duplicate sample_id error code mismatch');
+  checks.duplicate_sample_id_rejected_409 = true;
 
   const labMissingSample = await postJson('/api/v1/sampling/lab-result', {
     sample_id: 'missing-sample',
