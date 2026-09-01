@@ -306,7 +306,9 @@ async function main(): Promise<void> {
   for (const sentinel of privateSentinels) assert.equal(factText.includes(sentinel), false);
   assert.equal(factText.includes("s3-private://"), true);
   assert.equal(factText.includes("raw_payload_embedded\": false"), true);
-  ok("raw bytes remain private object-store data; facts contain only digest/reference provenance and no raw sentinel bytes");
+  assert.equal(factText.includes('"request_id"'), true);
+  assert.equal(factText.includes('"source_locator"'), true);
+  ok("raw bytes remain private object-store data; facts persist replay-complete request identity without raw sentinel bytes");
 
   const nonEvidence = await pool.query(`SELECT count(*)::int AS n FROM facts WHERE record_json->>'type' NOT IN ('soil_moisture_observation_v1','observed_rainfall_v1','historical_et0_estimate_v1','future_weather_assumption_v1','future_et0_assumption_v1')`);
   assert.equal(Number(nonEvidence.rows[0].n), 0);
