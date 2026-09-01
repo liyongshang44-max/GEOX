@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "AUDIT_CORRECTED_GFS_TARGET_DUE_AND_EXECUTION_SEAM_BLOCKERS");
+  assert.equal(authority.status, "GFS_TARGET_DUE_POLICY_ESTABLISHED_DURABLE_RETRY_AND_EXECUTION_SEAM_NEXT");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "ce4934babbd3263914d8d65627e50c51096c9017");
+  assert.equal(authority.subject_predecessor_sha, "aedcfc377a345322aa22727d46b2a3dd6ff24174");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -51,18 +51,27 @@ try {
   includes(cursor, "binding_id = ANY($7::text[])", "EVIDENCE_CURSOR_BINDING_SET_SQL_REQUIRED");
 
   const gfsTargetDueReadiness = json(authority.gfs_target_due_readiness_ref);
-  assert.equal(gfsTargetDueReadiness.status, "NOT_ESTABLISHED");
-  assert.equal(gfsTargetDueReadiness.frozen_semantics.o00_warm_start.first_gfs_pair_valid_from, "ACTIVE_FORMAL_A0_LOGICAL_TIME");
-  assert.equal(gfsTargetDueReadiness.frozen_semantics.provider_selection.provider_creates_target_logical_time, false);
-  assert.equal(gfsTargetDueReadiness.frozen_semantics.operational_window.latest_safe_start_lead_minutes, 30);
-  assert.equal(gfsTargetDueReadiness.frozen_semantics.operational_window.retry_is_operational_only, true);
-  assert.equal(gfsTargetDueReadiness.frozen_semantics.operational_window.legacy_numeric_values_are_current_production_authority, false);
-  assert.equal(gfsTargetDueReadiness.missing_authority.earliest_acquisition_lead_policy_established, false);
-  assert.equal(gfsTargetDueReadiness.missing_authority.numeric_retry_policy_established, false);
-  assert.deepEqual(gfsTargetDueReadiness.blockers, [
-    "GFS_TARGET_LOGICAL_TIME_AUTHORITY_NOT_ESTABLISHED",
-    "GFS_OPERATIONAL_DUE_AND_RETRY_POLICY_NOT_ESTABLISHED",
-  ]);
+  assert.equal(gfsTargetDueReadiness.status, "ESTABLISHED_NO_ACTIVE_INSTANCE");
+  assert.equal(gfsTargetDueReadiness.target_progression.first_target_rule, "TARGET_EQUALS_FORMAL_A0");
+  assert.equal(gfsTargetDueReadiness.target_progression.provider_creates_target_logical_time, false);
+  assert.equal(gfsTargetDueReadiness.target_progression.runtime_tick_cursor_may_drive_target_progression, false);
+  assert.equal(gfsTargetDueReadiness.due_policy.subsequent.earliest_start_lead_minutes, 70);
+  assert.equal(gfsTargetDueReadiness.due_policy.subsequent.latest_start_lead_minutes_exclusive, 30);
+  assert.equal(gfsTargetDueReadiness.due_policy.retry.max_attempts_per_target_window, 3);
+  assert.equal(gfsTargetDueReadiness.due_policy.retry.minimum_retry_interval_seconds, 60);
+  assert.equal(gfsTargetDueReadiness.due_policy.retry.retry_is_operational_only, true);
+  assert.equal(gfsTargetDueReadiness.active_instance.runtime_start_authority_bound, false);
+  assert.equal(gfsTargetDueReadiness.implementation_readiness.pure_target_due_policy_implemented, true);
+  assert.equal(gfsTargetDueReadiness.implementation_readiness.durable_gfs_retry_throttle_implemented, false);
+  const gfsTargetDuePolicy = read(authority.gfs_target_due_policy_ref);
+  includes(gfsTargetDuePolicy, "nextProductionGfsTargetLogicalTimeV1", "GFS_TARGET_PROGRESSION_POLICY_REQUIRED");
+  includes(gfsTargetDuePolicy, "PRODUCTION_GFS_TARGET_DUE_DURABLE_PROGRESS_GAP", "GFS_TARGET_GAP_FAIL_CLOSED_REQUIRED");
+  includes(gfsTargetDuePolicy, "MCFT_CAP09_GFS_SUBSEQUENT_EARLIEST_START_LEAD_MINUTES_V1 = 70", "GFS_EARLIEST_LEAD_POLICY_REQUIRED");
+  includes(gfsTargetDuePolicy, "MCFT_CAP09_GFS_LATEST_SAFE_START_LEAD_MINUTES_V1 = 30", "GFS_LATEST_SAFE_START_REQUIRED");
+  includes(gfsTargetDuePolicy, "MCFT_CAP09_GFS_MAX_ATTEMPTS_PER_TARGET_WINDOW_V1 = 3", "GFS_MAX_ATTEMPTS_REQUIRED");
+  includes(gfsTargetDuePolicy, "MCFT_CAP09_GFS_RETRY_MINIMUM_INTERVAL_SECONDS_V1 = 60", "GFS_RETRY_INTERVAL_REQUIRED");
+  assert.equal(gfsTargetDuePolicy.includes("Date.now"), false, "GFS_TARGET_DUE_WALL_CLOCK_READ_FORBIDDEN");
+  assert.equal(gfsTargetDuePolicy.includes("process.env"), false, "GFS_TARGET_DUE_ENV_READ_FORBIDDEN");
 
   const sourceProgress = read(authority.source_progress_ref);
   includes(sourceProgress, "EvidenceSourceSpecificProgressReaderV1", "SOURCE_PROGRESS_READER_REQUIRED");
@@ -266,8 +275,7 @@ try {
     "PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_NOT_MATERIALIZED",
     "KBS_RAW_HOURLY_PRODUCTION_BASELINE_POINTER_SCHEMA_NOT_MATERIALIZED",
     "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
-    "GFS_TARGET_LOGICAL_TIME_AUTHORITY_NOT_ESTABLISHED",
-    "GFS_OPERATIONAL_DUE_AND_RETRY_POLICY_NOT_ESTABLISHED",
+    "GFS_DURABLE_RETRY_THROTTLE_AND_ATTEMPT_BUDGET_NOT_IMPLEMENTED",
     "HETEROGENEOUS_SOURCE_PLAN_EXECUTION_SEAM_NOT_IMPLEMENTED",
   ]);
   assert.equal(authority.adjudication.phase5_fixture_manifest_may_be_production_planner, false);
@@ -323,9 +331,15 @@ try {
   assert.equal(authority.source_specific_requirements.gfs_bundle.exact_fact_replay_provenance_read_port_implemented, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.restored_ingested_at_replay_input_available, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.current_shape_bindable, false);
-  assert.equal(authority.source_specific_requirements.gfs_bundle.target_logical_time_authority_established, false);
-  assert.equal(authority.source_specific_requirements.gfs_bundle.operational_due_retry_policy_established, false);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.target_logical_time_authority_established, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.operational_due_retry_policy_established, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.active_target_instance_bound, false);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.earliest_start_lead_minutes, 70);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.latest_start_lead_minutes_exclusive, 30);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.max_attempts_per_target_window, 3);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.retry_minimum_interval_seconds, 60);
   assert.equal(authority.source_specific_requirements.gfs_bundle.durable_retry_throttle_established, false);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.durable_attempt_budget_established, false);
   assert.equal(authority.source_specific_requirements.gfs_bundle.partial_pair_production_rehydration_adapter_implemented, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.retained_replay_uses_same_evidence_runtime_cycle_service, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.per_work_item_retention_override_implemented, true);

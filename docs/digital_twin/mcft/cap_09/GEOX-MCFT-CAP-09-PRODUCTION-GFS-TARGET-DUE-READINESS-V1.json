@@ -1,63 +1,71 @@
 {
   "schema_version": "geox_mcft_cap09_production_gfs_target_due_readiness_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-GFS-TARGET-DUE-READINESS-V1",
-  "status": "NOT_ESTABLISHED",
-  "subject_predecessor_sha": "ce4934babbd3263914d8d65627e50c51096c9017",
+  "status": "ESTABLISHED_NO_ACTIVE_INSTANCE",
+  "subject_predecessor_sha": "aedcfc377a345322aa22727d46b2a3dd6ff24174",
   "authority_basis": {
     "amendment_19_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-PROVIDER-RUNTIME-CADENCE-DECOUPLING-AUTHORITY.md",
     "pre_runtime_hardening_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-RUNTIME-HARDENING-AUTHORITY-V1.json",
+    "pre_runtime_hardening_acceptance_ref": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRE_RUNTIME_HARDENING.cjs",
     "hosting_route_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
     "acquisition_horizon_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json",
     "product_gfs_provider_ref": "apps/server/src/external_evidence/provider/gfs_nomads_live_provider_v1.ts",
-    "pure_source_planner_ref": "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_planner_v1.ts"
+    "policy_ref": "apps/server/src/external_evidence/mcft_cap09_production_gfs_target_due_policy_v1.ts",
+    "acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_GFS_TARGET_DUE_POLICY_V1.ts"
   },
-  "frozen_semantics": {
-    "o00_warm_start": {
-      "first_gfs_pair_valid_from": "ACTIVE_FORMAL_A0_LOGICAL_TIME",
-      "pair_must_be_available_to_runtime_at_lte_a0": true,
-      "pair_must_be_ingested_at_lte_a0": true,
-      "horizon_1_interval": "(A0,O00]",
-      "target_may_be_invented_from_wall_clock": false
+  "target_progression": {
+    "first_target_source": "ACTIVE_RUNTIME_START_AUTHORITY_EXPLICIT_FORMAL_A0_LOGICAL_TIME",
+    "first_target_rule": "TARGET_EQUALS_FORMAL_A0",
+    "subsequent_rule": "STRICT_PLUS_PT1H_FROM_LAST_CONTIGUOUS_DURABLE_PAIRED_TARGET",
+    "gap_handling": "FAIL_CLOSED",
+    "provider_creates_target_logical_time": false,
+    "runtime_tick_cursor_may_drive_target_progression": false,
+    "wall_clock_floor_may_create_target": false
+  },
+  "due_policy": {
+    "warm_start": {
+      "due_window_start": "ACTIVE_RUNTIME_START_ACTIVATION_FENCE",
+      "due_window_end_exclusive": "FORMAL_A0",
+      "target": "FORMAL_A0"
     },
-    "subsequent_hourly_capture": {
-      "rule": "PRECEDING_HOURLY_PREBOUNDARY_CAPTURE_PROVIDES_CAUSAL_PAIR_FOR_NEXT_INTERVAL",
-      "exact_hour_progression_structurally_required": true,
-      "runtime_tick_cursor_may_drive_evidence_acquisition": false
+    "subsequent": {
+      "earliest_start_lead_minutes": 70,
+      "latest_start_lead_minutes_exclusive": 30,
+      "earliest_70m_policy_origin": "EXPLICIT_GEOX_OPERATIONAL_POLICY_PROMOTED_FROM_PREVIOUS_QUALIFIED_COLLECTOR_IMPLEMENTATION",
+      "latest_30m_policy_origin": "FROZEN_PRE_RUNTIME_HARDENING_AUTHORITY"
     },
-    "provider_selection": {
-      "provider_selects_latest_complete_cycle_for_explicit_target": true,
-      "provider_creates_target_logical_time": false,
-      "same_exact_cycle_weather_et0_required": true,
-      "historical_cycle_sweep_authorized": false
-    },
-    "operational_window": {
-      "latest_safe_start_lead_minutes": 30,
-      "latest_safe_start_lead_authority_source": "PRE_RUNTIME_HARDENING_AUTHORITY",
-      "bounded_retry_required": true,
+    "retry": {
+      "max_attempts_per_target_window": 3,
+      "max_attempts_policy_origin": "QUALIFIED_PRE_RUNTIME_HARDENING_ACCEPTANCE",
+      "minimum_retry_interval_seconds": 60,
+      "retry_interval_policy_origin": "EXPLICIT_GEOX_OPERATIONAL_POLICY_PROMOTED_FROM_PREVIOUS_QUALIFIED_COLLECTOR_IMPLEMENTATION",
       "retry_is_operational_only": true,
-      "legacy_collector_max_start_lead_minutes_observed": 70,
-      "legacy_collector_max_attempts_observed": 3,
-      "legacy_collector_retry_backoff_ms_observed": 60000,
-      "legacy_numeric_values_are_current_production_authority": false
+      "provider_or_temporal_truth": false
     }
   },
-  "missing_authority": {
-    "active_formal_a0_target_bound": false,
-    "active_runtime_start_target_instance_bound": false,
-    "earliest_acquisition_lead_policy_established": false,
-    "numeric_retry_policy_established": false,
-    "durable_gfs_retry_throttle_established": false
+  "active_instance": {
+    "runtime_start_authority_bound": false,
+    "formal_a0_logical_time_bound": false,
+    "activation_fence_time_bound": false,
+    "production_runtime_start_authorized": false
+  },
+  "implementation_readiness": {
+    "pure_target_due_policy_implemented": true,
+    "durable_gfs_retry_throttle_implemented": false,
+    "durable_gfs_attempt_budget_implemented": false,
+    "source_plan_execution_seam_implemented": false
   },
   "blockers": [
-    "GFS_TARGET_LOGICAL_TIME_AUTHORITY_NOT_ESTABLISHED",
-    "GFS_OPERATIONAL_DUE_AND_RETRY_POLICY_NOT_ESTABLISHED"
+    "GFS_DURABLE_RETRY_THROTTLE_AND_ATTEMPT_BUDGET_NOT_IMPLEMENTED",
+    "HETEROGENEOUS_SOURCE_PLAN_EXECUTION_SEAM_NOT_IMPLEMENTED"
   ],
   "forbidden_shortcuts": [
     "WALL_CLOCK_FLOOR_AS_GFS_TARGET",
     "RUNTIME_TICK_CURSOR_AS_PROVIDER_ACQUISITION_CLOCK",
     "PHASE5_FIXTURE_TARGET_AS_PRODUCTION_AUTHORITY",
     "DEPLOYMENT_ENV_FORMAL_EPOCH_AS_GFS_TARGET_AUTHORITY",
-    "LEGACY_COLLECTOR_NUMERIC_RETRY_CONSTANTS_AUTO_PROMOTED_WITHOUT_EXPLICIT_POLICY"
+    "UNBOUNDED_RETRY",
+    "RETRY_POLICY_TREATED_AS_PROVIDER_CADENCE_TRUTH"
   ],
   "non_effects": {
     "database_connection_attempted": false,

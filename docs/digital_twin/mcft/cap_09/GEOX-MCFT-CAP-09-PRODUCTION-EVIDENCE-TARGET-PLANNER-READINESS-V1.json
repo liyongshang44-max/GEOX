@@ -1,9 +1,9 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_target_planner_readiness_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1",
-  "status": "AUDIT_CORRECTED_GFS_TARGET_DUE_AND_EXECUTION_SEAM_BLOCKERS",
+  "status": "GFS_TARGET_DUE_POLICY_ESTABLISHED_DURABLE_RETRY_AND_EXECUTION_SEAM_NEXT",
   "stage": "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START",
-  "subject_predecessor_sha": "ce4934babbd3263914d8d65627e50c51096c9017",
+  "subject_predecessor_sha": "aedcfc377a345322aa22727d46b2a3dd6ff24174",
   "host_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
   "production_process_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
   "production_composition_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
@@ -77,7 +77,7 @@
       "required_planning_semantics": "CROSS_CYCLE_LATEST_VALID_FROM_PAIR_PROGRESS",
       "current_read_port_shape": "BINDING_SET_CROSS_CYCLE_PROGRESS_WITH_EXACT_CYCLE_PAIRING",
       "current_shape_bindable": false,
-      "reason": "PARTIAL_PAIR_REHYDRATION_IS_IMPLEMENTED_BUT_PRODUCTION_GFS_TARGET_LOGICAL_TIME_AND_OPERATIONAL_DUE_RETRY_AUTHORITIES_ARE_NOT_ESTABLISHED",
+      "reason": "PURE_GFS_TARGET_PROGRESSION_AND_DUE_POLICY_ESTABLISHED_BUT_DURABLE_RETRY_THROTTLE_ATTEMPT_BUDGET_AND_SINGLE_HOST_EXECUTION_SEAM_REMAIN_UNIMPLEMENTED",
       "required_foundation": [
         "CROSS_CYCLE_GFS_PROGRESS_READ_PORT",
         "WEATHER_ET0_PAIR_SKEW_FAIL_CLOSED",
@@ -103,10 +103,16 @@
       "zero_provider_refetch_rehydration_proven": true,
       "canonical_fact_content_type_persisted": true,
       "replay_envelope_content_type_restored": true,
-      "target_logical_time_authority_established": false,
-      "operational_due_retry_policy_established": false,
-      "legacy_collector_numeric_retry_constants_promoted": false,
-      "durable_retry_throttle_established": false
+      "target_logical_time_authority_established": true,
+      "operational_due_retry_policy_established": true,
+      "legacy_collector_numeric_retry_constants_promoted": true,
+      "durable_retry_throttle_established": false,
+      "active_target_instance_bound": false,
+      "earliest_start_lead_minutes": 70,
+      "latest_start_lead_minutes_exclusive": 30,
+      "max_attempts_per_target_window": 3,
+      "retry_minimum_interval_seconds": 60,
+      "durable_attempt_budget_established": false
     },
     "kbs_soil": {
       "publication_mode": "IRREGULAR_PROVIDER_DEFINED_EVENT",
@@ -154,12 +160,11 @@
     "PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_NOT_MATERIALIZED",
     "KBS_RAW_HOURLY_PRODUCTION_BASELINE_POINTER_SCHEMA_NOT_MATERIALIZED",
     "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
-    "GFS_TARGET_LOGICAL_TIME_AUTHORITY_NOT_ESTABLISHED",
-    "GFS_OPERATIONAL_DUE_AND_RETRY_POLICY_NOT_ESTABLISHED",
+    "GFS_DURABLE_RETRY_THROTTLE_AND_ATTEMPT_BUDGET_NOT_IMPLEMENTED",
     "HETEROGENEOUS_SOURCE_PLAN_EXECUTION_SEAM_NOT_IMPLEMENTED"
   ],
   "implementation_order": [
-    "ESTABLISH_GFS_TARGET_LOGICAL_TIME_AND_OPERATIONAL_DUE_RETRY_AUTHORITIES",
+    "IMPLEMENT_DURABLE_GFS_RETRY_THROTTLE_AND_PER_TARGET_ATTEMPT_BUDGET",
     "IMPLEMENT_SINGLE_HOST_HETEROGENEOUS_SOURCE_PLAN_EXECUTION_SEAM",
     "AUTHORIZE_AND_MATERIALIZE_PRODUCTION_SOURCE_POLL_SCHEDULE_SCHEMA",
     "AUTHORIZE_AND_MATERIALIZE_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA",
@@ -243,7 +248,13 @@
     "PRODUCTION_SOURCE_POLL_SCHEDULE_REMEDIATION_DEFAULT_UNARMED",
     "GFS_TARGET_AUTHORITY_GAP_MACHINE_VISIBLE",
     "GFS_OPERATIONAL_DUE_RETRY_AUTHORITY_GAP_MACHINE_VISIBLE",
-    "HETEROGENEOUS_SOURCE_PLAN_EXECUTION_SEAM_GAP_MACHINE_VISIBLE"
+    "HETEROGENEOUS_SOURCE_PLAN_EXECUTION_SEAM_GAP_MACHINE_VISIBLE",
+    "GFS_FORMAL_A0_ANCHORED_TARGET_PROGRESSION_POLICY",
+    "GFS_STRICT_HOURLY_CONTIGUOUS_TARGET_PROGRESSION",
+    "GFS_WARM_START_ACTIVATION_FENCE_TO_A0_DUE_WINDOW",
+    "GFS_SUBSEQUENT_70_TO_30_MINUTE_OPERATIONAL_DUE_WINDOW",
+    "GFS_MAX_THREE_ATTEMPTS_PER_TARGET_WINDOW_POLICY",
+    "GFS_MINIMUM_60_SECOND_OPERATIONAL_RETRY_POLICY"
   ],
   "current_entrypoint": {
     "status": "PACKAGED_FAIL_CLOSED_PURE_PLANNER_NOT_PRODUCTION_BOUND",
@@ -288,7 +299,7 @@
   "kbs_publication_cycle_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1.ts",
   "gfs_fact_replay_provenance_reader_ref": "apps/server/src/persistence/external_evidence/postgres_external_evidence_fact_replay_provenance_v1.ts",
   "gfs_fact_replay_provenance_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_V1.ts",
-  "current_frontier": "GFS_TARGET_DUE_AUTHORITY_AND_SINGLE_HOST_EXECUTION_SEAM",
+  "current_frontier": "GFS_DURABLE_RETRY_THROTTLE_AND_SINGLE_HOST_EXECUTION_SEAM",
   "gfs_partial_pair_rehydration_adapter_ref": "apps/server/src/external_evidence/mcft_cap09_gfs_partial_pair_rehydration_v1.ts",
   "gfs_partial_pair_rehydration_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_PARTIAL_PAIR_REHYDRATION_V1.ts",
   "source_due_policy_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1.json",
@@ -303,5 +314,7 @@
   "source_poll_schedule_schema_remediation_workflow_ref": ".github/workflows/mcft-cap-09-production-evidence-source-poll-schedule-schema-remediation.yml",
   "source_poll_schedule_schema_remediation_capability_implemented": true,
   "source_poll_schedule_schema_remediation_authorized": false,
-  "gfs_target_due_readiness_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-GFS-TARGET-DUE-READINESS-V1.json"
+  "gfs_target_due_readiness_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-GFS-TARGET-DUE-READINESS-V1.json",
+  "gfs_target_due_policy_ref": "apps/server/src/external_evidence/mcft_cap09_production_gfs_target_due_policy_v1.ts",
+  "gfs_target_due_policy_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_GFS_TARGET_DUE_POLICY_V1.ts"
 }

@@ -412,6 +412,18 @@ function main() {
     assert(byId(gfsReadinessPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(gfsReadinessPath));
   }
 
+  // CP-4: GFS target/due pure policy is Phase3-owned and owner-visible post-merge.
+  for (const gfsTargetDuePath of ["apps/server/src/external_evidence/mcft_cap09_production_gfs_target_due_policy_v1.ts","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_GFS_TARGET_DUE_POLICY_V1.ts"]) {
+    const gfsTargetDuePlan = plan(authority, registry, [gfsTargetDuePath]);
+    assert.equal(gfsTargetDuePlan.status, "PASS");
+    assert.equal(gfsTargetDuePlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(gfsTargetDuePlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(gfsTargetDuePlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const gfsTargetDuePostMerge = plan(authority, registry, [gfsTargetDuePath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(gfsTargetDuePostMerge, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(gfsTargetDuePostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(gfsTargetDuePath));
+  }
+
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
   const phase3 = plan(authority, registry, [phase3Path]);
