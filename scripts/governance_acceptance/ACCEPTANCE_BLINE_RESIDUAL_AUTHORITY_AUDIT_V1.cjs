@@ -171,7 +171,22 @@ function scan(abs, production) {
     SEMANTIC_NOUN + "[A-Za-z0-9_]*\\s*\\(", "i"
   );
   if (builder.test(content) || nounFirstBuilder.test(content)) {
-    for (const f of families) add(p, f, "SEMANTIC_BUILDER", "high-risk-builder-name", production);
+    const builderAuthorityPath =
+      p.startsWith("apps/server/src/domain/") ||
+      p.startsWith("apps/server/src/services/") ||
+      p.startsWith("apps/server/src/evidence/") ||
+      p.startsWith("apps/executor/src/adapters/");
+    const kind = builderAuthorityPath ? "SEMANTIC_BUILDER" : "PROJECTION_BUILDER";
+    for (const f of families) add(p, f, kind, "high-risk-builder-name", production);
+  }
+
+  // Runtime adapters may create authority through typed HTTP boundaries rather than direct SQL.
+  const receiptHttpProducer =
+    p.startsWith("apps/executor/src/") &&
+    /\/api\/v1\/ao-act\/receipts(?:\/uplink)?/.test(content) &&
+    /(?:fetch\s*\(|postJson\s*\()/.test(content);
+  if (receiptHttpProducer) {
+    add(p, "execution.receipt", "HTTP_AUTHORITY_PRODUCER", "ao-act-receipt-http-producer", production);
   }
 
   for (const state of STRONG_STATES) {
@@ -281,7 +296,7 @@ function main() {
 
   const hardKinds = new Set([
     "PERSISTENCE_WRITER","SEMANTIC_BUILDER","AUTHORITY_DERIVER",
-    "PERSISTENCE_AUTHORITY_RISK"
+    "HTTP_AUTHORITY_PRODUCER","PERSISTENCE_AUTHORITY_RISK"
   ]);
   const hard = [];
   const touches = [];
