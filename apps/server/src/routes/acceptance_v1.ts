@@ -12,7 +12,6 @@ import { buildAcceptanceResultFromEvidenceArtifactsV1 } from "../domain/acceptan
 import { evidencePolicyFromReceiptV1, type FormalEvidenceSourceLaneV1, type FormalEvidencePolicyResultV1 } from "../domain/evidence/formal_evidence_policy_v1.js";
 import { appendSkillRunFact, appendSkillTraceFact, digestJson } from "../domain/skill_registry/facts.js";
 import { listJudgeResultsV2, loadJudgeResultV2 } from "../domain/judge/judge_result_v2.js";
-import { extractFormalFieldObservationPairV1, recordMemoryV1 } from "../services/field_memory_service.js";
 import { createFailSafeEventV1, createManualTakeoverV1 } from "../services/fail_safe_service_v1.js";
 import { auditContextFromRequestV1, recordSecurityAuditEventV1 } from "../services/security_audit_service_v1.js";
 
@@ -550,43 +549,10 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
 
       await pool.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [acceptanceFactId, FACT_SOURCE_ACCEPTANCE_V1, acceptanceRecord]);
 
-      if (acceptanceRecord.payload.verdict === "PASS" && acceptanceRecord.payload.formal_acceptance === true && field_id) {
-        const opId = typeof taskPayload.operation_plan_id === "string" ? taskPayload.operation_plan_id.trim() : "";
-        const observationPair = extractFormalFieldObservationPairV1(
-          receiptPayload,
-          { kind: "receipt_fact", ref: receiptFact.fact_id },
-          "acceptance_receipt_observed_parameters"
-        );
-        if (opId && observationPair) {
-          const evidenceRefs = [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds, acceptanceFactId];
-          await recordMemoryV1(pool, tenant.tenant_id, {
-            type: "FIELD_RESPONSE_MEMORY",
-            operation_id: opId,
-            task_id: body.act_task_id,
-            field_id,
-            project_id: tenant.project_id,
-            group_id: tenant.group_id,
-            acceptance_id: acceptanceFactId,
-            formal_acceptance_id: acceptanceFactId,
-            memory_lane: "FORMAL_FIELD_MEMORY",
-            trust_level: "FORMAL_ACCEPTED",
-            source_lane: "FORMAL_OPERATION",
-            customer_visible_memory: true,
-            learning_eligible: true,
-            metrics: {
-              before_soil_moisture: observationPair.before_soil_moisture,
-              after_soil_moisture: observationPair.after_soil_moisture,
-              soil_moisture_delta: observationPair.soil_moisture_delta,
-              confidence: observationPair.confidence,
-              target_range: observationPair.target_range,
-              success: true,
-              acceptance_passed: true,
-            },
-            evidence_refs: evidenceRefs,
-            summary: `Formal acceptance passed for task ${body.act_task_id}`,
-          });
-        }
-      }
+      // B-Line authority convergence: Acceptance records the verdict only.
+      // Formal Field Memory requires a separately governed downstream
+      // Outcome -> Candidate -> reviewed Promotion/Commit path.
+      // Acceptance PASS is necessary provenance, never sufficient memory authority.
 
       if (acceptanceRecord.payload.verdict === "FAIL" || acceptanceRecord.payload.verdict === "PARTIAL" || acceptanceRecord.payload.verdict === "NEEDS_REVIEW" || acceptanceRecord.payload.verdict === "INSUFFICIENT_EVIDENCE") {
         const trigger = acceptanceRecord.payload.verdict === "FAIL" ? "ACCEPTANCE_FAILED" : "ACCEPTANCE_NEEDS_REVIEW";
