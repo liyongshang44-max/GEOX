@@ -32,4 +32,5 @@ export const SAMPLING_DOMAIN_HARD_RULES_V1 = {
   manual_sample_data_must_not_write_problem_state_conclusion: "manual sample data 不得直接写 ProblemState conclusion",
   lab_result_must_not_write_roi_field_memory_customer_success: "lab result 不得直接写 ROI / Field Memory / customer success",
   latest_wins_source_selection_forbidden: "Sampling formal chain 不得使用 latest-wins source selection; exact fact identity or explicit ambiguity is required",
+  legacy_unbound_lab_not_formal_authority: "legacy lab_result_import_v1 without exact receipt/plan/scope refs cannot establish Formal Sampling authority",
 } as const;
