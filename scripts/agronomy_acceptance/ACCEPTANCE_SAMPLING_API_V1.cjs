@@ -90,9 +90,9 @@ async function main() {
   checks.plan_created = true;
 
   const badPlanReceipt = await postJson('/api/v1/sampling/receipt', {
+    ...scopedBody,
     plan_id: 'missing-plan-id',
     sample_id: `${ids.sample_id}-x`,
-    ...scopedBody,
     collected_at_ts: now,
     collector_actor_id: 'collector-1',
     sample_type: 'SOIL',
@@ -103,9 +103,9 @@ async function main() {
   checks.receipt_requires_existing_plan = true;
 
   const receiptNoEvidence = await postJson('/api/v1/sampling/receipt', {
+    ...scopedBody,
     plan_id: planRes.json.plan_id,
     sample_id: `${ids.sample_id}-no-evi`,
-    ...scopedBody,
     collected_at_ts: now,
     collector_actor_id: 'collector-1',
     sample_type: 'SOIL',
@@ -116,9 +116,9 @@ async function main() {
   checks.receipt_requires_evidence_refs = true;
 
   const goodReceipt = await postJson('/api/v1/sampling/receipt', {
+    ...scopedBody,
     plan_id: planRes.json.plan_id,
     sample_id: ids.sample_id,
-    ...scopedBody,
     collected_at_ts: now,
     collector_actor_id: 'collector-1',
     sample_type: 'SOIL',
@@ -128,9 +128,9 @@ async function main() {
   assert.equal(goodReceipt.status, 200, 'good receipt should succeed');
 
   const duplicateReceipt = await postJson('/api/v1/sampling/receipt', {
+    ...scopedBody,
     plan_id: planRes.json.plan_id,
     sample_id: ids.sample_id,
-    ...scopedBody,
     collected_at_ts: now + 1,
     collector_actor_id: 'collector-duplicate',
     sample_type: 'SOIL',
