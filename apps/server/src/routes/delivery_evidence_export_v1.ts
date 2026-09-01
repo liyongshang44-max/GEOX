@@ -8,8 +8,6 @@ import crypto from "node:crypto"; // Node crypto for SHA-256 hashing and UUIDs.
 import { randomUUID } from "node:crypto"; // UUID generator for fact ids (append-only ledger).
 import { fileURLToPath } from "node:url"; // ESM 下替代 __filename / __dirname.
 import { z } from "zod"; // Zod schema validation for request parsing.
-import GeoxContracts from "@geox/contracts";
-import type { AcceptanceResultV1Payload } from "@geox/contracts";
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js"; // Reuse AO-ACT token/scope authorization (read-only scope).
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js"; // Auth context type for tenant triple checks.
@@ -33,8 +31,8 @@ type ExportJob = { // Evidence export job record stored in memory.
   artifact_sha256: string | null; // SHA-256 hex of produced artifact bytes.
   stdout_tail: string; // Tail of job logs (human debugging, truncated).
   stderr_tail: string; // Tail of job errors (human debugging, truncated).
-  acceptance_fact_id: string | null; // fact_id of acceptance_result_v1 created by this job.
-  acceptance_result: AcceptanceResultV1Payload | null; // Small in-memory summary of the acceptance_result_v1 payload (for status endpoint).
+  acceptance_fact_id: null; // Deprecated compatibility field. Legacy evidence export no longer mints Acceptance authority.
+  acceptance_result: null; // Deprecated compatibility field. Always null; canonical Acceptance must be produced elsewhere.
   error: string | null; // Terminal error message.
 }; // End ExportJob.
 
@@ -100,7 +98,7 @@ async function fetchFactsByJsonPath(pool: Pool, whereSql: string, params: any[])
   })).filter((x: any) => x.record_json); // Drop rows with invalid JSON.
 } // End fetchFactsByJsonPath.
 
-async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> { // Execute export job: read facts, write artifact, write acceptance_result_v1.
+async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> { // Execute export job: read facts and write an evidence artifact only.
   job.state = "running"; // Mark job as running.
   job.updated_at = Date.now(); // Update timestamp.
   job.stdout_tail = tailAppend(job.stdout_tail, "job:running\n"); // Append log line.
@@ -356,34 +354,8 @@ const __dirname = path.dirname(__filename);
   job.artifact_sha256 = artifact_sha256; // Record artifact sha256 in job record.
   job.stdout_tail = tailAppend(job.stdout_tail, `artifact:written sha256=${artifact_sha256}\n`); // Append log.
 
-  // 7) Compute minimal acceptance_result_v1 and append it to facts ledger (append-only).
-  const acceptance_fact_id = randomUUID(); // Generate new fact_id for append-only insert.
-  const verdict = taskFacts.length > 0 ? "PASS" : "FAIL"; // Minimal template: task must exist.
-  const acceptance_record = {
-    type: "acceptance_result_v1",
-    payload: GeoxContracts.AcceptanceResultV1PayloadSchema.parse({
-      acceptance_id: acceptance_fact_id,
-      tenant_id: job.tenant_id,
-      project_id: job.project_id,
-      group_id: job.group_id,
-      program_id: job.program_id ?? undefined,
-      field_id: job.field_id ?? "unknown_field",
-      act_task_id: job.act_task_id,
-      verdict,
-      metrics: { coverage_ratio: verdict === "PASS" ? 1 : 0, in_field_ratio: 0, telemetry_delta: 0 },
-      evidence_refs: evidence_fact_ids,
-      evaluated_at: new Date().toISOString()
-    })
-  };
-
-  await pool.query( // Insert acceptance_result_v1 fact into facts table (append-only).
-    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", // SQL insert.
-    [acceptance_fact_id, "api/delivery/evidence_export/v1", acceptance_record] // Parameters.
-  ); // End insert.
-
-  job.acceptance_fact_id = acceptance_fact_id; // Record acceptance fact id in job.
-  job.acceptance_result = acceptance_record.payload; // Store payload summary for status API.
-  job.stdout_tail = tailAppend(job.stdout_tail, `acceptance:written fact_id=${acceptance_fact_id} verdict=${verdict}\n`); // Append log.
+  // 7) Deliberately do not mint Acceptance here. Evidence export is read/packaging authority only.
+  job.stdout_tail = tailAppend(job.stdout_tail, "acceptance:not-written legacy-export-is-non-authoritative\n");
 
   // 8) Mark job done.
   job.state = "done"; // Mark done.
@@ -434,7 +406,7 @@ function setLegacyDeprecatedWarning(reply: any): void {
 
 export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, pool: Pool): void { // Register Sprint 26 evidence export API v1 routes.
   // POST /api/delivery/evidence_export/v1/jobs
-  // Creates an async export job that produces an artifact and an acceptance_result_v1 fact.
+  // Creates an async export job that produces an artifact only. Acceptance authority is explicitly out of scope.
   const createJobHandler = async (req: any, reply: any) => { // Create job endpoint (enqueue only).
     setLegacyDeprecatedWarning(reply);
     try { // Guard with try/catch for consistent 400 errors.
@@ -476,7 +448,7 @@ export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, poo
   app.post("/api/delivery/evidence_export/v1/jobs", createJobHandler); // Backward-compatible endpoint (deprecated: true).
 
   // GET /api/delivery/evidence_export/v1/jobs/:job_id
-  // Returns job status + small result summary (including acceptance_result_v1 pointers).
+  // Returns job status + deprecated Acceptance compatibility fields, which remain null.
   app.get("/api/delivery/evidence_export/v1/jobs/:job_id", async (req, reply) => { // Job status endpoint.
     setLegacyDeprecatedWarning(reply);
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read"); // Require read-only AO-ACT scope.

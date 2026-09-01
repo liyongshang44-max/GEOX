@@ -152,10 +152,7 @@ async function main(): Promise<void> { // Program entrypoint.
     console.log(`INFO: created export job_id=${jobId}`); // Print job id.
 
     const job = await waitJobDone(args.baseUrl, args.token, jobId, 60_000); // Wait for job completion (60s).
-    console.log(`INFO: export done sha256=${job.artifact_sha256} acceptance_fact_id=${job.acceptance_fact_id}`); // Print key output pointers.
-    if (job.acceptance_result?.verdict) { // If acceptance_result is present, print verdict.
-      console.log(`INFO: acceptance verdict=${job.acceptance_result.verdict} deterministic_hash=${job.acceptance_result.deterministic_hash}`); // Print verdict + hash.
-    }
+    console.log(`INFO: export done sha256=${job.artifact_sha256}`); // Evidence export is packaging only; Acceptance is a separate authority.
 
     console.log(`PASS: executor_runtime_v1 completed act_task_id=${act_task_id}`); // Emit PASS marker for acceptance scripts.
   }

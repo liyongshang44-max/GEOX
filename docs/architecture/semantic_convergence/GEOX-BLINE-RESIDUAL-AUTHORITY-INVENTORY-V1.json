@@ -999,8 +999,7 @@
       "entrypoint": "Evidence Module route + jobs/runtime.ts worker",
       "activation_mode": "ACTIVE_API_AND_BACKGROUND_JOB",
       "writes": [
-        "evidence export artifact",
-        "acceptance_result_v1 fact"
+        "evidence export artifact"
       ],
       "reads": [
         "AO-ACT task/receipt",
@@ -1009,22 +1008,20 @@
         "operation plan and transitions"
       ],
       "semantic_family": [
-        "acceptance.verdict",
         "execution.result_evidence",
         "execution.receipt",
         "execution.task",
         "operation.plan"
       ],
-      "authority_class": "PARALLEL_ACCEPTANCE_AUTHORITY_P0",
+      "authority_class": "LEGACY_EVIDENCE_EXPORT_PACKAGING_ONLY",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
-        "facts ledger",
-        "evidence export API consumers"
+        "deprecated evidence export API consumers"
       ],
-      "removal_target": "REMOVE ACCEPTANCE WRITER; EXPORT EXISTING CANONICAL ACCEPTANCE/EVIDENCE ONLY",
+      "removal_target": "P0-RES-007 IMPLEMENTED: NO ACCEPTANCE WRITER; RETAIN DEPRECATED PACKAGING COMPATIBILITY UNTIL CLIENT CUTOVER",
       "b02_registered": false,
-      "audit_note": "Current verdict is taskFacts.length > 0 ? PASS : FAIL."
+      "audit_note": "Repair successor #3434 removes acceptance_result_v1 minting. Deprecated acceptance_fact_id/acceptance_result status fields remain null-only compatibility fields."
     },
     {
       "surface_id": "RES-038",

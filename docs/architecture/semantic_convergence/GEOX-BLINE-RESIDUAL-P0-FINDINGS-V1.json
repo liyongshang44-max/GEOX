@@ -121,7 +121,19 @@
         "the route requires only ao_act.index.read for job creation"
       ],
       "semantic_risk": "evidence export can create authoritative-looking acceptance independently of the formal Acceptance Engine and evidence gate",
-      "required_direction": "export must consume existing canonical acceptance/evidence; exporting must never mint an Acceptance verdict"
+      "required_direction": "export must consume existing canonical acceptance/evidence; exporting must never mint an Acceptance verdict",
+      "repair": {
+        "status": "IMPLEMENTED_PENDING_EXACT_HEAD_QUALIFICATION",
+        "pr": 3434,
+        "branch": "fix/bline-p0-res007-evidence-export-acceptance-authority-v1",
+        "changes": [
+          "deprecated delivery evidence export no longer inserts any facts",
+          "AcceptanceResultV1 schema/type and task-exists PASS/FAIL derivation removed",
+          "deprecated acceptance_fact_id and acceptance_result status fields remain null-only",
+          "executor logging no longer consumes legacy export Acceptance fields",
+          "build-test guard enforces packaging-only boundary"
+        ]
+      }
     },
     {
       "finding_id": "P0-RES-008",
