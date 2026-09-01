@@ -7,6 +7,7 @@ q([
  "CREATE ROLE cloud_admin CREATEROLE NOLOGIN;",
  "CREATE ROLE neondb_owner CREATEROLE NOLOGIN;",
  "CREATE ROLE geox_mcft_cap09_forcing_writer_owner_v1 NOLOGIN;",
+ "GRANT geox_mcft_cap09_forcing_writer_owner_v1 TO cloud_admin WITH ADMIN TRUE, INHERIT FALSE, SET FALSE;",
  "SET ROLE cloud_admin;",
  "GRANT geox_mcft_cap09_forcing_writer_owner_v1 TO neondb_owner WITH ADMIN TRUE, INHERIT FALSE, SET FALSE;",
  "RESET ROLE;",
