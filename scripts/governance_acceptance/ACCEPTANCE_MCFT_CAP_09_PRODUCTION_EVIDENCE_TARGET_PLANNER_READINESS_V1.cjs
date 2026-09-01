@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "SOURCE_PLAN_EXECUTOR_CORE_IMPLEMENTED_ATTEMPT_FENCE_BINDING_NEXT");
+  assert.equal(authority.status, "PROVIDER_ATTEMPT_FENCE_BOUND_SCHEMA_MATERIALIZATION_NEXT");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "c77a5bf215f3e634b9e6499aefc0a7339ac581a6");
+  assert.equal(authority.subject_predecessor_sha, "de7d5aaa24ed24f86ae53f5f98ea90b3c8f68dc0");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -51,7 +51,7 @@ try {
   includes(cursor, "binding_id = ANY($7::text[])", "EVIDENCE_CURSOR_BINDING_SET_SQL_REQUIRED");
 
   const gfsTargetDueReadiness = json(authority.gfs_target_due_readiness_ref);
-  assert.equal(gfsTargetDueReadiness.status, "ESTABLISHED_NO_ACTIVE_INSTANCE");
+  assert.equal(gfsTargetDueReadiness.status, "ESTABLISHED_FENCE_BOUND_SCHEMA_NOT_MATERIALIZED_NO_ACTIVE_INSTANCE");
   assert.equal(gfsTargetDueReadiness.target_progression.first_target_rule, "TARGET_EQUALS_FORMAL_A0");
   assert.equal(gfsTargetDueReadiness.target_progression.provider_creates_target_logical_time, false);
   assert.equal(gfsTargetDueReadiness.target_progression.runtime_tick_cursor_may_drive_target_progression, false);
@@ -269,6 +269,8 @@ try {
   includes(host, "PHASE3_EVIDENCE_HOST_ATTEMPT_PLAN_INVALID", "EVIDENCE_HOST_ATTEMPT_PLAN_FAIL_CLOSED_REQUIRED");
   includes(host, 'status: "NOT_DUE"', "EVIDENCE_HOST_NOT_DUE_STATE_REQUIRED");
   includes(host, 'reason: "PLANNER_NOT_DUE"', "EVIDENCE_HOST_NOT_DUE_WAIT_REQUIRED");
+  includes(host, '"PROVIDER_NOT_DUE"', "EVIDENCE_HOST_PROVIDER_NOT_DUE_REQUIRED");
+  includes(host, 'reason: "PROVIDER_NOT_DUE"', "EVIDENCE_HOST_PROVIDER_NOT_DUE_WAIT_REQUIRED");
   includes(host, '"ATTEMPT_COMPLETED"', "EVIDENCE_HOST_ATTEMPT_HEALTH_REQUIRED");
   includes(host, "EVIDENCE_PLANE_DURABLE_PROGRESS_SET", "EVIDENCE_HOST_DURABLE_PROGRESS_SET_REQUIRED");
   assert.equal(host.includes("EvidenceRuntimeCycleServiceV1"), false, "EVIDENCE_HOST_DIRECT_CYCLE_SERVICE_FORBIDDEN");
@@ -286,6 +288,18 @@ try {
   includes(sourcePlanExecutor, "PRODUCTION_SOURCE_PLAN_EXECUTOR_KBS_BLOCKED", "SOURCE_PLAN_EXECUTOR_KBS_BLOCK_FAIL_CLOSED_REQUIRED");
   assert.equal(sourcePlanExecutor.includes("Date.now"), false, "SOURCE_PLAN_EXECUTOR_WALL_CLOCK_FORBIDDEN");
   assert.equal(sourcePlanExecutor.includes("process.env"), false, "SOURCE_PLAN_EXECUTOR_ENV_FORBIDDEN");
+  includes(sourcePlanExecutor, "provider_attempt_fence_factory", "SOURCE_PLAN_EXECUTOR_PROVIDER_FENCE_REQUIRED");
+  includes(sourcePlanExecutor, "provider_attempt_fence: providerFence", "SOURCE_PLAN_EXECUTOR_PROVIDER_FENCE_BINDING_REQUIRED");
+  includes(sourcePlanExecutor, "GFS_REHYDRATION_PROVIDER_FENCE_FORBIDDEN", "GFS_REHYDRATION_ZERO_PROVIDER_BUDGET_REQUIRED");
+  const providerFenceContract=read(authority.provider_attempt_fence_contract_ref);
+  includes(providerFenceContract, "claimBeforeProviderFetch", "PROVIDER_FENCE_CONTRACT_REQUIRED");
+  const providerFenceFactory=read(authority.provider_attempt_fence_factory_ref);
+  includes(providerFenceFactory, "claimPollBeforeProviderFetch", "PROVIDER_FENCE_SOURCE_POLL_CLAIM_REQUIRED");
+  includes(providerFenceFactory, "claimGfsAttemptBeforeProviderFetch", "PROVIDER_FENCE_GFS_RETRY_CLAIM_REQUIRED");
+  includes(providerFenceFactory, "GFS_ATTEMPT_BUDGET_EXHAUSTED", "PROVIDER_FENCE_GFS_BUDGET_FAIL_CLOSED_REQUIRED");
+  includes(providerFenceFactory, "GFS_MISSED_WINDOW", "PROVIDER_FENCE_GFS_MISSED_WINDOW_FAIL_CLOSED_REQUIRED");
+  assert.equal(providerFenceFactory.includes("Date.now"), false, "PROVIDER_FENCE_WALL_CLOCK_FORBIDDEN");
+  assert.equal(providerFenceFactory.includes("process.env"), false, "PROVIDER_FENCE_ENV_FORBIDDEN");
 
   const fixture = read("apps/server/src/external_evidence/qualification/mcft_cap09_phase5_evidence_runtime_qualification_v1.ts");
   includes(fixture, "createTargetPlanner(input?", "PHASE5_MANIFEST_PLANNER_REQUIRED");
@@ -303,7 +317,6 @@ try {
     "PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_NOT_MATERIALIZED",
     "KBS_RAW_HOURLY_PRODUCTION_BASELINE_POINTER_SCHEMA_NOT_MATERIALIZED",
     "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
-    "PROVIDER_ATTEMPT_FENCE_BINDING_NOT_IMPLEMENTED",
   ]);
   assert.equal(authority.adjudication.phase5_fixture_manifest_may_be_production_planner, false);
   assert.equal(authority.adjudication.v13_forcing_controller_may_be_general_evidence_planner, false);
@@ -394,7 +407,8 @@ try {
   assert.equal(authority.host_lifecycle_gap.gfs_partial_rehydration_can_share_single_host_lifecycle, true);
   assert.equal(authority.host_lifecycle_gap.second_evidence_host_authorized, false);
   assert.equal(authority.host_lifecycle_gap.production_source_plan_executor_adapter_implemented, true);
-  assert.equal(authority.host_lifecycle_gap.provider_attempt_fence_binding_implemented, false);
+  assert.equal(authority.host_lifecycle_gap.provider_attempt_fence_binding_implemented, true);
+  assert.equal(authority.host_lifecycle_gap.provider_not_due_nonfailure_standby_implemented, true);
   assert.equal(authority.host_lifecycle_gap.durable_restart_authority, "EVIDENCE_PLANE_DURABLE_PROGRESS_SET");
 
   for (const [key, expected] of Object.entries({
@@ -415,7 +429,7 @@ try {
     status: "PASS",
     subject_sha: subject,
     authority_status: authority.status,
-    current_frontier: "EXPLICIT_KBS_BATCH_AND_SOIL_DUE_AUTHORITIES_REQUIRED",
+    current_frontier: authority.current_frontier,
     kbs_planner_cycle_wiring_aligned: true,
     gfs_replay_provenance_foundation_implemented: true,
     kbs_publication_cycle_adapter_implemented: true,

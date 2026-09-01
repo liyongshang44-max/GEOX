@@ -1,9 +1,9 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_target_planner_readiness_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1",
-  "status": "SOURCE_PLAN_EXECUTOR_CORE_IMPLEMENTED_ATTEMPT_FENCE_BINDING_NEXT",
+  "status": "PROVIDER_ATTEMPT_FENCE_BOUND_SCHEMA_MATERIALIZATION_NEXT",
   "stage": "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START",
-  "subject_predecessor_sha": "c77a5bf215f3e634b9e6499aefc0a7339ac581a6",
+  "subject_predecessor_sha": "de7d5aaa24ed24f86ae53f5f98ea90b3c8f68dc0",
   "host_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
   "production_process_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
   "production_composition_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
@@ -69,7 +69,10 @@
       "minimum_poll_interval_seconds": 900,
       "durable_poll_schedule_implemented": true,
       "fenced_poll_claim_before_provider_attempt_implemented": true,
-      "no_change_poll_throttle_restart_safe": true
+      "no_change_poll_throttle_restart_safe": true,
+      "production_execution_provider_fence_bound": true,
+      "provider_not_due_zero_fetch": true,
+      "execution_shape_bindable_after_schema_materialization": true
     },
     "gfs_bundle": {
       "publication_mode": "SIX_HOUR_PROVIDER_CYCLES_WITH_HOURLY_TARGET_WINDOWS",
@@ -77,7 +80,7 @@
       "required_planning_semantics": "CROSS_CYCLE_LATEST_VALID_FROM_PAIR_PROGRESS",
       "current_read_port_shape": "BINDING_SET_CROSS_CYCLE_PROGRESS_WITH_EXACT_CYCLE_PAIRING",
       "current_shape_bindable": false,
-      "reason": "GFS_TARGET_DUE_AND_DURABLE_RETRY_STATE_ARE_IMPLEMENTED_BUT_SINGLE_HOST_HETEROGENEOUS_SOURCE_PLAN_EXECUTION_SEAM_REMAINS_UNIMPLEMENTED",
+      "reason": "GFS_TARGET_DUE_RETRY_REHYDRATION_SINGLE_HOST_EXECUTION_AND_PROVIDER_FENCE_ARE_IMPLEMENTED_PRODUCTION_RETRY_SCHEMA_AND_ACTIVE_TARGET_INSTANCE_REMAIN_UNBOUND",
       "required_foundation": [
         "CROSS_CYCLE_GFS_PROGRESS_READ_PORT",
         "WEATHER_ET0_PAIR_SKEW_FAIL_CLOSED",
@@ -117,7 +120,11 @@
       "retry_state_stale_fence_fail_closed": true,
       "retry_target_rewind_forbidden": true,
       "retry_target_skip_forbidden": true,
-      "partial_plan_carries_exact_progress_snapshot": true
+      "partial_plan_carries_exact_progress_snapshot": true,
+      "production_execution_provider_fence_bound": true,
+      "provider_not_due_zero_fetch": true,
+      "gfs_partial_rehydration_consumes_provider_attempt_budget": false,
+      "execution_shape_bindable_after_schema_materialization": true
     },
     "kbs_soil": {
       "publication_mode": "IRREGULAR_PROVIDER_DEFINED_EVENT",
@@ -135,7 +142,10 @@
       "durable_poll_schedule_implemented": true,
       "fenced_poll_claim_before_provider_attempt_implemented": true,
       "unchanged_event_poll_throttle_restart_safe": true,
-      "target_free_specialized_work_item_builder_implemented": true
+      "target_free_specialized_work_item_builder_implemented": true,
+      "production_execution_provider_fence_bound": true,
+      "provider_not_due_zero_fetch": true,
+      "execution_shape_bindable_after_schema_materialization": true
     }
   },
   "host_lifecycle_gap": {
@@ -158,7 +168,8 @@
       "SOURCE_POLL_SCHEDULE",
       "GFS_RETRY_SCHEDULE"
     ],
-    "provider_attempt_fence_binding_implemented": false
+    "provider_attempt_fence_binding_implemented": true,
+    "provider_not_due_nonfailure_standby_implemented": true
   },
   "bootstrap_authority_gap": {
     "production_acquisition_start_or_bounded_backfill_horizon_established": true,
@@ -176,11 +187,9 @@
   "unconditional_blockers": [
     "PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_NOT_MATERIALIZED",
     "KBS_RAW_HOURLY_PRODUCTION_BASELINE_POINTER_SCHEMA_NOT_MATERIALIZED",
-    "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
-    "PROVIDER_ATTEMPT_FENCE_BINDING_NOT_IMPLEMENTED"
+    "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"
   ],
   "implementation_order": [
-    "BIND_FENCED_SOURCE_POLL_AND_GFS_RETRY_CLAIMS_BEFORE_PROVIDER_ATTEMPTS",
     "AUTHORIZE_AND_MATERIALIZE_PRODUCTION_SOURCE_POLL_SCHEDULE_SCHEMA",
     "AUTHORIZE_AND_MATERIALIZE_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA",
     "PROVE_RESTART_PAIR_SKEW_BATCH_REUSE_GFS_RETRY_THROTTLE_AND_ZERO_DUE_PROVIDER_REQUEST",
@@ -283,7 +292,14 @@
     "PRODUCTION_SOURCE_PLAN_EXECUTOR_CORE",
     "GFS_PARTIAL_PLAN_CARRIES_EXACT_PROGRESS_SNAPSHOT",
     "KBS_SOIL_TARGET_FREE_WORK_ITEM_BUILDER",
-    "KBS_BLOCKED_PUBLICATION_STATE_FAIL_CLOSED_IN_EXECUTOR"
+    "KBS_BLOCKED_PUBLICATION_STATE_FAIL_CLOSED_IN_EXECUTOR",
+    "AFTER_LEASE_BEFORE_PROVIDER_ATTEMPT_FENCE_CONTRACT",
+    "KBS_RAW_HOURLY_DURABLE_POLL_CLAIM_BOUND_BEFORE_FETCH",
+    "KBS_SOIL_DURABLE_POLL_CLAIM_BOUND_BEFORE_FETCH",
+    "GFS_DURABLE_RETRY_BUDGET_CLAIM_BOUND_BEFORE_FETCH",
+    "PROVIDER_NOT_DUE_NONFAILURE_HOST_STANDBY",
+    "GFS_PARTIAL_REHYDRATION_ZERO_PROVIDER_BUDGET_CONSUMPTION",
+    "GFS_DUE_WINDOW_CARRIED_FROM_PLANNER_TO_FENCE_WITHOUT_REPLANNING"
   ],
   "current_entrypoint": {
     "status": "PACKAGED_FAIL_CLOSED_PURE_PLANNER_NOT_PRODUCTION_BOUND",
@@ -328,7 +344,7 @@
   "kbs_publication_cycle_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1.ts",
   "gfs_fact_replay_provenance_reader_ref": "apps/server/src/persistence/external_evidence/postgres_external_evidence_fact_replay_provenance_v1.ts",
   "gfs_fact_replay_provenance_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_V1.ts",
-  "current_frontier": "PROVIDER_ATTEMPT_FENCE_BINDING",
+  "current_frontier": "PRODUCTION_SCHEMA_MATERIALIZATION_AND_COMPILED_PLANNER_BINDING",
   "gfs_partial_pair_rehydration_adapter_ref": "apps/server/src/external_evidence/mcft_cap09_gfs_partial_pair_rehydration_v1.ts",
   "gfs_partial_pair_rehydration_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_PARTIAL_PAIR_REHYDRATION_V1.ts",
   "source_due_policy_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1.json",
@@ -351,5 +367,8 @@
   "gfs_retry_schedule_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_RETRY_SCHEDULE_POSTGRES_V1.ts",
   "host_attempt_contract_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_attempt_v1.ts",
   "production_source_plan_executor_ref": "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_plan_executor_v1.ts",
-  "production_source_plan_executor_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLAN_EXECUTOR_V1.ts"
+  "production_source_plan_executor_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLAN_EXECUTOR_V1.ts",
+  "provider_attempt_fence_contract_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_provider_attempt_fence_v1.ts",
+  "provider_attempt_fence_factory_ref": "apps/server/src/external_evidence/mcft_cap09_production_provider_attempt_fence_v1.ts",
+  "provider_attempt_fence_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_V1.ts"
 }

@@ -1,8 +1,8 @@
 {
   "schema_version": "geox_mcft_cap09_production_gfs_target_due_readiness_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-GFS-TARGET-DUE-READINESS-V1",
-  "status": "ESTABLISHED_NO_ACTIVE_INSTANCE",
-  "subject_predecessor_sha": "6cb65b7091886994d4c5854b2a064021ec2d8f6b",
+  "status": "ESTABLISHED_FENCE_BOUND_SCHEMA_NOT_MATERIALIZED_NO_ACTIVE_INSTANCE",
+  "subject_predecessor_sha": "de7d5aaa24ed24f86ae53f5f98ea90b3c8f68dc0",
   "authority_basis": {
     "amendment_19_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-PROVIDER-RUNTIME-CADENCE-DECOUPLING-AUTHORITY.md",
     "pre_runtime_hardening_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-RUNTIME-HARDENING-AUTHORITY-V1.json",
@@ -53,10 +53,13 @@
     "pure_target_due_policy_implemented": true,
     "durable_gfs_retry_throttle_implemented": true,
     "durable_gfs_attempt_budget_implemented": true,
-    "source_plan_execution_seam_implemented": false
+    "source_plan_execution_seam_implemented": true,
+    "provider_attempt_fence_binding_implemented": true,
+    "gfs_due_window_passthrough_implemented": true,
+    "partial_rehydration_zero_provider_budget_consumption": true
   },
   "blockers": [
-    "HETEROGENEOUS_SOURCE_PLAN_EXECUTION_SEAM_NOT_IMPLEMENTED"
+    "PRODUCTION_GFS_RETRY_SCHEMA_NOT_MATERIALIZED"
   ],
   "forbidden_shortcuts": [
     "WALL_CLOCK_FLOOR_AS_GFS_TARGET",
@@ -90,5 +93,15 @@
     "owner_takeover_preserves_state": true,
     "stale_fence_rejected": true,
     "current_production_schema_materialized": false
+  },
+  "provider_attempt_fence": {
+    "contract_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_provider_attempt_fence_v1.ts",
+    "factory_ref": "apps/server/src/external_evidence/mcft_cap09_production_provider_attempt_fence_v1.ts",
+    "acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_V1.ts",
+    "lease_claim_source": "CURRENT_EVIDENCE_PRODUCER_LEASE_ACQUIRED_BY_EXECUTION_SERVICE",
+    "claim_order": "AFTER_LEASE_BEFORE_PROVIDER_FETCH",
+    "provider_not_due_behavior": "NONFAILURE_STANDBY_ZERO_PROVIDER_REQUEST",
+    "attempt_budget_exhausted_behavior": "FAIL_CLOSED",
+    "missed_window_behavior": "FAIL_CLOSED"
   }
 }
