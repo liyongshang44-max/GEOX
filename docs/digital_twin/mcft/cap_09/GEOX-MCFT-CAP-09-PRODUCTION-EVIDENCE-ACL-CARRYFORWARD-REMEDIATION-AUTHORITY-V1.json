@@ -96,7 +96,10 @@
       "all_application_rows_zero": true
     },
     "writer_owner_effective_set_authority_zero": true,
-    "writer_owner_self_grant_residual_count_zero": true
+    "writer_owner_self_grant_residual_count_zero": true,
+    "exact_two_production_login_roles_restricted": true,
+    "production_login_direct_public_acl_zero": true,
+    "production_login_object_ownership_zero": true
   },
   "arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_ARM_V1.json",
   "workflow_ref": ".github/workflows/mcft-cap-09-production-evidence-acl-carryforward-remediation.yml",
@@ -203,6 +206,20 @@
     "preflight_must_run_before_mutation_in_same_workflow_job": true,
     "preflight_subject_must_equal_workflow_subject_sha": true,
     "runner_must_revalidate_live_prestate_before_mutation": true,
-    "later_stage_authorities_must_remain_false": true
+    "later_stage_authorities_must_remain_false": true,
+    "authority_and_arm_authorization_must_match": true,
+    "partial_acl_prestate_forbidden": true,
+    "post_remediation_armed_rerun_forbidden": true
+  },
+  "authorization_state_model": {
+    "blocked_pre_cleanup": "BLOCKED_ON_WRITER_OWNER_SELF_GRANT_CLEANUP_NOT_AUTHORIZED",
+    "ready_unarmed": "LIVE_EXACT_NINE_REMEDIATION_READY_NOT_AUTHORIZED",
+    "ready_armed": "LIVE_EXACT_NINE_REMEDIATION_AUTHORIZED",
+    "post_remediation_unarmed": "LIVE_EXACT_NINE_REMEDIATION_APPLIED"
+  },
+  "preflight_state_model": {
+    "exact_nine_missing": "PASS_REMEDIATION_REQUIRED",
+    "exact_nine_materialized": "PASS_ALREADY_MATERIALIZED",
+    "partial_acl_state": "FAIL_CLOSED"
   }
 }

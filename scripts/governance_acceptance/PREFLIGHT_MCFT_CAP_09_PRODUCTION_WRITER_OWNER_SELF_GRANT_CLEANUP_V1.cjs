@@ -4,6 +4,7 @@ const fs=require("node:fs"),path=require("node:path"),cp=require("node:child_pro
 const ROOT=process.cwd(),TARGET="geox_mcft_cap09_production_runtime_v1";
 const EVIDENCE_LOGIN="geox_mcft_cap09_evidence_runtime_login_v1",TWIN_LOGIN="geox_mcft_cap09_twin_runtime_login_v1";
 const EVIDENCE_PRIVILEGE="geox_mcft_cap09_evidence_runtime_v1",TWIN_PRIVILEGE="geox_mcft_cap09_twin_runtime_v1";
+const AUTH=path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-WRITER-OWNER-SELF-GRANT-CLEANUP-AUTHORITY-V1.json");
 const ARM=path.join(ROOT,"scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_ARM_V1.json");
 const OUT=path.join(ROOT,"acceptance-output/MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_PREFLIGHT_V1_RESULT.json");
 const q=(url,sql)=>cp.execFileSync("psql",[url,"-X","-v","ON_ERROR_STOP=1","-AtF","|","-c",sql],{encoding:"utf8"}).trim();
@@ -14,8 +15,12 @@ try{
  const subject=String(process.env.SUBJECT_SHA||"");assert.match(subject,/^[0-9a-f]{40}$/,"WRITER_OWNER_CLEANUP_SUBJECT_REQUIRED");
  const seed=String(process.env.SEED_DATABASE_URL||"").trim();assert.ok(seed,"WRITER_OWNER_CLEANUP_SEED_URL_REQUIRED");
  const u=new URL(seed);u.pathname="/"+TARGET;const url=u.toString();
+ const authority=JSON.parse(fs.readFileSync(AUTH,"utf8"));
  const arm=JSON.parse(fs.readFileSync(ARM,"utf8"));
+ assert.equal(authority.target.database_name,TARGET,"WRITER_OWNER_CLEANUP_AUTHORITY_TARGET_REQUIRED");
  const cleanupAuthorized=arm.production_writer_owner_self_grant_cleanup_authorized===true;
+ const authorityAuthorized=authority.authorization.production_writer_owner_self_grant_cleanup_authorized===true;
+ assert.equal(authorityAuthorized,cleanupAuthorized,"WRITER_OWNER_CLEANUP_AUTHORITY_ARM_AUTHORIZATION_MISMATCH");
  assert.equal(cleanupAuthorized,arm.armed===true,"WRITER_OWNER_CLEANUP_ARM_AUTHORIZATION_COHERENCE_REQUIRED");
  assert.equal(arm.same_workflow_fresh_preflight_required,true,"WRITER_OWNER_CLEANUP_SAME_WORKFLOW_PREFLIGHT_REQUIRED");
  assert.equal(arm.preflight_subject_binding,"CURRENT_WORKFLOW_SUBJECT_SHA","WRITER_OWNER_CLEANUP_PREFLIGHT_BINDING_MODE_REQUIRED");
@@ -77,15 +82,32 @@ try{
   "AND granted.rolname IN ('geox_mcft_cap09_evidence_writer_owner_v1','geox_mcft_cap09_forcing_writer_owner_v1','geox_mcft_cap09_twin_writer_owner_v1')",
   "ORDER BY granted.rolname,grantor.rolname"
  ].join("\n")).split(/\r?\n/).filter(Boolean);
- assert.deepEqual(membershipRows,[
+ const requiredMembershipRows=[
   "geox_mcft_cap09_evidence_writer_owner_v1|member=neondb_owner|grantor=cloud_admin|admin=true|inherit=false|set=false",
   "geox_mcft_cap09_forcing_writer_owner_v1|member=neondb_owner|grantor=cloud_admin|admin=true|inherit=false|set=false",
   "geox_mcft_cap09_forcing_writer_owner_v1|member=neondb_owner|grantor=neondb_owner|admin=false|inherit=true|set=true",
   "geox_mcft_cap09_twin_writer_owner_v1|member=neondb_owner|grantor=cloud_admin|admin=true|inherit=false|set=false"
- ],"WRITER_OWNER_CLEANUP_EXACT_LIVE_MEMBERSHIP_PRESTATE_REQUIRED");
+ ];
+ const cleanMembershipRows=[
+  "geox_mcft_cap09_evidence_writer_owner_v1|member=neondb_owner|grantor=cloud_admin|admin=true|inherit=false|set=false",
+  "geox_mcft_cap09_forcing_writer_owner_v1|member=neondb_owner|grantor=cloud_admin|admin=true|inherit=false|set=false",
+  "geox_mcft_cap09_twin_writer_owner_v1|member=neondb_owner|grantor=cloud_admin|admin=true|inherit=false|set=false"
+ ];
  const caps={};
  for(const r of ["geox_mcft_cap09_evidence_writer_owner_v1","geox_mcft_cap09_forcing_writer_owner_v1","geox_mcft_cap09_twin_writer_owner_v1"])caps[r]=b(q(url,"SELECT pg_catalog.pg_has_role(current_user,'"+r+"','SET')::text"));
- assert.deepEqual(caps,{geox_mcft_cap09_evidence_writer_owner_v1:false,geox_mcft_cap09_forcing_writer_owner_v1:true,geox_mcft_cap09_twin_writer_owner_v1:false},"WRITER_OWNER_CLEANUP_EFFECTIVE_SET_PRESTATE_REQUIRED");
+ const cleanupRequired=JSON.stringify(membershipRows)===JSON.stringify(requiredMembershipRows)&&JSON.stringify(caps)===JSON.stringify({geox_mcft_cap09_evidence_writer_owner_v1:false,geox_mcft_cap09_forcing_writer_owner_v1:true,geox_mcft_cap09_twin_writer_owner_v1:false});
+ const alreadyClean=JSON.stringify(membershipRows)===JSON.stringify(cleanMembershipRows)&&JSON.stringify(caps)===JSON.stringify({geox_mcft_cap09_evidence_writer_owner_v1:false,geox_mcft_cap09_forcing_writer_owner_v1:false,geox_mcft_cap09_twin_writer_owner_v1:false});
+ assert.equal(Number(cleanupRequired)+Number(alreadyClean),1,"WRITER_OWNER_CLEANUP_LIVE_MEMBERSHIP_STATE_NOT_EXACT");
+ if(arm.armed===true)assert.equal(cleanupRequired,true,"WRITER_OWNER_CLEANUP_ARMED_ALREADY_CLEAN_FORBIDDEN");
+ let preflightStatus;
+ if(cleanupRequired){
+  preflightStatus="PASS_CLEANUP_REQUIRED";
+  assert.equal(authority.status,arm.armed===true?"EXACT_SELF_GRANT_CLEANUP_AUTHORIZED":"LIVE_EXACT_SELF_GRANT_PROVEN_CLEANUP_NOT_AUTHORIZED","WRITER_OWNER_CLEANUP_AUTHORITY_STATUS_PRESTATE_MISMATCH");
+ }else{
+  assert.equal(arm.armed,false,"WRITER_OWNER_CLEANUP_ALREADY_CLEAN_MUST_BE_UNARMED");
+  preflightStatus="PASS_ALREADY_CLEAN";
+  assert.equal(authority.status,"EXACT_SELF_GRANT_CLEANUP_APPLIED","WRITER_OWNER_CLEANUP_AUTHORITY_STATUS_POSTSTATE_REQUIRED");
+ }
  const targetTables=["external_evidence_producer_lease_v1","external_evidence_supply_event_v1","external_evidence_supply_cursor_v1"];
  const missing=[];for(const t of targetTables){const m=matrix(url,t);for(const [i,p] of [[0,"SELECT"],[1,"INSERT"],[2,"UPDATE"]])if(!m[i])missing.push(t+":"+p);assert.equal(m[3],false,"WRITER_OWNER_CLEANUP_DELETE_FORBIDDEN:"+t);}
  assert.deepEqual(missing,[
@@ -93,5 +115,5 @@ try{
   "external_evidence_supply_event_v1:SELECT","external_evidence_supply_event_v1:INSERT","external_evidence_supply_event_v1:UPDATE",
   "external_evidence_supply_cursor_v1:SELECT","external_evidence_supply_cursor_v1:INSERT","external_evidence_supply_cursor_v1:UPDATE"
  ],"WRITER_OWNER_CLEANUP_EXACT_NINE_ACL_PRESTATE_REQUIRED");
- write({schema_version:"geox_mcft_cap09_production_writer_owner_self_grant_cleanup_preflight_v1",status:"PASS_CLEANUP_REQUIRED",subject_sha:subject,database_name:TARGET,current_user:currentUser,table_count:tableCount,routine_count:routineCount,total_application_rows:totalRows,service_login_role_count:serviceLoginRoleRows.length,service_login_roles_restricted:true,service_login_memberships:serviceLoginMembershipRows,exact_one_privilege_membership_each:true,service_login_direct_public_acl_count:loginDirectAclCount,service_login_owned_object_count:loginOwnedObjectCount,writer_owner_memberships:membershipRows,writer_owner_effective_set:caps,exact_nine_missing_privileges:missing,arm_observed:arm.armed===true,cleanup_authorized_observed:cleanupAuthorized,same_workflow_fresh_preflight_required:arm.same_workflow_fresh_preflight_required===true,preflight_subject_binding:arm.preflight_subject_binding,database_mutation:false,row_mutation:false,schema_mutation:false,table_acl_mutation:false,function_acl_mutation:false,role_attribute_mutation:false,membership_mutation:false,runtime_process_start:false,production_owner_activation:false,formal_v5_arm:false,a0_bootstrap:false,o00_started:false});
+ write({schema_version:"geox_mcft_cap09_production_writer_owner_self_grant_cleanup_preflight_v1",status:preflightStatus,subject_sha:subject,database_name:TARGET,current_user:currentUser,table_count:tableCount,routine_count:routineCount,total_application_rows:totalRows,service_login_role_count:serviceLoginRoleRows.length,service_login_roles_restricted:true,service_login_memberships:serviceLoginMembershipRows,exact_one_privilege_membership_each:true,service_login_direct_public_acl_count:loginDirectAclCount,service_login_owned_object_count:loginOwnedObjectCount,writer_owner_memberships:membershipRows,writer_owner_effective_set:caps,cleanup_required:cleanupRequired,already_clean:alreadyClean,exact_nine_missing_privileges:missing,authority_status:authority.status,authority_authorized_observed:authorityAuthorized,arm_observed:arm.armed===true,cleanup_authorized_observed:cleanupAuthorized,same_workflow_fresh_preflight_required:arm.same_workflow_fresh_preflight_required===true,preflight_subject_binding:arm.preflight_subject_binding,database_mutation:false,row_mutation:false,schema_mutation:false,table_acl_mutation:false,function_acl_mutation:false,role_attribute_mutation:false,membership_mutation:false,runtime_process_start:false,production_owner_activation:false,formal_v5_arm:false,a0_bootstrap:false,o00_started:false});
 }catch(e){write({status:"FAIL",subject_sha:String(process.env.SUBJECT_SHA||""),error:e instanceof Error?e.message:String(e),database_mutation:false,membership_mutation:false,runtime_process_start:false,production_owner_activation:false,formal_v5_arm:false,a0_bootstrap:false,o00_started:false});process.exitCode=1;}

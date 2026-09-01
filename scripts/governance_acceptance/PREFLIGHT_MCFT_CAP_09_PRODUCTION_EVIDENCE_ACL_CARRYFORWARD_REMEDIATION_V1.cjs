@@ -23,10 +23,12 @@ try{
  const seed=String(process.env.SEED_DATABASE_URL||"").trim(); assert.ok(seed,"ACL_REMEDIATION_SEED_URL_REQUIRED");
  const u=new URL(seed);u.pathname="/"+TARGET;const url=u.toString();
  const a=j(AUTH),arm=j(ARM);
- assert.equal(a.status,"BLOCKED_ON_WRITER_OWNER_SELF_GRANT_CLEANUP_NOT_AUTHORIZED");
  assert.equal(a.target.database_name,TARGET);
  const remediationAuthorized=arm.production_evidence_acl_carryforward_remediation_authorized===true;
+ const authorityAuthorized=a.authorization.production_evidence_acl_carryforward_remediation_authorized===true;
  assert.equal(remediationAuthorized,arm.armed===true,"ACL_REMEDIATION_ARM_AUTHORIZATION_COHERENCE_REQUIRED");
+ assert.equal(authorityAuthorized,remediationAuthorized,"ACL_REMEDIATION_AUTHORITY_ARM_AUTHORIZATION_MISMATCH");
+ assert.ok(["BLOCKED_ON_WRITER_OWNER_SELF_GRANT_CLEANUP_NOT_AUTHORIZED","LIVE_EXACT_NINE_REMEDIATION_READY_NOT_AUTHORIZED","LIVE_EXACT_NINE_REMEDIATION_AUTHORIZED","LIVE_EXACT_NINE_REMEDIATION_APPLIED"].includes(a.status),"ACL_REMEDIATION_AUTHORITY_STATUS_INVALID");
  assert.equal(arm.same_workflow_fresh_preflight_required,true,"ACL_REMEDIATION_SAME_WORKFLOW_PREFLIGHT_REQUIRED");
  assert.equal(arm.preflight_subject_binding,"CURRENT_WORKFLOW_SUBJECT_SHA","ACL_REMEDIATION_PREFLIGHT_BINDING_MODE_REQUIRED");
  if(arm.armed===true)assert.equal(arm.exact_target_database_name,TARGET,"ACL_REMEDIATION_ARM_TARGET_REQUIRED");
@@ -233,7 +235,21 @@ try{
  }
 
  if(unsafe.length)throw new Error("ACL_REMEDIATION_UNSAFE_PRESTATE:"+unsafe.join(","));
- const status=missing.length?"PASS_REMEDIATION_REQUIRED":"PASS_ALREADY_MATERIALIZED";
+ const exactNine=a.authorized_mutation_scope.exact_missing_privileges;
+ const phase3Matrices=phase3Tables.map(t=>matrix(url,t,role));
+ const remediationRequired=JSON.stringify(missing)===JSON.stringify(exactNine)&&phase3Matrices.every(m=>JSON.stringify(m)===JSON.stringify([false,false,false,false]));
+ const alreadyMaterialized=missing.length===0&&phase3Matrices.every(m=>JSON.stringify(m)===JSON.stringify([true,true,true,false]));
+ if(!remediationRequired&&!alreadyMaterialized)throw new Error("ACL_REMEDIATION_PARTIAL_PHASE3_ACL_STATE_FORBIDDEN");
+ if(arm.armed===true)assert.equal(remediationRequired,true,"ACL_REMEDIATION_ARMED_ALREADY_MATERIALIZED_FORBIDDEN");
+ let status;
+ if(remediationRequired){
+  status="PASS_REMEDIATION_REQUIRED";
+  assert.equal(a.status,arm.armed===true?"LIVE_EXACT_NINE_REMEDIATION_AUTHORIZED":"LIVE_EXACT_NINE_REMEDIATION_READY_NOT_AUTHORIZED","ACL_REMEDIATION_AUTHORITY_READY_STATUS_REQUIRED");
+ }else{
+  assert.equal(arm.armed,false,"ACL_REMEDIATION_ALREADY_MATERIALIZED_MUST_BE_UNARMED");
+  status="PASS_ALREADY_MATERIALIZED";
+  assert.equal(a.status,"LIVE_EXACT_NINE_REMEDIATION_APPLIED","ACL_REMEDIATION_AUTHORITY_APPLIED_STATUS_REQUIRED");
+ }
 
  write({
   schema_version:"geox_mcft_cap09_production_evidence_acl_carryforward_remediation_preflight_v1",
@@ -265,6 +281,10 @@ try{
   remediation_target_tables_owned_by_current_user:phase3Tables.every(t=>objectOwners["table:"+t]===currentUser),
   arm_observed:arm.armed===true,
   remediation_authorized_observed:remediationAuthorized,
+  authority_authorized_observed:authorityAuthorized,
+  authority_status:a.status,
+  remediation_required:remediationRequired,
+  already_materialized:alreadyMaterialized,
   same_workflow_fresh_preflight_required:arm.same_workflow_fresh_preflight_required===true,
   preflight_subject_binding:arm.preflight_subject_binding,
   database_mutation:false,row_mutation:false,schema_mutation:false,role_mutation:false,

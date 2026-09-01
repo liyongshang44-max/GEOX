@@ -51,7 +51,13 @@
     "cloud_admin_management_memberships_preserved": true,
     "exact_nine_phase3_acl_privileges_unchanged": true,
     "table_and_function_acl_unchanged": true,
-    "application_row_count_unchanged": true
+    "application_row_count_unchanged": true,
+    "exact_two_service_login_memberships_unchanged": true,
+    "service_login_role_attributes_unchanged": true,
+    "service_login_direct_public_acl_remains_zero": true,
+    "service_login_object_ownership_remains_zero": true,
+    "all_public_table_acl_unchanged": true,
+    "all_public_function_acl_unchanged": true
   },
   "arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_ARM_V1.json",
   "preflight_ref": "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_V1.cjs",
@@ -91,6 +97,19 @@
     "preflight_must_run_before_mutation_in_same_workflow_job": true,
     "preflight_subject_must_equal_workflow_subject_sha": true,
     "runner_must_revalidate_live_prestate_before_mutation": true,
-    "later_stage_authorities_must_remain_false": true
+    "later_stage_authorities_must_remain_false": true,
+    "authority_and_arm_authorization_must_match": true,
+    "armed_post_cleanup_rerun_forbidden": true
+  },
+  "preflight_state_model": {
+    "unarmed_pre_cleanup": "PASS_CLEANUP_REQUIRED",
+    "armed_pre_cleanup": "PASS_CLEANUP_REQUIRED_ONLY",
+    "unarmed_post_cleanup": "PASS_ALREADY_CLEAN",
+    "armed_post_cleanup": "FAIL_CLOSED_ALREADY_CLEAN"
+  },
+  "authorization_state_model": {
+    "pre_cleanup_unarmed": "LIVE_EXACT_SELF_GRANT_PROVEN_CLEANUP_NOT_AUTHORIZED",
+    "pre_cleanup_armed": "EXACT_SELF_GRANT_CLEANUP_AUTHORIZED",
+    "post_cleanup_unarmed": "EXACT_SELF_GRANT_CLEANUP_APPLIED"
   }
 }
