@@ -2292,7 +2292,7 @@
         "agronomy evidence consumers"
       ],
       "removal_target": "KEEP SAMPLING EVIDENCE ACCEPTANCE; EXACT PLAN/RECEIPT/LAB FACT BINDING REQUIRED; AMBIGUITY FAILS CLOSED",
-      "audit_note": "Latest-wins source selection removed. Plan/import identities resolve deterministically; sample receipt ambiguity returns 409; Sampling Acceptance persists exact plan/receipt/lab fact refs.",
+      "audit_note": "Latest-wins source selection removed. Plan/import identities resolve deterministically; sample receipt ambiguity returns 409; duplicate sample_id is rejected; lab import requires exact plan continuity; Sampling Acceptance persists exact plan/receipt/lab refs and is idempotent per exact source chain.",
       "surface_id": "RES-084",
       "b02_registered": false
     },
@@ -2485,7 +2485,7 @@
         "fertilization evidence consumers"
       ],
       "removal_target": "KEEP SAMPLING WORKFLOW; NEVER REINTRODUCE LATEST-WINS SOURCE AUTHORITY",
-      "audit_note": "Route now consumes fact rows, persists exact plan/receipt/lab refs into sampling_acceptance_v1, and maps duplicate/ambiguous identity to explicit client errors.",
+      "audit_note": "Route consumes exact fact rows, rejects duplicate/ambiguous receipt identity, verifies exact plan continuity before lab import, persists exact plan/receipt/lab refs into sampling_acceptance_v1, and returns an idempotent Acceptance identity for repeated exact-chain evaluation.",
       "surface_id": "RES-091",
       "b02_registered": false
     },
@@ -7593,7 +7593,7 @@
       ],
       "authority_owner": "SAMPLING_DOMAIN",
       "writer_scope": "sampling plan/receipt/lab/acceptance facts",
-      "audit_note": "Sampling plan/receipt/lab/acceptance chain now records exact fact identity and fails closed on ambiguous receipt/lab selection."
+      "audit_note": "Sampling plan/receipt/lab/acceptance chain records exact fact identity. Duplicate receipt creation is blocked, ambiguous historical identity fails closed, and repeated Acceptance evaluation is exact-chain idempotent."
     },
     {
       "surface_id": "RES-289",
@@ -8014,7 +8014,7 @@
       ],
       "removal_target": "KEEP FAIL-CLOSED READ MODEL; NEVER SELECT LATEST FACT TO CREATE CUSTOMER-VISIBLE ELIGIBILITY",
       "b02_registered": false,
-      "audit_note": "Previously selected latest relation/receipt/lab/acceptance and could affect customer_visible_eligible. Now ambiguity blocks visibility and exact fact refs are required."
+      "audit_note": "Previously selected latest relation/receipt/lab/acceptance and could affect customer_visible_eligible. Now ambiguity blocks visibility; relation→plan→receipt→lab→acceptance exact plan-fact continuity is required."
     }
   ],
   "cross_branch_surfaces": [
