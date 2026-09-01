@@ -440,7 +440,36 @@
     "production_owner_activation_authorized": false,
     "formal_v5_arm_authorized": false,
     "a0_authorized": false,
-    "o00_authorized": false
+    "o00_authorized": false,
+    "machine_preflight_contract": {
+      "schema_version": "geox_mcft_cap09_local_operator_host_machine_preflight_contract_v1",
+      "classification": "PRE_RUNTIME_STATIC_MACHINE_ADMISSION",
+      "status": "AUTHORIZED_NOT_YET_PROVEN_ON_CURRENT_EXACT_HEAD",
+      "minimum_logical_cpu_count": 2,
+      "minimum_host_total_memory_gib": 4,
+      "minimum_docker_cpu_count": 2,
+      "minimum_docker_memory_gib": 4,
+      "minimum_repo_disk_free_gib": 5,
+      "resource_floor_basis": "MINIMUM_OPERATIONAL_ADMISSION_FLOOR_FOR_TWO_NODE_LONG_RUNNING_SERVICES_USING_EXTERNAL_POSTGRES_AND_PRIVATE_OBJECT_STORAGE_NOT_A_PERFORMANCE_SLA",
+      "durable_log_root": "~/.geox/mcft-cap09/logs",
+      "durable_log_root_must_exist": true,
+      "durable_log_root_must_be_writable": true,
+      "durable_log_root_must_be_outside_os_temp": true,
+      "network_readiness_probe": "ACTIVE_IPV4_DEFAULT_ROUTE_AND_CONFIGURED_IPV4_DNS_NO_EXTERNAL_REQUEST",
+      "network_provider_request_forbidden": true,
+      "network_database_connection_forbidden": true,
+      "runtime_secret_read_forbidden": true,
+      "container_start_forbidden": true,
+      "actual_24h_uptime_proven_by_static_preflight": false,
+      "actual_24h_network_continuity_proven_by_static_preflight": false,
+      "actual_runtime_restart_policy_proven_by_static_preflight": false,
+      "later_runtime_window_must_prove": [
+        "24H_HOST_UPTIME",
+        "NETWORK_CONTINUITY",
+        "DURABLE_LOG_CONTINUITY",
+        "RESTART_POLICY_UNLESS_STOPPED"
+      ]
+    }
   },
   "host_binding_evidence": {
     "status": "BOUND_FROM_OPERATOR_MANAGED_LOCAL_HOST_ID",

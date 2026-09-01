@@ -30,7 +30,10 @@ function runLocalMachineProbe(){
 
   const a=j(AUTH);
   const local=a.local_operator_managed_host_contract||{};
+  const machineContract=local.machine_preflight_contract||{};
   const boundHostId=String(local.host_id||"").trim().toLowerCase();
+  add(machineContract.schema_version==="geox_mcft_cap09_local_operator_host_machine_preflight_contract_v1","LOCAL_PREFLIGHT_MACHINE_CONTRACT_REQUIRED");
+  add(machineContract.classification==="PRE_RUNTIME_STATIC_MACHINE_ADMISSION","LOCAL_PREFLIGHT_MACHINE_CLASSIFICATION_REQUIRED");
   add(a.status==="LOCAL_OPERATOR_MANAGED_DOCKER_HOST_IDENTITIES_BOUND","LOCAL_PREFLIGHT_BOUND_HOST_AUTHORITY_REQUIRED");
   add(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(boundHostId),"LOCAL_PREFLIGHT_BOUND_HOST_UUID_REQUIRED");
 
@@ -95,6 +98,46 @@ function runLocalMachineProbe(){
     }
   }catch{}
 
+  const hostCpuCount=os.cpus().length;
+  const hostTotalMemoryGiB=Number((os.totalmem()/1024/1024/1024).toFixed(2));
+  const dockerCpuCount=dockerInfo?.NCPU==null?null:Number(dockerInfo.NCPU);
+  const dockerMemoryGiB=dockerInfo?.MemTotal==null?null:Number((Number(dockerInfo.MemTotal)/1024/1024/1024).toFixed(2));
+  add(hostCpuCount>=Number(machineContract.minimum_logical_cpu_count),"LOCAL_PREFLIGHT_HOST_CPU_FLOOR_REQUIRED");
+  add(hostTotalMemoryGiB>=Number(machineContract.minimum_host_total_memory_gib),"LOCAL_PREFLIGHT_HOST_MEMORY_FLOOR_REQUIRED");
+  add(dockerCpuCount!==null&&dockerCpuCount>=Number(machineContract.minimum_docker_cpu_count),"LOCAL_PREFLIGHT_DOCKER_CPU_FLOOR_REQUIRED");
+  add(dockerMemoryGiB!==null&&dockerMemoryGiB>=Number(machineContract.minimum_docker_memory_gib),"LOCAL_PREFLIGHT_DOCKER_MEMORY_FLOOR_REQUIRED");
+  add(diskFreeGiB!==null&&diskFreeGiB>=Number(machineContract.minimum_repo_disk_free_gib),"LOCAL_PREFLIGHT_REPO_DISK_FLOOR_REQUIRED");
+
+  const expandHome=(value)=>String(value||"").replace(/^~(?=[\\/]|$)/,os.homedir());
+  const durableLogRoot=path.resolve(expandHome(machineContract.durable_log_root));
+  const tempRoot=path.resolve(os.tmpdir());
+  let durableLogRootExists=false,durableLogRootWritable=false,durableLogRootOutsideTemp=false;
+  try{
+    const stat=fs.statSync(durableLogRoot);
+    durableLogRootExists=stat.isDirectory();
+    if(durableLogRootExists){fs.accessSync(durableLogRoot,fs.constants.W_OK);durableLogRootWritable=true;}
+    const relativeToTemp=path.relative(tempRoot,durableLogRoot);
+    durableLogRootOutsideTemp=relativeToTemp!==""&&!relativeToTemp.startsWith(".."+path.sep)&&!path.isAbsolute(relativeToTemp)?false:true;
+  }catch{}
+  add(durableLogRootExists,"LOCAL_PREFLIGHT_DURABLE_LOG_ROOT_REQUIRED");
+  add(durableLogRootWritable,"LOCAL_PREFLIGHT_DURABLE_LOG_ROOT_WRITABLE_REQUIRED");
+  add(durableLogRootOutsideTemp,"LOCAL_PREFLIGHT_DURABLE_LOG_ROOT_OUTSIDE_TEMP_REQUIRED");
+
+  let network=null;
+  if(process.platform==="win32"){
+    const ps=[
+      "$ErrorActionPreference='Stop'",
+      "$c=Get-NetIPConfiguration | Where-Object { $_.NetAdapter.Status -eq 'Up' -and $_.IPv4DefaultGateway -ne $null } | Select-Object -First 1",
+      "if($null -eq $c){throw 'ACTIVE_IPV4_DEFAULT_ROUTE_NOT_FOUND'}",
+      "$dns=@((Get-DnsClientServerAddress -InterfaceIndex $c.InterfaceIndex -AddressFamily IPv4).ServerAddresses | Where-Object { $_ -and $_.Trim() })",
+      "if($dns.Count -eq 0){throw 'IPV4_DNS_NOT_CONFIGURED'}",
+      "[pscustomobject]@{interface_alias=$c.InterfaceAlias;interface_index=[int]$c.InterfaceIndex;ipv4_default_gateway=[string]$c.IPv4DefaultGateway.NextHop;ipv4_dns=@($dns)}|ConvertTo-Json -Compress"
+    ].join(";");
+    const n=safeRun("powershell.exe",["-NoProfile","-NonInteractive","-Command",ps]);
+    if(n.ok){try{network=JSON.parse(n.stdout);}catch{}}
+  }
+  add(Boolean(network),"LOCAL_PREFLIGHT_ACTIVE_IPV4_ROUTE_AND_DNS_REQUIRED");
+
   const out={
     schema_version:"geox_mcft_cap09_local_operator_host_machine_preflight_v1",
     status:blockers.length===0?"PASS":"FAIL",
@@ -110,16 +153,16 @@ function runLocalMachineProbe(){
     platform:process.platform,
     architecture:process.arch,
     os_release:os.release(),
-    cpu_count:os.cpus().length,
-    host_total_memory_gib:Number((os.totalmem()/1024/1024/1024).toFixed(2)),
+    cpu_count:hostCpuCount,
+    host_total_memory_gib:hostTotalMemoryGiB,
     host_free_memory_gib:Number((os.freemem()/1024/1024/1024).toFixed(2)),
     repo_disk_free_gib:diskFreeGiB,
     docker_daemon_available:Boolean(dockerServer),
     docker_server_version:dockerServer?.Version??dockerServer?.VersionString??null,
     docker_server_os:dockerInfo?.OSType??null,
     docker_server_architecture:dockerInfo?.Architecture??null,
-    docker_server_cpu_count:dockerInfo?.NCPU??null,
-    docker_server_memory_gib:dockerInfo?.MemTotal?Number((Number(dockerInfo.MemTotal)/1024/1024/1024).toFixed(2)):null,
+    docker_server_cpu_count:dockerCpuCount,
+    docker_server_memory_gib:dockerMemoryGiB,
     docker_compose_available:compose.ok&&compose.stdout.length>0,
     docker_compose_version:compose.ok?compose.stdout:null,
     active_power_scheme:power?.active_scheme??null,
@@ -128,10 +171,25 @@ function runLocalMachineProbe(){
     windows_time_source:source||null,
     windows_time_status_readable:timeStatus.ok,
     system_utc_now:new Date().toISOString(),
+    machine_preflight_classification:machineContract.classification??null,
+    resource_floor_basis:machineContract.resource_floor_basis??null,
+    resource_floor_pass:hostCpuCount>=Number(machineContract.minimum_logical_cpu_count)&&hostTotalMemoryGiB>=Number(machineContract.minimum_host_total_memory_gib)&&dockerCpuCount!==null&&dockerCpuCount>=Number(machineContract.minimum_docker_cpu_count)&&dockerMemoryGiB!==null&&dockerMemoryGiB>=Number(machineContract.minimum_docker_memory_gib)&&diskFreeGiB!==null&&diskFreeGiB>=Number(machineContract.minimum_repo_disk_free_gib),
+    durable_log_root:durableLogRoot,
+    durable_log_root_exists:durableLogRootExists,
+    durable_log_root_writable:durableLogRootWritable,
+    durable_log_root_outside_os_temp:durableLogRootOutsideTemp,
+    active_network_interface:network?.interface_alias??null,
+    active_ipv4_default_gateway:network?.ipv4_default_gateway??null,
+    configured_ipv4_dns:Array.isArray(network?.ipv4_dns)?network.ipv4_dns:[],
+    network_readiness_pass:Boolean(network),
+    provider_request_count:0,
+    actual_24h_uptime_proven:false,
+    actual_24h_network_continuity_proven:false,
+    actual_runtime_restart_policy_proven:false,
+    later_runtime_window_required_proofs:Array.isArray(machineContract.later_runtime_window_must_prove)?machineContract.later_runtime_window_must_prove:[],
     blockers,
     runtime_secret_read:false,
     database_connection_attempted:false,
-    provider_request_count:0,
     container_start_count:0,
     runtime_process_start:false,
     production_owner_activation:false,
@@ -165,6 +223,10 @@ try{
   req(cp?.status==="IMMUTABLE_SUCCESS_UNBOUND"&&cp?.host_binding_readiness?.run_id===33424840577&&cp?.owner_provisioning_readiness?.run_id===33424840821,"HOST_BINDING_PRE_PLATFORM_CHECKPOINT_REQUIRED");
   const local=a.local_operator_managed_host_contract;
   req(local?.platform_provider==="LOCAL_OPERATOR_MANAGED_DOCKER"&&local?.region_or_location==="OPERATOR_LOCAL_MACHINE","LOCAL_HOST_CONTRACT_REQUIRED");
+  const machineContract=local?.machine_preflight_contract;
+  req(machineContract?.schema_version==="geox_mcft_cap09_local_operator_host_machine_preflight_contract_v1"&&machineContract?.classification==="PRE_RUNTIME_STATIC_MACHINE_ADMISSION","LOCAL_MACHINE_PREFLIGHT_CONTRACT_REQUIRED");
+  req(machineContract.minimum_logical_cpu_count===2&&machineContract.minimum_host_total_memory_gib===4&&machineContract.minimum_docker_cpu_count===2&&machineContract.minimum_docker_memory_gib===4&&machineContract.minimum_repo_disk_free_gib===5,"LOCAL_MACHINE_RESOURCE_FLOOR_REQUIRED");
+  req(machineContract.durable_log_root==="~/.geox/mcft-cap09/logs"&&machineContract.network_provider_request_forbidden===true&&machineContract.network_database_connection_forbidden===true&&machineContract.runtime_secret_read_forbidden===true&&machineContract.container_start_forbidden===true,"LOCAL_MACHINE_PREFLIGHT_NON_EFFECT_CONTRACT_REQUIRED");
   req(local?.host_id_scheme==="GEOX_LOCAL_HOST_UUID_V1"&&local?.host_id_state_file==="~/.geox/mcft-cap09/local-host-id-v1","LOCAL_HOST_ID_SCHEME_REQUIRED");
   req(local?.container_id_is_authority===false&&local?.compose_project_name==="geox-mcft-cap09-production-v1","LOCAL_HOST_STABLE_IDENTITY_CONTRACT_REQUIRED");
   req(local?.evidence_runtime?.service_name==="geox-mcft-cap09-evidence-runtime-v1"&&local?.evidence_runtime?.runtime_role==="EVIDENCE_RUNTIME"&&local?.evidence_runtime?.execution_class==="LONG_RUNNING_SERVICE","LOCAL_EVIDENCE_SERVICE_CONTRACT_REQUIRED");
