@@ -3997,24 +3997,27 @@
       "entrypoint": "active registration graph; parent=apps/server/src/modules/judge/registerJudgeModule.ts",
       "activation_mode": "ACTIVE_DERIVER",
       "writes": [
-        "semantic output / delegated persistence according to active route implementation"
+        "judge_result_v2 delegated persistence",
+        "TECHNICAL_EXECUTION_MEMORY via recordMemoryV1"
       ],
       "reads": [
         "active request/runtime inputs",
         "delegated domain/service inputs"
       ],
       "semantic_family": [
-        "evidence.qualification",
-        "acceptance.verdict",
+        "judge.result",
         "field_memory"
       ],
-      "authority_class": "ACTIVE_RUNTIME_DERIVER_EXPLICITLY_DISPOSED",
+      "authority_class": "JUDGE_RESULT_DERIVER_WITH_TECHNICAL_EXECUTION_MEMORY_SIDE_EFFECT",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
-      "downstream_consumers": [],
-      "removal_target": "canonical judge result / execution evidence qualification ; REMOVE_DIRECT_MEMORY_SIDE_EFFECT_IF_PRESENT",
+      "downstream_consumers": [
+        "Judge result readers",
+        "technical execution-memory diagnostics"
+      ],
+      "removal_target": "KEEP TECHNICAL EXECUTION MEMORY SIDE EFFECT; MUST REMAIN NON_CUSTOMER_VISIBLE, NON_LEARNING_ELIGIBLE, AND NEVER FORMAL_FIELD_MEMORY",
       "b02_registered": true,
-      "audit_note": "Added by B-Line Active Runtime Surface Closure after direct registration-graph and source-role adjudication; registration is factual coverage, not authority approval."
+      "audit_note": "Exact source proof: memory_lane=TECHNICAL_EXECUTION_MEMORY, trust_level=TECHNICAL_SIGNAL, customer_visible_memory=false, learning_eligible=false. No Formal Field Memory authority."
     },
     {
       "surface_id": "RES-152",
