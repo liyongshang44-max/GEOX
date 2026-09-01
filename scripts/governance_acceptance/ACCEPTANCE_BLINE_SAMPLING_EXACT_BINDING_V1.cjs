@@ -35,6 +35,7 @@ need("service", [
   "sampling_plan_fact_id",
   "sample_receipt_fact_id",
   "lab_result_fact_id",
+  "sampling_plan_fact_id: input.sampling_plan_fact_id",
   "LIMIT 2",
 ]);
 forbid("service", [
@@ -47,6 +48,9 @@ need("route", [
   "sample_receipt_fact_id: receipt.fact_id",
   "lab_result_fact_id: labResult.fact_id",
   "sampling_plan_fact_id: plan.fact_id",
+  "sampling_plan_fact_id: String(receiptRecord.sampling_plan_fact_id ?? \"\")",
+  "MISMATCH:sampling_plan_fact_id",
+  "MISMATCH:lab_sampling_plan_fact_id",
   "handleSamplingServiceError",
 ]);
 forbid("route", [
@@ -56,11 +60,14 @@ forbid("route", [
 
 need("projection", [
   "AMBIGUOUS_SAMPLING_OPERATION_RELATION",
+  "SAMPLING_OPERATION_RELATION_EXACT_PLAN_REF_MISSING",
   "AMBIGUOUS_SAMPLE_RECEIPT_FOR_PLAN",
   "AMBIGUOUS_LAB_RESULT_FOR_SAMPLE",
   "AMBIGUOUS_SAMPLING_ACCEPTANCE_FOR_CHAIN",
   "SAMPLING_EXACT_CHAIN_NOT_ESTABLISHED",
   "customer_visible_eligible: exactChain",
+  "receiptJson?.sampling_plan_fact_id === planRow.fact_id",
+  "labJson?.sampling_plan_fact_id === planRow.fact_id",
   "LIMIT 2",
 ]);
 forbid("projection", [
@@ -73,6 +80,8 @@ need("fertilization", [
   "loadExactFact(\"sampling_acceptance_v1\", sampling_acceptance_fact_id)",
   "SAMPLING_ACCEPTANCE_EXACT_CHAIN_REQUIRED",
   "SAMPLING_ACCEPTANCE_EXACT_CHAIN_MISMATCH",
+  "SAMPLING_RECEIPT_PLAN_FACT_REF_MISMATCH",
+  "SAMPLING_LAB_PLAN_FACT_REF_MISMATCH",
   "{ kind: \"sampling_plan_v1\", ref_id: samplingChain.plan.fact_id }",
   "{ kind: \"sample_receipt_v1\", ref_id: samplingChain.receipt.fact_id }",
   "{ kind: \"lab_result_import_v1\", ref_id: samplingChain.lab.fact_id }",
@@ -114,6 +123,9 @@ const stats = {
   service_latest_selector_absent: !source.service.includes("ORDER BY occurred_at DESC"),
   projection_latest_selector_absent: !source.projection.includes("ORDER BY occurred_at DESC"),
   acceptance_exact_refs: ["sampling_plan_fact_id", "sample_receipt_fact_id", "lab_result_fact_id"].every((x) => source.service.includes(x) && source.route.includes(x)),
+  plan_fact_continuity: source.projection.includes("SAMPLING_OPERATION_RELATION_EXACT_PLAN_REF_MISSING")
+    && source.fertilization.includes("SAMPLING_RECEIPT_PLAN_FACT_REF_MISMATCH")
+    && source.fertilization.includes("SAMPLING_LAB_PLAN_FACT_REF_MISMATCH"),
   fertilization_exact_sampling_acceptance: source.fertilization.includes("requireExactSamplingChain"),
   sampling_projection_registered: Boolean(res305),
   fertilization_acceptance_p0_preserved: Boolean(res077 && String(res077.audit_note || "").includes("P0-RES-009 remains independently open")),
