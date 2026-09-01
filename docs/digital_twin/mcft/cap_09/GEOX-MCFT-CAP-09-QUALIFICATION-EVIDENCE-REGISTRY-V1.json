@@ -1079,6 +1079,26 @@
         "artifact_absence_reason": "RUN_LEVEL_POST_MERGE_V13_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
         "immutable_binding_sha256": "5fb35ca2af1ad2f3ee653478edda85147fd9fbc2d08adbbb98e685863529b415"
+      },
+      {
+        "evidence_id": "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_C4650503",
+        "check_id": "V13_PRODUCER_DRIVEN_QUALIFICATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "post-merge-v13-producer-driven-live-qualification",
+        "stage": "POST_MERGE_V13_QUALIFICATION",
+        "subject_sha": "c4650503bfe2362464c01739a9bbe33b1b330269",
+        "workflow_name": "mcft-cap-09-v13-producer-driven-live-qualification",
+        "workflow_path": ".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml",
+        "run_id": 33472486099,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "c4650503bfe2362464c01739a9bbe33b1b330269",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:55d1c34fc39f85125863f4c146b118fe60b67908b2072632a7371c5605742311",
+        "artifact_absence_reason": "RUN_LEVEL_POST_MERGE_V13_PRODUCER_DRIVEN_QUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "b45934b1faf3549b8a62a9762a005648b9b56c0c049e96b0e4ca475110831c8a"
       }
     ],
     "durable_anchors": {
@@ -1643,6 +1663,20 @@
             "base_sha": "46367333d228a2b90a86ff6a33aebc334f3d73a2",
             "created_at": "2026-09-01T04:55:51Z",
             "updated_at": "2026-09-01T04:58:28Z"
+          }
+        },
+        {
+          "evidence_id": "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_C4650503",
+          "run_id": 33472486099,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 182,
+            "workflow_path": ".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml",
+            "workflow_name": "mcft-cap-09-v13-producer-driven-live-qualification",
+            "head_sha": "c4650503bfe2362464c01739a9bbe33b1b330269",
+            "base_sha": "46367333d228a2b90a86ff6a33aebc334f3d73a2",
+            "created_at": "2026-09-01T05:09:04Z",
+            "updated_at": "2026-09-01T05:52:33Z"
           }
         }
       ],
