@@ -183,6 +183,7 @@ function assertConnectivity(seed, role, password, expectedPrivilege, oppositePri
 
 function main() {
   assertAuthorityUnarmed();
+  const authority = JSON.parse(fs.readFileSync(AUTHORITY, "utf8"));
   const subjectSha = requiredEnv("SUBJECT_SHA");
   assert.match(subjectSha, /^[0-9a-f]{40}$/, "SERVICE_LOGIN_READINESS_SUBJECT_SHA_REQUIRED");
   const seed = requiredEnv("SEED_DATABASE_URL");
