@@ -1787,14 +1787,16 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
     "/api/v1/field-memory/from-acceptance": {
       post: {
         tags: ["operations"],
-        summary: "Create formal field memory from a formal acceptance result",
+        summary: "Materialize formal field memory from Acceptance plus committed reviewed promotion proof",
+        description: "Compatibility entrypoint. Acceptance is necessary provenance but never sufficient authority. The request must bind an exact field_memory_record_v1 whose P29 candidate and independent P30 reviewed promotion basis are verified fail-closed.",
         security: [{ bearerAuth: [] }],
         requestBody: { required: true, content: { "application/json": { schema: ref("FormalFieldMemoryFromAcceptanceRequest") } } },
         responses: {
-          "200": jsonResponse(ref("FormalFieldMemoryFromAcceptanceResponse"), "Formal field memory created or reused from acceptance"),
-          "400": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["MISSING_OPERATION_PLAN_ID", "MISSING_ACCEPTANCE_ID"] } }, additionalProperties: false }, "Missing required formal field memory input"),
-          "404": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["ACCEPTANCE_NOT_FOUND"] } }, additionalProperties: false }, "Acceptance result not found"),
-          "422": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["ACCEPTANCE_VERDICT_NOT_PASS", "ACCEPTANCE_NOT_FORMAL", "FORMAL_EVIDENCE_NOT_PASSED", "CHAIN_VALIDATION_NOT_PASSED", "ACCEPTANCE_FIELD_ID_MISSING", "OBSERVATION_PAIR_NOT_FOUND"] } }, additionalProperties: false }, "Formal field memory gate rejected"),
+          "200": jsonResponse(ref("FormalFieldMemoryFromAcceptanceResponse"), "Formal field memory materialized or reused after reviewed promotion proof"),
+          "400": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["MISSING_OPERATION_PLAN_ID", "MISSING_ACCEPTANCE_ID", "MISSING_FIELD_MEMORY_RECORD_REF"] } }, additionalProperties: false }, "Missing required formal field memory input"),
+          "404": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["ACCEPTANCE_NOT_FOUND", "FIELD_MEMORY_RECORD_NOT_FOUND", "FIELD_MEMORY_CANDIDATE_NOT_FOUND"] } }, additionalProperties: false }, "Required authority/provenance fact not found"),
+          "409": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string" } }, additionalProperties: false }, "Promotion proof identity is ambiguous"),
+          "422": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string" } }, additionalProperties: false }, "Acceptance/provenance/promotion gate rejected"),
           "500": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["INTERNAL_ERROR"] } }, additionalProperties: false }, "Internal error"),
         },
       },
@@ -4305,13 +4307,14 @@ function applyP13OpenApiAlignment(spec: any) {
     },
     FormalFieldMemoryFromAcceptanceRequest: {
       type: "object",
-      required: ["tenant_id", "project_id", "group_id", "operation_plan_id", "acceptance_id"],
+      required: ["tenant_id", "project_id", "group_id", "operation_plan_id", "acceptance_id", "field_memory_record_ref"],
       properties: {
         tenant_id: { type: "string" },
         project_id: { type: "string" },
         group_id: { type: "string" },
         operation_plan_id: { type: "string" },
         acceptance_id: { type: "string" },
+        field_memory_record_ref: { type: "string", description: "Exact fact_id or field_memory_record_id for a committed P30-reviewed field_memory_record_v1 proof." },
       },
       additionalProperties: false,
     },
