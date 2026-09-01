@@ -5666,6 +5666,75 @@
       "b02_registered": false,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "audit_note": "Operator Twin consumes ScenarioSet to build recommendation/candidate submission; it is not ScenarioSet authority."
+    },
+    {
+      "surface_id": "RES-225",
+      "source_path": "apps/server/src/domain/sensing/run_sensing_inference_pipeline_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific touchpoint only as classified"
+      ],
+      "reads": [
+        "upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.adapter_resolution"
+      ],
+      "authority_class": "SCANNER_CROSS_FAMILY_OVERREACH_SENSING_INFERENCE_NOT_EXECUTION_ADAPTER_RESOLUTION",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep under sensing/Evidence/State; do not assign execution adapter authority.",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "The call resolves fertility inference over observation aggregates; this is sensing/Evidence/derived-state inference, not AO-ACT task adapter selection."
+    },
+    {
+      "surface_id": "RES-226",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific touchpoint only as classified"
+      ],
+      "reads": [
+        "upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "decision.approval"
+      ],
+      "authority_class": "EXECUTION_ROUTE_APPROVAL_PROVENANCE_CONSUMER_NOT_APPROVAL_OWNER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep AO-ACT downstream of canonical Approval; remove any approval-state collapse during execution convergence.",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "control_ao_act consumes approved-plan / approval lineage before Task construction. The ApprovalDecision remains upstream; this route must not mint an independent approval verdict."
+    },
+    {
+      "surface_id": "RES-227",
+      "source_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "entrypoint": "capability-level adjudication from #3438 exact residual proof",
+      "activation_mode": "CAPABILITY_LEVEL_ADJUDICATED",
+      "writes": [
+        "family-specific touchpoint only as classified"
+      ],
+      "reads": [
+        "upstream semantic/provenance inputs"
+      ],
+      "semantic_family": [
+        "execution.task"
+      ],
+      "authority_class": "LEGACY_RECEIPT_ROUTE_TASK_PROVENANCE_CONSUMER_NOT_TASK_OWNER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Move receipt compatibility to canonical AO-ACT Receipt service; Task authority remains task_service/control AO-ACT.",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "The decision-engine receipt-from-task compatibility path loads/validates an existing Task and builds a Receipt. Task identity is upstream provenance, not Task creation authority."
     }
   ],
   "cross_branch_surfaces": [
