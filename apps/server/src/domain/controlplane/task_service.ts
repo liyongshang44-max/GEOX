@@ -2451,8 +2451,10 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           adapter_type: typeof readyPlan?.record_json?.payload?.adapter_type === "string"
             ? String(readyPlan.record_json.payload.adapter_type)
             : (proposal?.meta?.adapter_type ?? null),
-          device_type: preDecisionPlanPayload?.device_type ?? null,
-          required_capabilities: Array.isArray(preDecisionPlanPayload?.required_capabilities) ? planPayload.required_capabilities : []
+          device_type: readyPlan?.record_json?.payload?.device_type ?? preDecisionPlanPayload?.device_type ?? null,
+          required_capabilities: Array.isArray(readyPlan?.record_json?.payload?.required_capabilities)
+            ? readyPlan.record_json.payload.required_capabilities
+            : []
         }
       };
       console.info("[AO_ACT_TASK_CREATE_DEBUG]", JSON.stringify({
