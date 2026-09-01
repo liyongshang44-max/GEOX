@@ -420,7 +420,7 @@ export async function runFlightTableOperationAoActReceiptV1(args: {
   });
 
   const dispatchResp = await callJson(`${baseUrl}/api/v1/operator/dispatch/${encodeURIComponent(act_task_id)}/dispatch`, "POST", bearerToken, { note: `flight-table FT-F dispatch to ${device_id}` });
-  const dispatch_status = dispatchResp.ok ? safeText(dispatchResp.json?.status_after) || "DISPATCHED" : `DISPATCH_FAILED:${safeText(dispatchResp.json?.error_code ?? dispatchResp.json?.error ?? dispatchResp.status)}`;
+  const dispatch_status = dispatchResp.ok ? safeText(dispatchResp.json?.status_after) || "DISPATCH_REQUESTED" : `DISPATCH_FAILED:${safeText(dispatchResp.json?.error_code ?? dispatchResp.json?.error ?? dispatchResp.status)}`;
   const worklist = await callJson(`${baseUrl}/api/v1/operator/dispatch/worklist?limit=300`, "GET", bearerToken);
   const worklistItem = extractWorklistItem(worklist.json, act_task_id);
 
