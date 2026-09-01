@@ -21,8 +21,14 @@ if (/\bINSERT\s+INTO\s+facts\b/i.test(legacy)) {
 if (/AcceptanceResultV1PayloadSchema|type:\s*["']acceptance_result_v1["']|acceptance:written/.test(legacy)) {
   fail("legacy evidence export still contains Acceptance-minting semantics");
 }
-if (!legacy.includes('acceptance:not-written legacy-export-is-non-authoritative')) {
-  fail("legacy evidence export must declare its non-authoritative Acceptance boundary");
+const executableBoundaryLog = legacy.split("\n").some((line) => {
+  const trimmed = line.trim();
+  return !trimmed.startsWith("//")
+    && /job\.stdout_tail\s*=\s*tailAppend\(/.test(trimmed)
+    && trimmed.includes("acceptance:not-written legacy-export-is-non-authoritative");
+});
+if (!executableBoundaryLog) {
+  fail("legacy evidence export must execute its non-authoritative Acceptance boundary log");
 }
 if (!/acceptance_fact_id:\s*null/.test(legacy) || !/acceptance_result:\s*null/.test(legacy)) {
   fail("deprecated status compatibility fields must initialize to null");
