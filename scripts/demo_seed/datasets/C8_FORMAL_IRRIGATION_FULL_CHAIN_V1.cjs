@@ -1285,10 +1285,44 @@ function buildC8FormalIrrigationFullChainDataset(options) {
   const operationPlan = { operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, field_id: FIELD_ID, field_name: 'C8 灌溉示范田', season_id: SEASON_ID, recommendation_id: RECOMMENDATION_ID, requirement_id: REQUIREMENT_ID, source_requirement_id: REQUIREMENT_ID, prescription_id: PRESCRIPTION_ID, approval_request_id: APPROVAL_ID, act_task_id: TASK_ID, operation_type: 'IRRIGATION', action_type: 'IRRIGATION', planned_amount: plannedIrrigationAmountMm, planned_unit: 'mm', planned_amount_source: formalRequirementAmountSource, amount_source: formalRequirementAmountSource, target_device_id: 'dev_valve_pump_c8_001', spatial_scope: { kind: 'field', field_id: FIELD_ID }, expected_evidence: ['water_delivery_receipt', 'post_soil_moisture_metric'], before_metrics: { soil_moisture: 18.4 }, after_metrics: { soil_moisture: 24.8 }, final_status: 'SUCCESS', status: 'APPROVED' };
   const task = { act_task_id: TASK_ID, operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, prescription_id: PRESCRIPTION_ID, requirement_id: REQUIREMENT_ID, source_requirement_id: REQUIREMENT_ID, field_id: FIELD_ID, device_id: 'dev_valve_pump_c8_001', action_type: 'IRRIGATION', status: 'ACKED', parameters: { amount: plannedIrrigationAmountMm, amount_mm: plannedIrrigationAmountMm, unit: 'mm', source_requirement_id: REQUIREMENT_ID, amount_source: formalRequirementAmountSource, target_soil_moisture_percent: IRRIGATION_TARGET_SOIL_MOISTURE_PERCENT, safety: { manual_approval_required: true } }, evidence_requirements: ['water_delivery_receipt', 'post_soil_moisture_metric'], meta: { device_id: 'dev_valve_pump_c8_001', field_id: FIELD_ID, prescription_id: PRESCRIPTION_ID, requirement_id: REQUIREMENT_ID, amount_source: formalRequirementAmountSource } };
   const receipt = { receipt_id: RECEIPT_ID, act_task_id: TASK_ID, task_id: TASK_ID, operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, prescription_id: PRESCRIPTION_ID, requirement_id: REQUIREMENT_ID, source_requirement_id: REQUIREMENT_ID, field_id: FIELD_ID, status: 'executed', execution_time: { start_ts: ts - 1200000, end_ts: ts - 900000 }, observed_parameters: { amount: executedIrrigationAmountMm, executed_amount: executedIrrigationAmountMm, planned_amount: plannedIrrigationAmountMm, planned_amount_source: formalRequirementAmountSource, unit: 'mm', coverage_percent: 100, before_soil_moisture: 18.4, after_soil_moisture: 24.8, soil_moisture_delta: 6.4 }, resource_usage: { water_l: waterUsageLiters, electric_kwh: 7.2 }, labor: { duration_minutes: 38, worker_count: 1 }, execution_coverage: { kind: 'field', ref: FIELD_ID }, evidence_refs: ['ev_c8_irrigation_water_delivery_001', 'ev_c8_irrigation_metric_001'], evidence_artifact_ids: ['ev_c8_irrigation_water_delivery_001', 'ev_c8_irrigation_metric_001'], logs_refs: [{ kind: 'valve_open_confirmation' }] };
-  const acceptance = { acceptance_id: ACCEPTANCE_ID, operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, act_task_id: TASK_ID, task_id: TASK_ID, field_id: FIELD_ID, verdict: 'PASS', formal_acceptance: true, formal_evidence_passed: true, chain_validation_passed: true, source_lane: 'FORMAL_OPERATION', customer_visible_eligible: true, is_simulated: false, evidence_refs: ['ev_c8_irrigation_water_delivery_001', 'ev_c8_irrigation_metric_001'], metrics: { before_soil_moisture: 18.4, after_soil_moisture: 24.8, soil_moisture_delta: 6.4 } };
-  // Controlled acceptance fixture only: these facts model an already-authorized
-  // P29 candidate + P30 reviewed promotion proof. The product runtime never
-  // creates these proofs through /field-memory/from-acceptance.
+  const acceptance = {
+    acceptance_id: ACCEPTANCE_ID,
+    operation_plan_id: FORMAL_OP,
+    operation_id: FORMAL_OP,
+    act_task_id: TASK_ID,
+    task_id: TASK_ID,
+    field_id: FIELD_ID,
+    verdict: 'PASS',
+    formal_acceptance: true,
+    formal_evidence_passed: true,
+    chain_validation_passed: true,
+    source_lane: 'FORMAL_OPERATION',
+    customer_visible_eligible: true,
+    is_simulated: false,
+    evidence_refs: ['ev_c8_irrigation_water_delivery_001', 'ev_c8_irrigation_metric_001'],
+    metrics: { before_soil_moisture: 18.4, after_soil_moisture: 24.8, soil_moisture_delta: 6.4 },
+    meta: { policy_refs: ['FORMAL_ACCEPTANCE_GATE_CONTRACT_V0'], controlled_fixture_only: true },
+  };
+
+  // Controlled acceptance fixture only: model a pre-authorized P26 -> P27 -> P28
+  // -> P29 -> P30 proof chain. The product runtime consumes these facts but
+  // never creates Outcome/ROI/Candidate/Promotion authority.
+  const outcomeReviewFactId = `${pre}_outcome_review_c8_memory_001`;
+  const roiBoundaryFactId = `${pre}_roi_boundary_c8_memory_001`;
+  const roiLedgerFactId = `${pre}_roi_ledger_c8_memory_001`;
+  const roiLedgerId = 'roi_ledger_c8_memory_001';
+
+  const roiCostBasisRefs = [
+    { kind: 'roi_cost_basis_v1', ref_id: `${pre}_roi_cost_basis_c8_memory_001` },
+  ];
+  const roiValueBasisRefs = [
+    { kind: 'roi_value_basis_v1', ref_id: `${pre}_roi_value_basis_c8_memory_001` },
+  ];
+  const roiAccountingPolicyRef = {
+    kind: 'roi_accounting_policy_v1',
+    ref_id: `${pre}_roi_accounting_policy_c8_memory_001`,
+  };
+
   const memoryCandidateBasisRefs = [
     { kind: 'memory_relevance_review_v1', ref_id: `${pre}_memory_relevance_review_c8_001` },
     { kind: 'agronomic_context_v1', ref_id: `${pre}_agronomic_context_c8_memory_001` },
@@ -1302,28 +1336,215 @@ function buildC8FormalIrrigationFullChainDataset(options) {
     { kind: 'operator_context_ack_v1', ref_id: `${pre}_operator_context_ack_c8_001` },
     { kind: 'reuse_boundary_review_v1', ref_id: `${pre}_reuse_boundary_review_c8_001` },
   ];
+
   const formalMemoryAuthorityProofFacts = [
-    fact('memory_relevance_review_c8_001', 'memory_relevance_review_v1', { operation_plan_id: FORMAL_OP, formal_eligible: true, classification: 'MEMORY_RELEVANCE_SOURCE', review_scope: 'controlled_fixture_p29_basis' }),
-    fact('agronomic_context_c8_memory_001', 'agronomic_context_v1', { operation_plan_id: FORMAL_OP, formal_eligible: true, classification: 'AGRONOMIC_CONTEXT_SOURCE', review_scope: 'controlled_fixture_p29_basis' }),
-    fact('recurrence_context_c8_001', 'recurrence_context_v1', { operation_plan_id: FORMAL_OP, formal_eligible: true, classification: 'RECURRENCE_CONTEXT_SOURCE', review_scope: 'controlled_fixture_p29_basis' }),
-    fact('operator_review_c8_memory_001', 'operator_review_v1', { operation_plan_id: FORMAL_OP, formal_eligible: true, classification: 'OPERATOR_REVIEW_SOURCE', review_scope: 'controlled_fixture_p29_basis' }),
+    fact('outcome_review_c8_memory_001', 'outcome_review_v1', {
+      operation_plan_id: FORMAL_OP,
+      act_task_id: TASK_ID,
+      receipt_fact_id: `${pre}_${RECEIPT_ID}`,
+      operation_plan_transition_fact_id: `${pre}_${FORMAL_OP}_transition_9`,
+      operation_plan_fact_id: `${pre}_${FORMAL_OP}`,
+      acceptance_result_fact_id: `${pre}_${ACCEPTANCE_ID}`,
+      acceptance_id: ACCEPTANCE_ID,
+      outcome_review_id: 'outcome_review_c8_memory_001',
+      review_state: 'REVIEWED',
+      source_verdict: 'PASS',
+      formal_acceptance: true,
+      formal_evidence_passed: true,
+      outcome_window: { start_ts: ts - 900000, end_ts: ts },
+      measurement_refs: [
+        { kind: 'evidence_artifact_v1', ref_id: `${pre}_ev_c8_irrigation_water_delivery_001` },
+        { kind: 'evidence_artifact_v1', ref_id: `${pre}_ev_c8_irrigation_metric_001` },
+      ],
+      comparison_basis: { kind: 'before_after_observation_pair', bounded_observation_only: true },
+      observed_outcome_summary: 'Observed soil-moisture change only; no causal attribution.',
+      uncertainty_notes: ['Controlled fixture outcome review.'],
+      blocking_reasons: [],
+      reviewer_ref: { kind: 'human', id: 'c8_outcome_reviewer' },
+      reviewed_at_ts: ts,
+      meta: {
+        source_refs: [`${pre}_${ACCEPTANCE_ID}`, `${pre}_ev_c8_irrigation_water_delivery_001`, `${pre}_ev_c8_irrigation_metric_001`],
+        policy_refs: ['OUTCOME_ROI_BOUNDARY_GATE_CONTRACT_V0'],
+        idempotency_key: 'c8_outcome_review_memory_001',
+        controlled_fixture_only: true,
+      },
+    }),
+    fact('roi_boundary_c8_memory_001', 'roi_boundary_v1', {
+      operation_plan_id: FORMAL_OP,
+      act_task_id: TASK_ID,
+      acceptance_result_fact_id: `${pre}_${ACCEPTANCE_ID}`,
+      outcome_review_fact_id: outcomeReviewFactId,
+      roi_boundary_id: 'roi_boundary_c8_memory_001',
+      roi_review_eligible: true,
+      roi_ledger_allowed: false,
+      roi_realization_allowed: false,
+      required_future_roi_gate: 'P28',
+      meta: {
+        source_refs: [`${pre}_${ACCEPTANCE_ID}`, outcomeReviewFactId],
+        policy_refs: ['ROI_BOUNDARY_PAYLOAD_SCHEMA_V0'],
+        idempotency_key: 'c8_roi_boundary_memory_001',
+        controlled_fixture_only: true,
+      },
+    }),
+    fact('roi_cost_basis_c8_memory_001', 'roi_cost_basis_v1', {
+      operation_plan_id: FORMAL_OP,
+      act_task_id: TASK_ID,
+      formal_eligible: true,
+      classification: 'ACCOUNTING_SOURCE',
+      source_lane: 'CONTROLLED_GOVERNANCE_FIXTURE',
+    }),
+    fact('roi_value_basis_c8_memory_001', 'roi_value_basis_v1', {
+      operation_plan_id: FORMAL_OP,
+      act_task_id: TASK_ID,
+      formal_eligible: true,
+      classification: 'ACCOUNTING_SOURCE',
+      source_lane: 'CONTROLLED_GOVERNANCE_FIXTURE',
+    }),
+    fact('roi_accounting_policy_c8_memory_001', 'roi_accounting_policy_v1', {
+      operation_plan_id: FORMAL_OP,
+      act_task_id: TASK_ID,
+      formal_eligible: true,
+      classification: 'POLICY_SOURCE',
+      source_lane: 'CONTROLLED_GOVERNANCE_FIXTURE',
+    }),
+    fact('roi_ledger_c8_memory_001', 'roi_ledger_v1', {
+      operation_plan_id: FORMAL_OP,
+      act_task_id: TASK_ID,
+      roi_ledger_id: roiLedgerId,
+      roi_boundary_fact_id: roiBoundaryFactId,
+      roi_boundary_id: 'roi_boundary_c8_memory_001',
+      outcome_review_fact_id: outcomeReviewFactId,
+      acceptance_result_fact_id: `${pre}_${ACCEPTANCE_ID}`,
+      ledger_state: 'RECORDED',
+      accounting_window: { start_ts: ts - 600000, end_ts: ts },
+      cost_basis_refs: roiCostBasisRefs,
+      value_basis_refs: roiValueBasisRefs,
+      accounting_policy_ref: roiAccountingPolicyRef,
+      accounting_summary: 'Controlled accounting snapshot only; not ROI realization.',
+      accounting_classification: 'FAVORABLE_ACCOUNTING_DELTA',
+      accounting_uncertainty_notes: ['Controlled fixture accounting basis.'],
+      blocking_reasons: [],
+      reviewer_ref: { kind: 'human', id: 'c8_roi_reviewer' },
+      reviewed_at_ts: ts,
+      meta: {
+        source_refs: [
+          roiBoundaryFactId,
+          outcomeReviewFactId,
+          `${pre}_${ACCEPTANCE_ID}`,
+          ...roiCostBasisRefs.map((x) => x.ref_id),
+          ...roiValueBasisRefs.map((x) => x.ref_id),
+          roiAccountingPolicyRef.ref_id,
+        ],
+        policy_refs: ['ROI_LEDGER_GATE_CONTRACT_V0'],
+        idempotency_key: 'c8_roi_ledger_memory_001',
+        controlled_fixture_only: true,
+      },
+    }),
+
+    fact('memory_relevance_review_c8_001', 'memory_relevance_review_v1', {
+      operation_plan_id: FORMAL_OP,
+      act_task_id: TASK_ID,
+      formal_eligible: true,
+      classification: 'MEMORY_RELEVANCE_SOURCE',
+      source_lane: 'CONTROLLED_GOVERNANCE_FIXTURE',
+      review_scope: 'controlled_fixture_p29_basis',
+    }),
+    fact('agronomic_context_c8_memory_001', 'agronomic_context_v1', {
+      operation_plan_id: FORMAL_OP,
+      act_task_id: TASK_ID,
+      formal_eligible: true,
+      classification: 'AGRONOMIC_CONTEXT_SOURCE',
+      source_lane: 'CONTROLLED_GOVERNANCE_FIXTURE',
+      review_scope: 'controlled_fixture_p29_basis',
+    }),
+    fact('recurrence_context_c8_001', 'recurrence_context_v1', {
+      operation_plan_id: FORMAL_OP,
+      act_task_id: TASK_ID,
+      formal_eligible: true,
+      classification: 'RECURRENCE_CONTEXT_SOURCE',
+      source_lane: 'CONTROLLED_GOVERNANCE_FIXTURE',
+      review_scope: 'controlled_fixture_p29_basis',
+    }),
+    fact('operator_review_c8_memory_001', 'operator_review_v1', {
+      operation_plan_id: FORMAL_OP,
+      act_task_id: TASK_ID,
+      formal_eligible: true,
+      classification: 'OPERATOR_REVIEW_SOURCE',
+      source_lane: 'CONTROLLED_GOVERNANCE_FIXTURE',
+      review_scope: 'controlled_fixture_p29_basis',
+    }),
     fact('field_memory_candidate_c8_001', 'field_memory_candidate_v1', {
       operation_plan_id: FORMAL_OP,
       act_task_id: TASK_ID,
       field_id: FIELD_ID,
       field_memory_candidate_id: FIELD_MEMORY_CANDIDATE_ID,
+      roi_ledger_fact_id: roiLedgerFactId,
+      roi_ledger_id: roiLedgerId,
+      roi_boundary_fact_id: roiBoundaryFactId,
+      outcome_review_fact_id: outcomeReviewFactId,
       acceptance_result_fact_id: `${pre}_${ACCEPTANCE_ID}`,
       candidate_state: 'CANDIDATE_RECORDED',
       candidate_classification: 'POTENTIAL_OPERATIONAL_PATTERN',
       candidate_basis_refs: memoryCandidateBasisRefs,
       candidate_summary: 'Controlled fixture candidate; candidate only, no memory commit authority.',
-      meta: { policy_refs: ['FIELD_MEMORY_CANDIDATE_GATE_CONTRACT_V0'], controlled_fixture_only: true },
+      candidate_uncertainty_notes: ['Candidate only; reviewed promotion still required.'],
+      blocking_reasons: [],
+      reviewer_ref: { kind: 'human', id: 'c8_memory_candidate_reviewer' },
+      reviewed_at_ts: ts,
+      meta: {
+        source_refs: [
+          roiLedgerFactId,
+          roiBoundaryFactId,
+          outcomeReviewFactId,
+          `${pre}_${ACCEPTANCE_ID}`,
+          ...memoryCandidateBasisRefs.map((x) => x.ref_id),
+        ],
+        policy_refs: ['FIELD_MEMORY_CANDIDATE_GATE_CONTRACT_V0'],
+        idempotency_key: 'c8_field_memory_candidate_001',
+        controlled_fixture_only: true,
+      },
     }),
-    fact('promotion_review_c8_001', 'promotion_review_v1', { operation_plan_id: FORMAL_OP, formal_eligible: true, classification: 'PROMOTION_REVIEW_SOURCE', review_scope: 'controlled_fixture_p30_basis' }),
-    fact('memory_record_policy_c8_001', 'memory_record_policy_v1', { operation_plan_id: FORMAL_OP, formal_eligible: true, classification: 'MEMORY_RECORD_POLICY_SOURCE', review_scope: 'controlled_fixture_p30_basis' }),
-    fact('agronomic_reviewer_approval_c8_001', 'agronomic_reviewer_approval_v1', { operation_plan_id: FORMAL_OP, formal_eligible: true, classification: 'AGRONOMIC_APPROVAL_SOURCE', review_scope: 'controlled_fixture_p30_basis' }),
-    fact('operator_context_ack_c8_001', 'operator_context_ack_v1', { operation_plan_id: FORMAL_OP, formal_eligible: true, classification: 'OPERATOR_ACK_SOURCE', review_scope: 'controlled_fixture_p30_basis' }),
-    fact('reuse_boundary_review_c8_001', 'reuse_boundary_review_v1', { operation_plan_id: FORMAL_OP, formal_eligible: true, classification: 'REUSE_BOUNDARY_SOURCE', review_scope: 'controlled_fixture_p30_basis' }),
+
+    fact('promotion_review_c8_001', 'promotion_review_v1', {
+      operation_plan_id: FORMAL_OP,
+      act_task_id: TASK_ID,
+      formal_eligible: true,
+      classification: 'PROMOTION_REVIEW_SOURCE',
+      source_lane: 'CONTROLLED_GOVERNANCE_FIXTURE',
+      review_scope: 'controlled_fixture_p30_basis',
+    }),
+    fact('memory_record_policy_c8_001', 'memory_record_policy_v1', {
+      operation_plan_id: FORMAL_OP,
+      act_task_id: TASK_ID,
+      formal_eligible: true,
+      classification: 'MEMORY_RECORD_POLICY_SOURCE',
+      source_lane: 'CONTROLLED_GOVERNANCE_FIXTURE',
+      review_scope: 'controlled_fixture_p30_basis',
+    }),
+    fact('agronomic_reviewer_approval_c8_001', 'agronomic_reviewer_approval_v1', {
+      operation_plan_id: FORMAL_OP,
+      act_task_id: TASK_ID,
+      formal_eligible: true,
+      classification: 'AGRONOMIC_APPROVAL_SOURCE',
+      source_lane: 'CONTROLLED_GOVERNANCE_FIXTURE',
+      review_scope: 'controlled_fixture_p30_basis',
+    }),
+    fact('operator_context_ack_c8_001', 'operator_context_ack_v1', {
+      operation_plan_id: FORMAL_OP,
+      act_task_id: TASK_ID,
+      formal_eligible: true,
+      classification: 'OPERATOR_ACK_SOURCE',
+      source_lane: 'CONTROLLED_GOVERNANCE_FIXTURE',
+      review_scope: 'controlled_fixture_p30_basis',
+    }),
+    fact('reuse_boundary_review_c8_001', 'reuse_boundary_review_v1', {
+      operation_plan_id: FORMAL_OP,
+      act_task_id: TASK_ID,
+      formal_eligible: true,
+      classification: 'REUSE_BOUNDARY_SOURCE',
+      source_lane: 'CONTROLLED_GOVERNANCE_FIXTURE',
+      review_scope: 'controlled_fixture_p30_basis',
+    }),
     fact('field_memory_record_c8_001', 'field_memory_record_v1', {
       operation_plan_id: FORMAL_OP,
       act_task_id: TASK_ID,
@@ -1331,13 +1552,37 @@ function buildC8FormalIrrigationFullChainDataset(options) {
       field_memory_record_id: FIELD_MEMORY_RECORD_ID,
       field_memory_candidate_fact_id: `${pre}_field_memory_candidate_c8_001`,
       field_memory_candidate_id: FIELD_MEMORY_CANDIDATE_ID,
+      roi_ledger_fact_id: roiLedgerFactId,
+      roi_boundary_fact_id: roiBoundaryFactId,
+      outcome_review_fact_id: outcomeReviewFactId,
       acceptance_result_fact_id: `${pre}_${ACCEPTANCE_ID}`,
       record_state: 'RECORD_COMMITTED',
       record_category: 'OPERATIONAL_CONTEXT_MEMORY',
-      record_scope: 'review_only_no_runtime_use',
+      record_scope: 'same_field_only',
       promotion_basis_refs: memoryPromotionBasisRefs,
-      record_summary: 'Controlled fixture committed review record; no model-learning authority.',
-      meta: { policy_refs: ['FIELD_MEMORY_RECORD_GATE_CONTRACT_V0'], controlled_fixture_only: true },
+      reuse_boundary: {
+        kind: 'policy_ref',
+        ref_id: `${pre}_reuse_boundary_review_c8_001`,
+        scope: 'same_field_only',
+      },
+      blocking_reasons: [],
+      promoter_ref: { kind: 'human', id: 'c8_memory_promoter' },
+      promoted_at_ts: ts,
+      record_summary: 'Controlled fixture committed same-field memory record; no model-learning authority.',
+      record_uncertainty_notes: ['Committed record only; no model update or state-estimator activation.'],
+      meta: {
+        source_refs: [
+          `${pre}_field_memory_candidate_c8_001`,
+          roiLedgerFactId,
+          roiBoundaryFactId,
+          outcomeReviewFactId,
+          `${pre}_${ACCEPTANCE_ID}`,
+          ...memoryPromotionBasisRefs.map((x) => x.ref_id),
+        ],
+        policy_refs: ['FIELD_MEMORY_RECORD_GATE_CONTRACT_V0'],
+        idempotency_key: 'c8_field_memory_record_001',
+        controlled_fixture_only: true,
+      },
     }),
   ];
   const formalMemory = { memory_id: MEMORY_ID, tenant_id: tenant, project_id: PROJECT_ID, group_id: GROUP_ID, field_id: FIELD_ID, operation_id: FORMAL_OP, task_id: TASK_ID, recommendation_id: RECOMMENDATION_ID, prescription_id: PRESCRIPTION_ID, acceptance_id: ACCEPTANCE_ID, formal_acceptance_id: ACCEPTANCE_ID, memory_type: 'FIELD_RESPONSE_MEMORY', memory_lane: 'FORMAL_FIELD_MEMORY', trust_level: 'FORMAL_ACCEPTED', source_lane: 'FORMAL_OPERATION', customer_visible_memory: true, learning_eligible: true, compatibility_fallback: true, projection_support_only: true, not_authoritative_formal_result: true, formal_result_must_be_derived: true, static_seed_row_reason: 'Kept only as an optional compatibility projection fixture while customer-visible formal memory is derived through POST /api/v1/field-memory/from-acceptance.', before_value: 18.4, after_value: 24.8, delta_value: 6.4, metric_key: 'soil_moisture_response', confidence: 0.95, summary_text: 'C8 灌溉后 20cm 土层水分从 18.4% 回升到 24.8%，达到目标区间。', summary: 'C8 灌溉后 20cm 土层水分从 18.4% 回升到 24.8%，达到目标区间。', evidence_refs: ['ev_c8_irrigation_water_delivery_001', 'ev_c8_irrigation_metric_001'], trust_reasons: ['FORMAL_ACCEPTANCE_PASS', 'FORMAL_FIELD_OBSERVATION_PAIR_FOUND'], occurred_at: iso, created_at: iso, updated_at: iso };
