@@ -576,20 +576,23 @@
         "field_memory_v1"
       ],
       "reads": [
-        "acceptance/outcome-related evidence"
+        "acceptance_result_v1 and formal gate state",
+        "acceptance/evidence/receipt observation candidates",
+        "device_observation_index_v1 latest-two fallback"
       ],
       "semantic_family": [
         "field_memory"
       ],
-      "authority_class": "CURRENT_FIELD_MEMORY_WRITER",
+      "authority_class": "CURRENT_FIELD_MEMORY_WRITER_WITH_LATEST_PAIR_P0",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "recommendation memory context",
         "reports"
       ],
-      "removal_target": "KEEP_BUT_SEPARATE_FROM_ACCEPTANCE_VERDICT",
-      "b02_registered": true
+      "removal_target": "KEEP_FIELD_MEMORY_SERVICE; REMOVE_LATEST_TWO_DEVICE_FALLBACK; REQUIRE_CAUSAL_OPERATION_BOUND_OBSERVATION_PAIR",
+      "b02_registered": true,
+      "audit_note": "P0-RES-008: formal-memory service can fall back to two latest field observations without operation/receipt/acceptance time binding."
     },
     {
       "surface_id": "RES-021",
