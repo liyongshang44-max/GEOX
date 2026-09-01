@@ -1071,25 +1071,28 @@
       "activation_mode": "ACTIVE_EXPLICIT_API",
       "writes": [
         "roi_entry_v1",
-        "field_memory_v1"
+        "decision_cycle_v1 formal refs"
       ],
       "reads": [
-        "Twin decision-cycle/formalization inputs"
+        "Twin decision-cycle/formalization inputs",
+        "canonical proof-gated Field Memory materializer result"
       ],
       "semantic_family": [
         "roi",
         "field_memory",
         "governance.trace_projection"
       ],
-      "authority_class": "TWIN_EXPLICIT_FORMALIZATION_WRITER",
+      "authority_class": "TWIN_ROI_WRITER_AND_FORMAL_MEMORY_COMPATIBILITY_FACADE",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "Twin Kernel business closure",
-        "ROI/Field Memory readers"
+        "ROI readers",
+        "canonical Field Memory service"
       ],
-      "removal_target": "CONVERGE TO SINGLE ACCEPTANCE→OUTCOME FORMALIZATION CONTRACT; NO IMPLICIT AUTO-FORMALIZATION",
-      "b02_registered": false
+      "removal_target": "KEEP ROI LEGACY AUTHORITY SEPARATE; FIELD MEMORY MUST DELEGATE TO CANONICAL REVIEWED-PROMOTION MATERIALIZER",
+      "b02_registered": false,
+      "audit_note": "Direct field_memory_v1 INSERT removed. Field Memory endpoint now requires field_memory_record_ref and delegates to canonical proof-gated materializer."
     },
     {
       "surface_id": "RES-040",
@@ -1098,24 +1101,28 @@
       "activation_mode": "ACTIVE_EXPLICIT_API",
       "writes": [
         "roi_entry_v1",
-        "field_memory_v1 operator workflow records"
+        "operator_formalization_action_v0",
+        "decision_cycle_v1 formal refs"
       ],
       "reads": [
-        "Twin decision-cycle/operator workflow inputs"
+        "Twin decision-cycle/operator workflow inputs",
+        "canonical proof-gated Field Memory materializer result"
       ],
       "semantic_family": [
         "roi",
         "field_memory",
         "governance.trace_projection"
       ],
-      "authority_class": "TWIN_OPERATOR_FORMALIZATION_WRITER",
+      "authority_class": "TWIN_OPERATOR_AUDIT_FACADE_NO_DIRECT_FORMAL_MEMORY_AUTHORITY",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
-        "Twin Kernel operator workflow/read models"
+        "Twin Kernel operator workflow/read models",
+        "canonical Field Memory service"
       ],
-      "removal_target": "CONVERGE WITH SINGLE FORMALIZATION AUTHORITY; PRESERVE EXPLICIT HUMAN ACTION PROVENANCE",
-      "b02_registered": false
+      "removal_target": "KEEP HUMAN REVIEW/AUDIT FACADE; NO DIRECT FIELD_MEMORY_V1 WRITE; REQUIRE CANONICAL REVIEWED-PROMOTION MATERIALIZER",
+      "b02_registered": false,
+      "audit_note": "Operator review/action provenance remains explicit, but caller memory_statement is audit payload only and cannot mint Formal Field Memory."
     },
     {
       "surface_id": "RES-041",
