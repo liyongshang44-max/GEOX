@@ -75,13 +75,23 @@
       "source_path": "apps/server/src/domain/planner/compiler_v1.ts",
       "entrypoint": "GET /api/v1/programs/:program_id/actions via programs_core_v1.ts",
       "activation_mode": "API_ONLY",
-      "writes": ["CandidateActionV1 in-memory response projection"],
-      "reads": ["FieldProgramV1", "FieldProgramV1.execution_policy"],
-      "semantic_family": ["decision.planning_option", "execution.dispatch_intent"],
+      "writes": [
+        "CandidateActionV1 in-memory response projection"
+      ],
+      "reads": [
+        "FieldProgramV1",
+        "FieldProgramV1.execution_policy"
+      ],
+      "semantic_family": [
+        "decision.planning_option",
+        "execution.dispatch_intent"
+      ],
       "authority_class": "LEGACY_MIXED_PLANNING_EXECUTION_POLICY_PROJECTION",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
-      "downstream_consumers": ["program actions API clients"],
+      "downstream_consumers": [
+        "program actions API clients"
+      ],
       "removal_target": "CONVERGE_TO_PLANNING_OPTION_THEN_CANDIDATE_ELIGIBILITY_APPROVAL_EXECUTION_POLICY",
       "b02_registered": false,
       "audit_note": "AUTO/APPROVAL_REQUIRED/BLOCKED is currently derived directly from FieldProgram execution_policy. It must not be interpreted as DecisionEligibility."
@@ -91,13 +101,24 @@
       "source_path": "apps/server/src/routes/programs_core_v1.ts",
       "entrypoint": "registered through programs_read_v1.ts -> programs_v1.ts -> field module",
       "activation_mode": "API_ONLY",
-      "writes": ["program facts and program transitions", "CandidateActionV1 HTTP response"],
-      "reads": ["FieldProgram projections", "planner/compiler_v1.ts"],
-      "semantic_family": ["decision.planning_option", "presentation.read_model"],
+      "writes": [
+        "program facts and program transitions",
+        "CandidateActionV1 HTTP response"
+      ],
+      "reads": [
+        "FieldProgram projections",
+        "planner/compiler_v1.ts"
+      ],
+      "semantic_family": [
+        "decision.planning_option",
+        "presentation.read_model"
+      ],
       "authority_class": "ACTIVE_PRODUCT_ROUTE_ORCHESTRATOR",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
-      "downstream_consumers": ["product program routes"],
+      "downstream_consumers": [
+        "product program routes"
+      ],
       "removal_target": "KEEP_ROUTE_REPLACE_INTERNAL_AUTHORITY",
       "b02_registered": false
     },
@@ -106,13 +127,27 @@
       "source_path": "apps/server/src/jobs/agronomy_agent.ts",
       "entrypoint": "background agronomy agent",
       "activation_mode": "FEATURE_FLAGGED_WORKER",
-      "writes": ["decision_recommendation_v1", "operation_plan_v1"],
-      "reads": ["telemetry", "FieldProgram", "legacy agronomy rules"],
-      "semantic_family": ["evidence.raw_observation", "decision.candidate", "operation.plan"],
+      "writes": [
+        "decision_recommendation_v1",
+        "operation_plan_v1"
+      ],
+      "reads": [
+        "telemetry",
+        "FieldProgram",
+        "legacy agronomy rules"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "decision.candidate",
+        "operation.plan"
+      ],
       "authority_class": "ACTIVE_LEGACY_WRITER",
       "runtime_reachable": "PROVEN_WHEN_ENABLED",
       "feature_flag": "AGRONOMY_AGENT_ENABLED",
-      "downstream_consumers": ["recommendation projections", "operation-plan consumers"],
+      "downstream_consumers": [
+        "recommendation projections",
+        "operation-plan consumers"
+      ],
       "removal_target": "SHADOW_THEN_REMOVE_DIRECT_PLAN_AND_FABRICATED_OBSERVATION_AUTHORITY",
       "b02_registered": true,
       "audit_note": "Missing soil telemetry currently falls back to DEFAULT_SOIL_MOISTURE=30 before recommendation generation."
@@ -122,13 +157,31 @@
       "source_path": "apps/server/src/routes/decision_engine_v1.ts",
       "entrypoint": "/api/v1/recommendations/generate and related product APIs",
       "activation_mode": "API_ONLY",
-      "writes": ["decision_recommendation_v1", "operation-plan lifecycle facts"],
-      "reads": ["legacy crop-stage resolver", "derived sensing", "weather forecast projection", "field memory", "rules/calculators"],
-      "semantic_family": ["context.crop_stage", "twin.forecast", "decision.calculation", "decision.candidate", "operation.plan"],
+      "writes": [
+        "decision_recommendation_v1",
+        "operation-plan lifecycle facts"
+      ],
+      "reads": [
+        "legacy crop-stage resolver",
+        "derived sensing",
+        "weather forecast projection",
+        "field memory",
+        "rules/calculators"
+      ],
+      "semantic_family": [
+        "context.crop_stage",
+        "twin.forecast",
+        "decision.calculation",
+        "decision.candidate",
+        "operation.plan"
+      ],
       "authority_class": "ACTIVE_LEGACY_FACADE_WITH_INTERNAL_AUTHORITY",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
-      "downstream_consumers": ["recommendation API clients", "approval/plan chain"],
+      "downstream_consumers": [
+        "recommendation API clients",
+        "approval/plan chain"
+      ],
       "removal_target": "KEEP_API_FACADE_CONSUME_TYPED_GOVERNED_PORTS",
       "b02_registered": true
     },
@@ -137,13 +190,23 @@
       "source_path": "apps/server/src/domain/prescription/prescription_contract_v1.ts",
       "entrypoint": "called by prescriptions_v1.ts",
       "activation_mode": "API_CALL_CHAIN",
-      "writes": ["prescription_contract_v1 rows"],
-      "reads": ["decision_recommendation_v1 payload semantics"],
-      "semantic_family": ["action.prescription_spec", "decision.approval"],
+      "writes": [
+        "prescription_contract_v1 rows"
+      ],
+      "reads": [
+        "decision_recommendation_v1 payload semantics"
+      ],
+      "semantic_family": [
+        "action.prescription_spec",
+        "decision.approval"
+      ],
       "authority_class": "LEGACY_MIXED_ACTION_SPEC_APPROVAL_POLICY",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
-      "downstream_consumers": ["prescription API", "approval/task bridges"],
+      "downstream_consumers": [
+        "prescription API",
+        "approval/task bridges"
+      ],
       "removal_target": "PRESERVE_ACTION_SPEC_REMOVE_UPSTREAM_DECISION_AUTHORITY",
       "b02_registered": false,
       "audit_note": "The contract derives approval_requirement and READY_FOR_APPROVAL status; this must be classified separately from DecisionEligibility."
@@ -153,13 +216,26 @@
       "source_path": "apps/server/src/routes/prescriptions_v1.ts",
       "entrypoint": "registered through registerPrescriptionModule",
       "activation_mode": "API_ONLY",
-      "writes": ["prescription_contract_v1 through domain service", "approval/task bridge side effects on specific routes"],
-      "reads": ["decision_recommendation_v1", "prescription_contract_v1"],
-      "semantic_family": ["action.prescription_spec", "decision.approval", "operation.plan", "execution.task"],
+      "writes": [
+        "prescription_contract_v1 through domain service",
+        "approval/task bridge side effects on specific routes"
+      ],
+      "reads": [
+        "decision_recommendation_v1",
+        "prescription_contract_v1"
+      ],
+      "semantic_family": [
+        "action.prescription_spec",
+        "decision.approval",
+        "operation.plan",
+        "execution.task"
+      ],
       "authority_class": "ACTIVE_PRODUCT_ROUTE_MIXED_SEMANTICS",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
-      "downstream_consumers": ["approval and execution flows"],
+      "downstream_consumers": [
+        "approval and execution flows"
+      ],
       "removal_target": "KEEP_PRESCRIPTION_SURFACE_SPLIT_AUTHORITY_BOUNDARIES",
       "b02_registered": false
     },
@@ -168,13 +244,25 @@
       "source_path": "apps/server/src/routes/v1/operator_dispatch_actions.ts",
       "entrypoint": "registered by Operator Module",
       "activation_mode": "API_ONLY",
-      "writes": ["operator_action_audit_v1", "ao_act_dispatch_v1 status=DISPATCHED or RETRY_DISPATCHED"],
-      "reads": ["ao_act_task_v0", "operation state projection", "prior ao_act_dispatch_v1"],
-      "semantic_family": ["execution.dispatch_intent", "execution.dispatch_delivery"],
+      "writes": [
+        "operator_action_audit_v1",
+        "ao_act_dispatch_v1 status=DISPATCHED or RETRY_DISPATCHED"
+      ],
+      "reads": [
+        "ao_act_task_v0",
+        "operation state projection",
+        "prior ao_act_dispatch_v1"
+      ],
+      "semantic_family": [
+        "execution.dispatch_intent",
+        "execution.dispatch_delivery"
+      ],
       "authority_class": "ACTIVE_LEGACY_DISPATCH_STATUS_WRITER",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
-      "downstream_consumers": ["operator dispatch worklist/read model"],
+      "downstream_consumers": [
+        "operator dispatch worklist/read model"
+      ],
       "removal_target": "WRITE_DISPATCH_REQUESTED_INTENT_THEN_USE_CANONICAL_AO_ACT_DISPATCH_SERVICE",
       "b02_registered": false,
       "audit_note": "Operator click currently declares DISPATCHED without proving adapter delivery."
@@ -184,13 +272,25 @@
       "source_path": "apps/server/src/domain/controlplane/task_service.ts",
       "entrypoint": "/api/v1/ao-act/dispatches/claim and /api/v1/ao-act/dispatches/state",
       "activation_mode": "API_ONLY",
-      "writes": ["dispatch_queue_v1", "task/dispatch/outbox facts and queue state"],
-      "reads": ["AO-ACT task/outbox/device capability data"],
-      "semantic_family": ["execution.task", "execution.dispatch_delivery", "execution.receipt"],
+      "writes": [
+        "dispatch_queue_v1",
+        "task/dispatch/outbox facts and queue state"
+      ],
+      "reads": [
+        "AO-ACT task/outbox/device capability data"
+      ],
+      "semantic_family": [
+        "execution.task",
+        "execution.dispatch_delivery",
+        "execution.receipt"
+      ],
       "authority_class": "CURRENT_AO_ACT_RUNTIME_AUTHORITY",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
-      "downstream_consumers": ["executor runtime", "AO-ACT routes"],
+      "downstream_consumers": [
+        "executor runtime",
+        "AO-ACT routes"
+      ],
       "removal_target": "KEEP_BUT_RENAME_STATE_SEMANTICS",
       "b02_registered": true,
       "audit_note": "Queue claim itself transitions READY->DISPATCHED, which currently conflates lease/claim with external delivery."
@@ -200,13 +300,24 @@
       "source_path": "apps/executor/src/run_dispatch_once.ts",
       "entrypoint": "executor worker/CLI",
       "activation_mode": "WORKER_ENTRYPOINT",
-      "writes": ["AO-ACT dispatch state through HTTP", "receipt through HTTP"],
-      "reads": ["claimed dispatch queue items"],
-      "semantic_family": ["execution.dispatch_delivery", "execution.receipt"],
+      "writes": [
+        "AO-ACT dispatch state through HTTP",
+        "receipt through HTTP"
+      ],
+      "reads": [
+        "claimed dispatch queue items"
+      ],
+      "semantic_family": [
+        "execution.dispatch_delivery",
+        "execution.receipt"
+      ],
       "authority_class": "EXECUTION_ADAPTER_RUNTIME",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
-      "downstream_consumers": ["external adapters", "AO-ACT receipt path"],
+      "downstream_consumers": [
+        "external adapters",
+        "AO-ACT receipt path"
+      ],
       "removal_target": "KEEP_EXECUTOR_SPLIT_CLAIM_SEND_ACCEPTED_ACK_SEMANTICS",
       "b02_registered": false,
       "audit_note": "Executor writes DISPATCHED before adapter.execute(), then ACKED after adapter success."
@@ -216,13 +327,27 @@
       "source_path": "apps/server/src/routes/human_executors_v1.ts",
       "entrypoint": "registered by Execution Module; assignment expiry worker also started from bootstrap/workers.ts",
       "activation_mode": "API_AND_WORKER",
-      "writes": ["work assignment tables/audit facts", "human_work_receipt_v1 delegated into /api/v1/actions/receipt"],
-      "reads": ["ao_act_task_v0", "executor capability", "assignment state"],
-      "semantic_family": ["execution.task", "execution.result_evidence", "execution.receipt"],
+      "writes": [
+        "work assignment tables/audit facts",
+        "human_work_receipt_v1 delegated into /api/v1/actions/receipt"
+      ],
+      "reads": [
+        "ao_act_task_v0",
+        "executor capability",
+        "assignment state"
+      ],
+      "semantic_family": [
+        "execution.task",
+        "execution.result_evidence",
+        "execution.receipt"
+      ],
       "authority_class": "HUMAN_EXECUTION_ADAPTER",
       "runtime_reachable": "PROVEN",
       "feature_flag": "WORK_ASSIGNMENT_ALLOW_SUBMIT_FROM_ACCEPTED",
-      "downstream_consumers": ["canonical AO-ACT receipt path", "operator human-work UI"],
+      "downstream_consumers": [
+        "canonical AO-ACT receipt path",
+        "operator human-work UI"
+      ],
       "removal_target": "KEEP_AS_HUMAN_ADAPTER_UNIFY_RECEIPT_AS_EXECUTED_ACCEPTANCE",
       "b02_registered": false
     },
@@ -231,13 +356,22 @@
       "source_path": "apps/server/src/domain/twin_kernel/decision_cycle_v1.ts",
       "entrypoint": "used by twin_kernel routes and production-ingestion route",
       "activation_mode": "API_CALL_CHAIN",
-      "writes": ["decision_cycle_v1 projection object only"],
-      "reads": ["forecast/scenario/replay/learning refs plus recommendation/approval/task/receipt/acceptance refs"],
-      "semantic_family": ["governance.trace_projection", "execution.dispatch_delivery"],
+      "writes": [
+        "decision_cycle_v1 projection object only"
+      ],
+      "reads": [
+        "forecast/scenario/replay/learning refs plus recommendation/approval/task/receipt/acceptance refs"
+      ],
+      "semantic_family": [
+        "governance.trace_projection",
+        "execution.dispatch_delivery"
+      ],
       "authority_class": "TRACE_PROJECTION_WITH_SEMANTIC_CONFLATION",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
-      "downstream_consumers": ["Twin Kernel decision-cycle read model"],
+      "downstream_consumers": [
+        "Twin Kernel decision-cycle read model"
+      ],
       "removal_target": "KEEP_TRACE_FIX_STAGE_DERIVATION",
       "b02_registered": false,
       "audit_note": "Current state machine marks DISPATCHED complete from act_task_id existence rather than dispatch evidence."
@@ -247,13 +381,22 @@
       "source_path": "apps/server/src/domain/soil_water/root_zone_scenario_recommendation_submission_builder_v1.ts",
       "entrypoint": "legacy operator scenario recommendation submission code path",
       "activation_mode": "BUILDER_CAPABILITY",
-      "writes": ["decision_recommendation_v1 payload in-memory"],
-      "reads": ["RootZoneIrrigationScenarioSetPayloadV1"],
-      "semantic_family": ["twin.scenario", "decision.candidate"],
+      "writes": [
+        "decision_recommendation_v1 payload in-memory"
+      ],
+      "reads": [
+        "RootZoneIrrigationScenarioSetPayloadV1"
+      ],
+      "semantic_family": [
+        "twin.scenario",
+        "decision.candidate"
+      ],
       "authority_class": "CANDIDATE_BUILDER",
       "runtime_reachable": "INDIRECT_OR_LEGACY",
       "feature_flag": null,
-      "downstream_consumers": ["operator scenario recommendation writer surfaces"],
+      "downstream_consumers": [
+        "operator scenario recommendation writer surfaces"
+      ],
       "removal_target": "ADAPT_TO_CANONICAL_CANDIDATEDECISION",
       "b02_registered": false
     },
@@ -262,9 +405,16 @@
       "source_path": "apps/server/src/routes/v1/operator_twin.ts",
       "entrypoint": "not registered by current Operator Module",
       "activation_mode": "NOT_REFERENCED_CURRENT_MODULE_GRAPH",
-      "writes": ["contains decision_recommendation_v1 fact-write code"],
-      "reads": ["Twin/source indexes and root-zone scenario builders"],
-      "semantic_family": ["decision.candidate", "presentation.read_model"],
+      "writes": [
+        "contains decision_recommendation_v1 fact-write code"
+      ],
+      "reads": [
+        "Twin/source indexes and root-zone scenario builders"
+      ],
+      "semantic_family": [
+        "decision.candidate",
+        "presentation.read_model"
+      ],
       "authority_class": "STALE_ORPHAN_AUTHORITY_CAPABLE_SURFACE",
       "runtime_reachable": "NOT_PROVEN",
       "feature_flag": null,
@@ -278,13 +428,21 @@
       "source_path": "apps/server/src/domain/approval/approval_request_service_v1.ts",
       "entrypoint": "approval service call chain",
       "activation_mode": "API_CALL_CHAIN",
-      "writes": ["approval_request_v1"],
-      "reads": ["recommendation/candidate-related payloads"],
-      "semantic_family": ["decision.approval"],
+      "writes": [
+        "approval_request_v1"
+      ],
+      "reads": [
+        "recommendation/candidate-related payloads"
+      ],
+      "semantic_family": [
+        "decision.approval"
+      ],
       "authority_class": "APPROVAL_SERVICE",
       "runtime_reachable": "PROVEN_OR_REFERENCED",
       "feature_flag": null,
-      "downstream_consumers": ["approval routes"],
+      "downstream_consumers": [
+        "approval routes"
+      ],
       "removal_target": "KEEP_REGISTER_EXPLICITLY",
       "b02_registered": false
     },
@@ -293,13 +451,21 @@
       "source_path": "apps/server/src/domain/operations/operation_plan_from_approval_decision_builder_v1.ts",
       "entrypoint": "approved-decision to operation-plan call chain",
       "activation_mode": "BUILDER_CAPABILITY",
-      "writes": ["operation_plan_v1 payload in-memory"],
-      "reads": ["approval_decision_v1"],
-      "semantic_family": ["operation.plan"],
+      "writes": [
+        "operation_plan_v1 payload in-memory"
+      ],
+      "reads": [
+        "approval_decision_v1"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
       "authority_class": "APPROVAL_DERIVED_PLAN_BUILDER",
       "runtime_reachable": "PROVEN_OR_REFERENCED",
       "feature_flag": null,
-      "downstream_consumers": ["operation-plan persistence routes"],
+      "downstream_consumers": [
+        "operation-plan persistence routes"
+      ],
       "removal_target": "KEEP_REGISTER_EXPLICITLY",
       "b02_registered": false
     },
@@ -308,13 +474,21 @@
       "source_path": "apps/server/src/domain/controlplane/ao_act_task_from_operation_plan_builder_v1.ts",
       "entrypoint": "ready-operation-plan to AO-ACT task call chain",
       "activation_mode": "BUILDER_CAPABILITY",
-      "writes": ["ao_act_task_v0 payload in-memory"],
-      "reads": ["operation_plan_v1"],
-      "semantic_family": ["execution.task"],
+      "writes": [
+        "ao_act_task_v0 payload in-memory"
+      ],
+      "reads": [
+        "operation_plan_v1"
+      ],
+      "semantic_family": [
+        "execution.task"
+      ],
       "authority_class": "TASK_BUILDER",
       "runtime_reachable": "PROVEN_OR_REFERENCED",
       "feature_flag": null,
-      "downstream_consumers": ["AO-ACT task persistence route"],
+      "downstream_consumers": [
+        "AO-ACT task persistence route"
+      ],
       "removal_target": "KEEP_REGISTER_EXPLICITLY",
       "b02_registered": false
     },
@@ -323,13 +497,21 @@
       "source_path": "apps/server/src/domain/execution/as_executed_from_ao_act_receipt_v1.ts",
       "entrypoint": "receipt-to-as-executed call chain",
       "activation_mode": "BUILDER_CAPABILITY",
-      "writes": ["as_executed record payload in-memory"],
-      "reads": ["AO-ACT receipt"],
-      "semantic_family": ["execution.as_executed"],
+      "writes": [
+        "as_executed record payload in-memory"
+      ],
+      "reads": [
+        "AO-ACT receipt"
+      ],
+      "semantic_family": [
+        "execution.as_executed"
+      ],
       "authority_class": "AS_EXECUTED_BUILDER",
       "runtime_reachable": "PROVEN_OR_REFERENCED",
       "feature_flag": null,
-      "downstream_consumers": ["evidence artifact and acceptance chain"],
+      "downstream_consumers": [
+        "evidence artifact and acceptance chain"
+      ],
       "removal_target": "KEEP_REGISTER_EXPLICITLY",
       "b02_registered": false
     },
@@ -338,13 +520,25 @@
       "source_path": "apps/server/src/routes/acceptance_v1.ts",
       "entrypoint": "acceptance API route",
       "activation_mode": "API_ONLY",
-      "writes": ["acceptance_result_v1", "formal Field Memory on qualifying PASS"],
-      "reads": ["execution evidence / receipt / as-executed chain"],
-      "semantic_family": ["acceptance.verdict", "field_memory"],
+      "writes": [
+        "acceptance_result_v1",
+        "formal Field Memory on qualifying PASS"
+      ],
+      "reads": [
+        "execution evidence / receipt / as-executed chain"
+      ],
+      "semantic_family": [
+        "acceptance.verdict",
+        "field_memory"
+      ],
       "authority_class": "CURRENT_ACCEPTANCE_RUNTIME",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
-      "downstream_consumers": ["Field Memory", "water-response/manual downstreams", "reports"],
+      "downstream_consumers": [
+        "Field Memory",
+        "water-response/manual downstreams",
+        "reports"
+      ],
       "removal_target": "KEEP_SPLIT_ACCEPTANCE_FROM_OUTCOME_MEMORY",
       "b02_registered": true
     },
@@ -353,13 +547,23 @@
       "source_path": "apps/server/src/routes/as_executed_v1.ts",
       "entrypoint": "as-executed API route",
       "activation_mode": "API_ONLY",
-      "writes": ["as_executed_record_v1 persistence"],
-      "reads": ["execution result inputs"],
-      "semantic_family": ["execution.as_executed"],
+      "writes": [
+        "as_executed_record_v1 persistence"
+      ],
+      "reads": [
+        "execution result inputs"
+      ],
+      "semantic_family": [
+        "execution.as_executed"
+      ],
       "authority_class": "AS_EXECUTED_PERSISTENCE_ROUTE",
       "runtime_reachable": "PROVEN_OR_REFERENCED",
       "feature_flag": null,
-      "downstream_consumers": ["evidence artifact", "acceptance", "ROI"],
+      "downstream_consumers": [
+        "evidence artifact",
+        "acceptance",
+        "ROI"
+      ],
       "removal_target": "KEEP_REGISTER_EXPLICITLY",
       "b02_registered": false
     },
@@ -368,13 +572,22 @@
       "source_path": "apps/server/src/services/field_memory_service.ts",
       "entrypoint": "service call chain",
       "activation_mode": "API_CALL_CHAIN",
-      "writes": ["field_memory_v1"],
-      "reads": ["acceptance/outcome-related evidence"],
-      "semantic_family": ["field_memory"],
+      "writes": [
+        "field_memory_v1"
+      ],
+      "reads": [
+        "acceptance/outcome-related evidence"
+      ],
+      "semantic_family": [
+        "field_memory"
+      ],
       "authority_class": "CURRENT_FIELD_MEMORY_WRITER",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
-      "downstream_consumers": ["recommendation memory context", "reports"],
+      "downstream_consumers": [
+        "recommendation memory context",
+        "reports"
+      ],
       "removal_target": "KEEP_BUT_SEPARATE_FROM_ACCEPTANCE_VERDICT",
       "b02_registered": true
     },
@@ -383,14 +596,558 @@
       "source_path": "apps/server/src/domain/roi/roi_ledger_v1.ts",
       "entrypoint": "ROI route/service call chain",
       "activation_mode": "API_CALL_CHAIN",
-      "writes": ["ROI ledger rows"],
-      "reads": ["prescription/execution/as-executed/acceptance evidence"],
-      "semantic_family": ["roi"],
+      "writes": [
+        "ROI ledger rows"
+      ],
+      "reads": [
+        "prescription/execution/as-executed/acceptance evidence"
+      ],
+      "semantic_family": [
+        "roi"
+      ],
       "authority_class": "ROI_FORMALIZATION",
       "runtime_reachable": "PROVEN_OR_REFERENCED",
       "feature_flag": null,
-      "downstream_consumers": ["commercial reporting"],
+      "downstream_consumers": [
+        "commercial reporting"
+      ],
       "removal_target": "KEEP_REGISTER_EXPLICITLY",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-022",
+      "source_path": "apps/executor/src/adapters/irrigation_simulator.ts",
+      "entrypoint": "createAdapterRegistry() always registers irrigation_simulator; selected by executor adapter_type/task support",
+      "activation_mode": "REGISTERED_EXECUTOR_ADAPTER_SIMULATION_LANE",
+      "writes": [
+        "AO-ACT receipt through /api/v1/ao-act/receipts for simulated fertilization",
+        "simulator execution result returned to executor runtime"
+      ],
+      "reads": [
+        "AO-ACT task",
+        "executor runtime context",
+        "simulator/downlink APIs"
+      ],
+      "semantic_family": [
+        "execution.receipt",
+        "execution.result_evidence"
+      ],
+      "authority_class": "SIMULATED_EXECUTION_RECEIPT_PRODUCER",
+      "runtime_reachable": "PROVEN_CAPABILITY; TASK_SELECTION_REQUIRED",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "canonical AO-ACT receipt intake",
+        "AsExecuted/Acceptance chain if lane guards fail"
+      ],
+      "removal_target": "KEEP_SIMULATION_ADAPTER; REQUIRE_SIMULATED_LANE_TO_FAIL_CLOSED_FROM_FORMAL_ACCEPTANCE",
+      "b02_registered": false,
+      "audit_note": "Registry activation is real. Simulated receipt/evidence must never be promoted to formal execution authority."
+    },
+    {
+      "surface_id": "RES-023",
+      "source_path": "apps/executor/src/run_mqtt_receipt_uplink_once.ts",
+      "entrypoint": "@geox/executor package script receipt-uplink-once / explicit CLI",
+      "activation_mode": "EXPLICIT_EXECUTOR_CLI",
+      "writes": [
+        "AO-ACT receipt through /api/v1/ao-act/receipts/uplink"
+      ],
+      "reads": [
+        "CLI/environment receipt metadata",
+        "device command/task identifiers"
+      ],
+      "semantic_family": [
+        "execution.receipt"
+      ],
+      "authority_class": "MQTT_RECEIPT_HTTP_PRODUCER",
+      "runtime_reachable": "PROVEN_EXPLICIT_ENTRYPOINT",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "AO-ACT receipt intake",
+        "AsExecuted",
+        "Acceptance"
+      ],
+      "removal_target": "KEEP_TYPED_RECEIPT_ADAPTER; PRESERVE_DEVICE_EVIDENCE_PROVENANCE",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-024",
+      "source_path": "apps/server/db/migrations/2026_04_24_prescription_contract_v1.sql",
+      "entrypoint": "database migration runner",
+      "activation_mode": "MIGRATION_ONLY",
+      "writes": [
+        "prescription_contract_v1 schema/data migration"
+      ],
+      "reads": [
+        "legacy recommendation/prescription migration state"
+      ],
+      "semantic_family": [
+        "action.prescription_spec",
+        "decision.candidate"
+      ],
+      "authority_class": "HISTORICAL_PRESCRIPTION_MIGRATION_DATA_REWRITE",
+      "runtime_reachable": "NOT_LONG_RUNNING_RUNTIME",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "prescription_contract_v1 runtime"
+      ],
+      "removal_target": "KEEP_HISTORICAL_MIGRATION; DO_NOT TREAT AS CURRENT PRODUCT AUTHORITY",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-025",
+      "source_path": "apps/server/db/migrations/2026_05_02_field_memory_v1.sql",
+      "entrypoint": "database migration runner",
+      "activation_mode": "MIGRATION_ONLY",
+      "writes": [
+        "field_memory_v1 migration/backfill"
+      ],
+      "reads": [
+        "pre-existing field-memory rows/schema"
+      ],
+      "semantic_family": [
+        "field_memory"
+      ],
+      "authority_class": "HISTORICAL_FIELD_MEMORY_MIGRATION_DATA_REWRITE",
+      "runtime_reachable": "NOT_LONG_RUNNING_RUNTIME",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "field_memory_v1 runtime"
+      ],
+      "removal_target": "KEEP_HISTORICAL_MIGRATION; AUDIT BACKFILL SEMANTICS",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-026",
+      "source_path": "apps/server/db/migrations/2026_05_04_field_memory_v1_created_at_fix.sql",
+      "entrypoint": "database migration runner",
+      "activation_mode": "MIGRATION_ONLY",
+      "writes": [
+        "field_memory_v1 created_at correction/backfill"
+      ],
+      "reads": [
+        "existing field_memory_v1 rows"
+      ],
+      "semantic_family": [
+        "field_memory"
+      ],
+      "authority_class": "HISTORICAL_FIELD_MEMORY_TIMESTAMP_REWRITE",
+      "runtime_reachable": "NOT_LONG_RUNNING_RUNTIME",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "field_memory_v1 runtime"
+      ],
+      "removal_target": "KEEP_HISTORICAL_MIGRATION; NEVER USE MIGRATION TIMESTAMP AS DECISION_TIME",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-027",
+      "source_path": "apps/server/db/migrations/2026_05_06_field_memory_v1_full_contract.sql",
+      "entrypoint": "database migration runner",
+      "activation_mode": "MIGRATION_ONLY",
+      "writes": [
+        "field_memory_v1 contract migration/backfill"
+      ],
+      "reads": [
+        "existing field_memory_v1 rows"
+      ],
+      "semantic_family": [
+        "field_memory"
+      ],
+      "authority_class": "HISTORICAL_FIELD_MEMORY_CONTRACT_REWRITE",
+      "runtime_reachable": "NOT_LONG_RUNNING_RUNTIME",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "field_memory_v1 runtime"
+      ],
+      "removal_target": "KEEP_HISTORICAL_MIGRATION; PRESERVE TECHNICAL_VS_FORMAL_LANE DISTINCTION",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-028",
+      "source_path": "apps/server/db/migrations/2026_06_05_field_memory_metric_key_default_v1.sql",
+      "entrypoint": "database migration runner",
+      "activation_mode": "MIGRATION_ONLY",
+      "writes": [
+        "field_memory_v1 metric-key default/backfill"
+      ],
+      "reads": [
+        "existing field_memory_v1 rows"
+      ],
+      "semantic_family": [
+        "field_memory"
+      ],
+      "authority_class": "HISTORICAL_FIELD_MEMORY_DEFAULT_REWRITE",
+      "runtime_reachable": "NOT_LONG_RUNNING_RUNTIME",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "field_memory_v1 runtime"
+      ],
+      "removal_target": "KEEP_HISTORICAL_MIGRATION; DEFAULTS MUST NOT FABRICATE OUTCOME MEASUREMENTS",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-029",
+      "source_path": "apps/server/db/migrations/2026_06_28_tk13_formalization_layer_v0.sql",
+      "entrypoint": "database migration runner",
+      "activation_mode": "MIGRATION_ONLY",
+      "writes": [
+        "roi_entry_v1/field_memory_v1 formalization schema/data migration"
+      ],
+      "reads": [
+        "Twin Kernel formalization persistence state"
+      ],
+      "semantic_family": [
+        "roi",
+        "field_memory",
+        "governance.trace_projection"
+      ],
+      "authority_class": "HISTORICAL_TWIN_FORMALIZATION_MIGRATION",
+      "runtime_reachable": "NOT_LONG_RUNNING_RUNTIME",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "Twin Kernel formalization routes"
+      ],
+      "removal_target": "KEEP_HISTORICAL_MIGRATION; RUNTIME FORMALIZATION AUTHORITY MUST BE EXPLICITLY GOVERNED",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-030",
+      "source_path": "apps/server/src/domain/acceptance/acceptance_result_from_evidence_artifacts_v1.ts",
+      "entrypoint": "called by POST /api/v1/acceptance/from-evidence-artifacts",
+      "activation_mode": "DOMAIN_BUILDER_ON_CANONICAL_ACCEPTANCE_ROUTE",
+      "writes": [
+        "AcceptanceResultV1 payload in-memory"
+      ],
+      "reads": [
+        "AsExecuted record",
+        "evidence artifacts",
+        "scope and acceptance inputs"
+      ],
+      "semantic_family": [
+        "acceptance.verdict",
+        "execution.as_executed"
+      ],
+      "authority_class": "CANONICAL_ACCEPTANCE_RESULT_BUILDER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "acceptance_v1 persistence route"
+      ],
+      "removal_target": "KEEP; REGISTER AS ACCEPTANCE BUILDER ONLY; NO FIELD_MEMORY/ROI SIDE EFFECT",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-031",
+      "source_path": "apps/server/src/domain/approval/recommendation_approval_decision_builder_v1.ts",
+      "entrypoint": "approval domain capability; direct runtime caller not proven by current code search",
+      "activation_mode": "BUILDER_CAPABILITY",
+      "writes": [
+        "approval decision payload in-memory"
+      ],
+      "reads": [
+        "recommendation/approval inputs"
+      ],
+      "semantic_family": [
+        "decision.approval",
+        "decision.candidate"
+      ],
+      "authority_class": "LEGACY_APPROVAL_DECISION_BUILDER",
+      "runtime_reachable": "NOT_PROVEN_DIRECT_CALLER",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "approval domain if invoked"
+      ],
+      "removal_target": "KEEP_OR_RETIRE_AFTER APPROVAL ROUTE CALL-GRAPH PROOF; NEVER EQUATE WITH ELIGIBILITY",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-032",
+      "source_path": "apps/server/src/domain/evidence/evidence_artifact_from_as_executed_v1.ts",
+      "entrypoint": "called by POST /api/v1/evidence-artifacts/from-as-executed",
+      "activation_mode": "DOMAIN_BUILDER_ON_EVIDENCE_ROUTE",
+      "writes": [
+        "execution evidence artifact payloads in-memory"
+      ],
+      "reads": [
+        "AsExecuted record"
+      ],
+      "semantic_family": [
+        "execution.result_evidence",
+        "execution.as_executed"
+      ],
+      "authority_class": "AS_EXECUTED_EVIDENCE_ARTIFACT_BUILDER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "evidence artifact persistence route",
+        "Acceptance from evidence artifacts"
+      ],
+      "removal_target": "KEEP; EVIDENCE ONLY; MUST NOT MINT ACCEPTANCE",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-033",
+      "source_path": "apps/server/src/domain/execution/as_executed_v1.ts",
+      "entrypoint": "AsExecuted service call chain",
+      "activation_mode": "DOMAIN_SERVICE",
+      "writes": [
+        "as_executed_record_v1",
+        "as_applied_map_v1"
+      ],
+      "reads": [
+        "AO-ACT receipt",
+        "prescription_contract_v1"
+      ],
+      "semantic_family": [
+        "execution.as_executed",
+        "execution.receipt",
+        "action.prescription_spec"
+      ],
+      "authority_class": "CANONICAL_AS_EXECUTED_PERSISTENCE_SERVICE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "evidence artifacts",
+        "Acceptance",
+        "ROI/reporting"
+      ],
+      "removal_target": "KEEP; REQUIRE RECEIPT-PROVEN EXECUTION AND EXACT PROVENANCE",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-034",
+      "source_path": "apps/server/src/domain/operations/operation_plan_transition_builder_v1.ts",
+      "entrypoint": "called by control_operation_plan_v1 route",
+      "activation_mode": "DOMAIN_BUILDER_ON_OPERATION_PLAN_ROUTE",
+      "writes": [
+        "operation_plan_transition_v1 payload; operation_plan_index update via route/service chain"
+      ],
+      "reads": [
+        "operation_plan_v1",
+        "operation_plan_index_v1",
+        "approval decision linkage"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "authority_class": "OPERATION_PLAN_LIFECYCLE_TRANSITION_BUILDER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "OperationPlan persistence/index",
+        "later AO-ACT task creation"
+      ],
+      "removal_target": "KEEP; ALLOW ONLY GOVERNED CREATED→APPROVED→READY TRANSITIONS",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-035",
+      "source_path": "apps/server/src/infra/runtime_dispatch_queue_bootstrap_v1.ts",
+      "entrypoint": "runRuntimeDispatchQueueBootstrapFromEnvironmentV1 one-shot administrative entrypoint",
+      "activation_mode": "ADMIN_ONE_SHOT_SCHEMA_BACKFILL",
+      "writes": [
+        "dispatch_queue_v1 schema",
+        "command_id backfill for legacy rows"
+      ],
+      "reads": [
+        "dispatch_queue_v1 schema and rows"
+      ],
+      "semantic_family": [
+        "execution.dispatch_delivery"
+      ],
+      "authority_class": "INFRA_SCHEMA_MIGRATION_CAPABILITY",
+      "runtime_reachable": "ADMIN_EXPLICIT_ONLY; LONG_RUNNING_RUNTIME_FORBIDDEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "AO-ACT dispatch runtime"
+      ],
+      "removal_target": "KEEP AS ADMIN MIGRATION; DO NOT TREAT AS DISPATCH DELIVERY AUTHORITY",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-036",
+      "source_path": "apps/server/src/projections/operation_plan_index_v1.ts",
+      "entrypoint": "OperationPlan route/service persistence call chain",
+      "activation_mode": "PERSISTENT_PROJECTION_WRITER",
+      "writes": [
+        "operation_plan_index_v1"
+      ],
+      "reads": [
+        "OperationPlan lifecycle records"
+      ],
+      "semantic_family": [
+        "operation.plan"
+      ],
+      "authority_class": "OPERATION_PLAN_INDEX_PROJECTION_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "OperationPlan routes",
+        "task creation",
+        "reporting"
+      ],
+      "removal_target": "KEEP AS PROJECTION; SOURCE FACT/LIFECYCLE AUTHORITY MUST REMAIN EXPLICIT",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-037",
+      "source_path": "apps/server/src/routes/delivery_evidence_export_v1.ts",
+      "entrypoint": "Evidence Module route + jobs/runtime.ts worker",
+      "activation_mode": "ACTIVE_API_AND_BACKGROUND_JOB",
+      "writes": [
+        "evidence export artifact",
+        "acceptance_result_v1 fact"
+      ],
+      "reads": [
+        "AO-ACT task/receipt",
+        "approval",
+        "recommendation",
+        "operation plan and transitions"
+      ],
+      "semantic_family": [
+        "acceptance.verdict",
+        "execution.result_evidence",
+        "execution.receipt",
+        "execution.task",
+        "operation.plan"
+      ],
+      "authority_class": "PARALLEL_ACCEPTANCE_AUTHORITY_P0",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "facts ledger",
+        "evidence export API consumers"
+      ],
+      "removal_target": "REMOVE ACCEPTANCE WRITER; EXPORT EXISTING CANONICAL ACCEPTANCE/EVIDENCE ONLY",
+      "b02_registered": false,
+      "audit_note": "Current verdict is taskFacts.length > 0 ? PASS : FAIL."
+    },
+    {
+      "surface_id": "RES-038",
+      "source_path": "apps/server/src/routes/v1/operator_approval_actions.ts",
+      "entrypoint": "Operator Module approval action POST routes",
+      "activation_mode": "ACTIVE_API",
+      "writes": [
+        "approval_request_v1 updated facts",
+        "approval_decision_v1 facts",
+        "operator action audit"
+      ],
+      "reads": [
+        "approval request/decision facts",
+        "main approval route for approve action"
+      ],
+      "semantic_family": [
+        "decision.approval"
+      ],
+      "authority_class": "ACTIVE_OPERATOR_APPROVAL_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "approval/operation plan chain",
+        "operator UI"
+      ],
+      "removal_target": "KEEP APPROVAL AUTHORITY; REMOVE ANY ELIGIBILITY OR EXECUTION SEMANTIC LEAKAGE",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-039",
+      "source_path": "apps/server/src/routes/v1/twin_kernel_formalization.ts",
+      "entrypoint": "Twin Kernel Module explicit formalization POST routes",
+      "activation_mode": "ACTIVE_EXPLICIT_API",
+      "writes": [
+        "roi_entry_v1",
+        "field_memory_v1"
+      ],
+      "reads": [
+        "Twin decision-cycle/formalization inputs"
+      ],
+      "semantic_family": [
+        "roi",
+        "field_memory",
+        "governance.trace_projection"
+      ],
+      "authority_class": "TWIN_EXPLICIT_FORMALIZATION_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "Twin Kernel business closure",
+        "ROI/Field Memory readers"
+      ],
+      "removal_target": "CONVERGE TO SINGLE ACCEPTANCE→OUTCOME FORMALIZATION CONTRACT; NO IMPLICIT AUTO-FORMALIZATION",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-040",
+      "source_path": "apps/server/src/routes/v1/twin_kernel_operator_workflow.ts",
+      "entrypoint": "Twin Kernel Module explicit operator workflow routes",
+      "activation_mode": "ACTIVE_EXPLICIT_API",
+      "writes": [
+        "roi_entry_v1",
+        "field_memory_v1 operator workflow records"
+      ],
+      "reads": [
+        "Twin decision-cycle/operator workflow inputs"
+      ],
+      "semantic_family": [
+        "roi",
+        "field_memory",
+        "governance.trace_projection"
+      ],
+      "authority_class": "TWIN_OPERATOR_FORMALIZATION_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "Twin Kernel operator workflow/read models"
+      ],
+      "removal_target": "CONVERGE WITH SINGLE FORMALIZATION AUTHORITY; PRESERVE EXPLICIT HUMAN ACTION PROVENANCE",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-041",
+      "source_path": "apps/server/src/services/fertilization/fertilization_bridge_v1.ts",
+      "entrypoint": "fertilization variable bridge service call chain",
+      "activation_mode": "DOMAIN_SERVICE",
+      "writes": [
+        "prescription_contract_v1"
+      ],
+      "reads": [
+        "fertilization prescription/variable plan"
+      ],
+      "semantic_family": [
+        "action.prescription_spec",
+        "decision.approval"
+      ],
+      "authority_class": "FERTILIZATION_PRESCRIPTION_BRIDGE_WITH_APPROVAL_STATUS",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "variable prescription/approval/execution chain"
+      ],
+      "removal_target": "KEEP ACTION SPEC; SPLIT READY_FOR_APPROVAL/APPROVAL REQUIREMENT FROM DECISION ELIGIBILITY",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-042",
+      "source_path": "apps/server/src/services/flight_table/flight_table_skills_v1.ts",
+      "entrypoint": "Devtools Flight Table routes through registerDevtoolsModule",
+      "activation_mode": "DEVTOOLS_FEATURE_FLAGGED",
+      "writes": [
+        "skill_run_v1 facts",
+        "field_memory_v1 SKILL_PERFORMANCE_MEMORY"
+      ],
+      "reads": [
+        "Flight Table run/skill assembly"
+      ],
+      "semantic_family": [
+        "field_memory"
+      ],
+      "authority_class": "DEVTOOLS_TECHNICAL_SKILL_MEMORY_WRITER",
+      "runtime_reachable": "PROVEN_WHEN_GEOX_DEVTOOLS_ENABLED",
+      "feature_flag": "GEOX_DEVTOOLS_ENABLED",
+      "downstream_consumers": [
+        "Flight Table skill/report learning views"
+      ],
+      "removal_target": "KEEP TECHNICAL_DEVTOOLS LANE; MUST NEVER PROMOTE TO FORMAL_FIELD_MEMORY OR LEARNING AUTHORITY",
       "b02_registered": false
     }
   ],
@@ -399,7 +1156,10 @@
       "surface_id": "RES-X01",
       "source_ref": "Draft PR #3346 @ 605d256d5e4a02a18fee89e5a6db755af3f97e18",
       "source_path": "apps/server/src/adapters/external_operations/john_deere/deere_field_operation_adapter_v1.ts",
-      "semantic_family": ["execution.result_evidence", "execution.reconciliation"],
+      "semantic_family": [
+        "execution.result_evidence",
+        "execution.reconciliation"
+      ],
       "authority_class": "SOURCE_EVIDENCE_ONLY_ADAPTER",
       "runtime_reachable": "NOT_ON_THIS_AUDIT_HEAD",
       "removal_target": "KEEP_AND_REGISTER_WHEN_REPLAYED_TO_FINAL_INTEGRATION",
@@ -409,7 +1169,10 @@
       "surface_id": "RES-X02",
       "source_ref": "Draft PR #3346 @ 605d256d5e4a02a18fee89e5a6db755af3f97e18",
       "source_path": "apps/server/src/domain/operation_reconciliation/external_operation_source_evidence_v1.ts",
-      "semantic_family": ["execution.result_evidence", "execution.reconciliation"],
+      "semantic_family": [
+        "execution.result_evidence",
+        "execution.reconciliation"
+      ],
       "authority_class": "SOURCE_EVIDENCE_ONLY_CONTRACT",
       "runtime_reachable": "NOT_ON_THIS_AUDIT_HEAD",
       "removal_target": "KEEP_AND_REGISTER_WHEN_REPLAYED_TO_FINAL_INTEGRATION"
