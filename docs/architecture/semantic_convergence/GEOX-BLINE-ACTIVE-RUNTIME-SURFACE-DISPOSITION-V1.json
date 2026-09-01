@@ -745,12 +745,11 @@
         "apps/server/src/domain/evidence/formal_evidence_policy_v1.ts"
       ],
       "replacement_path": [
-        "Acceptance -> Outcome -> Memory formalization"
+        "Acceptance -> Outcome -> Candidate -> reviewed Promotion/Commit -> Formal Field Memory"
       ],
-      "sunset_condition": "DIRECT Acceptance->FieldMemory AUTHORITY MUST BE ADJUDICATED",
+      "sunset_condition": "Acceptance must never directly persist FORMAL_FIELD_MEMORY",
       "semantic_family": [
-        "acceptance.verdict",
-        "field_memory"
+        "acceptance.verdict"
       ],
       "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
       "owner": "BLINE"
