@@ -4,6 +4,7 @@ const path = require("node:path");
 const ROOT = path.resolve(__dirname, "..", "..");
 const legacyPath = path.join(ROOT, "apps/server/src/routes/delivery_evidence_export_v1.ts");
 const stablePath = path.join(ROOT, "apps/server/src/routes/evidence_export_jobs_v1.ts");
+const executorPath = path.join(ROOT, "apps/executor/src/run_once.ts");
 
 function fail(message) {
   console.error("ACCEPTANCE_BLINE_P0_RES007_FAIL " + message);
@@ -12,6 +13,7 @@ function fail(message) {
 
 const legacy = fs.readFileSync(legacyPath, "utf8");
 const stable = fs.readFileSync(stablePath, "utf8");
+const executor = fs.readFileSync(executorPath, "utf8");
 
 if (/\bINSERT\s+INTO\s+facts\b/i.test(legacy)) {
   fail("legacy evidence export must not append to the facts ledger");
@@ -35,6 +37,9 @@ if (!legacy.includes('requireAoActScopeV0(req, reply, "ao_act.index.read")')) {
 }
 if (!stable.includes("(record_json::jsonb->>'type')='acceptance_result_v1'")) {
   fail("stable evidence export must continue to consume existing canonical Acceptance");
+}
+if (/job\.acceptance_fact_id|job\.acceptance_result/.test(executor)) {
+  fail("executor must not treat deprecated evidence export status as an Acceptance source");
 }
 
 console.log("ACCEPTANCE_BLINE_P0_RES007_PASS");
