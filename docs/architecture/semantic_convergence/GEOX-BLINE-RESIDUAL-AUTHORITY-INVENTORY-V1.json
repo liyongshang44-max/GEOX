@@ -257,7 +257,7 @@
       "activation_mode": "API_ONLY",
       "writes": [
         "operator_action_audit_v1",
-        "ao_act_dispatch_v1 status=DISPATCHED or RETRY_DISPATCHED"
+        "ao_act_dispatch_v1 status=DISPATCH_REQUESTED or RETRY_DISPATCH_REQUESTED"
       ],
       "reads": [
         "ao_act_task_v0",
@@ -268,15 +268,15 @@
         "execution.dispatch_intent",
         "execution.dispatch_delivery"
       ],
-      "authority_class": "ACTIVE_LEGACY_DISPATCH_STATUS_WRITER",
+      "authority_class": "ACTIVE_OPERATOR_DISPATCH_INTENT_WRITER_DELIVERY_CONSUMER",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "operator dispatch worklist/read model"
       ],
-      "removal_target": "WRITE_DISPATCH_REQUESTED_INTENT_THEN_USE_CANONICAL_AO_ACT_DISPATCH_SERVICE",
+      "removal_target": "KEEP OPERATOR INTENT FACADE; CANONICAL QUEUE/EXECUTOR OWNS DELIVERY AND ACK",
       "b02_registered": false,
-      "audit_note": "Operator click currently declares DISPATCHED without proving adapter delivery."
+      "audit_note": "Operator action writes REQUESTED intent only; same route remains a read/projection consumer of executor-owned DISPATCHED/ACKED delivery semantics."
     },
     {
       "surface_id": "RES-008",
@@ -7080,7 +7080,7 @@
       "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
       "feature_flag": null,
       "downstream_consumers": [],
-      "removal_target": "Change DISPATCHED write to DISPATCH_REQUESTED intent then canonical queue/outbox",
+      "removal_target": "Keep operator command facade as dispatch-intent writer only; canonical queue/executor owns delivery",
       "b02_registered": false,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "ledger_disposition": "LEGACY_COMPATIBILITY",
@@ -7089,8 +7089,8 @@
         "execution.dispatch_delivery"
       ],
       "authority_owner": "OPERATOR_COMMAND_FACADE",
-      "writer_scope": "operator dispatch intent/audit facts",
-      "audit_note": "Known dispatch status authority debt."
+      "writer_scope": "operator dispatch intent/audit facts only; delivery family is read/projection consumption, not writer authority",
+      "audit_note": "Ledger writer is intent-only. Path still consumes delivery states for worklist projection and duplicate/terminal guards."
     },
     {
       "surface_id": "RES-273",

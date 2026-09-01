@@ -2452,7 +2452,7 @@
       "replacement_path": [
         "DispatchIntent -> canonical queue/outbox delivery"
       ],
-      "sunset_condition": "CHANGE_TO_DISPATCH_REQUESTED_INTENT_BEFORE_CLOSURE",
+      "sunset_condition": "KEEP INTENT-ONLY WRITER; DELIVERY/ACK MAY BE CONSUMED BUT MUST NOT BE MINTED HERE",
       "semantic_family": [
         "execution.dispatch_intent",
         "execution.dispatch_delivery"
