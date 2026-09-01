@@ -11,6 +11,7 @@ const files = {
   dataset: "scripts/demo_seed/datasets/C8_FORMAL_IRRIGATION_FULL_CHAIN_V1.cjs",
   openapi: "apps/server/src/routes/openapi_v1.ts",
   migration: "README_MIGRATION.md",
+  judge: "apps/server/src/routes/judge_v2.ts",
 };
 
 const source = Object.fromEntries(Object.entries(files).map(([k, p]) => [k, fs.readFileSync(p, "utf8")]));
@@ -121,6 +122,17 @@ need("migration", [
   "Explicit reviewed Field Memory promotion/commit gate",
 ]);
 
+need("judge", [
+  'memory_lane: "TECHNICAL_EXECUTION_MEMORY"',
+  'trust_level: "TECHNICAL_SIGNAL"',
+  "customer_visible_memory: false",
+  "learning_eligible: false",
+  "JUDGE_PASS_IS_TECHNICAL_SIGNAL_NOT_FORMAL_FIELD_MEMORY",
+]);
+if (source.judge.includes('memory_lane: "FORMAL_FIELD_MEMORY"')) fail("JUDGE_MUST_NOT_MINT_FORMAL_FIELD_MEMORY");
+if (source.judge.includes("customer_visible_memory: true")) fail("JUDGE_MUST_NOT_MINT_CUSTOMER_VISIBLE_MEMORY");
+if (source.judge.includes("learning_eligible: true")) fail("JUDGE_MUST_NOT_MINT_LEARNING_ELIGIBLE_MEMORY");
+
 if (source.route.includes("field_memory_record_ref") && !source.service.includes("requireFormalFieldMemoryPromotionAuthorityV1")) {
   fail("ROUTE_PROOF_REF_NOT_VERIFIED_BY_SERVICE");
 }
@@ -137,6 +149,7 @@ console.log("BLINE_FORMAL_MEMORY_REVIEWED_PROMOTION_PROOF_STATS " + JSON.stringi
   review_only_scope_blocked: source.verifier.includes("FIELD_MEMORY_RECORD_REVIEW_ONLY_SCOPE_BLOCKED"),
   same_field_scope_required: source.verifier.includes("FIELD_MEMORY_RECORD_SCOPE_NOT_SAME_FIELD_ONLY"),
   frozen_runner_invoked_by_verifier: /P(?:29|30)_09_FIELD_MEMORY/.test(source.verifier),
+  judge_memory_lane_technical_only: source.judge.includes('memory_lane: "TECHNICAL_EXECUTION_MEMORY"') && !source.judge.includes('memory_lane: "FORMAL_FIELD_MEMORY"'),
 }));
 
 for (const failure of failures) console.error("FAIL " + failure);
