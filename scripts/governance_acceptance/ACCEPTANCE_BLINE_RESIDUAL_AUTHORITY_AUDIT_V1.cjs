@@ -181,12 +181,12 @@ function scan(abs, production) {
     );
     const returned = new RegExp("return\\s+[\\\"']" + s + "[\\\"']", "i");
     if (assignment.test(content) || returned.test(content)) {
-      add(p, "cross_family.status_derivation", "SEMANTIC_DERIVER", "strong-state:" + state, production);
+      add(p, "cross_family.status_derivation", "PROJECTION_DERIVER", "strong-state:" + state, production);
     }
   }
 
   if (specialPlanner) {
-    add(p, "decision.planning_option", "SEMANTIC_DERIVER", "planner-execution-policy-binding", production);
+    add(p, "decision.planning_option", "AUTHORITY_DERIVER", "planner-execution-policy-binding", production);
   }
   if (specialFallback) {
     add(p, "evidence.raw_observation", "PERSISTENCE_AUTHORITY_RISK", "fabricated-observation-fallback", production);
@@ -280,7 +280,7 @@ function main() {
   }
 
   const hardKinds = new Set([
-    "PERSISTENCE_WRITER","SEMANTIC_BUILDER","SEMANTIC_DERIVER",
+    "PERSISTENCE_WRITER","SEMANTIC_BUILDER","AUTHORITY_DERIVER",
     "PERSISTENCE_AUTHORITY_RISK"
   ]);
   const hard = [];
