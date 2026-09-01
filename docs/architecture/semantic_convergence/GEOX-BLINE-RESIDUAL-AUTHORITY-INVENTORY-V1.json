@@ -2274,9 +2274,9 @@
         "sampling_acceptance_v1"
       ],
       "reads": [
-        "deterministic sampling_plan_v1 fact identity",
-        "unique scope-bound sample_receipt_v1 identity",
-        "deterministic lab_result_import_v1 fact identity bound to exact receipt",
+        "exact sampling_plan_v1 fact identity",
+        "plan-scoped sample_receipt_v1 identity; sample_id-only lookup unique-or-ambiguous",
+        "chain-scoped lab_result_import_v1 identity bound to exact receipt and plan",
         "exact Sampling Acceptance source fact chain"
       ],
       "semantic_family": [
@@ -2292,7 +2292,7 @@
         "agronomy evidence consumers"
       ],
       "removal_target": "KEEP SAMPLING EVIDENCE ACCEPTANCE; EXACT PLAN/RECEIPT/LAB FACT BINDING REQUIRED; AMBIGUITY FAILS CLOSED",
-      "audit_note": "Latest-wins source selection removed. Plan identity is exact; receipt fact identity is canonical scope+sample and race-safe; lab fact identity is canonical scope+sample+exact receipt/plan+import so caller-supplied import_id is not treated as globally unique; Sampling Acceptance persists exact plan/receipt/lab refs, uses canonical exact-chain fact identity, and is race-safe idempotent. Historical ambiguity fails closed.",
+      "audit_note": "Latest-wins source selection removed. sample_id is not promoted to global identity: receipt fact identity is canonical scope+exact plan fact+sample and race-safe; sample-only compatibility lookup is unique-or-ambiguous. Lab fact identity is canonical scope+sample+exact receipt/plan+import, so caller-supplied import_id is chain-scoped. Sampling Acceptance persists exact refs and is race-safe idempotent.",
       "surface_id": "RES-084",
       "b02_registered": false
     },
@@ -2468,8 +2468,8 @@
       ],
       "reads": [
         "exact plan fact",
-        "unique scope-bound sample receipt fact",
-        "exact lab fact",
+        "plan-scoped or explicitly referenced sample receipt fact",
+        "exact chain-scoped lab fact",
         "exact Sampling Acceptance source refs"
       ],
       "semantic_family": [
@@ -2485,7 +2485,7 @@
         "fertilization evidence consumers"
       ],
       "removal_target": "KEEP SAMPLING WORKFLOW; NEVER REINTRODUCE LATEST-WINS SOURCE AUTHORITY",
-      "audit_note": "Route consumes exact fact rows, rejects duplicate/ambiguous receipt identity, verifies exact plan continuity before lab import, permits the same business import_id on distinct exact sample chains, persists exact plan/receipt/lab refs into sampling_acceptance_v1, and returns one opaque Acceptance business id over one deterministic exact-chain fact identity.",
+      "audit_note": "Route permits sample_id reuse across different plans, rejects duplicate receipt for the same exact plan+sample, supports explicit sample_receipt_fact_id for lab import, fails ambiguous sample-only lookup closed, and persists exact plan/receipt/lab refs into Sampling Acceptance.",
       "surface_id": "RES-091",
       "b02_registered": false
     },
@@ -7593,7 +7593,7 @@
       ],
       "authority_owner": "SAMPLING_DOMAIN",
       "writer_scope": "sampling plan/receipt/lab/acceptance facts",
-      "audit_note": "Sampling plan/receipt/lab/acceptance chain records exact fact identity. Receipt, lab and Acceptance fact identities are canonical at their semantic uniqueness boundaries; caller-supplied import_id is chain-scoped rather than a global fact key; historical duplicates fail closed; repeated/concurrent Acceptance evaluation converges idempotently."
+      "audit_note": "Sampling plan/receipt/lab/acceptance chain records exact fact identity without inventing global uniqueness for sample_id or import_id. Receipt uniqueness is exact-plan scoped; lab identity is exact-chain scoped; historical ambiguity fails closed; repeated/concurrent Acceptance evaluation converges idempotently."
     },
     {
       "surface_id": "RES-289",
