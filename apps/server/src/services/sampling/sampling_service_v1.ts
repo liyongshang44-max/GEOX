@@ -230,6 +230,43 @@ export class SamplingServiceV1 {
     return (result.rows?.[0] as SamplingFactRowV1 | undefined) ?? null;
   }
 
+  private async findExistingReceiptForCreateV1(input: {
+    plan_id: string;
+    sample_id: string;
+    tenant_id: string;
+    project_id: string;
+    group_id: string;
+    sampling_plan_fact_id: string;
+  }): Promise<SamplingFactRowV1 | null> {
+    const result = await this.pool.query(
+      `SELECT fact_id, occurred_at, source, record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type') = 'sample_receipt_v1'
+          AND (record_json::jsonb->>'sample_id') = $1
+          AND (record_json::jsonb->>'tenant_id') = $2
+          AND (record_json::jsonb->>'project_id') = $3
+          AND (record_json::jsonb->>'group_id') = $4
+          AND (
+            (record_json::jsonb->>'sampling_plan_fact_id') = $5
+            OR (
+              COALESCE(record_json::jsonb->>'sampling_plan_fact_id', '') = ''
+              AND (record_json::jsonb->>'plan_id') = $6
+            )
+          )
+        LIMIT 2`,
+      [
+        input.sample_id,
+        input.tenant_id,
+        input.project_id,
+        input.group_id,
+        input.sampling_plan_fact_id,
+        input.plan_id,
+      ],
+    );
+    if ((result.rows?.length ?? 0) > 1) throw new SamplingServiceErrorV1("AMBIGUOUS:sample_receipt_v1", 409);
+    return (result.rows?.[0] as SamplingFactRowV1 | undefined) ?? null;
+  }
+
   async createReceipt(input: {
     plan_id: string;
     sample_id: string;
@@ -252,7 +289,7 @@ export class SamplingServiceV1 {
     override_reason?: string;
   }): Promise<{ receipt_id: string; fact_id: string }> {
     const scope = { tenant_id: input.tenant_id, project_id: input.project_id, group_id: input.group_id };
-    const existing = await this.findReceiptBySampleId(input.sample_id, scope, input.sampling_plan_fact_id);
+    const existing = await this.findExistingReceiptForCreateV1(input);
     if (existing) throw new SamplingServiceErrorV1("DUPLICATE:sample_id", 409);
 
     const receipt_id = randomUUID();
