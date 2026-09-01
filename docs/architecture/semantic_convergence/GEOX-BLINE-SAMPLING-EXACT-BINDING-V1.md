@@ -151,6 +151,7 @@ same sample_id on a different plan -> allowed
 ambiguous sample_id-only lab locator -> 409 until sample_receipt_fact_id is supplied
 historical receipt/lab/Acceptance ambiguity -> fail closed
 legacy receipt without sampling_plan_fact_id -> duplicate create blocked by exact plan_id/sample_id scope
+legacy receipt with conflicting non-empty plan fact ref but same plan_id/sample_id -> duplicate create still blocked; corrupted provenance is never shadowed by a replacement fact
 lab import requires exact receipt -> exact plan continuity
 repeat exact Sampling Acceptance -> same fact identity
 concurrent duplicate receipt creation -> exactly one success + one duplicate conflict
