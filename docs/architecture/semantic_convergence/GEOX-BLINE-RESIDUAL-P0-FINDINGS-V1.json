@@ -103,6 +103,25 @@
       ],
       "semantic_risk": "multiple valid-looking writer surfaces exist but are not completely represented in B-Line machine ownership inventory",
       "required_direction": "inventory every writer and establish a single formalization authority contract before cutover"
+    },
+    {
+      "finding_id": "P0-RES-007",
+      "severity": "P0",
+      "title": "Evidence export job mints parallel Acceptance PASS/FAIL authority",
+      "paths": [
+        "apps/server/src/routes/delivery_evidence_export_v1.ts",
+        "apps/server/src/modules/evidence/registerEvidenceModule.ts",
+        "apps/server/src/jobs/runtime.ts"
+      ],
+      "evidence": [
+        "registerEvidenceModule registers registerDeliveryEvidenceExportV1Routes",
+        "jobs/runtime.ts executes fetchPendingJobs/runQueuedEvidenceExportJob",
+        "runEvidenceExportJob appends acceptance_result_v1 to facts",
+        "verdict is computed as taskFacts.length > 0 ? PASS : FAIL",
+        "the route requires only ao_act.index.read for job creation"
+      ],
+      "semantic_risk": "evidence export can create authoritative-looking acceptance independently of the formal Acceptance Engine and evidence gate",
+      "required_direction": "export must consume existing canonical acceptance/evidence; exporting must never mint an Acceptance verdict"
     }
   ]
 }
