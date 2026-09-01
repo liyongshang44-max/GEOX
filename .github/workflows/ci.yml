@@ -31,6 +31,9 @@ jobs:
       - name: Route dependency guard
         run: pnpm run ci:route-dependency-guard
 
+      - name: B-Line residual authority audit
+        run: pnpm run ci:governance:bline-residual-authority-audit
+
       - name: Route response ownership guard
         run: pnpm run ci:route-response-ownership
 
