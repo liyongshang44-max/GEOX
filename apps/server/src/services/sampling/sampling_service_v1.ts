@@ -76,6 +76,28 @@ function deterministicAcceptanceFactIdV1(input: {
   return `sa_${digest}`;
 }
 
+function deterministicLabResultFactIdV1(input: {
+  tenant_id: string;
+  project_id: string;
+  group_id: string;
+  sample_id: string;
+  sample_receipt_fact_id: string;
+  sampling_plan_fact_id: string;
+  import_id: string;
+}): string {
+  const digest = samplingIdentityHashV1([
+    "lab_result_import_v1",
+    input.tenant_id,
+    input.project_id,
+    input.group_id,
+    input.sample_id,
+    input.sample_receipt_fact_id,
+    input.sampling_plan_fact_id,
+    input.import_id,
+  ]);
+  return `sl_${digest}`;
+}
+
 export class SamplingServiceV1 {
   constructor(private readonly pool: Pool) {}
 
@@ -277,7 +299,7 @@ export class SamplingServiceV1 {
     field_id: string;
   }): Promise<{ import_id: string; fact_id: string }> {
     const import_id = input.import_id ?? randomUUID();
-    const fact_id = `sl_${import_id}`;
+    const fact_id = deterministicLabResultFactIdV1({ ...input, import_id });
 
     const record_json: Record<string, unknown> = {
       type: "lab_result_import_v1",
@@ -309,18 +331,17 @@ export class SamplingServiceV1 {
     sampleReceiptFactId: string,
   ): Promise<SamplingFactRowV1 | null> {
     if (import_id) {
-      const factId = `sl_${import_id}`;
       const result = await this.pool.query(
         `SELECT fact_id, occurred_at, source, record_json
            FROM facts
-          WHERE fact_id = $1
-            AND (record_json::jsonb->>'type') = 'lab_result_import_v1'
-            AND (record_json::jsonb->>'sample_id') = $2
-            AND (record_json::jsonb->>'import_id') = $3
-            AND (record_json::jsonb->>'sample_receipt_fact_id') = $4
-          LIMIT 1`,
-        [factId, sample_id, import_id, sampleReceiptFactId],
+          WHERE (record_json::jsonb->>'type') = 'lab_result_import_v1'
+            AND (record_json::jsonb->>'sample_id') = $1
+            AND (record_json::jsonb->>'import_id') = $2
+            AND (record_json::jsonb->>'sample_receipt_fact_id') = $3
+          LIMIT 2`,
+        [sample_id, import_id, sampleReceiptFactId],
       );
+      if ((result.rows?.length ?? 0) > 1) throw new SamplingServiceErrorV1("AMBIGUOUS:lab_result_import_v1", 409);
       return (result.rows?.[0] as SamplingFactRowV1 | undefined) ?? null;
     }
 
