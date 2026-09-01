@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_non_github_host_binding_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1",
-  "status": "LOCAL_OPERATOR_MANAGED_DOCKER_HOST_AUTHORIZED_IDENTITIES_UNBOUND",
+  "status": "LOCAL_OPERATOR_MANAGED_DOCKER_HOST_IDENTITIES_BOUND",
   "architecture_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
   "predecessor_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json",
   "predecessor_stage": "RUNTIME_CREDENTIAL_BINDING_COMPLETE_PRE_HOST_BINDING",
@@ -30,11 +30,27 @@
     "execution_class_required": "LONG_RUNNING_SERVICE",
     "evidence_runtime": {
       "runtime_role": "EVIDENCE_RUNTIME",
-      "service_identity": null
+      "service_identity": {
+        "platform_provider": "LOCAL_OPERATOR_MANAGED_DOCKER",
+        "platform_account_or_project_id": "local-host:fae5f756-ef25-40d5-9777-5b2c3d4837a1",
+        "region_or_location": "OPERATOR_LOCAL_MACHINE",
+        "service_id": "local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/geox-mcft-cap09-evidence-runtime-v1",
+        "service_name": "geox-mcft-cap09-evidence-runtime-v1",
+        "execution_class": "LONG_RUNNING_SERVICE",
+        "runtime_role": "EVIDENCE_RUNTIME"
+      }
     },
     "twin_runtime": {
       "runtime_role": "TWIN_RUNTIME",
-      "service_identity": null
+      "service_identity": {
+        "platform_provider": "LOCAL_OPERATOR_MANAGED_DOCKER",
+        "platform_account_or_project_id": "local-host:fae5f756-ef25-40d5-9777-5b2c3d4837a1",
+        "region_or_location": "OPERATOR_LOCAL_MACHINE",
+        "service_id": "local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/geox-mcft-cap09-twin-runtime-v1",
+        "service_name": "geox-mcft-cap09-twin-runtime-v1",
+        "execution_class": "LONG_RUNNING_SERVICE",
+        "runtime_role": "TWIN_RUNTIME"
+      }
     },
     "constraints": {
       "evidence_and_twin_service_identities_must_be_distinct": true,
@@ -62,28 +78,28 @@
   },
   "binding_state": {
     "platform_selected": true,
-    "local_host_id_bound": false,
-    "evidence_host_identity_bound": false,
-    "twin_host_identity_bound": false,
-    "exact_two_runtime_service_identities_bound": false,
-    "binding_authorized": false
+    "local_host_id_bound": true,
+    "evidence_host_identity_bound": true,
+    "twin_host_identity_bound": true,
+    "exact_two_runtime_service_identities_bound": true,
+    "binding_authorized": true
   },
   "next_stage": {
-    "stage": "BIND_LOCAL_OPERATOR_MANAGED_HOST_IDENTITIES",
-    "status": "LOCAL_OPERATOR_HOST_AUTHORIZED_AWAITING_HOST_IDENTITY",
+    "stage": "QUALIFY_LOCAL_24H_HOST_AND_BIND_PRODUCTION_EVIDENCE_TARGET_PLANNER",
+    "status": "LOCAL_HOST_IDENTITIES_BOUND_PRE_RUNTIME_START",
     "external_platform_selection_required": false,
     "external_service_provisioning_or_existing_identity_required": false,
     "runtime_start_separate": true,
     "production_owner_activation_separate": true,
-    "pre_platform_checkpoint_evidence_bound": true,
-    "pre_platform_checkpoint_subject_sha": "776c6a6b9765abd608e8f469729451784c24c868",
     "selected_platform_candidate": "LOCAL_OPERATOR_MANAGED_DOCKER",
     "selected_location": "OPERATOR_LOCAL_MACHINE",
-    "platform_selection_status": "AUTHORIZED_SELECTED",
-    "cost_bearing_external_resource": false,
-    "local_host_id_status": "UNBOUND",
-    "evidence_service_identity_status": "UNBOUND",
-    "twin_service_identity_status": "UNBOUND",
+    "local_host_id_status": "BOUND",
+    "local_host_id": "fae5f756-ef25-40d5-9777-5b2c3d4837a1",
+    "evidence_service_identity_status": "BOUND",
+    "evidence_service_id": "local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/geox-mcft-cap09-evidence-runtime-v1",
+    "twin_service_identity_status": "BOUND",
+    "twin_service_id": "local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/geox-mcft-cap09-twin-runtime-v1",
+    "exact_two_runtime_service_identities_bound": true,
     "host_binding_arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json",
     "host_binding_arm_status": "UNARMED",
     "platform_selection_authorized": true,
@@ -188,7 +204,9 @@
     "AUTHORIZE_RENDER_INERT_IDENTITY_BOOTSTRAP",
     "RETIRE_RENDER_EXECUTION_PATH_HTTP_402_NO_SERVICE_CREATED",
     "AUTHORIZE_LOCAL_OPERATOR_MANAGED_DOCKER_HOST",
-    "PACKAGE_EVIDENCE_PRODUCTION_ENTRYPOINT_FAIL_CLOSED"
+    "PACKAGE_EVIDENCE_PRODUCTION_ENTRYPOINT_FAIL_CLOSED",
+    "BIND_LOCAL_OPERATOR_MANAGED_HOST_ID",
+    "BIND_EXACT_TWO_LOCAL_LONG_RUNNING_SERVICE_IDENTITIES"
   ],
   "platform_evaluation": {
     "evaluated_at": "2026-09-01",
@@ -379,19 +397,19 @@
     "retired": true
   },
   "local_operator_managed_host_contract": {
-    "status": "AUTHORIZED_HOST_IDENTITY_UNBOUND",
+    "status": "HOST_AND_SERVICE_IDENTITIES_BOUND",
     "platform_provider": "LOCAL_OPERATOR_MANAGED_DOCKER",
-    "platform_account_or_project_id": null,
+    "platform_account_or_project_id": "local-host:fae5f756-ef25-40d5-9777-5b2c3d4837a1",
     "region_or_location": "OPERATOR_LOCAL_MACHINE",
     "host_id_scheme": "GEOX_LOCAL_HOST_UUID_V1",
     "host_id_state_file": "~/.geox/mcft-cap09/local-host-id-v1",
-    "host_id": null,
+    "host_id": "fae5f756-ef25-40d5-9777-5b2c3d4837a1",
     "service_id_scheme": "local-docker://{host_id}/{service_name}",
     "compose_project_name": "geox-mcft-cap09-production-v1",
     "container_id_is_authority": false,
     "evidence_runtime": {
       "service_name": "geox-mcft-cap09-evidence-runtime-v1",
-      "service_id": null,
+      "service_id": "local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/geox-mcft-cap09-evidence-runtime-v1",
       "execution_class": "LONG_RUNNING_SERVICE",
       "runtime_role": "EVIDENCE_RUNTIME",
       "production_process_factory": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
@@ -402,7 +420,7 @@
     },
     "twin_runtime": {
       "service_name": "geox-mcft-cap09-twin-runtime-v1",
-      "service_id": null,
+      "service_id": "local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/geox-mcft-cap09-twin-runtime-v1",
       "execution_class": "LONG_RUNNING_SERVICE",
       "runtime_role": "TWIN_RUNTIME",
       "production_process_factory": "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts",
@@ -423,5 +441,22 @@
     "formal_v5_arm_authorized": false,
     "a0_authorized": false,
     "o00_authorized": false
+  },
+  "host_binding_evidence": {
+    "status": "BOUND_FROM_OPERATOR_MANAGED_LOCAL_HOST_ID",
+    "bound_at_date": "2026-09-01",
+    "host_id_state_file": "~/.geox/mcft-cap09/local-host-id-v1",
+    "host_id": "fae5f756-ef25-40d5-9777-5b2c3d4837a1",
+    "service_id_derivation_scheme": "local-docker://{host_id}/{service_name}",
+    "evidence_service_id": "local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/geox-mcft-cap09-evidence-runtime-v1",
+    "twin_service_id": "local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/geox-mcft-cap09-twin-runtime-v1",
+    "exact_two_distinct_service_ids": true,
+    "container_id_used_as_authority": false,
+    "external_cost_bearing_resource_created": false,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false
   }
 }
