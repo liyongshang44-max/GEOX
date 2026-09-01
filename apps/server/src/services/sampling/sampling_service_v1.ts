@@ -43,7 +43,8 @@ function scopeParams(scope: SamplingScopeV1): [string, string, string] {
 }
 
 function samplingIdentityHashV1(parts: Array<string | null | undefined>): string {
-  return createHash("sha256").update(parts.map((part) => String(part ?? "")).join("\n"), "utf8").digest("hex");
+  const canonicalParts = parts.map((part) => part == null ? null : String(part));
+  return createHash("sha256").update(JSON.stringify(canonicalParts), "utf8").digest("hex");
 }
 
 function deterministicReceiptFactIdV1(scope: SamplingScopeV1, sample_id: string): string {
