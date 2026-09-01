@@ -1,7 +1,7 @@
 // MCFT-CAP-09 production source-plan executor core.
 // Maps already-adjudicated pure source decisions into the single EvidenceRuntimeHost attempt seam.
 // It does not plan, read clocks/environment, start processes, or bind production ownership.
-// Provider-attempt fenced poll/retry claims are a separate required binding and are not performed here.
+// Provider-attempt fenced poll/retry claims are injected here but execute only inside the service after the current Evidence producer lease is acquired.
 
 import type {
   EvidenceRuntimeCycleServiceV1,
