@@ -20,10 +20,16 @@ export type ProductionEvidenceAcquisitionHorizonV1 = {
   runtime_start_authority_ref: string;
   activation_fence_time: string;
   kbs_raw_hourly: {
-    bootstrap_mode: "FIRST_RETAINED_PROVIDER_BATCH_FETCH_STARTED_AT_OR_AFTER_ACTIVATION_FENCE";
-    bounded_backfill_unit: "EXACT_EVENT_ROWS_PRESENT_IN_THAT_SINGLE_RETAINED_BATCH";
-    earlier_batch_fetch_authorized: false;
-    fixed_hour_lookback: null;
+    bootstrap_mode: "FIRST_RETAINED_FULL_TABLE_SNAPSHOT_ESTABLISHES_PRIVATE_PUBLICATION_BASELINE_NO_CANONICAL_EMISSION";
+    endpoint_shape: "COMPLETE_ACCUMULATED_TABLE";
+    baseline_retention_required: true;
+    baseline_event_index_required: true;
+    baseline_canonical_emission_count: 0;
+    first_canonical_emission_requires_observed_post_baseline_forward_event_delta: true;
+    post_baseline_diff_basis: "EVENT_TIME_PLUS_ROW_IDENTITY_HASH";
+    fixed_latest_24_rows_assumption_authorized: false;
+    non_authoritative_daily_batch_operating_profile_may_define_promotion_set: false;
+    revision_or_backfill_before_previous_latest_auto_promotion_authorized: false;
   };
   gfs_bundle: {
     bootstrap_mode: "FIRST_PROVIDER_SELECTED_CYCLE_FETCH_STARTED_AT_OR_AFTER_ACTIVATION_FENCE";
@@ -39,6 +45,8 @@ export type ProductionEvidenceAcquisitionHorizonV1 = {
   };
   restart: {
     durable_progress_present: "RESUME_FROM_EVIDENCE_OWNED_DURABLE_SOURCE_PROGRESS";
+    kbs_publication_baseline_must_be_durable_when_no_evidence_progress: true;
+    in_memory_only_kbs_baseline_sufficient_for_production: false;
     bootstrap_rewind_authorized: false;
     runtime_tick_cursor_fallback_authorized: false;
     successful_cycle_count_fallback_authorized: false;
@@ -82,11 +90,16 @@ export function materializeProductionEvidenceAcquisitionHorizonV1(
     activation_fence_time: activationFenceTime,
     kbs_raw_hourly: {
       bootstrap_mode:
-        "FIRST_RETAINED_PROVIDER_BATCH_FETCH_STARTED_AT_OR_AFTER_ACTIVATION_FENCE",
-      bounded_backfill_unit:
-        "EXACT_EVENT_ROWS_PRESENT_IN_THAT_SINGLE_RETAINED_BATCH",
-      earlier_batch_fetch_authorized: false,
-      fixed_hour_lookback: null,
+        "FIRST_RETAINED_FULL_TABLE_SNAPSHOT_ESTABLISHES_PRIVATE_PUBLICATION_BASELINE_NO_CANONICAL_EMISSION",
+      endpoint_shape: "COMPLETE_ACCUMULATED_TABLE",
+      baseline_retention_required: true,
+      baseline_event_index_required: true,
+      baseline_canonical_emission_count: 0,
+      first_canonical_emission_requires_observed_post_baseline_forward_event_delta: true,
+      post_baseline_diff_basis: "EVENT_TIME_PLUS_ROW_IDENTITY_HASH",
+      fixed_latest_24_rows_assumption_authorized: false,
+      non_authoritative_daily_batch_operating_profile_may_define_promotion_set: false,
+      revision_or_backfill_before_previous_latest_auto_promotion_authorized: false,
     },
     gfs_bundle: {
       bootstrap_mode:
@@ -105,6 +118,8 @@ export function materializeProductionEvidenceAcquisitionHorizonV1(
     restart: {
       durable_progress_present:
         "RESUME_FROM_EVIDENCE_OWNED_DURABLE_SOURCE_PROGRESS",
+      kbs_publication_baseline_must_be_durable_when_no_evidence_progress: true,
+      in_memory_only_kbs_baseline_sufficient_for_production: false,
       bootstrap_rewind_authorized: false,
       runtime_tick_cursor_fallback_authorized: false,
       successful_cycle_count_fallback_authorized: false,

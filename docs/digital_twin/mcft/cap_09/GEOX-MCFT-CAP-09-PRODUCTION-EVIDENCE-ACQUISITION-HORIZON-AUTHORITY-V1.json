@@ -1,16 +1,18 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_acquisition_horizon_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1",
-  "status": "ESTABLISHED_PRE_RUNTIME_START_POLICY_NO_ACTIVE_INSTANCE",
+  "status": "ESTABLISHED_FULL_TABLE_BASELINE_POLICY_NO_ACTIVE_INSTANCE",
   "stage": "POST_SOURCE_PROGRESS_AND_KBS_BATCH_PATH_PRE_PURE_PLANNER",
-  "subject_predecessor_sha": "cda440d64930ab7e887209eb7c08f2f0529a58cf",
+  "subject_predecessor_sha": "f6c11495ac2242e962521e9bfc29f13ab679345c",
   "authority_basis": {
     "master_task_line_ref": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md",
     "taskbook_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
     "production_hosting_route_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
     "provider_watermark_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDER-AVAILABILITY-WATERMARK-AUTHORITY.md",
     "cadence_decoupling_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-PROVIDER-RUNTIME-CADENCE-DECOUPLING-AUTHORITY.md",
-    "planner_readiness_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json"
+    "planner_readiness_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json",
+    "kbs_publication_observer_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-PUBLICATION-CADENCE-OBSERVER-V1.md",
+    "kbs_product_provider_ref": "apps/server/src/external_evidence/provider/kbs_raw_hourly_live_provider_v1.ts"
   },
   "decisive_ruling": {
     "acquisition_horizon_must_be_explicit": true,
@@ -22,15 +24,25 @@
     "runtime_tick_cursor_may_define_evidence_horizon": false,
     "formal_forcing_budget_may_define_bootstrap_horizon": false,
     "fixed_historical_lookback_hours": null,
-    "historical_provider_sweep_authorized": false
+    "historical_provider_sweep_authorized": false,
+    "kbs_raw_hourly_endpoint_semantics": "COMPLETE_ACCUMULATED_TABLE_NOT_SINGLE_PUBLICATION_OBJECT",
+    "kbs_non_authoritative_daily_batch_profile_may_define_bootstrap_tail": false,
+    "kbs_fixed_latest_24_rows_bootstrap_authorized": false
   },
   "bootstrap_policy": {
     "kbs_raw_hourly": {
-      "mode": "FIRST_RETAINED_PROVIDER_BATCH_FETCH_STARTED_AT_OR_AFTER_ACTIVATION_FENCE",
-      "bounded_backfill_unit": "EXACT_EVENT_ROWS_PRESENT_IN_THAT_SINGLE_RETAINED_BATCH",
-      "earlier_batch_fetch_authorized": false,
-      "fixed_hour_lookback_authorized": false,
-      "raw_retention_before_decode_required": true,
+      "mode": "FIRST_RETAINED_FULL_TABLE_SNAPSHOT_ESTABLISHES_PRIVATE_PUBLICATION_BASELINE_NO_CANONICAL_EMISSION",
+      "endpoint_shape": "COMPLETE_ACCUMULATED_TABLE",
+      "baseline_retention_required": true,
+      "baseline_event_index_required": true,
+      "baseline_canonical_emission_count": 0,
+      "first_canonical_emission_requires_observed_post_baseline_forward_event_delta": true,
+      "post_baseline_diff_basis": "EVENT_TIME_PLUS_ROW_IDENTITY_HASH",
+      "revision_or_backfill_before_previous_latest_auto_promotion_authorized": false,
+      "fixed_latest_24_rows_assumption_authorized": false,
+      "non_authoritative_daily_batch_operating_profile_may_define_promotion_set": false,
+      "earlier_historical_table_scan_for_bootstrap_promotion_authorized": false,
+      "raw_retention_before_diff_and_decode_required": true,
       "real_provider_chronology_required": true
     },
     "gfs_bundle": {
@@ -53,7 +65,9 @@
     "phase5_manifest_fallback_authorized": false,
     "formal_epoch_fallback_authorized": false,
     "runtime_tick_cursor_fallback_authorized": false,
-    "successful_cycle_count_fallback_authorized": false
+    "successful_cycle_count_fallback_authorized": false,
+    "kbs_publication_baseline_must_be_durable_when_no_evidence_progress": true,
+    "in_memory_only_kbs_baseline_sufficient_for_production": false
   },
   "runtime_start_binding": {
     "active_horizon_instance_bound": false,

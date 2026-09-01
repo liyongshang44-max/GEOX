@@ -69,15 +69,23 @@ export type ProductionEvidenceSourceDecisionV1 =
       status: "BLOCKED_CAPABILITY";
       authority_ref: string;
       blocker:
-        | "KBS_RAW_HOURLY_BATCH_DISCOVERY_NO_CHANGE_ADAPTER_NOT_IMPLEMENTED"
+        | "KBS_RAW_HOURLY_DURABLE_PUBLICATION_BASELINE_NOT_IMPLEMENTED"
+        | "KBS_RAW_HOURLY_PUBLICATION_DIFF_NO_CHANGE_ADAPTER_NOT_IMPLEMENTED"
         | "KBS_RAW_HOURLY_PAIR_SKEW_REPAIR_NOT_IMPLEMENTED"
         | "GFS_PARTIAL_PAIR_PRODUCTION_REHYDRATION_ADAPTER_NOT_IMPLEMENTED";
       operation:
         | {
-            kind: "KBS_RAW_HOURLY_BATCH_DISCOVERY_REQUIRED";
+            kind: "KBS_RAW_HOURLY_PUBLICATION_BASELINE_REQUIRED";
             requested_at: string;
-            paired_contiguous_through: string | null;
-            current_pair_state: "ABSENT" | "PAIRED";
+            endpoint_shape: "COMPLETE_ACCUMULATED_TABLE";
+            canonical_emission_count: 0;
+            bindable_to_current_cycle_service: false;
+          }
+        | {
+            kind: "KBS_RAW_HOURLY_PUBLICATION_DIFF_REQUIRED";
+            requested_at: string;
+            paired_contiguous_through: string;
+            diff_basis: "EVENT_TIME_PLUS_ROW_IDENTITY_HASH";
             bindable_to_current_cycle_service: false;
           }
         | {
@@ -272,17 +280,34 @@ export function planProductionEvidenceSourcesV1(input: {
           bindable_to_current_cycle_service: false,
         },
       });
-    } else {
+    } else if (kbs.state === "ABSENT") {
       decisions.push({
         source_family: "KBS_RAW_HOURLY",
         status: "BLOCKED_CAPABILITY",
         authority_ref: authorityRefV1(kbsDue.authority_ref),
-        blocker: "KBS_RAW_HOURLY_BATCH_DISCOVERY_NO_CHANGE_ADAPTER_NOT_IMPLEMENTED",
+        blocker: "KBS_RAW_HOURLY_DURABLE_PUBLICATION_BASELINE_NOT_IMPLEMENTED",
         operation: {
-          kind: "KBS_RAW_HOURLY_BATCH_DISCOVERY_REQUIRED",
+          kind: "KBS_RAW_HOURLY_PUBLICATION_BASELINE_REQUIRED",
+          requested_at: kbsDue.requested_at,
+          endpoint_shape: "COMPLETE_ACCUMULATED_TABLE",
+          canonical_emission_count: 0,
+          bindable_to_current_cycle_service: false,
+        },
+      });
+    } else {
+      if (!kbs.paired_contiguous_through) {
+        throw new Error("PRODUCTION_EVIDENCE_SOURCE_PLANNER_KBS_PAIRED_PROGRESS_REQUIRED");
+      }
+      decisions.push({
+        source_family: "KBS_RAW_HOURLY",
+        status: "BLOCKED_CAPABILITY",
+        authority_ref: authorityRefV1(kbsDue.authority_ref),
+        blocker: "KBS_RAW_HOURLY_PUBLICATION_DIFF_NO_CHANGE_ADAPTER_NOT_IMPLEMENTED",
+        operation: {
+          kind: "KBS_RAW_HOURLY_PUBLICATION_DIFF_REQUIRED",
           requested_at: kbsDue.requested_at,
           paired_contiguous_through: kbs.paired_contiguous_through,
-          current_pair_state: kbs.state === "ABSENT" ? "ABSENT" : "PAIRED",
+          diff_basis: "EVENT_TIME_PLUS_ROW_IDENTITY_HASH",
           bindable_to_current_cycle_service: false,
         },
       });
