@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "ACQUISITION_HORIZON_AUTHORITY_ESTABLISHED_REMAINING_BLOCKERS");
+  assert.equal(authority.status, "PURE_SOURCE_SPECIFIC_PLANNER_CORE_IMPLEMENTED_REMAINING_BINDING_BLOCKERS");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "cda440d64930ab7e887209eb7c08f2f0529a58cf");
+  assert.equal(authority.subject_predecessor_sha, "47f3127ecd7bd52e5eba48aca71c0116411cfc24");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -78,6 +78,17 @@ try {
   assert.equal(horizonContract.includes("Date.now"), false, "PRODUCTION_EVIDENCE_HORIZON_WALL_CLOCK_READ_FORBIDDEN");
   assert.equal(horizonContract.includes("process.env"), false, "PRODUCTION_EVIDENCE_HORIZON_ENV_READ_FORBIDDEN");
 
+  const purePlanner = read(authority.pure_source_planner_ref);
+  includes(purePlanner, "planProductionEvidenceSourcesV1", "PURE_SOURCE_SPECIFIC_PLANNER_REQUIRED");
+  includes(purePlanner, "KBS_RAW_HOURLY_BATCH_DISCOVERY_REQUIRED", "KBS_BATCH_DISCOVERY_PLAN_REQUIRED");
+  includes(purePlanner, "GFS_TARGET_ALREADY_DURABLE", "GFS_DURABLE_TARGET_DEDUP_REQUIRED");
+  includes(purePlanner, "GFS_PARTIAL_PAIR_REHYDRATION_REQUIRED", "GFS_PARTIAL_PAIR_REHYDRATION_PLAN_REQUIRED");
+  includes(purePlanner, "KBS_SOIL_CURRENT_ACQUIRE", "SOIL_EXPLICIT_DUE_ACTION_REQUIRED");
+  assert.equal(purePlanner.includes("Date.now"), false, "PURE_PLANNER_WALL_CLOCK_READ_FORBIDDEN");
+  assert.equal(purePlanner.includes("process.env"), false, "PURE_PLANNER_ENV_READ_FORBIDDEN");
+  assert.equal(purePlanner.includes("new Postgres"), false, "PURE_PLANNER_DATABASE_ADAPTER_FORBIDDEN");
+  assert.equal(purePlanner.includes("fetch("), false, "PURE_PLANNER_PROVIDER_FETCH_FORBIDDEN");
+
   const host = read(authority.host_lifecycle_ref);
   includes(host, '"PLANNER_EXHAUSTED"', "EVIDENCE_HOST_NULL_TERMINAL_STATE_REQUIRED");
   includes(host, "PHASE3_EVIDENCE_HOST_PLANNER_EMPTY_WORK_ITEMS_FORBIDDEN", "EVIDENCE_HOST_EMPTY_WORK_FATAL_REQUIRED");
@@ -97,6 +108,10 @@ try {
   includes(packager, "MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND", "PRODUCTION_ENTRYPOINT_FAIL_CLOSED_REQUIRED");
 
   assert.deepEqual(authority.unconditional_blockers, [
+    "KBS_RAW_HOURLY_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED",
+    "KBS_RAW_HOURLY_BATCH_DISCOVERY_NO_CHANGE_ADAPTER_NOT_IMPLEMENTED",
+    "KBS_RAW_HOURLY_PAIR_SKEW_REPAIR_NOT_IMPLEMENTED",
+    "GFS_PARTIAL_PAIR_PRODUCTION_REHYDRATION_ADAPTER_NOT_IMPLEMENTED",
     "KBS_SOIL_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED",
     "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
   ]);
@@ -110,6 +125,13 @@ try {
   assert.equal(authority.bootstrap_authority_gap.active_runtime_start_horizon_instance_bound, false);
   assert.equal(authority.bootstrap_authority_gap.activation_fence_source, "SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY");
   assert.equal(authority.bootstrap_authority_gap.may_inherit_formal_forcing_budget_as_bootstrap_horizon, false);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.pure_planner_decision_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.batch_discovery_no_change_adapter_implemented, false);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.pair_skew_repair_implemented, false);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.pure_planner_decision_implemented, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.durable_target_dedup_implemented, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.partial_pair_production_rehydration_adapter_implemented, false);
+  assert.equal(authority.source_specific_requirements.kbs_soil.pure_planner_decision_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.single_fetch_multi_interval_path_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.single_private_retention_per_batch_implemented, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.cross_cycle_progress_read_port_implemented, true);
@@ -136,7 +158,8 @@ try {
     status: "PASS",
     subject_sha: subject,
     authority_status: authority.status,
-    current_frontier: "PURE_SOURCE_SPECIFIC_PLANNER_REQUIRED",
+    current_frontier: "KBS_DISCOVERY_AND_GFS_REHYDRATION_ADAPTERS_REQUIRED",
+    pure_source_specific_planner_core_implemented: true,
     acquisition_horizon_authority_established: true,
     active_runtime_start_horizon_instance_bound: false,
     kbs_single_fetch_multi_interval_path_implemented: true,

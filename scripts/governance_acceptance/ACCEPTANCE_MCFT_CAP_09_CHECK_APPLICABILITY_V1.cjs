@@ -206,12 +206,26 @@ function main() {
   for (const horizonPlannerPath of [
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_V1.ts",
+    "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_planner_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLANNER_V1.ts",
   ]) {
     const horizonPlanner = plan(authority, registry, [horizonPlannerPath]);
     assert.equal(horizonPlanner.status, "PASS");
     assert.equal(horizonPlanner.unknown_changed_paths.length, 0);
     assert.equal(byId(horizonPlanner, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
   }
+
+  // CP-4: pure production Evidence planner core is Phase3-owned; focused proof is owner-closure-owned.
+  const purePlannerRuntime = plan(authority, registry, ["apps/server/src/external_evidence/mcft_cap09_production_evidence_source_planner_v1.ts"]);
+  assert.equal(purePlannerRuntime.status, "PASS");
+  assert.equal(purePlannerRuntime.unknown_changed_paths.length, 0);
+  assert.equal(byId(purePlannerRuntime, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+  assert(byId(purePlannerRuntime, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes("apps/server/src/external_evidence/mcft_cap09_production_evidence_source_planner_v1.ts"));
+
+  const purePlannerProof = plan(authority, registry, ["scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLANNER_V1.ts"]);
+  assert.equal(purePlannerProof.status, "PASS");
+  assert.equal(purePlannerProof.unknown_changed_paths.length, 0);
+  assert.equal(byId(purePlannerProof, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
 
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";

@@ -19,6 +19,8 @@ on:
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_source_progress_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_production_evidence_acquisition_horizon_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_production_evidence_source_planner_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLANNER_V1.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PROGRESS_V1.ts'
@@ -64,6 +66,7 @@ jobs:
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1.ts
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PROGRESS_V1.ts
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_V1.ts
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLANNER_V1.ts
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_MULTI_INTERVAL_PRODUCT_PATH_V1.ts
 
       - uses: actions/upload-artifact@v4
@@ -74,6 +77,7 @@ jobs:
             acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_TARGET_PLANNER_READINESS_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PROGRESS_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLANNER_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_KBS_RAW_HOURLY_MULTI_INTERVAL_PRODUCT_PATH_V1_RESULT.json
           if-no-files-found: error
           retention-days: 90
