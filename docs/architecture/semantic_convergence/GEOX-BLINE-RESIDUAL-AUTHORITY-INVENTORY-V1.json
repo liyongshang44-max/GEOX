@@ -3107,6 +3107,212 @@
       "removal_target": "SEPARATE PROD/PILOT AUTHORITY PROVISIONING FROM DEMO SEEDS; KEEP MCFT OWNERSHIP UNMODIFIED",
       "surface_id": "RES-117",
       "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/db/migrations/2026_05_14_variable_task_no_auto_acked_v1.sql",
+      "entrypoint": "database migration installs BEFORE INSERT trigger on facts",
+      "activation_mode": "DATABASE_TRIGGER_RUNTIME",
+      "writes": [
+        "rewrites operation_plan_v1 ACKED → READY_TO_DISPATCH / NOT_DISPATCHED / ACK_REQUIRED",
+        "rewrites VARIABLE_ACTION_TASK_CREATED transition ACKED → READY_TO_DISPATCH"
+      ],
+      "reads": [
+        "NEW facts.record_json type/source/status/reason"
+      ],
+      "semantic_family": [
+        "operation.plan",
+        "action.prescription_spec",
+        "governance.database_automation"
+      ],
+      "authority_class": "LEGACY_DATABASE_OPERATION_PLAN_STATUS_REWRITER",
+      "runtime_reachable": "PROVEN WHEN MIGRATION INSTALLED",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "all facts writers of affected variable-prescription operation-plan records"
+      ],
+      "removal_target": "MOVE SAFETY RULE INTO EXPLICIT OPERATION-PLAN/TASK LIFECYCLE AUTHORITY; RETIRE HIDDEN DB STATUS REWRITE AFTER SHADOW EQUIVALENCE",
+      "audit_note": "Safety direction is correct (prevents task creation from implying ACK), but semantic authority is hidden in a BEFORE INSERT trigger.",
+      "surface_id": "RES-118",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/db/migrations/2026_05_15_fact_envelope_v1.sql",
+      "entrypoint": "database migration installs raw_samples mutation-prevention triggers",
+      "activation_mode": "DATABASE_INTEGRITY_TRIGGER",
+      "writes": [
+        "rejects UPDATE/DELETE on raw_samples; no semantic value mutation"
+      ],
+      "reads": [
+        "raw_samples mutation attempts"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "governance.database_automation"
+      ],
+      "authority_class": "RAW_SAMPLE_APPEND_ONLY_DATABASE_GUARD",
+      "runtime_reachable": "PROVEN WHEN MIGRATION INSTALLED",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "raw evidence store"
+      ],
+      "removal_target": "KEEP APPEND-ONLY INTEGRITY GUARD; REGISTER AS STORAGE GOVERNANCE NOT DECISION AUTHORITY",
+      "surface_id": "RES-119",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/db/migrations/2026_06_04_decision_recommendation_summary_normalization_v1.sql",
+      "entrypoint": "database migration installs BEFORE INSERT trigger on facts",
+      "activation_mode": "DATABASE_COMPATIBILITY_TRIGGER",
+      "writes": [
+        "fills missing decision_recommendation_v1 payload.summary from payload.explain.human"
+      ],
+      "reads": [
+        "NEW decision_recommendation_v1 record_json"
+      ],
+      "semantic_family": [
+        "decision.candidate",
+        "governance.database_automation"
+      ],
+      "authority_class": "LEGACY_RECOMMENDATION_PRESENTATION_NORMALIZER",
+      "runtime_reachable": "PROVEN WHEN MIGRATION INSTALLED",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "legacy recommendation readers/UI"
+      ],
+      "removal_target": "MOVE PRESENTATION NORMALIZATION TO EXPLICIT COMPATIBILITY PROJECTION; DB TRIGGER MUST NOT OWN CANDIDATE SEMANTICS",
+      "audit_note": "Does not change recommendation action/eligibility; it copies human explanation into summary for compatibility.",
+      "surface_id": "RES-120",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/db/migrations/2026_06_05_alert_event_index_seed_idempotent_v1.sql",
+      "entrypoint": "database migration installs BEFORE INSERT trigger on alert_event_index_v1",
+      "activation_mode": "DATABASE_IDEMPOTENCY_TRIGGER",
+      "writes": [
+        "returns NULL to skip duplicate tenant_id/event_id projection inserts"
+      ],
+      "reads": [
+        "alert_event_index_v1"
+      ],
+      "semantic_family": [
+        "governance.database_automation",
+        "governance.trace_projection"
+      ],
+      "authority_class": "ALERT_PROJECTION_IDEMPOTENCY_GUARD",
+      "runtime_reachable": "PROVEN WHEN TABLE/MIGRATION PRESENT",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "alert projection seed/replay"
+      ],
+      "removal_target": "KEEP IDEMPOTENCY GUARD OR REPLACE WITH EXPLICIT UNIQUE/UPSERT CONTRACT; NO PRODUCT DECISION AUTHORITY",
+      "surface_id": "RES-121",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/db/migrations/2026_06_05_device_observation_fact_id_idempotent_v1.sql",
+      "entrypoint": "database migration installs BEFORE INSERT trigger on device_observation_index_v1",
+      "activation_mode": "DATABASE_IDEMPOTENCY_TRIGGER",
+      "writes": [
+        "returns NULL to skip duplicate fact_id projection inserts"
+      ],
+      "reads": [
+        "device_observation_index_v1"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "governance.database_automation"
+      ],
+      "authority_class": "DEVICE_OBSERVATION_PROJECTION_IDEMPOTENCY_GUARD",
+      "runtime_reachable": "PROVEN WHEN TABLE/MIGRATION PRESENT",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "device observation projection seed/replay"
+      ],
+      "removal_target": "KEEP IDEMPOTENCY SEMANTICS; SOURCE OBSERVATION AUTHORITY REMAINS FACT/PROVENANCE, NOT PROJECTION INSERT ORDER",
+      "surface_id": "RES-122",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/db/migrations/2026_06_28_tk9_source_index_and_decision_stage_hotfix_v1.sql",
+      "entrypoint": "database migration backfill + decision_cycle_v1 BEFORE INSERT/UPDATE trigger",
+      "activation_mode": "HISTORICAL_COMPATIBILITY_BACKFILL_AND_RUNTIME_PROJECTION_TRIGGER",
+      "writes": [
+        "field_index_v1 project_id/group_id compatibility backfill",
+        "water_state compatibility aliases",
+        "decision_cycle_v1 current_stage normalization"
+      ],
+      "reads": [
+        "water_state_estimate_index_v1",
+        "soil_moisture_sensing_window_index_v1",
+        "weather_forecast_index_v1",
+        "decision_cycle_v1 state_machine_json"
+      ],
+      "semantic_family": [
+        "governance.trace_projection",
+        "context.snapshot",
+        "governance.database_automation"
+      ],
+      "authority_class": "TWIN_KERNEL_COMPATIBILITY_SCOPE_BACKFILL_AND_STAGE_NORMALIZER",
+      "runtime_reachable": "BACKFILL HISTORICAL; STAGE TRIGGER RUNTIME IF decision_cycle_v1 PRESENT",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "Twin Kernel source-index joins",
+        "decision-cycle read models"
+      ],
+      "removal_target": "KEEP STAGE PROJECTION FAIL-CLOSED; RETIRE COMPATIBILITY SCOPE INFERENCE AFTER EXPLICIT FIELD/SCOPE AUTHORITY MIGRATION",
+      "audit_note": "Scope backfill uses DISTINCT ON tenant_id,field_id with ORDER BY project_id,group_id across source indexes. If multiple scope candidates exist, lexicographic selection is deterministic compatibility, not authoritative reconciliation.",
+      "surface_id": "RES-123",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/db/migrations/2026_07_17_mcft_cap_06_calibration_governance_persistence.sql",
+      "entrypoint": "MCFT-CAP-06 migration installs calibration governance database functions/triggers",
+      "activation_mode": "MCFT_OWNED_DATABASE_AUTOMATION",
+      "writes": [
+        "MCFT calibration governance persistence constraints/automation"
+      ],
+      "reads": [
+        "MCFT calibration canonical persistence state"
+      ],
+      "semantic_family": [
+        "governance.database_automation",
+        "twin.state"
+      ],
+      "authority_class": "MCFT_CAP06_CALIBRATION_DATABASE_AUTOMATION",
+      "runtime_reachable": "MCFT_OWNED; DO_NOT MODIFY FROM BLINE",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "MCFT calibration persistence"
+      ],
+      "removal_target": "DO_NOT_MODIFY_IN_BLINE; FINAL_TYPED_INTEGRATION_ONLY_AFTER_MCFT_COMPLETE",
+      "surface_id": "RES-124",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/db/migrations/2026_07_20_mcft_cap_07_fact_visibility_support.sql",
+      "entrypoint": "MCFT-CAP-07 migration installs fact-visibility/epoch authority triggers",
+      "activation_mode": "MCFT_OWNED_DATABASE_AUTOMATION",
+      "writes": [
+        "maintains/enforces MCFT fact visibility index and epoch lifecycle",
+        "rejects unauthorized/invalid visibility mutations"
+      ],
+      "reads": [
+        "MCFT canonical facts",
+        "visibility epoch/index metadata"
+      ],
+      "semantic_family": [
+        "governance.database_automation",
+        "governance.trace_projection"
+      ],
+      "authority_class": "MCFT_CAP07_FACT_VISIBILITY_DATABASE_AUTHORITY",
+      "runtime_reachable": "MCFT_OWNED; DO_NOT MODIFY FROM BLINE",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "MCFT fact visibility/readback"
+      ],
+      "removal_target": "DO_NOT_MODIFY_IN_BLINE; FINAL_TYPED_INTEGRATION ONLY AFTER MCFT COMPLETE",
+      "surface_id": "RES-125",
+      "b02_registered": false
     }
   ],
   "cross_branch_surfaces": [
