@@ -17,6 +17,10 @@ const DB_PATH = path.join(
   ROOT,
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OPERATIONAL-DATABASE-CANDIDATE-V1.json",
 );
+const OWNER_AUTH_PATH = path.join(
+  ROOT,
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json",
+);
 const OWNER_ROLES = [
   "geox_mcft_cap09_evidence_writer_owner_v1",
   "geox_mcft_cap09_twin_writer_owner_v1",
@@ -121,6 +125,26 @@ function validateAuthorityFiles() {
   ]) {
     assert.equal(arm[key], false, "SCHEMA_ACL_LATER_AUTHORITY_FORBIDDEN:" + key);
   }
+
+  const owner = JSON.parse(fs.readFileSync(OWNER_AUTH_PATH, "utf8"));
+  const loginEvidence = owner.service_login_materialization_evidence || null;
+  const durableServiceLoginClosure =
+    loginEvidence?.status === "IMMUTABLE_SUCCESS" &&
+    loginEvidence?.workflow === "mcft-cap-09-production-service-login-provision-one-shot" &&
+    loginEvidence?.subject_sha === "5979f15749b0aa7e40a27daf14b957661345d8cd" &&
+    loginEvidence?.run_id === 33416708461 &&
+    loginEvidence?.artifact_id === 9767296933 &&
+    loginEvidence?.artifact_digest ===
+      "sha256:f77622ffd4e60556b5437b52f72e95704be45b5e9bc50ef2b0cf78db82ef0ac7" &&
+    loginEvidence?.database_name === TARGET_DB &&
+    loginEvidence?.exact_one_privilege_membership_each === true &&
+    loginEvidence?.login_roles_have_no_direct_public_acl === true &&
+    loginEvidence?.login_roles_own_zero_database_objects === true &&
+    loginEvidence?.evidence_login_connectivity_proven === true &&
+    loginEvidence?.twin_login_connectivity_proven === true &&
+    loginEvidence?.disarmed_after_success === true;
+
+  return { durableServiceLoginClosure };
 }
 
 function currentCapabilities(url) {
@@ -369,8 +393,47 @@ function assertMaterialized(url) {
   };
 }
 
+function assertExactDurableProductionLogins(url) {
+  const loginRows = rows(
+    url,
+    [
+      "SELECT rolname,rolcanlogin::text,rolsuper::text,rolcreatedb::text,rolcreaterole::text,rolreplication::text,rolbypassrls::text",
+      "  FROM pg_catalog.pg_roles",
+      " WHERE rolname IN ('geox_mcft_cap09_evidence_runtime_login_v1','geox_mcft_cap09_twin_runtime_login_v1')",
+      " ORDER BY rolname;",
+    ].join("\n"),
+  );
+  assert.equal(loginRows.length, 2, "SCHEMA_ACL_EXACT_TWO_DURABLE_PRODUCTION_LOGINS_REQUIRED");
+  for (const row of loginRows) {
+    assert.equal(bool(row[1]), true, "SCHEMA_ACL_DURABLE_LOGIN_ATTRIBUTE_REQUIRED:" + row[0]);
+    for (let index = 2; index <= 6; index += 1) {
+      assert.equal(bool(row[index]), false, "SCHEMA_ACL_DURABLE_LOGIN_RESTRICTED_ATTRIBUTE:" + row[0]);
+    }
+  }
+
+  const membershipRows = rows(
+    url,
+    [
+      "SELECT member.rolname,granted.rolname",
+      "  FROM pg_catalog.pg_auth_members m",
+      "  JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid",
+      "  JOIN pg_catalog.pg_roles member ON member.oid=m.member",
+      " WHERE member.rolname IN ('geox_mcft_cap09_evidence_runtime_login_v1','geox_mcft_cap09_twin_runtime_login_v1')",
+      " ORDER BY member.rolname,granted.rolname;",
+    ].join("\n"),
+  );
+  assert.deepEqual(
+    membershipRows,
+    [
+      ["geox_mcft_cap09_evidence_runtime_login_v1", "geox_mcft_cap09_evidence_runtime_v1"],
+      ["geox_mcft_cap09_twin_runtime_login_v1", "geox_mcft_cap09_twin_runtime_v1"],
+    ],
+    "SCHEMA_ACL_DURABLE_LOGIN_EXACT_MEMBERSHIP_MATRIX_REQUIRED",
+  );
+}
+
 function main() {
-  validateAuthorityFiles();
+  const authorityState = validateAuthorityFiles();
 
   const subjectSha = requiredEnv("SUBJECT_SHA");
   assert.match(subjectSha, /^[0-9a-f]{40}$/, "SCHEMA_ACL_READINESS_SUBJECT_REQUIRED");
@@ -398,7 +461,12 @@ function main() {
     ) || "0",
   );
   const memberships = membershipState(targetUrl);
-  assert.equal(loginCount, 0, "SCHEMA_ACL_PRODUCTION_LOGIN_MUST_BE_ABSENT");
+  if (authorityState.durableServiceLoginClosure) {
+    assert.equal(loginCount, 2, "SCHEMA_ACL_POST_7E_EXACT_TWO_PRODUCTION_LOGINS_REQUIRED");
+    assertExactDurableProductionLogins(targetUrl);
+  } else {
+    assert.equal(loginCount, 0, "SCHEMA_ACL_PRE_7E_PRODUCTION_LOGIN_MUST_BE_ABSENT");
+  }
   assert.equal(
     memberships.effectiveSetCount,
     0,
@@ -418,6 +486,11 @@ function main() {
     database_name: TARGET_DB,
     ...capabilities,
     service_login_role_count: loginCount,
+    service_login_state: authorityState.durableServiceLoginClosure
+      ? "DURABLE_EXACT_TWO_POST_7E"
+      : "ABSENT_PRE_7E",
+    service_login_materialization_evidence_bound:
+      authorityState.durableServiceLoginClosure,
     provisioning_admin_writer_owner_set_membership_residual_count:
       memberships.effectiveSetCount,
     provisioning_admin_writer_owner_effective_set_role_count:
@@ -426,7 +499,7 @@ function main() {
       memberships.selfGrantCount,
     writer_owner_management_membership_rows: memberships.membershipRows,
     schema_acl_arm: false,
-    service_login_created: false,
+    service_login_created: authorityState.durableServiceLoginClosure,
     runtime_process_start: false,
     production_owner_activation: false,
     provider_request_count: 0,
