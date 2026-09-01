@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 
 export type SamplingScopeV1 = {
@@ -40,6 +40,45 @@ const INSERT_FACT_SQL = `
 
 function scopeParams(scope: SamplingScopeV1): [string, string, string] {
   return [scope.tenant_id, scope.project_id, scope.group_id];
+}
+
+function samplingIdentityHashV1(parts: Array<string | null | undefined>): string {
+  return createHash("sha256").update(parts.map((part) => String(part ?? "")).join("\n"), "utf8").digest("hex");
+}
+
+function deterministicReceiptIdentityV1(scope: SamplingScopeV1, sample_id: string): { receipt_id: string; fact_id: string } {
+  const digest = samplingIdentityHashV1(["sample_receipt_v1", ...scopeParams(scope), sample_id]);
+  return {
+    receipt_id: `sample_receipt_${digest.slice(0, 32)}`,
+    fact_id: `sr_${digest}`,
+  };
+}
+
+function deterministicAcceptanceIdentityV1(input: {
+  tenant_id: string;
+  project_id: string;
+  group_id: string;
+  sampling_plan_fact_id: string;
+  sample_receipt_fact_id?: string | null;
+  lab_result_fact_id?: string | null;
+  sample_id: string;
+  import_id?: string | null;
+}): { acceptance_id: string; fact_id: string } {
+  const digest = samplingIdentityHashV1([
+    "sampling_acceptance_v1",
+    input.tenant_id,
+    input.project_id,
+    input.group_id,
+    input.sampling_plan_fact_id,
+    input.sample_receipt_fact_id ?? null,
+    input.lab_result_fact_id ?? null,
+    input.sample_id,
+    input.import_id ?? null,
+  ]);
+  return {
+    acceptance_id: `sampling_acceptance_${digest.slice(0, 32)}`,
+    fact_id: `sa_${digest}`,
+  };
 }
 
 export class SamplingServiceV1 {
@@ -174,8 +213,7 @@ export class SamplingServiceV1 {
     const existing = await this.findReceiptBySampleId(input.sample_id, scope);
     if (existing) throw new SamplingServiceErrorV1("DUPLICATE:sample_id", 409);
 
-    const receipt_id = randomUUID();
-    const fact_id = `sr_${receipt_id}`;
+    const { receipt_id, fact_id } = deterministicReceiptIdentityV1(scope, input.sample_id);
 
     const record_json: Record<string, unknown> = {
       type: "sample_receipt_v1",
@@ -202,7 +240,14 @@ export class SamplingServiceV1 {
       override_reason: input.override_reason ?? null,
     };
 
-    await this.insertFact({ fact_id, occurred_at: new Date().toISOString(), source: "api_v1_sampling", record_json });
+    try {
+      await this.insertFact({ fact_id, occurred_at: new Date().toISOString(), source: "api_v1_sampling", record_json });
+    } catch (error) {
+      if (error instanceof SamplingServiceErrorV1 && error.message === "FACT_INSERT_CONFLICT_OR_FAILED") {
+        throw new SamplingServiceErrorV1("DUPLICATE:sample_id", 409);
+      }
+      throw error;
+    }
     return { receipt_id, fact_id };
   }
 
@@ -315,7 +360,7 @@ export class SamplingServiceV1 {
       throw new SamplingServiceErrorV1("INVALID_ACCEPTANCE_SCOPE", 400);
     }
 
-    const existing = await this.pool.query(
+    const findExisting = async () => this.pool.query(
       `SELECT fact_id, record_json
          FROM facts
         WHERE (record_json::jsonb->>'type') = 'sampling_acceptance_v1'
@@ -339,11 +384,13 @@ export class SamplingServiceV1 {
         input.import_id ?? null,
       ],
     );
-    if ((existing.rows?.length ?? 0) > 1) {
-      throw new SamplingServiceErrorV1("AMBIGUOUS:sampling_acceptance_v1", 409);
-    }
-    if (existing.rows?.[0]) {
-      const existingRecord = existing.rows[0].record_json ?? {};
+
+    const resolveExisting = (rows: any[]): { acceptance_id: string; fact_id: string } | null => {
+      if (rows.length > 1) {
+        throw new SamplingServiceErrorV1("AMBIGUOUS:sampling_acceptance_v1", 409);
+      }
+      if (!rows[0]) return null;
+      const existingRecord = rows[0].record_json ?? {};
       const existingReasons = Array.isArray(existingRecord.reasons) ? existingRecord.reasons.map(String) : [];
       if (String(existingRecord.verdict ?? "") !== input.verdict
         || JSON.stringify(existingReasons) !== JSON.stringify(input.reasons)) {
@@ -351,12 +398,13 @@ export class SamplingServiceV1 {
       }
       const acceptanceId = String(existingRecord.acceptance_id ?? "").trim();
       if (!acceptanceId) throw new SamplingServiceErrorV1("INVALID:sampling_acceptance_identity", 409);
-      return { acceptance_id: acceptanceId, fact_id: String(existing.rows[0].fact_id), idempotent: true };
-    }
+      return { acceptance_id: acceptanceId, fact_id: String(rows[0].fact_id) };
+    };
 
-    const acceptance_id = randomUUID();
-    const fact_id = `sa_${acceptance_id}`;
+    const before = resolveExisting((await findExisting()).rows ?? []);
+    if (before) return { ...before, idempotent: true };
 
+    const { acceptance_id, fact_id } = deterministicAcceptanceIdentityV1(input);
     const record_json: Record<string, unknown> = {
       type: "sampling_acceptance_v1",
       schema_version: "1",
@@ -377,8 +425,15 @@ export class SamplingServiceV1 {
       evidence_refs: input.evidence_refs,
     };
 
-    await this.insertFact({ fact_id, occurred_at: new Date().toISOString(), source: "api_v1_sampling", record_json });
-    return { acceptance_id, fact_id, idempotent: false };
+    try {
+      await this.insertFact({ fact_id, occurred_at: new Date().toISOString(), source: "api_v1_sampling", record_json });
+      return { acceptance_id, fact_id, idempotent: false };
+    } catch (error) {
+      if (!(error instanceof SamplingServiceErrorV1) || error.message !== "FACT_INSERT_CONFLICT_OR_FAILED") throw error;
+      const raced = resolveExisting((await findExisting()).rows ?? []);
+      if (raced) return { ...raced, idempotent: true };
+      throw error;
+    }
   }
 
   async getPlan(plan_id: string): Promise<SamplingFactRowV1 | null> {
