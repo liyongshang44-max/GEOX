@@ -126,7 +126,7 @@ try {
 
   const kbsSnapshotComparison = read(authority.kbs_publication_snapshot_comparison_ref);
   includes(kbsSnapshotComparison, "HISTORICAL_DRIFT", "KBS_HISTORICAL_DRIFT_STATE_REQUIRED");
-  includes(kbsSnapshotComparison, "BASELINE_POINTER_SNAPSHOT_MISMATCH", "KBS_BASELINE_SNAPSHOT_IDENTITY_BOUNDARY_REQUIRED");
+  includes(kbsSnapshotComparison, "previousLatest !== baseline", "KBS_BASELINE_SNAPSHOT_IDENTITY_BOUNDARY_REQUIRED");
   includes(kbsSnapshotComparison, "historical_revision_or_backfill_auto_promotion_authorized", "KBS_HISTORICAL_AUTO_PROMOTION_FORBIDDEN_MARKER_REQUIRED");
   assert.equal(kbsSnapshotComparison.includes("fetch("), false, "KBS_SNAPSHOT_COMPARISON_PROVIDER_FETCH_FORBIDDEN");
   assert.equal(kbsSnapshotComparison.includes("INSERT INTO"), false, "KBS_SNAPSHOT_COMPARISON_DB_WRITE_FORBIDDEN");
