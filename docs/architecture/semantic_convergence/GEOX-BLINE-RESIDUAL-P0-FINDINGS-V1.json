@@ -161,6 +161,25 @@
       ],
       "semantic_risk": "caller-provided execution claims can be promoted into an authoritative-looking fertilization acceptance PASS without proving execution provenance",
       "required_direction": "fertilization acceptance must consume exact canonical execution evidence / receipt / AsExecuted bindings and fail closed on missing provenance; acceptance evaluation should require the dedicated acceptance authority scope"
+    },
+    {
+      "finding_id": "P0-RES-010",
+      "severity": "P0",
+      "title": "Sampling acceptance uses latest-wins receipt/lab selection when exact source identity is not supplied",
+      "paths": [
+        "apps/server/src/routes/v1/sampling.ts",
+        "apps/server/src/services/sampling/sampling_service_v1.ts"
+      ],
+      "evidence": [
+        "POST /api/v1/sampling/acceptance/evaluate makes import_id optional",
+        "findReceiptBySampleId selects sample_receipt_v1 by sample_id ORDER BY occurred_at DESC LIMIT 1",
+        "findLabResultBySampleId without import_id uses the shared FIND_FACT_SQL ORDER BY occurred_at DESC LIMIT 1",
+        "createReceipt can append multiple receipts for the same sample_id because receipt_id is independently generated",
+        "createLabResult can append multiple imports for the same sample_id because import_id may be independently generated",
+        "the selected receipt/lab rows determine PASS/FAIL/INSUFFICIENT_EVIDENCE"
+      ],
+      "semantic_risk": "later receipt or lab facts can silently change which evidence is treated as authoritative for sampling acceptance without an explicit exact source binding",
+      "required_direction": "sampling acceptance must bind exact receipt and lab-import identities (or an explicit immutable version relation) and fail closed on ambiguity; latest-wins selection is forbidden"
     }
   ]
 }
