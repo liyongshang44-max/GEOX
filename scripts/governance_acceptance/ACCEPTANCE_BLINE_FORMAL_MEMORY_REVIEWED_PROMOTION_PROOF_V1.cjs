@@ -26,8 +26,7 @@ const forbid = (key, tokens) => {
 
 forbid("service", [
   "loadAcceptanceResultForMemoryV1",
-  "fact_id = $4)",
-  "ORDER BY occurred_at DESC, fact_id DESC\n      LIMIT 1",
+  "((record_json::jsonb#>>'{payload,acceptance_id}') = $4 OR fact_id = $4)",
 ]);
 
 need("route", [
