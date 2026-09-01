@@ -436,7 +436,7 @@
       ],
       "removal_target": "KEEP READ COMPATIBILITY; MOVE WRITE AUTHORITY TO CANONICAL CANDIDATE SUBMISSION THEN RETIRE LEGACY WRITER AFTER CUTOVER",
       "b02_registered": false,
-      "audit_note": "Previous STALE_ORPHAN classification was factually wrong. Split legacy read/write wrappers still call into this file, and the write wrapper re-registers two POST surfaces. File header says read-only/no recommendation writes while implementation persists decision_recommendation_v1."
+      "audit_note": "Root-zone candidate submission now requires exact tenant/project/group/field/zone/scenario_set lookup; degraded tenant+field fallback removed; DB query errors propagate."
     },
     {
       "surface_id": "RES-014",
@@ -5693,7 +5693,7 @@
       "removal_target": "Keep legacy scenario read/submit compatibility; scenario authority stays legacy Twin/MCFT-derived and candidate source binding must fail closed",
       "b02_registered": false,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
-      "audit_note": "Operator Twin consumes ScenarioSet to build recommendation/candidate submission; it is not ScenarioSet authority."
+      "audit_note": "Operator Twin remains ScenarioSet consumer only; root-zone recommendation submission cannot widen scope or substitute a weaker latest candidate."
     },
     {
       "surface_id": "RES-225",
