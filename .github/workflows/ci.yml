@@ -76,6 +76,9 @@ jobs:
       - name: B-Line Formal Memory scope provenance
         run: pnpm run ci:governance:bline-formal-memory-scope-provenance
 
+      - name: B-Line Sampling exact source binding
+        run: pnpm run ci:governance:bline-sampling-exact-source-binding
+
       - name: Route response ownership guard
         run: pnpm run ci:route-response-ownership
 
@@ -252,6 +255,32 @@ jobs:
           export API_BASE_URL=http://127.0.0.1:3001
           export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
           node scripts/governance_acceptance/ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1.cjs --base-url http://127.0.0.1:3001 --tenant tenantA 2>&1 | tee acceptance-output/c8-formal-chain-backend-p0.log
+
+      - name: Run Sampling exact-source release gate
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export API_BASE_URL=http://127.0.0.1:3001
+          export GEOX_BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          pnpm run ci:scenario:sampling
+
+      - name: Run Fertilization exact-Sampling-consumer regression gate
+        timeout-minutes: 30
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export API_BASE_URL=http://127.0.0.1:3001
+          export GEOX_BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          pnpm run ci:scenario:fertilization
 
       - name: Install Playwright Chromium for frontend audit
         timeout-minutes: 5

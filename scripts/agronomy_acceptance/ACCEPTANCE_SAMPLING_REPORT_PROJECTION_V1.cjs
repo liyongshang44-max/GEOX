@@ -165,6 +165,37 @@ async function main() {
     'operation report must not attach latest unbound sampling plan by field fallback',
   );
 
+  requireOk(await fetchJson(`${baseUrl}/api/v1/sampling/plan`, {
+    method: 'POST',
+    token,
+    body: {
+      ...scope,
+      field_id,
+      reason: 'MANUAL_REQUEST',
+      sample_type: 'SOIL',
+      required_points: 1,
+      evidence_refs: [],
+      operation_id: operationId,
+    },
+  }), 'create second operation-bound sampling plan');
+
+  const ambiguousOperationReport = requireOk(await fetchJson(reportPath, {
+    method: 'GET',
+    token,
+  }), 'query operation report after ambiguous sampling relation');
+  const ambiguousJson = extractOperationReport(ambiguousOperationReport);
+  assert.equal(
+    ambiguousJson?.sampling?.customer_visible_eligible,
+    false,
+    'ambiguous Sampling operation relation must fail closed from customer visibility',
+  );
+  assert.equal(
+    Array.isArray(ambiguousJson?.sampling?.blocking_reasons)
+      && ambiguousJson.sampling.blocking_reasons.includes('AMBIGUOUS_SAMPLING_OPERATION_RELATION'),
+    true,
+    'ambiguous Sampling operation relation must emit explicit blocking reason',
+  );
+
   console.log(JSON.stringify({
     ok: true,
     suite: 'ACCEPTANCE_SAMPLING_REPORT_PROJECTION_V1',
@@ -178,6 +209,7 @@ async function main() {
       operation_report_sampling_lab_status_pass: true,
       operation_report_sampling_acceptance_status_pass: true,
       operation_report_does_not_use_field_latest_sampling_fallback: true,
+      operation_report_blocks_ambiguous_sampling_relation: true,
     },
   }, null, 2));
 }

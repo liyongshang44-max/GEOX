@@ -25,6 +25,8 @@ async function main() {
     acceptance_api_live_called: false,
     invalid_lab_result_not_pass: false,
     acceptance_missing_receipt_uses_plan_scope: false,
+    duplicate_sample_receipt_rejected: false,
+    repeat_acceptance_same_exact_fact: false,
   };
 
   try {
@@ -96,12 +98,37 @@ async function main() {
     checks.sample_receipt_created = true;
     checks.sample_receipt_refs_ao_sense_receipt = true;
 
+    const duplicateReceipt = await fetchJson(`${base}/api/v1/sampling/receipt`, {
+      method: 'POST',
+      token,
+      body: {
+        plan_id: plan.plan_id,
+        sample_id,
+        tenant_id: scope.tenant_id,
+        project_id: scope.project_id,
+        group_id: scope.group_id,
+        field_id: `field_${run}`,
+        collected_at_ts: Date.now() + 1,
+        collector_actor_id: 'collector_formal_sampling_duplicate',
+        sample_type: 'SOIL',
+        chain_of_custody_status: 'RECORDED',
+        evidence_refs: [{ kind: 'fact_id', ref_id: aoSenseReceiptFactId }],
+      },
+    });
+    assert.equal(duplicateReceipt.status, 409, `duplicate sample_id receipt must fail closed with 409; got ${duplicateReceipt.status} body=${duplicateReceipt.text}`);
+    checks.duplicate_sample_receipt_rejected = true;
+
     const lab = requireOk(await fetchJson(`${base}/api/v1/sampling/lab-result`, { method: 'POST', token, body: { sample_id, imported_at_ts: Date.now(), metrics: { ph: 6.5, ec: 1.2 }, units: { ph: 'pH', ec: 'mS/cm' }, evidence_refs: [{ kind: 'import_run_v1', ref_id: rid('import_run') }], quality_status: 'PASS' } }), 'import lab result');
     checks.lab_result_imported = true;
 
     const acceptance = requireOk(await fetchJson(`${base}/api/v1/sampling/acceptance/evaluate`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_id, import_id: lab.import_id } }), 'evaluate sampling acceptance');
     checks.acceptance_api_live_called = true;
     checks.sampling_acceptance_evaluated = ['PASS', 'FAIL', 'INSUFFICIENT_EVIDENCE'].includes(acceptance.verdict);
+
+    const acceptanceRepeat = requireOk(await fetchJson(`${base}/api/v1/sampling/acceptance/evaluate`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_id, import_id: lab.import_id } }), 'repeat exact sampling acceptance');
+    assert.equal(acceptanceRepeat.fact_id, acceptance.fact_id, 'same exact Sampling source chain must return the same acceptance fact_id');
+    assert.equal(acceptanceRepeat.acceptance_id, acceptance.acceptance_id, 'same exact Sampling source chain must return the same acceptance_id');
+    checks.repeat_acceptance_same_exact_fact = true;
 
     const sample = requireOk(await fetchJson(`${base}/api/v1/sampling/sample/${sample_id}`, { method: 'GET', token }), 'fetch sample by sample_id');
     assert.equal(
