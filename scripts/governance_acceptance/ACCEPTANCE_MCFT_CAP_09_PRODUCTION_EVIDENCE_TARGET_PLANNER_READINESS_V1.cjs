@@ -29,7 +29,7 @@ try {
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
   assert.equal(authority.status, "KBS_PUBLICATION_CYCLE_ADAPTER_IMPLEMENTED_PRODUCTION_SCHEMA_AND_DUE_AUTHORITY_REMAIN");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "63c56f2e732f568f927c554dddb64e4a7b788ec3");
+  assert.equal(authority.subject_predecessor_sha, "5f0bca94196fcd98191a145ad48ebec9ad1ff631");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
