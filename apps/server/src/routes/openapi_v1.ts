@@ -1312,6 +1312,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             status: { type: "string", enum: ["TASK_CREATED", "DISPATCH_PENDING", "DISPATCHED", "RETRY_DISPATCHED", "ACKED", "RECEIPT_PENDING", "EXECUTION_FAILED", "RECEIPT_RECEIVED", "COMPLETED", "UNKNOWN"] },
             execution_mode: { type: "string", nullable: true },
             task_created_at: { type: "string", format: "date-time", nullable: true },
+            dispatch_requested_at: { type: "string", format: "date-time", nullable: true },
             dispatched_at: { type: "string", format: "date-time", nullable: true },
             acked_at: { type: "string", format: "date-time", nullable: true },
             receipt_received_at: { type: "string", format: "date-time", nullable: true },
@@ -1865,7 +1866,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
       "/api/v1/operator/dispatch/{taskId}/dispatch": {
         post: {
           tags: ["operations"],
-          summary: "Dispatch task",
+          summary: "Request task dispatch",
           parameters: [
             { name: "taskId", in: "path", required: true, schema: { type: "string" } }
           ],
@@ -1897,7 +1898,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
       "/api/v1/operator/dispatch/{taskId}/retry": {
         post: {
           tags: ["operations"],
-          summary: "Retry dispatch task",
+          summary: "Request task redispatch",
           parameters: [
             { name: "taskId", in: "path", required: true, schema: { type: "string" } }
           ],
