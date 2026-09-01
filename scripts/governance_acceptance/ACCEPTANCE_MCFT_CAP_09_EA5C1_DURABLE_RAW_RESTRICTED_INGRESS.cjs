@@ -169,7 +169,8 @@ if (validationMode === "SUCCESSOR_MAINTENANCE_REVALIDATION") {
   for (const marker of [
     "request_id: requestId",
     "source_locator: finalLocator",
-    "replay_complete_raw_provenance_required: true",
+    "factText.includes('\"request_id\"')",
+    "factText.includes('\"source_locator\"')",
   ]) {
     if (!successorAcceptance.includes(marker)) {
       fail(`EA5C1_SUCCESSOR_REPLAY_COMPLETE_PROOF_MARKER_MISSING:${marker}`);
