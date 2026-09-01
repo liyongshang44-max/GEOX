@@ -2504,6 +2504,156 @@
       "removal_target": "KEEP TRANSPORT INGEST; PRESERVE SOURCE/EVENT-TIME PROVENANCE; CANONICAL OBSERVATION/EQ MUST REMAIN EXPLICIT",
       "surface_id": "RES-093",
       "b02_registered": false
+    },
+    {
+      "source_path": "packages/device-skills/src/index.ts",
+      "entrypoint": "@geox/device-skills imported by control_ao_act.ts, task_service.ts and server sensing facade",
+      "activation_mode": "ACTIVE_SHARED_RUNTIME_LIBRARY",
+      "writes": [
+        "in-memory task capability resolution",
+        "in-memory compatibility/evidence requirements",
+        "in-memory derived sensing state"
+      ],
+      "reads": [
+        "AO-ACT task payload",
+        "adapter_type",
+        "device_observation_v1"
+      ],
+      "semantic_family": [
+        "execution.adapter_resolution",
+        "twin.state"
+      ],
+      "authority_class": "DEVICE_SKILL_CAPABILITY_AND_SENSING_AUTHORITY_LIBRARY",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "AO-ACT task/control-plane dispatch preparation",
+        "fertility sensing facade"
+      ],
+      "removal_target": "KEEP AS TYPED CAPABILITY/INFERENCE LIBRARY; MUST NOT BECOME DISPATCH DELIVERY OR CANONICAL STATE AUTHORITY WITHOUT EXPLICIT PORT",
+      "surface_id": "RES-094",
+      "b02_registered": false
+    },
+    {
+      "source_path": "packages/device-skills/src/fertility_inference_core_v1.ts",
+      "entrypoint": "re-exported by @geox/device-skills and called by server fertility_inference_v1.ts",
+      "activation_mode": "ACTIVE_SHARED_RUNTIME_LIBRARY",
+      "writes": [
+        "in-memory FertilityInferenceV1Result / derived sensing semantics"
+      ],
+      "reads": [
+        "device observation / normalized sensing aggregate"
+      ],
+      "semantic_family": [
+        "twin.state",
+        "evidence.qualification"
+      ],
+      "authority_class": "FERTILITY_DERIVED_SENSING_AUTHORITY_CORE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "server fertility inference",
+        "sensing pipeline"
+      ],
+      "removal_target": "KEEP DERIVED-SENSING CALCULATION; CANONICAL STATE/EQ AUTHORITY MUST REMAIN EXPLICIT DOWNSTREAM",
+      "surface_id": "RES-095",
+      "b02_registered": false
+    },
+    {
+      "source_path": "packages/device-skills/src/pump_controller_v1.ts",
+      "entrypoint": "registered in deviceSkillRegistry via packages/device-skills/src/index.ts",
+      "activation_mode": "ACTIVE_REGISTERED_DEVICE_SKILL",
+      "writes": [
+        "in-memory START_PUMP/STOP_PUMP/ADJUST_FLOW capability resolution and evidence requirements"
+      ],
+      "reads": [
+        "AO-ACT task payload and adapter compatibility"
+      ],
+      "semantic_family": [
+        "execution.adapter_resolution"
+      ],
+      "authority_class": "PUMP_DEVICE_CAPABILITY_RESOLVER",
+      "runtime_reachable": "PROVEN_THROUGH_DEVICE_SKILL_REGISTRY",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "task_service/control_ao_act adapter selection"
+      ],
+      "removal_target": "KEEP AS PRE-DISPATCH CAPABILITY RESOLUTION; NO DISPATCHED/ACKED AUTHORITY",
+      "surface_id": "RES-096",
+      "b02_registered": false
+    },
+    {
+      "source_path": "packages/device-skills/src/sprayer_unit_v1.ts",
+      "entrypoint": "registered in deviceSkillRegistry via packages/device-skills/src/index.ts",
+      "activation_mode": "ACTIVE_REGISTERED_DEVICE_SKILL",
+      "writes": [
+        "in-memory SPRAY_PESTICIDE capability resolution and evidence requirements"
+      ],
+      "reads": [
+        "AO-ACT task payload and adapter compatibility"
+      ],
+      "semantic_family": [
+        "execution.adapter_resolution"
+      ],
+      "authority_class": "SPRAYER_DEVICE_CAPABILITY_RESOLVER",
+      "runtime_reachable": "PROVEN_THROUGH_DEVICE_SKILL_REGISTRY",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "task_service/control_ao_act adapter selection"
+      ],
+      "removal_target": "KEEP AS PRE-DISPATCH CAPABILITY RESOLUTION; NO DISPATCHED/ACKED/ACCEPTANCE AUTHORITY",
+      "surface_id": "RES-097",
+      "b02_registered": false
+    },
+    {
+      "source_path": "packages/skill-registry/src/index.ts",
+      "entrypoint": "@geox/skill-registry imported by legacy agronomy_rule_registry.ts",
+      "activation_mode": "LEGACY_RUNTIME_LIBRARY_DEFAULT_DISABLED",
+      "writes": [
+        "in-memory skill binding selection",
+        "indirect skill_binding_v1 facts through injected appendSkillBindingFact"
+      ],
+      "reads": [
+        "projected skill_binding_v1 rows",
+        "tenant/crop/scope priority"
+      ],
+      "semantic_family": [
+        "governance.skill_binding"
+      ],
+      "authority_class": "LEGACY_SKILL_BINDING_SELECTOR_LIBRARY",
+      "runtime_reachable": "ONLY_WHEN_GEOX_DISABLE_LEGACY_SKILLS=false",
+      "feature_flag": "GEOX_DISABLE_LEGACY_SKILLS",
+      "downstream_consumers": [
+        "legacy agronomy rule skill selection"
+      ],
+      "removal_target": "KEEP DEFAULT FAIL-CLOSED; DO NOT REACTIVATE AS PARALLEL DECISION/EXECUTION AUTHORITY WITHOUT EXPLICIT GOVERNANCE",
+      "surface_id": "RES-098",
+      "b02_registered": false
+    },
+    {
+      "source_path": "packages/control-kernel/src/kernel.ts",
+      "entrypoint": "@geox/control-kernel pure library; no current app runtime import found",
+      "activation_mode": "REGISTERED_CAPABILITY_ISLAND",
+      "writes": [
+        "in-memory ControlVerdictV0 ALLOW/DENY/UNDETERMINED"
+      ],
+      "reads": [
+        "ProblemState-like input",
+        "UncertaintyEnvelope-like input",
+        "PermissionSet candidate_actions",
+        "ControlRuleSetV0"
+      ],
+      "semantic_family": [
+        "decision.control_gate"
+      ],
+      "authority_class": "LEGACY_CONTROL_VERDICT_AUTHORITY_CAPABILITY",
+      "runtime_reachable": "NOT_PROVEN_CURRENT_APP_CALLER",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "DO NOT EQUATE WITH DECISION_ELIGIBILITY; KEEP ISOLATED OR RETIRE AFTER CANONICAL ELIGIBILITY/CONTROL BOUNDARY IS EXPLICIT",
+      "audit_note": "Pure evaluator emits ALLOW/DENY/UNDETERMINED; evaluated_at_ts uses Date.now and verdict_id includes a random suffix, so it must not be promoted to causal decision authority unchanged.",
+      "surface_id": "RES-099",
+      "b02_registered": false
     }
   ],
   "cross_branch_surfaces": [
