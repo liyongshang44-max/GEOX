@@ -179,8 +179,6 @@ jobs:
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EVIDENCE_SOURCE_POLL_SCHEDULE_POSTGRES_V1.ts
       - name: Prove durable GFS retry throttle and per-target attempt budget
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_RETRY_SCHEDULE_POSTGRES_V1.ts
-      - name: Prove canonical GFS hourly target-pair history
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts
       - name: Prove fenced KBS publication baseline current pointer
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1.ts
       - name: Prove retained KBS snapshot historical-prefix comparison
@@ -248,6 +246,8 @@ jobs:
           CREATE TABLE public.approvals (id integer PRIMARY KEY);
           CREATE TABLE public.actions (id integer PRIMARY KEY);
           SQL
+      - name: Prove canonical GFS hourly target-pair history
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts
       - name: Prove replay-complete External Evidence fact provenance readback
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_V1.ts
       - name: Prove zero-provider GFS partial-pair retained rehydration
