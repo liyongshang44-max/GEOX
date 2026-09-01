@@ -11,6 +11,7 @@ const files = {
   fertilizationContract: "docs/contracts/FERTILIZATION_DOMAIN_CONTRACT_V1.md",
   inventory: "docs/architecture/semantic_convergence/GEOX-BLINE-RESIDUAL-AUTHORITY-INVENTORY-V1.json",
   ci: ".github/workflows/ci.yml",
+  samplingApi: "scripts/agronomy_acceptance/ACCEPTANCE_SAMPLING_API_V1.cjs",
 };
 
 const source = Object.fromEntries(Object.entries(files).map(([k, p]) => [k, fs.readFileSync(path.join(root, p), "utf8")]));
@@ -28,6 +29,9 @@ function forbid(key, tokens) {
 }
 
 need("service", [
+  "createHash",
+  "deterministicReceiptIdentityV1",
+  "deterministicAcceptanceIdentityV1",
   "const factId = `sp_${plan_id}`",
   "const fact_id = `sl_${import_id}`",
   "AMBIGUOUS:sample_receipt_v1",
@@ -111,6 +115,13 @@ need("fertilizationContract", [
   "Latest-wins Sampling lookup is forbidden",
 ]);
 
+need("samplingApi", [
+  "concurrent_duplicate_sample_id_serialized",
+  "concurrent_acceptance_identity_stable",
+  "Promise.all",
+  "concurrent exact-chain acceptance must converge on one fact_id",
+]);
+
 need("ci", [
   "Run Sampling exact-chain scenario release gate",
   "pnpm run ci:scenario:sampling",
@@ -141,6 +152,8 @@ const stats = {
     && source.route.includes("sampling_plan_fact_id: plan.fact_id"),
   acceptance_exact_refs: ["sampling_plan_fact_id", "sample_receipt_fact_id", "lab_result_fact_id"].every((x) => source.service.includes(x) && source.route.includes(x)),
   acceptance_exact_chain_idempotent: source.service.includes("CONFLICT:sampling_acceptance_exact_chain_verdict") && source.service.includes("idempotent: true"),
+  receipt_identity_race_safe: source.service.includes("deterministicReceiptIdentityV1") && source.samplingApi.includes("concurrent_duplicate_sample_id_serialized"),
+  acceptance_identity_race_safe: source.service.includes("deterministicAcceptanceIdentityV1") && source.samplingApi.includes("concurrent_acceptance_identity_stable"),
   plan_fact_continuity: source.projection.includes("SAMPLING_OPERATION_RELATION_EXACT_PLAN_REF_MISSING")
     && source.fertilization.includes("SAMPLING_RECEIPT_PLAN_FACT_REF_MISMATCH")
     && source.fertilization.includes("SAMPLING_LAB_PLAN_FACT_REF_MISMATCH"),
