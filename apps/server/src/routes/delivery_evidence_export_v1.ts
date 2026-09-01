@@ -354,7 +354,10 @@ const __dirname = path.dirname(__filename);
   job.artifact_sha256 = artifact_sha256; // Record artifact sha256 in job record.
   job.stdout_tail = tailAppend(job.stdout_tail, `artifact:written sha256=${artifact_sha256}\n`); // Append log.
 
-  // 7) Deliberately do not mint Acceptance here. Evidence export is read/packaging authority only.\n  job.stdout_tail = tailAppend(job.stdout_tail, "acceptance:not-written legacy-export-is-non-authoritative\\n");\n\n  // 8) Mark job done.
+  // 7) Deliberately do not mint Acceptance here. Evidence export is read/packaging authority only.
+  job.stdout_tail = tailAppend(job.stdout_tail, "acceptance:not-written legacy-export-is-non-authoritative\n");
+
+  // 8) Mark job done.
   job.state = "done"; // Mark done.
   job.updated_at = Date.now(); // Update timestamp.
 } // End runEvidenceExportJob.
