@@ -836,7 +836,7 @@ export async function loadManualOperationByCommandId(
   pool: Pool,
   tenant: TenantTriple,
   command_id: string
-): Promise<{ operation_id: string; operation_plan_id: string; command_id: string } | null> {
+): Promise<{ operation_id: string; operation_plan_id: string; command_id: string; act_task_id: string } | null> {
   const normalizedCommandId = String(command_id ?? "").trim();
   if (!normalizedCommandId) return null;
   const sql = `
@@ -871,10 +871,30 @@ export async function loadManualOperationByCommandId(
   const operation_id = String(payload.operation_id ?? operation_plan_id).trim() || operation_plan_id;
   const resolvedCommandId = String(row.resolved_command_id ?? "").trim();
   if (!resolvedCommandId) return null;
+  const taskRes = await pool.query(
+    `SELECT fact_id, record_json::jsonb AS record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type') = 'ao_act_task_v0'
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+        AND (record_json::jsonb#>>'{payload,project_id}') = $2
+        AND (record_json::jsonb#>>'{payload,group_id}') = $3
+        AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $4
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 2`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, operation_plan_id]
+  );
+  if ((taskRes.rowCount ?? 0) !== 1) {
+    if ((taskRes.rowCount ?? 0) > 1) throw new Error("MANUAL_OPERATION_TASK_LINKAGE_AMBIGUOUS");
+    return null;
+  }
+  const taskRecord = parseJsonMaybe(taskRes.rows[0].record_json) ?? taskRes.rows[0].record_json;
+  const act_task_id = String(taskRecord?.payload?.act_task_id ?? "").trim();
+  if (!act_task_id) return null;
   return {
     operation_id,
     operation_plan_id,
-    command_id: resolvedCommandId
+    command_id: resolvedCommandId,
+    act_task_id
   };
 }
 
