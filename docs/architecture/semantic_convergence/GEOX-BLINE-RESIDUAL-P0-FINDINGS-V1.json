@@ -235,6 +235,58 @@
       ],
       "semantic_risk": "unscoped or partially scoped Acceptance/Evidence/Receipt facts can acquire caller tenant scope during Formal Field Memory materialization, violating exact provenance and null-wildcard prohibitions",
       "required_direction": "formal-memory source facts must carry and exactly match tenant/project/group and required operation/receipt identities; missing scope is a hard rejection, never a wildcard"
+    },
+    {
+      "finding_id": "P0-RES-013",
+      "severity": "P0",
+      "title": "Formal Field Memory fabricates a fixed soil-moisture target range without product authority",
+      "paths": [
+        "apps/server/src/routes/acceptance_v1.ts",
+        "apps/server/src/services/field_memory_service.ts",
+        "packages/contracts/src/schema/acceptance_result_v1.ts"
+      ],
+      "evidence": [
+        "acceptance_v1 writes target_range {min:0.22,max:0.28} into customer-visible, learning-eligible FORMAL_FIELD_MEMORY",
+        "createFormalFieldMemoryFromAcceptanceV1 falls back to the same {min:0.22,max:0.28}",
+        "AcceptanceMetricsV1Schema does not define target_range, so canonical Acceptance cannot preserve a caller-supplied target_range through schema parsing",
+        "repository search found no active product policy/FieldProgram authority that establishes 0.22-0.28 as the formal target range"
+      ],
+      "semantic_risk": "an implementation constant is promoted into formal agronomic outcome memory as if it were a governed target policy",
+      "required_direction": "formal memory target range must come from an exact, versioned product/operation/evidence source or remain unknown/null; implementation constants cannot acquire formal authority"
+    },
+    {
+      "finding_id": "P0-RES-014",
+      "severity": "P0",
+      "title": "Acceptance evaluate grants acceptance authority to AO-ACT task writers",
+      "paths": [
+        "apps/server/src/routes/acceptance_v1.ts",
+        "apps/server/src/routes/auth_v1.ts",
+        "apps/server/src/auth/ao_act_authz_v0.ts"
+      ],
+      "evidence": [
+        "POST /api/v1/acceptance/evaluate authorizes requireAoActAnyScopeV0 with acceptance.evaluate OR ao_act.task.write",
+        "the route can mint acceptance_result_v1 and, on formal PASS, customer-visible/learning-eligible Formal Field Memory",
+        "/api/v1/session/me maps operator_acceptance only to acceptance.evaluate, while ao_act.task.write maps operator_dispatch",
+        "the role gate limits execution to admin/operator but does not require the dedicated acceptance.evaluate scope"
+      ],
+      "semantic_risk": "an operator credential intended only for task/dispatch writing can exercise Acceptance and downstream Formal Memory authority",
+      "required_direction": "Acceptance evaluation must require the dedicated acceptance.evaluate scope; task/dispatch authority is not Acceptance authority"
+    },
+    {
+      "finding_id": "P0-RES-015",
+      "severity": "P0",
+      "title": "Acceptance evaluate selects the latest receipt for a task instead of binding exact receipt identity",
+      "paths": [
+        "apps/server/src/routes/acceptance_v1.ts"
+      ],
+      "evidence": [
+        "EvaluateRequestSchema has act_task_id but no receipt_id",
+        "loadReceiptFact filters receipts by act_task_id/task_id, orders by occurred_at DESC,fact_id DESC, and LIMIT 1",
+        "the selected receipt drives telemetry, formal evidence gating, receipt_id persisted into Acceptance, and the direct Formal Field Memory side effect",
+        "multiple receipts for one task can therefore silently change the Acceptance verdict/evidence source"
+      ],
+      "semantic_risk": "later receipt facts can silently replace the evidence authority used for Acceptance and Formal Memory",
+      "required_direction": "Acceptance must bind an exact receipt_id/fact_id supplied by the request or fail closed on ambiguity; latest-wins receipt selection is forbidden"
     }
   ]
 }
