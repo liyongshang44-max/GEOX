@@ -34,9 +34,11 @@ need("service", [
   "deterministicReceiptFactIdV1",
   "deterministicAcceptanceFactIdV1",
   "const factId = `sp_${plan_id}`",
-  "const fact_id = `sl_${import_id}`",
+  "deterministicLabResultFactIdV1",
   "AMBIGUOUS:sample_receipt_v1",
   "AMBIGUOUS:lab_result_import_v1",
+  "sample_receipt_fact_id') = $3",
+  "LIMIT 2",
   "DUPLICATE:sample_id",
   "AMBIGUOUS:sampling_acceptance_v1",
   "CONFLICT:sampling_acceptance_exact_chain_verdict",
@@ -119,6 +121,7 @@ need("fertilizationContract", [
 need("samplingApi", [
   "concurrent_duplicate_sample_id_serialized",
   "concurrent_acceptance_identity_stable",
+  "shared_import_id_is_chain_local",
   "Promise.all",
   "concurrent exact-chain acceptance must converge on one fact_id",
 ]);
@@ -157,6 +160,8 @@ const stats = {
   acceptance_identity_race_safe: source.service.includes("deterministicAcceptanceFactIdV1") && source.samplingApi.includes("concurrent_acceptance_identity_stable"),
   opaque_business_ids_preserved: source.service.includes("const receipt_id = randomUUID();") && source.service.includes("const acceptance_id = randomUUID();"),
   identity_tuple_canonical_encoding: source.service.includes("JSON.stringify(canonicalParts)") && !source.service.includes('.join("\\n")'),
+  lab_identity_chain_scoped: source.service.includes("deterministicLabResultFactIdV1") && !source.service.includes("const fact_id = `sl_${import_id}`"),
+  shared_import_runtime_proven: source.samplingApi.includes("shared_import_id_is_chain_local"),
   plan_fact_continuity: source.projection.includes("SAMPLING_OPERATION_RELATION_EXACT_PLAN_REF_MISSING")
     && source.fertilization.includes("SAMPLING_RECEIPT_PLAN_FACT_REF_MISMATCH")
     && source.fertilization.includes("SAMPLING_LAB_PLAN_FACT_REF_MISMATCH"),
