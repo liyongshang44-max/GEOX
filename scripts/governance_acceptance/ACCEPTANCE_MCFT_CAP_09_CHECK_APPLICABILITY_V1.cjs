@@ -160,12 +160,22 @@ function main() {
     "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
     "V13_AUTONOMOUS_FORCING_FOUNDATION",
     "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
-    "EXACT_ONE_PRODUCTION_OWNER",
   ]) {
     const row = byId(evidenceAclCarryforward, id);
     assert.equal(row.status, "REQUALIFY", "EVIDENCE_ACL_CARRYFORWARD_MUST_REQUALIFY:" + id);
     assert(row.changed_dependencies.includes(evidenceAclCarryforwardPath), "EVIDENCE_ACL_CARRYFORWARD_DEPENDENCY_REQUIRED:" + id);
   }
+  assert.equal(byId(evidenceAclCarryforward, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+  const evidenceAclCarryforwardPostMerge = plan(
+    authority,
+    registry,
+    [evidenceAclCarryforwardPath],
+    "POST_MERGE_V13_QUALIFICATION",
+  );
+  assert.equal(evidenceAclCarryforwardPostMerge.status, "PASS");
+  const ownerCarryforward = byId(evidenceAclCarryforwardPostMerge, "EXACT_ONE_PRODUCTION_OWNER");
+  assert.equal(ownerCarryforward.status, "REQUALIFY", "EVIDENCE_ACL_CARRYFORWARD_OWNER_CLOSURE_MUST_REQUALIFY");
+  assert(ownerCarryforward.changed_dependencies.includes(evidenceAclCarryforwardPath), "EVIDENCE_ACL_CARRYFORWARD_OWNER_DEPENDENCY_REQUIRED");
 
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
