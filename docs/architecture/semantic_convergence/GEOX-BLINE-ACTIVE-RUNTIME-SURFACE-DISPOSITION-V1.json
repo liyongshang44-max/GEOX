@@ -638,6 +638,7 @@
       "surface_id": "ARS-026",
       "source_path": "apps/server/src/routes/v1/operator_twin.ts",
       "activation_parent": [
+        "apps/server/src/routes/v1/operator_twin_read_legacy_v1.ts",
         "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts"
       ],
       "surface_role": "AUTHORITY",
