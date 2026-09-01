@@ -93,7 +93,7 @@ async function main(): Promise<void> {
           origin_source_kind: "NOAA_NCEP_GFS_PGRB2_0P25",
           origin_source_id: ORIGIN,
           epistemic_class: "ASSUMED",
-          available_to_runtime_at: AVAILABLE,
+          available_to_runtime_at: RETRIEVED,
           role_time: { issued_at: ISSUED, ingested_at: INGESTED },
           quality: { status: "PASS" },
           source_payload: { cycle_key: "20260831T18Z", point_count: 72 },
