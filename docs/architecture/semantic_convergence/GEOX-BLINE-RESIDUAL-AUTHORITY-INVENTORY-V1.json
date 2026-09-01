@@ -7879,6 +7879,31 @@
       "b02_registered": false,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "audit_note": "Registry service appends versioned skill-definition/status facts through central fact writer."
+    },
+    {
+      "surface_id": "RES-302",
+      "source_path": "apps/server/src/services/flight_table/flight_table_skills_v1.ts",
+      "entrypoint": "Flight Table DEVTOOLS skill assembly -> canonical skill_binding_service.appendSkillBinding",
+      "activation_mode": "DEVTOOLS_ONLY",
+      "writes": [
+        "feature-gated development SkillBinding facts through canonical service"
+      ],
+      "reads": [
+        "Flight Table deterministic skill assembly configuration"
+      ],
+      "semantic_family": [
+        "governance.skill_binding"
+      ],
+      "authority_class": "DEVTOOLS_SKILL_BINDING_CALLSITE",
+      "runtime_reachable": "FEATURE_GATED_DEVTOOLS",
+      "feature_flag": "ENABLE_FLIGHT_TABLE_API",
+      "downstream_consumers": [
+        "development flight-table acceptance/simulation only"
+      ],
+      "removal_target": "NEVER PROMOTE TO PRODUCTION AUTHORITY; keep as explicit DEVTOOLS consumer of canonical SkillBinding service",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Exact final propagated tuple from dynamic authority-callsite proof. This path is a devtools consumer, not a production binding-policy owner."
     }
   ],
   "cross_branch_surfaces": [
