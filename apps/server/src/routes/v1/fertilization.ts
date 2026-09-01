@@ -46,6 +46,16 @@ function requireFertilizationReadAuth(req: any, reply: FastifyReply) {
   ]);
 }
 
+function requireFertilizationAcceptanceAuth(req: any, reply: FastifyReply) {
+  const auth = requireAoActAnyScopeV0(req, reply, ["acceptance.evaluate"]);
+  if (!auth) return null;
+  if (!["operator", "admin"].includes(String(auth.role))) {
+    reply.status(403).send({ ok: false, error: "AUTH_ROLE_SCOPE_DENIED" });
+    return null;
+  }
+  return auth;
+}
+
 function handleServiceError(reply: FastifyReply, error: unknown) {
   if (error instanceof FertilizationServiceErrorV1 || error instanceof FertilizationBridgeErrorV1) {
     return reply.status(error.statusCode).send({ ok: false, error: error.message });
@@ -135,16 +145,21 @@ export function registerFertilizationV1Routes(app: FastifyInstance, pool: Pool):
   });
 
   app.post("/api/v1/fertilization/acceptance/evaluate", async (req, reply) => {
-    const auth = requireFertilizationWriteAuth(req, reply);
+    const auth = requireFertilizationAcceptanceAuth(req, reply);
     if (!auth) return reply;
     const body: any = req.body ?? {};
     const tenant = tenantFromBodyOrAuthV1(body, auth);
     if (!requireTenantMatchOr404(reply, tenant, auth)) return reply;
 
+    const fertilizationPrescriptionId = String(body.fertilization_prescription_id ?? "").trim();
+    if (!fertilizationPrescriptionId) return badRequest(reply, "MISSING_OR_INVALID:fertilization_prescription_id");
+    const prescription = await service.getPrescription(tenant, fertilizationPrescriptionId);
+    if (!prescription) return reply.status(404).send({ ok: false, error: "NOT_FOUND:fertilization_prescription" });
+    const fieldId = String(prescription.record_json?.field_id ?? "");
+    if (!requireFieldAllowedOr404V1(reply, auth, fieldId)) return reply;
+
     try {
       const result = await service.evaluateAcceptance({ ...body, ...tenant });
-      const fieldId = String(result.acceptance?.field_id ?? "");
-      if (!requireFieldAllowedOr404V1(reply, auth, fieldId)) return reply;
       return reply.send({ ok: true, fact_id: result.fact_id, acceptance: result.acceptance });
     } catch (error) {
       return handleServiceError(reply, error);

@@ -157,14 +157,16 @@ Fertilization Domain owns formal business facts. GEOX Main Chain owns Recommenda
 {
   fertilization_acceptance_id: string;
   fertilization_prescription_id: string;
+  variable_prescription_id: string;
   tenant_id: string;
   project_id: string;
   group_id: string;
   field_id: string;
-  operation_plan_id?: string | null;
-  act_task_id?: string | null;
-  receipt_id?: string | null;
-  as_applied_id?: string | null;
+  operation_plan_id: string;
+  act_task_id: string;
+  receipt_id: string;
+  as_executed_id: string;
+  as_applied_id: string;
   acceptance_status: "PASS" | "FAIL" | "NEEDS_REVIEW" | "MISSING";
   zone_results: Array<{
     zone_id: string;
@@ -178,6 +180,11 @@ Fertilization Domain owns formal business facts. GEOX Main Chain owns Recommenda
   operation_rollup_policy: "ALL_REQUIRED_ZONES_PASS" | "NEEDS_REVIEW_ON_MISSING_ZONE";
   reasons: string[];
   evidence_refs: Array<{ kind: string; ref_id: string }>;
+  acceptance_policy: {
+    source: "prescription_contract_v1.acceptance_conditions";
+    amount_tolerance_percent: number;
+    required_coverage_percent: number;
+  };
   evaluated_at_ts: number;
 }
 ```
@@ -209,5 +216,10 @@ Fertilization AGRONOMY Skill output may be diagnosis_signal or recommendation_ca
 - fertilization_recommendation ≠ fertilization prescription
 - fertilization_prescription ≠ approved operation
 - receipt success ≠ fertilization acceptance PASS
+- caller-supplied zone application assertions ≠ execution evidence
+- fertilization acceptance requires exact receipt -> AsExecuted -> AsApplied identity continuity
+- fertilization acceptance zone results must be derived from exact AsApplied VARIABLE_BY_ZONE evidence
+- coverage and deviation thresholds come from exact variable prescription acceptance_conditions; coverage uses 0-100 percent units
+- fields.write / prescription.write ≠ acceptance.evaluate authority
 - operation-level average 不得掩盖 zone-level over/under application
 - fertilization acceptance PASS 不得直接写 ROI / Field Memory / customer success

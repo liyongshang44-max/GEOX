@@ -258,7 +258,8 @@
     "ci:governance:bline-acceptance-no-formal-memory-side-effect": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_ACCEPTANCE_NO_FORMAL_MEMORY_SIDE_EFFECT_V1.cjs",
     "ci:governance:bline-formal-memory-reviewed-promotion-proof": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_FORMAL_MEMORY_REVIEWED_PROMOTION_PROOF_V1.cjs",
     "ci:governance:bline-legacy-twin-no-direct-formal-memory": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_LEGACY_TWIN_NO_DIRECT_FORMAL_MEMORY_V1.cjs",
-    "ci:governance:bline-formal-memory-scope-provenance": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_FORMAL_MEMORY_SCOPE_PROVENANCE_V1.cjs"
+    "ci:governance:bline-formal-memory-scope-provenance": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_FORMAL_MEMORY_SCOPE_PROVENANCE_V1.cjs",
+    "ci:governance:bline-fertilization-acceptance-exact-execution": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_FERTILIZATION_ACCEPTANCE_EXACT_EXECUTION_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"

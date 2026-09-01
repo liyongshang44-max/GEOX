@@ -172,7 +172,21 @@
         "ALL_REQUIRED_ZONES_PASS can therefore be produced from caller assertions alone"
       ],
       "semantic_risk": "caller-provided execution claims can be promoted into an authoritative-looking fertilization acceptance PASS without proving execution provenance",
-      "required_direction": "fertilization acceptance must consume exact canonical execution evidence / receipt / AsExecuted bindings and fail closed on missing provenance; acceptance evaluation should require the dedicated acceptance authority scope"
+      "required_direction": "fertilization acceptance must consume exact canonical execution evidence / receipt / AsExecuted bindings and fail closed on missing provenance; acceptance evaluation should require the dedicated acceptance authority scope",
+      "repair": {
+        "status": "IMPLEMENTED_PENDING_EXACT_HEAD_QUALIFICATION",
+        "branch": "fix/bline-fertilization-acceptance-exact-execution-v1",
+        "changes": [
+          "fertilization acceptance requires exact operation_plan_id, act_task_id, receipt_id, as_executed_id and as_applied_id",
+          "caller zone_applications and caller evidence_refs are rejected as acceptance authority",
+          "exact bridge prescription_contract_v1 is bound by fert_bridge_<fertilization_prescription_id>",
+          "AsExecuted must be CONFIRMED and match exact variable prescription, task, receipt and field",
+          "AsApplied must match exact AsExecuted, variable prescription, task, receipt and field",
+          "zone results derive only from exact AsApplied VARIABLE_BY_ZONE zone_applications",
+          "coverage/deviation thresholds come from exact prescription_contract_v1.acceptance_conditions using 0-100 percentage units",
+          "acceptance route requires dedicated acceptance.evaluate authority and field allowlist is checked before write"
+        ]
+      }
     },
     {
       "finding_id": "P0-RES-010",

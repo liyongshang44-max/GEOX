@@ -4,7 +4,7 @@ const { assert, env, fetchJson, requireOk, waitForHealth } = require('./_common.
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const id = (p) => `${p}_${randomUUID().replace(/-/g, '').slice(0, 18)}`;
-const pctDeviation = (planned, actual) => planned > 0 ? Math.abs(actual - planned) / planned : 1;
+const pctDeviation = (planned, actual) => planned > 0 ? (Math.abs(actual - planned) / planned) * 100 : 100;
 
 function tokenEnv(name, fallback) { return env(name, env('AO_ACT_TOKEN', fallback)); }
 function truthy(x) { return x === true; }
@@ -162,22 +162,32 @@ function receiptBody(scope, operation_plan_id, act_task_id, field_id, device_id,
 
 async function submitReceiptAndAsApplied(base, executorToken, operatorToken, scope, receipt) {
   const receiptResp = await post(base, '/api/v1/actions/receipt', executorToken, receipt);
-  if (!receiptResp.ok || receiptResp.json?.ok === false) return { receiptResp, receipt_id: null, asApplied: null, genericAcceptance: null };
+  if (!receiptResp.ok || receiptResp.json?.ok === false) {
+    return { receiptResp, receipt_id: null, asExecutedResponse: null, as_executed: null, as_applied: null, genericAcceptance: null };
+  }
   const receipt_id = String(receiptResp.json?.receipt_id ?? receiptResp.json?.fact_id ?? '').trim();
-  const asApplied = await post(base, '/api/v1/as-executed/from-receipt', executorToken, { ...scope, task_id: receipt.act_task_id, receipt_id });
+  const asExecutedResponse = await post(base, '/api/v1/as-executed/from-receipt', executorToken, { ...scope, task_id: receipt.act_task_id, receipt_id });
   const genericAcceptance = await post(base, '/api/v1/acceptance/evaluate', operatorToken, { ...scope, act_task_id: receipt.act_task_id, receipt_id });
-  return { receiptResp, receipt_id, asApplied, genericAcceptance };
+  return {
+    receiptResp,
+    receipt_id,
+    asExecutedResponse,
+    as_executed: asExecutedResponse.json?.as_executed ?? null,
+    as_applied: asExecutedResponse.json?.as_applied ?? null,
+    genericAcceptance,
+  };
 }
 
-async function evalFertilizationAcceptance(base, token, scope, prescription_id, receipt_id, act_task_id, operation_plan_id, zoneApps) {
+async function evalFertilizationAcceptance(base, token, scope, prescription_id, receiptFlow, act_task_id, operation_plan_id, extra = {}) {
   return post(base, '/api/v1/fertilization/acceptance/evaluate', token, {
     ...scope,
     fertilization_prescription_id: prescription_id,
-    receipt_id,
+    receipt_id: receiptFlow.receipt_id,
     act_task_id,
     operation_plan_id,
-    zone_applications: zoneApps,
-    evidence_refs: [{ kind: 'ao_act_receipt_v0', ref_id: receipt_id }],
+    as_executed_id: receiptFlow.as_executed?.as_executed_id,
+    as_applied_id: receiptFlow.as_applied?.as_applied_id,
+    ...extra,
   });
 }
 
@@ -236,13 +246,13 @@ function localZoneRollup(zoneRates, zoneApps) {
     const actual = Number(app?.actual_n_kg_ha ?? app?.applied_amount ?? 0);
     const coverage = Number(app?.coverage_percent ?? 0);
     const deviation = pctDeviation(planned, actual);
-    const result = !app || coverage < 0.9 || deviation > 0.15 ? 'FAIL' : 'PASS';
+    const result = !app || coverage < 95 || deviation > 15 ? 'FAIL' : 'PASS';
     return { zone_id: z.zone_id, planned, actual, coverage, deviation, result };
   });
   const verdict = matrix.every((z) => z.result === 'PASS') ? 'PASS' : 'FAIL';
   const averagePlanned = matrix.reduce((s, z) => s + z.planned, 0);
   const averageActual = matrix.reduce((s, z) => s + z.actual, 0);
-  const averageLooksOk = pctDeviation(averagePlanned, averageActual) <= 0.15;
+  const averageLooksOk = pctDeviation(averagePlanned, averageActual) <= 15;
   return { matrix, verdict, averageLooksOk };
 }
 
@@ -284,6 +294,8 @@ async function run() {
     planned_n_exceeds_max_blocked: false,
     receipt_success_missing_zone_applications_acceptance_not_pass: false,
     one_required_zone_over_under_operation_not_pass: false,
+    caller_zone_assertions_rejected: false,
+    wrong_as_applied_identity_rejected: false,
     operation_average_cannot_hide_zone_fail: false,
     unapproved_prescription_cannot_dispatch_task: false,
   };
@@ -387,8 +399,8 @@ async function run() {
     }
 
     const goodApps = [
-      { zone_id: 'zone_a', planned_n_kg_ha: 50, actual_n_kg_ha: 49, applied_amount: 49, planned_amount: 50, actual_rate: 49, planned_rate: 50, unit: 'kgN/ha', coverage_percent: 0.97, status: 'APPLIED' },
-      { zone_id: 'zone_b', planned_n_kg_ha: 30, actual_n_kg_ha: 30, applied_amount: 30, planned_amount: 30, actual_rate: 30, planned_rate: 30, unit: 'kgN/ha', coverage_percent: 0.96, status: 'APPLIED' },
+      { zone_id: 'zone_a', planned_n_kg_ha: 50, actual_n_kg_ha: 49, applied_amount: 49, planned_amount: 50, actual_rate: 49, planned_rate: 50, unit: 'kgN/ha', coverage_percent: 97, status: 'APPLIED' },
+      { zone_id: 'zone_b', planned_n_kg_ha: 30, actual_n_kg_ha: 30, applied_amount: 30, planned_amount: 30, actual_rate: 30, planned_rate: 30, unit: 'kgN/ha', coverage_percent: 96, status: 'APPLIED' },
     ];
     checks.receipt_contains_zone_fertilizer_applications = goodApps.length === 2 && goodApps.every((z) => z.zone_id && z.actual_n_kg_ha != null);
 
@@ -397,8 +409,13 @@ async function run() {
     let reportResp = null;
     if (checks.ao_act_task_created_after_approval) {
       receiptFlow = await submitReceiptAndAsApplied(base, executorToken, operatorToken, scope, receiptBody(scope, operation_plan_id, act_task_id, field_id, device_id, goodApps));
-      fertAcc = await evalFertilizationAcceptance(base, operatorToken, scope, fertilization_prescription_id, receiptFlow.receipt_id, act_task_id, operation_plan_id, goodApps);
-      checks.fertilization_acceptance_evaluated = fertAcc.ok === true && fertAcc.json?.ok !== false && Boolean(fertAcc.json?.acceptance);
+      fertAcc = await evalFertilizationAcceptance(base, operatorToken, scope, fertilization_prescription_id, receiptFlow, act_task_id, operation_plan_id);
+      checks.fertilization_acceptance_evaluated = fertAcc.ok === true
+        && fertAcc.json?.ok !== false
+        && Boolean(fertAcc.json?.acceptance)
+        && fertAcc.json?.acceptance?.acceptance_status === 'PASS'
+        && fertAcc.json?.acceptance?.as_executed_id === receiptFlow.as_executed?.as_executed_id
+        && fertAcc.json?.acceptance?.as_applied_id === receiptFlow.as_applied?.as_applied_id;
       reportResp = await fetchOperationReport(base, adminToken, scope, operation_plan_id);
       const report = reportResp.json?.operation_report_v1;
       assert.equal(report?.formal_scenario?.scenario_type, 'FORMAL_FERTILIZATION');
@@ -414,19 +431,62 @@ async function run() {
       checks.operation_report_fertilization_acceptance_pass = true;
       checks.operation_report_fertilization_zone_rates_present = true;
 
-      const missingAcc = await evalFertilizationAcceptance(base, operatorToken, scope, fertilization_prescription_id, receiptFlow.receipt_id, act_task_id, operation_plan_id, []);
-      negative.receipt_success_missing_zone_applications_acceptance_not_pass = missingAcc.ok && String(missingAcc.json?.acceptance?.acceptance_status ?? '').toUpperCase() !== 'PASS';
+      const callerAssertion = await evalFertilizationAcceptance(
+        base,
+        operatorToken,
+        scope,
+        fertilization_prescription_id,
+        receiptFlow,
+        act_task_id,
+        operation_plan_id,
+        { zone_applications: [{ zone_id: 'zone_a', actual_n_kg_ha: 0, coverage_percent: 100 }] },
+      );
+      negative.caller_zone_assertions_rejected = callerAssertion.status === 400
+        && callerAssertion.json?.error === 'CALLER_EXECUTION_ASSERTIONS_FORBIDDEN';
+
+      const wrongAsApplied = await post(base, '/api/v1/fertilization/acceptance/evaluate', operatorToken, {
+        ...scope,
+        fertilization_prescription_id,
+        receipt_id: receiptFlow.receipt_id,
+        act_task_id,
+        operation_plan_id,
+        as_executed_id: receiptFlow.as_executed?.as_executed_id,
+        as_applied_id: `missing_as_applied_${runId}`,
+      });
+      negative.wrong_as_applied_identity_rejected = wrongAsApplied.status === 404
+        && wrongAsApplied.json?.error === 'FERTILIZATION_AS_APPLIED_NOT_FOUND';
+
+      const missingZoneApps = [goodApps[0]];
+      const missingFlow = await submitReceiptAndAsApplied(
+        base,
+        executorToken,
+        operatorToken,
+        scope,
+        receiptBody(scope, operation_plan_id, act_task_id, field_id, device_id, missingZoneApps),
+      );
+      const missingAcc = await evalFertilizationAcceptance(base, operatorToken, scope, fertilization_prescription_id, missingFlow, act_task_id, operation_plan_id);
+      negative.receipt_success_missing_zone_applications_acceptance_not_pass = missingAcc.ok
+        && String(missingAcc.json?.acceptance?.acceptance_status ?? '').toUpperCase() !== 'PASS';
+
       const failApps = [
-        { ...goodApps[0], actual_n_kg_ha: 80, applied_amount: 80, actual_rate: 80, coverage_percent: 0.97 },
+        { ...goodApps[0], actual_n_kg_ha: 80, applied_amount: 80, actual_rate: 80, coverage_percent: 97 },
         goodApps[1],
       ];
-      const failAcc = await evalFertilizationAcceptance(base, operatorToken, scope, fertilization_prescription_id, receiptFlow.receipt_id, act_task_id, operation_plan_id, failApps);
-      negative.one_required_zone_over_under_operation_not_pass = failAcc.ok && String(failAcc.json?.acceptance?.acceptance_status ?? '').toUpperCase() !== 'PASS';
+      const failFlow = await submitReceiptAndAsApplied(
+        base,
+        executorToken,
+        operatorToken,
+        scope,
+        receiptBody(scope, operation_plan_id, act_task_id, field_id, device_id, failApps),
+      );
+      const failAcc = await evalFertilizationAcceptance(base, operatorToken, scope, fertilization_prescription_id, failFlow, act_task_id, operation_plan_id);
+      negative.one_required_zone_over_under_operation_not_pass = failAcc.ok
+        && String(failAcc.json?.acceptance?.acceptance_status ?? '').toUpperCase() !== 'PASS';
     }
 
     const localFail = localZoneRollup(fertZoneRates, [
-      { zone_id: 'zone_a', actual_n_kg_ha: 80, coverage_percent: 0.97 },
-      { zone_id: 'zone_b', actual_n_kg_ha: 0, coverage_percent: 0.97 },
+      { zone_id: 'zone_a', actual_n_kg_ha: 80, coverage_percent: 97 },
+      { zone_id: 'zone_b', actual_n_kg_ha: 0, coverage_percent: 97 },
     ]);
     negative.operation_average_cannot_hide_zone_fail = localFail.averageLooksOk === true && localFail.verdict !== 'PASS';
     checks.zone_failure_not_hidden_by_average = negative.operation_average_cannot_hide_zone_fail
@@ -447,6 +507,8 @@ async function run() {
       operation_plan_id,
       task_meta: taskPayload?.meta ?? null,
       receipt_id: receiptFlow?.receipt_id ?? null,
+      as_executed_id: receiptFlow?.as_executed?.as_executed_id ?? null,
+      as_applied_id: receiptFlow?.as_applied?.as_applied_id ?? null,
       fertilization_acceptance_status: fertAcc?.json?.acceptance?.acceptance_status ?? null,
       report_status: reportResp?.status ?? null,
     };
