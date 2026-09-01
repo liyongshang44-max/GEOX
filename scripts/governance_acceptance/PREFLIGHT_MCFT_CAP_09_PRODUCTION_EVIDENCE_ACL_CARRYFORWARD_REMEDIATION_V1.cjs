@@ -62,8 +62,18 @@ try{
  const fn=b(q(url,"SELECT has_function_privilege('geox_mcft_cap09_evidence_runtime_v1','public.mcft_cap09_evidence_runtime_append_fact_v1(text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb)','EXECUTE')::text"));
  if(!fn)unsafe.push("phase3_append_function:EXECUTE_MISSING");
 
+ const loginRoleRows=q(url,[
+  "SELECT rolname||'|login='||rolcanlogin::text||'|inherit='||rolinherit::text||'|super='||rolsuper::text||'|createdb='||rolcreatedb::text||'|createrole='||rolcreaterole::text||'|replication='||rolreplication::text||'|bypassrls='||rolbypassrls::text",
+  "FROM pg_catalog.pg_roles",
+  "WHERE rolname IN ('geox_mcft_cap09_evidence_runtime_login_v1','geox_mcft_cap09_twin_runtime_login_v1')",
+  "ORDER BY rolname"
+ ].join("\n")).split(/\r?\n/).filter(Boolean);
+ assert.deepEqual(loginRoleRows,[
+  "geox_mcft_cap09_evidence_runtime_login_v1|login=true|inherit=true|super=false|createdb=false|createrole=false|replication=false|bypassrls=false",
+  "geox_mcft_cap09_twin_runtime_login_v1|login=true|inherit=true|super=false|createdb=false|createrole=false|replication=false|bypassrls=false"
+ ],"ACL_REMEDIATION_EXACT_TWO_RESTRICTED_SERVICE_LOGINS_REQUIRED");
  const loginRows=q(url,[
-  "SELECT member.rolname||'>'||granted.rolname",
+  "SELECT member.rolname||'|privilege='||granted.rolname||'|admin='||m.admin_option::text||'|inherit='||m.inherit_option::text||'|set='||m.set_option::text",
   "FROM pg_catalog.pg_auth_members m",
   "JOIN pg_catalog.pg_roles member ON member.oid=m.member",
   "JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid",
@@ -71,9 +81,24 @@ try{
   "ORDER BY member.rolname,granted.rolname"
  ].join("\n")).split(/\r?\n/).filter(Boolean);
  assert.deepEqual(loginRows,[
-  "geox_mcft_cap09_evidence_runtime_login_v1>geox_mcft_cap09_evidence_runtime_v1",
-  "geox_mcft_cap09_twin_runtime_login_v1>geox_mcft_cap09_twin_runtime_v1"
- ],"ACL_REMEDIATION_LOGIN_MEMBERSHIP_DRIFT");
+  "geox_mcft_cap09_evidence_runtime_login_v1|privilege=geox_mcft_cap09_evidence_runtime_v1|admin=false|inherit=true|set=false",
+  "geox_mcft_cap09_twin_runtime_login_v1|privilege=geox_mcft_cap09_twin_runtime_v1|admin=false|inherit=true|set=false"
+ ],"ACL_REMEDIATION_EXACT_ONE_PRIVILEGE_MEMBERSHIP_EACH_REQUIRED");
+ const loginDirectAclCount=Number(q(url,[
+  "WITH target AS (SELECT oid FROM pg_catalog.pg_roles WHERE rolname IN ('geox_mcft_cap09_evidence_runtime_login_v1','geox_mcft_cap09_twin_runtime_login_v1'))",
+  "SELECT ((SELECT count(*) FROM pg_catalog.pg_class object JOIN pg_catalog.pg_namespace namespace ON namespace.oid=object.relnamespace CROSS JOIN LATERAL pg_catalog.aclexplode(object.relacl) acl WHERE namespace.nspname='public' AND acl.grantee IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_proc routine JOIN pg_catalog.pg_namespace namespace ON namespace.oid=routine.pronamespace CROSS JOIN LATERAL pg_catalog.aclexplode(routine.proacl) acl WHERE namespace.nspname='public' AND acl.grantee IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_namespace namespace CROSS JOIN LATERAL pg_catalog.aclexplode(namespace.nspacl) acl WHERE namespace.nspname='public' AND acl.grantee IN (SELECT oid FROM target)))::int"
+ ].join("\n"))||"0");
+ assert.equal(loginDirectAclCount,0,"ACL_REMEDIATION_SERVICE_LOGIN_DIRECT_PUBLIC_ACL_FORBIDDEN");
+ const loginOwnedObjectCount=Number(q(url,[
+  "WITH target AS (SELECT oid FROM pg_catalog.pg_roles WHERE rolname IN ('geox_mcft_cap09_evidence_runtime_login_v1','geox_mcft_cap09_twin_runtime_login_v1'))",
+  "SELECT ((SELECT count(*) FROM pg_catalog.pg_database d WHERE d.datdba IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_namespace n WHERE n.nspowner IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_class c WHERE c.relowner IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_proc p WHERE p.proowner IN (SELECT oid FROM target)))::int"
+ ].join("\n"))||"0");
+ assert.equal(loginOwnedObjectCount,0,"ACL_REMEDIATION_SERVICE_LOGIN_OBJECT_OWNERSHIP_FORBIDDEN");
 
  const currentUser=q(url,"SELECT current_user");
  const currentRole=q(url,[
@@ -216,7 +241,10 @@ try{
   table_count:tableCount,routine_count:routineCount,total_application_rows:totalRows,
   observed_acl:observed,phase3_append_function_execute:fn,
   missing_privileges:missing,diagnostics,
+  exact_login_roles:loginRoleRows,
   exact_login_memberships:loginRows,
+  service_login_direct_public_acl_count:loginDirectAclCount,
+  service_login_owned_object_count:loginOwnedObjectCount,
   current_role:{
     rolname:currentRole[0]||null,
     rolcreaterole:b(currentRole[1]),
