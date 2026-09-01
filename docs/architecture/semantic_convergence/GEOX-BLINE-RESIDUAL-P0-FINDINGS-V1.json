@@ -122,6 +122,25 @@
       ],
       "semantic_risk": "evidence export can create authoritative-looking acceptance independently of the formal Acceptance Engine and evidence gate",
       "required_direction": "export must consume existing canonical acceptance/evidence; exporting must never mint an Acceptance verdict"
+    },
+    {
+      "finding_id": "P0-RES-008",
+      "severity": "P0",
+      "title": "Formal Field Memory can bind unrelated latest device observations as operation outcome",
+      "paths": [
+        "apps/server/src/routes/field_memory_v1.ts",
+        "apps/server/src/services/field_memory_service.ts"
+      ],
+      "evidence": [
+        "POST /api/v1/field-memory/from-acceptance calls createFormalFieldMemoryFromAcceptanceV1",
+        "after acceptance/evidence/receipt observation-pair lookup misses, the service falls back to loadDeviceObservationPairV1",
+        "loadDeviceObservationPairV1 filters only tenant/project/group/field/metric and value_num",
+        "it orders device_observation_index_v1 by observed_at_ts_ms DESC and LIMIT 2",
+        "no operation_plan_id, receipt_id, acceptance occurred_at, execution interval, or causal window constrains the selected pair",
+        "the resulting pair is persisted as FORMAL_FIELD_MEMORY with FORMAL_ACCEPTED and learning_eligible=true"
+      ],
+      "semantic_risk": "latest field observations can be misattributed as the before/after outcome of an unrelated accepted operation and enter formal learning memory",
+      "required_direction": "formal field-response memory must bind an observation pair causally to the accepted operation or fail closed; latest-two field fallback is forbidden"
     }
   ]
 }
