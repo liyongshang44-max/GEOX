@@ -2500,7 +2500,7 @@
     {
       "source_path": "apps/telemetry-ingest/src/main.ts",
       "entrypoint": "telemetry-ingest long-running MQTT process",
-      "activation_mode": "ACTIVE_EXTERNAL_INGEST_DAEMON",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
       "writes": [
         "raw telemetry facts",
         "device_observation_v1 and downstream sensing/read-model side effects"
@@ -2511,9 +2511,10 @@
         "canonical telemetry metric contracts"
       ],
       "semantic_family": [
-        "evidence.raw_observation"
+        "evidence.raw_observation",
+        "governance.fact_ledger"
       ],
-      "authority_class": "TELEMETRY_INGEST_DAEMON_AND_OBSERVATION_ACTIVATION",
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
       "runtime_reachable": "PROVEN_LONG_RUNNING_PROCESS",
       "feature_flag": null,
       "downstream_consumers": [
@@ -2521,10 +2522,18 @@
         "sensing pipeline",
         "agronomy/read models"
       ],
-      "removal_target": "KEEP TRANSPORT INGEST; PRESERVE SOURCE/EVENT-TIME PROVENANCE; CANONICAL OBSERVATION/EQ MUST REMAIN EXPLICIT",
+      "removal_target": "KEEP transport ingress; preserve source/event-time provenance; canonical Observation/EvidenceQualification remain explicit downstream",
       "surface_id": "RES-093",
       "b02_registered": false,
-      "audit_note": "Telemetry daemon activates observation ingestion but does not itself receive a generic fact-ledger disposition; writer authority is tracked at the called ingestion services."
+      "audit_note": "Direct production facts writer discovered dynamically; unlike a pure caller, this daemon persists telemetry facts itself.",
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "evidence.raw_observation",
+        "device.state"
+      ],
+      "authority_owner": "TELEMETRY_INGEST_DAEMON",
+      "writer_scope": "raw telemetry / heartbeat ingress facts and transport-level observation activation"
     },
     {
       "source_path": "packages/device-skills/src/index.ts",
@@ -6901,37 +6910,6 @@
       "audit_note": "Active human execution writer."
     },
     {
-      "surface_id": "RES-266",
-      "source_path": "apps/server/src/routes/operation_state_v1.ts",
-      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
-      "activation_mode": "READ_MODEL_ZERO_WRITE",
-      "writes": [
-        "NONE_BY_GET_OR_READ_MODEL"
-      ],
-      "reads": [
-        "writer-specific validated upstream inputs/provenance"
-      ],
-      "semantic_family": [
-        "governance.fact_ledger"
-      ],
-      "authority_class": "FACT_LEDGER_READ_MODEL_ZERO_WRITE",
-      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
-      "feature_flag": null,
-      "downstream_consumers": [],
-      "removal_target": "KEEP GET/read model zero semantic persistence; learning facts originate only from explicit Outcome/Learning workflows",
-      "b02_registered": true,
-      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
-      "ledger_disposition": "READ_MODEL_ZERO_WRITE",
-      "underlying_semantic_families": [
-        "governance.skill_binding",
-        "learning.feedback",
-        "presentation.read_model"
-      ],
-      "authority_owner": "REPORTING_READ_MODEL",
-      "writer_scope": "none in request-time read model; onReady schema preparation is infrastructure-only",
-      "audit_note": "Repair branch removed ensureSkillRunFact/updateRulePerformance/recordRulePerformance and all facts DML from operation_state GET implementation."
-    },
-    {
       "surface_id": "RES-267",
       "source_path": "apps/server/src/routes/programs_core_v1.ts",
       "entrypoint": "exact governance.fact_ledger writer capability adjudication",
@@ -7648,6 +7626,259 @@
       "authority_owner": "DEPLOYMENT_BOOTSTRAP",
       "writer_scope": "deterministic seed facts only",
       "audit_note": "Writes skill_definition/skill_binding bootstrap facts; deployment seed does not become runtime decision authority."
+    },
+    {
+      "surface_id": "RES-291",
+      "source_path": "apps/server/src/domain/sensing/run_sensing_inference_pipeline_v1.ts",
+      "entrypoint": "authority-callsite discovered by recursive capability proof",
+      "activation_mode": "ACTIVE_SEMANTIC_CALLSITE",
+      "writes": [
+        "delegated semantic persistence through registered downstream writer/service"
+      ],
+      "reads": [
+        "validated upstream runtime inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.skill_binding"
+      ],
+      "authority_class": "SKILL_RUN_PROVENANCE_CALLSITE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep explicit skill-run provenance; binding policy authority stays in Skill Registry.",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Sensing inference records the actual skill run used for inference; it consumes the Skill Registry fact writer but does not own skill-definition/binding policy."
+    },
+    {
+      "surface_id": "RES-292",
+      "source_path": "apps/server/src/routes/acceptance_v1.ts",
+      "entrypoint": "authority-callsite discovered by recursive capability proof",
+      "activation_mode": "ACTIVE_SEMANTIC_CALLSITE",
+      "writes": [
+        "delegated semantic persistence through registered downstream writer/service"
+      ],
+      "reads": [
+        "validated upstream runtime inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.skill_binding"
+      ],
+      "authority_class": "ACCEPTANCE_SKILL_RUN_TRACE_CALLSITE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep explicit Acceptance skill provenance; do not infer policy authority from trace persistence.",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Acceptance records skill run/trace provenance during an explicit Acceptance write path, not a GET/read-model side effect."
+    },
+    {
+      "surface_id": "RES-293",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "entrypoint": "authority-callsite discovered by recursive capability proof",
+      "activation_mode": "ACTIVE_SEMANTIC_CALLSITE",
+      "writes": [
+        "delegated semantic persistence through registered downstream writer/service"
+      ],
+      "reads": [
+        "validated upstream runtime inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.skill_binding"
+      ],
+      "authority_class": "EXECUTION_SKILL_RUN_PROVENANCE_CALLSITE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep execution skill provenance; no independent SkillBinding policy authority.",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "AO-ACT records execution skill-run provenance; adapter/binding selection policy remains separately governed."
+    },
+    {
+      "surface_id": "RES-294",
+      "source_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "entrypoint": "authority-callsite discovered by recursive capability proof",
+      "activation_mode": "ACTIVE_SEMANTIC_CALLSITE",
+      "writes": [
+        "delegated semantic persistence through registered downstream writer/service"
+      ],
+      "reads": [
+        "validated upstream runtime inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.skill_binding"
+      ],
+      "authority_class": "LEGACY_DECISION_SKILL_RUN_TRACE_CALLSITE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Move provenance to governed Candidate/Calculation runtime during B-09 cutover; no new SkillBinding policy.",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Legacy decision facade records skill run/trace provenance alongside recommendation flows; this is compatibility runtime provenance."
+    },
+    {
+      "surface_id": "RES-295",
+      "source_path": "apps/server/src/routes/judge_v2.ts",
+      "entrypoint": "authority-callsite discovered by recursive capability proof",
+      "activation_mode": "ACTIVE_SEMANTIC_CALLSITE",
+      "writes": [
+        "delegated semantic persistence through registered downstream writer/service"
+      ],
+      "reads": [
+        "validated upstream runtime inputs/provenance"
+      ],
+      "semantic_family": [
+        "decision.candidate"
+      ],
+      "authority_class": "B09Y_CANDIDATE_SHADOW_CONSUMER_CALLSITE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep shadow consumer until canonical Candidate integration is separately authorized.",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Judge invokes the authorized B-09y candidate-boundary/context shadow builder after the historical Judge result; it does not become Candidate authority."
+    },
+    {
+      "surface_id": "RES-296",
+      "source_path": "apps/server/src/routes/v1/fertilization.ts",
+      "entrypoint": "authority-callsite discovered by recursive capability proof",
+      "activation_mode": "ACTIVE_SEMANTIC_CALLSITE",
+      "writes": [
+        "delegated semantic persistence through registered downstream writer/service"
+      ],
+      "reads": [
+        "validated upstream runtime inputs/provenance"
+      ],
+      "semantic_family": [
+        "evidence.qualification"
+      ],
+      "authority_class": "FERTILIZATION_EVIDENCE_SERVICE_CALLSITE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep route as facade; harden exact evidence/zone binding in domain service.",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Route delegates fertilization assessment/prescription/acceptance methods to the active domain service; Evidence qualification semantics are owned by that service chain."
+    },
+    {
+      "surface_id": "RES-297",
+      "source_path": "apps/server/src/services/appleii_problem_state_pipeline_v1.ts",
+      "entrypoint": "authority-callsite discovered by recursive capability proof",
+      "activation_mode": "ACTIVE_SEMANTIC_CALLSITE",
+      "writes": [
+        "delegated semantic persistence through registered downstream writer/service"
+      ],
+      "reads": [
+        "validated upstream runtime inputs/provenance"
+      ],
+      "semantic_family": [
+        "judge.problem_state"
+      ],
+      "authority_class": "PROBLEM_STATE_WRITER_CALLSITE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep orchestration; canonical ProblemState derivation stays in problem_state_uncertainty_v1.",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Pipeline explicitly appends ProblemState/uncertainty facts through the domain writer; it is the orchestrating callsite, not a second problem-state algorithm."
+    },
+    {
+      "surface_id": "RES-298",
+      "source_path": "apps/server/src/services/skill_binding_validation_service_v1.ts",
+      "entrypoint": "authority-callsite discovered by recursive capability proof",
+      "activation_mode": "ACTIVE_SEMANTIC_CALLSITE",
+      "writes": [
+        "delegated semantic persistence through registered downstream writer/service"
+      ],
+      "reads": [
+        "validated upstream runtime inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.skill_binding"
+      ],
+      "authority_class": "SKILL_BINDING_VALIDATION_WRITE_CALLSITE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep validation facade over canonical Skill Registry binding authority.",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Validation service persists validated SkillBinding through the central fact writer; no parallel binding policy is introduced."
+    },
+    {
+      "surface_id": "RES-299",
+      "source_path": "apps/server/src/services/skills/runtime_v1.ts",
+      "entrypoint": "authority-callsite discovered by recursive capability proof",
+      "activation_mode": "ACTIVE_SEMANTIC_CALLSITE",
+      "writes": [
+        "delegated semantic persistence through registered downstream writer/service"
+      ],
+      "reads": [
+        "validated upstream runtime inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.skill_binding"
+      ],
+      "authority_class": "SKILL_RUNTIME_FACT_CALLSITE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep governed runtime fact path.",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Runtime service appends skill-run facts through the canonical registry writer; it owns runtime execution records, not definition/binding policy."
+    },
+    {
+      "surface_id": "RES-300",
+      "source_path": "apps/server/src/services/skills/skill_binding_service.ts",
+      "entrypoint": "authority-callsite discovered by recursive capability proof",
+      "activation_mode": "ACTIVE_SEMANTIC_CALLSITE",
+      "writes": [
+        "delegated semantic persistence through registered downstream writer/service"
+      ],
+      "reads": [
+        "validated upstream runtime inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.skill_binding"
+      ],
+      "authority_class": "SKILL_BINDING_SERVICE_CALLSITE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep as canonical service facade for SkillBinding mutations.",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Binding service validates and appends binding facts through the central Skill Registry fact writer."
+    },
+    {
+      "surface_id": "RES-301",
+      "source_path": "apps/server/src/services/skills/skill_registry_service.ts",
+      "entrypoint": "authority-callsite discovered by recursive capability proof",
+      "activation_mode": "ACTIVE_SEMANTIC_CALLSITE",
+      "writes": [
+        "delegated semantic persistence through registered downstream writer/service"
+      ],
+      "reads": [
+        "validated upstream runtime inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.skill_binding"
+      ],
+      "authority_class": "SKILL_DEFINITION_REGISTRY_CALLSITE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep as canonical Skill Registry facade.",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Registry service appends versioned skill-definition/status facts through central fact writer."
     }
   ],
   "cross_branch_surfaces": [
@@ -7690,7 +7921,7 @@
     "rule": "ACTIVE_RUNTIME_SURFACE_WITHOUT_DISPOSITION_IS_FAIL_CLOSED"
   },
   "fact_ledger_closure": {
-    "status": "FULL_PATH_ADJUDICATION_PENDING_DYNAMIC_EXACT_PROOF",
+    "status": "DYNAMIC_DIRECT_WRITER_SET_ADJUDICATED_PENDING_EXACT_PROOF",
     "source_exact_ci": "33509893507 / job 99862739754",
     "expected_writer_count": 65,
     "adjudicated_writer_count": 65,
