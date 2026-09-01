@@ -536,26 +536,25 @@
       "entrypoint": "acceptance API route",
       "activation_mode": "API_ONLY",
       "writes": [
-        "acceptance_result_v1",
-        "formal Field Memory on qualifying PASS"
+        "acceptance_result_v1"
       ],
       "reads": [
         "execution evidence / receipt / as-executed chain"
       ],
       "semantic_family": [
-        "acceptance.verdict",
-        "field_memory"
+        "acceptance.verdict"
       ],
       "authority_class": "CURRENT_ACCEPTANCE_RUNTIME",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
-        "Field Memory",
-        "water-response/manual downstreams",
+        "outcome verification",
+        "Field Memory promotion candidates",
         "reports"
       ],
-      "removal_target": "KEEP_SPLIT_ACCEPTANCE_FROM_OUTCOME_MEMORY",
-      "b02_registered": true
+      "removal_target": "KEEP_ACCEPTANCE_ONLY; NO_DIRECT_FORMAL_FIELD_MEMORY_SIDE_EFFECT",
+      "b02_registered": true,
+      "audit_note": "B-Line Formal Field Memory convergence phase 1 removes direct Acceptance -> FORMAL_FIELD_MEMORY persistence."
     },
     {
       "surface_id": "RES-019",
@@ -6505,18 +6504,17 @@
       "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
       "feature_flag": null,
       "downstream_consumers": [],
-      "removal_target": "Keep Acceptance; split Acceptance -> Outcome -> Memory",
+      "removal_target": "Keep Acceptance; downstream Outcome -> Candidate -> reviewed Promotion/Commit owns Formal Memory",
       "b02_registered": true,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "ledger_disposition": "SEMANTIC_FACT_WRITER",
       "underlying_semantic_families": [
         "acceptance.verdict",
-        "field_memory",
         "execution.as_executed"
       ],
       "authority_owner": "ACCEPTANCE_RUNTIME",
-      "writer_scope": "Acceptance facts plus current direct formal-memory side effect",
-      "audit_note": "Current canonical Acceptance route still directly formalizes Field Memory on formal PASS."
+      "writer_scope": "Acceptance facts only; Field Memory is downstream and separately governed",
+      "audit_note": "Direct formal-memory side effect removed in B-Line Formal Field Memory convergence phase 1."
     },
     {
       "surface_id": "RES-253",
