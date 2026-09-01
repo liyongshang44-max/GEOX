@@ -250,8 +250,25 @@ function main() {
   assert.equal(loginCount, 2, "SERVICE_LOGIN_READINESS_PARTIAL_LOGIN_STATE_FORBIDDEN");
   assert.equal(secrets.evidence_runtime_password, true, "SERVICE_LOGIN_READINESS_EVIDENCE_PASSWORD_REQUIRED");
   assert.equal(secrets.twin_runtime_password, true, "SERVICE_LOGIN_READINESS_TWIN_PASSWORD_REQUIRED");
-  assert.equal(secrets.evidence_runtime_database_url, false, "SERVICE_LOGIN_READINESS_EVIDENCE_URL_MUST_WAIT_FOR_7F");
-  assert.equal(secrets.twin_runtime_database_url, false, "SERVICE_LOGIN_READINESS_TWIN_URL_MUST_WAIT_FOR_7F");
+  const runtimeUrlCount =
+    Number(secrets.evidence_runtime_database_url) +
+    Number(secrets.twin_runtime_database_url);
+  assert.ok(
+    runtimeUrlCount === 0 || runtimeUrlCount === 2,
+    "SERVICE_LOGIN_READINESS_PARTIAL_RUNTIME_URL_STATE_FORBIDDEN",
+  );
+  if (runtimeUrlCount === 2) {
+    assert.equal(
+      authority.current_stage,
+      "RUNTIME_CREDENTIAL_BINDING_COMPLETE_PRE_HOST_BINDING",
+      "SERVICE_LOGIN_READINESS_BOUND_URLS_REQUIRE_7F_AUTHORITY",
+    );
+    assert.equal(
+      authority.runtime_credential_binding_evidence?.status,
+      "IMMUTABLE_SUCCESS",
+      "SERVICE_LOGIN_READINESS_7F_DURABLE_EVIDENCE_REQUIRED",
+    );
+  }
 
   assertRole(adminUrl, EVIDENCE_LOGIN, EVIDENCE_PRIVILEGE);
   assertRole(adminUrl, TWIN_LOGIN, TWIN_PRIVILEGE);
@@ -273,7 +290,9 @@ function main() {
   write({
     schema_version: "geox_mcft_cap09_production_service_login_readiness_v1",
     status: "PASS",
-    stage: "SERVICE_LOGIN_COMPLETE_PRE_RUNTIME_CREDENTIAL_BINDING",
+    stage: runtimeUrlCount === 2
+      ? "SERVICE_LOGIN_COMPLETE_RUNTIME_CREDENTIALS_BOUND"
+      : "SERVICE_LOGIN_COMPLETE_PRE_RUNTIME_CREDENTIAL_BINDING",
     subject_sha: subjectSha,
     database_name: TARGET_DB,
     production_host_table_count: 41,
@@ -286,8 +305,9 @@ function main() {
     evidence_login_connectivity_proven: true,
     twin_login_connectivity_proven: true,
     credential_secret_state: secrets,
-    runtime_database_url_binding: false,
-    runtime_credential_binding: false,
+    runtime_database_url_secret_count: runtimeUrlCount,
+    runtime_database_url_binding: runtimeUrlCount === 2,
+    runtime_credential_binding: runtimeUrlCount === 2,
     runtime_process_start: false,
     production_owner_activation: false,
     provider_request_count: 0,
