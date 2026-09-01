@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_writer_owner_self_grant_cleanup_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-WRITER-OWNER-SELF-GRANT-CLEANUP-AUTHORITY-V1",
-  "status": "LIVE_EXACT_SELF_GRANT_PROVEN_CLEANUP_NOT_AUTHORIZED",
+  "status": "EXACT_SELF_GRANT_CLEANUP_AUTHORIZED",
   "root_cause": {
     "code": "PROVISIONING_ADMIN_FORCING_WRITER_OWNER_SELF_GRANT_RESIDUAL",
     "origin_attribution": "NOT_PROVEN",
@@ -64,7 +64,7 @@
   "runner_ref": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_V1.cjs",
   "workflow_ref": ".github/workflows/mcft-cap-09-production-writer-owner-self-grant-cleanup.yml",
   "authorization": {
-    "production_writer_owner_self_grant_cleanup_authorized": false,
+    "production_writer_owner_self_grant_cleanup_authorized": true,
     "production_evidence_acl_carryforward_remediation_authorized": false,
     "runtime_process_start_authorized": false,
     "production_owner_activation_authorized": false,
@@ -88,7 +88,7 @@
   },
   "next_stage": {
     "stage": "EXACT_SELF_GRANT_CLEANUP",
-    "status": "BLOCKED_ON_EXPLICIT_USER_AUTHORIZATION",
+    "status": "AUTHORIZED_PENDING_SAME_WORKFLOW_FRESH_PREFLIGHT_AND_EXACT_REVOKE",
     "after_success": "RERUN_LIVE_SCHEMA_READINESS_THEN_REAUTHORIZE_EXACT_NINE_ACL_REMEDIATION"
   },
   "authorization_binding": {
@@ -111,5 +111,10 @@
     "pre_cleanup_unarmed": "LIVE_EXACT_SELF_GRANT_PROVEN_CLEANUP_NOT_AUTHORIZED",
     "pre_cleanup_armed": "EXACT_SELF_GRANT_CLEANUP_AUTHORIZED",
     "post_cleanup_unarmed": "EXACT_SELF_GRANT_CLEANUP_APPLIED"
+  },
+  "user_authorization": {
+    "explicit": true,
+    "scope": "PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_ONLY",
+    "observed_date": "2026-09-01"
   }
 }
