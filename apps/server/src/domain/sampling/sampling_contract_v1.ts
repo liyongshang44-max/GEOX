@@ -24,7 +24,7 @@ export type SampleReceiptFactV1 = SamplingFactEnvelopeV1<"sample_receipt_v1", Sa
 export type LabResultImportFactV1 = SamplingFactEnvelopeV1<"lab_result_import_v1", LabResultImportV1>;
 export type SamplingAcceptanceFactV1 = SamplingFactEnvelopeV1<"sampling_acceptance_v1", SamplingAcceptanceV1>;
 export type SamplingAcceptanceEvaluateRequestV1 = { plan_id: string; sample_id: string; import_id?: string };
-export type SamplingAcceptanceEvaluateResponseV1 = { ok: true; acceptance_id: string; fact_id: string; verdict: "PASS" | "FAIL" | "INSUFFICIENT_EVIDENCE"; reasons: string[]; sampling_plan_fact_id?: string; sample_receipt_fact_id?: string; lab_result_fact_id?: string };
+export type SamplingAcceptanceEvaluateResponseV1 = { ok: true; acceptance_id: string; fact_id: string; idempotent?: boolean; verdict: "PASS" | "FAIL" | "INSUFFICIENT_EVIDENCE"; reasons: string[]; sampling_plan_fact_id?: string; sample_receipt_fact_id?: string; lab_result_fact_id?: string };
 export const SAMPLING_DOMAIN_HARD_RULES_V1 = {
   sample_receipt_created_not_lab_result_valid: "sample_receipt created ≠ lab result valid",
   lab_result_imported_not_agronomy_recommendation: "lab_result_imported ≠ agronomy recommendation",
