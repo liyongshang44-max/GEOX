@@ -66,6 +66,11 @@ export type ProductionEvidenceSourceFamilyV1 =
   | "KBS_RAW_HOURLY"
   | "GFS_BUNDLE";
 
+export type KbsRawHourlyPublicationFetchV1 = Pick<
+  EvidenceRuntimeCycleWorkItemV1,
+  "request" | "transport"
+>;
+
 const ALL_PRODUCTION_EVIDENCE_SOURCE_FAMILIES_V1:
   readonly ProductionEvidenceSourceFamilyV1[] = [
     "KBS_SOIL",
@@ -206,6 +211,27 @@ export class ProductionEvidenceWorkItemFactoryV1 {
     return sourceFamilies.map((family) => byFamily[family]);
   }
 
+  buildKbsRawHourlyPublicationFetch(input: {
+    requested_at: string;
+    request_id_prefix: string;
+  }): KbsRawHourlyPublicationFetchV1 {
+    const requestedAt = canonicalIsoV1(
+      input.requested_at,
+      "PHASE3_EVIDENCE_KBS_PUBLICATION_REQUESTED_AT_INVALID",
+    );
+    const prefix = requestPrefixV1(input.request_id_prefix);
+    return {
+      request: buildKbsRawHourlyFetchRequestV1({
+        request_id: `${prefix}:kbs-raw-hourly-publication`,
+        requested_at: requestedAt,
+      }),
+      transport: new KbsRawHourlyLiveTransportV1({
+        fetch_impl: this.config.fetch_impl,
+        clock: this.clock,
+      }),
+    };
+  }
+
   buildKbsRawHourlyBatch(input: {
     target_logical_times: readonly string[];
     requested_at: string;
@@ -223,18 +249,15 @@ export class ProductionEvidenceWorkItemFactoryV1 {
         clock: this.clock,
       },
     );
-    const request = buildKbsRawHourlyFetchRequestV1({
-      request_id: `${prefix}:kbs-raw-hourly-batch`,
+    const publication = this.buildKbsRawHourlyPublicationFetch({
       requested_at: requestedAt,
+      request_id_prefix: prefix,
     });
     return {
       work_item_id: `${prefix}:kbs-raw-hourly-batch`,
       dataset_id: "kbs_lter_raw_hourly_multi_interval_batch_v1",
-      request,
-      transport: new KbsRawHourlyLiveTransportV1({
-        fetch_impl: this.config.fetch_impl,
-        clock: this.clock,
-      }),
+      request: publication.request,
+      transport: publication.transport,
       decoder,
     };
   }

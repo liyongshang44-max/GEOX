@@ -95,6 +95,14 @@ async function main(): Promise<void> {
     fetch_impl: fetchImpl,
     clock: () => new Date(AVAILABLE_AT),
   });
+  const publication = factory.buildKbsRawHourlyPublicationFetch({
+    requested_at: REQUESTED_AT,
+    request_id_prefix: "kbs-publication-focused",
+  });
+  assert.equal(publication.request.source_event_time, undefined);
+  assert.equal(publication.request.locator, MCFT_CAP09_KBS_RAW_HOURLY_ENDPOINT_V1);
+  assert.match(publication.request.request_id, /:kbs-raw-hourly-publication$/);
+
   const item = factory.buildKbsRawHourlyBatch({
     target_logical_times: TARGETS,
     requested_at: REQUESTED_AT,
@@ -168,6 +176,7 @@ async function main(): Promise<void> {
     one_retained_batch_reused_across_all_targets: true,
     raw_retention_before_all_decode: true,
     source_event_time_not_forged_from_one_target: true,
+    target_free_complete_table_publication_fetch_factory: true,
     database_connection_attempted: false,
     runtime_tick_cursor_mutation: false,
     twin_state_mutation: false,
