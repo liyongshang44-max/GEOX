@@ -32,7 +32,7 @@ need("service", [
   "createHash",
   "JSON.stringify(canonicalParts)",
   "deterministicReceiptFactIdV1",
-  "sampling_plan_fact_id, sample_id",
+  "sampling_plan_fact_id: string, sample_id: string",
   "findReceiptByFactId",
   "deterministicAcceptanceFactIdV1",
   "const factId = `sp_${plan_id}`",
