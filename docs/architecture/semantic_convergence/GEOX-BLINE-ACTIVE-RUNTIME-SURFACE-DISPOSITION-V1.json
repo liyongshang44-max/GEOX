@@ -2512,16 +2512,18 @@
       "surface_role": "AUTHORITY",
       "delegates_to": [],
       "replacement_path": [
-        "exact-source sampling evidence chain"
+        "sampling route -> exact Sampling service chain",
+        "operation report -> fail-closed exact Sampling projection"
       ],
-      "sunset_condition": "REMOVE_LATEST_WINS_BEFORE_CLOSURE",
+      "sunset_condition": "KEEP ACTIVE; LATEST-WINS CLOSED; AMBIGUOUS RECEIPT/LAB/RELATION/ACCEPTANCE MUST FAIL CLOSED",
       "semantic_family": [
         "evidence.raw_observation",
         "evidence.qualification",
         "acceptance.verdict"
       ],
       "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
-      "owner": "BLINE"
+      "owner": "BLINE",
+      "audit_note": "Sampling route remains product-active but no longer selects latest source facts; operation-report projection consumes a single exact chain or blocks."
     },
     {
       "surface_id": "ARS-126",

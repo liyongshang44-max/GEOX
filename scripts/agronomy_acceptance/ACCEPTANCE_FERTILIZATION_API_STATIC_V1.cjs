@@ -53,6 +53,10 @@ function assertRegex(text, pattern, label) {
     'LAB_RESULT_QUALITY_STATUS_NOT_PASS',
     'sampling_acceptance_v1',
     'SAMPLING_ACCEPTANCE_PASS_REQUIRED',
+    'SAMPLING_EXACT_RECEIPT_REF_REQUIRED',
+    'SAMPLING_ACCEPTANCE_AMBIGUOUS',
+    'sample_receipt_fact_id',
+    'lab_result_fact_id',
     'MISSING_NITROGEN_METRIC',
     'evidence_tier = "FORMAL"',
     'LOW_N_RISK',
@@ -130,8 +134,9 @@ function assertRegex(text, pattern, label) {
 
   assertAll(register, ['registerFertilizationV1Routes', './v1/fertilization.js'], 'core route registration');
 
-  assertRegex(service, /WHERE \(record_json::jsonb->>'type'\) = 'lab_result_import_v1'[\s\S]*record_json::jsonb->>'sample_id'[\s\S]*record_json::jsonb->>'import_id'/, 'SAMPLING_LAB lab result lookup');
-  assertRegex(service, /WHERE \(record_json::jsonb->>'type'\) = 'sampling_acceptance_v1'[\s\S]*UPPER\(COALESCE\(record_json::jsonb->>'verdict', ''\)\) = 'PASS'/, 'SAMPLING_LAB sampling acceptance PASS lookup');
+  assertRegex(service, /fact_id = \$1[\s\S]*record_json::jsonb->>'type'\) = 'lab_result_import_v1'[\s\S]*record_json::jsonb->>'sample_id'[\s\S]*record_json::jsonb->>'import_id'/, 'SAMPLING_LAB exact lab result lookup');
+  assertRegex(service, /record_json::jsonb->>'lab_result_fact_id'[\s\S]*record_json::jsonb->>'sample_receipt_fact_id'[\s\S]*UPPER\(COALESCE\(record_json::jsonb->>'verdict', ''\)\) = 'PASS'/, 'SAMPLING_LAB exact sampling acceptance PASS lookup');
+  assert.equal(/ORDER BY occurred_at DESC/.test(service), false, 'fertilization service must not use latest-wins fact selection');
   assertRegex(service, /if \(requestedCustomerVisible && !formalLowN\)/, 'customer-visible recommendation guard');
   assertRegex(service, /if \(recommendation\.customer_visible_eligible !== true\)/, 'prescription requires customer-visible recommendation guard');
   assertRegex(service, /if \(planned_n_kg_ha < 0\)/, 'negative N rate guard');

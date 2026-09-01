@@ -216,46 +216,83 @@ export class FertilizationServiceV1 {
          FROM facts
         WHERE (record_json::jsonb->>'type') = $1
           AND (record_json::jsonb->>$2) = $3
-        ORDER BY occurred_at DESC
-        LIMIT 1`,
+        LIMIT 2`,
       [type, key, value],
     );
+    if ((result.rows?.length ?? 0) > 1) {
+      throw new FertilizationServiceErrorV1(`FERTILIZATION_SOURCE_AMBIGUOUS:${type}:${key}`, 409);
+    }
     return result.rows?.[0] ?? null;
   }
 
   private async findLabResult(scope: TenantScopeV1, sample_id: string, lab_import_id: string): Promise<FactRowV1 | null> {
+    const labFactId = `sl_${lab_import_id}`;
     const result = await this.pool.query(
       `SELECT fact_id, occurred_at, source, record_json
          FROM facts
-        WHERE (record_json::jsonb->>'type') = 'lab_result_import_v1'
-          AND (record_json::jsonb->>'sample_id') = $1
-          AND (record_json::jsonb->>'import_id') = $2
-        ORDER BY occurred_at DESC
+        WHERE fact_id = $1
+          AND (record_json::jsonb->>'type') = 'lab_result_import_v1'
+          AND (record_json::jsonb->>'sample_id') = $2
+          AND (record_json::jsonb->>'import_id') = $3
+          AND (record_json::jsonb->>'tenant_id') = $4
+          AND (record_json::jsonb->>'project_id') = $5
+          AND (record_json::jsonb->>'group_id') = $6
         LIMIT 1`,
-      [sample_id, lab_import_id],
+      [labFactId, sample_id, lab_import_id, scope.tenant_id, scope.project_id, scope.group_id],
     );
     const row = result.rows?.[0] ?? null;
     if (!row) return null;
-    const receipt = await this.findFactByTypeAndKey("sample_receipt_v1", "sample_id", sample_id);
+
+    const receiptFactId = nonEmptyText(row.record_json?.sample_receipt_fact_id);
+    if (!receiptFactId) return null;
+    const receiptResult = await this.pool.query(
+      `SELECT fact_id, occurred_at, source, record_json
+         FROM facts
+        WHERE fact_id = $1
+          AND (record_json::jsonb->>'type') = 'sample_receipt_v1'
+        LIMIT 1`,
+      [receiptFactId],
+    );
+    const receipt = receiptResult.rows?.[0] ?? null;
     if (!receipt || !tenantMatches(receipt.record_json, scope)) return null;
+    if (String(receipt.record_json?.sample_id ?? "") !== sample_id) return null;
     return row;
   }
 
-  private async findSamplingAcceptancePass(scope: TenantScopeV1, sample_id: string, lab_import_id: string): Promise<FactRowV1 | null> {
+  private async findSamplingAcceptancePass(
+    scope: TenantScopeV1,
+    sample_id: string,
+    lab_import_id: string,
+    lab_result_fact_id: string,
+    sample_receipt_fact_id: string,
+  ): Promise<FactRowV1 | null> {
     const result = await this.pool.query(
       `SELECT fact_id, occurred_at, source, record_json
          FROM facts
         WHERE (record_json::jsonb->>'type') = 'sampling_acceptance_v1'
           AND (record_json::jsonb->>'sample_id') = $1
           AND COALESCE(record_json::jsonb->>'import_id', '') = $2
+          AND (record_json::jsonb->>'lab_result_fact_id') = $3
+          AND (record_json::jsonb->>'sample_receipt_fact_id') = $4
+          AND (record_json::jsonb->>'tenant_id') = $5
+          AND (record_json::jsonb->>'project_id') = $6
+          AND (record_json::jsonb->>'group_id') = $7
           AND UPPER(COALESCE(record_json::jsonb->>'verdict', '')) = 'PASS'
-        ORDER BY occurred_at DESC
-        LIMIT 1`,
-      [sample_id, lab_import_id],
+        LIMIT 2`,
+      [
+        sample_id,
+        lab_import_id,
+        lab_result_fact_id,
+        sample_receipt_fact_id,
+        scope.tenant_id,
+        scope.project_id,
+        scope.group_id,
+      ],
     );
-    const row = result.rows?.[0] ?? null;
-    if (!row || !tenantMatches(row.record_json, scope)) return null;
-    return row;
+    if ((result.rows?.length ?? 0) > 1) {
+      throw new FertilizationServiceErrorV1("SAMPLING_ACCEPTANCE_AMBIGUOUS", 409);
+    }
+    return result.rows?.[0] ?? null;
   }
 
   async createNitrogenAssessment(input: TenantFieldScopeV1 & {
@@ -299,7 +336,15 @@ export class FertilizationServiceV1 {
       if (String(labRecord.quality_status ?? "").trim().toUpperCase() !== "PASS") {
         throw new FertilizationServiceErrorV1("LAB_RESULT_QUALITY_STATUS_NOT_PASS", 400);
       }
-      const samplingAcceptance = await this.findSamplingAcceptancePass(input, sample_id, lab_import_id);
+      const sampleReceiptFactId = nonEmptyText(labRecord.sample_receipt_fact_id);
+      if (!sampleReceiptFactId) throw new FertilizationServiceErrorV1("SAMPLING_EXACT_RECEIPT_REF_REQUIRED", 400);
+      const samplingAcceptance = await this.findSamplingAcceptancePass(
+        input,
+        sample_id,
+        lab_import_id,
+        lab.fact_id,
+        sampleReceiptFactId,
+      );
       if (!samplingAcceptance) throw new FertilizationServiceErrorV1("SAMPLING_ACCEPTANCE_PASS_REQUIRED", 400);
       metrics = normalizeNitrogenMetrics(input.metrics ?? labRecord.metrics);
       if (!hasNitrogenMetric(metrics)) throw new FertilizationServiceErrorV1("MISSING_NITROGEN_METRIC", 400);
@@ -309,8 +354,9 @@ export class FertilizationServiceV1 {
       reasons = normalizeReasons(input.reasons, status === "LOW_N_RISK" ? ["FORMAL_LAB_RESULT_LOW_N_RISK"] : ["FORMAL_LAB_RESULT_REVIEWED"]);
       evidence_refs = uniqueEvidenceRefs([
         ...evidence_refs,
-        { kind: "lab_result_import_v1", ref_id: lab_import_id },
-        { kind: "sampling_acceptance_v1", ref_id: String(samplingAcceptance.record_json?.acceptance_id ?? samplingAcceptance.fact_id) },
+        { kind: "sample_receipt_v1", ref_id: sampleReceiptFactId },
+        { kind: "lab_result_import_v1", ref_id: lab.fact_id },
+        { kind: "sampling_acceptance_v1", ref_id: samplingAcceptance.fact_id },
       ]);
     } else if (trigger_source === "SENSING_RISK") {
       if (skill_signal_refs.length < 1 && sensing_state_refs.length < 1) {

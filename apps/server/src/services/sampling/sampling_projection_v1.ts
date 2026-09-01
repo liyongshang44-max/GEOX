@@ -55,21 +55,30 @@ function emptySamplingReportView(): SamplingReportViewV1 {
   };
 }
 
+function blockedSamplingReportView(reason: string, plan_id: string | null = null): SamplingReportViewV1 {
+  return {
+    ...emptySamplingReportView(),
+    plan_id,
+    blocking_reasons: [reason],
+  };
+}
+
 export async function buildSamplingReportViewV1(pool: Pool, params: SamplingScope): Promise<SamplingReportViewV1> {
   const scope = [params.tenant_id, params.project_id, params.group_id];
-  const plan = toText(params.plan_id);
+  const requestedPlanId = toText(params.plan_id);
   const operationIds = uniqueTextList([
     params.operation_id,
     ...(Array.isArray(params.operation_ids) ? params.operation_ids : []),
   ]);
 
-  if (!plan && operationIds.length < 1) return emptySamplingReportView();
+  if (!requestedPlanId && operationIds.length < 1) return emptySamplingReportView();
 
-  let resolvedPlanId: string | null = plan;
+  let resolvedPlanId: string | null = requestedPlanId;
+  let relationPlanFactId: string | null = null;
 
   if (!resolvedPlanId && operationIds.length > 0) {
-    const relationRow = await pool.query(
-      `SELECT record_json
+    const relationRows = await pool.query(
+      `SELECT fact_id, record_json
          FROM facts
         WHERE (record_json::jsonb->>'type')='sampling_operation_relation_v1'
           AND (record_json::jsonb->>'tenant_id')=$1
@@ -79,75 +88,132 @@ export async function buildSamplingReportViewV1(pool: Pool, params: SamplingScop
             (record_json::jsonb->>'operation_id') = ANY($4::text[])
             OR (record_json::jsonb->>'operation_plan_id') = ANY($4::text[])
           )
-        ORDER BY occurred_at DESC
-        LIMIT 1`,
+        LIMIT 2`,
       [...scope, operationIds],
     );
-    resolvedPlanId = toText(relationRow.rows?.[0]?.record_json?.plan_id);
+    if ((relationRows.rows?.length ?? 0) > 1) {
+      return blockedSamplingReportView("AMBIGUOUS_SAMPLING_OPERATION_RELATION");
+    }
+    const relation = relationRows.rows?.[0]?.record_json ?? null;
+    resolvedPlanId = toText(relation?.plan_id);
+    relationPlanFactId = toText(relation?.sampling_plan_fact_id);
   }
 
   if (!resolvedPlanId) return emptySamplingReportView();
 
+  const expectedPlanFactId = `sp_${resolvedPlanId}`;
+  if (relationPlanFactId && relationPlanFactId !== expectedPlanFactId) {
+    return blockedSamplingReportView("SAMPLING_RELATION_PLAN_FACT_MISMATCH", resolvedPlanId);
+  }
+
   const planRow = await pool.query(
-      `SELECT record_json
-         FROM facts
-        WHERE (record_json::jsonb->>'type')='sampling_plan_v1'
-          AND (record_json::jsonb->>'tenant_id')=$1
-          AND (record_json::jsonb->>'project_id')=$2
-          AND (record_json::jsonb->>'group_id')=$3
-          AND (record_json::jsonb->>'plan_id')=$4
-        ORDER BY occurred_at DESC
-        LIMIT 1`,
-      [...scope, resolvedPlanId],
-    );
-
+    `SELECT fact_id, record_json
+       FROM facts
+      WHERE fact_id=$4
+        AND (record_json::jsonb->>'type')='sampling_plan_v1'
+        AND (record_json::jsonb->>'tenant_id')=$1
+        AND (record_json::jsonb->>'project_id')=$2
+        AND (record_json::jsonb->>'group_id')=$3
+        AND (record_json::jsonb->>'plan_id')=$5
+      LIMIT 1`,
+    [...scope, expectedPlanFactId, resolvedPlanId],
+  );
+  const planFactId = toText(planRow.rows?.[0]?.fact_id);
   const planJson: any = planRow.rows?.[0]?.record_json ?? null;
-  resolvedPlanId = toText(planJson?.plan_id) ?? resolvedPlanId;
+  if (!planFactId || !planJson) return blockedSamplingReportView("SAMPLING_PLAN_EXACT_FACT_NOT_FOUND", resolvedPlanId);
 
-  const receiptRow = resolvedPlanId
-    ? await pool.query(
-      `SELECT record_json
-         FROM facts
-        WHERE (record_json::jsonb->>'type')='sample_receipt_v1'
-          AND (record_json::jsonb->>'tenant_id')=$1
-          AND (record_json::jsonb->>'project_id')=$2
-          AND (record_json::jsonb->>'group_id')=$3
-          AND (record_json::jsonb->>'plan_id')=$4
-        ORDER BY occurred_at DESC
-        LIMIT 1`,
-      [...scope, resolvedPlanId],
-    )
-    : { rows: [] as any[] };
-  const receipt: any = receiptRow.rows?.[0]?.record_json ?? null;
+  const receiptRows = await pool.query(
+    `SELECT fact_id, record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type')='sample_receipt_v1'
+        AND (record_json::jsonb->>'tenant_id')=$1
+        AND (record_json::jsonb->>'project_id')=$2
+        AND (record_json::jsonb->>'group_id')=$3
+        AND (record_json::jsonb->>'plan_id')=$4
+      LIMIT 2`,
+    [...scope, resolvedPlanId],
+  );
+  if ((receiptRows.rows?.length ?? 0) > 1) {
+    return blockedSamplingReportView("AMBIGUOUS_SAMPLE_RECEIPT_FOR_PLAN", resolvedPlanId);
+  }
+
+  const receiptFactId = toText(receiptRows.rows?.[0]?.fact_id);
+  const receipt: any = receiptRows.rows?.[0]?.record_json ?? null;
+  if (receipt && toText(receipt?.sampling_plan_fact_id) !== planFactId) {
+    return blockedSamplingReportView("SAMPLE_RECEIPT_PLAN_FACT_MISMATCH", resolvedPlanId);
+  }
   const sampleId = toText(receipt?.sample_id);
 
-  const labRow = sampleId
-    ? await pool.query(
-      `SELECT record_json
-         FROM facts
-        WHERE (record_json::jsonb->>'type')='lab_result_import_v1'
-          AND (record_json::jsonb->>'sample_id')=$1
-        ORDER BY occurred_at DESC
-        LIMIT 1`,
-      [sampleId],
-    )
-    : { rows: [] as any[] };
-  const lab: any = labRow.rows?.[0]?.record_json ?? null;
-  const importId = toText(lab?.import_id);
+  let acceptance: any = null;
+  let lab: any = null;
 
-  const acceptanceRow = sampleId
-    ? await pool.query(
-      `SELECT record_json
+  if (sampleId) {
+    const acceptanceRows = await pool.query(
+      `SELECT fact_id, record_json
          FROM facts
         WHERE (record_json::jsonb->>'type')='sampling_acceptance_v1'
-          AND (record_json::jsonb->>'sample_id')=$1
-          AND ($2::text IS NULL OR (record_json::jsonb->>'import_id')=$2 OR (record_json::jsonb->>'plan_id')=$3)
-        ORDER BY occurred_at DESC
-        LIMIT 1`,
-      [sampleId, importId, resolvedPlanId],
-    )
-    : { rows: [] as any[] };
-  const acceptance: any = acceptanceRow.rows?.[0]?.record_json ?? null;
+          AND (record_json::jsonb->>'tenant_id')=$1
+          AND (record_json::jsonb->>'project_id')=$2
+          AND (record_json::jsonb->>'group_id')=$3
+          AND (record_json::jsonb->>'plan_id')=$4
+          AND (record_json::jsonb->>'sample_id')=$5
+        LIMIT 2`,
+      [...scope, resolvedPlanId, sampleId],
+    );
+    if ((acceptanceRows.rows?.length ?? 0) > 1) {
+      return blockedSamplingReportView("AMBIGUOUS_SAMPLING_ACCEPTANCE_FOR_PLAN", resolvedPlanId);
+    }
+    acceptance = acceptanceRows.rows?.[0]?.record_json ?? null;
+
+    if (acceptance) {
+      if (toText(acceptance?.sampling_plan_fact_id) !== planFactId) {
+        return blockedSamplingReportView("SAMPLING_ACCEPTANCE_PLAN_FACT_MISMATCH", resolvedPlanId);
+      }
+      if (toText(acceptance?.sample_receipt_fact_id) !== receiptFactId) {
+        return blockedSamplingReportView("SAMPLING_ACCEPTANCE_RECEIPT_FACT_MISMATCH", resolvedPlanId);
+      }
+
+      const labFactId = toText(acceptance?.lab_result_fact_id);
+      if (labFactId) {
+        const labRow = await pool.query(
+          `SELECT fact_id, record_json
+             FROM facts
+            WHERE fact_id=$4
+              AND (record_json::jsonb->>'type')='lab_result_import_v1'
+              AND (record_json::jsonb->>'tenant_id')=$1
+              AND (record_json::jsonb->>'project_id')=$2
+              AND (record_json::jsonb->>'group_id')=$3
+              AND (record_json::jsonb->>'sample_id')=$5
+            LIMIT 1`,
+          [...scope, labFactId, sampleId],
+        );
+        lab = labRow.rows?.[0]?.record_json ?? null;
+        if (!lab) return blockedSamplingReportView("SAMPLING_ACCEPTANCE_LAB_FACT_NOT_FOUND", resolvedPlanId);
+        if (toText(lab?.sample_receipt_fact_id) !== receiptFactId) {
+          return blockedSamplingReportView("LAB_RESULT_RECEIPT_FACT_MISMATCH", resolvedPlanId);
+        }
+      }
+    } else {
+      const labRows = await pool.query(
+        `SELECT fact_id, record_json
+           FROM facts
+          WHERE (record_json::jsonb->>'type')='lab_result_import_v1'
+            AND (record_json::jsonb->>'tenant_id')=$1
+            AND (record_json::jsonb->>'project_id')=$2
+            AND (record_json::jsonb->>'group_id')=$3
+            AND (record_json::jsonb->>'sample_id')=$4
+          LIMIT 2`,
+        [...scope, sampleId],
+      );
+      if ((labRows.rows?.length ?? 0) > 1) {
+        return blockedSamplingReportView("AMBIGUOUS_LAB_RESULT_FOR_SAMPLE", resolvedPlanId);
+      }
+      lab = labRows.rows?.[0]?.record_json ?? null;
+      if (lab && toText(lab?.sample_receipt_fact_id) !== receiptFactId) {
+        return blockedSamplingReportView("LAB_RESULT_RECEIPT_FACT_MISMATCH", resolvedPlanId);
+      }
+    }
+  }
 
   const sampleTypeRaw = String(receipt?.sample_type ?? planJson?.sample_type ?? "").toUpperCase();
   const sample_type = (["SOIL", "TISSUE", "WATER"].includes(sampleTypeRaw) ? sampleTypeRaw : null) as SamplingReportViewV1["sample_type"];

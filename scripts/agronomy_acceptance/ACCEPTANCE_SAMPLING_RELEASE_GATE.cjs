@@ -6,6 +6,7 @@ const { resolve } = require("node:path");
 const steps = [
   { kind: "node", dir: "../agronomy_acceptance", file: "ACCEPTANCE_SAMPLING_CONTRACT_V1.cjs", label: "sampling-release" },
   { kind: "node", dir: "../governance_acceptance", file: "ACCEPTANCE_SAMPLING_NO_PROJECTION_WRITE_V1.cjs", label: "sampling-release" },
+  { kind: "node", dir: "../governance_acceptance", file: "ACCEPTANCE_BLINE_SAMPLING_EXACT_SOURCE_BINDING_V1.cjs", label: "sampling-release" },
   { kind: "node", dir: "../agronomy_acceptance", file: "ACCEPTANCE_SAMPLING_API_V1.cjs", label: "sampling-release" },
   { kind: "node", dir: "../agronomy_acceptance", file: "ACCEPTANCE_FORMAL_SAMPLING_E2E_V1.cjs", label: "sampling-release" },
   { kind: "node", dir: "../agronomy_acceptance", file: "ACCEPTANCE_SAMPLING_REPORT_PROJECTION_V1.cjs", label: "sampling-release" },

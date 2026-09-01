@@ -2273,22 +2273,25 @@
         "sampling_acceptance_v1"
       ],
       "reads": [
-        "sampling plan/receipt/lab evidence"
+        "exact sampling_plan_v1 by deterministic plan fact id",
+        "unique sample_receipt_v1 per tenant/project/group/sample_id",
+        "exact lab_result_import_v1 by deterministic import fact id",
+        "exact source refs bound into deterministic sampling_acceptance_v1"
       ],
       "semantic_family": [
         "evidence.raw_observation",
         "evidence.qualification",
         "acceptance.verdict"
       ],
-      "authority_class": "SAMPLING_EVIDENCE_AUTHORITY_SERVICE_WITH_LATEST_SELECTION_P0",
+      "authority_class": "SAMPLING_EXACT_SOURCE_CHAIN_AUTHORITY_SERVICE",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "sampling API",
         "agronomy evidence consumers"
       ],
-      "removal_target": "KEEP SAMPLING EVIDENCE ACCEPTANCE; REQUIRE EXACT RECEIPT/LAB IMPORT BINDING; FIX P0-RES-010",
-      "audit_note": "Route computes sampling PASS from lab quality + chain of custody, but optional import_id and latest receipt/lab selection violate exact-source authority.",
+      "removal_target": "KEEP SAMPLING EVIDENCE/ACCEPTANCE; P0-RES-010 CLOSED BY EXACT PLAN/RECEIPT/LAB BINDING AND DETERMINISTIC ACCEPTANCE IDENTITY",
+      "audit_note": "No latest-wins source selection remains in active Sampling service. sample_id receipt ambiguity fails closed; exact plan/receipt/lab fact refs are persisted into Sampling Acceptance.",
       "surface_id": "RES-084",
       "b02_registered": false
     },
@@ -2463,22 +2466,24 @@
         "indirect sampling plan/receipt/lab-result/sampling-acceptance facts"
       ],
       "reads": [
-        "sampling plan/receipt/lab evidence"
+        "exact plan fact identity",
+        "unique scoped sample receipt identity",
+        "exact or uniquely-resolved lab import identity"
       ],
       "semantic_family": [
         "evidence.raw_observation",
         "evidence.qualification",
         "acceptance.verdict"
       ],
-      "authority_class": "ACTIVE_SAMPLING_EVIDENCE_AUTHORITY_ROUTE_WITH_LATEST_P0",
+      "authority_class": "ACTIVE_SAMPLING_EXACT_SOURCE_BINDING_ROUTE",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "sampling service",
         "fertilization evidence consumers"
       ],
-      "removal_target": "KEEP SAMPLING WORKFLOW; REQUIRE EXACT RECEIPT/LAB-IMPORT BINDING; FIX P0-RES-010",
-      "audit_note": "P0-RES-010: acceptance selection currently permits latest-wins receipt/lab selection when exact import identity is omitted.",
+      "removal_target": "KEEP SAMPLING WORKFLOW AS FACADE OVER EXACT-SOURCE SERVICE; NO LATEST RECEIPT/LAB SELECTION",
+      "audit_note": "Route preserves existing API shape while internally binding exact fact identities. Ambiguous source selection returns fail-closed error instead of latest-wins.",
       "surface_id": "RES-091",
       "b02_registered": false
     },
@@ -7298,7 +7303,8 @@
         "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
       ],
       "reads": [
-        "writer-specific validated upstream inputs/provenance"
+        "writer-specific validated upstream inputs/provenance",
+        "for SAMPLING_LAB formal trigger: exact lab_result_import_v1 fact, exact sample_receipt_v1 fact, exact PASS sampling_acceptance_v1 bound to both"
       ],
       "semantic_family": [
         "governance.fact_ledger"
@@ -7319,7 +7325,7 @@
       ],
       "authority_owner": "FERTILIZATION_DOMAIN",
       "writer_scope": "assessment/recommendation/prescription/acceptance facts",
-      "audit_note": "Active fertilization domain service with mixed semantic families."
+      "audit_note": "Active fertilization domain service with mixed semantic families. SAMPLING_LAB now consumes exact Sampling source-chain refs only; remaining fertilization recommendation/prescription/acceptance convergence is separate debt."
     },
     {
       "surface_id": "RES-280",
@@ -7573,7 +7579,7 @@
       "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
       "feature_flag": null,
       "downstream_consumers": [],
-      "removal_target": "Remove latest-wins source selection; require exact binding",
+      "removal_target": "KEEP EXACT-SOURCE Sampling fact writer; latest-wins source selection removed",
       "b02_registered": false,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "ledger_disposition": "SEMANTIC_FACT_WRITER",
@@ -7584,7 +7590,7 @@
       ],
       "authority_owner": "SAMPLING_DOMAIN",
       "writer_scope": "sampling plan/receipt/lab/acceptance facts",
-      "audit_note": "Active sampling domain service."
+      "audit_note": "Sampling writer now uses deterministic plan/lab identities, unique scoped receipt identity, and deterministic exact-chain Sampling Acceptance identity."
     },
     {
       "surface_id": "RES-289",
@@ -7778,10 +7784,10 @@
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [],
-      "removal_target": "Keep route as facade; harden exact evidence/zone binding in domain service.",
+      "removal_target": "Keep route as facade; Sampling evidence inputs are exact-bound in Fertilization domain service; remaining zone/acceptance authority hardening is separate.",
       "b02_registered": false,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
-      "audit_note": "Route delegates fertilization assessment/prescription/acceptance methods to the active domain service; Evidence qualification semantics are owned by that service chain."
+      "audit_note": "Route delegates to fertilization service. Formal SAMPLING_LAB path no longer selects latest Sampling facts."
     },
     {
       "surface_id": "RES-297",
@@ -7979,6 +7985,35 @@
       "b02_registered": false,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "audit_note": "Forward-only repair preserves historical migration records while removing active schema scope fabrication."
+    },
+    {
+      "surface_id": "RES-305",
+      "source_path": "apps/server/src/services/sampling/sampling_projection_v1.ts",
+      "entrypoint": "reports_v1.ts -> buildSamplingReportViewV1",
+      "activation_mode": "ACTIVE_SERVICE_CALL_CHAIN",
+      "writes": [],
+      "reads": [
+        "sampling_operation_relation_v1",
+        "exact sampling_plan_v1",
+        "unique sample_receipt_v1 for resolved plan",
+        "exact-chain sampling_acceptance_v1",
+        "exact lab_result_import_v1 referenced by acceptance"
+      ],
+      "semantic_family": [
+        "presentation.read_model",
+        "evidence.qualification"
+      ],
+      "authority_class": "SAMPLING_EXACT_CHAIN_REPORT_PROJECTION_FAIL_CLOSED",
+      "runtime_reachable": "PROVEN_VIA_OPERATION_REPORT",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "apps/server/src/routes/reports_v1.ts",
+        "customer/operator operation report projections"
+      ],
+      "removal_target": "KEEP PROJECTION-ONLY; MULTIPLE RELATIONS/RECEIPTS/ACCEPTANCES/LABS MUST BLOCK, NEVER LATEST-WINS",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "audit_note": "Previously omitted active surface. Customer-visible sampling eligibility projection now requires a single exact chain and emits explicit blocking reasons on ambiguity."
     }
   ],
   "cross_branch_surfaces": [
