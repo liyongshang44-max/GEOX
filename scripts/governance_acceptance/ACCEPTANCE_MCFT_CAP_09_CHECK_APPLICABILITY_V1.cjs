@@ -215,6 +215,8 @@ function main() {
     "apps/server/src/external_evidence/mcft_cap09_kbs_publication_baseline_pointer_v1.ts",
     "apps/server/src/persistence/external_evidence/postgres_kbs_publication_baseline_pointer_v1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1.ts",
+    "apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_comparison_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_SNAPSHOT_COMPARISON_V1.ts",
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-KBS-BASELINE-POINTER-SCHEMA-REMEDIATION-AUTHORITY-V1.json",
     "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_ARM_V1.json",
     "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_V1.cjs",
@@ -277,6 +279,17 @@ function main() {
     assert.equal(byId(result, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
     assert(byId(result, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(kbsPointerRemediationPath));
   }
+
+  // CP-4: KBS retained snapshot comparison is Phase3-owned; focused proof is owner-closure-owned.
+  const kbsSnapshotComparisonRuntime = plan(authority, registry, ["apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_comparison_v1.ts"]);
+  assert.equal(kbsSnapshotComparisonRuntime.status, "PASS");
+  assert.equal(kbsSnapshotComparisonRuntime.unknown_changed_paths.length, 0);
+  assert.equal(byId(kbsSnapshotComparisonRuntime, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+  assert(byId(kbsSnapshotComparisonRuntime, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes("apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_comparison_v1.ts"));
+  const kbsSnapshotComparisonProof = plan(authority, registry, ["scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_SNAPSHOT_COMPARISON_V1.ts"]);
+  assert.equal(kbsSnapshotComparisonProof.status, "PASS");
+  assert.equal(kbsSnapshotComparisonProof.unknown_changed_paths.length, 0);
+  assert.equal(byId(kbsSnapshotComparisonProof, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
 
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";

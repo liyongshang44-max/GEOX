@@ -254,7 +254,8 @@
         "apps/server/src/external_evidence/kbs_raw_hourly_publication_baseline_store_v1.ts",
         "apps/server/db/migrations/2026_09_01_mcft_cap_09_kbs_publication_baseline_pointer.sql",
         "apps/server/src/external_evidence/mcft_cap09_kbs_publication_baseline_pointer_v1.ts",
-        "apps/server/src/persistence/external_evidence/postgres_kbs_publication_baseline_pointer_v1.ts"
+        "apps/server/src/persistence/external_evidence/postgres_kbs_publication_baseline_pointer_v1.ts",
+        "apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_comparison_v1.ts"
       ]
     },
     "PHASE4_TWIN_RUNTIME_FOUNDATION": {
@@ -434,7 +435,9 @@
         "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_ARM_V1.json",
         "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_V1.cjs",
         "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_V1.cjs",
-        ".github/workflows/mcft-cap-09-production-kbs-baseline-pointer-schema-remediation.yml"
+        ".github/workflows/mcft-cap-09-production-kbs-baseline-pointer-schema-remediation.yml",
+        "apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_comparison_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_SNAPSHOT_COMPARISON_V1.ts"
       ]
     }
   },

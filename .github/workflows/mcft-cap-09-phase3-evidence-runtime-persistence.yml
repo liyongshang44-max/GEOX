@@ -48,6 +48,8 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_V1.ts'
       - 'apps/server/src/external_evidence/kbs_raw_hourly_publication_baseline_store_v1.ts'
       - 'apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_snapshot_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_SNAPSHOT_COMPARISON_V1.ts'
+      - 'apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_comparison_v1.ts'
       - 'apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts'
       - 'apps/server/src/external_evidence/s3_compatible_private_evidence_object_client_v1.ts'
       - 'apps/server/src/external_evidence/s3_compatible_private_candidate_manifest_store_v1.ts'
@@ -130,11 +132,14 @@ jobs:
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_PRIVATE_CANDIDATE_IO_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_V1.ts \
-            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1.ts
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_SNAPSHOT_COMPARISON_V1.ts
       - name: Prove durable Evidence lease and supply cursor semantics
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts
       - name: Prove fenced KBS publication baseline current pointer
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1.ts
+      - name: Prove retained KBS snapshot historical-prefix comparison
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_SNAPSHOT_COMPARISON_V1.ts
       - name: Prove generic Evidence cadence profiles
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_SUPPLY_CADENCE_PROFILES_V1.ts
       - name: Prove one canonical Evidence Runtime supply cycle
@@ -222,6 +227,7 @@ jobs:
               pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts"),
               pathlib.Path("apps/server/src/persistence/external_evidence/postgres_kbs_publication_baseline_pointer_v1.ts"),
               pathlib.Path("apps/server/src/external_evidence/mcft_cap09_kbs_publication_baseline_pointer_v1.ts"),
+              pathlib.Path("apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_comparison_v1.ts"),
               pathlib.Path("apps/server/src/persistence/external_evidence/postgres_evidence_runtime_governed_ingress_v1.ts"),
           ]
           decoder_file = pathlib.Path("apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts")
@@ -284,5 +290,6 @@ jobs:
             acceptance-output/MCFT_CAP_09_PHASE7_PRIVATE_CANDIDATE_IO_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_KBS_PUBLICATION_BASELINE_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_KBS_PUBLICATION_SNAPSHOT_COMPARISON_V1_RESULT.json
           if-no-files-found: warn
           retention-days: 90

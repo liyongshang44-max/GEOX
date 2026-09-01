@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "KBS_FENCED_BASELINE_POINTER_IMPLEMENTED_PRODUCTION_REMEDIATION_READY_NOT_AUTHORIZED");
+  assert.equal(authority.status, "KBS_HISTORICAL_PREFIX_COMPARISON_IMPLEMENTED_REMEDIATION_READY_NOT_AUTHORIZED");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "3da9aacaffacd8ff90dfb55468b68d2190bdf7dd");
+  assert.equal(authority.subject_predecessor_sha, "ac753bcef691a20c6f1429cd6d86e6a5a59a45d9");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -124,6 +124,13 @@ try {
   includes(kbsProductionPointerWorkflow, "Read-only exact production KBS pointer schema preflight", "KBS_POINTER_PRODUCTION_READ_ONLY_PREFLIGHT_REQUIRED");
   includes(kbsProductionPointerWorkflow, "Apply pointer schema only when separately armed", "KBS_POINTER_PRODUCTION_SEPARATE_ARM_REQUIRED");
 
+  const kbsSnapshotComparison = read(authority.kbs_publication_snapshot_comparison_ref);
+  includes(kbsSnapshotComparison, "HISTORICAL_DRIFT", "KBS_HISTORICAL_DRIFT_STATE_REQUIRED");
+  includes(kbsSnapshotComparison, "BASELINE_POINTER_SNAPSHOT_MISMATCH", "KBS_BASELINE_SNAPSHOT_IDENTITY_BOUNDARY_REQUIRED");
+  includes(kbsSnapshotComparison, "historical_revision_or_backfill_auto_promotion_authorized", "KBS_HISTORICAL_AUTO_PROMOTION_FORBIDDEN_MARKER_REQUIRED");
+  assert.equal(kbsSnapshotComparison.includes("fetch("), false, "KBS_SNAPSHOT_COMPARISON_PROVIDER_FETCH_FORBIDDEN");
+  assert.equal(kbsSnapshotComparison.includes("INSERT INTO"), false, "KBS_SNAPSHOT_COMPARISON_DB_WRITE_FORBIDDEN");
+
   const purePlanner = read(authority.pure_source_planner_ref);
   includes(purePlanner, "planProductionEvidenceSourcesV1", "PURE_SOURCE_SPECIFIC_PLANNER_REQUIRED");
   includes(purePlanner, "KBS_RAW_HOURLY_PUBLICATION_BASELINE_REQUIRED", "KBS_PUBLICATION_BASELINE_PLAN_REQUIRED");
@@ -188,6 +195,9 @@ try {
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_baseline_pointer_schema_materialized, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_durable_baseline_available, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.durable_publication_baseline_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.historical_prefix_snapshot_comparison_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.historical_revision_backfill_fail_closed, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.baseline_pointer_snapshot_identity_mismatch_fail_closed, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.publication_diff_no_change_adapter_implemented, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.fixed_latest_24_rows_bootstrap_authorized, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.pair_skew_repair_implemented, false);
@@ -221,7 +231,8 @@ try {
     status: "PASS",
     subject_sha: subject,
     authority_status: authority.status,
-    current_frontier: "PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_AUTHORIZATION_REQUIRED",
+    current_frontier: "KBS_RETAINED_SNAPSHOT_CYCLE_ADAPTER_REQUIRED",
+    kbs_historical_prefix_snapshot_comparison_implemented: true,
     production_kbs_baseline_pointer_schema_remediation_capability_implemented: true,
     production_kbs_baseline_pointer_schema_remediation_authorized: false,
     kbs_fenced_baseline_pointer_implemented_isolated: true,
