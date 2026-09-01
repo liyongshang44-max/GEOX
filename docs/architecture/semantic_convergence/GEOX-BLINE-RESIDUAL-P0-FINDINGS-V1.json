@@ -180,6 +180,23 @@
       ],
       "semantic_risk": "later receipt or lab facts can silently change which evidence is treated as authoritative for sampling acceptance without an explicit exact source binding",
       "required_direction": "sampling acceptance must bind exact receipt and lab-import identities (or an explicit immutable version relation) and fail closed on ambiguity; latest-wins selection is forbidden"
+    },
+    {
+      "finding_id": "P0-RES-011",
+      "severity": "P0",
+      "title": "Formal Field Memory fabricates confidence=0.8 when no confidence evidence is supplied",
+      "paths": [
+        "apps/server/src/services/field_memory_service.ts",
+        "apps/server/src/routes/acceptance_v1.ts"
+      ],
+      "evidence": [
+        "recordMemoryV1 computes confidence as num(metrics.confidence) ?? 0.8",
+        "the canonical acceptance formal-memory call supplies before/after soil moisture, target range, success and acceptance_passed but no metrics.confidence",
+        "that call sets memory_lane=FORMAL_FIELD_MEMORY, trust_level=FORMAL_ACCEPTED, customer_visible_memory=true and learning_eligible=true",
+        "recordMemoryV1 persists the derived 0.8 into field_memory_v1.confidence"
+      ],
+      "semantic_risk": "absence of confidence evidence is converted into a fabricated numeric confidence and promoted into customer-visible, learning-eligible formal memory",
+      "required_direction": "formal memory confidence must be provenance-bound to measured/qualified evidence or remain unknown/null and fail closed where a numeric confidence is required; arbitrary numeric defaults cannot acquire formal authority"
     }
   ]
 }
