@@ -289,6 +289,9 @@ export class FertilizationServiceV1 {
     if (String(receiptRecord.plan_id ?? "") !== String(acceptanceRecord.plan_id ?? "")) {
       throw new FertilizationServiceErrorV1("SAMPLING_RECEIPT_PLAN_MISMATCH", 400);
     }
+    if (String(receiptRecord.sampling_plan_fact_id ?? "") !== plan.fact_id) {
+      throw new FertilizationServiceErrorV1("SAMPLING_RECEIPT_PLAN_FACT_REF_MISMATCH", 400);
+    }
     if (String(receiptRecord.sample_id ?? "") !== sample_id) {
       throw new FertilizationServiceErrorV1("SAMPLING_RECEIPT_SAMPLE_MISMATCH", 400);
     }
@@ -297,6 +300,9 @@ export class FertilizationServiceV1 {
     }
     if (String(labRecord.sample_receipt_fact_id ?? "") !== receipt.fact_id) {
       throw new FertilizationServiceErrorV1("SAMPLING_LAB_RECEIPT_REF_MISMATCH", 400);
+    }
+    if (String(labRecord.sampling_plan_fact_id ?? "") !== plan.fact_id) {
+      throw new FertilizationServiceErrorV1("SAMPLING_LAB_PLAN_FACT_REF_MISMATCH", 400);
     }
     if (String(labRecord.plan_id ?? "") !== String(planRecord.plan_id ?? "")) {
       throw new FertilizationServiceErrorV1("SAMPLING_LAB_PLAN_MISMATCH", 400);
