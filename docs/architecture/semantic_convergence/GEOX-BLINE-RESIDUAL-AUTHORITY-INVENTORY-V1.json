@@ -578,21 +578,22 @@
       "reads": [
         "acceptance_result_v1 and formal gate state",
         "acceptance/evidence/receipt observation candidates",
-        "device_observation_index_v1 latest-two fallback"
+        "device_observation_index_v1 latest-two fallback",
+        "tenant/project/group scope predicates that currently allow missing-source-field fallback"
       ],
       "semantic_family": [
         "field_memory"
       ],
-      "authority_class": "CURRENT_FIELD_MEMORY_WRITER_WITH_CAUSAL_PAIR_AND_FORMAL_CONFIDENCE_P0S",
+      "authority_class": "CURRENT_FIELD_MEMORY_WRITER_WITH_PROVENANCE_P0S",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "recommendation memory context",
         "reports"
       ],
-      "removal_target": "KEEP_FIELD_MEMORY_SERVICE; REMOVE_LATEST_TWO_DEVICE_FALLBACK; REMOVE FABRICATED FORMAL CONFIDENCE; REQUIRE CAUSAL OPERATION-BOUND OBSERVATION/CONFIDENCE PROVENANCE",
+      "removal_target": "KEEP_FIELD_MEMORY_SERVICE; REMOVE_LATEST_TWO_DEVICE_FALLBACK; REMOVE FABRICATED FORMAL CONFIDENCE; REQUIRE EXACT TENANT/PROJECT/GROUP AND EXACT RECEIPT/OPERATION-BOUND OBSERVATION/CONFIDENCE PROVENANCE",
       "b02_registered": true,
-      "audit_note": "P0-RES-008: formal-memory service can fall back to two latest field observations without operation/receipt/acceptance time binding. P0-RES-011: recordMemoryV1 defaults missing confidence to 0.8; canonical formal acceptance does not supply confidence, so 0.8 becomes FORMAL_ACCEPTED/customer-visible/learning-eligible. Latent scope debt: project_id/group_id default to projectA/groupA, although all currently identified production callers pass scope explicitly."
+      "audit_note": "P0-RES-008: latest-two device observations can be bound to an unrelated accepted operation. P0-RES-011: missing formal confidence becomes 0.8. P0-RES-012: missing tenant/project/group on Acceptance/Evidence/Receipt is treated as caller scope via COALESCE null-wildcard predicates."
     },
     {
       "surface_id": "RES-021",
@@ -1277,16 +1278,16 @@
       "semantic_family": [
         "field_memory"
       ],
-      "authority_class": "FORMAL_FIELD_MEMORY_ENTRYPOINT_WITH_LATEST_PAIR_P0",
+      "authority_class": "FORMAL_FIELD_MEMORY_ENTRYPOINT_WITH_PROVENANCE_P0S",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "formal Field Memory readers",
         "learning-eligible memory consumers"
       ],
-      "removal_target": "KEEP EXPLICIT FORMALIZATION ENTRYPOINT; REQUIRE CAUSALLY BOUND OBSERVATION PAIR AND REMOVE LATEST-TWO FALLBACK",
+      "removal_target": "KEEP EXPLICIT FORMALIZATION ENTRYPOINT; REQUIRE EXACT-SCOPED ACCEPTANCE + EXACT RECEIPT/EVIDENCE IDENTITY + CAUSAL OBSERVATION PAIR + EXPLICIT CONFIDENCE",
       "b02_registered": false,
-      "audit_note": "P0-RES-008: active route can reach latest-two device observation fallback in field_memory_service."
+      "audit_note": "P0-RES-008/011/012: route reaches latest-pair fallback, fabricated confidence, and null-wildcard source-scope matching in field_memory_service."
     },
     {
       "surface_id": "RES-048",
