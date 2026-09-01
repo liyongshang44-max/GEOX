@@ -2292,7 +2292,7 @@
         "agronomy evidence consumers"
       ],
       "removal_target": "KEEP SAMPLING EVIDENCE ACCEPTANCE; EXACT PLAN/RECEIPT/LAB FACT BINDING REQUIRED; AMBIGUITY FAILS CLOSED",
-      "audit_note": "Latest-wins source selection removed. sample_id is not promoted to global identity: receipt fact identity is canonical scope+exact plan fact+sample and race-safe; sample-only compatibility lookup is unique-or-ambiguous. Lab fact identity is canonical scope+sample+exact receipt/plan+import, so caller-supplied import_id is chain-scoped. Sampling Acceptance persists exact refs and is race-safe idempotent.",
+      "audit_note": "Latest-wins removed. Receipt identity is exact-plan scoped; lab identity is exact-chain scoped and lab reads require tenant/project/group continuity; caller-supplied sample_id/import_id remain business locators rather than global fact keys. Sampling Acceptance persists exact plan/receipt/lab refs, validates lab field/scope, and is race-safe idempotent.",
       "surface_id": "RES-084",
       "b02_registered": false
     },
@@ -8014,7 +8014,7 @@
       ],
       "removal_target": "KEEP FAIL-CLOSED READ MODEL; NEVER SELECT LATEST FACT TO CREATE CUSTOMER-VISIBLE ELIGIBILITY",
       "b02_registered": false,
-      "audit_note": "Previously selected latest relation/receipt/lab/acceptance and could affect customer_visible_eligible. Now ambiguity blocks visibility; relation→plan→receipt→lab→acceptance exact plan-fact continuity is required."
+      "audit_note": "Sampling report projection is fail-closed: relation→plan→receipt→lab→acceptance exact continuity is required, lab query is tenant/project/group scoped, and ambiguity or legacy missing exact refs blocks customer visibility rather than selecting latest."
     },
     {
       "surface_id": "RES-306",
