@@ -399,6 +399,19 @@ function main() {
     assert(byId(sourcePollRemediationPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(sourcePollRemediationPath));
   }
 
+  // CP-4: GFS target/due readiness is Phase3-owned and owner-visible post-merge.
+  {
+    const gfsReadinessPath = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-GFS-TARGET-DUE-READINESS-V1.json";
+    const gfsReadinessPlan = plan(authority, registry, [gfsReadinessPath]);
+    assert.equal(gfsReadinessPlan.status, "PASS");
+    assert.equal(gfsReadinessPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(gfsReadinessPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(gfsReadinessPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const gfsReadinessPostMerge = plan(authority, registry, [gfsReadinessPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(gfsReadinessPostMerge, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(gfsReadinessPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(gfsReadinessPath));
+  }
+
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
   const phase3 = plan(authority, registry, [phase3Path]);

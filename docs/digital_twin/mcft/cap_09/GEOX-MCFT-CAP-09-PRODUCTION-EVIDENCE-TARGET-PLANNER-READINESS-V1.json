@@ -1,9 +1,9 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_target_planner_readiness_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1",
-  "status": "SOURCE_DUE_POLICIES_AND_SCHEMA_REMEDIATION_READY_NOT_AUTHORIZED",
+  "status": "AUDIT_CORRECTED_GFS_TARGET_DUE_AND_EXECUTION_SEAM_BLOCKERS",
   "stage": "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START",
-  "subject_predecessor_sha": "4731574a35bd55526d5d9acb021a26068348a0c5",
+  "subject_predecessor_sha": "ce4934babbd3263914d8d65627e50c51096c9017",
   "host_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
   "production_process_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
   "production_composition_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
@@ -76,8 +76,8 @@
       "cursor_partition": "BINDING_ID_PLUS_CYCLE_SPECIFIC_ORIGIN_SOURCE_ID",
       "required_planning_semantics": "CROSS_CYCLE_LATEST_VALID_FROM_PAIR_PROGRESS",
       "current_read_port_shape": "BINDING_SET_CROSS_CYCLE_PROGRESS_WITH_EXACT_CYCLE_PAIRING",
-      "current_shape_bindable": true,
-      "reason": "COMPLETE_CROSS_CYCLE_PARTIAL_PAIR_REHYDRATION_USES_EXACT_FACT_PROVENANCE_PRIVATE_RETAINED_RAW_AND_EXISTING_EVIDENCE_RUNTIME_CYCLE_SERVICE",
+      "current_shape_bindable": false,
+      "reason": "PARTIAL_PAIR_REHYDRATION_IS_IMPLEMENTED_BUT_PRODUCTION_GFS_TARGET_LOGICAL_TIME_AND_OPERATIONAL_DUE_RETRY_AUTHORITIES_ARE_NOT_ESTABLISHED",
       "required_foundation": [
         "CROSS_CYCLE_GFS_PROGRESS_READ_PORT",
         "WEATHER_ET0_PAIR_SKEW_FAIL_CLOSED",
@@ -102,7 +102,11 @@
       "existing_side_idempotent_missing_side_insert_proven": true,
       "zero_provider_refetch_rehydration_proven": true,
       "canonical_fact_content_type_persisted": true,
-      "replay_envelope_content_type_restored": true
+      "replay_envelope_content_type_restored": true,
+      "target_logical_time_authority_established": false,
+      "operational_due_retry_policy_established": false,
+      "legacy_collector_numeric_retry_constants_promoted": false,
+      "durable_retry_throttle_established": false
     },
     "kbs_soil": {
       "publication_mode": "IRREGULAR_PROVIDER_DEFINED_EVENT",
@@ -128,7 +132,10 @@
     "long_running_not_due_semantics": "NON_TERMINAL_WAIT_WITHOUT_CYCLE_DATABASE_OR_PROVIDER_EXECUTION",
     "not_due_wait_implemented": true,
     "not_due_wait_reason": "PLANNER_NOT_DUE",
-    "production_planner_still_bindable": false
+    "production_planner_still_bindable": false,
+    "heterogeneous_source_plan_execution_seam_implemented": false,
+    "kbs_publication_cycle_can_share_single_host_lifecycle": false,
+    "second_evidence_host_authorized": false
   },
   "bootstrap_authority_gap": {
     "production_acquisition_start_or_bounded_backfill_horizon_established": true,
@@ -146,12 +153,17 @@
   "unconditional_blockers": [
     "PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_NOT_MATERIALIZED",
     "KBS_RAW_HOURLY_PRODUCTION_BASELINE_POINTER_SCHEMA_NOT_MATERIALIZED",
-    "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"
+    "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
+    "GFS_TARGET_LOGICAL_TIME_AUTHORITY_NOT_ESTABLISHED",
+    "GFS_OPERATIONAL_DUE_AND_RETRY_POLICY_NOT_ESTABLISHED",
+    "HETEROGENEOUS_SOURCE_PLAN_EXECUTION_SEAM_NOT_IMPLEMENTED"
   ],
   "implementation_order": [
-    "ESTABLISH_EXPLICIT_KBS_BATCH_AND_SOIL_DUE_AUTHORITIES",
-    "AUTHORIZE_AND_MATERIALIZE_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_BEFORE_RUNTIME_BINDING",
-    "PROVE_RESTART_PAIR_SKEW_BATCH_REUSE_AND_ZERO_DUE_PROVIDER_REQUEST",
+    "ESTABLISH_GFS_TARGET_LOGICAL_TIME_AND_OPERATIONAL_DUE_RETRY_AUTHORITIES",
+    "IMPLEMENT_SINGLE_HOST_HETEROGENEOUS_SOURCE_PLAN_EXECUTION_SEAM",
+    "AUTHORIZE_AND_MATERIALIZE_PRODUCTION_SOURCE_POLL_SCHEDULE_SCHEMA",
+    "AUTHORIZE_AND_MATERIALIZE_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA",
+    "PROVE_RESTART_PAIR_SKEW_BATCH_REUSE_GFS_RETRY_THROTTLE_AND_ZERO_DUE_PROVIDER_REQUEST",
     "BIND_COMPILED_ENTRYPOINT_UNDER_SEPARATE_RUNTIME_START_AUTHORITY"
   ],
   "implemented_foundation": [
@@ -228,7 +240,10 @@
     "NO_CHANGE_DOES_NOT_REQUIRE_EVIDENCE_CURSOR_ADVANCE_FOR_THROTTLE",
     "PRODUCTION_SOURCE_POLL_SCHEDULE_FORWARD_SCHEMA_REMEDIATION_CAPABILITY",
     "PRODUCTION_SOURCE_POLL_SCHEDULE_READ_ONLY_PRESTATE_ADJUDICATION",
-    "PRODUCTION_SOURCE_POLL_SCHEDULE_REMEDIATION_DEFAULT_UNARMED"
+    "PRODUCTION_SOURCE_POLL_SCHEDULE_REMEDIATION_DEFAULT_UNARMED",
+    "GFS_TARGET_AUTHORITY_GAP_MACHINE_VISIBLE",
+    "GFS_OPERATIONAL_DUE_RETRY_AUTHORITY_GAP_MACHINE_VISIBLE",
+    "HETEROGENEOUS_SOURCE_PLAN_EXECUTION_SEAM_GAP_MACHINE_VISIBLE"
   ],
   "current_entrypoint": {
     "status": "PACKAGED_FAIL_CLOSED_PURE_PLANNER_NOT_PRODUCTION_BOUND",
@@ -273,7 +288,7 @@
   "kbs_publication_cycle_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1.ts",
   "gfs_fact_replay_provenance_reader_ref": "apps/server/src/persistence/external_evidence/postgres_external_evidence_fact_replay_provenance_v1.ts",
   "gfs_fact_replay_provenance_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_V1.ts",
-  "current_frontier": "PRODUCTION_SCHEMA_MATERIALIZATION_AND_PLANNER_BINDING",
+  "current_frontier": "GFS_TARGET_DUE_AUTHORITY_AND_SINGLE_HOST_EXECUTION_SEAM",
   "gfs_partial_pair_rehydration_adapter_ref": "apps/server/src/external_evidence/mcft_cap09_gfs_partial_pair_rehydration_v1.ts",
   "gfs_partial_pair_rehydration_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_PARTIAL_PAIR_REHYDRATION_V1.ts",
   "source_due_policy_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1.json",
@@ -287,5 +302,6 @@
   "source_poll_schedule_schema_remediation_arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_ARM_V1.json",
   "source_poll_schedule_schema_remediation_workflow_ref": ".github/workflows/mcft-cap-09-production-evidence-source-poll-schedule-schema-remediation.yml",
   "source_poll_schedule_schema_remediation_capability_implemented": true,
-  "source_poll_schedule_schema_remediation_authorized": false
+  "source_poll_schedule_schema_remediation_authorized": false,
+  "gfs_target_due_readiness_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-GFS-TARGET-DUE-READINESS-V1.json"
 }

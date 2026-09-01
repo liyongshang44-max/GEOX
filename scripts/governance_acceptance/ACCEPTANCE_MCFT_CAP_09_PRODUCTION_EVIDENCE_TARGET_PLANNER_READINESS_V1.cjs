@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "SOURCE_DUE_POLICIES_AND_SCHEMA_REMEDIATION_READY_NOT_AUTHORIZED");
+  assert.equal(authority.status, "AUDIT_CORRECTED_GFS_TARGET_DUE_AND_EXECUTION_SEAM_BLOCKERS");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "4731574a35bd55526d5d9acb021a26068348a0c5");
+  assert.equal(authority.subject_predecessor_sha, "ce4934babbd3263914d8d65627e50c51096c9017");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -49,6 +49,20 @@ try {
   includes(cursor, "binding_id=$7 AND origin_source_id=$8", "EVIDENCE_CURSOR_EXACT_BINDING_ORIGIN_READ_REQUIRED");
   includes(cursor, "readSupplyCursorsByBindings", "EVIDENCE_CURSOR_BINDING_SET_READ_REQUIRED");
   includes(cursor, "binding_id = ANY($7::text[])", "EVIDENCE_CURSOR_BINDING_SET_SQL_REQUIRED");
+
+  const gfsTargetDueReadiness = json(authority.gfs_target_due_readiness_ref);
+  assert.equal(gfsTargetDueReadiness.status, "NOT_ESTABLISHED");
+  assert.equal(gfsTargetDueReadiness.frozen_semantics.o00_warm_start.first_gfs_pair_valid_from, "ACTIVE_FORMAL_A0_LOGICAL_TIME");
+  assert.equal(gfsTargetDueReadiness.frozen_semantics.provider_selection.provider_creates_target_logical_time, false);
+  assert.equal(gfsTargetDueReadiness.frozen_semantics.operational_window.latest_safe_start_lead_minutes, 30);
+  assert.equal(gfsTargetDueReadiness.frozen_semantics.operational_window.retry_is_operational_only, true);
+  assert.equal(gfsTargetDueReadiness.frozen_semantics.operational_window.legacy_numeric_values_are_current_production_authority, false);
+  assert.equal(gfsTargetDueReadiness.missing_authority.earliest_acquisition_lead_policy_established, false);
+  assert.equal(gfsTargetDueReadiness.missing_authority.numeric_retry_policy_established, false);
+  assert.deepEqual(gfsTargetDueReadiness.blockers, [
+    "GFS_TARGET_LOGICAL_TIME_AUTHORITY_NOT_ESTABLISHED",
+    "GFS_OPERATIONAL_DUE_AND_RETRY_POLICY_NOT_ESTABLISHED",
+  ]);
 
   const sourceProgress = read(authority.source_progress_ref);
   includes(sourceProgress, "EvidenceSourceSpecificProgressReaderV1", "SOURCE_PROGRESS_READER_REQUIRED");
@@ -252,6 +266,9 @@ try {
     "PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_NOT_MATERIALIZED",
     "KBS_RAW_HOURLY_PRODUCTION_BASELINE_POINTER_SCHEMA_NOT_MATERIALIZED",
     "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
+    "GFS_TARGET_LOGICAL_TIME_AUTHORITY_NOT_ESTABLISHED",
+    "GFS_OPERATIONAL_DUE_AND_RETRY_POLICY_NOT_ESTABLISHED",
+    "HETEROGENEOUS_SOURCE_PLAN_EXECUTION_SEAM_NOT_IMPLEMENTED",
   ]);
   assert.equal(authority.adjudication.phase5_fixture_manifest_may_be_production_planner, false);
   assert.equal(authority.adjudication.v13_forcing_controller_may_be_general_evidence_planner, false);
@@ -305,7 +322,10 @@ try {
   assert.equal(authority.source_specific_requirements.gfs_bundle.replay_source_locator_from_final_locator, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.exact_fact_replay_provenance_read_port_implemented, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.restored_ingested_at_replay_input_available, true);
-  assert.equal(authority.source_specific_requirements.gfs_bundle.current_shape_bindable, true);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.current_shape_bindable, false);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.target_logical_time_authority_established, false);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.operational_due_retry_policy_established, false);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.durable_retry_throttle_established, false);
   assert.equal(authority.source_specific_requirements.gfs_bundle.partial_pair_production_rehydration_adapter_implemented, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.retained_replay_uses_same_evidence_runtime_cycle_service, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.per_work_item_retention_override_implemented, true);

@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/mcft-cap-09-production-evidence-target-planner-readiness.yml'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-GFS-TARGET-DUE-READINESS-V1.json'
       - '.github/workflows/mcft-cap-09-production-evidence-source-poll-schedule-schema-remediation.yml'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_V1.cjs'
       - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_V1.cjs'
