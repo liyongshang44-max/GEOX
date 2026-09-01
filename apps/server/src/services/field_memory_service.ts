@@ -208,6 +208,7 @@ type ObservationPairV1 = {
   before_soil_moisture: number;
   after_soil_moisture: number;
   soil_moisture_delta: number;
+  confidence?: number;
   evidence_refs: unknown[];
   source: string;
 };
@@ -290,10 +291,12 @@ function observationPairFromPayload(payload: any, evidenceRef: unknown, source: 
   if (before !== undefined && after === undefined && delta !== undefined) after = before + delta;
   if (after !== undefined && before === undefined && delta !== undefined) before = after - delta;
   if (before === undefined || after === undefined) return null;
+  const confidence = finiteFromKeys(observed, ["confidence", "measurement_confidence", "observation_confidence"]);
   return {
     before_soil_moisture: before,
     after_soil_moisture: after,
     soil_moisture_delta: delta ?? after - before,
+    ...(confidence !== undefined ? { confidence } : {}),
     evidence_refs: evidenceRef == null ? [] : [evidenceRef],
     source,
   };
@@ -457,6 +460,7 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
       before_soil_moisture: observationPair.before_soil_moisture,
       after_soil_moisture: observationPair.after_soil_moisture,
       soil_moisture_delta: observationPair.soil_moisture_delta,
+      confidence: observationPair.confidence,
       target_range: acceptance.payload?.metrics?.target_range,
       success: true,
       acceptance_passed: true,
