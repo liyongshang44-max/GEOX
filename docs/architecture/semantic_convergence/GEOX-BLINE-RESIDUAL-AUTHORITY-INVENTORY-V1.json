@@ -265,9 +265,10 @@
         "prior ao_act_dispatch_v1"
       ],
       "semantic_family": [
-        "execution.dispatch_intent"
+        "execution.dispatch_intent",
+        "execution.dispatch_delivery"
       ],
-      "authority_class": "ACTIVE_OPERATOR_DISPATCH_INTENT_WRITER",
+      "authority_class": "ACTIVE_OPERATOR_DISPATCH_INTENT_WRITER_DELIVERY_CONSUMER",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
@@ -275,7 +276,7 @@
       ],
       "removal_target": "KEEP OPERATOR INTENT FACADE; CANONICAL QUEUE/EXECUTOR OWNS DELIVERY AND ACK",
       "b02_registered": false,
-      "audit_note": "Operator action now records intent only. delivery_confirmed=false and acknowledgement_confirmed=false; worklist projects intent as DISPATCH_PENDING."
+      "audit_note": "Operator action writes REQUESTED intent only; same route remains a read/projection consumer of executor-owned DISPATCHED/ACKED delivery semantics."
     },
     {
       "surface_id": "RES-008",
@@ -7084,11 +7085,12 @@
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "ledger_disposition": "LEGACY_COMPATIBILITY",
       "underlying_semantic_families": [
-        "execution.dispatch_intent"
+        "execution.dispatch_intent",
+        "execution.dispatch_delivery"
       ],
       "authority_owner": "OPERATOR_COMMAND_FACADE",
-      "writer_scope": "operator dispatch intent/audit facts only; no delivery or acknowledgement authority",
-      "audit_note": "Dispatch delivery status debt closed for operator facade: writes REQUESTED intent only; no dispatched_at/delivery confirmation."
+      "writer_scope": "operator dispatch intent/audit facts only; delivery family is read/projection consumption, not writer authority",
+      "audit_note": "Ledger writer is intent-only. Path still consumes delivery states for worklist projection and duplicate/terminal guards."
     },
     {
       "surface_id": "RES-273",
