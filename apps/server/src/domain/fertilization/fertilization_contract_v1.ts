@@ -175,19 +175,26 @@ export type FertilizationAcceptanceZoneResultV1 = {
 export type FertilizationAcceptanceV1 = {
   fertilization_acceptance_id: string;
   fertilization_prescription_id: string;
+  variable_prescription_id: string;
   tenant_id: string;
   project_id: string;
   group_id: string;
   field_id: string;
-  operation_plan_id?: string | null;
-  act_task_id?: string | null;
-  receipt_id?: string | null;
-  as_applied_id?: string | null;
+  operation_plan_id: string;
+  act_task_id: string;
+  receipt_id: string;
+  as_executed_id: string;
+  as_applied_id: string;
   acceptance_status: FertilizationAcceptanceStatusV1;
   zone_results: FertilizationAcceptanceZoneResultV1[];
   operation_rollup_policy: "ALL_REQUIRED_ZONES_PASS" | "NEEDS_REVIEW_ON_MISSING_ZONE";
   reasons: string[];
   evidence_refs: FertilizationEvidenceRefV1[];
+  acceptance_policy: {
+    source: "prescription_contract_v1.acceptance_conditions";
+    amount_tolerance_percent: number;
+    required_coverage_percent: number;
+  };
   evaluated_at_ts: number;
 };
 
