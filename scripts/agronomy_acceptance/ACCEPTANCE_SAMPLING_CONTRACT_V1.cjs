@@ -34,6 +34,7 @@ function hasAll(text, required) {
     'manual sample data 不得直接写 ProblemState conclusion',
     'lab result 不得直接写 ROI / Field Memory / customer success',
     'Sampling formal chain 不得使用 latest-wins source selection',
+    'legacy lab_result_import_v1 without exact receipt/plan/scope refs cannot establish Formal Sampling authority',
   ];
   const requiredSamplingReasons = [
     'LOW_CONFIDENCE',
