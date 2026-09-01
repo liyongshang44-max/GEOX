@@ -27,7 +27,7 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "VERIFIED_RETAINED_RAW_REPLAY_PRIMITIVE_EXTRACTED_KBS_CYCLE_ADAPTER_NEXT");
+  assert.equal(authority.status, "KBS_PUBLICATION_CYCLE_ADAPTER_IMPLEMENTED_PRODUCTION_SCHEMA_AND_DUE_AUTHORITY_REMAIN");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
   assert.equal(authority.subject_predecessor_sha, "63c56f2e732f568f927c554dddb64e4a7b788ec3");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
