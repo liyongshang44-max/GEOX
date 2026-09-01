@@ -1,0 +1,12 @@
+{
+  "schema_version": "geox_mcft_cap09_production_evidence_acl_carryforward_remediation_arm_v1",
+  "armed": false,
+  "exact_target_database_name": null,
+  "production_evidence_acl_carryforward_remediation_authorized": false,
+  "expected_preflight_subject_sha": null,
+  "runtime_process_start_authorized": false,
+  "production_owner_activation_authorized": false,
+  "formal_v5_arm_authorized": false,
+  "a0_authorized": false,
+  "o00_authorized": false
+}
