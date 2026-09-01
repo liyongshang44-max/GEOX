@@ -100,8 +100,10 @@ function main() {
   assert.deepEqual(failedV4Policy.errors, [], `FAILED_V4_AUTHORITY_POLICY_ERRORS:${JSON.stringify(failedV4Policy.errors)}`);
   assert(failedV4Policy.subjects.has("26c1383f7f45abb76c99e28ec3d06714e85d1b2c"), "FAILED_V4_SUBJECT_MUST_BE_FORBIDDEN");
 
-  // CP-4: control-plane-only maintenance preserves carry-forward only for dependency sets
-  // that still exist unchanged at the frozen subject. Expanded Phase1/Phase2 sets require fresh proof.
+  // CP-4: control-plane-only maintenance cannot carry historical evidence whose resolved
+  // dependency digest has already changed on the current successor. Shared collector refactoring
+  // therefore keeps EA5C1 fail-closed as REQUALIFY even when this synthetic changed-path set
+  // contains only the control-plane authority itself.
   const controlOnly = plan(authority, registry, [AUTHORITY_PATH]);
   assert.equal(controlOnly.status, "PASS");
   assert.equal(controlOnly.unknown_changed_paths.length, 0);
@@ -117,7 +119,13 @@ function main() {
     assert.equal(row.reason_code, "DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT", `EXPANDED_V13_RESOLVER_REASON_REQUIRED:${id}`);
     assert.equal(row.dependency_digest_match, false, `EXPANDED_V13_RESOLVER_DIGEST_MUST_DIFFER:${id}`);
   }
-  assert.equal(byId(controlOnly, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS").status, "CARRY_FORWARD", "UNCHANGED_EA5C1_MUST_CARRY");
+  const controlOnlyEa5c1 = byId(controlOnly, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS");
+  assert.equal(controlOnlyEa5c1.status, "REQUALIFY", "SHARED_COLLECTOR_DIGEST_DRIFT_MUST_REQUALIFY_EA5C1");
+  assert.equal(controlOnlyEa5c1.dependency_digest_match, false, "EA5C1_SHARED_COLLECTOR_DIGEST_MUST_DIFFER");
+  assert(
+    ["DEPENDENCY_DIGEST_CHANGED", "DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT"].includes(controlOnlyEa5c1.reason_code),
+    "EA5C1_SHARED_COLLECTOR_REQUALIFICATION_REASON_REQUIRED",
+  );
   for (const id of [
     "EA5E2_RUNTIME_DEPENDENCY_GRAPH",
     "LEGACY_AM19_PERSISTENT_24T",
