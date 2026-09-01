@@ -37,6 +37,9 @@ jobs:
       - name: B-Line P0-RES-007 evidence export boundary
         run: pnpm run ci:governance:bline-p0-res007-evidence-export-boundary
 
+      - name: B-Line P0 formal Field Memory provenance
+        run: pnpm run ci:governance:bline-p0-formal-field-memory-provenance
+
       - name: Route response ownership guard
         run: pnpm run ci:route-response-ownership
 
