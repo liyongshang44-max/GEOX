@@ -72,7 +72,10 @@ try {
   assert.equal(horizonAuthority.restart_policy.in_memory_only_kbs_baseline_sufficient_for_production, false);
   assert.equal(horizonAuthority.bootstrap_policy.gfs_bundle.historical_cycle_sweep_authorized, false);
   assert.equal(horizonAuthority.bootstrap_policy.kbs_soil.historical_event_scan_authorized, false);
-  assert.equal(horizonAuthority.bootstrap_policy.kbs_soil.explicit_poll_due_policy_established, false);
+  assert.equal(horizonAuthority.bootstrap_policy.kbs_raw_hourly.explicit_poll_due_policy_established, true);
+  assert.equal(horizonAuthority.bootstrap_policy.kbs_raw_hourly.minimum_poll_interval_seconds, 900);
+  assert.equal(horizonAuthority.bootstrap_policy.kbs_soil.explicit_poll_due_policy_established, true);
+  assert.equal(horizonAuthority.bootstrap_policy.kbs_soil.minimum_poll_interval_seconds, 300);
   assert.equal(horizonAuthority.restart_policy.bootstrap_rewind_authorized, false);
   assert.equal(horizonAuthority.runtime_start_binding.active_horizon_instance_bound, false);
 
