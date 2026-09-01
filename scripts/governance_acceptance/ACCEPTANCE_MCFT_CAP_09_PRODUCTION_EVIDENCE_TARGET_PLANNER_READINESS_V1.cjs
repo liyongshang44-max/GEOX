@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "PURE_PLANNER_IMPLEMENTED_KBS_FULL_TABLE_BOOTSTRAP_CORRECTED_REMAINING_BINDING_BLOCKERS");
+  assert.equal(authority.status, "KBS_BASELINE_MANIFEST_AND_DIFF_CORE_IMPLEMENTED_REMAINING_POINTER_ADAPTER_BLOCKERS");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "f6c11495ac2242e962521e9bfc29f13ab679345c");
+  assert.equal(authority.subject_predecessor_sha, "da98afdf72877b918176b429410a5b3de06e0b9b");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -85,6 +85,15 @@ try {
   assert.equal(horizonContract.includes("Date.now"), false, "PRODUCTION_EVIDENCE_HORIZON_WALL_CLOCK_READ_FORBIDDEN");
   assert.equal(horizonContract.includes("process.env"), false, "PRODUCTION_EVIDENCE_HORIZON_ENV_READ_FORBIDDEN");
 
+  const kbsSnapshotInspector = read(authority.kbs_publication_snapshot_inspector_ref);
+  includes(kbsSnapshotInspector, "KbsRawHourlyPublicationSnapshotInspectorV1", "KBS_PUBLICATION_SNAPSHOT_INSPECTOR_REQUIRED");
+  includes(kbsSnapshotInspector, '"NO_CHANGE" | "FORWARD_DELTA" | "AMBIGUOUS_FORWARD"', "KBS_PUBLICATION_DIFF_STATE_REQUIRED");
+  includes(kbsSnapshotInspector, "revision_or_backfill_auto_promotion_authorized", "KBS_REVISION_BACKFILL_NONPROMOTION_REQUIRED");
+  const kbsBaselineStore = read(authority.kbs_publication_baseline_store_ref);
+  includes(kbsBaselineStore, "S3CompatibleKbsRawHourlyPublicationBaselineStoreV1", "KBS_PRIVATE_BASELINE_STORE_REQUIRED");
+  includes(kbsBaselineStore, "PRIVATE_KBS_RAW_HOURLY_PUBLICATION_BASELINE", "KBS_PRIVATE_BASELINE_OBJECT_CLASS_REQUIRED");
+  includes(kbsBaselineStore, "current_pointer_bound: false", "KBS_BASELINE_POINTER_MUST_REMAIN_UNBOUND");
+  assert.equal(kbsBaselineStore.includes("INSERT INTO"), false, "KBS_BASELINE_STORE_DATABASE_WRITE_FORBIDDEN");
   const purePlanner = read(authority.pure_source_planner_ref);
   includes(purePlanner, "planProductionEvidenceSourcesV1", "PURE_SOURCE_SPECIFIC_PLANNER_REQUIRED");
   includes(purePlanner, "KBS_RAW_HOURLY_PUBLICATION_BASELINE_REQUIRED", "KBS_PUBLICATION_BASELINE_PLAN_REQUIRED");
@@ -117,7 +126,7 @@ try {
 
   assert.deepEqual(authority.unconditional_blockers, [
     "KBS_RAW_HOURLY_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED",
-    "KBS_RAW_HOURLY_DURABLE_PUBLICATION_BASELINE_NOT_IMPLEMENTED",
+    "KBS_RAW_HOURLY_DURABLE_BASELINE_POINTER_NOT_IMPLEMENTED",
     "KBS_RAW_HOURLY_PUBLICATION_DIFF_NO_CHANGE_ADAPTER_NOT_IMPLEMENTED",
     "KBS_RAW_HOURLY_PAIR_SKEW_REPAIR_NOT_IMPLEMENTED",
     "GFS_PARTIAL_PAIR_PRODUCTION_REHYDRATION_ADAPTER_NOT_IMPLEMENTED",
@@ -135,6 +144,12 @@ try {
   assert.equal(authority.bootstrap_authority_gap.activation_fence_source, "SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY");
   assert.equal(authority.bootstrap_authority_gap.may_inherit_formal_forcing_budget_as_bootstrap_horizon, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.pure_planner_decision_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.publication_snapshot_inspector_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.forward_delta_discovery_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.no_change_discovery_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.content_addressed_private_baseline_manifest_store_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.baseline_manifest_idempotent_readback_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.durable_baseline_current_pointer_implemented, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.durable_publication_baseline_implemented, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.publication_diff_no_change_adapter_implemented, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.fixed_latest_24_rows_bootstrap_authorized, false);
@@ -169,7 +184,9 @@ try {
     status: "PASS",
     subject_sha: subject,
     authority_status: authority.status,
-    current_frontier: "KBS_DURABLE_PUBLICATION_BASELINE_REQUIRED",
+    current_frontier: "KBS_FENCED_BASELINE_POINTER_REQUIRED",
+    kbs_content_addressed_baseline_manifest_store_implemented: true,
+    kbs_forward_delta_no_change_discovery_implemented: true,
     kbs_complete_table_bootstrap_corrected: true,
     pure_source_specific_planner_core_implemented: true,
     acquisition_horizon_authority_established: true,

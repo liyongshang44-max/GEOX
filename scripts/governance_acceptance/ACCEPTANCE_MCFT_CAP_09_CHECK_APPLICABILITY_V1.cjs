@@ -208,6 +208,9 @@ function main() {
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_V1.ts",
     "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_planner_v1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLANNER_V1.ts",
+    "apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_snapshot_v1.ts",
+    "apps/server/src/external_evidence/kbs_raw_hourly_publication_baseline_store_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_V1.ts",
   ]) {
     const horizonPlanner = plan(authority, registry, [horizonPlannerPath]);
     assert.equal(horizonPlanner.status, "PASS");
@@ -226,6 +229,19 @@ function main() {
   assert.equal(purePlannerProof.status, "PASS");
   assert.equal(purePlannerProof.unknown_changed_paths.length, 0);
   assert.equal(byId(purePlannerProof, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+
+  // CP-4: KBS publication snapshot inspection and private baseline manifest are Phase3-owned.
+  for (const kbsPublicationRuntimePath of ["apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_snapshot_v1.ts", "apps/server/src/external_evidence/kbs_raw_hourly_publication_baseline_store_v1.ts"]) {
+    const result = plan(authority, registry, [kbsPublicationRuntimePath]);
+    assert.equal(result.status, "PASS");
+    assert.equal(result.unknown_changed_paths.length, 0);
+    assert.equal(byId(result, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert(byId(result, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes(kbsPublicationRuntimePath));
+  }
+  const kbsPublicationProof = plan(authority, registry, ["scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_V1.ts"]);
+  assert.equal(kbsPublicationProof.status, "PASS");
+  assert.equal(kbsPublicationProof.unknown_changed_paths.length, 0);
+  assert.equal(byId(kbsPublicationProof, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
 
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";

@@ -249,7 +249,9 @@
         "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql",
         "apps/server/src/external_evidence/mcft_cap09_evidence_source_progress_v1.ts",
         "apps/server/src/external_evidence/mcft_cap09_production_evidence_acquisition_horizon_v1.ts",
-        "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_planner_v1.ts"
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_planner_v1.ts",
+        "apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_snapshot_v1.ts",
+        "apps/server/src/external_evidence/kbs_raw_hourly_publication_baseline_store_v1.ts"
       ]
     },
     "PHASE4_TWIN_RUNTIME_FOUNDATION": {
@@ -417,7 +419,10 @@
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_V1.ts",
         "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_planner_v1.ts",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLANNER_V1.ts"
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLANNER_V1.ts",
+        "apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_snapshot_v1.ts",
+        "apps/server/src/external_evidence/kbs_raw_hourly_publication_baseline_store_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_V1.ts"
       ]
     }
   },

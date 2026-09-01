@@ -69,7 +69,7 @@ export type ProductionEvidenceSourceDecisionV1 =
       status: "BLOCKED_CAPABILITY";
       authority_ref: string;
       blocker:
-        | "KBS_RAW_HOURLY_DURABLE_PUBLICATION_BASELINE_NOT_IMPLEMENTED"
+        | "KBS_RAW_HOURLY_DURABLE_BASELINE_POINTER_NOT_IMPLEMENTED"
         | "KBS_RAW_HOURLY_PUBLICATION_DIFF_NO_CHANGE_ADAPTER_NOT_IMPLEMENTED"
         | "KBS_RAW_HOURLY_PAIR_SKEW_REPAIR_NOT_IMPLEMENTED"
         | "GFS_PARTIAL_PAIR_PRODUCTION_REHYDRATION_ADAPTER_NOT_IMPLEMENTED";
@@ -285,7 +285,7 @@ export function planProductionEvidenceSourcesV1(input: {
         source_family: "KBS_RAW_HOURLY",
         status: "BLOCKED_CAPABILITY",
         authority_ref: authorityRefV1(kbsDue.authority_ref),
-        blocker: "KBS_RAW_HOURLY_DURABLE_PUBLICATION_BASELINE_NOT_IMPLEMENTED",
+        blocker: "KBS_RAW_HOURLY_DURABLE_BASELINE_POINTER_NOT_IMPLEMENTED",
         operation: {
           kind: "KBS_RAW_HOURLY_PUBLICATION_BASELINE_REQUIRED",
           requested_at: kbsDue.requested_at,

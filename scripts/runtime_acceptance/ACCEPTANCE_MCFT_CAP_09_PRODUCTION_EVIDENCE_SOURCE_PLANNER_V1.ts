@@ -231,7 +231,7 @@ function main(): void {
     },
   });
   assert.deepEqual(kbsBootstrap.blockers, [
-    "KBS_RAW_HOURLY_DURABLE_PUBLICATION_BASELINE_NOT_IMPLEMENTED",
+    "KBS_RAW_HOURLY_DURABLE_BASELINE_POINTER_NOT_IMPLEMENTED",
   ]);
   assert.equal(
     kbsBootstrap.decisions[0]?.status === "BLOCKED_CAPABILITY"
