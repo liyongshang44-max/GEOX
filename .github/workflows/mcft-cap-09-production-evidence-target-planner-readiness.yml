@@ -13,6 +13,8 @@ on:
       - 'apps/server/src/external_evidence/mcft_cap09_production_evidence_work_items_v1.ts'
       - 'apps/server/src/external_evidence/provider/kbs_raw_hourly_live_provider_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_MULTI_INTERVAL_PRODUCT_PATH_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_kbs_raw_hourly_publication_cycle_service_v1.ts'
       - 'apps/server/src/external_evidence/qualification/mcft_cap09_phase5_evidence_runtime_qualification_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.ts'
       - 'apps/server/src/persistence/external_evidence/postgres_evidence_runtime_persistence_v1.ts'
@@ -68,6 +70,7 @@ jobs:
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_V1.ts
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLANNER_V1.ts
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_MULTI_INTERVAL_PRODUCT_PATH_V1.ts
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1.ts
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -79,5 +82,6 @@ jobs:
             acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLANNER_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_KBS_RAW_HOURLY_MULTI_INTERVAL_PRODUCT_PATH_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1_RESULT.json
           if-no-files-found: error
           retention-days: 90

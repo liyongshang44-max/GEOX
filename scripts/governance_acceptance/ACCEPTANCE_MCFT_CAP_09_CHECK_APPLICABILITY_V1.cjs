@@ -305,6 +305,17 @@ function main() {
   assert.equal(byId(retainedReplayProof, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
   assert.equal(byId(retainedReplayProof, "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION").status, "REQUALIFY");
 
+  // CP-4: KBS publication cycle service is Phase3-owned and owner-closure-visible.
+  for (const kbsPublicationCyclePath of ["apps/server/src/external_evidence/mcft_cap09_kbs_raw_hourly_publication_cycle_service_v1.ts","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1.ts"]) {
+    const result = plan(authority, registry, [kbsPublicationCyclePath]);
+    assert.equal(result.status, "PASS");
+    assert.equal(result.unknown_changed_paths.length, 0);
+    assert.equal(byId(result, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(result, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(result, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes(kbsPublicationCyclePath));
+    assert(byId(result, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(kbsPublicationCyclePath));
+  }
+
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
   const phase3 = plan(authority, registry, [phase3Path]);

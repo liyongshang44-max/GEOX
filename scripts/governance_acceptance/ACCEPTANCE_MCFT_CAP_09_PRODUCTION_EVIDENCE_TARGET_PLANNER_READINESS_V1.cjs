@@ -142,6 +142,16 @@ try {
   includes(phase7ReplayConsumer, "ExistingRetainedRawVerificationBarrierV1", "PHASE7_SHARED_REPLAY_BARRIER_REQUIRED");
   assert.equal(phase7ReplayConsumer.includes("class PrivateCandidateReadbackTransportV1"), false, "PHASE7_LOCAL_REPLAY_TRANSPORT_DUPLICATE_FORBIDDEN");
 
+  const kbsPublicationCycle = read(authority.kbs_publication_cycle_service_ref);
+  includes(kbsPublicationCycle, "collectAndRetainRawEvidenceV1", "KBS_CYCLE_CANONICAL_RETENTION_STAGE_REQUIRED");
+  includes(kbsPublicationCycle, "PostCommitVisibleExternalFormalEvidenceIngressV1", "KBS_CYCLE_VISIBLE_INGRESS_REQUIRED");
+  includes(kbsPublicationCycle, "BLOCKED_HISTORICAL_DRIFT", "KBS_CYCLE_HISTORICAL_DRIFT_BLOCK_REQUIRED");
+  includes(kbsPublicationCycle, "BLOCKED_FORWARD_GAP", "KBS_CYCLE_FORWARD_GAP_BLOCK_REQUIRED");
+  includes(kbsPublicationCycle, "expected_previous_digest: pointer.baseline_digest", "KBS_CYCLE_POINTER_CAS_REQUIRED");
+  includes(kbsPublicationCycle, "baseline_pointer_advance_count", "KBS_CYCLE_POINTER_LAST_MACHINE_FIELD_REQUIRED");
+  assert.equal(kbsPublicationCycle.includes("setInterval("), false, "KBS_CYCLE_CADENCE_OWNERSHIP_FORBIDDEN");
+  assert.equal(kbsPublicationCycle.includes("process.env"), false, "KBS_CYCLE_ENV_AUTHORITY_FORBIDDEN");
+
   const purePlanner = read(authority.pure_source_planner_ref);
   includes(purePlanner, "planProductionEvidenceSourcesV1", "PURE_SOURCE_SPECIFIC_PLANNER_REQUIRED");
   includes(purePlanner, "KBS_RAW_HOURLY_PUBLICATION_BASELINE_REQUIRED", "KBS_PUBLICATION_BASELINE_PLAN_REQUIRED");
@@ -203,6 +213,12 @@ try {
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.baseline_pointer_restart_readback_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_baseline_pointer_schema_remediation_capability_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_baseline_pointer_schema_remediation_authorized, false);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.batch_discovery_no_change_adapter_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.publication_diff_no_change_adapter_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.pair_skew_repair_implemented, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.forward_gap_fail_closed, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.pointer_advance_after_all_visible_cursor_advances, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.single_forward_hour_supported, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_baseline_pointer_schema_materialized, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_durable_baseline_available, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.durable_publication_baseline_implemented, true);
@@ -244,7 +260,8 @@ try {
     status: "PASS",
     subject_sha: subject,
     authority_status: authority.status,
-    current_frontier: "KBS_RETAINED_SNAPSHOT_CYCLE_ADAPTER_REQUIRED",
+    current_frontier: "GFS_PARTIAL_PAIR_PRODUCTION_REHYDRATION_ADAPTER_REQUIRED",
+    kbs_publication_cycle_adapter_implemented: true,
     shared_verified_retained_raw_replay_primitive_implemented: true,
     kbs_historical_prefix_snapshot_comparison_implemented: true,
     production_kbs_baseline_pointer_schema_remediation_capability_implemented: true,

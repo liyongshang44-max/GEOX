@@ -1,9 +1,9 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_target_planner_readiness_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1",
-  "status": "VERIFIED_RETAINED_RAW_REPLAY_PRIMITIVE_EXTRACTED_KBS_CYCLE_ADAPTER_NEXT",
+  "status": "KBS_PUBLICATION_CYCLE_ADAPTER_IMPLEMENTED_PRODUCTION_SCHEMA_AND_DUE_AUTHORITY_REMAIN",
   "stage": "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START",
-  "subject_predecessor_sha": "63c56f2e732f568f927c554dddb64e4a7b788ec3",
+  "subject_predecessor_sha": "5f0bca94196fcd98191a145ad48ebec9ad1ff631",
   "host_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
   "production_process_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
   "production_composition_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
@@ -26,7 +26,7 @@
       "required_planning_semantics": "ONE_RETAINED_PROVIDER_BATCH_MAY_ADVANCE_MULTIPLE_EXACT_HOURLY_EVENTS",
       "current_product_shape": "COMPLETE_TABLE_FETCH_PLUS_EXACT_INTERVAL_DECODERS_WITH_MULTI_INTERVAL_REUSE",
       "current_shape_bindable": false,
-      "reason": "FULL_TABLE_BASELINE_MANIFEST_FENCED_POINTER_AND_EXACT_PREFIX_COMPARISON_IMPLEMENTED_HISTORICAL_DRIFT_FAILS_CLOSED_BUT_PRODUCTION_POINTER_SCHEMA_REMAINS_UNAUTHORIZED_AND_CYCLE_ADAPTER_PAIR_REPAIR_AND_EXPLICIT_DUE_AUTHORITY_REMAIN_UNBOUND",
+      "reason": "COMPLETE_TABLE_FETCH_RETAIN_READBACK_PREFIX_COMPARE_FORWARD_DECODE_IDEMPOTENT_PAIR_REPAIR_AND_POINTER_LAST_CYCLE_SERVICE_IMPLEMENTED_BUT_PRODUCTION_POINTER_SCHEMA_AND_EXPLICIT_DUE_AUTHORITY_REMAIN_UNBOUND",
       "required_foundation": [
         "BATCH_WATERMARK_DISCOVERY_OR_EQUIVALENT_DUE_STATE",
         "SINGLE_FETCH_MULTI_INTERVAL_RETAIN_DECODE_CANONICALIZE",
@@ -37,10 +37,10 @@
       "single_fetch_multi_interval_path_implemented": true,
       "single_private_retention_per_batch_implemented": true,
       "pure_planner_decision_implemented": true,
-      "batch_discovery_no_change_adapter_implemented": false,
-      "pair_skew_repair_implemented": false,
+      "batch_discovery_no_change_adapter_implemented": true,
+      "pair_skew_repair_implemented": true,
       "durable_publication_baseline_implemented": true,
-      "publication_diff_no_change_adapter_implemented": false,
+      "publication_diff_no_change_adapter_implemented": true,
       "fixed_latest_24_rows_bootstrap_authorized": false,
       "publication_snapshot_inspector_implemented": true,
       "forward_delta_discovery_implemented": true,
@@ -58,7 +58,10 @@
       "historical_prefix_snapshot_comparison_implemented": true,
       "historical_revision_backfill_fail_closed": true,
       "baseline_pointer_snapshot_identity_mismatch_fail_closed": true,
-      "verified_retained_raw_replay_primitive_implemented": true
+      "verified_retained_raw_replay_primitive_implemented": true,
+      "forward_gap_fail_closed": true,
+      "pointer_advance_after_all_visible_cursor_advances": true,
+      "single_forward_hour_supported": true
     },
     "gfs_bundle": {
       "publication_mode": "SIX_HOUR_PROVIDER_CYCLES_WITH_HOURLY_TARGET_WINDOWS",
@@ -117,14 +120,11 @@
   "unconditional_blockers": [
     "KBS_RAW_HOURLY_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED",
     "KBS_RAW_HOURLY_PRODUCTION_BASELINE_POINTER_SCHEMA_NOT_MATERIALIZED",
-    "KBS_RAW_HOURLY_PUBLICATION_DIFF_NO_CHANGE_ADAPTER_NOT_IMPLEMENTED",
-    "KBS_RAW_HOURLY_PAIR_SKEW_REPAIR_NOT_IMPLEMENTED",
     "GFS_PARTIAL_PAIR_PRODUCTION_REHYDRATION_ADAPTER_NOT_IMPLEMENTED",
     "KBS_SOIL_EXPLICIT_DUE_POLICY_NOT_ESTABLISHED",
     "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"
   ],
   "implementation_order": [
-    "ADD_KBS_RETAINED_SNAPSHOT_DIFF_AND_IDEMPOTENT_NO_CHANGE_CYCLE_ADAPTER",
     "ADD_GFS_PARTIAL_PAIR_PRODUCTION_REHYDRATION_ADAPTER",
     "ESTABLISH_EXPLICIT_KBS_BATCH_AND_SOIL_DUE_AUTHORITIES",
     "AUTHORIZE_AND_MATERIALIZE_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_BEFORE_RUNTIME_BINDING",
@@ -175,7 +175,14 @@
     "SHARED_VERIFIED_RETAINED_RAW_REPLAY_PRIMITIVE",
     "RETAINED_RAW_REPLAY_ZERO_PROVIDER_REFETCH",
     "RETAINED_RAW_REPLAY_ZERO_RAW_STORE_REWRITE",
-    "PHASE7_CANDIDATE_REHYDRATION_REUSES_SHARED_REPLAY_PRIMITIVE"
+    "PHASE7_CANDIDATE_REHYDRATION_REUSES_SHARED_REPLAY_PRIMITIVE",
+    "KBS_COMPLETE_TABLE_PUBLICATION_CYCLE_SERVICE",
+    "KBS_NO_CHANGE_ZERO_CANONICAL_ZERO_POINTER_ADVANCE",
+    "KBS_HISTORICAL_DRIFT_AND_AMBIGUOUS_FORWARD_FAIL_CLOSED",
+    "KBS_FORWARD_GAP_FAIL_CLOSED_BEFORE_POINTER_ADVANCE",
+    "KBS_PARTIAL_PAIR_RETRY_REPAIR_FROM_OLD_BASELINE",
+    "KBS_BASELINE_POINTER_ADVANCES_ONLY_AFTER_ALL_VISIBLE_CURSOR_ADVANCES",
+    "KBS_SINGLE_FORWARD_HOUR_EXACT_DECODER_FALLBACK"
   ],
   "current_entrypoint": {
     "status": "PACKAGED_FAIL_CLOSED_PURE_PLANNER_NOT_PRODUCTION_BOUND",
@@ -215,5 +222,7 @@
   "kbs_publication_snapshot_comparison_ref": "apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_comparison_v1.ts",
   "kbs_publication_snapshot_comparison_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_SNAPSHOT_COMPARISON_V1.ts",
   "verified_retained_raw_replay_ref": "apps/server/src/external_evidence/verified_retained_raw_replay_v1.ts",
-  "verified_retained_raw_replay_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1.ts"
+  "verified_retained_raw_replay_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1.ts",
+  "kbs_publication_cycle_service_ref": "apps/server/src/external_evidence/mcft_cap09_kbs_raw_hourly_publication_cycle_service_v1.ts",
+  "kbs_publication_cycle_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1.ts"
 }
