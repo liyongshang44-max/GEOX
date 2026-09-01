@@ -254,6 +254,8 @@ function assertExportContract(plan) {
     'acceptance_result_v1',
     'evidence_artifact_v1',
     'telemetry_observation_v1',
+    'field_memory_candidate_v1',
+    'field_memory_record_v1',
   ]) {
     assertFactPresent(plan, type);
   }
@@ -271,7 +273,7 @@ function assertExportContract(plan) {
   assertOk(manifest.formalized_by_seed === false, 'E2E_FORMALIZED_BY_SEED_MUST_BE_FALSE', manifest);
   assertOk(manifest.field_memory_written_by_seed === false, 'E2E_FIELD_MEMORY_WRITTEN_BY_SEED_MUST_BE_FALSE', manifest);
   assertOk(Array.isArray(manifest.field_memory_flow), 'E2E_FIELD_MEMORY_FLOW_MISSING', manifest);
-  for (const item of ['acceptance_result_v1', 'field-memory/from-acceptance', 'field_memory_v1']) {
+  for (const item of ['acceptance_result_v1', 'field_memory_candidate_v1', 'field_memory_record_v1', 'field-memory/from-acceptance', 'field_memory_v1']) {
     assertOk(manifest.field_memory_flow.includes(item), 'E2E_FIELD_MEMORY_FLOW_INCOMPLETE', { item, flow: manifest.field_memory_flow });
   }
   assertOk(Array.isArray(manifest.seed_forbidden_fact_types) && manifest.seed_forbidden_fact_types.includes('soil_moisture_sensing_window_v1'), 'E2E_SENSING_WINDOW_FACTS_FORBIDDEN_MANIFEST_REQUIRED', manifest);
