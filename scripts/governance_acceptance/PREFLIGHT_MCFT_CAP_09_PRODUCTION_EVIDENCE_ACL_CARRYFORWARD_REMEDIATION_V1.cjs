@@ -6,7 +6,7 @@ const AUTH=path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUC
 const OUT=path.join(ROOT,"acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_PREFLIGHT_V1_RESULT.json");
 const j=p=>JSON.parse(fs.readFileSync(p,"utf8"));
 const q=(url,sql)=>cp.execFileSync("psql",[url,"-X","-v","ON_ERROR_STOP=1","-AtF","|","-c",sql],{encoding:"utf8"}).trim();
-const b=v=>v==="t";
+const b=v=>v==="t"||v==="true";
 const write=v=>{fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify(v,null,2)+"\n");console.log(JSON.stringify(v,null,2));};
 function matrix(url,table,role){
  return q(url,[
@@ -147,18 +147,35 @@ try{
  }
 
  const diagnostics=[];
- if(JSON.stringify(facts)!==JSON.stringify([true,false,false,false]))diagnostics.push("facts:MATRIX_DRIFT");
- if(!fn)diagnostics.push("phase3_append_function:EXECUTE_MISSING");
+ unsafe.length=0;
+ if(JSON.stringify(facts)!==JSON.stringify([true,false,false,false]))unsafe.push("facts:MATRIX_DRIFT");
+ if(!fn)unsafe.push("phase3_append_function:EXECUTE_MISSING");
  for(const t of v13Tables){
   const m=matrix(url,t,role);
-  if(JSON.stringify(m)!==JSON.stringify([true,true,true,false]))diagnostics.push(t+":V13_MATRIX_DRIFT");
+  if(JSON.stringify(m)!==JSON.stringify([true,true,true,false]))unsafe.push(t+":V13_MATRIX_DRIFT");
  }
  for(const t of phase3Tables){
   const m=matrix(url,t,role);
+  if(m[3])unsafe.push(t+":DELETE_MUST_BE_FALSE");
   if(JSON.stringify(m)!==JSON.stringify([true,true,true,false]))diagnostics.push(t+":PHASE3_MATRIX_DRIFT");
+  if(objectOwners["table:"+t]!==currentUser)unsafe.push(t+":CURRENT_USER_MUST_OWN_TABLE");
  }
 
- const status=diagnostics.length?"PASS_DIAGNOSTIC_REMEDIATION_REQUIRED":"PASS_ALREADY_MATERIALIZED";
+ const functionChecks=[
+  {name:"mcft_cap09_evidence_runtime_append_fact_v1",evidence:true,twin:false},
+  {name:"mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1",evidence:true,twin:false},
+  {name:"mcft_cap09_twin_runtime_append_fact_v1",evidence:false,twin:true}
+ ];
+ const functionPrivilegeMatrix={};
+ for(const item of functionChecks){
+  const e=b(q(url,"SELECT has_function_privilege('geox_mcft_cap09_evidence_runtime_v1','public."+item.name+"','EXECUTE')::text"));
+  const t=b(q(url,"SELECT has_function_privilege('geox_mcft_cap09_twin_runtime_v1','public."+item.name+"','EXECUTE')::text"));
+  functionPrivilegeMatrix[item.name]={evidence_execute:e,twin_execute:t};
+  if(e!==item.evidence||t!==item.twin)unsafe.push(item.name+":EXECUTE_MATRIX_DRIFT");
+ }
+
+ if(unsafe.length)throw new Error("ACL_REMEDIATION_UNSAFE_PRESTATE:"+unsafe.join(","));
+ const status=missing.length?"PASS_REMEDIATION_REQUIRED":"PASS_ALREADY_MATERIALIZED";
 
  write({
   schema_version:"geox_mcft_cap09_production_evidence_acl_carryforward_remediation_preflight_v1",
@@ -181,6 +198,9 @@ try{
   object_owners:objectOwners,
   table_acl_rows:tableAclRows,
   routine_acl_rows:routineAclRows,
+  function_privilege_matrix:functionPrivilegeMatrix,
+  remediation_scope_exact:missing,
+  remediation_target_tables_owned_by_current_user:phase3Tables.every(t=>objectOwners["table:"+t]===currentUser),
   arm_observed:arm.armed===true,
   database_mutation:false,row_mutation:false,schema_mutation:false,role_mutation:false,
   runtime_process_start:false,production_owner_activation:false,provider_request_count:0,formal_v5_arm:false,a0_bootstrap:false,o00_started:false

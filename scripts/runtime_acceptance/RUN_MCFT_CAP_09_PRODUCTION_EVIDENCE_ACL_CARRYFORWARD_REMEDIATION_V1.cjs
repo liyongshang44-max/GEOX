@@ -7,9 +7,17 @@ const PREF=path.join(ROOT,"acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL
 const OUT=path.join(ROOT,"acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_V1_RESULT.json");
 const j=p=>JSON.parse(fs.readFileSync(p,"utf8"));
 const q=(url,sql)=>cp.execFileSync("psql",[url,"-X","-v","ON_ERROR_STOP=1","-AtF","|","-c",sql],{encoding:"utf8"}).trim();
-const b=v=>v==="t";
+const b=v=>v==="t"||v==="true";
 const write=v=>{fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify(v,null,2)+"\n");console.log(JSON.stringify(v,null,2));};
 const matrix=(url,t)=>q(url,["SELECT","has_table_privilege('geox_mcft_cap09_evidence_runtime_v1','public."+t+"','SELECT')::text,","has_table_privilege('geox_mcft_cap09_evidence_runtime_v1','public."+t+"','INSERT')::text,","has_table_privilege('geox_mcft_cap09_evidence_runtime_v1','public."+t+"','UPDATE')::text,","has_table_privilege('geox_mcft_cap09_evidence_runtime_v1','public."+t+"','DELETE')::text"].join("\n")).split("|").map(b);
+const owner=(url,t)=>q(url,[
+ "SELECT owner_role.rolname",
+ "FROM pg_catalog.pg_class c",
+ "JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace",
+ "JOIN pg_catalog.pg_roles owner_role ON owner_role.oid=c.relowner",
+ "WHERE n.nspname='public' AND c.relname='"+t+"'"
+].join("\n"));
+const fnExec=(url,role,name)=>b(q(url,"SELECT has_function_privilege('"+role+"','public."+name+"','EXECUTE')::text"));
 try{
  const subject=String(process.env.SUBJECT_SHA||"");assert.match(subject,/^[0-9a-f]{40}$/);
  const arm=j(ARM),pref=j(PREF);
@@ -30,9 +38,45 @@ try{
  const seed=String(process.env.SEED_DATABASE_URL||"").trim();assert.ok(seed);
  const u=new URL(seed);u.pathname="/"+TARGET;const url=u.toString();
  const tables=["external_evidence_producer_lease_v1","external_evidence_supply_event_v1","external_evidence_supply_cursor_v1"];
+ const v13Tables=["twin_external_formal_forcing_base_cursor_v1","twin_external_formal_forcing_base_target_v1","twin_external_formal_forcing_controller_lease_v1"];
+ const currentUser=q(url,"SELECT current_user");
+ assert.equal(currentUser,pref.current_user,"ACL_REMEDIATION_CURRENT_USER_DRIFT");
+ for(const t of tables)assert.equal(owner(url,t),currentUser,"ACL_REMEDIATION_TARGET_OWNER_DRIFT:"+t);
+
+ const tableCount=Number(q(url,"SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'"));
+ const routineCount=Number(q(url,"SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'"));
+ assert.equal(tableCount,41,"ACL_REMEDIATION_FRESH_EXACT_41_TABLES_REQUIRED");
+ assert.equal(routineCount,3,"ACL_REMEDIATION_FRESH_EXACT_3_ROUTINES_REQUIRED");
+ const preTableNames=q(url,"SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE' ORDER BY table_name").split(/\r?\n/).filter(Boolean);
+ let freshRows=0;for(const t of preTableNames)freshRows+=Number(q(url,'SELECT count(*)::int FROM public."'+t.replaceAll('"','""')+'"'));
+ assert.equal(freshRows,0,"ACL_REMEDIATION_FRESH_ALL_ROWS_MUST_BE_ZERO");
+
+ assert.deepEqual(matrix(url,"facts"),[true,false,false,false],"ACL_REMEDIATION_FRESH_FACTS_MATRIX_REQUIRED");
+ for(const t of v13Tables)assert.deepEqual(matrix(url,t),[true,true,true,false],"ACL_REMEDIATION_FRESH_V13_MATRIX_REQUIRED:"+t);
+ assert.equal(fnExec(url,"geox_mcft_cap09_evidence_runtime_v1","mcft_cap09_evidence_runtime_append_fact_v1"),true,"ACL_REMEDIATION_FRESH_PHASE3_FUNCTION_REQUIRED");
+ assert.equal(fnExec(url,"geox_mcft_cap09_twin_runtime_v1","mcft_cap09_evidence_runtime_append_fact_v1"),false,"ACL_REMEDIATION_FRESH_PHASE3_FUNCTION_TWIN_FORBIDDEN");
+ assert.equal(fnExec(url,"geox_mcft_cap09_evidence_runtime_v1","mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1"),true,"ACL_REMEDIATION_FRESH_V13_FUNCTION_REQUIRED");
+ assert.equal(fnExec(url,"geox_mcft_cap09_twin_runtime_v1","mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1"),false,"ACL_REMEDIATION_FRESH_V13_FUNCTION_TWIN_FORBIDDEN");
+ assert.equal(fnExec(url,"geox_mcft_cap09_evidence_runtime_v1","mcft_cap09_twin_runtime_append_fact_v1"),false,"ACL_REMEDIATION_FRESH_TWIN_FUNCTION_EVIDENCE_FORBIDDEN");
+ assert.equal(fnExec(url,"geox_mcft_cap09_twin_runtime_v1","mcft_cap09_twin_runtime_append_fact_v1"),true,"ACL_REMEDIATION_FRESH_TWIN_FUNCTION_REQUIRED");
+
+ const exactMemberships=q(url,[
+  "SELECT member.rolname||'>'||granted.rolname",
+  "FROM pg_catalog.pg_auth_members m",
+  "JOIN pg_catalog.pg_roles member ON member.oid=m.member",
+  "JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid",
+  "WHERE member.rolname IN ('geox_mcft_cap09_evidence_runtime_login_v1','geox_mcft_cap09_twin_runtime_login_v1')",
+  "ORDER BY member.rolname,granted.rolname"
+ ].join("\n")).split(/\r?\n/).filter(Boolean);
+ assert.deepEqual(exactMemberships,[
+  "geox_mcft_cap09_evidence_runtime_login_v1>geox_mcft_cap09_evidence_runtime_v1",
+  "geox_mcft_cap09_twin_runtime_login_v1>geox_mcft_cap09_twin_runtime_v1"
+ ],"ACL_REMEDIATION_FRESH_LOGIN_MEMBERSHIP_REQUIRED");
+
  const before=Object.fromEntries(tables.map(t=>[t,matrix(url,t)]));
+ for(const t of tables)assert.equal(before[t][3],false,"ACL_REMEDIATION_TARGET_DELETE_PRESTATE_FORBIDDEN:"+t);
  const loginBefore=q(url,"SELECT count(*)::int FROM pg_catalog.pg_roles WHERE rolname IN ('geox_mcft_cap09_evidence_runtime_login_v1','geox_mcft_cap09_twin_runtime_login_v1')");
- const totalBefore=Number(pref.total_application_rows);
+ const totalBefore=freshRows;
 
  const sql=[
   "BEGIN;",

@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_acl_carryforward_remediation_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1",
-  "status": "REMEDIATION_REQUIRED_NOT_AUTHORIZED",
+  "status": "EXACT_NINE_PRIVILEGE_REMEDIATION_READY_NOT_AUTHORIZED",
   "root_cause": {
     "code": "V13_DENY_BY_DEFAULT_RESET_DROPPED_PHASE3_EVIDENCE_TABLE_PRIVILEGES",
     "predecessor_acl": "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql",
@@ -11,7 +11,12 @@
     "isolated_v13_success_run_id": 33466354564,
     "isolated_phase5_success_run_id": 33466354473,
     "live_detection_run_id": 33466558457,
-    "live_detection_error": "SCHEMA_ACL_EVIDENCE_PHASE3_CARRYFORWARD_MISMATCH:external_evidence_producer_lease_v1"
+    "live_detection_error": "SCHEMA_ACL_EVIDENCE_PHASE3_CARRYFORWARD_MISMATCH:external_evidence_producer_lease_v1",
+    "full_diagnostic_run_id": 33467260874,
+    "full_diagnostic_artifact_id": 9785301007,
+    "full_diagnostic_artifact_digest": "sha256:e2af67d1d17ee458d0948879a80f53ac205ccbf036fd80f4c5d9bb60574a7f01",
+    "corrected_parser_finding": "ONLY_PHASE3_LEASE_SUPPLY_TABLE_PRIVILEGES_MISSING",
+    "false_diagnostic_cause": "psql_boolean_text_true_false_was_parsed_as_t_f"
   },
   "target": {
     "database_name": "geox_mcft_cap09_production_runtime_v1",
@@ -43,7 +48,21 @@
     "role_or_membership_mutation_allowed": false,
     "function_acl_mutation_allowed": false,
     "schema_ddl_allowed": false,
-    "row_dml_allowed": false
+    "row_dml_allowed": false,
+    "exact_missing_privileges": [
+      "external_evidence_producer_lease_v1:SELECT",
+      "external_evidence_producer_lease_v1:INSERT",
+      "external_evidence_producer_lease_v1:UPDATE",
+      "external_evidence_supply_event_v1:SELECT",
+      "external_evidence_supply_event_v1:INSERT",
+      "external_evidence_supply_event_v1:UPDATE",
+      "external_evidence_supply_cursor_v1:SELECT",
+      "external_evidence_supply_cursor_v1:INSERT",
+      "external_evidence_supply_cursor_v1:UPDATE"
+    ],
+    "target_tables_owned_by": "neondb_owner",
+    "required_current_user": "neondb_owner",
+    "temporary_set_role_required": false
   },
   "required_preexisting_unchanged_surface": {
     "facts_acl": {
@@ -65,7 +84,17 @@
       "DELETE": false
     },
     "exact_two_production_logins": true,
-    "exact_one_privilege_membership_each": true
+    "exact_one_privilege_membership_each": true,
+    "live_diagnostic_proven": {
+      "facts_acl_exact": true,
+      "phase3_append_function_execute_exact": true,
+      "v13_coordination_acl_exact": true,
+      "v13_append_function_execute_exact": true,
+      "twin_append_function_execute_exact": true,
+      "exact_two_login_memberships": true,
+      "target_table_owner_neondb_owner": true,
+      "all_application_rows_zero": true
+    }
   },
   "arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_ARM_V1.json",
   "workflow_ref": ".github/workflows/mcft-cap-09-production-evidence-acl-carryforward-remediation.yml",
