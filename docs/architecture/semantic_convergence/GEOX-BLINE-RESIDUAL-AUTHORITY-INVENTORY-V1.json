@@ -5735,6 +5735,1903 @@
       "b02_registered": false,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "audit_note": "The decision-engine receipt-from-task compatibility path loads/validates an existing Task and builds a Receipt. Task identity is upstream provenance, not Task creation authority."
+    },
+    {
+      "surface_id": "RES-228",
+      "source_path": "apps/server/db/migrations/2026_05_02_mvp0_skill_registry_seed.sql",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEED_MIGRATION",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEED_MIGRATION",
+      "runtime_reachable": "DEPLOYMENT_ONLY",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep seed idempotent; no runtime semantic authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEED_MIGRATION",
+      "underlying_semantic_families": [
+        "governance.skill_binding"
+      ],
+      "authority_owner": "DEPLOYMENT_BOOTSTRAP",
+      "writer_scope": "deterministic seed facts only",
+      "audit_note": "Writes skill_definition/skill_binding bootstrap facts; deployment seed does not become runtime decision authority."
+    },
+    {
+      "surface_id": "RES-229",
+      "source_path": "apps/server/src/domain/approval/approval_request_service_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep canonical ApprovalRequest service",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "decision.approval"
+      ],
+      "authority_owner": "APPROVAL_SERVICE",
+      "writer_scope": "ApprovalRequest creation",
+      "audit_note": "Validated scoped ApprovalRequest fact writer."
+    },
+    {
+      "surface_id": "RES-230",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Converge cross-family authority; Task creation must not imply Plan ACKED/Acceptance",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "execution.task",
+        "execution.dispatch_delivery",
+        "execution.receipt",
+        "operation.plan",
+        "decision.approval",
+        "acceptance.verdict"
+      ],
+      "authority_owner": "AO_ACT_RUNTIME",
+      "writer_scope": "mixed Task/Dispatch/Receipt plus legacy Plan/Approval/Acceptance orchestration",
+      "audit_note": "Large active runtime writes multiple semantic fact types; explicit mixed-authority debt."
+    },
+    {
+      "surface_id": "RES-231",
+      "source_path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep shadow-only until separately authorized typed integration",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "context.snapshot",
+        "decision.candidate"
+      ],
+      "authority_owner": "B09Y_SHADOW_BOUNDARY",
+      "writer_scope": "shadow boundary/context facts only",
+      "audit_note": "Exact immutable FieldProgram/Candidate decision-time context binding; no final Eligibility/Approval authority."
+    },
+    {
+      "surface_id": "RES-232",
+      "source_path": "apps/server/src/domain/decision/decision_eligibility_policy_declaration_fact_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep explicit versioned policy authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "decision.eligibility"
+      ],
+      "authority_owner": "DECISION_ELIGIBILITY_POLICY",
+      "writer_scope": "versioned policy declaration facts",
+      "audit_note": "Scoped fail-closed policy declaration writer."
+    },
+    {
+      "surface_id": "RES-233",
+      "source_path": "apps/server/src/domain/sensing/problem_state_uncertainty_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep as diagnostic/evidence derivation; no direct Candidate authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "judge.problem_state",
+        "evidence.qualification"
+      ],
+      "authority_owner": "SENSING_PROBLEM_STATE",
+      "writer_scope": "problem-state and uncertainty facts",
+      "audit_note": "Deterministic uncertainty/problem-state envelope writer."
+    },
+    {
+      "surface_id": "RES-234",
+      "source_path": "apps/server/src/domain/sensing/raw_sample_fact_envelope_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep canonical raw evidence ingress",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "evidence.raw_observation"
+      ],
+      "authority_owner": "SENSING_INGRESS",
+      "writer_scope": "raw sample facts plus runtime-availability provenance marker",
+      "audit_note": "Rejects synthetic/interpolated samples and records exact ingress provenance."
+    },
+    {
+      "surface_id": "RES-235",
+      "source_path": "apps/server/src/domain/skill_registry/facts.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep explicit skill registry authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "governance.skill_binding"
+      ],
+      "authority_owner": "SKILL_REGISTRY",
+      "writer_scope": "skill definition/binding/run/trace facts",
+      "audit_note": "Shared fact writer for versioned skill governance/runtime records."
+    },
+    {
+      "surface_id": "RES-236",
+      "source_path": "apps/server/src/jobs/agronomy_agent.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Shadow then remove Candidate/Plan authority at B-09 cutover",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "decision.candidate",
+        "operation.plan"
+      ],
+      "authority_owner": "LEGACY_AGRONOMY_AGENT",
+      "writer_scope": "recommendation and legacy plan proposal facts",
+      "audit_note": "Active legacy agent can persist recommendation and operation plan semantics."
+    },
+    {
+      "surface_id": "RES-237",
+      "source_path": "apps/server/src/modules/legacy/registerLegacyMonitoringModule.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Retain compatibility only; canonical evidence ingress owns new semantics",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "evidence.raw_observation",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "LEGACY_MONITORING",
+      "writer_scope": "marker/canopy/raw-sample compatibility facts",
+      "audit_note": "Legacy monitoring module persists observation/marker facts."
+    },
+    {
+      "surface_id": "RES-238",
+      "source_path": "apps/server/src/persistence/calibration/postgres_calibration_governance_repository_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "B-Line inventory only; no implementation change before MCFT typed cutover",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "twin.calibration",
+        "twin.learning"
+      ],
+      "authority_owner": "MCFT_TWIN_RUNTIME",
+      "writer_scope": "typed calibration/shadow-evaluation persistence",
+      "audit_note": "MCFT/Twin persistence repository; semantic object authority is upstream typed runtime."
+    },
+    {
+      "surface_id": "RES-239",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_approval_plan_evidence_repository_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "B-Line inventory only; no implementation change",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "decision.approval",
+        "operation.plan",
+        "evidence.qualification"
+      ],
+      "authority_owner": "MCFT_TWIN_RUNTIME",
+      "writer_scope": "approved-plan replay evidence persistence",
+      "audit_note": "Typed MCFT replay-evidence repository."
+    },
+    {
+      "surface_id": "RES-240",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; B-Line only records ownership until typed cutover",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "twin.state",
+        "twin.forecast",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "MCFT_TWIN_RUNTIME",
+      "writer_scope": "canonical runtime/state/forecast/checkpoint persistence",
+      "audit_note": "Runtime repository persists canonical MCFT/Twin record sets and projections."
+    },
+    {
+      "surface_id": "RES-241",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_cap08_s4_append_forward_repository_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; no B-Line implementation edits",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "twin.state",
+        "twin.forecast",
+        "twin.scenario",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "MCFT_CAP08_RUNTIME",
+      "writer_scope": "CAP08 authority-bound append/transition facts",
+      "audit_note": "CAP08 transition/append authority persistence."
+    },
+    {
+      "surface_id": "RES-242",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_cap08_t17_transition_repository_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; no B-Line implementation edits",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "twin.state",
+        "twin.forecast",
+        "twin.scenario",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "MCFT_CAP08_RUNTIME",
+      "writer_scope": "CAP08 authority-bound append/transition facts",
+      "audit_note": "CAP08 transition/append authority persistence."
+    },
+    {
+      "surface_id": "RES-243",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; inventory ownership only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "evidence.raw_observation",
+        "evidence.qualification"
+      ],
+      "authority_owner": "MCFT_EVIDENCE_RUNTIME",
+      "writer_scope": "canonicalized external formal evidence facts",
+      "audit_note": "External formal evidence ingress belongs to MCFT boundary."
+    },
+    {
+      "surface_id": "RES-244",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; B-Line must not create parallel learning authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "twin.feedback",
+        "outcome.evidence"
+      ],
+      "authority_owner": "MCFT_TWIN_RUNTIME",
+      "writer_scope": "decision/action-feedback/residual persistence",
+      "audit_note": "Typed feedback-cycle persistence repository."
+    },
+    {
+      "surface_id": "RES-245",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; legacy Twin replacement target after cutover",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "twin.forecast",
+        "twin.scenario"
+      ],
+      "authority_owner": "MCFT_TWIN_RUNTIME",
+      "writer_scope": "forecast/scenario canonical persistence",
+      "audit_note": "Canonical MCFT/Twin forecast/scenario repository."
+    },
+    {
+      "surface_id": "RES-246",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_immutable_decision_action_commit_repository_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; inventory ownership only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "twin.decision_record",
+        "outcome.evidence"
+      ],
+      "authority_owner": "MCFT_TWIN_RUNTIME",
+      "writer_scope": "immutable decision/action feedback commits",
+      "audit_note": "Typed immutable decision/action commit repository."
+    },
+    {
+      "surface_id": "RES-247",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; B-Line only records ownership until typed cutover",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "twin.state",
+        "twin.forecast",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "MCFT_TWIN_RUNTIME",
+      "writer_scope": "canonical runtime/state/forecast/checkpoint persistence",
+      "audit_note": "Runtime repository persists canonical MCFT/Twin record sets and projections."
+    },
+    {
+      "surface_id": "RES-248",
+      "source_path": "apps/server/src/projections/irrigation_scenario_set_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Freeze legacy authority; replace with MCFT/governed scenario input after cutover",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "twin.scenario"
+      ],
+      "authority_owner": "LEGACY_TWIN_SCENARIO",
+      "writer_scope": "legacy irrigation ScenarioSet fact + index",
+      "audit_note": "Active projection also persists scenario_set semantic facts."
+    },
+    {
+      "surface_id": "RES-249",
+      "source_path": "apps/server/src/projections/manual_execution_quality_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep derived-only; must not become Receipt/Acceptance authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "execution.result_evidence"
+      ],
+      "authority_owner": "EXECUTION_QUALITY_PROJECTION",
+      "writer_scope": "derived manual execution quality snapshot facts",
+      "audit_note": "Projection persists quality snapshot fact derived from Task/Receipt lineage."
+    },
+    {
+      "surface_id": "RES-250",
+      "source_path": "apps/server/src/projections/water_state_estimate_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Freeze as legacy state projection; canonical State moves to MCFT typed port",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "twin.state"
+      ],
+      "authority_owner": "LEGACY_WATER_STATE",
+      "writer_scope": "water-state estimate facts + index",
+      "audit_note": "Active water-state estimate writer."
+    },
+    {
+      "surface_id": "RES-251",
+      "source_path": "apps/server/src/projections/weather_forecast_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep source/forecast adapter; canonical forecast authority remains explicit under MCFT cutover",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "twin.forecast",
+        "evidence.raw_observation"
+      ],
+      "authority_owner": "WEATHER_FORECAST_INGRESS",
+      "writer_scope": "forecast facts + index",
+      "audit_note": "External weather forecast projection persists forecast facts."
+    },
+    {
+      "surface_id": "RES-252",
+      "source_path": "apps/server/src/routes/acceptance_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep Acceptance; split Acceptance -> Outcome -> Memory",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "acceptance.verdict",
+        "field_memory",
+        "execution.as_executed"
+      ],
+      "authority_owner": "ACCEPTANCE_RUNTIME",
+      "writer_scope": "Acceptance facts plus current direct formal-memory side effect",
+      "audit_note": "Current canonical Acceptance route still directly formalizes Field Memory on formal PASS."
+    },
+    {
+      "surface_id": "RES-253",
+      "source_path": "apps/server/src/routes/agronomy_inference_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep deriver; no direct Candidate/Execution authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "agronomy.interpretation",
+        "evidence.qualification"
+      ],
+      "authority_owner": "AGRONOMY_INFERENCE",
+      "writer_scope": "agronomy inference result facts",
+      "audit_note": "Active agronomy inference API persists inference results."
+    },
+    {
+      "surface_id": "RES-254",
+      "source_path": "apps/server/src/routes/agronomy_media_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep observation ingress under Evidence qualification",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "evidence.raw_observation"
+      ],
+      "authority_owner": "AGRONOMY_OBSERVATION_INGRESS",
+      "writer_scope": "agronomy observation facts",
+      "audit_note": "Active media/observation ingestion writer."
+    },
+    {
+      "surface_id": "RES-255",
+      "source_path": "apps/server/src/routes/alerts_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep alert operational authority; never conflate ACK with execution/acceptance",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "governance.trace_projection"
+      ],
+      "authority_owner": "ALERT_RUNTIME",
+      "writer_scope": "alert rule/event/notification operational facts",
+      "audit_note": "Active alert state and audit writer."
+    },
+    {
+      "surface_id": "RES-256",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep primary API; remove Task->Plan ACKED and lifecycle conflation",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "execution.task",
+        "execution.receipt",
+        "operation.plan",
+        "execution.adapter_resolution"
+      ],
+      "authority_owner": "AO_ACT_RUNTIME",
+      "writer_scope": "primary Task/Receipt/Plan/dispatch execution facts",
+      "audit_note": "Primary AO-ACT mixed execution orchestrator."
+    },
+    {
+      "surface_id": "RES-257",
+      "source_path": "apps/server/src/routes/control_ao_sense.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep AO-SENSE separate from AO-ACT execution authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "execution.task",
+        "execution.receipt",
+        "evidence.raw_observation"
+      ],
+      "authority_owner": "AO_SENSE_RUNTIME",
+      "writer_scope": "sensing task/receipt facts",
+      "audit_note": "Active sensing task/receipt API."
+    },
+    {
+      "surface_id": "RES-258",
+      "source_path": "apps/server/src/routes/control_approval_request_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep canonical Approval facade; Plan remains explicit downstream boundary",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "decision.approval",
+        "operation.plan"
+      ],
+      "authority_owner": "APPROVAL_RUNTIME",
+      "writer_scope": "ApprovalRequest/Decision and approved-decision Plan facts",
+      "audit_note": "Active approval writer and approved-decision Plan construction route."
+    },
+    {
+      "surface_id": "RES-259",
+      "source_path": "apps/server/src/routes/control_operation_plan_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep as explicit Plan transition facade after lifecycle repair",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "operation.plan"
+      ],
+      "authority_owner": "OPERATION_PLAN_RUNTIME",
+      "writer_scope": "explicit OperationPlan transition/submission facts",
+      "audit_note": "Active plan transition writer."
+    },
+    {
+      "surface_id": "RES-260",
+      "source_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep API facade; converge internals to governed ports then retire duplicate write authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "decision.candidate",
+        "decision.calculation",
+        "operation.plan",
+        "execution.task",
+        "execution.receipt"
+      ],
+      "authority_owner": "LEGACY_DECISION_FACADE",
+      "writer_scope": "recommendation/plan/receipt compatibility facts",
+      "audit_note": "Active legacy facade contains recommendation plus execution compatibility writers."
+    },
+    {
+      "surface_id": "RES-261",
+      "source_path": "apps/server/src/routes/devices_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep device registry/capability authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "device.identity",
+        "execution.adapter_resolution"
+      ],
+      "authority_owner": "DEVICE_REGISTRY",
+      "writer_scope": "device identity/credential/capability facts",
+      "audit_note": "Active device identity/capability writer."
+    },
+    {
+      "surface_id": "RES-262",
+      "source_path": "apps/server/src/routes/evidence_artifact_from_as_executed_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep canonical Receipt->AsExecuted->EvidenceArtifact boundary",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "execution.as_executed",
+        "execution.result_evidence"
+      ],
+      "authority_owner": "EVIDENCE_ARTIFACT_RUNTIME",
+      "writer_scope": "AsExecuted-linked evidence artifact/submission facts",
+      "audit_note": "Explicit evidence artifact persistence entrypoint."
+    },
+    {
+      "surface_id": "RES-263",
+      "source_path": "apps/server/src/routes/evidence_export_jobs_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Packaging only; no Acceptance/decision authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "evidence.packaging"
+      ],
+      "authority_owner": "EVIDENCE_EXPORT_INFRA",
+      "writer_scope": "export-job lifecycle/package metadata facts",
+      "audit_note": "Evidence export job state is operational packaging metadata."
+    },
+    {
+      "surface_id": "RES-264",
+      "source_path": "apps/server/src/routes/fields_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep field identity/context authority; separate trace-only facts",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "field.identity",
+        "context.declared_identity",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "FIELD_RUNTIME",
+      "writer_scope": "field/device binding/geometry/season facts",
+      "audit_note": "Active field and field-context writer."
+    },
+    {
+      "surface_id": "RES-265",
+      "source_path": "apps/server/src/routes/human_executors_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep human adapter -> canonical Receipt; harden default evidence semantics",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "execution.task",
+        "execution.result_evidence",
+        "execution.receipt"
+      ],
+      "authority_owner": "HUMAN_EXECUTION_RUNTIME",
+      "writer_scope": "service-team/executor/work-assignment/human receipt facts",
+      "audit_note": "Active human execution writer."
+    },
+    {
+      "surface_id": "RES-266",
+      "source_path": "apps/server/src/routes/operation_state_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "READ_SIDE_EFFECT_P0",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_READ_SIDE_EFFECT_P0",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "REMOVE GET semantic persistence; learning writes must originate from Acceptance->Outcome->Learning event",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "READ_SIDE_EFFECT_P0",
+      "underlying_semantic_families": [
+        "governance.skill_binding",
+        "learning.feedback",
+        "presentation.read_model"
+      ],
+      "authority_owner": "REPORTING_READ_MODEL",
+      "writer_scope": "GET detail currently writes skill_run and rule_performance facts",
+      "audit_note": "Read route side effect intentionally remains fail-closed P0."
+    },
+    {
+      "surface_id": "RES-267",
+      "source_path": "apps/server/src/routes/programs_core_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep product facade; split planning from downstream execution authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "decision.planning_option",
+        "context.declared_identity",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "FIELD_PROGRAM_RUNTIME",
+      "writer_scope": "FieldProgram/transition/note/resource/cost facts",
+      "audit_note": "Active FieldProgram writer plus planning/action surface."
+    },
+    {
+      "surface_id": "RES-268",
+      "source_path": "apps/server/src/routes/raw.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Retire after canonical Evidence ingress cutover",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "evidence.raw_observation"
+      ],
+      "authority_owner": "LEGACY_RAW_INGRESS",
+      "writer_scope": "legacy raw facts",
+      "audit_note": "Legacy raw route persists generic facts."
+    },
+    {
+      "surface_id": "RES-269",
+      "source_path": "apps/server/src/routes/v1/operator_acceptance_actions.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep human command facade; Acceptance truth stays canonical service",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "acceptance.verdict",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "OPERATOR_COMMAND_FACADE",
+      "writer_scope": "operator audit/review-request facts",
+      "audit_note": "Compatibility operator Acceptance command surface."
+    },
+    {
+      "surface_id": "RES-270",
+      "source_path": "apps/server/src/routes/v1/operator_approval_actions.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep human command facade; converge to canonical Approval service",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "decision.approval",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "OPERATOR_COMMAND_FACADE",
+      "writer_scope": "operator approval audit/decision facts",
+      "audit_note": "Compatibility operator Approval command writer."
+    },
+    {
+      "surface_id": "RES-271",
+      "source_path": "apps/server/src/routes/v1/operator_device_offline_actions.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep human command facade; device/alert services own state",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "device.state",
+        "governance.trace_projection"
+      ],
+      "authority_owner": "OPERATOR_COMMAND_FACADE",
+      "writer_scope": "device-offline operator audit facts",
+      "audit_note": "Compatibility operator device action writer."
+    },
+    {
+      "surface_id": "RES-272",
+      "source_path": "apps/server/src/routes/v1/operator_dispatch_actions.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Change DISPATCHED write to DISPATCH_REQUESTED intent then canonical queue/outbox",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "execution.dispatch_intent",
+        "execution.dispatch_delivery"
+      ],
+      "authority_owner": "OPERATOR_COMMAND_FACADE",
+      "writer_scope": "operator dispatch intent/audit facts",
+      "audit_note": "Known dispatch status authority debt."
+    },
+    {
+      "surface_id": "RES-273",
+      "source_path": "apps/server/src/routes/v1/operator_twin.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Fail closed exact scope; cut write authority to canonical Candidate adapter after cutover",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "decision.candidate",
+        "twin.scenario",
+        "presentation.read_model"
+      ],
+      "authority_owner": "LEGACY_OPERATOR_TWIN",
+      "writer_scope": "legacy scenario-recommendation submission/recommendation facts",
+      "audit_note": "Active legacy mixed read/write Twin surface."
+    },
+    {
+      "surface_id": "RES-274",
+      "source_path": "apps/server/src/routes/water_response_verification_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep explicit Acceptance->OutcomeEvidence boundary",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "outcome.evidence"
+      ],
+      "authority_owner": "OUTCOME_VERIFICATION",
+      "writer_scope": "water-response verification/submission facts",
+      "audit_note": "Active outcome verification writer."
+    },
+    {
+      "surface_id": "RES-275",
+      "source_path": "apps/server/src/runtime/twin_runtime/cap08_s3_decision_action_provider_service_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; B-Line inventory only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "twin.decision_record",
+        "decision.approval",
+        "operation.plan",
+        "execution.receipt",
+        "outcome.evidence"
+      ],
+      "authority_owner": "MCFT_CAP08_RUNTIME",
+      "writer_scope": "CAP08 replay/decision/action evidence facts",
+      "audit_note": "MCFT CAP08 decision/action provider runtime."
+    },
+    {
+      "surface_id": "RES-276",
+      "source_path": "apps/server/src/runtime/twin_runtime/cap08_s3_outcome_completion_evidence_service_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT FROZEN; B-Line inventory only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "outcome.evidence",
+        "evidence.raw_observation"
+      ],
+      "authority_owner": "MCFT_CAP08_RUNTIME",
+      "writer_scope": "CAP08 completion/outcome evidence facts",
+      "audit_note": "MCFT CAP08 outcome completion evidence service."
+    },
+    {
+      "surface_id": "RES-277",
+      "source_path": "apps/server/src/services/derived_sensing_state_service_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "LEGACY_COMPATIBILITY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_LEGACY_COMPATIBILITY",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep projection until canonical Twin State cutover; no new state authority",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "LEGACY_COMPATIBILITY",
+      "underlying_semantic_families": [
+        "twin.state",
+        "evidence.qualification"
+      ],
+      "authority_owner": "LEGACY_DERIVED_SENSING_STATE",
+      "writer_scope": "derived sensing state facts + index",
+      "audit_note": "Active derived sensing state service."
+    },
+    {
+      "surface_id": "RES-278",
+      "source_path": "apps/server/src/services/device_observation_service_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep canonical observation ingress; qualification remains separate",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "evidence.raw_observation"
+      ],
+      "authority_owner": "DEVICE_OBSERVATION_INGRESS",
+      "writer_scope": "normalized device observation facts",
+      "audit_note": "Active normalized device observation writer."
+    },
+    {
+      "surface_id": "RES-279",
+      "source_path": "apps/server/src/services/fertilization/fertilization_service_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Fail closed caller-supplied zone assertion and converge Acceptance",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "decision.candidate",
+        "action.prescription_spec",
+        "evidence.qualification",
+        "acceptance.verdict"
+      ],
+      "authority_owner": "FERTILIZATION_DOMAIN",
+      "writer_scope": "assessment/recommendation/prescription/acceptance facts",
+      "audit_note": "Active fertilization domain service with mixed semantic families."
+    },
+    {
+      "surface_id": "RES-280",
+      "source_path": "apps/server/src/services/flight_table/flight_table_devices_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "DEVTOOLS_ONLY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_DEVTOOLS_ONLY",
+      "runtime_reachable": "FEATURE_GATED_DEVTOOLS",
+      "feature_flag": "ENABLE_FLIGHT_TABLE_API",
+      "downstream_consumers": [],
+      "removal_target": "Never promote to production authority; explicit DEVTOOLS only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "DEVTOOLS_ONLY",
+      "underlying_semantic_families": [
+        "devtools.simulation"
+      ],
+      "authority_owner": "FLIGHT_TABLE_DEVTOOLS",
+      "writer_scope": "dev/flight-table deterministic simulation facts",
+      "audit_note": "Flight Table services are development/simulation assembly and evidence lanes."
+    },
+    {
+      "surface_id": "RES-281",
+      "source_path": "apps/server/src/services/flight_table/flight_table_evidence_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "DEVTOOLS_ONLY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_DEVTOOLS_ONLY",
+      "runtime_reachable": "FEATURE_GATED_DEVTOOLS",
+      "feature_flag": "ENABLE_FLIGHT_TABLE_API",
+      "downstream_consumers": [],
+      "removal_target": "Never promote to production authority; explicit DEVTOOLS only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "DEVTOOLS_ONLY",
+      "underlying_semantic_families": [
+        "devtools.simulation"
+      ],
+      "authority_owner": "FLIGHT_TABLE_DEVTOOLS",
+      "writer_scope": "dev/flight-table deterministic simulation facts",
+      "audit_note": "Flight Table services are development/simulation assembly and evidence lanes."
+    },
+    {
+      "surface_id": "RES-282",
+      "source_path": "apps/server/src/services/flight_table/flight_table_field_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "DEVTOOLS_ONLY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_DEVTOOLS_ONLY",
+      "runtime_reachable": "FEATURE_GATED_DEVTOOLS",
+      "feature_flag": "ENABLE_FLIGHT_TABLE_API",
+      "downstream_consumers": [],
+      "removal_target": "Never promote to production authority; explicit DEVTOOLS only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "DEVTOOLS_ONLY",
+      "underlying_semantic_families": [
+        "devtools.simulation"
+      ],
+      "authority_owner": "FLIGHT_TABLE_DEVTOOLS",
+      "writer_scope": "dev/flight-table deterministic simulation facts",
+      "audit_note": "Flight Table services are development/simulation assembly and evidence lanes."
+    },
+    {
+      "surface_id": "RES-283",
+      "source_path": "apps/server/src/services/flight_table/flight_table_geometry_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "DEVTOOLS_ONLY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_DEVTOOLS_ONLY",
+      "runtime_reachable": "FEATURE_GATED_DEVTOOLS",
+      "feature_flag": "ENABLE_FLIGHT_TABLE_API",
+      "downstream_consumers": [],
+      "removal_target": "Never promote to production authority; explicit DEVTOOLS only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "DEVTOOLS_ONLY",
+      "underlying_semantic_families": [
+        "devtools.simulation"
+      ],
+      "authority_owner": "FLIGHT_TABLE_DEVTOOLS",
+      "writer_scope": "dev/flight-table deterministic simulation facts",
+      "audit_note": "Flight Table services are development/simulation assembly and evidence lanes."
+    },
+    {
+      "surface_id": "RES-284",
+      "source_path": "apps/server/src/services/flight_table/flight_table_operation_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "DEVTOOLS_ONLY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_DEVTOOLS_ONLY",
+      "runtime_reachable": "FEATURE_GATED_DEVTOOLS",
+      "feature_flag": "ENABLE_FLIGHT_TABLE_API",
+      "downstream_consumers": [],
+      "removal_target": "Never promote to production authority; explicit DEVTOOLS only",
+      "b02_registered": true,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "DEVTOOLS_ONLY",
+      "underlying_semantic_families": [
+        "devtools.simulation"
+      ],
+      "authority_owner": "FLIGHT_TABLE_DEVTOOLS",
+      "writer_scope": "dev/flight-table deterministic simulation facts",
+      "audit_note": "Flight Table services are development/simulation assembly and evidence lanes."
+    },
+    {
+      "surface_id": "RES-285",
+      "source_path": "apps/server/src/services/flight_table/flight_table_skills_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "DEVTOOLS_ONLY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_DEVTOOLS_ONLY",
+      "runtime_reachable": "FEATURE_GATED_DEVTOOLS",
+      "feature_flag": "ENABLE_FLIGHT_TABLE_API",
+      "downstream_consumers": [],
+      "removal_target": "Never promote to production authority; explicit DEVTOOLS only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "DEVTOOLS_ONLY",
+      "underlying_semantic_families": [
+        "devtools.simulation"
+      ],
+      "authority_owner": "FLIGHT_TABLE_DEVTOOLS",
+      "writer_scope": "dev/flight-table deterministic simulation facts",
+      "audit_note": "Flight Table services are development/simulation assembly and evidence lanes."
+    },
+    {
+      "surface_id": "RES-286",
+      "source_path": "apps/server/src/services/flight_table/flight_table_telemetry_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "DEVTOOLS_ONLY",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_DEVTOOLS_ONLY",
+      "runtime_reachable": "FEATURE_GATED_DEVTOOLS",
+      "feature_flag": "ENABLE_FLIGHT_TABLE_API",
+      "downstream_consumers": [],
+      "removal_target": "Never promote to production authority; explicit DEVTOOLS only",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "DEVTOOLS_ONLY",
+      "underlying_semantic_families": [
+        "devtools.simulation"
+      ],
+      "authority_owner": "FLIGHT_TABLE_DEVTOOLS",
+      "writer_scope": "dev/flight-table deterministic simulation facts",
+      "audit_note": "Flight Table services are development/simulation assembly and evidence lanes."
+    },
+    {
+      "surface_id": "RES-287",
+      "source_path": "apps/server/src/services/inspection/pest_disease_inspection_service_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep exact evidence/acceptance chain",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "evidence.raw_observation",
+        "evidence.qualification",
+        "acceptance.verdict"
+      ],
+      "authority_owner": "INSPECTION_DOMAIN",
+      "writer_scope": "inspection request/observation/assessment/review/acceptance facts",
+      "audit_note": "Active inspection domain service."
+    },
+    {
+      "surface_id": "RES-288",
+      "source_path": "apps/server/src/services/sampling/sampling_service_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Remove latest-wins source selection; require exact binding",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "evidence.raw_observation",
+        "evidence.qualification",
+        "acceptance.verdict"
+      ],
+      "authority_owner": "SAMPLING_DOMAIN",
+      "writer_scope": "sampling plan/receipt/lab/acceptance facts",
+      "audit_note": "Active sampling domain service."
+    },
+    {
+      "surface_id": "RES-289",
+      "source_path": "apps/server/src/services/telemetry_ingest_service_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEMANTIC_FACT_WRITER",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEMANTIC_FACT_WRITER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep telemetry ingress; EvidenceQualification remains explicit downstream",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEMANTIC_FACT_WRITER",
+      "underlying_semantic_families": [
+        "evidence.raw_observation",
+        "device.state"
+      ],
+      "authority_owner": "TELEMETRY_INGRESS",
+      "writer_scope": "raw telemetry facts + projections",
+      "audit_note": "Active telemetry ingest writer."
+    },
+    {
+      "surface_id": "RES-290",
+      "source_path": "docker/postgres/init/003_p1_skill_seed.sql",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "SEED_MIGRATION",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_SEED_MIGRATION",
+      "runtime_reachable": "DEPLOYMENT_ONLY",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "Keep seed idempotent; no runtime semantic authority",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "SEED_MIGRATION",
+      "underlying_semantic_families": [
+        "governance.skill_binding"
+      ],
+      "authority_owner": "DEPLOYMENT_BOOTSTRAP",
+      "writer_scope": "deterministic seed facts only",
+      "audit_note": "Writes skill_definition/skill_binding bootstrap facts; deployment seed does not become runtime decision authority."
     }
   ],
   "cross_branch_surfaces": [
@@ -5775,5 +7672,20 @@
     "root": "apps/server/src/modules/domain/registerDomainModules.ts",
     "proof": "scripts/governance_acceptance/ACCEPTANCE_BLINE_ACTIVE_RUNTIME_SURFACE_CLOSURE_V1.cjs",
     "rule": "ACTIVE_RUNTIME_SURFACE_WITHOUT_DISPOSITION_IS_FAIL_CLOSED"
+  },
+  "fact_ledger_closure": {
+    "status": "FULL_PATH_ADJUDICATION_PENDING_EXACT_MACHINE_PROOF",
+    "source_exact_ci": "33509893507 / job 99862739754",
+    "expected_writer_count": 63,
+    "adjudicated_writer_count": 63,
+    "disposition_counts": {
+      "SEED_MIGRATION": 2,
+      "SEMANTIC_FACT_WRITER": 28,
+      "LEGACY_COMPATIBILITY": 13,
+      "MCFT_FROZEN": 12,
+      "READ_SIDE_EFFECT_P0": 1,
+      "DEVTOOLS_ONLY": 7
+    },
+    "invariant": "governance.fact_ledger is persistence topology only; it never substitutes for underlying semantic authority ownership"
   }
 }
