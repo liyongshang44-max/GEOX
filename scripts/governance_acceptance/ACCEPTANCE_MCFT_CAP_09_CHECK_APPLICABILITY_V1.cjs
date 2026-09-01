@@ -449,6 +449,18 @@ function main() {
     assert(byId(attemptPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(attemptPath));
   }
 
+  // CP-4: source-plan executor core is Phase3-owned and owner-visible post-merge.
+  for (const executorPath of ["apps/server/src/external_evidence/mcft_cap09_production_evidence_source_plan_executor_v1.ts","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLAN_EXECUTOR_V1.ts"]) {
+    const executorPlan = plan(authority, registry, [executorPath]);
+    assert.equal(executorPlan.status, "PASS");
+    assert.equal(executorPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(executorPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(executorPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const executorPostMerge = plan(authority, registry, [executorPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(executorPostMerge, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(executorPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(executorPath));
+  }
+
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
   const phase3 = plan(authority, registry, [phase3Path]);

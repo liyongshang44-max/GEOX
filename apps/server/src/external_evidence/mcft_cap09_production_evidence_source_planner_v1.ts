@@ -72,6 +72,7 @@ export type ProductionEvidenceSourceDecisionV1 =
             cycle_key: string;
             cycle_issued_at: string;
             available_role: "WEATHER" | "FUTURE_ET0";
+            partial_progress: GfsCyclePairProgressV1;
             bindable_to_current_cycle_service: true;
           }
         | {
@@ -283,6 +284,7 @@ export function planProductionEvidenceSourcesV1(input: {
             cycle_key: partial.cycle_key,
             cycle_issued_at: partial.cycle_issued_at,
             available_role: availableRole,
+            partial_progress: partial,
             bindable_to_current_cycle_service: true,
           },
         });

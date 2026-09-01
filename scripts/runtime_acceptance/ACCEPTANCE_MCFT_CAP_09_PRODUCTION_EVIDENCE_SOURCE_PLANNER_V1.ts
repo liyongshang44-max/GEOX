@@ -366,6 +366,20 @@ function main(): void {
       : null,
     true,
   );
+  assert.equal(
+    gfsPartialDecision?.status === "ACTION"
+      && gfsPartialDecision.operation.kind === "GFS_PARTIAL_PAIR_REHYDRATE"
+      ? gfsPartialDecision.operation.partial_progress.cycle_key
+      : null,
+    "20260901t180000z",
+  );
+  assert.equal(
+    gfsPartialDecision?.status === "ACTION"
+      && gfsPartialDecision.operation.kind === "GFS_PARTIAL_PAIR_REHYDRATE"
+      ? gfsPartialDecision.operation.partial_progress.weather?.fact_id
+      : null,
+    "fact_" + "1".repeat(64),
+  );
 
   const soilAction = planProductionEvidenceSourcesV1({
     planning_time: PLANNING_TIME,
@@ -427,6 +441,7 @@ function main(): void {
     gfs_action_uses_explicit_target: true,
     gfs_durable_target_is_not_reacquired: true,
     gfs_partial_pair_rehydration_gap_machine_visible: true,
+    gfs_partial_plan_carries_exact_progress_snapshot: true,
     soil_action_requires_explicit_due_input: true,
     activation_fence_fail_closed: true,
     production_due_authorities_established_by_this_proof: false,

@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "SINGLE_HOST_EXECUTION_SEAM_IMPLEMENTED_SOURCE_PLAN_ADAPTER_NEXT");
+  assert.equal(authority.status, "SOURCE_PLAN_EXECUTOR_CORE_IMPLEMENTED_ATTEMPT_FENCE_BINDING_NEXT");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "5100364393f49c5c38f9a8ba87e844e946d82430");
+  assert.equal(authority.subject_predecessor_sha, "c77a5bf215f3e634b9e6499aefc0a7339ac581a6");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -257,6 +257,7 @@ try {
   );
   includes(purePlanner, "GFS_TARGET_ALREADY_DURABLE", "GFS_DURABLE_TARGET_DEDUP_REQUIRED");
   includes(purePlanner, "GFS_PARTIAL_PAIR_REHYDRATE", "GFS_PARTIAL_PAIR_REHYDRATION_ACTION_REQUIRED");
+  includes(purePlanner, "partial_progress: partial", "GFS_PARTIAL_EXACT_PROGRESS_SNAPSHOT_REQUIRED");
   includes(purePlanner, "KBS_SOIL_CURRENT_ACQUIRE", "SOIL_EXPLICIT_DUE_ACTION_REQUIRED");
   assert.equal(purePlanner.includes("Date.now"), false, "PURE_PLANNER_WALL_CLOCK_READ_FORBIDDEN");
   assert.equal(purePlanner.includes("process.env"), false, "PURE_PLANNER_ENV_READ_FORBIDDEN");
@@ -276,6 +277,15 @@ try {
   includes(hostAttempt, '"KBS_RAW_HOURLY_PUBLICATION_CYCLE"', "EVIDENCE_HOST_KBS_ATTEMPT_KIND_REQUIRED");
   includes(hostAttempt, '"GFS_PARTIAL_PAIR_REHYDRATION"', "EVIDENCE_HOST_GFS_REHYDRATION_ATTEMPT_KIND_REQUIRED");
   includes(hostAttempt, "buildCanonicalWorkItemAttemptPlanV1", "EVIDENCE_HOST_CANONICAL_ATTEMPT_ADAPTER_REQUIRED");
+  const sourcePlanExecutor = read(authority.production_source_plan_executor_ref);
+  includes(sourcePlanExecutor, "ProductionEvidenceSourcePlanExecutorV1", "SOURCE_PLAN_EXECUTOR_REQUIRED");
+  includes(sourcePlanExecutor, "KBS_RAW_HOURLY_PUBLICATION_CYCLE", "SOURCE_PLAN_EXECUTOR_KBS_REQUIRED");
+  includes(sourcePlanExecutor, "GFS_PARTIAL_PAIR_REHYDRATION", "SOURCE_PLAN_EXECUTOR_GFS_REPAIR_REQUIRED");
+  includes(sourcePlanExecutor, "buildKbsSoilCurrent", "SOURCE_PLAN_EXECUTOR_SOIL_TARGET_FREE_PATH_REQUIRED");
+  includes(sourcePlanExecutor, "partial: operation.partial_progress", "SOURCE_PLAN_EXECUTOR_EXACT_PARTIAL_SNAPSHOT_REQUIRED");
+  includes(sourcePlanExecutor, "PRODUCTION_SOURCE_PLAN_EXECUTOR_KBS_BLOCKED", "SOURCE_PLAN_EXECUTOR_KBS_BLOCK_FAIL_CLOSED_REQUIRED");
+  assert.equal(sourcePlanExecutor.includes("Date.now"), false, "SOURCE_PLAN_EXECUTOR_WALL_CLOCK_FORBIDDEN");
+  assert.equal(sourcePlanExecutor.includes("process.env"), false, "SOURCE_PLAN_EXECUTOR_ENV_FORBIDDEN");
 
   const fixture = read("apps/server/src/external_evidence/qualification/mcft_cap09_phase5_evidence_runtime_qualification_v1.ts");
   includes(fixture, "createTargetPlanner(input?", "PHASE5_MANIFEST_PLANNER_REQUIRED");
@@ -293,7 +303,7 @@ try {
     "PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_NOT_MATERIALIZED",
     "KBS_RAW_HOURLY_PRODUCTION_BASELINE_POINTER_SCHEMA_NOT_MATERIALIZED",
     "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
-    "PRODUCTION_SOURCE_PLAN_EXECUTOR_ADAPTER_NOT_IMPLEMENTED",
+    "PROVIDER_ATTEMPT_FENCE_BINDING_NOT_IMPLEMENTED",
   ]);
   assert.equal(authority.adjudication.phase5_fixture_manifest_may_be_production_planner, false);
   assert.equal(authority.adjudication.v13_forcing_controller_may_be_general_evidence_planner, false);
@@ -383,7 +393,8 @@ try {
   assert.equal(authority.host_lifecycle_gap.kbs_publication_cycle_can_share_single_host_lifecycle, true);
   assert.equal(authority.host_lifecycle_gap.gfs_partial_rehydration_can_share_single_host_lifecycle, true);
   assert.equal(authority.host_lifecycle_gap.second_evidence_host_authorized, false);
-  assert.equal(authority.host_lifecycle_gap.production_source_plan_executor_adapter_implemented, false);
+  assert.equal(authority.host_lifecycle_gap.production_source_plan_executor_adapter_implemented, true);
+  assert.equal(authority.host_lifecycle_gap.provider_attempt_fence_binding_implemented, false);
   assert.equal(authority.host_lifecycle_gap.durable_restart_authority, "EVIDENCE_PLANE_DURABLE_PROGRESS_SET");
 
   for (const [key, expected] of Object.entries({

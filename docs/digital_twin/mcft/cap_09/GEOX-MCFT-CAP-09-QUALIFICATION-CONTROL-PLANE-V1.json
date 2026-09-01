@@ -278,7 +278,9 @@
         "apps/server/src/external_evidence/mcft_cap09_gfs_retry_schedule_v1.ts",
         "apps/server/src/persistence/external_evidence/postgres_gfs_retry_schedule_v1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_RETRY_SCHEDULE_POSTGRES_V1.ts",
-        "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_attempt_v1.ts"
+        "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_attempt_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_plan_executor_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLAN_EXECUTOR_V1.ts"
       ]
     },
     "PHASE4_TWIN_RUNTIME_FOUNDATION": {
@@ -486,7 +488,9 @@
         "apps/server/src/external_evidence/mcft_cap09_gfs_retry_schedule_v1.ts",
         "apps/server/src/persistence/external_evidence/postgres_gfs_retry_schedule_v1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_RETRY_SCHEDULE_POSTGRES_V1.ts",
-        "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_attempt_v1.ts"
+        "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_attempt_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_plan_executor_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLAN_EXECUTOR_V1.ts"
       ]
     }
   },
