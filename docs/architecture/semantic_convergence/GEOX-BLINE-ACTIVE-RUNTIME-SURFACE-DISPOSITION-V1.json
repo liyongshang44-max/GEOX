@@ -2322,9 +2322,9 @@
       "surface_role": "AUTHORITY",
       "delegates_to": [],
       "replacement_path": [
-        "canonical fertilization candidate/spec/acceptance chain"
+        "exact Sampling evidence chain for SAMPLING_LAB -> fertilization assessment; separate future canonical fertilization acceptance chain"
       ],
-      "sunset_condition": "FAIL_CLOSED_ACCEPTANCE_PROVENANCE_REQUIRED",
+      "sunset_condition": "SAMPLING EXACT BINDING KEPT; FERTILIZATION ACCEPTANCE P0-RES-009 STILL REQUIRES SEPARATE CLOSURE",
       "semantic_family": [
         "decision.candidate",
         "action.prescription_spec",
@@ -2510,11 +2510,13 @@
         "apps/server/src/routes/registerCoreV1Routes.ts"
       ],
       "surface_role": "AUTHORITY",
-      "delegates_to": [],
-      "replacement_path": [
-        "exact-source sampling evidence chain"
+      "delegates_to": [
+        "apps/server/src/services/sampling/sampling_service_v1.ts"
       ],
-      "sunset_condition": "REMOVE_LATEST_WINS_BEFORE_CLOSURE",
+      "replacement_path": [
+        "exact plan fact -> unique receipt fact -> exact lab fact -> exact sampling acceptance fact"
+      ],
+      "sunset_condition": "KEEP EXACT-SOURCE SAMPLING FACADE; LATEST-WINS FORBIDDEN",
       "semantic_family": [
         "evidence.raw_observation",
         "evidence.qualification",
