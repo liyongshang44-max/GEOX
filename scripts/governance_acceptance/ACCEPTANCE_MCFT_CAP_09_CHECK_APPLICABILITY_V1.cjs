@@ -144,6 +144,19 @@ function main() {
   assert.equal(unknown.status, "FAIL");
   assert.deepEqual(unknown.unknown_changed_paths, ["docs/__mcft_cap09_unowned_path_should_fail__.md"]);
 
+  const ea5c1Check = authority.checks.find((row) => row.check_id === "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS");
+  assert.ok(ea5c1Check, "EA5C1_CHECK_REQUIRED");
+  assert.equal(ea5c1Check.execution_workflow_status, "IMPLEMENTED_AT_SUCCESSOR_HEAD");
+  assert.equal(ea5c1Check.execution_workflow, ".github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml");
+
+  // CP-4: shared collector maintenance has a legal successor requalification route.
+  const collectorPath = "apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts";
+  const collectorChange = plan(authority, registry, [collectorPath]);
+  assert.equal(collectorChange.status, "PASS");
+  assert.equal(collectorChange.unknown_changed_paths.length, 0);
+  assert.equal(byId(collectorChange, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS").status, "REQUALIFY");
+  assert(byId(collectorChange, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS").changed_dependencies.includes(collectorPath));
+
   // CP-4: known changed dependency. Shared ingress changes must requalify EA5C1.
   const ingressPath = "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts";
   const ingress = plan(authority, registry, [ingressPath]);

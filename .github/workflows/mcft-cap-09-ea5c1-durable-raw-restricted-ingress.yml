@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml'
       - 'apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts'
       - 'apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C1-DURABLE-RAW-RESTRICTED-INGRESS-V1.json'

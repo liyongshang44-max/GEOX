@@ -587,7 +587,7 @@
       ],
       "historical_evidence_policy": "CARRY_ONLY_IF_IMMUTABLE_BINDING_AND_EXACT_RESOLVER_PATHS_UNCHANGED",
       "execution_workflow": ".github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml",
-      "execution_workflow_status": "IMPLEMENTED_AT_FROZEN_SUBJECT",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
       "fail_policy": "FAIL_CLOSED",
       "carry_forward_policy": "ONLY_WHEN_EXACT_RESOLVER_PATHS_UNCHANGED",
       "requalification_triggers": [
