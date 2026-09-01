@@ -43,6 +43,8 @@ need("service", [
   "sample_receipt_fact_id') = $3",
   "LIMIT 2",
   "DUPLICATE:sample_id",
+  "findExistingReceiptForCreateV1",
+  "COALESCE(record_json::jsonb->>'sampling_plan_fact_id', '') = ''",
   "AMBIGUOUS:sampling_acceptance_v1",
   "CONFLICT:sampling_acceptance_exact_chain_verdict",
   "idempotent: true",
@@ -119,7 +121,7 @@ need("samplingContract", [
   "sampling_plan_fact_id",
   "sample_receipt_fact_id",
   "lab_result_fact_id",
-  "latest-wins source selection",
+  "latest-wins",
   "ambiguous receipt/lab/acceptance identity",
   "same exact plan/receipt/lab source chain is idempotent",
 ]);
@@ -135,7 +137,8 @@ need("samplingApi", [
   "sample_id_reuse_across_plans_allowed",
   "ambiguous_sample_locator_requires_exact_receipt_ref",
   "Promise.all",
-  "concurrent exact-chain acceptance must converge on one fact_id",
+  "concurrent acceptance must converge on one fact_id",
+  "legacy_receipt_duplicate_blocked_409",
 ]);
 
 need("ci", [
@@ -169,6 +172,7 @@ const stats = {
   acceptance_exact_refs: ["sampling_plan_fact_id", "sample_receipt_fact_id", "lab_result_fact_id"].every((x) => source.service.includes(x) && source.route.includes(x)),
   acceptance_exact_chain_idempotent: source.service.includes("CONFLICT:sampling_acceptance_exact_chain_verdict") && source.service.includes("idempotent: true"),
   receipt_identity_race_safe: source.service.includes("deterministicReceiptFactIdV1") && source.samplingApi.includes("concurrent_duplicate_sample_id_serialized"),
+  legacy_receipt_duplicate_fail_closed: source.service.includes("findExistingReceiptForCreateV1") && source.samplingApi.includes("legacy_receipt_duplicate_blocked_409"),
   acceptance_identity_race_safe: source.service.includes("deterministicAcceptanceFactIdV1") && source.samplingApi.includes("concurrent_acceptance_identity_stable"),
   opaque_business_ids_preserved: source.service.includes("const receipt_id = randomUUID();") && source.service.includes("const acceptance_id = randomUUID();"),
   identity_tuple_canonical_encoding: source.service.includes("JSON.stringify(canonicalParts)") && !source.service.includes('.join("\\n")'),
