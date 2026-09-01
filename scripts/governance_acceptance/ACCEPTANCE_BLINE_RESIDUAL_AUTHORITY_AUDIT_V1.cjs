@@ -281,7 +281,7 @@ function main() {
 
   const hardKinds = new Set([
     "PERSISTENCE_WRITER","SEMANTIC_BUILDER","SEMANTIC_DERIVER",
-    "PERSISTENCE_AUTHORITY_RISK","SCHEMA_AUTHORITY"
+    "PERSISTENCE_AUTHORITY_RISK"
   ]);
   const hard = [];
   const touches = [];
