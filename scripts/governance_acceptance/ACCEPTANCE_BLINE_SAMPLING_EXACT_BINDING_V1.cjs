@@ -10,6 +10,7 @@ const files = {
   samplingContract: "docs/contracts/SAMPLING_DOMAIN_CONTRACT_V1.md",
   fertilizationContract: "docs/contracts/FERTILIZATION_DOMAIN_CONTRACT_V1.md",
   inventory: "docs/architecture/semantic_convergence/GEOX-BLINE-RESIDUAL-AUTHORITY-INVENTORY-V1.json",
+  ci: ".github/workflows/ci.yml",
 };
 
 const source = Object.fromEntries(Object.entries(files).map(([k, p]) => [k, fs.readFileSync(path.join(root, p), "utf8")]));
@@ -110,6 +111,13 @@ need("fertilizationContract", [
   "Latest-wins Sampling lookup is forbidden",
 ]);
 
+need("ci", [
+  "Run Sampling exact-chain scenario release gate",
+  "pnpm run ci:scenario:sampling",
+  "Run Fertilization Sampling-consumer regression gate",
+  "pnpm run ci:scenario:fertilization",
+]);
+
 const inventory = JSON.parse(source.inventory);
 const byId = new Map((inventory.surfaces || []).map((row) => [row.surface_id, row]));
 const res084 = byId.get("RES-084");
@@ -137,6 +145,7 @@ const stats = {
     && source.fertilization.includes("SAMPLING_RECEIPT_PLAN_FACT_REF_MISMATCH")
     && source.fertilization.includes("SAMPLING_LAB_PLAN_FACT_REF_MISMATCH"),
   fertilization_exact_sampling_acceptance: source.fertilization.includes("requireExactSamplingChain"),
+  scenario_runtime_wired: source.ci.includes("pnpm run ci:scenario:sampling") && source.ci.includes("pnpm run ci:scenario:fertilization"),
   sampling_projection_registered: Boolean(res305),
   fertilization_acceptance_p0_preserved: Boolean(res077 && String(res077.audit_note || "").includes("P0-RES-009 remains independently open")),
 };
