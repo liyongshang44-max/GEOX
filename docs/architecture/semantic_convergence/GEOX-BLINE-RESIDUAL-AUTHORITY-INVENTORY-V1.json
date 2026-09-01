@@ -1319,6 +1319,1002 @@
       "removal_target": "KEEP TWO-LANE ROI MODEL; AS_EXECUTED SIGNAL MUST REMAIN INTERIM/NON_CUSTOMER_VISIBLE AND FORMAL ROI MUST REQUIRE EXACT FORMAL ACCEPTANCE",
       "b02_registered": false,
       "audit_note": "from-as-executed explicitly reports INTERIM_SUPPORTED/customer_visible=false; formalize-from-acceptance requires PASS/formal evidence/chain validation."
+    },
+    {
+      "source_path": "apps/server/db/migrations/2026_05_02_mvp0_skill_registry_seed.sql",
+      "entrypoint": "database migration runner",
+      "activation_mode": "MIGRATION_ONLY",
+      "writes": [
+        "skill_definition_v1 seed facts"
+      ],
+      "reads": [
+        "existing facts-backed skill registry"
+      ],
+      "semantic_family": [
+        "governance.skill_registry"
+      ],
+      "authority_class": "HISTORICAL_SKILL_REGISTRY_SEED_WRITER",
+      "runtime_reachable": "NOT_LONG_RUNNING_RUNTIME",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "skill registry"
+      ],
+      "removal_target": "KEEP HISTORICAL MIGRATION; DO NOT TREAT SEEDED OCCURRED_AT AS RUNTIME DECISION AUTHORITY",
+      "surface_id": "RES-049",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/domain/sensing/problem_state_uncertainty_v1.ts",
+      "entrypoint": "appleii_problem_state_pipeline_v1.ts",
+      "activation_mode": "DOMAIN_BUILDER_AND_FACT_WRITER",
+      "writes": [
+        "problem_state_v1",
+        "uncertainty_v1"
+      ],
+      "reads": [
+        "sensing/problem-state pipeline evidence"
+      ],
+      "semantic_family": [
+        "twin.state",
+        "evidence.qualification"
+      ],
+      "authority_class": "PROBLEM_STATE_UNCERTAINTY_FACT_WRITER",
+      "runtime_reachable": "PROVEN_CALLER",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "sensing/problem-state pipeline"
+      ],
+      "removal_target": "REGISTER AS LEGACY STATE/UNCERTAINTY AUTHORITY; ADAPT TO CANONICAL STATE/EVIDENCE WITHOUT LATEST-WINS",
+      "surface_id": "RES-050",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/domain/sensing/raw_sample_fact_envelope_v1.ts",
+      "entrypoint": "raw-sample sensing intake/read series call chain",
+      "activation_mode": "SENSING_FACT_WRITER",
+      "writes": [
+        "raw_sample_v1",
+        "runtime availability marker facts"
+      ],
+      "reads": [
+        "raw sensing sample inputs"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation"
+      ],
+      "authority_class": "RAW_SAMPLE_EVIDENCE_WRITER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "sensing series",
+        "Evidence qualification pipeline"
+      ],
+      "removal_target": "KEEP RAW EVIDENCE LANE; CANONICAL OBSERVATION/EQ MUST BE EXPLICIT DOWNSTREAM",
+      "surface_id": "RES-051",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/modules/legacy/registerLegacyMonitoringModule.ts",
+      "entrypoint": "registerLegacyRoutes.ts",
+      "activation_mode": "ACTIVE_LEGACY_MODULE",
+      "writes": [
+        "marker_v1",
+        "canopy_frame_v1",
+        "legacy monitoring facts"
+      ],
+      "reads": [
+        "legacy monitoring route inputs"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation"
+      ],
+      "authority_class": "ACTIVE_LEGACY_MONITORING_FACT_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "legacy monitoring/read models"
+      ],
+      "removal_target": "SHADOW INTO CANONICAL OBSERVATION/EQ; REMOVE LEGACY AUTHORITY ONLY AFTER CONSUMER CUTOVER",
+      "surface_id": "RES-052",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/persistence/calibration/postgres_calibration_governance_repository_v1.ts",
+      "entrypoint": "MCFT/Twin runtime composition or repository caller; B-Line does not own activation",
+      "activation_mode": "MCFT_OWNED_PERSISTENCE",
+      "writes": [
+        "MCFT-CAP-06 Calibration Candidate / Shadow Evaluation canonical history in public.facts"
+      ],
+      "reads": [
+        "validated calibration candidate/shadow evaluation drafts"
+      ],
+      "semantic_family": [
+        "twin.state",
+        "governance.trace_projection"
+      ],
+      "authority_class": "MCFT_CALIBRATION_GOVERNANCE_PERSISTENCE_REPOSITORY",
+      "runtime_reachable": "MCFT_OWNED; DO_NOT_REINTERPRET_FROM_BLINE",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "MCFT/Twin runtime only"
+      ],
+      "removal_target": "DO_NOT_MODIFY_IN_BLINE; FINAL_TYPED_INTEGRATION_ONLY_AFTER_MCFT_COMPLETE",
+      "audit_note": "File boundary explicitly states persistence only; no calibration math, active-config mutation, State/checkpoint, approval, route, scheduler or network authority.",
+      "surface_id": "RES-053",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_approval_plan_evidence_repository_v1.ts",
+      "entrypoint": "MCFT/Twin runtime composition or repository caller; B-Line does not own activation",
+      "activation_mode": "MCFT_OWNED_PERSISTENCE",
+      "writes": [
+        "Approval Assertion and Approved Plan Replay Evidence facts",
+        "active-plan binding projection"
+      ],
+      "reads": [
+        "validated CAP-05 approval/plan evidence"
+      ],
+      "semantic_family": [
+        "decision.approval",
+        "operation.plan",
+        "evidence.qualification"
+      ],
+      "authority_class": "MCFT_APPROVAL_PLAN_EVIDENCE_PERSISTENCE_REPOSITORY",
+      "runtime_reachable": "MCFT_OWNED; DO_NOT_REINTERPRET_FROM_BLINE",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "MCFT/Twin runtime only"
+      ],
+      "removal_target": "DO_NOT_MODIFY_IN_BLINE; FINAL_TYPED_INTEGRATION_ONLY_AFTER_MCFT_COMPLETE",
+      "audit_note": "Persistence/evidence projection only; no approval exercise, Recommendation, Task, dispatch or action authority.",
+      "surface_id": "RES-054",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts",
+      "entrypoint": "MCFT/Twin runtime composition or repository caller; B-Line does not own activation",
+      "activation_mode": "MCFT_OWNED_PERSISTENCE",
+      "writes": [
+        "CAP-02/CAP-03 assimilated canonical continuation facts and projections"
+      ],
+      "reads": [
+        "validated assimilated continuation record sets"
+      ],
+      "semantic_family": [
+        "twin.state",
+        "evidence.qualification"
+      ],
+      "authority_class": "MCFT_ASSIMILATED_RUNTIME_PERSISTENCE_REPOSITORY",
+      "runtime_reachable": "MCFT_OWNED; DO_NOT_REINTERPRET_FROM_BLINE",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "MCFT/Twin runtime only"
+      ],
+      "removal_target": "DO_NOT_MODIFY_IN_BLINE; FINAL_TYPED_INTEGRATION_ONLY_AFTER_MCFT_COMPLETE",
+      "audit_note": "Persistence only; no Evidence selection, assimilation math, Forecast, Scenario, Recommendation or action.",
+      "surface_id": "RES-055",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_cap08_s4_append_forward_repository_v1.ts",
+      "entrypoint": "MCFT/Twin runtime composition or repository caller; B-Line does not own activation",
+      "activation_mode": "MCFT_OWNED_PERSISTENCE",
+      "writes": [
+        "CAP-08 append-forward runtime facts/projections"
+      ],
+      "reads": [
+        "validated CAP-08 append-forward records"
+      ],
+      "semantic_family": [
+        "twin.state",
+        "governance.trace_projection"
+      ],
+      "authority_class": "MCFT_CAP08_APPEND_FORWARD_PERSISTENCE_REPOSITORY",
+      "runtime_reachable": "MCFT_OWNED; DO_NOT_REINTERPRET_FROM_BLINE",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "MCFT/Twin runtime only"
+      ],
+      "removal_target": "DO_NOT_MODIFY_IN_BLINE; FINAL_TYPED_INTEGRATION_ONLY_AFTER_MCFT_COMPLETE",
+      "audit_note": "MCFT-owned append-forward persistence.",
+      "surface_id": "RES-056",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_cap08_t17_transition_repository_v1.ts",
+      "entrypoint": "MCFT/Twin runtime composition or repository caller; B-Line does not own activation",
+      "activation_mode": "MCFT_OWNED_PERSISTENCE",
+      "writes": [
+        "CAP-08 T17 transition facts/projections"
+      ],
+      "reads": [
+        "validated T17 transition records"
+      ],
+      "semantic_family": [
+        "twin.state",
+        "governance.trace_projection"
+      ],
+      "authority_class": "MCFT_CAP08_T17_TRANSITION_PERSISTENCE_REPOSITORY",
+      "runtime_reachable": "MCFT_OWNED; DO_NOT_REINTERPRET_FROM_BLINE",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "MCFT/Twin runtime only"
+      ],
+      "removal_target": "DO_NOT_MODIFY_IN_BLINE; FINAL_TYPED_INTEGRATION_ONLY_AFTER_MCFT_COMPLETE",
+      "audit_note": "MCFT-owned transition persistence.",
+      "surface_id": "RES-057",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts",
+      "entrypoint": "MCFT/Twin runtime composition or repository caller; B-Line does not own activation",
+      "activation_mode": "MCFT_OWNED_PERSISTENCE",
+      "writes": [
+        "restricted canonical External Evidence facts"
+      ],
+      "reads": [
+        "EA3 canonicalization result plus durable raw verification"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "evidence.qualification"
+      ],
+      "authority_class": "MCFT_EXTERNAL_FORMAL_EVIDENCE_INGRESS_WRITER",
+      "runtime_reachable": "MCFT_OWNED; DO_NOT_REINTERPRET_FROM_BLINE",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "MCFT/Twin runtime only"
+      ],
+      "removal_target": "DO_NOT_MODIFY_IN_BLINE; FINAL_TYPED_INTEGRATION_ONLY_AFTER_MCFT_COMPLETE",
+      "audit_note": "MCFT-CAP-09 restricted ingress; durable raw verification must succeed before facts transaction.",
+      "surface_id": "RES-058",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts",
+      "entrypoint": "MCFT/Twin runtime composition or repository caller; B-Line does not own activation",
+      "activation_mode": "MCFT_OWNED_PERSISTENCE",
+      "writes": [
+        "MCFT feedback/action evidence facts and projections"
+      ],
+      "reads": [
+        "validated feedback persistence inputs"
+      ],
+      "semantic_family": [
+        "outcome.evidence",
+        "governance.trace_projection"
+      ],
+      "authority_class": "MCFT_FEEDBACK_PERSISTENCE_REPOSITORY",
+      "runtime_reachable": "MCFT_OWNED; DO_NOT_REINTERPRET_FROM_BLINE",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "MCFT/Twin runtime only"
+      ],
+      "removal_target": "DO_NOT_MODIFY_IN_BLINE; FINAL_TYPED_INTEGRATION_ONLY_AFTER_MCFT_COMPLETE",
+      "audit_note": "MCFT-owned feedback persistence.",
+      "surface_id": "RES-059",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts",
+      "entrypoint": "MCFT/Twin runtime composition or repository caller; B-Line does not own activation",
+      "activation_mode": "MCFT_OWNED_PERSISTENCE",
+      "writes": [
+        "CAP-04 canonical Forecast/Scenario candidate facts and projections"
+      ],
+      "reads": [
+        "validated canonical forecast/scenario envelopes"
+      ],
+      "semantic_family": [
+        "twin.forecast",
+        "twin.scenario"
+      ],
+      "authority_class": "MCFT_FORECAST_SCENARIO_PERSISTENCE_REPOSITORY",
+      "runtime_reachable": "MCFT_OWNED; DO_NOT_REINTERPRET_FROM_BLINE",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "MCFT/Twin runtime only"
+      ],
+      "removal_target": "DO_NOT_MODIFY_IN_BLINE; FINAL_TYPED_INTEGRATION_ONLY_AFTER_MCFT_COMPLETE",
+      "audit_note": "File boundary explicitly says persistence/projection only; no Forecast math, Scenario math, Evidence selection, route, scheduler or wall-clock authority.",
+      "surface_id": "RES-060",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_immutable_decision_action_commit_repository_v1.ts",
+      "entrypoint": "MCFT/Twin runtime composition or repository caller; B-Line does not own activation",
+      "activation_mode": "MCFT_OWNED_PERSISTENCE",
+      "writes": [
+        "immutable MCFT decision/action commit facts"
+      ],
+      "reads": [
+        "validated immutable decision/action commit inputs"
+      ],
+      "semantic_family": [
+        "decision.candidate",
+        "operation.plan",
+        "execution.task"
+      ],
+      "authority_class": "MCFT_IMMUTABLE_DECISION_ACTION_COMMIT_REPOSITORY",
+      "runtime_reachable": "MCFT_OWNED; DO_NOT_REINTERPRET_FROM_BLINE",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "MCFT/Twin runtime only"
+      ],
+      "removal_target": "DO_NOT_MODIFY_IN_BLINE; FINAL_TYPED_INTEGRATION_ONLY_AFTER_MCFT_COMPLETE",
+      "audit_note": "MCFT-owned immutable commit persistence.",
+      "surface_id": "RES-061",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts",
+      "entrypoint": "MCFT/Twin runtime composition or repository caller; B-Line does not own activation",
+      "activation_mode": "MCFT_OWNED_PERSISTENCE",
+      "writes": [
+        "Runtime Config and fenced A0/A2 continuation facts/projections"
+      ],
+      "reads": [
+        "validated canonical runtime record sets"
+      ],
+      "semantic_family": [
+        "twin.state",
+        "governance.trace_projection"
+      ],
+      "authority_class": "MCFT_RUNTIME_PERSISTENCE_REPOSITORY",
+      "runtime_reachable": "MCFT_OWNED; DO_NOT_REINTERPRET_FROM_BLINE",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "MCFT/Twin runtime only"
+      ],
+      "removal_target": "DO_NOT_MODIFY_IN_BLINE; FINAL_TYPED_INTEGRATION_ONLY_AFTER_MCFT_COMPLETE",
+      "audit_note": "File boundary explicitly says persistence only; no State equations, Evidence selection, uncertainty math, tick orchestration or routes.",
+      "surface_id": "RES-062",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/projections/irrigation_scenario_set_v1.ts",
+      "entrypoint": "no external production caller found for build/append APIs on audited head",
+      "activation_mode": "REGISTERED_CAPABILITY_ISLAND",
+      "writes": [
+        "irrigation_scenario_set_v1",
+        "irrigation_scenario_set_index_v1"
+      ],
+      "reads": [
+        "WaterStateEstimate",
+        "IrrigationRequirement",
+        "WeatherForecast",
+        "SensingWindow"
+      ],
+      "semantic_family": [
+        "twin.scenario"
+      ],
+      "authority_class": "IRRIGATION_SCENARIO_COMPARISON_CAPABILITY_WRITER",
+      "runtime_reachable": "NOT_PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "KEEP AS COMPARISON-ONLY CAPABILITY OR ADAPT TO CANONICAL SCENARIO; NEVER PROMOTE TO RECOMMENDATION",
+      "audit_note": "Current payload explicitly sets comparison_only=true, no_recommendation=true and recommended_option_id=null.",
+      "surface_id": "RES-063",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/projections/manual_execution_quality_v1.ts",
+      "entrypoint": "dashboard_v1.ts projection call chain",
+      "activation_mode": "ACTIVE_REPORTING_PROJECTION",
+      "writes": [
+        "manual_execution_quality_snapshot_v1"
+      ],
+      "reads": [
+        "manual execution task/receipt/work assignment state"
+      ],
+      "semantic_family": [
+        "execution.result_evidence",
+        "governance.trace_projection"
+      ],
+      "authority_class": "MANUAL_EXECUTION_QUALITY_PROJECTION_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "dashboard/manual execution reporting"
+      ],
+      "removal_target": "KEEP AS REPORTING PROJECTION; MUST NOT SUBSTITUTE FOR RECEIPT/AS_EXECUTED/ACCEPTANCE",
+      "surface_id": "RES-064",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/projections/water_state_estimate_v1.ts",
+      "entrypoint": "no external production caller found for build/append APIs on audited head",
+      "activation_mode": "REGISTERED_CAPABILITY_ISLAND",
+      "writes": [
+        "water_state_estimate_v1",
+        "water_state_estimate_index_v1"
+      ],
+      "reads": [
+        "SoilMoistureSensingWindow",
+        "WeatherForecast",
+        "IrrigationRequirement"
+      ],
+      "semantic_family": [
+        "twin.state"
+      ],
+      "authority_class": "LEGACY_WATER_STATE_ESTIMATE_CAPABILITY_WRITER",
+      "runtime_reachable": "NOT_PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "DO NOT ACTIVATE AS PARALLEL CANONICAL STATE; ADAPT/RETIRE AFTER MCFT STATE AUTHORITY IS AVAILABLE",
+      "audit_note": "Deterministically classifies NORMAL/LIGHT_DEFICIT/MODERATE_DEFICIT/UNKNOWN; currently no external caller found.",
+      "surface_id": "RES-065",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/routes/agronomy_media_v1.ts",
+      "entrypoint": "active agronomy media API route",
+      "activation_mode": "ACTIVE_API",
+      "writes": [
+        "agronomy_observation_v1"
+      ],
+      "reads": [
+        "agronomy media/observation request payload"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation"
+      ],
+      "authority_class": "LEGACY_AGRONOMY_OBSERVATION_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "agronomy media/read models"
+      ],
+      "removal_target": "CONVERGE TO CANONICAL OBSERVATION→EQ; MEDIA UPLOAD MUST NOT BYPASS EVIDENCE QUALIFICATION",
+      "surface_id": "RES-066",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/routes/alerts_v1.ts",
+      "entrypoint": "alerts routes and alert notification/offline workers",
+      "activation_mode": "ACTIVE_API_AND_WORKERS",
+      "writes": [
+        "alert_event_raised_v1",
+        "alert_rule_created_v1",
+        "alert_rule_disabled_v1",
+        "alert_event_acknowledged_v1",
+        "alert_event_closed_v1",
+        "alert_notification_recorded_v1",
+        "alert_notification_dispatched_v1"
+      ],
+      "reads": [
+        "alert rules/device/offline/notification state"
+      ],
+      "semantic_family": [
+        "governance.trace_projection"
+      ],
+      "authority_class": "ALERT_OPERATIONAL_FACT_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "alert UI/notification workers"
+      ],
+      "removal_target": "KEEP OPERATIONAL ALERT AUTHORITY; DO NOT EQUATE ALERT ACK WITH EXECUTION/ACCEPTANCE ACK",
+      "surface_id": "RES-067",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/routes/control_ao_sense.ts",
+      "entrypoint": "AO-SENSE primary/legacy/control routes",
+      "activation_mode": "ACTIVE_API",
+      "writes": [
+        "ao_sense_task_v1",
+        "ao_sense_receipt_v1"
+      ],
+      "reads": [
+        "sensing task/request and receipt payloads"
+      ],
+      "semantic_family": [
+        "execution.task",
+        "execution.receipt",
+        "evidence.raw_observation"
+      ],
+      "authority_class": "AO_SENSE_TASK_RECEIPT_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "sampling/sensing evidence pipeline"
+      ],
+      "removal_target": "KEEP SENSING EXECUTION LANE; MAP RECEIPT TO EVIDENCE, NOT AO-ACT BUSINESS EXECUTION",
+      "surface_id": "RES-068",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/routes/devices_v1.ts",
+      "entrypoint": "Devices primary/compatibility routes",
+      "activation_mode": "ACTIVE_API_WITH_LEGACY_WRITE_GATE",
+      "writes": [
+        "device_registered_v1",
+        "device_credential_issued_v1",
+        "device_credential_revoked_v1",
+        "device_capability_v1"
+      ],
+      "reads": [
+        "device enrollment/capability/credential inputs"
+      ],
+      "semantic_family": [
+        "governance.trace_projection",
+        "execution.dispatch_delivery"
+      ],
+      "authority_class": "DEVICE_IDENTITY_CAPABILITY_CREDENTIAL_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": "ALLOW_LEGACY_WRITE_APIS affects legacy compatibility writes",
+      "downstream_consumers": [
+        "device registry",
+        "executor/device dispatch"
+      ],
+      "removal_target": "KEEP DEVICE IDENTITY AUTHORITY; DISPATCH STATUS DISPLAY MUST REMAIN PROJECTION-ONLY",
+      "surface_id": "RES-069",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/routes/evidence_export_jobs_v1.ts",
+      "entrypoint": "/api/v1/evidence-export/jobs stable API",
+      "activation_mode": "ACTIVE_API",
+      "writes": [
+        "evidence_export_job_created_v1",
+        "evidence_export_job_completed_v1",
+        "export pack/index facts"
+      ],
+      "reads": [
+        "existing evidence/recommendation/approval/plan/task/receipt/acceptance facts"
+      ],
+      "semantic_family": [
+        "governance.trace_projection",
+        "acceptance.verdict"
+      ],
+      "authority_class": "STABLE_EVIDENCE_EXPORT_JOB_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": "GEOX_EVIDENCE_STORAGE_MODE and storage settings",
+      "downstream_consumers": [
+        "evidence export clients"
+      ],
+      "removal_target": "KEEP STABLE EXPORT PATH; EXPORT EXISTING ACCEPTANCE ONLY, NEVER MINT VERDICT",
+      "audit_note": "Unlike deprecated delivery export, this path reads existing acceptance_result_v1 rather than creating one.",
+      "surface_id": "RES-070",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/routes/fields_v1.ts",
+      "entrypoint": "Fields routes",
+      "activation_mode": "ACTIVE_API",
+      "writes": [
+        "field_created_v1",
+        "field_updated_v1",
+        "field_polygon_set_v1",
+        "field_season_upserted_v1",
+        "device_registered_v1",
+        "device_bound_to_field_v1",
+        "device_position_v1",
+        "operation_trajectory_v1"
+      ],
+      "reads": [
+        "field/device/geometry/trajectory API inputs"
+      ],
+      "semantic_family": [
+        "context.snapshot",
+        "execution.result_evidence",
+        "governance.trace_projection"
+      ],
+      "authority_class": "FIELD_DEVICE_GEOMETRY_OPERATION_TRACE_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "field identity/context",
+        "device mapping",
+        "operation reporting"
+      ],
+      "removal_target": "KEEP FIELD IDENTITY/GEOMETRY AUTHORITY; OPERATION TRAJECTORY REMAINS EVIDENCE, NOT ACCEPTANCE",
+      "surface_id": "RES-071",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/routes/v1/operator_acceptance_actions.ts",
+      "entrypoint": "Operator acceptance evaluate/review actions",
+      "activation_mode": "ACTIVE_API_FACADE",
+      "writes": [
+        "operator_action_audit_v1",
+        "operator_acceptance_review_request_v1"
+      ],
+      "reads": [
+        "OperationState projection",
+        "canonical /api/v1/acceptance/evaluate result"
+      ],
+      "semantic_family": [
+        "acceptance.verdict",
+        "governance.trace_projection"
+      ],
+      "authority_class": "OPERATOR_ACCEPTANCE_FACADE_AUDIT_REVIEW_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "operator acceptance worklist",
+        "canonical Acceptance route"
+      ],
+      "removal_target": "KEEP FACADE; CANONICAL ACCEPTANCE MUST REMAIN /api/v1/acceptance/evaluate",
+      "audit_note": "Evaluate delegates to main Acceptance route; this file does not mint acceptance_result_v1.",
+      "surface_id": "RES-072",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/routes/v1/operator_device_offline_actions.ts",
+      "entrypoint": "Operator device offline action routes",
+      "activation_mode": "ACTIVE_API",
+      "writes": [
+        "operator_device_offline_action_audit_v1"
+      ],
+      "reads": [
+        "device offline state and operator action input"
+      ],
+      "semantic_family": [
+        "governance.trace_projection"
+      ],
+      "authority_class": "DEVICE_OFFLINE_OPERATOR_AUDIT_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "operator diagnostics/device workflow"
+      ],
+      "removal_target": "KEEP AUDIT FACTS; DO NOT TREAT OPERATOR ACK AS DEVICE/EXECUTION DELIVERY ACK",
+      "surface_id": "RES-073",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/runtime/twin_runtime/cap08_s3_decision_action_provider_service_v1.ts",
+      "entrypoint": "MCFT/Twin runtime composition or repository caller; B-Line does not own activation",
+      "activation_mode": "MCFT_OWNED_PERSISTENCE",
+      "writes": [
+        "controlled_human_decision_request_v1",
+        "approval_assertion_evidence_v1",
+        "approved_irrigation_plan_snapshot_v1",
+        "irrigation_execution_receipt_evidence_v1"
+      ],
+      "reads": [
+        "MCFT CAP-08 decision/action provider inputs"
+      ],
+      "semantic_family": [
+        "decision.approval",
+        "operation.plan",
+        "execution.receipt"
+      ],
+      "authority_class": "MCFT_CAP08_DECISION_ACTION_PROVIDER_SERVICE",
+      "runtime_reachable": "MCFT_OWNED; DO_NOT_REINTERPRET_FROM_BLINE",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "MCFT/Twin runtime only"
+      ],
+      "removal_target": "DO_NOT_MODIFY_IN_BLINE; FINAL_TYPED_INTEGRATION_ONLY_AFTER_MCFT_COMPLETE",
+      "audit_note": "MCFT-owned provider service; B-Line does not modify.",
+      "surface_id": "RES-074",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/runtime/twin_runtime/cap08_s3_outcome_completion_evidence_service_v1.ts",
+      "entrypoint": "MCFT/Twin runtime composition or repository caller; B-Line does not own activation",
+      "activation_mode": "MCFT_OWNED_PERSISTENCE",
+      "writes": [
+        "CAP-08 outcome completion evidence facts"
+      ],
+      "reads": [
+        "MCFT outcome-completion inputs"
+      ],
+      "semantic_family": [
+        "outcome.evidence"
+      ],
+      "authority_class": "MCFT_CAP08_OUTCOME_COMPLETION_EVIDENCE_SERVICE",
+      "runtime_reachable": "MCFT_OWNED; DO_NOT_REINTERPRET_FROM_BLINE",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "MCFT/Twin runtime only"
+      ],
+      "removal_target": "DO_NOT_MODIFY_IN_BLINE; FINAL_TYPED_INTEGRATION_ONLY_AFTER_MCFT_COMPLETE",
+      "audit_note": "MCFT-owned outcome evidence service; B-Line does not modify.",
+      "surface_id": "RES-075",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/services/device_observation_service_v1.ts",
+      "entrypoint": "telemetry-ingest service, sensing fact envelope route and observation pipeline",
+      "activation_mode": "ACTIVE_CROSS_PROCESS_EVIDENCE_INGRESS",
+      "writes": [
+        "device_observation_v1",
+        "device observation projection/index"
+      ],
+      "reads": [
+        "telemetry/sensing observations"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation"
+      ],
+      "authority_class": "DEVICE_OBSERVATION_FACT_SERVICE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "Evidence qualification",
+        "field observation pipelines",
+        "Field Memory fallback currently"
+      ],
+      "removal_target": "KEEP SOURCE OBSERVATION AUTHORITY; CANONICAL OBSERVATION/EQ AND CAUSAL TIME BINDING MUST BE EXPLICIT",
+      "surface_id": "RES-076",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/services/fertilization/fertilization_service_v1.ts",
+      "entrypoint": "/api/v1/fertilization/* via registerCoreV1Routes",
+      "activation_mode": "ACTIVE_DOMAIN_SERVICE",
+      "writes": [
+        "nitrogen_need_assessment_v1",
+        "fertilization_recommendation_v1",
+        "fertilization_prescription_v1",
+        "fertilization_acceptance_v1"
+      ],
+      "reads": [
+        "field-scoped assessment/recommendation/prescription inputs",
+        "caller zone_applications on acceptance"
+      ],
+      "semantic_family": [
+        "decision.candidate",
+        "action.prescription_spec",
+        "acceptance.verdict"
+      ],
+      "authority_class": "ACTIVE_FERTILIZATION_DOMAIN_AUTHORITY_SERVICE_WITH_ACCEPTANCE_P0",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "fertilization API",
+        "fertilization variable bridge",
+        "approval/execution surfaces"
+      ],
+      "removal_target": "KEEP DOMAIN ASSESSMENT/CALCULATION; CONVERGE RECOMMENDATION/PRESCRIPTION/ACCEPTANCE TO CANONICAL BOUNDARIES; FIX P0-RES-009",
+      "audit_note": "P0-RES-009: acceptance PASS can be computed from caller-supplied zone_applications without receipt/AsExecuted verification.",
+      "surface_id": "RES-077",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/services/flight_table/flight_table_devices_v1.ts",
+      "entrypoint": "Devtools Flight Table route/service call chain",
+      "activation_mode": "DEVTOOLS_FEATURE_GATED",
+      "writes": [
+        "device_registered_v1",
+        "device_capability_v1",
+        "device_bound_to_field_v1",
+        "device_credential_issued_v1"
+      ],
+      "reads": [
+        "Flight Table scenario/template inputs"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "governance.trace_projection"
+      ],
+      "authority_class": "DEVTOOLS_FLIGHT_TABLE_DEVICE_WRITER",
+      "runtime_reachable": "PROVEN_WHEN_DEVTOOLS_ENABLED",
+      "feature_flag": "GEOX_DEVTOOLS_ENABLED at Devtools module boundary",
+      "downstream_consumers": [
+        "Flight Table demo/dev verification"
+      ],
+      "removal_target": "KEEP DEVTOOLS LANE; NEVER PROMOTE DEV/SIMULATED FACTS TO FORMAL PRODUCT AUTHORITY",
+      "audit_note": "development Flight Table lane",
+      "surface_id": "RES-078",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/services/flight_table/flight_table_evidence_v1.ts",
+      "entrypoint": "Devtools Flight Table route/service call chain",
+      "activation_mode": "DEVTOOLS_FEATURE_GATED",
+      "writes": [
+        "flight_table_evidence_scenario_v1",
+        "evidence_artifact_v1"
+      ],
+      "reads": [
+        "Flight Table scenario/template inputs"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "governance.trace_projection"
+      ],
+      "authority_class": "DEVTOOLS_FLIGHT_TABLE_EVIDENCE_WRITER",
+      "runtime_reachable": "PROVEN_WHEN_DEVTOOLS_ENABLED",
+      "feature_flag": "GEOX_DEVTOOLS_ENABLED at Devtools module boundary",
+      "downstream_consumers": [
+        "Flight Table demo/dev verification"
+      ],
+      "removal_target": "KEEP DEVTOOLS LANE; NEVER PROMOTE DEV/SIMULATED FACTS TO FORMAL PRODUCT AUTHORITY",
+      "audit_note": "development Flight Table evidence lane",
+      "surface_id": "RES-079",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/services/flight_table/flight_table_field_v1.ts",
+      "entrypoint": "Devtools Flight Table route/service call chain",
+      "activation_mode": "DEVTOOLS_FEATURE_GATED",
+      "writes": [
+        "field_created_v1",
+        "field_season_created_v1"
+      ],
+      "reads": [
+        "Flight Table scenario/template inputs"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "governance.trace_projection"
+      ],
+      "authority_class": "DEVTOOLS_FLIGHT_TABLE_FIELD_WRITER",
+      "runtime_reachable": "PROVEN_WHEN_DEVTOOLS_ENABLED",
+      "feature_flag": "GEOX_DEVTOOLS_ENABLED at Devtools module boundary",
+      "downstream_consumers": [
+        "Flight Table demo/dev verification"
+      ],
+      "removal_target": "KEEP DEVTOOLS LANE; NEVER PROMOTE DEV/SIMULATED FACTS TO FORMAL PRODUCT AUTHORITY",
+      "audit_note": "development Flight Table field lane",
+      "surface_id": "RES-080",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/services/flight_table/flight_table_geometry_v1.ts",
+      "entrypoint": "Devtools Flight Table route/service call chain",
+      "activation_mode": "DEVTOOLS_FEATURE_GATED",
+      "writes": [
+        "field_geometry_upserted_v1"
+      ],
+      "reads": [
+        "Flight Table scenario/template inputs"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "governance.trace_projection"
+      ],
+      "authority_class": "DEVTOOLS_FLIGHT_TABLE_GEOMETRY_WRITER",
+      "runtime_reachable": "PROVEN_WHEN_DEVTOOLS_ENABLED",
+      "feature_flag": "GEOX_DEVTOOLS_ENABLED at Devtools module boundary",
+      "downstream_consumers": [
+        "Flight Table demo/dev verification"
+      ],
+      "removal_target": "KEEP DEVTOOLS LANE; NEVER PROMOTE DEV/SIMULATED FACTS TO FORMAL PRODUCT AUTHORITY",
+      "audit_note": "development Flight Table geometry lane",
+      "surface_id": "RES-081",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/services/flight_table/flight_table_telemetry_v1.ts",
+      "entrypoint": "Devtools Flight Table route/service call chain",
+      "activation_mode": "DEVTOOLS_FEATURE_GATED",
+      "writes": [
+        "raw_telemetry_v1"
+      ],
+      "reads": [
+        "Flight Table scenario/template inputs"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "governance.trace_projection"
+      ],
+      "authority_class": "DEVTOOLS_FLIGHT_TABLE_TELEMETRY_WRITER",
+      "runtime_reachable": "PROVEN_WHEN_DEVTOOLS_ENABLED",
+      "feature_flag": "GEOX_DEVTOOLS_ENABLED at Devtools module boundary",
+      "downstream_consumers": [
+        "Flight Table demo/dev verification"
+      ],
+      "removal_target": "KEEP DEVTOOLS LANE; NEVER PROMOTE DEV/SIMULATED FACTS TO FORMAL PRODUCT AUTHORITY",
+      "audit_note": "development Flight Table telemetry lane",
+      "surface_id": "RES-082",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/services/inspection/pest_disease_inspection_service_v1.ts",
+      "entrypoint": "/api/v1/inspection routes via registerCoreV1Routes",
+      "activation_mode": "ACTIVE_DOMAIN_SERVICE",
+      "writes": [
+        "pest_disease_inspection_request_v1",
+        "pest_disease_observation_v1",
+        "pest_disease_signal_v1",
+        "pest_disease_inspection_assessment_v1",
+        "pest_disease_inspection_review_v1",
+        "pest_disease_inspection_acceptance_v1"
+      ],
+      "reads": [
+        "inspection observations/signals/reviews"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "evidence.qualification",
+        "acceptance.verdict"
+      ],
+      "authority_class": "PEST_DISEASE_INSPECTION_EVIDENCE_AUTHORITY_SERVICE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "inspection API",
+        "inspection report projection"
+      ],
+      "removal_target": "KEEP INSPECTION EVIDENCE CHAIN; MAP OBSERVATION/EQ; INSPECTION_ACCEPTANCE MUST NOT MEAN SPRAY/OPERATION ACCEPTANCE",
+      "audit_note": "PASS explicitly means inspection evidence chain complete, not spray/execution acceptance.",
+      "surface_id": "RES-083",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/services/sampling/sampling_service_v1.ts",
+      "entrypoint": "/api/v1/sampling routes",
+      "activation_mode": "ACTIVE_DOMAIN_SERVICE",
+      "writes": [
+        "sampling_plan_v1",
+        "sampling_operation_relation_v1",
+        "sample_receipt_v1",
+        "lab_result_import_v1",
+        "sampling_acceptance_v1"
+      ],
+      "reads": [
+        "sampling plan/receipt/lab evidence"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation",
+        "evidence.qualification",
+        "acceptance.verdict"
+      ],
+      "authority_class": "SAMPLING_EVIDENCE_AUTHORITY_SERVICE_WITH_LATEST_SELECTION_P0",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "sampling API",
+        "agronomy evidence consumers"
+      ],
+      "removal_target": "KEEP SAMPLING EVIDENCE ACCEPTANCE; REQUIRE EXACT RECEIPT/LAB IMPORT BINDING; FIX P0-RES-010",
+      "audit_note": "Route computes sampling PASS from lab quality + chain of custody, but optional import_id and latest receipt/lab selection violate exact-source authority.",
+      "surface_id": "RES-084",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/services/telemetry_ingest_service_v1.ts",
+      "entrypoint": "server telemetry ingest and telemetry-ingest app call chains",
+      "activation_mode": "ACTIVE_EVIDENCE_INGRESS",
+      "writes": [
+        "raw_telemetry_v1",
+        "downstream observation pipeline side effects"
+      ],
+      "reads": [
+        "telemetry payloads"
+      ],
+      "semantic_family": [
+        "evidence.raw_observation"
+      ],
+      "authority_class": "RAW_TELEMETRY_FACT_WRITER",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "device observation",
+        "sensing/Evidence pipeline"
+      ],
+      "removal_target": "KEEP RAW TELEMETRY SOURCE; CANONICAL OBSERVATION/EQ MUST PRESERVE SOURCE/TIME PROVENANCE",
+      "surface_id": "RES-085",
+      "b02_registered": false
+    },
+    {
+      "source_path": "apps/server/src/store/pg_store.ts",
+      "entrypoint": "shared PgStore persistence abstraction",
+      "activation_mode": "INFRASTRUCTURE_STORE",
+      "writes": [
+        "arbitrary caller-provided facts to public.facts"
+      ],
+      "reads": [
+        "facts replay/query state"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "GENERIC_FACT_STORE_INFRASTRUCTURE_WRITER",
+      "runtime_reachable": "PROVEN_OR_REFERENCED",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "legacy/runtime callers using PgStore"
+      ],
+      "removal_target": "KEEP STORAGE ABSTRACTION; SEMANTIC AUTHORITY MUST BE OWNED BY CALLERS AND MACHINE-INVENTORIED",
+      "surface_id": "RES-086",
+      "b02_registered": false
     }
   ],
   "cross_branch_surfaces": [
