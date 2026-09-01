@@ -1,0 +1,19 @@
+name: B-Line B10A Residual Authority Audit
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  residual-authority-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+      - name: Syntax check
+        run: node -c scripts/governance_acceptance/ACCEPTANCE_B10A_RESIDUAL_AUTHORITY_AUDIT_V1.cjs
+      - name: Run residual authority audit
+        run: node scripts/governance_acceptance/ACCEPTANCE_B10A_RESIDUAL_AUTHORITY_AUDIT_V1.cjs
