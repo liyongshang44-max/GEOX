@@ -353,6 +353,39 @@ function assertMaterialized(url) {
     "SCHEMA_ACL_DIRECT_FACTS_MATRIX_MISMATCH",
   );
 
+  const evidencePlaneTables = [
+    "external_evidence_producer_lease_v1",
+    "external_evidence_supply_event_v1",
+    "external_evidence_supply_cursor_v1",
+    "twin_external_formal_forcing_base_cursor_v1",
+    "twin_external_formal_forcing_base_target_v1",
+    "twin_external_formal_forcing_controller_lease_v1",
+  ];
+  const evidencePlaneAcl = {};
+  for (const tableName of evidencePlaneTables) {
+    const privileges = query(
+      url,
+      [
+        "SELECT",
+        "  has_table_privilege('geox_mcft_cap09_evidence_runtime_v1','public." + tableName + "','SELECT')::text,",
+        "  has_table_privilege('geox_mcft_cap09_evidence_runtime_v1','public." + tableName + "','INSERT')::text,",
+        "  has_table_privilege('geox_mcft_cap09_evidence_runtime_v1','public." + tableName + "','UPDATE')::text,",
+        "  has_table_privilege('geox_mcft_cap09_evidence_runtime_v1','public." + tableName + "','DELETE')::text;",
+      ].join("\n"),
+    ).split("|").map(bool);
+    assert.deepEqual(
+      privileges,
+      [true, true, true, false],
+      "SCHEMA_ACL_EVIDENCE_PHASE3_CARRYFORWARD_MISMATCH:" + tableName,
+    );
+    evidencePlaneAcl[tableName] = {
+      select: true,
+      insert: true,
+      update: true,
+      delete: false,
+    };
+  }
+
   const writerSchemaCreateCount = Number(
     query(
       url,
@@ -386,6 +419,8 @@ function assertMaterialized(url) {
     twin_privilege_role_safe: true,
     evidence_direct_facts_insert: false,
     twin_direct_facts_insert: false,
+    evidence_phase3_acl_carryforward_pass: true,
+    evidence_phase3_acl_carryforward_matrix: evidencePlaneAcl,
     evidence_writer_cross_plane_matrix_pass: true,
     twin_writer_cross_plane_matrix_pass: true,
     v13_fenced_promotion_cross_plane_matrix_pass: true,
