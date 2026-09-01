@@ -162,15 +162,27 @@ try{
  }
 
  const functionChecks=[
-  {name:"mcft_cap09_evidence_runtime_append_fact_v1",evidence:true,twin:false},
-  {name:"mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1",evidence:true,twin:false},
-  {name:"mcft_cap09_twin_runtime_append_fact_v1",evidence:false,twin:true}
+  {
+   name:"mcft_cap09_evidence_runtime_append_fact_v1",
+   signature:"mcft_cap09_evidence_runtime_append_fact_v1(text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb)",
+   evidence:true,twin:false
+  },
+  {
+   name:"mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1",
+   signature:"mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)",
+   evidence:true,twin:false
+  },
+  {
+   name:"mcft_cap09_twin_runtime_append_fact_v1",
+   signature:"mcft_cap09_twin_runtime_append_fact_v1(text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb)",
+   evidence:false,twin:true
+  }
  ];
  const functionPrivilegeMatrix={};
  for(const item of functionChecks){
-  const e=b(q(url,"SELECT has_function_privilege('geox_mcft_cap09_evidence_runtime_v1','public."+item.name+"','EXECUTE')::text"));
-  const t=b(q(url,"SELECT has_function_privilege('geox_mcft_cap09_twin_runtime_v1','public."+item.name+"','EXECUTE')::text"));
-  functionPrivilegeMatrix[item.name]={evidence_execute:e,twin_execute:t};
+  const e=b(q(url,"SELECT has_function_privilege('geox_mcft_cap09_evidence_runtime_v1','public."+item.signature+"','EXECUTE')::text"));
+  const t=b(q(url,"SELECT has_function_privilege('geox_mcft_cap09_twin_runtime_v1','public."+item.signature+"','EXECUTE')::text"));
+  functionPrivilegeMatrix[item.name]={signature:item.signature,evidence_execute:e,twin_execute:t};
   if(e!==item.evidence||t!==item.twin)unsafe.push(item.name+":EXECUTE_MATRIX_DRIFT");
  }
 

@@ -53,12 +53,12 @@ try{
 
  assert.deepEqual(matrix(url,"facts"),[true,false,false,false],"ACL_REMEDIATION_FRESH_FACTS_MATRIX_REQUIRED");
  for(const t of v13Tables)assert.deepEqual(matrix(url,t),[true,true,true,false],"ACL_REMEDIATION_FRESH_V13_MATRIX_REQUIRED:"+t);
- assert.equal(fnExec(url,"geox_mcft_cap09_evidence_runtime_v1","mcft_cap09_evidence_runtime_append_fact_v1"),true,"ACL_REMEDIATION_FRESH_PHASE3_FUNCTION_REQUIRED");
- assert.equal(fnExec(url,"geox_mcft_cap09_twin_runtime_v1","mcft_cap09_evidence_runtime_append_fact_v1"),false,"ACL_REMEDIATION_FRESH_PHASE3_FUNCTION_TWIN_FORBIDDEN");
- assert.equal(fnExec(url,"geox_mcft_cap09_evidence_runtime_v1","mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1"),true,"ACL_REMEDIATION_FRESH_V13_FUNCTION_REQUIRED");
- assert.equal(fnExec(url,"geox_mcft_cap09_twin_runtime_v1","mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1"),false,"ACL_REMEDIATION_FRESH_V13_FUNCTION_TWIN_FORBIDDEN");
- assert.equal(fnExec(url,"geox_mcft_cap09_evidence_runtime_v1","mcft_cap09_twin_runtime_append_fact_v1"),false,"ACL_REMEDIATION_FRESH_TWIN_FUNCTION_EVIDENCE_FORBIDDEN");
- assert.equal(fnExec(url,"geox_mcft_cap09_twin_runtime_v1","mcft_cap09_twin_runtime_append_fact_v1"),true,"ACL_REMEDIATION_FRESH_TWIN_FUNCTION_REQUIRED");
+ assert.equal(fnExec(url,"geox_mcft_cap09_evidence_runtime_v1","mcft_cap09_evidence_runtime_append_fact_v1(text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb)"),true,"ACL_REMEDIATION_FRESH_PHASE3_FUNCTION_REQUIRED");
+ assert.equal(fnExec(url,"geox_mcft_cap09_twin_runtime_v1","mcft_cap09_evidence_runtime_append_fact_v1(text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb)"),false,"ACL_REMEDIATION_FRESH_PHASE3_FUNCTION_TWIN_FORBIDDEN");
+ assert.equal(fnExec(url,"geox_mcft_cap09_evidence_runtime_v1","mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)"),true,"ACL_REMEDIATION_FRESH_V13_FUNCTION_REQUIRED");
+ assert.equal(fnExec(url,"geox_mcft_cap09_twin_runtime_v1","mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)"),false,"ACL_REMEDIATION_FRESH_V13_FUNCTION_TWIN_FORBIDDEN");
+ assert.equal(fnExec(url,"geox_mcft_cap09_evidence_runtime_v1","mcft_cap09_twin_runtime_append_fact_v1(text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb)"),false,"ACL_REMEDIATION_FRESH_TWIN_FUNCTION_EVIDENCE_FORBIDDEN");
+ assert.equal(fnExec(url,"geox_mcft_cap09_twin_runtime_v1","mcft_cap09_twin_runtime_append_fact_v1(text,text,text,text,text,text,text,bigint,text,timestamptz,jsonb)"),true,"ACL_REMEDIATION_FRESH_TWIN_FUNCTION_REQUIRED");
 
  const exactMemberships=q(url,[
   "SELECT member.rolname||'>'||granted.rolname",
