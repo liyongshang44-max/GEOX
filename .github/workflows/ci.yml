@@ -34,6 +34,9 @@ jobs:
       - name: B-Line residual authority audit
         run: pnpm run ci:governance:bline-residual-authority-audit
 
+      - name: B-Line P0-RES-007 evidence export boundary
+        run: pnpm run ci:governance:bline-p0-res007-evidence-export-boundary
+
       - name: Route response ownership guard
         run: pnpm run ci:route-response-ownership
 
