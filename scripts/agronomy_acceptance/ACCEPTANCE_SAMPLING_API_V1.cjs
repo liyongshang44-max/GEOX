@@ -138,9 +138,9 @@ async function main() {
 
   const concurrentSampleId = `${ids.sample_id}-concurrent`;
   const concurrentReceiptBody = {
+    ...scopedBody,
     plan_id: planRes.json.plan_id,
     sample_id: concurrentSampleId,
-    ...scopedBody,
     collected_at_ts: now + 10,
     collector_actor_id: 'collector-concurrent',
     sample_type: 'SOIL',
