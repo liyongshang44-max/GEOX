@@ -1152,6 +1152,173 @@
       ],
       "removal_target": "KEEP TECHNICAL_DEVTOOLS LANE; MUST NEVER PROMOTE TO FORMAL_FIELD_MEMORY OR LEARNING AUTHORITY",
       "b02_registered": false
+    },
+    {
+      "surface_id": "RES-043",
+      "source_path": "apps/executor/src/adapters/registry.ts",
+      "entrypoint": "createAdapterRegistry() in executor composition",
+      "activation_mode": "EXECUTOR_ADAPTER_REGISTRY",
+      "writes": [
+        "instantiates/registers execution adapter capabilities including irrigation_simulator"
+      ],
+      "reads": [
+        "adapter factories and executor runtime configuration"
+      ],
+      "semantic_family": [
+        "execution.receipt",
+        "execution.result_evidence"
+      ],
+      "authority_class": "EXECUTOR_ADAPTER_REGISTRY_ACTIVATION_SURFACE",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "executor dispatch runtime",
+        "registered real/simulator/MQTT/HTTP adapters"
+      ],
+      "removal_target": "KEEP REGISTRY; REQUIRE EACH ADAPTER LANE TO PRESERVE REAL_VS_SIMULATED AUTHORITY BOUNDARY",
+      "b02_registered": false,
+      "audit_note": "Registry activation is authority-relevant because it makes simulated and real execution producers selectable at runtime."
+    },
+    {
+      "surface_id": "RES-044",
+      "source_path": "apps/server/src/domain/skill_registry/facts.ts",
+      "entrypoint": "appendSkillRunFact() from active skill execution paths",
+      "activation_mode": "DOMAIN_SKILL_FACT_WRITER_WITH_TECHNICAL_MEMORY_SIDE_EFFECT",
+      "writes": [
+        "skill_run_v1 facts",
+        "TECHNICAL_SKILL_MEMORY via recordMemoryV1 when field_id exists"
+      ],
+      "reads": [
+        "skill run payload and field binding"
+      ],
+      "semantic_family": [
+        "field_memory"
+      ],
+      "authority_class": "TECHNICAL_SKILL_MEMORY_ACTIVATION",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "field_memory_v1 technical lane",
+        "skill observability/reporting"
+      ],
+      "removal_target": "KEEP TECHNICAL MEMORY SIDE EFFECT; MUST REMAIN NON_CUSTOMER_VISIBLE AND NON_LEARNING_ELIGIBLE",
+      "b02_registered": false,
+      "audit_note": "Explicitly writes TECHNICAL_SKILL_MEMORY / TECHNICAL_SIGNAL with customer_visible_memory=false and learning_eligible=false."
+    },
+    {
+      "surface_id": "RES-045",
+      "source_path": "apps/server/src/jobs/runtime.ts",
+      "entrypoint": "long-running jobs runtime",
+      "activation_mode": "BACKGROUND_WORKER",
+      "writes": [
+        "indirect Evidence Export artifact/job side effects through runQueuedEvidenceExportJob",
+        "optional Agronomy Agent side effects when enabled"
+      ],
+      "reads": [
+        "pending legacy delivery evidence export jobs",
+        "pending evidence report jobs",
+        "AGRONOMY_AGENT_ENABLED"
+      ],
+      "semantic_family": [
+        "acceptance.verdict",
+        "execution.receipt",
+        "execution.result_evidence",
+        "execution.task",
+        "operation.plan"
+      ],
+      "authority_class": "BACKGROUND_AUTHORITY_ORCHESTRATOR_WITH_PARALLEL_ACCEPTANCE_P0",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": "AGRONOMY_AGENT_ENABLED only gates agronomy agent; legacy export worker is unconditional",
+      "downstream_consumers": [
+        "delivery evidence export runtime",
+        "evidence report runtime",
+        "agronomy agent"
+      ],
+      "removal_target": "KEEP JOB ORCHESTRATOR; REMOVE LEGACY EXPORT ACCEPTANCE MINTING AND PRESERVE EXPLICIT AGENT FEATURE GATE",
+      "b02_registered": false,
+      "audit_note": "P0-RES-007 is activated here: queued legacy delivery export jobs call runQueuedEvidenceExportJob."
+    },
+    {
+      "surface_id": "RES-046",
+      "source_path": "apps/server/src/routes/evidence_artifact_from_as_executed_v1.ts",
+      "entrypoint": "POST /api/v1/evidence-artifacts/from-as-executed via Evidence Module",
+      "activation_mode": "ACTIVE_API",
+      "writes": [
+        "operator submission fact",
+        "evidence_artifact_v1 facts"
+      ],
+      "reads": [
+        "as_executed_record_v1",
+        "buildEvidenceArtifactsFromAsExecutedV1 domain builder"
+      ],
+      "semantic_family": [
+        "execution.as_executed",
+        "execution.result_evidence"
+      ],
+      "authority_class": "AS_EXECUTED_EVIDENCE_ARTIFACT_PERSISTENCE_ENTRYPOINT",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "Acceptance from evidence artifacts",
+        "evidence bundle/report/export"
+      ],
+      "removal_target": "KEEP EVIDENCE PERSISTENCE ENTRYPOINT; MUST NOT CREATE ACCEPTANCE OR OUTCOME AUTHORITY",
+      "b02_registered": false
+    },
+    {
+      "surface_id": "RES-047",
+      "source_path": "apps/server/src/routes/field_memory_v1.ts",
+      "entrypoint": "POST /api/v1/field-memory/from-acceptance via Field Memory Module",
+      "activation_mode": "ACTIVE_EXPLICIT_API",
+      "writes": [
+        "FORMAL_FIELD_MEMORY indirectly through createFormalFieldMemoryFromAcceptanceV1"
+      ],
+      "reads": [
+        "exact acceptance_id and operation_plan_id",
+        "field_memory_service observation-pair resolution"
+      ],
+      "semantic_family": [
+        "field_memory"
+      ],
+      "authority_class": "FORMAL_FIELD_MEMORY_ENTRYPOINT_WITH_LATEST_PAIR_P0",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "formal Field Memory readers",
+        "learning-eligible memory consumers"
+      ],
+      "removal_target": "KEEP EXPLICIT FORMALIZATION ENTRYPOINT; REQUIRE CAUSALLY BOUND OBSERVATION PAIR AND REMOVE LATEST-TWO FALLBACK",
+      "b02_registered": false,
+      "audit_note": "P0-RES-008: active route can reach latest-two device observation fallback in field_memory_service."
+    },
+    {
+      "surface_id": "RES-048",
+      "source_path": "apps/server/src/routes/roi_ledger_v1.ts",
+      "entrypoint": "POST /api/v1/roi-ledger/from-as-executed and /formalize-from-acceptance",
+      "activation_mode": "ACTIVE_EXPLICIT_API",
+      "writes": [
+        "interim ROI signal rows via createRoiLedgersFromAsExecuted",
+        "formal ROI rows via formalizeRoiLedgersFromAcceptance"
+      ],
+      "reads": [
+        "as_executed_id",
+        "operation_plan_id",
+        "acceptance_id",
+        "formal acceptance/chain validation"
+      ],
+      "semantic_family": [
+        "roi"
+      ],
+      "authority_class": "ROI_SIGNAL_AND_FORMALIZATION_ENTRYPOINT",
+      "runtime_reachable": "PROVEN",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "ROI ledger readers",
+        "commercial reporting"
+      ],
+      "removal_target": "KEEP TWO-LANE ROI MODEL; AS_EXECUTED SIGNAL MUST REMAIN INTERIM/NON_CUSTOMER_VISIBLE AND FORMAL ROI MUST REQUIRE EXACT FORMAL ACCEPTANCE",
+      "b02_registered": false,
+      "audit_note": "from-as-executed explicitly reports INTERIM_SUPPORTED/customer_visible=false; formalize-from-acceptance requires PASS/formal evidence/chain validation."
     }
   ],
   "cross_branch_surfaces": [
