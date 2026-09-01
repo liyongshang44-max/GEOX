@@ -886,9 +886,9 @@
         "apps/server/src/services/field_memory_service.ts"
       ],
       "replacement_path": [
-        "ROI remains legacy explicit formalization; Field Memory -> canonical reviewed-promotion materializer"
+        "ROI remains legacy explicit formalization; Field Memory facade delegates to exact P26-P30 same-field materializer"
       ],
-      "sunset_condition": "NO_DIRECT_FIELD_MEMORY_WRITE; ROI convergence is separate debt",
+      "sunset_condition": "NO_DIRECT_FIELD_MEMORY_WRITE; FIELD MEMORY REQUIRES EXACT P26-P30 CHAIN; ROI CONVERGENCE IS SEPARATE DEBT",
       "semantic_family": [
         "roi",
         "field_memory",
@@ -908,9 +908,9 @@
         "apps/server/src/services/field_memory_service.ts"
       ],
       "replacement_path": [
-        "human review/audit facade -> canonical reviewed-promotion Field Memory materializer"
+        "human review/audit facade -> exact P26-P30 same-field Formal Field Memory materializer"
       ],
-      "sunset_condition": "KEEP HUMAN AUDIT; NO INDEPENDENT FIELD_MEMORY TRUTH",
+      "sunset_condition": "KEEP HUMAN AUDIT; NO INDEPENDENT FIELD_MEMORY TRUTH OR PROMOTION AUTHORITY",
       "semantic_family": [
         "field_memory",
         "roi"
@@ -1686,9 +1686,9 @@
         "apps/server/src/services/field_memory_service.ts"
       ],
       "replacement_path": [
-        "OutcomeEvidence -> FieldMemoryCandidate -> reviewed Promotion/Commit proof -> Formal Field Memory materialization"
+        "Acceptance -> P27 Outcome/ROI review -> P28 recorded ROI ledger -> P29 Field Memory Candidate -> P30 same-field reviewed commit -> Formal Field Memory materialization"
       ],
-      "sunset_condition": "KEEP COMPATIBILITY ENTRYPOINT ONLY WHILE EXACT REVIEWED PROMOTION PROOF IS REQUIRED",
+      "sunset_condition": "KEEP COMPATIBILITY ENTRYPOINT ONLY WHILE EXACT P26-P30 PROOF IS REQUIRED AND ROUTE CREATES NO GOVERNANCE AUTHORITY",
       "semantic_family": [
         "field_memory"
       ],
