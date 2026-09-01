@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "REPLAY_ENVELOPE_SYNTHESIS_FOUNDATION_IMPLEMENTED_GFS_PARTIAL_PAIR_NEXT");
+  assert.equal(authority.status, "GFS_PARTIAL_PAIR_REHYDRATION_IMPLEMENTED_DUE_AUTHORITIES_NEXT");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "e9c3000927e1ebeac5dd724ff535e9b893396c9f");
+  assert.equal(authority.subject_predecessor_sha, "2f818a52b93e0afcefcf5adf09fe6e9de32a9c6c");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
