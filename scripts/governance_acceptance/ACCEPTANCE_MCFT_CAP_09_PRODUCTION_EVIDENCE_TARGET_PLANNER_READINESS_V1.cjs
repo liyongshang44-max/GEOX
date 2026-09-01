@@ -163,8 +163,18 @@ try {
 
   const purePlanner = read(authority.pure_source_planner_ref);
   includes(purePlanner, "planProductionEvidenceSourcesV1", "PURE_SOURCE_SPECIFIC_PLANNER_REQUIRED");
-  includes(purePlanner, "KBS_RAW_HOURLY_PUBLICATION_BASELINE_REQUIRED", "KBS_PUBLICATION_BASELINE_PLAN_REQUIRED");
-  includes(purePlanner, "KBS_RAW_HOURLY_PUBLICATION_DIFF_REQUIRED", "KBS_PUBLICATION_DIFF_PLAN_REQUIRED");
+  includes(purePlanner, "KBS_RAW_HOURLY_PUBLICATION_CYCLE", "KBS_PUBLICATION_CYCLE_PLAN_REQUIRED");
+  includes(purePlanner, "bindable_to_current_cycle_service: true", "KBS_PUBLICATION_CYCLE_BINDING_REQUIRED");
+  assert.equal(
+    purePlanner.includes("KBS_RAW_HOURLY_PUBLICATION_DIFF_NO_CHANGE_ADAPTER_NOT_IMPLEMENTED"),
+    false,
+    "KBS_STALE_DIFF_CAPABILITY_BLOCKER_FORBIDDEN",
+  );
+  assert.equal(
+    purePlanner.includes("KBS_RAW_HOURLY_PAIR_SKEW_REPAIR_NOT_IMPLEMENTED"),
+    false,
+    "KBS_STALE_PAIR_REPAIR_CAPABILITY_BLOCKER_FORBIDDEN",
+  );
   includes(purePlanner, "GFS_TARGET_ALREADY_DURABLE", "GFS_DURABLE_TARGET_DEDUP_REQUIRED");
   includes(purePlanner, "GFS_PARTIAL_PAIR_REHYDRATION_REQUIRED", "GFS_PARTIAL_PAIR_REHYDRATION_PLAN_REQUIRED");
   includes(purePlanner, "KBS_SOIL_CURRENT_ACQUIRE", "SOIL_EXPLICIT_DUE_ACTION_REQUIRED");
@@ -226,6 +236,8 @@ try {
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.forward_gap_fail_closed, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.pointer_advance_after_all_visible_cursor_advances, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.single_forward_hour_supported, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.planner_routes_due_work_to_publication_cycle_service, true);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.planner_cycle_service_binding_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_baseline_pointer_schema_materialized, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_durable_baseline_available, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.durable_publication_baseline_implemented, true);
@@ -270,6 +282,7 @@ try {
     subject_sha: subject,
     authority_status: authority.status,
     current_frontier: "GFS_PARTIAL_PAIR_ZERO_PROVIDER_REHYDRATION_ADAPTER_REQUIRED",
+    kbs_planner_cycle_wiring_aligned: true,
     gfs_replay_provenance_foundation_implemented: true,
     kbs_publication_cycle_adapter_implemented: true,
     shared_verified_retained_raw_replay_primitive_implemented: true,

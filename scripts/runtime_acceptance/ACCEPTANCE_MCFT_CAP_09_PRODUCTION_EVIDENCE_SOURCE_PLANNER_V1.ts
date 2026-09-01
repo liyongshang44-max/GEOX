@@ -200,16 +200,20 @@ function main(): void {
       kbs_soil: notDue("authority://soil/not-due"),
     },
   });
-  assert.equal(kbsDue.status, "BLOCKED_CAPABILITY");
-  assert.deepEqual(kbsDue.blockers, [
-    "KBS_RAW_HOURLY_PUBLICATION_DIFF_NO_CHANGE_ADAPTER_NOT_IMPLEMENTED",
-  ]);
-  assert.equal(kbsDue.decisions[0]?.status, "BLOCKED_CAPABILITY");
+  assert.equal(kbsDue.status, "ACTIONABLE");
+  assert.deepEqual(kbsDue.blockers, []);
+  assert.equal(kbsDue.action_count, 1);
+  assert.equal(kbsDue.decisions[0]?.status, "ACTION");
   assert.equal(
-    kbsDue.decisions[0]?.status === "BLOCKED_CAPABILITY"
-      ? kbsDue.decisions[0].operation.kind
+    kbsDue.decisions[0]?.status === "ACTION" ? kbsDue.decisions[0].operation.kind : null,
+    "KBS_RAW_HOURLY_PUBLICATION_CYCLE",
+  );
+  assert.equal(
+    kbsDue.decisions[0]?.status === "ACTION"
+      && kbsDue.decisions[0].operation.kind === "KBS_RAW_HOURLY_PUBLICATION_CYCLE"
+      ? kbsDue.decisions[0].operation.bindable_to_current_cycle_service
       : null,
-    "KBS_RAW_HOURLY_PUBLICATION_DIFF_REQUIRED",
+    true,
   );
 
   const bootstrapProgress = baseProgress();
@@ -230,21 +234,14 @@ function main(): void {
       kbs_soil: notDue("authority://soil/not-due"),
     },
   });
-  assert.deepEqual(kbsBootstrap.blockers, [
-    "KBS_RAW_HOURLY_BASELINE_POINTER_NOT_AVAILABLE_AT_RUNTIME",
-  ]);
+  assert.equal(kbsBootstrap.status, "ACTIONABLE");
+  assert.deepEqual(kbsBootstrap.blockers, []);
   assert.equal(
-    kbsBootstrap.decisions[0]?.status === "BLOCKED_CAPABILITY"
-      ? kbsBootstrap.decisions[0].operation.kind
+    kbsBootstrap.decisions[0]?.status === "ACTION"
+      && kbsBootstrap.decisions[0].operation.kind === "KBS_RAW_HOURLY_PUBLICATION_CYCLE"
+      ? kbsBootstrap.decisions[0].operation.observed_pair_state
       : null,
-    "KBS_RAW_HOURLY_PUBLICATION_BASELINE_REQUIRED",
-  );
-  assert.equal(
-    kbsBootstrap.decisions[0]?.status === "BLOCKED_CAPABILITY"
-      && kbsBootstrap.decisions[0].operation.kind === "KBS_RAW_HOURLY_PUBLICATION_BASELINE_REQUIRED"
-      ? kbsBootstrap.decisions[0].operation.canonical_emission_count
-      : null,
-    0,
+    "ABSENT",
   );
 
   const skewProgress = baseProgress();
@@ -262,9 +259,15 @@ function main(): void {
       kbs_soil: notDue("authority://soil/not-due"),
     },
   });
-  assert.deepEqual(kbsSkew.blockers, [
-    "KBS_RAW_HOURLY_PAIR_SKEW_REPAIR_NOT_IMPLEMENTED",
-  ]);
+  assert.equal(kbsSkew.status, "ACTIONABLE");
+  assert.deepEqual(kbsSkew.blockers, []);
+  assert.equal(
+    kbsSkew.decisions[0]?.status === "ACTION"
+      && kbsSkew.decisions[0].operation.kind === "KBS_RAW_HOURLY_PUBLICATION_CYCLE"
+      ? kbsSkew.decisions[0].operation.pair_skew_seconds
+      : null,
+    3600,
+  );
 
   const gfsAction = planProductionEvidenceSourcesV1({
     planning_time: PLANNING_TIME,
@@ -405,9 +408,9 @@ function main(): void {
     schema_version: "geox_mcft_cap09_production_evidence_source_planner_result_v1",
     status: "PASS",
     all_not_due_is_zero_action: true,
-    kbs_publication_diff_no_change_gap_machine_visible: true,
-    kbs_durable_publication_baseline_gap_machine_visible: true,
-    kbs_pair_skew_repair_gap_machine_visible: true,
+    kbs_due_routes_to_current_publication_cycle_service: true,
+    kbs_absent_progress_routes_to_baseline_initializing_cycle: true,
+    kbs_pair_skew_routes_to_idempotent_cycle_repair: true,
     gfs_action_uses_explicit_target: true,
     gfs_durable_target_is_not_reacquired: true,
     gfs_partial_pair_rehydration_gap_machine_visible: true,
