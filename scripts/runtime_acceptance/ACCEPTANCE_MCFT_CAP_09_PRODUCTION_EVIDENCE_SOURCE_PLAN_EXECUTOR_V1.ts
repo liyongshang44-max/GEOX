@@ -41,11 +41,17 @@ async function main():Promise<void>{
     kbs_publication_cycle:{async executeCycle(input){kbsCalls++;assert.equal(input.runtime_start_authority_ref,"authority://runtime-start");return {service_id:"MCFT_CAP09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_SERVICE_V1",status:"BASELINE_INITIALIZED",lease_claim:claim(),provider_request_count:1,raw_retention_attempt_count:1,retained_raw_read_count:1,forward_event_times:[],canonical_record_count:0,visible_ingress_count:0,evidence_supply_cursor_advance_count:0,baseline_manifest_write_count:1,baseline_pointer_advance_count:1,baseline_pointer_latest_before:null,baseline_pointer_latest_after:TARGET,blocked_reason:null,twin_state_mutation:false,runtime_process_start:false,production_target_planner_bound:false};}},
     runtime_start_authority_ref:"authority://runtime-start",
     activation_fence_time:"2026-09-02T17:00:00.000Z",
+    provider_attempt_fence_factory:{
+      buildForDecision(decision){
+        if(decision.status==="NOT_DUE" || decision.operation.kind==="GFS_PARTIAL_PAIR_REHYDRATE") return null;
+        return {async claimBeforeProviderFetch(){return {status:"AUTHORIZED" as const,durable_coordination_write_count:1 as const};}};
+      },
+    },
   });
 
   const kbs=executor.buildAttempt(action({kind:"KBS_RAW_HOURLY_PUBLICATION_CYCLE",requested_at:REQUESTED,observed_pair_state:"ABSENT",paired_contiguous_through:null,pair_skew_seconds:null,bindable_to_current_cycle_service:true}));assert(kbs);assert.equal(kbs.attempt_kind,"KBS_RAW_HOURLY_PUBLICATION_CYCLE");const kbsResult=await kbs.execute({scope:SCOPE,lease_owner:"owner",lease_duration_seconds:300});assert.equal(kbsResult.status,"COMPLETED");assert.equal(kbsCalls,1);
 
-  const gfs=executor.buildAttempt(action({kind:"GFS_BUNDLE_ACQUIRE",target_logical_time:TARGET,requested_at:REQUESTED,bindable_to_current_work_item_factory:true}));assert(gfs);assert.equal(gfs.attempt_kind,"CANONICAL_WORK_ITEM_CYCLE");await gfs.execute({scope:SCOPE,lease_owner:"owner",lease_duration_seconds:300});assert.equal(gfsBuilds,1);
+  const gfs=executor.buildAttempt(action({kind:"GFS_BUNDLE_ACQUIRE",target_logical_time:TARGET,requested_at:REQUESTED,due_window_start:"2026-09-02T18:50:00.000Z",due_window_end_exclusive:"2026-09-02T19:30:00.000Z",max_attempts_per_target_window:3,retry_minimum_interval_seconds:60,bindable_to_current_work_item_factory:true}));assert(gfs);assert.equal(gfs.attempt_kind,"CANONICAL_WORK_ITEM_CYCLE");await gfs.execute({scope:SCOPE,lease_owner:"owner",lease_duration_seconds:300});assert.equal(gfsBuilds,1);
 
   const partialProgress=partial();
   const repair=executor.buildAttempt(action({kind:"GFS_PARTIAL_PAIR_REHYDRATE",requested_at:REQUESTED,target_logical_time:TARGET,cycle_key:CYCLE_KEY,cycle_issued_at:CYCLE,available_role:"WEATHER",partial_progress:partialProgress,bindable_to_current_cycle_service:true}));assert(repair);assert.equal(repair.attempt_kind,"GFS_PARTIAL_PAIR_REHYDRATION");await repair.execute({scope:SCOPE,lease_owner:"owner",lease_duration_seconds:300});assert.equal(partialBuilds,1);
@@ -63,13 +69,19 @@ async function main():Promise<void>{
     kbs_publication_cycle:{async executeCycle(){return {service_id:"MCFT_CAP09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_SERVICE_V1",status:"BLOCKED_FORWARD_GAP",lease_claim:claim(),provider_request_count:1,raw_retention_attempt_count:1,retained_raw_read_count:2,forward_event_times:[TARGET],canonical_record_count:0,visible_ingress_count:0,evidence_supply_cursor_advance_count:0,baseline_manifest_write_count:0,baseline_pointer_advance_count:0,baseline_pointer_latest_before:"2026-09-02T19:00:00.000Z",baseline_pointer_latest_after:"2026-09-02T19:00:00.000Z",blocked_reason:"gap",twin_state_mutation:false,runtime_process_start:false,production_target_planner_bound:false};}},
     runtime_start_authority_ref:"authority://runtime-start",
     activation_fence_time:"2026-09-02T17:00:00.000Z",
+    provider_attempt_fence_factory:{
+      buildForDecision(decision){
+        if(decision.status==="NOT_DUE" || decision.operation.kind==="GFS_PARTIAL_PAIR_REHYDRATE") return null;
+        return {async claimBeforeProviderFetch(){return {status:"AUTHORIZED" as const,durable_coordination_write_count:1 as const};}};
+      },
+    },
   });
   const blocked=blockedExecutor.buildAttempt(action({kind:"KBS_RAW_HOURLY_PUBLICATION_CYCLE",requested_at:REQUESTED,observed_pair_state:"PAIRED",paired_contiguous_through:"2026-09-02T19:00:00.000Z",pair_skew_seconds:0,bindable_to_current_cycle_service:true}));assert(blocked);
   await assert.rejects(()=>blocked.execute({scope:SCOPE,lease_owner:"owner",lease_duration_seconds:300}),/PRODUCTION_SOURCE_PLAN_EXECUTOR_KBS_BLOCKED:BLOCKED_FORWARD_GAP:gap/);
 
   const source=fs.readFileSync(path.resolve("apps/server/src/external_evidence/mcft_cap09_production_evidence_source_plan_executor_v1.ts"),"utf8");
   for(const forbidden of ["Date.now","process.env","setInterval(","setTimeout(","RuntimeTickCursor"])assert.equal(source.includes(forbidden),false,"SOURCE_PLAN_EXECUTOR_FORBIDDEN_DEPENDENCY:"+forbidden);
-  const proof={schema_version:"geox_mcft_cap09_production_evidence_source_plan_executor_v1",status:"PASS",kbs_publication_maps_to_dedicated_attempt:true,gfs_fresh_maps_to_canonical_attempt:true,gfs_partial_consumes_exact_planned_progress_snapshot:true,soil_uses_target_free_specialized_work_item_path:true,kbs_blocked_state_fail_closed:true,not_due_maps_to_no_attempt:true,cycle_service_call_count:cycleCalls,provider_attempt_fence_binding_implemented:false,production_host_binding_authorized:false,runtime_process_start:false,production_owner_activation:false,formal_v5_arm:false};
+  const proof={schema_version:"geox_mcft_cap09_production_evidence_source_plan_executor_v1",status:"PASS",kbs_publication_maps_to_dedicated_attempt:true,gfs_fresh_maps_to_canonical_attempt:true,gfs_partial_consumes_exact_planned_progress_snapshot:true,soil_uses_target_free_specialized_work_item_path:true,kbs_blocked_state_fail_closed:true,not_due_maps_to_no_attempt:true,cycle_service_call_count:cycleCalls,provider_attempt_fence_binding_implemented:true,gfs_partial_rehydration_consumes_provider_attempt_budget:false,production_host_binding_authorized:false,runtime_process_start:false,production_owner_activation:false,formal_v5_arm:false};
   fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify(proof,null,2)+"\n");console.log(JSON.stringify(proof,null,2));
 }
 main().catch(error=>{fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify({status:"FAIL",error:error instanceof Error?error.message:String(error),production_host_binding_authorized:false},null,2)+"\n");console.error(error);process.exitCode=1;});

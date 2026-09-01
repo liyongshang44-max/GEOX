@@ -39,6 +39,8 @@ function horizon(): ProductionEvidenceAcquisitionHorizonV1 {
       fixed_latest_24_rows_assumption_authorized: false,
       non_authoritative_daily_batch_operating_profile_may_define_promotion_set: false,
       revision_or_backfill_before_previous_latest_auto_promotion_authorized: false,
+      explicit_poll_due_policy_established: true,
+      minimum_poll_interval_seconds: 900,
     },
     gfs_bundle: {
       bootstrap_mode: "FIRST_PROVIDER_SELECTED_CYCLE_FETCH_STARTED_AT_OR_AFTER_ACTIVATION_FENCE",
@@ -50,7 +52,8 @@ function horizon(): ProductionEvidenceAcquisitionHorizonV1 {
       bootstrap_mode: "FIRST_CURRENT_PROVIDER_RESPONSE_FETCH_STARTED_AT_OR_AFTER_ACTIVATION_FENCE",
       bounded_backfill_unit: "ONE_CURRENT_PROVIDER_RESPONSE",
       historical_event_scan_authorized: false,
-      explicit_poll_due_policy_established: false,
+      explicit_poll_due_policy_established: true,
+      minimum_poll_interval_seconds: 300,
     },
     restart: {
       durable_progress_present: "RESUME_FROM_EVIDENCE_OWNED_DURABLE_SOURCE_PROGRESS",
@@ -138,6 +141,17 @@ function due(authority: string) {
     authority_ref: authority,
     evaluated_at: PLANNING_TIME,
     requested_at: PLANNING_TIME,
+  };
+}
+
+function gfsDue(authority: string, target: string) {
+  return {
+    ...due(authority),
+    target_logical_time: target,
+    due_window_start: ACTIVATION,
+    due_window_end_exclusive: "2026-09-01T20:30:00.000Z",
+    max_attempts_per_target_window: 3 as const,
+    retry_minimum_interval_seconds: 60 as const,
   };
 }
 
@@ -275,10 +289,7 @@ function main(): void {
     progress: baseProgress(),
     due_state: {
       kbs_raw_hourly: notDue("authority://kbs/not-due"),
-      gfs_bundle: {
-        ...due("authority://gfs/due-fixture"),
-        target_logical_time: "2026-09-01T20:00:00.000Z",
-      },
+      gfs_bundle: gfsDue("authority://gfs/due-fixture", "2026-09-01T20:00:00.000Z"),
       kbs_soil: notDue("authority://soil/not-due"),
     },
   });
@@ -289,6 +300,16 @@ function main(): void {
   assert.equal(
     gfsDecision?.status === "ACTION" ? gfsDecision.operation.kind : null,
     "GFS_BUNDLE_ACQUIRE",
+  );
+  assert.equal(
+    gfsDecision?.status === "ACTION" && gfsDecision.operation.kind === "GFS_BUNDLE_ACQUIRE"
+      ? gfsDecision.operation.due_window_start : null,
+    ACTIVATION,
+  );
+  assert.equal(
+    gfsDecision?.status === "ACTION" && gfsDecision.operation.kind === "GFS_BUNDLE_ACQUIRE"
+      ? gfsDecision.operation.due_window_end_exclusive : null,
+    "2026-09-01T20:30:00.000Z",
   );
 
   const durableProgress = baseProgress();
@@ -308,10 +329,7 @@ function main(): void {
     progress: durableProgress,
     due_state: {
       kbs_raw_hourly: notDue("authority://kbs/not-due"),
-      gfs_bundle: {
-        ...due("authority://gfs/due-fixture"),
-        target_logical_time: "2026-09-01T20:00:00.000Z",
-      },
+      gfs_bundle: gfsDue("authority://gfs/due-fixture", "2026-09-01T20:00:00.000Z"),
       kbs_soil: notDue("authority://soil/not-due"),
     },
   });
@@ -342,10 +360,7 @@ function main(): void {
     progress: partialProgress,
     due_state: {
       kbs_raw_hourly: notDue("authority://kbs/not-due"),
-      gfs_bundle: {
-        ...due("authority://gfs/due-fixture"),
-        target_logical_time: "2026-09-01T20:00:00.000Z",
-      },
+      gfs_bundle: gfsDue("authority://gfs/due-fixture", "2026-09-01T20:00:00.000Z"),
       kbs_soil: notDue("authority://soil/not-due"),
     },
   });

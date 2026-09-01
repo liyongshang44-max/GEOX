@@ -410,7 +410,23 @@ async function main(): Promise<void> {
     activation_fence_time: ACTIVATION_FENCE,
   });
 
-  const baseline = await service.executeCycle(cycleInput("bootstrap"));
+  const providerBeforeFenceNotDue=providerFetchCount;
+  const retentionBeforeFenceNotDue=retentionAttemptCount;
+  const fenceNotDue=await service.executeCycle({
+    ...cycleInput("provider-not-due"),
+    provider_attempt_fence:{async claimBeforeProviderFetch(){return {status:"NOT_DUE" as const,durable_coordination_write_count:0 as const};}},
+  });
+  assert.equal(fenceNotDue.status,"PROVIDER_NOT_DUE");
+  assert.equal(fenceNotDue.provider_request_count,0);
+  assert.equal(fenceNotDue.raw_retention_attempt_count,0);
+  assert.equal(providerFetchCount,providerBeforeFenceNotDue);
+  assert.equal(retentionAttemptCount,retentionBeforeFenceNotDue);
+
+  let authorizedFenceCount=0;
+  const baseline = await service.executeCycle({
+    ...cycleInput("bootstrap"),
+    provider_attempt_fence:{async claimBeforeProviderFetch(){authorizedFenceCount+=1;return {status:"AUTHORIZED" as const,durable_coordination_write_count:1 as const};}},
+  });
   assert.equal(baseline.status, "BASELINE_INITIALIZED");
   assert.equal(baseline.canonical_record_count, 0);
   assert.equal(baseline.baseline_pointer_advance_count, 1);
@@ -514,6 +530,8 @@ async function main(): Promise<void> {
     schema_version: "geox_mcft_cap09_kbs_raw_hourly_publication_cycle_acceptance_v1",
     status: "PASS",
     baseline_first_snapshot_zero_canonical_emission: true,
+    provider_fence_authorized_before_bootstrap_fetch: authorizedFenceCount===1,
+    provider_not_due_zero_fetch_zero_retention: true,
     no_change_zero_canonical_zero_pointer_advance: true,
     historical_drift_fail_closed_pointer_unchanged: true,
     ambiguous_forward_fail_closed_pointer_unchanged: true,
