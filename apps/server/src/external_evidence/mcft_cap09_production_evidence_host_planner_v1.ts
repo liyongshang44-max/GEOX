@@ -1,7 +1,7 @@
 // MCFT-CAP-09 compiled production Evidence host planner core.
 // Reads only explicit runtime-start authority + Evidence-plane durable read ports,
 // invokes pure source policies/arbitration, and returns one existing host attempt plan.
-// No provider I/O, cursor mutation, RuntimeTickCursor, environment, process start, or owner activation.
+// No provider I/O, cursor mutation, Twin scheduler cursor access, environment, process start, or owner activation.
 
 import type { EvidenceRuntimeHostPlannerV1 } from "./mcft_cap09_evidence_runtime_host_v1.js";
 import type { EvidenceRuntimeScopeV1 } from "./mcft_cap09_evidence_runtime_persistence_v1.js";
