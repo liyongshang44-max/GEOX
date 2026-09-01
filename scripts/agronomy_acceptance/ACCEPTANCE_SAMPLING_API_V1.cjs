@@ -47,6 +47,8 @@ async function main() {
     invalid_quality_status_blocked: false,
     sample_lookup_works: false,
     duplicate_sample_id_rejected_409: false,
+    concurrent_duplicate_sample_id_serialized: false,
+    concurrent_acceptance_identity_stable: false,
     auth_missing_rejected_401: false,
     auth_invalid_rejected_401: false,
     tenant_boundary_rejected_404: false,
@@ -133,6 +135,57 @@ async function main() {
   assert.equal(duplicateReceipt.status, 409, 'duplicate sample_id must fail closed with 409');
   assert.equal(duplicateReceipt.json?.error, 'DUPLICATE:sample_id', 'duplicate sample_id error code mismatch');
   checks.duplicate_sample_id_rejected_409 = true;
+
+  const concurrentSampleId = `${ids.sample_id}-concurrent`;
+  const concurrentReceiptBody = {
+    plan_id: planRes.json.plan_id,
+    sample_id: concurrentSampleId,
+    ...scopedBody,
+    collected_at_ts: now + 10,
+    collector_actor_id: 'collector-concurrent',
+    sample_type: 'SOIL',
+    evidence_refs: [{ kind: 'raw_sample_v1', ref_id: 'raw-concurrent' }],
+    chain_of_custody_status: 'RECORDED',
+  };
+  const concurrentReceipts = await Promise.all([
+    postJson('/api/v1/sampling/receipt', concurrentReceiptBody),
+    postJson('/api/v1/sampling/receipt', concurrentReceiptBody),
+  ]);
+  const concurrentReceiptStatuses = concurrentReceipts.map((x) => x.status).sort((a, b) => a - b);
+  assert.deepEqual(concurrentReceiptStatuses, [200, 409], 'concurrent duplicate receipt creation must serialize to one success and one 409');
+  const concurrentReceiptConflict = concurrentReceipts.find((x) => x.status === 409);
+  assert.equal(concurrentReceiptConflict?.json?.error, 'DUPLICATE:sample_id', 'concurrent duplicate receipt must use DUPLICATE:sample_id');
+  checks.concurrent_duplicate_sample_id_serialized = true;
+
+  const concurrentLab = await postJson('/api/v1/sampling/lab-result', {
+    sample_id: concurrentSampleId,
+    imported_at_ts: now + 20,
+    metrics: { ph: 6.6, nitrate_n_mg_kg: 2.4 },
+    units: { ph: 'pH', nitrate_n_mg_kg: 'mg/kg' },
+    evidence_refs: [{ kind: 'import_run_v1', ref_id: 'import-concurrent' }],
+    quality_status: 'PASS',
+  });
+  assert.equal(concurrentLab.status, 200, 'lab result after concurrent receipt serialization must succeed');
+
+  const concurrentAcceptanceBody = {
+    plan_id: planRes.json.plan_id,
+    sample_id: concurrentSampleId,
+    import_id: concurrentLab.json?.import_id,
+  };
+  const concurrentAcceptances = await Promise.all([
+    postJson('/api/v1/sampling/acceptance/evaluate', concurrentAcceptanceBody),
+    postJson('/api/v1/sampling/acceptance/evaluate', concurrentAcceptanceBody),
+  ]);
+  assert.deepEqual(concurrentAcceptances.map((x) => x.status), [200, 200], 'concurrent exact-chain acceptance evaluation must succeed idempotently');
+  assert.ok(concurrentAcceptances[0].json?.fact_id, 'concurrent acceptance fact_id required');
+  assert.equal(concurrentAcceptances[1].json?.fact_id, concurrentAcceptances[0].json?.fact_id, 'concurrent acceptance must converge on one fact_id');
+  assert.equal(concurrentAcceptances[1].json?.acceptance_id, concurrentAcceptances[0].json?.acceptance_id, 'concurrent acceptance must converge on one acceptance_id');
+  assert.deepEqual(
+    concurrentAcceptances.map((x) => x.json?.idempotent).sort(),
+    [false, true],
+    'concurrent exact-chain acceptance must have one creator and one idempotent observer',
+  );
+  checks.concurrent_acceptance_identity_stable = true;
 
   const labMissingSample = await postJson('/api/v1/sampling/lab-result', {
     sample_id: 'missing-sample',
