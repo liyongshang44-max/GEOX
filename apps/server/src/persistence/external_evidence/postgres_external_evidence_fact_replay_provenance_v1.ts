@@ -36,11 +36,14 @@ export type ExternalEvidenceFactReplayExpectationV1 = {
 export type ExternalEvidenceFactReplayProvenanceV1 = {
   reader_id: typeof MCFT_CAP09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_READER_ID_V1;
   fact_id: string;
+  dataset_id: string;
   record_type: string;
   binding_id: string;
   origin_source_id: string;
   source_record_id: string;
   record_semantic_sha256: string;
+  replay_request_id_derivation: "FACT_ID_V1";
+  replay_source_locator_derivation: "FINAL_LOCATOR_V1";
   restored_ingested_at: string;
   decoder: {
     decoder_id: string;
@@ -153,8 +156,9 @@ export class PostgresExternalEvidenceFactReplayProvenanceV1
 
     const sourcePayload = objectV1(record.source_payload, "FACT_REPLAY_SOURCE_PAYLOAD_REQUIRED");
     const raw = objectV1(sourcePayload.raw_provenance, "FACT_REPLAY_RAW_PROVENANCE_REQUIRED");
-    const requestId = requiredTextV1(raw.request_id, "FACT_REPLAY_RAW_REQUEST_ID_REQUIRED");
-    const sourceLocator = requiredTextV1(raw.source_locator, "FACT_REPLAY_RAW_SOURCE_LOCATOR_REQUIRED");
+    const replayRequestId = "mcft-cap09-retained-replay:" + factId;
+    const finalLocator = requiredTextV1(raw.final_locator, "FACT_REPLAY_FINAL_LOCATOR_REQUIRED");
+    const replaySourceLocator = finalLocator;
     const rawSha256 = requiredTextV1(raw.raw_sha256, "FACT_REPLAY_RAW_SHA256_REQUIRED");
     if (!/^sha256:[0-9a-f]{64}$/.test(rawSha256)) throw new Error("FACT_REPLAY_RAW_SHA256_INVALID");
     const rawBytes = Number(raw.raw_bytes);
@@ -170,11 +174,11 @@ export class PostgresExternalEvidenceFactReplayProvenanceV1
     );
 
     const rawProvenance: VerifiedRawEvidenceProvenanceV1 = {
-      request_id: requestId,
+      request_id: replayRequestId,
       provider_id: requiredTextV1(raw.provider_id, "FACT_REPLAY_PROVIDER_ID_REQUIRED"),
       source_family: requiredTextV1(raw.source_family, "FACT_REPLAY_SOURCE_FAMILY_REQUIRED"),
-      source_locator: sourceLocator,
-      final_locator: requiredTextV1(raw.final_locator, "FACT_REPLAY_FINAL_LOCATOR_REQUIRED"),
+      source_locator: replaySourceLocator,
+      final_locator: finalLocator,
       content_type: requiredTextV1(raw.content_type, "FACT_REPLAY_CONTENT_TYPE_REQUIRED"),
       source_issue_time: optionalIsoV1(raw.source_issue_time, "FACT_REPLAY_SOURCE_ISSUE_TIME_INVALID"),
       source_event_time: optionalIsoV1(raw.source_event_time, "FACT_REPLAY_SOURCE_EVENT_TIME_INVALID"),
@@ -190,11 +194,14 @@ export class PostgresExternalEvidenceFactReplayProvenanceV1
     return {
       reader_id: this.reader_id,
       fact_id: factId,
+      dataset_id: requiredTextV1(record.dataset_id, "FACT_REPLAY_DATASET_ID_REQUIRED"),
       record_type: record.record_type,
       binding_id: record.binding_id,
       origin_source_id: record.origin_source_id,
       source_record_id: record.source_record_id,
       record_semantic_sha256: expectedSemantic,
+      replay_request_id_derivation: "FACT_ID_V1",
+      replay_source_locator_derivation: "FINAL_LOCATOR_V1",
       restored_ingested_at: restoredIngestedAt,
       decoder: {
         decoder_id: decoderId,

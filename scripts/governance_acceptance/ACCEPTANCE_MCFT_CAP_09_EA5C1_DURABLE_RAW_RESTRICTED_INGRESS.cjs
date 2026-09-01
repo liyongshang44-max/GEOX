@@ -167,10 +167,9 @@ for (const marker of [
 if (validationMode === "SUCCESSOR_MAINTENANCE_REVALIDATION") {
   const successorAcceptance = fs.readFileSync(successorAcceptancePath, "utf8");
   for (const marker of [
-    "request_id: requestId",
-    "source_locator: finalLocator",
-    "factText.includes('\"request_id\"')",
-    "factText.includes('\"source_locator\"')",
+    "const rawProvenance = {",
+    "factText.includes('\"request_id\"'), false",
+    "factText.includes('\"source_locator\"'), false",
   ]) {
     if (!successorAcceptance.includes(marker)) {
       fail(`EA5C1_SUCCESSOR_REPLAY_COMPLETE_PROOF_MARKER_MISSING:${marker}`);

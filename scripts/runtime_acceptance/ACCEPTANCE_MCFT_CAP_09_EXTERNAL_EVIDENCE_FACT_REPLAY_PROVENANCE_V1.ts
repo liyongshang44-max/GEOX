@@ -133,8 +133,8 @@ async function main(): Promise<void> {
     );
     assert(canonical);
     const rawPublic = canonical.record.source_payload.raw_provenance as Record<string, unknown>;
-    assert.equal(rawPublic.request_id, REQUEST_ID);
-    assert.equal(rawPublic.source_locator, SOURCE_LOCATOR);
+    assert.equal(rawPublic.request_id, undefined);
+    assert.equal(rawPublic.source_locator, undefined);
 
     const ingress = new PostgresExternalFormalEvidenceIngressV1(pool, {
       async verifyRetainedRawEvidence(input) {
@@ -158,8 +158,11 @@ async function main(): Promise<void> {
       source_record_id: canonical.record.source_record_id,
     };
     const replay = await reader.readReplayProvenance(expected);
-    assert.equal(replay.raw_provenance.request_id, REQUEST_ID);
+    assert.equal(replay.raw_provenance.request_id, "mcft-cap09-retained-replay:" + committed.fact_id);
     assert.equal(replay.raw_provenance.source_locator, SOURCE_LOCATOR);
+    assert.equal(replay.dataset_id, canonical.record.dataset_id);
+    assert.equal(replay.replay_request_id_derivation, "FACT_ID_V1");
+    assert.equal(replay.replay_source_locator_derivation, "FINAL_LOCATOR_V1");
     assert.equal(replay.raw_provenance.retention_ref, canonical.raw_provenance.retention_ref);
     assert.equal(replay.raw_provenance.raw_sha256, canonical.raw_provenance.raw_sha256);
     assert.equal(replay.restored_ingested_at, INGESTED);
@@ -191,9 +194,10 @@ async function main(): Promise<void> {
     const result = {
       schema_version: "geox_mcft_cap09_external_evidence_fact_replay_provenance_acceptance_v1",
       status: "PASS",
-      replay_complete_canonical_raw_provenance: true,
-      request_id_preserved: true,
-      source_locator_preserved: true,
+      canonical_semantics_exclude_acquisition_attempt_request_id: true,
+      canonical_semantics_exclude_source_locator_alias: true,
+      deterministic_replay_request_id_from_fact_id: true,
+      replay_source_locator_from_final_locator: true,
       exact_fact_identity_recomputed: true,
       exact_scope_binding_origin_source_record_semantic_verified: true,
       original_ingested_at_restored: true,

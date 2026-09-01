@@ -153,8 +153,6 @@ export function prepareExternalFormalEvidenceIngressV1(result: CanonicalizedExte
 
   const sourcePayload = objectRecordV1(record.source_payload, "EA5C1_SOURCE_PAYLOAD_REQUIRED");
   const raw = objectRecordV1(sourcePayload.raw_provenance, "EA5C1_RAW_PROVENANCE_REQUIRED");
-  const rawRequestId = requiredTextV1(raw.request_id, "EA5C1_RAW_REQUEST_ID_REQUIRED");
-  const rawSourceLocator = requiredTextV1(raw.source_locator, "EA5C1_RAW_SOURCE_LOCATOR_REQUIRED");
   const rawSha256 = requiredTextV1(raw.raw_sha256, "EA5C1_RAW_SHA256_REQUIRED");
   if (!/^sha256:[0-9a-f]{64}$/.test(rawSha256)) throw new Error("EA5C1_RAW_SHA256_INVALID");
   const rawBytes = raw.raw_bytes;
@@ -168,9 +166,7 @@ export function prepareExternalFormalEvidenceIngressV1(result: CanonicalizedExte
     throw new Error("EA5C1_RAW_PROVENANCE_QUALITY_BINDING_MISMATCH");
   }
   if (
-    result.raw_provenance.request_id !== rawRequestId
-    || result.raw_provenance.source_locator !== rawSourceLocator
-    || result.raw_provenance.raw_sha256 !== rawSha256
+result.raw_provenance.raw_sha256 !== rawSha256
     || result.raw_provenance.retention_ref !== retentionRef
     || result.raw_provenance.raw_bytes !== Number(rawBytes)
   ) {

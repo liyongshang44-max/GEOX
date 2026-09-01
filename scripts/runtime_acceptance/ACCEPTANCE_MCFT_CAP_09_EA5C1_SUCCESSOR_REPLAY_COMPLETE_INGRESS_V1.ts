@@ -162,10 +162,8 @@ async function main(): Promise<void> {
       use_policy_ref: "GEOX-MCFT-CAP-09-AMENDMENT-05",
     };
     const rawProvenance = {
-      request_id: requestId,
       provider_id: providerId,
       source_family: recordType,
-      source_locator: finalLocator,
       final_locator: finalLocator,
       source_issue_time: null,
       source_event_time: null,
@@ -306,9 +304,9 @@ async function main(): Promise<void> {
   for (const sentinel of privateSentinels) assert.equal(factText.includes(sentinel), false);
   assert.equal(factText.includes("s3-private://"), true);
   assert.equal(factText.includes("raw_payload_embedded\": false"), true);
-  assert.equal(factText.includes('"request_id"'), true);
-  assert.equal(factText.includes('"source_locator"'), true);
-  ok("raw bytes remain private object-store data; facts persist replay-complete request identity without raw sentinel bytes");
+  assert.equal(factText.includes('"request_id"'), false);
+  assert.equal(factText.includes('"source_locator"'), false);
+  ok("raw bytes remain private object-store data; acquisition request envelope stays outside canonical facts");
 
   const nonEvidence = await pool.query(`SELECT count(*)::int AS n FROM facts WHERE record_json->>'type' NOT IN ('soil_moisture_observation_v1','observed_rainfall_v1','historical_et0_estimate_v1','future_weather_assumption_v1','future_et0_assumption_v1')`);
   assert.equal(Number(nonEvidence.rows[0].n), 0);

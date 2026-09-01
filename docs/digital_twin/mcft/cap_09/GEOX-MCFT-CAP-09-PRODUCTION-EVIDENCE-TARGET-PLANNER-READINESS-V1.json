@@ -1,9 +1,9 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_target_planner_readiness_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1",
-  "status": "KBS_PLANNER_CYCLE_WIRING_ALIGNED_GFS_REHYDRATION_NEXT",
+  "status": "REPLAY_ENVELOPE_SYNTHESIS_FOUNDATION_IMPLEMENTED_GFS_PARTIAL_PAIR_NEXT",
   "stage": "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START",
-  "subject_predecessor_sha": "62a3f03fb7da4b0831327775ed5e0624807df098",
+  "subject_predecessor_sha": "e9c3000927e1ebeac5dd724ff535e9b893396c9f",
   "host_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
   "production_process_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
   "production_composition_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
@@ -72,7 +72,7 @@
       "required_planning_semantics": "CROSS_CYCLE_LATEST_VALID_FROM_PAIR_PROGRESS",
       "current_read_port_shape": "BINDING_SET_CROSS_CYCLE_PROGRESS_WITH_EXACT_CYCLE_PAIRING",
       "current_shape_bindable": false,
-      "reason": "REPLAY_COMPLETE_CANONICAL_RAW_PROVENANCE_AND_EXACT_FACT_READ_PORT_IMPLEMENTED_PARTIAL_PAIR_ZERO_PROVIDER_REHYDRATION_ADAPTER_REMAINS",
+      "reason": "CANONICAL_FACT_EXCLUDES_ACQUISITION_REQUEST_ENVELOPE_EXACT_FACT_READER_SYNTHESIZES_REPLAY_REQUEST_FROM_FACT_ID_AND_FINAL_LOCATOR_PARTIAL_PAIR_ADAPTER_REMAINS",
       "required_foundation": [
         "CROSS_CYCLE_GFS_PROGRESS_READ_PORT",
         "WEATHER_ET0_PAIR_SKEW_FAIL_CLOSED",
@@ -85,10 +85,13 @@
       "durable_target_dedup_implemented": true,
       "partial_pair_production_rehydration_adapter_implemented": false,
       "verified_retained_raw_replay_primitive_implemented": true,
-      "canonical_fact_request_id_persisted": true,
-      "canonical_fact_source_locator_persisted": true,
+      "canonical_fact_request_id_persisted": false,
+      "canonical_fact_source_locator_persisted": false,
       "exact_fact_replay_provenance_read_port_implemented": true,
-      "restored_ingested_at_replay_input_available": true
+      "restored_ingested_at_replay_input_available": true,
+      "canonical_fact_operational_request_envelope_excluded": true,
+      "deterministic_replay_request_id_from_fact_id": true,
+      "replay_source_locator_from_final_locator": true
     },
     "kbs_soil": {
       "publication_mode": "IRREGULAR_PROVIDER_DEFINED_EVENT",
@@ -190,12 +193,13 @@
     "KBS_PARTIAL_PAIR_RETRY_REPAIR_FROM_OLD_BASELINE",
     "KBS_BASELINE_POINTER_ADVANCES_ONLY_AFTER_ALL_VISIBLE_CURSOR_ADVANCES",
     "KBS_SINGLE_FORWARD_HOUR_EXACT_DECODER_FALLBACK",
-    "CANONICAL_RAW_PROVENANCE_REQUEST_ID_PERSISTED",
-    "CANONICAL_RAW_PROVENANCE_SOURCE_LOCATOR_PERSISTED",
     "EXACT_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_READ_PORT",
     "REPLAY_ORIGINAL_INGESTED_AT_RECOVERABLE_FROM_CANONICAL_FACT",
     "KBS_PURE_PLANNER_DUE_ACTION_ROUTES_TO_PUBLICATION_CYCLE_SERVICE",
-    "KBS_PLANNER_NO_LONGER_EMITS_STALE_NOT_IMPLEMENTED_CAPABILITY_BLOCKERS"
+    "KBS_PLANNER_NO_LONGER_EMITS_STALE_NOT_IMPLEMENTED_CAPABILITY_BLOCKERS",
+    "CANONICAL_SEMANTICS_EXCLUDE_ACQUISITION_ATTEMPT_REQUEST_ENVELOPE",
+    "DETERMINISTIC_RETAINED_REPLAY_REQUEST_ID_FROM_FACT_ID",
+    "RETAINED_REPLAY_SOURCE_LOCATOR_DERIVED_FROM_FINAL_LOCATOR"
   ],
   "current_entrypoint": {
     "status": "PACKAGED_FAIL_CLOSED_PURE_PLANNER_NOT_PRODUCTION_BOUND",
