@@ -478,7 +478,7 @@ function finish(invSet, b02Set) {
 function assertScannerSentinels() {
   const sentinels = [
     ["apps/server/src/services/fertilization/fertilization_service_v1.ts", "GENERIC_FACT_WRITER"],
-    ["apps/server/src/routes/delivery_evidence_export_v1.ts", "GENERIC_FACT_WRITER"],
+    ["apps/server/src/services/device_observation_service_v1.ts", "GENERIC_FACT_WRITER"],
     ["docker/postgres/init/003_p1_skill_seed.sql", "GENERIC_FACT_WRITER"],
     ["packages/control-kernel/src/ruleset/evaluator.ts", "AUTHORITY_DERIVER"],
     ["apps/judge/src/problem_state.ts", "AUTHORITY_DERIVER"],
