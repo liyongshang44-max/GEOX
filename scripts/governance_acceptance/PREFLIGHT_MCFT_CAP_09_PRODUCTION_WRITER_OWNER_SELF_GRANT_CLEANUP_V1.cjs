@@ -2,6 +2,8 @@
 "use strict";
 const fs=require("node:fs"),path=require("node:path"),cp=require("node:child_process"),assert=require("node:assert/strict");
 const ROOT=process.cwd(),TARGET="geox_mcft_cap09_production_runtime_v1";
+const EVIDENCE_LOGIN="geox_mcft_cap09_evidence_runtime_login_v1",TWIN_LOGIN="geox_mcft_cap09_twin_runtime_login_v1";
+const EVIDENCE_PRIVILEGE="geox_mcft_cap09_evidence_runtime_v1",TWIN_PRIVILEGE="geox_mcft_cap09_twin_runtime_v1";
 const ARM=path.join(ROOT,"scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_ARM_V1.json");
 const OUT=path.join(ROOT,"acceptance-output/MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_PREFLIGHT_V1_RESULT.json");
 const q=(url,sql)=>cp.execFileSync("psql",[url,"-X","-v","ON_ERROR_STOP=1","-AtF","|","-c",sql],{encoding:"utf8"}).trim();
@@ -28,6 +30,43 @@ try{
  const tableNames=q(url,"SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE' ORDER BY table_name").split(/\r?\n/).filter(Boolean);
  let totalRows=0;for(const t of tableNames)totalRows+=Number(q(url,'SELECT count(*)::int FROM public."'+t.replaceAll('"','""')+'"'));
  assert.equal(totalRows,0,"WRITER_OWNER_CLEANUP_ALL_ROWS_MUST_BE_ZERO");
+ const serviceLoginRoleRows=q(url,[
+  "SELECT rolname||'|login='||rolcanlogin::text||'|inherit='||rolinherit::text||'|super='||rolsuper::text||'|createdb='||rolcreatedb::text||'|createrole='||rolcreaterole::text||'|replication='||rolreplication::text||'|bypassrls='||rolbypassrls::text",
+  "FROM pg_catalog.pg_roles",
+  "WHERE rolname IN ('"+EVIDENCE_LOGIN+"','"+TWIN_LOGIN+"')",
+  "ORDER BY rolname"
+ ].join("\n")).split(/\r?\n/).filter(Boolean);
+ assert.deepEqual(serviceLoginRoleRows,[
+  EVIDENCE_LOGIN+"|login=true|inherit=true|super=false|createdb=false|createrole=false|replication=false|bypassrls=false",
+  TWIN_LOGIN+"|login=true|inherit=true|super=false|createdb=false|createrole=false|replication=false|bypassrls=false"
+ ],"WRITER_OWNER_CLEANUP_EXACT_TWO_RESTRICTED_SERVICE_LOGINS_REQUIRED");
+ const serviceLoginMembershipRows=q(url,[
+  "SELECT member.rolname||'|privilege='||granted.rolname||'|admin='||m.admin_option::text||'|inherit='||m.inherit_option::text||'|set='||m.set_option::text",
+  "FROM pg_catalog.pg_auth_members m",
+  "JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid",
+  "JOIN pg_catalog.pg_roles member ON member.oid=m.member",
+  "WHERE member.rolname IN ('"+EVIDENCE_LOGIN+"','"+TWIN_LOGIN+"')",
+  "ORDER BY member.rolname,granted.rolname"
+ ].join("\n")).split(/\r?\n/).filter(Boolean);
+ assert.deepEqual(serviceLoginMembershipRows,[
+  EVIDENCE_LOGIN+"|privilege="+EVIDENCE_PRIVILEGE+"|admin=false|inherit=true|set=false",
+  TWIN_LOGIN+"|privilege="+TWIN_PRIVILEGE+"|admin=false|inherit=true|set=false"
+ ],"WRITER_OWNER_CLEANUP_EXACT_ONE_PRIVILEGE_MEMBERSHIP_EACH_REQUIRED");
+ const loginDirectAclCount=Number(q(url,[
+  "WITH target AS (SELECT oid FROM pg_catalog.pg_roles WHERE rolname IN ('"+EVIDENCE_LOGIN+"','"+TWIN_LOGIN+"'))",
+  "SELECT ((SELECT count(*) FROM pg_catalog.pg_class object JOIN pg_catalog.pg_namespace namespace ON namespace.oid=object.relnamespace CROSS JOIN LATERAL pg_catalog.aclexplode(object.relacl) acl WHERE namespace.nspname='public' AND acl.grantee IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_proc routine JOIN pg_catalog.pg_namespace namespace ON namespace.oid=routine.pronamespace CROSS JOIN LATERAL pg_catalog.aclexplode(routine.proacl) acl WHERE namespace.nspname='public' AND acl.grantee IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_namespace namespace CROSS JOIN LATERAL pg_catalog.aclexplode(namespace.nspacl) acl WHERE namespace.nspname='public' AND acl.grantee IN (SELECT oid FROM target)))::int"
+ ].join("\n"))||"0");
+ assert.equal(loginDirectAclCount,0,"WRITER_OWNER_CLEANUP_SERVICE_LOGIN_DIRECT_PUBLIC_ACL_FORBIDDEN");
+ const loginOwnedObjectCount=Number(q(url,[
+  "WITH target AS (SELECT oid FROM pg_catalog.pg_roles WHERE rolname IN ('"+EVIDENCE_LOGIN+"','"+TWIN_LOGIN+"'))",
+  "SELECT ((SELECT count(*) FROM pg_catalog.pg_database d WHERE d.datdba IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_namespace n WHERE n.nspowner IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_class c WHERE c.relowner IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_proc p WHERE p.proowner IN (SELECT oid FROM target)))::int"
+ ].join("\n"))||"0");
+ assert.equal(loginOwnedObjectCount,0,"WRITER_OWNER_CLEANUP_SERVICE_LOGIN_OBJECT_OWNERSHIP_FORBIDDEN");
  const membershipRows=q(url,[
   "SELECT granted.rolname||'|member='||member.rolname||'|grantor='||grantor.rolname||'|admin='||m.admin_option::text||'|inherit='||m.inherit_option::text||'|set='||m.set_option::text",
   "FROM pg_catalog.pg_auth_members m",
@@ -54,5 +93,5 @@ try{
   "external_evidence_supply_event_v1:SELECT","external_evidence_supply_event_v1:INSERT","external_evidence_supply_event_v1:UPDATE",
   "external_evidence_supply_cursor_v1:SELECT","external_evidence_supply_cursor_v1:INSERT","external_evidence_supply_cursor_v1:UPDATE"
  ],"WRITER_OWNER_CLEANUP_EXACT_NINE_ACL_PRESTATE_REQUIRED");
- write({schema_version:"geox_mcft_cap09_production_writer_owner_self_grant_cleanup_preflight_v1",status:"PASS_CLEANUP_REQUIRED",subject_sha:subject,database_name:TARGET,current_user:currentUser,table_count:tableCount,routine_count:routineCount,total_application_rows:totalRows,writer_owner_memberships:membershipRows,writer_owner_effective_set:caps,exact_nine_missing_privileges:missing,arm_observed:arm.armed===true,cleanup_authorized_observed:cleanupAuthorized,same_workflow_fresh_preflight_required:arm.same_workflow_fresh_preflight_required===true,preflight_subject_binding:arm.preflight_subject_binding,database_mutation:false,row_mutation:false,schema_mutation:false,table_acl_mutation:false,function_acl_mutation:false,role_attribute_mutation:false,membership_mutation:false,runtime_process_start:false,production_owner_activation:false,formal_v5_arm:false,a0_bootstrap:false,o00_started:false});
+ write({schema_version:"geox_mcft_cap09_production_writer_owner_self_grant_cleanup_preflight_v1",status:"PASS_CLEANUP_REQUIRED",subject_sha:subject,database_name:TARGET,current_user:currentUser,table_count:tableCount,routine_count:routineCount,total_application_rows:totalRows,service_login_role_count:serviceLoginRoleRows.length,service_login_roles_restricted:true,service_login_memberships:serviceLoginMembershipRows,exact_one_privilege_membership_each:true,service_login_direct_public_acl_count:loginDirectAclCount,service_login_owned_object_count:loginOwnedObjectCount,writer_owner_memberships:membershipRows,writer_owner_effective_set:caps,exact_nine_missing_privileges:missing,arm_observed:arm.armed===true,cleanup_authorized_observed:cleanupAuthorized,same_workflow_fresh_preflight_required:arm.same_workflow_fresh_preflight_required===true,preflight_subject_binding:arm.preflight_subject_binding,database_mutation:false,row_mutation:false,schema_mutation:false,table_acl_mutation:false,function_acl_mutation:false,role_attribute_mutation:false,membership_mutation:false,runtime_process_start:false,production_owner_activation:false,formal_v5_arm:false,a0_bootstrap:false,o00_started:false});
 }catch(e){write({status:"FAIL",subject_sha:String(process.env.SUBJECT_SHA||""),error:e instanceof Error?e.message:String(e),database_mutation:false,membership_mutation:false,runtime_process_start:false,production_owner_activation:false,formal_v5_arm:false,a0_bootstrap:false,o00_started:false});process.exitCode=1;}
