@@ -364,27 +364,6 @@ function validatePipelineRequestV1(input: ExternalEvidenceLivePipelineInputV1): 
   assertHttpsAllowedHost(input.request.locator, input.request.allowed_final_hosts, "EA3_REQUEST_LOCATOR");
 }
 
-  const provenance: VerifiedRawEvidenceProvenanceV1 = {
-    request_id: input.request.request_id,
-    provider_id: input.request.provider_id,
-    source_family: input.request.source_family,
-    source_locator: input.request.locator,
-    final_locator: response.final_locator,
-    content_type: response.content_type,
-    source_issue_time: input.request.source_issue_time,
-    source_event_time: input.request.source_event_time,
-    retrieved_at: retrievedAt,
-    available_at: availableAt,
-    raw_sha256: digest,
-    raw_bytes: response.bytes.byteLength,
-    retention_ref: receipt.retention_ref,
-    retained_at: retainedAt,
-    use_policy_ref: input.request.use_policy_ref,
-  };
-
-  return { provenance, raw_bytes: new Uint8Array(response.bytes) };
-}
-
 export async function collectAndRetainRawEvidenceV1(
   input: ExternalEvidenceLivePipelineInputV1,
   ports: {
@@ -473,7 +452,6 @@ async function collectRetainDecodeV1(
     text(ports.decoder.decoder_id) && text(ports.decoder.decoder_version),
     "EA3_DECODER_IDENTITY_REQUIRED",
   );
-
   // Decoder invocation is intentionally after the verified retention receipt barrier.
   const decoded = await ports.decoder.decodeRetainedEvidence({
     raw_bytes: collected.raw_bytes,
