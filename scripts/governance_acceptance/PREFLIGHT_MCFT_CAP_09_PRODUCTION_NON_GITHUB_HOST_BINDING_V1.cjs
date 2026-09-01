@@ -283,7 +283,10 @@ try {
   );
   if (platformAuthorizedPreIdentity) {
     req(
-      a.next_stage?.status === "RENDER_PLATFORM_AUTHORIZED_AWAITING_SAFE_SERVICE_IDENTITY_PROVISIONING" &&
+      a.next_stage?.status ===
+        (workspaceBoundPreIdentity
+          ? "RENDER_WORKSPACE_BOUND_AWAITING_SAFE_SERVICE_IDENTITY_PROVISIONING"
+          : "RENDER_PLATFORM_AUTHORIZED_AWAITING_SAFE_SERVICE_IDENTITY_PROVISIONING") &&
         a.next_stage?.external_platform_selection_required === false &&
         a.next_stage?.safe_zero_runtime_identity_provisioning_required === true &&
         a.next_stage?.safe_zero_runtime_identity_provisioning_status === "NOT_PROVEN" &&
