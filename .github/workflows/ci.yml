@@ -46,11 +46,17 @@ jobs:
         continue-on-error: true
         run: pnpm run ci:governance:bline-operation-state-read-only
 
+      - name: B-Line execution plan-task lifecycle
+        id: bline_execution_plan_task_lifecycle
+        continue-on-error: true
+        run: pnpm run ci:governance:bline-execution-plan-task-lifecycle
+
       - name: B-Line closure fail-closed result
         run: |
           test "${{ steps.bline_residual.outcome }}" = "success"
           test "${{ steps.bline_active_runtime.outcome }}" = "success"
           test "${{ steps.bline_operation_state_read_only.outcome }}" = "success"
+          test "${{ steps.bline_execution_plan_task_lifecycle.outcome }}" = "success"
 
       - name: B-Line P0-RES-007 evidence export boundary
         run: pnpm run ci:governance:bline-p0-res007-evidence-export-boundary
