@@ -124,7 +124,9 @@ need("samplingContract", [
   "latest-wins",
   "ambiguous receipt/lab/acceptance identity",
   "same exact plan/receipt/lab source chain is idempotent",
-  "legacy lab_result_import_v1 without exact receipt/plan/scope refs cannot establish Formal Sampling authority",
+  "legacy `lab_result_import_v1` without exact `sample_receipt_fact_id` / `sampling_plan_fact_id` / scope refs is not Formal Sampling authority",
+  "must not be auto-bound by `sample_id` / `import_id`",
+  "formal use requires a newly established exact chain",
 ]);
 need("fertilizationContract", [
   "sampling_acceptance_fact_id",
@@ -176,7 +178,9 @@ const stats = {
   acceptance_exact_chain_idempotent: source.service.includes("CONFLICT:sampling_acceptance_exact_chain_verdict") && source.service.includes("idempotent: true"),
   receipt_identity_race_safe: source.service.includes("deterministicReceiptFactIdV1") && source.samplingApi.includes("concurrent_duplicate_sample_id_serialized"),
   legacy_receipt_duplicate_fail_closed: source.service.includes("findExistingReceiptForCreateV1") && source.samplingApi.includes("legacy_receipt_duplicate_blocked_409"),
-  legacy_unbound_lab_not_formal: source.samplingContract.includes("legacy lab_result_import_v1 without exact receipt/plan/scope refs cannot establish Formal Sampling authority")
+  legacy_unbound_lab_not_formal:
+    source.samplingContract.includes("legacy `lab_result_import_v1` without exact `sample_receipt_fact_id` / `sampling_plan_fact_id` / scope refs is not Formal Sampling authority")
+    && source.samplingContract.includes("must not be auto-bound by `sample_id` / `import_id`")
     && source.samplingApi.includes("legacy_unbound_lab_not_formal")
     && source.service.includes("sample_receipt_fact_id') = $3"),
   corrupted_legacy_receipt_shadowing_blocked: source.service.includes("OR (record_json::jsonb->>'plan_id') = $6") && source.samplingApi.includes("legacy_wrong_plan_fact_duplicate_blocked_409"),
