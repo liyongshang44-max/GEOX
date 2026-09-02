@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { Pool } = require('pg');
 const { assert, env, fetchJson, requireOk, waitForHealth } = require('./_common.cjs');
 
 const baseUrl = env('SAMPLING_API_BASE_URL', env('API_BASE_URL', env('BASE_URL', env('GEOX_BASE_URL', 'http://127.0.0.1:3000'))));
@@ -23,6 +24,30 @@ async function main() {
   };
   const field_id = `f-${now}`;
   const sample_id = `s-${now}`;
+  const pool = new Pool({ connectionString: env('DATABASE_URL', 'postgres://postgres:postgres@127.0.0.1:5432/geox') });
+
+  // The operation report route requires an actual operation_plan_v1 truth.
+  // sampling_operation_relation_v1 is only a relation and must never mint
+  // Operation authority from an arbitrary operation_id string.
+  await pool.query(
+    `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+     VALUES ($1, now(), 'sampling-report-projection-fixture', $2::jsonb)
+     ON CONFLICT (fact_id) DO NOTHING`,
+    [
+      `sampling_report_operation_plan_${now}`,
+      JSON.stringify({
+        type: 'operation_plan_v1',
+        payload: {
+          operation_plan_id: operationId,
+          tenant_id: scope.tenant_id,
+          project_id: scope.project_id,
+          group_id: scope.group_id,
+          field_id,
+          status: 'DRAFT',
+        },
+      }),
+    ],
+  );
 
   const plan = requireOk(await fetchJson(`${baseUrl}/api/v1/sampling/plan`, {
     method: 'POST',
@@ -164,6 +189,8 @@ async function main() {
     plan.plan_id,
     'operation report must not attach latest unbound sampling plan by field fallback',
   );
+
+  await pool.end();
 
   console.log(JSON.stringify({
     ok: true,
