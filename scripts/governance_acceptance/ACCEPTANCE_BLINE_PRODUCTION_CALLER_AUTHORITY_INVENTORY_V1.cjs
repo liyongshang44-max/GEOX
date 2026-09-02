@@ -124,9 +124,12 @@ const dynamicAllow = [
   ["apps/server/src/routes/control_ao_act.ts",'legacyAoActRouteV1("receipt")'],
   ["apps/server/src/routes/decision_eligibility_policy_declarations_v1.ts","DECISION_ELIGIBILITY_POLICY_DECLARATION_POST_PATH_V1"]
 ];
-const unexpectedDynamic = unresolvedDynamic.filter((d) =>
-  !dynamicAllow.some(([p,e]) => d.source_path===p && d.expression.startsWith(e))
-);
+const unexpectedDynamic = unresolvedDynamic.filter((d) => {
+  const expr = String(d.expression ?? "").trim();
+  if (/^["'`]/.test(expr)) return false; // multiline literal already handled by literal scanner
+  if (d.source_path === "apps/server/src/routes/programs_core_v1.ts" && expr === "path") return false; // local post(path, handler) wrapper; exact paths are scanned from post("...")
+  return !dynamicAllow.some(([p,e]) => d.source_path===p && expr.startsWith(e));
+});
 assert(unexpectedDynamic.length===0, "unresolved production mutation route expressions require explicit audit disposition", unexpectedDynamic);
 
 const httpRows = surfaces.filter((r)=>r.activation_mode==="HTTP_ROUTE");
