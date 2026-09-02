@@ -245,6 +245,51 @@ function covSqlEffect(text) {
   return { dml, ddl, fact };
 }
 
+function covDirectSqlEffect(fp, rootNode) {
+  const mod = covBuildModule(fp);
+  const sf = mod.sf;
+  const sqlBindings = new Map();
+
+  function collectBindings(n) {
+    if (n !== rootNode && (ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) || ts.isArrowFunction(n))) return;
+    if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.initializer) {
+      if (ts.isStringLiteral(n.initializer) || ts.isNoSubstitutionTemplateLiteral(n.initializer) || ts.isTemplateExpression(n.initializer)) {
+        sqlBindings.set(n.name.text, n.initializer.getText(sf));
+      }
+    }
+    ts.forEachChild(n, collectBindings);
+  }
+  collectBindings(rootNode);
+
+  const result = { dml:false, ddl:false, fact:false };
+  function merge(effect) {
+    result.dml = result.dml || effect.dml;
+    result.ddl = result.ddl || effect.ddl;
+    result.fact = result.fact || effect.fact;
+  }
+  function visit(n) {
+    if (n !== rootNode && (ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) || ts.isArrowFunction(n))) return;
+    if (
+      ts.isCallExpression(n) &&
+      ts.isPropertyAccessExpression(n.expression) &&
+      n.expression.name.text === "query" &&
+      n.arguments.length > 0
+    ) {
+      const arg = n.arguments[0];
+      let sql = "";
+      if (ts.isStringLiteral(arg) || ts.isNoSubstitutionTemplateLiteral(arg) || ts.isTemplateExpression(arg)) {
+        sql = arg.getText(sf);
+      } else if (ts.isIdentifier(arg) && sqlBindings.has(arg.text)) {
+        sql = sqlBindings.get(arg.text);
+      }
+      if (sql) merge(covSqlEffect(sql));
+    }
+    ts.forEachChild(n, visit);
+  }
+  visit(rootNode);
+  return result;
+}
+
 function covCollectGraphFiles(entries, allowedPrefixes) {
   const out = new Set();
   const stack = entries.map((p) => path.resolve(ROOT, p));
@@ -431,7 +476,7 @@ function covAllowWriteFalse(call) {
 }
 
 function covAnalyzeNode(fp, node, stack = new Set()) {
-  const direct = covSqlEffect(node.getText(covBuildModule(fp).sf));
+  const direct = covDirectSqlEffect(fp, node);
   const result = {
     dml: direct.dml,
     ddl: direct.ddl,
@@ -479,7 +524,7 @@ function covAnalyzeFunction(target, stack = new Set()) {
   const mod = covBuildModule(target.fp);
   const node = mod.functions.get(target.name);
   if (!node) return { dml:false, ddl:false, fact:false, directWriterKeys:new Set(), callees:new Set() };
-  const direct = covSqlEffect(node.getText(mod.sf));
+  const direct = covDirectSqlEffect(target.fp, node);
   const result = { dml:direct.dml, ddl:direct.ddl, fact:direct.fact, directWriterKeys:new Set(), callees:new Set() };
   if (direct.dml || direct.ddl) result.directWriterKeys.add(key);
 
