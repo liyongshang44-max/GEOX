@@ -2208,7 +2208,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P0",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/decision_engine_v1.ts::<inline>"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-051",
@@ -2252,7 +2256,12 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P0",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/projections/field_sensing_overview_v1.ts::refreshFieldSensingOverviewV1",
+        "apps/server/src/projections/field_sensing_overview_v1.ts::ensureFieldSensingOverviewProjectionV1"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-052",
@@ -2380,7 +2389,16 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P2",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/services/security_audit_service_v1.ts::recordSecurityAuditEventV1",
+        "apps/server/src/domain/skill_registry/facts.ts::appendFact",
+        "apps/server/src/projections/skill_registry_read_v1.ts::projectSkillRegistryReadV1",
+        "apps/server/src/projections/skill_registry_read_v1.ts::ensureSkillRegistryReadTable",
+        "apps/server/src/services/device_skill_bindings.ts::ensureDeviceSkillBindings",
+        "apps/server/src/services/device_skill_bindings.ts::ensureDeviceSkillBindingsRuntime"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-055",
@@ -2419,7 +2437,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/domain/skill_registry/facts.ts::appendFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-056",
@@ -2458,7 +2480,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/domain/skill_registry/facts.ts::appendFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-057",
@@ -2497,7 +2523,13 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/projections/skill_registry_read_v1.ts::projectSkillRegistryReadV1",
+        "apps/server/src/projections/skill_registry_read_v1.ts::ensureSkillRegistryReadTable",
+        "apps/server/src/domain/skill_registry/facts.ts::appendFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-058",
@@ -2536,7 +2568,13 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/projections/skill_registry_read_v1.ts::projectSkillRegistryReadV1",
+        "apps/server/src/projections/skill_registry_read_v1.ts::ensureSkillRegistryReadTable",
+        "apps/server/src/domain/skill_registry/facts.ts::appendFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-059",
@@ -2575,7 +2613,12 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/domain/skill_registry/facts.ts::appendFact",
+        "apps/server/src/services/field_memory_service.ts::recordMemoryV1"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-060",
@@ -2614,7 +2657,14 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/projections/skill_registry_read_v1.ts::projectSkillRegistryReadV1",
+        "apps/server/src/projections/skill_registry_read_v1.ts::ensureSkillRegistryReadTable",
+        "apps/server/src/domain/skill_registry/facts.ts::appendFact",
+        "apps/server/src/services/field_memory_service.ts::recordMemoryV1"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-061",
@@ -5312,7 +5362,12 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/evidence_report_v1.ts::<inline>",
+        "apps/server/src/routes/evidence_report_v1.ts::ensureJobsTable"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-119",
@@ -5354,7 +5409,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/evidence_export_jobs_v1.ts::<inline>"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-120",
@@ -6221,7 +6280,13 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/human_executors_v1.ts::<inline>",
+        "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
+        "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-139",
@@ -6262,7 +6327,13 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/human_executors_v1.ts::<inline>",
+        "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
+        "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-140",
@@ -6303,7 +6374,13 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/human_executors_v1.ts::<inline>",
+        "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
+        "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-141",
@@ -6338,7 +6415,13 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P0",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/human_executors_v1.ts::<inline>",
+        "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
+        "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-142",
@@ -6379,7 +6462,13 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/human_executors_v1.ts::<inline>",
+        "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
+        "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-143",
@@ -6420,7 +6509,13 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/human_executors_v1.ts::<inline>",
+        "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
+        "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-144",
@@ -6461,7 +6556,13 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/human_executors_v1.ts::<inline>",
+        "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
+        "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-145",
@@ -6502,7 +6603,13 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/human_executors_v1.ts::<inline>",
+        "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
+        "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-146",
@@ -6543,7 +6650,13 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/human_executors_v1.ts::<inline>",
+        "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
+        "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-147",
@@ -6584,7 +6697,13 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/human_executors_v1.ts::<inline>",
+        "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
+        "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-148",
@@ -6625,7 +6744,13 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/human_executors_v1.ts::<inline>",
+        "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
+        "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-149",
@@ -6666,7 +6791,13 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/human_executors_v1.ts::<inline>",
+        "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
+        "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-150",
@@ -6707,7 +6838,13 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/human_executors_v1.ts::<inline>",
+        "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
+        "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-151",
@@ -6752,7 +6889,12 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/alerts_v1.ts::<inline>",
+        "apps/server/src/routes/alert_workflow_v1.ts::upsertAlertWorkflowV1"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-152",
@@ -6797,7 +6939,13 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/alerts_v1.ts::<inline>",
+        "apps/server/src/routes/alert_workflow_v1.ts::upsertOperationWorkflowV1",
+        "apps/server/src/routes/alert_workflow_v1.ts::upsertAlertWorkflowV1"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-153",
@@ -6842,7 +6990,13 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/alerts_v1.ts::<inline>",
+        "apps/server/src/routes/alerts_v1.ts::insertAlertEventIfMissing",
+        "apps/server/src/routes/alerts_v1.ts::insertNotificationRecordsForEvent"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-154",
@@ -6887,7 +7041,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/alerts_v1.ts::<inline>"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-155",
@@ -6932,7 +7090,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/alerts_v1.ts::<inline>"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-156",
@@ -6977,7 +7139,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/alerts_v1.ts::<inline>"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-157",
@@ -8869,14 +9035,16 @@
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
         "projectSkillRegistryReadV1",
-        "recordSecurityAuditEventV1"
+        "recordSecurityAuditEventV1",
+        "apps/server/src/projections/skill_registry_read_v1.ts::ensureSkillRegistryReadTable"
       ],
       "write_targets": [
         "skill_registry_read_v1",
         "security_audit_event_v1"
       ],
       "current_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
-      "notes": "GET rebuilds skill_registry_read_v1 via DELETE/INSERT/UPSERT and records successful read audit in security_audit_event_v1. Tenant-scope denial can also audit before normal projection execution."
+      "notes": "GET rebuilds skill_registry_read_v1 via DELETE/INSERT/UPSERT and records successful read audit in security_audit_event_v1. Tenant-scope denial can also audit before normal projection execution.",
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-008",
