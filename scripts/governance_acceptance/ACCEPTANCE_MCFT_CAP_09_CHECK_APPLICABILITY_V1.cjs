@@ -9,14 +9,14 @@ const cp = require("node:child_process");
 const {
   AUTHORITY_PATH,
   REGISTRY_PATH,
-  resolveDependencyResolvers,
-  resolveFailedV4ForbiddenEvidencePolicy,
+  prepareApplicabilityContext,
   planApplicability,
 } = require("./PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs");
 
 const ROOT = path.resolve(__dirname, "../..");
 const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json");
 const CURRENT_HEAD_SHA = cp.execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" }).trim();
+const PREPARED_CONTEXTS = new WeakMap();
 
 function readJson(rel) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8"));
@@ -32,6 +32,26 @@ function byId(plan, id) {
   return row;
 }
 
+function preparedContext(authority, registry) {
+  let byRegistry = PREPARED_CONTEXTS.get(authority);
+  if (!byRegistry) {
+    byRegistry = new WeakMap();
+    PREPARED_CONTEXTS.set(authority, byRegistry);
+  }
+  let prepared = byRegistry.get(registry);
+  if (!prepared) {
+    prepared = prepareApplicabilityContext({
+      root: ROOT,
+      authority,
+      registry,
+      generation: null,
+      headSha: CURRENT_HEAD_SHA,
+    });
+    byRegistry.set(registry, prepared);
+  }
+  return prepared;
+}
+
 function plan(authority, registry, changedPaths, stage = "SUCCESSOR_SUBJECT_PRE_MERGE") {
   return planApplicability({
     root: ROOT,
@@ -41,6 +61,7 @@ function plan(authority, registry, changedPaths, stage = "SUCCESSOR_SUBJECT_PRE_
     stage,
     baseSha: authority.frozen_successor_subject_sha,
     headSha: CURRENT_HEAD_SHA,
+    preparedContext: preparedContext(authority, registry),
   });
 }
 
@@ -90,13 +111,29 @@ function main() {
   assertCheckContract(authority);
 
   // Authority itself must resolve every exact path / import root / external graph now.
-  const resolved = resolveDependencyResolvers(ROOT, authority);
+  const primaryPreparedContext = preparedContext(authority, registry);
+  assert.strictEqual(primaryPreparedContext, preparedContext(authority, registry));
+  assert.throws(
+    () => planApplicability({
+      root: ROOT,
+      authority,
+      registry,
+      changedPaths: [],
+      stage: "SUCCESSOR_SUBJECT_PRE_MERGE",
+      generation: null,
+      baseSha: authority.frozen_successor_subject_sha,
+      headSha: "0".repeat(40),
+      preparedContext: primaryPreparedContext,
+    }),
+    /CONTROL_PLANE_PREPARED_CONTEXT_SUBJECT_MISMATCH/,
+  );
+  const resolved = primaryPreparedContext.resolverResult;
   assert.deepEqual(resolved.errors, [], `CONTROL_PLANE_RESOLVER_ERRORS:${JSON.stringify(resolved.errors)}`);
   for (const [id, row] of Object.entries(resolved.resolved)) {
     assert.equal(row.missing.length, 0, `CONTROL_PLANE_RESOLVER_MISSING:${id}:${JSON.stringify(row.missing)}`);
     assert(row.paths.length > 0, `CONTROL_PLANE_RESOLVER_EMPTY:${id}`);
   }
-  const failedV4Policy = resolveFailedV4ForbiddenEvidencePolicy(ROOT);
+  const failedV4Policy = primaryPreparedContext.failedV4Policy;
   assert.deepEqual(failedV4Policy.errors, [], `FAILED_V4_AUTHORITY_POLICY_ERRORS:${JSON.stringify(failedV4Policy.errors)}`);
   assert(failedV4Policy.subjects.has("26c1383f7f45abb76c99e28ec3d06714e85d1b2c"), "FAILED_V4_SUBJECT_MUST_BE_FORBIDDEN");
 
@@ -828,6 +865,7 @@ function main() {
     acceptance_id: "MCFT_CAP09_CHECK_APPLICABILITY_V1",
     frozen_successor_subject_sha: authority.frozen_successor_subject_sha,
     resolver_count: Object.keys(resolved.resolved).length,
+    prepared_applicability_context_reused_for_same_subject: true,
     all_resolvers_materialized_without_missing_paths: true,
     central_check_contract_complete_and_resolvable: true,
     unimplemented_future_workflows_explicit_without_invented_paths: true,
