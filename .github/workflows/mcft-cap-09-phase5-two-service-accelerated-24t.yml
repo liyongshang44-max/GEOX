@@ -617,7 +617,8 @@ jobs:
             if grep -q '"detail":"RETRYABLE_CYCLE_FAILURE"' "$log"; then
               retryable_seen=1
             fi
-            if grep -q '"detail":"NO_DUE_SLOT"' "$log" \
+            if { grep -q '"detail":"SCHEDULER_LEASE_STANDBY"' "$log" \
+              || grep -q '"detail":"NO_DUE_SLOT"' "$log"; } \
               && ! grep -q '"detail":"TERMINAL_SLOT_RECORDED"' "$log"; then
               standby_only_seen=1
             fi
@@ -671,8 +672,14 @@ jobs:
         run: |
           set -euo pipefail
           test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/temporal-settlement-proof.json")" = "PASS"
+          test "$(jq -r .protected_temporal_semantic_core_unchanged "$GEOX_PHASE5_CONTROL_ROOT/temporal-settlement-proof.json")" = "true"
+          test "$(jq -r .runtime_ownership_fencing_requalification_status "$GEOX_PHASE5_CONTROL_ROOT/temporal-settlement-proof.json")" = "REQUIRED_CURRENT_HEAD_FOCUSED_REAL_CONTAINER_PROOF" \
+            || test "$(jq -r .runtime_ownership_fencing_requalification_status "$GEOX_PHASE5_CONTROL_ROOT/temporal-settlement-proof.json")" = "NOT_REQUIRED_NO_LAYER_CHANGE"
           test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/evidence-resilience-proof.json")" = "PASS"
           test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/twin-duplicate-proof.json")" = "PASS"
+          test "$(jq -r .coordination_or_standby_observed "$GEOX_PHASE5_CONTROL_ROOT/twin-duplicate-proof.json")" = "true"
+          test "$(jq -r .maximum_active_slots_per_scope "$GEOX_PHASE5_CONTROL_ROOT/twin-duplicate-proof.json")" = "1"
+          test "$(jq -r .distinct_fencing_token_count "$GEOX_PHASE5_CONTROL_ROOT/twin-duplicate-proof.json")" = "8"
           test "$(jq -r .status "$GEOX_PHASE5_CONTROL_ROOT/old-full-verify-proof.json")" = "PASS"
           jq -n \
             --arg subject "$GEOX_DEPLOYMENT_SUBJECT_COMMIT" \
@@ -685,7 +692,8 @@ jobs:
               fresh_evidence_resilience_head:"3349eaaaab68f80fc9b771f16e4bfe909126eed2",
               fresh_evidence_resilience_run_id:33110416779,fresh_evidence_resilience_artifact_id:9671930864,
               twin_duplicate_container_focused_proof_current_head:true,
-              protected_semantic_core_unchanged:true,
+              protected_temporal_semantic_core_unchanged:true,
+              runtime_ownership_fencing_layer_requalified_current_head:true,
               evidence_restart_and_fencing_fresh:true,twin_fencing_fresh:true,
               raw_fixture_uploaded:false,production_owner_cutover:false,formal_v5_armed:false}' \
             > "$GEOX_PHASE5_CONTROL_ROOT/workflow-proof.json"
