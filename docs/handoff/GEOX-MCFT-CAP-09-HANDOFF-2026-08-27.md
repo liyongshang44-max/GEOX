@@ -1,22 +1,843 @@
-# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-02 Continuation — V13 Runtime / Qualification-Harness Resolver Settlement Frontier
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-03 Continuation — Non-Live Engineering Closure / Live Activation Frontier
 
 Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
 
-Timestamp: **2026-09-02 22:56 +08:00**
+Timestamp: **2026-09-03 00:48 +08:00**
 
 Repository: liyongshang44-max/GEOX
 
-Purpose: continue the same MCFT-CAP-09 engineering-readiness line after closing the last known non-live Producer qualification-harness debt. The former V13 Producer stale-arm failure was not repaired by moving the arm time or by forcing a new provider call. Instead, the legacy V13 dependency resolver was machine-partitioned into a runtime-semantic closure and a qualification-harness closure; BF1D immutable evidence was projected only onto the proven-stable runtime subset; the Producer workflow now resolves governed applicability before evaluating the live arm; and the live arm/provider path is skipped whenever durable runtime evidence remains valid. The Taskbook Stage 1B completion gate remains unchanged, current T4R1 live activation remains ineligible, and QCP still deliberately fails closed only on EXACT_ONE_PRODUCTION_OWNER.
+Purpose: continue MCFT-CAP-09 after the V13 Producer runtime/qualification-harness migration is complete and current exact-head inventory shows no remaining controllable non-live engineering blocker. The engineering-readiness claim is now machine-qualified, Producer stale-arm debt is settled, and all checks applicable to the current POST_MERGE_V13_QUALIFICATION engineering stage have implementations. The only QCP blocker is live production-owner evidence; the only check still marked NOT_IMPLEMENTED_AT_FROZEN_SUBJECT is FORMAL_V5_ACTIVATION, which is not applicable until POST_GRADUATION_FORMAL_V5_ACTIVATION. KBS/current-season authority, live owner, Formal-v5, A0, and O00–O23 therefore remain on the live activation / Taskbook-completion line and must not be relabeled as unfinished software engineering.
 
-> **This P-section is now the highest-priority conversation continuation in this file.**
+> **This Q-section is now the highest-priority conversation continuation in this file.**
 >
-> The complete O-section immediately below remains intentionally preserved in full as the historical Engineering Readiness / Live Activation Separation frontier.
+> The complete P-section immediately below remains intentionally preserved in full as the historical V13 Runtime / Qualification-Harness Resolver Settlement frontier.
 >
-> O20 described the Producer runtime-vs-harness resolver migration as the next high-value engineering item. That item is now complete and machine-settled by P.
+> P established the resolver migration and stale-arm settlement. Q records the higher-order consequence after a fresh full QCP inventory audit: the controllable non-live MCFT-9 engineering line has no remaining blocker.
 >
-> N, M, L, K, J, I, H, and all earlier sections remain historical evidence and must remain intact.
+> O, N, M, L, K, J, I, H, and all earlier sections remain historical evidence and must remain intact.
 >
 > This handoff does **not** supersede docs/SSOT.md, the Digital Twin Master Task Line, the CAP-09 taskbook, Production Hosting architecture/route, QCP, immutable qualification evidence, accepted CAP-01→08 authorities, T4R1 crop/season authorities, or frozen Formal-store authorities.
+
+---
+
+## Q0. READ THIS FIRST — controllable MCFT-9 engineering line is closed; live activation remains separate
+
+Authoritative product PR:
+
+~~~text
+#3376
+
+title =
+  feat(mcft-cap09): qualify engineering readiness and settle producer harness migration
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+current exact head =
+  bbe66db3406ec903ea2256506d2cf9ea5ff727ae
+
+state =
+  Draft / open / unmerged
+
+mergeable =
+  true
+~~~
+
+Protected main remains:
+
+~~~text
+fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+
+protected =
+  true
+~~~
+
+Current authoritative split:
+
+~~~text
+MCFT-9 non-live engineering blockers =
+  0
+
+engineering readiness =
+  QUALIFIED
+
+allowed engineering claim =
+  MCFT_CAP_09_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_QUALIFIED
+
+Producer stale-arm debt =
+  SETTLED
+
+live activation =
+  NOT_CURRENTLY_ELIGIBLE
+
+current live blocker =
+  EXACT_ONE_PRODUCTION_OWNER
+
+later live sequence =
+  FORMAL_V5_ACTIVATION
+  A0
+  O00–O23
+
+Stage 1B completion =
+  NOT CLAIMED
+~~~
+
+This is the current continuation point.
+
+---
+
+## Q1. Current task in one sentence
+
+**Treat MCFT-CAP-09 controllable non-live engineering work as closed at the current exact head, preserve the qualified engineering-readiness state and settled Producer evidence contract, and keep the remaining production owner / Formal-v5 / A0 / O00–O23 work explicitly on the live activation and Taskbook-completion line.**
+
+Do not reopen engineering work merely because live activation is not currently eligible.
+
+---
+
+## Q2. Why Q exists above P
+
+P completed:
+
+~~~text
+V13 runtime/harness resolver migration
+Producer stale-arm settlement
+BF1D runtime evidence projection
+Producer applicability-before-arm ordering
+~~~
+
+Q adds the subsequent full current-QCP inventory audit.
+
+That audit asked:
+
+~~~text
+After Producer migration,
+is there any remaining current-stage engineering check
+that is still not implemented?
+~~~
+
+Answer:
+
+~~~text
+NO
+~~~
+
+All checks applicable to the current engineering stage:
+
+~~~text
+POST_MERGE_V13_QUALIFICATION
+~~~
+
+have implemented execution surfaces.
+
+The only check still marked:
+
+~~~text
+NOT_IMPLEMENTED_AT_FROZEN_SUBJECT
+~~~
+
+is:
+
+~~~text
+FORMAL_V5_ACTIVATION
+~~~
+
+and it applies only to:
+
+~~~text
+POST_GRADUATION_FORMAL_V5_ACTIVATION
+~~~
+
+Therefore FORMAL_V5_ACTIVATION is not a current non-live engineering blocker.
+
+---
+
+## Q3. Current exact-head machine status
+
+At:
+
+~~~text
+#3376 @ bbe66db3406ec903ea2256506d2cf9ea5ff727ae
+~~~
+
+confirmed exact-head results:
+
+~~~text
+CI
+  run 33639980519
+  SUCCESS
+
+planner-readiness
+  run 33639980526
+  SUCCESS
+
+Producer
+  run 33639980552
+  SUCCESS
+
+QCP
+  run 33639980586
+  deliberate FAIL-CLOSED
+  blocker_count = 1
+  only blocker = EXACT_ONE_PRODUCTION_OWNER
+
+post-merge control plane
+  run 33639980638
+  SUCCESS
+~~~
+
+Required repository delivery checks on this exact head are green.
+
+---
+
+## Q4. Producer stale-arm debt is fully settled
+
+Current Producer run:
+
+~~~text
+33639980552
+~~~
+
+conclusion:
+
+~~~text
+SUCCESS
+~~~
+
+Machine applicability:
+
+~~~text
+live_required =
+  false
+
+reason_code =
+  DURABLE_REQUALIFICATION_EVIDENCE_AND_DEPENDENCY_DIGEST_VALID
+
+evidence_id =
+  V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F_RUNTIME_PROJECTION_V1
+~~~
+
+Execution behavior:
+
+~~~text
+governed applicability =
+  SUCCESS
+
+durable evidence acceptance =
+  SUCCESS
+
+live arm freshness check =
+  SKIPPED
+
+live arm requirement =
+  SKIPPED
+
+qualification DB setup =
+  SKIPPED
+
+live provider qualification =
+  NOT RUN
+
+live proof upload =
+  SKIPPED
+~~~
+
+No provider request was required.
+
+Do not reopen stale-arm work unless runtime/harness semantics actually drift.
+
+---
+
+## Q5. Runtime/harness migration proof remains exact
+
+Migration proof:
+
+~~~text
+legacy resolver paths =
+  124
+
+runtime semantic closure =
+  108
+
+legacy harness subset =
+  16
+
+108 + 16 =
+  exact legacy 124-path partition
+
+runtime/harness overlap =
+  0
+~~~
+
+Current harness closure contains 20 paths:
+
+~~~text
+16 =
+  exact legacy harness subset
+
+4 =
+  post-migration governance/proof additions
+~~~
+
+The runtime set contains no workflow/QCP/qualification-script path.
+
+This is the structural basis for preventing harness aging from invalidating unchanged runtime semantics.
+
+---
+
+## Q6. BF1D projection remains evidence-preserving, not evidence laundering
+
+Historical BF1D source evidence remains immutable:
+
+~~~text
+V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F
+
+subject =
+  bf1d345f925f543779718973f8c9419684498e2a
+
+run =
+  33605700840
+
+legacy dependency digest =
+  sha256:db6bbfe41052d262481bb2a911cbe1501247c32ed111daa2af0b8ab5c58088b3
+~~~
+
+Migration exact values:
+
+~~~text
+BF1D runtime path digest =
+  sha256:8374cf46dd3e40768de512b7c89319b8913c5de61affeb6a8378e7a81cdc7d25
+
+current runtime path digest =
+  sha256:8374cf46dd3e40768de512b7c89319b8913c5de61affeb6a8378e7a81cdc7d25
+
+runtime semantic drift =
+  0
+~~~
+
+Projected Producer evidence:
+
+~~~text
+V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F_RUNTIME_PROJECTION_V1
+~~~
+
+Projection does not authorize a new live claim.
+
+---
+
+## Q7. Current QCP blocker inventory is clean except live owner
+
+Current QCP:
+
+~~~text
+run =
+  33639980586
+
+conclusion =
+  FAILURE
+  deliberate fail-closed
+
+artifact_id =
+  9850540007
+
+artifact_digest =
+  sha256:cc86dbc95c56ef90e7246833242f0760adf1576fbd6151bbe869a6f7dfe14e87
+~~~
+
+Machine inventory:
+
+~~~text
+planner =
+  PASS
+
+unknown_changed_paths =
+  0
+
+authority_errors =
+  0
+
+resolver_errors =
+  0
+
+Producer =
+  PASS
+
+blocker_count =
+  1
+
+only blocker =
+  EXACT_ONE_PRODUCTION_OWNER
+~~~
+
+The single blocker is not evidence of unfinished engineering implementation.
+
+It is a live production-owner evidence requirement.
+
+---
+
+## Q8. Full current QCP check inventory — current-stage implementation closure
+
+Current QCP defines these checks:
+
+~~~text
+CONTROL_PLANE_INTEGRITY
+V13_AUTONOMOUS_FORCING_FOUNDATION
+V13_HOLISTIC_SCHEMA
+V13_NEXT_TICK_VIABILITY
+EA5C1_DURABLE_RAW_RESTRICTED_INGRESS
+EA5E2_RUNTIME_DEPENDENCY_GRAPH
+LEGACY_AM19_PERSISTENT_24T
+PHASE1_TYPED_RUNTIME_COMPOSITION
+PHASE2_EVIDENCE_PROVIDER_MODULES
+PHASE3_EVIDENCE_RUNTIME_FOUNDATION
+PHASE4_TWIN_RUNTIME_FOUNDATION
+PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS
+PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION
+V13_PRODUCER_DRIVEN_QUALIFICATION
+END_TO_END_EVIDENCE_SUPPLY_DEADLINE
+EXACT_ONE_PRODUCTION_OWNER
+FORMAL_V5_ACTIVATION
+V13_RUNTIME_HARNESS_RESOLVER_MIGRATION
+~~~
+
+For the current:
+
+~~~text
+POST_MERGE_V13_QUALIFICATION
+~~~
+
+stage, every applicable engineering check has an implemented workflow/control surface.
+
+No current applicable check remains marked not implemented.
+
+---
+
+## Q9. FORMAL_V5_ACTIVATION is the only not-implemented frozen-subject check — and is future-stage only
+
+QCP entry:
+
+~~~text
+check_id =
+  FORMAL_V5_ACTIVATION
+
+execution_workflow =
+  null
+
+execution_workflow_status =
+  NOT_IMPLEMENTED_AT_FROZEN_SUBJECT
+
+fail_policy =
+  FAIL_CLOSED_UNTIL_POST_GRADUATION_ACTIVATION_AUTHORIZED
+~~~
+
+Applicable stages:
+
+~~~text
+POST_GRADUATION_FORMAL_V5_ACTIVATION
+~~~
+
+Not applicable to:
+
+~~~text
+SUCCESSOR_SUBJECT_PRE_MERGE
+POST_MERGE_V13_QUALIFICATION
+~~~
+
+Therefore:
+
+~~~text
+FORMAL_V5_ACTIVATION =
+  future live activation implementation/activation work
+
+FORMAL_V5_ACTIVATION !=
+  current non-live engineering-readiness blocker
+~~~
+
+Do not pull it backward into the completed engineering line.
+
+---
+
+## Q10. EXACT_ONE_PRODUCTION_OWNER is implemented but lacks live evidence
+
+QCP entry:
+
+~~~text
+check_id =
+  EXACT_ONE_PRODUCTION_OWNER
+
+execution_workflow_status =
+  IMPLEMENTED_AT_SUCCESSOR_HEAD
+
+fail_policy =
+  FAIL_CLOSED_UNTIL_EXACT_ONE_OWNER_AND_RETIRED_TRIGGER_ZERO_PROVEN
+~~~
+
+Applicable stages:
+
+~~~text
+POST_MERGE_V13_QUALIFICATION
+POST_GRADUATION_FORMAL_V5_ACTIVATION
+~~~
+
+Current blocker reason:
+
+~~~text
+NO_VALID_REQUALIFICATION_EVIDENCE
+~~~
+
+This means:
+
+~~~text
+owner gate implementation exists
+
+but current live owner proof does not exist
+~~~
+
+It does not mean the owner gate software is unimplemented.
+
+---
+
+## Q11. Engineering readiness remains qualified
+
+Canonical claim:
+
+~~~text
+MCFT_CAP_09_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_QUALIFIED
+~~~
+
+Current meaning remains bounded to controllable mechanisms:
+
+- runtime composition;
+- Evidence/Twin persistence;
+- production-equivalent 24T;
+- duplicate/restart/fencing;
+- semantic-core no-drift;
+- runtime independence;
+- V13 runtime qualification;
+- Producer durable evidence;
+- planner/source-progress readiness;
+- QCP/applicability integrity;
+- runtime/harness dependency governance;
+- live-authority fail-closed behavior.
+
+It still does not claim real current T4R1 production activation.
+
+---
+
+## Q12. Non-live engineering blockers are now explicitly zero
+
+Fresh current inventory conclusion:
+
+~~~text
+MCFT-9 non-live engineering blockers =
+  0
+~~~
+
+This conclusion is supported by:
+
+1. engineering-readiness exact-head SUCCESS;
+2. Producer stale-arm debt settlement;
+3. runtime/harness migration PASS;
+4. no current applicable QCP check lacking implementation;
+5. QCP authority/resolver/unknown-path errors = 0;
+6. current exact CI = SUCCESS;
+7. current exact planner = SUCCESS;
+8. current exact Producer = SUCCESS;
+9. remaining owner blocker being live evidence, not missing code;
+10. FORMAL_V5_ACTIVATION being future-stage-only.
+
+Do not invent a new non-live blocker merely because the live line is incomplete.
+
+---
+
+## Q13. Live activation remains deliberately incomplete
+
+Current live state:
+
+~~~text
+live_activation =
+  NOT_CURRENTLY_ELIGIBLE
+~~~
+
+Still true:
+
+~~~text
+current T4R1 stage authority =
+  not established
+
+current natural-season successor =
+  not established
+
+viable future Formal/A0 window =
+  false
+
+runtime_start_authority_may_be_armed =
+  false
+
+production owner active =
+  false
+
+Formal-v5 =
+  not activated
+
+A0 =
+  not bootstrapped
+
+O00–O23 =
+  not executed
+~~~
+
+This is now clearly a different lane from non-live engineering readiness.
+
+---
+
+## Q14. Remaining live sequence
+
+Current remaining live sequence is:
+
+~~~text
+material current-season authority
+        ↓
+new viable Formal/A0 window
+        ↓
+separate runtime-start authority
+        ↓
+exact-two production services
+        ↓
+live fenced owner readback
+        ↓
+EXACT_ONE_PRODUCTION_OWNER
+        ↓
+POST_GRADUATION_FORMAL_V5_ACTIVATION
+        ↓
+Formal-v5
+        ↓
+A0
+        ↓
+O00–O23
+        ↓
+final exact-SHA / R2 effectiveness
+        ↓
+STAGE_1B_SHADOW_ONLINE_CLOSURE_COMPLETE
+MCFT_CAP_09_COMPLETE
+~~~
+
+Nothing in the Q-section authorizes skipping this sequence.
+
+---
+
+## Q15. KBS/current-season evidence is operational activation input, not software-delivery input
+
+The corrected project interpretation is:
+
+~~~text
+KBS/current-season provider authority may block =
+  LIVE ACTIVATION
+
+KBS/current-season provider authority may block =
+  NOT NON-LIVE ENGINEERING READINESS
+~~~
+
+Therefore the existing KBS evidence monitor remains useful for reopening live activation.
+
+It must not be used to label MCFT-9 software development unfinished while no controllable engineering blocker exists.
+
+---
+
+## Q16. What is complete vs what is not complete
+
+Complete / qualified:
+
+~~~text
+production-equivalent engineering readiness
+runtime/harness evidence migration
+Producer stale-arm debt
+current-stage check implementation coverage
+current-stage planner/QCP control semantics
+current-stage CI/delivery qualification
+~~~
+
+Not complete / not claimed:
+
+~~~text
+current T4R1 live activation
+production owner graduation
+Formal-v5 activation
+A0
+O00–O23
+Stage 1B closure
+MCFT_CAP_09_COMPLETE
+MINIMUM_COMPLETE_FIELD_TWIN_COMPLETE
+~~~
+
+Do not collapse these categories.
+
+---
+
+## Q17. Pitfalls already hit — avoid repeating them
+
+### Q17.1 Do not use uncontrollable external publication cadence as a software engineering blocker
+
+The absence of new KBS T4R1 evidence is not a legitimate reason to keep controllable engineering work open.
+
+### Q17.2 Do not relabel live-owner evidence absence as missing implementation
+
+EXACT_ONE_PRODUCTION_OWNER workflow is implemented.
+
+The missing item is live proof.
+
+### Q17.3 Do not pull FORMAL_V5_ACTIVATION into the current stage
+
+It is explicitly applicable only after production-owner graduation.
+
+### Q17.4 Do not reopen Producer stale-arm work
+
+The migration is settled and current Producer is SUCCESS without live rerun.
+
+### Q17.5 Do not recombine harness paths into runtime semantic digest
+
+That would recreate the stale-arm/evidence invalidation defect.
+
+### Q17.6 Do not call BF1D projection a new live qualification
+
+It is a stable-runtime-subset evidence projection with exact migration proof.
+
+### Q17.7 Do not manufacture engineering work just because Stage 1B is not complete
+
+Stage 1B remaining work is live activation/completion work.
+
+### Q17.8 Do not infer live authority from engineering qualification
+
+Production-equivalent proof never becomes current T4R1 authority.
+
+### Q17.9 Do not cross-season stitch or infer stage from elapsed time
+
+Those prohibitions remain unchanged.
+
+### Q17.10 Do not enter B-Line
+
+Commercial authority repair and semantic-debt work remain outside MCFT ownership.
+
+---
+
+## Q18. First actions in the next conversation
+
+Before any write:
+
+1. verify #3376 still equals bbe66db3406ec903ea2256506d2cf9ea5ff727ae or reconstruct all descendants;
+2. verify #3298 contains this Q-section and remains docs-only;
+3. verify protected main remains fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8;
+4. verify Producer current evidence remains the BF1D runtime projection and live_required=false;
+5. verify runtime/harness migration still PASS;
+6. verify QCP remains authority/resolver/unknown-path clean;
+7. verify any new QCP blocker is classified as engineering vs live before acting;
+8. do not reopen non-live engineering unless a real controllable regression appears;
+9. continue live activation only when its authority prerequisites become valid;
+10. preserve the Taskbook Stage 1B completion gate exactly.
+
+---
+
+## Q19. Current decision rule for new findings
+
+For every new finding, classify it first:
+
+~~~text
+A. CONTROLLABLE NON-LIVE ENGINEERING DEFECT
+B. LIVE ACTIVATION / REAL-WORLD EVIDENCE CONDITION
+C. FUTURE POST-GRADUATION FORMAL WORK
+D. B-LINE / OUT-OF-SCOPE
+~~~
+
+Only category A reopens MCFT-9 engineering readiness.
+
+Current known remaining items classify as:
+
+~~~text
+EXACT_ONE_PRODUCTION_OWNER =
+  B
+
+current T4R1 authority =
+  B
+
+new viable Formal/A0 window =
+  B
+
+FORMAL_V5_ACTIVATION =
+  C
+
+A0 / O00–O23 =
+  B/C live completion sequence
+
+Commercial/B-Line repair =
+  D
+~~~
+
+No current known item is category A.
+
+---
+
+## Q20. Bottom line
+
+At the current exact product head:
+
+~~~text
+#3376 @ bbe66db3406ec903ea2256506d2cf9ea5ff727ae
+
+MCFT-9 non-live engineering blockers =
+  0
+
+engineering readiness =
+  QUALIFIED
+
+allowed engineering claim =
+  MCFT_CAP_09_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_QUALIFIED
+
+Producer stale-arm debt =
+  SETTLED
+
+runtime/harness migration =
+  PASS
+
+Producer =
+  SUCCESS
+  33639980552
+  live_required=false
+  live arm skipped
+  provider NOT RUN
+
+planner =
+  SUCCESS
+  33639980526
+
+QCP =
+  deliberate fail-closed
+  33639980586
+  authority_errors=0
+  resolver_errors=0
+  unknown_changed_paths=0
+  blocker_count=1
+  EXACT_ONE_PRODUCTION_OWNER
+
+CI =
+  SUCCESS
+  33639980519
+
+current-stage unimplemented engineering checks =
+  0
+
+only NOT_IMPLEMENTED_AT_FROZEN_SUBJECT check =
+  FORMAL_V5_ACTIVATION
+  applicable only to POST_GRADUATION_FORMAL_V5_ACTIVATION
+
+live activation =
+  NOT_CURRENTLY_ELIGIBLE
+
+Stage 1B =
+  NOT COMPLETE
+~~~
+
+The current boundary is therefore:
+
+**the controllable MCFT-9 engineering line is closed; the remaining work is the live activation / Taskbook-completion line.**
 
 ---
 
