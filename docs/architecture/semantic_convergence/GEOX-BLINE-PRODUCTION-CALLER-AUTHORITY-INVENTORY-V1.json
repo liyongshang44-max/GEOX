@@ -10861,6 +10861,148 @@
       "notes": "Updates agronomy signal snapshot projection from telemetry/binding inputs; no decision authority.",
       "tenant_binding_class": "ROW_TENANT_DERIVED",
       "tenant_binding_detail": "writer consumes explicit request/row/service graph scope; not DB-principal tenant isolation"
+    },
+    {
+      "writer_id": "BRUNTIME-028",
+      "source_path": "scripts/loadfact.ts",
+      "entry_symbol": "main",
+      "activation_root": "commercial.server admin import → registerAdminImportModule → ts-node scripts/loadfact.ts",
+      "activation_mode": "COMMERCIAL_ADMIN_CAF_SUBPROCESS",
+      "write_class": "FACT_LEDGER_AND_OPTIONAL_RAW_SAMPLE_IMPORT_WRITER",
+      "principal_type": "SERVER_SPAWNED_DATABASE_SUBPROCESS",
+      "write_targets": [
+        "facts",
+        "raw_samples when --writeRawSamples enabled"
+      ],
+      "current_disposition": "KEEP_INVENTORIED_LEGACY_ADMIN_IMPORT_NO_AUTH_REPAIR",
+      "tenant_binding_class": "NO_TENANT_SEMANTIC_SCOPE",
+      "tenant_binding_detail": "Loader consumes CAF rows and DATABASE_URL; no application auth-context tenant boundary is established inside loadfact.ts.",
+      "notes": "Inventory-only. Authentication/CAF import hardening is explicitly outside PR-SEC-1."
+    },
+    {
+      "writer_id": "BRUNTIME-029",
+      "source_path": "apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts",
+      "entry_symbol": "grantFrozenRuntimeBaselineV1",
+      "activation_root": "commercial.database-platform-bootstrap → generated database/platform_bootstrap.js → runMcftCap07DatabasePlatformBootstrapFromEnvironmentV1",
+      "activation_mode": "FOREIGN_MCFT_DATABASE_PLATFORM_BOOTSTRAP",
+      "write_class": "DATABASE_PRIVILEGE_AND_DEFAULT_PRIVILEGE_WRITER",
+      "principal_type": "MCFT_DATABASE_PLATFORM_ADMIN_CREDENTIAL",
+      "write_targets": [
+        "database CONNECT grants",
+        "public schema grants",
+        "public table/sequence/function grants",
+        "ALTER DEFAULT PRIVILEGES"
+      ],
+      "current_disposition": "FOREIGN_MCFT_NO_BLINE_CHANGE",
+      "tenant_binding_class": "FOREIGN_MCFT",
+      "tenant_binding_detail": "Global database privilege bootstrap; not a row tenant-binding mechanism.",
+      "notes": "Dynamic GRANT SQL is generated via pg_catalog.format and executed. B-Line records the real broad geox_runtime_v1 baseline only; CAP-07 implementation remains foreign."
+    },
+    {
+      "writer_id": "BRUNTIME-030",
+      "source_path": "apps/server/src/infra/runtime_schema_compatibility_bootstrap_v1.ts",
+      "entry_symbol": "ensureRuntimeSchemaCompatibilityV1",
+      "activation_root": "commercial.database-platform-bootstrap → generated database/platform_bootstrap.js → runRuntimeSchemaCompatibilityBootstrapFromEnvironmentV1",
+      "activation_mode": "DATABASE_PLATFORM_COMPATIBILITY_BOOTSTRAP",
+      "write_class": "SCHEMA_AND_PROJECTION_COMPATIBILITY_WRITER",
+      "principal_type": "DATABASE_PLATFORM_ADMIN_CREDENTIAL",
+      "write_targets": [
+        "worker_runtime_heartbeat_v1",
+        "jobs",
+        "evidence_export_job_index_v1",
+        "evidence_pack_index_v1",
+        "derived_sensing_state_index_v1",
+        "agronomy_inference_result_v1",
+        "agronomy_inference_index_v1",
+        "agronomy_observation_index_v1",
+        "field_season_index_v1",
+        "alert_rule_index_v1",
+        "alert_notification_index_v1",
+        "alert_actions_v1",
+        "alert_workflow_v1",
+        "operation_workflow_v1",
+        "alert_operation_relation_v1"
+      ],
+      "current_disposition": "KEEP_COMPATIBILITY_BOOTSTRAP_INVENTORY_ONLY",
+      "tenant_binding_class": "GLOBAL_BOOTSTRAP",
+      "tenant_binding_detail": "Global schema/projection bootstrap using GEOX_DB_PLATFORM_ADMIN_DATABASE_URL; no per-tenant DB isolation implied."
+    },
+    {
+      "writer_id": "BRUNTIME-031",
+      "source_path": "apps/server/src/infra/runtime_dispatch_queue_bootstrap_v1.ts",
+      "entry_symbol": "ensureRuntimeDispatchQueueSchemaV1",
+      "activation_root": "commercial.database-platform-bootstrap → generated database/platform_bootstrap.js → runRuntimeDispatchQueueBootstrapFromEnvironmentV1",
+      "activation_mode": "DATABASE_PLATFORM_COMPATIBILITY_BOOTSTRAP",
+      "write_class": "SCHEMA_AND_PROJECTION_COMPATIBILITY_WRITER",
+      "principal_type": "DATABASE_PLATFORM_ADMIN_CREDENTIAL",
+      "write_targets": [
+        "dispatch_queue_v1"
+      ],
+      "current_disposition": "KEEP_COMPATIBILITY_BOOTSTRAP_INVENTORY_ONLY",
+      "tenant_binding_class": "GLOBAL_BOOTSTRAP",
+      "tenant_binding_detail": "Global dispatch queue schema/backfill bootstrap; not tenant isolation."
+    },
+    {
+      "writer_id": "BRUNTIME-032",
+      "source_path": "apps/server/src/infra/runtime_device_status_compatibility_bootstrap_v1.ts",
+      "entry_symbol": "ensureRuntimeDeviceStatusCompatibilityV1",
+      "activation_root": "commercial.database-platform-bootstrap → generated database/platform_bootstrap.js → runRuntimeDeviceStatusCompatibilityBootstrapFromEnvironmentV1",
+      "activation_mode": "DATABASE_PLATFORM_COMPATIBILITY_BOOTSTRAP",
+      "write_class": "SCHEMA_COMPATIBILITY_WRITER",
+      "principal_type": "DATABASE_PLATFORM_ADMIN_CREDENTIAL",
+      "write_targets": [
+        "device_status_index_v1"
+      ],
+      "current_disposition": "KEEP_COMPATIBILITY_BOOTSTRAP_INVENTORY_ONLY",
+      "tenant_binding_class": "GLOBAL_BOOTSTRAP",
+      "tenant_binding_detail": "Global device-status compatibility schema bootstrap."
+    },
+    {
+      "writer_id": "BRUNTIME-033",
+      "source_path": "apps/server/src/infra/runtime_skill_registry_compatibility_bootstrap_v1.ts",
+      "entry_symbol": "ensureRuntimeSkillRegistryCompatibilityV1",
+      "activation_root": "commercial.database-platform-bootstrap → generated database/platform_bootstrap.js → runRuntimeSkillRegistryCompatibilityBootstrapFromEnvironmentV1",
+      "activation_mode": "DATABASE_PLATFORM_COMPATIBILITY_BOOTSTRAP",
+      "write_class": "SCHEMA_COMPATIBILITY_WRITER",
+      "principal_type": "DATABASE_PLATFORM_ADMIN_CREDENTIAL",
+      "write_targets": [
+        "skill_registry_read_v1"
+      ],
+      "current_disposition": "KEEP_COMPATIBILITY_BOOTSTRAP_INVENTORY_ONLY",
+      "tenant_binding_class": "GLOBAL_BOOTSTRAP",
+      "tenant_binding_detail": "Global skill-registry compatibility schema bootstrap."
+    },
+    {
+      "writer_id": "BRUNTIME-034",
+      "source_path": "apps/server/src/infra/runtime_field_fertility_compatibility_bootstrap_v1.ts",
+      "entry_symbol": "ensureRuntimeFieldFertilityCompatibilityV1",
+      "activation_root": "commercial.database-platform-bootstrap → generated database/platform_bootstrap.js → runRuntimeFieldFertilityCompatibilityBootstrapFromEnvironmentV1",
+      "activation_mode": "DATABASE_PLATFORM_COMPATIBILITY_BOOTSTRAP",
+      "write_class": "SCHEMA_COMPATIBILITY_WRITER",
+      "principal_type": "DATABASE_PLATFORM_ADMIN_CREDENTIAL",
+      "write_targets": [
+        "field_fertility_state_v1"
+      ],
+      "current_disposition": "KEEP_COMPATIBILITY_BOOTSTRAP_INVENTORY_ONLY",
+      "tenant_binding_class": "GLOBAL_BOOTSTRAP",
+      "tenant_binding_detail": "Global fertility compatibility schema bootstrap; not MCFT canonical State."
+    },
+    {
+      "writer_id": "BRUNTIME-035",
+      "source_path": "apps/server/src/infra/mcft_cap07_startup_migration_runner_v1.ts",
+      "entry_symbol": "runMcftCap07StartupMigrationRunnerV1",
+      "activation_root": "commercial.mcft-cap07-migration → generated database/mcft_cap07_migration.js → runMcftCap07StartupMigrationFromEnvironmentV1",
+      "activation_mode": "FOREIGN_MCFT_ONE_SHOT_DYNAMIC_MIGRATION_WRITER",
+      "write_class": "DYNAMIC_REGISTERED_MIGRATION_AND_LEDGER_WRITER",
+      "principal_type": "MCFT_MIGRATION_SERVICE",
+      "write_targets": [
+        "registered MCFT CAP-07 migration SQL objects",
+        "geox_schema_migration_ledger_v1"
+      ],
+      "current_disposition": "FOREIGN_MCFT_NO_BLINE_CHANGE",
+      "tenant_binding_class": "FOREIGN_MCFT",
+      "tenant_binding_detail": "Global migration authority under GEOX_MIGRATION_DATABASE_URL/geox_mcft_migrator_v1; not B-Line tenant authority.",
+      "notes": "Registered migration SQL is dynamically loaded and executed; verifyPhysicalContractV1 itself is SELECT-only and must not be classified as a writer."
     }
   ],
   "startup_mutation_dispositions": [
@@ -11720,5 +11862,18 @@
       "cross_tenant_data_mixing_proven": false,
       "semantic_ceiling": "LEGACY_AGRONOMY_SIGNAL_ONLY"
     }
-  }
+  },
+  "startup_check_dispositions": [
+    {
+      "check_id": "BSTART-CHECK-001",
+      "source_path": "apps/server/src/infra/mcft_cap07_runtime_startup_preflight_v1.ts",
+      "entry_symbol": "inspectVisibilityContractV1",
+      "activation_root": "commercial.server runtime startup preflight",
+      "classification": "PURE_STARTUP_CHECK",
+      "principal_type": "MCFT_RUNTIME_DATABASE_PRINCIPAL",
+      "persistent_targets": [],
+      "current_disposition": "FOREIGN_MCFT_READ_ONLY_PREFLIGHT_NO_BLINE_CHANGE",
+      "notes": "SELECT-only read-only transaction. Privilege strings contain INSERT/UPDATE/DELETE/TRUNCATE as data and are not executed DML."
+    }
+  ]
 }
