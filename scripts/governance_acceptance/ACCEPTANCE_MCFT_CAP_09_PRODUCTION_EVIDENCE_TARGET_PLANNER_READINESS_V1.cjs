@@ -105,7 +105,8 @@ try {
   includes(sourceProgress, "MCFT_CAP09_KBS_SOIL_ORIGIN_SOURCE_ID_V1", "SOIL_LATEST_PROGRESS_REQUIRED");
 
   const horizonAuthority = json(authority.acquisition_horizon_authority_ref);
-  assert.equal(horizonAuthority.status, "ENTRYPOINT_BOUND_RUNTIME_START_BLOCKED_CURRENT_T4R1_FORMAL_WINDOW_EXPIRED");
+  assert.equal(horizonAuthority.status, "ENGINEERING_READINESS_QUALIFIED_LIVE_ACTIVATION_BLOCKED_CURRENT_T4R1_AUTHORITY_UNRESOLVED");
+  assert.equal(horizonAuthority.stage, "POST_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_PRE_LIVE_ACTIVATION");
   assert.equal(horizonAuthority.decisive_ruling.activation_fence_source, "SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY");
   assert.equal(horizonAuthority.decisive_ruling.activation_fence_may_come_from_wall_clock_alone, false);
   assert.equal(horizonAuthority.decisive_ruling.formal_forcing_budget_may_define_bootstrap_horizon, false);
@@ -125,6 +126,172 @@ try {
   assert.equal(horizonAuthority.bootstrap_policy.kbs_soil.minimum_poll_interval_seconds, 300);
   assert.equal(horizonAuthority.restart_policy.bootstrap_rewind_authorized, false);
   assert.equal(horizonAuthority.runtime_start_binding.active_horizon_instance_bound, false);
+
+  const separation = horizonAuthority.engineering_readiness_live_activation_separation;
+  assert.equal(separation.schema_version, "geox_mcft_cap09_engineering_readiness_live_activation_separation_v1");
+  assert.equal(separation.status, "QUALIFIED_ENGINEERING_READINESS_LIVE_ACTIVATION_NOT_CURRENTLY_ELIGIBLE");
+  assert.equal(separation.authority_role, "ENGINEERING_READINESS_ONLY_NOT_STAGE1B_COMPLETION_NOT_LIVE_ACTIVATION");
+  assert.equal(separation.evidence_frontier_parent_sha, "3a83b76450b5459bde8d1d56234e5bba80b49398");
+  assert.equal(separation.ruling.software_implementation_qualification_is_distinct_from_operational_activation_qualification, true);
+  assert.equal(separation.ruling.uncontrollable_third_party_provider_availability_may_block_engineering_readiness, false);
+  assert.equal(separation.ruling.uncontrollable_third_party_provider_availability_may_block_live_activation, true);
+  assert.equal(separation.ruling.kbs_material_provider_change_is_engineering_blocker, false);
+  assert.equal(separation.ruling.kbs_material_provider_change_is_live_activation_gate, true);
+  assert.equal(separation.ruling.synthetic_or_fixture_evidence_may_be_promoted_to_real_t4r1_authority, false);
+  assert.equal(separation.ruling.cross_season_stitching_authorized, false);
+  assert.equal(separation.ruling.taskbook_stage1b_completion_gate_changed, false);
+  assert.equal(separation.engineering_readiness.status, "QUALIFIED");
+  assert.equal(
+    separation.engineering_readiness.allowed_claim,
+    "MCFT_CAP_09_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_QUALIFIED",
+  );
+  assert.equal(
+    separation.engineering_readiness.claim_scope,
+    "CONTROLLABLE_SOFTWARE_RUNTIME_GOVERNANCE_AND_PRODUCTION_EQUIVALENT_MECHANISMS",
+  );
+  assert.equal(separation.engineering_readiness.protected_semantic_core.baseline_subject_sha, "12473c491b354e49305f22bfa24c8701ce5e3ff9");
+  assert.equal(separation.engineering_readiness.protected_semantic_core.path_count, 15);
+  assert.equal(separation.engineering_readiness.protected_semantic_core.all_paths_unchanged_to_current_subject_required, true);
+
+  const taskbook = read("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md");
+  includes(taskbook, "Allowed claim only after S6 O00–O23 plus final exact-SHA/R2 effectiveness", "ENGINEERING_READINESS_TASKBOOK_COMPLETION_BOUNDARY_REQUIRED");
+  includes(taskbook, "STAGE_1B_SHADOW_ONLINE_CLOSURE_COMPLETE", "ENGINEERING_READINESS_STAGE1B_CLAIM_MUST_REMAIN_TASKBOOK_GOVERNED");
+  includes(taskbook, "MCFT_CAP_09_COMPLETE", "ENGINEERING_READINESS_CAP09_COMPLETE_CLAIM_MUST_REMAIN_TASKBOOK_GOVERNED");
+
+  const amendment08 = read(horizonAuthority.authority_basis.amendment08_implementation_activation_separation_ref);
+  includes(amendment08, "software implementation qualification", "ENGINEERING_READINESS_AMENDMENT08_IMPLEMENTATION_SEPARATION_REQUIRED");
+  includes(amendment08, "operational activation qualification", "ENGINEERING_READINESS_AMENDMENT08_ACTIVATION_SEPARATION_REQUIRED");
+  includes(amendment08, "EA5E2_IMPLEMENTATION_QUALIFIED", "ENGINEERING_READINESS_AMENDMENT08_IMPLEMENTATION_CLAIM_REQUIRED");
+  includes(amendment08, "EA5E2_OPERATIONAL_ACTIVATION_QUALIFIED", "ENGINEERING_READINESS_AMENDMENT08_ACTIVATION_CLAIM_REQUIRED");
+  const postActivation = json(horizonAuthority.authority_basis.post_activation_readiness_audit_ref);
+  assert.equal(postActivation.current_effective_state.ea5e2_implementation_qualified, true);
+  assert.equal(postActivation.current_effective_state.ea5e2_operational_activation_runner_qualified, true);
+  assert.equal(postActivation.current_effective_state.ea5e2_operational_activation_qualified, false);
+
+  const phase5SettlementScript = read(horizonAuthority.authority_basis.phase5_temporal_settlement_ref);
+  includes(phase5SettlementScript, 'const OLD_FULL_HEAD = "12473c491b354e49305f22bfa24c8701ce5e3ff9"', "ENGINEERING_READINESS_PHASE5_FULL24_HEAD_REQUIRED");
+  includes(phase5SettlementScript, 'const OLD_FULL_RUN_ID = 33101400822', "ENGINEERING_READINESS_PHASE5_FULL24_RUN_REQUIRED");
+  includes(phase5SettlementScript, 'const OLD_FULL_ARTIFACT_ID = 9659440229', "ENGINEERING_READINESS_PHASE5_FULL24_ARTIFACT_REQUIRED");
+  includes(phase5SettlementScript, 'const EVIDENCE_RESILIENCE_RUN_ID = 33110416779', "ENGINEERING_READINESS_PHASE5_RESILIENCE_RUN_REQUIRED");
+  includes(phase5SettlementScript, 'const EVIDENCE_RESILIENCE_ARTIFACT_ID = 9671930864', "ENGINEERING_READINESS_PHASE5_RESILIENCE_ARTIFACT_REQUIRED");
+
+  const protectedSemanticCore = [
+    "apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts",
+    "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v3.ts",
+    "apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v3.ts",
+    "apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.ts",
+    "apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_persistent_tick_service_v1.ts",
+    "apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts",
+    "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts",
+    "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts",
+    "apps/server/src/runtime/twin_runtime/postgres_external_formal_amendment19_evidence_source_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.ts",
+    "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.ts",
+    "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_verify_24t_v1.ts",
+  ];
+  assert.equal(protectedSemanticCore.length, 15);
+  for (const protectedPath of protectedSemanticCore) {
+    const changed = cp.execFileSync(
+      "git",
+      ["diff", "--name-only", "12473c491b354e49305f22bfa24c8701ce5e3ff9.." + subject, "--", protectedPath],
+      { encoding: "utf8" },
+    ).trim();
+    assert.equal(changed, "", "ENGINEERING_READINESS_PROTECTED_SEMANTIC_CORE_DRIFT:" + protectedPath);
+  }
+
+  for (const evidenceSubject of [
+    "12473c491b354e49305f22bfa24c8701ce5e3ff9",
+    "3349eaaaab68f80fc9b771f16e4bfe909126eed2",
+    "48ceafe7c6e7d3d57a1dc17411fb4bf673486333",
+    "776ba8381608cb906f68b57a56fc9aef6258cc52",
+    "bf1d345f925f543779718973f8c9419684498e2a",
+    "60e4fd93c9dff017fd0d62967fad17a49383f12e",
+    "d631d20b3a2a0c179ba2ed98dd827e3e6431f6db",
+    "3a83b76450b5459bde8d1d56234e5bba80b49398",
+  ]) cp.execFileSync("git", ["merge-base", "--is-ancestor", evidenceSubject, subject]);
+
+  const registry = json(horizonAuthority.authority_basis.qualification_evidence_registry_ref);
+  const registryRows = [];
+  (function collect(value) {
+    if (Array.isArray(value)) {
+      for (const row of value) collect(row);
+      return;
+    }
+    if (!value || typeof value !== "object") return;
+    if (typeof value.evidence_id === "string" && typeof value.check_id === "string") registryRows.push(value);
+    for (const row of Object.values(value)) collect(row);
+  })(registry);
+  const phase5Evidence = registryRows.find((row) => row.evidence_id === "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_776BA838");
+  assert.ok(phase5Evidence, "ENGINEERING_READINESS_PHASE5_REGISTRY_EVIDENCE_REQUIRED");
+  assert.equal(phase5Evidence.run_id, 33164682861);
+  assert.equal(phase5Evidence.run_conclusion, "success");
+  assert.equal(phase5Evidence.immutable, true);
+  assert.equal(phase5Evidence.dependency_digest, "sha256:01f8f55f611d9b15bb2e4b00cf2828205acf95bea8fc4c167a43687f3c688e7c");
+  const producerEvidence = registryRows.find((row) => row.evidence_id === "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F");
+  assert.ok(producerEvidence, "ENGINEERING_READINESS_V13_PRODUCER_EVIDENCE_REQUIRED");
+  assert.equal(producerEvidence.subject_sha, "bf1d345f925f543779718973f8c9419684498e2a");
+  assert.equal(producerEvidence.run_id, 33605700840);
+  assert.equal(producerEvidence.run_conclusion, "success");
+  assert.equal(producerEvidence.immutable, true);
+  assert.equal(producerEvidence.dependency_digest, "sha256:db6bbfe41052d262481bb2a911cbe1501247c32ed111daa2af0b8ab5c58088b3");
+
+  const phase6Workflow = read(horizonAuthority.authority_basis.phase6_runtime_independence_workflow_ref);
+  includes(phase6Workflow, "PHASE6_ACCEPTED_HEAD: '48ceafe7c6e7d3d57a1dc17411fb4bf673486333'", "ENGINEERING_READINESS_PHASE6_ACCEPTED_HEAD_REQUIRED");
+  includes(phase6Workflow, "PHASE6_RUNTIME_ARTIFACT_ID: '9676455831'", "ENGINEERING_READINESS_PHASE6_ARTIFACT_REQUIRED");
+  includes(phase6Workflow, "sha256:9a3a22b8b844fc1538d4a6986a9d3477b895208b1e88cdf13106f0f0dbf463d7", "ENGINEERING_READINESS_PHASE6_ARTIFACT_DIGEST_REQUIRED");
+
+  const evidenceChain = separation.engineering_readiness.evidence_chain;
+  assert.equal(evidenceChain.phase5_immutable_full_24t.workflow_run_id, 33101400822);
+  assert.equal(evidenceChain.phase5_immutable_full_24t.artifact_id, 9659440229);
+  assert.equal(evidenceChain.phase5_immutable_full_24t.exact_24t, true);
+  assert.equal(evidenceChain.phase5_immutable_full_24t.live_causal_evidence, true);
+  assert.equal(evidenceChain.phase5_fresh_evidence_resilience.workflow_run_id, 33110416779);
+  assert.equal(evidenceChain.phase5_fresh_evidence_resilience.duplicate_restart_fencing_fresh, true);
+  assert.equal(evidenceChain.phase5_temporal_settlement_and_twin_fencing.workflow_run_id, 33164682861);
+  assert.equal(evidenceChain.phase5_temporal_settlement_and_twin_fencing.artifact_id, 9683116099);
+  assert.equal(evidenceChain.phase5_temporal_settlement_and_twin_fencing.production_owner_cutover, false);
+  assert.equal(evidenceChain.phase5_temporal_settlement_and_twin_fencing.formal_v5_armed, false);
+  assert.equal(evidenceChain.phase6_runtime_independence.workflow_run_id, 33146391000);
+  assert.equal(evidenceChain.phase6_runtime_independence.artifact_id, 9676455831);
+  assert.equal(evidenceChain.phase6_successor_carry_forward.workflow_run_id, 33164682799);
+  assert.equal(evidenceChain.phase6_successor_carry_forward.artifact_id, 9683075686);
+  assert.equal(evidenceChain.v13_producer_driven_runtime.evidence_id, "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F");
+  assert.equal(evidenceChain.v13_producer_driven_runtime.current_durable_evidence_valid, true);
+  assert.equal(evidenceChain.t4r1_live_activation_fail_closed.current_stage_authority_established, false);
+  assert.equal(evidenceChain.t4r1_live_activation_fail_closed.current_natural_season_successor_authority_established, false);
+
+  assert.equal(separation.live_activation.status, "NOT_CURRENTLY_ELIGIBLE");
+  assert.equal(separation.live_activation.runtime_start_authority_may_be_armed, false);
+  assert.equal(separation.live_activation.production_owner_activation_authorized, false);
+  assert.equal(separation.live_activation.formal_v5_arm_authorized, false);
+  assert.equal(separation.live_activation.a0_authorized, false);
+  assert.equal(separation.live_activation.o00_authorized, false);
+  assert.equal(separation.live_activation.stage1b_completion_claim_authorized, false);
+  assert.equal(separation.live_activation.mcft_cap09_complete_claim_authorized, false);
+  assert.deepEqual(separation.engineering_readiness.nonclaims, [
+    "STAGE_1B_SHADOW_ONLINE_CLOSURE_COMPLETE",
+    "MCFT_CAP_09_COMPLETE",
+    "REAL_FIELD_24_HOUR_ONLINE_PROVEN",
+    "MINIMUM_COMPLETE_FIELD_TWIN_COMPLETE",
+    "CURRENT_T4R1_LIVE_ACTIVATION_ELIGIBLE",
+  ]);
+  assert.equal(separation.nonblocking_engineering_debt.id, "V13_PRODUCER_STALE_ARM_ORDERING");
+  assert.equal(separation.nonblocking_engineering_debt.blocks_engineering_readiness, false);
+  assert.equal(separation.nonblocking_engineering_debt.live_provider_failure_observed, false);
+  assert.equal(separation.nonblocking_engineering_debt.current_durable_producer_evidence_invalidated, false);
+  assert.equal(separation.completion_boundary.taskbook_completion_gate_unchanged, true);
+  assert.equal(separation.completion_boundary.real_s6_o00_o23_plus_final_exact_sha_r2_still_required_for_stage1b_completion, true);
+  assert.equal(horizonAuthority.next_legal_frontier.status_scope, "LIVE_ACTIVATION_ONLY");
+  assert.equal(
+    horizonAuthority.next_legal_frontier.engineering_frontier_status,
+    "MCFT_CAP_09_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_QUALIFIED",
+  );
+  assert.equal(horizonAuthority.next_legal_frontier.engineering_work_blocked_by_material_provider_change, false);
+  assert.equal(horizonAuthority.next_legal_frontier.material_provider_change_is_engineering_blocker, false);
+  assert.equal(horizonAuthority.next_legal_frontier.material_provider_change_is_live_activation_gate, true);
 
   const horizonContract = read(authority.acquisition_horizon_contract_ref);
   includes(horizonContract, "materializeProductionEvidenceAcquisitionHorizonV1", "PRODUCTION_EVIDENCE_HORIZON_TYPED_CONTRACT_REQUIRED");
@@ -700,6 +867,11 @@ try {
     viable_future_formal_window_available: false,
     alternative_scope_rescue_result: rescueSettlement.result,
     alternative_scope_eligible_candidate_count: rescueSettlement.eligible_candidate_count,
+    engineering_readiness_status: separation.engineering_readiness.status,
+    engineering_readiness_claim: separation.engineering_readiness.allowed_claim,
+    engineering_work_blocked_by_material_provider_change: false,
+    live_activation_status: separation.live_activation.status,
+    material_provider_change_is_live_activation_gate: true,
     runtime_start_authority_may_be_armed: false,
     kbs_single_fetch_multi_interval_path_implemented: true,
     source_specific_progress_ports_implemented: true,

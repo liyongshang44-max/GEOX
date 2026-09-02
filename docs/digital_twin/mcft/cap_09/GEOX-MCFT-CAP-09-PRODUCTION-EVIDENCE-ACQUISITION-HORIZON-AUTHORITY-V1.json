@@ -1,8 +1,8 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_acquisition_horizon_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1",
-  "status": "ENTRYPOINT_BOUND_RUNTIME_START_BLOCKED_CURRENT_T4R1_FORMAL_WINDOW_EXPIRED",
-  "stage": "POST_PLANNER_ENTRYPOINT_BINDING_PRE_T4R1_STAGE_OR_SEASON_REQUALIFICATION",
+  "status": "ENGINEERING_READINESS_QUALIFIED_LIVE_ACTIVATION_BLOCKED_CURRENT_T4R1_AUTHORITY_UNRESOLVED",
+  "stage": "POST_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_PRE_LIVE_ACTIVATION",
   "subject_predecessor_sha": "1b0954fcbbe359cc94d542db753dab2ffb86e260",
   "authority_basis": {
     "master_task_line_ref": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md",
@@ -13,7 +13,12 @@
     "planner_readiness_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json",
     "kbs_publication_observer_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-PUBLICATION-CADENCE-OBSERVER-V1.md",
     "kbs_product_provider_ref": "apps/server/src/external_evidence/provider/kbs_raw_hourly_live_provider_v1.ts",
-    "source_due_policy_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1.json"
+    "source_due_policy_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1.json",
+    "amendment08_implementation_activation_separation_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-08-IMPLEMENTATION-ACTIVATION-QUALIFICATION-SEPARATION-AUTHORITY.md",
+    "post_activation_readiness_audit_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-POST-ACTIVATION-READINESS-AUDIT-V1.json",
+    "phase5_temporal_settlement_ref": "scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs",
+    "phase6_runtime_independence_workflow_ref": ".github/workflows/mcft-cap-09-phase6-runtime-independence.yml",
+    "qualification_evidence_registry_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json"
   },
   "decisive_ruling": {
     "acquisition_horizon_must_be_explicit": true,
@@ -31,7 +36,13 @@
     "kbs_fixed_latest_24_rows_bootstrap_authorized": false,
     "current_t4r1_crop_authority_supports_future_formal_window": false,
     "runtime_start_may_be_armed_under_current_t4r1_crop_authority": false,
-    "alternative_existing_mcse_scope_rescue_available": false
+    "alternative_existing_mcse_scope_rescue_available": false,
+    "software_implementation_qualification_is_distinct_from_operational_activation_qualification": true,
+    "material_provider_change_is_engineering_readiness_blocker": false,
+    "material_provider_change_is_live_activation_eligibility_gate": true,
+    "engineering_readiness_may_be_qualified_while_runtime_start_unarmed": true,
+    "engineering_readiness_may_authorize_stage1b_completion_claim": false,
+    "engineering_readiness_may_authorize_mcft_cap09_complete_claim": false
   },
   "bootstrap_policy": {
     "kbs_raw_hourly": {
@@ -164,7 +175,7 @@
     "formal_execution_count": "0/24"
   },
   "next_legal_frontier": {
-    "status": "T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_REQUALIFICATION_REQUIRED",
+    "status": "T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_REQUALIFICATION_REQUIRED_ON_MATERIAL_PROVIDER_CHANGE",
     "direct_current_stage_route": "REQUALIFY_T4R1_CONTEMPORANEOUS_STAGE_ONLY_IF_EXACT_PROVIDER_EVIDENCE_CAN_MEET_STAGE_AND_6H_30H_GUARDS",
     "fallback_route": "ADJUDICATE_T4R1_NATURAL_SEASON_SUCCESSOR_WITHOUT_CROSS_SEASON_STITCHING",
     "runtime_start_before_frontier_resolution_authorized": false,
@@ -175,7 +186,13 @@
       "NEW_EXACT_CURRENT_T4R1_TERMINATION_OR_HARVEST_EVIDENCE_BECOMES_PUBLICLY_RETRIEVABLE",
       "NEW_KBS_AGLOG_T4_OR_T4R1_PLANTING_OBSERVATION_AFTER_2026_05_27_BECOMES_PUBLICLY_RETRIEVABLE"
     ],
-    "runtime_start_authority_may_be_armed": false
+    "runtime_start_authority_may_be_armed": false,
+    "status_scope": "LIVE_ACTIVATION_ONLY",
+    "engineering_frontier_status": "MCFT_CAP_09_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_QUALIFIED",
+    "engineering_work_blocked_by_material_provider_change": false,
+    "live_activation_blocked_until_material_provider_change_and_fresh_authority": true,
+    "material_provider_change_is_engineering_blocker": false,
+    "material_provider_change_is_live_activation_gate": true
   },
   "t4r1_stage_or_natural_season_requalification_settlement": {
     "status": "SETTLED_NO_CURRENT_T4R1_STAGE_OR_NATURAL_SEASON_SUCCESSOR_AUTHORITY_ESTABLISHED",
@@ -291,6 +308,129 @@
       "a0_bootstrap": false,
       "o00_started": false,
       "mcft_cap09_completed": false
+    }
+  },
+  "engineering_readiness_live_activation_separation": {
+    "schema_version": "geox_mcft_cap09_engineering_readiness_live_activation_separation_v1",
+    "status": "QUALIFIED_ENGINEERING_READINESS_LIVE_ACTIVATION_NOT_CURRENTLY_ELIGIBLE",
+    "authority_role": "ENGINEERING_READINESS_ONLY_NOT_STAGE1B_COMPLETION_NOT_LIVE_ACTIVATION",
+    "evidence_frontier_parent_sha": "3a83b76450b5459bde8d1d56234e5bba80b49398",
+    "ruling": {
+      "software_implementation_qualification_is_distinct_from_operational_activation_qualification": true,
+      "uncontrollable_third_party_provider_availability_may_block_engineering_readiness": false,
+      "uncontrollable_third_party_provider_availability_may_block_live_activation": true,
+      "kbs_material_provider_change_is_engineering_blocker": false,
+      "kbs_material_provider_change_is_live_activation_gate": true,
+      "synthetic_or_fixture_evidence_may_be_promoted_to_real_t4r1_authority": false,
+      "cross_season_stitching_authorized": false,
+      "taskbook_stage1b_completion_gate_changed": false
+    },
+    "engineering_readiness": {
+      "status": "QUALIFIED",
+      "allowed_claim": "MCFT_CAP_09_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_QUALIFIED",
+      "claim_scope": "CONTROLLABLE_SOFTWARE_RUNTIME_GOVERNANCE_AND_PRODUCTION_EQUIVALENT_MECHANISMS",
+      "exact_head_validation_mode": "PLANNER_READINESS_ACCEPTANCE_REVALIDATES_PROTECTED_SEMANTIC_CORE_AND_EVIDENCE_ANCESTRY_ON_EVERY_SUBJECT",
+      "protected_semantic_core": {
+        "baseline_subject_sha": "12473c491b354e49305f22bfa24c8701ce5e3ff9",
+        "path_count": 15,
+        "all_paths_unchanged_to_current_subject_required": true
+      },
+      "evidence_chain": {
+        "phase5_immutable_full_24t": {
+          "subject_sha": "12473c491b354e49305f22bfa24c8701ce5e3ff9",
+          "workflow_run_id": 33101400822,
+          "artifact_id": 9659440229,
+          "artifact_digest": "sha256:79606348f954162d867aeba79d2a2e0bbb0ab696b5e7336a3e95f0f904117055",
+          "exact_24t": true,
+          "live_causal_evidence": true
+        },
+        "phase5_fresh_evidence_resilience": {
+          "subject_sha": "3349eaaaab68f80fc9b771f16e4bfe909126eed2",
+          "workflow_run_id": 33110416779,
+          "artifact_id": 9671930864,
+          "artifact_digest": "sha256:ba40853403b3b7f53794e83aa7c4f283def431f63a29b346c53d043add856479",
+          "duplicate_restart_fencing_fresh": true
+        },
+        "phase5_temporal_settlement_and_twin_fencing": {
+          "subject_sha": "776ba8381608cb906f68b57a56fc9aef6258cc52",
+          "workflow_run_id": 33164682861,
+          "artifact_id": 9683116099,
+          "artifact_digest": "sha256:59f14796c7c8ddfb019e40fda408dd2f406f35bb029abbe0bb13479d5daba1a3",
+          "closure_basis": "IMMUTABLE_FULL_24T_PLUS_FRESH_HOSTING_RESILIENCE_AND_SEMANTIC_EQUIVALENCE",
+          "production_owner_cutover": false,
+          "formal_v5_armed": false
+        },
+        "phase6_runtime_independence": {
+          "accepted_subject_sha": "48ceafe7c6e7d3d57a1dc17411fb4bf673486333",
+          "workflow_run_id": 33146391000,
+          "artifact_id": 9676455831,
+          "artifact_digest": "sha256:9a3a22b8b844fc1538d4a6986a9d3477b895208b1e88cdf13106f0f0dbf463d7",
+          "github_control_plane_runtime_dependency_forbidden": true
+        },
+        "phase6_successor_carry_forward": {
+          "subject_sha": "776ba8381608cb906f68b57a56fc9aef6258cc52",
+          "workflow_run_id": 33164682799,
+          "artifact_id": 9683075686,
+          "artifact_digest": "sha256:ab7288ad236577499189bc951b48a32beed8e03b8df8105df5753df38e0bdf99",
+          "retired_owner_audit_passed": true
+        },
+        "v13_producer_driven_runtime": {
+          "evidence_id": "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F",
+          "subject_sha": "bf1d345f925f543779718973f8c9419684498e2a",
+          "workflow_run_id": 33605700840,
+          "dependency_digest": "sha256:db6bbfe41052d262481bb2a911cbe1501247c32ed111daa2af0b8ab5c58088b3",
+          "current_durable_evidence_valid": true
+        },
+        "t4r1_live_activation_fail_closed": {
+          "contemporaneous_stage_workflow_run_id": 33630413934,
+          "contemporaneous_stage_artifact_id": 9846584085,
+          "natural_season_workflow_run_id": 33630968448,
+          "natural_season_artifact_id": 9846818521,
+          "current_stage_authority_established": false,
+          "current_natural_season_successor_authority_established": false
+        },
+        "parent_exact_head_machine_state": {
+          "subject_sha": "3a83b76450b5459bde8d1d56234e5bba80b49398",
+          "ci_workflow_run_id": 33632065448,
+          "planner_readiness_workflow_run_id": 33632065286,
+          "qcp_workflow_run_id": 33632065496,
+          "qcp_expected_only_blocker": "EXACT_ONE_PRODUCTION_OWNER"
+        }
+      },
+      "nonclaims": [
+        "STAGE_1B_SHADOW_ONLINE_CLOSURE_COMPLETE",
+        "MCFT_CAP_09_COMPLETE",
+        "REAL_FIELD_24_HOUR_ONLINE_PROVEN",
+        "MINIMUM_COMPLETE_FIELD_TWIN_COMPLETE",
+        "CURRENT_T4R1_LIVE_ACTIVATION_ELIGIBLE"
+      ]
+    },
+    "live_activation": {
+      "status": "NOT_CURRENTLY_ELIGIBLE",
+      "reason": "NO_CURRENT_T4R1_STAGE_OR_NATURAL_SEASON_SUCCESSOR_AUTHORITY_AND_NO_VIABLE_FUTURE_FORMAL_WINDOW",
+      "material_provider_change_required_before_t4r1_stage_or_season_requalification": true,
+      "runtime_start_authority_may_be_armed": false,
+      "evidence_runtime_start_authorized": false,
+      "twin_runtime_start_authorized": false,
+      "production_owner_activation_authorized": false,
+      "formal_v5_arm_authorized": false,
+      "a0_authorized": false,
+      "o00_authorized": false,
+      "stage1b_completion_claim_authorized": false,
+      "mcft_cap09_complete_claim_authorized": false
+    },
+    "nonblocking_engineering_debt": {
+      "id": "V13_PRODUCER_STALE_ARM_ORDERING",
+      "classification": "QUALIFICATION_HARNESS_CONTROL_PLANE_DEBT",
+      "blocks_engineering_readiness": false,
+      "live_provider_failure_observed": false,
+      "current_durable_producer_evidence_invalidated": false,
+      "requires_resolution_before_fresh_producer_live_requalification_if_dependency_contract_reopened": true
+    },
+    "completion_boundary": {
+      "taskbook_completion_gate_unchanged": true,
+      "real_s6_o00_o23_plus_final_exact_sha_r2_still_required_for_stage1b_completion": true,
+      "engineering_readiness_claim_is_subordinate_to_stage1b_completion": true
     }
   }
 }
