@@ -632,8 +632,7 @@
         "twin.operator_workflow"
       ],
       "write_targets": [
-        "operator_session_v0",
-        "decision_cycle_v1"
+        "operator_session_v0"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -645,11 +644,14 @@
       "tenant_scope_from_untrusted_body": true,
       "risk_tier": "P0",
       "contract_refs": [],
-      "notes": null,
+      "notes": "decision_cycle_v1 is read for session/review context on this route; it is not directly mutated by this entrypoint.",
       "writer_entrypoints": [
         "apps/server/src/routes/v1/twin_kernel_operator_workflow.ts::<inline>"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "read_dependencies": [
+        "decision_cycle_v1"
+      ]
     },
     {
       "surface_id": "BSEC-013",
@@ -672,8 +674,7 @@
         "twin.operator_review"
       ],
       "write_targets": [
-        "operator_decision_review_v0",
-        "decision_cycle_v1"
+        "operator_decision_review_v0"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -685,11 +686,14 @@
       "tenant_scope_from_untrusted_body": true,
       "risk_tier": "P0",
       "contract_refs": [],
-      "notes": null,
+      "notes": "decision_cycle_v1 is read for session/review context on this route; it is not directly mutated by this entrypoint.",
       "writer_entrypoints": [
         "apps/server/src/routes/v1/twin_kernel_operator_workflow.ts::<inline>"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "read_dependencies": [
+        "decision_cycle_v1"
+      ]
     },
     {
       "surface_id": "BSEC-014",
@@ -4013,8 +4017,7 @@
       ],
       "write_targets": [
         "facts",
-        "operation_plan_index_v1",
-        "security_audit_event_v1"
+        "operation_plan_index_v1"
       ],
       "fact_types": [
         "approval_decision_v1",
@@ -4034,7 +4037,7 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P0",
       "contract_refs": [],
-      "notes": null,
+      "notes": "security_audit_event_v1 belongs to delegated /api/v1/actions/task persistence, not the direct Approval handler SQL target set.",
       "downstream_persistent_consequences": [
         "facts:ao_act_task_v0",
         "facts:ao_act_authz_audit_v0",
@@ -4800,12 +4803,9 @@
         "device.skill_binding"
       ],
       "write_targets": [
-        "facts/device indices",
         "device_skill_binding_index_v1"
       ],
-      "fact_types": [
-        "device skill binding facts"
-      ],
+      "fact_types": [],
       "downstream_consumers": [],
       "caller_authority_status": "GOVERNED_EXISTING",
       "current_disposition": "KEEP_WITH_CURRENT_SERVER_SIDE_AUTH",
@@ -4815,13 +4815,16 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null,
+      "notes": "Reconcile path persists device_skill_binding_index_v1 via ensureDeviceSkillBindings(allow_write=true). Prior 'facts/device indices' umbrella was overbroad and is retained only as superseded inventory history.",
       "writer_entrypoints": [
         "apps/server/src/services/device_skill_bindings.ts::ensureDeviceSkillBindings",
         "apps/server/src/services/device_skill_bindings.ts::ensureDeviceSkillBindingsRuntime"
       ],
       "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
-      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1",
+      "legacy_overbroad_target_claims": [
+        "facts/device indices"
+      ]
     },
     {
       "surface_id": "BSEC-101",
@@ -6730,7 +6733,6 @@
         "runtime.mutation"
       ],
       "write_targets": [
-        "ROUTE_DEFINED_MUTATION",
         "work_assignment_index_v1",
         "operation_handoff_v1",
         "work_assignment_audit_v1",
@@ -6749,14 +6751,17 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P0",
       "contract_refs": [],
-      "notes": null,
+      "notes": "ROUTE_DEFINED_MUTATION was a placeholder, not a persistent target; exact SQL targets are enumerated in write_targets.",
       "writer_entrypoints": [
         "apps/server/src/routes/human_executors_v1.ts::<inline>",
         "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
         "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
       ],
       "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
-      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1",
+      "legacy_placeholder_targets": [
+        "ROUTE_DEFINED_MUTATION"
+      ]
     },
     {
       "surface_id": "BSEC-142",
@@ -9368,7 +9373,6 @@
       ],
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
-        "refreshFieldReadModelsWithObservabilityV1",
         "refreshFieldSensingOverviewV1",
         "refreshFieldSensingSummaryStage1V1",
         "refreshFieldFertilityStateV1",
@@ -9383,7 +9387,10 @@
       ],
       "current_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
       "notes": "Read endpoint refreshes materialized sensing/fertility projections before returning.",
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "execution_orchestration_entrypoints": [
+        "refreshFieldReadModelsWithObservabilityV1"
+      ]
     },
     {
       "disposition_id": "BHTTP-003",
@@ -9398,7 +9405,6 @@
       ],
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
-        "refreshFieldReadModelsWithObservabilityV1",
         "refreshFieldSensingOverviewV1",
         "refreshFieldSensingSummaryStage1V1",
         "refreshFieldFertilityStateV1",
@@ -9413,7 +9419,10 @@
       ],
       "current_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
       "notes": "Internal compatibility GET refreshes materialized projections.",
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "execution_orchestration_entrypoints": [
+        "refreshFieldReadModelsWithObservabilityV1"
+      ]
     },
     {
       "disposition_id": "BHTTP-004",
@@ -9428,7 +9437,6 @@
       ],
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
-        "refreshFieldReadModelsWithObservabilityV1",
         "refreshFieldSensingOverviewV1",
         "refreshFieldSensingSummaryStage1V1",
         "refreshFieldFertilityStateV1",
@@ -9443,7 +9451,10 @@
       ],
       "current_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
       "notes": "Field detail GET refreshes sensing/fertility read models.",
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "execution_orchestration_entrypoints": [
+        "refreshFieldReadModelsWithObservabilityV1"
+      ]
     },
     {
       "disposition_id": "BHTTP-005",
@@ -9458,7 +9469,6 @@
       ],
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
-        "refreshFieldReadModelsWithObservabilityV1",
         "refreshFieldSensingOverviewV1",
         "refreshFieldSensingSummaryStage1V1",
         "refreshFieldFertilityStateV1",
@@ -9473,7 +9483,10 @@
       ],
       "current_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
       "notes": "Customer-facing sensing GET refreshes projections.",
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "execution_orchestration_entrypoints": [
+        "refreshFieldReadModelsWithObservabilityV1"
+      ]
     },
     {
       "disposition_id": "BHTTP-006",
@@ -9488,7 +9501,6 @@
       ],
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
-        "refreshFieldReadModelsWithObservabilityV1",
         "refreshFieldSensingOverviewV1",
         "refreshFieldSensingSummaryStage1V1",
         "refreshFieldFertilityStateV1",
@@ -9503,7 +9515,10 @@
       ],
       "current_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
       "notes": "Internal/debug GET refreshes projections.",
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "execution_orchestration_entrypoints": [
+        "refreshFieldReadModelsWithObservabilityV1"
+      ]
     },
     {
       "disposition_id": "BHTTP-007",
@@ -9545,8 +9560,7 @@
       "side_effect_class": "SCHEMA_ENSURE_ONLY",
       "writer_entrypoints": [
         "ensureDeviceSkillBindingStatusRuntimeV1",
-        "ensureDeviceModeRuntime",
-        "ensureDeviceSkillBindings(allow_write=false)"
+        "ensureDeviceModeRuntime"
       ],
       "write_targets": [
         "device_skill_binding_status_v1 schema",
@@ -9554,8 +9568,11 @@
         "device_index_v1"
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
-      "notes": "Exact head passes allow_write:false to ensureDeviceSkillBindings; no binding data repair is authorized by this GET.",
-      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
+      "notes": "Exact head passes allow_write:false to ensureDeviceSkillBindings; no binding data repair is authorized by this GET. allow_write=false path is read/health evaluation only; it is intentionally excluded from persistent writer_entrypoints.",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1",
+      "non_writing_call_chain": [
+        "ensureDeviceSkillBindings(allow_write=false)"
+      ]
     },
     {
       "disposition_id": "BHTTP-009",
@@ -9572,8 +9589,7 @@
       "writer_entrypoints": [
         "ensureDeviceSkillBindingStatusRuntimeV1",
         "ensureDeviceModeRuntime",
-        "ensureDeviceCapabilityRuntime",
-        "ensureDeviceSkillBindings(allow_write=false)"
+        "ensureDeviceCapabilityRuntime"
       ],
       "write_targets": [
         "device_skill_binding_status_v1 schema",
@@ -9582,8 +9598,11 @@
         "device_index_v1"
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
-      "notes": "Exact head uses allow_write:false for binding health; remaining ensure calls are schema/runtime compatibility.",
-      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
+      "notes": "Exact head uses allow_write:false for binding health; remaining ensure calls are schema/runtime compatibility. allow_write=false path is read/health evaluation only; it is intentionally excluded from persistent writer_entrypoints.",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1",
+      "non_writing_call_chain": [
+        "ensureDeviceSkillBindings(allow_write=false)"
+      ]
     },
     {
       "disposition_id": "BHTTP-010",
