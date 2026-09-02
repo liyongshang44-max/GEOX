@@ -19,7 +19,18 @@ try{
  assert.equal(armAuthorized,arm.armed===true,"SOURCE_POLL_SCHEMA_RUNNER_ARM_COHERENCE_REQUIRED");
  assert.equal(authorityAuthorized,armAuthorized,"SOURCE_POLL_SCHEMA_RUNNER_AUTHORITY_ARM_MISMATCH");
  if(arm.armed!==true){
-   assert.equal(armAuthorized,false);assert.equal(authority.status,"READY_NOT_AUTHORIZED");
+   assert.equal(armAuthorized,false);
+   assert.equal(pref.subject_sha,subject,"SOURCE_POLL_SCHEMA_PREFLIGHT_SUBJECT_MISMATCH");
+   assert.equal(pref.database_name,TARGET,"SOURCE_POLL_SCHEMA_PREFLIGHT_DATABASE_MISMATCH");
+   assert.equal(pref.table_count,41,"SOURCE_POLL_SCHEMA_PREFLIGHT_TABLE_COUNT_REQUIRED");
+   if(authority.status==="READY_NOT_AUTHORIZED"){
+     assert.equal(pref.status,"PASS_REMEDIATION_REQUIRED","SOURCE_POLL_SCHEMA_UNARMED_PREFLIGHT_REQUIRED");
+     assert.equal(pref.schedule_schema_absent,true,"SOURCE_POLL_SCHEMA_UNARMED_ABSENCE_REQUIRED");
+   }else{
+     assert.equal(authority.status,"MATERIALIZED_SETTLED_UNARMED","SOURCE_POLL_SCHEMA_UNARMED_AUTHORITY_STATUS_REQUIRED");
+     assert.equal(pref.status,"PASS_ALREADY_MATERIALIZED","SOURCE_POLL_SCHEMA_SETTLED_PREFLIGHT_REQUIRED");
+     assert.equal(pref.schedule_schema_complete,true,"SOURCE_POLL_SCHEMA_SETTLED_COMPLETENESS_REQUIRED");
+   }
    write({schema_version:"geox_mcft_cap09_production_evidence_source_poll_schedule_schema_remediation_v1",status:"SKIPPED_NOT_ARMED",subject_sha:subject,database_mutation:false,row_mutation:false,role_mutation:false,runtime_process_start:false,production_owner_activation:false,formal_v5_arm:false,a0_bootstrap:false,o00_started:false});
    process.exit(0);
  }
