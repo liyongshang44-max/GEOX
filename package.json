@@ -262,7 +262,8 @@
     "ci:governance:bline-sampling-exact-source-binding": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_SAMPLING_EXACT_SOURCE_BINDING_V1.cjs",
     "ci:governance:bline-fertilization-execution-provenance": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_FERTILIZATION_EXECUTION_PROVENANCE_V1.cjs",
     "ci:governance:bline-agronomy-agent-fail-closed": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_AGRONOMY_AGENT_FAIL_CLOSED_AUTHORITY_V1.cjs",
-    "ci:runtime:bline-agronomy-agent-fail-closed": "pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_AGRONOMY_AGENT_FAIL_CLOSED_RUNTIME_V1.ts"
+    "ci:runtime:bline-agronomy-agent-fail-closed": "pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_AGRONOMY_AGENT_FAIL_CLOSED_RUNTIME_V1.ts",
+    "ci:governance:bline-production-caller-authority-inventory": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_PRODUCTION_CALLER_AUTHORITY_INVENTORY_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"
