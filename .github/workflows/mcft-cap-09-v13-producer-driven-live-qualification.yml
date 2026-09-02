@@ -281,8 +281,10 @@ jobs:
               ) FROM geox_mcft_cap09_twin_runtime_v1;
             "
 
-            psql "$url" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql
-
+            # This qualification store is the exact V13 29-table successor store.
+            # Phase3 Evidence persistence is not materialized here and its carry-forward
+            # migration belongs to the 41-table production operational schema path.
+            # Requalification therefore reconciles only the V13 fenced-writer ACL.
             writer_schema_create="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_schema_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public','CREATE')::text")"
             test "$writer_schema_create" = "false" || { echo "V13_LIVE_WRITER_OWNER_SCHEMA_CREATE_FORBIDDEN:$writer_schema_create" >&2; exit 1; }
             writer_execute="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_function_privilege('geox_mcft_cap09_forcing_writer_owner_v1','$function_sig','EXECUTE')::text")"
