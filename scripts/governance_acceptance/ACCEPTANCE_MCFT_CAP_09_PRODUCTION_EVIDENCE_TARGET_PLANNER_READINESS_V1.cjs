@@ -105,7 +105,7 @@ try {
   includes(sourceProgress, "MCFT_CAP09_KBS_SOIL_ORIGIN_SOURCE_ID_V1", "SOIL_LATEST_PROGRESS_REQUIRED");
 
   const horizonAuthority = json(authority.acquisition_horizon_authority_ref);
-  assert.equal(horizonAuthority.status, "ENTRYPOINT_BOUND_RUNTIME_START_AUTHORITY_NOT_ARMED");
+  assert.equal(horizonAuthority.status, "ENTRYPOINT_BOUND_RUNTIME_START_BLOCKED_CURRENT_T4R1_FORMAL_WINDOW_EXPIRED");
   assert.equal(horizonAuthority.decisive_ruling.activation_fence_source, "SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY");
   assert.equal(horizonAuthority.decisive_ruling.activation_fence_may_come_from_wall_clock_alone, false);
   assert.equal(horizonAuthority.decisive_ruling.formal_forcing_budget_may_define_bootstrap_horizon, false);
