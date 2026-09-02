@@ -1230,6 +1230,129 @@ for (const key of covRuntimeWriterKeys) {
 assert(covRuntimeMissing.length === 0, "production runtime direct writer without inventory", covRuntimeMissing);
 
 
+
+// Internal HTTP delegation graph.
+function covNormalizeInternalTarget(text) {
+  const raw=String(text||"");
+  const idx=raw.indexOf("/api/");
+  if (idx<0) return null;
+  let target=raw.slice(idx);
+  target=target.replace(/\$\{[^}]+\}/g,":dynamic");
+  const quoteIndexes=['"',"'"].map((q)=>target.indexOf(q)).filter((x)=>x>=0);
+  const tickIndex=target.indexOf(String.fromCharCode(96));
+  if (tickIndex>=0) quoteIndexes.push(tickIndex);
+  if (quoteIndexes.length) target=target.slice(0,Math.min(...quoteIndexes));
+  target=target.replace(/[),;]+$/,"");
+  return target.trim();
+}
+function covObjectProperty(obj,name) {
+  if (!obj || !ts.isObjectLiteralExpression(obj)) return null;
+  for (const p of obj.properties) {
+    if (!ts.isPropertyAssignment(p)) continue;
+    const n=(ts.isIdentifier(p.name)||ts.isStringLiteral(p.name)) ? p.name.text : "";
+    if (n===name) return p.initializer;
+  }
+  return null;
+}
+function covFetchMethod(call) {
+  const init=call.arguments[1];
+  const method=covObjectProperty(init,"method");
+  if (method && (ts.isStringLiteral(method)||ts.isNoSubstitutionTemplateLiteral(method))) return method.text.toUpperCase();
+  return "GET";
+}
+function covEnclosingText(call,fp) {
+  let p=call.parent;
+  while (p && !covFunctionLike(p)) p=p.parent;
+  return p ? p.getText(covBuildModule(fp).sf) : "";
+}
+const covInternalDelegationEdges=[];
+const covInternalDelegationSeen=new Set();
+for (const fp of covFiles) {
+  const sourcePath=rel(fp);
+  if ((!fp.endsWith(".ts")&&!fp.endsWith(".tsx")) || isCommercialDisabledDevtools(fp) || sourcePath.startsWith("apps/server/src/services/flight_table/")) continue;
+  const mod=covBuildModule(fp);
+  const counters=new Map();
+  function pushEdge(call,method,targetText,helperKind) {
+    const target=covNormalizeInternalTarget(targetText);
+    if (!target) return;
+    const enclosing=covNearestFunctionName(call);
+    const base=sourcePath+"::"+enclosing+"::"+method+"::"+target+"::"+helperKind;
+    const ordinal=(counters.get(base)||0)+1;
+    counters.set(base,ordinal);
+    const edgeId=sourcePath+"#"+enclosing+"#"+method+":"+target+"#"+helperKind+"#"+ordinal;
+    if (covInternalDelegationSeen.has(edgeId)) return;
+    covInternalDelegationSeen.add(edgeId);
+    const callText=call.getText(mod.sf);
+    const enclosingText=covEnclosingText(call,fp);
+    const transition=/GEOX_INTERNAL_TASK_ISSUER_TOKEN/.test(callText) || /GEOX_INTERNAL_TASK_ISSUER_TOKEN/.test(enclosingText);
+    const forwards=/authorization/i.test(callText) || /req\.headers|authHeader|authz/.test(callText);
+    covInternalDelegationEdges.push({
+      delegation_id:edgeId,
+      source_path:sourcePath,
+      enclosing_symbol:enclosing,
+      target_method:method,
+      target_entrypoint:target,
+      helper_kind:helperKind,
+      principal_transition:transition,
+      credential_observation:transition ? "GEOX_INTERNAL_TASK_ISSUER_TOKEN" : (forwards ? "FORWARD_CALLER_BEARER" : "UNRESOLVED_OR_NONE"),
+    });
+  }
+  function visit(n) {
+    if (ts.isCallExpression(n)) {
+      if (ts.isIdentifier(n.expression) && n.expression.text==="fetch") {
+        const url=n.arguments[0];
+        if (url) {
+          const urlText=url.getText(mod.sf);
+          if (/\/api\//.test(urlText) && /(127\.0\.0\.1|buildInternalBaseUrl|hostBaseUrl|internalBaseUrl|GEOX_INTERNAL_BASE_URL|GEOX_BASE_URL)/.test(urlText)) {
+            pushEdge(n,covFetchMethod(n),urlText,"DIRECT_FETCH");
+          }
+        }
+      } else if (ts.isIdentifier(n.expression) && n.expression.text==="postJsonInternal") {
+        const pathArg=n.arguments[2];
+        if (pathArg && /\/api\//.test(pathArg.getText(mod.sf))) pushEdge(n,"POST",pathArg.getText(mod.sf),"POST_JSON_INTERNAL");
+      } else if (ts.isIdentifier(n.expression) && n.expression.text==="fetchJson") {
+        const urlArg=n.arguments[0];
+        if (urlArg && /\/api\//.test(urlArg.getText(mod.sf))) {
+          pushEdge(n,n.arguments.length>=3 ? "POST" : "GET",urlArg.getText(mod.sf),"FETCH_JSON_INTERNAL");
+        }
+      }
+    }
+    ts.forEachChild(n,visit);
+  }
+  visit(mod.sf);
+}
+const covDelegationDispositions=inv.internal_http_delegation_dispositions ?? [];
+const covDelegationById=new Map(covDelegationDispositions.map((d)=>[d.delegation_id,d]));
+const covDelegationMissing=[];
+const covPrincipalTransitionMissing=[];
+const covDelegationStale=[];
+for (const edge of covInternalDelegationEdges) {
+  const d=covDelegationById.get(edge.delegation_id);
+  if (!d) {
+    covDelegationMissing.push(edge);
+    if (edge.principal_transition) covPrincipalTransitionMissing.push(edge);
+    continue;
+  }
+  assert(d.source_path===edge.source_path, "internal delegation source mismatch", {edge,disposition:d});
+  assert(d.target_method===edge.target_method && d.target_entrypoint===edge.target_entrypoint, "internal delegation target mismatch", {edge,disposition:d});
+  assert(typeof d.delegator_principal==="string" && d.delegator_principal, "internal delegation delegator principal missing", d);
+  assert(typeof d.delegated_credential==="string" && d.delegated_credential, "internal delegation credential missing", d);
+  assert(typeof d.delegated_principal==="string" && d.delegated_principal, "internal delegation delegated principal missing", d);
+  assert(Array.isArray(d.target_capability), "internal delegation target capability missing", d);
+  assert(Array.isArray(d.persistent_consequence), "internal delegation persistent consequence missing", d);
+  if (edge.principal_transition) {
+    assert(d.principal_transition===true, "production principal transition not declared", {edge,disposition:d});
+    assert(d.delegated_credential==="GEOX_INTERNAL_TASK_ISSUER_TOKEN", "principal transition credential mismatch", {edge,disposition:d});
+  }
+}
+for (const d of covDelegationDispositions) {
+  if (!covInternalDelegationEdges.some((e)=>e.delegation_id===d.delegation_id)) covDelegationStale.push(d);
+}
+assert(covDelegationMissing.length===0, "production internal HTTP delegation edge without disposition", covDelegationMissing);
+assert(covPrincipalTransitionMissing.length===0, "production principal transition without disposition", covPrincipalTransitionMissing);
+assert(covDelegationStale.length===0, "stale internal HTTP delegation disposition", covDelegationStale);
+
+
 const covCredentialDispositions = inv.service_credential_dispositions ?? [];
 const covCredentialById = new Map(covCredentialDispositions.map((d)=>[d.credential_id,d]));
 const covRequiredCredentialIds = ["BCRED-001","BCRED-002","BCRED-003","BCRED-004","BCRED-005"];
@@ -1321,6 +1444,8 @@ const covZeroSets = {
   production_runtime_direct_writer_without_inventory: covRuntimeMissing.length,
   startup_mutation_without_explicit_disposition: covStartupMissingUnique.length + covStartupRootMissing.length,
   production_callback_hook_persistent_writer_without_disposition: covCallbackMissing.length,
+  production_internal_http_delegation_edge_without_disposition: covDelegationMissing.length,
+  production_principal_transition_without_disposition: covPrincipalTransitionMissing.length,
   production_service_credential_without_principal_classification: covCredentialMissing.length,
   production_global_multi_tenant_worker_with_ambiguous_tenant_binding_class: covGlobalWorkerAmbiguous.length,
 };
@@ -1343,6 +1468,8 @@ const summary={
   auto_pure_read_http_count:covPureReadCount,
   explicit_http_side_effect_disposition_count:covHttpDispositions.length,
   callback_hook_disposition_count:covCallbackDispositions.length,
+  internal_http_delegation_disposition_count:covDelegationDispositions.length,
+  discovered_internal_http_delegation_edge_count:covInternalDelegationEdges.length,
   service_credential_disposition_count:covCredentialDispositions.length,
   discovered_callback_edge_count:covCallbackEdges.length,
   startup_mutation_disposition_count:covStartupDispositions.length,
