@@ -550,7 +550,7 @@ async function run() {
     ]);
     negative.operation_average_cannot_hide_zone_fail = localFail.averageLooksOk === true && localFail.verdict !== 'PASS';
     checks.zone_failure_not_hidden_by_average = negative.operation_average_cannot_hide_zone_fail
-      && (negative.one_required_zone_over_under_operation_not_pass || !checks.ao_act_task_created_after_approval);
+      && negative.real_bad_zone_canonical_fail_blocks_fertilization;
 
     const taskPayload = checks.ao_act_task_created_after_approval ? await latestTaskByOperation(pool, scope, operation_plan_id) : null;
     debug.positive_chain = {
