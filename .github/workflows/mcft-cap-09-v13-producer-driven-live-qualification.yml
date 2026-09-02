@@ -235,26 +235,74 @@ jobs:
             }
           done
 
-      - name: Initialize exact 29-table v13 qualification schemas and ACL
+      - name: Reconcile exact 29-table v13 qualification ACL without writer-owner SET
         if: steps.arm.outputs.armed == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          initialize_store() {
+          reconcile_store() {
             url="$1"
             n="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'")"
-            if [ "$n" = "0" ]; then
-              psql "$url" -v ON_ERROR_STOP=1 -f docker/postgres/init/001_schema.sql
-              psql "$url" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql
-              psql "$url" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_07_10_mcft_cap_01_closure_remediation.sql
-              psql "$url" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql
-              psql "$url" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql
-              psql "$url" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql
-            fi
-            # Always apply the idempotent ACL migration so a safe 29-table partial qualification state can resume.
-            psql "$url" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql
-            final="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'")"
-            test "$final" = "29" || { echo "V13_LIVE_29_TABLE_SCHEMA_REQUIRED:$final" >&2; exit 1; }
+            test "$n" = "29" || {
+              echo "V13_LIVE_EXISTING_29_TABLE_QUALIFICATION_STORE_REQUIRED:$n" >&2
+              exit 1
+            }
+            function_sig="public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)"
+            function_present="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT (to_regprocedure('$function_sig') IS NOT NULL)::text")"
+            test "$function_present" = "true" || {
+              echo "V13_LIVE_EXISTING_FENCED_WRITER_REQUIRED" >&2
+              exit 1
+            }
+            owner_state="$(psql "$url" -AtF '|' -v ON_ERROR_STOP=1 -c "
+              SELECT owner_role.rolname,p.prosecdef::text
+                FROM pg_catalog.pg_proc p
+                JOIN pg_catalog.pg_roles owner_role ON owner_role.oid=p.proowner
+               WHERE p.oid=to_regprocedure('$function_sig')")"
+            test "$owner_state" = "geox_mcft_cap09_forcing_writer_owner_v1|true" || {
+              echo "V13_LIVE_FENCED_WRITER_OWNER_OR_SECURITY_DEFINER_MISMATCH:$owner_state" >&2
+              exit 1
+            }
+
+            # Writer-owner SET/self-membership was permanently cleaned. Requalification
+            # only reconciles ACL on the already-materialized qualification function.
+            psql "$url" -v ON_ERROR_STOP=1 <<'SQL'
+            REVOKE CREATE ON SCHEMA public FROM geox_mcft_cap09_forcing_writer_owner_v1;
+            REVOKE EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
+              text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
+            ) FROM PUBLIC;
+            REVOKE EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
+              text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
+            ) FROM geox_mcft_cap09_forcing_writer_owner_v1;
+            GRANT EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
+              text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
+            ) TO geox_mcft_cap09_evidence_runtime_v1;
+            REVOKE EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
+              text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
+            ) FROM geox_mcft_cap09_twin_runtime_v1;
+            SQL
+
+            psql "$url" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql
+
+            writer_schema_create="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_schema_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public','CREATE')::text")"
+            test "$writer_schema_create" = "false" || { echo "V13_LIVE_WRITER_OWNER_SCHEMA_CREATE_FORBIDDEN:$writer_schema_create" >&2; exit 1; }
+            writer_execute="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_function_privilege('geox_mcft_cap09_forcing_writer_owner_v1','$function_sig','EXECUTE')::text")"
+            test "$writer_execute" = "false" || { echo "V13_LIVE_WRITER_OWNER_EXECUTE_FORBIDDEN:$writer_execute" >&2; exit 1; }
+            writer_facts="$(psql "$url" -AtF '|' -v ON_ERROR_STOP=1 -c "
+              SELECT
+                has_table_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public.facts','SELECT')::text,
+                has_table_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public.facts','INSERT')::text,
+                has_table_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public.facts','UPDATE')::text,
+                has_table_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public.facts','DELETE')::text")"
+            test "$writer_facts" = "true|true|false|false" || { echo "V13_LIVE_WRITER_OWNER_FACTS_ACL_MISMATCH:$writer_facts" >&2; exit 1; }
+            for table in twin_external_formal_forcing_controller_lease_v1 twin_external_formal_forcing_base_target_v1; do
+              writer_coord="$(psql "$url" -AtF '|' -v ON_ERROR_STOP=1 -c "
+                SELECT
+                  has_table_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public.$table','SELECT')::text,
+                  has_table_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public.$table','INSERT')::text,
+                  has_table_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public.$table','UPDATE')::text,
+                  has_table_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public.$table','DELETE')::text")"
+              test "$writer_coord" = "true|false|true|false" || { echo "V13_LIVE_WRITER_OWNER_COORDINATION_ACL_MISMATCH:$table:$writer_coord" >&2; exit 1; }
+            done
             delta="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "
               SELECT string_agg(table_name,',' ORDER BY table_name)
                 FROM information_schema.tables
@@ -264,8 +312,8 @@ jobs:
               echo "V13_LIVE_FORCING_RELATION_SET_MISMATCH:$delta" >&2; exit 1;
             }
           }
-          initialize_store "$V13_ADMIN_URL"
-          initialize_store "$BLOCKED_ADMIN_URL"
+          reconcile_store "$V13_ADMIN_URL"
+          reconcile_store "$BLOCKED_ADMIN_URL"
 
       - name: Prove Evidence ACL before provider execution
         if: steps.arm.outputs.armed == 'true'
