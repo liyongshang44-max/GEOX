@@ -977,6 +977,32 @@ function covAnalyzeCallbackArg(fp, call, argIndex) {
   return {supported:false,analysis:null};
 }
 
+
+function covResolvedCallTarget(fp, call) {
+  if (ts.isIdentifier(call.expression)) return covResolveFunction(fp, call.expression.text);
+  return null;
+}
+function covTargetInvokesParameter(target, index) {
+  const mod = covBuildModule(target.fp);
+  const node = mod.functions.get(target.name);
+  if (!node || !node.parameters || index >= node.parameters.length) return false;
+  const param = node.parameters[index];
+  if (!param || !ts.isIdentifier(param.name)) return false;
+  const paramName = param.name.text;
+  let invoked = false;
+  function walk(n) {
+    if (invoked) return;
+    if (n !== node && covFunctionLike(n)) return;
+    if (ts.isCallExpression(n) && ts.isIdentifier(n.expression) && n.expression.text === paramName) {
+      invoked = true;
+      return;
+    }
+    ts.forEachChild(n, walk);
+  }
+  walk(node);
+  return invoked;
+}
+
 const covCallbackEdges = [];
 const covUnsupportedCallbacks = [];
 for (const fp of covFiles) {
@@ -1019,6 +1045,16 @@ for (const fp of covFiles) {
       } else if (ts.isPropertyAccessExpression(n.expression) && n.expression.name.text === "on") {
         const ev=n.arguments[0];
         if (ev && (ts.isStringLiteral(ev)||ts.isNoSubstitutionTemplateLiteral(ev))) addEdge(n,"EVENT_LISTENER",ev.text,1);
+      } else {
+        const target = covResolvedCallTarget(fp,n);
+        if (target) {
+          for (let i=0;i<n.arguments.length;i+=1) {
+            const arg=n.arguments[i];
+            if ((ts.isArrowFunction(arg)||ts.isFunctionExpression(arg)) && covTargetInvokesParameter(target,i)) {
+              addEdge(n,"HIGHER_ORDER_CALLBACK",covFunctionKey(target),i);
+            }
+          }
+        }
       }
     }
     ts.forEachChild(n,visit);
@@ -1172,15 +1208,18 @@ for (const key of covRuntimeWriterKeys) {
   const split = key.lastIndexOf("::");
   const sourcePath = key.slice(0, split);
   const symbol = key.slice(split + 2);
-  if (symbol === "<inline>") continue;
   const explicit = covRuntimeDispositions.some((d) => d.source_path === sourcePath && d.entry_symbol === symbol);
+  const callbackExplicit = covCallbackDispositions.some((d) =>
+    Array.isArray(d.writer_entrypoints) &&
+    d.writer_entrypoints.includes(sourcePath + "::" + symbol)
+  );
   const surface = surfaces.some((s) =>
     s.source_path === sourcePath &&
     s.entry_symbol === symbol &&
     s.activation_mode !== "HTTP_ROUTE"
   );
   const startup = covStartupDispositions.some((d) => d.source_path === sourcePath && d.entry_symbol === symbol);
-  if (!explicit && !surface && !startup) {
+  if (!explicit && !callbackExplicit && !surface && !startup) {
     covRuntimeMissing.push({
       source_path: sourcePath,
       entry_symbol: symbol,
