@@ -835,6 +835,50 @@ for (const r of covHttpUnique) {
   }
 }
 assert(covHttpClassMismatch.length === 0, "HTTP side-effect disposition does not match reachable write behavior", covHttpClassMismatch);
+
+function covWriterDeclared(declared, actual) {
+  const rows=Array.isArray(declared)?declared:[];
+  const symbol=String(actual||"").slice(String(actual||"").lastIndexOf("::")+2);
+  return rows.some((d)=>String(d)===String(actual) || String(d)===symbol);
+}
+function covTargetDeclared(declared, actual) {
+  const a=String(actual||"").replace(/^public\./i,"").toLowerCase();
+  return (Array.isArray(declared)?declared:[]).some((raw)=>{
+    const d=String(raw||"").replace(/^public\./i,"").toLowerCase().trim();
+    if (d===a) return true;
+    if (a==="facts" && (d==="facts" || d.startsWith("facts:") || d.startsWith("facts/") || d.startsWith("facts "))) return true;
+    return d.startsWith(a+":") || d.startsWith(a+" ") || d.startsWith(a+"/");
+  });
+}
+const covReachableWriterMissing=[];
+const covReachableTargetMissing=[];
+for (const route of covHttpUnique) {
+  if (!(route.dml||route.ddl)) continue;
+  const disposition=covHttpDispositionKey.get(route.source_path+"::"+route.method+"::"+route.route);
+  if (disposition) {
+    for (const writer of route.writers||[]) if (!covWriterDeclared(disposition.writer_entrypoints,writer)) {
+      covReachableWriterMissing.push({inventory_kind:"http_entrypoint_disposition",inventory_id:disposition.disposition_id,route,missing_writer:writer});
+    }
+    for (const target of route.targets||[]) if (!covTargetDeclared(disposition.write_targets,target)) {
+      covReachableTargetMissing.push({inventory_kind:"http_entrypoint_disposition",inventory_id:disposition.disposition_id,route,missing_target:target});
+    }
+  }
+  const surface=surfaces.find((row)=>
+    row.activation_mode==="HTTP_ROUTE" &&
+    row.source_path===route.source_path &&
+    row.http_method_or_runtime_trigger===route.method &&
+    row.exact_route_or_trigger===route.route
+  );
+  if (surface) {
+    for (const writer of route.writers||[]) if (!covWriterDeclared(surface.writer_entrypoints,writer)) {
+      covReachableWriterMissing.push({inventory_kind:"surface",inventory_id:surface.surface_id,route,missing_writer:writer});
+    }
+    for (const target of route.targets||[]) if (!covTargetDeclared(surface.write_targets,target)) {
+      covReachableTargetMissing.push({inventory_kind:"surface",inventory_id:surface.surface_id,route,missing_target:target});
+    }
+  }
+}
+
 assert(covCallerMissing.length === 0, "production caller-triggered mutation without inventory", covCallerMissing);
 
 
@@ -1114,7 +1158,22 @@ for (const d of covCallbackDispositions) {
 }
 assert(covCallbackMissing.length === 0, "production callback/hook persistent writer without disposition", covCallbackMissing);
 assert(covCallbackClassMismatch.length === 0, "callback/hook disposition effect class mismatch", covCallbackClassMismatch);
+
+for (const edge of covCallbackEdges) {
+  if (!(edge.dml||edge.ddl)) continue;
+  const d=covCallbackDispositionById.get(edge.callback_id);
+  if (!d) continue;
+  for (const writer of edge.writers||[]) if (!covWriterDeclared(d.writer_entrypoints,writer)) {
+    covReachableWriterMissing.push({inventory_kind:"callback_hook_disposition",inventory_id:d.callback_id,edge,missing_writer:writer});
+  }
+  for (const target of edge.targets||[]) if (!covTargetDeclared(d.write_targets,target)) {
+    covReachableTargetMissing.push({inventory_kind:"callback_hook_disposition",inventory_id:d.callback_id,edge,missing_target:target});
+  }
+}
+
 assert(covCallbackStale.length === 0, "stale callback/hook disposition", covCallbackStale);
+assert(covReachableWriterMissing.length===0, "reachable writer missing from disposition.writer_entrypoints", covReachableWriterMissing);
+assert(covReachableTargetMissing.length===0, "reachable persistent target missing from disposition.write_targets", covReachableTargetMissing);
 
 const covStartupDispositions = inv.startup_mutation_dispositions ?? [];
 const covStartupMissing = [];
@@ -1469,6 +1528,8 @@ const covZeroSets = {
   production_runtime_direct_writer_without_inventory: covRuntimeMissing.length,
   startup_mutation_without_explicit_disposition: covStartupMissingUnique.length + covStartupRootMissing.length,
   production_callback_hook_persistent_writer_without_disposition: covCallbackMissing.length,
+  reachable_writer_missing_from_disposition_writer_entrypoints: covReachableWriterMissing.length,
+  reachable_persistent_target_missing_from_disposition_write_targets: covReachableTargetMissing.length,
   production_internal_http_delegation_edge_without_disposition: covDelegationMissing.length,
   production_principal_transition_without_disposition: covPrincipalTransitionMissing.length,
   production_service_credential_without_principal_classification: covCredentialMissing.length,
