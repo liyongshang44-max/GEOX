@@ -76,6 +76,9 @@ jobs:
       - name: B-Line Formal Memory scope provenance
         run: pnpm run ci:governance:bline-formal-memory-scope-provenance
 
+      - name: B-Line Sampling exact-source binding
+        run: pnpm run ci:governance:bline-sampling-exact-source-binding
+
       - name: Route response ownership guard
         run: pnpm run ci:route-response-ownership
 
