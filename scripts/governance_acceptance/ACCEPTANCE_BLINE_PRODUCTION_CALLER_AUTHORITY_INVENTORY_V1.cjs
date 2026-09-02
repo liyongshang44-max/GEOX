@@ -227,25 +227,29 @@ const covAllowedHttpClasses = new Set([
 
 function covSqlEffect(text) {
   const s = String(text || "");
+  // SQL keywords inside single-quoted values are data, not executable verbs.
+  // This is material for privilege-inspection queries such as
+  // has_table_privilege(..., 'INSERT,UPDATE,DELETE,TRUNCATE').
+  const executableSql = s.replace(/'(?:''|[^'])*'/g, "''");
   const dml =
-    /\bINSERT\s+INTO\b/i.test(s) ||
-    /\bDELETE\s+FROM\b/i.test(s) ||
-    /\bUPDATE\s+(?:(?:ONLY\s+)?["A-Za-z_])/i.test(s) ||
-    /\bTRUNCATE(?:\s+TABLE)?\b/i.test(s) ||
-    /\bMERGE\s+INTO\b/i.test(s);
+    /\bINSERT\s+INTO\b/i.test(executableSql) ||
+    /\bDELETE\s+FROM\b/i.test(executableSql) ||
+    /\bUPDATE\s+(?:(?:ONLY\s+)?["A-Za-z_])/i.test(executableSql) ||
+    /\bTRUNCATE(?:\s+TABLE)?\b/i.test(executableSql) ||
+    /\bMERGE\s+INTO\b/i.test(executableSql);
   const ddl =
-    /\bCREATE\s+TABLE\b/i.test(s) ||
-    /\bALTER\s+TABLE\b/i.test(s) ||
-    /\bCREATE\s+(?:UNIQUE\s+)?INDEX\b/i.test(s) ||
-    /\bDROP\s+(?:TABLE|INDEX)\b/i.test(s);
+    /\bCREATE\s+TABLE\b/i.test(executableSql) ||
+    /\bALTER\s+TABLE\b/i.test(executableSql) ||
+    /\bCREATE\s+(?:UNIQUE\s+)?INDEX\b/i.test(executableSql) ||
+    /\bDROP\s+(?:TABLE|INDEX)\b/i.test(executableSql);
   const fact =
-    /\bINSERT\s+INTO\s+(?:public\.)?facts\b/i.test(s) ||
-    /\bUPDATE\s+(?:public\.)?facts\b/i.test(s) ||
-    /\bDELETE\s+FROM\s+(?:public\.)?facts\b/i.test(s);
+    /\bINSERT\s+INTO\s+(?:public\.)?facts\b/i.test(executableSql) ||
+    /\bUPDATE\s+(?:public\.)?facts\b/i.test(executableSql) ||
+    /\bDELETE\s+FROM\s+(?:public\.)?facts\b/i.test(executableSql);
   const targets = new Set();
   function collect(re, group=1) {
     let m;
-    while ((m=re.exec(s))) {
+    while ((m=re.exec(executableSql))) {
       const raw=String(m[group]||"").replace(/^public\./i,"").replaceAll('"',"").trim();
       if (raw && !["SET","SKIP","NOWAIT"].includes(raw.toUpperCase())) targets.add(raw);
     }
