@@ -7,6 +7,8 @@ on:
       - '.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml'
       - 'apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts'
       - 'apps/server/src/runtime/mcft_cap09_production_runtime_start_authority_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts'
