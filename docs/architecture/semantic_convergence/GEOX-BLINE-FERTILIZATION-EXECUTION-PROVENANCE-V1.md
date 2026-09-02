@@ -120,6 +120,8 @@ The canonical Acceptance evidence refs must include the exact Receipt fact.
 
 A canonical `NEEDS_REVIEW`, `INSUFFICIENT_EVIDENCE`, `PARTIAL`, or `FAIL` result cannot be upgraded to Fertilization PASS.
 
+Canonical Acceptance is a predecessor gate, not a peer verdict. If the exact canonical Acceptance is non-PASS, Fertilization Acceptance evaluation stops and no domain Acceptance fact is minted for that chain. In particular, current variable-zone canonical Acceptance already enforces zone completion, coverage, and amount-deviation constraints; Fertilization must not re-evaluate a canonically failed execution to create an independent FAIL/PASS truth.
+
 ## Authorization
 
 The Fertilization Acceptance route requires dedicated `acceptance.evaluate` scope and an acceptance-capable role.
