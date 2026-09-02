@@ -1,6 +1,6 @@
 {
   "schema_version": "bline_production_caller_authority_inventory_v1",
-  "status": "INVENTORY_DRAFT_AWAITING_MACHINE_COVERAGE",
+  "status": "INVENTORY_COMPLETE_BSEC0_OPEN",
   "canonical_predecessor": {
     "pr": 3452,
     "sha": "b6f141c5471cd6f329ba60bd79cf6e4085546264",
@@ -8029,7 +8029,8 @@
   "completion_claim": {
     "bsec0_closed": false,
     "active_graph_fully_disposed": false,
-    "reason": "PR-SEC-1 records caller-authority truth and gaps; containment/capability/device-principal work is intentionally not implemented here."
+    "reason": "PR-SEC-1 inventory is machine-qualified complete. Caller-authority containment/capability/device-principal work remains open and is outside this PR.",
+    "pr_sec_1_inventory_complete": true
   },
   "non_authority_method_dispositions": [
     {
@@ -8068,5 +8069,23 @@
       "authn_mode": "SESSION_TERMINATION_OR_STATELESS_LOCAL",
       "authz_capability": []
     }
-  ]
+  ],
+  "inventory_completion": {
+    "complete": true,
+    "qualified_product_head": "425e876486834ae6b958a2cbcc413b6b1bdc6c37",
+    "qualification_ci_run": 33598064113,
+    "caller_authority_inventory_gate": "SUCCESS",
+    "reverse_scan_missing_mutation_surfaces": 0,
+    "residual_authority_audit": "SUCCESS",
+    "active_runtime_surface_closure": "SUCCESS",
+    "typecheck": "SUCCESS",
+    "build": "SUCCESS",
+    "server_selfcheck": "SUCCESS",
+    "acceptance": "SUCCESS",
+    "commercial_mvp0_release": "SUCCESS",
+    "runtime_hygiene": "SUCCESS",
+    "semantic_runtime_changed": false,
+    "authz_runtime_changed": false,
+    "mcft_implementation_changed": false
+  }
 }
