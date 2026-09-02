@@ -319,6 +319,7 @@ async function run() {
     ec_high_salinity_risk_blocks_nitrogen_prescription: false,
     zone_rate_negative_blocked: false,
     planned_n_exceeds_max_blocked: false,
+    dedicated_acceptance_scope_enforced: false,
     caller_zone_applications_rejected: false,
     wrong_as_applied_chain_rejected: false,
     canonical_non_pass_cannot_upgrade: false,
@@ -459,6 +460,10 @@ async function run() {
         && fertAcc.json?.acceptance?.as_executed_id === receiptFlow.as_executed_id
         && fertAcc.json?.acceptance?.as_applied_id === receiptFlow.as_applied_id
         && fertAcc.json?.acceptance?.acceptance_result_fact_id === receiptFlow.acceptance_result_fact_id;
+
+      const executorAcceptanceAttempt = await evalFertilizationAcceptance(base, executorToken, scope, exactPositive);
+      negative.dedicated_acceptance_scope_enforced = executorAcceptanceAttempt.status === 403
+        || String(executorAcceptanceAttempt.json?.error ?? '').includes('SCOPE');
 
       const callerZoneAttempt = await evalFertilizationAcceptance(base, operatorToken, scope, exactPositive, { zone_applications: goodApps });
       negative.caller_zone_applications_rejected = callerZoneAttempt.status === 400
