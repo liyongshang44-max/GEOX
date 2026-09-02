@@ -1,22 +1,1124 @@
-# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-02 Continuation — T4R1 Stage / Natural-Season Requalification Settlement Frontier
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-02 Continuation — Engineering Readiness / Live Activation Separation Frontier
 
 Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
 
-Timestamp: **2026-09-02 21:00 +08:00**
+Timestamp: **2026-09-02 21:38 +08:00**
 
 Repository: liyongshang44-max/GEOX
 
-Purpose: continue the same MCFT-CAP-09 Stage 1B / Shadow-Online closure after the T4R1 contemporaneous-stage route and natural-season-successor route were both executed as read-only exact-head proofs and durably settled. The current machine result is not “stage authority repaired” and not “new natural season established”: both routes failed closed with zero qualified candidates. Runtime-start remains deliberately unarmed, production owner graduation is not yet a legal next action, and requalification must not be repeated until a material provider change is observed. The current exact product head also exposes one isolated Producer workflow stale-arm ordering debt; QCP independently confirms the durable Producer runtime evidence remains valid and no live provider rerun is required.
+Purpose: continue the same MCFT-CAP-09 work after correcting a critical scheduling/governance mistake: uncontrollable current-season KBS provider availability must not remain on the software-engineering critical path. The frozen Taskbook Stage 1B completion claim remains unchanged and still requires real S6 O00–O23 plus final exact-SHA/R2 effectiveness; however, the controllable software/runtime/governance mechanisms have now been separately machine-qualified under a subordinate production-equivalent engineering-readiness claim. Current T4R1 stage/season authority remains unresolved and therefore live activation is still not currently eligible. These two facts now coexist explicitly instead of the latter blocking the former.
 
-> **This N-section is now the highest-priority conversation continuation in this file.**
+> **This O-section is now the highest-priority conversation continuation in this file.**
 >
-> The complete M-section immediately below remains intentionally preserved in full as the historical T4R1 stage / natural-season requalification frontier from which this settlement was executed.
+> The complete N-section immediately below remains intentionally preserved in full as the historical T4R1 stage / natural-season settlement frontier.
 >
-> L, K, J, I, H, and all earlier Phase content remain historical evidence and must remain intact.
+> N contains an intentionally preserved statement that the “next legitimate technical event” was a material provider change. That statement is now superseded **for engineering readiness only** by O. It remains historically correct for the then-current live-activation frontier.
 >
-> Do not rewrite M merely because M15/M16 have now been executed. M records the exact legal sequence and preconditions that governed those proofs.
+> M, L, K, J, I, H, and all earlier sections remain historical evidence and must remain intact.
 >
 > This handoff does **not** supersede docs/SSOT.md, the Digital Twin Master Task Line, the CAP-09 taskbook, Production Hosting architecture/route, QCP, immutable qualification evidence, accepted CAP-01→08 authorities, T4R1 crop/season authorities, or frozen Formal-store authorities.
+
+---
+
+## O0. READ THIS FIRST — engineering readiness is qualified; live activation is separately not currently eligible
+
+The authoritative product PR is now:
+
+~~~text
+#3376
+
+title =
+  feat(mcft-cap09): qualify engineering readiness and separate live activation
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+current exact head =
+  330e1a239317644a8f34e5ffb34e9e76a1560a48
+
+state =
+  Draft / open / unmerged
+
+mergeable =
+  true
+~~~
+
+Protected main remains:
+
+~~~text
+fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+
+protected =
+  true
+~~~
+
+The current dual state is:
+
+~~~text
+MCFT_CAP09 engineering readiness =
+  QUALIFIED
+
+allowed engineering claim =
+  MCFT_CAP_09_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_QUALIFIED
+
+engineering work blocked by material KBS/provider change =
+  false
+
+MCFT_CAP09 live activation =
+  NOT_CURRENTLY_ELIGIBLE
+
+material KBS/provider change =
+  LIVE_ACTIVATION_GATE
+
+runtime-start authority may be armed =
+  false
+
+production owner activation =
+  false
+
+Formal-v5 =
+  not armed
+
+A0 =
+  not bootstrapped
+
+O00–O23 =
+  not started
+
+Stage 1B completion =
+  NOT CLAIMED
+~~~
+
+This is the core correction introduced by this continuation.
+
+---
+
+## O1. Current task in one sentence
+
+**Preserve the Taskbook’s real-field Stage 1B completion gate while treating the controllable CAP-09 software/runtime/governance mechanisms as independently engineering-qualified; continue remaining controllable engineering debt without waiting for KBS, while keeping real T4R1 runtime-start/owner/Formal activation closed until valid live authority exists.**
+
+The current engineering line is no longer:
+
+~~~text
+wait for KBS
+        ↓
+only then continue software work
+~~~
+
+It is:
+
+~~~text
+engineering readiness =
+  independently qualified
+        +
+live activation eligibility =
+  separately fail-closed
+~~~
+
+---
+
+## O2. Critical correction to the preserved N-section
+
+N correctly proved:
+
+~~~text
+current T4R1 stage authority =
+  not established
+
+current T4R1 natural-season successor =
+  not established
+
+viable future Formal/A0 window =
+  false
+~~~
+
+N then concluded:
+
+~~~text
+The next legitimate technical event is a material provider change.
+~~~
+
+That conclusion is now superseded in one precise respect:
+
+~~~text
+next legitimate LIVE ACTIVATION event =
+  material provider change
+
+next legitimate ENGINEERING action =
+  continue controllable engineering / governance work
+  without inventing live authority
+~~~
+
+Do not delete or rewrite N.
+
+O records the later governance correction and exact-head proof that engineering readiness can be qualified independently from uncontrollable live provider availability.
+
+---
+
+## O3. Frozen completion semantics were not weakened
+
+The CAP-09 taskbook still states that these claims are allowed only after real S6 O00–O23 plus final exact-SHA/R2 effectiveness:
+
+~~~text
+STAGE_1B_SHADOW_ONLINE_CLOSURE_COMPLETE
+MCFT_CAP_09_COMPLETE
+~~~
+
+Neither is claimed by this O-section.
+
+Also still forbidden:
+
+~~~text
+REAL_FIELD_24_HOUR_ONLINE_PROVEN
+MINIMUM_COMPLETE_FIELD_TWIN_COMPLETE
+CURRENT_T4R1_LIVE_ACTIVATION_ELIGIBLE
+~~~
+
+The new engineering claim is strictly subordinate:
+
+~~~text
+MCFT_CAP_09_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_QUALIFIED
+~~~
+
+It is not an alias for Stage 1B completion.
+
+---
+
+## O4. Existing authority precedent — Amendment-08 already separates implementation from activation
+
+This separation is not a new philosophical exception invented after the T4R1 window expired.
+
+The existing Amendment-08 authority already distinguishes:
+
+~~~text
+software implementation qualification
+!=
+operational activation qualification
+~~~
+
+The existing post-activation readiness audit independently records:
+
+~~~text
+ea5e2_implementation_qualified =
+  true
+
+ea5e2_operational_activation_runner_qualified =
+  true
+
+ea5e2_operational_activation_qualified =
+  false
+~~~
+
+The O-section applies the same lifecycle principle at the current whole-CAP engineering-readiness frontier without changing Taskbook completion semantics.
+
+---
+
+## O5. Exact product commits that establish the separation
+
+From the N-section head:
+
+~~~text
+3a83b76450b5459bde8d1d56234e5bba80b49398
+  test(mcft-cap09): govern T4R1 requalification settlement
+~~~
+
+the new chain is:
+
+~~~text
+d930c4b949c732993deea2c5ae24fb97324d16b1
+  gov(mcft-cap09): separate engineering readiness from live activation
+
+330e1a239317644a8f34e5ffb34e9e76a1560a48
+  fix(mcft-cap09): align engineering readiness settlement status
+~~~
+
+The second commit fixes one stale expected-status assertion discovered by the first exact-head planner run.
+
+Final net diff from 3a83 to 330e remains exactly two existing files:
+
+~~~text
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json
+
+scripts/governance_acceptance/
+ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_TARGET_PLANNER_READINESS_V1.cjs
+~~~
+
+No new runtime file, workflow, schema, migration, provider adapter, owner arm, Formal arm, or service was added.
+
+---
+
+## O6. Canonical dual-state authority
+
+The acquisition-horizon authority now declares:
+
+~~~text
+status =
+  ENGINEERING_READINESS_QUALIFIED_LIVE_ACTIVATION_BLOCKED_CURRENT_T4R1_AUTHORITY_UNRESOLVED
+
+stage =
+  POST_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_PRE_LIVE_ACTIVATION
+~~~
+
+Its dedicated separation object declares:
+
+~~~text
+status =
+  QUALIFIED_ENGINEERING_READINESS_LIVE_ACTIVATION_NOT_CURRENTLY_ELIGIBLE
+
+authority_role =
+  ENGINEERING_READINESS_ONLY_NOT_STAGE1B_COMPLETION_NOT_LIVE_ACTIVATION
+~~~
+
+Rulings include:
+
+~~~text
+software implementation qualification
+  distinct from operational activation qualification =
+  true
+
+third-party provider availability may block engineering readiness =
+  false
+
+third-party provider availability may block live activation =
+  true
+
+KBS material provider change is engineering blocker =
+  false
+
+KBS material provider change is live activation gate =
+  true
+
+fixture/synthetic evidence may become real T4R1 authority =
+  false
+
+cross-season stitching authorized =
+  false
+
+Taskbook Stage 1B completion gate changed =
+  false
+~~~
+
+---
+
+## O7. Exact-head planner-readiness machine proof
+
+At:
+
+~~~text
+#3376 @ 330e1a239317644a8f34e5ffb34e9e76a1560a48
+~~~
+
+planner-readiness:
+
+~~~text
+run =
+  33635915548
+
+conclusion =
+  SUCCESS
+
+artifact_id =
+  9848782654
+
+artifact_digest =
+  sha256:dedb8de6bfdaad759dd08d58dfef5b3f117dfb2157afb34d96906ef3bb49ac2f
+~~~
+
+Machine output includes:
+
+~~~text
+engineering_readiness_status =
+  QUALIFIED
+
+engineering_readiness_claim =
+  MCFT_CAP_09_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_QUALIFIED
+
+engineering_work_blocked_by_material_provider_change =
+  false
+
+live_activation_status =
+  NOT_CURRENTLY_ELIGIBLE
+
+material_provider_change_is_live_activation_gate =
+  true
+
+runtime_start_authority_may_be_armed =
+  false
+~~~
+
+The rest of the existing planner/source-progress/KBS-retained-batch selftests also completed SUCCESS.
+
+No provider request or production mutation was used to establish this claim.
+
+---
+
+## O8. Protected Phase5 semantic core is machine checked against drift
+
+The engineering-readiness acceptance does not merely trust old Phase5 prose.
+
+It dynamically compares the current exact subject against the immutable full-24T subject:
+
+~~~text
+12473c491b354e49305f22bfa24c8701ce5e3ff9
+~~~
+
+for the frozen Phase5 15-path semantic core.
+
+Current exact result:
+
+~~~text
+protected semantic core path count =
+  15
+
+changed protected semantic core paths =
+  []
+
+protected semantic core unchanged =
+  true
+~~~
+
+A GitHub compare from the immutable full-24T head to the pre-separation subject showed:
+
+~~~text
+successor commits =
+  393
+
+returned changed files =
+  215
+
+protected-core changed files =
+  0
+~~~
+
+The exact-head Phase5 settlement at 330e independently re-proved:
+
+~~~text
+protected_semantic_core_unchanged =
+  true
+
+protected_semantic_core_changed_paths =
+  []
+
+uncovered_changed_paths =
+  []
+~~~
+
+If any protected path drifts in a future subject, the engineering-readiness acceptance must fail closed.
+
+---
+
+## O9. Immutable full-24T evidence remains the full-window basis
+
+The full production-equivalent 24T evidence remains:
+
+~~~text
+subject =
+  12473c491b354e49305f22bfa24c8701ce5e3ff9
+
+workflow =
+  mcft-cap-09-phase5-two-service-accelerated-24t
+
+run =
+  33101400822
+
+artifact_id =
+  9659440229
+
+artifact_digest =
+  sha256:79606348f954162d867aeba79d2a2e0bbb0ab696b5e7336a3e95f0f904117055
+
+exact_24t =
+  true
+
+live_causal_evidence =
+  true
+~~~
+
+This proof is not rewritten as “current live T4R1 proof”.
+
+It is used only within the production-equivalent engineering-readiness evidence chain.
+
+---
+
+## O10. Fresh Evidence container-resilience proof remains separately bound
+
+Fresh Evidence resilience:
+
+~~~text
+subject =
+  3349eaaaab68f80fc9b771f16e4bfe909126eed2
+
+run =
+  33110416779
+
+artifact_id =
+  9671930864
+
+artifact_digest =
+  sha256:ba40853403b3b7f53794e83aa7c4f283def431f63a29b346c53d043add856479
+~~~
+
+This proof supplies:
+
+~~~text
+duplicate Evidence container behavior
+restart recovery
+fencing / standby takeover freshness
+~~~
+
+The current engineering claim requires the old full-window evidence and the later resilience evidence together; neither is silently substituted for the other.
+
+---
+
+## O11. Current-head Phase5 exact qualification proves the expired window is not an engineering stop
+
+Current exact Phase5:
+
+~~~text
+run =
+  33635916045
+
+conclusion =
+  SUCCESS
+
+artifact_id =
+  9848885930
+
+artifact_digest =
+  sha256:655de4afe04eaffdfb9f18a8571081f5db6ce44dc95dffe49ae00d7d4a90dc1e
+~~~
+
+Temporal adjudication:
+
+~~~text
+execution_mode =
+  TEMPORAL_SETTLEMENT_V1
+
+last_viable_full_24t_a0 =
+  2026-08-27T21:00:00.000Z
+
+temporal_window_expired =
+  true
+~~~
+
+Because the real window is expired, the workflow correctly skipped:
+
+~~~text
+Capture real causal A0 soil and GFS raw objects
+
+Run duplicate Evidence containers with fenced takeover and restart recovery
+  [live lane]
+
+Prepare A0 and exact 24-slot manifest from current live Evidence DB
+  [live lane]
+
+Run duplicate Twin containers O00-O07 with DB fencing
+  [full-live lane]
+
+Restart Twin container and recover O08-O23
+  [full-live lane]
+~~~
+
+Instead it:
+
+- downloaded the immutable full-24T proof;
+- downloaded the fresh Evidence-resilience proof;
+- verified semantic-core equivalence;
+- seeded disclosed controlled engineering fixture data only for focused Twin fencing;
+- ran the real Twin process graph against isolated qualification state;
+- proved the fixture is not live evidence.
+
+Current settlement output includes:
+
+~~~text
+current_head_full_live_24t_claimed =
+  false
+
+old_full_24t_exact_24 =
+  true
+
+old_full_24t_live_causal_evidence =
+  true
+
+evidence_duplicate_restart_fencing_fresh =
+  true
+
+protected_semantic_core_unchanged =
+  true
+
+production_owner_cutover =
+  false
+
+formal_v5_armed =
+  false
+~~~
+
+Controlled fixture proof includes:
+
+~~~text
+fixture_disclosure =
+  CONTROLLED_ENGINEERING_FIXTURE_NOT_FORMAL_EXTERNAL_EVIDENCE
+
+live_evidence_claim =
+  false
+
+full_24t_claim =
+  false
+
+provider_request_count =
+  0
+~~~
+
+This is the exact machine behavior required by the engineering/live separation.
+
+---
+
+## O12. Phase6 runtime-independence remains valid at the current head
+
+Accepted Phase6 runtime proof:
+
+~~~text
+accepted subject =
+  48ceafe7c6e7d3d57a1dc17411fb4bf673486333
+
+accepted run =
+  33146391000
+
+accepted artifact_id =
+  9676455831
+
+accepted artifact_digest =
+  sha256:9a3a22b8b844fc1538d4a6986a9d3477b895208b1e88cdf13106f0f0dbf463d7
+~~~
+
+Current exact successor reproof:
+
+~~~text
+run =
+  33635915859
+
+conclusion =
+  SUCCESS
+
+artifact_id =
+  9848785867
+
+artifact_digest =
+  sha256:061f738c76bf0313430b7d868e7087ee55ff16553a7ce4d4cf14eed97bc7fabd
+~~~
+
+The current run revalidated:
+
+- accepted Phase6 ancestry;
+- immutable accepted runtime artifact;
+- retired GitHub production-owner audit;
+- zero-effect successor carry-forward.
+
+The full Phase6 production-equivalent job remained skipped as expected.
+
+---
+
+## O13. V13 Producer durable runtime evidence remains valid
+
+Durable Producer evidence remains:
+
+~~~text
+evidence_id =
+  V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F
+
+subject =
+  bf1d345f925f543779718973f8c9419684498e2a
+
+run =
+  33605700840
+
+dependency_digest =
+  sha256:db6bbfe41052d262481bb2a911cbe1501247c32ed111daa2af0b8ab5c58088b3
+~~~
+
+The current exact control planes still accept it through:
+
+~~~text
+DURABLE_REQUALIFICATION_EVIDENCE_AND_DEPENDENCY_DIGEST_VALID
+~~~
+
+Do not interpret the independent Producer stale-arm workflow failure as invalidating this evidence.
+
+---
+
+## O14. Post-merge V13 control plane exact result
+
+Current exact post-merge control plane:
+
+~~~text
+run =
+  33635916229
+
+conclusion =
+  SUCCESS
+
+artifact_id =
+  9848829681
+
+artifact_digest =
+  sha256:c50188b90f4b1f36ee2c262b2c30865373171135f870e465b284b60396630cbd
+~~~
+
+Machine facts:
+
+~~~text
+planner_status =
+  PASS
+
+unknown_changed_paths =
+  0
+
+authority_errors =
+  0
+
+resolver_errors =
+  0
+
+V13 Producer =
+  PASS
+  durable BF1D evidence
+
+blocker_count =
+  1
+
+only blocker =
+  EXACT_ONE_PRODUCTION_OWNER
+~~~
+
+This is important: the new engineering-readiness claim did **not** consume or bypass the real live-owner gate.
+
+---
+
+## O15. QCP exact result remains deliberately fail-closed on the live owner
+
+Current exact QCP:
+
+~~~text
+run =
+  33635915721
+
+conclusion =
+  FAILURE
+  deliberate fail-closed
+
+artifact_id =
+  9848923064
+
+artifact_digest =
+  sha256:5b4aafd524b33bd750ba5734cb12946dd74d2ab9f8f1e4b37084f8a2e351ba76
+~~~
+
+The following all passed before blocker enumeration:
+
+~~~text
+central applicability semantics =
+  PASS
+
+generation / durable-anchor / dependency-digest semantics =
+  PASS
+
+immutable qualification evidence references =
+  PASS
+
+exact PR applicability plan =
+  PASS
+
+unknown_changed_paths =
+  0
+
+authority_errors =
+  0
+
+resolver_errors =
+  0
+~~~
+
+Final blocker inventory:
+
+~~~text
+blocker_count =
+  1
+
+blocker =
+  EXACT_ONE_PRODUCTION_OWNER
+
+reason =
+  NO_VALID_REQUALIFICATION_EVIDENCE
+~~~
+
+Producer remains PASS through BF1D durable evidence.
+
+Therefore:
+
+**engineering readiness qualified does not mean production owner evidence exists.**
+
+---
+
+## O16. Exact-head CI and delivery checks are green
+
+Current exact CI:
+
+~~~text
+run =
+  33635916218
+
+conclusion =
+  SUCCESS
+~~~
+
+Both main jobs completed SUCCESS:
+
+~~~text
+build-test =
+  SUCCESS
+
+acceptance =
+  SUCCESS
+~~~
+
+The broad acceptance lane also completed:
+
+- Controlled Pilot strict release;
+- C8 formal-chain backend P0;
+- frontend runtime page audit;
+- Stage-1 fixture raw sample contract;
+- P1 smoke/idempotency;
+- customer-report boundary suite;
+- main acceptance suite;
+- COMMERCIAL MVP0 release gate;
+- final runtime hygiene.
+
+Current required delivery checks are also green:
+
+~~~text
+mcft-delivery-policy-v2-contract =
+  SUCCESS
+
+mcft-candidate-integrity-pr-selftest =
+  SUCCESS
+
+mcft-candidate-integrity-enforce-current-pr =
+  SUCCESS
+
+mcft-release-lane-pr-selftest =
+  SUCCESS
+
+mcft-release-lane-enforce-current-pr =
+  SUCCESS
+
+mcft-main-ruleset-readiness-v1 =
+  SUCCESS
+~~~
+
+---
+
+## O17. Live T4R1 activation remains correctly ineligible
+
+Nothing in O changes the real T4R1 authority result recorded by N.
+
+Contemporaneous stage route:
+
+~~~text
+run =
+  33630413934
+
+result =
+  NO_T4R1_CONTEMPORANEOUS_STAGE_INPUT_AUTHORITY_CURRENTLY_ESTABLISHED
+~~~
+
+Natural-season successor route:
+
+~~~text
+run =
+  33630968448
+
+result =
+  NO_T4R1_NATURAL_SEASON_SUCCESSOR_CANDIDATE_CURRENTLY_OBSERVED
+~~~
+
+Therefore live status remains:
+
+~~~text
+current T4R1 stage authority established =
+  false
+
+current T4R1 natural-season successor established =
+  false
+
+viable future Formal/A0 window =
+  false
+
+runtime-start authority may be armed =
+  false
+
+production owner activation authorized =
+  false
+
+Formal-v5 =
+  false
+
+A0 =
+  false
+
+O00 =
+  false
+~~~
+
+Material provider change remains relevant here and only here.
+
+---
+
+## O18. Exact meaning of the new engineering claim
+
+Allowed:
+
+~~~text
+MCFT_CAP_09_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_QUALIFIED
+~~~
+
+This means the controllable software/runtime/governance mechanism chain is qualified through:
+
+- immutable exact full-24T proof;
+- fresh Evidence duplicate/restart/fencing proof;
+- protected semantic-core no-drift;
+- current-head temporal settlement;
+- focused Twin DB-fencing proof;
+- Phase6 runtime-independence;
+- V13 Producer durable runtime proof;
+- production planner/source-progress readiness;
+- QCP/control-plane integrity;
+- current live-authority fail-closed behavior.
+
+It does **not** mean:
+
+~~~text
+real current T4R1 activation ready
+real current T4R1 owner active
+real Formal-v5 running
+real A0 established
+real O00–O23 executed
+Stage 1B complete
+CAP-09 complete
+~~~
+
+---
+
+## O19. Independent Producer stale-arm failure is now explicitly nonblocking engineering debt
+
+Current independent Producer workflow still fails at:
+
+~~~text
+Resolve explicit live arm
+~~~
+
+because the stored:
+
+~~~text
+qualification_first_base
+~~~
+
+has aged inside the >6h freshness guard.
+
+The workflow fails before:
+
+~~~text
+Resolve governed producer live applicability
+~~~
+
+so it never reaches the existing durable-evidence skip path.
+
+Current classification:
+
+~~~text
+V13_PRODUCER_STALE_ARM_ORDERING
+
+classification =
+  QUALIFICATION_HARNESS_CONTROL_PLANE_DEBT
+
+blocks engineering readiness =
+  false
+
+live provider failure observed =
+  false
+
+current durable Producer evidence invalidated =
+  false
+~~~
+
+This debt remains controllable engineering work and is the next high-value non-live item.
+
+---
+
+## O20. Correct design direction for the Producer stale-arm debt
+
+Current:
+
+~~~text
+V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE
+~~~
+
+contains both:
+
+- production/runtime semantic dependency roots;
+- qualification workflow;
+- qualification preflight;
+- arm JSON;
+- QCP/applicability control files.
+
+Therefore a qualification-harness-only edit can currently look like a runtime evidence dependency change.
+
+Step5 timing already demonstrates the correct architectural principle:
+
+~~~text
+qualification-specific mechanics
+  may use a separate resolver
+
+so unrelated qualification changes
+  do not invalidate an already-closed runtime proof
+~~~
+
+The Producer debt should be repaired through a governed resolver/evidence-contract migration, not by simply moving the arm time.
+
+Required migration properties:
+
+1. explicitly identify runtime-semantic dependency paths;
+2. explicitly identify qualification-harness-only paths;
+3. prove removed harness paths are not imported by runtime roots;
+4. preserve fail-closed behavior for runtime semantic drift;
+5. preserve BF1D evidence provenance;
+6. do not relabel a changed runtime digest as unchanged;
+7. do not manufacture a fresh live Producer run;
+8. do not use a provider call unless the migrated evidence contract genuinely requires it;
+9. keep live owner/Formal non-effects;
+10. machine-test the migration with positive and negative path-drift cases.
+
+Do not perform a casual resolver shrink.
+
+---
+
+## O21. B-Line boundary remains unchanged
+
+The engineering-readiness correction does not expand MCFT ownership into B-Line.
+
+Still out of scope:
+
+- Commercial runtime authority repair;
+- Admin compatibility repair;
+- Executor B-Line classification;
+- Telemetry B-Line classification;
+- Decision / Approval / Dispatch / Acceptance product authority.
+
+The broad CI acceptance lane being green does not transfer those ownership surfaces into MCFT.
+
+---
+
+## O22. Immediate continuation order
+
+The controllable engineering sequence is now:
+
+~~~text
+1. lock exact head 330e1a239...
+2. preserve engineering-readiness/live-activation separation
+3. preserve Taskbook Stage 1B completion semantics
+4. design Producer runtime-vs-harness resolver migration
+5. prove resolver migration without evidence laundering
+6. fix stale-arm ordering so durable applicability can be resolved before live-arm freshness
+7. rerun exact-head QCP / Producer applicability / CI
+8. keep current T4R1 live activation NOT_CURRENTLY_ELIGIBLE
+~~~
+
+Separately, when KBS/provider material state changes:
+
+~~~text
+fresh current T4R1 stage/season requalification
+        ↓
+if valid authority exists:
+  calculate new viable future Formal/A0 authority
+        ↓
+separate runtime-start authority
+        ↓
+production owner
+        ↓
+Formal-v5 → A0 → O00–O23
+        ↓
+only then:
+  STAGE_1B_SHADOW_ONLINE_CLOSURE_COMPLETE
+  MCFT_CAP_09_COMPLETE
+~~~
+
+These are now two explicit lanes rather than one blocking chain.
+
+---
+
+## O23. Bottom line
+
+At the current exact head:
+
+~~~text
+#3376 @ 330e1a239317644a8f34e5ffb34e9e76a1560a48
+
+engineering readiness =
+  QUALIFIED
+
+allowed claim =
+  MCFT_CAP_09_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_QUALIFIED
+
+engineering work waiting on KBS =
+  NO
+
+live activation =
+  NOT_CURRENTLY_ELIGIBLE
+
+planner-readiness =
+  SUCCESS
+  33635915548
+
+Phase5 production-equivalent temporal settlement =
+  SUCCESS
+  33635916045
+
+Phase6 runtime independence =
+  SUCCESS
+  33635915859
+
+post-merge V13 control plane =
+  SUCCESS
+  33635916229
+
+QCP =
+  deliberate fail-closed
+  33635915721
+  blocker_count = 1
+  EXACT_ONE_PRODUCTION_OWNER
+
+CI =
+  SUCCESS
+  33635916218
+
+Producer durable evidence =
+  PASS
+  V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F
+
+independent Producer workflow =
+  stale-arm ordering failure
+  no live provider execution
+
+runtime-start / owner / Formal-v5 / A0 / O00 =
+  all unarmed / inactive
+
+Stage 1B =
+  NOT COMPLETE
+~~~
+
+The key scheduling correction is now machine-proved:
+
+**KBS/provider availability may block live activation, but it no longer blocks the controllable MCFT-9 engineering line.**
 
 ---
 
