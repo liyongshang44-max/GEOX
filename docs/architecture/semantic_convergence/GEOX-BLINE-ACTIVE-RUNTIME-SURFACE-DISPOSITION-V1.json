@@ -2614,9 +2614,9 @@
       "surface_role": "DERIVER",
       "delegates_to": [],
       "replacement_path": [
-        "legacy agronomy recommendation signal with exact telemetry fact provenance"
+        "legacy agronomy recommendation signal with exact telemetry fact provenance; non-executable"
       ],
-      "sunset_condition": "P0_RES_003_REMOVE_FABRICATED_TELEMETRY_DECISION_AND_DIRECT_PLAN_AUTHORITY",
+      "sunset_condition": "P0_RES_003_CLOSED_KEEP_FAIL_CLOSED_NON_EXECUTABLE_LEGACY_SIGNAL",
       "semantic_family": [
         "agronomy.interpretation",
         "evidence.raw_observation"
