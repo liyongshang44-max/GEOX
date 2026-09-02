@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import Fastify from "fastify";
 
-import { registerSensingModule } from "../../apps/server/src/modules/sensing/registerSensingModule.js";
+import { registerWeatherV1Routes } from "../../apps/server/src/routes/weather_v1.js";
 
 const ROUTE = "/api/v1/weather/forecast/ingest";
 const ERROR = "WEATHER_FORECAST_INGEST_COMMERCIAL_AUTHORITY_UNAVAILABLE";
@@ -90,7 +90,7 @@ const cases: Array<{
 
 async function main(): Promise<void> {
   const app = Fastify({ logger: false });
-  registerSensingModule(app, trapPool);
+  registerWeatherV1Routes(app, trapPool);
   await app.ready();
 
   const before = { ...counters };
@@ -128,14 +128,15 @@ async function main(): Promise<void> {
     await app.close();
   }
 
-  assert.equal(counters.total_queries, 0, "production registration rejection must issue zero DB queries");
+  assert.equal(counters.total_queries, 0, "focused weather-route rejection must issue zero DB queries");
   assert.equal(counters.facts_mutations, 0, "facts delta must remain zero");
   assert.equal(counters.weather_index_mutations, 0, "weather_forecast_index_v1 delta must remain zero");
   assert.equal(counters.schema_ensure_queries, 0, "weather index ensure path must remain unreachable");
 
   console.log(JSON.stringify({
     result: "PASS",
-    registration: "registerSensingModule -> registerWeatherV1Routes",
+    registration_under_test: "registerWeatherV1Routes",
+    production_registration_proven_separately: "registerSensingModule -> registerWeatherV1Routes + Commercial Compose runtime HTTP proof",
     route: ROUTE,
     containment: "COMMERCIAL_FAIL_CLOSE",
     rejection_cases: matrix.length,
