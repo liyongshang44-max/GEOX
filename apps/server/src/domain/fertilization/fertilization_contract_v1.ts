@@ -175,14 +175,19 @@ export type FertilizationAcceptanceZoneResultV1 = {
 export type FertilizationAcceptanceV1 = {
   fertilization_acceptance_id: string;
   fertilization_prescription_id: string;
+  fertilization_prescription_fact_id: string;
+  variable_prescription_id: string;
   tenant_id: string;
   project_id: string;
   group_id: string;
   field_id: string;
-  operation_plan_id?: string | null;
-  act_task_id?: string | null;
-  receipt_id?: string | null;
-  as_applied_id?: string | null;
+  operation_plan_id: string;
+  act_task_id: string;
+  receipt_fact_id: string;
+  receipt_id: string;
+  as_executed_id: string;
+  as_applied_id: string;
+  acceptance_result_fact_id: string;
   acceptance_status: FertilizationAcceptanceStatusV1;
   zone_results: FertilizationAcceptanceZoneResultV1[];
   operation_rollup_policy: "ALL_REQUIRED_ZONES_PASS" | "NEEDS_REVIEW_ON_MISSING_ZONE";
@@ -225,6 +230,8 @@ export const FERTILIZATION_DOMAIN_HARD_RULES_V1 = {
   recommendation_not_prescription: "fertilization_recommendation ≠ fertilization prescription",
   prescription_not_approved_operation: "fertilization_prescription ≠ approved operation",
   receipt_success_not_acceptance_pass: "receipt success ≠ fertilization acceptance PASS",
+  caller_zone_assertions_not_execution_evidence: "caller zone_applications ≠ canonical execution evidence",
+  canonical_acceptance_required_before_fertilization_pass: "fertilization acceptance PASS requires exact canonical acceptance_result_v1 formal PASS",
   operation_average_must_not_hide_zone_failure: "operation-level average 不得掩盖 zone-level over/under application",
   acceptance_pass_must_not_write_roi_field_memory_customer_success: "fertilization acceptance PASS 不得直接写 ROI / Field Memory / customer success",
 } as const;
