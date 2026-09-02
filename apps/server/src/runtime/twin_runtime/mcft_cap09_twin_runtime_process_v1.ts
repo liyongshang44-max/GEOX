@@ -33,6 +33,7 @@ import {
   McftCap09ProductionTwinWaitV1,
 } from "../mcft_cap09_production_process_lifecycle_v1.js";
 import {
+  loadMcftCap09ProductionRuntimeStartAuthorityV1,
   parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1,
 } from "../mcft_cap09_production_runtime_start_authority_v1.js";
 import {
@@ -207,12 +208,15 @@ export async function runMcftCap09TwinRuntimeProcessV1(input?: {
   const document = productionAcquisitionHorizonAuthorityJson as {
     runtime_start_binding?: unknown;
   };
-  parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
-    input?.runtime_start_authority ?? document.runtime_start_binding,
-    "TWIN_RUNTIME",
-  );
-
   const env = input?.env ?? process.env;
+  loadMcftCap09ProductionRuntimeStartAuthorityV1({
+    plane: "TWIN_RUNTIME",
+    authority_path:
+      env.GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH,
+    explicit_authority: input?.runtime_start_authority,
+    embedded_authority: document.runtime_start_binding,
+  });
+
   const runtimeEnv: EnvironmentV1 = {
     ...env,
     GEOX_MCFT_CAP09_TWIN_RUNTIME_LEASE_OWNER:
