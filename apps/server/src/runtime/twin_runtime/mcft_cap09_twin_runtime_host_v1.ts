@@ -244,7 +244,7 @@ export class TwinRuntimeHostV1 {
     let retryableFailureCount = 0;
     let schedulerLeaseStandbyCount = 0;
     let consecutiveFailures = 0;
-    let lastCycleResult: ExecuteExternalFormalV3Amendment19RunnerResultV1 | null = null;
+    let lastCycleResult: ExecuteExternalFormalV3Am19RunnerResultV1 | null = null;
     let currentOwnershipClaim: TwinRuntimeSchedulerOwnershipLeaseClaimV1 | null = null;
 
     await this.healthV1({
