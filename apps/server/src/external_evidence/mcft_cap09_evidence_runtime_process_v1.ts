@@ -18,6 +18,9 @@ import {
   type EvidenceRuntimeWorkItemFactoryV1,
 } from "./mcft_cap09_evidence_runtime_composition_v1.js";
 import type {
+  EvidenceRuntimeHostPlannerV1,
+} from "./mcft_cap09_evidence_runtime_host_v1.js";
+import type {
   EvidenceRuntimeScopeV1,
 } from "./mcft_cap09_evidence_runtime_persistence_v1.js";
 import type {
@@ -40,6 +43,7 @@ export const MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_CONTRACT_V1 = {
   database_principal: "geox_mcft_cap09_evidence_runtime_login_v1",
   raw_storage_authority: "EVIDENCE_RUNTIME_S3_CREDENTIALS_ONLY",
   target_selection_boundary: "EXPLICIT_INJECTED_TARGET_PLANNER",
+  host_planner_boundary: "EXPLICIT_INJECTED_HOST_PLANNER",
   qualification_provider_boundary: "EXPLICIT_WORK_ITEM_FACTORY_INJECTION_WITH_PRODUCTION_DEFAULT",
   graceful_current_lease_release: true,
   runtime_tick_cursor_authority: false,
@@ -205,12 +209,14 @@ export function readMcftCap09EvidenceRuntimeProcessConfigV1(
 }
 
 export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
-  target_planner: EvidenceRuntimeAcquisitionTargetPlannerV1;
   env?: EnvironmentV1;
   completion_clock?: () => string;
   work_item_config?: Omit<ProductionEvidenceWorkItemFactoryConfigV1, "retention">;
   work_item_factory?: EvidenceRuntimeWorkItemFactoryV1;
-}): Promise<void> {
+} & (
+  | { target_planner: EvidenceRuntimeAcquisitionTargetPlannerV1; host_planner?: never }
+  | { target_planner?: never; host_planner: EvidenceRuntimeHostPlannerV1 }
+)): Promise<void> {
   const env = input.env ?? process.env;
   const config = readMcftCap09EvidenceRuntimeProcessConfigV1(env);
   if (!config.lease_owner) throw new Error("PHASE5_EVIDENCE_LEASE_OWNER_REQUIRED");
@@ -231,7 +237,9 @@ export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
         secret_access_key: config.s3_secret_access_key,
         allow_insecure_http_for_test: config.s3_allow_insecure_http_for_test,
       },
-      target_planner: input.target_planner,
+      ...(input.host_planner
+        ? { host_planner: input.host_planner }
+        : { target_planner: input.target_planner! }),
       wait: new McftCap09ProductionEvidenceWaitV1({
         success_cadence_ms: config.success_cadence_ms,
         lease_standby_ms: config.lease_standby_ms,

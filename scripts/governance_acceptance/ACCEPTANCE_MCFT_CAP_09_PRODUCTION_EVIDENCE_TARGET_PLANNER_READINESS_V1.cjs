@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "GFS_CANONICAL_HOURLY_TARGET_HISTORY_CORRECTED_SCHEMA_MATERIALIZATION_NEXT");
+  assert.equal(authority.status, "PRODUCTION_HOST_PLANNER_PROCESS_SEAM_IMPLEMENTED_ENTRYPOINT_STILL_UNBOUND");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "3abee9e9c57e011af7912785910503f6a59cf2eb");
+  assert.equal(authority.subject_predecessor_sha, "175299092f8f8701520ea6e5628a47841d9b90a9");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -277,6 +277,12 @@ try {
   assert.equal(purePlanner.includes("new Postgres"), false, "PURE_PLANNER_DATABASE_ADAPTER_FORBIDDEN");
   assert.equal(purePlanner.includes("fetch("), false, "PURE_PLANNER_PROVIDER_FETCH_FORBIDDEN");
 
+  const composition = read(authority.production_composition_ref);
+  includes(composition, "host_planner: EvidenceRuntimeHostPlannerV1", "PRODUCTION_COMPOSITION_DIRECT_HOST_PLANNER_SEAM_REQUIRED");
+  includes(composition, "PHASE3_EVIDENCE_RUNTIME_EXACTLY_ONE_PLANNER_BOUNDARY_REQUIRED", "PRODUCTION_COMPOSITION_EXACT_ONE_PLANNER_REQUIRED");
+  const productionProcess = read(authority.production_process_ref);
+  includes(productionProcess, "host_planner: EvidenceRuntimeHostPlannerV1", "PRODUCTION_PROCESS_DIRECT_HOST_PLANNER_SEAM_REQUIRED");
+
   const host = read(authority.host_lifecycle_ref);
   includes(host, '"PLANNER_EXHAUSTED"', "EVIDENCE_HOST_NULL_TERMINAL_STATE_REQUIRED");
   includes(host, "PHASE3_EVIDENCE_HOST_ATTEMPT_PLAN_INVALID", "EVIDENCE_HOST_ATTEMPT_PLAN_FAIL_CLOSED_REQUIRED");
@@ -292,6 +298,9 @@ try {
   includes(hostAttempt, '"KBS_RAW_HOURLY_PUBLICATION_CYCLE"', "EVIDENCE_HOST_KBS_ATTEMPT_KIND_REQUIRED");
   includes(hostAttempt, '"GFS_PARTIAL_PAIR_REHYDRATION"', "EVIDENCE_HOST_GFS_REHYDRATION_ATTEMPT_KIND_REQUIRED");
   includes(hostAttempt, "buildCanonicalWorkItemAttemptPlanV1", "EVIDENCE_HOST_CANONICAL_ATTEMPT_ADAPTER_REQUIRED");
+  assert.equal(authority.host_lifecycle_gap.production_host_planner_process_seam_implemented, true);
+  assert.equal(authority.host_lifecycle_gap.production_process_accepts_direct_host_planner, true);
+
   const sourcePlanExecutor = read(authority.production_source_plan_executor_ref);
   includes(sourcePlanExecutor, "ProductionEvidenceSourcePlanExecutorV1", "SOURCE_PLAN_EXECUTOR_REQUIRED");
   includes(sourcePlanExecutor, "KBS_RAW_HOURLY_PUBLICATION_CYCLE", "SOURCE_PLAN_EXECUTOR_KBS_REQUIRED");
@@ -335,6 +344,10 @@ try {
   assert.equal(authority.adjudication.v13_forcing_controller_may_be_general_evidence_planner, false);
   assert.equal(authority.adjudication.wall_clock_floor_alone_may_select_all_source_targets, false);
   assert.equal(authority.adjudication.runtime_tick_cursor_may_drive_evidence_acquisition, false);
+  assert.equal(
+    authority.current_entrypoint.status,
+    "PACKAGED_FAIL_CLOSED_PRODUCTION_HOST_PLANNER_PROCESS_SEAM_AVAILABLE_ENTRYPOINT_NOT_BOUND",
+  );
   assert.equal(authority.current_entrypoint.binding_authorized, false);
   assert.equal(authority.current_entrypoint.failure_code, "MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND");
   assert.equal(authority.bootstrap_authority_gap.production_acquisition_start_or_bounded_backfill_horizon_established, true);

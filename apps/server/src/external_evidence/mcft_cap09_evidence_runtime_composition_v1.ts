@@ -88,7 +88,6 @@ export function composeEvidenceRuntimeV1(input: {
   pool: Pool;
   scope: EvidenceRuntimeScopeV1;
   raw_retention: S3CompatiblePrivateRawRetentionConfigV1;
-  target_planner: EvidenceRuntimeAcquisitionTargetPlannerV1;
   wait: EvidenceRuntimeHostWaitPortV1;
   health: EvidenceRuntimeHostHealthPortV1;
   stop: EvidenceRuntimeHostStopPortV1;
@@ -96,9 +95,17 @@ export function composeEvidenceRuntimeV1(input: {
   completion_clock: () => string;
   work_item_factory?: EvidenceRuntimeWorkItemFactoryV1;
   work_item_config?: Omit<ProductionEvidenceWorkItemFactoryConfigV1, "retention">;
-}): EvidenceRuntimeCompositionV1 {
+} & (
+  | { target_planner: EvidenceRuntimeAcquisitionTargetPlannerV1; host_planner?: never }
+  | { target_planner?: never; host_planner: EvidenceRuntimeHostPlannerV1 }
+)): EvidenceRuntimeCompositionV1 {
   if (input.work_item_factory && input.work_item_config) {
     throw new Error("PHASE3_EVIDENCE_RUNTIME_WORK_ITEM_FACTORY_AND_CONFIG_MUTUALLY_EXCLUSIVE");
+  }
+  const hasTargetPlanner = input.target_planner !== undefined;
+  const hasHostPlanner = input.host_planner !== undefined;
+  if (hasTargetPlanner === hasHostPlanner) {
+    throw new Error("PHASE3_EVIDENCE_RUNTIME_EXACTLY_ONE_PLANNER_BOUNDARY_REQUIRED");
   }
   const retention = new S3CompatiblePrivateRawEvidenceRetentionAdapterV1(input.raw_retention);
   const leaseRepository = new PostgresEvidenceProducerLeaseV1(input.pool, input.scope);
@@ -131,9 +138,13 @@ export function composeEvidenceRuntimeV1(input: {
     completion_clock: input.completion_clock,
   });
 
-  const planner: EvidenceRuntimeHostPlannerV1 = {
+  const planner: EvidenceRuntimeHostPlannerV1 = input.host_planner ?? {
     async nextAttemptPlan(state) {
-      const target = await input.target_planner.nextTarget(state);
+      const targetPlanner = input.target_planner;
+      if (!targetPlanner) {
+        throw new Error("PHASE3_EVIDENCE_RUNTIME_TARGET_PLANNER_INTERNAL_BINDING_REQUIRED");
+      }
+      const target = await targetPlanner.nextTarget(state);
       if (target === null) return null;
       if ("status" in target) {
         if (target.status !== "NOT_DUE" || Object.keys(target).length !== 1) {

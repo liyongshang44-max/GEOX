@@ -118,6 +118,10 @@ function main(): void {
     MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_CONTRACT_V1.target_selection_boundary,
     "EXPLICIT_INJECTED_TARGET_PLANNER",
   );
+  assert.equal(
+    MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_CONTRACT_V1.host_planner_boundary,
+    "EXPLICIT_INJECTED_HOST_PLANNER",
+  );
 
   const signals = new FakeProcessSignalsV1();
   const stop = createMcftCap09ProcessStopV1({
@@ -173,6 +177,16 @@ function main(): void {
   const distWriter = fs.readFileSync(
     path.resolve("apps/server/scripts/write_dist_entries.cjs"),
     "utf8",
+  );
+  assert.equal(
+    evidenceSource.includes("host_planner: EvidenceRuntimeHostPlannerV1"),
+    true,
+    "PHASE5_EVIDENCE_PROCESS_DIRECT_HOST_PLANNER_SEAM_REQUIRED",
+  );
+  assert.equal(
+    distWriter.includes("MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"),
+    true,
+    "PHASE5_EVIDENCE_DIST_ENTRYPOINT_MUST_REMAIN_FAIL_CLOSED",
   );
 
   for (const forbidden of [
