@@ -53,6 +53,7 @@ jobs:
       - name: Prepare commercial compose env
         run: |
           ACCEPTANCE_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='admin' && x.scopes.includes('security.admin') && !x.revoked); if(!t) process.exit(1); console.log(t.token)")"
+          EXECUTOR_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.token==='tenant_a_admin_token' && x.scopes.includes('ao_act.task.write') && x.scopes.includes('ao_act.receipt.write') && !x.revoked); if(!t) process.exit(1); console.log(t.token)")"
           cat > .env.ci <<EOF
           GEOX_RUNTIME_ENV=pilot
           POSTGRES_USER=landos
@@ -62,6 +63,7 @@ jobs:
           GEOX_RUNTIME_DATABASE_PASSWORD=ci-pilot-runtime-database-strong-2026
           GEOX_DEPLOYMENT_SUBJECT_COMMIT=${GITHUB_SHA}
           GEOX_AO_ACT_TOKEN=$ACCEPTANCE_TOKEN
+          GEOX_EXECUTOR_TOKEN=$EXECUTOR_TOKEN
           GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
           GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT=http://127.0.0.1:9000
           MINIO_ROOT_USER=geoxminio
