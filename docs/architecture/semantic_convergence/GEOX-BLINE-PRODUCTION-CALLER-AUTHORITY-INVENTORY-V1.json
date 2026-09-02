@@ -158,7 +158,7 @@
     {
       "surface_id": "BSEC-001",
       "source_path": "apps/server/src/routes/v1/operator_twin.ts",
-      "entry_symbol": "registerOperatorTwinReadRoutes#submit-recommendation",
+      "entry_symbol": "registerOperatorTwinReadRoutes#root-zone-submit-recommendation",
       "http_method_or_runtime_trigger": "POST",
       "exact_route_or_trigger": "/api/v1/operator/twin/fields/:field_id/root-zone-scenarios/:scenario_set_id/options/:option_id/submit-recommendation",
       "runtime_reachable": true,
@@ -197,7 +197,7 @@
     {
       "surface_id": "BSEC-002",
       "source_path": "apps/server/src/routes/v1/operator_twin.ts",
-      "entry_symbol": "registerOperatorTwinReadRoutes#submit-recommendation",
+      "entry_symbol": "registerOperatorTwinReadRoutes#legacy-scenario-submit-recommendation",
       "http_method_or_runtime_trigger": "POST",
       "exact_route_or_trigger": "/api/v1/operator/twin/fields/:field_id/scenarios/:scenario_set_id/options/:option_id/submit-recommendation",
       "runtime_reachable": true,
