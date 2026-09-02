@@ -242,7 +242,23 @@ function covSqlEffect(text) {
     /\bINSERT\s+INTO\s+(?:public\.)?facts\b/i.test(s) ||
     /\bUPDATE\s+(?:public\.)?facts\b/i.test(s) ||
     /\bDELETE\s+FROM\s+(?:public\.)?facts\b/i.test(s);
-  return { dml, ddl, fact };
+  const targets = new Set();
+  function collect(re, group=1) {
+    let m;
+    while ((m=re.exec(s))) {
+      const raw=String(m[group]||"").replace(/^public\./i,"").replaceAll('"',"").trim();
+      if (raw && raw.toUpperCase()!=="SET") targets.add(raw);
+    }
+  }
+  collect(/\bINSERT\s+INTO\s+((?:public\.)?"?[A-Za-z_][A-Za-z0-9_]*"?)/ig);
+  collect(/\bDELETE\s+FROM\s+((?:public\.)?"?[A-Za-z_][A-Za-z0-9_]*"?)/ig);
+  collect(/\bUPDATE\s+(?:ONLY\s+)?((?:public\.)?"?[A-Za-z_][A-Za-z0-9_]*"?)/ig);
+  collect(/\bTRUNCATE(?:\s+TABLE)?\s+((?:public\.)?"?[A-Za-z_][A-Za-z0-9_]*"?)/ig);
+  collect(/\bMERGE\s+INTO\s+((?:public\.)?"?[A-Za-z_][A-Za-z0-9_]*"?)/ig);
+  collect(/\bCREATE\s+TABLE(?:\s+IF\s+NOT\s+EXISTS)?\s+((?:public\.)?"?[A-Za-z_][A-Za-z0-9_]*"?)/ig);
+  collect(/\bALTER\s+TABLE(?:\s+IF\s+EXISTS)?\s+((?:public\.)?"?[A-Za-z_][A-Za-z0-9_]*"?)/ig);
+  collect(/\bCREATE\s+(?:UNIQUE\s+)?INDEX(?:\s+IF\s+NOT\s+EXISTS)?\s+[^\s]+\s+ON\s+((?:public\.)?"?[A-Za-z_][A-Za-z0-9_]*"?)/ig);
+  return { dml, ddl, fact, targets };
 }
 
 function covImmediatelyInvokedFunction(n) {
@@ -280,11 +296,12 @@ function covDirectSqlEffect(fp, rootNode) {
     }
   }
 
-  const result = { dml:false, ddl:false, fact:false };
+  const result = { dml:false, ddl:false, fact:false, targets:new Set() };
   function merge(effect) {
     result.dml = result.dml || effect.dml;
     result.ddl = result.ddl || effect.ddl;
     result.fact = result.fact || effect.fact;
+    for (const t of effect.targets || []) result.targets.add(t);
   }
   function visit(n) {
     if (
@@ -506,6 +523,7 @@ function covAnalyzeNode(fp, node, stack = new Set()) {
     fact: direct.fact,
     directWriterKeys: new Set(),
     callees: new Set(),
+    targets: new Set(direct.targets || []),
   };
   if (direct.dml || direct.ddl) result.directWriterKeys.add(rel(fp) + "::" + "<inline>");
 
@@ -515,6 +533,7 @@ function covAnalyzeNode(fp, node, stack = new Set()) {
     result.fact = result.fact || other.fact;
     for (const k of other.directWriterKeys) result.directWriterKeys.add(k);
     for (const k of other.callees) result.callees.add(k);
+    for (const t of other.targets || []) result.targets.add(t);
   }
 
   function walk(n) {
@@ -541,14 +560,14 @@ function covAnalyzeNode(fp, node, stack = new Set()) {
 function covAnalyzeFunction(target, stack = new Set()) {
   const key = covFunctionKey(target);
   if (covAnalysisCache.has(key)) return covAnalysisCache.get(key);
-  if (stack.has(key)) return { dml:false, ddl:false, fact:false, directWriterKeys:new Set(), callees:new Set() };
+  if (stack.has(key)) return { dml:false, ddl:false, fact:false, directWriterKeys:new Set(), callees:new Set(), targets:new Set() };
   const next = new Set(stack);
   next.add(key);
   const mod = covBuildModule(target.fp);
   const node = mod.functions.get(target.name);
-  if (!node) return { dml:false, ddl:false, fact:false, directWriterKeys:new Set(), callees:new Set() };
+  if (!node) return { dml:false, ddl:false, fact:false, directWriterKeys:new Set(), callees:new Set(), targets:new Set() };
   const direct = covDirectSqlEffect(target.fp, node);
-  const result = { dml:direct.dml, ddl:direct.ddl, fact:direct.fact, directWriterKeys:new Set(), callees:new Set() };
+  const result = { dml:direct.dml, ddl:direct.ddl, fact:direct.fact, directWriterKeys:new Set(), callees:new Set(), targets:new Set() };
   if (direct.dml || direct.ddl) result.directWriterKeys.add(key);
 
   function merge(other) {
@@ -557,6 +576,7 @@ function covAnalyzeFunction(target, stack = new Set()) {
     result.fact = result.fact || other.fact;
     for (const k of other.directWriterKeys) result.directWriterKeys.add(k);
     for (const k of other.callees) result.callees.add(k);
+    for (const t of other.targets || []) result.targets.add(t);
   }
   function walk(n) {
     if (ts.isCallExpression(n)) {
@@ -621,7 +641,7 @@ for (const fp of runtimeFiles) {
           : null;
         if (route) {
           const handler = n.arguments[n.arguments.length - 1];
-          let analysis = { dml:false, ddl:false, fact:false, directWriterKeys:new Set(), callees:new Set() };
+          let analysis = { dml:false, ddl:false, fact:false, directWriterKeys:new Set(), callees:new Set(), targets:new Set() };
           if (handler && (ts.isArrowFunction(handler) || ts.isFunctionExpression(handler))) {
             analysis = covAnalyzeNode(fp, handler);
           } else if (handler && ts.isIdentifier(handler)) {
@@ -636,10 +656,11 @@ for (const fp of runtimeFiles) {
             ddl: analysis.ddl,
             fact: analysis.fact,
             writers: [...analysis.directWriterKeys],
+            targets: [...(analysis.targets || [])],
           });
         } else {
           const handler = n.arguments[n.arguments.length - 1];
-          let analysis = { dml:false, ddl:false, fact:false, directWriterKeys:new Set(), callees:new Set() };
+          let analysis = { dml:false, ddl:false, fact:false, directWriterKeys:new Set(), callees:new Set(), targets:new Set() };
           if (handler && (ts.isArrowFunction(handler) || ts.isFunctionExpression(handler))) {
             analysis = covAnalyzeNode(fp, handler);
           } else if (handler && ts.isIdentifier(handler)) {
@@ -654,6 +675,7 @@ for (const fp of runtimeFiles) {
             ddl: analysis.ddl,
             fact: analysis.fact,
             writers: [...analysis.directWriterKeys],
+            targets: [...(analysis.targets || [])],
           });
         }
       }
@@ -692,7 +714,7 @@ for (const fp of runtimeFiles) {
           : null;
         const handler = handlerProp && ts.isPropertyAssignment(handlerProp) ? handlerProp.initializer : null;
         if (route && methods.length && handler) {
-          let analysis = { dml:false, ddl:false, fact:false, directWriterKeys:new Set(), callees:new Set() };
+          let analysis = { dml:false, ddl:false, fact:false, directWriterKeys:new Set(), callees:new Set(), targets:new Set() };
           if (ts.isArrowFunction(handler) || ts.isFunctionExpression(handler)) {
             analysis = covAnalyzeNode(fp, handler);
           } else if (ts.isIdentifier(handler)) {
@@ -820,15 +842,15 @@ const covExecutionAnalysisCache = new Map();
 function covAnalyzeExecutedFunction(target, stack = new Set()) {
   const key = covFunctionKey(target);
   if (covExecutionAnalysisCache.has(key)) return covExecutionAnalysisCache.get(key);
-  if (stack.has(key)) return { dml:false, ddl:false, fact:false, directWriterKeys:new Set() };
+  if (stack.has(key)) return { dml:false, ddl:false, fact:false, directWriterKeys:new Set(), targets:new Set() };
   const next = new Set(stack);
   next.add(key);
   const mod = covBuildModule(target.fp);
   const node = mod.functions.get(target.name);
-  if (!node) return { dml:false, ddl:false, fact:false, directWriterKeys:new Set() };
+  if (!node) return { dml:false, ddl:false, fact:false, directWriterKeys:new Set(), targets:new Set() };
 
   const direct = covDirectSqlEffect(target.fp, node);
-  const result = { dml:direct.dml, ddl:direct.ddl, fact:direct.fact, directWriterKeys:new Set() };
+  const result = { dml:direct.dml, ddl:direct.ddl, fact:direct.fact, directWriterKeys:new Set(), targets:new Set() };
   if (direct.dml || direct.ddl) result.directWriterKeys.add(key);
 
   function merge(other) {
@@ -836,6 +858,7 @@ function covAnalyzeExecutedFunction(target, stack = new Set()) {
     result.ddl = result.ddl || other.ddl;
     result.fact = result.fact || other.fact;
     for (const k of other.directWriterKeys) result.directWriterKeys.add(k);
+    for (const t of other.targets || []) result.targets.add(t);
   }
   function walk(n) {
     if (
@@ -912,10 +935,10 @@ function covEnclosingFunctionNode(n) {
 }
 function covAnalyzeCallbackNode(fp, node, localMap, stack = new Set()) {
   const keyBase = rel(fp) + "::callback::" + node.pos + ":" + node.end;
-  if (stack.has(keyBase)) return {dml:false,ddl:false,fact:false,directWriterKeys:new Set(),callees:new Set()};
+  if (stack.has(keyBase)) return {dml:false,ddl:false,fact:false,directWriterKeys:new Set(),callees:new Set(),targets:new Set()};
   const next = new Set(stack); next.add(keyBase);
   const direct = covDirectSqlEffect(fp, node);
-  const result = {dml:direct.dml,ddl:direct.ddl,fact:direct.fact,directWriterKeys:new Set(),callees:new Set()};
+  const result = {dml:direct.dml,ddl:direct.ddl,fact:direct.fact,directWriterKeys:new Set(),callees:new Set(),targets:new Set()};
   if (direct.dml || direct.ddl) result.directWriterKeys.add(rel(fp) + "::" + "<inline>");
 
   function merge(other) {
@@ -924,6 +947,7 @@ function covAnalyzeCallbackNode(fp, node, localMap, stack = new Set()) {
     result.fact = result.fact || other.fact;
     for (const k of other.directWriterKeys || []) result.directWriterKeys.add(k);
     for (const k of other.callees || []) result.callees.add(k);
+    for (const t of other.targets || []) result.targets.add(t);
   }
   function analyzeLocal(name) {
     const local = localMap.get(name);
@@ -970,7 +994,7 @@ function covAnalyzeCallbackArg(fp, call, argIndex) {
       let p = call.parent;
       while (p && !covFunctionLike(p)) p = p.parent;
       if (p && p.parameters.some((param) => ts.isIdentifier(param.name) && param.name.text === arg.text)) {
-        return {supported:true,analysis:{dml:false,ddl:false,fact:false,directWriterKeys:new Set(),callees:new Set()}};
+        return {supported:true,analysis:{dml:false,ddl:false,fact:false,directWriterKeys:new Set(),callees:new Set(),targets:new Set()}};
       }
     }
   }
@@ -1031,6 +1055,7 @@ for (const fp of covFiles) {
       dml:a.dml, ddl:a.ddl, fact:a.fact,
       writers:[...a.directWriterKeys],
       callees:[...a.callees],
+      targets:[...(a.targets || [])],
     });
   }
   function visit(n) {
