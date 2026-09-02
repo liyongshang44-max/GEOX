@@ -32,9 +32,6 @@ import type {
 import {
   createProductionEvidenceHostPlannerFactoryV1,
 } from "./mcft_cap09_production_evidence_planner_assembly_v1.js";
-import {
-  MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY_CLASS_V1,
-} from "./mcft_cap09_production_evidence_acquisition_horizon_v1.js";
 import type {
   ProductionEvidencePlanningClockV1,
   ProductionEvidenceRuntimeStartAuthorityInstanceV1,
@@ -45,6 +42,9 @@ import {
   McftCap09ProductionEvidenceFailureClassifierV1,
   McftCap09ProductionEvidenceWaitV1,
 } from "../runtime/mcft_cap09_production_process_lifecycle_v1.js";
+import {
+  parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1,
+} from "../runtime/mcft_cap09_production_runtime_start_authority_v1.js";
 
 export const MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_ID_V1 =
   "MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_V1" as const;
@@ -66,6 +66,7 @@ export const MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_CONTRACT_V1 = {
   twin_state_authority: false,
   action_authority: false,
   formal_arm_authority: false,
+  runtime_start_authority: "SEPARATE_GOVERNED_AUTHORITY_REQUIRED",
   production_owner_cutover: false,
 } as const;
 
@@ -288,84 +289,13 @@ export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
   }
 }
 
-function runtimeStartRecordV1(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_INVALID");
-  }
-  return value as Record<string, unknown>;
-}
-
-function runtimeStartTextV1(value: unknown, code: string): string {
-  if (typeof value !== "string" || !value.trim()) throw new Error(code);
-  return value.trim();
-}
-
-function runtimeStartIsoV1(value: unknown, code: string): string {
-  const text = runtimeStartTextV1(value, code);
-  const parsed = Date.parse(text);
-  if (!Number.isFinite(parsed) || new Date(parsed).toISOString() !== text) throw new Error(code);
-  return text;
-}
-
-function runtimeStartHourV1(value: unknown, code: string): string {
-  const text = runtimeStartIsoV1(value, code);
-  if (!text.endsWith(":00:00.000Z")) throw new Error(code);
-  return text;
-}
-
 export function parseMcftCap09ProductionRuntimeStartAuthorityV1(
   value: unknown,
 ): ProductionEvidenceRuntimeStartAuthorityInstanceV1 {
-  const authority = runtimeStartRecordV1(value);
-  if (
-    authority.schema_version !== "geox_mcft_cap09_production_runtime_start_authority_instance_v1"
-    || authority.authority_id !== "GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-START-AUTHORITY-INSTANCE-V1"
-  ) {
-    throw new Error("MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_IDENTITY_INVALID");
-  }
-  if (
-    authority.armed !== true
-    || authority.status !== "AUTHORIZED"
-    || authority.runtime_process_start_authorized !== true
-    || authority.evidence_runtime_start_authorized !== true
-  ) {
-    throw new Error("MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED");
-  }
-  if (
-    authority.production_owner_activation_authorized !== false
-    || authority.formal_v5_arm_authorized !== false
-    || authority.a0_authorized !== false
-    || authority.o00_authorized !== false
-  ) {
-    throw new Error("MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_SCOPE_INVALID");
-  }
-  if (authority.authority_class !== MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY_CLASS_V1) {
-    throw new Error("MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_CLASS_INVALID");
-  }
-  const activationFence = runtimeStartIsoV1(
-    authority.activation_fence_time,
-    "MCFT_CAP09_PRODUCTION_RUNTIME_START_ACTIVATION_FENCE_INVALID",
+  return parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+    value,
+    "EVIDENCE_RUNTIME",
   );
-  const formalA0 = runtimeStartHourV1(
-    authority.formal_a0_logical_time,
-    "MCFT_CAP09_PRODUCTION_RUNTIME_START_FORMAL_A0_INVALID",
-  );
-  if (Date.parse(activationFence) >= Date.parse(formalA0)) {
-    throw new Error("MCFT_CAP09_PRODUCTION_RUNTIME_START_FENCE_MUST_PRECEDE_A0");
-  }
-  return {
-    authority_class: MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY_CLASS_V1,
-    authority_ref: runtimeStartTextV1(
-      authority.authority_ref,
-      "MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_REF_REQUIRED",
-    ),
-    activation_fence_time: activationFence,
-    formal_a0_authority_ref: runtimeStartTextV1(
-      authority.formal_a0_authority_ref,
-      "MCFT_CAP09_PRODUCTION_RUNTIME_START_FORMAL_A0_AUTHORITY_REF_REQUIRED",
-    ),
-    formal_a0_logical_time: formalA0,
-  };
 }
 
 export async function runMcftCap09ProductionEvidenceRuntimeV1(input: {
@@ -374,7 +304,9 @@ export async function runMcftCap09ProductionEvidenceRuntimeV1(input: {
   work_item_config?: Omit<ProductionEvidenceWorkItemFactoryConfigV1, "retention">;
   runtime_start_authority?: unknown;
 } = {}): Promise<void> {
-  const document = runtimeStartRecordV1(productionAcquisitionHorizonAuthorityJson);
+  const document = productionAcquisitionHorizonAuthorityJson as {
+    runtime_start_binding?: unknown;
+  };
   const authority = parseMcftCap09ProductionRuntimeStartAuthorityV1(
     input.runtime_start_authority ?? document.runtime_start_binding,
   );
