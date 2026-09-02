@@ -103,7 +103,7 @@ for (const fp of runtimeFiles) {
   const rawSource=read(fp);
   // Ignore full-line comments before route discovery so deprecated/commented routes
   // cannot become phantom production surfaces.
-  const source=rawSource.split(/\\r?\\n/).map((line)=>/^\\s*\\/\\//.test(line) ? "" : line).join("\\n");
+  const source=rawSource.split(/\r?\n/).map((line)=>/^\s*\/\//.test(line) ? "" : line).join("\n");
   const p=rel(fp);
   const literal=/\bapp\.(post|put|patch|delete)\s*\(\s*["'\x60]([^"'\x60]+)["'\x60]/gms;
   let m;
