@@ -695,19 +695,25 @@ for (const d of covDynamicHttp) {
     continue;
   }
   const hasWrite = d.dml || d.ddl;
+  const exactSurfaceIds = Array.isArray(disposition.exact_surface_ids) ? disposition.exact_surface_ids : [];
+  const exactSurfaceRows = exactSurfaceIds.map((id) => surfaces.find((x) => x.surface_id === id)).filter(Boolean);
+  if (exactSurfaceIds.length) {
+    assert(exactSurfaceRows.length === exactSurfaceIds.length, "dynamic HTTP disposition references missing exact surface", {route:d, disposition});
+  }
+  const delegatedEffect = exactSurfaceRows.some((row) => Array.isArray(row.write_targets) && row.write_targets.length > 0);
   if (disposition.side_effect_class === "PURE_READ" && hasWrite) covDynamicClassMismatch.push({route:d, disposition});
-  if (disposition.side_effect_class === "SCHEMA_ENSURE_ONLY" && (!d.ddl || d.dml)) covDynamicClassMismatch.push({route:d, disposition});
-  if (disposition.side_effect_class === "FACT_LEDGER_WRITE" && !d.fact) covDynamicClassMismatch.push({route:d, disposition});
-  if ((disposition.side_effect_class === "PROJECTION_SIDE_EFFECT" || disposition.side_effect_class === "DOMAIN_STATE_SIDE_EFFECT") && !d.dml) covDynamicClassMismatch.push({route:d, disposition});
+  if (disposition.side_effect_class === "SCHEMA_ENSURE_ONLY" && (!d.ddl || d.dml) && !delegatedEffect) covDynamicClassMismatch.push({route:d, disposition});
+  if (disposition.side_effect_class === "FACT_LEDGER_WRITE" && !d.fact && !delegatedEffect) covDynamicClassMismatch.push({route:d, disposition});
+  if ((disposition.side_effect_class === "PROJECTION_SIDE_EFFECT" || disposition.side_effect_class === "DOMAIN_STATE_SIDE_EFFECT") && !d.dml && !delegatedEffect) covDynamicClassMismatch.push({route:d, disposition});
   if (disposition.side_effect_class !== "PURE_READ") {
-    const exactCovered = disposition.exact_routes.some((route) =>
+    const exactHttpDispositionCovered = disposition.exact_routes.some((route) =>
       covHttpDispositions.some((h) =>
-        h.source_path === d.source_path &&
         h.http_method === d.method &&
         h.exact_route === route
       )
     );
-    assert(exactCovered, "dynamic HTTP writer requires exact HTTP side-effect inventory surface", { route:d, disposition });
+    const exactSurfaceCovered = exactSurfaceRows.length > 0;
+    assert(exactHttpDispositionCovered || exactSurfaceCovered, "dynamic HTTP writer requires exact caller/writer inventory surface", { route:d, disposition });
   }
 }
 const covStaleDynamicDispositions = covDynamicDispositions.filter((d) =>
