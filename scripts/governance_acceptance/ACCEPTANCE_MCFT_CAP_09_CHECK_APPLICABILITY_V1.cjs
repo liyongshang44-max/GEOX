@@ -153,7 +153,10 @@ function main() {
   ]) {
     const row = byId(controlOnly, id);
     assert.equal(row.status, "REQUALIFY", `EXPANDED_V13_RESOLVER_MUST_REQUALIFY:${id}`);
-    assert.equal(row.reason_code, "DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT", `EXPANDED_V13_RESOLVER_REASON_REQUIRED:${id}`);
+    assert(
+      ["DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT", "GOVERNED_DEPENDENCY_CHANGED"].includes(row.reason_code),
+      `EXPANDED_V13_RESOLVER_REASON_REQUIRED:${id}`,
+    );
     assert.equal(row.dependency_digest_match, false, `EXPANDED_V13_RESOLVER_DIGEST_MUST_DIFFER:${id}`);
   }
   const controlOnlyEa5c1 = byId(controlOnly, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS");

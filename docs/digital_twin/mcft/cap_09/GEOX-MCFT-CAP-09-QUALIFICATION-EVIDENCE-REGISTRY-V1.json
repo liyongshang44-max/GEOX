@@ -1319,6 +1319,86 @@
         "artifact_absence_reason": "RUN_LEVEL_POST_MERGE_V13_PRODUCER_DRIVEN_QUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
         "immutable_binding_sha256": "d27970fa5e689a01d373421e7bdcb8b5e5c9f0d87c299e1c4b364c37e21cc693"
+      },
+      {
+        "evidence_id": "V13_AUTONOMOUS_FORCING_FOUNDATION_POSTMERGE_BF1D345F",
+        "check_id": "V13_AUTONOMOUS_FORCING_FOUNDATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "post-merge-v13-autonomous-forcing-foundation",
+        "stage": "POST_MERGE_V13_QUALIFICATION",
+        "subject_sha": "bf1d345f925f543779718973f8c9419684498e2a",
+        "workflow_name": "mcft-cap-09-v13-autonomous-forcing-foundation",
+        "workflow_path": ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
+        "run_id": 33605700749,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "bf1d345f925f543779718973f8c9419684498e2a",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:db6bbfe41052d262481bb2a911cbe1501247c32ed111daa2af0b8ab5c58088b3",
+        "artifact_absence_reason": "RUN_LEVEL_POST_MERGE_V13_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "beb0f306e87f1593ad92a385d5bfea66da40b4ec688d5810e7e4e079f55f8c1e"
+      },
+      {
+        "evidence_id": "V13_HOLISTIC_SCHEMA_POSTMERGE_BF1D345F",
+        "check_id": "V13_HOLISTIC_SCHEMA",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "post-merge-v13-holistic-schema",
+        "stage": "POST_MERGE_V13_QUALIFICATION",
+        "subject_sha": "bf1d345f925f543779718973f8c9419684498e2a",
+        "workflow_name": "mcft-cap-09-v13-holistic-schema-postgres",
+        "workflow_path": ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
+        "run_id": 33605700771,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "bf1d345f925f543779718973f8c9419684498e2a",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:db6bbfe41052d262481bb2a911cbe1501247c32ed111daa2af0b8ab5c58088b3",
+        "artifact_absence_reason": "RUN_LEVEL_POST_MERGE_V13_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "2465fe80b25d6b0bcd7f5461e5719a6218af7f42fb785b85cdcdf8c7a5f5273f"
+      },
+      {
+        "evidence_id": "V13_NEXT_TICK_VIABILITY_POSTMERGE_BF1D345F",
+        "check_id": "V13_NEXT_TICK_VIABILITY",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "post-merge-v13-next-tick-viability",
+        "stage": "POST_MERGE_V13_QUALIFICATION",
+        "subject_sha": "bf1d345f925f543779718973f8c9419684498e2a",
+        "workflow_name": "mcft-cap-09-v13-next-tick-viability-postgres",
+        "workflow_path": ".github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml",
+        "run_id": 33605700731,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "bf1d345f925f543779718973f8c9419684498e2a",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:db6bbfe41052d262481bb2a911cbe1501247c32ed111daa2af0b8ab5c58088b3",
+        "artifact_absence_reason": "RUN_LEVEL_POST_MERGE_V13_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "86fd800e6d62fdaeac059052e4375830767cc3b37a481fdb312fd4e770c508f7"
+      },
+      {
+        "evidence_id": "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F",
+        "check_id": "V13_PRODUCER_DRIVEN_QUALIFICATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "post-merge-v13-producer-driven-live-qualification",
+        "stage": "POST_MERGE_V13_QUALIFICATION",
+        "subject_sha": "bf1d345f925f543779718973f8c9419684498e2a",
+        "workflow_name": "mcft-cap-09-v13-producer-driven-live-qualification",
+        "workflow_path": ".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml",
+        "run_id": 33605700840,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "bf1d345f925f543779718973f8c9419684498e2a",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:db6bbfe41052d262481bb2a911cbe1501247c32ed111daa2af0b8ab5c58088b3",
+        "artifact_absence_reason": "RUN_LEVEL_POST_MERGE_V13_PRODUCER_DRIVEN_QUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "fad2d54989c00790ba5dabce98c3aebb1c7b25bad997724c8cf8f88f61665629"
       }
     ],
     "durable_anchors": {
@@ -2051,6 +2131,62 @@
             "base_sha": "46367333d228a2b90a86ff6a33aebc334f3d73a2",
             "created_at": "2026-09-02T04:40:18Z",
             "updated_at": "2026-09-02T05:34:03Z"
+          }
+        },
+        {
+          "evidence_id": "V13_AUTONOMOUS_FORCING_FOUNDATION_POSTMERGE_BF1D345F",
+          "run_id": 33605700749,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 379,
+            "workflow_path": ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
+            "workflow_name": "mcft-cap-09-v13-autonomous-forcing-foundation",
+            "head_sha": "bf1d345f925f543779718973f8c9419684498e2a",
+            "base_sha": "46367333d228a2b90a86ff6a33aebc334f3d73a2",
+            "created_at": "2026-09-02T07:51:43Z",
+            "updated_at": "2026-09-02T07:53:45Z"
+          }
+        },
+        {
+          "evidence_id": "V13_HOLISTIC_SCHEMA_POSTMERGE_BF1D345F",
+          "run_id": 33605700771,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 334,
+            "workflow_path": ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
+            "workflow_name": "mcft-cap-09-v13-holistic-schema-postgres",
+            "head_sha": "bf1d345f925f543779718973f8c9419684498e2a",
+            "base_sha": "46367333d228a2b90a86ff6a33aebc334f3d73a2",
+            "created_at": "2026-09-02T07:51:43Z",
+            "updated_at": "2026-09-02T07:53:12Z"
+          }
+        },
+        {
+          "evidence_id": "V13_NEXT_TICK_VIABILITY_POSTMERGE_BF1D345F",
+          "run_id": 33605700731,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 363,
+            "workflow_path": ".github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml",
+            "workflow_name": "mcft-cap-09-v13-next-tick-viability-postgres",
+            "head_sha": "bf1d345f925f543779718973f8c9419684498e2a",
+            "base_sha": "46367333d228a2b90a86ff6a33aebc334f3d73a2",
+            "created_at": "2026-09-02T07:51:43Z",
+            "updated_at": "2026-09-02T07:53:02Z"
+          }
+        },
+        {
+          "evidence_id": "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F",
+          "run_id": 33605700840,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 284,
+            "workflow_path": ".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml",
+            "workflow_name": "mcft-cap-09-v13-producer-driven-live-qualification",
+            "head_sha": "bf1d345f925f543779718973f8c9419684498e2a",
+            "base_sha": "46367333d228a2b90a86ff6a33aebc334f3d73a2",
+            "created_at": "2026-09-02T07:51:43Z",
+            "updated_at": "2026-09-02T08:32:35Z"
           }
         }
       ],
