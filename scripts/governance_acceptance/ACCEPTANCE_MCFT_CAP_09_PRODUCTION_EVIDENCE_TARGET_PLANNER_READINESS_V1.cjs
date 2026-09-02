@@ -258,8 +258,16 @@ try {
   assert.equal(evidenceChain.phase6_runtime_independence.artifact_id, 9676455831);
   assert.equal(evidenceChain.phase6_successor_carry_forward.workflow_run_id, 33164682799);
   assert.equal(evidenceChain.phase6_successor_carry_forward.artifact_id, 9683075686);
-  assert.equal(evidenceChain.v13_producer_driven_runtime.evidence_id, "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F");
+  assert.equal(evidenceChain.v13_producer_driven_runtime.source_evidence_id, "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F");
+  assert.equal(evidenceChain.v13_producer_driven_runtime.projected_evidence_id, "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F_RUNTIME_PROJECTION_V1");
+  assert.equal(evidenceChain.v13_producer_driven_runtime.runtime_resolver_id, "V13_RUNTIME_SEMANTIC_CLOSURE");
+  assert.equal(evidenceChain.v13_producer_driven_runtime.projected_dependency_digest, "sha256:b312d05f816ab2494f503749d2a2b9d62be91b3ba235e24bce268440b6070235");
+  assert.equal(evidenceChain.v13_producer_driven_runtime.settlement_subject_sha, "c8e4b23557fc825d8b40baf06857aaa96cc801fa");
+  assert.equal(evidenceChain.v13_producer_driven_runtime.settlement_workflow_run_id, 33639258830);
   assert.equal(evidenceChain.v13_producer_driven_runtime.current_durable_evidence_valid, true);
+  assert.equal(evidenceChain.v13_producer_driven_runtime.applicability_resolved_before_live_arm, true);
+  assert.equal(evidenceChain.v13_producer_driven_runtime.live_requalification_required, false);
+  assert.equal(evidenceChain.v13_producer_driven_runtime.provider_request_count, 0);
   assert.equal(evidenceChain.t4r1_live_activation_fail_closed.current_stage_authority_established, false);
   assert.equal(evidenceChain.t4r1_live_activation_fail_closed.current_natural_season_successor_authority_established, false);
 
@@ -278,10 +286,90 @@ try {
     "MINIMUM_COMPLETE_FIELD_TWIN_COMPLETE",
     "CURRENT_T4R1_LIVE_ACTIVATION_ELIGIBLE",
   ]);
-  assert.equal(separation.nonblocking_engineering_debt.id, "V13_PRODUCER_STALE_ARM_ORDERING");
-  assert.equal(separation.nonblocking_engineering_debt.blocks_engineering_readiness, false);
-  assert.equal(separation.nonblocking_engineering_debt.live_provider_failure_observed, false);
-  assert.equal(separation.nonblocking_engineering_debt.current_durable_producer_evidence_invalidated, false);
+  const producerDebt = separation.nonblocking_engineering_debt;
+  assert.equal(producerDebt.id, "V13_PRODUCER_STALE_ARM_ORDERING");
+  assert.equal(producerDebt.status, "SETTLED_RUNTIME_HARNESS_RESOLVER_MIGRATION");
+  assert.equal(producerDebt.classification, "QUALIFICATION_HARNESS_CONTROL_PLANE_DEBT");
+  assert.equal(producerDebt.blocks_engineering_readiness, false);
+  assert.equal(producerDebt.live_provider_failure_observed, false);
+  assert.equal(producerDebt.current_durable_producer_evidence_invalidated, false);
+  assert.equal(producerDebt.requires_resolution_before_fresh_producer_live_requalification_if_dependency_contract_reopened, false);
+  assert.equal(producerDebt.settlement_subject_sha, "c8e4b23557fc825d8b40baf06857aaa96cc801fa");
+  assert.equal(producerDebt.migration_proof_subject_sha, "5e162fceb5758aa3eaf7894a474a5886fa069057");
+  assert.equal(producerDebt.runtime_resolver_id, "V13_RUNTIME_SEMANTIC_CLOSURE");
+  assert.equal(producerDebt.qualification_harness_resolver_id, "V13_QUALIFICATION_HARNESS_CLOSURE");
+  assert.equal(producerDebt.legacy_resolver_id, "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE");
+  assert.equal(producerDebt.legacy_path_count, 124);
+  assert.equal(producerDebt.runtime_path_count, 108);
+  assert.equal(producerDebt.legacy_harness_path_count, 16);
+  assert.equal(producerDebt.current_harness_path_count, 20);
+  assert.equal(producerDebt.exact_partition_proven, true);
+  assert.equal(producerDebt.runtime_harness_overlap_count, 0);
+  assert.equal(producerDebt.runtime_path_digest_bf1d, "sha256:8374cf46dd3e40768de512b7c89319b8913c5de61affeb6a8378e7a81cdc7d25");
+  assert.equal(producerDebt.runtime_path_digest_settlement_subject, producerDebt.runtime_path_digest_bf1d);
+  assert.equal(producerDebt.projected_runtime_aggregate_digest, "sha256:b312d05f816ab2494f503749d2a2b9d62be91b3ba235e24bce268440b6070235");
+  assert.equal(producerDebt.projected_producer_evidence_id, "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F_RUNTIME_PROJECTION_V1");
+  assert.equal(producerDebt.source_producer_evidence_id, "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F");
+  assert.equal(producerDebt.producer_workflow_run_id, 33639258830);
+  assert.equal(producerDebt.producer_workflow_conclusion, "success");
+  assert.equal(producerDebt.producer_applicability_resolved_before_live_arm, true);
+  assert.equal(producerDebt.producer_live_required, false);
+  assert.equal(producerDebt.stale_arm_freshness_check_executed, false);
+  assert.equal(producerDebt.provider_request_count, 0);
+  assert.equal(producerDebt.production_runtime_mutation, false);
+  assert.equal(producerDebt.production_owner_activation, false);
+  assert.equal(producerDebt.formal_v5_arm, false);
+  assert.equal(producerDebt.a0_bootstrap, false);
+  assert.equal(producerDebt.o00_started, false);
+  assert.equal(producerDebt.post_merge_control_plane.workflow_run_id, 33639259326);
+  assert.equal(producerDebt.post_merge_control_plane.conclusion, "success");
+  assert.equal(producerDebt.post_merge_control_plane.artifact_id, 9850214136);
+  assert.equal(producerDebt.post_merge_control_plane.artifact_digest, "sha256:9d2b11289be5ba992d41dfb83d92a66f1a77b888380c8692219b66fb7ee4d808");
+  assert.equal(producerDebt.post_merge_control_plane.blocker_count, 1);
+  assert.equal(producerDebt.post_merge_control_plane.only_blocker, "EXACT_ONE_PRODUCTION_OWNER");
+  assert.equal(producerDebt.qualification_control_plane.workflow_run_id, 33639259224);
+  assert.equal(producerDebt.qualification_control_plane.deliberate_fail_closed, true);
+  assert.equal(producerDebt.qualification_control_plane.artifact_id, 9850279193);
+  assert.equal(producerDebt.qualification_control_plane.artifact_digest, "sha256:6b2798025d1149429526e12fdaa28e2c4204455f018a12fe580e910b82d0c434");
+  assert.equal(producerDebt.qualification_control_plane.blocker_count, 1);
+  assert.equal(producerDebt.qualification_control_plane.only_blocker, "EXACT_ONE_PRODUCTION_OWNER");
+  assert.equal(producerDebt.projection_authorizes_new_live_claim, false);
+  assert.equal(producerDebt.taskbook_completion_gate_changed, false);
+
+  for (const evidenceSubject of [
+    producerDebt.migration_proof_subject_sha,
+    producerDebt.settlement_subject_sha,
+  ]) cp.execFileSync("git", ["merge-base", "--is-ancestor", evidenceSubject, subject]);
+
+  const v13Qcp = json("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json");
+  const v13Registry = json("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json");
+  assert.ok(v13Qcp.dependency_resolvers?.V13_RUNTIME_SEMANTIC_CLOSURE, "V13_RUNTIME_SEMANTIC_RESOLVER_REQUIRED");
+  assert.ok(v13Qcp.dependency_resolvers?.V13_QUALIFICATION_HARNESS_CLOSURE, "V13_HARNESS_RESOLVER_REQUIRED");
+  for (const checkId of [
+    "V13_AUTONOMOUS_FORCING_FOUNDATION",
+    "V13_HOLISTIC_SCHEMA",
+    "V13_NEXT_TICK_VIABILITY",
+    "V13_PRODUCER_DRIVEN_QUALIFICATION",
+  ]) {
+    const check = v13Qcp.checks.find((row) => row.check_id === checkId);
+    assert.deepEqual(check?.resolver_ids, ["V13_RUNTIME_SEMANTIC_CLOSURE"], "V13_RUNTIME_CHECK_RESOLVER_SETTLEMENT_REQUIRED:" + checkId);
+  }
+  const projectedProducer = v13Registry.requalification_evidence?.entries?.find(
+    (row) => row.evidence_id === producerDebt.projected_producer_evidence_id,
+  );
+  assert.ok(projectedProducer, "V13_PROJECTED_PRODUCER_EVIDENCE_REQUIRED");
+  assert.equal(projectedProducer.dependency_digest, producerDebt.projected_runtime_aggregate_digest);
+  assert.equal(projectedProducer.projection_source_evidence_id, producerDebt.source_producer_evidence_id);
+  assert.equal(projectedProducer.projection_authorizes_new_live_claim, false);
+
+  const producerWorkflow = read(".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml");
+  const applicabilityIndex = producerWorkflow.indexOf("- name: Resolve governed producer live applicability");
+  const durableIndex = producerWorkflow.indexOf("- name: Accept durable producer evidence without live rerun");
+  const armIndex = producerWorkflow.indexOf("- name: Resolve explicit live arm");
+  assert.ok(applicabilityIndex >= 0 && durableIndex > applicabilityIndex && armIndex > durableIndex, "V13_PRODUCER_APPLICABILITY_MUST_PRECEDE_ARM");
+  includes(producerWorkflow, "if: steps.applicability.outputs.live_required == 'false'", "V13_PRODUCER_DURABLE_SKIP_MUST_USE_APPLICABILITY");
+  includes(producerWorkflow, "id: arm\n        if: steps.applicability.outputs.live_required == 'true'", "V13_PRODUCER_ARM_MUST_ONLY_RUN_FOR_LIVE_REQUALIFICATION");
+  includes(producerWorkflow, "V13_LIVE_ARM_FIRST_BASE_MUST_LEAD_BY_MORE_THAN_6H", "V13_PRODUCER_STALE_ARM_FRESHNESS_GUARD_MUST_REMAIN");
   assert.equal(separation.completion_boundary.taskbook_completion_gate_unchanged, true);
   assert.equal(separation.completion_boundary.real_s6_o00_o23_plus_final_exact_sha_r2_still_required_for_stage1b_completion, true);
   assert.equal(horizonAuthority.next_legal_frontier.status_scope, "LIVE_ACTIVATION_ONLY");
@@ -869,6 +957,9 @@ try {
     alternative_scope_eligible_candidate_count: rescueSettlement.eligible_candidate_count,
     engineering_readiness_status: separation.engineering_readiness.status,
     engineering_readiness_claim: separation.engineering_readiness.allowed_claim,
+    v13_producer_stale_arm_debt_status: producerDebt.status,
+    v13_producer_projected_evidence_id: producerDebt.projected_producer_evidence_id,
+    v13_producer_live_requalification_required: producerDebt.producer_live_required,
     engineering_work_blocked_by_material_provider_change: false,
     live_activation_status: separation.live_activation.status,
     material_provider_change_is_live_activation_gate: true,
