@@ -82,6 +82,9 @@ jobs:
       - name: B-Line Fertilization execution provenance
         run: pnpm run ci:governance:bline-fertilization-execution-provenance
 
+      - name: B-Line Agronomy Agent fail-closed authority
+        run: pnpm run ci:governance:bline-agronomy-agent-fail-closed
+
       - name: Route response ownership guard
         run: pnpm run ci:route-response-ownership
 
@@ -267,6 +270,10 @@ jobs:
           export GEOX_ACCEPTANCE_TOKEN=admin_token
           export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
           pnpm run ci:scenario:fertilization
+
+      - name: B-Line Agronomy Agent fail-closed runtime
+        timeout-minutes: 5
+        run: pnpm run ci:runtime:bline-agronomy-agent-fail-closed
 
       - name: Run PR18I formal-chain preflight gate
         timeout-minutes: 30
