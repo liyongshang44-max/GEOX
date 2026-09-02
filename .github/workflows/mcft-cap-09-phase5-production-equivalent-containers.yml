@@ -10,6 +10,7 @@ on:
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts'
       - 'apps/server/src/runtime/mcft_cap09_production_runtime_start_authority_v1.ts'
+      - 'apps/server/src/runtime/mcft_cap09_production_service_identity_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts'
@@ -39,6 +40,8 @@ on:
       - 'docker/runtime.Dockerfile'
       - 'docker/mcft-cap09-runtime.Dockerfile'
       - 'docker-compose.mcft-cap09-phase5-qualification.yml'
+      - 'docker-compose.mcft-cap09-production.yml'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts'
       - 'docker/postgres/init/**'
       - 'apps/server/package.json'
       - 'package.json'
@@ -108,6 +111,7 @@ jobs:
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_EVIDENCE_QUALIFICATION_ENTRYPOINT_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_QUALIFICATION_CLOCK_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_QUALIFICATION_COMPOSE_V1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_CANONICAL_FACT_WRITER_V1.ts
 
       - name: Prove controlled Evidence provider work-item boundary
@@ -121,6 +125,9 @@ jobs:
 
       - name: Prove dedicated qualification Compose topology
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_QUALIFICATION_COMPOSE_V1.ts
+
+      - name: Prove frozen local production launcher topology
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts
 
       - name: Build exact server production package
         run: pnpm --filter @geox/server run build
