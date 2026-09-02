@@ -62,6 +62,24 @@ async function main() {
     }), 'create ao sense task');
     checks.ao_sense_task_created = true;
 
+    const observationFactId = rid('device_observation');
+    await pool.query(
+      `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+       VALUES ($1, NOW(), 'acceptance_formal_sampling', $2::jsonb)`,
+      [observationFactId, JSON.stringify({
+        type: 'device_observation_v1',
+        schema_version: '1',
+        tenant_id: scope.tenant_id,
+        project_id: scope.project_id,
+        group_id: scope.group_id,
+        field_id,
+        metric: 'soil_sampling_observation',
+        value: 1,
+        unit: 'observation',
+        observed_at_ts_ms: Date.now(),
+      })],
+    );
+
     const aoReceipt = requireOk(await fetchJson(`${base}/api/v1/sense/receipt`, {
       method: 'POST',
       token,
@@ -70,8 +88,7 @@ async function main() {
         executed_at_ts: Date.now(),
         result: 'success',
         evidence_refs: [
-          { kind: 'raw_sample_v1', ref_id: rid('raw_sample') },
-          { kind: 'marker_v1', ref_id: rid('marker') },
+          { kind: 'fact_id', ref_id: observationFactId },
         ],
       },
     }), 'create ao sense receipt');
