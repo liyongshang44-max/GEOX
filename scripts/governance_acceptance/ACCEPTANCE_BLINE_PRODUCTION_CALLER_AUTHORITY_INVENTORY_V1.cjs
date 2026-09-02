@@ -526,22 +526,29 @@ function covAnalyzeNode(fp, node, stack = new Set()) {
     targets: new Set(direct.targets || []),
   };
   if (direct.dml || direct.ddl) result.directWriterKeys.add(rel(fp) + "::" + "<inline>");
+  const localMap = covLocalFunctionMap(node);
 
   function merge(other) {
     result.dml = result.dml || other.dml;
     result.ddl = result.ddl || other.ddl;
     result.fact = result.fact || other.fact;
-    for (const k of other.directWriterKeys) result.directWriterKeys.add(k);
-    for (const k of other.callees) result.callees.add(k);
+    for (const k of other.directWriterKeys || []) result.directWriterKeys.add(k);
+    for (const k of other.callees || []) result.callees.add(k);
     for (const t of other.targets || []) result.targets.add(t);
   }
 
   function walk(n) {
-    if (ts.isCallExpression(n)) {
-      let name = null;
-      if (ts.isIdentifier(n.expression)) name = n.expression.text;
-      if (name) {
-        if (!(name === "ensureDeviceSkillBindings" && covAllowWriteFalse(n))) {
+    if (
+      n !== node &&
+      covFunctionLike(n) &&
+      !covImmediatelyInvokedFunction(n)
+    ) return;
+    if (ts.isCallExpression(n) && ts.isIdentifier(n.expression)) {
+      const name = n.expression.text;
+      if (!(name === "ensureDeviceSkillBindings" && covAllowWriteFalse(n))) {
+        if (localMap.has(name)) {
+          merge(covAnalyzeCallbackNode(fp, localMap.get(name), localMap, stack));
+        } else {
           const target = covResolveFunction(fp, name);
           if (target) {
             const key = covFunctionKey(target);
@@ -567,27 +574,43 @@ function covAnalyzeFunction(target, stack = new Set()) {
   const node = mod.functions.get(target.name);
   if (!node) return { dml:false, ddl:false, fact:false, directWriterKeys:new Set(), callees:new Set(), targets:new Set() };
   const direct = covDirectSqlEffect(target.fp, node);
-  const result = { dml:direct.dml, ddl:direct.ddl, fact:direct.fact, directWriterKeys:new Set(), callees:new Set(), targets:new Set() };
+  const result = {
+    dml:direct.dml,
+    ddl:direct.ddl,
+    fact:direct.fact,
+    directWriterKeys:new Set(),
+    callees:new Set(),
+    targets:new Set(direct.targets || []),
+  };
   if (direct.dml || direct.ddl) result.directWriterKeys.add(key);
+  const localMap = covLocalFunctionMap(node);
 
   function merge(other) {
     result.dml = result.dml || other.dml;
     result.ddl = result.ddl || other.ddl;
     result.fact = result.fact || other.fact;
-    for (const k of other.directWriterKeys) result.directWriterKeys.add(k);
-    for (const k of other.callees) result.callees.add(k);
+    for (const k of other.directWriterKeys || []) result.directWriterKeys.add(k);
+    for (const k of other.callees || []) result.callees.add(k);
     for (const t of other.targets || []) result.targets.add(t);
   }
   function walk(n) {
-    if (ts.isCallExpression(n)) {
-      let name = null;
-      if (ts.isIdentifier(n.expression)) name = n.expression.text;
-      if (name && !(name === "ensureDeviceSkillBindings" && covAllowWriteFalse(n))) {
-        const child = covResolveFunction(target.fp, name);
-        if (child) {
-          const childKey = covFunctionKey(child);
-          result.callees.add(childKey);
-          merge(covAnalyzeFunction(child, next));
+    if (
+      n !== node &&
+      covFunctionLike(n) &&
+      !covImmediatelyInvokedFunction(n)
+    ) return;
+    if (ts.isCallExpression(n) && ts.isIdentifier(n.expression)) {
+      const name = n.expression.text;
+      if (!(name === "ensureDeviceSkillBindings" && covAllowWriteFalse(n))) {
+        if (localMap.has(name)) {
+          merge(covAnalyzeCallbackNode(target.fp, localMap.get(name), localMap, next));
+        } else {
+          const child = covResolveFunction(target.fp, name);
+          if (child) {
+            const childKey = covFunctionKey(child);
+            result.callees.add(childKey);
+            merge(covAnalyzeFunction(child, next));
+          }
         }
       }
     }
