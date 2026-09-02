@@ -16,6 +16,9 @@ import {
   MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1,
   readMcftCap09TwinRuntimeProcessConfigV1,
 } from "../../apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.js";
+import {
+  parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1,
+} from "../../apps/server/src/runtime/mcft_cap09_production_runtime_start_authority_v1.js";
 
 const OUT = path.resolve(
   "acceptance-output/MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1_RESULT.json",
@@ -65,6 +68,57 @@ function main(): void {
   assert.equal(
     MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1.database_clock_for_tick_authority,
     true,
+  );
+  assert.equal(
+    MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1.runtime_start_authority,
+    "SEPARATE_GOVERNED_AUTHORITY_REQUIRED",
+  );
+
+  const runtimeStartAuthority = {
+    schema_version: "geox_mcft_cap09_production_runtime_start_authority_instance_v1",
+    authority_id: "GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-START-AUTHORITY-INSTANCE-V1",
+    status: "AUTHORIZED",
+    armed: true,
+    authority_class: "MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY",
+    authority_ref: "GEOX-MCFT-CAP-09-TEST-RUNTIME-START-AUTHORITY-V1",
+    activation_fence_time: "2026-09-03T17:30:00.000Z",
+    formal_a0_authority_ref: "GEOX-MCFT-CAP-09-TEST-A0-AUTHORITY-V1",
+    formal_a0_logical_time: "2026-09-03T18:00:00.000Z",
+    runtime_process_start_authorized: true,
+    evidence_runtime_start_authorized: true,
+    twin_runtime_start_authorized: true,
+    production_owner_activation_authorized: false,
+    formal_v5_arm_authorized: false,
+    a0_authorized: false,
+    o00_authorized: false,
+  } as const;
+  assert.equal(
+    parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+      runtimeStartAuthority,
+      "TWIN_RUNTIME",
+    ).formal_a0_logical_time,
+    "2026-09-03T18:00:00.000Z",
+  );
+  assert.equal(
+    parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+      runtimeStartAuthority,
+      "EVIDENCE_RUNTIME",
+    ).activation_fence_time,
+    "2026-09-03T17:30:00.000Z",
+  );
+  assert.throws(
+    () => parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+      { ...runtimeStartAuthority, armed: false },
+      "TWIN_RUNTIME",
+    ),
+    /MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED/,
+  );
+  assert.throws(
+    () => parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+      { ...runtimeStartAuthority, twin_runtime_start_authorized: false },
+      "TWIN_RUNTIME",
+    ),
+    /MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED/,
   );
 
   assert.throws(
@@ -243,6 +297,8 @@ function main(): void {
     stable_compiled_evidence_entrypoint: true,
     evidence_entrypoint_production_planner_bound: true,
     evidence_entrypoint_fail_closed_without_runtime_start_authority: true,
+    twin_entrypoint_fail_closed_without_runtime_start_authority: true,
+    shared_runtime_start_authority_parser: true,
     stable_compiled_twin_entrypoint: true,
     test_script_dependency_in_product_process: false,
     production_owner_cutover: false,
