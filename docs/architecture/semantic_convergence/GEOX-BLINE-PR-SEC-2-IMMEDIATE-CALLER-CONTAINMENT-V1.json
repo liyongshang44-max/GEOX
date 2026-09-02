@@ -1,0 +1,100 @@
+{
+  "schema_version": "bline_pr_sec_2_immediate_caller_containment_v1",
+  "status": "BATCH_1_IMPLEMENTED_PENDING_EXACT_HEAD_QUALIFICATION",
+  "mission": "B-SEC-0 / PR-SEC-2 Immediate fail-closed caller-authority containment",
+  "predecessor": {
+    "pr": 3453,
+    "sha": "dc1036f3fec8173cbc775d536b50ef62672651d5",
+    "exact_ci": 33632733189,
+    "status": "PR_SEC_1_COMPLETE_FROZEN",
+    "historical_metadata_representation_drift": "OBSERVED_NON_BLOCKING"
+  },
+  "forbidden_work": [
+    "semantic redesign",
+    "Candidate meaning change",
+    "Approval meaning change",
+    "OperationPlan meaning change",
+    "Task meaning change",
+    "Dispatch meaning change",
+    "Acceptance meaning change",
+    "Agronomy Agent semantic reopening",
+    "Sampling semantic reopening",
+    "Fertilization semantic reopening",
+    "Formal Field Memory semantic reopening",
+    "MCFT implementation modification",
+    "PR #3453 modification"
+  ],
+  "debt_baseline": {
+    "production_reachable_mutating_surface_without_authn": 35,
+    "production_reachable_semantic_writer_without_validated_capability": 109,
+    "production_reachable_human_action_with_unverified_declared_actor": 7,
+    "production_reachable_service_writer_without_bound_principal": 3,
+    "tenant_scope_from_untrusted_body_or_unbound": 16
+  },
+  "batches": [
+    {
+      "batch_id": "PRSEC2-BATCH-001",
+      "risk_order": 1,
+      "subject": "Operator Twin unauthenticated recommendation candidate writers",
+      "source_surfaces": ["BSEC-001", "BSEC-002"],
+      "entrypoints": [
+        "POST /api/v1/operator/twin/fields/:field_id/root-zone-scenarios/:scenario_set_id/options/:option_id/submit-recommendation",
+        "POST /api/v1/operator/twin/fields/:field_id/scenarios/:scenario_set_id/options/:option_id/submit-recommendation"
+      ],
+      "runtime_registration": "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts::registerOperatorTwinWriteLegacyRoutesV1",
+      "authority_chain": {
+        "principal": "AO_ACT_BEARER_ACTOR",
+        "credential": "structured AO-ACT bearer token",
+        "capability": "recommendation.write",
+        "product_principal": "role admitted by ROLE_SCOPE_MATRIX_V1 for recommendation.write",
+        "tenant_project_group_binding": "request body scope must exact-match authenticated token tenant_id/project_id/group_id",
+        "field_binding": "authenticated principal field access must include route field_id",
+        "declared_actor_binding": "operator_id is rejected on mismatch and persisted from authenticated actor_id",
+        "delegated_service_principal": "commercial.server shared DB runtime principal; unchanged in this batch",
+        "producer": [
+          "insertOperatorRootZoneScenarioRecommendationFacts",
+          "insertOperatorScenarioRecommendationFacts"
+        ],
+        "persistent_targets": ["facts"],
+        "semantic_consequence": [
+          "operator_root_zone_scenario_recommendation_submission_v1 or operator_scenario_recommendation_submission_v1",
+          "decision_recommendation_v1"
+        ]
+      },
+      "negative_proofs_required": [
+        "missing bearer cannot reach producer",
+        "invalid/revoked bearer cannot reach producer",
+        "bearer without recommendation.write cannot reach producer",
+        "role not admitted for recommendation.write cannot reach producer",
+        "tenant/project/group mismatch cannot reach producer",
+        "field scope mismatch cannot reach producer",
+        "declared operator_id mismatch cannot reach producer"
+      ],
+      "semantic_runtime_changed": false,
+      "persistence_semantics_changed": false,
+      "mcft_implementation_changed": false,
+      "expected_machine_debt_delta": {
+        "production_reachable_mutating_surface_without_authn": -2,
+        "production_reachable_semantic_writer_without_validated_capability": -2,
+        "production_reachable_human_action_with_unverified_declared_actor": 0,
+        "production_reachable_service_writer_without_bound_principal": 0,
+        "tenant_scope_from_untrusted_body_or_unbound": 0
+      },
+      "expected_after": {
+        "production_reachable_mutating_surface_without_authn": 33,
+        "production_reachable_semantic_writer_without_validated_capability": 107,
+        "production_reachable_human_action_with_unverified_declared_actor": 7,
+        "production_reachable_service_writer_without_bound_principal": 3,
+        "tenant_scope_from_untrusted_body_or_unbound": 16
+      },
+      "qualification": "PENDING"
+    }
+  ],
+  "next_priority_after_batch_1": [
+    "Weather Forecast ingest",
+    "Legacy Twin base mutation fail-close",
+    "Admin Import",
+    "/api/raw and weak __internal__ compatibility",
+    "high-risk GET write-under-read"
+  ]
+}
