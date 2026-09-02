@@ -205,6 +205,7 @@ Required request identities are:
 
 ```text
 fertilization_prescription_id
+fertilization_prescription_fact_id
 receipt_fact_id
 act_task_id
 operation_plan_id
@@ -212,6 +213,8 @@ as_executed_id
 as_applied_id
 acceptance_result_fact_id
 ```
+
+`fertilization_prescription_id` alone is not source-selection authority. The request must supply exact `fertilization_prescription_fact_id`, whose fact type, business ID, and tenant scope are verified before use.
 
 The exact Fertilization prescription must resolve its deterministic bridge successor `fert_bridge_<fertilization_prescription_id>` in `prescription_contract_v1`. Exact Receipt, AsExecuted, AsApplied, and canonical Acceptance must all match that bridge prescription, tenant/project/group, field, task, and operation.
 
