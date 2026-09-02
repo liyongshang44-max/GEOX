@@ -167,22 +167,54 @@ function receiptBody(scope, operation_plan_id, act_task_id, field_id, device_id,
 
 async function submitReceiptAndAsApplied(base, executorToken, operatorToken, scope, receipt) {
   const receiptResp = await post(base, '/api/v1/actions/receipt', executorToken, receipt);
-  if (!receiptResp.ok || receiptResp.json?.ok === false) return { receiptResp, receipt_id: null, asApplied: null, genericAcceptance: null };
-  const receipt_id = String(receiptResp.json?.receipt_id ?? receiptResp.json?.fact_id ?? '').trim();
-  const asApplied = await post(base, '/api/v1/as-executed/from-receipt', executorToken, { ...scope, task_id: receipt.act_task_id, receipt_id });
-  const genericAcceptance = await post(base, '/api/v1/acceptance/evaluate', operatorToken, { ...scope, act_task_id: receipt.act_task_id, receipt_id });
-  return { receiptResp, receipt_id, asApplied, genericAcceptance };
+  if (!receiptResp.ok || receiptResp.json?.ok === false) {
+    return { receiptResp, receipt_fact_id: null, as_executed_id: null, as_applied_id: null, acceptance_result_fact_id: null, asApplied: null, genericAcceptance: null };
+  }
+  const receipt_fact_id = String(receiptResp.json?.fact_id ?? '').trim();
+  assert.ok(receipt_fact_id, 'AO-ACT receipt exact fact_id required');
+
+  const asApplied = await post(base, '/api/v1/as-executed/from-receipt', executorToken, {
+    ...scope,
+    task_id: receipt.act_task_id,
+    receipt_id: receipt_fact_id,
+  });
+  const asAppliedJson = requireOk(asApplied, 'create exact AsExecuted/AsApplied');
+  const as_executed_id = String(asAppliedJson.as_executed?.as_executed_id ?? '').trim();
+  const as_applied_id = String(asAppliedJson.as_applied?.as_applied_id ?? '').trim();
+  assert.ok(as_executed_id && as_applied_id, 'exact as_executed_id/as_applied_id required');
+
+  const genericAcceptance = await post(base, '/api/v1/acceptance/evaluate', operatorToken, {
+    ...scope,
+    act_task_id: receipt.act_task_id,
+    receipt_id: receipt_fact_id,
+  });
+  const generic = requireOk(genericAcceptance, 'canonical acceptance evaluate');
+  const acceptance_result_fact_id = String(generic.fact_id ?? '').trim();
+  assert.ok(acceptance_result_fact_id, 'canonical acceptance exact fact_id required');
+
+  return {
+    receiptResp,
+    receipt_fact_id,
+    as_executed_id,
+    as_applied_id,
+    acceptance_result_fact_id,
+    asApplied,
+    genericAcceptance,
+  };
 }
 
-async function evalFertilizationAcceptance(base, token, scope, prescription_id, receipt_id, act_task_id, operation_plan_id, zoneApps) {
+async function evalFertilizationAcceptance(base, token, scope, exact, extra = {}) {
   return post(base, '/api/v1/fertilization/acceptance/evaluate', token, {
     ...scope,
-    fertilization_prescription_id: prescription_id,
-    receipt_id,
-    act_task_id,
-    operation_plan_id,
-    zone_applications: zoneApps,
-    evidence_refs: [{ kind: 'ao_act_receipt_v0', ref_id: receipt_id }],
+    fertilization_prescription_id: exact.fertilization_prescription_id,
+    fertilization_prescription_fact_id: exact.fertilization_prescription_fact_id,
+    receipt_fact_id: exact.receipt_fact_id,
+    act_task_id: exact.act_task_id,
+    operation_plan_id: exact.operation_plan_id,
+    as_executed_id: exact.as_executed_id,
+    as_applied_id: exact.as_applied_id,
+    acceptance_result_fact_id: exact.acceptance_result_fact_id,
+    ...extra,
   });
 }
 
@@ -287,7 +319,9 @@ async function run() {
     ec_high_salinity_risk_blocks_nitrogen_prescription: false,
     zone_rate_negative_blocked: false,
     planned_n_exceeds_max_blocked: false,
-    receipt_success_missing_zone_applications_acceptance_not_pass: false,
+    caller_zone_applications_rejected: false,
+    wrong_as_applied_chain_rejected: false,
+    canonical_non_pass_cannot_upgrade: false,
     one_required_zone_over_under_operation_not_pass: false,
     operation_average_cannot_hide_zone_fail: false,
     unapproved_prescription_cannot_dispatch_task: false,
@@ -365,6 +399,8 @@ async function run() {
     const presResp = await createPrescription(base, adminToken, scope, field_id, recommendation_id, fertZoneRates);
     const pres = requireOk(presResp, 'formal fertilization prescription');
     const fertilization_prescription_id = pres.prescription.fertilization_prescription_id;
+    const fertilization_prescription_fact_id = String(pres.fact_id ?? '').trim();
+    assert.ok(fertilization_prescription_fact_id, 'fertilization prescription exact fact_id missing');
 
     const bridgeResp = await post(base, `/api/v1/fertilization/prescription/${q(fertilization_prescription_id)}/to-variable-prescription`, adminToken, scope);
     const bridge = requireOk(bridgeResp, 'bridge to variable prescription');
@@ -402,8 +438,63 @@ async function run() {
     let reportResp = null;
     if (checks.ao_act_task_created_after_approval) {
       receiptFlow = await submitReceiptAndAsApplied(base, executorToken, operatorToken, scope, receiptBody(scope, operation_plan_id, act_task_id, field_id, device_id, goodApps));
-      fertAcc = await evalFertilizationAcceptance(base, operatorToken, scope, fertilization_prescription_id, receiptFlow.receipt_id, act_task_id, operation_plan_id, goodApps);
-      checks.fertilization_acceptance_evaluated = fertAcc.ok === true && fertAcc.json?.ok !== false && Boolean(fertAcc.json?.acceptance);
+      assert.equal(String(receiptFlow.genericAcceptance?.json?.verdict ?? '').toUpperCase(), 'PASS', 'canonical Acceptance must PASS before Fertilization PASS');
+      assert.equal(receiptFlow.genericAcceptance?.json?.acceptance?.formal_acceptance, true, 'canonical Acceptance must be formal');
+
+      const exactPositive = {
+        fertilization_prescription_id,
+        fertilization_prescription_fact_id,
+        receipt_fact_id: receiptFlow.receipt_fact_id,
+        act_task_id,
+        operation_plan_id,
+        as_executed_id: receiptFlow.as_executed_id,
+        as_applied_id: receiptFlow.as_applied_id,
+        acceptance_result_fact_id: receiptFlow.acceptance_result_fact_id,
+      };
+      fertAcc = await evalFertilizationAcceptance(base, operatorToken, scope, exactPositive);
+      checks.fertilization_acceptance_evaluated = fertAcc.ok === true
+        && fertAcc.json?.ok !== false
+        && String(fertAcc.json?.acceptance?.acceptance_status ?? '').toUpperCase() === 'PASS'
+        && fertAcc.json?.acceptance?.receipt_fact_id === receiptFlow.receipt_fact_id
+        && fertAcc.json?.acceptance?.as_executed_id === receiptFlow.as_executed_id
+        && fertAcc.json?.acceptance?.as_applied_id === receiptFlow.as_applied_id
+        && fertAcc.json?.acceptance?.acceptance_result_fact_id === receiptFlow.acceptance_result_fact_id;
+
+      const callerZoneAttempt = await evalFertilizationAcceptance(base, operatorToken, scope, exactPositive, { zone_applications: goodApps });
+      negative.caller_zone_applications_rejected = callerZoneAttempt.status === 400
+        && String(callerZoneAttempt.json?.error ?? '') === 'CALLER_ZONE_APPLICATIONS_FORBIDDEN';
+
+      const wrongAsApplied = await evalFertilizationAcceptance(base, operatorToken, scope, { ...exactPositive, as_applied_id: id('wrong_as_applied') });
+      negative.wrong_as_applied_chain_rejected = wrongAsApplied.status >= 400 && wrongAsApplied.json?.ok === false;
+
+      const nonPassFactId = id('canonical_acceptance_needs_review');
+      await pool.query(
+        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+         VALUES ($1, NOW(), 'acceptance_formal_fertilization_negative', $2::jsonb)`,
+        [nonPassFactId, JSON.stringify({
+          type: 'acceptance_result_v1',
+          payload: {
+            tenant_id: scope.tenant_id,
+            project_id: scope.project_id,
+            group_id: scope.group_id,
+            field_id,
+            act_task_id,
+            operation_plan_id,
+            receipt_id: receiptFlow.receipt_fact_id,
+            verdict: 'NEEDS_REVIEW',
+            formal_acceptance: false,
+            formal_evidence_passed: true,
+            formal_execution_passed: false,
+            source_lane: 'FORMAL_OPERATION',
+            customer_visible_eligible: false,
+            evidence_refs: [receiptFlow.receipt_fact_id],
+          },
+        })],
+      );
+      const nonPassAttempt = await evalFertilizationAcceptance(base, operatorToken, scope, { ...exactPositive, acceptance_result_fact_id: nonPassFactId });
+      negative.canonical_non_pass_cannot_upgrade = nonPassAttempt.status === 400
+        && String(nonPassAttempt.json?.error ?? '') === 'CANONICAL_ACCEPTANCE_PASS_REQUIRED';
+
       reportResp = await fetchOperationReport(base, adminToken, scope, operation_plan_id);
       const report = reportResp.json?.operation_report_v1;
       assert.equal(report?.formal_scenario?.scenario_type, 'FORMAL_FERTILIZATION');
@@ -419,14 +510,29 @@ async function run() {
       checks.operation_report_fertilization_acceptance_pass = true;
       checks.operation_report_fertilization_zone_rates_present = true;
 
-      const missingAcc = await evalFertilizationAcceptance(base, operatorToken, scope, fertilization_prescription_id, receiptFlow.receipt_id, act_task_id, operation_plan_id, []);
-      negative.receipt_success_missing_zone_applications_acceptance_not_pass = missingAcc.ok && String(missingAcc.json?.acceptance?.acceptance_status ?? '').toUpperCase() !== 'PASS';
       const failApps = [
         { ...goodApps[0], actual_n_kg_ha: 80, applied_amount: 80, actual_rate: 80, coverage_percent: 0.97 },
         goodApps[1],
       ];
-      const failAcc = await evalFertilizationAcceptance(base, operatorToken, scope, fertilization_prescription_id, receiptFlow.receipt_id, act_task_id, operation_plan_id, failApps);
-      negative.one_required_zone_over_under_operation_not_pass = failAcc.ok && String(failAcc.json?.acceptance?.acceptance_status ?? '').toUpperCase() !== 'PASS';
+      const failOperationPlanId = `op_fail_${runId}`;
+      const failTaskResp = await createTask(base, operatorToken, scope, variable_prescription_id, approval.approval_request_id, failOperationPlanId, device_id);
+      const failTaskJson = requireOk(failTaskResp, 'create fail-zone task');
+      const failTaskId = String(failTaskJson.act_task_id ?? '').trim();
+      assert.ok(failTaskId, 'fail-zone act_task_id missing');
+      const failFlow = await submitReceiptAndAsApplied(base, executorToken, operatorToken, scope, receiptBody(scope, failOperationPlanId, failTaskId, field_id, device_id, failApps));
+      assert.equal(String(failFlow.genericAcceptance?.json?.verdict ?? '').toUpperCase(), 'PASS', 'canonical execution may PASS while Fertilization zone tolerance FAILs');
+      const failAcc = await evalFertilizationAcceptance(base, operatorToken, scope, {
+        fertilization_prescription_id,
+        fertilization_prescription_fact_id,
+        receipt_fact_id: failFlow.receipt_fact_id,
+        act_task_id: failTaskId,
+        operation_plan_id: failOperationPlanId,
+        as_executed_id: failFlow.as_executed_id,
+        as_applied_id: failFlow.as_applied_id,
+        acceptance_result_fact_id: failFlow.acceptance_result_fact_id,
+      });
+      negative.one_required_zone_over_under_operation_not_pass = failAcc.ok
+        && String(failAcc.json?.acceptance?.acceptance_status ?? '').toUpperCase() === 'FAIL';
     }
 
     const localFail = localZoneRollup(fertZoneRates, [
@@ -451,7 +557,10 @@ async function run() {
       act_task_id,
       operation_plan_id,
       task_meta: taskPayload?.meta ?? null,
-      receipt_id: receiptFlow?.receipt_id ?? null,
+      receipt_fact_id: receiptFlow?.receipt_fact_id ?? null,
+      as_executed_id: receiptFlow?.as_executed_id ?? null,
+      as_applied_id: receiptFlow?.as_applied_id ?? null,
+      acceptance_result_fact_id: receiptFlow?.acceptance_result_fact_id ?? null,
       fertilization_acceptance_status: fertAcc?.json?.acceptance?.acceptance_status ?? null,
       report_status: reportResp?.status ?? null,
     };
