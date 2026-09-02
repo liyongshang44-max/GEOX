@@ -9114,6 +9114,29 @@
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
       "notes": "GET ensures rule-performance table before SELECT."
+    },
+    {
+      "disposition_id": "BHTTP-045",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "entry_symbol": "GET legacyAoActRouteV1(\"index\")",
+      "http_method": "GET",
+      "exact_route": "/api/control/ao_act/index",
+      "activation_root": "commercial.server → compatibility routes → registerAoActLegacyRoutes",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "action.read",
+        "ao_act.index.read"
+      ],
+      "side_effect_class": "FACT_LEDGER_WRITE",
+      "writer_entrypoints": [
+        "handleAoActIndexV1",
+        "writeAoActAuthzAuditFactV0"
+      ],
+      "write_targets": [
+        "facts:ao_act_authz_audit_v0"
+      ],
+      "current_disposition": "INVENTORIED_LEGACY_GET_FACT_LEDGER_AUDIT_WRITE",
+      "notes": "Deprecated compatibility GET delegates to handleAoActIndexV1(deprecated=true); successful index read appends AO-ACT authz audit fact. Compatibility route remains non-authoritative for action semantics."
     }
   ],
   "runtime_direct_writer_dispositions": [
@@ -9638,6 +9661,216 @@
       ],
       "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
       "notes": "DDL-only startup compatibility ensure."
+    }
+  ],
+  "dynamic_http_registration_dispositions": [
+    {
+      "disposition_id": "BDYN-001",
+      "source_path": "apps/server/src/routes/v1/admin_control_plane.ts",
+      "http_method": "GET",
+      "expression": "`/api/v1/admin/${kind}`",
+      "disposition_kind": "FINITE_STATIC_READ_SET",
+      "side_effect_class": "PURE_READ",
+      "exact_routes": [
+        "/api/v1/admin/dashboard",
+        "/api/v1/admin/fields",
+        "/api/v1/admin/operations",
+        "/api/v1/admin/devices",
+        "/api/v1/admin/alerts",
+        "/api/v1/admin/evidence",
+        "/api/v1/admin/skills",
+        "/api/v1/admin/acceptance",
+        "/api/v1/admin/healthz"
+      ],
+      "current_disposition": "READ_ONLY_ADMIN_CONTROL_PLANE",
+      "notes": "registerAdminControlPlaneV1Routes ignores the Pool parameter and returns static/read-model boundary envelopes only."
+    },
+    {
+      "disposition_id": "BDYN-002",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "http_method": "GET",
+      "expression": "legacyAoActRouteV1(\"index\")",
+      "disposition_kind": "DYNAMIC_COMPATIBILITY_ROUTE_WITH_EXACT_INVENTORY_SURFACE",
+      "side_effect_class": "FACT_LEDGER_WRITE",
+      "exact_routes": [
+        "/api/control/ao_act/index"
+      ],
+      "current_disposition": "EXACT_SURFACE_BHTTP_LEGACY_AO_ACT_INDEX",
+      "notes": "Exact compatibility route is independently inventoried because its read handler appends ao_act_authz_audit_v0."
+    },
+    {
+      "disposition_id": "BDYN-003",
+      "source_path": "apps/server/src/routes/v1/operator_twin_read_legacy_v1.ts",
+      "http_method": "GET",
+      "expression": "path",
+      "disposition_kind": "CAPTURED_LEGACY_GET_HANDLER_WRAPPER",
+      "side_effect_class": "PURE_READ",
+      "exact_routes": [
+        "/api/v1/operator/twin",
+        "/api/v1/operator/twin/source-indexes",
+        "/api/v1/operator/twin/fields/:field_id",
+        "/api/v1/operator/twin/fields/:field_id/post-irrigation",
+        "/api/v1/operator/twin/fields/:field_id/calibration",
+        "/api/v1/operator/twin/fields/:field_id/evidence",
+        "/api/v1/operator/twin/fields/:field_id/forecast",
+        "/api/v1/operator/twin/fields/:field_id/scenarios"
+      ],
+      "current_disposition": "LEGACY_READ_COMPATIBILITY_WRAPPER",
+      "notes": "Wrapper captures only GET handlers from operator_twin.ts; independent handler-block audit found no SQL mutation/write helper in the eight GET handlers."
+    },
+    {
+      "disposition_id": "BDYN-004",
+      "source_path": "apps/server/src/routes/programs_core_v1.ts",
+      "http_method": "GET",
+      "expression": "path",
+      "disposition_kind": "LOCAL_REGISTRATION_WRAPPER_EXACT_LITERAL_CALLS_SCANNED",
+      "side_effect_class": "PURE_READ",
+      "exact_routes": [],
+      "current_disposition": "REGISTRATION_INDIRECTION_ONLY",
+      "notes": "Local get(path,handler) wrapper. Exact get(\"/...\") call sites are separately discovered and handler-analyzed by the all-method scanner."
+    },
+    {
+      "disposition_id": "BDYN-005",
+      "source_path": "apps/server/src/routes/v1/runtime_features_v1.ts",
+      "http_method": "GET",
+      "expression": "RUNTIME_FEATURES_PATH_V1",
+      "disposition_kind": "STATIC_CONSTANT_ROUTE",
+      "side_effect_class": "PURE_READ",
+      "exact_routes": [
+        "/api/v1/runtime/features"
+      ],
+      "current_disposition": "PURE_RUNTIME_FEATURE_READ",
+      "notes": "Returns runtime security/feature status from in-memory configuration; no DB mutation."
+    },
+    {
+      "disposition_id": "BDYN-006",
+      "source_path": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts",
+      "http_method": "GET",
+      "expression": "MCFT_FIELD_TWIN_CANONICAL_BASE_V1",
+      "disposition_kind": "FOREIGN_MCFT_READ_SURFACE",
+      "side_effect_class": "PURE_READ",
+      "exact_routes": [
+        "/api/v1/operator/twin/fields/:field_id/runtime"
+      ],
+      "current_disposition": "FOREIGN_MCFT_READ_ONLY_NO_BLINE_CHANGE",
+      "notes": "MCFT-owned canonical field-twin read API. B-Line records activation/disposition only and does not modify MCFT implementation."
+    },
+    {
+      "disposition_id": "BDYN-007",
+      "source_path": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts",
+      "http_method": "GET",
+      "expression": "`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/timeline`",
+      "disposition_kind": "FOREIGN_MCFT_READ_SURFACE",
+      "side_effect_class": "PURE_READ",
+      "exact_routes": [
+        "/api/v1/operator/twin/fields/:field_id/runtime/timeline"
+      ],
+      "current_disposition": "FOREIGN_MCFT_READ_ONLY_NO_BLINE_CHANGE",
+      "notes": "MCFT-owned canonical field-twin read API. B-Line records activation/disposition only and does not modify MCFT implementation."
+    },
+    {
+      "disposition_id": "BDYN-008",
+      "source_path": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts",
+      "http_method": "GET",
+      "expression": "`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/trace`",
+      "disposition_kind": "FOREIGN_MCFT_READ_SURFACE",
+      "side_effect_class": "PURE_READ",
+      "exact_routes": [
+        "/api/v1/operator/twin/fields/:field_id/runtime/trace"
+      ],
+      "current_disposition": "FOREIGN_MCFT_READ_ONLY_NO_BLINE_CHANGE",
+      "notes": "MCFT-owned canonical field-twin read API. B-Line records activation/disposition only and does not modify MCFT implementation."
+    },
+    {
+      "disposition_id": "BDYN-009",
+      "source_path": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts",
+      "http_method": "GET",
+      "expression": "`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/states`",
+      "disposition_kind": "FOREIGN_MCFT_READ_SURFACE",
+      "side_effect_class": "PURE_READ",
+      "exact_routes": [
+        "/api/v1/operator/twin/fields/:field_id/runtime/states"
+      ],
+      "current_disposition": "FOREIGN_MCFT_READ_ONLY_NO_BLINE_CHANGE",
+      "notes": "MCFT-owned canonical field-twin read API. B-Line records activation/disposition only and does not modify MCFT implementation."
+    },
+    {
+      "disposition_id": "BDYN-010",
+      "source_path": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts",
+      "http_method": "GET",
+      "expression": "`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/forecasts`",
+      "disposition_kind": "FOREIGN_MCFT_READ_SURFACE",
+      "side_effect_class": "PURE_READ",
+      "exact_routes": [
+        "/api/v1/operator/twin/fields/:field_id/runtime/forecasts"
+      ],
+      "current_disposition": "FOREIGN_MCFT_READ_ONLY_NO_BLINE_CHANGE",
+      "notes": "MCFT-owned canonical field-twin read API. B-Line records activation/disposition only and does not modify MCFT implementation."
+    },
+    {
+      "disposition_id": "BDYN-011",
+      "source_path": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts",
+      "http_method": "GET",
+      "expression": "`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/scenarios`",
+      "disposition_kind": "FOREIGN_MCFT_READ_SURFACE",
+      "side_effect_class": "PURE_READ",
+      "exact_routes": [
+        "/api/v1/operator/twin/fields/:field_id/runtime/scenarios"
+      ],
+      "current_disposition": "FOREIGN_MCFT_READ_ONLY_NO_BLINE_CHANGE",
+      "notes": "MCFT-owned canonical field-twin read API. B-Line records activation/disposition only and does not modify MCFT implementation."
+    },
+    {
+      "disposition_id": "BDYN-012",
+      "source_path": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts",
+      "http_method": "GET",
+      "expression": "`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/residuals`",
+      "disposition_kind": "FOREIGN_MCFT_READ_SURFACE",
+      "side_effect_class": "PURE_READ",
+      "exact_routes": [
+        "/api/v1/operator/twin/fields/:field_id/runtime/residuals"
+      ],
+      "current_disposition": "FOREIGN_MCFT_READ_ONLY_NO_BLINE_CHANGE",
+      "notes": "MCFT-owned canonical field-twin read API. B-Line records activation/disposition only and does not modify MCFT implementation."
+    },
+    {
+      "disposition_id": "BDYN-013",
+      "source_path": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts",
+      "http_method": "GET",
+      "expression": "`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/action-lifecycle`",
+      "disposition_kind": "FOREIGN_MCFT_READ_SURFACE",
+      "side_effect_class": "PURE_READ",
+      "exact_routes": [
+        "/api/v1/operator/twin/fields/:field_id/runtime/action-lifecycle"
+      ],
+      "current_disposition": "FOREIGN_MCFT_READ_ONLY_NO_BLINE_CHANGE",
+      "notes": "MCFT-owned canonical field-twin read API. B-Line records activation/disposition only and does not modify MCFT implementation."
+    },
+    {
+      "disposition_id": "BDYN-014",
+      "source_path": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts",
+      "http_method": "GET",
+      "expression": "`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/model-governance`",
+      "disposition_kind": "FOREIGN_MCFT_READ_SURFACE",
+      "side_effect_class": "PURE_READ",
+      "exact_routes": [
+        "/api/v1/operator/twin/fields/:field_id/runtime/model-governance"
+      ],
+      "current_disposition": "FOREIGN_MCFT_READ_ONLY_NO_BLINE_CHANGE",
+      "notes": "MCFT-owned canonical field-twin read API. B-Line records activation/disposition only and does not modify MCFT implementation."
+    },
+    {
+      "disposition_id": "BDYN-015",
+      "source_path": "apps/server/src/routes/v1/mcft_field_twin_read_v1.ts",
+      "http_method": "GET",
+      "expression": "`${MCFT_FIELD_TWIN_CANONICAL_BASE_V1}/health`",
+      "disposition_kind": "FOREIGN_MCFT_READ_SURFACE",
+      "side_effect_class": "PURE_READ",
+      "exact_routes": [
+        "/api/v1/operator/twin/fields/:field_id/runtime/health"
+      ],
+      "current_disposition": "FOREIGN_MCFT_READ_ONLY_NO_BLINE_CHANGE",
+      "notes": "MCFT-owned canonical field-twin read API. B-Line records activation/disposition only and does not modify MCFT implementation."
     }
   ]
 }
