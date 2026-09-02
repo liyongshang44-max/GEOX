@@ -6,12 +6,16 @@ on:
       - 'apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts'
       - 'apps/server/src/routes/weather_v1.ts'
       - 'apps/server/src/modules/sensing/registerSensingModule.ts'
+      - 'apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts'
       - 'docs/architecture/semantic_convergence/GEOX-BLINE-PR-SEC-2-IMMEDIATE-CALLER-CONTAINMENT-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_IMMEDIATE_CALLER_CONTAINMENT_V1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_FAIL_CLOSED_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_FAIL_CLOSED_V1.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_OPERATOR_TWIN_AUTH_NEGATIVE_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_FAIL_CLOSED_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_COMMERCIAL_RUNTIME_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_FAIL_CLOSED_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_COMMERCIAL_RUNTIME_V1.ts'
       - '.github/workflows/bline-pr-sec2-containment.yml'
 
 jobs:
@@ -48,6 +52,12 @@ jobs:
 
       - name: PR-SEC-2 BSEC-003 production registration behavioral proof
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_FAIL_CLOSED_V1.ts
+
+      - name: PR-SEC-2 BSEC-005..010 corrected accounting and reachability closure
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_FAIL_CLOSED_V1.cjs
+
+      - name: PR-SEC-2 BSEC-005..010 production registration behavioral proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_FAIL_CLOSED_V1.ts
 
       - name: Frozen PR-SEC-1 caller inventory regression
         run: pnpm run ci:governance:bline-production-caller-authority-inventory
@@ -147,13 +157,23 @@ jobs:
           export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_COMMERCIAL_RUNTIME_V1.ts
 
+      - name: BSEC-005..010 Commercial runtime seven-table persistence-delta proof
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_COMMERCIAL_RUNTIME_V1.ts
+
       - name: Runtime hygiene
         if: always()
         run: |
           set -euo pipefail
-          LOG=/tmp/bline-pr-sec2-weather-runtime.log
+          LOG=/tmp/bline-pr-sec2-runtime.log
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs server > "$LOG" 2>&1 || true
-          ! grep -E 'ERR_HTTP_HEADERS_SENT|Reply was already sent|reply already sent' "$LOG"
+          ! grep -E 'FST_ERR_REP_ALREADY_SENT|ERR_HTTP_HEADERS_SENT|Reply was already sent|reply already sent' "$LOG"
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
       - name: Stop Commercial runtime
