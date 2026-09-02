@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_owner_graduation_gate_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1",
-  "status": "PREFLIGHT_ONLY_CUTOVER_NOT_PERFORMED",
+  "status": "READ_ONLY_LIVE_OWNER_ADJUDICATION_IMPLEMENTED_RUNTIME_START_SEPARATE",
   "route_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
   "timing_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json",
   "retirement_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json",
@@ -43,10 +43,12 @@
     "generic_cross_plane_owner_forbidden": true
   },
   "non_github_hosting_binding": {
-    "status": "NOT_ESTABLISHED",
+    "status": "ESTABLISHED_LOCAL_OPERATOR_MANAGED_DOCKER",
+    "authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
     "github_actions_routine_production_host_forbidden": true,
     "qualification_compose_is_production_owner": false,
-    "required_before_cutover": true
+    "required_before_cutover": true,
+    "exact_two_runtime_service_identities_bound": true
   },
   "activation_arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_CUTOVER_ARM_V1.json",
   "non_effects": {
@@ -58,5 +60,21 @@
     "a0_bootstrap": false,
     "o00_started": false,
     "mcft_cap09_completed": false
+  },
+  "implementation": {
+    "production_launcher_ref": "docker-compose.mcft-cap09-production.yml",
+    "production_launcher_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts",
+    "live_fenced_lease_verifier_ref": "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs",
+    "runtime_start_authority_ref": "apps/server/src/runtime/mcft_cap09_production_runtime_start_authority_v1.ts",
+    "service_identity_binding_ref": "apps/server/src/runtime/mcft_cap09_production_service_identity_v1.ts",
+    "github_actions_runtime_start_allowed": false,
+    "github_actions_owner_activation_allowed": false,
+    "read_only_live_adjudication_only": true
+  },
+  "activation_arm_semantics": {
+    "arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_CUTOVER_ARM_V1.json",
+    "status": "LEGACY_GUARD_REMAINS_UNARMED_NOT_RUNTIME_START_AUTHORITY",
+    "runtime_start_authority_is_separate": true,
+    "github_actions_cutover_execution_authorized": false
   }
 }
