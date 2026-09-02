@@ -7,15 +7,19 @@ on:
       - 'apps/server/src/routes/weather_v1.ts'
       - 'apps/server/src/modules/sensing/registerSensingModule.ts'
       - 'apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts'
+      - 'apps/server/src/modules/admin/registerAdminModule.ts'
       - 'docs/architecture/semantic_convergence/GEOX-BLINE-PR-SEC-2-IMMEDIATE-CALLER-CONTAINMENT-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_IMMEDIATE_CALLER_CONTAINMENT_V1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_FAIL_CLOSED_V1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_FAIL_CLOSED_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_ADMIN_IMPORT_FAIL_CLOSED_V1.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_OPERATOR_TWIN_AUTH_NEGATIVE_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_FAIL_CLOSED_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_COMMERCIAL_RUNTIME_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_FAIL_CLOSED_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_COMMERCIAL_RUNTIME_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_ADMIN_IMPORT_FAIL_CLOSED_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_ADMIN_IMPORT_COMMERCIAL_RUNTIME_V1.ts'
       - '.github/workflows/bline-pr-sec2-containment.yml'
 
 jobs:
@@ -58,6 +62,12 @@ jobs:
 
       - name: PR-SEC-2 BSEC-005..010 production registration behavioral proof
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_FAIL_CLOSED_V1.ts
+
+      - name: PR-SEC-2 BSEC-022/023 corrected accounting and source-truth closure
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_ADMIN_IMPORT_FAIL_CLOSED_V1.cjs
+
+      - name: PR-SEC-2 BSEC-022/023 production registration behavioral proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_ADMIN_IMPORT_FAIL_CLOSED_V1.ts
 
       - name: Frozen PR-SEC-1 caller inventory regression
         run: pnpm run ci:governance:bline-production-caller-authority-inventory
@@ -166,6 +176,20 @@ jobs:
           export BASE_URL=http://127.0.0.1:3001
           export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_COMMERCIAL_RUNTIME_V1.ts
+
+      - name: BSEC-022/023 Commercial filesystem and database no-delta proof
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          export GEOX_TEST_BEARER="$GEOX_AO_ACT_TOKEN"
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_ADMIN_IMPORT_COMMERCIAL_RUNTIME_V1.ts
+          SERVER_CID="$(docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps -q server)"
+          test -n "$SERVER_CID"
+          ! docker top "$SERVER_CID" -eo pid,args | grep -E '[l]oadfact\.ts'
 
       - name: Runtime hygiene
         if: always()
