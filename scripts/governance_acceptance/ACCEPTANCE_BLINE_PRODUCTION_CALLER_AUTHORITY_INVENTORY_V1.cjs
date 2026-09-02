@@ -1393,7 +1393,7 @@ for (const edge of covCallbackEdges) {
   if (d.effect_class === "PURE_STARTUP_CHECK" && persistent) covCallbackClassMismatch.push({edge,disposition:d});
   if (d.effect_class === "STARTUP_SCHEMA_BOOTSTRAP" && (!edge.ddl || edge.dml)) covCallbackClassMismatch.push({edge,disposition:d});
   if (d.effect_class === "STARTUP_PROJECTION_BOOTSTRAP" && !edge.dml) covCallbackClassMismatch.push({edge,disposition:d});
-  if (["CALLER_HOOK_PERSISTENT_WRITE","TIMER_BACKGROUND_WRITER","EVENT_BACKGROUND_WRITER","DEFERRED_SERVER_CALLBACK_WRITER"].includes(d.effect_class) && !persistent) covCallbackClassMismatch.push({edge,disposition:d});
+  if (["CALLER_HOOK_PERSISTENT_WRITE","CALLER_TRIGGERED_HIGHER_ORDER_WRITER","TIMER_BACKGROUND_WRITER","EVENT_BACKGROUND_WRITER","DEFERRED_SERVER_CALLBACK_WRITER"].includes(d.effect_class) && !persistent) covCallbackClassMismatch.push({edge,disposition:d});
 }
 for (const d of covCallbackDispositions) {
   if (!covCallbackEdges.some((e)=>e.callback_id===d.callback_id)) covCallbackStale.push(d);
