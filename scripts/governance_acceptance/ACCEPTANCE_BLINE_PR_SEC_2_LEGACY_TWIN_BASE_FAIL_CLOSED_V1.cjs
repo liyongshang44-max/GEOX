@@ -117,6 +117,7 @@ const changed = git(["diff", "--name-only", `${BATCH2_ACCEPTED_HEAD}..HEAD`]).sp
 const allowed = new Set([
   "apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts",
   "scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_FAIL_CLOSED_V1.cjs",
+  "scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_FAIL_CLOSED_V1.cjs",
   "scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_FAIL_CLOSED_V1.ts",
   "scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_COMMERCIAL_RUNTIME_V1.ts",
   ".github/workflows/bline-pr-sec2-containment.yml",
