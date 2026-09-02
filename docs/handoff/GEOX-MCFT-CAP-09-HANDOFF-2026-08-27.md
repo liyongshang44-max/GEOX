@@ -1,22 +1,968 @@
-# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-02 Continuation — QCP Prepared-Context / Exact-Head Digest Carry-forward Frontier
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-02 Continuation — T4R1 Stage / Natural-Season Authority Requalification Frontier
 
 Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
 
-Timestamp: **2026-09-02 11:39 +08:00**
+Timestamp: **2026-09-02 20:16 +08:00**
 
 Repository: liyongshang44-max/GEOX
 
-Purpose: continue the same MCFT-CAP-09 frozen Production Hosting / exact-one-owner route after the K-section source-specific planner frontier has advanced through source progress, KBS daily-batch handling, GFS retained-raw repair, explicit source due policy, durable poll scheduling, GFS target/retry authority, heterogeneous source execution, host planner-process binding, and concrete planner dependency assembly. The current product problem is no longer source-planner design. The newest exact head has proved that the earlier QCP/post-merge cancellations were caused by repeated resolver/digest materialization rather than business blockers, and the prepared-context optimization has closed that performance defect without reducing the negative test matrix or increasing timeouts. The current machine frontier is now exact-head QCP dependency-digest carry-forward and immutable requalification-evidence convergence, while production schema materialization, runtime start, owner activation, Formal-v5, A0, and O00 remain separately closed.
+Purpose: continue the same MCFT-CAP-09 Stage 1B / Shadow-Online closure after exact-head qualification convergence, production Evidence schema materialization, planner entrypoint binding, stale-workflow applicability closure, and formal-window settlement. The immediate legal frontier is no longer QCP digest carry-forward, schema remediation, planner entrypoint binding, or runtime-start implementation. Current machine authority proves that the frozen T4R1 crop authority cannot support any future Formal/A0 window under Amendment-06 minimum lead, and an independent read-only search found no alternative existing MCSE scope candidate. Runtime-start authority therefore remains deliberately unarmed until T4R1 contemporaneous stage can be requalified from exact provider evidence or a natural-season successor is formally adjudicated without cross-season stitching.
 
-> **This L-section is now the highest-priority conversation continuation in this file.**
+> **This M-section is now the highest-priority conversation continuation in this file.**
 >
-> The K-section immediately below remains intentionally preserved in full as the historical Local Static Admission / source-specific planner / host NOT_DUE frontier.
+> The L-section immediately below remains intentionally preserved in full as the historical QCP Prepared-Context / exact-head digest carry-forward frontier.
 >
-> Do not rewrite K merely because source-specific progress ports, KBS/GFS/soil due semantics, GFS target progression, heterogeneous execution, planner-process binding, and dependency assembly were completed later. K records the exact product-planning frontier from which those closures were built.
+> K, J, I, H, and all earlier Phase 7 / Phase 6 / Phase 5 / Phase 4 / Phase 3 / Phase 2 sections remain historical evidence and must remain intact.
 >
-> J, I, H, and all earlier Phase 7 / Phase 6 / Phase 5 / Phase 4 / Phase 3 / Phase 2 sections remain historical evidence and must remain intact.
+> Do not rewrite L merely because QCP evidence convergence, schema remediation, entrypoint binding, and runtime-start readiness settlement were completed later. L records the exact control-plane frontier from which those closures were built.
 >
-> This handoff does **not** supersede docs/SSOT.md, the Digital Twin Master Task Line, the CAP-09 taskbook, Production Hosting architecture/route, QCP, qualification evidence registry, immutable workflow artifacts, accepted CAP-01→08 authorities, or the frozen Formal-store authorities.
+> This handoff does **not** supersede docs/SSOT.md, the Digital Twin Master Task Line, the CAP-09 taskbook, Production Hosting architecture/route, QCP, immutable qualification evidence, accepted CAP-01→08 authorities, T4R1 crop/season authorities, or frozen Formal-store authorities.
+
+---
+
+## M0. READ THIS FIRST — runtime-start is currently illegal; the next legal frontier is T4R1 stage-or-season authority requalification
+
+The authoritative product PR is:
+
+~~~text
+#3376
+feat(mcft-cap09): qualify producer-driven v13 supply graph
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+current exact head =
+  e075d48b13ef1c85888c0f3dfbf3173bb5232f96
+
+state =
+  Draft
+  open
+  unmerged
+
+mergeable =
+  true
+~~~
+
+Protected main remains:
+
+~~~text
+fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+
+protected =
+  true
+~~~
+
+Do **not** reset #3376 to:
+
+~~~text
+a11921e9f6a37b82922d727e6cf73988341ecede
+77e5857a0b9d8fd50513db41c135990f707d0ce6
+5ed1ff5340507bb6d722810a64132b5e1a7966e0
+2dd44252283d75830805f743ef78a03d6879a7d8
+~~~
+
+Those are historical predecessors, not the current product head.
+
+The current authority state is now:
+
+~~~text
+production planner entrypoint =
+  BOUND
+
+production Evidence schema remediations =
+  MATERIALIZED / SETTLED
+
+V13 Producer =
+  PASS
+  durable-evidence skip
+  no live provider request
+
+QCP =
+  FAILURE
+  expected fail-closed
+  only blocker = EXACT_ONE_PRODUCTION_OWNER
+
+runtime-start authority instance =
+  NOT ARMED
+
+current T4R1 crop authority supports future Formal/A0 window =
+  NO
+
+alternative existing MCSE scope rescue =
+  NO CANDIDATE
+
+next legal frontier =
+  T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_REQUALIFICATION_REQUIRED
+~~~
+
+The immediate continuation is therefore **not**:
+
+~~~text
+arm runtime-start
+start Evidence/Twin services
+manufacture owner evidence
+reuse old T4R1 Formal window
+search historical authorities again
+force Formal-v5
+bootstrap A0
+start O00
+~~~
+
+It is:
+
+~~~text
+REQUALIFY T4R1 CONTEMPORANEOUS STAGE
+  using exact contemporaneous provider evidence
+  with stage + 6h / 30h guards
+        ↓
+if unsupported:
+  ADJUDICATE T4R1 NATURAL-SEASON SUCCESSOR
+  with no cross-season stitching
+        ↓
+establish a new viable future Formal/A0 authority
+        ↓
+only then establish / arm production runtime-start authority
+        ↓
+exact-two local services
+        ↓
+live fenced owner readback
+        ↓
+production owner graduation
+        ↓
+Formal-v5 → A0 → O00–O23
+~~~
+
+---
+
+## M1. Current task in one sentence
+
+**Resolve the expired-current-T4R1 Formal-window blocker by first attempting a contemporaneous T4R1 stage requalification from exact provider evidence under the frozen stage and 6h/30h guards; if that cannot be proven, formally adjudicate the T4R1 natural-season successor without cross-season stitching, then create a new viable future Formal/A0 authority before any production runtime-start authority is armed.**
+
+This is no longer:
+
+- a QCP digest carry-forward task;
+- a stale Producer live-rerun task;
+- a production Evidence metadata schema materialization task;
+- a planner assembly task;
+- a compiled planner entrypoint binding task;
+- a source-poll/KBS schema taxonomy repair task;
+- an exact-two host identity binding task;
+- a generic runtime-start implementation task.
+
+The near-term work is now:
+
+~~~text
+T4R1 contemporaneous stage evidence
+or
+T4R1 natural-season successor adjudication
+~~~
+
+Only after one of those paths establishes a legal future Formal/A0 window does runtime-start become reachable.
+
+---
+
+## M2. Authority reconstruction order for the next engineer
+
+Read in this order before changing stage, season, Formal, runtime-start, owner, or O00 logic:
+
+1. docs/SSOT.md
+2. docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md
+3. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md
+4. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md
+5. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json
+6. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json
+7. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json
+8. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-06-* authority / exact minimum epoch-selection lead rule
+9. the frozen T4R1 lifecycle / geometry / source / stage authorities referenced by the crop-context authority
+10. the frozen alternative-scope rescue contract and probe blobs referenced by the canonical settlement
+11. #3376 exact head e075d48b13ef1c85888c0f3dfbf3173bb5232f96
+12. runtime-start readiness proof run 33622744383 / artifact 9843579935
+13. alternative-scope rescue proof run 33623030240 / artifact 9843705746
+14. current-head CI 33623725103
+15. current-head planner-readiness 33623725015
+16. current-head Producer 33623725247
+17. current-head source-poll remediation 33623725007
+18. current-head KBS baseline remediation 33623724734
+19. current-head QCP 33623725319
+20. this M-section
+
+Do not use weekly reports, old conversation prose, the deleted temporary v2 rescue files, or a stale runtime-start readiness file as stronger authority than the canonical settlement now embedded in acquisition-horizon authority.
+
+---
+
+## M3. Repository / PR topology at handoff time
+
+### M3.1 Protected main
+
+~~~text
+protected main =
+  fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+
+protected =
+  true
+~~~
+
+Do not merge or move protected main as part of this handoff continuation.
+
+### M3.2 #3376 — active product frontier
+
+~~~text
+#3376
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+head =
+  e075d48b13ef1c85888c0f3dfbf3173bb5232f96
+
+state =
+  Draft / open / unmerged
+
+mergeable =
+  true
+~~~
+
+The newest exact linear successor chain is:
+
+~~~text
+a11921e9f6a37b82922d727e6cf73988341ecede
+  fix(mcft-cap09): accept settled schema remediation taxonomy
+
+9a27816e456402a8eb6a3a7d572713bd8e0737f0
+  gov(mcft-cap09): expose expired t4r1 formal window blocker
+
+76e990f18275eb0bb1bb115540c9725b0fef1321
+  gov(mcft-cap09): requalify alternative scope rescue
+
+7fbf81adacecdec3c994355cf138259bb147e764
+  gov(mcft-cap09): settle expired formal-window frontier
+
+e075d48b13ef1c85888c0f3dfbf3173bb5232f96
+  fix(mcft-cap09): align planner readiness with formal-window settlement
+~~~
+
+The four commits after a11921e9... did **not** start production runtime, did **not** activate owner, did **not** arm Formal/A0/O00, and did **not** touch B-Line.
+
+### M3.3 Docs-only handoff PR
+
+The handoff remains isolated in:
+
+~~~text
+#3298
+
+branch =
+  docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier
+
+base =
+  26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+
+pre-M head =
+  60e9d2892d9521d3b88f2a05307303df508e1675
+
+state =
+  Draft / open
+
+mergeable =
+  true
+
+changed_files =
+  2
+~~~
+
+Keep #3298 docs-only.
+
+Do not rebase it merely because #3376 and protected main are newer.
+
+---
+
+## M4. Stage 1B completion semantics remain frozen
+
+The active completion target remains:
+
+~~~text
+STAGE_1B_SHADOW_ONLINE_CLOSURE_COMPLETE
+~~~
+
+Do **not** declare:
+
+~~~text
+MINIMUM_COMPLETE_FIELD_TWIN_COMPLETE
+~~~
+
+The latter still requires separately scoped Stage 1C controlled-action feedback closure.
+
+Current Stage 1B is still **IN PROGRESS** because:
+
+~~~text
+runtime-start authority =
+  not armable yet
+
+production owner =
+  not graduated
+
+Formal-v5 =
+  not armed
+
+A0 =
+  not bootstrapped
+
+O00–O23 =
+  not executed
+~~~
+
+---
+
+## M5. B-Line boundary remains externally frozen
+
+B-Line independent audit work remains out of MCFT ownership.
+
+Do not modify from this task:
+
+- Commercial server activation graph;
+- Admin compatibility surfaces;
+- Executor B-Line classification;
+- Telemetry B-Line classification;
+- Decision / Approval / Dispatch / Acceptance product authority.
+
+Do not reinterpret B-Line audit findings as reasons to drift #3376.
+
+The four newest commits after a11921e9... remained inside MCFT Stage 1B governance / readiness scope.
+
+---
+
+## M6. Current-head machine status matrix
+
+At:
+
+~~~text
+#3376 @ e075d48b13ef1c85888c0f3dfbf3173bb5232f96
+~~~
+
+the confirmed current-head results are:
+
+~~~text
+CI
+  run 33623725103
+  SUCCESS
+
+Production Evidence target planner readiness
+  run 33623725015
+  SUCCESS
+
+V13 Producer-driven qualification
+  run 33623725247
+  SUCCESS
+  durable-evidence reuse
+  no live provider qualification
+
+Production source-poll schema remediation
+  run 33623725007
+  SUCCESS
+
+Production KBS baseline-pointer schema remediation
+  run 33623724734
+  SUCCESS
+
+QCP
+  run 33623725319
+  FAILURE by design
+  Step 8 blocker enumeration
+  exactly one remaining blocker:
+    EXACT_ONE_PRODUCTION_OWNER
+~~~
+
+Current QCP still accepts Producer through:
+
+~~~text
+DURABLE_REQUALIFICATION_EVIDENCE_AND_DEPENDENCY_DIGEST_VALID
+status = PASS
+~~~
+
+Do not rerun live Producer merely because the PR head changed.
+
+---
+
+## M7. Schema-remediation settlement is complete
+
+The earlier settlement taxonomy regression has been closed.
+
+Current-head machine workflows for both remediations are green:
+
+~~~text
+source-poll remediation =
+  SUCCESS
+
+KBS baseline-pointer remediation =
+  SUCCESS
+~~~
+
+The production schema remains materialized.
+
+Do not:
+
+- re-arm the one-shot remediations;
+- rerun forward-only ALTERs simply because pull_request.paths re-triggers a workflow;
+- regress authority status back to READY_NOT_AUTHORIZED;
+- treat MATERIALIZED_SETTLED_UNARMED as an error.
+
+The correct settled behavior is read-only confirmation plus no mutation.
+
+---
+
+## M8. Production planner entrypoint is complete and is not the blocker anymore
+
+Current planner-readiness authority says:
+
+~~~text
+production_target_planner_bound =
+  true
+
+production schema materialized =
+  true
+
+current frontier =
+  T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_REQUALIFICATION_BEFORE_RUNTIME_START
+~~~
+
+The compiled Evidence entrypoint remains fail-closed because:
+
+~~~text
+RUNTIME_START_AUTHORITY_NOT_ARMED
+~~~
+
+That fail-closed behavior is correct.
+
+Do not reopen planner assembly, source arbitration, KBS/GFS planning, or entrypoint packaging.
+
+---
+
+## M9. Runtime-start authority exists as a schema seam but must remain unarmed
+
+The canonical runtime-start binding is now embedded in:
+
+~~~text
+GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json
+/runtime_start_binding
+~~~
+
+Current exact state:
+
+~~~text
+schema_version =
+  geox_mcft_cap09_production_runtime_start_authority_instance_v1
+
+authority_id =
+  GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-START-AUTHORITY-INSTANCE-V1
+
+status =
+  ENTRYPOINT_BOUND_NOT_ARMED
+
+armed =
+  false
+
+authority_ref =
+  null
+
+activation_fence_time =
+  null
+
+formal_a0_authority_ref =
+  null
+
+formal_a0_logical_time =
+  null
+
+runtime_process_start_authorized =
+  false
+
+evidence_runtime_start_authorized =
+  false
+
+twin_runtime_start_authorized =
+  false
+
+production_owner_activation_authorized =
+  false
+
+formal_v5_arm_authorized =
+  false
+
+a0_authorized =
+  false
+
+o00_authorized =
+  false
+~~~
+
+Do not populate these fields until M10–M14 are resolved.
+
+---
+
+## M10. Decisive blocker — current T4R1 crop authority has no viable future Formal/A0 window
+
+The runtime-start readiness proof is frozen into canonical authority:
+
+~~~text
+status =
+  BLOCKED_NO_VIABLE_FUTURE_FORMAL_WINDOW_UNDER_CURRENT_T4R1_CROP_AUTHORITY
+
+proof_subject_sha =
+  9a27816e456402a8eb6a3a7d572713bd8e0737f0
+
+workflow_run_id =
+  33622744383
+
+artifact_id =
+  9843579935
+
+observed_at =
+  2026-09-02T11:06:05.000Z
+~~~
+
+The current T4R1 crop authority permits at latest:
+
+~~~text
+latest viable A0 =
+  2026-08-27T21:00:00Z
+
+latest viable O00 =
+  2026-08-27T22:00:00Z
+
+latest viable O23 =
+  2026-08-28T21:00:00Z
+~~~
+
+Amendment-06 requires:
+
+~~~text
+minimum epoch-selection lead =
+  36h
+~~~
+
+At proof time the earliest selectable future window was already:
+
+~~~text
+earliest selectable A0 =
+  2026-09-03T23:00:00Z
+
+earliest selectable O00 =
+  2026-09-04T00:00:00Z
+~~~
+
+Therefore:
+
+~~~text
+viable_future_formal_window_available =
+  false
+
+runtime_start_authority_may_be_armed =
+  false
+~~~
+
+This is the decisive reason runtime-start is currently illegal.
+
+---
+
+## M11. Why QCP's single owner blocker does not mean owner cutover is the next legal action
+
+QCP currently reports only:
+
+~~~text
+EXACT_ONE_PRODUCTION_OWNER
+~~~
+
+That remains correct within QCP's Stage 1B qualification graph.
+
+However, execution ordering is additionally constrained by the runtime-start authority.
+
+The current legal order is:
+
+~~~text
+crop stage / season authority
+        ↓
+future Formal/A0 logical-time authority
+        ↓
+runtime-start authority
+        ↓
+runtime processes
+        ↓
+live fenced leases
+        ↓
+EXACT_ONE_PRODUCTION_OWNER evidence
+~~~
+
+Therefore:
+
+**Do not read “QCP has only owner blocker” as permission to arm runtime-start or manufacture owner evidence.**
+
+Owner evidence cannot exist lawfully before a valid future Formal/A0 authority can support the activation fence.
+
+---
+
+## M12. Alternative existing-scope rescue was independently requalified and failed to establish a candidate
+
+A separate read-only rescue was executed before settling the frontier.
+
+Canonical settlement:
+
+~~~text
+status =
+  SETTLED_IMMUTABLE_READ_ONLY_SCAN
+
+proof_subject_sha =
+  76e990f18275eb0bb1bb115540c9725b0fef1321
+
+workflow_run_id =
+  33623030240
+
+artifact_id =
+  9843705746
+
+observed_at =
+  2026-09-02T11:09:43.779Z
+
+result =
+  NO_ALTERNATIVE_SCOPE_CANDIDATE_CURRENTLY_ESTABLISHED
+~~~
+
+Exact scan facts:
+
+~~~text
+index pages scanned =
+  8
+
+observation rows scanned =
+  240
+
+planting leads =
+  4
+
+inspected candidates =
+  4
+
+candidate treatments =
+  T1
+  T2
+  T3
+  T4
+
+eligible candidate count =
+  0
+
+all inspected legal O00 count zero =
+  true
+
+selected candidate =
+  null
+~~~
+
+Non-effects:
+
+~~~text
+provider_body_emitted =
+  false
+
+provider_payload_persisted_or_uploaded =
+  false
+
+alternative_scope_authority_created =
+  false
+
+lifecycle_authority_created =
+  false
+
+geometry_authority_created =
+  false
+
+source_rebind_authority_created =
+  false
+
+database_write_count =
+  0
+
+runtime_process_start =
+  false
+
+formal_execution_count =
+  0/24
+~~~
+
+Do not keep rescanning the same historical MCSE scope unless the governing inputs materially change.
+
+---
+
+## M13. Temporary rescue/readiness files were intentionally removed after settlement
+
+The following temporary v2 / readiness scaffolding was added for proof and then removed in:
+
+~~~text
+7fbf81adacecdec3c994355cf138259bb147e764
+gov(mcft-cap09): settle expired formal-window frontier
+~~~
+
+Removed after settlement:
+
+~~~text
+.github/workflows/mcft-cap-09-alternative-scope-rescue-requalification-v2.yml
+.github/workflows/mcft-cap-09-production-runtime-start-readiness.yml
+docs/.../GEOX-MCFT-CAP-09-ALTERNATIVE-SCOPE-RESCUE-REQUALIFICATION-V2.json
+docs/.../GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-START-READINESS-V1.json
+scripts/.../ACCEPTANCE_MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_REQUALIFICATION_V2.cjs
+scripts/.../PREFLIGHT_MCFT_CAP_09_PRODUCTION_RUNTIME_START_READINESS_V1.cjs
+~~~
+
+Their authoritative results were carried forward into the canonical acquisition-horizon authority.
+
+Do not interpret their absence as missing proof.
+
+Do not recreate them merely because a file search no longer finds them.
+
+---
+
+## M14. Current legal frontier — exact wording
+
+Canonical authority now declares:
+
+~~~text
+next_legal_frontier.status =
+  T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_REQUALIFICATION_REQUIRED
+~~~
+
+Direct route:
+
+~~~text
+REQUALIFY_T4R1_CONTEMPORANEOUS_STAGE_ONLY_IF_EXACT_PROVIDER_EVIDENCE_CAN_MEET_STAGE_AND_6H_30H_GUARDS
+~~~
+
+Fallback route:
+
+~~~text
+ADJUDICATE_T4R1_NATURAL_SEASON_SUCCESSOR_WITHOUT_CROSS_SEASON_STITCHING
+~~~
+
+And explicitly:
+
+~~~text
+runtime_start_before_frontier_resolution_authorized =
+  false
+~~~
+
+This exact frontier must be preserved.
+
+---
+
+## M15. Next step A — T4R1 contemporaneous stage requalification
+
+The next engineer should start here.
+
+Goal:
+
+**Determine whether exact contemporaneous provider evidence can still prove the current T4R1 crop stage under the frozen stage authority and required temporal guards.**
+
+Requirements:
+
+- use exact current provider evidence;
+- use the frozen T4R1 scope / lifecycle / geometry / source bindings unless authority explicitly changes them;
+- prove the required stage semantics;
+- satisfy the frozen 6h / 30h guards;
+- keep evidence provenance exact;
+- keep acquisition read-only until a new authority is actually adjudicated;
+- fail closed if the evidence does not support the stage.
+
+Do not:
+
+- carry forward the August stage merely because it was previously accepted;
+- infer stage from calendar age alone;
+- use LLM confidence as authority;
+- weaken the 6h / 30h guards;
+- stitch observations from different seasons.
+
+If exact evidence proves the current stage, issue a contemporaneous successor authority through the existing governed authority route.
+
+---
+
+## M16. Next step B — natural-season successor adjudication if stage requalification fails
+
+If M15 cannot be proven, immediately move to:
+
+~~~text
+T4R1 NATURAL-SEASON SUCCESSOR ADJUDICATION
+~~~
+
+Required properties:
+
+- identify the natural-season successor explicitly;
+- establish lifecycle authority;
+- establish geometry authority;
+- establish source binding authority;
+- establish planting / season anchor provenance;
+- do not inherit stale crop-stage claims from the old season;
+- do not cross-season stitch observations;
+- do not reuse old Formal epoch state;
+- do not clone old A0 / O00 state;
+- do not silently remap T4R1 to another treatment/scope.
+
+A valid successor must stand on its own evidence.
+
+---
+
+## M17. Only after M15 or M16 succeeds — restore a viable future Formal/A0 authority
+
+Once a valid current crop/season authority exists, calculate a new future Formal window under the frozen timing rules.
+
+The new authority must prove at minimum:
+
+~~~text
+future A0 selectable under Amendment-06 lead
+future O00 / O23 legal under current crop-stage / season authority
+no stale predecessor window reuse
+no old Formal-v4/v5 epoch warm-start
+no activation fence from deployment environment
+~~~
+
+Only then may:
+
+~~~text
+formal_a0_authority_ref
+formal_a0_logical_time
+activation_fence_time
+authority_ref
+~~~
+
+be populated into a new runtime-start authority instance.
+
+---
+
+## M18. Runtime-start / owner / Formal sequence after authority restoration
+
+After M17, the legal continuation is:
+
+~~~text
+1. establish separate production runtime-start authority instance
+2. arm Evidence runtime start
+3. arm Twin runtime start
+4. start exact-two already-bound non-GitHub local service identities
+5. prove independent live fenced leases by database readback
+6. prove GitHub is not the production execution owner
+7. close EXACT_ONE_PRODUCTION_OWNER
+8. arm fresh Formal-v5 epoch
+9. bootstrap fresh A0
+10. execute O00–O23 under real UTC wall clock
+11. automatic final readback
+12. exact-SHA final Stage 1B adjudication
+~~~
+
+Do not collapse runtime-start authority, owner graduation, Formal-v5, and A0 into one authorization.
+
+---
+
+## M19. Pitfalls already encountered — do not repeat them
+
+### M19.1 Do not arm runtime-start just because entrypoint binding is complete
+
+Entrypoint readiness is not temporal authority.
+
+Current entrypoint is correctly fail-closed.
+
+### M19.2 Do not use QCP's single owner blocker as execution-order authority
+
+QCP blocker convergence is necessary but not sufficient to establish runtime-start legality.
+
+### M19.3 Do not reuse the expired T4R1 Formal window
+
+The old window is not “slightly stale”; it is mathematically incompatible with current minimum lead.
+
+### M19.4 Do not keep searching historical alternative scopes after the immutable rescue scan
+
+The rescue scanned:
+
+~~~text
+8 pages
+240 rows
+4 planting leads
+T1/T2/T3/T4
+0 eligible
+~~~
+
+Without changed inputs, another scan is not new authority.
+
+### M19.5 Do not cross-season stitch
+
+A natural-season successor must not borrow stale observations, crop stage, lifecycle, geometry, or planting anchors from the prior season simply to create a viable Formal window.
+
+### M19.6 Do not confuse deleted temporary proof scaffolding with lost evidence
+
+The proof result was settled into canonical authority.
+
+### M19.7 Do not reopen schema remediation or planner binding
+
+Those frontiers are closed and current-head workflows are green.
+
+### M19.8 Do not rerun live Producer on descendant metadata/governance commits
+
+The stale-workflow applicability gate exists specifically to reuse valid durable Producer evidence when the shared resolver digest remains valid.
+
+### M19.9 Do not touch B-Line
+
+Commercial activation / Admin / Executor / Telemetry / Decision-Approval-Dispatch-Acceptance authority remain outside MCFT scope.
+
+### M19.10 Do not announce Stage 1B complete early
+
+Formal-v5, A0, O00–O23, final readback, and exact-SHA adjudication remain unfinished.
+
+---
+
+## M20. Handoff checkpoint / first actions for the next conversation
+
+Start from:
+
+~~~text
+#3376 @ e075d48b13ef1c85888c0f3dfbf3173bb5232f96
+~~~
+
+Do not restart from a11921e9..., 77e5857a..., L-section heads, or earlier planner/schema frontiers.
+
+First actions:
+
+~~~text
+1. fetch #3376 and verify exact head = e075d48b...
+2. verify current-head CI / planner / Producer / schema remediation results remain as recorded
+3. read canonical acquisition-horizon authority
+4. read frozen T4R1 crop/stage/season authority chain
+5. perform T4R1 contemporaneous stage requalification using exact provider evidence
+6. require exact stage + 6h / 30h guards
+7. if unsupported, stop direct-stage route
+8. adjudicate T4R1 natural-season successor without cross-season stitching
+9. only after viable future Formal/A0 authority exists, construct runtime-start authority instance
+10. then continue exact-two services → live fenced owner → Formal-v5 → A0 → O00–O23
+~~~
+
+The one-line frontier is:
+
+~~~text
+planner/source-specific engineering CLOSED
++ production metadata schema materialized
++ compiled production Evidence planner entrypoint BOUND
++ stale workflow applicability CLOSED
++ QCP converged to EXACT_ONE_PRODUCTION_OWNER
+
+BUT
+
+current T4R1 Formal window EXPIRED
++ no viable future Formal/A0 window under current crop authority
++ alternative existing MCSE rescue = NONE
+
+→ T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_REQUALIFICATION_REQUIRED
+→ FUTURE_FORMAL_A0_AUTHORITY
+→ SEPARATE_RUNTIME_START_AUTHORITY
+→ EXACT_TWO_LOCAL_SERVICES
+→ LIVE_FENCED_OWNER_READBACK
+→ EXACT_ONE_PRODUCTION_OWNER
+→ Formal-v5
+→ A0
+→ O00–O23
+→ STAGE_1B_SHADOW_ONLINE_CLOSURE_COMPLETE
+~~~
 
 ---
 
