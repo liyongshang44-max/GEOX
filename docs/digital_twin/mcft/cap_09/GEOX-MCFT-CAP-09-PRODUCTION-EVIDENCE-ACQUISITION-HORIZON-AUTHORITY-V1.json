@@ -1,8 +1,8 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_acquisition_horizon_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1",
-  "status": "ESTABLISHED_FULL_TABLE_BASELINE_POLICY_NO_ACTIVE_INSTANCE",
-  "stage": "POST_SOURCE_PROGRESS_AND_KBS_BATCH_PATH_PRE_PURE_PLANNER",
+  "status": "ENTRYPOINT_BOUND_RUNTIME_START_AUTHORITY_NOT_ARMED",
+  "stage": "POST_PLANNER_ENTRYPOINT_BINDING_PRE_RUNTIME_START",
   "subject_predecessor_sha": "1b0954fcbbe359cc94d542db753dab2ffb86e260",
   "authority_basis": {
     "master_task_line_ref": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md",
@@ -76,12 +76,28 @@
     "no_change_may_advance_poll_schedule_without_evidence_progress": true
   },
   "runtime_start_binding": {
+    "schema_version": "geox_mcft_cap09_production_runtime_start_authority_instance_v1",
+    "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-START-AUTHORITY-INSTANCE-V1",
+    "status": "ENTRYPOINT_BOUND_NOT_ARMED",
+    "armed": false,
     "active_horizon_instance_bound": false,
+    "authority_class": "MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY",
+    "authority_ref": null,
+    "activation_fence_time": null,
+    "formal_a0_authority_ref": null,
+    "formal_a0_logical_time": null,
     "required_runtime_start_authority_class": "MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY",
-    "binding_occurs_only_under_separate_runtime_start_authority": true
+    "binding_occurs_only_under_separate_runtime_start_authority": true,
+    "runtime_process_start_authorized": false,
+    "evidence_runtime_start_authorized": false,
+    "twin_runtime_start_authorized": false,
+    "production_owner_activation_authorized": false,
+    "formal_v5_arm_authorized": false,
+    "a0_authorized": false,
+    "o00_authorized": false
   },
   "non_effects": {
-    "production_target_planner_bound": false,
+    "production_target_planner_bound": true,
     "runtime_secret_read": false,
     "database_connection_attempted": false,
     "provider_request_count": 0,

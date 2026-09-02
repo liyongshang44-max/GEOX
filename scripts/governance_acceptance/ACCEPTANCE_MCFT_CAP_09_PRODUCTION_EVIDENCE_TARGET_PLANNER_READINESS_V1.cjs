@@ -105,7 +105,7 @@ try {
   includes(sourceProgress, "MCFT_CAP09_KBS_SOIL_ORIGIN_SOURCE_ID_V1", "SOIL_LATEST_PROGRESS_REQUIRED");
 
   const horizonAuthority = json(authority.acquisition_horizon_authority_ref);
-  assert.equal(horizonAuthority.status, "ESTABLISHED_FULL_TABLE_BASELINE_POLICY_NO_ACTIVE_INSTANCE");
+  assert.equal(horizonAuthority.status, "ENTRYPOINT_BOUND_RUNTIME_START_AUTHORITY_NOT_ARMED");
   assert.equal(horizonAuthority.decisive_ruling.activation_fence_source, "SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY");
   assert.equal(horizonAuthority.decisive_ruling.activation_fence_may_come_from_wall_clock_alone, false);
   assert.equal(horizonAuthority.decisive_ruling.formal_forcing_budget_may_define_bootstrap_horizon, false);
@@ -413,7 +413,9 @@ try {
   );
   assert.equal(authority.current_entrypoint.binding_authorized, true);
   assert.equal(authority.current_entrypoint.failure_code, "MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED");
-  const runtimeStartAuthority = json(authority.production_runtime_start_authority_ref);
+  const runtimeStartAuthorityDocument = json(authority.production_runtime_start_authority_ref);
+  assert.equal(authority.production_runtime_start_authority_json_pointer, "/runtime_start_binding");
+  const runtimeStartAuthority = runtimeStartAuthorityDocument.runtime_start_binding;
   assert.equal(runtimeStartAuthority.status, "ENTRYPOINT_BOUND_NOT_ARMED");
   assert.equal(runtimeStartAuthority.armed, false);
   assert.equal(runtimeStartAuthority.runtime_process_start_authorized, false);

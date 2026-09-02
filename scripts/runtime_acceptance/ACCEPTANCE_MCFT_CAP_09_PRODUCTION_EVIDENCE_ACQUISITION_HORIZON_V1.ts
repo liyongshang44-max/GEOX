@@ -7,12 +7,43 @@ import {
   MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY_CLASS_V1,
   materializeProductionEvidenceAcquisitionHorizonV1,
 } from "../../apps/server/src/external_evidence/mcft_cap09_production_evidence_acquisition_horizon_v1.js";
+import {
+  MCFT_CAP09_PRODUCTION_EVIDENCE_RUNTIME_ENTRYPOINT_ID_V1,
+  parseMcftCap09ProductionRuntimeStartAuthorityV1,
+} from "../../apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.js";
 
 const OUT = path.resolve(
   "acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_V1_RESULT.json",
 );
 
 function main(): void {
+  const authorityDocument = JSON.parse(fs.readFileSync(
+    path.resolve("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json"),
+    "utf8",
+  )) as Record<string, unknown>;
+  const runtimeStartAuthority = authorityDocument.runtime_start_binding as Record<string, unknown>;
+  assert.equal(runtimeStartAuthority.status, "ENTRYPOINT_BOUND_NOT_ARMED");
+  assert.equal(runtimeStartAuthority.armed, false);
+  assert.equal(runtimeStartAuthority.runtime_process_start_authorized, false);
+  assert.equal(runtimeStartAuthority.production_owner_activation_authorized, false);
+  assert.throws(
+    () => parseMcftCap09ProductionRuntimeStartAuthorityV1(runtimeStartAuthority),
+    /MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED/,
+  );
+  const activeRuntimeStart = parseMcftCap09ProductionRuntimeStartAuthorityV1({
+    ...runtimeStartAuthority,
+    status: "AUTHORIZED",
+    armed: true,
+    authority_ref: "authority://mcft-cap09/production-runtime-start/test",
+    activation_fence_time: "2026-09-02T18:00:00.000Z",
+    formal_a0_authority_ref: "authority://mcft-cap09/formal-a0/test",
+    formal_a0_logical_time: "2026-09-02T20:00:00.000Z",
+    runtime_process_start_authorized: true,
+    evidence_runtime_start_authorized: true,
+  });
+  assert.equal(activeRuntimeStart.activation_fence_time, "2026-09-02T18:00:00.000Z");
+  assert.equal(activeRuntimeStart.formal_a0_logical_time, "2026-09-02T20:00:00.000Z");
+
   const horizon = materializeProductionEvidenceAcquisitionHorizonV1({
     authority_class: MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY_CLASS_V1,
     authority_ref: "authority://mcft-cap09/runtime-start/focused-fixture",
@@ -103,6 +134,9 @@ function main(): void {
   const proof = {
     schema_version: "geox_mcft_cap09_production_evidence_acquisition_horizon_result_v1",
     status: "PASS",
+    production_runtime_entrypoint_id: MCFT_CAP09_PRODUCTION_EVIDENCE_RUNTIME_ENTRYPOINT_ID_V1,
+    production_runtime_start_authority_repository_bound: true,
+    production_runtime_start_authority_armed: false,
     explicit_runtime_start_fence_required: true,
     wall_clock_derived_fence: false,
     deployment_environment_derived_fence: false,
@@ -124,7 +158,7 @@ function main(): void {
     provider_request_count: 0,
     evidence_cursor_mutation_count: 0,
     runtime_tick_cursor_mutation_count: 0,
-    production_target_planner_bound: false,
+    production_target_planner_bound: true,
     runtime_process_start: false,
     production_owner_activation: false,
     formal_v5_arm: false,
