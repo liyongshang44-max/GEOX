@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_target_planner_readiness_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1",
-  "status": "PRODUCTION_SCHEMA_MATERIALIZED_PLANNER_ENTRYPOINT_BOUND_RUNTIME_START_AUTHORITY_NOT_ARMED",
+  "status": "PRODUCTION_SCHEMA_MATERIALIZED_PLANNER_ENTRYPOINT_BOUND_RUNTIME_START_BLOCKED_CURRENT_T4R1_FORMAL_WINDOW_EXPIRED",
   "stage": "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START",
   "subject_predecessor_sha": "9e291eb52b97c9f3f7dd24c3208d8bfc7b357f31",
   "host_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
@@ -195,6 +195,7 @@
   },
   "unconditional_blockers": [],
   "implementation_order": [
+    "RESOLVE_T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_TO_RESTORE_VIABLE_FUTURE_FORMAL_WINDOW",
     "ESTABLISH_AND_ARM_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY"
   ],
   "implemented_foundation": [
@@ -352,7 +353,7 @@
   "kbs_publication_cycle_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1.ts",
   "gfs_fact_replay_provenance_reader_ref": "apps/server/src/persistence/external_evidence/postgres_external_evidence_fact_replay_provenance_v1.ts",
   "gfs_fact_replay_provenance_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_V1.ts",
-  "current_frontier": "PRODUCTION_RUNTIME_START_AUTHORITY_INSTANCE",
+  "current_frontier": "T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_REQUALIFICATION_BEFORE_RUNTIME_START",
   "gfs_partial_pair_rehydration_adapter_ref": "apps/server/src/external_evidence/mcft_cap09_gfs_partial_pair_rehydration_v1.ts",
   "gfs_partial_pair_rehydration_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_PARTIAL_PAIR_REHYDRATION_V1.ts",
   "source_due_policy_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1.json",
@@ -413,5 +414,17 @@
   "production_planner_assembly_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_PLANNER_ASSEMBLY_V1.ts",
   "production_planner_dependency_assembly_implemented": true,
   "production_planner_dependency_assembly_construction_zero_io": true,
-  "production_planner_dependency_assembly_runtime_start_effect": false
+  "production_planner_dependency_assembly_runtime_start_effect": false,
+  "runtime_start_frontier": {
+    "acquisition_horizon_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json",
+    "readiness_status": "BLOCKED_NO_VIABLE_FUTURE_FORMAL_WINDOW_UNDER_CURRENT_T4R1_CROP_AUTHORITY",
+    "readiness_workflow_run_id": 33622744383,
+    "latest_viable_o00": "2026-08-27T22:00:00.000Z",
+    "viable_future_formal_window_available": false,
+    "alternative_scope_rescue_result": "NO_ALTERNATIVE_SCOPE_CANDIDATE_CURRENTLY_ESTABLISHED",
+    "alternative_scope_rescue_workflow_run_id": 33623030240,
+    "alternative_scope_eligible_candidate_count": 0,
+    "runtime_start_authority_may_be_armed": false,
+    "next_legal_frontier": "T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_REQUALIFICATION"
+  }
 }

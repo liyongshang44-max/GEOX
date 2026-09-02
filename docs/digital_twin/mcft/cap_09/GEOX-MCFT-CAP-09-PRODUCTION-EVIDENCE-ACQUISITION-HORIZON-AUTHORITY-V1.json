@@ -1,8 +1,8 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_acquisition_horizon_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1",
-  "status": "ENTRYPOINT_BOUND_RUNTIME_START_AUTHORITY_NOT_ARMED",
-  "stage": "POST_PLANNER_ENTRYPOINT_BINDING_PRE_RUNTIME_START",
+  "status": "ENTRYPOINT_BOUND_RUNTIME_START_BLOCKED_CURRENT_T4R1_FORMAL_WINDOW_EXPIRED",
+  "stage": "POST_PLANNER_ENTRYPOINT_BINDING_PRE_T4R1_STAGE_OR_SEASON_REQUALIFICATION",
   "subject_predecessor_sha": "1b0954fcbbe359cc94d542db753dab2ffb86e260",
   "authority_basis": {
     "master_task_line_ref": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md",
@@ -28,7 +28,10 @@
     "historical_provider_sweep_authorized": false,
     "kbs_raw_hourly_endpoint_semantics": "COMPLETE_ACCUMULATED_TABLE_NOT_SINGLE_PUBLICATION_OBJECT",
     "kbs_non_authoritative_daily_batch_profile_may_define_bootstrap_tail": false,
-    "kbs_fixed_latest_24_rows_bootstrap_authorized": false
+    "kbs_fixed_latest_24_rows_bootstrap_authorized": false,
+    "current_t4r1_crop_authority_supports_future_formal_window": false,
+    "runtime_start_may_be_armed_under_current_t4r1_crop_authority": false,
+    "alternative_existing_mcse_scope_rescue_available": false
   },
   "bootstrap_policy": {
     "kbs_raw_hourly": {
@@ -109,5 +112,61 @@
     "a0_bootstrap": false,
     "o00_started": false,
     "mcft_cap09_completed": false
+  },
+  "runtime_start_readiness_settlement": {
+    "status": "BLOCKED_NO_VIABLE_FUTURE_FORMAL_WINDOW_UNDER_CURRENT_T4R1_CROP_AUTHORITY",
+    "proof_subject_sha": "9a27816e456402a8eb6a3a7d572713bd8e0737f0",
+    "workflow_run_id": 33622744383,
+    "artifact_id": 9843579935,
+    "observed_at": "2026-09-02T11:06:05.000Z",
+    "crop_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json",
+    "amendment06_minimum_epoch_selection_lead_hours": 36,
+    "latest_viable_a0": "2026-08-27T21:00:00.000Z",
+    "latest_viable_o00": "2026-08-27T22:00:00.000Z",
+    "latest_viable_o23": "2026-08-28T21:00:00.000Z",
+    "earliest_selectable_a0_at_proof_time": "2026-09-03T23:00:00.000Z",
+    "earliest_selectable_o00_at_proof_time": "2026-09-04T00:00:00.000Z",
+    "viable_future_formal_window_available": false,
+    "runtime_start_authority_may_be_armed": false
+  },
+  "alternative_scope_rescue_settlement": {
+    "status": "SETTLED_IMMUTABLE_READ_ONLY_SCAN",
+    "proof_subject_sha": "76e990f18275eb0bb1bb115540c9725b0fef1321",
+    "workflow_run_id": 33623030240,
+    "artifact_id": 9843705746,
+    "observed_at": "2026-09-02T11:09:43.779Z",
+    "frozen_contract_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ALTERNATIVE-SCOPE-RESCUE-V1.json",
+    "frozen_contract_blob_sha": "a14d9bee0817960a62463f9a1059ab60959d3e59",
+    "frozen_probe_ref": "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_V1.mjs",
+    "frozen_probe_blob_sha": "b697347078f7898b98795b864e880f0a07f9cb93",
+    "result": "NO_ALTERNATIVE_SCOPE_CANDIDATE_CURRENTLY_ESTABLISHED",
+    "scanned_index_page_count": 8,
+    "scanned_observation_row_count": 240,
+    "planting_lead_count": 4,
+    "inspected_candidate_count": 4,
+    "eligible_candidate_count": 0,
+    "candidate_treatments": [
+      "T1",
+      "T2",
+      "T3",
+      "T4"
+    ],
+    "all_inspected_legal_o00_count_zero": true,
+    "selected_candidate": null,
+    "provider_body_emitted": false,
+    "provider_payload_persisted_or_uploaded": false,
+    "alternative_scope_authority_created": false,
+    "lifecycle_authority_created": false,
+    "geometry_authority_created": false,
+    "source_rebind_authority_created": false,
+    "database_write_count": 0,
+    "runtime_process_start": false,
+    "formal_execution_count": "0/24"
+  },
+  "next_legal_frontier": {
+    "status": "T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_REQUALIFICATION_REQUIRED",
+    "direct_current_stage_route": "REQUALIFY_T4R1_CONTEMPORANEOUS_STAGE_ONLY_IF_EXACT_PROVIDER_EVIDENCE_CAN_MEET_STAGE_AND_6H_30H_GUARDS",
+    "fallback_route": "ADJUDICATE_T4R1_NATURAL_SEASON_SUCCESSOR_WITHOUT_CROSS_SEASON_STITCHING",
+    "runtime_start_before_frontier_resolution_authorized": false
   }
 }

@@ -27,7 +27,7 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "PRODUCTION_SCHEMA_MATERIALIZED_PLANNER_ENTRYPOINT_BOUND_RUNTIME_START_AUTHORITY_NOT_ARMED");
+  assert.equal(authority.status, "PRODUCTION_SCHEMA_MATERIALIZED_PLANNER_ENTRYPOINT_BOUND_RUNTIME_START_BLOCKED_CURRENT_T4R1_FORMAL_WINDOW_EXPIRED");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
   assert.equal(authority.subject_predecessor_sha, "9e291eb52b97c9f3f7dd24c3208d8bfc7b357f31");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
@@ -420,6 +420,44 @@ try {
   assert.equal(runtimeStartAuthority.armed, false);
   assert.equal(runtimeStartAuthority.runtime_process_start_authorized, false);
   assert.equal(runtimeStartAuthority.production_owner_activation_authorized, false);
+  assert.equal(
+    runtimeStartAuthorityDocument.status,
+    "ENTRYPOINT_BOUND_RUNTIME_START_BLOCKED_CURRENT_T4R1_FORMAL_WINDOW_EXPIRED",
+  );
+  const runtimeStartReadiness = runtimeStartAuthorityDocument.runtime_start_readiness_settlement;
+  assert.equal(runtimeStartReadiness.status, "BLOCKED_NO_VIABLE_FUTURE_FORMAL_WINDOW_UNDER_CURRENT_T4R1_CROP_AUTHORITY");
+  assert.equal(runtimeStartReadiness.proof_subject_sha, "9a27816e456402a8eb6a3a7d572713bd8e0737f0");
+  assert.equal(runtimeStartReadiness.workflow_run_id, 33622744383);
+  assert.equal(runtimeStartReadiness.artifact_id, 9843579935);
+  assert.equal(runtimeStartReadiness.latest_viable_a0, "2026-08-27T21:00:00.000Z");
+  assert.equal(runtimeStartReadiness.latest_viable_o00, "2026-08-27T22:00:00.000Z");
+  assert.equal(runtimeStartReadiness.latest_viable_o23, "2026-08-28T21:00:00.000Z");
+  assert.equal(runtimeStartReadiness.viable_future_formal_window_available, false);
+  assert.equal(runtimeStartReadiness.runtime_start_authority_may_be_armed, false);
+  const rescueSettlement = runtimeStartAuthorityDocument.alternative_scope_rescue_settlement;
+  assert.equal(rescueSettlement.status, "SETTLED_IMMUTABLE_READ_ONLY_SCAN");
+  assert.equal(rescueSettlement.proof_subject_sha, "76e990f18275eb0bb1bb115540c9725b0fef1321");
+  assert.equal(rescueSettlement.workflow_run_id, 33623030240);
+  assert.equal(rescueSettlement.artifact_id, 9843705746);
+  assert.equal(rescueSettlement.result, "NO_ALTERNATIVE_SCOPE_CANDIDATE_CURRENTLY_ESTABLISHED");
+  assert.equal(rescueSettlement.scanned_observation_row_count, 240);
+  assert.equal(rescueSettlement.planting_lead_count, 4);
+  assert.equal(rescueSettlement.eligible_candidate_count, 0);
+  assert.equal(rescueSettlement.all_inspected_legal_o00_count_zero, true);
+  assert.equal(rescueSettlement.selected_candidate, null);
+  assert.equal(rescueSettlement.database_write_count, 0);
+  assert.equal(rescueSettlement.runtime_process_start, false);
+  assert.equal(authority.runtime_start_frontier.viable_future_formal_window_available, false);
+  assert.equal(authority.runtime_start_frontier.alternative_scope_eligible_candidate_count, 0);
+  assert.equal(authority.runtime_start_frontier.runtime_start_authority_may_be_armed, false);
+  assert.equal(
+    authority.current_frontier,
+    "T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_REQUALIFICATION_BEFORE_RUNTIME_START",
+  );
+  assert.deepEqual(authority.implementation_order, [
+    "RESOLVE_T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_TO_RESTORE_VIABLE_FUTURE_FORMAL_WINDOW",
+    "ESTABLISH_AND_ARM_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY",
+  ]);
   assert.equal(authority.bootstrap_authority_gap.production_acquisition_start_or_bounded_backfill_horizon_established, true);
   assert.equal(authority.bootstrap_authority_gap.active_runtime_start_horizon_instance_bound, false);
   assert.equal(authority.bootstrap_authority_gap.activation_fence_source, "SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY");
@@ -559,6 +597,12 @@ try {
     pure_source_specific_planner_core_implemented: true,
     acquisition_horizon_authority_established: true,
     active_runtime_start_horizon_instance_bound: false,
+    runtime_start_readiness_status: runtimeStartReadiness.status,
+    latest_viable_formal_o00: runtimeStartReadiness.latest_viable_o00,
+    viable_future_formal_window_available: false,
+    alternative_scope_rescue_result: rescueSettlement.result,
+    alternative_scope_eligible_candidate_count: rescueSettlement.eligible_candidate_count,
+    runtime_start_authority_may_be_armed: false,
     kbs_single_fetch_multi_interval_path_implemented: true,
     source_specific_progress_ports_implemented: true,
     unconditional_blockers: authority.unconditional_blockers,
