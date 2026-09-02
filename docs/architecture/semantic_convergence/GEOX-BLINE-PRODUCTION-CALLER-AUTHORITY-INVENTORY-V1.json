@@ -7445,10 +7445,10 @@
     },
     {
       "surface_id": "BSEC-179",
-      "source_path": "apps/server/src/database/platform_bootstrap.ts",
-      "entry_symbol": "platform bootstrap main",
+      "source_path": "apps/server/scripts/write_dist_entries.cjs",
+      "entry_symbol": "generated database/platform_bootstrap.js entry",
       "http_method_or_runtime_trigger": "RUNTIME_TRIGGER",
-      "exact_route_or_trigger": "docker service one-shot",
+      "exact_route_or_trigger": "docker one-shot -> node apps/server/dist/database/platform_bootstrap.js",
       "runtime_reachable": true,
       "activation_root": "commercial.database-platform-bootstrap",
       "activation_mode": "ONE_SHOT_DB_PLATFORM_BOOTSTRAP",
@@ -7480,14 +7480,14 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": "Generated runtime entrypoint; tracked source truth is apps/server/scripts/write_dist_entries.cjs."
     },
     {
       "surface_id": "BSEC-180",
-      "source_path": "apps/server/src/database/mcft_cap07_migration.ts",
-      "entry_symbol": "MCFT CAP07 migration main",
+      "source_path": "apps/server/scripts/write_dist_entries.cjs",
+      "entry_symbol": "generated database/mcft_cap07_migration.js entry",
       "http_method_or_runtime_trigger": "RUNTIME_TRIGGER",
-      "exact_route_or_trigger": "docker service one-shot",
+      "exact_route_or_trigger": "docker one-shot -> node apps/server/dist/database/mcft_cap07_migration.js",
       "runtime_reachable": true,
       "activation_root": "commercial.mcft-cap07-migration",
       "activation_mode": "ONE_SHOT_MIGRATION",
@@ -7519,7 +7519,7 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P0",
       "contract_refs": [],
-      "notes": null
+      "notes": "Generated runtime entrypoint; tracked source truth is apps/server/scripts/write_dist_entries.cjs. Foreign MCFT disposition only."
     },
     {
       "surface_id": "BSEC-181",
