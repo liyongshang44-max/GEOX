@@ -87,14 +87,16 @@ for (const invented of ['weather.write', 'forecast.write']) {
   assert(!roles.includes(invented), `Batch 2 must not invent ${invented}`);
 }
 
-// Batch-2 changes are constrained relative to the accepted Batch-1 exact head.
+// Batch-2 file provenance is frozen at its accepted exact head. Later PR-SEC-2 batches
+// must not be reclassified as Batch-2 scope expansion merely because this is a stacked PR.
 const acceptedBatch1Head = '3a8c456509070698d4f2b3f19ffec71f3ce0e248';
+const acceptedBatch2Head = '599604d7ace9c6c7cc09ba5fd761e3100d3f3403';
 let changed = [];
 try {
-  changed = cp.execFileSync('git', ['diff', '--name-only', `${acceptedBatch1Head}...HEAD`], { cwd: ROOT, encoding: 'utf8' })
+  changed = cp.execFileSync('git', ['diff', '--name-only', `${acceptedBatch1Head}...${acceptedBatch2Head}`], { cwd: ROOT, encoding: 'utf8' })
     .trim().split(/\r?\n/).filter(Boolean);
 } catch (error) {
-  fail('unable to derive Batch 2 changed-file boundary', String(error));
+  fail('unable to derive accepted Batch 2 changed-file boundary', String(error));
 }
 const allowed = new Set([
   'apps/server/src/routes/weather_v1.ts',
@@ -104,7 +106,7 @@ const allowed = new Set([
   'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_COMMERCIAL_RUNTIME_V1.ts',
   '.github/workflows/bline-pr-sec2-containment.yml',
 ]);
-for (const file of changed) assert(allowed.has(file), 'Batch 2 changed-file scope expansion', file);
+for (const file of changed) assert(allowed.has(file), 'Accepted Batch 2 changed-file scope expansion', file);
 for (const file of changed) {
   assert(!file.includes('/mcft') && !file.includes('MCFT'), 'Batch 2 must not modify MCFT', file);
   assert(!file.endsWith('apps/server/src/domain/auth/roles.ts'), 'Batch 2 must not modify role matrix', file);
@@ -123,6 +125,7 @@ console.log(JSON.stringify({
   before: batch1After,
   computed_delta: computedDelta,
   computed_after: computedAfter,
-  changed_files_since_batch1: changed,
+  accepted_batch2_head: acceptedBatch2Head,
+  changed_files_between_accepted_batch_heads: changed,
   mcft_modification: false,
 }, null, 2));
