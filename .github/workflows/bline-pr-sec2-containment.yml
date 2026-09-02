@@ -4,9 +4,14 @@ on:
   pull_request:
     paths:
       - 'apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts'
+      - 'apps/server/src/routes/weather_v1.ts'
+      - 'apps/server/src/modules/sensing/registerSensingModule.ts'
       - 'docs/architecture/semantic_convergence/GEOX-BLINE-PR-SEC-2-IMMEDIATE-CALLER-CONTAINMENT-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_IMMEDIATE_CALLER_CONTAINMENT_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_FAIL_CLOSED_V1.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_OPERATOR_TWIN_AUTH_NEGATIVE_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_FAIL_CLOSED_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_COMMERCIAL_RUNTIME_V1.ts'
       - '.github/workflows/bline-pr-sec2-containment.yml'
 
 jobs:
@@ -15,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -36,6 +43,12 @@ jobs:
       - name: PR-SEC-2 Operator Twin behavioral negative proof
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_OPERATOR_TWIN_AUTH_NEGATIVE_V1.ts
 
+      - name: PR-SEC-2 BSEC-003 weather ingest reachability closure
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_FAIL_CLOSED_V1.cjs
+
+      - name: PR-SEC-2 BSEC-003 production registration behavioral proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_FAIL_CLOSED_V1.ts
+
       - name: Frozen PR-SEC-1 caller inventory regression
         run: pnpm run ci:governance:bline-production-caller-authority-inventory
 
@@ -50,3 +63,99 @@ jobs:
 
       - name: Build
         run: pnpm -r build
+
+  commercial-runtime-proof:
+    runs-on: ubuntu-latest
+    needs: containment
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Prepare commercial compose env
+        run: |
+          ACCEPTANCE_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='admin' && x.scopes.includes('security.admin') && !x.revoked); if(!t) process.exit(1); console.log(t.token)")"
+          mapfile -t ACCEPTANCE_IDENTITY < <(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='admin' && x.scopes.includes('security.admin') && !x.revoked); if(!t) process.exit(1); for (const k of ['tenant_id','project_id','group_id','actor_id']) { const v=String(t[k]||'').trim(); if(!v) process.exit(1); console.log(v); }")
+          EXECUTOR_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.token==='tenant_a_admin_token' && x.scopes.includes('ao_act.task.write') && x.scopes.includes('ao_act.receipt.write') && !x.revoked); if(!t) process.exit(1); console.log(t.token)")"
+          cat > .env.ci <<EOF_INNER
+          GEOX_RUNTIME_ENV=pilot
+          POSTGRES_USER=landos
+          POSTGRES_PASSWORD=ci-pilot-postgres-strong-2026
+          POSTGRES_DB=landos
+          GEOX_MCFT_MIGRATOR_PASSWORD=ci-pilot-mcft-migrator-strong-2026
+          GEOX_RUNTIME_DATABASE_PASSWORD=ci-pilot-runtime-database-strong-2026
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT=${GITHUB_SHA}
+          GEOX_AO_ACT_TOKEN=$ACCEPTANCE_TOKEN
+          GEOX_ACCEPTANCE_TENANT_ID=${ACCEPTANCE_IDENTITY[0]}
+          GEOX_ACCEPTANCE_PROJECT_ID=${ACCEPTANCE_IDENTITY[1]}
+          GEOX_ACCEPTANCE_GROUP_ID=${ACCEPTANCE_IDENTITY[2]}
+          GEOX_ACCEPTANCE_ACTOR_ID=${ACCEPTANCE_IDENTITY[3]}
+          GEOX_EXECUTOR_TOKEN=$EXECUTOR_TOKEN
+          GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
+          GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT=http://127.0.0.1:9000
+          MINIO_ROOT_USER=geoxminio
+          MINIO_ROOT_PASSWORD=ci-pilot-minio-strong-2026
+          MQTT_AUTH_REQUIRED=1
+          GEOX_MQTT_AUTH_REQUIRED=1
+          MQTT_USERNAME=geoxmqtt
+          MQTT_PASSWORD=ci-pilot-mqtt-strong-2026
+          CORS_ORIGINS=https://pilot-ci.geox.invalid
+          GEOX_ALLOWED_ORIGINS=https://pilot-ci.geox.invalid
+          APP_SECRET=ci-pilot-app-secret-strong-2026
+          GEOX_APP_SECRET=ci-pilot-app-secret-strong-2026
+          PUBLIC_BASE_URL=https://pilot-ci.geox.invalid
+          GEOX_PUBLIC_BASE_URL=https://pilot-ci.geox.invalid
+          GEOX_EXECUTION_DEFAULT_DISABLED=1
+          GEOX_EXECUTION_ENABLE_EXPLICITLY=0
+          GEOX_EXECUTION_ENABLE_REASON=ci-controlled-pilot-runtime-security-baseline
+          GEOX_DEVTOOLS_ENABLED=0
+          EOF_INNER
+
+      - name: Start Commercial runtime
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          timeout 180 docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d minio minio-init
+          timeout 300 docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d postgres mqtt server jobs executor
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
+
+      - name: Wait for Commercial server
+        run: |
+          set -euo pipefail
+          timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health >/dev/null; do sleep 2; done'
+
+      - name: BSEC-003 Commercial runtime persistence-delta proof
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_COMMERCIAL_RUNTIME_V1.ts
+
+      - name: Runtime hygiene
+        if: always()
+        run: |
+          set -euo pipefail
+          LOG=/tmp/bline-pr-sec2-weather-runtime.log
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs server > "$LOG" 2>&1 || true
+          ! grep -E 'ERR_HTTP_HEADERS_SENT|Reply was already sent|reply already sent' "$LOG"
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
+
+      - name: Stop Commercial runtime
+        if: always()
+        run: docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml down -v --remove-orphans || true
