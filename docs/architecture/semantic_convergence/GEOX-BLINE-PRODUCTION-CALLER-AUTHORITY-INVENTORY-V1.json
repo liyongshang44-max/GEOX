@@ -1,6 +1,6 @@
 {
   "schema_version": "bline_production_caller_authority_inventory_v1",
-  "status": "INVENTORY_COMPLETE_BSEC0_OPEN",
+  "status": "INVENTORY_REOPENED_FOR_MACHINE_COVERAGE_CLOSURE",
   "canonical_predecessor": {
     "pr": 3452,
     "sha": "b6f141c5471cd6f329ba60bd79cf6e4085546264",
@@ -8029,8 +8029,8 @@
   "completion_claim": {
     "bsec0_closed": false,
     "active_graph_fully_disposed": false,
-    "pr_sec_1_inventory_complete": true,
-    "reason": "PR-SEC-1 inventory is machine-qualified complete on exact product head 5633a76d20fb1d7f20d2159fbef6567493e516ed / CI 33608456999. Caller-authority containment/capability/device-principal work remains open and is outside this PR."
+    "pr_sec_1_inventory_complete": false,
+    "reason": "PR-SEC-1 reopened after independent audit proved the prior HTTP method-rooted reverse scan missed production-reachable GET side effects and non-HTTP direct writers. Existing CI evidence remains CURRENT_GATE_PASS only; INVENTORY_GRAPH_COMPLETE is not claimed."
   },
   "non_authority_method_dispositions": [
     {
@@ -8091,7 +8091,7 @@
   "inventory_qualification": {
     "qualified_product_head": "5633a76d20fb1d7f20d2159fbef6567493e516ed",
     "exact_ci_run": 33608456999,
-    "result": "SUCCESS",
+    "result": "HISTORICAL_CURRENT_GATE_PASS_NOT_GRAPH_COMPLETE",
     "build_test": "SUCCESS",
     "caller_authority_inventory_gate": "SUCCESS",
     "residual_authority_audit": "SUCCESS",
@@ -8119,10 +8119,418 @@
       "production_reachable_service_writer_without_bound_principal": 3,
       "tenant_scope_from_untrusted_body_or_unbound": 16
     },
-    "boundary": "INVENTORY_COMPLETE_ONLY_BSEC0_REMAINS_OPEN_NO_PR_SEC_2"
+    "boundary": "PR_SEC_1_REOPENED_NO_PR_SEC_2"
   },
   "metadata_final_qualification": {
-    "status": "PENDING_EXACT_HEAD_REQUALIFICATION",
-    "note": "Set only after this metadata-only rebind commit is itself qualified. B-SEC-0 remains open."
-  }
+    "status": "REVOKED_BY_MACHINE_COVERAGE_GAP",
+    "qualified_head": null,
+    "exact_ci_run": null,
+    "note": "e2147bf2c3ba7272da3ef34135088f7297716f5f / CI 33609380441 remains valid CURRENT_GATE_PASS evidence, but does not prove INVENTORY_GRAPH_COMPLETE."
+  },
+  "coverage_closure": {
+    "status": "REOPENED",
+    "caller_authority_graph_complete": false,
+    "runtime_activation_write_graph_complete": false,
+    "required_zero_sets": {
+      "production_caller_triggered_mutation_without_inventory": null,
+      "production_runtime_direct_writer_without_inventory": null,
+      "startup_mutation_without_explicit_disposition": null
+    },
+    "http_side_effect_classes": [
+      "PURE_READ",
+      "SCHEMA_ENSURE_ONLY",
+      "PROJECTION_SIDE_EFFECT",
+      "DOMAIN_STATE_SIDE_EFFECT",
+      "FACT_LEDGER_WRITE"
+    ],
+    "rule": "All production-reachable HTTP entrypoints are reverse-scan roots regardless of HTTP method. Non-HTTP process/worker/subprocess/loop writers and startup/registration mutations are independently inventoried."
+  },
+  "http_entrypoint_dispositions": [
+    {
+      "disposition_id": "BHTTP-001",
+      "source_path": "apps/server/src/routes/dashboard_v1.ts",
+      "entry_symbol": "GET /api/v1/dashboard/manual-execution-quality",
+      "http_method": "GET",
+      "exact_route": "/api/v1/dashboard/manual-execution-quality",
+      "activation_root": "commercial.server → bootstrap/server → app → dashboard",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "ao_act.index.read"
+      ],
+      "side_effect_class": "FACT_LEDGER_WRITE",
+      "writer_entrypoints": [
+        "projectManualExecutionQualityV1"
+      ],
+      "write_targets": [
+        "manual_execution_quality_projection_v1",
+        "facts:manual_execution_quality_snapshot_v1"
+      ],
+      "current_disposition": "INVENTORIED_WRITE_UNDER_GET_AND_READ_CAPABILITY",
+      "notes": "GET invokes projectManualExecutionQualityV1, which UPSERTs the projection and appends manual_execution_quality_snapshot_v1 to facts."
+    },
+    {
+      "disposition_id": "BHTTP-002",
+      "source_path": "apps/server/src/routes/dashboard_v1.ts",
+      "entry_symbol": "GET /api/v1/dashboard/fields/:field_id/sensing-summary",
+      "http_method": "GET",
+      "exact_route": "/api/v1/dashboard/fields/:field_id/sensing-summary",
+      "activation_root": "commercial.server → bootstrap/server → app → dashboard",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "ao_act.index.read"
+      ],
+      "side_effect_class": "PROJECTION_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "refreshFieldReadModelsWithObservabilityV1",
+        "refreshFieldSensingOverviewV1",
+        "refreshFieldSensingSummaryStage1V1",
+        "refreshFieldFertilityStateV1"
+      ],
+      "write_targets": [
+        "field_sensing_overview_v1",
+        "field_sensing_summary_stage1_v1",
+        "field_fertility_state_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
+      "notes": "Read endpoint refreshes materialized sensing/fertility projections before returning."
+    },
+    {
+      "disposition_id": "BHTTP-003",
+      "source_path": "apps/server/src/routes/dashboard_v1.ts",
+      "entry_symbol": "GET /api/v1/dashboard/internal/fields/:field_id/sensing-overview",
+      "http_method": "GET",
+      "exact_route": "/api/v1/dashboard/internal/fields/:field_id/sensing-overview",
+      "activation_root": "commercial.server → bootstrap/server → app → dashboard",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "ao_act.index.read"
+      ],
+      "side_effect_class": "PROJECTION_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "refreshFieldReadModelsWithObservabilityV1",
+        "refreshFieldSensingOverviewV1",
+        "refreshFieldSensingSummaryStage1V1",
+        "refreshFieldFertilityStateV1"
+      ],
+      "write_targets": [
+        "field_sensing_overview_v1",
+        "field_sensing_summary_stage1_v1",
+        "field_fertility_state_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
+      "notes": "Internal compatibility GET refreshes materialized projections."
+    },
+    {
+      "disposition_id": "BHTTP-004",
+      "source_path": "apps/server/src/routes/fields_v1.ts",
+      "entry_symbol": "GET /api/v1/fields/:field_id",
+      "http_method": "GET",
+      "exact_route": "/api/v1/fields/:field_id",
+      "activation_root": "commercial.server → bootstrap/server → app → fields",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "fields.read"
+      ],
+      "side_effect_class": "PROJECTION_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "refreshFieldReadModelsWithObservabilityV1",
+        "refreshFieldSensingOverviewV1",
+        "refreshFieldSensingSummaryStage1V1",
+        "refreshFieldFertilityStateV1"
+      ],
+      "write_targets": [
+        "field_sensing_overview_v1",
+        "field_sensing_summary_stage1_v1",
+        "field_fertility_state_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
+      "notes": "Field detail GET refreshes sensing/fertility read models."
+    },
+    {
+      "disposition_id": "BHTTP-005",
+      "source_path": "apps/server/src/routes/fields_v1.ts",
+      "entry_symbol": "GET /api/v1/fields/:field_id/sensing-summary",
+      "http_method": "GET",
+      "exact_route": "/api/v1/fields/:field_id/sensing-summary",
+      "activation_root": "commercial.server → bootstrap/server → app → fields",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "fields.read"
+      ],
+      "side_effect_class": "PROJECTION_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "refreshFieldReadModelsWithObservabilityV1",
+        "refreshFieldSensingOverviewV1",
+        "refreshFieldSensingSummaryStage1V1",
+        "refreshFieldFertilityStateV1"
+      ],
+      "write_targets": [
+        "field_sensing_overview_v1",
+        "field_sensing_summary_stage1_v1",
+        "field_fertility_state_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
+      "notes": "Customer-facing sensing GET refreshes projections."
+    },
+    {
+      "disposition_id": "BHTTP-006",
+      "source_path": "apps/server/src/routes/fields_v1.ts",
+      "entry_symbol": "GET /api/v1/fields/:field_id/sensing-read-models",
+      "http_method": "GET",
+      "exact_route": "/api/v1/fields/:field_id/sensing-read-models",
+      "activation_root": "commercial.server → bootstrap/server → app → fields",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "fields.read"
+      ],
+      "side_effect_class": "PROJECTION_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "refreshFieldReadModelsWithObservabilityV1",
+        "refreshFieldSensingOverviewV1",
+        "refreshFieldSensingSummaryStage1V1",
+        "refreshFieldFertilityStateV1"
+      ],
+      "write_targets": [
+        "field_sensing_overview_v1",
+        "field_sensing_summary_stage1_v1",
+        "field_fertility_state_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
+      "notes": "Internal/debug GET refreshes projections."
+    },
+    {
+      "disposition_id": "BHTTP-007",
+      "source_path": "apps/server/src/routes/skills_rules_v1.ts",
+      "entry_symbol": "GET /api/v1/skills/rules",
+      "http_method": "GET",
+      "exact_route": "/api/v1/skills/rules",
+      "activation_root": "commercial.server → bootstrap/server → app → skills",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "skill.read",
+        "ao_act.index.read"
+      ],
+      "side_effect_class": "PROJECTION_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "projectSkillRegistryReadV1"
+      ],
+      "write_targets": [
+        "skill_registry_read_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
+      "notes": "GET rebuilds skill_registry_read_v1 via DELETE/INSERT/UPSERT before querying it."
+    },
+    {
+      "disposition_id": "BHTTP-008",
+      "source_path": "apps/server/src/routes/devices_v1.ts",
+      "entry_symbol": "GET /api/v1/devices",
+      "http_method": "GET",
+      "exact_route": "/api/v1/devices",
+      "activation_root": "commercial.server → bootstrap/server → app → devices",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "devices.read"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureDeviceSkillBindingStatusRuntimeV1",
+        "ensureDeviceModeRuntime",
+        "ensureDeviceSkillBindings(allow_write=false)"
+      ],
+      "write_targets": [
+        "device_skill_binding_status_v1 schema",
+        "device_index_v1.device_mode schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "Exact head passes allow_write:false to ensureDeviceSkillBindings; no binding data repair is authorized by this GET."
+    },
+    {
+      "disposition_id": "BHTTP-009",
+      "source_path": "apps/server/src/routes/devices_v1.ts",
+      "entry_symbol": "GET /api/v1/devices/:device_id",
+      "http_method": "GET",
+      "exact_route": "/api/v1/devices/:device_id",
+      "activation_root": "commercial.server → bootstrap/server → app → devices",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "devices.read"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureDeviceSkillBindingStatusRuntimeV1",
+        "ensureDeviceModeRuntime",
+        "ensureDeviceCapabilityRuntime",
+        "ensureDeviceSkillBindings(allow_write=false)"
+      ],
+      "write_targets": [
+        "device_skill_binding_status_v1 schema",
+        "device_index_v1.device_mode schema",
+        "device_capability schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "Exact head uses allow_write:false for binding health; remaining ensure calls are schema/runtime compatibility."
+    },
+    {
+      "disposition_id": "BHTTP-010",
+      "source_path": "apps/server/src/routes/devices_v1.ts",
+      "entry_symbol": "GET /api/v1/devices/:device_id/capabilities",
+      "http_method": "GET",
+      "exact_route": "/api/v1/devices/:device_id/capabilities",
+      "activation_root": "commercial.server → bootstrap/server → app → devices",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "devices.read"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureDeviceCapabilityRuntime"
+      ],
+      "write_targets": [
+        "device_capability schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "GET performs compatibility schema ensure before SELECT."
+    },
+    {
+      "disposition_id": "BHTTP-011",
+      "source_path": "apps/server/src/routes/devices_v1.ts",
+      "entry_symbol": "GET /api/v1/devices/:device_id/console",
+      "http_method": "GET",
+      "exact_route": "/api/v1/devices/:device_id/console",
+      "activation_root": "commercial.server → bootstrap/server → app → devices",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "devices.read"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureDeviceCapabilityRuntime"
+      ],
+      "write_targets": [
+        "device_capability schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "Console GET performs compatibility schema ensure."
+    },
+    {
+      "disposition_id": "BHTTP-012",
+      "source_path": "apps/server/src/routes/devices_v1.ts",
+      "entry_symbol": "GET /api/v1/devices/:device_id/onboarding-status",
+      "http_method": "GET",
+      "exact_route": "/api/v1/devices/:device_id/onboarding-status",
+      "activation_root": "commercial.server → bootstrap/server → app → devices",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "devices.read"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureDeviceModeRuntime"
+      ],
+      "write_targets": [
+        "device_index_v1.device_mode schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "Onboarding-status GET performs compatibility schema ensure."
+    }
+  ],
+  "runtime_direct_writer_dispositions": [
+    {
+      "writer_id": "BRUNTIME-001",
+      "source_path": "apps/server/src/runtime/worker_runtime_heartbeat_v1.ts",
+      "entry_symbol": "recordWorkerRuntimeStartedV1",
+      "activation_root": "commercial.jobs → apps/server/src/jobs/runtime.ts",
+      "activation_mode": "BACKGROUND_WORKER_DIRECT_WRITER",
+      "write_class": "INFRA_OPERATIONAL_STATE_WRITER",
+      "principal_type": "JOBS_SERVICE_PROCESS",
+      "write_targets": [
+        "worker_runtime_heartbeat_v1"
+      ],
+      "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY"
+    },
+    {
+      "writer_id": "BRUNTIME-002",
+      "source_path": "apps/server/src/runtime/worker_runtime_heartbeat_v1.ts",
+      "entry_symbol": "recordWorkerRuntimeHeartbeatV1",
+      "activation_root": "commercial.jobs → apps/server/src/jobs/runtime.ts",
+      "activation_mode": "BACKGROUND_WORKER_DIRECT_WRITER",
+      "write_class": "INFRA_OPERATIONAL_STATE_WRITER",
+      "principal_type": "JOBS_SERVICE_PROCESS",
+      "write_targets": [
+        "worker_runtime_heartbeat_v1"
+      ],
+      "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY"
+    },
+    {
+      "writer_id": "BRUNTIME-003",
+      "source_path": "apps/server/src/runtime/worker_runtime_heartbeat_v1.ts",
+      "entry_symbol": "recordWorkerRuntimeErrorV1",
+      "activation_root": "commercial.jobs → apps/server/src/jobs/runtime.ts",
+      "activation_mode": "BACKGROUND_WORKER_DIRECT_WRITER",
+      "write_class": "INFRA_OPERATIONAL_STATE_WRITER",
+      "principal_type": "JOBS_SERVICE_PROCESS",
+      "write_targets": [
+        "worker_runtime_heartbeat_v1 via recordWorkerRuntimeHeartbeatV1"
+      ],
+      "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY"
+    },
+    {
+      "writer_id": "BRUNTIME-004",
+      "source_path": "apps/executor/src/lib/worker_runtime_heartbeat.ts",
+      "entry_symbol": "recordWorkerRuntimeStarted",
+      "activation_root": "commercial.executor → apps/executor/src/runtime_loop.ts",
+      "activation_mode": "BACKGROUND_WORKER_DIRECT_WRITER",
+      "write_class": "INFRA_OPERATIONAL_STATE_WRITER",
+      "principal_type": "EXECUTOR_SERVICE_PRINCIPAL",
+      "write_targets": [
+        "worker_runtime_heartbeat_v1"
+      ],
+      "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY"
+    },
+    {
+      "writer_id": "BRUNTIME-005",
+      "source_path": "apps/executor/src/lib/worker_runtime_heartbeat.ts",
+      "entry_symbol": "recordWorkerRuntimeHeartbeat",
+      "activation_root": "commercial.executor → apps/executor/src/runtime_loop.ts",
+      "activation_mode": "BACKGROUND_WORKER_DIRECT_WRITER",
+      "write_class": "INFRA_OPERATIONAL_STATE_WRITER",
+      "principal_type": "EXECUTOR_SERVICE_PRINCIPAL",
+      "write_targets": [
+        "worker_runtime_heartbeat_v1"
+      ],
+      "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY"
+    },
+    {
+      "writer_id": "BRUNTIME-006",
+      "source_path": "apps/executor/src/lib/worker_runtime_heartbeat.ts",
+      "entry_symbol": "recordWorkerRuntimeError",
+      "activation_root": "commercial.executor → apps/executor/src/runtime_loop.ts",
+      "activation_mode": "BACKGROUND_WORKER_DIRECT_WRITER",
+      "write_class": "INFRA_OPERATIONAL_STATE_WRITER",
+      "principal_type": "EXECUTOR_SERVICE_PRINCIPAL",
+      "write_targets": [
+        "worker_runtime_heartbeat_v1 via recordWorkerRuntimeHeartbeat"
+      ],
+      "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY"
+    }
+  ],
+  "startup_mutation_dispositions": [
+    {
+      "startup_id": "BSTART-001",
+      "source_path": "apps/server/src/services/derived_sensing_state_service_v1.ts",
+      "entry_symbol": "ensureDerivedSensingStateProjectionV1",
+      "registration_sources": [
+        "apps/server/src/routes/dashboard_v1.ts#registerDashboardV1Routes",
+        "apps/server/src/routes/agronomy_inference_v1.ts#registerAgronomyInferenceV1Routes"
+      ],
+      "activation_root": "commercial.server → module registration",
+      "mutation_class": "STARTUP_PROJECTION_BOOTSTRAP",
+      "write_targets": [
+        "derived_sensing_state_index_v1 schema",
+        "derived_sensing_state_index_v1 data cleanup/backfill"
+      ],
+      "current_disposition": "KEEP_COMPATIBILITY_BOOTSTRAP_INVENTORY_ONLY",
+      "notes": "Contains UPDATE and duplicate-cleanup DELETE in addition to DDL. Not caller authority; must remain visible in Runtime Activation Write Graph."
+    }
+  ]
 }
