@@ -447,6 +447,104 @@ try {
   assert.equal(rescueSettlement.selected_candidate, null);
   assert.equal(rescueSettlement.database_write_count, 0);
   assert.equal(rescueSettlement.runtime_process_start, false);
+
+  const stageSeasonSettlement = runtimeStartAuthorityDocument.t4r1_stage_or_natural_season_requalification_settlement;
+  assert.equal(
+    stageSeasonSettlement.status,
+    "SETTLED_NO_CURRENT_T4R1_STAGE_OR_NATURAL_SEASON_SUCCESSOR_AUTHORITY_ESTABLISHED",
+  );
+  assert.equal(stageSeasonSettlement.predecessor_frontier_head, "e075d48b13ef1c85888c0f3dfbf3173bb5232f96");
+
+  const stageRoute = stageSeasonSettlement.contemporaneous_stage_route;
+  assert.equal(stageRoute.proof_subject_sha, "60e4fd93c9dff017fd0d62967fad17a49383f12e");
+  assert.equal(stageRoute.workflow_run_id, 33630413934);
+  assert.equal(stageRoute.artifact_id, 9846584085);
+  assert.equal(
+    stageRoute.artifact_digest,
+    "sha256:38a6b645cab971c70ed13e116392186f0eafee2c32538d062a02e265a24a18c4",
+  );
+  assert.equal(stageRoute.result, "NO_T4R1_CONTEMPORANEOUS_STAGE_INPUT_AUTHORITY_CURRENTLY_ESTABLISHED");
+  assert.equal(stageRoute.scanned_index_page_count, 5);
+  assert.equal(stageRoute.scanned_observation_row_count, 150);
+  assert.equal(stageRoute.inspected_detail_count, 6);
+  assert.equal(stageRoute.direct_stage_input_candidate_count, 0);
+  assert.equal(stageRoute.termination_input_candidate_count, 0);
+  assert.equal(stageRoute.stage_authority_established, false);
+  assert.equal(stageRoute.stage, null);
+  assert.equal(stageRoute.whole_window_6h_30h_guard_passed, false);
+  assert.equal(stageRoute.database_write_count, 0);
+  assert.equal(stageRoute.runtime_process_start, false);
+  assert.equal(stageRoute.provider_body_emitted, false);
+  assert.equal(stageRoute.formal_execution_count, "0/24");
+
+  const naturalSeasonRoute = stageSeasonSettlement.natural_season_route;
+  assert.equal(naturalSeasonRoute.proof_subject_sha, "d631d20b3a2a0c179ba2ed98dd827e3e6431f6db");
+  assert.equal(naturalSeasonRoute.workflow_run_id, 33630968448);
+  assert.equal(naturalSeasonRoute.artifact_id, 9846818521);
+  assert.equal(
+    naturalSeasonRoute.artifact_digest,
+    "sha256:6275357bf5a6e054f0656dc907215439e20829b9e94a1925e317ecfcea9af09b",
+  );
+  assert.equal(naturalSeasonRoute.result, "NO_T4R1_NATURAL_SEASON_SUCCESSOR_CANDIDATE_CURRENTLY_OBSERVED");
+  assert.equal(naturalSeasonRoute.scanned_index_page_count, 5);
+  assert.equal(naturalSeasonRoute.scanned_observation_row_count, 150);
+  assert.equal(naturalSeasonRoute.post_anchor_t4_planting_lead_count, 0);
+  assert.equal(naturalSeasonRoute.exact_t4r1_successor_candidate_count, 0);
+  assert.equal(naturalSeasonRoute.time_gated_snapshot, true);
+  assert.equal(naturalSeasonRoute.global_new_season_source_absence_claimed, false);
+  assert.equal(naturalSeasonRoute.new_natural_season_created, false);
+  assert.equal(naturalSeasonRoute.new_season_id, null);
+  assert.equal(naturalSeasonRoute.new_crop, null);
+  assert.equal(naturalSeasonRoute.historical_geometry_reused, false);
+  assert.equal(naturalSeasonRoute.cross_season_stitching_authorized, false);
+  assert.equal(naturalSeasonRoute.database_write_count, 0);
+  assert.equal(naturalSeasonRoute.runtime_process_start, false);
+  assert.equal(naturalSeasonRoute.provider_body_emitted, false);
+  assert.equal(naturalSeasonRoute.formal_execution_count, "0/24");
+
+  assert.equal(stageSeasonSettlement.conclusion.current_t4r1_stage_authority_established, false);
+  assert.equal(stageSeasonSettlement.conclusion.current_t4r1_natural_season_successor_authority_established, false);
+  assert.equal(stageSeasonSettlement.conclusion.viable_future_formal_window_available, false);
+  assert.equal(stageSeasonSettlement.conclusion.runtime_start_authority_may_be_armed, false);
+  assert.equal(stageSeasonSettlement.conclusion.production_owner_activation_authorized, false);
+  assert.equal(stageSeasonSettlement.conclusion.cross_season_stitching_authorized, false);
+  assert.equal(stageSeasonSettlement.conclusion.requalification_without_material_provider_change_authorized, false);
+  assert.equal(
+    stageSeasonSettlement.conclusion.next_legal_frontier,
+    "T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_REQUALIFICATION_REQUIRED_ON_MATERIAL_PROVIDER_CHANGE",
+  );
+  assert.deepEqual(stageSeasonSettlement.material_provider_change_triggers, [
+    "NEW_EXACT_CURRENT_T4R1_PHENOLOGY_EVIDENCE_BECOMES_PUBLICLY_RETRIEVABLE",
+    "NEW_EXACT_CURRENT_T4R1_TERMINATION_OR_HARVEST_EVIDENCE_BECOMES_PUBLICLY_RETRIEVABLE",
+    "NEW_KBS_AGLOG_T4_OR_T4R1_PLANTING_OBSERVATION_AFTER_2026_05_27_BECOMES_PUBLICLY_RETRIEVABLE",
+  ]);
+  assert.equal(stageSeasonSettlement.transient_proof_scaffolding.status, "RETIRED_AFTER_DURABLE_CANONICAL_SETTLEMENT");
+  assert.equal(stageSeasonSettlement.transient_proof_scaffolding.repository_history_preserves_exact_blobs, true);
+  assert.equal(stageSeasonSettlement.transient_proof_scaffolding.files.length, 8);
+  for (const row of stageSeasonSettlement.transient_proof_scaffolding.files) {
+    assert.match(row.blob_sha, /^[0-9a-f]{40}$/, `T4R1_REQUALIFICATION_RETIRED_BLOB_SHA_REQUIRED:${row.path}`);
+    assert.equal(
+      fs.existsSync(path.join(ROOT, row.path)),
+      false,
+      `T4R1_REQUALIFICATION_TRANSIENT_PATH_MUST_BE_RETIRED:${row.path}`,
+    );
+  }
+  assert.equal(stageSeasonSettlement.non_effects.production_database_mutation, false);
+  assert.equal(stageSeasonSettlement.non_effects.raw_object_mutation, false);
+  assert.equal(stageSeasonSettlement.non_effects.runtime_config_mutation, false);
+  assert.equal(stageSeasonSettlement.non_effects.scheduler_mutation, false);
+  assert.equal(stageSeasonSettlement.non_effects.production_runtime_start, false);
+  assert.equal(stageSeasonSettlement.non_effects.production_owner_activation, false);
+  assert.equal(stageSeasonSettlement.non_effects.formal_v5_execution, false);
+  assert.equal(stageSeasonSettlement.non_effects.a0_bootstrap, false);
+  assert.equal(stageSeasonSettlement.non_effects.o00_started, false);
+  assert.equal(stageSeasonSettlement.non_effects.mcft_cap09_completed, false);
+  assert.equal(
+    runtimeStartAuthorityDocument.next_legal_frontier.latest_requalification_settlement_status,
+    "SETTLED_NO_CURRENT_T4R1_STAGE_OR_NATURAL_SEASON_SUCCESSOR_AUTHORITY_ESTABLISHED",
+  );
+  assert.equal(runtimeStartAuthorityDocument.next_legal_frontier.requalification_without_material_provider_change_authorized, false);
+  assert.equal(runtimeStartAuthorityDocument.next_legal_frontier.runtime_start_authority_may_be_armed, false);
   assert.equal(authority.runtime_start_frontier.viable_future_formal_window_available, false);
   assert.equal(authority.runtime_start_frontier.alternative_scope_eligible_candidate_count, 0);
   assert.equal(authority.runtime_start_frontier.runtime_start_authority_may_be_armed, false);
