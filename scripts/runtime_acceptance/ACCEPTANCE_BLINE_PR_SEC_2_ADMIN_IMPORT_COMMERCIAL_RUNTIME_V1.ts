@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import pg from "pg";
 
 const { Pool } = pg;
@@ -8,14 +6,7 @@ const DATABASE_URL = String(process.env.DATABASE_URL ?? "").trim();
 if (!DATABASE_URL) throw new Error("DATABASE_URL required");
 
 const ERROR = "ADMIN_IMPORT_MUTATION_COMMERCIAL_AUTHORITY_UNAVAILABLE";
-const repoRoot = process.cwd();
-const uploadDir = path.join(repoRoot, "_uploads");
-const acceptanceDir = path.join(repoRoot, "acceptance");
 
-function listNames(dir: string, prefix?: string): string[] {
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir).filter((name) => !prefix || name.startsWith(prefix)).sort();
-}
 async function count(pool: pg.Pool, table: string): Promise<number> {
   const r = await pool.query(`select count(*)::bigint as n from ${table}`);
   return Number(r.rows?.[0]?.n ?? 0);
@@ -58,8 +49,6 @@ async function main() {
   const pool = new Pool({ connectionString: DATABASE_URL });
   try {
     const before = {
-      uploads: listNames(uploadDir),
-      acceptance: listNames(acceptanceDir, "caf009_1h_"),
       facts: await count(pool, "facts"),
       raw_samples: await count(pool, "raw_samples"),
     };
@@ -75,24 +64,20 @@ async function main() {
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     const after = {
-      uploads: listNames(uploadDir),
-      acceptance: listNames(acceptanceDir, "caf009_1h_"),
       facts: await count(pool, "facts"),
       raw_samples: await count(pool, "raw_samples"),
     };
-
-    if (JSON.stringify(after.uploads) !== JSON.stringify(before.uploads)) throw new Error(`_uploads changed: ${before.uploads.length} -> ${after.uploads.length}`);
-    if (JSON.stringify(after.acceptance) !== JSON.stringify(before.acceptance)) throw new Error(`acceptance artifacts changed: ${before.acceptance.length} -> ${after.acceptance.length}`);
     if (after.facts !== before.facts) throw new Error(`facts changed: ${before.facts} -> ${after.facts}`);
     if (after.raw_samples !== before.raw_samples) throw new Error(`raw_samples changed: ${before.raw_samples} -> ${after.raw_samples}`);
 
     console.log(JSON.stringify({
       ok: true,
       results,
-      before: { uploads: before.uploads.length, acceptance_dirs: before.acceptance.length, facts: before.facts, raw_samples: before.raw_samples },
-      after: { uploads: after.uploads.length, acceptance_dirs: after.acceptance.length, facts: after.facts, raw_samples: after.raw_samples },
-      delta: { uploads: 0, acceptance_dirs: 0, facts: 0, raw_samples: 0 },
+      before,
+      after,
+      delta: { facts: 0, raw_samples: 0 },
       deferred_wait_ms: 500,
+      filesystem_proof: "PERFORMED_INSIDE_COMMERCIAL_SERVER_CONTAINER_BY_WORKFLOW",
     }, null, 2));
   } finally {
     await pool.end();
