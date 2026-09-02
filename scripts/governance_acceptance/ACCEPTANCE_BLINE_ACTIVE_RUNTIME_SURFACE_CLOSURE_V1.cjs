@@ -10,6 +10,9 @@ const REGISTRY = path.join(BASE, "GEOX-BLINE-ACTIVE-RUNTIME-SURFACE-DISPOSITION-
 const RESIDUAL = path.join(BASE, "GEOX-BLINE-RESIDUAL-AUTHORITY-INVENTORY-V1.json");
 const RESIDUAL_SCANNER = path.join(ROOT, "scripts/governance_acceptance/ACCEPTANCE_BLINE_RESIDUAL_AUTHORITY_AUDIT_V1.cjs");
 const ROOT_REGISTRY = "apps/server/src/modules/domain/registerDomainModules.ts";
+const COMMERCIAL_COMPOSE = "docker-compose.commercial_v1.yml";
+const BACKGROUND_RUNTIME_ROOTS = ["apps/server/src/jobs/runtime.ts"];
+const AGRONOMY_AGENT = "apps/server/src/jobs/agronomy_agent.ts";
 
 const ALLOWED_ROLES = new Set([
   "AUTHORITY","DERIVER","ADAPTER","COMPATIBILITY","PROJECTION","READ_ONLY","ACTIVATION_ONLY","INFRASTRUCTURE"
@@ -86,6 +89,25 @@ function walkRegistrationGraph(filePath) {
   }
 }
 
+function registerBackgroundRuntimeGraph() {
+  const compose = read(COMMERCIAL_COMPOSE);
+  const jobs = read(BACKGROUND_RUNTIME_ROOTS[0]);
+  const agent = read(AGRONOMY_AGENT);
+
+  if (!/\n\s{2}jobs:\s*\n/.test(compose)) failures.push("BACKGROUND_JOBS_SERVICE_MISSING");
+  if (!compose.includes('command: ["node", "apps/server/dist/jobs/runtime.js"]')) failures.push("BACKGROUND_JOBS_COMMAND_MISSING");
+  if (!compose.includes('AGRONOMY_AGENT_ENABLED: "1"')) failures.push("BACKGROUND_AGRONOMY_AGENT_NOT_COMMERCIAL_ACTIVE");
+  if (!jobs.includes('import { runAgronomyAgentOnce } from "./agronomy_agent.js";')) failures.push("BACKGROUND_AGRONOMY_AGENT_IMPORT_MISSING");
+  if (!jobs.includes('if (process.env.AGRONOMY_AGENT_ENABLED === "1")')) failures.push("BACKGROUND_AGRONOMY_AGENT_FEATURE_GATE_MISSING");
+  if (!jobs.includes("await runAgronomyAgentOnce(pool)")) failures.push("BACKGROUND_AGRONOMY_AGENT_CALL_MISSING");
+  if (!agent.includes('const AGENT_SOURCE = "jobs/agronomy_agent"')) failures.push("BACKGROUND_AGRONOMY_AGENT_SOURCE_MISSING");
+
+  edges.push({ parent: COMMERCIAL_COMPOSE, child: BACKGROUND_RUNTIME_ROOTS[0], symbol: "jobs", local: "jobs" });
+  addParent(BACKGROUND_RUNTIME_ROOTS[0], COMMERCIAL_COMPOSE);
+  edges.push({ parent: BACKGROUND_RUNTIME_ROOTS[0], child: AGRONOMY_AGENT, symbol: "runAgronomyAgentOnce", local: "runAgronomyAgentOnce" });
+  addParent(AGRONOMY_AGENT, BACKGROUND_RUNTIME_ROOTS[0]);
+}
+
 function parseScannerArray(source, name) {
   const m = source.match(new RegExp("const\\s+" + name + "\\s*=\\s*\\[([\\s\\S]*?)\\];"));
   if (!m) {
@@ -137,6 +159,9 @@ function main() {
     failures.push("ACTIVE_REGISTRY_SCHEMA_VERSION_INVALID");
   }
   if (registry.root_registry !== ROOT_REGISTRY) failures.push("ACTIVE_REGISTRY_ROOT_MISMATCH");
+  if (!exactArrayEqual(registry.background_runtime_roots, BACKGROUND_RUNTIME_ROOTS)) {
+    failures.push("BACKGROUND_RUNTIME_ROOTS_MISMATCH");
+  }
 
   const byPath = new Map();
   for (const row of Array.isArray(registry.surfaces) ? registry.surfaces : []) {
@@ -154,6 +179,7 @@ function main() {
   }
 
   walkRegistrationGraph(ROOT_REGISTRY);
+  registerBackgroundRuntimeGraph();
   const activePaths = new Set([ROOT_REGISTRY, ...activeParents.keys()]);
 
   for (const p of [...activePaths].sort()) {
@@ -242,6 +268,7 @@ function main() {
   console.log("BLINE_ACTIVE_RUNTIME_GRAPH " + JSON.stringify({
     root: ROOT_REGISTRY,
     active_surface_count: activePaths.size,
+    background_runtime_surface_count: BACKGROUND_RUNTIME_ROOTS.length + 1,
     edge_count: edges.length,
     disposition_count: byPath.size,
     missing_disposition_count: failures.filter(x => x.startsWith("ACTIVE_RUNTIME_SURFACE_WITHOUT_DISPOSITION:")).length,

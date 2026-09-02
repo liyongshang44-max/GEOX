@@ -194,26 +194,10 @@
       "new_owner_creation": "FORBIDDEN"
     },
     {
-      "edge_id": "P-008",
-      "producer_id": "agronomy-agent-recommendation",
-      "semantic_id": "decision.candidate",
-      "relation": "GRANDFATHERED_PRODUCER",
-      "removal_target": "B-09",
-      "new_owner_creation": "FORBIDDEN"
-    },
-    {
       "edge_id": "P-009",
       "producer_id": "decision-engine-recommendation",
       "semantic_id": "decision.candidate",
       "relation": "GRANDFATHERED_PRODUCER",
-      "removal_target": "B-09",
-      "new_owner_creation": "FORBIDDEN"
-    },
-    {
-      "edge_id": "P-010",
-      "producer_id": "agronomy-agent-plan",
-      "semantic_id": "operation.plan",
-      "relation": "GRANDFATHERED_DIRECT_PLAN_PRODUCER",
       "removal_target": "B-09",
       "new_owner_creation": "FORBIDDEN"
     },
@@ -714,40 +698,6 @@
         "fingerprint": "devtools/Flight Table intentionally excluded from production semantic consumers"
       },
       "status": "NOT_WIRED"
-    },
-    {
-      "edge_id": "C-023",
-      "from_producer": "agronomy-agent-recommendation",
-      "to_consumer": "agronomy-agent-plan-write",
-      "semantic_id": "decision.candidate",
-      "connection_class": "ACTIVE_PARALLEL",
-      "activation": "FEATURE_FLAG",
-      "runtime_edge": "PROVEN",
-      "contract_compatible": true,
-      "evidence": {
-        "kind": "SAME_JOB",
-        "caller_path": "apps/server/src/jobs/agronomy_agent.ts",
-        "callee_path": "apps/server/src/jobs/agronomy_agent.ts",
-        "fingerprint": "recommendation_v1 / decision_recommendation_v1 followed by operation_plan_v1"
-      },
-      "status": "CURRENT_PROVEN"
-    },
-    {
-      "edge_id": "C-024",
-      "from_producer": "agronomy-agent-plan",
-      "to_consumer": "agronomy-agent-plan-persistence",
-      "semantic_id": "operation.plan",
-      "connection_class": "ACTIVE_PARALLEL",
-      "activation": "FEATURE_FLAG",
-      "runtime_edge": "PROVEN",
-      "contract_compatible": true,
-      "evidence": {
-        "kind": "PERSISTENCE_WRITE",
-        "caller_path": "apps/server/src/jobs/agronomy_agent.ts",
-        "callee_path": "apps/server/src/jobs/agronomy_agent.ts",
-        "fingerprint": "agronomy_agent_auto_create / operation_plan_v1"
-      },
-      "status": "CURRENT_PROVEN"
     },
     {
       "edge_id": "C-025",

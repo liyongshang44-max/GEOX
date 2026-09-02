@@ -31,7 +31,8 @@
     "STALE_ORPHAN_CLASSIFICATION_CONTRADICTS_MODULE_GRAPH = FAIL",
     "READ_ROUTE_WITH_SEMANTIC_WRITE = FAIL",
     "LEGACY_TWIN_AUTHORITY_NOT_DECLARED = FAIL",
-    "INVENTORY_METADATA_DRIFT = FAIL"
+    "INVENTORY_METADATA_DRIFT = FAIL",
+    "BACKGROUND_RUNTIME_SURFACE_WITHOUT_DISPOSITION = FAIL"
   ],
   "surfaces": [
     {
@@ -2581,6 +2582,50 @@
       ],
       "runtime_reachable": "PROVEN_BY_MODULE_GRAPH",
       "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-129",
+      "source_path": "apps/server/src/jobs/runtime.ts",
+      "activation_parent": [
+        "docker-compose.commercial_v1.yml"
+      ],
+      "surface_role": "ACTIVATION_ONLY",
+      "delegates_to": [
+        "apps/server/src/jobs/agronomy_agent.ts",
+        "apps/server/src/routes/delivery_evidence_export_v1.ts",
+        "apps/server/src/routes/evidence_report_v1.ts"
+      ],
+      "replacement_path": [
+        "SELF"
+      ],
+      "sunset_condition": "KEEP_BACKGROUND_WORKER_WITH_EXPLICIT_DELEGATE_DISPOSITIONS",
+      "semantic_family": [
+        "governance.runtime_activation"
+      ],
+      "runtime_reachable": "PROVEN_BY_COMMERCIAL_COMPOSE",
+      "owner": "BLINE"
+    },
+    {
+      "surface_id": "ARS-130",
+      "source_path": "apps/server/src/jobs/agronomy_agent.ts",
+      "activation_parent": [
+        "apps/server/src/jobs/runtime.ts"
+      ],
+      "surface_role": "DERIVER",
+      "delegates_to": [],
+      "replacement_path": [
+        "legacy agronomy recommendation signal with exact telemetry fact provenance; non-executable"
+      ],
+      "sunset_condition": "P0_RES_003_CLOSED_KEEP_FAIL_CLOSED_NON_EXECUTABLE_LEGACY_SIGNAL",
+      "semantic_family": [
+        "agronomy.interpretation",
+        "evidence.raw_observation"
+      ],
+      "runtime_reachable": "PROVEN_BY_BACKGROUND_WORKER_GRAPH",
+      "owner": "BLINE"
     }
+  ],
+  "background_runtime_roots": [
+    "apps/server/src/jobs/runtime.ts"
   ]
 }
