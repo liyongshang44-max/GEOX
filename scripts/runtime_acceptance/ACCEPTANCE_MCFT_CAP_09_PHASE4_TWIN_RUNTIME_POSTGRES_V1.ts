@@ -159,11 +159,41 @@ async function main(): Promise<void> {
       /FUTURE_BOUNDARY_CLAIM_REJECTED/,
     );
 
+    const preSlotOwner = await scheduler.acquireOrRenewOwnershipLease({
+      lease_owner: "phase4-owner-a",
+      lease_duration_seconds: 300,
+    });
+    assert(preSlotOwner, "PHASE4_PRE_SLOT_SCHEDULER_OWNER_LEASE_REQUIRED");
+    const preSlotRenewed = await scheduler.acquireOrRenewOwnershipLease({
+      lease_owner: "phase4-owner-a",
+      lease_duration_seconds: 300,
+    });
+    assert(preSlotRenewed, "PHASE4_PRE_SLOT_SCHEDULER_OWNER_RENEW_REQUIRED");
+    assert.equal(
+      preSlotRenewed.fencing_token,
+      preSlotOwner.fencing_token,
+      "PHASE4_SAME_OWNER_HEARTBEAT_MUST_PRESERVE_FENCE",
+    );
+    const standbyOwner = await scheduler.acquireOrRenewOwnershipLease({
+      lease_owner: "phase4-owner-standby",
+      lease_duration_seconds: 300,
+    });
+    assert.equal(
+      standbyOwner,
+      null,
+      "PHASE4_DUPLICATE_PRE_SLOT_SCHEDULER_OWNER_MUST_STANDBY",
+    );
+
     const claim0 = await scheduler.claimDueSlot({
       boundary: due[0],
       lease_owner: "phase4-owner-a",
       lease_duration_seconds: 300,
     });
+    assert.equal(
+      claim0.fencing_token,
+      preSlotOwner.fencing_token,
+      "PHASE4_DUE_SLOT_MUST_REUSE_PRE_SLOT_OWNER_FENCE",
+    );
     const claim0Retry = await scheduler.claimDueSlot({
       boundary: due[0],
       lease_owner: "phase4-owner-a",
@@ -292,6 +322,20 @@ async function main(): Promise<void> {
       { slot_id: "O03", state: "COMPLETED" },
     ]);
 
+    const postScheduleOwner = await restartedScheduler.acquireOrRenewOwnershipLease({
+      lease_owner: "phase4-owner-presence-after-o03",
+      lease_duration_seconds: 300,
+    });
+    assert(postScheduleOwner, "PHASE4_POST_SLOT_OWNER_PRESENCE_REQUIRED");
+    assert(
+      postScheduleOwner.fencing_token > fences.at(-1)!,
+      "PHASE4_POST_SLOT_OWNER_PRESENCE_MUST_ADVANCE_EXPIRED_FENCE",
+    );
+    const releaseStatus = await restartedScheduler.releaseOwnershipLease({
+      claim: postScheduleOwner,
+    });
+    assert.equal(releaseStatus, "RELEASED");
+
     const activeCount = Number(
       (
         await pool.query<{ n: string }>(
@@ -321,6 +365,11 @@ async function main(): Promise<void> {
       oldest_due_first: true,
       future_slot_rejected: true,
       same_owner_claim_idempotent: true,
+      pre_slot_scheduler_owner_presence: true,
+      same_owner_presence_renew_preserves_fence: true,
+      duplicate_pre_slot_owner_standby: true,
+      due_slot_reuses_pre_slot_owner_fence: true,
+      owner_presence_compare_and_set_release: true,
       duplicate_owner_rejected: true,
       expired_active_slot_recovered: true,
       recovery_preserved_idempotency_key: true,
