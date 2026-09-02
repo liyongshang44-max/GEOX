@@ -100,7 +100,10 @@ const unresolvedDynamic=[];
 for (const fp of runtimeFiles) {
   if (!fp.endsWith(".ts") && !fp.endsWith(".tsx")) continue;
   if (isCommercialDisabledDevtools(fp)) continue;
-  const source=read(fp);
+  const rawSource=read(fp);
+  // Ignore full-line comments before route discovery so deprecated/commented routes
+  // cannot become phantom production surfaces.
+  const source=rawSource.split(/\\r?\\n/).map((line)=>/^\\s*\\/\\//.test(line) ? "" : line).join("\\n");
   const p=rel(fp);
   const literal=/\bapp\.(post|put|patch|delete)\s*\(\s*["'\x60]([^"'\x60]+)["'\x60]/gms;
   let m;
@@ -133,10 +136,15 @@ const unexpectedDynamic = unresolvedDynamic.filter((d) => {
 assert(unexpectedDynamic.length===0, "unresolved production mutation route expressions require explicit audit disposition", unexpectedDynamic);
 
 const httpRows = surfaces.filter((r)=>r.activation_mode==="HTTP_ROUTE");
+const nonAuthority = inv.non_authority_method_dispositions ?? [];
+for (const x of nonAuthority) {
+  assert(typeof x.source_path==="string" && typeof x.http_method==="string" && typeof x.exact_route==="string" && typeof x.reason==="string" && x.reason.trim(), "invalid non-authority method disposition", x);
+}
 const missing=[];
 for (const d of discovered) {
   const found=httpRows.some((r)=>r.source_path===d.source_path && r.http_method_or_runtime_trigger===d.method && r.exact_route_or_trigger===d.route);
-  if(!found) missing.push(d);
+  const explicitlyNonAuthority=nonAuthority.some((r)=>r.source_path===d.source_path && r.http_method===d.method && r.exact_route===d.route);
+  if(!found && !explicitlyNonAuthority) missing.push(d);
 }
 assert(missing.length===0, "production-reachable literal mutation routes missing from entrypoint inventory", missing);
 
@@ -211,6 +219,7 @@ const summary={
   reachable_surface_count:reachable.length,
   commercial_root_count:roots.length,
   discovered_literal_http_mutation_count:discovered.length,
+  explicitly_non_authority_http_method_count:nonAuthority.length,
   subprocess_edge_count:sub.length,
   bsec0_closed:false,
   debt_counters:{
