@@ -18,6 +18,7 @@ need("route",[
   'ACCEPTANCE_EVALUATE_ROLE_DENIED'
 ]);
 need("service",[
+  'fertilization_prescription_fact_id',
   'receipt_fact_id',
   'as_executed_id',
   'as_applied_id',
@@ -58,7 +59,7 @@ if(routeBlock.includes("requireFertilizationWriteAuth")) failures.push("FERTILIZ
 
 console.log("BLINE_FERTILIZATION_EXECUTION_PROVENANCE_STATS "+JSON.stringify({
  failures:failures.length,
- exact_ids:["receipt_fact_id","as_executed_id","as_applied_id","acceptance_result_fact_id"].every(x=>src.service.includes(x)),
+ exact_ids:["fertilization_prescription_fact_id","receipt_fact_id","as_executed_id","as_applied_id","acceptance_result_fact_id"].every(x=>src.service.includes(x)),
  caller_zone_authority_absent:!evalBlock.includes("Array.isArray(input.zone_applications)"),
  dedicated_acceptance_auth:routeBlock.includes("requireFertilizationAcceptanceAuth")
 }));
