@@ -963,6 +963,16 @@ function covAnalyzeCallbackArg(fp, call, argIndex) {
     if (localMap.has(arg.text)) return {supported:true,analysis:covAnalyzeCallbackNode(fp,localMap.get(arg.text),localMap)};
     const target = covResolveFunction(fp,arg.text);
     if (target) return {supported:true,analysis:covAnalyzeFunction(target)};
+    // Promise settlement callbacks are lexical function parameters and carry no
+    // persistence capability by themselves. Prove that lexical relationship;
+    // never allowlist an arbitrary unresolved identifier by name alone.
+    if (arg.text === "resolve" || arg.text === "reject") {
+      let p = call.parent;
+      while (p && !covFunctionLike(p)) p = p.parent;
+      if (p && p.parameters.some((param) => ts.isIdentifier(param.name) && param.name.text === arg.text)) {
+        return {supported:true,analysis:{dml:false,ddl:false,fact:false,directWriterKeys:new Set(),callees:new Set()}};
+      }
+    }
   }
   return {supported:false,analysis:null};
 }
