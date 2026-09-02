@@ -1021,10 +1021,10 @@ for (const route of covHttpUnique) {
   const disposition=covHttpDispositionKey.get(route.source_path+"::"+route.method+"::"+route.route);
   if (disposition) {
     for (const writer of route.writers||[]) if (!covWriterDeclared(disposition.writer_entrypoints,writer)) {
-      covReachableWriterMissing.push({inventory_kind:"http_entrypoint_disposition",inventory_id:disposition.disposition_id,route,missing_writer:writer});
+      covReachableWriterMissing.push({inventory_kind:"http_entrypoint_disposition",inventory_id:disposition.disposition_id,missing_writer:writer});
     }
     for (const target of route.targets||[]) if (!covTargetDeclared(disposition.write_targets,target)) {
-      covReachableTargetMissing.push({inventory_kind:"http_entrypoint_disposition",inventory_id:disposition.disposition_id,route,missing_target:target});
+      covReachableTargetMissing.push({inventory_kind:"http_entrypoint_disposition",inventory_id:disposition.disposition_id,missing_target:target});
     }
   }
   const surface=surfaces.find((row)=>
@@ -1035,10 +1035,10 @@ for (const route of covHttpUnique) {
   );
   if (surface) {
     for (const writer of route.writers||[]) if (!covWriterDeclared(surface.writer_entrypoints,writer)) {
-      covReachableWriterMissing.push({inventory_kind:"surface",inventory_id:surface.surface_id,route,missing_writer:writer});
+      covReachableWriterMissing.push({inventory_kind:"surface",inventory_id:surface.surface_id,missing_writer:writer});
     }
     for (const target of route.targets||[]) if (!covTargetDeclared(surface.write_targets,target)) {
-      covReachableTargetMissing.push({inventory_kind:"surface",inventory_id:surface.surface_id,route,missing_target:target});
+      covReachableTargetMissing.push({inventory_kind:"surface",inventory_id:surface.surface_id,missing_target:target});
     }
   }
 }
@@ -1406,10 +1406,10 @@ for (const edge of covCallbackEdges) {
   const d=covCallbackDispositionById.get(edge.callback_id);
   if (!d) continue;
   for (const writer of edge.writers||[]) if (!covWriterDeclared(d.writer_entrypoints,writer)) {
-    covReachableWriterMissing.push({inventory_kind:"callback_hook_disposition",inventory_id:d.callback_id,edge,missing_writer:writer});
+    covReachableWriterMissing.push({inventory_kind:"callback_hook_disposition",inventory_id:d.callback_id,missing_writer:writer});
   }
   for (const target of edge.targets||[]) if (!covTargetDeclared(d.write_targets,target)) {
-    covReachableTargetMissing.push({inventory_kind:"callback_hook_disposition",inventory_id:d.callback_id,edge,missing_target:target});
+    covReachableTargetMissing.push({inventory_kind:"callback_hook_disposition",inventory_id:d.callback_id,missing_target:target});
   }
 }
 
