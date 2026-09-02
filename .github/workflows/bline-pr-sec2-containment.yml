@@ -43,6 +43,8 @@ jobs:
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_ADMIN_IMPORT_FAIL_CLOSED_V1.ts
       - name: BSEC-024..026 corrected accounting and closure
         run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEAK_INTERNAL_FAIL_CLOSED_V1.cjs
+      - name: Build focused sensing workspace dependencies
+        run: pnpm --filter @geox/device-skills... build
       - name: BSEC-024..026 behavioral proof
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEAK_INTERNAL_FAIL_CLOSED_V1.ts
       - name: Frozen PR-SEC-1 caller inventory regression
