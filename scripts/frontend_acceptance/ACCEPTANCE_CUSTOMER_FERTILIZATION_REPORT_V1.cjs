@@ -31,7 +31,7 @@ function assertAll(text, needles, label) {
 
   assertAll(labels, [
     'FORMAL_FERTILIZATION',
-    '正式施氮',
+    '施氮（实验性 / non-selling）',
     'fertilizationCustomerSummaryText',
     'fertilization_lab_low_n_formal',
     'fertilization_sensing_review_only',
@@ -42,8 +42,15 @@ function assertAll(text, needles, label) {
     ...customerTexts,
   ], 'customerScenarioLabels fertilization labels');
 
+  assert.equal(
+    labels.includes('if (key === "FORMAL_FERTILIZATION") return "正式施氮";'),
+    false,
+    'FORMAL_FERTILIZATION must not be sold/labeled as formally sellable fertilization'
+  );
+
   assertAll(vm, [
     'fertilizationCustomerSummaryText',
+    '实验性 / non-selling',
     'reportOrOperation?.fertilization',
     'fertilizationSummaryText',
     'FORMAL_FERTILIZATION',
