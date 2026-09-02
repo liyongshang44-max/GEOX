@@ -6,6 +6,7 @@ on:
       - 'apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts'
       - 'docs/architecture/semantic_convergence/GEOX-BLINE-PR-SEC-2-IMMEDIATE-CALLER-CONTAINMENT-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_IMMEDIATE_CALLER_CONTAINMENT_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_OPERATOR_TWIN_AUTH_NEGATIVE_V1.ts'
       - '.github/workflows/bline-pr-sec2-containment.yml'
 
 jobs:
@@ -31,6 +32,9 @@ jobs:
 
       - name: PR-SEC-2 immediate caller containment
         run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_IMMEDIATE_CALLER_CONTAINMENT_V1.cjs
+
+      - name: PR-SEC-2 Operator Twin behavioral negative proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_OPERATOR_TWIN_AUTH_NEGATIVE_V1.ts
 
       - name: Frozen PR-SEC-1 caller inventory regression
         run: pnpm run ci:governance:bline-production-caller-authority-inventory

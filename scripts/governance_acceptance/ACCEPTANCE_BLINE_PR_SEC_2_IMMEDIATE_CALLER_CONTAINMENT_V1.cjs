@@ -28,10 +28,32 @@ const batch = repair.batches?.find((x) => x.batch_id === 'PRSEC2-BATCH-001');
 assert(batch, 'batch 1 mapping missing');
 assert(JSON.stringify(batch.source_surfaces) === JSON.stringify(['BSEC-001','BSEC-002']), 'batch 1 source surface set drift');
 assert(batch.authority_chain?.capability === 'recommendation.write', 'batch 1 capability must be recommendation.write');
-assert(batch.expected_machine_debt_delta?.production_reachable_mutating_surface_without_authn === -2, 'unauth delta must be -2');
-assert(batch.expected_machine_debt_delta?.production_reachable_semantic_writer_without_validated_capability === -2, 'capability delta must be -2');
-assert(batch.expected_after?.production_reachable_mutating_surface_without_authn === 33, 'expected unauth after must be 33');
-assert(batch.expected_after?.production_reachable_semantic_writer_without_validated_capability === 107, 'expected capability after must be 107');
+
+const sourceRows = batch.source_surfaces.map((surfaceId) => predecessor.surfaces.find((x) => x.surface_id === surfaceId));
+for (const row of sourceRows) {
+  assert(row, 'batch 1 frozen source inventory row missing');
+  assert(row.runtime_reachable === true, 'contained row must be production reachable', row?.surface_id);
+  assert(row.authn_mode === 'NONE', 'batch 1 unauth baseline must come from authn_mode NONE', row?.surface_id);
+  assert(Array.isArray(row.authz_capability) && row.authz_capability.length === 0, 'batch 1 capability baseline must be empty', row?.surface_id);
+  assert(row.caller_authority_status === 'UNAUTHENTICATED_PRODUCTION_WRITER', 'batch 1 caller-authority baseline drift', row?.surface_id);
+  assert(row.principal_type === 'UNVERIFIED_CALLER', 'batch 1 principal baseline drift', row?.surface_id);
+  assert(!String(row.declared_actor_binding || '').includes('CALLER_DECLARED_NOT_AUTH_BOUND'), 'batch 1 must not claim human-actor debt reduction', row?.surface_id);
+  assert(!String(row.principal_type || '').includes('SERVICE'), 'batch 1 must not claim service-principal debt reduction', row?.surface_id);
+  assert(row.tenant_scope_from_untrusted_body !== true, 'batch 1 must not claim tenant-body debt reduction', row?.surface_id);
+}
+
+const computedDelta = {
+  production_reachable_mutating_surface_without_authn: -sourceRows.length,
+  production_reachable_semantic_writer_without_validated_capability: -sourceRows.length,
+  production_reachable_human_action_with_unverified_declared_actor: 0,
+  production_reachable_service_writer_without_bound_principal: 0,
+  tenant_scope_from_untrusted_body_or_unbound: 0,
+};
+const computedAfter = Object.fromEntries(
+  Object.entries(baseline).map(([key, value]) => [key, value + (computedDelta[key] ?? 0)])
+);
+assert(JSON.stringify(batch.expected_machine_debt_delta) === JSON.stringify(computedDelta), 'declared debt delta must equal machine-derived frozen-row delta', { declared: batch.expected_machine_debt_delta, computed: computedDelta });
+assert(JSON.stringify(batch.expected_after) === JSON.stringify(computedAfter), 'declared after-state must equal machine-derived after-state', { declared: batch.expected_after, computed: computedAfter });
 
 for (const route of [
   '/api/v1/operator/twin/fields/:field_id/root-zone-scenarios/:scenario_set_id/options/:option_id/submit-recommendation',
@@ -72,7 +94,7 @@ console.log(JSON.stringify({
   batch: batch.batch_id,
   contained_surfaces: batch.source_surfaces,
   before: baseline,
-  expected_after: batch.expected_after,
+  computed_after: computedAfter,
   semantic_redesign: false,
   mcft_modification: false,
 }, null, 2));

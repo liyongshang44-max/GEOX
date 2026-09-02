@@ -79,7 +79,7 @@ export function registerOperatorTwinWriteLegacyRoutesV1(app: FastifyInstance, po
     const downstream = handler as (req: FastifyRequest, reply: FastifyReply) => unknown;
     app.post(path, async (req: FastifyRequest, reply: FastifyReply) => {
       const auth = bindRecommendationWriterPrincipalV1(req, reply);
-      if (!auth) return;
+      if (!auth) return reply;
       return downstream(req, reply);
     });
   }

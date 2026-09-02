@@ -15,12 +15,18 @@ const ACCEPTANCE_NAME = "ACCEPTANCE_ROOT_ZONE_SCENARIO_SUBMIT_RECOMMENDATION_RUN
 const PREFIX = "h35_root_zone_scenario_submit_acceptance_";
 const BASE_URL = String(process.env.GEOX_BASE_URL || process.env.BASE_URL || "http://127.0.0.1:3001").replace(/\/$/, "");
 const TOKEN = String(process.env.GEOX_ACCEPTANCE_TOKEN || "").trim();
+const ACCEPTANCE_IDENTITY = {
+  tenant_id: String(process.env.GEOX_ACCEPTANCE_TENANT_ID || "").trim(),
+  project_id: String(process.env.GEOX_ACCEPTANCE_PROJECT_ID || "").trim(),
+  group_id: String(process.env.GEOX_ACCEPTANCE_GROUP_ID || "").trim(),
+  actor_id: String(process.env.GEOX_ACCEPTANCE_ACTOR_ID || "").trim(),
+};
 const RUN_ID = `${PREFIX}${randomUUID()}`;
 const CREATED_AT = "2026-06-21T00:00:00.000Z";
 const SCOPE = {
-  tenant_id: `${RUN_ID}_tenant`,
-  project_id: `${RUN_ID}_project`,
-  group_id: `${RUN_ID}_group`,
+  tenant_id: ACCEPTANCE_IDENTITY.tenant_id,
+  project_id: ACCEPTANCE_IDENTITY.project_id,
+  group_id: ACCEPTANCE_IDENTITY.group_id,
   field_id: `${RUN_ID}_field`,
   zone_id: `${RUN_ID}_zone`,
 };
@@ -135,7 +141,7 @@ async function postSubmission({ fieldId, scenarioSetId, optionId, body = {} }) {
       },
       body: JSON.stringify({
         ...SCOPE,
-        operator_id: `${RUN_ID}_operator`,
+        operator_id: ACCEPTANCE_IDENTITY.actor_id,
         submission_reason: "review selected root-zone irrigation scenario",
         idempotency_key: `${RUN_ID}:${scenarioSetId}:${optionId}:${randomUUID()}`,
         ...body,
@@ -156,6 +162,24 @@ async function postSubmission({ fieldId, scenarioSetId, optionId, body = {} }) {
     body: payload,
     submission: payload.operator_root_zone_scenario_recommendation_submission_v1,
   };
+}
+
+async function proveAuthRejectedSubmitCreatesNoRecommendation(pool, label, scenario, optionId, body, expectedError) {
+  await upsertScenario(pool, scenario);
+  const before = await factCount(pool, "decision_recommendation_v1", scenario.scenario_set_id);
+  const result = await postSubmission({
+    fieldId: SCOPE.field_id,
+    scenarioSetId: scenario.scenario_set_id,
+    optionId,
+    body,
+  });
+
+  assert(result.statusCode === 403, `${label} returns 403`, result);
+  assert(result.body?.error === expectedError, `${label} returns expected auth error`, result);
+  assert(
+    (await factCount(pool, "decision_recommendation_v1", scenario.scenario_set_id)) === before,
+    `${label} does not write recommendation`,
+  );
 }
 
 async function factCount(pool, type, scenarioSetId) {
@@ -301,22 +325,31 @@ async function proveRejections(pool) {
     "REJECTED_SCENARIO_NOT_FOUND",
   );
 
-  await proveRejectedSubmitCreatesNoRecommendation(
+  await proveAuthRejectedSubmitCreatesNoRecommendation(
     pool,
-    "project exact-binding miss",
+    "tenant authority binding miss",
+    makeScenario(`${RUN_ID}_scope_tenant`),
+    "IRRIGATE_20MM_DAY0",
+    { tenant_id: `${RUN_ID}_other_tenant` },
+    "AUTH_TENANT_SCOPE_MISMATCH",
+  );
+
+  await proveAuthRejectedSubmitCreatesNoRecommendation(
+    pool,
+    "project authority binding miss",
     makeScenario(`${RUN_ID}_scope_project`),
     "IRRIGATE_20MM_DAY0",
     { project_id: `${RUN_ID}_other_project` },
-    "REJECTED_SCENARIO_NOT_FOUND",
+    "AUTH_TENANT_SCOPE_MISMATCH",
   );
 
-  await proveRejectedSubmitCreatesNoRecommendation(
+  await proveAuthRejectedSubmitCreatesNoRecommendation(
     pool,
-    "group exact-binding miss",
+    "group authority binding miss",
     makeScenario(`${RUN_ID}_scope_group`),
     "IRRIGATE_20MM_DAY0",
     { group_id: `${RUN_ID}_other_group` },
-    "REJECTED_SCENARIO_NOT_FOUND",
+    "AUTH_TENANT_SCOPE_MISMATCH",
   );
 
   await proveRejectedSubmitCreatesNoRecommendation(
@@ -339,6 +372,10 @@ async function proveRejections(pool) {
 }
 
 async function main() {
+  for (const [key, value] of Object.entries(ACCEPTANCE_IDENTITY)) {
+    assert(value, `GEOX_ACCEPTANCE_${key.toUpperCase()} is required for authenticated runtime acceptance`);
+  }
+
   const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.PG_URL;
   assert(connectionString, "DATABASE_URL/POSTGRES_URL/PG_URL required");
 
