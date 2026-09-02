@@ -270,6 +270,15 @@ function covDirectSqlEffect(fp, rootNode) {
     ts.forEachChild(n, collectBindings);
   }
   collectBindings(rootNode);
+  for (const stmt of sf.statements) {
+    if (!ts.isVariableStatement(stmt)) continue;
+    for (const decl of stmt.declarationList.declarations) {
+      if (!ts.isIdentifier(decl.name) || !decl.initializer) continue;
+      if (ts.isStringLiteral(decl.initializer) || ts.isNoSubstitutionTemplateLiteral(decl.initializer) || ts.isTemplateExpression(decl.initializer)) {
+        sqlBindings.set(decl.name.text, decl.initializer.getText(sf));
+      }
+    }
+  }
 
   const result = { dml:false, ddl:false, fact:false };
   function merge(effect) {
@@ -862,6 +871,16 @@ const covRuntimeRoots = [
   "apps/executor/src/runtime_loop.ts",
   "apps/telemetry-ingest/src/main.ts",
 ];
+const covAdditionalRuntimeEntryRoots = [
+  ["scripts/loadfact.ts", "main", "COMMERCIAL_ADMIN_CAF_SUBPROCESS"],
+  ["apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts", "runMcftCap07DatabasePlatformBootstrapFromEnvironmentV1", "COMMERCIAL_DATABASE_PLATFORM_BOOTSTRAP"],
+  ["apps/server/src/infra/runtime_schema_compatibility_bootstrap_v1.ts", "runRuntimeSchemaCompatibilityBootstrapFromEnvironmentV1", "COMMERCIAL_DATABASE_PLATFORM_BOOTSTRAP"],
+  ["apps/server/src/infra/runtime_dispatch_queue_bootstrap_v1.ts", "runRuntimeDispatchQueueBootstrapFromEnvironmentV1", "COMMERCIAL_DATABASE_PLATFORM_BOOTSTRAP"],
+  ["apps/server/src/infra/runtime_device_status_compatibility_bootstrap_v1.ts", "runRuntimeDeviceStatusCompatibilityBootstrapFromEnvironmentV1", "COMMERCIAL_DATABASE_PLATFORM_BOOTSTRAP"],
+  ["apps/server/src/infra/runtime_skill_registry_compatibility_bootstrap_v1.ts", "runRuntimeSkillRegistryCompatibilityBootstrapFromEnvironmentV1", "COMMERCIAL_DATABASE_PLATFORM_BOOTSTRAP"],
+  ["apps/server/src/infra/runtime_field_fertility_compatibility_bootstrap_v1.ts", "runRuntimeFieldFertilityCompatibilityBootstrapFromEnvironmentV1", "COMMERCIAL_DATABASE_PLATFORM_BOOTSTRAP"],
+  ["apps/server/src/infra/mcft_cap07_startup_migration_runner_v1.ts", "runMcftCap07StartupMigrationFromEnvironmentV1", "FOREIGN_MCFT_MIGRATION_ROOT"],
+];
 const covRuntimeWriterKeys = new Set();
 for (const rootRel of covRuntimeRoots) {
   const rootAbs = path.resolve(ROOT, rootRel);
@@ -871,6 +890,21 @@ for (const rootRel of covRuntimeRoots) {
     const analysis = covAnalyzeFunction({ fp: rootAbs, name });
     for (const key of analysis.directWriterKeys) covRuntimeWriterKeys.add(key);
   }
+}
+const covAdditionalRuntimeRootEvidence = [];
+for (const [sourcePath, entrySymbol, rootKind] of covAdditionalRuntimeEntryRoots) {
+  const fp = path.resolve(ROOT, sourcePath);
+  assert(exists(fp), "additional production runtime root source missing", {source_path:sourcePath, entry_symbol:entrySymbol});
+  const target = covResolveFunction(fp, entrySymbol);
+  assert(target, "additional production runtime root entry symbol missing", {source_path:sourcePath, entry_symbol:entrySymbol});
+  const analysis = covAnalyzeExecutedFunction(target);
+  covAdditionalRuntimeRootEvidence.push({
+    source_path:sourcePath,
+    entry_symbol:entrySymbol,
+    root_kind:rootKind,
+    writer_count:analysis.directWriterKeys.size,
+  });
+  for (const key of analysis.directWriterKeys) covRuntimeWriterKeys.add(key);
 }
 const covRuntimeMissing = [];
 for (const key of covRuntimeWriterKeys) {
@@ -921,6 +955,8 @@ const summary={
   startup_mutation_disposition_count:covStartupDispositions.length,
   startup_root_direct_writer_count:covStartupRootWriterKeys.size,
   runtime_direct_writer_disposition_count:covRuntimeDispositions.length,
+  additional_process_subprocess_root_count:covAdditionalRuntimeEntryRoots.length,
+  additional_process_subprocess_root_evidence:covAdditionalRuntimeRootEvidence,
   coverage_zero_sets:covZeroSets,
   bsec0_closed:false,
   debt_counters:{
