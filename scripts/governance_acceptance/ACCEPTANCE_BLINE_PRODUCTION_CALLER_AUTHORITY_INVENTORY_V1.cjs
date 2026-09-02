@@ -582,6 +582,8 @@ const covHttpDispositionKey = new Map(covHttpDispositions.map((d) => [
 ]));
 
 const covAllHttp = [];
+const covDynamicHttp = [];
+const covUnsupportedRouteRegistrations = [];
 for (const fp of runtimeFiles) {
   if (!fp.endsWith(".ts") && !fp.endsWith(".tsx")) continue;
   if (isCommercialDisabledDevtools(fp)) continue;
@@ -592,13 +594,13 @@ for (const fp of runtimeFiles) {
       let isRoute = false;
       if (ts.isPropertyAccessExpression(n.expression) && ts.isIdentifier(n.expression.expression) && n.expression.expression.text === "app") {
         const candidate = n.expression.name.text.toUpperCase();
-        if (["GET","POST","PUT","PATCH","DELETE","HEAD","OPTIONS"].includes(candidate)) {
+        if (["GET","POST","PUT","PATCH","DELETE","HEAD","OPTIONS","ALL"].includes(candidate)) {
           method = candidate;
           isRoute = true;
         }
       } else if (rel(fp) === "apps/server/src/routes/programs_core_v1.ts" && ts.isIdentifier(n.expression)) {
         const candidate = n.expression.text.toUpperCase();
-        if (["GET","POST","PUT","PATCH","DELETE","HEAD","OPTIONS"].includes(candidate)) {
+        if (["GET","POST","PUT","PATCH","DELETE","HEAD","OPTIONS","ALL"].includes(candidate)) {
           method = candidate;
           isRoute = true;
         }
@@ -626,14 +628,45 @@ for (const fp of runtimeFiles) {
             fact: analysis.fact,
             writers: [...analysis.directWriterKeys],
           });
+        } else {
+          covDynamicHttp.push({
+            source_path: rel(fp),
+            method,
+            expression: routeArg ? routeArg.getText(mod.sf) : "<missing>",
+          });
         }
       }
+    }
+    if (
+      ts.isCallExpression(n) &&
+      ts.isPropertyAccessExpression(n.expression) &&
+      ts.isIdentifier(n.expression.expression) &&
+      n.expression.expression.text === "app" &&
+      n.expression.name.text === "route"
+    ) {
+      covUnsupportedRouteRegistrations.push({ source_path: rel(fp), expression: n.getText(mod.sf).slice(0, 240) });
     }
     ts.forEachChild(n, visit);
   }
   visit(mod.sf);
 }
 const covHttpUnique = [...new Map(covAllHttp.map((r) => [r.source_path+"::"+r.method+"::"+r.route, r])).values()];
+
+const covDynamicHttpAllow = [
+  ["apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts", "POST", "path"],
+  ["apps/server/src/routes/control_ao_act.ts", "POST", "legacyAoActRouteV1(\"task\")"],
+  ["apps/server/src/routes/control_ao_act.ts", "POST", "legacyAoActRouteV1(\"receipt\")"],
+  ["apps/server/src/routes/decision_eligibility_policy_declarations_v1.ts", "POST", "DECISION_ELIGIBILITY_POLICY_DECLARATION_POST_PATH_V1"],
+  ["apps/server/src/routes/programs_core_v1.ts", "POST", "path"],
+];
+const covUnexpectedDynamicHttp = covDynamicHttp.filter((d) =>
+  !covDynamicHttpAllow.some(([p,m,e]) =>
+    d.source_path === p && d.method === m && String(d.expression || "").startsWith(e)
+  )
+);
+assert(covUnexpectedDynamicHttp.length === 0, "unresolved production HTTP entrypoint requires explicit all-method disposition", covUnexpectedDynamicHttp);
+assert(covUnsupportedRouteRegistrations.length === 0, "unsupported app.route production registration requires explicit scanner support", covUnsupportedRouteRegistrations);
+
 
 const covCallerMissing = [];
 const covHttpClassMismatch = [];
@@ -666,6 +699,45 @@ for (const r of covHttpUnique) {
 }
 assert(covHttpClassMismatch.length === 0, "HTTP side-effect disposition does not match reachable write behavior", covHttpClassMismatch);
 assert(covCallerMissing.length === 0, "production caller-triggered mutation without inventory", covCallerMissing);
+
+
+const covExecutionAnalysisCache = new Map();
+function covAnalyzeExecutedFunction(target, stack = new Set()) {
+  const key = covFunctionKey(target);
+  if (covExecutionAnalysisCache.has(key)) return covExecutionAnalysisCache.get(key);
+  if (stack.has(key)) return { dml:false, ddl:false, fact:false, directWriterKeys:new Set() };
+  const next = new Set(stack);
+  next.add(key);
+  const mod = covBuildModule(target.fp);
+  const node = mod.functions.get(target.name);
+  if (!node) return { dml:false, ddl:false, fact:false, directWriterKeys:new Set() };
+
+  const direct = covDirectSqlEffect(target.fp, node);
+  const result = { dml:direct.dml, ddl:direct.ddl, fact:direct.fact, directWriterKeys:new Set() };
+  if (direct.dml || direct.ddl) result.directWriterKeys.add(key);
+
+  function merge(other) {
+    result.dml = result.dml || other.dml;
+    result.ddl = result.ddl || other.ddl;
+    result.fact = result.fact || other.fact;
+    for (const k of other.directWriterKeys) result.directWriterKeys.add(k);
+  }
+  function walk(n) {
+    if (
+      n !== node &&
+      (ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) || ts.isArrowFunction(n)) &&
+      !covImmediatelyInvokedFunction(n)
+    ) return;
+    if (ts.isCallExpression(n) && ts.isIdentifier(n.expression)) {
+      const child = covResolveFunction(target.fp, n.expression.text);
+      if (child) merge(covAnalyzeExecutedFunction(child, next));
+    }
+    ts.forEachChild(n, walk);
+  }
+  walk(node);
+  covExecutionAnalysisCache.set(key, result);
+  return result;
+}
 
 const covStartupDispositions = inv.startup_mutation_dispositions ?? [];
 const covStartupMissing = [];
@@ -714,6 +786,29 @@ const covStartupUnique = [...new Map(covStartupSeen.map((x) => [x.registration_s
 const covStartupMissingUnique = [...new Map(covStartupMissing.map((x) => [x.registration_source+"::"+x.source_path+"::"+x.entry_symbol, x])).values()];
 assert(covStartupMissingUnique.length === 0, "startup mutation without explicit disposition", covStartupMissingUnique);
 
+const covStartupRootWriterKeys = new Set();
+for (const [sourcePath, fnName] of [
+  ["apps/server/src/app.ts", "createApp"],
+  ["apps/server/src/bootstrap/server.ts", "startServer"],
+]) {
+  const fp = path.resolve(ROOT, sourcePath);
+  if (!exists(fp)) continue;
+  const target = covResolveFunction(fp, fnName);
+  if (!target) fail("startup root function missing", { source_path:sourcePath, entry_symbol:fnName });
+  const analysis = covAnalyzeExecutedFunction(target);
+  for (const key of analysis.directWriterKeys) covStartupRootWriterKeys.add(key);
+}
+const covStartupRootMissing = [];
+for (const key of covStartupRootWriterKeys) {
+  const split = key.lastIndexOf("::");
+  const sourcePath = key.slice(0, split);
+  const symbol = key.slice(split + 2);
+  const explicit = covStartupDispositions.some((d) => d.source_path === sourcePath && d.entry_symbol === symbol);
+  if (!explicit) covStartupRootMissing.push({ source_path:sourcePath, entry_symbol:symbol });
+}
+assert(covStartupRootMissing.length === 0, "startup mutation without explicit disposition from server startup graph", covStartupRootMissing);
+
+
 const covRuntimeDispositions = inv.runtime_direct_writer_dispositions ?? [];
 const covRuntimeRoots = [
   "apps/server/src/jobs/runtime.ts",
@@ -757,7 +852,7 @@ assert(covRuntimeMissing.length === 0, "production runtime direct writer without
 const covZeroSets = {
   production_caller_triggered_mutation_without_inventory: covCallerMissing.length,
   production_runtime_direct_writer_without_inventory: covRuntimeMissing.length,
-  startup_mutation_without_explicit_disposition: covStartupMissingUnique.length,
+  startup_mutation_without_explicit_disposition: covStartupMissingUnique.length + covStartupRootMissing.length,
 };
 
 const summary={
@@ -771,10 +866,13 @@ const summary={
   explicitly_non_authority_http_method_count:nonAuthority.length,
   subprocess_edge_count:sub.length,
   discovered_all_http_entrypoint_count:covHttpUnique.length,
+  discovered_dynamic_http_registration_count:covDynamicHttp.length,
+  unsupported_app_route_registration_count:covUnsupportedRouteRegistrations.length,
   discovered_get_entrypoint_count:covHttpUnique.filter((r)=>r.method==="GET").length,
   auto_pure_read_http_count:covPureReadCount,
   explicit_http_side_effect_disposition_count:covHttpDispositions.length,
   startup_mutation_disposition_count:covStartupDispositions.length,
+  startup_root_direct_writer_count:covStartupRootWriterKeys.size,
   runtime_direct_writer_disposition_count:covRuntimeDispositions.length,
   coverage_zero_sets:covZeroSets,
   bsec0_closed:false,
