@@ -88,7 +88,7 @@
         {
           "consumer_id": "agronomy-agent",
           "path": "apps/server/src/jobs/agronomy_agent.ts",
-          "role": "currently reads telemetry_index_v1 directly",
+          "role": "reads telemetry_index_v1 as a fail-closed legacy agronomy-signal input and freezes the selected telemetry fact_id; missing value or exact fact identity yields no semantic output",
           "current": true,
           "connection_class": "ACTIVE_PARALLEL",
           "activation": "FEATURE_FLAG",
@@ -1231,26 +1231,6 @@
       "new_owner_creation": "FORBIDDEN",
       "registered_producers": [
         {
-          "producer_id": "agronomy-agent-recommendation",
-          "path": "apps/server/src/jobs/agronomy_agent.ts",
-          "role": "writes recommendation_v1 and decision_recommendation_v1",
-          "authority_level": "GRANDFATHERED_DUPLICATE",
-          "grandfathered_duplicate": true,
-          "removal_target": "B-09",
-          "current": true,
-          "fingerprints": [
-            "recommendation_v1",
-            "decision_recommendation_v1"
-          ],
-          "connection_class": "ACTIVE_PARALLEL",
-          "activation": "FEATURE_FLAG",
-          "runtime_edge": "PROVEN",
-          "new_runtime_consumer_creation": "FORBIDDEN",
-          "grandfathered_runtime_consumers": [
-            "agronomy-agent-plan-write"
-          ]
-        },
-        {
           "producer_id": "decision-engine-recommendation",
           "path": "apps/server/src/routes/decision_engine_v1.ts",
           "role": "formal/product recommendation producer",
@@ -1424,15 +1404,6 @@
           "runtime_edge": "PROVEN"
         },
         {
-          "consumer_id": "agronomy-agent-plan-write",
-          "path": "apps/server/src/jobs/agronomy_agent.ts",
-          "role": "same active job persists recommendation and then operation_plan_v1 compatibility object",
-          "current": true,
-          "connection_class": "ACTIVE_PARALLEL",
-          "activation": "FEATURE_FLAG",
-          "runtime_edge": "PROVEN"
-        },
-        {
           "consumer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
           "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
           "role": "B-09j shadow-only scoped recommendation source resolver and explicit runtime consumer of the formal decision-engine recommendation producer plus the existing B-06c CandidateDecision compatibility projector; no Decision Eligibility invocation",
@@ -1469,10 +1440,10 @@
         "B-06e treats DRAFT/READY_FOR_APPROVAL as candidate-compatible only; APPROVAL_REQUESTED/APPROVED/TASK_CREATED/REJECTED/CANCELLED fail closed.",
         "B-06e never promotes prescription approval/timing/device/acceptance metadata or legacy evidence_refs into downstream or Evidence authority.",
         "B-06e rejects auto_execute_allowed=true and explicit downstream approval/plan/task/receipt identities.",
-        "B-06f registers one pure operation-plan authority classifier and grandfathered Agronomy Agent operation-plan candidate-view adapter with no runtime consumer.",
-        "B-06f requires exact jobs/agronomy_agent + agronomy_agent_auto_create dual provenance; status=CREATED alone is never enough.",
+        "B-06f retains a pure historical operation-plan authority classifier/candidate-view compatibility adapter for already-persisted legacy Agronomy Agent plan facts; #3452 removes the active Agronomy Agent Plan writer.",
+        "B-06f historical compatibility classification still requires exact jobs/agronomy_agent + agronomy_agent_auto_create provenance for legacy persisted facts; no new such facts may be produced by the active Agent.",
         "B-06f explicitly rejects approval-derived, downstream and unknown operation_plan_v1 records instead of collapsing them back into CandidateDecision.",
-        "B-06f candidate projection does not remove the source Agronomy Agent plan's historical authority; removal remains B-09 only.",
+        "B-06f candidate projection never removed historical persisted fact semantics; active Agronomy Agent decision/plan production is removed under P0-RES-003 while historical read compatibility remains bounded.",
         "B-06g registers one pure AgronomyRecommendationV2 -> CandidateDecisionV1 compatibility adapter with no runtime consumer.",
         "B-06g never promotes legacy rule-engine crop_stage/crop_code into canonical Stage/Context authority.",
         "B-06g keeps evidence_basis and SkillTrace evidence as legacy provenance only; canonical EvidenceQualification refs remain explicit.",
@@ -1497,15 +1468,6 @@
           "activation": "ALWAYS",
           "runtime_edge": "PROVEN",
           "evidence_edge_id": "C-016"
-        },
-        {
-          "consumer_id": "agronomy-agent-plan-write",
-          "path": "apps/server/src/jobs/agronomy_agent.ts",
-          "producer_id": "agronomy-agent-recommendation",
-          "connection_class": "ACTIVE_PARALLEL",
-          "activation": "FEATURE_FLAG",
-          "runtime_edge": "PROVEN",
-          "evidence_edge_id": "C-023"
         },
         {
           "consumer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
@@ -1974,26 +1936,6 @@
           "grandfathered_runtime_consumers": []
         },
         {
-          "producer_id": "agronomy-agent-plan",
-          "path": "apps/server/src/jobs/agronomy_agent.ts",
-          "role": "direct operation_plan_v1 creation after recommendation",
-          "authority_level": "GRANDFATHERED_DUPLICATE",
-          "grandfathered_duplicate": true,
-          "removal_target": "B-09",
-          "current": true,
-          "fingerprints": [
-            "operation_plan_v1",
-            "agronomy_agent_auto_create"
-          ],
-          "connection_class": "ACTIVE_PARALLEL",
-          "activation": "FEATURE_FLAG",
-          "runtime_edge": "PROVEN",
-          "new_runtime_consumer_creation": "FORBIDDEN",
-          "grandfathered_runtime_consumers": [
-            "agronomy-agent-plan-persistence"
-          ]
-        },
-        {
           "producer_id": "decision-engine-plan-touchpoint",
           "path": "apps/server/src/routes/decision_engine_v1.ts",
           "role": "recommendation/plan lifecycle touchpoint",
@@ -2022,36 +1964,16 @@
           "grandfathered_runtime_consumers": []
         }
       ],
-      "registered_consumers": [
-        {
-          "consumer_id": "agronomy-agent-plan-persistence",
-          "path": "apps/server/src/jobs/agronomy_agent.ts",
-          "role": "same active job writes operation_plan_v1 and transition records",
-          "current": true,
-          "connection_class": "ACTIVE_PARALLEL",
-          "activation": "FEATURE_FLAG",
-          "runtime_edge": "PROVEN"
-        }
-      ],
+      "registered_consumers": [],
       "notes": [
         "operation_plan_v1 record existence alone must not imply approval authority.",
-        "Agronomy Agent direct plan creation is grandfathered debt, not a proven execution bypass.",
+        "Agronomy Agent direct plan creation was grandfathered debt; #3452 removes the active writer while preserving historical fact compatibility.",
         "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only.",
         "B-06f classifies real operation_plan_v1 authority before any candidate compatibility projection.",
-        "Only exact Agronomy Agent dual provenance is candidate-view compatible; approval-derived/downstream/unknown plans are not.",
-        "Agronomy Agent direct plan authority remains active grandfathered debt until B-09 even when a CandidateDecision compatibility view is available."
+        "Historical Agronomy Agent plan facts remain candidate-view compatible only under exact legacy dual provenance; approval-derived/downstream/unknown plans are not.",
+        "Agronomy Agent direct plan authority is removed by P0-RES-003; no active background Agent path may mint operation_plan_v1 or operation_plan_transition_v1."
       ],
-      "runtime_consumers": [
-        {
-          "consumer_id": "agronomy-agent-plan-persistence",
-          "path": "apps/server/src/jobs/agronomy_agent.ts",
-          "producer_id": "agronomy-agent-plan",
-          "connection_class": "ACTIVE_PARALLEL",
-          "activation": "FEATURE_FLAG",
-          "runtime_edge": "PROVEN",
-          "evidence_edge_id": "C-024"
-        }
-      ]
+      "runtime_consumers": []
     },
     {
       "semantic_id": "execution.task_receipt_acceptance",
@@ -2967,52 +2889,39 @@
     {
       "guard_id": "G-B02-04-agronomy-agent-direct-plan-fingerprint",
       "semantic_id": "operation.plan",
-      "description": "The current Agronomy Agent direct plan producer is grandfathered at exactly one path; copies are forbidden.",
-      "scan_roots": [
-        "apps/server/src"
-      ],
-      "extensions": [
-        ".ts"
-      ],
-      "ignore_path_fragments": [
-        ".test.ts",
-        ".acceptance.test.ts"
-      ],
-      "match": {
-        "all_of": [
-          "agronomy_agent_auto_create",
-          "operation_plan_v1"
-        ]
-      },
-      "registered_paths": [
+      "description": "Agronomy Agent direct operation-plan authority is removed; the active job file may not contain the legacy auto-create trigger or direct operation_plan_v1 writer fingerprint.",
+      "failure": "AGRONOMY_AGENT_DIRECT_PLAN_AUTHORITY_FORBIDDEN",
+      "scan_files": [
         "apps/server/src/jobs/agronomy_agent.ts"
       ],
-      "failure": "UNREGISTERED_AGRONOMY_AGENT_PLAN_PRODUCER"
+      "forbid": {
+        "any_of_regex": [
+          "agronomy_agent_auto_create",
+          "type\\\\s*:\\\\s*[\\\"']operation_plan_v1[\\\"']",
+          "type\\\\s*:\\\\s*[\\\"']operation_plan_transition_v1[\\\"']"
+        ]
+      }
     },
     {
       "guard_id": "G-B02-05-missing-soil-default-fingerprint",
       "semantic_id": "evidence.raw_observation",
-      "description": "The known DEFAULT_SOIL_MOISTURE compatibility fallback is grandfathered only in the existing Agronomy Agent.",
-      "scan_roots": [
-        "apps/server/src"
-      ],
-      "extensions": [
-        ".ts"
-      ],
-      "ignore_path_fragments": [
-        ".test.ts",
-        ".acceptance.test.ts"
-      ],
+      "description": "Agronomy Agent telemetry consumption must fail closed on missing/non-exact telemetry and retain immutable telemetry fact provenance; fabricated numeric fallback is forbidden.",
       "match": {
         "all_of": [
-          "DEFAULT_SOIL_MOISTURE",
-          "effectiveSoilMoisture"
+          "fact_id AS telemetry_fact_id",
+          "const telemetryFactId = safeString(telemetry?.telemetry_fact_id)",
+          "if (!Number.isFinite(soilMoisture ?? Number.NaN) || !telemetryFactId)",
+          "authority_mode: \"LEGACY_AGRONOMY_SIGNAL_ONLY\"",
+          "evidence_refs: [telemetryFactId]"
         ]
       },
       "registered_paths": [
         "apps/server/src/jobs/agronomy_agent.ts"
       ],
-      "failure": "UNREGISTERED_FABRICATED_OBSERVATION_FALLBACK"
+      "failure": "UNREGISTERED_AGRONOMY_AGENT_EXACT_TELEMETRY_FAIL_CLOSED_PATH",
+      "scan_files": [
+        "apps/server/src/jobs/agronomy_agent.ts"
+      ]
     },
     {
       "guard_id": "G-B02-06-decision-engine-integration-hotspot",
