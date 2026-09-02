@@ -157,14 +157,19 @@ Fertilization Domain owns formal business facts. GEOX Main Chain owns Recommenda
 {
   fertilization_acceptance_id: string;
   fertilization_prescription_id: string;
+  fertilization_prescription_fact_id: string;
+  variable_prescription_id: string;
   tenant_id: string;
   project_id: string;
   group_id: string;
   field_id: string;
-  operation_plan_id?: string | null;
-  act_task_id?: string | null;
-  receipt_id?: string | null;
-  as_applied_id?: string | null;
+  operation_plan_id: string;
+  act_task_id: string;
+  receipt_fact_id: string;
+  receipt_id: string;
+  as_executed_id: string;
+  as_applied_id: string;
+  acceptance_result_fact_id: string;
   acceptance_status: "PASS" | "FAIL" | "NEEDS_REVIEW" | "MISSING";
   zone_results: Array<{
     zone_id: string;
@@ -192,7 +197,31 @@ For `SAMPLING_LAB`, `sample_id` and `lab_import_id` are business continuity asse
 
 `MANUAL_AGRONOMIST` requires explicit evidence refs and defaults to non-customer-visible review until a later approval chain validates it.
 
-## 4. Skill boundary note
+## 4. Execution provenance rule
+
+Formal Fertilization Acceptance consumes, but does not replace, the canonical execution chain.
+
+Required request identities are:
+
+```text
+fertilization_prescription_id
+receipt_fact_id
+act_task_id
+operation_plan_id
+as_executed_id
+as_applied_id
+acceptance_result_fact_id
+```
+
+The exact Fertilization prescription must resolve its deterministic bridge successor `fert_bridge_<fertilization_prescription_id>` in `prescription_contract_v1`. Exact Receipt, AsExecuted, AsApplied, and canonical Acceptance must all match that bridge prescription, tenant/project/group, field, task, and operation.
+
+`zone_applications` in request JSON are forbidden as acceptance evidence. Zone actuals are read only from `as_applied_map_v1.application.zone_applications`.
+
+Fertilization `PASS` additionally requires the exact `acceptance_result_v1` to be `PASS` with `formal_acceptance=true`, `formal_evidence_passed=true`, `formal_execution_passed=true`, `source_lane=FORMAL_OPERATION`, and `customer_visible_eligible=true`.
+
+`fields.write` and `prescription.write` are not Fertilization Acceptance authority. The route requires dedicated `acceptance.evaluate` scope.
+
+## 5. Skill boundary note
 
 `AcceptanceSkill skill_id=fertilization_acceptance_v1` is only an acceptance-signal producer and is not the formal `fertilization_acceptance_v1` fact writer.
 
@@ -202,7 +231,7 @@ Fertilization AGRONOMY Skill output may be `diagnosis_signal` or `recommendation
 
 Fertilization AGRONOMY Skill output may be diagnosis_signal or recommendation_candidate before domain promotion; it is not a customer-visible recommendation, prescription, approval, AO-ACT task, receipt, acceptance, ROI, or Field Memory.
 
-## 5. Hard rules
+## 6. Hard rules
 
 - SkillRun SUCCESS ≠ nitrogen_need_assessment LOW_N_RISK
 - lab_result_imported ≠ nitrogen need confirmed
@@ -211,5 +240,7 @@ Fertilization AGRONOMY Skill output may be diagnosis_signal or recommendation_ca
 - fertilization_recommendation ≠ fertilization prescription
 - fertilization_prescription ≠ approved operation
 - receipt success ≠ fertilization acceptance PASS
+- caller zone_applications ≠ canonical execution evidence
+- fertilization acceptance PASS requires exact canonical acceptance_result_v1 formal PASS
 - operation-level average 不得掩盖 zone-level over/under application
 - fertilization acceptance PASS 不得直接写 ROI / Field Memory / customer success
