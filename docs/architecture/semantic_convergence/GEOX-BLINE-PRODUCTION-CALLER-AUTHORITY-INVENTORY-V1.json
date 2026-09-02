@@ -9871,6 +9871,91 @@
       ],
       "current_disposition": "FOREIGN_MCFT_READ_ONLY_NO_BLINE_CHANGE",
       "notes": "MCFT-owned canonical field-twin read API. B-Line records activation/disposition only and does not modify MCFT implementation."
+    },
+    {
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "http_method": "POST",
+      "expression": "legacyAoActRouteV1(\"task\")",
+      "disposition_kind": "DYNAMIC_COMPATIBILITY_ROUTE_TO_EXACT_WRITER_SURFACE",
+      "side_effect_class": "FACT_LEDGER_WRITE",
+      "exact_routes": [
+        "/api/control/ao_act/task"
+      ],
+      "exact_surface_ids": [
+        "BSEC-079"
+      ],
+      "current_disposition": "LEGACY_COMPATIBILITY_WRITER_ALREADY_EXACT_INVENTORIED",
+      "notes": "Deprecated POST delegates to handleAoActTaskV1; exact caller-authority surface BSEC-079 remains authoritative for the route.",
+      "disposition_id": "BDYN-016"
+    },
+    {
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "http_method": "POST",
+      "expression": "legacyAoActRouteV1(\"receipt\")",
+      "disposition_kind": "DYNAMIC_COMPATIBILITY_ROUTE_TO_EXACT_WRITER_SURFACE",
+      "side_effect_class": "FACT_LEDGER_WRITE",
+      "exact_routes": [
+        "/api/control/ao_act/receipt"
+      ],
+      "exact_surface_ids": [
+        "BSEC-080"
+      ],
+      "current_disposition": "LEGACY_COMPATIBILITY_WRITER_ALREADY_EXACT_INVENTORIED",
+      "notes": "Deprecated POST delegates to handleAoActReceiptV1; exact caller-authority surface BSEC-080 remains authoritative for the route.",
+      "disposition_id": "BDYN-017"
+    },
+    {
+      "source_path": "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts",
+      "http_method": "POST",
+      "expression": "path",
+      "disposition_kind": "CAPTURED_LEGACY_POST_HANDLER_WRAPPER",
+      "side_effect_class": "FACT_LEDGER_WRITE",
+      "exact_routes": [
+        "/api/v1/operator/twin/fields/:field_id/root-zone-scenarios/:scenario_set_id/options/:option_id/submit-recommendation",
+        "/api/v1/operator/twin/fields/:field_id/scenarios/:scenario_set_id/options/:option_id/submit-recommendation"
+      ],
+      "exact_surface_ids": [
+        "BSEC-001",
+        "BSEC-002"
+      ],
+      "current_disposition": "LEGACY_WRITE_REGISTRATION_WRAPPER_TO_EXACT_SURFACES",
+      "notes": "Wrapper captures two POST handlers from operator_twin.ts and re-registers them. The wrapper itself has no inline SQL, but deployed handler effects are represented by BSEC-001/BSEC-002.",
+      "disposition_id": "BDYN-018"
+    },
+    {
+      "source_path": "apps/server/src/routes/decision_eligibility_policy_declarations_v1.ts",
+      "http_method": "POST",
+      "expression": "DECISION_ELIGIBILITY_POLICY_DECLARATION_POST_PATH_V1",
+      "disposition_kind": "STATIC_CONSTANT_ROUTE_TO_EXACT_WRITER_SURFACE",
+      "side_effect_class": "FACT_LEDGER_WRITE",
+      "exact_routes": [
+        "/api/v1/decision-eligibility/policy-declarations"
+      ],
+      "exact_surface_ids": [
+        "BSEC-061"
+      ],
+      "current_disposition": "DEDICATED_POLICY_DECLARATION_WRITER_ALREADY_EXACT_INVENTORIED",
+      "notes": "Constant route delegates to appendDecisionEligibilityPolicyDeclarationFactV1; BSEC-061 owns the caller-authority disposition.",
+      "disposition_id": "BDYN-019"
+    },
+    {
+      "source_path": "apps/server/src/routes/programs_core_v1.ts",
+      "http_method": "POST",
+      "expression": "path",
+      "disposition_kind": "LOCAL_REGISTRATION_WRAPPER_EXACT_LITERAL_CALLS_SCANNED",
+      "side_effect_class": "PURE_READ",
+      "exact_routes": [],
+      "exact_surface_ids": [
+        "BSEC-044",
+        "BSEC-045",
+        "BSEC-046",
+        "BSEC-047",
+        "BSEC-048",
+        "BSEC-049"
+      ],
+      "current_disposition": "REGISTRATION_INDIRECTION_ONLY",
+      "notes": "Local post(path,handler) wrapper. Exact post(\"/...\") call sites are separately discovered and their caller-authority surfaces are BSEC-044..049.",
+      "disposition_id": "BDYN-020"
     }
   ]
 }
