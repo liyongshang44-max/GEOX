@@ -139,29 +139,26 @@
       "entrypoint": "background agronomy agent",
       "activation_mode": "FEATURE_FLAGGED_WORKER",
       "writes": [
-        "decision_recommendation_v1",
-        "operation_plan_v1"
+        "recommendation_v1 non-executable legacy agronomy signal only"
       ],
       "reads": [
-        "telemetry",
+        "exact telemetry_index_v1 soil-moisture value + immutable fact_id",
         "FieldProgram",
         "legacy agronomy rules"
       ],
       "semantic_family": [
         "evidence.raw_observation",
-        "decision.candidate",
-        "operation.plan"
+        "agronomy.interpretation"
       ],
-      "authority_class": "ACTIVE_LEGACY_WRITER",
+      "authority_class": "LEGACY_AGRONOMY_SIGNAL_DERIVER_FAIL_CLOSED_EXACT_TELEMETRY_BOUND",
       "runtime_reachable": "PROVEN_WHEN_ENABLED",
       "feature_flag": "AGRONOMY_AGENT_ENABLED",
       "downstream_consumers": [
-        "recommendation projections",
-        "operation-plan consumers"
+        "legacy recommendation_v1 dedupe/read compatibility only"
       ],
-      "removal_target": "SHADOW_THEN_REMOVE_DIRECT_PLAN_AND_FABRICATED_OBSERVATION_AUTHORITY",
+      "removal_target": "P0-RES-003 CLOSED: KEEP NON-EXECUTABLE LEGACY AGRONOMY SIGNAL; NO FABRICATED TELEMETRY, DECISION_RECOMMENDATION, OR DIRECT PLAN AUTHORITY",
       "b02_registered": true,
-      "audit_note": "Missing soil telemetry currently falls back to DEFAULT_SOIL_MOISTURE=30 before recommendation generation."
+      "audit_note": "P0-RES-003 closed on #3452 product qualification run 33591992325 @ 4e3c4f3514e3c16777e5824ccee2367eb88dd0f3: missing telemetry produces zero semantic writes; retained signal requires exact telemetry_index_v1.fact_id provenance; Agent decision_recommendation_v1 and OperationPlan/transition writers are removed."
     },
     {
       "surface_id": "RES-004",
@@ -1234,8 +1231,8 @@
       "entrypoint": "long-running jobs runtime",
       "activation_mode": "BACKGROUND_WORKER",
       "writes": [
-        "indirect Evidence Export artifact/job side effects through runQueuedEvidenceExportJob",
-        "optional Agronomy Agent side effects when enabled"
+        "indirect Evidence Export/report packaging side effects through queued background jobs",
+        "optional non-executable recommendation_v1 legacy agronomy signal when AGRONOMY_AGENT_ENABLED=1"
       ],
       "reads": [
         "pending legacy delivery evidence export jobs",
@@ -1243,13 +1240,11 @@
         "AGRONOMY_AGENT_ENABLED"
       ],
       "semantic_family": [
-        "acceptance.verdict",
-        "execution.receipt",
         "execution.result_evidence",
-        "execution.task",
-        "operation.plan"
+        "agronomy.interpretation",
+        "governance.runtime_activation"
       ],
-      "authority_class": "BACKGROUND_AUTHORITY_ORCHESTRATOR_WITH_PARALLEL_ACCEPTANCE_P0",
+      "authority_class": "BACKGROUND_RUNTIME_ORCHESTRATOR_EXPLICITLY_DISPOSED",
       "runtime_reachable": "PROVEN",
       "feature_flag": "AGRONOMY_AGENT_ENABLED only gates agronomy agent; legacy export worker is unconditional",
       "downstream_consumers": [
@@ -1257,9 +1252,9 @@
         "evidence report runtime",
         "agronomy agent"
       ],
-      "removal_target": "KEEP JOB ORCHESTRATOR; REMOVE LEGACY EXPORT ACCEPTANCE MINTING AND PRESERVE EXPLICIT AGENT FEATURE GATE",
+      "removal_target": "KEEP JOB ORCHESTRATOR; P0-RES-007 ACCEPTANCE MINTING CLOSED; P0-RES-003 AGRONOMY DECISION/PLAN AUTHORITY CLOSED; PRESERVE EXPLICIT FEATURE GATE",
       "b02_registered": false,
-      "audit_note": "P0-RES-007 is activated here: queued legacy delivery export jobs call runQueuedEvidenceExportJob."
+      "audit_note": "Background runtime remains active and is now explicitly represented in the active-runtime graph. Delivery export is packaging-only after P0-RES-007; Agronomy Agent is fail-closed exact-telemetry-bound and non-executable after P0-RES-003."
     },
     {
       "surface_id": "RES-046",
@@ -6038,17 +6033,16 @@
       "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
       "feature_flag": null,
       "downstream_consumers": [],
-      "removal_target": "Shadow then remove Candidate/Plan authority at B-09 cutover",
+      "removal_target": "P0-RES-003 CLOSED: RETAIN FACT-LEDGER WRITE ONLY FOR NON-EXECUTABLE recommendation_v1 LEGACY SIGNAL",
       "b02_registered": true,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "ledger_disposition": "LEGACY_COMPATIBILITY",
       "underlying_semantic_families": [
-        "decision.candidate",
-        "operation.plan"
+        "agronomy.interpretation"
       ],
-      "authority_owner": "LEGACY_AGRONOMY_AGENT",
-      "writer_scope": "recommendation and legacy plan proposal facts",
-      "audit_note": "Active legacy agent can persist recommendation and operation plan semantics."
+      "authority_owner": "LEGACY_AGRONOMY_SIGNAL_DERIVER",
+      "writer_scope": "recommendation_v1 legacy agronomy signal only; exact telemetry fact provenance required; no decision_recommendation_v1 or OperationPlan/transition writes",
+      "audit_note": "P0-RES-003 product qualification run 33591992325 proves missing telemetry zero-write, exact telemetry fact provenance, recommendation_v1 signal-only output, and zero Candidate/Plan authority."
     },
     {
       "surface_id": "RES-237",
