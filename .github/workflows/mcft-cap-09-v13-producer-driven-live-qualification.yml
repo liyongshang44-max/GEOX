@@ -53,8 +53,39 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Resolve governed producer live applicability
+        id: applicability
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="acceptance-output/MCFT_CAP_09_V13_PRODUCER_LIVE_APPLICABILITY_V1_RESULT.json"
+          node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_V13_PRODUCER_LIVE_APPLICABILITY_V1.cjs \
+            --base '${{ github.event.pull_request.base.sha }}' \
+            --head '${{ github.event.pull_request.head.sha }}' \
+            --generation v13 \
+            --stage POST_MERGE_V13_QUALIFICATION \
+            --out "$out"
+          node - "$out" "$GITHUB_OUTPUT" <<'NODE'
+          const fs=require('node:fs');
+          const [outPath,githubOutput]=process.argv.slice(2);
+          const p=JSON.parse(fs.readFileSync(outPath,'utf8'));
+          if(p.status!=='PASS') throw new Error('V13_PRODUCER_LIVE_APPLICABILITY_NOT_PASS');
+          fs.appendFileSync(githubOutput,`live_required=${p.live_required?'true':'false'}\n`);
+          if(p.evidence_id) fs.appendFileSync(githubOutput,`evidence_id=${p.evidence_id}\n`);
+          console.log(JSON.stringify(p,null,2));
+          NODE
+
+      - name: Accept durable producer evidence without live rerun
+        if: steps.applicability.outputs.live_required == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${{ steps.applicability.outputs.evidence_id }}"
+          echo "V13_PRODUCER_LIVE_REQUALIFICATION_SKIPPED_DURABLE_EVIDENCE:${{ steps.applicability.outputs.evidence_id }}"
+
       - name: Resolve explicit live arm
         id: arm
+        if: steps.applicability.outputs.live_required == 'true'
         shell: node {0}
         run: |
           const fs=require('node:fs');
@@ -79,37 +110,12 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_OUTPUT,'armed=true\n');
           fs.appendFileSync(process.env.GITHUB_OUTPUT,'qualification_first_base='+a.qualification_first_base+'\n');
 
-
-      - name: Resolve governed producer live applicability
-        id: applicability
-        if: steps.arm.outputs.armed == 'true'
+      - name: Require live arm when live requalification is required
+        if: steps.applicability.outputs.live_required == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          out="acceptance-output/MCFT_CAP_09_V13_PRODUCER_LIVE_APPLICABILITY_V1_RESULT.json"
-          node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_V13_PRODUCER_LIVE_APPLICABILITY_V1.cjs \
-            --base '${{ github.event.pull_request.base.sha }}' \
-            --head '${{ github.event.pull_request.head.sha }}' \
-            --generation v13 \
-            --stage POST_MERGE_V13_QUALIFICATION \
-            --out "$out"
-          node - "$out" "$GITHUB_OUTPUT" <<'NODE'
-          const fs=require('node:fs');
-          const [outPath,githubOutput]=process.argv.slice(2);
-          const p=JSON.parse(fs.readFileSync(outPath,'utf8'));
-          if(p.status!=='PASS') throw new Error('V13_PRODUCER_LIVE_APPLICABILITY_NOT_PASS');
-          fs.appendFileSync(githubOutput,`live_required=${p.live_required?'true':'false'}\n`);
-          if(p.evidence_id) fs.appendFileSync(githubOutput,`evidence_id=${p.evidence_id}\n`);
-          console.log(JSON.stringify(p,null,2));
-          NODE
-
-      - name: Accept durable producer evidence without live rerun
-        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'false'
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "${{ steps.applicability.outputs.evidence_id }}"
-          echo "V13_PRODUCER_LIVE_REQUALIFICATION_SKIPPED_DURABLE_EVIDENCE:${{ steps.applicability.outputs.evidence_id }}"
+          test "${{ steps.arm.outputs.armed }}" = "true"
 
       - name: Require exact frozen subject and authority
         if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'

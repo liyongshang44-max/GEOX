@@ -570,7 +570,10 @@
         "scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs",
         "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
         "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_V13_PRODUCER_LIVE_APPLICABILITY_V1.cjs",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_RUNTIME_HARNESS_RESOLVER_MIGRATION_V1.cjs"
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_RUNTIME_HARNESS_RESOLVER_MIGRATION_V1.cjs",
+        ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml",
+        ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs"
       ]
     }
   },
@@ -624,7 +627,7 @@
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.cjs"
       ],
       "resolver_ids": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "historical_evidence_policy": "CARRY_ONLY_IF_IMMUTABLE_BINDING_AND_DEPENDENCY_CLOSURE_UNCHANGED",
       "execution_workflow": ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
@@ -632,7 +635,7 @@
       "fail_policy": "FAIL_CLOSED",
       "carry_forward_policy": "ONLY_WHEN_DEPENDENCY_RESOLVER_UNCHANGED",
       "requalification_triggers": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "applicable_stages": [
         "SUCCESSOR_SUBJECT_PRE_MERGE",
@@ -652,7 +655,7 @@
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
       ],
       "resolver_ids": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "historical_evidence_policy": "CARRY_ONLY_IF_IMMUTABLE_BINDING_AND_DEPENDENCY_CLOSURE_UNCHANGED",
       "execution_workflow": ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
@@ -660,7 +663,7 @@
       "fail_policy": "FAIL_CLOSED",
       "carry_forward_policy": "ONLY_WHEN_DEPENDENCY_RESOLVER_UNCHANGED",
       "requalification_triggers": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "applicable_stages": [
         "SUCCESSOR_SUBJECT_PRE_MERGE",
@@ -680,7 +683,7 @@
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
       ],
       "resolver_ids": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "historical_evidence_policy": "CARRY_ONLY_IF_IMMUTABLE_BINDING_AND_DEPENDENCY_CLOSURE_UNCHANGED",
       "execution_workflow": ".github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml",
@@ -688,7 +691,7 @@
       "fail_policy": "FAIL_CLOSED",
       "carry_forward_policy": "ONLY_WHEN_DEPENDENCY_RESOLVER_UNCHANGED",
       "requalification_triggers": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "applicable_stages": [
         "SUCCESSOR_SUBJECT_PRE_MERGE",
@@ -957,7 +960,7 @@
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
       ],
       "resolver_ids": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "historical_evidence_policy": "FRESH_QUALIFICATION_REQUIRED_NO_PREVIOUS_GENERATION_REUSE",
       "execution_workflow": ".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml",
@@ -965,7 +968,7 @@
       "fail_policy": "FAIL_CLOSED_UNTIL_IMPLEMENTED_AND_QUALIFIED",
       "carry_forward_policy": "NONE",
       "requalification_triggers": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "applicable_stages": [
         "POST_MERGE_V13_QUALIFICATION"
@@ -1039,7 +1042,7 @@
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
       ],
       "resolver_ids": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "historical_evidence_policy": "FRESH_V5_EPOCH_ONLY_FAILED_V4_REUSE_FORBIDDEN",
       "execution_workflow": null,
@@ -1047,7 +1050,7 @@
       "fail_policy": "FAIL_CLOSED_UNTIL_POST_GRADUATION_ACTIVATION_AUTHORIZED",
       "carry_forward_policy": "NONE",
       "requalification_triggers": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "applicable_stages": [
         "POST_GRADUATION_FORMAL_V5_ACTIVATION"
@@ -1067,16 +1070,18 @@
       ],
       "resolver_ids": [
         "V13_RUNTIME_SEMANTIC_CLOSURE",
-        "V13_QUALIFICATION_HARNESS_CLOSURE"
+        "V13_QUALIFICATION_HARNESS_CLOSURE",
+        "CONTROL_PLANE_FILES"
       ],
       "historical_evidence_policy": "BF1D_LEGACY_RUNTIME_DIGEST_PROJECTION_REQUIRES_MACHINE_PARTITION_PROOF",
-      "execution_workflow": null,
-      "execution_workflow_status": "IMPLEMENTED_AS_CONTROL_PLANE_DIAGNOSTIC",
+      "execution_workflow": ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
       "fail_policy": "FAIL_CLOSED_UNTIL_RUNTIME_HARNESS_PARTITION_AND_BF1D_PROJECTION_PROVEN",
       "carry_forward_policy": "NONE",
       "requalification_triggers": [
         "V13_RUNTIME_SEMANTIC_CLOSURE",
-        "V13_QUALIFICATION_HARNESS_CLOSURE"
+        "V13_QUALIFICATION_HARNESS_CLOSURE",
+        "CONTROL_PLANE_FILES"
       ],
       "applicable_stages": [
         "POST_MERGE_V13_QUALIFICATION"

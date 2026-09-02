@@ -19,13 +19,35 @@ const LEGACY = "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE";
 const RUNTIME = "V13_RUNTIME_SEMANTIC_CLOSURE";
 const HARNESS = "V13_QUALIFICATION_HARNESS_CLOSURE";
 const SELF = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_RUNTIME_HARNESS_RESOLVER_MIGRATION_V1.cjs";
+const POST_MIGRATION_HARNESS_ADDITIONS = [
+  SELF,
+  ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml",
+  ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs",
+];
 const BF1D = "bf1d345f925f543779718973f8c9419684498e2a";
 const LEGACY_AGGREGATE_DIGEST = "sha256:db6bbfe41052d262481bb2a911cbe1501247c32ed111daa2af0b8ab5c58088b3";
 const PRODUCER_CHECKS = {
-  V13_AUTONOMOUS_FORCING_FOUNDATION: 33605700749,
-  V13_HOLISTIC_SCHEMA: 33605700771,
-  V13_NEXT_TICK_VIABILITY: 33605700731,
-  V13_PRODUCER_DRIVEN_QUALIFICATION: 33605700840,
+  V13_AUTONOMOUS_FORCING_FOUNDATION: {
+    run_id: 33605700749,
+    source_evidence_id: "V13_AUTONOMOUS_FORCING_FOUNDATION_POSTMERGE_BF1D345F",
+    projected_evidence_id: "V13_AUTONOMOUS_FORCING_FOUNDATION_POSTMERGE_BF1D345F_RUNTIME_PROJECTION_V1",
+  },
+  V13_HOLISTIC_SCHEMA: {
+    run_id: 33605700771,
+    source_evidence_id: "V13_HOLISTIC_SCHEMA_POSTMERGE_BF1D345F",
+    projected_evidence_id: "V13_HOLISTIC_SCHEMA_POSTMERGE_BF1D345F_RUNTIME_PROJECTION_V1",
+  },
+  V13_NEXT_TICK_VIABILITY: {
+    run_id: 33605700731,
+    source_evidence_id: "V13_NEXT_TICK_VIABILITY_POSTMERGE_BF1D345F",
+    projected_evidence_id: "V13_NEXT_TICK_VIABILITY_POSTMERGE_BF1D345F_RUNTIME_PROJECTION_V1",
+  },
+  V13_PRODUCER_DRIVEN_QUALIFICATION: {
+    run_id: 33605700840,
+    source_evidence_id: "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F",
+    projected_evidence_id: "V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F_RUNTIME_PROJECTION_V1",
+  },
 };
 
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
@@ -64,11 +86,13 @@ try {
   const harnessSet = new Set(harness.paths);
   assert.equal(legacySet.size, 124, "V13_MIGRATION_LEGACY_PATH_COUNT_CHANGED");
   assert.equal(runtimeSet.size, 108, "V13_MIGRATION_RUNTIME_PATH_COUNT_CHANGED");
-  assert.equal(harnessSet.size, 17, "V13_MIGRATION_HARNESS_PATH_COUNT_CHANGED");
-  assert.equal(harnessSet.has(SELF), true, "V13_MIGRATION_SELF_MUST_BE_HARNESS_GOVERNED");
-  assert.equal(legacySet.has(SELF), false, "V13_MIGRATION_SELF_MUST_NOT_BE_LEGACY_RUNTIME_EVIDENCE");
+  assert.equal(harnessSet.size, 20, "V13_MIGRATION_HARNESS_PATH_COUNT_CHANGED");
+  for (const rel of POST_MIGRATION_HARNESS_ADDITIONS) {
+    assert.equal(harnessSet.has(rel), true, "V13_MIGRATION_POST_ADDITION_MUST_BE_HARNESS_GOVERNED:" + rel);
+    assert.equal(legacySet.has(rel), false, "V13_MIGRATION_POST_ADDITION_MUST_NOT_ENTER_LEGACY_EVIDENCE:" + rel);
+  }
 
-  const legacyHarnessSet = new Set([...harnessSet].filter((value) => value !== SELF));
+  const legacyHarnessSet = new Set([...harnessSet].filter((value) => !POST_MIGRATION_HARNESS_ADDITIONS.includes(value)));
   assert.equal(legacyHarnessSet.size, 16, "V13_MIGRATION_LEGACY_HARNESS_PATH_COUNT_REQUIRED");
   assert.equal([...runtimeSet].some((value) => legacyHarnessSet.has(value)), false, "V13_MIGRATION_RUNTIME_HARNESS_OVERLAP_FORBIDDEN");
   assert.equal([...runtimeSet].every((value) => legacySet.has(value)), true, "V13_MIGRATION_RUNTIME_MUST_BE_LEGACY_SUBSET");
@@ -99,14 +123,21 @@ try {
   const entries = registry.requalification_evidence?.entries || [];
   const anchors = new Map((registry.requalification_evidence?.durable_anchors?.entries || []).map((row) => [row.evidence_id, row]));
   const sourceEvidence = {};
-  for (const [checkId, runId] of Object.entries(PRODUCER_CHECKS)) {
-    const row = entries.find((entry) =>
-      entry.check_id === checkId &&
-      entry.subject_sha === BF1D &&
-      entry.run_id === runId &&
-      entry.dependency_digest === LEGACY_AGGREGATE_DIGEST
-    );
+  const bindingFields = [
+    "evidence_id", "check_id", "evidence_class", "generation", "stage", "subject_sha",
+    "workflow_name", "workflow_path", "run_id", "run_conclusion", "artifact_id", "artifact_digest",
+    "dependency_subject_sha", "dependency_digest_strategy", "dependency_digest",
+    "artifact_absence_reason", "immutable",
+  ];
+  const expectedBinding = (entry) => sha256(JSON.stringify(bindingFields.map((key) => entry?.[key] ?? null)));
+  for (const [checkId, spec] of Object.entries(PRODUCER_CHECKS)) {
+    const runId = spec.run_id;
+    const row = entries.find((entry) => entry.evidence_id === spec.source_evidence_id);
     assert.ok(row, "V13_MIGRATION_BF1D_SOURCE_EVIDENCE_REQUIRED:" + checkId);
+    assert.equal(row.check_id, checkId, "V13_MIGRATION_BF1D_SOURCE_CHECK_MISMATCH:" + checkId);
+    assert.equal(row.subject_sha, BF1D, "V13_MIGRATION_BF1D_SOURCE_SUBJECT_MISMATCH:" + checkId);
+    assert.equal(row.run_id, runId, "V13_MIGRATION_BF1D_SOURCE_RUN_MISMATCH:" + checkId);
+    assert.equal(row.dependency_digest, LEGACY_AGGREGATE_DIGEST, "V13_MIGRATION_BF1D_SOURCE_DIGEST_MISMATCH:" + checkId);
     assert.equal(row.run_conclusion, "success", "V13_MIGRATION_BF1D_SOURCE_RUN_SUCCESS_REQUIRED:" + checkId);
     assert.equal(row.immutable, true, "V13_MIGRATION_BF1D_SOURCE_IMMUTABLE_REQUIRED:" + checkId);
     const anchor = anchors.get(row.evidence_id);
@@ -114,8 +145,41 @@ try {
     assert.equal(anchor.run_id, runId, "V13_MIGRATION_BF1D_SOURCE_ANCHOR_RUN_MISMATCH:" + checkId);
     assert.equal(anchor.run_snapshot?.head_sha, BF1D, "V13_MIGRATION_BF1D_SOURCE_ANCHOR_HEAD_MISMATCH:" + checkId);
     assert.equal(anchor.run_snapshot?.base_sha, "46367333d228a2b90a86ff6a33aebc334f3d73a2", "V13_MIGRATION_BF1D_SOURCE_ANCHOR_BASE_MISMATCH:" + checkId);
-    sourceEvidence[checkId] = { evidence_id: row.evidence_id, run_id: runId };
+
+    const projected = entries.find((entry) => entry.evidence_id === spec.projected_evidence_id);
+    assert.ok(projected, "V13_MIGRATION_PROJECTED_EVIDENCE_REQUIRED:" + checkId);
+    assert.equal(projected.check_id, checkId, "V13_MIGRATION_PROJECTED_CHECK_MISMATCH:" + checkId);
+    assert.equal(projected.subject_sha, BF1D, "V13_MIGRATION_PROJECTED_SUBJECT_MISMATCH:" + checkId);
+    assert.equal(projected.run_id, runId, "V13_MIGRATION_PROJECTED_RUN_MISMATCH:" + checkId);
+    assert.equal(projected.dependency_digest, projectedAtHead, "V13_MIGRATION_PROJECTED_DIGEST_MISMATCH:" + checkId);
+    assert.equal(projected.projection_source_evidence_id, row.evidence_id, "V13_MIGRATION_PROJECTED_SOURCE_MISMATCH:" + checkId);
+    assert.equal(projected.projection_migration_proof_subject_sha, "5e162fceb5758aa3eaf7894a474a5886fa069057", "V13_MIGRATION_PROJECTED_PROOF_SUBJECT_MISMATCH:" + checkId);
+    assert.equal(projected.projection_legacy_dependency_digest, LEGACY_AGGREGATE_DIGEST, "V13_MIGRATION_PROJECTED_LEGACY_DIGEST_MISMATCH:" + checkId);
+    assert.equal(projected.projection_runtime_resolver_id, RUNTIME, "V13_MIGRATION_PROJECTED_RESOLVER_MISMATCH:" + checkId);
+    assert.equal(projected.projection_runtime_path_digest, runtimeAtHead.digest, "V13_MIGRATION_PROJECTED_PATH_DIGEST_MISMATCH:" + checkId);
+    assert.equal(projected.projection_authorizes_new_live_claim, false, "V13_MIGRATION_PROJECTED_LIVE_CLAIM_FORBIDDEN:" + checkId);
+    assert.equal(projected.immutable_binding_sha256, expectedBinding(projected), "V13_MIGRATION_PROJECTED_BINDING_MISMATCH:" + checkId);
+    const projectedAnchor = anchors.get(projected.evidence_id);
+    assert.ok(projectedAnchor, "V13_MIGRATION_PROJECTED_ANCHOR_REQUIRED:" + checkId);
+    assert.equal(projectedAnchor.run_id, runId, "V13_MIGRATION_PROJECTED_ANCHOR_RUN_MISMATCH:" + checkId);
+    assert.deepEqual(projectedAnchor.run_snapshot, anchor.run_snapshot, "V13_MIGRATION_PROJECTED_ANCHOR_SNAPSHOT_MISMATCH:" + checkId);
+    sourceEvidence[checkId] = {
+      source_evidence_id: row.evidence_id,
+      projected_evidence_id: projected.evidence_id,
+      run_id: runId,
+    };
   }
+
+  const producerWorkflow = fs.readFileSync(path.join(ROOT, ".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml"), "utf8");
+  const applicabilityIndex = producerWorkflow.indexOf("- name: Resolve governed producer live applicability");
+  const durableIndex = producerWorkflow.indexOf("- name: Accept durable producer evidence without live rerun");
+  const armIndex = producerWorkflow.indexOf("- name: Resolve explicit live arm");
+  const requireArmIndex = producerWorkflow.indexOf("- name: Require live arm when live requalification is required");
+  assert(applicabilityIndex >= 0 && durableIndex > applicabilityIndex && armIndex > durableIndex && requireArmIndex > armIndex, "V13_MIGRATION_PRODUCER_APPLICABILITY_ARM_ORDER_INVALID");
+  assert.equal(producerWorkflow.includes("id: applicability\n        if: steps.arm.outputs.armed == 'true'"), false, "V13_MIGRATION_APPLICABILITY_MUST_NOT_BE_ARM_GATED");
+  assert.equal(producerWorkflow.includes("if: steps.applicability.outputs.live_required == 'false'"), true, "V13_MIGRATION_DURABLE_SKIP_MUST_BE_APPLICABILITY_GATED");
+  assert.equal(producerWorkflow.includes("id: arm\n        if: steps.applicability.outputs.live_required == 'true'"), true, "V13_MIGRATION_ARM_MUST_REQUIRE_LIVE_REQUALIFICATION");
+  assert.equal(producerWorkflow.includes("V13_LIVE_ARM_FIRST_BASE_MUST_LEAD_BY_MORE_THAN_6H"), true, "V13_MIGRATION_LIVE_ARM_FRESHNESS_GUARD_MUST_REMAIN");
 
   write({
     schema_version: "geox_mcft_cap09_v13_runtime_harness_resolver_migration_v1",
@@ -129,6 +193,7 @@ try {
     runtime_path_count: runtimeSet.size,
     legacy_harness_path_count: legacyHarnessSet.size,
     current_harness_path_count: harnessSet.size,
+    post_migration_harness_addition_count: POST_MIGRATION_HARNESS_ADDITIONS.length,
     exact_partition_proven: true,
     runtime_harness_overlap_count: 0,
     legacy_aggregate_digest: legacyAggregate,
@@ -139,6 +204,9 @@ try {
     projected_runtime_aggregate_digest_current: projectedAtHead,
     projected_runtime_digest_stable: true,
     source_evidence: sourceEvidence,
+    projected_evidence_registry_complete: true,
+    applicability_resolved_before_live_arm: true,
+    stale_arm_checked_only_when_live_requalification_required: true,
     projection_authorizes_new_live_claim: false,
     production_runtime_mutation: false,
     provider_request_count: 0,

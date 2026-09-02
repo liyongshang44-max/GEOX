@@ -737,6 +737,31 @@ function main() {
   assert.equal(producerQualification.execution_workflow_status, "IMPLEMENTED_AT_SUCCESSOR_HEAD");
   assert.equal(producerQualification.execution_workflow, ".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml");
   assert.equal(producerQualification.diagnostic_command, null, "V13_PRODUCER_DRIVEN_QUALIFICATION_MUST_USE_IMMUTABLE_WORKFLOW_EVIDENCE_NOT_INLINE_DIAGNOSTIC");
+  assert.deepEqual(producerQualification.resolver_ids, ["V13_RUNTIME_SEMANTIC_CLOSURE"]);
+  assert.deepEqual(producerQualification.requalification_triggers, ["V13_RUNTIME_SEMANTIC_CLOSURE"]);
+  const v13RuntimePaths = new Set(resolved.resolved.V13_RUNTIME_SEMANTIC_CLOSURE.paths);
+  const v13HarnessPaths = new Set(resolved.resolved.V13_QUALIFICATION_HARNESS_CLOSURE.paths);
+  for (const harnessOnlyPath of [
+    ".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml",
+    "scripts/runtime_acceptance/MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_ARM.json",
+    "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_V13_PRODUCER_LIVE_APPLICABILITY_V1.cjs",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_RUNTIME_HARNESS_RESOLVER_MIGRATION_V1.cjs",
+    ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml",
+    ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs",
+  ]) {
+    assert(v13HarnessPaths.has(harnessOnlyPath), `V13_HARNESS_PATH_REQUIRED:${harnessOnlyPath}`);
+    assert(!v13RuntimePaths.has(harnessOnlyPath), `V13_HARNESS_PATH_MUST_NOT_INVALIDATE_RUNTIME_EVIDENCE:${harnessOnlyPath}`);
+  }
+  for (const id of [
+    "V13_AUTONOMOUS_FORCING_FOUNDATION",
+    "V13_HOLISTIC_SCHEMA",
+    "V13_NEXT_TICK_VIABILITY",
+    "V13_PRODUCER_DRIVEN_QUALIFICATION",
+  ]) {
+    assert.deepEqual(authority.checks.find((row) => row.check_id === id).resolver_ids, ["V13_RUNTIME_SEMANTIC_CLOSURE"], `V13_RUNTIME_CHECK_RESOLVER_MIGRATION_REQUIRED:${id}`);
+  }
   assert.equal(byId(plan(authority, registry, [], "POST_MERGE_V13_QUALIFICATION"), "V13_PRODUCER_DRIVEN_QUALIFICATION").status, "REQUIRED");
 
   // Step 5 may be implemented without being treated as qualified. Its dependency
@@ -749,7 +774,7 @@ function main() {
   assert.equal(timingQualification.execution_workflow, ".github/workflows/mcft-cap-09-v13-frozen-timing-authority.yml");
   assert.equal(timingQualification.diagnostic_command, null);
   const timingPaths = new Set(resolved.resolved.V13_TIMING_QUALIFICATION_CLOSURE.paths);
-  const step4Paths = new Set(resolved.resolved.V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE.paths);
+  const step4Paths = new Set(resolved.resolved.V13_RUNTIME_SEMANTIC_CLOSURE.paths);
   for (const timingOnlyPath of [
     ".github/workflows/mcft-cap-09-v13-exact-head-timing-measurement.yml",
     ".github/workflows/mcft-cap-09-v13-exact-head-timing-sample.yml",
