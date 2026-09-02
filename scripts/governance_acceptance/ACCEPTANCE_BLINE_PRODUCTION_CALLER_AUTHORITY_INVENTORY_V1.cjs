@@ -496,6 +496,93 @@ function covResolveFunction(fp, name) {
   return null;
 }
 
+
+function covResolveLexicalCallable(fp, fromNode, name) {
+  const mod=covBuildModule(fp);
+  let p=fromNode?.parent ?? null;
+  while (p) {
+    if (covFunctionLike(p)) {
+      let found=null;
+      function scan(n) {
+        if (found) return;
+        if (n!==p && covFunctionLike(n)) {
+          if (ts.isFunctionDeclaration(n) && n.name?.text===name) found={kind:"node",node:n,scope:p};
+          if ((ts.isArrowFunction(n)||ts.isFunctionExpression(n)) && n.parent && ts.isVariableDeclaration(n.parent) && ts.isIdentifier(n.parent.name) && n.parent.name.text===name) found={kind:"node",node:n,scope:p};
+          return;
+        }
+        if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.name.text===name && n.initializer) {
+          if (ts.isArrowFunction(n.initializer)||ts.isFunctionExpression(n.initializer)) {
+            found={kind:"node",node:n.initializer,scope:p};
+            return;
+          }
+          const imported=[];
+          function collectImported(x) {
+            if (ts.isIdentifier(x) && mod.imports.has(x.text)) imported.push(mod.imports.get(x.text));
+            ts.forEachChild(x,collectImported);
+          }
+          collectImported(n.initializer);
+          const uniq=new Map(imported.map((x)=>[x.fp+"::"+x.name,x]));
+          if (uniq.size===1) {
+            const t=[...uniq.values()][0];
+            found={kind:"target",target:covFindReexport(t.fp,t.name)||t,scope:p};
+            return;
+          }
+        }
+        ts.forEachChild(n,scan);
+      }
+      scan(p);
+      if (found) return found;
+    }
+    p=p.parent;
+  }
+  return null;
+}
+
+const covImmediateCallbackMethods=new Set([
+  "map","flatMap","forEach","reduce","reduceRight","filter","some","every","find","findIndex","findLast","findLastIndex","sort",
+  "then","catch","finally",
+]);
+function covAnalyzeReachableCallbackArgs(fp, call, stack, merge) {
+  const enclosing=covEnclosingFunctionNode(call);
+  const scopeMap=covLocalFunctionMap(enclosing);
+  const indexes=new Set();
+
+  if (ts.isPropertyAccessExpression(call.expression) && covImmediateCallbackMethods.has(call.expression.name.text)) {
+    for (let i=0;i<call.arguments.length;i+=1) {
+      const arg=call.arguments[i];
+      if (ts.isArrowFunction(arg)||ts.isFunctionExpression(arg)||ts.isIdentifier(arg)) indexes.add(i);
+    }
+  }
+  if (ts.isIdentifier(call.expression)) {
+    const lexical=covResolveLexicalCallable(fp,call,call.expression.text);
+    let target=null;
+    if (lexical?.kind==="target") target=lexical.target;
+    else if (!lexical) target=covResolveFunction(fp,call.expression.text);
+    if (target) {
+      for (let i=0;i<call.arguments.length;i+=1) if (covTargetInvokesParameter(target,i)) indexes.add(i);
+    }
+  }
+
+  for (const i of indexes) {
+    const arg=call.arguments[i];
+    if (!arg) continue;
+    if (ts.isArrowFunction(arg)||ts.isFunctionExpression(arg)) {
+      merge(covAnalyzeCallbackNode(fp,arg,scopeMap,stack));
+    } else if (ts.isIdentifier(arg)) {
+      if (scopeMap.has(arg.text)) merge(covAnalyzeCallbackNode(fp,scopeMap.get(arg.text),scopeMap,stack));
+      else {
+        const lexical=covResolveLexicalCallable(fp,call,arg.text);
+        if (lexical?.kind==="node") merge(covAnalyzeCallbackNode(fp,lexical.node,covLocalFunctionMap(lexical.scope),stack));
+        else {
+          const target=lexical?.kind==="target" ? lexical.target : covResolveFunction(fp,arg.text);
+          if (target) merge(covAnalyzeFunction(target,stack));
+        }
+      }
+    }
+  }
+}
+
+
 function covFunctionKey(t) {
   return rel(t.fp) + "::" + t.name;
 }
@@ -538,27 +625,30 @@ function covAnalyzeNode(fp, node, stack = new Set()) {
   }
 
   function walk(n) {
-    if (
-      n !== node &&
-      covFunctionLike(n) &&
-      !covImmediatelyInvokedFunction(n)
-    ) return;
-    if (ts.isCallExpression(n) && ts.isIdentifier(n.expression)) {
-      const name = n.expression.text;
-      if (!(name === "ensureDeviceSkillBindings" && covAllowWriteFalse(n))) {
-        if (localMap.has(name)) {
-          merge(covAnalyzeCallbackNode(fp, localMap.get(name), localMap, stack));
-        } else {
-          const target = covResolveFunction(fp, name);
-          if (target) {
-            const key = covFunctionKey(target);
-            result.callees.add(key);
-            merge(covAnalyzeFunction(target, stack));
+    if (n !== node && covFunctionLike(n) && !covImmediatelyInvokedFunction(n)) return;
+    if (ts.isCallExpression(n)) {
+      covAnalyzeReachableCallbackArgs(fp,n,stack,merge);
+      if (ts.isIdentifier(n.expression)) {
+        const name=n.expression.text;
+        if (!(name==="ensureDeviceSkillBindings" && covAllowWriteFalse(n))) {
+          if (localMap.has(name)) {
+            merge(covAnalyzeCallbackNode(fp,localMap.get(name),localMap,stack));
+          } else {
+            const lexical=covResolveLexicalCallable(fp,n,name);
+            if (lexical?.kind==="node") {
+              merge(covAnalyzeCallbackNode(fp,lexical.node,covLocalFunctionMap(lexical.scope),stack));
+            } else {
+              const target=lexical?.kind==="target" ? lexical.target : covResolveFunction(fp,name);
+              if (target) {
+                result.callees.add(covFunctionKey(target));
+                merge(covAnalyzeFunction(target,stack));
+              }
+            }
           }
         }
       }
     }
-    ts.forEachChild(n, walk);
+    ts.forEachChild(n,walk);
   }
   walk(node);
   return result;
@@ -594,30 +684,33 @@ function covAnalyzeFunction(target, stack = new Set()) {
     for (const t of other.targets || []) result.targets.add(t);
   }
   function walk(n) {
-    if (
-      n !== node &&
-      covFunctionLike(n) &&
-      !covImmediatelyInvokedFunction(n)
-    ) return;
-    if (ts.isCallExpression(n) && ts.isIdentifier(n.expression)) {
-      const name = n.expression.text;
-      if (!(name === "ensureDeviceSkillBindings" && covAllowWriteFalse(n))) {
-        if (localMap.has(name)) {
-          merge(covAnalyzeCallbackNode(target.fp, localMap.get(name), localMap, next));
-        } else {
-          const child = covResolveFunction(target.fp, name);
-          if (child) {
-            const childKey = covFunctionKey(child);
-            result.callees.add(childKey);
-            merge(covAnalyzeFunction(child, next));
+    if (n !== node && covFunctionLike(n) && !covImmediatelyInvokedFunction(n)) return;
+    if (ts.isCallExpression(n)) {
+      covAnalyzeReachableCallbackArgs(target.fp,n,next,merge);
+      if (ts.isIdentifier(n.expression)) {
+        const name=n.expression.text;
+        if (!(name==="ensureDeviceSkillBindings" && covAllowWriteFalse(n))) {
+          if (localMap.has(name)) {
+            merge(covAnalyzeCallbackNode(target.fp,localMap.get(name),localMap,next));
+          } else {
+            const lexical=covResolveLexicalCallable(target.fp,n,name);
+            if (lexical?.kind==="node") {
+              merge(covAnalyzeCallbackNode(target.fp,lexical.node,covLocalFunctionMap(lexical.scope),next));
+            } else {
+              const child=lexical?.kind==="target" ? lexical.target : covResolveFunction(target.fp,name);
+              if (child) {
+                result.callees.add(covFunctionKey(child));
+                merge(covAnalyzeFunction(child,next));
+              }
+            }
           }
         }
       }
     }
-    ts.forEachChild(n, walk);
+    ts.forEachChild(n,walk);
   }
   walk(node);
-  covAnalysisCache.set(key, result);
+  covAnalysisCache.set(key,result);
   return result;
 }
 
