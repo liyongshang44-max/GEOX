@@ -246,7 +246,6 @@ export class FertilizationServiceV1 {
         WHERE (record_json::jsonb->>'type') = 'sampling_acceptance_v1'
           AND (record_json::jsonb->>'sample_id') = $1
           AND (record_json::jsonb->>'import_id') = $2
-          AND UPPER(COALESCE(record_json::jsonb->>'verdict', '')) = 'PASS'
         LIMIT 2`,
       [sample_id, lab_import_id],
     );
@@ -255,6 +254,7 @@ export class FertilizationServiceV1 {
     if (!acceptance || !tenantMatches(acceptance.record_json, scope)) return null;
 
     const acceptanceRecord: any = acceptance.record_json ?? {};
+    if (String(acceptanceRecord.verdict ?? "").trim().toUpperCase() !== "PASS") return null;
     const plan_fact_id = nonEmptyText(acceptanceRecord.plan_fact_id);
     const receipt_fact_id = nonEmptyText(acceptanceRecord.receipt_fact_id);
     const lab_fact_id = nonEmptyText(acceptanceRecord.lab_fact_id);
@@ -283,6 +283,8 @@ export class FertilizationServiceV1 {
       && acceptanceRecord.plan_fact_id === plan.fact_id
       && acceptanceRecord.receipt_fact_id === receipt.fact_id
       && acceptanceRecord.lab_fact_id === lab.fact_id
+      && acceptanceRecord.plan_id === planRecord.plan_id
+      && receiptRecord.plan_id === planRecord.plan_id
       && receiptRecord.sample_id === sample_id
       && labRecord.sample_id === sample_id
       && acceptanceRecord.sample_id === sample_id
