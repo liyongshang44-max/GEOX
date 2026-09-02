@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_kbs_baseline_pointer_schema_remediation_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-KBS-BASELINE-POINTER-SCHEMA-REMEDIATION-AUTHORITY-V1",
-  "status": "AUTHORIZED",
+  "status": "READY_NOT_AUTHORIZED",
   "subject_predecessor_sha": "3da9aacaffacd8ff90dfb55468b68d2190bdf7dd",
   "purpose": "Forward-only materialization of the already-qualified KBS publication baseline pointer columns on the exact production operational database.",
   "target": {
@@ -47,7 +47,7 @@
     "drop_or_rename_allowed": false
   },
   "authorization": {
-    "production_kbs_baseline_pointer_schema_remediation_authorized": true,
+    "production_kbs_baseline_pointer_schema_remediation_authorized": false,
     "runtime_process_start_authorized": false,
     "production_owner_activation_authorized": false,
     "formal_v5_arm_authorized": false,

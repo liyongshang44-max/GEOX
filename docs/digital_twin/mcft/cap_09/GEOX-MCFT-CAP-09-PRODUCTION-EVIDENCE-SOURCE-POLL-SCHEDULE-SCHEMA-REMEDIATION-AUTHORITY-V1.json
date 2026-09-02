@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_source_poll_schedule_schema_remediation_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-POLL-SCHEDULE-SCHEMA-REMEDIATION-AUTHORITY-V1",
-  "status": "AUTHORIZED",
+  "status": "READY_NOT_AUTHORIZED",
   "subject_predecessor_sha": "6cb65b7091886994d4c5854b2a064021ec2d8f6b",
   "purpose": "Forward-only materialization of already-qualified KBS/soil poll schedule plus durable GFS retry target/throttle/attempt-budget columns on the exact production operational database.",
   "target": {
@@ -57,7 +57,7 @@
     "drop_or_rename_allowed": false
   },
   "authorization": {
-    "production_evidence_source_poll_schedule_schema_remediation_authorized": true,
+    "production_evidence_source_poll_schedule_schema_remediation_authorized": false,
     "runtime_process_start_authorized": false,
     "production_owner_activation_authorized": false,
     "formal_v5_arm_authorized": false,
