@@ -53,9 +53,9 @@ const roots = inv.commercial_activation_roots ?? [];
 for (const service of requiredRootServices) {
   assert(roots.some((r) => r.compose_service === service && typeof r.disposition === "string" && r.disposition), "commercial activation root missing disposition", service);
 }
-assert(compose.includes("node apps/server/dist/server.js"), "commercial server command drift");
-assert(compose.includes("node apps/server/dist/jobs/runtime.js"), "commercial jobs command drift");
-assert(compose.includes("node apps/executor/dist/runtime_loop.js"), "commercial executor command drift");
+assert(compose.includes('command: ["node", "apps/server/dist/server.js"]'), "commercial server command drift");
+assert(compose.includes('command: ["node", "apps/server/dist/jobs/runtime.js"]'), "commercial jobs command drift");
+assert(compose.includes('command: ["node", "apps/executor/dist/runtime_loop.js"]'), "commercial executor command drift");
 assert(compose.includes("apps/telemetry-ingest"), "commercial telemetry-ingest root drift");
 assert(/GEOX_DEVTOOLS_ENABLED[^\n]*:-0/.test(compose), "commercial devtools must default disabled");
 
