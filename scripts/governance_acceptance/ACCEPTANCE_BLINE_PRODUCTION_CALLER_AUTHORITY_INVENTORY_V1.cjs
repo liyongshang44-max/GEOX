@@ -1043,7 +1043,7 @@ for (const route of covHttpUnique) {
   }
 }
 
-assert(covCallerMissing.length === 0, "production caller-triggered mutation without inventory", covCallerMissing);
+// deferred zero-set assertion: assert(covCallerMissing.length === 0, "production caller-triggered mutation without inventory", covCallerMissing);
 
 
 const covExecutionAnalysisCache = new Map();
@@ -1398,7 +1398,7 @@ for (const edge of covCallbackEdges) {
 for (const d of covCallbackDispositions) {
   if (!covCallbackEdges.some((e)=>e.callback_id===d.callback_id)) covCallbackStale.push(d);
 }
-assert(covCallbackMissing.length === 0, "production callback/hook persistent writer without disposition", covCallbackMissing);
+// deferred zero-set assertion: assert(covCallbackMissing.length === 0, "production callback/hook persistent writer without disposition", covCallbackMissing);
 assert(covCallbackClassMismatch.length === 0, "callback/hook disposition effect class mismatch", covCallbackClassMismatch);
 
 for (const edge of covCallbackEdges) {
@@ -1414,8 +1414,8 @@ for (const edge of covCallbackEdges) {
 }
 
 assert(covCallbackStale.length === 0, "stale callback/hook disposition", covCallbackStale);
-assert(covReachableWriterMissing.length===0, "reachable writer missing from disposition.writer_entrypoints", covReachableWriterMissing);
-assert(covReachableTargetMissing.length===0, "reachable persistent target missing from disposition.write_targets", covReachableTargetMissing);
+// deferred zero-set assertion: assert(covReachableWriterMissing.length===0, "reachable writer missing from disposition.writer_entrypoints", covReachableWriterMissing);
+// deferred zero-set assertion: assert(covReachableTargetMissing.length===0, "reachable persistent target missing from disposition.write_targets", covReachableTargetMissing);
 
 const covStartupDispositions = inv.startup_mutation_dispositions ?? [];
 const covStartupMissing = [];
@@ -1462,7 +1462,7 @@ for (const fp of runtimeFiles) {
 }
 const covStartupUnique = [...new Map(covStartupSeen.map((x) => [x.registration_source+"::"+x.source_path+"::"+x.entry_symbol, x])).values()];
 const covStartupMissingUnique = [...new Map(covStartupMissing.map((x) => [x.registration_source+"::"+x.source_path+"::"+x.entry_symbol, x])).values()];
-assert(covStartupMissingUnique.length === 0, "startup mutation without explicit disposition", covStartupMissingUnique);
+// deferred zero-set assertion: assert(covStartupMissingUnique.length === 0, "startup mutation without explicit disposition", covStartupMissingUnique);
 
 const covStartupRootWriterKeys = new Set();
 for (const [sourcePath, fnName] of [
@@ -1484,7 +1484,7 @@ for (const key of covStartupRootWriterKeys) {
   const explicit = covStartupDispositions.some((d) => d.source_path === sourcePath && d.entry_symbol === symbol);
   if (!explicit) covStartupRootMissing.push({ source_path:sourcePath, entry_symbol:symbol });
 }
-assert(covStartupRootMissing.length === 0, "startup mutation without explicit disposition from server startup graph", covStartupRootMissing);
+// deferred zero-set assertion: assert(covStartupRootMissing.length === 0, "startup mutation without explicit disposition from server startup graph", covStartupRootMissing);
 
 
 const covRuntimeDispositions = inv.runtime_direct_writer_dispositions ?? [];
@@ -1553,7 +1553,7 @@ for (const key of covRuntimeWriterKeys) {
     });
   }
 }
-assert(covRuntimeMissing.length === 0, "production runtime direct writer without inventory", covRuntimeMissing);
+// deferred zero-set assertion: assert(covRuntimeMissing.length === 0, "production runtime direct writer without inventory", covRuntimeMissing);
 
 
 
@@ -1674,8 +1674,8 @@ for (const edge of covInternalDelegationEdges) {
 for (const d of covDelegationDispositions) {
   if (!covInternalDelegationEdges.some((e)=>e.delegation_id===d.delegation_id)) covDelegationStale.push(d);
 }
-assert(covDelegationMissing.length===0, "production internal HTTP delegation edge without disposition", covDelegationMissing);
-assert(covPrincipalTransitionMissing.length===0, "production principal transition without disposition", covPrincipalTransitionMissing);
+// deferred zero-set assertion: assert(covDelegationMissing.length===0, "production internal HTTP delegation edge without disposition", covDelegationMissing);
+// deferred zero-set assertion: assert(covPrincipalTransitionMissing.length===0, "production principal transition without disposition", covPrincipalTransitionMissing);
 assert(covDelegationStale.length===0, "stale internal HTTP delegation disposition", covDelegationStale);
 
 
@@ -1756,7 +1756,7 @@ for (const d of covRuntimeDispositions) {
   assert(d.tenant_binding_class !== "SERVICE_CONFIG_OR_DB_SCOPE", "ambiguous tenant binding label forbidden on runtime writer", d);
 }
 assert(covAmbiguousTenantWriters.length===0, "runtime writer has ambiguous tenant-binding class", covAmbiguousTenantWriters);
-assert(covGlobalWorkerAmbiguous.length===0, "production global multi-tenant worker with ambiguous tenant-binding class", covGlobalWorkerAmbiguous);
+// deferred zero-set assertion: assert(covGlobalWorkerAmbiguous.length===0, "production global multi-tenant worker with ambiguous tenant-binding class", covGlobalWorkerAmbiguous);
 
 const covAgronomyRuntime = covRuntimeDispositions.find((d)=>d.source_path==="apps/server/src/jobs/agronomy_agent.ts" && d.entry_symbol==="insertFact");
 assert(covAgronomyRuntime?.tenant_binding_class==="GLOBAL_MULTI_TENANT_WORKER", "Agronomy Agent tenant-binding classification drift", covAgronomyRuntime);
@@ -1816,4 +1816,41 @@ const summary={
   }
 };
 console.log(JSON.stringify(summary,null,2));
+const covCompactCoverageFailure = {
+  production_caller_triggered_mutation_without_inventory: covCallerMissing.map((x)=>({
+    source_path:x.source_path, method:x.method, route:x.route,
+  })),
+  production_runtime_direct_writer_without_inventory: covRuntimeMissing,
+  startup_mutation_without_explicit_disposition: [
+    ...covStartupMissingUnique,
+    ...covStartupRootMissing,
+  ],
+  production_callback_hook_persistent_writer_without_disposition: covCallbackMissing.map((x)=>({
+    callback_id:x.callback_id, source_path:x.source_path, callback_kind:x.callback_kind, trigger:x.trigger, caller_route:x.caller_route ?? null,
+  })),
+  reachable_writer_missing_from_disposition_writer_entrypoints: covReachableWriterMissing,
+  reachable_persistent_target_missing_from_disposition_write_targets: covReachableTargetMissing,
+  production_internal_http_delegation_edge_without_disposition: covDelegationMissing.map((x)=>({
+    delegation_id:x.delegation_id, source_path:x.source_path, enclosing_symbol:x.enclosing_symbol,
+    target_method:x.target_method, target_entrypoint:x.target_entrypoint,
+    helper_kind:x.helper_kind, principal_transition:x.principal_transition,
+    credential_observation:x.credential_observation,
+  })),
+  production_principal_transition_without_disposition: covPrincipalTransitionMissing.map((x)=>({
+    delegation_id:x.delegation_id, source_path:x.source_path,
+    target_method:x.target_method, target_entrypoint:x.target_entrypoint,
+    credential_observation:x.credential_observation,
+  })),
+  production_service_credential_without_principal_classification: covCredentialMissing,
+  production_global_multi_tenant_worker_with_ambiguous_tenant_binding_class: covGlobalWorkerAmbiguous.map((x)=>({
+    writer_id:x.writer_id, source_path:x.source_path, entry_symbol:x.entry_symbol,
+    tenant_binding_class:x.tenant_binding_class, tenant_binding_detail:x.tenant_binding_detail ?? null,
+  })),
+};
+const covCoverageClosed = Object.values(covZeroSets).every((n)=>n===0);
+assert(covCoverageClosed, "PR-SEC-1 machine coverage zero-set closure failed", {
+  zero_sets:covZeroSets,
+  missing:covCompactCoverageFailure,
+});
+
 console.log("[BLINE_CALLER_AUTHORITY_INVENTORY] PASS");
