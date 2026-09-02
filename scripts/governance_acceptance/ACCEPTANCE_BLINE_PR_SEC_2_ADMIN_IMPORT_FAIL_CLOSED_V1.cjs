@@ -31,14 +31,12 @@ for (const forbidden of ['req.parts(', 'mkdirSync(', 'createWriteStream(', 'pipe
   assert(!failBlock.includes(forbidden), `fail-close handler contains forbidden side-effect token ${forbidden}`);
 }
 
-// BSEC-022 correction: writeMarkers is an inert argv today; exact DB targets are facts + optional raw_samples.
 assert(semanticSrc.includes('"--writeMarkers"'), 'route no longer passes writeMarkers; source truth changed');
 assert(!loadfactSrc.includes('writeMarkers'), 'writeMarkers unexpectedly became active in loadfact');
 assert(loadfactSrc.includes('insert into facts'), 'facts writer missing from loadfact');
 assert(loadfactSrc.includes('insert into raw_samples'), 'raw_samples writer missing from loadfact');
 assert(!loadfactSrc.includes('insert into markers'), 'markers unexpectedly became a loadfact persistence target');
 
-// BSEC-023 correction: attempted Commercial localhost target is absent; standalone Judge ignores persist=true.
 assert(semanticSrc.includes('http://127.0.0.1:${port}/api/judge/run'), 'BSEC-023 attempted internal Judge edge changed');
 const serverJudge = read('apps/server/src/routes/judge.ts');
 const judgeV2 = read('apps/server/src/routes/judge_v2.ts');
@@ -118,6 +116,7 @@ const allowed = new Set([
   '.github/workflows/bline-pr-sec2-containment.yml',
   'apps/server/src/modules/admin/registerAdminModule.ts',
   'scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_ADMIN_IMPORT_FAIL_CLOSED_V1.cjs',
+  'scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_FAIL_CLOSED_V1.cjs',
   'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_ADMIN_IMPORT_FAIL_CLOSED_V1.ts',
   'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_ADMIN_IMPORT_COMMERCIAL_RUNTIME_V1.ts',
 ]);
