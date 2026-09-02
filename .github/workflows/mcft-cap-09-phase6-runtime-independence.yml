@@ -909,22 +909,27 @@ jobs:
           fi
           runtime_delta_count="$(wc -l < "$runtime_delta_file" | tr -d ' ')"
 
-          if [ "${#phase7_foundation_delta[@]}" -gt 0 ] || [ "${#phase7_composition_delta[@]}" -gt 0 ]; then
-            for module_path in "${allowed_successor_runtime_paths[@]}"; do
-              module_stem="$(basename "$module_path" .ts)"
-              mapfile -t refs < <(git grep -l -F "$module_stem" -- apps/server/src || true)
-              for ref in "${refs[@]}"; do
-                allowed=0
-                for allowed_path in "${allowed_successor_runtime_paths[@]}"; do
-                  [ "$ref" = "$allowed_path" ] && allowed=1
-                done
-                if [ "$allowed" != "1" ]; then
-                  echo "PHASE7_UNWIRED_SUCCESSOR_PREMATURE_PRODUCTION_WIRING:$module_stem:$ref" >&2
-                  exit 1
-                fi
+          # Preserve the accepted Phase7 "unwired" assertion against its exact
+          # historical tree. Current successors may legally connect these modules,
+          # but every changed runtime path is required below to have a central-QCP
+          # REQUALIFY/REQUIRED route.
+          for module_path in "${allowed_successor_runtime_paths[@]}"; do
+            module_stem="$(basename "$module_path" .ts)"
+            mapfile -t accepted_refs < <(
+              git grep -l -F "$module_stem" "$PHASE7_ACCEPTED_PREDECESSOR_HEAD" -- apps/server/src \
+                | sed 's/^[^:]*://' || true
+            )
+            for ref in "${accepted_refs[@]}"; do
+              allowed=0
+              for allowed_path in "${allowed_successor_runtime_paths[@]}"; do
+                [ "$ref" = "$allowed_path" ] && allowed=1
               done
+              if [ "$allowed" != "1" ]; then
+                echo "PHASE7_ACCEPTED_PREDECESSOR_UNWIRED_ASSERTION_FAILED:$module_stem:$ref" >&2
+                exit 1
+              fi
             done
-          fi
+          done
 
           mapfile -t qualification_delta < <(git diff --name-only "$BASE_SHA"..HEAD -- \
             scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs \
@@ -1077,10 +1082,11 @@ jobs:
             protected_runtime_delta_count:runtimeDelta.length,
             protected_runtime_delta_paths:runtimeDelta,
             successor_runtime_delta_governed_by_central_plan:true,
-            phase7_unwired_evidence_foundation_delta_count:foundationDelta.length,
-            phase7_unwired_evidence_foundation_requires_phase3_requalification:true,
-            phase7_unwired_candidate_promotion_composition_delta_count:compositionDelta.length,
-            phase7_unwired_candidate_promotion_requires_dedicated_requalification:true,
+            accepted_predecessor_phase7_foundation_unwired_verified:true,
+            phase7_evidence_foundation_delta_count:foundationDelta.length,
+            phase7_evidence_foundation_requires_phase3_requalification:true,
+            phase7_candidate_promotion_composition_delta_count:compositionDelta.length,
+            phase7_candidate_promotion_requires_dedicated_requalification:true,
             production_process_graph_wiring:false,
             accepted_predecessor_machine_evidence_verified:true,
             qualification_support_delta_count:qualificationDelta.length,
