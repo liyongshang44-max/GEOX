@@ -1,22 +1,993 @@
-# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-02 Continuation — T4R1 Stage / Natural-Season Authority Requalification Frontier
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-02 Continuation — T4R1 Stage / Natural-Season Requalification Settlement Frontier
 
 Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
 
-Timestamp: **2026-09-02 20:16 +08:00**
+Timestamp: **2026-09-02 21:00 +08:00**
 
 Repository: liyongshang44-max/GEOX
 
-Purpose: continue the same MCFT-CAP-09 Stage 1B / Shadow-Online closure after exact-head qualification convergence, production Evidence schema materialization, planner entrypoint binding, stale-workflow applicability closure, and formal-window settlement. The immediate legal frontier is no longer QCP digest carry-forward, schema remediation, planner entrypoint binding, or runtime-start implementation. Current machine authority proves that the frozen T4R1 crop authority cannot support any future Formal/A0 window under Amendment-06 minimum lead, and an independent read-only search found no alternative existing MCSE scope candidate. Runtime-start authority therefore remains deliberately unarmed until T4R1 contemporaneous stage can be requalified from exact provider evidence or a natural-season successor is formally adjudicated without cross-season stitching.
+Purpose: continue the same MCFT-CAP-09 Stage 1B / Shadow-Online closure after the T4R1 contemporaneous-stage route and natural-season-successor route were both executed as read-only exact-head proofs and durably settled. The current machine result is not “stage authority repaired” and not “new natural season established”: both routes failed closed with zero qualified candidates. Runtime-start remains deliberately unarmed, production owner graduation is not yet a legal next action, and requalification must not be repeated until a material provider change is observed. The current exact product head also exposes one isolated Producer workflow stale-arm ordering debt; QCP independently confirms the durable Producer runtime evidence remains valid and no live provider rerun is required.
 
-> **This M-section is now the highest-priority conversation continuation in this file.**
+> **This N-section is now the highest-priority conversation continuation in this file.**
 >
-> The L-section immediately below remains intentionally preserved in full as the historical QCP Prepared-Context / exact-head digest carry-forward frontier.
+> The complete M-section immediately below remains intentionally preserved in full as the historical T4R1 stage / natural-season requalification frontier from which this settlement was executed.
 >
-> K, J, I, H, and all earlier Phase 7 / Phase 6 / Phase 5 / Phase 4 / Phase 3 / Phase 2 sections remain historical evidence and must remain intact.
+> L, K, J, I, H, and all earlier Phase content remain historical evidence and must remain intact.
 >
-> Do not rewrite L merely because QCP evidence convergence, schema remediation, entrypoint binding, and runtime-start readiness settlement were completed later. L records the exact control-plane frontier from which those closures were built.
+> Do not rewrite M merely because M15/M16 have now been executed. M records the exact legal sequence and preconditions that governed those proofs.
 >
 > This handoff does **not** supersede docs/SSOT.md, the Digital Twin Master Task Line, the CAP-09 taskbook, Production Hosting architecture/route, QCP, immutable qualification evidence, accepted CAP-01→08 authorities, T4R1 crop/season authorities, or frozen Formal-store authorities.
+
+---
+
+## N0. READ THIS FIRST — both T4R1 requalification branches have been executed; neither established new authority
+
+The authoritative product PR is now:
+
+~~~text
+#3376
+feat(mcft-cap09): settle T4R1 stage-or-season requalification frontier
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+current exact head =
+  3a83b76450b5459bde8d1d56234e5bba80b49398
+
+state =
+  Draft
+  open
+  unmerged
+
+mergeable =
+  true
+~~~
+
+Protected main remains:
+
+~~~text
+fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+
+protected =
+  true
+~~~
+
+The M-section next step has now been executed in order:
+
+~~~text
+T4R1 contemporaneous stage requalification
+        ↓
+NO_T4R1_CONTEMPORANEOUS_STAGE_INPUT_AUTHORITY_CURRENTLY_ESTABLISHED
+        ↓
+T4R1 natural-season successor adjudication
+        ↓
+NO_T4R1_NATURAL_SEASON_SUCCESSOR_CANDIDATE_CURRENTLY_OBSERVED
+        ↓
+durable canonical settlement
+~~~
+
+Therefore the current legal state is:
+
+~~~text
+current T4R1 stage authority newly established =
+  false
+
+new T4R1 natural-season successor authority established =
+  false
+
+viable future Formal/A0 window available =
+  false
+
+runtime_start_authority_may_be_armed =
+  false
+
+production owner cutover currently legal =
+  false
+
+Formal-v5 =
+  not armed
+
+A0 =
+  not bootstrapped
+
+O00–O23 =
+  not started
+~~~
+
+The next legal action is **not** another identical provider scan.
+
+It is:
+
+~~~text
+WAIT FOR MATERIAL PROVIDER CHANGE
+        ↓
+fresh governed T4R1 stage/season requalification
+        ↓
+only if new authority is actually established:
+  calculate new viable future Formal/A0 authority
+        ↓
+separate runtime-start authority
+        ↓
+exact-two local services
+        ↓
+live fenced owner readback
+        ↓
+EXACT_ONE_PRODUCTION_OWNER
+        ↓
+Formal-v5 → A0 → O00–O23
+~~~
+
+---
+
+## N1. Current task in one sentence
+
+**Hold runtime-start, owner graduation, Formal-v5, A0, and O00 closed after both current T4R1 requalification branches returned zero authority candidates; preserve the exact proof settlement, avoid repeated historical scans, and reopen stage/season requalification only after a material KBS AgLog provider change creates new candidate evidence.**
+
+The current task is no longer:
+
+- executing M15;
+- executing M16;
+- searching the same T4R1 historical rows again;
+- alternative-scope rescue;
+- planner assembly;
+- schema remediation;
+- live Producer requalification;
+- owner cutover;
+- Formal-v5 arm.
+
+---
+
+## N2. Authority reconstruction order for the next engineer
+
+Read in this order before changing stage, season, Formal, runtime-start, owner, or Producer qualification:
+
+1. docs/SSOT.md
+2. docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md
+3. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md
+4. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md
+5. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json
+6. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json
+7. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json
+8. frozen Amendment-06 minimum epoch-selection lead authority
+9. Amendment-13 current-crop authority requalification separation
+10. Amendment-20 T4R1 Formal successor-scope authority
+11. frozen T4R1 lifecycle / geometry / source / stage authorities
+12. #3376 exact head 3a83b76450b5459bde8d1d56234e5bba80b49398
+13. stage proof run 33630413934 / artifact 9846584085
+14. natural-season proof run 33630968448 / artifact 9846818521
+15. current-head planner-readiness run 33632065286
+16. current-head CI run 33632065448
+17. current-head QCP run 33632065496
+18. current-head independent Producer run 33632065256
+19. this N-section
+20. the preserved M-section below
+
+Do not use a stale weekly report, old conversation prose, or the retired transient proof files as stronger authority than the canonical settlement embedded in acquisition-horizon authority.
+
+---
+
+## N3. Repository / PR topology at this settlement frontier
+
+### N3.1 Protected main
+
+~~~text
+protected main =
+  fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+
+protected =
+  true
+~~~
+
+Do not move protected main from this task.
+
+### N3.2 #3376 — active product frontier
+
+~~~text
+#3376
+
+title =
+  feat(mcft-cap09): settle T4R1 stage-or-season requalification frontier
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+head =
+  3a83b76450b5459bde8d1d56234e5bba80b49398
+
+state =
+  Draft / open / unmerged
+
+mergeable =
+  true
+~~~
+
+The new exact linear chain after the M-section head is:
+
+~~~text
+e075d48b13ef1c85888c0f3dfbf3173bb5232f96
+  fix(mcft-cap09): align planner readiness with formal-window settlement
+
+60e4fd93c9dff017fd0d62967fad17a49383f12e
+  gov(mcft-cap09): requalify T4R1 contemporaneous stage input
+
+d631d20b3a2a0c179ba2ed98dd827e3e6431f6db
+  gov(mcft-cap09): adjudicate T4R1 natural-season successor
+
+003d7422c550fa124766a291498f8ea4e64a871f
+  gov(mcft-cap09): settle T4R1 stage-or-season requalification
+
+3a83b76450b5459bde8d1d56234e5bba80b49398
+  test(mcft-cap09): govern T4R1 requalification settlement
+~~~
+
+These commits did not start runtime, did not activate production owner, did not arm Formal-v5/A0/O00, and did not touch B-Line.
+
+### N3.3 Docs-only handoff PR
+
+Before this N-section update:
+
+~~~text
+#3298
+
+branch =
+  docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier
+
+base =
+  26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+
+pre-N head =
+  1eede2861a63a364576b377bf82297712aa5de0e
+
+state =
+  Draft / open
+
+mergeable =
+  true
+
+changed_files =
+  2
+~~~
+
+Keep #3298 docs-only and do not rebase it merely because #3376 or protected main differ.
+
+---
+
+## N4. Stage 1B completion semantics remain unchanged
+
+The active completion target remains:
+
+~~~text
+STAGE_1B_SHADOW_ONLINE_CLOSURE_COMPLETE
+~~~
+
+Do not declare:
+
+~~~text
+MINIMUM_COMPLETE_FIELD_TWIN_COMPLETE
+~~~
+
+Stage 1B remains **IN PROGRESS** because:
+
+~~~text
+current viable future Formal/A0 authority =
+  absent
+
+runtime-start authority =
+  not armable
+
+production owner =
+  not graduated
+
+Formal-v5 =
+  not armed
+
+A0 =
+  not bootstrapped
+
+O00–O23 =
+  not executed
+~~~
+
+---
+
+## N5. B-Line boundary remains frozen
+
+Do not enter B-Line audit repair from this continuation.
+
+MCFT still does not own:
+
+- Commercial server activation graph;
+- Admin compatibility surfaces;
+- Executor B-Line classification;
+- Telemetry B-Line classification;
+- Decision / Approval / Dispatch / Acceptance product authority.
+
+The new T4R1 proof/settlement commits remained inside MCFT Stage 1B authority and readiness scope.
+
+---
+
+## N6. Current exact-head machine status matrix
+
+At:
+
+~~~text
+#3376 @ 3a83b76450b5459bde8d1d56234e5bba80b49398
+~~~
+
+confirmed results are:
+
+~~~text
+CI
+  run 33632065448
+  SUCCESS
+
+Production Evidence target planner readiness
+  run 33632065286
+  SUCCESS
+
+QCP
+  run 33632065496
+  FAILURE by design
+  exact blocker_count = 1
+  blocker =
+    EXACT_ONE_PRODUCTION_OWNER
+
+QCP Producer adjudication
+  PASS
+  reason =
+    DURABLE_REQUALIFICATION_EVIDENCE_AND_DEPENDENCY_DIGEST_VALID
+  evidence_id =
+    V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F
+
+Independent Producer workflow
+  run 33632065256
+  FAILURE
+  failed step =
+    Resolve explicit live arm
+  live provider execution =
+    NOT RUN
+~~~
+
+Required repository delivery checks on this exact head are green:
+
+~~~text
+build-test =
+  SUCCESS
+
+acceptance =
+  SUCCESS
+
+mcft-delivery-policy-v2-contract =
+  SUCCESS
+
+mcft-candidate-integrity-pr-selftest =
+  SUCCESS
+
+mcft-candidate-integrity-enforce-current-pr =
+  SUCCESS
+
+mcft-release-lane-pr-selftest =
+  SUCCESS
+
+mcft-release-lane-enforce-current-pr =
+  SUCCESS
+
+mcft-main-ruleset-readiness-v1 =
+  SUCCESS
+~~~
+
+Do not reinterpret the independent Producer workflow red as invalidation of the durable Producer runtime qualification; QCP independently validates the immutable BF1D evidence and unchanged dependency digest.
+
+---
+
+## N7. T4R1 contemporaneous-stage route — exact machine result
+
+Exact proof subject:
+
+~~~text
+60e4fd93c9dff017fd0d62967fad17a49383f12e
+~~~
+
+Workflow:
+
+~~~text
+run =
+  33630413934
+
+conclusion =
+  SUCCESS
+
+artifact_id =
+  9846584085
+
+artifact_digest =
+  sha256:38a6b645cab971c70ed13e116392186f0eafee2c32538d062a02e265a24a18c4
+~~~
+
+Machine result:
+
+~~~text
+NO_T4R1_CONTEMPORANEOUS_STAGE_INPUT_AUTHORITY_CURRENTLY_ESTABLISHED
+~~~
+
+Exact scan facts:
+
+~~~text
+index pages =
+  5
+
+observation rows =
+  150
+
+inspected T4 detail records =
+  6
+
+direct stage input candidates =
+  0
+
+termination input candidates =
+  0
+
+stage authority established =
+  false
+
+stage =
+  null
+
+whole-window 6h/30h guard passed =
+  false
+~~~
+
+This is not a stage failure caused by implementation code.
+
+It is a fail-closed provider-evidence result.
+
+---
+
+## N8. T4R1 stage proof non-effects
+
+The stage route remained read-only:
+
+~~~text
+database_write_count =
+  0
+
+provider_body_emitted =
+  false
+
+runtime_process_start =
+  false
+
+production_owner_activation =
+  false
+
+Formal-v5 arm =
+  false
+
+A0 =
+  false
+
+O00 =
+  false
+
+formal_execution_count =
+  0/24
+~~~
+
+Do not convert management events or elapsed crop age into a stage simply to obtain a future Formal window.
+
+---
+
+## N9. T4R1 natural-season successor route — exact machine result
+
+Because N7 did not establish stage authority, the fallback route was executed immediately.
+
+Exact proof subject:
+
+~~~text
+d631d20b3a2a0c179ba2ed98dd827e3e6431f6db
+~~~
+
+Workflow:
+
+~~~text
+run =
+  33630968448
+
+conclusion =
+  SUCCESS
+
+artifact_id =
+  9846818521
+
+artifact_digest =
+  sha256:6275357bf5a6e054f0656dc907215439e20829b9e94a1925e317ecfcea9af09b
+~~~
+
+Machine result:
+
+~~~text
+NO_T4R1_NATURAL_SEASON_SUCCESSOR_CANDIDATE_CURRENTLY_OBSERVED
+~~~
+
+Exact scan facts:
+
+~~~text
+index pages =
+  5
+
+observation rows =
+  150
+
+post-anchor T4 Planting leads =
+  0
+
+exact T4R1 successor candidates =
+  0
+
+new natural season created =
+  false
+
+new season_id =
+  null
+
+new crop =
+  null
+~~~
+
+This is explicitly a time-gated snapshot.
+
+It does **not** claim global permanent absence of a future season.
+
+---
+
+## N10. Natural-season route preserved the no-stitching boundary
+
+The proof explicitly kept:
+
+~~~text
+historical geometry reused =
+  false
+
+cross-season state stitching authorized =
+  false
+
+cross-season forecast stitching authorized =
+  false
+
+cross-season checkpoint stitching authorized =
+  false
+
+cross-season lineage stitching authorized =
+  false
+
+database_write_count =
+  0
+
+runtime_process_start =
+  false
+
+formal_execution_count =
+  0/24
+~~~
+
+Do not create a successor by inheriting old T4R1 crop stage, Kc, Formal epoch, A0, O00, geometry, forecast, checkpoint, or lineage state.
+
+---
+
+## N11. Durable settlement replaced the temporary proof scaffolding
+
+After both exact proofs completed, their results were copied into the canonical:
+
+~~~text
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json
+~~~
+
+Settlement commit:
+
+~~~text
+003d7422c550fa124766a291498f8ea4e64a871f
+gov(mcft-cap09): settle T4R1 stage-or-season requalification
+~~~
+
+Governance-coverage commit:
+
+~~~text
+3a83b76450b5459bde8d1d56234e5bba80b49398
+test(mcft-cap09): govern T4R1 requalification settlement
+~~~
+
+The exact proof subject/run/artifact/digest/counts/non-effects are now machine asserted by the existing planner-readiness acceptance.
+
+---
+
+## N12. Eight transient proof files were intentionally retired
+
+The two proof slices used eight temporary files:
+
+~~~text
+.github/workflows/mcft-cap-09-t4r1-contemporaneous-stage-input-requalification-v1.yml
+docs/.../GEOX-MCFT-CAP-09-T4R1-CONTEMPORANEOUS-STAGE-INPUT-REQUALIFICATION-V1.json
+scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CONTEMPORANEOUS_STAGE_INPUT_REQUALIFICATION_V1.cjs
+scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_CONTEMPORANEOUS_STAGE_INPUT_REQUALIFICATION_V1.mjs
+
+.github/workflows/mcft-cap-09-t4r1-natural-season-successor-adjudication-v1.yml
+docs/.../GEOX-MCFT-CAP-09-T4R1-NATURAL-SEASON-SUCCESSOR-ADJUDICATION-V1.json
+scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_NATURAL_SEASON_SUCCESSOR_ADJUDICATION_V1.cjs
+scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_NATURAL_SEASON_SUCCESSOR_ADJUDICATION_V1.mjs
+~~~
+
+They are intentionally absent from the final tree.
+
+Their exact blob SHAs are retained in the canonical settlement and the repository history.
+
+Do not recreate them merely because they are absent.
+
+Restore/rebuild a governed proof slice only after the material provider inputs actually change.
+
+---
+
+## N13. Final net product diff from the M-section head is intentionally small
+
+From:
+
+~~~text
+e075d48b13ef1c85888c0f3dfbf3173bb5232f96
+~~~
+
+to:
+
+~~~text
+3a83b76450b5459bde8d1d56234e5bba80b49398
+~~~
+
+the final net diff contains only two existing files:
+
+~~~text
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json
+
+scripts/governance_acceptance/
+ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_TARGET_PLANNER_READINESS_V1.cjs
+~~~
+
+The live read-only proof machinery was temporary and did not become permanent runtime/product code.
+
+This is deliberate.
+
+---
+
+## N14. Current legal frontier — exact settlement wording
+
+Canonical settlement status:
+
+~~~text
+SETTLED_NO_CURRENT_T4R1_STAGE_OR_NATURAL_SEASON_SUCCESSOR_AUTHORITY_ESTABLISHED
+~~~
+
+Current conclusions:
+
+~~~text
+current_t4r1_stage_authority_established =
+  false
+
+current_t4r1_natural_season_successor_authority_established =
+  false
+
+viable_future_formal_window_available =
+  false
+
+runtime_start_authority_may_be_armed =
+  false
+
+production_owner_activation_authorized =
+  false
+
+cross_season_stitching_authorized =
+  false
+
+requalification_without_material_provider_change_authorized =
+  false
+~~~
+
+Current next legal frontier:
+
+~~~text
+T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_REQUALIFICATION_REQUIRED_ON_MATERIAL_PROVIDER_CHANGE
+~~~
+
+---
+
+## N15. Material provider changes that may reopen requalification
+
+The canonical settlement currently recognizes these triggers:
+
+~~~text
+NEW_EXACT_CURRENT_T4R1_PHENOLOGY_EVIDENCE_BECOMES_PUBLICLY_RETRIEVABLE
+
+NEW_EXACT_CURRENT_T4R1_TERMINATION_OR_HARVEST_EVIDENCE_BECOMES_PUBLICLY_RETRIEVABLE
+
+NEW_KBS_AGLOG_T4_OR_T4R1_PLANTING_OBSERVATION_AFTER_2026_05_27_BECOMES_PUBLICLY_RETRIEVABLE
+~~~
+
+Until one of these material facts changes, do not repeat the same five-page / 150-row historical scan.
+
+A routine PR head change, metadata change, docs update, CI rerun, or owner-control-plane change is not a material provider change.
+
+---
+
+## N16. Independent Producer workflow red — exact classification
+
+Current independent Producer run:
+
+~~~text
+33632065256
+~~~
+
+failed at:
+
+~~~text
+Resolve explicit live arm
+~~~
+
+The current arm contains:
+
+~~~text
+qualification_first_base =
+  2026-09-02T18:00:00.000Z
+~~~
+
+The inline workflow guard rejects it once it is no longer more than six hours in the future.
+
+Importantly:
+
+~~~text
+Resolve governed producer live applicability =
+  SKIPPED
+
+Run producer-driven live v13 qualification =
+  SKIPPED
+
+live provider execution =
+  false
+~~~
+
+At the same exact head, QCP independently reports:
+
+~~~text
+V13_PRODUCER_DRIVEN_QUALIFICATION
+
+status =
+  PASS
+
+reason_code =
+  DURABLE_REQUALIFICATION_EVIDENCE_AND_DEPENDENCY_DIGEST_VALID
+
+evidence_id =
+  V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F
+~~~
+
+Therefore this red is an isolated stale-arm ordering / qualification-control-plane debt.
+
+It is **not** a provider failure and does not authorize a live provider rerun.
+
+---
+
+## N17. Why the Producer red is not being “fixed” by force
+
+Do not simply:
+
+~~~text
+change qualification_first_base to another future hour
+disarm/rearm the producer arm
+move the time check
+remove the workflow from the dependency resolver
+register a no-op workflow run as fresh Producer evidence
+~~~
+
+without re-adjudicating the evidence contract.
+
+Reason:
+
+~~~text
+V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE
+~~~
+
+currently intentionally includes:
+
+- the Producer live qualification workflow;
+- Producer qualification preflight;
+- Producer arm JSON;
+- QCP/applicability control files.
+
+Changing those paths is a governed V13 dependency drift.
+
+A cosmetic “make it green” patch would therefore require a genuine fresh Producer requalification or a separately justified resolver/evidence-contract redesign.
+
+The current frontier does not need that change because QCP already proves the durable Producer runtime evidence remains valid.
+
+---
+
+## N18. Current execution order and stop conditions
+
+The current legal sequence is now:
+
+~~~text
+NO MATERIAL PROVIDER CHANGE
+        ↓
+STOP
+  do not repeat T4R1 stage/season scan
+  do not arm runtime start
+  do not start services
+  do not activate owner
+  do not arm Formal-v5
+  do not bootstrap A0
+  do not start O00
+~~~
+
+When a material provider change is established:
+
+~~~text
+fresh governed T4R1 stage/season requalification
+        ↓
+if authority remains unresolved:
+  STOP again
+        ↓
+if a valid current stage or natural-season successor authority is established:
+  calculate new viable future Formal/A0 authority
+        ↓
+establish / arm separate production runtime-start authority
+        ↓
+exact-two local services
+        ↓
+live fenced owner readback
+        ↓
+EXACT_ONE_PRODUCTION_OWNER closure
+        ↓
+Formal-v5
+        ↓
+A0
+        ↓
+O00–O23
+        ↓
+STAGE_1B_SHADOW_ONLINE_CLOSURE_COMPLETE
+~~~
+
+---
+
+## N19. Pitfalls already hit in this continuation
+
+### N19.1 Do not infer stage from management records
+
+KBS T4 post-planting records included management events, but no exact governed phenology-stage candidate was established.
+
+Management activity is not crop-stage authority.
+
+### N19.2 Do not treat “no stage candidate” as permission to manufacture a natural season
+
+The fallback route also returned zero exact successor candidate.
+
+No season_id was created.
+
+### N19.3 Do not turn a time-gated scan into a global absence statement
+
+The natural-season result means:
+
+~~~text
+no candidate currently observed in the governed scan
+~~~
+
+not:
+
+~~~text
+no future season can ever exist
+~~~
+
+### N19.4 Do not retain one-shot scanners as permanent product code
+
+After exact proof, durable settlement belongs in canonical authority.
+
+The temporary proof files were removed intentionally.
+
+### N19.5 Do not mistake temporary-file deletion for evidence loss
+
+Exact blob SHAs, run IDs, artifact IDs, digests, counts, and non-effects are preserved in canonical authority and git history.
+
+### N19.6 Do not repeat the same provider scan on metadata descendants
+
+The canonical settlement now explicitly requires material provider change before requalification.
+
+### N19.7 Do not read QCP owner blocker as runtime-start permission
+
+QCP still reports:
+
+~~~text
+EXACT_ONE_PRODUCTION_OWNER
+~~~
+
+but runtime-start remains illegal because there is no viable future Formal/A0 authority.
+
+### N19.8 Do not “fix” Producer red by causing an unnecessary live rerun
+
+The independent workflow fails before applicability because its arm time aged out.
+
+QCP still validates the durable BF1D evidence.
+
+A live rerun is not justified by a metadata descendant.
+
+### N19.9 Do not broaden into B-Line
+
+No Commercial authority, Admin compatibility, Executor classification, Telemetry classification, Decision, Approval, Dispatch, or Acceptance repair belongs in this MCFT continuation.
+
+---
+
+## N20. First actions for the next conversation
+
+Before any write:
+
+1. verify #3376 still equals `3a83b76450b5459bde8d1d56234e5bba80b49398` or reconstruct all new descendants;
+2. verify protected main remains `fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8`;
+3. verify the canonical T4R1 stage/season settlement remains unchanged;
+4. inspect whether a material KBS AgLog provider change has actually occurred;
+5. if no material provider change exists, do **not** rebuild/re-run the T4R1 scanners;
+6. keep runtime-start unarmed;
+7. keep owner cutover closed;
+8. keep Formal-v5/A0/O00 closed;
+9. treat independent Producer stale-arm red as isolated governance debt unless its governed dependency or evidence contract is explicitly reopened;
+10. continue preserving the B-Line boundary.
+
+The current engineering frontier is therefore evidence-driven waiting, not missing implementation.
+
+---
+
+## N21. Bottom line
+
+At the current exact head:
+
+~~~text
+#3376 @ 3a83b76450b5459bde8d1d56234e5bba80b49398
+
+T4R1 contemporaneous stage route =
+  COMPLETE
+  no authority established
+
+T4R1 natural-season successor route =
+  COMPLETE
+  no candidate authority established
+
+canonical settlement =
+  COMPLETE
+
+planner-readiness =
+  SUCCESS
+
+CI =
+  SUCCESS
+
+QCP =
+  deliberate fail-closed
+  EXACT_ONE_PRODUCTION_OWNER
+
+QCP Producer evidence =
+  PASS
+  durable BF1D evidence
+
+independent Producer workflow =
+  stale-arm ordering FAILURE
+  no live provider execution
+
+runtime-start =
+  NOT ARMABLE
+
+Formal-v5 / A0 / O00 =
+  NOT STARTED
+
+Stage 1B =
+  IN PROGRESS
+~~~
+
+The next legitimate technical event is a **material provider change**, not another implementation guess.
 
 ---
 
