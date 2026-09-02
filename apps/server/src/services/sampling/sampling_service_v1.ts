@@ -4,6 +4,13 @@ import type { Pool } from "pg";
 type EvidenceRef = { kind: string; ref_id: string };
 type SamplingVerdict = "PASS" | "FAIL" | "INSUFFICIENT_EVIDENCE";
 
+export type SamplingFactRowV1 = {
+  fact_id: string;
+  occurred_at: string;
+  source: string;
+  record_json: Record<string, unknown>;
+};
+
 type InsertFactInput = {
   fact_id: string;
   occurred_at: string;
@@ -18,21 +25,36 @@ const INSERT_FACT_SQL = `
   RETURNING fact_id
 `;
 
-const FIND_FACT_SQL = `
-  SELECT fact_id, occurred_at, source, record_json
-  FROM facts
-  WHERE (record_json::jsonb->>'type') = $1
-    AND (record_json::jsonb->>$2) = $3
-  ORDER BY occurred_at DESC
-  LIMIT 1
-`;
-
 export class SamplingServiceV1 {
   constructor(private readonly pool: Pool) {}
 
   private async insertFact(input: InsertFactInput): Promise<boolean> {
     const result = await this.pool.query(INSERT_FACT_SQL, [input.fact_id, input.occurred_at, input.source, JSON.stringify(input.record_json)]);
     return Array.isArray(result.rows) && result.rows.length > 0;
+  }
+
+  async findFactByIdAndType(fact_id: string, type: string): Promise<SamplingFactRowV1 | null> {
+    const result = await this.pool.query(
+      `SELECT fact_id, occurred_at, source, record_json
+         FROM facts
+        WHERE fact_id = $1
+          AND (record_json::jsonb->>'type') = $2
+        LIMIT 1`,
+      [fact_id, type],
+    );
+    return result.rows?.[0] ?? null;
+  }
+
+  private async findUniqueFactByBusinessKey(type: string, key: string, value: string): Promise<SamplingFactRowV1 | null> {
+    const result = await this.pool.query(
+      `SELECT fact_id, occurred_at, source, record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type') = $1
+          AND (record_json::jsonb->>$2) = $3
+        LIMIT 2`,
+      [type, key, value],
+    );
+    return result.rows?.length === 1 ? result.rows[0] : null;
   }
 
   async createPlan(input: {
@@ -56,6 +78,7 @@ export class SamplingServiceV1 {
       type: "sampling_plan_v1",
       schema_version: "1",
       plan_id,
+      plan_fact_id: fact_id,
       tenant_id: input.tenant_id,
       project_id: input.project_id,
       group_id: input.group_id,
@@ -87,6 +110,7 @@ export class SamplingServiceV1 {
       group_id: input.group_id,
       field_id: input.field_id,
       plan_id,
+      plan_fact_id: fact_id,
       operation_id,
       operation_plan_id,
       created_at_ts: Date.now(),
@@ -105,6 +129,7 @@ export class SamplingServiceV1 {
 
   async createReceipt(input: {
     plan_id: string;
+    plan_fact_id: string;
     sample_id: string;
     tenant_id: string;
     project_id: string;
@@ -129,8 +154,11 @@ export class SamplingServiceV1 {
     const record_json: Record<string, unknown> = {
       type: "sample_receipt_v1",
       schema_version: "1",
+      receipt_id,
+      receipt_fact_id: fact_id,
       sample_id: input.sample_id,
       plan_id: input.plan_id,
+      plan_fact_id: input.plan_fact_id,
       tenant_id: input.tenant_id,
       project_id: input.project_id,
       group_id: input.group_id,
@@ -154,38 +182,10 @@ export class SamplingServiceV1 {
     return { receipt_id, fact_id };
   }
 
-  async findPlanById(plan_id: string): Promise<Record<string, unknown> | null> {
-    const result = await this.pool.query(FIND_FACT_SQL, ["sampling_plan_v1", "plan_id", plan_id]);
-    return result.rows?.[0]?.record_json ?? null;
-  }
-
-  async findReceiptBySampleId(sample_id: string): Promise<Record<string, unknown> | null> {
-    const result = await this.pool.query(
-      `SELECT record_json
-       FROM facts
-       WHERE (record_json::jsonb->>'type') = 'sample_receipt_v1'
-         AND (record_json::jsonb->>'sample_id') = $1
-       ORDER BY occurred_at DESC
-       LIMIT 1`,
-      [sample_id],
-    );
-    return result.rows?.[0]?.record_json ?? null;
-  }
-
-  async hasFactByIdAndType(fact_id: string, type: string): Promise<boolean> {
-    const result = await this.pool.query(
-      `SELECT 1
-       FROM facts
-       WHERE fact_id = $1
-         AND (record_json::jsonb->>'type') = $2
-       LIMIT 1`,
-      [fact_id, type],
-    );
-    return (result.rowCount ?? 0) > 0;
-  }
-
   async createLabResult(input: {
     sample_id: string;
+    receipt_fact_id: string;
+    plan_fact_id: string;
     imported_at_ts: number;
     import_id?: string;
     lab_name?: string | null;
@@ -201,7 +201,10 @@ export class SamplingServiceV1 {
       type: "lab_result_import_v1",
       schema_version: "1",
       import_id,
+      lab_fact_id: fact_id,
       sample_id: input.sample_id,
+      receipt_fact_id: input.receipt_fact_id,
+      plan_fact_id: input.plan_fact_id,
       imported_at_ts: input.imported_at_ts,
       lab_name: input.lab_name ?? null,
       metrics: input.metrics,
@@ -215,29 +218,13 @@ export class SamplingServiceV1 {
     return { import_id, fact_id };
   }
 
-  async findLabResultBySampleId(sample_id: string, import_id?: string): Promise<Record<string, unknown> | null> {
-    if (import_id) {
-      const result = await this.pool.query(
-        `SELECT record_json
-         FROM facts
-         WHERE (record_json::jsonb->>'type') = 'lab_result_import_v1'
-           AND (record_json::jsonb->>'sample_id') = $1
-           AND (record_json::jsonb->>'import_id') = $2
-         ORDER BY occurred_at DESC
-         LIMIT 1`,
-        [sample_id, import_id],
-      );
-      return result.rows?.[0]?.record_json ?? null;
-    }
-
-    const result = await this.pool.query(FIND_FACT_SQL, ["lab_result_import_v1", "sample_id", sample_id]);
-    return result.rows?.[0]?.record_json ?? null;
-  }
-
   async createAcceptance(input: {
     plan_id: string;
+    plan_fact_id: string;
     sample_id: string;
-    import_id?: string;
+    receipt_fact_id: string;
+    import_id: string;
+    lab_fact_id: string;
     tenant_id: string;
     project_id: string;
     group_id: string;
@@ -255,9 +242,13 @@ export class SamplingServiceV1 {
       type: "sampling_acceptance_v1",
       schema_version: "1",
       acceptance_id,
+      acceptance_fact_id: fact_id,
       plan_id: input.plan_id,
+      plan_fact_id: input.plan_fact_id,
       sample_id: input.sample_id,
-      import_id: input.import_id ?? null,
+      receipt_fact_id: input.receipt_fact_id,
+      import_id: input.import_id,
+      lab_fact_id: input.lab_fact_id,
       tenant_id: input.tenant_id,
       project_id: input.project_id,
       group_id: input.group_id,
@@ -272,24 +263,35 @@ export class SamplingServiceV1 {
     return { acceptance_id, fact_id };
   }
 
+  async findPlanById(plan_id: string): Promise<Record<string, unknown> | null> {
+    const row = await this.findUniqueFactByBusinessKey("sampling_plan_v1", "plan_id", plan_id);
+    return row?.record_json ?? null;
+  }
+
   async getPlan(plan_id: string): Promise<Record<string, unknown> | null> {
-    const result = await this.pool.query(FIND_FACT_SQL, ["sampling_plan_v1", "plan_id", plan_id]);
-    return result.rows?.[0] ?? null;
+    return this.findUniqueFactByBusinessKey("sampling_plan_v1", "plan_id", plan_id);
   }
 
   async getSample(sample_id: string): Promise<Record<string, unknown> | null> {
     const receiptResult = await this.pool.query(
       `SELECT fact_id, occurred_at, source, record_json
-       FROM facts
-       WHERE (record_json::jsonb->>'type') = 'sample_receipt_v1'
-         AND (record_json::jsonb->>'sample_id') = $1
-       ORDER BY occurred_at DESC
-       LIMIT 1`,
+         FROM facts
+        WHERE (record_json::jsonb->>'type') = 'sample_receipt_v1'
+          AND (record_json::jsonb->>'sample_id') = $1
+        LIMIT 2`,
       [sample_id],
     );
-    if (receiptResult.rows?.[0]) return receiptResult.rows[0];
+    if (receiptResult.rows?.length === 1) return receiptResult.rows[0];
+    if ((receiptResult.rows?.length ?? 0) > 1) return null;
 
-    const labResult = await this.pool.query(FIND_FACT_SQL, ["lab_result_import_v1", "sample_id", sample_id]);
-    return labResult.rows?.[0] ?? null;
+    const labResult = await this.pool.query(
+      `SELECT fact_id, occurred_at, source, record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type') = 'lab_result_import_v1'
+          AND (record_json::jsonb->>'sample_id') = $1
+        LIMIT 2`,
+      [sample_id],
+    );
+    return labResult.rows?.length === 1 ? labResult.rows[0] : null;
   }
 }
