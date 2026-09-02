@@ -530,29 +530,214 @@ export class FertilizationServiceV1 {
     return row;
   }
 
+  private async loadExactExecutionProvenance(input: TenantScopeV1 & {
+    fertilization_prescription_id: string;
+    fertilization_prescription_fact_id: string;
+    field_id: string;
+    receipt_fact_id: string;
+    act_task_id: string;
+    operation_plan_id: string;
+    as_executed_id: string;
+    as_applied_id: string;
+    acceptance_result_fact_id: string;
+  }): Promise<{
+    variable_prescription_id: string;
+    receipt_fact_id: string;
+    receipt_id: string;
+    receipt_record: any;
+    as_executed: any;
+    as_applied: any;
+    canonical_acceptance: FactRowV1;
+  }> {
+    const bridgeRecommendationId = `fert_bridge_${input.fertilization_prescription_id}`;
+    const bridge = await this.pool.query(
+      `SELECT prescription_id, tenant_id, project_id, group_id, field_id, operation_type
+         FROM prescription_contract_v1
+        WHERE recommendation_id = $1
+          AND tenant_id = $2
+          AND project_id = $3
+          AND group_id = $4
+        LIMIT 2`,
+      [bridgeRecommendationId, input.tenant_id, input.project_id, input.group_id],
+    );
+    if ((bridge.rows?.length ?? 0) !== 1) {
+      throw new FertilizationServiceErrorV1(
+        (bridge.rows?.length ?? 0) > 1 ? "FERTILIZATION_BRIDGE_PRESCRIPTION_AMBIGUOUS" : "FERTILIZATION_BRIDGE_PRESCRIPTION_REQUIRED",
+        (bridge.rows?.length ?? 0) > 1 ? 409 : 400,
+      );
+    }
+    const variablePrescription = bridge.rows[0];
+    const variable_prescription_id = nonEmptyText(variablePrescription.prescription_id);
+    if (!variable_prescription_id
+      || String(variablePrescription.field_id ?? "") !== input.field_id
+      || String(variablePrescription.operation_type ?? "").trim().toUpperCase() !== "FERTILIZATION") {
+      throw new FertilizationServiceErrorV1("FERTILIZATION_BRIDGE_PRESCRIPTION_MISMATCH", 400);
+    }
+
+    const receiptResult = await this.pool.query(
+      `SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
+         FROM facts
+        WHERE fact_id = $1
+          AND (record_json::jsonb->>'type') IN ('ao_act_receipt_v0','ao_act_receipt_v1')
+        LIMIT 1`,
+      [input.receipt_fact_id],
+    );
+    const receiptRow = receiptResult.rows?.[0] ?? null;
+    if (!receiptRow) throw new FertilizationServiceErrorV1("NOT_FOUND:receipt_fact_id", 404);
+    const receiptRecord = receiptRow.record_json ?? {};
+    const receiptPayload = receiptRecord.payload ?? {};
+    if (String(receiptPayload.tenant_id ?? "") !== input.tenant_id
+      || String(receiptPayload.project_id ?? "") !== input.project_id
+      || String(receiptPayload.group_id ?? "") !== input.group_id
+      || String(receiptPayload.field_id ?? "") !== input.field_id
+      || String(receiptPayload.act_task_id ?? receiptPayload.task_id ?? "") !== input.act_task_id
+      || String(receiptPayload.operation_plan_id ?? "") !== input.operation_plan_id) {
+      throw new FertilizationServiceErrorV1("RECEIPT_EXACT_CHAIN_MISMATCH", 400);
+    }
+    const receipt_id = nonEmptyText(receiptPayload.receipt_id ?? receiptPayload.ao_act_receipt_id) ?? input.receipt_fact_id;
+
+    const asExecutedResult = await this.pool.query(
+      `SELECT *
+         FROM as_executed_record_v1
+        WHERE tenant_id = $1
+          AND project_id = $2
+          AND group_id = $3
+          AND as_executed_id = $4
+        LIMIT 1`,
+      [input.tenant_id, input.project_id, input.group_id, input.as_executed_id],
+    );
+    const as_executed = asExecutedResult.rows?.[0] ?? null;
+    if (!as_executed) throw new FertilizationServiceErrorV1("NOT_FOUND:as_executed_id", 404);
+    const asExecutedReceiptRefs = Array.isArray(as_executed.receipt_refs) ? as_executed.receipt_refs : [];
+    const exactReceiptRefPresent = asExecutedReceiptRefs.some((ref: any) => {
+      if (typeof ref === "string") return ref === input.receipt_fact_id;
+      return String(ref?.fact_id ?? ref?.ref_id ?? ref?.id ?? "") === input.receipt_fact_id;
+    });
+    if (String(as_executed.task_id ?? "") !== input.act_task_id
+      || String(as_executed.receipt_id ?? "") !== receipt_id
+      || String(as_executed.prescription_id ?? "") !== variable_prescription_id
+      || String(as_executed.field_id ?? "") !== input.field_id
+      || !exactReceiptRefPresent) {
+      throw new FertilizationServiceErrorV1("AS_EXECUTED_EXACT_CHAIN_MISMATCH", 400);
+    }
+
+    const asAppliedResult = await this.pool.query(
+      `SELECT *
+         FROM as_applied_map_v1
+        WHERE tenant_id = $1
+          AND project_id = $2
+          AND group_id = $3
+          AND as_applied_id = $4
+        LIMIT 1`,
+      [input.tenant_id, input.project_id, input.group_id, input.as_applied_id],
+    );
+    const as_applied = asAppliedResult.rows?.[0] ?? null;
+    if (!as_applied) throw new FertilizationServiceErrorV1("NOT_FOUND:as_applied_id", 404);
+    if (String(as_applied.as_executed_id ?? "") !== input.as_executed_id
+      || String(as_applied.task_id ?? "") !== input.act_task_id
+      || String(as_applied.receipt_id ?? "") !== receipt_id
+      || String(as_applied.prescription_id ?? "") !== variable_prescription_id
+      || String(as_applied.field_id ?? "") !== input.field_id) {
+      throw new FertilizationServiceErrorV1("AS_APPLIED_EXACT_CHAIN_MISMATCH", 400);
+    }
+
+    const canonicalAcceptance = await this.findExactFactById("acceptance_result_v1", input.acceptance_result_fact_id);
+    if (!canonicalAcceptance) throw new FertilizationServiceErrorV1("NOT_FOUND:acceptance_result_fact_id", 404);
+    const acceptancePayload: any = canonicalAcceptance.record_json?.payload ?? {};
+    const acceptanceEvidence = Array.isArray(acceptancePayload.evidence_refs) ? acceptancePayload.evidence_refs : [];
+    const receiptBound = acceptanceEvidence.some((ref: any) => {
+      if (typeof ref === "string") return ref === input.receipt_fact_id;
+      return String(ref?.fact_id ?? ref?.ref_id ?? ref?.id ?? "") === input.receipt_fact_id;
+    });
+    const canonicalPass = String(acceptancePayload.verdict ?? "").trim().toUpperCase() === "PASS"
+      && acceptancePayload.formal_acceptance === true
+      && acceptancePayload.formal_evidence_passed === true
+      && acceptancePayload.formal_execution_passed === true
+      && String(acceptancePayload.source_lane ?? "").trim().toUpperCase() === "FORMAL_OPERATION"
+      && acceptancePayload.customer_visible_eligible === true;
+    if (!canonicalPass) throw new FertilizationServiceErrorV1("CANONICAL_ACCEPTANCE_PASS_REQUIRED", 400);
+    if (String(acceptancePayload.tenant_id ?? "") !== input.tenant_id
+      || String(acceptancePayload.project_id ?? "") !== input.project_id
+      || String(acceptancePayload.group_id ?? "") !== input.group_id
+      || String(acceptancePayload.field_id ?? "") !== input.field_id
+      || String(acceptancePayload.act_task_id ?? "") !== input.act_task_id
+      || String(acceptancePayload.operation_plan_id ?? "") !== input.operation_plan_id
+      || String(acceptancePayload.receipt_id ?? "") !== receipt_id
+      || !receiptBound) {
+      throw new FertilizationServiceErrorV1("CANONICAL_ACCEPTANCE_EXACT_CHAIN_MISMATCH", 400);
+    }
+
+    return {
+      variable_prescription_id,
+      receipt_fact_id: input.receipt_fact_id,
+      receipt_id,
+      receipt_record: receiptRecord,
+      as_executed,
+      as_applied,
+      canonical_acceptance: canonicalAcceptance,
+    };
+  }
+
   async evaluateAcceptance(input: TenantScopeV1 & {
     fertilization_prescription_id: string;
-    receipt_id?: string | null;
-    act_task_id?: string | null;
-    operation_plan_id?: string | null;
-    as_applied_id?: string | null;
-    receipt_status?: string | null;
-    zone_applications?: unknown;
-    evidence_refs?: unknown;
+    receipt_fact_id: string;
+    act_task_id: string;
+    operation_plan_id: string;
+    as_executed_id: string;
+    as_applied_id: string;
+    acceptance_result_fact_id: string;
   }): Promise<{ acceptance: Record<string, unknown>; fact_id: string }> {
     ensureTenantScope(input);
     const fertilization_prescription_id = nonEmptyText(input.fertilization_prescription_id);
+    const receipt_fact_id = nonEmptyText(input.receipt_fact_id);
+    const act_task_id = nonEmptyText(input.act_task_id);
+    const operation_plan_id = nonEmptyText(input.operation_plan_id);
+    const as_executed_id = nonEmptyText(input.as_executed_id);
+    const as_applied_id = nonEmptyText(input.as_applied_id);
+    const acceptance_result_fact_id = nonEmptyText(input.acceptance_result_fact_id);
     if (!fertilization_prescription_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:fertilization_prescription_id", 400);
+    if (!receipt_fact_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:receipt_fact_id", 400);
+    if (!act_task_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:act_task_id", 400);
+    if (!operation_plan_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:operation_plan_id", 400);
+    if (!as_executed_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:as_executed_id", 400);
+    if (!as_applied_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:as_applied_id", 400);
+    if (!acceptance_result_fact_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:acceptance_result_fact_id", 400);
+    if (Array.isArray((input as any).zone_applications)) throw new FertilizationServiceErrorV1("CALLER_ZONE_APPLICATIONS_FORBIDDEN", 400);
+    if ((input as any).receipt_status != null) throw new FertilizationServiceErrorV1("CALLER_RECEIPT_STATUS_FORBIDDEN", 400);
+    if ((input as any).receipt_id != null) throw new FertilizationServiceErrorV1("CALLER_RECEIPT_ID_FORBIDDEN_USE_RECEIPT_FACT_ID", 400);
+    if ((input as any).evidence_refs != null) throw new FertilizationServiceErrorV1("CALLER_EXECUTION_EVIDENCE_FORBIDDEN", 400);
+
     const prescriptionRow = await this.getPrescription(input, fertilization_prescription_id);
     if (!prescriptionRow) throw new FertilizationServiceErrorV1("NOT_FOUND:fertilization_prescription", 404);
     const prescription = prescriptionRow.record_json;
+    const provenance = await this.loadExactExecutionProvenance({
+      tenant_id: input.tenant_id,
+      project_id: input.project_id,
+      group_id: input.group_id,
+      fertilization_prescription_id,
+      fertilization_prescription_fact_id: prescriptionRow.fact_id,
+      field_id: prescription.field_id,
+      receipt_fact_id,
+      act_task_id,
+      operation_plan_id,
+      as_executed_id,
+      as_applied_id,
+      acceptance_result_fact_id,
+    });
 
-    const apps = Array.isArray(input.zone_applications) ? input.zone_applications : [];
+    const application = provenance.as_applied?.application && typeof provenance.as_applied.application === "object"
+      ? provenance.as_applied.application
+      : {};
+    if (String(application.mode ?? "").trim().toUpperCase() !== "VARIABLE_BY_ZONE") {
+      throw new FertilizationServiceErrorV1("AS_APPLIED_VARIABLE_BY_ZONE_REQUIRED", 400);
+    }
+    const apps = Array.isArray(application.zone_applications) ? application.zone_applications : [];
     const requiredZones = prescription.zone_rates.filter((z) => z.required !== false);
     const zone_results = requiredZones.map((zone) => {
       const app = apps.find((entry: any) => String(entry?.zone_id ?? "") === zone.zone_id) as any;
-      const actual_n_kg_ha = finiteOrNull(app?.actual_n_kg_ha ?? app?.applied_n_kg_ha ?? app?.actual_rate);
-      const coverage_percent = finiteOrNull(app?.coverage_percent);
+      const actual_n_kg_ha = finiteOrNull(app?.applied_amount ?? app?.actual_n_kg_ha ?? app?.applied_n_kg_ha ?? app?.actual_rate);
+      const coverageRaw = finiteOrNull(app?.coverage_percent);
+      const coverage_percent = coverageRaw != null && coverageRaw > 1 ? coverageRaw / 100 : coverageRaw;
       const deviation_percent = actual_n_kg_ha == null || zone.planned_n_kg_ha <= 0
         ? null
         : Math.abs(actual_n_kg_ha - zone.planned_n_kg_ha) / zone.planned_n_kg_ha;
@@ -564,7 +749,10 @@ export class FertilizationServiceV1 {
       } else if (actual_n_kg_ha == null) {
         result = "NEEDS_REVIEW";
         reasons.push("MISSING_ACTUAL_N_KG_HA");
-      } else if (coverage_percent != null && coverage_percent < 0.9) {
+      } else if (coverage_percent == null) {
+        result = "NEEDS_REVIEW";
+        reasons.push("MISSING_ZONE_COVERAGE");
+      } else if (coverage_percent < 0.9) {
         result = "FAIL";
         reasons.push("ZONE_COVERAGE_BELOW_THRESHOLD");
       } else if (deviation_percent != null && deviation_percent > 0.15) {
@@ -594,25 +782,33 @@ export class FertilizationServiceV1 {
       schema_version: "1",
       fertilization_acceptance_id: randomUUID(),
       fertilization_prescription_id,
+      fertilization_prescription_fact_id: prescriptionRow.fact_id,
+      variable_prescription_id: provenance.variable_prescription_id,
       tenant_id: prescription.tenant_id,
       project_id: prescription.project_id,
       group_id: prescription.group_id,
       field_id: prescription.field_id,
-      operation_plan_id: nonEmptyText(input.operation_plan_id),
-      act_task_id: nonEmptyText(input.act_task_id),
-      receipt_id: nonEmptyText(input.receipt_id),
-      as_applied_id: nonEmptyText(input.as_applied_id),
+      operation_plan_id,
+      act_task_id,
+      receipt_fact_id,
+      receipt_id: provenance.receipt_id,
+      as_executed_id,
+      as_applied_id,
+      acceptance_result_fact_id,
       acceptance_status,
       zone_results,
       operation_rollup_policy: "ALL_REQUIRED_ZONES_PASS",
       reasons: acceptance_status === "PASS" ? ["ALL_REQUIRED_ZONES_PASS"] : ["ZONE_LEVEL_EVIDENCE_REQUIRED"],
       evidence_refs: uniqueEvidenceRefs([
-        ...normalizeEvidenceRefs(input.evidence_refs, false),
-        { kind: "fertilization_prescription_v1", ref_id: fertilization_prescription_id },
+        { kind: "fertilization_prescription_v1", ref_id: prescriptionRow.fact_id },
+        { kind: "prescription_contract_v1", ref_id: provenance.variable_prescription_id },
+        { kind: "ao_act_receipt_fact", ref_id: receipt_fact_id },
+        { kind: "as_executed_record_v1", ref_id: as_executed_id },
+        { kind: "as_applied_map_v1", ref_id: as_applied_id },
+        { kind: "acceptance_result_v1", ref_id: acceptance_result_fact_id },
       ]),
       evaluated_at_ts: nowTs(),
     };
     const inserted = await this.insertFact(acceptance, "fac");
     return { acceptance, fact_id: inserted.fact_id };
-  }
-}
+  }}
