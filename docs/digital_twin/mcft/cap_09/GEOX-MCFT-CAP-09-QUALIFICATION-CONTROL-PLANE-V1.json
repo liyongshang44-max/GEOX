@@ -287,6 +287,11 @@
         "apps/server/src/external_evidence/mcft_cap09_gfs_target_pair_history_v1.ts",
         "apps/server/src/persistence/external_evidence/postgres_gfs_target_pair_history_v1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_arbitration_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_ARBITRATION_V1.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-ARBITRATION-AUTHORITY-V1.json",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_host_planner_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_HOST_PLANNER_V1.ts",
         "apps/server/src/external_evidence/mcft_cap09_production_evidence_planner_assembly_v1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_PLANNER_ASSEMBLY_V1.ts"
       ]
@@ -505,6 +510,11 @@
         "apps/server/src/external_evidence/mcft_cap09_gfs_target_pair_history_v1.ts",
         "apps/server/src/persistence/external_evidence/postgres_gfs_target_pair_history_v1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_arbitration_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_ARBITRATION_V1.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-ARBITRATION-AUTHORITY-V1.json",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_host_planner_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_HOST_PLANNER_V1.ts",
         "apps/server/src/external_evidence/mcft_cap09_production_evidence_planner_assembly_v1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_PLANNER_ASSEMBLY_V1.ts"
       ]

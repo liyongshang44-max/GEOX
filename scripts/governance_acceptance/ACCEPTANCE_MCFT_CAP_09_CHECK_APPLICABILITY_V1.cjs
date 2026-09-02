@@ -497,6 +497,26 @@ function main() {
     assert(byId(postMergeAssemblyPlan, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(plannerAssemblyPath));
   }
 
+  // CP-4: the single-host arbitration and compiled host planner are Phase3-owned
+  // runtime dependencies, and remain visible to the post-merge owner gate.
+  const hostPlannerPaths = [
+    "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_arbitration_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_ARBITRATION_V1.ts",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-ARBITRATION-AUTHORITY-V1.json",
+    "apps/server/src/external_evidence/mcft_cap09_production_evidence_host_planner_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_HOST_PLANNER_V1.ts",
+  ];
+  const hostPlannerPlan = plan(authority, registry, hostPlannerPaths);
+  assert.equal(hostPlannerPlan.status, "PASS");
+  assert.equal(hostPlannerPlan.unknown_changed_paths.length, 0);
+  assert.equal(byId(hostPlannerPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+  assert.equal(byId(hostPlannerPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+  const postMergeHostPlannerPlan = plan(authority, registry, hostPlannerPaths, "POST_MERGE_V13_QUALIFICATION");
+  assert.equal(byId(postMergeHostPlannerPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+  for (const hostPlannerPath of hostPlannerPaths) {
+    assert(byId(postMergeHostPlannerPlan, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(hostPlannerPath));
+  }
+
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
   const phase3 = plan(authority, registry, [phase3Path]);
