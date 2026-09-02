@@ -665,7 +665,61 @@ for (const fp of runtimeFiles) {
       n.expression.expression.text === "app" &&
       n.expression.name.text === "route"
     ) {
-      covUnsupportedRouteRegistrations.push({ source_path: rel(fp), expression: n.getText(mod.sf).slice(0, 240) });
+      const cfg = n.arguments[0];
+      let parsed = false;
+      if (cfg && ts.isObjectLiteralExpression(cfg)) {
+        const prop = (name) => cfg.properties.find((p) =>
+          ts.isPropertyAssignment(p) &&
+          ((ts.isIdentifier(p.name) && p.name.text === name) || (ts.isStringLiteral(p.name) && p.name.text === name))
+        );
+        const methodProp = prop("method");
+        const urlProp = prop("url");
+        const handlerProp = prop("handler");
+        const methods = [];
+        if (methodProp && ts.isPropertyAssignment(methodProp)) {
+          const v = methodProp.initializer;
+          if (ts.isStringLiteral(v) || ts.isNoSubstitutionTemplateLiteral(v)) {
+            methods.push(v.text.toUpperCase());
+          } else if (ts.isArrayLiteralExpression(v)) {
+            for (const el of v.elements) {
+              if (ts.isStringLiteral(el) || ts.isNoSubstitutionTemplateLiteral(el)) methods.push(el.text.toUpperCase());
+            }
+          }
+        }
+        const route = urlProp && ts.isPropertyAssignment(urlProp) &&
+          (ts.isStringLiteral(urlProp.initializer) || ts.isNoSubstitutionTemplateLiteral(urlProp.initializer))
+          ? urlProp.initializer.text
+          : null;
+        const handler = handlerProp && ts.isPropertyAssignment(handlerProp) ? handlerProp.initializer : null;
+        if (route && methods.length && handler) {
+          let analysis = { dml:false, ddl:false, fact:false, directWriterKeys:new Set(), callees:new Set() };
+          if (ts.isArrowFunction(handler) || ts.isFunctionExpression(handler)) {
+            analysis = covAnalyzeNode(fp, handler);
+          } else if (ts.isIdentifier(handler)) {
+            const target = covResolveFunction(fp, handler.text);
+            if (target) analysis = covAnalyzeFunction(target);
+          }
+          for (const method of methods) {
+            if (!["GET","POST","PUT","PATCH","DELETE","HEAD","OPTIONS","ALL"].includes(method)) {
+              covUnsupportedRouteRegistrations.push({ source_path:rel(fp), expression:n.getText(mod.sf).slice(0,240), reason:"UNSUPPORTED_METHOD" });
+              continue;
+            }
+            covAllHttp.push({
+              source_path: rel(fp),
+              method,
+              route,
+              dml: analysis.dml,
+              ddl: analysis.ddl,
+              fact: analysis.fact,
+              writers: [...analysis.directWriterKeys],
+            });
+          }
+          parsed = true;
+        }
+      }
+      if (!parsed) {
+        covUnsupportedRouteRegistrations.push({ source_path: rel(fp), expression: n.getText(mod.sf).slice(0, 240), reason:"DYNAMIC_OR_UNSUPPORTED_APP_ROUTE" });
+      }
     }
     ts.forEachChild(n, visit);
   }
