@@ -27,9 +27,9 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "PRODUCTION_HOST_PLANNER_PROCESS_SEAM_IMPLEMENTED_ENTRYPOINT_STILL_UNBOUND");
+  assert.equal(authority.status, "PRODUCTION_PLANNER_DEPENDENCY_ASSEMBLY_IMPLEMENTED_ENTRYPOINT_STILL_UNBOUND");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
-  assert.equal(authority.subject_predecessor_sha, "175299092f8f8701520ea6e5628a47841d9b90a9");
+  assert.equal(authority.subject_predecessor_sha, "9e291eb52b97c9f3f7dd24c3208d8bfc7b357f31");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
@@ -282,6 +282,20 @@ try {
   includes(composition, "PHASE3_EVIDENCE_RUNTIME_EXACTLY_ONE_PLANNER_BOUNDARY_REQUIRED", "PRODUCTION_COMPOSITION_EXACT_ONE_PLANNER_REQUIRED");
   const productionProcess = read(authority.production_process_ref);
   includes(productionProcess, "host_planner: EvidenceRuntimeHostPlannerV1", "PRODUCTION_PROCESS_DIRECT_HOST_PLANNER_SEAM_REQUIRED");
+
+  const plannerAssembly = read(authority.production_planner_assembly_ref);
+  includes(plannerAssembly, "PostgresEvidenceSupplyCursorReadV1", "PLANNER_ASSEMBLY_CURSOR_READER_REQUIRED");
+  includes(plannerAssembly, "PostgresEvidenceSourcePollScheduleV1", "PLANNER_ASSEMBLY_SOURCE_POLL_REQUIRED");
+  includes(plannerAssembly, "PostgresGfsRetryScheduleV1", "PLANNER_ASSEMBLY_GFS_RETRY_REQUIRED");
+  includes(plannerAssembly, "PostgresGfsCanonicalTargetPairHistoryV1", "PLANNER_ASSEMBLY_GFS_HISTORY_REQUIRED");
+  includes(plannerAssembly, "ProductionEvidenceProviderAttemptFenceFactoryV1", "PLANNER_ASSEMBLY_PROVIDER_FENCE_REQUIRED");
+  includes(plannerAssembly, "ProductionEvidenceSourcePlanExecutorV1", "PLANNER_ASSEMBLY_EXECUTOR_REQUIRED");
+  includes(plannerAssembly, "ProductionEvidenceHostPlannerV1", "PLANNER_ASSEMBLY_HOST_PLANNER_REQUIRED");
+  assert.equal(plannerAssembly.includes("process.env"), false, "PLANNER_ASSEMBLY_ENV_FORBIDDEN");
+  assert.equal(plannerAssembly.includes("Date.now"), false, "PLANNER_ASSEMBLY_WALL_CLOCK_FORBIDDEN");
+  assert.equal(authority.production_planner_dependency_assembly_implemented, true);
+  assert.equal(authority.production_planner_dependency_assembly_construction_zero_io, true);
+  assert.equal(authority.production_planner_dependency_assembly_runtime_start_effect, false);
 
   const host = read(authority.host_lifecycle_ref);
   includes(host, '"PLANNER_EXHAUSTED"', "EVIDENCE_HOST_NULL_TERMINAL_STATE_REQUIRED");

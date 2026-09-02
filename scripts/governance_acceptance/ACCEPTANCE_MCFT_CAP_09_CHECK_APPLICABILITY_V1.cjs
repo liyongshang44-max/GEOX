@@ -485,6 +485,18 @@ function main() {
     assert(byId(historyPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(gfsTargetHistoryPath));
   }
 
+  // CP-4: production planner dependency assembly is Phase3-owned and owner-visible post-merge.
+  for (const plannerAssemblyPath of ["apps/server/src/external_evidence/mcft_cap09_production_evidence_planner_assembly_v1.ts","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_PLANNER_ASSEMBLY_V1.ts"]) {
+    const plannerAssemblyPlan = plan(authority, registry, [plannerAssemblyPath]);
+    assert.equal(plannerAssemblyPlan.status, "PASS");
+    assert.equal(plannerAssemblyPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(plannerAssemblyPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(plannerAssemblyPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const postMergeAssemblyPlan = plan(authority, registry, [plannerAssemblyPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(postMergeAssemblyPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(postMergeAssemblyPlan, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(plannerAssemblyPath));
+  }
+
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
   const phase3 = plan(authority, registry, [phase3Path]);

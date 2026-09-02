@@ -1,9 +1,9 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_target_planner_readiness_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1",
-  "status": "PRODUCTION_HOST_PLANNER_PROCESS_SEAM_IMPLEMENTED_ENTRYPOINT_STILL_UNBOUND",
+  "status": "PRODUCTION_PLANNER_DEPENDENCY_ASSEMBLY_IMPLEMENTED_ENTRYPOINT_STILL_UNBOUND",
   "stage": "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START",
-  "subject_predecessor_sha": "175299092f8f8701520ea6e5628a47841d9b90a9",
+  "subject_predecessor_sha": "9e291eb52b97c9f3f7dd24c3208d8bfc7b357f31",
   "host_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
   "production_process_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
   "production_composition_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
@@ -313,7 +313,8 @@
     "GFS_CURSOR_SUMMARY_REMOVED_AS_HOURLY_TARGET_COMPLETION_AUTHORITY",
     "GFS_SOURCE_PLANNER_EXACT_TARGET_CANONICAL_DEDUP",
     "GFS_AFTER_LEASE_STALE_PLAN_CANONICAL_RECHECK",
-    "PRODUCTION_PROCESS_DIRECT_HOST_PLANNER_BINDING_SEAM"
+    "PRODUCTION_PROCESS_DIRECT_HOST_PLANNER_BINDING_SEAM",
+    "PRODUCTION_PLANNER_CONCRETE_DEPENDENCY_ASSEMBLY_ZERO_IO"
   ],
   "current_entrypoint": {
     "status": "PACKAGED_FAIL_CLOSED_PRODUCTION_HOST_PLANNER_PROCESS_SEAM_AVAILABLE_ENTRYPOINT_NOT_BOUND",
@@ -387,5 +388,10 @@
   "provider_attempt_fence_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_V1.ts",
   "gfs_target_pair_history_contract_ref": "apps/server/src/external_evidence/mcft_cap09_gfs_target_pair_history_v1.ts",
   "gfs_target_pair_history_postgres_ref": "apps/server/src/persistence/external_evidence/postgres_gfs_target_pair_history_v1.ts",
-  "gfs_target_pair_history_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts"
+  "gfs_target_pair_history_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts",
+  "production_planner_assembly_ref": "apps/server/src/external_evidence/mcft_cap09_production_evidence_planner_assembly_v1.ts",
+  "production_planner_assembly_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_PLANNER_ASSEMBLY_V1.ts",
+  "production_planner_dependency_assembly_implemented": true,
+  "production_planner_dependency_assembly_construction_zero_io": true,
+  "production_planner_dependency_assembly_runtime_start_effect": false
 }
