@@ -196,8 +196,8 @@ B-SEC-0 caller authority is closed
 PR-SEC-1 inventory is machine-qualified complete on:
 
 ```text
-qualified head                               b4f21227da1c768d1ec99ff7a7237311e8cf3128
-exact CI                                     33605095007
+qualified head                               5633a76d20fb1d7f20d2159fbef6567493e516ed
+exact CI                                     33608456999
 build-test                                   SUCCESS
 caller-authority inventory reverse-scan      SUCCESS
 residual authority audit                     SUCCESS
@@ -236,6 +236,8 @@ caller-controlled/unbound tenant scope       16
 These counters are the output of the inventory phase. They are not closure failures for PR-SEC-1 and must not be rewritten to zero until later authorized containment/principal work actually closes them.
 
 This metadata does **not** declare B-SEC-0 complete and does **not** declare ACTIVE_GRAPH_FULLY_DISPOSED. PR-SEC-2 has not started.
+
+The metadata-only completion rebind itself must now be exact-head requalified before PR-SEC-1 is considered finally settled.
 
 ## 10. Completion rule for this package
 
