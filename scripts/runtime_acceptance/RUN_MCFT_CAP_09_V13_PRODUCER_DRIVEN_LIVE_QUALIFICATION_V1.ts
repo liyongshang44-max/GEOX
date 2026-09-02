@@ -14,7 +14,7 @@ const OUT = path.resolve("acceptance-output/MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE
 const EXPECTED_V13_DB = "geox_mcft_cap09_s6_accel24t_am19_v13";
 const EXPECTED_BLOCKED_DB = "geox_mcft_cap09_s6_accel24t_am19_blocked_v13";
 const EXPECTED_BUCKET = "geox-mcft-cap09-formal-raw-v1";
-const EVIDENCE_ROLE = "geox_mcft_cap09_evidence_runtime_v1";
+const EVIDENCE_LOGIN_ROLE = "geox_mcft_cap09_evidence_runtime_login_v1";
 
 function required(name: string): string {
   const value = String(process.env[name] ?? "").trim();
@@ -58,7 +58,7 @@ async function runBlockedNegative(input: { url: string; subject: string }): Prom
   const epoch = "epoch_mcft_cap09_v13_blocked_qual_" + input.subject.slice(0, 12);
   const pastBase = canonicalHour(Date.now() - 3_600_000);
   try {
-    assert.equal(await currentRole(pool), EVIDENCE_ROLE, "V13_BLOCKED_QUALIFICATION_EVIDENCE_ROLE_REQUIRED");
+    assert.equal(await currentRole(pool), EVIDENCE_LOGIN_ROLE, "V13_BLOCKED_QUALIFICATION_EVIDENCE_LOGIN_ROLE_REQUIRED");
     assert.equal(await publicTableCount(pool), 29, "V13_BLOCKED_QUALIFICATION_29_TABLES_REQUIRED");
     const lifecycle = new PostgresExternalFormalForcingControllerLifecycleV1(pool, {
       scope: MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1,
@@ -135,7 +135,7 @@ async function main(): Promise<void> {
   const samples: Array<Record<string, unknown>> = [];
 
   try {
-    assert.equal(await currentRole(pool), EVIDENCE_ROLE, "V13_LIVE_QUALIFICATION_EVIDENCE_ROLE_REQUIRED");
+    assert.equal(await currentRole(pool), EVIDENCE_LOGIN_ROLE, "V13_LIVE_QUALIFICATION_EVIDENCE_LOGIN_ROLE_REQUIRED");
     assert.equal(await publicTableCount(pool), 29, "V13_LIVE_QUALIFICATION_29_TABLES_REQUIRED");
     assert.equal(await functionExists(pool), true, "V13_LIVE_QUALIFICATION_FENCED_WRITER_REQUIRED");
 

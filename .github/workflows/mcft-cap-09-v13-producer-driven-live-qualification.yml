@@ -27,6 +27,7 @@ env:
   TWIN_ROLE: geox_mcft_cap09_twin_runtime_v1
   TWIN_LOGIN_ROLE: geox_mcft_cap09_twin_runtime_login_v1
   SEED_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+  EVIDENCE_RUNTIME_DATABASE_URL_SECRET: ${{ secrets.GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL }}
   S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
   S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
   S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
@@ -126,26 +127,27 @@ jobs:
         run: |
           const fs=require('node:fs');
           const raw=String(process.env.SEED_DATABASE_URL||'').trim();
+          const evidenceRaw=String(process.env.EVIDENCE_RUNTIME_DATABASE_URL_SECRET||'').trim();
           if(!raw)throw new Error('V13_LIVE_DATABASE_SECRET_REQUIRED');
+          if(!evidenceRaw)throw new Error('V13_LIVE_EVIDENCE_RUNTIME_DATABASE_URL_SECRET_REQUIRED');
           const seed=new URL(raw);
-          if(!['postgres:','postgresql:'].includes(seed.protocol))throw new Error('V13_LIVE_POSTGRES_URL_REQUIRED');
-          function target(name,asEvidence=false){
-            const u=new URL(raw);
+          const evidenceSeed=new URL(evidenceRaw);
+          if(!['postgres:','postgresql:'].includes(seed.protocol)||!['postgres:','postgresql:'].includes(evidenceSeed.protocol))throw new Error('V13_LIVE_POSTGRES_URL_REQUIRED');
+          if(decodeURIComponent(evidenceSeed.username)!==process.env.EVIDENCE_LOGIN_ROLE)throw new Error('V13_LIVE_EVIDENCE_LOGIN_URL_PRINCIPAL_REQUIRED');
+          if(evidenceSeed.hostname!==seed.hostname||(evidenceSeed.port||'5432')!==(seed.port||'5432'))throw new Error('V13_LIVE_EVIDENCE_LOGIN_ENDPOINT_MISMATCH');
+          function target(name,source){
+            const u=new URL(source);
             u.pathname='/'+name;
-            let v=u.toString();
-            if(asEvidence){
-              const separator=u.search?'&':'?';
-              v+=separator+'options='+encodeURIComponent('-c role='+process.env.EVIDENCE_ROLE);
-            }
+            const v=u.toString();
             console.log('::add-mask::'+v);
             return v;
           }
           const lines=[
-            'V13_ADMIN_URL='+target(process.env.V13_DB),
-            'BLOCKED_ADMIN_URL='+target(process.env.BLOCKED_V13_DB),
-            'FORMAL_V5_URL='+target(process.env.FORMAL_V5_DB),
-            'V13_EVIDENCE_URL='+target(process.env.V13_DB,true),
-            'BLOCKED_EVIDENCE_URL='+target(process.env.BLOCKED_V13_DB,true),
+            'V13_ADMIN_URL='+target(process.env.V13_DB,raw),
+            'BLOCKED_ADMIN_URL='+target(process.env.BLOCKED_V13_DB,raw),
+            'FORMAL_V5_URL='+target(process.env.FORMAL_V5_DB,raw),
+            'V13_EVIDENCE_URL='+target(process.env.V13_DB,evidenceRaw),
+            'BLOCKED_EVIDENCE_URL='+target(process.env.BLOCKED_V13_DB,evidenceRaw),
           ];
           fs.appendFileSync(process.env.GITHUB_ENV,lines.join('\n')+'\n');
 
@@ -223,38 +225,14 @@ jobs:
             echo "V13_LIVE_PRODUCTION_LOGIN_EXACT_MEMBERSHIP_REQUIRED:$production_login_memberships" >&2; exit 1;
           }
 
-          : > "$RUNNER_TEMP/v13-live-self-granted-roles.txt"
-          for role in "$EVIDENCE_ROLE" geox_mcft_cap09_forcing_writer_owner_v1; do
-            self_grants_before="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
-              SELECT count(*)::int
-                FROM pg_catalog.pg_auth_members m
-                JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
-                JOIN pg_catalog.pg_roles member ON member.oid=m.member
-                JOIN pg_catalog.pg_roles grantor ON grantor.oid=m.grantor
-               WHERE granted.rolname='$role'
-                 AND member.rolname=current_user
-                 AND grantor.rolname=current_user")"
-            test "$self_grants_before" = "0" || {
-              echo "V13_LIVE_STALE_TEMP_SELF_GRANT_FORBIDDEN:$role:$self_grants_before" >&2; exit 1;
+          for url in "$V13_EVIDENCE_URL" "$BLOCKED_EVIDENCE_URL"; do
+            evidence_login_state="$(psql "$url" -AtF '|' -v ON_ERROR_STOP=1 -c "
+              SELECT current_user::text,
+                     pg_catalog.pg_has_role(current_user,'$EVIDENCE_ROLE','USAGE')::text,
+                     pg_catalog.pg_has_role(current_user,'$TWIN_ROLE','USAGE')::text")"
+            test "$evidence_login_state" = "$EVIDENCE_LOGIN_ROLE|true|false" || {
+              echo "V13_LIVE_EVIDENCE_LOGIN_EFFECTIVE_ROLE_BOUNDARY_REQUIRED:$evidence_login_state" >&2; exit 1;
             }
-            can_set_before="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT pg_catalog.pg_has_role(current_user,'$role','SET')::text")"
-            if [ "$can_set_before" != "true" ]; then
-              can_admin="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
-                SELECT EXISTS (
-                  SELECT 1
-                    FROM pg_catalog.pg_auth_members m
-                    JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
-                    JOIN pg_catalog.pg_roles member ON member.oid=m.member
-                   WHERE granted.rolname='$role' AND member.rolname=current_user AND m.admin_option
-                )::text")"
-              test "$can_admin" = "true" || {
-                echo "V13_LIVE_TEMP_MEMBERSHIP_CANNOT_BE_ESTABLISHED:$role" >&2; exit 1;
-              }
-              psql "$SEED_DATABASE_URL" -v ON_ERROR_STOP=1 -c "GRANT $role TO CURRENT_USER"
-              printf '%s\n' "$role" >> "$RUNNER_TEMP/v13-live-self-granted-roles.txt"
-            fi
-            can_set_after="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT pg_catalog.pg_has_role(current_user,'$role','SET')::text")"
-            test "$can_set_after" = "true" || { echo "V13_LIVE_TEMP_MEMBERSHIP_NOT_EFFECTIVE:$role" >&2; exit 1; }
           done
 
       - name: Initialize exact 29-table v13 qualification schemas and ACL
@@ -296,7 +274,9 @@ jobs:
           set -euo pipefail
           for url in "$V13_EVIDENCE_URL" "$BLOCKED_EVIDENCE_URL"; do
             role="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT current_user")"
-            test "$role" = "$EVIDENCE_ROLE"
+            test "$role" = "$EVIDENCE_LOGIN_ROLE"
+            evidence_membership="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT pg_catalog.pg_has_role(current_user,'$EVIDENCE_ROLE','USAGE')::text")"
+            test "$evidence_membership" = "true"
             schema_usage="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_schema_privilege(current_user,'public','USAGE')::text")"
             test "$schema_usage" = "true"
             schema_create="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_schema_privilege(current_user,'public','CREATE')::text")"
@@ -363,36 +343,3 @@ jobs:
           path: acceptance-output/MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V1_RESULT.json
           if-no-files-found: error
           retention-days: 90
-
-      - name: Revoke temporary qualification role memberships
-        if: always() && steps.arm.outputs.armed == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          for url in "$V13_ADMIN_URL" "$BLOCKED_ADMIN_URL"; do
-            psql "$url" -v ON_ERROR_STOP=1 -c "REVOKE CREATE ON SCHEMA public FROM geox_mcft_cap09_forcing_writer_owner_v1"
-            writer_schema_create="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_schema_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public','CREATE')::text")"
-            test "$writer_schema_create" = "false" || { echo "V13_LIVE_WRITER_OWNER_SCHEMA_CREATE_CLEANUP_FAILED:$writer_schema_create" >&2; exit 1; }
-            function_present="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT (to_regprocedure('public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)') IS NOT NULL)::text")"
-            if [ "$function_present" = "true" ]; then
-              psql "$url" -v ON_ERROR_STOP=1 -c "SET ROLE geox_mcft_cap09_forcing_writer_owner_v1; REVOKE EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb) FROM geox_mcft_cap09_forcing_writer_owner_v1; RESET ROLE;"
-              writer_execute="$(psql "$url" -At -v ON_ERROR_STOP=1 -c "SELECT has_function_privilege('geox_mcft_cap09_forcing_writer_owner_v1','public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)','EXECUTE')::text")"
-              test "$writer_execute" = "false" || { echo "V13_LIVE_WRITER_OWNER_EXECUTE_CLEANUP_FAILED:$writer_execute" >&2; exit 1; }
-            fi
-          done
-          if [ -f "$RUNNER_TEMP/v13-live-self-granted-roles.txt" ]; then
-            while IFS= read -r role; do
-              test -n "$role" || continue
-              psql "$SEED_DATABASE_URL" -v ON_ERROR_STOP=1 -c "REVOKE $role FROM CURRENT_USER GRANTED BY CURRENT_USER"
-              self_grants="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
-                SELECT count(*)::int
-                  FROM pg_catalog.pg_auth_members m
-                  JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
-                  JOIN pg_catalog.pg_roles member ON member.oid=m.member
-                  JOIN pg_catalog.pg_roles grantor ON grantor.oid=m.grantor
-                 WHERE granted.rolname='$role'
-                   AND member.rolname=current_user
-                   AND grantor.rolname=current_user")"
-              test "$self_grants" = "0" || { echo "V13_LIVE_TEMP_SELF_GRANT_LEAK:$role:$self_grants" >&2; exit 1; }
-            done < "$RUNNER_TEMP/v13-live-self-granted-roles.txt"
-          fi
