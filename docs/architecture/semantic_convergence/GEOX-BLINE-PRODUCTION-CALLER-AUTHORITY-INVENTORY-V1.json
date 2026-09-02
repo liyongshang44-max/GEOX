@@ -1,6 +1,6 @@
 {
   "schema_version": "bline_production_caller_authority_inventory_v1",
-  "status": "INVENTORY_REOPENED_FOR_MACHINE_COVERAGE_CLOSURE",
+  "status": "INVENTORY_COMPLETE_BSEC0_OPEN",
   "canonical_predecessor": {
     "pr": 3452,
     "sha": "b6f141c5471cd6f329ba60bd79cf6e4085546264",
@@ -9219,8 +9219,8 @@
   "completion_claim": {
     "bsec0_closed": false,
     "active_graph_fully_disposed": false,
-    "pr_sec_1_inventory_complete": false,
-    "reason": "PR-SEC-1 reopened after independent audit proved the prior HTTP method-rooted reverse scan missed production-reachable GET side effects and non-HTTP direct writers. Existing CI evidence remains CURRENT_GATE_PASS only; INVENTORY_GRAPH_COMPLETE is not claimed."
+    "pr_sec_1_inventory_complete": true,
+    "reason": "PR-SEC-1 machine coverage closure is complete at exact product/graph head 63cad07273a8fc3a9e81212fcf3fed71104c3ba6. Exact CI 33629047025 proves all caller/runtime/startup/callback/writer/target/delegation/principal-transition/credential/tenant-binding coverage zero-sets are 0. Open B-SEC caller-authority debt remains intentionally non-zero and PR-SEC-2 has not started."
   },
   "non_authority_method_dispositions": [
     {
@@ -9262,26 +9262,25 @@
   ],
   "inventory_completion": {
     "complete": true,
-    "qualified_product_head": "425e876486834ae6b958a2cbcc413b6b1bdc6c37",
-    "qualification_ci_run": 33598064113,
+    "qualified_product_head": "63cad07273a8fc3a9e81212fcf3fed71104c3ba6",
+    "qualification_ci_run": 33629047025,
     "caller_authority_inventory_gate": "SUCCESS",
-    "reverse_scan_missing_mutation_surfaces": 0,
+    "machine_coverage_zero_sets": "ALL_ZERO",
     "residual_authority_audit": "SUCCESS",
     "active_runtime_surface_closure": "SUCCESS",
     "typecheck": "SUCCESS",
     "build": "SUCCESS",
     "server_selfcheck": "SUCCESS",
     "acceptance": "SUCCESS",
-    "commercial_mvp0_release": "SUCCESS",
-    "runtime_hygiene": "SUCCESS",
     "semantic_runtime_changed": false,
     "authz_runtime_changed": false,
-    "mcft_implementation_changed": false
+    "mcft_implementation_changed": false,
+    "boundary": "INVENTORY_COMPLETE_ONLY_BSEC0_REMAINS_OPEN_NO_PR_SEC_2"
   },
   "inventory_qualification": {
-    "qualified_product_head": "5633a76d20fb1d7f20d2159fbef6567493e516ed",
-    "exact_ci_run": 33608456999,
-    "result": "HISTORICAL_CURRENT_GATE_PASS_NOT_GRAPH_COMPLETE",
+    "qualified_product_head": "63cad07273a8fc3a9e81212fcf3fed71104c3ba6",
+    "exact_ci_run": 33629047025,
+    "result": "INVENTORY_GRAPH_COMPLETE_BSEC0_OPEN",
     "build_test": "SUCCESS",
     "caller_authority_inventory_gate": "SUCCESS",
     "residual_authority_audit": "SUCCESS",
@@ -9290,17 +9289,19 @@
     "build": "SUCCESS",
     "server_selfcheck": "SUCCESS",
     "acceptance": "SUCCESS",
-    "controlled_pilot_strict_release": "SUCCESS",
-    "commercial_mvp0_release": "SUCCESS",
-    "runtime_hygiene": "SUCCESS",
-    "reverse_scan": {
-      "surface_count": 192,
-      "reachable_surface_count": 187,
-      "commercial_root_count": 11,
-      "discovered_literal_http_mutation_count": 178,
-      "explicitly_non_authority_http_method_count": 4,
-      "subprocess_edge_count": 1,
-      "missing_mutation_surface_count": 0
+    "coverage_zero_sets": {
+      "production_caller_triggered_mutation_without_inventory": 0,
+      "production_runtime_direct_writer_without_inventory": 0,
+      "startup_mutation_without_explicit_disposition": 0,
+      "production_callback_hook_persistent_writer_without_disposition": 0,
+      "reachable_writer_missing_from_disposition_writer_entrypoints": 0,
+      "reachable_persistent_target_missing_from_disposition_write_targets": 0,
+      "declared_writer_without_reachable_persistent_writer": 0,
+      "declared_sql_target_without_reachable_persistent_target": 0,
+      "production_internal_http_delegation_edge_without_disposition": 0,
+      "production_principal_transition_without_disposition": 0,
+      "production_service_credential_without_principal_classification": 0,
+      "production_global_multi_tenant_worker_with_ambiguous_tenant_binding_class": 0
     },
     "open_debt_counters": {
       "production_reachable_mutating_surface_without_authn": 35,
@@ -9309,13 +9310,13 @@
       "production_reachable_service_writer_without_bound_principal": 3,
       "tenant_scope_from_untrusted_body_or_unbound": 16
     },
-    "boundary": "PR_SEC_1_REOPENED_NO_PR_SEC_2"
+    "boundary": "INVENTORY_COMPLETE_ONLY_BSEC0_REMAINS_OPEN_NO_PR_SEC_2"
   },
   "metadata_final_qualification": {
-    "status": "REVOKED_BY_MACHINE_COVERAGE_GAP",
+    "status": "PENDING_EXACT_HEAD_REQUALIFICATION",
     "qualified_head": null,
     "exact_ci_run": null,
-    "note": "e2147bf2c3ba7272da3ef34135088f7297716f5f / CI 33609380441 remains valid CURRENT_GATE_PASS evidence, but does not prove INVENTORY_GRAPH_COMPLETE."
+    "note": "This metadata-only completion rebind must itself be qualified at its exact resulting head. Do not create a second vanity metadata rebind after that CI; external exact-head CI evidence is the final qualification proof."
   },
   "coverage_closure": {
     "status": "REOPENED",
