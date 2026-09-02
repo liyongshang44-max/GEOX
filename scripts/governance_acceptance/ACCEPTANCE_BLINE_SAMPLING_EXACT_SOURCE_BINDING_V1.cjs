@@ -67,13 +67,23 @@ forbid("service", [
   "ORDER BY occurred_at DESC",
 ]);
 
-const forbiddenFertilizationLatest = /sampling_acceptance_v1[\\s\\S]{0,600}ORDER BY occurred_at DESC[\\s\\S]{0,100}LIMIT 1/;
-if (forbiddenFertilizationLatest.test(src.fertilization)) failures.push("FERTILIZATION_LATEST_SAMPLING_ACCEPTANCE_FORBIDDEN");
-
-const samplingAcceptanceSelector = /sampling_acceptance_v1[\\s\\S]{0,700}sample_id[\\s\\S]{0,300}import_id[\\s\\S]{0,300}LIMIT 2/;
-if (!samplingAcceptanceSelector.test(src.fertilization)) failures.push("FERTILIZATION_SAMPLING_ACCEPTANCE_LIMIT2_SELECTOR_REQUIRED");
-const passPrefilter = /sampling_acceptance_v1[\\s\\S]{0,700}(?:verdict)[\\s\\S]{0,180}PASS[\\s\\S]{0,300}LIMIT 2/;
-if (passPrefilter.test(src.fertilization)) failures.push("FERTILIZATION_SAMPLING_ACCEPTANCE_PASS_PREFILTER_FORBIDDEN");
+const selectorAnchor = "WHERE (record_json::jsonb->>'type') = 'sampling_acceptance_v1'";
+const selectorStart = src.fertilization.indexOf(selectorAnchor);
+const selectorLimit2 = selectorStart >= 0 ? src.fertilization.indexOf("LIMIT 2", selectorStart) : -1;
+if (selectorStart < 0 || selectorLimit2 < 0) {
+  failures.push("FERTILIZATION_SAMPLING_ACCEPTANCE_LIMIT2_SELECTOR_REQUIRED");
+} else {
+  const selectorBlock = src.fertilization.slice(selectorStart, selectorLimit2 + "LIMIT 2".length);
+  if (!selectorBlock.includes("sample_id") || !selectorBlock.includes("import_id")) {
+    failures.push("FERTILIZATION_SAMPLING_ACCEPTANCE_EXACT_BUSINESS_KEYS_REQUIRED");
+  }
+  if (selectorBlock.includes("ORDER BY occurred_at DESC") || selectorBlock.includes("LIMIT 1")) {
+    failures.push("FERTILIZATION_LATEST_SAMPLING_ACCEPTANCE_FORBIDDEN");
+  }
+  if (/verdict[^\n]{0,240}PASS/i.test(selectorBlock)) {
+    failures.push("FERTILIZATION_SAMPLING_ACCEPTANCE_PASS_PREFILTER_FORBIDDEN");
+  }
+}
 
 console.log("BLINE_SAMPLING_EXACT_SOURCE_BINDING_STATS " + JSON.stringify({
   failures: failures.length,
