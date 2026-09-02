@@ -35,6 +35,7 @@ async function createSamplingChain(base, token, scope, field_id, sample_id, metr
   const receipt = requireOk(await post(base, '/api/v1/sampling/receipt', token, {
     ...scope,
     plan_id: plan.plan_id,
+    plan_fact_id: plan.fact_id,
     sample_id,
     field_id,
     collected_at_ts: Date.now(),
@@ -46,6 +47,7 @@ async function createSamplingChain(base, token, scope, field_id, sample_id, metr
   }), 'sample receipt');
   const lab = requireOk(await post(base, '/api/v1/sampling/lab-result', token, {
     sample_id,
+    receipt_fact_id: receipt.fact_id,
     imported_at_ts: Date.now(),
     lab_name: 'formal_fertilization_lab',
     metrics,
@@ -56,8 +58,11 @@ async function createSamplingChain(base, token, scope, field_id, sample_id, metr
   if (accept) {
     const acc = requireOk(await post(base, '/api/v1/sampling/acceptance/evaluate', token, {
       plan_id: plan.plan_id,
+      plan_fact_id: plan.fact_id,
       sample_id,
+      receipt_fact_id: receipt.fact_id,
       import_id: lab.import_id,
+      lab_fact_id: lab.fact_id,
     }), 'sampling acceptance');
     return { plan, receipt, lab, sampling_acceptance: acc };
   }
