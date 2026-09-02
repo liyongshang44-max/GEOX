@@ -854,6 +854,197 @@ function covAnalyzeExecutedFunction(target, stack = new Set()) {
   return result;
 }
 
+
+// Callback / lifecycle execution graph.
+// Recognized production callback registrations are analyzed as executed edges, not as inert nested functions.
+function covFunctionLike(n) {
+  return ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) || ts.isArrowFunction(n);
+}
+function covNearestFunctionName(n) {
+  let p = n.parent;
+  while (p) {
+    if (ts.isFunctionDeclaration(p) && p.name) return p.name.text;
+    if ((ts.isFunctionExpression(p) || ts.isArrowFunction(p)) && p.parent && ts.isVariableDeclaration(p.parent) && ts.isIdentifier(p.parent.name)) return p.parent.name.text;
+    p = p.parent;
+  }
+  return "<module>";
+}
+function covNearestStaticRoute(n, fp) {
+  let p = n.parent;
+  while (p) {
+    if (ts.isCallExpression(p) && ts.isPropertyAccessExpression(p.expression) &&
+        ts.isIdentifier(p.expression.expression) && p.expression.expression.text === "app") {
+      const method = p.expression.name.text.toUpperCase();
+      if (["GET","POST","PUT","PATCH","DELETE","HEAD","OPTIONS"].includes(method)) {
+        const arg = p.arguments[0];
+        if (arg && (ts.isStringLiteral(arg) || ts.isNoSubstitutionTemplateLiteral(arg))) {
+          return method + " " + arg.text;
+        }
+      }
+    }
+    p = p.parent;
+  }
+  return null;
+}
+function covLocalFunctionMap(container) {
+  const map = new Map();
+  if (!container) return map;
+  function visit(n) {
+    if (n !== container && covFunctionLike(n)) {
+      if (ts.isFunctionDeclaration(n) && n.name) map.set(n.name.text, n);
+      if ((ts.isFunctionExpression(n) || ts.isArrowFunction(n)) && n.parent && ts.isVariableDeclaration(n.parent) && ts.isIdentifier(n.parent.name)) {
+        map.set(n.parent.name.text, n);
+      }
+      return;
+    }
+    ts.forEachChild(n, visit);
+  }
+  visit(container);
+  return map;
+}
+function covEnclosingFunctionNode(n) {
+  let p = n.parent;
+  while (p) {
+    if (covFunctionLike(p)) return p;
+    p = p.parent;
+  }
+  return null;
+}
+function covAnalyzeCallbackNode(fp, node, localMap, stack = new Set()) {
+  const keyBase = rel(fp) + "::callback::" + node.pos + ":" + node.end;
+  if (stack.has(keyBase)) return {dml:false,ddl:false,fact:false,directWriterKeys:new Set(),callees:new Set()};
+  const next = new Set(stack); next.add(keyBase);
+  const direct = covDirectSqlEffect(fp, node);
+  const result = {dml:direct.dml,ddl:direct.ddl,fact:direct.fact,directWriterKeys:new Set(),callees:new Set()};
+  if (direct.dml || direct.ddl) result.directWriterKeys.add(rel(fp) + "::" + "<inline>");
+
+  function merge(other) {
+    result.dml = result.dml || other.dml;
+    result.ddl = result.ddl || other.ddl;
+    result.fact = result.fact || other.fact;
+    for (const k of other.directWriterKeys || []) result.directWriterKeys.add(k);
+    for (const k of other.callees || []) result.callees.add(k);
+  }
+  function analyzeLocal(name) {
+    const local = localMap.get(name);
+    if (!local) return false;
+    const localKey = rel(fp) + "::local::" + name + ":" + local.pos;
+    if (next.has(localKey)) return true;
+    const nested = new Set(next); nested.add(localKey);
+    merge(covAnalyzeCallbackNode(fp, local, localMap, nested));
+    return true;
+  }
+  function walk(n) {
+    if (n !== node && covFunctionLike(n)) return;
+    if (ts.isCallExpression(n) && ts.isIdentifier(n.expression)) {
+      const name = n.expression.text;
+      if (!analyzeLocal(name) && !(name === "ensureDeviceSkillBindings" && covAllowWriteFalse(n))) {
+        const target = covResolveFunction(fp, name);
+        if (target) {
+          result.callees.add(covFunctionKey(target));
+          merge(covAnalyzeFunction(target, next));
+        }
+      }
+    }
+    ts.forEachChild(n, walk);
+  }
+  walk(node);
+  return result;
+}
+function covAnalyzeCallbackArg(fp, call, argIndex) {
+  const arg = call.arguments[argIndex];
+  if (!arg) return {supported:false,analysis:null};
+  const enclosing = covEnclosingFunctionNode(call);
+  const localMap = covLocalFunctionMap(enclosing);
+  if (ts.isArrowFunction(arg) || ts.isFunctionExpression(arg)) {
+    return {supported:true,analysis:covAnalyzeCallbackNode(fp,arg,localMap)};
+  }
+  if (ts.isIdentifier(arg)) {
+    if (localMap.has(arg.text)) return {supported:true,analysis:covAnalyzeCallbackNode(fp,localMap.get(arg.text),localMap)};
+    const target = covResolveFunction(fp,arg.text);
+    if (target) return {supported:true,analysis:covAnalyzeFunction(target)};
+  }
+  return {supported:false,analysis:null};
+}
+
+const covCallbackEdges = [];
+const covUnsupportedCallbacks = [];
+for (const fp of covFiles) {
+  if ((!fp.endsWith(".ts") && !fp.endsWith(".tsx")) || isCommercialDisabledDevtools(fp)) continue;
+  const mod = covBuildModule(fp);
+  const counters = new Map();
+  function addEdge(call, kind, trigger, cbIndex) {
+    const enclosing = covNearestFunctionName(call);
+    const counterKey = rel(fp)+"::"+enclosing+"::"+kind+"::"+trigger;
+    const ordinal = (counters.get(counterKey) || 0) + 1;
+    counters.set(counterKey, ordinal);
+    const callbackId = rel(fp)+"#"+enclosing+"#"+kind+":"+trigger+"#"+ordinal;
+    const analyzed = covAnalyzeCallbackArg(fp,call,cbIndex);
+    if (!analyzed.supported) {
+      covUnsupportedCallbacks.push({callback_id:callbackId,source_path:rel(fp),callback_kind:kind,trigger,expression:call.getText(mod.sf).slice(0,280)});
+      return;
+    }
+    const a = analyzed.analysis;
+    covCallbackEdges.push({
+      callback_id:callbackId,
+      source_path:rel(fp),
+      enclosing_symbol:enclosing,
+      callback_kind:kind,
+      trigger,
+      caller_route:covNearestStaticRoute(call,fp),
+      dml:a.dml, ddl:a.ddl, fact:a.fact,
+      writers:[...a.directWriterKeys],
+      callees:[...a.callees],
+    });
+  }
+  function visit(n) {
+    if (ts.isCallExpression(n)) {
+      if (ts.isPropertyAccessExpression(n.expression) && ts.isIdentifier(n.expression.expression) &&
+          n.expression.expression.text === "app" && n.expression.name.text === "addHook") {
+        const ev=n.arguments[0];
+        if (ev && (ts.isStringLiteral(ev)||ts.isNoSubstitutionTemplateLiteral(ev))) addEdge(n,"FASTIFY_HOOK",ev.text,1);
+        else covUnsupportedCallbacks.push({source_path:rel(fp),callback_kind:"FASTIFY_HOOK",trigger:"<dynamic>",expression:n.getText(mod.sf).slice(0,280)});
+      } else if (ts.isIdentifier(n.expression) && (n.expression.text === "setInterval" || n.expression.text === "setTimeout")) {
+        addEdge(n,n.expression.text === "setInterval" ? "TIMER_INTERVAL" : "TIMER_TIMEOUT",n.expression.text,0);
+      } else if (ts.isPropertyAccessExpression(n.expression) && n.expression.name.text === "on") {
+        const ev=n.arguments[0];
+        if (ev && (ts.isStringLiteral(ev)||ts.isNoSubstitutionTemplateLiteral(ev))) addEdge(n,"EVENT_LISTENER",ev.text,1);
+      }
+    }
+    ts.forEachChild(n,visit);
+  }
+  visit(mod.sf);
+}
+assert(covUnsupportedCallbacks.length === 0, "production callback/hook registration could not be statically resolved", covUnsupportedCallbacks);
+
+const covCallbackDispositions = inv.callback_hook_dispositions ?? [];
+const covCallbackDispositionById = new Map(covCallbackDispositions.map((d)=>[d.callback_id,d]));
+const covCallbackMissing = [];
+const covCallbackStale = [];
+const covCallbackClassMismatch = [];
+for (const edge of covCallbackEdges) {
+  const persistent = edge.dml || edge.ddl;
+  const mustDisposition = persistent || (edge.callback_kind === "FASTIFY_HOOK" && edge.trigger === "onReady");
+  if (!mustDisposition) continue;
+  const d = covCallbackDispositionById.get(edge.callback_id);
+  if (!d) { covCallbackMissing.push(edge); continue; }
+  assert(d.source_path === edge.source_path, "callback disposition source mismatch", {edge,disposition:d});
+  assert(d.callback_kind === edge.callback_kind, "callback disposition kind mismatch", {edge,disposition:d});
+  if (edge.callback_kind === "FASTIFY_HOOK" && edge.trigger === "preHandler" && persistent) {
+    assert(Array.isArray(d.caller_routes) && d.caller_routes.length > 0, "persistent preHandler requires explicit caller route binding", {edge,disposition:d});
+  }
+  if (d.effect_class === "PURE_STARTUP_CHECK" && persistent) covCallbackClassMismatch.push({edge,disposition:d});
+  if (d.effect_class === "STARTUP_SCHEMA_BOOTSTRAP" && (!edge.ddl || edge.dml)) covCallbackClassMismatch.push({edge,disposition:d});
+  if (d.effect_class === "STARTUP_PROJECTION_BOOTSTRAP" && !edge.dml) covCallbackClassMismatch.push({edge,disposition:d});
+  if (["CALLER_HOOK_PERSISTENT_WRITE","TIMER_BACKGROUND_WRITER","EVENT_BACKGROUND_WRITER","DEFERRED_SERVER_CALLBACK_WRITER"].includes(d.effect_class) && !persistent) covCallbackClassMismatch.push({edge,disposition:d});
+}
+for (const d of covCallbackDispositions) {
+  if (!covCallbackEdges.some((e)=>e.callback_id===d.callback_id)) covCallbackStale.push(d);
+}
+assert(covCallbackMissing.length === 0, "production callback/hook persistent writer without disposition", covCallbackMissing);
+assert(covCallbackClassMismatch.length === 0, "callback/hook disposition effect class mismatch", covCallbackClassMismatch);
+assert(covCallbackStale.length === 0, "stale callback/hook disposition", covCallbackStale);
+
 const covStartupDispositions = inv.startup_mutation_dispositions ?? [];
 const covStartupMissing = [];
 const covStartupSeen = [];
@@ -993,6 +1184,7 @@ const covZeroSets = {
   production_caller_triggered_mutation_without_inventory: covCallerMissing.length,
   production_runtime_direct_writer_without_inventory: covRuntimeMissing.length,
   startup_mutation_without_explicit_disposition: covStartupMissingUnique.length + covStartupRootMissing.length,
+  production_callback_hook_persistent_writer_without_disposition: covCallbackMissing.length,
 };
 
 const summary={
@@ -1012,6 +1204,8 @@ const summary={
   discovered_get_entrypoint_count:covHttpUnique.filter((r)=>r.method==="GET").length,
   auto_pure_read_http_count:covPureReadCount,
   explicit_http_side_effect_disposition_count:covHttpDispositions.length,
+  callback_hook_disposition_count:covCallbackDispositions.length,
+  discovered_callback_edge_count:covCallbackEdges.length,
   startup_mutation_disposition_count:covStartupDispositions.length,
   startup_root_direct_writer_count:covStartupRootWriterKeys.size,
   runtime_direct_writer_disposition_count:covRuntimeDispositions.length,
