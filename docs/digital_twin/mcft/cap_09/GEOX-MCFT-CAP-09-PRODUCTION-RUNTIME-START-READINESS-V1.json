@@ -1,0 +1,65 @@
+{
+  "schema_version": "geox_mcft_cap09_production_runtime_start_readiness_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-START-READINESS-V1",
+  "record_status": "CURRENT_FRONTIER_MACHINE_READINESS_CANDIDATE",
+  "status": "BLOCKED_NO_VIABLE_FUTURE_FORMAL_WINDOW_UNDER_CURRENT_T4R1_CROP_AUTHORITY",
+  "subject_predecessor_sha": "a11921e9f6a37b82922d727e6cf73988341ecede",
+  "stage": "POST_PRODUCTION_PLANNER_ENTRYPOINT_BINDING_PRE_RUNTIME_START",
+  "authority_refs": {
+    "taskbook": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+    "production_route": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+    "crop_context": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json",
+    "epoch_rebase": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-06-FORMAL-WINDOW-EPOCH-REBASE-AUTHORITY.md",
+    "acquisition_horizon": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json",
+    "target_consensus_preflight": "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs"
+  },
+  "required_future_formal_window": {
+    "context_count": 25,
+    "contexts": [
+      "A0",
+      "O00_THROUGH_O23"
+    ],
+    "required_stage_code": "MID",
+    "backward_stability_hours": 6,
+    "forward_transition_guard_hours": 30,
+    "planting_time_uncertainty_carried": true,
+    "future_observations_used": false,
+    "minimum_epoch_selection_lead_hours": 36,
+    "actual_utc_only": true,
+    "replay_or_accelerated_clock_allowed": false
+  },
+  "frozen_scan_result": {
+    "exact_fao_variant_count": 6,
+    "latest_viable_a0": "2026-08-27T21:00:00.000Z",
+    "latest_viable_o00": "2026-08-27T22:00:00.000Z",
+    "latest_viable_o23": "2026-08-28T21:00:00.000Z",
+    "first_nonviable_a0": "2026-08-27T22:00:00.000Z",
+    "first_nonviable_context": "O23",
+    "first_nonviable_logical_time": "2026-08-28T22:00:00.000Z",
+    "first_nonviable_reason": "STAGE_TRANSITION_RISK",
+    "current_or_future_window_may_be_invented": false
+  },
+  "ruling": {
+    "runtime_start_authority_may_be_armed": false,
+    "formal_a0_logical_time_may_be_guessed": false,
+    "lifecycle_active_state_may_substitute_for_stage_authority": false,
+    "t1r1_phenology_authority_may_be_reused_for_t4r1": false,
+    "owner_graduation_may_not_bypass_crop_window_readiness": true,
+    "separate_t4r1_stage_or_season_authority_required": true
+  },
+  "next_legal_frontier": [
+    "REQUALIFY_T4R1_CURRENT_SEASON_STAGE_AUTHORITY_IF_DIRECT_CONTEMPORANEOUS_EVIDENCE_EXISTS",
+    "OTHERWISE_ADJUDICATE_A_T4R1_NATURAL_SEASON_SUCCESSOR_WITHOUT_CROSS_SEASON_STITCHING"
+  ],
+  "non_effects": {
+    "database_read": false,
+    "database_write": false,
+    "provider_request": false,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false,
+    "mcft_cap09_completed": false
+  }
+}
