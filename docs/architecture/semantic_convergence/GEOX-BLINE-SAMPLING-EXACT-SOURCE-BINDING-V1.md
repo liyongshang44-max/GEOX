@@ -2,7 +2,7 @@
 
 ## Status
 
-Status: **AUTHORIZED IMPLEMENTATION / P0-RES-010 CLOSURE**
+Status: **COMPLETE / P0-RES-010 CLOSED**
 
 Exact stacked base:
 
@@ -119,7 +119,9 @@ This package does not:
 
 ## Completion
 
-P0-RES-010 may be marked closed only when one exact head proves:
+P0-RES-010 is closed by exact qualification run `33585821179` on #3450 product head `f33dae70a23818c2097f149b477f44924736d3df`.
+
+That exact head proves:
 
 ```text
 Sampling exact-source static governance gate PASS
@@ -133,3 +135,17 @@ full acceptance                                PASS
 Controlled Pilot / Commercial MVP0             PASS
 MCFT implementation delta                      0
 ```
+
+Exact CI result:
+
+```text
+ci run              33585821179 SUCCESS
+build-test          SUCCESS
+acceptance          SUCCESS
+Sampling runtime    SUCCESS
+Fertilization exact Sampling consumer runtime SUCCESS
+Controlled Pilot strict release SUCCESS
+Commercial MVP0 release SUCCESS
+```
+
+The two MCFT failures on the PR remain foreign-owned CAP-09 qualification lanes and are not modified by this B-Line package.
