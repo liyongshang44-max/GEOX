@@ -1119,6 +1119,26 @@
         "artifact_absence_reason": "RUN_LEVEL_POST_MERGE_V13_PRODUCER_DRIVEN_QUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
         "immutable_binding_sha256": "025c7d2a449dc7bd9183a048c6adf2238b50795b53358c4962b948a5f60e482f"
+      },
+      {
+        "evidence_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS_REQUAL_EE6BE360",
+        "check_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "successor-subject-pre-merge-ea5c1-durable-raw-restricted-ingress",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "ee6be360c0fb5f795b2c05243fe768c3909d03ef",
+        "workflow_name": "mcft-cap-09-ea5c1-durable-raw-restricted-ingress",
+        "workflow_path": ".github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml",
+        "run_id": 33587281329,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "ee6be360c0fb5f795b2c05243fe768c3909d03ef",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:bfa5ce0f9b3687ab9e01d8728fc0d9ecc9d4523270d1c6c39243b62e0eaef803",
+        "artifact_absence_reason": "RUN_LEVEL_SUCCESSOR_SUBJECT_PRE_MERGE_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "adce793c448f2dbe9d067f45d0f4daa9b6bab1b30a1078a6356fb241b7dd6bf8"
       }
     ],
     "durable_anchors": {
@@ -1711,6 +1731,20 @@
             "base_sha": "46367333d228a2b90a86ff6a33aebc334f3d73a2",
             "created_at": "2026-09-01T05:09:04Z",
             "updated_at": "2026-09-01T05:52:33Z"
+          }
+        },
+        {
+          "evidence_id": "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS_REQUAL_EE6BE360",
+          "run_id": 33587281329,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 77,
+            "workflow_path": ".github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml",
+            "workflow_name": "mcft-cap-09-ea5c1-durable-raw-restricted-ingress",
+            "head_sha": "ee6be360c0fb5f795b2c05243fe768c3909d03ef",
+            "base_sha": "46367333d228a2b90a86ff6a33aebc334f3d73a2",
+            "created_at": "2026-09-02T03:30:16Z",
+            "updated_at": "2026-09-02T03:31:29Z"
           }
         }
       ],
