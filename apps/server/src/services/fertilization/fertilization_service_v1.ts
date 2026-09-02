@@ -223,39 +223,80 @@ export class FertilizationServiceV1 {
     return result.rows?.[0] ?? null;
   }
 
-  private async findLabResult(scope: TenantScopeV1, sample_id: string, lab_import_id: string): Promise<FactRowV1 | null> {
+  private async findExactFactById(type: string, fact_id: string): Promise<FactRowV1 | null> {
     const result = await this.pool.query(
       `SELECT fact_id, occurred_at, source, record_json
          FROM facts
-        WHERE (record_json::jsonb->>'type') = 'lab_result_import_v1'
-          AND (record_json::jsonb->>'sample_id') = $1
-          AND (record_json::jsonb->>'import_id') = $2
-        ORDER BY occurred_at DESC
+        WHERE fact_id = $1
+          AND (record_json::jsonb->>'type') = $2
         LIMIT 1`,
-      [sample_id, lab_import_id],
+      [fact_id, type],
     );
-    const row = result.rows?.[0] ?? null;
-    if (!row) return null;
-    const receipt = await this.findFactByTypeAndKey("sample_receipt_v1", "sample_id", sample_id);
-    if (!receipt || !tenantMatches(receipt.record_json, scope)) return null;
-    return row;
+    return result.rows?.[0] ?? null;
   }
 
-  private async findSamplingAcceptancePass(scope: TenantScopeV1, sample_id: string, lab_import_id: string): Promise<FactRowV1 | null> {
+  private async findExactSamplingAcceptanceChain(
+    scope: TenantFieldScopeV1,
+    sample_id: string,
+    lab_import_id: string,
+  ): Promise<{ acceptance: FactRowV1; plan: FactRowV1; receipt: FactRowV1; lab: FactRowV1 } | null> {
     const result = await this.pool.query(
       `SELECT fact_id, occurred_at, source, record_json
          FROM facts
         WHERE (record_json::jsonb->>'type') = 'sampling_acceptance_v1'
           AND (record_json::jsonb->>'sample_id') = $1
-          AND COALESCE(record_json::jsonb->>'import_id', '') = $2
-          AND UPPER(COALESCE(record_json::jsonb->>'verdict', '')) = 'PASS'
-        ORDER BY occurred_at DESC
-        LIMIT 1`,
+          AND (record_json::jsonb->>'import_id') = $2
+        LIMIT 2`,
       [sample_id, lab_import_id],
     );
-    const row = result.rows?.[0] ?? null;
-    if (!row || !tenantMatches(row.record_json, scope)) return null;
-    return row;
+    if ((result.rows?.length ?? 0) > 1) throw new FertilizationServiceErrorV1("SAMPLING_ACCEPTANCE_AMBIGUOUS", 409);
+    const acceptance = result.rows?.[0] ?? null;
+    if (!acceptance || !tenantMatches(acceptance.record_json, scope)) return null;
+
+    const acceptanceRecord: any = acceptance.record_json ?? {};
+    if (String(acceptanceRecord.verdict ?? "").trim().toUpperCase() !== "PASS") return null;
+    const plan_fact_id = nonEmptyText(acceptanceRecord.plan_fact_id);
+    const receipt_fact_id = nonEmptyText(acceptanceRecord.receipt_fact_id);
+    const lab_fact_id = nonEmptyText(acceptanceRecord.lab_fact_id);
+    const acceptance_fact_id = nonEmptyText(acceptanceRecord.acceptance_fact_id);
+    if (!plan_fact_id || !receipt_fact_id || !lab_fact_id || acceptance_fact_id !== acceptance.fact_id) {
+      throw new FertilizationServiceErrorV1("SAMPLING_ACCEPTANCE_EXACT_BINDING_REQUIRED", 400);
+    }
+
+    const [plan, receipt, lab] = await Promise.all([
+      this.findExactFactById("sampling_plan_v1", plan_fact_id),
+      this.findExactFactById("sample_receipt_v1", receipt_fact_id),
+      this.findExactFactById("lab_result_import_v1", lab_fact_id),
+    ]);
+    if (!plan || !receipt || !lab) throw new FertilizationServiceErrorV1("SAMPLING_EXACT_SOURCE_FACT_MISSING", 400);
+
+    const planRecord: any = plan.record_json ?? {};
+    const receiptRecord: any = receipt.record_json ?? {};
+    const labRecord: any = lab.record_json ?? {};
+    const exactChainMatches =
+      planRecord.plan_fact_id === plan.fact_id
+      && receiptRecord.receipt_fact_id === receipt.fact_id
+      && labRecord.lab_fact_id === lab.fact_id
+      && receiptRecord.plan_fact_id === plan.fact_id
+      && labRecord.plan_fact_id === plan.fact_id
+      && labRecord.receipt_fact_id === receipt.fact_id
+      && acceptanceRecord.plan_fact_id === plan.fact_id
+      && acceptanceRecord.receipt_fact_id === receipt.fact_id
+      && acceptanceRecord.lab_fact_id === lab.fact_id
+      && acceptanceRecord.plan_id === planRecord.plan_id
+      && receiptRecord.plan_id === planRecord.plan_id
+      && receiptRecord.sample_id === sample_id
+      && labRecord.sample_id === sample_id
+      && acceptanceRecord.sample_id === sample_id
+      && labRecord.import_id === lab_import_id
+      && acceptanceRecord.import_id === lab_import_id
+      && tenantMatches(planRecord, scope)
+      && tenantMatches(receiptRecord, scope)
+      && String(planRecord.field_id ?? "") === scope.field_id
+      && String(receiptRecord.field_id ?? "") === scope.field_id;
+
+    if (!exactChainMatches) throw new FertilizationServiceErrorV1("SAMPLING_EXACT_SOURCE_CHAIN_MISMATCH", 400);
+    return { acceptance, plan, receipt, lab };
   }
 
   async createNitrogenAssessment(input: TenantFieldScopeV1 & {
@@ -293,14 +334,12 @@ export class FertilizationServiceV1 {
       const lab_import_id = nonEmptyText(input.lab_import_id);
       if (!sample_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:sample_id", 400);
       if (!lab_import_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:lab_import_id", 400);
-      const lab = await this.findLabResult(input, sample_id, lab_import_id);
-      if (!lab) throw new FertilizationServiceErrorV1("NOT_FOUND:lab_result_import_v1", 404);
-      const labRecord: any = lab.record_json ?? {};
+      const samplingChain = await this.findExactSamplingAcceptanceChain(input, sample_id, lab_import_id);
+      if (!samplingChain) throw new FertilizationServiceErrorV1("SAMPLING_ACCEPTANCE_PASS_REQUIRED", 400);
+      const labRecord: any = samplingChain.lab.record_json ?? {};
       if (String(labRecord.quality_status ?? "").trim().toUpperCase() !== "PASS") {
         throw new FertilizationServiceErrorV1("LAB_RESULT_QUALITY_STATUS_NOT_PASS", 400);
       }
-      const samplingAcceptance = await this.findSamplingAcceptancePass(input, sample_id, lab_import_id);
-      if (!samplingAcceptance) throw new FertilizationServiceErrorV1("SAMPLING_ACCEPTANCE_PASS_REQUIRED", 400);
       metrics = normalizeNitrogenMetrics(input.metrics ?? labRecord.metrics);
       if (!hasNitrogenMetric(metrics)) throw new FertilizationServiceErrorV1("MISSING_NITROGEN_METRIC", 400);
       evidence_tier = "FORMAL";
@@ -309,8 +348,10 @@ export class FertilizationServiceV1 {
       reasons = normalizeReasons(input.reasons, status === "LOW_N_RISK" ? ["FORMAL_LAB_RESULT_LOW_N_RISK"] : ["FORMAL_LAB_RESULT_REVIEWED"]);
       evidence_refs = uniqueEvidenceRefs([
         ...evidence_refs,
-        { kind: "lab_result_import_v1", ref_id: lab_import_id },
-        { kind: "sampling_acceptance_v1", ref_id: String(samplingAcceptance.record_json?.acceptance_id ?? samplingAcceptance.fact_id) },
+        { kind: "lab_result_import_v1", ref_id: samplingChain.lab.fact_id },
+        { kind: "sampling_acceptance_v1", ref_id: samplingChain.acceptance.fact_id },
+        { kind: "sample_receipt_v1", ref_id: samplingChain.receipt.fact_id },
+        { kind: "sampling_plan_v1", ref_id: samplingChain.plan.fact_id },
       ]);
     } else if (trigger_source === "SENSING_RISK") {
       if (skill_signal_refs.length < 1 && sensing_state_refs.length < 1) {

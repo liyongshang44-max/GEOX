@@ -2280,15 +2280,15 @@
         "evidence.qualification",
         "acceptance.verdict"
       ],
-      "authority_class": "SAMPLING_EVIDENCE_AUTHORITY_SERVICE_WITH_LATEST_SELECTION_P0",
+      "authority_class": "SAMPLING_EVIDENCE_AUTHORITY_SERVICE_EXACT_SOURCE_BOUND",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "sampling API",
         "agronomy evidence consumers"
       ],
-      "removal_target": "KEEP SAMPLING EVIDENCE ACCEPTANCE; REQUIRE EXACT RECEIPT/LAB IMPORT BINDING; FIX P0-RES-010",
-      "audit_note": "Route computes sampling PASS from lab quality + chain of custody, but optional import_id and latest receipt/lab selection violate exact-source authority.",
+      "removal_target": "P0-RES-010 CLOSED: KEEP SAMPLING EVIDENCE ACCEPTANCE WITH IMMUTABLE PLAN/RECEIPT/LAB FACT BINDING",
+      "audit_note": "P0-RES-010 closed on #3450 exact qualification run 33585821179: formal Sampling source selection is immutable fact-bound; latest-wins source authority removed; ambiguous append history fails closed.",
       "surface_id": "RES-084",
       "b02_registered": false
     },
@@ -2470,15 +2470,15 @@
         "evidence.qualification",
         "acceptance.verdict"
       ],
-      "authority_class": "ACTIVE_SAMPLING_EVIDENCE_AUTHORITY_ROUTE_WITH_LATEST_P0",
+      "authority_class": "ACTIVE_SAMPLING_EVIDENCE_AUTHORITY_ROUTE_EXACT_SOURCE_BOUND",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
         "sampling service",
         "fertilization evidence consumers"
       ],
-      "removal_target": "KEEP SAMPLING WORKFLOW; REQUIRE EXACT RECEIPT/LAB-IMPORT BINDING; FIX P0-RES-010",
-      "audit_note": "P0-RES-010: acceptance selection currently permits latest-wins receipt/lab selection when exact import identity is omitted.",
+      "removal_target": "P0-RES-010 CLOSED: KEEP SAMPLING WORKFLOW WITH REQUIRED EXACT PLAN/RECEIPT/LAB FACT IDENTITIES",
+      "audit_note": "P0-RES-010 closed on #3450 exact qualification run 33585821179: acceptance/evidence APIs require exact fact identities and no longer select Receipt/Lab authority by occurred_at.",
       "surface_id": "RES-091",
       "b02_registered": false
     },
@@ -7573,7 +7573,7 @@
       "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
       "feature_flag": null,
       "downstream_consumers": [],
-      "removal_target": "Remove latest-wins source selection; require exact binding",
+      "removal_target": "P0-RES-010 CLOSED: EXACT SOURCE BINDING ENFORCED",
       "b02_registered": false,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "ledger_disposition": "SEMANTIC_FACT_WRITER",
@@ -7584,7 +7584,7 @@
       ],
       "authority_owner": "SAMPLING_DOMAIN",
       "writer_scope": "sampling plan/receipt/lab/acceptance facts",
-      "audit_note": "Active sampling domain service."
+      "audit_note": "Exact fact-ledger writer remains active; source authority is immutable plan_fact_id -> receipt_fact_id -> lab_fact_id -> acceptance_fact_id. Qualification run 33585821179 SUCCESS."
     },
     {
       "surface_id": "RES-289",
