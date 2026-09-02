@@ -1,6 +1,6 @@
 # GEOX B-Line Production Caller-Authority Closure V1
 
-**Status:** PR-SEC-1 / INVENTORY COMPLETE / B-SEC-0 OPEN  
+**Status:** PR-SEC-1 / REOPENED FOR MACHINE COVERAGE CLOSURE / B-SEC-0 OPEN  
 **Mission:** B-SEC-0 — Production Caller-Authority Closure  
 **Canonical predecessor:** #3452 @ `b6f141c5471cd6f329ba60bd79cf6e4085546264`  
 **Predecessor qualification:** CI `33592626515` — build-test SUCCESS / acceptance SUCCESS  
@@ -191,9 +191,9 @@ It does not mean:
 B-SEC-0 caller authority is closed
 ```
 
-## 9. Exact inventory qualification
+## 9. Historical current-gate qualification (not graph completeness)
 
-PR-SEC-1 inventory is machine-qualified complete on:
+The following exact-head evidence remains valid as CURRENT_GATE_PASS evidence only; it no longer proves INVENTORY_GRAPH_COMPLETE:
 
 ```text
 qualified head                               5633a76d20fb1d7f20d2159fbef6567493e516ed
@@ -239,7 +239,7 @@ This metadata does **not** declare B-SEC-0 complete and does **not** declare ACT
 
 The metadata-only completion rebind itself must now be exact-head requalified before PR-SEC-1 is considered finally settled.
 
-## 10. Completion rule for this package
+## 10. Reopened completion rule for this package
 
 PR-SEC-1 is complete only when its exact head proves:
 
@@ -251,3 +251,56 @@ PR-SEC-1 is complete only when its exact head proves:
 - inventory still declares `bsec0_closed=false`.
 
 After that exact qualification, report the inventory and findings to GEOX Owner and stop. Do not begin PR-SEC-2 without a new instruction.
+
+
+## 11. Machine coverage closure re-open
+
+Independent audit after `e2147bf2c3ba7272da3ef34135088f7297716f5f` proved the prior reverse-scan root was incomplete.
+
+The old HTTP scanner began from:
+
+```text
+app.(post|put|patch|delete)
+```
+
+That method-level assumption is invalid because production-reachable GET handlers can mutate projections, operational state, schema, and the fact ledger.
+
+PR-SEC-1 is therefore reopened. The completion claim is revoked until two graphs are independently closed:
+
+```text
+A. Caller Authority Graph
+principal
+→ credential
+→ capability
+→ caller-triggered HTTP entrypoint
+→ write
+→ semantic consequence
+
+B. Runtime Activation Write Graph
+process
+→ startup / registration / worker / subprocess / loop
+→ direct writer
+→ DB / projection / fact mutation
+```
+
+Required zero-sets before INVENTORY COMPLETE may be claimed again:
+
+```text
+production caller-triggered mutation without inventory = 0
+production runtime direct writer without inventory      = 0
+startup mutation without explicit disposition           = 0
+```
+
+HTTP discovery must begin from all production-reachable HTTP entrypoints regardless of method. GET dispositions use:
+
+```text
+PURE_READ
+SCHEMA_ENSURE_ONLY
+PROJECTION_SIDE_EFFECT
+DOMAIN_STATE_SIDE_EFFECT
+FACT_LEDGER_WRITE
+```
+
+Known reopened findings include the manual-execution-quality fact-ledger write, sensing/field/skill projection refresh GETs, worker-runtime heartbeat direct writers, and registration-time derived-sensing projection cleanup/backfill.
+
+No runtime auth repair, semantic cleanup, PR-SEC-2 work, or MCFT implementation change is authorized by this reopening.
