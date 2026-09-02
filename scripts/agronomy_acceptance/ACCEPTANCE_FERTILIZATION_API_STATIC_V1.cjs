@@ -93,7 +93,17 @@ function assertRegex(text, pattern, label) {
 
   const requiredAcceptanceRules = [
     'fertilization_acceptance_v1',
-    'zone_applications',
+    'fertilization_prescription_fact_id',
+    'variable_prescription_id',
+    'receipt_fact_id',
+    'as_executed_id',
+    'as_applied_id',
+    'acceptance_result_fact_id',
+    'loadExactExecutionProvenance',
+    'CALLER_ZONE_APPLICATIONS_FORBIDDEN',
+    'CANONICAL_ACCEPTANCE_PASS_REQUIRED',
+    'as_applied_map_v1',
+    'application.zone_applications',
     'zone_results',
     'actual_n_kg_ha',
     'coverage_percent',
@@ -127,6 +137,18 @@ function assertRegex(text, pattern, label) {
   assertAll(service, requiredPrescriptionRules, 'prescription rules');
   assertAll(service, requiredAcceptanceRules, 'acceptance rules');
   assertAll(route, requiredAuthRules, 'route auth and isolation rules');
+  const acceptanceRouteStart = route.indexOf('app.post("/api/v1/fertilization/acceptance/evaluate"');
+  const acceptanceRouteEnd = route.indexOf('app.get("/api/v1/fertilization/assessment', acceptanceRouteStart);
+  const acceptanceRoute = route.slice(acceptanceRouteStart, acceptanceRouteEnd);
+  assertAll(acceptanceRoute, [
+    'requireFertilizationAcceptanceAuth',
+  ], 'fertilization acceptance dedicated auth');
+  assert.equal(acceptanceRoute.includes('requireFertilizationWriteAuth'), false, 'fertilization acceptance must not use generic Fertilization write auth');
+  assertAll(route, [
+    'requireAoActScopeV0(req, reply, "acceptance.evaluate")',
+    'ACCEPTANCE_EVALUATE_ROLE_DENIED',
+  ], 'fertilization acceptance exact scope and role');
+
 
   assertAll(register, ['registerFertilizationV1Routes', './v1/fertilization.js'], 'core route registration');
 
