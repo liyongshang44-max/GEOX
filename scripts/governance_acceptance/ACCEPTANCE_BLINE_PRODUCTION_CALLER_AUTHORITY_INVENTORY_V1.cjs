@@ -278,7 +278,11 @@ function covDirectSqlEffect(fp, rootNode) {
     result.fact = result.fact || effect.fact;
   }
   function visit(n) {
-    if (n !== rootNode && (ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) || ts.isArrowFunction(n))) return;
+    if (
+      n !== rootNode &&
+      (ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) || ts.isArrowFunction(n)) &&
+      !covImmediatelyInvokedFunction(n)
+    ) return;
     if (
       ts.isCallExpression(n) &&
       ts.isPropertyAccessExpression(n.expression) &&
