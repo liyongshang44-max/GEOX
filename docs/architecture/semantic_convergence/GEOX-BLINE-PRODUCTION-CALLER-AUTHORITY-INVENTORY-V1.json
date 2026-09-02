@@ -8030,7 +8030,7 @@
     "bsec0_closed": false,
     "active_graph_fully_disposed": false,
     "pr_sec_1_inventory_complete": true,
-    "reason": "PR-SEC-1 inventory is machine-qualified complete on exact head b4f21227da1c768d1ec99ff7a7237311e8cf3128 / CI 33605095007. Caller-authority containment/capability/device-principal work remains open and is outside this PR."
+    "reason": "PR-SEC-1 inventory is machine-qualified complete on exact product head 5633a76d20fb1d7f20d2159fbef6567493e516ed / CI 33608456999. Caller-authority containment/capability/device-principal work remains open and is outside this PR."
   },
   "non_authority_method_dispositions": [
     {
@@ -8089,8 +8089,8 @@
     "mcft_implementation_changed": false
   },
   "inventory_qualification": {
-    "qualified_product_head": "b4f21227da1c768d1ec99ff7a7237311e8cf3128",
-    "exact_ci_run": 33605095007,
+    "qualified_product_head": "5633a76d20fb1d7f20d2159fbef6567493e516ed",
+    "exact_ci_run": 33608456999,
     "result": "SUCCESS",
     "build_test": "SUCCESS",
     "caller_authority_inventory_gate": "SUCCESS",
@@ -8120,5 +8120,9 @@
       "tenant_scope_from_untrusted_body_or_unbound": 16
     },
     "boundary": "INVENTORY_COMPLETE_ONLY_BSEC0_REMAINS_OPEN_NO_PR_SEC_2"
+  },
+  "metadata_final_qualification": {
+    "status": "PENDING_EXACT_HEAD_REQUALIFICATION",
+    "note": "Set only after this metadata-only rebind commit is itself qualified. B-SEC-0 remains open."
   }
 }
