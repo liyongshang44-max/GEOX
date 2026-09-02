@@ -46,6 +46,7 @@ The request to `POST /api/v1/fertilization/acceptance/evaluate` must provide:
 
 ```text
 fertilization_prescription_id
+fertilization_prescription_fact_id
 receipt_fact_id
 act_task_id
 operation_plan_id
@@ -54,7 +55,7 @@ as_applied_id
 acceptance_result_fact_id
 ```
 
-`zone_applications`, `receipt_status`, caller-supplied `receipt_id`, and caller-supplied execution evidence must not determine the verdict.
+`zone_applications`, `receipt_status`, caller-supplied `receipt_id`, and caller-supplied execution evidence must not determine the verdict. The Fertilization prescription is selected by exact `fertilization_prescription_fact_id`; `fertilization_prescription_id` alone is a business continuity assertion.
 
 If caller `zone_applications` are supplied, the request fails closed rather than treating them as evidence.
 
