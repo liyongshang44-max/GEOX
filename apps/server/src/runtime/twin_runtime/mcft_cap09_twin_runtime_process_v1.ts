@@ -8,6 +8,8 @@
 import fs from "node:fs";
 import os from "node:os";
 
+import productionAcquisitionHorizonAuthorityJson from "../../../../../docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json" with { type: "json" };
+
 import { createDatabasePool } from "../../infra/database.js";
 import {
   assertMcftCap09ServicePrincipalV1,
@@ -30,6 +32,9 @@ import {
   McftCap09ProductionTwinFailureClassifierV1,
   McftCap09ProductionTwinWaitV1,
 } from "../mcft_cap09_production_process_lifecycle_v1.js";
+import {
+  parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1,
+} from "../mcft_cap09_production_runtime_start_authority_v1.js";
 
 export const MCFT_CAP09_TWIN_RUNTIME_PROCESS_ID_V1 =
   "MCFT_CAP09_TWIN_RUNTIME_PROCESS_V1" as const;
@@ -48,6 +53,7 @@ export const MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1 = {
   qualification_clock_boundary:
     "EXPLICIT_DATABASE_CLOCK_AND_SCHEDULER_AUTHORITY_INJECTION_WITH_PRODUCTION_DEFAULT",
   formal_arm_authority: false,
+  runtime_start_authority: "SEPARATE_GOVERNED_AUTHORITY_REQUIRED",
   production_owner_cutover: false,
 } as const;
 
@@ -193,7 +199,16 @@ export async function runMcftCap09TwinRuntimeProcessV1(input?: {
   env?: EnvironmentV1;
   database_clock?: TwinRuntimeDatabaseClockPortV1;
   scheduler_clock_authority?: PersistentSequentialSchedulerClockAuthorityV1;
+  runtime_start_authority?: unknown;
 }): Promise<void> {
+  const document = productionAcquisitionHorizonAuthorityJson as {
+    runtime_start_binding?: unknown;
+  };
+  parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+    input?.runtime_start_authority ?? document.runtime_start_binding,
+    "TWIN_RUNTIME",
+  );
+
   const env = input?.env ?? process.env;
   const config = readMcftCap09TwinRuntimeProcessConfigV1(env);
   if (!config.lease_owner) throw new Error("PHASE5_TWIN_RUNTIME_LEASE_OWNER_REQUIRED");
