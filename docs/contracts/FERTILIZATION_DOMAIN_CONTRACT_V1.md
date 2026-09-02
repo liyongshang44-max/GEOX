@@ -186,6 +186,8 @@ Fertilization Domain owns formal business facts. GEOX Main Chain owns Recommenda
 
 `SAMPLING_LAB` is the only path allowed to produce a formal customer-visible nitrogen need assessment. The service implementation must require `sample_id`, `lab_import_id`, `lab_result_import_v1.quality_status = PASS`, `sampling_acceptance_v1 = PASS`, and nitrogen-related metrics before it may emit `status = LOW_N_RISK` with `evidence_tier = FORMAL`.
 
+For `SAMPLING_LAB`, `sample_id` and `lab_import_id` are business continuity assertions, not source-selection authority. The consumed `sampling_acceptance_v1` must uniquely freeze an exact immutable `plan_fact_id -> receipt_fact_id -> lab_fact_id` chain, and the referenced Lab fact must be the exact `lab_import_id` source. Multiple Sampling Acceptance facts for the same `sample_id + lab_import_id` are ambiguous in the absence of a frozen supersession/current-version policy and must fail closed before verdict filtering; a PASS row may not be selected by recency or by pre-filtering away conflicting history.
+
 `SENSING_RISK` may reference `fertility_state`, `salinity_risk_state`, `canopy_stress_state`, or Skill signals, but it may only produce `status = NEEDS_REVIEW` with `evidence_tier = WARNING`.
 
 `MANUAL_AGRONOMIST` requires explicit evidence refs and defaults to non-customer-visible review until a later approval chain validates it.
