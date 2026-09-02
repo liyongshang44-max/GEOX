@@ -1,3 +1,1367 @@
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-02 Continuation — QCP Prepared-Context / Exact-Head Digest Carry-forward Frontier
+
+Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
+
+Timestamp: **2026-09-02 11:39 +08:00**
+
+Repository: liyongshang44-max/GEOX
+
+Purpose: continue the same MCFT-CAP-09 frozen Production Hosting / exact-one-owner route after the K-section source-specific planner frontier has advanced through source progress, KBS daily-batch handling, GFS retained-raw repair, explicit source due policy, durable poll scheduling, GFS target/retry authority, heterogeneous source execution, host planner-process binding, and concrete planner dependency assembly. The current product problem is no longer source-planner design. The newest exact head has proved that the earlier QCP/post-merge cancellations were caused by repeated resolver/digest materialization rather than business blockers, and the prepared-context optimization has closed that performance defect without reducing the negative test matrix or increasing timeouts. The current machine frontier is now exact-head QCP dependency-digest carry-forward and immutable requalification-evidence convergence, while production schema materialization, runtime start, owner activation, Formal-v5, A0, and O00 remain separately closed.
+
+> **This L-section is now the highest-priority conversation continuation in this file.**
+>
+> The K-section immediately below remains intentionally preserved in full as the historical Local Static Admission / source-specific planner / host NOT_DUE frontier.
+>
+> Do not rewrite K merely because source-specific progress ports, KBS/GFS/soil due semantics, GFS target progression, heterogeneous execution, planner-process binding, and dependency assembly were completed later. K records the exact product-planning frontier from which those closures were built.
+>
+> J, I, H, and all earlier Phase 7 / Phase 6 / Phase 5 / Phase 4 / Phase 3 / Phase 2 sections remain historical evidence and must remain intact.
+>
+> This handoff does **not** supersede docs/SSOT.md, the Digital Twin Master Task Line, the CAP-09 taskbook, Production Hosting architecture/route, QCP, qualification evidence registry, immutable workflow artifacts, accepted CAP-01→08 authorities, or the frozen Formal-store authorities.
+
+---
+
+## L0. READ THIS FIRST — planner engineering has advanced; the immediate blocker is QCP digest carry-forward, not timeout and not provider acquisition
+
+The authoritative product PR is:
+
+~~~text
+#3376
+feat(mcft-cap09): qualify producer-driven v13 supply graph
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+current exact head =
+  ee6be360c0fb5f795b2c05243fe768c3909d03ef
+
+tree =
+  1998f78556e4477c766039c5723a42513d7c47d7
+
+state =
+  Draft
+  open
+  unmerged
+
+mergeable =
+  true
+~~~
+
+Protected main remains:
+
+~~~text
+fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+~~~
+
+The exact-head performance commit is:
+
+~~~text
+ee6be360c0fb5f795b2c05243fe768c3909d03ef
+perf(mcft-cap09): reuse applicability resolver context
+
+parent =
+  2add95e4b7912b62423ec376fc56bcaf7801f262
+~~~
+
+The previous head had a misleading mixed state:
+
+~~~text
+business/runtime qualification workflows =
+  SUCCESS
+
+main CI =
+  SUCCESS
+
+QCP =
+  CANCELLED
+
+post-merge control plane =
+  CANCELLED
+~~~
+
+Those cancellations were **not** external concurrency and were **not** valid PASS results.
+
+The root cause was:
+
+~~~text
+central applicability selftest
++ ALL_BLOCKERS enumeration
+→ repeatedly rematerialized the same resolver graph
+→ repeatedly rebuilt current/historical dependency digest catalogs
+→ repeatedly spawned git/show child processes
+→ QCP exceeded ~15-minute job timeout
+→ post-merge blocker inventory exceeded ~10-minute job timeout
+→ orphan Node processes remained after cancellation
+~~~
+
+The performance defect has now been fixed.
+
+At the new exact head:
+
+~~~text
+post-merge control plane =
+  SUCCESS
+
+central applicability semantics =
+  SUCCESS
+
+QCP =
+  FAILURE
+  but no longer because of timeout
+
+current QCP failure step =
+  generation / durable-anchor / dependency-digest semantics
+
+current failure code =
+  FROZEN_DIGEST_CARRY_FORWARD_REQUIRED
+
+currently identified check =
+  EA5C1_DURABLE_RAW_RESTRICTED_INGRESS
+~~~
+
+Therefore the immediate continuation is **not**:
+
+~~~text
+increase timeout
+rerun until lucky
+restart provider qualification
+change planner semantics
+activate production runtime
+~~~
+
+It is:
+
+~~~text
+close QCP frozen dependency-digest carry-forward
+→ let exact-head immutable requalification evidence resolve against the new dependency digests
+→ rerun QCP
+→ converge the seven post-merge evidence blockers
+→ keep production schema arms closed unless separately authorized
+→ then finish production planner entrypoint binding
+→ only after that open runtime/owner authority
+~~~
+
+---
+
+## L1. Current task in one sentence
+
+**Close the exact-head QCP dependency-digest carry-forward and immutable requalification-evidence chain created by the already-qualified successor/planner changes, while preserving the now-fast prepared-context control plane; then, under separate explicit authorities, materialize the two still-absent production Evidence metadata schema extensions, bind the already-assembled production planner entrypoint, and only after those boundaries are green proceed to Evidence/Twin runtime start, exact-one-owner closure, Formal-v5, A0, and O00–O23.**
+
+This is no longer:
+
+- a source-specific progress-port design task;
+- a KBS single-fetch/multi-interval implementation task;
+- a GFS partial-pair replay implementation task;
+- a source due-policy design task;
+- a GFS target-logical-time authority design task;
+- a heterogeneous source-execution design task;
+- a host NOT_DUE lifecycle design task;
+- an external host selection task;
+- a production ACL repair task;
+- a generic provider acquisition wait;
+- a QCP timeout-increase task.
+
+The near-term work is now:
+
+~~~text
+QCP digest carry-forward
++
+exact-head immutable evidence convergence
++
+two separately authorized production metadata schema materializations
++
+final production planner entrypoint binding
+~~~
+
+---
+
+## L2. Authority reconstruction order for the next engineer
+
+Read in this order:
+
+1. docs/SSOT.md
+2. docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md
+3. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md
+4. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md
+5. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+6. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+7. scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+8. scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+9. scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+10. scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CP2_GENERATION_DEPENDENCY_DIGEST_V1.cjs
+11. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json
+12. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json
+13. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1.json
+14. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-ARBITRATION-AUTHORITY-V1.json
+15. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-POLL-SCHEDULE-SCHEMA-REMEDIATION-AUTHORITY-V1.json
+16. docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-KBS-BASELINE-POINTER-SCHEMA-REMEDIATION-AUTHORITY-V1.json
+17. #3376 exact head ee6be360c0fb5f795b2c05243fe768c3909d03ef
+18. QCP run 33587281709 / artifact 9830546384
+19. post-merge run 33587282033 / artifact 9830538780
+20. Phase3 run 33587281820
+21. planner-readiness run 33587281398
+22. EA3 run 33587281673
+23. EA5C1 run 33587281329
+24. EA5E2 dependency-graph run 33587281956
+25. Phase6 runtime-independence run 33587281701
+26. CI run 33587281215
+27. V13 Autonomous run 33587281699
+28. V13 Holistic run 33587281817
+29. V13 Next-Tick run 33587281875
+30. this L-section
+
+The weekly report remains context only.
+
+Do not use a weekly summary, previous chat prose, or stale K-section head values to override these machine authorities.
+
+---
+
+## L3. Repository / PR topology at handoff time
+
+### L3.1 Protected main
+
+~~~text
+protected main =
+  fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+
+protected =
+  true
+~~~
+
+Do not move protected main as part of this handoff update.
+
+### L3.2 #3376 — active product frontier
+
+~~~text
+#3376
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+head =
+  ee6be360c0fb5f795b2c05243fe768c3909d03ef
+
+tree =
+  1998f78556e4477c766039c5723a42513d7c47d7
+
+state =
+  Draft / open / unmerged
+
+mergeable =
+  true
+~~~
+
+The newest relevant commits are:
+
+~~~text
+93b32a86dee54f4029a2a00421c33a2250921624
+  fix(mcft-cap09): govern ea3 successor proof route
+
+2add95e4b7912b62423ec376fc56bcaf7801f262
+  fix(mcft-cap09): pin phase7 unwired proof historically
+
+ee6be360c0fb5f795b2c05243fe768c3909d03ef
+  perf(mcft-cap09): reuse applicability resolver context
+~~~
+
+Do not reset to the K-section head.
+
+Do not treat 2add95e4... as current product head.
+
+### L3.3 Docs-only handoff PR
+
+The handoff remains isolated in:
+
+~~~text
+#3298
+
+branch =
+  docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier
+
+base =
+  26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+
+pre-L head =
+  2cd11a7c29422e4033e418ffbf5246e819979bf8
+
+state =
+  Draft / open
+
+mergeable =
+  true
+~~~
+
+Its historical base remains intentional.
+
+Do not rebase #3298 merely because protected main and #3376 are newer.
+
+The docs PR must remain docs-only.
+
+---
+
+## L4. Frozen activation route — exact current position
+
+The frozen route remains:
+
+~~~text
+1  MERGE_EXACT_V13_SUCCESSOR_SUBJECT
+2  CAPACITY_PREFLIGHT_AND_SAFE_SUPERSEDED_GENERATION_CLEANUP_IF_REQUIRED
+3  PROVISION_ZERO_STATE_V13_BLOCKED_V13_AND_FORMAL_V5_STORES
+4  RUN_PRODUCER_DRIVEN_V13_QUALIFICATION
+5  FREEZE_EXACT_HEAD_END_TO_END_TIMING_BUDGET
+6  OPEN_NEW_MACHINE_ONLY_GRADUATION_GATE
+7  PROVE_EXACT_ONE_PRODUCTION_OWNER_AND_RETIRED_TRIGGER_ZERO
+8  ARM_FRESH_V5_EPOCH
+9  BOOTSTRAP_FRESH_A0
+10 RUN_REAL_WALL_CLOCK_O00_O23_WITH_ZERO_ROUTINE_MANUAL_RESCUE
+11 RUN_AUTOMATIC_FINAL_READBACK
+12 FINAL_READ_ONLY_COMPLETION_ADJUDICATION
+~~~
+
+Current status is now more advanced than K:
+
+~~~text
+1  COMPLETE
+2  COMPLETE
+3  COMPLETE
+4  COMPLETE / producer-driven qualification evidence exists
+5  COMPLETE / timing authority evidence exists
+6  COMPLETE
+
+7  IN PROGRESS
+
+   production operational DB authority / DB existence               COMPLETE
+   41-table / 3-routine baseline production schema                  COMPLETE
+   service LOGIN principals                                         COMPLETE
+   runtime credentials                                               READY / NOT STARTED
+   local non-GitHub host + exact-two service identities              BOUND
+   writer-owner self-grant cleanup                                   COMPLETE / DISARMED
+   exact-nine Phase3 Evidence ACL carry-forward                      COMPLETE / DISARMED
+   local static admission                                            COMPLETE / IMMUTABLE
+
+   source-specific Evidence progress ports                           COMPLETE
+   KBS daily-batch single-fetch / multi-interval path                COMPLETE
+   GFS partial-pair retained-raw rehydration                         COMPLETE
+   explicit KBS Raw Hourly due policy                                COMPLETE
+   explicit KBS Soil due policy                                      COMPLETE
+   durable source-poll scheduling / fenced claim                     COMPLETE
+   GFS target logical-time authority                                 COMPLETE
+   GFS operational due/retry authority                               COMPLETE
+   durable GFS retry budget / takeover safety                        COMPLETE
+   heterogeneous source-plan execution seam                          COMPLETE
+   provider-attempt fence after Evidence lease                       COMPLETE
+   direct host planner-process binding seam                          COMPLETE
+   concrete production planner dependency assembly                   COMPLETE
+
+   production source-poll schedule schema materialized               NO / NOT AUTHORIZED
+   production KBS baseline-pointer schema materialized               NO / NOT AUTHORIZED
+   compiled production planner entrypoint bound                      NO
+   runtime process start                                              NOT AUTHORIZED / NOT STARTED
+   exact independent fenced Evidence/Twin runtime leases              NOT STARTED
+   EXACT_ONE_PRODUCTION_OWNER durable closure                         NOT CLOSED
+
+8  NOT STARTED
+9  NOT STARTED
+10 NOT STARTED
+11 NOT STARTED
+12 NOT STARTED
+~~~
+
+Do not collapse these sub-stages.
+
+---
+
+## L5. The K-section source-specific planner frontier has materially advanced
+
+Current planner-readiness authority on exact head says:
+
+~~~text
+status =
+  PRODUCTION_PLANNER_DEPENDENCY_ASSEMBLY_IMPLEMENTED_ENTRYPOINT_STILL_UNBOUND
+
+current_frontier =
+  PRODUCTION_SCHEMA_MATERIALIZATION_AND_RUNTIME_START_ENTRYPOINT_BINDING
+
+unconditional_blockers =
+  PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_NOT_MATERIALIZED
+  KBS_RAW_HOURLY_PRODUCTION_BASELINE_POINTER_SCHEMA_NOT_MATERIALIZED
+  EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND
+~~~
+
+This replaces K's old:
+
+~~~text
+SOURCE_SPECIFIC_PROGRESS_PORTS_REQUIRED
+~~~
+
+The source-specific product work now includes:
+
+~~~text
+KBS Raw Hourly:
+  complete-table snapshot inventory
+  durable private baseline manifest
+  fenced baseline pointer
+  restart readback
+  historical-prefix comparison
+  forward delta / no-change discovery
+  historical drift fail-closed
+  single retained batch → multi-interval canonicalization
+  pair-skew repair
+  explicit 900-second GEOX operational due throttle
+  durable fenced poll claim
+  provider NOT_DUE zero fetch
+  dedicated publication-cycle service binding
+
+GFS:
+  cross-cycle progress
+  canonical hourly target history
+  exact target dedup
+  partial-pair exact-fact provenance replay
+  private retained-raw replay
+  restored original ingested_at
+  zero-provider partial-pair rehydration
+  same EvidenceRuntimeCycleService reuse
+  exact target logical-time authority
+  strict hourly target progression
+  70→30-minute operational due window
+  max-three-attempt budget
+  minimum 60-second retry throttle
+  takeover-safe durable retry state
+  after-lease stale-plan canonical recheck
+  provider NOT_DUE zero fetch
+
+KBS Soil:
+  latest observed-event progress
+  explicit 300-second GEOX operational due throttle
+  durable fenced poll claim
+  target-free specialized work-item builder
+  provider NOT_DUE zero fetch
+~~~
+
+The current planner is therefore not "unimplemented".
+
+The remaining planner blocker is **entrypoint binding after production schema materialization and runtime-start authority**, not missing source semantics.
+
+---
+
+## L6. Two governance omissions were found and fixed before the performance work
+
+### L6.1 EA3 successor proof path was not registered in QCP
+
+Fix:
+
+~~~text
+93b32a86dee54f4029a2a00421c33a2250921624
+fix(mcft-cap09): govern ea3 successor proof route
+~~~
+
+Meaning:
+
+- successor EA3 proof is now part of the governed dependency route;
+- future changes to that proof cannot silently bypass QCP;
+- this was a governance ownership omission, not an EA3 runtime failure.
+
+### L6.2 Phase6 still applied historical Phase7 "unwired" semantics to the current successor
+
+Fix:
+
+~~~text
+2add95e4b7912b62423ec376fc56bcaf7801f262
+fix(mcft-cap09): pin phase7 unwired proof historically
+~~~
+
+Meaning:
+
+- the old Phase7 "unwired" condition remains valid only as historical evidence;
+- the current successor is not forced to satisfy the obsolete unwired sentinel;
+- Phase6 can qualify the current successor without rewriting Phase7 history.
+
+Do not revert either fix.
+
+Do not delete the historical Phase7 proof merely because it is no longer a current-successor requirement.
+
+---
+
+## L7. Pre-performance-fix exact-head machine state
+
+At:
+
+~~~text
+head =
+  2add95e4b7912b62423ec376fc56bcaf7801f262
+~~~
+
+the following were confirmed SUCCESS:
+
+~~~text
+EA3
+  run 33585759082
+  SUCCESS
+
+EA5C1
+  run 33585759069
+  SUCCESS
+
+EA5E2 dependency graph
+  run 33585759093
+  SUCCESS
+
+Phase6 successor sentinel / runtime independence
+  run 33585759169
+  SUCCESS
+
+Phase3 persistence
+  run 33585759103
+  SUCCESS
+
+production planner-readiness
+  run 33585759174
+  SUCCESS
+
+main CI
+  run 33585759127
+  SUCCESS
+~~~
+
+But:
+
+~~~text
+post-merge control plane
+  run 33585759099
+  CANCELLED
+
+QCP full qualification
+  run 33585759203
+  CANCELLED
+~~~
+
+These two cancellations must never be reported as PASS.
+
+They also must not be mixed with the intentional fail-closed workflows described later.
+
+---
+
+## L8. Cancellation root cause — control-plane repeated materialization, not concurrency
+
+The cancellations were investigated before any rerun.
+
+Result:
+
+~~~text
+QCP:
+  central applicability semantics ran for ~15 minutes
+  then job timeout cancelled it
+
+post-merge:
+  ALL_BLOCKERS enumeration ran for ~10 minutes
+  then job timeout cancelled it
+
+external concurrency cancellation =
+  false
+
+business blocker causing hang =
+  false
+~~~
+
+Both cancellations left orphan Node processes.
+
+The expensive repeated work was:
+
+~~~text
+resolver materialization
++
+current dependency digest catalog
++
+historical dependency digest catalog
++
+generation context
++
+repeated git/show subprocesses
+~~~
+
+The selftest exercises approximately 70+ synthetic changed-path / stage / fail-closed cases.
+
+Before the fix, each case recreated essentially the same immutable resolver/digest context.
+
+Do not "solve" this by:
+
+- raising workflow timeout;
+- deleting negative test cases;
+- skipping historical digest validation;
+- replacing git-backed digests with guessed values;
+- running the same cancelled workflows repeatedly.
+
+---
+
+## L9. Prepared-context performance optimization — exact semantic boundary
+
+The optimization introduces an explicit prepared applicability context.
+
+The reusable portion is only data proven invariant for the same exact subject:
+
+~~~text
+repository root
+authority object identity/content
+registry object identity/content
+generation
+head SHA
+
+→ materialized resolver graph
+→ current dependency digest catalog
+→ historical dependency digest catalog
+→ generation context
+~~~
+
+The following remain per-case inputs and are **not** cached away:
+
+~~~text
+changedPaths
+stage
+negative authority clone
+negative registry clone
+unknown-path test
+duplicate-check test
+missing-authority test
+missing-artifact test
+failed-v4 reuse test
+~~~
+
+Prepared-context reuse is allowed only when the context identity matches the caller's exact root / authority / registry / generation / head.
+
+A mismatched head must fail rather than reuse the prepared context.
+
+This is critical: the optimization reduces repeated materialization; it does **not** memoize final applicability outcomes across distinct tests.
+
+---
+
+## L10. Performance proof — same negative matrix, no timeout increase
+
+Before pushing, the full local selftest was run without reducing cases and without increasing timeout.
+
+Result:
+
+~~~text
+full QCP applicability selftest =
+  PASS
+
+elapsed =
+  62.436 seconds
+~~~
+
+The full post-merge ALL_BLOCKERS enumeration was then run.
+
+Result:
+
+~~~text
+planner_status =
+  PASS
+
+unknown paths =
+  0
+
+resolver errors =
+  0
+
+authority errors =
+  0
+
+elapsed =
+  approximately 67 seconds
+~~~
+
+The local blocker count before exact-head immutable evidence refresh was:
+
+~~~text
+7
+~~~
+
+The exact negative matrix remained active.
+
+The acceptance output explicitly proves:
+
+~~~text
+prepared_applicability_context_reused_for_same_subject = true
+all_resolvers_materialized_without_missing_paths = true
+unknown_changed_path_fails_closed = true
+historical_evidence_mutation_fails_closed = true
+duplicate_check_id_fails_closed = true
+missing_central_authority_ref_fails_closed = true
+missing_authority_ref_fails_closed = true
+missing_evidence_artifact_ref_fails_closed = true
+failed_v4_reuse_is_forbidden = true
+cp4_frozen_negative_case_matrix_complete = true
+regex_fallback_used = false
+~~~
+
+---
+
+## L11. Exact remote performance commit scope
+
+The authoritative remote performance fix is:
+
+~~~text
+ee6be360c0fb5f795b2c05243fe768c3909d03ef
+perf(mcft-cap09): reuse applicability resolver context
+
+parent =
+  2add95e4b7912b62423ec376fc56bcaf7801f262
+
+ahead_by =
+  1
+
+behind_by =
+  0
+~~~
+
+It changes exactly two files:
+
+~~~text
+scripts/governance_acceptance/
+  ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+    +42 / -4
+
+scripts/governance_acceptance/
+  PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+    +55 / -5
+~~~
+
+It does **not** change:
+
+- production runtime code;
+- provider implementations;
+- DB schema;
+- planner product semantics;
+- owner authority;
+- Formal authority;
+- A0/O00 authority.
+
+The local pre-push performance candidate mentioned in the conversation as a02afda60… is diagnostic history only.
+
+The authoritative remote subject is ee6be360….
+
+---
+
+## L12. New exact-head machine qualification after the performance fix
+
+At:
+
+~~~text
+ee6be360c0fb5f795b2c05243fe768c3909d03ef
+~~~
+
+the following are terminal SUCCESS:
+
+~~~text
+post-merge V13 control plane
+  33587282033
+  SUCCESS
+
+main CI
+  33587281215
+  SUCCESS
+
+Phase3 Evidence Runtime persistence
+  33587281820
+  SUCCESS
+
+production Evidence target planner-readiness
+  33587281398
+  SUCCESS
+
+EA3 external collector/canonicalizer successor
+  33587281673
+  SUCCESS
+
+EA5C1 durable raw restricted ingress
+  33587281329
+  SUCCESS
+
+EA5E2 runtime dependency graph
+  33587281956
+  SUCCESS
+
+Phase6 runtime independence
+  33587281701
+  SUCCESS
+
+V13 Autonomous Forcing Foundation
+  33587281699
+  SUCCESS
+
+V13 Holistic Schema
+  33587281817
+  SUCCESS
+
+V13 Next-Tick Viability
+  33587281875
+  SUCCESS
+
+Phase4 Twin Runtime persistence
+  33587281319
+  SUCCESS
+
+Phase5 production-equivalent containers
+  33587281934
+  SUCCESS
+
+Phase5 accelerated 24T
+  33587281803
+  SUCCESS
+
+production operational schema/ACL readiness
+  33587282008
+  SUCCESS
+
+production host readiness
+  33587281991
+  SUCCESS
+
+production service LOGIN readiness
+  33587281949
+  SUCCESS
+
+production runtime credential readiness
+  33587281466
+  SUCCESS
+
+production owner-provisioning readiness
+  33587281731
+  SUCCESS
+
+KBS baseline-pointer schema remediation workflow
+  33587281428
+  SUCCESS / default unarmed semantics
+
+source-poll schedule schema remediation workflow
+  33587281805
+  SUCCESS / default unarmed semantics
+~~~
+
+The important exception is QCP itself:
+
+~~~text
+QCP
+  33587281709
+  FAILURE
+~~~
+
+That failure is now a fast semantic failure, not a timeout.
+
+---
+
+## L13. QCP exact current failure — performance problem is closed; CP2 digest carry-forward is not
+
+QCP run:
+
+~~~text
+run =
+  33587281709
+
+subject =
+  ee6be360c0fb5f795b2c05243fe768c3909d03ef
+
+artifact =
+  9830546384
+
+artifact digest =
+  sha256:f757aefe1b55eb57382d174c3fe5e9c3c1e8d4d6ac2df65a1c9f1131a25c3643
+~~~
+
+Step status:
+
+~~~text
+Require governed successor predecessor and zero production bindings
+  SUCCESS
+
+Prove central applicability semantics
+  SUCCESS
+
+Prove generation, durable-anchor, and dependency-digest semantics
+  FAILURE
+
+Resolve immutable qualification evidence references
+  SKIPPED
+
+Generate exact PR applicability plan
+  SKIPPED
+
+Enumerate all blockers without fail-fast
+  SKIPPED
+
+Validate control-plane machine proof
+  SKIPPED
+~~~
+
+Current failure:
+
+~~~text
+code =
+  FROZEN_DIGEST_CARRY_FORWARD_REQUIRED
+
+check_id =
+  EA5C1_DURABLE_RAW_RESTRICTED_INGRESS
+
+reason_code =
+  GOVERNED_DEPENDENCY_CHANGED
+
+generation =
+  v13
+
+current dependency digest =
+  sha256:bfa5ce0f9b3687ab9e01d8728fc0d9ecc9d4523270d1c6c39243b62e0eaef803
+
+historical dependency digest =
+  null
+
+previous historical subject digest shown by CP2 =
+  sha256:5d0cd30932062032298b24a44b7d7d728a58807669961058931c22dfba0b99ac
+~~~
+
+Interpretation:
+
+- EA5C1 workflow itself is green on the new head;
+- QCP correctly sees that the governed dependency set changed;
+- CP2 refuses to reuse a frozen historical digest when the required carry-forward record is missing;
+- QCP stops before evidence-registry resolution because generation/digest semantics must be valid first.
+
+Do not bypass this by inserting a guessed digest.
+
+Do not edit the registry merely to force a green status.
+
+First close the exact dependency-digest carry-forward semantics, then let immutable exact-head workflow evidence be adjudicated normally.
+
+---
+
+## L14. Post-merge control plane is now fast and terminal SUCCESS
+
+Run:
+
+~~~text
+33587282033
+SUCCESS
+
+artifact =
+  9830538780
+
+artifact digest =
+  sha256:b81adacde9007c7d5c2913d82330e5d94d3cf96dc7975011d01b22f114609596
+~~~
+
+Machine summary:
+
+~~~text
+planner_status =
+  PASS
+
+pass =
+  2
+
+requalify =
+  9
+
+unknown =
+  0
+
+authority_errors =
+  0
+
+unknown_changed_paths =
+  0
+
+blocker_count =
+  7
+~~~
+
+The seven current blockers are:
+
+~~~text
+V13_AUTONOMOUS_FORCING_FOUNDATION
+V13_HOLISTIC_SCHEMA
+V13_NEXT_TICK_VIABILITY
+EA5C1_DURABLE_RAW_RESTRICTED_INGRESS
+V13_PRODUCER_DRIVEN_QUALIFICATION
+END_TO_END_EVIDENCE_SUPPLY_DEADLINE
+EXACT_ONE_PRODUCTION_OWNER
+~~~
+
+All seven are currently classified:
+
+~~~text
+blocker_class =
+  INVALID_OR_MISSING_REQUALIFICATION_EVIDENCE
+
+reason_code =
+  NO_VALID_REQUALIFICATION_EVIDENCE
+~~~
+
+Do not read this as "those workflows failed".
+
+Several corresponding exact-head workflows are already SUCCESS.
+
+The control plane is saying their currently registered immutable evidence does not yet match the new dependency digest/stage requirements.
+
+That is the continuation frontier.
+
+---
+
+## L15. Expected fail-closed workflows must not be mixed with QCP/post-merge semantics
+
+At the current exact head these are FAILURE for deliberate authority reasons:
+
+~~~text
+V13 producer-driven live qualification
+  33587282025
+  failed at: Resolve explicit live arm
+
+production owner graduation
+  33587281992
+  failed at: Fail closed until real non-GitHub owner cutover is implemented
+
+EA5C2b1 live KBS soil ingress executor
+  33587281927
+  failed at: Resolve governed EA5C2B1 predecessor
+
+production operational DB provision one-shot
+  33587282026
+  failed at: Require explicit database-provision arm
+~~~
+
+These are not the same category as:
+
+~~~text
+old QCP cancellation
+old post-merge cancellation
+current QCP CP2 digest failure
+~~~
+
+Keep the categories separate:
+
+~~~text
+CANCELLED
+!=
+FAIL_CLOSED_BY_AUTHORITY
+!=
+SEMANTIC_QCP_FAILURE
+!=
+RUNTIME_REGRESSION
+~~~
+
+---
+
+## L16. Production planner current truth — dependencies assembled, entrypoint still unbound
+
+The current planner-readiness authority says:
+
+~~~text
+status =
+  PRODUCTION_PLANNER_DEPENDENCY_ASSEMBLY_IMPLEMENTED_ENTRYPOINT_STILL_UNBOUND
+
+current_frontier =
+  PRODUCTION_SCHEMA_MATERIALIZATION_AND_RUNTIME_START_ENTRYPOINT_BINDING
+~~~
+
+Remaining unconditional planner blockers:
+
+~~~text
+1. PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_NOT_MATERIALIZED
+
+2. KBS_RAW_HOURLY_PRODUCTION_BASELINE_POINTER_SCHEMA_NOT_MATERIALIZED
+
+3. EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND
+~~~
+
+Important completed facts include:
+
+~~~text
+GFS target logical-time authority established =
+  true
+
+GFS operational due/retry policy established =
+  true
+
+GFS durable retry budget established =
+  true
+
+single Evidence host heterogeneous attempt execution seam =
+  implemented
+
+provider fence after lease =
+  implemented
+
+direct host planner process seam =
+  implemented
+
+production planner concrete dependency assembly =
+  implemented
+~~~
+
+Therefore do not reopen:
+
+- GFS target authority design;
+- GFS partial rehydration design;
+- KBS due policy design;
+- soil due policy design;
+- heterogeneous host execution architecture.
+
+The product frontier has moved beyond those tasks.
+
+---
+
+## L17. Two production metadata schema extensions remain deliberately absent
+
+### L17.1 Source poll schedule metadata
+
+Current authority/remediation state:
+
+~~~text
+capability implemented =
+  true
+
+production schema materialized =
+  false
+
+remediation authorized =
+  false
+~~~
+
+The remediation workflow may report SUCCESS while remaining unarmed.
+
+That SUCCESS means:
+
+- isolated migration proof passed;
+- production read-only preflight passed;
+- runner correctly skipped mutation while unarmed.
+
+It does **not** mean production DDL happened.
+
+### L17.2 KBS baseline-pointer metadata
+
+Current authority/remediation state is analogous:
+
+~~~text
+capability implemented =
+  true
+
+production baseline-pointer schema materialized =
+  false
+
+remediation authorized =
+  false
+~~~
+
+Again:
+
+~~~text
+remediation workflow SUCCESS
+!=
+production DDL applied
+~~~
+
+Do not flip either arm without separate explicit authorization.
+
+Do not combine the two schema mutations into one implicit "planner fix".
+
+---
+
+## L18. Pitfalls already hit — do not repeat them
+
+### L18.1 Never report CANCELLED as PASS
+
+The predecessor QCP and post-merge runs were cancelled by job timeout.
+
+A green business workflow set does not convert cancellation into qualification success.
+
+### L18.2 Do not fix control-plane performance by increasing timeout
+
+The accepted fix is prepared-context reuse.
+
+Timeout inflation would hide the repeated-materialization defect.
+
+### L18.3 Do not reduce the negative test matrix
+
+Unknown path, duplicate check, missing authority, missing artifact, historical mutation, failed-v4 reuse, and stage/generation negatives must remain active.
+
+### L18.4 Prepared context is not a global "trust me" cache
+
+Never reuse it across a different:
+
+- repository root;
+- authority object;
+- registry object;
+- generation;
+- head SHA.
+
+A mismatched subject must fail.
+
+### L18.5 Do not let negative authority/registry clones inherit the positive prepared context
+
+Those tests intentionally change the governance subject.
+
+They must independently materialize and fail closed.
+
+### L18.6 Do not handwrite a dependency digest just to make QCP green
+
+The current CP2 failure is precisely guarding against unproven frozen-digest carry-forward.
+
+The digest must come from the governed dependency set and valid carry-forward semantics.
+
+### L18.7 Do not handwrite registry evidence to erase the seven post-merge blockers
+
+Exact-head workflows already generated real machine evidence.
+
+First make QCP dependency semantics coherent, then register/adjudicate immutable evidence under the normal contract.
+
+### L18.8 QCP current FAILURE is not a performance regression
+
+Central applicability already passes quickly.
+
+The failure is later at dependency-digest semantics.
+
+Do not go back to the performance code unless timing actually regresses.
+
+### L18.9 post-merge blocker_count=7 is not "seven runtime failures"
+
+It is seven missing/invalid requalification-evidence adjudications under the new dependency set.
+
+### L18.10 Do not treat remediation workflow SUCCESS as production mutation
+
+Both relevant production schema capabilities are default-unarmed.
+
+Read the preflight/runner output, not only the workflow conclusion.
+
+### L18.11 Do not confuse expected fail-closed live/owner workflows with control-plane failures
+
+Live arm, owner cutover, EA5C2b1 predecessor, and one-shot provisioning have separate authority semantics.
+
+### L18.12 Do not commit local acceptance-output
+
+Untracked/local:
+
+~~~text
+acceptance-output/
+~~~
+
+must remain uncommitted unless an exact governed workflow/artifact contract explicitly owns a generated file.
+
+### L18.13 Do not start production runtime while QCP/evidence convergence is open
+
+No Evidence/Twin runtime process should be started as a side effect of control-plane repair.
+
+### L18.14 Do not activate production owner, Formal-v5, A0, or O00
+
+Those remain downstream stages.
+
+### L18.15 Do not rewrite or rebase the historical docs-only handoff lineage
+
+#3298 intentionally preserves its historical base and the earlier sections.
+
+---
+
+## L19. Immediate next actions for the next engineer
+
+Start with:
+
+~~~text
+1. GET #3376
+2. require exact remote head
+3. if head != ee6be360..., classify drift before changing anything
+4. read QCP artifact 9830546384
+5. read post-merge artifact 9830538780
+6. do not rerun provider/live mutation workflows as a first response
+~~~
+
+If the exact product head is still:
+
+~~~text
+ee6be360c0fb5f795b2c05243fe768c3909d03ef
+~~~
+
+continue in this order:
+
+1. inspect CP2's frozen-digest carry-forward contract for EA5C1_DURABLE_RAW_RESTRICTED_INGRESS;
+2. identify the exact newly governed dependency path(s) that made the current EA5C1 dependency digest sha256:bfa5ce0f9b3687ab9e01d8728fc0d9ecc9d4523270d1c6c39243b62e0eaef803;
+3. establish the required carry-forward through the existing machine authority mechanism — do not inject a guessed historical digest;
+4. rerun the complete QCP without increasing timeout and require:
+   - central applicability PASS;
+   - generation/durable-anchor/dependency-digest semantics PASS;
+   - immutable evidence resolution runs;
+   - exact applicability plan generated;
+   - ALL_BLOCKERS enumeration completes;
+5. use the current exact-head successful workflow runs as evidence candidates only after dependency digest/stage matching is valid;
+6. converge the seven post-merge NO_VALID_REQUALIFICATION_EVIDENCE blockers by the normal immutable registry route;
+7. keep source-poll schema and KBS baseline-pointer remediation arms false unless the user separately authorizes production DDL;
+8. after schema materialization is separately authorized and proven, re-run production planner-readiness;
+9. bind the already-assembled planner entrypoint only under the separate runtime-start boundary;
+10. then start exact two local long-running services and prove independent Evidence/Twin fenced leases;
+11. close EXACT_ONE_PRODUCTION_OWNER;
+12. only then proceed Formal-v5 → A0 → O00–O23.
+
+Do not merge #3376 merely because CI and source-specific qualification are green.
+
+QCP/evidence convergence and downstream production authority remain open.
+
+---
+
+## L20. Current one-line frontier
+
+~~~text
+producer durable evidence exists
++ writer-owner cleanup CLOSED
++ exact-nine ACL remediation CLOSED
++ local static machine admission IMMUTABLE PASS
++ exact-two local service identities BOUND
++ source-specific progress COMPLETE
++ KBS daily-batch product path COMPLETE
++ GFS retained-raw partial repair COMPLETE
++ explicit source due policies COMPLETE
++ durable poll/retry state COMPLETE
++ GFS target authority COMPLETE
++ heterogeneous single-host source execution COMPLETE
++ host planner-process binding seam COMPLETE
++ production planner dependency assembly COMPLETE
++ control-plane prepared-context performance defect CLOSED
++ post-merge control plane SUCCESS
+
+→ QCP_FROZEN_DIGEST_CARRY_FORWARD_REQUIRED
+→ IMMUTABLE_REQUALIFICATION_EVIDENCE_CONVERGENCE
+→ SOURCE_POLL_SCHEMA_MATERIALIZATION [SEPARATE AUTH]
+→ KBS_BASELINE_POINTER_SCHEMA_MATERIALIZATION [SEPARATE AUTH]
+→ PRODUCTION_PLANNER_ENTRYPOINT_BINDING
+→ SEPARATE_RUNTIME_START_AUTHORITY
+→ EXACT_ONE_EFFECTIVE_OWNER / LEASE CLOSURE
+→ Formal-v5 → A0 → O00–O23
+~~~
+
+Current non-effects remain:
+
+~~~text
+production runtime started =
+  false
+
+production DDL executed by this continuation =
+  false
+
+production owner activated =
+  false
+
+Formal-v5 armed =
+  false
+
+A0 bootstrapped =
+  false
+
+O00 started =
+  false
+
+untracked acceptance-output committed =
+  false
+~~~
+
+The performance issue is closed.
+
+The current first problem to solve is the QCP dependency-digest carry-forward, not runtime behavior.
+
+---
+
 # GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-01 Continuation — Local Static Admission / Source-Specific Planner / Host NOT_DUE Frontier
 
 Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
