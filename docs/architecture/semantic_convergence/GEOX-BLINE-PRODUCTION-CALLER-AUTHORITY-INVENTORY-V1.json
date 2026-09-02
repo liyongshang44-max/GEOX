@@ -10258,6 +10258,42 @@
       ],
       "current_disposition": "KEEP_TELEMETRY_EVENT_INGRESS_WITH_DEVICE_CREDENTIAL_AND_ROW_TENANT_ADMISSION",
       "notes": "Shared broker credential is not treated as device semantic admission; topic tenant plus device credential checks remain separate downstream controls."
+    },
+    {
+      "callback_id": "apps/telemetry-ingest/src/main.ts#main#HIGHER_ORDER_CALLBACK:apps/telemetry-ingest/src/mqtt_durable_raw_v1.ts::runMqttObservationProjectionV1#1",
+      "source_path": "apps/telemetry-ingest/src/main.ts",
+      "callback_kind": "HIGHER_ORDER_CALLBACK",
+      "trigger": "apps/telemetry-ingest/src/mqtt_durable_raw_v1.ts::runMqttObservationProjectionV1",
+      "effect_class": "EVENT_BACKGROUND_WRITER",
+      "caller_routes": [],
+      "principal_type": "TELEMETRY_INGEST_SERVICE_PROCESS",
+      "tenant_binding_class": "ROW_TENANT_DERIVED",
+      "tenant_binding_detail": "MQTT topic tenant + validated device credential; project/group from service config",
+      "writer_entrypoints": [
+        "apps/server/src/services/device_observation_service_v1.ts::writeDeviceObservationFactV1",
+        "apps/server/src/domain/skill_registry/facts.ts::appendFact",
+        "apps/server/src/services/field_memory_service.ts::recordMemoryV1",
+        "apps/server/src/services/derived_sensing_state_service_v1.ts::appendDerivedSensingStateV1",
+        "apps/server/src/projections/field_sensing_overview_v1.ts::refreshFieldSensingOverviewV1",
+        "apps/server/src/projections/field_sensing_overview_v1.ts::ensureFieldSensingOverviewProjectionV1",
+        "apps/server/src/projections/field_sensing_summary_stage1_v1.ts::refreshFieldSensingSummaryStage1V1",
+        "apps/server/src/projections/field_sensing_summary_stage1_v1.ts::ensureFieldSensingSummaryStage1ProjectionV1",
+        "apps/server/src/projections/field_fertility_state_v1.ts::refreshFieldFertilityStateV1",
+        "apps/server/src/projections/field_fertility_state_v1.ts::ensureFieldFertilityStateProjectionV1"
+      ],
+      "write_targets": [
+        "facts:device_observation_v1",
+        "device_observation_index_v1",
+        "facts:skill_run_v1",
+        "field_memory_v1:TECHNICAL_SKILL_MEMORY",
+        "facts:derived_sensing_state_v1",
+        "derived_sensing_state_index_v1",
+        "field_sensing_overview_v1",
+        "field_sensing_summary_stage1_v1",
+        "field_fertility_state_v1"
+      ],
+      "current_disposition": "KEEP_TELEMETRY_DURABLE_RAW_CALLBACK_WITH_TECHNICAL_SKILL_MEMORY_ONLY",
+      "notes": "runMqttObservationProjectionV1 demonstrably invokes the callback. Skill-run persistence can call recordMemoryV1 only as TECHNICAL_SKILL_MEMORY / TECHNICAL_SIGNAL with customer_visible_memory=false and learning_eligible=false; this does not reopen Formal Field Memory authority."
     }
   ],
   "service_credential_dispositions": [
