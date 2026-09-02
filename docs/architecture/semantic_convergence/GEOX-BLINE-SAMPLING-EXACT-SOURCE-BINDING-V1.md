@@ -19,6 +19,8 @@ DO NOT MODIFY MCFT IMPLEMENTATION
 
 This package closes the Sampling latest-wins authority defect recorded as `P0-RES-010`. It does not define a new temporal version-selection policy and does not modify MCFT State, Forecast, Scenario, persistence, runtime ownership, production hosting, scheduler, Formal stores, or candidate promotion.
 
+This package does not define a supersession/current-version policy. Append history remains representable, but no row becomes authoritative merely because it is later.
+
 ## Identity model
 
 Sampling facts are append/history capable. A business identifier is a consistency assertion; it is not sufficient authority for choosing one immutable fact when more than one fact can exist.
