@@ -97,6 +97,35 @@ type SlotRowV1 = {
   terminal_at: string | Date | null;
 };
 
+type RuntimeLeaseRowV1 = {
+  lease_owner: string;
+  fencing_token: string | number | bigint;
+  acquired_at: string | Date;
+  expires_at: string | Date;
+  heartbeat_at: string | Date;
+  database_now: string | Date;
+};
+
+export type TwinRuntimeSchedulerOwnershipLeaseClaimV1 = {
+  scope: TwinScopeKeyV1;
+  lease_owner: string;
+  fencing_token: bigint;
+  acquired_at: string;
+  expires_at: string;
+  heartbeat_at: string;
+  database_now: string;
+};
+
+export interface TwinRuntimeSchedulerOwnershipPortV1 {
+  acquireOrRenewOwnershipLease(input: {
+    lease_owner: string;
+    lease_duration_seconds: number;
+  }): Promise<TwinRuntimeSchedulerOwnershipLeaseClaimV1 | null>;
+  releaseOwnershipLease(input: {
+    claim: TwinRuntimeSchedulerOwnershipLeaseClaimV1;
+  }): Promise<"RELEASED" | "ALREADY_EXPIRED_OR_STALE">;
+}
+
 const SCOPE_KEYS = ["tenant_id", "project_id", "group_id", "field_id", "season_id", "zone_id"] as const;
 const HOUR_MS = 3_600_000;
 
@@ -297,27 +326,85 @@ export class PostgresPersistentSequentialSchedulerAdapterV1 implements Scheduler
     }
   }
 
-  private async acquireLease(client: SchedulerClientV1, leaseOwner: string, leaseDurationSeconds: number): Promise<bigint> {
-    requiredText(leaseOwner, "LEASE_OWNER_REQUIRED");
+  private async acquireOrRenewLeaseV1(
+    executor: Pick<SchedulerClientV1, "query"> | Pick<SchedulerPoolV1, "query">,
+    leaseOwner: string,
+    leaseDurationSeconds: number,
+  ): Promise<TwinRuntimeSchedulerOwnershipLeaseClaimV1 | null> {
+    const owner = requiredText(leaseOwner, "LEASE_OWNER_REQUIRED");
     if (!Number.isInteger(leaseDurationSeconds) || leaseDurationSeconds <= 0 || leaseDurationSeconds > 3600) {
       throw new Error("LEASE_DURATION_SECONDS_INVALID");
     }
-    const result = await client.query<{ fencing_token: string | number | bigint }>(
+    const result = await executor.query<RuntimeLeaseRowV1>(
       `INSERT INTO twin_runtime_lease_v1
        (tenant_id,project_id,group_id,field_id,season_id,zone_id,lease_owner,fencing_token,acquired_at,expires_at,heartbeat_at)
        VALUES ($1,$2,$3,$4,$5,$6,$7,1,transaction_timestamp(),transaction_timestamp()+make_interval(secs=>$8),transaction_timestamp())
        ON CONFLICT (tenant_id,project_id,group_id,field_id,season_id,zone_id) DO UPDATE SET
-         lease_owner=EXCLUDED.lease_owner,
-         fencing_token=twin_runtime_lease_v1.fencing_token+1,
-         acquired_at=transaction_timestamp(),
+         lease_owner=CASE
+           WHEN twin_runtime_lease_v1.expires_at<=transaction_timestamp() THEN EXCLUDED.lease_owner
+           ELSE twin_runtime_lease_v1.lease_owner
+         END,
+         fencing_token=CASE
+           WHEN twin_runtime_lease_v1.expires_at<=transaction_timestamp()
+             THEN twin_runtime_lease_v1.fencing_token+1
+           ELSE twin_runtime_lease_v1.fencing_token
+         END,
+         acquired_at=CASE
+           WHEN twin_runtime_lease_v1.expires_at<=transaction_timestamp()
+             THEN transaction_timestamp()
+           ELSE twin_runtime_lease_v1.acquired_at
+         END,
          expires_at=transaction_timestamp()+make_interval(secs=>$8),
          heartbeat_at=transaction_timestamp()
        WHERE twin_runtime_lease_v1.expires_at<=transaction_timestamp()
-       RETURNING fencing_token`,
-      [...scopeValues(this.config.scope), leaseOwner, leaseDurationSeconds],
+          OR twin_runtime_lease_v1.lease_owner=EXCLUDED.lease_owner
+       RETURNING lease_owner,fencing_token,acquired_at,expires_at,heartbeat_at,
+                 transaction_timestamp() AS database_now`,
+      [...scopeValues(this.config.scope), owner, leaseDurationSeconds],
     );
-    if (result.rows.length !== 1) throw new Error("LEASE_HELD_BY_OTHER_OWNER");
-    return BigInt(result.rows[0].fencing_token);
+    if (result.rows.length === 0) return null;
+    if (result.rows.length !== 1) throw new Error("TWIN_RUNTIME_SCHEDULER_LEASE_CARDINALITY");
+    const row = result.rows[0];
+    return {
+      scope: { ...this.config.scope },
+      lease_owner: requiredText(row.lease_owner, "LEASE_OWNER_REQUIRED"),
+      fencing_token: BigInt(row.fencing_token),
+      acquired_at: iso(row.acquired_at),
+      expires_at: iso(row.expires_at),
+      heartbeat_at: iso(row.heartbeat_at),
+      database_now: iso(row.database_now),
+    };
+  }
+
+  async acquireOrRenewOwnershipLease(input: {
+    lease_owner: string;
+    lease_duration_seconds: number;
+  }): Promise<TwinRuntimeSchedulerOwnershipLeaseClaimV1 | null> {
+    return this.acquireOrRenewLeaseV1(
+      this.pool,
+      input.lease_owner,
+      input.lease_duration_seconds,
+    );
+  }
+
+  async releaseOwnershipLease(input: {
+    claim: TwinRuntimeSchedulerOwnershipLeaseClaimV1;
+  }): Promise<"RELEASED" | "ALREADY_EXPIRED_OR_STALE"> {
+    assertScope(input.claim.scope, this.config.scope);
+    const result = await this.pool.query(
+      `UPDATE twin_runtime_lease_v1
+          SET expires_at=GREATEST(transaction_timestamp(),acquired_at+interval '1 microsecond'),
+              heartbeat_at=transaction_timestamp()
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
+          AND lease_owner=$7 AND fencing_token=$8
+          AND expires_at>transaction_timestamp()`,
+      [
+        ...scopeValues(this.config.scope),
+        requiredText(input.claim.lease_owner, "LEASE_OWNER_REQUIRED"),
+        input.claim.fencing_token.toString(),
+      ],
+    );
+    return result.rowCount === 1 ? "RELEASED" : "ALREADY_EXPIRED_OR_STALE";
   }
 
   private async assertLeaseCurrent(client: SchedulerClientV1, leaseOwner: string, fencingToken: bigint): Promise<void> {
@@ -365,7 +452,13 @@ export class PostgresPersistentSequentialSchedulerAdapterV1 implements Scheduler
         scopeValues(this.config.scope),
       );
       if (active.rows.length) throw new Error("ACTIVE_SLOT_ALREADY_PRESENT");
-      const fencingToken = await this.acquireLease(client, input.lease_owner, input.lease_duration_seconds);
+      const ownershipClaim = await this.acquireOrRenewLeaseV1(
+        client,
+        input.lease_owner,
+        input.lease_duration_seconds,
+      );
+      if (!ownershipClaim) throw new Error("LEASE_HELD_BY_OTHER_OWNER");
+      const fencingToken = ownershipClaim.fencing_token;
       const inserted = await client.query<SlotRowV1>(
         `INSERT INTO twin_shadow_online_scheduler_slot_v1
          (tenant_id,project_id,group_id,field_id,season_id,zone_id,slot_id,logical_time,
