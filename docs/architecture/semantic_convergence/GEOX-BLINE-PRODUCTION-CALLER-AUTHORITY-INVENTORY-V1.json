@@ -8432,6 +8432,688 @@
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
       "notes": "Onboarding-status GET performs compatibility schema ensure."
+    },
+    {
+      "disposition_id": "BHTTP-013",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "entry_symbol": "GET /api/v1/actions/index",
+      "http_method": "GET",
+      "exact_route": "/api/v1/actions/index",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "ao_act.index.read"
+      ],
+      "side_effect_class": "FACT_LEDGER_WRITE",
+      "writer_entrypoints": [
+        "writeAoActAuthzAuditFactV0"
+      ],
+      "write_targets": [
+        "facts:ao_act_authz_audit_v0"
+      ],
+      "current_disposition": "INVENTORIED_WRITE_UNDER_GET",
+      "notes": "Read endpoint appends an AO-ACT authorization audit fact with event=index_read."
+    },
+    {
+      "disposition_id": "BHTTP-014",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "GET /api/v1/ao-act/dispatches",
+      "http_method": "GET",
+      "exact_route": "/api/v1/ao-act/dispatches",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "ao_act.index.read"
+      ],
+      "side_effect_class": "DOMAIN_STATE_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "ensureDispatchQueueRuntime"
+      ],
+      "write_targets": [
+        "dispatch_queue_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_DOMAIN_STATE_COMPATIBILITY_WRITE",
+      "notes": "First read can execute dispatch_queue_v1 schema compatibility plus command_id backfill UPDATE."
+    },
+    {
+      "disposition_id": "BHTTP-015",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "GET /api/v1/operations/console",
+      "http_method": "GET",
+      "exact_route": "/api/v1/operations/console",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "ao_act.index.read"
+      ],
+      "side_effect_class": "DOMAIN_STATE_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "ensureDispatchQueueRuntime"
+      ],
+      "write_targets": [
+        "dispatch_queue_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_DOMAIN_STATE_COMPATIBILITY_WRITE",
+      "notes": "Operations console can trigger dispatch_queue_v1 compatibility backfill through queue reads."
+    },
+    {
+      "disposition_id": "BHTTP-016",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "GET /api/v1/operations/console/read-model",
+      "http_method": "GET",
+      "exact_route": "/api/v1/operations/console/read-model",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "ao_act.index.read"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureOperationPlanStateReadModelRuntime"
+      ],
+      "write_targets": [
+        "operation plan state read-model schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "GET performs runtime schema ensure before reading the projection."
+    },
+    {
+      "disposition_id": "BHTTP-017",
+      "source_path": "apps/server/src/routes/dashboard_v1.ts",
+      "entry_symbol": "GET /api/v1/dashboard/manual-execution-quality/tasks",
+      "http_method": "GET",
+      "exact_route": "/api/v1/dashboard/manual-execution-quality/tasks",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "ao_act.index.read"
+      ],
+      "side_effect_class": "FACT_LEDGER_WRITE",
+      "writer_entrypoints": [
+        "projectManualExecutionQualityV1",
+        "ensureManualExecutionQualityProjectionV1"
+      ],
+      "write_targets": [
+        "manual_execution_quality_projection_v1",
+        "facts:manual_execution_quality_snapshot_v1"
+      ],
+      "current_disposition": "INVENTORIED_WRITE_UNDER_GET",
+      "notes": "Task detail GET invokes the same manual execution quality projector and appends a snapshot fact."
+    },
+    {
+      "disposition_id": "BHTTP-018",
+      "source_path": "apps/server/src/routes/reports_dashboard_v1.ts",
+      "entry_symbol": "GET /api/v1/reports/customer-dashboard/field-portfolio-summary",
+      "http_method": "GET",
+      "exact_route": "/api/v1/reports/customer-dashboard/field-portfolio-summary",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_READ_CAPABILITY"
+      ],
+      "side_effect_class": "PROJECTION_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "ensureWeatherForecastIndexV1"
+      ],
+      "write_targets": [
+        "weather_forecast_index_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "notes": "GET invokes weather forecast compatibility ensure, including UPDATE backfill of issue/version metadata."
+    },
+    {
+      "disposition_id": "BHTTP-019",
+      "source_path": "apps/server/src/routes/reports_v1.ts",
+      "entry_symbol": "GET /api/v1/reports/operation/:operation_id",
+      "http_method": "GET",
+      "exact_route": "/api/v1/reports/operation/:operation_id",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_READ_CAPABILITY"
+      ],
+      "side_effect_class": "PROJECTION_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "ensureWeatherForecastIndexV1"
+      ],
+      "write_targets": [
+        "weather_forecast_index_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "notes": "GET invokes weather forecast compatibility ensure, including UPDATE backfill of issue/version metadata."
+    },
+    {
+      "disposition_id": "BHTTP-020",
+      "source_path": "apps/server/src/routes/reports_v1.ts",
+      "entry_symbol": "GET /api/v1/reports/field/:field_id",
+      "http_method": "GET",
+      "exact_route": "/api/v1/reports/field/:field_id",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_READ_CAPABILITY"
+      ],
+      "side_effect_class": "PROJECTION_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "ensureWeatherForecastIndexV1"
+      ],
+      "write_targets": [
+        "weather_forecast_index_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "notes": "GET invokes weather forecast compatibility ensure, including UPDATE backfill of issue/version metadata."
+    },
+    {
+      "disposition_id": "BHTTP-021",
+      "source_path": "apps/server/src/routes/weather_v1.ts",
+      "entry_symbol": "GET /api/v1/weather/forecast/latest",
+      "http_method": "GET",
+      "exact_route": "/api/v1/weather/forecast/latest",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_READ_CAPABILITY"
+      ],
+      "side_effect_class": "PROJECTION_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "ensureWeatherForecastIndexV1"
+      ],
+      "write_targets": [
+        "weather_forecast_index_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "notes": "GET invokes weather forecast compatibility ensure, including UPDATE backfill of issue/version metadata."
+    },
+    {
+      "disposition_id": "BHTTP-022",
+      "source_path": "apps/server/src/routes/evidence_report_v1.ts",
+      "entry_symbol": "GET /api/v1/evidence-reports/:job_id",
+      "http_method": "GET",
+      "exact_route": "/api/v1/evidence-reports/:job_id",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "ao_act.index.read"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureJobsTable"
+      ],
+      "write_targets": [
+        "jobs schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "GET ensures legacy jobs table/index before SELECT."
+    },
+    {
+      "disposition_id": "BHTTP-023",
+      "source_path": "apps/server/src/routes/evidence_report_v1.ts",
+      "entry_symbol": "GET /api/v1/evidence-reports/:job_id/download",
+      "http_method": "GET",
+      "exact_route": "/api/v1/evidence-reports/:job_id/download",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "ao_act.index.read"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureJobsTable"
+      ],
+      "write_targets": [
+        "jobs schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "GET ensures legacy jobs table/index before SELECT."
+    },
+    {
+      "disposition_id": "BHTTP-024",
+      "source_path": "apps/server/src/routes/human_ops_v1.ts",
+      "entry_symbol": "GET /api/v1/human-ops/kpi",
+      "http_method": "GET",
+      "exact_route": "/api/v1/human-ops/kpi",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_HUMAN_OPS_READ_CAPABILITY"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureHumanOpsKpiProjectionV1"
+      ],
+      "write_targets": [
+        "human_ops_kpi_v1 schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "GET ensures KPI projection table/index before reading; refresh is owned by the background worker."
+    },
+    {
+      "disposition_id": "BHTTP-025",
+      "source_path": "apps/server/src/routes/human_ops_v1.ts",
+      "entry_symbol": "GET /api/v1/human-ops/executor-ranking",
+      "http_method": "GET",
+      "exact_route": "/api/v1/human-ops/executor-ranking",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_HUMAN_OPS_READ_CAPABILITY"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureHumanOpsKpiProjectionV1"
+      ],
+      "write_targets": [
+        "human_ops_kpi_v1 schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "GET ensures KPI projection table/index before reading; refresh is owned by the background worker."
+    },
+    {
+      "disposition_id": "BHTTP-026",
+      "source_path": "apps/server/src/routes/human_executors_v1.ts",
+      "entry_symbol": "GET /api/v1/human-executors",
+      "http_method": "GET",
+      "exact_route": "/api/v1/human-executors",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_HUMAN_EXECUTOR_READ_CAPABILITY"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureHumanExecutorRuntime"
+      ],
+      "write_targets": [
+        "human executor/work assignment runtime schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "GET ensures human executor/work-assignment compatibility schema before reading."
+    },
+    {
+      "disposition_id": "BHTTP-027",
+      "source_path": "apps/server/src/routes/human_executors_v1.ts",
+      "entry_symbol": "GET /api/v1/human-executors/:executorId",
+      "http_method": "GET",
+      "exact_route": "/api/v1/human-executors/:executorId",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_HUMAN_EXECUTOR_READ_CAPABILITY"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureHumanExecutorRuntime"
+      ],
+      "write_targets": [
+        "human executor/work assignment runtime schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "GET ensures human executor/work-assignment compatibility schema before reading."
+    },
+    {
+      "disposition_id": "BHTTP-028",
+      "source_path": "apps/server/src/routes/human_executors_v1.ts",
+      "entry_symbol": "GET /api/v1/human-executors/dispatch-workbench",
+      "http_method": "GET",
+      "exact_route": "/api/v1/human-executors/dispatch-workbench",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_HUMAN_EXECUTOR_READ_CAPABILITY"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureHumanExecutorRuntime"
+      ],
+      "write_targets": [
+        "human executor/work assignment runtime schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "GET ensures human executor/work-assignment compatibility schema before reading."
+    },
+    {
+      "disposition_id": "BHTTP-029",
+      "source_path": "apps/server/src/routes/human_executors_v1.ts",
+      "entry_symbol": "GET /api/v1/human-executors/availability",
+      "http_method": "GET",
+      "exact_route": "/api/v1/human-executors/availability",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_HUMAN_EXECUTOR_READ_CAPABILITY"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureHumanExecutorRuntime"
+      ],
+      "write_targets": [
+        "human executor/work assignment runtime schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "GET ensures human executor/work-assignment compatibility schema before reading."
+    },
+    {
+      "disposition_id": "BHTTP-030",
+      "source_path": "apps/server/src/routes/human_executors_v1.ts",
+      "entry_symbol": "GET /api/v1/work-assignments",
+      "http_method": "GET",
+      "exact_route": "/api/v1/work-assignments",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_HUMAN_EXECUTOR_READ_CAPABILITY"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureHumanExecutorRuntime"
+      ],
+      "write_targets": [
+        "human executor/work assignment runtime schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "GET ensures human executor/work-assignment compatibility schema before reading."
+    },
+    {
+      "disposition_id": "BHTTP-031",
+      "source_path": "apps/server/src/routes/human_executors_v1.ts",
+      "entry_symbol": "GET /api/v1/work-assignments/sla-summary",
+      "http_method": "GET",
+      "exact_route": "/api/v1/work-assignments/sla-summary",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_HUMAN_EXECUTOR_READ_CAPABILITY"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureHumanExecutorRuntime"
+      ],
+      "write_targets": [
+        "human executor/work assignment runtime schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "GET ensures human executor/work-assignment compatibility schema before reading."
+    },
+    {
+      "disposition_id": "BHTTP-032",
+      "source_path": "apps/server/src/routes/human_executors_v1.ts",
+      "entry_symbol": "GET /api/v1/work-assignments/:assignmentId",
+      "http_method": "GET",
+      "exact_route": "/api/v1/work-assignments/:assignmentId",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_HUMAN_EXECUTOR_READ_CAPABILITY"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureHumanExecutorRuntime"
+      ],
+      "write_targets": [
+        "human executor/work assignment runtime schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "GET ensures human executor/work-assignment compatibility schema before reading."
+    },
+    {
+      "disposition_id": "BHTTP-033",
+      "source_path": "apps/server/src/routes/human_executors_v1.ts",
+      "entry_symbol": "GET /api/v1/operations/:id/handoff",
+      "http_method": "GET",
+      "exact_route": "/api/v1/operations/:id/handoff",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_HUMAN_EXECUTOR_READ_CAPABILITY"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureHumanExecutorRuntime"
+      ],
+      "write_targets": [
+        "human executor/work assignment runtime schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "GET ensures human executor/work-assignment compatibility schema before reading."
+    },
+    {
+      "disposition_id": "BHTTP-034",
+      "source_path": "apps/server/src/routes/human_executors_v1.ts",
+      "entry_symbol": "GET /api/v1/work-assignments/:assignment_id/audit",
+      "http_method": "GET",
+      "exact_route": "/api/v1/work-assignments/:assignment_id/audit",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_HUMAN_EXECUTOR_READ_CAPABILITY"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureHumanExecutorRuntime"
+      ],
+      "write_targets": [
+        "human executor/work assignment runtime schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "GET ensures human executor/work-assignment compatibility schema before reading."
+    },
+    {
+      "disposition_id": "BHTTP-035",
+      "source_path": "apps/server/src/routes/skill_runtime_v1.ts",
+      "entry_symbol": "GET /api/v1/skill/status/:skill_run_id",
+      "http_method": "GET",
+      "exact_route": "/api/v1/skill/status/:skill_run_id",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_SKILL_READ_CAPABILITY"
+      ],
+      "side_effect_class": "PROJECTION_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "projectSkillRegistryReadV1",
+        "ensureSkillRegistryReadTable"
+      ],
+      "write_targets": [
+        "skill_registry_read_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "notes": "GET rebuilds or refreshes skill_registry_read_v1 before returning read data."
+    },
+    {
+      "disposition_id": "BHTTP-036",
+      "source_path": "apps/server/src/routes/skill_runtime_v1.ts",
+      "entry_symbol": "GET /api/v1/skill/results/:skill_run_id",
+      "http_method": "GET",
+      "exact_route": "/api/v1/skill/results/:skill_run_id",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_SKILL_READ_CAPABILITY"
+      ],
+      "side_effect_class": "PROJECTION_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "projectSkillRegistryReadV1",
+        "ensureSkillRegistryReadTable"
+      ],
+      "write_targets": [
+        "skill_registry_read_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "notes": "GET rebuilds or refreshes skill_registry_read_v1 before returning read data."
+    },
+    {
+      "disposition_id": "BHTTP-037",
+      "source_path": "apps/server/src/routes/skill_runtime_v1.ts",
+      "entry_symbol": "GET /api/v1/skill/runs/:skill_run_id",
+      "http_method": "GET",
+      "exact_route": "/api/v1/skill/runs/:skill_run_id",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_SKILL_READ_CAPABILITY"
+      ],
+      "side_effect_class": "PROJECTION_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "projectSkillRegistryReadV1",
+        "ensureSkillRegistryReadTable"
+      ],
+      "write_targets": [
+        "skill_registry_read_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "notes": "GET rebuilds or refreshes skill_registry_read_v1 before returning read data."
+    },
+    {
+      "disposition_id": "BHTTP-038",
+      "source_path": "apps/server/src/routes/skill_runs_v1.ts",
+      "entry_symbol": "GET /api/v1/skill-runs",
+      "http_method": "GET",
+      "exact_route": "/api/v1/skill-runs",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_SKILL_READ_CAPABILITY"
+      ],
+      "side_effect_class": "PROJECTION_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "projectSkillRegistryReadV1",
+        "ensureSkillRegistryReadTable"
+      ],
+      "write_targets": [
+        "skill_registry_read_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "notes": "GET rebuilds or refreshes skill_registry_read_v1 before returning read data."
+    },
+    {
+      "disposition_id": "BHTTP-039",
+      "source_path": "apps/server/src/routes/skills_v1.ts",
+      "entry_symbol": "GET /api/v1/skills",
+      "http_method": "GET",
+      "exact_route": "/api/v1/skills",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_SKILL_READ_CAPABILITY"
+      ],
+      "side_effect_class": "PROJECTION_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "projectSkillRegistryReadV1",
+        "ensureSkillRegistryReadTable"
+      ],
+      "write_targets": [
+        "skill_registry_read_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "notes": "GET rebuilds or refreshes skill_registry_read_v1 before returning read data."
+    },
+    {
+      "disposition_id": "BHTTP-040",
+      "source_path": "apps/server/src/routes/skills_v1.ts",
+      "entry_symbol": "GET /api/v1/skills/:skill_id",
+      "http_method": "GET",
+      "exact_route": "/api/v1/skills/:skill_id",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_SKILL_READ_CAPABILITY"
+      ],
+      "side_effect_class": "PROJECTION_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "projectSkillRegistryReadV1",
+        "ensureSkillRegistryReadTable"
+      ],
+      "write_targets": [
+        "skill_registry_read_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "notes": "GET rebuilds or refreshes skill_registry_read_v1 before returning read data."
+    },
+    {
+      "disposition_id": "BHTTP-041",
+      "source_path": "apps/server/src/routes/skills_v1.ts",
+      "entry_symbol": "GET /api/v1/skills/runs",
+      "http_method": "GET",
+      "exact_route": "/api/v1/skills/runs",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_SKILL_READ_CAPABILITY"
+      ],
+      "side_effect_class": "PROJECTION_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "projectSkillRegistryReadV1",
+        "ensureSkillRegistryReadTable"
+      ],
+      "write_targets": [
+        "skill_registry_read_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "notes": "GET rebuilds or refreshes skill_registry_read_v1 before returning read data."
+    },
+    {
+      "disposition_id": "BHTTP-042",
+      "source_path": "apps/server/src/routes/skills_v1.ts",
+      "entry_symbol": "GET /api/v1/skills/bindings",
+      "http_method": "GET",
+      "exact_route": "/api/v1/skills/bindings",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_SKILL_READ_CAPABILITY"
+      ],
+      "side_effect_class": "PROJECTION_SIDE_EFFECT",
+      "writer_entrypoints": [
+        "projectSkillRegistryReadV1",
+        "ensureSkillRegistryReadTable"
+      ],
+      "write_targets": [
+        "skill_registry_read_v1"
+      ],
+      "current_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "notes": "GET rebuilds or refreshes skill_registry_read_v1 before returning read data."
+    },
+    {
+      "disposition_id": "BHTTP-043",
+      "source_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "entry_symbol": "GET /api/v1/agronomy/rule-performance",
+      "http_method": "GET",
+      "exact_route": "/api/v1/agronomy/rule-performance",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_DECISION_READ_CAPABILITY"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureRulePerformanceTable"
+      ],
+      "write_targets": [
+        "agronomy rule performance schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "GET ensures rule-performance table before SELECT."
+    },
+    {
+      "disposition_id": "BHTTP-044",
+      "source_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "entry_symbol": "GET /api/v1/agronomy/rule-performance/:rule_id",
+      "http_method": "GET",
+      "exact_route": "/api/v1/agronomy/rule-performance/:rule_id",
+      "activation_root": "commercial.server → bootstrap/server → app",
+      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authz_capability": [
+        "EXISTING_DECISION_READ_CAPABILITY"
+      ],
+      "side_effect_class": "SCHEMA_ENSURE_ONLY",
+      "writer_entrypoints": [
+        "ensureRulePerformanceTable"
+      ],
+      "write_targets": [
+        "agronomy rule performance schema"
+      ],
+      "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
+      "notes": "GET ensures rule-performance table before SELECT."
     }
   ],
   "runtime_direct_writer_dispositions": [
@@ -8531,6 +9213,127 @@
       ],
       "current_disposition": "KEEP_COMPATIBILITY_BOOTSTRAP_INVENTORY_ONLY",
       "notes": "Contains UPDATE and duplicate-cleanup DELETE in addition to DDL. Not caller authority; must remain visible in Runtime Activation Write Graph."
+    },
+    {
+      "startup_id": "BSTART-002",
+      "source_path": "apps/server/src/routes/evidence_export_jobs_v1.ts",
+      "entry_symbol": "ensureEvidenceExportJobIndexV1Schema",
+      "registration_sources": [
+        "apps/server/src/routes/evidence_export_jobs_v1.ts#registerEvidenceExportJobsV1Routes"
+      ],
+      "activation_root": "commercial.server → module registration",
+      "mutation_class": "STARTUP_SCHEMA_BOOTSTRAP",
+      "write_targets": [
+        "evidence_export_job_index_v1 schema"
+      ],
+      "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
+      "notes": "DDL-only startup compatibility ensure."
+    },
+    {
+      "startup_id": "BSTART-003",
+      "source_path": "apps/server/src/routes/evidence_export_jobs_v1.ts",
+      "entry_symbol": "ensureEvidencePackIndexV1Schema",
+      "registration_sources": [
+        "apps/server/src/routes/evidence_export_jobs_v1.ts#registerEvidenceExportJobsV1Routes"
+      ],
+      "activation_root": "commercial.server → module registration",
+      "mutation_class": "STARTUP_SCHEMA_BOOTSTRAP",
+      "write_targets": [
+        "evidence_pack_index_v1 schema"
+      ],
+      "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
+      "notes": "DDL-only startup compatibility ensure."
+    },
+    {
+      "startup_id": "BSTART-004",
+      "source_path": "apps/server/src/routes/field_tags_v1.ts",
+      "entry_symbol": "ensureFieldTagsSchemaV1",
+      "registration_sources": [
+        "apps/server/src/routes/field_tags_v1.ts#registerFieldTagsV1Routes"
+      ],
+      "activation_root": "commercial.server → module registration",
+      "mutation_class": "STARTUP_SCHEMA_BOOTSTRAP",
+      "write_targets": [
+        "field_tags_v1 schema"
+      ],
+      "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
+      "notes": "DDL-only startup compatibility ensure."
+    },
+    {
+      "startup_id": "BSTART-005",
+      "source_path": "apps/server/src/routes/device_status_v1.ts",
+      "entry_symbol": "ensureDeviceStatusIndexV1Schema",
+      "registration_sources": [
+        "apps/server/src/routes/device_status_v1.ts#registerDeviceStatusV1Routes"
+      ],
+      "activation_root": "commercial.server → module registration",
+      "mutation_class": "STARTUP_SCHEMA_BOOTSTRAP",
+      "write_targets": [
+        "device_status_index_v1 schema"
+      ],
+      "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
+      "notes": "DDL-only best-effort startup compatibility ensure."
+    },
+    {
+      "startup_id": "BSTART-006",
+      "source_path": "apps/server/src/routes/agronomy_media_v1.ts",
+      "entry_symbol": "ensureAgronomyObservationIndexV1",
+      "registration_sources": [
+        "apps/server/src/routes/agronomy_media_v1.ts#registerAgronomyMediaV1Routes"
+      ],
+      "activation_root": "commercial.server → module registration",
+      "mutation_class": "STARTUP_SCHEMA_BOOTSTRAP",
+      "write_targets": [
+        "agronomy_observation_index_v1 schema"
+      ],
+      "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
+      "notes": "DDL-only startup compatibility ensure."
+    },
+    {
+      "startup_id": "BSTART-007",
+      "source_path": "apps/server/src/routes/agronomy_inference_v1.ts",
+      "entry_symbol": "ensureAgronomyInferenceIndexV1",
+      "registration_sources": [
+        "apps/server/src/routes/agronomy_inference_v1.ts#registerAgronomyInferenceV1Routes"
+      ],
+      "activation_root": "commercial.server → module registration",
+      "mutation_class": "STARTUP_SCHEMA_BOOTSTRAP",
+      "write_targets": [
+        "agronomy_inference_result_v1 schema",
+        "agronomy_inference_index_v1 schema"
+      ],
+      "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
+      "notes": "DDL-only startup compatibility ensure."
+    },
+    {
+      "startup_id": "BSTART-008",
+      "source_path": "apps/server/src/routes/fields_v1.ts",
+      "entry_symbol": "ensureFieldSeasonProjectionV1",
+      "registration_sources": [
+        "apps/server/src/routes/fields_v1.ts#registerFieldsV1Routes"
+      ],
+      "activation_root": "commercial.server → module registration",
+      "mutation_class": "STARTUP_SCHEMA_BOOTSTRAP",
+      "write_targets": [
+        "field_season_index_v1 schema"
+      ],
+      "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
+      "notes": "DDL-only startup compatibility ensure."
+    },
+    {
+      "startup_id": "BSTART-009",
+      "source_path": "apps/server/src/routes/evidence_report_v1.ts",
+      "entry_symbol": "ensureJobsTable",
+      "registration_sources": [
+        "apps/server/src/routes/evidence_report_v1.ts#registerEvidenceReportV1Routes"
+      ],
+      "activation_root": "commercial.server → module registration",
+      "mutation_class": "STARTUP_SCHEMA_BOOTSTRAP",
+      "write_targets": [
+        "jobs schema"
+      ],
+      "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
+      "notes": "DDL-only startup compatibility ensure."
     }
   ]
 }
