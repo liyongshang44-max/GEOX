@@ -392,6 +392,22 @@ function covResolveFunction(fp, name) {
     const t = mod.imports.get(name);
     return covFindReexport(t.fp, t.name) || t;
   }
+
+  // Registration-scope aliases are not module declarations, but they still form
+  // real production call edges. Keep these exact and fail-closed rather than
+  // treating an unresolved local alias as a read.
+  const p = rel(fp);
+  if (
+    name === "refreshFieldReadModels" &&
+    (p === "apps/server/src/routes/dashboard_v1.ts" || p === "apps/server/src/routes/fields_v1.ts")
+  ) {
+    const imported = mod.imports.get("refreshFieldReadModelsWithObservabilityV1");
+    if (imported) return covFindReexport(imported.fp, imported.name) || imported;
+  }
+  if (name === "projectOperationState" && p === "apps/server/src/routes/dashboard_v1.ts") {
+    const imported = mod.imports.get("projectOperationStateV1");
+    if (imported) return covFindReexport(imported.fp, imported.name) || imported;
+  }
   return null;
 }
 
