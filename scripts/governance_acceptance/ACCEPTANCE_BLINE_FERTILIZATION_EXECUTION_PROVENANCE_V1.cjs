@@ -4,6 +4,7 @@ const fs=require("node:fs");
 const files={
  route:"apps/server/src/routes/v1/fertilization.ts",
  service:"apps/server/src/services/fertilization/fertilization_service_v1.ts",
+ asExecuted:"apps/server/src/domain/execution/as_executed_v1.ts",
  contract:"apps/server/src/domain/fertilization/fertilization_contract_v1.ts",
  doc:"docs/architecture/semantic_convergence/GEOX-BLINE-FERTILIZATION-EXECUTION-PROVENANCE-V1.md"
 };
@@ -16,6 +17,11 @@ need("route",[
   'requireFertilizationAcceptanceAuth',
   'requireAoActScopeV0(req, reply, "acceptance.evaluate")',
   'ACCEPTANCE_EVALUATE_ROLE_DENIED'
+]);
+need("asExecuted",[
+  'getByPath(factPayload, ["meta", "prescription_id"])',
+  'getByPath(factPayload, ["meta", "recommendation_id"])',
+  'prescription_resolved_by'
 ]);
 need("service",[
   'fertilization_prescription_fact_id',
