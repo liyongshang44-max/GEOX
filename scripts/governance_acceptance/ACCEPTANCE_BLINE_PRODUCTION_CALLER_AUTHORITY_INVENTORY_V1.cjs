@@ -1020,6 +1020,44 @@ function covTargetDeclared(declared, actual) {
 }
 const covReachableWriterMissing=[];
 const covReachableTargetMissing=[];
+const covDeclaredWriterWithoutReachablePersistentWriter=[];
+const covDeclaredSqlTargetWithoutReachablePersistentTarget=[];
+
+function covWriterCanonicalMatch(declared, actualWriters) {
+  const d=String(declared||"");
+  if (!d) return false;
+  if (actualWriters.includes(d)) return true;
+  const dSymbol=d.includes("::") ? d.slice(d.lastIndexOf("::")+2) : d;
+  return actualWriters.some((a)=>String(a).slice(String(a).lastIndexOf("::")+2)===dSymbol);
+}
+function covDeclaredSqlTargetCandidate(raw) {
+  let d=String(raw||"").trim().toLowerCase().replace(/^public\./,"");
+  if (!d) return null;
+  if (d==="facts" || d.startsWith("facts:") || d.startsWith("facts/") || d.startsWith("facts ")) return "facts";
+  d=d.replace(/\s+schema$/,"").trim();
+  d=d.split(/\s+via\s+/)[0].trim();
+  if (/^[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*$/.test(d)) d=d.split(".")[0];
+  return /^[a-z_][a-z0-9_]*$/.test(d) ? d : null;
+}
+function covCheckDeclaredExactness(kind,id,row,route) {
+  const actualWriters=[...(route.writers||[])];
+  const actualTargets=[...(route.targets||[])].map((x)=>String(x).replace(/^public\./i,"").toLowerCase());
+  for (const declared of row.writer_entrypoints||[]) {
+    if (!covWriterCanonicalMatch(declared,actualWriters)) {
+      covDeclaredWriterWithoutReachablePersistentWriter.push({
+        inventory_kind:kind, inventory_id:id, declared_writer:String(declared),
+      });
+    }
+  }
+  for (const declared of row.write_targets||[]) {
+    const sqlTarget=covDeclaredSqlTargetCandidate(declared);
+    if (sqlTarget && !actualTargets.includes(sqlTarget)) {
+      covDeclaredSqlTargetWithoutReachablePersistentTarget.push({
+        inventory_kind:kind, inventory_id:id, declared_sql_target:String(declared), canonical_sql_target:sqlTarget,
+      });
+    }
+  }
+}
 for (const route of covHttpUnique) {
   if (!(route.dml||route.ddl)) continue;
   const disposition=covHttpDispositionKey.get(route.source_path+"::"+route.method+"::"+route.route);
@@ -1030,6 +1068,7 @@ for (const route of covHttpUnique) {
     for (const target of route.targets||[]) if (!covTargetDeclared(disposition.write_targets,target)) {
       covReachableTargetMissing.push({inventory_kind:"http_entrypoint_disposition",inventory_id:disposition.disposition_id,missing_target:target});
     }
+    covCheckDeclaredExactness("http_entrypoint_disposition",disposition.disposition_id,disposition,route);
   }
   const surface=surfaces.find((row)=>
     row.activation_mode==="HTTP_ROUTE" &&
@@ -1044,6 +1083,7 @@ for (const route of covHttpUnique) {
     for (const target of route.targets||[]) if (!covTargetDeclared(surface.write_targets,target)) {
       covReachableTargetMissing.push({inventory_kind:"surface",inventory_id:surface.surface_id,missing_target:target});
     }
+    covCheckDeclaredExactness("surface",surface.surface_id,surface,route);
   }
 }
 
@@ -1415,6 +1455,9 @@ for (const edge of covCallbackEdges) {
   for (const target of edge.targets||[]) if (!covTargetDeclared(d.write_targets,target)) {
     covReachableTargetMissing.push({inventory_kind:"callback_hook_disposition",inventory_id:d.callback_id,missing_target:target});
   }
+  covCheckDeclaredExactness("callback_hook_disposition",d.callback_id,d,{
+    writers:edge.writers||[], targets:edge.targets||[]
+  });
 }
 
 assert(covCallbackStale.length === 0, "stale callback/hook disposition", covCallbackStale);
@@ -1776,6 +1819,8 @@ const covZeroSets = {
   production_callback_hook_persistent_writer_without_disposition: covCallbackMissing.length,
   reachable_writer_missing_from_disposition_writer_entrypoints: covReachableWriterMissing.length,
   reachable_persistent_target_missing_from_disposition_write_targets: covReachableTargetMissing.length,
+  declared_writer_without_reachable_persistent_writer: covDeclaredWriterWithoutReachablePersistentWriter.length,
+  declared_sql_target_without_reachable_persistent_target: covDeclaredSqlTargetWithoutReachablePersistentTarget.length,
   production_internal_http_delegation_edge_without_disposition: covDelegationMissing.length,
   production_principal_transition_without_disposition: covPrincipalTransitionMissing.length,
   production_service_credential_without_principal_classification: covCredentialMissing.length,
@@ -1834,6 +1879,8 @@ const covCompactCoverageFailure = {
   })),
   reachable_writer_missing_from_disposition_writer_entrypoints: covReachableWriterMissing,
   reachable_persistent_target_missing_from_disposition_write_targets: covReachableTargetMissing,
+  declared_writer_without_reachable_persistent_writer: covDeclaredWriterWithoutReachablePersistentWriter,
+  declared_sql_target_without_reachable_persistent_target: covDeclaredSqlTargetWithoutReachablePersistentTarget,
   production_internal_http_delegation_edge_without_disposition: covDelegationMissing.map((x)=>({
     delegation_id:x.delegation_id, source_path:x.source_path, enclosing_symbol:x.enclosing_symbol,
     target_method:x.target_method, target_entrypoint:x.target_entrypoint,
