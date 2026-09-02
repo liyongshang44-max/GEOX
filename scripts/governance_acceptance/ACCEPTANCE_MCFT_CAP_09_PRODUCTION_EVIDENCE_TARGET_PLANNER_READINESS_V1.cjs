@@ -589,7 +589,7 @@ try {
   assert.equal(runtimeStartAuthority.production_owner_activation_authorized, false);
   assert.equal(
     runtimeStartAuthorityDocument.status,
-    "ENTRYPOINT_BOUND_RUNTIME_START_BLOCKED_CURRENT_T4R1_FORMAL_WINDOW_EXPIRED",
+    "ENGINEERING_READINESS_QUALIFIED_LIVE_ACTIVATION_BLOCKED_CURRENT_T4R1_AUTHORITY_UNRESOLVED",
   );
   const runtimeStartReadiness = runtimeStartAuthorityDocument.runtime_start_readiness_settlement;
   assert.equal(runtimeStartReadiness.status, "BLOCKED_NO_VIABLE_FUTURE_FORMAL_WINDOW_UNDER_CURRENT_T4R1_CROP_AUTHORITY");
