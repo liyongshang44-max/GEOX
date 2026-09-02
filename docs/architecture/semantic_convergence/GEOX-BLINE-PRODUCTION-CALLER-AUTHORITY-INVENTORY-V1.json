@@ -7520,11 +7520,553 @@
       "risk_tier": "P0",
       "contract_refs": [],
       "notes": null
+    },
+    {
+      "surface_id": "BSEC-181",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/approvals",
+      "http_method_or_runtime_trigger": "POST",
+      "exact_route_or_trigger": "/api/v1/approvals",
+      "runtime_reachable": true,
+      "activation_root": "commercial.server → bootstrap/server → app → core → controlplane",
+      "activation_mode": "HTTP_ROUTE",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "ao_act.task.write"
+      ],
+      "principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "allowed_roles_or_principals": [
+        "admin via requireAoActAdminV0"
+      ],
+      "tenant_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "project_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "group_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "field_binding": "TASK/PLAN/DEVICE_CHAIN_VALIDATED_WHERE_APPLICABLE",
+      "semantic_family": [
+        "approval.request"
+      ],
+      "write_targets": [
+        "delegated approval_request writer"
+      ],
+      "fact_types": [
+        "approval_request_v1"
+      ],
+      "downstream_consumers": [],
+      "caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_MISMATCH",
+      "current_disposition": "BSEC_CAPABILITY_DEBT_OPEN",
+      "required_action": "USE APPROVAL-SPECIFIC REQUEST CAPABILITY/PRINCIPAL; ao_act.task.write is not approval authority",
+      "sunset_or_cutover_condition": "BSEC0_CALLER_AUTHORITY_CLOSED",
+      "declared_actor_binding": "AUTH_ACTOR_USED_OR_NOT_APPLICABLE",
+      "tenant_scope_from_untrusted_body": false,
+      "risk_tier": "P0",
+      "contract_refs": [],
+      "notes": null
+    },
+    {
+      "surface_id": "BSEC-182",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/approvals/:request_id/decide",
+      "http_method_or_runtime_trigger": "POST",
+      "exact_route_or_trigger": "/api/v1/approvals/:request_id/decide",
+      "runtime_reachable": true,
+      "activation_root": "commercial.server → bootstrap/server → app → core → controlplane",
+      "activation_mode": "HTTP_ROUTE",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "ao_act.task.write"
+      ],
+      "principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "allowed_roles_or_principals": [
+        "admin via requireAoActAdminV0"
+      ],
+      "tenant_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "project_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "group_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "field_binding": "TASK/PLAN/DEVICE_CHAIN_VALIDATED_WHERE_APPLICABLE",
+      "semantic_family": [
+        "approval.verdict"
+      ],
+      "write_targets": [
+        "approval decision + downstream task/plan chain"
+      ],
+      "fact_types": [
+        "approval_decision_v1",
+        "ao_act_task_v0",
+        "operation plan transition facts"
+      ],
+      "downstream_consumers": [],
+      "caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_MISMATCH",
+      "current_disposition": "BSEC_CAPABILITY_DEBT_OPEN",
+      "required_action": "USE approval.decide / governed approval principal; generic task write is not decision authority",
+      "sunset_or_cutover_condition": "BSEC0_CALLER_AUTHORITY_CLOSED",
+      "declared_actor_binding": "AUTH_ACTOR_USED_OR_NOT_APPLICABLE",
+      "tenant_scope_from_untrusted_body": false,
+      "risk_tier": "P0",
+      "contract_refs": [],
+      "notes": null
+    },
+    {
+      "surface_id": "BSEC-183",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/ao-act/tasks",
+      "http_method_or_runtime_trigger": "POST",
+      "exact_route_or_trigger": "/api/v1/ao-act/tasks",
+      "runtime_reachable": true,
+      "activation_root": "commercial.server → bootstrap/server → app → core → controlplane",
+      "activation_mode": "HTTP_ROUTE",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "ao_act.task.write"
+      ],
+      "principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "allowed_roles_or_principals": [
+        "scope-bearing principal; exact product principal not narrowed"
+      ],
+      "tenant_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "project_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "group_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "field_binding": "TASK/PLAN/DEVICE_CHAIN_VALIDATED_WHERE_APPLICABLE",
+      "semantic_family": [
+        "execution.task"
+      ],
+      "write_targets": [
+        "facts",
+        "operation plan/task projections"
+      ],
+      "fact_types": [
+        "ao_act_task_v0"
+      ],
+      "downstream_consumers": [],
+      "caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_MISMATCH",
+      "current_disposition": "BSEC_CAPABILITY_DEBT_OPEN",
+      "required_action": "NARROW TO action.task.create / exact service-or-human principal",
+      "sunset_or_cutover_condition": "BSEC0_CALLER_AUTHORITY_CLOSED",
+      "declared_actor_binding": "AUTH_ACTOR_USED_OR_NOT_APPLICABLE",
+      "tenant_scope_from_untrusted_body": false,
+      "risk_tier": "P0",
+      "contract_refs": [],
+      "notes": null
+    },
+    {
+      "surface_id": "BSEC-184",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/ao-act/tasks/:act_task_id/dispatch",
+      "http_method_or_runtime_trigger": "POST",
+      "exact_route_or_trigger": "/api/v1/ao-act/tasks/:act_task_id/dispatch",
+      "runtime_reachable": true,
+      "activation_root": "commercial.server → bootstrap/server → app → core → controlplane",
+      "activation_mode": "HTTP_ROUTE",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "ao_act.task.write"
+      ],
+      "principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "allowed_roles_or_principals": [
+        "scope-bearing principal; exact product principal not narrowed"
+      ],
+      "tenant_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "project_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "group_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "field_binding": "TASK/PLAN/DEVICE_CHAIN_VALIDATED_WHERE_APPLICABLE",
+      "semantic_family": [
+        "execution.dispatch"
+      ],
+      "write_targets": [
+        "facts",
+        "dispatch outbox",
+        "operation plan transition"
+      ],
+      "fact_types": [
+        "ao_act_task_dispatched_v1",
+        "ao_act_dispatch_outbox_v1",
+        "operation_plan_transition_v1"
+      ],
+      "downstream_consumers": [],
+      "caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_MISMATCH",
+      "current_disposition": "BSEC_CAPABILITY_DEBT_OPEN",
+      "required_action": "NARROW TO action.task.dispatch AND DISPATCH PRINCIPAL; preserve execution semantics",
+      "sunset_or_cutover_condition": "BSEC0_CALLER_AUTHORITY_CLOSED",
+      "declared_actor_binding": "AUTH_ACTOR_USED_OR_NOT_APPLICABLE",
+      "tenant_scope_from_untrusted_body": false,
+      "risk_tier": "P0",
+      "contract_refs": [],
+      "notes": null
+    },
+    {
+      "surface_id": "BSEC-185",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/ao-act/dispatches/claim",
+      "http_method_or_runtime_trigger": "POST",
+      "exact_route_or_trigger": "/api/v1/ao-act/dispatches/claim",
+      "runtime_reachable": true,
+      "activation_root": "commercial.server → bootstrap/server → app → core → controlplane",
+      "activation_mode": "HTTP_ROUTE",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "ao_act.task.write"
+      ],
+      "principal_type": "EXECUTOR_OR_ADMIN_BEARER_NOT_EXACTLY_NARROWED",
+      "allowed_roles_or_principals": [
+        "scope-bearing principal; exact product principal not narrowed"
+      ],
+      "tenant_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "project_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "group_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "field_binding": "TASK/PLAN/DEVICE_CHAIN_VALIDATED_WHERE_APPLICABLE",
+      "semantic_family": [
+        "execution.dispatch_claim"
+      ],
+      "write_targets": [
+        "dispatch queue lease state"
+      ],
+      "fact_types": [],
+      "downstream_consumers": [],
+      "caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_MISMATCH",
+      "current_disposition": "BSEC_CAPABILITY_DEBT_OPEN",
+      "required_action": "BIND CLAIM TO EXECUTOR SERVICE PRINCIPAL; generic task-write human authority is insufficient",
+      "sunset_or_cutover_condition": "BSEC0_CALLER_AUTHORITY_CLOSED",
+      "declared_actor_binding": "AUTH_ACTOR_USED_OR_NOT_APPLICABLE",
+      "tenant_scope_from_untrusted_body": false,
+      "risk_tier": "P0",
+      "contract_refs": [],
+      "notes": null
+    },
+    {
+      "surface_id": "BSEC-186",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/ao-act/dispatches/state",
+      "http_method_or_runtime_trigger": "POST",
+      "exact_route_or_trigger": "/api/v1/ao-act/dispatches/state",
+      "runtime_reachable": true,
+      "activation_root": "commercial.server → bootstrap/server → app → core → controlplane",
+      "activation_mode": "HTTP_ROUTE",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "ao_act.task.write"
+      ],
+      "principal_type": "EXECUTOR_OR_ADMIN_BEARER_NOT_EXACTLY_NARROWED",
+      "allowed_roles_or_principals": [
+        "scope-bearing principal; exact product principal not narrowed"
+      ],
+      "tenant_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "project_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "group_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "field_binding": "TASK/PLAN/DEVICE_CHAIN_VALIDATED_WHERE_APPLICABLE",
+      "semantic_family": [
+        "execution.dispatch_state"
+      ],
+      "write_targets": [
+        "dispatch queue",
+        "operation plan transitions",
+        "manual fallback/work assignment state"
+      ],
+      "fact_types": [
+        "operation_plan_transition_v1",
+        "work_assignment_status_changed_v1"
+      ],
+      "downstream_consumers": [],
+      "caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_MISMATCH",
+      "current_disposition": "BSEC_CAPABILITY_DEBT_OPEN",
+      "required_action": "BIND DISPATCH STATE TO EXECUTOR SERVICE PRINCIPAL/CAPABILITY",
+      "sunset_or_cutover_condition": "BSEC0_CALLER_AUTHORITY_CLOSED",
+      "declared_actor_binding": "AUTH_ACTOR_USED_OR_NOT_APPLICABLE",
+      "tenant_scope_from_untrusted_body": false,
+      "risk_tier": "P0",
+      "contract_refs": [],
+      "notes": null
+    },
+    {
+      "surface_id": "BSEC-187",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/ao-act/downlinks/published",
+      "http_method_or_runtime_trigger": "POST",
+      "exact_route_or_trigger": "/api/v1/ao-act/downlinks/published",
+      "runtime_reachable": true,
+      "activation_root": "commercial.server → bootstrap/server → app → core → controlplane",
+      "activation_mode": "HTTP_ROUTE",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "ao_act.task.write"
+      ],
+      "principal_type": "EXECUTOR_SERVICE_EXPECTED_BUT_NOT_ROUTE_ENFORCED",
+      "allowed_roles_or_principals": [
+        "scope-bearing principal; exact product principal not narrowed"
+      ],
+      "tenant_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "project_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "group_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "field_binding": "TASK/PLAN/DEVICE_CHAIN_VALIDATED_WHERE_APPLICABLE",
+      "semantic_family": [
+        "execution.downlink_publish"
+      ],
+      "write_targets": [
+        "facts",
+        "dispatch queue"
+      ],
+      "fact_types": [
+        "ao_act_downlink_published_v1"
+      ],
+      "downstream_consumers": [],
+      "caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_MISMATCH",
+      "current_disposition": "BSEC_CAPABILITY_DEBT_OPEN",
+      "required_action": "BIND DOWNLINK-PUBLISHED TO EXECUTOR SERVICE PRINCIPAL/CAPABILITY",
+      "sunset_or_cutover_condition": "BSEC0_CALLER_AUTHORITY_CLOSED",
+      "declared_actor_binding": "AUTH_ACTOR_USED_OR_NOT_APPLICABLE",
+      "tenant_scope_from_untrusted_body": false,
+      "risk_tier": "P0",
+      "contract_refs": [],
+      "notes": null
+    },
+    {
+      "surface_id": "BSEC-188",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/ao-act/receipts/uplink",
+      "http_method_or_runtime_trigger": "POST",
+      "exact_route_or_trigger": "/api/v1/ao-act/receipts/uplink",
+      "runtime_reachable": true,
+      "activation_root": "commercial.server → bootstrap/server → app → core → controlplane",
+      "activation_mode": "HTTP_ROUTE",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "ao_act.receipt.write"
+      ],
+      "principal_type": "EXECUTOR_OR_DEVICE_GATEWAY_SERVICE_EXPECTED",
+      "allowed_roles_or_principals": [
+        "scope-bearing principal; exact product principal not narrowed"
+      ],
+      "tenant_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "project_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "group_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "field_binding": "TASK/PLAN/DEVICE_CHAIN_VALIDATED_WHERE_APPLICABLE",
+      "semantic_family": [
+        "execution.receipt_uplink"
+      ],
+      "write_targets": [
+        "device ack facts",
+        "delegated receipt writer"
+      ],
+      "fact_types": [
+        "ao_act_device_ack_v1",
+        "ao_act_receipt_v1"
+      ],
+      "downstream_consumers": [],
+      "caller_authority_status": "AUTHENTICATED_BUT_SERVICE_PRINCIPAL_NOT_EXACTLY_NARROWED",
+      "current_disposition": "BSEC_CAPABILITY_DEBT_OPEN",
+      "required_action": "BIND UPLINK TO EXECUTOR/DEVICE-GATEWAY SERVICE PRINCIPAL; retain receipt semantics",
+      "sunset_or_cutover_condition": "BSEC0_CALLER_AUTHORITY_CLOSED",
+      "declared_actor_binding": "AUTH_ACTOR_USED_OR_NOT_APPLICABLE",
+      "tenant_scope_from_untrusted_body": false,
+      "risk_tier": "P0",
+      "contract_refs": [],
+      "notes": null
+    },
+    {
+      "surface_id": "BSEC-189",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/operations/console/read-model/rebuild",
+      "http_method_or_runtime_trigger": "POST",
+      "exact_route_or_trigger": "/api/v1/operations/console/read-model/rebuild",
+      "runtime_reachable": true,
+      "activation_root": "commercial.server → bootstrap/server → app → core → controlplane",
+      "activation_mode": "HTTP_ROUTE",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "ao_act.task.write"
+      ],
+      "principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "allowed_roles_or_principals": [
+        "admin via requireAoActAdminV0"
+      ],
+      "tenant_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "project_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "group_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "field_binding": "TASK/PLAN/DEVICE_CHAIN_VALIDATED_WHERE_APPLICABLE",
+      "semantic_family": [
+        "operation_plan.read_model_rebuild"
+      ],
+      "write_targets": [
+        "operation plan state projection"
+      ],
+      "fact_types": [],
+      "downstream_consumers": [],
+      "caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_MISMATCH",
+      "current_disposition": "BSEC_CAPABILITY_DEBT_OPEN",
+      "required_action": "USE ADMIN/PROJECTION-REBUILD CAPABILITY; task write is unrelated",
+      "sunset_or_cutover_condition": "BSEC0_CALLER_AUTHORITY_CLOSED",
+      "declared_actor_binding": "AUTH_ACTOR_USED_OR_NOT_APPLICABLE",
+      "tenant_scope_from_untrusted_body": false,
+      "risk_tier": "P1",
+      "contract_refs": [],
+      "notes": null
+    },
+    {
+      "surface_id": "BSEC-190",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/ao-act/tasks/:act_task_id/retry",
+      "http_method_or_runtime_trigger": "POST",
+      "exact_route_or_trigger": "/api/v1/ao-act/tasks/:act_task_id/retry",
+      "runtime_reachable": true,
+      "activation_root": "commercial.server → bootstrap/server → app → core → controlplane",
+      "activation_mode": "HTTP_ROUTE",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "ao_act.task.write"
+      ],
+      "principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "allowed_roles_or_principals": [
+        "admin via requireAoActAdminV0"
+      ],
+      "tenant_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "project_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "group_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "field_binding": "TASK/PLAN/DEVICE_CHAIN_VALIDATED_WHERE_APPLICABLE",
+      "semantic_family": [
+        "execution.dispatch_retry"
+      ],
+      "write_targets": [
+        "delegated dispatch queue/facts"
+      ],
+      "fact_types": [
+        "ao_act_dispatch_outbox_v1",
+        "ao_act_task_dispatched_v1"
+      ],
+      "downstream_consumers": [],
+      "caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_MISMATCH",
+      "current_disposition": "BSEC_CAPABILITY_DEBT_OPEN",
+      "required_action": "USE action.task.dispatch / retry-specific admin authority; generic task write compatibility debt",
+      "sunset_or_cutover_condition": "BSEC0_CALLER_AUTHORITY_CLOSED",
+      "declared_actor_binding": "AUTH_ACTOR_USED_OR_NOT_APPLICABLE",
+      "tenant_scope_from_untrusted_body": false,
+      "risk_tier": "P0",
+      "contract_refs": [],
+      "notes": null
+    },
+    {
+      "surface_id": "BSEC-191",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/ao-act/receipts/evidence",
+      "http_method_or_runtime_trigger": "POST",
+      "exact_route_or_trigger": "/api/v1/ao-act/receipts/evidence",
+      "runtime_reachable": true,
+      "activation_root": "commercial.server → bootstrap/server → app → core → controlplane",
+      "activation_mode": "HTTP_ROUTE",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "ao_act.receipt.write"
+      ],
+      "principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "allowed_roles_or_principals": [
+        "scope-bearing principal; exact product principal not narrowed"
+      ],
+      "tenant_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "project_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "group_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "field_binding": "TASK/PLAN/DEVICE_CHAIN_VALIDATED_WHERE_APPLICABLE",
+      "semantic_family": [
+        "execution.receipt_evidence"
+      ],
+      "write_targets": [
+        "facts"
+      ],
+      "fact_types": [
+        "evidence_artifact_v1"
+      ],
+      "downstream_consumers": [],
+      "caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_MISMATCH",
+      "current_disposition": "BSEC_CAPABILITY_DEBT_OPEN",
+      "required_action": "ADJUDICATE evidence.artifact.write vs receipt writer; retain exact receipt linkage",
+      "sunset_or_cutover_condition": "BSEC0_CALLER_AUTHORITY_CLOSED",
+      "declared_actor_binding": "AUTH_ACTOR_USED_OR_NOT_APPLICABLE",
+      "tenant_scope_from_untrusted_body": false,
+      "risk_tier": "P1",
+      "contract_refs": [],
+      "notes": null
+    },
+    {
+      "surface_id": "BSEC-192",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "registerControlPlaneV1Routes#POST /api/v1/ao-act/receipts",
+      "http_method_or_runtime_trigger": "POST",
+      "exact_route_or_trigger": "/api/v1/ao-act/receipts",
+      "runtime_reachable": true,
+      "activation_root": "commercial.server → bootstrap/server → app → core → controlplane",
+      "activation_mode": "HTTP_ROUTE",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "ao_act.receipt.write"
+      ],
+      "principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "allowed_roles_or_principals": [
+        "scope-bearing principal; exact product principal not narrowed"
+      ],
+      "tenant_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "project_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "group_binding": "AUTH_CONTEXT_EXACT_MATCH_TO_BODY",
+      "field_binding": "TASK/PLAN/DEVICE_CHAIN_VALIDATED_WHERE_APPLICABLE",
+      "semantic_family": [
+        "execution.receipt"
+      ],
+      "write_targets": [
+        "facts",
+        "receipt projections"
+      ],
+      "fact_types": [
+        "ao_act_receipt_v1",
+        "commercial receipt wrapper facts"
+      ],
+      "downstream_consumers": [],
+      "caller_authority_status": "GOVERNED_EXISTING_WITH_PRINCIPAL_REVIEW",
+      "current_disposition": "KEEP_CURRENT_RECEIPT_CAPABILITY; VERIFY EXECUTOR/OPERATOR PRINCIPAL MATRIX IN PR-SEC-3",
+      "required_action": "PR-SEC-3 principal narrowing only if required; no receipt semantic change",
+      "sunset_or_cutover_condition": "BSEC0_CALLER_AUTHORITY_CLOSED",
+      "declared_actor_binding": "AUTH_ACTOR_USED_OR_NOT_APPLICABLE",
+      "tenant_scope_from_untrusted_body": false,
+      "risk_tier": "P0",
+      "contract_refs": [],
+      "notes": null
     }
   ],
   "completion_claim": {
     "bsec0_closed": false,
     "active_graph_fully_disposed": false,
     "reason": "PR-SEC-1 records caller-authority truth and gaps; containment/capability/device-principal work is intentionally not implemented here."
-  }
+  },
+  "non_authority_method_dispositions": [
+    {
+      "source_path": "apps/server/src/routes/v1/operator.ts",
+      "http_method": "POST",
+      "exact_route": "/api/v1/operator/alerts/:alertId/ack",
+      "reason": "Authenticated facade returns an action DTO only; no database/fact/projection mutation occurs in handler.",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "alerts.write"
+      ]
+    },
+    {
+      "source_path": "apps/server/src/routes/v1/operator.ts",
+      "http_method": "POST",
+      "exact_route": "/api/v1/operator/alerts/:alertId/close",
+      "reason": "Authenticated facade returns an action DTO only; no database/fact/projection mutation occurs in handler.",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "authz_capability": [
+        "alerts.write"
+      ]
+    },
+    {
+      "source_path": "apps/server/src/routes/auth_v1.ts",
+      "http_method": "POST",
+      "exact_route": "/api/v1/auth/login",
+      "reason": "Authentication bootstrap/control-plane endpoint; does not mint product semantic authority. Local allowlist path is stateless; external IDP forwarding is outside product semantic writer inventory.",
+      "authn_mode": "CREDENTIAL_BOOTSTRAP_OR_EXTERNAL_IDP",
+      "authz_capability": []
+    },
+    {
+      "source_path": "apps/server/src/routes/auth_v1.ts",
+      "http_method": "POST",
+      "exact_route": "/api/v1/auth/logout",
+      "reason": "Authentication session/control-plane endpoint; local allowlist path is stateless and does not write GEOX semantic/product state.",
+      "authn_mode": "SESSION_TERMINATION_OR_STATELESS_LOCAL",
+      "authz_capability": []
+    }
+  ]
 }
