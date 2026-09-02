@@ -10492,6 +10492,27 @@
       ],
       "current_disposition": "KEEP_TELEMETRY_DURABLE_RAW_CALLBACK_WITH_TECHNICAL_SKILL_MEMORY_ONLY",
       "notes": "runMqttObservationProjectionV1 demonstrably invokes the callback. Skill-run persistence can call recordMemoryV1 only as TECHNICAL_SKILL_MEMORY / TECHNICAL_SIGNAL with customer_visible_memory=false and learning_eligible=false; this does not reopen Formal Field Memory authority."
+    },
+    {
+      "callback_id": "apps/server/src/routes/reports_dashboard_v1.ts#registerReportsDashboardV1Routes#HIGHER_ORDER_CALLBACK:apps/server/src/routes/reports_dashboard_v1.ts::mapWithConcurrencyLimit#1",
+      "source_path": "apps/server/src/routes/reports_dashboard_v1.ts",
+      "callback_kind": "HIGHER_ORDER_CALLBACK",
+      "trigger": "apps/server/src/routes/reports_dashboard_v1.ts::mapWithConcurrencyLimit",
+      "effect_class": "CALLER_TRIGGERED_HIGHER_ORDER_WRITER",
+      "caller_routes": [
+        "GET /api/v1/reports/customer-dashboard/field-portfolio-summary"
+      ],
+      "principal_type": "EXTERNAL_AUTHENTICATED_CALLER",
+      "tenant_binding_class": "ROW_TENANT_DERIVED",
+      "tenant_binding_detail": "Authenticated report scope flows through tenant + scoped field set into projectReportV1.",
+      "writer_entrypoints": [
+        "apps/server/src/projections/weather_forecast_v1.ts::ensureWeatherForecastIndexV1"
+      ],
+      "write_targets": [
+        "weather_forecast_index_v1"
+      ],
+      "current_disposition": "INVENTORIED_REPORT_HIGHER_ORDER_WEATHER_COMPATIBILITY_WRITE",
+      "notes": "mapWithConcurrencyLimit executes local runOneWorker(), which invokes the supplied worker callback; projectReportV1 then calls getLatestWeatherForecastIndexV1 → ensureWeatherForecastIndexV1. This is request-triggered compatibility persistence, not an independent background worker."
     }
   ],
   "service_credential_dispositions": [
