@@ -3546,14 +3546,20 @@
         "approval.verdict"
       ],
       "write_targets": [
-        "facts"
+        "facts",
+        "operation_plan_index_v1",
+        "security_audit_event_v1"
       ],
       "fact_types": [
         "approval_decision_v1",
         "operation_plan_v1",
-        "operation_plan_transition_v1"
+        "operation_plan_transition_v1",
+        "ao_act_task_v0",
+        "ao_act_authz_audit_v0"
       ],
-      "downstream_consumers": [],
+      "downstream_consumers": [
+        "INTERNAL_HTTP_DELEGATION → POST /api/v1/actions/task"
+      ],
       "caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_COMPATIBILITY",
       "current_disposition": "BSEC_CAPABILITY_DEBT_OPEN",
       "required_action": "REMOVE_GENERIC_AO_ACT_FALLBACK_AFTER_CAPABILITY_REVIEW",
@@ -3562,7 +3568,25 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P0",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "downstream_persistent_consequences": [
+        "facts:ao_act_task_v0",
+        "facts:ao_act_authz_audit_v0",
+        "security_audit_event_v1"
+      ],
+      "principal_transition": {
+        "condition": "approval path permits auto task issue",
+        "delegator_principal": "outer authenticated approver/admin",
+        "declared_business_actor": "outer authenticated approval actor via normalizeAoActIssuer(auth, proposal.issuer)",
+        "delegated_credential": "GEOX_INTERNAL_TASK_ISSUER_TOKEN",
+        "commercial_default_delegated_principal": "operator_token",
+        "target_entrypoint": "POST /api/v1/actions/task",
+        "target_capability": [
+          "action.task.create",
+          "ao_act.task.write"
+        ],
+        "note": "Business issuer and authenticated inner writer principal are distinct provenance dimensions; no privilege-escalation or semantic change is claimed by this inventory."
+      }
     },
     {
       "surface_id": "BSEC-086",
@@ -8312,13 +8336,15 @@
       ],
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
-        "projectSkillRegistryReadV1"
+        "projectSkillRegistryReadV1",
+        "recordSecurityAuditEventV1"
       ],
       "write_targets": [
-        "skill_registry_read_v1"
+        "skill_registry_read_v1",
+        "security_audit_event_v1"
       ],
       "current_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
-      "notes": "GET rebuilds skill_registry_read_v1 via DELETE/INSERT/UPSERT before querying it."
+      "notes": "GET rebuilds skill_registry_read_v1 via DELETE/INSERT/UPSERT and records successful read audit in security_audit_event_v1. Tenant-scope denial can also audit before normal projection execution."
     },
     {
       "disposition_id": "BHTTP-008",
