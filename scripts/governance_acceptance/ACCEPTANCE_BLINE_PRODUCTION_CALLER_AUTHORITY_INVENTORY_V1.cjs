@@ -245,13 +245,23 @@ function covSqlEffect(text) {
   return { dml, ddl, fact };
 }
 
+function covImmediatelyInvokedFunction(n) {
+  let p = n.parent;
+  while (p && ts.isParenthesizedExpression(p)) p = p.parent;
+  return Boolean(p && ts.isCallExpression(p) && p.expression === (ts.isParenthesizedExpression(n.parent) ? n.parent : n));
+}
+
 function covDirectSqlEffect(fp, rootNode) {
   const mod = covBuildModule(fp);
   const sf = mod.sf;
   const sqlBindings = new Map();
 
   function collectBindings(n) {
-    if (n !== rootNode && (ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) || ts.isArrowFunction(n))) return;
+    if (
+      n !== rootNode &&
+      (ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) || ts.isArrowFunction(n)) &&
+      !covImmediatelyInvokedFunction(n)
+    ) return;
     if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.initializer) {
       if (ts.isStringLiteral(n.initializer) || ts.isNoSubstitutionTemplateLiteral(n.initializer) || ts.isTemplateExpression(n.initializer)) {
         sqlBindings.set(n.name.text, n.initializer.getText(sf));
