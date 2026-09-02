@@ -542,10 +542,39 @@ const covImmediateCallbackMethods=new Set([
   "map","flatMap","forEach","reduce","reduceRight","filter","some","every","find","findIndex","findLast","findLastIndex","sort",
   "then","catch","finally",
 ]);
+
+function covTargetInvokesObjectCallbackProperty(target,index,propName) {
+  const mod=covBuildModule(target.fp);
+  const node=mod.functions.get(target.name);
+  if (!node || index>=node.parameters.length) return false;
+  const param=node.parameters[index];
+  if (!param || !ts.isIdentifier(param.name)) return false;
+  const paramName=param.name.text;
+  let invoked=false;
+  function walk(n) {
+    if (invoked) return;
+    if (n!==node && covFunctionLike(n)) return;
+    if (
+      ts.isCallExpression(n) &&
+      ts.isPropertyAccessExpression(n.expression) &&
+      ts.isIdentifier(n.expression.expression) &&
+      n.expression.expression.text===paramName &&
+      n.expression.name.text===propName
+    ) {
+      invoked=true;
+      return;
+    }
+    ts.forEachChild(n,walk);
+  }
+  walk(node);
+  return invoked;
+}
+
 function covAnalyzeReachableCallbackArgs(fp, call, stack, merge) {
   const enclosing=covEnclosingFunctionNode(call);
   const scopeMap=covLocalFunctionMap(enclosing);
   const indexes=new Set();
+  let target=null;
 
   if (ts.isPropertyAccessExpression(call.expression) && covImmediateCallbackMethods.has(call.expression.name.text)) {
     for (let i=0;i<call.arguments.length;i+=1) {
@@ -555,11 +584,31 @@ function covAnalyzeReachableCallbackArgs(fp, call, stack, merge) {
   }
   if (ts.isIdentifier(call.expression)) {
     const lexical=covResolveLexicalCallable(fp,call,call.expression.text);
-    let target=null;
     if (lexical?.kind==="target") target=lexical.target;
     else if (!lexical) target=covResolveFunction(fp,call.expression.text);
     if (target) {
-      for (let i=0;i<call.arguments.length;i+=1) if (covTargetInvokesParameter(target,i)) indexes.add(i);
+      for (let i=0;i<call.arguments.length;i+=1) {
+        if (covTargetInvokesParameter(target,i)) indexes.add(i);
+        const arg=call.arguments[i];
+        if (arg && ts.isObjectLiteralExpression(arg)) {
+          for (const prop of arg.properties) {
+            if (!ts.isPropertyAssignment(prop)) continue;
+            const propName=(ts.isIdentifier(prop.name)||ts.isStringLiteral(prop.name)) ? prop.name.text : "";
+            if (!propName || !covTargetInvokesObjectCallbackProperty(target,i,propName)) continue;
+            const init=prop.initializer;
+            if (ts.isArrowFunction(init)||ts.isFunctionExpression(init)) {
+              merge(covAnalyzeCallbackNode(fp,init,scopeMap,stack));
+            } else if (ts.isIdentifier(init)) {
+              const lexicalArg=covResolveLexicalCallable(fp,call,init.text);
+              if (lexicalArg?.kind==="node") merge(covAnalyzeCallbackNode(fp,lexicalArg.node,covLocalFunctionMap(lexicalArg.scope),stack));
+              else {
+                const cbTarget=lexicalArg?.kind==="target" ? lexicalArg.target : covResolveFunction(fp,init.text);
+                if (cbTarget) merge(covAnalyzeFunction(cbTarget,stack));
+              }
+            }
+          }
+        }
+      }
     }
   }
 
@@ -574,14 +623,13 @@ function covAnalyzeReachableCallbackArgs(fp, call, stack, merge) {
         const lexical=covResolveLexicalCallable(fp,call,arg.text);
         if (lexical?.kind==="node") merge(covAnalyzeCallbackNode(fp,lexical.node,covLocalFunctionMap(lexical.scope),stack));
         else {
-          const target=lexical?.kind==="target" ? lexical.target : covResolveFunction(fp,arg.text);
-          if (target) merge(covAnalyzeFunction(target,stack));
+          const cbTarget=lexical?.kind==="target" ? lexical.target : covResolveFunction(fp,arg.text);
+          if (cbTarget) merge(covAnalyzeFunction(cbTarget,stack));
         }
       }
     }
   }
 }
-
 
 function covFunctionKey(t) {
   return rel(t.fp) + "::" + t.name;
@@ -1094,47 +1142,55 @@ function covEnclosingFunctionNode(n) {
   return null;
 }
 function covAnalyzeCallbackNode(fp, node, localMap, stack = new Set()) {
-  const keyBase = rel(fp) + "::callback::" + node.pos + ":" + node.end;
+  const keyBase=rel(fp)+"::callback::"+node.pos+":"+node.end;
   if (stack.has(keyBase)) return {dml:false,ddl:false,fact:false,directWriterKeys:new Set(),callees:new Set(),targets:new Set()};
-  const next = new Set(stack); next.add(keyBase);
-  const direct = covDirectSqlEffect(fp, node);
-  const result = {dml:direct.dml,ddl:direct.ddl,fact:direct.fact,directWriterKeys:new Set(),callees:new Set(),targets:new Set()};
-  if (direct.dml || direct.ddl) result.directWriterKeys.add(rel(fp) + "::" + "<inline>");
+  const next=new Set(stack);
+  next.add(keyBase);
+  const direct=covDirectSqlEffect(fp,node);
+  const result={
+    dml:direct.dml, ddl:direct.ddl, fact:direct.fact,
+    directWriterKeys:new Set(), callees:new Set(), targets:new Set(direct.targets||[])
+  };
+  if (direct.dml||direct.ddl) result.directWriterKeys.add(rel(fp)+"::<inline>");
 
   function merge(other) {
-    result.dml = result.dml || other.dml;
-    result.ddl = result.ddl || other.ddl;
-    result.fact = result.fact || other.fact;
-    for (const k of other.directWriterKeys || []) result.directWriterKeys.add(k);
-    for (const k of other.callees || []) result.callees.add(k);
-    for (const t of other.targets || []) result.targets.add(t);
-  }
-  function analyzeLocal(name) {
-    const local = localMap.get(name);
-    if (!local) return false;
-    const localKey = rel(fp) + "::local::" + name + ":" + local.pos;
-    if (next.has(localKey)) return true;
-    const nested = new Set(next); nested.add(localKey);
-    merge(covAnalyzeCallbackNode(fp, local, localMap, nested));
-    return true;
+    result.dml=result.dml||other.dml;
+    result.ddl=result.ddl||other.ddl;
+    result.fact=result.fact||other.fact;
+    for (const k of other.directWriterKeys||[]) result.directWriterKeys.add(k);
+    for (const k of other.callees||[]) result.callees.add(k);
+    for (const t of other.targets||[]) result.targets.add(t);
   }
   function walk(n) {
-    if (n !== node && covFunctionLike(n)) return;
-    if (ts.isCallExpression(n) && ts.isIdentifier(n.expression)) {
-      const name = n.expression.text;
-      if (!analyzeLocal(name) && !(name === "ensureDeviceSkillBindings" && covAllowWriteFalse(n))) {
-        const target = covResolveFunction(fp, name);
-        if (target) {
-          result.callees.add(covFunctionKey(target));
-          merge(covAnalyzeFunction(target, next));
+    if (n!==node && covFunctionLike(n) && !covImmediatelyInvokedFunction(n)) return;
+    if (ts.isCallExpression(n)) {
+      covAnalyzeReachableCallbackArgs(fp,n,next,merge);
+      if (ts.isIdentifier(n.expression)) {
+        const name=n.expression.text;
+        if (!(name==="ensureDeviceSkillBindings" && covAllowWriteFalse(n))) {
+          if (localMap?.has(name)) {
+            merge(covAnalyzeCallbackNode(fp,localMap.get(name),localMap,next));
+          } else {
+            const lexical=covResolveLexicalCallable(fp,n,name);
+            if (lexical?.kind==="node") {
+              merge(covAnalyzeCallbackNode(fp,lexical.node,covLocalFunctionMap(lexical.scope),next));
+            } else {
+              const target=lexical?.kind==="target" ? lexical.target : covResolveFunction(fp,name);
+              if (target) {
+                result.callees.add(covFunctionKey(target));
+                merge(covAnalyzeFunction(target,next));
+              }
+            }
+          }
         }
       }
     }
-    ts.forEachChild(n, walk);
+    ts.forEachChild(n,walk);
   }
   walk(node);
   return result;
 }
+
 function covAnalyzeCallbackArg(fp, call, argIndex) {
   const arg = call.arguments[argIndex];
   if (!arg) return {supported:false,analysis:null};
