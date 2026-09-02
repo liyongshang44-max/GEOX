@@ -186,9 +186,30 @@ jobs:
           export BASE_URL=http://127.0.0.1:3001
           export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
           export GEOX_TEST_BEARER="$GEOX_AO_ACT_TOKEN"
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_ADMIN_IMPORT_COMMERCIAL_RUNTIME_V1.ts
           SERVER_CID="$(docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps -q server)"
           test -n "$SERVER_CID"
+
+          snapshot_fs() {
+            docker exec "$SERVER_CID" sh -ceu '
+              upload_files=0
+              if [ -d /app/_uploads ]; then upload_files=$(find /app/_uploads -type f | wc -l); fi
+              acceptance_dirs=0
+              acceptance_files=0
+              if [ -d /app/acceptance ]; then
+                acceptance_dirs=$(find /app/acceptance -maxdepth 1 -mindepth 1 -type d -name "caf009_1h_*" | wc -l)
+                acceptance_files=$(find /app/acceptance -type f \( -name run.json -o -name window.json -o -name summary.json -o -name README.txt \) -path "*/caf009_1h_*/*" | wc -l)
+              fi
+              printf "%s %s %s\n" "$upload_files" "$acceptance_dirs" "$acceptance_files"
+            '
+          }
+
+          BEFORE_FS="$(snapshot_fs)"
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_ADMIN_IMPORT_COMMERCIAL_RUNTIME_V1.ts
+          sleep 1
+          AFTER_FS="$(snapshot_fs)"
+          echo "container_fs_before=$BEFORE_FS"
+          echo "container_fs_after=$AFTER_FS"
+          test "$AFTER_FS" = "$BEFORE_FS"
           ! docker top "$SERVER_CID" -eo pid,args | grep -E '[l]oadfact\.ts'
 
       - name: Runtime hygiene
