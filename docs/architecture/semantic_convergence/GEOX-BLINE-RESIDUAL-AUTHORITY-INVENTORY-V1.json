@@ -2079,14 +2079,15 @@
       ],
       "reads": [
         "field-scoped assessment/recommendation/prescription inputs",
-        "caller zone_applications on acceptance"
+        "exact fertilization prescription fact",
+        "exact canonical Receipt/AsExecuted/AsApplied/Acceptance provenance"
       ],
       "semantic_family": [
         "decision.candidate",
         "action.prescription_spec",
         "acceptance.verdict"
       ],
-      "authority_class": "ACTIVE_FERTILIZATION_DOMAIN_AUTHORITY_SERVICE_WITH_ACCEPTANCE_P0",
+      "authority_class": "ACTIVE_FERTILIZATION_DOMAIN_AUTHORITY_SERVICE_CANONICAL_EXECUTION_BOUND",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
@@ -2094,8 +2095,8 @@
         "fertilization variable bridge",
         "approval/execution surfaces"
       ],
-      "removal_target": "KEEP DOMAIN ASSESSMENT/CALCULATION; CONVERGE RECOMMENDATION/PRESCRIPTION/ACCEPTANCE TO CANONICAL BOUNDARIES; FIX P0-RES-009",
-      "audit_note": "P0-RES-009: acceptance PASS can be computed from caller-supplied zone_applications without receipt/AsExecuted verification.",
+      "removal_target": "P0-RES-009 CLOSED: KEEP DOMAIN ASSESSMENT/CALCULATION AND DOMAIN ACCEPTANCE DOWNSTREAM OF EXACT CANONICAL EXECUTION",
+      "audit_note": "P0-RES-009 closed on #3451 product qualification run 33588708759: caller execution assertions are forbidden; Fertilization Acceptance requires exact prescription fact, Receipt fact, AsExecuted, AsApplied, and canonical formal-PASS acceptance_result_v1.",
       "surface_id": "RES-077",
       "b02_registered": false
     },
@@ -2415,7 +2416,7 @@
         "decision.approval",
         "acceptance.verdict"
       ],
-      "authority_class": "ACTIVE_FERTILIZATION_AUTHORITY_ROUTE_WITH_ACCEPTANCE_P0",
+      "authority_class": "ACTIVE_FERTILIZATION_AUTHORITY_ROUTE_DEDICATED_ACCEPTANCE_SCOPE_CANONICAL_EXECUTION_BOUND",
       "runtime_reachable": "PROVEN",
       "feature_flag": null,
       "downstream_consumers": [
@@ -2423,8 +2424,8 @@
         "variable prescription bridge",
         "approval/execution consumers"
       ],
-      "removal_target": "KEEP PRODUCT FACADE; CONVERGE TO CANONICAL CANDIDATE/ACTION-SPEC/APPROVAL/ACCEPTANCE PORTS; FIX P0-RES-009",
-      "audit_note": "P0-RES-009: active acceptance route currently permits caller assertions to drive fertilization PASS without canonical execution evidence verification.",
+      "removal_target": "P0-RES-009 CLOSED: KEEP PRODUCT FACADE; ACCEPTANCE REQUIRES DEDICATED SCOPE AND EXACT CANONICAL EXECUTION PROVENANCE",
+      "audit_note": "P0-RES-009 closed on #3451 product qualification run 33588708759: acceptance route requires acceptance.evaluate and no longer permits fields.write/prescription.write or caller zone assertions to establish Acceptance.",
       "surface_id": "RES-089",
       "b02_registered": false
     },
@@ -7307,7 +7308,7 @@
       "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
       "feature_flag": null,
       "downstream_consumers": [],
-      "removal_target": "Fail closed caller-supplied zone assertion and converge Acceptance",
+      "removal_target": "P0-RES-009 CLOSED: RETAIN FACT WRITER WITH EXACT CANONICAL EXECUTION PROVENANCE; CALLER EXECUTION ASSERTIONS FORBIDDEN",
       "b02_registered": false,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "ledger_disposition": "SEMANTIC_FACT_WRITER",
@@ -7319,7 +7320,7 @@
       ],
       "authority_owner": "FERTILIZATION_DOMAIN",
       "writer_scope": "assessment/recommendation/prescription/acceptance facts",
-      "audit_note": "Active fertilization domain service with mixed semantic families."
+      "audit_note": "Active Fertilization semantic fact writer remains mixed by design, but Acceptance is downstream of exact canonical execution provenance and canonical formal Acceptance. Product qualification run 33588708759 SUCCESS."
     },
     {
       "surface_id": "RES-280",
