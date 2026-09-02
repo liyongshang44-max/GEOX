@@ -31,6 +31,9 @@ jobs:
       - name: Route dependency guard
         run: pnpm run ci:route-dependency-guard
 
+      - name: B-Line production caller authority inventory
+        run: pnpm run ci:governance:bline-production-caller-authority-inventory
+
       - name: B-Line residual authority audit
         id: bline_residual
         continue-on-error: true
