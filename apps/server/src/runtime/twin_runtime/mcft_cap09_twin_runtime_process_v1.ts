@@ -35,6 +35,9 @@ import {
 import {
   parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1,
 } from "../mcft_cap09_production_runtime_start_authority_v1.js";
+import {
+  buildMcftCap09ProductionLeaseOwnerV1,
+} from "../mcft_cap09_production_service_identity_v1.js";
 
 export const MCFT_CAP09_TWIN_RUNTIME_PROCESS_ID_V1 =
   "MCFT_CAP09_TWIN_RUNTIME_PROCESS_V1" as const;
@@ -210,7 +213,20 @@ export async function runMcftCap09TwinRuntimeProcessV1(input?: {
   );
 
   const env = input?.env ?? process.env;
-  const config = readMcftCap09TwinRuntimeProcessConfigV1(env);
+  const runtimeEnv: EnvironmentV1 = {
+    ...env,
+    GEOX_MCFT_CAP09_TWIN_RUNTIME_LEASE_OWNER:
+      buildMcftCap09ProductionLeaseOwnerV1({
+        plane: "TWIN_RUNTIME",
+        configured_service_id: requiredEnvV1(
+          env,
+          "GEOX_MCFT_CAP09_TWIN_RUNTIME_SERVICE_ID",
+          "MCFT_CAP09_PRODUCTION_TWIN_SERVICE_ID_REQUIRED",
+        ),
+        instance_id: String(env.HOSTNAME ?? os.hostname()).trim(),
+      }),
+  };
+  const config = readMcftCap09TwinRuntimeProcessConfigV1(runtimeEnv);
   if (!config.lease_owner) throw new Error("PHASE5_TWIN_RUNTIME_LEASE_OWNER_REQUIRED");
 
   const manifest = readJsonObjectV1(
