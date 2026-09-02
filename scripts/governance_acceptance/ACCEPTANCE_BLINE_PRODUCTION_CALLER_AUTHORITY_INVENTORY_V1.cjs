@@ -1229,11 +1229,100 @@ for (const key of covRuntimeWriterKeys) {
 }
 assert(covRuntimeMissing.length === 0, "production runtime direct writer without inventory", covRuntimeMissing);
 
+
+const covCredentialDispositions = inv.service_credential_dispositions ?? [];
+const covCredentialById = new Map(covCredentialDispositions.map((d)=>[d.credential_id,d]));
+const covRequiredCredentialIds = ["BCRED-001","BCRED-002","BCRED-003","BCRED-004","BCRED-005"];
+for (const id of covRequiredCredentialIds) {
+  assert(covCredentialById.has(id), "production service credential without principal classification", id);
+}
+
+const runtimeDockerfile = read(path.join(ROOT,"docker/runtime.Dockerfile"));
+const hardeningDoc = read(path.join(ROOT,"docs/security/GEOX_RUNTIME_HARDENING_V1.md"));
+const runtimeSecurity = read(path.join(ROOT,"apps/server/src/runtime/runtime_security_v1.ts"));
+const cap07Bootstrap = read(path.join(ROOT,"apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts"));
+
+function covComposeServiceBlock(service) {
+  const escaped = service.replace(/[.*+?^()|[\]{}\\-]/g, "\\const covZeroSets = {");
+  return compose.match(new RegExp("\\n  "+escaped+":[\\s\\S]*?(?=\\n  [A-Za-z0-9_-]+:|$)"))?.[0] ?? "";
+}
+for (const service of ["server","jobs","executor","telemetry-ingest"]) {
+  const serviceBlock = covComposeServiceBlock(service);
+  assert(serviceBlock.includes("postgres://geox_runtime_v1:"), "commercial process no longer bound to declared shared DB principal", {service});
+}
+assert(cap07Bootstrap.includes('MCFT_CAP07_RUNTIME_ROLE_V1 = "geox_runtime_v1"'), "CAP07 runtime principal identity drift");
+assert(cap07Bootstrap.includes("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO"), "CAP07 shared runtime broad table grant drift");
+assert(cap07Bootstrap.includes("ALTER DEFAULT PRIVILEGES IN SCHEMA public"), "CAP07 runtime default privilege contract drift");
+
+const mqttBlock = covComposeServiceBlock("mqtt");
+assert(mqttBlock.includes("allow_anonymous false"), "commercial MQTT anonymous policy drift");
+assert(mqttBlock.includes("password_file "), "commercial MQTT password-file policy drift");
+assert(!mqttBlock.includes("acl_file"), "commercial MQTT unexpectedly gained topic ACL; credential disposition requires re-adjudication");
+for (const service of ["executor","telemetry-ingest"]) {
+  const serviceBlock = covComposeServiceBlock(service);
+  assert(serviceBlock.includes("GEOX_MQTT_USERNAME:") && serviceBlock.includes("MQTT_USERNAME"), "shared MQTT username topology drift", {service});
+  assert(serviceBlock.includes("GEOX_MQTT_PASSWORD:") && serviceBlock.includes("MQTT_PASSWORD"), "shared MQTT password topology drift", {service});
+}
+
+const serverBlock = covComposeServiceBlock("server");
+assert(serverBlock.includes("GEOX_EVIDENCE_S3_ACCESS_KEY_ID:") && serverBlock.includes("MINIO_ROOT_USER"), "evidence object-store access key no longer matches declared root reuse debt");
+assert(serverBlock.includes("GEOX_EVIDENCE_S3_SECRET_ACCESS_KEY:") && serverBlock.includes("MINIO_ROOT_PASSWORD"), "evidence object-store secret no longer matches declared root reuse debt");
+assert(serverBlock.includes("GEOX_TOKENS_FILE: /app/config/auth/security_acceptance_tokens.json"), "commercial tracked acceptance bearer source drift");
+assert(serverBlock.includes("GEOX_INTERNAL_TASK_ISSUER_TOKEN:") && serverBlock.includes("operator_token"), "internal delegated bearer default drift");
+assert(runtimeDockerfile.includes("COPY config ./config"), "runtime image config copy drift");
+assert(hardeningDoc.includes("security_acceptance_tokens.json") && hardeningDoc.includes("only for test/dev acceptance"), "documented acceptance-token policy drift");
+assert(hardeningDoc.includes("Staging/production must not use acceptance fixture"), "documented staging/production token policy drift");
+assert(runtimeSecurity.includes('tokenPath.includes("example_tokens.json")'), "runtime security example-token check drift");
+assert(!runtimeSecurity.includes('tokenPath.includes("security_acceptance_tokens.json")'), "runtime security now rejects acceptance fixture; credential debt disposition requires re-adjudication");
+
+function covWalkFiles(rootDir, out=[]) {
+  if (!fs.existsSync(rootDir)) return out;
+  for (const ent of fs.readdirSync(rootDir,{withFileTypes:true})) {
+    const fp=path.join(rootDir,ent.name);
+    if (ent.isDirectory()) covWalkFiles(fp,out);
+    else if (ent.isFile()) out.push(fp);
+  }
+  return out;
+}
+const covRlsProductionFiles = [
+  ...covWalkFiles(path.join(ROOT,"apps/server/src")),
+  ...covWalkFiles(path.join(ROOT,"docker/postgres")),
+].filter((fp)=>/\.(?:ts|sql|js|cjs|mjs)$/i.test(fp) && !/\.test\./.test(fp));
+const covRlsStatements=[];
+for (const fp of covRlsProductionFiles) {
+  const sourceText=read(fp);
+  if (/\b(?:ENABLE|FORCE)\s+ROW\s+LEVEL\s+SECURITY\b/i.test(sourceText) || /\bCREATE\s+POLICY\b/i.test(sourceText)) covRlsStatements.push(rel(fp));
+}
+assert(covRlsStatements.length===0, "DB-level tenant RLS now exists and shared-principal classification requires re-adjudication", covRlsStatements);
+
+const covAllowedTenantBindingClasses = new Set(inv.tenant_binding_model?.allowed_classes ?? []);
+for (const requiredClass of ["SERVICE_CONFIG_SCOPED_WORKER","GLOBAL_MULTI_TENANT_WORKER","ROW_TENANT_DERIVED","GLOBAL_BOOTSTRAP","FOREIGN_MCFT"]) {
+  assert(covAllowedTenantBindingClasses.has(requiredClass), "tenant-binding class model incomplete", requiredClass);
+}
+const covAmbiguousTenantWriters=[];
+const covGlobalWorkerAmbiguous=[];
+for (const d of covRuntimeDispositions) {
+  if (!covAllowedTenantBindingClasses.has(d.tenant_binding_class)) covAmbiguousTenantWriters.push(d);
+  if (d.tenant_binding_class === "GLOBAL_MULTI_TENANT_WORKER" && !String(d.tenant_binding_detail||"").includes("ROW_TENANT_DERIVED")) covGlobalWorkerAmbiguous.push(d);
+  assert(d.tenant_binding_class !== "SERVICE_CONFIG_OR_DB_SCOPE", "ambiguous tenant binding label forbidden on runtime writer", d);
+}
+assert(covAmbiguousTenantWriters.length===0, "runtime writer has ambiguous tenant-binding class", covAmbiguousTenantWriters);
+assert(covGlobalWorkerAmbiguous.length===0, "production global multi-tenant worker with ambiguous tenant-binding class", covGlobalWorkerAmbiguous);
+
+const covAgronomyRuntime = covRuntimeDispositions.find((d)=>d.source_path==="apps/server/src/jobs/agronomy_agent.ts" && d.entry_symbol==="insertFact");
+assert(covAgronomyRuntime?.tenant_binding_class==="GLOBAL_MULTI_TENANT_WORKER", "Agronomy Agent tenant-binding classification drift", covAgronomyRuntime);
+assert(String(covAgronomyRuntime?.tenant_binding_detail||"").includes("CROSS_TENANT_ACTIVATION_FALLBACK"), "Agronomy Agent activation fallback debt missing", covAgronomyRuntime);
+assert(String(covAgronomyRuntime?.current_disposition||"").includes("LEGACY_SIGNAL_ONLY"), "Agronomy Agent semantic ceiling drift", covAgronomyRuntime);
+
+const covCredentialMissing = covRequiredCredentialIds.filter((id)=>!covCredentialById.has(id));
+
 const covZeroSets = {
   production_caller_triggered_mutation_without_inventory: covCallerMissing.length,
   production_runtime_direct_writer_without_inventory: covRuntimeMissing.length,
   startup_mutation_without_explicit_disposition: covStartupMissingUnique.length + covStartupRootMissing.length,
   production_callback_hook_persistent_writer_without_disposition: covCallbackMissing.length,
+  production_service_credential_without_principal_classification: covCredentialMissing.length,
+  production_global_multi_tenant_worker_with_ambiguous_tenant_binding_class: covGlobalWorkerAmbiguous.length,
 };
 
 const summary={
@@ -1254,6 +1343,7 @@ const summary={
   auto_pure_read_http_count:covPureReadCount,
   explicit_http_side_effect_disposition_count:covHttpDispositions.length,
   callback_hook_disposition_count:covCallbackDispositions.length,
+  service_credential_disposition_count:covCredentialDispositions.length,
   discovered_callback_edge_count:covCallbackEdges.length,
   startup_mutation_disposition_count:covStartupDispositions.length,
   startup_root_direct_writer_count:covStartupRootWriterKeys.size,
