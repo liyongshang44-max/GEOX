@@ -167,6 +167,130 @@
     "status": "T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_REQUALIFICATION_REQUIRED",
     "direct_current_stage_route": "REQUALIFY_T4R1_CONTEMPORANEOUS_STAGE_ONLY_IF_EXACT_PROVIDER_EVIDENCE_CAN_MEET_STAGE_AND_6H_30H_GUARDS",
     "fallback_route": "ADJUDICATE_T4R1_NATURAL_SEASON_SUCCESSOR_WITHOUT_CROSS_SEASON_STITCHING",
-    "runtime_start_before_frontier_resolution_authorized": false
+    "runtime_start_before_frontier_resolution_authorized": false,
+    "latest_requalification_settlement_status": "SETTLED_NO_CURRENT_T4R1_STAGE_OR_NATURAL_SEASON_SUCCESSOR_AUTHORITY_ESTABLISHED",
+    "requalification_without_material_provider_change_authorized": false,
+    "material_provider_change_triggers": [
+      "NEW_EXACT_CURRENT_T4R1_PHENOLOGY_EVIDENCE_BECOMES_PUBLICLY_RETRIEVABLE",
+      "NEW_EXACT_CURRENT_T4R1_TERMINATION_OR_HARVEST_EVIDENCE_BECOMES_PUBLICLY_RETRIEVABLE",
+      "NEW_KBS_AGLOG_T4_OR_T4R1_PLANTING_OBSERVATION_AFTER_2026_05_27_BECOMES_PUBLICLY_RETRIEVABLE"
+    ],
+    "runtime_start_authority_may_be_armed": false
+  },
+  "t4r1_stage_or_natural_season_requalification_settlement": {
+    "status": "SETTLED_NO_CURRENT_T4R1_STAGE_OR_NATURAL_SEASON_SUCCESSOR_AUTHORITY_ESTABLISHED",
+    "predecessor_frontier_head": "e075d48b13ef1c85888c0f3dfbf3173bb5232f96",
+    "contemporaneous_stage_route": {
+      "proof_subject_sha": "60e4fd93c9dff017fd0d62967fad17a49383f12e",
+      "workflow_run_id": 33630413934,
+      "artifact_id": 9846584085,
+      "artifact_digest": "sha256:38a6b645cab971c70ed13e116392186f0eafee2c32538d062a02e265a24a18c4",
+      "observed_at_utc": "2026-09-02T12:33:03.075Z",
+      "result": "NO_T4R1_CONTEMPORANEOUS_STAGE_INPUT_AUTHORITY_CURRENTLY_ESTABLISHED",
+      "scanned_index_page_count": 5,
+      "scanned_observation_row_count": 150,
+      "inspected_detail_count": 6,
+      "direct_stage_input_candidate_count": 0,
+      "termination_input_candidate_count": 0,
+      "stage_authority_established": false,
+      "stage": null,
+      "whole_window_6h_30h_guard_passed": false,
+      "database_write_count": 0,
+      "runtime_process_start": false,
+      "provider_body_emitted": false,
+      "formal_execution_count": "0/24"
+    },
+    "natural_season_route": {
+      "proof_subject_sha": "d631d20b3a2a0c179ba2ed98dd827e3e6431f6db",
+      "workflow_run_id": 33630968448,
+      "artifact_id": 9846818521,
+      "artifact_digest": "sha256:6275357bf5a6e054f0656dc907215439e20829b9e94a1925e317ecfcea9af09b",
+      "observed_at_utc": "2026-09-02T12:39:23.929Z",
+      "result": "NO_T4R1_NATURAL_SEASON_SUCCESSOR_CANDIDATE_CURRENTLY_OBSERVED",
+      "scanned_index_page_count": 5,
+      "scanned_observation_row_count": 150,
+      "post_anchor_t4_planting_lead_count": 0,
+      "exact_t4r1_successor_candidate_count": 0,
+      "time_gated_snapshot": true,
+      "global_new_season_source_absence_claimed": false,
+      "new_natural_season_created": false,
+      "new_season_id": null,
+      "new_crop": null,
+      "historical_geometry_reused": false,
+      "cross_season_stitching_authorized": false,
+      "database_write_count": 0,
+      "runtime_process_start": false,
+      "provider_body_emitted": false,
+      "formal_execution_count": "0/24"
+    },
+    "conclusion": {
+      "current_t4r1_stage_authority_established": false,
+      "current_t4r1_natural_season_successor_authority_established": false,
+      "viable_future_formal_window_available": false,
+      "runtime_start_authority_may_be_armed": false,
+      "production_owner_activation_authorized": false,
+      "formal_v5_arm_authorized": false,
+      "a0_authorized": false,
+      "o00_authorized": false,
+      "cross_season_stitching_authorized": false,
+      "requalification_without_material_provider_change_authorized": false,
+      "next_legal_frontier": "T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_REQUALIFICATION_REQUIRED_ON_MATERIAL_PROVIDER_CHANGE"
+    },
+    "material_provider_change_triggers": [
+      "NEW_EXACT_CURRENT_T4R1_PHENOLOGY_EVIDENCE_BECOMES_PUBLICLY_RETRIEVABLE",
+      "NEW_EXACT_CURRENT_T4R1_TERMINATION_OR_HARVEST_EVIDENCE_BECOMES_PUBLICLY_RETRIEVABLE",
+      "NEW_KBS_AGLOG_T4_OR_T4R1_PLANTING_OBSERVATION_AFTER_2026_05_27_BECOMES_PUBLICLY_RETRIEVABLE"
+    ],
+    "transient_proof_scaffolding": {
+      "status": "RETIRED_AFTER_DURABLE_CANONICAL_SETTLEMENT",
+      "reason": "AVOID_REPEATED_HISTORICAL_PROVIDER_SCAN_ON_METADATA_DESCENDANTS",
+      "repository_history_preserves_exact_blobs": true,
+      "files": [
+        {
+          "path": ".github/workflows/mcft-cap-09-t4r1-contemporaneous-stage-input-requalification-v1.yml",
+          "blob_sha": "231f6d1cac4a4250e479f1ced5ba2705d4a8aaba"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CONTEMPORANEOUS-STAGE-INPUT-REQUALIFICATION-V1.json",
+          "blob_sha": "220b0d935bf1404a981ce1e7c43bdd6c831bb793"
+        },
+        {
+          "path": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CONTEMPORANEOUS_STAGE_INPUT_REQUALIFICATION_V1.cjs",
+          "blob_sha": "d9bb652226f464dd000520f272391ee821d31455"
+        },
+        {
+          "path": "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_CONTEMPORANEOUS_STAGE_INPUT_REQUALIFICATION_V1.mjs",
+          "blob_sha": "e774e138d190c3d1f3d52d09069f514b007af233"
+        },
+        {
+          "path": ".github/workflows/mcft-cap-09-t4r1-natural-season-successor-adjudication-v1.yml",
+          "blob_sha": "cddfb6acb6d64b0988ad3c2042b053ab4c5339b0"
+        },
+        {
+          "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-NATURAL-SEASON-SUCCESSOR-ADJUDICATION-V1.json",
+          "blob_sha": "cb2a1d2f30b7d4150aa8370375f6442f096c9155"
+        },
+        {
+          "path": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_NATURAL_SEASON_SUCCESSOR_ADJUDICATION_V1.cjs",
+          "blob_sha": "1a09d0f8737eacbc015efa5087ad1a37da2238bd"
+        },
+        {
+          "path": "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_NATURAL_SEASON_SUCCESSOR_ADJUDICATION_V1.mjs",
+          "blob_sha": "087e2495636a8d34306e021c02d74f303d21eb50"
+        }
+      ]
+    },
+    "non_effects": {
+      "production_database_mutation": false,
+      "raw_object_mutation": false,
+      "runtime_config_mutation": false,
+      "scheduler_mutation": false,
+      "production_runtime_start": false,
+      "production_owner_activation": false,
+      "formal_v5_execution": false,
+      "a0_bootstrap": false,
+      "o00_started": false,
+      "mcft_cap09_completed": false
+    }
   }
 }
