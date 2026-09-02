@@ -25,6 +25,8 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - name: Batch005 corrected accounting and registration closure
         run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEAK_INTERNAL_FAIL_CLOSED_V1.cjs
+      - name: Build focused sensing workspace dependencies
+        run: pnpm --filter @geox/device-skills... build
       - name: Batch005 production registration behavioral proof
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEAK_INTERNAL_FAIL_CLOSED_V1.ts
       - name: Frozen PR-SEC-1 caller inventory regression
