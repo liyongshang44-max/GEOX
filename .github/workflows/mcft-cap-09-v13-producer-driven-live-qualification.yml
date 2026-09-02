@@ -265,21 +265,21 @@ jobs:
 
             # Writer-owner SET/self-membership was permanently cleaned. Requalification
             # only reconciles ACL on the already-materialized qualification function.
-            psql "$url" -v ON_ERROR_STOP=1 <<'SQL'
-            REVOKE CREATE ON SCHEMA public FROM geox_mcft_cap09_forcing_writer_owner_v1;
-            REVOKE EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
-              text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
-            ) FROM PUBLIC;
-            REVOKE EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
-              text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
-            ) FROM geox_mcft_cap09_forcing_writer_owner_v1;
-            GRANT EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
-              text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
-            ) TO geox_mcft_cap09_evidence_runtime_v1;
-            REVOKE EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
-              text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
-            ) FROM geox_mcft_cap09_twin_runtime_v1;
-            SQL
+            psql "$url" -v ON_ERROR_STOP=1 -c "
+              REVOKE CREATE ON SCHEMA public FROM geox_mcft_cap09_forcing_writer_owner_v1;
+              REVOKE EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
+                text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
+              ) FROM PUBLIC;
+              REVOKE EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
+                text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
+              ) FROM geox_mcft_cap09_forcing_writer_owner_v1;
+              GRANT EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
+                text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
+              ) TO geox_mcft_cap09_evidence_runtime_v1;
+              REVOKE EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
+                text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
+              ) FROM geox_mcft_cap09_twin_runtime_v1;
+            "
 
             psql "$url" -v ON_ERROR_STOP=1 -f apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql
 
