@@ -1229,18 +1229,88 @@ function covTargetInvokesParameter(target, index) {
   const param = node.parameters[index];
   if (!param || !ts.isIdentifier(param.name)) return false;
   const paramName = param.name.text;
-  let invoked = false;
-  function walk(n) {
-    if (invoked) return;
-    if (n !== node && covFunctionLike(n)) return;
-    if (ts.isCallExpression(n) && ts.isIdentifier(n.expression) && n.expression.text === paramName) {
-      invoked = true;
-      return;
+  const localMap = covLocalFunctionMap(node);
+  const visited = new Set();
+
+  function scanExecutable(container) {
+    const key = container.pos + ":" + container.end;
+    if (visited.has(key)) return false;
+    visited.add(key);
+
+    let invoked = false;
+    function walk(n) {
+      if (invoked) return;
+      if (n !== container && covFunctionLike(n) && !covImmediatelyInvokedFunction(n)) return;
+
+      if (ts.isCallExpression(n)) {
+        if (ts.isIdentifier(n.expression)) {
+          const name = n.expression.text;
+          if (name === paramName) {
+            invoked = true;
+            return;
+          }
+          const local = localMap.get(name);
+          if (local && scanExecutable(local)) {
+            invoked = true;
+            return;
+          }
+        }
+
+        if (
+          ts.isPropertyAccessExpression(n.expression) &&
+          ts.isIdentifier(n.expression.expression) &&
+          n.expression.expression.text === "Array" &&
+          n.expression.name.text === "from"
+        ) {
+          const cb = n.arguments[1];
+          if (
+            cb &&
+            (ts.isArrowFunction(cb) || ts.isFunctionExpression(cb)) &&
+            scanExecutable(cb)
+          ) {
+            invoked = true;
+            return;
+          }
+          if (cb && ts.isIdentifier(cb)) {
+            const local = localMap.get(cb.text);
+            if (local && scanExecutable(local)) {
+              invoked = true;
+              return;
+            }
+          }
+        }
+
+        if (
+          ts.isPropertyAccessExpression(n.expression) &&
+          covImmediateCallbackMethods.has(n.expression.name.text)
+        ) {
+          for (const arg of n.arguments) {
+            if (
+              (ts.isArrowFunction(arg) || ts.isFunctionExpression(arg)) &&
+              scanExecutable(arg)
+            ) {
+              invoked = true;
+              return;
+            }
+            if (ts.isIdentifier(arg)) {
+              const local = localMap.get(arg.text);
+              if (local && scanExecutable(local)) {
+                invoked = true;
+                return;
+              }
+            }
+          }
+        }
+      }
+
+      ts.forEachChild(n, walk);
     }
-    ts.forEachChild(n, walk);
+
+    walk(container);
+    return invoked;
   }
-  walk(node);
-  return invoked;
+
+  return scanExecutable(node);
 }
 
 const covCallbackEdges = [];
