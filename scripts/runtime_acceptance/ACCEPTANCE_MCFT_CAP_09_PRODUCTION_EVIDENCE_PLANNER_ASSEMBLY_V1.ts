@@ -66,7 +66,8 @@ function main():void{
     assert.equal(source.includes(forbidden),false,"ASSEMBLY_FORBIDDEN_DEPENDENCY:"+forbidden);
   }
   const dist=fs.readFileSync(path.resolve("apps/server/scripts/write_dist_entries.cjs"),"utf8");
-  assert.equal(dist.includes("MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"),true);
+  assert.equal(dist.includes("runMcftCap09ProductionEvidenceRuntimeV1"),true);
+  assert.equal(dist.includes("MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"),false);
 
   const proof={
     schema_version:"geox_mcft_cap09_production_evidence_planner_assembly_v1",
@@ -82,7 +83,8 @@ function main():void{
     construction_database_query_count:poolCalls,
     construction_execution_call_count:executionCalls,
     construction_clock_read_count:clockCalls,
-    production_entrypoint_bound:false,
+    production_entrypoint_bound:true,
+    runtime_start_authority_armed:false,
     runtime_process_start:false,
     production_owner_activation:false,
     formal_v5_arm:false,

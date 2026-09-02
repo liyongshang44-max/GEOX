@@ -33,6 +33,9 @@ on:
       - 'apps/server/src/external_evidence/mcft_cap09_production_evidence_host_planner_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_PLANNER_ASSEMBLY_V1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_production_evidence_planner_assembly_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_production_evidence_runtime_v1.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-START-AUTHORITY-V1.json'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_ENTRYPOINT_BINDING_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_V1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_production_provider_attempt_fence_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_provider_attempt_fence_v1.ts'
@@ -108,6 +111,7 @@ jobs:
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_ARBITRATION_V1.ts
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_HOST_PLANNER_V1.ts
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_PLANNER_ASSEMBLY_V1.ts
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_ENTRYPOINT_BINDING_V1.ts
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_V1.ts
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_PARTIAL_PAIR_REHYDRATION_V1.ts
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_MULTI_INTERVAL_PRODUCT_PATH_V1.ts
@@ -126,6 +130,7 @@ jobs:
             acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLANNER_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLAN_EXECUTOR_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_PLANNER_ASSEMBLY_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_ENTRYPOINT_BINDING_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_GFS_PARTIAL_PAIR_REHYDRATION_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_KBS_RAW_HOURLY_MULTI_INTERVAL_PRODUCT_PATH_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1_RESULT.json

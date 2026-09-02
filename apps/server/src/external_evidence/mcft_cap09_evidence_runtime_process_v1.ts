@@ -15,6 +15,7 @@ import {
 import {
   composeEvidenceRuntimeV1,
   type EvidenceRuntimeAcquisitionTargetPlannerV1,
+  type EvidenceRuntimeHostPlannerFactoryV1,
   type EvidenceRuntimeWorkItemFactoryV1,
 } from "./mcft_cap09_evidence_runtime_composition_v1.js";
 import type {
@@ -214,8 +215,9 @@ export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
   work_item_config?: Omit<ProductionEvidenceWorkItemFactoryConfigV1, "retention">;
   work_item_factory?: EvidenceRuntimeWorkItemFactoryV1;
 } & (
-  | { target_planner: EvidenceRuntimeAcquisitionTargetPlannerV1; host_planner?: never }
-  | { target_planner?: never; host_planner: EvidenceRuntimeHostPlannerV1 }
+  | { target_planner: EvidenceRuntimeAcquisitionTargetPlannerV1; host_planner?: never; host_planner_factory?: never }
+  | { target_planner?: never; host_planner: EvidenceRuntimeHostPlannerV1; host_planner_factory?: never }
+  | { target_planner?: never; host_planner?: never; host_planner_factory: EvidenceRuntimeHostPlannerFactoryV1 }
 )): Promise<void> {
   const env = input.env ?? process.env;
   const config = readMcftCap09EvidenceRuntimeProcessConfigV1(env);
@@ -239,7 +241,9 @@ export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
       },
       ...(input.host_planner
         ? { host_planner: input.host_planner }
-        : { target_planner: input.target_planner! }),
+        : input.host_planner_factory
+          ? { host_planner_factory: input.host_planner_factory }
+          : { target_planner: input.target_planner! }),
       wait: new McftCap09ProductionEvidenceWaitV1({
         success_cadence_ms: config.success_cadence_ms,
         lease_standby_ms: config.lease_standby_ms,

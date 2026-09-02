@@ -82,7 +82,7 @@ jobs:
             'LOCAL_24H_HOST_PREFLIGHT_NOT_PROVEN',
             'NON_GITHUB_HOST_BINDING_NOT_COMPLETE'
           ]:[
-            'EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND',
+            'PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED',
             'LOCAL_24H_HOST_PREFLIGHT_NOT_PROVEN'
           ];
           const p={

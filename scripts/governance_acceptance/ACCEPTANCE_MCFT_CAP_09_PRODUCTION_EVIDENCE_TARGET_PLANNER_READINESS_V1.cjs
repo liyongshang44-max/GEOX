@@ -27,14 +27,14 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "PRODUCTION_SCHEMA_MATERIALIZED_PLANNER_DEPENDENCY_ASSEMBLY_IMPLEMENTED_ENTRYPOINT_STILL_UNBOUND");
+  assert.equal(authority.status, "PRODUCTION_SCHEMA_MATERIALIZED_PLANNER_ENTRYPOINT_BOUND_RUNTIME_START_AUTHORITY_NOT_ARMED");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
   assert.equal(authority.subject_predecessor_sha, "9e291eb52b97c9f3f7dd24c3208d8bfc7b357f31");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
 
   assert.equal(hostAuthority.next_stage?.local_24h_host_preflight_status, "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT");
-  assert.equal(hostAuthority.next_stage?.evidence_production_target_planner_status, "NOT_BOUND");
-  assert.equal(hostAuthority.next_stage?.evidence_production_compiled_entrypoint_status, "PACKAGED_FAIL_CLOSED_TARGET_PLANNER_UNBOUND");
+  assert.equal(hostAuthority.next_stage?.evidence_production_target_planner_status, "BOUND");
+  assert.equal(hostAuthority.next_stage?.evidence_production_compiled_entrypoint_status, "PACKAGED_PRODUCTION_PLANNER_BOUND_RUNTIME_START_AUTHORITY_NOT_ARMED");
 
   const workItems = read(authority.production_work_item_factory_ref);
   includes(workItems, "new KbsRawHourlyLiveTransportV1", "KBS_CURRENT_EXACT_TARGET_TRANSPORT_REQUIRED");
@@ -399,19 +399,25 @@ try {
   }
 
   const packager = read(authority.entrypoint_packager_ref);
-  includes(packager, "MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND", "PRODUCTION_ENTRYPOINT_FAIL_CLOSED_REQUIRED");
+  includes(packager, "runMcftCap09ProductionEvidenceRuntimeV1", "PRODUCTION_ENTRYPOINT_PLANNER_BINDING_REQUIRED");
+  assert.equal(packager.includes("MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"), false);
 
-  assert.deepEqual(authority.unconditional_blockers, ["EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"]);
+  assert.deepEqual(authority.unconditional_blockers, []);
   assert.equal(authority.adjudication.phase5_fixture_manifest_may_be_production_planner, false);
   assert.equal(authority.adjudication.v13_forcing_controller_may_be_general_evidence_planner, false);
   assert.equal(authority.adjudication.wall_clock_floor_alone_may_select_all_source_targets, false);
   assert.equal(authority.adjudication.runtime_tick_cursor_may_drive_evidence_acquisition, false);
   assert.equal(
     authority.current_entrypoint.status,
-    "PACKAGED_FAIL_CLOSED_PRODUCTION_HOST_PLANNER_PROCESS_SEAM_AVAILABLE_ENTRYPOINT_NOT_BOUND",
+    "PACKAGED_PRODUCTION_PLANNER_BOUND_RUNTIME_START_AUTHORITY_NOT_ARMED",
   );
-  assert.equal(authority.current_entrypoint.binding_authorized, false);
-  assert.equal(authority.current_entrypoint.failure_code, "MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND");
+  assert.equal(authority.current_entrypoint.binding_authorized, true);
+  assert.equal(authority.current_entrypoint.failure_code, "MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED");
+  const runtimeStartAuthority = json(authority.production_runtime_start_authority_ref);
+  assert.equal(runtimeStartAuthority.status, "ENTRYPOINT_BOUND_NOT_ARMED");
+  assert.equal(runtimeStartAuthority.armed, false);
+  assert.equal(runtimeStartAuthority.runtime_process_start_authorized, false);
+  assert.equal(runtimeStartAuthority.production_owner_activation_authorized, false);
   assert.equal(authority.bootstrap_authority_gap.production_acquisition_start_or_bounded_backfill_horizon_established, true);
   assert.equal(authority.bootstrap_authority_gap.active_runtime_start_horizon_instance_bound, false);
   assert.equal(authority.bootstrap_authority_gap.activation_fence_source, "SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY");
@@ -506,7 +512,7 @@ try {
   assert.equal(authority.source_specific_requirements.gfs_bundle.weather_et0_pair_skew_fail_closed, true);
   assert.equal(authority.source_specific_requirements.kbs_soil.latest_observed_event_progress_read_implemented, true);
   assert.equal(authority.host_lifecycle_gap.not_due_wait_implemented, true);
-  assert.equal(authority.host_lifecycle_gap.production_planner_still_bindable, true);
+  assert.equal(authority.host_lifecycle_gap.production_planner_bound, true);
   assert.equal(authority.host_lifecycle_gap.heterogeneous_source_plan_execution_seam_implemented, true);
   assert.equal(authority.host_lifecycle_gap.kbs_publication_cycle_can_share_single_host_lifecycle, true);
   assert.equal(authority.host_lifecycle_gap.gfs_partial_rehydration_can_share_single_host_lifecycle, true);
@@ -555,8 +561,9 @@ try {
     source_specific_progress_ports_implemented: true,
     unconditional_blockers: authority.unconditional_blockers,
     static_machine_admission: "PASS_PARENT_SUBJECT",
-    production_target_planner_bound: false,
+    production_target_planner_bound: true,
     compiled_entrypoint_fail_closed: true,
+    compiled_entrypoint_fail_closed_reason: "RUNTIME_START_AUTHORITY_NOT_ARMED",
     planner_not_due_wait_implemented: true,
     database_connection_attempted: false,
     provider_request_count: 0,

@@ -29,10 +29,12 @@ runJobsRuntime().catch((error) => {
   },
   {
     name: path.join("runtime", "mcft_cap09_evidence_runtime.js"),
-    content: `import { runMcftCap09EvidenceRuntimeProcessV1 } from "../apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.js";
+    content: `import { runMcftCap09ProductionEvidenceRuntimeV1 } from "../apps/server/src/external_evidence/mcft_cap09_production_evidence_runtime_v1.js";
 
-void runMcftCap09EvidenceRuntimeProcessV1;
-throw new Error("MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND");
+runMcftCap09ProductionEvidenceRuntimeV1().catch((error) => {
+  console.error(\`FATAL: MCFT-CAP-09 Evidence Runtime crashed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+  process.exit(1);
+});
 `,
   },
   {

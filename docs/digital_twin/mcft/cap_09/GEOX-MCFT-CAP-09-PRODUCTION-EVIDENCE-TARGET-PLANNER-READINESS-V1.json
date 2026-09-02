@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_target_planner_readiness_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1",
-  "status": "PRODUCTION_SCHEMA_MATERIALIZED_PLANNER_DEPENDENCY_ASSEMBLY_IMPLEMENTED_ENTRYPOINT_STILL_UNBOUND",
+  "status": "PRODUCTION_SCHEMA_MATERIALIZED_PLANNER_ENTRYPOINT_BOUND_RUNTIME_START_AUTHORITY_NOT_ARMED",
   "stage": "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START",
   "subject_predecessor_sha": "9e291eb52b97c9f3f7dd24c3208d8bfc7b357f31",
   "host_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
@@ -26,7 +26,7 @@
       "required_planning_semantics": "ONE_RETAINED_PROVIDER_BATCH_MAY_ADVANCE_MULTIPLE_EXACT_HOURLY_EVENTS",
       "current_product_shape": "COMPLETE_TABLE_FETCH_PLUS_EXACT_INTERVAL_DECODERS_WITH_MULTI_INTERVAL_REUSE",
       "current_shape_bindable": true,
-      "reason": "COMPLETE_TABLE_PUBLICATION_CYCLE_PURE_PLANNER_WIRING_PRODUCTION_POINTER_SCHEMA_AND_EXPLICIT_DUE_AUTHORITY_ESTABLISHED_COMPILED_ENTRYPOINT_REMAINS_UNBOUND",
+      "reason": "COMPLETE_TABLE_PUBLICATION_CYCLE_PURE_PLANNER_WIRING_PRODUCTION_POINTER_SCHEMA_EXPLICIT_DUE_AUTHORITY_AND_COMPILED_ENTRYPOINT_BINDING_ESTABLISHED_RUNTIME_START_AUTHORITY_REMAINS_UNARMED",
       "required_foundation": [
         "BATCH_WATERMARK_DISCOVERY_OR_EQUIVALENT_DUE_STATE",
         "SINGLE_FETCH_MULTI_INTERVAL_RETAIN_DECODE_CANONICALIZE",
@@ -160,7 +160,7 @@
     "long_running_not_due_semantics": "NON_TERMINAL_WAIT_WITHOUT_CYCLE_DATABASE_OR_PROVIDER_EXECUTION",
     "not_due_wait_implemented": true,
     "not_due_wait_reason": "PLANNER_NOT_DUE",
-    "production_planner_still_bindable": true,
+    "production_planner_bound": true,
     "heterogeneous_source_plan_execution_seam_implemented": true,
     "kbs_publication_cycle_can_share_single_host_lifecycle": true,
     "second_evidence_host_authorized": false,
@@ -193,11 +193,9 @@
     "kbs_fixed_latest_24_rows_bootstrap_authorized": false,
     "kbs_first_emission_requires_post_baseline_forward_event_delta": true
   },
-  "unconditional_blockers": [
-    "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"
-  ],
+  "unconditional_blockers": [],
   "implementation_order": [
-    "BIND_COMPILED_ENTRYPOINT_UNDER_SEPARATE_RUNTIME_START_AUTHORITY"
+    "ESTABLISH_AND_ARM_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY"
   ],
   "implemented_foundation": [
     "NON_TERMINAL_NOT_DUE_HOST_STATE",
@@ -312,9 +310,9 @@
     "PRODUCTION_PLANNER_CONCRETE_DEPENDENCY_ASSEMBLY_ZERO_IO"
   ],
   "current_entrypoint": {
-    "status": "PACKAGED_FAIL_CLOSED_PRODUCTION_HOST_PLANNER_PROCESS_SEAM_AVAILABLE_ENTRYPOINT_NOT_BOUND",
-    "failure_code": "MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
-    "binding_authorized": false
+    "status": "PACKAGED_PRODUCTION_PLANNER_BOUND_RUNTIME_START_AUTHORITY_NOT_ARMED",
+    "failure_code": "MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED",
+    "binding_authorized": true
   },
   "non_effects": {
     "runtime_secret_read": false,
@@ -354,7 +352,7 @@
   "kbs_publication_cycle_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1.ts",
   "gfs_fact_replay_provenance_reader_ref": "apps/server/src/persistence/external_evidence/postgres_external_evidence_fact_replay_provenance_v1.ts",
   "gfs_fact_replay_provenance_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_V1.ts",
-  "current_frontier": "PRODUCTION_EVIDENCE_COMPILED_ENTRYPOINT_BINDING",
+  "current_frontier": "PRODUCTION_RUNTIME_START_AUTHORITY_INSTANCE",
   "gfs_partial_pair_rehydration_adapter_ref": "apps/server/src/external_evidence/mcft_cap09_gfs_partial_pair_rehydration_v1.ts",
   "gfs_partial_pair_rehydration_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_PARTIAL_PAIR_REHYDRATION_V1.ts",
   "source_due_policy_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1.json",
@@ -364,6 +362,9 @@
   "source_due_policy_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_DUE_POLICY_V1.ts",
   "source_poll_schedule_postgres_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EVIDENCE_SOURCE_POLL_SCHEDULE_POSTGRES_V1.ts",
   "production_source_poll_schedule_schema_materialized": true,
+  "production_runtime_start_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-START-AUTHORITY-V1.json",
+  "production_entrypoint_binding_ref": "apps/server/src/external_evidence/mcft_cap09_production_evidence_runtime_v1.ts",
+  "production_entrypoint_binding_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_ENTRYPOINT_BINDING_V1.ts",
   "production_schema_materialization_evidence": {
     "source_poll_schedule_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-POLL-SCHEDULE-SCHEMA-REMEDIATION-AUTHORITY-V1.json",
     "source_poll_schedule_applied_subject_sha": "d3da67cf19baa8a6ebff69171d0b00c9e2fe018e",

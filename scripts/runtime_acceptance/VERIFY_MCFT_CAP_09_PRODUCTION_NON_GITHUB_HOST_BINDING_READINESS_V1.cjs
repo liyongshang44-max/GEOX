@@ -20,7 +20,7 @@ try{
   req(owner.runtime_credential_binding_evidence?.status==="IMMUTABLE_SUCCESS"&&owner.runtime_credential_post_binding_readiness_evidence?.status==="IMMUTABLE_SUCCESS","HOST_BINDING_READINESS_RUNTIME_CREDENTIAL_CLOSURE_REQUIRED");
   req(a.production_execution_host_class==="NON_GITHUB_LONG_RUNNING_SERVICE"&&a.github_actions?.production_execution_host_allowed===false,"HOST_BINDING_READINESS_HOST_CLASS_REQUIRED");
   req(a.platform_evaluation?.selected_candidate?.platform_provider==="LOCAL_OPERATOR_MANAGED_DOCKER","HOST_BINDING_READINESS_LOCAL_SELECTION_REQUIRED");
-  req(local?.evidence_runtime?.compiled_entrypoint==="apps/server/dist/runtime/mcft_cap09_evidence_runtime.js"&&local?.evidence_runtime?.compiled_entrypoint_status==="PACKAGED_FAIL_CLOSED_TARGET_PLANNER_UNBOUND"&&local?.evidence_runtime?.target_planner_status==="NOT_BOUND","HOST_BINDING_READINESS_EVIDENCE_PACKAGING_REQUIRED");
+  req(local?.evidence_runtime?.compiled_entrypoint==="apps/server/dist/runtime/mcft_cap09_evidence_runtime.js"&&local?.evidence_runtime?.compiled_entrypoint_status==="PACKAGED_PRODUCTION_PLANNER_BOUND_RUNTIME_START_AUTHORITY_NOT_ARMED"&&local?.evidence_runtime?.target_planner_status==="BOUND","HOST_BINDING_READINESS_EVIDENCE_PACKAGING_REQUIRED");
   req(arm.runtime_process_start_authorized===false&&arm.production_owner_activation_authorized===false&&arm.formal_v5_arm_authorized===false&&arm.a0_authorized===false&&arm.o00_authorized===false,"HOST_BINDING_READINESS_NON_EFFECT_REQUIRED");
   if(a.status==="LOCAL_OPERATOR_MANAGED_DOCKER_HOST_AUTHORIZED_IDENTITIES_UNBOUND"){
     req(local?.status==="AUTHORIZED_HOST_IDENTITY_UNBOUND"&&local.host_id===null&&local.evidence_runtime?.service_id===null&&local.twin_runtime?.service_id===null,"HOST_BINDING_READINESS_LOCAL_UNBOUND_REQUIRED");
@@ -80,7 +80,7 @@ try{
     evidence_host:{service_id:expectedEvidence,service_name:evidence.service_name,runtime_role:"EVIDENCE_RUNTIME"},
     twin_host:{service_id:expectedTwin,service_name:twin.service_name,runtime_role:"TWIN_RUNTIME"},
     service_ids_distinct:true,
-    remaining_blockers:["EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"],
+    remaining_blockers:["PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED"],
     github_actions_execution_host:false,runtime_process_start:false,production_owner_activation:false,provider_request_count:0,formal_v5_arm:false,a0_bootstrap:false,o00_started:false
   });
 }catch(e){

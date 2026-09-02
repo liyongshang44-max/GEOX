@@ -184,9 +184,9 @@ function main(): void {
     "PHASE5_EVIDENCE_PROCESS_DIRECT_HOST_PLANNER_SEAM_REQUIRED",
   );
   assert.equal(
-    distWriter.includes("MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"),
+    distWriter.includes("runMcftCap09ProductionEvidenceRuntimeV1"),
     true,
-    "PHASE5_EVIDENCE_DIST_ENTRYPOINT_MUST_REMAIN_FAIL_CLOSED",
+    "PHASE5_EVIDENCE_DIST_ENTRYPOINT_PRODUCTION_PLANNER_BINDING_REQUIRED",
   );
 
   for (const forbidden of [
@@ -209,12 +209,12 @@ function main(): void {
     true,
   );
   assert.equal(
-    distWriter.includes("runMcftCap09EvidenceRuntimeProcessV1"),
+    distWriter.includes("runMcftCap09ProductionEvidenceRuntimeV1"),
     true,
   );
   assert.equal(
     distWriter.includes("MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"),
-    true,
+    false,
   );
   assert.equal(
     distWriter.includes('path.join("runtime", "mcft_cap09_twin_runtime.js")'),
@@ -241,7 +241,8 @@ function main(): void {
     twin_duplicate_coordination_contention_retryable: true,
     twin_stale_fence_corruption_fatal: true,
     stable_compiled_evidence_entrypoint: true,
-    evidence_entrypoint_fail_closed_without_target_planner: true,
+    evidence_entrypoint_production_planner_bound: true,
+    evidence_entrypoint_fail_closed_without_runtime_start_authority: true,
     stable_compiled_twin_entrypoint: true,
     test_script_dependency_in_product_process: false,
     production_owner_cutover: false,

@@ -110,8 +110,8 @@
     "local_24h_host_preflight_status": "PASS_STATIC_MACHINE_ADMISSION_PARENT_SUBJECT",
     "local_24h_host_preflight_evidence_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-LOCAL-OPERATOR-HOST-STATIC-ADMISSION-EVIDENCE-V1.json",
     "local_24h_host_preflight_evidence_sha256": "sha256:4560fd10d6d1905f917be3c47b50a8751cd9caf3d84f8d5057e7e770d5325499",
-    "evidence_production_compiled_entrypoint_status": "PACKAGED_FAIL_CLOSED_TARGET_PLANNER_UNBOUND",
-    "evidence_production_target_planner_status": "NOT_BOUND"
+    "evidence_production_compiled_entrypoint_status": "PACKAGED_PRODUCTION_PLANNER_BOUND_RUNTIME_START_AUTHORITY_NOT_ARMED",
+    "evidence_production_target_planner_status": "BOUND"
   },
   "non_effects": {
     "external_host_provisioning": false,
@@ -415,10 +415,10 @@
       "execution_class": "LONG_RUNNING_SERVICE",
       "runtime_role": "EVIDENCE_RUNTIME",
       "production_process_factory": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
-      "compiled_entrypoint_status": "PACKAGED_FAIL_CLOSED_TARGET_PLANNER_UNBOUND",
-      "target_planner_status": "NOT_BOUND",
+      "compiled_entrypoint_status": "PACKAGED_PRODUCTION_PLANNER_BOUND_RUNTIME_START_AUTHORITY_NOT_ARMED",
+      "target_planner_status": "BOUND",
       "compiled_entrypoint": "apps/server/dist/runtime/mcft_cap09_evidence_runtime.js",
-      "compiled_entrypoint_fail_closed_code": "MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"
+      "compiled_entrypoint_fail_closed_code": "MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED"
     },
     "twin_runtime": {
       "service_name": "geox-mcft-cap09-twin-runtime-v1",
