@@ -43,6 +43,7 @@ import {
   McftCap09ProductionEvidenceWaitV1,
 } from "../runtime/mcft_cap09_production_process_lifecycle_v1.js";
 import {
+  loadMcftCap09ProductionRuntimeStartAuthorityV1,
   parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1,
 } from "../runtime/mcft_cap09_production_runtime_start_authority_v1.js";
 import {
@@ -310,10 +311,14 @@ export async function runMcftCap09ProductionEvidenceRuntimeV1(input: {
   const document = productionAcquisitionHorizonAuthorityJson as {
     runtime_start_binding?: unknown;
   };
-  const authority = parseMcftCap09ProductionRuntimeStartAuthorityV1(
-    input.runtime_start_authority ?? document.runtime_start_binding,
-  );
   const env = input.env ?? process.env;
+  const authority = loadMcftCap09ProductionRuntimeStartAuthorityV1({
+    plane: "EVIDENCE_RUNTIME",
+    authority_path:
+      env.GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH,
+    explicit_authority: input.runtime_start_authority,
+    embedded_authority: document.runtime_start_binding,
+  });
   const runtimeEnv: EnvironmentV1 = {
     ...env,
     GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_LEASE_OWNER:
