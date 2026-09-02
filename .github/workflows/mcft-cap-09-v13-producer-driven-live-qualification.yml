@@ -6,6 +6,10 @@ on:
       - '.github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V1.ts'
       - 'scripts/runtime_acceptance/MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_ARM.json'
+      - 'scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_V13_PRODUCER_LIVE_APPLICABILITY_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
       - 'apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.ts'
       - 'apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql'
 
@@ -75,8 +79,40 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_OUTPUT,'armed=true\n');
           fs.appendFileSync(process.env.GITHUB_OUTPUT,'qualification_first_base='+a.qualification_first_base+'\n');
 
-      - name: Require exact frozen subject and authority
+
+      - name: Resolve governed producer live applicability
+        id: applicability
         if: steps.arm.outputs.armed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="acceptance-output/MCFT_CAP_09_V13_PRODUCER_LIVE_APPLICABILITY_V1_RESULT.json"
+          node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_V13_PRODUCER_LIVE_APPLICABILITY_V1.cjs \
+            --base '${{ github.event.pull_request.base.sha }}' \
+            --head '${{ github.event.pull_request.head.sha }}' \
+            --generation v13 \
+            --stage POST_MERGE_V13_QUALIFICATION \
+            --out "$out"
+          node - "$out" "$GITHUB_OUTPUT" <<'NODE'
+          const fs=require('node:fs');
+          const [outPath,githubOutput]=process.argv.slice(2);
+          const p=JSON.parse(fs.readFileSync(outPath,'utf8'));
+          if(p.status!=='PASS') throw new Error('V13_PRODUCER_LIVE_APPLICABILITY_NOT_PASS');
+          fs.appendFileSync(githubOutput,`live_required=${p.live_required?'true':'false'}\n`);
+          if(p.evidence_id) fs.appendFileSync(githubOutput,`evidence_id=${p.evidence_id}\n`);
+          console.log(JSON.stringify(p,null,2));
+          NODE
+
+      - name: Accept durable producer evidence without live rerun
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${{ steps.applicability.outputs.evidence_id }}"
+          echo "V13_PRODUCER_LIVE_REQUALIFICATION_SKIPPED_DURABLE_EVIDENCE:${{ steps.applicability.outputs.evidence_id }}"
+
+      - name: Require exact frozen subject and authority
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -97,21 +133,21 @@ jobs:
           NODE
 
       - uses: pnpm/action-setup@v4
-        if: steps.arm.outputs.armed == 'true'
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
         with:
           version: 9.15.4
       - uses: actions/setup-node@v4
-        if: steps.arm.outputs.armed == 'true'
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
         with:
           node-version: 20.11.1
           cache: pnpm
       - uses: actions/setup-python@v5
-        if: steps.arm.outputs.armed == 'true'
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
         with:
           python-version: '3.12'
 
       - name: Install exact repository and scientific dependencies
-        if: steps.arm.outputs.armed == 'true'
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
         run: |
           set -euo pipefail
           pnpm install --frozen-lockfile
@@ -122,7 +158,7 @@ jobs:
           python apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py selftest
 
       - name: Normalize governed database URLs
-        if: steps.arm.outputs.armed == 'true'
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
         shell: node {0}
         run: |
           const fs=require('node:fs');
@@ -152,7 +188,7 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_ENV,lines.join('\n')+'\n');
 
       - name: Require Formal-v5 untouched and qualification stores uninitialized-or-exact-v13
-        if: steps.arm.outputs.armed == 'true'
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -167,7 +203,7 @@ jobs:
           done
 
       - name: Establish qualification-only NOLOGIN Evidence privilege role
-        if: steps.arm.outputs.armed == 'true'
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -236,7 +272,7 @@ jobs:
           done
 
       - name: Reconcile exact 29-table v13 qualification ACL without writer-owner SET
-        if: steps.arm.outputs.armed == 'true'
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -318,7 +354,7 @@ jobs:
           reconcile_store "$BLOCKED_ADMIN_URL"
 
       - name: Prove Evidence ACL before provider execution
-        if: steps.arm.outputs.armed == 'true'
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -344,7 +380,7 @@ jobs:
           done
 
       - name: Run producer-driven live v13 qualification
-        if: steps.arm.outputs.armed == 'true'
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
         env:
           MCFT_CAP09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION: '1'
           MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
@@ -359,7 +395,7 @@ jobs:
         run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V1.ts
 
       - name: Validate machine proof and frozen non-effects
-        if: steps.arm.outputs.armed == 'true'
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
         shell: node {0}
         run: |
           const fs=require('node:fs');
@@ -375,7 +411,7 @@ jobs:
           for(const k of ['production_owner_activation','formal_v5_arm','a0_bootstrap','o00_started','mcft_cap09_completed'])if(p[k]!==false)throw new Error('V13_LIVE_LATER_STAGE_EFFECT:'+k);
 
       - name: Reprove Formal-v5 untouched
-        if: steps.arm.outputs.armed == 'true'
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -386,7 +422,7 @@ jobs:
           test "$counts" = "0|0" || { echo "V13_LIVE_FORMAL_V5_MUTATION_FORBIDDEN:$counts" >&2; exit 1; }
 
       - name: Upload immutable producer qualification proof
-        if: steps.arm.outputs.armed == 'true'
+        if: steps.arm.outputs.armed == 'true' && steps.applicability.outputs.live_required == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap09-v13-producer-driven-live-qualification-${{ github.event.pull_request.head.sha }}
