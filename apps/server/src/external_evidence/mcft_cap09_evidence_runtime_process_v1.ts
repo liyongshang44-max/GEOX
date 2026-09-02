@@ -45,6 +45,9 @@ import {
 import {
   parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1,
 } from "../runtime/mcft_cap09_production_runtime_start_authority_v1.js";
+import {
+  buildMcftCap09ProductionLeaseOwnerV1,
+} from "../runtime/mcft_cap09_production_service_identity_v1.js";
 
 export const MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_ID_V1 =
   "MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_V1" as const;
@@ -311,7 +314,20 @@ export async function runMcftCap09ProductionEvidenceRuntimeV1(input: {
     input.runtime_start_authority ?? document.runtime_start_binding,
   );
   const env = input.env ?? process.env;
-  const config = readMcftCap09EvidenceRuntimeProcessConfigV1(env);
+  const runtimeEnv: EnvironmentV1 = {
+    ...env,
+    GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_LEASE_OWNER:
+      buildMcftCap09ProductionLeaseOwnerV1({
+        plane: "EVIDENCE_RUNTIME",
+        configured_service_id: requiredEnvV1(
+          env,
+          "GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_SERVICE_ID",
+          "MCFT_CAP09_PRODUCTION_EVIDENCE_SERVICE_ID_REQUIRED",
+        ),
+        instance_id: String(env.HOSTNAME ?? os.hostname()).trim(),
+      }),
+  };
+  const config = readMcftCap09EvidenceRuntimeProcessConfigV1(runtimeEnv);
   const planningClock = input.planning_clock ?? { now: () => new Date().toISOString() };
   const hostPlannerFactory = createProductionEvidenceHostPlannerFactoryV1({
     runtime_start_authority: authority,
@@ -327,7 +343,7 @@ export async function runMcftCap09ProductionEvidenceRuntimeV1(input: {
     work_item_config: input.work_item_config,
   });
   await runMcftCap09EvidenceRuntimeProcessV1({
-    env,
+    env: runtimeEnv,
     host_planner_factory: hostPlannerFactory,
     work_item_config: input.work_item_config,
   });
