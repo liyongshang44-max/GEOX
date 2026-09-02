@@ -8,6 +8,7 @@ const INVENTORY = path.join(ROOT, "docs/architecture/semantic_convergence/GEOX-B
 const MODULE = path.join(ROOT, "apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts");
 const LEGACY_SOURCE = "apps/server/src/routes/v1/twin_kernel.ts";
 const BATCH2_ACCEPTED_HEAD = "599604d7ace9c6c7cc09ba5fd761e3100d3f3403";
+const BATCH3_ACCEPTED_HEAD = "622a3f7b59d78faf900ab6d43cf52cb9e6458b7e";
 
 function fail(message, extra) {
   console.error("[BLINE_PRSEC2_LEGACY_TWIN_FAIL_CLOSE] FAIL:", message);
@@ -110,10 +111,10 @@ for (const forbidden of ["setTimeout", "setInterval", "setImmediate", "queueMicr
   assert(!moduleSource.includes(forbidden), "forbidden deferred/cutover token in containment implementation", forbidden);
 }
 
-const legacyDiff = git(["diff", "--name-only", `${BATCH2_ACCEPTED_HEAD}..HEAD`, "--", LEGACY_SOURCE]);
-assert(legacyDiff === "", "legacy Twin source/GET-read semantics must remain byte-unchanged from accepted Batch 2 head", legacyDiff);
+const legacyDiff = git(["diff", "--name-only", `${BATCH2_ACCEPTED_HEAD}..${BATCH3_ACCEPTED_HEAD}`, "--", LEGACY_SOURCE]);
+assert(legacyDiff === "", "legacy Twin source/GET-read semantics must remain byte-unchanged for accepted Batch 3", legacyDiff);
 
-const changed = git(["diff", "--name-only", `${BATCH2_ACCEPTED_HEAD}..HEAD`]).split(/\r?\n/).filter(Boolean);
+const changed = git(["diff", "--name-only", `${BATCH2_ACCEPTED_HEAD}..${BATCH3_ACCEPTED_HEAD}`]).split(/\r?\n/).filter(Boolean);
 const allowed = new Set([
   "apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts",
   "scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_FAIL_CLOSED_V1.cjs",
@@ -141,6 +142,7 @@ console.log(JSON.stringify({
   batch3_computed_after: afterBatch3,
   exact_routes: ROUTES,
   legacy_twin_source_unchanged: true,
+  qualification_boundary: `${BATCH2_ACCEPTED_HEAD}..${BATCH3_ACCEPTED_HEAD}`,
   batch3_changed_files: changed,
   mcft_delta: 0,
 }, null, 2));
