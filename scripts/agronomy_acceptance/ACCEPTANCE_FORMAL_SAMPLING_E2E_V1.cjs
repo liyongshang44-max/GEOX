@@ -56,6 +56,27 @@ async function main() {
     }), 'create ao sense task');
     checks.ao_sense_task_created = true;
 
+    const observationFactId = rid('device_observation');
+    await pool.query(
+      `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+       VALUES ($1, now(), 'formal-sampling-e2e-observation-fixture', $2::jsonb)`,
+      [
+        observationFactId,
+        JSON.stringify({
+          type: 'device_observation_v1',
+          schema_version: '1',
+          tenant_id: scope.tenant_id,
+          project_id: scope.project_id,
+          group_id: scope.group_id,
+          observed_at_ts: now,
+          device_id: `sampling_fixture_${run}`,
+          metric: 'sample_collection_presence',
+          value: 1,
+          unit: 'count',
+        }),
+      ],
+    );
+
     const aoReceipt = requireOk(await fetchJson(`${base}/api/v1/sense/receipt`, {
       method: 'POST',
       token,
@@ -64,8 +85,7 @@ async function main() {
         executed_at_ts: Date.now(),
         result: 'success',
         evidence_refs: [
-          { kind: 'raw_sample_v1', ref_id: rid('raw_sample') },
-          { kind: 'marker_v1', ref_id: rid('marker') },
+          { kind: 'fact_id', ref_id: observationFactId },
         ],
       },
     }), 'create ao sense receipt');
@@ -102,6 +122,23 @@ async function main() {
     const acceptance = requireOk(await fetchJson(`${base}/api/v1/sampling/acceptance/evaluate`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_id, import_id: lab.import_id } }), 'evaluate sampling acceptance');
     checks.acceptance_api_live_called = true;
     checks.sampling_acceptance_evaluated = ['PASS', 'FAIL', 'INSUFFICIENT_EVIDENCE'].includes(acceptance.verdict);
+    assert.equal(acceptance.sampling_plan_fact_id, plan.fact_id, 'sampling acceptance must bind exact plan fact');
+    assert.equal(acceptance.sample_receipt_fact_id, receipt.fact_id, 'sampling acceptance must bind exact receipt fact');
+    assert.equal(acceptance.lab_result_fact_id, lab.fact_id, 'sampling acceptance must bind exact lab fact');
+    const exactAcceptanceFact = await pool.query('SELECT record_json FROM facts WHERE fact_id=$1', [acceptance.fact_id]);
+    assert.equal(exactAcceptanceFact.rowCount, 1, 'exact sampling acceptance fact must exist');
+    assert.equal(exactAcceptanceFact.rows[0].record_json?.sampling_plan_fact_id, plan.fact_id, 'persisted plan fact ref mismatch');
+    assert.equal(exactAcceptanceFact.rows[0].record_json?.sample_receipt_fact_id, receipt.fact_id, 'persisted receipt fact ref mismatch');
+    assert.equal(exactAcceptanceFact.rows[0].record_json?.lab_result_fact_id, lab.fact_id, 'persisted lab fact ref mismatch');
+
+    const repeatedAcceptance = requireOk(await fetchJson(`${base}/api/v1/sampling/acceptance/evaluate`, {
+      method: 'POST',
+      token,
+      body: { plan_id: plan.plan_id, sample_id, import_id: lab.import_id },
+    }), 'repeat sampling acceptance');
+    assert.equal(repeatedAcceptance.fact_id, acceptance.fact_id, 'same exact sampling chain must keep one acceptance fact');
+    assert.equal(repeatedAcceptance.acceptance_id, acceptance.acceptance_id, 'same exact sampling chain must keep one acceptance id');
+    assert.equal(repeatedAcceptance.idempotent, true, 'repeat sampling acceptance must report idempotent=true');
 
     const sample = requireOk(await fetchJson(`${base}/api/v1/sampling/sample/${sample_id}`, { method: 'GET', token }), 'fetch sample by sample_id');
     assert.equal(

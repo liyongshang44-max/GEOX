@@ -33,6 +33,7 @@ function hasAll(text, required) {
     'sampling_acceptance PASS ≠ operation success',
     'manual sample data 不得直接写 ProblemState conclusion',
     'lab result 不得直接写 ROI / Field Memory / customer success',
+    'Sampling formal chain 不得使用 latest-wins source selection',
   ];
   const requiredSamplingReasons = [
     'LOW_CONFIDENCE',
@@ -47,9 +48,25 @@ function hasAll(text, required) {
   assert.equal(hasAll(md, requiredFactTypes), true, 'SAMPLING_DOMAIN_CONTRACT_V1.md missing required fact types');
   assert.equal(hasAll(ts, requiredHardRules), true, 'sampling_contract_v1.ts missing hard rules');
   assert.equal(hasAll(md, requiredHardRules), true, 'SAMPLING_DOMAIN_CONTRACT_V1.md missing hard rules');
+  assert.equal(
+    ts.includes('legacy lab_result_import_v1 without exact receipt/plan/scope refs cannot establish Formal Sampling authority'),
+    true,
+    'sampling_contract_v1.ts missing legacy lab non-authority rule',
+  );
+  assert.equal(
+    hasAll(md, [
+      'legacy `lab_result_import_v1` without exact `sample_receipt_fact_id` / `sampling_plan_fact_id` / scope refs is not Formal Sampling authority',
+      'must not be auto-bound by `sample_id` / `import_id`',
+      'formal use requires a newly established exact chain',
+    ]),
+    true,
+    'SAMPLING_DOMAIN_CONTRACT_V1.md missing legacy lab non-authority semantics',
+  );
   assert.equal(hasAll(ts, ['SAMPLING_REASONS_V1', ...requiredSamplingReasons]), true, 'sampling_contract_v1.ts missing SAMPLING_REASONS_V1');
   assert.equal(hasAll(route, requiredSamplingReasons), true, 'sampling route missing contract sampling reasons');
   assert.equal(deprecatedSamplingReasons.some((reason) => route.includes(reason)), false, 'sampling route contains deprecated sampling reasons');
+  assert.equal(hasAll(ts, ['sampling_plan_fact_id', 'sample_receipt_fact_id', 'lab_result_fact_id']), true, 'sampling acceptance exact refs missing from contract');
+  assert.equal(hasAll(md, ['sampling_plan_fact_id', 'sample_receipt_fact_id', 'lab_result_fact_id', 'ambiguous receipt/lab/acceptance identity']), true, 'sampling exact-binding documentation missing');
 
   console.log('PASS acceptance sampling contract v1', {
     contractTs,

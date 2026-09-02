@@ -48,6 +48,13 @@ function assertRegex(text, pattern, label) {
     'trigger_source === "SAMPLING_LAB"',
     'MISSING_OR_INVALID:sample_id',
     'MISSING_OR_INVALID:lab_import_id',
+    'MISSING_OR_INVALID:sampling_acceptance_fact_id',
+    'requireExactSamplingChain',
+    'sampling_plan_fact_id',
+    'sample_receipt_fact_id',
+    'lab_result_fact_id',
+    'SAMPLING_ACCEPTANCE_EXACT_CHAIN_REQUIRED',
+    'SAMPLING_ACCEPTANCE_EXACT_CHAIN_MISMATCH',
     'lab_result_import_v1',
     'quality_status',
     'LAB_RESULT_QUALITY_STATUS_NOT_PASS',
@@ -130,8 +137,10 @@ function assertRegex(text, pattern, label) {
 
   assertAll(register, ['registerFertilizationV1Routes', './v1/fertilization.js'], 'core route registration');
 
-  assertRegex(service, /WHERE \(record_json::jsonb->>'type'\) = 'lab_result_import_v1'[\s\S]*record_json::jsonb->>'sample_id'[\s\S]*record_json::jsonb->>'import_id'/, 'SAMPLING_LAB lab result lookup');
-  assertRegex(service, /WHERE \(record_json::jsonb->>'type'\) = 'sampling_acceptance_v1'[\s\S]*UPPER\(COALESCE\(record_json::jsonb->>'verdict', ''\)\) = 'PASS'/, 'SAMPLING_LAB sampling acceptance PASS lookup');
+  assertRegex(service, /loadExactFact\("sampling_acceptance_v1", sampling_acceptance_fact_id\)/, 'SAMPLING_LAB exact sampling acceptance lookup');
+  assertRegex(service, /loadExactFact\("lab_result_import_v1", labResultFactId\)/, 'SAMPLING_LAB exact lab fact lookup');
+  assert.equal(service.includes('findSamplingAcceptancePass'), false, 'latest-wins sampling acceptance helper must be removed');
+  assert.equal(service.includes('findLabResult(scope'), false, 'latest-wins sampling lab helper must be removed');
   assertRegex(service, /if \(requestedCustomerVisible && !formalLowN\)/, 'customer-visible recommendation guard');
   assertRegex(service, /if \(recommendation\.customer_visible_eligible !== true\)/, 'prescription requires customer-visible recommendation guard');
   assertRegex(service, /if \(planned_n_kg_ha < 0\)/, 'negative N rate guard');

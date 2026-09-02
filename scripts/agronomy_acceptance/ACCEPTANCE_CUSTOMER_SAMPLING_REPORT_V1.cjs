@@ -13,7 +13,8 @@ const checks = {
   view_model_has_sampling_summary:
     /function\s+samplingSummaryText\(value:\s*any\):\s*string\s*\|\s*undefined\s*\{/m.test(viewModel) &&
     /const\s+sampling\s*=\s*value\?\.sampling\s*\?\?\s*\{\}/m.test(viewModel) &&
-    /return\s*\[\.\.\.scenarioReasons,\s*\.\.\.samplingReasons,\s*\.\.\.missingItems,\s*\.\.\.chainReasons\]/m.test(viewModel),
+    /const\s+samplingReasons\s*=\s*asList\(reportOrOperation\?\.sampling\?\.blocking_reasons\)/m.test(viewModel) &&
+    /zoneSummaryText:\s*samplingSummaryText\(reportOrOperation\)\s*\?\?\s*zoneSummaryText\(reportOrOperation\)/m.test(viewModel),
 
   view_model_prioritizes_sampling_summary:
     /zoneSummaryText:\s*samplingSummaryText\(reportOrOperation\)\s*\?\?\s*zoneSummaryText\(reportOrOperation\)/m.test(viewModel),

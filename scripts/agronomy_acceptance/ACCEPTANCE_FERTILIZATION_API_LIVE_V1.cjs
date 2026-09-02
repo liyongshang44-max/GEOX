@@ -59,13 +59,13 @@ async function createSamplingFormalChain(base, token, scope, field_id, sample_id
     quality_status: 'PASS',
   }), 'sampling lab result');
 
-  requireOk(await post(base, '/api/v1/sampling/acceptance/evaluate', token, {
+  const samplingAcceptance = requireOk(await post(base, '/api/v1/sampling/acceptance/evaluate', token, {
     plan_id: plan.plan_id,
     sample_id,
     import_id: lab.import_id,
   }), 'sampling acceptance');
 
-  return { plan, lab };
+  return { plan, lab, samplingAcceptance };
 }
 
 async function main() {
@@ -124,7 +124,7 @@ async function main() {
   await waitForHealth(base);
   checks.cross_tenant_404 = true;
 
-  const { lab } = await createSamplingFormalChain(base, token, scope, field_id, sample_id);
+  const { lab, samplingAcceptance } = await createSamplingFormalChain(base, token, scope, field_id, sample_id);
 
   const lowN = await post(base, '/api/v1/fertilization/nitrogen-assessment', token, {
     ...scope,
@@ -132,6 +132,7 @@ async function main() {
     trigger_source: 'SAMPLING_LAB',
     sample_id,
     lab_import_id: lab.import_id,
+    sampling_acceptance_fact_id: samplingAcceptance.fact_id,
     sample_type: 'SOIL',
     status: 'LOW_N_RISK',
     metrics: { nitrate_n_mg_kg: 2.1, ammonium_n_mg_kg: 0.8 },

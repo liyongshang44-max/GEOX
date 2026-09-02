@@ -50,6 +50,10 @@ Fertilization Domain owns formal business facts. GEOX Main Chain owns Recommenda
 
   sample_id?: string | null;
   lab_import_id?: string | null;
+  sampling_acceptance_fact_id?: string | null;
+  sampling_plan_fact_id?: string | null;
+  sample_receipt_fact_id?: string | null;
+  lab_result_fact_id?: string | null;
 
   skill_signal_refs?: Array<{
     skill_id: string;
@@ -184,7 +188,7 @@ Fertilization Domain owns formal business facts. GEOX Main Chain owns Recommenda
 
 ## 3. Formal trigger rules
 
-`SAMPLING_LAB` is the only path allowed to produce a formal customer-visible nitrogen need assessment. The service implementation must require `sample_id`, `lab_import_id`, `lab_result_import_v1.quality_status = PASS`, `sampling_acceptance_v1 = PASS`, and nitrogen-related metrics before it may emit `status = LOW_N_RISK` with `evidence_tier = FORMAL`.
+`SAMPLING_LAB` is the only path allowed to produce a formal customer-visible nitrogen need assessment. The service implementation must require `sample_id`, `lab_import_id`, and exact `sampling_acceptance_fact_id`. That exact Acceptance must be `PASS` and must bind exact `sampling_plan_fact_id`, `sample_receipt_fact_id`, and `lab_result_fact_id`; the exact lab fact must have `quality_status = PASS` and match the same tenant/project/group/field/sample/import chain before the service may emit `status = LOW_N_RISK` with `evidence_tier = FORMAL`. Latest-wins Sampling lookup is forbidden.
 
 `SENSING_RISK` may reference `fertility_state`, `salinity_risk_state`, `canopy_stress_state`, or Skill signals, but it may only produce `status = NEEDS_REVIEW` with `evidence_tier = WARNING`.
 
