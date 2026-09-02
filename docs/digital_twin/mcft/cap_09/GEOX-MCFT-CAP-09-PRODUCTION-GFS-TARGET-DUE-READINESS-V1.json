@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_gfs_target_due_readiness_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-GFS-TARGET-DUE-READINESS-V1",
-  "status": "ESTABLISHED_FENCE_BOUND_SCHEMA_NOT_MATERIALIZED_NO_ACTIVE_INSTANCE",
+  "status": "ESTABLISHED_FENCE_BOUND_SCHEMA_MATERIALIZED_NO_ACTIVE_INSTANCE",
   "subject_predecessor_sha": "3abee9e9c57e011af7912785910503f6a59cf2eb",
   "authority_basis": {
     "amendment_19_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-PROVIDER-RUNTIME-CADENCE-DECOUPLING-AUTHORITY.md",
@@ -65,7 +65,7 @@
     "provider_attempt_fence_after_lease_exact_target_recheck": true
   },
   "blockers": [
-    "PRODUCTION_GFS_RETRY_SCHEMA_NOT_MATERIALIZED"
+    "ACTIVE_RUNTIME_START_AUTHORITY_NOT_BOUND"
   ],
   "forbidden_shortcuts": [
     "WALL_CLOCK_FLOOR_AS_GFS_TARGET",
@@ -98,7 +98,9 @@
     "target_skip_forbidden": true,
     "owner_takeover_preserves_state": true,
     "stale_fence_rejected": true,
-    "current_production_schema_materialized": false
+    "current_production_schema_materialized": true,
+    "materialization_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-POLL-SCHEDULE-SCHEMA-REMEDIATION-AUTHORITY-V1.json",
+    "materialization_settled_subject_sha": "5ed1ff5340507bb6d722810a64132b5e1a7966e0"
   },
   "provider_attempt_fence": {
     "contract_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_provider_attempt_fence_v1.ts",

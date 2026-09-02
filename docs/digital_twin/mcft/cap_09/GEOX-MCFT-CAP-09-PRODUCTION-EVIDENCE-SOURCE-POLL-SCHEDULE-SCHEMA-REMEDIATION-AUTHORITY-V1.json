@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_source_poll_schedule_schema_remediation_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-POLL-SCHEDULE-SCHEMA-REMEDIATION-AUTHORITY-V1",
-  "status": "READY_NOT_AUTHORIZED",
+  "status": "MATERIALIZED_SETTLED_UNARMED",
   "subject_predecessor_sha": "6cb65b7091886994d4c5854b2a064021ec2d8f6b",
   "purpose": "Forward-only materialization of already-qualified KBS/soil poll schedule plus durable GFS retry target/throttle/attempt-budget columns on the exact production operational database.",
   "target": {
@@ -78,6 +78,34 @@
     "partial": "FAIL_CLOSED",
     "ready_unarmed": "READY_NOT_AUTHORIZED",
     "ready_armed": "AUTHORIZED"
+  },
+  "materialization_evidence": {
+    "applied_subject_sha": "d3da67cf19baa8a6ebff69171d0b00c9e2fe018e",
+    "applied_workflow_run_id": 33614379928,
+    "applied_workflow_run_attempt": 1,
+    "applied_artifact_id": 9840323496,
+    "applied_artifact_digest": "sha256:fab6b292ff0111a0828595a31c41abfea4b466ce4586746f38af5fdd87f6ecf4",
+    "applied_status": "PASS_REMEDIATION_APPLIED",
+    "table_count_before": 41,
+    "table_count_after": 41,
+    "lease_row_count_before": 0,
+    "lease_row_count_after": 0,
+    "settled_subject_sha": "5ed1ff5340507bb6d722810a64132b5e1a7966e0",
+    "settled_workflow_run_id": 33614716061,
+    "settled_workflow_run_attempt": 1,
+    "settled_artifact_id": 9840477002,
+    "settled_artifact_digest": "sha256:ede696ca1dda5a014ba20819e9049cc46966678abdcffa3c89204d8ee7a4904d",
+    "settled_preflight_status": "PASS_ALREADY_MATERIALIZED",
+    "settled_runner_status": "SKIPPED_NOT_ARMED",
+    "current_production_schema_materialized": true,
+    "current_arm_observed": false,
+    "current_authorization_observed": false,
+    "settlement_database_mutation": false,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false
   },
   "non_effects": {
     "current_production_database_mutation": false,

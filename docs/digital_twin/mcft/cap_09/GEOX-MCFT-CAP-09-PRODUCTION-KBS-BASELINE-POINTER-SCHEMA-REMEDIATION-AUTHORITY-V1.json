@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_kbs_baseline_pointer_schema_remediation_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-KBS-BASELINE-POINTER-SCHEMA-REMEDIATION-AUTHORITY-V1",
-  "status": "READY_NOT_AUTHORIZED",
+  "status": "MATERIALIZED_SETTLED_UNARMED",
   "subject_predecessor_sha": "3da9aacaffacd8ff90dfb55468b68d2190bdf7dd",
   "purpose": "Forward-only materialization of the already-qualified KBS publication baseline pointer columns on the exact production operational database.",
   "target": {
@@ -68,6 +68,34 @@
     "partial": "FAIL_CLOSED",
     "ready_unarmed": "READY_NOT_AUTHORIZED",
     "ready_armed": "AUTHORIZED"
+  },
+  "materialization_evidence": {
+    "applied_subject_sha": "d3da67cf19baa8a6ebff69171d0b00c9e2fe018e",
+    "applied_workflow_run_id": 33614379767,
+    "applied_workflow_run_attempt": 1,
+    "applied_artifact_id": 9840345035,
+    "applied_artifact_digest": "sha256:6b401e49fdf09fcf06f93df44a797debfaea18577f6fb2306fc288a798153376",
+    "applied_status": "PASS_REMEDIATION_APPLIED",
+    "table_count_before": 41,
+    "table_count_after": 41,
+    "lease_row_count_before": 0,
+    "lease_row_count_after": 0,
+    "settled_subject_sha": "5ed1ff5340507bb6d722810a64132b5e1a7966e0",
+    "settled_workflow_run_id": 33614715938,
+    "settled_workflow_run_attempt": 1,
+    "settled_artifact_id": 9840466228,
+    "settled_artifact_digest": "sha256:ad8dfdc94d51b513ccc04c01582d57ce1e27f170b959c6bd26393495606a40ad",
+    "settled_preflight_status": "PASS_ALREADY_MATERIALIZED",
+    "settled_runner_status": "SKIPPED_NOT_ARMED",
+    "current_production_schema_materialized": true,
+    "current_arm_observed": false,
+    "current_authorization_observed": false,
+    "settlement_database_mutation": false,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false
   },
   "non_effects": {
     "current_production_database_mutation": false,

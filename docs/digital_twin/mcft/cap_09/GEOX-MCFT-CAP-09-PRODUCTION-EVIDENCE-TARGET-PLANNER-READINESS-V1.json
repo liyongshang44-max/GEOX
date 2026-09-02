@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_target_planner_readiness_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1",
-  "status": "PRODUCTION_PLANNER_DEPENDENCY_ASSEMBLY_IMPLEMENTED_ENTRYPOINT_STILL_UNBOUND",
+  "status": "PRODUCTION_SCHEMA_MATERIALIZED_PLANNER_DEPENDENCY_ASSEMBLY_IMPLEMENTED_ENTRYPOINT_STILL_UNBOUND",
   "stage": "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START",
   "subject_predecessor_sha": "9e291eb52b97c9f3f7dd24c3208d8bfc7b357f31",
   "host_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
@@ -25,8 +25,8 @@
       "publication_mode": "DAILY_BATCH_OF_HOURLY_EVENTS",
       "required_planning_semantics": "ONE_RETAINED_PROVIDER_BATCH_MAY_ADVANCE_MULTIPLE_EXACT_HOURLY_EVENTS",
       "current_product_shape": "COMPLETE_TABLE_FETCH_PLUS_EXACT_INTERVAL_DECODERS_WITH_MULTI_INTERVAL_REUSE",
-      "current_shape_bindable": false,
-      "reason": "COMPLETE_TABLE_PUBLICATION_CYCLE_AND_PURE_PLANNER_WIRING_IMPLEMENTED_PRODUCTION_POINTER_SCHEMA_AND_EXPLICIT_DUE_AUTHORITY_REMAIN_UNBOUND",
+      "current_shape_bindable": true,
+      "reason": "COMPLETE_TABLE_PUBLICATION_CYCLE_PURE_PLANNER_WIRING_PRODUCTION_POINTER_SCHEMA_AND_EXPLICIT_DUE_AUTHORITY_ESTABLISHED_COMPILED_ENTRYPOINT_REMAINS_UNBOUND",
       "required_foundation": [
         "BATCH_WATERMARK_DISCOVERY_OR_EQUIVALENT_DUE_STATE",
         "SINGLE_FETCH_MULTI_INTERVAL_RETAIN_DECODE_CANONICALIZE",
@@ -51,7 +51,7 @@
       "fenced_baseline_pointer_compare_and_set_implemented": true,
       "baseline_pointer_preserves_writer_identity_across_takeover": true,
       "baseline_pointer_restart_readback_implemented": true,
-      "production_baseline_pointer_schema_materialized": false,
+      "production_baseline_pointer_schema_materialized": true,
       "production_durable_baseline_available": false,
       "production_baseline_pointer_schema_remediation_capability_implemented": true,
       "production_baseline_pointer_schema_remediation_authorized": false,
@@ -79,8 +79,8 @@
       "cursor_partition": "BINDING_ID_PLUS_CYCLE_SPECIFIC_ORIGIN_SOURCE_ID",
       "required_planning_semantics": "PROVIDER_CYCLE_PROGRESS_PLUS_APPEND_ONLY_CANONICAL_HOURLY_TARGET_PAIR_HISTORY",
       "current_read_port_shape": "CURSOR_CYCLE_PROGRESS_PLUS_CANONICAL_FACT_TARGET_HISTORY",
-      "current_shape_bindable": false,
-      "reason": "GFS_TARGET_DUE_RETRY_REHYDRATION_SINGLE_HOST_EXECUTION_PROVIDER_FENCE_AND_CANONICAL_HOURLY_TARGET_HISTORY_ARE_IMPLEMENTED_PRODUCTION_SCHEMAS_AND_ACTIVE_TARGET_INSTANCE_REMAIN_UNBOUND",
+      "current_shape_bindable": true,
+      "reason": "GFS_TARGET_DUE_RETRY_REHYDRATION_SINGLE_HOST_EXECUTION_PROVIDER_FENCE_CANONICAL_HOURLY_TARGET_HISTORY_AND_PRODUCTION_RETRY_SCHEMA_ARE_ESTABLISHED_ACTIVE_TARGET_INSTANCE_REMAINS_SEPARATELY_RUNTIME_START_BOUND",
       "required_foundation": [
         "CROSS_CYCLE_GFS_PROGRESS_READ_PORT",
         "WEATHER_ET0_PAIR_SKEW_FAIL_CLOSED",
@@ -135,7 +135,7 @@
     "kbs_soil": {
       "publication_mode": "IRREGULAR_PROVIDER_DEFINED_EVENT",
       "required_planning_semantics": "INDEPENDENT_DUE_POLICY_NOT_FORCED_TO_HOURLY_OR_GFS_CADENCE",
-      "current_shape_bindable": false,
+      "current_shape_bindable": true,
       "required_foundation": [
         "EXPLICIT_SOIL_POLL_DUE_POLICY",
         "LATEST_OBSERVED_EVENT_PROGRESS_READ",
@@ -160,7 +160,7 @@
     "long_running_not_due_semantics": "NON_TERMINAL_WAIT_WITHOUT_CYCLE_DATABASE_OR_PROVIDER_EXECUTION",
     "not_due_wait_implemented": true,
     "not_due_wait_reason": "PLANNER_NOT_DUE",
-    "production_planner_still_bindable": false,
+    "production_planner_still_bindable": true,
     "heterogeneous_source_plan_execution_seam_implemented": true,
     "kbs_publication_cycle_can_share_single_host_lifecycle": true,
     "second_evidence_host_authorized": false,
@@ -194,14 +194,9 @@
     "kbs_first_emission_requires_post_baseline_forward_event_delta": true
   },
   "unconditional_blockers": [
-    "PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_NOT_MATERIALIZED",
-    "KBS_RAW_HOURLY_PRODUCTION_BASELINE_POINTER_SCHEMA_NOT_MATERIALIZED",
     "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"
   ],
   "implementation_order": [
-    "AUTHORIZE_AND_MATERIALIZE_PRODUCTION_SOURCE_POLL_SCHEDULE_SCHEMA",
-    "AUTHORIZE_AND_MATERIALIZE_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA",
-    "PROVE_RESTART_PAIR_SKEW_BATCH_REUSE_GFS_RETRY_THROTTLE_AND_ZERO_DUE_PROVIDER_REQUEST",
     "BIND_COMPILED_ENTRYPOINT_UNDER_SEPARATE_RUNTIME_START_AUTHORITY"
   ],
   "implemented_foundation": [
@@ -359,7 +354,7 @@
   "kbs_publication_cycle_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1.ts",
   "gfs_fact_replay_provenance_reader_ref": "apps/server/src/persistence/external_evidence/postgres_external_evidence_fact_replay_provenance_v1.ts",
   "gfs_fact_replay_provenance_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_V1.ts",
-  "current_frontier": "PRODUCTION_SCHEMA_MATERIALIZATION_AND_RUNTIME_START_ENTRYPOINT_BINDING",
+  "current_frontier": "PRODUCTION_EVIDENCE_COMPILED_ENTRYPOINT_BINDING",
   "gfs_partial_pair_rehydration_adapter_ref": "apps/server/src/external_evidence/mcft_cap09_gfs_partial_pair_rehydration_v1.ts",
   "gfs_partial_pair_rehydration_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_PARTIAL_PAIR_REHYDRATION_V1.ts",
   "source_due_policy_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1.json",
@@ -368,7 +363,30 @@
   "source_poll_schedule_migration_ref": "apps/server/db/migrations/2026_09_01_mcft_cap_09_evidence_source_poll_schedule.sql",
   "source_due_policy_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_DUE_POLICY_V1.ts",
   "source_poll_schedule_postgres_acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EVIDENCE_SOURCE_POLL_SCHEDULE_POSTGRES_V1.ts",
-  "production_source_poll_schedule_schema_materialized": false,
+  "production_source_poll_schedule_schema_materialized": true,
+  "production_schema_materialization_evidence": {
+    "source_poll_schedule_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-POLL-SCHEDULE-SCHEMA-REMEDIATION-AUTHORITY-V1.json",
+    "source_poll_schedule_applied_subject_sha": "d3da67cf19baa8a6ebff69171d0b00c9e2fe018e",
+    "source_poll_schedule_applied_workflow_run_id": 33614379928,
+    "source_poll_schedule_settled_subject_sha": "5ed1ff5340507bb6d722810a64132b5e1a7966e0",
+    "source_poll_schedule_settled_workflow_run_id": 33614716061,
+    "source_poll_schedule_settled_preflight_status": "PASS_ALREADY_MATERIALIZED",
+    "source_poll_schedule_settled_runner_status": "SKIPPED_NOT_ARMED",
+    "kbs_baseline_pointer_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-KBS-BASELINE-POINTER-SCHEMA-REMEDIATION-AUTHORITY-V1.json",
+    "kbs_baseline_pointer_applied_subject_sha": "d3da67cf19baa8a6ebff69171d0b00c9e2fe018e",
+    "kbs_baseline_pointer_applied_workflow_run_id": 33614379767,
+    "kbs_baseline_pointer_settled_subject_sha": "5ed1ff5340507bb6d722810a64132b5e1a7966e0",
+    "kbs_baseline_pointer_settled_workflow_run_id": 33614715938,
+    "kbs_baseline_pointer_settled_preflight_status": "PASS_ALREADY_MATERIALIZED",
+    "kbs_baseline_pointer_settled_runner_status": "SKIPPED_NOT_ARMED",
+    "table_count": 41,
+    "lease_row_count": 0,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false
+  },
   "source_poll_schedule_schema_remediation_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-POLL-SCHEDULE-SCHEMA-REMEDIATION-AUTHORITY-V1.json",
   "source_poll_schedule_schema_remediation_arm_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_ARM_V1.json",
   "source_poll_schedule_schema_remediation_workflow_ref": ".github/workflows/mcft-cap-09-production-evidence-source-poll-schedule-schema-remediation.yml",

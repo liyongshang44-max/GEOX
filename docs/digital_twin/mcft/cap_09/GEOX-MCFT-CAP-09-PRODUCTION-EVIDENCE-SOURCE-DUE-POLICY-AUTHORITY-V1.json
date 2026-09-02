@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_production_evidence_source_due_policy_authority_v1",
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1",
-  "status": "ESTABLISHED_NOT_BOUND",
+  "status": "ESTABLISHED_SCHEMA_MATERIALIZED_NOT_BOUND",
   "subject_predecessor_sha": "1b0954fcbbe359cc94d542db753dab2ffb86e260",
   "authority_basis": {
     "master_task_line_ref": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE-V2.md",
@@ -45,7 +45,9 @@
     "migration_ref": "apps/server/db/migrations/2026_09_01_mcft_cap_09_evidence_source_poll_schedule.sql",
     "storage_surface": "EXISTING_EXTERNAL_EVIDENCE_PRODUCER_LEASE_ROW",
     "new_table_count": 0,
-    "current_production_schema_materialized": false
+    "current_production_schema_materialized": true,
+    "materialization_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-POLL-SCHEDULE-SCHEMA-REMEDIATION-AUTHORITY-V1.json",
+    "materialization_settled_subject_sha": "5ed1ff5340507bb6d722810a64132b5e1a7966e0"
   },
   "binding": {
     "production_due_state_materializer_implemented": true,

@@ -27,7 +27,7 @@ try {
   assert.match(subject, /^[0-9a-f]{40}$/, "EVIDENCE_TARGET_PLANNER_READINESS_SUBJECT_REQUIRED");
 
   assert.equal(authority.schema_version, "geox_mcft_cap09_production_evidence_target_planner_readiness_v1");
-  assert.equal(authority.status, "PRODUCTION_PLANNER_DEPENDENCY_ASSEMBLY_IMPLEMENTED_ENTRYPOINT_STILL_UNBOUND");
+  assert.equal(authority.status, "PRODUCTION_SCHEMA_MATERIALIZED_PLANNER_DEPENDENCY_ASSEMBLY_IMPLEMENTED_ENTRYPOINT_STILL_UNBOUND");
   assert.equal(authority.stage, "POST_LOCAL_STATIC_MACHINE_ADMISSION_PRE_RUNTIME_START");
   assert.equal(authority.subject_predecessor_sha, "9e291eb52b97c9f3f7dd24c3208d8bfc7b357f31");
   cp.execFileSync("git", ["merge-base", "--is-ancestor", authority.subject_predecessor_sha, subject]);
@@ -61,7 +61,7 @@ try {
   assert.equal(authority.source_specific_requirements.gfs_bundle.provider_fence_after_lease_exact_target_recheck, true);
 
   const gfsTargetDueReadiness = json(authority.gfs_target_due_readiness_ref);
-  assert.equal(gfsTargetDueReadiness.status, "ESTABLISHED_FENCE_BOUND_SCHEMA_NOT_MATERIALIZED_NO_ACTIVE_INSTANCE");
+  assert.equal(gfsTargetDueReadiness.status, "ESTABLISHED_FENCE_BOUND_SCHEMA_MATERIALIZED_NO_ACTIVE_INSTANCE");
   assert.equal(gfsTargetDueReadiness.target_progression.first_target_rule, "TARGET_EQUALS_FORMAL_A0");
   assert.equal(gfsTargetDueReadiness.target_progression.provider_creates_target_logical_time, false);
   assert.equal(gfsTargetDueReadiness.target_progression.durable_target_pair_history_source, "APPEND_ONLY_CANONICAL_EXTERNAL_EVIDENCE_FACT_PAIRS");
@@ -79,7 +79,8 @@ try {
   assert.equal(gfsTargetDueReadiness.implementation_readiness.durable_gfs_attempt_budget_implemented, true);
   assert.equal(gfsTargetDueReadiness.durable_retry_state.per_target_attempt_budget, 3);
   assert.equal(gfsTargetDueReadiness.durable_retry_state.retry_minimum_interval_seconds, 60);
-  assert.equal(gfsTargetDueReadiness.durable_retry_state.current_production_schema_materialized, false);
+  assert.equal(gfsTargetDueReadiness.durable_retry_state.current_production_schema_materialized, true);
+  assert.deepEqual(gfsTargetDueReadiness.blockers, ["ACTIVE_RUNTIME_START_AUTHORITY_NOT_BOUND"]);
   const gfsRetryRepo = read(authority.gfs_retry_schedule_repository_ref);
   includes(gfsRetryRepo, "claimGfsAttemptBeforeProviderFetch", "GFS_RETRY_FENCED_CLAIM_REQUIRED");
   includes(gfsRetryRepo, "GFS_RETRY_STALE_FENCE", "GFS_RETRY_STALE_FENCE_REQUIRED");
@@ -158,13 +159,35 @@ try {
   assert.equal(kbsBaselinePointerMigration.includes("CREATE TABLE"), false, "KBS_BASELINE_POINTER_NEW_TABLE_FORBIDDEN");
 
   const kbsProductionPointerRemediationAuthority = json(authority.kbs_production_baseline_pointer_schema_remediation_authority_ref);
-  assert.equal(kbsProductionPointerRemediationAuthority.status, "READY_NOT_AUTHORIZED");
+  assert.equal(kbsProductionPointerRemediationAuthority.status, "MATERIALIZED_SETTLED_UNARMED");
   assert.equal(kbsProductionPointerRemediationAuthority.target.database_name, "geox_mcft_cap09_production_runtime_v1");
   assert.equal(kbsProductionPointerRemediationAuthority.target.expected_table_count, 41);
   assert.equal(kbsProductionPointerRemediationAuthority.target.new_table_count_authorized, 0);
   assert.equal(kbsProductionPointerRemediationAuthority.authorization.production_kbs_baseline_pointer_schema_remediation_authorized, false);
   assert.equal(kbsProductionPointerRemediationAuthority.authorization.runtime_process_start_authorized, false);
   assert.equal(kbsProductionPointerRemediationAuthority.migration_ref, authority.kbs_publication_baseline_pointer_migration_ref);
+  assert.deepEqual(
+    [
+      kbsProductionPointerRemediationAuthority.materialization_evidence.applied_subject_sha,
+      kbsProductionPointerRemediationAuthority.materialization_evidence.applied_workflow_run_id,
+      kbsProductionPointerRemediationAuthority.materialization_evidence.applied_status,
+      kbsProductionPointerRemediationAuthority.materialization_evidence.settled_subject_sha,
+      kbsProductionPointerRemediationAuthority.materialization_evidence.settled_workflow_run_id,
+      kbsProductionPointerRemediationAuthority.materialization_evidence.settled_preflight_status,
+      kbsProductionPointerRemediationAuthority.materialization_evidence.settled_runner_status,
+      kbsProductionPointerRemediationAuthority.materialization_evidence.current_production_schema_materialized,
+    ],
+    [
+      "d3da67cf19baa8a6ebff69171d0b00c9e2fe018e",
+      33614379767,
+      "PASS_REMEDIATION_APPLIED",
+      "5ed1ff5340507bb6d722810a64132b5e1a7966e0",
+      33614715938,
+      "PASS_ALREADY_MATERIALIZED",
+      "SKIPPED_NOT_ARMED",
+      true,
+    ],
+  );
   const kbsProductionPointerArm = json(authority.kbs_production_baseline_pointer_schema_remediation_arm_ref);
   assert.equal(kbsProductionPointerArm.armed, false);
   assert.equal(kbsProductionPointerArm.exact_target_database_name, null);
@@ -174,13 +197,35 @@ try {
   includes(kbsProductionPointerWorkflow, "Apply pointer schema only when separately armed", "KBS_POINTER_PRODUCTION_SEPARATE_ARM_REQUIRED");
 
   const sourcePollRemediationAuthority = json(authority.source_poll_schedule_schema_remediation_authority_ref);
-  assert.equal(sourcePollRemediationAuthority.status, "READY_NOT_AUTHORIZED");
+  assert.equal(sourcePollRemediationAuthority.status, "MATERIALIZED_SETTLED_UNARMED");
   assert.equal(sourcePollRemediationAuthority.target.database_name, "geox_mcft_cap09_production_runtime_v1");
   assert.equal(sourcePollRemediationAuthority.target.expected_table_count, 41);
   assert.equal(sourcePollRemediationAuthority.target.new_table_count_authorized, 0);
   assert.equal(sourcePollRemediationAuthority.authorization.production_evidence_source_poll_schedule_schema_remediation_authorized, false);
   assert.equal(sourcePollRemediationAuthority.authorization.runtime_process_start_authorized, false);
   assert.equal(sourcePollRemediationAuthority.migration_ref, authority.source_poll_schedule_migration_ref);
+  assert.deepEqual(
+    [
+      sourcePollRemediationAuthority.materialization_evidence.applied_subject_sha,
+      sourcePollRemediationAuthority.materialization_evidence.applied_workflow_run_id,
+      sourcePollRemediationAuthority.materialization_evidence.applied_status,
+      sourcePollRemediationAuthority.materialization_evidence.settled_subject_sha,
+      sourcePollRemediationAuthority.materialization_evidence.settled_workflow_run_id,
+      sourcePollRemediationAuthority.materialization_evidence.settled_preflight_status,
+      sourcePollRemediationAuthority.materialization_evidence.settled_runner_status,
+      sourcePollRemediationAuthority.materialization_evidence.current_production_schema_materialized,
+    ],
+    [
+      "d3da67cf19baa8a6ebff69171d0b00c9e2fe018e",
+      33614379928,
+      "PASS_REMEDIATION_APPLIED",
+      "5ed1ff5340507bb6d722810a64132b5e1a7966e0",
+      33614716061,
+      "PASS_ALREADY_MATERIALIZED",
+      "SKIPPED_NOT_ARMED",
+      true,
+    ],
+  );
   const sourcePollRemediationArm = json(authority.source_poll_schedule_schema_remediation_arm_ref);
   assert.equal(sourcePollRemediationArm.armed, false);
   assert.equal(sourcePollRemediationArm.exact_target_database_name, null);
@@ -244,6 +289,13 @@ try {
   includes(duePolicy, '"minimum_poll_interval_seconds": 900', "KBS_RAW_DUE_INTERVAL_REQUIRED");
   includes(duePolicy, '"minimum_poll_interval_seconds": 300', "KBS_SOIL_DUE_INTERVAL_REQUIRED");
   includes(duePolicy, '"provider_observed_cadence_is_due_authority": false', "OBSERVED_CADENCE_AUTHORITY_FORBIDDEN");
+  const duePolicyAuthority = json(authority.source_due_policy_authority_ref);
+  assert.equal(duePolicyAuthority.status, "ESTABLISHED_SCHEMA_MATERIALIZED_NOT_BOUND");
+  assert.equal(duePolicyAuthority.durable_state.current_production_schema_materialized, true);
+  assert.equal(
+    duePolicyAuthority.durable_state.materialization_settled_subject_sha,
+    "5ed1ff5340507bb6d722810a64132b5e1a7966e0",
+  );
   const duePolicyRuntime = read("apps/server/src/external_evidence/mcft_cap09_production_evidence_source_due_policy_v1.ts");
   includes(duePolicyRuntime, "GEOX_OPERATIONAL_THROTTLE_NOT_PROVIDER_CADENCE", "DUE_POLICY_OPERATIONAL_SEMANTICS_REQUIRED");
   assert.equal(duePolicyRuntime.includes("Date.now"), false, "DUE_POLICY_WALL_CLOCK_FORBIDDEN");
@@ -349,11 +401,7 @@ try {
   const packager = read(authority.entrypoint_packager_ref);
   includes(packager, "MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND", "PRODUCTION_ENTRYPOINT_FAIL_CLOSED_REQUIRED");
 
-  assert.deepEqual(authority.unconditional_blockers, [
-    "PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_NOT_MATERIALIZED",
-    "KBS_RAW_HOURLY_PRODUCTION_BASELINE_POINTER_SCHEMA_NOT_MATERIALIZED",
-    "EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND",
-  ]);
+  assert.deepEqual(authority.unconditional_blockers, ["EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"]);
   assert.equal(authority.adjudication.phase5_fixture_manifest_may_be_production_planner, false);
   assert.equal(authority.adjudication.v13_forcing_controller_may_be_general_evidence_planner, false);
   assert.equal(authority.adjudication.wall_clock_floor_alone_may_select_all_source_targets, false);
@@ -388,7 +436,7 @@ try {
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.single_forward_hour_supported, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.planner_routes_due_work_to_publication_cycle_service, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.planner_cycle_service_binding_implemented, true);
-  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_baseline_pointer_schema_materialized, false);
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_baseline_pointer_schema_materialized, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.production_durable_baseline_available, false);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.explicit_due_policy_established, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.minimum_poll_interval_seconds, 900);
@@ -410,7 +458,7 @@ try {
   assert.equal(authority.source_specific_requirements.gfs_bundle.replay_source_locator_from_final_locator, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.exact_fact_replay_provenance_read_port_implemented, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.restored_ingested_at_replay_input_available, true);
-  assert.equal(authority.source_specific_requirements.gfs_bundle.current_shape_bindable, false);
+  assert.equal(authority.source_specific_requirements.gfs_bundle.current_shape_bindable, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.target_logical_time_authority_established, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.operational_due_retry_policy_established, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.active_target_instance_bound, false);
@@ -434,14 +482,31 @@ try {
   assert.equal(authority.source_specific_requirements.kbs_soil.minimum_poll_interval_seconds, 300);
   assert.equal(authority.source_specific_requirements.kbs_soil.durable_poll_schedule_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_soil.fenced_poll_claim_before_provider_attempt_implemented, true);
-  assert.equal(authority.production_source_poll_schedule_schema_materialized, false);
+  assert.equal(authority.production_source_poll_schedule_schema_materialized, true);
+  assert.deepEqual(
+    [
+      authority.production_schema_materialization_evidence.source_poll_schedule_applied_workflow_run_id,
+      authority.production_schema_materialization_evidence.source_poll_schedule_settled_workflow_run_id,
+      authority.production_schema_materialization_evidence.source_poll_schedule_settled_preflight_status,
+      authority.production_schema_materialization_evidence.source_poll_schedule_settled_runner_status,
+      authority.production_schema_materialization_evidence.kbs_baseline_pointer_applied_workflow_run_id,
+      authority.production_schema_materialization_evidence.kbs_baseline_pointer_settled_workflow_run_id,
+      authority.production_schema_materialization_evidence.kbs_baseline_pointer_settled_preflight_status,
+      authority.production_schema_materialization_evidence.kbs_baseline_pointer_settled_runner_status,
+      authority.production_schema_materialization_evidence.table_count,
+      authority.production_schema_materialization_evidence.lease_row_count,
+    ],
+    [33614379928, 33614716061, "PASS_ALREADY_MATERIALIZED", "SKIPPED_NOT_ARMED", 33614379767, 33614715938, "PASS_ALREADY_MATERIALIZED", "SKIPPED_NOT_ARMED", 41, 0],
+  );
+  assert.equal(authority.source_specific_requirements.kbs_raw_hourly.current_shape_bindable, true);
+  assert.equal(authority.source_specific_requirements.kbs_soil.current_shape_bindable, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.single_fetch_multi_interval_path_implemented, true);
   assert.equal(authority.source_specific_requirements.kbs_raw_hourly.single_private_retention_per_batch_implemented, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.cross_cycle_progress_read_port_implemented, true);
   assert.equal(authority.source_specific_requirements.gfs_bundle.weather_et0_pair_skew_fail_closed, true);
   assert.equal(authority.source_specific_requirements.kbs_soil.latest_observed_event_progress_read_implemented, true);
   assert.equal(authority.host_lifecycle_gap.not_due_wait_implemented, true);
-  assert.equal(authority.host_lifecycle_gap.production_planner_still_bindable, false);
+  assert.equal(authority.host_lifecycle_gap.production_planner_still_bindable, true);
   assert.equal(authority.host_lifecycle_gap.heterogeneous_source_plan_execution_seam_implemented, true);
   assert.equal(authority.host_lifecycle_gap.kbs_publication_cycle_can_share_single_host_lifecycle, true);
   assert.equal(authority.host_lifecycle_gap.gfs_partial_rehydration_can_share_single_host_lifecycle, true);
@@ -477,6 +542,8 @@ try {
     kbs_historical_prefix_snapshot_comparison_implemented: true,
     production_kbs_baseline_pointer_schema_remediation_capability_implemented: true,
     production_kbs_baseline_pointer_schema_remediation_authorized: false,
+    production_kbs_baseline_pointer_schema_materialized: true,
+    production_source_poll_schedule_schema_materialized: true,
     kbs_fenced_baseline_pointer_implemented_isolated: true,
     kbs_content_addressed_baseline_manifest_store_implemented: true,
     kbs_forward_delta_no_change_discovery_implemented: true,
