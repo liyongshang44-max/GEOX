@@ -19,6 +19,10 @@ import type {
 import type {
   TwinRuntimeSuccessorViabilityPortV1,
 } from "./postgres_twin_runtime_successor_viability_v1.js";
+import type {
+  TwinRuntimeSchedulerOwnershipLeaseClaimV1,
+  TwinRuntimeSchedulerOwnershipPortV1,
+} from "./postgres_persistent_sequential_scheduler_adapter_v1.js";
 
 export const MCFT_CAP09_TWIN_RUNTIME_HOST_ID_V1 =
   "MCFT_CAP09_TWIN_RUNTIME_HOST_V1" as const;
@@ -41,6 +45,10 @@ export const MCFT_CAP09_TWIN_RUNTIME_HOST_CONTRACT_V1 = {
     "twin_shadow_online_scheduler_slot_v1",
   scheduler_lease:
     "twin_runtime_lease_v1",
+  scheduler_owner_presence:
+    "PROCESS_MUST_HOLD_CURRENT_TWIN_RUNTIME_SCHEDULER_LEASE_BEFORE_DUE_SLOT_ATTEMPT",
+  duplicate_process_policy:
+    "NON_OWNER_INSTANCE_STANDBY_NO_CANONICAL_RUNNER_CALL",
   clock_authority: "POSTGRES_TRANSACTION_TIMESTAMP",
   missed_slot_order: "OLDEST_ELIGIBLE_FIRST",
   successor_viability:
@@ -80,6 +88,7 @@ export interface TwinRuntimeHostWaitPortV1 {
       | "NO_DUE_SLOT"
       | "EVIDENCE_OR_CONFIG_NOT_READY"
       | "TERMINAL_SLOT"
+      | "SCHEDULER_LEASE_STANDBY"
       | "RETRY_BACKOFF";
     cycle_attempt: number;
     consecutive_failure_count: number;
@@ -108,6 +117,7 @@ export type TwinRuntimeHostHealthEventV1 = {
     | "NO_DUE_SLOT"
     | "NOT_READY_PRECLAIM"
     | "TERMINAL_SLOT_RECORDED"
+    | "SCHEDULER_LEASE_STANDBY"
     | "RETRYABLE_CYCLE_FAILURE"
     | "FATAL_CYCLE_FAILURE"
     | "STOP_REQUESTED";
@@ -131,6 +141,7 @@ export type RunTwinRuntimeHostResultV1 = {
   no_due_slot_count: number;
   preclaim_backpressure_count: number;
   retryable_failure_count: number;
+  scheduler_lease_standby_count: number;
   last_cycle_result: ExecuteExternalFormalV3Am19RunnerResultV1 | null;
   durable_restart_authority: "RUNTIME_TICK_CURSOR_AND_CANONICAL_CHECKPOINT";
   provider_request_count: 0;
@@ -199,6 +210,7 @@ export class TwinRuntimeHostV1 {
 
   constructor(private readonly deps: {
     database_clock: TwinRuntimeDatabaseClockPortV1;
+    scheduler_ownership: TwinRuntimeSchedulerOwnershipPortV1;
     one_due_slot: Pick<ExternalFormalV3Amendment19RunnerV1, "executeOneDueSlot">
       | TwinRuntimeOneDueSlotPortV1;
     successor_viability: TwinRuntimeSuccessorViabilityPortV1;
@@ -230,8 +242,10 @@ export class TwinRuntimeHostV1 {
     let noDueSlotCount = 0;
     let preclaimBackpressureCount = 0;
     let retryableFailureCount = 0;
+    let schedulerLeaseStandbyCount = 0;
     let consecutiveFailures = 0;
-    let lastCycleResult: ExecuteExternalFormalV3Am19RunnerResultV1 | null = null;
+    let lastCycleResult: ExecuteExternalFormalV3Amendment19RunnerResultV1 | null = null;
+    let currentOwnershipClaim: TwinRuntimeSchedulerOwnershipLeaseClaimV1 | null = null;
 
     await this.healthV1({
       status: "STARTING",
@@ -244,6 +258,7 @@ export class TwinRuntimeHostV1 {
       detail: "HOST_START",
     });
 
+    try {
     while (true) {
       if (this.deps.stop.stopRequested()) {
         await this.healthV1({
@@ -265,6 +280,7 @@ export class TwinRuntimeHostV1 {
           no_due_slot_count: noDueSlotCount,
           preclaim_backpressure_count: preclaimBackpressureCount,
           retryable_failure_count: retryableFailureCount,
+          scheduler_lease_standby_count: schedulerLeaseStandbyCount,
           last_cycle_result: lastCycleResult,
           durable_restart_authority:
             "RUNTIME_TICK_CURSOR_AND_CANONICAL_CHECKPOINT",
@@ -276,6 +292,33 @@ export class TwinRuntimeHostV1 {
 
       cycleAttempt += 1;
       try {
+        const ownershipClaim =
+          await this.deps.scheduler_ownership.acquireOrRenewOwnershipLease({
+            lease_owner: leaseOwner,
+            lease_duration_seconds: leaseDurationSeconds,
+          });
+        if (!ownershipClaim) {
+          schedulerLeaseStandbyCount += 1;
+          consecutiveFailures = 0;
+          await this.healthV1({
+            status: "BACKPRESSURE",
+            cycle_attempt: cycleAttempt,
+            terminal_slot_count: terminalSlotCount,
+            no_due_slot_count: noDueSlotCount,
+            preclaim_backpressure_count: preclaimBackpressureCount,
+            retryable_failure_count: retryableFailureCount,
+            consecutive_failure_count: consecutiveFailures,
+            detail: "SCHEDULER_LEASE_STANDBY",
+          });
+          await this.deps.wait.waitAfterAttempt({
+            reason: "SCHEDULER_LEASE_STANDBY",
+            cycle_attempt: cycleAttempt,
+            consecutive_failure_count: consecutiveFailures,
+          });
+          continue;
+        }
+        currentOwnershipClaim = ownershipClaim;
+
         const clock = await this.deps.database_clock.readDatabaseNow();
         const result = await this.deps.one_due_slot.executeOneDueSlot({
           through_logical_time: clock.observed_at,
@@ -406,6 +449,13 @@ export class TwinRuntimeHostV1 {
           reason: "RETRY_BACKOFF",
           cycle_attempt: cycleAttempt,
           consecutive_failure_count: consecutiveFailures,
+        });
+      }
+    }
+    } finally {
+      if (currentOwnershipClaim) {
+        await this.deps.scheduler_ownership.releaseOwnershipLease({
+          claim: currentOwnershipClaim,
         });
       }
     }
