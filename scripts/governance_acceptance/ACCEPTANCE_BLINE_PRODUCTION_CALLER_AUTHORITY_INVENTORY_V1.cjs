@@ -1692,7 +1692,7 @@ const runtimeSecurity = read(path.join(ROOT,"apps/server/src/runtime/runtime_sec
 const cap07Bootstrap = read(path.join(ROOT,"apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts"));
 
 function covComposeServiceBlock(service) {
-  const escaped = service.replace(/[.*+?^()|[\]{}\\-]/g, "\\const covZeroSets = {");
+  const escaped = service.replaceAll("-", "\\-");
   return compose.match(new RegExp("\\n  "+escaped+":[\\s\\S]*?(?=\\n  [A-Za-z0-9_-]+:|$)"))?.[0] ?? "";
 }
 for (const service of ["server","jobs","executor","telemetry-ingest"]) {
