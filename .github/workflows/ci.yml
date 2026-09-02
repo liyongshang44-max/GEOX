@@ -214,6 +214,38 @@ jobs:
           export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
           pnpm run ci:runtime:bline-operator-dispatch-intent
 
+      - name: B-Line Sampling exact-source runtime
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export API_BASE_URL=http://127.0.0.1:3001
+          export SAMPLING_API_BASE_URL=http://127.0.0.1:3001
+          export GEOX_ACCEPTANCE_TOKEN="$GEOX_AO_ACT_TOKEN"
+          export ADMIN_TOKEN="$GEOX_AO_ACT_TOKEN"
+          export AO_ACT_TOKEN="$GEOX_AO_ACT_TOKEN"
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          pnpm run ci:scenario:sampling
+
+      - name: B-Line Fertilization exact Sampling consumer runtime
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export API_BASE_URL=http://127.0.0.1:3001
+          export FERTILIZATION_API_BASE_URL=http://127.0.0.1:3001
+          export GEOX_ACCEPTANCE_TOKEN="$GEOX_AO_ACT_TOKEN"
+          export ADMIN_TOKEN="$GEOX_AO_ACT_TOKEN"
+          export AO_ACT_TOKEN="$GEOX_AO_ACT_TOKEN"
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          node scripts/agronomy_acceptance/ACCEPTANCE_FERTILIZATION_API_LIVE_V1.cjs
+
       - name: Run PR18I formal-chain preflight gate
         timeout-minutes: 30
         run: |
