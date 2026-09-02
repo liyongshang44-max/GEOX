@@ -9151,7 +9151,9 @@
       "write_targets": [
         "worker_runtime_heartbeat_v1"
       ],
-      "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY"
+      "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY",
+      "tenant_binding_class": "NO_TENANT_SEMANTIC_SCOPE",
+      "tenant_binding_detail": "jobs process operational heartbeat row is process identity, not product tenant authority"
     },
     {
       "writer_id": "BRUNTIME-002",
@@ -9164,7 +9166,9 @@
       "write_targets": [
         "worker_runtime_heartbeat_v1"
       ],
-      "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY"
+      "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY",
+      "tenant_binding_class": "NO_TENANT_SEMANTIC_SCOPE",
+      "tenant_binding_detail": "jobs process operational heartbeat row is process identity, not product tenant authority"
     },
     {
       "writer_id": "BRUNTIME-003",
@@ -9177,7 +9181,9 @@
       "write_targets": [
         "worker_runtime_heartbeat_v1 via recordWorkerRuntimeHeartbeatV1"
       ],
-      "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY"
+      "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY",
+      "tenant_binding_class": "NO_TENANT_SEMANTIC_SCOPE",
+      "tenant_binding_detail": "jobs process operational heartbeat row is process identity, not product tenant authority"
     },
     {
       "writer_id": "BRUNTIME-004",
@@ -9190,7 +9196,9 @@
       "write_targets": [
         "worker_runtime_heartbeat_v1"
       ],
-      "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY"
+      "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY",
+      "tenant_binding_class": "SERVICE_CONFIG_SCOPED_WORKER",
+      "tenant_binding_detail": "executor runtime scope from GEOX_TENANT_ID/GEOX_PROJECT_ID/GEOX_GROUP_ID"
     },
     {
       "writer_id": "BRUNTIME-005",
@@ -9203,7 +9211,9 @@
       "write_targets": [
         "worker_runtime_heartbeat_v1"
       ],
-      "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY"
+      "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY",
+      "tenant_binding_class": "SERVICE_CONFIG_SCOPED_WORKER",
+      "tenant_binding_detail": "executor runtime scope from GEOX_TENANT_ID/GEOX_PROJECT_ID/GEOX_GROUP_ID"
     },
     {
       "writer_id": "BRUNTIME-006",
@@ -9216,7 +9226,9 @@
       "write_targets": [
         "worker_runtime_heartbeat_v1 via recordWorkerRuntimeHeartbeat"
       ],
-      "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY"
+      "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY",
+      "tenant_binding_class": "SERVICE_CONFIG_SCOPED_WORKER",
+      "tenant_binding_detail": "executor runtime scope from GEOX_TENANT_ID/GEOX_PROJECT_ID/GEOX_GROUP_ID"
     },
     {
       "writer_id": "BRUNTIME-007",
@@ -9230,7 +9242,9 @@
         "facts:recommendation_v1"
       ],
       "current_disposition": "KEEP_LEGACY_SIGNAL_ONLY_NO_DIRECT_DECISION_OR_PLAN_AUTHORITY",
-      "notes": "After #3452 this direct writer is limited to LEGACY_AGRONOMY_SIGNAL_ONLY recommendation_v1; still a production fact-ledger writer."
+      "notes": "After #3452 this direct writer is limited to LEGACY_AGRONOMY_SIGNAL_ONLY recommendation_v1; still a production fact-ledger writer.",
+      "tenant_binding_class": "GLOBAL_MULTI_TENANT_WORKER",
+      "tenant_binding_detail": "ROW_TENANT_DERIVED + CROSS_TENANT_ACTIVATION_FALLBACK; legacy signal only; no proven cross-tenant telemetry mixing"
     },
     {
       "writer_id": "BRUNTIME-008",
@@ -9245,7 +9259,9 @@
         "jobs.result"
       ],
       "current_disposition": "KEEP_BACKGROUND_JOB_STATE_WRITER_NO_NEW_SEMANTIC_AUTHORITY",
-      "notes": "Transitions queued evidence-report job state RUNNING→DONE around the already-governed report job."
+      "notes": "Transitions queued evidence-report job state RUNNING→DONE around the already-governed report job.",
+      "tenant_binding_class": "GLOBAL_MULTI_TENANT_WORKER",
+      "tenant_binding_detail": "ROW_TENANT_DERIVED from scanned job/rule/notification/assignment source rows"
     },
     {
       "writer_id": "BRUNTIME-009",
@@ -9260,7 +9276,9 @@
         "jobs.error"
       ],
       "current_disposition": "KEEP_BACKGROUND_JOB_STATE_WRITER_NO_NEW_SEMANTIC_AUTHORITY",
-      "notes": "Records FAILED/error state for evidence-report jobs."
+      "notes": "Records FAILED/error state for evidence-report jobs.",
+      "tenant_binding_class": "GLOBAL_MULTI_TENANT_WORKER",
+      "tenant_binding_detail": "ROW_TENANT_DERIVED from scanned job/rule/notification/assignment source rows"
     },
     {
       "writer_id": "BRUNTIME-010",
@@ -9275,7 +9293,9 @@
         "alert_event_index_v1"
       ],
       "current_disposition": "KEEP_ALERT_RUNTIME_AUTHORITY",
-      "notes": "Alert worker appends raised-event facts and inserts alert event projection rows."
+      "notes": "Alert worker appends raised-event facts and inserts alert event projection rows.",
+      "tenant_binding_class": "GLOBAL_MULTI_TENANT_WORKER",
+      "tenant_binding_detail": "ROW_TENANT_DERIVED from scanned job/rule/notification/assignment source rows"
     },
     {
       "writer_id": "BRUNTIME-011",
@@ -9290,7 +9310,9 @@
         "alert_notification_index_v1"
       ],
       "current_disposition": "KEEP_ALERT_NOTIFICATION_RUNTIME_AUTHORITY",
-      "notes": "Creates notification facts and pending notification index rows for a raised alert."
+      "notes": "Creates notification facts and pending notification index rows for a raised alert.",
+      "tenant_binding_class": "GLOBAL_MULTI_TENANT_WORKER",
+      "tenant_binding_detail": "ROW_TENANT_DERIVED from scanned job/rule/notification/assignment source rows"
     },
     {
       "writer_id": "BRUNTIME-012",
@@ -9305,7 +9327,9 @@
         "facts:alert_notification_dispatched_v1"
       ],
       "current_disposition": "KEEP_ALERT_NOTIFICATION_RUNTIME_AUTHORITY",
-      "notes": "Updates pending notification state and appends dispatch-result facts."
+      "notes": "Updates pending notification state and appends dispatch-result facts.",
+      "tenant_binding_class": "GLOBAL_MULTI_TENANT_WORKER",
+      "tenant_binding_detail": "ROW_TENANT_DERIVED from scanned job/rule/notification/assignment source rows"
     },
     {
       "writer_id": "BRUNTIME-013",
@@ -9322,7 +9346,9 @@
         "work_assignment_audit_v1 schema"
       ],
       "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
-      "notes": "Runtime worker path ensures human executor/work-assignment compatibility schema."
+      "notes": "Runtime worker path ensures human executor/work-assignment compatibility schema.",
+      "tenant_binding_class": "GLOBAL_MULTI_TENANT_WORKER",
+      "tenant_binding_detail": "ROW_TENANT_DERIVED from scanned job/rule/notification/assignment source rows"
     },
     {
       "writer_id": "BRUNTIME-014",
@@ -9336,7 +9362,9 @@
         "human_ops_kpi_v1 schema"
       ],
       "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
-      "notes": "Ensures KPI projection table/index."
+      "notes": "Ensures KPI projection table/index.",
+      "tenant_binding_class": "GLOBAL_MULTI_TENANT_WORKER",
+      "tenant_binding_detail": "ROW_TENANT_DERIVED from scanned job/rule/notification/assignment source rows"
     },
     {
       "writer_id": "BRUNTIME-015",
@@ -9350,7 +9378,9 @@
         "human_ops_kpi_v1"
       ],
       "current_disposition": "KEEP_REBUILDABLE_OPERATIONAL_PROJECTION",
-      "notes": "Refresh worker deletes/rebuilds human operations KPI projection from assignment/audit source state."
+      "notes": "Refresh worker deletes/rebuilds human operations KPI projection from assignment/audit source state.",
+      "tenant_binding_class": "GLOBAL_MULTI_TENANT_WORKER",
+      "tenant_binding_detail": "ROW_TENANT_DERIVED from scanned job/rule/notification/assignment source rows"
     },
     {
       "writer_id": "BRUNTIME-016",
@@ -9364,7 +9394,9 @@
         "device_observation_index_v1 schema"
       ],
       "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
-      "notes": "Ensures device observation projection schema before observation ingestion/refresh."
+      "notes": "Ensures device observation projection schema before observation ingestion/refresh.",
+      "tenant_binding_class": "GLOBAL_BOOTSTRAP",
+      "tenant_binding_detail": "schema compatibility writer; no tenant-row semantic authority"
     },
     {
       "writer_id": "BRUNTIME-017",
@@ -9379,7 +9411,9 @@
         "device_observation_index_v1"
       ],
       "current_disposition": "KEEP_OBSERVATION_INGRESS_WRITER_WITH_EXISTING_EVIDENCE_BOUNDARY",
-      "notes": "Appends device observation fact and updates its projection; no new caller authority is granted by this inventory."
+      "notes": "Appends device observation fact and updates its projection; no new caller authority is granted by this inventory.",
+      "tenant_binding_class": "ROW_TENANT_DERIVED",
+      "tenant_binding_detail": "writer consumes explicit request/row/service graph scope; not DB-principal tenant isolation"
     },
     {
       "writer_id": "BRUNTIME-018",
@@ -9393,7 +9427,9 @@
         "facts:skill registry fact families"
       ],
       "current_disposition": "KEEP_SKILL_REGISTRY_FACT_WRITER",
-      "notes": "Low-level skill-registry ledger append helper reached from production runtime graph."
+      "notes": "Low-level skill-registry ledger append helper reached from production runtime graph.",
+      "tenant_binding_class": "ROW_TENANT_DERIVED",
+      "tenant_binding_detail": "writer consumes explicit request/row/service graph scope; not DB-principal tenant isolation"
     },
     {
       "writer_id": "BRUNTIME-019",
@@ -9407,7 +9443,9 @@
         "Field Memory persistent state/facts"
       ],
       "current_disposition": "KEEP_ONLY_UNDER_EXISTING_REVIEWED_FORMALIZATION_BOUNDARY",
-      "notes": "Direct Field Memory writer remains governed by the already-qualified reviewed-promotion boundary; inventory does not widen authority."
+      "notes": "Direct Field Memory writer remains governed by the already-qualified reviewed-promotion boundary; inventory does not widen authority.",
+      "tenant_binding_class": "ROW_TENANT_DERIVED",
+      "tenant_binding_detail": "writer consumes explicit request/row/service graph scope; not DB-principal tenant isolation"
     },
     {
       "writer_id": "BRUNTIME-020",
@@ -9422,7 +9460,9 @@
         "derived_sensing_state_index_v1"
       ],
       "current_disposition": "KEEP_DERIVED_SENSING_COMPATIBILITY_AUTHORITY",
-      "notes": "Appends derived sensing state and maintains derived-sensing projection; not canonical MCFT State."
+      "notes": "Appends derived sensing state and maintains derived-sensing projection; not canonical MCFT State.",
+      "tenant_binding_class": "ROW_TENANT_DERIVED",
+      "tenant_binding_detail": "writer consumes explicit request/row/service graph scope; not DB-principal tenant isolation"
     },
     {
       "writer_id": "BRUNTIME-021",
@@ -9436,7 +9476,9 @@
         "field_sensing_overview_v1"
       ],
       "current_disposition": "KEEP_REBUILDABLE_SENSING_PROJECTION",
-      "notes": "Rebuildable field sensing overview projection writer."
+      "notes": "Rebuildable field sensing overview projection writer.",
+      "tenant_binding_class": "ROW_TENANT_DERIVED",
+      "tenant_binding_detail": "writer consumes explicit request/row/service graph scope; not DB-principal tenant isolation"
     },
     {
       "writer_id": "BRUNTIME-022",
@@ -9450,7 +9492,9 @@
         "field_sensing_overview_v1 schema"
       ],
       "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
-      "notes": "Ensures sensing overview projection schema."
+      "notes": "Ensures sensing overview projection schema.",
+      "tenant_binding_class": "GLOBAL_BOOTSTRAP",
+      "tenant_binding_detail": "schema compatibility writer; no tenant-row semantic authority"
     },
     {
       "writer_id": "BRUNTIME-023",
@@ -9464,7 +9508,9 @@
         "field_sensing_summary_stage1_v1"
       ],
       "current_disposition": "KEEP_REBUILDABLE_SENSING_PROJECTION",
-      "notes": "Refreshes Stage-1 sensing summary projection; evidence sufficiency remains downstream projection semantics."
+      "notes": "Refreshes Stage-1 sensing summary projection; evidence sufficiency remains downstream projection semantics.",
+      "tenant_binding_class": "ROW_TENANT_DERIVED",
+      "tenant_binding_detail": "writer consumes explicit request/row/service graph scope; not DB-principal tenant isolation"
     },
     {
       "writer_id": "BRUNTIME-024",
@@ -9478,7 +9524,9 @@
         "field_sensing_summary_stage1_v1 schema"
       ],
       "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
-      "notes": "Ensures Stage-1 sensing summary projection schema."
+      "notes": "Ensures Stage-1 sensing summary projection schema.",
+      "tenant_binding_class": "GLOBAL_BOOTSTRAP",
+      "tenant_binding_detail": "schema compatibility writer; no tenant-row semantic authority"
     },
     {
       "writer_id": "BRUNTIME-025",
@@ -9492,7 +9540,9 @@
         "field_fertility_state_v1"
       ],
       "current_disposition": "KEEP_REBUILDABLE_FERTILITY_PROJECTION",
-      "notes": "Refreshes compatibility fertility projection from derived sensing state; not MCFT canonical State."
+      "notes": "Refreshes compatibility fertility projection from derived sensing state; not MCFT canonical State.",
+      "tenant_binding_class": "ROW_TENANT_DERIVED",
+      "tenant_binding_detail": "writer consumes explicit request/row/service graph scope; not DB-principal tenant isolation"
     },
     {
       "writer_id": "BRUNTIME-026",
@@ -9506,7 +9556,9 @@
         "field_fertility_state_v1 schema"
       ],
       "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
-      "notes": "Ensures fertility projection schema."
+      "notes": "Ensures fertility projection schema.",
+      "tenant_binding_class": "GLOBAL_BOOTSTRAP",
+      "tenant_binding_detail": "schema compatibility writer; no tenant-row semantic authority"
     },
     {
       "writer_id": "BRUNTIME-027",
@@ -9520,7 +9572,9 @@
         "agronomy_signal_snapshot_v1"
       ],
       "current_disposition": "KEEP_REBUILDABLE_AGRONOMY_SIGNAL_PROJECTION",
-      "notes": "Updates agronomy signal snapshot projection from telemetry/binding inputs; no decision authority."
+      "notes": "Updates agronomy signal snapshot projection from telemetry/binding inputs; no decision authority.",
+      "tenant_binding_class": "ROW_TENANT_DERIVED",
+      "tenant_binding_detail": "writer consumes explicit request/row/service graph scope; not DB-principal tenant isolation"
     }
   ],
   "startup_mutation_dispositions": [
@@ -9957,5 +10011,359 @@
       "notes": "Local post(path,handler) wrapper. Exact post(\"/...\") call sites are separately discovered and their caller-authority surfaces are BSEC-044..049.",
       "disposition_id": "BDYN-020"
     }
-  ]
+  ],
+  "callback_hook_dispositions": [
+    {
+      "callback_id": "apps/server/src/routes/alert_workflow_v1.ts#registerAlertWorkflowV1Routes#FASTIFY_HOOK:onReady#1",
+      "source_path": "apps/server/src/routes/alert_workflow_v1.ts",
+      "callback_kind": "FASTIFY_HOOK",
+      "trigger": "onReady",
+      "effect_class": "STARTUP_SCHEMA_BOOTSTRAP",
+      "caller_routes": [],
+      "principal_type": "SERVER_STARTUP_PROCESS",
+      "tenant_binding_class": "GLOBAL_BOOTSTRAP",
+      "writer_entrypoints": [
+        "apps/server/src/routes/alert_workflow_v1.ts::ensureAlertWorkflowV1Schema",
+        "apps/server/src/routes/alert_workflow_v1.ts::ensureOperationWorkflowV1Schema",
+        "apps/server/src/routes/alert_workflow_v1.ts::ensureAlertOperationRelationV1Schema"
+      ],
+      "write_targets": [
+        "alert_workflow_v1 schema",
+        "operation_workflow_v1 schema",
+        "alert_operation_relation_v1 schema"
+      ],
+      "current_disposition": "KEEP_STARTUP_SCHEMA_BOOTSTRAP_NO_CALLER_AUTHORITY"
+    },
+    {
+      "callback_id": "apps/server/src/routes/operation_state_v1.ts#registerOperationStateV1Routes#FASTIFY_HOOK:onReady#1",
+      "source_path": "apps/server/src/routes/operation_state_v1.ts",
+      "callback_kind": "FASTIFY_HOOK",
+      "trigger": "onReady",
+      "effect_class": "STARTUP_SCHEMA_BOOTSTRAP",
+      "caller_routes": [],
+      "principal_type": "SERVER_STARTUP_PROCESS",
+      "tenant_binding_class": "GLOBAL_BOOTSTRAP",
+      "writer_entrypoints": [
+        "apps/server/src/domain/agronomy/effect_engine.ts::ensureRulePerformanceTable"
+      ],
+      "write_targets": [
+        "agronomy_rule_performance schema"
+      ],
+      "current_disposition": "KEEP_STARTUP_SCHEMA_BOOTSTRAP_NO_CALLER_AUTHORITY"
+    },
+    {
+      "callback_id": "apps/server/src/routes/evidence_export_jobs_v1.ts#registerEvidenceExportJobsV1Routes#TIMER_TIMEOUT:setTimeout#1",
+      "source_path": "apps/server/src/routes/evidence_export_jobs_v1.ts",
+      "callback_kind": "TIMER_TIMEOUT",
+      "trigger": "setTimeout",
+      "effect_class": "DEFERRED_SERVER_CALLBACK_WRITER",
+      "caller_routes": [
+        "POST /api/v1/evidence-export/jobs"
+      ],
+      "principal_type": "SERVER_SERVICE_PROCESS",
+      "tenant_binding_class": "ROW_TENANT_DERIVED",
+      "writer_entrypoints": [
+        "apps/server/src/routes/evidence_export_jobs_v1.ts::runJob"
+      ],
+      "write_targets": [
+        "facts:evidence_export_job_completed_v1",
+        "evidence_export_job_index_v1",
+        "evidence_pack_index_v1",
+        "runtime/evidence_exports_v1 filesystem",
+        "evidence object-store local mirror or S3 bucket"
+      ],
+      "current_disposition": "KEEP_SERVER_IN_PROCESS_DEFERRED_EVIDENCE_EXPORT_DISTINCT_FROM_JOBS_PROCESS",
+      "notes": "HTTP request schedules setTimeout(...runJob...,0); server service principal performs job-state, evidence-pack and completion-fact persistence independently of commercial.jobs."
+    },
+    {
+      "callback_id": "apps/server/src/routes/alerts_v1.ts#registerAlertsV1Routes#FASTIFY_HOOK:onReady#1",
+      "source_path": "apps/server/src/routes/alerts_v1.ts",
+      "callback_kind": "FASTIFY_HOOK",
+      "trigger": "onReady",
+      "effect_class": "STARTUP_SCHEMA_BOOTSTRAP",
+      "caller_routes": [],
+      "principal_type": "SERVER_STARTUP_PROCESS",
+      "tenant_binding_class": "GLOBAL_BOOTSTRAP",
+      "writer_entrypoints": [
+        "apps/server/src/routes/alerts_v1.ts::ensureAlertsV1Schema"
+      ],
+      "write_targets": [
+        "alert_rule_index_v1 schema",
+        "alert_notification_index_v1 schema",
+        "alert_actions_v1 schema"
+      ],
+      "current_disposition": "KEEP_STARTUP_SCHEMA_BOOTSTRAP_NO_CALLER_AUTHORITY"
+    },
+    {
+      "callback_id": "apps/server/src/routes/alerts_v1.ts#startAlertNotificationWorker#TIMER_INTERVAL:setInterval#1",
+      "source_path": "apps/server/src/routes/alerts_v1.ts",
+      "callback_kind": "TIMER_INTERVAL",
+      "trigger": "setInterval",
+      "effect_class": "TIMER_BACKGROUND_WRITER",
+      "caller_routes": [],
+      "principal_type": "SERVER_BACKGROUND_WORKER_PROCESS",
+      "tenant_binding_class": "GLOBAL_MULTI_TENANT_WORKER",
+      "tenant_binding_detail": "ROW_TENANT_DERIVED",
+      "writer_entrypoints": [
+        "apps/server/src/routes/alerts_v1.ts::dispatchPendingNotifications"
+      ],
+      "write_targets": [
+        "alert_notification_index_v1",
+        "facts:alert_notification_dispatched_v1"
+      ],
+      "current_disposition": "KEEP_GLOBAL_NOTIFICATION_WORKER_ROW_TENANT_DERIVED"
+    },
+    {
+      "callback_id": "apps/server/src/routes/alerts_v1.ts#startOfflineAlertWorker#TIMER_INTERVAL:setInterval#1",
+      "source_path": "apps/server/src/routes/alerts_v1.ts",
+      "callback_kind": "TIMER_INTERVAL",
+      "trigger": "setInterval",
+      "effect_class": "TIMER_BACKGROUND_WRITER",
+      "caller_routes": [],
+      "principal_type": "SERVER_BACKGROUND_WORKER_PROCESS",
+      "tenant_binding_class": "GLOBAL_MULTI_TENANT_WORKER",
+      "tenant_binding_detail": "ROW_TENANT_DERIVED",
+      "writer_entrypoints": [
+        "apps/server/src/routes/alerts_v1.ts::insertAlertEventIfMissing",
+        "apps/server/src/routes/alerts_v1.ts::insertNotificationRecordsForEvent"
+      ],
+      "write_targets": [
+        "facts:alert_event_raised_v1",
+        "alert_event_index_v1",
+        "facts:alert_notification_recorded_v1",
+        "alert_notification_index_v1"
+      ],
+      "current_disposition": "KEEP_GLOBAL_ALERT_WORKER_ROW_TENANT_DERIVED"
+    },
+    {
+      "callback_id": "apps/server/src/routes/human_ops_v1.ts#startHumanOpsKpiRefreshWorker#TIMER_INTERVAL:setInterval#1",
+      "source_path": "apps/server/src/routes/human_ops_v1.ts",
+      "callback_kind": "TIMER_INTERVAL",
+      "trigger": "setInterval",
+      "effect_class": "TIMER_BACKGROUND_WRITER",
+      "caller_routes": [],
+      "principal_type": "SERVER_BACKGROUND_WORKER_PROCESS",
+      "tenant_binding_class": "GLOBAL_MULTI_TENANT_WORKER",
+      "tenant_binding_detail": "ROW_TENANT_DERIVED_GLOBAL_REBUILD",
+      "writer_entrypoints": [
+        "apps/server/src/projections/human_ops_kpi_v1.ts::ensureHumanOpsKpiProjectionV1",
+        "apps/server/src/projections/human_ops_kpi_v1.ts::refreshHumanOpsKpiProjectionV1"
+      ],
+      "write_targets": [
+        "human_ops_kpi_v1"
+      ],
+      "current_disposition": "KEEP_GLOBAL_MULTI_TENANT_KPI_REBUILD"
+    },
+    {
+      "callback_id": "apps/server/src/routes/human_executors_v1.ts#startAssignmentExpiryWorker#TIMER_INTERVAL:setInterval#1",
+      "source_path": "apps/server/src/routes/human_executors_v1.ts",
+      "callback_kind": "TIMER_INTERVAL",
+      "trigger": "setInterval",
+      "effect_class": "TIMER_BACKGROUND_WRITER",
+      "caller_routes": [],
+      "principal_type": "SERVER_BACKGROUND_WORKER_PROCESS",
+      "tenant_binding_class": "GLOBAL_MULTI_TENANT_WORKER",
+      "tenant_binding_detail": "ROW_TENANT_DERIVED",
+      "writer_entrypoints": [
+        "apps/server/src/routes/human_executors_v1.ts::<inline>",
+        "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime"
+      ],
+      "write_targets": [
+        "work_assignment_index_v1",
+        "work_assignment_audit_v1",
+        "facts:work_assignment_status_changed_v1"
+      ],
+      "current_disposition": "KEEP_GLOBAL_ASSIGNMENT_EXPIRY_WORKER_ROW_TENANT_DERIVED",
+      "notes": "Nested tick() is executed by setInterval; inline SQL writer is explicitly inventoried and may not be skipped."
+    },
+    {
+      "callback_id": "apps/server/src/routes/appleii_stage1_evidence_gate_v1.ts#registerAppleIIStage1EvidenceGateV1#FASTIFY_HOOK:preHandler#1",
+      "source_path": "apps/server/src/routes/appleii_stage1_evidence_gate_v1.ts",
+      "callback_kind": "FASTIFY_HOOK",
+      "trigger": "preHandler",
+      "effect_class": "CALLER_HOOK_PERSISTENT_WRITE",
+      "caller_routes": [
+        "POST /api/v1/recommendations/generate"
+      ],
+      "principal_type": "EXTERNAL_AUTHENTICATED_CALLER",
+      "tenant_binding_class": "ROW_TENANT_DERIVED",
+      "writer_entrypoints": [
+        "apps/server/src/projections/field_sensing_overview_v1.ts::refreshFieldSensingOverviewV1",
+        "apps/server/src/projections/field_sensing_overview_v1.ts::ensureFieldSensingOverviewProjectionV1",
+        "apps/server/src/projections/field_sensing_summary_stage1_v1.ts::refreshFieldSensingSummaryStage1V1",
+        "apps/server/src/projections/field_sensing_summary_stage1_v1.ts::ensureFieldSensingSummaryStage1ProjectionV1",
+        "apps/server/src/projections/field_fertility_state_v1.ts::refreshFieldFertilityStateV1",
+        "apps/server/src/projections/field_fertility_state_v1.ts::ensureFieldFertilityStateProjectionV1",
+        "apps/server/src/domain/sensing/problem_state_uncertainty_v1.ts::appendProblemStateAndUncertaintyFactsV1"
+      ],
+      "write_targets": [
+        "field_sensing_overview_v1",
+        "field_sensing_summary_stage1_v1",
+        "field_fertility_state_v1",
+        "facts:problem_state_v1",
+        "facts:uncertainty_envelope_v1"
+      ],
+      "current_disposition": "INVENTORIED_RECOMMENDATION_PREHANDLER_EVIDENCE_AND_PROBLEM_STATE_WRITE"
+    },
+    {
+      "callback_id": "apps/server/src/routes/decision_engine_v1.ts#registerDecisionEngineV1Routes#FASTIFY_HOOK:onReady#1",
+      "source_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "callback_kind": "FASTIFY_HOOK",
+      "trigger": "onReady",
+      "effect_class": "STARTUP_PROJECTION_BOOTSTRAP",
+      "caller_routes": [],
+      "principal_type": "SERVER_STARTUP_PROCESS",
+      "tenant_binding_class": "GLOBAL_BOOTSTRAP",
+      "writer_entrypoints": [
+        "apps/server/src/domain/agronomy/effect_engine.ts::ensureRulePerformanceTable",
+        "apps/server/src/services/derived_sensing_state_service_v1.ts::ensureDerivedSensingStateProjectionV1"
+      ],
+      "write_targets": [
+        "agronomy_rule_performance schema",
+        "derived_sensing_state_index_v1"
+      ],
+      "current_disposition": "KEEP_STARTUP_PROJECTION_COMPATIBILITY_BOOTSTRAP_NO_CALLER_AUTHORITY"
+    },
+    {
+      "callback_id": "apps/telemetry-ingest/src/main.ts#main#EVENT_LISTENER:message#1",
+      "source_path": "apps/telemetry-ingest/src/main.ts",
+      "callback_kind": "EVENT_LISTENER",
+      "trigger": "message",
+      "effect_class": "EVENT_BACKGROUND_WRITER",
+      "caller_routes": [],
+      "principal_type": "TELEMETRY_INGEST_SERVICE_PROCESS",
+      "tenant_binding_class": "ROW_TENANT_DERIVED",
+      "tenant_binding_detail": "MQTT_TOPIC_TENANT_PLUS_DEVICE_CREDENTIAL_ADMISSION; PROJECT/GROUP_FROM_SERVICE_CONFIG",
+      "writer_entrypoints": [
+        "apps/telemetry-ingest/src/main.ts::<inline>",
+        "apps/server/src/services/device_observation_service_v1.ts::writeDeviceObservationFactV1",
+        "apps/server/src/services/derived_sensing_state_service_v1.ts::appendDerivedSensingStateV1",
+        "apps/server/src/domain/skill_registry/facts.ts::appendFact",
+        "apps/server/src/projections/field_sensing_overview_v1.ts::refreshFieldSensingOverviewV1",
+        "apps/server/src/projections/field_sensing_summary_stage1_v1.ts::refreshFieldSensingSummaryStage1V1",
+        "apps/server/src/projections/field_fertility_state_v1.ts::refreshFieldFertilityStateV1",
+        "apps/server/src/projections/agronomy_signal_snapshot_v1.ts::updateAgronomySnapshot"
+      ],
+      "write_targets": [
+        "facts:raw_telemetry_v1_or_device_heartbeat_v1",
+        "facts:device_observation_v1",
+        "device_observation_index_v1",
+        "facts:derived_sensing_state_v1",
+        "derived_sensing_state_index_v1",
+        "facts:skill_run_v1",
+        "field_sensing_overview_v1",
+        "field_sensing_summary_stage1_v1",
+        "field_fertility_state_v1",
+        "agronomy_signal_snapshot_v1"
+      ],
+      "current_disposition": "KEEP_TELEMETRY_EVENT_INGRESS_WITH_DEVICE_CREDENTIAL_AND_ROW_TENANT_ADMISSION",
+      "notes": "Shared broker credential is not treated as device semantic admission; topic tenant plus device credential checks remain separate downstream controls."
+    }
+  ],
+  "service_credential_dispositions": [
+    {
+      "credential_id": "BCRED-001",
+      "credential_class": "SHARED_BROAD_DB_PRINCIPAL",
+      "processes": [
+        "commercial.server",
+        "commercial.jobs",
+        "commercial.executor",
+        "commercial.telemetry-ingest"
+      ],
+      "credential_source": "docker-compose.commercial_v1.yml DATABASE_URL/GEOX_RUNTIME_DATABASE_URL",
+      "authenticated_principal": "geox_runtime_v1",
+      "infrastructure_authority": [
+        "SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public",
+        "USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public",
+        "EXECUTE ON ALL FUNCTIONS IN SCHEMA public",
+        "matching ALTER DEFAULT PRIVILEGES"
+      ],
+      "tenant_isolation_claim": "NO_DB_LEVEL_TENANT_ISOLATION_ESTABLISHED_BY_THIS_PRINCIPAL",
+      "row_level_security_status": "NOT_ESTABLISHED_AS_PRODUCTION_TENANT_BOUNDARY",
+      "ownership": "MCFT_CAP07_FOREIGN_IMPLEMENTATION",
+      "current_disposition": "RECORD_ONLY_NO_CAP07_OR_DB_ROLE_CHANGE"
+    },
+    {
+      "credential_id": "BCRED-002",
+      "credential_class": "SHARED_MQTT_BROKER_PRINCIPAL",
+      "processes": [
+        "commercial.executor",
+        "commercial.telemetry-ingest",
+        "commercial.server"
+      ],
+      "credential_source": "docker-compose.commercial_v1.yml MQTT_USERNAME/MQTT_PASSWORD",
+      "authenticated_principal": "single commercial MQTT username/password",
+      "infrastructure_authority": [
+        "broker authentication to listener 1883"
+      ],
+      "broker_policy": [
+        "allow_anonymous false",
+        "password_file enabled",
+        "acl_file absent"
+      ],
+      "tenant_isolation_claim": "NO_SERVICE_TOPIC_ACL_SEPARATION",
+      "current_disposition": "RECORD_ONLY_DEVICE_CREDENTIAL_SEMANTIC_ADMISSION_REMAINS_SEPARATE"
+    },
+    {
+      "credential_id": "BCRED-003",
+      "credential_class": "ROOT_OBJECT_STORE_CREDENTIAL_REUSED_AS_RUNTIME_WRITER",
+      "processes": [
+        "commercial.server"
+      ],
+      "credential_source": "GEOX_EVIDENCE_S3_ACCESS_KEY_ID=MINIO_ROOT_USER; GEOX_EVIDENCE_S3_SECRET_ACCESS_KEY=MINIO_ROOT_PASSWORD",
+      "authenticated_principal": "MinIO root credential",
+      "infrastructure_authority": [
+        "evidence bucket object PUT/GET as root-equivalent credential"
+      ],
+      "tenant_isolation_claim": "NO_BUCKET_SCOPED_RUNTIME_PRINCIPAL",
+      "current_disposition": "RECORD_ONLY_NO_MINIO_CREDENTIAL_REDESIGN"
+    },
+    {
+      "credential_id": "BCRED-004",
+      "credential_class": "TRACKED_ACCEPTANCE_BEARER_FILE_USED_BY_COMMERCIAL_RUNTIME",
+      "processes": [
+        "commercial.server"
+      ],
+      "credential_source": "GEOX_TOKENS_FILE=/app/config/auth/security_acceptance_tokens.json; docker/runtime.Dockerfile COPY config ./config",
+      "authenticated_principal": "fixed tracked bearer records including admin/operator/executor/client roles",
+      "infrastructure_authority": [
+        "application bearer authentication according to token-file scopes"
+      ],
+      "policy_conflict": "docs/security/GEOX_RUNTIME_HARDENING_V1.md says security_acceptance_tokens.json is test/dev acceptance only and staging/production must not use it",
+      "current_machine_gate_gap": "runtime-security prohibition covers example_tokens.json but does not establish rejection of security_acceptance_tokens.json",
+      "current_disposition": "CREDENTIAL_PROVENANCE_DEBT_RECORD_ONLY_NO_TOKEN_ROTATION_OR_AUTH_REPAIR"
+    },
+    {
+      "credential_id": "BCRED-005",
+      "credential_class": "INTERNAL_HTTP_DELEGATED_BEARER",
+      "processes": [
+        "commercial.server"
+      ],
+      "credential_source": "GEOX_INTERNAL_TASK_ISSUER_TOKEN",
+      "authenticated_principal": "compose default resolves to operator_token",
+      "infrastructure_authority": [
+        "authenticate delegated POST /api/v1/actions/task according to operator_token scopes"
+      ],
+      "current_disposition": "RECORD_PRINCIPAL_TRANSITION_SEPARATELY_NO_APPROVAL_SEMANTIC_CHANGE"
+    }
+  ],
+  "tenant_binding_model": {
+    "allowed_classes": [
+      "SERVICE_CONFIG_SCOPED_WORKER",
+      "GLOBAL_MULTI_TENANT_WORKER",
+      "ROW_TENANT_DERIVED",
+      "GLOBAL_BOOTSTRAP",
+      "FOREIGN_MCFT",
+      "NO_TENANT_SEMANTIC_SCOPE"
+    ],
+    "ambiguous_legacy_label_forbidden_for_runtime_direct_writers": "SERVICE_CONFIG_OR_DB_SCOPE",
+    "global_multi_tenant_worker_requires_detail": true,
+    "agronomy_agent": {
+      "classification": "GLOBAL_MULTI_TENANT_WORKER",
+      "tenant_derivation": "ROW_TENANT_DERIVED",
+      "activation_caveat": "CROSS_TENANT_ACTIVATION_FALLBACK",
+      "cross_tenant_data_mixing_proven": false,
+      "semantic_ceiling": "LEGACY_AGRONOMY_SIGNAL_ONLY"
+    }
+  }
 }
