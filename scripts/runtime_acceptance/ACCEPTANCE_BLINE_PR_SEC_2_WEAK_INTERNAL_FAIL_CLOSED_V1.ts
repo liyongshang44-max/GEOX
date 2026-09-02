@@ -10,11 +10,17 @@ const ROUTES = [
   "/api/agronomy/interpretation_v1/append",
 ] as const;
 
-const queryCounter = { count: 0 };
+type Phase = "registration" | "requests";
+let phase: Phase = "registration";
+const queryCounter = { total: 0, requestPhase: 0 };
 const pool = {
   query: async (..._args: any[]) => {
-    queryCounter.count += 1;
-    throw new Error("UNEXPECTED_DB_QUERY");
+    queryCounter.total += 1;
+    if (phase === "requests") {
+      queryCounter.requestPhase += 1;
+      throw new Error("UNEXPECTED_TARGET_DB_QUERY");
+    }
+    return { rows: [], rowCount: 0 };
   },
 } as any;
 
@@ -41,22 +47,41 @@ async function main() {
   registerAgronomyModule(app, pool, { mediaDir: "/tmp/geox-bline-weak-internal-media" });
   await app.ready();
 
+  // Full production module registration legitimately performs unrelated best-effort
+  // schema initialization (for example device_status_v1). Drain those startup
+  // continuations, record the baseline, then make the target-request phase strict.
+  await new Promise((resolve) => setImmediate(resolve));
+  const registrationQueryCount = queryCounter.total;
+  phase = "requests";
+
   const results: any[] = [];
   for (const route of ROUTES) {
     for (const c of cases) {
-      const before = queryCounter.count;
+      const beforeTotal = queryCounter.total;
+      const beforeRequestPhase = queryCounter.requestPhase;
       const res = await app.inject({ method: "POST", url: `${route}${c.query}`, headers: { "content-type": "application/json", ...c.headers } as any, payload: bodyFor(route) });
       const json = res.json();
       if (res.statusCode !== 403 || json?.error !== ERROR) throw new Error(`${route}/${c.name} did not deterministically fail-close: ${res.statusCode} ${res.body}`);
-      if (queryCounter.count !== before) throw new Error(`${route}/${c.name} reached DB: ${before} -> ${queryCounter.count}`);
+      if (queryCounter.total !== beforeTotal || queryCounter.requestPhase !== beforeRequestPhase) {
+        throw new Error(`${route}/${c.name} reached DB during target request: total ${beforeTotal} -> ${queryCounter.total}, request ${beforeRequestPhase} -> ${queryCounter.requestPhase}`);
+      }
       results.push({ route, case: c.name, status: res.statusCode, error: json.error, db_query_delta: 0 });
     }
   }
 
   await new Promise((resolve) => setImmediate(resolve));
-  if (queryCounter.count !== 0) throw new Error(`post-response DB query count=${queryCounter.count}`);
+  if (queryCounter.total !== registrationQueryCount || queryCounter.requestPhase !== 0) {
+    throw new Error(`post-response target DB query delta=${queryCounter.total - registrationQueryCount}, request_phase_count=${queryCounter.requestPhase}`);
+  }
   await app.close();
-  console.log(JSON.stringify({ ok: true, error: ERROR, db_query_count: 0, results }, null, 2));
+  console.log(JSON.stringify({
+    ok: true,
+    error: ERROR,
+    registration_query_count: registrationQueryCount,
+    target_request_db_query_count: 0,
+    target_request_db_query_delta: 0,
+    results,
+  }, null, 2));
 }
 
 main().catch((error) => {
