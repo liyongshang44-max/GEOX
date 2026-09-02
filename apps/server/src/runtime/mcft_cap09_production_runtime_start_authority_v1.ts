@@ -1,3 +1,5 @@
+import fs from "node:fs";
+
 // MCFT-CAP-09 shared production runtime-start authority parser.
 //
 // Boundary: validation only. This module performs no database, provider, filesystem,
@@ -112,4 +114,42 @@ export function parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
     ),
     formal_a0_logical_time: formalA0,
   };
+}
+
+
+export function loadMcftCap09ProductionRuntimeStartAuthorityV1(input: {
+  plane: McftCap09ProductionRuntimePlaneV1;
+  authority_path?: string | null;
+  explicit_authority?: unknown;
+  embedded_authority?: unknown;
+}): McftCap09ProductionRuntimeStartAuthorityInstanceV1 {
+  if (input.explicit_authority !== undefined) {
+    return parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+      input.explicit_authority,
+      input.plane,
+    );
+  }
+
+  const pathValue = String(input.authority_path ?? "").trim();
+  if (pathValue) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(fs.readFileSync(pathValue, "utf8"));
+    } catch (error) {
+      throw new Error(
+        `MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_FILE_INVALID:${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+    return parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+      parsed,
+      input.plane,
+    );
+  }
+
+  return parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+    input.embedded_authority,
+    input.plane,
+  );
 }
