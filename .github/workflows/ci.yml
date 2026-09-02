@@ -79,6 +79,9 @@ jobs:
       - name: B-Line Sampling exact-source binding
         run: pnpm run ci:governance:bline-sampling-exact-source-binding
 
+      - name: B-Line Fertilization execution provenance
+        run: pnpm run ci:governance:bline-fertilization-execution-provenance
+
       - name: Route response ownership guard
         run: pnpm run ci:route-response-ownership
 
@@ -245,6 +248,25 @@ jobs:
           export AO_ACT_TOKEN="$GEOX_AO_ACT_TOKEN"
           export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
           node scripts/agronomy_acceptance/ACCEPTANCE_FERTILIZATION_API_LIVE_V1.cjs
+
+      - name: B-Line Fertilization canonical execution provenance runtime
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export API_BASE_URL=http://127.0.0.1:3001
+          export FERTILIZATION_API_BASE_URL=http://127.0.0.1:3001
+          export ADMIN_TOKEN=admin_token
+          export APPROVER_TOKEN=approver_token
+          export OPERATOR_TOKEN=operator_token
+          export EXECUTOR_TOKEN=executor_token
+          export AO_ACT_TOKEN=admin_token
+          export GEOX_ACCEPTANCE_TOKEN=admin_token
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          pnpm run ci:scenario:fertilization
 
       - name: Run PR18I formal-chain preflight gate
         timeout-minutes: 30

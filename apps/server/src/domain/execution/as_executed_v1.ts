@@ -402,6 +402,7 @@ async function resolvePrescription(pool: Pool, params: { tenant: TenantTriple; t
     const fact = parseJsonMaybe(row.record_json) ?? {};
     const factPayload = fact?.payload ?? {};
     const candidate =
+      getByPath(factPayload, ["meta", "prescription_id"]) ||
       getByPath(factPayload, ["parameters", "prescription_id"]) ||
       getByPath(factPayload, ["prescription_id"]) ||
       getByPath(factPayload, ["proposal", "parameters", "prescription_id"]) ||
@@ -412,6 +413,7 @@ async function resolvePrescription(pool: Pool, params: { tenant: TenantTriple; t
     }
     if (!recommendationIdCandidate) {
       recommendationIdCandidate =
+        getByPath(factPayload, ["meta", "recommendation_id"]) ||
         getByPath(factPayload, ["recommendation_id"]) ||
         getByPath(factPayload, ["proposal", "meta", "recommendation_id"]);
     }
