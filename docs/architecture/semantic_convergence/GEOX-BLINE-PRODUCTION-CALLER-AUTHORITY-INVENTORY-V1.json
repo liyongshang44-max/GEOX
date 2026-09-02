@@ -7446,11 +7446,11 @@
     {
       "surface_id": "BSEC-179",
       "source_path": "apps/server/scripts/write_dist_entries.cjs",
-      "entry_symbol": "generated database/platform_bootstrap.js entry",
+      "entry_symbol": "generated entry: database/platform_bootstrap.js → runDatabasePlatformBootstrapV1",
       "http_method_or_runtime_trigger": "RUNTIME_TRIGGER",
-      "exact_route_or_trigger": "docker one-shot -> node apps/server/dist/database/platform_bootstrap.js",
+      "exact_route_or_trigger": "docker service one-shot → generated dist/database/platform_bootstrap.js",
       "runtime_reachable": true,
-      "activation_root": "commercial.database-platform-bootstrap",
+      "activation_root": "commercial.database-platform-bootstrap → generated entry → infra bootstrap runners",
       "activation_mode": "ONE_SHOT_DB_PLATFORM_BOOTSTRAP",
       "authn_mode": "DATABASE_PLATFORM_ADMIN_CREDENTIAL",
       "authz_capability": [
@@ -7480,16 +7480,16 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": "Generated runtime entrypoint; tracked source truth is apps/server/scripts/write_dist_entries.cjs."
+      "notes": "Tracked source-of-truth is apps/server/scripts/write_dist_entries.cjs. Build generates dist/database/platform_bootstrap.js, which invokes mcft_cap07_database_platform_bootstrap_v1 plus runtime schema/dispatch/device-status/skill-registry/field-fertility compatibility bootstraps."
     },
     {
       "surface_id": "BSEC-180",
       "source_path": "apps/server/scripts/write_dist_entries.cjs",
-      "entry_symbol": "generated database/mcft_cap07_migration.js entry",
+      "entry_symbol": "generated entry: database/mcft_cap07_migration.js → runMcftCap07StartupMigrationFromEnvironmentV1",
       "http_method_or_runtime_trigger": "RUNTIME_TRIGGER",
-      "exact_route_or_trigger": "docker one-shot -> node apps/server/dist/database/mcft_cap07_migration.js",
+      "exact_route_or_trigger": "docker service one-shot → generated dist/database/mcft_cap07_migration.js",
       "runtime_reachable": true,
-      "activation_root": "commercial.mcft-cap07-migration",
+      "activation_root": "commercial.mcft-cap07-migration → generated entry → mcft_cap07_startup_migration_runner_v1",
       "activation_mode": "ONE_SHOT_MIGRATION",
       "authn_mode": "MCFT_MIGRATOR_DATABASE_CREDENTIAL",
       "authz_capability": [
@@ -7519,7 +7519,7 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P0",
       "contract_refs": [],
-      "notes": "Generated runtime entrypoint; tracked source truth is apps/server/scripts/write_dist_entries.cjs. Foreign MCFT disposition only."
+      "notes": "Tracked source-of-truth is apps/server/scripts/write_dist_entries.cjs. Build generates dist/database/mcft_cap07_migration.js, which imports apps/server/src/infra/mcft_cap07_startup_migration_runner_v1.js. Foreign MCFT boundary remains no-B-Line-change."
     },
     {
       "surface_id": "BSEC-181",
