@@ -11875,5 +11875,408 @@
       "current_disposition": "FOREIGN_MCFT_READ_ONLY_PREFLIGHT_NO_BLINE_CHANGE",
       "notes": "SELECT-only read-only transaction. Privilege strings contain INSERT/UPDATE/DELETE/TRUNCATE as data and are not executed DML."
     }
+  ],
+  "internal_http_delegation_dispositions": [
+    {
+      "delegation_id": "apps/server/src/modules/admin/registerAdminImportModule.ts#registerAdminImportModule#POST:/api/judge/run#DIRECT_FETCH#1",
+      "source_path": "apps/server/src/modules/admin/registerAdminImportModule.ts",
+      "enclosing_symbol": "registerAdminImportModule",
+      "target_method": "POST",
+      "target_entrypoint": "/api/judge/run",
+      "helper_kind": "DIRECT_FETCH",
+      "principal_transition": false,
+      "credential_observation": "UNRESOLVED_OR_NONE",
+      "delegator_principal": "ADMIN_ACCEPTANCE_ROUTE_REQUEST; NO LOCAL BEARER PROOF IN THIS EDGE",
+      "delegated_credential": "NONE_LOOPBACK_HTTP",
+      "delegated_principal": "UNAUTHENTICATED_LOOPBACK_CALLER_AT_JUDGE_ROUTE",
+      "target_capability": [],
+      "declared_business_actor": "NONE",
+      "persistent_consequence": [],
+      "current_disposition": "INTERNAL_HTTP_DELEGATION_TO_STATELESS_JUDGE_NO_PERSISTENT_CONSEQUENCE",
+      "notes": "Admin CAF acceptance calls loopback Judge without Authorization. Judge route has no auth check in apps/judge/src/routes.ts. apps/judge/src/runtime.ts explicitly forces persist=false even if options.persist=true."
+    },
+    {
+      "delegation_id": "apps/server/src/routes/control_approval_request_v1.ts#handleApprovalApprove#POST:/api/v1/actions/task#DIRECT_FETCH#1",
+      "source_path": "apps/server/src/routes/control_approval_request_v1.ts",
+      "enclosing_symbol": "handleApprovalApprove",
+      "target_method": "POST",
+      "target_entrypoint": "/api/v1/actions/task",
+      "helper_kind": "DIRECT_FETCH",
+      "principal_transition": true,
+      "credential_observation": "GEOX_INTERNAL_TASK_ISSUER_TOKEN",
+      "target_surface_id": "BSEC-073",
+      "delegator_principal": "OUTER_AUTHENTICATED_APPROVER_OR_ADMIN",
+      "delegated_credential": "GEOX_INTERNAL_TASK_ISSUER_TOKEN",
+      "delegated_principal": "operator_token (Commercial default)",
+      "target_capability": [
+        "action.task.create",
+        "ao_act.task.write"
+      ],
+      "declared_business_actor": "OUTER_AUTHENTICATED_APPROVAL_ACTOR PRESERVED AS TASK ISSUER/BUSINESS PROVENANCE",
+      "persistent_consequence": [
+        "target:facts/operation projections",
+        "target:security_audit_event_v1",
+        "target:fail_safe_event_v1",
+        "target:manual_takeover_v1",
+        "target:field_fertility_state_v1",
+        "fact:ao_act_task_v0"
+      ],
+      "current_disposition": "INVENTORIED_PRINCIPAL_TRANSITION_NO_APPROVAL_SEMANTIC_CHANGE",
+      "notes": "Business delegator/issuer and authenticated inner writer principal are distinct. This inventory does not claim privilege escalation and does not change Approval semantics."
+    },
+    {
+      "delegation_id": "apps/server/src/routes/control_ao_act.ts#registerAoActV1Routes#POST:/api/v1/approvals#POST_JSON_INTERNAL#1",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "enclosing_symbol": "registerAoActV1Routes",
+      "target_method": "POST",
+      "target_entrypoint": "/api/v1/approvals",
+      "helper_kind": "POST_JSON_INTERNAL",
+      "principal_transition": false,
+      "credential_observation": "FORWARD_CALLER_BEARER",
+      "target_surface_id": "BSEC-181",
+      "delegator_principal": "OUTER_AUTHENTICATED_CALLER",
+      "delegated_credential": "FORWARDED_CALLER_BEARER",
+      "delegated_principal": "SAME_CALLER_PRINCIPAL_REAUTHENTICATED_AT_TARGET",
+      "target_capability": [
+        "ao_act.task.write"
+      ],
+      "declared_business_actor": "PRESERVED_FROM_OUTER REQUEST/AUTH CONTEXT OR REVALIDATED BY TARGET",
+      "persistent_consequence": [
+        "target:delegated approval_request writer",
+        "fact:approval_request_v1"
+      ],
+      "current_disposition": "INTERNAL_HTTP_DELEGATION_FORWARDS_CALLER_AUTHORITY",
+      "notes": "Target route re-applies its existing authz/capability checks. No new authority is granted by PR-SEC-1."
+    },
+    {
+      "delegation_id": "apps/server/src/routes/control_ao_act.ts#registerAoActV1Routes#POST:/api/v1/approvals/:dynamic/decide#POST_JSON_INTERNAL#1",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "enclosing_symbol": "registerAoActV1Routes",
+      "target_method": "POST",
+      "target_entrypoint": "/api/v1/approvals/:dynamic/decide",
+      "helper_kind": "POST_JSON_INTERNAL",
+      "principal_transition": false,
+      "credential_observation": "FORWARD_CALLER_BEARER",
+      "target_surface_id": "BSEC-182",
+      "delegator_principal": "OUTER_AUTHENTICATED_CALLER",
+      "delegated_credential": "FORWARDED_CALLER_BEARER",
+      "delegated_principal": "SAME_CALLER_PRINCIPAL_REAUTHENTICATED_AT_TARGET",
+      "target_capability": [
+        "ao_act.task.write"
+      ],
+      "declared_business_actor": "PRESERVED_FROM_OUTER REQUEST/AUTH CONTEXT OR REVALIDATED BY TARGET",
+      "persistent_consequence": [
+        "target:approval decision + downstream task/plan chain",
+        "target:facts",
+        "target:dispatch_queue_v1",
+        "fact:approval_decision_v1",
+        "fact:ao_act_task_v0",
+        "fact:operation plan transition facts"
+      ],
+      "current_disposition": "INTERNAL_HTTP_DELEGATION_FORWARDS_CALLER_AUTHORITY",
+      "notes": "Target route re-applies its existing authz/capability checks. No new authority is granted by PR-SEC-1."
+    },
+    {
+      "delegation_id": "apps/server/src/domain/controlplane/task_service.ts#registerControlPlaneV1Routes#POST:/api/v1/approvals/request#FETCH_JSON_INTERNAL#1",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "enclosing_symbol": "registerControlPlaneV1Routes",
+      "target_method": "POST",
+      "target_entrypoint": "/api/v1/approvals/request",
+      "helper_kind": "FETCH_JSON_INTERNAL",
+      "principal_transition": false,
+      "credential_observation": "FORWARD_CALLER_BEARER",
+      "target_surface_id": "BSEC-084",
+      "delegator_principal": "OUTER_AUTHENTICATED_CALLER",
+      "delegated_credential": "FORWARDED_CALLER_BEARER",
+      "delegated_principal": "SAME_CALLER_PRINCIPAL_REAUTHENTICATED_AT_TARGET",
+      "target_capability": [
+        "approval.request",
+        "prescription.submit_approval",
+        "ao_act.task.write"
+      ],
+      "declared_business_actor": "PRESERVED_FROM_OUTER REQUEST/AUTH CONTEXT OR REVALIDATED BY TARGET",
+      "persistent_consequence": [
+        "target:facts",
+        "fact:approval_request_v1"
+      ],
+      "current_disposition": "INTERNAL_HTTP_DELEGATION_FORWARDS_CALLER_AUTHORITY",
+      "notes": "Target route re-applies its existing authz/capability checks. No new authority is granted by PR-SEC-1."
+    },
+    {
+      "delegation_id": "apps/server/src/domain/controlplane/task_service.ts#registerControlPlaneV1Routes#POST:/api/v1/actions/task#FETCH_JSON_INTERNAL#1",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "enclosing_symbol": "registerControlPlaneV1Routes",
+      "target_method": "POST",
+      "target_entrypoint": "/api/v1/actions/task",
+      "helper_kind": "FETCH_JSON_INTERNAL",
+      "principal_transition": false,
+      "credential_observation": "FORWARD_CALLER_BEARER",
+      "target_surface_id": "BSEC-073",
+      "delegator_principal": "OUTER_AUTHENTICATED_CALLER",
+      "delegated_credential": "FORWARDED_CALLER_BEARER",
+      "delegated_principal": "SAME_CALLER_PRINCIPAL_REAUTHENTICATED_AT_TARGET",
+      "target_capability": [
+        "action.task.create",
+        "ao_act.task.write"
+      ],
+      "declared_business_actor": "PRESERVED_FROM_OUTER REQUEST/AUTH CONTEXT OR REVALIDATED BY TARGET",
+      "persistent_consequence": [
+        "target:facts/operation projections",
+        "target:security_audit_event_v1",
+        "target:fail_safe_event_v1",
+        "target:manual_takeover_v1",
+        "target:field_fertility_state_v1",
+        "fact:ao_act_task_v0"
+      ],
+      "current_disposition": "INTERNAL_HTTP_DELEGATION_FORWARDS_CALLER_AUTHORITY",
+      "notes": "Target route re-applies its existing authz/capability checks. No new authority is granted by PR-SEC-1."
+    },
+    {
+      "delegation_id": "apps/server/src/domain/controlplane/task_service.ts#registerControlPlaneV1Routes#POST:/api/v1/actions/task#FETCH_JSON_INTERNAL#2",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "enclosing_symbol": "registerControlPlaneV1Routes",
+      "target_method": "POST",
+      "target_entrypoint": "/api/v1/actions/task",
+      "helper_kind": "FETCH_JSON_INTERNAL",
+      "principal_transition": false,
+      "credential_observation": "FORWARD_CALLER_BEARER",
+      "target_surface_id": "BSEC-073",
+      "delegator_principal": "OUTER_AUTHENTICATED_CALLER",
+      "delegated_credential": "FORWARDED_CALLER_BEARER",
+      "delegated_principal": "SAME_CALLER_PRINCIPAL_REAUTHENTICATED_AT_TARGET",
+      "target_capability": [
+        "action.task.create",
+        "ao_act.task.write"
+      ],
+      "declared_business_actor": "PRESERVED_FROM_OUTER REQUEST/AUTH CONTEXT OR REVALIDATED BY TARGET",
+      "persistent_consequence": [
+        "target:facts/operation projections",
+        "target:security_audit_event_v1",
+        "target:fail_safe_event_v1",
+        "target:manual_takeover_v1",
+        "target:field_fertility_state_v1",
+        "fact:ao_act_task_v0"
+      ],
+      "current_disposition": "INTERNAL_HTTP_DELEGATION_FORWARDS_CALLER_AUTHORITY",
+      "notes": "Target route re-applies its existing authz/capability checks. No new authority is granted by PR-SEC-1."
+    },
+    {
+      "delegation_id": "apps/server/src/domain/controlplane/task_service.ts#registerControlPlaneV1Routes#POST:/api/v1/ao-act/receipts#FETCH_JSON_INTERNAL#1",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "enclosing_symbol": "registerControlPlaneV1Routes",
+      "target_method": "POST",
+      "target_entrypoint": "/api/v1/ao-act/receipts",
+      "helper_kind": "FETCH_JSON_INTERNAL",
+      "principal_transition": false,
+      "credential_observation": "FORWARD_CALLER_BEARER",
+      "target_surface_id": "BSEC-192",
+      "delegator_principal": "OUTER_AUTHENTICATED_CALLER",
+      "delegated_credential": "FORWARDED_CALLER_BEARER",
+      "delegated_principal": "SAME_CALLER_PRINCIPAL_REAUTHENTICATED_AT_TARGET",
+      "target_capability": [
+        "ao_act.receipt.write"
+      ],
+      "declared_business_actor": "PRESERVED_FROM_OUTER REQUEST/AUTH CONTEXT OR REVALIDATED BY TARGET",
+      "persistent_consequence": [
+        "target:facts",
+        "target:receipt projections",
+        "target:dispatch_queue_v1",
+        "fact:ao_act_receipt_v1",
+        "fact:commercial receipt wrapper facts"
+      ],
+      "current_disposition": "INTERNAL_HTTP_DELEGATION_FORWARDS_CALLER_AUTHORITY",
+      "notes": "Target route re-applies its existing authz/capability checks. No new authority is granted by PR-SEC-1."
+    },
+    {
+      "delegation_id": "apps/server/src/domain/controlplane/task_service.ts#registerControlPlaneV1Routes#POST:/api/v1/ao-act/tasks/:dynamic/dispatch#FETCH_JSON_INTERNAL#1",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "enclosing_symbol": "registerControlPlaneV1Routes",
+      "target_method": "POST",
+      "target_entrypoint": "/api/v1/ao-act/tasks/:dynamic/dispatch",
+      "helper_kind": "FETCH_JSON_INTERNAL",
+      "principal_transition": false,
+      "credential_observation": "FORWARD_CALLER_BEARER",
+      "target_surface_id": "BSEC-184",
+      "delegator_principal": "OUTER_AUTHENTICATED_CALLER",
+      "delegated_credential": "FORWARDED_CALLER_BEARER",
+      "delegated_principal": "SAME_CALLER_PRINCIPAL_REAUTHENTICATED_AT_TARGET",
+      "target_capability": [
+        "ao_act.task.write"
+      ],
+      "declared_business_actor": "PRESERVED_FROM_OUTER REQUEST/AUTH CONTEXT OR REVALIDATED BY TARGET",
+      "persistent_consequence": [
+        "target:facts",
+        "target:dispatch outbox",
+        "target:operation plan transition",
+        "target:dispatch_queue_v1",
+        "fact:ao_act_task_dispatched_v1",
+        "fact:ao_act_dispatch_outbox_v1",
+        "fact:operation_plan_transition_v1"
+      ],
+      "current_disposition": "INTERNAL_HTTP_DELEGATION_FORWARDS_CALLER_AUTHORITY",
+      "notes": "Target route re-applies its existing authz/capability checks. No new authority is granted by PR-SEC-1."
+    },
+    {
+      "delegation_id": "apps/server/src/domain/controlplane/task_service.ts#registerControlPlaneV1Routes#POST:/api/v1/actions/receipt#FETCH_JSON_INTERNAL#1",
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "enclosing_symbol": "registerControlPlaneV1Routes",
+      "target_method": "POST",
+      "target_entrypoint": "/api/v1/actions/receipt",
+      "helper_kind": "FETCH_JSON_INTERNAL",
+      "principal_transition": false,
+      "credential_observation": "FORWARD_CALLER_BEARER",
+      "target_surface_id": "BSEC-076",
+      "delegator_principal": "OUTER_AUTHENTICATED_CALLER",
+      "delegated_credential": "FORWARDED_CALLER_BEARER",
+      "delegated_principal": "SAME_CALLER_PRINCIPAL_REAUTHENTICATED_AT_TARGET",
+      "target_capability": [
+        "action.receipt.submit",
+        "ao_act.receipt.write"
+      ],
+      "declared_business_actor": "PRESERVED_FROM_OUTER REQUEST/AUTH CONTEXT OR REVALIDATED BY TARGET",
+      "persistent_consequence": [
+        "target:facts/operation projections",
+        "target:fail_safe_event_v1",
+        "target:manual_takeover_v1",
+        "target:security_audit_event_v1",
+        "fact:ao_act_receipt_v0"
+      ],
+      "current_disposition": "INTERNAL_HTTP_DELEGATION_FORWARDS_CALLER_AUTHORITY",
+      "notes": "Target route re-applies its existing authz/capability checks. No new authority is granted by PR-SEC-1."
+    },
+    {
+      "delegation_id": "apps/server/src/routes/v1/operator_acceptance_actions.ts#callMainAcceptanceEvaluate#POST:/api/v1/acceptance/evaluate#DIRECT_FETCH#1",
+      "source_path": "apps/server/src/routes/v1/operator_acceptance_actions.ts",
+      "enclosing_symbol": "callMainAcceptanceEvaluate",
+      "target_method": "POST",
+      "target_entrypoint": "/api/v1/acceptance/evaluate",
+      "helper_kind": "DIRECT_FETCH",
+      "principal_transition": false,
+      "credential_observation": "FORWARD_CALLER_BEARER",
+      "target_surface_id": "BSEC-123",
+      "delegator_principal": "OUTER_AUTHENTICATED_CALLER",
+      "delegated_credential": "FORWARDED_CALLER_BEARER",
+      "delegated_principal": "SAME_CALLER_PRINCIPAL_REAUTHENTICATED_AT_TARGET",
+      "target_capability": [
+        "acceptance.evaluate"
+      ],
+      "declared_business_actor": "PRESERVED_FROM_OUTER REQUEST/AUTH CONTEXT OR REVALIDATED BY TARGET",
+      "persistent_consequence": [
+        "target:facts/domain projections",
+        "target:field_memory_v1",
+        "target:fail_safe_event_v1",
+        "target:manual_takeover_v1",
+        "target:security_audit_event_v1",
+        "fact:acceptance_result_v1"
+      ],
+      "current_disposition": "INTERNAL_HTTP_DELEGATION_FORWARDS_CALLER_AUTHORITY",
+      "notes": "Target route re-applies its existing authz/capability checks. No new authority is granted by PR-SEC-1."
+    },
+    {
+      "delegation_id": "apps/server/src/routes/v1/operator_approval_actions.ts#callMainApprovalApprove#POST:/api/v1/approvals/approve#DIRECT_FETCH#1",
+      "source_path": "apps/server/src/routes/v1/operator_approval_actions.ts",
+      "enclosing_symbol": "callMainApprovalApprove",
+      "target_method": "POST",
+      "target_entrypoint": "/api/v1/approvals/approve",
+      "helper_kind": "DIRECT_FETCH",
+      "principal_transition": false,
+      "credential_observation": "FORWARD_CALLER_BEARER",
+      "target_surface_id": "BSEC-085",
+      "delegator_principal": "OUTER_AUTHENTICATED_CALLER",
+      "delegated_credential": "FORWARDED_CALLER_BEARER",
+      "delegated_principal": "SAME_CALLER_PRINCIPAL_REAUTHENTICATED_AT_TARGET",
+      "target_capability": [
+        "approval.decide",
+        "ao_act.task.write"
+      ],
+      "declared_business_actor": "PRESERVED_FROM_OUTER REQUEST/AUTH CONTEXT OR REVALIDATED BY TARGET",
+      "persistent_consequence": [
+        "target:facts",
+        "target:operation_plan_index_v1",
+        "target:security_audit_event_v1",
+        "fact:approval_decision_v1",
+        "fact:operation_plan_v1",
+        "fact:operation_plan_transition_v1",
+        "fact:ao_act_task_v0",
+        "fact:ao_act_authz_audit_v0"
+      ],
+      "current_disposition": "INTERNAL_HTTP_DELEGATION_FORWARDS_CALLER_AUTHORITY",
+      "notes": "Target route re-applies its existing authz/capability checks. No new authority is granted by PR-SEC-1."
+    },
+    {
+      "delegation_id": "apps/server/src/routes/decision_engine_v1.ts#registerDecisionEngineV1Routes#POST:/api/v1/approvals/request#FETCH_JSON_INTERNAL#1",
+      "source_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "enclosing_symbol": "registerDecisionEngineV1Routes",
+      "target_method": "POST",
+      "target_entrypoint": "/api/v1/approvals/request",
+      "helper_kind": "FETCH_JSON_INTERNAL",
+      "principal_transition": false,
+      "credential_observation": "FORWARD_CALLER_BEARER",
+      "target_surface_id": "BSEC-084",
+      "delegator_principal": "OUTER_AUTHENTICATED_CALLER",
+      "delegated_credential": "FORWARDED_CALLER_BEARER",
+      "delegated_principal": "SAME_CALLER_PRINCIPAL_REAUTHENTICATED_AT_TARGET",
+      "target_capability": [
+        "approval.request",
+        "prescription.submit_approval",
+        "ao_act.task.write"
+      ],
+      "declared_business_actor": "PRESERVED_FROM_OUTER REQUEST/AUTH CONTEXT OR REVALIDATED BY TARGET",
+      "persistent_consequence": [
+        "target:facts",
+        "fact:approval_request_v1"
+      ],
+      "current_disposition": "INTERNAL_HTTP_DELEGATION_FORWARDS_CALLER_AUTHORITY",
+      "notes": "Target route re-applies its existing authz/capability checks. No new authority is granted by PR-SEC-1."
+    },
+    {
+      "delegation_id": "apps/server/src/routes/decision_engine_v1.ts#registerDecisionEngineV1Routes#POST:/api/v1/actions/receipt#FETCH_JSON_INTERNAL#1",
+      "source_path": "apps/server/src/routes/decision_engine_v1.ts",
+      "enclosing_symbol": "registerDecisionEngineV1Routes",
+      "target_method": "POST",
+      "target_entrypoint": "/api/v1/actions/receipt",
+      "helper_kind": "FETCH_JSON_INTERNAL",
+      "principal_transition": false,
+      "credential_observation": "FORWARD_CALLER_BEARER",
+      "target_surface_id": "BSEC-076",
+      "delegator_principal": "OUTER_AUTHENTICATED_CALLER",
+      "delegated_credential": "FORWARDED_CALLER_BEARER",
+      "delegated_principal": "SAME_CALLER_PRINCIPAL_REAUTHENTICATED_AT_TARGET",
+      "target_capability": [
+        "action.receipt.submit",
+        "ao_act.receipt.write"
+      ],
+      "declared_business_actor": "PRESERVED_FROM_OUTER REQUEST/AUTH CONTEXT OR REVALIDATED BY TARGET",
+      "persistent_consequence": [
+        "target:facts/operation projections",
+        "target:fail_safe_event_v1",
+        "target:manual_takeover_v1",
+        "target:security_audit_event_v1",
+        "fact:ao_act_receipt_v0"
+      ],
+      "current_disposition": "INTERNAL_HTTP_DELEGATION_FORWARDS_CALLER_AUTHORITY",
+      "notes": "Target route re-applies its existing authz/capability checks. No new authority is granted by PR-SEC-1."
+    },
+    {
+      "delegation_id": "apps/server/src/routes/fields_v1.ts#registerFieldsV1Routes#POST:/api/v1/devices/:dynamic/simulator/start#DIRECT_FETCH#1",
+      "source_path": "apps/server/src/routes/fields_v1.ts",
+      "enclosing_symbol": "registerFieldsV1Routes",
+      "target_method": "POST",
+      "target_entrypoint": "/api/v1/devices/:dynamic/simulator/start",
+      "helper_kind": "DIRECT_FETCH",
+      "principal_transition": false,
+      "credential_observation": "FORWARD_CALLER_BEARER",
+      "target_surface_id": "BSEC-165",
+      "delegator_principal": "OUTER_AUTHENTICATED_CALLER",
+      "delegated_credential": "FORWARDED_CALLER_BEARER",
+      "delegated_principal": "SAME_CALLER_PRINCIPAL_REAUTHENTICATED_AT_TARGET",
+      "target_capability": [
+        "dev.simulator.run or security.admin"
+      ],
+      "declared_business_actor": "PRESERVED_FROM_OUTER REQUEST/AUTH CONTEXT OR REVALIDATED BY TARGET",
+      "persistent_consequence": [],
+      "current_disposition": "INTERNAL_DELEGATION_TARGET_COMMERCIAL_DISABLED",
+      "notes": "Target surface is COMMERCIAL_DISABLED; no production persistent consequence claimed."
+    }
   ]
 }
