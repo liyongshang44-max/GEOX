@@ -1,22 +1,931 @@
-# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-02 Continuation — Engineering Readiness / Live Activation Separation Frontier
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-02 Continuation — V13 Runtime / Qualification-Harness Resolver Settlement Frontier
 
 Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
 
-Timestamp: **2026-09-02 21:38 +08:00**
+Timestamp: **2026-09-02 22:56 +08:00**
 
 Repository: liyongshang44-max/GEOX
 
-Purpose: continue the same MCFT-CAP-09 work after correcting a critical scheduling/governance mistake: uncontrollable current-season KBS provider availability must not remain on the software-engineering critical path. The frozen Taskbook Stage 1B completion claim remains unchanged and still requires real S6 O00–O23 plus final exact-SHA/R2 effectiveness; however, the controllable software/runtime/governance mechanisms have now been separately machine-qualified under a subordinate production-equivalent engineering-readiness claim. Current T4R1 stage/season authority remains unresolved and therefore live activation is still not currently eligible. These two facts now coexist explicitly instead of the latter blocking the former.
+Purpose: continue the same MCFT-CAP-09 engineering-readiness line after closing the last known non-live Producer qualification-harness debt. The former V13 Producer stale-arm failure was not repaired by moving the arm time or by forcing a new provider call. Instead, the legacy V13 dependency resolver was machine-partitioned into a runtime-semantic closure and a qualification-harness closure; BF1D immutable evidence was projected only onto the proven-stable runtime subset; the Producer workflow now resolves governed applicability before evaluating the live arm; and the live arm/provider path is skipped whenever durable runtime evidence remains valid. The Taskbook Stage 1B completion gate remains unchanged, current T4R1 live activation remains ineligible, and QCP still deliberately fails closed only on EXACT_ONE_PRODUCTION_OWNER.
 
-> **This O-section is now the highest-priority conversation continuation in this file.**
+> **This P-section is now the highest-priority conversation continuation in this file.**
 >
-> The complete N-section immediately below remains intentionally preserved in full as the historical T4R1 stage / natural-season settlement frontier.
+> The complete O-section immediately below remains intentionally preserved in full as the historical Engineering Readiness / Live Activation Separation frontier.
 >
-> N contains an intentionally preserved statement that the “next legitimate technical event” was a material provider change. That statement is now superseded **for engineering readiness only** by O. It remains historically correct for the then-current live-activation frontier.
+> O20 described the Producer runtime-vs-harness resolver migration as the next high-value engineering item. That item is now complete and machine-settled by P.
 >
-> M, L, K, J, I, H, and all earlier sections remain historical evidence and must remain intact.
+> N, M, L, K, J, I, H, and all earlier sections remain historical evidence and must remain intact.
 >
 > This handoff does **not** supersede docs/SSOT.md, the Digital Twin Master Task Line, the CAP-09 taskbook, Production Hosting architecture/route, QCP, immutable qualification evidence, accepted CAP-01→08 authorities, T4R1 crop/season authorities, or frozen Formal-store authorities.
+
+---
+
+## P0. READ THIS FIRST — Producer stale-arm debt is closed without live requalification
+
+The authoritative product PR is now:
+
+~~~text
+#3376
+
+title =
+  feat(mcft-cap09): qualify engineering readiness and settle producer harness migration
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+current exact head =
+  bbe66db3406ec903ea2256506d2cf9ea5ff727ae
+
+state =
+  Draft / open / unmerged
+
+mergeable =
+  true
+~~~
+
+Protected main remains:
+
+~~~text
+fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+
+protected =
+  true
+~~~
+
+Current engineering state:
+
+~~~text
+engineering_readiness =
+  QUALIFIED
+
+allowed engineering claim =
+  MCFT_CAP_09_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_QUALIFIED
+
+known Producer stale-arm engineering debt =
+  SETTLED_RUNTIME_HARNESS_RESOLVER_MIGRATION
+
+engineering work blocked by KBS/provider material change =
+  false
+~~~
+
+Current live state remains:
+
+~~~text
+live_activation =
+  NOT_CURRENTLY_ELIGIBLE
+
+runtime_start_authority_may_be_armed =
+  false
+
+production owner activation =
+  false
+
+Formal-v5 / A0 / O00 =
+  false / false / false
+
+Stage 1B completion =
+  NOT CLAIMED
+~~~
+
+---
+
+## P1. Current task in one sentence
+
+**Preserve the now-qualified and stale-arm-clean engineering-readiness state, treat the V13 runtime/harness evidence migration as settled, keep real live activation fail-closed, and do not let qualification-control-plane metadata changes invalidate already-proven runtime semantics.**
+
+The current task is no longer:
+
+- wait for KBS before engineering can continue;
+- fix Producer by moving `qualification_first_base`;
+- rerun live provider qualification merely to clear stale arm;
+- keep QCP/workflow/arm metadata inside the runtime evidence digest;
+- treat the independent Producer red as an unresolved engineering blocker.
+
+---
+
+## P2. Exact migration chain after the O-section head
+
+O-section product head:
+
+~~~text
+330e1a239317644a8f34e5ffb34e9e76a1560a48
+  fix(mcft-cap09): align engineering readiness settlement status
+~~~
+
+Successor chain:
+
+~~~text
+4089c08e5cd890b5703fb7de1a5315876b644310
+  gov(mcft-cap09): probe producer runtime-harness resolver split
+
+5e162fceb5758aa3eaf7894a474a5886fa069057
+  test(mcft-cap09): prove V13 runtime-harness resolver migration
+
+c8e4b23557fc825d8b40baf06857aaa96cc801fa
+  fix(mcft-cap09): decouple V13 runtime evidence from qualification harness
+
+bbe66db3406ec903ea2256506d2cf9ea5ff727ae
+  gov(mcft-cap09): settle V13 producer stale-arm harness debt
+~~~
+
+The first probe intentionally reproduced the old resolver problem: changing QCP authority caused the old all-in-one V13 resolver to expand QCP blocker count from the expected single live-owner blocker to multiple V13 requalification blockers.
+
+That transient probe red was evidence of the defect, not the final state.
+
+---
+
+## P3. Root cause of the stale-arm problem
+
+The former:
+
+~~~text
+V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE
+~~~
+
+mixed two dependency classes:
+
+~~~text
+production/runtime semantic dependencies
++
+qualification harness / workflow / arm / QCP dependencies
+~~~
+
+The legacy resolver had:
+
+~~~text
+path_count =
+  124
+~~~
+
+and included:
+
+- runtime roots and imported runtime dependencies;
+- runtime migrations;
+- production forcing composition/persistence;
+- live Formal-store authority;
+- GitHub qualification workflows;
+- qualification arm JSON;
+- runtime/governance acceptance scripts;
+- QCP authority;
+- applicability planner;
+- blocker preflight;
+- Producer applicability preflight.
+
+Consequences:
+
+1. a QCP/harness-only change could invalidate runtime evidence;
+2. the Producer workflow checked arm freshness before governed applicability;
+3. metadata descendants could fail on a stale arm even when runtime dependency evidence was still valid;
+4. clearing that red naively would have required unnecessary live provider activity.
+
+This was an evidence-contract design defect, not a provider defect.
+
+---
+
+## P4. New runtime / harness resolver separation
+
+The final control plane now contains:
+
+~~~text
+V13_RUNTIME_SEMANTIC_CLOSURE
+
+V13_QUALIFICATION_HARNESS_CLOSURE
+~~~
+
+Runtime-semantic closure:
+
+~~~text
+path_count =
+  108
+~~~
+
+Qualification-harness closure:
+
+~~~text
+current path_count =
+  20
+~~~
+
+Of those 20 harness paths:
+
+~~~text
+16 =
+  exact legacy harness subset
+
+4 =
+  post-migration harness governance additions
+~~~
+
+The four post-migration additions are governance/proof surfaces and are explicitly forbidden from entering the legacy runtime evidence set.
+
+---
+
+## P5. Exact partition proof
+
+The migration acceptance:
+
+~~~text
+scripts/governance_acceptance/
+ACCEPTANCE_MCFT_CAP_09_V13_RUNTIME_HARNESS_RESOLVER_MIGRATION_V1.cjs
+~~~
+
+machine-proves:
+
+~~~text
+legacy_path_count =
+  124
+
+runtime_path_count =
+  108
+
+legacy_harness_path_count =
+  16
+
+current_harness_path_count =
+  20
+
+exact_partition_proven =
+  true
+
+runtime_harness_overlap_count =
+  0
+~~~
+
+For the historical legacy set:
+
+~~~text
+runtime 108
++
+legacy harness 16
+=
+legacy 124
+~~~
+
+as an exact set equality, not merely equal counts.
+
+The runtime set is also machine-checked to contain no:
+
+- `.github/workflows/` paths;
+- `scripts/governance_acceptance/` paths;
+- `scripts/runtime_acceptance/` paths;
+- QCP authority path.
+
+This prevents qualification mechanics from being silently relabeled as runtime semantics.
+
+---
+
+## P6. BF1D source evidence is not rewritten
+
+Original BF1D V13 evidence remains immutable historical source evidence.
+
+Producer source:
+
+~~~text
+evidence_id =
+  V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F
+
+subject =
+  bf1d345f925f543779718973f8c9419684498e2a
+
+run =
+  33605700840
+
+legacy dependency digest =
+  sha256:db6bbfe41052d262481bb2a911cbe1501247c32ed111daa2af0b8ab5c58088b3
+~~~
+
+The migration proof recomputes the BF1D legacy aggregate and requires exact equality with that frozen digest.
+
+It does not mutate the BF1D entry.
+
+---
+
+## P7. Runtime subset stability is the basis for evidence projection
+
+Exact machine values:
+
+~~~text
+BF1D runtime path digest =
+  sha256:8374cf46dd3e40768de512b7c89319b8913c5de61affeb6a8378e7a81cdc7d25
+
+current runtime path digest =
+  sha256:8374cf46dd3e40768de512b7c89319b8913c5de61affeb6a8378e7a81cdc7d25
+
+runtime subset stable =
+  true
+~~~
+
+The projected aggregate dependency digest is:
+
+~~~text
+sha256:b312d05f816ab2494f503749d2a2b9d62be91b3ba235e24bce268440b6070235
+~~~
+
+and is identical when calculated from:
+
+~~~text
+BF1D runtime subset
+current runtime subset
+~~~
+
+Therefore the projection is based on an unchanged semantic dependency set, not on confidence or manual assertion.
+
+---
+
+## P8. Four BF1D V13 evidence entries were projected, with provenance
+
+The migration covers:
+
+~~~text
+V13_AUTONOMOUS_FORCING_FOUNDATION
+V13_HOLISTIC_SCHEMA
+V13_NEXT_TICK_VIABILITY
+V13_PRODUCER_DRIVEN_QUALIFICATION
+~~~
+
+Each projected entry retains:
+
+- original BF1D subject;
+- original workflow name/path;
+- original successful run ID;
+- original durable anchor snapshot;
+- source evidence ID;
+- legacy dependency digest;
+- migration proof subject;
+- runtime resolver ID;
+- runtime path digest;
+- projected dependency digest;
+- immutable binding.
+
+Projected Producer evidence:
+
+~~~text
+V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F_RUNTIME_PROJECTION_V1
+~~~
+
+The projection explicitly states:
+
+~~~text
+projection_authorizes_new_live_claim =
+  false
+~~~
+
+Do not interpret projected evidence as a new provider observation or new real-world qualification run.
+
+---
+
+## P9. Producer workflow order is now corrected
+
+Old unsafe order:
+
+~~~text
+live arm freshness
+        ↓
+governed applicability
+        ↓
+durable evidence skip
+~~~
+
+Current order:
+
+~~~text
+governed Producer live applicability
+        ↓
+if live_required = false:
+  accept durable projected runtime evidence
+        ↓
+skip live arm entirely
+        ↓
+skip live provider qualification entirely
+~~~
+
+Only when:
+
+~~~text
+live_required = true
+~~~
+
+does the workflow proceed to:
+
+~~~text
+Resolve explicit live arm
+        ↓
+Require live arm when live requalification is required
+        ↓
+live qualification setup/provider path
+~~~
+
+The >6h arm freshness guard remains in place.
+
+It was not deleted or weakened.
+
+---
+
+## P10. Current exact Producer workflow is SUCCESS
+
+At:
+
+~~~text
+#3376 @ bbe66db3406ec903ea2256506d2cf9ea5ff727ae
+~~~
+
+Producer run:
+
+~~~text
+33639980552
+
+conclusion =
+  SUCCESS
+~~~
+
+Exact step result:
+
+~~~text
+Resolve governed producer live applicability =
+  SUCCESS
+
+Accept durable producer evidence without live rerun =
+  SUCCESS
+
+Resolve explicit live arm =
+  SKIPPED
+
+Require live arm when live requalification is required =
+  SKIPPED
+
+qualification DB setup =
+  SKIPPED
+
+provider-driven live qualification =
+  SKIPPED
+
+immutable live proof upload =
+  SKIPPED
+~~~
+
+Machine applicability result:
+
+~~~text
+reason_code =
+  DURABLE_REQUALIFICATION_EVIDENCE_AND_DEPENDENCY_DIGEST_VALID
+
+live_required =
+  false
+
+evidence_id =
+  V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F_RUNTIME_PROJECTION_V1
+~~~
+
+No provider call was made.
+
+---
+
+## P11. Current migration machine proof is PASS inside QCP
+
+Latest exact QCP diagnostic output records:
+
+~~~text
+schema_version =
+  geox_mcft_cap09_v13_runtime_harness_resolver_migration_v1
+
+status =
+  PASS
+
+subject_sha =
+  bbe66db3406ec903ea2256506d2cf9ea5ff727ae
+
+source_subject_sha =
+  bf1d345f925f543779718973f8c9419684498e2a
+
+legacy_path_count =
+  124
+
+runtime_path_count =
+  108
+
+legacy_harness_path_count =
+  16
+
+current_harness_path_count =
+  20
+
+exact_partition_proven =
+  true
+
+runtime_harness_overlap_count =
+  0
+
+projected_runtime_digest_stable =
+  true
+
+projected_evidence_registry_complete =
+  true
+
+applicability_resolved_before_live_arm =
+  true
+
+stale_arm_checked_only_when_live_requalification_required =
+  true
+
+projection_authorizes_new_live_claim =
+  false
+~~~
+
+Non-effects:
+
+~~~text
+production_runtime_mutation =
+  false
+
+provider_request_count =
+  0
+
+production_owner_activation =
+  false
+
+formal_v5_arm =
+  false
+
+a0_bootstrap =
+  false
+
+o00_started =
+  false
+~~~
+
+---
+
+## P12. Current QCP has returned to the intended single blocker
+
+Current exact QCP:
+
+~~~text
+run =
+  33639980586
+
+conclusion =
+  FAILURE
+  deliberate fail-closed
+
+artifact_id =
+  9850540007
+
+artifact_digest =
+  sha256:cc86dbc95c56ef90e7246833242f0760adf1576fbd6151bbe869a6f7dfe14e87
+~~~
+
+Machine facts:
+
+~~~text
+unknown_changed_paths =
+  0
+
+authority_errors =
+  0
+
+resolver_errors =
+  0
+
+blocker_count =
+  1
+~~~
+
+Only blocker:
+
+~~~text
+EXACT_ONE_PRODUCTION_OWNER
+
+reason =
+  NO_VALID_REQUALIFICATION_EVIDENCE
+~~~
+
+V13 Producer is PASS through projected durable runtime evidence.
+
+The migration check itself is PASS.
+
+This proves the transient 5-blocker probe state has been correctly eliminated.
+
+---
+
+## P13. Current post-merge control plane is fully green
+
+Current exact post-merge V13 control plane:
+
+~~~text
+run =
+  33639980638
+
+conclusion =
+  SUCCESS
+
+artifact_id =
+  9850442837
+
+artifact_digest =
+  sha256:eb28d0041ae204d1452383f9506e1fcb62fa193641704579b6e329560b349054
+~~~
+
+This confirms the migrated resolver/evidence model is accepted by the non-fail-fast post-merge control-plane path.
+
+---
+
+## P14. Current planner-readiness is SUCCESS and canonical settlement is updated
+
+Current exact planner-readiness:
+
+~~~text
+run =
+  33639980526
+
+conclusion =
+  SUCCESS
+
+artifact_id =
+  9850403992
+
+artifact_digest =
+  sha256:ea9f09effa99e4bb248d10db0e4da324ea5d510291ae4e2235e3b46cf2cd1004
+~~~
+
+Canonical acquisition-horizon authority now records:
+
+~~~text
+nonblocking_engineering_debt.id =
+  V13_PRODUCER_STALE_ARM_ORDERING
+
+nonblocking_engineering_debt.status =
+  SETTLED_RUNTIME_HARNESS_RESOLVER_MIGRATION
+
+blocks_engineering_readiness =
+  false
+
+current_durable_producer_evidence_invalidated =
+  false
+
+requires_resolution_before_fresh_producer_live_requalification_if_dependency_contract_reopened =
+  false
+~~~
+
+The engineering-readiness exact-head validation mode now includes V13 runtime/harness migration revalidation.
+
+---
+
+## P15. Current CI is fully green
+
+Current exact CI:
+
+~~~text
+run =
+  33639980519
+
+conclusion =
+  SUCCESS
+
+build-test =
+  SUCCESS
+
+acceptance =
+  SUCCESS
+~~~
+
+Also SUCCESS on the same exact product head:
+
+- planner-readiness;
+- Phase5 production-equivalent temporal settlement;
+- Phase6 runtime independence;
+- V13 autonomous forcing;
+- V13 holistic schema;
+- V13 next-tick viability;
+- V13 Producer qualification preflight;
+- V13 Producer independent workflow;
+- post-merge V13 control plane;
+- delivery-policy contract;
+- candidate PR selftest;
+- main-ruleset readiness.
+
+---
+
+## P16. Two initial pull_request_target reds were external GitHub API failures
+
+Initial target-side runs:
+
+~~~text
+candidate integrity =
+  33639974544
+  FAILURE
+
+release lane =
+  33639974493
+  FAILURE
+~~~
+
+Both failed because GitHub returned:
+
+~~~text
+HTTP 500
+
+/pulls/3376/files
+
+"Server Error: Sorry, this diff is temporarily unavailable due to heavy server load."
+
+code =
+  not_available
+~~~
+
+They did not report:
+
+- candidate declaration mismatch;
+- release policy mismatch;
+- head mismatch;
+- base mismatch;
+- MCFT boundary violation.
+
+PR metadata was updated at the same exact head to retrigger target-side enforcement.
+
+Do not classify these two initial target-side reds as an engineering defect.
+
+---
+
+## P17. Engineering readiness remains qualified; stale-arm is no longer a pending debt
+
+Current canonical engineering claim remains:
+
+~~~text
+MCFT_CAP_09_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_QUALIFIED
+~~~
+
+It now includes a settled V13 Producer runtime/harness migration proof.
+
+At this point the previously identified controllable Producer stale-arm debt is no longer open.
+
+No new known controllable engineering blocker is introduced by the migration.
+
+The remaining QCP owner blocker is on the live activation / Taskbook completion line.
+
+---
+
+## P18. Live activation boundary remains unchanged
+
+Current T4R1 live authority is still unresolved:
+
+~~~text
+current T4R1 stage authority =
+  not established
+
+current natural-season successor =
+  not established
+
+viable future Formal/A0 window =
+  false
+
+runtime_start_authority_may_be_armed =
+  false
+
+production_owner_activation_authorized =
+  false
+
+Formal-v5 =
+  false
+
+A0 =
+  false
+
+O00 =
+  false
+~~~
+
+Material KBS/provider change remains:
+
+~~~text
+LIVE_ACTIVATION_GATE
+~~~
+
+not:
+
+~~~text
+ENGINEERING_READINESS_BLOCKER
+~~~
+
+No resolver migration changes that distinction.
+
+---
+
+## P19. Prohibited shortcuts remain prohibited
+
+Do not:
+
+- call the runtime projection a new live qualification;
+- change BF1D historical evidence in place;
+- remove BF1D provenance from projected entries;
+- allow QCP/workflow/arm paths back into runtime semantic closure;
+- make harness resolver changes silently authorize provider/runtime effects;
+- bypass the >6h live-arm freshness guard when `live_required=true`;
+- activate production owner while runtime-start is not armable;
+- infer T4R1 stage from management events or elapsed time;
+- cross-season stitch;
+- promote fixture/synthetic evidence to real T4R1 authority;
+- declare Stage 1B complete;
+- declare MCFT_CAP_09_COMPLETE.
+
+---
+
+## P20. Next continuation order
+
+Before any further write:
+
+1. verify #3376 exact head remains `bbe66db3406ec903ea2256506d2cf9ea5ff727ae` or reconstruct descendants;
+2. verify the runtime/harness migration acceptance still passes;
+3. verify Producer still resolves applicability before live arm;
+4. verify projected BF1D runtime evidence is still the unique valid Producer evidence for the current runtime digest;
+5. verify QCP remains only `EXACT_ONE_PRODUCTION_OWNER`;
+6. verify engineering readiness remains QUALIFIED;
+7. do not reopen stale-arm work unless runtime/harness dependency semantics actually drift;
+8. keep live activation closed until valid current-season authority exists.
+
+If no new controllable engineering debt appears, do not invent one merely to keep the project “busy”.
+
+The real remaining completion lane is live activation / Stage 1B, and its external evidence gate is intentionally separate from engineering readiness.
+
+---
+
+## P21. Bottom line
+
+At the current exact product head:
+
+~~~text
+#3376 @ bbe66db3406ec903ea2256506d2cf9ea5ff727ae
+
+engineering readiness =
+  QUALIFIED
+
+known stale-arm engineering debt =
+  SETTLED
+
+V13 runtime/harness migration =
+  PASS
+
+legacy paths =
+  124
+
+runtime paths =
+  108
+
+legacy harness paths =
+  16
+
+current harness paths =
+  20
+
+runtime/harness overlap =
+  0
+
+BF1D runtime digest =
+  sha256:8374cf46dd3e40768de512b7c89319b8913c5de61affeb6a8378e7a81cdc7d25
+
+current runtime digest =
+  same
+
+projected Producer evidence =
+  V13_PRODUCER_DRIVEN_QUALIFICATION_POSTMERGE_BF1D345F_RUNTIME_PROJECTION_V1
+
+Producer =
+  SUCCESS
+  33639980552
+  live_required=false
+  live arm skipped
+  provider skipped
+
+planner-readiness =
+  SUCCESS
+  33639980526
+
+post-merge control plane =
+  SUCCESS
+  33639980638
+
+QCP =
+  deliberate fail-closed
+  33639980586
+  blocker_count=1
+  EXACT_ONE_PRODUCTION_OWNER
+
+CI =
+  SUCCESS
+  33639980519
+
+live activation =
+  NOT_CURRENTLY_ELIGIBLE
+
+runtime-start / owner / Formal-v5 / A0 / O00 =
+  all inactive
+
+Stage 1B =
+  NOT COMPLETE
+~~~
+
+The key technical result is now closed:
+
+**qualification-harness aging can no longer invalidate unchanged V13 runtime semantics or force an unnecessary live provider rerun.**
 
 ---
 
