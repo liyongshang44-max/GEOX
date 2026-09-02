@@ -247,7 +247,7 @@ function covSqlEffect(text) {
     let m;
     while ((m=re.exec(s))) {
       const raw=String(m[group]||"").replace(/^public\./i,"").replaceAll('"',"").trim();
-      if (raw && raw.toUpperCase()!=="SET") targets.add(raw);
+      if (raw && !["SET","SKIP","NOWAIT"].includes(raw.toUpperCase())) targets.add(raw);
     }
   }
   collect(/\bINSERT\s+INTO\s+((?:public\.)?"?[A-Za-z_][A-Za-z0-9_]*"?)/ig);
