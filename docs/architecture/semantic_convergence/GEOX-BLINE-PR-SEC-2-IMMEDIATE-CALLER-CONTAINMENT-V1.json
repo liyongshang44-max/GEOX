@@ -1,6 +1,6 @@
 {
   "schema_version": "bline_pr_sec_2_immediate_caller_containment_v1",
-  "status": "BATCH_1_IMPLEMENTED_PENDING_EXACT_HEAD_QUALIFICATION",
+  "status": "BATCH_2B_IMPLEMENTED_PENDING_EXACT_HEAD_QUALIFICATION",
   "mission": "B-SEC-0 / PR-SEC-2 Immediate fail-closed caller-authority containment",
   "predecessor": {
     "pr": 3453,
@@ -87,11 +87,85 @@
         "production_reachable_service_writer_without_bound_principal": 3,
         "tenant_scope_from_untrusted_body_or_unbound": 16
       },
-      "qualification": "PENDING"
+      "qualification": "ACCEPTED_AT_3a8c456509070698d4f2b3f19ffec71f3ce0e248"
+    },
+    {
+      "batch_id": "PRSEC2-BATCH-002A",
+      "risk_order": 2,
+      "subject": "NOAA / NCEP GFS caller-authority provenance audit",
+      "source_surfaces": ["BSEC-003"],
+      "mode": "READ_ONLY_AUDIT",
+      "verdict": "CASE_B_VALID_NOAA_GFS_PROVIDER_EXISTS_BUT_AUTHORITY_IS_MCFT_OWNED_OR_NON_COMMERCIAL",
+      "runtime_modified": false,
+      "mcft_implementation_changed": false,
+      "qualification": "CTO_ACCEPTED"
+    },
+    {
+      "batch_id": "PRSEC2-BATCH-002B",
+      "risk_order": 2,
+      "subject": "Commercial Weather Forecast ingest fail-close",
+      "source_surfaces": ["BSEC-003"],
+      "entrypoints": [
+        "POST /api/v1/weather/forecast/ingest"
+      ],
+      "runtime_registration": "apps/server/src/modules/sensing/registerSensingModule.ts::registerSensingModule -> apps/server/src/routes/weather_v1.ts::registerWeatherV1Routes",
+      "containment_decision": "COMMERCIAL_FAIL_CLOSE",
+      "authority_result": {
+        "commercial_provider_principal": "NOT_ESTABLISHED",
+        "validated_capability": "NOT_ESTABLISHED",
+        "tenant_project_group_binding": "NOT_ESTABLISHED",
+        "production_persistence_reachability": false,
+        "reason": "No authorized Commercial weather-ingest caller authority exists; production POST route rejects before caller-controlled scope or forecast payload reaches persistence"
+      },
+      "persistent_targets_made_unreachable": [
+        "facts / weather_forecast_fact_v1",
+        "weather_forecast_index_v1"
+      ],
+      "writers_made_unreachable": [
+        "ingestWeatherForecastFactV1",
+        "appendWeatherForecastFactV1",
+        "upsertWeatherForecastIndexV1",
+        "ensureWeatherForecastIndexV1"
+      ],
+      "behavioral_proofs_required": [
+        "missing credential rejected with zero DB query",
+        "arbitrary bearer rejected with zero DB query",
+        "caller-controlled tenant/project/group/field rejected with zero DB query",
+        "caller-controlled provider/source metadata rejected with zero DB query",
+        "caller-controlled hourly/raw payload rejected with zero DB query",
+        "Commercial Compose runtime rejection leaves facts count unchanged",
+        "Commercial Compose runtime rejection leaves weather_forecast_index_v1 count/presence unchanged",
+        "rejection clean-returns without deferred/callback persistence"
+      ],
+      "closure_reason": {
+        "unauthenticated_writer_debt": "PRODUCTION_WRITER_NO_LONGER_CALLER_REACHABLE",
+        "capability_debt": "PRODUCTION_WRITER_NO_LONGER_CALLER_REACHABLE_NOT_VALIDATED_CAPABILITY_CREATED",
+        "tenant_scope_debt": "UNTRUSTED_BODY_SCOPE_NO_LONGER_REACHES_PRODUCTION_PERSISTENCE_NOT_TRUSTED_BINDING_CREATED"
+      },
+      "new_principal_created": false,
+      "new_capability_created": false,
+      "role_matrix_changed": false,
+      "semantic_runtime_changed": false,
+      "persistence_semantics_changed": false,
+      "mcft_implementation_changed": false,
+      "machine_debt_delta": {
+        "production_reachable_mutating_surface_without_authn": -1,
+        "production_reachable_semantic_writer_without_validated_capability": -1,
+        "production_reachable_human_action_with_unverified_declared_actor": 0,
+        "production_reachable_service_writer_without_bound_principal": 0,
+        "tenant_scope_from_untrusted_body_or_unbound": -1
+      },
+      "expected_after": {
+        "production_reachable_mutating_surface_without_authn": 32,
+        "production_reachable_semantic_writer_without_validated_capability": 106,
+        "production_reachable_human_action_with_unverified_declared_actor": 7,
+        "production_reachable_service_writer_without_bound_principal": 3,
+        "tenant_scope_from_untrusted_body_or_unbound": 15
+      },
+      "qualification": "PENDING_EXACT_HEAD_QUALIFICATION"
     }
   ],
-  "next_priority_after_batch_1": [
-    "Weather Forecast ingest",
+  "next_priority_after_batch_2": [
     "Legacy Twin base mutation fail-close",
     "Admin Import",
     "/api/raw and weak __internal__ compatibility",
