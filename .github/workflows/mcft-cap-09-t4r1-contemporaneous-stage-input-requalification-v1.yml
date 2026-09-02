@@ -1,0 +1,109 @@
+name: mcft-cap-09-t4r1-contemporaneous-stage-input-requalification-v1
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-t4r1-contemporaneous-stage-input-requalification-v1.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CONTEMPORANEOUS-STAGE-INPUT-REQUALIFICATION-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CONTEMPORANEOUS_STAGE_INPUT_REQUALIFICATION_V1.cjs'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_CONTEMPORANEOUS_STAGE_INPUT_REQUALIFICATION_V1.mjs'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-t4r1-stage-input-requalification-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  t4r1-contemporaneous-stage-input-requalification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Resolve exact stage-input subject
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "subject_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "subject_sha=${{ github.event.merge_group.head_sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium for KBS AgLog read-only requalification
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Syntax-check T4R1 stage-input proof code
+        run: |
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CONTEMPORANEOUS_STAGE_INPUT_REQUALIFICATION_V1.cjs
+          node --check scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_CONTEMPORANEOUS_STAGE_INPUT_REQUALIFICATION_V1.mjs
+
+      - name: Validate exact T4R1 stage-input governance boundary
+        env:
+          MCFT_BASE_SHA: e075d48b13ef1c85888c0f3dfbf3173bb5232f96
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CONTEMPORANEOUS_STAGE_INPUT_REQUALIFICATION_V1.cjs
+
+      - name: Execute live read-only T4R1 contemporaneous stage-input requalification
+        env:
+          MCFT_SUBJECT_SHA: ${{ steps.authority.outputs.subject_sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_CONTEMPORANEOUS_STAGE_INPUT_REQUALIFICATION_V1.mjs
+
+      - name: Verify fail-closed stage-input result contract
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_T4R1_CONTEMPORANEOUS_STAGE_INPUT_REQUALIFICATION_V1.json', 'utf8'));
+          if (result.status !== 'PASS') throw new Error('T4R1_STAGE_INPUT_LIVE_SCAN_PASS_REQUIRED');
+          if (result.subject_sha !== '${{ steps.authority.outputs.subject_sha }}') throw new Error('T4R1_STAGE_INPUT_EXACT_HEAD_RESULT_REQUIRED');
+          const allowed = [
+            'T4R1_CONTEMPORANEOUS_STAGE_INPUT_CANDIDATE_DETECTED_MAPPING_AND_GUARD_PROOF_REQUIRED',
+            'T4R1_TERMINATION_INPUT_CANDIDATE_DETECTED_LIFECYCLE_REQUALIFICATION_REQUIRED',
+            'NO_T4R1_CONTEMPORANEOUS_STAGE_INPUT_AUTHORITY_CURRENTLY_ESTABLISHED'
+          ];
+          if (!allowed.includes(result.result)) throw new Error('T4R1_STAGE_INPUT_TERMINAL_RESULT_INVALID');
+          if (result.stage_authority?.status !== 'UNRESOLVED' || result.stage_authority?.stage !== null) throw new Error('T4R1_STAGE_INPUT_PREMATURE_STAGE_AUTHORITY');
+          if (result.stage_authority?.backward_stability_hours_required !== 6 || result.stage_authority?.forward_transition_guard_hours_required !== 30) throw new Error('T4R1_STAGE_INPUT_GUARD_DRIFT');
+          if (result.stage_authority?.whole_window_guard_passed !== false) throw new Error('T4R1_STAGE_INPUT_PREMATURE_WHOLE_WINDOW_PASS');
+          if (result.database_write_count !== 0 || result.runtime_process_start !== false) throw new Error('T4R1_STAGE_INPUT_ZERO_SIDE_EFFECT_REQUIRED');
+          if (result.production_owner_activation !== false || result.formal_v5_arm !== false || result.a0_bootstrap !== false || result.o00_started !== false) throw new Error('T4R1_STAGE_INPUT_ACTIVATION_NONCLAIM_REQUIRED');
+          if (result.formal_execution_count !== '0/24') throw new Error('T4R1_STAGE_INPUT_FORMAL_NONCLAIM_REQUIRED');
+          console.log(JSON.stringify({
+            status: 'PASS',
+            result: result.result,
+            stage_input_candidate_count: result.provider_scan.direct_stage_input_candidate_count,
+            termination_input_candidate_count: result.provider_scan.termination_input_candidate_count
+          }));
+
+      - name: Upload immutable metadata-only T4R1 stage-input proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t4r1-stage-input-requalification-${{ steps.authority.outputs.subject_sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_T4R1_CONTEMPORANEOUS_STAGE_INPUT_REQUALIFICATION_GOVERNANCE_V1.json
+            acceptance-output/MCFT_CAP_09_T4R1_CONTEMPORANEOUS_STAGE_INPUT_REQUALIFICATION_V1.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CONTEMPORANEOUS-STAGE-INPUT-REQUALIFICATION-V1.json
+          if-no-files-found: error
+          retention-days: 90
