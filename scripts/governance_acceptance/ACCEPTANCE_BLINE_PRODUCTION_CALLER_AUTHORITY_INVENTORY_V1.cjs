@@ -629,10 +629,22 @@ for (const fp of runtimeFiles) {
             writers: [...analysis.directWriterKeys],
           });
         } else {
+          const handler = n.arguments[n.arguments.length - 1];
+          let analysis = { dml:false, ddl:false, fact:false, directWriterKeys:new Set(), callees:new Set() };
+          if (handler && (ts.isArrowFunction(handler) || ts.isFunctionExpression(handler))) {
+            analysis = covAnalyzeNode(fp, handler);
+          } else if (handler && ts.isIdentifier(handler)) {
+            const target = covResolveFunction(fp, handler.text);
+            if (target) analysis = covAnalyzeFunction(target);
+          }
           covDynamicHttp.push({
             source_path: rel(fp),
             method,
             expression: routeArg ? routeArg.getText(mod.sf) : "<missing>",
+            dml: analysis.dml,
+            ddl: analysis.ddl,
+            fact: analysis.fact,
+            writers: [...analysis.directWriterKeys],
           });
         }
       }
@@ -652,19 +664,53 @@ for (const fp of runtimeFiles) {
 }
 const covHttpUnique = [...new Map(covAllHttp.map((r) => [r.source_path+"::"+r.method+"::"+r.route, r])).values()];
 
-const covDynamicHttpAllow = [
-  ["apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts", "POST", "path"],
-  ["apps/server/src/routes/control_ao_act.ts", "POST", "legacyAoActRouteV1(\"task\")"],
-  ["apps/server/src/routes/control_ao_act.ts", "POST", "legacyAoActRouteV1(\"receipt\")"],
-  ["apps/server/src/routes/decision_eligibility_policy_declarations_v1.ts", "POST", "DECISION_ELIGIBILITY_POLICY_DECLARATION_POST_PATH_V1"],
-  ["apps/server/src/routes/programs_core_v1.ts", "POST", "path"],
-];
-const covUnexpectedDynamicHttp = covDynamicHttp.filter((d) =>
-  !covDynamicHttpAllow.some(([p,m,e]) =>
-    d.source_path === p && d.method === m && String(d.expression || "").startsWith(e)
+const covDynamicDispositions = inv.dynamic_http_registration_dispositions ?? [];
+for (const d of covDynamicDispositions) {
+  assert(typeof d.source_path === "string" && d.source_path, "invalid dynamic HTTP disposition source_path", d);
+  assert(typeof d.http_method === "string" && d.http_method, "invalid dynamic HTTP disposition method", d);
+  assert(typeof d.expression === "string" && d.expression, "invalid dynamic HTTP disposition expression", d);
+  assert(covAllowedHttpClasses.has(d.side_effect_class), "invalid dynamic HTTP side-effect class", d);
+  assert(Array.isArray(d.exact_routes), "invalid dynamic HTTP exact_routes", d);
+}
+const covDynamicDispositionKey = new Map(covDynamicDispositions.map((d) => [
+  d.source_path + "::" + d.http_method + "::" + d.expression,
+  d,
+]));
+const covUnexpectedDynamicHttp = [];
+const covDynamicClassMismatch = [];
+for (const d of covDynamicHttp) {
+  const key = d.source_path + "::" + d.method + "::" + d.expression;
+  const disposition = covDynamicDispositionKey.get(key);
+  if (!disposition) {
+    covUnexpectedDynamicHttp.push(d);
+    continue;
+  }
+  const hasWrite = d.dml || d.ddl;
+  if (disposition.side_effect_class === "PURE_READ" && hasWrite) covDynamicClassMismatch.push({route:d, disposition});
+  if (disposition.side_effect_class === "SCHEMA_ENSURE_ONLY" && (!d.ddl || d.dml)) covDynamicClassMismatch.push({route:d, disposition});
+  if (disposition.side_effect_class === "FACT_LEDGER_WRITE" && !d.fact) covDynamicClassMismatch.push({route:d, disposition});
+  if ((disposition.side_effect_class === "PROJECTION_SIDE_EFFECT" || disposition.side_effect_class === "DOMAIN_STATE_SIDE_EFFECT") && !d.dml) covDynamicClassMismatch.push({route:d, disposition});
+  if (disposition.side_effect_class !== "PURE_READ") {
+    const exactCovered = disposition.exact_routes.some((route) =>
+      covHttpDispositions.some((h) =>
+        h.source_path === d.source_path &&
+        h.http_method === d.method &&
+        h.exact_route === route
+      )
+    );
+    assert(exactCovered, "dynamic HTTP writer requires exact HTTP side-effect inventory surface", { route:d, disposition });
+  }
+}
+const covStaleDynamicDispositions = covDynamicDispositions.filter((d) =>
+  !covDynamicHttp.some((x) =>
+    x.source_path === d.source_path &&
+    x.method === d.http_method &&
+    x.expression === d.expression
   )
 );
 assert(covUnexpectedDynamicHttp.length === 0, "unresolved production HTTP entrypoint requires explicit all-method disposition", covUnexpectedDynamicHttp);
+assert(covDynamicClassMismatch.length === 0, "dynamic HTTP side-effect disposition does not match reachable write behavior", covDynamicClassMismatch);
+assert(covStaleDynamicDispositions.length === 0, "stale dynamic HTTP disposition without production registration", covStaleDynamicDispositions);
 assert(covUnsupportedRouteRegistrations.length === 0, "unsupported app.route production registration requires explicit scanner support", covUnsupportedRouteRegistrations);
 
 
@@ -867,6 +913,7 @@ const summary={
   subprocess_edge_count:sub.length,
   discovered_all_http_entrypoint_count:covHttpUnique.length,
   discovered_dynamic_http_registration_count:covDynamicHttp.length,
+  dynamic_http_registration_disposition_count:covDynamicDispositions.length,
   unsupported_app_route_registration_count:covUnsupportedRouteRegistrations.length,
   discovered_get_entrypoint_count:covHttpUnique.filter((r)=>r.method==="GET").length,
   auto_pure_read_http_count:covPureReadCount,
