@@ -586,10 +586,14 @@ export class FertilizationServiceV1 {
     if (!receiptRow) throw new FertilizationServiceErrorV1("NOT_FOUND:receipt_fact_id", 404);
     const receiptRecord = receiptRow.record_json ?? {};
     const receiptPayload = receiptRecord.payload ?? {};
+    const receiptFieldId = nonEmptyText(receiptPayload.field_id)
+      ?? (String(receiptPayload.execution_coverage?.kind ?? "").trim().toLowerCase() === "field"
+        ? nonEmptyText(receiptPayload.execution_coverage?.ref)
+        : null);
     if (String(receiptPayload.tenant_id ?? "") !== input.tenant_id
       || String(receiptPayload.project_id ?? "") !== input.project_id
       || String(receiptPayload.group_id ?? "") !== input.group_id
-      || String(receiptPayload.field_id ?? "") !== input.field_id
+      || receiptFieldId !== input.field_id
       || String(receiptPayload.act_task_id ?? receiptPayload.task_id ?? "") !== input.act_task_id
       || String(receiptPayload.operation_plan_id ?? "") !== input.operation_plan_id) {
       throw new FertilizationServiceErrorV1("RECEIPT_EXACT_CHAIN_MISMATCH", 400);
@@ -680,6 +684,7 @@ export class FertilizationServiceV1 {
 
   async evaluateAcceptance(input: TenantScopeV1 & {
     fertilization_prescription_id: string;
+    fertilization_prescription_fact_id: string;
     receipt_fact_id: string;
     act_task_id: string;
     operation_plan_id: string;
@@ -689,6 +694,7 @@ export class FertilizationServiceV1 {
   }): Promise<{ acceptance: Record<string, unknown>; fact_id: string }> {
     ensureTenantScope(input);
     const fertilization_prescription_id = nonEmptyText(input.fertilization_prescription_id);
+    const fertilization_prescription_fact_id = nonEmptyText(input.fertilization_prescription_fact_id);
     const receipt_fact_id = nonEmptyText(input.receipt_fact_id);
     const act_task_id = nonEmptyText(input.act_task_id);
     const operation_plan_id = nonEmptyText(input.operation_plan_id);
@@ -696,6 +702,7 @@ export class FertilizationServiceV1 {
     const as_applied_id = nonEmptyText(input.as_applied_id);
     const acceptance_result_fact_id = nonEmptyText(input.acceptance_result_fact_id);
     if (!fertilization_prescription_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:fertilization_prescription_id", 400);
+    if (!fertilization_prescription_fact_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:fertilization_prescription_fact_id", 400);
     if (!receipt_fact_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:receipt_fact_id", 400);
     if (!act_task_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:act_task_id", 400);
     if (!operation_plan_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:operation_plan_id", 400);
@@ -707,15 +714,19 @@ export class FertilizationServiceV1 {
     if ((input as any).receipt_id != null) throw new FertilizationServiceErrorV1("CALLER_RECEIPT_ID_FORBIDDEN_USE_RECEIPT_FACT_ID", 400);
     if ((input as any).evidence_refs != null) throw new FertilizationServiceErrorV1("CALLER_EXECUTION_EVIDENCE_FORBIDDEN", 400);
 
-    const prescriptionRow = await this.getPrescription(input, fertilization_prescription_id);
-    if (!prescriptionRow) throw new FertilizationServiceErrorV1("NOT_FOUND:fertilization_prescription", 404);
+    const prescriptionRow = await this.findExactFactById("fertilization_prescription_v1", fertilization_prescription_fact_id) as FactRowV1<FertilizationPrescriptionFactV1> | null;
+    if (!prescriptionRow) throw new FertilizationServiceErrorV1("NOT_FOUND:fertilization_prescription_fact_id", 404);
     const prescription = prescriptionRow.record_json;
+    if (!tenantMatches(prescription, input)
+      || prescription.fertilization_prescription_id !== fertilization_prescription_id) {
+      throw new FertilizationServiceErrorV1("FERTILIZATION_PRESCRIPTION_EXACT_CHAIN_MISMATCH", 400);
+    }
     const provenance = await this.loadExactExecutionProvenance({
       tenant_id: input.tenant_id,
       project_id: input.project_id,
       group_id: input.group_id,
       fertilization_prescription_id,
-      fertilization_prescription_fact_id: prescriptionRow.fact_id,
+      fertilization_prescription_fact_id,
       field_id: prescription.field_id,
       receipt_fact_id,
       act_task_id,
@@ -811,4 +822,5 @@ export class FertilizationServiceV1 {
     };
     const inserted = await this.insertFact(acceptance, "fac");
     return { acceptance, fact_id: inserted.fact_id };
-  }}
+  }
+}
