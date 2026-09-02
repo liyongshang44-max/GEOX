@@ -102,6 +102,9 @@
         "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C1-DURABLE-RAW-RESTRICTED-INGRESS-V1.json",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs",
+        ".github/workflows/mcft-cap-09-ea3-external-collector-canonicalizer.yml",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_SUCCESSOR_REPLAY_COMPLETE_INGRESS_V1.ts"
       ]
     },

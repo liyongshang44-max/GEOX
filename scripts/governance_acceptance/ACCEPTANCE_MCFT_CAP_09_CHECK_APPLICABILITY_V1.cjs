@@ -167,6 +167,23 @@ function main() {
   assert.equal(byId(collectorChange, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS").status, "REQUALIFY");
   assert(byId(collectorChange, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS").changed_dependencies.includes(collectorPath));
 
+  // CP-4: the EA3 collector proof route is part of the EA5C1 successor
+  // qualification surface, not an ungoverned side gate.
+  for (const ea3ProofPath of [
+    ".github/workflows/mcft-cap-09-ea3-external-collector-canonicalizer.yml",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER.ts",
+  ]) {
+    const ea3ProofPlan = plan(authority, registry, [ea3ProofPath]);
+    assert.equal(ea3ProofPlan.status, "PASS");
+    assert.equal(ea3ProofPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(ea3ProofPlan, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS").status, "REQUALIFY");
+    assert(
+      byId(ea3ProofPlan, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS")
+        .changed_dependencies.includes(ea3ProofPath),
+    );
+  }
+
   // CP-4: known changed dependency. Shared ingress changes must requalify EA5C1.
   const ingressPath = "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts";
   const ingress = plan(authority, registry, [ingressPath]);
