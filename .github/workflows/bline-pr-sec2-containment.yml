@@ -1,0 +1,48 @@
+name: bline-pr-sec2-containment
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts'
+      - 'docs/architecture/semantic_convergence/GEOX-BLINE-PR-SEC-2-IMMEDIATE-CALLER-CONTAINMENT-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_IMMEDIATE_CALLER_CONTAINMENT_V1.cjs'
+      - '.github/workflows/bline-pr-sec2-containment.yml'
+
+jobs:
+  containment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: PR-SEC-2 immediate caller containment
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_IMMEDIATE_CALLER_CONTAINMENT_V1.cjs
+
+      - name: Frozen PR-SEC-1 caller inventory regression
+        run: pnpm run ci:governance:bline-production-caller-authority-inventory
+
+      - name: B-Line residual authority audit
+        run: pnpm run ci:governance:bline-residual-authority-audit
+
+      - name: B-Line active runtime surface closure
+        run: pnpm run ci:governance:bline-active-runtime-surface-closure
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Build
+        run: pnpm -r build
