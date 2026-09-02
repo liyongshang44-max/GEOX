@@ -38,9 +38,10 @@ async function createSamplingFormalChain(base, token, scope, field_id, sample_id
     evidence_refs: [],
   }), 'sampling plan');
 
-  requireOk(await post(base, '/api/v1/sampling/receipt', token, {
+  const receipt = requireOk(await post(base, '/api/v1/sampling/receipt', token, {
     ...scope,
     plan_id: plan.plan_id,
+    plan_fact_id: plan.fact_id,
     sample_id,
     field_id,
     collected_at_ts: Date.now(),
@@ -52,6 +53,7 @@ async function createSamplingFormalChain(base, token, scope, field_id, sample_id
 
   const lab = requireOk(await post(base, '/api/v1/sampling/lab-result', token, {
     sample_id,
+    receipt_fact_id: receipt.fact_id,
     imported_at_ts: Date.now(),
     metrics: { nitrate_n_mg_kg: 2.1, ammonium_n_mg_kg: 0.8 },
     units: { nitrate_n_mg_kg: 'mg/kg', ammonium_n_mg_kg: 'mg/kg' },
@@ -59,13 +61,16 @@ async function createSamplingFormalChain(base, token, scope, field_id, sample_id
     quality_status: 'PASS',
   }), 'sampling lab result');
 
-  requireOk(await post(base, '/api/v1/sampling/acceptance/evaluate', token, {
+  const acceptance = requireOk(await post(base, '/api/v1/sampling/acceptance/evaluate', token, {
     plan_id: plan.plan_id,
+    plan_fact_id: plan.fact_id,
     sample_id,
+    receipt_fact_id: receipt.fact_id,
     import_id: lab.import_id,
+    lab_fact_id: lab.fact_id,
   }), 'sampling acceptance');
 
-  return { plan, lab };
+  return { plan, receipt, lab, acceptance };
 }
 
 async function main() {
