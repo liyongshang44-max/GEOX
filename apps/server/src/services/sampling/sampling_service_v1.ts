@@ -268,11 +268,11 @@ export class SamplingServiceV1 {
     return row?.record_json ?? null;
   }
 
-  async getPlan(plan_id: string): Promise<Record<string, unknown> | null> {
+  async getPlan(plan_id: string): Promise<SamplingFactRowV1 | null> {
     return this.findUniqueFactByBusinessKey("sampling_plan_v1", "plan_id", plan_id);
   }
 
-  async getSample(sample_id: string): Promise<Record<string, unknown> | null> {
+  async getSample(sample_id: string): Promise<SamplingFactRowV1 | null> {
     const receiptResult = await this.pool.query(
       `SELECT fact_id, occurred_at, source, record_json
          FROM facts
