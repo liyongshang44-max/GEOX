@@ -1,0 +1,98 @@
+name: mcft-cap-09-alternative-scope-rescue-requalification-v2
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-alternative-scope-rescue-requalification-v2.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ALTERNATIVE-SCOPE-RESCUE-REQUALIFICATION-V2.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_REQUALIFICATION_V2.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ALTERNATIVE-SCOPE-RESCUE-V1.json'
+      - 'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_V1.mjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-START-READINESS-V1.json'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-alternative-scope-rescue-requalification-v2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  current-scope-rescue-requalification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate frozen rescue contract and resolve mode
+        id: mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_REQUALIFICATION_V2.cjs
+          status="$(node -e "const a=require('./docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ALTERNATIVE-SCOPE-RESCUE-REQUALIFICATION-V2.json');process.stdout.write(a.record_status)")"
+          if [ "$status" = "LIVE_SCAN_REQUIRED_READ_ONLY" ]; then
+            echo "live_required=true" >> "$GITHUB_OUTPUT"
+          elif [ "$status" = "SETTLED_IMMUTABLE_LIVE_SCAN" ]; then
+            echo "live_required=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "UNSAFE_REQUALIFICATION_STATUS:$status" >&2; exit 1
+          fi
+
+      - uses: pnpm/action-setup@v4
+        if: steps.mode.outputs.live_required == 'true'
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        if: steps.mode.outputs.live_required == 'true'
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+      - name: Install exact repository dependencies
+        if: steps.mode.outputs.live_required == 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium for read-only KBS rescue scan
+        if: steps.mode.outputs.live_required == 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Execute frozen live read-only alternative-scope scan
+        if: steps.mode.outputs.live_required == 'true'
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_V1.mjs
+      - name: Validate candidate-only live result
+        if: steps.mode.outputs.live_required == 'true'
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_V1.json','utf8'));
+          const head='${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}';
+          if(r.status!=='PASS'||r.subject_sha!==head)throw new Error('ALT_SCOPE_REQUAL_LIVE_RESULT_INVALID');
+          if(!['ALTERNATIVE_SCOPE_CANDIDATE_DETECTED_REQUALIFICATION_REQUIRED','NO_ALTERNATIVE_SCOPE_CANDIDATE_CURRENTLY_ESTABLISHED'].includes(r.result))throw new Error('ALT_SCOPE_REQUAL_TERMINAL_INVALID');
+          if(r.alternative_scope_authority_created!==false||r.lifecycle_authority_created!==false||r.geometry_authority_created!==false||r.source_rebind_authority_created!==false)throw new Error('ALT_SCOPE_REQUAL_PREMATURE_AUTHORITY');
+          if(r.database_write_count!==0||r.raw_object_write_count!==0||r.runtime_config_write_count!==0||r.scheduler_write_count!==0||r.formal_execution_count!=='0/24')throw new Error('ALT_SCOPE_REQUAL_ZERO_EFFECT_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',result:r.result,eligible_candidate_count:r.provider_scan.eligible_candidate_count,selected_treatment:r.selected_candidate?.treatment??null,earliest_legal_o00:r.selected_candidate?.earliest_legal_o00??null}));
+
+      - name: Accept settled immutable scan without provider rerun
+        if: steps.mode.outputs.live_required == 'false'
+        shell: node {0}
+        run: |
+          const a=require('./docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ALTERNATIVE-SCOPE-RESCUE-REQUALIFICATION-V2.json');
+          if(!a.settlement||!a.settlement.result)throw new Error('ALT_SCOPE_REQUAL_SETTLEMENT_REQUIRED');
+          console.log(JSON.stringify({status:'PASS',result:a.settlement.result,run_id:a.settlement.run_id,provider_rerun:false}));
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-alternative-scope-rescue-requalification-v2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_REQUALIFICATION_V2_GOVERNANCE.json
+            acceptance-output/MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_V1.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ALTERNATIVE-SCOPE-RESCUE-REQUALIFICATION-V2.json
+          if-no-files-found: warn
+          retention-days: 90

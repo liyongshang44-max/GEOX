@@ -1,0 +1,74 @@
+{
+  "schema_version": "geox_mcft_cap09_alternative_scope_rescue_requalification_v2",
+  "authority_id": "GEOX-MCFT-CAP-09-ALTERNATIVE-SCOPE-RESCUE-REQUALIFICATION-V2",
+  "record_status": "LIVE_SCAN_REQUIRED_READ_ONLY",
+  "subject_predecessor_sha": "9a27816e456402a8eb6a3a7d572713bd8e0737f0",
+  "stage": "POST_T4R1_FORMAL_WINDOW_EXPIRY_PRE_RUNTIME_START",
+  "reason": {
+    "runtime_start_readiness_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-START-READINESS-V1.json",
+    "runtime_start_readiness_subject_sha": "9a27816e456402a8eb6a3a7d572713bd8e0737f0",
+    "runtime_start_readiness_run_id": 33622744383,
+    "runtime_start_readiness_result": "BLOCKED_NO_VIABLE_FUTURE_FORMAL_WINDOW_UNDER_CURRENT_T4R1_CROP_AUTHORITY"
+  },
+  "frozen_rescue_contract": {
+    "authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-ALTERNATIVE-SCOPE-RESCUE-V1.json",
+    "authority_blob_sha": "a14d9bee0817960a62463f9a1059ab60959d3e59",
+    "probe_ref": "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_ALTERNATIVE_SCOPE_RESCUE_V1.mjs",
+    "probe_blob_sha": "b697347078f7898b98795b864e880f0a07f9cb93",
+    "selection_contract_rewritten": false,
+    "preferred_treatment": null,
+    "preferred_field": null,
+    "preferred_hybrid": null,
+    "eligible_treatments": [
+      "T1",
+      "T2",
+      "T3",
+      "T4",
+      "T5",
+      "T6"
+    ],
+    "required_replicate": "R1",
+    "required_crop_tokens": [
+      "corn",
+      "maize"
+    ],
+    "explicit_hybrid_identity_required": true,
+    "minimum_candidate_lead_hours": 48,
+    "planning_search_horizon_hours": 168,
+    "exact_slot_count": 24,
+    "backward_stability_hours": 6,
+    "forward_transition_guard_hours": 30
+  },
+  "live_scan": {
+    "authorized": true,
+    "provider": "KBS_AGLOG",
+    "read_only": true,
+    "provider_body_may_be_emitted": false,
+    "provider_payload_may_be_persisted_or_uploaded": false,
+    "allowed_terminal_results": [
+      "ALTERNATIVE_SCOPE_CANDIDATE_DETECTED_REQUALIFICATION_REQUIRED",
+      "NO_ALTERNATIVE_SCOPE_CANDIDATE_CURRENTLY_ESTABLISHED"
+    ],
+    "selected_candidate_is_authority": false
+  },
+  "settlement": null,
+  "next_legal_frontier": {
+    "on_candidate": "SEPARATE_SCOPE_LIFECYCLE_GEOMETRY_SOURCE_REBIND_AND_FORMAL_CROP_CONTEXT_QUALIFICATION",
+    "on_no_candidate": "T4R1_STAGE_OR_NATURAL_SEASON_AUTHORITY_REQUALIFICATION"
+  },
+  "non_effects": {
+    "alternative_scope_authority_created": false,
+    "lifecycle_authority_created": false,
+    "geometry_authority_created": false,
+    "source_rebind_authority_created": false,
+    "database_write": false,
+    "raw_object_write": false,
+    "runtime_config_write": false,
+    "scheduler_write": false,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false
+  }
+}
