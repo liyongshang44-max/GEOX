@@ -8547,9 +8547,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/reports/customer-dashboard/field-portfolio-summary",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
@@ -8568,9 +8568,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/reports/operation/:operation_id",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
@@ -8589,9 +8589,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/reports/field/:field_id",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
@@ -8610,10 +8610,8 @@
       "http_method": "GET",
       "exact_route": "/api/v1/weather/forecast/latest",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
-      "authz_capability": [
-        "EXISTING_READ_CAPABILITY"
-      ],
+      "authn_mode": "NONE",
+      "authz_capability": [],
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
         "ensureWeatherForecastIndexV1"
@@ -8621,8 +8619,8 @@
       "write_targets": [
         "weather_forecast_index_v1"
       ],
-      "current_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
-      "notes": "GET invokes weather forecast compatibility ensure, including UPDATE backfill of issue/version metadata."
+      "current_disposition": "INVENTORIED_UNAUTHENTICATED_GET_PROJECTION_SIDE_EFFECT",
+      "notes": "Unauthenticated GET accepts tenant/project/group from query/defaults and calls getLatestWeatherForecastIndexV1, whose compatibility ensure may UPDATE weather_forecast_index_v1 metadata."
     },
     {
       "disposition_id": "BHTTP-022",
@@ -8631,7 +8629,7 @@
       "http_method": "GET",
       "exact_route": "/api/v1/evidence-reports/:job_id",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
         "ao_act.index.read"
       ],
@@ -8652,7 +8650,7 @@
       "http_method": "GET",
       "exact_route": "/api/v1/evidence-reports/:job_id/download",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
         "ao_act.index.read"
       ],
@@ -8673,9 +8671,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/human-ops/kpi",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_HUMAN_OPS_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "SCHEMA_ENSURE_ONLY",
       "writer_entrypoints": [
@@ -8694,9 +8692,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/human-ops/executor-ranking",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_HUMAN_OPS_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "SCHEMA_ENSURE_ONLY",
       "writer_entrypoints": [
@@ -8715,9 +8713,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/human-executors",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_HUMAN_EXECUTOR_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "SCHEMA_ENSURE_ONLY",
       "writer_entrypoints": [
@@ -8736,9 +8734,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/human-executors/:executorId",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_HUMAN_EXECUTOR_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "SCHEMA_ENSURE_ONLY",
       "writer_entrypoints": [
@@ -8757,9 +8755,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/human-executors/dispatch-workbench",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_HUMAN_EXECUTOR_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "SCHEMA_ENSURE_ONLY",
       "writer_entrypoints": [
@@ -8778,9 +8776,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/human-executors/availability",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_HUMAN_EXECUTOR_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "SCHEMA_ENSURE_ONLY",
       "writer_entrypoints": [
@@ -8799,9 +8797,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/work-assignments",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_HUMAN_EXECUTOR_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "SCHEMA_ENSURE_ONLY",
       "writer_entrypoints": [
@@ -8820,9 +8818,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/work-assignments/sla-summary",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_HUMAN_EXECUTOR_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "SCHEMA_ENSURE_ONLY",
       "writer_entrypoints": [
@@ -8841,9 +8839,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/work-assignments/:assignmentId",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_HUMAN_EXECUTOR_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "SCHEMA_ENSURE_ONLY",
       "writer_entrypoints": [
@@ -8862,9 +8860,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/operations/:id/handoff",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_HUMAN_EXECUTOR_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "SCHEMA_ENSURE_ONLY",
       "writer_entrypoints": [
@@ -8883,9 +8881,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/work-assignments/:assignment_id/audit",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_HUMAN_EXECUTOR_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "SCHEMA_ENSURE_ONLY",
       "writer_entrypoints": [
@@ -8904,9 +8902,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/skill/status/:skill_run_id",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_SKILL_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
@@ -8926,9 +8924,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/skill/results/:skill_run_id",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_SKILL_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
@@ -8948,9 +8946,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/skill/runs/:skill_run_id",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_SKILL_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
@@ -8970,9 +8968,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/skill-runs",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_SKILL_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
@@ -8992,9 +8990,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/skills",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_SKILL_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
@@ -9014,9 +9012,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/skills/:skill_id",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_SKILL_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
@@ -9036,9 +9034,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/skills/runs",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_SKILL_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
@@ -9058,9 +9056,9 @@
       "http_method": "GET",
       "exact_route": "/api/v1/skills/bindings",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_SKILL_READ_CAPABILITY"
+        "ao_act.index.read"
       ],
       "side_effect_class": "PROJECTION_SIDE_EFFECT",
       "writer_entrypoints": [
@@ -9080,9 +9078,10 @@
       "http_method": "GET",
       "exact_route": "/api/v1/agronomy/rule-performance",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_DECISION_READ_CAPABILITY"
+        "recommendation.read",
+        "ao_act.index.read"
       ],
       "side_effect_class": "SCHEMA_ENSURE_ONLY",
       "writer_entrypoints": [
@@ -9101,9 +9100,10 @@
       "http_method": "GET",
       "exact_route": "/api/v1/agronomy/rule-performance/:rule_id",
       "activation_root": "commercial.server → bootstrap/server → app",
-      "authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "authn_mode": "CENTRAL_BEARER_ALLOWLIST",
       "authz_capability": [
-        "EXISTING_DECISION_READ_CAPABILITY"
+        "recommendation.read",
+        "ao_act.index.read"
       ],
       "side_effect_class": "SCHEMA_ENSURE_ONLY",
       "writer_entrypoints": [
