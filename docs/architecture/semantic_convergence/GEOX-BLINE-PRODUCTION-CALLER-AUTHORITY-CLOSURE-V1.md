@@ -1,6 +1,6 @@
 # GEOX B-Line Production Caller-Authority Closure V1
 
-**Status:** PR-SEC-1 / INVENTORY UNDER MACHINE QUALIFICATION  
+**Status:** PR-SEC-1 / INVENTORY COMPLETE / B-SEC-0 OPEN  
 **Mission:** B-SEC-0 — Production Caller-Authority Closure  
 **Canonical predecessor:** #3452 @ `b6f141c5471cd6f329ba60bd79cf6e4085546264`  
 **Predecessor qualification:** CI `33592626515` — build-test SUCCESS / acceptance SUCCESS  
@@ -191,7 +191,53 @@ It does not mean:
 B-SEC-0 caller authority is closed
 ```
 
-## 9. Completion rule for this package
+## 9. Exact inventory qualification
+
+PR-SEC-1 inventory is machine-qualified complete on:
+
+```text
+qualified head                               b4f21227da1c768d1ec99ff7a7237311e8cf3128
+exact CI                                     33605095007
+build-test                                   SUCCESS
+caller-authority inventory reverse-scan      SUCCESS
+residual authority audit                     SUCCESS
+active runtime surface closure               SUCCESS
+Typecheck                                    SUCCESS
+Build                                        SUCCESS
+Server selfcheck                             SUCCESS
+acceptance                                   SUCCESS
+Controlled Pilot strict release              SUCCESS
+Commercial MVP0 release                      SUCCESS
+runtime hygiene                              SUCCESS
+```
+
+Reverse-scan result:
+
+```text
+surfaces                                     192
+runtime-reachable surfaces                   187
+Commercial roots                             11
+discovered literal mutation methods          178
+explicit non-authority POST dispositions     4
+subprocess promotion edges                   1
+new missing mutation surfaces                0
+```
+
+Open caller-authority debt remains intentionally non-zero:
+
+```text
+mutating surface without authn               35
+semantic writer without validated capability 109
+unverified declared human actor              7
+service writer without bound principal       3
+caller-controlled/unbound tenant scope       16
+```
+
+These counters are the output of the inventory phase. They are not closure failures for PR-SEC-1 and must not be rewritten to zero until later authorized containment/principal work actually closes them.
+
+This metadata does **not** declare B-SEC-0 complete and does **not** declare ACTIVE_GRAPH_FULLY_DISPOSED. PR-SEC-2 has not started.
+
+## 10. Completion rule for this package
 
 PR-SEC-1 is complete only when its exact head proves:
 
