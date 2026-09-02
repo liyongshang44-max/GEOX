@@ -17,8 +17,13 @@ import {
   readMcftCap09TwinRuntimeProcessConfigV1,
 } from "../../apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.js";
 import {
+  loadMcftCap09ProductionRuntimeStartAuthorityV1,
   parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1,
 } from "../../apps/server/src/runtime/mcft_cap09_production_runtime_start_authority_v1.js";
+import {
+  buildMcftCap09ProductionLeaseOwnerV1,
+  readMcftCap09ProductionServiceIdentityBindingV1,
+} from "../../apps/server/src/runtime/mcft_cap09_production_service_identity_v1.js";
 
 const OUT = path.resolve(
   "acceptance-output/MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1_RESULT.json",
@@ -119,6 +124,52 @@ function main(): void {
       "TWIN_RUNTIME",
     ),
     /MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED/,
+  );
+
+  const mountedAuthorityPath = path.resolve(
+    "acceptance-output/MCFT_CAP_09_TEST_RUNTIME_START_AUTHORITY_INSTANCE_V1.json",
+  );
+  fs.mkdirSync(path.dirname(mountedAuthorityPath), { recursive: true });
+  fs.writeFileSync(
+    mountedAuthorityPath,
+    JSON.stringify(runtimeStartAuthority, null, 2) + "\n",
+  );
+  assert.equal(
+    loadMcftCap09ProductionRuntimeStartAuthorityV1({
+      plane: "TWIN_RUNTIME",
+      authority_path: mountedAuthorityPath,
+      embedded_authority: { armed: false },
+    }).formal_a0_logical_time,
+    "2026-09-03T18:00:00.000Z",
+  );
+
+  const evidenceBinding =
+    readMcftCap09ProductionServiceIdentityBindingV1("EVIDENCE_RUNTIME");
+  const twinBinding =
+    readMcftCap09ProductionServiceIdentityBindingV1("TWIN_RUNTIME");
+  assert.notEqual(evidenceBinding.service_id, twinBinding.service_id);
+  const evidenceOwnerA = buildMcftCap09ProductionLeaseOwnerV1({
+    plane: "EVIDENCE_RUNTIME",
+    configured_service_id: evidenceBinding.service_id,
+    instance_id: "container-a",
+  });
+  const evidenceOwnerB = buildMcftCap09ProductionLeaseOwnerV1({
+    plane: "EVIDENCE_RUNTIME",
+    configured_service_id: evidenceBinding.service_id,
+    instance_id: "container-b",
+  });
+  assert.notEqual(evidenceOwnerA, evidenceOwnerB);
+  assert.equal(
+    evidenceOwnerA,
+    `${evidenceBinding.service_id}#instance:container-a`,
+  );
+  assert.throws(
+    () => buildMcftCap09ProductionLeaseOwnerV1({
+      plane: "EVIDENCE_RUNTIME",
+      configured_service_id: twinBinding.service_id,
+      instance_id: "container-a",
+    }),
+    /MCFT_CAP09_PRODUCTION_CONFIGURED_SERVICE_ID_MISMATCH/,
   );
 
   assert.throws(
@@ -299,6 +350,10 @@ function main(): void {
     evidence_entrypoint_fail_closed_without_runtime_start_authority: true,
     twin_entrypoint_fail_closed_without_runtime_start_authority: true,
     shared_runtime_start_authority_parser: true,
+    mounted_runtime_start_authority_file_binding: true,
+    frozen_production_service_identity_binding: true,
+    per_instance_fenced_owner_identity: true,
+    duplicate_service_instances_have_distinct_owner_identity: true,
     stable_compiled_twin_entrypoint: true,
     test_script_dependency_in_product_process: false,
     production_owner_cutover: false,
