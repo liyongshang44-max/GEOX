@@ -2322,9 +2322,10 @@
       "surface_role": "AUTHORITY",
       "delegates_to": [],
       "replacement_path": [
-        "canonical fertilization candidate/spec/acceptance chain"
+        "canonical fertilization candidate/spec/acceptance chain",
+        "exact fertilization prescription fact -> bridged variable prescription -> exact Receipt -> exact AsExecuted -> exact AsApplied -> canonical formal Acceptance"
       ],
-      "sunset_condition": "FAIL_CLOSED_ACCEPTANCE_PROVENANCE_REQUIRED",
+      "sunset_condition": "P0_RES_009_CLOSED_KEEP_CANONICAL_EXECUTION_BOUND_FERTILIZATION_AUTHORITY",
       "semantic_family": [
         "decision.candidate",
         "action.prescription_spec",
