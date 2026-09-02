@@ -125,18 +125,25 @@ async function exactTelemetryCase() {
   };
 }
 
-const missing = await missingTelemetryCase();
-const exact = await exactTelemetryCase();
-console.log(JSON.stringify({
-  ok: true,
-  suite: "ACCEPTANCE_BLINE_AGRONOMY_AGENT_FAIL_CLOSED_RUNTIME_V1",
-  checks: {
-    missing_telemetry_zero_writes: missing.writes === 0,
-    missing_telemetry_counted: missing.no_telemetry === 1,
-    exact_telemetry_fact_provenance: exact.telemetry_fact_id === "raw_fact_bline_agent_soil_001",
-    retained_signal_only: exact.types.length === 1 && exact.types[0] === "recommendation_v1",
-    non_executable_signal: exact.no_direct_execution === true,
-  },
-  missing,
-  exact,
-}, null, 2));
+async function main() {
+  const missing = await missingTelemetryCase();
+  const exact = await exactTelemetryCase();
+  console.log(JSON.stringify({
+    ok: true,
+    suite: "ACCEPTANCE_BLINE_AGRONOMY_AGENT_FAIL_CLOSED_RUNTIME_V1",
+    checks: {
+      missing_telemetry_zero_writes: missing.writes === 0,
+      missing_telemetry_counted: missing.no_telemetry === 1,
+      exact_telemetry_fact_provenance: exact.telemetry_fact_id === "raw_fact_bline_agent_soil_001",
+      retained_signal_only: exact.types.length === 1 && exact.types[0] === "recommendation_v1",
+      non_executable_signal: exact.no_direct_execution === true,
+    },
+    missing,
+    exact,
+  }, null, 2));
+}
+
+main().catch((error) => {
+  console.error(error?.stack || String(error));
+  process.exitCode = 1;
+});
