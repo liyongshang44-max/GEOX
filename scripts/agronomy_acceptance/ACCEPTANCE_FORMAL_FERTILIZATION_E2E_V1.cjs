@@ -323,7 +323,7 @@ async function run() {
     caller_zone_applications_rejected: false,
     wrong_as_applied_chain_rejected: false,
     canonical_non_pass_cannot_upgrade: false,
-    one_required_zone_over_under_operation_not_pass: false,
+    real_bad_zone_canonical_fail_blocks_fertilization: false,
     operation_average_cannot_hide_zone_fail: false,
     unapproved_prescription_cannot_dispatch_task: false,
   };
@@ -525,7 +525,11 @@ async function run() {
       const failTaskId = String(failTaskJson.act_task_id ?? '').trim();
       assert.ok(failTaskId, 'fail-zone act_task_id missing');
       const failFlow = await submitReceiptAndAsApplied(base, executorToken, operatorToken, scope, receiptBody(scope, failOperationPlanId, failTaskId, field_id, device_id, failApps));
-      assert.equal(String(failFlow.genericAcceptance?.json?.verdict ?? '').toUpperCase(), 'PASS', 'canonical execution may PASS while Fertilization zone tolerance FAILs');
+      assert.equal(
+        String(failFlow.genericAcceptance?.json?.verdict ?? '').toUpperCase(),
+        'FAIL',
+        'bad-zone variable execution must be rejected by canonical Acceptance before Fertilization domain evaluation',
+      );
       const failAcc = await evalFertilizationAcceptance(base, operatorToken, scope, {
         fertilization_prescription_id,
         fertilization_prescription_fact_id,
@@ -536,8 +540,8 @@ async function run() {
         as_applied_id: failFlow.as_applied_id,
         acceptance_result_fact_id: failFlow.acceptance_result_fact_id,
       });
-      negative.one_required_zone_over_under_operation_not_pass = failAcc.ok
-        && String(failAcc.json?.acceptance?.acceptance_status ?? '').toUpperCase() === 'FAIL';
+      negative.real_bad_zone_canonical_fail_blocks_fertilization = failAcc.status === 400
+        && String(failAcc.json?.error ?? '') === 'CANONICAL_ACCEPTANCE_PASS_REQUIRED';
     }
 
     const localFail = localZoneRollup(fertZoneRates, [
