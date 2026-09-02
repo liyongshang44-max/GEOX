@@ -526,7 +526,7 @@
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_PLANNER_ASSEMBLY_V1.ts"
       ]
     },
-    "V13_PRODUCER_RUNTIME_SEMANTIC_CLOSURE": {
+    "V13_RUNTIME_SEMANTIC_CLOSURE": {
       "kind": "IMPORT_CLOSURE",
       "roots": [
         "apps/server/src/runtime/twin_runtime/external_formal_forcing_autonomous_controller_service_v1.ts",
@@ -551,7 +551,7 @@
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
       ]
     },
-    "V13_PRODUCER_QUALIFICATION_HARNESS": {
+    "V13_QUALIFICATION_HARNESS_CLOSURE": {
       "kind": "EXACT_PATH_SET",
       "paths": [
         ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
@@ -569,7 +569,8 @@
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
         "scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs",
         "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
-        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_V13_PRODUCER_LIVE_APPLICABILITY_V1.cjs"
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_V13_PRODUCER_LIVE_APPLICABILITY_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_RUNTIME_HARNESS_RESOLVER_MIGRATION_V1.cjs"
       ]
     }
   },
@@ -1053,6 +1054,35 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": null
+    },
+    {
+      "check_id": "V13_RUNTIME_HARNESS_RESOLVER_MIGRATION",
+      "owner": "MCFT_CAP09_V13_RUNTIME_EVIDENCE_GOVERNANCE",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"
+      ],
+      "resolver_ids": [
+        "V13_RUNTIME_SEMANTIC_CLOSURE",
+        "V13_QUALIFICATION_HARNESS_CLOSURE"
+      ],
+      "historical_evidence_policy": "BF1D_LEGACY_RUNTIME_DIGEST_PROJECTION_REQUIRES_MACHINE_PARTITION_PROOF",
+      "execution_workflow": null,
+      "execution_workflow_status": "IMPLEMENTED_AS_CONTROL_PLANE_DIAGNOSTIC",
+      "fail_policy": "FAIL_CLOSED_UNTIL_RUNTIME_HARNESS_PARTITION_AND_BF1D_PROJECTION_PROVEN",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "V13_RUNTIME_SEMANTIC_CLOSURE",
+        "V13_QUALIFICATION_HARNESS_CLOSURE"
+      ],
+      "applicable_stages": [
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_RUNTIME_HARNESS_RESOLVER_MIGRATION_V1.cjs"
     }
   ],
   "non_effects": {
