@@ -2,7 +2,7 @@
 
 ## Status
 
-Status: **AUTHORIZED IMPLEMENTATION / P0-RES-003 CLOSURE**
+Status: **COMPLETE / P0-RES-003 CLOSED**
 
 Exact stacked base:
 
@@ -146,7 +146,9 @@ This package does not:
 
 ## Completion
 
-P0-RES-003 may be closed only when one exact head proves:
+P0-RES-003 is closed by product qualification run `33591992325` on #3452 product head `4e3c4f3514e3c16777e5824ccee2367eb88dd0f3`.
+
+That exact product head proves:
 
 ```text
 commercial background activation graph registered PASS
@@ -162,3 +164,21 @@ full acceptance PASS
 Controlled Pilot / Commercial MVP0 PASS
 MCFT implementation delta 0
 ```
+
+Exact product qualification result:
+
+```text
+ci run                                      33591992325 SUCCESS
+build-test                                  SUCCESS
+B-Line residual authority audit             SUCCESS
+B-Line active runtime surface closure       SUCCESS
+B-Line Agronomy Agent static authority      SUCCESS
+B-Line Agronomy Agent fail-closed runtime   SUCCESS
+PR18I formal-chain preflight                SUCCESS
+Controlled Pilot strict release             SUCCESS
+full acceptance suite                       SUCCESS
+Commercial MVP0 release                     SUCCESS
+runtime hygiene                             SUCCESS
+```
+
+The closure-metadata commits make no product runtime change and are requalified separately on the final closure head.
