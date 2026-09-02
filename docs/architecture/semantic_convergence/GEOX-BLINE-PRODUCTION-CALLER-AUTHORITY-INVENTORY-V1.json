@@ -262,7 +262,9 @@
         "forecast.weather"
       ],
       "write_targets": [
-        "weather_forecast facts/index"
+        "weather_forecast facts/index",
+        "facts",
+        "weather_forecast_index_v1"
       ],
       "fact_types": [
         "weather_forecast_fact_v1"
@@ -279,7 +281,14 @@
       "tenant_scope_from_untrusted_body": true,
       "risk_tier": "P0",
       "contract_refs": [],
-      "notes": "telemetry.write is explicitly not a valid forecast-provider authority."
+      "notes": "telemetry.write is explicitly not a valid forecast-provider authority.",
+      "writer_entrypoints": [
+        "apps/server/src/projections/weather_forecast_v1.ts::appendWeatherForecastFactV1",
+        "apps/server/src/projections/weather_forecast_v1.ts::upsertWeatherForecastIndexV1",
+        "apps/server/src/projections/weather_forecast_v1.ts::ensureWeatherForecastIndexV1"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-004",
@@ -317,7 +326,11 @@
       "contract_refs": [
         "docs/contracts/v2/DEVICE_HEARTBEAT_AUTH_CONTRACT_V2.md"
       ],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/device_heartbeat_v1.ts::<inline>"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-005",
@@ -1514,7 +1527,8 @@
         "legacy.monitoring.context_config"
       ],
       "write_targets": [
-        "sensor_groups + sensor_group_members"
+        "sensor_groups + sensor_group_members",
+        "sensor_group_members"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -1530,7 +1544,8 @@
       "writer_entrypoints": [
         "apps/server/src/modules/admin/registerAdminGroupsModule.ts::<inline>"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-035",
@@ -1572,7 +1587,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P2",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/fields_v1.ts::<inline>"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-036",
@@ -1602,7 +1621,15 @@
         "facts",
         "field_index_v1",
         "device_index_v1",
-        "device_binding_index_v1"
+        "device_binding_index_v1",
+        "telemetry_index_v1",
+        "device_status_index_v1",
+        "device_observation_index_v1",
+        "derived_sensing_state_index_v1",
+        "field_memory_v1",
+        "field_sensing_overview_v1",
+        "field_sensing_summary_stage1_v1",
+        "field_fertility_state_v1"
       ],
       "fact_types": [
         "field_created_v1",
@@ -1618,7 +1645,23 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P2",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/fields_v1.ts::<inline>",
+        "apps/server/src/services/telemetry_ingest_service_v1.ts::ingestTelemetryV1",
+        "apps/server/src/services/device_observation_service_v1.ts::writeDeviceObservationFactV1",
+        "apps/server/src/services/derived_sensing_state_service_v1.ts::appendDerivedSensingStateV1",
+        "apps/server/src/domain/skill_registry/facts.ts::appendFact",
+        "apps/server/src/services/field_memory_service.ts::recordMemoryV1",
+        "apps/server/src/projections/field_sensing_overview_v1.ts::refreshFieldSensingOverviewV1",
+        "apps/server/src/projections/field_sensing_overview_v1.ts::ensureFieldSensingOverviewProjectionV1",
+        "apps/server/src/projections/field_sensing_summary_stage1_v1.ts::refreshFieldSensingSummaryStage1V1",
+        "apps/server/src/projections/field_sensing_summary_stage1_v1.ts::ensureFieldSensingSummaryStage1ProjectionV1",
+        "apps/server/src/projections/field_fertility_state_v1.ts::refreshFieldFertilityStateV1",
+        "apps/server/src/projections/field_fertility_state_v1.ts::ensureFieldFertilityStateProjectionV1"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-037",
@@ -1661,7 +1704,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P2",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/fields_v1.ts::<inline>"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-038",
@@ -1703,7 +1750,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P2",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/fields_v1.ts::<inline>"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-039",
@@ -1745,7 +1796,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P2",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/fields_v1.ts::<inline>"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-040",
@@ -1773,7 +1828,8 @@
       ],
       "write_targets": [
         "facts",
-        "device_binding_index_v1"
+        "device_binding_index_v1",
+        "device_skill_binding_status_v1"
       ],
       "fact_types": [
         "device_bound_to_field_v1"
@@ -1787,7 +1843,15 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P2",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/fields_v1.ts::<inline>",
+        "apps/server/src/domain/skill_registry/facts.ts::appendFact",
+        "apps/server/src/services/skill_binding_validation_service_v1.ts::validateDeviceRequiredObservationSkillBindingsV1",
+        "apps/server/src/services/skill_binding_validation_service_v1.ts::ensureDeviceSkillBindingStatusRuntimeV1"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-041",
@@ -1826,7 +1890,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P2",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/field_tags_v1.ts::<inline>"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-042",
@@ -1865,7 +1933,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P2",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/field_tags_v1.ts::<inline>"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-043",
@@ -1893,7 +1965,8 @@
         "field.management_zone"
       ],
       "write_targets": [
-        "management zone persistence"
+        "management zone persistence",
+        "management_zone_v1"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -1905,7 +1978,12 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/domain/field/management_zone_v1.ts::upsertManagementZoneV1"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-044",
@@ -1948,7 +2026,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/programs_core_v1.ts::insertFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-045",
@@ -1991,7 +2073,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/programs_core_v1.ts::insertFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-046",
@@ -2034,7 +2120,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/programs_core_v1.ts::insertFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-047",
@@ -2077,7 +2167,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/programs_core_v1.ts::insertFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-048",
@@ -2120,7 +2214,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/programs_core_v1.ts::insertFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-049",
@@ -2163,7 +2261,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/programs_core_v1.ts::insertFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-050",
@@ -2240,7 +2342,12 @@
         "decision.recommendation"
       ],
       "write_targets": [
-        "facts"
+        "facts",
+        "field_sensing_overview_v1",
+        "field_sensing_summary_stage1_v1",
+        "field_fertility_state_v1",
+        "weather_forecast_index_v1",
+        "field_memory_v1"
       ],
       "fact_types": [
         "decision_recommendation_input_facts_v1",
@@ -2259,9 +2366,18 @@
       "notes": null,
       "writer_entrypoints": [
         "apps/server/src/projections/field_sensing_overview_v1.ts::refreshFieldSensingOverviewV1",
-        "apps/server/src/projections/field_sensing_overview_v1.ts::ensureFieldSensingOverviewProjectionV1"
+        "apps/server/src/projections/field_sensing_overview_v1.ts::ensureFieldSensingOverviewProjectionV1",
+        "apps/server/src/projections/field_sensing_summary_stage1_v1.ts::refreshFieldSensingSummaryStage1V1",
+        "apps/server/src/projections/field_sensing_summary_stage1_v1.ts::ensureFieldSensingSummaryStage1ProjectionV1",
+        "apps/server/src/projections/field_fertility_state_v1.ts::refreshFieldFertilityStateV1",
+        "apps/server/src/projections/field_fertility_state_v1.ts::ensureFieldFertilityStateProjectionV1",
+        "apps/server/src/projections/weather_forecast_v1.ts::ensureWeatherForecastIndexV1",
+        "apps/server/src/domain/skill_registry/facts.ts::appendFact",
+        "apps/server/src/services/field_memory_service.ts::recordMemoryV1",
+        "apps/server/src/routes/decision_engine_v1.ts::insertFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-052",
@@ -2305,7 +2421,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P0",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/decision_engine_v1.ts::insertFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-053",
@@ -2347,7 +2467,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P2",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/decision_engine_v1.ts::insertFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-054",
@@ -2375,7 +2499,11 @@
         "skill.binding"
       ],
       "write_targets": [
-        "skill binding persistence"
+        "skill binding persistence",
+        "security_audit_event_v1",
+        "facts",
+        "skill_registry_read_v1",
+        "device_skill_binding_index_v1"
       ],
       "fact_types": [
         "skill_binding_v1"
@@ -2398,7 +2526,8 @@
         "apps/server/src/services/device_skill_bindings.ts::ensureDeviceSkillBindings",
         "apps/server/src/services/device_skill_bindings.ts::ensureDeviceSkillBindingsRuntime"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-055",
@@ -2425,7 +2554,8 @@
         "skill.binding"
       ],
       "write_targets": [
-        "skill registry/binding state"
+        "skill registry/binding state",
+        "facts"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -2441,7 +2571,8 @@
       "writer_entrypoints": [
         "apps/server/src/domain/skill_registry/facts.ts::appendFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-056",
@@ -2468,7 +2599,8 @@
         "skill.binding"
       ],
       "write_targets": [
-        "skill registry/binding state"
+        "skill registry/binding state",
+        "facts"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -2484,7 +2616,8 @@
       "writer_entrypoints": [
         "apps/server/src/domain/skill_registry/facts.ts::appendFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-057",
@@ -2511,7 +2644,9 @@
         "skill.binding"
       ],
       "write_targets": [
-        "skill registry/binding state"
+        "skill registry/binding state",
+        "skill_registry_read_v1",
+        "facts"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -2529,7 +2664,8 @@
         "apps/server/src/projections/skill_registry_read_v1.ts::ensureSkillRegistryReadTable",
         "apps/server/src/domain/skill_registry/facts.ts::appendFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-058",
@@ -2556,7 +2692,9 @@
         "skill.binding"
       ],
       "write_targets": [
-        "skill registry/binding state"
+        "skill registry/binding state",
+        "skill_registry_read_v1",
+        "facts"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -2574,7 +2712,8 @@
         "apps/server/src/projections/skill_registry_read_v1.ts::ensureSkillRegistryReadTable",
         "apps/server/src/domain/skill_registry/facts.ts::appendFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-059",
@@ -2601,7 +2740,9 @@
         "skill.runtime"
       ],
       "write_targets": [
-        "skill run state"
+        "skill run state",
+        "facts",
+        "field_memory_v1"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -2618,7 +2759,8 @@
         "apps/server/src/domain/skill_registry/facts.ts::appendFact",
         "apps/server/src/services/field_memory_service.ts::recordMemoryV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-060",
@@ -2645,7 +2787,10 @@
         "skill.runtime"
       ],
       "write_targets": [
-        "skill run state"
+        "skill run state",
+        "skill_registry_read_v1",
+        "facts",
+        "field_memory_v1"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -2664,7 +2809,8 @@
         "apps/server/src/domain/skill_registry/facts.ts::appendFact",
         "apps/server/src/services/field_memory_service.ts::recordMemoryV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-061",
@@ -3209,7 +3355,8 @@
         "operation.plan"
       ],
       "write_targets": [
-        "facts/projections"
+        "facts/projections",
+        "operation_plan_index_v1"
       ],
       "fact_types": [
         "operator_operation_plan_transition_submission_v1",
@@ -3230,7 +3377,8 @@
         "apps/server/src/projections/operation_plan_index_v1.ts::ensureOperationPlanIndexV1",
         "apps/server/src/projections/operation_plan_index_v1.ts::upsertOperationPlanIndexV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-073",
@@ -3258,7 +3406,11 @@
         "execution.task"
       ],
       "write_targets": [
-        "facts/operation projections"
+        "facts/operation projections",
+        "security_audit_event_v1",
+        "fail_safe_event_v1",
+        "manual_takeover_v1",
+        "field_fertility_state_v1"
       ],
       "fact_types": [
         "ao_act_task_v0"
@@ -3282,7 +3434,8 @@
         "apps/server/src/projections/field_fertility_state_v1.ts::ensureFieldFertilityStateProjectionV1",
         "apps/server/src/routes/control_ao_act.ts::writeAoActAuthzAuditFactV0"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-074",
@@ -3309,7 +3462,12 @@
         "execution.task"
       ],
       "write_targets": [
-        "facts/operation projections"
+        "facts/operation projections",
+        "operation_plan_index_v1",
+        "fail_safe_event_v1",
+        "manual_takeover_v1",
+        "security_audit_event_v1",
+        "field_fertility_state_v1"
       ],
       "fact_types": [
         "ao_act_task_v0",
@@ -3335,7 +3493,8 @@
         "apps/server/src/projections/field_fertility_state_v1.ts::ensureFieldFertilityStateProjectionV1",
         "apps/server/src/routes/control_ao_act.ts::writeAoActAuthzAuditFactV0"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-075",
@@ -3363,7 +3522,11 @@
         "execution.task"
       ],
       "write_targets": [
-        "facts/operation projections"
+        "facts/operation projections",
+        "fail_safe_event_v1",
+        "manual_takeover_v1",
+        "security_audit_event_v1",
+        "field_fertility_state_v1"
       ],
       "fact_types": [
         "ao_act_task_v0"
@@ -3388,7 +3551,8 @@
         "apps/server/src/projections/field_fertility_state_v1.ts::ensureFieldFertilityStateProjectionV1",
         "apps/server/src/routes/control_ao_act.ts::writeAoActAuthzAuditFactV0"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-076",
@@ -3416,7 +3580,10 @@
         "execution.receipt"
       ],
       "write_targets": [
-        "facts/operation projections"
+        "facts/operation projections",
+        "fail_safe_event_v1",
+        "manual_takeover_v1",
+        "security_audit_event_v1"
       ],
       "fact_types": [
         "ao_act_receipt_v0"
@@ -3438,7 +3605,8 @@
         "apps/server/src/services/security_audit_service_v1.ts::recordSecurityAuditEventV1",
         "apps/server/src/routes/control_ao_act.ts::writeAoActAuthzAuditFactV0"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-077",
@@ -3466,7 +3634,9 @@
         "execution.request"
       ],
       "write_targets": [
-        "facts/operation projections"
+        "facts/operation projections",
+        "skill_registry_read_v1",
+        "field_memory_v1"
       ],
       "fact_types": [
         "action_execution_request_v1",
@@ -3489,7 +3659,8 @@
         "apps/server/src/domain/skill_registry/facts.ts::appendFact",
         "apps/server/src/services/field_memory_service.ts::recordMemoryV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-078",
@@ -3741,7 +3912,8 @@
         "operation.plan"
       ],
       "write_targets": [
-        "facts"
+        "facts",
+        "operation_plan_index_v1"
       ],
       "fact_types": [
         "operator_approval_decision_operation_plan_submission_v1",
@@ -3761,7 +3933,8 @@
         "apps/server/src/routes/control_approval_request_v1.ts::handleCreateOperationPlanFromApprovalDecision",
         "apps/server/src/projections/operation_plan_index_v1.ts::upsertOperationPlanIndexV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-084",
@@ -3961,7 +4134,8 @@
         "approval.verdict"
       ],
       "write_targets": [
-        "facts"
+        "facts",
+        "operation_plan_index_v1"
       ],
       "fact_types": [
         "approval_decision_v1"
@@ -3981,7 +4155,8 @@
         "apps/server/src/routes/control_approval_request_v1.ts::ensureCompatibilityApprovalPlanReadyV1",
         "apps/server/src/projections/operation_plan_index_v1.ts::upsertOperationPlanIndexV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-088",
@@ -4057,7 +4232,8 @@
         "approval.verdict"
       ],
       "write_targets": [
-        "facts"
+        "facts",
+        "operation_plan_index_v1"
       ],
       "fact_types": [
         "approval_decision_v1"
@@ -4077,7 +4253,8 @@
         "apps/server/src/routes/control_approval_request_v1.ts::ensureCompatibilityApprovalPlanReadyV1",
         "apps/server/src/projections/operation_plan_index_v1.ts::upsertOperationPlanIndexV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-090",
@@ -4104,7 +4281,10 @@
         "device.registry"
       ],
       "write_targets": [
-        "facts/device indices"
+        "facts/device indices",
+        "device_index_v1",
+        "device_skill_binding_status_v1",
+        "device_skill_binding_index_v1"
       ],
       "fact_types": [
         "device_registered_v1"
@@ -4128,7 +4308,8 @@
         "apps/server/src/services/device_skill_bindings.ts::ensureDeviceSkillBindings",
         "apps/server/src/services/device_skill_bindings.ts::ensureDeviceSkillBindingsRuntime"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-091",
@@ -4155,7 +4336,9 @@
         "device.credential"
       ],
       "write_targets": [
-        "facts/device indices"
+        "facts/device indices",
+        "device_credential_index_v1",
+        "device_index_v1"
       ],
       "fact_types": [
         "device_credential_issued_v1"
@@ -4173,7 +4356,8 @@
       "writer_entrypoints": [
         "apps/server/src/routes/devices_v1.ts::handleIssueDeviceCredential"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-092",
@@ -4200,7 +4384,9 @@
         "device.credential"
       ],
       "write_targets": [
-        "facts/device indices"
+        "facts/device indices",
+        "device_credential_index_v1",
+        "device_index_v1"
       ],
       "fact_types": [
         "device_credential_revoked_v1"
@@ -4218,7 +4404,8 @@
       "writer_entrypoints": [
         "apps/server/src/routes/devices_v1.ts::handleRevokeDeviceCredential"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-093",
@@ -4245,7 +4432,10 @@
         "device.registry"
       ],
       "write_targets": [
-        "facts/device indices"
+        "facts/device indices",
+        "device_index_v1",
+        "device_skill_binding_status_v1",
+        "device_skill_binding_index_v1"
       ],
       "fact_types": [
         "device_registered_v1"
@@ -4269,7 +4459,8 @@
         "apps/server/src/services/device_skill_bindings.ts::ensureDeviceSkillBindings",
         "apps/server/src/services/device_skill_bindings.ts::ensureDeviceSkillBindingsRuntime"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-094",
@@ -4296,7 +4487,10 @@
         "device.registry"
       ],
       "write_targets": [
-        "facts/device indices"
+        "facts/device indices",
+        "device_index_v1",
+        "device_skill_binding_status_v1",
+        "device_skill_binding_index_v1"
       ],
       "fact_types": [
         "device_registered_v1"
@@ -4320,7 +4514,8 @@
         "apps/server/src/services/device_skill_bindings.ts::ensureDeviceSkillBindings",
         "apps/server/src/services/device_skill_bindings.ts::ensureDeviceSkillBindingsRuntime"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-095",
@@ -4347,7 +4542,8 @@
         "device.capability"
       ],
       "write_targets": [
-        "facts/device indices"
+        "facts/device indices",
+        "device_capability"
       ],
       "fact_types": [
         "device_capability_v1"
@@ -4366,7 +4562,8 @@
         "apps/server/src/routes/devices_v1.ts::<inline>",
         "apps/server/src/routes/devices_v1.ts::ensureDeviceCapabilityRuntime"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-096",
@@ -4393,7 +4590,11 @@
         "device.onboarding"
       ],
       "write_targets": [
-        "facts/device indices"
+        "facts/device indices",
+        "device_index_v1",
+        "device_credential_index_v1",
+        "device_skill_binding_status_v1",
+        "device_skill_binding_index_v1"
       ],
       "fact_types": [
         "device_registered_v1",
@@ -4418,7 +4619,8 @@
         "apps/server/src/services/device_skill_bindings.ts::ensureDeviceSkillBindings",
         "apps/server/src/services/device_skill_bindings.ts::ensureDeviceSkillBindingsRuntime"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-097",
@@ -4445,7 +4647,11 @@
         "device.onboarding"
       ],
       "write_targets": [
-        "facts/device indices"
+        "facts/device indices",
+        "device_index_v1",
+        "device_credential_index_v1",
+        "device_skill_binding_status_v1",
+        "device_skill_binding_index_v1"
       ],
       "fact_types": [
         "device_registered_v1",
@@ -4470,7 +4676,8 @@
         "apps/server/src/services/device_skill_bindings.ts::ensureDeviceSkillBindings",
         "apps/server/src/services/device_skill_bindings.ts::ensureDeviceSkillBindingsRuntime"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-098",
@@ -4497,7 +4704,9 @@
         "device.credential"
       ],
       "write_targets": [
-        "facts/device indices"
+        "facts/device indices",
+        "device_credential_index_v1",
+        "device_index_v1"
       ],
       "fact_types": [
         "device_credential_issued_v1"
@@ -4515,7 +4724,8 @@
       "writer_entrypoints": [
         "apps/server/src/routes/devices_v1.ts::handleIssueDeviceCredential"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-099",
@@ -4542,7 +4752,9 @@
         "device.credential"
       ],
       "write_targets": [
-        "facts/device indices"
+        "facts/device indices",
+        "device_credential_index_v1",
+        "device_index_v1"
       ],
       "fact_types": [
         "device_credential_revoked_v1"
@@ -4560,7 +4772,8 @@
       "writer_entrypoints": [
         "apps/server/src/routes/devices_v1.ts::handleRevokeDeviceCredential"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-100",
@@ -4587,7 +4800,8 @@
         "device.skill_binding"
       ],
       "write_targets": [
-        "facts/device indices"
+        "facts/device indices",
+        "device_skill_binding_index_v1"
       ],
       "fact_types": [
         "device skill binding facts"
@@ -4606,7 +4820,8 @@
         "apps/server/src/services/device_skill_bindings.ts::ensureDeviceSkillBindings",
         "apps/server/src/services/device_skill_bindings.ts::ensureDeviceSkillBindingsRuntime"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-101",
@@ -4648,7 +4863,11 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/routes/telemetry_v1.ts::<inline>"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-102",
@@ -4675,7 +4894,16 @@
         "evidence.raw_observation"
       ],
       "write_targets": [
-        "raw sensing persistence"
+        "raw sensing persistence",
+        "raw_samples",
+        "facts",
+        "markers",
+        "device_observation_index_v1",
+        "derived_sensing_state_index_v1",
+        "field_memory_v1",
+        "field_sensing_overview_v1",
+        "field_sensing_summary_stage1_v1",
+        "field_fertility_state_v1"
       ],
       "fact_types": [
         "raw_sample_v1"
@@ -4689,7 +4917,24 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/domain/sensing/raw_sample_fact_envelope_v1.ts::appendRawSampleV1",
+        "apps/server/src/domain/sensing/raw_sample_fact_envelope_v1.ts::writeRawSampleRuntimeAvailabilityMarkerV1",
+        "apps/server/src/services/device_observation_service_v1.ts::ensureDeviceObservationProjectionV1",
+        "apps/server/src/services/device_observation_service_v1.ts::writeDeviceObservationFactV1",
+        "apps/server/src/services/derived_sensing_state_service_v1.ts::appendDerivedSensingStateV1",
+        "apps/server/src/domain/skill_registry/facts.ts::appendFact",
+        "apps/server/src/services/field_memory_service.ts::recordMemoryV1",
+        "apps/server/src/projections/field_sensing_overview_v1.ts::refreshFieldSensingOverviewV1",
+        "apps/server/src/projections/field_sensing_overview_v1.ts::ensureFieldSensingOverviewProjectionV1",
+        "apps/server/src/projections/field_sensing_summary_stage1_v1.ts::refreshFieldSensingSummaryStage1V1",
+        "apps/server/src/projections/field_sensing_summary_stage1_v1.ts::ensureFieldSensingSummaryStage1ProjectionV1",
+        "apps/server/src/projections/field_fertility_state_v1.ts::refreshFieldFertilityStateV1",
+        "apps/server/src/projections/field_fertility_state_v1.ts::ensureFieldFertilityStateProjectionV1"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-103",
@@ -5111,7 +5356,8 @@
         "inspection.request"
       ],
       "write_targets": [
-        "inspection facts/projections"
+        "inspection facts/projections",
+        "facts"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -5123,7 +5369,12 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/services/inspection/pest_disease_inspection_service_v1.ts::insertFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-113",
@@ -5151,7 +5402,8 @@
         "inspection.observation"
       ],
       "write_targets": [
-        "inspection facts/projections"
+        "inspection facts/projections",
+        "facts"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -5163,7 +5415,12 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/services/inspection/pest_disease_inspection_service_v1.ts::insertFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-114",
@@ -5191,7 +5448,8 @@
         "inspection.signal"
       ],
       "write_targets": [
-        "inspection facts/projections"
+        "inspection facts/projections",
+        "facts"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -5203,7 +5461,12 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/services/inspection/pest_disease_inspection_service_v1.ts::insertFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-115",
@@ -5231,7 +5494,8 @@
         "inspection.assessment"
       ],
       "write_targets": [
-        "inspection facts/projections"
+        "inspection facts/projections",
+        "facts"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -5243,7 +5507,12 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/services/inspection/pest_disease_inspection_service_v1.ts::insertFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-116",
@@ -5271,7 +5540,8 @@
         "inspection.review"
       ],
       "write_targets": [
-        "inspection facts/projections"
+        "inspection facts/projections",
+        "facts"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -5283,7 +5553,12 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P1",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/services/inspection/pest_disease_inspection_service_v1.ts::insertFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-117",
@@ -5311,7 +5586,8 @@
         "inspection.acceptance"
       ],
       "write_targets": [
-        "inspection facts/projections"
+        "inspection facts/projections",
+        "facts"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -5323,7 +5599,12 @@
       "tenant_scope_from_untrusted_body": false,
       "risk_tier": "P0",
       "contract_refs": [],
-      "notes": null
+      "notes": null,
+      "writer_entrypoints": [
+        "apps/server/src/services/inspection/pest_disease_inspection_service_v1.ts::insertFact"
+      ],
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-118",
@@ -5577,7 +5858,11 @@
         "acceptance.verdict"
       ],
       "write_targets": [
-        "facts/domain projections"
+        "facts/domain projections",
+        "field_memory_v1",
+        "fail_safe_event_v1",
+        "manual_takeover_v1",
+        "security_audit_event_v1"
       ],
       "fact_types": [
         "acceptance_result_v1"
@@ -5600,7 +5885,8 @@
         "apps/server/src/services/fail_safe_service_v1.ts::createManualTakeoverV1",
         "apps/server/src/services/security_audit_service_v1.ts::recordSecurityAuditEventV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-124",
@@ -5629,7 +5915,8 @@
         "water_response.verification"
       ],
       "write_targets": [
-        "facts/domain projections"
+        "facts/domain projections",
+        "water_response_verification_index_v1"
       ],
       "fact_types": [
         "operator_water_response_verification_submission_v1",
@@ -5648,7 +5935,8 @@
       "writer_entrypoints": [
         "apps/server/src/routes/water_response_verification_v1.ts::<inline>"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-125",
@@ -5675,7 +5963,9 @@
         "agronomy.inference"
       ],
       "write_targets": [
-        "facts/domain projections"
+        "facts/domain projections",
+        "agronomy_inference_result_v1",
+        "agronomy_inference_index_v1"
       ],
       "fact_types": [
         "agronomy_inference_result_v1"
@@ -5693,7 +5983,8 @@
       "writer_entrypoints": [
         "apps/server/src/routes/agronomy_inference_v1.ts::<inline>"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-126",
@@ -5720,7 +6011,8 @@
         "agronomy.observation"
       ],
       "write_targets": [
-        "facts/domain projections"
+        "facts/domain projections",
+        "agronomy_observation_index_v1"
       ],
       "fact_types": [
         "agronomy_observation_v1"
@@ -5738,7 +6030,8 @@
       "writer_entrypoints": [
         "apps/server/src/routes/agronomy_media_v1.ts::<inline>"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-127",
@@ -5855,7 +6148,8 @@
         "approval.request"
       ],
       "write_targets": [
-        "prescription_contract_v1/facts"
+        "prescription_contract_v1/facts",
+        "facts"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -5872,7 +6166,8 @@
         "apps/server/src/routes/prescriptions_v1.ts::<inline>",
         "apps/server/src/domain/approval/approval_request_service_v1.ts::createApprovalRequestV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-130",
@@ -5990,7 +6285,8 @@
         "roi.formalization"
       ],
       "write_targets": [
-        "roi ledger persistence"
+        "roi ledger persistence",
+        "roi_ledger_v1"
       ],
       "fact_types": [
         "roi_ledger_v1"
@@ -6008,7 +6304,8 @@
       "writer_entrypoints": [
         "apps/server/src/domain/roi/roi_ledger_v1.ts::upsertRoiCandidate"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-133",
@@ -6035,7 +6332,8 @@
         "roi.formalization"
       ],
       "write_targets": [
-        "roi ledger persistence"
+        "roi ledger persistence",
+        "roi_ledger_v1"
       ],
       "fact_types": [
         "roi_ledger_v1"
@@ -6054,7 +6352,8 @@
         "apps/server/src/domain/roi/roi_ledger_v1.ts::upsertRoiCandidate",
         "apps/server/src/domain/roi/roi_ledger_v1.ts::upsertFormalRoiFromInterim"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-134",
@@ -6173,7 +6472,8 @@
         "judge.agronomy"
       ],
       "write_targets": [
-        "judge_result_v2"
+        "judge_result_v2",
+        "facts"
       ],
       "fact_types": [
         "judge_result_v2"
@@ -6192,7 +6492,8 @@
         "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts::buildCandidateDecisionBoundaryContextBindingV1",
         "apps/server/src/domain/judge/judge_result_v2.ts::insertJudgeResultV2"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-137",
@@ -6220,7 +6521,8 @@
         "judge.execution"
       ],
       "write_targets": [
-        "judge_result_v2"
+        "judge_result_v2",
+        "field_memory_v1"
       ],
       "fact_types": [
         "judge_result_v2"
@@ -6239,7 +6541,8 @@
         "apps/server/src/domain/judge/judge_result_v2.ts::insertJudgeResultV2",
         "apps/server/src/services/field_memory_service.ts::recordMemoryV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-138",
@@ -6266,7 +6569,14 @@
         "human_execution.service_team"
       ],
       "write_targets": [
-        "work_assignment indices/audit/facts"
+        "work_assignment indices/audit/facts",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "work_assignment_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "work_assignment_audit_v1",
+        "facts"
       ],
       "fact_types": [
         "work_assignment_status_changed_v1"
@@ -6286,7 +6596,8 @@
         "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
         "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-139",
@@ -6313,7 +6624,14 @@
         "human_execution.executor_registry"
       ],
       "write_targets": [
-        "work_assignment indices/audit/facts"
+        "work_assignment indices/audit/facts",
+        "human_executor_index_v1",
+        "service_team_index_v1",
+        "work_assignment_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "work_assignment_audit_v1",
+        "facts"
       ],
       "fact_types": [
         "work_assignment_status_changed_v1"
@@ -6333,7 +6651,8 @@
         "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
         "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-140",
@@ -6360,7 +6679,14 @@
         "human_execution.assignment"
       ],
       "write_targets": [
-        "work_assignment indices/audit/facts"
+        "work_assignment indices/audit/facts",
+        "work_assignment_index_v1",
+        "work_assignment_audit_v1",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "facts"
       ],
       "fact_types": [
         "work_assignment_status_changed_v1"
@@ -6380,7 +6706,8 @@
         "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
         "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-141",
@@ -6403,7 +6730,14 @@
         "runtime.mutation"
       ],
       "write_targets": [
-        "ROUTE_DEFINED_MUTATION"
+        "ROUTE_DEFINED_MUTATION",
+        "work_assignment_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_audit_v1",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "work_assignment_reassign_log_v1",
+        "facts"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -6421,7 +6755,8 @@
         "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
         "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-142",
@@ -6448,7 +6783,14 @@
         "human_execution.assignment"
       ],
       "write_targets": [
-        "work_assignment indices/audit/facts"
+        "work_assignment indices/audit/facts",
+        "work_assignment_index_v1",
+        "work_assignment_audit_v1",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "facts"
       ],
       "fact_types": [
         "work_assignment_status_changed_v1"
@@ -6468,7 +6810,8 @@
         "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
         "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-143",
@@ -6495,7 +6838,14 @@
         "human_execution.assignment"
       ],
       "write_targets": [
-        "work_assignment indices/audit/facts"
+        "work_assignment indices/audit/facts",
+        "work_assignment_index_v1",
+        "work_assignment_reassign_log_v1",
+        "work_assignment_audit_v1",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "operation_handoff_v1",
+        "facts"
       ],
       "fact_types": [
         "work_assignment_status_changed_v1"
@@ -6515,7 +6865,8 @@
         "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
         "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-144",
@@ -6542,7 +6893,14 @@
         "human_execution.assignment"
       ],
       "write_targets": [
-        "work_assignment indices/audit/facts"
+        "work_assignment indices/audit/facts",
+        "work_assignment_index_v1",
+        "work_assignment_audit_v1",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "facts"
       ],
       "fact_types": [
         "work_assignment_status_changed_v1"
@@ -6562,7 +6920,8 @@
         "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
         "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-145",
@@ -6589,7 +6948,14 @@
         "human_execution.assignment"
       ],
       "write_targets": [
-        "work_assignment indices/audit/facts"
+        "work_assignment indices/audit/facts",
+        "work_assignment_index_v1",
+        "work_assignment_audit_v1",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "facts"
       ],
       "fact_types": [
         "work_assignment_status_changed_v1"
@@ -6609,7 +6975,8 @@
         "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
         "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-146",
@@ -6636,7 +7003,14 @@
         "human_execution.assignment"
       ],
       "write_targets": [
-        "work_assignment indices/audit/facts"
+        "work_assignment indices/audit/facts",
+        "work_assignment_index_v1",
+        "work_assignment_audit_v1",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "facts"
       ],
       "fact_types": [
         "work_assignment_status_changed_v1"
@@ -6656,7 +7030,8 @@
         "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
         "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-147",
@@ -6683,7 +7058,14 @@
         "human_execution.assignment"
       ],
       "write_targets": [
-        "work_assignment indices/audit/facts"
+        "work_assignment indices/audit/facts",
+        "work_assignment_index_v1",
+        "work_assignment_audit_v1",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "facts"
       ],
       "fact_types": [
         "work_assignment_status_changed_v1"
@@ -6703,7 +7085,8 @@
         "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
         "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-148",
@@ -6730,7 +7113,14 @@
         "human_execution.assignment"
       ],
       "write_targets": [
-        "work_assignment indices/audit/facts"
+        "work_assignment indices/audit/facts",
+        "work_assignment_index_v1",
+        "work_assignment_audit_v1",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "facts"
       ],
       "fact_types": [
         "work_assignment_status_changed_v1"
@@ -6750,7 +7140,8 @@
         "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
         "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-149",
@@ -6777,7 +7168,14 @@
         "human_execution.assignment"
       ],
       "write_targets": [
-        "work_assignment indices/audit/facts"
+        "work_assignment indices/audit/facts",
+        "work_assignment_index_v1",
+        "work_assignment_audit_v1",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "facts"
       ],
       "fact_types": [
         "work_assignment_status_changed_v1"
@@ -6797,7 +7195,8 @@
         "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
         "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-150",
@@ -6824,7 +7223,14 @@
         "execution.human_receipt"
       ],
       "write_targets": [
-        "work_assignment indices/audit/facts"
+        "work_assignment indices/audit/facts",
+        "work_assignment_index_v1",
+        "work_assignment_audit_v1",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "facts"
       ],
       "fact_types": [
         "human_work_receipt_v1"
@@ -6844,7 +7250,8 @@
         "apps/server/src/routes/human_executors_v1.ts::ensureHumanExecutorRuntime",
         "apps/server/src/routes/human_executors_v1.ts::insertAuditFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-151",
@@ -6872,7 +7279,9 @@
         "alert.action"
       ],
       "write_targets": [
-        "alert indices/workflow/facts"
+        "alert indices/workflow/facts",
+        "alert_actions_v1",
+        "alert_workflow_v1"
       ],
       "fact_types": [
         "alert_event_raised_v1",
@@ -6894,7 +7303,8 @@
         "apps/server/src/routes/alerts_v1.ts::<inline>",
         "apps/server/src/routes/alert_workflow_v1.ts::upsertAlertWorkflowV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-152",
@@ -6922,7 +7332,10 @@
         "alert.action"
       ],
       "write_targets": [
-        "alert indices/workflow/facts"
+        "alert indices/workflow/facts",
+        "alert_actions_v1",
+        "operation_workflow_v1",
+        "alert_workflow_v1"
       ],
       "fact_types": [
         "alert_event_raised_v1",
@@ -6945,7 +7358,8 @@
         "apps/server/src/routes/alert_workflow_v1.ts::upsertOperationWorkflowV1",
         "apps/server/src/routes/alert_workflow_v1.ts::upsertAlertWorkflowV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-153",
@@ -6973,7 +7387,11 @@
         "alert.rule"
       ],
       "write_targets": [
-        "alert indices/workflow/facts"
+        "alert indices/workflow/facts",
+        "facts",
+        "alert_rule_index_v1",
+        "alert_event_index_v1",
+        "alert_notification_index_v1"
       ],
       "fact_types": [
         "alert_event_raised_v1",
@@ -6996,7 +7414,8 @@
         "apps/server/src/routes/alerts_v1.ts::insertAlertEventIfMissing",
         "apps/server/src/routes/alerts_v1.ts::insertNotificationRecordsForEvent"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-154",
@@ -7024,7 +7443,9 @@
         "alert.rule"
       ],
       "write_targets": [
-        "alert indices/workflow/facts"
+        "alert indices/workflow/facts",
+        "alert_rule_index_v1",
+        "facts"
       ],
       "fact_types": [
         "alert_event_raised_v1",
@@ -7045,7 +7466,8 @@
       "writer_entrypoints": [
         "apps/server/src/routes/alerts_v1.ts::<inline>"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-155",
@@ -7073,7 +7495,9 @@
         "alert.event"
       ],
       "write_targets": [
-        "alert indices/workflow/facts"
+        "alert indices/workflow/facts",
+        "alert_event_index_v1",
+        "facts"
       ],
       "fact_types": [
         "alert_event_raised_v1",
@@ -7094,7 +7518,8 @@
       "writer_entrypoints": [
         "apps/server/src/routes/alerts_v1.ts::<inline>"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-156",
@@ -7122,7 +7547,9 @@
         "alert.event"
       ],
       "write_targets": [
-        "alert indices/workflow/facts"
+        "alert indices/workflow/facts",
+        "alert_event_index_v1",
+        "facts"
       ],
       "fact_types": [
         "alert_event_raised_v1",
@@ -7143,7 +7570,8 @@
       "writer_entrypoints": [
         "apps/server/src/routes/alerts_v1.ts::<inline>"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-157",
@@ -7171,7 +7599,10 @@
         "alert.workflow"
       ],
       "write_targets": [
-        "alert indices/workflow/facts"
+        "alert indices/workflow/facts",
+        "alert_workflow_v1",
+        "alert_operation_relation_v1",
+        "operation_workflow_v1"
       ],
       "fact_types": [
         "alert_event_raised_v1",
@@ -7194,7 +7625,8 @@
         "apps/server/src/routes/alert_workflow_v1.ts::upsertAlertOperationRelationV1",
         "apps/server/src/routes/alert_workflow_v1.ts::upsertOperationWorkflowV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-158",
@@ -7222,7 +7654,10 @@
         "alert.workflow"
       ],
       "write_targets": [
-        "alert indices/workflow/facts"
+        "alert indices/workflow/facts",
+        "alert_workflow_v1",
+        "alert_operation_relation_v1",
+        "operation_workflow_v1"
       ],
       "fact_types": [
         "alert_event_raised_v1",
@@ -7245,7 +7680,8 @@
         "apps/server/src/routes/alert_workflow_v1.ts::upsertAlertOperationRelationV1",
         "apps/server/src/routes/alert_workflow_v1.ts::upsertOperationWorkflowV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-159",
@@ -7273,7 +7709,10 @@
         "alert.workflow"
       ],
       "write_targets": [
-        "alert indices/workflow/facts"
+        "alert indices/workflow/facts",
+        "alert_workflow_v1",
+        "alert_operation_relation_v1",
+        "operation_workflow_v1"
       ],
       "fact_types": [
         "alert_event_raised_v1",
@@ -7296,7 +7735,8 @@
         "apps/server/src/routes/alert_workflow_v1.ts::upsertAlertOperationRelationV1",
         "apps/server/src/routes/alert_workflow_v1.ts::upsertOperationWorkflowV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-160",
@@ -7324,7 +7764,10 @@
         "alert.workflow"
       ],
       "write_targets": [
-        "alert indices/workflow/facts"
+        "alert indices/workflow/facts",
+        "alert_workflow_v1",
+        "alert_operation_relation_v1",
+        "operation_workflow_v1"
       ],
       "fact_types": [
         "alert_event_raised_v1",
@@ -7347,7 +7790,8 @@
         "apps/server/src/routes/alert_workflow_v1.ts::upsertAlertOperationRelationV1",
         "apps/server/src/routes/alert_workflow_v1.ts::upsertOperationWorkflowV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-161",
@@ -7375,7 +7819,8 @@
         "execution.fail_safe"
       ],
       "write_targets": [
-        "manual_takeover_v1/fail_safe_event_v1"
+        "manual_takeover_v1/fail_safe_event_v1",
+        "security_audit_event_v1"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -7392,7 +7837,8 @@
         "apps/server/src/services/fail_safe_service_v1.ts::acknowledgeManualTakeoverV1",
         "apps/server/src/services/security_audit_service_v1.ts::recordSecurityAuditEventV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-162",
@@ -7420,7 +7866,8 @@
         "execution.fail_safe"
       ],
       "write_targets": [
-        "manual_takeover_v1/fail_safe_event_v1"
+        "manual_takeover_v1/fail_safe_event_v1",
+        "security_audit_event_v1"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -7437,7 +7884,8 @@
         "apps/server/src/services/fail_safe_service_v1.ts::completeManualTakeoverV1",
         "apps/server/src/services/security_audit_service_v1.ts::recordSecurityAuditEventV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-163",
@@ -7465,7 +7913,9 @@
         "execution.fail_safe"
       ],
       "write_targets": [
-        "manual_takeover_v1/fail_safe_event_v1"
+        "manual_takeover_v1/fail_safe_event_v1",
+        "fail_safe_event_v1",
+        "security_audit_event_v1"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -7482,7 +7932,8 @@
         "apps/server/src/services/fail_safe_service_v1.ts::resolveFailSafeEventV1",
         "apps/server/src/services/security_audit_service_v1.ts::recordSecurityAuditEventV1"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-164",
@@ -8239,7 +8690,9 @@
         "approval.verdict"
       ],
       "write_targets": [
-        "approval decision + downstream task/plan chain"
+        "approval decision + downstream task/plan chain",
+        "facts",
+        "dispatch_queue_v1"
       ],
       "fact_types": [
         "approval_decision_v1",
@@ -8261,7 +8714,8 @@
         "apps/server/src/domain/controlplane/task_service.ts::upsertDispatchQueueReady",
         "apps/server/src/domain/controlplane/task_service.ts::ensureDispatchQueueRuntime"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-183",
@@ -8289,7 +8743,8 @@
       ],
       "write_targets": [
         "facts",
-        "operation plan/task projections"
+        "operation plan/task projections",
+        "dispatch_queue_v1"
       ],
       "fact_types": [
         "ao_act_task_v0"
@@ -8309,7 +8764,8 @@
         "apps/server/src/domain/controlplane/task_service.ts::upsertDispatchQueueReady",
         "apps/server/src/domain/controlplane/task_service.ts::ensureDispatchQueueRuntime"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-184",
@@ -8338,7 +8794,8 @@
       "write_targets": [
         "facts",
         "dispatch outbox",
-        "operation plan transition"
+        "operation plan transition",
+        "dispatch_queue_v1"
       ],
       "fact_types": [
         "ao_act_task_dispatched_v1",
@@ -8360,7 +8817,8 @@
         "apps/server/src/domain/controlplane/task_service.ts::ensureDispatchQueueRuntime",
         "apps/server/src/domain/controlplane/task_service.ts::insertFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-185",
@@ -8387,7 +8845,9 @@
         "execution.dispatch_claim"
       ],
       "write_targets": [
-        "dispatch queue lease state"
+        "dispatch queue lease state",
+        "dispatch_queue_v1",
+        "facts"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -8406,7 +8866,8 @@
         "apps/server/src/domain/controlplane/task_service.ts::updateDispatchQueueStateByActTask",
         "apps/server/src/domain/controlplane/task_service.ts::insertFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-186",
@@ -8435,7 +8896,9 @@
       "write_targets": [
         "dispatch queue",
         "operation plan transitions",
-        "manual fallback/work assignment state"
+        "manual fallback/work assignment state",
+        "dispatch_queue_v1",
+        "facts"
       ],
       "fact_types": [
         "operation_plan_transition_v1",
@@ -8456,7 +8919,8 @@
         "apps/server/src/domain/controlplane/task_service.ts::ensureDispatchQueueRuntime",
         "apps/server/src/domain/controlplane/task_service.ts::insertFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-187",
@@ -8484,7 +8948,8 @@
       ],
       "write_targets": [
         "facts",
-        "dispatch queue"
+        "dispatch queue",
+        "dispatch_queue_v1"
       ],
       "fact_types": [
         "ao_act_downlink_published_v1"
@@ -8504,7 +8969,8 @@
         "apps/server/src/domain/controlplane/task_service.ts::ensureDispatchQueueRuntime",
         "apps/server/src/domain/controlplane/task_service.ts::insertFact"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-188",
@@ -8532,7 +8998,9 @@
       ],
       "write_targets": [
         "device ack facts",
-        "delegated receipt writer"
+        "delegated receipt writer",
+        "facts",
+        "dispatch_queue_v1"
       ],
       "fact_types": [
         "ao_act_device_ack_v1",
@@ -8554,7 +9022,8 @@
         "apps/server/src/domain/controlplane/task_service.ts::ensureDispatchQueueRuntime",
         "apps/server/src/domain/controlplane/task_service.ts::createAcceptance"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-189",
@@ -8581,7 +9050,8 @@
         "operation_plan.read_model_rebuild"
       ],
       "write_targets": [
-        "operation plan state projection"
+        "operation plan state projection",
+        "operation_plan_state_v1_rm"
       ],
       "fact_types": [],
       "downstream_consumers": [],
@@ -8598,7 +9068,8 @@
         "apps/server/src/domain/controlplane/task_service.ts::rebuildOperationPlanStateReadModel",
         "apps/server/src/domain/controlplane/task_service.ts::ensureOperationPlanStateReadModelRuntime"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "surface_id": "BSEC-190",
@@ -8713,7 +9184,8 @@
       ],
       "write_targets": [
         "facts",
-        "receipt projections"
+        "receipt projections",
+        "dispatch_queue_v1"
       ],
       "fact_types": [
         "ao_act_receipt_v1",
@@ -8735,7 +9207,8 @@
         "apps/server/src/domain/controlplane/task_service.ts::updateDispatchQueueStateByActTask",
         "apps/server/src/domain/controlplane/task_service.ts::ensureDispatchQueueRuntime"
       ],
-      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     }
   ],
   "completion_claim": {
@@ -8958,7 +9431,10 @@
         "refreshFieldReadModelsWithObservabilityV1",
         "refreshFieldSensingOverviewV1",
         "refreshFieldSensingSummaryStage1V1",
-        "refreshFieldFertilityStateV1"
+        "refreshFieldFertilityStateV1",
+        "apps/server/src/projections/field_sensing_overview_v1.ts::ensureFieldSensingOverviewProjectionV1",
+        "apps/server/src/projections/field_sensing_summary_stage1_v1.ts::ensureFieldSensingSummaryStage1ProjectionV1",
+        "apps/server/src/projections/field_fertility_state_v1.ts::ensureFieldFertilityStateProjectionV1"
       ],
       "write_targets": [
         "field_sensing_overview_v1",
@@ -8966,7 +9442,8 @@
         "field_fertility_state_v1"
       ],
       "current_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
-      "notes": "Field detail GET refreshes sensing/fertility read models."
+      "notes": "Field detail GET refreshes sensing/fertility read models.",
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-005",
@@ -8984,7 +9461,10 @@
         "refreshFieldReadModelsWithObservabilityV1",
         "refreshFieldSensingOverviewV1",
         "refreshFieldSensingSummaryStage1V1",
-        "refreshFieldFertilityStateV1"
+        "refreshFieldFertilityStateV1",
+        "apps/server/src/projections/field_sensing_overview_v1.ts::ensureFieldSensingOverviewProjectionV1",
+        "apps/server/src/projections/field_sensing_summary_stage1_v1.ts::ensureFieldSensingSummaryStage1ProjectionV1",
+        "apps/server/src/projections/field_fertility_state_v1.ts::ensureFieldFertilityStateProjectionV1"
       ],
       "write_targets": [
         "field_sensing_overview_v1",
@@ -8992,7 +9472,8 @@
         "field_fertility_state_v1"
       ],
       "current_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
-      "notes": "Customer-facing sensing GET refreshes projections."
+      "notes": "Customer-facing sensing GET refreshes projections.",
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-006",
@@ -9010,7 +9491,10 @@
         "refreshFieldReadModelsWithObservabilityV1",
         "refreshFieldSensingOverviewV1",
         "refreshFieldSensingSummaryStage1V1",
-        "refreshFieldFertilityStateV1"
+        "refreshFieldFertilityStateV1",
+        "apps/server/src/projections/field_sensing_overview_v1.ts::ensureFieldSensingOverviewProjectionV1",
+        "apps/server/src/projections/field_sensing_summary_stage1_v1.ts::ensureFieldSensingSummaryStage1ProjectionV1",
+        "apps/server/src/projections/field_fertility_state_v1.ts::ensureFieldFertilityStateProjectionV1"
       ],
       "write_targets": [
         "field_sensing_overview_v1",
@@ -9018,7 +9502,8 @@
         "field_fertility_state_v1"
       ],
       "current_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
-      "notes": "Internal/debug GET refreshes projections."
+      "notes": "Internal/debug GET refreshes projections.",
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-007",
@@ -9065,10 +9550,12 @@
       ],
       "write_targets": [
         "device_skill_binding_status_v1 schema",
-        "device_index_v1.device_mode schema"
+        "device_index_v1.device_mode schema",
+        "device_index_v1"
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
-      "notes": "Exact head passes allow_write:false to ensureDeviceSkillBindings; no binding data repair is authorized by this GET."
+      "notes": "Exact head passes allow_write:false to ensureDeviceSkillBindings; no binding data repair is authorized by this GET.",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-009",
@@ -9091,10 +9578,12 @@
       "write_targets": [
         "device_skill_binding_status_v1 schema",
         "device_index_v1.device_mode schema",
-        "device_capability schema"
+        "device_capability schema",
+        "device_index_v1"
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
-      "notes": "Exact head uses allow_write:false for binding health; remaining ensure calls are schema/runtime compatibility."
+      "notes": "Exact head uses allow_write:false for binding health; remaining ensure calls are schema/runtime compatibility.",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-010",
@@ -9154,10 +9643,12 @@
         "ensureDeviceModeRuntime"
       ],
       "write_targets": [
-        "device_index_v1.device_mode schema"
+        "device_index_v1.device_mode schema",
+        "device_index_v1"
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
-      "notes": "Onboarding-status GET performs compatibility schema ensure."
+      "notes": "Onboarding-status GET performs compatibility schema ensure.",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-013",
@@ -9238,10 +9729,12 @@
         "ensureOperationPlanStateReadModelRuntime"
       ],
       "write_targets": [
-        "operation plan state read-model schema"
+        "operation plan state read-model schema",
+        "operation_plan_state_v1_rm"
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
-      "notes": "GET performs runtime schema ensure before reading the projection."
+      "notes": "GET performs runtime schema ensure before reading the projection.",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-017",
@@ -9448,10 +9941,17 @@
         "ensureHumanExecutorRuntime"
       ],
       "write_targets": [
-        "human executor/work assignment runtime schema"
+        "human executor/work assignment runtime schema",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "work_assignment_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "work_assignment_audit_v1"
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
-      "notes": "GET ensures human executor/work-assignment compatibility schema before reading."
+      "notes": "GET ensures human executor/work-assignment compatibility schema before reading.",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-027",
@@ -9469,10 +9969,17 @@
         "ensureHumanExecutorRuntime"
       ],
       "write_targets": [
-        "human executor/work assignment runtime schema"
+        "human executor/work assignment runtime schema",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "work_assignment_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "work_assignment_audit_v1"
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
-      "notes": "GET ensures human executor/work-assignment compatibility schema before reading."
+      "notes": "GET ensures human executor/work-assignment compatibility schema before reading.",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-028",
@@ -9490,10 +9997,17 @@
         "ensureHumanExecutorRuntime"
       ],
       "write_targets": [
-        "human executor/work assignment runtime schema"
+        "human executor/work assignment runtime schema",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "work_assignment_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "work_assignment_audit_v1"
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
-      "notes": "GET ensures human executor/work-assignment compatibility schema before reading."
+      "notes": "GET ensures human executor/work-assignment compatibility schema before reading.",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-029",
@@ -9511,10 +10025,17 @@
         "ensureHumanExecutorRuntime"
       ],
       "write_targets": [
-        "human executor/work assignment runtime schema"
+        "human executor/work assignment runtime schema",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "work_assignment_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "work_assignment_audit_v1"
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
-      "notes": "GET ensures human executor/work-assignment compatibility schema before reading."
+      "notes": "GET ensures human executor/work-assignment compatibility schema before reading.",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-030",
@@ -9532,10 +10053,17 @@
         "ensureHumanExecutorRuntime"
       ],
       "write_targets": [
-        "human executor/work assignment runtime schema"
+        "human executor/work assignment runtime schema",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "work_assignment_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "work_assignment_audit_v1"
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
-      "notes": "GET ensures human executor/work-assignment compatibility schema before reading."
+      "notes": "GET ensures human executor/work-assignment compatibility schema before reading.",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-031",
@@ -9553,10 +10081,17 @@
         "ensureHumanExecutorRuntime"
       ],
       "write_targets": [
-        "human executor/work assignment runtime schema"
+        "human executor/work assignment runtime schema",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "work_assignment_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "work_assignment_audit_v1"
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
-      "notes": "GET ensures human executor/work-assignment compatibility schema before reading."
+      "notes": "GET ensures human executor/work-assignment compatibility schema before reading.",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-032",
@@ -9574,10 +10109,17 @@
         "ensureHumanExecutorRuntime"
       ],
       "write_targets": [
-        "human executor/work assignment runtime schema"
+        "human executor/work assignment runtime schema",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "work_assignment_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "work_assignment_audit_v1"
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
-      "notes": "GET ensures human executor/work-assignment compatibility schema before reading."
+      "notes": "GET ensures human executor/work-assignment compatibility schema before reading.",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-033",
@@ -9595,10 +10137,17 @@
         "ensureHumanExecutorRuntime"
       ],
       "write_targets": [
-        "human executor/work assignment runtime schema"
+        "human executor/work assignment runtime schema",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "work_assignment_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "work_assignment_audit_v1"
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
-      "notes": "GET ensures human executor/work-assignment compatibility schema before reading."
+      "notes": "GET ensures human executor/work-assignment compatibility schema before reading.",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-034",
@@ -9616,10 +10165,17 @@
         "ensureHumanExecutorRuntime"
       ],
       "write_targets": [
-        "human executor/work assignment runtime schema"
+        "human executor/work assignment runtime schema",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "work_assignment_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1",
+        "work_assignment_audit_v1"
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
-      "notes": "GET ensures human executor/work-assignment compatibility schema before reading."
+      "notes": "GET ensures human executor/work-assignment compatibility schema before reading.",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-035",
@@ -9814,10 +10370,12 @@
         "ensureRulePerformanceTable"
       ],
       "write_targets": [
-        "agronomy rule performance schema"
+        "agronomy rule performance schema",
+        "agronomy_rule_performance"
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
-      "notes": "GET ensures rule-performance table before SELECT."
+      "notes": "GET ensures rule-performance table before SELECT.",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-044",
@@ -9836,10 +10394,12 @@
         "ensureRulePerformanceTable"
       ],
       "write_targets": [
-        "agronomy rule performance schema"
+        "agronomy rule performance schema",
+        "agronomy_rule_performance"
       ],
       "current_disposition": "INVENTORIED_GET_SCHEMA_ENSURE",
-      "notes": "GET ensures rule-performance table before SELECT."
+      "notes": "GET ensures rule-performance table before SELECT.",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "disposition_id": "BHTTP-045",
@@ -10897,10 +11457,15 @@
       "write_targets": [
         "work_assignment_index_v1",
         "work_assignment_audit_v1",
-        "facts:work_assignment_status_changed_v1"
+        "facts:work_assignment_status_changed_v1",
+        "service_team_index_v1",
+        "human_executor_index_v1",
+        "operation_handoff_v1",
+        "work_assignment_reassign_log_v1"
       ],
       "current_disposition": "KEEP_GLOBAL_ASSIGNMENT_EXPIRY_WORKER_ROW_TENANT_DERIVED",
-      "notes": "Nested tick() is executed by setInterval; inline SQL writer is explicitly inventoried and may not be skipped."
+      "notes": "Nested tick() is executed by setInterval; inline SQL writer is explicitly inventoried and may not be skipped.",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "callback_id": "apps/server/src/routes/appleii_stage1_evidence_gate_v1.ts#registerAppleIIStage1EvidenceGateV1#FASTIFY_HOOK:preHandler#1",
@@ -10968,7 +11533,11 @@
         "apps/server/src/projections/field_sensing_overview_v1.ts::refreshFieldSensingOverviewV1",
         "apps/server/src/projections/field_sensing_summary_stage1_v1.ts::refreshFieldSensingSummaryStage1V1",
         "apps/server/src/projections/field_fertility_state_v1.ts::refreshFieldFertilityStateV1",
-        "apps/server/src/projections/agronomy_signal_snapshot_v1.ts::updateAgronomySnapshot"
+        "apps/server/src/projections/agronomy_signal_snapshot_v1.ts::updateAgronomySnapshot",
+        "apps/server/src/services/field_memory_service.ts::recordMemoryV1",
+        "apps/server/src/projections/field_sensing_overview_v1.ts::ensureFieldSensingOverviewProjectionV1",
+        "apps/server/src/projections/field_sensing_summary_stage1_v1.ts::ensureFieldSensingSummaryStage1ProjectionV1",
+        "apps/server/src/projections/field_fertility_state_v1.ts::ensureFieldFertilityStateProjectionV1"
       ],
       "write_targets": [
         "facts:raw_telemetry_v1_or_device_heartbeat_v1",
@@ -10980,10 +11549,13 @@
         "field_sensing_overview_v1",
         "field_sensing_summary_stage1_v1",
         "field_fertility_state_v1",
-        "agronomy_signal_snapshot_v1"
+        "agronomy_signal_snapshot_v1",
+        "field_memory_v1"
       ],
       "current_disposition": "KEEP_TELEMETRY_EVENT_INGRESS_WITH_DEVICE_CREDENTIAL_AND_ROW_TENANT_ADMISSION",
-      "notes": "Shared broker credential is not treated as device semantic admission; topic tenant plus device credential checks remain separate downstream controls."
+      "notes": "Shared broker credential is not treated as device semantic admission; topic tenant plus device credential checks remain separate downstream controls.",
+      "writer_entrypoints_source": "MACHINE_REACHABLE_EXACT_SET_PR_SEC_1",
+      "write_targets_source": "MACHINE_REACHABLE_SQL_TARGET_SET_PR_SEC_1"
     },
     {
       "callback_id": "apps/telemetry-ingest/src/main.ts#main#HIGHER_ORDER_CALLBACK:apps/telemetry-ingest/src/mqtt_durable_raw_v1.ts::runMqttObservationProjectionV1#1",
