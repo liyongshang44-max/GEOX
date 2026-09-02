@@ -9194,6 +9194,310 @@
         "worker_runtime_heartbeat_v1 via recordWorkerRuntimeHeartbeat"
       ],
       "current_disposition": "KEEP_NO_PRODUCT_SEMANTIC_AUTHORITY"
+    },
+    {
+      "writer_id": "BRUNTIME-007",
+      "source_path": "apps/server/src/jobs/agronomy_agent.ts",
+      "entry_symbol": "insertFact",
+      "activation_root": "commercial.jobs → apps/server/src/jobs/runtime.ts → runAgronomyAgentOnce → insertFact",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "FACT_LEDGER_WRITER",
+      "principal_type": "JOBS_SERVICE_PROCESS",
+      "write_targets": [
+        "facts:recommendation_v1"
+      ],
+      "current_disposition": "KEEP_LEGACY_SIGNAL_ONLY_NO_DIRECT_DECISION_OR_PLAN_AUTHORITY",
+      "notes": "After #3452 this direct writer is limited to LEGACY_AGRONOMY_SIGNAL_ONLY recommendation_v1; still a production fact-ledger writer."
+    },
+    {
+      "writer_id": "BRUNTIME-008",
+      "source_path": "apps/server/src/routes/evidence_report_v1.ts",
+      "entry_symbol": "runQueuedEvidenceReportJob",
+      "activation_root": "commercial.jobs → evidence report job worker → runQueuedEvidenceReportJob",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "OPERATIONAL_JOB_STATE_WRITER",
+      "principal_type": "JOBS_SERVICE_PROCESS",
+      "write_targets": [
+        "jobs.status",
+        "jobs.result"
+      ],
+      "current_disposition": "KEEP_BACKGROUND_JOB_STATE_WRITER_NO_NEW_SEMANTIC_AUTHORITY",
+      "notes": "Transitions queued evidence-report job state RUNNING→DONE around the already-governed report job."
+    },
+    {
+      "writer_id": "BRUNTIME-009",
+      "source_path": "apps/server/src/routes/evidence_report_v1.ts",
+      "entry_symbol": "markEvidenceReportJobFailed",
+      "activation_root": "commercial.jobs → evidence report job worker → markEvidenceReportJobFailed",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "OPERATIONAL_JOB_STATE_WRITER",
+      "principal_type": "JOBS_SERVICE_PROCESS",
+      "write_targets": [
+        "jobs.status",
+        "jobs.error"
+      ],
+      "current_disposition": "KEEP_BACKGROUND_JOB_STATE_WRITER_NO_NEW_SEMANTIC_AUTHORITY",
+      "notes": "Records FAILED/error state for evidence-report jobs."
+    },
+    {
+      "writer_id": "BRUNTIME-010",
+      "source_path": "apps/server/src/routes/alerts_v1.ts",
+      "entry_symbol": "insertAlertEventIfMissing",
+      "activation_root": "commercial.server workers → alert evaluation worker → insertAlertEventIfMissing",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "FACT_LEDGER_AND_DOMAIN_STATE_WRITER",
+      "principal_type": "SERVER_BACKGROUND_WORKER_PROCESS",
+      "write_targets": [
+        "facts:alert_event_raised_v1",
+        "alert_event_index_v1"
+      ],
+      "current_disposition": "KEEP_ALERT_RUNTIME_AUTHORITY",
+      "notes": "Alert worker appends raised-event facts and inserts alert event projection rows."
+    },
+    {
+      "writer_id": "BRUNTIME-011",
+      "source_path": "apps/server/src/routes/alerts_v1.ts",
+      "entry_symbol": "insertNotificationRecordsForEvent",
+      "activation_root": "commercial.server workers → alert evaluation worker → insertAlertEventIfMissing → insertNotificationRecordsForEvent",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "FACT_LEDGER_AND_DOMAIN_STATE_WRITER",
+      "principal_type": "SERVER_BACKGROUND_WORKER_PROCESS",
+      "write_targets": [
+        "facts:alert_notification_recorded_v1",
+        "alert_notification_index_v1"
+      ],
+      "current_disposition": "KEEP_ALERT_NOTIFICATION_RUNTIME_AUTHORITY",
+      "notes": "Creates notification facts and pending notification index rows for a raised alert."
+    },
+    {
+      "writer_id": "BRUNTIME-012",
+      "source_path": "apps/server/src/routes/alerts_v1.ts",
+      "entry_symbol": "dispatchPendingNotifications",
+      "activation_root": "commercial.server workers → alert notification worker → dispatchPendingNotifications",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "FACT_LEDGER_AND_DOMAIN_STATE_WRITER",
+      "principal_type": "SERVER_BACKGROUND_WORKER_PROCESS",
+      "write_targets": [
+        "alert_notification_index_v1",
+        "facts:alert_notification_dispatched_v1"
+      ],
+      "current_disposition": "KEEP_ALERT_NOTIFICATION_RUNTIME_AUTHORITY",
+      "notes": "Updates pending notification state and appends dispatch-result facts."
+    },
+    {
+      "writer_id": "BRUNTIME-013",
+      "source_path": "apps/server/src/routes/human_executors_v1.ts",
+      "entry_symbol": "ensureHumanExecutorRuntime",
+      "activation_root": "commercial.server workers → assignment expiry / human executor runtime → ensureHumanExecutorRuntime",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "SCHEMA_COMPATIBILITY_WRITER",
+      "principal_type": "SERVER_BACKGROUND_WORKER_PROCESS",
+      "write_targets": [
+        "service_team_index_v1 schema",
+        "human_executor_index_v1 schema",
+        "work_assignment_index_v1 schema",
+        "work_assignment_audit_v1 schema"
+      ],
+      "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
+      "notes": "Runtime worker path ensures human executor/work-assignment compatibility schema."
+    },
+    {
+      "writer_id": "BRUNTIME-014",
+      "source_path": "apps/server/src/projections/human_ops_kpi_v1.ts",
+      "entry_symbol": "ensureHumanOpsKpiProjectionV1",
+      "activation_root": "commercial.server workers → human ops KPI worker → ensureHumanOpsKpiProjectionV1",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "SCHEMA_COMPATIBILITY_WRITER",
+      "principal_type": "SERVER_BACKGROUND_WORKER_PROCESS",
+      "write_targets": [
+        "human_ops_kpi_v1 schema"
+      ],
+      "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
+      "notes": "Ensures KPI projection table/index."
+    },
+    {
+      "writer_id": "BRUNTIME-015",
+      "source_path": "apps/server/src/projections/human_ops_kpi_v1.ts",
+      "entry_symbol": "refreshHumanOpsKpiProjectionV1",
+      "activation_root": "commercial.server workers → startHumanOpsKpiRefreshWorker → refreshHumanOpsKpiProjectionV1",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "PROJECTION_WRITER",
+      "principal_type": "SERVER_BACKGROUND_WORKER_PROCESS",
+      "write_targets": [
+        "human_ops_kpi_v1"
+      ],
+      "current_disposition": "KEEP_REBUILDABLE_OPERATIONAL_PROJECTION",
+      "notes": "Refresh worker deletes/rebuilds human operations KPI projection from assignment/audit source state."
+    },
+    {
+      "writer_id": "BRUNTIME-016",
+      "source_path": "apps/server/src/services/device_observation_service_v1.ts",
+      "entry_symbol": "ensureDeviceObservationProjectionV1",
+      "activation_root": "commercial.jobs/server sensing graph → device observation service → ensureDeviceObservationProjectionV1",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "SCHEMA_COMPATIBILITY_WRITER",
+      "principal_type": "SERVER_OR_JOBS_SERVICE_PROCESS",
+      "write_targets": [
+        "device_observation_index_v1 schema"
+      ],
+      "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
+      "notes": "Ensures device observation projection schema before observation ingestion/refresh."
+    },
+    {
+      "writer_id": "BRUNTIME-017",
+      "source_path": "apps/server/src/services/device_observation_service_v1.ts",
+      "entry_symbol": "writeDeviceObservationFactV1",
+      "activation_root": "commercial.jobs/server sensing graph → device observation service → writeDeviceObservationFactV1",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "FACT_LEDGER_AND_PROJECTION_WRITER",
+      "principal_type": "SERVER_OR_JOBS_SERVICE_PROCESS",
+      "write_targets": [
+        "facts:device_observation_v1",
+        "device_observation_index_v1"
+      ],
+      "current_disposition": "KEEP_OBSERVATION_INGRESS_WRITER_WITH_EXISTING_EVIDENCE_BOUNDARY",
+      "notes": "Appends device observation fact and updates its projection; no new caller authority is granted by this inventory."
+    },
+    {
+      "writer_id": "BRUNTIME-018",
+      "source_path": "apps/server/src/domain/skill_registry/facts.ts",
+      "entry_symbol": "appendFact",
+      "activation_root": "commercial.jobs/server skill runtime graph → skill registry facts.appendFact",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "FACT_LEDGER_WRITER",
+      "principal_type": "SERVER_OR_JOBS_SERVICE_PROCESS",
+      "write_targets": [
+        "facts:skill registry fact families"
+      ],
+      "current_disposition": "KEEP_SKILL_REGISTRY_FACT_WRITER",
+      "notes": "Low-level skill-registry ledger append helper reached from production runtime graph."
+    },
+    {
+      "writer_id": "BRUNTIME-019",
+      "source_path": "apps/server/src/services/field_memory_service.ts",
+      "entry_symbol": "recordMemoryV1",
+      "activation_root": "commercial.jobs/server reviewed formalization graph → recordMemoryV1",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "FACT_LEDGER_OR_DOMAIN_MEMORY_WRITER",
+      "principal_type": "SERVER_OR_JOBS_SERVICE_PROCESS",
+      "write_targets": [
+        "Field Memory persistent state/facts"
+      ],
+      "current_disposition": "KEEP_ONLY_UNDER_EXISTING_REVIEWED_FORMALIZATION_BOUNDARY",
+      "notes": "Direct Field Memory writer remains governed by the already-qualified reviewed-promotion boundary; inventory does not widen authority."
+    },
+    {
+      "writer_id": "BRUNTIME-020",
+      "source_path": "apps/server/src/services/derived_sensing_state_service_v1.ts",
+      "entry_symbol": "appendDerivedSensingStateV1",
+      "activation_root": "commercial.jobs/server sensing graph → appendDerivedSensingStateV1",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "FACT_LEDGER_AND_PROJECTION_WRITER",
+      "principal_type": "SERVER_OR_JOBS_SERVICE_PROCESS",
+      "write_targets": [
+        "facts:derived_sensing_state_v1",
+        "derived_sensing_state_index_v1"
+      ],
+      "current_disposition": "KEEP_DERIVED_SENSING_COMPATIBILITY_AUTHORITY",
+      "notes": "Appends derived sensing state and maintains derived-sensing projection; not canonical MCFT State."
+    },
+    {
+      "writer_id": "BRUNTIME-021",
+      "source_path": "apps/server/src/projections/field_sensing_overview_v1.ts",
+      "entry_symbol": "refreshFieldSensingOverviewV1",
+      "activation_root": "commercial.server/jobs field read-model graph → refreshFieldSensingOverviewV1",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "PROJECTION_WRITER",
+      "principal_type": "SERVER_OR_JOBS_SERVICE_PROCESS",
+      "write_targets": [
+        "field_sensing_overview_v1"
+      ],
+      "current_disposition": "KEEP_REBUILDABLE_SENSING_PROJECTION",
+      "notes": "Rebuildable field sensing overview projection writer."
+    },
+    {
+      "writer_id": "BRUNTIME-022",
+      "source_path": "apps/server/src/projections/field_sensing_overview_v1.ts",
+      "entry_symbol": "ensureFieldSensingOverviewProjectionV1",
+      "activation_root": "commercial.server/jobs field read-model graph → ensureFieldSensingOverviewProjectionV1",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "SCHEMA_COMPATIBILITY_WRITER",
+      "principal_type": "SERVER_OR_JOBS_SERVICE_PROCESS",
+      "write_targets": [
+        "field_sensing_overview_v1 schema"
+      ],
+      "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
+      "notes": "Ensures sensing overview projection schema."
+    },
+    {
+      "writer_id": "BRUNTIME-023",
+      "source_path": "apps/server/src/projections/field_sensing_summary_stage1_v1.ts",
+      "entry_symbol": "refreshFieldSensingSummaryStage1V1",
+      "activation_root": "commercial.server/jobs field read-model graph → refreshFieldSensingSummaryStage1V1",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "PROJECTION_WRITER",
+      "principal_type": "SERVER_OR_JOBS_SERVICE_PROCESS",
+      "write_targets": [
+        "field_sensing_summary_stage1_v1"
+      ],
+      "current_disposition": "KEEP_REBUILDABLE_SENSING_PROJECTION",
+      "notes": "Refreshes Stage-1 sensing summary projection; evidence sufficiency remains downstream projection semantics."
+    },
+    {
+      "writer_id": "BRUNTIME-024",
+      "source_path": "apps/server/src/projections/field_sensing_summary_stage1_v1.ts",
+      "entry_symbol": "ensureFieldSensingSummaryStage1ProjectionV1",
+      "activation_root": "commercial.server/jobs field read-model graph → ensureFieldSensingSummaryStage1ProjectionV1",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "SCHEMA_COMPATIBILITY_WRITER",
+      "principal_type": "SERVER_OR_JOBS_SERVICE_PROCESS",
+      "write_targets": [
+        "field_sensing_summary_stage1_v1 schema"
+      ],
+      "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
+      "notes": "Ensures Stage-1 sensing summary projection schema."
+    },
+    {
+      "writer_id": "BRUNTIME-025",
+      "source_path": "apps/server/src/projections/field_fertility_state_v1.ts",
+      "entry_symbol": "refreshFieldFertilityStateV1",
+      "activation_root": "commercial.server/jobs field read-model graph → refreshFieldFertilityStateV1",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "PROJECTION_WRITER",
+      "principal_type": "SERVER_OR_JOBS_SERVICE_PROCESS",
+      "write_targets": [
+        "field_fertility_state_v1"
+      ],
+      "current_disposition": "KEEP_REBUILDABLE_FERTILITY_PROJECTION",
+      "notes": "Refreshes compatibility fertility projection from derived sensing state; not MCFT canonical State."
+    },
+    {
+      "writer_id": "BRUNTIME-026",
+      "source_path": "apps/server/src/projections/field_fertility_state_v1.ts",
+      "entry_symbol": "ensureFieldFertilityStateProjectionV1",
+      "activation_root": "commercial.server/jobs field read-model graph → ensureFieldFertilityStateProjectionV1",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "SCHEMA_COMPATIBILITY_WRITER",
+      "principal_type": "SERVER_OR_JOBS_SERVICE_PROCESS",
+      "write_targets": [
+        "field_fertility_state_v1 schema"
+      ],
+      "current_disposition": "KEEP_SCHEMA_COMPATIBILITY_BOOTSTRAP",
+      "notes": "Ensures fertility projection schema."
+    },
+    {
+      "writer_id": "BRUNTIME-027",
+      "source_path": "apps/server/src/projections/agronomy_signal_snapshot_v1.ts",
+      "entry_symbol": "updateAgronomySnapshot",
+      "activation_root": "commercial.jobs/server agronomy read-model graph → updateAgronomySnapshot",
+      "activation_mode": "PRODUCTION_RUNTIME_DIRECT_WRITER",
+      "write_class": "PROJECTION_WRITER",
+      "principal_type": "SERVER_OR_JOBS_SERVICE_PROCESS",
+      "write_targets": [
+        "agronomy_signal_snapshot_v1"
+      ],
+      "current_disposition": "KEEP_REBUILDABLE_AGRONOMY_SIGNAL_PROJECTION",
+      "notes": "Updates agronomy signal snapshot projection from telemetry/binding inputs; no decision authority."
     }
   ],
   "startup_mutation_dispositions": [
