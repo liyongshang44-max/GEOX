@@ -70,6 +70,11 @@ forbid("service", [
 const forbiddenFertilizationLatest = /sampling_acceptance_v1[\\s\\S]{0,600}ORDER BY occurred_at DESC[\\s\\S]{0,100}LIMIT 1/;
 if (forbiddenFertilizationLatest.test(src.fertilization)) failures.push("FERTILIZATION_LATEST_SAMPLING_ACCEPTANCE_FORBIDDEN");
 
+const samplingAcceptanceSelector = /sampling_acceptance_v1[\\s\\S]{0,700}sample_id[\\s\\S]{0,300}import_id[\\s\\S]{0,300}LIMIT 2/;
+if (!samplingAcceptanceSelector.test(src.fertilization)) failures.push("FERTILIZATION_SAMPLING_ACCEPTANCE_LIMIT2_SELECTOR_REQUIRED");
+const passPrefilter = /sampling_acceptance_v1[\\s\\S]{0,700}(?:verdict)[\\s\\S]{0,180}PASS[\\s\\S]{0,300}LIMIT 2/;
+if (passPrefilter.test(src.fertilization)) failures.push("FERTILIZATION_SAMPLING_ACCEPTANCE_PASS_PREFILTER_FORBIDDEN");
+
 console.log("BLINE_SAMPLING_EXACT_SOURCE_BINDING_STATS " + JSON.stringify({
   failures: failures.length,
   exact_fields_in_contract: ["plan_fact_id","receipt_fact_id","lab_fact_id"].every((x) => src.contract.includes(x)),
