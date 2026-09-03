@@ -1,5 +1,6 @@
 const fs=require('node:fs'),cp=require('node:child_process');
 const BATCH006_HEAD='c15d559d0ab2a0332cac2a2a1cf2f9d4e7f2119f';
+const BATCH007_HEAD='a7bcd53c61522b11342c74cfa4af02b12f44c26e';
 const CORRECTIONS=['BSEC-001','BSEC-002','BSEC-005','BSEC-018','BSEC-019','BSEC-031'];
 const CLOSED_THROUGH_006=['BSEC-001','BSEC-002','BSEC-003','BSEC-005','BSEC-006','BSEC-007','BSEC-008','BSEC-009','BSEC-010','BSEC-022','BSEC-023','BSEC-024','BSEC-025','BSEC-026','BSEC-141'];
 const TARGET='BSEC-030';
@@ -8,7 +9,7 @@ function read(p){return fs.readFileSync(p,'utf8');}
 function assert(c,m,x){if(!c)throw new Error(`${m}${x===undefined?'':`: ${JSON.stringify(x)}`}`);}
 const registrationPath='apps/server/src/routes/registerLegacyRoutes.ts';
 const sourcePath='apps/server/src/modules/legacy/registerLegacyMonitoringModule.ts';
-assert(sh(['diff','--name-only',BATCH006_HEAD,'HEAD','--',sourcePath])==='',`${sourcePath} changed in Batch007`);
+assert(sh(['diff','--name-only',BATCH006_HEAD,BATCH007_HEAD,'--',sourcePath])==='',`${sourcePath} changed in Batch007`);
 const registration=read(registrationPath),source=read(sourcePath);
 assert(registration.includes('LEGACY_CANOPY_UPLOAD_COMMERCIAL_AUTHORITY_UNAVAILABLE'),'deterministic Batch007 error missing');
 assert(registration.includes('path === "/api/canopy/upload"'),'BSEC-030 exact registration interception missing');
@@ -55,7 +56,7 @@ const allowed=new Set([
 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_FAIL_CLOSED_V1.ts',
 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_COMMERCIAL_RUNTIME_V1.ts'
 ]);
-const changed=sh(['diff','--name-only',BATCH006_HEAD,'HEAD']).split(/\r?\n/).filter(Boolean);
+const changed=sh(['diff','--name-only',BATCH006_HEAD,BATCH007_HEAD]).split(/\r?\n/).filter(Boolean);
 for(const p of changed) assert(allowed.has(p),'Batch007 scope expansion',p);
 for(const p of changed) assert(!/mcft/i.test(p),'MCFT path changed',p);
 console.log(JSON.stringify({result:'PASS',batch:'PRSEC2-BATCH-007',containment:'COMMERCIAL_FAIL_CLOSE',target:TARGET,frozen_prsec1:frozenDebt,corrected_prsec1:debt(corrected),before,delta:batchDelta,after,caller_scan:callerScan,changed_files:changed,mcft_delta:0},null,2));
