@@ -13,7 +13,8 @@ const paths = {
   authority: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json",
   probe: "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.py",
   gate: "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.cjs",
-  workflow: ".github/workflows/mcft-cap-09-t4r1-thermal-biological-stage-authority-v1.yml"
+  workflow: ".github/workflows/mcft-cap-09-t4r1-thermal-biological-stage-authority-v1.yml",
+  qcp: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"
 };
 const expected = Object.values(paths).sort();
 
@@ -25,7 +26,7 @@ function git() { return execFileSync("git", Array.from(arguments), { encoding: "
 eq(BASE, EXPECTED_BASE, "MCFT_CAP09_T4R1_THERMAL_STAGE_EXACT_BASE_REQUIRED");
 eq(git("merge-base", EXPECTED_BASE, "HEAD"), EXPECTED_BASE, "MCFT_CAP09_T4R1_THERMAL_STAGE_BASE_NOT_ANCESTOR");
 const changed = git("diff", "--name-only", EXPECTED_BASE + "...HEAD").split(/\r?\n/).filter(Boolean).sort();
-eq(JSON.stringify(changed), JSON.stringify(expected), "MCFT_CAP09_T4R1_THERMAL_STAGE_EXACT_SIX_FILE_BOUNDARY_REQUIRED");
+eq(JSON.stringify(changed), JSON.stringify(expected), "MCFT_CAP09_T4R1_THERMAL_STAGE_EXACT_SEVEN_FILE_BOUNDARY_REQUIRED");
 
 const authority = JSON.parse(fs.readFileSync(paths.authority, "utf8"));
 eq(authority.record_status, "IMPLEMENTATION_CANDIDATE_DEPENDS_ON_DT02_AMENDMENT03_EFFECTIVENESS", "THERMAL_STAGE_STATUS_DRIFT");
@@ -75,6 +76,15 @@ for (const marker of [
   "production_stage_authority_established"
 ]) has(probeText, marker, "THERMAL_STAGE_PROBE_RULE_MISSING");
 
+const qcp = JSON.parse(fs.readFileSync(paths.qcp, "utf8"));
+const resolver = qcp.dependency_resolvers?.T4R1_BIOLOGICAL_STAGE_AUTHORITY_V1;
+if (!resolver || resolver.kind !== "EXACT_PATH_SET") fail("THERMAL_STAGE_QCP_RESOLVER_MISSING");
+const qcpCheck = (qcp.checks || []).find((row) => row.check_id === "T4R1_BIOLOGICAL_STAGE_AUTHORITY");
+if (!qcpCheck) fail("THERMAL_STAGE_QCP_CHECK_MISSING");
+eq(JSON.stringify(qcpCheck.resolver_ids), JSON.stringify(["T4R1_BIOLOGICAL_STAGE_AUTHORITY_V1"]), "THERMAL_STAGE_QCP_RESOLVER_DRIFT");
+eq(qcpCheck.execution_workflow, paths.workflow, "THERMAL_STAGE_QCP_WORKFLOW_DRIFT");
+eq(qcpCheck.carry_forward_policy, "NONE", "THERMAL_STAGE_QCP_CARRY_FORWARD_FORBIDDEN");
+
 const workflow = fs.readFileSync(paths.workflow, "utf8");
 for (const forbidden of [
   "schedule:",
@@ -94,6 +104,7 @@ const out = {
   exact_base_sha: EXPECTED_BASE,
   subject_head_sha: git("rev-parse", "HEAD"),
   exact_changed_file_count: changed.length,
+  qcp_registered: true,
   generic_stage_resolver_implemented: true,
   bounded_base50_gdu_implemented: true,
   exact_t4r1_binding_candidate_present: true,
