@@ -118,6 +118,12 @@ jobs:
           timeout 300 docker compose --env-file .env.w2 -f docker-compose.commercial_v1.yml up -d postgres mqtt server
       - name: Wait for Commercial server
         run: timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health >/dev/null; do sleep 2; done'
+      - name: Prepare predecessor product read-state outside W2 measured GET window
+        run: |
+          set -euo pipefail
+          set -a; source .env.w2; set +a
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --apply --tenant tenantA
       - name: W2 bounded Commercial no-mutation proof
         run: |
           set -euo pipefail
