@@ -60,6 +60,9 @@ assert(weatherLatest.includes("allow_compatibility_write: false"),"weather lates
 assert(!weatherLatest.includes('?? "tenantA"')&&!weatherLatest.includes('?? "projectA"')&&!weatherLatest.includes('?? "groupA"'),"weather latest still has anonymous/default tenant fallback");
 const reports=read("apps/server/src/routes/reports_v1.ts");
 assert(reports.includes("allow_compatibility_write: false"),"report GET weather lookup still mutates compatibility state");
+const reportsDashboard=read("apps/server/src/routes/reports_dashboard_v1.ts");
+assert(reportsDashboard.includes("SELECT operation_plan_id AS operation_id, field_id"),"field portfolio bounded GET must read canonical operation_plan identity");
+assert(!reportsDashboard.includes("COALESCE(operation_id, operation_plan_id) AS operation_id"),"field portfolio bounded GET still references non-canonical compatibility identity column");
 
 const task=read("apps/server/src/domain/controlplane/task_service.ts");
 const listDispatch=extractFn(task,"async function listDispatchQueue(","async function listDispatchQueueByIds(");
@@ -112,7 +115,7 @@ assert(!rulesGet.includes("recordSecurityAuditEventV1")&&!rulesGet.includes("den
 const allowed=new Set([
  ".github/workflows/bline-w2-caller-read-write-boundary.yml",".github/workflows/ci.yml",
  W2,
- "apps/server/src/routes/decision_engine_v1.ts","apps/server/src/routes/weather_v1.ts","apps/server/src/routes/reports_v1.ts",
+ "apps/server/src/routes/decision_engine_v1.ts","apps/server/src/routes/weather_v1.ts","apps/server/src/routes/reports_v1.ts","apps/server/src/routes/reports_dashboard_v1.ts",
  "apps/server/src/routes/dashboard_v1.ts","apps/server/src/routes/fields_v1.ts","apps/server/src/routes/control_ao_act.ts","apps/server/src/routes/skills_rules_v1.ts",
  "apps/server/src/projections/weather_forecast_v1.ts","apps/server/src/projections/field_sensing_overview_v1.ts","apps/server/src/projections/field_sensing_summary_stage1_v1.ts","apps/server/src/projections/field_fertility_state_v1.ts","apps/server/src/projections/manual_execution_quality_v1.ts","apps/server/src/projections/skill_registry_read_v1.ts",
  "apps/server/src/services/field_read_model_refresh_v1.ts","apps/server/src/services/skills/runtime_v1.ts","apps/server/src/services/skills/skill_runtime_service.ts","apps/server/src/services/skills/skill_registry_service.ts","apps/server/src/services/skills/skill_binding_service.ts",
