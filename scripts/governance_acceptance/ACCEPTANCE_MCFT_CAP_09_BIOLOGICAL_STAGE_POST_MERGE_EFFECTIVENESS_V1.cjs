@@ -13,7 +13,17 @@ const SCRIPT_PATH = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_BIOLOG
 const GRADUATION_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-EFFECTIVENESS-GRADUATION-V1.json";
 const AMENDMENT_PATH = "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md";
 const REGISTER_PATH = "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-DECISION-REGISTER.json";
-const EXPECTED_PATHS = [QCP_PATH, CERT_PATH, WORKFLOW_PATH, SCRIPT_PATH].sort();
+const POST_MERGE_CONTROL_PLANE_WORKFLOW = ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml";
+const QUALIFICATION_CONTROL_PLANE_WORKFLOW = ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml";
+const POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA = "ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23";
+const EXPECTED_PATHS = [
+  QCP_PATH,
+  CERT_PATH,
+  WORKFLOW_PATH,
+  SCRIPT_PATH,
+  POST_MERGE_CONTROL_PLANE_WORKFLOW,
+  QUALIFICATION_CONTROL_PLANE_WORKFLOW,
+].sort();
 
 function fail(code, detail) {
   throw new Error(detail ? code + ":" + detail : code);
@@ -36,7 +46,7 @@ const changed = git("diff", "--name-only", EXPECTED_BASE + "...HEAD")
   .split(/\r?\n/)
   .filter(Boolean)
   .sort();
-eq(JSON.stringify(changed), JSON.stringify(EXPECTED_PATHS), "POSTMERGE_BIO_STAGE_EFFECT_EXACT_FOUR_FILE_BOUNDARY_REQUIRED");
+eq(JSON.stringify(changed), JSON.stringify(EXPECTED_PATHS), "POSTMERGE_BIO_STAGE_EFFECT_EXACT_SIX_FILE_BOUNDARY_REQUIRED");
 
 const cert = JSON.parse(fs.readFileSync(CERT_PATH, "utf8"));
 eq(cert.schema_version, "geox_dt02_biological_stage_authority_effectiveness_v1", "POSTMERGE_BIO_STAGE_EFFECT_SCHEMA");
@@ -78,6 +88,19 @@ if (!(check.resolver_ids || []).includes("BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVEN
 }
 if (!(check.applicable_stages || []).includes("SUCCESSOR_SUBJECT_PRE_MERGE")) {
   fail("POSTMERGE_BIO_STAGE_EFFECT_QCP_PREMERGE_QUALIFICATION_REQUIRED");
+}
+if (!(qcp.governed_successor_predecessor_shas || []).includes(POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA)) {
+  fail("POSTMERGE_BIO_STAGE_EFFECT_QCP_EXACT_PREDECESSOR_REQUIRED");
+}
+
+for (const controlWorkflowPath of [POST_MERGE_CONTROL_PLANE_WORKFLOW, QUALIFICATION_CONTROL_PLANE_WORKFLOW]) {
+  const controlWorkflow = fs.readFileSync(controlWorkflowPath, "utf8");
+  if (!controlWorkflow.includes("POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA")) {
+    fail("POSTMERGE_BIO_STAGE_EFFECT_CONTROL_PLANE_EXACT_PREDECESSOR_BINDING_REQUIRED", controlWorkflowPath);
+  }
+  if (!controlWorkflow.includes(POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA)) {
+    fail("POSTMERGE_BIO_STAGE_EFFECT_CONTROL_PLANE_EXACT_PREDECESSOR_SHA_REQUIRED", controlWorkflowPath);
+  }
 }
 
 const workflow = fs.readFileSync(WORKFLOW_PATH, "utf8");
