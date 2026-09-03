@@ -1,0 +1,30 @@
+{
+  "schema_version": "geox_mcft_cap09_production_runtime_start_arm_v1",
+  "armed": false,
+  "activation_step": "MATERIAL_PROVIDER_CHANGE_REQUALIFIED_AND_VIABLE_FORMAL_A0_WINDOW_ESTABLISHED",
+  "exact_deployment_subject_sha": null,
+  "authority_ref": "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json",
+  "live_activation_authority_ref": null,
+  "live_activation_authority_sha256": null,
+  "formal_a0_authority_ref": null,
+  "formal_a0_authority_sha256": null,
+  "scope": {
+    "tenant_id": null,
+    "project_id": null,
+    "group_id": null,
+    "field_id": null,
+    "season_id": null,
+    "zone_id": null
+  },
+  "activation_fence_time": null,
+  "formal_a0_logical_time": null,
+  "runtime_process_start_authorized": false,
+  "evidence_runtime_start_authorized": false,
+  "twin_runtime_start_authorized": false,
+  "production_owner_activation_authorized": false,
+  "formal_v5_arm_authorized": false,
+  "a0_authorized": false,
+  "o00_authorized": false,
+  "execution_requested": false,
+  "current_status": "UNARMED_LIVE_ACTIVATION_NOT_ELIGIBLE"
+}
