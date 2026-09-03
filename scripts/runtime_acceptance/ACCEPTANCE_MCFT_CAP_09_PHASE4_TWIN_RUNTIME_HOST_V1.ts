@@ -12,6 +12,9 @@ import {
 import type {
   ExecuteExternalFormalV3Am19RunnerResultV1,
 } from "../../apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.js";
+import type {
+  TwinRuntimeSchedulerOwnershipLeaseClaimV1,
+} from "../../apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.js";
 
 const OUT = path.resolve(
   "acceptance-output/MCFT_CAP_09_PHASE4_TWIN_RUNTIME_HOST_V1_RESULT.json",
@@ -38,6 +41,51 @@ function notReady(): ExecuteExternalFormalV3Am19RunnerResultV1 {
     claim_attempted: false,
     provider_request_count: 0,
     r2_request_count: 0,
+  };
+}
+
+const TEST_SCOPE = {
+  tenant_id: "tenant-a",
+  project_id: "project-a",
+  group_id: "group-a",
+  field_id: "field-a",
+  season_id: "season-a",
+  zone_id: "zone-a",
+} as const;
+
+function ownershipHarnessV1(input: { standby_first?: boolean } = {}) {
+  let acquireCalls = 0;
+  let releaseCalls = 0;
+  const port = {
+    async acquireOrRenewOwnershipLease(request: {
+      lease_owner: string;
+      lease_duration_seconds: number;
+    }): Promise<TwinRuntimeSchedulerOwnershipLeaseClaimV1 | null> {
+      acquireCalls += 1;
+      assert.equal(request.lease_duration_seconds, 900);
+      if (input.standby_first === true && acquireCalls === 1) return null;
+      return {
+        scope: { ...TEST_SCOPE },
+        lease_owner: request.lease_owner,
+        fencing_token: 1n,
+        acquired_at: "2026-08-27T00:00:00.000Z",
+        expires_at: "2026-08-27T00:15:00.000Z",
+        heartbeat_at: "2026-08-27T00:00:00.000Z",
+        database_now: "2026-08-27T00:00:00.000Z",
+      };
+    },
+    async releaseOwnershipLease(inputRelease: {
+      claim: TwinRuntimeSchedulerOwnershipLeaseClaimV1;
+    }): Promise<"RELEASED"> {
+      releaseCalls += 1;
+      assert.equal(inputRelease.claim.fencing_token, 1n);
+      return "RELEASED";
+    },
+  };
+  return {
+    port,
+    acquireCalls: () => acquireCalls,
+    releaseCalls: () => releaseCalls,
   };
 }
 
@@ -101,6 +149,7 @@ async function main(): Promise<void> {
   const health: TwinRuntimeHostHealthEventV1[] = [];
   let stop = false;
 
+  const ownership = ownershipHarnessV1();
   const host = new TwinRuntimeHostV1({
     database_clock: {
       async readDatabaseNow() {
@@ -110,6 +159,7 @@ async function main(): Promise<void> {
         };
       },
     },
+    scheduler_ownership: ownership.port,
     one_due_slot: {
       async executeOneDueSlot(input) {
         calls.push({ ...input });
@@ -171,6 +221,9 @@ async function main(): Promise<void> {
   assert.equal(result.terminal_slot_count, 1);
   assert.equal(successorCalls, 1);
   assert.equal(result.retryable_failure_count, 0);
+  assert.equal(result.scheduler_lease_standby_count, 0);
+  assert.equal(ownership.acquireCalls(), 3);
+  assert.equal(ownership.releaseCalls(), 1);
   assert.equal(result.provider_request_count, 0);
   assert.equal(result.r2_request_count, 0);
   assert.equal(result.evidence_supply_cursor_mutation, false);
@@ -199,6 +252,7 @@ async function main(): Promise<void> {
   let retryStop = false;
   let retryCalls = 0;
   const retryWaits: string[] = [];
+  const retryOwnership = ownershipHarnessV1();
   const retryHost = new TwinRuntimeHostV1({
     database_clock: {
       async readDatabaseNow() {
@@ -208,6 +262,7 @@ async function main(): Promise<void> {
         };
       },
     },
+    scheduler_ownership: retryOwnership.port,
     one_due_slot: {
       async executeOneDueSlot() {
         retryCalls += 1;
@@ -242,9 +297,13 @@ async function main(): Promise<void> {
   });
   assert.equal(retryResult.retryable_failure_count, 1);
   assert.equal(retryResult.cycle_attempt_count, 2);
+  assert.equal(retryResult.scheduler_lease_standby_count, 0);
+  assert.equal(retryOwnership.acquireCalls(), 2);
+  assert.equal(retryOwnership.releaseCalls(), 1);
   assert.deepEqual(retryWaits, ["RETRY_BACKOFF", "NO_DUE_SLOT"]);
 
   let fallbackRejected = false;
+  const fallbackOwnership = ownershipHarnessV1();
   const fallbackHost = new TwinRuntimeHostV1({
     database_clock: {
       async readDatabaseNow() {
@@ -254,6 +313,7 @@ async function main(): Promise<void> {
         };
       },
     },
+    scheduler_ownership: fallbackOwnership.port,
     one_due_slot: {
       async executeOneDueSlot() {
         return {
@@ -290,6 +350,48 @@ async function main(): Promise<void> {
     /PHASE4_TWIN_RUNTIME_PROVIDER_OR_R2_FALLBACK_FORBIDDEN/,
   );
   assert.equal(fallbackRejected, true);
+  assert.equal(fallbackOwnership.acquireCalls(), 1);
+  assert.equal(fallbackOwnership.releaseCalls(), 1);
+
+  let standbyStop = false;
+  let standbyRunnerCalls = 0;
+  const standbyOwnership = ownershipHarnessV1({ standby_first: true });
+  const standbyHost = new TwinRuntimeHostV1({
+    database_clock: {
+      async readDatabaseNow() {
+        throw new Error("STANDBY_MUST_NOT_READ_DB_CLOCK");
+      },
+    },
+    scheduler_ownership: standbyOwnership.port,
+    one_due_slot: {
+      async executeOneDueSlot() {
+        standbyRunnerCalls += 1;
+        return noDue();
+      },
+    },
+    successor_viability: {
+      async verifyAfterTerminal() {
+        throw new Error("STANDBY_MUST_NOT_VERIFY_SUCCESSOR");
+      },
+    },
+    wait: {
+      async waitAfterAttempt(input) {
+        assert.equal(input.reason, "SCHEDULER_LEASE_STANDBY");
+        standbyStop = true;
+      },
+    },
+    health: { async recordHealth() {} },
+    stop: { stopRequested: () => standbyStop },
+    failure_classifier: { classify: () => "FATAL" },
+  });
+  const standbyResult = await standbyHost.run({
+    lease_owner: "phase4-host-standby",
+    lease_duration_seconds: 900,
+  });
+  assert.equal(standbyResult.scheduler_lease_standby_count, 1);
+  assert.equal(standbyRunnerCalls, 0);
+  assert.equal(standbyOwnership.acquireCalls(), 1);
+  assert.equal(standbyOwnership.releaseCalls(), 0);
 
   const proof = {
     schema_version: "geox_mcft_cap09_phase4_twin_runtime_host_qualification_v1",
@@ -302,6 +404,9 @@ async function main(): Promise<void> {
     terminal_slot_progression: true,
     terminal_successor_viability_required: true,
     retryable_failure_backoff: true,
+    scheduler_owner_presence_lease_before_runner: true,
+    duplicate_scheduler_owner_standby_no_runner_call: true,
+    scheduler_owner_lease_released_on_stop_or_fatal: true,
     provider_or_r2_fallback_fail_closed: true,
     durable_restart_authority: "RUNTIME_TICK_CURSOR_AND_CANONICAL_CHECKPOINT",
     evidence_supply_cursor_mutation: false,

@@ -115,6 +115,30 @@ async function main(): Promise<void> {
   const twin = services["twin-runtime"]!;
   const evidenceEnv = environmentMap(evidence.environment);
   const twinEnv = environmentMap(twin.environment);
+  assert.equal(
+    twinEnv.GEOX_MCFT_CAP09_PHASE5_A0,
+    env.GEOX_PHASE5_A0,
+    "PHASE5_TWIN_QUALIFICATION_A0_REQUIRED_FOR_CONTROLLED_RUNTIME_START_AUTHORITY",
+  );
+  assert.equal(
+    twinEnv.GEOX_DEPLOYMENT_SUBJECT_COMMIT,
+    env.GEOX_DEPLOYMENT_SUBJECT_COMMIT,
+    "PHASE5_TWIN_QUALIFICATION_EXACT_SUBJECT_REQUIRED",
+  );
+  for (const [runtimeKey, sourceKey] of [
+    ["GEOX_MCFT_CAP09_TENANT_ID", "GEOX_PHASE5_TENANT_ID"],
+    ["GEOX_MCFT_CAP09_PROJECT_ID", "GEOX_PHASE5_PROJECT_ID"],
+    ["GEOX_MCFT_CAP09_GROUP_ID", "GEOX_PHASE5_GROUP_ID"],
+    ["GEOX_MCFT_CAP09_FIELD_ID", "GEOX_PHASE5_FIELD_ID"],
+    ["GEOX_MCFT_CAP09_SEASON_ID", "GEOX_PHASE5_SEASON_ID"],
+    ["GEOX_MCFT_CAP09_ZONE_ID", "GEOX_PHASE5_ZONE_ID"],
+  ] as const) {
+    assert.equal(
+      twinEnv[runtimeKey],
+      env[sourceKey],
+      `PHASE5_TWIN_QUALIFICATION_EXACT_SCOPE_REQUIRED:${runtimeKey}`,
+    );
+  }
   const capture = services["fixture-capture"]!;
   const prepare = services["qualification-prepare"]!;
   const verify = services["qualification-verify"]!;

@@ -7,6 +7,8 @@
 -- It also receives no arbitrary UPDATE/DELETE authority over canonical facts.
 
 DO $role$
+DECLARE
+  v_role record;
 BEGIN
   IF NOT EXISTS (
     SELECT 1
@@ -14,13 +16,17 @@ BEGIN
      WHERE rolname = 'geox_mcft_cap09_twin_runtime_v1'
   ) THEN
     CREATE ROLE geox_mcft_cap09_twin_runtime_v1
-      NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+      NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+  END IF;
+
+  SELECT rolcanlogin,rolinherit,rolsuper,rolcreatedb,rolcreaterole,rolreplication,rolbypassrls
+    INTO v_role FROM pg_catalog.pg_roles WHERE rolname='geox_mcft_cap09_twin_runtime_v1';
+  IF NOT FOUND OR v_role.rolcanlogin OR v_role.rolinherit OR v_role.rolsuper
+     OR v_role.rolcreatedb OR v_role.rolcreaterole OR v_role.rolreplication OR v_role.rolbypassrls THEN
+    RAISE EXCEPTION 'MCFT_CAP09_TWIN_RUNTIME_ROLE_UNSAFE';
   END IF;
 END
 $role$;
-
-ALTER ROLE geox_mcft_cap09_twin_runtime_v1
-  NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
 
 REVOKE ALL ON SCHEMA public FROM geox_mcft_cap09_twin_runtime_v1;
 GRANT USAGE ON SCHEMA public TO geox_mcft_cap09_twin_runtime_v1;
@@ -28,8 +34,6 @@ GRANT USAGE ON SCHEMA public TO geox_mcft_cap09_twin_runtime_v1;
 REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public
   FROM geox_mcft_cap09_twin_runtime_v1;
 REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public
-  FROM geox_mcft_cap09_twin_runtime_v1;
-REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public
   FROM geox_mcft_cap09_twin_runtime_v1;
 
 -- Canonical fact authority: append and read only.

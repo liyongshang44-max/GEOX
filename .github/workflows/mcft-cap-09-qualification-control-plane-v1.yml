@@ -3,7 +3,16 @@ name: mcft-cap-09-qualification-control-plane-v1
 on:
   pull_request:
     paths:
+      - '.github/workflows/mcft-cap-09-production-evidence-target-planner-readiness.yml'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_TARGET_PLANNER_READINESS_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json'
+      - '.github/workflows/mcft-cap-09-production-evidence-acl-carryforward-remediation.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_V1.cjs'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_V1.cjs'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_ARM_V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-LOCAL-OPERATOR-HOST-STATIC-ADMISSION-EVIDENCE-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json'
       - 'scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'
@@ -31,6 +40,7 @@ on:
       - '.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml'
       - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql'
       - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql'
+      - 'apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql'
       - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_SUPPLY_CADENCE_PROFILES_V1.ts'
       - 'apps/server/src/persistence/external_evidence/postgres_evidence_runtime_governed_ingress_v1.ts'
@@ -95,6 +105,11 @@ on:
       - 'apps/server/src/external_evidence/qualification/mcft_cap09_phase5_capture_a0_fixture_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_verify_24t_v1.ts'
+      - 'apps/server/src/runtime/mcft_cap09_production_runtime_start_authority_v1.ts'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json'
+      - 'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_BUILDER_V1.cjs'
+      - 'docker-compose.mcft-cap09-production.yml'
   merge_group:
     types: [checks_requested]
 
@@ -114,6 +129,8 @@ env:
   PHASE7_PREPARATION_SHA: 'c4249e5b7bd67d35d34813aceea6760f9d210ed0'
   PHASE7_EVIDENCE_FORCING_SHA: 'd6c015b49d09960591185ff9c930e64dac7e2806'
   PHASE7_PRIVATE_CANDIDATE_IO_SHA: '46c9c7b6b59c113848fc69daff88fb183fccc954'
+  PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA: 'fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8'
+  POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA: '46367333d228a2b90a86ff6a33aebc334f3d73a2'
 
 concurrency:
   group: mcft-cap09-qualification-control-plane-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
@@ -138,10 +155,15 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             base='${{ github.event.pull_request.base.sha }}'
-            if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ] && [ "$base" != "$PHASE2_CLOSURE_SHA" ] && [ "$base" != "$PHASE3_CLOSURE_SHA" ] && [ "$base" != "$PHASE4_CLOSURE_SHA" ] && [ "$base" != "$PHASE5_CLOSURE_SHA" ] && [ "$base" != "$PHASE6_CLOSURE_SHA" ] && [ "$base" != "$PHASE7_PREPARATION_SHA" ] && [ "$base" != "$PHASE7_EVIDENCE_FORCING_SHA" ] && [ "$base" != "$PHASE7_PRIVATE_CANDIDATE_IO_SHA" ]; then
+            if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ] && [ "$base" != "$PHASE2_CLOSURE_SHA" ] && [ "$base" != "$PHASE3_CLOSURE_SHA" ] && [ "$base" != "$PHASE4_CLOSURE_SHA" ] && [ "$base" != "$PHASE5_CLOSURE_SHA" ] && [ "$base" != "$PHASE6_CLOSURE_SHA" ] && [ "$base" != "$PHASE7_PREPARATION_SHA" ] && [ "$base" != "$PHASE7_EVIDENCE_FORCING_SHA" ] && [ "$base" != "$PHASE7_PRIVATE_CANDIDATE_IO_SHA" ] && [ "$base" != "$PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA" ] && [ "$base" != "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ]; then
               echo "MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:${base}" >&2
               exit 1
             fi
+            stage="SUCCESSOR_SUBJECT_PRE_MERGE"
+            if [ "$base" = "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ]; then
+              stage="POST_MERGE_V13_QUALIFICATION"
+            fi
+            echo "MCFT_CAP09_PR_STAGE=$stage" >> "$GITHUB_ENV"
           fi
           test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
           test -z "${FORMAL_RAW_S3_ACCESS_KEY_ID:-}"
@@ -171,7 +193,7 @@ jobs:
           const assert = (condition, code, detail = null) => {
             if (!condition) failures.push({code, detail});
           };
-          const expectedPredecessors = [process.env.FROZEN_SUCCESSOR_SHA, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA, process.env.PHASE2_CLOSURE_SHA, process.env.PHASE3_CLOSURE_SHA, process.env.PHASE4_CLOSURE_SHA, process.env.PHASE5_CLOSURE_SHA, process.env.PHASE6_CLOSURE_SHA, process.env.PHASE7_PREPARATION_SHA, process.env.PHASE7_EVIDENCE_FORCING_SHA, process.env.PHASE7_PRIVATE_CANDIDATE_IO_SHA];
+          const expectedPredecessors = [process.env.FROZEN_SUCCESSOR_SHA, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA, process.env.PHASE2_CLOSURE_SHA, process.env.PHASE3_CLOSURE_SHA, process.env.PHASE4_CLOSURE_SHA, process.env.PHASE5_CLOSURE_SHA, process.env.PHASE6_CLOSURE_SHA, process.env.PHASE7_PREPARATION_SHA, process.env.PHASE7_EVIDENCE_FORCING_SHA, process.env.PHASE7_PRIVATE_CANDIDATE_IO_SHA, process.env.PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA, process.env.POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA];
           const governedPredecessors = authority.governed_successor_predecessor_shas || [];
           assert(governedPredecessors.length === expectedPredecessors.length, 'GOVERNED_PREDECESSOR_CARDINALITY_MISMATCH', governedPredecessors);
           assert(new Set(governedPredecessors).size === governedPredecessors.length, 'GOVERNED_PREDECESSOR_DUPLICATE', governedPredecessors);
@@ -191,14 +213,21 @@ jobs:
           assert(g.store_generation?.formal_database === 'geox_mcft_cap09_s6_formal_t4r1_24h_v5', 'FORMAL_STORE_GENERATION_MISMATCH', g.store_generation);
           assert(registry.dependency_digest_strategy === DEPENDENCY_DIGEST_STRATEGY, 'DEPENDENCY_DIGEST_STRATEGY_MISMATCH', registry.dependency_digest_strategy);
           assert(registry.durable_anchors?.entries?.length === registry.entries.length, 'DURABLE_ANCHOR_CARDINALITY_MISMATCH', {anchors:registry.durable_anchors?.entries?.length, entries:registry.entries.length});
-          const carryForwardIds = ['EA5C1_DURABLE_RAW_RESTRICTED_INGRESS'];
+          const carryForwardIds = [];
+          const ea5c1RequalificationIds = ['EA5C1_DURABLE_RAW_RESTRICTED_INGRESS'];
           const v13RequalificationIds = ['V13_AUTONOMOUS_FORCING_FOUNDATION','V13_HOLISTIC_SCHEMA','V13_NEXT_TICK_VIABILITY'];
-          const requalificationIds = [...v13RequalificationIds,'EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T','PHASE1_TYPED_RUNTIME_COMPOSITION','PHASE2_EVIDENCE_PROVIDER_MODULES','PHASE3_EVIDENCE_RUNTIME_FOUNDATION','PHASE4_TWIN_RUNTIME_FOUNDATION','PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS','PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION'];
-          const v13ScopedIds = [...carryForwardIds, ...requalificationIds];
-          for (const id of carryForwardIds) {
+          const requalificationIds = [...ea5c1RequalificationIds, ...v13RequalificationIds,'EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T','PHASE1_TYPED_RUNTIME_COMPOSITION','PHASE2_EVIDENCE_PROVIDER_MODULES','PHASE3_EVIDENCE_RUNTIME_FOUNDATION','PHASE4_TWIN_RUNTIME_FOUNDATION','PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS','PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION'];
+          const v13ScopedIds = [...requalificationIds];
+          const ea5c1SuccessorProof = 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_SUCCESSOR_REPLAY_COMPLETE_INGRESS_V1.ts';
+          for (const id of ea5c1RequalificationIds) {
             const row = current.decisions.find(x => x.check_id === id);
-            assert(Boolean(row) && row.status === 'CARRY_FORWARD' && row.dependency_digest_match === true, 'FROZEN_DIGEST_CARRY_FORWARD_REQUIRED', row || {check_id:id, missing:true});
-            assert(/^sha256:[0-9a-f]{64}$/.test(row?.dependency_digest || ''), 'DEPENDENCY_DIGEST_REQUIRED', row || {check_id:id, missing:true});
+            assert(Boolean(row) && row.status === 'REQUALIFY' && row.dependency_digest_match === false, 'EA5C1_EXPANDED_DEPENDENCY_MUST_REQUALIFY', row || {check_id:id, missing:true});
+            assert(['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(row?.reason_code), 'EA5C1_REQUALIFICATION_REASON_INVALID', row);
+            assert(/^sha256:[0-9a-f]{64}$/.test(row?.dependency_digest || ''), 'EA5C1_REQUALIFICATION_DEPENDENCY_DIGEST_REQUIRED', row || {check_id:id, missing:true});
+            assert(row?.historical_dependency_digest === null, 'EA5C1_HISTORICAL_DIGEST_MUST_REMAIN_UNRESOLVED_FOR_EXPANDED_SET', row);
+            const historicalMissing = (row?.dependency_digest_missing?.historical || []).flatMap(x => x?.missing || []);
+            assert(historicalMissing.includes(ea5c1SuccessorProof), 'EA5C1_EXPANDED_FROZEN_DEPENDENCY_MUST_BE_IDENTIFIED', row);
+            assert(Array.isArray(row?.changed_dependencies) && row.changed_dependencies.includes(ea5c1SuccessorProof), 'EA5C1_SUCCESSOR_PROOF_DEPENDENCY_CHANGE_REQUIRED', row);
           }
           const phase7Adapter = 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts';
           for (const id of v13RequalificationIds) {
@@ -415,7 +444,7 @@ jobs:
           --base '${{ github.event.pull_request.base.sha }}'
           --head '${{ github.event.pull_request.head.sha }}'
           --generation v13
-          --stage SUCCESSOR_SUBJECT_PRE_MERGE
+          --stage "$MCFT_CAP09_PR_STAGE"
           --out acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_PLAN.json
 
       - name: Enumerate all blockers without fail-fast
@@ -425,7 +454,7 @@ jobs:
           --base '${{ github.event.pull_request.base.sha }}'
           --head '${{ github.event.pull_request.head.sha }}'
           --generation v13
-          --stage SUCCESSOR_SUBJECT_PRE_MERGE
+          --stage "$MCFT_CAP09_PR_STAGE"
           --out acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json
 
       - name: Validate control-plane machine proof
@@ -433,6 +462,7 @@ jobs:
         shell: node {0}
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA: ${{ env.POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA }}
         run: |
           const fs = require('node:fs');
           const proof = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json','utf8'));
@@ -448,6 +478,10 @@ jobs:
           const governedBases = new Set(registry.requalification_evidence?.durable_anchors?.rules?.governed_successor_predecessors || []);
           if (plan.base_sha !== process.env.PR_BASE_SHA) throw new Error(`CONTROL_PLANE_PLAN_BASE_MUST_EQUAL_PR_BASE:${plan.base_sha}:${process.env.PR_BASE_SHA}`);
           if (!governedBases.has(plan.base_sha)) throw new Error(`CONTROL_PLANE_PLAN_BASE_NOT_GOVERNED:${plan.base_sha}`);
+          const expectedStage = process.env.PR_BASE_SHA === process.env.POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA
+            ? 'POST_MERGE_V13_QUALIFICATION'
+            : 'SUCCESSOR_SUBJECT_PRE_MERGE';
+          if (plan.stage !== expectedStage || preflight.stage !== expectedStage) throw new Error(`CONTROL_PLANE_STAGE_ROUTE_MISMATCH:${plan.stage}:${preflight.stage}:${expectedStage}`);
           const control = plan.decisions.find(x => x.check_id === 'CONTROL_PLANE_INTEGRITY');
           if (!control || control.status !== 'REQUALIFY') throw new Error('CONTROL_PLANE_SELF_CHANGE_MUST_REQUALIFY');
           const phase7Adapter = 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts';
@@ -471,7 +505,9 @@ jobs:
             if (phase7AdapterChanged && (row.status !== 'REQUALIFY' || !row.changed_dependencies.includes(phase7Adapter))) throw new Error(`${id}_MUST_REQUALIFY_FOR_PHASE7_ADAPTER`);
           }
           const ea5c1 = plan.decisions.find(x => x.check_id === 'EA5C1_DURABLE_RAW_RESTRICTED_INGRESS');
-          if (!ea5c1 || ea5c1.status !== 'CARRY_FORWARD' || ea5c1.dependency_digest_match !== true) throw new Error(`FROZEN_EVIDENCE_MUST_CARRY_FORWARD_WITH_DIGEST:EA5C1_DURABLE_RAW_RESTRICTED_INGRESS:${ea5c1?.status}`);
+          if (!ea5c1) throw new Error('EA5C1_DURABLE_RAW_RESTRICTED_INGRESS_APPLICABILITY_DECISION_REQUIRED');
+          if (ea5c1.status !== 'REQUALIFY' || ea5c1.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(ea5c1.reason_code) || !Array.isArray(ea5c1.changed_dependencies) || ea5c1.changed_dependencies.length === 0) throw new Error(`EA5C1_REQUALIFICATION_BINDING_INVALID:${ea5c1.reason_code}`);
+          if (ea5c1.execution_workflow !== '.github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml') throw new Error('EA5C1_REQUALIFICATION_WORKFLOW_MISMATCH');
           for (const id of ['EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T']) {
             const row = plan.decisions.find(x => x.check_id === id);
             if (!row) throw new Error(`${id}_APPLICABILITY_DECISION_REQUIRED`);

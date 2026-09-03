@@ -198,6 +198,7 @@ export function composeMcftCap09TwinRuntimeV1(
   const host = new TwinRuntimeHostV1({
     database_clock:
       input.database_clock ?? new PostgresTwinRuntimeDatabaseClockV1(input.pool),
+    scheduler_ownership: scheduler,
     one_due_slot: runner,
     successor_viability: successorViability,
     wait: input.wait,

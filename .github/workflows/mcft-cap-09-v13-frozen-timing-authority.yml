@@ -1,0 +1,133 @@
+name: mcft-cap-09-v13-frozen-timing-authority
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-v13-frozen-timing-authority.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json'
+      - 'scripts/runtime_acceptance/VALIDATE_MCFT_CAP_09_V13_FROZEN_TIMING_AUTHORITY_V1.ts'
+      - 'apps/server/src/domain/twin_runtime/external_formal_forcing_acquisition_budget_v1.ts'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate-frozen-timing-authority:
+    if: >-
+      github.head_ref == 'feat/mcft-cap09-v13-producer-driven-qualification-v1' &&
+      github.event.pull_request.base.sha == '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact frozen timing subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require frozen authority and resolve immutable bindings
+        id: authority
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const a=JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json','utf8'));
+          if(a.status!=='QUALIFIED_AND_FROZEN_FROM_EXACT_HEAD_REAL_TIMING_AND_CONTROLLED_DELAY'||a.timing_budget_qualified!==true||a.timing_budget_frozen!==true)throw new Error('V13_TIMING_AUTHORITY_NOT_FROZEN');
+          const m=a.measurement_authority||{};
+          const c=a.controlled_delay_authority||{};
+          for(const [prefix,b,subjectKey] of [['m',m,'measurement_subject_sha'],['c',c,'controlled_subject_sha']]){
+            if(!/^[0-9a-f]{40}$/.test(String(b[subjectKey]||'')))throw new Error('V13_TIMING_BINDING_SUBJECT_REQUIRED:'+prefix);
+            if(!Number.isSafeInteger(b.run_id)||b.run_id<=0||!Number.isSafeInteger(b.artifact_id)||b.artifact_id<=0)throw new Error('V13_TIMING_BINDING_RUN_ARTIFACT_REQUIRED:'+prefix);
+            if(!/^sha256:[0-9a-f]{64}$/.test(String(b.artifact_digest||''))||!b.artifact_name)throw new Error('V13_TIMING_BINDING_ARTIFACT_REQUIRED:'+prefix);
+            const lines=[
+              prefix+'_subject_sha='+b[subjectKey],
+              prefix+'_run_id='+b.run_id,
+              prefix+'_artifact_id='+b.artifact_id,
+              prefix+'_artifact_name='+b.artifact_name,
+              prefix+'_artifact_digest='+b.artifact_digest,
+              prefix+'_workflow_name='+b.workflow_name,
+              prefix+'_workflow_path='+b.workflow_path,
+            ];
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,lines.join('\n')+'\n');
+          }
+
+      - name: Verify immutable timing run and artifact identities
+        shell: node {0}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CURRENT_HEAD: ${{ github.event.pull_request.head.sha }}
+          M_SUBJECT: ${{ steps.authority.outputs.m_subject_sha }}
+          M_RUN: ${{ steps.authority.outputs.m_run_id }}
+          M_ARTIFACT: ${{ steps.authority.outputs.m_artifact_id }}
+          M_NAME: ${{ steps.authority.outputs.m_artifact_name }}
+          M_DIGEST: ${{ steps.authority.outputs.m_artifact_digest }}
+          M_WORKFLOW_NAME: ${{ steps.authority.outputs.m_workflow_name }}
+          M_WORKFLOW_PATH: ${{ steps.authority.outputs.m_workflow_path }}
+          C_SUBJECT: ${{ steps.authority.outputs.c_subject_sha }}
+          C_RUN: ${{ steps.authority.outputs.c_run_id }}
+          C_ARTIFACT: ${{ steps.authority.outputs.c_artifact_id }}
+          C_NAME: ${{ steps.authority.outputs.c_artifact_name }}
+          C_DIGEST: ${{ steps.authority.outputs.c_artifact_digest }}
+          C_WORKFLOW_NAME: ${{ steps.authority.outputs.c_workflow_name }}
+          C_WORKFLOW_PATH: ${{ steps.authority.outputs.c_workflow_path }}
+        run: |
+          const cp=require('node:child_process');
+          const headers={Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
+          async function get(path){const r=await fetch('https://api.github.com/repos/'+process.env.REPO+path,{headers});if(!r.ok)throw new Error('GITHUB_QUERY_FAILED:'+path+':'+r.status);return r.json();}
+          async function verify(prefix){
+            const subject=process.env[prefix+'_SUBJECT'];
+            const runId=process.env[prefix+'_RUN'];
+            const artifactId=process.env[prefix+'_ARTIFACT'];
+            const run=await get('/actions/runs/'+runId);
+            if(run.conclusion!=='success'||run.head_sha!==subject||run.name!==process.env[prefix+'_WORKFLOW_NAME']||run.path!==process.env[prefix+'_WORKFLOW_PATH']||run.event!=='pull_request')throw new Error('TIMING_RUN_IDENTITY_MISMATCH:'+prefix);
+            if(cp.spawnSync('git',['merge-base','--is-ancestor',subject,process.env.CURRENT_HEAD],{stdio:'ignore'}).status!==0)throw new Error('TIMING_SUBJECT_NOT_ANCESTOR:'+prefix);
+            const artifact=await get('/actions/artifacts/'+artifactId);
+            if(artifact.expired===true||artifact.name!==process.env[prefix+'_NAME']||artifact.digest!==process.env[prefix+'_DIGEST']||String(artifact.workflow_run?.id)!==String(runId))throw new Error('TIMING_ARTIFACT_IDENTITY_MISMATCH:'+prefix);
+          }
+          Promise.all([verify('M'),verify('C')]).catch(e=>{console.error(e);process.exitCode=1;});
+
+      - name: Download immutable real timing measurement
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.authority.outputs.m_artifact_name }}
+          path: timing-measurement
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.authority.outputs.m_run_id }}
+
+      - name: Download immutable controlled-delay proof
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.authority.outputs.c_artifact_name }}
+          path: controlled-delay
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.authority.outputs.c_run_id }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install exact repository
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate frozen timing authority against both immutable proofs
+        env:
+          MCFT_TIMING_MEASUREMENT_PROOF: timing-measurement/MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V1_RESULT.json
+          MCFT_CONTROLLED_DELAY_PROOF: controlled-delay/MCFT_CAP_09_V13_CONTROLLED_TIMING_DELAY_MATRIX_V1_RESULT.json
+        run: pnpm exec tsx scripts/runtime_acceptance/VALIDATE_MCFT_CAP_09_V13_FROZEN_TIMING_AUTHORITY_V1.ts
+
+      - name: Upload frozen timing authority proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-v13-frozen-timing-authority-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_V13_FROZEN_TIMING_AUTHORITY_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

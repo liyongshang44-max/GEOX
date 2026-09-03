@@ -83,11 +83,17 @@ jobs:
           fi
           phase1_sha="8943c752a354cb916cc7f144681203aa9a19f70b"
           phase2_closure_sha="c3346768a44b16b127378cb690ada1d8cfec1049"
-          if [[ "$base_sha" != "$phase1_sha" && "$base_sha" != "$phase2_closure_sha" ]]; then
+          protected_main_adoption_sha="fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8"
+          if [[ "$base_sha" != "$phase1_sha" && "$base_sha" != "$phase2_closure_sha" && "$base_sha" != "$protected_main_adoption_sha" ]]; then
             echo "EA5C2B1_GOVERNED_PREDECESSOR_REQUIRED: $base_sha" >&2
             exit 1
           fi
           echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
+          if [ "$base_sha" = "$protected_main_adoption_sha" ]; then
+            echo "protected_main_adoption=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "protected_main_adoption=0" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
@@ -103,6 +109,7 @@ jobs:
       - name: Validate Phase2 successor boundary without rewriting historical EA5C2B1 authority
         env:
           MCFT_BASE_SHA: ${{ steps.authority.outputs.base_sha }}
+          MCFT_CAP09_PROTECTED_MAIN_ADOPTION: ${{ steps.authority.outputs.protected_main_adoption }}
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs
 
       - name: Prove KBS Raw Hourly product core preserves Amendment-11 late authority

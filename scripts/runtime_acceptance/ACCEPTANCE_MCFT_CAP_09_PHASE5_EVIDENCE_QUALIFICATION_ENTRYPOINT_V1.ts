@@ -22,9 +22,21 @@ import type {
   EvidenceRuntimeScopeV1,
   EvidenceSupplyCursorSnapshotV1,
 } from "../../apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.js";
+import type {
+  EvidenceRuntimeAcquisitionNotDueV1,
+  EvidenceRuntimeAcquisitionTargetV1,
+} from "../../apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.js";
 
 function digest(bytes: Uint8Array): string {
   return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+}
+
+function requiredTarget(
+  value: EvidenceRuntimeAcquisitionTargetV1 | EvidenceRuntimeAcquisitionNotDueV1 | null,
+  code: string,
+): EvidenceRuntimeAcquisitionTargetV1 {
+  if (value === null || "status" in value) throw new Error(code);
+  return value;
 }
 
 
@@ -134,14 +146,14 @@ async function main(): Promise<void> {
       requested_at: requestedAt,
       request_id_prefix: "phase5.entrypoint.o00",
     });
-    const second = await planner.nextTarget({
+    const second = requiredTarget(await planner.nextTarget({
       cycle_attempt: 1,
       successful_cycle_count: 1,
       consecutive_failure_count: 0,
       previous_result: null,
-    });
-    assert.equal(second?.target_logical_time, target1);
-    assert.deepEqual(second?.source_families, ["KBS_RAW_HOURLY"]);
+    }), "PHASE5_QUALIFICATION_SECOND_TARGET_REQUIRED");
+    assert.equal(second.target_logical_time, target1);
+    assert.deepEqual(second.source_families, ["KBS_RAW_HOURLY"]);
     assert.throws(
       () => fixture.selectGfsCycle({ target_logical_time: target1 }),
       /PHASE5_QUALIFICATION_GFS_CYCLE_NOT_DECLARED/,
@@ -203,14 +215,14 @@ async function main(): Promise<void> {
         },
       },
     });
-    const durableFirst = await durablePlanner.nextTarget({
+    const durableFirst = requiredTarget(await durablePlanner.nextTarget({
       cycle_attempt: 0,
       successful_cycle_count: 0,
       consecutive_failure_count: 0,
       previous_result: null,
-    });
-    assert.equal(durableFirst?.target_logical_time, target0);
-    assert.equal(durableFirst?.restored_ingested_at, undefined);
+    }), "PHASE5_QUALIFICATION_DURABLE_FIRST_TARGET_REQUIRED");
+    assert.equal(durableFirst.target_logical_time, target0);
+    assert.equal(durableFirst.restored_ingested_at, undefined);
 
     const cycleKey = "20260827t060000z";
     const weatherOrigin = `gfs_${cycleKey}_pgrb2_0p25_kbs`;
@@ -225,14 +237,14 @@ async function main(): Promise<void> {
         ingested_at: ingest0,
       }),
     );
-    const durablePartial0 = await durablePlanner.nextTarget({
+    const durablePartial0 = requiredTarget(await durablePlanner.nextTarget({
       cycle_attempt: 1,
       successful_cycle_count: 0,
       consecutive_failure_count: 0,
       previous_result: null,
-    });
-    assert.equal(durablePartial0?.target_logical_time, target0);
-    assert.equal(durablePartial0?.restored_ingested_at, ingest0);
+    }), "PHASE5_QUALIFICATION_DURABLE_PARTIAL_ZERO_TARGET_REQUIRED");
+    assert.equal(durablePartial0.target_logical_time, target0);
+    assert.equal(durablePartial0.restored_ingested_at, ingest0);
 
     cursorByBinding.set(
       MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_ET0_BINDING_ID_V1,
@@ -243,14 +255,14 @@ async function main(): Promise<void> {
         ingested_at: ingest0,
       }),
     );
-    const durableSecond = await durablePlanner.nextTarget({
+    const durableSecond = requiredTarget(await durablePlanner.nextTarget({
       cycle_attempt: 2,
       successful_cycle_count: 0,
       consecutive_failure_count: 0,
       previous_result: null,
-    });
-    assert.equal(durableSecond?.target_logical_time, target1);
-    assert.equal(durableSecond?.restored_ingested_at, undefined);
+    }), "PHASE5_QUALIFICATION_DURABLE_SECOND_TARGET_REQUIRED");
+    assert.equal(durableSecond.target_logical_time, target1);
+    assert.equal(durableSecond.restored_ingested_at, undefined);
 
     const ingest1 = "2026-08-27T08:57:00.000Z";
     cursorByBinding.set(
@@ -262,14 +274,14 @@ async function main(): Promise<void> {
         ingested_at: ingest1,
       }),
     );
-    const durablePartial1 = await durablePlanner.nextTarget({
+    const durablePartial1 = requiredTarget(await durablePlanner.nextTarget({
       cycle_attempt: 3,
       successful_cycle_count: 0,
       consecutive_failure_count: 0,
       previous_result: null,
-    });
-    assert.equal(durablePartial1?.target_logical_time, target1);
-    assert.equal(durablePartial1?.restored_ingested_at, ingest1);
+    }), "PHASE5_QUALIFICATION_DURABLE_PARTIAL_ONE_TARGET_REQUIRED");
+    assert.equal(durablePartial1.target_logical_time, target1);
+    assert.equal(durablePartial1.restored_ingested_at, ingest1);
 
     cursorByBinding.set(
       MCFT_CAP09_EXTERNAL_FORMAL_FUTURE_ET0_BINDING_ID_V1,

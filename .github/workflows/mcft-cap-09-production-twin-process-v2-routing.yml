@@ -1,0 +1,73 @@
+name: MCFT CAP-09 Production Twin Process V2 Routing
+
+on:
+  pull_request:
+    branches:
+      - feat/mcft-cap09-twin-v2-stage-qcp-registration-v1
+    paths:
+      - .github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml
+      - .github/workflows/mcft-cap-09-production-twin-process-v2-routing.yml
+      - apps/server/scripts/write_dist_entries.cjs
+      - apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts
+      - docker-compose.mcft-cap09-production.yml
+      - scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs
+      - scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts
+      - scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MCFT_CAP09_PRODUCTION_TWIN_V2_ROUTING_BASE_SHA: f605f7e22ad7a4b7605be885ef1328f2b8283b55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server run typecheck
+
+      - name: Typecheck routing acceptances
+        run: >-
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck
+          --target ES2022 --module NodeNext --moduleResolution NodeNext
+          --esModuleInterop --types node
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts
+
+      - name: Prove production two-service launcher V2 route
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts
+
+      - name: Prove process authority separation and V1 preservation
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts
+
+      - name: Build exact server production package
+        run: pnpm --filter @geox/server run build
+
+      - name: Prove stable V1 and V2 compiled entrypoints
+        run: |
+          test -f apps/server/dist/runtime/mcft_cap09_twin_runtime.js
+          grep -Fq 'runMcftCap09TwinRuntimeProcessV1' apps/server/dist/runtime/mcft_cap09_twin_runtime.js
+          test -f apps/server/dist/runtime/mcft_cap09_twin_runtime_v2.js
+          grep -Fq 'runMcftCap09TwinRuntimeProcessV2' apps/server/dist/runtime/mcft_cap09_twin_runtime_v2.js
+          ! grep -Rq 'scripts/runtime_acceptance' apps/server/dist/runtime/mcft_cap09_twin_runtime.js apps/server/dist/runtime/mcft_cap09_twin_runtime_v2.js
+
+      - name: Exact routing governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs

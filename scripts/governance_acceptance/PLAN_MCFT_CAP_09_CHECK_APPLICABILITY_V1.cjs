@@ -379,20 +379,69 @@ function resolveFailedV4ForbiddenEvidencePolicy(root) {
   return { subjects, errors };
 }
 
-function planApplicability({ root = ROOT, authority, registry, changedPaths, stage, generation = null, baseSha = null, headSha = null }) {
+function prepareApplicabilityContext({ root = ROOT, authority, registry, generation = null, headSha = null }) {
   if (!authority || authority.authority_id !== "MCFT_CAP09_CHECK_APPLICABILITY_V1") throw new Error("CONTROL_PLANE_AUTHORITY_REQUIRED");
   if (!registry || registry.registry_id !== "MCFT_CAP09_QUALIFICATION_EVIDENCE_REGISTRY_V1") throw new Error("CONTROL_PLANE_EVIDENCE_REGISTRY_REQUIRED");
-  if (!(authority.allowed_stages || []).includes(stage)) throw new Error(`CONTROL_PLANE_STAGE_INVALID:${stage}`);
-
-  const changed = [...new Set((changedPaths || []).map(norm).filter(Boolean))].sort();
   const definitionErrors = validateDefinitions(authority, registry, root);
   const generationContext = resolveGenerationContext(root, authority, generation);
   const resolverResult = resolveDependencyResolvers(root, authority);
   const failedV4Policy = resolveFailedV4ForbiddenEvidencePolicy(root);
   const allOwned = new Set(Object.values(resolverResult.resolved).flatMap((resolver) => resolver.paths));
-  const unknownChangedPaths = changed.filter((p) => !allOwned.has(p));
   const evidence = registryMap(registry);
   const digestCatalog = resolveDependencyDigestCatalog(root, resolverResult.resolved, headSha, authority.frozen_successor_subject_sha);
+
+  return Object.freeze({
+    root,
+    authority,
+    registry,
+    generation: generation ?? null,
+    headSha: headSha ?? null,
+    definitionErrors,
+    generationContext,
+    resolverResult,
+    failedV4Policy,
+    allOwned,
+    evidence,
+    digestCatalog,
+  });
+}
+
+function planApplicability({
+  root = ROOT,
+  authority,
+  registry,
+  changedPaths,
+  stage,
+  generation = null,
+  baseSha = null,
+  headSha = null,
+  preparedContext = null,
+}) {
+  if (!authority || authority.authority_id !== "MCFT_CAP09_CHECK_APPLICABILITY_V1") throw new Error("CONTROL_PLANE_AUTHORITY_REQUIRED");
+  if (!registry || registry.registry_id !== "MCFT_CAP09_QUALIFICATION_EVIDENCE_REGISTRY_V1") throw new Error("CONTROL_PLANE_EVIDENCE_REGISTRY_REQUIRED");
+  if (!(authority.allowed_stages || []).includes(stage)) throw new Error(`CONTROL_PLANE_STAGE_INVALID:${stage}`);
+
+  const context = preparedContext || prepareApplicabilityContext({ root, authority, registry, generation, headSha });
+  if (
+    context.root !== root ||
+    context.authority !== authority ||
+    context.registry !== registry ||
+    context.generation !== (generation ?? null) ||
+    context.headSha !== (headSha ?? null)
+  ) {
+    throw new Error("CONTROL_PLANE_PREPARED_CONTEXT_SUBJECT_MISMATCH");
+  }
+  const {
+    definitionErrors,
+    generationContext,
+    resolverResult,
+    failedV4Policy,
+    allOwned,
+    evidence,
+    digestCatalog,
+  } = context;
+  const changed = [...new Set((changedPaths || []).map(norm).filter(Boolean))].sort();
+  const unknownChangedPaths = changed.filter((p) => !allOwned.has(p));
   const decisions = [];
 
   for (const check of authority.checks || []) {
@@ -473,8 +522,14 @@ function planApplicability({ root = ROOT, authority, registry, changedPaths, sta
       subject_digest: currentDependency.digest,
       immutable_evidence_binding: evidenceEntry?.immutable_binding_sha256 ?? null,
       diagnostic_command: check.diagnostic_command ?? null,
-      execution_workflow: check.execution_workflow ?? null,
-      execution_workflow_status: check.execution_workflow_status ?? null,
+      execution_workflow:
+        check.execution_workflows_by_stage && Object.prototype.hasOwnProperty.call(check.execution_workflows_by_stage, stage)
+          ? check.execution_workflows_by_stage[stage]
+          : check.execution_workflow ?? null,
+      execution_workflow_status:
+        check.execution_workflow_status_by_stage && Object.prototype.hasOwnProperty.call(check.execution_workflow_status_by_stage, stage)
+          ? check.execution_workflow_status_by_stage[stage]
+          : check.execution_workflow_status ?? null,
     });
   }
 
@@ -576,6 +631,7 @@ module.exports = {
   resolveDependencyDigestCatalog,
   aggregateCheckDependencyDigest,
   resolveFailedV4ForbiddenEvidencePolicy,
+  prepareApplicabilityContext,
   planApplicability,
 };
 

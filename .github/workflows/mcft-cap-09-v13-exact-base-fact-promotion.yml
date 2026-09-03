@@ -16,6 +16,8 @@ env:
   NODE_VERSION: '20.11.1'
   PNPM_VERSION: '9.15.4'
   EXACT_PREDECESSOR_SHA: '26c1383f7f45abb76c99e28ec3d06714e85d1b2c'
+  PROTECTED_MAIN_ADOPTION_BASE_SHA: 'fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8'
+  CANONICAL_IMPLEMENTATION_SHA: 'd82c5caccce8169c19ce7ec2230e774a68a9f636'
 
 concurrency:
   group: mcft-cap09-v13-exact-base-fact-promotion-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
@@ -48,7 +50,16 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            test "${{ github.event.pull_request.base.sha }}" = "$EXACT_PREDECESSOR_SHA"
+            base="${{ github.event.pull_request.base.sha }}"
+            if [ "$base" = "$EXACT_PREDECESSOR_SHA" ]; then
+              :
+            elif [ "$base" = "$PROTECTED_MAIN_ADOPTION_BASE_SHA" ]; then
+              git merge-base --is-ancestor "$CANONICAL_IMPLEMENTATION_SHA" HEAD || { echo 'V13_EXACT_BASE_PROMOTION_ADOPTION_CANONICAL_ANCESTRY_REQUIRED' >&2; exit 1; }
+              echo 'PASS: protected-main adoption reuses current exact-base promotion implementation and runs full focused acceptance.'
+            else
+              echo "V13_EXACT_BASE_PROMOTION_GOVERNED_PREDECESSOR_REQUIRED:$base" >&2
+              exit 1
+            fi
           fi
           trigger_block="$(awk '/^on:/{capture=1} /^permissions:/{capture=0} capture{print}' .github/workflows/mcft-cap-09-v13-exact-base-fact-promotion.yml)"
           ! grep -Eq '^  schedule:|^  workflow_dispatch:' <<<"$trigger_block"

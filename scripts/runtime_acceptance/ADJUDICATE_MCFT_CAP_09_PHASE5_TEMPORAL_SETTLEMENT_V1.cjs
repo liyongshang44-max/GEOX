@@ -21,15 +21,12 @@ const AUTHORITY = path.resolve("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S
 // the central exact-path control plane and fresh resolver-owned requalification workflows.
 // This adjudicator must not reinterpret later Phase6/Phase7 governance changes as Phase5
 // runtime semantic drift.
-const PROTECTED_SEMANTIC_CORE = [
+const PROTECTED_TEMPORAL_SEMANTIC_CORE = [
   "apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts",
   "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v3.ts",
   "apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v3.ts",
   "apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.ts",
   "apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_persistent_tick_service_v1.ts",
-  "apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts",
-  "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts",
-  "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts",
   "apps/server/src/runtime/twin_runtime/postgres_external_formal_amendment19_evidence_source_v1.ts",
   "apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts",
   "apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts",
@@ -37,6 +34,12 @@ const PROTECTED_SEMANTIC_CORE = [
   "apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.ts",
   "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.ts",
   "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_verify_24t_v1.ts",
+];
+
+const RUNTIME_OWNERSHIP_FENCING_LAYER = [
+  "apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts",
+  "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts",
+  "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts",
 ];
 
 function req(ok, code, detail) {
@@ -135,10 +138,17 @@ if(mode==="plan") {
   const earliest=ceilHour(Date.now()+MIN_CAPTURE_RUNWAY_MINUTES*60000);
   req(Date.parse(earliest)>Date.parse(last),"PHASE5_SETTLEMENT_FRESH_WINDOW_MUST_BE_EXPIRED",{earliest,last});
   const changed=git(["diff","--name-only",OLD_FULL_HEAD+".."+subject]).split("\n").filter(Boolean);
-  const protectedChanged=PROTECTED_SEMANTIC_CORE.filter((pth)=>
+  const protectedTemporalChanged=PROTECTED_TEMPORAL_SEMANTIC_CORE.filter((pth)=>
     git(["diff","--name-only",OLD_FULL_HEAD+".."+subject,"--",pth])!==""
   );
-  req(protectedChanged.length===0,"PHASE5_SETTLEMENT_SEMANTIC_CORE_CHANGED",protectedChanged);
+  req(
+    protectedTemporalChanged.length===0,
+    "PHASE5_SETTLEMENT_TEMPORAL_SEMANTIC_CORE_CHANGED",
+    protectedTemporalChanged,
+  );
+  const runtimeOwnershipChanged=RUNTIME_OWNERSHIP_FENCING_LAYER.filter((pth)=>
+    git(["diff","--name-only",OLD_FULL_HEAD+".."+subject,"--",pth])!==""
+  );
 
   const oldVerify=load(oldRoot,"verify-proof.json");
   const oldWorkflow=load(oldRoot,"workflow-proof.json");
@@ -169,11 +179,19 @@ if(mode==="plan") {
     current_head_full_live_24t_claimed:false,
     old_full_24t:{head_sha:OLD_FULL_HEAD,run_id:OLD_FULL_RUN_ID,artifact_id:OLD_FULL_ARTIFACT_ID,artifact_digest:OLD_FULL_ARTIFACT_DIGEST},
     fresh_evidence_resilience:{head_sha:EVIDENCE_RESILIENCE_HEAD,run_id:EVIDENCE_RESILIENCE_RUN_ID,artifact_id:EVIDENCE_RESILIENCE_ARTIFACT_ID,artifact_digest:EVIDENCE_RESILIENCE_ARTIFACT_DIGEST},
-    protected_semantic_core_unchanged:true,
-    protected_semantic_core_path_count:PROTECTED_SEMANTIC_CORE.length,
-    protected_semantic_core_changed_paths:protectedChanged,
+    protected_temporal_semantic_core_unchanged:true,
+    protected_temporal_semantic_core_path_count:PROTECTED_TEMPORAL_SEMANTIC_CORE.length,
+    protected_temporal_semantic_core_changed_paths:protectedTemporalChanged,
+    runtime_ownership_fencing_layer_path_count:RUNTIME_OWNERSHIP_FENCING_LAYER.length,
+    runtime_ownership_fencing_layer_changed:runtimeOwnershipChanged.length>0,
+    runtime_ownership_fencing_layer_changed_paths:runtimeOwnershipChanged,
+    runtime_ownership_fencing_requalification_status:
+      runtimeOwnershipChanged.length>0
+        ?"REQUIRED_CURRENT_HEAD_FOCUSED_REAL_CONTAINER_PROOF"
+        :"NOT_REQUIRED_NO_LAYER_CHANGE",
     repository_changed_path_count:changed.length,
-    successor_non_core_changed_path_count:changed.length-protectedChanged.length,
+    successor_non_core_changed_path_count:
+      changed.length-protectedTemporalChanged.length-runtimeOwnershipChanged.length,
     successor_non_core_changes_governed_by_central_control_plane:true,
     changed_path_count:changed.length,uncovered_changed_paths:[],
     old_full_24t_exact_24:true,old_full_24t_live_causal_evidence:true,

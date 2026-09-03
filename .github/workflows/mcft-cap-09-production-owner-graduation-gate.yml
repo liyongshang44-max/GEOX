@@ -1,0 +1,217 @@
+name: mcft-cap-09-production-owner-graduation-gate
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-production-evidence-acl-carryforward-remediation.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_V1.cjs'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_V1.cjs'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_ARM_V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1.json'
+      - '.github/workflows/mcft-cap-09-production-owner-graduation-gate.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_CUTOVER_ARM_V1.json'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_V1.cjs'
+      - 'scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts'
+      - 'apps/server/src/runtime/mcft_cap09_production_runtime_start_authority_v1.ts'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json'
+      - 'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_BUILDER_V1.cjs'
+      - 'apps/server/src/runtime/mcft_cap09_production_service_identity_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts'
+      - 'docker-compose.mcft-cap09-production.yml'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts'
+      - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs'
+      - 'apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts'
+      - 'apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-production-owner-graduation-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: true
+
+jobs:
+  owner-graduation-gate:
+    if: >-
+      github.head_ref == 'feat/mcft-cap09-v13-producer-driven-qualification-v1' &&
+      github.event.pull_request.base.sha == '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      SEED_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+      EVIDENCE_RUNTIME_DATABASE_URL_SECRET: ${{ secrets.GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL }}
+      EVIDENCE_RUNTIME_PASSWORD_SECRET: ${{ secrets.GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_PASSWORD }}
+      TWIN_RUNTIME_DATABASE_URL_SECRET: ${{ secrets.GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL }}
+      TWIN_RUNTIME_PASSWORD_SECRET: ${{ secrets.GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_PASSWORD }}
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+
+    steps:
+      - name: Checkout exact graduation subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prove static graduation boundary
+        run: node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_V1.cjs
+
+      - name: Prove zero retired GitHub production owners and triggers
+        run: node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs enforce
+
+      - name: Inventory production service identities without mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SEED_DATABASE_URL"
+          rows="$(psql "$SEED_DATABASE_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT rolname,rolcanlogin::text,rolinherit::text,rolsuper::text,rolcreatedb::text,rolcreaterole::text
+              FROM pg_catalog.pg_roles
+             WHERE rolname IN (
+               'geox_mcft_cap09_evidence_runtime_v1',
+               'geox_mcft_cap09_twin_runtime_v1',
+               'geox_mcft_cap09_evidence_runtime_login_v1',
+               'geox_mcft_cap09_twin_runtime_login_v1'
+             )
+             ORDER BY rolname")"
+          printf '%s\n' "$rows"
+
+          evidence_priv=false; twin_priv=false; evidence_login=false; twin_login=false
+          if grep -q '^geox_mcft_cap09_evidence_runtime_v1|' <<<"$rows"; then
+            grep -Fx 'geox_mcft_cap09_evidence_runtime_v1|false|true|false|false|false' <<<"$rows"
+            evidence_priv=true
+          fi
+          if grep -q '^geox_mcft_cap09_twin_runtime_v1|' <<<"$rows"; then
+            grep -Fx 'geox_mcft_cap09_twin_runtime_v1|false|false|false|false|false' <<<"$rows"
+            twin_priv=true
+          fi
+          if grep -q '^geox_mcft_cap09_evidence_runtime_login_v1|' <<<"$rows"; then
+            grep -Fx 'geox_mcft_cap09_evidence_runtime_login_v1|true|true|false|false|false' <<<"$rows"
+            memberships="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
+              SELECT COALESCE(string_agg(granted.rolname,',' ORDER BY granted.rolname),'')
+                FROM pg_catalog.pg_auth_members m
+                JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
+                JOIN pg_catalog.pg_roles member ON member.oid=m.member
+               WHERE member.rolname='geox_mcft_cap09_evidence_runtime_login_v1'")"
+            test "$memberships" = 'geox_mcft_cap09_evidence_runtime_v1'
+            evidence_login=true
+          fi
+          if grep -q '^geox_mcft_cap09_twin_runtime_login_v1|' <<<"$rows"; then
+            grep -Fx 'geox_mcft_cap09_twin_runtime_login_v1|true|true|false|false|false' <<<"$rows"
+            memberships="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
+              SELECT COALESCE(string_agg(granted.rolname,',' ORDER BY granted.rolname),'')
+                FROM pg_catalog.pg_auth_members m
+                JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
+                JOIN pg_catalog.pg_roles member ON member.oid=m.member
+               WHERE member.rolname='geox_mcft_cap09_twin_runtime_login_v1'")"
+            test "$memberships" = 'geox_mcft_cap09_twin_runtime_v1'
+            twin_login=true
+          fi
+
+          {
+            echo "OWNER_EVIDENCE_PRIVILEGE_PRESENT=$evidence_priv"
+            echo "OWNER_TWIN_PRIVILEGE_PRESENT=$twin_priv"
+            echo "OWNER_EVIDENCE_LOGIN_PRESENT=$evidence_login"
+            echo "OWNER_TWIN_LOGIN_PRESENT=$twin_login"
+          } >> "$GITHUB_ENV"
+
+      - name: Emit machine-only owner graduation inventory
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const pre=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_PREFLIGHT_V1_RESULT.json','utf8'));
+          const gh=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_AUDIT_V1.json','utf8'));
+          if(pre.status!=='PASS'||gh.status!=='PASS')throw new Error('OWNER_GRADUATION_PREFLIGHT_REQUIRED');
+          for(const key of ['active_retired_owner_or_trigger_count','retired_actions_write_count','unclassified_scheduled_count','unclassified_workflow_run_count'])if(gh[key]!==0)throw new Error('OWNER_GITHUB_ZERO_REQUIRED:'+key);
+          const evidencePrivilege=process.env.OWNER_EVIDENCE_PRIVILEGE_PRESENT==='true';
+          const twinPrivilege=process.env.OWNER_TWIN_PRIVILEGE_PRESENT==='true';
+          const evidenceLogin=process.env.OWNER_EVIDENCE_LOGIN_PRESENT==='true';
+          const twinLogin=process.env.OWNER_TWIN_LOGIN_PRESENT==='true';
+          const evidenceUrl=Boolean(process.env.EVIDENCE_RUNTIME_DATABASE_URL_SECRET);
+          const evidencePassword=Boolean(process.env.EVIDENCE_RUNTIME_PASSWORD_SECRET);
+          const twinUrl=Boolean(process.env.TWIN_RUNTIME_DATABASE_URL_SECRET);
+          const twinPassword=Boolean(process.env.TWIN_RUNTIME_PASSWORD_SECRET);
+          const blockers=[];
+          if(!evidencePrivilege)blockers.push('EVIDENCE_PRIVILEGE_ROLE_NOT_PRESENT');
+          if(!twinPrivilege)blockers.push('TWIN_PRIVILEGE_ROLE_NOT_PRESENT');
+          if(!evidenceLogin)blockers.push('EVIDENCE_LOGIN_ROLE_NOT_PRESENT');
+          if(!twinLogin)blockers.push('TWIN_LOGIN_ROLE_NOT_PRESENT');
+          if(!evidenceUrl)blockers.push('EVIDENCE_RUNTIME_DATABASE_URL_SECRET_NOT_BOUND');
+          if(!evidencePassword)blockers.push('EVIDENCE_RUNTIME_PASSWORD_SECRET_NOT_BOUND');
+          if(!twinUrl)blockers.push('TWIN_RUNTIME_DATABASE_URL_SECRET_NOT_BOUND');
+          if(!twinPassword)blockers.push('TWIN_RUNTIME_PASSWORD_SECRET_NOT_BOUND');
+          const proof={
+            schema_version:'geox_mcft_cap09_production_owner_graduation_gate_v1',
+            status:blockers.length===0?'READ_ONLY_LIVE_OWNER_ADJUDICATION_READY':'PROVISIONING_PREREQUISITE_BLOCKED',
+            subject_sha:process.env.SUBJECT_SHA,
+            timing_budget_frozen:true,
+            selected_budget_ms:pre.selected_budget_ms,
+            github_retired_owner_and_trigger_count_zero:true,
+            evidence_privilege_role_present:evidencePrivilege,
+            twin_privilege_role_present:twinPrivilege,
+            evidence_login_present:evidenceLogin,
+            twin_login_present:twinLogin,
+            evidence_runtime_database_url_secret_present:evidenceUrl,
+            evidence_runtime_password_secret_present:evidencePassword,
+            twin_runtime_database_url_secret_present:twinUrl,
+            twin_runtime_password_secret_present:twinPassword,
+            production_owner_provisioning_required:blockers.length!==0,
+            login_presence_is_effective_owner_proof:false,
+            non_github_hosting_binding_established:true,
+            exact_two_runtime_service_identities_bound:true,
+            evidence_effective_owner_count:null,
+            twin_effective_scheduler_owner_count:null,
+            exact_one_production_owner_proven:false,
+            blocking_conditions:blockers,
+            remote_mutation_count:0,
+            production_login_creation:false,
+            production_owner_activation:false,
+            provider_request_count:0,
+            formal_v5_arm:false,
+            formal_v5_mutation:false,
+            a0_bootstrap:false,
+            o00_started:false,
+            mcft_cap09_completed:false
+          };
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_GATE_V1_RESULT.json',JSON.stringify(proof,null,2)+'\n');
+          console.log(JSON.stringify(proof,null,2));
+
+      - name: Read only current live fenced production owners
+        id: live-owner-readback
+        continue-on-error: true
+        run: node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs
+
+      - name: Upload owner graduation preflight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-production-owner-graduation-preflight-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_PREFLIGHT_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_AUDIT_V1.json
+            acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_GATE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Require exact one live fenced owner per runtime role
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const proof=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1_RESULT.json','utf8'));
+          if(proof.status!=='PASS'){
+            const blockers=Array.isArray(proof.blockers)?proof.blockers.join(','):'UNKNOWN';
+            throw new Error('PRODUCTION_OWNER_LIVE_FENCED_LEASES_NOT_ESTABLISHED:'+blockers);
+          }
+          if(proof.adjudication!=='EXACT_ONE_EFFECTIVE_OWNER_PER_RUNTIME_ROLE_PROVEN'){
+            throw new Error('PRODUCTION_OWNER_LIVE_ADJUDICATION_INVALID');
+          }
