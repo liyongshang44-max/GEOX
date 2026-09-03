@@ -26,5 +26,9 @@
   "a0_authorized": false,
   "o00_authorized": false,
   "execution_requested": false,
-  "current_status": "UNARMED_LIVE_ACTIVATION_NOT_ELIGIBLE"
+  "current_status": "UNARMED_LIVE_ACTIVATION_NOT_ELIGIBLE",
+  "current_crop_authority_ref": null,
+  "current_crop_authority_sha256": null,
+  "biological_stage_architecture_effectiveness_ref": null,
+  "biological_stage_architecture_effectiveness_sha256": null
 }
