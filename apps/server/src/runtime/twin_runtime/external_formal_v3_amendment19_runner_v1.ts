@@ -7,7 +7,6 @@ import { semanticHashV1 } from "../../domain/twin_runtime/canonical_identity_v1.
 import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../domain/twin_runtime/external_formal_runtime_config_v1.js";
 import type { MaterializedExternalFormalA18CropContextV2 } from "./external_formal_a18_crop_context_v2.js";
 import type { MaterializedExternalFormalA18CropContextV3 } from "./external_formal_a18_crop_context_v3.js";
-import type { MaterializedExternalFormalA18CropContextV4 } from "./external_formal_a18_crop_context_v4.js";
 import type {
   ExecuteExternalFormalV3Amendment19PersistentTickResultV1,
   ExternalFormalV3Amendment19DatabaseEvidenceSourcePortV1,
@@ -27,8 +26,7 @@ export const EXTERNAL_FORMAL_V3_AM19_RUNNER_WATERMARK_ID_V1 = "PROVIDER_AVAILABI
 
 type MaterializedExternalFormalA18CropContextSuccessorV1 =
   | MaterializedExternalFormalA18CropContextV2
-  | MaterializedExternalFormalA18CropContextV3
-  | MaterializedExternalFormalA18CropContextV4;
+  | MaterializedExternalFormalA18CropContextV3;
 
 export type ExternalFormalV3Am19ManifestSlotPinV1 = ExternalFormalV3Amendment19ManifestSlotPinV1 & {
   parent_runtime_config_ref: string;
@@ -136,12 +134,6 @@ function computeMaterializationHashV1(materialized: MaterializedExternalFormalA1
     materialization_profile: materialized.materialization_profile,
     context_ref: materialized.context_ref,
     context_identity_hash: materialized.context_identity_hash,
-    ...("current_crop_authority_evidence_digest" in materialized
-      ? {
-          current_crop_authority_evidence_digest:
-            materialized.current_crop_authority_evidence_digest,
-        }
-      : {}),
     materialized_context: materialized.context,
   });
 }
