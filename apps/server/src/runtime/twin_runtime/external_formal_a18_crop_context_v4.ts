@@ -33,7 +33,8 @@ export type MaterializeExternalFormalA18CropContextInputV4 = {
   crop_authority: JsonRecordV4;
   configuration_matrix: JsonRecordV4;
   current_crop_authority: JsonRecordV4;
-  activation_mode: "QUALIFICATION_ONLY";
+  biological_stage_architecture_effectiveness?: JsonRecordV4;
+  activation_mode: "QUALIFICATION_ONLY" | "PRODUCTION_EFFECTIVE";
 };
 
 export type MaterializedExternalFormalA18CropContextV4 = {
@@ -48,7 +49,7 @@ export type MaterializedExternalFormalA18CropContextV4 = {
   current_crop_authority_evidence_digest: string;
   water_use_stage_forward_stable_under_thermal_progression: true;
   lifecycle_requires_separate_validation: true;
-  production_effective: false;
+  production_effective: boolean;
   context: ContinuationCropStageConfigurationContextV1;
 };
 
@@ -122,6 +123,8 @@ function validateCurrentCropAuthorityV4(value: JsonRecordV4): {
   stage: ExternalFormalCropWaterUseStageV4;
   evidenceDigest: string;
   expectedKc: number;
+  authorityAsOf: string;
+  forwardStabilityHours: number;
 } {
   if (value.schema_version !== "geox_mcft_cap09_t4r1_current_crop_authority_composition_result_v1"
     || value.status !== "PASS"
@@ -150,6 +153,22 @@ function validateCurrentCropAuthorityV4(value: JsonRecordV4): {
     || biological.resolved_biological_stage !== "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE") {
     throw new Error("EXTERNAL_FORMAL_A18_V4_BIOLOGICAL_STAGE_AUTHORITY_MISMATCH");
   }
+  const authorityAsOf = canonicalHourV4(
+    biological.authority_as_of,
+    "EXTERNAL_FORMAL_A18_V4_STAGE_AUTHORITY_AS_OF_REQUIRED",
+  );
+  const forwardStabilityHours = numberV4(
+    biological.forward_stability_hours,
+    "EXTERNAL_FORMAL_A18_V4_FORWARD_STABILITY_HOURS_REQUIRED",
+  );
+  if (
+    !Number.isInteger(forwardStabilityHours)
+    || forwardStabilityHours <= 0
+    || forwardStabilityHours > 48
+  ) {
+    throw new Error("EXTERNAL_FORMAL_A18_V4_FORWARD_STABILITY_HOURS_INVALID");
+  }
+
   const stage = value.crop_water_use_stage;
   if (!validStageV4(stage) || stage !== "LATE") {
     throw new Error("EXTERNAL_FORMAL_A18_V4_EXACT_LATE_STAGE_REQUIRED");
@@ -168,7 +187,13 @@ function validateCurrentCropAuthorityV4(value: JsonRecordV4): {
   // R5 -> R6 is a monotone biological-development transition and both governed
   // mappings resolve to LATE. This proves water-use-stage stability under thermal
   // progression only; it does not prove future lifecycle ACTIVE.
-  return { stage, evidenceDigest, expectedKc };
+  return {
+    stage,
+    evidenceDigest,
+    expectedKc,
+    authorityAsOf,
+    forwardStabilityHours,
+  };
 }
 
 export function deriveExternalFormalA18CropContextIdentityHashV4(input: {
@@ -196,7 +221,26 @@ export function deriveExternalFormalA18CropContextIdentityHashV4(input: {
 export function materializeExternalFormalA18CropContextV4(
   input: MaterializeExternalFormalA18CropContextInputV4,
 ): MaterializedExternalFormalA18CropContextV4 {
-  if (input.activation_mode !== "QUALIFICATION_ONLY") throw new Error("EXTERNAL_FORMAL_A18_V4_PRODUCTION_ACTIVATION_NOT_AUTHORIZED");
+  const productionEffective = input.activation_mode === "PRODUCTION_EFFECTIVE";
+  if (productionEffective) {
+    const current = input.current_crop_authority;
+    if (
+      current.architecture_effective !== true
+      || current.runtime_consumption_authorized !== true
+    ) {
+      throw new Error("EXTERNAL_FORMAL_A18_V4_CURRENT_CROP_AUTHORITY_NOT_EFFECTIVE");
+    }
+    const architecture = input.biological_stage_architecture_effectiveness;
+    if (
+      !architecture
+      || architecture.schema_version !== "geox_dt02_biological_stage_authority_effectiveness_v1"
+      || architecture.amendment_id !== "DT02-AMENDMENT-03"
+      || architecture.status !== "EFFECTIVE"
+      || architecture.effective !== true
+    ) {
+      throw new Error("EXTERNAL_FORMAL_A18_V4_ARCHITECTURE_EFFECTIVENESS_REQUIRED");
+    }
+  }
   const logicalTime = canonicalHourV4(input.logical_time, "EXTERNAL_FORMAL_A18_V4_CROP_CONTEXT_LOGICAL_TIME_INVALID");
   if (!/^sha256:[0-9a-f]{64}$/.test(input.expected_identity_hash)) {
     throw new Error("EXTERNAL_FORMAL_A18_V4_EXPECTED_IDENTITY_HASH_INVALID");
@@ -217,6 +261,14 @@ export function materializeExternalFormalA18CropContextV4(
   }
 
   const current = validateCurrentCropAuthorityV4(input.current_crop_authority);
+  const logicalMs = Date.parse(logicalTime);
+  const authorityMs = Date.parse(current.authorityAsOf);
+  if (logicalMs < authorityMs) {
+    throw new Error("EXTERNAL_FORMAL_A18_V4_FUTURE_STAGE_EVIDENCE_FORBIDDEN");
+  }
+  if (logicalMs > authorityMs + current.forwardStabilityHours * 3_600_000) {
+    throw new Error("EXTERNAL_FORMAL_A18_V4_STAGE_AUTHORITY_FORWARD_WINDOW_EXCEEDED");
+  }
   const source = exactCropSourceV4(input.configuration_matrix, current.stage);
   if (source.kc !== current.expectedKc) throw new Error("EXTERNAL_FORMAL_A18_V4_CURRENT_KC_MATRIX_MISMATCH");
 
@@ -261,7 +313,9 @@ export function materializeExternalFormalA18CropContextV4(
       "MODEL_PRIOR_FROM_CAP08",
       "NOT_FIELD_CALIBRATED",
       "NO_FUTURE_OBSERVATION_USE",
-      "QUALIFICATION_ONLY_NO_PRODUCTION_EFFECT",
+      productionEffective
+        ? "PRODUCTION_EFFECTIVE_EXACT_BOUND_STAGE_AUTHORITY"
+        : "QUALIFICATION_ONLY_NO_PRODUCTION_EFFECT",
     ],
     determinism_hash: identityHash,
   };
@@ -286,7 +340,7 @@ export function materializeExternalFormalA18CropContextV4(
     current_crop_authority_evidence_digest: current.evidenceDigest,
     water_use_stage_forward_stable_under_thermal_progression: true,
     lifecycle_requires_separate_validation: true,
-    production_effective: false,
+    production_effective: productionEffective,
     context,
   };
 }
