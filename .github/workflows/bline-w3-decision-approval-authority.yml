@@ -1,0 +1,128 @@
+name: bline-w3-decision-approval-authority
+
+on:
+  push:
+    branches:
+      - 'feat/bline-w3-decision-approval-authority-v1'
+  pull_request:
+    paths:
+      - 'docs/architecture/semantic_convergence/GEOX-BLINE-W3-DECISION-APPROVAL-AUTHORITY-V1.json'
+      - 'apps/server/src/routes/decision_engine_v1.ts'
+      - 'apps/server/src/routes/control_approval_request_v1.ts'
+      - 'apps/server/src/routes/prescriptions_v1.ts'
+      - 'apps/server/src/domain/controlplane/task_service.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_W3_COMMERCIAL_DECISION_APPROVAL_AUTHORITY_V1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.cjs'
+      - '.github/workflows/bline-w3-decision-approval-authority.yml'
+      - '.github/workflows/ci.yml'
+
+jobs:
+  bounded-closure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --no-frozen-lockfile
+      - name: Build focused server dependencies
+        run: pnpm --filter @geox/device-skills... build
+      - name: W3 bounded inventory and source gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.cjs
+      - name: W3 focused positive-negative runtime proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.ts
+      - name: W2 accepted successor preservation
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.cjs
+      - name: Frozen PR-SEC-1 caller inventory regression
+        run: pnpm run ci:governance:bline-production-caller-authority-inventory
+      - name: B-Line residual authority audit
+        run: pnpm run ci:governance:bline-residual-authority-audit
+      - name: B-Line active runtime surface closure
+        run: pnpm run ci:governance:bline-active-runtime-surface-closure
+      - name: Typecheck
+        run: pnpm -r typecheck
+      - name: Build
+        run: pnpm -r build
+
+  commercial-authority-proof:
+    runs-on: ubuntu-latest
+    needs: bounded-closure
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --no-frozen-lockfile
+      - name: Prepare W3 Commercial credential and compose environment
+        run: |
+          set -euo pipefail
+          TOKENS_JSON="$(node - <<'NODE'
+          const f={version:"ao_act_tokens_v0",tokens:[
+            {token:"w3_task_only",token_id:"tok_task",actor_id:"task",tenant_id:"tenantA",project_id:"projectA",group_id:"groupA",role:"admin",scopes:["ao_act.task.write"],revoked:false},
+            {token:"w3_rec_writer",token_id:"tok_rec_writer",actor_id:"rec_writer",tenant_id:"tenantA",project_id:"projectA",group_id:"groupA",role:"agronomist",scopes:["recommendation.write"],revoked:false},
+            {token:"w3_rec_request",token_id:"tok_rec_request",actor_id:"operator",tenant_id:"tenantA",project_id:"projectA",group_id:"groupA",role:"operator",scopes:["recommendation.approval_request"],revoked:false},
+            {token:"w3_approval_request",token_id:"tok_approval_request",actor_id:"requester",tenant_id:"tenantA",project_id:"projectA",group_id:"groupA",role:"admin",scopes:["approval.request"],revoked:false},
+            {token:"w3_prescription_submit",token_id:"tok_prescription_submit",actor_id:"prescriber",tenant_id:"tenantA",project_id:"projectA",group_id:"groupA",role:"admin",scopes:["prescription.submit_approval"],revoked:false},
+            {token:"w3_approval_decide",token_id:"tok_approval_decide",actor_id:"approver",tenant_id:"tenantA",project_id:"projectA",group_id:"groupA",role:"admin",scopes:["approval.decide"],revoked:false}
+          ]};process.stdout.write(JSON.stringify(f));
+          NODE
+          )"
+          cat > .env.w3 <<EOF
+          GEOX_RUNTIME_ENV=pilot
+          GEOX_TOKENS_JSON='$TOKENS_JSON'
+          POSTGRES_USER=landos
+          POSTGRES_PASSWORD=w3-postgres-strong-2026
+          POSTGRES_DB=landos
+          GEOX_MCFT_MIGRATOR_PASSWORD=w3-mcft-migrator-strong-2026
+          GEOX_RUNTIME_DATABASE_PASSWORD=w3-runtime-database-strong-2026
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT=${GITHUB_SHA}
+          GEOX_AO_ACT_TOKEN=w3_approval_request
+          GEOX_EXECUTOR_TOKEN=w3_task_only
+          GEOX_INTERNAL_TASK_ISSUER_TOKEN=w3_task_only
+          GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
+          MINIO_ROOT_USER=geoxminio
+          MINIO_ROOT_PASSWORD=w3-minio-strong-2026
+          MQTT_USERNAME=geoxmqtt
+          MQTT_PASSWORD=w3-mqtt-strong-2026
+          CORS_ORIGINS=https://w3.geox.invalid
+          APP_SECRET=w3-app-secret-strong-2026
+          PUBLIC_BASE_URL=https://w3.geox.invalid
+          GEOX_EXECUTION_DEFAULT_DISABLED=1
+          GEOX_EXECUTION_ENABLE_EXPLICITLY=0
+          GEOX_EXECUTION_ENABLE_REASON=w3-decision-approval-authority-proof
+          GEOX_DEVTOOLS_ENABLED=0
+          EOF
+      - name: Start Commercial server
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          timeout 180 docker compose --env-file .env.w3 -f docker-compose.commercial_v1.yml up -d minio minio-init
+          timeout 300 docker compose --env-file .env.w3 -f docker-compose.commercial_v1.yml up -d postgres mqtt server
+      - name: Wait for Commercial server
+        run: timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health >/dev/null; do sleep 2; done'
+      - name: W3 Commercial decision-approval authority proof
+        run: |
+          set -a; source .env.w3; set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          export GEOX_W3_TASK_ONLY_TOKEN=w3_task_only
+          export GEOX_W3_RECOMMENDATION_WRITER_TOKEN=w3_rec_writer
+          export GEOX_W3_RECOMMENDATION_REQUEST_TOKEN=w3_rec_request
+          export GEOX_W3_APPROVAL_REQUEST_TOKEN=w3_approval_request
+          export GEOX_W3_PRESCRIPTION_SUBMIT_TOKEN=w3_prescription_submit
+          export GEOX_W3_APPROVAL_DECIDE_TOKEN=w3_approval_decide
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W3_COMMERCIAL_DECISION_APPROVAL_AUTHORITY_V1.ts
+      - name: Runtime hygiene
+        if: always()
+        run: |
+          LOG=/tmp/bline-w3-runtime.log
+          docker compose --env-file .env.w3 -f docker-compose.commercial_v1.yml logs server > "$LOG" 2>&1 || true
+          ! grep -E 'FST_ERR_REP_ALREADY_SENT|ERR_HTTP_HEADERS_SENT|Reply was already sent|reply already sent' "$LOG"
+      - name: Stop Commercial runtime
+        if: always()
+        run: docker compose --env-file .env.w3 -f docker-compose.commercial_v1.yml down -v --remove-orphans || true

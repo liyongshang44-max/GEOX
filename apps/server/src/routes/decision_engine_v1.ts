@@ -1887,8 +1887,8 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
   });
 
   app.post("/api/v1/recommendations/:recommendation_id/submit-approval", async (req, reply) => {
-    const auth = requireAoActAnyScopeV0(req, reply, ["recommendation.write", "ao_act.task.write"]);
-    if (!auth) return;
+    const auth = requireAoActScopeV0(req, reply, "approval.request");
+    if (!auth) return reply;
     const params: any = (req as any).params ?? {};
     const body: any = req.body ?? {};
     const recommendation_id = String(params.recommendation_id ?? "").trim();

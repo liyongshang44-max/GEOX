@@ -1,5 +1,6 @@
 const fs=require("node:fs"),cp=require("node:child_process"),path=require("node:path");
 const BASE="03db0c098a66053fd0b921cb8a3c5acdcf67d4d0";
+const W2_ACCEPTED_HEAD="89e7ea6e5b322ae7745c04db3ad4ab584aecb6c2";
 const PREDECESSOR="docs/architecture/semantic_convergence/GEOX-BLINE-PRODUCTION-CALLER-AUTHORITY-INVENTORY-V1.json";
 const W2="docs/architecture/semantic_convergence/GEOX-BLINE-W2-CALLER-READ-WRITE-BOUNDARY-V1.json";
 function sh(args){return cp.execFileSync("git",["-c","core.quotepath=false",...args],{encoding:"utf8"}).trim();}
@@ -128,8 +129,13 @@ const allowed=new Set([
  "scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs",
  "scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_EVIDENCE_EXPORT_WRITE_CAPABILITY_V1.cjs"
 ]);
+const head=sh(["rev-parse","HEAD"]);
 const changed=sh(["diff","--name-only",BASE,"HEAD"]).split(/\r?\n/).filter(Boolean);
-for(const p of changed) assert(allowed.has(p),"W2 scope expansion",p);
-for(const p of changed) assert(!/mcft/i.test(p),"W2 touched MCFT",p);
-for(const p of changed) assert(!/(approval|planner|crop.*latest|executor|device_status|legacy.*twin|monitoring)/i.test(p),"W2 forbidden workstream path changed",p);
-console.log(JSON.stringify({result:"PASS",workstream:"W2_CALLER_CAPABILITY_READ_WRITE_BOUNDARY",authority_base:BASE,bounded_inventory:{recommendation_generate:"BSEC-051",known_get_mutation_count:23,anonymous_sensitive_reads:predecessorAnon},repairs:{recommendation_writer_capability:true,get_mutations_removed:true,anonymous_weather_read_bound:true,cd02_scope_only:true},changed_files:changed,mcft_delta:0},null,2));
+if(head===W2_ACCEPTED_HEAD){
+  for(const p of changed) assert(allowed.has(p),"W2 scope expansion",p);
+  for(const p of changed) assert(!/mcft/i.test(p),"W2 touched MCFT",p);
+  for(const p of changed) assert(!/(approval|planner|crop.*latest|executor|device_status|legacy.*twin|monitoring)/i.test(p),"W2 forbidden workstream path changed",p);
+} else {
+  assert(sh(["diff","--name-only",W2_ACCEPTED_HEAD,"HEAD","--",W2])==="","closed W2 bounded inventory drift in successor workstream",W2);
+}
+console.log(JSON.stringify({result:"PASS",workstream:"W2_CALLER_CAPABILITY_READ_WRITE_BOUNDARY",authority_base:BASE,accepted_head:W2_ACCEPTED_HEAD,qualification_mode:head===W2_ACCEPTED_HEAD?"EXACT_W2_SCOPE":"SUCCESSOR_PRESERVATION",bounded_inventory:{recommendation_generate:"BSEC-051",known_get_mutation_count:23,anonymous_sensitive_reads:predecessorAnon},repairs:{recommendation_writer_capability:true,get_mutations_removed:true,anonymous_weather_read_bound:true,cd02_scope_only:true},changed_files:changed,mcft_delta:0},null,2));

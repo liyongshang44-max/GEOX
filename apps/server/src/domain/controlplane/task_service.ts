@@ -2229,13 +2229,13 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // POST /api/v1/approvals
   // Stable REST wrapper around Sprint25 approval_request runtime.
   app.post("/api/v1/approvals", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write"); // Approval creation implies later task issuance authority.
-    if (!auth) return;
-    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
+    const auth = requireAoActScopeV0(req, reply, "approval.request");
+    if (!auth) return reply;
+    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return reply;
     const body: any = req.body ?? {};
     const tenant: TenantTriple = parseTenantFromBody(body);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
 
     const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/approvals/request`, String((req.headers as any).authorization ?? ""), {
       ...body,
@@ -2279,9 +2279,9 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // approve => writes approval_decision_v1 + wrapper task_created fact via existing AO-ACT core.
   // reject  => writes approval_decision_v1 only.
   app.post("/api/v1/approvals/:request_id/decide", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
-    if (!auth) return;
-    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
+    const auth = requireAoActScopeV0(req, reply, "approval.decide");
+    if (!auth) return reply;
+    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return reply;
     const params: any = (req as any).params ?? {};
     const body: any = req.body ?? {};
     const request_id = String(params.request_id ?? "").trim();
@@ -2289,8 +2289,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const decision = String(body.decision ?? "").trim().toUpperCase();
     if (decision !== "APPROVE" && decision !== "REJECT") return badRequest(reply, "INVALID_DECISION");
     const tenant: TenantTriple = parseTenantFromBody(body);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
 
     const requestFact = await loadLatestFactByTypeAndKey(pool, "approval_request_v1", "payload,request_id", request_id, tenant);
     if (!requestFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
