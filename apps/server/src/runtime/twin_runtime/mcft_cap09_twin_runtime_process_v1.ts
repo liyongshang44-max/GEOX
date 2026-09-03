@@ -210,13 +210,6 @@ export async function runMcftCap09TwinRuntimeProcessV1(input?: {
     runtime_start_binding?: unknown;
   };
   const env = input?.env ?? process.env;
-  loadMcftCap09ProductionRuntimeStartAuthorityV1({
-    plane: "TWIN_RUNTIME",
-    authority_path:
-      env.GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH,
-    explicit_authority: input?.runtime_start_authority,
-    embedded_authority: document.runtime_start_binding,
-  });
 
   const qualificationLeaseOwner = String(
     input?.qualification_lease_owner ?? "",
@@ -253,6 +246,21 @@ export async function runMcftCap09TwinRuntimeProcessV1(input?: {
     config.manifest_path,
     "PHASE5_TWIN_RUNTIME_MANIFEST_INVALID",
   ) as unknown as ExternalFormalV3Am19WindowManifestV1;
+  loadMcftCap09ProductionRuntimeStartAuthorityV1({
+    plane: "TWIN_RUNTIME",
+    expected: {
+      deployment_subject_sha: requiredEnvV1(
+        env,
+        "GEOX_DEPLOYMENT_SUBJECT_COMMIT",
+        "MCFT_CAP09_PRODUCTION_DEPLOYMENT_SUBJECT_REQUIRED",
+      ),
+      scope: manifest.scope,
+    },
+    authority_path:
+      env.GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH,
+    explicit_authority: input?.runtime_start_authority,
+    embedded_authority: document.runtime_start_binding,
+  });
   const cropAuthority = readJsonObjectV1(
     config.crop_authority_path,
     "PHASE5_TWIN_RUNTIME_CROP_AUTHORITY_INVALID",
