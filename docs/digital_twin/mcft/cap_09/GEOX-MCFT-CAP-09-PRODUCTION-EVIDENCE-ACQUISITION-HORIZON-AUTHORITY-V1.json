@@ -329,11 +329,13 @@
       "status": "QUALIFIED",
       "allowed_claim": "MCFT_CAP_09_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_QUALIFIED",
       "claim_scope": "CONTROLLABLE_SOFTWARE_RUNTIME_GOVERNANCE_AND_PRODUCTION_EQUIVALENT_MECHANISMS",
-      "exact_head_validation_mode": "PLANNER_READINESS_ACCEPTANCE_REVALIDATES_PROTECTED_SEMANTIC_CORE_EVIDENCE_ANCESTRY_AND_V13_RUNTIME_HARNESS_MIGRATION_ON_EVERY_SUBJECT",
+      "exact_head_validation_mode": "PLANNER_READINESS_REVALIDATES_PROTECTED_TEMPORAL_SEMANTIC_CORE_EVIDENCE_ANCESTRY_AND_V13_RUNTIME_HARNESS_MIGRATION;TWIN_RUNTIME_OWNERSHIP_FENCING_LAYER_REQUIRES_FRESH_PHASE4_AND_PHASE5_FOCUSED_REQUALIFICATION",
       "protected_semantic_core": {
         "baseline_subject_sha": "12473c491b354e49305f22bfa24c8701ce5e3ff9",
-        "path_count": 15,
-        "all_paths_unchanged_to_current_subject_required": true
+        "semantic_scope": "IMMUTABLE_PHASE5_TEMPORAL_RUNTIME_CORE",
+        "path_count": 12,
+        "all_paths_unchanged_to_current_subject_required": true,
+        "excludes_runtime_ownership_fencing_layer": true
       },
       "evidence_chain": {
         "phase5_immutable_full_24t": {
@@ -412,7 +414,22 @@
         "REAL_FIELD_24_HOUR_ONLINE_PROVEN",
         "MINIMUM_COMPLETE_FIELD_TWIN_COMPLETE",
         "CURRENT_T4R1_LIVE_ACTIVATION_ELIGIBLE"
-      ]
+      ],
+      "runtime_ownership_fencing_layer": {
+        "path_count": 3,
+        "paths": [
+          "apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts",
+          "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts",
+          "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts"
+        ],
+        "may_change_only_with_focused_current_head_requalification": true,
+        "planner_readiness_may_classify_change_as_temporal_semantic_drift": false,
+        "required_requalification_surfaces": [
+          "mcft-cap-09-phase4-twin-runtime-persistence",
+          "mcft-cap-09-phase5-production-equivalent-containers",
+          "mcft-cap-09-phase5-two-service-accelerated-24t"
+        ]
+      }
     },
     "live_activation": {
       "status": "NOT_CURRENTLY_ELIGIBLE",
