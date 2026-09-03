@@ -12,3 +12,5 @@
 
 # windows scripts can stay CRLF if you prefer (optional)
 *.ps1 text eol=crlf
+fixtures/external_operations/john_deere/single_product_rx_v1.json -text -diff -merge -eol -diff -merge -eol
+fixtures/external_operations/john_deere/single_product_rx_v1.json -text -diff -merge -eol
