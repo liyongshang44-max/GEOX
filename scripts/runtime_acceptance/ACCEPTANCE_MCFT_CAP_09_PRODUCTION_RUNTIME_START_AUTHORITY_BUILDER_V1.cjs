@@ -72,6 +72,14 @@ try {
     OUT_DIR,
     "MCFT_CAP_09_TEST_FORMAL_A0_AUTHORITY_V1.json",
   );
+  const currentCropAuthority = path.join(
+    OUT_DIR,
+    "MCFT_CAP_09_TEST_CURRENT_CROP_AUTHORITY_V1.json",
+  );
+  const stageArchitectureEffectiveness = path.join(
+    OUT_DIR,
+    "MCFT_CAP_09_TEST_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_V1.json",
+  );
   writeJson(liveAuthority, {
     schema_version: "geox_mcft_cap09_test_live_activation_authority_v1",
     status: "QUALIFIED_TEST_FIXTURE_ONLY",
@@ -81,6 +89,20 @@ try {
     schema_version: "geox_mcft_cap09_test_formal_a0_authority_v1",
     status: "QUALIFIED_TEST_FIXTURE_ONLY",
     formal_a0_logical_time: "2099-01-01T00:00:00.000Z",
+  });
+  writeJson(currentCropAuthority, {
+    schema_version: "geox_mcft_cap09_t4r1_current_crop_authority_composition_result_v1",
+    status: "PASS",
+    qualification_outcome: "CURRENT_CROP_CONTEXT_AUTHORITY_CANDIDATE_RESOLVED",
+    crop_water_use_stage: "LATE",
+    crop_model_parameter: { parameter: "Kc", stage_code: "LATE", value: 0.6 },
+    production_effective: false,
+  });
+  writeJson(stageArchitectureEffectiveness, {
+    schema_version: "geox_dt02_biological_stage_authority_effectiveness_test_v1",
+    status: "EFFECTIVE_TEST_FIXTURE_ONLY",
+    amendment_id: "DT02-AMENDMENT-03",
+    effective: true,
   });
 
   const scope = {
@@ -110,6 +132,10 @@ try {
     live_activation_authority_sha256: digest(liveAuthority),
     formal_a0_authority_ref: rel(formalA0Authority),
     formal_a0_authority_sha256: digest(formalA0Authority),
+    current_crop_authority_ref: rel(currentCropAuthority),
+    current_crop_authority_sha256: digest(currentCropAuthority),
+    biological_stage_architecture_effectiveness_ref: rel(stageArchitectureEffectiveness),
+    biological_stage_architecture_effectiveness_sha256: digest(stageArchitectureEffectiveness),
     scope,
     activation_fence_time: "2098-12-31T23:30:00.000Z",
     formal_a0_logical_time: "2099-01-01T00:00:00.000Z",
@@ -138,6 +164,10 @@ try {
   assert.equal(authority.live_activation_authority_sha256, digest(liveAuthority));
   assert.equal(authority.formal_a0_authority_ref, rel(formalA0Authority));
   assert.equal(authority.formal_a0_authority_sha256, digest(formalA0Authority));
+  assert.equal(authority.current_crop_authority_ref, rel(currentCropAuthority));
+  assert.equal(authority.current_crop_authority_sha256, digest(currentCropAuthority));
+  assert.equal(authority.biological_stage_architecture_effectiveness_ref, rel(stageArchitectureEffectiveness));
+  assert.equal(authority.biological_stage_architecture_effectiveness_sha256, digest(stageArchitectureEffectiveness));
   assert.equal(authority.activation_fence_time, "2098-12-31T23:30:00.000Z");
   assert.equal(authority.formal_a0_logical_time, "2099-01-01T00:00:00.000Z");
   assert.equal(authority.runtime_process_start_authorized, true);
@@ -191,6 +221,51 @@ try {
   );
   assert.equal(fs.existsSync(badDigestOut), false);
 
+  const badCurrentCropDigestArm = path.join(
+    OUT_DIR,
+    "MCFT_CAP_09_TEST_BAD_CURRENT_CROP_DIGEST_RUNTIME_START_ARM_V1.json",
+  );
+  writeJson(badCurrentCropDigestArm, {
+    ...armed,
+    current_crop_authority_sha256: "sha256:" + "e".repeat(64),
+  });
+  const badCurrentCropDigestOut = path.join(
+    OUT_DIR,
+    "MCFT_CAP_09_TEST_BAD_CURRENT_CROP_DIGEST_RUNTIME_START_AUTHORITY_V1.json",
+  );
+  fs.rmSync(badCurrentCropDigestOut, { force: true });
+  const badCurrentCropDigestAttempt = runBuilder(badCurrentCropDigestArm, badCurrentCropDigestOut);
+  assert.notEqual(badCurrentCropDigestAttempt.status, 0);
+  assert.match(
+    badCurrentCropDigestAttempt.stderr,
+    /RUNTIME_START_CURRENT_CROP_AUTHORITY_SHA256_MISMATCH/,
+  );
+  assert.equal(fs.existsSync(badCurrentCropDigestOut), false);
+
+  const badStageArchitectureDigestArm = path.join(
+    OUT_DIR,
+    "MCFT_CAP_09_TEST_BAD_STAGE_ARCHITECTURE_DIGEST_RUNTIME_START_ARM_V1.json",
+  );
+  writeJson(badStageArchitectureDigestArm, {
+    ...armed,
+    biological_stage_architecture_effectiveness_sha256: "sha256:" + "d".repeat(64),
+  });
+  const badStageArchitectureDigestOut = path.join(
+    OUT_DIR,
+    "MCFT_CAP_09_TEST_BAD_STAGE_ARCHITECTURE_DIGEST_RUNTIME_START_AUTHORITY_V1.json",
+  );
+  fs.rmSync(badStageArchitectureDigestOut, { force: true });
+  const badStageArchitectureDigestAttempt = runBuilder(
+    badStageArchitectureDigestArm,
+    badStageArchitectureDigestOut,
+  );
+  assert.notEqual(badStageArchitectureDigestAttempt.status, 0);
+  assert.match(
+    badStageArchitectureDigestAttempt.stderr,
+    /RUNTIME_START_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_SHA256_MISMATCH/,
+  );
+  assert.equal(fs.existsSync(badStageArchitectureDigestOut), false);
+
   writeJson(RESULT, {
     schema_version:
       "geox_mcft_cap09_production_runtime_start_authority_builder_acceptance_v1",
@@ -198,9 +273,13 @@ try {
     exact_subject_bound: true,
     exact_scope_bound: true,
     source_authority_digest_bound: true,
+    current_crop_authority_digest_bound: true,
+    biological_stage_architecture_effectiveness_digest_bound: true,
     current_repository_arm_unarmed_fail_closed: true,
     stale_head_arm_rejected: true,
     bad_source_digest_rejected: true,
+    bad_current_crop_digest_rejected: true,
+    bad_stage_architecture_effectiveness_digest_rejected: true,
     runtime_process_started: false,
     database_connection_attempted: false,
     provider_request_count: 0,

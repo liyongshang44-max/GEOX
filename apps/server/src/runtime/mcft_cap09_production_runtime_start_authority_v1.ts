@@ -32,6 +32,10 @@ export type McftCap09ProductionRuntimeStartAuthorityInstanceV1 = {
   formal_a0_authority_sha256: string;
   live_activation_authority_ref: string;
   live_activation_authority_sha256: string;
+  current_crop_authority_ref: string;
+  current_crop_authority_sha256: string;
+  biological_stage_architecture_effectiveness_ref: string;
+  biological_stage_architecture_effectiveness_sha256: string;
   formal_a0_logical_time: string;
 };
 
@@ -210,6 +214,22 @@ export function parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
     live_activation_authority_sha256: digestV1(
       authority.live_activation_authority_sha256,
       "MCFT_CAP09_PRODUCTION_RUNTIME_START_LIVE_ACTIVATION_AUTHORITY_DIGEST_REQUIRED",
+    ),
+    current_crop_authority_ref: textV1(
+      authority.current_crop_authority_ref,
+      "MCFT_CAP09_PRODUCTION_RUNTIME_START_CURRENT_CROP_AUTHORITY_REF_REQUIRED",
+    ),
+    current_crop_authority_sha256: digestV1(
+      authority.current_crop_authority_sha256,
+      "MCFT_CAP09_PRODUCTION_RUNTIME_START_CURRENT_CROP_AUTHORITY_DIGEST_REQUIRED",
+    ),
+    biological_stage_architecture_effectiveness_ref: textV1(
+      authority.biological_stage_architecture_effectiveness_ref,
+      "MCFT_CAP09_PRODUCTION_RUNTIME_START_STAGE_ARCHITECTURE_EFFECTIVENESS_REF_REQUIRED",
+    ),
+    biological_stage_architecture_effectiveness_sha256: digestV1(
+      authority.biological_stage_architecture_effectiveness_sha256,
+      "MCFT_CAP09_PRODUCTION_RUNTIME_START_STAGE_ARCHITECTURE_EFFECTIVENESS_DIGEST_REQUIRED",
     ),
     formal_a0_logical_time: formalA0,
   };

@@ -107,6 +107,14 @@ function main(): void {
       "GEOX-MCFT-CAP-09-TEST-LIVE-ACTIVATION-AUTHORITY-V1",
     live_activation_authority_sha256:
       "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    current_crop_authority_ref:
+      "qualification://mcft-cap09/phase5/process-boundary-current-crop-authority-v1",
+    current_crop_authority_sha256:
+      "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    biological_stage_architecture_effectiveness_ref:
+      "qualification://mcft-cap09/phase5/process-boundary-stage-architecture-effectiveness-v1",
+    biological_stage_architecture_effectiveness_sha256:
+      "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
     formal_a0_logical_time: "2026-09-03T18:00:00.000Z",
     runtime_process_start_authorized: true,
     evidence_runtime_start_authorized: true,
