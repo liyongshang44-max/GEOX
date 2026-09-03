@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   accumulateCornBase50GduBoundsV1,
+  classifyCornResidualToMaturityStageV1,
   computeCornBase50DailyGduFromFahrenheitV1,
   mapBiologicalAuthorityToWaterUseStageV1,
   resolveBiologicalStageAuthorityV1,
@@ -125,4 +126,40 @@ test("pre-R6 mapping preserves MID/LATE ambiguity", () => {
   });
   assert.deepEqual(mapped.candidate_water_use_stages, ["LATE", "MID"]);
   assert.equal(mapped.resolved_water_use_stage, null);
+});
+
+
+test("residual GDU resolves R5 dent-or-later only when the full uncertainty is beyond conservative R5 reference", () => {
+  const result = classifyCornResidualToMaturityStageV1(
+    { lower_gdu: 1987.335, upper_gdu: 2042.955 },
+    { maturity_gdu: 2380, conservative_r5_reference_min_remaining_gdu: 400 },
+  );
+  assert.equal(result.lower_remaining_gdu, 337.045);
+  assert.equal(result.upper_remaining_gdu, 392.665);
+  assert.deepEqual(result.candidate_biological_stages, ["R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE"]);
+  assert.equal(result.resolved_biological_stage, "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE");
+});
+
+test("residual GDU stays ambiguous when uncertainty overlaps conservative R5 reference", () => {
+  const result = classifyCornResidualToMaturityStageV1(
+    { lower_gdu: 1900, upper_gdu: 2050 },
+    { maturity_gdu: 2380, conservative_r5_reference_min_remaining_gdu: 400 },
+  );
+  assert.deepEqual(result.candidate_biological_stages, [
+    "PRE_R5_MODEL_ESTIMATE",
+    "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE",
+  ]);
+  assert.equal(result.resolved_biological_stage, null);
+});
+
+test("residual GDU preserves R5/R6 ambiguity when maturity threshold is straddled", () => {
+  const result = classifyCornResidualToMaturityStageV1(
+    { lower_gdu: 2370, upper_gdu: 2390 },
+    { maturity_gdu: 2380, conservative_r5_reference_min_remaining_gdu: 400 },
+  );
+  assert.deepEqual(result.candidate_biological_stages, [
+    "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE",
+    "R6_OR_LATER_MODEL_ESTIMATE",
+  ]);
+  assert.equal(result.resolved_biological_stage, null);
 });
