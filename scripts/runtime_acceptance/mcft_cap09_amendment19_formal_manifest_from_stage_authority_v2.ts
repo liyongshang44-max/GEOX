@@ -14,7 +14,7 @@ import {
   MCFT_CAP09_A18_CROP_CONTEXT_MATERIALIZATION_PROFILE_V4,
   materializeExternalFormalA18CropContextV4,
 } from "../../apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.js";
-import type { ExternalFormalV3Am19WindowManifestV1 } from "../../apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.js";
+import type { ExternalFormalV4Am19WindowManifestV2 } from "../../apps/server/src/runtime/twin_runtime/external_formal_v4_amendment19_runner_v2.js";
 import {
   MCFT_CAP09_AM19_FORMAL_DATABASE_V4,
   validateMcftCap09Am19FormalArmV1,
@@ -26,7 +26,7 @@ type JsonRecordV2 = Record<string, unknown>;
 export type BuiltMcftCap09Am19StageAuthorityManifestV2 = {
   arm: McftCap09Am19FormalArmV1;
   bundle: ExternalFormalPrewindowAuthorityBundleV4;
-  manifest: ExternalFormalAmendment19WindowManifestV1 & ExternalFormalV3Am19WindowManifestV1;
+  manifest: ExternalFormalAmendment19WindowManifestV1 & ExternalFormalV4Am19WindowManifestV2;
   crop_authority: JsonRecordV2;
   configuration_matrix: JsonRecordV2;
   current_crop_authority: JsonRecordV2;
@@ -205,7 +205,7 @@ export function buildMcftCap09Am19FormalManifestFromStageAuthorityV2(input: {
     arm,
     bundle,
     manifest: manifest as ExternalFormalAmendment19WindowManifestV1
-      & ExternalFormalV3Am19WindowManifestV1,
+      & ExternalFormalV4Am19WindowManifestV2,
     crop_authority: input.crop_authority,
     configuration_matrix: input.configuration_matrix,
     current_crop_authority: input.current_crop_authority,
