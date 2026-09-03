@@ -1,3 +1,1551 @@
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-03 Continuation — Protected-Main Governed Adoption / Pre-Merge Technical Qualification Closure / Merge Authorization Frontier
+
+Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
+
+Timestamp: **2026-09-03 23:02 +08:00**
+
+Repository: liyongshang44-max/GEOX
+
+Purpose: continue MCFT-CAP-09 from the S-section Biological Stage Authority / Twin V2 Production Routing frontier through the complete protected-main governed-adoption qualification sequence. This continuation closes the remaining pre-merge technical qualification work for biological-stage authority, Twin V2 production routing, architecture-effectiveness graduation, runtime-start effective-stage hardening, historical exact-base requalification, and protected-main adoption governance. The current candidate is no longer a stacked Draft-only technical experiment. It is a clean, ready-for-review protected-main adoption PR whose required protected-main status contexts and MCFT adoption qualification workflows are all machine-successful.
+
+The current frontier is no longer “write more code into #3492.”
+
+The current frontier is:
+
+~~~text
+protected-main merge authorization
+        ↓
+post-merge architecture effectiveness certificate
+        ↓
+fresh effective current-crop authority snapshot
+        ↓
+runtime-start exact ref + SHA256 binding
+        ↓
+live activation
+        ↓
+Formal-v5
+        ↓
+A0
+        ↓
+O00–O23
+        ↓
+final exact-SHA / R2
+        ↓
+MCFT-CAP-09 COMPLETE
+~~~
+
+> **This T-section is now the highest-priority conversation continuation in this file.**
+>
+> The complete S-section immediately below remains intentionally preserved in full as historical evidence of the Biological Stage Authority / Twin V2 Production Routing / Integrated Qualification frontier.
+>
+> R/Q/P/O/N/M/L/K/J/I/H and all earlier sections remain historical evidence and must remain intact.
+>
+> Do not rewrite S to make protected-main adoption look as if it had already been qualified at the #3485 routing head.
+>
+> This handoff does **not** supersede docs/SSOT.md, the Digital Twin Master Task Line, the CAP-09 taskbook, accepted CAP-01→08 authorities, Production Hosting authority, QCP, protected-main rulesets, Formal-store authorities, or immutable qualification evidence.
+
+---
+
+## T0. READ THIS FIRST — pre-merge technical qualification is closed
+
+The S-section ended at:
+
+~~~text
+#3485 @
+a32a871638d1cbb254ab354702da05c37e4c10fe
+
+integrated production routing =
+  qualified
+
+protected-main adoption / effectiveness =
+  not yet established
+~~~
+
+At the S handoff snapshot, integrated CI was still in progress.
+
+That CI later completed successfully and the engineering line advanced through:
+
+~~~text
+effectiveness graduation
+        ↓
+runtime-start effective-stage hardening
+        ↓
+QCP ownership
+        ↓
+integrated runtime-start qualification
+        ↓
+protected-main governed adoption
+        ↓
+adoption-wide historical requalification
+        ↓
+required-context closure
+~~~
+
+The current protected-main adoption candidate is now:
+
+~~~text
+PR #3492
+
+title =
+  adopt(mcft-cap09): governed successor stack to protected main
+
+head =
+  75277bcf281d8d00cc480655013f1277763078bf
+
+base =
+  fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+
+base branch =
+  protected main
+
+state =
+  OPEN
+  READY FOR REVIEW
+
+mergeable =
+  true
+
+mergeable_state =
+  clean
+
+commits =
+  502
+
+changed_files =
+  248
+~~~
+
+Protected main remains exactly:
+
+~~~text
+fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+~~~
+
+There is no current protected-main drift.
+
+No merge has been executed.
+
+---
+
+## T1. Current task in one sentence
+
+**Do not add more implementation to #3492; obtain explicit protected-main merge authorization, merge the already-qualified governed adoption candidate, then enter post-merge architecture effectiveness → fresh current-crop authority → exact runtime-start binding before any live runtime activation.**
+
+---
+
+## T2. Why T exists above S
+
+S solved the technical deadlock caused by treating KBS phenology as the only possible biological-stage truth source.
+
+That work established:
+
+~~~text
+BiologicalStageAuthorityV1
+        ↓
+thermal biological-stage estimate
+        ↓
+current-crop composition
+        ↓
+A18 V4
+        ↓
+Twin Runtime Composition V2
+        ↓
+Production Twin Process V2 routing
+~~~
+
+However, S deliberately did **not** claim:
+
+~~~text
+protected main has adopted the successor stack
+DT-02 Amendment-03 is EFFECTIVE
+current-crop authority is production-effective
+runtime-start is armed
+live owners exist
+Formal/A0/O00 have run
+~~~
+
+T exists because the next engineering question was different:
+
+~~~text
+Can the entire qualified successor stack be adopted against the
+actual current protected main without:
+  weakening historical exact-base guards,
+  losing dependency ownership,
+  bypassing durable evidence,
+  replaying canonical diagnostics on an invalid mega-diff,
+  or accidentally activating production?
+~~~
+
+That question has now been answered pre-merge.
+
+The answer is:
+
+~~~text
+YES
+
+pre-merge technical qualification =
+  CLOSED
+
+protected-main merge itself =
+  NOT YET EXECUTED
+~~~
+
+---
+
+## T3. Effectiveness graduation successor stack after #3485
+
+The first successor after the routing frontier was architecture-effectiveness graduation.
+
+Canonical effectiveness implementation:
+
+~~~text
+PR #3486
+
+head =
+  98678b5bbcd2c8dca276f5029cf514d2357ff521
+
+base =
+  #3484 @
+  8d20fe6510377544422fb271c59b8b70e9501884
+
+changed files =
+  5
+~~~
+
+This base selection was deliberate.
+
+Do **not** base canonical effectiveness on #3485 because #3485 contains qualification-only integrated-boundary logic.
+
+Canonical #3486 preserved:
+
+~~~text
+canonical effectiveness subject =
+  exactly 5 files
+~~~
+
+QCP registration successor:
+
+~~~text
+PR #3487
+
+head =
+  59f7e64d247eca84e9c8e42143fbade34364bba7
+
+delta =
+  exactly 1 QCP file
+~~~
+
+Integrated qualification:
+
+~~~text
+PR #3488
+
+head =
+  aa591fc7d40fae450bf9c8b1e95fa8df9913d72c
+
+integrated subject =
+  5 canonical effectiveness files
+  +
+  1 QCP file
+  =
+  exactly 6 files
+~~~
+
+#3488 machine qualification closed:
+
+~~~text
+dedicated effectiveness qualification =
+  SUCCESS
+
+EA5E2 =
+  SUCCESS
+
+CI =
+  SUCCESS
+
+Phase6 =
+  SUCCESS
+~~~
+
+QCP/post-merge red lights on the stacked subject remained historical predecessor guards and were not weakened.
+
+---
+
+## T4. Runtime-start effective-stage hardening successor stack
+
+After effectiveness graduation, the next successor line hardened runtime-start so production cannot consume a candidate-only stage authority.
+
+Canonical runtime-start successor:
+
+~~~text
+PR #3489
+
+head =
+  e0bad26d944a4a42b053a8dd8b7e3531b0383326
+
+base =
+  #3487 @
+  59f7e64d247eca84e9c8e42143fbade34364bba7
+
+canonical changed-file boundary =
+  4 files
+~~~
+
+Phase5/QCP ownership successor:
+
+~~~text
+PR #3490
+
+head =
+  d82c5caccce8169c19ce7ec2230e774a68a9f636
+
+delta =
+  1 QCP file
+~~~
+
+Integrated runtime-start qualification:
+
+~~~text
+PR #3491
+
+head =
+  0e375b704141ecb1c83015938a2e54be057f7faf
+
+integrated changed-file boundary =
+  5 files
+~~~
+
+#3491 ultimately proved:
+
+~~~text
+dedicated runtime-start effective-stage qualification =
+  SUCCESS
+
+EA5E2 =
+  SUCCESS
+
+Phase5 =
+  SUCCESS
+
+accelerated 24T =
+  SUCCESS
+
+Phase6 =
+  SUCCESS
+
+CI =
+  SUCCESS
+~~~
+
+The qualification-only #3491 commit is not treated as canonical product authority.
+
+The canonical implementation frontier incorporated into adoption is #3490.
+
+---
+
+## T5. #3492 is the protected-main adoption carrier, not a new product implementation branch
+
+#3492 was created as the governed adoption carrier from:
+
+~~~text
+protected main =
+  fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+
+canonical MCFT successor implementation head =
+  d82c5caccce8169c19ce7ec2230e774a68a9f636
+~~~
+
+The initial comparison established:
+
+~~~text
+main is an ancestor of the successor stack
+
+behind_by =
+  0
+
+content conflict =
+  none
+~~~
+
+Therefore no rebase or rewritten implementation lineage was required.
+
+The adoption carrier exists to expose the complete canonical MCFT-CAP-09 successor lineage to:
+
+~~~text
+protected-main-base qualification
+required main status contexts
+QCP adoption semantics
+historical exact-base compatibility
+durable evidence requalification
+~~~
+
+It is **not** a license to rewrite historical accepted code until every path-triggered workflow becomes visually green.
+
+---
+
+## T6. The first protected-main adoption blocker was QCP predecessor drift
+
+Initial #3492 qualification failed QCP at:
+
+~~~text
+MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:
+fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+~~~
+
+Independent audit showed:
+
+~~~text
+Qualification Evidence Registry
+  already governed:
+    fa6e260d...
+
+QCP authority / workflow
+  did not yet admit:
+    fa6e260d...
+~~~
+
+The correct repair followed existing repository precedent:
+
+~~~text
+add one exact protected-main adoption predecessor
+  =
+  fa6e260d...
+
+do not add wildcard current-main semantics
+
+do not weaken historical predecessor checks
+
+do not alter:
+  POSTMERGE_V13 predecessor =
+    46367333d228a2b90a86ff6a33aebc334f3d73a2
+~~~
+
+A dedicated environment identity was added:
+
+~~~text
+PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA
+~~~
+
+This is an exact-SHA adoption gate, not a generic main-branch bypass.
+
+---
+
+## T7. Adoption-wide EA5E2 exposed four unowned DT-02 architecture paths
+
+Once the exact protected-main predecessor was accepted, adoption-wide EA5E2 found four previously hidden unknown paths:
+
+~~~text
+.github/workflows/
+  dt-02-architecture-amendment-03-biological-stage-authority.yml
+
+docs/digital_twin/
+  GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md
+
+docs/digital_twin/
+  GEOX-DT-02-ARCHITECTURE-DECISION-REGISTER.json
+
+scripts/governance_acceptance/
+  ACCEPTANCE_DT_02_ARCHITECTURE_AMENDMENT_03.cjs
+~~~
+
+This was not a runtime defect.
+
+The stacked development line had inherited those files as ancestors, so the ownership gap had remained hidden.
+
+The repair introduced an independent exact-path resolver:
+
+~~~text
+DT02_BIOLOGICAL_STAGE_ARCHITECTURE_AMENDMENT_03
+~~~
+
+and attached it as dependency/requalification input to the existing six biological-stage successor checks:
+
+~~~text
+T4R1_BIOLOGICAL_STAGE_AUTHORITY
+T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION
+A18_BIOLOGICAL_STAGE_CONTEXT_V4
+TWIN_V2_STAGE_AUTHORITY_SUCCESSOR
+PRODUCTION_TWIN_PROCESS_V2_ROUTING
+BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION
+~~~
+
+No new architecture authority was invented.
+
+No canonical routing exact-file gate was expanded.
+
+After the repair, central planner produced:
+
+~~~text
+status =
+  PASS
+
+unknown_changed_paths =
+  []
+
+authority_errors =
+  []
+
+resolver_errors =
+  []
+
+blockers =
+  []
+~~~
+
+---
+
+## T8. Do not replay canonical exact-base diagnostics against a 248-file adoption subject
+
+QCP blocker-preflight then exposed a second adoption-specific governance problem.
+
+Several canonical diagnostics correctly require:
+
+~~~text
+their original exact predecessor
++
+their original exact changed-file boundary
+~~~
+
+Running them directly against a protected-main mega-adoption subject would necessarily fail.
+
+That does **not** authorize weakening those canonical diagnostics.
+
+The correct mechanism was the repository's existing:
+
+~~~text
+DURABLE_REQUALIFICATION_EVIDENCE
+~~~
+
+model.
+
+For protected-main adoption only, already-qualified exact-subject runs are admitted through immutable bindings that verify:
+
+~~~text
+check_id
+workflow name
+workflow path
+run id
+successful conclusion
+subject SHA
+governed base SHA
+subject ancestor relation
+dependency digest
+immutable binding SHA256
+~~~
+
+The original canonical diagnostics remain intact for their original exact subjects.
+
+---
+
+## T9. Biological-stage successor durable evidence was explicitly re-bound
+
+Fresh immutable evidence was established for:
+
+~~~text
+T4R1 biological-stage authority
+  #3456 @ ffc9d035...
+  run 33714356587
+  SUCCESS
+
+current-crop authority composition
+  #3457 @ f55dfb2d...
+  run 33714620747
+  SUCCESS
+
+A18 biological-stage context V4
+  #3458 @ 1d932372...
+  run 33715042012
+  SUCCESS
+
+Twin V2 stage-authority successor
+  #3462 @ d9d395ee...
+  run 33720451005
+  SUCCESS
+
+Production Twin Process V2 routing
+  #3473 @ 2e42bf7d...
+  run 33740861038
+  SUCCESS
+
+biological-stage effectiveness graduation
+  #3486 @ 98678b5b...
+  run 33750290463
+  SUCCESS
+~~~
+
+The evidence registry validates the immutable run metadata.
+
+Do not reduce this to:
+
+~~~text
+“a previous run was green”
+~~~
+
+The current QCP checks the durable binding itself.
+
+---
+
+## T10. Adoption-wide requalification exposed nine historical checks that needed fresh settlement
+
+After the biological successor evidence was bound, the full protected-main adoption subject exposed nine broader historical checks:
+
+~~~text
+V13_AUTONOMOUS_FORCING_FOUNDATION
+V13_HOLISTIC_SCHEMA
+V13_NEXT_TICK_VIABILITY
+LEGACY_AM19_PERSISTENT_24T
+PHASE2_EVIDENCE_PROVIDER_MODULES
+PHASE3_EVIDENCE_RUNTIME_FOUNDATION
+PHASE4_TWIN_RUNTIME_FOUNDATION
+PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS
+PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION
+~~~
+
+Do not treat all nine as the same class.
+
+They split into:
+
+~~~text
+fresh exact-head workflows already SUCCESS:
+  V13 x3
+  Phase3
+  Phase4
+  Phase5
+
+adoption predecessor / compatibility work required:
+  Phase2
+  Phase7
+  legacy Amendment-19 persistent 24T
+~~~
+
+The final settlement registered fresh immutable workflow-run evidence and durable anchors only after corresponding successful machine proof existed.
+
+---
+
+## T11. Phase2 adoption requalification was not allowed to rewrite the frozen Phase2 authority
+
+Phase2 initially failed because its successor requalification gate only accepted the historical Phase1/Phase2 predecessors.
+
+The protected-main adoption repair added one exact mode:
+
+~~~text
+MCFT_CAP09_PROTECTED_MAIN_ADOPTION = 1
+
+base must equal =
+  fa6e260d...
+~~~
+
+The adoption continuity proof requires:
+
+~~~text
+historical EA5C2B1 gate =
+  unchanged
+
+historical EA5C2B1 authority =
+  unchanged
+
+historical runtime acceptance =
+  unchanged
+
+later provider evolution =
+  requalified by current workflow
+~~~
+
+It does not claim the newer provider implementation is byte-identical to the old Phase2 provider implementation.
+
+Fresh protected-main adoption Phase2 proof:
+
+~~~text
+Phase2 live KBS ingress executor
+  33765430003
+  SUCCESS
+~~~
+
+Production cadence was not activated by this proof.
+
+---
+
+## T12. Phase7 candidate-promotion adoption routing required exact-main predecessor support
+
+The historical Phase7 workflow also had an exact predecessor fence.
+
+Protected-main adoption added only:
+
+~~~text
+fa6e260d...
+~~~
+
+as an explicit adoption predecessor.
+
+The workflow then ran the actual isolated qualification rather than merely passing the guard.
+
+Current exact-head proof:
+
+~~~text
+Phase7 candidate promotion composition
+  33765430655
+  SUCCESS
+~~~
+
+The proof crosses:
+
+~~~text
+typecheck
+retained-raw replay
+isolated MinIO
+private candidate → PostgreSQL fenced promotion
+machine proof
+~~~
+
+Do not downgrade this to a path-only gate.
+
+---
+
+## T13. Legacy Amendment-19 24T exposed two historical compatibility debts
+
+Protected-main adoption forced the legacy Amendment-19 24T workflow through code paths that historical successor routing had often skipped.
+
+Two real compatibility issues were exposed.
+
+### T13.1 Frozen runner V3 symbol compatibility
+
+The frozen runner referenced:
+
+~~~text
+MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V3
+MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V3
+~~~
+
+while the authority bundle exposed the current V4 symbols.
+
+The frozen runner itself was not modified.
+
+The repository already contained:
+
+~~~text
+EXECUTE_MCFT_CAP_09_AM19_PHASE2_AUTHORITY_SYMBOL_COMPATIBILITY_V1.ts
+~~~
+
+The adoption route was corrected to use that existing compatibility harness.
+
+The harness creates a temporary compatibility subject for typecheck/selftest.
+
+It does not create a new production authority.
+
+It does not commit generated compatibility files.
+
+### T13.2 Retired direct EA5E2 graph gate
+
+The legacy workflow also directly called an old EA5E2 graph acceptance that expected a historical manual carrier.
+
+Current central planner semantics have already retired that graph under Phase6.
+
+The repair therefore did **not** rewrite the old carrier digest or reactivate the retired production graph.
+
+Protected-main adoption uses:
+
+~~~text
+central applicability planner
++
+Phase6 production-owner retirement audit
+~~~
+
+while historical non-adoption modes retain their prior direct-gate behavior.
+
+Current exact-head legacy proof:
+
+~~~text
+legacy Amendment-19 persistent 24T
+  33765430710
+  SUCCESS
+~~~
+
+The static proof passed:
+
+~~~text
+symbol compatibility
+Phase6-retired EA5E2 route
+crop-window preflight
+pure orchestration selftests
+persistence-free 24T
+no-premature-Formal-effect
+~~~
+
+The persistent-live job remained skipped.
+
+---
+
+## T14. Remaining historical exact-base workflow routing was closed after dc0515
+
+A later parallel head drift occurred after:
+
+~~~text
+dc0515ce875ce930e3deaf18db0158a16b1e8384
+~~~
+
+The drift was reconstructed before continuing.
+
+The three adoption qualification commits were:
+
+~~~text
+3380cbf91ba2df7bb8af21d73a1fbfffa112120b
+  fix(mcft-cap09): route historical checks for protected-main adoption
+
+beb28550aba718cea6af2ebe7709200d0f91417f
+  gov(mcft-cap09): own adoption historical-check routing paths
+
+75277bcf281d8d00cc480655013f1277763078bf
+  fix(mcft-cap09): route remaining registry checks for adoption
+~~~
+
+They closed adoption qualification routing for:
+
+~~~text
+S1 registry
+S2 registry
+S3 registry
+S4 registry
+S5 registry
+S6 registry
+
+trusted registry bootstrap
+
+S3 persistent sequential scheduler
+
+Amendment-19 scheduler clock seam
+
+V13 exact-base fact promotion
+
+QCP adoption routing
+~~~
+
+These commits are adoption qualification/governance routing.
+
+They are not a new production runtime implementation.
+
+Do not classify them as a new Decision/Twin/provider production feature.
+
+---
+
+## T15. Current exact-head machine qualification — all critical lanes green
+
+Current exact head:
+
+~~~text
+#3492 @
+75277bcf281d8d00cc480655013f1277763078bf
+~~~
+
+Current machine evidence:
+
+~~~text
+QCP
+  33765431000
+  SUCCESS
+
+CI
+  33765430702
+  SUCCESS
+
+EA5E2 runtime dependency graph
+  33765431199
+  SUCCESS
+
+Phase5 production-equivalent
+  33765431263
+  SUCCESS
+
+accelerated 24T
+  33765430853
+  SUCCESS
+
+Phase2 live KBS ingress
+  33765430003
+  SUCCESS
+
+Phase7 candidate promotion composition
+  33765430655
+  SUCCESS
+
+legacy Amendment-19 persistent 24T
+  33765430710
+  SUCCESS
+
+post-merge V13 control-plane qualification
+  33765430765
+  SUCCESS
+
+main-ruleset readiness
+  33765430815
+  SUCCESS
+
+delivery policy
+  33765431500
+  SUCCESS
+
+release lane
+  33765431029
+  SUCCESS
+
+candidate declaration
+  33765430557
+  SUCCESS
+~~~
+
+This is the first point in this continuation where the complete protected-main adoption candidate has converged without an unexplained MCFT qualification red light.
+
+---
+
+## T16. Protected-main required contexts are satisfied
+
+The active protected-main ruleset requires these eight contexts:
+
+~~~text
+acceptance
+
+build-test
+
+mcft-delivery-policy-v2-contract
+
+mcft-candidate-integrity-pr-selftest
+
+mcft-release-lane-pr-selftest
+
+mcft-main-ruleset-readiness-v1
+
+mcft-candidate-integrity-enforce-current-pr
+
+mcft-release-lane-enforce-current-pr
+~~~
+
+At:
+
+~~~text
+75277bcf281d8d00cc480655013f1277763078bf
+~~~
+
+each required context has a valid SUCCESS.
+
+Some workflows also emit same-name skipped/non-applicable jobs.
+
+Do not classify those skipped instances as blockers when the required context itself has a valid SUCCESS.
+
+Current GitHub PR state is:
+
+~~~text
+READY FOR REVIEW
+
+mergeable =
+  true
+
+mergeable_state =
+  clean
+~~~
+
+This is a materially different state from the earlier Draft/blocked adoption frontier.
+
+---
+
+## T17. Production one-shot workflows remain deliberately skipped
+
+Throughout protected-main adoption qualification, real production one-shot lanes remained:
+
+~~~text
+SKIPPED
+~~~
+
+This includes production provisioning / credential / runtime activation paths.
+
+Therefore the adoption qualification did **not** accidentally perform:
+
+~~~text
+local or remote production Docker/runtime start
+
+production Evidence owner activation
+
+production Twin owner activation
+
+production DB mutation
+
+provider production cadence activation
+
+Formal-v5 activation
+
+A0
+
+O00–O23
+~~~
+
+Isolated PostgreSQL / MinIO / proof containers used inside CI qualification are not production activation.
+
+Do not conflate isolated qualification infrastructure with production ownership.
+
+---
+
+## T18. #3493 is no longer an independent continuation frontier
+
+A governance-only successor PR was used during protected-main adoption qualification to isolate QCP/adoption-control changes.
+
+Its changes were subsequently folded into the active #3492 adoption lineage.
+
+Current state:
+
+~~~text
+#3493 =
+  CLOSED
+
+#3492 =
+  current adoption authority candidate
+~~~
+
+Do not continue development from #3493.
+
+Do not reopen #3493 unless a separate governance-only repair is explicitly required and separately justified.
+
+The live continuation point is #3492 exact head.
+
+---
+
+## T19. Current classification after pre-merge technical closure
+
+### A — controllable pre-merge implementation / qualification defects
+
+~~~text
+0 currently known
+~~~
+
+Closed in T:
+
+~~~text
+protected-main QCP predecessor mismatch
+
+DT-02 Amendment-03 unknown-path ownership
+
+canonical diagnostic misuse on mega-adoption diff
+
+biological-stage durable evidence binding
+
+V13 / Phase3 / Phase4 / Phase5 adoption evidence settlement
+
+Phase2 protected-main adoption continuity
+
+Phase7 protected-main adoption predecessor routing
+
+legacy Amendment-19 V3→V4 symbol compatibility
+
+legacy Amendment-19 retired EA5E2 routing
+
+S1–S6 / trusted registry adoption routing
+
+S3 persistent scheduler adoption routing
+
+Amendment-19 scheduler clock-seam adoption routing
+
+V13 exact-base fact-promotion adoption routing
+
+required protected-main context convergence
+~~~
+
+### B — protected-main governance
+
+Current remaining gate:
+
+~~~text
+explicit authorization to merge #3492
+~~~
+
+The technical candidate is ready for review and clean.
+
+The merge itself has not been authorized in this handoff.
+
+### C — post-merge effectiveness / runtime-start preparation
+
+After merge, still required:
+
+~~~text
+new exact protected-main SHA
+
+post-merge architecture effectiveness certificate
+
+fresh effective current-crop authority snapshot
+
+runtime-start exact ref + SHA256 binding
+
+fresh runtime-start authority verification
+~~~
+
+### D — live activation / CAP-09 Taskbook completion
+
+Still future work:
+
+~~~text
+production runtime start
+
+live Evidence fenced owner
+
+live Twin fenced scheduler owner
+
+Formal-v5
+
+A0
+
+O00–O23
+
+final exact-SHA / R2 effectiveness
+
+MCFT-CAP-09 COMPLETE
+~~~
+
+### E — out of scope
+
+~~~text
+B-Line implementation
+Commercial/B-Line authority repair
+unrelated repository audit expansion
+~~~
+
+---
+
+## T20. What has NOT happened
+
+Do not infer any of the following from READY FOR REVIEW or the all-green pre-merge qualification:
+
+~~~text
+#3492 has merged
+
+protected main contains the successor stack
+
+DT-02 Amendment-03 is already EFFECTIVE on protected main
+
+the architecture effectiveness certificate has been issued
+
+the current-crop authority is already production-effective
+
+runtime-start arm is armed
+
+runtime-start exact refs are bound to the future merge SHA
+
+production Docker is running
+
+production Evidence/Twin owners are live
+
+Formal-v5 has started
+
+A0 has started
+
+O00–O23 have started
+
+MCFT-CAP-09 is COMPLETE
+~~~
+
+Pre-merge qualification closure is necessary.
+
+It is not the same as post-merge effectiveness or live activation.
+
+---
+
+## T21. Current authorization boundary
+
+The current next action is no longer an engineering implementation action.
+
+It is an authorization action:
+
+~~~text
+MERGE #3492
+~~~
+
+Current candidate:
+
+~~~text
+PR =
+  #3492
+
+head =
+  75277bcf281d8d00cc480655013f1277763078bf
+
+base =
+  fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+
+state =
+  READY FOR REVIEW
+
+mergeable_state =
+  clean
+~~~
+
+Do **not** merge without explicit authorization.
+
+Do **not** add speculative code to #3492 while waiting for merge authorization.
+
+Every unnecessary new commit would:
+
+~~~text
+change the exact adoption head
+
+invalidate current exact-head qualification evidence
+
+trigger the full 248-file adoption matrix again
+
+risk reopening already-closed historical exact-base debt
+~~~
+
+The correct state while awaiting authorization is:
+
+~~~text
+freeze #3492 exact head
+~~~
+
+---
+
+## T22. Exact next steps after merge authorization
+
+### Step 1 — re-check exact heads immediately before merge
+
+Confirm:
+
+~~~text
+#3492 ==
+  75277bcf281d8d00cc480655013f1277763078bf
+
+protected main ==
+  fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+
+mergeable =
+  true
+
+mergeable_state =
+  clean
+~~~
+
+If either SHA drifts:
+
+~~~text
+STOP
+
+reconstruct descendants
+
+do not merge stale authority
+~~~
+
+### Step 2 — merge only the governed #3492 adoption candidate
+
+Do not merge qualification-only historical branches independently.
+
+Do not merge #3488 / #3491 as product authority.
+
+After merge, record the **actual new protected-main SHA**.
+
+Do not assume it equals the pre-merge PR head.
+
+### Step 3 — issue post-merge DT-02 Amendment-03 effectiveness certificate
+
+The architecture-effectiveness builder is intentionally post-merge aware.
+
+It must bind:
+
+~~~text
+actual protected-main SHA
+
+exact Amendment-03 blob
+
+exact Decision Register blob
+
+exact graduation authority blob
+~~~
+
+It must not self-declare effectiveness from a pre-merge Draft head.
+
+### Step 4 — build a fresh effective current-crop authority snapshot
+
+The snapshot must preserve:
+
+~~~text
+persistent lifecycle authority
+
+biological stage =
+  R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE
+  unless new qualified evidence legitimately changes it
+
+epistemic class =
+  THERMAL_MODEL_DERIVED
+  unless superseded by stronger qualified evidence
+
+water-use stage =
+  governed mapping
+
+Kc =
+  frozen schedule lookup
+
+architecture_effective =
+  true only under valid post-merge certificate
+
+runtime_consumption_authorized =
+  true only under valid effectiveness rules
+~~~
+
+Do not reuse a candidate-only snapshot as production truth.
+
+### Step 5 — exact-bind runtime-start refs and SHA256 digests
+
+Populate production runtime-start authority with exact:
+
+~~~text
+current_crop_authority_ref
+current_crop_authority_sha256
+
+biological_stage_architecture_effectiveness_ref
+biological_stage_architecture_effectiveness_sha256
+~~~
+
+Then re-run runtime-start builder/parser acceptance.
+
+### Step 6 — only then evaluate live activation authorization
+
+Do not start production runtime simply because post-merge effectiveness is green.
+
+Live activation still requires the previously frozen owner/runtime sequence.
+
+### Step 7 — resume Formal/A0/O00 closure only after live runtime prerequisites
+
+Order remains:
+
+~~~text
+runtime activation
+        ↓
+live owners
+        ↓
+Formal-v5
+        ↓
+A0
+        ↓
+O00–O23
+        ↓
+final exact-SHA / R2
+~~~
+
+---
+
+## T23. Pitfalls encountered in this continuation — do not repeat them
+
+### T23.1 Do not add code to a clean READY-FOR-REVIEW adoption head
+
+Once all required contexts and MCFT qualification are green, new code is not “progress.”
+
+It is head churn.
+
+Freeze the candidate.
+
+### T23.2 Do not weaken canonical exact-base gates for a mega-adoption PR
+
+Canonical exact-subject diagnostics protect historical authority.
+
+Use protected-main adoption routing and durable requalification evidence instead.
+
+### T23.3 Do not add a generic “current main” predecessor
+
+The adoption predecessor is:
+
+~~~text
+one exact SHA
+~~~
+
+not:
+
+~~~text
+whatever main is today
+~~~
+
+Any main drift requires a new exact adjudication.
+
+### T23.4 Do not confuse unknown_changed_paths with runtime regression
+
+Adoption-wide unknown paths may mean QCP ownership is incomplete.
+
+Fix resolver ownership before touching runtime code.
+
+### T23.5 Do not create a fake fresh architecture run by replaying an exact-bound canonical diagnostic on 248 files
+
+Use immutable exact-subject evidence plus current dependency digest/ancestor validation.
+
+### T23.6 Do not treat a successful run ID as evidence without immutable binding
+
+Evidence must bind:
+
+~~~text
+run
+workflow
+subject
+base
+digest
+ancestor
+immutable hash
+~~~
+
+### T23.7 Do not modify the frozen Amendment-19 runner to restore V3 symbols
+
+Use the existing V3→V4 compatibility harness.
+
+Frozen accepted runner semantics remain historical evidence.
+
+### T23.8 Do not resurrect the retired EA5E2 production graph
+
+Protected-main adoption must use the central planner and Phase6 retirement authority.
+
+Do not rewrite the old carrier digest to make the obsolete direct gate pass.
+
+### T23.9 Do not classify isolated CI PostgreSQL/MinIO as production activation
+
+Qualification containers are not live production owners.
+
+Production one-shots remained skipped.
+
+### T23.10 Do not force every path-triggered historical workflow to become a protected-main required context
+
+Protected-main ruleset has an explicit required context set.
+
+Classify non-required historical red/skipped workflows by applicability.
+
+### T23.11 Same-name skipped checks do not invalidate a valid required SUCCESS context
+
+Inspect the actual required context conclusion.
+
+Do not treat all rendered check rows as equivalent.
+
+### T23.12 Always reconstruct parallel head drift before continuing
+
+This continuation encountered:
+
+~~~text
+dc0515...
+  →
+3380cbf...
+  →
+beb28550...
+  →
+75277bcf...
+~~~
+
+Never continue writing from an earlier SHA after such drift.
+
+### T23.13 Do not confuse qualification-only successor commits with canonical product authority
+
+#3488 and #3491 remain qualification views.
+
+The adopted product lineage is the governed canonical successor stack.
+
+### T23.14 Do not merge because mergeable=true alone
+
+Required contexts, MCFT qualification, exact head/base, and explicit authorization all matter.
+
+### T23.15 Do not issue architecture effectiveness before the merge SHA exists
+
+Effectiveness binds the actual protected-main result.
+
+Pre-merge head is not a substitute.
+
+### T23.16 Do not arm runtime-start before effectiveness and fresh current-crop authority are bound
+
+The runtime-start builder now intentionally requires those exact refs/digests.
+
+### T23.17 Do not infer CAP-09 completion from pre-merge technical closure
+
+Taskbook closure still requires live runtime + Formal-v5 + A0 + O00–O23 + final effectiveness.
+
+---
+
+## T24. Current practical meaning
+
+The entire non-live engineering sequence opened by the biological-stage problem has now reached a clean adoption candidate:
+
+~~~text
+KBS phenology no longer sole stage truth
+        ↓
+BiologicalStageAuthorityV1
+        ↓
+thermal biological stage
+        ↓
+persistent lifecycle + stage composition
+        ↓
+A18 V4
+        ↓
+Twin Runtime Composition V2
+        ↓
+Production Twin Process V2
+        ↓
+architecture effectiveness graduation
+        ↓
+runtime-start effective-stage hardening
+        ↓
+protected-main adoption qualification
+        ↓
+historical exact-base requalification
+        ↓
+required main contexts
+        ↓
+READY FOR REVIEW
+~~~
+
+The correct next move is **not** more implementation.
+
+It is:
+
+~~~text
+explicit merge authorization
+~~~
+
+After merge, the frontier becomes effectiveness/binding, not another pre-merge architecture rewrite.
+
+---
+
+## T25. First actions in the next conversation
+
+Before any action:
+
+~~~text
+1. Read this T-section.
+2. Re-check #3492 exact head.
+3. Re-check protected main exact head.
+4. Re-check READY FOR REVIEW / mergeable / clean.
+5. Re-check required contexts if any head changed.
+~~~
+
+Expected continuation if no drift:
+
+~~~text
+#3492 =
+  75277bcf281d8d00cc480655013f1277763078bf
+
+protected main =
+  fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+
+next required authority =
+  explicit merge authorization
+~~~
+
+If merge is authorized:
+
+~~~text
+merge #3492
+        ↓
+record actual new protected-main SHA
+        ↓
+post-merge architecture effectiveness certificate
+        ↓
+fresh effective current-crop snapshot
+        ↓
+runtime-start exact ref/SHA256 binding
+~~~
+
+If merge is **not** authorized:
+
+~~~text
+freeze #3492
+do not add speculative code
+do not start production runtime
+~~~
+
+---
+
 # GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-03 Continuation — Biological Stage Authority / Twin V2 Production Routing / Integrated Qualification Frontier
 
 Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
