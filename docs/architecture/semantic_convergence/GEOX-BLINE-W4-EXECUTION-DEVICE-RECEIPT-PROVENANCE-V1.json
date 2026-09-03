@@ -5,8 +5,8 @@
   "source_authority": "GEOX-BLINE-PRODUCTION-CALLER-AUTHORITY-INVENTORY-V1.json",
   "closure_domain": "CD-04",
   "closure_domain_invariant": "Execution, device sensing and receipt provenance are bound to authenticated executor/operator/device principals; caller-declared actor/device/scope fields cannot create authority.",
-  "discovery_policy": "NO_WHOLE_REPOSITORY_DISCOVERY; EXACT_PREDECESSOR_ROWS_ONLY",
-  "bounded_predecessor_row_count": 15,
+  "discovery_policy": "NO_WHOLE_REPOSITORY_DISCOVERY; EXACT_PREDECESSOR_ROWS_ONLY; DIRECT_CAPABILITY_FANOUT_CORRECTION_ONLY",
+  "bounded_predecessor_row_count": 20,
   "bounded_predecessor_rows": [
     {
       "surface_id": "BSEC-004",
@@ -105,6 +105,34 @@
       "w4_disposition": "PRESERVE_RECEIPT_SEMANTICS; OPERATOR_OR_EXECUTOR_ONLY; EXECUTOR_ID_FROM_AUTH_CONTEXT"
     },
     {
+      "surface_id": "BSEC-077",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "entry_symbol": "POST /api/v1/actions/execute",
+      "exact_route_or_trigger": "/api/v1/actions/execute",
+      "predecessor_authz_capability": [
+        "action.task.dispatch",
+        "ao_act.task.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_COMPATIBILITY",
+      "predecessor_principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "PRESERVE_PRE_W4_EFFECTIVE_PRINCIPALS_ADMIN_OR_OPERATOR_ONLY; EXECUTOR_DETERMINISTIC_DENY; NO_EXECUTION_SEMANTIC_CHANGE"
+    },
+    {
+      "surface_id": "BSEC-078",
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "entry_symbol": "POST /api/v1/operations/manual",
+      "exact_route_or_trigger": "/api/v1/operations/manual",
+      "predecessor_authz_capability": [
+        "action.task.dispatch",
+        "ao_act.task.write"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_CAPABILITY_COMPATIBILITY",
+      "predecessor_principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "PRESERVE_PRE_W4_EFFECTIVE_PRINCIPALS_ADMIN_OR_OPERATOR_ONLY; EXECUTOR_DETERMINISTIC_DENY; NO_MANUAL_OPERATION_SEMANTIC_CHANGE"
+    },
+    {
       "surface_id": "BSEC-080",
       "source_path": "apps/server/src/routes/control_ao_act.ts",
       "entry_symbol": "registerAoActLegacyRoutes#/api/control/ao_act/receipt",
@@ -130,6 +158,48 @@
       "predecessor_principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
       "predecessor_declared_actor_binding": "NOT_APPLICABLE",
       "w4_disposition": "DEVICE_OR_GATEWAY_SOURCE_REQUIRES_DEVICE_SECRET_AND_EXACT_CREDENTIAL_DEVICE_FIELD_SCOPE; NON_DEVICE_SERVICE_SOURCE_RETAINS_TELEMETRY_WRITE"
+    },
+    {
+      "surface_id": "BSEC-161",
+      "source_path": "apps/server/src/routes/fail_safe_v1.ts",
+      "entry_symbol": "POST /api/v1/manual-takeovers/:takeover_id/ack",
+      "exact_route_or_trigger": "/api/v1/manual-takeovers/:takeover_id/ack",
+      "predecessor_authz_capability": [
+        "security.admin",
+        "action.task.dispatch"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_SECURITY_ADMIN_OR_DISPATCH_ALTERNATE",
+      "predecessor_principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "PRESERVE_PRE_W4_EFFECTIVE_PRINCIPALS_ADMIN_OR_OPERATOR_ONLY; EXECUTOR_DETERMINISTIC_DENY; NO_FAIL_SAFE_SEMANTIC_CHANGE"
+    },
+    {
+      "surface_id": "BSEC-162",
+      "source_path": "apps/server/src/routes/fail_safe_v1.ts",
+      "entry_symbol": "POST /api/v1/manual-takeovers/:takeover_id/complete",
+      "exact_route_or_trigger": "/api/v1/manual-takeovers/:takeover_id/complete",
+      "predecessor_authz_capability": [
+        "security.admin",
+        "action.task.dispatch"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_SECURITY_ADMIN_OR_DISPATCH_ALTERNATE",
+      "predecessor_principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "PRESERVE_PRE_W4_EFFECTIVE_PRINCIPALS_ADMIN_OR_OPERATOR_ONLY; EXECUTOR_DETERMINISTIC_DENY; NO_FAIL_SAFE_SEMANTIC_CHANGE"
+    },
+    {
+      "surface_id": "BSEC-163",
+      "source_path": "apps/server/src/routes/fail_safe_v1.ts",
+      "entry_symbol": "POST /api/v1/fail-safe/events/:fail_safe_event_id/resolve",
+      "exact_route_or_trigger": "/api/v1/fail-safe/events/:fail_safe_event_id/resolve",
+      "predecessor_authz_capability": [
+        "security.admin",
+        "action.task.dispatch"
+      ],
+      "predecessor_caller_authority_status": "AUTHENTICATED_BUT_SECURITY_ADMIN_OR_DISPATCH_ALTERNATE",
+      "predecessor_principal_type": "HUMAN_OR_SERVICE_BEARER_PRINCIPAL",
+      "predecessor_declared_actor_binding": "NOT_APPLICABLE",
+      "w4_disposition": "PRESERVE_PRE_W4_EFFECTIVE_PRINCIPALS_ADMIN_OR_OPERATOR_ONLY; EXECUTOR_DETERMINISTIC_DENY; NO_FAIL_SAFE_SEMANTIC_CHANGE"
     },
     {
       "surface_id": "BSEC-185",
@@ -197,7 +267,27 @@
       "w4_disposition": "REQUIRE_OPERATOR_OR_EXECUTOR_RECEIPT_PRINCIPAL; RECEIPT_EXECUTOR_FROM_AUTH; RETAIN_ACCEPTANCE_AND_OPERATION_PLAN_TRANSITIONS"
     }
   ],
-  "governed_baselines": [
+  "capability_fanout_correction": {
+    "trigger": "CENTRAL_ROLE_MATRIX_DELTA: action.task.dispatch added to executor",
+    "added_exact_repair_rows": [
+      "BSEC-077",
+      "BSEC-078",
+      "BSEC-161",
+      "BSEC-162",
+      "BSEC-163"
+    ],
+    "required_effective_principals": "PRE_W4_ADMIN_OR_OPERATOR_ONLY",
+    "executor_disposition": "DETERMINISTIC_DENY"
+  },
+  "governed_regression_baselines": [
+    {
+      "surface_id": "BSEC-067",
+      "rule": "Operator Dispatch dispatch remains admin/operator-only; executor must not obtain Operator Dispatch authority"
+    },
+    {
+      "surface_id": "BSEC-068",
+      "rule": "Operator Dispatch retry remains admin/operator-only; executor must not obtain Operator Dispatch authority"
+    },
     {
       "surface_id": "BSEC-169",
       "rule": "MQTT application-layer device credential validation remains unchanged"

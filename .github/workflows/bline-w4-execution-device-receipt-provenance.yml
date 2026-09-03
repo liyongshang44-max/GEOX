@@ -14,6 +14,7 @@ on:
       - 'apps/server/src/domain/controlplane/task_service.ts'
       - 'apps/server/src/routes/control_ao_act.ts'
       - 'apps/server/src/routes/decision_engine_v1.ts'
+      - 'apps/server/src/routes/fail_safe_v1.ts'
       - 'apps/server/src/domain/auth/roles.ts'
       - 'config/auth/security_acceptance_tokens.json'
       - 'apps/executor/src/runtime_loop.ts'

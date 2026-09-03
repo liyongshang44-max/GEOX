@@ -10,10 +10,10 @@ function block(src,start,end){const s=src.indexOf(start);assert(s>=0,"source mar
 const pred=json(PREDECESSOR),w4=json(W4);
 assert(w4.version==="GEOX_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1","W4 version drift");
 assert(w4.authority_base===BASE,"W4 authority base drift",w4.authority_base);
-assert(w4.discovery_policy==="NO_WHOLE_REPOSITORY_DISCOVERY; EXACT_PREDECESSOR_ROWS_ONLY","W4 discovery policy drift");
+assert(w4.discovery_policy==="NO_WHOLE_REPOSITORY_DISCOVERY; EXACT_PREDECESSOR_ROWS_ONLY; DIRECT_CAPABILITY_FANOUT_CORRECTION_ONLY","W4 discovery policy drift");
 assert(sh(["diff","--name-only",BASE,"HEAD","--",PREDECESSOR])==="","frozen predecessor inventory modified");
-const ids=["BSEC-004","BSEC-018","BSEC-019","BSEC-020","BSEC-021","BSEC-050","BSEC-053","BSEC-076","BSEC-080","BSEC-102","BSEC-185","BSEC-186","BSEC-187","BSEC-188","BSEC-192"];
-assert(w4.bounded_predecessor_row_count===15&&w4.bounded_predecessor_rows?.length===15,"W4 bounded count drift");
+const ids=["BSEC-004","BSEC-018","BSEC-019","BSEC-020","BSEC-021","BSEC-050","BSEC-053","BSEC-076","BSEC-077","BSEC-078","BSEC-080","BSEC-102","BSEC-161","BSEC-162","BSEC-163","BSEC-185","BSEC-186","BSEC-187","BSEC-188","BSEC-192"];
+assert(w4.bounded_predecessor_row_count===20&&w4.bounded_predecessor_rows?.length===20,"W4 bounded count drift");
 assert(JSON.stringify(w4.bounded_predecessor_rows.map(x=>x.surface_id).sort())===JSON.stringify([...ids].sort()),"W4 bounded row set drift");
 const predById=new Map((pred.surfaces||[]).map(x=>[x.surface_id,x]));
 for(const row of w4.bounded_predecessor_rows){
@@ -21,6 +21,13 @@ for(const row of w4.bounded_predecessor_rows){
  assert(row.source_path===p.source_path&&row.entry_symbol===p.entry_symbol&&row.exact_route_or_trigger===p.exact_route_or_trigger,"predecessor identity drift",row.surface_id);
  assert(JSON.stringify(row.predecessor_authz_capability)===JSON.stringify(p.authz_capability),"predecessor capability truth drift",row.surface_id);
  assert(row.predecessor_caller_authority_status===p.caller_authority_status,"predecessor status truth drift",row.surface_id);
+}
+assert(JSON.stringify(w4.capability_fanout_correction?.added_exact_repair_rows?.slice().sort())===JSON.stringify(["BSEC-077","BSEC-078","BSEC-161","BSEC-162","BSEC-163"].sort()),"W4 direct capability fan-out row set drift");
+const baselineIds=["BSEC-067","BSEC-068","BSEC-169","BSEC-170"];
+assert(JSON.stringify((w4.governed_regression_baselines||[]).map(x=>x.surface_id).sort())===JSON.stringify([...baselineIds].sort()),"W4 governed regression baseline set drift");
+for(const id of baselineIds){
+ const p=predById.get(id);assert(p,"missing governed baseline predecessor row",id);
+ assert(sh(["diff","--name-only",BASE,"HEAD","--",p.source_path])==="","W4 regression baseline production source changed",id);
 }
 const roles=read("apps/server/src/domain/auth/roles.ts");
 const executorRow=roles.split(/\r?\n/).find(x=>x.includes('executor: ['));
@@ -73,6 +80,26 @@ const wrapper=block(task,'app.post("/api/v1/ao-act/receipts"','app.get("/api/v1/
 assert(wrapper.includes("requireReceiptPrincipalV1(auth, reply)")&&wrapper.includes("executor_id: executionPrincipal")&&wrapper.includes("source_receipt_fact_id"),"Commercial receipt wrapper provenance incomplete");
 assert(wrapper.includes("createAcceptance")&&wrapper.includes("transitionOperationPlanStateV1"),"W4 changed receipt/Acceptance semantic chain");
 const aoAct=read("apps/server/src/routes/control_ao_act.ts");
+const dispatchHumanGate=block(aoAct,"function requireActionDispatchHumanRoleV1","function requireActionReceiptSubmitRoleV1");
+assert(dispatchHumanGate.includes('role === "admin" || role === "operator"')&&dispatchHumanGate.includes("ACTION_DISPATCH_HUMAN_ROLE_DENIED"),"W4 BSEC-077/078 human dispatch principal gate drift");
+for(const spec of [
+ ['app.post("/api/v1/actions/execute"','// POST /api/v1/operations/manual'],
+ ['app.post("/api/v1/operations/manual"','// 兼容层仅用于存量迁移']
+]){
+ const b=block(aoAct,spec[0],spec[1]);
+ assert(b.includes("requireActionDispatchHumanRoleV1(reply, auth)"),"W4 fan-out route lacks admin/operator-only gate",spec[0]);
+}
+const failSafe=read("apps/server/src/routes/fail_safe_v1.ts");
+assert(failSafe.includes("requireManualInterventionHumanRoleV1")&&failSafe.includes("MANUAL_INTERVENTION_ROLE_DENIED"),"W4 fail-safe human principal gate missing");
+for(const route of ["/api/v1/manual-takeovers/:takeover_id/ack","/api/v1/manual-takeovers/:takeover_id/complete","/api/v1/fail-safe/events/:fail_safe_event_id/resolve"]){
+ const marker="app.post('"+route+"'";
+ const start=failSafe.indexOf(marker);assert(start>=0,"fail-safe fan-out route missing",route);
+ const slice=failSafe.slice(start,start+900);
+ assert(slice.includes("requireManualInterventionHumanRoleV1(reply,auth)"),"fail-safe fan-out route lacks executor deny",route);
+}
+const operatorDispatch=read("apps/server/src/routes/v1/operator_dispatch_actions.ts");
+const roleAllows=block(operatorDispatch,"function roleAllowsDispatch","function normalizeStatus");
+assert(roleAllows.includes('normalized === "admin" || normalized === "operator"')&&!roleAllows.includes("executor"),"BSEC-067/068 Operator Dispatch baseline leaked executor authority");
 const roleGate=block(aoAct,"function requireActionReceiptSubmitRoleV1","function canonicalActionReceiptExecutorV1");
 assert(roleGate.includes('role === "operator" || role === "executor"')&&!roleGate.includes('role === "admin"'),"direct receipt retains admin execution authority");
 assert(aoAct.includes("EXECUTOR_IDENTITY_MISMATCH")&&aoAct.includes("executor_id: executorIdentity"),"direct receipt caller-declared executor still authoritative");
@@ -85,7 +112,7 @@ assert(simulator.includes("hasExecutorRuntimeScopes(auth)")&&simulator.includes(
 const allowed=new Set([
  ".github/workflows/bline-w4-execution-device-receipt-provenance.yml",".github/workflows/ci.yml",
  "docker-compose.commercial_v1.yml","config/auth/security_acceptance_tokens.json","apps/executor/src/runtime_loop.ts",
- "apps/server/src/domain/auth/roles.ts","apps/server/src/auth/device_credential_auth_v1.ts","apps/server/src/routes/device_heartbeat_v1.ts","apps/server/src/routes/sensing_fact_envelope_v1.ts","apps/server/src/routes/control_ao_sense.ts","apps/server/src/domain/controlplane/task_service.ts","apps/server/src/routes/control_ao_act.ts","apps/server/src/routes/decision_engine_v1.ts",
+ "apps/server/src/domain/auth/roles.ts","apps/server/src/auth/device_credential_auth_v1.ts","apps/server/src/routes/device_heartbeat_v1.ts","apps/server/src/routes/sensing_fact_envelope_v1.ts","apps/server/src/routes/control_ao_sense.ts","apps/server/src/domain/controlplane/task_service.ts","apps/server/src/routes/control_ao_act.ts","apps/server/src/routes/decision_engine_v1.ts","apps/server/src/routes/fail_safe_v1.ts",
  W4,"scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs","scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts","scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_COMMERCIAL_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts",
  "scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs","scripts/governance_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.cjs",
  "scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_IRRIGATION_E2E_V1.ts","scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_VARIABLE_OPERATION_E2E_V1.cjs","scripts/agronomy_acceptance/ACCEPTANCE_DEVICE_ANOMALY_E2E_V1.cjs","scripts/agronomy_acceptance/ACCEPTANCE_SKILL_CONTRACT_GAP_CLOSURE_V1.cjs","scripts/agronomy_acceptance/ACCEPTANCE_PILOT_CLOSURE_V1.cjs","apps/server/scripts/p1_smoke_device_ready.mjs"
@@ -95,4 +122,4 @@ for(const p of changed)assert(allowed.has(p),"W4 scope expansion",p);
 for(const p of changed)assert(!/mcft/i.test(p),"W4 touched MCFT",p);
 for(const p of changed)assert(!/(planner|crop.*latest|monitoring|action_qualification)/i.test(p),"W4 forbidden workstream path changed",p);
 for(const p of ["apps/server/src/routes/control_approval_request_v1.ts","apps/server/src/routes/prescriptions_v1.ts","apps/server/src/routes/v1/operator_approval_actions.ts"])assert(!changed.includes(p),"W4 reopened W3 Approval authority",p);
-console.log(JSON.stringify({result:"PASS",workstream:"W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE",authority_base:BASE,bounded_predecessor_row_count:15,repairs:{dedicated_executor_principal:true,caller_declared_executor_removed:true,device_heartbeat_credential_bound:true,http_device_sensing_credential_bound:true,ao_sense_runtime_authority_bound:true,receipt_provenance_auth_derived:true,acceptance_semantics_unchanged:true},changed_files:changed,mcft_delta:0},null,2));
+console.log(JSON.stringify({result:"PASS",workstream:"W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE",authority_base:BASE,bounded_predecessor_row_count:20,capability_fanout_rows:["BSEC-077","BSEC-078","BSEC-161","BSEC-162","BSEC-163"],governed_regression_baselines:["BSEC-067","BSEC-068","BSEC-169","BSEC-170"],repairs:{dedicated_executor_principal:true,caller_declared_executor_removed:true,device_heartbeat_credential_bound:true,http_device_sensing_credential_bound:true,ao_sense_runtime_authority_bound:true,receipt_provenance_auth_derived:true,executor_dispatch_capability_fanout_closed:true,acceptance_semantics_unchanged:true},changed_files:changed,mcft_delta:0},null,2));

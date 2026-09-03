@@ -6,6 +6,8 @@ import { registerDeviceHeartbeatV1Routes } from "../../apps/server/src/routes/de
 import { registerSensingFactEnvelopeV1Routes } from "../../apps/server/src/routes/sensing_fact_envelope_v1.js";
 import { registerAoActV1Routes } from "../../apps/server/src/routes/control_ao_act.js";
 import { registerDecisionEngineV1Routes } from "../../apps/server/src/routes/decision_engine_v1.js";
+import { registerFailSafeV1Routes } from "../../apps/server/src/routes/fail_safe_v1.js";
+import { registerOperatorDispatchActionRoutes } from "../../apps/server/src/routes/v1/operator_dispatch_actions.js";
 
 const saved=new Map<string,string|undefined>();
 for(const k of ["GEOX_RUNTIME_ENV","GEOX_TOKENS_JSON","GEOX_TOKENS_FILE","GEOX_TOKEN_SSOT_PATH","GEOX_TOKEN","GEOX_AO_ACT_TOKEN","AO_ACT_TOKEN"])saved.set(k,process.env[k]);
@@ -35,6 +37,24 @@ class StubPool{
  }
  async connect(){this.connects++;return {query:this.query.bind(this),release(){}};}
 }
+class OperatorDispatchStubPool extends StubPool {
+ auditWrites=0;dispatchIntentWrites=0;
+ override async query(sql:any,params:any[]=[]){
+  const q=String(sql??"");
+  if(/FROM\s+facts/i.test(q)&&q.includes("ao_act_task_v0")&&q.includes("payload,act_task_id")){
+    return {rowCount:1,rows:[{fact_id:"task_fact_w4",occurred_at:new Date().toISOString(),record_json:{type:"ao_act_task_v0",payload:{tenant_id:"tenantA",project_id:"projectA",group_id:"groupA",act_task_id:"task_w4",status:"TASK_CREATED"}}}]};
+  }
+  if(/INSERT INTO facts/i.test(q)){
+    this.mutations++;
+    const record=params?.[2]??{};
+    if(record?.type==="operator_action_audit_v1")this.auditWrites++;
+    if(record?.type==="ao_act_dispatch_v1")this.dispatchIntentWrites++;
+    return {rowCount:1,rows:[]};
+  }
+  this.reads++;
+  return {rowCount:0,rows:[]};
+ }
+}
 async function post(app:any,url:string,token?:string,body:any={}){
  const res=await app.inject({method:"POST",url,headers:token?bearer(token):{"content-type":"application/json"},payload:body});
  let json:any=null;try{json=res.json();}catch{}
@@ -54,6 +74,10 @@ async function main(){
  expect(mismatchClaim.status===403&&mismatchClaim.json?.error==="EXECUTOR_IDENTITY_MISMATCH","caller-declared executor survived claim boundary",mismatchClaim);
  const executorClaim=await post(cp,"/api/v1/ao-act/dispatches/claim","w4_executor",{tenant_id:"tenantA",project_id:"projectA",group_id:"groupA",executor_id:"executor_actor",limit:1});
  expect(executorClaim.status!==401&&executorClaim.status!==403,"dedicated executor did not cross claim auth boundary",executorClaim);
+ const executorState=await post(cp,"/api/v1/ao-act/dispatches/state","w4_executor",{tenant_id:"tenantA",project_id:"projectA",group_id:"groupA"});
+ expect(executorState.status===400&&executorState.json?.error==="MISSING_ACT_TASK_ID","dedicated executor did not cross dispatch-state auth boundary",executorState);
+ const executorPublished=await post(cp,"/api/v1/ao-act/downlinks/published","w4_executor",{tenant_id:"tenantA",project_id:"projectA",group_id:"groupA",executor_id:"executor_actor"});
+ expect(executorPublished.status===400&&executorPublished.json?.error==="MISSING_ACT_TASK_ID","dedicated executor did not cross downlink-published auth boundary",executorPublished);
  const adminWrapperReceipt=await post(cp,"/api/v1/ao-act/receipts","w4_admin",{});
  expect(adminWrapperReceipt.status===403&&adminWrapperReceipt.json?.error==="EXECUTION_PRINCIPAL_REQUIRED","admin gained Commercial receipt principal",adminWrapperReceipt);
  const executorWrapperReceipt=await post(cp,"/api/v1/ao-act/receipts","w4_executor",{});
@@ -65,7 +89,35 @@ async function main(){
  expect(adminDirect.status===403&&adminDirect.json?.error==="ACTION_RECEIPT_SUBMIT_ROLE_DENIED","admin gained direct receipt authority",adminDirect);
  const execMismatch=await post(ao,"/api/v1/actions/receipt","w4_executor",{tenant_id:"tenantA",project_id:"projectA",group_id:"groupA",executor_id:{kind:"script",id:"declared",namespace:"x"}});
  expect(execMismatch.status!==200,"malformed/mismatched receipt unexpectedly persisted",execMismatch);
+ const beforeFanoutDeny=pool.mutations;
+ const executeFanout=await post(ao,"/api/v1/actions/execute","w4_executor",{});
+ expect(executeFanout.status===403&&executeFanout.json?.error==="ACTION_DISPATCH_HUMAN_ROLE_DENIED","BSEC-077 executor fan-out not closed",executeFanout);
+ const manualFanout=await post(ao,"/api/v1/operations/manual","w4_executor",{});
+ expect(manualFanout.status===403&&manualFanout.json?.error==="ACTION_DISPATCH_HUMAN_ROLE_DENIED","BSEC-078 executor fan-out not closed",manualFanout);
+ expect(pool.mutations===beforeFanoutDeny,"BSEC-077/078 executor deny mutated state",{beforeFanoutDeny,after:pool.mutations});
  await ao.close();
+
+ const failSafe=Fastify({logger:false});registerFailSafeV1Routes(failSafe,pool as any);await failSafe.ready();
+ const beforeFailSafeDeny=pool.mutations;
+ const takeoverAck=await post(failSafe,"/api/v1/manual-takeovers/takeover_w4/ack","w4_executor",{tenant_id:"tenantA",project_id:"projectA",group_id:"groupA"});
+ const takeoverComplete=await post(failSafe,"/api/v1/manual-takeovers/takeover_w4/complete","w4_executor",{tenant_id:"tenantA",project_id:"projectA",group_id:"groupA"});
+ const failSafeResolve=await post(failSafe,"/api/v1/fail-safe/events/fail_w4/resolve","w4_executor",{tenant_id:"tenantA",project_id:"projectA",group_id:"groupA"});
+ for(const [id,res] of [["BSEC-161",takeoverAck],["BSEC-162",takeoverComplete],["BSEC-163",failSafeResolve]] as const){
+  expect(res.status===403&&res.json?.error==="MANUAL_INTERVENTION_ROLE_DENIED",id+" executor fan-out not closed",res);
+ }
+ expect(pool.mutations===beforeFailSafeDeny,"BSEC-161/162/163 executor deny mutated state",{beforeFailSafeDeny,after:pool.mutations});
+ await failSafe.close();
+
+ const operatorPool=new OperatorDispatchStubPool();
+ const operatorDispatch=Fastify({logger:false});registerOperatorDispatchActionRoutes(operatorDispatch,operatorPool as any);await operatorDispatch.ready();
+ const operatorDispatchDeny=await post(operatorDispatch,"/api/v1/operator/dispatch/task_w4/dispatch","w4_executor",{});
+ const operatorRetryDeny=await post(operatorDispatch,"/api/v1/operator/dispatch/task_w4/retry","w4_executor",{});
+ for(const [id,res] of [["BSEC-067",operatorDispatchDeny],["BSEC-068",operatorRetryDeny]] as const){
+  expect(res.status>=400&&res.json?.permission?.allowed===false&&res.json?.permission?.role==="executor",id+" executor obtained Operator Dispatch authority",res);
+ }
+ expect(operatorPool.dispatchIntentWrites===0,"BSEC-067/068 executor denial wrote dispatch intent",{dispatchIntentWrites:operatorPool.dispatchIntentWrites,auditWrites:operatorPool.auditWrites});
+ expect(operatorPool.auditWrites===2,"BSEC-067/068 executor denial audit regression",{auditWrites:operatorPool.auditWrites});
+ await operatorDispatch.close();
 
  const de=Fastify({logger:false});registerDecisionEngineV1Routes(de,pool as any);await de.ready();
  const adminSim=await post(de,"/api/v1/simulators/irrigation/execute","w4_admin",{});
@@ -104,6 +156,6 @@ async function main(){
  expect([401,404].includes(rawWrongDevice.status),"wrong device identity not denied",rawWrongDevice);
  await raw.close();
 
- console.log(JSON.stringify({result:"PASS",workstream:"W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE",executor:{admin_claim:adminClaim.status,operator_claim:operatorClaim.status,mismatch_claim:mismatchClaim.status,dedicated_claim:executorClaim.status,admin_receipt:adminWrapperReceipt.status,dedicated_receipt:executorWrapperReceipt.status,admin_simulator:adminSim.status,dedicated_simulator:execSim.status},ao_sense:{anonymous:anonSense.status,wrong_scope:wrongSense.status,telemetry_writer:telemetrySense.status},device:{anonymous:hbAnon.status,structured_bearer:hbStructured.status,valid:hbGood.status,cross_scope:hbCross.status},http_sensing:{structured_bearer:rawAdmin.status,wrong_device:rawWrongDevice.status},mutation_count:pool.mutations},null,2));
+ console.log(JSON.stringify({result:"PASS",workstream:"W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE",bounded_predecessor_row_count:20,capability_fanout:{repair_rows:{BSEC_077:executeFanout.status,BSEC_078:manualFanout.status,BSEC_161:takeoverAck.status,BSEC_162:takeoverComplete.status,BSEC_163:failSafeResolve.status},operator_dispatch_baselines:{BSEC_067:{status:operatorDispatchDeny.status,permission_allowed:operatorDispatchDeny.json?.permission?.allowed},BSEC_068:{status:operatorRetryDeny.status,permission_allowed:operatorRetryDeny.json?.permission?.allowed},dispatch_intent_writes:operatorPool.dispatchIntentWrites,deny_audit_writes:operatorPool.auditWrites}},executor:{admin_claim:adminClaim.status,operator_claim:operatorClaim.status,mismatch_claim:mismatchClaim.status,dedicated_claim:executorClaim.status,dedicated_state:executorState.status,dedicated_downlink_published:executorPublished.status,admin_receipt:adminWrapperReceipt.status,dedicated_receipt:executorWrapperReceipt.status,admin_simulator:adminSim.status,dedicated_simulator:execSim.status},ao_sense:{anonymous:anonSense.status,wrong_scope:wrongSense.status,telemetry_writer:telemetrySense.status},device:{anonymous:hbAnon.status,structured_bearer:hbStructured.status,valid:hbGood.status,cross_scope:hbCross.status},http_sensing:{structured_bearer:rawAdmin.status,wrong_device:rawWrongDevice.status},mutation_count:pool.mutations},null,2));
 }
 main().catch(e=>{console.error(e);process.exitCode=1;}).finally(restore);

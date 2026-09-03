@@ -76,6 +76,11 @@ async function main(){
  denied.push(await call("/api/v1/ao-act/dispatches/claim",admin,{...scope,executor_id:"actor_tenant_a_admin"}));
  denied.push(await call("/api/v1/ao-act/dispatches/claim",operator,{...scope,executor_id:"tok_operator_actor"}));
  denied.push(await call("/api/v1/ao-act/dispatches/claim",executor,{...scope,executor_id:"caller_declared"}));
+ denied.push(await call("/api/v1/actions/execute",executor,{}));
+ denied.push(await call("/api/v1/operations/manual",executor,{}));
+ denied.push(await call("/api/v1/manual-takeovers/takeover_w4/ack",executor,{...scope}));
+ denied.push(await call("/api/v1/manual-takeovers/takeover_w4/complete",executor,{...scope}));
+ denied.push(await call("/api/v1/fail-safe/events/fail_w4/resolve",executor,{...scope}));
  denied.push(await call("/api/v1/actions/receipt",admin,{}));
  denied.push(await call("/api/v1/ao-act/receipts",admin,{}));
  denied.push(await call("/api/v1/simulators/irrigation/execute",admin,{}));

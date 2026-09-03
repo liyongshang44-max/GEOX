@@ -135,6 +135,12 @@ function requireActionTaskCreateRoleV1(reply: any, auth: any): boolean {
   reply.status(403).send({ ok: false, error: "ACTION_TASK_CREATE_ROLE_DENIED" });
   return false;
 }
+function requireActionDispatchHumanRoleV1(reply: any, auth: any): boolean {
+  const role = String(auth?.role ?? "").trim();
+  if (role === "admin" || role === "operator") return true;
+  reply.status(403).send({ ok: false, error: "ACTION_DISPATCH_HUMAN_ROLE_DENIED" });
+  return false;
+}
 function requireActionReceiptSubmitRoleV1(reply: any, auth: any): boolean {
   const role = String(auth?.role ?? "").trim();
   if (role === "operator" || role === "executor") return true;
@@ -1513,7 +1519,8 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/actions/execute", async (req, reply) => {
     try {
       const auth = requireAoActAnyScopeV0(req, reply, ["action.task.dispatch", "ao_act.task.write"]);
-      if (!auth) return;
+      if (!auth) return reply;
+      if (!requireActionDispatchHumanRoleV1(reply, auth)) return reply;
       const body = z.object({
         tenant_id: z.string().min(1),
         project_id: z.string().min(1),
@@ -1894,7 +1901,8 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/operations/manual", async (req, reply) => {
     try {
       const auth = requireAoActAnyScopeV0(req, reply, ["action.task.dispatch", "ao_act.task.write"]);
-      if (!auth) return;
+      if (!auth) return reply;
+      if (!requireActionDispatchHumanRoleV1(reply, auth)) return reply;
       const body = z.object({
         tenant_id: z.string().min(1),
         project_id: z.string().min(1),
