@@ -39,15 +39,15 @@
   },
   "hybrid_thermal_landmark_candidate": {
     "provider": "ALBERT_LEA_SEED",
-    "official_url": "https://alseed.com/organic-and-riseup-non-gmo-corn-performance/",
+    "official_url": "https://alseed.com/product/organic-blue-river-43-96p-seed-corn/",
     "source_class": "SECONDARY_SEED_CATALOG_EXACT_PRODUCT_SPECIFICATION",
     "required_markers": [
-      "Hybrid",
-      "CRM",
+      "Organic Blue River 43-96P Seed Corn",
+      "96-day CRM",
+      "Performance Table",
       "GDU",
       "Black Layer",
       "43-96P",
-      "96",
       "2380"
     ],
     "hybrid_product_code": "43-96P",
