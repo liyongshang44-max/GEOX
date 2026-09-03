@@ -204,6 +204,7 @@ export async function runMcftCap09TwinRuntimeProcessV1(input?: {
   database_clock?: TwinRuntimeDatabaseClockPortV1;
   scheduler_clock_authority?: PersistentSequentialSchedulerClockAuthorityV1;
   runtime_start_authority?: unknown;
+  qualification_lease_owner?: string;
 }): Promise<void> {
   const document = productionAcquisitionHorizonAuthorityJson as {
     runtime_start_binding?: unknown;
@@ -217,10 +218,25 @@ export async function runMcftCap09TwinRuntimeProcessV1(input?: {
     embedded_authority: document.runtime_start_binding,
   });
 
+  const qualificationLeaseOwner = String(
+    input?.qualification_lease_owner ?? "",
+  ).trim();
+  if (qualificationLeaseOwner) {
+    if (
+      input?.runtime_start_authority === undefined
+      || input?.database_clock === undefined
+      || input?.scheduler_clock_authority?.mode !== "ACCELERATED_ENGINEERING_ONLY"
+    ) {
+      throw new Error(
+        "MCFT_CAP09_TWIN_QUALIFICATION_LEASE_OWNER_REQUIRES_EXPLICIT_ENGINEERING_BOUNDARIES",
+      );
+    }
+  }
   const runtimeEnv: EnvironmentV1 = {
     ...env,
     GEOX_MCFT_CAP09_TWIN_RUNTIME_LEASE_OWNER:
-      buildMcftCap09ProductionLeaseOwnerV1({
+      qualificationLeaseOwner
+      || buildMcftCap09ProductionLeaseOwnerV1({
         plane: "TWIN_RUNTIME",
         configured_service_id: requiredEnvV1(
           env,
