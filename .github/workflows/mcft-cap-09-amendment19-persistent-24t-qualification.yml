@@ -202,11 +202,11 @@ jobs:
           pnpm --filter @geox/server run typecheck
 
       - name: Prove successor AM19 compatibility against byte-frozen historical runner
-        if: steps.routing.outputs.mode == 'phase2-authority-symbol-compatibility' || steps.routing.outputs.mode == 'phase3-provider-maintenance-successor' || steps.routing.outputs.mode == 'production-hosting-successor'
+        if: steps.routing.outputs.mode == 'phase2-authority-symbol-compatibility' || steps.routing.outputs.mode == 'phase3-provider-maintenance-successor' || steps.routing.outputs.mode == 'production-hosting-successor' || steps.routing.outputs.mode == 'protected-main-adoption-successor'
         run: pnpm exec tsx scripts/runtime_acceptance/EXECUTE_MCFT_CAP_09_AM19_PHASE2_AUTHORITY_SYMBOL_COMPATIBILITY_V1.ts selftest
 
       - name: Typecheck historical qualification orchestration
-        if: steps.routing.outputs.mode != 'v13-maintenance-successor' && steps.routing.outputs.mode != 'qualification-control-plane-successor' && steps.routing.outputs.mode != 'phase2-authority-symbol-compatibility' && steps.routing.outputs.mode != 'phase3-provider-maintenance-successor' && steps.routing.outputs.mode != 'production-hosting-successor'
+        if: steps.routing.outputs.mode != 'v13-maintenance-successor' && steps.routing.outputs.mode != 'qualification-control-plane-successor' && steps.routing.outputs.mode != 'phase2-authority-symbol-compatibility' && steps.routing.outputs.mode != 'phase3-provider-maintenance-successor' && steps.routing.outputs.mode != 'production-hosting-successor' && steps.routing.outputs.mode != 'protected-main-adoption-successor'
         run: |
           set -euo pipefail
           pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
@@ -249,7 +249,7 @@ jobs:
           set -euo pipefail
           node scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_V1.cjs selftest
           pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_REHYDRATION_V1.ts selftest
-          if [[ "${{ steps.routing.outputs.mode }}" != "production-hosting-successor" ]]; then
+          if [[ "${{ steps.routing.outputs.mode }}" != "production-hosting-successor" && "${{ steps.routing.outputs.mode }}" != "protected-main-adoption-successor" ]]; then
             pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_24T_QUALIFICATION_V1.ts selftest
           fi
 
