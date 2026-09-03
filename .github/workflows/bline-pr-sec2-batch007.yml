@@ -22,6 +22,8 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - name: Batch007 corrected accounting and source boundary
         run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_FAIL_CLOSED_V1.cjs
+      - name: Build focused registration workspace dependencies
+        run: pnpm --filter @geox/device-skills... build
       - name: Batch007 production registration behavioral proof
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_FAIL_CLOSED_V1.ts
       - name: Frozen PR-SEC-1 caller inventory regression
