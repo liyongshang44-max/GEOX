@@ -2229,8 +2229,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // POST /api/v1/approvals
   // Stable REST wrapper around Sprint25 approval_request runtime.
   app.post("/api/v1/approvals", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write"); // Approval creation implies later task issuance authority.
-    if (!auth) return;
+    const auth = requireAoActScopeV0(req, reply, "approval.request");
+    if (!auth) return reply;
     if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
     const body: any = req.body ?? {};
     const tenant: TenantTriple = parseTenantFromBody(body);
@@ -2279,8 +2279,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // approve => writes approval_decision_v1 + wrapper task_created fact via existing AO-ACT core.
   // reject  => writes approval_decision_v1 only.
   app.post("/api/v1/approvals/:request_id/decide", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
-    if (!auth) return;
+    const auth = requireAoActScopeV0(req, reply, "approval.decide");
+    if (!auth) return reply;
     if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
     const params: any = (req as any).params ?? {};
     const body: any = req.body ?? {};

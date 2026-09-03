@@ -499,7 +499,7 @@ async function handleRecommendationApprovalRequest(req: any, reply: any, pool: P
 
 async function handleApprovalRequest(req: any, reply: any, pool: Pool) {
   try {
-    const auth = requireAoActAnyScopeV0(req, reply, ["approval.request", "prescription.submit_approval", "ao_act.task.write"]);
+    const auth = requireAoActAnyScopeV0(req, reply, ["approval.request", "prescription.submit_approval"]);
     if (!auth) return reply;
     (req as any).auth = auth;
 
@@ -551,7 +551,7 @@ async function handleApprovalRequestsList(req: any, reply: any, pool: Pool) {
 
 async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
   try {
-    const auth = requireAoActAnyScopeV0(req, reply, ["approval.decide", "ao_act.task.write"]);
+    const auth = requireAoActScopeV0(req, reply, "approval.decide");
     if (!auth) return reply;
     (req as any).auth = auth;
     if (!requireApprovalDeciderRoleV1(reply, auth)) return reply;
