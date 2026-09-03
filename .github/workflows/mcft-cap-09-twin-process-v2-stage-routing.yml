@@ -1,0 +1,45 @@
+name: MCFT CAP-09 Twin Process V2 Stage Routing
+
+on:
+  pull_request:
+    branches:
+      - feat/mcft-cap09-twin-v2-stage-qcp-registration-v1
+    paths:
+      - .github/workflows/mcft-cap-09-twin-process-v2-stage-routing.yml
+      - apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts
+      - apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_stage_authority_preflight_v1.test.ts
+      - apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_stage_authority_preflight_v1.ts
+      - scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_PROCESS_V2_STAGE_ROUTING_V1.cjs
+      - scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MCFT_CAP09_TWIN_PROCESS_V2_BASE_SHA: f605f7e22ad7a4b7605be885ef1328f2b8283b55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Server typecheck
+        run: pnpm run typecheck:server
+      - name: V4 production manifest preflight tests
+        run: node --import tsx --test apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_stage_authority_preflight_v1.test.ts
+      - name: Phase5 process boundary
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts
+      - name: Exact routing governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_PROCESS_V2_STAGE_ROUTING_V1.cjs
