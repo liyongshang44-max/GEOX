@@ -10,7 +10,10 @@ import {
   type RawSampleEnvelopeV1,
   type RawSampleFactEnvelopeTenantV1,
 } from "../domain/sensing/raw_sample_fact_envelope_v1.js";
-import { writeObservationRunPipelineAndRefreshFieldV1 } from "../services/device_observation_service_v1.js";
+import {
+  ensureDeviceObservationProjectionV1,
+  writeObservationRunPipelineAndRefreshFieldV1,
+} from "../services/device_observation_service_v1.js";
 import { evaluateRawSampleObservationQualityV1 } from "../evidence/raw_sample_measurement_quality_v1.js";
 
 function badRequest(reply: FastifyReply, error: string) {
@@ -159,6 +162,9 @@ async function maybeRunOfficialObservationPipelineV1(pool: Pool, item: RawSample
   if (!item.field_id || !item.sensor_id || !item.metric) return null;
   const qualityDecision = evaluateRawSampleObservationQualityV1(item.qc_quality);
   if (!qualityDecision.observation_pipeline_eligible) return null;
+  // Runtime must use the guarded Pool path: geox_runtime_v1 only verifies
+  // that migrated observation relations/indexes are preprovisioned.
+  await ensureDeviceObservationProjectionV1(pool as any);
   const client = await pool.connect();
   try {
     const result = await writeObservationRunPipelineAndRefreshFieldV1(client, {
