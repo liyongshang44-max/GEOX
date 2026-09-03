@@ -193,12 +193,64 @@ async function ensureSkillRegistryReadTable(pool: Pool): Promise<void> {
   await pool.query(`ALTER TABLE skill_registry_read_v1 ADD COLUMN IF NOT EXISTS legacy_category text NULL`);
 }
 
-export async function projectSkillRegistryReadV1(
-  pool: Pool,
-  tenant: TenantTriple,
-  options: { persist?: boolean } = {},
-): Promise<SkillRegistryReadRow[]> {
-  if (options.persist !== false) await ensureSkillRegistryReadTable(pool);
+export async function computeSkillRegistryReadRowsV1(pool: Pool, tenant: TenantTriple): Promise<SkillRegistryReadRow[]> {
+  const factsQ = await pool.query(
+    `SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json
+     FROM facts
+     WHERE (record_json::jsonb->>'type') IN ('skill_definition_v1','skill_binding_v1','skill_run_v1')
+       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+       AND (record_json::jsonb#>>'{payload,project_id}') = $2
+       AND (record_json::jsonb#>>'{payload,group_id}') = $3
+     ORDER BY occurred_at ASC, fact_id ASC`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id]
+  );
+
+  const staged: SkillRegistryReadRow[] = (factsQ.rows ?? []).map((row: any) => {
+    const record = parseRecordJson(row.record_json) ?? row.record_json;
+    const payload = record?.payload ?? {};
+    const factType = String(record?.type ?? "") as SkillRegistryFactType;
+    const occurredAt = toIsoTimestamp(row.occurred_at);
+    const ts = toEpochMs(row.occurred_at, occurredAt);
+    const legacyCategory = str(payload.category).toLowerCase() || null;
+    const publicCategory = toPublicCategoryFromLegacy(legacyCategory);
+
+    return {
+      tenant_id: str(payload.tenant_id),
+      project_id: str(payload.project_id),
+      group_id: str(payload.group_id),
+      fact_type: factType,
+      fact_id: str(row.fact_id),
+      skill_id: str(payload.skill_id),
+      version: str(payload.version),
+      category: publicCategory,
+      legacy_category: legacyCategory,
+      status: str(payload.status) || null,
+      scope_type: str(payload.scope_type) || null,
+      rollout_mode: str(payload.rollout_mode) || null,
+      result_status: str(payload.result_status) || null,
+      crop_code: str(payload.crop_code).toLowerCase() || null,
+      device_type: str(payload.device_type) || null,
+      trigger_stage: normalizeRunTriggerStage(factType, payload.trigger_stage),
+      bind_target: str(payload.bind_target) || null,
+      operation_id: str(payload.operation_id) || null,
+      operation_plan_id: str(payload.operation_plan_id) || null,
+      field_id: str(payload.field_id) || null,
+      device_id: str(payload.device_id) || null,
+      input_digest: str(payload.input_digest) || null,
+      output_digest: str(payload.output_digest) || null,
+      lifecycle_version: Number.isFinite(Number(payload.lifecycle_version)) ? Number(payload.lifecycle_version) : null,
+      payload_json: payload,
+      occurred_at: occurredAt,
+      updated_at_ts_ms: Number.isFinite(ts) ? ts : 0,
+    };
+  }).filter((x) => x.fact_type && x.skill_id && x.version);
+
+  const latest = selectLatest(staged);
+  return latest;
+}
+
+export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTriple): Promise<SkillRegistryReadRow[]> {
+  await ensureSkillRegistryReadTable(pool);
 
   const factsQ = await pool.query(
     `SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json
@@ -252,7 +304,6 @@ export async function projectSkillRegistryReadV1(
   }).filter((x) => x.fact_type && x.skill_id && x.version);
 
   const latest = selectLatest(staged);
-  if (options.persist === false) return latest;
 
   const client = await pool.connect();
   try {
