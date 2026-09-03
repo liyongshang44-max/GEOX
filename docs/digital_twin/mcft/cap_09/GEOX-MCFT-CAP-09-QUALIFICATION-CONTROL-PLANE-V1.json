@@ -331,6 +331,7 @@
       "paths": [
         ".github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml",
         ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+        ".github/workflows/mcft-cap-09-runtime-start-effective-stage-validation-v1.yml",
         "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase5_twin_fact_writer_acl.sql",
         "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql",
         "apps/server/scripts/write_dist_entries.cjs",
