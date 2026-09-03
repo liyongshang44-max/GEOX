@@ -1,7 +1,7 @@
 import type { Pool } from "pg";
 
 import { appendSkillDefinitionFact, type SkillDefinitionFactPayload } from "../../domain/skill_registry/facts.js";
-import { filterSkillRegistryReadRowsV1, projectSkillRegistryReadV1 } from "../../projections/skill_registry_read_v1.js";
+import { computeSkillRegistryReadRowsV1, filterSkillRegistryReadRowsV1, projectSkillRegistryReadV1 } from "../../projections/skill_registry_read_v1.js";
 import type { TenantTriple } from "./skill_trace_service.js";
 
 type SkillRow = {
@@ -29,7 +29,7 @@ type SkillRow = {
 };
 
 export async function listSkills(pool: Pool, tenant: TenantTriple, filters: Record<string, unknown>) {
-  const projected = await projectSkillRegistryReadV1(pool, tenant, { persist: false });
+  const projected = await computeSkillRegistryReadRowsV1(pool, tenant);
   const rows = filterSkillRegistryReadRowsV1(projected, {
     ...tenant,
     category: typeof filters.category === "string" ? filters.category : undefined,
@@ -72,7 +72,7 @@ export async function listSkills(pool: Pool, tenant: TenantTriple, filters: Reco
 }
 
 export async function getSkillDetail(pool: Pool, tenant: TenantTriple, skill_id: string) {
-  const projected = await projectSkillRegistryReadV1(pool, tenant, { persist: false });
+  const projected = await computeSkillRegistryReadRowsV1(pool, tenant);
   const rows = projected.filter((row) => row.skill_id === skill_id).slice(0, 500) as SkillRow[];
   if (!rows.length) return null;
 
