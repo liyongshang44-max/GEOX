@@ -171,7 +171,7 @@ function main(): void {
   );
   assert.match(
     commandText(twin.command),
-    //apps\\\/server\\\/dist\\\/runtime\\\/mcft_cap09_twin_runtime_v2\\\.js//,
+    /apps\/server\/dist\/runtime\/mcft_cap09_twin_runtime_v2\.js/,
   );
   assert.match(commandText(evidence.command), /exec node/);
   assert.match(commandText(twin.command), /exec node/);
