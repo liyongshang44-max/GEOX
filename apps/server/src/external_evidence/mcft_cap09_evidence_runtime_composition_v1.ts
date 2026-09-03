@@ -9,8 +9,11 @@ import type { Pool } from "pg";
 import {
   EvidenceRuntimeCycleServiceV1,
   type EvidenceRuntimeCycleWorkItemV1,
-  type ExecuteEvidenceRuntimeCycleResultV1,
 } from "./mcft_cap09_evidence_runtime_cycle_service_v1.js";
+import {
+  buildCanonicalWorkItemAttemptPlanV1,
+  type EvidenceRuntimeHostAttemptResultV1,
+} from "./mcft_cap09_evidence_runtime_host_attempt_v1.js";
 import {
   EvidenceRuntimeHostV1,
   type EvidenceRuntimeHostFailureClassifierV1,
@@ -20,6 +23,7 @@ import {
   type EvidenceRuntimeHostWaitPortV1,
 } from "./mcft_cap09_evidence_runtime_host_v1.js";
 import type {
+  EvidenceProducerLeaseClaimV1,
   EvidenceRuntimeScopeV1,
 } from "./mcft_cap09_evidence_runtime_persistence_v1.js";
 import {
@@ -55,18 +59,47 @@ export type EvidenceRuntimeAcquisitionTargetV1 = {
   restored_ingested_at?: string;
 };
 
+export type EvidenceRuntimeAcquisitionNotDueV1 = {
+  status: "NOT_DUE";
+};
+
 export interface EvidenceRuntimeAcquisitionTargetPlannerV1 {
   nextTarget(input: {
     cycle_attempt: number;
     successful_cycle_count: number;
     consecutive_failure_count: number;
-    previous_result: ExecuteEvidenceRuntimeCycleResultV1 | null;
-  }): Promise<EvidenceRuntimeAcquisitionTargetV1 | null>;
+    previous_result: EvidenceRuntimeHostAttemptResultV1 | null;
+  }): Promise<EvidenceRuntimeAcquisitionTargetV1 | EvidenceRuntimeAcquisitionNotDueV1 | null>;
 }
 
 export interface EvidenceRuntimeWorkItemFactoryV1 {
   readonly factory_id: string;
   buildForTarget(input: EvidenceRuntimeAcquisitionTargetV1): readonly EvidenceRuntimeCycleWorkItemV1[];
+}
+
+export type EvidenceRuntimeHostPlannerFactoryInputV1 = {
+  pool: Pool;
+  scope: EvidenceRuntimeScopeV1;
+  cycle_service: EvidenceRuntimeCycleServiceV1;
+  work_item_factory: EvidenceRuntimeWorkItemFactoryV1;
+  retention: S3CompatiblePrivateRawEvidenceRetentionAdapterV1;
+  lease_repository: PostgresEvidenceProducerLeaseV1;
+  visibility: PostgresExternalFormalEvidenceVisibilityV1;
+  committed_ingress_factory: {
+    createForProducerClaim(
+      claim: EvidenceProducerLeaseClaimV1,
+    ): PostgresEvidenceRuntimeGovernedIngressV1;
+  };
+  cursor_factory: {
+    createForProducerClaim(
+      claim: EvidenceProducerLeaseClaimV1,
+    ): PostgresEvidenceSupplyCursorV1;
+  };
+  completion_clock: () => string;
+};
+
+export interface EvidenceRuntimeHostPlannerFactoryV1 {
+  createHostPlanner(input: EvidenceRuntimeHostPlannerFactoryInputV1): EvidenceRuntimeHostPlannerV1;
 }
 
 export type EvidenceRuntimeCompositionV1 = {
@@ -81,7 +114,6 @@ export function composeEvidenceRuntimeV1(input: {
   pool: Pool;
   scope: EvidenceRuntimeScopeV1;
   raw_retention: S3CompatiblePrivateRawRetentionConfigV1;
-  target_planner: EvidenceRuntimeAcquisitionTargetPlannerV1;
   wait: EvidenceRuntimeHostWaitPortV1;
   health: EvidenceRuntimeHostHealthPortV1;
   stop: EvidenceRuntimeHostStopPortV1;
@@ -89,9 +121,19 @@ export function composeEvidenceRuntimeV1(input: {
   completion_clock: () => string;
   work_item_factory?: EvidenceRuntimeWorkItemFactoryV1;
   work_item_config?: Omit<ProductionEvidenceWorkItemFactoryConfigV1, "retention">;
-}): EvidenceRuntimeCompositionV1 {
+} & (
+  | { target_planner: EvidenceRuntimeAcquisitionTargetPlannerV1; host_planner?: never; host_planner_factory?: never }
+  | { target_planner?: never; host_planner: EvidenceRuntimeHostPlannerV1; host_planner_factory?: never }
+  | { target_planner?: never; host_planner?: never; host_planner_factory: EvidenceRuntimeHostPlannerFactoryV1 }
+)): EvidenceRuntimeCompositionV1 {
   if (input.work_item_factory && input.work_item_config) {
     throw new Error("PHASE3_EVIDENCE_RUNTIME_WORK_ITEM_FACTORY_AND_CONFIG_MUTUALLY_EXCLUSIVE");
+  }
+  const hasTargetPlanner = input.target_planner !== undefined;
+  const hasHostPlanner = input.host_planner !== undefined;
+  const hasHostPlannerFactory = input.host_planner_factory !== undefined;
+  if (Number(hasTargetPlanner) + Number(hasHostPlanner) + Number(hasHostPlannerFactory) !== 1) {
+    throw new Error("PHASE3_EVIDENCE_RUNTIME_EXACTLY_ONE_PLANNER_BOUNDARY_REQUIRED");
   }
   const retention = new S3CompatiblePrivateRawEvidenceRetentionAdapterV1(input.raw_retention);
   const leaseRepository = new PostgresEvidenceProducerLeaseV1(input.pool, input.scope);
@@ -102,38 +144,65 @@ export function composeEvidenceRuntimeV1(input: {
       retention,
     });
 
+  const committedIngressFactory = {
+    createForProducerClaim(claim: EvidenceProducerLeaseClaimV1) {
+      return new PostgresEvidenceRuntimeGovernedIngressV1(
+        input.pool,
+        retention,
+        input.scope,
+        claim,
+      );
+    },
+  };
+  const cursorFactory = {
+    createForProducerClaim(claim: EvidenceProducerLeaseClaimV1) {
+      return new PostgresEvidenceSupplyCursorV1(input.pool, input.scope, claim);
+    },
+  };
   const cycleService = new EvidenceRuntimeCycleServiceV1({
     lease: leaseRepository,
     retention,
-    committed_ingress_factory: {
-      createForProducerClaim(claim) {
-        return new PostgresEvidenceRuntimeGovernedIngressV1(
-          input.pool,
-          retention,
-          input.scope,
-          claim,
-        );
-      },
-    },
+    committed_ingress_factory: committedIngressFactory,
     visibility,
-    cursor_factory: {
-      createForProducerClaim(claim) {
-        return new PostgresEvidenceSupplyCursorV1(input.pool, input.scope, claim);
-      },
-    },
+    cursor_factory: cursorFactory,
     completion_clock: input.completion_clock,
   });
 
-  const planner: EvidenceRuntimeHostPlannerV1 = {
-    async nextWorkItems(state) {
-      const target = await input.target_planner.nextTarget(state);
+  const plannerFromFactory = input.host_planner_factory?.createHostPlanner({
+    pool: input.pool,
+    scope: input.scope,
+    cycle_service: cycleService,
+    work_item_factory: workItemFactory,
+    retention,
+    lease_repository: leaseRepository,
+    visibility,
+    committed_ingress_factory: committedIngressFactory,
+    cursor_factory: cursorFactory,
+    completion_clock: input.completion_clock,
+  });
+  const planner: EvidenceRuntimeHostPlannerV1 = input.host_planner ?? plannerFromFactory ?? {
+    async nextAttemptPlan(state) {
+      const targetPlanner = input.target_planner;
+      if (!targetPlanner) {
+        throw new Error("PHASE3_EVIDENCE_RUNTIME_TARGET_PLANNER_INTERNAL_BINDING_REQUIRED");
+      }
+      const target = await targetPlanner.nextTarget(state);
       if (target === null) return null;
-      return workItemFactory.buildForTarget(target);
+      if ("status" in target) {
+        if (target.status !== "NOT_DUE" || Object.keys(target).length !== 1) {
+          throw new Error("PHASE3_EVIDENCE_RUNTIME_TARGET_PLANNER_STATE_INVALID");
+        }
+        return target;
+      }
+      return buildCanonicalWorkItemAttemptPlanV1({
+        attempt_id: target.request_id_prefix,
+        cycle_service: cycleService,
+        work_items: workItemFactory.buildForTarget(target),
+      });
     },
   };
 
   const host = new EvidenceRuntimeHostV1({
-    cycle_service: cycleService,
     planner,
     wait: input.wait,
     health: input.health,

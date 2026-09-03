@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import math
 import re
@@ -102,6 +103,306 @@ def parse_kbs_raw_hourly_csv_v1(body: bytes) -> list[dict[str, str]]:
                     rows.append({header: values[position] for position, header in enumerate(headers)})
                 return rows
     raise RuntimeError("MCFT_CAP09_KBS_RAW_HOURLY_HEADER_NOT_FOUND")
+
+
+
+def sha256_json_v1(value) -> str:
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+    return "sha256:" + hashlib.sha256(encoded).hexdigest()
+
+
+def publication_event_groups_v1(*, body: bytes, available_at: datetime) -> tuple[int, int, dict[str, list[str]]]:
+    require_v1(available_at.tzinfo is not None, "MCFT_CAP09_KBS_PUBLICATION_AVAILABLE_AT_TZ_REQUIRED")
+    available = available_at.astimezone(timezone.utc)
+    rows = parse_kbs_raw_hourly_csv_v1(body)
+    grouped: dict[str, list[str]] = {}
+    valid_row_count = 0
+    for row in rows:
+        timestamp = parse_provider_utc_v1(row.get("datetime_utc", ""))
+        if timestamp is None or timestamp > available + timedelta(minutes=5):
+            continue
+        valid_row_count += 1
+        event_time = iso_v1(timestamp.replace(microsecond=0))
+        row_hash = sha256_json_v1({key: row.get(key, "") for key in sorted(row)})
+        grouped.setdefault(event_time, []).append(row_hash)
+    require_v1(bool(grouped), "MCFT_CAP09_KBS_PUBLICATION_EVENT_INDEX_REQUIRED")
+    return len(rows), valid_row_count, grouped
+
+
+def publication_event_summary_v1(event_time: str, row_hashes: list[str]) -> dict:
+    variants = sorted(set(row_hashes))
+    return {
+        "event_time": event_time,
+        "row_count": len(row_hashes),
+        "row_variant_count": len(variants),
+        "row_identity_hash": sha256_json_v1(variants),
+    }
+
+
+def build_kbs_raw_hourly_publication_snapshot_inventory_v1(*, body: bytes, available_at: datetime) -> dict:
+    parsed_row_count, valid_row_count, grouped = publication_event_groups_v1(
+        body=body,
+        available_at=available_at,
+    )
+    event_times = sorted(grouped)
+    latest = parse_iso_v1(event_times[-1], "MCFT_CAP09_KBS_PUBLICATION_LATEST_INVALID")
+    require_v1(
+        latest.minute == 0 and latest.second == 0 and latest.microsecond == 0,
+        "MCFT_CAP09_KBS_PUBLICATION_LATEST_CANONICAL_HOUR_REQUIRED",
+    )
+    digest = hashlib.sha256()
+    for event_time in event_times:
+        summary = publication_event_summary_v1(event_time, grouped[event_time])
+        digest.update(
+            (event_time + "\0" + summary["row_identity_hash"] + "\0" + str(summary["row_count"]) + "\n").encode("utf-8")
+        )
+    latest_summary = publication_event_summary_v1(event_times[-1], grouped[event_times[-1]])
+    return {
+        "schema_version": "geox_mcft_cap09_kbs_raw_hourly_publication_snapshot_inventory_v1",
+        "endpoint_shape": "COMPLETE_ACCUMULATED_TABLE",
+        "parsed_row_count": parsed_row_count,
+        "valid_row_count": valid_row_count,
+        "unique_event_time_count": len(event_times),
+        "latest_event_time": event_times[-1],
+        "latest_event_row_count": latest_summary["row_count"],
+        "latest_event_row_variant_count": latest_summary["row_variant_count"],
+        "latest_event_row_identity_hash": latest_summary["row_identity_hash"],
+        "event_index_sha256": "sha256:" + digest.hexdigest(),
+        "raw_values_emitted": False,
+    }
+
+
+def diff_kbs_raw_hourly_publication_forward_v1(
+    *,
+    body: bytes,
+    available_at: datetime,
+    after_event_time: datetime,
+) -> dict:
+    require_v1(after_event_time.tzinfo is not None, "MCFT_CAP09_KBS_PUBLICATION_AFTER_TZ_REQUIRED")
+    after = after_event_time.astimezone(timezone.utc)
+    require_v1(
+        after.minute == 0 and after.second == 0 and after.microsecond == 0,
+        "MCFT_CAP09_KBS_PUBLICATION_AFTER_CANONICAL_HOUR_REQUIRED",
+    )
+    inventory = build_kbs_raw_hourly_publication_snapshot_inventory_v1(
+        body=body,
+        available_at=available_at,
+    )
+    current_latest = parse_iso_v1(inventory["latest_event_time"], "MCFT_CAP09_KBS_PUBLICATION_CURRENT_LATEST_INVALID")
+    require_v1(current_latest >= after, "MCFT_CAP09_KBS_PUBLICATION_LATEST_REGRESSION")
+
+    _, _, grouped = publication_event_groups_v1(body=body, available_at=available_at)
+    forward: list[dict] = []
+    for event_time in sorted(grouped):
+        parsed = parse_iso_v1(event_time, "MCFT_CAP09_KBS_PUBLICATION_FORWARD_EVENT_INVALID")
+        if parsed <= after:
+            continue
+        require_v1(
+            parsed.minute == 0 and parsed.second == 0 and parsed.microsecond == 0,
+            "MCFT_CAP09_KBS_PUBLICATION_FORWARD_EVENT_CANONICAL_HOUR_REQUIRED",
+        )
+        forward.append(publication_event_summary_v1(event_time, grouped[event_time]))
+
+    ambiguous = [item["event_time"] for item in forward if int(item["row_count"]) != 1]
+    status = "NO_CHANGE" if not forward else ("AMBIGUOUS_FORWARD" if ambiguous else "FORWARD_DELTA")
+    return {
+        "schema_version": "geox_mcft_cap09_kbs_raw_hourly_publication_forward_delta_v1",
+        "status": status,
+        "baseline_latest_event_time": iso_v1(after),
+        "current_latest_event_time": inventory["latest_event_time"],
+        "forward_event_count": len(forward),
+        "forward_event_times": [item["event_time"] for item in forward],
+        "forward_event_rows": forward,
+        "ambiguous_forward_event_times": ambiguous,
+        "revision_or_backfill_auto_promotion_authorized": False,
+        "raw_values_emitted": False,
+    }
+
+
+
+def compare_kbs_raw_hourly_publication_snapshots_v1(
+    *,
+    previous_body: bytes,
+    previous_available_at: datetime,
+    current_body: bytes,
+    current_available_at: datetime,
+    baseline_latest_event_time: datetime,
+) -> dict:
+    require_v1(
+        baseline_latest_event_time.tzinfo is not None,
+        "MCFT_CAP09_KBS_PUBLICATION_COMPARE_BASELINE_TZ_REQUIRED",
+    )
+    baseline = baseline_latest_event_time.astimezone(timezone.utc)
+    require_v1(
+        baseline.minute == 0 and baseline.second == 0 and baseline.microsecond == 0,
+        "MCFT_CAP09_KBS_PUBLICATION_COMPARE_BASELINE_CANONICAL_HOUR_REQUIRED",
+    )
+
+    previous_inventory = build_kbs_raw_hourly_publication_snapshot_inventory_v1(
+        body=previous_body,
+        available_at=previous_available_at,
+    )
+    current_inventory = build_kbs_raw_hourly_publication_snapshot_inventory_v1(
+        body=current_body,
+        available_at=current_available_at,
+    )
+    previous_latest = parse_iso_v1(
+        previous_inventory["latest_event_time"],
+        "MCFT_CAP09_KBS_PUBLICATION_COMPARE_PREVIOUS_LATEST_INVALID",
+    )
+    current_latest = parse_iso_v1(
+        current_inventory["latest_event_time"],
+        "MCFT_CAP09_KBS_PUBLICATION_COMPARE_CURRENT_LATEST_INVALID",
+    )
+    require_v1(
+        previous_latest == baseline,
+        "MCFT_CAP09_KBS_PUBLICATION_COMPARE_BASELINE_POINTER_SNAPSHOT_MISMATCH",
+    )
+    require_v1(
+        current_latest >= baseline,
+        "MCFT_CAP09_KBS_PUBLICATION_COMPARE_CURRENT_LATEST_REGRESSION",
+    )
+
+    _, _, previous_grouped = publication_event_groups_v1(
+        body=previous_body,
+        available_at=previous_available_at,
+    )
+    _, _, current_grouped = publication_event_groups_v1(
+        body=current_body,
+        available_at=current_available_at,
+    )
+
+    historical_times = sorted({
+        event_time
+        for event_time in set(previous_grouped) | set(current_grouped)
+        if parse_iso_v1(
+            event_time,
+            "MCFT_CAP09_KBS_PUBLICATION_COMPARE_HISTORICAL_EVENT_INVALID",
+        ) <= baseline
+    })
+    historical_drift: list[dict] = []
+    for event_time in historical_times:
+        previous_hashes = previous_grouped.get(event_time)
+        current_hashes = current_grouped.get(event_time)
+        if previous_hashes is None:
+            kind = "ADDED_BEFORE_OR_AT_BASELINE"
+        elif current_hashes is None:
+            kind = "REMOVED_BEFORE_OR_AT_BASELINE"
+        else:
+            previous_summary = publication_event_summary_v1(event_time, previous_hashes)
+            current_summary = publication_event_summary_v1(event_time, current_hashes)
+            if (
+                previous_summary["row_count"] == current_summary["row_count"]
+                and previous_summary["row_variant_count"] == current_summary["row_variant_count"]
+                and previous_summary["row_identity_hash"] == current_summary["row_identity_hash"]
+            ):
+                continue
+            kind = "CHANGED_BEFORE_OR_AT_BASELINE"
+        historical_drift.append({"event_time": event_time, "kind": kind})
+
+    forward: list[dict] = []
+    for event_time in sorted(current_grouped):
+        parsed = parse_iso_v1(
+            event_time,
+            "MCFT_CAP09_KBS_PUBLICATION_COMPARE_FORWARD_EVENT_INVALID",
+        )
+        if parsed <= baseline:
+            continue
+        require_v1(
+            parsed.minute == 0 and parsed.second == 0 and parsed.microsecond == 0,
+            "MCFT_CAP09_KBS_PUBLICATION_COMPARE_FORWARD_CANONICAL_HOUR_REQUIRED",
+        )
+        forward.append(publication_event_summary_v1(event_time, current_grouped[event_time]))
+
+    ambiguous_forward = [
+        item["event_time"]
+        for item in forward
+        if int(item["row_count"]) != 1 or int(item["row_variant_count"]) != 1
+    ]
+    if historical_drift:
+        status = "HISTORICAL_DRIFT"
+    elif ambiguous_forward:
+        status = "AMBIGUOUS_FORWARD"
+    elif forward:
+        status = "FORWARD_DELTA"
+    else:
+        status = "NO_CHANGE"
+
+    return {
+        "schema_version": "geox_mcft_cap09_kbs_raw_hourly_publication_snapshot_comparison_v1",
+        "status": status,
+        "baseline_latest_event_time": iso_v1(baseline),
+        "previous_latest_event_time": previous_inventory["latest_event_time"],
+        "current_latest_event_time": current_inventory["latest_event_time"],
+        "historical_prefix_exact_match": len(historical_drift) == 0,
+        "historical_drift_count": len(historical_drift),
+        "historical_drift": historical_drift,
+        "forward_event_count": len(forward),
+        "forward_event_times": [item["event_time"] for item in forward],
+        "forward_event_rows": forward,
+        "ambiguous_forward_event_times": ambiguous_forward,
+        "historical_revision_or_backfill_auto_promotion_authorized": False,
+        "raw_values_emitted": False,
+    }
+
+
+def publication_snapshot_comparison_cli_v1(args: argparse.Namespace) -> None:
+    payload = compare_kbs_raw_hourly_publication_snapshots_v1(
+        previous_body=Path(args.previous_input).read_bytes(),
+        previous_available_at=parse_iso_v1(
+            args.previous_available_at,
+            "MCFT_CAP09_KBS_PUBLICATION_COMPARE_CLI_PREVIOUS_AVAILABLE_INVALID",
+        ),
+        current_body=Path(args.current_input).read_bytes(),
+        current_available_at=parse_iso_v1(
+            args.current_available_at,
+            "MCFT_CAP09_KBS_PUBLICATION_COMPARE_CLI_CURRENT_AVAILABLE_INVALID",
+        ),
+        baseline_latest_event_time=parse_iso_v1(
+            args.baseline_latest_event_time,
+            "MCFT_CAP09_KBS_PUBLICATION_COMPARE_CLI_BASELINE_INVALID",
+        ),
+    )
+    Path(args.output).write_text(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    print(json.dumps({
+        "status": "PASS",
+        "comparison_status": payload["status"],
+        "schema_version": payload["schema_version"],
+        "raw_values_emitted": False,
+        "provider_request_count": 0,
+        "database_write_count": 0,
+    }, sort_keys=True))
+
+
+def publication_inventory_cli_v1(args: argparse.Namespace) -> None:
+    available = parse_iso_v1(args.available_at, "MCFT_CAP09_KBS_PUBLICATION_CLI_AVAILABLE_AT_INVALID")
+    if args.command == "inspect-snapshot":
+        payload = build_kbs_raw_hourly_publication_snapshot_inventory_v1(
+            body=Path(args.input).read_bytes(),
+            available_at=available,
+        )
+    elif args.command == "diff-forward":
+        payload = diff_kbs_raw_hourly_publication_forward_v1(
+            body=Path(args.input).read_bytes(),
+            available_at=available,
+            after_event_time=parse_iso_v1(args.after, "MCFT_CAP09_KBS_PUBLICATION_CLI_AFTER_INVALID"),
+        )
+    else:
+        raise RuntimeError("MCFT_CAP09_KBS_PUBLICATION_CLI_COMMAND_INVALID")
+    Path(args.output).write_text(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    print(json.dumps({
+        "status": "PASS",
+        "schema_version": payload["schema_version"],
+        "raw_values_emitted": False,
+        "provider_request_count": 0,
+        "database_write_count": 0,
+    }, sort_keys=True))
 
 
 def compute_asce_short_hourly_et0_v1(
@@ -311,6 +612,68 @@ def selftest_v1() -> None:
             "MCFT_CAP09_KBS_PRODUCT_CORE_SELFTEST_MISSING_TARGET_CODE",
         )
 
+    snapshot = build_kbs_raw_hourly_publication_snapshot_inventory_v1(body=body, available_at=available)
+    require_v1(snapshot["endpoint_shape"] == "COMPLETE_ACCUMULATED_TABLE", "MCFT_CAP09_KBS_PUBLICATION_SELFTEST_ENDPOINT_SHAPE")
+    require_v1(snapshot["latest_event_time"] == "2026-08-13T04:00:00.000Z", "MCFT_CAP09_KBS_PUBLICATION_SELFTEST_LATEST")
+    require_v1(snapshot["latest_event_row_count"] == 1, "MCFT_CAP09_KBS_PUBLICATION_SELFTEST_LATEST_ROW_COUNT")
+    no_change = diff_kbs_raw_hourly_publication_forward_v1(
+        body=body,
+        available_at=available,
+        after_event_time=datetime(2026, 8, 13, 4, 0, tzinfo=timezone.utc),
+    )
+    require_v1(no_change["status"] == "NO_CHANGE", "MCFT_CAP09_KBS_PUBLICATION_SELFTEST_NO_CHANGE")
+    next_rows = rows + [
+        "2026-08-13 05:00:00,190.0,3.1,2.0,25.5,0.4",
+        "2026-08-13 06:00:00,200.0,3.2,2.1,26.0,0.5",
+    ]
+    next_body = (header + "\n".join(next_rows) + "\n").encode("utf-8")
+    forward = diff_kbs_raw_hourly_publication_forward_v1(
+        body=next_body,
+        available_at=available,
+        after_event_time=datetime(2026, 8, 13, 4, 0, tzinfo=timezone.utc),
+    )
+    require_v1(forward["status"] == "FORWARD_DELTA", "MCFT_CAP09_KBS_PUBLICATION_SELFTEST_FORWARD_STATUS")
+    require_v1(forward["forward_event_times"] == [
+        "2026-08-13T05:00:00.000Z",
+        "2026-08-13T06:00:00.000Z",
+    ], "MCFT_CAP09_KBS_PUBLICATION_SELFTEST_FORWARD_EVENTS")
+
+    compare_no_change = compare_kbs_raw_hourly_publication_snapshots_v1(
+        previous_body=body,
+        previous_available_at=available,
+        current_body=body,
+        current_available_at=available,
+        baseline_latest_event_time=datetime(2026, 8, 13, 4, 0, tzinfo=timezone.utc),
+    )
+    require_v1(compare_no_change["status"] == "NO_CHANGE", "MCFT_CAP09_KBS_COMPARE_SELFTEST_NO_CHANGE")
+    compare_forward = compare_kbs_raw_hourly_publication_snapshots_v1(
+        previous_body=body,
+        previous_available_at=available,
+        current_body=next_body,
+        current_available_at=available,
+        baseline_latest_event_time=datetime(2026, 8, 13, 4, 0, tzinfo=timezone.utc),
+    )
+    require_v1(compare_forward["status"] == "FORWARD_DELTA", "MCFT_CAP09_KBS_COMPARE_SELFTEST_FORWARD")
+    revised_rows = [
+        rows[0],
+        "2026-08-13 03:00:00,151.0,2.5,1.8,24.0,0.2",
+        rows[2],
+        "2026-08-13 05:00:00,190.0,3.1,2.0,25.5,0.4",
+    ]
+    revised_body = (header + "\n".join(revised_rows) + "\n").encode("utf-8")
+    compare_drift = compare_kbs_raw_hourly_publication_snapshots_v1(
+        previous_body=body,
+        previous_available_at=available,
+        current_body=revised_body,
+        current_available_at=available,
+        baseline_latest_event_time=datetime(2026, 8, 13, 4, 0, tzinfo=timezone.utc),
+    )
+    require_v1(compare_drift["status"] == "HISTORICAL_DRIFT", "MCFT_CAP09_KBS_COMPARE_SELFTEST_DRIFT")
+    require_v1(
+        compare_drift["historical_drift"][0]["event_time"] == "2026-08-13T03:00:00.000Z",
+        "MCFT_CAP09_KBS_COMPARE_SELFTEST_DRIFT_EVENT",
+    )
+
     duplicate_body = (header + "\n".join(rows + [rows[1]]) + "\n").encode("utf-8")
     try:
         decode_exact_kbs_raw_hourly_interval_v1(
@@ -335,6 +698,11 @@ def selftest_v1() -> None:
         "stale_daily_batch_exact_t_remains_decodable": True,
         "missing_exact_t_fails_closed": True,
         "duplicate_exact_t_fails_closed": True,
+        "complete_table_snapshot_inventory": True,
+        "forward_delta_discovery": True,
+        "no_change_discovery": True,
+        "historical_prefix_snapshot_comparison": True,
+        "historical_revision_backfill_fail_closed": True,
         "provider_request_count": 0,
         "database_write_count": 0,
         "runtime_tick_mutation_count": 0,
@@ -345,6 +713,22 @@ def main_v1() -> None:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("selftest")
+    inspect = sub.add_parser("inspect-snapshot")
+    inspect.add_argument("--available-at", required=True)
+    inspect.add_argument("--input", required=True)
+    inspect.add_argument("--output", required=True)
+    diff = sub.add_parser("diff-forward")
+    diff.add_argument("--after", required=True)
+    diff.add_argument("--available-at", required=True)
+    diff.add_argument("--input", required=True)
+    diff.add_argument("--output", required=True)
+    compare = sub.add_parser("compare-snapshots")
+    compare.add_argument("--previous-input", required=True)
+    compare.add_argument("--previous-available-at", required=True)
+    compare.add_argument("--current-input", required=True)
+    compare.add_argument("--current-available-at", required=True)
+    compare.add_argument("--baseline-latest-event-time", required=True)
+    compare.add_argument("--output", required=True)
     decode = sub.add_parser("decode-exact")
     decode.add_argument("--target", required=True)
     decode.add_argument("--available-at", required=True)
@@ -360,6 +744,10 @@ def main_v1() -> None:
         selftest_v1()
     elif args.command == "decode-exact":
         decode_cli_v1(args)
+    elif args.command in ("inspect-snapshot", "diff-forward"):
+        publication_inventory_cli_v1(args)
+    elif args.command == "compare-snapshots":
+        publication_snapshot_comparison_cli_v1(args)
 
 
 if __name__ == "__main__":

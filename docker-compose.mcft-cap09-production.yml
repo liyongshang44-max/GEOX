@@ -1,0 +1,98 @@
+name: geox-mcft-cap09-production-v1
+
+services:
+  geox-mcft-cap09-evidence-runtime-v1:
+    image: geox-mcft-cap09-runtime:${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?GEOX_DEPLOYMENT_SUBJECT_COMMIT is required}
+    build:
+      context: .
+      dockerfile: docker/mcft-cap09-runtime.Dockerfile
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    command:
+      - sh
+      - -c
+      - >-
+        mkdir -p /var/log/geox/mcft-cap09/evidence &&
+        exec node apps/server/dist/runtime/mcft_cap09_evidence_runtime.js
+        >> /var/log/geox/mcft-cap09/evidence/runtime.log 2>&1
+    environment:
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?GEOX_DEPLOYMENT_SUBJECT_COMMIT is required}
+      GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_SERVICE_ID: local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/geox-mcft-cap09-evidence-runtime-v1
+      GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH: /run/geox/mcft-cap09/runtime-start-authority.json
+      GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL: ${GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL:?GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL is required}
+      GEOX_MCFT_CAP09_TENANT_ID: ${GEOX_MCFT_CAP09_TENANT_ID:?GEOX_MCFT_CAP09_TENANT_ID is required}
+      GEOX_MCFT_CAP09_PROJECT_ID: ${GEOX_MCFT_CAP09_PROJECT_ID:?GEOX_MCFT_CAP09_PROJECT_ID is required}
+      GEOX_MCFT_CAP09_GROUP_ID: ${GEOX_MCFT_CAP09_GROUP_ID:?GEOX_MCFT_CAP09_GROUP_ID is required}
+      GEOX_MCFT_CAP09_FIELD_ID: ${GEOX_MCFT_CAP09_FIELD_ID:?GEOX_MCFT_CAP09_FIELD_ID is required}
+      GEOX_MCFT_CAP09_SEASON_ID: ${GEOX_MCFT_CAP09_SEASON_ID:?GEOX_MCFT_CAP09_SEASON_ID is required}
+      GEOX_MCFT_CAP09_ZONE_ID: ${GEOX_MCFT_CAP09_ZONE_ID:?GEOX_MCFT_CAP09_ZONE_ID is required}
+      GEOX_MCFT_CAP09_EVIDENCE_S3_ENDPOINT: ${GEOX_MCFT_CAP09_EVIDENCE_S3_ENDPOINT:?GEOX_MCFT_CAP09_EVIDENCE_S3_ENDPOINT is required}
+      GEOX_MCFT_CAP09_EVIDENCE_S3_BUCKET: ${GEOX_MCFT_CAP09_EVIDENCE_S3_BUCKET:?GEOX_MCFT_CAP09_EVIDENCE_S3_BUCKET is required}
+      GEOX_MCFT_CAP09_EVIDENCE_S3_REGION: ${GEOX_MCFT_CAP09_EVIDENCE_S3_REGION:?GEOX_MCFT_CAP09_EVIDENCE_S3_REGION is required}
+      GEOX_MCFT_CAP09_EVIDENCE_S3_ACCESS_KEY_ID: ${GEOX_MCFT_CAP09_EVIDENCE_S3_ACCESS_KEY_ID:?GEOX_MCFT_CAP09_EVIDENCE_S3_ACCESS_KEY_ID is required}
+      GEOX_MCFT_CAP09_EVIDENCE_S3_SECRET_ACCESS_KEY: ${GEOX_MCFT_CAP09_EVIDENCE_S3_SECRET_ACCESS_KEY:?GEOX_MCFT_CAP09_EVIDENCE_S3_SECRET_ACCESS_KEY is required}
+    volumes:
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH:?GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH is required}
+        target: /run/geox/mcft-cap09/runtime-start-authority.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_DURABLE_LOG_ROOT:?GEOX_MCFT_CAP09_DURABLE_LOG_ROOT is required}/evidence
+        target: /var/log/geox/mcft-cap09/evidence
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  geox-mcft-cap09-twin-runtime-v1:
+    image: geox-mcft-cap09-runtime:${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?GEOX_DEPLOYMENT_SUBJECT_COMMIT is required}
+    build:
+      context: .
+      dockerfile: docker/mcft-cap09-runtime.Dockerfile
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    command:
+      - sh
+      - -c
+      - >-
+        mkdir -p /var/log/geox/mcft-cap09/twin &&
+        exec node apps/server/dist/runtime/mcft_cap09_twin_runtime.js
+        >> /var/log/geox/mcft-cap09/twin/runtime.log 2>&1
+    environment:
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?GEOX_DEPLOYMENT_SUBJECT_COMMIT is required}
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_SERVICE_ID: local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/geox-mcft-cap09-twin-runtime-v1
+      GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH: /run/geox/mcft-cap09/runtime-start-authority.json
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL: ${GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL:?GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL is required}
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_MANIFEST_PATH: /run/geox/mcft-cap09/formal-window-manifest.json
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_CROP_AUTHORITY_PATH: /run/geox/mcft-cap09/crop-authority.json
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_CONFIGURATION_MATRIX_PATH: /run/geox/mcft-cap09/configuration-matrix.json
+    volumes:
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH:?GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH is required}
+        target: /run/geox/mcft-cap09/runtime-start-authority.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_PRODUCTION_FORMAL_WINDOW_MANIFEST_PATH:?GEOX_MCFT_CAP09_PRODUCTION_FORMAL_WINDOW_MANIFEST_PATH is required}
+        target: /run/geox/mcft-cap09/formal-window-manifest.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_PRODUCTION_CROP_AUTHORITY_PATH:?GEOX_MCFT_CAP09_PRODUCTION_CROP_AUTHORITY_PATH is required}
+        target: /run/geox/mcft-cap09/crop-authority.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_PRODUCTION_CONFIGURATION_MATRIX_PATH:?GEOX_MCFT_CAP09_PRODUCTION_CONFIGURATION_MATRIX_PATH is required}
+        target: /run/geox/mcft-cap09/configuration-matrix.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_DURABLE_LOG_ROOT:?GEOX_MCFT_CAP09_DURABLE_LOG_ROOT is required}/twin
+        target: /var/log/geox/mcft-cap09/twin
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

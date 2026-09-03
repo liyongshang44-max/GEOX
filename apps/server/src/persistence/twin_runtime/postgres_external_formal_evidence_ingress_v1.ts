@@ -122,7 +122,7 @@ function identityV1(record: CanonicalReplayEvidenceRecordV1): string {
   return [record.tenant_id, record.project_id, record.group_id, record.field_id, record.season_id, record.zone_id, record.dataset_id, record.record_type, record.source_record_id].join("|");
 }
 
-function factIdV1(record: CanonicalReplayEvidenceRecordV1): string {
+export function externalFormalEvidenceFactIdV1(record: CanonicalReplayEvidenceRecordV1): string {
   return `fact_external_evidence_${crypto.createHash("sha256").update(identityV1(record), "utf8").digest("hex")}`;
 }
 
@@ -165,7 +165,11 @@ export function prepareExternalFormalEvidenceIngressV1(result: CanonicalizedExte
   if (record.quality.raw_source_sha256 !== rawSha256 || record.quality.raw_retention_ref !== retentionRef || record.quality.raw_payload_embedded !== false) {
     throw new Error("EA5C1_RAW_PROVENANCE_QUALITY_BINDING_MISMATCH");
   }
-  if (result.raw_provenance.raw_sha256 !== rawSha256 || result.raw_provenance.retention_ref !== retentionRef || result.raw_provenance.raw_bytes !== Number(rawBytes)) {
+  if (
+result.raw_provenance.raw_sha256 !== rawSha256
+    || result.raw_provenance.retention_ref !== retentionRef
+    || result.raw_provenance.raw_bytes !== Number(rawBytes)
+  ) {
     throw new Error("EA5C1_PIPELINE_RAW_PROVENANCE_MISMATCH");
   }
   if (result.decoder.decoder_id !== raw.decoder_id || result.decoder.decoder_version !== raw.decoder_version) {
@@ -195,7 +199,7 @@ export function prepareExternalFormalEvidenceIngressV1(result: CanonicalizedExte
     record,
     event_time: eventTime,
     raw_proof: { retention_ref: retentionRef, retained_sha256: rawSha256, retained_bytes: Number(rawBytes) },
-    fact_id: factIdV1(record),
+    fact_id: externalFormalEvidenceFactIdV1(record),
     identity_key: identityV1(record),
     requested_semantic_hash: requestedSemanticHash,
   };

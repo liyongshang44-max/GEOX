@@ -7,6 +7,8 @@ on:
       - 'apps/server/src/external_evidence/s3_compatible_private_candidate_manifest_store_v1.ts'
       - 'apps/server/src/external_evidence/s3_compatible_private_evidence_object_client_v1.ts'
       - 'apps/server/src/external_evidence/s3_compatible_private_retained_raw_reader_v1.ts'
+      - 'apps/server/src/external_evidence/verified_retained_raw_replay_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1.ts'
       - 'apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts'
       - 'apps/server/src/external_evidence/mcft_cap09_production_evidence_work_items_v1.ts'
@@ -34,6 +36,7 @@ env:
   NODE_VERSION: '20.11.1'
   PNPM_VERSION: '9.15.4'
   EXACT_PREDECESSOR_SHA: '46c9c7b6b59c113848fc69daff88fb183fccc954'
+  POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA: '46367333d228a2b90a86ff6a33aebc334f3d73a2'
   DATABASE_URL: 'postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_phase7_composition'
 
 concurrency:
@@ -84,7 +87,11 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            test "${{ github.event.pull_request.base.sha }}" = "$EXACT_PREDECESSOR_SHA"
+            base="${{ github.event.pull_request.base.sha }}"
+            if [ "$base" != "$EXACT_PREDECESSOR_SHA" ] && [ "$base" != "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ]; then
+              echo "PHASE7_COMPOSITION_UNGOVERNED_BASE:$base" >&2
+              exit 1
+            fi
           fi
           test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
           test -z "${GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL:-}"
@@ -95,7 +102,12 @@ jobs:
           pnpm --filter @geox/server run typecheck
           pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
             apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts \
+            apps/server/src/external_evidence/verified_retained_raw_replay_v1.ts \
+            scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1.ts \
             scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1.ts
+
+      - name: Prove reusable verified retained-raw replay primitive
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1.ts
 
       - name: Start isolated private formal raw/candidate store
         shell: bash
@@ -177,6 +189,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap09-phase7-candidate-promotion-composition-${{ github.event.pull_request.head.sha || github.sha }}
-          path: acceptance-output/MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1_RESULT.json
+          path: |
+            acceptance-output/MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1_RESULT.json
           if-no-files-found: error
           retention-days: 90

@@ -21,13 +21,16 @@ eq(git("merge-base", base, head), base, "EA5C1_BASE_NOT_ANCESTOR");
 
 const authorityPath = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C1-DURABLE-RAW-RESTRICTED-INGRESS-V1.json";
 const rawAdapterPath = "apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts";
+const collectorPath = "apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts";
 const ingressPath = "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts";
 const acceptancePath = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts";
+const successorAcceptancePath = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_SUCCESSOR_REPLAY_COMPLETE_INGRESS_V1.ts";
 const gatePath = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs";
 const workflowPath = ".github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml";
-const expectedChanged = [authorityPath, rawAdapterPath, ingressPath, acceptancePath, gatePath, workflowPath].sort();
+const historicalExpectedChanged = [authorityPath, rawAdapterPath, ingressPath, acceptancePath, gatePath, workflowPath].sort();
+const successorProtectedPaths = [...historicalExpectedChanged, collectorPath].sort();
 const changed = git("diff", "--name-only", `${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
-const protectedChanged = changed.filter((file) => expectedChanged.includes(file));
+const protectedChanged = changed.filter((file) => successorProtectedPaths.includes(file));
 
 const predecessorPins = {
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md": "39f6a09273c30088a7ea264cfa94ff930ea5518e",
@@ -46,7 +49,7 @@ const candidatePins = {
 
 let validationMode;
 if (base === HISTORICAL_BASE) {
-  eq(JSON.stringify(changed), JSON.stringify(expectedChanged), "EA5C1_EXACT_SIX_FILE_BOUNDARY_REQUIRED");
+  eq(JSON.stringify(changed), JSON.stringify(historicalExpectedChanged), "EA5C1_EXACT_SIX_FILE_BOUNDARY_REQUIRED");
   for (const [file, expected] of Object.entries(predecessorPins)) {
     eq(blob(base, file), expected, `EA5C1_BASE_BLOB_PIN_MISMATCH:${file}`);
     eq(blob("HEAD", file), expected, `EA5C1_PREDECESSOR_MUTATED:${file}`);
@@ -64,12 +67,15 @@ if (base === HISTORICAL_BASE) {
   eq(blob(base, acceptancePath), candidatePins[acceptancePath], "EA5C1_SUCCESSOR_BASE_FOCUSED_ACCEPTANCE_DRIFT");
   eq(blob("HEAD", acceptancePath), candidatePins[acceptancePath], "EA5C1_SUCCESSOR_FOCUSED_ACCEPTANCE_MUTATED");
   for (const file of Object.keys(predecessorPins)) {
+    if (file === collectorPath) continue;
     eq(blob("HEAD", file), blob(base, file), `EA5C1_SUCCESSOR_PREDECESSOR_MUTATED:${file}`);
   }
-  const allowedMaintenance = new Set([ingressPath, gatePath, workflowPath]);
+  const allowedMaintenance = new Set([ingressPath, collectorPath, gatePath, workflowPath]);
   const forbiddenProtected = protectedChanged.filter((file) => !allowedMaintenance.has(file));
   eq(JSON.stringify(forbiddenProtected), JSON.stringify([]), "EA5C1_SUCCESSOR_PROTECTED_SURFACE_CHANGE_REQUIRES_NEW_EXACT_GATE");
-  if (!protectedChanged.includes(ingressPath)) fail("EA5C1_SUCCESSOR_INGRESS_CHANGE_REQUIRED_FOR_MAINTENANCE_REVALIDATION");
+  if (!protectedChanged.includes(ingressPath) && !protectedChanged.includes(collectorPath)) {
+    fail("EA5C1_SUCCESSOR_INGRESS_OR_COLLECTOR_CHANGE_REQUIRED_FOR_MAINTENANCE_REVALIDATION");
+  }
   validationMode = "SUCCESSOR_MAINTENANCE_REVALIDATION";
 }
 
@@ -140,12 +146,36 @@ for (const forbidden of ["INSERT INTO twin_runtime", "INSERT INTO twin_state", "
   if (ingressSource.includes(forbidden)) fail(`EA5C1_NON_EVIDENCE_WRITE_SURFACE_FORBIDDEN:${forbidden}`);
 }
 
+const collectorSource = fs.readFileSync(collectorPath, "utf8");
+for (const marker of [
+  "collectAndRetainRawEvidenceV1",
+  "EA3_RETENTION_DIGEST_MISMATCH",
+  "Decoder invocation is intentionally after the verified retention receipt barrier.",
+]) if (!collectorSource.includes(marker)) fail(`EA5C1_SUCCESSOR_COLLECTOR_MARKER_MISSING:${marker}`);
+for (const forbidden of ["process.env", "INSERT INTO facts", "RuntimeTickCursor"]) {
+  if (collectorSource.includes(forbidden)) fail(`EA5C1_SUCCESSOR_COLLECTOR_BOUNDARY_FORBIDDEN:${forbidden}`);
+}
+
 const workflow = fs.readFileSync(workflowPath, "utf8");
 for (const marker of [
   "postgres:18", "minio/minio", "ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.ts",
   "ACCEPTANCE_MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER.ts", "ACCEPTANCE_MCFT_CAP_09_EA5B5C_EXTERNAL_CAP04_ORCHESTRATION.ts",
-  "MCFT_SUBJECT_SHA", "Verify raw bucket stays private"
+  "MCFT_SUBJECT_SHA", "Verify raw bucket stays private", "EA5C1_EXACT_HISTORICAL_BASE",
+  successorAcceptancePath
 ]) if (!workflow.includes(marker)) fail(`EA5C1_WORKFLOW_PROOF_MARKER_MISSING:${marker}`);
+
+if (validationMode === "SUCCESSOR_MAINTENANCE_REVALIDATION") {
+  const successorAcceptance = fs.readFileSync(successorAcceptancePath, "utf8");
+  for (const marker of [
+    "const rawProvenance = {",
+    "factText.includes('\"request_id\"'), false",
+    "factText.includes('\"source_locator\"'), false",
+  ]) {
+    if (!successorAcceptance.includes(marker)) {
+      fail(`EA5C1_SUCCESSOR_REPLAY_COMPLETE_PROOF_MARKER_MISSING:${marker}`);
+    }
+  }
+}
 
 const result = {
   schema_version: "geox_mcft_cap09_ea5c1_governance_result_v2",
@@ -160,6 +190,8 @@ const result = {
   historical_raw_adapter_immutable: blob("HEAD", rawAdapterPath) === candidatePins[rawAdapterPath],
   historical_focused_acceptance_immutable: blob("HEAD", acceptancePath) === candidatePins[acceptancePath],
   successor_ingress_maintenance_revalidation: validationMode === "SUCCESSOR_MAINTENANCE_REVALIDATION",
+  successor_collector_maintenance_revalidation:
+    validationMode === "SUCCESSOR_MAINTENANCE_REVALIDATION" && protectedChanged.includes(collectorPath),
   predecessor_contracts_unchanged_from_current_base: true,
   durable_raw_before_decode_and_before_facts_proved: true,
   exact_external_five_source_ingress_profile_proved: true,

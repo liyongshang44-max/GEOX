@@ -16,6 +16,14 @@ import {
   MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1,
   readMcftCap09TwinRuntimeProcessConfigV1,
 } from "../../apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.js";
+import {
+  loadMcftCap09ProductionRuntimeStartAuthorityV1,
+  parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1,
+} from "../../apps/server/src/runtime/mcft_cap09_production_runtime_start_authority_v1.js";
+import {
+  buildMcftCap09ProductionLeaseOwnerV1,
+  readMcftCap09ProductionServiceIdentityBindingV1,
+} from "../../apps/server/src/runtime/mcft_cap09_production_service_identity_v1.js";
 
 const OUT = path.resolve(
   "acceptance-output/MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1_RESULT.json",
@@ -65,6 +73,154 @@ function main(): void {
   assert.equal(
     MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1.database_clock_for_tick_authority,
     true,
+  );
+  assert.equal(
+    MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1.runtime_start_authority,
+    "SEPARATE_GOVERNED_AUTHORITY_REQUIRED",
+  );
+
+  const runtimeStartExpected = {
+    deployment_subject_sha: "1".repeat(40),
+    scope: {
+      tenant_id: "tenantA",
+      project_id: "projectA",
+      group_id: "groupA",
+      field_id: "field_e3r1",
+      season_id: "season_2026",
+      zone_id: "zone_root",
+    },
+  } as const;
+  const runtimeStartAuthority = {
+    schema_version: "geox_mcft_cap09_production_runtime_start_authority_instance_v1",
+    authority_id: "GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-START-AUTHORITY-INSTANCE-V1",
+    status: "AUTHORIZED",
+    armed: true,
+    authority_class: "MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY",
+    authority_ref: "GEOX-MCFT-CAP-09-TEST-RUNTIME-START-AUTHORITY-V1",
+    deployment_subject_sha: runtimeStartExpected.deployment_subject_sha,
+    scope: runtimeStartExpected.scope,
+    activation_fence_time: "2026-09-03T17:30:00.000Z",
+    formal_a0_authority_ref: "GEOX-MCFT-CAP-09-TEST-A0-AUTHORITY-V1",
+    formal_a0_authority_sha256:
+      "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    live_activation_authority_ref:
+      "GEOX-MCFT-CAP-09-TEST-LIVE-ACTIVATION-AUTHORITY-V1",
+    live_activation_authority_sha256:
+      "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    formal_a0_logical_time: "2026-09-03T18:00:00.000Z",
+    runtime_process_start_authorized: true,
+    evidence_runtime_start_authorized: true,
+    twin_runtime_start_authorized: true,
+    production_owner_activation_authorized: false,
+    formal_v5_arm_authorized: false,
+    a0_authorized: false,
+    o00_authorized: false,
+  } as const;
+  assert.equal(
+    parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+      runtimeStartAuthority,
+      "TWIN_RUNTIME",
+      runtimeStartExpected,
+    ).formal_a0_logical_time,
+    "2026-09-03T18:00:00.000Z",
+  );
+  assert.equal(
+    parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+      runtimeStartAuthority,
+      "EVIDENCE_RUNTIME",
+      runtimeStartExpected,
+    ).activation_fence_time,
+    "2026-09-03T17:30:00.000Z",
+  );
+  assert.throws(
+    () => parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+      { ...runtimeStartAuthority, armed: false },
+      "TWIN_RUNTIME",
+      runtimeStartExpected,
+    ),
+    /MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED/,
+  );
+  assert.throws(
+    () => parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+      { ...runtimeStartAuthority, twin_runtime_start_authorized: false },
+      "TWIN_RUNTIME",
+      runtimeStartExpected,
+    ),
+    /MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED/,
+  );
+  assert.throws(
+    () => parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+      runtimeStartAuthority,
+      "TWIN_RUNTIME",
+      { ...runtimeStartExpected, deployment_subject_sha: "2".repeat(40) },
+    ),
+    /MCFT_CAP09_PRODUCTION_RUNTIME_START_DEPLOYMENT_SUBJECT_MISMATCH/,
+  );
+  assert.throws(
+    () => parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+      runtimeStartAuthority,
+      "TWIN_RUNTIME",
+      {
+        ...runtimeStartExpected,
+        scope: { ...runtimeStartExpected.scope, field_id: "field_other" },
+      },
+    ),
+    /MCFT_CAP09_PRODUCTION_RUNTIME_START_SCOPE_MISMATCH/,
+  );
+  assert.throws(
+    () => parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+      { ...runtimeStartAuthority, formal_a0_authority_sha256: "sha256:bad" },
+      "TWIN_RUNTIME",
+      runtimeStartExpected,
+    ),
+    /MCFT_CAP09_PRODUCTION_RUNTIME_START_FORMAL_A0_AUTHORITY_DIGEST_REQUIRED/,
+  );
+
+  const mountedAuthorityPath = path.resolve(
+    "acceptance-output/MCFT_CAP_09_TEST_RUNTIME_START_AUTHORITY_INSTANCE_V1.json",
+  );
+  fs.mkdirSync(path.dirname(mountedAuthorityPath), { recursive: true });
+  fs.writeFileSync(
+    mountedAuthorityPath,
+    JSON.stringify(runtimeStartAuthority, null, 2) + "\n",
+  );
+  assert.equal(
+    loadMcftCap09ProductionRuntimeStartAuthorityV1({
+      plane: "TWIN_RUNTIME",
+      expected: runtimeStartExpected,
+      authority_path: mountedAuthorityPath,
+      embedded_authority: { armed: false },
+    }).formal_a0_logical_time,
+    "2026-09-03T18:00:00.000Z",
+  );
+
+  const evidenceBinding =
+    readMcftCap09ProductionServiceIdentityBindingV1("EVIDENCE_RUNTIME");
+  const twinBinding =
+    readMcftCap09ProductionServiceIdentityBindingV1("TWIN_RUNTIME");
+  assert.notEqual(evidenceBinding.service_id, twinBinding.service_id);
+  const evidenceOwnerA = buildMcftCap09ProductionLeaseOwnerV1({
+    plane: "EVIDENCE_RUNTIME",
+    configured_service_id: evidenceBinding.service_id,
+    instance_id: "container-a",
+  });
+  const evidenceOwnerB = buildMcftCap09ProductionLeaseOwnerV1({
+    plane: "EVIDENCE_RUNTIME",
+    configured_service_id: evidenceBinding.service_id,
+    instance_id: "container-b",
+  });
+  assert.notEqual(evidenceOwnerA, evidenceOwnerB);
+  assert.equal(
+    evidenceOwnerA,
+    `${evidenceBinding.service_id}#instance:container-a`,
+  );
+  assert.throws(
+    () => buildMcftCap09ProductionLeaseOwnerV1({
+      plane: "EVIDENCE_RUNTIME",
+      configured_service_id: twinBinding.service_id,
+      instance_id: "container-a",
+    }),
+    /MCFT_CAP09_PRODUCTION_CONFIGURED_SERVICE_ID_MISMATCH/,
   );
 
   assert.throws(
@@ -117,6 +273,10 @@ function main(): void {
   assert.equal(
     MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_CONTRACT_V1.target_selection_boundary,
     "EXPLICIT_INJECTED_TARGET_PLANNER",
+  );
+  assert.equal(
+    MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_CONTRACT_V1.host_planner_boundary,
+    "EXPLICIT_INJECTED_HOST_PLANNER",
   );
 
   const signals = new FakeProcessSignalsV1();
@@ -174,6 +334,16 @@ function main(): void {
     path.resolve("apps/server/scripts/write_dist_entries.cjs"),
     "utf8",
   );
+  assert.equal(
+    evidenceSource.includes("host_planner: EvidenceRuntimeHostPlannerV1"),
+    true,
+    "PHASE5_EVIDENCE_PROCESS_DIRECT_HOST_PLANNER_SEAM_REQUIRED",
+  );
+  assert.equal(
+    distWriter.includes("runMcftCap09ProductionEvidenceRuntimeV1"),
+    true,
+    "PHASE5_EVIDENCE_DIST_ENTRYPOINT_PRODUCTION_PLANNER_BINDING_REQUIRED",
+  );
 
   for (const forbidden of [
     "scripts/runtime_acceptance",
@@ -187,9 +357,26 @@ function main(): void {
       `PHASE5_PROCESS_TEST_ONLY_DEPENDENCY_FORBIDDEN:${forbidden}`,
     );
   }
+  assert.equal(
+    lifecycleSource.includes('case "SCHEDULER_LEASE_STANDBY":'),
+    true,
+    "PHASE5_TWIN_SCHEDULER_LEASE_STANDBY_WAIT_REQUIRED",
+  );
   assert.equal(twinSource.includes("composeMcftCap09TwinRuntimeV1"), true);
   assert.equal(evidenceSource.includes("composeEvidenceRuntimeV1"), true);
   assert.equal(evidenceSource.includes("lease_repository.releaseLease"), true);
+  assert.equal(
+    distWriter.includes('path.join("runtime", "mcft_cap09_evidence_runtime.js")'),
+    true,
+  );
+  assert.equal(
+    distWriter.includes("runMcftCap09ProductionEvidenceRuntimeV1"),
+    true,
+  );
+  assert.equal(
+    distWriter.includes("MCFT_CAP09_EVIDENCE_PRODUCTION_TARGET_PLANNER_NOT_BOUND"),
+    false,
+  );
   assert.equal(
     distWriter.includes('path.join("runtime", "mcft_cap09_twin_runtime.js")'),
     true,
@@ -214,6 +401,20 @@ function main(): void {
     evidence_graceful_current_fence_release: true,
     twin_duplicate_coordination_contention_retryable: true,
     twin_stale_fence_corruption_fatal: true,
+    twin_scheduler_lease_standby_waits_without_fatal: true,
+    stable_compiled_evidence_entrypoint: true,
+    evidence_entrypoint_production_planner_bound: true,
+    evidence_entrypoint_fail_closed_without_runtime_start_authority: true,
+    twin_entrypoint_fail_closed_without_runtime_start_authority: true,
+    shared_runtime_start_authority_parser: true,
+    runtime_start_exact_deployment_subject_bound: true,
+    runtime_start_exact_scope_bound: true,
+    runtime_start_source_digest_fields_required: true,
+    stale_runtime_start_authority_replay_fail_closed: true,
+    mounted_runtime_start_authority_file_binding: true,
+    frozen_production_service_identity_binding: true,
+    per_instance_fenced_owner_identity: true,
+    duplicate_service_instances_have_distinct_owner_identity: true,
     stable_compiled_twin_entrypoint: true,
     test_script_dependency_in_product_process: false,
     production_owner_cutover: false,

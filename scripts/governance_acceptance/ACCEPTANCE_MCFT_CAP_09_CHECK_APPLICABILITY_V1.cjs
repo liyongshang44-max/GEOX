@@ -9,14 +9,14 @@ const cp = require("node:child_process");
 const {
   AUTHORITY_PATH,
   REGISTRY_PATH,
-  resolveDependencyResolvers,
-  resolveFailedV4ForbiddenEvidencePolicy,
+  prepareApplicabilityContext,
   planApplicability,
 } = require("./PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs");
 
 const ROOT = path.resolve(__dirname, "../..");
 const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json");
 const CURRENT_HEAD_SHA = cp.execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" }).trim();
+const PREPARED_CONTEXTS = new WeakMap();
 
 function readJson(rel) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8"));
@@ -32,6 +32,26 @@ function byId(plan, id) {
   return row;
 }
 
+function preparedContext(authority, registry) {
+  let byRegistry = PREPARED_CONTEXTS.get(authority);
+  if (!byRegistry) {
+    byRegistry = new WeakMap();
+    PREPARED_CONTEXTS.set(authority, byRegistry);
+  }
+  let prepared = byRegistry.get(registry);
+  if (!prepared) {
+    prepared = prepareApplicabilityContext({
+      root: ROOT,
+      authority,
+      registry,
+      generation: null,
+      headSha: CURRENT_HEAD_SHA,
+    });
+    byRegistry.set(registry, prepared);
+  }
+  return prepared;
+}
+
 function plan(authority, registry, changedPaths, stage = "SUCCESSOR_SUBJECT_PRE_MERGE") {
   return planApplicability({
     root: ROOT,
@@ -41,6 +61,7 @@ function plan(authority, registry, changedPaths, stage = "SUCCESSOR_SUBJECT_PRE_
     stage,
     baseSha: authority.frozen_successor_subject_sha,
     headSha: CURRENT_HEAD_SHA,
+    preparedContext: preparedContext(authority, registry),
   });
 }
 
@@ -90,18 +111,36 @@ function main() {
   assertCheckContract(authority);
 
   // Authority itself must resolve every exact path / import root / external graph now.
-  const resolved = resolveDependencyResolvers(ROOT, authority);
+  const primaryPreparedContext = preparedContext(authority, registry);
+  assert.strictEqual(primaryPreparedContext, preparedContext(authority, registry));
+  assert.throws(
+    () => planApplicability({
+      root: ROOT,
+      authority,
+      registry,
+      changedPaths: [],
+      stage: "SUCCESSOR_SUBJECT_PRE_MERGE",
+      generation: null,
+      baseSha: authority.frozen_successor_subject_sha,
+      headSha: "0".repeat(40),
+      preparedContext: primaryPreparedContext,
+    }),
+    /CONTROL_PLANE_PREPARED_CONTEXT_SUBJECT_MISMATCH/,
+  );
+  const resolved = primaryPreparedContext.resolverResult;
   assert.deepEqual(resolved.errors, [], `CONTROL_PLANE_RESOLVER_ERRORS:${JSON.stringify(resolved.errors)}`);
   for (const [id, row] of Object.entries(resolved.resolved)) {
     assert.equal(row.missing.length, 0, `CONTROL_PLANE_RESOLVER_MISSING:${id}:${JSON.stringify(row.missing)}`);
     assert(row.paths.length > 0, `CONTROL_PLANE_RESOLVER_EMPTY:${id}`);
   }
-  const failedV4Policy = resolveFailedV4ForbiddenEvidencePolicy(ROOT);
+  const failedV4Policy = primaryPreparedContext.failedV4Policy;
   assert.deepEqual(failedV4Policy.errors, [], `FAILED_V4_AUTHORITY_POLICY_ERRORS:${JSON.stringify(failedV4Policy.errors)}`);
   assert(failedV4Policy.subjects.has("26c1383f7f45abb76c99e28ec3d06714e85d1b2c"), "FAILED_V4_SUBJECT_MUST_BE_FORBIDDEN");
 
-  // CP-4: control-plane-only maintenance preserves carry-forward only for dependency sets
-  // that still exist unchanged at the frozen subject. Expanded Phase1/Phase2 sets require fresh proof.
+  // CP-4: control-plane-only maintenance cannot carry historical evidence whose resolved
+  // dependency digest has already changed on the current successor. Shared collector refactoring
+  // therefore keeps EA5C1 fail-closed as REQUALIFY even when this synthetic changed-path set
+  // contains only the control-plane authority itself.
   const controlOnly = plan(authority, registry, [AUTHORITY_PATH]);
   assert.equal(controlOnly.status, "PASS");
   assert.equal(controlOnly.unknown_changed_paths.length, 0);
@@ -114,10 +153,19 @@ function main() {
   ]) {
     const row = byId(controlOnly, id);
     assert.equal(row.status, "REQUALIFY", `EXPANDED_V13_RESOLVER_MUST_REQUALIFY:${id}`);
-    assert.equal(row.reason_code, "DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT", `EXPANDED_V13_RESOLVER_REASON_REQUIRED:${id}`);
+    assert(
+      ["DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT", "GOVERNED_DEPENDENCY_CHANGED"].includes(row.reason_code),
+      `EXPANDED_V13_RESOLVER_REASON_REQUIRED:${id}`,
+    );
     assert.equal(row.dependency_digest_match, false, `EXPANDED_V13_RESOLVER_DIGEST_MUST_DIFFER:${id}`);
   }
-  assert.equal(byId(controlOnly, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS").status, "CARRY_FORWARD", "UNCHANGED_EA5C1_MUST_CARRY");
+  const controlOnlyEa5c1 = byId(controlOnly, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS");
+  assert.equal(controlOnlyEa5c1.status, "REQUALIFY", "SHARED_COLLECTOR_DIGEST_DRIFT_MUST_REQUALIFY_EA5C1");
+  assert.equal(controlOnlyEa5c1.dependency_digest_match, false, "EA5C1_SHARED_COLLECTOR_DIGEST_MUST_DIFFER");
+  assert(
+    ["DEPENDENCY_DIGEST_CHANGED", "DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT"].includes(controlOnlyEa5c1.reason_code),
+    "EA5C1_SHARED_COLLECTOR_REQUALIFICATION_REASON_REQUIRED",
+  );
   for (const id of [
     "EA5E2_RUNTIME_DEPENDENCY_GRAPH",
     "LEGACY_AM19_PERSISTENT_24T",
@@ -136,6 +184,46 @@ function main() {
   assert.equal(unknown.status, "FAIL");
   assert.deepEqual(unknown.unknown_changed_paths, ["docs/__mcft_cap09_unowned_path_should_fail__.md"]);
 
+  const ea5c1Check = authority.checks.find((row) => row.check_id === "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS");
+  assert.ok(ea5c1Check, "EA5C1_CHECK_REQUIRED");
+  assert.equal(ea5c1Check.execution_workflow_status, "IMPLEMENTED_AT_SUCCESSOR_HEAD");
+  assert.equal(ea5c1Check.execution_workflow, ".github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml");
+
+  const successorEa5c1AcceptancePath = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_SUCCESSOR_REPLAY_COMPLETE_INGRESS_V1.ts";
+  const successorEa5c1AcceptancePlan = plan(authority, registry, [successorEa5c1AcceptancePath]);
+  assert.equal(successorEa5c1AcceptancePlan.status, "PASS");
+  assert.equal(successorEa5c1AcceptancePlan.unknown_changed_paths.length, 0);
+  assert.equal(byId(successorEa5c1AcceptancePlan, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS").status, "REQUALIFY");
+  assert(
+    byId(successorEa5c1AcceptancePlan, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS")
+      .changed_dependencies.includes(successorEa5c1AcceptancePath),
+  );
+
+  // CP-4: shared collector maintenance has a legal successor requalification route.
+  const collectorPath = "apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.ts";
+  const collectorChange = plan(authority, registry, [collectorPath]);
+  assert.equal(collectorChange.status, "PASS");
+  assert.equal(collectorChange.unknown_changed_paths.length, 0);
+  assert.equal(byId(collectorChange, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS").status, "REQUALIFY");
+  assert(byId(collectorChange, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS").changed_dependencies.includes(collectorPath));
+
+  // CP-4: the EA3 collector proof route is part of the EA5C1 successor
+  // qualification surface, not an ungoverned side gate.
+  for (const ea3ProofPath of [
+    ".github/workflows/mcft-cap-09-ea3-external-collector-canonicalizer.yml",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER.ts",
+  ]) {
+    const ea3ProofPlan = plan(authority, registry, [ea3ProofPath]);
+    assert.equal(ea3ProofPlan.status, "PASS");
+    assert.equal(ea3ProofPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(ea3ProofPlan, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS").status, "REQUALIFY");
+    assert(
+      byId(ea3ProofPlan, "EA5C1_DURABLE_RAW_RESTRICTED_INGRESS")
+        .changed_dependencies.includes(ea3ProofPath),
+    );
+  }
+
   // CP-4: known changed dependency. Shared ingress changes must requalify EA5C1.
   const ingressPath = "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts";
   const ingress = plan(authority, registry, [ingressPath]);
@@ -149,6 +237,342 @@ function main() {
   assert.equal(legacy.status, "PASS");
   assert.equal(byId(legacy, "LEGACY_AM19_PERSISTENT_24T").status, "REQUALIFY");
   assert(byId(legacy, "LEGACY_AM19_PERSISTENT_24T").changed_dependencies.includes(legacyPath));
+
+  // CP-4: forward ACL carry-forward remediation crosses Phase3, V13,
+  // production-equivalent containers, and production-owner provisioning.
+  const evidenceAclCarryforwardPath = "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql";
+  const evidenceAclCarryforward = plan(authority, registry, [evidenceAclCarryforwardPath]);
+  assert.equal(evidenceAclCarryforward.status, "PASS");
+  assert.equal(evidenceAclCarryforward.unknown_changed_paths.length, 0);
+  for (const id of [
+    "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+    "V13_AUTONOMOUS_FORCING_FOUNDATION",
+    "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+  ]) {
+    const row = byId(evidenceAclCarryforward, id);
+    assert.equal(row.status, "REQUALIFY", "EVIDENCE_ACL_CARRYFORWARD_MUST_REQUALIFY:" + id);
+    assert(row.changed_dependencies.includes(evidenceAclCarryforwardPath), "EVIDENCE_ACL_CARRYFORWARD_DEPENDENCY_REQUIRED:" + id);
+  }
+  assert.equal(byId(evidenceAclCarryforward, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+  const evidenceAclCarryforwardPostMerge = plan(
+    authority,
+    registry,
+    [evidenceAclCarryforwardPath],
+    "POST_MERGE_V13_QUALIFICATION",
+  );
+  assert.equal(evidenceAclCarryforwardPostMerge.status, "PASS");
+  const ownerCarryforward = byId(evidenceAclCarryforwardPostMerge, "EXACT_ONE_PRODUCTION_OWNER");
+  assert.equal(ownerCarryforward.status, "REQUALIFY", "EVIDENCE_ACL_CARRYFORWARD_OWNER_CLOSURE_MUST_REQUALIFY");
+  assert(ownerCarryforward.changed_dependencies.includes(evidenceAclCarryforwardPath), "EVIDENCE_ACL_CARRYFORWARD_OWNER_DEPENDENCY_REQUIRED");
+
+  // CP-4: planner-readiness focused proofs are centrally owned and may not become unknown paths.
+  const kbsMultiIntervalPlannerProofPath = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_MULTI_INTERVAL_PRODUCT_PATH_V1.ts";
+  const kbsMultiIntervalPlannerProof = plan(authority, registry, [kbsMultiIntervalPlannerProofPath]);
+  assert.equal(kbsMultiIntervalPlannerProof.status, "PASS");
+  assert.equal(kbsMultiIntervalPlannerProof.unknown_changed_paths.length, 0);
+  assert.equal(byId(kbsMultiIntervalPlannerProof, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+
+  // CP-4: source-specific progress is production Evidence Runtime code and must be Phase3-owned.
+  const sourceProgressRuntime = plan(authority, registry, ["apps/server/src/external_evidence/mcft_cap09_evidence_source_progress_v1.ts"]);
+  assert.equal(sourceProgressRuntime.status, "PASS");
+  assert.equal(sourceProgressRuntime.unknown_changed_paths.length, 0);
+  assert.equal(byId(sourceProgressRuntime, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+  assert(byId(sourceProgressRuntime, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes("apps/server/src/external_evidence/mcft_cap09_evidence_source_progress_v1.ts"));
+
+  const sourceProgressProof = plan(authority, registry, ["scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PROGRESS_V1.ts"]);
+  assert.equal(sourceProgressProof.status, "PASS");
+  assert.equal(sourceProgressProof.unknown_changed_paths.length, 0);
+  assert.equal(byId(sourceProgressProof, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+
+  // CP-4: acquisition-horizon runtime contract is Phase3-owned; policy/proof are planner-owner closure paths.
+  const horizonRuntime = plan(authority, registry, ["apps/server/src/external_evidence/mcft_cap09_production_evidence_acquisition_horizon_v1.ts"]);
+  assert.equal(horizonRuntime.status, "PASS");
+  assert.equal(horizonRuntime.unknown_changed_paths.length, 0);
+  assert.equal(byId(horizonRuntime, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+  assert(byId(horizonRuntime, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes("apps/server/src/external_evidence/mcft_cap09_production_evidence_acquisition_horizon_v1.ts"));
+
+  for (const horizonPlannerPath of [
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_V1.ts",
+    "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_planner_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLANNER_V1.ts",
+    "apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_snapshot_v1.ts",
+    "apps/server/src/external_evidence/kbs_raw_hourly_publication_baseline_store_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_V1.ts",
+    "apps/server/db/migrations/2026_09_01_mcft_cap_09_kbs_publication_baseline_pointer.sql",
+    "apps/server/src/external_evidence/mcft_cap09_kbs_publication_baseline_pointer_v1.ts",
+    "apps/server/src/persistence/external_evidence/postgres_kbs_publication_baseline_pointer_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1.ts",
+    "apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_comparison_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_SNAPSHOT_COMPARISON_V1.ts",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-KBS-BASELINE-POINTER-SCHEMA-REMEDIATION-AUTHORITY-V1.json",
+    "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_ARM_V1.json",
+    "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_V1.cjs",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_V1.cjs",
+    ".github/workflows/mcft-cap-09-production-kbs-baseline-pointer-schema-remediation.yml",
+  ]) {
+    const horizonPlanner = plan(authority, registry, [horizonPlannerPath]);
+    assert.equal(horizonPlanner.status, "PASS");
+    assert.equal(horizonPlanner.unknown_changed_paths.length, 0);
+    assert.equal(byId(horizonPlanner, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+  }
+
+  // CP-4: pure production Evidence planner core is Phase3-owned; focused proof is owner-closure-owned.
+  const purePlannerRuntime = plan(authority, registry, ["apps/server/src/external_evidence/mcft_cap09_production_evidence_source_planner_v1.ts"]);
+  assert.equal(purePlannerRuntime.status, "PASS");
+  assert.equal(purePlannerRuntime.unknown_changed_paths.length, 0);
+  assert.equal(byId(purePlannerRuntime, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+  assert(byId(purePlannerRuntime, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes("apps/server/src/external_evidence/mcft_cap09_production_evidence_source_planner_v1.ts"));
+
+  const purePlannerProof = plan(authority, registry, ["scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLANNER_V1.ts"]);
+  assert.equal(purePlannerProof.status, "PASS");
+  assert.equal(purePlannerProof.unknown_changed_paths.length, 0);
+  assert.equal(byId(purePlannerProof, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+
+  // CP-4: KBS publication snapshot inspection and private baseline manifest are Phase3-owned.
+  for (const kbsPublicationRuntimePath of ["apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_snapshot_v1.ts", "apps/server/src/external_evidence/kbs_raw_hourly_publication_baseline_store_v1.ts"]) {
+    const result = plan(authority, registry, [kbsPublicationRuntimePath]);
+    assert.equal(result.status, "PASS");
+    assert.equal(result.unknown_changed_paths.length, 0);
+    assert.equal(byId(result, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert(byId(result, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes(kbsPublicationRuntimePath));
+  }
+  const kbsPublicationProof = plan(authority, registry, ["scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_V1.ts"]);
+  assert.equal(kbsPublicationProof.status, "PASS");
+  assert.equal(kbsPublicationProof.unknown_changed_paths.length, 0);
+  assert.equal(byId(kbsPublicationProof, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+
+  // CP-4: KBS publication baseline pointer schema/contract/repository are Phase3-owned.
+  for (const kbsBaselinePointerRuntimePath of [
+    "apps/server/db/migrations/2026_09_01_mcft_cap_09_kbs_publication_baseline_pointer.sql",
+    "apps/server/src/external_evidence/mcft_cap09_kbs_publication_baseline_pointer_v1.ts",
+    "apps/server/src/persistence/external_evidence/postgres_kbs_publication_baseline_pointer_v1.ts",
+  ]) {
+    const result = plan(authority, registry, [kbsBaselinePointerRuntimePath]);
+    assert.equal(result.status, "PASS");
+    assert.equal(result.unknown_changed_paths.length, 0);
+    assert.equal(byId(result, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert(byId(result, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes(kbsBaselinePointerRuntimePath));
+  }
+  const kbsBaselinePointerProof = plan(authority, registry, ["scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1.ts"]);
+  assert.equal(kbsBaselinePointerProof.status, "PASS");
+  assert.equal(kbsBaselinePointerProof.unknown_changed_paths.length, 0);
+  assert.equal(byId(kbsBaselinePointerProof, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+
+  // CP-4: production KBS pointer schema remediation control surfaces are owner-closure-owned.
+  for (const kbsPointerRemediationPath of ["docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-KBS-BASELINE-POINTER-SCHEMA-REMEDIATION-AUTHORITY-V1.json","scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_ARM_V1.json","scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_V1.cjs","scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_V1.cjs",".github/workflows/mcft-cap-09-production-kbs-baseline-pointer-schema-remediation.yml"]) {
+    const result = plan(authority, registry, [kbsPointerRemediationPath]);
+    assert.equal(result.status, "PASS");
+    assert.equal(result.unknown_changed_paths.length, 0);
+    assert.equal(byId(result, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const postMergeResult = plan(authority, registry, [kbsPointerRemediationPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(postMergeResult, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(postMergeResult, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(kbsPointerRemediationPath));
+  }
+
+  // CP-4: KBS retained snapshot comparison is Phase3-owned; focused proof is owner-closure-owned.
+  const kbsSnapshotComparisonRuntime = plan(authority, registry, ["apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_comparison_v1.ts"]);
+  assert.equal(kbsSnapshotComparisonRuntime.status, "PASS");
+  assert.equal(kbsSnapshotComparisonRuntime.unknown_changed_paths.length, 0);
+  assert.equal(byId(kbsSnapshotComparisonRuntime, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+  assert(byId(kbsSnapshotComparisonRuntime, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes("apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_comparison_v1.ts"));
+  const kbsSnapshotComparisonProof = plan(authority, registry, ["scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_SNAPSHOT_COMPARISON_V1.ts"]);
+  assert.equal(kbsSnapshotComparisonProof.status, "PASS");
+  assert.equal(kbsSnapshotComparisonProof.unknown_changed_paths.length, 0);
+  assert.equal(byId(kbsSnapshotComparisonProof, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+
+  // CP-4: shared verified retained-raw replay is governed by both Phase3 and Phase7 import closure.
+  const retainedReplayShared = plan(authority, registry, ["apps/server/src/external_evidence/verified_retained_raw_replay_v1.ts"]);
+  assert.equal(retainedReplayShared.status, "PASS");
+  assert.equal(retainedReplayShared.unknown_changed_paths.length, 0);
+  assert.equal(byId(retainedReplayShared, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+  assert.equal(byId(retainedReplayShared, "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION").status, "REQUALIFY");
+  assert(byId(retainedReplayShared, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes("apps/server/src/external_evidence/verified_retained_raw_replay_v1.ts"));
+  assert(byId(retainedReplayShared, "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION").changed_dependencies.includes("apps/server/src/external_evidence/verified_retained_raw_replay_v1.ts"));
+  const retainedReplayProof = plan(authority, registry, ["scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1.ts"]);
+  assert.equal(retainedReplayProof.status, "PASS");
+  assert.equal(retainedReplayProof.unknown_changed_paths.length, 0);
+  assert.equal(byId(retainedReplayProof, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+  assert.equal(byId(retainedReplayProof, "PHASE7_PRIVATE_CANDIDATE_PROMOTION_COMPOSITION").status, "REQUALIFY");
+
+  // CP-4: KBS publication cycle service is Phase3-owned and owner-closure-visible.
+  for (const kbsPublicationCyclePath of ["apps/server/src/external_evidence/mcft_cap09_kbs_raw_hourly_publication_cycle_service_v1.ts","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1.ts"]) {
+    const result = plan(authority, registry, [kbsPublicationCyclePath]);
+    assert.equal(result.status, "PASS");
+    assert.equal(result.unknown_changed_paths.length, 0);
+    assert.equal(byId(result, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(result, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    assert(byId(result, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes(kbsPublicationCyclePath));
+    const postMergeResult = plan(authority, registry, [kbsPublicationCyclePath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(postMergeResult, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(postMergeResult, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(kbsPublicationCyclePath));
+  }
+
+  // CP-4: exact fact replay provenance is Phase3-owned and production-owner-visible.
+  for (const replayPath of ["apps/server/src/persistence/external_evidence/postgres_external_evidence_fact_replay_provenance_v1.ts","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_V1.ts"]) {
+    const replayPlan = plan(authority, registry, [replayPath]);
+    assert.equal(replayPlan.status, "PASS");
+    assert.equal(replayPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(replayPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(replayPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    assert(byId(replayPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").changed_dependencies.includes(replayPath));
+    const replayPostMergePlan = plan(authority, registry, [replayPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(replayPostMergePlan, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(replayPostMergePlan, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(replayPath));
+  }
+
+  // CP-4: GFS partial-pair rehydration is Phase3-owned and owner-visible.
+  for (const gfsPartialPath of ["apps/server/src/external_evidence/mcft_cap09_gfs_partial_pair_rehydration_v1.ts", "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_PARTIAL_PAIR_REHYDRATION_V1.ts"]) {
+    const gfsPartialPlan = plan(authority, registry, [gfsPartialPath]);
+    assert.equal(gfsPartialPlan.status, "PASS");
+    assert.equal(gfsPartialPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(gfsPartialPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(gfsPartialPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const gfsPartialPostMergePlan = plan(authority, registry, [gfsPartialPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(gfsPartialPostMergePlan, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(gfsPartialPostMergePlan, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(gfsPartialPath));
+  }
+
+  // CP-4: source due policy and durable poll schedule are Phase3-owned and owner-visible post-merge.
+  for (const sourcePollPath of ["apps/server/src/external_evidence/mcft_cap09_evidence_source_poll_schedule_v1.ts","apps/server/src/external_evidence/mcft_cap09_production_evidence_source_due_policy_v1.ts","apps/server/src/persistence/external_evidence/postgres_evidence_source_poll_schedule_v1.ts","apps/server/db/migrations/2026_09_01_mcft_cap_09_evidence_source_poll_schedule.sql","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_DUE_POLICY_V1.ts","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EVIDENCE_SOURCE_POLL_SCHEDULE_POSTGRES_V1.ts","docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1.json"]) {
+    const sourcePollPlan = plan(authority, registry, [sourcePollPath]);
+    assert.equal(sourcePollPlan.status, "PASS");
+    assert.equal(sourcePollPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(sourcePollPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(sourcePollPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const sourcePollPostMerge = plan(authority, registry, [sourcePollPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(sourcePollPostMerge, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(sourcePollPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(sourcePollPath));
+  }
+
+  // CP-4: source-poll production schema remediation controls are owner-closure-owned.
+  for (const sourcePollRemediationPath of ["docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-POLL-SCHEDULE-SCHEMA-REMEDIATION-AUTHORITY-V1.json","scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_ARM_V1.json","scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_V1.cjs","scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_V1.cjs",".github/workflows/mcft-cap-09-production-evidence-source-poll-schedule-schema-remediation.yml"]) {
+    const sourcePollRemediationPlan = plan(authority, registry, [sourcePollRemediationPath]);
+    assert.equal(sourcePollRemediationPlan.status, "PASS");
+    assert.equal(sourcePollRemediationPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(sourcePollRemediationPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const sourcePollRemediationPostMerge = plan(authority, registry, [sourcePollRemediationPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(sourcePollRemediationPostMerge, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(sourcePollRemediationPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(sourcePollRemediationPath));
+  }
+
+  // CP-4: GFS target/due readiness is Phase3-owned and owner-visible post-merge.
+  {
+    const gfsReadinessPath = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-GFS-TARGET-DUE-READINESS-V1.json";
+    const gfsReadinessPlan = plan(authority, registry, [gfsReadinessPath]);
+    assert.equal(gfsReadinessPlan.status, "PASS");
+    assert.equal(gfsReadinessPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(gfsReadinessPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(gfsReadinessPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const gfsReadinessPostMerge = plan(authority, registry, [gfsReadinessPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(gfsReadinessPostMerge, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(gfsReadinessPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(gfsReadinessPath));
+  }
+
+  // CP-4: GFS target/due pure policy is Phase3-owned and owner-visible post-merge.
+  for (const gfsTargetDuePath of ["apps/server/src/external_evidence/mcft_cap09_production_gfs_target_due_policy_v1.ts","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_GFS_TARGET_DUE_POLICY_V1.ts"]) {
+    const gfsTargetDuePlan = plan(authority, registry, [gfsTargetDuePath]);
+    assert.equal(gfsTargetDuePlan.status, "PASS");
+    assert.equal(gfsTargetDuePlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(gfsTargetDuePlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(gfsTargetDuePlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const gfsTargetDuePostMerge = plan(authority, registry, [gfsTargetDuePath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(gfsTargetDuePostMerge, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(gfsTargetDuePostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(gfsTargetDuePath));
+  }
+
+  // CP-4: durable GFS retry schedule is Phase3-owned and owner-visible post-merge.
+  for (const gfsRetryPath of ["apps/server/src/external_evidence/mcft_cap09_gfs_retry_schedule_v1.ts","apps/server/src/persistence/external_evidence/postgres_gfs_retry_schedule_v1.ts","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_RETRY_SCHEDULE_POSTGRES_V1.ts"]) {
+    const gfsRetryPlan = plan(authority, registry, [gfsRetryPath]);
+    assert.equal(gfsRetryPlan.status, "PASS");
+    assert.equal(gfsRetryPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(gfsRetryPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(gfsRetryPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const gfsRetryPostMerge = plan(authority, registry, [gfsRetryPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(gfsRetryPostMerge, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(gfsRetryPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(gfsRetryPath));
+  }
+
+  // CP-4: single-host attempt seam is Phase3-owned and owner-visible post-merge.
+  {
+    const attemptPath = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_attempt_v1.ts";
+    const attemptPlan = plan(authority, registry, [attemptPath]);
+    assert.equal(attemptPlan.status, "PASS");
+    assert.equal(attemptPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(attemptPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(attemptPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const attemptPostMerge = plan(authority, registry, [attemptPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(attemptPostMerge, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(attemptPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(attemptPath));
+  }
+
+  // CP-4: source-plan executor core is Phase3-owned and owner-visible post-merge.
+  for (const executorPath of ["apps/server/src/external_evidence/mcft_cap09_production_evidence_source_plan_executor_v1.ts","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLAN_EXECUTOR_V1.ts"]) {
+    const executorPlan = plan(authority, registry, [executorPath]);
+    assert.equal(executorPlan.status, "PASS");
+    assert.equal(executorPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(executorPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(executorPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const executorPostMerge = plan(authority, registry, [executorPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(executorPostMerge, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(executorPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(executorPath));
+  }
+
+  // CP-4: provider-attempt fence surfaces are Phase3-owned and owner-visible post-merge.
+  for (const providerFencePath of ["apps/server/src/external_evidence/mcft_cap09_evidence_runtime_provider_attempt_fence_v1.ts","apps/server/src/external_evidence/mcft_cap09_production_provider_attempt_fence_v1.ts","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_V1.ts"]) {
+    const providerFencePlan=plan(authority,registry,[providerFencePath]);
+    assert.equal(providerFencePlan.status,"PASS");
+    assert.equal(providerFencePlan.unknown_changed_paths.length,0);
+    assert.equal(byId(providerFencePlan,"PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status,"REQUALIFY");
+    assert.equal(byId(providerFencePlan,"EXACT_ONE_PRODUCTION_OWNER").status,"NOT_APPLICABLE");
+    const providerFencePostMerge=plan(authority,registry,[providerFencePath],"POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(providerFencePostMerge,"EXACT_ONE_PRODUCTION_OWNER").status,"REQUALIFY");
+    assert(byId(providerFencePostMerge,"EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(providerFencePath));
+  }
+
+  // CP-4: canonical GFS hourly target history is Phase3-owned and owner-visible post-merge.
+  for (const gfsTargetHistoryPath of ["apps/server/src/external_evidence/mcft_cap09_gfs_target_pair_history_v1.ts","apps/server/src/persistence/external_evidence/postgres_gfs_target_pair_history_v1.ts","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts"]) {
+    const historyPlan = plan(authority, registry, [gfsTargetHistoryPath]);
+    assert.equal(historyPlan.status, "PASS");
+    assert.equal(historyPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(historyPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(historyPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const historyPostMerge = plan(authority, registry, [gfsTargetHistoryPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(historyPostMerge, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(historyPostMerge, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(gfsTargetHistoryPath));
+  }
+
+  // CP-4: production planner dependency assembly is Phase3-owned and owner-visible post-merge.
+  for (const plannerAssemblyPath of ["apps/server/src/external_evidence/mcft_cap09_production_evidence_planner_assembly_v1.ts","scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_PLANNER_ASSEMBLY_V1.ts"]) {
+    const plannerAssemblyPlan = plan(authority, registry, [plannerAssemblyPath]);
+    assert.equal(plannerAssemblyPlan.status, "PASS");
+    assert.equal(plannerAssemblyPlan.unknown_changed_paths.length, 0);
+    assert.equal(byId(plannerAssemblyPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+    assert.equal(byId(plannerAssemblyPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+    const postMergeAssemblyPlan = plan(authority, registry, [plannerAssemblyPath], "POST_MERGE_V13_QUALIFICATION");
+    assert.equal(byId(postMergeAssemblyPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+    assert(byId(postMergeAssemblyPlan, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(plannerAssemblyPath));
+  }
+
+  // CP-4: the single-host arbitration and compiled host planner are Phase3-owned
+  // runtime dependencies, and remain visible to the post-merge owner gate.
+  const hostPlannerPaths = [
+    "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_arbitration_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_ARBITRATION_V1.ts",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-ARBITRATION-AUTHORITY-V1.json",
+    "apps/server/src/external_evidence/mcft_cap09_production_evidence_host_planner_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_HOST_PLANNER_V1.ts",
+  ];
+  const hostPlannerPlan = plan(authority, registry, hostPlannerPaths);
+  assert.equal(hostPlannerPlan.status, "PASS");
+  assert.equal(hostPlannerPlan.unknown_changed_paths.length, 0);
+  assert.equal(byId(hostPlannerPlan, "PHASE3_EVIDENCE_RUNTIME_FOUNDATION").status, "REQUALIFY");
+  assert.equal(byId(hostPlannerPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "NOT_APPLICABLE");
+  const postMergeHostPlannerPlan = plan(authority, registry, hostPlannerPaths, "POST_MERGE_V13_QUALIFICATION");
+  assert.equal(byId(postMergeHostPlannerPlan, "EXACT_ONE_PRODUCTION_OWNER").status, "REQUALIFY");
+  for (const hostPlannerPath of hostPlannerPaths) {
+    assert(byId(postMergeHostPlannerPlan, "EXACT_ONE_PRODUCTION_OWNER").changed_dependencies.includes(hostPlannerPath));
+  }
 
   // CP-4: Phase3 Evidence Runtime changes require fresh exact-head workflow evidence.
   const phase3Path = "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_v1.ts";
@@ -219,17 +643,23 @@ function main() {
     "apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.ts",
     "apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts",
     "apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts",
+    "apps/server/src/runtime/mcft_cap09_production_runtime_start_authority_v1.ts",
+    "apps/server/src/runtime/mcft_cap09_production_service_identity_v1.ts",
     "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts",
+    "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts",
+    "apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1.ts",
     "apps/server/src/external_evidence/qualification/mcft_cap09_phase5_controlled_evidence_work_items_v1.ts",
-    "apps/server/src/external_evidence/qualification/mcft_cap09_phase5_evidence_runtime_qualification_v1.ts",
-    "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_twin_runtime_qualification_v1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_CONTROLLED_PROVIDER_WORK_ITEMS_V1.ts",
+    "apps/server/src/external_evidence/qualification/mcft_cap09_phase5_evidence_runtime_qualification_v1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_EVIDENCE_QUALIFICATION_ENTRYPOINT_V1.ts",
+    "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_twin_runtime_qualification_v1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_QUALIFICATION_CLOCK_V1.ts",
     "docker-compose.mcft-cap09-phase5-qualification.yml",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_QUALIFICATION_COMPOSE_V1.ts",
+    "docker-compose.mcft-cap09-production.yml",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts",
     "apps/server/src/persistence/twin_runtime/postgres_mcft_cap09_twin_canonical_fact_writer_v1.ts",
     "apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts",
     "apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.ts",
@@ -240,6 +670,16 @@ function main() {
     "apps/server/src/external_evidence/qualification/mcft_cap09_phase5_capture_a0_fixture_v1.ts",
     "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.ts",
     "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_verify_24t_v1.ts",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md",
+    "scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs",
+    "scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts",
+    "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
+    "apps/server/src/external_evidence/provider/gfs_nomads_live_provider_v1.ts",
+    "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts",
+    "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql",
+    "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json",
+    "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_BUILDER_V1.cjs",
   ];
   const phase5 = plan(authority, registry, phase5Paths);
   assert.equal(phase5.status, "PASS");
@@ -307,13 +747,139 @@ function main() {
   assert.equal(missingArtifactResult.status, "FAIL");
   assert.equal(byId(missingArtifactResult, "V13_HOLISTIC_SCHEMA").status, "UNKNOWN");
 
-  // CP-4: a future obligation may be declared without inventing a workflow that does not exist yet.
-  for (const id of ["V13_PRODUCER_DRIVEN_QUALIFICATION", "END_TO_END_EVIDENCE_SUPPLY_DEADLINE", "EXACT_ONE_PRODUCTION_OWNER", "FORMAL_V5_ACTIVATION"]) {
-    const check = authority.checks.find((row) => row.check_id === id);
-    assert.ok(check, `FUTURE_CHECK_REQUIRED:${id}`);
-    assert.equal(check.execution_workflow_status, "NOT_IMPLEMENTED_AT_FROZEN_SUBJECT");
-    assert.equal(check.execution_workflow, null);
+  // CP-4: step 4 may be implemented at the successor head without being treated as qualified.
+  const producerQualification = authority.checks.find((row) => row.check_id === "V13_PRODUCER_DRIVEN_QUALIFICATION");
+  assert.ok(producerQualification, "FUTURE_CHECK_REQUIRED:V13_PRODUCER_DRIVEN_QUALIFICATION");
+  assert.equal(producerQualification.execution_workflow_status, "IMPLEMENTED_AT_SUCCESSOR_HEAD");
+  assert.equal(producerQualification.execution_workflow, ".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml");
+  assert.equal(producerQualification.diagnostic_command, null, "V13_PRODUCER_DRIVEN_QUALIFICATION_MUST_USE_IMMUTABLE_WORKFLOW_EVIDENCE_NOT_INLINE_DIAGNOSTIC");
+  assert.deepEqual(producerQualification.resolver_ids, ["V13_RUNTIME_SEMANTIC_CLOSURE"]);
+  assert.deepEqual(producerQualification.requalification_triggers, ["V13_RUNTIME_SEMANTIC_CLOSURE"]);
+  const v13RuntimePaths = new Set(resolved.resolved.V13_RUNTIME_SEMANTIC_CLOSURE.paths);
+  const v13HarnessPaths = new Set(resolved.resolved.V13_QUALIFICATION_HARNESS_CLOSURE.paths);
+  for (const harnessOnlyPath of [
+    ".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml",
+    "scripts/runtime_acceptance/MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_ARM.json",
+    "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_V13_PRODUCER_LIVE_APPLICABILITY_V1.cjs",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_RUNTIME_HARNESS_RESOLVER_MIGRATION_V1.cjs",
+    ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml",
+    ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs",
+  ]) {
+    assert(v13HarnessPaths.has(harnessOnlyPath), `V13_HARNESS_PATH_REQUIRED:${harnessOnlyPath}`);
+    assert(!v13RuntimePaths.has(harnessOnlyPath), `V13_HARNESS_PATH_MUST_NOT_INVALIDATE_RUNTIME_EVIDENCE:${harnessOnlyPath}`);
   }
+  for (const id of [
+    "V13_AUTONOMOUS_FORCING_FOUNDATION",
+    "V13_HOLISTIC_SCHEMA",
+    "V13_NEXT_TICK_VIABILITY",
+    "V13_PRODUCER_DRIVEN_QUALIFICATION",
+  ]) {
+    assert.deepEqual(authority.checks.find((row) => row.check_id === id).resolver_ids, ["V13_RUNTIME_SEMANTIC_CLOSURE"], `V13_RUNTIME_CHECK_RESOLVER_MIGRATION_REQUIRED:${id}`);
+  }
+  assert.equal(byId(plan(authority, registry, [], "POST_MERGE_V13_QUALIFICATION"), "V13_PRODUCER_DRIVEN_QUALIFICATION").status, "REQUIRED");
+
+  // Step 5 may be implemented without being treated as qualified. Its dependency
+  // closure is deliberately separate from Step 4 so timing work cannot invalidate
+  // the already-closed producer-driven qualification.
+  const timingQualification = authority.checks.find((row) => row.check_id === "END_TO_END_EVIDENCE_SUPPLY_DEADLINE");
+  assert.ok(timingQualification, "FUTURE_CHECK_REQUIRED:END_TO_END_EVIDENCE_SUPPLY_DEADLINE");
+  assert.deepEqual(timingQualification.resolver_ids, ["V13_TIMING_QUALIFICATION_CLOSURE"]);
+  assert.equal(timingQualification.execution_workflow_status, "IMPLEMENTED_AT_SUCCESSOR_HEAD");
+  assert.equal(timingQualification.execution_workflow, ".github/workflows/mcft-cap-09-v13-frozen-timing-authority.yml");
+  assert.equal(timingQualification.diagnostic_command, null);
+  const timingPaths = new Set(resolved.resolved.V13_TIMING_QUALIFICATION_CLOSURE.paths);
+  const step4Paths = new Set(resolved.resolved.V13_RUNTIME_SEMANTIC_CLOSURE.paths);
+  for (const timingOnlyPath of [
+    ".github/workflows/mcft-cap-09-v13-exact-head-timing-measurement.yml",
+    ".github/workflows/mcft-cap-09-v13-exact-head-timing-sample.yml",
+    ".github/workflows/mcft-cap-09-v13-frozen-timing-authority.yml",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V1.ts",
+    "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V1.ts",
+    "scripts/runtime_acceptance/VALIDATE_MCFT_CAP_09_V13_FROZEN_TIMING_AUTHORITY_V1.ts",
+    "scripts/runtime_acceptance/MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_ARM_V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json",
+    ".github/workflows/mcft-cap-09-v13-controlled-timing-delay-matrix.yml",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_CONTROLLED_TIMING_DELAY_MATRIX_V1.ts",
+  ]) {
+    assert(timingPaths.has(timingOnlyPath), `TIMING_CLOSURE_PATH_REQUIRED:${timingOnlyPath}`);
+    assert(!step4Paths.has(timingOnlyPath), `TIMING_PATH_MUST_NOT_REOPEN_STEP4:${timingOnlyPath}`);
+  }
+  assert.equal(byId(plan(authority, registry, [], "POST_MERGE_V13_QUALIFICATION"), "END_TO_END_EVIDENCE_SUPPLY_DEADLINE").status, "REQUIRED");
+
+  // Production-owner graduation has its own bounded closure. The workflow is
+  // intentionally fail-closed while the arm is false / non-GitHub host binding is absent,
+  // so a read-only preflight success cannot be registered as exact-owner closure evidence.
+  const ownerQualification = authority.checks.find((row) => row.check_id === "EXACT_ONE_PRODUCTION_OWNER");
+  assert.ok(ownerQualification, "FUTURE_CHECK_REQUIRED:EXACT_ONE_PRODUCTION_OWNER");
+  assert.deepEqual(ownerQualification.resolver_ids, ["PRODUCTION_OWNER_GRADUATION_CLOSURE"]);
+  assert.equal(ownerQualification.execution_workflow_status, "IMPLEMENTED_AT_SUCCESSOR_HEAD");
+  assert.equal(ownerQualification.execution_workflow, ".github/workflows/mcft-cap-09-production-owner-graduation-gate.yml");
+  assert.equal(ownerQualification.diagnostic_command, null);
+  const ownerPaths = new Set(resolved.resolved.PRODUCTION_OWNER_GRADUATION_CLOSURE.paths);
+  for (const ownerOnlyPath of [
+    ".github/workflows/mcft-cap-09-production-owner-graduation-gate.yml",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json",
+    "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_CUTOVER_ARM_V1.json",
+    "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json",
+    "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_BUILDER_V1.cjs",
+    "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_V1.cjs",
+    ".github/workflows/mcft-cap-09-production-owner-provisioning-readiness.yml",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json",
+    "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_ARM_V1.json",
+    "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_V1.cjs",
+    ".github/workflows/mcft-cap-09-production-runtime-credential-bind-one-shot.yml",
+    ".github/workflows/mcft-cap-09-production-runtime-credential-readiness.yml",
+    "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_RUNTIME_CREDENTIAL_READINESS_V1.cjs",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-LOCAL-OPERATOR-HOST-STATIC-ADMISSION-EVIDENCE-V1.json",
+    "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json",
+    "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_V1.cjs",
+    "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_READINESS_V1.cjs",
+    ".github/workflows/mcft-cap-09-production-non-github-host-binding-readiness.yml",
+    ".github/workflows/mcft-cap-09-production-owner-provisioning-bundle-postgres.yml",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_BUNDLE_POSTGRES_V1.ts",
+    ".github/workflows/mcft-cap-09-production-service-login-provision-one-shot.yml",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_SERVICE_LOGIN_PROVISIONING_V1.ts",
+    ".github/workflows/mcft-cap-09-production-service-login-readiness.yml",
+    "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_SERVICE_LOGIN_READINESS_V1.cjs",
+    ".github/workflows/mcft-cap-09-production-operational-database-candidate-preflight.yml",
+    ".github/workflows/mcft-cap-09-production-operational-database-provision-one-shot.yml",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OPERATIONAL-DATABASE-CANDIDATE-V1.json",
+    "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_PROVISION_ARM_V1.json",
+    "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_CANDIDATE_V1.cjs",
+    ".github/workflows/mcft-cap-09-production-operational-schema-acl-readiness.yml",
+    "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_ARM_V1.json",
+    ".github/workflows/mcft-cap-09-production-operational-schema-acl-materialize-one-shot.yml",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_MATERIALIZATION_V1.ts",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1.json",
+    "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_ARM_V1.json",
+    "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_V1.cjs",
+    "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_V1.cjs",
+    ".github/workflows/mcft-cap-09-production-evidence-acl-carryforward-remediation.yml",
+    ".github/workflows/mcft-cap-09-production-evidence-target-planner-readiness.yml",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_TARGET_PLANNER_READINESS_V1.cjs",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_MULTI_INTERVAL_PRODUCT_PATH_V1.ts",
+    "apps/server/src/external_evidence/mcft_cap09_evidence_source_progress_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PROGRESS_V1.ts",
+    "apps/server/src/external_evidence/mcft_cap09_production_evidence_acquisition_horizon_v1.ts",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_V1.ts",
+  ]) {
+    assert(ownerPaths.has(ownerOnlyPath), `OWNER_CLOSURE_PATH_REQUIRED:${ownerOnlyPath}`);
+    assert(!timingPaths.has(ownerOnlyPath), `OWNER_PATH_MUST_NOT_REOPEN_TIMING:${ownerOnlyPath}`);
+    assert(!step4Paths.has(ownerOnlyPath), `OWNER_PATH_MUST_NOT_REOPEN_STEP4:${ownerOnlyPath}`);
+  }
+  assert.equal(byId(plan(authority, registry, [], "POST_MERGE_V13_QUALIFICATION"), "EXACT_ONE_PRODUCTION_OWNER").status, "REQUIRED");
+
+  // Formal-v5 remains unimplemented and fail closed until owner graduation closes.
+  const formalActivation = authority.checks.find((row) => row.check_id === "FORMAL_V5_ACTIVATION");
+  assert.ok(formalActivation, "FUTURE_CHECK_REQUIRED:FORMAL_V5_ACTIVATION");
+  assert.equal(formalActivation.execution_workflow_status, "NOT_IMPLEMENTED_AT_FROZEN_SUBJECT");
+  assert.equal(formalActivation.execution_workflow, null);
 
   // CP-4: a failed-v4 subject is forbidden for carry-forward by the actual Formal-store authority.
   const failedV4Registry = clone(registry);
@@ -346,6 +912,7 @@ function main() {
     acceptance_id: "MCFT_CAP09_CHECK_APPLICABILITY_V1",
     frozen_successor_subject_sha: authority.frozen_successor_subject_sha,
     resolver_count: Object.keys(resolved.resolved).length,
+    prepared_applicability_context_reused_for_same_subject: true,
     all_resolvers_materialized_without_missing_paths: true,
     central_check_contract_complete_and_resolvable: true,
     unimplemented_future_workflows_explicit_without_invented_paths: true,

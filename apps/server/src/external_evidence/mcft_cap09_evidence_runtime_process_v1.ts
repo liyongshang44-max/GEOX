@@ -8,6 +8,8 @@
 
 import os from "node:os";
 
+import productionAcquisitionHorizonAuthorityJson from "../../../../docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json" with { type: "json" };
+
 import { createDatabasePool } from "../infra/database.js";
 import {
   assertMcftCap09ServicePrincipalV1,
@@ -15,8 +17,12 @@ import {
 import {
   composeEvidenceRuntimeV1,
   type EvidenceRuntimeAcquisitionTargetPlannerV1,
+  type EvidenceRuntimeHostPlannerFactoryV1,
   type EvidenceRuntimeWorkItemFactoryV1,
 } from "./mcft_cap09_evidence_runtime_composition_v1.js";
+import type {
+  EvidenceRuntimeHostPlannerV1,
+} from "./mcft_cap09_evidence_runtime_host_v1.js";
 import type {
   EvidenceRuntimeScopeV1,
 } from "./mcft_cap09_evidence_runtime_persistence_v1.js";
@@ -24,14 +30,31 @@ import type {
   ProductionEvidenceWorkItemFactoryConfigV1,
 } from "./mcft_cap09_production_evidence_work_items_v1.js";
 import {
+  createProductionEvidenceHostPlannerFactoryV1,
+} from "./mcft_cap09_production_evidence_planner_assembly_v1.js";
+import type {
+  ProductionEvidencePlanningClockV1,
+  ProductionEvidenceRuntimeStartAuthorityInstanceV1,
+} from "./mcft_cap09_production_evidence_host_planner_v1.js";
+import {
   createMcftCap09ProcessStopV1,
   McftCap09ConsoleEvidenceHealthV1,
   McftCap09ProductionEvidenceFailureClassifierV1,
   McftCap09ProductionEvidenceWaitV1,
 } from "../runtime/mcft_cap09_production_process_lifecycle_v1.js";
+import {
+  loadMcftCap09ProductionRuntimeStartAuthorityV1,
+  parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1,
+} from "../runtime/mcft_cap09_production_runtime_start_authority_v1.js";
+import {
+  buildMcftCap09ProductionLeaseOwnerV1,
+} from "../runtime/mcft_cap09_production_service_identity_v1.js";
 
 export const MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_ID_V1 =
   "MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_V1" as const;
+
+export const MCFT_CAP09_PRODUCTION_EVIDENCE_RUNTIME_ENTRYPOINT_ID_V1 =
+  "MCFT_CAP09_PRODUCTION_EVIDENCE_RUNTIME_ENTRYPOINT_V1" as const;
 
 export const MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_CONTRACT_V1 = {
   process_id: MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_ID_V1,
@@ -40,12 +63,14 @@ export const MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_CONTRACT_V1 = {
   database_principal: "geox_mcft_cap09_evidence_runtime_login_v1",
   raw_storage_authority: "EVIDENCE_RUNTIME_S3_CREDENTIALS_ONLY",
   target_selection_boundary: "EXPLICIT_INJECTED_TARGET_PLANNER",
+  host_planner_boundary: "EXPLICIT_INJECTED_HOST_PLANNER",
   qualification_provider_boundary: "EXPLICIT_WORK_ITEM_FACTORY_INJECTION_WITH_PRODUCTION_DEFAULT",
   graceful_current_lease_release: true,
   runtime_tick_cursor_authority: false,
   twin_state_authority: false,
   action_authority: false,
   formal_arm_authority: false,
+  runtime_start_authority: "SEPARATE_GOVERNED_AUTHORITY_REQUIRED",
   production_owner_cutover: false,
 } as const;
 
@@ -205,12 +230,15 @@ export function readMcftCap09EvidenceRuntimeProcessConfigV1(
 }
 
 export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
-  target_planner: EvidenceRuntimeAcquisitionTargetPlannerV1;
   env?: EnvironmentV1;
   completion_clock?: () => string;
   work_item_config?: Omit<ProductionEvidenceWorkItemFactoryConfigV1, "retention">;
   work_item_factory?: EvidenceRuntimeWorkItemFactoryV1;
-}): Promise<void> {
+} & (
+  | { target_planner: EvidenceRuntimeAcquisitionTargetPlannerV1; host_planner?: never; host_planner_factory?: never }
+  | { target_planner?: never; host_planner: EvidenceRuntimeHostPlannerV1; host_planner_factory?: never }
+  | { target_planner?: never; host_planner?: never; host_planner_factory: EvidenceRuntimeHostPlannerFactoryV1 }
+)): Promise<void> {
   const env = input.env ?? process.env;
   const config = readMcftCap09EvidenceRuntimeProcessConfigV1(env);
   if (!config.lease_owner) throw new Error("PHASE5_EVIDENCE_LEASE_OWNER_REQUIRED");
@@ -231,7 +259,11 @@ export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
         secret_access_key: config.s3_secret_access_key,
         allow_insecure_http_for_test: config.s3_allow_insecure_http_for_test,
       },
-      target_planner: input.target_planner,
+      ...(input.host_planner
+        ? { host_planner: input.host_planner }
+        : input.host_planner_factory
+          ? { host_planner_factory: input.host_planner_factory }
+          : { target_planner: input.target_planner! }),
       wait: new McftCap09ProductionEvidenceWaitV1({
         success_cadence_ms: config.success_cadence_ms,
         lease_standby_ms: config.lease_standby_ms,
@@ -251,7 +283,7 @@ export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
       lease_owner: config.lease_owner,
       lease_duration_seconds: config.lease_duration_seconds,
     });
-    const finalClaim = result.last_cycle_result?.lease_claim ?? null;
+    const finalClaim = result.last_attempt_result?.lease_claim ?? null;
     if (finalClaim && finalClaim.lease_owner === config.lease_owner) {
       await composition.lease_repository.releaseLease({ claim: finalClaim });
     }
@@ -259,4 +291,79 @@ export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
     stop.dispose();
     await pool.end();
   }
+}
+
+export function parseMcftCap09ProductionRuntimeStartAuthorityV1(
+  value: unknown,
+  expected: {
+    deployment_subject_sha: string;
+    scope: EvidenceRuntimeScopeV1;
+  },
+): ProductionEvidenceRuntimeStartAuthorityInstanceV1 {
+  return parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+    value,
+    "EVIDENCE_RUNTIME",
+    expected,
+  );
+}
+
+export async function runMcftCap09ProductionEvidenceRuntimeV1(input: {
+  env?: EnvironmentV1;
+  planning_clock?: ProductionEvidencePlanningClockV1;
+  work_item_config?: Omit<ProductionEvidenceWorkItemFactoryConfigV1, "retention">;
+  runtime_start_authority?: unknown;
+} = {}): Promise<void> {
+  const document = productionAcquisitionHorizonAuthorityJson as {
+    runtime_start_binding?: unknown;
+  };
+  const env = input.env ?? process.env;
+  const expectedScope = scopeFromEnvironmentV1(env);
+  const authority = loadMcftCap09ProductionRuntimeStartAuthorityV1({
+    plane: "EVIDENCE_RUNTIME",
+    expected: {
+      deployment_subject_sha: requiredEnvV1(
+        env,
+        "GEOX_DEPLOYMENT_SUBJECT_COMMIT",
+        "MCFT_CAP09_PRODUCTION_DEPLOYMENT_SUBJECT_REQUIRED",
+      ),
+      scope: expectedScope,
+    },
+    authority_path:
+      env.GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH,
+    explicit_authority: input.runtime_start_authority,
+    embedded_authority: document.runtime_start_binding,
+  });
+  const runtimeEnv: EnvironmentV1 = {
+    ...env,
+    GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_LEASE_OWNER:
+      buildMcftCap09ProductionLeaseOwnerV1({
+        plane: "EVIDENCE_RUNTIME",
+        configured_service_id: requiredEnvV1(
+          env,
+          "GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_SERVICE_ID",
+          "MCFT_CAP09_PRODUCTION_EVIDENCE_SERVICE_ID_REQUIRED",
+        ),
+        instance_id: String(env.HOSTNAME ?? os.hostname()).trim(),
+      }),
+  };
+  const config = readMcftCap09EvidenceRuntimeProcessConfigV1(runtimeEnv);
+  const planningClock = input.planning_clock ?? { now: () => new Date().toISOString() };
+  const hostPlannerFactory = createProductionEvidenceHostPlannerFactoryV1({
+    runtime_start_authority: authority,
+    planning_clock: planningClock,
+    private_store: {
+      endpoint: config.s3_endpoint,
+      bucket: config.s3_bucket,
+      region: config.s3_region,
+      access_key_id: config.s3_access_key_id,
+      secret_access_key: config.s3_secret_access_key,
+      allow_insecure_http_for_test: config.s3_allow_insecure_http_for_test,
+    },
+    work_item_config: input.work_item_config,
+  });
+  await runMcftCap09EvidenceRuntimeProcessV1({
+    env: runtimeEnv,
+    host_planner_factory: hostPlannerFactory,
+    work_item_config: input.work_item_config,
+  });
 }

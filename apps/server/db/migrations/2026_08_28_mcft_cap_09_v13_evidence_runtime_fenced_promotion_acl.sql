@@ -12,8 +12,27 @@ BEGIN
 END
 $role$;
 
-ALTER ROLE geox_mcft_cap09_forcing_writer_owner_v1
-  NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+DO $role_safety$
+DECLARE
+  v_role record;
+BEGIN
+  SELECT rolcanlogin, rolinherit, rolsuper, rolcreatedb, rolcreaterole, rolreplication, rolbypassrls
+    INTO v_role
+    FROM pg_catalog.pg_roles
+   WHERE rolname='geox_mcft_cap09_forcing_writer_owner_v1';
+
+  IF NOT FOUND
+     OR v_role.rolcanlogin
+     OR v_role.rolinherit
+     OR v_role.rolsuper
+     OR v_role.rolcreatedb
+     OR v_role.rolcreaterole
+     OR v_role.rolreplication
+     OR v_role.rolbypassrls THEN
+    RAISE EXCEPTION 'MCFT_CAP09_V13_FORCING_WRITER_OWNER_ROLE_UNSAFE';
+  END IF;
+END
+$role_safety$;
 
 REVOKE ALL ON SCHEMA public FROM geox_mcft_cap09_forcing_writer_owner_v1;
 GRANT USAGE ON SCHEMA public TO geox_mcft_cap09_forcing_writer_owner_v1;
@@ -26,6 +45,37 @@ GRANT SELECT,UPDATE ON TABLE
   public.twin_external_formal_forcing_controller_lease_v1,
   public.twin_external_formal_forcing_base_target_v1
 TO geox_mcft_cap09_forcing_writer_owner_v1;
+
+-- The Evidence privilege role owns forcing acquisition coordination in both
+-- qualification and production. On this V13 store it receives an exact object ACL:
+-- schema USAGE, facts SELECT, forcing coordination DML, and the fenced writer only.
+REVOKE ALL ON SCHEMA public FROM geox_mcft_cap09_evidence_runtime_v1;
+GRANT USAGE ON SCHEMA public TO geox_mcft_cap09_evidence_runtime_v1;
+REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM geox_mcft_cap09_evidence_runtime_v1;
+REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM geox_mcft_cap09_evidence_runtime_v1;
+REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM geox_mcft_cap09_evidence_runtime_v1;
+GRANT SELECT ON TABLE public.facts TO geox_mcft_cap09_evidence_runtime_v1;
+GRANT SELECT,INSERT,UPDATE ON TABLE
+  public.twin_external_formal_forcing_base_cursor_v1,
+  public.twin_external_formal_forcing_base_target_v1,
+  public.twin_external_formal_forcing_controller_lease_v1
+TO geox_mcft_cap09_evidence_runtime_v1;
+
+-- Create/replace the SECURITY DEFINER function while explicitly SET ROLE to its
+-- final NOLOGIN owner. Existing functions need a temporary self-EXECUTE grant so
+-- the PL/pgSQL validator can inspect the already-owned routine during replacement.
+DO $temp_writer_execute$
+BEGIN
+  IF pg_catalog.to_regprocedure(
+    'public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)'
+  ) IS NOT NULL THEN
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb) TO geox_mcft_cap09_forcing_writer_owner_v1';
+  END IF;
+END
+$temp_writer_execute$;
+
+GRANT CREATE ON SCHEMA public TO geox_mcft_cap09_forcing_writer_owner_v1;
+SET ROLE geox_mcft_cap09_forcing_writer_owner_v1;
 
 CREATE OR REPLACE FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
   p_tenant_id text,
@@ -256,9 +306,39 @@ BEGIN
 END
 $function$;
 
-ALTER FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
+RESET ROLE;
+REVOKE CREATE ON SCHEMA public FROM geox_mcft_cap09_forcing_writer_owner_v1;
+
+SET ROLE geox_mcft_cap09_forcing_writer_owner_v1;
+REVOKE EXECUTE ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
   text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb
-) OWNER TO geox_mcft_cap09_forcing_writer_owner_v1;
+) FROM geox_mcft_cap09_forcing_writer_owner_v1;
+RESET ROLE;
+
+DO $owner_check$
+DECLARE
+  v_function oid;
+  v_owner text;
+BEGIN
+  v_function:=pg_catalog.to_regprocedure(
+    'public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)'
+  );
+
+  IF v_function IS NULL THEN
+    RAISE EXCEPTION 'MCFT_CAP09_V13_FENCED_WRITER_FUNCTION_MISSING';
+  END IF;
+
+  SELECT owner_role.rolname
+    INTO v_owner
+    FROM pg_catalog.pg_proc p
+    JOIN pg_catalog.pg_roles owner_role ON owner_role.oid=p.proowner
+   WHERE p.oid=v_function;
+
+  IF v_owner IS DISTINCT FROM 'geox_mcft_cap09_forcing_writer_owner_v1' THEN
+    RAISE EXCEPTION 'MCFT_CAP09_V13_FENCED_WRITER_OWNER_MISMATCH:%', COALESCE(v_owner,'<missing>');
+  END IF;
+END
+$owner_check$;
 
 REVOKE ALL ON FUNCTION public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(
   text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb

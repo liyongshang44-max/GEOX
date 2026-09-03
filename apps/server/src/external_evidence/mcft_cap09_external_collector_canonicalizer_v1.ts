@@ -176,6 +176,11 @@ export type CanonicalizedExternalEvidenceResultV1 = {
   record_semantic_sha256: string;
 };
 
+export type CollectedRetainedRawEvidenceV1 = {
+  provenance: VerifiedRawEvidenceProvenanceV1;
+  raw_bytes: Uint8Array;
+};
+
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -291,6 +296,7 @@ function canonicalizeDraft(input: {
     provider_id: input.provenance.provider_id,
     source_family: input.provenance.source_family,
     final_locator: input.provenance.final_locator,
+    content_type: input.provenance.content_type,
     source_issue_time: input.provenance.source_issue_time ?? null,
     source_event_time: input.provenance.source_event_time ?? null,
     retrieved_at: input.provenance.retrieved_at,
@@ -359,23 +365,24 @@ function validatePipelineRequestV1(input: ExternalEvidenceLivePipelineInputV1): 
   assertHttpsAllowedHost(input.request.locator, input.request.allowed_final_hosts, "EA3_REQUEST_LOCATOR");
 }
 
-async function collectRetainDecodeV1(
+export async function collectAndRetainRawEvidenceV1(
   input: ExternalEvidenceLivePipelineInputV1,
   ports: {
     transport: ExternalEvidenceTransportPortV1;
     retention: RawEvidenceRetentionPortV1;
-    decoder: ExternalEvidenceDecoderPortV1;
   },
-): Promise<{
-  provenance: VerifiedRawEvidenceProvenanceV1;
-  decoded: readonly GovernedDecodedEvidenceDraftV1[];
-}> {
+): Promise<CollectedRetainedRawEvidenceV1> {
   validatePipelineRequestV1(input);
   const response = await ports.transport.fetchRawEvidence(input.request);
-  requireCondition(Number.isInteger(response.status) && response.status >= 200 && response.status < 300, `EA3_SOURCE_HTTP_STATUS_NOT_SUCCESS:${response.status}`);
+  requireCondition(
+    Number.isInteger(response.status) && response.status >= 200 && response.status < 300,
+    `EA3_SOURCE_HTTP_STATUS_NOT_SUCCESS:${response.status}`,
+  );
   assertHttpsAllowedHost(response.final_locator, input.request.allowed_final_hosts, "EA3_FINAL_LOCATOR");
   requireCondition(
-    input.request.expected_content_type_prefixes.some((prefix) => response.content_type.toLowerCase().startsWith(prefix.toLowerCase())),
+    input.request.expected_content_type_prefixes.some((prefix) =>
+      response.content_type.toLowerCase().startsWith(prefix.toLowerCase())
+    ),
     `EA3_CONTENT_TYPE_NOT_ALLOWED:${response.content_type}`,
   );
   const retrievedAt = canonicalIso(response.retrieved_at, "EA3_RETRIEVED_AT_INVALID");
@@ -409,7 +416,6 @@ async function collectRetainDecodeV1(
   requireCondition(receipt.externally_publishable === false, "EA3_RAW_RETENTION_PUBLICATION_FORBIDDEN");
   const retainedAt = canonicalIso(receipt.retained_at, "EA3_RETAINED_AT_INVALID");
   requireCondition(Date.parse(retrievedAt) <= Date.parse(retainedAt), "EA3_RETAINED_BEFORE_RETRIEVAL");
-  requireCondition(text(ports.decoder.decoder_id) && text(ports.decoder.decoder_version), "EA3_DECODER_IDENTITY_REQUIRED");
 
   const provenance: VerifiedRawEvidenceProvenanceV1 = {
     request_id: input.request.request_id,
@@ -428,11 +434,32 @@ async function collectRetainDecodeV1(
     retained_at: retainedAt,
     use_policy_ref: input.request.use_policy_ref,
   };
+  return { provenance, raw_bytes: new Uint8Array(response.bytes) };
+}
 
+async function collectRetainDecodeV1(
+  input: ExternalEvidenceLivePipelineInputV1,
+  ports: {
+    transport: ExternalEvidenceTransportPortV1;
+    retention: RawEvidenceRetentionPortV1;
+    decoder: ExternalEvidenceDecoderPortV1;
+  },
+): Promise<{
+  provenance: VerifiedRawEvidenceProvenanceV1;
+  decoded: readonly GovernedDecodedEvidenceDraftV1[];
+}> {
+  const collected = await collectAndRetainRawEvidenceV1(input, ports);
+  requireCondition(
+    text(ports.decoder.decoder_id) && text(ports.decoder.decoder_version),
+    "EA3_DECODER_IDENTITY_REQUIRED",
+  );
   // Decoder invocation is intentionally after the verified retention receipt barrier.
-  const decoded = await ports.decoder.decodeRetainedEvidence({ raw_bytes: response.bytes, provenance });
+  const decoded = await ports.decoder.decodeRetainedEvidence({
+    raw_bytes: collected.raw_bytes,
+    provenance: collected.provenance,
+  });
   requireCondition(decoded.length > 0, "EA3_DECODER_EMPTY_RESULT_FORBIDDEN");
-  return { provenance, decoded };
+  return { provenance: collected.provenance, decoded };
 }
 
 function canonicalizeDecodedV1(input: {

@@ -866,7 +866,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
-          test "$BASE_SHA" = "$PHASE7_ACCEPTED_PREDECESSOR_HEAD"
+          git merge-base --is-ancestor "$PHASE7_ACCEPTED_PREDECESSOR_HEAD" "$BASE_SHA"
           git merge-base --is-ancestor "$PHASE6_ACCEPTED_HEAD" "$BASE_SHA"
           git merge-base --is-ancestor "$BASE_SHA" "$SUBJECT_SHA"
 
@@ -902,53 +902,42 @@ jobs:
               docker-compose.mcft-cap09-phase6-github-blackout.override.yml \
             | grep -F -x -v -f <(printf '%s\n' "${allowed_successor_runtime_paths[@]}") || true
           )"
+          runtime_delta_file="$RUNNER_TEMP/phase6-successor-runtime-delta.txt"
+          : > "$runtime_delta_file"
           if [ -n "$runtime_delta" ]; then
-            echo "PHASE6_SUCCESSOR_RUNTIME_REQUALIFICATION_REQUIRED" >&2
-            printf '%s\n' "$runtime_delta" >&2
-            exit 1
+            printf '%s\n' "$runtime_delta" > "$runtime_delta_file"
           fi
+          runtime_delta_count="$(wc -l < "$runtime_delta_file" | tr -d ' ')"
 
-          if [ "${#phase7_foundation_delta[@]}" -gt 0 ] || [ "${#phase7_composition_delta[@]}" -gt 0 ]; then
-            for module_path in "${allowed_successor_runtime_paths[@]}"; do
-              module_stem="$(basename "$module_path" .ts)"
-              mapfile -t refs < <(git grep -l -F "$module_stem" -- apps/server/src || true)
-              for ref in "${refs[@]}"; do
-                allowed=0
-                for allowed_path in "${allowed_successor_runtime_paths[@]}"; do
-                  [ "$ref" = "$allowed_path" ] && allowed=1
-                done
-                if [ "$allowed" != "1" ]; then
-                  echo "PHASE7_UNWIRED_SUCCESSOR_PREMATURE_PRODUCTION_WIRING:$module_stem:$ref" >&2
-                  exit 1
-                fi
+          # Preserve the accepted Phase7 "unwired" assertion against its exact
+          # historical tree. Current successors may legally connect these modules,
+          # but every changed runtime path is required below to have a central-QCP
+          # REQUALIFY/REQUIRED route.
+          for module_path in "${allowed_successor_runtime_paths[@]}"; do
+            module_stem="$(basename "$module_path" .ts)"
+            mapfile -t accepted_refs < <(
+              git grep -l -F "$module_stem" "$PHASE7_ACCEPTED_PREDECESSOR_HEAD" -- apps/server/src \
+                | sed 's/^[^:]*://' || true
+            )
+            for ref in "${accepted_refs[@]}"; do
+              allowed=0
+              for allowed_path in "${allowed_successor_runtime_paths[@]}"; do
+                [ "$ref" = "$allowed_path" ] && allowed=1
               done
+              if [ "$allowed" != "1" ]; then
+                echo "PHASE7_ACCEPTED_PREDECESSOR_UNWIRED_ASSERTION_FAILED:$module_stem:$ref" >&2
+                exit 1
+              fi
             done
-          fi
+          done
 
           mapfile -t qualification_delta < <(git diff --name-only "$BASE_SHA"..HEAD -- \
             scripts/runtime_acceptance/ADJUDICATE_MCFT_CAP_09_PHASE5_TEMPORAL_SETTLEMENT_V1.cjs \
             scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts | sort)
 
           mapfile -t db_delta < <(git diff --name-only "$BASE_SHA"..HEAD -- apps/server/db/migrations | sort)
-          allowed_acl='apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql'
-          if [ "${#db_delta[@]}" -gt 1 ] || { [ "${#db_delta[@]}" -eq 1 ] && [ "${db_delta[0]}" != "$allowed_acl" ]; }; then
-            echo "PHASE6_SUCCESSOR_DATABASE_REQUALIFICATION_REQUIRED" >&2
-            printf '%s\n' "${db_delta[@]}" >&2
-            exit 1
-          fi
-          if [ "${#db_delta[@]}" -eq 1 ]; then
-            acl="$(cat "$allowed_acl")"
-            for table in \
-              twin_external_formal_forcing_base_cursor_v1 \
-              twin_external_formal_forcing_base_target_v1 \
-              twin_external_formal_forcing_controller_lease_v1; do
-              grep -Fq "$table" <<<"$acl"
-            done
-            grep -Fq 'TO geox_mcft_cap09_evidence_runtime_v1' <<<"$acl"
-            test -z "$(git diff --name-only "$BASE_SHA"..HEAD -- apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql)"
-          fi
 
-          if [ "${#phase7_foundation_delta[@]}" -gt 0 ] || [ "${#phase7_composition_delta[@]}" -gt 0 ] || [ "${#qualification_delta[@]}" -gt 0 ] || [ "${#db_delta[@]}" -gt 0 ]; then
+          if [ "$runtime_delta_count" -gt 0 ] || [ "${#phase7_foundation_delta[@]}" -gt 0 ] || [ "${#phase7_composition_delta[@]}" -gt 0 ] || [ "${#qualification_delta[@]}" -gt 0 ] || [ "${#db_delta[@]}" -gt 0 ]; then
             plan="$RUNNER_TEMP/phase6-successor-requalification-plan.json"
             node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs \
               --base "$BASE_SHA" \
@@ -956,14 +945,23 @@ jobs:
               --generation v13 \
               --stage SUCCESSOR_SUBJECT_PRE_MERGE \
               --out "$plan"
-            node - "$plan" "${#phase7_foundation_delta[@]}" "${#phase7_composition_delta[@]}" "${#qualification_delta[@]}" "${#db_delta[@]}" <<'NODE'
+            node - "$plan" "$runtime_delta_file" "${#phase7_foundation_delta[@]}" "${#phase7_composition_delta[@]}" "${#qualification_delta[@]}" "${#db_delta[@]}" <<'NODE'
           const fs=require('node:fs');
-          const [planPath,foundationCount,compositionCount,qualificationCount,dbCount]=process.argv.slice(2);
+          const [planPath,runtimeDeltaPath,foundationCount,compositionCount,qualificationCount,dbCount]=process.argv.slice(2);
           const p=JSON.parse(fs.readFileSync(planPath,'utf8'));
           if(p.status!=='PASS'||p.unknown_changed_paths.length||p.authority_errors.length||p.resolver_errors.length){
             throw new Error('PHASE6_SUCCESSOR_REQUALIFICATION_PLAN_NOT_PASS');
           }
           const byId=(id)=>p.decisions.find(x=>x.check_id===id);
+          const runtimeDelta=fs.readFileSync(runtimeDeltaPath,'utf8').trim().split(/\r?\n/).filter(Boolean);
+          for(const file of runtimeDelta){
+            const covering=p.decisions.filter(row=>(row.changed_dependencies||[]).includes(file));
+            const requalified=covering.some(row=>row.status==='REQUALIFY'||row.status==='REQUIRED');
+            const ownerDeferred=covering.some(row=>row.check_id==='EXACT_ONE_PRODUCTION_OWNER'&&row.status==='NOT_APPLICABLE');
+            if(!requalified&&!ownerDeferred){
+              throw new Error('PHASE6_SUCCESSOR_RUNTIME_DELTA_NOT_GOVERNED:'+file);
+            }
+          }
           if(Number(foundationCount)>0){
             const phase3=byId('PHASE3_EVIDENCE_RUNTIME_FOUNDATION');
             if(!phase3||phase3.status!=='REQUALIFY'){
@@ -983,10 +981,13 @@ jobs:
             }
           }
           if(Number(dbCount)>0){
-            for(const id of ['PHASE3_EVIDENCE_RUNTIME_FOUNDATION','PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS']){
-              const row=byId(id);
-              if(!row||row.status!=='REQUALIFY'){
-                throw new Error('PHASE6_SUCCESSOR_EVIDENCE_ACL_DELTA_REQUIRES_REQUALIFY:'+id);
+            const dbPaths=require('node:child_process').execFileSync(
+              'git',['diff','--name-only',process.env.BASE_SHA+'..HEAD','--','apps/server/db/migrations'],{encoding:'utf8'}
+            ).trim().split(/\r?\n/).filter(Boolean);
+            for(const file of dbPaths){
+              const covering=p.decisions.filter(row=>(row.changed_dependencies||[]).includes(file));
+              if(!covering.some(row=>row.status==='REQUALIFY')&&!covering.some(row=>row.check_id==='EXACT_ONE_PRODUCTION_OWNER'&&row.status==='NOT_APPLICABLE')){
+                throw new Error('PHASE6_SUCCESSOR_DATABASE_DELTA_NOT_GOVERNED:'+file);
               }
             }
           }
@@ -1063,6 +1064,12 @@ jobs:
             'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts'
           ];
           const compositionDelta=diff(compositionPaths);
+          const runtimeDelta=diff([
+            'apps/server/src','apps/server/scripts','apps/server/package.json','package.json',
+            'pnpm-lock.yaml','pnpm-workspace.yaml','docker',
+            'docker-compose.mcft-cap09-phase5-qualification.yml',
+            'docker-compose.mcft-cap09-phase6-github-blackout.override.yml'
+          ]).filter(path=>!foundationPaths.includes(path)&&!compositionPaths.includes(path));
           const out={
             schema_version:'geox_mcft_cap09_phase6_successor_carry_forward_v1',
             status:'PASS',
@@ -1072,11 +1079,14 @@ jobs:
             accepted_successor_predecessor_head:process.env.PHASE7_ACCEPTED_PREDECESSOR_HEAD,
             accepted_runtime_run_id:Number(process.env.PHASE6_RUNTIME_RUN_ID),
             accepted_runtime_artifact_id:Number(process.env.PHASE6_RUNTIME_ARTIFACT_ID),
-            protected_runtime_delta_count:0,
-            phase7_unwired_evidence_foundation_delta_count:foundationDelta.length,
-            phase7_unwired_evidence_foundation_requires_phase3_requalification:true,
-            phase7_unwired_candidate_promotion_composition_delta_count:compositionDelta.length,
-            phase7_unwired_candidate_promotion_requires_dedicated_requalification:true,
+            protected_runtime_delta_count:runtimeDelta.length,
+            protected_runtime_delta_paths:runtimeDelta,
+            successor_runtime_delta_governed_by_central_plan:true,
+            accepted_predecessor_phase7_foundation_unwired_verified:true,
+            phase7_evidence_foundation_delta_count:foundationDelta.length,
+            phase7_evidence_foundation_requires_phase3_requalification:true,
+            phase7_candidate_promotion_composition_delta_count:compositionDelta.length,
+            phase7_candidate_promotion_requires_dedicated_requalification:true,
             production_process_graph_wiring:false,
             accepted_predecessor_machine_evidence_verified:true,
             qualification_support_delta_count:qualificationDelta.length,

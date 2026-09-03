@@ -14,7 +14,8 @@
     "48ceafe7c6e7d3d57a1dc17411fb4bf673486333",
     "c4249e5b7bd67d35d34813aceea6760f9d210ed0",
     "d6c015b49d09960591185ff9c930e64dac7e2806",
-    "46c9c7b6b59c113848fc69daff88fb183fccc954"
+    "46c9c7b6b59c113848fc69daff88fb183fccc954",
+    "46367333d228a2b90a86ff6a33aebc334f3d73a2"
   ],
   "stacked_predecessor_branch": "fix/mcft-cap09-v13-autonomous-forcing-foundation",
   "default_stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
@@ -73,7 +74,13 @@
         ".github/workflows/mcft-cap-09-t4r1-rolling-rehydration-live-proof.yml",
         ".github/workflows/mcft-cap-09-phase6-runtime-independence.yml",
         "docker-compose.mcft-cap09-phase6-github-blackout.override.yml",
-        ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml"
+        ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-WRITER-OWNER-SELF-GRANT-CLEANUP-AUTHORITY-V1.json",
+        "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_ARM_V1.json",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_V1.cjs",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_POSTGRES_V1.cjs",
+        ".github/workflows/mcft-cap-09-production-writer-owner-self-grant-cleanup.yml"
       ]
     },
     "EA5E2_RUNTIME_GRAPH_V4": {
@@ -94,7 +101,11 @@
         "apps/server/src/external_evidence/s3_compatible_raw_evidence_retention_adapter_v1.ts",
         "apps/server/src/persistence/twin_runtime/postgres_external_formal_evidence_ingress_v1.ts",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C1-DURABLE-RAW-RESTRICTED-INGRESS-V1.json",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs"
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_DURABLE_RAW_RESTRICTED_INGRESS.cjs",
+        ".github/workflows/mcft-cap-09-ea3-external-collector-canonicalizer.yml",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA3_EXTERNAL_COLLECTOR_CANONICALIZER.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C1_SUCCESSOR_REPLAY_COMPLETE_INGRESS_V1.ts"
       ]
     },
     "LEGACY_AM19_PERSISTENT_24T": {
@@ -125,21 +136,30 @@
         "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_process_v1.ts"
       ],
       "additional_exact_paths": [
-        "apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts",
+        ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
+        ".github/workflows/mcft-cap-09-v13-fenced-fact-promotion-postgres.yml",
+        ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
+        ".github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml",
+        ".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml",
+        ".github/workflows/mcft-cap-09-v13-producer-driven-qualification-preflight.yml",
         "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql",
         "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql",
         "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql",
+        "apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql",
+        "apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts",
+        "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.cjs",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.ts",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_FENCED_FACT_PROMOTION_POSTGRES.ts",
-        ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
-        ".github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml",
-        ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
-        ".github/workflows/mcft-cap-09-v13-fenced-fact-promotion-postgres.yml",
-        "apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql",
-        "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts"
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES.ts",
+        "scripts/runtime_acceptance/MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_ARM.json",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V1.ts",
+        "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_V13_PRODUCER_LIVE_APPLICABILITY_V1.cjs"
       ]
     },
     "PHASE1_TYPED_RUNTIME_COMPOSITION": {
@@ -233,7 +253,54 @@
         "apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql",
         "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts",
         "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.ts",
-        "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_process_v1.ts"
+        "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_process_v1.ts",
+        "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql",
+        "apps/server/src/external_evidence/mcft_cap09_evidence_source_progress_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_acquisition_horizon_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_planner_v1.ts",
+        "apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_snapshot_v1.ts",
+        "apps/server/src/external_evidence/kbs_raw_hourly_publication_baseline_store_v1.ts",
+        "apps/server/db/migrations/2026_09_01_mcft_cap_09_kbs_publication_baseline_pointer.sql",
+        "apps/server/src/external_evidence/mcft_cap09_kbs_publication_baseline_pointer_v1.ts",
+        "apps/server/src/persistence/external_evidence/postgres_kbs_publication_baseline_pointer_v1.ts",
+        "apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_comparison_v1.ts",
+        "apps/server/src/external_evidence/verified_retained_raw_replay_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_kbs_raw_hourly_publication_cycle_service_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1.ts",
+        "apps/server/src/persistence/external_evidence/postgres_external_evidence_fact_replay_provenance_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_gfs_partial_pair_rehydration_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_PARTIAL_PAIR_REHYDRATION_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_evidence_source_poll_schedule_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_due_policy_v1.ts",
+        "apps/server/src/persistence/external_evidence/postgres_evidence_source_poll_schedule_v1.ts",
+        "apps/server/db/migrations/2026_09_01_mcft_cap_09_evidence_source_poll_schedule.sql",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_DUE_POLICY_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EVIDENCE_SOURCE_POLL_SCHEDULE_POSTGRES_V1.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-GFS-TARGET-DUE-READINESS-V1.json",
+        "apps/server/src/external_evidence/mcft_cap09_production_gfs_target_due_policy_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_GFS_TARGET_DUE_POLICY_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_gfs_retry_schedule_v1.ts",
+        "apps/server/src/persistence/external_evidence/postgres_gfs_retry_schedule_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_RETRY_SCHEDULE_POSTGRES_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_attempt_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_plan_executor_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLAN_EXECUTOR_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_provider_attempt_fence_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_production_provider_attempt_fence_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_gfs_target_pair_history_v1.ts",
+        "apps/server/src/persistence/external_evidence/postgres_gfs_target_pair_history_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_arbitration_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_ARBITRATION_V1.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-ARBITRATION-AUTHORITY-V1.json",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_host_planner_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_HOST_PLANNER_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_planner_assembly_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_PLANNER_ASSEMBLY_V1.ts"
       ]
     },
     "PHASE4_TWIN_RUNTIME_FOUNDATION": {
@@ -253,6 +320,7 @@
         "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_ACL_V1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_TWIN_RUNTIME_POSTGRES_V1.ts",
+        "apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts",
         "apps/server/src/runtime/twin_runtime/postgres_twin_runtime_successor_viability_v1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE4_SUCCESSOR_VIABILITY_V1.ts",
         "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase5_twin_fact_writer_acl.sql"
@@ -267,7 +335,11 @@
         "apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.ts",
         "apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts",
         "apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts",
+        "apps/server/src/runtime/mcft_cap09_production_runtime_start_authority_v1.ts",
+        "apps/server/src/runtime/mcft_cap09_production_service_identity_v1.ts",
         "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts",
+        "apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_SERVICE_PRINCIPALS_V1.ts",
         "apps/server/src/external_evidence/qualification/mcft_cap09_phase5_controlled_evidence_work_items_v1.ts",
@@ -278,6 +350,8 @@
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_QUALIFICATION_CLOCK_V1.ts",
         "docker-compose.mcft-cap09-phase5-qualification.yml",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_QUALIFICATION_COMPOSE_V1.ts",
+        "docker-compose.mcft-cap09-production.yml",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts",
         "apps/server/src/persistence/twin_runtime/postgres_mcft_cap09_twin_canonical_fact_writer_v1.ts",
         "apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts",
         "apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.ts",
@@ -293,7 +367,11 @@
         "scripts/runtime_acceptance/SEED_MCFT_CAP_09_PHASE5_TWIN_FENCING_FIXTURE_V1.ts",
         "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
         "apps/server/src/external_evidence/provider/gfs_nomads_live_provider_v1.ts",
-        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts"
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts",
+        "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql",
+        "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json",
+        "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_BUILDER_V1.cjs"
       ]
     },
     "PHASE7_PRIVATE_CANDIDATE_PROMOTION_IMPORT_CLOSURE": {
@@ -303,7 +381,220 @@
       ],
       "additional_exact_paths": [
         ".github/workflows/mcft-cap-09-phase7-candidate-promotion-composition.yml",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1.ts"
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE7_CANDIDATE_PROMOTION_COMPOSITION_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_VERIFIED_RETAINED_RAW_REPLAY_V1.ts"
+      ]
+    },
+    "V13_TIMING_QUALIFICATION_CLOSURE": {
+      "kind": "IMPORT_CLOSURE",
+      "roots": [
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V1.ts",
+        "scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V1.ts",
+        "scripts/runtime_acceptance/VALIDATE_MCFT_CAP_09_V13_FROZEN_TIMING_AUTHORITY_V1.ts",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_CONTROLLED_TIMING_DELAY_MATRIX_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_CONTROLLER_SERVICE_POSTGRES.ts"
+      ],
+      "additional_exact_paths": [
+        ".github/workflows/mcft-cap-09-v13-exact-head-timing-measurement.yml",
+        ".github/workflows/mcft-cap-09-v13-exact-head-timing-sample.yml",
+        ".github/workflows/mcft-cap-09-v13-frozen-timing-authority.yml",
+        "scripts/runtime_acceptance/MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_ARM_V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json",
+        ".github/workflows/mcft-cap-09-v13-controlled-timing-delay-matrix.yml",
+        "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql",
+        "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql",
+        "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql"
+      ]
+    },
+    "PRODUCTION_OWNER_GRADUATION_CLOSURE": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-production-owner-graduation-gate.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json",
+        "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_CUTOVER_ARM_V1.json",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_V1.cjs",
+        "scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json",
+        "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
+        "apps/server/src/runtime/mcft_cap09_production_runtime_start_authority_v1.ts",
+        "apps/server/src/runtime/mcft_cap09_production_service_identity_v1.ts",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts",
+        "apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts",
+        "docker-compose.mcft-cap09-production.yml",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts",
+        "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs",
+        "apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts",
+        "apps/server/src/infra/mcft_cap09_phase5_service_principal_provisioning_v1.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json",
+        ".github/workflows/mcft-cap-09-production-non-github-host-binding-readiness.yml",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_V1.cjs",
+        "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_READINESS_V1.cjs",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-LOCAL-OPERATOR-HOST-STATIC-ADMISSION-EVIDENCE-V1.json",
+        "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json",
+        "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_ARM_V1.json",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_V1.cjs",
+        ".github/workflows/mcft-cap-09-production-owner-provisioning-readiness.yml",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_SERVICE_LOGIN_PROVISIONING_V1.ts",
+        ".github/workflows/mcft-cap-09-production-service-login-provision-one-shot.yml",
+        "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_SERVICE_LOGIN_READINESS_V1.cjs",
+        ".github/workflows/mcft-cap-09-production-runtime-credential-bind-one-shot.yml",
+        ".github/workflows/mcft-cap-09-production-runtime-credential-readiness.yml",
+        "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_RUNTIME_CREDENTIAL_READINESS_V1.cjs",
+        ".github/workflows/mcft-cap-09-production-service-login-readiness.yml",
+        "apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.ts",
+        "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_BUNDLE_POSTGRES_V1.ts",
+        ".github/workflows/mcft-cap-09-production-owner-provisioning-bundle-postgres.yml",
+        "docker/postgres/init/001_schema.sql",
+        "apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql",
+        "apps/server/db/migrations/2026_07_10_mcft_cap_01_closure_remediation.sql",
+        "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql",
+        "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql",
+        "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql",
+        "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql",
+        "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase5_twin_fact_writer_acl.sql",
+        "apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql",
+        "apps/server/db/migrations/2026_08_31_mcft_cap_09_production_host_projection_persistence.sql",
+        "apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql",
+        "apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OPERATIONAL-DATABASE-CANDIDATE-V1.json",
+        "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_PROVISION_ARM_V1.json",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OPERATIONAL_DATABASE_CANDIDATE_V1.cjs",
+        ".github/workflows/mcft-cap-09-production-operational-database-candidate-preflight.yml",
+        ".github/workflows/mcft-cap-09-production-operational-database-provision-one-shot.yml",
+        "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_ARM_V1.json",
+        ".github/workflows/mcft-cap-09-production-operational-schema-acl-readiness.yml",
+        "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_READINESS_V2.cjs",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_MATERIALIZATION_V1.ts",
+        ".github/workflows/mcft-cap-09-production-operational-schema-acl-materialize-one-shot.yml",
+        "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1.json",
+        "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_ARM_V1.json",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_V1.cjs",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_V1.cjs",
+        ".github/workflows/mcft-cap-09-production-evidence-acl-carryforward-remediation.yml",
+        ".github/workflows/mcft-cap-09-production-evidence-target-planner-readiness.yml",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_TARGET_PLANNER_READINESS_V1.cjs",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_MULTI_INTERVAL_PRODUCT_PATH_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_evidence_source_progress_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PROGRESS_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_acquisition_horizon_v1.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACQUISITION-HORIZON-AUTHORITY-V1.json",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACQUISITION_HORIZON_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_planner_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLANNER_V1.ts",
+        "apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_snapshot_v1.ts",
+        "apps/server/src/external_evidence/kbs_raw_hourly_publication_baseline_store_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_V1.ts",
+        "apps/server/db/migrations/2026_09_01_mcft_cap_09_kbs_publication_baseline_pointer.sql",
+        "apps/server/src/external_evidence/mcft_cap09_kbs_publication_baseline_pointer_v1.ts",
+        "apps/server/src/persistence/external_evidence/postgres_kbs_publication_baseline_pointer_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_BASELINE_POINTER_V1.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-KBS-BASELINE-POINTER-SCHEMA-REMEDIATION-AUTHORITY-V1.json",
+        "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_ARM_V1.json",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_V1.cjs",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_KBS_BASELINE_POINTER_SCHEMA_REMEDIATION_V1.cjs",
+        ".github/workflows/mcft-cap-09-production-kbs-baseline-pointer-schema-remediation.yml",
+        "apps/server/src/external_evidence/provider/kbs_raw_hourly_publication_comparison_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_SNAPSHOT_COMPARISON_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_kbs_raw_hourly_publication_cycle_service_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_RAW_HOURLY_PUBLICATION_CYCLE_V1.ts",
+        "apps/server/src/persistence/external_evidence/postgres_external_evidence_fact_replay_provenance_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EXTERNAL_EVIDENCE_FACT_REPLAY_PROVENANCE_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_gfs_partial_pair_rehydration_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_PARTIAL_PAIR_REHYDRATION_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_evidence_source_poll_schedule_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_due_policy_v1.ts",
+        "apps/server/src/persistence/external_evidence/postgres_evidence_source_poll_schedule_v1.ts",
+        "apps/server/db/migrations/2026_09_01_mcft_cap_09_evidence_source_poll_schedule.sql",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_DUE_POLICY_V1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EVIDENCE_SOURCE_POLL_SCHEDULE_POSTGRES_V1.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-DUE-POLICY-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-POLL-SCHEDULE-SCHEMA-REMEDIATION-AUTHORITY-V1.json",
+        "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_ARM_V1.json",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_V1.cjs",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_POLL_SCHEDULE_SCHEMA_REMEDIATION_V1.cjs",
+        ".github/workflows/mcft-cap-09-production-evidence-source-poll-schedule-schema-remediation.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-GFS-TARGET-DUE-READINESS-V1.json",
+        "apps/server/src/external_evidence/mcft_cap09_production_gfs_target_due_policy_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_GFS_TARGET_DUE_POLICY_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_gfs_retry_schedule_v1.ts",
+        "apps/server/src/persistence/external_evidence/postgres_gfs_retry_schedule_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_RETRY_SCHEDULE_POSTGRES_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_host_attempt_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_plan_executor_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_PLAN_EXECUTOR_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_provider_attempt_fence_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_production_provider_attempt_fence_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_gfs_target_pair_history_v1.ts",
+        "apps/server/src/persistence/external_evidence/postgres_gfs_target_pair_history_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_TARGET_PAIR_HISTORY_POSTGRES_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_arbitration_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_ARBITRATION_V1.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-ARBITRATION-AUTHORITY-V1.json",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_host_planner_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_HOST_PLANNER_V1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_production_evidence_planner_assembly_v1.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_PLANNER_ASSEMBLY_V1.ts",
+        "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json",
+        "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_BUILDER_V1.cjs"
+      ]
+    },
+    "V13_RUNTIME_SEMANTIC_CLOSURE": {
+      "kind": "IMPORT_CLOSURE",
+      "roots": [
+        "apps/server/src/runtime/twin_runtime/external_formal_forcing_autonomous_controller_service_v1.ts",
+        "apps/server/src/runtime/twin_runtime/external_formal_v5_amendment19_runner_v1.ts",
+        "apps/server/src/runtime/twin_runtime/external_formal_v5_viability_gated_scheduler_v1.ts",
+        "apps/server/src/runtime/twin_runtime/postgres_external_formal_next_tick_viability_v1.ts",
+        "apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_base_continuity_repository_v1.ts",
+        "apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_controller_lifecycle_v1.ts",
+        "apps/server/src/runtime/twin_runtime/postgres_external_formal_forcing_supply_admission_v1.ts",
+        "apps/server/src/persistence/twin_runtime/postgres_external_formal_fenced_exact_base_fact_promotion_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.ts",
+        "apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_process_v1.ts"
+      ],
+      "additional_exact_paths": [
+        "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql",
+        "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql",
+        "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql",
+        "apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql",
+        "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql",
+        "apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts",
+        "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
+      ]
+    },
+    "V13_QUALIFICATION_HARNESS_CLOSURE": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
+        ".github/workflows/mcft-cap-09-v13-fenced-fact-promotion-postgres.yml",
+        ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
+        ".github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml",
+        ".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml",
+        ".github/workflows/mcft-cap-09-v13-producer-driven-qualification-preflight.yml",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_FENCED_FACT_PROMOTION_POSTGRES.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_NEXT_TICK_VIABILITY_POSTGRES.ts",
+        "scripts/runtime_acceptance/MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_ARM.json",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_PRODUCER_DRIVEN_LIVE_QUALIFICATION_V1.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+        "scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+        "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_V13_PRODUCER_LIVE_APPLICABILITY_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_RUNTIME_HARNESS_RESOLVER_MIGRATION_V1.cjs",
+        ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml",
+        ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs"
       ]
     }
   },
@@ -357,7 +648,7 @@
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.cjs"
       ],
       "resolver_ids": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "historical_evidence_policy": "CARRY_ONLY_IF_IMMUTABLE_BINDING_AND_DEPENDENCY_CLOSURE_UNCHANGED",
       "execution_workflow": ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
@@ -365,7 +656,7 @@
       "fail_policy": "FAIL_CLOSED",
       "carry_forward_policy": "ONLY_WHEN_DEPENDENCY_RESOLVER_UNCHANGED",
       "requalification_triggers": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "applicable_stages": [
         "SUCCESSOR_SUBJECT_PRE_MERGE",
@@ -385,7 +676,7 @@
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
       ],
       "resolver_ids": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "historical_evidence_policy": "CARRY_ONLY_IF_IMMUTABLE_BINDING_AND_DEPENDENCY_CLOSURE_UNCHANGED",
       "execution_workflow": ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
@@ -393,7 +684,7 @@
       "fail_policy": "FAIL_CLOSED",
       "carry_forward_policy": "ONLY_WHEN_DEPENDENCY_RESOLVER_UNCHANGED",
       "requalification_triggers": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "applicable_stages": [
         "SUCCESSOR_SUBJECT_PRE_MERGE",
@@ -413,7 +704,7 @@
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
       ],
       "resolver_ids": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "historical_evidence_policy": "CARRY_ONLY_IF_IMMUTABLE_BINDING_AND_DEPENDENCY_CLOSURE_UNCHANGED",
       "execution_workflow": ".github/workflows/mcft-cap-09-v13-next-tick-viability-postgres.yml",
@@ -421,7 +712,7 @@
       "fail_policy": "FAIL_CLOSED",
       "carry_forward_policy": "ONLY_WHEN_DEPENDENCY_RESOLVER_UNCHANGED",
       "requalification_triggers": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "applicable_stages": [
         "SUCCESSOR_SUBJECT_PRE_MERGE",
@@ -446,7 +737,7 @@
       ],
       "historical_evidence_policy": "CARRY_ONLY_IF_IMMUTABLE_BINDING_AND_EXACT_RESOLVER_PATHS_UNCHANGED",
       "execution_workflow": ".github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml",
-      "execution_workflow_status": "IMPLEMENTED_AT_FROZEN_SUBJECT",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
       "fail_policy": "FAIL_CLOSED",
       "carry_forward_policy": "ONLY_WHEN_EXACT_RESOLVER_PATHS_UNCHANGED",
       "requalification_triggers": [
@@ -690,15 +981,15 @@
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
       ],
       "resolver_ids": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "historical_evidence_policy": "FRESH_QUALIFICATION_REQUIRED_NO_PREVIOUS_GENERATION_REUSE",
-      "execution_workflow": null,
-      "execution_workflow_status": "NOT_IMPLEMENTED_AT_FROZEN_SUBJECT",
+      "execution_workflow": ".github/workflows/mcft-cap-09-v13-producer-driven-live-qualification.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
       "fail_policy": "FAIL_CLOSED_UNTIL_IMPLEMENTED_AND_QUALIFIED",
       "carry_forward_policy": "NONE",
       "requalification_triggers": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "applicable_stages": [
         "POST_MERGE_V13_QUALIFICATION"
@@ -713,18 +1004,19 @@
         "V13"
       ],
       "authority_refs": [
-        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json"
       ],
       "resolver_ids": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_TIMING_QUALIFICATION_CLOSURE"
       ],
       "historical_evidence_policy": "FRESH_EXACT_HEAD_REAL_TIMING_EVIDENCE_REQUIRED",
-      "execution_workflow": null,
-      "execution_workflow_status": "NOT_IMPLEMENTED_AT_FROZEN_SUBJECT",
+      "execution_workflow": ".github/workflows/mcft-cap-09-v13-frozen-timing-authority.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
       "fail_policy": "FAIL_CLOSED_UNTIL_TIMING_BUDGET_QUALIFIED",
       "carry_forward_policy": "NONE",
       "requalification_triggers": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_TIMING_QUALIFICATION_CLOSURE"
       ],
       "applicable_stages": [
         "POST_MERGE_V13_QUALIFICATION"
@@ -740,18 +1032,19 @@
         "FORMAL_V5_ACTIVATION"
       ],
       "authority_refs": [
-        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json"
       ],
       "resolver_ids": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "PRODUCTION_OWNER_GRADUATION_CLOSURE"
       ],
       "historical_evidence_policy": "NO_HISTORICAL_SUBSTITUTE_FOR_LIVE_OWNER_INVENTORY",
-      "execution_workflow": null,
-      "execution_workflow_status": "NOT_IMPLEMENTED_AT_FROZEN_SUBJECT",
+      "execution_workflow": ".github/workflows/mcft-cap-09-production-owner-graduation-gate.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
       "fail_policy": "FAIL_CLOSED_UNTIL_EXACT_ONE_OWNER_AND_RETIRED_TRIGGER_ZERO_PROVEN",
       "carry_forward_policy": "NONE",
       "requalification_triggers": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "PRODUCTION_OWNER_GRADUATION_CLOSURE"
       ],
       "applicable_stages": [
         "POST_MERGE_V13_QUALIFICATION",
@@ -770,7 +1063,7 @@
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
       ],
       "resolver_ids": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "historical_evidence_policy": "FRESH_V5_EPOCH_ONLY_FAILED_V4_REUSE_FORBIDDEN",
       "execution_workflow": null,
@@ -778,13 +1071,44 @@
       "fail_policy": "FAIL_CLOSED_UNTIL_POST_GRADUATION_ACTIVATION_AUTHORIZED",
       "carry_forward_policy": "NONE",
       "requalification_triggers": [
-        "V13_AUTONOMOUS_FORCING_IMPORT_CLOSURE"
+        "V13_RUNTIME_SEMANTIC_CLOSURE"
       ],
       "applicable_stages": [
         "POST_GRADUATION_FORMAL_V5_ACTIVATION"
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": null
+    },
+    {
+      "check_id": "V13_RUNTIME_HARNESS_RESOLVER_MIGRATION",
+      "owner": "MCFT_CAP09_V13_RUNTIME_EVIDENCE_GOVERNANCE",
+      "generation_scope": [
+        "V13"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"
+      ],
+      "resolver_ids": [
+        "V13_RUNTIME_SEMANTIC_CLOSURE",
+        "V13_QUALIFICATION_HARNESS_CLOSURE",
+        "CONTROL_PLANE_FILES"
+      ],
+      "historical_evidence_policy": "BF1D_LEGACY_RUNTIME_DIGEST_PROJECTION_REQUIRES_MACHINE_PARTITION_PROOF",
+      "execution_workflow": ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
+      "fail_policy": "FAIL_CLOSED_UNTIL_RUNTIME_HARNESS_PARTITION_AND_BF1D_PROJECTION_PROVEN",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "V13_RUNTIME_SEMANTIC_CLOSURE",
+        "V13_QUALIFICATION_HARNESS_CLOSURE",
+        "CONTROL_PLANE_FILES"
+      ],
+      "applicable_stages": [
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_RUNTIME_HARNESS_RESOLVER_MIGRATION_V1.cjs"
     }
   ],
   "non_effects": {

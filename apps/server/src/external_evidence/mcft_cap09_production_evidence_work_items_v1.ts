@@ -1,6 +1,6 @@
 // MCFT-CAP-09 Phase 3 production Evidence work-item factory.
-// Builds product soil / historical weather / GFS future-Evidence work for an explicitly supplied target.
-// Boundary: no target selection, cadence, environment, process lifecycle, DB write, Twin state, or RuntimeTickCursor.
+// Builds product soil / KBS hourly / GFS future Evidence work without owning target selection,
+// cadence, environment, process lifecycle, DB writes, Twin state, or RuntimeTickCursor.
 
 import type {
   RawEvidenceRetentionPortV1,
@@ -21,6 +21,7 @@ import {
   buildKbsRawHourlyFetchRequestV1,
   KbsRawHourlyExactIntervalDecoderV1,
   KbsRawHourlyLiveTransportV1,
+  KbsRawHourlyMultiIntervalDecoderV1,
 } from "./provider/kbs_raw_hourly_live_provider_v1.js";
 import {
   GfsNomadsLiveProviderV1,
@@ -41,22 +42,26 @@ export const MCFT_CAP09_PRODUCTION_EVIDENCE_WORK_ITEM_FACTORY_ID_V1 =
 
 function canonicalHourV1(value: string, code: string): string {
   const parsed = Date.parse(value);
-  if (!Number.isFinite(parsed) || new Date(parsed).toISOString() !== value || !value.endsWith(":00:00.000Z")) {
+  if (
+    !Number.isFinite(parsed)
+    || new Date(parsed).toISOString() !== value
+    || !value.endsWith(":00:00.000Z")
+  ) throw new Error(code);
+  return value;
+}
+function canonicalIsoV1(value: string, code: string): string {
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed) || new Date(parsed).toISOString() !== value) {
     throw new Error(code);
   }
   return value;
 }
-
-function canonicalIsoV1(value: string, code: string): string {
-  const parsed = Date.parse(value);
-  if (!Number.isFinite(parsed) || new Date(parsed).toISOString() !== value) throw new Error(code);
-  return value;
-}
-
 function requestPrefixV1(value: string): string {
   const text = value.trim();
   if (!text) throw new Error("PHASE3_EVIDENCE_WORK_REQUEST_PREFIX_REQUIRED");
-  if (!/^[0-9A-Za-z_.:-]+$/.test(text)) throw new Error("PHASE3_EVIDENCE_WORK_REQUEST_PREFIX_INVALID");
+  if (!/^[0-9A-Za-z_.:-]+$/.test(text)) {
+    throw new Error("PHASE3_EVIDENCE_WORK_REQUEST_PREFIX_INVALID");
+  }
   return text;
 }
 
@@ -64,6 +69,11 @@ export type ProductionEvidenceSourceFamilyV1 =
   | "KBS_SOIL"
   | "KBS_RAW_HOURLY"
   | "GFS_BUNDLE";
+
+export type KbsRawHourlyPublicationFetchV1 = Pick<
+  EvidenceRuntimeCycleWorkItemV1,
+  "request" | "transport"
+>;
 
 const ALL_PRODUCTION_EVIDENCE_SOURCE_FAMILIES_V1:
   readonly ProductionEvidenceSourceFamilyV1[] = [
@@ -112,43 +122,54 @@ export class ProductionEvidenceWorkItemFactoryV1 {
     this.clock = config.clock ?? (() => new Date());
   }
 
-  buildForTarget(input: {
-    target_logical_time: string;
+  buildKbsSoilCurrent(input: {
     requested_at: string;
     request_id_prefix: string;
-    source_families?: readonly ProductionEvidenceSourceFamilyV1[];
-    restored_ingested_at?: string;
-  }): readonly EvidenceRuntimeCycleWorkItemV1[] {
-    const target = canonicalHourV1(input.target_logical_time, "PHASE3_EVIDENCE_WORK_TARGET_INVALID");
-    const requestedAt = canonicalIsoV1(input.requested_at, "PHASE3_EVIDENCE_WORK_REQUESTED_AT_INVALID");
+  }): EvidenceRuntimeCycleWorkItemV1 {
+    const requestedAt = canonicalIsoV1(
+      input.requested_at,
+      "PHASE3_EVIDENCE_SOIL_REQUESTED_AT_INVALID",
+    );
     const prefix = requestPrefixV1(input.request_id_prefix);
-
-    const sourceFamilies = normalizeSourceFamiliesV1(input.source_families);
-
-    const soilRequest = buildKbsVariate25SoilFetchRequestV1({
+    const request = buildKbsVariate25SoilFetchRequestV1({
       request_id: `${prefix}:soil`,
       requested_at: requestedAt,
     });
-    const soil: EvidenceRuntimeCycleWorkItemV1 = {
+    return {
       work_item_id: `${prefix}:soil`,
       dataset_id: MCFT_CAP09_KBS_SOIL_DATASET_ID_V1,
-      request: soilRequest,
+      request,
       transport: createKbsVariate25SoilTransportV1({
         fetch_impl: this.config.fetch_impl,
         clock: this.clock,
       }),
       decoder: new KbsVariate25SoilEvidenceDecoderV1(),
     };
+  }
 
-    const rawHourlyRequest = buildKbsRawHourlyFetchRequestV1({
+  buildKbsRawHourlyExact(input: {
+    target_logical_time: string;
+    requested_at: string;
+    request_id_prefix: string;
+  }): EvidenceRuntimeCycleWorkItemV1 {
+    const target = canonicalHourV1(
+      input.target_logical_time,
+      "PHASE3_EVIDENCE_KBS_EXACT_TARGET_INVALID",
+    );
+    const requestedAt = canonicalIsoV1(
+      input.requested_at,
+      "PHASE3_EVIDENCE_KBS_EXACT_REQUESTED_AT_INVALID",
+    );
+    const prefix = requestPrefixV1(input.request_id_prefix);
+    const request = buildKbsRawHourlyFetchRequestV1({
       request_id: `${prefix}:kbs-raw-hourly`,
       requested_at: requestedAt,
       source_event_time: target,
     });
-    const rawHourly: EvidenceRuntimeCycleWorkItemV1 = {
+    return {
       work_item_id: `${prefix}:kbs-raw-hourly`,
       dataset_id: "kbs_lter_raw_hourly_exact_interval_v1",
-      request: rawHourlyRequest,
+      request,
       transport: new KbsRawHourlyLiveTransportV1({
         fetch_impl: this.config.fetch_impl,
         clock: this.clock,
@@ -158,7 +179,23 @@ export class ProductionEvidenceWorkItemFactoryV1 {
         clock: this.clock,
       }),
     };
+  }
 
+  buildGfsBundle(input: {
+    target_logical_time: string;
+    requested_at: string;
+    request_id_prefix: string;
+    restored_ingested_at?: string;
+  }): EvidenceRuntimeCycleWorkItemV1 {
+    const target = canonicalHourV1(
+      input.target_logical_time,
+      "PHASE3_EVIDENCE_GFS_TARGET_INVALID",
+    );
+    const requestedAt = canonicalIsoV1(
+      input.requested_at,
+      "PHASE3_EVIDENCE_GFS_REQUESTED_AT_INVALID",
+    );
+    const prefix = requestPrefixV1(input.request_id_prefix);
     const byteClient = new ControlledHttpsByteClientV1({
       fetch_impl: this.config.fetch_impl,
       clock: this.clock,
@@ -166,23 +203,23 @@ export class ProductionEvidenceWorkItemFactoryV1 {
       max_raw_bytes: this.config.gfs_byte_client_max_bytes ?? 250_000_000,
       timeout_ms: this.config.gfs_timeout_ms ?? 120_000,
     });
-    const gfsProvider = new GfsNomadsLiveProviderV1({ byte_client: byteClient });
-    const gfsComposer = new GfsNomadsRawBundleComposerV1({
-      provider: gfsProvider,
+    const provider = new GfsNomadsLiveProviderV1({ byte_client: byteClient });
+    const composer = new GfsNomadsRawBundleComposerV1({
+      provider,
       retention: this.config.retention,
       clock: this.clock,
     });
-    const gfsRequest = buildGfsNomadsBundleFetchRequestV1({
+    const request = buildGfsNomadsBundleFetchRequestV1({
       request_id: `${prefix}:gfs-bundle`,
       requested_at: requestedAt,
       target_logical_time: target,
     });
-    const gfs: EvidenceRuntimeCycleWorkItemV1 = {
+    return {
       work_item_id: `${prefix}:gfs-bundle`,
       dataset_id: "noaa_ncep_gfs_same_cycle_72h_bundle_v1",
-      request: gfsRequest,
+      request,
       transport: new GfsNomadsBundleTransportV1(
-        gfsComposer,
+        composer,
         target,
         `${prefix}:gfs-members`,
       ),
@@ -193,15 +230,96 @@ export class ProductionEvidenceWorkItemFactoryV1 {
         restored_ingested_at: input.restored_ingested_at,
       }),
     };
+  }
 
-    const byFamily: Readonly<Record<
-      ProductionEvidenceSourceFamilyV1,
-      EvidenceRuntimeCycleWorkItemV1
-    >> = {
-      KBS_SOIL: soil,
-      KBS_RAW_HOURLY: rawHourly,
-      GFS_BUNDLE: gfs,
+  buildForTarget(input: {
+    target_logical_time: string;
+    requested_at: string;
+    request_id_prefix: string;
+    source_families?: readonly ProductionEvidenceSourceFamilyV1[];
+    restored_ingested_at?: string;
+  }): readonly EvidenceRuntimeCycleWorkItemV1[] {
+    const target = canonicalHourV1(
+      input.target_logical_time,
+      "PHASE3_EVIDENCE_WORK_TARGET_INVALID",
+    );
+    const requestedAt = canonicalIsoV1(
+      input.requested_at,
+      "PHASE3_EVIDENCE_WORK_REQUESTED_AT_INVALID",
+    );
+    const prefix = requestPrefixV1(input.request_id_prefix);
+    const families = normalizeSourceFamiliesV1(input.source_families);
+    return families.map((family) => {
+      if (family === "KBS_SOIL") {
+        return this.buildKbsSoilCurrent({
+          requested_at: requestedAt,
+          request_id_prefix: prefix,
+        });
+      }
+      if (family === "KBS_RAW_HOURLY") {
+        return this.buildKbsRawHourlyExact({
+          target_logical_time: target,
+          requested_at: requestedAt,
+          request_id_prefix: prefix,
+        });
+      }
+      return this.buildGfsBundle({
+        target_logical_time: target,
+        requested_at: requestedAt,
+        request_id_prefix: prefix,
+        restored_ingested_at: input.restored_ingested_at,
+      });
+    });
+  }
+
+  buildKbsRawHourlyPublicationFetch(input: {
+    requested_at: string;
+    request_id_prefix: string;
+  }): KbsRawHourlyPublicationFetchV1 {
+    const requestedAt = canonicalIsoV1(
+      input.requested_at,
+      "PHASE3_EVIDENCE_KBS_PUBLICATION_REQUESTED_AT_INVALID",
+    );
+    const prefix = requestPrefixV1(input.request_id_prefix);
+    return {
+      request: buildKbsRawHourlyFetchRequestV1({
+        request_id: `${prefix}:kbs-raw-hourly-publication`,
+        requested_at: requestedAt,
+      }),
+      transport: new KbsRawHourlyLiveTransportV1({
+        fetch_impl: this.config.fetch_impl,
+        clock: this.clock,
+      }),
     };
-    return sourceFamilies.map((family) => byFamily[family]);
+  }
+
+  buildKbsRawHourlyBatch(input: {
+    target_logical_times: readonly string[];
+    requested_at: string;
+    request_id_prefix: string;
+  }): EvidenceRuntimeCycleWorkItemV1 {
+    const requestedAt = canonicalIsoV1(
+      input.requested_at,
+      "PHASE3_EVIDENCE_KBS_BATCH_REQUESTED_AT_INVALID",
+    );
+    const prefix = requestPrefixV1(input.request_id_prefix);
+    const decoder = new KbsRawHourlyMultiIntervalDecoderV1(
+      input.target_logical_times,
+      {
+        python_executable: this.config.python_executable,
+        clock: this.clock,
+      },
+    );
+    const publication = this.buildKbsRawHourlyPublicationFetch({
+      requested_at: requestedAt,
+      request_id_prefix: prefix,
+    });
+    return {
+      work_item_id: `${prefix}:kbs-raw-hourly-batch`,
+      dataset_id: "kbs_lter_raw_hourly_multi_interval_batch_v1",
+      request: publication.request,
+      transport: publication.transport,
+      decoder,
+    };
   }
 }

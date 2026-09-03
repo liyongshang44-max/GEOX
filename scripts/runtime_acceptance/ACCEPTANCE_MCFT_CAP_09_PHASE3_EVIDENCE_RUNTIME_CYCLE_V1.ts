@@ -245,6 +245,13 @@ async function main(): Promise<void> {
     lease_owner: "evidence-host-A",
     lease_duration_seconds: 300,
     work_items: [work(order)],
+    provider_attempt_fence:{
+      async claimBeforeProviderFetch({claim}) {
+        order.push("provider_attempt_fence");
+        assert.equal(claim.fencing_token,7n);
+        return {status:"AUTHORIZED" as const,durable_coordination_write_count:1 as const};
+      },
+    },
   });
   assert.equal(result.status, "COMPLETED");
   if (result.status !== "COMPLETED") throw new Error("PHASE3_CYCLE_COMPLETION_REQUIRED");
@@ -253,6 +260,7 @@ async function main(): Promise<void> {
   assert.equal(result.evidence_supply_cursor_advance_count, 1);
   assert.deepEqual(order, [
     "lease_acquire",
+    "provider_attempt_fence",
     "lease_renew",
     "ingress_bound_to_lease",
     "cursor_bound_to_lease",
@@ -283,11 +291,30 @@ async function main(): Promise<void> {
   assert.equal(blocked.status, "LEASE_HELD_BY_OTHER_OWNER");
   assert.deepEqual(blockedOrder, ["lease_acquire"]);
 
+  const fenceNotDueOrder:string[]=[];
+  const fenceNotDueService=new EvidenceRuntimeCycleServiceV1({
+    lease:leasePort(fenceNotDueOrder),
+    retention:retention(fenceNotDueOrder),
+    committed_ingress_factory:committedIngressFactory(fenceNotDueOrder),
+    visibility:visibility(fenceNotDueOrder),
+    cursor_factory:cursorFactory(fenceNotDueOrder),
+    completion_clock:()=>CANONICALIZED_AT,
+  });
+  const fenceNotDue=await fenceNotDueService.executeCycle({
+    scope:SCOPE,lease_owner:"evidence-host-C",lease_duration_seconds:300,
+    work_items:[work(fenceNotDueOrder)],
+    provider_attempt_fence:{async claimBeforeProviderFetch(){fenceNotDueOrder.push("provider_attempt_fence");return {status:"NOT_DUE" as const,durable_coordination_write_count:0 as const};}},
+  });
+  assert.equal(fenceNotDue.status,"PROVIDER_NOT_DUE");
+  assert.deepEqual(fenceNotDueOrder,["lease_acquire","provider_attempt_fence"]);
+
   const proof = {
     schema_version: "geox_mcft_cap09_phase3_evidence_runtime_cycle_qualification_v1",
     status: "PASS",
     exact_order: order,
     provider_fetch_after_lease: true,
+    provider_attempt_fence_after_lease_before_provider: true,
+    provider_not_due_zero_provider_request: true,
     raw_retention_before_decode: true,
     governed_commit_before_visibility: true,
     post_commit_visibility_before_cursor: true,

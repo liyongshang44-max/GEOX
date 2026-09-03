@@ -208,6 +208,96 @@ async function main(): Promise<void> {
   assert.equal(injectedFactoryCalls, 1);
   assert.equal(databaseCalls, 0);
 
+  let notDueStopped = false;
+  let notDueFactoryCalls = 0;
+  const notDueComposition = composeEvidenceRuntimeV1({
+    pool: fakePool,
+    scope: {
+      tenant_id: "tenantA", project_id: "projectA", group_id: "groupA",
+      field_id: "field_e3r1", season_id: "season_2026", zone_id: "zone_root",
+    },
+    raw_retention: {
+      endpoint: "https://s3.example.invalid", bucket: "phase3-evidence-private",
+      region: "us-test-1", access_key_id: "qualification-access",
+      secret_access_key: "qualification-secret", clock: () => new Date(REQUESTED),
+    },
+    target_planner: { async nextTarget() { return { status: "NOT_DUE" as const }; } },
+    wait: { async waitAfterAttempt(input) { assert.equal(input.reason, "PLANNER_NOT_DUE"); notDueStopped = true; } },
+    health: { async recordHealth() {} },
+    stop: { stopRequested: () => notDueStopped },
+    failure_classifier: { classify: () => "FATAL" },
+    completion_clock: () => REQUESTED,
+    work_item_factory: {
+      factory_id: "MCFT_CAP09_NOT_DUE_FACTORY_MUST_REMAIN_IDLE",
+      buildForTarget() { notDueFactoryCalls += 1; return []; },
+    },
+  });
+  const notDueResult = await notDueComposition.host.run({
+    scope: {
+      tenant_id: "tenantA", project_id: "projectA", group_id: "groupA",
+      field_id: "field_e3r1", season_id: "season_2026", zone_id: "zone_root",
+    },
+    lease_owner: "phase3-not-due-test",
+    lease_duration_seconds: 300,
+  });
+  assert.equal(notDueResult.stop_reason, "STOP_REQUESTED");
+  assert.equal(notDueResult.cycle_attempt_count, 0);
+  assert.equal(notDueResult.not_due_wait_count, 1);
+  assert.equal(notDueFactoryCalls, 0);
+  assert.equal(databaseCalls, 0);
+
+  let directHostPlannerCalls = 0;
+  let directHostPlannerWaited = false;
+  let directHostPlannerFactoryCalls = 0;
+  const directHostPlannerComposition = composeEvidenceRuntimeV1({
+    pool: fakePool,
+    scope: {
+      tenant_id: "tenantA", project_id: "projectA", group_id: "groupA",
+      field_id: "field_e3r1", season_id: "season_2026", zone_id: "zone_root",
+    },
+    raw_retention: {
+      endpoint: "https://s3.example.invalid", bucket: "phase3-evidence-private",
+      region: "us-test-1", access_key_id: "qualification-access",
+      secret_access_key: "qualification-secret", clock: () => new Date(REQUESTED),
+    },
+    host_planner: {
+      async nextAttemptPlan() {
+        directHostPlannerCalls += 1;
+        return { status: "NOT_DUE" as const };
+      },
+    },
+    wait: {
+      async waitAfterAttempt(input) {
+        assert.equal(input.reason, "PLANNER_NOT_DUE");
+        directHostPlannerWaited = true;
+      },
+    },
+    health: { async recordHealth() {} },
+    stop: { stopRequested: () => directHostPlannerWaited },
+    failure_classifier: { classify: () => "FATAL" },
+    completion_clock: () => REQUESTED,
+    work_item_factory: {
+      factory_id: "MCFT_CAP09_DIRECT_HOST_PLANNER_UNUSED_FACTORY_V1",
+      buildForTarget() {
+        directHostPlannerFactoryCalls += 1;
+        throw new Error("DIRECT_HOST_PLANNER_LEGACY_FACTORY_MUST_REMAIN_IDLE");
+      },
+    },
+  });
+  const directHostPlannerResult = await directHostPlannerComposition.host.run({
+    scope: {
+      tenant_id: "tenantA", project_id: "projectA", group_id: "groupA",
+      field_id: "field_e3r1", season_id: "season_2026", zone_id: "zone_root",
+    },
+    lease_owner: "phase3-direct-host-planner-test",
+    lease_duration_seconds: 300,
+  });
+  assert.equal(directHostPlannerResult.stop_reason, "STOP_REQUESTED");
+  assert.equal(directHostPlannerResult.not_due_wait_count, 1);
+  assert.equal(directHostPlannerCalls, 1);
+  assert.equal(directHostPlannerFactoryCalls, 0);
+  assert.equal(databaseCalls, 0);
+
   assert.throws(
     () => composeEvidenceRuntimeV1({
       pool: fakePool,
@@ -230,6 +320,35 @@ async function main(): Promise<void> {
       work_item_config: { clock: () => new Date(REQUESTED) },
     }),
     /PHASE3_EVIDENCE_RUNTIME_WORK_ITEM_FACTORY_AND_CONFIG_MUTUALLY_EXCLUSIVE/,
+  );
+
+  assert.throws(
+    () => composeEvidenceRuntimeV1({
+      pool: fakePool,
+      scope: { tenant_id: "t", project_id: "p", group_id: "g", field_id: "f", season_id: "s", zone_id: "z" },
+      raw_retention: { endpoint: "https://s3.example.invalid", bucket: "b", region: "r", access_key_id: "a", secret_access_key: "s" },
+      wait: { async waitAfterAttempt() {} },
+      health: { async recordHealth() {} },
+      stop: { stopRequested: () => true },
+      failure_classifier: { classify: () => "FATAL" },
+      completion_clock: () => REQUESTED,
+    } as never),
+    /PHASE3_EVIDENCE_RUNTIME_EXACTLY_ONE_PLANNER_BOUNDARY_REQUIRED/,
+  );
+  assert.throws(
+    () => composeEvidenceRuntimeV1({
+      pool: fakePool,
+      scope: { tenant_id: "t", project_id: "p", group_id: "g", field_id: "f", season_id: "s", zone_id: "z" },
+      raw_retention: { endpoint: "https://s3.example.invalid", bucket: "b", region: "r", access_key_id: "a", secret_access_key: "s" },
+      target_planner: { async nextTarget() { return null; } },
+      host_planner: { async nextAttemptPlan() { return null; } },
+      wait: { async waitAfterAttempt() {} },
+      health: { async recordHealth() {} },
+      stop: { stopRequested: () => true },
+      failure_classifier: { classify: () => "FATAL" },
+      completion_clock: () => REQUESTED,
+    } as never),
+    /PHASE3_EVIDENCE_RUNTIME_EXACTLY_ONE_PLANNER_BOUNDARY_REQUIRED/,
   );
 
   const productionFiles = [
@@ -268,7 +387,12 @@ async function main(): Promise<void> {
     injected_target_planner_calls: injectedTargetPlannerCalls,
     injected_work_item_factory_calls: injectedFactoryCalls,
     work_item_factory_and_config_mutually_exclusive: true,
+    direct_host_planner_binding_supported: true,
+    direct_host_planner_calls: directHostPlannerCalls,
+    direct_host_planner_legacy_factory_calls: directHostPlannerFactoryCalls,
+    exactly_one_planner_boundary_required: true,
     same_canonical_cycle_service_path: true,
+    planner_not_due_skips_work_item_factory_database_and_provider: true,
     production_activation: false,
     runtime_tick_cursor_mutation: false,
     twin_state_mutation: false,

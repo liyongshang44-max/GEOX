@@ -289,4 +289,9 @@ function main() {
   if (output.status !== "PASS") process.exitCode = 1;
 }
 
+module.exports = {
+  resolveRequalificationEvidence,
+  expectedRequalificationBinding,
+};
+
 if (require.main === module) main();

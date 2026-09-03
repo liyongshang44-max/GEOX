@@ -27,6 +27,9 @@ export const MCFT_CAP09_KBS_RAW_HOURLY_ENDPOINT_V1 =
 export const MCFT_CAP09_KBS_RAW_HOURLY_DECODER_ID_V1 =
   "MCFT_CAP09_KBS_RAW_HOURLY_EXACT_INTERVAL_DECODER_V1" as const;
 export const MCFT_CAP09_KBS_RAW_HOURLY_DECODER_VERSION_V1 = "1" as const;
+export const MCFT_CAP09_KBS_RAW_HOURLY_MULTI_INTERVAL_DECODER_ID_V1 =
+  "MCFT_CAP09_KBS_RAW_HOURLY_MULTI_INTERVAL_DECODER_V1" as const;
+export const MCFT_CAP09_KBS_RAW_HOURLY_MULTI_INTERVAL_DECODER_VERSION_V1 = "1" as const;
 export const MCFT_CAP09_KBS_RAW_HOURLY_USE_POLICY_REF_V1 =
   "GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1" as const;
 export const MCFT_CAP09_KBS_RAW_HOURLY_SCIENTIFIC_CORE_RELATIVE_PATH_V1 =
@@ -297,5 +300,62 @@ export class KbsRawHourlyExactIntervalDecoderV1 implements ExternalEvidenceDecod
     } finally {
       fs.rmSync(temp, { recursive: true, force: true });
     }
+  }
+}
+
+
+function normalizeKbsRawHourlyMultiIntervalTargetsV1(
+  targets: readonly string[],
+): readonly string[] {
+  requireConditionV1(
+    Array.isArray(targets) && targets.length >= 2,
+    "KBS_RAW_HOURLY_MULTI_INTERVAL_AT_LEAST_TWO_TARGETS_REQUIRED",
+  );
+  const normalized = targets.map((target) =>
+    canonicalHourV1(target, "KBS_RAW_HOURLY_MULTI_INTERVAL_TARGET_INVALID")
+  );
+  requireConditionV1(
+    new Set(normalized).size === normalized.length,
+    "KBS_RAW_HOURLY_MULTI_INTERVAL_TARGET_DUPLICATE",
+  );
+  return [...normalized].sort((left, right) => Date.parse(left) - Date.parse(right));
+}
+
+export class KbsRawHourlyMultiIntervalDecoderV1 implements ExternalEvidenceDecoderPortV1 {
+  readonly decoder_id = MCFT_CAP09_KBS_RAW_HOURLY_MULTI_INTERVAL_DECODER_ID_V1;
+  readonly decoder_version = MCFT_CAP09_KBS_RAW_HOURLY_MULTI_INTERVAL_DECODER_VERSION_V1;
+  readonly target_interval_ends: readonly string[];
+
+  constructor(
+    targets: readonly string[],
+    private readonly config: KbsRawHourlyDecoderConfigV1 = {},
+  ) {
+    this.target_interval_ends = normalizeKbsRawHourlyMultiIntervalTargetsV1(targets);
+  }
+
+  async decodeRetainedEvidence(
+    input: ExternalEvidenceDecoderInputV1,
+  ): Promise<readonly GovernedDecodedEvidenceDraftV1[]> {
+    const drafts: GovernedDecodedEvidenceDraftV1[] = [];
+    for (const target of this.target_interval_ends) {
+      const exact = new KbsRawHourlyExactIntervalDecoderV1(target, this.config);
+      drafts.push(...await exact.decodeRetainedEvidence(input));
+    }
+    requireConditionV1(
+      drafts.length === this.target_interval_ends.length * 2,
+      "KBS_RAW_HOURLY_MULTI_INTERVAL_EXACT_TWO_DRAFTS_PER_TARGET_REQUIRED",
+    );
+    const sourceIds = drafts.map((draft) => draft.source_record_id);
+    requireConditionV1(
+      new Set(sourceIds).size === sourceIds.length,
+      "KBS_RAW_HOURLY_MULTI_INTERVAL_SOURCE_RECORD_ID_DUPLICATE",
+    );
+    return drafts.sort((left, right) => {
+      const leftTime = String(left.role_time.interval_end ?? "");
+      const rightTime = String(right.role_time.interval_end ?? "");
+      return leftTime.localeCompare(rightTime)
+        || left.role.localeCompare(right.role)
+        || left.source_record_id.localeCompare(right.source_record_id);
+    });
   }
 }

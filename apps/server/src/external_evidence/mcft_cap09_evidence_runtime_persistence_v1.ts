@@ -83,5 +83,14 @@ export interface EvidenceSupplyCursorReadPortV1 {
   }): Promise<EvidenceSupplyCursorSnapshotV1 | null>;
 }
 
+// Read-only batch view used by source-specific Evidence progress composition.
+// This does not select targets, infer due-ness, advance cursors, or authorize provider work.
+export interface EvidenceSupplyCursorBindingSetReadPortV1 {
+  readSupplyCursorsByBindings(input: {
+    scope: EvidenceRuntimeScopeV1;
+    binding_ids: readonly string[];
+  }): Promise<readonly EvidenceSupplyCursorSnapshotV1[]>;
+}
+
 export type DurableEvidenceSupplyCursorPortV1 =
   EvidenceSupplyCursorPortV1 & EvidenceSupplyCursorReadPortV1;

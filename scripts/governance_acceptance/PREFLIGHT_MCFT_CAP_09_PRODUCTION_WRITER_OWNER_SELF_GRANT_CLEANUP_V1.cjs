@@ -1,0 +1,124 @@
+#!/usr/bin/env node
+"use strict";
+const fs=require("node:fs"),path=require("node:path"),cp=require("node:child_process"),assert=require("node:assert/strict");
+const ROOT=process.cwd(),TARGET="geox_mcft_cap09_production_runtime_v1";
+const EVIDENCE_LOGIN="geox_mcft_cap09_evidence_runtime_login_v1",TWIN_LOGIN="geox_mcft_cap09_twin_runtime_login_v1";
+const EVIDENCE_PRIVILEGE="geox_mcft_cap09_evidence_runtime_v1",TWIN_PRIVILEGE="geox_mcft_cap09_twin_runtime_v1";
+const AUTH=path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-WRITER-OWNER-SELF-GRANT-CLEANUP-AUTHORITY-V1.json");
+const ACL_AUTH=path.join(ROOT,"docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1.json");
+const ARM=path.join(ROOT,"scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_ARM_V1.json");
+const OUT=path.join(ROOT,"acceptance-output/MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_PREFLIGHT_V1_RESULT.json");
+const q=(url,sql)=>cp.execFileSync("psql",[url,"-X","-v","ON_ERROR_STOP=1","-AtF","|","-c",sql],{encoding:"utf8"}).trim();
+const b=v=>v==="t"||v==="true";
+const write=v=>{fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify(v,null,2)+"\n");console.log(JSON.stringify(v,null,2));};
+const matrix=(url,t)=>q(url,["SELECT","has_table_privilege('geox_mcft_cap09_evidence_runtime_v1','public."+t+"','SELECT')::text,","has_table_privilege('geox_mcft_cap09_evidence_runtime_v1','public."+t+"','INSERT')::text,","has_table_privilege('geox_mcft_cap09_evidence_runtime_v1','public."+t+"','UPDATE')::text,","has_table_privilege('geox_mcft_cap09_evidence_runtime_v1','public."+t+"','DELETE')::text"].join("\n")).split("|").map(b);
+try{
+ const subject=String(process.env.SUBJECT_SHA||"");assert.match(subject,/^[0-9a-f]{40}$/,"WRITER_OWNER_CLEANUP_SUBJECT_REQUIRED");
+ const seed=String(process.env.SEED_DATABASE_URL||"").trim();assert.ok(seed,"WRITER_OWNER_CLEANUP_SEED_URL_REQUIRED");
+ const u=new URL(seed);u.pathname="/"+TARGET;const url=u.toString();
+ const authority=JSON.parse(fs.readFileSync(AUTH,"utf8"));
+ const aclAuthority=JSON.parse(fs.readFileSync(ACL_AUTH,"utf8"));
+ const arm=JSON.parse(fs.readFileSync(ARM,"utf8"));
+ assert.equal(authority.target.database_name,TARGET,"WRITER_OWNER_CLEANUP_AUTHORITY_TARGET_REQUIRED");
+ const cleanupAuthorized=arm.production_writer_owner_self_grant_cleanup_authorized===true;
+ const authorityAuthorized=authority.authorization.production_writer_owner_self_grant_cleanup_authorized===true;
+ assert.equal(authorityAuthorized,cleanupAuthorized,"WRITER_OWNER_CLEANUP_AUTHORITY_ARM_AUTHORIZATION_MISMATCH");
+ assert.equal(cleanupAuthorized,arm.armed===true,"WRITER_OWNER_CLEANUP_ARM_AUTHORIZATION_COHERENCE_REQUIRED");
+ assert.equal(arm.same_workflow_fresh_preflight_required,true,"WRITER_OWNER_CLEANUP_SAME_WORKFLOW_PREFLIGHT_REQUIRED");
+ assert.equal(arm.preflight_subject_binding,"CURRENT_WORKFLOW_SUBJECT_SHA","WRITER_OWNER_CLEANUP_PREFLIGHT_BINDING_MODE_REQUIRED");
+ if(arm.armed===true)assert.equal(arm.exact_target_database_name,TARGET,"WRITER_OWNER_CLEANUP_ARM_TARGET_REQUIRED");
+ else assert.equal(arm.exact_target_database_name,null,"WRITER_OWNER_CLEANUP_UNARMED_TARGET_MUST_BE_NULL");
+ for(const k of ["production_evidence_acl_carryforward_remediation_authorized","runtime_process_start_authorized","production_owner_activation_authorized","formal_v5_arm_authorized","a0_authorized","o00_authorized"])assert.equal(arm[k],false,"WRITER_OWNER_CLEANUP_LATER_AUTHORITY_MUST_BE_FALSE:"+k);
+ assert.equal(q(url,"SELECT current_database()"),TARGET,"WRITER_OWNER_CLEANUP_DATABASE_MISMATCH");
+ const currentUser=q(url,"SELECT current_user");assert.equal(currentUser,"neondb_owner","WRITER_OWNER_CLEANUP_CURRENT_USER_MUST_BE_NEONDB_OWNER");
+ const tableCount=Number(q(url,"SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'"));
+ const routineCount=Number(q(url,"SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'"));
+ assert.equal(tableCount,41,"WRITER_OWNER_CLEANUP_EXACT_41_TABLES_REQUIRED");assert.equal(routineCount,3,"WRITER_OWNER_CLEANUP_EXACT_3_ROUTINES_REQUIRED");
+ const tableNames=q(url,"SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE' ORDER BY table_name").split(/\r?\n/).filter(Boolean);
+ let totalRows=0;for(const t of tableNames)totalRows+=Number(q(url,'SELECT count(*)::int FROM public."'+t.replaceAll('"','""')+'"'));
+ assert.equal(totalRows,0,"WRITER_OWNER_CLEANUP_ALL_ROWS_MUST_BE_ZERO");
+ const serviceLoginRoleRows=q(url,[
+  "SELECT rolname||'|login='||rolcanlogin::text||'|inherit='||rolinherit::text||'|super='||rolsuper::text||'|createdb='||rolcreatedb::text||'|createrole='||rolcreaterole::text||'|replication='||rolreplication::text||'|bypassrls='||rolbypassrls::text",
+  "FROM pg_catalog.pg_roles",
+  "WHERE rolname IN ('"+EVIDENCE_LOGIN+"','"+TWIN_LOGIN+"')",
+  "ORDER BY rolname"
+ ].join("\n")).split(/\r?\n/).filter(Boolean);
+ assert.deepEqual(serviceLoginRoleRows,[
+  EVIDENCE_LOGIN+"|login=true|inherit=true|super=false|createdb=false|createrole=false|replication=false|bypassrls=false",
+  TWIN_LOGIN+"|login=true|inherit=true|super=false|createdb=false|createrole=false|replication=false|bypassrls=false"
+ ],"WRITER_OWNER_CLEANUP_EXACT_TWO_RESTRICTED_SERVICE_LOGINS_REQUIRED");
+ const serviceLoginMembershipRows=q(url,[
+  "SELECT member.rolname||'|privilege='||granted.rolname||'|admin='||m.admin_option::text||'|inherit='||m.inherit_option::text||'|set='||m.set_option::text",
+  "FROM pg_catalog.pg_auth_members m",
+  "JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid",
+  "JOIN pg_catalog.pg_roles member ON member.oid=m.member",
+  "WHERE member.rolname IN ('"+EVIDENCE_LOGIN+"','"+TWIN_LOGIN+"')",
+  "ORDER BY member.rolname,granted.rolname"
+ ].join("\n")).split(/\r?\n/).filter(Boolean);
+ assert.deepEqual(serviceLoginMembershipRows,[
+  EVIDENCE_LOGIN+"|privilege="+EVIDENCE_PRIVILEGE+"|admin=false|inherit=true|set=false",
+  TWIN_LOGIN+"|privilege="+TWIN_PRIVILEGE+"|admin=false|inherit=true|set=false"
+ ],"WRITER_OWNER_CLEANUP_EXACT_ONE_PRIVILEGE_MEMBERSHIP_EACH_REQUIRED");
+ const loginDirectAclCount=Number(q(url,[
+  "WITH target AS (SELECT oid FROM pg_catalog.pg_roles WHERE rolname IN ('"+EVIDENCE_LOGIN+"','"+TWIN_LOGIN+"'))",
+  "SELECT ((SELECT count(*) FROM pg_catalog.pg_class object JOIN pg_catalog.pg_namespace namespace ON namespace.oid=object.relnamespace CROSS JOIN LATERAL pg_catalog.aclexplode(object.relacl) acl WHERE namespace.nspname='public' AND acl.grantee IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_proc routine JOIN pg_catalog.pg_namespace namespace ON namespace.oid=routine.pronamespace CROSS JOIN LATERAL pg_catalog.aclexplode(routine.proacl) acl WHERE namespace.nspname='public' AND acl.grantee IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_namespace namespace CROSS JOIN LATERAL pg_catalog.aclexplode(namespace.nspacl) acl WHERE namespace.nspname='public' AND acl.grantee IN (SELECT oid FROM target)))::int"
+ ].join("\n"))||"0");
+ assert.equal(loginDirectAclCount,0,"WRITER_OWNER_CLEANUP_SERVICE_LOGIN_DIRECT_PUBLIC_ACL_FORBIDDEN");
+ const loginOwnedObjectCount=Number(q(url,[
+  "WITH target AS (SELECT oid FROM pg_catalog.pg_roles WHERE rolname IN ('"+EVIDENCE_LOGIN+"','"+TWIN_LOGIN+"'))",
+  "SELECT ((SELECT count(*) FROM pg_catalog.pg_database d WHERE d.datdba IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_namespace n WHERE n.nspowner IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_class c WHERE c.relowner IN (SELECT oid FROM target))",
+  "+(SELECT count(*) FROM pg_catalog.pg_proc p WHERE p.proowner IN (SELECT oid FROM target)))::int"
+ ].join("\n"))||"0");
+ assert.equal(loginOwnedObjectCount,0,"WRITER_OWNER_CLEANUP_SERVICE_LOGIN_OBJECT_OWNERSHIP_FORBIDDEN");
+ const membershipRows=q(url,[
+  "SELECT granted.rolname||'|member='||member.rolname||'|grantor='||grantor.rolname||'|admin='||m.admin_option::text||'|inherit='||m.inherit_option::text||'|set='||m.set_option::text",
+  "FROM pg_catalog.pg_auth_members m",
+  "JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid",
+  "JOIN pg_catalog.pg_roles member ON member.oid=m.member",
+  "JOIN pg_catalog.pg_roles grantor ON grantor.oid=m.grantor",
+  "WHERE member.rolname=current_user",
+  "AND granted.rolname IN ('geox_mcft_cap09_evidence_writer_owner_v1','geox_mcft_cap09_forcing_writer_owner_v1','geox_mcft_cap09_twin_writer_owner_v1')",
+  "ORDER BY granted.rolname,grantor.rolname"
+ ].join("\n")).split(/\r?\n/).filter(Boolean);
+ const requiredMembershipRows=[
+  "geox_mcft_cap09_evidence_writer_owner_v1|member=neondb_owner|grantor=cloud_admin|admin=true|inherit=false|set=false",
+  "geox_mcft_cap09_forcing_writer_owner_v1|member=neondb_owner|grantor=cloud_admin|admin=true|inherit=false|set=false",
+  "geox_mcft_cap09_forcing_writer_owner_v1|member=neondb_owner|grantor=neondb_owner|admin=false|inherit=true|set=true",
+  "geox_mcft_cap09_twin_writer_owner_v1|member=neondb_owner|grantor=cloud_admin|admin=true|inherit=false|set=false"
+ ];
+ const cleanMembershipRows=[
+  "geox_mcft_cap09_evidence_writer_owner_v1|member=neondb_owner|grantor=cloud_admin|admin=true|inherit=false|set=false",
+  "geox_mcft_cap09_forcing_writer_owner_v1|member=neondb_owner|grantor=cloud_admin|admin=true|inherit=false|set=false",
+  "geox_mcft_cap09_twin_writer_owner_v1|member=neondb_owner|grantor=cloud_admin|admin=true|inherit=false|set=false"
+ ];
+ const caps={};
+ for(const r of ["geox_mcft_cap09_evidence_writer_owner_v1","geox_mcft_cap09_forcing_writer_owner_v1","geox_mcft_cap09_twin_writer_owner_v1"])caps[r]=b(q(url,"SELECT pg_catalog.pg_has_role(current_user,'"+r+"','SET')::text"));
+ const cleanupRequired=JSON.stringify(membershipRows)===JSON.stringify(requiredMembershipRows)&&JSON.stringify(caps)===JSON.stringify({geox_mcft_cap09_evidence_writer_owner_v1:false,geox_mcft_cap09_forcing_writer_owner_v1:true,geox_mcft_cap09_twin_writer_owner_v1:false});
+ const alreadyClean=JSON.stringify(membershipRows)===JSON.stringify(cleanMembershipRows)&&JSON.stringify(caps)===JSON.stringify({geox_mcft_cap09_evidence_writer_owner_v1:false,geox_mcft_cap09_forcing_writer_owner_v1:false,geox_mcft_cap09_twin_writer_owner_v1:false});
+ assert.equal(Number(cleanupRequired)+Number(alreadyClean),1,"WRITER_OWNER_CLEANUP_LIVE_MEMBERSHIP_STATE_NOT_EXACT");
+ if(arm.armed===true)assert.equal(cleanupRequired,true,"WRITER_OWNER_CLEANUP_ARMED_ALREADY_CLEAN_FORBIDDEN");
+ let preflightStatus;
+ if(cleanupRequired){
+  preflightStatus="PASS_CLEANUP_REQUIRED";
+  assert.equal(authority.status,arm.armed===true?"EXACT_SELF_GRANT_CLEANUP_AUTHORIZED":"LIVE_EXACT_SELF_GRANT_PROVEN_CLEANUP_NOT_AUTHORIZED","WRITER_OWNER_CLEANUP_AUTHORITY_STATUS_PRESTATE_MISMATCH");
+ }else{
+  assert.equal(arm.armed,false,"WRITER_OWNER_CLEANUP_ALREADY_CLEAN_MUST_BE_UNARMED");
+  preflightStatus="PASS_ALREADY_CLEAN";
+  assert.equal(authority.status,"EXACT_SELF_GRANT_CLEANUP_APPLIED","WRITER_OWNER_CLEANUP_AUTHORITY_STATUS_POSTSTATE_REQUIRED");
+ }
+ const targetTables=["external_evidence_producer_lease_v1","external_evidence_supply_event_v1","external_evidence_supply_cursor_v1"];
+ const missing=[];for(const t of targetTables){const m=matrix(url,t);for(const [i,p] of [[0,"SELECT"],[1,"INSERT"],[2,"UPDATE"]])if(!m[i])missing.push(t+":"+p);assert.equal(m[3],false,"WRITER_OWNER_CLEANUP_DELETE_FORBIDDEN:"+t);}
+ const exactNine=[
+  "external_evidence_producer_lease_v1:SELECT","external_evidence_producer_lease_v1:INSERT","external_evidence_producer_lease_v1:UPDATE",
+  "external_evidence_supply_event_v1:SELECT","external_evidence_supply_event_v1:INSERT","external_evidence_supply_event_v1:UPDATE",
+  "external_evidence_supply_cursor_v1:SELECT","external_evidence_supply_cursor_v1:INSERT","external_evidence_supply_cursor_v1:UPDATE"
+ ];
+ const aclPreRemediation=JSON.stringify(missing)===JSON.stringify(exactNine);
+ const aclPostRemediation=missing.length===0&&aclAuthority.status==="LIVE_EXACT_NINE_REMEDIATION_APPLIED"&&aclAuthority.authorization.production_evidence_acl_carryforward_remediation_authorized===false;
+ assert.equal(Number(aclPreRemediation)+Number(aclPostRemediation),1,"WRITER_OWNER_CLEANUP_ACL_STATE_MUST_BE_EXACT_PRE_OR_POST_REMEDIATION");
+ write({schema_version:"geox_mcft_cap09_production_writer_owner_self_grant_cleanup_preflight_v1",status:preflightStatus,subject_sha:subject,database_name:TARGET,current_user:currentUser,table_count:tableCount,routine_count:routineCount,total_application_rows:totalRows,service_login_role_count:serviceLoginRoleRows.length,service_login_roles_restricted:true,service_login_memberships:serviceLoginMembershipRows,exact_one_privilege_membership_each:true,service_login_direct_public_acl_count:loginDirectAclCount,service_login_owned_object_count:loginOwnedObjectCount,writer_owner_memberships:membershipRows,writer_owner_effective_set:caps,cleanup_required:cleanupRequired,already_clean:alreadyClean,exact_nine_missing_privileges:missing,exact_nine_acl_state:aclPostRemediation?"POST_REMEDIATION_MATERIALIZED":"PRE_REMEDIATION_MISSING",acl_remediation_authority_status:aclAuthority.status,authority_status:authority.status,authority_authorized_observed:authorityAuthorized,arm_observed:arm.armed===true,cleanup_authorized_observed:cleanupAuthorized,same_workflow_fresh_preflight_required:arm.same_workflow_fresh_preflight_required===true,preflight_subject_binding:arm.preflight_subject_binding,database_mutation:false,row_mutation:false,schema_mutation:false,table_acl_mutation:false,function_acl_mutation:false,role_attribute_mutation:false,membership_mutation:false,runtime_process_start:false,production_owner_activation:false,formal_v5_arm:false,a0_bootstrap:false,o00_started:false});
+}catch(e){write({status:"FAIL",subject_sha:String(process.env.SUBJECT_SHA||""),error:e instanceof Error?e.message:String(e),database_mutation:false,membership_mutation:false,runtime_process_start:false,production_owner_activation:false,formal_v5_arm:false,a0_bootstrap:false,o00_started:false});process.exitCode=1;}
