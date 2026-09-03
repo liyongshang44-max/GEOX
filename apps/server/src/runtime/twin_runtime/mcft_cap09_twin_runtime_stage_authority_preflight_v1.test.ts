@@ -10,6 +10,9 @@ import {
   preflightMcftCap09TwinStageAuthorityManifestV1,
   type McftCap09ProductionV4ManifestV1,
 } from "./mcft_cap09_twin_runtime_stage_authority_preflight_v1.js";
+import type {
+  ExternalFormalV4Am19ManifestSlotPinV2,
+} from "./external_formal_v4_amendment19_runner_v2.js";
 
 const cropAuthority = JSON.parse(fs.readFileSync(
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json",
@@ -78,7 +81,9 @@ function manifest(): McftCap09ProductionV4ManifestV1 {
   const current = currentCrop();
   const manifestRef = "MCFT_CAP09_V4_PREFLIGHT_TEST_MANIFEST_V1";
   const manifestHash = "sha256:" + "b".repeat(64);
-  const slots = Array.from({ length: 24 }, (_, index) => {
+  const slots: ExternalFormalV4Am19ManifestSlotPinV2[] = Array.from(
+    { length: 24 },
+    (_, index) => {
     const logicalTime = new Date(
       Date.parse("2026-09-03T05:00:00.000Z") + index * 3_600_000,
     ).toISOString();
@@ -97,7 +102,7 @@ function manifest(): McftCap09ProductionV4ManifestV1 {
       activation_mode:"PRODUCTION_EFFECTIVE",
     });
     const slotId = `O${String(index).padStart(2,"0")}`;
-    return {
+      return {
       manifest_ref:manifestRef,
       manifest_hash:manifestHash,
       epoch_id:"mcft_cap09_v4_preflight_test_epoch_v1",
@@ -110,8 +115,9 @@ function manifest(): McftCap09ProductionV4ManifestV1 {
       crop_stage_context_ref:materialized.context_ref,
       crop_stage_context_hash:materialized.context_identity_hash,
       crop_stage_context_materialization_hash:materialized.context_materialization_hash,
-    };
-  });
+      };
+    },
+  );
   return {
     schema_version:"geox_mcft_cap09_amendment19_window_manifest_v1",
     subject_sha:subject,
