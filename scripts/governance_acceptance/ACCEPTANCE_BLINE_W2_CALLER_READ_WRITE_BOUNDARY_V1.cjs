@@ -90,9 +90,19 @@ for(const p of [
 const registryService=read("apps/server/src/services/skills/skill_registry_service.ts");
 const updateSkill=extractFn(registryService,"export async function updateSkillStatus","");
 assert(updateSkill.includes("projectSkillRegistryReadV1(pool, tenant)"),"skill writer service no longer materializes projection");
+const runtimeSkill=read("apps/server/src/services/skills/runtime_v1.ts");
+const runtimeRead=extractFn(runtimeSkill,"async function findSkillRunByRunIdReadOnly","async function findSkillRunByRunIdForMutation");
+const runtimeMutation=extractFn(runtimeSkill,"async function findSkillRunByRunIdForMutation","export async function executeSkillRuntimeV1");
+const cancelSkill=extractFn(runtimeSkill,"export async function cancelSkillRuntimeV1","export async function getSkillRunRuntimeStatusV1");
+assert(runtimeRead.includes("computeSkillRegistryReadRowsV1")&&!runtimeRead.includes("projectSkillRegistryReadV1"),"skill runtime GET helper is not pure");
+assert(runtimeMutation.includes("projectSkillRegistryReadV1(pool, tenant)"),"skill cancel mutation helper lost projection writer");
+assert(cancelSkill.includes("findSkillRunByRunIdForMutation"),"skill cancel no longer uses mutation-preserving lookup");
+
 const binding=read("apps/server/src/services/skills/skill_binding_service.ts");
 const bindingGet=extractFn(binding,"export async function getSkillBindingProjection","export async function resolveDeviceSkillBindingForTask");
+const bindingResolve=extractFn(binding,"export async function resolveDeviceSkillBindingForTask","");
 assert(!bindingGet.includes("projectSkillRegistryReadV1"),"skill binding GET still materializes registry projection");
+assert(bindingResolve.includes("projectSkillRegistryReadV1(pool, tenant)"),"action execution binding resolution lost predecessor projection writer");
 const rules=read("apps/server/src/routes/skills_rules_v1.ts");
 const rulesGet=extractFn(rules,'app.get("/api/v1/skills/rules"','app.post(',);
 assert(rulesGet.includes("computeSkillRegistryReadRowsV1"),"skill rules GET missing dedicated pure-read helper");
