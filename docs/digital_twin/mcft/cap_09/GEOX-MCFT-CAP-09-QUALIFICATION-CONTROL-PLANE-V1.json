@@ -648,6 +648,15 @@
         "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_stage_authority_preflight_v1.ts",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_PROCESS_V2_STAGE_ROUTING_V1.cjs"
       ]
+    },
+    "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_CANDIDATE_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/dt-02-architecture-amendment-03-biological-stage-authority.yml",
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-DECISION-REGISTER.json",
+        "scripts/governance_acceptance/ACCEPTANCE_DT_02_ARCHITECTURE_AMENDMENT_03.cjs"
+      ]
     }
   },
   "checks": [
@@ -1310,6 +1319,33 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_PROCESS_V2_STAGE_ROUTING_V1.cjs"
+    },
+    {
+      "check_id": "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_CANDIDATE",
+      "owner": "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_GOVERNANCE",
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-DECISION-REGISTER.json"
+      ],
+      "resolver_ids": [
+        "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_CANDIDATE_V1"
+      ],
+      "historical_evidence_policy": "EXACT_BLOB_IDENTITY_MAY_CARRY_FORWARD_FROM_ISOLATED_FOUR_FILE_DT02_QUALIFICATION",
+      "execution_workflow": ".github/workflows/dt-02-architecture-amendment-03-biological-stage-authority.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
+      "fail_policy": "FAIL_CLOSED",
+      "carry_forward_policy": "EXACT_BLOB_IDENTITY_ONLY",
+      "requalification_triggers": [
+        "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_CANDIDATE_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "carry_forward_evidence_id": "DT02_AMENDMENT03_ISOLATED_QUALIFICATION_RUN_33710270018",
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_DT_02_ARCHITECTURE_AMENDMENT_03.cjs"
     }
   ],
   "non_effects": {
