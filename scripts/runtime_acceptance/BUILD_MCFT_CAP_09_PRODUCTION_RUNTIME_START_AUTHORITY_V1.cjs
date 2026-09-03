@@ -49,7 +49,153 @@ function repoRef(value, digest, code) {
   req(fs.existsSync(resolved) && fs.statSync(resolved).isFile(), code + "_REF_FILE_REQUIRED");
   const observed = sha256(resolved);
   req(observed === text(digest, code + "_SHA256_REQUIRED"), code + "_SHA256_MISMATCH");
-  return { ref, sha256: observed };
+  return { ref, sha256: observed, resolved };
+}
+
+function validateEffectiveStageAuthorities(currentCropRef, stageArchitectureRef, scope, formalA0) {
+  const currentCrop = readJson(currentCropRef.resolved);
+  req(
+    currentCrop.schema_version === "geox_mcft_cap09_t4r1_current_crop_authority_composition_result_v1"
+      && currentCrop.status === "PASS"
+      && currentCrop.qualification_outcome === "CURRENT_CROP_CONTEXT_AUTHORITY_CANDIDATE_RESOLVED",
+    "RUNTIME_START_CURRENT_CROP_AUTHORITY_SCHEMA_STATUS_REQUIRED",
+  );
+  req(
+    currentCrop.architecture_effective === true
+      && currentCrop.runtime_consumption_authorized === true,
+    "RUNTIME_START_CURRENT_CROP_AUTHORITY_NOT_EFFECTIVE",
+  );
+  for (const key of ["tenant_id","project_id","group_id","field_id","season_id","zone_id"]) {
+    req(
+      text(currentCrop.scope?.[key], "RUNTIME_START_CURRENT_CROP_SCOPE_REQUIRED:" + key)
+        === scope[key],
+      "RUNTIME_START_CURRENT_CROP_SCOPE_MISMATCH:" + key,
+    );
+  }
+
+  const life = currentCrop.lifecycle ?? {};
+  req(
+    life.domain_state === "ACTIVE"
+      && life.authority_status === "RESOLVED"
+      && life.authority_validity === "VALID"
+      && life.authority_mode === "GOVERNED_PERSISTENT_STATE"
+      && life.active_consumable_candidate === true,
+    "RUNTIME_START_CURRENT_CROP_LIFECYCLE_NOT_CONSUMABLE",
+  );
+  const lifecycleHorizon = exactIso(
+    life.horizon_end_utc,
+    "RUNTIME_START_CURRENT_CROP_LIFECYCLE_HORIZON_REQUIRED",
+  );
+  req(
+    Date.parse(formalA0) <= Date.parse(lifecycleHorizon),
+    "RUNTIME_START_CURRENT_CROP_LIFECYCLE_HORIZON_EXPIRED",
+  );
+
+  const biological = currentCrop.biological_stage ?? {};
+  text(
+    biological.resolved_biological_stage,
+    "RUNTIME_START_CURRENT_CROP_BIOLOGICAL_STAGE_REQUIRED",
+  );
+  if (biological.epistemic_class !== "DIRECT_OBSERVED_PHENOLOGY") {
+    req(
+      biological.observed_biological_stage_claimed === false,
+      "RUNTIME_START_CURRENT_CROP_DERIVED_OBSERVED_CLAIM_FORBIDDEN",
+    );
+  }
+  const stageAsOf = exactHour(
+    biological.authority_as_of,
+    "RUNTIME_START_CURRENT_CROP_STAGE_AUTHORITY_AS_OF_REQUIRED",
+  );
+  const forwardHours = Number(biological.forward_stability_hours);
+  req(
+    Number.isInteger(forwardHours) && forwardHours > 0 && forwardHours <= 48,
+    "RUNTIME_START_CURRENT_CROP_FORWARD_STABILITY_INVALID",
+  );
+  req(
+    Date.parse(formalA0) >= Date.parse(stageAsOf),
+    "RUNTIME_START_CURRENT_CROP_FUTURE_STAGE_EVIDENCE_FORBIDDEN",
+  );
+  req(
+    Date.parse(formalA0) <= Date.parse(stageAsOf) + forwardHours * 3_600_000,
+    "RUNTIME_START_CURRENT_CROP_STAGE_AUTHORITY_STALE_AT_A0",
+  );
+
+  const waterUseStage = text(
+    currentCrop.crop_water_use_stage,
+    "RUNTIME_START_CURRENT_CROP_WATER_USE_STAGE_REQUIRED",
+  );
+  const kc = currentCrop.crop_model_parameter ?? {};
+  req(
+    kc.parameter === "Kc"
+      && kc.stage_code === waterUseStage
+      && typeof kc.value === "number"
+      && Number.isFinite(kc.value)
+      && kc.production_effective === false,
+    "RUNTIME_START_CURRENT_CROP_KC_AUTHORITY_INVALID",
+  );
+
+  const stageArchitecture = readJson(stageArchitectureRef.resolved);
+  req(
+    stageArchitecture.schema_version === "geox_dt02_biological_stage_authority_effectiveness_v1"
+      && stageArchitecture.amendment_id === "DT02-AMENDMENT-03"
+      && stageArchitecture.status === "EFFECTIVE"
+      && stageArchitecture.effective === true,
+    "RUNTIME_START_BIOLOGICAL_STAGE_ARCHITECTURE_NOT_EFFECTIVE",
+  );
+  exactSha(
+    stageArchitecture.protected_main_sha,
+    "RUNTIME_START_BIOLOGICAL_STAGE_PROTECTED_MAIN_SHA_REQUIRED",
+  );
+  const certificateIssuedAt = exactIso(
+    stageArchitecture.issued_at,
+    "RUNTIME_START_BIOLOGICAL_STAGE_CERTIFICATE_ISSUED_AT_REQUIRED",
+  );
+  req(
+    Date.parse(certificateIssuedAt) <= Date.parse(formalA0),
+    "RUNTIME_START_BIOLOGICAL_STAGE_CERTIFICATE_FROM_FUTURE",
+  );
+  for (const key of [
+    "runtime_start_authorized",
+    "production_owner_activation_authorized",
+    "formal_v5_authorized",
+    "a0_authorized",
+    "o00_o23_authorized",
+  ]) {
+    req(
+      stageArchitecture[key] === false,
+      "RUNTIME_START_BIOLOGICAL_STAGE_CERTIFICATE_AUTHORITY_CEILING_DRIFT:" + key,
+    );
+  }
+
+  const graduation = currentCrop.graduation ?? {};
+  req(
+    graduation.status === "EFFECTIVE_FOR_RUNTIME_CONSUMPTION"
+      && graduation.amendment_id === "DT02-AMENDMENT-03",
+    "RUNTIME_START_CURRENT_CROP_GRADUATION_REQUIRED",
+  );
+  req(
+    graduation.architecture_effectiveness_sha256 === stageArchitectureRef.sha256,
+    "RUNTIME_START_CURRENT_CROP_ARCHITECTURE_CERTIFICATE_DIGEST_MISMATCH",
+  );
+  req(
+    graduation.protected_main_sha === stageArchitecture.protected_main_sha,
+    "RUNTIME_START_CURRENT_CROP_PROTECTED_MAIN_MISMATCH",
+  );
+  req(
+    graduation.graduated_at === stageArchitecture.issued_at,
+    "RUNTIME_START_CURRENT_CROP_GRADUATION_TIME_MISMATCH",
+  );
+
+  return {
+    biological_stage: biological.resolved_biological_stage,
+    crop_water_use_stage: waterUseStage,
+    kc: kc.value,
+    stage_authority_as_of: stageAsOf,
+    stage_authority_valid_until:
+      new Date(Date.parse(stageAsOf) + forwardHours * 3_600_000).toISOString(),
+    lifecycle_horizon_end_utc: lifecycleHorizon,
+    protected_main_sha: stageArchitecture.protected_main_sha,
+  };
 }
 function gitHead() {
   return execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" }).trim();
@@ -106,6 +252,13 @@ function build(arm, observedHead) {
   );
   req(Date.parse(activationFence) < Date.parse(formalA0), "RUNTIME_START_FENCE_MUST_PRECEDE_A0");
 
+  const stageValidation = validateEffectiveStageAuthorities(
+    currentCrop,
+    stageArchitecture,
+    scope,
+    formalA0,
+  );
+
   req(arm.runtime_process_start_authorized === true, "RUNTIME_START_PROCESS_START_MUST_BE_AUTHORIZED");
   req(arm.evidence_runtime_start_authorized === true, "RUNTIME_START_EVIDENCE_START_MUST_BE_AUTHORIZED");
   req(arm.twin_runtime_start_authorized === true, "RUNTIME_START_TWIN_START_MUST_BE_AUTHORIZED");
@@ -137,6 +290,13 @@ function build(arm, observedHead) {
     biological_stage_architecture_effectiveness_ref: stageArchitecture.ref,
     biological_stage_architecture_effectiveness_sha256: stageArchitecture.sha256,
     formal_a0_logical_time: formalA0,
+    biological_stage: stageValidation.biological_stage,
+    crop_water_use_stage: stageValidation.crop_water_use_stage,
+    kc: stageValidation.kc,
+    stage_authority_as_of: stageValidation.stage_authority_as_of,
+    stage_authority_valid_until: stageValidation.stage_authority_valid_until,
+    lifecycle_horizon_end_utc: stageValidation.lifecycle_horizon_end_utc,
+    biological_stage_protected_main_sha: stageValidation.protected_main_sha,
     runtime_process_start_authorized: true,
     evidence_runtime_start_authorized: true,
     twin_runtime_start_authorized: true,
@@ -165,6 +325,12 @@ try {
     current_crop_authority_sha256: result.current_crop_authority_sha256,
     biological_stage_architecture_effectiveness_ref: result.biological_stage_architecture_effectiveness_ref,
     biological_stage_architecture_effectiveness_sha256: result.biological_stage_architecture_effectiveness_sha256,
+    biological_stage: result.biological_stage,
+    crop_water_use_stage: result.crop_water_use_stage,
+    kc: result.kc,
+    stage_authority_valid_until: result.stage_authority_valid_until,
+    lifecycle_horizon_end_utc: result.lifecycle_horizon_end_utc,
+    biological_stage_protected_main_sha: result.biological_stage_protected_main_sha,
     production_owner_activation_authorized: false,
     formal_v5_arm_authorized: false,
     a0_authorized: false,
