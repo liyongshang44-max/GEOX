@@ -197,10 +197,13 @@ function main() {
       historical_evidence_ref: decision.historical_evidence_ref ?? null,
     };
     const protectedMainAdoptionBase = String(process.env.PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA || "");
+    const postAdoptionEffectivenessBase = String(process.env.POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA || "");
     const adoptionDurableRequalification =
       stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
-      /^[0-9a-f]{40}$/.test(protectedMainAdoptionBase) &&
-      args.base === protectedMainAdoptionBase &&
+      (
+        (/^[0-9a-f]{40}$/.test(protectedMainAdoptionBase) && args.base === protectedMainAdoptionBase) ||
+        (/^[0-9a-f]{40}$/.test(postAdoptionEffectivenessBase) && args.base === postAdoptionEffectivenessBase)
+      ) &&
       PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS.has(decision.check_id);
     if (decision.status === "NOT_APPLICABLE") {
       result = { ...common, execution: "NOT_APPLICABLE", status: "NOT_APPLICABLE" };

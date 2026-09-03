@@ -23,6 +23,7 @@ permissions:
 
 env:
   POST_MERGE_V13_BASE_SHA: 'fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8'
+  POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA: 'ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23'
   PRODUCER_QUALIFICATION_BASE_SHA: '46367333d228a2b90a86ff6a33aebc334f3d73a2'
 
 jobs:
@@ -45,7 +46,10 @@ jobs:
           base_ref="${{ github.event.pull_request.base.ref }}"
           base_sha="${{ github.event.pull_request.base.sha }}"
           if [ "$base_ref" = "main" ]; then
-            test "$base_sha" = "$POST_MERGE_V13_BASE_SHA"
+            if [ "$base_sha" != "$POST_MERGE_V13_BASE_SHA" ] && [ "$base_sha" != "$POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA" ]; then
+              echo "MCFT_CAP09_POST_MERGE_V13_UNGOVERNED_MAIN_BASE:${base_sha}" >&2
+              exit 1
+            fi
           else
             test "$base_ref" = "feat/mcft-cap09-postmerge-v13-production-composition-v1"
             test "$base_sha" = "$PRODUCER_QUALIFICATION_BASE_SHA"

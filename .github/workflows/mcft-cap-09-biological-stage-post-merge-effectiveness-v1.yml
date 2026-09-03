@@ -1,0 +1,145 @@
+name: MCFT CAP-09 Post-Merge Biological Stage Effectiveness
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/mcft-cap-09-biological-stage-post-merge-effectiveness-v1.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-postmerge-biological-stage-effectiveness-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      MCFT_CAP09_POSTMERGE_BIO_STAGE_EFFECT_BASE_SHA: ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23
+      MCFT_CAP09_POSTMERGE_BIO_STAGE_EFFECT_ISSUED_AT: 2026-09-03T15:23:00.000Z
+      EFFECTIVENESS_CERT: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json
+    steps:
+      - name: Checkout exact successor subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium for fresh T4R1 lifecycle qualification
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Fetch current protected main
+        run: git fetch origin main
+
+      - name: Validate exact post-merge effectiveness governance boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1.cjs
+
+      - name: Rebuild exact architecture effectiveness certificate from protected main
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_V1.cjs \
+            --protected-main-sha "$MCFT_CAP09_POSTMERGE_BIO_STAGE_EFFECT_BASE_SHA" \
+            --issued-at "$MCFT_CAP09_POSTMERGE_BIO_STAGE_EFFECT_ISSUED_AT" \
+            --out acceptance-output/MCFT_CAP09_EXPECTED_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_V1.json
+          cmp acceptance-output/MCFT_CAP09_EXPECTED_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_V1.json "$EFFECTIVENESS_CERT"
+
+      - name: Fresh read-only T4R1 lifecycle requalification
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.mjs
+
+      - name: Fresh read-only T4R1 thermal biological-stage requalification
+        run: python3 scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.py
+
+      - name: Compose fresh current-crop authority candidate
+        run: node scripts/runtime_acceptance/COMPOSE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_V1.cjs
+
+      - name: Graduate fresh current-crop authority against effective architecture
+        run: |
+          node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_V1.cjs \
+            --candidate acceptance-output/MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json \
+            --architecture-effectiveness "$EFFECTIVENESS_CERT" \
+            --out acceptance-output/MCFT_CAP09_T4R1_EFFECTIVE_CURRENT_CROP_AUTHORITY_RESULT.json
+
+      - name: Validate post-merge effectiveness and fresh authority non-effects
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const cert = JSON.parse(fs.readFileSync(process.env.EFFECTIVENESS_CERT, 'utf8'));
+          const crop = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP09_T4R1_EFFECTIVE_CURRENT_CROP_AUTHORITY_RESULT.json','utf8'));
+          if (cert.protected_main_sha !== process.env.MCFT_CAP09_POSTMERGE_BIO_STAGE_EFFECT_BASE_SHA) throw new Error('POSTMERGE_CERT_MAIN_SHA_MISMATCH');
+          if (cert.status !== 'EFFECTIVE' || cert.effective !== true) throw new Error('POSTMERGE_CERT_EFFECTIVE_REQUIRED');
+          if (crop.status !== 'PASS' || crop.qualification_outcome !== 'CURRENT_CROP_CONTEXT_AUTHORITY_CANDIDATE_RESOLVED') throw new Error('POSTMERGE_EFFECTIVE_CURRENT_CROP_PASS_REQUIRED');
+          if (crop.architecture_effective !== true || crop.runtime_consumption_authorized !== true) throw new Error('POSTMERGE_EFFECTIVE_CURRENT_CROP_GRADUATION_REQUIRED');
+          if (crop.graduation?.protected_main_sha !== cert.protected_main_sha) throw new Error('POSTMERGE_EFFECTIVE_CURRENT_CROP_MAIN_BINDING_MISMATCH');
+          if (crop.graduation?.graduated_at !== cert.issued_at) throw new Error('POSTMERGE_EFFECTIVE_CURRENT_CROP_TIME_BINDING_MISMATCH');
+          for (const key of [
+            'runtime_config_write_authorized',
+            'database_write_authorized',
+            'scheduler_write_authorized',
+            'formal_evidence_write_authorized',
+            'production_runtime_start_authorized',
+            'production_owner_activation_authorized',
+            'formal_v5_authorized',
+            'a0_authorized',
+            'o00_o23_authorized',
+            'mcft_cap09_completed'
+          ]) {
+            if (crop[key] !== false) throw new Error('POSTMERGE_EFFECTIVE_CURRENT_CROP_AUTHORITY_CEILING_DRIFT:' + key);
+          }
+          console.log(JSON.stringify({
+            status:'PASS',
+            protected_main_sha:cert.protected_main_sha,
+            architecture_effective:true,
+            biological_stage:crop.biological_stage?.resolved_biological_stage,
+            crop_water_use_stage:crop.crop_water_use_stage,
+            kc:crop.crop_model_parameter?.value,
+            stage_authority_as_of:crop.biological_stage?.authority_as_of,
+            forward_stability_hours:crop.biological_stage?.forward_stability_hours,
+            lifecycle_horizon_end_utc:crop.lifecycle?.horizon_end_utc,
+            runtime_started:false,
+            production_owner_activated:false,
+            formal_v5_armed:false,
+            a0_started:false,
+            o00_started:false
+          }));
+
+      - name: Upload immutable post-merge effectiveness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-postmerge-biological-stage-effectiveness-${{ github.event.pull_request.head.sha }}
+          path: |
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json
+            acceptance-output/MCFT_CAP09_EXPECTED_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_V1.json
+            acceptance-output/MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_RESULT.json
+            acceptance-output/MCFT_CAP09_T4R1_THERMAL_BIOLOGICAL_STAGE_PROBE_RESULT.json
+            acceptance-output/MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json
+            acceptance-output/MCFT_CAP09_T4R1_EFFECTIVE_CURRENT_CROP_AUTHORITY_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
