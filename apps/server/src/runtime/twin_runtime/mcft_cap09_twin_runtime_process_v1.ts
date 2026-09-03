@@ -5,6 +5,7 @@
 // composition, and owns signal-driven lifecycle. It has no provider/R2 credentials and
 // no EvidenceSupplyCursor authority.
 
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 
@@ -34,6 +35,7 @@ import {
 } from "../mcft_cap09_production_process_lifecycle_v1.js";
 import {
   loadMcftCap09ProductionRuntimeStartAuthorityV1,
+  type McftCap09ProductionRuntimeStartAuthorityInstanceV1,
 } from "../mcft_cap09_production_runtime_start_authority_v1.js";
 import {
   buildMcftCap09ProductionLeaseOwnerV1,
@@ -57,6 +59,10 @@ export const MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1 = {
     "EXPLICIT_DATABASE_CLOCK_AND_SCHEDULER_AUTHORITY_INJECTION_WITH_PRODUCTION_DEFAULT",
   formal_arm_authority: false,
   runtime_start_authority: "SEPARATE_GOVERNED_AUTHORITY_REQUIRED",
+  production_current_crop_authority:
+    "READ_ONLY_MOUNT_EXACT_SHA256_AND_EFFECTIVE_SEMANTICS_REQUIRED",
+  biological_stage_architecture_effectiveness:
+    "READ_ONLY_MOUNT_EXACT_SHA256_AND_EFFECTIVE_SEMANTICS_REQUIRED",
   production_owner_cutover: false,
 } as const;
 
@@ -68,6 +74,8 @@ export type McftCap09TwinRuntimeProcessConfigV1 = {
   manifest_path: string;
   crop_authority_path: string;
   configuration_matrix_path: string;
+  current_crop_authority_path: string;
+  biological_stage_architecture_effectiveness_path: string;
   lease_owner: string;
   lease_duration_seconds: number;
   idle_poll_ms: number;
@@ -117,6 +125,95 @@ function readJsonObjectV1(pathValue: string, code: string): JsonRecordV1 {
   return parsed as JsonRecordV1;
 }
 
+function fileDigestV1(pathValue: string, code: string): string {
+  let bytes: Buffer;
+  try {
+    bytes = fs.readFileSync(pathValue);
+  } catch (error) {
+    throw new Error(`${code}:${error instanceof Error ? error.message : String(error)}`);
+  }
+  return "sha256:" + crypto.createHash("sha256").update(bytes).digest("hex");
+}
+
+export function loadMcftCap09ProductionStageAuthorityMountsV1(input: {
+  runtime_start_authority: Pick<
+    McftCap09ProductionRuntimeStartAuthorityInstanceV1,
+    | "current_crop_authority_sha256"
+    | "biological_stage_architecture_effectiveness_sha256"
+  >;
+  current_crop_authority_path: string;
+  biological_stage_architecture_effectiveness_path: string;
+}): {
+  current_crop_authority: JsonRecordV1;
+  biological_stage_architecture_effectiveness: JsonRecordV1;
+} {
+  const currentPath = String(input.current_crop_authority_path ?? "").trim();
+  if (!currentPath) throw new Error("MCFT_CAP09_PRODUCTION_CURRENT_CROP_AUTHORITY_PATH_REQUIRED");
+  const stageArchitecturePath = String(
+    input.biological_stage_architecture_effectiveness_path ?? "",
+  ).trim();
+  if (!stageArchitecturePath) {
+    throw new Error(
+      "MCFT_CAP09_PRODUCTION_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_PATH_REQUIRED",
+    );
+  }
+
+  if (
+    fileDigestV1(currentPath, "MCFT_CAP09_PRODUCTION_CURRENT_CROP_AUTHORITY_FILE_INVALID")
+    !== input.runtime_start_authority.current_crop_authority_sha256
+  ) {
+    throw new Error("MCFT_CAP09_PRODUCTION_CURRENT_CROP_AUTHORITY_DIGEST_MISMATCH");
+  }
+  if (
+    fileDigestV1(
+      stageArchitecturePath,
+      "MCFT_CAP09_PRODUCTION_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_FILE_INVALID",
+    )
+    !== input.runtime_start_authority.biological_stage_architecture_effectiveness_sha256
+  ) {
+    throw new Error(
+      "MCFT_CAP09_PRODUCTION_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_DIGEST_MISMATCH",
+    );
+  }
+
+  const current = readJsonObjectV1(
+    currentPath,
+    "MCFT_CAP09_PRODUCTION_CURRENT_CROP_AUTHORITY_INVALID",
+  );
+  if (
+    current.schema_version
+      !== "geox_mcft_cap09_t4r1_current_crop_authority_composition_result_v1"
+    || current.status !== "PASS"
+    || current.qualification_outcome
+      !== "CURRENT_CROP_CONTEXT_AUTHORITY_CANDIDATE_RESOLVED"
+    || current.architecture_effective !== true
+    || current.runtime_consumption_authorized !== true
+  ) {
+    throw new Error("MCFT_CAP09_PRODUCTION_CURRENT_CROP_AUTHORITY_NOT_EFFECTIVE");
+  }
+
+  const stageArchitecture = readJsonObjectV1(
+    stageArchitecturePath,
+    "MCFT_CAP09_PRODUCTION_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_INVALID",
+  );
+  if (
+    stageArchitecture.schema_version
+      !== "geox_dt02_biological_stage_authority_effectiveness_v1"
+    || stageArchitecture.amendment_id !== "DT02-AMENDMENT-03"
+    || stageArchitecture.status !== "EFFECTIVE"
+    || stageArchitecture.effective !== true
+  ) {
+    throw new Error(
+      "MCFT_CAP09_PRODUCTION_BIOLOGICAL_STAGE_ARCHITECTURE_NOT_EFFECTIVE",
+    );
+  }
+
+  return {
+    current_crop_authority: current,
+    biological_stage_architecture_effectiveness: stageArchitecture,
+  };
+}
+
 export function readMcftCap09TwinRuntimeProcessConfigV1(
   env: EnvironmentV1 = process.env,
 ): McftCap09TwinRuntimeProcessConfigV1 {
@@ -143,6 +240,12 @@ export function readMcftCap09TwinRuntimeProcessConfigV1(
       "GEOX_MCFT_CAP09_TWIN_RUNTIME_CONFIGURATION_MATRIX_PATH",
       "PHASE5_TWIN_RUNTIME_CONFIGURATION_MATRIX_PATH_REQUIRED",
     ),
+    current_crop_authority_path: String(
+      env.GEOX_MCFT_CAP09_TWIN_RUNTIME_CURRENT_CROP_AUTHORITY_PATH ?? "",
+    ).trim(),
+    biological_stage_architecture_effectiveness_path: String(
+      env.GEOX_MCFT_CAP09_TWIN_RUNTIME_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_PATH ?? "",
+    ).trim(),
     lease_owner: String(
       env.GEOX_MCFT_CAP09_TWIN_RUNTIME_LEASE_OWNER
       ?? `twin-runtime:${env.HOSTNAME ?? os.hostname()}`,
@@ -245,7 +348,7 @@ export async function runMcftCap09TwinRuntimeProcessV1(input?: {
     config.manifest_path,
     "PHASE5_TWIN_RUNTIME_MANIFEST_INVALID",
   ) as unknown as ExternalFormalV3Am19WindowManifestV1;
-  loadMcftCap09ProductionRuntimeStartAuthorityV1({
+  const runtimeStartAuthority = loadMcftCap09ProductionRuntimeStartAuthorityV1({
     plane: "TWIN_RUNTIME",
     expected: {
       deployment_subject_sha: requiredEnvV1(
@@ -260,6 +363,14 @@ export async function runMcftCap09TwinRuntimeProcessV1(input?: {
     explicit_authority: input?.runtime_start_authority,
     embedded_authority: document.runtime_start_binding,
   });
+  if (!qualificationLeaseOwner) {
+    loadMcftCap09ProductionStageAuthorityMountsV1({
+      runtime_start_authority: runtimeStartAuthority,
+      current_crop_authority_path: config.current_crop_authority_path,
+      biological_stage_architecture_effectiveness_path:
+        config.biological_stage_architecture_effectiveness_path,
+    });
+  }
   const cropAuthority = readJsonObjectV1(
     config.crop_authority_path,
     "PHASE5_TWIN_RUNTIME_CROP_AUTHORITY_INVALID",
