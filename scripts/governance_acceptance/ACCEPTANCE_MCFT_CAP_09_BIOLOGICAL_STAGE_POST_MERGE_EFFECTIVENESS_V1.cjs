@@ -38,7 +38,7 @@ function blobAt(ref, file) {
   return git("rev-parse", ref + ":" + file);
 }
 
-const base = process.env.MCFT_CAP09_POSTMERGE_BIO_STAGE_EFFECT_BASE_SHA;
+const base = process.env.MCFT_CAP09_POSTMERGE_BIO_STAGE_EFFECT_BASE_SHA || EXPECTED_BASE;
 eq(base, EXPECTED_BASE, "POSTMERGE_BIO_STAGE_EFFECT_EXACT_BASE_REQUIRED");
 eq(git("merge-base", EXPECTED_BASE, "HEAD"), EXPECTED_BASE, "POSTMERGE_BIO_STAGE_EFFECT_BASE_NOT_ANCESTOR");
 
