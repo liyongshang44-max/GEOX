@@ -18,6 +18,8 @@ function currentCrop() {
     schema_version:"geox_mcft_cap09_t4r1_current_crop_authority_composition_result_v1",
     status:"PASS",
     qualification_outcome:"CURRENT_CROP_CONTEXT_AUTHORITY_CANDIDATE_RESOLVED",
+    architecture_effective:false,
+    runtime_consumption_authorized:false,
     scope:{
       tenant_id:"tenant_mcft_external",project_id:"project_mcft_cap09",group_id:"group_public_research",
       site_id:"KBS_MCSE_T4R1",field_id:"field_kbs_mcse_t4r1",season_id:"season_2026_corn",
