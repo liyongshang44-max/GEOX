@@ -1,0 +1,83 @@
+{
+  "schema_version": "geox_mcft_cap09_t4r1_current_crop_authority_composition_v1",
+  "record_status": "CURRENT_CROP_AUTHORITY_COMPOSITION_CANDIDATE_NO_PRODUCTION_EFFECT",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "exact_base_sha": "ffc9d03533670d2f47ace71d170602d8768ec1bc",
+  "architecture_dependency": {
+    "amendment_id": "DT02-AMENDMENT-03",
+    "amendment_path": "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+    "production_effect_requires_effectiveness": true
+  },
+  "scope": {
+    "tenant_id": "tenant_mcft_external",
+    "project_id": "project_mcft_cap09",
+    "group_id": "group_public_research",
+    "site_id": "KBS_MCSE_T4R1",
+    "field_id": "field_kbs_mcse_t4r1",
+    "season_id": "season_2026_corn",
+    "zone_id": "zone_kbs_mcse_t4r1_crop_formal_v1",
+    "crop": "corn",
+    "hybrid_product_code": "43-96P"
+  },
+  "lifecycle_axis": {
+    "authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-PERSISTENT-LIFECYCLE-QUALIFICATION-V1.json",
+    "authority_blob_sha": "58891e7ac7d887e3fdbb439c60728a794c9d70c7",
+    "formal_site_consumer_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V3.json",
+    "required": {
+      "qualification_outcome": "ACTIVE_CANDIDATE",
+      "domain_state": "ACTIVE",
+      "authority_status": "RESOLVED",
+      "authority_validity": "VALID",
+      "authority_mode": "GOVERNED_PERSISTENT_STATE",
+      "active_consumable_candidate": true
+    },
+    "horizon_end_utc": "2026-11-24T03:59:59.999Z",
+    "biological_stage_may_establish_lifecycle": false
+  },
+  "biological_stage_axis": {
+    "authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json",
+    "qualified_predecessor_head": "ffc9d03533670d2f47ace71d170602d8768ec1bc",
+    "required_epistemic_class": "THERMAL_MODEL_DERIVED",
+    "required_observed_claim": false,
+    "expected_current_candidate": "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE"
+  },
+  "water_use_axis": {
+    "expected_singleton_stage": "LATE",
+    "biological_to_water_use_mapping_required": true
+  },
+  "crop_model_parameter_axis": {
+    "required_parameter": "Kc",
+    "configuration_matrix_path": "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
+    "configuration_matrix_blob_sha": "c04c6805ab79c715781b99f8fbcf997fae3a8c48",
+    "configuration_source_id": "mcft_crop_water_use_corn_v1",
+    "configuration_semantic_hash": "sha256:56ac92e34148bd81fe20f2925e1079cb1a3ed647ffefd1471caf1302df70ee4c",
+    "expected_stage_code": "LATE",
+    "expected_kc": 0.6
+  },
+  "composition_policy": {
+    "algorithm_id": "T4R1_CURRENT_CROP_AUTHORITY_EXACT_AXIS_INTERSECTION_V1",
+    "all_axes_must_resolve": true,
+    "scope_identity_must_match": true,
+    "fresh_live_requalification_required": true,
+    "lifecycle_independent_from_stage": true,
+    "stage_independent_from_lifecycle": true,
+    "kc_requires_singleton_water_use_stage": true,
+    "future_observation_use_forbidden": true,
+    "provider_silence_as_lifecycle_evidence_forbidden": true,
+    "result_if_all_axes_pass": "CURRENT_CROP_CONTEXT_AUTHORITY_CANDIDATE_RESOLVED",
+    "result_if_any_axis_fails": "CURRENT_CROP_CONTEXT_AUTHORITY_UNRESOLVED"
+  },
+  "non_effects": {
+    "runtime_config_write_authorized": false,
+    "database_write_authorized": false,
+    "scheduler_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "production_runtime_start_authorized": false,
+    "production_owner_activation_authorized": false,
+    "formal_v5_authorized": false,
+    "a0_authorized": false,
+    "o00_o23_authorized": false,
+    "mcft_cap09_completed": false
+  }
+}

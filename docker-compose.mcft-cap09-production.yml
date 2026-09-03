@@ -70,6 +70,8 @@ services:
       GEOX_MCFT_CAP09_TWIN_RUNTIME_MANIFEST_PATH: /run/geox/mcft-cap09/formal-window-manifest.json
       GEOX_MCFT_CAP09_TWIN_RUNTIME_CROP_AUTHORITY_PATH: /run/geox/mcft-cap09/crop-authority.json
       GEOX_MCFT_CAP09_TWIN_RUNTIME_CONFIGURATION_MATRIX_PATH: /run/geox/mcft-cap09/configuration-matrix.json
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_CURRENT_CROP_AUTHORITY_PATH: /run/geox/mcft-cap09/current-crop-authority.json
+      GEOX_MCFT_CAP09_TWIN_RUNTIME_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_PATH: /run/geox/mcft-cap09/biological-stage-architecture-effectiveness.json
     volumes:
       - type: bind
         source: ${GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH:?GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH is required}
@@ -86,6 +88,14 @@ services:
       - type: bind
         source: ${GEOX_MCFT_CAP09_PRODUCTION_CONFIGURATION_MATRIX_PATH:?GEOX_MCFT_CAP09_PRODUCTION_CONFIGURATION_MATRIX_PATH is required}
         target: /run/geox/mcft-cap09/configuration-matrix.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_PRODUCTION_CURRENT_CROP_AUTHORITY_PATH:?GEOX_MCFT_CAP09_PRODUCTION_CURRENT_CROP_AUTHORITY_PATH is required}
+        target: /run/geox/mcft-cap09/current-crop-authority.json
+        read_only: true
+      - type: bind
+        source: ${GEOX_MCFT_CAP09_PRODUCTION_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_PATH:?GEOX_MCFT_CAP09_PRODUCTION_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_PATH is required}
+        target: /run/geox/mcft-cap09/biological-stage-architecture-effectiveness.json
         read_only: true
       - type: bind
         source: ${GEOX_MCFT_CAP09_DURABLE_LOG_ROOT:?GEOX_MCFT_CAP09_DURABLE_LOG_ROOT is required}/twin

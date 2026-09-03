@@ -1,0 +1,64 @@
+name: MCFT CAP-09 A18 Biological Stage Context V4
+
+on:
+  pull_request:
+    branches:
+      - feat/mcft-cap09-t4r1-current-crop-authority-composition-v1
+    paths:
+      - .github/workflows/mcft-cap-09-a18-biological-stage-context-v4.yml
+      - apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.ts
+      - apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.test.ts
+      - scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A18_BIOLOGICAL_STAGE_CONTEXT_V4.cjs
+      - scripts/runtime_acceptance/PROBE_MCFT_CAP_09_A18_BIOLOGICAL_STAGE_CONTEXT_V4.ts
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      MCFT_CAP09_A18_V4_BASE_SHA: f55dfb2d928d4846f45e808ac2ff3040543a3151
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium for current lifecycle proof
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Server typecheck
+        run: pnpm run typecheck:server
+      - name: V4 materializer tests
+        run: node --import tsx --test apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.test.ts
+      - name: Exact candidate governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A18_BIOLOGICAL_STAGE_CONTEXT_V4.cjs
+      - name: Fresh lifecycle
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.mjs
+      - name: Fresh stage and Kc
+        run: python3 scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.py
+      - name: Compose current crop authority
+        run: node scripts/runtime_acceptance/COMPOSE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_V1.cjs
+      - name: Prove V4 materialization from fresh authority
+        run: node --import tsx scripts/runtime_acceptance/PROBE_MCFT_CAP_09_A18_BIOLOGICAL_STAGE_CONTEXT_V4.ts
+      - name: Upload proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-a18-biological-stage-context-v4
+          path: |
+            acceptance-output/MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json
+            acceptance-output/MCFT_CAP09_A18_BIOLOGICAL_STAGE_CONTEXT_V4_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
