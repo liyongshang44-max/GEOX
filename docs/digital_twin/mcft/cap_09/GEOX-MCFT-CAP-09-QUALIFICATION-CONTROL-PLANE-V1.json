@@ -86,7 +86,12 @@
         ".github/workflows/mcft-cap-09-v13-exact-base-fact-promotion.yml",
         ".github/workflows/mcft-cap-09-s3-registry-registration.yml",
         ".github/workflows/mcft-cap-09-s2-registry-registration.yml",
-        ".github/workflows/mcft-cap-09-amendment-19-scheduler-clock-seam.yml"
+        ".github/workflows/mcft-cap-09-amendment-19-scheduler-clock-seam.yml",
+        ".github/workflows/mcft-cap-09-trusted-registry-bootstrap.yml",
+        ".github/workflows/mcft-cap-09-s1-registry-registration.yml",
+        ".github/workflows/mcft-cap-09-s4-registry-registration.yml",
+        ".github/workflows/mcft-cap-09-s5-registry-registration.yml",
+        ".github/workflows/mcft-cap-09-s6-registry-registration.yml"
       ]
     },
     "EA5E2_RUNTIME_GRAPH_V4": {
