@@ -1,0 +1,54 @@
+name: MCFT CAP-09 Biological Stage Effectiveness Graduation
+
+on:
+  pull_request:
+    branches:
+      - feat/mcft-cap09-twin-process-v2-routing-qcp-r2
+    paths:
+      - .github/workflows/mcft-cap-09-biological-stage-effectiveness-graduation-v1.yml
+      - docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-EFFECTIVENESS-GRADUATION-V1.json
+      - scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_V1.cjs
+      - scripts/runtime_acceptance/BUILD_MCFT_CAP_09_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_V1.cjs
+      - scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_V1.cjs
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      MCFT_CAP09_BIO_STAGE_EFFECT_BASE_SHA: 89908c39b11cc5298a949ba505f9cd3a99275036
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Exact five-file graduation governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_V1.cjs
+
+      - name: Architecture effectiveness builder selftest
+        run: node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_V1.cjs --selftest
+
+      - name: Effective current-crop builder selftest
+        run: node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_V1.cjs --selftest
+
+      - name: Fetch current protected main
+        run: git fetch origin main
+
+      - name: Prove current protected main cannot issue candidate effectiveness
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          OUT=acceptance-output/SHOULD_NOT_EXIST_BIOLOGICAL_STAGE_EFFECTIVENESS.json
+          rm -f "$OUT"
+          set +e
+          node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_V1.cjs             --protected-main-sha "$(git rev-parse origin/main)"             --issued-at "2026-09-03T07:15:00.000Z"             --out "$OUT"             >acceptance-output/bio-stage-effectiveness-negative.stdout             2>acceptance-output/bio-stage-effectiveness-negative.stderr
+          RC=$?
+          set -e
+          test "$RC" -ne 0
+          test ! -e "$OUT"
+          grep -Eq 'GRADUATION_AUTHORITY_NOT_PRESENT_ON_PROTECTED_MAIN|AMENDMENT03_NOT_PRESENT_ON_PROTECTED_MAIN'             acceptance-output/bio-stage-effectiveness-negative.stderr
