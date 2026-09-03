@@ -1,5 +1,6 @@
 const fs=require('node:fs'),cp=require('node:child_process');
 const BATCH007_HEAD='a7bcd53c61522b11342c74cfa4af02b12f44c26e';
+const BATCH008_ACCEPTED_HEAD='35398258d3c59810aba3d19af1c295b1f05a57ce';
 const CORRECTIONS=['BSEC-001','BSEC-002','BSEC-005','BSEC-018','BSEC-019','BSEC-031'];
 const CLOSED_THROUGH_007=['BSEC-001','BSEC-002','BSEC-003','BSEC-005','BSEC-006','BSEC-007','BSEC-008','BSEC-009','BSEC-010','BSEC-022','BSEC-023','BSEC-024','BSEC-025','BSEC-026','BSEC-030','BSEC-141'];
 const TARGET='BSEC-120';
@@ -72,7 +73,8 @@ const allowed=new Set([
 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_EVIDENCE_EXPORT_WRITE_CAPABILITY_V1.ts',
 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_EVIDENCE_EXPORT_COMMERCIAL_RUNTIME_V1.ts'
 ]);
-const changed=sh(['diff','--name-only',BATCH007_HEAD,'HEAD']).split(/\r?\n/).filter(Boolean);
-for(const p of changed) assert(allowed.has(p),'Batch008 scope expansion',p);
-for(const p of changed) assert(!/mcft/i.test(p),'MCFT path changed',p);
-console.log(JSON.stringify({result:'PASS',batch:'PRSEC2-BATCH-008',target:TARGET,repair:'LEGACY_CREATE_REQUIRES_EVIDENCE_EXPORT_WRITE',frozen_prsec1:frozenDebt,corrected_prsec1:debt(corrected),before,delta:batchDelta,after,changed_files:changed,mcft_delta:0},null,2));
+const changed=sh(['diff','--name-only',BATCH007_HEAD,BATCH008_ACCEPTED_HEAD]).split(/\r?\n/).filter(Boolean);
+for(const p of changed) assert(allowed.has(p),'Batch008 accepted-head scope expansion',p);
+for(const p of changed) assert(!/mcft/i.test(p),'Batch008 accepted-head MCFT path changed',p);
+assert(sh(['diff','--name-only',BATCH008_ACCEPTED_HEAD,'HEAD','--',sourcePath])==='','accepted BSEC-120 production source drift in successor workstream',sourcePath);
+console.log(JSON.stringify({result:'PASS',batch:'PRSEC2-BATCH-008',target:TARGET,accepted_head:BATCH008_ACCEPTED_HEAD,repair:'LEGACY_CREATE_REQUIRES_EVIDENCE_EXPORT_WRITE',frozen_prsec1:frozenDebt,corrected_prsec1:debt(corrected),before,delta:batchDelta,after,changed_files:changed,mcft_delta:0},null,2));
