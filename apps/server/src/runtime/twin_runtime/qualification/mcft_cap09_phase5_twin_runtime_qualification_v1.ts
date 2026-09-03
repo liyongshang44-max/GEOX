@@ -128,6 +128,14 @@ export function buildPhase5TwinQualificationRuntimeStartAuthorityV1(input: {
       "qualification://mcft-cap09/phase5/live-activation-authority-v1",
     live_activation_authority_sha256:
       "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    current_crop_authority_ref:
+      "qualification://mcft-cap09/phase5/current-crop-authority-v1",
+    current_crop_authority_sha256:
+      "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    biological_stage_architecture_effectiveness_ref:
+      "qualification://mcft-cap09/phase5/biological-stage-architecture-effectiveness-v1",
+    biological_stage_architecture_effectiveness_sha256:
+      "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
     formal_a0_logical_time: formalA0,
     runtime_process_start_authorized: true,
     evidence_runtime_start_authorized: false,
