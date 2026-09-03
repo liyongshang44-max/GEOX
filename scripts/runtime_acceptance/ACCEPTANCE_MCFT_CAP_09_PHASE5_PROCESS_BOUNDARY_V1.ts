@@ -79,6 +79,17 @@ function main(): void {
     "SEPARATE_GOVERNED_AUTHORITY_REQUIRED",
   );
 
+  const runtimeStartExpected = {
+    deployment_subject_sha: "1".repeat(40),
+    scope: {
+      tenant_id: "tenantA",
+      project_id: "projectA",
+      group_id: "groupA",
+      field_id: "field_e3r1",
+      season_id: "season_2026",
+      zone_id: "zone_root",
+    },
+  } as const;
   const runtimeStartAuthority = {
     schema_version: "geox_mcft_cap09_production_runtime_start_authority_instance_v1",
     authority_id: "GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-START-AUTHORITY-INSTANCE-V1",
@@ -86,8 +97,16 @@ function main(): void {
     armed: true,
     authority_class: "MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY",
     authority_ref: "GEOX-MCFT-CAP-09-TEST-RUNTIME-START-AUTHORITY-V1",
+    deployment_subject_sha: runtimeStartExpected.deployment_subject_sha,
+    scope: runtimeStartExpected.scope,
     activation_fence_time: "2026-09-03T17:30:00.000Z",
     formal_a0_authority_ref: "GEOX-MCFT-CAP-09-TEST-A0-AUTHORITY-V1",
+    formal_a0_authority_sha256:
+      "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    live_activation_authority_ref:
+      "GEOX-MCFT-CAP-09-TEST-LIVE-ACTIVATION-AUTHORITY-V1",
+    live_activation_authority_sha256:
+      "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     formal_a0_logical_time: "2026-09-03T18:00:00.000Z",
     runtime_process_start_authorized: true,
     evidence_runtime_start_authorized: true,
@@ -101,6 +120,7 @@ function main(): void {
     parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
       runtimeStartAuthority,
       "TWIN_RUNTIME",
+      runtimeStartExpected,
     ).formal_a0_logical_time,
     "2026-09-03T18:00:00.000Z",
   );
@@ -108,6 +128,7 @@ function main(): void {
     parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
       runtimeStartAuthority,
       "EVIDENCE_RUNTIME",
+      runtimeStartExpected,
     ).activation_fence_time,
     "2026-09-03T17:30:00.000Z",
   );
@@ -115,6 +136,7 @@ function main(): void {
     () => parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
       { ...runtimeStartAuthority, armed: false },
       "TWIN_RUNTIME",
+      runtimeStartExpected,
     ),
     /MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED/,
   );
@@ -122,8 +144,36 @@ function main(): void {
     () => parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
       { ...runtimeStartAuthority, twin_runtime_start_authorized: false },
       "TWIN_RUNTIME",
+      runtimeStartExpected,
     ),
     /MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED/,
+  );
+  assert.throws(
+    () => parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+      runtimeStartAuthority,
+      "TWIN_RUNTIME",
+      { ...runtimeStartExpected, deployment_subject_sha: "2".repeat(40) },
+    ),
+    /MCFT_CAP09_PRODUCTION_RUNTIME_START_DEPLOYMENT_SUBJECT_MISMATCH/,
+  );
+  assert.throws(
+    () => parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+      runtimeStartAuthority,
+      "TWIN_RUNTIME",
+      {
+        ...runtimeStartExpected,
+        scope: { ...runtimeStartExpected.scope, field_id: "field_other" },
+      },
+    ),
+    /MCFT_CAP09_PRODUCTION_RUNTIME_START_SCOPE_MISMATCH/,
+  );
+  assert.throws(
+    () => parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
+      { ...runtimeStartAuthority, formal_a0_authority_sha256: "sha256:bad" },
+      "TWIN_RUNTIME",
+      runtimeStartExpected,
+    ),
+    /MCFT_CAP09_PRODUCTION_RUNTIME_START_FORMAL_A0_AUTHORITY_DIGEST_REQUIRED/,
   );
 
   const mountedAuthorityPath = path.resolve(
@@ -137,6 +187,7 @@ function main(): void {
   assert.equal(
     loadMcftCap09ProductionRuntimeStartAuthorityV1({
       plane: "TWIN_RUNTIME",
+      expected: runtimeStartExpected,
       authority_path: mountedAuthorityPath,
       embedded_authority: { armed: false },
     }).formal_a0_logical_time,
@@ -356,6 +407,10 @@ function main(): void {
     evidence_entrypoint_fail_closed_without_runtime_start_authority: true,
     twin_entrypoint_fail_closed_without_runtime_start_authority: true,
     shared_runtime_start_authority_parser: true,
+    runtime_start_exact_deployment_subject_bound: true,
+    runtime_start_exact_scope_bound: true,
+    runtime_start_source_digest_fields_required: true,
+    stale_runtime_start_authority_replay_fail_closed: true,
     mounted_runtime_start_authority_file_binding: true,
     frozen_production_service_identity_binding: true,
     per_instance_fenced_owner_identity: true,
