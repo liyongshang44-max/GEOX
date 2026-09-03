@@ -11,7 +11,7 @@ const expected=[
   "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v4.ts",
   "apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.test.ts",
   "apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.ts",
-  "apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.ts",
+  "apps/server/src/runtime/twin_runtime/external_formal_v4_amendment19_runner_v2.ts",
   "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts",
   "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_COMPOSITION_V2_STAGE_AUTHORITY_V1.cjs",
   "scripts/runtime_acceptance/COMPOSE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_V1.cjs",
