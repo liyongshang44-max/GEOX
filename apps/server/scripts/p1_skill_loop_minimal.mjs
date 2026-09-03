@@ -57,6 +57,10 @@ function resolveAccessToken() {
 }
 
 const TOKEN = resolveAccessToken();
+const EXECUTOR_TOKEN = String(process.env.GEOX_EXECUTOR_TOKEN ?? "").trim();
+const EXECUTOR_ACTOR_ID = String(process.env.GEOX_EXECUTOR_ACTOR_ID ?? process.env.GEOX_EXECUTOR_ID ?? "").trim();
+if (!EXECUTOR_TOKEN) throw new Error("MISSING_ENV:GEOX_EXECUTOR_TOKEN");
+if (!EXECUTOR_ACTOR_ID) throw new Error("MISSING_ENV:GEOX_EXECUTOR_ACTOR_ID");
 const tenant = {
   tenant_id: process.env.GEOX_TENANT_ID ?? "tenantA",
   project_id: process.env.GEOX_PROJECT_ID ?? "projectA",
@@ -67,6 +71,11 @@ const headers = {
   "content-type": "application/json",
   accept: "application/json",
   authorization: `Bearer ${TOKEN}`,
+};
+const executorHeaders = {
+  "content-type": "application/json",
+  accept: "application/json",
+  authorization: `Bearer ${EXECUTOR_TOKEN}`,
 };
 const DEVICE_ID = process.env.GEOX_DEVICE_ID ?? "dev_smoke_01";
 const ADAPTER_TYPE = "irrigation_simulator";
@@ -336,11 +345,12 @@ async function submitReceipt(operationPlanId, actTaskId, evidenceKinds, fieldId)
   }));
   return requestWithRetry("/api/control/ao_act/receipt", {
     method: "POST",
+    headers: executorHeaders,
     body: JSON.stringify({
       ...tenant,
       operation_plan_id: operationPlanId,
       act_task_id: actTaskId,
-      executor_id: { kind: "script", id: "p1_smoke_executor", namespace: "qa" },
+      executor_id: { kind: "script", id: EXECUTOR_ACTOR_ID, namespace: "executor_runtime_v1" },
       execution_time: { start_ts: now - 2000, end_ts: now },
       execution_coverage: { kind: "field", ref: fieldId },
       resource_usage: { fuel_l: 0, electric_kwh: 0.2, water_l: 15, chemical_ml: 0 },
@@ -406,7 +416,7 @@ async function setDispatchState(actTaskId, state) {
   };
   const res = await fetch(`${BASE_URL}/api/v1/ao-act/dispatches/state`, {
     method: "POST",
-    headers,
+    headers: executorHeaders,
     body: JSON.stringify(body),
   });
   const text = await res.text();

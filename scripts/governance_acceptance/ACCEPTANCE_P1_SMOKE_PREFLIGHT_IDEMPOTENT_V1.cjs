@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 const { spawnSync } = require('node:child_process');
+const { provisionDeviceIdentityFixture } = require('../acceptance/p1_device_identity_fixture.cjs');
 
 const BASE_URL = process.env.BASE_URL || process.env.API_BASE_URL || process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001';
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || process.env.AO_ACT_TOKEN || process.env.GEOX_TOKEN || process.env.GEOX_AO_ACT_TOKEN || 'admin_token';
+const DATABASE_URL = process.env.DATABASE_URL || '';
 const TENANT = {
   tenant_id: process.env.TENANT_ID || process.env.GEOX_TENANT_ID || 'tenantA',
   project_id: process.env.PROJECT_ID || process.env.GEOX_PROJECT_ID || 'projectA',
@@ -17,7 +19,6 @@ function log(message, detail) {
   console.log(`[p1-smoke-preflight-idempotent] ${message}`, detail || '');
 }
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
-
 async function fetchJson(path, { method = 'GET', token = ADMIN_TOKEN, body } = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
@@ -119,7 +120,7 @@ function openAcceptanceFailSafeIds(items) {
   ).map((x) => String(x.fail_safe_event_id)).filter(Boolean);
 }
 
-function runPreflight(deviceId) {
+function runPreflight(deviceId, deviceCredentialSecret) {
   const env = {
     ...process.env,
     GEOX_BASE_URL: BASE_URL,
@@ -129,6 +130,7 @@ function runPreflight(deviceId) {
     GEOX_GROUP_ID: TENANT.group_id,
     GEOX_TOKEN: ADMIN_TOKEN,
     GEOX_AO_ACT_TOKEN: ADMIN_TOKEN,
+    GEOX_DEVICE_CREDENTIAL_SECRET: deviceCredentialSecret,
   };
   const result = spawnSync(process.execPath, ['apps/server/scripts/p1_smoke_device_ready.mjs'], {
     cwd: process.cwd(), env, encoding: 'utf8',
@@ -169,7 +171,13 @@ async function main() {
   const acceptanceIds = openAcceptanceFailSafeIds(before);
   if (acceptanceIds.length === 0) log('SKIP acceptance fail-safe preservation fixture: none currently OPEN');
 
-  runPreflight(deviceId);
+  const { secret: deviceCredentialSecret } = await provisionDeviceIdentityFixture({
+    databaseUrl: DATABASE_URL,
+    tenant: TENANT,
+    deviceId,
+    fieldId,
+  });
+  runPreflight(deviceId, deviceCredentialSecret);
 
   const after = await listFailSafes();
   const current = byId(after, currentEventId);

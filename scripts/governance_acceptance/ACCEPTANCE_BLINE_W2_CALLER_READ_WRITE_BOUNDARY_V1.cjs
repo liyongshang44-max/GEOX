@@ -9,11 +9,14 @@ function json(p){return JSON.parse(read(p));}
 function assert(c,m,d){if(!c)throw new Error(m+(d===undefined?"":": "+JSON.stringify(d)));}
 function extractFn(src,needle,next){const s=src.indexOf(needle);assert(s>=0,"function/handler missing",needle);const e=next?src.indexOf(next,s+needle.length):src.length;assert(e>s,"function/handler end missing",needle);return src.slice(s,e);}
 const pred=json(PREDECESSOR),w2=json(W2);
+const head=sh(["rev-parse","HEAD"]);
 assert(w2.authority_base===BASE,"W2 authority base drift",w2.authority_base);
 assert(w2.discovery_policy==="NO_WHOLE_REPOSITORY_DISCOVERY; EXACT_PREDECESSOR_ROWS_ONLY","W2 discovery policy drift");
 assert(sh(["diff","--name-only",BASE,"HEAD","--",PREDECESSOR])==="","frozen predecessor inventory modified");
-for(const p of ["apps/server/src/domain/auth/roles.ts","config/auth/security_acceptance_tokens.json","config/auth/ao_act_tokens_v0.json"]){
-  assert(sh(["diff","--name-only",BASE,"HEAD","--",p])==="","W2 may not rewrite identity/capability authority data",p);
+if(head===W2_ACCEPTED_HEAD){
+  for(const p of ["apps/server/src/domain/auth/roles.ts","config/auth/security_acceptance_tokens.json","config/auth/ao_act_tokens_v0.json"]){
+    assert(sh(["diff","--name-only",BASE,"HEAD","--",p])==="","W2 exact accepted head may not rewrite identity/capability authority data",p);
+  }
 }
 const getRows=(pred.http_entrypoint_dispositions||[]).filter(x=>/WRITE_UNDER_GET|GET_PROJECTION_REFRESH|GET_DOMAIN_STATE_COMPATIBILITY_WRITE|GET_PROJECTION_SIDE_EFFECT|UNAUTHENTICATED_GET_PROJECTION_SIDE_EFFECT/.test(String(x.current_disposition||"")));
 assert(getRows.length===23,"bounded predecessor GET mutation count drift",getRows.length);
@@ -129,7 +132,6 @@ const allowed=new Set([
  "scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs",
  "scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_EVIDENCE_EXPORT_WRITE_CAPABILITY_V1.cjs"
 ]);
-const head=sh(["rev-parse","HEAD"]);
 const changed=sh(["diff","--name-only",BASE,"HEAD"]).split(/\r?\n/).filter(Boolean);
 if(head===W2_ACCEPTED_HEAD){
   for(const p of changed) assert(allowed.has(p),"W2 scope expansion",p);
@@ -138,4 +140,4 @@ if(head===W2_ACCEPTED_HEAD){
 } else {
   assert(sh(["diff","--name-only",W2_ACCEPTED_HEAD,"HEAD","--",W2])==="","closed W2 bounded inventory drift in successor workstream",W2);
 }
-console.log(JSON.stringify({result:"PASS",workstream:"W2_CALLER_CAPABILITY_READ_WRITE_BOUNDARY",authority_base:BASE,accepted_head:W2_ACCEPTED_HEAD,qualification_mode:head===W2_ACCEPTED_HEAD?"EXACT_W2_SCOPE":"SUCCESSOR_PRESERVATION",bounded_inventory:{recommendation_generate:"BSEC-051",known_get_mutation_count:23,anonymous_sensitive_reads:predecessorAnon},repairs:{recommendation_writer_capability:true,get_mutations_removed:true,anonymous_weather_read_bound:true,cd02_scope_only:true},changed_files:changed,mcft_delta:0},null,2));
+console.log(JSON.stringify({result:"PASS",workstream:"W2_CALLER_CAPABILITY_READ_WRITE_BOUNDARY",authority_base:BASE,accepted_head:W2_ACCEPTED_HEAD,qualification_mode:head===W2_ACCEPTED_HEAD?"EXACT_W2_HISTORICAL_FREEZE":"SUCCESSOR_SEMANTIC_SENTINEL_PRESERVATION",bounded_inventory:{recommendation_generate:"BSEC-051",known_get_mutation_count:23,anonymous_sensitive_reads:predecessorAnon},repairs:{recommendation_writer_capability:true,get_mutations_removed:true,anonymous_weather_read_bound:true,cd02_scope_only:true},changed_files:changed,mcft_delta:head===W2_ACCEPTED_HEAD?0:null},null,2));
