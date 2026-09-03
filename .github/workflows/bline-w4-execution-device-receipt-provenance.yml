@@ -23,6 +23,7 @@ on:
       - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_COMMERCIAL_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts'
       - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.cjs'
       - 'scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_IRRIGATION_E2E_V1.ts'
       - 'scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_VARIABLE_OPERATION_E2E_V1.cjs'

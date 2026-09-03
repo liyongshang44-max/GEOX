@@ -114,7 +114,7 @@ const allowed=new Set([
  "docker-compose.commercial_v1.yml","config/auth/security_acceptance_tokens.json","apps/executor/src/runtime_loop.ts",
  "apps/server/src/domain/auth/roles.ts","apps/server/src/auth/device_credential_auth_v1.ts","apps/server/src/routes/device_heartbeat_v1.ts","apps/server/src/routes/sensing_fact_envelope_v1.ts","apps/server/src/routes/control_ao_sense.ts","apps/server/src/domain/controlplane/task_service.ts","apps/server/src/routes/control_ao_act.ts","apps/server/src/routes/decision_engine_v1.ts","apps/server/src/routes/fail_safe_v1.ts",
  W4,"scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs","scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts","scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_COMMERCIAL_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts",
- "scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs","scripts/governance_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.cjs",
+ "scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs","scripts/governance_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.cjs","scripts/governance_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.cjs",
  "scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_IRRIGATION_E2E_V1.ts","scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_VARIABLE_OPERATION_E2E_V1.cjs","scripts/agronomy_acceptance/ACCEPTANCE_DEVICE_ANOMALY_E2E_V1.cjs","scripts/agronomy_acceptance/ACCEPTANCE_SKILL_CONTRACT_GAP_CLOSURE_V1.cjs","scripts/agronomy_acceptance/ACCEPTANCE_PILOT_CLOSURE_V1.cjs","apps/server/scripts/p1_smoke_device_ready.mjs"
 ]);
 const changed=sh(["diff","--name-only",BASE,"HEAD"]).split(/\r?\n/).filter(Boolean);
