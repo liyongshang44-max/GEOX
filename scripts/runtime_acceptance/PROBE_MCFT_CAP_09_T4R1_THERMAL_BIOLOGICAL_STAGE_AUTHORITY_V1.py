@@ -14,6 +14,7 @@ from pathlib import Path
 
 CONFIG_PATH = Path("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json")
 OUT_PATH = Path("acceptance-output/MCFT_CAP09_T4R1_THERMAL_BIOLOGICAL_STAGE_PROBE_RESULT.json")
+CONFIG_MATRIX_PATH = Path("docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json")
 
 def fail(code, detail=""):
     raise RuntimeError(code + (":" + detail if detail else ""))
@@ -254,6 +255,33 @@ else:
     water_use_resolved = None
     candidate_outcome = "THERMAL_STAGE_PRE_R5_WATER_USE_UNRESOLVED"
 
+kc_binding = config["crop_model_parameter_binding"]
+matrix = json.loads(CONFIG_MATRIX_PATH.read_text(encoding="utf-8"))
+sources = [
+    row for row in matrix.get("configuration_source_definitions", [])
+    if row.get("configuration_source_id") == kc_binding["configuration_source_id"]
+]
+if len(sources) != 1:
+    fail("KC_CONFIGURATION_SOURCE_EXACT_SINGLETON_REQUIRED")
+kc_source = sources[0]
+if kc_source.get("configuration_semantic_hash") != kc_binding["configuration_semantic_hash"]:
+    fail("KC_CONFIGURATION_SEMANTIC_HASH_DRIFT")
+schedule = kc_source.get("parameters", {}).get("kc_schedule", {}).get("value")
+if not isinstance(schedule, list) or not schedule:
+    fail("KC_SCHEDULE_REQUIRED")
+
+resolved_kc = None
+if water_use_resolved is not None:
+    matches = [row for row in schedule if row.get("stage_code") == water_use_resolved]
+    if len(matches) != 1:
+        fail("KC_STAGE_EXACT_SINGLETON_LOOKUP_REQUIRED", str(water_use_resolved))
+    try:
+        resolved_kc = float(matches[0]["kc"])
+    except Exception:
+        fail("KC_VALUE_INVALID", str(matches[0].get("kc")))
+    if not math.isfinite(resolved_kc) or resolved_kc < 0:
+        fail("KC_VALUE_INVALID", str(resolved_kc))
+
 source_results["temperature_daily"] = {
     "status": "PASS_WITH_BOUNDED_MISSING_DAY_UNCERTAINTY",
     "final_url": weather_final,
@@ -291,6 +319,15 @@ result = {
     "resolved_biological_stage": biological_resolved,
     "candidate_water_use_stages": water_use_candidates,
     "resolved_water_use_stage": water_use_resolved,
+    "candidate_crop_model_parameter_authority": {
+        "status": "RESOLVED_CANDIDATE" if resolved_kc is not None else "UNRESOLVED",
+        "parameter": "Kc",
+        "stage_code": water_use_resolved,
+        "value": resolved_kc,
+        "configuration_source_id": kc_binding["configuration_source_id"],
+        "configuration_semantic_hash": kc_binding["configuration_semantic_hash"],
+        "production_effective": False,
+    },
     "lifecycle_authority_established_by_thermal_model": False,
     "production_stage_authority_established": False,
     "candidate_water_use_stage_authority_established": water_use_resolved is not None,
