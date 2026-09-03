@@ -4,7 +4,7 @@ import { appendSkillBindingFact } from "../domain/skill_registry/facts.js";
 import { requireAoActAnyScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { requireFieldAllowedOr404V1, requireTenantMatchOr404V1, tenantFromQueryOrAuthV1 } from "../auth/tenant_scope_v1.js";
 import { assertSkillBindingWriteAllowedV1, assertSkillCategoryBoundaryV1 } from "../auth/skill_security_v1.js";
-import { computeSkillRegistryReadRowsV1, filterSkillRegistryReadRowsV1, projectSkillRegistryReadV1 } from "../projections/skill_registry_read_v1.js";
+import { computeSkillRegistryReadRowsV1, filterSkillRegistryReadRowsV1, projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../projections/skill_registry_read_v1.js";
 import { ensureDeviceSkillBindings } from "../services/device_skill_bindings.js";
 import { auditContextFromRequestV1, denyWithAuditV1, recordSecurityAuditEventV1 } from "../services/security_audit_service_v1.js";
 
