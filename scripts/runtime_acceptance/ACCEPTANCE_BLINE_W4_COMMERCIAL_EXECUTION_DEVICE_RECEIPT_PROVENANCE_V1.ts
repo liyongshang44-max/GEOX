@@ -5,6 +5,8 @@ const base=String(process.env.BASE_URL??"http://127.0.0.1:3001").replace(/\/$/,"
 const dbUrl=String(process.env.DATABASE_URL??"").trim();
 const admin=String(process.env.GEOX_W4_ADMIN_TOKEN??"tenant_a_admin_token").trim();
 const operator=String(process.env.GEOX_W4_OPERATOR_TOKEN??"operator_token").trim();
+const operatorReceipt=String(process.env.GEOX_W4_OPERATOR_RECEIPT_TOKEN??"w4_operator_receipt_token").trim();
+const readOnly=String(process.env.GEOX_W4_READ_ONLY_TOKEN??"client_token").trim();
 const executor=String(process.env.GEOX_W4_EXECUTOR_TOKEN??"executor_token").trim();
 if(!dbUrl)throw new Error("W4 DATABASE_URL missing");
 const pool=new Pool({connectionString:dbUrl});
@@ -83,6 +85,8 @@ async function main(){
  denied.push(await call("/api/v1/fail-safe/events/fail_w4/resolve",executor,{...scope}));
  denied.push(await call("/api/v1/actions/receipt",admin,{}));
  denied.push(await call("/api/v1/ao-act/receipts",admin,{}));
+ denied.push(await call("/api/v1/ao-act/receipts",operator,{}));
+ denied.push(await call("/api/v1/ao-act/receipts",readOnly,{executor_id:{kind:"script",id:"tok_executor_actor",namespace:"caller_declared"}}));
  denied.push(await call("/api/v1/simulators/irrigation/execute",admin,{}));
  for(const x of denied)expect([401,403,404].includes(x.status),"W4 denied probe unexpectedly passed",{path:x.path,status:x.status,body:x.json});
  await new Promise(r=>setTimeout(r,250));
@@ -102,9 +106,11 @@ async function main(){
  expect(![401,403].includes(execClaim.status),"dedicated executor failed claim authority",execClaim);
  const execSimulator=await call("/api/v1/simulators/irrigation/execute",executor,{});
  expect(execSimulator.status===400&&execSimulator.json?.error==="MISSING_TASK_ID","dedicated executor failed simulator authority boundary",execSimulator);
- const opReceipt=await call("/api/v1/ao-act/receipts",operator,{});
- expect(![401,403].includes(opReceipt.status),"operator failed human receipt authority boundary",opReceipt);
+ const execReceipt=await call("/api/v1/ao-act/receipts",executor,{});
+ expect(![401,403].includes(execReceipt.status),"dedicated executor failed BSEC-192 receipt authority boundary",execReceipt);
+ const opReceipt=await call("/api/v1/ao-act/receipts",operatorReceipt,{});
+ expect(![401,403].includes(opReceipt.status),"acceptance-only operator receipt principal failed BSEC-192 authority boundary",opReceipt);
  const after=await snapshot();
- console.log(JSON.stringify({result:"PASS",workstream:"W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE",denied_count:denied.length,denied_state_unchanged:true,denied:denied.map(x=>({path:x.path,status:x.status,error:x.json?.error})),authorized:{heartbeat:{status:heartbeat.status,credential_id:heartbeat.json?.credential_id},raw_sensing:{status:raw.status,error:raw.json?.error},ao_sense_task:{status:senseTask.status,task_id:senseTask.json?.task_id},ao_sense_receipt:{status:senseReceipt.status,receipt_id:senseReceipt.json?.receipt_id},executor_claim:{status:execClaim.status},executor_simulator:{status:execSimulator.status,error:execSimulator.json?.error},operator_receipt:{status:opReceipt.status,error:opReceipt.json?.error}},after},null,2));
+ console.log(JSON.stringify({result:"PASS",workstream:"W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE",denied_count:denied.length,denied_state_unchanged:true,denied:denied.map(x=>({path:x.path,status:x.status,error:x.json?.error})),authorized:{heartbeat:{status:heartbeat.status,credential_id:heartbeat.json?.credential_id},raw_sensing:{status:raw.status,error:raw.json?.error},ao_sense_task:{status:senseTask.status,task_id:senseTask.json?.task_id},ao_sense_receipt:{status:senseReceipt.status,receipt_id:senseReceipt.json?.receipt_id},executor_claim:{status:execClaim.status},executor_simulator:{status:execSimulator.status,error:execSimulator.json?.error},executor_receipt:{status:execReceipt.status,error:execReceipt.json?.error},operator_receipt:{status:opReceipt.status,error:opReceipt.json?.error}},after},null,2));
 }
 main().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>pool.end());

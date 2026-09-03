@@ -143,12 +143,12 @@ async function createTask(base, token, scope, prescription_id, approval_request_
   });
 }
 
-function receiptBody(scope, operation_plan_id, act_task_id, field_id, device_id, zoneApps, status = 'executed') {
+function receiptBody(scope, operation_plan_id, act_task_id, field_id, device_id, zoneApps, executorActorId, status = 'executed') {
   return {
     ...scope,
     operation_plan_id,
     act_task_id,
-    executor_id: { kind: 'script', id: 'formal_fertilization_e2e', namespace: 'agronomy_acceptance' },
+    executor_id: { kind: 'script', id: executorActorId, namespace: 'agronomy_acceptance' },
     execution_time: { start_ts: Date.now() - 900000, end_ts: Date.now() },
     execution_coverage: { kind: 'field', ref: field_id },
     resource_usage: { fuel_l: null, electric_kwh: null, water_l: null, chemical_ml: null },
@@ -167,10 +167,8 @@ function receiptBody(scope, operation_plan_id, act_task_id, field_id, device_id,
 
 async function submitReceiptAndAsApplied(base, executorToken, operatorToken, scope, receipt) {
   const receiptResp = await post(base, '/api/v1/actions/receipt', executorToken, receipt);
-  if (!receiptResp.ok || receiptResp.json?.ok === false) {
-    return { receiptResp, receipt_fact_id: null, as_executed_id: null, as_applied_id: null, acceptance_result_fact_id: null, asApplied: null, genericAcceptance: null };
-  }
-  const receipt_fact_id = String(receiptResp.json?.fact_id ?? '').trim();
+  const receiptJson = requireOk(receiptResp, 'canonical AO-ACT receipt');
+  const receipt_fact_id = String(receiptJson.fact_id ?? '').trim();
   assert.ok(receipt_fact_id, 'AO-ACT receipt exact fact_id required');
 
   const asApplied = await post(base, '/api/v1/as-executed/from-receipt', executorToken, {
@@ -289,6 +287,8 @@ async function run() {
   const approverToken = tokenEnv('APPROVER_TOKEN', 'approver_token');
   const operatorToken = tokenEnv('OPERATOR_TOKEN', 'operator_token');
   const executorToken = tokenEnv('EXECUTOR_TOKEN', 'executor_token');
+  const executorActorId = String(process.env.EXECUTOR_ACTOR_ID || process.env.GEOX_EXECUTOR_ACTOR_ID || '').trim();
+  assert.ok(executorActorId, 'authenticated executor actor identity env required');
   const pool = new Pool({ connectionString: env('DATABASE_URL', 'postgres://postgres:postgres@127.0.0.1:5432/geox') });
   const scope = { tenant_id: env('TENANT_ID', 'tenantA'), project_id: env('PROJECT_ID', 'projectA'), group_id: env('GROUP_ID', 'groupA') };
   const runId = id('formal_fert');
@@ -438,7 +438,10 @@ async function run() {
     let fertAcc = null;
     let reportResp = null;
     if (checks.ao_act_task_created_after_approval) {
-      receiptFlow = await submitReceiptAndAsApplied(base, executorToken, operatorToken, scope, receiptBody(scope, operation_plan_id, act_task_id, field_id, device_id, goodApps));
+      const mismatchedReceipt = await post(base, '/api/v1/actions/receipt', executorToken, receiptBody(scope, operation_plan_id, act_task_id, field_id, device_id, goodApps, 'caller_declared_executor_mismatch'));
+      assert.equal(mismatchedReceipt.status, 403, 'caller-declared mismatched executor identity must be denied');
+      assert.equal(String(mismatchedReceipt.json?.error ?? ''), 'EXECUTOR_IDENTITY_MISMATCH', 'mismatched executor identity must fail with EXECUTOR_IDENTITY_MISMATCH');
+      receiptFlow = await submitReceiptAndAsApplied(base, executorToken, operatorToken, scope, receiptBody(scope, operation_plan_id, act_task_id, field_id, device_id, goodApps, executorActorId));
       assert.equal(String(receiptFlow.genericAcceptance?.json?.verdict ?? '').toUpperCase(), 'PASS', 'canonical Acceptance must PASS before Fertilization PASS');
       assert.equal(receiptFlow.genericAcceptance?.json?.acceptance?.formal_acceptance, true, 'canonical Acceptance must be formal');
 
@@ -524,7 +527,7 @@ async function run() {
       const failTaskJson = requireOk(failTaskResp, 'create fail-zone task');
       const failTaskId = String(failTaskJson.act_task_id ?? '').trim();
       assert.ok(failTaskId, 'fail-zone act_task_id missing');
-      const failFlow = await submitReceiptAndAsApplied(base, executorToken, operatorToken, scope, receiptBody(scope, failOperationPlanId, failTaskId, field_id, device_id, failApps));
+      const failFlow = await submitReceiptAndAsApplied(base, executorToken, operatorToken, scope, receiptBody(scope, failOperationPlanId, failTaskId, field_id, device_id, failApps, executorActorId));
       assert.equal(
         String(failFlow.genericAcceptance?.json?.verdict ?? '').toUpperCase(),
         'FAIL',

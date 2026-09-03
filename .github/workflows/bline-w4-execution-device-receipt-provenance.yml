@@ -27,6 +27,7 @@ on:
       - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.cjs'
       - 'scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_IRRIGATION_E2E_V1.ts'
       - 'scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_VARIABLE_OPERATION_E2E_V1.cjs'
+      - 'scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_FERTILIZATION_E2E_V1.cjs'
       - 'scripts/agronomy_acceptance/ACCEPTANCE_DEVICE_ANOMALY_E2E_V1.cjs'
       - 'scripts/agronomy_acceptance/ACCEPTANCE_SKILL_CONTRACT_GAP_CLOSURE_V1.cjs'
       - 'scripts/agronomy_acceptance/ACCEPTANCE_PILOT_CLOSURE_V1.cjs'
@@ -81,7 +82,7 @@ jobs:
       - name: Prepare W4 Commercial runtime
         run: |
           set -euo pipefail
-          TOKENS_JSON="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); process.stdout.write(JSON.stringify(f))")"
+          TOKENS_JSON="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); f.tokens=[...(f.tokens||[]),{token:'w4_operator_receipt_token',token_id:'tok_w4_operator_receipt',actor_id:'tok_w4_operator_receipt_actor',tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',role:'operator',revoked:false,allowed_field_ids:[],scopes:['ao_act.receipt.write']}]; process.stdout.write(JSON.stringify(f))")"
           cat > .env.w4 <<EOF
           GEOX_RUNTIME_ENV=pilot
           GEOX_TOKENS_JSON='$TOKENS_JSON'
@@ -124,6 +125,8 @@ jobs:
           export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
           export GEOX_W4_ADMIN_TOKEN=tenant_a_admin_token
           export GEOX_W4_OPERATOR_TOKEN=operator_token
+          export GEOX_W4_OPERATOR_RECEIPT_TOKEN=w4_operator_receipt_token
+          export GEOX_W4_READ_ONLY_TOKEN=client_token
           export GEOX_W4_EXECUTOR_TOKEN=executor_token
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_COMMERCIAL_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts
       - name: Runtime hygiene
