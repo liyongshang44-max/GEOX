@@ -28,9 +28,9 @@ import {
   ExternalFormalV3Amendment19PersistentTickServiceV1,
 } from "./external_formal_v3_amendment19_persistent_tick_service_v1.js";
 import {
-  ExternalFormalV3Amendment19RunnerV1,
-  type ExternalFormalV3Am19WindowManifestV1,
-} from "./external_formal_v3_amendment19_runner_v1.js";
+  ExternalFormalV4Amendment19RunnerV2,
+  type ExternalFormalV4Am19WindowManifestV2,
+} from "./external_formal_v4_amendment19_runner_v2.js";
 import type {
   Cap04ForecastScenarioPersistencePortV1,
 } from "./forecast_scenario_persistence_ports_v1.js";
@@ -74,7 +74,7 @@ export const MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_CONTRACT_V2 = {
   forecast_scenario_repository: "PostgresForecastScenarioRecoveryRepositoryV1",
   persistent_tick_service:
     "ExternalFormalV3Amendment19PersistentTickServiceV1",
-  one_slot_runner: "ExternalFormalV3Amendment19RunnerV1",
+  one_slot_runner: "ExternalFormalV4Amendment19RunnerV2",
   successor_viability: "PostgresTwinRuntimeSuccessorViabilityV1",
   crop_context_materializer: "materializeExternalFormalA18CropContextV4",
   provider_request_allowed: false,
@@ -94,7 +94,7 @@ type JsonRecordV1 = Record<string, unknown>;
 
 export type ComposeMcftCap09TwinRuntimeInputV2 = {
   pool: Pool;
-  manifest: ExternalFormalV3Am19WindowManifestV1;
+  manifest: ExternalFormalV4Am19WindowManifestV2;
   crop_authority: JsonRecordV1;
   configuration_matrix: JsonRecordV1;
   current_crop_authority: JsonRecordV1;
@@ -110,7 +110,7 @@ export type ComposeMcftCap09TwinRuntimeInputV2 = {
 export type McftCap09TwinRuntimeCompositionV2 = {
   composition_id: typeof MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_ID_V2;
   host: TwinRuntimeHostV1;
-  runner: ExternalFormalV3Amendment19RunnerV1;
+  runner: ExternalFormalV4Amendment19RunnerV2;
   scheduler: PostgresPersistentSequentialSchedulerAdapterV1;
   successor_viability: PostgresTwinRuntimeSuccessorViabilityV1;
   evidence_source: PostgresExternalFormalAmendment19EvidenceSourceV1;
@@ -186,7 +186,7 @@ export function composeMcftCap09TwinRuntimeV2(
     },
   };
 
-  const runner = new ExternalFormalV3Amendment19RunnerV1(
+  const runner = new ExternalFormalV4Amendment19RunnerV2(
     input.manifest,
     scheduler,
     runtimeRepository,
