@@ -1164,7 +1164,7 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       action_type,
       from_ts_ms,
       to_ts_ms,
-    });
+    }, { persist: false });
     const kpi = {
       avg_accept_duration_ms: snapshot.items.length ? Math.round(snapshot.items.reduce((sum, x) => sum + Number(x.avg_accept_duration_ms ?? 0), 0) / snapshot.items.length) : null,
       on_time_rate: snapshot.items.length ? Number((snapshot.items.reduce((sum, x) => sum + Number(x.on_time_rate ?? 0), 0) / snapshot.items.length).toFixed(4)) : null,
