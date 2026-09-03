@@ -482,7 +482,7 @@ function main(): void {
     "Formal-v5",
   ]) {
     assert.equal(
-      `${lifecycleSource}\n${twinSource}\n${evidenceSource}`.includes(forbidden),
+      `${lifecycleSource}\n${twinSource}\n${twinV2Source}\n${evidenceSource}`.includes(forbidden),
       false,
       `PHASE5_PROCESS_TEST_ONLY_DEPENDENCY_FORBIDDEN:${forbidden}`,
     );
@@ -544,6 +544,7 @@ function main(): void {
     evidence_target_planner_explicit_boundary: true,
     evidence_process_uses_phase3_composition: true,
     twin_process_uses_phase4_composition: true,
+    production_twin_process_uses_v2_stage_authority_composition: true,
     signal_stop_supported: true,
     evidence_graceful_current_fence_release: true,
     twin_duplicate_coordination_contention_retryable: true,
