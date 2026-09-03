@@ -92,8 +92,17 @@ source_results["planting"] = {
 hybrid = config["hybrid_thermal_landmark_candidate"]
 hybrid_body, hybrid_final = fetch(hybrid["official_url"])
 require_markers(text(hybrid_body), hybrid["required_markers"], "ALBERT_LEA_43_96P")
+brand_body, brand_final = fetch(hybrid["brand_authority_url"])
+require_markers(text(brand_body), hybrid["brand_authority_required_markers"], "ALBERT_LEA_BLUE_RIVER_BRAND_AUTHORITY")
+source_results["hybrid_brand_authority"] = {
+    "status": "PASS_FIRST_PARTY_BRAND_OWNER_AUTHORITY",
+    "final_url": brand_final,
+    "response_digest": digest(brand_body),
+    "response_byte_count": len(brand_body),
+    "provider_body_emitted": False,
+}
 source_results["hybrid_thermal_landmark"] = {
-    "status": "PASS_SECONDARY_EXACT_PRODUCT_SPECIFICATION_CANDIDATE",
+    "status": "PASS_FIRST_PARTY_BRAND_OWNER_EXACT_PRODUCT_SPECIFICATION",
     "final_url": hybrid_final,
     "response_digest": digest(hybrid_body),
     "response_byte_count": len(hybrid_body),
@@ -202,24 +211,48 @@ for d in daterange(start, end):
     valid_days.append(d.isoformat())
 
 threshold = float(hybrid["gdu_to_black_layer"])
+
+r5_model = config["r5_residual_to_maturity_model"]
+for source in r5_model["sources"]:
+    body, final_url = fetch(source["official_url"])
+    require_markers(text(body), source["required_markers"], source["source_id"])
+    source_results[source["source_id"]] = {
+        "status": "PASS",
+        "final_url": final_url,
+        "response_digest": digest(body),
+        "response_byte_count": len(body),
+        "role": source["role"],
+        "provider_body_emitted": False,
+    }
+
+r5_reference = float(r5_model["regional_reference_envelope"]["conservative_r5_reference_min_gdu_to_maturity"])
+remaining_lower = max(0.0, threshold - upper)
+remaining_upper = max(0.0, threshold - lower)
+
 if lower >= threshold:
     biological_candidates = ["R6_OR_LATER_MODEL_ESTIMATE"]
     biological_resolved = biological_candidates[0]
     water_use_candidates = ["LATE"]
     water_use_resolved = "LATE"
     candidate_outcome = "THERMAL_STAGE_R6_OR_LATER_LATE_CANDIDATE"
-elif upper < threshold:
-    biological_candidates = ["PRE_R6_MODEL_ESTIMATE"]
+elif upper >= threshold:
+    biological_candidates = ["R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE", "R6_OR_LATER_MODEL_ESTIMATE"]
+    biological_resolved = None
+    water_use_candidates = ["LATE"]
+    water_use_resolved = "LATE"
+    candidate_outcome = "THERMAL_STAGE_THRESHOLD_STRADDLE_LATE_CANDIDATE"
+elif remaining_upper < r5_reference:
+    biological_candidates = ["R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE"]
     biological_resolved = biological_candidates[0]
-    water_use_candidates = ["MID", "LATE"]
-    water_use_resolved = None
-    candidate_outcome = "THERMAL_STAGE_PRE_R6_WATER_USE_UNRESOLVED"
+    water_use_candidates = ["LATE"]
+    water_use_resolved = "LATE"
+    candidate_outcome = "THERMAL_STAGE_R5_DENT_OR_LATER_LATE_CANDIDATE"
 else:
-    biological_candidates = ["PRE_R6_MODEL_ESTIMATE", "R6_OR_LATER_MODEL_ESTIMATE"]
+    biological_candidates = ["PRE_R5_MODEL_ESTIMATE", "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE"]
     biological_resolved = None
     water_use_candidates = ["MID", "LATE"]
     water_use_resolved = None
-    candidate_outcome = "THERMAL_STAGE_THRESHOLD_STRADDLE_UNRESOLVED"
+    candidate_outcome = "THERMAL_STAGE_PRE_R5_WATER_USE_UNRESOLVED"
 
 source_results["temperature_daily"] = {
     "status": "PASS_WITH_BOUNDED_MISSING_DAY_UNCERTAINTY",
@@ -250,6 +283,9 @@ result = {
         "black_layer_reference_gdu": threshold,
         "distance_lower_to_reference_gdu": round(threshold - lower, 6),
         "distance_upper_to_reference_gdu": round(threshold - upper, 6),
+        "remaining_gdu_lower": round(remaining_lower, 6),
+        "remaining_gdu_upper": round(remaining_upper, 6),
+        "conservative_r5_reference_min_remaining_gdu": r5_reference,
     },
     "candidate_biological_stages": biological_candidates,
     "resolved_biological_stage": biological_resolved,
@@ -257,10 +293,11 @@ result = {
     "resolved_water_use_stage": water_use_resolved,
     "lifecycle_authority_established_by_thermal_model": False,
     "production_stage_authority_established": False,
+    "candidate_water_use_stage_authority_established": water_use_resolved is not None,
     "reason_production_not_established": [
         "DT02_AMENDMENT03_CANDIDATE_NOT_EFFECTIVE",
         "THERMAL_STAGE_AND_LIFECYCLE_MUST_BE_SEPARATELY_ADJUDICATED",
-        "SECONDARY_PRODUCT_SPECIFICATION_RETAINS_LIMITATION"
+        "RUNTIME_CONSUMPTION_REQUIRES_SEPARATE_EFFECTIVENESS_AND_LIFECYCLE_GUARD"
     ],
     "source_results": source_results,
     "writes": 0,
