@@ -5,12 +5,14 @@ const cp=require("node:child_process");
 
 const EXPECTED_BASE="571d209e4ce40ce4f94e4acb5331761220513498";
 const BASE=process.env.MCFT_CAP09_RUNTIME_START_EFFECTIVE_STAGE_BASE_SHA;
-const expected=[
+const successorPaths=[
   ".github/workflows/mcft-cap-09-runtime-start-effective-stage-validation-v1.yml",
   "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_RUNTIME_START_EFFECTIVE_STAGE_VALIDATION_V1.cjs",
   "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_BUILDER_V1.cjs",
   "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs"
 ].sort();
+const qcpPath="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
+const integratedPaths=[...successorPaths,qcpPath].sort();
 
 function fail(c,d){throw new Error(d?c+":"+d:c)}
 function eq(a,b,c){if(a!==b)fail(c,"expected="+JSON.stringify(b)+" actual="+JSON.stringify(a))}
@@ -19,7 +21,28 @@ function git(){return cp.execFileSync("git",Array.from(arguments),{encoding:"utf
 eq(BASE,EXPECTED_BASE,"RUNTIME_START_EFFECTIVE_STAGE_EXACT_BASE_REQUIRED");
 eq(git("merge-base",EXPECTED_BASE,"HEAD"),EXPECTED_BASE,"RUNTIME_START_EFFECTIVE_STAGE_BASE_NOT_ANCESTOR");
 const changed=git("diff","--name-only",EXPECTED_BASE+"...HEAD").split(/\r?\n/).filter(Boolean).sort();
-eq(JSON.stringify(changed),JSON.stringify(expected),"RUNTIME_START_EFFECTIVE_STAGE_EXACT_FOUR_FILE_BOUNDARY_REQUIRED");
+const successorOnly=JSON.stringify(changed)===JSON.stringify(successorPaths);
+const integrated=JSON.stringify(changed)===JSON.stringify(integratedPaths);
+if(!successorOnly&&!integrated){
+  fail(
+    "RUNTIME_START_EFFECTIVE_STAGE_EXACT_SUCCESSOR_OR_INTEGRATED_BOUNDARY_REQUIRED",
+    "successor="+JSON.stringify(successorPaths)
+      +" integrated="+JSON.stringify(integratedPaths)
+      +" actual="+JSON.stringify(changed),
+  );
+}
+if(integrated){
+  const qcp=JSON.parse(fs.readFileSync(qcpPath,"utf8"));
+  const resolver=qcp.dependency_resolvers?.PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS;
+  if(!resolver||resolver.kind!=="EXACT_PATH_SET"){
+    fail("RUNTIME_START_EFFECTIVE_STAGE_PHASE5_RESOLVER_REQUIRED");
+  }
+  const gatePath=
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_RUNTIME_START_EFFECTIVE_STAGE_VALIDATION_V1.cjs";
+  if(!(resolver.paths||[]).includes(gatePath)){
+    fail("RUNTIME_START_EFFECTIVE_STAGE_GATE_OWNERSHIP_REQUIRED");
+  }
+}
 
 const builder=fs.readFileSync("scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs","utf8");
 for(const marker of [
@@ -55,6 +78,9 @@ console.log(JSON.stringify({
   exact_base_sha:EXPECTED_BASE,
   subject_head_sha:git("rev-parse","HEAD"),
   exact_changed_file_count:changed.length,
+  qualification_boundary:integrated
+    ?"SUCCESSOR_PLUS_QCP_REGISTRATION"
+    :"SUCCESSOR_ONLY",
   real_arm_mutated:false,
   runtime_started:false,
   database_connection_attempted:false,
