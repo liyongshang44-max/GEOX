@@ -368,7 +368,10 @@
         "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_composition_v1.ts",
         "apps/server/src/external_evidence/provider/gfs_nomads_live_provider_v1.ts",
         "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts",
-        "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql"
+        "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql",
+        "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json",
+        "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_BUILDER_V1.cjs"
       ]
     },
     "PHASE7_PRIVATE_CANDIDATE_PROMOTION_IMPORT_CLOSURE": {
@@ -538,7 +541,10 @@
         "apps/server/src/external_evidence/mcft_cap09_production_evidence_host_planner_v1.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_HOST_PLANNER_V1.ts",
         "apps/server/src/external_evidence/mcft_cap09_production_evidence_planner_assembly_v1.ts",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_PLANNER_ASSEMBLY_V1.ts"
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_PLANNER_ASSEMBLY_V1.ts",
+        "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json",
+        "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_BUILDER_V1.cjs"
       ]
     },
     "V13_RUNTIME_SEMANTIC_CLOSURE": {
