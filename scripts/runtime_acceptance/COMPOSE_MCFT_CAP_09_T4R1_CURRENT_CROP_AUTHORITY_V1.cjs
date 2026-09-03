@@ -81,6 +81,8 @@ const result={
     epistemic_class:stage.epistemic_class,
     resolved_biological_stage:stage.resolved_biological_stage,
     observed_biological_stage_claimed:false,
+    authority_as_of:stage.as_of_logical_time,
+    forward_stability_hours:30,
     gdu_bounds:stage.gdu_bounds
   },
   crop_water_use_stage:stage.resolved_water_use_stage,
