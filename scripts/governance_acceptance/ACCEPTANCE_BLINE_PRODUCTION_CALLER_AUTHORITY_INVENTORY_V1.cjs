@@ -1105,7 +1105,6 @@ for (const r of covHttpUnique) {
     if ((cls === "PROJECTION_SIDE_EFFECT" || cls === "DOMAIN_STATE_SIDE_EFFECT") && !r.dml && !exactW2PureReadSuccessor) covHttpClassMismatch.push({route:r, disposition});
   }
 }
-}
 assert(covHttpClassMismatch.length === 0, "HTTP side-effect disposition does not match reachable write behavior", covHttpClassMismatch);
 
 function covWriterDeclared(declared, actual) {
