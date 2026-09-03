@@ -80,6 +80,16 @@ function build(arm, observedHead) {
     arm.formal_a0_authority_sha256,
     "RUNTIME_START_FORMAL_A0_AUTHORITY",
   );
+  const currentCrop = repoRef(
+    arm.current_crop_authority_ref,
+    arm.current_crop_authority_sha256,
+    "RUNTIME_START_CURRENT_CROP_AUTHORITY",
+  );
+  const stageArchitecture = repoRef(
+    arm.biological_stage_architecture_effectiveness_ref,
+    arm.biological_stage_architecture_effectiveness_sha256,
+    "RUNTIME_START_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS",
+  );
 
   const scope = {};
   for (const key of ["tenant_id","project_id","group_id","field_id","season_id","zone_id"]) {
@@ -122,6 +132,10 @@ function build(arm, observedHead) {
     formal_a0_authority_sha256: a0.sha256,
     live_activation_authority_ref: live.ref,
     live_activation_authority_sha256: live.sha256,
+    current_crop_authority_ref: currentCrop.ref,
+    current_crop_authority_sha256: currentCrop.sha256,
+    biological_stage_architecture_effectiveness_ref: stageArchitecture.ref,
+    biological_stage_architecture_effectiveness_sha256: stageArchitecture.sha256,
     formal_a0_logical_time: formalA0,
     runtime_process_start_authorized: true,
     evidence_runtime_start_authorized: true,
@@ -147,6 +161,10 @@ try {
     scope: result.scope,
     activation_fence_time: result.activation_fence_time,
     formal_a0_logical_time: result.formal_a0_logical_time,
+    current_crop_authority_ref: result.current_crop_authority_ref,
+    current_crop_authority_sha256: result.current_crop_authority_sha256,
+    biological_stage_architecture_effectiveness_ref: result.biological_stage_architecture_effectiveness_ref,
+    biological_stage_architecture_effectiveness_sha256: result.biological_stage_architecture_effectiveness_sha256,
     production_owner_activation_authorized: false,
     formal_v5_arm_authorized: false,
     a0_authorized: false,
