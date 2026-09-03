@@ -94,6 +94,10 @@ function main(): void {
       "/tmp/mcft-cap09/crop-authority.json",
     GEOX_MCFT_CAP09_PRODUCTION_CONFIGURATION_MATRIX_PATH:
       "/tmp/mcft-cap09/configuration-matrix.json",
+    GEOX_MCFT_CAP09_PRODUCTION_CURRENT_CROP_AUTHORITY_PATH:
+      "/tmp/mcft-cap09/current-crop-authority.json",
+    GEOX_MCFT_CAP09_PRODUCTION_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_PATH:
+      "/tmp/mcft-cap09/biological-stage-architecture-effectiveness.json",
     GEOX_MCFT_CAP09_DURABLE_LOG_ROOT: "/tmp/mcft-cap09/logs",
   };
 
@@ -243,10 +247,21 @@ function main(): void {
   assert.equal(evidenceAuthorityMount?.read_only, true);
   assert.equal(twinAuthorityMount?.read_only, true);
 
+  assert.equal(
+    twinEnv.GEOX_MCFT_CAP09_TWIN_RUNTIME_CURRENT_CROP_AUTHORITY_PATH,
+    "/run/geox/mcft-cap09/current-crop-authority.json",
+  );
+  assert.equal(
+    twinEnv.GEOX_MCFT_CAP09_TWIN_RUNTIME_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_PATH,
+    "/run/geox/mcft-cap09/biological-stage-architecture-effectiveness.json",
+  );
+
   for (const target of [
     "/run/geox/mcft-cap09/formal-window-manifest.json",
     "/run/geox/mcft-cap09/crop-authority.json",
     "/run/geox/mcft-cap09/configuration-matrix.json",
+    "/run/geox/mcft-cap09/current-crop-authority.json",
+    "/run/geox/mcft-cap09/biological-stage-architecture-effectiveness.json",
   ]) {
     assert.equal(
       mountFor(twin.volumes, target)?.read_only,
@@ -341,6 +356,8 @@ function main(): void {
     production_compiled_entrypoints: true,
     mounted_runtime_start_authority_read_only: true,
     twin_governed_control_mounts_read_only: true,
+    twin_current_crop_authority_mount_read_only: true,
+    twin_biological_stage_architecture_effectiveness_mount_read_only: true,
     separate_runtime_database_credentials: true,
     evidence_only_private_object_storage_credentials: true,
     durable_log_mounts_present: true,
