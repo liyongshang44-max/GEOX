@@ -211,7 +211,7 @@ jobs:
               'composeMcftCap09TwinRuntimeV2',
               'ExternalFormalV4Am19WindowManifestV2',
               'loadMcftCap09ProductionStageAuthorityMountsV1',
-              'GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL',
+              'readMcftCap09TwinRuntimeProcessConfigV1',
               'assertMcftCap09ServicePrincipalV1(pool, "TWIN_RUNTIME")',
               'createMcftCap09ProcessStopV1',
           ]
