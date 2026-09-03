@@ -7,6 +7,8 @@ import math
 import re
 import sys
 import urllib.request
+import urllib.error
+import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -17,14 +19,27 @@ def fail(code, detail=""):
     raise RuntimeError(code + (":" + detail if detail else ""))
 
 def fetch(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "GEOX-MCFT-CAP09-stage-authority-qualification/1.0"})
-    with urllib.request.urlopen(req, timeout=30) as response:
-        body = response.read()
-        final_url = response.geturl()
-        status = getattr(response, "status", 200)
-    if status != 200:
-        fail("SOURCE_HTTP_STATUS", str(status))
-    return body, final_url
+    last_error = None
+    for attempt in range(3):
+        req = urllib.request.Request(url, headers={"User-Agent": "GEOX-MCFT-CAP09-stage-authority-qualification/1.0"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as response:
+                body = response.read()
+                final_url = response.geturl()
+                status = getattr(response, "status", 200)
+            if status != 200:
+                fail("SOURCE_HTTP_STATUS", str(status))
+            return body, final_url
+        except urllib.error.HTTPError as exc:
+            last_error = exc
+            if exc.code < 500 or attempt == 2:
+                raise
+        except urllib.error.URLError as exc:
+            last_error = exc
+            if attempt == 2:
+                raise
+        time.sleep(2 ** attempt)
+    fail("SOURCE_FETCH_RETRY_EXHAUSTED", str(last_error))
 
 def digest(body):
     return "sha256:" + hashlib.sha256(body).hexdigest()
