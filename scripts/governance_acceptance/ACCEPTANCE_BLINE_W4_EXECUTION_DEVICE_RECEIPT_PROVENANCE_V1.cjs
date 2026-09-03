@@ -43,7 +43,8 @@ assert(operatorToken?.role==="operator"&&operatorToken?.scopes?.includes("teleme
 const ci=read(".github/workflows/ci.yml");
 assert(ci.includes("x.token==='executor_token' && x.role==='executor'"),"CI still masks executor with non-executor credential");
 assert(!ci.includes("x.token==='tenant_a_admin_token' && x.scopes.includes('ao_act.task.write') && x.scopes.includes('ao_act.receipt.write')"),"CI retains admin executor masking");
-assert(ci.includes("GEOX_EXECUTOR_ID=tok_executor_actor"),"CI executor actor binding missing");
+assert(ci.includes("mapfile -t EXECUTOR_IDENTITY")&&ci.includes("[\'token\',\'actor_id\']"),"CI executor token/actor identity extraction missing");
+assert(ci.includes("GEOX_EXECUTOR_ID=${EXECUTOR_IDENTITY[1]}")&&ci.includes("GEOX_EXECUTOR_ACTOR_ID=${EXECUTOR_IDENTITY[1]}"),"CI executor actor binding is not derived from authenticated executor fixture");
 const compose=read("docker-compose.commercial_v1.yml");
 assert(compose.includes("GEOX_AO_ACT_TOKEN:")&&compose.includes("GEOX_EXECUTOR_TOKEN is required"),"Commercial executor token wiring drift");
 assert(compose.includes("GEOX_EXECUTOR_ID:"),"Commercial executor identity wiring missing");
@@ -129,7 +130,7 @@ const commercialProof=read("scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_COMME
 for(const marker of ["GEOX_W4_OPERATOR_RECEIPT_TOKEN","w4_operator_receipt_token","dedicated executor failed BSEC-192 receipt authority boundary","acceptance-only operator receipt principal failed BSEC-192 authority boundary","GEOX_W4_READ_ONLY_TOKEN"])assert(commercialProof.includes(marker),"W4 BSEC-192 Commercial caller-migration proof drift",marker);
 const fertProof=read("scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_FERTILIZATION_E2E_V1.cjs");
 for(const marker of ["GEOX_EXECUTOR_ACTOR_ID","executorActorId","EXECUTOR_IDENTITY_MISMATCH","caller-declared mismatched executor identity must be denied","canonical AO-ACT receipt"])assert(fertProof.includes(marker),"Formal Fertilization executor-principal migration drift",marker);
-assert(!fertProof.includes("id: 'formal_fertilization_e2e'"),"Formal Fertilization retains stale caller-declared executor identity");
+assert(!/executor_id:\s*\{\s*kind:\s*\'script\',\s*id:\s*\'formal_fertilization_e2e\'/.test(fertProof),"Formal Fertilization retains stale caller-declared executor identity");
 const changed=sh(["diff","--name-only",BASE,"HEAD"]).split(/\r?\n/).filter(Boolean);
 for(const p of changed)assert(allowed.has(p),"W4 scope expansion",p);
 for(const p of changed)assert(!/mcft/i.test(p),"W4 touched MCFT",p);
