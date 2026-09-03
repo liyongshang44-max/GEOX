@@ -284,18 +284,8 @@ async function main() {
     ["security.admin", "action.task.dispatch"],
     { label: "adminToken", envNames: ["GEOX_ADMIN_TOKEN", "GEOX_TOKEN", "GEOX_AO_ACT_TOKEN"] }
   );
-  const credentialToken = normalizeScope(process.env.GEOX_DEVICE_CREDENTIAL_TOKEN ?? "");
-  if (!credentialToken) throw new Error("GEOX_DEVICE_CREDENTIAL_TOKEN_REQUIRED");
-  verifyEnvTokenScope("deviceCredentialToken", credentialToken, ["devices.credentials.write"]);
-  const issuedCredential = await fetchJson(`/api/v1/devices/${encodeURIComponent(DEVICE_ID)}/credentials`, {
-    method: "POST",
-    token: credentialToken,
-    body: { credential_id: `p1_smoke_${Date.now()}` },
-  });
-  if (!issuedCredential.ok || issuedCredential.json?.ok !== true || !String(issuedCredential.json?.credential_secret ?? "").trim()) {
-    throw new Error(`[p1-smoke-device-ready] credential issuance failed status=${issuedCredential.status} body=${issuedCredential.raw}`);
-  }
-  const deviceCredentialSecret = String(issuedCredential.json.credential_secret);
+  const deviceCredentialSecret = normalizeScope(process.env.GEOX_DEVICE_CREDENTIAL_SECRET ?? "");
+  if (!deviceCredentialSecret) throw new Error("GEOX_DEVICE_CREDENTIAL_SECRET_REQUIRED");
   const heartbeatRes = await fetchJson(`/api/v1/devices/${encodeURIComponent(DEVICE_ID)}/heartbeat`, {
     method: "POST",
     token: deviceCredentialSecret,

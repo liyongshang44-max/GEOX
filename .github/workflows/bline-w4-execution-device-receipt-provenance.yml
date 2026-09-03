@@ -32,6 +32,7 @@ on:
       - 'scripts/agronomy_acceptance/ACCEPTANCE_SKILL_CONTRACT_GAP_CLOSURE_V1.cjs'
       - 'scripts/agronomy_acceptance/ACCEPTANCE_PILOT_CLOSURE_V1.cjs'
       - 'apps/server/scripts/p1_smoke_device_ready.mjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_P1_SMOKE_PREFLIGHT_IDEMPOTENT_V1.cjs'
       - '.github/workflows/bline-w4-execution-device-receipt-provenance.yml'
       - '.github/workflows/ci.yml'
 
