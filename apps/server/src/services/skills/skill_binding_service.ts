@@ -1,7 +1,7 @@
 import type { Pool } from "pg";
 
 import { appendSkillBindingFact } from "../../domain/skill_registry/facts.js";
-import { querySkillBindingProjectionV1 } from "../../projections/skill_registry_read_v1.js";
+import { projectSkillRegistryReadV1, querySkillBindingProjectionV1 } from "../../projections/skill_registry_read_v1.js";
 import { asObject, boolLike } from "./skill_trace_service.js";
 import type { TenantTriple } from "./skill_trace_service.js";
 
@@ -76,6 +76,7 @@ export async function resolveDeviceSkillBindingForTask(
     return null;
   }
 
+  await projectSkillRegistryReadV1(pool, tenant);
   const projection = await getSkillBindingProjection(pool, tenant, { status: "ACTIVE" });
   const candidate = (projection.items_effective ?? []).find((item) => String(item.skill_id) === "mock_valve_control_skill_v1");
   if (!candidate) return null;
