@@ -85,6 +85,8 @@ assert(uplink.includes("requireReceiptPrincipalV1(auth, reply, true)")&&uplink.i
 const wrapper=block(task,'app.post("/api/v1/ao-act/receipts"','app.get("/api/v1/ao-act/receipts"');
 assert(wrapper.includes("requireReceiptPrincipalV1(auth, reply)")&&wrapper.includes("executor_id: executionPrincipal")&&wrapper.includes("source_receipt_fact_id"),"Commercial receipt wrapper provenance incomplete");
 assert(wrapper.includes("createAcceptance")&&wrapper.includes("transitionOperationPlanStateV1"),"W4 changed receipt/Acceptance semantic chain");
+assert(wrapper.includes("if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;"),"BSEC-192 missing tenant-fields reply ownership");
+assert(wrapper.includes("if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;"),"BSEC-192 missing tenant-match reply ownership");
 const aoAct=read("apps/server/src/routes/control_ao_act.ts");
 const dispatchHumanGate=block(aoAct,"function requireActionDispatchHumanRoleV1","function requireActionReceiptSubmitRoleV1");
 assert(dispatchHumanGate.includes('role === "admin" || role === "operator"')&&dispatchHumanGate.includes("ACTION_DISPATCH_HUMAN_ROLE_DENIED"),"W4 BSEC-077/078 human dispatch principal gate drift");

@@ -3832,8 +3832,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const body: any = req.body ?? {};
     if (!claimedReceiptExecutorMatchesV1(body.executor_id, executionPrincipal)) return reply.status(403).send({ ok: false, error: "EXECUTOR_IDENTITY_MISMATCH" });
     const tenant: TenantTriple = parseTenantFromBody(body);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
     const task_id = String(body.task_id ?? body.act_task_id ?? "").trim();
     const command_id = String(body.command_id ?? "").trim();
     if (!task_id) return badRequest(reply, "MISSING_TASK_ID");
