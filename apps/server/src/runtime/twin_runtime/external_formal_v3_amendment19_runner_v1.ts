@@ -136,6 +136,12 @@ function computeMaterializationHashV1(materialized: MaterializedExternalFormalA1
     materialization_profile: materialized.materialization_profile,
     context_ref: materialized.context_ref,
     context_identity_hash: materialized.context_identity_hash,
+    ...("current_crop_authority_evidence_digest" in materialized
+      ? {
+          current_crop_authority_evidence_digest:
+            materialized.current_crop_authority_evidence_digest,
+        }
+      : {}),
     materialized_context: materialized.context,
   });
 }
