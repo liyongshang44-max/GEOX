@@ -1,7 +1,7 @@
 import type { Pool } from "pg";
 
 import { appendSkillRunFact, digestJson } from "../../domain/skill_registry/facts.js";
-import { projectSkillRegistryReadV1 } from "../../projections/skill_registry_read_v1.js";
+import { computeSkillRegistryReadRowsV1 } from "../../projections/skill_registry_read_v1.js";
 
 export type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 
@@ -37,7 +37,7 @@ function normalizeRunCategory(value: unknown): "AGRONOMY" | "OPS" | "CONTROL" | 
 }
 
 async function findSkillRunByRunId(pool: Pool, tenant: TenantTriple, skillRunId: string): Promise<SkillRunReadRow | null> {
-  const rows = await projectSkillRegistryReadV1(pool, tenant, { persist: false }) as SkillRunReadRow[];
+  const rows = await computeSkillRegistryReadRowsV1(pool, tenant) as SkillRunReadRow[];
   const runRows = rows.filter((row) => row.fact_type === "skill_run_v1");
   return runRows.find((row) => String(row.payload_json?.run_id ?? "") === skillRunId)
     ?? runRows.find((row) => row.fact_id === skillRunId)
