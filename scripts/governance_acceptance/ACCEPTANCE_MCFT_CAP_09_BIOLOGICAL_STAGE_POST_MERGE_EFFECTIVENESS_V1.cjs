@@ -16,6 +16,7 @@ const AMENDMENT_PATH = "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-B
 const REGISTER_PATH = "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-DECISION-REGISTER.json";
 const POST_MERGE_CONTROL_PLANE_WORKFLOW = ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml";
 const QUALIFICATION_CONTROL_PLANE_WORKFLOW = ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml";
+const PREFLIGHT_PATH = "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs";
 const POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA = "ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23";
 const EXPECTED_PATHS = [
   QCP_PATH,
@@ -25,6 +26,7 @@ const EXPECTED_PATHS = [
   POST_MERGE_CONTROL_PLANE_WORKFLOW,
   QUALIFICATION_CONTROL_PLANE_WORKFLOW,
   EVIDENCE_REGISTRY_PATH,
+  PREFLIGHT_PATH,
 ].sort();
 
 function fail(code, detail) {
@@ -48,7 +50,7 @@ const changed = git("diff", "--name-only", EXPECTED_BASE + "...HEAD")
   .split(/\r?\n/)
   .filter(Boolean)
   .sort();
-eq(JSON.stringify(changed), JSON.stringify(EXPECTED_PATHS), "POSTMERGE_BIO_STAGE_EFFECT_EXACT_SEVEN_FILE_BOUNDARY_REQUIRED");
+eq(JSON.stringify(changed), JSON.stringify(EXPECTED_PATHS), "POSTMERGE_BIO_STAGE_EFFECT_EXACT_EIGHT_FILE_BOUNDARY_REQUIRED");
 
 const cert = JSON.parse(fs.readFileSync(CERT_PATH, "utf8"));
 eq(cert.schema_version, "geox_dt02_biological_stage_authority_effectiveness_v1", "POSTMERGE_BIO_STAGE_EFFECT_SCHEMA");
@@ -98,6 +100,11 @@ const evidenceRegistry = JSON.parse(fs.readFileSync(EVIDENCE_REGISTRY_PATH, "utf
 const governedEvidenceBases = evidenceRegistry.requalification_evidence?.durable_anchors?.rules?.governed_successor_predecessors || [];
 if (!governedEvidenceBases.includes(POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA)) {
   fail("POSTMERGE_BIO_STAGE_EFFECT_EVIDENCE_REGISTRY_EXACT_PREDECESSOR_REQUIRED");
+}
+
+const preflight = fs.readFileSync(PREFLIGHT_PATH, "utf8");
+if (!preflight.includes("POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA") || !preflight.includes("postAdoptionEffectivenessBase")) {
+  fail("POSTMERGE_BIO_STAGE_EFFECT_PREFLIGHT_POST_ADOPTION_ROUTE_REQUIRED");
 }
 
 for (const controlWorkflowPath of [POST_MERGE_CONTROL_PLANE_WORKFLOW, QUALIFICATION_CONTROL_PLANE_WORKFLOW]) {
