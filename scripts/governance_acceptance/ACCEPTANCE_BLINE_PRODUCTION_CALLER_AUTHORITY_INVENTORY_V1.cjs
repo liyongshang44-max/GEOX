@@ -937,6 +937,7 @@ const covDynamicClassMismatch = [];
 // Any other dynamic-route behavior continues to be evaluated against the original frozen disposition.
 const covW2BoundedInventoryPath = path.join(ROOT, "docs/architecture/semantic_convergence/GEOX-BLINE-W2-CALLER-READ-WRITE-BOUNDARY-V1.json");
 let covW2BoundedReadBoundaryActive = false;
+let covW2PureReadHttpKeys = new Set();
 let covW2BoundedHttpPureReadKeys = new Set();
 if (fs.existsSync(covW2BoundedInventoryPath)) {
   try {
@@ -955,6 +956,24 @@ if (fs.existsSync(covW2BoundedInventoryPath)) {
       indexHandler.includes('event: "index_read"') &&
       indexHandler.includes("req.log.info") &&
       !indexHandler.includes("writeAoActAuthzAuditFactV0");
+    if (covW2BoundedReadBoundaryActive) {
+      assert(Array.isArray(w2?.known_get_read_product_state_mutations), "W2 bounded GET inventory missing");
+      assert(w2.known_get_read_product_state_mutations.length === 23, "W2 bounded GET inventory cardinality drift");
+      covW2PureReadHttpKeys = new Set(
+        w2.known_get_read_product_state_mutations.map((row) => {
+          const entry = String(row?.entry_symbol ?? "");
+          assert(entry.startsWith("GET "), "W2 bounded GET entry symbol drift", row);
+          assert(
+            row?.w2_disposition === "REMOVE_READ_PATH_PERSISTENT_MUTATION" ||
+            row?.w2_disposition === "BIND_EXISTING_TELEMETRY_READ_AND_REMOVE_COMPATIBILITY_MUTATION",
+            "W2 bounded GET disposition drift",
+            row
+          );
+          return String(row.source_path) + "::GET::" + entry.slice(4);
+        })
+      );
+      assert(covW2PureReadHttpKeys.size === 23, "W2 bounded GET exact-key cardinality drift", [...covW2PureReadHttpKeys]);
+    }
     if (covW2BoundedReadBoundaryActive) {
       covW2BoundedHttpPureReadKeys = new Set(
         w2.known_get_read_product_state_mutations.map((row) => {
@@ -991,6 +1010,21 @@ function covIsExactW2DynamicPureReadSuccessor(route, disposition) {
     route?.ddl === false &&
     route?.fact === false &&
     Array.isArray(route?.writers) &&
+    route.writers.length === 0;
+}
+
+function covIsExactW2HttpPureReadSuccessor(route, disposition) {
+  if (!covW2BoundedReadBoundaryActive || !route || !disposition) return false;
+  const key = String(route.source_path) + "::" + String(route.method) + "::" + String(route.route);
+  return covW2PureReadHttpKeys.has(key) &&
+    disposition.source_path === route.source_path &&
+    disposition.http_method === route.method &&
+    disposition.exact_route === route.route &&
+    route.method === "GET" &&
+    route.dml === false &&
+    route.ddl === false &&
+    route.fact === false &&
+    Array.isArray(route.writers) &&
     route.writers.length === 0;
 }
 
@@ -1064,12 +1098,13 @@ for (const r of covHttpUnique) {
   if (["POST","PUT","PATCH","DELETE"].includes(r.method) && !surfaceCovered && !nonAuthorityCovered && !disposition) covCallerMissing.push(r);
   if (disposition) {
     const cls = disposition.side_effect_class;
-    const w2PureReadSuccessor = covIsExactW2HttpPureReadSuccessor(r, disposition);
+    const exactW2PureReadSuccessor = covIsExactW2HttpPureReadSuccessor(r, disposition);
     if (cls === "PURE_READ" && hasWrite) covHttpClassMismatch.push({route:r, disposition});
-    if (cls === "SCHEMA_ENSURE_ONLY" && (!r.ddl || r.dml) && !w2PureReadSuccessor) covHttpClassMismatch.push({route:r, disposition});
-    if (cls === "FACT_LEDGER_WRITE" && !r.fact && !w2PureReadSuccessor) covHttpClassMismatch.push({route:r, disposition});
-    if ((cls === "PROJECTION_SIDE_EFFECT" || cls === "DOMAIN_STATE_SIDE_EFFECT") && !r.dml && !w2PureReadSuccessor) covHttpClassMismatch.push({route:r, disposition});
+    if (cls === "SCHEMA_ENSURE_ONLY" && (!r.ddl || r.dml)) covHttpClassMismatch.push({route:r, disposition});
+    if (cls === "FACT_LEDGER_WRITE" && !r.fact && !exactW2PureReadSuccessor) covHttpClassMismatch.push({route:r, disposition});
+    if ((cls === "PROJECTION_SIDE_EFFECT" || cls === "DOMAIN_STATE_SIDE_EFFECT") && !r.dml && !exactW2PureReadSuccessor) covHttpClassMismatch.push({route:r, disposition});
   }
+}
 }
 assert(covHttpClassMismatch.length === 0, "HTTP side-effect disposition does not match reachable write behavior", covHttpClassMismatch);
 
