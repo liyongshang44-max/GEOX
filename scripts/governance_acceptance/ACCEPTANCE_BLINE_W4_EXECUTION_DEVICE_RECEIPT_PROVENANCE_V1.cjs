@@ -133,6 +133,10 @@ for(const marker of ["GEOX_W4_OPERATOR_RECEIPT_TOKEN","w4_operator_receipt_token
 const fertProof=read("scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_FERTILIZATION_E2E_V1.cjs");
 for(const marker of ["GEOX_EXECUTOR_ACTOR_ID","executorActorId","EXECUTOR_IDENTITY_MISMATCH","caller-declared mismatched executor identity must be denied","canonical AO-ACT receipt"])assert(fertProof.includes(marker),"Formal Fertilization executor-principal migration drift",marker);
 assert(!/executor_id:\s*\{\s*kind:\s*\'script\',\s*id:\s*\'formal_fertilization_e2e\'/.test(fertProof),"Formal Fertilization retains stale caller-declared executor identity");
+const p1Smoke=read("apps/server/scripts/p1_smoke_device_ready.mjs");
+for(const marker of ["GEOX_DEVICE_CREDENTIAL_TOKEN_REQUIRED","devices.credentials.write","deviceCredentialToken","env:GEOX_TOKENS_JSON"])assert(p1Smoke.includes(marker),"P1 smoke device-credential caller migration drift",marker);
+const mainCi=read(".github/workflows/ci.yml");
+assert(mainCi.includes("p1_device_credential_token")&&mainCi.includes("GEOX_DEVICE_CREDENTIAL_TOKEN=p1_device_credential_token"),"main acceptance lacks workflow-local device credential principal");
 const changed=sh(["diff","--name-only",BASE,"HEAD"]).split(/\r?\n/).filter(Boolean);
 for(const p of changed)assert(allowed.has(p),"W4 scope expansion",p);
 for(const p of changed)assert(!/mcft/i.test(p),"W4 touched MCFT",p);

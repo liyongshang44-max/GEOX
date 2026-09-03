@@ -156,7 +156,7 @@ jobs:
           ACCEPTANCE_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='admin' && x.scopes.includes('security.admin') && !x.revoked); if(!t) { console.error('missing active admin security.admin token'); process.exit(1); } console.log(t.token)")"
           mapfile -t ACCEPTANCE_IDENTITY < <(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='admin' && x.scopes.includes('security.admin') && !x.revoked); if(!t) process.exit(1); for (const k of ['tenant_id','project_id','group_id','actor_id']) { const v=String(t[k]||'').trim(); if(!v) { console.error('missing acceptance identity '+k); process.exit(1); } console.log(v); }")
           mapfile -t EXECUTOR_IDENTITY < <(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.token==='executor_token' && x.role==='executor' && x.scopes.includes('action.task.dispatch') && x.scopes.includes('ao_act.receipt.write') && !x.revoked); if(!t) { console.error('missing active dedicated executor acceptance token'); process.exit(1); } for (const k of ['token','actor_id']) { const v=String(t[k]||'').trim(); if(!v) { console.error('missing dedicated executor identity '+k); process.exit(1); } console.log(v); }")
-          TOKENS_JSON="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); process.stdout.write(JSON.stringify(f))")"
+          TOKENS_JSON="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); f.tokens=[...(f.tokens||[]),{token:'p1_device_credential_token',token_id:'tok_p1_device_credential',actor_id:'tok_p1_device_credential_actor',tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',role:'admin',revoked:false,allowed_field_ids:[],scopes:['devices.credentials.write']}]; process.stdout.write(JSON.stringify(f))")"
           cat > .env.ci <<EOF_INNER
           GEOX_RUNTIME_ENV=pilot
           GEOX_TOKENS_JSON='$TOKENS_JSON'
@@ -174,6 +174,7 @@ jobs:
           GEOX_EXECUTOR_TOKEN=${EXECUTOR_IDENTITY[0]}
           GEOX_EXECUTOR_ID=${EXECUTOR_IDENTITY[1]}
           GEOX_EXECUTOR_ACTOR_ID=${EXECUTOR_IDENTITY[1]}
+          GEOX_DEVICE_CREDENTIAL_TOKEN=p1_device_credential_token
           GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
           GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT=http://127.0.0.1:9000
           MINIO_ROOT_USER=geoxminio

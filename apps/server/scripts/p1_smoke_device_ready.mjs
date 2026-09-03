@@ -30,6 +30,25 @@ function normalizeScope(value) {
 
 function loadTokenCandidates() {
   const rows = [];
+  const runtimeTokensJson = String(process.env.GEOX_TOKENS_JSON ?? "").trim();
+  if (runtimeTokensJson) {
+    const parsed = JSON.parse(runtimeTokensJson);
+    const tokens = Array.isArray(parsed?.tokens) ? parsed.tokens : [];
+    for (const row of tokens) {
+      const token = typeof row?.token === "string" ? row.token.trim() : "";
+      if (!token || token.includes("set-via-env-or-external-secret-file")) continue;
+      rows.push({
+        token,
+        source_file: "env:GEOX_TOKENS_JSON",
+        scopes: Array.isArray(row?.scopes) ? row.scopes.map((s) => String(s)) : [],
+        role: String(row?.role ?? "").trim().toLowerCase(),
+        tenant_id: String(row?.tenant_id ?? "").trim(),
+        project_id: String(row?.project_id ?? "").trim(),
+        group_id: String(row?.group_id ?? "").trim(),
+        revoked: Boolean(row?.revoked),
+      });
+    }
+  }
   for (const tokenFilePath of TOKEN_CANDIDATE_FILES) {
     if (!fs.existsSync(tokenFilePath)) continue;
     const parsed = JSON.parse(fs.readFileSync(tokenFilePath, "utf8"));
@@ -265,9 +284,12 @@ async function main() {
     ["security.admin", "action.task.dispatch"],
     { label: "adminToken", envNames: ["GEOX_ADMIN_TOKEN", "GEOX_TOKEN", "GEOX_AO_ACT_TOKEN"] }
   );
+  const credentialToken = normalizeScope(process.env.GEOX_DEVICE_CREDENTIAL_TOKEN ?? "");
+  if (!credentialToken) throw new Error("GEOX_DEVICE_CREDENTIAL_TOKEN_REQUIRED");
+  verifyEnvTokenScope("deviceCredentialToken", credentialToken, ["devices.credentials.write"]);
   const issuedCredential = await fetchJson(`/api/v1/devices/${encodeURIComponent(DEVICE_ID)}/credentials`, {
     method: "POST",
-    token: adminToken,
+    token: credentialToken,
     body: { credential_id: `p1_smoke_${Date.now()}` },
   });
   if (!issuedCredential.ok || issuedCredential.json?.ok !== true || !String(issuedCredential.json?.credential_secret ?? "").trim()) {
