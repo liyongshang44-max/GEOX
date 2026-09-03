@@ -12,6 +12,7 @@ const expected=[
   "apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.test.ts",
   "apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.ts",
   "apps/server/src/runtime/twin_runtime/external_formal_v4_amendment19_runner_v2.ts",
+  "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts",
   "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts",
   "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_COMPOSITION_V2_STAGE_AUTHORITY_V1.cjs",
   "scripts/runtime_acceptance/COMPOSE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_V1.cjs",
@@ -26,7 +27,7 @@ function git(){return cp.execFileSync("git",Array.from(arguments),{encoding:"utf
 eq(BASE,EXPECTED_BASE,"TWIN_V2_STAGE_EXACT_BASE_REQUIRED");
 eq(git("merge-base",EXPECTED_BASE,"HEAD"),EXPECTED_BASE,"TWIN_V2_STAGE_BASE_NOT_ANCESTOR");
 const changed=git("diff","--name-only",EXPECTED_BASE+"...HEAD").split(/\r?\n/).filter(Boolean).sort();
-eq(JSON.stringify(changed),JSON.stringify(expected),"TWIN_V2_STAGE_EXACT_ELEVEN_FILE_BOUNDARY_REQUIRED");
+eq(JSON.stringify(changed),JSON.stringify(expected),"TWIN_V2_STAGE_EXACT_TWELVE_FILE_BOUNDARY_REQUIRED");
 
 const v4=fs.readFileSync("apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.ts","utf8");
 for(const marker of [
