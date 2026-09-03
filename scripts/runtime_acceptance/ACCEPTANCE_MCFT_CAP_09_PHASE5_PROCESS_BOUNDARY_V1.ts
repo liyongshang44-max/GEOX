@@ -466,6 +466,23 @@ function main(): void {
     "PHASE5_TWIN_SCHEDULER_LEASE_STANDBY_WAIT_REQUIRED",
   );
   assert.equal(twinSource.includes("composeMcftCap09TwinRuntimeV1"), true);
+  assert.equal(twinSource.includes("composeMcftCap09TwinRuntimeV2"), true);
+  assert.equal(
+    twinSource.includes("preflightMcftCap09TwinStageAuthorityManifestV1"),
+    true,
+    "PHASE5_TWIN_PRODUCTION_V4_MANIFEST_PREFLIGHT_REQUIRED",
+  );
+  assert.equal(
+    twinSource.indexOf("preflightMcftCap09TwinStageAuthorityManifestV1({")
+      < twinSource.indexOf("createDatabasePool(config.database_url)"),
+    true,
+    "PHASE5_TWIN_V4_MANIFEST_PREFLIGHT_MUST_PRECEDE_DATABASE_OPEN",
+  );
+  assert.equal(
+    twinSource.includes("const host = qualificationLeaseOwner"),
+    true,
+    "PHASE5_TWIN_EXPLICIT_PRODUCTION_QUALIFICATION_ROUTING_REQUIRED",
+  );
   assert.equal(evidenceSource.includes("composeEvidenceRuntimeV1"), true);
   assert.equal(evidenceSource.includes("lease_repository.releaseLease"), true);
   assert.equal(
@@ -500,6 +517,9 @@ function main(): void {
     evidence_target_planner_explicit_boundary: true,
     evidence_process_uses_phase3_composition: true,
     twin_process_uses_phase4_composition: true,
+    twin_qualification_preserves_composition_v1: true,
+    twin_production_uses_stage_authority_composition_v2: true,
+    twin_production_v4_manifest_preflight_before_database_open: true,
     signal_stop_supported: true,
     evidence_graceful_current_fence_release: true,
     twin_duplicate_coordination_contention_retryable: true,
