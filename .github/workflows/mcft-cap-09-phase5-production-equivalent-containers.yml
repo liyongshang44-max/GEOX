@@ -233,6 +233,8 @@ jobs:
             acceptance-output/MCFT_CAP_09_PHASE5_EVIDENCE_QUALIFICATION_ENTRYPOINT_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE5_TWIN_QUALIFICATION_CLOCK_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE5_QUALIFICATION_COMPOSE_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_BUILDER_V1_RESULT.json
             acceptance-output/MCFT_CAP_09_PHASE5_TWIN_CANONICAL_FACT_WRITER_V1_RESULT.json
           if-no-files-found: warn
           retention-days: 90
