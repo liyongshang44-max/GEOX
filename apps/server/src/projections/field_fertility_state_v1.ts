@@ -179,8 +179,9 @@ export async function refreshFieldFertilityStateV1(db: DbConn, params: {
   project_id?: string | null;
   group_id?: string | null;
   now_ms?: number;
+  persist?: boolean;
 }): Promise<FieldFertilityStateV1> {
-  await ensureFieldFertilityStateProjectionV1(db);
+  if (params.persist !== false) await ensureFieldFertilityStateProjectionV1(db);
   const nowMs = Number.isFinite(params.now_ms) ? Number(params.now_ms) : Date.now();
 
   const latestStates = await db.query(
@@ -213,6 +214,8 @@ export async function refreshFieldFertilityStateV1(db: DbConn, params: {
     field_id: params.field_id,
     now_ms: nowMs,
   });
+
+  if (params.persist === false) return state;
 
   const upsert = await db.query(
     `INSERT INTO field_fertility_state_v1
