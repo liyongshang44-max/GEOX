@@ -410,8 +410,8 @@ export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, poo
   const createJobHandler = async (req: any, reply: any) => { // Create job endpoint (enqueue only).
     setLegacyDeprecatedWarning(reply);
     try { // Guard with try/catch for consistent 400 errors.
-      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read"); // Require read-only AO-ACT scope.
-      if (!auth) return; // Stop if auth failed (handler already replied).
+      const auth = requireAoActScopeV0(req, reply, "evidence_export.write"); // Creating an export job is write authority; match the canonical successor capability.
+      if (!auth) return reply; // Auth helper already replied; return the Fastify reply to preserve single-response ownership.
 
       const body = z.object({ // Define body schema.
         tenant_id: z.string().min(1), // Tenant id.
