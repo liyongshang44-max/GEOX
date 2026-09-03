@@ -17,6 +17,7 @@ services:
         exec node apps/server/dist/runtime/mcft_cap09_evidence_runtime.js
         >> /var/log/geox/mcft-cap09/evidence/runtime.log 2>&1
     environment:
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?GEOX_DEPLOYMENT_SUBJECT_COMMIT is required}
       GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_SERVICE_ID: local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/geox-mcft-cap09-evidence-runtime-v1
       GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH: /run/geox/mcft-cap09/runtime-start-authority.json
       GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL: ${GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL:?GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL is required}
@@ -62,6 +63,7 @@ services:
         exec node apps/server/dist/runtime/mcft_cap09_twin_runtime.js
         >> /var/log/geox/mcft-cap09/twin/runtime.log 2>&1
     environment:
+      GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?GEOX_DEPLOYMENT_SUBJECT_COMMIT is required}
       GEOX_MCFT_CAP09_TWIN_RUNTIME_SERVICE_ID: local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/geox-mcft-cap09-twin-runtime-v1
       GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH: /run/geox/mcft-cap09/runtime-start-authority.json
       GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL: ${GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL:?GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL is required}
