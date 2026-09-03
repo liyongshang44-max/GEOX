@@ -22,12 +22,26 @@ function main(): void {
     "utf8",
   )) as Record<string, unknown>;
   const runtimeStartAuthority = authorityDocument.runtime_start_binding as Record<string, unknown>;
+  const runtimeStartExpected = {
+    deployment_subject_sha: "1".repeat(40),
+    scope: {
+      tenant_id: "tenant_mcft_external",
+      project_id: "project_mcft_cap09",
+      group_id: "group_public_research",
+      field_id: "field_kbs_mcse_t4r1",
+      season_id: "season_2026_corn",
+      zone_id: "zone_kbs_mcse_t4r1_crop_formal_v1",
+    },
+  };
   assert.equal(runtimeStartAuthority.status, "ENTRYPOINT_BOUND_NOT_ARMED");
   assert.equal(runtimeStartAuthority.armed, false);
   assert.equal(runtimeStartAuthority.runtime_process_start_authorized, false);
   assert.equal(runtimeStartAuthority.production_owner_activation_authorized, false);
   assert.throws(
-    () => parseMcftCap09ProductionRuntimeStartAuthorityV1(runtimeStartAuthority),
+    () => parseMcftCap09ProductionRuntimeStartAuthorityV1(
+      runtimeStartAuthority,
+      runtimeStartExpected,
+    ),
     /MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED/,
   );
   const activeRuntimeStart = parseMcftCap09ProductionRuntimeStartAuthorityV1({
@@ -35,12 +49,20 @@ function main(): void {
     status: "AUTHORIZED",
     armed: true,
     authority_ref: "authority://mcft-cap09/production-runtime-start/test",
+    deployment_subject_sha: runtimeStartExpected.deployment_subject_sha,
+    scope: runtimeStartExpected.scope,
     activation_fence_time: "2026-09-02T18:00:00.000Z",
     formal_a0_authority_ref: "authority://mcft-cap09/formal-a0/test",
+    formal_a0_authority_sha256:
+      "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    live_activation_authority_ref:
+      "authority://mcft-cap09/live-activation/test",
+    live_activation_authority_sha256:
+      "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     formal_a0_logical_time: "2026-09-02T20:00:00.000Z",
     runtime_process_start_authorized: true,
     evidence_runtime_start_authorized: true,
-  });
+  }, runtimeStartExpected);
   assert.equal(activeRuntimeStart.activation_fence_time, "2026-09-02T18:00:00.000Z");
   assert.equal(activeRuntimeStart.formal_a0_logical_time, "2026-09-02T20:00:00.000Z");
 
