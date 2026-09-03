@@ -1,7 +1,7 @@
 import type { Pool } from "pg";
 
 import { appendSkillBindingFact } from "../../domain/skill_registry/facts.js";
-import { projectSkillRegistryReadV1, querySkillBindingProjectionV1 } from "../../projections/skill_registry_read_v1.js";
+import { querySkillBindingProjectionV1 } from "../../projections/skill_registry_read_v1.js";
 import { asObject, boolLike } from "./skill_trace_service.js";
 import type { TenantTriple } from "./skill_trace_service.js";
 
@@ -47,7 +47,6 @@ export async function appendSkillBinding(pool: Pool, input: SkillBindingInput) {
 }
 
 export async function getSkillBindingProjection(pool: Pool, tenant: TenantTriple, filters: Record<string, unknown>) {
-  await projectSkillRegistryReadV1(pool, tenant);
   return querySkillBindingProjectionV1(pool, {
     ...tenant,
     category: typeof filters.category === "string" ? filters.category : undefined,
