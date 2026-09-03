@@ -33,14 +33,35 @@ async function main(): Promise<void> {
   );
   assert.equal(boundary.scheduler_clock_authority.now().toISOString(), through);
 
+  const qualificationScope = {
+    tenant_id: "tenant-phase5",
+    project_id: "project-phase5",
+    group_id: "group-phase5",
+    field_id: "field-phase5",
+    season_id: "season-phase5",
+    zone_id: "zone-phase5",
+  } as const;
+  const qualificationSubject = "1".repeat(40);
   const qualificationStart =
     buildPhase5TwinQualificationRuntimeStartAuthorityV1({
       formal_a0: "2026-08-27T19:00:00.000Z",
       qualification_ack: MCFT_CAP09_PHASE5_ACCELERATED_CLOCK_ACK_V1,
+      deployment_subject_sha: qualificationSubject,
+      scope: qualificationScope,
     });
   assert.equal(
     qualificationStart.authority_ref,
     MCFT_CAP09_PHASE5_RUNTIME_START_QUALIFICATION_AUTHORITY_REF_V1,
+  );
+  assert.equal(qualificationStart.deployment_subject_sha, qualificationSubject);
+  assert.deepEqual(qualificationStart.scope, qualificationScope);
+  assert.match(
+    qualificationStart.formal_a0_authority_sha256,
+    /^sha256:[0-9a-f]{64}$/,
+  );
+  assert.match(
+    qualificationStart.live_activation_authority_sha256,
+    /^sha256:[0-9a-f]{64}$/,
   );
   assert.equal(
     qualificationStart.activation_fence_time,
@@ -61,6 +82,8 @@ async function main(): Promise<void> {
     () => buildPhase5TwinQualificationRuntimeStartAuthorityV1({
       formal_a0: "2026-08-27T19:00:00.000Z",
       qualification_ack: "WRONG",
+      deployment_subject_sha: qualificationSubject,
+      scope: qualificationScope,
     }),
     /PHASE5_TWIN_QUALIFICATION_RUNTIME_START_ACK_REQUIRED/,
   );
@@ -163,6 +186,8 @@ async function main(): Promise<void> {
     production_scheduler_clock_default_preserved: true,
     accelerated_clock_requires_explicit_ack: true,
     qualification_runtime_start_requires_explicit_ack: true,
+    qualification_runtime_start_exact_subject_bound: true,
+    qualification_runtime_start_exact_scope_bound: true,
     qualification_runtime_start_authority_is_non_owner_non_formal: true,
     qualification_lease_owner_requires_explicit_engineering_boundaries: true,
     exact_hour_required: true,
