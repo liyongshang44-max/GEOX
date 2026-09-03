@@ -6,7 +6,7 @@ const cp=require("node:child_process");
 
 const EXPECTED_BASE="f605f7e22ad7a4b7605be885ef1328f2b8283b55";
 const BASE=process.env.MCFT_CAP09_PRODUCTION_TWIN_V2_ROUTING_BASE_SHA;
-const expected=[
+const expectedRouting=[
   ".github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml",
   ".github/workflows/mcft-cap-09-production-twin-process-v2-routing.yml",
   "apps/server/scripts/write_dist_entries.cjs",
@@ -16,6 +16,9 @@ const expected=[
   "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts",
   "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts"
 ].sort();
+const qcpPath=
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
+const expectedIntegrated=[...expectedRouting,qcpPath].sort();
 
 function fail(code,detail){throw new Error(detail?code+":"+detail:code)}
 function eq(a,b,code){if(a!==b)fail(code,"expected="+JSON.stringify(b)+" actual="+JSON.stringify(a))}
@@ -24,7 +27,37 @@ function git(){return cp.execFileSync("git",Array.from(arguments),{encoding:"utf
 eq(BASE,EXPECTED_BASE,"PRODUCTION_TWIN_V2_ROUTING_EXACT_BASE_REQUIRED");
 eq(git("merge-base",EXPECTED_BASE,"HEAD"),EXPECTED_BASE,"PRODUCTION_TWIN_V2_ROUTING_BASE_NOT_ANCESTOR");
 const changed=git("diff","--name-only",EXPECTED_BASE+"...HEAD").split(/\r?\n/).filter(Boolean).sort();
-eq(JSON.stringify(changed),JSON.stringify(expected),"PRODUCTION_TWIN_V2_ROUTING_EXACT_EIGHT_FILE_BOUNDARY_REQUIRED");
+const matchesRouting=
+  JSON.stringify(changed)===JSON.stringify(expectedRouting);
+const matchesIntegrated=
+  JSON.stringify(changed)===JSON.stringify(expectedIntegrated);
+if(!matchesRouting&&!matchesIntegrated){
+  fail(
+    "PRODUCTION_TWIN_V2_ROUTING_EXACT_ROUTING_OR_INTEGRATED_BOUNDARY_REQUIRED",
+    "expected_routing="+JSON.stringify(expectedRouting)
+      +" expected_integrated="+JSON.stringify(expectedIntegrated)
+      +" actual="+JSON.stringify(changed),
+  );
+}
+if(matchesIntegrated){
+  const qcp=JSON.parse(fs.readFileSync(qcpPath,"utf8"));
+  const resolver=qcp.dependency_resolvers?.PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1;
+  if(!resolver||resolver.kind!=="EXACT_PATH_SET"){
+    fail("PRODUCTION_TWIN_V2_ROUTING_INTEGRATED_QCP_RESOLVER_REQUIRED");
+  }
+  const expectedOwned=[
+    ".github/workflows/mcft-cap-09-production-twin-process-v2-routing.yml",
+    "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs"
+  ].sort();
+  const actualOwned=[...(resolver.paths??[])].sort();
+  if(JSON.stringify(actualOwned)!==JSON.stringify(expectedOwned)){
+    fail(
+      "PRODUCTION_TWIN_V2_ROUTING_INTEGRATED_QCP_EXACT_PATH_SET_REQUIRED",
+      "expected="+JSON.stringify(expectedOwned)+" actual="+JSON.stringify(actualOwned),
+    );
+  }
+}
 
 const processV2=fs.readFileSync(
   "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts","utf8"
@@ -88,6 +121,9 @@ console.log(JSON.stringify({
   exact_base_sha:EXPECTED_BASE,
   subject_head_sha:git("rev-parse","HEAD"),
   exact_changed_file_count:changed.length,
+  qualification_boundary:matchesIntegrated
+    ?"ROUTING_PLUS_QCP_REGISTRATION"
+    :"ROUTING_ONLY",
   production_route:"MCFT_CAP09_TWIN_RUNTIME_PROCESS_V2",
   historical_process_v1_preserved:true,
   historical_crop_context_v3_preserved:true,
