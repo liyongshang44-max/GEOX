@@ -114,7 +114,7 @@ assert(!rulesGet.includes("projectSkillRegistryReadV1"),"skill rules GET still m
 assert(!rulesGet.includes("recordSecurityAuditEventV1")&&!rulesGet.includes("denyWithAuditV1"),"skill rules GET still persists security audit");
 
 const allowed=new Set([
- ".github/workflows/bline-w2-caller-read-write-boundary.yml",".github/workflows/ci.yml",
+ ".github/workflows/bline-w2-caller-read-write-boundary.yml",".github/workflows/ci.yml",".github/workflows/bline-pr-sec2-batch008.yml",".github/workflows/bline-pr-sec2-containment.yml",
  W2,
  "apps/server/src/routes/decision_engine_v1.ts","apps/server/src/routes/weather_v1.ts","apps/server/src/routes/reports_v1.ts","apps/server/src/routes/reports_dashboard_v1.ts",
  "apps/server/src/routes/dashboard_v1.ts","apps/server/src/routes/fields_v1.ts","apps/server/src/routes/control_ao_act.ts","apps/server/src/routes/skills_rules_v1.ts",
