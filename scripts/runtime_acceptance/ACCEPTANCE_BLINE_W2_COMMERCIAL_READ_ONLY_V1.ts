@@ -47,13 +47,45 @@ async function call(path:string,token=admin,method="GET",body?:any){
  return {path,method,status:r.status,json,text};
 }
 
+async function prepareManualQualityReadFixture(){
+ // Qualification-only fixture in the isolated ephemeral Commercial DB.
+ // It supplies only the empty predecessor source tables/columns read by the
+ // manual-execution-quality pure-read calculation. No production schema owner,
+ // route, executor identity, or W2 measured GET is used to create them.
+ await pool.query(`
+   CREATE TABLE IF NOT EXISTS human_executor_index_v1 (
+     tenant_id TEXT NOT NULL,
+     executor_id TEXT NOT NULL,
+     display_name TEXT NOT NULL DEFAULT '',
+     team_id TEXT NULL,
+     PRIMARY KEY (tenant_id, executor_id)
+   )
+ `);
+ await pool.query(`
+   CREATE TABLE IF NOT EXISTS work_assignment_index_v1 (
+     tenant_id TEXT NOT NULL,
+     assignment_id TEXT NOT NULL,
+     act_task_id TEXT NOT NULL,
+     executor_id TEXT NOT NULL,
+     status TEXT NOT NULL,
+     assigned_at TIMESTAMPTZ NOT NULL,
+     arrive_deadline_ts TIMESTAMPTZ NULL,
+     PRIMARY KEY (tenant_id, assignment_id)
+   )
+ `);
+ await pool.query(`
+   CREATE TABLE IF NOT EXISTS work_assignment_audit_v1 (
+     tenant_id TEXT NOT NULL,
+     audit_id TEXT NOT NULL,
+     assignment_id TEXT NOT NULL,
+     status TEXT NOT NULL,
+     occurred_at TIMESTAMPTZ NOT NULL,
+     PRIMARY KEY (tenant_id, audit_id)
+   )
+ `);
+}
 async function main(){
- // Predecessor-owned compatibility setup is intentionally outside the measured W2 GET window.
- // It initializes the human-executor/work-assignment source schema consumed by the
- // manual-execution-quality pure-read computation; W2 must not move that schema ownership
- // into the dashboard GET or count setup DDL as a read-path mutation.
- const setup=await call("/api/v1/human-executors?limit=1");
- expect(setup.status===200,"W2 Commercial predecessor source-schema setup failed",setup);
+ await prepareManualQualityReadFixture();
  const before=await snapshot();
  const calls:any[]=[];
  const getPaths=[
@@ -92,6 +124,6 @@ async function main(){
  const writerPassedAuth=await call("/api/v1/recommendations/generate",writer,"POST",{});
  expect(writerPassedAuth.status===400 && writerPassedAuth.json?.error==="MISSING_DEVICE_ID","recommendation writer did not pass auth boundary to business validation",writerPassedAuth);
 
- console.log(JSON.stringify({result:"PASS",workstream:"W2_CALLER_CAPABILITY_READ_WRITE_BOUNDARY",predecessor_source_schema_setup:{path:setup.path,status:setup.status,measured:false},bounded_get_count:getPaths.length,get_results:calls.map(x=>({path:x.path,status:x.status})),state_digest_unchanged:true,targets:before,recommendation:{read_only:{status:readDenied.status,error:readDenied.json?.error},writer:{status:writerPassedAuth.status,error:writerPassedAuth.json?.error}}},null,2));
+ console.log(JSON.stringify({result:"PASS",workstream:"W2_CALLER_CAPABILITY_READ_WRITE_BOUNDARY",predecessor_source_schema_setup:{mode:"test_fixture_ddl",measured:false},bounded_get_count:getPaths.length,get_results:calls.map(x=>({path:x.path,status:x.status})),state_digest_unchanged:true,targets:before,recommendation:{read_only:{status:readDenied.status,error:readDenied.json?.error},writer:{status:writerPassedAuth.status,error:writerPassedAuth.json?.error}}},null,2));
 }
 main().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>pool.end());
