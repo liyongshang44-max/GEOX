@@ -31,6 +31,12 @@ jobs:
       - name: Route dependency guard
         run: pnpm run ci:route-dependency-guard
 
+      - name: B-Line W1 identity foundation machine gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs
+
+      - name: B-Line W1 focused identity runtime proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.ts
+
       - name: B-Line production caller authority inventory
         run: pnpm run ci:governance:bline-production-caller-authority-inventory
 
