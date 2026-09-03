@@ -648,6 +648,16 @@
         "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_stage_authority_preflight_v1.ts",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_PROCESS_V2_STAGE_ROUTING_V1.cjs"
       ]
+    },
+    "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-biological-stage-effectiveness-graduation-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-EFFECTIVENESS-GRADUATION-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_V1.cjs",
+        "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_V1.cjs",
+        "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_V1.cjs"
+      ]
     }
   },
   "checks": [
@@ -1310,6 +1320,37 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_PROCESS_V2_STAGE_ROUTING_V1.cjs"
+    },
+    {
+      "check_id": "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION",
+      "owner": "MCFT_CAP09_BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_QUALIFICATION",
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-EFFECTIVENESS-GRADUATION-V1.json"
+      ],
+      "resolver_ids": [
+        "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_V1",
+        "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR_V1",
+        "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "execution_workflow": ".github/workflows/mcft-cap-09-biological-stage-effectiveness-graduation-v1.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
+      "fail_policy": "FAIL_CLOSED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_V1",
+        "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR_V1",
+        "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_V1.cjs"
     }
   ],
   "non_effects": {
