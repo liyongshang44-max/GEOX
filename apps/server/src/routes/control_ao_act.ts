@@ -928,8 +928,8 @@ async function handleAoActReceiptV1(app: FastifyInstance, pool: Pool, req: any, 
   }
     try {
       const auth = requireAoActAnyScopeV0(req, reply, ["action.receipt.submit", "ao_act.receipt.write"]);
-      if (!auth) return;
-      if (!requireActionReceiptSubmitRoleV1(reply, auth)) return;
+      if (!auth) return reply;
+      if (!requireActionReceiptSubmitRoleV1(reply, auth)) return reply;
 
       const hit = scanForForbiddenKeys(req.body);
       if (hit) return reply.status(400).send({ ok: false, error: `FORBIDDEN_KEY:${hit}` });

@@ -102,6 +102,9 @@ const roleAllows=block(operatorDispatch,"function roleAllowsDispatch","function 
 assert(roleAllows.includes('normalized === "admin" || normalized === "operator"')&&!roleAllows.includes("executor"),"BSEC-067/068 Operator Dispatch baseline leaked executor authority");
 const roleGate=block(aoAct,"function requireActionReceiptSubmitRoleV1","function canonicalActionReceiptExecutorV1");
 assert(roleGate.includes('role === "operator" || role === "executor"')&&!roleGate.includes('role === "admin"'),"direct receipt retains admin execution authority");
+const receiptHandler=block(aoAct,"async function handleAoActReceiptV1","async function handleAoActIndexV1");
+assert(receiptHandler.includes("if (!auth) return reply;"),"BSEC-076/080 missing auth reply ownership");
+assert(receiptHandler.includes("if (!requireActionReceiptSubmitRoleV1(reply, auth)) return reply;"),"BSEC-076/080 role-deny reply ownership drift");
 assert(aoAct.includes("EXECUTOR_IDENTITY_MISMATCH")&&aoAct.includes("executor_id: executorIdentity"),"direct receipt caller-declared executor still authoritative");
 const decision=read("apps/server/src/routes/decision_engine_v1.ts");
 const receiptFromTask=block(decision,'app.post("/api/v1/actions/receipt/from-task"','app.post("/api/v1/recommendations/generate"');
