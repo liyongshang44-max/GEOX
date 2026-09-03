@@ -607,6 +607,25 @@
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.cjs",
         "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.py"
       ]
+    },
+    "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-t4r1-current-crop-authority-composition-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1.cjs",
+        "scripts/runtime_acceptance/COMPOSE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_V1.cjs"
+      ]
+    },
+    "A18_BIOLOGICAL_STAGE_CONTEXT_V4": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-a18-biological-stage-context-v4.yml",
+        "apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.test.ts",
+        "apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A18_BIOLOGICAL_STAGE_CONTEXT_V4.cjs",
+        "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_A18_BIOLOGICAL_STAGE_CONTEXT_V4.ts"
+      ]
     }
   },
   "checks": [
@@ -1147,6 +1166,64 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.cjs"
+    },
+    {
+      "check_id": "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION",
+      "owner": "MCFT_CAP09_CURRENT_CROP_AUTHORITY_COMPOSITION_QUALIFICATION",
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json"
+      ],
+      "resolver_ids": [
+        "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "execution_workflow": ".github/workflows/mcft-cap-09-t4r1-current-crop-authority-composition-v1.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
+      "fail_policy": "FAIL_CLOSED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1",
+        "T4R1_BIOLOGICAL_STAGE_AUTHORITY_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1.cjs"
+    },
+    {
+      "check_id": "A18_BIOLOGICAL_STAGE_CONTEXT_V4",
+      "owner": "MCFT_CAP09_A18_BIOLOGICAL_STAGE_CONTEXT_V4_QUALIFICATION",
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json"
+      ],
+      "resolver_ids": [
+        "A18_BIOLOGICAL_STAGE_CONTEXT_V4",
+        "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "execution_workflow": ".github/workflows/mcft-cap-09-a18-biological-stage-context-v4.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
+      "fail_policy": "FAIL_CLOSED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "A18_BIOLOGICAL_STAGE_CONTEXT_V4",
+        "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1",
+        "T4R1_BIOLOGICAL_STAGE_AUTHORITY_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_A18_BIOLOGICAL_STAGE_CONTEXT_V4.cjs"
     }
   ],
   "non_effects": {
