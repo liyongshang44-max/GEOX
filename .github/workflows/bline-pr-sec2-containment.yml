@@ -9,6 +9,7 @@ on:
       - 'apps/server/src/modules/agronomy/registerAgronomyModule.ts'
       - 'apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts'
       - 'apps/server/src/modules/admin/registerAdminModule.ts'
+      - 'apps/server/src/modules/execution/registerExecutionModule.ts'
       - 'scripts/acceptance/ACCEPTANCE_COMMERCIAL_V1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_*.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_*.ts'
@@ -47,6 +48,10 @@ jobs:
         run: pnpm --filter @geox/device-skills... build
       - name: BSEC-024..026 behavioral proof
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEAK_INTERNAL_FAIL_CLOSED_V1.ts
+      - name: BSEC-141 corrected accounting and closure
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_INTERNAL_AUTO_FALLBACK_FAIL_CLOSED_V1.cjs
+      - name: BSEC-141 production registration behavioral proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_INTERNAL_AUTO_FALLBACK_FAIL_CLOSED_V1.ts
       - name: Frozen PR-SEC-1 caller inventory regression
         run: pnpm run ci:governance:bline-production-caller-authority-inventory
       - name: B-Line residual authority audit
@@ -70,8 +75,8 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - name: Prepare commercial compose env
         run: |
-          ACCEPTANCE_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='admin' && x.scopes.includes('security.admin') && !x.revoked); if(!t) process.exit(1); console.log(t.token)")"
-          mapfile -t ACCEPTANCE_IDENTITY < <(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='admin' && x.scopes.includes('security.admin') && !x.revoked); if(!t) process.exit(1); for (const k of ['tenant_id','project_id','group_id','actor_id']) { const v=String(t[k]||'').trim(); if(!v) process.exit(1); console.log(v); }")
+          ACCEPTANCE_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.token==='tenant_a_admin_token' && x.scopes.includes('ao_act.task.write') && x.scopes.includes('ao_act.index.read') && !x.revoked); if(!t) process.exit(1); console.log(t.token)")"
+          mapfile -t ACCEPTANCE_IDENTITY < <(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.token==='tenant_a_admin_token' && x.scopes.includes('ao_act.task.write') && x.scopes.includes('ao_act.index.read') && !x.revoked); if(!t) process.exit(1); for (const k of ['tenant_id','project_id','group_id','actor_id']) { const v=String(t[k]||'').trim(); if(!v) process.exit(1); console.log(v); }")
           EXECUTOR_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.token==='tenant_a_admin_token' && x.scopes.includes('ao_act.task.write') && x.scopes.includes('ao_act.receipt.write') && !x.revoked); if(!t) process.exit(1); console.log(t.token)")"
           cat > .env.ci <<EOF
           GEOX_RUNTIME_ENV=pilot
@@ -146,6 +151,20 @@ jobs:
           export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
           export GEOX_TEST_BEARER="$GEOX_AO_ACT_TOKEN"
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEAK_INTERNAL_COMMERCIAL_RUNTIME_V1.ts
+      - name: BSEC-141 Commercial sentinel no-persistence proof
+        run: |
+          set -a; source .env.ci; set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          export GEOX_TEST_BEARER="$GEOX_AO_ACT_TOKEN"
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_INTERNAL_AUTO_FALLBACK_COMMERCIAL_RUNTIME_V1.ts
+      - name: Canonical dispatch failure human fallback regression
+        run: |
+          set -a; source .env.ci; set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          export GEOX_TEST_BEARER="$GEOX_AO_ACT_TOKEN"
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_CANONICAL_HUMAN_FALLBACK_RUNTIME_V1.ts
       - name: Runtime hygiene
         if: always()
         run: |
