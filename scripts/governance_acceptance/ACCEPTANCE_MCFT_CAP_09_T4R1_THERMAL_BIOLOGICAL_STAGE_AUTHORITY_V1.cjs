@@ -17,6 +17,7 @@ const paths = {
   qcp: "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"
 };
 const expected = Object.values(paths).sort();
+const kcMatrixPath = "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json";
 
 function fail(code, detail) { throw new Error(detail ? code + ":" + detail : code); }
 function eq(a, b, code) { if (a !== b) fail(code, "expected=" + JSON.stringify(b) + " actual=" + JSON.stringify(a)); }
@@ -45,6 +46,10 @@ eq(authority.thermal_method.silent_imputation_authorized, false, "THERMAL_STAGE_
 eq(authority.lifecycle_independence.thermal_stage_proves_lifecycle_active, false, "THERMAL_STAGE_LIFECYCLE_COLLAPSE_FORBIDDEN");
 eq(authority.nonclaims.observed_t4r1_biological_stage_established, false, "THERMAL_STAGE_OBSERVED_TRUTH_PREMATURE");
 eq(authority.nonclaims.runtime_start_authorized, false, "THERMAL_STAGE_RUNTIME_START_PREMATURE");
+eq(authority.crop_model_parameter_binding.configuration_matrix_blob_sha, "c04c6805ab79c715781b99f8fbcf997fae3a8c48", "THERMAL_STAGE_KC_MATRIX_BLOB_DRIFT");
+eq(authority.crop_model_parameter_binding.configuration_semantic_hash, "sha256:56ac92e34148bd81fe20f2925e1079cb1a3ed647ffefd1471caf1302df70ee4c", "THERMAL_STAGE_KC_SEMANTIC_HASH_DRIFT");
+eq(authority.crop_model_parameter_binding.expected_current_candidate_if_late.kc, 0.6, "THERMAL_STAGE_LATE_KC_DRIFT");
+eq(git("hash-object", kcMatrixPath), "c04c6805ab79c715781b99f8fbcf997fae3a8c48", "THERMAL_STAGE_KC_MATRIX_EXACT_BLOB_REQUIRED");
 
 const moduleText = fs.readFileSync(paths.module, "utf8");
 for (const marker of [
@@ -57,6 +62,7 @@ for (const marker of [
   "accumulateCornBase50GduBoundsV1",
   "classifyCornResidualToMaturityStageV1",
   "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE",
+  "resolveCropWaterUseKcFromFrozenScheduleV1",
   "mapBiologicalAuthorityToWaterUseStageV1",
   "MISSING_OR_INVALID",
   "daily_max_gdu"
@@ -73,7 +79,10 @@ for (const marker of [
   "pre-R6 mapping preserves MID/LATE ambiguity",
   "residual GDU resolves R5 dent-or-later only when the full uncertainty is beyond conservative R5 reference",
   "residual GDU stays ambiguous when uncertainty overlaps conservative R5 reference",
-  "residual GDU preserves R5/R6 ambiguity when maturity threshold is straddled"
+  "residual GDU preserves R5/R6 ambiguity when maturity threshold is straddled",
+  "frozen stage-to-Kc lookup resolves exact LATE singleton",
+  "stage-to-Kc lookup fails closed on unresolved stage",
+  "stage-to-Kc lookup fails closed on duplicate stage entries"
 ]) has(testText, marker, "THERMAL_STAGE_TEST_COVERAGE_MISSING");
 
 const probeText = fs.readFileSync(paths.probe, "utf8");
@@ -84,6 +93,8 @@ for (const marker of [
   "THERMAL_STAGE_THRESHOLD_STRADDLE_LATE_CANDIDATE",
   "conservative_r5_reference_min_remaining_gdu",
   "hybrid_brand_authority",
+  "KC_CONFIGURATION_SOURCE_EXACT_SINGLETON_REQUIRED",
+  "candidate_crop_model_parameter_authority",
   "lifecycle_authority_established_by_thermal_model",
   "production_stage_authority_established"
 ]) has(probeText, marker, "THERMAL_STAGE_PROBE_RULE_MISSING");
@@ -121,6 +132,7 @@ const out = {
   bounded_base50_gdu_implemented: true,
   residual_to_maturity_stage_classifier_implemented: true,
   first_party_exact_hybrid_thermal_anchor_required: true,
+  exact_frozen_stage_to_kc_binding_required: true,
   exact_t4r1_binding_candidate_present: true,
   live_source_probe_present: true,
   observed_vs_derived_separation: true,
