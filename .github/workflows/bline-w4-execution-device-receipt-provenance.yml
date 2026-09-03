@@ -33,6 +33,7 @@ on:
       - 'scripts/agronomy_acceptance/ACCEPTANCE_SKILL_CONTRACT_GAP_CLOSURE_V1.cjs'
       - 'scripts/agronomy_acceptance/ACCEPTANCE_PILOT_CLOSURE_V1.cjs'
       - 'apps/server/scripts/p1_smoke_device_ready.mjs'
+      - 'apps/server/scripts/p1_skill_loop_minimal.mjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_P1_SMOKE_PREFLIGHT_IDEMPOTENT_V1.cjs'
       - 'scripts/acceptance/run_acceptance.cjs'
       - 'scripts/acceptance/p1_device_identity_fixture.cjs'
