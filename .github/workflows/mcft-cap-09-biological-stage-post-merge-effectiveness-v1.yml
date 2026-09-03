@@ -97,8 +97,19 @@ jobs:
           if (crop.architecture_effective !== true || crop.runtime_consumption_authorized !== true) throw new Error('POSTMERGE_EFFECTIVE_CURRENT_CROP_GRADUATION_REQUIRED');
           if (crop.graduation?.protected_main_sha !== cert.protected_main_sha) throw new Error('POSTMERGE_EFFECTIVE_CURRENT_CROP_MAIN_BINDING_MISMATCH');
           if (crop.graduation?.graduated_at !== cert.issued_at) throw new Error('POSTMERGE_EFFECTIVE_CURRENT_CROP_TIME_BINDING_MISMATCH');
-          if (crop.runtime_start_authorized !== false || crop.production_owner_activation_authorized !== false || crop.formal_v5_authorized !== false || crop.a0_authorized !== false || crop.o00_o23_authorized !== false) {
-            throw new Error('POSTMERGE_EFFECTIVE_CURRENT_CROP_AUTHORITY_CEILING_DRIFT');
+          for (const key of [
+            'runtime_config_write_authorized',
+            'database_write_authorized',
+            'scheduler_write_authorized',
+            'formal_evidence_write_authorized',
+            'production_runtime_start_authorized',
+            'production_owner_activation_authorized',
+            'formal_v5_authorized',
+            'a0_authorized',
+            'o00_o23_authorized',
+            'mcft_cap09_completed'
+          ]) {
+            if (crop[key] !== false) throw new Error('POSTMERGE_EFFECTIVE_CURRENT_CROP_AUTHORITY_CEILING_DRIFT:' + key);
           }
           console.log(JSON.stringify({
             status:'PASS',
