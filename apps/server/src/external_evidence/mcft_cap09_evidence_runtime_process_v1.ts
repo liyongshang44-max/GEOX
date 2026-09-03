@@ -295,10 +295,15 @@ export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
 
 export function parseMcftCap09ProductionRuntimeStartAuthorityV1(
   value: unknown,
+  expected: {
+    deployment_subject_sha: string;
+    scope: EvidenceRuntimeScopeV1;
+  },
 ): ProductionEvidenceRuntimeStartAuthorityInstanceV1 {
   return parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
     value,
     "EVIDENCE_RUNTIME",
+    expected,
   );
 }
 
@@ -312,8 +317,17 @@ export async function runMcftCap09ProductionEvidenceRuntimeV1(input: {
     runtime_start_binding?: unknown;
   };
   const env = input.env ?? process.env;
+  const expectedScope = scopeFromEnvironmentV1(env);
   const authority = loadMcftCap09ProductionRuntimeStartAuthorityV1({
     plane: "EVIDENCE_RUNTIME",
+    expected: {
+      deployment_subject_sha: requiredEnvV1(
+        env,
+        "GEOX_DEPLOYMENT_SUBJECT_COMMIT",
+        "MCFT_CAP09_PRODUCTION_DEPLOYMENT_SUBJECT_REQUIRED",
+      ),
+      scope: expectedScope,
+    },
     authority_path:
       env.GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH,
     explicit_authority: input.runtime_start_authority,
