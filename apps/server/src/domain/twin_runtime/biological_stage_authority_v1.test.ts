@@ -6,6 +6,7 @@ import {
   computeCornBase50DailyGduFromFahrenheitV1,
   mapBiologicalAuthorityToWaterUseStageV1,
   resolveBiologicalStageAuthorityV1,
+  resolveCropWaterUseKcFromFrozenScheduleV1,
 } from "./biological_stage_authority_v1.js";
 
 const scope = {
@@ -162,4 +163,32 @@ test("residual GDU preserves R5/R6 ambiguity when maturity threshold is straddle
     "R6_OR_LATER_MODEL_ESTIMATE",
   ]);
   assert.equal(result.resolved_biological_stage, null);
+});
+
+
+test("frozen stage-to-Kc lookup resolves exact LATE singleton", () => {
+  const result = resolveCropWaterUseKcFromFrozenScheduleV1("LATE", [
+    { stage_code: "INITIAL", kc: 0.3 },
+    { stage_code: "DEVELOPMENT", kc: 0.7 },
+    { stage_code: "MID", kc: 1.15 },
+    { stage_code: "LATE", kc: 0.6 },
+  ]);
+  assert.deepEqual(result, { stage_code: "LATE", kc: 0.6 });
+});
+
+test("stage-to-Kc lookup fails closed on unresolved stage", () => {
+  assert.throws(
+    () => resolveCropWaterUseKcFromFrozenScheduleV1(null, [{ stage_code: "LATE", kc: 0.6 }]),
+    /BIO_STAGE_KC_RESOLVED_STAGE_REQUIRED/,
+  );
+});
+
+test("stage-to-Kc lookup fails closed on duplicate stage entries", () => {
+  assert.throws(
+    () => resolveCropWaterUseKcFromFrozenScheduleV1("LATE", [
+      { stage_code: "LATE", kc: 0.6 },
+      { stage_code: "LATE", kc: 0.7 },
+    ]),
+    /BIO_STAGE_KC_STAGE_DUPLICATE/,
+  );
 });
