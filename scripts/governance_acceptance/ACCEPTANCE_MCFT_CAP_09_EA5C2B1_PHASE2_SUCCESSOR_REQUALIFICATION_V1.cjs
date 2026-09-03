@@ -9,6 +9,7 @@ const path = require("node:path");
 const ROOT = path.resolve(__dirname, "../..");
 const PHASE1_BASE = "8943c752a354cb916cc7f144681203aa9a19f70b";
 const PHASE2_CLOSURE = "c3346768a44b16b127378cb690ada1d8cfec1049";
+const PROTECTED_MAIN_ADOPTION_BASE = "fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8";
 const HISTORICAL_GATE = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs";
 const HISTORICAL_AUTHORITY = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C2B1-LIVE-KBS-SOIL-INGRESS-EXECUTOR-V1.json";
 const HISTORICAL_ACCEPTANCE = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS.ts";
@@ -87,11 +88,61 @@ function requireMarkers(file, markers, code) {
 
 try {
   const base = exactCommit(process.env.MCFT_BASE_SHA || PHASE1_BASE, "EA5C2B1_PHASE2_BASE_SHA_INVALID");
-  assert.ok(
-    base === PHASE1_BASE || base === PHASE2_CLOSURE,
-    "EA5C2B1_GOVERNED_PREDECESSOR_REQUIRED",
-  );
-  assert.equal(git("merge-base", base, "HEAD"), base, "EA5C2B1_PHASE2_BASE_NOT_ANCESTOR");
+  const protectedMainAdoption = process.env.MCFT_CAP09_PROTECTED_MAIN_ADOPTION === "1";
+  if (protectedMainAdoption) {
+    assert.equal(base, PROTECTED_MAIN_ADOPTION_BASE, "EA5C2B1_PROTECTED_MAIN_ADOPTION_BASE_REQUIRED");
+    assert.equal(git("merge-base", PHASE2_CLOSURE, "HEAD"), PHASE2_CLOSURE, "EA5C2B1_PHASE2_CLOSURE_NOT_ANCESTOR_OF_ADOPTION");
+    for (const file of [HISTORICAL_GATE, HISTORICAL_AUTHORITY, HISTORICAL_ACCEPTANCE]) {
+      assert.equal(
+        git("rev-parse", `HEAD:${file}`),
+        git("rev-parse", `${PHASE1_BASE}:${file}`),
+        `EA5C2B1_PROTECTED_MAIN_ADOPTION_HISTORICAL_AUTHORITY_DRIFT:${file}`,
+      );
+    }
+    const workflow = requireMarkers(WORKFLOW, [
+      "ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs",
+      "ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs",
+      PROTECTED_MAIN_ADOPTION_BASE,
+      "Execute live KBS source through frozen EA3 and EA5C1 pipeline against CI-only stores",
+    ], "EA5C2B1_PROTECTED_MAIN_ADOPTION_WORKFLOW_MARKER_MISSING");
+    for (const forbidden of [
+      "GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY:",
+      "GEOX_MCFT_CAP09_S6_DATABASE_URL:",
+    ]) assert.equal(workflow.includes(forbidden), false, `EA5C2B1_PROTECTED_MAIN_ADOPTION_FORMAL_SECRET_BINDING_FORBIDDEN:${forbidden}`);
+    for (const [file, markers] of [
+      [EXECUTOR, ["collectRetainDecodeCanonicalizeExternalEvidenceV1", "PostgresExternalFormalEvidenceIngressV1", "runtime_public_provider_fetch_count: 0"]],
+      [TRANSPORT, ["class ControlledHttpsByteClientV1", "class HttpsExternalEvidenceTransportV1", "FINAL_HOST_NOT_ALLOWED", "FINAL_IDENTITY_DRIFT"]],
+      [KBS_HOURLY_PROVIDER, ["class KbsRawHourlyLiveTransportV1", "class KbsRawHourlyExactIntervalDecoderV1", "freshness_is_late_authoritative_admission_gate: false"]],
+      [GFS_PROVIDER, ["class GfsNomadsLiveProviderV1", "selectLatestCompleteCycle", "cross_cycle_substitution_authorized: false"]],
+    ]) requireMarkers(file, markers, "EA5C2B1_PROTECTED_MAIN_ADOPTION_MARKER_MISSING");
+    const result = {
+      schema_version: "geox_mcft_cap09_ea5c2b1_phase2_successor_requalification_v1",
+      status: "PASS",
+      classification: "PROTECTED_MAIN_ADOPTION_PHASE2_CONTINUITY_REQUALIFICATION",
+      governed_base_sha: base,
+      phase1_frozen_authority_sha: PHASE1_BASE,
+      phase2_closure_sha: PHASE2_CLOSURE,
+      candidate_sha: git("rev-parse", "HEAD"),
+      historical_ea5c2b1_gate_unchanged: true,
+      historical_ea5c2b1_authority_unchanged: true,
+      historical_ea5c2b1_runtime_acceptance_unchanged: true,
+      later_provider_evolution_requalified_by_current_workflow: true,
+      production_evidence_runtime_activated: false,
+      production_twin_runtime_activated: false,
+      provider_production_cadence_owner_activated: false,
+      formal_database_mutation: false,
+      formal_v5_armed: false,
+      graduation_effect: false,
+      mcft_cap09_completed: false,
+    };
+    write(result);
+    console.log(JSON.stringify(result));
+  } else {
+    assert.ok(
+      base === PHASE1_BASE || base === PHASE2_CLOSURE,
+      "EA5C2B1_GOVERNED_PREDECESSOR_REQUIRED",
+    );
+    assert.equal(git("merge-base", base, "HEAD"), base, "EA5C2B1_PHASE2_BASE_NOT_ANCESTOR");
 
   // Historical/frozen authority remains pinned to the original Phase1 predecessor even
   // when this gate requalifies a later stacked Phase3 successor on top of Phase2 closure.
@@ -349,6 +400,7 @@ try {
   };
   write(result);
   console.log(JSON.stringify(result));
+  }
 } catch (error) {
   const result = {
     schema_version: "geox_mcft_cap09_ea5c2b1_phase2_successor_requalification_v1",

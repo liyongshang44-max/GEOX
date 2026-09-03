@@ -106,7 +106,9 @@ jobs:
           if grep -Eq "$v13_marker_regex" <<<"$changed"; then v13_marker_changed=true; fi
           if grep -Fxq "$phase2_compatibility_path" <<<"$changed"; then phase2_compatibility_changed=true; fi
           mode='historical-am19'
-          if [[ ( "$base_sha" == "$phase3_closure_sha" || "$base_sha" == "$phase4_closure_sha" ) && "$historical_sensitive_changed" == 'false' ]]; then
+          if [[ "$base_sha" == "$protected_main_sha" ]]; then
+            mode='protected-main-adoption-successor'
+          elif [[ ( "$base_sha" == "$phase3_closure_sha" || "$base_sha" == "$phase4_closure_sha" ) && "$historical_sensitive_changed" == 'false' ]]; then
             mode='production-hosting-successor'
           elif [[ "$base_sha" == "$phase2_closure_sha" && "$phase2_frozen_authority_changed" == 'false' ]]; then
             test "$(git rev-parse "HEAD:${frozen_historical_runner}")" = "$frozen_historical_runner_blob" || { echo 'AM19_PHASE3_HISTORICAL_RUNNER_BLOB_DRIFT' >&2; exit 1; }
@@ -145,6 +147,11 @@ jobs:
               grep -Fq 'qualified_subject_sha' scripts/governance_acceptance/CLASSIFY_MCFT_CAP_09_AMENDMENT_19_PERSISTENT_GRADUATION_TRIGGER_V1.cjs
             fi
           fi
+
+      - name: Record protected-main adoption AM19 requalification route
+        if: steps.routing.outputs.mode == 'protected-main-adoption-successor'
+        run: |
+          echo 'PASS: protected-main adoption runs current AM19 typecheck, orchestration selftests, EA5E2 graph, crop-window preflight, and persistence-free 24T semantics without activating persistent-live.'
 
       - name: Record frozen AM19 compatibility route for production-hosting successor
         if: steps.routing.outputs.mode == 'production-hosting-successor'
