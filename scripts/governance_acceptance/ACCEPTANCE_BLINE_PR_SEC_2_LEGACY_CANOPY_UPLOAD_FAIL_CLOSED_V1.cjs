@@ -51,6 +51,7 @@ const allowed=new Set([
 '.github/workflows/bline-pr-sec2-containment.yml',
 'apps/server/src/routes/registerLegacyRoutes.ts',
 'scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_FAIL_CLOSED_V1.cjs',
+'scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_INTERNAL_AUTO_FALLBACK_FAIL_CLOSED_V1.cjs',
 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_FAIL_CLOSED_V1.ts',
 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_COMMERCIAL_RUNTIME_V1.ts'
 ]);
