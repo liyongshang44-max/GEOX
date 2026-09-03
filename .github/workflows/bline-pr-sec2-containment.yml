@@ -10,6 +10,7 @@ on:
       - 'apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts'
       - 'apps/server/src/modules/admin/registerAdminModule.ts'
       - 'apps/server/src/modules/execution/registerExecutionModule.ts'
+      - 'apps/server/src/routes/registerLegacyRoutes.ts'
       - 'scripts/acceptance/ACCEPTANCE_COMMERCIAL_V1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_*.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_*.ts'
@@ -52,6 +53,10 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_INTERNAL_AUTO_FALLBACK_FAIL_CLOSED_V1.cjs
       - name: BSEC-141 production registration behavioral proof
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_INTERNAL_AUTO_FALLBACK_FAIL_CLOSED_V1.ts
+      - name: BSEC-030 corrected accounting and closure
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_FAIL_CLOSED_V1.cjs
+      - name: BSEC-030 production registration behavioral proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_FAIL_CLOSED_V1.ts
       - name: Frozen PR-SEC-1 caller inventory regression
         run: pnpm run ci:governance:bline-production-caller-authority-inventory
       - name: B-Line residual authority audit
@@ -165,6 +170,22 @@ jobs:
           export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
           export GEOX_TEST_BEARER="$GEOX_AO_ACT_TOKEN"
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_CANONICAL_HUMAN_FALLBACK_RUNTIME_V1.ts
+      - name: BSEC-030 Commercial sentinel and media no-persistence proof
+        run: |
+          set -euo pipefail
+          set -a; source .env.ci; set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          export GEOX_TEST_BEARER="$GEOX_AO_ACT_TOKEN"
+          SERVER_CID="$(docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps -q server)"
+          snapshot_media() {
+            docker exec "$SERVER_CID" sh -ceu 'if [ -d /app/media/canopy ]; then find /app/media/canopy -type f -print | sort; fi'
+          }
+          BEFORE_MEDIA="$(snapshot_media)"
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_COMMERCIAL_RUNTIME_V1.ts
+          sleep 1
+          AFTER_MEDIA="$(snapshot_media)"
+          test "$AFTER_MEDIA" = "$BEFORE_MEDIA"
       - name: Runtime hygiene
         if: always()
         run: |
