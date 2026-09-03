@@ -634,6 +634,7 @@
         "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v4.test.ts",
         "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v4.ts",
         "apps/server/src/runtime/twin_runtime/external_formal_v4_amendment19_runner_v2.ts",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_COMPOSITION_V2_STAGE_AUTHORITY_V1.cjs",
         "scripts/runtime_acceptance/mcft_cap09_amendment19_formal_manifest_from_stage_authority_v2.test.ts",
         "scripts/runtime_acceptance/mcft_cap09_amendment19_formal_manifest_from_stage_authority_v2.ts"
