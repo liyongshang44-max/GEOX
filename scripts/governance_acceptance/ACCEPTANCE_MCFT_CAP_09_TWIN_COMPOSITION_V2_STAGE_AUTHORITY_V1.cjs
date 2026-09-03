@@ -5,7 +5,7 @@ const cp=require("node:child_process");
 
 const EXPECTED_BASE="373e33c54109540a2bdbf1c3a31626b731d5cfc6";
 const BASE=process.env.MCFT_CAP09_TWIN_V2_STAGE_BASE_SHA;
-const expected=[
+const expectedSuccessor=[
   ".github/workflows/mcft-cap-09-twin-composition-v2-stage-authority.yml",
   "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v4.test.ts",
   "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v4.ts",
@@ -19,6 +19,9 @@ const expected=[
   "scripts/runtime_acceptance/mcft_cap09_amendment19_formal_manifest_from_stage_authority_v2.test.ts",
   "scripts/runtime_acceptance/mcft_cap09_amendment19_formal_manifest_from_stage_authority_v2.ts"
 ].sort();
+const qcpPath=
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
+const expectedIntegrated=[...expectedSuccessor,qcpPath].sort();
 
 function fail(code,detail){throw new Error(detail?code+":"+detail:code)}
 function eq(a,b,code){if(a!==b)fail(code,"expected="+JSON.stringify(b)+" actual="+JSON.stringify(a))}
@@ -27,7 +30,30 @@ function git(){return cp.execFileSync("git",Array.from(arguments),{encoding:"utf
 eq(BASE,EXPECTED_BASE,"TWIN_V2_STAGE_EXACT_BASE_REQUIRED");
 eq(git("merge-base",EXPECTED_BASE,"HEAD"),EXPECTED_BASE,"TWIN_V2_STAGE_BASE_NOT_ANCESTOR");
 const changed=git("diff","--name-only",EXPECTED_BASE+"...HEAD").split(/\r?\n/).filter(Boolean).sort();
-eq(JSON.stringify(changed),JSON.stringify(expected),"TWIN_V2_STAGE_EXACT_TWELVE_FILE_BOUNDARY_REQUIRED");
+const matchesSuccessor=
+  JSON.stringify(changed)===JSON.stringify(expectedSuccessor);
+const matchesIntegrated=
+  JSON.stringify(changed)===JSON.stringify(expectedIntegrated);
+if(!matchesSuccessor&&!matchesIntegrated){
+  fail(
+    "TWIN_V2_STAGE_EXACT_SUCCESSOR_OR_INTEGRATED_BOUNDARY_REQUIRED",
+    "expected_successor="+JSON.stringify(expectedSuccessor)
+      +" expected_integrated="+JSON.stringify(expectedIntegrated)
+      +" actual="+JSON.stringify(changed),
+  );
+}
+if(matchesIntegrated){
+  const qcp=JSON.parse(fs.readFileSync(qcpPath,"utf8"));
+  const resolver=qcp.dependency_resolvers?.TWIN_V2_STAGE_AUTHORITY_SUCCESSOR_V1;
+  if(!resolver||resolver.kind!=="EXACT_PATH_SET"){
+    fail("TWIN_V2_STAGE_INTEGRATED_QCP_RESOLVER_REQUIRED");
+  }
+  if(!resolver.paths.includes(
+    "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts"
+  )){
+    fail("TWIN_V2_STAGE_INTEGRATED_QCP_COMPOSITION_PATH_REQUIRED");
+  }
+}
 
 const v4=fs.readFileSync("apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.ts","utf8");
 for(const marker of [
@@ -61,6 +87,9 @@ console.log(JSON.stringify({
   exact_base_sha:EXPECTED_BASE,
   subject_head_sha:git("rev-parse","HEAD"),
   exact_changed_file_count:changed.length,
+  qualification_boundary:matchesIntegrated
+    ?"SUCCESSOR_PLUS_QCP_REGISTRATION"
+    :"SUCCESSOR_ONLY",
   historical_v1_v3_rewritten:false,
   production_process_routing_changed:false,
   runtime_started:false
