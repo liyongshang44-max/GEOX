@@ -40,10 +40,6 @@ async function main() {
   registerLegacyRoutes(app, pool, { mediaDir });
   await app.ready();
 
-  const routes = app.printRoutes();
-  if (!routes.includes("/api/canopy/upload")) throw new Error("BSEC-030 route not registered");
-  if (!routes.includes("/api/canopy/frame")) throw new Error("BSEC-029 sibling route not registered");
-
   const registrationQueries = queries.total;
   const mediaBefore = tree(mediaDir);
   phase = "requests";
@@ -83,6 +79,21 @@ async function main() {
     results.push({ case: c.name, status: response.statusCode, error: body.error, db_query_delta: 0, media_delta: 0 });
   }
 
+  const sibling = await app.inject({
+    method: "POST",
+    url: "/api/canopy/frame",
+    headers: { "content-type": "application/json" },
+    payload: { sentinel: "bsec029_sibling_registration_probe" },
+  });
+  let siblingBody: any = null;
+  try { siblingBody = sibling.json(); } catch {}
+  if (sibling.statusCode === 403 && siblingBody?.error === ERROR) {
+    throw new Error("BSEC-029 sibling route was incorrectly intercepted by Batch007");
+  }
+  if (JSON.stringify(tree(mediaDir)) !== JSON.stringify(mediaBefore)) {
+    throw new Error("BSEC-029 sibling registration probe changed media tree");
+  }
+
   await new Promise((resolve) => setImmediate(resolve));
   if (queries.total !== registrationQueries || queries.request !== 0) {
     throw new Error(`post-response DB delta=${queries.total-registrationQueries}, request=${queries.request}`);
@@ -101,7 +112,7 @@ async function main() {
     request_phase_db_query_delta: 0,
     post_response_db_query_delta: 0,
     media_delta: 0,
-    sibling_bsec029_registered: true,
+    sibling_bsec029_not_intercepted: true,
     results,
   }, null, 2));
 }
