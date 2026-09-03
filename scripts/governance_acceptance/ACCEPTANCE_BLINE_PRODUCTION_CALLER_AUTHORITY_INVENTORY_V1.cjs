@@ -937,6 +937,7 @@ const covDynamicClassMismatch = [];
 // Any other dynamic-route behavior continues to be evaluated against the original frozen disposition.
 const covW2BoundedInventoryPath = path.join(ROOT, "docs/architecture/semantic_convergence/GEOX-BLINE-W2-CALLER-READ-WRITE-BOUNDARY-V1.json");
 let covW2BoundedReadBoundaryActive = false;
+let covW2BoundedHttpPureReadKeys = new Set();
 if (fs.existsSync(covW2BoundedInventoryPath)) {
   try {
     const w2 = JSON.parse(read(covW2BoundedInventoryPath));
@@ -949,13 +950,34 @@ if (fs.existsSync(covW2BoundedInventoryPath)) {
       w2?.authority_base === "03db0c098a66053fd0b921cb8a3c5acdcf67d4d0" &&
       w2?.discovery_policy === "NO_WHOLE_REPOSITORY_DISCOVERY; EXACT_PREDECESSOR_ROWS_ONLY" &&
       w2?.known_get_count === 23 &&
+      Array.isArray(w2?.known_get_read_product_state_mutations) &&
+      w2.known_get_read_product_state_mutations.length === 23 &&
       indexHandler.includes('event: "index_read"') &&
       indexHandler.includes("req.log.info") &&
       !indexHandler.includes("writeAoActAuthzAuditFactV0");
+    if (covW2BoundedReadBoundaryActive) {
+      covW2BoundedHttpPureReadKeys = new Set(
+        w2.known_get_read_product_state_mutations.map((row) => {
+          const entry = String(row?.entry_symbol ?? "");
+          const route = entry.startsWith("GET ") ? entry.slice(4) : "";
+          return String(row?.source_path ?? "") + "::GET::" + route;
+        }).filter((key) => !key.endsWith("::"))
+      );
+      assert(covW2BoundedHttpPureReadKeys.size === 23, "W2 bounded HTTP successor key set drift", [...covW2BoundedHttpPureReadKeys]);
+    }
   } catch {
     covW2BoundedReadBoundaryActive = false;
   }
 }
+function covIsExactW2HttpPureReadSuccessor(route, disposition) {
+  if (!covW2BoundedReadBoundaryActive) return false;
+  const key = String(route?.source_path ?? "") + "::" + String(route?.method ?? "") + "::" + String(route?.route ?? "");
+  if (!covW2BoundedHttpPureReadKeys.has(key)) return false;
+  if (!disposition || disposition.source_path !== route.source_path || disposition.http_method !== route.method || disposition.exact_route !== route.route) return false;
+  return route.dml === false && route.ddl === false && route.fact === false &&
+    Array.isArray(route.writers) && route.writers.length === 0;
+}
+
 function covIsExactW2DynamicPureReadSuccessor(route, disposition) {
   return covW2BoundedReadBoundaryActive &&
     disposition?.disposition_id === "BDYN-002" &&
@@ -1042,10 +1064,11 @@ for (const r of covHttpUnique) {
   if (["POST","PUT","PATCH","DELETE"].includes(r.method) && !surfaceCovered && !nonAuthorityCovered && !disposition) covCallerMissing.push(r);
   if (disposition) {
     const cls = disposition.side_effect_class;
+    const w2PureReadSuccessor = covIsExactW2HttpPureReadSuccessor(r, disposition);
     if (cls === "PURE_READ" && hasWrite) covHttpClassMismatch.push({route:r, disposition});
-    if (cls === "SCHEMA_ENSURE_ONLY" && (!r.ddl || r.dml)) covHttpClassMismatch.push({route:r, disposition});
-    if (cls === "FACT_LEDGER_WRITE" && !r.fact) covHttpClassMismatch.push({route:r, disposition});
-    if ((cls === "PROJECTION_SIDE_EFFECT" || cls === "DOMAIN_STATE_SIDE_EFFECT") && !r.dml) covHttpClassMismatch.push({route:r, disposition});
+    if (cls === "SCHEMA_ENSURE_ONLY" && (!r.ddl || r.dml) && !w2PureReadSuccessor) covHttpClassMismatch.push({route:r, disposition});
+    if (cls === "FACT_LEDGER_WRITE" && !r.fact && !w2PureReadSuccessor) covHttpClassMismatch.push({route:r, disposition});
+    if ((cls === "PROJECTION_SIDE_EFFECT" || cls === "DOMAIN_STATE_SIDE_EFFECT") && !r.dml && !w2PureReadSuccessor) covHttpClassMismatch.push({route:r, disposition});
   }
 }
 assert(covHttpClassMismatch.length === 0, "HTTP side-effect disposition does not match reachable write behavior", covHttpClassMismatch);
