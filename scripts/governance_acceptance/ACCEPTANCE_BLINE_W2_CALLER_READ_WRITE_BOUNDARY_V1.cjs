@@ -98,7 +98,9 @@ const allowed=new Set([
  "scripts/governance_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.cjs",
  "scripts/runtime_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.ts",
  "scripts/runtime_acceptance/ACCEPTANCE_BLINE_W2_COMMERCIAL_READ_ONLY_V1.ts",
- "scripts/governance_acceptance/ACCEPTANCE_BLINE_PRODUCTION_CALLER_AUTHORITY_INVENTORY_V1.cjs"
+ "scripts/governance_acceptance/ACCEPTANCE_BLINE_PRODUCTION_CALLER_AUTHORITY_INVENTORY_V1.cjs",
+ "scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs",
+ "scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_EVIDENCE_EXPORT_WRITE_CAPABILITY_V1.cjs"
 ]);
 const changed=sh(["diff","--name-only",BASE,"HEAD"]).split(/\r?\n/).filter(Boolean);
 for(const p of changed) assert(allowed.has(p),"W2 scope expansion",p);
