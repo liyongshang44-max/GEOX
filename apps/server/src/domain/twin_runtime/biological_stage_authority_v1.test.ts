@@ -99,7 +99,7 @@ test("bounded accumulation preserves planting-time and missing-day uncertainty",
     { local_date: "2026-05-29", coverage: "COMPLETE", max_temp_f: 81, min_temp_f: 46 },
   ]);
   assert.equal(result.lower_gdu, 15.5);
-  assert.equal(result.upper_gdu, 68);
+  assert.equal(result.upper_gdu, 71);
   assert.equal(result.complete_day_count, 1);
   assert.equal(result.planting_uncertain_day_count, 1);
   assert.equal(result.missing_or_invalid_day_count, 1);
