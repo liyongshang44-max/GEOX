@@ -1,0 +1,349 @@
+{
+  "version": "GEOX_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1",
+  "status": "FROZEN_BOUNDED_WORKSTREAM_INVENTORY",
+  "authority_base": "03db0c098a66053fd0b921cb8a3c5acdcf67d4d0",
+  "source_authority": "GEOX-BLINE-PRODUCTION-CALLER-AUTHORITY-INVENTORY-V1.json",
+  "closure_domain": "CD-02",
+  "closure_domain_invariant": "Commercial caller capability is not Twin runtime authority, and no commercial caller may extend or mutate the legacy Twin base-chain.",
+  "discovery_policy": "NO_WHOLE_REPOSITORY_DISCOVERY; EXACT_PREDECESSOR_ROWS_ONLY",
+  "recommendation_generate": {
+    "surface_id": "BSEC-051",
+    "source_path": "apps/server/src/routes/decision_engine_v1.ts",
+    "entry_symbol": "POST /api/v1/recommendations/generate",
+    "exact_route_or_trigger": "/api/v1/recommendations/generate",
+    "predecessor_authz_capability": [
+      "recommendation.read",
+      "ao_act.index.read"
+    ],
+    "predecessor_caller_authority_status": "AUTHENTICATED_BUT_WRITE_UNDER_READ_CAPABILITY",
+    "w2_disposition": "REQUIRE_EXISTING_RECOMMENDATION_WRITE; DO_NOT_CHANGE_RECOMMENDATION_SEMANTICS"
+  },
+  "known_get_read_product_state_mutations": [
+    {
+      "source_path": "apps/server/src/routes/dashboard_v1.ts",
+      "entry_symbol": "GET /api/v1/dashboard/manual-execution-quality",
+      "predecessor_authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "predecessor_authz_capability": [
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "manual_execution_quality_projection_v1",
+        "facts:manual_execution_quality_snapshot_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_WRITE_UNDER_GET_AND_READ_CAPABILITY",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/dashboard_v1.ts",
+      "entry_symbol": "GET /api/v1/dashboard/fields/:field_id/sensing-summary",
+      "predecessor_authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "predecessor_authz_capability": [
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "field_sensing_overview_v1",
+        "field_sensing_summary_stage1_v1",
+        "field_fertility_state_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/dashboard_v1.ts",
+      "entry_symbol": "GET /api/v1/dashboard/internal/fields/:field_id/sensing-overview",
+      "predecessor_authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "predecessor_authz_capability": [
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "field_sensing_overview_v1",
+        "field_sensing_summary_stage1_v1",
+        "field_fertility_state_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/fields_v1.ts",
+      "entry_symbol": "GET /api/v1/fields/:field_id",
+      "predecessor_authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "predecessor_authz_capability": [
+        "fields.read"
+      ],
+      "predecessor_write_targets": [
+        "field_sensing_overview_v1",
+        "field_sensing_summary_stage1_v1",
+        "field_fertility_state_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/fields_v1.ts",
+      "entry_symbol": "GET /api/v1/fields/:field_id/sensing-summary",
+      "predecessor_authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "predecessor_authz_capability": [
+        "fields.read"
+      ],
+      "predecessor_write_targets": [
+        "field_sensing_overview_v1",
+        "field_sensing_summary_stage1_v1",
+        "field_fertility_state_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/fields_v1.ts",
+      "entry_symbol": "GET /api/v1/fields/:field_id/sensing-read-models",
+      "predecessor_authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "predecessor_authz_capability": [
+        "fields.read"
+      ],
+      "predecessor_write_targets": [
+        "field_sensing_overview_v1",
+        "field_sensing_summary_stage1_v1",
+        "field_fertility_state_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/skills_rules_v1.ts",
+      "entry_symbol": "GET /api/v1/skills/rules",
+      "predecessor_authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "predecessor_authz_capability": [
+        "skill.read",
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "skill_registry_read_v1",
+        "security_audit_event_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_PROJECTION_REFRESH",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/control_ao_act.ts",
+      "entry_symbol": "GET /api/v1/actions/index",
+      "predecessor_authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "predecessor_authz_capability": [
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "facts:ao_act_authz_audit_v0"
+      ],
+      "predecessor_disposition": "INVENTORIED_WRITE_UNDER_GET",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "GET /api/v1/ao-act/dispatches",
+      "predecessor_authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "predecessor_authz_capability": [
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "dispatch_queue_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_DOMAIN_STATE_COMPATIBILITY_WRITE",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/domain/controlplane/task_service.ts",
+      "entry_symbol": "GET /api/v1/operations/console",
+      "predecessor_authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "predecessor_authz_capability": [
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "dispatch_queue_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_DOMAIN_STATE_COMPATIBILITY_WRITE",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/dashboard_v1.ts",
+      "entry_symbol": "GET /api/v1/dashboard/manual-execution-quality/tasks",
+      "predecessor_authn_mode": "EXISTING_ROUTE_AUTH_CONTEXT",
+      "predecessor_authz_capability": [
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "manual_execution_quality_projection_v1",
+        "facts:manual_execution_quality_snapshot_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_WRITE_UNDER_GET",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/reports_dashboard_v1.ts",
+      "entry_symbol": "GET /api/v1/reports/customer-dashboard/field-portfolio-summary",
+      "predecessor_authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "predecessor_authz_capability": [
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "weather_forecast_index_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/reports_v1.ts",
+      "entry_symbol": "GET /api/v1/reports/operation/:operation_id",
+      "predecessor_authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "predecessor_authz_capability": [
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "weather_forecast_index_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/reports_v1.ts",
+      "entry_symbol": "GET /api/v1/reports/field/:field_id",
+      "predecessor_authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "predecessor_authz_capability": [
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "weather_forecast_index_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/weather_v1.ts",
+      "entry_symbol": "GET /api/v1/weather/forecast/latest",
+      "predecessor_authn_mode": "NONE",
+      "predecessor_authz_capability": [],
+      "predecessor_write_targets": [
+        "weather_forecast_index_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_UNAUTHENTICATED_GET_PROJECTION_SIDE_EFFECT",
+      "w2_disposition": "BIND_EXISTING_TELEMETRY_READ_AND_REMOVE_COMPATIBILITY_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/skill_runtime_v1.ts",
+      "entry_symbol": "GET /api/v1/skill/status/:skill_run_id",
+      "predecessor_authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "predecessor_authz_capability": [
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "skill_registry_read_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/skill_runtime_v1.ts",
+      "entry_symbol": "GET /api/v1/skill/results/:skill_run_id",
+      "predecessor_authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "predecessor_authz_capability": [
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "skill_registry_read_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/skill_runtime_v1.ts",
+      "entry_symbol": "GET /api/v1/skill/runs/:skill_run_id",
+      "predecessor_authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "predecessor_authz_capability": [
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "skill_registry_read_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/skill_runs_v1.ts",
+      "entry_symbol": "GET /api/v1/skill-runs",
+      "predecessor_authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "predecessor_authz_capability": [
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "skill_registry_read_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/skills_v1.ts",
+      "entry_symbol": "GET /api/v1/skills",
+      "predecessor_authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "predecessor_authz_capability": [
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "skill_registry_read_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/skills_v1.ts",
+      "entry_symbol": "GET /api/v1/skills/:skill_id",
+      "predecessor_authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "predecessor_authz_capability": [
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "skill_registry_read_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/skills_v1.ts",
+      "entry_symbol": "GET /api/v1/skills/runs",
+      "predecessor_authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "predecessor_authz_capability": [
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "skill_registry_read_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    },
+    {
+      "source_path": "apps/server/src/routes/skills_v1.ts",
+      "entry_symbol": "GET /api/v1/skills/bindings",
+      "predecessor_authn_mode": "CENTRAL_BEARER_ALLOWLIST",
+      "predecessor_authz_capability": [
+        "ao_act.index.read"
+      ],
+      "predecessor_write_targets": [
+        "skill_registry_read_v1"
+      ],
+      "predecessor_disposition": "INVENTORIED_GET_PROJECTION_SIDE_EFFECT",
+      "w2_disposition": "REMOVE_READ_PATH_PERSISTENT_MUTATION"
+    }
+  ],
+  "known_get_count": 23,
+  "known_anonymous_sensitive_reads": [
+    "GET /api/v1/weather/forecast/latest"
+  ],
+  "explicit_exclusions": [
+    "Approval semantics",
+    "OperationPlan authority redesign",
+    "Executor/device identity",
+    "legacy Twin/Monitoring retirement",
+    "service/DB/MQTT infrastructure",
+    "Planner/Crop latest-wins",
+    "MCFT",
+    "Action Qualification",
+    "new commercial thesis"
+  ]
+}
