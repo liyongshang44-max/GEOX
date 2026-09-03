@@ -7,7 +7,9 @@ import {
 } from "../../apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.js";
 import {
   buildPhase5TwinQualificationClockBoundaryV1,
+  buildPhase5TwinQualificationRuntimeStartAuthorityV1,
   MCFT_CAP09_PHASE5_ACCELERATED_CLOCK_ACK_V1,
+  MCFT_CAP09_PHASE5_RUNTIME_START_QUALIFICATION_AUTHORITY_REF_V1,
 } from "../../apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_twin_runtime_qualification_v1.js";
 import {
   MCFT_CAP09_AM19_ACCELERATED_SCHEDULER_CLOCK_ACK_V1,
@@ -30,6 +32,38 @@ async function main(): Promise<void> {
     MCFT_CAP09_AM19_ACCELERATED_SCHEDULER_CLOCK_ACK_V1,
   );
   assert.equal(boundary.scheduler_clock_authority.now().toISOString(), through);
+
+  const qualificationStart =
+    buildPhase5TwinQualificationRuntimeStartAuthorityV1({
+      formal_a0: "2026-08-27T19:00:00.000Z",
+      qualification_ack: MCFT_CAP09_PHASE5_ACCELERATED_CLOCK_ACK_V1,
+    });
+  assert.equal(
+    qualificationStart.authority_ref,
+    MCFT_CAP09_PHASE5_RUNTIME_START_QUALIFICATION_AUTHORITY_REF_V1,
+  );
+  assert.equal(
+    qualificationStart.activation_fence_time,
+    "2026-08-27T18:30:00.000Z",
+  );
+  assert.equal(
+    qualificationStart.formal_a0_logical_time,
+    "2026-08-27T19:00:00.000Z",
+  );
+  assert.equal(qualificationStart.runtime_process_start_authorized, true);
+  assert.equal(qualificationStart.twin_runtime_start_authorized, true);
+  assert.equal(qualificationStart.evidence_runtime_start_authorized, false);
+  assert.equal(qualificationStart.production_owner_activation_authorized, false);
+  assert.equal(qualificationStart.formal_v5_arm_authorized, false);
+  assert.equal(qualificationStart.a0_authorized, false);
+  assert.equal(qualificationStart.o00_authorized, false);
+  assert.throws(
+    () => buildPhase5TwinQualificationRuntimeStartAuthorityV1({
+      formal_a0: "2026-08-27T19:00:00.000Z",
+      qualification_ack: "WRONG",
+    }),
+    /PHASE5_TWIN_QUALIFICATION_RUNTIME_START_ACK_REQUIRED/,
+  );
 
   assert.throws(
     () => buildPhase5TwinQualificationClockBoundaryV1({
@@ -65,6 +99,8 @@ async function main(): Promise<void> {
     "runMcftCap09TwinRuntimeProcessV1",
     "ACCELERATED_ENGINEERING_ONLY",
     "MCFT_CAP09_AM19_ACCELERATED_SCHEDULER_CLOCK_ACK_V1",
+    "buildPhase5TwinQualificationRuntimeStartAuthorityV1",
+    "qualification_lease_owner",
   ]) {
     assert.equal(
       qualificationSource.includes(required),
@@ -126,6 +162,9 @@ async function main(): Promise<void> {
     production_database_clock_default_preserved: true,
     production_scheduler_clock_default_preserved: true,
     accelerated_clock_requires_explicit_ack: true,
+    qualification_runtime_start_requires_explicit_ack: true,
+    qualification_runtime_start_authority_is_non_owner_non_formal: true,
+    qualification_lease_owner_requires_explicit_engineering_boundaries: true,
     exact_hour_required: true,
     same_production_twin_process_reused: true,
     second_scheduler_or_runner_path: false,
