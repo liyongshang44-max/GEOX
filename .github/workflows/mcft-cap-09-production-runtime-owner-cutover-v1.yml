@@ -1,0 +1,104 @@
+name: MCFT CAP-09 Production Runtime Owner Cutover
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-production-runtime-owner-cutover-v1.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-FORMAL-A0-PLANNING-AUTHORITY-V1.json'
+      - 'apps/server/src/runtime/mcft_cap09_production_owner_cutover_authority_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_preformal_owner_standby_v1.ts'
+      - 'apps/server/src/runtime/mcft_cap09_evidence_preformal_owner_runtime_v1.ts'
+      - 'apps/server/src/runtime/mcft_cap09_twin_preformal_owner_runtime_v1.ts'
+      - 'apps/server/scripts/write_dist_entries.cjs'
+      - 'docker-compose.mcft-cap09-production-preformal.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json'
+      - '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-production-runtime-owner-cutover-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Qualify dual-key pre-Formal cutover contract
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs
+
+      - name: Preserve runtime-start authority builder contract
+        run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_BUILDER_V1.cjs
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Build
+        run: pnpm -r build
+
+      - name: Prove compiled pre-Formal entrypoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f apps/server/dist/runtime/mcft_cap09_evidence_preformal_owner_runtime.js
+          test -f apps/server/dist/runtime/mcft_cap09_twin_preformal_owner_runtime.js
+          grep -Fq 'runMcftCap09EvidencePreFormalOwnerRuntimeV1' apps/server/dist/runtime/mcft_cap09_evidence_preformal_owner_runtime.js
+          grep -Fq 'runMcftCap09TwinPreFormalOwnerRuntimeV1' apps/server/dist/runtime/mcft_cap09_twin_preformal_owner_runtime.js
+
+      - name: Render pre-Formal production compose without execution
+        env:
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${{ github.event.pull_request.head.sha }}
+          GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL: postgres://evidence:secret@localhost:5432/geox
+          GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL: postgres://twin:secret@localhost:5432/geox
+          GEOX_MCFT_CAP09_TENANT_ID: tenant_mcft_external
+          GEOX_MCFT_CAP09_PROJECT_ID: project_mcft_cap09
+          GEOX_MCFT_CAP09_GROUP_ID: group_public_research
+          GEOX_MCFT_CAP09_FIELD_ID: field_kbs_mcse_t4r1
+          GEOX_MCFT_CAP09_SEASON_ID: season_2026_corn
+          GEOX_MCFT_CAP09_ZONE_ID: zone_kbs_mcse_t4r1_crop_formal_v1
+          GEOX_MCFT_CAP09_EVIDENCE_S3_ENDPOINT: https://example.invalid
+          GEOX_MCFT_CAP09_EVIDENCE_S3_BUCKET: test
+          GEOX_MCFT_CAP09_EVIDENCE_S3_REGION: us-east-1
+          GEOX_MCFT_CAP09_EVIDENCE_S3_ACCESS_KEY_ID: test
+          GEOX_MCFT_CAP09_EVIDENCE_S3_SECRET_ACCESS_KEY: test
+          GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH: /tmp/runtime-start.json
+          GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH: /tmp/owner-cutover.json
+          GEOX_MCFT_CAP09_PRODUCTION_CURRENT_CROP_AUTHORITY_PATH: /tmp/current-crop.json
+          GEOX_MCFT_CAP09_PRODUCTION_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_PATH: /tmp/stage-effectiveness.json
+          GEOX_MCFT_CAP09_DURABLE_LOG_ROOT: /tmp/mcft-cap09-logs
+        run: docker compose -f docker-compose.mcft-cap09-production-preformal.yml config >/tmp/preformal-compose.yml
+
+      - name: Prove GitHub cannot execute production cutover
+        shell: bash
+        run: |
+          set -euo pipefail
+          if GITHUB_ACTIONS=true node scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs >/tmp/cutover.out 2>/tmp/cutover.err; then
+            echo "cutover unexpectedly executed in GitHub Actions" >&2
+            exit 1
+          fi
+          grep -Fq 'CUTOVER_GITHUB_ACTIONS_FORBIDDEN' /tmp/cutover.err
