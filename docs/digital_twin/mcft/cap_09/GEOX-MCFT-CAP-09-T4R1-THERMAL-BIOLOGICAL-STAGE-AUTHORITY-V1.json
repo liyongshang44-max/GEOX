@@ -174,7 +174,9 @@
     "formal_v5_authorized": false,
     "a0_authorized": false,
     "o00_o23_authorized": false,
-    "mcft_cap09_completed": false
+    "mcft_cap09_completed": false,
+    "production_crop_model_parameter_authority_effective": false,
+    "runtime_config_kc_rebound": false
   },
   "r5_residual_to_maturity_model": {
     "model_id": "CORN_R5_RESIDUAL_TO_MATURITY_CONSERVATIVE_ENVELOPE_V1",
@@ -267,5 +269,22 @@
       "R5_ESTIMATE_IS_THERMAL_MODEL_DERIVED",
       "LIFECYCLE_MUST_BE_SEPARATELY_ADJUDICATED"
     ]
+  },
+  "crop_model_parameter_binding": {
+    "required_parameter": "Kc",
+    "configuration_matrix_path": "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
+    "configuration_matrix_blob_sha": "c04c6805ab79c715781b99f8fbcf997fae3a8c48",
+    "configuration_source_id": "mcft_crop_water_use_corn_v1",
+    "configuration_semantic_hash": "sha256:56ac92e34148bd81fe20f2925e1079cb1a3ed647ffefd1471caf1302df70ee4c",
+    "resolution_rule": "ONE_UNIQUE_WATER_USE_STAGE_THEN_EXACT_STAGE_CODE_LOOKUP_IN_FROZEN_KC_SCHEDULE",
+    "expected_current_candidate_if_late": {
+      "stage_code": "LATE",
+      "kc": 0.6
+    },
+    "stage_specific_lookup_only": true,
+    "interpolation_authorized": false,
+    "lifecycle_to_kc_inference_authorized": false,
+    "biological_stage_direct_to_kc_without_water_use_mapping_authorized": false,
+    "production_effective_before_architecture_and_runtime_binding": false
   }
 }
