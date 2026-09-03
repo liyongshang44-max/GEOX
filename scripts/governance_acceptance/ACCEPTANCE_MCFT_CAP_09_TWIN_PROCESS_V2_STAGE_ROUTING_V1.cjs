@@ -5,7 +5,7 @@ const cp=require("node:child_process");
 
 const EXPECTED_BASE="f605f7e22ad7a4b7605be885ef1328f2b8283b55";
 const BASE=process.env.MCFT_CAP09_TWIN_PROCESS_V2_BASE_SHA;
-const expected=[
+const expectedRouting=[
   ".github/workflows/mcft-cap-09-twin-process-v2-stage-routing.yml",
   "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts",
   "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_stage_authority_preflight_v1.test.ts",
@@ -13,6 +13,9 @@ const expected=[
   "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_PROCESS_V2_STAGE_ROUTING_V1.cjs",
   "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts"
 ].sort();
+const qcpPath=
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
+const expectedIntegrated=[...expectedRouting,qcpPath].sort();
 function fail(code,detail){throw new Error(detail?code+":"+detail:code)}
 function eq(a,b,code){if(a!==b)fail(code,"expected="+JSON.stringify(b)+" actual="+JSON.stringify(a))}
 function git(){return cp.execFileSync("git",Array.from(arguments),{encoding:"utf8"}).trim()}
@@ -20,7 +23,35 @@ function git(){return cp.execFileSync("git",Array.from(arguments),{encoding:"utf
 eq(BASE,EXPECTED_BASE,"TWIN_PROCESS_V2_EXACT_BASE_REQUIRED");
 eq(git("merge-base",EXPECTED_BASE,"HEAD"),EXPECTED_BASE,"TWIN_PROCESS_V2_BASE_NOT_ANCESTOR");
 const changed=git("diff","--name-only",EXPECTED_BASE+"...HEAD").split(/\r?\n/).filter(Boolean).sort();
-eq(JSON.stringify(changed),JSON.stringify(expected),"TWIN_PROCESS_V2_EXACT_SIX_FILE_BOUNDARY_REQUIRED");
+const matchesRouting=
+  JSON.stringify(changed)===JSON.stringify(expectedRouting);
+const matchesIntegrated=
+  JSON.stringify(changed)===JSON.stringify(expectedIntegrated);
+if(!matchesRouting&&!matchesIntegrated){
+  fail(
+    "TWIN_PROCESS_V2_EXACT_ROUTING_OR_INTEGRATED_BOUNDARY_REQUIRED",
+    "expected_routing="+JSON.stringify(expectedRouting)
+      +" expected_integrated="+JSON.stringify(expectedIntegrated)
+      +" actual="+JSON.stringify(changed),
+  );
+}
+if(matchesIntegrated){
+  const qcp=JSON.parse(fs.readFileSync(qcpPath,"utf8"));
+  const resolver=qcp.dependency_resolvers?.TWIN_PROCESS_V2_STAGE_ROUTING_V1;
+  if(!resolver||resolver.kind!=="EXACT_PATH_SET"){
+    fail("TWIN_PROCESS_V2_INTEGRATED_QCP_RESOLVER_REQUIRED");
+  }
+  for(const requiredPath of [
+    ".github/workflows/mcft-cap-09-twin-process-v2-stage-routing.yml",
+    "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_stage_authority_preflight_v1.test.ts",
+    "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_stage_authority_preflight_v1.ts",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_PROCESS_V2_STAGE_ROUTING_V1.cjs",
+  ]){
+    if(!resolver.paths.includes(requiredPath)){
+      fail("TWIN_PROCESS_V2_INTEGRATED_QCP_PATH_REQUIRED",requiredPath);
+    }
+  }
+}
 
 const processText=fs.readFileSync("apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts","utf8");
 for(const marker of [
@@ -49,6 +80,9 @@ console.log(JSON.stringify({
   exact_base_sha:EXPECTED_BASE,
   subject_head_sha:git("rev-parse","HEAD"),
   exact_changed_file_count:changed.length,
+  qualification_boundary:matchesIntegrated
+    ?"ROUTING_PLUS_QCP_REGISTRATION"
+    :"ROUTING_ONLY",
   qualification_composition_v1_preserved:true,
   production_composition_v2_bound:true,
   production_preflight_before_database_open:true,
