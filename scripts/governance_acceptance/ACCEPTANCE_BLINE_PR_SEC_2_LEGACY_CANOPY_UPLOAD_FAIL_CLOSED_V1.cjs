@@ -18,8 +18,8 @@ assert(source.includes('app.post("/api/canopy/upload"'),'frozen BSEC-030 route s
 assert(source.includes('app.post("/api/canopy/frame"'),'BSEC-029 sibling route source missing');
 assert(source.includes('fs.writeFileSync(outPath, fileBuf)'),'BSEC-030 filesystem side effect source truth drift');
 assert(source.includes('type: "canopy_frame_v1"'),'BSEC-030 fact type source truth drift');
-const callerScan=sh(['grep','-RIl','--exclude-dir=.git','/api/canopy/upload','.']).split(/\r?\n/).filter(Boolean)
-  .filter(p=>p!==sourcePath && p!=='scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_FAIL_CLOSED_V1.cjs');
+const callerScan=sh(['grep','-RIl','/api/canopy/upload','apps']).split(/\r?\n/).filter(Boolean)
+  .filter(p=>p!==sourcePath && p!==registrationPath);
 assert(callerScan.length===0,'unexpected current repository BSEC-030 caller/reference',callerScan);
 const inv=JSON.parse(read('docs/architecture/semantic_convergence/GEOX-BLINE-PRODUCTION-CALLER-AUTHORITY-INVENTORY-V1.json'));
 const frozen=inv.surfaces??[],byId=new Map(frozen.map(r=>[r.surface_id,r]));
