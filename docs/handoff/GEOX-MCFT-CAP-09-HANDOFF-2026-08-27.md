@@ -1,22 +1,1476 @@
-# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-03 Continuation — Non-Live Engineering Closure / Live Activation Frontier
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-03 Continuation — Engineering Reopen Closure / Exact-Bound Runtime-Start / Live Docker Activation Frontier
 
 Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
 
-Timestamp: **2026-09-03 00:48 +08:00**
+Timestamp: **2026-09-03 10:23 +08:00**
 
 Repository: liyongshang44-max/GEOX
 
-Purpose: continue MCFT-CAP-09 after the V13 Producer runtime/qualification-harness migration is complete and current exact-head inventory shows no remaining controllable non-live engineering blocker. The engineering-readiness claim is now machine-qualified, Producer stale-arm debt is settled, and all checks applicable to the current POST_MERGE_V13_QUALIFICATION engineering stage have implementations. The only QCP blocker is live production-owner evidence; the only check still marked NOT_IMPLEMENTED_AT_FROZEN_SUBJECT is FORMAL_V5_ACTIVATION, which is not applicable until POST_GRADUATION_FORMAL_V5_ACTIVATION. KBS/current-season authority, live owner, Formal-v5, A0, and O00–O23 therefore remain on the live activation / Taskbook-completion line and must not be relabeled as unfinished software engineering.
+Purpose: continue MCFT-CAP-09 after the Q-section engineering-closure claim was independently reopened, multiple real controllable production-runtime / owner-graduation defects were found and repaired, current-head Phase4/Phase5/CI/Planner/QCP qualification was re-established, the local Docker production graph and read-only live-owner adjudication were implemented, and a subsequent 25-commit descendant chain exact-bound the future runtime-start authority to deployment subject, authority provenance, scope, and anti-replay semantics. The controllable non-live engineering blocker count is again zero at the current exact head, but local production Docker activation has **not** occurred: the runtime-start arm is still unarmed, no production runtime process has been started, and the only current QCP blocker remains the absence of real live fenced Evidence/Twin owners. KBS/current-season material-change authority, viable Formal/A0 timing, local Docker activation, Formal-v5, A0, and O00–O23 therefore remain on the live activation / Taskbook-completion line.
 
-> **This Q-section is now the highest-priority conversation continuation in this file.**
+> **This R-section is now the highest-priority conversation continuation in this file.**
 >
-> The complete P-section immediately below remains intentionally preserved in full as the historical V13 Runtime / Qualification-Harness Resolver Settlement frontier.
+> The complete Q-section immediately below remains intentionally preserved in full as historical evidence of the earlier Non-Live Engineering Closure / Live Activation frontier.
 >
-> P established the resolver migration and stale-arm settlement. Q records the higher-order consequence after a fresh full QCP inventory audit: the controllable non-live MCFT-9 engineering line has no remaining blocker.
+> Q's higher-order classification model remains useful, but one Q source-truth statement was later disproved by repository audit: owner-graduation implementation was not yet complete at the Q head. R records the engineering reopen, the actual fixes, the requalification closure, and the current exact-bound runtime-start/live-Docker frontier.
 >
-> O, N, M, L, K, J, I, H, and all earlier sections remain historical evidence and must remain intact.
+> P/O/N/M/L/K/J/I/H and all earlier sections remain historical evidence and must remain intact.
 >
 > This handoff does **not** supersede docs/SSOT.md, the Digital Twin Master Task Line, the CAP-09 taskbook, Production Hosting architecture/route, QCP, immutable qualification evidence, accepted CAP-01→08 authorities, T4R1 crop/season authorities, or frozen Formal-store authorities.
+
+---
+
+## R0. READ THIS FIRST — engineering was legitimately reopened and is now closed again at a newer exact head
+
+Authoritative product PR:
+
+~~~text
+#3376
+
+title =
+  feat(mcft-cap09): qualify engineering readiness and settle producer harness migration
+
+base =
+  46367333d228a2b90a86ff6a33aebc334f3d73a2
+
+current exact head =
+  35b06a92165acc5a6598ccfefc76e4467d93da04
+
+state =
+  Draft / open / unmerged
+
+mergeable =
+  true
+~~~
+
+Protected main remains:
+
+~~~text
+fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+
+protected =
+  true
+~~~
+
+Current authoritative split:
+
+~~~text
+MCFT-9 controllable non-live engineering blockers =
+  0
+
+engineering readiness =
+  QUALIFIED AGAIN AFTER REOPEN / REPAIR / REQUALIFICATION
+
+allowed engineering claim =
+  MCFT_CAP_09_PRODUCTION_EQUIVALENT_ENGINEERING_READINESS_QUALIFIED
+
+Docker production implementation =
+  IMPLEMENTED / QUALIFIED
+
+local production Docker activation =
+  NOT STARTED
+
+runtime-start arm =
+  UNARMED
+
+live activation =
+  NOT_CURRENTLY_ELIGIBLE
+
+QCP current blocker_count =
+  1
+
+only QCP blocker =
+  EXACT_ONE_PRODUCTION_OWNER
+
+Stage 1B completion =
+  NOT CLAIMED
+~~~
+
+The current continuation point is no longer the Q head:
+
+~~~text
+bbe66db3406ec903ea2256506d2cf9ea5ff727ae
+~~~
+
+and no longer the intermediate repaired head:
+
+~~~text
+10523e49c96f9bf2ccc09625611a65facf281ae1
+~~~
+
+The current product source truth is:
+
+~~~text
+35b06a92165acc5a6598ccfefc76e4467d93da04
+~~~
+
+---
+
+## R1. Current task in one sentence
+
+**Preserve the newly requalified A=0 engineering state at the exact current head, keep the exact-bound runtime-start arm unarmed until real material-provider / Formal-window prerequisites exist, do not start local production Docker prematurely, and resume the Taskbook live sequence only when current T4R1 authority legitimately reopens activation.**
+
+---
+
+## R2. Why R exists above Q
+
+Q concluded:
+
+~~~text
+owner gate implementation exists
+missing item = live owner proof
+~~~
+
+That conclusion was too broad.
+
+Independent audit after Q found that the Q head still contained controllable implementation gaps:
+
+1. Twin production runtime did not enforce the same runtime-start authority fence as Evidence Runtime.
+2. Twin scheduler lease only appeared while claiming a due slot, so the frozen owner-before-Formal/A0/O00 sequence could not be proven.
+3. the frozen local production two-service Docker launcher did not exist;
+4. owner-graduation ended in a hardcoded:
+   ~~~text
+   PRODUCTION_OWNER_CUTOVER_IMPLEMENTATION_NOT_PRESENT_AT_THIS_HEAD
+   ~~~
+5. owner preflight still projected:
+   ~~~text
+   non_github_hosting_binding_established = false
+   ~~~
+   after exact-two local Docker service identities had already been bound;
+6. Planner/Phase5 settlement treated Twin ownership/fencing changes as immutable temporal semantic drift;
+7. Phase5 qualification did not yet have a controlled seam for the newly enforced production runtime-start gate;
+8. production lifecycle treated legitimate:
+   ~~~text
+   SCHEDULER_LEASE_STANDBY
+   ~~~
+   as an invalid/fatal wait reason.
+
+Therefore Q's classification rule was correct in principle, but the Q inventory was incomplete.
+
+These were category A defects and legitimately reopened engineering.
+
+They are now repaired and machine-requalified.
+
+---
+
+## R3. Exact engineering-reopen repair chain before the current 35b06a descendant
+
+The first closure sequence reached:
+
+~~~text
+10523e49c96f9bf2ccc09625611a65facf281ae1
+~~~
+
+Key repairs in that sequence:
+
+### R3.1 Shared production runtime-start authority fence
+
+A shared governed parser now protects both:
+
+~~~text
+Evidence Runtime
+Twin Runtime
+~~~
+
+Production Twin cannot enter its long-running process before runtime-start authority validation.
+
+The default repository authority remains unarmed.
+
+### R3.2 Pre-O00 Twin scheduler owner presence
+
+The existing table remains authoritative:
+
+~~~text
+twin_runtime_lease_v1
+~~~
+
+No parallel owner table was created.
+
+Twin host now:
+
+~~~text
+acquire / renew scheduler ownership
+        ↓
+only owner may call canonical due-slot runner
+        ↓
+losing duplicate enters SCHEDULER_LEASE_STANDBY
+        ↓
+standby does not execute canonical runner
+~~~
+
+The lease remains database-clock / fencing governed.
+
+### R3.3 Production two-service Docker launcher
+
+Implemented:
+
+~~~text
+docker-compose.mcft-cap09-production.yml
+~~~
+
+Frozen topology:
+
+~~~text
+project =
+  geox-mcft-cap09-production-v1
+
+Evidence service =
+  geox-mcft-cap09-evidence-runtime-v1
+
+Twin service =
+  geox-mcft-cap09-twin-runtime-v1
+
+restart =
+  unless-stopped
+~~~
+
+The production launcher uses compiled production entrypoints.
+
+It is not the Phase5 qualification compose.
+
+### R3.4 Stable service attribution without collapsing duplicate instances
+
+Production lease owner identity is bound as:
+
+~~~text
+<exact frozen service_id>#instance:<runtime instance id>
+~~~
+
+This preserves:
+
+~~~text
+stable service authority attribution
++
+distinct fencing principals for overlapping/restarted instances
+~~~
+
+Do not simplify lease_owner back to service_id alone.
+
+### R3.5 Real read-only owner graduation adjudication
+
+Added:
+
+~~~text
+scripts/runtime_acceptance/
+VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs
+~~~
+
+It performs read-only verification of:
+
+~~~text
+Evidence:
+  external_evidence_producer_lease_v1
+
+Twin:
+  twin_runtime_lease_v1
+~~~
+
+and checks:
+
+~~~text
+correct runtime DB login
+active lease expiry
+heartbeat chronology
+positive fencing token
+exact-one distinct live owner
+owner attribution to frozen local service identity
+cross-plane owner independence
+~~~
+
+It does not:
+
+~~~text
+start runtime
+activate owner
+mutate DB
+request provider
+arm Formal
+bootstrap A0
+start O00
+~~~
+
+### R3.6 Owner gate stub removed
+
+The previous terminal stub:
+
+~~~text
+PRODUCTION_OWNER_CUTOVER_IMPLEMENTATION_NOT_PRESENT_AT_THIS_HEAD
+~~~
+
+was removed.
+
+The gate now fails for real live evidence absence.
+
+### R3.7 Planner / temporal-core authority split
+
+The immutable temporal core is now:
+
+~~~text
+12 paths
+~~~
+
+Twin ownership/fencing layer is separately requalifiable:
+
+~~~text
+3 paths
+
+postgres_persistent_sequential_scheduler_adapter_v1.ts
+mcft_cap09_twin_runtime_host_v1.ts
+mcft_cap09_twin_runtime_composition_v1.ts
+~~~
+
+Ownership/fencing changes require current-head focused Phase4/Phase5 proof.
+
+They must not be misclassified as Evidence temporal semantic drift.
+
+### R3.8 Phase5 qualification-only runtime-start seam
+
+The production runtime-start fence was not weakened.
+
+Qualification-only owner/runtime-start override is accepted only under explicit engineering boundaries:
+
+~~~text
+explicit runtime-start authority
+explicit DB clock
+scheduler clock mode =
+  ACCELERATED_ENGINEERING_ONLY
+explicit qualification acknowledgement
+~~~
+
+The qualification authority does not authorize:
+
+~~~text
+production owner activation
+Formal-v5
+A0
+O00
+~~~
+
+### R3.9 SCHEDULER_LEASE_STANDBY lifecycle correction
+
+A duplicate Twin instance correctly reached:
+
+~~~text
+SCHEDULER_LEASE_STANDBY
+~~~
+
+but the common production wait policy initially rejected that reason.
+
+Fixed behavior:
+
+~~~text
+SCHEDULER_LEASE_STANDBY =
+  normal idle / backpressure wait
+  not fatal
+~~~
+
+This focused bug was the last runtime issue found before the 10523 exact-head 24T success.
+
+---
+
+## R4. 10523 exact-head machine closure — the reopen was genuinely repaired
+
+At:
+
+~~~text
+#3376 @
+10523e49c96f9bf2ccc09625611a65facf281ae1
+~~~
+
+confirmed:
+
+~~~text
+CI
+  33702272609
+  SUCCESS
+  build-test = SUCCESS
+  acceptance = SUCCESS
+
+Phase4 Twin runtime persistence
+  33702272905
+  SUCCESS
+
+Phase5 production-equivalent containers
+  33702273090
+  SUCCESS
+
+Phase5 two-service accelerated 24T
+  33702272938
+  SUCCESS
+
+Planner-readiness
+  33702273009
+  SUCCESS
+
+Post-merge V13 control plane
+  33702273018
+  SUCCESS
+~~~
+
+The focused real-container 24T lane proved the repaired Twin duplicate/fencing/standby path instead of relying on static source assertions.
+
+---
+
+## R5. Current head advanced again — 25 descendants exact-bound future runtime-start authority
+
+While the conversation was being handed off, #3376 advanced from:
+
+~~~text
+10523e49c96f9bf2ccc09625611a65facf281ae1
+~~~
+
+to:
+
+~~~text
+35b06a92165acc5a6598ccfefc76e4467d93da04
+~~~
+
+through 25 fast-forward descendants.
+
+This was not unrelated drift.
+
+The chain closes a new engineering question:
+
+~~~text
+When live activation eventually becomes eligible,
+how is runtime-start authority generated without:
+  stale replay
+  wrong deployment SHA
+  wrong scope
+  wrong authority provenance
+  hand-authored unsafe JSON
+?
+~~~
+
+The descendant chain added and qualified:
+
+~~~text
+MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json
+
+BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs
+
+ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_BUILDER_V1.cjs
+~~~
+
+and exact-wired them through:
+
+~~~text
+Evidence production entrypoint
+Twin production entrypoint
+Phase5 qualification fixture
+production Docker deployment subject
+QCP
+owner graduation preflight/gate
+Phase5 trigger closure
+~~~
+
+Notable descendant commits include:
+
+~~~text
+4b751a3f
+  define exact-bound runtime-start arm
+
+daea05dd
+  build exact-bound runtime-start authority
+
+388df0e9
+  bind runtime-start authority to exact head and scope
+
+d14530a9
+  exact-bind Evidence runtime-start authority
+
+6014a285
+  exact-bind Twin runtime-start authority
+
+2bc72921
+  reject stale runtime-start authority replay
+
+cfae8d29
+  prove governed runtime-start authority builder
+
+b97169ca
+  register runtime-start authority closure in QCP
+
+b0e008fd
+  require exact-bound runtime-start builder before owner graduation
+
+35b06a92
+  exact-bind acquisition-horizon runtime-start fixture
+~~~
+
+---
+
+## R6. Current runtime-start arm remains deliberately unarmed
+
+At current exact head:
+
+~~~text
+scripts/runtime_acceptance/
+MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json
+~~~
+
+still says:
+
+~~~text
+armed =
+  false
+
+activation_step =
+  MATERIAL_PROVIDER_CHANGE_REQUALIFIED_AND_VIABLE_FORMAL_A0_WINDOW_ESTABLISHED
+
+exact_deployment_subject_sha =
+  null
+
+live_activation_authority_ref =
+  null
+
+formal_a0_authority_ref =
+  null
+
+scope =
+  all null
+
+runtime_process_start_authorized =
+  false
+
+evidence_runtime_start_authorized =
+  false
+
+twin_runtime_start_authorized =
+  false
+
+production_owner_activation_authorized =
+  false
+
+formal_v5_arm_authorized =
+  false
+
+a0_authorized =
+  false
+
+o00_authorized =
+  false
+
+execution_requested =
+  false
+
+current_status =
+  UNARMED_LIVE_ACTIVATION_NOT_ELIGIBLE
+~~~
+
+This is correct.
+
+Do not arm it manually while material-provider / Formal-window prerequisites remain false.
+
+---
+
+## R7. What the exact-bound runtime-start builder proves
+
+The builder refuses to emit an authority unless all of the following are exact:
+
+~~~text
+arm schema valid
+armed = true
+execution_requested = true
+exact_deployment_subject_sha = git HEAD
+
+live activation authority ref exists
+live activation authority sha256 exact
+
+Formal/A0 authority ref exists
+Formal/A0 authority sha256 exact
+
+tenant/project/group/field/season/zone all bound
+
+activation_fence_time canonical ISO
+formal_a0_logical_time canonical exact hour
+activation fence < A0
+
+runtime process start = true
+Evidence runtime start = true
+Twin runtime start = true
+
+production owner activation = false
+Formal-v5 arm = false
+A0 = false
+O00 = false
+~~~
+
+This closes stale replay and wrong-subject/wrong-scope activation risk.
+
+The builder is not permission to arm the current repository arm.
+
+---
+
+## R8. Current exact-head machine status at 35b06a
+
+At:
+
+~~~text
+#3376 @
+35b06a92165acc5a6598ccfefc76e4467d93da04
+~~~
+
+confirmed:
+
+~~~text
+CI
+  33705109612
+  SUCCESS
+  build-test = SUCCESS
+  acceptance = SUCCESS
+
+planner-readiness
+  33705109547
+  SUCCESS
+
+Phase4 Twin runtime persistence
+  33705109984
+  SUCCESS
+
+Phase5 production-equivalent containers
+  33705109477
+  SUCCESS
+
+Phase5 two-service accelerated 24T
+  33705109953
+  SUCCESS
+
+Producer
+  33705109973
+  SUCCESS
+
+post-merge V13 control plane
+  33705109996
+  SUCCESS
+
+production non-GitHub host binding readiness
+  33705109808
+  SUCCESS
+
+production owner provisioning readiness
+  33705109956
+  SUCCESS
+
+production service-login readiness
+  33705109933
+  SUCCESS
+
+production runtime credential readiness
+  33705109682
+  SUCCESS
+~~~
+
+The current exact head therefore preserves the repaired production/runtime/owner engineering layer after the 25-commit exact-bound runtime-start descendant chain.
+
+---
+
+## R9. Current QCP remains clean except real live owner evidence
+
+Current QCP:
+
+~~~text
+run =
+  33705109970
+
+conclusion =
+  FAILURE
+  deliberate fail-closed
+~~~
+
+Machine inventory:
+
+~~~text
+planner_status =
+  PASS
+
+authority_errors =
+  0
+
+unknown_changed_paths =
+  0
+
+blocker_count =
+  1
+
+only failing current check =
+  EXACT_ONE_PRODUCTION_OWNER
+~~~
+
+The QCP log also shows:
+
+~~~text
+unknown_changed_paths = []
+authority_errors = []
+resolver_errors = []
+~~~
+
+No current category-A QCP error is known.
+
+---
+
+## R10. Current owner gate fails for real live lease absence — not missing software
+
+Current owner gate:
+
+~~~text
+run =
+  33705109831
+
+conclusion =
+  FAILURE
+  expected fail-closed
+~~~
+
+Preflight proves:
+
+~~~text
+status =
+  PASS
+
+runtime_start_arm_unarmed =
+  true
+
+runtime_start_exact_subject_and_provenance_builder_present =
+  true
+
+separate_runtime_start_authority_bound_at_entrypoints =
+  true
+
+exact_one_production_owner_proven =
+  false
+
+provider_request_count =
+  0
+~~~
+
+Read-only live owner adjudication fails on:
+
+~~~text
+EVIDENCE_RUNTIME_LIVE_LEASE_NOT_ESTABLISHED
+EVIDENCE_RUNTIME_EXACT_ONE_EFFECTIVE_OWNER_NOT_PROVEN
+
+TWIN_RUNTIME_LIVE_LEASE_NOT_ESTABLISHED
+TWIN_RUNTIME_EXACT_ONE_EFFECTIVE_OWNER_NOT_PROVEN
+~~~
+
+This means:
+
+~~~text
+owner implementation =
+  PRESENT / QUALIFIED
+
+local production runtime =
+  NOT RUNNING
+
+live fenced owner evidence =
+  ABSENT
+~~~
+
+Do not relabel this as missing owner software.
+
+---
+
+## R11. Docker distinction — implementation is complete; local production activation has not happened
+
+This distinction must be preserved.
+
+Completed without user-local runtime activation:
+
+~~~text
+production Docker compose exists
+exact-two production service topology frozen
+production entrypoints built
+runtime-start authority gate wired
+service identity / instance fencing wired
+restart behavior wired
+durable log mounts wired
+separate credential surfaces wired
+read-only owner verifier wired
+Phase5 Docker qualification PASS
+focused real-container qualification PASS
+~~~
+
+Not performed:
+
+~~~text
+user local:
+  docker compose up -d
+
+production Evidence process start
+production Twin process start
+live provider execution
+live production owner activation
+Formal-v5
+A0
+O00
+~~~
+
+Why no user-local participation was needed for the completed engineering work:
+
+~~~text
+GitHub runner / CI Docker =
+  production-equivalent engineering qualification environment
+
+user local Docker host =
+  future production execution host
+  not yet authorized to start
+~~~
+
+If the local production services had actually started, live active lease rows should exist.
+
+They do not.
+
+The owner gate proves that they do not.
+
+---
+
+## R12. When user-local Docker participation becomes necessary
+
+User-local participation is required only after this sequence succeeds:
+
+~~~text
+material provider change
+        ↓
+fresh T4R1 stage / natural-season authority adjudication
+        ↓
+viable future Formal/A0 window
+        ↓
+runtime-start arm exact-bound to:
+  deployment SHA
+  authority digests
+  exact field/season/zone scope
+  activation fence
+  exact A0
+        ↓
+runtime-start authority builder PASS
+        ↓
+prepare local authority/config mounts
+        ↓
+docker compose config
+        ↓
+docker compose up -d
+        ↓
+docker compose ps / logs
+        ↓
+live fenced Evidence/Twin lease readback
+~~~
+
+Do not ask the user to start local Docker before the runtime-start arm is legitimately armed.
+
+---
+
+## R13. Producer stale-arm settlement remains valid at the current head
+
+Current Producer:
+
+~~~text
+run =
+  33705109973
+
+conclusion =
+  SUCCESS
+
+reason_code =
+  DURABLE_REQUALIFICATION_EVIDENCE_AND_DEPENDENCY_DIGEST_VALID
+
+live_required =
+  false
+~~~
+
+No live provider rerun was required.
+
+Do not reopen Producer merely because owner/runtime-start governance evolved.
+
+---
+
+## R14. Runtime/harness migration remains exact after all new descendants
+
+Current QCP migration proof at 35b06a:
+
+~~~text
+legacy_path_count =
+  124
+
+runtime_path_count =
+  108
+
+legacy_harness_path_count =
+  16
+
+current_harness_path_count =
+  20
+
+post_migration_harness_addition_count =
+  4
+
+exact_partition_proven =
+  true
+
+runtime_harness_overlap_count =
+  0
+~~~
+
+Runtime digest remains:
+
+~~~text
+BF1D =
+  sha256:8374cf46dd3e40768de512b7c89319b8913c5de61affeb6a8378e7a81cdc7d25
+
+current =
+  sha256:8374cf46dd3e40768de512b7c89319b8913c5de61affeb6a8378e7a81cdc7d25
+~~~
+
+Projected runtime aggregate digest also remains stable:
+
+~~~text
+sha256:b312d05f816ab2494f503749d2a2b9d62be91b3ba235e24bce268440b6070235
+~~~
+
+The new runtime-start governance work did not mutate the frozen V13 runtime semantic closure.
+
+---
+
+## R15. KBS / current-season live trigger remains absent
+
+Latest public AgLog audit in this conversation still shows no material trigger.
+
+Preserved T4 anchor:
+
+~~~text
+T4 planting =
+  2026-05-27
+~~~
+
+After that anchor, observed T4 entries remain mechanical weed-control events.
+
+No new exact public evidence was found for:
+
+~~~text
+NEW_EXACT_CURRENT_T4R1_PHENOLOGY_EVIDENCE_BECOMES_PUBLICLY_RETRIEVABLE
+
+NEW_EXACT_CURRENT_T4R1_TERMINATION_OR_HARVEST_EVIDENCE_BECOMES_PUBLICLY_RETRIEVABLE
+
+NEW_KBS_AGLOG_T4_OR_T4R1_PLANTING_OBSERVATION_AFTER_2026_05_27_BECOMES_PUBLICLY_RETRIEVABLE
+~~~
+
+Therefore:
+
+~~~text
+material provider change =
+  NOT OBSERVED
+
+fresh T4R1 authority requalification =
+  NOT LEGALLY REOPENED
+
+runtime-start arm =
+  MUST REMAIN UNARMED
+~~~
+
+---
+
+## R16. Scheduled GitHub provider observer must not be recreated
+
+Repository audit confirmed that historical provider-facing scheduled observers were intentionally retired under Phase6.
+
+Current architecture permits GitHub for:
+
+~~~text
+qualification
+independent read-only audit
+governance verification
+~~~
+
+GitHub must not become:
+
+~~~text
+routine production provider cadence owner
+routine production tick owner
+routine production runtime host
+~~~
+
+Therefore the absence of a scheduled AgLog observer is not an engineering defect.
+
+Do not re-add one just to avoid waiting for material provider change.
+
+---
+
+## R17. Current blocker classification
+
+Current classification:
+
+~~~text
+A. controllable non-live engineering defects =
+  0
+
+B. live activation / real-world evidence =
+  material current T4R1 authority
+  viable future Formal/A0 window
+  local production runtime start
+  Evidence live fenced owner
+  Twin live fenced scheduler owner
+
+C. post-graduation / Taskbook completion =
+  FORMAL_V5_ACTIVATION
+  Formal-v5
+  A0
+  O00–O23
+  final exact-SHA / R2 effectiveness
+
+D. out of MCFT scope =
+  B-Line
+~~~
+
+The current QCP blocker:
+
+~~~text
+EXACT_ONE_PRODUCTION_OWNER
+~~~
+
+is category B.
+
+---
+
+## R18. Next plan — exact order
+
+### Step 1 — freeze the current qualified engineering subject
+
+Before any new write:
+
+~~~text
+verify #3376 exact head
+verify current QCP / CI / Phase4 / Phase5
+classify any new red before editing
+~~~
+
+Do not manufacture head drift while live prerequisites remain false.
+
+### Step 2 — watch for a legitimate material-provider trigger
+
+Only reopen current-season authority if one of the three R15 triggers becomes public.
+
+Do not rerun T4R1 authority merely because time passed.
+
+### Step 3 — adjudicate fresh current-season authority
+
+If material change occurs:
+
+~~~text
+fresh provider proof
+        ↓
+T4R1 stage / natural-season adjudication
+        ↓
+current authority established?
+~~~
+
+If no:
+
+~~~text
+remain frozen
+do not start Docker
+~~~
+
+### Step 4 — calculate a viable future Formal/A0 window
+
+Only after current authority exists.
+
+### Step 5 — exact-bind runtime-start arm
+
+Populate:
+
+~~~text
+exact_deployment_subject_sha
+live activation authority ref + sha256
+Formal/A0 authority ref + sha256
+tenant/project/group/field/season/zone
+activation fence
+exact Formal A0
+~~~
+
+Keep:
+
+~~~text
+production_owner_activation_authorized = false
+formal_v5_arm_authorized = false
+a0_authorized = false
+o00_authorized = false
+~~~
+
+Run the governed runtime-start authority builder.
+
+### Step 6 — user-local Docker activation
+
+Only now ask the user for local execution.
+
+Expected local sequence will be bounded PowerShell / Docker commands with:
+
+~~~text
+exact git SHA assertion
+exact authority/config path assertions
+docker compose config
+docker compose up -d
+docker compose ps
+log/readiness checks
+~~~
+
+### Step 7 — read-only owner graduation
+
+GitHub/read-only gate proves:
+
+~~~text
+Evidence effective owner = exactly 1
+Twin effective scheduler owner = exactly 1
+correct service identities
+active positive fencing
+cross-plane owner independence
+~~~
+
+### Step 8 — post-owner Formal sequence
+
+Only after EXACT_ONE_PRODUCTION_OWNER is closed:
+
+~~~text
+FORMAL_V5_ACTIVATION
+        ↓
+Formal-v5
+        ↓
+A0
+        ↓
+real O00–O23
+        ↓
+final exact-SHA / R2 effectiveness
+        ↓
+STAGE_1B_SHADOW_ONLINE_CLOSURE_COMPLETE
+MCFT_CAP_09_COMPLETE
+~~~
+
+---
+
+## R19. Pitfalls already hit — do not repeat
+
+### R19.1 Do not trust a previous “A=0” inventory without checking executable future transitions
+
+Q incorrectly treated owner implementation as complete because the gate workflow existed.
+
+A workflow existing is not enough.
+
+Verify that the future transition has an executable path.
+
+### R19.2 Do not confuse host identity binding with a live owner
+
+These are different:
+
+~~~text
+local host/service identity bound
+!=
+production process running
+!=
+live fenced owner established
+~~~
+
+### R19.3 Do not confuse Docker production implementation with Docker production activation
+
+CI Docker qualification can prove implementation without starting the user's production host.
+
+Do not claim local runtime is running unless live lease/readback proves it.
+
+### R19.4 Do not use stable service_id alone as lease_owner
+
+That can collapse overlapping container instances into one principal.
+
+Keep per-instance identity in the fenced owner.
+
+### R19.5 Do not create a second Twin owner authority
+
+Reuse:
+
+~~~text
+twin_runtime_lease_v1
+~~~
+
+and its existing fencing/database-clock semantics.
+
+### R19.6 Do not make GitHub execute owner cutover
+
+GitHub owner gate is read-only adjudication.
+
+The non-GitHub production host executes the runtime.
+
+### R19.7 Do not weaken production runtime-start authority for qualification
+
+Use the explicit engineering-only qualification seam.
+
+Production default remains fail-closed.
+
+### R19.8 Do not treat SCHEDULER_LEASE_STANDBY as fatal
+
+It is the expected losing-instance state.
+
+### R19.9 Do not classify Twin ownership/fencing changes as immutable Evidence temporal drift
+
+Use the 12-path temporal core + 3-path requalifiable ownership/fencing split.
+
+### R19.10 Do not assume process-tenure fencing means one token for all slots
+
+A temporary hypothesis in this conversation attempted to change the focused harness to require one fence.
+
+The current real-container proof disproved that assumption.
+
+The scratch harness modification was never moved into #3376 and was removed.
+
+Trust the machine-proven current scheduler semantics, not that abandoned hypothesis.
+
+### R19.11 Do not use scratch staging branch as authority
+
+Temporary branch:
+
+~~~text
+work/mcft-cap09-owner-lease-closure-2026-09-03
+~~~
+
+was only a construction/staging aid.
+
+It is not architecture authority and is not the current continuation point.
+
+### R19.12 Always re-check head drift before writing
+
+During this handoff operation itself:
+
+~~~text
+#3376 moved from
+10523e49...
+
+to
+35b06a92...
+~~~
+
+through 25 legitimate descendants.
+
+Never overwrite or ignore such drift.
+
+Reconstruct descendants first.
+
+### R19.13 Do not chase historical red workflows just to make the PR visually all-green
+
+Observed reds such as old scheduler seam / S2/S3 registry / one-shot lanes can be historical exact-base or lifecycle guards.
+
+The protected-main required contexts are separate.
+
+Classify exact applicability before repair.
+
+### R19.14 Do not re-add scheduled AgLog GitHub cadence
+
+Phase6 retired that production pattern deliberately.
+
+### R19.15 Do not update handoff unless explicitly requested
+
+The user explicitly instructed:
+
+~~~text
+handoff 不必主动更新
+需要更新时用户会明确要求
+~~~
+
+This R-section is being written only because the user explicitly requested a handoff update.
+
+---
+
+## R20. First actions in the next conversation
+
+Before any write:
+
+1. verify #3376 exact head still equals:
+   ~~~text
+   35b06a92165acc5a6598ccfefc76e4467d93da04
+   ~~~
+   or reconstruct every descendant before reusing this handoff;
+2. verify protected main still equals:
+   ~~~text
+   fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8
+   ~~~
+3. verify CI / Planner / Phase4 / Phase5 / focused 24T / Producer / post-merge remain green;
+4. verify QCP still has:
+   ~~~text
+   authority_errors = 0
+   unknown_changed_paths = 0
+   blocker_count = 1
+   EXACT_ONE_PRODUCTION_OWNER
+   ~~~
+5. verify runtime-start arm remains unarmed unless material-provider + viable Formal/A0 authority now exists;
+6. verify any newly public KBS/T4R1 evidence before deciding whether requalification is legally reopened;
+7. do not start local Docker unless runtime-start authority is legitimately exact-bound;
+8. if local Docker is authorized, make the user-facing commands assert exact SHA and authority hashes before `docker compose up -d`;
+9. after runtime start, use read-only fenced owner proof before any Formal-v5 action;
+10. preserve Stage 1B completion gate exactly.
+
+---
+
+## R21. Current exact file map for the newly repaired frontier
+
+### Production runtime-start authority
+
+~~~text
+apps/server/src/runtime/
+mcft_cap09_production_runtime_start_authority_v1.ts
+
+scripts/runtime_acceptance/
+MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json
+
+scripts/runtime_acceptance/
+BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs
+
+scripts/runtime_acceptance/
+ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_BUILDER_V1.cjs
+~~~
+
+### Production service identity / launcher
+
+~~~text
+apps/server/src/runtime/
+mcft_cap09_production_service_identity_v1.ts
+
+docker-compose.mcft-cap09-production.yml
+
+scripts/runtime_acceptance/
+ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts
+~~~
+
+### Twin owner presence / fencing
+
+~~~text
+apps/server/src/runtime/twin_runtime/
+postgres_persistent_sequential_scheduler_adapter_v1.ts
+
+apps/server/src/runtime/twin_runtime/
+mcft_cap09_twin_runtime_host_v1.ts
+
+apps/server/src/runtime/twin_runtime/
+mcft_cap09_twin_runtime_composition_v1.ts
+~~~
+
+### Live owner readback
+
+~~~text
+scripts/runtime_acceptance/
+VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs
+
+scripts/governance_acceptance/
+PREFLIGHT_MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_V1.cjs
+
+.github/workflows/
+mcft-cap-09-production-owner-graduation-gate.yml
+~~~
+
+### Phase5 qualification seam
+
+~~~text
+apps/server/src/runtime/twin_runtime/qualification/
+mcft_cap09_phase5_twin_runtime_qualification_v1.ts
+
+docker-compose.mcft-cap09-phase5-qualification.yml
+
+scripts/runtime_acceptance/
+ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_QUALIFICATION_CLOCK_V1.ts
+~~~
+
+### Central governance
+
+~~~text
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+
+scripts/governance_acceptance/
+ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+~~~
+
+---
+
+## R22. Bottom line
+
+At current exact product head:
+
+~~~text
+#3376 @
+35b06a92165acc5a6598ccfefc76e4467d93da04
+
+controllable non-live engineering blockers =
+  0
+
+engineering readiness =
+  QUALIFIED
+
+Docker production implementation =
+  IMPLEMENTED / MACHINE-QUALIFIED
+
+local Docker production activation =
+  NOT STARTED
+
+runtime-start authority implementation =
+  IMPLEMENTED / EXACT-BOUND / ANTI-REPLAY
+
+runtime-start arm =
+  UNARMED
+
+Producer =
+  33705109973
+  SUCCESS
+  live_required=false
+
+Planner =
+  33705109547
+  SUCCESS
+
+Phase4 =
+  33705109984
+  SUCCESS
+
+Phase5 package =
+  33705109477
+  SUCCESS
+
+Phase5 focused 24T =
+  33705109953
+  SUCCESS
+
+Post-merge =
+  33705109996
+  SUCCESS
+
+CI =
+  33705109612
+  SUCCESS
+
+QCP =
+  33705109970
+  deliberate fail-closed
+  planner_status=PASS
+  authority_errors=0
+  unknown_changed_paths=0
+  blocker_count=1
+  EXACT_ONE_PRODUCTION_OWNER
+
+Owner gate =
+  33705109831
+  expected fail-closed
+  live Evidence lease absent
+  live Twin lease absent
+
+material provider change =
+  NOT OBSERVED
+
+current T4R1 live activation =
+  NOT ELIGIBLE
+
+Formal-v5 / A0 / O00–O23 =
+  NOT STARTED
+
+Stage 1B =
+  NOT COMPLETE
+~~~
+
+The current boundary is therefore:
+
+**the MCFT-9 controllable engineering line has been legitimately reopened, repaired, exact-head requalified, and closed again; the production Docker graph and exact-bound runtime-start authority are ready, but local production execution remains intentionally unstarted until real current-season authority and a viable Formal/A0 window legally arm the live sequence.**
 
 ---
 
