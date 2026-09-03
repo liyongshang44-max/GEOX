@@ -88,8 +88,42 @@ test("V4 forbids production activation before effectiveness", () => {
   });
   assert.throws(()=>materializeExternalFormalA18CropContextV4({
     logical_time:logical,expected_identity_hash:expected,crop_authority:cropAuthority,
-    configuration_matrix:matrix,current_crop_authority:current,activation_mode:"PRODUCTION" as never
-  }),/EXTERNAL_FORMAL_A18_V4_PRODUCTION_ACTIVATION_NOT_AUTHORIZED/);
+    configuration_matrix:matrix,current_crop_authority:current,
+    activation_mode:"PRODUCTION_EFFECTIVE"
+  }),/EXTERNAL_FORMAL_A18_V4_CURRENT_CROP_AUTHORITY_NOT_EFFECTIVE/);
+});
+
+test("V4 production mode requires effective architecture and effective current crop authority", () => {
+  const current=currentCrop();
+  current.architecture_effective=true;
+  current.runtime_consumption_authorized=true;
+  const logical="2026-09-03T05:00:00.000Z";
+  const expected=deriveExternalFormalA18CropContextIdentityHashV4({
+    logical_time:logical,crop_stage_code:"LATE",
+    current_crop_authority_evidence_digest:current.evidence_digest
+  });
+  assert.throws(()=>materializeExternalFormalA18CropContextV4({
+    logical_time:logical,expected_identity_hash:expected,crop_authority:cropAuthority,
+    configuration_matrix:matrix,current_crop_authority:current,
+    biological_stage_architecture_effectiveness:{
+      schema_version:"geox_dt02_biological_stage_authority_effectiveness_v1",
+      amendment_id:"DT02-AMENDMENT-03",status:"CANDIDATE",effective:false
+    },
+    activation_mode:"PRODUCTION_EFFECTIVE"
+  }),/EXTERNAL_FORMAL_A18_V4_ARCHITECTURE_EFFECTIVENESS_REQUIRED/);
+
+  const result=materializeExternalFormalA18CropContextV4({
+    logical_time:logical,expected_identity_hash:expected,crop_authority:cropAuthority,
+    configuration_matrix:matrix,current_crop_authority:current,
+    biological_stage_architecture_effectiveness:{
+      schema_version:"geox_dt02_biological_stage_authority_effectiveness_v1",
+      amendment_id:"DT02-AMENDMENT-03",status:"EFFECTIVE",effective:true
+    },
+    activation_mode:"PRODUCTION_EFFECTIVE"
+  });
+  assert.equal(result.stage_code,"LATE");
+  assert.equal(result.kc,0.6);
+  assert.equal(result.production_effective,true);
 });
 
 test("V4 fails closed if current Kc disagrees with exact frozen matrix", () => {
