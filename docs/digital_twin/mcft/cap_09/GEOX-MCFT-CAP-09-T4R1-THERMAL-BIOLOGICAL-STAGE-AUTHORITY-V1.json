@@ -1,0 +1,161 @@
+{
+  "schema_version": "geox_mcft_cap09_t4r1_thermal_biological_stage_authority_v1",
+  "record_status": "IMPLEMENTATION_CANDIDATE_DEPENDS_ON_DT02_AMENDMENT03_EFFECTIVENESS",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier": "T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY",
+  "implementation_base_sha": "17eb06c4c79f36e51b88561395f8e69cd86195b7",
+  "architecture_candidate": {
+    "amendment_id": "DT02-AMENDMENT-03",
+    "amendment_path": "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+    "amendment_candidate_head": "17eb06c4c79f36e51b88561395f8e69cd86195b7",
+    "effective_required_before_production_consumption": true
+  },
+  "formal_scope": {
+    "site_id": "KBS_MCSE_T4R1",
+    "field_id": "field_kbs_mcse_t4r1",
+    "season_id": "season_2026_corn",
+    "zone_id": "zone_kbs_mcse_t4r1_crop_formal_v1",
+    "crop": "corn",
+    "hybrid_product_code": "43-96P",
+    "provider_treatment": "T4",
+    "replicate": "R1"
+  },
+  "planting_authority": {
+    "provider": "KBS_AGLOG",
+    "observation_id": 6974,
+    "official_url": "https://aglog.kbs.msu.edu/observations/6974",
+    "planting_local_date": "2026-05-27",
+    "timezone": "America/Detroit",
+    "precision": "LOCAL_CALENDAR_DAY_ONLY",
+    "crop": "corn",
+    "hybrid_product_code": "43-96P",
+    "required_markers": [
+      "2026-05-27",
+      "Planting",
+      "43-96P"
+    ],
+    "source_role": "DIRECT_MANAGEMENT_PLANTING_AND_HYBRID_IDENTITY"
+  },
+  "hybrid_thermal_landmark_candidate": {
+    "provider": "ALBERT_LEA_SEED",
+    "official_url": "https://alseed.com/organic-and-riseup-non-gmo-corn-performance/",
+    "source_class": "SECONDARY_SEED_CATALOG_EXACT_PRODUCT_SPECIFICATION",
+    "required_markers": [
+      "Hybrid",
+      "CRM",
+      "GDU",
+      "Black Layer",
+      "43-96P",
+      "96",
+      "2380"
+    ],
+    "hybrid_product_code": "43-96P",
+    "crm_days": 96,
+    "gdu_to_black_layer": 2380,
+    "exact_product_match_required": true,
+    "sibling_threshold_transfer_authorized": false,
+    "crm_to_gdu_conversion_authorized": false,
+    "observed_phenology_claim_authorized": false,
+    "authority_ceiling": "THERMAL_MODEL_INPUT_CANDIDATE_NOT_DIRECT_FIELD_TRUTH"
+  },
+  "black_layer_semantics": {
+    "provider": "PURDUE_UNIVERSITY_EXTENSION",
+    "official_url": "https://www.agry.purdue.edu/ext/corn/news/timeless/grainfill.html",
+    "required_markers": [
+      "Physiological Maturity (R6)",
+      "black layer"
+    ],
+    "semantic_mapping": "BLACK_LAYER_APPROXIMATES_PHYSIOLOGICAL_MATURITY_R6",
+    "direct_t4r1_observation": false
+  },
+  "temperature_source_candidate": {
+    "provider": "IOWA_ENVIRONMENTAL_MESONET",
+    "station_id": "KBSM4",
+    "network": "MI_DCP",
+    "station_name": "KELLOGG BIOLOGICAL STATION - MAWN",
+    "latitude": 42.4081,
+    "longitude": -85.3736,
+    "station_metadata_url": "https://mesonet.agron.iastate.edu/sites/networks.php?network=MI_DCP&station=KBSM4",
+    "daily_api_url_template": "https://mesonet.agron.iastate.edu/cgi-bin/request/daily.py?stations=KBSM4&network=MI_DCP&sts={start_date}&ets={end_date}&format=csv",
+    "source_role": "NEAR_SITE_DAILY_EXTREMA_THERMAL_INPUT_CANDIDATE",
+    "direct_t4r1_field_truth": false,
+    "raw_payload_persistence_authorized": false,
+    "derived_aggregate_and_digest_only": true
+  },
+  "thermal_method": {
+    "algorithm_id": "CORN_BASE50_DAILY_EXTREMA_CAP86_FLOOR50_V1",
+    "unit": "degF",
+    "base_f": 50,
+    "max_cap_f": 86,
+    "min_floor_f": 50,
+    "daily_max_gdu": 36,
+    "formula": "max(0, ((min(Tmax,86)+max(Tmin,50))/2)-50)",
+    "planting_day_lower_gdu": 0,
+    "planting_day_upper_uses_observed_full_day_if_valid": true,
+    "missing_or_invalid_day_lower_gdu": 0,
+    "missing_or_invalid_day_upper_gdu": 36,
+    "silent_imputation_authorized": false
+  },
+  "qualification_snapshot": {
+    "as_of_logical_time": "2026-09-03T00:00:00.000Z",
+    "temperature_start_local_date": "2026-05-27",
+    "last_complete_temperature_local_date": "2026-09-02",
+    "future_observations_authorized": false,
+    "full_season_ex_post_normalization_authorized": false
+  },
+  "thermal_landmark_mapping": {
+    "biological_stage_system": "CORN_REPRODUCTIVE_THERMAL_LANDMARK_V1",
+    "below_black_layer_candidate": "PRE_R6_MODEL_ESTIMATE",
+    "at_or_above_black_layer_candidate": "R6_OR_LATER_MODEL_ESTIMATE",
+    "threshold_crossing_rule": "LOWER_GDU_AT_OR_ABOVE_2380_REQUIRED_FOR_R6_OR_LATER_SINGLETON",
+    "straddle_rule": "LOWER_LT_2380_AND_UPPER_GE_2380_RETURNS_NON_SINGLETON",
+    "observed_biological_stage_claimed": false
+  },
+  "biological_to_water_use_mapping": {
+    "PRE_R6_MODEL_ESTIMATE": [
+      "MID",
+      "LATE"
+    ],
+    "R6_OR_LATER_MODEL_ESTIMATE": [
+      "LATE"
+    ],
+    "mapping_semantics": "PARTIAL_CONSERVATIVE_MAPPING_ONLY",
+    "kc_resolution_requires_singleton_water_use_stage": true
+  },
+  "lifecycle_independence": {
+    "thermal_stage_proves_lifecycle_active": false,
+    "harvest_or_termination_guard_required_for_operational_consumption": true,
+    "lifecycle_authority_source_unchanged": true
+  },
+  "expected_candidate_outcomes": [
+    "THERMAL_SOURCE_QUALIFICATION_FAIL_CLOSED",
+    "THERMAL_STAGE_PRE_R6_WATER_USE_UNRESOLVED",
+    "THERMAL_STAGE_THRESHOLD_STRADDLE_UNRESOLVED",
+    "THERMAL_STAGE_R6_OR_LATER_LATE_CANDIDATE"
+  ],
+  "data_use_policy": {
+    "provider_payload_may_be_committed": false,
+    "provider_payload_may_be_uploaded_as_ci_artifact": false,
+    "provider_body_text_may_be_emitted": false,
+    "provider_response_digest_may_be_emitted": true,
+    "derived_daily_count_may_be_emitted": true,
+    "derived_gdu_bounds_may_be_emitted": true,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "raw_object_write_authorized": false,
+    "runtime_config_write_authorized": false,
+    "scheduler_write_authorized": false,
+    "production_runtime_start_authorized": false
+  },
+  "nonclaims": {
+    "observed_t4r1_biological_stage_established": false,
+    "current_t4r1_lifecycle_active_established_by_thermal_model": false,
+    "current_t4r1_kc_resolved_by_this_candidate": false,
+    "runtime_start_authorized": false,
+    "formal_v5_authorized": false,
+    "a0_authorized": false,
+    "o00_o23_authorized": false,
+    "mcft_cap09_completed": false
+  }
+}
