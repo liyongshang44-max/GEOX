@@ -19,6 +19,9 @@ import {
   readMcftCap09TwinRuntimeProcessConfigV1,
 } from "../../apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.js";
 import {
+  MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V2,
+} from "../../apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.js";
+import {
   loadMcftCap09ProductionRuntimeStartAuthorityV1,
   parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1,
 } from "../../apps/server/src/runtime/mcft_cap09_production_runtime_start_authority_v1.js";
@@ -92,6 +95,26 @@ function main(): void {
   assert.equal(
     MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1.runtime_start_authority,
     "SEPARATE_GOVERNED_AUTHORITY_REQUIRED",
+  );
+  assert.equal(
+    MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V2.composition,
+    "MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_V2",
+  );
+  assert.equal(
+    MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V2.runner,
+    "ExternalFormalV4Amendment19RunnerV2",
+  );
+  assert.equal(
+    MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V2.crop_context_materializer,
+    "materializeExternalFormalA18CropContextV4",
+  );
+  assert.equal(
+    MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V2.provider_credentials_allowed,
+    false,
+  );
+  assert.equal(
+    MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V2.raw_storage_credentials_allowed,
+    false,
   );
 
   const runtimeStartExpected = {
@@ -429,6 +452,10 @@ function main(): void {
     path.resolve("apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts"),
     "utf8",
   );
+  const twinV2Source = fs.readFileSync(
+    path.resolve("apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts"),
+    "utf8",
+  );
   const evidenceSource = fs.readFileSync(
     path.resolve("apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts"),
     "utf8",
@@ -466,6 +493,15 @@ function main(): void {
     "PHASE5_TWIN_SCHEDULER_LEASE_STANDBY_WAIT_REQUIRED",
   );
   assert.equal(twinSource.includes("composeMcftCap09TwinRuntimeV1"), true);
+  assert.equal(twinV2Source.includes("composeMcftCap09TwinRuntimeV2"), true);
+  assert.equal(
+    twinV2Source.includes("loadMcftCap09ProductionStageAuthorityMountsV1"),
+    true,
+  );
+  assert.equal(
+    twinV2Source.includes("ExternalFormalV4Am19WindowManifestV2"),
+    true,
+  );
   assert.equal(evidenceSource.includes("composeEvidenceRuntimeV1"), true);
   assert.equal(evidenceSource.includes("lease_repository.releaseLease"), true);
   assert.equal(
@@ -486,6 +522,14 @@ function main(): void {
   );
   assert.equal(
     distWriter.includes("runMcftCap09TwinRuntimeProcessV1"),
+    true,
+  );
+  assert.equal(
+    distWriter.includes('path.join("runtime", "mcft_cap09_twin_runtime_v2.js")'),
+    true,
+  );
+  assert.equal(
+    distWriter.includes("runMcftCap09TwinRuntimeProcessV2"),
     true,
   );
 
@@ -523,6 +567,9 @@ function main(): void {
     per_instance_fenced_owner_identity: true,
     duplicate_service_instances_have_distinct_owner_identity: true,
     stable_compiled_twin_entrypoint: true,
+    stable_compiled_twin_v2_entrypoint: true,
+    production_twin_process_v2_stage_authority_bound: true,
+    historical_twin_process_v1_preserved: true,
     test_script_dependency_in_product_process: false,
     production_owner_cutover: false,
     formal_v5_armed: false,
