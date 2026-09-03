@@ -61,7 +61,7 @@ for (const key of [
 ]) eq(cert[key], false, "POSTMERGE_BIO_STAGE_EFFECT_AUTHORITY_CEILING:" + key);
 
 const qcp = JSON.parse(fs.readFileSync(QCP_PATH, "utf8"));
-const resolver = qcp.resolvers?.BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1;
+const resolver = qcp.dependency_resolvers?.BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1;
 if (!resolver) fail("POSTMERGE_BIO_STAGE_EFFECT_QCP_RESOLVER_REQUIRED");
 eq(resolver.kind, "EXACT_PATH_SET", "POSTMERGE_BIO_STAGE_EFFECT_QCP_RESOLVER_KIND");
 eq(
