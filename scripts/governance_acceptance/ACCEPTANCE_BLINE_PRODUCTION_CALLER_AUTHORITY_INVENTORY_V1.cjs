@@ -931,6 +931,47 @@ const covDynamicDispositionKey = new Map(covDynamicDispositions.map((d) => [
 ]));
 const covUnexpectedDynamicHttp = [];
 const covDynamicClassMismatch = [];
+
+// W2 successor compatibility is intentionally exact and does not rewrite the frozen PR-SEC-1 inventory.
+// BDYN-002 remains a registered legacy compatibility GET, but W2 removes only its persistent read-audit fact.
+// Any other dynamic-route behavior continues to be evaluated against the original frozen disposition.
+const covW2BoundedInventoryPath = path.join(ROOT, "docs/architecture/semantic_convergence/GEOX-BLINE-W2-CALLER-READ-WRITE-BOUNDARY-V1.json");
+let covW2BoundedReadBoundaryActive = false;
+if (fs.existsSync(covW2BoundedInventoryPath)) {
+  try {
+    const w2 = JSON.parse(read(covW2BoundedInventoryPath));
+    const aoActSource = read(path.join(ROOT, "apps/server/src/routes/control_ao_act.ts"));
+    const indexStart = aoActSource.indexOf("async function handleAoActIndexV1");
+    const indexEnd = aoActSource.indexOf("export function registerAoActV1Routes", indexStart);
+    const indexHandler = indexStart >= 0 && indexEnd > indexStart ? aoActSource.slice(indexStart, indexEnd) : "";
+    covW2BoundedReadBoundaryActive =
+      w2?.version === "GEOX_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1" &&
+      w2?.authority_base === "03db0c098a66053fd0b921cb8a3c5acdcf67d4d0" &&
+      w2?.discovery_policy === "NO_WHOLE_REPOSITORY_DISCOVERY; EXACT_PREDECESSOR_ROWS_ONLY" &&
+      w2?.known_get_count === 23 &&
+      indexHandler.includes('event: "index_read"') &&
+      indexHandler.includes("req.log.info") &&
+      !indexHandler.includes("writeAoActAuthzAuditFactV0");
+  } catch {
+    covW2BoundedReadBoundaryActive = false;
+  }
+}
+function covIsExactW2DynamicPureReadSuccessor(route, disposition) {
+  return covW2BoundedReadBoundaryActive &&
+    disposition?.disposition_id === "BDYN-002" &&
+    disposition?.source_path === "apps/server/src/routes/control_ao_act.ts" &&
+    disposition?.http_method === "GET" &&
+    disposition?.expression === 'legacyAoActRouteV1("index")' &&
+    route?.source_path === "apps/server/src/routes/control_ao_act.ts" &&
+    route?.method === "GET" &&
+    route?.expression === 'legacyAoActRouteV1("index")' &&
+    route?.dml === false &&
+    route?.ddl === false &&
+    route?.fact === false &&
+    Array.isArray(route?.writers) &&
+    route.writers.length === 0;
+}
+
 for (const d of covDynamicHttp) {
   const key = d.source_path + "::" + d.method + "::" + d.expression;
   const disposition = covDynamicDispositionKey.get(key);
@@ -947,7 +988,12 @@ for (const d of covDynamicHttp) {
   const delegatedEffect = exactSurfaceRows.some((row) => Array.isArray(row.write_targets) && row.write_targets.length > 0);
   if (disposition.side_effect_class === "PURE_READ" && hasWrite) covDynamicClassMismatch.push({route:d, disposition});
   if (disposition.side_effect_class === "SCHEMA_ENSURE_ONLY" && (!d.ddl || d.dml) && !delegatedEffect) covDynamicClassMismatch.push({route:d, disposition});
-  if (disposition.side_effect_class === "FACT_LEDGER_WRITE" && !d.fact && !delegatedEffect) covDynamicClassMismatch.push({route:d, disposition});
+  if (
+    disposition.side_effect_class === "FACT_LEDGER_WRITE" &&
+    !d.fact &&
+    !delegatedEffect &&
+    !covIsExactW2DynamicPureReadSuccessor(d, disposition)
+  ) covDynamicClassMismatch.push({route:d, disposition});
   if ((disposition.side_effect_class === "PROJECTION_SIDE_EFFECT" || disposition.side_effect_class === "DOMAIN_STATE_SIDE_EFFECT") && !d.dml && !delegatedEffect) covDynamicClassMismatch.push({route:d, disposition});
   if (disposition.side_effect_class !== "PURE_READ") {
     const exactHttpDispositionCovered = disposition.exact_routes.some((route) =>
