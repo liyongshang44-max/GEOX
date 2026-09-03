@@ -1,11 +1,10 @@
-// Purpose: Amendment-19 production runner for one manifest-pinned V3 slot.
+// Purpose: Amendment-19 V4 successor production runner for one manifest-pinned slot.
 // Boundary: same persistent scheduler/repositories/lease-fencing/tick graph as Formal; no provider/R2 fetch, no timer loop, no implicit-latest config selection.
 // Evidence is always frozen at the selected slot's logical UTC boundary T, including oldest-first backfill.
 
 import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
 import { semanticHashV1 } from "../../domain/twin_runtime/canonical_identity_v1.js";
 import { MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1 } from "../../domain/twin_runtime/external_formal_runtime_config_v1.js";
-import type { MaterializedExternalFormalA18CropContextV2 } from "./external_formal_a18_crop_context_v2.js";
 import type { MaterializedExternalFormalA18CropContextV4 } from "./external_formal_a18_crop_context_v4.js";
 import type {
   ExecuteExternalFormalV3Amendment19PersistentTickResultV1,
