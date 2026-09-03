@@ -150,8 +150,24 @@ try {
     "CONTROLLABLE_SOFTWARE_RUNTIME_GOVERNANCE_AND_PRODUCTION_EQUIVALENT_MECHANISMS",
   );
   assert.equal(separation.engineering_readiness.protected_semantic_core.baseline_subject_sha, "12473c491b354e49305f22bfa24c8701ce5e3ff9");
-  assert.equal(separation.engineering_readiness.protected_semantic_core.path_count, 15);
+  assert.equal(separation.engineering_readiness.protected_semantic_core.path_count, 12);
+  assert.equal(
+    separation.engineering_readiness.protected_semantic_core.semantic_scope,
+    "IMMUTABLE_PHASE5_TEMPORAL_RUNTIME_CORE",
+  );
   assert.equal(separation.engineering_readiness.protected_semantic_core.all_paths_unchanged_to_current_subject_required, true);
+  assert.equal(separation.engineering_readiness.protected_semantic_core.excludes_runtime_ownership_fencing_layer, true);
+  assert.equal(separation.engineering_readiness.runtime_ownership_fencing_layer.path_count, 3);
+  assert.equal(
+    separation.engineering_readiness.runtime_ownership_fencing_layer
+      .planner_readiness_may_classify_change_as_temporal_semantic_drift,
+    false,
+  );
+  assert.equal(
+    separation.engineering_readiness.runtime_ownership_fencing_layer
+      .may_change_only_with_focused_current_head_requalification,
+    true,
+  );
 
   const taskbook = read("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md");
   includes(taskbook, "Allowed claim only after S6 O00–O23 plus final exact-SHA/R2 effectiveness", "ENGINEERING_READINESS_TASKBOOK_COMPLETION_BOUNDARY_REQUIRED");
@@ -174,6 +190,16 @@ try {
   includes(phase5SettlementScript, 'const OLD_FULL_ARTIFACT_ID = 9659440229', "ENGINEERING_READINESS_PHASE5_FULL24_ARTIFACT_REQUIRED");
   includes(phase5SettlementScript, 'const EVIDENCE_RESILIENCE_RUN_ID = 33110416779', "ENGINEERING_READINESS_PHASE5_RESILIENCE_RUN_REQUIRED");
   includes(phase5SettlementScript, 'const EVIDENCE_RESILIENCE_ARTIFACT_ID = 9671930864', "ENGINEERING_READINESS_PHASE5_RESILIENCE_ARTIFACT_REQUIRED");
+  includes(
+    phase5SettlementScript,
+    "PROTECTED_TEMPORAL_SEMANTIC_CORE",
+    "ENGINEERING_READINESS_TEMPORAL_CORE_SPLIT_REQUIRED",
+  );
+  includes(
+    phase5SettlementScript,
+    "RUNTIME_OWNERSHIP_FENCING_LAYER",
+    "ENGINEERING_READINESS_OWNERSHIP_FENCING_LAYER_REQUIRED",
+  );
 
   const protectedSemanticCore = [
     "apps/server/src/domain/twin_runtime/external_formal_amendment19_window_manifest_v1.ts",
@@ -181,9 +207,6 @@ try {
     "apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v3.ts",
     "apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.ts",
     "apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_persistent_tick_service_v1.ts",
-    "apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts",
-    "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts",
-    "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts",
     "apps/server/src/runtime/twin_runtime/postgres_external_formal_amendment19_evidence_source_v1.ts",
     "apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts",
     "apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts",
@@ -192,7 +215,15 @@ try {
     "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.ts",
     "apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_verify_24t_v1.ts",
   ];
-  assert.equal(protectedSemanticCore.length, 15);
+  assert.equal(protectedSemanticCore.length, 12);
+  assert.deepEqual(
+    separation.engineering_readiness.runtime_ownership_fencing_layer.paths,
+    [
+      "apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts",
+      "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts",
+      "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v1.ts",
+    ],
+  );
   for (const protectedPath of protectedSemanticCore) {
     const changed = cp.execFileSync(
       "git",
