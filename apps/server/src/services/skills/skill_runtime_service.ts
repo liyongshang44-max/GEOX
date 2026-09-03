@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
 
-import { projectSkillRegistryReadV1 } from "../../projections/skill_registry_read_v1.js";
+import { computeSkillRegistryReadRowsV1 } from "../../projections/skill_registry_read_v1.js";
 import { toInt } from "./skill_trace_service.js";
 import type { TenantTriple } from "./skill_trace_service.js";
 
@@ -64,7 +64,7 @@ function toExplanationCodes(value: unknown): string[] {
 }
 
 export async function listSkillRuns(pool: Pool, tenant: TenantTriple, query: Record<string, unknown>) {
-  const projected = await projectSkillRegistryReadV1(pool, tenant, { persist: false }) as SkillRunReadRow[];
+  const projected = await computeSkillRegistryReadRowsV1(pool, tenant) as SkillRunReadRow[];
   let rows = projected.filter((row) => row.fact_type === "skill_run_v1");
 
   const fieldId = typeof query.field_id === "string" ? query.field_id.trim() : "";
@@ -121,7 +121,7 @@ export async function listSkillRuns(pool: Pool, tenant: TenantTriple, query: Rec
 }
 
 export async function listSkillRunsLegacy(pool: Pool, tenant: TenantTriple, query: Record<string, unknown>) {
-  const projected = await projectSkillRegistryReadV1(pool, tenant, { persist: false }) as SkillRunReadRow[];
+  const projected = await computeSkillRegistryReadRowsV1(pool, tenant) as SkillRunReadRow[];
   const page = Math.max(1, toInt(query.page, 1));
   const page_size = Math.min(200, Math.max(1, toInt(query.page_size, 20)));
   const offset = (page - 1) * page_size;
