@@ -28,6 +28,7 @@ assert(JSON.stringify(rec.authz_capability)===JSON.stringify(["recommendation.re
 const decision=read("apps/server/src/routes/decision_engine_v1.ts");
 const recHandler=extractFn(decision,'app.post("/api/v1/recommendations/generate"','app.post(',);
 assert(recHandler.includes('requireAoActScopeV0(req, reply, "recommendation.write")'),"Recommendation generate lacks writer authority");
+assert(recHandler.includes("if (!auth) return reply;"),"Recommendation generate denied-auth path does not terminate Fastify reply ownership");
 assert(!recHandler.includes('"recommendation.read"')&&!recHandler.includes('"ao_act.index.read"'),"Recommendation generate still authorizes by read capability");
 assert(read("apps/server/src/domain/auth/roles.ts").includes('recommendation.write'),"existing recommendation.write capability missing");
 
