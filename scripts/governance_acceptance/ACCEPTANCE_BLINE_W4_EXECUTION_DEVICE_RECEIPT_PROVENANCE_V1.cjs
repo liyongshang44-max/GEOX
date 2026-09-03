@@ -37,7 +37,7 @@ const fixture=json("config/auth/security_acceptance_tokens.json");
 const executorToken=(fixture.tokens||[]).find(x=>x.token==="executor_token");
 assert(executorToken?.role==="executor"&&executorToken?.actor_id==="tok_executor_actor"&&executorToken?.revoked===false,"dedicated executor fixture identity drift",executorToken);
 for(const scope of ["action.task.dispatch","action.receipt.submit","ao_act.receipt.write"])assert(executorToken.scopes?.includes(scope),"executor fixture missing required capability",scope);
-assert(!executorToken.scopes?.includes("security.admin")&&!executorToken.scopes?.includes("ao_act.task.write"),"executor fixture gained admin/generic task-write authority",executorToken.scopes);
+assert(!executorToken.scopes?.includes("security.admin")&&!executorToken.scopes?.includes("ao_act.task.write")&&!executorToken.scopes?.includes("ao_act.index.read"),"executor fixture gained admin/generic task-write/index-read authority",executorToken.scopes);
 const operatorToken=(fixture.tokens||[]).find(x=>x.token==="operator_token");
 assert(operatorToken?.role==="operator"&&operatorToken?.scopes?.includes("telemetry.write"),"AO-SENSE lacks existing authenticated telemetry.write operator credential",operatorToken);
 const ci=read(".github/workflows/ci.yml");
@@ -52,6 +52,10 @@ const runtime=read("apps/executor/src/runtime_loop.ts");
 assert(runtime.includes('throw new Error("GEOX_EXECUTOR_ID_REQUIRED")'),"executor runtime does not fail closed on missing identity");
 assert(runtime.includes("safeRecordExecutorHeartbeat"),"executor worker heartbeat removed");
 assert(!runtime.includes("heartbeatOnce(")&&!runtime.includes("/api/v1/devices/"),"executor service still masquerades as device heartbeat");
+const executorDispatch=read("apps/executor/src/run_dispatch_once.ts");
+assert(!executorDispatch.includes("async function getReceipts")&&!executorDispatch.includes("hasReceiptIdempotencyKey"),"executor receipt idempotency retains read-before-write scan");
+assert(!executorDispatch.includes("/api/v1/ao-act/receipts?tenant_id="),"executor still pre-reads receipt index before POST");
+for(const marker of ["res.status === 409","DUPLICATE_RECEIPT","source=server_post_conflict"])assert(executorDispatch.includes(marker),"executor POST idempotency handling drift",marker);
 const deviceAuth=read("apps/server/src/auth/device_credential_auth_v1.ts");
 for(const marker of ["device_credential_index_v1","device_index_v1","device_binding_index_v1","field_index_v1","c.status='ACTIVE'","c.revoked_ts_ms IS NULL","credential_hash"])assert(deviceAuth.includes(marker),"device credential boundary missing marker",marker);
 const heartbeat=read("apps/server/src/routes/device_heartbeat_v1.ts");
@@ -87,6 +91,11 @@ assert(wrapper.includes("requireReceiptPrincipalV1(auth, reply)")&&wrapper.inclu
 assert(wrapper.includes("createAcceptance")&&wrapper.includes("transitionOperationPlanStateV1"),"W4 changed receipt/Acceptance semantic chain");
 assert(wrapper.includes("if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;"),"BSEC-192 missing tenant-fields reply ownership");
 assert(wrapper.includes("if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;"),"BSEC-192 missing tenant-match reply ownership");
+const receiptListStart=task.indexOf('app.get("/api/v1/ao-act/receipts"');
+assert(receiptListStart>=0,"receipt GET route missing");
+const receiptList=task.slice(receiptListStart);
+assert(receiptList.includes('requireAoActScopeV0(req, reply, "ao_act.index.read")'),"receipt GET authority changed");
+for(const marker of ["if (!auth) return reply;","if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;","if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;"])assert(receiptList.includes(marker),"receipt GET response ownership drift",marker);
 const aoAct=read("apps/server/src/routes/control_ao_act.ts");
 const dispatchHumanGate=block(aoAct,"function requireActionDispatchHumanRoleV1","function requireActionReceiptSubmitRoleV1");
 assert(dispatchHumanGate.includes('role === "admin" || role === "operator"')&&dispatchHumanGate.includes("ACTION_DISPATCH_HUMAN_ROLE_DENIED"),"W4 BSEC-077/078 human dispatch principal gate drift");
@@ -122,11 +131,11 @@ const simulator=block(decision,'app.post("/api/v1/simulators/irrigation/execute"
 assert(simulator.includes("hasExecutorRuntimeScopes(auth)")&&simulator.includes("isExecutorToken(auth)")&&simulator.includes("canonicalDecisionReceiptExecutorV1(auth)"),"simulator executor authority drift");
 const allowed=new Set([
  ".github/workflows/bline-w4-execution-device-receipt-provenance.yml",".github/workflows/ci.yml",
- "docker-compose.commercial_v1.yml","config/auth/security_acceptance_tokens.json","apps/executor/src/runtime_loop.ts",
+ "docker-compose.commercial_v1.yml","config/auth/security_acceptance_tokens.json","apps/executor/src/runtime_loop.ts","apps/executor/src/run_dispatch_once.ts",
  "apps/server/src/domain/auth/roles.ts","apps/server/src/auth/device_credential_auth_v1.ts","apps/server/src/routes/device_heartbeat_v1.ts","apps/server/src/routes/sensing_fact_envelope_v1.ts","apps/server/src/routes/control_ao_sense.ts","apps/server/src/domain/controlplane/task_service.ts","apps/server/src/routes/control_ao_act.ts","apps/server/src/routes/decision_engine_v1.ts","apps/server/src/routes/fail_safe_v1.ts",
  W4,"scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs","scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts","scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_COMMERCIAL_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts",
  "scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs","scripts/governance_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.cjs","scripts/governance_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.cjs",
- "scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_IRRIGATION_E2E_V1.ts","scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_VARIABLE_OPERATION_E2E_V1.cjs","scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_FERTILIZATION_E2E_V1.cjs","scripts/agronomy_acceptance/ACCEPTANCE_DEVICE_ANOMALY_E2E_V1.cjs","scripts/agronomy_acceptance/ACCEPTANCE_SKILL_CONTRACT_GAP_CLOSURE_V1.cjs","scripts/agronomy_acceptance/ACCEPTANCE_PILOT_CLOSURE_V1.cjs","apps/server/scripts/p1_smoke_device_ready.mjs","scripts/governance_acceptance/ACCEPTANCE_P1_SMOKE_PREFLIGHT_IDEMPOTENT_V1.cjs"
+ "scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_IRRIGATION_E2E_V1.ts","scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_VARIABLE_OPERATION_E2E_V1.cjs","scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_FERTILIZATION_E2E_V1.cjs","scripts/agronomy_acceptance/ACCEPTANCE_DEVICE_ANOMALY_E2E_V1.cjs","scripts/agronomy_acceptance/ACCEPTANCE_SKILL_CONTRACT_GAP_CLOSURE_V1.cjs","scripts/agronomy_acceptance/ACCEPTANCE_PILOT_CLOSURE_V1.cjs","apps/server/scripts/p1_smoke_device_ready.mjs","scripts/governance_acceptance/ACCEPTANCE_P1_SMOKE_PREFLIGHT_IDEMPOTENT_V1.cjs","scripts/acceptance/run_acceptance.cjs","scripts/acceptance/p1_device_identity_fixture.cjs"
 ]);
 const commercialProof=read("scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_COMMERCIAL_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts");
 for(const marker of ["GEOX_W4_OPERATOR_RECEIPT_TOKEN","w4_operator_receipt_token","dedicated executor failed BSEC-192 receipt authority boundary","acceptance-only operator receipt principal failed BSEC-192 authority boundary","GEOX_W4_READ_ONLY_TOKEN"])assert(commercialProof.includes(marker),"W4 BSEC-192 Commercial caller-migration proof drift",marker);
@@ -135,8 +144,13 @@ for(const marker of ["GEOX_EXECUTOR_ACTOR_ID","executorActorId","EXECUTOR_IDENTI
 assert(!/executor_id:\s*\{\s*kind:\s*\'script\',\s*id:\s*\'formal_fertilization_e2e\'/.test(fertProof),"Formal Fertilization retains stale caller-declared executor identity");
 const p1Smoke=read("apps/server/scripts/p1_smoke_device_ready.mjs");
 for(const marker of ["GEOX_DEVICE_CREDENTIAL_SECRET_REQUIRED","GEOX_DEVICE_CREDENTIAL_SECRET"])assert(p1Smoke.includes(marker),"P1 smoke device-secret caller migration drift",marker);
+const p1Fixture=read("scripts/acceptance/p1_device_identity_fixture.cjs");
+for(const marker of ["provisionDeviceIdentityFixture","field_index_v1","device_index_v1","device_binding_index_v1","device_credential_index_v1"])assert(p1Fixture.includes(marker),"shared P1 exact device identity fixture drift",marker);
 const p1Preflight=read("scripts/governance_acceptance/ACCEPTANCE_P1_SMOKE_PREFLIGHT_IDEMPOTENT_V1.cjs");
-for(const marker of ["provisionDeviceIdentityFixture","field_index_v1","device_index_v1","device_binding_index_v1","device_credential_index_v1","GEOX_DEVICE_CREDENTIAL_SECRET"])assert(p1Preflight.includes(marker),"P1 preflight exact device identity fixture drift",marker);
+assert(p1Preflight.includes("provisionDeviceIdentityFixture")&&p1Preflight.includes("GEOX_DEVICE_CREDENTIAL_SECRET"),"P1 preflight no longer reuses shared identity lifecycle");
+const acceptanceRunner=read("scripts/acceptance/run_acceptance.cjs");
+for(const marker of ["provisionDeviceIdentityFixture","step.id === 'P1_SMOKE'","GEOX_DEVICE_CREDENTIAL_SECRET","GEOX_DEVICE_ID","extractOperationPlanIdFromP1Output"])assert(acceptanceRunner.includes(marker),"legacy acceptance P1 fixture/output migration drift",marker);
+assert(acceptanceRunner.includes("pnpmArgs: ['--filter', '@geox/server', 'run', 'test:p1:smoke']"),"legacy acceptance replaced original P1_SMOKE command");
 const mainCi=read(".github/workflows/ci.yml");
 assert(mainCi.includes("Run P1 smoke preflight idempotency gate")&&mainCi.includes("export DATABASE_URL=")&&mainCi.includes("postgres://"),"P1 preflight database fixture wiring missing");
 const changed=sh(["diff","--name-only",BASE,"HEAD"]).split(/\r?\n/).filter(Boolean);

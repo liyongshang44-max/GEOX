@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 const { spawnSync } = require('node:child_process');
-const crypto = require('node:crypto');
-const { Pool } = require('pg');
+const { provisionDeviceIdentityFixture } = require('../acceptance/p1_device_identity_fixture.cjs');
 
 const BASE_URL = process.env.BASE_URL || process.env.API_BASE_URL || process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001';
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || process.env.AO_ACT_TOKEN || process.env.GEOX_TOKEN || process.env.GEOX_AO_ACT_TOKEN || 'admin_token';
@@ -20,40 +19,6 @@ function log(message, detail) {
   console.log(`[p1-smoke-preflight-idempotent] ${message}`, detail || '');
 }
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
-function sha256Hex(value) { return crypto.createHash('sha256').update(String(value), 'utf8').digest('hex'); }
-
-async function provisionDeviceIdentityFixture(pool, deviceId, fieldId) {
-  if (!DATABASE_URL) fail('DATABASE_URL_REQUIRED_FOR_DEVICE_IDENTITY_FIXTURE');
-  const ts = Date.now();
-  const credentialId = `p1_smoke_${sha256Hex(`${deviceId}|${fieldId}`).slice(0,16)}`;
-  const secret = `p1_smoke_secret_${crypto.randomBytes(24).toString('base64url')}`;
-  await pool.query(
-    `INSERT INTO field_index_v1(tenant_id,field_id,name,area_ha,status,project_id,group_id,created_ts_ms,updated_ts_ms)
-     VALUES($1,$2,$3,1,'ACTIVE',$4,$5,$6,$6)
-     ON CONFLICT(tenant_id,field_id) DO UPDATE SET project_id=EXCLUDED.project_id,group_id=EXCLUDED.group_id,updated_ts_ms=EXCLUDED.updated_ts_ms`,
-    [TENANT.tenant_id,fieldId,`P1 smoke ${fieldId}`,TENANT.project_id,TENANT.group_id,ts],
-  );
-  await pool.query(
-    `INSERT INTO device_index_v1(tenant_id,device_id,display_name,created_ts_ms,last_credential_id,last_credential_status)
-     VALUES($1,$2,$3,$4,$5,'ACTIVE')
-     ON CONFLICT(tenant_id,device_id) DO UPDATE SET last_credential_id=EXCLUDED.last_credential_id,last_credential_status='ACTIVE'`,
-    [TENANT.tenant_id,deviceId,`P1 smoke ${deviceId}`,ts,credentialId],
-  );
-  await pool.query(
-    `INSERT INTO device_binding_index_v1(tenant_id,device_id,field_id,bound_ts_ms)
-     VALUES($1,$2,$3,$4)
-     ON CONFLICT(tenant_id,device_id) DO UPDATE SET field_id=EXCLUDED.field_id,bound_ts_ms=EXCLUDED.bound_ts_ms`,
-    [TENANT.tenant_id,deviceId,fieldId,ts],
-  );
-  await pool.query(
-    `INSERT INTO device_credential_index_v1(tenant_id,device_id,credential_id,credential_hash,status,issued_ts_ms,revoked_ts_ms)
-     VALUES($1,$2,$3,$4,'ACTIVE',$5,NULL)
-     ON CONFLICT(tenant_id,device_id,credential_id) DO UPDATE SET credential_hash=EXCLUDED.credential_hash,status='ACTIVE',issued_ts_ms=EXCLUDED.issued_ts_ms,revoked_ts_ms=NULL`,
-    [TENANT.tenant_id,deviceId,credentialId,sha256Hex(secret),ts],
-  );
-  return secret;
-}
-
 async function fetchJson(path, { method = 'GET', token = ADMIN_TOKEN, body } = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
@@ -206,9 +171,12 @@ async function main() {
   const acceptanceIds = openAcceptanceFailSafeIds(before);
   if (acceptanceIds.length === 0) log('SKIP acceptance fail-safe preservation fixture: none currently OPEN');
 
-  const pool = new Pool({ connectionString: DATABASE_URL });
-  const deviceCredentialSecret = await provisionDeviceIdentityFixture(pool, deviceId, fieldId);
-  await pool.end();
+  const { secret: deviceCredentialSecret } = await provisionDeviceIdentityFixture({
+    databaseUrl: DATABASE_URL,
+    tenant: TENANT,
+    deviceId,
+    fieldId,
+  });
   runPreflight(deviceId, deviceCredentialSecret);
 
   const after = await listFailSafes();

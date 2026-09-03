@@ -3991,10 +3991,10 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // GET /api/v1/ao-act/receipts
   app.get("/api/v1/ao-act/receipts", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-    if (!auth) return;
+    if (!auth) return reply;
     const tenant = queryTenantFromReq(req, auth);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
     const q: any = (req as any).query ?? {};
     const items = await listReceipts(pool, tenant, parseLimit(q), typeof q.act_task_id === "string" ? q.act_task_id : undefined);
     return reply.send({ ok: true, items });

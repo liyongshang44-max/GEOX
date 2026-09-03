@@ -18,6 +18,7 @@ on:
       - 'apps/server/src/domain/auth/roles.ts'
       - 'config/auth/security_acceptance_tokens.json'
       - 'apps/executor/src/runtime_loop.ts'
+      - 'apps/executor/src/run_dispatch_once.ts'
       - 'docker-compose.commercial_v1.yml'
       - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts'
@@ -33,6 +34,8 @@ on:
       - 'scripts/agronomy_acceptance/ACCEPTANCE_PILOT_CLOSURE_V1.cjs'
       - 'apps/server/scripts/p1_smoke_device_ready.mjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_P1_SMOKE_PREFLIGHT_IDEMPOTENT_V1.cjs'
+      - 'scripts/acceptance/run_acceptance.cjs'
+      - 'scripts/acceptance/p1_device_identity_fixture.cjs'
       - '.github/workflows/bline-w4-execution-device-receipt-provenance.yml'
       - '.github/workflows/ci.yml'
 

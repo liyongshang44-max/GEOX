@@ -14,7 +14,7 @@ for(const k of ["GEOX_RUNTIME_ENV","GEOX_TOKENS_JSON","GEOX_TOKENS_FILE","GEOX_T
 function restore(){for(const [k,v] of saved){if(v===undefined)delete process.env[k];else process.env[k]=v;}}
 function expect(c:any,m:string,d?:any){if(!c)throw new Error(m+(d===undefined?"":": "+JSON.stringify(d)));}
 const tokens:any={version:"ao_act_tokens_v0",tokens:[
- {token:"w4_admin",token_id:"tok_admin",actor_id:"admin_actor",tenant_id:"tenantA",project_id:"projectA",group_id:"groupA",role:"admin",scopes:["action.task.dispatch","action.receipt.submit","ao_act.receipt.write","telemetry.write"],revoked:false},
+ {token:"w4_admin",token_id:"tok_admin",actor_id:"admin_actor",tenant_id:"tenantA",project_id:"projectA",group_id:"groupA",role:"admin",scopes:["action.task.dispatch","action.receipt.submit","ao_act.receipt.write","ao_act.index.read","telemetry.write"],revoked:false},
  {token:"w4_operator",token_id:"tok_operator",actor_id:"operator_actor",tenant_id:"tenantA",project_id:"projectA",group_id:"groupA",role:"operator",scopes:["action.task.dispatch","action.receipt.submit","ao_act.receipt.write","telemetry.write"],revoked:false},
  {token:"w4_executor",token_id:"tok_executor",actor_id:"executor_actor",tenant_id:"tenantA",project_id:"projectA",group_id:"groupA",role:"executor",scopes:["action.task.dispatch","action.receipt.submit","ao_act.receipt.write","telemetry.write"],revoked:false},
  {token:"w4_telemetry",token_id:"tok_telemetry",actor_id:"telemetry_service",tenant_id:"tenantA",project_id:"projectA",group_id:"groupA",role:"operator",scopes:["telemetry.write"],revoked:false},
@@ -60,6 +60,11 @@ async function post(app:any,url:string,token?:string,body:any={}){
  let json:any=null;try{json=res.json();}catch{}
  return {status:res.statusCode,json,body:res.body};
 }
+async function get(app:any,url:string,token?:string){
+ const res=await app.inject({method:"GET",url,headers:token?{authorization:`Bearer ${token}`}:{}});
+ let json:any=null;try{json=res.json();}catch{}
+ return {status:res.statusCode,json,body:res.body};
+}
 async function main(){
  process.env.GEOX_RUNTIME_ENV="test";process.env.GEOX_TOKENS_JSON=JSON.stringify(tokens);
  delete process.env.GEOX_TOKENS_FILE;delete process.env.GEOX_TOKEN_SSOT_PATH;delete process.env.GEOX_TOKEN;delete process.env.GEOX_AO_ACT_TOKEN;delete process.env.AO_ACT_TOKEN;
@@ -82,6 +87,12 @@ async function main(){
  expect(adminWrapperReceipt.status===403&&adminWrapperReceipt.json?.error==="EXECUTION_PRINCIPAL_REQUIRED","admin gained Commercial receipt principal",adminWrapperReceipt);
  const executorWrapperReceipt=await post(cp,"/api/v1/ao-act/receipts","w4_executor",{});
  expect(executorWrapperReceipt.status!==401&&executorWrapperReceipt.status!==403,"executor did not cross Commercial receipt auth boundary",executorWrapperReceipt);
+ const beforeReceiptRead=pool.mutations;
+ const executorReceiptRead=await get(cp,"/api/v1/ao-act/receipts?tenant_id=tenantA&project_id=projectA&group_id=groupA","w4_executor");
+ expect(executorReceiptRead.status===403&&executorReceiptRead.json?.error==="AUTH_SCOPE_DENIED","executor gained ao_act.index.read through receipt GET",executorReceiptRead);
+ const adminReceiptRead=await get(cp,"/api/v1/ao-act/receipts?tenant_id=tenantA&project_id=projectA&group_id=groupA","w4_admin");
+ expect(adminReceiptRead.status===200&&Array.isArray(adminReceiptRead.json?.items),"authorized index reader failed receipt GET boundary",adminReceiptRead);
+ expect(pool.mutations===beforeReceiptRead,"receipt GET authority probes mutated state",{beforeReceiptRead,after:pool.mutations});
  await cp.close();
 
  const ao=Fastify({logger:false});registerAoActV1Routes(ao,pool as any);await ao.ready();
@@ -156,6 +167,6 @@ async function main(){
  expect([401,404].includes(rawWrongDevice.status),"wrong device identity not denied",rawWrongDevice);
  await raw.close();
 
- console.log(JSON.stringify({result:"PASS",workstream:"W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE",bounded_predecessor_row_count:20,capability_fanout:{repair_rows:{BSEC_077:executeFanout.status,BSEC_078:manualFanout.status,BSEC_161:takeoverAck.status,BSEC_162:takeoverComplete.status,BSEC_163:failSafeResolve.status},operator_dispatch_baselines:{BSEC_067:{status:operatorDispatchDeny.status,permission_allowed:operatorDispatchDeny.json?.permission?.allowed},BSEC_068:{status:operatorRetryDeny.status,permission_allowed:operatorRetryDeny.json?.permission?.allowed},dispatch_intent_writes:operatorPool.dispatchIntentWrites,deny_audit_writes:operatorPool.auditWrites}},executor:{admin_claim:adminClaim.status,operator_claim:operatorClaim.status,mismatch_claim:mismatchClaim.status,dedicated_claim:executorClaim.status,dedicated_state:executorState.status,dedicated_downlink_published:executorPublished.status,admin_receipt:adminWrapperReceipt.status,dedicated_receipt:executorWrapperReceipt.status,admin_simulator:adminSim.status,dedicated_simulator:execSim.status},ao_sense:{anonymous:anonSense.status,wrong_scope:wrongSense.status,telemetry_writer:telemetrySense.status},device:{anonymous:hbAnon.status,structured_bearer:hbStructured.status,valid:hbGood.status,cross_scope:hbCross.status},http_sensing:{structured_bearer:rawAdmin.status,wrong_device:rawWrongDevice.status},mutation_count:pool.mutations},null,2));
+ console.log(JSON.stringify({result:"PASS",workstream:"W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE",bounded_predecessor_row_count:20,capability_fanout:{repair_rows:{BSEC_077:executeFanout.status,BSEC_078:manualFanout.status,BSEC_161:takeoverAck.status,BSEC_162:takeoverComplete.status,BSEC_163:failSafeResolve.status},operator_dispatch_baselines:{BSEC_067:{status:operatorDispatchDeny.status,permission_allowed:operatorDispatchDeny.json?.permission?.allowed},BSEC_068:{status:operatorRetryDeny.status,permission_allowed:operatorRetryDeny.json?.permission?.allowed},dispatch_intent_writes:operatorPool.dispatchIntentWrites,deny_audit_writes:operatorPool.auditWrites}},executor:{admin_claim:adminClaim.status,operator_claim:operatorClaim.status,mismatch_claim:mismatchClaim.status,dedicated_claim:executorClaim.status,dedicated_state:executorState.status,dedicated_downlink_published:executorPublished.status,admin_receipt:adminWrapperReceipt.status,dedicated_receipt:executorWrapperReceipt.status,executor_receipt_read:executorReceiptRead.status,authorized_receipt_read:adminReceiptRead.status,admin_simulator:adminSim.status,dedicated_simulator:execSim.status},ao_sense:{anonymous:anonSense.status,wrong_scope:wrongSense.status,telemetry_writer:telemetrySense.status},device:{anonymous:hbAnon.status,structured_bearer:hbStructured.status,valid:hbGood.status,cross_scope:hbCross.status},http_sensing:{structured_bearer:rawAdmin.status,wrong_device:rawWrongDevice.status},mutation_count:pool.mutations},null,2));
 }
 main().catch(e=>{console.error(e);process.exitCode=1;}).finally(restore);
