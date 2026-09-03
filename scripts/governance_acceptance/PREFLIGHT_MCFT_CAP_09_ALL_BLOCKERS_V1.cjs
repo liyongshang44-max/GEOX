@@ -18,6 +18,14 @@ const DEFAULT_OUT = "acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RES
 const REQUALIFICATION_BINDING_STRATEGY = "MCFT_CAP09_REQUALIFICATION_RUN_BINDING_V1";
 const PHASE6_RETIREMENT_AUTHORITY_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json";
 const PHASE6_OWNER_AUDITOR_PATH = "scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs";
+const PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS = new Set([
+  "T4R1_BIOLOGICAL_STAGE_AUTHORITY",
+  "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION",
+  "A18_BIOLOGICAL_STAGE_CONTEXT_V4",
+  "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR",
+  "PRODUCTION_TWIN_PROCESS_V2_ROUTING",
+  "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION",
+]);
 const REQUALIFICATION_BINDING_FIELDS = [
   "evidence_id", "check_id", "evidence_class", "generation", "stage", "subject_sha",
   "workflow_name", "workflow_path", "run_id", "run_conclusion", "artifact_id", "artifact_digest",
@@ -187,6 +195,12 @@ function main() {
       dependency_digest_match: decision.dependency_digest_match ?? false,
       historical_evidence_ref: decision.historical_evidence_ref ?? null,
     };
+    const protectedMainAdoptionBase = String(process.env.PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA || "");
+    const adoptionDurableRequalification =
+      stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+      /^[0-9a-f]{40}$/.test(protectedMainAdoptionBase) &&
+      args.base === protectedMainAdoptionBase &&
+      PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS.has(decision.check_id);
     if (decision.status === "NOT_APPLICABLE") {
       result = { ...common, execution: "NOT_APPLICABLE", status: "NOT_APPLICABLE" };
     } else if (decision.status === "CARRY_FORWARD") {
@@ -218,7 +232,7 @@ function main() {
           check_id: decision.check_id,
           detail: diagnostic,
         });
-      } else if (decision.diagnostic_command) {
+      } else if (decision.diagnostic_command && !adoptionDurableRequalification) {
         const diagnostic = runDiagnostic(decision.diagnostic_command);
         result = { ...common, execution: "DIAGNOSTIC_COMMAND", status: diagnostic.status, reason_code: diagnostic.status === "PASS" ? "DIAGNOSTIC_PASS" : "DIAGNOSTIC_FAIL", diagnostic_command: decision.diagnostic_command, diagnostic };
         if (diagnostic.status !== "PASS") blockers.push({ blocker_class: "DIAGNOSTIC_FAILURE", check_id: decision.check_id, detail: diagnostic });
