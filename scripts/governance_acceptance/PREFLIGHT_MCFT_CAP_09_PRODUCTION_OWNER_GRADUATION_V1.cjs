@@ -21,6 +21,14 @@ const ARM = path.join(
   ROOT,
   "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_CUTOVER_ARM_V1.json",
 );
+const RUNTIME_START_ARM = path.join(
+  ROOT,
+  "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json",
+);
+const RUNTIME_START_BUILDER = path.join(
+  ROOT,
+  "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs",
+);
 const EVIDENCE_PROCESS = path.join(
   ROOT,
   "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
@@ -67,6 +75,8 @@ try {
   const host = readJson(HOST_AUTH);
   const timing = readJson(TIMING_AUTH);
   const arm = readJson(ARM);
+  const runtimeStartArm = readJson(RUNTIME_START_ARM);
+  const runtimeStartBuilder = text(RUNTIME_START_BUILDER);
   const evidence = text(EVIDENCE_PROCESS);
   const twin = text(TWIN_PROCESS);
   const serviceIdentity = text(SERVICE_IDENTITY);
@@ -171,6 +181,31 @@ try {
   }
 
   req(
+    runtimeStartArm.schema_version
+      === "geox_mcft_cap09_production_runtime_start_arm_v1"
+      && runtimeStartArm.armed === false
+      && runtimeStartArm.execution_requested === false
+      && runtimeStartArm.runtime_process_start_authorized === false
+      && runtimeStartArm.production_owner_activation_authorized === false
+      && runtimeStartArm.formal_v5_arm_authorized === false
+      && runtimeStartArm.a0_authorized === false
+      && runtimeStartArm.o00_authorized === false,
+    "OWNER_RUNTIME_START_ARM_MUST_REMAIN_UNARMED",
+  );
+  for (const marker of [
+    "RUNTIME_START_EXACT_DEPLOYMENT_SUBJECT_MISMATCH",
+    "RUNTIME_START_LIVE_ACTIVATION_AUTHORITY_SHA256_MISMATCH",
+    "RUNTIME_START_FORMAL_A0_AUTHORITY_SHA256_MISMATCH",
+    "production_owner_activation_authorized",
+    "formal_v5_arm_authorized",
+  ]) {
+    req(
+      runtimeStartBuilder.includes(marker),
+      "OWNER_RUNTIME_START_BUILDER_BOUNDARY_REQUIRED:" + marker,
+    );
+  }
+
+  req(
     evidence.includes("GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_SERVICE_ID"),
     "EVIDENCE_PRODUCTION_SERVICE_ID_BINDING_REQUIRED",
   );
@@ -225,6 +260,8 @@ try {
     non_github_hosting_binding_established: true,
     exact_two_runtime_service_identities_bound: true,
     production_two_service_launcher_present: true,
+    runtime_start_arm_unarmed: true,
+    runtime_start_exact_subject_and_provenance_builder_present: true,
     separate_runtime_start_authority_bound_at_entrypoints: true,
     live_fenced_lease_verifier_present: true,
     evidence_and_twin_lease_boundaries_independent: true,
