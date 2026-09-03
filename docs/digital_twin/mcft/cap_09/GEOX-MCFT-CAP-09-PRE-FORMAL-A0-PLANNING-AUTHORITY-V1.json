@@ -1,0 +1,23 @@
+{
+  "schema_version": "geox_mcft_cap09_pre_formal_a0_planning_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-PRE-FORMAL-A0-PLANNING-AUTHORITY-V1",
+  "status": "AUTHORIZED_FOR_RUNTIME_EVIDENCE_TARGET_PLANNING_ONLY",
+  "purpose": "SELECT_A_FUTURE_WHOLE_UTC_HOUR_FOR_RUNTIME_EVIDENCE_TARGET_PLANNING_WITHOUT_EXECUTING_A0",
+  "selection_policy": {
+    "clock_authority": "LOCAL_OPERATOR_HOST_UTC_AT_CUTOVER",
+    "minimum_lead_source": "FORMAL_FORCING_ACQUISITION_BUDGET_V1_SELECTED_BUDGET_MS",
+    "selected_budget_ms": 2081804,
+    "rule": "EARLIEST_WHOLE_UTC_HOUR_AT_OR_AFTER_ACTIVATION_FENCE_PLUS_SELECTED_BUDGET",
+    "must_not_exceed_current_crop_stage_authority_valid_until": true,
+    "must_not_exceed_lifecycle_horizon_end_utc": true,
+    "amendment_06_36h_o00_epoch_selection_lead_applies_to_o00_not_this_preformal_a0_planning_boundary": true
+  },
+  "authority_ceiling": {
+    "runtime_evidence_target_planning_authorized": true,
+    "formal_v5_arm_authorized": false,
+    "a0_execution_authorized": false,
+    "o00_epoch_selection_authorized": false,
+    "o00_execution_authorized": false,
+    "mcft_cap09_completed": false
+  }
+}
