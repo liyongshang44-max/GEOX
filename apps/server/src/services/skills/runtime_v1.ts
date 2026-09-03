@@ -18,6 +18,7 @@ export type SkillRuntimeExecuteInput = TenantTriple & {
 };
 
 type SkillRunReadRow = {
+  fact_type: string;
   fact_id: string;
   skill_id: string;
   version: string;
@@ -36,30 +37,11 @@ function normalizeRunCategory(value: unknown): "AGRONOMY" | "OPS" | "CONTROL" | 
 }
 
 async function findSkillRunByRunId(pool: Pool, tenant: TenantTriple, skillRunId: string): Promise<SkillRunReadRow | null> {
-  await projectSkillRegistryReadV1(pool, tenant);
-  const rowByPayload = await pool.query<SkillRunReadRow>(
-    `SELECT *
-       FROM skill_registry_read_v1
-      WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3
-        AND fact_type = 'skill_run_v1'
-        AND payload_json->>'run_id' = $4
-      ORDER BY updated_at_ts_ms DESC
-      LIMIT 1`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, skillRunId],
-  );
-  if (rowByPayload.rows?.[0]) return rowByPayload.rows[0];
-
-  const rowByFact = await pool.query<SkillRunReadRow>(
-    `SELECT *
-       FROM skill_registry_read_v1
-      WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3
-        AND fact_type = 'skill_run_v1'
-        AND fact_id = $4
-      ORDER BY updated_at_ts_ms DESC
-      LIMIT 1`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, skillRunId],
-  );
-  return rowByFact.rows?.[0] ?? null;
+  const rows = await projectSkillRegistryReadV1(pool, tenant, { persist: false }) as SkillRunReadRow[];
+  const runRows = rows.filter((row) => row.fact_type === "skill_run_v1");
+  return runRows.find((row) => String(row.payload_json?.run_id ?? "") === skillRunId)
+    ?? runRows.find((row) => row.fact_id === skillRunId)
+    ?? null;
 }
 
 export async function executeSkillRuntimeV1(pool: Pool, input: SkillRuntimeExecuteInput): Promise<{ fact_id: string; occurred_at: string; run_id: string }> {
