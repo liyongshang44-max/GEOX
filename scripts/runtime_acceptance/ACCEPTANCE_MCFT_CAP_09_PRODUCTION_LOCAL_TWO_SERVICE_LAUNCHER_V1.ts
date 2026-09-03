@@ -131,6 +131,16 @@ function main(): void {
   assert.equal(twin.restart, "unless-stopped");
   assert.equal(evidence.init, true);
   assert.equal(twin.init, true);
+  assert.equal(
+    evidenceEnv.GEOX_DEPLOYMENT_SUBJECT_COMMIT,
+    env.GEOX_DEPLOYMENT_SUBJECT_COMMIT,
+    "PRODUCTION_EVIDENCE_EXACT_DEPLOYMENT_SUBJECT_REQUIRED",
+  );
+  assert.equal(
+    twinEnv.GEOX_DEPLOYMENT_SUBJECT_COMMIT,
+    env.GEOX_DEPLOYMENT_SUBJECT_COMMIT,
+    "PRODUCTION_TWIN_EXACT_DEPLOYMENT_SUBJECT_REQUIRED",
+  );
 
   assert.equal(
     evidenceEnv.GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_SERVICE_ID,
