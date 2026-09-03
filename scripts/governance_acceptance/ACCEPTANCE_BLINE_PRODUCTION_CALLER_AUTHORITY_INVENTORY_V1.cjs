@@ -1763,13 +1763,22 @@ for (const service of ["executor","telemetry-ingest"]) {
 const serverBlock = covComposeServiceBlock("server");
 assert(serverBlock.includes("GEOX_EVIDENCE_S3_ACCESS_KEY_ID:") && serverBlock.includes("MINIO_ROOT_USER"), "evidence object-store access key no longer matches declared root reuse debt");
 assert(serverBlock.includes("GEOX_EVIDENCE_S3_SECRET_ACCESS_KEY:") && serverBlock.includes("MINIO_ROOT_PASSWORD"), "evidence object-store secret no longer matches declared root reuse debt");
-assert(serverBlock.includes("GEOX_TOKENS_FILE: /app/config/auth/security_acceptance_tokens.json"), "commercial tracked acceptance bearer source drift");
+const covLegacyTrackedAcceptanceBearer = serverBlock.includes("GEOX_TOKENS_FILE: /app/config/auth/security_acceptance_tokens.json");
+const covW1IsolatedCredentialSource =
+  !serverBlock.includes("GEOX_TOKENS_FILE: /app/config/auth/security_acceptance_tokens.json") &&
+  serverBlock.includes("GEOX_TOKENS_JSON: ${GEOX_TOKENS_JSON:-}") &&
+  serverBlock.includes("GEOX_TOKENS_FILE: ${GEOX_TOKENS_FILE:-}");
+assert(covLegacyTrackedAcceptanceBearer || covW1IsolatedCredentialSource, "commercial credential source topology drift");
 assert(serverBlock.includes("GEOX_INTERNAL_TASK_ISSUER_TOKEN:") && serverBlock.includes("operator_token"), "internal delegated bearer default drift");
 assert(runtimeDockerfile.includes("COPY config ./config"), "runtime image config copy drift");
 assert(hardeningDoc.includes("security_acceptance_tokens.json") && hardeningDoc.includes("only for test/dev acceptance"), "documented acceptance-token policy drift");
 assert(hardeningDoc.includes("Staging/production must not use acceptance fixture"), "documented staging/production token policy drift");
 assert(runtimeSecurity.includes('tokenPath.includes("example_tokens.json")'), "runtime security example-token check drift");
-assert(!runtimeSecurity.includes('tokenPath.includes("security_acceptance_tokens.json")'), "runtime security now rejects acceptance fixture; credential debt disposition requires re-adjudication");
+if (covLegacyTrackedAcceptanceBearer) {
+  assert(!runtimeSecurity.includes("RUNTIME_ACCEPTANCE_TOKEN_FIXTURE_FORBIDDEN"), "legacy frozen credential topology unexpectedly gained W1 fixture rejection");
+} else {
+  assert(runtimeSecurity.includes("RUNTIME_ACCEPTANCE_TOKEN_FIXTURE_FORBIDDEN"), "W1 isolated credential topology missing tracked acceptance fixture rejection");
+}
 
 function covWalkFiles(rootDir, out=[]) {
   if (!fs.existsSync(rootDir)) return out;
