@@ -1,5 +1,6 @@
 const fs=require('node:fs'),cp=require('node:child_process');
 const HEAD_BATCH5='3c3e7b0182847de40c9d9357066a955364e6bed1';
+const HEAD_BATCH6='c15d559d0ab2a0332cac2a2a1cf2f9d4e7f2119f';
 const CORRECTIONS=['BSEC-001','BSEC-002','BSEC-005','BSEC-018','BSEC-019','BSEC-031'];
 const CLOSED_BEFORE=['BSEC-001','BSEC-002','BSEC-003','BSEC-005','BSEC-006','BSEC-007','BSEC-008','BSEC-009','BSEC-010','BSEC-022','BSEC-023','BSEC-024','BSEC-025','BSEC-026'];
 const TARGET='BSEC-141';
@@ -9,7 +10,7 @@ function assert(c,m,x){if(!c)throw new Error(`${m}${x===undefined?'':`: ${JSON.s
 const registrationPath='apps/server/src/modules/execution/registerExecutionModule.ts';
 const semanticPath='apps/server/src/routes/human_executors_v1.ts';
 const fallbackPath='apps/server/src/domain/controlplane/task_service.ts';
-for(const p of [semanticPath,fallbackPath]) assert(sh(['diff','--name-only',HEAD_BATCH5,'HEAD','--',p])==='',`${p} changed in Batch006`);
+for(const p of [semanticPath,fallbackPath]) assert(sh(['diff','--name-only',HEAD_BATCH5,HEAD_BATCH6,'--',p])==='',`${p} changed in Batch006`);
 const registration=read(registrationPath),semantic=read(semanticPath),fallback=read(fallbackPath);
 assert(registration.includes('INTERNAL_AUTO_FALLBACK_COMMERCIAL_AUTHORITY_UNAVAILABLE'),'deterministic Batch006 error missing');
 assert(registration.includes('path === "/api/internal/work-assignments/auto-fallback"'),'BSEC-141 exact registration interception missing');
@@ -57,7 +58,7 @@ const allowed=new Set([
 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_INTERNAL_AUTO_FALLBACK_COMMERCIAL_RUNTIME_V1.ts',
 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_CANONICAL_HUMAN_FALLBACK_RUNTIME_V1.ts'
 ]);
-const changed=sh(['diff','--name-only',HEAD_BATCH5,'HEAD']).split(/\r?\n/).filter(Boolean);
+const changed=sh(['diff','--name-only',HEAD_BATCH5,HEAD_BATCH6]).split(/\r?\n/).filter(Boolean);
 for(const p of changed) assert(allowed.has(p),'Batch006 scope expansion',p);
 for(const p of changed) assert(!/mcft/i.test(p),'MCFT path changed',p);
 console.log(JSON.stringify({result:'PASS',batch:'PRSEC2-BATCH-006',containment:'COMMERCIAL_FAIL_CLOSE',target:TARGET,frozen_prsec1:frozenDebt,corrected_prsec1:debt(corrected),before,delta:batchDelta,after,changed_files:changed,mcft_delta:0},null,2));
