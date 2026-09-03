@@ -123,6 +123,8 @@ function validateCurrentCropAuthorityV4(value: JsonRecordV4): {
   stage: ExternalFormalCropWaterUseStageV4;
   evidenceDigest: string;
   expectedKc: number;
+  authorityAsOf: string;
+  forwardStabilityHours: number;
 } {
   if (value.schema_version !== "geox_mcft_cap09_t4r1_current_crop_authority_composition_result_v1"
     || value.status !== "PASS"
@@ -151,6 +153,22 @@ function validateCurrentCropAuthorityV4(value: JsonRecordV4): {
     || biological.resolved_biological_stage !== "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE") {
     throw new Error("EXTERNAL_FORMAL_A18_V4_BIOLOGICAL_STAGE_AUTHORITY_MISMATCH");
   }
+  const authorityAsOf = canonicalHourV4(
+    biological.authority_as_of,
+    "EXTERNAL_FORMAL_A18_V4_STAGE_AUTHORITY_AS_OF_REQUIRED",
+  );
+  const forwardStabilityHours = numberV4(
+    biological.forward_stability_hours,
+    "EXTERNAL_FORMAL_A18_V4_FORWARD_STABILITY_HOURS_REQUIRED",
+  );
+  if (
+    !Number.isInteger(forwardStabilityHours)
+    || forwardStabilityHours <= 0
+    || forwardStabilityHours > 48
+  ) {
+    throw new Error("EXTERNAL_FORMAL_A18_V4_FORWARD_STABILITY_HOURS_INVALID");
+  }
+
   const stage = value.crop_water_use_stage;
   if (!validStageV4(stage) || stage !== "LATE") {
     throw new Error("EXTERNAL_FORMAL_A18_V4_EXACT_LATE_STAGE_REQUIRED");
@@ -169,7 +187,13 @@ function validateCurrentCropAuthorityV4(value: JsonRecordV4): {
   // R5 -> R6 is a monotone biological-development transition and both governed
   // mappings resolve to LATE. This proves water-use-stage stability under thermal
   // progression only; it does not prove future lifecycle ACTIVE.
-  return { stage, evidenceDigest, expectedKc };
+  return {
+    stage,
+    evidenceDigest,
+    expectedKc,
+    authorityAsOf,
+    forwardStabilityHours,
+  };
 }
 
 export function deriveExternalFormalA18CropContextIdentityHashV4(input: {
@@ -237,6 +261,14 @@ export function materializeExternalFormalA18CropContextV4(
   }
 
   const current = validateCurrentCropAuthorityV4(input.current_crop_authority);
+  const logicalMs = Date.parse(logicalTime);
+  const authorityMs = Date.parse(current.authorityAsOf);
+  if (logicalMs < authorityMs) {
+    throw new Error("EXTERNAL_FORMAL_A18_V4_FUTURE_STAGE_EVIDENCE_FORBIDDEN");
+  }
+  if (logicalMs > authorityMs + current.forwardStabilityHours * 3_600_000) {
+    throw new Error("EXTERNAL_FORMAL_A18_V4_STAGE_AUTHORITY_FORWARD_WINDOW_EXCEEDED");
+  }
   const source = exactCropSourceV4(input.configuration_matrix, current.stage);
   if (source.kc !== current.expectedKc) throw new Error("EXTERNAL_FORMAL_A18_V4_CURRENT_KC_MATRIX_MISMATCH");
 
