@@ -50,9 +50,19 @@ const task=read("apps/server/src/domain/controlplane/task_service.ts");
 const approvalCreate=extract(task,'app.post("/api/v1/approvals",','app.get("/api/v1/approvals",');
 assert(approvalCreate.includes('requireAoActScopeV0(req, reply, "approval.request")'),"BSEC-181 lacks approval.request");
 assert(!approvalCreate.includes('"ao_act.task.write"'),"BSEC-181 retains generic task-write authority");
-const approvalDecide=extract(task,'app.post("/api/v1/approvals/:request_id/decide"','app.get("/api/v1/ao-act/tasks"');
+for(const marker of [
+ 'if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return reply;',
+ 'if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;',
+ 'if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;'
+]) assert(approvalCreate.includes(marker),"BSEC-181 reply ownership drift",marker);
+const approvalDecide=extract(task,'app.post("/api/v1/approvals/:request_id/decide"','app.post("/api/v1/ao-act/tasks"');
 assert(approvalDecide.includes('requireAoActScopeV0(req, reply, "approval.decide")'),"BSEC-182 lacks approval.decide");
 assert(!approvalDecide.slice(0,600).includes('"ao_act.task.write"'),"BSEC-182 auth retains generic task-write authority");
+for(const marker of [
+ 'if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return reply;',
+ 'if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;',
+ 'if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;'
+]) assert(approvalDecide.includes(marker),"BSEC-182 reply ownership drift",marker);
 const allowed=new Set([
  ".github/workflows/bline-w3-decision-approval-authority.yml",".github/workflows/ci.yml",W3,
  "apps/server/src/routes/decision_engine_v1.ts","apps/server/src/routes/control_approval_request_v1.ts","apps/server/src/routes/prescriptions_v1.ts","apps/server/src/domain/controlplane/task_service.ts",
