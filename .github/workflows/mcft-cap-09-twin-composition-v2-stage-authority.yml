@@ -1,0 +1,52 @@
+name: MCFT CAP-09 Twin Composition V2 Stage Authority
+
+on:
+  pull_request:
+    branches:
+      - feat/mcft-cap09-twin-stage-authority-mount-v1
+    paths:
+      - .github/workflows/mcft-cap-09-twin-composition-v2-stage-authority.yml
+      - apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v4.test.ts
+      - apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v4.ts
+      - apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.test.ts
+      - apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.ts
+      - apps/server/src/runtime/twin_runtime/external_formal_v3_amendment19_runner_v1.ts
+      - apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts
+      - scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_COMPOSITION_V2_STAGE_AUTHORITY_V1.cjs
+      - scripts/runtime_acceptance/COMPOSE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_V1.cjs
+      - scripts/runtime_acceptance/mcft_cap09_amendment19_formal_manifest_from_stage_authority_v2.test.ts
+      - scripts/runtime_acceptance/mcft_cap09_amendment19_formal_manifest_from_stage_authority_v2.ts
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MCFT_CAP09_TWIN_V2_STAGE_BASE_SHA: 373e33c54109540a2bdbf1c3a31626b731d5cfc6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Server typecheck
+        run: pnpm run typecheck:server
+      - name: V4 crop-context tests
+        run: node --import tsx --test apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.test.ts
+      - name: V4 prewindow tests
+        run: node --import tsx --test apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v4.test.ts
+      - name: V4 manifest successor tests
+        run: node --import tsx --test scripts/runtime_acceptance/mcft_cap09_amendment19_formal_manifest_from_stage_authority_v2.test.ts
+      - name: Exact changed-file governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_COMPOSITION_V2_STAGE_AUTHORITY_V1.cjs
