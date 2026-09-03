@@ -6,7 +6,7 @@ function sh(args){return cp.execFileSync("git",["-c","core.quotepath=false",...a
 function read(p){return fs.readFileSync(p,"utf8");}
 function json(p){return JSON.parse(read(p));}
 function assert(c,m,d){if(!c)throw new Error(m+(d===undefined?"":": "+JSON.stringify(d)));}
-function extractFn(src,needle,next){const s=src.indexOf(needle);assert(s>=0,"function/handler missing",needle);const e=next?src.indexOf(next,s):src.length;assert(e>s,"function/handler end missing",needle);return src.slice(s,e);}
+function extractFn(src,needle,next){const s=src.indexOf(needle);assert(s>=0,"function/handler missing",needle);const e=next?src.indexOf(next,s+needle.length):src.length;assert(e>s,"function/handler end missing",needle);return src.slice(s,e);}
 const pred=json(PREDECESSOR),w2=json(W2);
 assert(w2.authority_base===BASE,"W2 authority base drift",w2.authority_base);
 assert(w2.discovery_policy==="NO_WHOLE_REPOSITORY_DISCOVERY; EXACT_PREDECESSOR_ROWS_ONLY","W2 discovery policy drift");
