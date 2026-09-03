@@ -30,7 +30,9 @@ export const MCFT_CAP09_TWIN_RUNTIME_HOST_CONTRACT_V1 = {
   host_id: MCFT_CAP09_TWIN_RUNTIME_HOST_ID_V1,
   execution_model: "LONG_RUNNING_ONE_DUE_CANONICAL_SLOT_PER_ATTEMPT",
   one_slot_runtime:
-    "GOVERNED_AMENDMENT19_RUNNER_SUCCESSOR.executeOneDueSlot",
+    "ExternalFormalV3Amendment19RunnerV1.executeOneDueSlot",
+  runner_successor_structural_port:
+    "TwinRuntimeOneDueSlotPortV1",
   canonical_tick_path:
     "ExternalFormalV3Amendment19PersistentTickServiceV1",
   scheduler:
