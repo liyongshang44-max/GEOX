@@ -1,0 +1,70 @@
+name: MCFT CAP-09 T4R1 Current Crop Authority Composition
+
+on:
+  pull_request:
+    branches:
+      - feat/mcft-cap09-t4r1-thermal-stage-authority-v1
+    paths:
+      - .github/workflows/mcft-cap-09-t4r1-current-crop-authority-composition-v1.yml
+      - docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json
+      - scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1.cjs
+      - scripts/runtime_acceptance/COMPOSE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_V1.cjs
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MCFT_CAP09_CURRENT_CROP_COMPOSITION_BASE_SHA: ffc9d03533670d2f47ace71d170602d8768ec1bc
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium for existing lifecycle probe
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Verify exact four-file integration boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1.cjs
+
+      - name: Fresh read-only T4R1 lifecycle requalification
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.mjs
+
+      - name: Fresh read-only thermal stage and Kc requalification
+        run: python3 scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.py
+
+      - name: Compose exact current-crop authority
+        run: node scripts/runtime_acceptance/COMPOSE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_V1.cjs
+
+      - name: Upload sanitized composition evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t4r1-current-crop-authority
+          path: |
+            acceptance-output/MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_RESULT.json
+            acceptance-output/MCFT_CAP09_T4R1_THERMAL_BIOLOGICAL_STAGE_PROBE_RESULT.json
+            acceptance-output/MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
