@@ -104,11 +104,22 @@ function repoRootFromModule(): string {
 
 function isProductionLikeRuntimeV0(): boolean {
   const env = String(process.env.GEOX_RUNTIME_ENV ?? "development").trim().toLowerCase();
-  return env === "staging" || env === "production";
+  return ["pilot", "controlled-pilot", "controlled_pilot", "commercial", "staging", "production"].includes(env);
+}
+
+function isTrackedAcceptanceCredentialPathV0(fp: string): boolean {
+  const normalized = String(fp ?? "").trim().replace(/\\/g, "/").toLowerCase();
+  return normalized.endsWith("/config/auth/security_acceptance_tokens.json") ||
+    normalized === "config/auth/security_acceptance_tokens.json";
 }
 
 function hasStructuredTokenSourceV0(): boolean {
-  return Boolean(String(process.env.GEOX_TOKENS_JSON ?? "").trim() || String(process.env.GEOX_TOKENS_FILE ?? process.env.GEOX_TOKEN_SSOT_PATH ?? "").trim());
+  const inline = String(process.env.GEOX_TOKENS_JSON ?? "").trim();
+  if (inline) return true;
+  const secretFile = String(process.env.GEOX_TOKENS_FILE ?? process.env.GEOX_TOKEN_SSOT_PATH ?? "").trim();
+  if (!secretFile) return false;
+  if (isProductionLikeRuntimeV0() && isTrackedAcceptanceCredentialPathV0(secretFile)) return false;
+  return true;
 }
 
 export function defaultAoActTokenFilePathV0(): string {
@@ -158,6 +169,9 @@ function tokenFileFromEnv(): TokenFileV0 | null {
 
   const secretFile = String(process.env.GEOX_TOKENS_FILE ?? process.env.GEOX_TOKEN_SSOT_PATH ?? "").trim();
   if (secretFile) {
+    if (isProductionLikeRuntimeV0() && isTrackedAcceptanceCredentialPathV0(secretFile)) {
+      return { version: "ao_act_tokens_v0", tokens: [] };
+    }
     if (!fs.existsSync(secretFile)) return { version: "ao_act_tokens_v0", tokens: [] };
     try {
       const raw = fs.readFileSync(secretFile, "utf8").replace(/^﻿/, "");
@@ -208,19 +222,23 @@ function parseBearerToken(req: FastifyRequest): string | null {
 }
 
 
-function roleFromRecord(rec: TokenRecordV0): AoActRoleV0 {
-  if (["operator","viewer","client","executor","agronomist","approver","auditor","support"].includes(String(rec.role))) return rec.role as AoActRoleV0;
-  return "admin";
+const VALID_AO_ACT_ROLES_V0 = new Set<AoActRoleV0>([
+  "admin", "operator", "viewer", "client", "executor", "agronomist", "approver", "auditor", "support"
+]);
+
+function roleFromRecord(rec: TokenRecordV0): AoActRoleV0 | null {
+  const role = String(rec.role ?? "").trim();
+  return VALID_AO_ACT_ROLES_V0.has(role as AoActRoleV0) ? role as AoActRoleV0 : null;
 }
 
-function authContextFromRecord(rec: TokenRecordV0): AoActAuthContextV0 {
+function authContextFromRecord(rec: TokenRecordV0, role: AoActRoleV0): AoActAuthContextV0 {
   return {
     actor_id: rec.actor_id,
     token_id: rec.token_id,
     tenant_id: rec.tenant_id,
     project_id: rec.project_id,
     group_id: rec.group_id,
-    role: roleFromRecord(rec),
+    role,
     scopes: Array.isArray(rec.scopes) ? rec.scopes.slice() : [],
     allowed_field_ids: Array.isArray(rec.allowed_field_ids)
       ? rec.allowed_field_ids.map((x) => String(x ?? "").trim()).filter(Boolean)
@@ -253,13 +271,18 @@ export function requireAoActAuthV0(
     reply.status(403).send({ ok: false, error: "AUTH_REVOKED" });
     return null;
   }
+  const role = roleFromRecord(rec);
+  if (!role) {
+    reply.status(401).send({ ok: false, error: "AUTH_ROLE_INVALID" });
+    return null;
+  }
   if (typeof rec.tenant_id !== "string" || rec.tenant_id.trim().length === 0 ||
       typeof rec.project_id !== "string" || rec.project_id.trim().length === 0 ||
       typeof rec.group_id !== "string" || rec.group_id.trim().length === 0) {
     reply.status(401).send({ ok: false, error: "AUTH_INVALID" });
     return null;
   }
-  return authContextFromRecord(rec);
+  return authContextFromRecord(rec, role);
 }
 
 export function requireAoActAdminV0(
@@ -303,11 +326,16 @@ export function requireAoActScopeV0(
     reply.status(403).send({ ok: false, error: "AUTH_REVOKED" }); // Revoked token.
     return null; // Halt.
   }
+  const role = roleFromRecord(rec);
+  if (!role) {
+    reply.status(401).send({ ok: false, error: "AUTH_ROLE_INVALID" });
+    return null;
+  }
   if (!rec.scopes.includes(scope)) {
     reply.status(403).send({ ok: false, error: "AUTH_SCOPE_DENIED" });
     return null;
   }
-  if (!isScopeAllowedForRoleV1(roleFromRecord(rec) as AuthRole, scope)) {
+  if (!isScopeAllowedForRoleV1(role as AuthRole, scope)) {
     reply.status(403).send({ ok: false, error: "AUTH_ROLE_SCOPE_DENIED" });
     return null;
   }
@@ -325,7 +353,7 @@ export function requireAoActScopeV0(
     return null;
   }
 
-  return authContextFromRecord(rec);
+  return authContextFromRecord(rec, role);
 }
 
 
@@ -372,11 +400,12 @@ export function requireAoActAnyScopeV0(req: FastifyRequest, reply: FastifyReply,
   const rec = tf.tokens.find((t) => t.token === tok) ?? null;
   if (!rec) { reply.status(401).send({ ok: false, error: "AUTH_INVALID" }); return null; }
   if (rec.revoked) { reply.status(403).send({ ok: false, error: "AUTH_REVOKED" }); return null; }
+  const role = roleFromRecord(rec);
+  if (!role) { reply.status(401).send({ ok: false, error: "AUTH_ROLE_INVALID" }); return null; }
   if (!rec.tenant_id || !rec.project_id || !rec.group_id) { reply.status(401).send({ ok: false, error: "AUTH_INVALID" }); return null; }
-  const role = roleFromRecord(rec) as AuthRole;
   const anyToken = scopes.some((s) => rec.scopes.includes(s));
   if (!anyToken) { reply.status(403).send({ ok: false, error: "AUTH_SCOPE_DENIED" }); return null; }
-  const anyRole = scopes.some((s) => rec.scopes.includes(s) && isScopeAllowedForRoleV1(role, s));
+  const anyRole = scopes.some((s) => rec.scopes.includes(s) && isScopeAllowedForRoleV1(role as AuthRole, s));
   if (!anyRole) { reply.status(403).send({ ok: false, error: "AUTH_ROLE_SCOPE_DENIED" }); return null; }
-  return authContextFromRecord(rec);
+  return authContextFromRecord(rec, role);
 }
