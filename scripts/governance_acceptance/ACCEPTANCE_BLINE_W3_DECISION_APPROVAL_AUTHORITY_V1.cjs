@@ -42,7 +42,7 @@ assert(canonicalRequest.includes('["approval.request", "recommendation.approval_
 const canonicalDecision=extract(approval,"async function handleRecommendationApprovalDecision","async function handleRecommendationApprovalRequest");
 assert(canonicalDecision.includes('requireAoActScopeV0(req, reply, "approval.decide")'),"canonical operator approval decision authority drift");
 const pres=read("apps/server/src/routes/prescriptions_v1.ts");
-const presSubmit=extract(pres,'app.post("/api/v1/prescriptions/:prescription_id/submit-approval"','app.get("/api/v1/prescriptions"');
+const presSubmit=extract(pres,'app.post("/api/v1/prescriptions/:prescription_id/submit-approval"',null);
 assert(presSubmit.includes('["prescription.submit_approval", "approval.request"]'),"BSEC-129 approval-specific authority drift");
 assert(!presSubmit.includes('"ao_act.task.write"'),"BSEC-129 retains generic task-write fallback");
 assert(presSubmit.includes("APPROVAL_DECISION_NOT_ALLOWED_ON_SUBMIT"),"prescription request/decision separation drift");
