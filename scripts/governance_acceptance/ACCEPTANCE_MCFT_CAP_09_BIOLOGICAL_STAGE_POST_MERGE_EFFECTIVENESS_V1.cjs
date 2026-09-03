@@ -7,6 +7,7 @@ const cp = require("node:child_process");
 const EXPECTED_BASE = "ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23";
 const EXPECTED_ISSUED_AT = "2026-09-03T15:23:00.000Z";
 const QCP_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
+const EVIDENCE_REGISTRY_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json";
 const CERT_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json";
 const WORKFLOW_PATH = ".github/workflows/mcft-cap-09-biological-stage-post-merge-effectiveness-v1.yml";
 const SCRIPT_PATH = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1.cjs";
@@ -23,6 +24,7 @@ const EXPECTED_PATHS = [
   SCRIPT_PATH,
   POST_MERGE_CONTROL_PLANE_WORKFLOW,
   QUALIFICATION_CONTROL_PLANE_WORKFLOW,
+  EVIDENCE_REGISTRY_PATH,
 ].sort();
 
 function fail(code, detail) {
@@ -46,7 +48,7 @@ const changed = git("diff", "--name-only", EXPECTED_BASE + "...HEAD")
   .split(/\r?\n/)
   .filter(Boolean)
   .sort();
-eq(JSON.stringify(changed), JSON.stringify(EXPECTED_PATHS), "POSTMERGE_BIO_STAGE_EFFECT_EXACT_SIX_FILE_BOUNDARY_REQUIRED");
+eq(JSON.stringify(changed), JSON.stringify(EXPECTED_PATHS), "POSTMERGE_BIO_STAGE_EFFECT_EXACT_SEVEN_FILE_BOUNDARY_REQUIRED");
 
 const cert = JSON.parse(fs.readFileSync(CERT_PATH, "utf8"));
 eq(cert.schema_version, "geox_dt02_biological_stage_authority_effectiveness_v1", "POSTMERGE_BIO_STAGE_EFFECT_SCHEMA");
@@ -91,6 +93,11 @@ if (!(check.applicable_stages || []).includes("SUCCESSOR_SUBJECT_PRE_MERGE")) {
 }
 if (!(qcp.governed_successor_predecessor_shas || []).includes(POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA)) {
   fail("POSTMERGE_BIO_STAGE_EFFECT_QCP_EXACT_PREDECESSOR_REQUIRED");
+}
+const evidenceRegistry = JSON.parse(fs.readFileSync(EVIDENCE_REGISTRY_PATH, "utf8"));
+const governedEvidenceBases = evidenceRegistry.requalification_evidence?.durable_anchors?.rules?.governed_successor_predecessors || [];
+if (!governedEvidenceBases.includes(POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA)) {
+  fail("POSTMERGE_BIO_STAGE_EFFECT_EVIDENCE_REGISTRY_EXACT_PREDECESSOR_REQUIRED");
 }
 
 for (const controlWorkflowPath of [POST_MERGE_CONTROL_PLANE_WORKFLOW, QUALIFICATION_CONTROL_PLANE_WORKFLOW]) {
