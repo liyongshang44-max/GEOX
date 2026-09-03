@@ -13,6 +13,7 @@ import {
 import type {
   ExternalFormalV4Am19ManifestSlotPinV2,
 } from "./external_formal_v4_amendment19_runner_v2.js";
+import type { ShadowOnlineSlotIdV1 } from "./ports.js";
 
 const cropAuthority = JSON.parse(fs.readFileSync(
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json",
@@ -101,7 +102,7 @@ function manifest(): McftCap09ProductionV4ManifestV1 {
       biological_stage_architecture_effectiveness:architecture,
       activation_mode:"PRODUCTION_EFFECTIVE",
     });
-    const slotId = `O${String(index).padStart(2,"0")}`;
+    const slotId = `O${String(index).padStart(2,"0")}` as ShadowOnlineSlotIdV1;
       return {
       manifest_ref:manifestRef,
       manifest_hash:manifestHash,
