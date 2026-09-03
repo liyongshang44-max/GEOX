@@ -139,6 +139,7 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
         project_id: auth.project_id,
         group_id: auth.group_id,
         field_id,
+        persist: false,
       });
 
     return reply.send({
@@ -170,6 +171,7 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       project_id: auth.project_id,
       group_id: auth.group_id,
       field_id,
+      persist: false,
     });
 
     return reply.send({
