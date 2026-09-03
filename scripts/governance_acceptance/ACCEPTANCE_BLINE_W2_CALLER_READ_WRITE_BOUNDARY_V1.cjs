@@ -70,21 +70,33 @@ assert(!actionIndex.includes("writeAoActAuthzAuditFactV0"),"AO-ACT index GET sti
 assert(actionIndex.includes("req.log.info"),"AO-ACT index GET lost nonpersistent audit evidence");
 
 const skillProjection=read("apps/server/src/projections/skill_registry_read_v1.ts");
-assert(skillProjection.includes("options: { persist?: boolean }"),"skill registry non-persist option missing");
-assert(skillProjection.includes("if (options.persist === false) return latest"),"skill registry still materializes pure read");
+const skillPure=extractFn(skillProjection,"export async function computeSkillRegistryReadRowsV1","export async function projectSkillRegistryReadV1");
+const skillWriter=extractFn(skillProjection,"export async function projectSkillRegistryReadV1","export function filterSkillRegistryReadRowsV1");
+assert(skillPure.includes("FROM facts"),"skill pure-read helper must derive rows from facts");
+assert(skillPure.includes("return latest"),"skill pure-read helper must return computed rows");
+for(const forbidden of ["ensureSkillRegistryReadTable","pool.connect(","DELETE FROM skill_registry_read_v1","INSERT INTO skill_registry_read_v1","CREATE TABLE","ALTER TABLE"]){
+  assert(!skillPure.includes(forbidden),"skill pure-read helper contains persistent mutation",forbidden);
+}
+for(const required of ["ensureSkillRegistryReadTable","pool.connect(","DELETE FROM skill_registry_read_v1","INSERT INTO skill_registry_read_v1"]){
+  assert(skillWriter.includes(required),"skill writer path lost predecessor persistence semantics",required);
+}
 for(const p of [
  "apps/server/src/services/skills/runtime_v1.ts",
  "apps/server/src/services/skills/skill_runtime_service.ts",
  "apps/server/src/services/skills/skill_registry_service.ts"
 ]){
-  assert(read(p).includes("persist: false"),"skill GET service missing pure read mode",p);
+  assert(read(p).includes("computeSkillRegistryReadRowsV1"),"skill GET service missing dedicated pure-read helper",p);
 }
+const registryService=read("apps/server/src/services/skills/skill_registry_service.ts");
+const updateSkill=extractFn(registryService,"export async function updateSkillStatus","");
+assert(updateSkill.includes("projectSkillRegistryReadV1(pool, tenant)"),"skill writer service no longer materializes projection");
 const binding=read("apps/server/src/services/skills/skill_binding_service.ts");
 const bindingGet=extractFn(binding,"export async function getSkillBindingProjection","export async function resolveDeviceSkillBindingForTask");
 assert(!bindingGet.includes("projectSkillRegistryReadV1"),"skill binding GET still materializes registry projection");
 const rules=read("apps/server/src/routes/skills_rules_v1.ts");
 const rulesGet=extractFn(rules,'app.get("/api/v1/skills/rules"','app.post(',);
-assert(rulesGet.includes("persist: false"),"skill rules GET still materializes registry projection");
+assert(rulesGet.includes("computeSkillRegistryReadRowsV1"),"skill rules GET missing dedicated pure-read helper");
+assert(!rulesGet.includes("projectSkillRegistryReadV1"),"skill rules GET still materializes registry projection");
 assert(!rulesGet.includes("recordSecurityAuditEventV1")&&!rulesGet.includes("denyWithAuditV1"),"skill rules GET still persists security audit");
 
 const allowed=new Set([
