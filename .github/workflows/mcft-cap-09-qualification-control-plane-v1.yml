@@ -161,7 +161,7 @@ jobs:
               exit 1
             fi
             stage="SUCCESSOR_SUBJECT_PRE_MERGE"
-            if [ "$base" = "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ] || [ "$base" = "$POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA" ]; then
+            if [ "$base" = "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ]; then
               stage="POST_MERGE_V13_QUALIFICATION"
             fi
             echo "MCFT_CAP09_PR_STAGE=$stage" >> "$GITHUB_ENV"
@@ -483,10 +483,7 @@ jobs:
           const governedBases = new Set(registry.requalification_evidence?.durable_anchors?.rules?.governed_successor_predecessors || []);
           if (plan.base_sha !== process.env.PR_BASE_SHA) throw new Error(`CONTROL_PLANE_PLAN_BASE_MUST_EQUAL_PR_BASE:${plan.base_sha}:${process.env.PR_BASE_SHA}`);
           if (!governedBases.has(plan.base_sha)) throw new Error(`CONTROL_PLANE_PLAN_BASE_NOT_GOVERNED:${plan.base_sha}`);
-          const expectedStage = (
-            process.env.PR_BASE_SHA === process.env.POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA
-            || process.env.PR_BASE_SHA === process.env.POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA
-          )
+          const expectedStage = process.env.PR_BASE_SHA === process.env.POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA
             ? 'POST_MERGE_V13_QUALIFICATION'
             : 'SUCCESSOR_SUBJECT_PRE_MERGE';
           if (plan.stage !== expectedStage || preflight.stage !== expectedStage) throw new Error(`CONTROL_PLANE_STAGE_ROUTE_MISMATCH:${plan.stage}:${preflight.stage}:${expectedStage}`);
