@@ -10,10 +10,7 @@ import {
   type RawSampleEnvelopeV1,
   type RawSampleFactEnvelopeTenantV1,
 } from "../domain/sensing/raw_sample_fact_envelope_v1.js";
-import {
-  ensureDeviceObservationProjectionV1,
-  writeObservationRunPipelineAndRefreshFieldV1,
-} from "../services/device_observation_service_v1.js";
+import { writeObservationRunPipelineAndRefreshFieldV1 } from "../services/device_observation_service_v1.js";
 import { evaluateRawSampleObservationQualityV1 } from "../evidence/raw_sample_measurement_quality_v1.js";
 
 function badRequest(reply: FastifyReply, error: string) {
@@ -164,7 +161,6 @@ async function maybeRunOfficialObservationPipelineV1(pool: Pool, item: RawSample
   if (!qualityDecision.observation_pipeline_eligible) return null;
   const client = await pool.connect();
   try {
-    await ensureDeviceObservationProjectionV1(client);
     const result = await writeObservationRunPipelineAndRefreshFieldV1(client, {
       tenant_id: String(item.payload_json?.tenant_id ?? ""),
       project_id: item.project_id,
