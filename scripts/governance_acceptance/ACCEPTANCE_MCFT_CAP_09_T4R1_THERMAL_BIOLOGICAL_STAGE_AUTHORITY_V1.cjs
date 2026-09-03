@@ -34,6 +34,10 @@ eq(authority.formal_scope.site_id, "KBS_MCSE_T4R1", "THERMAL_STAGE_SCOPE_DRIFT")
 eq(authority.formal_scope.hybrid_product_code, "43-96P", "THERMAL_STAGE_HYBRID_DRIFT");
 eq(authority.planting_authority.observation_id, 6974, "THERMAL_STAGE_PLANTING_DRIFT");
 eq(authority.hybrid_thermal_landmark_candidate.gdu_to_black_layer, 2380, "THERMAL_STAGE_BLACK_LAYER_GDU_DRIFT");
+eq(authority.hybrid_thermal_landmark_candidate.source_class, "FIRST_PARTY_BRAND_OWNER_EXACT_PRODUCT_SPECIFICATION", "THERMAL_STAGE_HYBRID_SOURCE_CLASS_DRIFT");
+eq(authority.r5_residual_to_maturity_model.regional_reference_envelope.conservative_r5_reference_min_gdu_to_maturity, 400, "THERMAL_STAGE_R5_REFERENCE_DRIFT");
+eq(authority.r5_residual_to_maturity_model.decision_policy.observed_biological_stage_claimed, false, "THERMAL_STAGE_R5_DERIVED_MUST_NOT_CLAIM_OBSERVED");
+eq(authority.r5_residual_to_maturity_model.decision_policy.generic_absolute_gdu_stage_threshold_transfer_authorized, false, "THERMAL_STAGE_GENERIC_THRESHOLD_TRANSFER_FORBIDDEN");
 eq(authority.thermal_method.base_f, 50, "THERMAL_STAGE_BASE_F_DRIFT");
 eq(authority.thermal_method.max_cap_f, 86, "THERMAL_STAGE_MAX_CAP_DRIFT");
 eq(authority.thermal_method.min_floor_f, 50, "THERMAL_STAGE_MIN_FLOOR_DRIFT");
@@ -51,6 +55,8 @@ for (const marker of [
   "BIO_STAGE_FUTURE_EVIDENCE_FORBIDDEN",
   "computeCornBase50DailyGduFromFahrenheitV1",
   "accumulateCornBase50GduBoundsV1",
+  "classifyCornResidualToMaturityStageV1",
+  "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE",
   "mapBiologicalAuthorityToWaterUseStageV1",
   "MISSING_OR_INVALID",
   "daily_max_gdu"
@@ -64,14 +70,20 @@ for (const marker of [
   "derived authority cannot claim observed biological truth",
   "future evidence is rejected",
   "corn Base-50 daily GDU applies 86F cap and 50F floor",
-  "pre-R6 mapping preserves MID/LATE ambiguity"
+  "pre-R6 mapping preserves MID/LATE ambiguity",
+  "residual GDU resolves R5 dent-or-later only when the full uncertainty is beyond conservative R5 reference",
+  "residual GDU stays ambiguous when uncertainty overlaps conservative R5 reference",
+  "residual GDU preserves R5/R6 ambiguity when maturity threshold is straddled"
 ]) has(testText, marker, "THERMAL_STAGE_TEST_COVERAGE_MISSING");
 
 const probeText = fs.readFileSync(paths.probe, "utf8");
 for (const marker of [
   "raw_payload_emitted",
   "missing_or_invalid_day_count",
-  "THERMAL_STAGE_THRESHOLD_STRADDLE_UNRESOLVED",
+  "THERMAL_STAGE_R5_DENT_OR_LATER_LATE_CANDIDATE",
+  "THERMAL_STAGE_THRESHOLD_STRADDLE_LATE_CANDIDATE",
+  "conservative_r5_reference_min_remaining_gdu",
+  "hybrid_brand_authority",
   "lifecycle_authority_established_by_thermal_model",
   "production_stage_authority_established"
 ]) has(probeText, marker, "THERMAL_STAGE_PROBE_RULE_MISSING");
@@ -107,6 +119,8 @@ const out = {
   qcp_registered: true,
   generic_stage_resolver_implemented: true,
   bounded_base50_gdu_implemented: true,
+  residual_to_maturity_stage_classifier_implemented: true,
+  first_party_exact_hybrid_thermal_anchor_required: true,
   exact_t4r1_binding_candidate_present: true,
   live_source_probe_present: true,
   observed_vs_derived_separation: true,
