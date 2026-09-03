@@ -1,0 +1,68 @@
+{
+  "schema_version": "geox_mcft_cap09_biological_stage_effectiveness_graduation_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-EFFECTIVENESS-GRADUATION-V1",
+  "record_status": "CANDIDATE_NOT_EFFECTIVE_UNTIL_EXACT_HEAD_PROOF_AND_PROTECTED_MAIN_MERGE",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "exact_predecessor_sha": "89908c39b11cc5298a949ba505f9cd3a99275036",
+  "architecture_candidate": {
+    "amendment_id": "DT02-AMENDMENT-03",
+    "candidate_head_sha": "17eb06c4c79f36e51b88561395f8e69cd86195b7",
+    "amendment_path": "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+    "amendment_blob_sha": "0383f89ee9aa3d57b0c870ac5d0b1197bd4a4ccb",
+    "decision_register_path": "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-DECISION-REGISTER.json",
+    "decision_register_blob_sha": "b9a5184f1557d1d5e1bb2baa977429aa57dbe7ad"
+  },
+  "qualified_premerge_evidence": {
+    "architecture_candidate_run": 33710270018,
+    "integrated_twin_v2_routing_run": 33722612068,
+    "phase5_production_equivalent_run": 33722611942,
+    "accelerated_24t_run": 33722612000,
+    "ci_run": 33722612024,
+    "ea5e_planner_run": 33722611884
+  },
+  "protected_main_effectiveness_prerequisites": {
+    "protected_main_must_equal_requested_subject": true,
+    "graduation_authority_must_be_present_on_protected_main": true,
+    "amendment03_exact_blob_must_be_present_on_protected_main": true,
+    "decision_register_exact_blob_must_be_present_on_protected_main": true,
+    "premerge_run_ids_are_metadata_not_runtime_authority": true,
+    "human_override_authorized": false
+  },
+  "effect_if_exact_head_proof_passes_and_candidate_merges_to_protected_main": {
+    "dt02_biological_stage_effectiveness_certificate_issuance_authorized": true,
+    "fresh_current_crop_authority_graduation_authorized": true,
+    "runtime_start_authorized": false,
+    "production_owner_activation_authorized": false,
+    "formal_v5_authorized": false,
+    "a0_authorized": false,
+    "o00_o23_authorized": false,
+    "mcft_cap09_completed": false
+  },
+  "current_crop_graduation_rules": {
+    "fresh_candidate_required": true,
+    "candidate_architecture_effective_must_be_false": true,
+    "candidate_runtime_consumption_authorized_must_be_false": true,
+    "lifecycle_active_resolved_valid_required": true,
+    "derived_stage_must_not_claim_observed_truth": true,
+    "singleton_water_use_stage_required": true,
+    "resolved_kc_required": true,
+    "stage_forward_stability_window_must_cover_certificate_issued_at": true,
+    "evidence_digest_preserved": true,
+    "crop_model_parameter_production_effective_remains_false": true
+  },
+  "output_contracts": {
+    "architecture_effectiveness_schema": "geox_dt02_biological_stage_authority_effectiveness_v1",
+    "effective_current_crop_schema": "geox_mcft_cap09_t4r1_current_crop_authority_composition_result_v1",
+    "runtime_start_must_bind_output_file_digests_separately": true
+  },
+  "nonclaims": {
+    "architecture_effective_now": false,
+    "current_crop_runtime_consumption_authorized_now": false,
+    "runtime_start_authorized": false,
+    "production_owner_active": false,
+    "formal_v5_armed": false,
+    "a0_started": false,
+    "o00_started": false
+  }
+}
