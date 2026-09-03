@@ -15,7 +15,7 @@ eq(BASE,EXPECTED_BASE,"A18_V4_EXACT_BASE_REQUIRED");
 eq(git("merge-base",EXPECTED_BASE,"HEAD"),EXPECTED_BASE,"A18_V4_BASE_NOT_ANCESTOR");
 const changed=git("diff","--name-only",EXPECTED_BASE+"...HEAD").split(/\r?\n/).filter(Boolean).sort();
 eq(JSON.stringify(changed),JSON.stringify(expected),"A18_V4_EXACT_FIVE_FILE_BOUNDARY_REQUIRED");
-const module=fs.readFileSync("apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.ts","utf8");
+const moduleText=fs.readFileSync("apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.ts","utf8");
 for(const marker of [
  "FORMAL_BIOLOGICAL_STAGE_AUTHORITY_DERIVED_CROP_WATER_USE_CONTEXT_V4",
  "EXTERNAL_FORMAL_A18_V4_PRODUCTION_ACTIVATION_NOT_AUTHORIZED",
@@ -23,7 +23,7 @@ for(const marker of [
  "WATER_USE_STAGE_LATE_STABLE_FOR_R5_TO_R6_THERMAL_PROGRESSION",
  "LIFECYCLE_ACTIVE_REQUIRES_SEPARATE_VALIDATION",
  "EXTERNAL_FORMAL_A18_V4_CURRENT_KC_MATRIX_MISMATCH"
-]) if(!module.includes(marker))fail("A18_V4_REQUIRED_SEMANTIC_MISSING",marker);
+]) if(!moduleText.includes(marker))fail("A18_V4_REQUIRED_SEMANTIC_MISSING",marker);
 if(/stage_code:\s*"MID"/.test(module))fail("A18_V4_HARDCODED_MID_FORBIDDEN");
 const workflow=fs.readFileSync(".github/workflows/mcft-cap-09-a18-biological-stage-context-v4.yml","utf8");
 for(const forbidden of ["workflow_dispatch:","schedule:","pull_request_target","docker compose up","FORMAL_DATABASE_URL","GEOX_MCFT_CAP09_S6_DATABASE_URL"]){
