@@ -194,8 +194,9 @@ try {
   );
   for (const marker of [
     "RUNTIME_START_EXACT_DEPLOYMENT_SUBJECT_MISMATCH",
-    "RUNTIME_START_LIVE_ACTIVATION_AUTHORITY_SHA256_MISMATCH",
-    "RUNTIME_START_FORMAL_A0_AUTHORITY_SHA256_MISMATCH",
+    "live_activation_authority_sha256",
+    "formal_a0_authority_sha256",
+    'code + "_SHA256_MISMATCH"',
     "production_owner_activation_authorized",
     "formal_v5_arm_authorized",
   ]) {
