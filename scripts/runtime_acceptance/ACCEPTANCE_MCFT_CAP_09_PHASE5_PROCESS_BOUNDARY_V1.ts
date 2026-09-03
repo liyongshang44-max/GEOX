@@ -306,6 +306,11 @@ function main(): void {
       `PHASE5_PROCESS_TEST_ONLY_DEPENDENCY_FORBIDDEN:${forbidden}`,
     );
   }
+  assert.equal(
+    lifecycleSource.includes('case "SCHEDULER_LEASE_STANDBY":'),
+    true,
+    "PHASE5_TWIN_SCHEDULER_LEASE_STANDBY_WAIT_REQUIRED",
+  );
   assert.equal(twinSource.includes("composeMcftCap09TwinRuntimeV1"), true);
   assert.equal(evidenceSource.includes("composeEvidenceRuntimeV1"), true);
   assert.equal(evidenceSource.includes("lease_repository.releaseLease"), true);
@@ -345,6 +350,7 @@ function main(): void {
     evidence_graceful_current_fence_release: true,
     twin_duplicate_coordination_contention_retryable: true,
     twin_stale_fence_corruption_fatal: true,
+    twin_scheduler_lease_standby_waits_without_fatal: true,
     stable_compiled_evidence_entrypoint: true,
     evidence_entrypoint_production_planner_bound: true,
     evidence_entrypoint_fail_closed_without_runtime_start_authority: true,
