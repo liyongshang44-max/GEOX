@@ -38,9 +38,10 @@
     "source_role": "DIRECT_MANAGEMENT_PLANTING_AND_HYBRID_IDENTITY"
   },
   "hybrid_thermal_landmark_candidate": {
-    "provider": "ALBERT_LEA_SEED",
+    "provider": "ALBERT_LEA_SEED_BLUE_RIVER",
     "official_url": "https://alseed.com/product/organic-blue-river-43-96p-seed-corn/",
-    "source_class": "SECONDARY_SEED_CATALOG_EXACT_PRODUCT_SPECIFICATION",
+    "brand_authority_url": "https://alseed.com/albert-lea-seed-house-announces-acquisition-of-blue-river-organic-seed/",
+    "source_class": "FIRST_PARTY_BRAND_OWNER_EXACT_PRODUCT_SPECIFICATION",
     "required_markers": [
       "Organic Blue River 43-96P Seed Corn",
       "96-day CRM",
@@ -50,6 +51,11 @@
       "43-96P",
       "2380"
     ],
+    "brand_authority_required_markers": [
+      "acquired",
+      "Blue River Organic Seed",
+      "Albert Lea Seed"
+    ],
     "hybrid_product_code": "43-96P",
     "crm_days": 96,
     "gdu_to_black_layer": 2380,
@@ -57,7 +63,7 @@
     "sibling_threshold_transfer_authorized": false,
     "crm_to_gdu_conversion_authorized": false,
     "observed_phenology_claim_authorized": false,
-    "authority_ceiling": "THERMAL_MODEL_INPUT_CANDIDATE_NOT_DIRECT_FIELD_TRUTH"
+    "authority_ceiling": "FIRST_PARTY_HYBRID_THERMAL_MODEL_INPUT_NOT_DIRECT_FIELD_TRUTH"
   },
   "black_layer_semantics": {
     "provider": "PURDUE_UNIVERSITY_EXTENSION",
@@ -105,22 +111,33 @@
     "full_season_ex_post_normalization_authorized": false
   },
   "thermal_landmark_mapping": {
-    "biological_stage_system": "CORN_REPRODUCTIVE_THERMAL_LANDMARK_V1",
-    "below_black_layer_candidate": "PRE_R6_MODEL_ESTIMATE",
+    "biological_stage_system": "CORN_REPRODUCTIVE_THERMAL_LANDMARK_AND_RESIDUAL_MATURITY_V1",
+    "below_r5_residual_candidate": "PRE_R5_MODEL_ESTIMATE",
+    "r5_or_later_pre_r6_candidate": "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE",
     "at_or_above_black_layer_candidate": "R6_OR_LATER_MODEL_ESTIMATE",
-    "threshold_crossing_rule": "LOWER_GDU_AT_OR_ABOVE_2380_REQUIRED_FOR_R6_OR_LATER_SINGLETON",
-    "straddle_rule": "LOWER_LT_2380_AND_UPPER_GE_2380_RETURNS_NON_SINGLETON",
+    "black_layer_threshold_crossing_rule": "LOWER_GDU_AT_OR_ABOVE_2380_REQUIRED_FOR_R6_OR_LATER_SINGLETON",
+    "r5_residual_rule": "UPPER_REMAINING_GDU_BELOW_CONSERVATIVE_R5_REFERENCE_MIN_400_AND_ACCUMULATED_UPPER_BELOW_2380",
+    "black_layer_straddle_rule": "LOWER_LT_2380_AND_UPPER_GE_2380_RETURNS_NON_SINGLETON",
     "observed_biological_stage_claimed": false
   },
   "biological_to_water_use_mapping": {
-    "PRE_R6_MODEL_ESTIMATE": [
+    "PRE_R5_MODEL_ESTIMATE": [
       "MID",
+      "LATE"
+    ],
+    "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE": [
       "LATE"
     ],
     "R6_OR_LATER_MODEL_ESTIMATE": [
       "LATE"
     ],
-    "mapping_semantics": "PARTIAL_CONSERVATIVE_MAPPING_ONLY",
+    "mapping_semantics": "PARTIAL_CONSERVATIVE_FAO_LATE_RIPENING_MAPPING_V2",
+    "mapping_basis": [
+      "FAO_LATE_SEASON_RUNS_FROM_START_OF_MATURITY_TO_HARVEST_OR_FULL_SENESCENCE",
+      "FAO_LATE_SEASON_INCLUDES_RIPENING",
+      "R5_DENT_IS_MATURING_KERNEL_PROGRESS_TOWARD_PHYSIOLOGICAL_MATURITY",
+      "UNIVERSITY_EXTENSION_LATE_SEASON_WATER_USE_INCLUDES_DENT_PROGRESS"
+    ],
     "kc_resolution_requires_singleton_water_use_stage": true
   },
   "lifecycle_independence": {
@@ -130,7 +147,8 @@
   },
   "expected_candidate_outcomes": [
     "THERMAL_SOURCE_QUALIFICATION_FAIL_CLOSED",
-    "THERMAL_STAGE_PRE_R6_WATER_USE_UNRESOLVED",
+    "THERMAL_STAGE_PRE_R5_WATER_USE_UNRESOLVED",
+    "THERMAL_STAGE_R5_DENT_OR_LATER_LATE_CANDIDATE",
     "THERMAL_STAGE_THRESHOLD_STRADDLE_UNRESOLVED",
     "THERMAL_STAGE_R6_OR_LATER_LATE_CANDIDATE"
   ],
@@ -157,5 +175,97 @@
     "a0_authorized": false,
     "o00_o23_authorized": false,
     "mcft_cap09_completed": false
+  },
+  "r5_residual_to_maturity_model": {
+    "model_id": "CORN_R5_RESIDUAL_TO_MATURITY_CONSERVATIVE_ENVELOPE_V1",
+    "purpose": "Use exact-hybrid black-layer GDU as the maturity anchor and separately qualified university residual-GDU stage references to determine whether the full current thermal uncertainty lies beyond the conservative R5 dent reference.",
+    "sources": [
+      {
+        "source_id": "WISCONSIN_CORN_DEVELOPMENT_R5_RESIDUAL_GDU",
+        "provider": "UNIVERSITY_OF_WISCONSIN_CORN_AGRONOMY",
+        "official_url": "https://corn.agronomy.wisc.edu/management/L011.aspx",
+        "required_markers": [
+          "Early Dent (R5)",
+          "425-525",
+          "Fully Dented",
+          "200-300",
+          "Physiological maturity (R6)"
+        ],
+        "role": "REGIONAL_CORN_RESIDUAL_GDU_STAGE_REFERENCE"
+      },
+      {
+        "source_id": "FAO56_LATE_SEASON_SEMANTICS",
+        "provider": "FAO",
+        "official_url": "https://www.fao.org/4/X0490E/x0490e0a.htm",
+        "required_markers": [
+          "Late season stage",
+          "start of maturity",
+          "harvest or full senescence"
+        ],
+        "role": "CROP_WATER_USE_LATE_STAGE_SEMANTICS"
+      },
+      {
+        "source_id": "UMN_CORN_R5_MATURING_KERNEL_SEMANTICS",
+        "provider": "UNIVERSITY_OF_MINNESOTA_EXTENSION",
+        "official_url": "https://extension.umn.edu/agriculture/crop-production/corn/growth-and-development",
+        "required_markers": [
+          "R5: Kernel dent stage",
+          "maturing kernels",
+          "R6: Physiological maturity"
+        ],
+        "role": "R5_DENT_BIOLOGICAL_DEVELOPMENT_SEMANTICS"
+      },
+      {
+        "source_id": "UMN_LATE_SEASON_CORN_WATER_USE",
+        "provider": "UNIVERSITY_OF_MINNESOTA_EXTENSION",
+        "official_url": "https://extension.umn.edu/natural-resources/conservation/agricultural-soil-and-water/irrigation/late-season-irrigation",
+        "required_markers": [
+          "late season",
+          "Beginning dent",
+          "Full dent",
+          "Water use"
+        ],
+        "role": "LATE_SEASON_WATER_USE_CORROBORATION"
+      }
+    ],
+    "regional_reference_envelope": {
+      "southern_wisconsin_early_dent_r5_gdu_to_maturity": [
+        425,
+        525
+      ],
+      "northern_wisconsin_early_dent_r5_gdu_to_maturity": [
+        400,
+        500
+      ],
+      "southern_wisconsin_r5_5_gdu_to_maturity": [
+        200,
+        300
+      ],
+      "northern_wisconsin_r5_5_gdu_to_maturity": [
+        175,
+        275
+      ],
+      "conservative_r5_reference_min_gdu_to_maturity": 400,
+      "conservative_r5_5_reference_max_gdu_to_maturity": 300
+    },
+    "decision_policy": {
+      "exact_hybrid_maturity_anchor_required": true,
+      "current_accumulation_must_be_bounded": true,
+      "remaining_gdu_lower_formula": "max(0, exact_maturity_gdu - accumulated_upper_gdu)",
+      "remaining_gdu_upper_formula": "max(0, exact_maturity_gdu - accumulated_lower_gdu)",
+      "r5_or_later_pre_r6_if": "accumulated_upper_gdu < exact_maturity_gdu AND remaining_gdu_upper < 400",
+      "r5_progress_between_early_and_half_milkline_if": "remaining_gdu_upper < 400 AND remaining_gdu_lower > 300",
+      "biological_result_on_r5_or_later": "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE",
+      "water_use_result_on_r5_or_later": "LATE",
+      "observed_biological_stage_claimed": false,
+      "exact_r5_field_observation_claimed": false,
+      "generic_absolute_gdu_stage_threshold_transfer_authorized": false,
+      "linear_flower_to_black_layer_interpolation_authorized": false
+    },
+    "limitation_codes": [
+      "REGIONAL_RESIDUAL_GDU_MODEL_NOT_T4R1_FIELD_OBSERVATION",
+      "R5_ESTIMATE_IS_THERMAL_MODEL_DERIVED",
+      "LIFECYCLE_MUST_BE_SEPARATELY_ADJUDICATED"
+    ]
   }
 }
