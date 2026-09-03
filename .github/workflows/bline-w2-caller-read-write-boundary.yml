@@ -91,6 +91,8 @@ jobs:
           GEOX_MCFT_MIGRATOR_PASSWORD=w2-mcft-migrator-strong-2026
           GEOX_RUNTIME_DATABASE_PASSWORD=w2-runtime-database-strong-2026
           GEOX_DEPLOYMENT_SUBJECT_COMMIT=${GITHUB_SHA}
+          GEOX_AO_ACT_TOKEN=w2_admin
+          GEOX_EXECUTOR_TOKEN=w2_admin
           GEOX_INTERNAL_TASK_ISSUER_TOKEN=w2_admin
           GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
           MINIO_ROOT_USER=geoxminio
