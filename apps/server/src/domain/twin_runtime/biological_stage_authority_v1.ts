@@ -87,6 +87,20 @@ export type CornBase50GduBoundsV1 = {
   day_count: number;
 };
 
+export type CornResidualToMaturityStagePolicyV1 = {
+  maturity_gdu: number;
+  conservative_r5_reference_min_remaining_gdu: number;
+};
+
+export type CornResidualToMaturityStageResolutionV1 = {
+  lower_accumulated_gdu: number;
+  upper_accumulated_gdu: number;
+  lower_remaining_gdu: number;
+  upper_remaining_gdu: number;
+  candidate_biological_stages: readonly string[];
+  resolved_biological_stage: string | null;
+};
+
 export type BiologicalToWaterUseStageMappingV1 = Readonly<Record<string, readonly string[]>>;
 
 export type WaterUseStageResolutionV1 = {
@@ -303,6 +317,47 @@ export function accumulateCornBase50GduBoundsV1(
     planting_uncertain_day_count: plantingUncertain,
     missing_or_invalid_day_count: missing,
     day_count: days.length,
+  };
+}
+
+export function classifyCornResidualToMaturityStageV1(
+  bounds: Pick<CornBase50GduBoundsV1, "lower_gdu" | "upper_gdu">,
+  policy: CornResidualToMaturityStagePolicyV1,
+): CornResidualToMaturityStageResolutionV1 {
+  const lowerAccumulated = finiteNumber(bounds.lower_gdu, "BIO_STAGE_RESIDUAL_LOWER_GDU_INVALID");
+  const upperAccumulated = finiteNumber(bounds.upper_gdu, "BIO_STAGE_RESIDUAL_UPPER_GDU_INVALID");
+  const maturity = finiteNumber(policy.maturity_gdu, "BIO_STAGE_RESIDUAL_MATURITY_GDU_INVALID");
+  const r5Remaining = finiteNumber(
+    policy.conservative_r5_reference_min_remaining_gdu,
+    "BIO_STAGE_RESIDUAL_R5_REFERENCE_INVALID",
+  );
+  if (lowerAccumulated < 0 || upperAccumulated < 0 || maturity <= 0 || r5Remaining <= 0) {
+    throw new Error("BIO_STAGE_RESIDUAL_POLICY_NON_POSITIVE");
+  }
+  if (lowerAccumulated > upperAccumulated) throw new Error("BIO_STAGE_RESIDUAL_ACCUMULATION_BOUNDS_INVERTED");
+  if (r5Remaining >= maturity) throw new Error("BIO_STAGE_RESIDUAL_R5_REFERENCE_OUT_OF_RANGE");
+
+  const lowerRemaining = Math.max(0, maturity - upperAccumulated);
+  const upperRemaining = Math.max(0, maturity - lowerAccumulated);
+
+  let candidates: string[];
+  if (lowerAccumulated >= maturity) {
+    candidates = ["R6_OR_LATER_MODEL_ESTIMATE"];
+  } else if (upperAccumulated >= maturity) {
+    candidates = ["R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE", "R6_OR_LATER_MODEL_ESTIMATE"];
+  } else if (upperRemaining < r5Remaining) {
+    candidates = ["R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE"];
+  } else {
+    candidates = ["PRE_R5_MODEL_ESTIMATE", "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE"];
+  }
+
+  return {
+    lower_accumulated_gdu: Number(lowerAccumulated.toFixed(6)),
+    upper_accumulated_gdu: Number(upperAccumulated.toFixed(6)),
+    lower_remaining_gdu: Number(lowerRemaining.toFixed(6)),
+    upper_remaining_gdu: Number(upperRemaining.toFixed(6)),
+    candidate_biological_stages: candidates,
+    resolved_biological_stage: candidates.length === 1 ? candidates[0]! : null,
   };
 }
 
