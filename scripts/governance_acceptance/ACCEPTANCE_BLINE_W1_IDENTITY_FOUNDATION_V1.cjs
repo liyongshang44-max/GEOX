@@ -1,5 +1,6 @@
 const fs=require('node:fs'),cp=require('node:child_process');
 const BASE='35398258d3c59810aba3d19af1c295b1f05a57ce';
+const W1_ACCEPTED_HEAD='03db0c098a66053fd0b921cb8a3c5acdcf67d4d0';
 function sh(a){return cp.execFileSync('git',['-c','core.quotepath=false',...a],{encoding:'utf8'}).trim();}
 function read(p){return fs.readFileSync(p,'utf8');}
 function assert(c,m,x){if(!c)throw new Error(`${m}${x===undefined?'':`: ${JSON.stringify(x)}`}`);}
@@ -49,11 +50,19 @@ const allowed=new Set([
   'scripts/governance_acceptance/ACCEPTANCE_BLINE_PRODUCTION_CALLER_AUTHORITY_INVENTORY_V1.cjs',
   'scripts/runtime_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.ts'
 ]);
+const head=sh(['rev-parse','HEAD']);
 const changed=sh(['diff','--name-only',BASE,'HEAD']).split(/\r?\n/).filter(Boolean);
-for(const p of changed) assert(allowed.has(p),'W1 scope expansion',p);
-for(const p of changed) assert(!/mcft/i.test(p),'MCFT path changed',p);
-for(const p of changed) {
-  if(p===statusPath) continue;
-  assert(!/(recommendation|approval|executor|legacy)/i.test(p),'forbidden W1 semantic workstream path changed',p);
+if (head===W1_ACCEPTED_HEAD) {
+  for(const p of changed) assert(allowed.has(p),'W1 scope expansion',p);
+  for(const p of changed) assert(!/mcft/i.test(p),'MCFT path changed',p);
+  for(const p of changed) {
+    if(p===statusPath) continue;
+    assert(!/(recommendation|approval|executor|legacy)/i.test(p),'forbidden W1 semantic workstream path changed',p);
+  }
+} else {
+  const protectedW1=[authPath,statusPath,runtimePath,composePath,rolesPath,...fixtures,frozenInventory];
+  for(const p of protectedW1) {
+    assert(sh(['diff','--name-only',W1_ACCEPTED_HEAD,'HEAD','--',p])==='','closed W1 protected source drift in successor workstream',p);
+  }
 }
-console.log(JSON.stringify({result:'PASS',workstream:'W1_IDENTITY_FOUNDATION',authority_base:BASE,checks:{malformed_role_fail_closed:true,commercial_credential_source_isolated:true,device_status_auth_context_bound:true,token_role_consistency_gate:true,role_matrix_unchanged:true,credential_fixtures_unchanged:true},changed_files:changed,mcft_delta:0},null,2));
+console.log(JSON.stringify({result:'PASS',workstream:'W1_IDENTITY_FOUNDATION',authority_base:BASE,accepted_head:W1_ACCEPTED_HEAD,qualification_mode:head===W1_ACCEPTED_HEAD?'EXACT_W1_SCOPE':'SUCCESSOR_PRESERVATION',checks:{malformed_role_fail_closed:true,commercial_credential_source_isolated:true,device_status_auth_context_bound:true,token_role_consistency_gate:true,role_matrix_unchanged:true,credential_fixtures_unchanged:true},changed_files:changed,mcft_delta:head===W1_ACCEPTED_HEAD?0:null},null,2));
