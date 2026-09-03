@@ -1325,12 +1325,13 @@ const inlineArgs = q.act_task_id
 
 const out = await pool.query(inlineSql, inlineArgs); // Execute tenant-filtered inline index query.
 
-await writeAoActAuthzAuditFactV0(pool, {
+req.log.info({
+  route: deprecated ? legacyAoActRouteV1("index") : "/api/v1/actions/index",
   event: "index_read",
   actor_id: auth.actor_id,
   token_id: auth.token_id,
-  act_task_id: q.act_task_id
-});
+  act_task_id: q.act_task_id ?? null
+}, "AO-ACT index read authorized");
 
 return reply.send({ ok: true, rows: out.rows, note: "tenant_filtered_inline" });
 

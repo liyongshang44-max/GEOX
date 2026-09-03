@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import {
   getLatestWeatherForecastIndexV1,
 } from "../projections/weather_forecast_v1.js";
@@ -76,17 +77,25 @@ export function registerWeatherV1Routes(app: FastifyInstance, _pool: Pool): void
   });
 
   app.get("/api/v1/weather/forecast/latest", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "telemetry.read");
+    if (!auth) return reply;
+
     const q = ((req as any).query ?? {}) as any;
-    const tenant = {
-      tenant_id: String(q.tenant_id ?? "tenantA"),
-      project_id: String(q.project_id ?? "projectA"),
-      group_id: String(q.group_id ?? "groupA"),
+    const requestedTenant = {
+      tenant_id: String(q.tenant_id ?? auth.tenant_id).trim(),
+      project_id: String(q.project_id ?? auth.project_id).trim(),
+      group_id: String(q.group_id ?? auth.group_id).trim(),
     };
+    if (
+      requestedTenant.tenant_id !== auth.tenant_id
+      || requestedTenant.project_id !== auth.project_id
+      || requestedTenant.group_id !== auth.group_id
+    ) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
 
     const fieldId = String(q.field_id ?? "").trim();
     if (!fieldId) return reply.code(400).send({ ok: false, error: "MISSING_FIELD_ID" });
 
-    const latest = await getLatestWeatherForecastIndexV1(pool, tenant, fieldId);
+    const latest = await getLatestWeatherForecastIndexV1(pool, requestedTenant, fieldId, { allow_compatibility_write: false });
     if (!latest) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
 
     return reply.code(200).send({ ok: true, weather_forecast_v1: latest });

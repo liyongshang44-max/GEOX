@@ -1519,8 +1519,8 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
   });
 
   app.post("/api/v1/recommendations/generate", async (req, reply) => {
-    const auth = requireAoActAnyScopeV0(req, reply, ["recommendation.read", "ao_act.index.read"]);
-    if (!auth) return;
+    const auth = requireAoActScopeV0(req, reply, "recommendation.write");
+    if (!auth) return reply;
     const body: any = req.body ?? {};
     const tenant: TenantTriple = {
       tenant_id: String(body.tenant_id ?? auth.tenant_id),

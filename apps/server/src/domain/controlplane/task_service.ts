@@ -1435,7 +1435,6 @@ async function listOperationPlanStateReadModel(
 }
 
 async function listDispatchQueue(pool: Pool, tenant: TenantTriple, limit: number, actTaskId?: string): Promise<any[]> {
-  await ensureDispatchQueueRuntime(pool);
   const sql = `
     SELECT q.queue_id,
            q.act_task_id,

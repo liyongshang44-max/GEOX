@@ -37,6 +37,15 @@ jobs:
       - name: B-Line W1 focused identity runtime proof
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.ts
 
+      - name: B-Line W2 bounded caller read-write gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.cjs
+
+      - name: Build W2 focused server dependencies
+        run: pnpm --filter @geox/device-skills... build
+
+      - name: B-Line W2 focused positive-negative runtime proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.ts
+
       - name: B-Line production caller authority inventory
         run: pnpm run ci:governance:bline-production-caller-authority-inventory
 
