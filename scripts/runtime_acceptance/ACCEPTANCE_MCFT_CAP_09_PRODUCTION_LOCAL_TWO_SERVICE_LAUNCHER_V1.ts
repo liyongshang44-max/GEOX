@@ -171,7 +171,7 @@ function main(): void {
   );
   assert.match(
     commandText(twin.command),
-    /apps\/server\/dist\/runtime\/mcft_cap09_twin_runtime\.js/,
+    /apps\/server\/dist\/runtime\/mcft_cap09_twin_runtime_v2\.js/,
   );
   assert.match(commandText(evidence.command), /exec node/);
   assert.match(commandText(twin.command), /exec node/);
@@ -354,6 +354,8 @@ function main(): void {
     duplicate_instances_have_distinct_owner_identity: true,
     restart_policy_unless_stopped: true,
     production_compiled_entrypoints: true,
+    production_twin_routes_to_process_v2: true,
+    historical_twin_v1_entrypoint_preserved: true,
     mounted_runtime_start_authority_read_only: true,
     twin_governed_control_mounts_read_only: true,
     twin_current_crop_authority_mount_read_only: true,

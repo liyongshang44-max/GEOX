@@ -60,7 +60,7 @@ services:
       - -c
       - >-
         mkdir -p /var/log/geox/mcft-cap09/twin &&
-        exec node apps/server/dist/runtime/mcft_cap09_twin_runtime.js
+        exec node apps/server/dist/runtime/mcft_cap09_twin_runtime_v2.js
         >> /var/log/geox/mcft-cap09/twin/runtime.log 2>&1
     environment:
       GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?GEOX_DEPLOYMENT_SUBJECT_COMMIT is required}
