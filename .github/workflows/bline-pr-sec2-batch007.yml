@@ -1,0 +1,118 @@
+name: bline-pr-sec2-batch007
+
+on:
+  pull_request:
+    paths:
+      - 'apps/server/src/routes/registerLegacyRoutes.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_FAIL_CLOSED_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_FAIL_CLOSED_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_COMMERCIAL_RUNTIME_V1.ts'
+      - '.github/workflows/bline-pr-sec2-batch007.yml'
+
+jobs:
+  containment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --no-frozen-lockfile
+      - name: Batch007 corrected accounting and source boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_FAIL_CLOSED_V1.cjs
+      - name: Batch007 production registration behavioral proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_FAIL_CLOSED_V1.ts
+      - name: Frozen PR-SEC-1 caller inventory regression
+        run: pnpm run ci:governance:bline-production-caller-authority-inventory
+      - name: B-Line residual authority audit
+        run: pnpm run ci:governance:bline-residual-authority-audit
+      - name: B-Line active runtime surface closure
+        run: pnpm run ci:governance:bline-active-runtime-surface-closure
+      - name: Typecheck
+        run: pnpm -r typecheck
+      - name: Build
+        run: pnpm -r build
+
+  commercial-runtime-proof:
+    runs-on: ubuntu-latest
+    needs: containment
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --no-frozen-lockfile
+      - name: Prepare commercial compose env
+        run: |
+          ACCEPTANCE_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.token==='tenant_a_admin_token' && x.scopes.includes('ao_act.task.write') && x.scopes.includes('ao_act.index.read') && !x.revoked); if(!t) process.exit(1); console.log(t.token)")"
+          mapfile -t ACCEPTANCE_IDENTITY < <(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.token==='tenant_a_admin_token' && x.scopes.includes('ao_act.task.write') && x.scopes.includes('ao_act.index.read') && !x.revoked); if(!t) process.exit(1); for (const k of ['tenant_id','project_id','group_id','actor_id']) { const v=String(t[k]||'').trim(); if(!v) process.exit(1); console.log(v); }")
+          EXECUTOR_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.token==='tenant_a_admin_token' && x.scopes.includes('ao_act.task.write') && x.scopes.includes('ao_act.receipt.write') && !x.revoked); if(!t) process.exit(1); console.log(t.token)")"
+          cat > .env.ci <<EOF
+          GEOX_RUNTIME_ENV=pilot
+          POSTGRES_USER=landos
+          POSTGRES_PASSWORD=ci-pilot-postgres-strong-2026
+          POSTGRES_DB=landos
+          GEOX_MCFT_MIGRATOR_PASSWORD=ci-pilot-mcft-migrator-strong-2026
+          GEOX_RUNTIME_DATABASE_PASSWORD=ci-pilot-runtime-database-strong-2026
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT=${GITHUB_SHA}
+          GEOX_AO_ACT_TOKEN=$ACCEPTANCE_TOKEN
+          GEOX_ACCEPTANCE_TENANT_ID=${ACCEPTANCE_IDENTITY[0]}
+          GEOX_ACCEPTANCE_PROJECT_ID=${ACCEPTANCE_IDENTITY[1]}
+          GEOX_ACCEPTANCE_GROUP_ID=${ACCEPTANCE_IDENTITY[2]}
+          GEOX_ACCEPTANCE_ACTOR_ID=${ACCEPTANCE_IDENTITY[3]}
+          GEOX_EXECUTOR_TOKEN=$EXECUTOR_TOKEN
+          GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
+          GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT=http://127.0.0.1:9000
+          MINIO_ROOT_USER=geoxminio
+          MINIO_ROOT_PASSWORD=ci-pilot-minio-strong-2026
+          MQTT_AUTH_REQUIRED=1
+          GEOX_MQTT_AUTH_REQUIRED=1
+          MQTT_USERNAME=geoxmqtt
+          MQTT_PASSWORD=ci-pilot-mqtt-strong-2026
+          CORS_ORIGINS=https://pilot-ci.geox.invalid
+          GEOX_ALLOWED_ORIGINS=https://pilot-ci.geox.invalid
+          APP_SECRET=ci-pilot-app-secret-strong-2026
+          GEOX_APP_SECRET=ci-pilot-app-secret-strong-2026
+          PUBLIC_BASE_URL=https://pilot-ci.geox.invalid
+          GEOX_PUBLIC_BASE_URL=https://pilot-ci.geox.invalid
+          GEOX_EXECUTION_DEFAULT_DISABLED=1
+          GEOX_EXECUTION_ENABLE_EXPLICITLY=0
+          GEOX_EXECUTION_ENABLE_REASON=ci-controlled-pilot-runtime-security-baseline
+          GEOX_DEVTOOLS_ENABLED=0
+          EOF
+      - name: Start Commercial runtime
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          timeout 180 docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d minio minio-init
+          timeout 300 docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d postgres mqtt server jobs executor
+      - name: Wait for Commercial server
+        run: timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health >/dev/null; do sleep 2; done'
+      - name: Batch007 Commercial sentinel and media no-persistence proof
+        run: |
+          set -euo pipefail
+          set -a; source .env.ci; set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          export GEOX_TEST_BEARER="$GEOX_AO_ACT_TOKEN"
+          SERVER_CID="$(docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps -q server)"
+          snapshot_media() {
+            docker exec "$SERVER_CID" sh -ceu 'if [ -d /app/media/canopy ]; then find /app/media/canopy -type f -print | sort; fi'
+          }
+          BEFORE_MEDIA="$(snapshot_media)"
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_COMMERCIAL_RUNTIME_V1.ts
+          sleep 1
+          AFTER_MEDIA="$(snapshot_media)"
+          test "$AFTER_MEDIA" = "$BEFORE_MEDIA"
+      - name: Runtime hygiene
+        if: always()
+        run: |
+          LOG=/tmp/bline-batch007-runtime.log
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs server > "$LOG" 2>&1 || true
+          ! grep -E 'FST_ERR_REP_ALREADY_SENT|ERR_HTTP_HEADERS_SENT|Reply was already sent|reply already sent' "$LOG"
+      - name: Stop Commercial runtime
+        if: always()
+        run: docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml down -v --remove-orphans || true
