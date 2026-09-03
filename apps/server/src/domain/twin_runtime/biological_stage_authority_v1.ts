@@ -101,6 +101,16 @@ export type CornResidualToMaturityStageResolutionV1 = {
   resolved_biological_stage: string | null;
 };
 
+export type CropWaterUseKcScheduleEntryV1 = {
+  stage_code: string;
+  kc: number;
+};
+
+export type CropWaterUseKcResolutionV1 = {
+  stage_code: string;
+  kc: number;
+};
+
 export type BiologicalToWaterUseStageMappingV1 = Readonly<Record<string, readonly string[]>>;
 
 export type WaterUseStageResolutionV1 = {
@@ -359,6 +369,30 @@ export function classifyCornResidualToMaturityStageV1(
     candidate_biological_stages: candidates,
     resolved_biological_stage: candidates.length === 1 ? candidates[0]! : null,
   };
+}
+
+export function resolveCropWaterUseKcFromFrozenScheduleV1(
+  resolvedWaterUseStage: string | null,
+  schedule: readonly CropWaterUseKcScheduleEntryV1[],
+): CropWaterUseKcResolutionV1 {
+  const stage = requiredText(resolvedWaterUseStage, "BIO_STAGE_KC_RESOLVED_STAGE_REQUIRED");
+  if (!Array.isArray(schedule) || schedule.length === 0) throw new Error("BIO_STAGE_KC_SCHEDULE_REQUIRED");
+
+  const normalized = schedule.map(function (row, index) {
+    const stageCode = requiredText(row.stage_code, "BIO_STAGE_KC_STAGE_CODE_INVALID_" + index);
+    const kc = finiteNumber(row.kc, "BIO_STAGE_KC_VALUE_INVALID_" + index);
+    if (kc < 0) throw new Error("BIO_STAGE_KC_VALUE_NEGATIVE_" + index);
+    return { stage_code: stageCode, kc: kc };
+  });
+
+  const duplicateStages = normalized.filter(function (row, index, all) {
+    return all.findIndex(function (candidate) { return candidate.stage_code === row.stage_code; }) !== index;
+  });
+  if (duplicateStages.length > 0) throw new Error("BIO_STAGE_KC_STAGE_DUPLICATE");
+
+  const matches = normalized.filter(function (row) { return row.stage_code === stage; });
+  if (matches.length !== 1) throw new Error("BIO_STAGE_KC_EXACT_SINGLETON_LOOKUP_REQUIRED:" + stage);
+  return { stage_code: matches[0]!.stage_code, kc: matches[0]!.kc };
 }
 
 export function mapBiologicalAuthorityToWaterUseStageV1(
