@@ -7,6 +7,9 @@ on:
       - '.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml'
       - 'apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts'
+      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_v4_amendment19_runner_v2.ts'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_host_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts'
       - 'apps/server/src/runtime/mcft_cap09_production_runtime_start_authority_v1.ts'
@@ -168,6 +171,8 @@ jobs:
         run: |
           test -f apps/server/dist/runtime/mcft_cap09_twin_runtime.js
           grep -Fq 'runMcftCap09TwinRuntimeProcessV1' apps/server/dist/runtime/mcft_cap09_twin_runtime.js
+          test -f apps/server/dist/runtime/mcft_cap09_twin_runtime_v2.js
+          grep -Fq 'runMcftCap09TwinRuntimeProcessV2' apps/server/dist/runtime/mcft_cap09_twin_runtime_v2.js
           test -f apps/server/dist/qualification/mcft_cap09_phase5_evidence_runtime.js
           grep -Fq 'runMcftCap09Phase5EvidenceRuntimeQualificationV1' apps/server/dist/qualification/mcft_cap09_phase5_evidence_runtime.js
           test -f apps/server/dist/qualification/mcft_cap09_phase5_twin_runtime.js
@@ -175,7 +180,7 @@ jobs:
           test -f apps/server/dist/qualification/mcft_cap09_phase5_capture_a0_fixture.js
           test -f apps/server/dist/qualification/mcft_cap09_phase5_prepare_24t.js
           test -f apps/server/dist/qualification/mcft_cap09_phase5_verify_24t.js
-          ! grep -Rq 'scripts/runtime_acceptance' apps/server/dist/runtime/mcft_cap09_twin_runtime.js apps/server/dist/qualification/mcft_cap09_phase5_evidence_runtime.js apps/server/dist/qualification/mcft_cap09_phase5_twin_runtime.js
+          ! grep -Rq 'scripts/runtime_acceptance' apps/server/dist/runtime/mcft_cap09_twin_runtime.js apps/server/dist/runtime/mcft_cap09_twin_runtime_v2.js apps/server/dist/qualification/mcft_cap09_phase5_evidence_runtime.js apps/server/dist/qualification/mcft_cap09_phase5_twin_runtime.js
 
       - name: Prove Phase5 process source boundaries
         shell: python
@@ -184,11 +189,12 @@ jobs:
 
           lifecycle = Path('apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.ts').read_text()
           twin = Path('apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.ts').read_text()
+          twin_v2 = Path('apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts').read_text()
           evidence = Path('apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts').read_text()
           principals = Path('apps/server/src/infra/mcft_cap09_phase5_service_principal_v1.ts').read_text()
 
           for marker in ['scripts/runtime_acceptance', 'GITHUB_RUN_ID', 'github.event']:
-              if marker in lifecycle + twin + evidence + principals:
+              if marker in lifecycle + twin + twin_v2 + evidence + principals:
                   raise SystemExit(f'PHASE5_PRODUCT_TEST_WIRING_FORBIDDEN:{marker}')
 
           required_twin = [
@@ -200,6 +206,18 @@ jobs:
           for marker in required_twin:
               if marker not in twin:
                   raise SystemExit(f'PHASE5_TWIN_PROCESS_BINDING_MISSING:{marker}')
+
+          required_twin_v2 = [
+              'composeMcftCap09TwinRuntimeV2',
+              'ExternalFormalV4Am19WindowManifestV2',
+              'loadMcftCap09ProductionStageAuthorityMountsV1',
+              'GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL',
+              'assertMcftCap09ServicePrincipalV1(pool, "TWIN_RUNTIME")',
+              'createMcftCap09ProcessStopV1',
+          ]
+          for marker in required_twin_v2:
+              if marker not in twin_v2:
+                  raise SystemExit(f'PHASE5_TWIN_V2_PROCESS_BINDING_MISSING:{marker}')
 
           required_evidence = [
               'composeEvidenceRuntimeV1',
