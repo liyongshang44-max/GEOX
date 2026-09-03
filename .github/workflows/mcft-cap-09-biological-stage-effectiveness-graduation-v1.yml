@@ -42,6 +42,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p acceptance-output
           OUT=acceptance-output/SHOULD_NOT_EXIST_BIOLOGICAL_STAGE_EFFECTIVENESS.json
           rm -f "$OUT"
           set +e
