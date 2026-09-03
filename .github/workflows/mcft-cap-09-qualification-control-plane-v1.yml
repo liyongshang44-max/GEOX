@@ -489,6 +489,19 @@ jobs:
           if (plan.stage !== expectedStage || preflight.stage !== expectedStage) throw new Error(`CONTROL_PLANE_STAGE_ROUTE_MISMATCH:${plan.stage}:${preflight.stage}:${expectedStage}`);
           const control = plan.decisions.find(x => x.check_id === 'CONTROL_PLANE_INTEGRITY');
           if (!control || control.status !== 'REQUALIFY') throw new Error('CONTROL_PLANE_SELF_CHANGE_MUST_REQUALIFY');
+          const assertRequalificationBinding = (row, id) => {
+            if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(row.reason_code)) {
+              throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID:${row.reason_code}`);
+            }
+            if (row.reason_code === 'DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT') {
+              const historicalMissing = row.dependency_digest_missing?.historical;
+              if (!Array.isArray(historicalMissing) || historicalMissing.length === 0) {
+                throw new Error(`${id}_EXPANDED_DEPENDENCY_SET_REQUIRES_HISTORICAL_MISSING_PATHS`);
+              }
+            } else if (!Array.isArray(row.changed_dependencies) || row.changed_dependencies.length === 0) {
+              throw new Error(`${id}_REQUALIFICATION_REQUIRES_CHANGED_DEPENDENCIES:${row.reason_code}`);
+            }
+          };
           const phase7Adapter = 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts';
           const phase7AdapterChanged = plan.changed_paths.includes(phase7Adapter);
           const v13Checks = [
@@ -502,7 +515,7 @@ jobs:
             if (row.status === 'CARRY_FORWARD') {
               if (row.dependency_digest_match !== true) throw new Error(`${id}_CARRY_FORWARD_REQUIRES_DIGEST_MATCH`);
             } else if (row.status === 'REQUALIFY') {
-              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(row.reason_code) || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length === 0) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID:${row.reason_code}`);
+              assertRequalificationBinding(row, id);
             } else {
               throw new Error(`${id}_UNEXPECTED_STATUS:${row.status}`);
             }
@@ -511,7 +524,8 @@ jobs:
           }
           const ea5c1 = plan.decisions.find(x => x.check_id === 'EA5C1_DURABLE_RAW_RESTRICTED_INGRESS');
           if (!ea5c1) throw new Error('EA5C1_DURABLE_RAW_RESTRICTED_INGRESS_APPLICABILITY_DECISION_REQUIRED');
-          if (ea5c1.status !== 'REQUALIFY' || ea5c1.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(ea5c1.reason_code) || !Array.isArray(ea5c1.changed_dependencies) || ea5c1.changed_dependencies.length === 0) throw new Error(`EA5C1_REQUALIFICATION_BINDING_INVALID:${ea5c1.reason_code}`);
+          if (ea5c1.status !== 'REQUALIFY') throw new Error(`EA5C1_REQUALIFICATION_STATUS_INVALID:${ea5c1.status}`);
+          assertRequalificationBinding(ea5c1, 'EA5C1_DURABLE_RAW_RESTRICTED_INGRESS');
           if (ea5c1.execution_workflow !== '.github/workflows/mcft-cap-09-ea5c1-durable-raw-restricted-ingress.yml') throw new Error('EA5C1_REQUALIFICATION_WORKFLOW_MISMATCH');
           for (const id of ['EA5E2_RUNTIME_DEPENDENCY_GRAPH','LEGACY_AM19_PERSISTENT_24T']) {
             const row = plan.decisions.find(x => x.check_id === id);
@@ -519,7 +533,7 @@ jobs:
             if (row.status === 'CARRY_FORWARD') {
               if (row.dependency_digest_match !== true) throw new Error(`${id}_CARRY_FORWARD_REQUIRES_DIGEST_MATCH`);
             } else if (row.status === 'REQUALIFY') {
-              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(row.reason_code)) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID`);
+              assertRequalificationBinding(row, id);
             } else if (row.status === 'REQUIRED') {
               if (row.reason_code !== 'APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE' || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length !== 0) throw new Error(`${id}_UNCHANGED_STACK_PREDECESSOR_INVALID`);
             } else {
@@ -537,7 +551,7 @@ jobs:
             if (row.status === 'REQUIRED') {
               if (row.reason_code !== 'APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE' || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length !== 0) throw new Error(`${id}_UNCHANGED_STACK_PREDECESSOR_INVALID:${row.reason_code}`);
             } else if (row.status === 'REQUALIFY') {
-              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(row.reason_code) || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length === 0) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID:${row.reason_code}`);
+              assertRequalificationBinding(row, id);
             } else {
               throw new Error(`${id}_UNEXPECTED_STATUS:${row.status}`);
             }
@@ -555,7 +569,7 @@ jobs:
             if (row.status === 'REQUIRED') {
               if (row.reason_code !== 'APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE' || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length !== 0) throw new Error(`${id}_UNCHANGED_STACK_PREDECESSOR_INVALID:${row.reason_code}`);
             } else if (row.status === 'REQUALIFY') {
-              if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(row.reason_code) || !Array.isArray(row.changed_dependencies) || row.changed_dependencies.length === 0) throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID:${row.reason_code}`);
+              assertRequalificationBinding(row, id);
             } else {
               throw new Error(`${id}_UNEXPECTED_STATUS:${row.status}`);
             }
