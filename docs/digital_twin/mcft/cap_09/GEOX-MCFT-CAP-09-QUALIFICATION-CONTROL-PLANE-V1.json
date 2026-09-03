@@ -596,6 +596,17 @@
         ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs"
       ]
+    },
+    "T4R1_BIOLOGICAL_STAGE_AUTHORITY_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-t4r1-thermal-biological-stage-authority-v1.yml",
+        "apps/server/src/domain/twin_runtime/biological_stage_authority_v1.test.ts",
+        "apps/server/src/domain/twin_runtime/biological_stage_authority_v1.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.cjs",
+        "scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.py"
+      ]
     }
   },
   "checks": [
@@ -1109,6 +1120,33 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_RUNTIME_HARNESS_RESOLVER_MIGRATION_V1.cjs"
+    },
+    {
+      "check_id": "T4R1_BIOLOGICAL_STAGE_AUTHORITY",
+      "owner": "MCFT_CAP09_BIOLOGICAL_STAGE_AUTHORITY_QUALIFICATION",
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json"
+      ],
+      "resolver_ids": [
+        "T4R1_BIOLOGICAL_STAGE_AUTHORITY_V1"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "execution_workflow": ".github/workflows/mcft-cap-09-t4r1-thermal-biological-stage-authority-v1.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
+      "fail_policy": "FAIL_CLOSED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "T4R1_BIOLOGICAL_STAGE_AUTHORITY_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.cjs"
     }
   ],
   "non_effects": {
