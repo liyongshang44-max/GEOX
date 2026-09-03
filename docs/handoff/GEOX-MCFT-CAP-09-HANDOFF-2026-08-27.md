@@ -1,3 +1,1639 @@
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-03 Continuation — Biological Stage Authority / Twin V2 Production Routing / Integrated Qualification Frontier
+
+Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
+
+Timestamp: **2026-09-03 19:16 +08:00**
+
+Repository: liyongshang44-max/GEOX
+
+Purpose: continue MCFT-CAP-09 after the R-section exact-bound runtime-start frontier was deliberately reopened on one architectural question: whether current crop biological stage must wait indefinitely for a KBS phenology publication, or whether GEOX may establish a governed biological-stage authority from other qualified evidence such as accumulated thermal time. The new work has established a Digital Twin biological-stage authority architecture, implemented and live-qualified a bounded Base-50 thermal model for T4R1, resolved the current crop to a derived R5/dent-or-later biological-stage estimate, mapped that estimate to the governed LATE crop-water-use stage and frozen Kc=0.6, composed it with the independently adopted persistent lifecycle authority, introduced A18 crop-context V4 and a Twin Runtime Composition V2 / Amendment-19 V4 successor path, exact-bound current-crop and architecture-effectiveness inputs at runtime start, mounted those inputs read-only into production Twin, registered the new ownership lanes in QCP, and finally qualified production Twin Process V2 routing.
+
+The current production-routing implementation is no longer blocked on KBS phenology publication.
+
+At the current integrated qualification head, the former routing exact-boundary red light has been repaired. Production Twin V2 routing, Phase5 production-equivalent containers, accelerated 24T, EA5E2 dependency planning, and the routing exact-boundary gate are machine-successful. The only currently visible red workflows at the integrated routing head are the legacy QCP/post-merge predecessor guards, which fail before applicability planning because the stacked base is intentionally not one of their historical governed predecessors. They are not evidence of a Twin V2 routing defect.
+
+> **This S-section is now the highest-priority conversation continuation in this file.**
+>
+> The complete R-section immediately below remains intentionally preserved in full as historical evidence of the Engineering Reopen Closure / Exact-Bound Runtime-Start / Live Docker Activation frontier.
+>
+> Q/P/O/N/M/L/K/J/I/H and all earlier sections remain historical evidence and must remain intact.
+>
+> Do not rewrite R to make the newer biological-stage work look as if it already existed at the R head.
+>
+> This handoff does **not** supersede docs/SSOT.md, the Digital Twin Master Task Line, the CAP-09 taskbook, accepted CAP-01→08 authorities, Production Hosting authority, QCP, protected-main effectiveness rules, Formal-store authorities, or immutable qualification evidence.
+
+---
+
+## S0. READ THIS FIRST — the current continuation is no longer “wait for KBS phenology”
+
+The R-section current product baseline was:
+
+~~~text
+#3376 @
+35b06a92165acc5a6598ccfefc76e4467d93da04
+~~~
+
+That baseline remains historically valid for the exact-bound runtime-start / Docker / live-owner engineering frontier.
+
+The present continuation is a stacked successor architecture and implementation line beginning from that head.
+
+The new question was:
+
+~~~text
+If KBS does not publish a usable current phenology stage for weeks or months,
+must MCFT-9 development remain blocked?
+~~~
+
+The answer established by this continuation is:
+
+~~~text
+NO
+
+KBS phenology =
+  one possible direct-observation evidence source
+
+KBS phenology =
+  NOT the sole possible biological-stage authority source
+
+GEOX may derive biological stage from separately qualified evidence,
+provided:
+  provenance is exact
+  uncertainty is explicit
+  derived != observed
+  lifecycle is separate
+  crop-water-use mapping is governed
+  future evidence is forbidden
+  production consumption is effectiveness-gated
+~~~
+
+The current T4R1 derived result is:
+
+~~~text
+biological stage =
+  R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE
+
+epistemic class =
+  THERMAL_MODEL_DERIVED
+
+observed biological stage claimed =
+  false
+
+crop-water-use stage =
+  LATE
+
+frozen Kc =
+  0.6
+~~~
+
+This does **not** claim that a field observer, KBS phenology feed, scout, phenocam, or remote-sensing system directly observed R5.
+
+---
+
+## S1. Current task in one sentence
+
+**Finish the governed adoption/effectiveness path for BiologicalStageAuthority and production Twin V2/V4 routing without weakening protected-main, runtime-start, lifecycle, or owner gates; then resume live activation only through the already exact-bound runtime-start sequence.**
+
+---
+
+## S2. Why this work was opened after R
+
+R correctly left live activation unarmed, but the conversation identified a practical architecture problem:
+
+~~~text
+current KBS phenology evidence may not arrive for:
+  weeks
+  or months
+~~~
+
+Waiting indefinitely for one provider-specific phenology publication would turn an external observation delay into a permanent engineering blocker.
+
+The user explicitly required that GEOX be able to reason about biological stage from other qualified evidence, including accumulated thermal time, and that this capability enter the Digital Twin architecture rather than remain a one-off CAP-09 script.
+
+The architecture therefore had to answer:
+
+1. what counts as direct versus derived biological-stage evidence;
+2. how planting / hybrid / temperature evidence enters a stage resolver;
+3. how uncertainty is represented;
+4. how biological development stage maps to crop-water-use stage;
+5. how crop-water-use stage maps to governed Kc;
+6. how lifecycle remains independent;
+7. how a production runtime consumes an exact snapshot without re-fetching live evidence on every tick;
+8. how the new path becomes effective without rewriting historical V3/MID evidence.
+
+---
+
+## S3. Digital Twin architecture decision — BiologicalStageAuthorityV1
+
+Architecture candidate:
+
+~~~text
+PR #3455
+
+title =
+  docs(dt02): propose biological stage authority architecture
+
+head =
+  17eb06c4c79f36e51b88561395f8e69cd86195b7
+
+base =
+  #3376 @ 35b06a92165acc5a6598ccfefc76e4467d93da04
+
+Draft / open / mergeable
+~~~
+
+The architecture introduces a governed biological-stage resolver concept:
+
+~~~text
+Planting / hybrid identity
+        +
+weather / thermal accumulation
+        +
+direct phenology observation
+        +
+remote sensing
+        +
+other separately qualified biological-stage evidence
+        ↓
+BiologicalStageAuthorityV1
+        ↓
+biological development stage
+        ↓
+crop-water-use stage
+        ↓
+governed Kc lookup
+        ↓
+Formal crop context / Runtime Config
+~~~
+
+Frozen epistemic classes include:
+
+~~~text
+DIRECT_OBSERVED_PHENOLOGY
+THERMAL_MODEL_DERIVED
+CALENDAR_MODEL_DERIVED
+REMOTE_SENSING_DERIVED
+FUSED_DERIVED
+UNRESOLVED
+~~~
+
+The important semantic rule is:
+
+~~~text
+derived estimate
+  !=
+observed field truth
+~~~
+
+and separately:
+
+~~~text
+Biological Stage
+  !=
+Season Lifecycle
+~~~
+
+Thermal progress may estimate biological development.
+
+Thermal progress alone may not claim:
+
+~~~text
+ACTIVE lifecycle
+not harvested
+not terminated
+current season still operationally valid
+~~~
+
+Those remain independent lifecycle-authority questions.
+
+---
+
+## S4. Thermal implementation and current T4R1 result
+
+Thermal implementation:
+
+~~~text
+PR #3456
+
+title =
+  feat(mcft-cap09): add T4R1 thermal biological stage authority
+
+head =
+  ffc9d03533670d2f47ace71d170602d8768ec1bc
+
+base =
+  17eb06c4c79f36e51b88561395f8e69cd86195b7
+
+Draft / open / mergeable
+~~~
+
+Implemented domain semantics include:
+
+~~~text
+resolveBiologicalStageAuthorityV1
+
+computeCornBase50DailyGduFromFahrenheitV1
+
+accumulateCornBase50GduBoundsV1
+
+classifyCornResidualToMaturityStageV1
+
+mapBiologicalAuthorityToWaterUseStageV1
+
+resolveCropWaterUseKcFromFrozenScheduleV1
+~~~
+
+Corn thermal calculation is bounded Base-50:
+
+~~~text
+Tmax cap =
+  86 F
+
+Tmin floor =
+  50 F
+
+Base =
+  50 F
+~~~
+
+The current T4R1 calculation used:
+
+~~~text
+planting =
+  2026-05-27
+
+crop =
+  corn
+
+hybrid =
+  Blue River 43-96P
+
+weather station =
+  KBSM4
+
+weather through =
+  2026-09-02
+~~~
+
+The live read-only probe produced:
+
+~~~text
+complete temperature days =
+  97
+
+one missing day =
+  2026-07-04
+
+conservative accumulated GDU lower =
+  1987.335
+
+conservative accumulated GDU upper =
+  2042.955
+~~~
+
+The missing day was not silently interpolated.
+
+The uncertainty stayed bounded.
+
+---
+
+## S5. Exact hybrid thermal authority and residual-to-maturity model
+
+The exact 43-96P product specification establishes:
+
+~~~text
+96-day CRM
+
+GDU to Black Layer =
+  2380
+~~~
+
+Additional first-party brand-owner technical material also identifies:
+
+~~~text
+GDU to Flower =
+  1245
+~~~
+
+The source authority classification was strengthened after confirming Albert Lea Seed is the owner/operator of the Blue River brand:
+
+~~~text
+source class =
+  FIRST_PARTY_BRAND_OWNER_EXACT_PRODUCT_SPECIFICATION
+~~~
+
+This source is authoritative for hybrid thermal metadata.
+
+It is still **not** direct T4R1 field phenology.
+
+Current residual thermal range:
+
+~~~text
+2380 - 2042.955 =
+  337.045 GDU
+
+2380 - 1987.335 =
+  392.665 GDU
+
+remaining-to-black-layer interval =
+  337.045 .. 392.665 GDU
+~~~
+
+The residual model uses separately qualified university corn development references.
+
+The conservative R5 reference boundary used for adjudication is:
+
+~~~text
+400 GDU remaining
+~~~
+
+Because the full current uncertainty interval lies below that conservative R5 remaining-GDU reference while still remaining pre-R6, the model resolves:
+
+~~~text
+R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE
+~~~
+
+This is a thermal-model result, not an observed R5 statement.
+
+Do not simplify this into:
+
+~~~text
+T4R1 observed stage = R5
+~~~
+
+That statement is not authorized.
+
+---
+
+## S6. Crop-water-use stage and Kc are now resolved through governed mapping
+
+The derived biological-stage result maps through the new stage authority contract to:
+
+~~~text
+crop-water-use stage =
+  LATE
+~~~
+
+Kc is not hardcoded by the thermal probe.
+
+It is resolved from the existing frozen configuration source:
+
+~~~text
+configuration source =
+  mcft_crop_water_use_corn_v1
+
+configuration semantic hash =
+  sha256:56ac92e34148bd81fe20f2925e1079cb1a3ed647ffefd1471caf1302df70ee4c
+
+LATE Kc =
+  0.6
+~~~
+
+The lookup is exact-stage / exact-singleton.
+
+It rejects:
+
+~~~text
+unresolved stage
+duplicate stage rows
+wrong semantic hash
+wrong configuration source
+silent interpolation
+~~~
+
+Therefore:
+
+~~~text
+thermal model
+  does not directly invent Kc
+
+BiologicalStageAuthority
+        ↓
+governed water-use stage
+        ↓
+existing frozen Kc schedule
+~~~
+
+---
+
+## S7. Persistent lifecycle was independently requalified and composed with stage authority
+
+Current-crop composition:
+
+~~~text
+PR #3457
+
+title =
+  feat(mcft-cap09): compose T4R1 current crop authority
+
+head =
+  f55dfb2d928d4846f45e808ac2ff3040543a3151
+
+Draft / open / mergeable
+~~~
+
+It composes two independent axes:
+
+~~~text
+persistent lifecycle authority
++
+biological-stage / water-use / Kc authority
+~~~
+
+The adopted T4R1 lifecycle semantics pre-existed this work and remain independent.
+
+Fresh lifecycle qualification established:
+
+~~~text
+domain_state =
+  ACTIVE
+
+authority_status =
+  RESOLVED
+
+authority_validity =
+  VALID
+
+authority_mode =
+  GOVERNED_PERSISTENT_STATE
+
+active_consumable_candidate =
+  true
+~~~
+
+The fresh transition sweep did not find a known termination or contradiction.
+
+But the composition explicitly preserves:
+
+~~~text
+provider silence
+  != proof of no harvest
+
+thermal stage
+  != proof of ACTIVE lifecycle
+~~~
+
+The composed current-crop candidate is therefore:
+
+~~~text
+Lifecycle:
+  ACTIVE / RESOLVED / VALID
+
+Biological stage:
+  R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE
+
+Epistemic class:
+  THERMAL_MODEL_DERIVED
+
+Water-use:
+  LATE
+
+Kc:
+  0.6
+~~~
+
+---
+
+## S8. A18 V4 replaces the current hardcoded-MID design without rewriting V3 history
+
+A real controllable architecture defect was found in the existing Formal crop-context path:
+
+~~~text
+external_formal_a18_crop_context_v3.ts
+
+stage_code =
+  MID
+
+exact parameter lookup =
+  MID / Kc 1.15
+~~~
+
+The old Formal successor probe also expected:
+
+~~~text
+MID
+Kc = 1.15
+~~~
+
+That design would prevent a new biological-stage authority from reaching Formal crop context even if the stage resolver correctly returned LATE.
+
+The repair deliberately did **not** rewrite V3.
+
+Successor:
+
+~~~text
+PR #3458
+
+title =
+  feat(mcft-cap09): add biological-stage-aware A18 crop context v4
+
+head =
+  1d9323724d5f69efdd978ea57f46714495862d85
+
+Draft / open / mergeable
+~~~
+
+V4 consumes:
+
+~~~text
+current-crop authority
+        ↓
+resolved water-use stage
+        ↓
+exact frozen Kc schedule
+        ↓
+Formal crop context
+~~~
+
+Historical V3/MID qualification evidence remains byte-stable historical evidence.
+
+---
+
+## S9. V4 effectiveness and temporal semantics
+
+V4 was initially qualification-only.
+
+It later gained an explicit production mode:
+
+~~~text
+PRODUCTION_EFFECTIVE
+~~~
+
+Production mode requires both:
+
+~~~text
+current_crop_authority:
+  architecture_effective = true
+  runtime_consumption_authorized = true
+
+DT-02 Amendment-03 effectiveness:
+  schema exact
+  amendment_id = DT02-AMENDMENT-03
+  status = EFFECTIVE
+  effective = true
+~~~
+
+Do not self-declare either condition on a stacked Draft PR.
+
+The current architecture candidate does not become effective merely because focused CI is green.
+
+Protected-main / effectiveness governance still applies.
+
+V4 also enforces a stage-authority time envelope.
+
+Current-crop authority carries:
+
+~~~text
+authority_as_of
+forward_stability_hours
+~~~
+
+The current V4 successor proof uses:
+
+~~~text
+forward stability =
+  30 hours
+~~~
+
+The reason this limited forward proof is valid is narrow:
+
+~~~text
+current model state =
+  R5_DENT_OR_LATER_PRE_R6
+
+thermal forward progression =
+  toward R6
+
+R5 and R6 governed water-use mapping =
+  LATE
+~~~
+
+This proves water-use-stage stability under bounded thermal progression.
+
+It does **not** prove future lifecycle ACTIVE.
+
+Future-stage evidence is rejected.
+
+Use of a snapshot beyond its forward-stability horizon is rejected.
+
+---
+
+## S10. Runtime-start authority now exact-binds stage-authority consumption
+
+Runtime-start binding:
+
+~~~text
+PR #3460
+
+title =
+  feat(mcft-cap09): bind biological-stage authority at runtime start
+
+head =
+  0c07e5e9096cd4af8e52fb9adc69047116aa7b4e
+
+Draft / open / mergeable
+~~~
+
+The future production runtime-start authority must exact-bind:
+
+~~~text
+current_crop_authority_ref
+current_crop_authority_sha256
+
+biological_stage_architecture_effectiveness_ref
+biological_stage_architecture_effectiveness_sha256
+~~~
+
+Builder/parser acceptance rejects tampered digests.
+
+The repository real arm remains:
+
+~~~text
+armed =
+  false
+
+execution_requested =
+  false
+
+runtime_process_start_authorized =
+  false
+~~~
+
+The new fields in the real arm remain null until legitimate activation preparation.
+
+Qualification fixtures use explicit engineering-only references.
+
+Do not replace production refs with qualification:// fixtures.
+
+---
+
+## S11. Production Twin now requires read-only mounted stage-authority inputs
+
+Production mount seam:
+
+~~~text
+PR #3461
+
+title =
+  feat(mcft-cap09): bind stage authority mounts into production Twin
+
+head =
+  373e33c54109540a2bdbf1c3a31626b731d5cfc6
+
+Draft / open / mergeable
+~~~
+
+Production Twin requires two additional read-only mounted authorities:
+
+~~~text
+current-crop-authority.json
+
+biological-stage-architecture-effectiveness.json
+~~~
+
+Production process validation requires:
+
+~~~text
+mounted file SHA256
+  ==
+runtime-start authority SHA256
+~~~
+
+and semantic effectiveness:
+
+~~~text
+current crop:
+  architecture_effective = true
+  runtime_consumption_authorized = true
+
+architecture:
+  DT02-AMENDMENT-03
+  status = EFFECTIVE
+  effective = true
+~~~
+
+These mounts are Twin-only.
+
+Evidence Runtime does not consume them.
+
+Candidate-only current-crop authority is rejected.
+
+Ineffective architecture is rejected.
+
+Digest drift is rejected.
+
+---
+
+## S12. Twin Runtime Composition V2 / V4 manifest successor
+
+Successor implementation:
+
+~~~text
+PR #3462
+
+title =
+  feat(mcft-cap09): add Twin composition V2 stage-authority successor
+
+head =
+  d9d395ee7fe022d0e718112a37909c56052979d9
+
+Draft / open / mergeable
+
+changed files =
+  12
+~~~
+
+QCP registration:
+
+~~~text
+PR #3463
+
+title =
+  chore(mcft-cap09): register Twin V2 stage-authority successor in QCP
+
+head =
+  f605f7e22ad7a4b7605be885ef1328f2b8283b55
+
+Draft / open / mergeable
+~~~
+
+Integrated successor qualification:
+
+~~~text
+PR #3464
+
+title =
+  test(mcft-cap09): integrated Twin V2 stage-authority qualification
+
+head =
+  42525afa40991b6f70db88fe224c4cdecf7d84ed
+
+base =
+  373e33c54109540a2bdbf1c3a31626b731d5cfc6
+
+changed files =
+  13
+
+Draft / open / mergeable
+~~~
+
+The successor includes:
+
+~~~text
+A18 crop context V4
+V4 prewindow authority bundle
+V4 Amendment-19 runner successor
+V4 Amendment-19 manifest successor
+Twin Runtime Composition V2
+runner-neutral Twin Host structural port
+QCP ownership registration
+~~~
+
+Historical V1/V3 entrypoints remain preserved.
+
+---
+
+## S13. A V4 runner successor was required — do not modify the historical V3 runner
+
+An early attempt made the historical V3 runner accept V4.
+
+That was correctly rejected by the historical Amendment-19 cutover classifier.
+
+The repair was:
+
+~~~text
+restore:
+  external_formal_v3_amendment19_runner_v1.ts
+  byte-for-byte historical behavior
+
+add:
+  external_formal_v4_amendment19_runner_v2.ts
+~~~
+
+This is a critical precedent.
+
+Do not make successor migration by mutating historical accepted runner semantics.
+
+Use a versioned successor.
+
+The same rule applies to:
+
+~~~text
+A18 V3
+Twin Composition V1
+historical manifest pins
+historical qualification artifacts
+~~~
+
+---
+
+## S14. Twin Host port was generalized, but the historical contract literal was preserved
+
+V4 runner integration exposed a type-level coupling:
+
+~~~text
+TwinRuntimeHostV1
+  explicitly typed against
+ExternalFormalV3Amendment19RunnerV1
+~~~
+
+The correct fix was to define the minimal structural one-due-slot port actually consumed by Host.
+
+Do not cast V4 to V3.
+
+However, a second audit found historical Phase4 acceptance exact-asserted the V1 host contract literal:
+
+~~~text
+one_slot_runtime =
+  ExternalFormalV3Amendment19RunnerV1.executeOneDueSlot
+~~~
+
+Therefore the final repair preserved the historical literal and added successor-neutral structural typing separately.
+
+Do not “clean up” that historical literal unless the Phase4 authority is intentionally versioned.
+
+---
+
+## S15. Integrated Twin V2 successor machine qualification is green
+
+At:
+
+~~~text
+#3464 @
+42525afa40991b6f70db88fe224c4cdecf7d84ed
+~~~
+
+the integrated subject proved:
+
+~~~text
+Twin Composition V2 Stage Authority focused qualification
+  33721555454
+  SUCCESS
+
+EA5E2 central planner / dependency routing
+  33721555313
+  SUCCESS
+
+Phase4 Twin Runtime Persistence
+  33721555592
+  SUCCESS
+
+Phase5 production-equivalent containers
+  33721555259
+  SUCCESS
+
+Phase5 two-service accelerated 24T
+  33721555260
+  SUCCESS
+
+CI
+  33721555304
+  SUCCESS
+~~~
+
+The 24T path crossed:
+
+~~~text
+central exact-path ownership =
+  PASS
+
+fresh temporal viability =
+  PASS
+
+container/image qualification =
+  PASS
+
+immutable full-24T baseline/carry-forward settlement =
+  accepted under current temporal adjudication
+~~~
+
+Do not misread the baseline/carry-forward route as “24T did not run therefore failure.”
+
+The workflow itself returned SUCCESS under the governed settlement semantics.
+
+---
+
+## S16. Production Twin Process V2 routing — canonical PR
+
+Canonical production routing:
+
+~~~text
+PR #3473
+
+title =
+  feat(mcft-cap09): route production Twin to Process V2
+
+head =
+  2e42bf7db7ac216c19447fd11befd0ee14ab2693
+
+base =
+  f605f7e22ad7a4b7605be885ef1328f2b8283b55
+
+base branch =
+  feat/mcft-cap09-twin-v2-stage-qcp-registration-v1
+
+changed files =
+  8
+
+commits =
+  11
+
+Draft / open / mergeable
+~~~
+
+The production routing surface proves:
+
+~~~text
+server typecheck =
+  PASS
+
+launcher V2 =
+  PASS
+
+process-boundary =
+  PASS
+
+server build =
+  PASS
+
+V1 compiled entrypoint =
+  PASS
+
+V2 compiled entrypoint =
+  PASS
+~~~
+
+Canonical routing focused run:
+
+~~~text
+33740861038
+SUCCESS
+~~~
+
+Canonical Phase5 production-equivalent:
+
+~~~text
+33740860960
+SUCCESS
+~~~
+
+Canonical CI:
+
+~~~text
+33740860969
+SUCCESS
+~~~
+
+Historical V1 remains compiled.
+
+The migration is a routed successor, not deletion of the historical entrypoint.
+
+---
+
+## S17. Integrated production routing qualification — current exact frontier
+
+Integrated routing qualification:
+
+~~~text
+PR #3485
+
+title =
+  test(mcft-cap09): integrated production Twin V2 routing qualification
+
+head =
+  a32a871638d1cbb254ab354702da05c37e4c10fe
+
+base =
+  f605f7e22ad7a4b7605be885ef1328f2b8283b55
+
+base branch =
+  feat/mcft-cap09-twin-v2-stage-qcp-registration-v1
+
+changed files =
+  9
+
+commits =
+  13
+
+Draft / open / mergeable
+~~~
+
+The correct integrated changed-file subject is:
+
+~~~text
+canonical production routing =
+  8 exact files
+
+integrated qualification =
+  8 exact routing files
+  +
+  docs/digital_twin/mcft/cap_09/
+  GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+  =
+  9 exact files
+~~~
+
+The qualification-only exact-boundary gate initially still recognized only the canonical 8-file subject.
+
+That was not a production routing defect.
+
+The repair at:
+
+~~~text
+a32a871638d1cbb254ab354702da05c37e4c10fe
+~~~
+
+changed only the #3485 qualification branch.
+
+It did **not** relax canonical #3473.
+
+Final gate semantics are strict two-way selection:
+
+~~~text
+canonical routing:
+  exactly 8 routing files
+
+integrated qualification:
+  exactly the same 8 routing files
+  +
+  exact QCP registration file
+  =
+  exactly 9 files
+~~~
+
+No arbitrary extra file is accepted.
+
+---
+
+## S18. #3485 machine evidence after the exact-boundary repair
+
+At:
+
+~~~text
+#3485 @
+a32a871638d1cbb254ab354702da05c37e4c10fe
+~~~
+
+confirmed:
+
+~~~text
+Production Twin Process V2 Routing
+  33748529151
+  SUCCESS
+
+  Server typecheck =
+    SUCCESS
+
+  Typecheck routing acceptances =
+    SUCCESS
+
+  Prove production two-service launcher V2 route =
+    SUCCESS
+
+  Prove process authority separation and V1 preservation =
+    SUCCESS
+
+  Build exact server production package =
+    SUCCESS
+
+  Prove stable V1 and V2 compiled entrypoints =
+    SUCCESS
+
+  Exact routing governance =
+    SUCCESS
+~~~
+
+Also confirmed:
+
+~~~text
+Phase5 production-equivalent containers
+  33748529109
+  SUCCESS
+
+Phase5 two-service accelerated 24T
+  33748528881
+  SUCCESS
+
+EA5E2 runtime dependency graph
+  33748528834
+  SUCCESS
+
+EA5E2 successor runner qualification
+  33748529180
+  SUCCESS
+
+Phase6 runtime independence
+  33748528837
+  SUCCESS
+
+main-ruleset readiness
+  33748529158
+  SUCCESS
+
+delivery policy
+  33748528825
+  SUCCESS
+
+release lane
+  33748529182
+  SUCCESS
+~~~
+
+At this handoff snapshot, integrated CI is still running:
+
+~~~text
+CI
+  33748528924
+  IN_PROGRESS
+~~~
+
+Do not call that a failure.
+
+Canonical #3473 CI is already SUCCESS.
+
+If the next conversation sees 33748528924 completed, record its actual conclusion before making any new claim.
+
+---
+
+## S19. The two current red workflows at #3485 are expected stacked-predecessor guards
+
+QCP:
+
+~~~text
+run =
+  33748528868
+
+conclusion =
+  FAILURE
+~~~
+
+The failure occurs before central applicability planning:
+
+~~~text
+Require governed successor predecessor and zero production bindings
+  FAILURE
+
+reason =
+  MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:
+  f605f7e22ad7a4b7605be885ef1328f2b8283b55
+~~~
+
+Post-merge:
+
+~~~text
+run =
+  33748529985
+
+conclusion =
+  FAILURE
+~~~
+
+It fails at:
+
+~~~text
+Require exact post-merge predecessor
+~~~
+
+These are not current Twin V2 production-routing defects.
+
+Do not “fix” them by:
+
+~~~text
+adding stacked qualification bases to historical predecessor allowlists
+weakening post-merge predecessor checks
+broadening QCP predecessor acceptance
+~~~
+
+Those workflows are protecting a different governance transition.
+
+The routing-specific and integrated subject-specific workflows are the relevant evidence for this Draft stack.
+
+---
+
+## S20. Current classification after biological-stage and production-routing closure
+
+### A — controllable non-live biological-stage / routing defects
+
+~~~text
+0 currently known
+~~~
+
+Closed in this continuation:
+
+~~~text
+KBS-only stage dependency
+thermal-stage resolver absence
+R5/LATE ambiguity from black-layer-only mapping
+stage-to-Kc governed lookup absence
+current lifecycle + stage composition absence
+A18 V3 hardcoded MID production successor gap
+runtime-start stage-authority binding absence
+production Twin authority mount/digest absence
+Twin Composition V2 absence
+V4 manifest / runner successor absence
+QCP successor ownership gaps
+production Process V2 routing gap
+integrated 8-vs-9 exact-boundary qualification mismatch
+~~~
+
+### B — governance / effectiveness sequencing
+
+Still not equivalent to production effectiveness:
+
+~~~text
+DT-02 Amendment-03 remains a Draft architecture candidate
+stacked successor PRs remain open/unmerged
+protected-main effectiveness has not been established for the new architecture
+current-crop authority may not self-promote to runtime-consumable production truth
+#3485 QCP/post-merge historical-predecessor guards remain deliberately fail-closed
+integrated CI 33748528924 is still IN_PROGRESS at handoff snapshot
+~~~
+
+### C — live activation / Taskbook completion
+
+Still future work:
+
+~~~text
+legitimate production runtime-start arm
+local production Docker start
+Evidence live fenced owner
+Twin live fenced scheduler owner
+Formal-v5
+A0
+O00–O23
+final exact-SHA / R2 effectiveness
+MCFT-CAP-09 COMPLETE
+~~~
+
+### D — out of scope
+
+~~~text
+B-Line implementation
+Commercial/B-Line authority repair
+unrelated repository audit expansion
+~~~
+
+---
+
+## S21. What has NOT happened
+
+Do not infer any of the following from the green V2 routing qualification:
+
+~~~text
+protected main contains DT-02 Amendment-03
+DT-02 Amendment-03 is EFFECTIVE
+current-crop authority is production-effective
+runtime-start arm is armed
+local production Docker is running
+production Evidence Runtime is running
+production Twin Runtime is running
+live production owner cutover occurred
+Formal-v5 started
+A0 started
+O00 started
+O00–O23 completed
+MCFT-CAP-09 completed
+~~~
+
+The work has prepared and machine-qualified the successor path.
+
+It has not performed live production activation.
+
+---
+
+## S22. Next conversation — exact first steps
+
+Start from:
+
+~~~text
+#3485 @
+a32a871638d1cbb254ab354702da05c37e4c10fe
+~~~
+
+First verify:
+
+~~~text
+#3485 head still equals
+  a32a871638d1cbb254ab354702da05c37e4c10fe
+
+#3473 head still equals
+  2e42bf7db7ac216c19447fd11befd0ee14ab2693
+
+#3463 head still equals
+  f605f7e22ad7a4b7605be885ef1328f2b8283b55
+~~~
+
+If any head drifted:
+
+~~~text
+STOP
+reconstruct descendants
+classify each changed path
+re-run exact-bound qualification reasoning
+do not continue from stale SHA
+~~~
+
+Then check:
+
+~~~text
+CI run 33748528924
+~~~
+
+If it completed:
+
+~~~text
+record actual conclusion
+do not infer from canonical #3473 CI
+~~~
+
+If integrated CI is SUCCESS and no new exact-head defect appears, the next technical frontier is no longer stage-model development.
+
+The next frontier is:
+
+~~~text
+governed adoption / effectiveness sequencing
+for:
+  DT-02 Amendment-03
+  BiologicalStageAuthority
+  current-crop authority
+  Twin V2 / V4 production routing
+~~~
+
+Do not self-declare effectiveness on the Draft stack.
+
+After legitimate effectiveness and exact production snapshot generation:
+
+~~~text
+fresh current-crop authority snapshot
+        ↓
+architecture_effective = true
+runtime_consumption_authorized = true
+        ↓
+exact ref + SHA256
+        ↓
+runtime-start authority exact binding
+        ↓
+production Twin read-only mounts
+        ↓
+Process V2 / A18 V4
+~~~
+
+Only after the pre-existing live-activation prerequisites are legitimately met should the sequence continue to:
+
+~~~text
+runtime-start arm
+        ↓
+local docker compose config
+        ↓
+local docker compose up -d
+        ↓
+live Evidence/Twin fenced lease proof
+        ↓
+owner graduation
+        ↓
+Formal-v5
+        ↓
+A0
+        ↓
+O00–O23
+~~~
+
+---
+
+## S23. Pitfalls encountered in this continuation — do not repeat them
+
+### S23.1 Do not make KBS phenology the only possible biological-stage truth path
+
+KBS phenology may be the strongest direct observation when current and valid.
+
+It is not the only admissible evidence class.
+
+The architecture must preserve multiple governed paths.
+
+### S23.2 Do not call a thermal estimate an observation
+
+Correct:
+
+~~~text
+R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE
+epistemic_class = THERMAL_MODEL_DERIVED
+observed = false
+~~~
+
+Incorrect:
+
+~~~text
+T4R1 observed R5
+~~~
+
+### S23.3 Do not collapse biological stage into lifecycle
+
+~~~text
+R5 / R6 progress
+  does not prove
+ACTIVE season / no harvest
+~~~
+
+Lifecycle remains separately governed.
+
+### S23.4 Do not convert CRM days into GDU
+
+~~~text
+96-day CRM
+  !=
+96 calendar days after planting
+  !=
+automatic GDU threshold
+~~~
+
+Use exact product thermal metadata.
+
+### S23.5 Do not transfer sibling-hybrid thresholds
+
+The exact-product rule is intentional.
+
+Do not borrow a GDU threshold from a “similar” hybrid merely to get a singleton stage.
+
+### S23.6 Do not linearly interpolate flower-to-black-layer as biological stage authority
+
+A linear percentage between:
+
+~~~text
+GDU to Flower
+and
+GDU to Black Layer
+~~~
+
+is not a governed phenology model.
+
+The implemented R5 adjudication uses a separately qualified residual-to-maturity reference.
+
+### S23.7 Do not silently impute missing weather days
+
+Missing thermal observations remain uncertainty.
+
+The current result uses lower/upper bounds.
+
+### S23.8 Do not use future evidence
+
+V4 rejects:
+
+~~~text
+logical time < stage authority as-of
+~~~
+
+and rejects runtime/materialization beyond the bounded forward-stability horizon.
+
+### S23.9 Do not let the 30h LATE-stability proof become a lifecycle proof
+
+The bounded statement is only:
+
+~~~text
+R5 -> R6 thermal progression
+still maps to
+LATE water-use stage
+~~~
+
+It is not:
+
+~~~text
+crop definitely remains unharvested for 30h
+~~~
+
+### S23.10 Do not rewrite V3/MID history to make V4 easier
+
+An attempt to alter the V3 runner was correctly rejected by the historical cutover classifier.
+
+Always add a versioned successor.
+
+### S23.11 Do not type-cast V4 runner to V3
+
+Generalize the actual structural Host port.
+
+Keep historical contract literals when accepted tests freeze them.
+
+### S23.12 Do not treat central-planner unknown paths as runtime bugs
+
+Several red 24T / EA5E2 runs were caused by missing QCP ownership registration.
+
+The correct fix was exact resolver ownership.
+
+Do not patch runtime semantics merely to make an ownership gate green.
+
+### S23.13 Integrated qualification must include the QCP file explicitly
+
+For production routing:
+
+~~~text
+canonical =
+  8 exact files
+
+integrated =
+  exact same 8
+  +
+  exact QCP registration
+  =
+  9
+~~~
+
+Do not broaden the canonical gate.
+
+Do not make the integrated gate accept arbitrary extras.
+
+### S23.14 Do not “fix” stacked-base QCP/post-merge failures by weakening predecessor governance
+
+At #3485 the failures occur before applicability planning because:
+
+~~~text
+base =
+  f605f7e22ad7a4b7605be885ef1328f2b8283b55
+~~~
+
+is not a historical governed predecessor for those workflows.
+
+That is expected for this qualification view.
+
+### S23.15 Do not confuse GitHub PR merge commits with product head drift
+
+PR workflows may run against generated merge commits.
+
+Always distinguish:
+
+~~~text
+PR product head
+vs
+GitHub temporary merge subject
+~~~
+
+before reconstructing descendants.
+
+### S23.16 Do not continue on a stale exact head after parallel drift
+
+This happened repeatedly during the stage-authority work.
+
+Before any next action:
+
+~~~text
+read PR head
+compare expected -> current
+reconstruct descendants
+classify changed files
+~~~
+
+### S23.17 Do not start local Docker because routing is green
+
+Green routing proves software readiness.
+
+It does not authorize production execution.
+
+The runtime-start arm remains the execution gate.
+
+---
+
+## S24. Current practical meaning
+
+The original concern:
+
+~~~text
+If KBS does not publish phenology for one or two months,
+does MCFT-9 development wait for one or two months?
+~~~
+
+has been technically resolved.
+
+The system now has a governed path to produce:
+
+~~~text
+current biological-stage estimate
+        +
+current lifecycle authority
+        +
+water-use stage
+        +
+Kc
+~~~
+
+without pretending that model-derived evidence is direct observation.
+
+The remaining work is now principally:
+
+~~~text
+adoption / effectiveness
+        ↓
+exact production snapshot binding
+        ↓
+live activation when authorized
+        ↓
+Taskbook Formal/A0/O00 closure
+~~~
+
+It is no longer:
+
+~~~text
+wait indefinitely for KBS phenology before engineering can continue
+~~~
+
+---
+
 # GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-03 Continuation — Engineering Reopen Closure / Exact-Bound Runtime-Start / Live Docker Activation Frontier
 
 Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
