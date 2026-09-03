@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -14,6 +15,7 @@ import {
 } from "../../apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.js";
 import {
   MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1,
+  loadMcftCap09ProductionStageAuthorityMountsV1,
   readMcftCap09TwinRuntimeProcessConfigV1,
 } from "../../apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.js";
 import {
@@ -35,6 +37,10 @@ class FakeProcessSignalsV1 extends EventEmitter {
   }
 }
 
+function digestFile(file: string): string {
+  return "sha256:" + crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+}
+
 function main(): void {
   const twinEnv = {
     GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL:
@@ -43,6 +49,10 @@ function main(): void {
     GEOX_MCFT_CAP09_TWIN_RUNTIME_CROP_AUTHORITY_PATH: "/run/geox/crop.json",
     GEOX_MCFT_CAP09_TWIN_RUNTIME_CONFIGURATION_MATRIX_PATH:
       "/run/geox/config-matrix.json",
+    GEOX_MCFT_CAP09_TWIN_RUNTIME_CURRENT_CROP_AUTHORITY_PATH:
+      "/run/geox/current-crop.json",
+    GEOX_MCFT_CAP09_TWIN_RUNTIME_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_PATH:
+      "/run/geox/stage-architecture-effectiveness.json",
     GEOX_MCFT_CAP09_TWIN_RUNTIME_LEASE_OWNER: "twin-runtime:test-A",
     GEOX_MCFT_CAP09_TWIN_RUNTIME_LEASE_DURATION_SECONDS: "300",
     GEOX_MCFT_CAP09_TWIN_RUNTIME_IDLE_POLL_MS: "1000",
@@ -62,6 +72,11 @@ function main(): void {
   );
   assert.equal(twin.lease_owner, "twin-runtime:test-A");
   assert.equal(twin.lease_duration_seconds, 300);
+  assert.equal(twin.current_crop_authority_path, "/run/geox/current-crop.json");
+  assert.equal(
+    twin.biological_stage_architecture_effectiveness_path,
+    "/run/geox/stage-architecture-effectiveness.json",
+  );
   assert.equal(
     MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V1.provider_credentials_allowed,
     false,
@@ -200,6 +215,86 @@ function main(): void {
       embedded_authority: { armed: false },
     }).formal_a0_logical_time,
     "2026-09-03T18:00:00.000Z",
+  );
+
+  const stageMountDir = path.resolve("acceptance-output/mcft-cap09-stage-mount-fixtures");
+  fs.mkdirSync(stageMountDir, { recursive: true });
+  const currentCropPath = path.join(stageMountDir, "current-crop-authority.json");
+  const stageArchitecturePath = path.join(stageMountDir, "stage-architecture-effectiveness.json");
+  fs.writeFileSync(currentCropPath, JSON.stringify({
+    schema_version: "geox_mcft_cap09_t4r1_current_crop_authority_composition_result_v1",
+    status: "PASS",
+    qualification_outcome: "CURRENT_CROP_CONTEXT_AUTHORITY_CANDIDATE_RESOLVED",
+    architecture_effective: true,
+    runtime_consumption_authorized: true,
+  }, null, 2) + "\n");
+  fs.writeFileSync(stageArchitecturePath, JSON.stringify({
+    schema_version: "geox_dt02_biological_stage_authority_effectiveness_v1",
+    amendment_id: "DT02-AMENDMENT-03",
+    status: "EFFECTIVE",
+    effective: true,
+  }, null, 2) + "\n");
+
+  const mountedStageAuthority = loadMcftCap09ProductionStageAuthorityMountsV1({
+    runtime_start_authority: {
+      current_crop_authority_sha256: digestFile(currentCropPath),
+      biological_stage_architecture_effectiveness_sha256: digestFile(stageArchitecturePath),
+    },
+    current_crop_authority_path: currentCropPath,
+    biological_stage_architecture_effectiveness_path: stageArchitecturePath,
+  });
+  assert.equal(mountedStageAuthority.current_crop_authority.runtime_consumption_authorized, true);
+  assert.equal(mountedStageAuthority.biological_stage_architecture_effectiveness.effective, true);
+
+  assert.throws(
+    () => loadMcftCap09ProductionStageAuthorityMountsV1({
+      runtime_start_authority: {
+        current_crop_authority_sha256: "sha256:" + "e".repeat(64),
+        biological_stage_architecture_effectiveness_sha256: digestFile(stageArchitecturePath),
+      },
+      current_crop_authority_path: currentCropPath,
+      biological_stage_architecture_effectiveness_path: stageArchitecturePath,
+    }),
+    /MCFT_CAP09_PRODUCTION_CURRENT_CROP_AUTHORITY_DIGEST_MISMATCH/,
+  );
+
+  const candidateOnlyPath = path.join(stageMountDir, "current-crop-candidate-only.json");
+  fs.writeFileSync(candidateOnlyPath, JSON.stringify({
+    schema_version: "geox_mcft_cap09_t4r1_current_crop_authority_composition_result_v1",
+    status: "PASS",
+    qualification_outcome: "CURRENT_CROP_CONTEXT_AUTHORITY_CANDIDATE_RESOLVED",
+    architecture_effective: false,
+    runtime_consumption_authorized: false,
+  }, null, 2) + "\n");
+  assert.throws(
+    () => loadMcftCap09ProductionStageAuthorityMountsV1({
+      runtime_start_authority: {
+        current_crop_authority_sha256: digestFile(candidateOnlyPath),
+        biological_stage_architecture_effectiveness_sha256: digestFile(stageArchitecturePath),
+      },
+      current_crop_authority_path: candidateOnlyPath,
+      biological_stage_architecture_effectiveness_path: stageArchitecturePath,
+    }),
+    /MCFT_CAP09_PRODUCTION_CURRENT_CROP_AUTHORITY_NOT_EFFECTIVE/,
+  );
+
+  const ineffectiveArchitecturePath = path.join(stageMountDir, "stage-architecture-candidate.json");
+  fs.writeFileSync(ineffectiveArchitecturePath, JSON.stringify({
+    schema_version: "geox_dt02_biological_stage_authority_effectiveness_v1",
+    amendment_id: "DT02-AMENDMENT-03",
+    status: "CANDIDATE",
+    effective: false,
+  }, null, 2) + "\n");
+  assert.throws(
+    () => loadMcftCap09ProductionStageAuthorityMountsV1({
+      runtime_start_authority: {
+        current_crop_authority_sha256: digestFile(currentCropPath),
+        biological_stage_architecture_effectiveness_sha256: digestFile(ineffectiveArchitecturePath),
+      },
+      current_crop_authority_path: currentCropPath,
+      biological_stage_architecture_effectiveness_path: ineffectiveArchitecturePath,
+    }),
+    /MCFT_CAP09_PRODUCTION_BIOLOGICAL_STAGE_ARCHITECTURE_NOT_EFFECTIVE/,
   );
 
   const evidenceBinding =
@@ -418,6 +513,10 @@ function main(): void {
     runtime_start_exact_deployment_subject_bound: true,
     runtime_start_exact_scope_bound: true,
     runtime_start_source_digest_fields_required: true,
+    production_current_crop_authority_mount_digest_bound: true,
+    production_current_crop_authority_must_be_effective: true,
+    production_biological_stage_architecture_mount_digest_bound: true,
+    production_biological_stage_architecture_must_be_effective: true,
     stale_runtime_start_authority_replay_fail_closed: true,
     mounted_runtime_start_authority_file_binding: true,
     frozen_production_service_identity_binding: true,
