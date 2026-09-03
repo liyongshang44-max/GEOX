@@ -9,6 +9,7 @@ const runtimePath='apps/server/src/runtime/runtime_security_v1.ts';
 const composePath='docker-compose.commercial_v1.yml';
 const rolesPath='apps/server/src/domain/auth/roles.ts';
 const fixtures=['config/auth/security_acceptance_tokens.json','config/auth/ao_act_tokens_v0.json'];
+const frozenInventory='docs/architecture/semantic_convergence/GEOX-BLINE-PRODUCTION-CALLER-AUTHORITY-INVENTORY-V1.json';
 const auth=read(authPath),status=read(statusPath),runtime=read(runtimePath),compose=read(composePath),roles=read(rolesPath);
 
 assert(auth.includes('"admin", "operator", "viewer", "client", "executor", "agronomist", "approver", "auditor", "support"'),'explicit valid-role set missing');
@@ -37,14 +38,15 @@ assert(auth.includes('AUTH_ROLE_SCOPE_DENIED'),'token-role scope inconsistency d
 assert(auth.includes('isScopeAllowedForRoleV1(role as AuthRole, scope)'),'single-scope role consistency enforcement missing');
 assert(auth.includes('isScopeAllowedForRoleV1(role as AuthRole, s)'),'any-scope role consistency enforcement missing');
 
-for(const p of [rolesPath,...fixtures]){
-  assert(sh(['diff','--name-only',BASE,'HEAD','--',p])==='','W1 must not rewrite role matrix or tracked credential fixtures',p);
+for(const p of [rolesPath,...fixtures,frozenInventory]){
+  assert(sh(['diff','--name-only',BASE,'HEAD','--',p])==='','W1 must not rewrite role matrix, tracked credential fixtures, or frozen PR-SEC-1 inventory',p);
 }
 const allowed=new Set([
   '.github/workflows/bline-w1-identity-foundation.yml',
   '.github/workflows/ci.yml',
   authPath,statusPath,runtimePath,composePath,
   'scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs',
+  'scripts/governance_acceptance/ACCEPTANCE_BLINE_PRODUCTION_CALLER_AUTHORITY_INVENTORY_V1.cjs',
   'scripts/runtime_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.ts'
 ]);
 const changed=sh(['diff','--name-only',BASE,'HEAD']).split(/\r?\n/).filter(Boolean);
