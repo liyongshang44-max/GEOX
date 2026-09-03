@@ -238,7 +238,56 @@ jobs:
           console.log(JSON.stringify({status:'PASS',stable_t3r1_seed_supported:true,v3_seed_supported:true,rogue_seed_rejected:true,target_database:'geox_mcft_cap09_s6_formal_t3r1_24h_v3'}));
 
       - name: Rebind governed EA5E2 dependency graph
+        if: steps.routing.outputs.mode != 'protected-main-adoption-successor'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs
+
+      - name: Generate protected-main adoption EA5E2 applicability plan
+        if: steps.routing.outputs.mode == 'protected-main-adoption-successor'
+        run: >-
+          node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+          --base '${{ github.event.pull_request.base.sha }}'
+          --head '${{ github.event.pull_request.head.sha }}'
+          --generation v13
+          --stage SUCCESSOR_SUBJECT_PRE_MERGE
+          --out acceptance-output/MCFT_CAP_09_AM19_ADOPTION_EA5E2_PLAN_V1.json
+
+      - name: Require Phase6-retired EA5E2 route for protected-main adoption
+        if: steps.routing.outputs.mode == 'protected-main-adoption-successor'
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const cp=require('node:child_process');
+          const plan=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_AM19_ADOPTION_EA5E2_PLAN_V1.json','utf8'));
+          if(plan.status!=='PASS')throw new Error('AM19_ADOPTION_EA5E2_PLAN_NOT_PASS:'+plan.status);
+          if((plan.authority_errors||[]).length)throw new Error('AM19_ADOPTION_EA5E2_AUTHORITY_ERROR');
+          if((plan.resolver_errors||[]).length)throw new Error('AM19_ADOPTION_EA5E2_RESOLVER_ERROR');
+          if((plan.unknown_changed_paths||[]).length)throw new Error('AM19_ADOPTION_EA5E2_UNKNOWN_CHANGED_PATH:'+plan.unknown_changed_paths.join(','));
+          const authorityPath='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json';
+          const authority=JSON.parse(fs.readFileSync(authorityPath,'utf8'));
+          if(!String(authority.status||'').startsWith('PHASE6_'))throw new Error('AM19_ADOPTION_PHASE6_RETIREMENT_AUTHORITY_REQUIRED');
+          const audit=cp.spawnSync(process.execPath,['scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs','enforce'],{encoding:'utf8'});
+          if(audit.status!==0)throw new Error('AM19_ADOPTION_PHASE6_OWNER_AUDIT_REQUIRED:'+String(audit.stderr||audit.stdout||''));
+          const row=(plan.decisions||[]).find(x=>x.check_id==='EA5E2_RUNTIME_DEPENDENCY_GRAPH');
+          const proof={
+            schema_version:'geox_mcft_cap09_am19_adoption_ea5e2_route_v1',
+            status:'PASS',
+            subject_sha:'${{ github.event.pull_request.head.sha }}',
+            base_sha:'${{ github.event.pull_request.base.sha }}',
+            central_plan_status:plan.status,
+            central_decision_status:row?.status??null,
+            applicability:'PHASE6_RETIRED',
+            reason_code:'GITHUB_PRODUCTION_EXECUTION_RETIRED',
+            phase6_owner_audit:true,
+            runtime_mutation:false,
+            production_workflow_activation:false,
+            formal_database_mutation:false,
+            provider_request:false,
+            graduation_effect:false,
+            mcft_cap09_completed:false
+          };
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_AM19_ADOPTION_EA5E2_ROUTE_V1_RESULT.json',JSON.stringify(proof,null,2)+'\n');
+          console.log(JSON.stringify(proof));
 
       - name: Prove crop-window preflight ordering and zero-side-effect boundary
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_CROP_WINDOW_PREFLIGHT_V1.cjs
