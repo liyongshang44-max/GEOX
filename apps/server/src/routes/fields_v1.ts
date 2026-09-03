@@ -1041,6 +1041,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       project_id: auth.project_id,
       group_id: auth.group_id,
       field_id,
+      persist: false,
     });
 
     return reply.send({ // Return detail payload.
@@ -1108,6 +1109,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       project_id: auth.project_id,
       group_id: auth.group_id,
       field_id,
+      persist: false,
     });
 
     return reply.send({
@@ -1151,6 +1153,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
         project_id: auth.project_id,
         group_id: auth.group_id,
         field_id,
+        persist: false,
       });
 
     return reply.send({
