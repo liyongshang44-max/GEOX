@@ -107,7 +107,7 @@ async function postSamples({ base, token, f, source = 'device', count = 12 }) {
           synthetic: false,
         },
       };
-      requireOk(await fetchJson(`${base}/api/v1/sensing/raw-samples`, { method: 'POST', token, body }), `raw sample ${def.metric} ${i}`);
+      requireOk(await fetchJson(`${base}/api/v1/sensing/raw-samples`, { method: 'POST', token: `${f.run_id}:${f.device_id}:credential`, body }), `raw sample ${def.metric} ${i}`);
     }
   }
 }
@@ -272,7 +272,7 @@ async function receiptFailureLane(ctx, baseF, recommendation) {
     group_id: f.group_id,
     operation_plan_id: `op_${f.run_id}`,
     act_task_id: task.act_task_id,
-    executor_id: { kind: 'device', id: f.device_id, namespace: 'device_anomaly_e2e' },
+    executor_id: { kind: 'script', id: 'tok_executor_actor', namespace: 'executor_runtime_v1' },
     execution_time: { start_ts: Date.now() - 600000, end_ts: Date.now() - 300000 },
     execution_coverage: { kind: 'field', ref: f.field_id },
     resource_usage: { fuel_l: 0, electric_kwh: 0, water_l: 0, chemical_ml: 0 },

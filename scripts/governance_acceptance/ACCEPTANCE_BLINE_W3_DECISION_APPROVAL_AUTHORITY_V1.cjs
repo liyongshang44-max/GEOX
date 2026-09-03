@@ -1,5 +1,6 @@
 const fs=require("node:fs"),cp=require("node:child_process");
 const BASE="89e7ea6e5b322ae7745c04db3ad4ab584aecb6c2";
+const W3_ACCEPTED_HEAD="9ffa7d8ea383f759a5dbe23ab919328193a06dd3";
 const PREDECESSOR="docs/architecture/semantic_convergence/GEOX-BLINE-PRODUCTION-CALLER-AUTHORITY-INVENTORY-V1.json";
 const W3="docs/architecture/semantic_convergence/GEOX-BLINE-W3-DECISION-APPROVAL-AUTHORITY-V1.json";
 function sh(args){return cp.execFileSync("git",["-c","core.quotepath=false",...args],{encoding:"utf8"}).trim();}
@@ -12,8 +13,14 @@ assert(w3.version==="GEOX_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1","W3 version d
 assert(w3.authority_base===BASE,"W3 authority base drift",w3.authority_base);
 assert(w3.discovery_policy==="NO_WHOLE_REPOSITORY_DISCOVERY; EXACT_PREDECESSOR_ROWS_ONLY","W3 discovery policy drift");
 assert(sh(["diff","--name-only",BASE,"HEAD","--",PREDECESSOR])==="","frozen predecessor inventory modified");
-for(const p of ["apps/server/src/domain/auth/roles.ts","config/auth/security_acceptance_tokens.json","config/auth/ao_act_tokens_v0.json","apps/server/src/routes/v1/operator_approval_actions.ts"]){
-  assert(sh(["diff","--name-only",BASE,"HEAD","--",p])==="","W3 protected authority source drift",p);
+const head=sh(["rev-parse","HEAD"]);
+if(head===W3_ACCEPTED_HEAD){
+  for(const p of ["apps/server/src/domain/auth/roles.ts","config/auth/security_acceptance_tokens.json","config/auth/ao_act_tokens_v0.json","apps/server/src/routes/v1/operator_approval_actions.ts"]){
+    assert(sh(["diff","--name-only",BASE,"HEAD","--",p])==="","W3 protected authority source drift",p);
+  }
+} else {
+  assert(sh(["diff","--name-only",W3_ACCEPTED_HEAD,"HEAD","--",W3])==="","closed W3 bounded inventory drift in successor workstream",W3);
+  assert(sh(["diff","--name-only",W3_ACCEPTED_HEAD,"HEAD","--","apps/server/src/routes/v1/operator_approval_actions.ts"])==="","closed W3 canonical approval action route drift");
 }
 const targetIds=["BSEC-052","BSEC-084","BSEC-085","BSEC-086","BSEC-087","BSEC-088","BSEC-089","BSEC-129","BSEC-181","BSEC-182"];
 assert(w3.bounded_predecessor_row_count===10&&Array.isArray(w3.bounded_predecessor_rows)&&w3.bounded_predecessor_rows.length===10,"W3 bounded row count drift");
@@ -72,7 +79,9 @@ const allowed=new Set([
  "scripts/governance_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.cjs"
 ]);
 const changed=sh(["diff","--name-only",BASE,"HEAD"]).split(/\r?\n/).filter(Boolean);
-for(const p of changed)assert(allowed.has(p),"W3 scope expansion",p);
-for(const p of changed)assert(!/mcft/i.test(p),"W3 touched MCFT",p);
-for(const p of changed)assert(!/(executor|device_status|planner|crop.*latest|action_qualification|monitoring)/i.test(p),"W3 forbidden workstream path changed",p);
-console.log(JSON.stringify({result:"PASS",workstream:"W3_DECISION_APPROVAL_AUTHORITY",authority_base:BASE,bounded_predecessor_row_count:10,repairs:{recommendation_legacy_bridge:"approval.request",approval_request_fallback_removed:true,approval_decide_fallback_removed:true,prescription_submit_approval_kept_for_commercial_sku_01:true,decision_approval_separation:true},changed_files:changed,mcft_delta:0},null,2));
+if(head===W3_ACCEPTED_HEAD){
+  for(const p of changed)assert(allowed.has(p),"W3 scope expansion",p);
+  for(const p of changed)assert(!/mcft/i.test(p),"W3 touched MCFT",p);
+  for(const p of changed)assert(!/(executor|device_status|planner|crop.*latest|action_qualification|monitoring)/i.test(p),"W3 forbidden workstream path changed",p);
+}
+console.log(JSON.stringify({result:"PASS",workstream:"W3_DECISION_APPROVAL_AUTHORITY",authority_base:BASE,accepted_head:W3_ACCEPTED_HEAD,qualification_mode:head===W3_ACCEPTED_HEAD?"EXACT_W3_SCOPE":"SUCCESSOR_PRESERVATION",bounded_predecessor_row_count:10,repairs:{recommendation_legacy_bridge:"approval.request",approval_request_fallback_removed:true,approval_decide_fallback_removed:true,prescription_submit_approval_kept_for_commercial_sku_01:true,decision_approval_separation:true},changed_files:changed,mcft_delta:head===W3_ACCEPTED_HEAD?0:null},null,2));

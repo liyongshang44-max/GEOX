@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { requireDeviceCredentialAuthV1 } from "../auth/device_credential_auth_v1.js";
 import {
   appendRawSampleV1,
   buildSeriesResponseV1,
@@ -195,11 +196,38 @@ async function maybeRunOfficialObservationPipelineV1(pool: Pool, item: RawSample
 
 export function registerSensingFactEnvelopeV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/sensing/raw-samples", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "telemetry.write");
-    if (!auth) return;
     const body: any = req.body ?? {};
+    const payload = asPayloadRecord(body?.payload);
+    const source = body?.source ?? payload.source;
+    let auth: any = null;
+    if (isFormalRawSampleSourceV1(source)) {
+      const device_id = String(body?.sensor_id ?? body?.sensorId ?? payload.sensor_id ?? payload.device_id ?? "").trim();
+      const credential_id = String(body?.credential_id ?? payload.credential_id ?? "").trim();
+      if (!device_id) return badRequest(reply, "FORMAL_DEVICE_ID_REQUIRED");
+      if (!credential_id) return badRequest(reply, "FORMAL_DEVICE_CREDENTIAL_ID_REQUIRED");
+      const deviceAuth = await requireDeviceCredentialAuthV1(pool, req, reply, { device_id, credential_id });
+      if (!deviceAuth) return reply;
+      auth = deviceAuth;
+      const claimedFieldId = String(body?.field_id ?? body?.fieldId ?? payload.field_id ?? "").trim();
+      if (claimedFieldId && claimedFieldId !== deviceAuth.field_id) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+      for (const [key, expected] of [["tenant_id", deviceAuth.tenant_id], ["project_id", deviceAuth.project_id], ["group_id", deviceAuth.group_id]] as const) {
+        for (const holder of [body, payload]) {
+          const provided = holder?.[key] == null ? "" : String(holder[key]).trim();
+          if (provided && provided !== expected) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+        }
+      }
+      for (const holder of [body, payload]) {
+        const claimedDevice = String(holder?.device_id ?? holder?.sensor_id ?? holder?.sensorId ?? "").trim();
+        if (claimedDevice && claimedDevice !== deviceAuth.device_id) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+        const claimedCredential = String(holder?.credential_id ?? "").trim();
+        if (claimedCredential && claimedCredential !== deviceAuth.credential_id) return reply.status(401).send({ ok: false, error: "DEVICE_CREDENTIAL_ID_MISMATCH" });
+      }
+    } else {
+      auth = requireAoActScopeV0(req, reply, "telemetry.write");
+      if (!auth) return reply;
+    }
     const tenant = tenantFromAuth(auth, body);
-    if (!enforceTenantMatch(auth, tenant, reply)) return;
+    if (!enforceTenantMatch(auth, tenant, reply)) return reply;
     try {
       await requireFormalSampleGuardsV1(pool, body, tenant);
       const item = await appendRawSampleV1(pool, body, tenant);

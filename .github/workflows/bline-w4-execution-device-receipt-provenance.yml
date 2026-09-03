@@ -1,0 +1,138 @@
+name: bline-w4-execution-device-receipt-provenance
+
+on:
+  push:
+    branches:
+      - 'feat/bline-w4-execution-device-receipt-provenance-v1'
+  pull_request:
+    paths:
+      - 'docs/architecture/semantic_convergence/GEOX-BLINE-W4-EXECUTION-DEVICE-RECEIPT-PROVENANCE-V1.json'
+      - 'apps/server/src/auth/device_credential_auth_v1.ts'
+      - 'apps/server/src/routes/device_heartbeat_v1.ts'
+      - 'apps/server/src/routes/sensing_fact_envelope_v1.ts'
+      - 'apps/server/src/routes/control_ao_sense.ts'
+      - 'apps/server/src/domain/controlplane/task_service.ts'
+      - 'apps/server/src/routes/control_ao_act.ts'
+      - 'apps/server/src/routes/decision_engine_v1.ts'
+      - 'apps/server/src/domain/auth/roles.ts'
+      - 'config/auth/security_acceptance_tokens.json'
+      - 'apps/executor/src/runtime_loop.ts'
+      - 'docker-compose.commercial_v1.yml'
+      - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_COMMERCIAL_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.cjs'
+      - 'scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_IRRIGATION_E2E_V1.ts'
+      - 'scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_VARIABLE_OPERATION_E2E_V1.cjs'
+      - 'scripts/agronomy_acceptance/ACCEPTANCE_DEVICE_ANOMALY_E2E_V1.cjs'
+      - 'scripts/agronomy_acceptance/ACCEPTANCE_SKILL_CONTRACT_GAP_CLOSURE_V1.cjs'
+      - 'scripts/agronomy_acceptance/ACCEPTANCE_PILOT_CLOSURE_V1.cjs'
+      - 'apps/server/scripts/p1_smoke_device_ready.mjs'
+      - '.github/workflows/bline-w4-execution-device-receipt-provenance.yml'
+      - '.github/workflows/ci.yml'
+
+jobs:
+  bounded-closure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --no-frozen-lockfile
+      - name: Build focused server dependencies
+        run: pnpm --filter @geox/device-skills... build
+      - name: W4 bounded inventory and source gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs
+      - name: W4 focused positive-negative runtime proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts
+      - name: W1 closed-domain successor preservation
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs
+      - name: W2 closed-domain successor preservation
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.cjs
+      - name: W3 closed-domain successor preservation
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.cjs
+      - name: Frozen PR-SEC-1 caller inventory regression
+        run: pnpm run ci:governance:bline-production-caller-authority-inventory
+      - name: B-Line residual authority audit
+        run: pnpm run ci:governance:bline-residual-authority-audit
+      - name: B-Line active runtime surface closure
+        run: pnpm run ci:governance:bline-active-runtime-surface-closure
+      - name: Typecheck
+        run: pnpm -r typecheck
+      - name: Build
+        run: pnpm -r build
+
+  commercial-provenance-proof:
+    runs-on: ubuntu-latest
+    needs: bounded-closure
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.4 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --no-frozen-lockfile
+      - name: Prepare W4 Commercial runtime
+        run: |
+          set -euo pipefail
+          TOKENS_JSON="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); process.stdout.write(JSON.stringify(f))")"
+          cat > .env.w4 <<EOF
+          GEOX_RUNTIME_ENV=pilot
+          GEOX_TOKENS_JSON='$TOKENS_JSON'
+          POSTGRES_USER=landos
+          POSTGRES_PASSWORD=w4-postgres-strong-2026
+          POSTGRES_DB=landos
+          GEOX_MCFT_MIGRATOR_PASSWORD=w4-mcft-migrator-strong-2026
+          GEOX_RUNTIME_DATABASE_PASSWORD=w4-runtime-database-strong-2026
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT=${GITHUB_SHA}
+          GEOX_AO_ACT_TOKEN=tenant_a_admin_token
+          GEOX_EXECUTOR_TOKEN=executor_token
+          GEOX_EXECUTOR_ID=tok_executor_actor
+          GEOX_EXECUTOR_ACTOR_ID=tok_executor_actor
+          GEOX_INTERNAL_TASK_ISSUER_TOKEN=tenant_a_admin_token
+          GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
+          MINIO_ROOT_USER=geoxminio
+          MINIO_ROOT_PASSWORD=w4-minio-strong-2026
+          MQTT_USERNAME=geoxmqtt
+          MQTT_PASSWORD=w4-mqtt-strong-2026
+          CORS_ORIGINS=https://w4.geox.invalid
+          APP_SECRET=w4-app-secret-strong-2026
+          PUBLIC_BASE_URL=https://w4.geox.invalid
+          GEOX_EXECUTION_DEFAULT_DISABLED=1
+          GEOX_EXECUTION_ENABLE_EXPLICITLY=0
+          GEOX_EXECUTION_ENABLE_REASON=w4-execution-device-receipt-provenance
+          GEOX_DEVTOOLS_ENABLED=0
+          EOF
+      - name: Start Commercial runtime
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          timeout 180 docker compose --env-file .env.w4 -f docker-compose.commercial_v1.yml up -d minio minio-init
+          timeout 300 docker compose --env-file .env.w4 -f docker-compose.commercial_v1.yml up -d postgres mqtt server executor
+      - name: Wait for Commercial server
+        run: timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health >/dev/null; do sleep 2; done'
+      - name: W4 Commercial execution-device-receipt provenance proof
+        run: |
+          set -a; source .env.w4; set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          export GEOX_W4_ADMIN_TOKEN=tenant_a_admin_token
+          export GEOX_W4_OPERATOR_TOKEN=operator_token
+          export GEOX_W4_EXECUTOR_TOKEN=executor_token
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_COMMERCIAL_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts
+      - name: Runtime hygiene
+        if: always()
+        run: |
+          SERVER_LOG=/tmp/bline-w4-server.log
+          EXECUTOR_LOG=/tmp/bline-w4-executor.log
+          docker compose --env-file .env.w4 -f docker-compose.commercial_v1.yml logs server > "$SERVER_LOG" 2>&1 || true
+          docker compose --env-file .env.w4 -f docker-compose.commercial_v1.yml logs executor > "$EXECUTOR_LOG" 2>&1 || true
+          ! grep -E 'FST_ERR_REP_ALREADY_SENT|ERR_HTTP_HEADERS_SENT|Reply was already sent|reply already sent' "$SERVER_LOG"
+          ! grep -E 'AUTH_SCOPE_DENIED|AUTH_ROLE_SCOPE_DENIED|EXECUTOR_IDENTITY_MISMATCH|EXECUTOR_PRINCIPAL_REQUIRED' "$EXECUTOR_LOG"
+      - name: Stop Commercial runtime
+        if: always()
+        run: docker compose --env-file .env.w4 -f docker-compose.commercial_v1.yml down -v --remove-orphans || true

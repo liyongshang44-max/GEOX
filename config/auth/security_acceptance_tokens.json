@@ -114,7 +114,8 @@
         "field.zone.read",
         "security.audit.read",
         "inspection.read",
-        "inspection.write"
+        "inspection.write",
+        "telemetry.write"
       ]
     },
     {
@@ -131,7 +132,8 @@
         "action.read",
         "action.receipt.submit",
         "ao_act.receipt.write",
-        "field.zone.read"
+        "field.zone.read",
+        "action.task.dispatch"
       ]
     },
     {
@@ -186,7 +188,9 @@
       "role": "auditor",
       "revoked": false,
       "allowed_field_ids": [],
-      "scopes": ["inspection.read"]
+      "scopes": [
+        "inspection.read"
+      ]
     },
     {
       "token": "set-via-env-or-external-secret-file-pdi-writeonly",
@@ -198,7 +202,9 @@
       "role": "operator",
       "revoked": false,
       "allowed_field_ids": [],
-      "scopes": ["inspection.write"]
+      "scopes": [
+        "inspection.write"
+      ]
     },
     {
       "token": "revoked_token",

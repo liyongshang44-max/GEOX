@@ -52,6 +52,12 @@ jobs:
       - name: B-Line W3 focused positive-negative runtime proof
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.ts
 
+      - name: B-Line W4 execution-device-receipt provenance gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs
+
+      - name: B-Line W4 focused positive-negative runtime proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts
+
       - name: B-Line production caller authority inventory
         run: pnpm run ci:governance:bline-production-caller-authority-inventory
 
@@ -149,7 +155,7 @@ jobs:
         run: |
           ACCEPTANCE_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='admin' && x.scopes.includes('security.admin') && !x.revoked); if(!t) { console.error('missing active admin security.admin token'); process.exit(1); } console.log(t.token)")"
           mapfile -t ACCEPTANCE_IDENTITY < <(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='admin' && x.scopes.includes('security.admin') && !x.revoked); if(!t) process.exit(1); for (const k of ['tenant_id','project_id','group_id','actor_id']) { const v=String(t[k]||'').trim(); if(!v) { console.error('missing acceptance identity '+k); process.exit(1); } console.log(v); }")
-          EXECUTOR_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.token==='tenant_a_admin_token' && x.scopes.includes('ao_act.task.write') && x.scopes.includes('ao_act.receipt.write') && !x.revoked); if(!t) { console.error('missing active executor-compatible acceptance token'); process.exit(1); } console.log(t.token)")"
+          EXECUTOR_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.token==='executor_token' && x.role==='executor' && x.scopes.includes('action.task.dispatch') && x.scopes.includes('ao_act.receipt.write') && !x.revoked); if(!t) { console.error('missing active dedicated executor acceptance token'); process.exit(1); } console.log(t.token)")"
           TOKENS_JSON="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); process.stdout.write(JSON.stringify(f))")"
           cat > .env.ci <<EOF_INNER
           GEOX_RUNTIME_ENV=pilot
@@ -166,6 +172,8 @@ jobs:
           GEOX_ACCEPTANCE_GROUP_ID=${ACCEPTANCE_IDENTITY[2]}
           GEOX_ACCEPTANCE_ACTOR_ID=${ACCEPTANCE_IDENTITY[3]}
           GEOX_EXECUTOR_TOKEN=$EXECUTOR_TOKEN
+          GEOX_EXECUTOR_ID=tok_executor_actor
+          GEOX_EXECUTOR_ACTOR_ID=tok_executor_actor
           GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
           GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT=http://127.0.0.1:9000
           MINIO_ROOT_USER=geoxminio

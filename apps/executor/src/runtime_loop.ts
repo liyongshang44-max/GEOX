@@ -79,7 +79,8 @@ function parseExecutorContext(cliArgs: string[]): ExecutorRuntimeContext {
   const tenant_id = get("tenant_id") ?? process.env.GEOX_TENANT_ID ?? "tenantA";
   const project_id = get("project_id") ?? process.env.GEOX_PROJECT_ID ?? "projectA";
   const group_id = get("group_id") ?? process.env.GEOX_GROUP_ID ?? "groupA";
-  const executor_id = get("executor_id") ?? process.env.GEOX_EXECUTOR_ID ?? "dispatch_executor";
+  const executor_id = get("executor_id") ?? process.env.GEOX_EXECUTOR_ID ?? "";
+  if (!executor_id.trim()) throw new Error("GEOX_EXECUTOR_ID_REQUIRED");
   return { baseUrl, token, tenant_id, project_id, group_id, executor_id };
 }
 
@@ -133,44 +134,11 @@ async function safeRecordExecutorHeartbeat(pool: any, ctx: ExecutorWorkerHeartbe
   }
 }
 
-async function heartbeatOnce(ctx: ExecutorRuntimeContext): Promise<void> {
-  if (!ctx.token) return;
-  const url = `${ctx.baseUrl}/api/v1/devices/${encodeURIComponent(ctx.executor_id)}/heartbeat`;
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${ctx.token}`
-      },
-      body: JSON.stringify({
-        tenant_id: ctx.tenant_id,
-        project_id: ctx.project_id,
-        group_id: ctx.group_id,
-        status: "ONLINE",
-        meta: { source: "executor_runtime_loop" }
-      })
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      console.log(`WARN: executor heartbeat failed status=${res.status} body=${text}`);
-      return;
-    }
-
-    console.log(`HEARTBEAT_TRACE executor_id=${ctx.executor_id} tenant_id=${ctx.tenant_id}`);
-  } catch (error: any) {
-    console.log(`WARN: executor heartbeat error message=${error?.message ?? String(error)}`);
-  }
-}
-
 async function runRuntimeLoop(cliArgs?: string[]): Promise<void> {
   const argv = cliArgs ?? process.argv.slice(2);
   const pollIntervalMs = parsePollIntervalMs(argv);
   const heartbeatIntervalMs = parseHeartbeatIntervalMs(argv);
   const forwardArgs = stripPollArg(argv);
-  const heartbeatCtx = parseExecutorContext(argv);
   const workerHeartbeatPool = createHeartbeatPool();
   const workerHeartbeatCtx: ExecutorWorkerHeartbeatContext = {
     worker_id: resolveWorkerId("geox-v1-executor"),
@@ -182,14 +150,8 @@ async function runRuntimeLoop(cliArgs?: string[]): Promise<void> {
   console.log(`INFO: executor runtime loop started poll_interval_ms=${pollIntervalMs} heartbeat_interval_ms=${heartbeatIntervalMs}`);
   await safeRecordExecutorHeartbeat(workerHeartbeatPool, workerHeartbeatCtx, "STARTED", "IDLE");
 
-  let lastHeartbeatAtMs = 0;
+  parseExecutorContext(argv);
   while (true) {
-    const nowMs = Date.now();
-    if (nowMs - lastHeartbeatAtMs >= heartbeatIntervalMs) {
-      await heartbeatOnce(heartbeatCtx);
-      lastHeartbeatAtMs = Date.now();
-    }
-
     try {
       await safeRecordExecutorHeartbeat(workerHeartbeatPool, workerHeartbeatCtx, "RUNNING", "IDLE");
       await runDispatchOnce(forwardArgs);

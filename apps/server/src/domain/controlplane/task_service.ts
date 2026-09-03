@@ -33,6 +33,40 @@ function badRequest(reply: FastifyReply, error: string) {
   return reply.status(400).send({ ok: false, error }); // Deterministic 400 helper.
 }
 
+function requireExecutorServicePrincipalV1(auth: AoActAuthContextV0, reply: FastifyReply): boolean {
+  if (String(auth.role ?? "") !== "executor") {
+    reply.status(403).send({ ok: false, error: "EXECUTOR_PRINCIPAL_REQUIRED" });
+    return false;
+  }
+  return true;
+}
+
+function canonicalReceiptExecutorV1(auth: AoActAuthContextV0): { kind: "human" | "script"; id: string; namespace: string } | null {
+  const role = String(auth.role ?? "");
+  if (role === "executor") return { kind: "script", id: String(auth.actor_id), namespace: "executor_runtime_v1" };
+  if (role === "operator") return { kind: "human", id: String(auth.actor_id), namespace: "operator_auth_v1" };
+  return null;
+}
+
+function requireReceiptPrincipalV1(auth: AoActAuthContextV0, reply: FastifyReply, executorOnly = false) {
+  if (executorOnly && String(auth.role ?? "") !== "executor") {
+    reply.status(403).send({ ok: false, error: "EXECUTOR_PRINCIPAL_REQUIRED" });
+    return null;
+  }
+  const principal = canonicalReceiptExecutorV1(auth);
+  if (!principal) {
+    reply.status(403).send({ ok: false, error: "EXECUTION_PRINCIPAL_REQUIRED" });
+    return null;
+  }
+  return principal;
+}
+
+function claimedReceiptExecutorMatchesV1(claimed: any, principal: { id: string }): boolean {
+  if (claimed == null || claimed === "") return true;
+  if (typeof claimed === "string") return claimed.trim() === principal.id;
+  return String(claimed?.id ?? "").trim() === principal.id;
+}
+
 function capabilityError(reply: FastifyReply, input: {
   stage: "approval" | "task_create" | "dispatch";
   act_task_id?: string | null;
@@ -2985,15 +3019,18 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // POST /api/v1/ao-act/dispatches/claim
   // Industrial runtime queue claim: atomically leases READY items to a single executor.
   app.post("/api/v1/ao-act/dispatches/claim", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    const auth = requireAoActScopeV0(req, reply, "action.task.dispatch");
     if (!auth) return reply;
+    if (!requireExecutorServicePrincipalV1(auth, reply)) return reply;
     const body: any = req.body ?? {};
     const tenant: TenantTriple = parseTenantFromBody(body);
     if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
     const limit = Math.max(1, Math.min(50, Number.parseInt(String(body.limit ?? 1), 10) || 1));
     const lease_seconds = Math.max(5, Math.min(300, Number.parseInt(String(body.lease_seconds ?? 30), 10) || 30));
-    const executor_id = String(body.executor_id ?? auth.actor_id ?? "executor").trim() || "executor";
+    const claimedExecutorId = String(body.executor_id ?? "").trim();
+    if (claimedExecutorId && claimedExecutorId !== String(auth.actor_id)) return reply.status(403).send({ ok: false, error: "EXECUTOR_IDENTITY_MISMATCH" });
+    const executor_id = String(auth.actor_id);
     const lease_token = String(body.lease_token ?? `lease_${randomUUID().replace(/-/g, "")}`).trim();
     const actTaskId = typeof body.act_task_id === "string" && body.act_task_id.trim() ? body.act_task_id.trim() : undefined;
     const adapterHint = typeof body.adapter_hint === "string" && body.adapter_hint.trim() ? body.adapter_hint.trim() : undefined;
@@ -3048,8 +3085,9 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // POST /api/v1/ao-act/dispatches/state
   // Explicit runtime state transition endpoint used by executor adapters.
   app.post("/api/v1/ao-act/dispatches/state", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
-    if (!auth) return;
+    const auth = requireAoActScopeV0(req, reply, "action.task.dispatch");
+    if (!auth) return reply;
+    if (!requireExecutorServicePrincipalV1(auth, reply)) return reply;
     const body: any = req.body ?? {};
     const tenant: TenantTriple = parseTenantFromBody(body);
     if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
@@ -3213,9 +3251,12 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // POST /api/v1/ao-act/downlinks/published
   // Adapter runtime writes one audit fact after a successful MQTT publish and before appending receipt.
   app.post("/api/v1/ao-act/downlinks/published", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
-    if (!auth) return;
+    const auth = requireAoActScopeV0(req, reply, "action.task.dispatch");
+    if (!auth) return reply;
+    if (!requireExecutorServicePrincipalV1(auth, reply)) return reply;
     const body: any = req.body ?? {};
+    const claimedExecutorId = String(body.executor_id ?? "").trim();
+    if (claimedExecutorId && claimedExecutorId !== String(auth.actor_id)) return reply.status(403).send({ ok: false, error: "EXECUTOR_IDENTITY_MISMATCH" });
     const tenant: TenantTriple = parseTenantFromBody(body);
     if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
@@ -3239,7 +3280,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         state: "DISPATCHED",
         publish_fact_id: existingPublished.fact_id,
         leaseToken: typeof body.lease_token === "string" && body.lease_token.trim() ? body.lease_token.trim() : null,
-        leasedBy: typeof body.executor_id === "string" && body.executor_id.trim() ? body.executor_id.trim() : null
+        leasedBy: String(auth.actor_id)
       });
       const dispatchedTransition = operation_plan_id
         ? await ensureOperationPlanAtLeastDispatched(
@@ -3286,7 +3327,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       state: "DISPATCHED",
       publish_fact_id: published_fact_id,
       leaseToken: typeof body.lease_token === "string" && body.lease_token.trim() ? body.lease_token.trim() : null,
-      leasedBy: typeof body.executor_id === "string" && body.executor_id.trim() ? body.executor_id.trim() : null
+      leasedBy: String(auth.actor_id)
     });
     const dispatchedTransition = operation_plan_id
       ? await ensureOperationPlanAtLeastDispatched(
@@ -3342,8 +3383,11 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // MQTT receipt uplink ingestion path: append device-ack audit fact, then delegate into stable receipt runtime.
   app.post("/api/v1/ao-act/receipts/uplink", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
-    if (!auth) return;
+    if (!auth) return reply;
+    const executionPrincipal = requireReceiptPrincipalV1(auth, reply, true);
+    if (!executionPrincipal) return reply;
     const body: any = req.body ?? {};
+    if (!claimedReceiptExecutorMatchesV1(body.executor_id, executionPrincipal)) return reply.status(403).send({ ok: false, error: "EXECUTOR_IDENTITY_MISMATCH" });
     const tenant: TenantTriple = parseTenantFromBody(body);
     if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
@@ -3427,7 +3471,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       task_id: act_task_id,
       act_task_id,
       command_id,
-      executor_id: body.executor_id ?? { kind: "device", id: device_id, namespace: "mqtt_device_v1" },
+      executor_id: executionPrincipal,
       execution_time: body.execution_time ?? { start_ts: Number(body.start_ts ?? Date.now() - 50), end_ts: Number(body.end_ts ?? Date.now()) },
       execution_coverage: body.execution_coverage ?? { kind: "field", ref: "device_uplink" },
       resource_usage: body.resource_usage ?? { fuel_l: 0, electric_kwh: 0, water_l: 0, chemical_ml: 0 },
@@ -3448,7 +3492,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!delegated.ok || !delegated.json?.ok) return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "RECEIPT_UPLINK_WRITE_FAILED" });
     const uplinkEvidenceValidity = evaluateReceiptEvidenceValidity({
       ...body,
-      executor_id: body.executor_id ?? { kind: "device", id: device_id, namespace: "mqtt_device_v1" },
+      executor_id: executionPrincipal,
       logs_refs: body.logs_refs ?? [{ kind: "mqtt", ref: deriveReceiptTopic(tenant, device_id, body) }],
     });
     const receipt_v1_fact_id = await insertFact(pool, "api/v1/ao-act/receipts/uplink", {
@@ -3467,7 +3511,11 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         receipt_code: String(body?.meta?.receipt_code ?? body?.status ?? "SUCCEEDED"),
         receipt_message: body?.meta?.receipt_message ?? null,
         raw_receipt_ref: body?.meta?.raw_receipt_ref ?? null,
-        received_ts: Number(body?.meta?.received_ts ?? Date.now())
+        received_ts: Number(body?.meta?.received_ts ?? Date.now()),
+        executor_id: executionPrincipal,
+        source_receipt_fact_id: String(delegated.json.fact_id ?? ""),
+        auth_actor_id: auth.actor_id,
+        auth_token_id: auth.token_id
       }
     });
     if (uplinkEvidenceValidity.valid) {
@@ -3778,8 +3826,11 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // Delegates to existing receipt runtime and adds a stable wrapper fact for Commercial v1 REST.
   app.post("/api/v1/ao-act/receipts", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
-    if (!auth) return;
+    if (!auth) return reply;
+    const executionPrincipal = requireReceiptPrincipalV1(auth, reply);
+    if (!executionPrincipal) return reply;
     const body: any = req.body ?? {};
+    if (!claimedReceiptExecutorMatchesV1(body.executor_id, executionPrincipal)) return reply.status(403).send({ ok: false, error: "EXECUTOR_IDENTITY_MISMATCH" });
     const tenant: TenantTriple = parseTenantFromBody(body);
     if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
@@ -3817,6 +3868,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (planActTaskId && planActTaskId !== task_id) return badRequest(reply, "OPERATION_PLAN_TASK_ID_MISMATCH");
     const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/actions/receipt`, String((req.headers as any).authorization ?? ""), {
       ...body,
+      executor_id: executionPrincipal,
       act_task_id: task_id,
       operation_plan_id,
       tenant_id: tenant.tenant_id,
@@ -3841,6 +3893,10 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         receipt_message: body?.meta?.receipt_message ?? null,
         raw_receipt_ref: body?.meta?.raw_receipt_ref ?? null,
         received_ts: Number(body?.meta?.received_ts ?? Date.now()),
+        executor_id: executionPrincipal,
+        source_receipt_fact_id: String(delegated.json.fact_id ?? ""),
+        auth_actor_id: auth.actor_id,
+        auth_token_id: auth.token_id,
         evidence_artifact_ids: evidenceArtifactIds
       }
     });

@@ -224,14 +224,18 @@ function requireTenantMatchOr404(auth: AoActAuthContextV0, tenant: TenantTriple,
 
 
 function isExecutorToken(auth: AoActAuthContextV0): boolean {
-  const actor = String(auth.actor_id ?? "").toLowerCase();
-  const tokenId = String(auth.token_id ?? "").toLowerCase();
-  return actor.includes("executor") || tokenId.includes("executor");
+  return String(auth.role ?? "") === "executor";
 }
 
 function hasExecutorRuntimeScopes(auth: AoActAuthContextV0): boolean {
   const scopes = Array.isArray(auth.scopes) ? auth.scopes : [];
-  return scopes.includes("ao_act.task.write") && scopes.includes("ao_act.receipt.write");
+  return scopes.includes("action.task.dispatch") && scopes.includes("ao_act.receipt.write");
+}
+
+function canonicalDecisionReceiptExecutorV1(auth: AoActAuthContextV0): { kind: "human" | "script"; id: string; namespace: string } {
+  return String(auth.role ?? "") === "executor"
+    ? { kind: "script", id: String(auth.actor_id), namespace: "executor_runtime_v1" }
+    : { kind: "human", id: String(auth.actor_id), namespace: "operator_auth_v1" };
 }
 
 function hostBaseUrl(req: FastifyRequest): string {
@@ -1135,7 +1139,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
   app.post("/api/v1/actions/receipt/from-task", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "action.receipt.submit");
     if (!auth) return reply;
-    if (!["executor", "operator", "admin"].includes(String(auth.role))) {
+    if (!["executor", "operator"].includes(String(auth.role))) {
       return reply.status(403).send({ ok: false, error: "AUTH_ROLE_SCOPE_DENIED" });
     }
     const body: any = req.body ?? {};
@@ -1146,6 +1150,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     const operation_plan_id = String(body.operation_plan_id ?? "").trim();
     const act_task_id = String(body.act_task_id ?? "").trim();
     const executor_id = body.executor_id ?? {};
+    const executionPrincipal = canonicalDecisionReceiptExecutorV1(auth);
     const meta = body.meta ?? {};
     const idempotency_key = String(meta.idempotency_key ?? "").trim();
     const command_id = String(meta.command_id ?? "").trim();
@@ -1153,6 +1158,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     if (!field_id || !operation_plan_id || !act_task_id) return reject("REJECTED_INVALID_INPUT");
     if (!idempotency_key || command_id !== act_task_id || meta.source !== "AO_ACT_TASK_V0") return reject("REJECTED_INVALID_INPUT");
     if (!["human", "script", "device"].includes(String(executor_id.kind)) || !String(executor_id.id ?? "").trim() || !String(executor_id.namespace ?? "").trim()) return reject("REJECTED_INVALID_INPUT");
+    if (String(executor_id.id ?? "").trim() !== executionPrincipal.id) return reply.status(403).send({ ok: false, error: "EXECUTOR_IDENTITY_MISMATCH" });
     if (!body.execution_time || !Number.isFinite(Number(body.execution_time.start_ts)) || !Number.isFinite(Number(body.execution_time.end_ts)) || Number(body.execution_time.start_ts) > Number(body.execution_time.end_ts)) return reject("REJECTED_INVALID_INPUT");
     if (!Array.isArray(body.evidence_refs) || body.evidence_refs.length < 1) return reject("REJECTED_INVALID_INPUT");
     if (!Array.isArray(body.logs_refs) || body.logs_refs.length < 1) return reject("REJECTED_INVALID_INPUT");
@@ -1165,7 +1171,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     const devices = Array.isArray(body.device_refs) ? body.device_refs : [];
     for (const d of devices) if (d?.kind !== "device_ref_fact" || !String(d?.ref ?? "").trim()) return reject("REJECTED_INVALID_INPUT");
 
-    const dup = await pool.query(`SELECT fact_id FROM facts WHERE (record_json::jsonb->>'type')='executor_ao_act_receipt_submission_v1' AND (record_json::jsonb#>>'{payload,tenant_id}')=$1 AND (record_json::jsonb#>>'{payload,project_id}')=$2 AND (record_json::jsonb#>>'{payload,group_id}')=$3 AND (record_json::jsonb#>>'{payload,act_task_id}')=$4 AND (record_json::jsonb#>>'{payload,executor_id,kind}')=$5 AND (record_json::jsonb#>>'{payload,executor_id,id}')=$6 AND (record_json::jsonb#>>'{payload,executor_id,namespace}')=$7 AND (record_json::jsonb#>>'{payload,idempotency_key}')=$8 LIMIT 1`, [tenant.tenant_id, tenant.project_id, tenant.group_id, act_task_id, executor_id.kind, executor_id.id, executor_id.namespace, idempotency_key]);
+    const dup = await pool.query(`SELECT fact_id FROM facts WHERE (record_json::jsonb->>'type')='executor_ao_act_receipt_submission_v1' AND (record_json::jsonb#>>'{payload,tenant_id}')=$1 AND (record_json::jsonb#>>'{payload,project_id}')=$2 AND (record_json::jsonb#>>'{payload,group_id}')=$3 AND (record_json::jsonb#>>'{payload,act_task_id}')=$4 AND (record_json::jsonb#>>'{payload,executor_id,kind}')=$5 AND (record_json::jsonb#>>'{payload,executor_id,id}')=$6 AND (record_json::jsonb#>>'{payload,executor_id,namespace}')=$7 AND (record_json::jsonb#>>'{payload,idempotency_key}')=$8 LIMIT 1`, [tenant.tenant_id, tenant.project_id, tenant.group_id, act_task_id, executionPrincipal.kind, executionPrincipal.id, executionPrincipal.namespace, idempotency_key]);
     if (dup.rows.length) return reject("REJECTED_DUPLICATE", 409, { duplicate: true });
 
     const taskFact = await loadTaskFactByTaskId(pool, tenant, act_task_id);
@@ -1218,7 +1224,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       approvalRequestTransition: approvalFact?.record_json ?? null,
       approvalRequestFactId: approvalFact?.fact_id ?? null,
       operationPlanIndexRecord: indexRow,
-      executor_id,
+      executor_id: executionPrincipal,
       execution_time: {
         start_ts: Number(body.execution_time.start_ts),
         end_ts: Number(body.execution_time.end_ts),
@@ -2027,7 +2033,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     // Never callable from recommendation / UI / approval flows.
     // All execution must originate from approved AO-ACT tasks.
     const auth = requireAoActAnyScopeV0(req, reply, ["action.receipt.submit", "ao_act.receipt.write"]);
-    if (!auth) return;
+    if (!auth) return reply;
     if (!hasExecutorRuntimeScopes(auth)) {
       return reply.status(403).send({ ok: false, error: "EXECUTOR_SCOPE_REQUIRED" });
     }
@@ -2103,7 +2109,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       operation_plan_id,
       act_task_id,
       command_id,
-      executor_id: { kind: "script", id: "irrigation_simulator", namespace: "decision_engine_v1" },
+      executor_id: canonicalDecisionReceiptExecutorV1(auth),
       execution_time: { start_ts: startTs, end_ts: endTs },
       execution_coverage: { kind: "field", ref: String(body.field_id ?? "field_unknown") },
       resource_usage: {

@@ -23,7 +23,7 @@ import { randomUUID } from "node:crypto"; // Generate UUIDs for fact/task ids
 import { z } from "zod"; // Runtime validation
 import { resolveTaskCapabilityViaDeviceSkillsResult } from "@geox/device-skills";
 
-import { requireAoActAnyScopeV0, requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js"; // Sprint 19: AO-ACT token/scope authorization.
+import { requireAoActAnyScopeV0, requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js"; // Sprint 19: AO-ACT token/scope authorization.
 import { computeEffect } from "../domain/agronomy/effect_engine.js";
 import { evaluateAoActHardRulePrecheckV1 } from "../domain/agronomy/ao_act_hard_rule_strategy_v1.js";
 import { deriveFertilityPrecheckConstraintsV1 } from "../domain/agronomy/fertility_precheck_constraints_v1.js";
@@ -137,9 +137,15 @@ function requireActionTaskCreateRoleV1(reply: any, auth: any): boolean {
 }
 function requireActionReceiptSubmitRoleV1(reply: any, auth: any): boolean {
   const role = String(auth?.role ?? "").trim();
-  if (role === "admin" || role === "operator" || role === "executor") return true;
+  if (role === "operator" || role === "executor") return true;
   reply.status(403).send({ ok: false, error: "ACTION_RECEIPT_SUBMIT_ROLE_DENIED" });
   return false;
+}
+
+function canonicalActionReceiptExecutorV1(auth: AoActAuthContextV0): { kind: "human" | "script"; id: string; namespace: string } {
+  return String(auth.role ?? "") === "executor"
+    ? { kind: "script", id: String(auth.actor_id), namespace: "executor_runtime_v1" }
+    : { kind: "human", id: String(auth.actor_id), namespace: "operator_auth_v1" };
 }
 
 function isFeatureEnabledV0(envName: string, defaultEnabled: boolean): boolean {
@@ -923,6 +929,10 @@ async function handleAoActReceiptV1(app: FastifyInstance, pool: Pool, req: any, 
       if (hit) return reply.status(400).send({ ok: false, error: `FORBIDDEN_KEY:${hit}` });
 
       const body = actionReceiptRequestSchemaV1.parse(req.body);
+      const executorIdentity = canonicalActionReceiptExecutorV1(auth);
+      if (String(body.executor_id?.id ?? "").trim() !== executorIdentity.id) {
+        return reply.status(403).send({ ok: false, error: "EXECUTOR_IDENTITY_MISMATCH" });
+      }
 
       const tenant = assertTenantFieldsPresentV0(body, "body"); // Extract tenant triple from parsed body.
       if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard isolation (404 on mismatch).
@@ -972,9 +982,9 @@ const dup = await findDuplicateAoActReceiptByIdempotencyKey(pool, {
   project_id: tenant.project_id,
   group_id: tenant.group_id,
   act_task_id: body.act_task_id, // Dedupe within this act_task_id.
-  executor_kind: body.executor_id.kind, // Dedupe scope: executor kind.
-  executor_id: body.executor_id.id, // Dedupe scope: executor id.
-  executor_namespace: body.executor_id.namespace, // Dedupe scope: executor namespace.
+  executor_kind: executorIdentity.kind, // Dedupe scope: authenticated executor kind.
+  executor_id: executorIdentity.id, // Dedupe scope: authenticated executor id.
+  executor_namespace: executorIdentity.namespace, // Dedupe scope: authenticated executor namespace.
   idempotency_key: idempotencyKey // Dedupe key: executor-generated idempotency key.
 });
 if (dup) { // If a duplicate exists, reject to avoid semantic pollution from retries.
@@ -1041,7 +1051,7 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
           group_id: tenant.group_id,
           operation_plan_id: body.operation_plan_id,
           act_task_id: body.act_task_id,
-          executor_id: body.executor_id,
+          executor_id: executorIdentity,
           execution_time: body.execution_time,
           execution_coverage: body.execution_coverage,
           resource_usage: body.resource_usage,
