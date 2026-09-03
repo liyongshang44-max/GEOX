@@ -199,6 +199,7 @@ implements TwinRuntimeHostWaitPortV1 {
   async waitAfterAttempt(input: {
     reason:
       | "NO_DUE_SLOT"
+      | "SCHEDULER_LEASE_STANDBY"
       | "EVIDENCE_OR_CONFIG_NOT_READY"
       | "TERMINAL_SLOT"
       | "RETRY_BACKOFF";
@@ -208,6 +209,7 @@ implements TwinRuntimeHostWaitPortV1 {
     let waitMs: number;
     switch (input.reason) {
       case "NO_DUE_SLOT":
+      case "SCHEDULER_LEASE_STANDBY":
         waitMs = this.idleMs;
         break;
       case "EVIDENCE_OR_CONFIG_NOT_READY":
