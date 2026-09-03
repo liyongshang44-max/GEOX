@@ -33,7 +33,8 @@ export type MaterializeExternalFormalA18CropContextInputV4 = {
   crop_authority: JsonRecordV4;
   configuration_matrix: JsonRecordV4;
   current_crop_authority: JsonRecordV4;
-  activation_mode: "QUALIFICATION_ONLY";
+  biological_stage_architecture_effectiveness?: JsonRecordV4;
+  activation_mode: "QUALIFICATION_ONLY" | "PRODUCTION_EFFECTIVE";
 };
 
 export type MaterializedExternalFormalA18CropContextV4 = {
@@ -48,7 +49,7 @@ export type MaterializedExternalFormalA18CropContextV4 = {
   current_crop_authority_evidence_digest: string;
   water_use_stage_forward_stable_under_thermal_progression: true;
   lifecycle_requires_separate_validation: true;
-  production_effective: false;
+  production_effective: boolean;
   context: ContinuationCropStageConfigurationContextV1;
 };
 
@@ -196,7 +197,26 @@ export function deriveExternalFormalA18CropContextIdentityHashV4(input: {
 export function materializeExternalFormalA18CropContextV4(
   input: MaterializeExternalFormalA18CropContextInputV4,
 ): MaterializedExternalFormalA18CropContextV4 {
-  if (input.activation_mode !== "QUALIFICATION_ONLY") throw new Error("EXTERNAL_FORMAL_A18_V4_PRODUCTION_ACTIVATION_NOT_AUTHORIZED");
+  const productionEffective = input.activation_mode === "PRODUCTION_EFFECTIVE";
+  if (productionEffective) {
+    const current = input.current_crop_authority;
+    if (
+      current.architecture_effective !== true
+      || current.runtime_consumption_authorized !== true
+    ) {
+      throw new Error("EXTERNAL_FORMAL_A18_V4_CURRENT_CROP_AUTHORITY_NOT_EFFECTIVE");
+    }
+    const architecture = input.biological_stage_architecture_effectiveness;
+    if (
+      !architecture
+      || architecture.schema_version !== "geox_dt02_biological_stage_authority_effectiveness_v1"
+      || architecture.amendment_id !== "DT02-AMENDMENT-03"
+      || architecture.status !== "EFFECTIVE"
+      || architecture.effective !== true
+    ) {
+      throw new Error("EXTERNAL_FORMAL_A18_V4_ARCHITECTURE_EFFECTIVENESS_REQUIRED");
+    }
+  }
   const logicalTime = canonicalHourV4(input.logical_time, "EXTERNAL_FORMAL_A18_V4_CROP_CONTEXT_LOGICAL_TIME_INVALID");
   if (!/^sha256:[0-9a-f]{64}$/.test(input.expected_identity_hash)) {
     throw new Error("EXTERNAL_FORMAL_A18_V4_EXPECTED_IDENTITY_HASH_INVALID");
@@ -261,7 +281,9 @@ export function materializeExternalFormalA18CropContextV4(
       "MODEL_PRIOR_FROM_CAP08",
       "NOT_FIELD_CALIBRATED",
       "NO_FUTURE_OBSERVATION_USE",
-      "QUALIFICATION_ONLY_NO_PRODUCTION_EFFECT",
+      productionEffective
+        ? "PRODUCTION_EFFECTIVE_EXACT_BOUND_STAGE_AUTHORITY"
+        : "QUALIFICATION_ONLY_NO_PRODUCTION_EFFECT",
     ],
     determinism_hash: identityHash,
   };
@@ -286,7 +308,7 @@ export function materializeExternalFormalA18CropContextV4(
     current_crop_authority_evidence_digest: current.evidenceDigest,
     water_use_stage_forward_stable_under_thermal_progression: true,
     lifecycle_requires_separate_validation: true,
-    production_effective: false,
+    production_effective: productionEffective,
     context,
   };
 }
