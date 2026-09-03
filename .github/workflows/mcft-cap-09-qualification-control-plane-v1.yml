@@ -405,11 +405,14 @@ jobs:
               if (run.name !== entry.workflow_name || snapshot.workflow_name !== entry.workflow_name) throw new Error(`REQUALIFICATION_RUN_WORKFLOW_MISMATCH:${entry.evidence_id}:${run.name}`);
               if (run.path !== entry.workflow_path || snapshot.workflow_path !== entry.workflow_path) throw new Error(`REQUALIFICATION_RUN_PATH_MISMATCH:${entry.evidence_id}:${run.path}`);
               if (run.event !== 'pull_request' || snapshot.event !== 'pull_request') throw new Error(`REQUALIFICATION_RUN_EVENT_MISMATCH:${entry.evidence_id}:${run.event}`);
-              const runBaseSha = run.pull_requests?.find(pr => pr?.base?.sha)?.base?.sha ?? null;
-              if (snapshot.base_sha !== runBaseSha || !governedRequalificationBases.has(runBaseSha)) throw new Error(`REQUALIFICATION_RUN_BASE_MISMATCH:${entry.evidence_id}:${runBaseSha}`);
+              const liveRunBaseSha = run.pull_requests?.find(pr => pr?.base?.sha)?.base?.sha ?? null;
+              if (!governedRequalificationBases.has(snapshot.base_sha)) throw new Error(`REQUALIFICATION_SNAPSHOT_BASE_UNGOVERNED:${entry.evidence_id}:${snapshot.base_sha}`);
+              if (liveRunBaseSha !== null && snapshot.base_sha !== liveRunBaseSha) throw new Error(`REQUALIFICATION_RUN_BASE_MISMATCH:${entry.evidence_id}:${liveRunBaseSha}`);
+              const runBaseSha = liveRunBaseSha ?? snapshot.base_sha;
               requalificationResults.push({
                 evidence_id:entry.evidence_id, check_id:entry.check_id, run_id:entry.run_id,
-                live_run_resolved:true, run_conclusion:run.conclusion, head_sha:run.head_sha,
+                live_run_resolved:true, live_pr_base_resolved:liveRunBaseSha !== null,
+                run_conclusion:run.conclusion, head_sha:run.head_sha,
                 base_sha:runBaseSha, workflow_name:run.name, workflow_path:run.path, event:run.event,
                 durable_anchor_resolved:true,
               });
@@ -464,6 +467,7 @@ jobs:
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA: ${{ env.POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA }}
+          POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA: ${{ env.POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA }}
         run: |
           const fs = require('node:fs');
           const proof = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json','utf8'));
@@ -479,7 +483,10 @@ jobs:
           const governedBases = new Set(registry.requalification_evidence?.durable_anchors?.rules?.governed_successor_predecessors || []);
           if (plan.base_sha !== process.env.PR_BASE_SHA) throw new Error(`CONTROL_PLANE_PLAN_BASE_MUST_EQUAL_PR_BASE:${plan.base_sha}:${process.env.PR_BASE_SHA}`);
           if (!governedBases.has(plan.base_sha)) throw new Error(`CONTROL_PLANE_PLAN_BASE_NOT_GOVERNED:${plan.base_sha}`);
-          const expectedStage = process.env.PR_BASE_SHA === process.env.POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA
+          const expectedStage = (
+            process.env.PR_BASE_SHA === process.env.POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA
+            || process.env.PR_BASE_SHA === process.env.POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA
+          )
             ? 'POST_MERGE_V13_QUALIFICATION'
             : 'SUCCESSOR_SUBJECT_PRE_MERGE';
           if (plan.stage !== expectedStage || preflight.stage !== expectedStage) throw new Error(`CONTROL_PLANE_STAGE_ROUTE_MISMATCH:${plan.stage}:${preflight.stage}:${expectedStage}`);
