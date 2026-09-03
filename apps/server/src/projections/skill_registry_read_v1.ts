@@ -4,7 +4,7 @@ type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 
 type SkillRegistryFactType = "skill_definition_v1" | "skill_binding_v1" | "skill_run_v1";
 
-type SkillRegistryReadRow = {
+export type SkillRegistryReadRow = {
   tenant_id: string;
   project_id: string;
   group_id: string;
@@ -193,8 +193,12 @@ async function ensureSkillRegistryReadTable(pool: Pool): Promise<void> {
   await pool.query(`ALTER TABLE skill_registry_read_v1 ADD COLUMN IF NOT EXISTS legacy_category text NULL`);
 }
 
-export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTriple): Promise<SkillRegistryReadRow[]> {
-  await ensureSkillRegistryReadTable(pool);
+export async function projectSkillRegistryReadV1(
+  pool: Pool,
+  tenant: TenantTriple,
+  options: { persist?: boolean } = {},
+): Promise<SkillRegistryReadRow[]> {
+  if (options.persist !== false) await ensureSkillRegistryReadTable(pool);
 
   const factsQ = await pool.query(
     `SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json
@@ -248,6 +252,7 @@ export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTripl
   }).filter((x) => x.fact_type && x.skill_id && x.version);
 
   const latest = selectLatest(staged);
+  if (options.persist === false) return latest;
 
   const client = await pool.connect();
   try {
@@ -301,6 +306,38 @@ export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTripl
   }
 
   return latest;
+}
+
+export function filterSkillRegistryReadRowsV1(
+  rows: SkillRegistryReadRow[],
+  input: TenantTriple & {
+    category?: string;
+    status?: string;
+    crop_code?: string;
+    device_type?: string;
+    trigger_stage?: string;
+    bind_target?: string;
+    fact_type?: SkillRegistryFactType;
+  }
+): SkillRegistryReadRow[] {
+  const category = typeof input.category === "string" ? toPublicCategoryFromLegacy(input.category) : null;
+  const status = input.status?.trim().toUpperCase() || null;
+  const cropCode = input.crop_code?.trim().toLowerCase() || null;
+  const deviceType = input.device_type?.trim().toUpperCase() || null;
+  const triggerStage = input.trigger_stage?.trim() || null;
+  const bindTarget = input.bind_target?.trim() || null;
+  const factType = input.fact_type?.trim() || null;
+  return rows.filter((row) => {
+    if (row.tenant_id !== input.tenant_id || row.project_id !== input.project_id || row.group_id !== input.group_id) return false;
+    if (category && row.category !== category) return false;
+    if (status && String(row.status ?? "").toUpperCase() !== status) return false;
+    if (cropCode && String(row.crop_code ?? "").toLowerCase() !== cropCode) return false;
+    if (deviceType && String(row.device_type ?? "").toUpperCase() !== deviceType) return false;
+    if (triggerStage && row.trigger_stage !== triggerStage) return false;
+    if (bindTarget && row.bind_target !== bindTarget) return false;
+    if (factType && row.fact_type !== factType) return false;
+    return true;
+  }).slice(0, 500);
 }
 
 export async function querySkillRegistryReadV1(
