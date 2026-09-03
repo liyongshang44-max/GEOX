@@ -687,7 +687,8 @@
       "paths": [
         ".github/workflows/mcft-cap-09-biological-stage-post-merge-effectiveness-v1.yml",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1.cjs"
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1.cjs",
+        "scripts/governance_acceptance/ROUTE_MCFT_CAP_09_BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1.cjs"
       ]
     },
     "PRODUCTION_RUNTIME_OWNER_CUTOVER_V1": {
@@ -1429,7 +1430,7 @@
         "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1",
         "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_AMENDMENT_03"
       ],
-      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "historical_evidence_policy": "CANONICAL_EXACT_AT_EFFECTIVENESS_SUBJECT_SUCCESSOR_BLOB_PRESERVATION_AFTER_EFFECTIVENESS_MERGE",
       "execution_workflow": ".github/workflows/mcft-cap-09-biological-stage-post-merge-effectiveness-v1.yml",
       "execution_workflow_status": "IMPLEMENTED_AT_POST_MERGE_SUCCESSOR_HEAD",
       "fail_policy": "FAIL_CLOSED",
@@ -1446,7 +1447,7 @@
         "POST_MERGE_V13_QUALIFICATION"
       ],
       "carry_forward_evidence_id": null,
-      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1.cjs"
+      "diagnostic_command": "node scripts/governance_acceptance/ROUTE_MCFT_CAP_09_BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1.cjs"
     },
     {
       "check_id": "PRODUCTION_RUNTIME_OWNER_CUTOVER",
