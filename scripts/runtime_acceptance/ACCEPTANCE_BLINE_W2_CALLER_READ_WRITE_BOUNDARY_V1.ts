@@ -5,7 +5,7 @@ import { registerControlPlaneV1Routes } from "../../apps/server/src/domain/contr
 import { registerAoActV1Routes } from "../../apps/server/src/routes/control_ao_act.js";
 import { refreshFieldReadModelsWithObservabilityV1 } from "../../apps/server/src/services/field_read_model_refresh_v1.js";
 import { projectManualExecutionQualityV1, listManualExecutionQualityTaskDetailsV1 } from "../../apps/server/src/projections/manual_execution_quality_v1.js";
-import { projectSkillRegistryReadV1 } from "../../apps/server/src/projections/skill_registry_read_v1.js";
+import { computeSkillRegistryReadRowsV1 } from "../../apps/server/src/projections/skill_registry_read_v1.js";
 import { listSkills, getSkillDetail } from "../../apps/server/src/services/skills/skill_registry_service.js";
 import { listSkillRuns, listSkillRunsLegacy } from "../../apps/server/src/services/skills/skill_runtime_service.js";
 import { getSkillBindingProjection } from "../../apps/server/src/services/skills/skill_binding_service.js";
@@ -104,7 +104,7 @@ async function main(){
   const manualDetails=await listManualExecutionQualityTaskDetailsV1(pool as any,{tenant_id:"tenantA",project_id:"projectA",group_id:"groupA",dimension:"TEAM" as any});
   expect(manualDetails && typeof manualDetails==="object","pure manual quality detail read failed");
 
-  const projected=await projectSkillRegistryReadV1(pool as any,{tenant_id:"tenantA",project_id:"projectA",group_id:"groupA"},{persist:false});
+  const projected=await computeSkillRegistryReadRowsV1(pool as any,{tenant_id:"tenantA",project_id:"projectA",group_id:"groupA"});
   expect(projected.length===2,"pure skill projection did not compute expected rows",projected);
   const skills=await listSkills(pool as any,{tenant_id:"tenantA",project_id:"projectA",group_id:"groupA"},{});
   expect(skills.some((x:any)=>x.skill_id==="w2_skill"),"pure skill list lost definition",skills);
