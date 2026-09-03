@@ -131,6 +131,7 @@ env:
   PHASE7_PRIVATE_CANDIDATE_IO_SHA: '46c9c7b6b59c113848fc69daff88fb183fccc954'
   PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA: 'fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8'
   POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA: '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+  POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA: 'ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23'
 
 concurrency:
   group: mcft-cap09-qualification-control-plane-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
@@ -155,12 +156,12 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             base='${{ github.event.pull_request.base.sha }}'
-            if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ] && [ "$base" != "$PHASE2_CLOSURE_SHA" ] && [ "$base" != "$PHASE3_CLOSURE_SHA" ] && [ "$base" != "$PHASE4_CLOSURE_SHA" ] && [ "$base" != "$PHASE5_CLOSURE_SHA" ] && [ "$base" != "$PHASE6_CLOSURE_SHA" ] && [ "$base" != "$PHASE7_PREPARATION_SHA" ] && [ "$base" != "$PHASE7_EVIDENCE_FORCING_SHA" ] && [ "$base" != "$PHASE7_PRIVATE_CANDIDATE_IO_SHA" ] && [ "$base" != "$PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA" ] && [ "$base" != "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ]; then
+            if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ] && [ "$base" != "$PHASE2_CLOSURE_SHA" ] && [ "$base" != "$PHASE3_CLOSURE_SHA" ] && [ "$base" != "$PHASE4_CLOSURE_SHA" ] && [ "$base" != "$PHASE5_CLOSURE_SHA" ] && [ "$base" != "$PHASE6_CLOSURE_SHA" ] && [ "$base" != "$PHASE7_PREPARATION_SHA" ] && [ "$base" != "$PHASE7_EVIDENCE_FORCING_SHA" ] && [ "$base" != "$PHASE7_PRIVATE_CANDIDATE_IO_SHA" ] && [ "$base" != "$PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA" ] && [ "$base" != "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ] && [ "$base" != "$POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA" ]; then
               echo "MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:${base}" >&2
               exit 1
             fi
             stage="SUCCESSOR_SUBJECT_PRE_MERGE"
-            if [ "$base" = "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ]; then
+            if [ "$base" = "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ] || [ "$base" = "$POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA" ]; then
               stage="POST_MERGE_V13_QUALIFICATION"
             fi
             echo "MCFT_CAP09_PR_STAGE=$stage" >> "$GITHUB_ENV"
@@ -193,7 +194,7 @@ jobs:
           const assert = (condition, code, detail = null) => {
             if (!condition) failures.push({code, detail});
           };
-          const expectedPredecessors = [process.env.FROZEN_SUCCESSOR_SHA, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA, process.env.PHASE2_CLOSURE_SHA, process.env.PHASE3_CLOSURE_SHA, process.env.PHASE4_CLOSURE_SHA, process.env.PHASE5_CLOSURE_SHA, process.env.PHASE6_CLOSURE_SHA, process.env.PHASE7_PREPARATION_SHA, process.env.PHASE7_EVIDENCE_FORCING_SHA, process.env.PHASE7_PRIVATE_CANDIDATE_IO_SHA, process.env.PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA, process.env.POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA];
+          const expectedPredecessors = [process.env.FROZEN_SUCCESSOR_SHA, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA, process.env.PHASE2_CLOSURE_SHA, process.env.PHASE3_CLOSURE_SHA, process.env.PHASE4_CLOSURE_SHA, process.env.PHASE5_CLOSURE_SHA, process.env.PHASE6_CLOSURE_SHA, process.env.PHASE7_PREPARATION_SHA, process.env.PHASE7_EVIDENCE_FORCING_SHA, process.env.PHASE7_PRIVATE_CANDIDATE_IO_SHA, process.env.PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA, process.env.POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA, process.env.POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA];
           const governedPredecessors = authority.governed_successor_predecessor_shas || [];
           assert(governedPredecessors.length === expectedPredecessors.length, 'GOVERNED_PREDECESSOR_CARDINALITY_MISMATCH', governedPredecessors);
           assert(new Set(governedPredecessors).size === governedPredecessors.length, 'GOVERNED_PREDECESSOR_DUPLICATE', governedPredecessors);
