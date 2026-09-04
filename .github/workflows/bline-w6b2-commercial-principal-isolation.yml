@@ -141,13 +141,44 @@ jobs:
       - name: Render Commercial compose with isolated secret volumes
         run: |
           set -euo pipefail
-          docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml config > /tmp/w6b2-commercial.rendered.yml
-          grep -q 'geox_telemetry_ingest_v1' /tmp/w6b2-commercial.rendered.yml
-          grep -q 'geox_jobs_v1' /tmp/w6b2-commercial.rendered.yml
-          grep -q 'geox_executor_runtime_v1' /tmp/w6b2-commercial.rendered.yml
-          ! grep -q 'GEOX_TELEMETRY_DATABASE_PASSWORD' /tmp/w6b2-commercial.rendered.yml
-          ! grep -q 'GEOX_JOBS_DATABASE_PASSWORD' /tmp/w6b2-commercial.rendered.yml
-          ! grep -q 'GEOX_EXECUTOR_DATABASE_PASSWORD' /tmp/w6b2-commercial.rendered.yml
+          docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml config --format json > /tmp/w6b2-commercial.rendered.json
+          node <<'NODE'
+          const fs = require('node:fs');
+          const cfg = JSON.parse(fs.readFileSync('/tmp/w6b2-commercial.rendered.json', 'utf8'));
+          const assert = (ok, message) => { if (!ok) throw new Error(message); };
+          const forbiddenEnv = [
+            'GEOX_TELEMETRY_DATABASE_PASSWORD',
+            'GEOX_JOBS_DATABASE_PASSWORD',
+            'GEOX_EXECUTOR_DATABASE_PASSWORD',
+          ];
+          const services = ['server', 'telemetry-ingest', 'jobs', 'executor'];
+          for (const name of services) {
+            const service = cfg.services?.[name];
+            assert(service, `missing service ${name}`);
+            const env = service.environment ?? {};
+            for (const key of forbiddenEnv) {
+              assert(!(key in env), `${name} leaked ${key} through compose environment`);
+            }
+          }
+          const expected = {
+            'telemetry-ingest': { target: '/run/geox/telemetry', principal: 'geox_telemetry_ingest_v1' },
+            jobs: { target: '/run/geox/jobs', principal: 'geox_jobs_v1' },
+            executor: { target: '/run/geox/executor', principal: 'geox_executor_runtime_v1' },
+          };
+          for (const [name, requirement] of Object.entries(expected)) {
+            const service = cfg.services[name];
+            const volumes = service.volumes ?? [];
+            const mount = volumes.find((v) => v && typeof v === 'object' && v.target === requirement.target);
+            assert(mount, `${name} missing isolated credential mount ${requirement.target}`);
+            assert(mount.read_only === true, `${name} credential mount must be read-only`);
+            const command = Array.isArray(service.command) ? service.command.join('\n') : String(service.command ?? '');
+            assert(command.includes(requirement.principal), `${name} command missing dedicated DB principal ${requirement.principal}`);
+          }
+          const serverVolumes = cfg.services.server.volumes ?? [];
+          const workerTargets = new Set(['/run/geox/telemetry', '/run/geox/jobs', '/run/geox/executor']);
+          assert(!serverVolumes.some((v) => v && typeof v === 'object' && workerTargets.has(v.target)), 'server mounted a worker credential volume');
+          console.log('[w6b2-compose-render] service-scoped credential isolation PASS');
+          NODE
 
       - name: Start isolated Commercial runtime
         timeout-minutes: 10
