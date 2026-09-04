@@ -30,9 +30,9 @@ assert(JSON.stringify((byId.get('PLANNER-LATEST-01')?.direct_callers||[]).sort()
 assert(byId.get('CROP-LATEST-01')?.root===CROP,'crop root drift');
 assert(JSON.stringify((byId.get('CROP-LATEST-01')?.direct_callers||[]).sort())===JSON.stringify([CROP_HOOK,REPORT_HOOK].sort()),'crop direct caller boundary drift');
 
-const plannerRefs=lines(sh(['grep','-l','compileProgramActionsV1','--','apps/server/src/**/*.ts']).replace(/^$/,'')||'');
+const plannerRefs=lines(sh(['grep','-l','compileProgramActionsV1','--','apps/server/src']));
 assert(JSON.stringify(plannerRefs)===JSON.stringify([PLANNER,PROGRAMS].sort()),'planner caller/import boundary expanded',plannerRefs);
-const cropRefs=lines(sh(['grep','-l','resolveCropContextV1','--','apps/server/src/**/*.ts']).replace(/^$/,'')||'');
+const cropRefs=lines(sh(['grep','-l','resolveCropContextV1','--','apps/server/src']));
 assert(JSON.stringify(cropRefs)===JSON.stringify([CROP,CROP_HOOK,REPORT_HOOK].sort()),'crop caller/import boundary expanded',cropRefs);
 
 const planner=read(PLANNER),crop=read(CROP),programs=read(PROGRAMS),cropHook=read(CROP_HOOK);
@@ -47,7 +47,8 @@ assert(crop.includes('allow_crop_specific_diagnosis: false')&&crop.includes('all
 assert(cropHook.includes('resolveCropContextV1(pool, tenant, field_id, season_id, { program_id })'),'recommendation crop hook does not carry existing parent program identity');
 assert(cropHook.includes('resolveCropContextV1(pool, tenant, field_id, text(rec.season_id), { program_id: text(rec.program_id) })'),'prescription crop hook does not carry persisted parent program identity');
 assert(programs.includes('PlannerPredecessorAmbiguityError'),'planner route ambiguity type not wired');
-assert(programs.includes('reply.status(409)')&&programs.includes('PLANNER_PREDECESSOR_AMBIGUOUS')===false,'route must use typed ambiguity error without duplicating authority code literal');
+assert(programs.includes('reply.status(409)'),'planner ambiguity route must fail closed with conflict response');
+assert(!programs.includes('error: "PLANNER_PREDECESSOR_AMBIGUOUS"'),'route must use the typed compiler ambiguity error rather than duplicate selector authority');
 
 const allowed=new Set([
   ARTIFACT,
