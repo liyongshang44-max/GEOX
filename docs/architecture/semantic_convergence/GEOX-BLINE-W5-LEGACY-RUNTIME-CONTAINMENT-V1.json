@@ -1,0 +1,66 @@
+{
+  "version": "GEOX_BLINE_W5_LEGACY_RUNTIME_CONTAINMENT_V1",
+  "status": "FROZEN_BOUNDED_WORKSTREAM_INVENTORY",
+  "authority_base": "f23cc22eb8158a1d9840f042f13ad3fd27b5fe8a",
+  "workstream": "W5_LEGACY_RUNTIME_CONTAINMENT",
+  "discovery_policy": "NO_WHOLE_REPOSITORY_DISCOVERY; EXACT_PREDECESSOR_ROWS_ONLY",
+  "repair_strategy": "STRICT_RUNTIME_EXACT_METHOD_PATH_CONTAINMENT_BEFORE_LEGACY_HANDLER; NO_NEW_AUTHORITY",
+  "bounded_predecessor_row_count": 22,
+  "bounded_predecessor_rows": [
+    {"surface_id":"BSEC-005","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/v1/twin-kernel/field-state-snapshots","source_path":"apps/server/src/routes/v1/twin_kernel.ts","legacy_family":"TWIN_KERNEL"},
+    {"surface_id":"BSEC-006","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/v1/twin-kernel/forecast-runs","source_path":"apps/server/src/routes/v1/twin_kernel.ts","legacy_family":"TWIN_KERNEL"},
+    {"surface_id":"BSEC-007","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/v1/twin-kernel/scenario-sets","source_path":"apps/server/src/routes/v1/twin_kernel.ts","legacy_family":"TWIN_KERNEL"},
+    {"surface_id":"BSEC-008","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/v1/twin-kernel/calibration-replays","source_path":"apps/server/src/routes/v1/twin_kernel.ts","legacy_family":"TWIN_KERNEL"},
+    {"surface_id":"BSEC-009","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/v1/twin-kernel/field-learning-candidates","source_path":"apps/server/src/routes/v1/twin_kernel.ts","legacy_family":"TWIN_KERNEL"},
+    {"surface_id":"BSEC-010","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/v1/twin-kernel/decision-cycles","source_path":"apps/server/src/routes/v1/twin_kernel.ts","legacy_family":"TWIN_KERNEL"},
+    {"surface_id":"BSEC-011","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/v1/twin-kernel/production-ingestion/source-refs","source_path":"apps/server/src/routes/v1/twin_kernel_production_ingestion.ts","legacy_family":"TWIN_KERNEL"},
+    {"surface_id":"BSEC-012","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/v1/twin-kernel/operator-workflow/sessions","source_path":"apps/server/src/routes/v1/twin_kernel_operator_workflow.ts","legacy_family":"TWIN_KERNEL"},
+    {"surface_id":"BSEC-013","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/v1/twin-kernel/operator-workflow/reviews","source_path":"apps/server/src/routes/v1/twin_kernel_operator_workflow.ts","legacy_family":"TWIN_KERNEL"},
+    {"surface_id":"BSEC-014","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/v1/twin-kernel/operator-workflow/formalization-actions/roi","source_path":"apps/server/src/routes/v1/twin_kernel_operator_workflow.ts","legacy_family":"TWIN_KERNEL"},
+    {"surface_id":"BSEC-015","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/v1/twin-kernel/operator-workflow/formalization-actions/field-memory","source_path":"apps/server/src/routes/v1/twin_kernel_operator_workflow.ts","legacy_family":"TWIN_KERNEL"},
+    {"surface_id":"BSEC-016","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/v1/twin-kernel/formalizations/roi","source_path":"apps/server/src/routes/v1/twin_kernel_formalization.ts","legacy_family":"TWIN_KERNEL"},
+    {"surface_id":"BSEC-017","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/v1/twin-kernel/formalizations/field-memory","source_path":"apps/server/src/routes/v1/twin_kernel_formalization.ts","legacy_family":"TWIN_KERNEL"},
+    {"surface_id":"BSEC-022","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/admin/import/caf_hourly","source_path":"apps/server/src/modules/admin/registerAdminImportModule.ts","legacy_family":"ADMIN"},
+    {"surface_id":"BSEC-023","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/admin/acceptance/caf009_1h/run","source_path":"apps/server/src/modules/admin/registerAdminImportModule.ts","legacy_family":"ADMIN"},
+    {"surface_id":"BSEC-027","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/derive/overlays","source_path":"apps/server/src/modules/legacy/registerLegacyMonitoringModule.ts","legacy_family":"MONITORING"},
+    {"surface_id":"BSEC-028","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/marker","source_path":"apps/server/src/modules/legacy/registerLegacyMonitoringModule.ts","legacy_family":"MONITORING"},
+    {"surface_id":"BSEC-029","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/canopy/frame","source_path":"apps/server/src/modules/legacy/registerLegacyMonitoringModule.ts","legacy_family":"MONITORING"},
+    {"surface_id":"BSEC-031","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/admin/groups","source_path":"apps/server/src/modules/admin/registerAdminGroupsModule.ts","legacy_family":"ADMIN"},
+    {"surface_id":"BSEC-032","http_method_or_runtime_trigger":"POST","exact_route_or_trigger":"/api/admin/groups/:groupId/members","source_path":"apps/server/src/modules/admin/registerAdminGroupsModule.ts","legacy_family":"ADMIN"},
+    {"surface_id":"BSEC-033","http_method_or_runtime_trigger":"DELETE","exact_route_or_trigger":"/api/admin/groups/:groupId/members/:sensorId","source_path":"apps/server/src/modules/admin/registerAdminGroupsModule.ts","legacy_family":"ADMIN"},
+    {"surface_id":"BSEC-034","http_method_or_runtime_trigger":"DELETE","exact_route_or_trigger":"/api/admin/groups/:groupId","source_path":"apps/server/src/modules/admin/registerAdminGroupsModule.ts","legacy_family":"ADMIN"}
+  ],
+  "governed_regression_baselines": [
+    {
+      "surface_id":"BSEC-030",
+      "http_method_or_runtime_trigger":"POST",
+      "exact_route_or_trigger":"/api/canopy/upload",
+      "source_path":"apps/server/src/modules/legacy/registerLegacyMonitoringModule.ts",
+      "containment_source_path":"apps/server/src/routes/registerLegacyRoutes.ts",
+      "expected_error":"LEGACY_CANOPY_UPLOAD_COMMERCIAL_AUTHORITY_UNAVAILABLE",
+      "disposition":"BASELINE_ONLY_ALREADY_COMMERCIAL_FAIL_CLOSED"
+    }
+  ],
+  "strict_runtime_profiles": ["pilot","staging","production"],
+  "strict_runtime_response": {"status":410,"error":"LEGACY_RUNTIME_CONTAINED"},
+  "preserved_behavior": [
+    "development/test legacy compatibility behavior",
+    "legacy read routes",
+    "BSEC-030 prior dedicated containment"
+  ],
+  "forbidden_workstreams": [
+    "Recommendation / Approval reopening",
+    "Receipt / Acceptance reopening",
+    "Executor/device redesign",
+    "Planner/Crop latest-wins",
+    "shared DB/MQTT/service isolation modernization",
+    "MCFT",
+    "Action Qualification",
+    "new legacy authority architecture"
+  ],
+  "claims": [
+    "No W5 route is granted a new role or capability.",
+    "Strict-runtime containment occurs before legacy handler execution/body side effects.",
+    "W5 does not retire or redesign legacy semantics; it makes the frozen mutation surfaces unreachable in Commercial/strict runtime."
+  ]
+}

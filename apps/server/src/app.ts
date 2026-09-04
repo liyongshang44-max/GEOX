@@ -13,6 +13,7 @@ import { registerCompatibilityModules } from "./modules/compat/registerCompatibi
 import { registerAdminModule } from "./modules/admin/registerAdminModule.js";
 import { buildCorsOptionsV1 } from "./runtime/cors_v1.js";
 import { registerRouteReplyGuardV1 } from "./runtime/route_reply_guard_v1.js";
+import { registerW5LegacyRuntimeContainmentV1 } from "./runtime/legacy_runtime_containment_v1.js";
 
 type CreateAppOptions = {
   config: ServerConfig;
@@ -65,6 +66,7 @@ export function createApp(options: CreateAppOptions): { app: FastifyInstance; po
 
   registerRuntimeErrorBoundaryV1(app);
   registerRouteReplyGuardV1(app);
+  registerW5LegacyRuntimeContainmentV1(app);
   registerCoreModule(app);
   registerStaticModule(app, {
     mediaDir: paths.mediaDir,
