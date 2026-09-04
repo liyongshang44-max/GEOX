@@ -2,18 +2,72 @@ import fs from "node:fs";
 import { Pool } from "pg";
 import mqtt, { type MqttClient } from "mqtt";
 
+const UNOBSERVED = "UNOBSERVED" as const;
+
+type TerminalRecord = {
+  result: "PASS" | "FAIL";
+  phase: string;
+  DB_SERVER: unknown;
+  DB_TELEMETRY: unknown;
+  DB_JOBS: unknown;
+  DB_EXECUTOR: unknown;
+  MQTT_CONNECT_EXECUTOR: unknown;
+  MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT: unknown;
+  MQTT_POSITIVE_CONTROL_SUBSCRIBE: unknown;
+  MQTT_TEST_PUBLISH: unknown;
+  MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT: unknown;
+  MQTT_POSITIVE_CONTROL_DELIVERY_COUNT: unknown;
+  error_code: string | null;
+  error_message: string | null;
+};
+
+const terminal: TerminalRecord = {
+  result: "FAIL",
+  phase: "INIT",
+  DB_SERVER: UNOBSERVED,
+  DB_TELEMETRY: UNOBSERVED,
+  DB_JOBS: UNOBSERVED,
+  DB_EXECUTOR: UNOBSERVED,
+  MQTT_CONNECT_EXECUTOR: UNOBSERVED,
+  MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT: UNOBSERVED,
+  MQTT_POSITIVE_CONTROL_SUBSCRIBE: UNOBSERVED,
+  MQTT_TEST_PUBLISH: UNOBSERVED,
+  MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT: UNOBSERVED,
+  MQTT_POSITIVE_CONTROL_DELIVERY_COUNT: UNOBSERVED,
+  error_code: null,
+  error_message: null,
+};
+
+const terminalEvidenceKeys = new Set([
+  "DB_SERVER",
+  "DB_TELEMETRY",
+  "DB_JOBS",
+  "DB_EXECUTOR",
+  "MQTT_CONNECT_EXECUTOR",
+  "MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT",
+  "MQTT_POSITIVE_CONTROL_SUBSCRIBE",
+  "MQTT_TEST_PUBLISH",
+  "MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT",
+  "MQTT_POSITIVE_CONTROL_DELIVERY_COUNT",
+]);
+
+let terminalEmitted = false;
+let telemetryDbPassword = "";
+let jobsDbPassword = "";
+let executorDbPassword = "";
+let telemetryMqttPassword = "";
+let executorMqttPassword = "";
+
 const host = String(process.env.W6B2_DB_HOST ?? "127.0.0.1").trim();
 const port = Number.parseInt(String(process.env.W6B2_DB_PORT ?? "5433"), 10);
 const database = String(process.env.POSTGRES_DB ?? "landos").trim();
-const telemetryDbPassword = secret("GEOX_TELEMETRY_DATABASE_PASSWORD", "/run/geox/telemetry/db_password");
-const jobsDbPassword = secret("GEOX_JOBS_DATABASE_PASSWORD", "/run/geox/jobs/db_password");
-const executorDbPassword = secret("GEOX_EXECUTOR_DATABASE_PASSWORD", "/run/geox/executor/db_password");
-
 const telemetryMqttUsername = String(process.env.GEOX_TELEMETRY_MQTT_USERNAME ?? "geox_telemetry_ingest_v1").trim();
-const telemetryMqttPassword = secret("GEOX_TELEMETRY_MQTT_PASSWORD", "/run/geox/telemetry/mqtt_password");
 const executorMqttUsername = String(process.env.GEOX_EXECUTOR_MQTT_USERNAME ?? "geox_executor_v1").trim();
-const executorMqttPassword = secret("GEOX_EXECUTOR_MQTT_PASSWORD", "/run/geox/executor/mqtt_password");
 const mqttUrl = String(process.env.W6B2_MQTT_URL ?? "mqtt://127.0.0.1:1883").trim();
+
+function setPhase(phase: string): void {
+  terminal.phase = phase;
+}
 
 function secret(envName: string, filePath: string): string {
   const fromEnv = String(process.env[envName] ?? "");
@@ -25,11 +79,24 @@ function secret(envName: string, filePath: string): string {
   throw new Error(`W6B2_RUNTIME_PROOF_MISSING_SECRET:${envName}:${filePath}`);
 }
 
+function loadSecrets(): void {
+  setPhase("LOAD_SECRETS");
+  telemetryDbPassword = secret("GEOX_TELEMETRY_DATABASE_PASSWORD", "/run/geox/telemetry/db_password");
+  jobsDbPassword = secret("GEOX_JOBS_DATABASE_PASSWORD", "/run/geox/jobs/db_password");
+  executorDbPassword = secret("GEOX_EXECUTOR_DATABASE_PASSWORD", "/run/geox/executor/db_password");
+  telemetryMqttPassword = secret("GEOX_TELEMETRY_MQTT_PASSWORD", "/run/geox/telemetry/mqtt_password");
+  executorMqttPassword = secret("GEOX_EXECUTOR_MQTT_PASSWORD", "/run/geox/executor/mqtt_password");
+}
+
 function assert(condition: unknown, message: string, detail?: unknown): asserts condition {
   if (!condition) throw new Error(`${message}${detail === undefined ? "" : `:${JSON.stringify(detail)}`}`);
 }
 
 function observed(stage: string, value: unknown): void {
+  terminal.phase = stage;
+  if (terminalEvidenceKeys.has(stage)) {
+    (terminal as unknown as Record<string, unknown>)[stage] = value;
+  }
   console.log(JSON.stringify({ stage, observed: value }));
 }
 
@@ -37,17 +104,62 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-const principals = [
-  { kind: "telemetry", stage: "DB_TELEMETRY", user: "geox_telemetry_ingest_v1", password: telemetryDbPassword },
-  { kind: "jobs", stage: "DB_JOBS", user: "geox_jobs_v1", password: jobsDbPassword },
-  { kind: "executor", stage: "DB_EXECUTOR", user: "geox_executor_runtime_v1", password: executorDbPassword },
-] as const;
+function sanitizeErrorText(error: unknown): string {
+  let text = errorText(error);
+  for (const secretValue of [telemetryDbPassword, jobsDbPassword, executorDbPassword, telemetryMqttPassword, executorMqttPassword]) {
+    if (secretValue) text = text.split(secretValue).join("[REDACTED]");
+  }
+  return text
+    .replace(/postgres(?:ql)?:\/\/[^:@/\s]+:[^@/\s]+@/gi, "postgres://[REDACTED]@")
+    .slice(0, 4000);
+}
+
+function terminalErrorCode(error: unknown): string {
+  const message = errorText(error);
+  const w6b2Code = message.match(/\b(W6B2_[A-Z0-9_]+)/)?.[1];
+  if (w6b2Code) return w6b2Code;
+  const externalCode = (error as { code?: unknown } | null)?.code;
+  if (typeof externalCode === "string" && externalCode.trim()) return externalCode.trim();
+  return `W6B2_${terminal.phase.replace(/[^A-Z0-9]+/gi, "_").toUpperCase()}_ERROR`;
+}
+
+function emitTerminalRecord(error?: unknown): void {
+  if (terminalEmitted) return;
+  terminalEmitted = true;
+  if (error === undefined) {
+    terminal.result = "PASS";
+    terminal.phase = "COMPLETE";
+    terminal.error_code = null;
+    terminal.error_message = null;
+  } else {
+    terminal.result = "FAIL";
+    terminal.error_code = terminalErrorCode(error);
+    terminal.error_message = sanitizeErrorText(error);
+  }
+  console.log(`W6B2_TERMINAL_RECORD=${JSON.stringify(terminal)}`);
+}
+
+type Principal = {
+  kind: "telemetry" | "jobs" | "executor";
+  stage: "DB_TELEMETRY" | "DB_JOBS" | "DB_EXECUTOR";
+  user: string;
+  password: string;
+};
+
+function principals(): Principal[] {
+  return [
+    { kind: "telemetry", stage: "DB_TELEMETRY", user: "geox_telemetry_ingest_v1", password: telemetryDbPassword },
+    { kind: "jobs", stage: "DB_JOBS", user: "geox_jobs_v1", password: jobsDbPassword },
+    { kind: "executor", stage: "DB_EXECUTOR", user: "geox_executor_runtime_v1", password: executorDbPassword },
+  ];
+}
 
 function dbUrl(user: string, password: string): string {
   return `postgres://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${encodeURIComponent(database)}`;
 }
 
 async function observeServerDatabasePrincipal() {
+  setPhase("DB_SERVER");
   const adminUrl = String(process.env.GEOX_DB_PLATFORM_ADMIN_DATABASE_URL ?? "").trim();
   assert(adminUrl, "W6B2_DB_SERVER_ADMIN_OBSERVER_URL_MISSING");
   const pool = new Pool({ connectionString: adminUrl, max: 1, connectionTimeoutMillis: 5000 });
@@ -103,7 +215,8 @@ async function observeServerDatabasePrincipal() {
   }
 }
 
-async function verifyDatabasePrincipal(principal: (typeof principals)[number]) {
+async function verifyDatabasePrincipal(principal: Principal) {
+  setPhase(principal.stage);
   const pool = new Pool({ connectionString: dbUrl(principal.user, principal.password), max: 1, connectionTimeoutMillis: 5000 });
   try {
     const identity = await pool.query<{
@@ -213,6 +326,7 @@ async function verifyDatabasePrincipal(principal: (typeof principals)[number]) {
 }
 
 async function expectDbAuthFailure(user: string, wrongPassword: string, label: string): Promise<void> {
+  setPhase(`DB_CROSS_CREDENTIAL_${label.toUpperCase()}`);
   const pool = new Pool({ connectionString: dbUrl(user, wrongPassword), max: 1, connectionTimeoutMillis: 3000 });
   let denied = false;
   try {
@@ -254,24 +368,42 @@ function connectMqtt(username: string, password: string, clientId: string): Prom
 
 type SubscribeObservation =
   | { status: "GRANTED"; qos: number; granted: Array<{ topic: string; qos: number }> }
-  | { status: "ERROR"; error: string };
+  | { status: "ERROR"; error: string }
+  | { status: "TIMEOUT"; timeout_ms: number };
 
-function observeSubscribe(client: MqttClient, topic: string): Promise<SubscribeObservation> {
+function observeSubscribe(client: MqttClient, topic: string, timeoutMs = 4000): Promise<SubscribeObservation> {
   return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value: SubscribeObservation) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(value);
+    };
+    const timer = setTimeout(() => finish({ status: "TIMEOUT", timeout_ms: timeoutMs }), timeoutMs);
     client.subscribe(topic, { qos: 0 }, (error, granted) => {
       if (error) {
-        resolve({ status: "ERROR", error: errorText(error) });
+        finish({ status: "ERROR", error: errorText(error) });
         return;
       }
       const normalized = (granted ?? []).map((item: any) => ({ topic: String(item?.topic ?? ""), qos: Number(item?.qos ?? -1) }));
-      resolve({ status: "GRANTED", qos: Number(normalized[0]?.qos ?? -1), granted: normalized });
+      finish({ status: "GRANTED", qos: Number(normalized[0]?.qos ?? -1), granted: normalized });
     });
   });
 }
 
-function publish(client: MqttClient, topic: string, payload: string): Promise<void> {
+function publish(client: MqttClient, topic: string, payload: string, timeoutMs = 4000): Promise<void> {
   return new Promise((resolve, reject) => {
-    client.publish(topic, payload, { qos: 0, retain: false }, (error) => error ? reject(error) : resolve());
+    let settled = false;
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error) reject(error);
+      else resolve();
+    };
+    const timer = setTimeout(() => finish(new Error(`MQTT_PUBLISH_TIMEOUT:${timeoutMs}`)), timeoutMs);
+    client.publish(topic, payload, { qos: 0, retain: false }, (error) => error ? finish(error) : finish());
   });
 }
 
@@ -284,7 +416,9 @@ async function verifyMqttBoundary() {
   const payload = `executor-authorized-publish-${nonce}`;
   const deliveryWindowMs = 2500;
 
+  setPhase("MQTT_CONNECT_POSITIVE_CONTROL");
   const telemetry = await connectMqtt(telemetryMqttUsername, telemetryMqttPassword, `w6b2_telemetry_${nonce}`);
+  setPhase("MQTT_CONNECT_EXECUTOR");
   const executor = await connectMqtt(executorMqttUsername, executorMqttPassword, `w6b2_executor_${nonce}`);
   observed("MQTT_CONNECT_EXECUTOR", {
     principal: executorMqttUsername,
@@ -295,14 +429,20 @@ async function verifyMqttBoundary() {
   let executorForbiddenDeliveryCount = 0;
   let positiveControlDeliveryCount = 0;
   try {
+    setPhase("MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT");
     const forbiddenSubscribe = await observeSubscribe(executor, topic);
-    observed("MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT", forbiddenSubscribe);
+    observed("MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT", {
+      ...forbiddenSubscribe,
+      executor_connected_after_subscribe: executor.connected,
+    });
 
+    setPhase("MQTT_POSITIVE_CONTROL_SUBSCRIBE");
     const positiveSubscribe = await observeSubscribe(telemetry, topic);
     observed("MQTT_POSITIVE_CONTROL_SUBSCRIBE", {
       principal: telemetryMqttUsername,
       topic,
       result: positiveSubscribe,
+      connected_after_subscribe: telemetry.connected,
     });
     assert(positiveSubscribe.status === "GRANTED" && positiveSubscribe.qos !== 128, "W6B2_MQTT_TELEMETRY_READ_DENIED", positiveSubscribe);
 
@@ -315,13 +455,26 @@ async function verifyMqttBoundary() {
     executor.on("message", executorHandler);
     telemetry.on("message", positiveHandler);
 
+    setPhase("MQTT_TEST_PUBLISH");
     observed("MQTT_TEST_PUBLISH", {
+      status: "ATTEMPT",
       publisher: executorMqttUsername,
+      publisher_connected: executor.connected,
       topic,
       nonce,
       payload,
     });
     await publish(executor, topic, payload);
+    observed("MQTT_TEST_PUBLISH", {
+      status: "PUBLISHED",
+      publisher: executorMqttUsername,
+      publisher_connected: executor.connected,
+      topic,
+      nonce,
+      payload,
+    });
+
+    setPhase("MQTT_DELIVERY_WINDOW");
     await new Promise((resolve) => setTimeout(resolve, deliveryWindowMs));
 
     executor.removeListener("message", executorHandler);
@@ -355,6 +508,7 @@ async function verifyMqttBoundary() {
       || (forbiddenSubscribe.status === "GRANTED" && forbiddenSubscribe.qos === 128);
     assert(deniedByOriginalSubackAssumption, "W6B2_MQTT_EXECUTOR_SUBSCRIBE_NOT_DENIED_BY_SUBACK", forbiddenSubscribe);
 
+    setPhase("MQTT_TELEMETRY_FORBIDDEN_PUBLISH");
     let telemetryReceivedOwnPublish = false;
     const ownPayload = `telemetry-forbidden-${nonce}`;
     const ownHandler = (incomingTopic: string, incomingPayload: Buffer) => {
@@ -370,6 +524,7 @@ async function verifyMqttBoundary() {
     executor.end(true);
   }
 
+  setPhase("MQTT_CROSS_CREDENTIAL");
   let crossCredentialDenied = false;
   try {
     const wrong = await connectMqtt(telemetryMqttUsername, executorMqttPassword, `w6b2_wrong_${nonce}`);
@@ -393,16 +548,20 @@ async function verifyMqttBoundary() {
 }
 
 async function main() {
-  assert(new Set(principals.map((p) => p.user)).size === principals.length, "W6B2_DB_USERNAME_COLLAPSED");
-  assert(new Set(principals.map((p) => p.password)).size === principals.length, "W6B2_DB_PASSWORD_COLLAPSED");
+  loadSecrets();
+  const dbPrincipals = principals();
+  setPhase("DB_DISTINCT_CREDENTIALS");
+  assert(new Set(dbPrincipals.map((p) => p.user)).size === dbPrincipals.length, "W6B2_DB_USERNAME_COLLAPSED");
+  assert(new Set(dbPrincipals.map((p) => p.password)).size === dbPrincipals.length, "W6B2_DB_PASSWORD_COLLAPSED");
 
   const serverDbResult = await observeServerDatabasePrincipal();
   const dbResults = [];
-  for (const principal of principals) dbResults.push(await verifyDatabasePrincipal(principal));
+  for (const principal of dbPrincipals) dbResults.push(await verifyDatabasePrincipal(principal));
   await expectDbAuthFailure("geox_telemetry_ingest_v1", jobsDbPassword, "telemetry_user_with_jobs_password");
   await expectDbAuthFailure("geox_jobs_v1", executorDbPassword, "jobs_user_with_executor_password");
   await expectDbAuthFailure("geox_executor_runtime_v1", telemetryDbPassword, "executor_user_with_telemetry_password");
 
+  setPhase("MQTT");
   const mqttResult = await verifyMqttBoundary();
   console.log(JSON.stringify({
     result: "PASS",
@@ -417,7 +576,10 @@ async function main() {
   }, null, 2));
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.stack ?? error.message : String(error));
-  process.exit(1);
-});
+main()
+  .then(() => emitTerminalRecord())
+  .catch((error) => {
+    console.error(error instanceof Error ? error.stack ?? sanitizeErrorText(error) : sanitizeErrorText(error));
+    emitTerminalRecord(error);
+    process.exitCode = 1;
+  });
