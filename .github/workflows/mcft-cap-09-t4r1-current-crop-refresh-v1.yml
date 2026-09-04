@@ -66,19 +66,23 @@ jobs:
       - name: Validate persisted rolling current-crop authority
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_V1.cjs
 
-      - name: Prove no production activation surfaces entered this refresh workflow
+      - name: Validate qualification-only authority ceiling and zero production effects
         shell: node {0}
         run: |
           const fs=require('fs');
-          const text=fs.readFileSync('.github/workflows/mcft-cap-09-t4r1-current-crop-refresh-v1.yml','utf8');
-          for(const forbidden of [
-            'docker compose',
-            'RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER',
-            'formal_v5_arm_authorized:true',
-            'a0_authorized:true',
-            'o00_authorized:true'
-          ]) if(text.includes(forbidden)) throw new Error('REFRESH_WORKFLOW_PRODUCTION_EFFECT_FORBIDDEN:'+forbidden);
           const current=JSON.parse(fs.readFileSync(process.env.PERSISTED,'utf8'));
+          for(const key of [
+            'runtime_config_write_authorized',
+            'database_write_authorized',
+            'scheduler_write_authorized',
+            'formal_evidence_write_authorized',
+            'production_runtime_start_authorized',
+            'production_owner_activation_authorized',
+            'formal_v5_authorized',
+            'a0_authorized',
+            'o00_o23_authorized',
+            'mcft_cap09_completed'
+          ]) if(current[key]!==false) throw new Error('REFRESH_AUTHORITY_CEILING_DRIFT:'+key);
           if(current.refresh?.running_preformal_mount_replaced!==false) throw new Error('REFRESH_RUNNING_MOUNT_REPLACEMENT_FORBIDDEN');
           if(current.refresh?.production_runtime_restarted!==false) throw new Error('REFRESH_PRODUCTION_RESTART_FORBIDDEN');
           console.log(JSON.stringify({status:'PASS',qualification_only:true,production_runtime_restarted:false,running_mount_replaced:false}));
