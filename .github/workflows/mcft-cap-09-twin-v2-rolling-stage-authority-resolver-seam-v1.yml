@@ -12,7 +12,6 @@ on:
 
 permissions:
   contents: write
-  actions: read
 
 jobs:
   qualification:
@@ -24,15 +23,14 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
 
-      - name: Patch QCP trigger for effective authority registry
-        shell: bash
+      - name: Materialize QCP trigger blob only
+        shell: node {0}
         env:
-          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          set -euo pipefail
-          node <<'NODE'
           const fs = require('node:fs');
           const workflowPath = '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml';
           const registryLine = "      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json'";
@@ -41,19 +39,17 @@ jobs:
           if (!text.includes(registryLine)) {
             if (!text.includes(anchor)) throw new Error('QCP_TRIGGER_ANCHOR_MISSING');
             text = text.replace(anchor, `${anchor}\n${registryLine}`);
-            fs.writeFileSync(workflowPath, text);
           }
-          NODE
-          changed="$(git diff --name-only)"
-          test "$changed" = '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .github/workflows/mcft-cap-09-qualification-control-plane-v1.yml
-          git commit -m 'test(mcft-cap09): trigger QCP for effective authority registry'
-          echo "QCP_TRIGGER_COMMIT=$(git rev-parse HEAD)"
-          set +e
-          git push origin "HEAD:${HEAD_BRANCH}"
-          rc=$?
-          set -e
-          echo "QCP_TRIGGER_PUSH_RC=$rc"
-          exit 0
+          const response = await fetch(`https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/git/blobs`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+              Accept: 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({content: Buffer.from(text, 'utf8').toString('base64'), encoding: 'base64'}),
+          });
+          const body = await response.json();
+          if (!response.ok || !body.sha) throw new Error(`QCP_TRIGGER_BLOB_CREATE_FAILED:${response.status}:${JSON.stringify(body)}`);
+          console.log(`QCP_TRIGGER_BLOB_SHA=${body.sha}`);
