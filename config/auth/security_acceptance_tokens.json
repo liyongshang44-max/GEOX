@@ -119,6 +119,20 @@
       ]
     },
     {
+      "token": "internal_task_issuer_token_v1",
+      "token_id": "tok_internal_task_issuer_v1",
+      "actor_id": "svc_internal_task_issuer_v1",
+      "tenant_id": "tenantA",
+      "project_id": "projectA",
+      "group_id": "groupA",
+      "role": "operator",
+      "revoked": false,
+      "allowed_field_ids": [],
+      "scopes": [
+        "action.task.create"
+      ]
+    },
+    {
       "token": "executor_token",
       "token_id": "tok_executor",
       "actor_id": "tok_executor_actor",
