@@ -12,7 +12,7 @@ import { projectProgramTimelineV1 } from "../projections/program_timeline_v1.js"
 import { projectProgramCostV1 } from "../projections/program_cost_v1.js";
 import { projectProgramSlaV1 } from "../projections/program_sla_v1.js";
 import { projectProgramEfficiencyV1 } from "../projections/program_efficiency_v1.js";
-import { compileProgramActionsV1 } from "../domain/planner/compiler_v1.js";
+import { compileProgramActionsV1, PlannerPredecessorAmbiguityError } from "../domain/planner/compiler_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 const PROGRAM_STATUSES = new Set(["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED", "ARCHIVED"]);
@@ -58,7 +58,6 @@ const ProgramCreateBodySchema = z.object({
   status: z.string().optional()
 });
 
-
 function tenantFromReq(req: any, auth: any): TenantTriple {
   const q = req.query ?? {};
   return {
@@ -67,7 +66,6 @@ function tenantFromReq(req: any, auth: any): TenantTriple {
     group_id: String(q.group_id ?? req.body?.group_id ?? auth.group_id)
   };
 }
-
 
 function normalizeTagFilters(raw: unknown): string[] {
   if (Array.isArray(raw)) return raw.map((x) => String(x ?? "").trim()).filter(Boolean);
@@ -198,8 +196,6 @@ export function registerProgramsCoreV1Routes(app: FastifyInstance, pool: Pool, o
 
     const allowedFieldIds = normalizeAllowedFieldIds(auth);
     let items = await projectProgramPortfolioV1(pool, tenant);
-    // commercial_v1/admin pilot compatibility:
-    // when token payload does not include allowed_field_ids, do not collapse portfolio to empty.
     if (allowedFieldIds.length > 0) {
       items = items.filter((x) => allowedFieldIds.includes(String(x.field_id ?? "").trim()));
     }
@@ -247,7 +243,6 @@ export function registerProgramsCoreV1Routes(app: FastifyInstance, pool: Pool, o
     if (!item) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     return reply.send({ ok: true, item });
   });
-
 
   get("/api/v1/programs/:program_id/state", async (req: any, reply: any) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
@@ -522,9 +517,23 @@ export function registerProgramsCoreV1Routes(app: FastifyInstance, pool: Pool, o
     const program_id = String((req.params as any)?.program_id ?? "").trim();
     if (!program_id) return reply.status(400).send({ ok: false, error: "MISSING_PROGRAM_ID" });
 
-    const compiled = await compileProgramActionsV1(pool, tenant, program_id);
-    if (!compiled) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    return reply.send({ ok: true, program_id, candidate_actions: compiled.candidate_actions });
+    try {
+      const compiled = await compileProgramActionsV1(pool, tenant, program_id);
+      if (!compiled) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+      return reply.send({ ok: true, program_id, candidate_actions: compiled.candidate_actions });
+    } catch (error) {
+      if (error instanceof PlannerPredecessorAmbiguityError) {
+        return reply.status(409).send({
+          ok: false,
+          error: error.code,
+          blocker_id: error.blocker_id,
+          predecessor_type: error.predecessor_type,
+          candidate_fact_ids: error.candidate_fact_ids,
+          reason: error.reason,
+        });
+      }
+      throw error;
+    }
   });
 
   post("/api/v1/programs/:program_id/transitions", async (req: any, reply: any) => {
@@ -650,7 +659,6 @@ export function registerProgramsCoreV1Routes(app: FastifyInstance, pool: Pool, o
 
     return reply.send({ ok: true, field_id, count: items.length, seasons });
   });
-
 
   get("/api/v1/fields/:field_id/program-state", async (req: any, reply: any) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
