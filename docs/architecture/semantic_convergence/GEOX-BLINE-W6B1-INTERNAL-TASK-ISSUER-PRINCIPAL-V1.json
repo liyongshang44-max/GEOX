@@ -1,0 +1,76 @@
+{
+  "version": "GEOX-BLINE-W6B1-INTERNAL-TASK-ISSUER-PRINCIPAL-V1",
+  "status": "FROZEN_BOUNDED_WORKSTREAM_INVENTORY",
+  "authority_base": "bcc78fb00e73292362f237a95db3441e07389f6f",
+  "accepted_predecessor": "W6-A",
+  "workstream": "W6-B1_INTERNAL_TASK_ISSUER_PRINCIPAL_BOUNDARY",
+  "blockers": [
+    {
+      "id": "INTERNAL-TASK-ISSUER-01",
+      "finding": "Commercial approval auto-task issuance may reuse a broad operator credential instead of a dedicated least-capability service principal."
+    }
+  ],
+  "bounded_source_surface": {
+    "internal_issuer_env_consumer": [
+      "apps/server/src/routes/control_approval_request_v1.ts"
+    ],
+    "canonical_downstream_sink": "POST /api/v1/actions/task",
+    "auth_source": "apps/server/src/auth/ao_act_authz_v0.ts",
+    "role_scope_authority": "apps/server/src/domain/auth/roles.ts",
+    "commercial_runtime_config": "docker-compose.commercial_v1.yml",
+    "acceptance_token_fixture": "config/auth/security_acceptance_tokens.json",
+    "main_acceptance_env": ".github/workflows/ci.yml"
+  },
+  "frozen_invariants": [
+    "The internal task issuer is a service principal distinct from the approving human principal.",
+    "The AO-ACT task payload issuer continues to preserve the authenticated approving human identity.",
+    "The internal service principal uses the existing operator role and the existing action.task.create scope only.",
+    "No new role, scope, Recommendation authority, Approval authority, Dispatch authority, Receipt authority, Acceptance authority, or Execution authority is created.",
+    "GEOX_INTERNAL_TASK_ISSUER_TOKEN has no operator_token or admin-token fallback in Commercial runtime.",
+    "A missing, revoked, unknown, wrong-role, or over-scoped internal issuer principal fails closed before a task subrequest is sent.",
+    "The internal issuer credential cannot authorize approval.decide, action.task.dispatch, action.receipt.submit, acceptance.evaluate, telemetry.write, inspection.write, or unrelated mutation scopes.",
+    "W1-W6A accepted behavior remains preserved.",
+    "MCFT implementation, docs, workflows, bootstrap, database roles, and runtime semantics remain untouched."
+  ],
+  "implementation_boundary": {
+    "allowed_source_changes": [
+      "apps/server/src/auth/internal_task_issuer_principal_v1.ts",
+      "apps/server/src/routes/control_approval_request_v1.ts",
+      "docker-compose.commercial_v1.yml",
+      "config/auth/security_acceptance_tokens.json",
+      ".github/workflows/ci.yml"
+    ],
+    "allowed_qualification_changes": [
+      "docs/architecture/semantic_convergence/GEOX-BLINE-W6B1-INTERNAL-TASK-ISSUER-PRINCIPAL-V1.json",
+      "scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B1_INTERNAL_TASK_ISSUER_PRINCIPAL_V1.cjs",
+      "scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6B1_INTERNAL_TASK_ISSUER_PRINCIPAL_V1.ts",
+      ".github/workflows/bline-w6b1-internal-task-issuer-principal.yml"
+    ],
+    "explicitly_forbidden": [
+      "W6-B2 database/service/MQTT principal implementation",
+      "MCFT files",
+      "MCFT bootstrap or runtime preflight changes",
+      "Action Qualification",
+      "new authorization roles or scopes",
+      "changes to PR #3500",
+      "rebasing onto protected main"
+    ]
+  },
+  "qualification_requirements": [
+    "bounded inventory and source/config boundary gate",
+    "dedicated issuer exact-scope positive proof",
+    "broad operator-token rejection proof",
+    "admin-token rejection proof",
+    "missing issuer fail-closed proof",
+    "revoked/unknown/wrong-role/over-scoped issuer fail-closed proof",
+    "approval business issuer remains the approver while task auth audit uses the dedicated service actor",
+    "unrelated mutation scopes denied for the dedicated issuer token",
+    "W1-W6A successor preservation",
+    "Frozen PR-SEC-1, residual authority, active-runtime regression",
+    "Typecheck",
+    "Build",
+    "Commercial affected-flow regression",
+    "main CI",
+    "MCFT delta = 0"
+  ]
+}
