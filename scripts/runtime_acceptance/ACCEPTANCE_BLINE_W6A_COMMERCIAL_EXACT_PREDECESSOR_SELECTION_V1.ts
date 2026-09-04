@@ -83,6 +83,28 @@ async function seedField(field_id: string) {
   );
 }
 
+async function seedFormalStage1IrrigationLow(field_id: string) {
+  const nowMs = Date.now();
+  await pool.query(
+    `DELETE FROM derived_sensing_state_index_v1
+      WHERE tenant_id = $1
+        AND project_id = $2
+        AND group_id = $3
+        AND field_id = $4
+        AND state_type = 'irrigation_effectiveness_state'`,
+    [scope.tenant_id, scope.project_id, scope.group_id, field_id],
+  );
+  await pool.query(
+    `INSERT INTO derived_sensing_state_index_v1
+      (tenant_id, project_id, group_id, field_id, state_type, payload_json, confidence,
+       explanation_codes_json, source_device_ids_json, computed_at, computed_at_ts_ms,
+       fact_id, source_observation_ids_json)
+     VALUES($1,$2,$3,$4,'irrigation_effectiveness_state','{"level":"LOW"}'::jsonb,0.9,
+       '[]'::jsonb,'[]'::jsonb,now(),$5,$6,'["obs_w6a_stage1"]'::jsonb)`,
+    [scope.tenant_id, scope.project_id, scope.group_id, field_id, nowMs, `w6a_stage1_${run}`],
+  );
+}
+
 async function plannerCommercialProof() {
   const field = `field_w6a_planner_${run}`;
   const program = `program_w6a_planner_${run}`;
@@ -126,19 +148,13 @@ async function cropCommercialProof() {
 
   const parentProgram = `program_w6a_crop_parent_${run}`;
   await insertFact(`w6a_crop_parent_program_${run}`, "field_program_v1", programPayload(parentProgram, field, "season_1"), "2026-09-01T00:30:00Z");
+  await seedFormalStage1IrrigationLow(field);
   const rec = await api("POST", "/api/v1/recommendations/generate", {
     ...scope,
     program_id: parentProgram,
     field_id: field,
     device_id: `dev_w6a_${run}`,
     crop_code: "corn",
-    stage1_sensing_summary: {
-      irrigation_effectiveness: "low",
-      leak_risk: "low",
-      canopy_temp_status: "normal",
-      evapotranspiration_risk: "medium",
-      sensor_quality_level: "GOOD",
-    },
     image_recognition: { stress_score: 0.55, disease_score: 0.2, pest_risk_score: 0.2, confidence: 0.9 },
   });
   expect(rec.status === 200, "Commercial recommendation parent-program season resolution flow failed", rec);
