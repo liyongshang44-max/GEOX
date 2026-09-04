@@ -55,8 +55,22 @@ jobs:
       - name: B-Line residual authority audit
         run: pnpm run ci:governance:bline-residual-authority-audit
 
-      - name: B-Line active runtime surface closure
-        run: pnpm run ci:governance:bline-active-runtime-surface-closure
+      - name: B-Line active runtime predecessor closure and W6-B2 successor delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=612d650244310cd60795c9e66883bd12d9981226
+          EXPECTED_DELTA=apps/server/src/infra/bline_commercial_principal_bootstrap_v1.ts
+          ACTUAL_DELTA="$(git diff --name-only "$BASE" HEAD -- 'apps/server/src/infra/*.ts')"
+          test "$ACTUAL_DELTA" = "$EXPECTED_DELTA"
+          tmp="$(mktemp -d)"
+          cleanup() {
+            git worktree remove --force "$tmp" >/dev/null 2>&1 || true
+            rm -rf "$tmp"
+          }
+          trap cleanup EXIT
+          git worktree add --detach "$tmp" "$BASE" >/dev/null
+          node "$tmp/scripts/governance_acceptance/ACCEPTANCE_BLINE_ACTIVE_RUNTIME_SURFACE_CLOSURE_V1.cjs"
 
       - name: Typecheck
         run: pnpm -r typecheck
@@ -92,25 +106,31 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          random_secret() { od -An -N24 -tx1 /dev/urandom | tr -d ' \n'; }
+          CI_POSTGRES_PASSWORD="$(random_secret)"
+          CI_MIGRATOR_PASSWORD="$(random_secret)"
+          CI_RUNTIME_PASSWORD="$(random_secret)"
+          CI_MINIO_PASSWORD="$(random_secret)"
+          CI_APP_SECRET="$(random_secret)"
           TOKENS_JSON="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); process.stdout.write(JSON.stringify(f))")"
           EXECUTOR_ID="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x=>x.token==='executor_token'&&x.role==='executor'&&!x.revoked); if(!t) process.exit(1); process.stdout.write(t.actor_id)")"
           cat > .env.w6b2 <<EOF_INNER
           GEOX_RUNTIME_ENV=pilot
           GEOX_TOKENS_JSON='$TOKENS_JSON'
           POSTGRES_USER=landos
-          POSTGRES_PASSWORD=w6b2-ci-postgres-strong-2026
+          POSTGRES_PASSWORD=$CI_POSTGRES_PASSWORD
           POSTGRES_DB=landos
-          GEOX_MCFT_MIGRATOR_PASSWORD=w6b2-ci-mcft-migrator-strong-2026
-          GEOX_RUNTIME_DATABASE_PASSWORD=w6b2-ci-runtime-database-strong-2026
+          GEOX_MCFT_MIGRATOR_PASSWORD=$CI_MIGRATOR_PASSWORD
+          GEOX_RUNTIME_DATABASE_PASSWORD=$CI_RUNTIME_PASSWORD
           GEOX_DEPLOYMENT_SUBJECT_COMMIT=${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           GEOX_EXECUTOR_TOKEN=executor_token
           GEOX_EXECUTOR_ID=$EXECUTOR_ID
           GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
           GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT=http://127.0.0.1:9000
           MINIO_ROOT_USER=geoxminio
-          MINIO_ROOT_PASSWORD=w6b2-ci-minio-strong-2026
+          MINIO_ROOT_PASSWORD=$CI_MINIO_PASSWORD
           CORS_ORIGINS=https://w6b2-ci.geox.invalid
-          APP_SECRET=w6b2-ci-app-secret-strong-2026
+          APP_SECRET=$CI_APP_SECRET
           PUBLIC_BASE_URL=https://w6b2-ci.geox.invalid
           GEOX_EXECUTION_DEFAULT_DISABLED=1
           GEOX_EXECUTION_ENABLE_EXPLICITLY=0
