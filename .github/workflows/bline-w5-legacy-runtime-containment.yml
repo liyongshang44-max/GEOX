@@ -63,8 +63,11 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - name: Prepare W5 Commercial runtime
         run: |
+          set -euo pipefail
+          TOKENS_JSON="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); process.stdout.write(JSON.stringify(f))")"
           cat > .env.w5 <<EOF
           GEOX_RUNTIME_ENV=pilot
+          GEOX_TOKENS_JSON='$TOKENS_JSON'
           POSTGRES_USER=landos
           POSTGRES_PASSWORD=w5-postgres-strong-2026
           POSTGRES_DB=landos
@@ -96,7 +99,14 @@ jobs:
           timeout 180 docker compose --env-file .env.w5 -f docker-compose.commercial_v1.yml up -d minio minio-init
           timeout 300 docker compose --env-file .env.w5 -f docker-compose.commercial_v1.yml up -d postgres mqtt server executor
       - name: Wait for Commercial server
-        run: timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health >/dev/null; do sleep 2; done'
+        run: |
+          set -euo pipefail
+          if ! timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health >/dev/null; do sleep 2; done'; then
+            docker compose --env-file .env.w5 -f docker-compose.commercial_v1.yml ps || true
+            docker compose --env-file .env.w5 -f docker-compose.commercial_v1.yml logs server || true
+            docker compose --env-file .env.w5 -f docker-compose.commercial_v1.yml logs executor || true
+            exit 1
+          fi
       - name: W5 real Commercial legacy containment proof
         run: |
           export BASE_URL=http://127.0.0.1:3001
