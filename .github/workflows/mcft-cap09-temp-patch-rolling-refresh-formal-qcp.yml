@@ -36,8 +36,8 @@ jobs:
           const shellNew='&& [ "$base" != "$POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA" ] && [ "$base" != "$POST_PRODUCTION_LIVE_ROLLING_REFRESH_PREDECESSOR_SHA" ]; then';
           if((s.split(shellOld).length-1)!==1) throw new Error('FORMAL_QCP_SHELL_BOUNDARY_DRIFT');
           s=s.replace(shellOld,shellNew);
-          const jsOld='  process.env.POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA\n];';
-          const jsNew='  process.env.POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA,\n  process.env.POST_PRODUCTION_LIVE_ROLLING_REFRESH_PREDECESSOR_SHA\n];';
+          const jsOld='process.env.POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA];';
+          const jsNew='process.env.POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA, process.env.POST_PRODUCTION_LIVE_ROLLING_REFRESH_PREDECESSOR_SHA];';
           if((s.split(jsOld).length-1)!==1) throw new Error('FORMAL_QCP_JS_BOUNDARY_DRIFT');
           s=s.replace(jsOld,jsNew);
           fs.writeFileSync(p,s);
