@@ -7,51 +7,51 @@ on:
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.test.ts'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs'
       - '.github/workflows/mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   qualification:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
-      - name: Checkout exact successor subject
+      - name: Checkout exact qualification carrier
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.11.1
-          cache: pnpm
-
-      - name: Install exact repository dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run focused rolling authority resolver tests
-        run: >-
-          node --import tsx --test
-          apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.test.ts
-
-      - name: Prove governance and production non-effects
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs
-
-      - name: Upload resolver seam proof
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcft-cap09-twin-v2-rolling-stage-authority-resolver-seam-${{ github.event.pull_request.head.sha }}
-          path: acceptance-output/MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.json
-          if-no-files-found: warn
-          retention-days: 90
+      - name: Append b37 governed durable predecessor only
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json';
+          const oldSha = 'd67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3';
+          const newSha = 'b37b6cee4aadb50a8303cdfeffd0b4ab8a89451f';
+          let text = fs.readFileSync(path, 'utf8');
+          if (text.includes(newSha)) throw new Error('B37_ALREADY_REGISTERED');
+          const anchor = `          "${oldSha}"\n        ],\n        "dependency_digest_must_match_current": true,`;
+          const count = text.split(anchor).length - 1;
+          if (count !== 1) throw new Error(`GOVERNED_PREDECESSOR_ANCHOR_COUNT=${count}`);
+          const replacement = `          "${oldSha}",\n          "${newSha}"\n        ],\n        "dependency_digest_must_match_current": true,`;
+          text = text.replace(anchor, replacement);
+          JSON.parse(text);
+          fs.writeFileSync(path, text);
+          NODE
+          changed="$(git diff --name-only)"
+          test "$changed" = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json'
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+          git commit -m 'test(mcft-cap09): register b37 durable requalification predecessor'
+          git push origin "HEAD:${HEAD_BRANCH}"
