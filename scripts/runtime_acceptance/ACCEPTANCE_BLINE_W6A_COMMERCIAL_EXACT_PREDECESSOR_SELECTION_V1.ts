@@ -127,12 +127,34 @@ async function cropCommercialProof() {
   const parentProgram = `program_w6a_crop_parent_${run}`;
   await insertFact(`w6a_crop_parent_program_${run}`, "field_program_v1", programPayload(parentProgram, field, "season_1"), "2026-09-01T00:30:00Z");
   const rec = await api("POST", "/api/v1/recommendations/generate", {
-    ...scope, program_id: parentProgram, field_id: field, season_id: "season_1", device_id: `dev_w6a_${run}`,
-    crop_code: "corn", image_recognition: { stress_score: 0.55, disease_score: 0.2, pest_risk_score: 0.2, confidence: 0.9 },
+    ...scope,
+    program_id: parentProgram,
+    field_id: field,
+    device_id: `dev_w6a_${run}`,
+    crop_code: "corn",
+    stage1_sensing_summary: {
+      irrigation_effectiveness: "low",
+      leak_risk: "low",
+      canopy_temp_status: "normal",
+      evapotranspiration_risk: "medium",
+      sensor_quality_level: "GOOD",
+    },
+    image_recognition: { stress_score: 0.55, disease_score: 0.2, pest_risk_score: 0.2, confidence: 0.9 },
   });
-  expect(rec.status === 200, "Commercial recommendation explicit-season flow failed", rec);
-  expect(rec.json?.crop_context?.resolution?.status === "EXACT" && rec.json?.crop_context?.season_id === "season_1", "recommendation crop hook did not preserve exact parent/season context", rec.json?.crop_context);
-  return { explicit_report_status: explicit.status, ambiguous_report_status: ambiguous.status, recommendation_status: rec.status };
+  expect(rec.status === 200, "Commercial recommendation parent-program season resolution flow failed", rec);
+  expect(
+    rec.json?.crop_context?.resolution?.status === "EXACT"
+      && rec.json?.crop_context?.resolution?.basis === "PARENT_PROGRAM"
+      && rec.json?.crop_context?.season_id === "season_1",
+    "recommendation crop hook did not resolve the already-recorded parent program season exactly",
+    rec.json?.crop_context,
+  );
+  return {
+    explicit_report_status: explicit.status,
+    ambiguous_report_status: ambiguous.status,
+    recommendation_status: rec.status,
+    recommendation_resolution_basis: rec.json?.crop_context?.resolution?.basis,
+  };
 }
 
 async function main() {
