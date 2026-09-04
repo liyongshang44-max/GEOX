@@ -23,7 +23,12 @@ const adoptionExpected=[
   "apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.test.ts",
   "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts",
   "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs",
-  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs"
+  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs",
+  ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+  ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json",
+  "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"
 ].sort();
 
 function fail(code,detail){throw new Error(detail?code+":"+detail:code)}
@@ -43,7 +48,7 @@ if(adoption){
 const diffBase=adoption?ADOPTION_BASE:(successor?PREVIOUS_SUCCESSOR_BASE:EXPECTED_BASE);
 const changed=git("diff","--name-only",diffBase+"...HEAD").split(/\r?\n/).filter(Boolean).sort();
 if(adoption){
-  eq(JSON.stringify(changed),JSON.stringify(adoptionExpected),"PRODUCTION_TWIN_V2_ROUTING_ADOPTION_EXACT_FIVE_FILE_BOUNDARY_REQUIRED");
+  eq(JSON.stringify(changed),JSON.stringify(adoptionExpected),"PRODUCTION_TWIN_V2_ROUTING_ADOPTION_EXACT_TEN_FILE_BOUNDARY_REQUIRED");
   for(const frozen of [
     ".github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml",
     "apps/server/scripts/write_dist_entries.cjs",
