@@ -29,14 +29,78 @@ function assert(condition: unknown, message: string, detail?: unknown): asserts 
   if (!condition) throw new Error(`${message}${detail === undefined ? "" : `:${JSON.stringify(detail)}`}`);
 }
 
+function observed(stage: string, value: unknown): void {
+  console.log(JSON.stringify({ stage, observed: value }));
+}
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 const principals = [
-  { kind: "telemetry", user: "geox_telemetry_ingest_v1", password: telemetryDbPassword },
-  { kind: "jobs", user: "geox_jobs_v1", password: jobsDbPassword },
-  { kind: "executor", user: "geox_executor_runtime_v1", password: executorDbPassword },
+  { kind: "telemetry", stage: "DB_TELEMETRY", user: "geox_telemetry_ingest_v1", password: telemetryDbPassword },
+  { kind: "jobs", stage: "DB_JOBS", user: "geox_jobs_v1", password: jobsDbPassword },
+  { kind: "executor", stage: "DB_EXECUTOR", user: "geox_executor_runtime_v1", password: executorDbPassword },
 ] as const;
 
 function dbUrl(user: string, password: string): string {
   return `postgres://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${encodeURIComponent(database)}`;
+}
+
+async function observeServerDatabasePrincipal() {
+  const adminUrl = String(process.env.GEOX_DB_PLATFORM_ADMIN_DATABASE_URL ?? "").trim();
+  assert(adminUrl, "W6B2_DB_SERVER_ADMIN_OBSERVER_URL_MISSING");
+  const pool = new Pool({ connectionString: adminUrl, max: 1, connectionTimeoutMillis: 5000 });
+  try {
+    const result = await pool.query<{
+      rolname: string;
+      rolcanlogin: boolean;
+      rolinherit: boolean;
+      rolsuper: boolean;
+      rolcreatedb: boolean;
+      rolcreaterole: boolean;
+      rolreplication: boolean;
+      rolbypassrls: boolean;
+      active_session_count: string;
+    }>(`
+      SELECT
+        r.rolname,
+        r.rolcanlogin,
+        r.rolinherit,
+        r.rolsuper,
+        r.rolcreatedb,
+        r.rolcreaterole,
+        r.rolreplication,
+        r.rolbypassrls,
+        (
+          SELECT count(*)::text
+          FROM pg_catalog.pg_stat_activity AS a
+          WHERE a.usename = r.rolname
+            AND a.datname = current_database()
+        ) AS active_session_count
+      FROM pg_catalog.pg_roles AS r
+      WHERE r.rolname = 'geox_runtime_v1'
+    `);
+    const row = result.rows[0];
+    assert(row, "W6B2_DB_SERVER_ROLE_MISSING");
+    const value = {
+      expected_principal: "geox_runtime_v1",
+      role: row.rolname,
+      database,
+      active_session_count: Number.parseInt(row.active_session_count, 10),
+      rolcanlogin: row.rolcanlogin,
+      rolinherit: row.rolinherit,
+      rolsuper: row.rolsuper,
+      rolcreatedb: row.rolcreatedb,
+      rolcreaterole: row.rolcreaterole,
+      rolreplication: row.rolreplication,
+      rolbypassrls: row.rolbypassrls,
+    };
+    observed("DB_SERVER", value);
+    return value;
+  } finally {
+    await pool.end();
+  }
 }
 
 async function verifyDatabasePrincipal(principal: (typeof principals)[number]) {
@@ -72,29 +136,68 @@ async function verifyDatabasePrincipal(principal: (typeof principals)[number]) {
     `);
     const row = identity.rows[0];
     assert(row, "W6B2_DB_IDENTITY_MISSING", principal.kind);
+
+    let factsSelect = "PASS";
+    try {
+      await pool.query("SELECT fact_id FROM public.facts LIMIT 1");
+    } catch (error) {
+      factsSelect = `FAIL:${errorText(error)}`;
+    }
+
+    let catalogSelect = "PASS";
+    try {
+      await pool.query("SELECT 1 FROM pg_catalog.pg_class LIMIT 1");
+    } catch (error) {
+      catalogSelect = `FAIL:${errorText(error)}`;
+    }
+
+    let createDenied = false;
+    let createObserved = "ALLOWED";
+    try {
+      await pool.query(`CREATE TABLE public.w6b2_forbidden_${principal.kind}_v1(id integer)`);
+    } catch (error) {
+      createDenied = true;
+      createObserved = `DENIED:${errorText(error)}`;
+    }
+
+    let setRuntimeDenied = false;
+    let setRuntimeObserved = "ALLOWED";
+    try {
+      await pool.query("SET ROLE geox_runtime_v1");
+    } catch (error) {
+      setRuntimeDenied = true;
+      setRuntimeObserved = `DENIED:${errorText(error)}`;
+    }
+
+    const value = {
+      principal: principal.kind,
+      expected_user: principal.user,
+      session_user: row.session_user,
+      current_user: row.current_user,
+      rolcanlogin: row.rolcanlogin,
+      rolinherit: row.rolinherit,
+      rolsuper: row.rolsuper,
+      rolcreatedb: row.rolcreatedb,
+      rolcreaterole: row.rolcreaterole,
+      rolreplication: row.rolreplication,
+      rolbypassrls: row.rolbypassrls,
+      can_set_runtime: row.can_set_runtime,
+      can_create_public: row.can_create_public,
+      facts_select: factsSelect,
+      catalog_select: catalogSelect,
+      create_public: createObserved,
+      set_runtime_role: setRuntimeObserved,
+    };
+    observed(principal.stage, value);
+
     assert(row.session_user === principal.user && row.current_user === principal.user, "W6B2_DB_IDENTITY_COLLAPSED", { principal: principal.kind, row });
     assert(row.rolcanlogin, "W6B2_DB_LOGIN_DISABLED", principal.kind);
     assert(!row.rolinherit && !row.rolsuper && !row.rolcreatedb && !row.rolcreaterole && !row.rolreplication && !row.rolbypassrls, "W6B2_DB_ROLE_FLAGS_INVALID", { principal: principal.kind, row });
     assert(!row.can_set_runtime, "W6B2_DB_CAN_SET_MCFT_RUNTIME_ROLE", principal.kind);
     assert(!row.can_create_public, "W6B2_DB_CAN_CREATE_PUBLIC", principal.kind);
-
-    await pool.query("SELECT fact_id FROM public.facts LIMIT 1");
-    await pool.query("SELECT 1 FROM pg_catalog.pg_class LIMIT 1");
-
-    let createDenied = false;
-    try {
-      await pool.query(`CREATE TABLE public.w6b2_forbidden_${principal.kind}_v1(id integer)`);
-    } catch {
-      createDenied = true;
-    }
+    assert(factsSelect === "PASS", "W6B2_DB_FACTS_SELECT_FAILED", { principal: principal.kind, actual: factsSelect });
+    assert(catalogSelect === "PASS", "W6B2_DB_CATALOG_SELECT_FAILED", { principal: principal.kind, actual: catalogSelect });
     assert(createDenied, "W6B2_DB_PUBLIC_CREATE_NOT_DENIED", principal.kind);
-
-    let setRuntimeDenied = false;
-    try {
-      await pool.query("SET ROLE geox_runtime_v1");
-    } catch {
-      setRuntimeDenied = true;
-    }
     assert(setRuntimeDenied, "W6B2_DB_SET_RUNTIME_NOT_DENIED", principal.kind);
 
     return {
@@ -149,11 +252,19 @@ function connectMqtt(username: string, password: string, clientId: string): Prom
   });
 }
 
-function subscribe(client: MqttClient, topic: string): Promise<number> {
-  return new Promise((resolve, reject) => {
+type SubscribeObservation =
+  | { status: "GRANTED"; qos: number; granted: Array<{ topic: string; qos: number }> }
+  | { status: "ERROR"; error: string };
+
+function observeSubscribe(client: MqttClient, topic: string): Promise<SubscribeObservation> {
+  return new Promise((resolve) => {
     client.subscribe(topic, { qos: 0 }, (error, granted) => {
-      if (error) return reject(error);
-      resolve(Number((granted?.[0] as any)?.qos ?? -1));
+      if (error) {
+        resolve({ status: "ERROR", error: errorText(error) });
+        return;
+      }
+      const normalized = (granted ?? []).map((item: any) => ({ topic: String(item?.topic ?? ""), qos: Number(item?.qos ?? -1) }));
+      resolve({ status: "GRANTED", qos: Number(normalized[0]?.qos ?? -1), granted: normalized });
     });
   });
 }
@@ -170,43 +281,90 @@ async function verifyMqttBoundary() {
 
   const nonce = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
   const topic = `telemetry/w6b2_${nonce}/device`;
+  const payload = `executor-authorized-publish-${nonce}`;
+  const deliveryWindowMs = 2500;
+
   const telemetry = await connectMqtt(telemetryMqttUsername, telemetryMqttPassword, `w6b2_telemetry_${nonce}`);
   const executor = await connectMqtt(executorMqttUsername, executorMqttPassword, `w6b2_executor_${nonce}`);
-  try {
-    const telemetryGrant = await subscribe(telemetry, topic);
-    assert(telemetryGrant !== 128, "W6B2_MQTT_TELEMETRY_READ_DENIED", telemetryGrant);
+  observed("MQTT_CONNECT_EXECUTOR", {
+    principal: executorMqttUsername,
+    connected: executor.connected,
+    protocol_version: 4,
+  });
 
-    const executorGrant = await subscribe(executor, topic).catch(() => 128);
-    assert(executorGrant === 128, "W6B2_MQTT_EXECUTOR_SUBSCRIBE_NOT_DENIED", executorGrant);
+  let executorForbiddenDeliveryCount = 0;
+  let positiveControlDeliveryCount = 0;
+  try {
+    const forbiddenSubscribe = await observeSubscribe(executor, topic);
+    observed("MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT", forbiddenSubscribe);
+
+    const positiveSubscribe = await observeSubscribe(telemetry, topic);
+    observed("MQTT_POSITIVE_CONTROL_SUBSCRIBE", {
+      principal: telemetryMqttUsername,
+      topic,
+      result: positiveSubscribe,
+    });
+    assert(positiveSubscribe.status === "GRANTED" && positiveSubscribe.qos !== 128, "W6B2_MQTT_TELEMETRY_READ_DENIED", positiveSubscribe);
+
+    const executorHandler = (incomingTopic: string, incomingPayload: Buffer) => {
+      if (incomingTopic === topic && incomingPayload.toString("utf8") === payload) executorForbiddenDeliveryCount += 1;
+    };
+    const positiveHandler = (incomingTopic: string, incomingPayload: Buffer) => {
+      if (incomingTopic === topic && incomingPayload.toString("utf8") === payload) positiveControlDeliveryCount += 1;
+    };
+    executor.on("message", executorHandler);
+    telemetry.on("message", positiveHandler);
+
+    observed("MQTT_TEST_PUBLISH", {
+      publisher: executorMqttUsername,
+      topic,
+      nonce,
+      payload,
+    });
+    await publish(executor, topic, payload);
+    await new Promise((resolve) => setTimeout(resolve, deliveryWindowMs));
+
+    executor.removeListener("message", executorHandler);
+    telemetry.removeListener("message", positiveHandler);
+
+    observed("MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT", {
+      count: executorForbiddenDeliveryCount,
+      bounded_window_ms: deliveryWindowMs,
+      topic,
+      nonce,
+    });
+    observed("MQTT_POSITIVE_CONTROL_DELIVERY_COUNT", {
+      count: positiveControlDeliveryCount,
+      bounded_window_ms: deliveryWindowMs,
+      topic,
+      nonce,
+    });
+
+    assert(executorForbiddenDeliveryCount === 0, "W6B2_MQTT_EXECUTOR_FORBIDDEN_PUBLICATION_DELIVERED", {
+      count: executorForbiddenDeliveryCount,
+      topic,
+      nonce,
+    });
+    assert(positiveControlDeliveryCount > 0, "W6B2_MQTT_POSITIVE_CONTROL_NOT_DELIVERED", {
+      count: positiveControlDeliveryCount,
+      topic,
+      nonce,
+    });
+
+    const deniedByOriginalSubackAssumption = forbiddenSubscribe.status === "ERROR"
+      || (forbiddenSubscribe.status === "GRANTED" && forbiddenSubscribe.qos === 128);
+    assert(deniedByOriginalSubackAssumption, "W6B2_MQTT_EXECUTOR_SUBSCRIBE_NOT_DENIED_BY_SUBACK", forbiddenSubscribe);
 
     let telemetryReceivedOwnPublish = false;
     const ownPayload = `telemetry-forbidden-${nonce}`;
-    const ownHandler = (incomingTopic: string, payload: Buffer) => {
-      if (incomingTopic === topic && payload.toString("utf8") === ownPayload) telemetryReceivedOwnPublish = true;
+    const ownHandler = (incomingTopic: string, incomingPayload: Buffer) => {
+      if (incomingTopic === topic && incomingPayload.toString("utf8") === ownPayload) telemetryReceivedOwnPublish = true;
     };
     telemetry.on("message", ownHandler);
     await publish(telemetry, topic, ownPayload).catch(() => undefined);
     await new Promise((resolve) => setTimeout(resolve, 500));
     telemetry.removeListener("message", ownHandler);
     assert(!telemetryReceivedOwnPublish, "W6B2_MQTT_TELEMETRY_PUBLISH_NOT_DENIED");
-
-    const executorPayload = `executor-allowed-${nonce}`;
-    const delivered = new Promise<boolean>((resolve) => {
-      const handler = (incomingTopic: string, payload: Buffer) => {
-        if (incomingTopic === topic && payload.toString("utf8") === executorPayload) {
-          clearTimeout(timer);
-          telemetry.removeListener("message", handler);
-          resolve(true);
-        }
-      };
-      const timer = setTimeout(() => {
-        telemetry.removeListener("message", handler);
-        resolve(false);
-      }, 2500);
-      telemetry.on("message", handler);
-    });
-    await publish(executor, topic, executorPayload);
-    assert(await delivered, "W6B2_MQTT_EXECUTOR_PUBLISH_NOT_DELIVERED");
   } finally {
     telemetry.end(true);
     executor.end(true);
@@ -227,7 +385,9 @@ async function verifyMqttBoundary() {
     telemetry_read_allowed: true,
     telemetry_publish_denied: true,
     executor_publish_allowed: true,
-    executor_subscribe_denied: true,
+    executor_subscribe_denied_by_original_suback_assumption: true,
+    executor_forbidden_delivery_count: executorForbiddenDeliveryCount,
+    positive_control_delivery_count: positiveControlDeliveryCount,
     cross_credential_denied: true,
   };
 }
@@ -236,6 +396,7 @@ async function main() {
   assert(new Set(principals.map((p) => p.user)).size === principals.length, "W6B2_DB_USERNAME_COLLAPSED");
   assert(new Set(principals.map((p) => p.password)).size === principals.length, "W6B2_DB_PASSWORD_COLLAPSED");
 
+  const serverDbResult = await observeServerDatabasePrincipal();
   const dbResults = [];
   for (const principal of principals) dbResults.push(await verifyDatabasePrincipal(principal));
   await expectDbAuthFailure("geox_telemetry_ingest_v1", jobsDbPassword, "telemetry_user_with_jobs_password");
@@ -247,6 +408,7 @@ async function main() {
     result: "PASS",
     workstream: "W6_B2_COMMERCIAL_PRINCIPAL_ISOLATION",
     database: {
+      server: serverDbResult,
       principals: dbResults,
       distinct_credentials: true,
       cross_credentials_denied: true,
