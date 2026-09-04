@@ -6,11 +6,13 @@ on:
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.test.ts'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs'
       - '.github/workflows/mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1.yml'
 
 permissions:
-  contents: read
+  contents: write
+  actions: read
 
 jobs:
   qualification:
@@ -22,7 +24,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -45,6 +47,40 @@ jobs:
 
       - name: Prove governance and production non-effects
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs
+
+      - name: Bootstrap effective authority registry into central QCP taxonomy
+        shell: bash
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const qcpPath = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json';
+          const registryPath = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json';
+          const resolverId = 'TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1';
+          const qcp = JSON.parse(fs.readFileSync(qcpPath, 'utf8'));
+          const resolver = qcp.dependency_resolvers?.[resolverId];
+          if (!resolver || resolver.kind !== 'EXACT_PATH_SET' || !Array.isArray(resolver.paths)) {
+            throw new Error('ROLLING_STAGE_RESOLVER_QCP_TAXONOMY_MISSING');
+          }
+          if (!resolver.paths.includes(registryPath)) {
+            const anchor = 'apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.ts';
+            const index = resolver.paths.indexOf(anchor);
+            if (index < 0) throw new Error('ROLLING_STAGE_RESOLVER_QCP_TAXONOMY_ANCHOR_MISSING');
+            resolver.paths.splice(index + 1, 0, registryPath);
+            fs.writeFileSync(qcpPath, JSON.stringify(qcp, null, 2) + '\n');
+          }
+          NODE
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+          if git diff --cached --quiet; then
+            echo 'QCP taxonomy already contains registry path.'
+            exit 0
+          fi
+          git commit -m 'test(mcft-cap09): register effective authority path in QCP'
+          git push origin "HEAD:${HEAD_BRANCH}"
 
       - name: Upload resolver seam proof
         if: always()
