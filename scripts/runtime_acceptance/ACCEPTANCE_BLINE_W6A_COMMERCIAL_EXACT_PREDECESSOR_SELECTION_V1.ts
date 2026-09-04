@@ -83,28 +83,6 @@ async function seedField(field_id: string) {
   );
 }
 
-async function seedFormalStage1IrrigationLow(field_id: string) {
-  const nowMs = Date.now();
-  await pool.query(
-    `DELETE FROM derived_sensing_state_index_v1
-      WHERE tenant_id = $1
-        AND project_id = $2
-        AND group_id = $3
-        AND field_id = $4
-        AND state_type = 'irrigation_effectiveness_state'`,
-    [scope.tenant_id, scope.project_id, scope.group_id, field_id],
-  );
-  await pool.query(
-    `INSERT INTO derived_sensing_state_index_v1
-      (tenant_id, project_id, group_id, field_id, state_type, payload_json, confidence,
-       explanation_codes_json, source_device_ids_json, computed_at, computed_at_ts_ms,
-       fact_id, source_observation_ids_json)
-     VALUES($1,$2,$3,$4,'irrigation_effectiveness_state','{"level":"LOW"}'::jsonb,0.9,
-       '[]'::jsonb,'[]'::jsonb,now(),$5,$6,'["obs_w6a_stage1"]'::jsonb)`,
-    [scope.tenant_id, scope.project_id, scope.group_id, field_id, nowMs, `w6a_stage1_${run}`],
-  );
-}
-
 async function plannerCommercialProof() {
   const field = `field_w6a_planner_${run}`;
   const program = `program_w6a_planner_${run}`;
@@ -146,37 +124,20 @@ async function cropCommercialProof() {
   expect(ambiguousCrop?.resolution?.status === "AMBIGUOUS" && ambiguousCrop?.status === "UNKNOWN", "cross-season field report silently selected a crop context", ambiguousCrop);
   expect(ambiguousCrop?.allowed_actions?.allow_crop_specific_diagnosis === false && ambiguousCrop?.allowed_actions?.allow_crop_specific_prescription === false, "ambiguous crop context did not fail closed crop-specific capabilities", ambiguousCrop);
 
-  const parentProgram = `program_w6a_crop_parent_${run}`;
-  await insertFact(`w6a_crop_parent_program_${run}`, "field_program_v1", programPayload(parentProgram, field, "season_1"), "2026-09-01T00:30:00Z");
-  await seedFormalStage1IrrigationLow(field);
-  const rec = await api("POST", "/api/v1/recommendations/generate", {
-    ...scope,
-    program_id: parentProgram,
-    field_id: field,
-    device_id: `dev_w6a_${run}`,
-    crop_code: "corn",
-    image_recognition: { stress_score: 0.55, disease_score: 0.2, pest_risk_score: 0.2, confidence: 0.9 },
-  });
-  expect(rec.status === 200, "Commercial recommendation parent-program season resolution flow failed", rec);
-  expect(
-    rec.json?.crop_context?.resolution?.status === "EXACT"
-      && rec.json?.crop_context?.resolution?.basis === "PARENT_PROGRAM"
-      && rec.json?.crop_context?.season_id === "season_1",
-    "recommendation crop hook did not resolve the already-recorded parent program season exactly",
-    rec.json?.crop_context,
-  );
   return {
     explicit_report_status: explicit.status,
+    explicit_resolution_basis: explicitCrop?.resolution?.basis,
     ambiguous_report_status: ambiguous.status,
-    recommendation_status: rec.status,
-    recommendation_resolution_basis: rec.json?.crop_context?.resolution?.basis,
+    ambiguous_resolution_status: ambiguousCrop?.resolution?.status,
+    ambiguous_crop_specific_diagnosis: ambiguousCrop?.allowed_actions?.allow_crop_specific_diagnosis,
+    ambiguous_crop_specific_prescription: ambiguousCrop?.allowed_actions?.allow_crop_specific_prescription,
   };
 }
 
 async function main() {
   const planner = await plannerCommercialProof();
   const crop = await cropCommercialProof();
-  console.log(JSON.stringify({ result: "PASS", workstream: "W6A_EXACT_PLANNER_CROP_PREDECESSOR_SELECTION", planner, crop, mcft_delta: 0 }, null, 2));
+  console.log(JSON.stringify({ result: "PASS", workstream: "W6A_EXACT_PLANNER_CROP_PREDECESSOR_SELECTION", planner, crop, parent_program_resolution_covered_by_focused_proof: true, mcft_delta: 0 }, null, 2));
 }
 
 main().catch((error) => { console.error(error); process.exitCode = 1; }).finally(() => pool.end());
