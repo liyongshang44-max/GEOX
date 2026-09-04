@@ -77,6 +77,14 @@ const adminTaskOnly = tokenRecord({
   role: "admin",
   scopes: ["action.task.create"],
 });
+const revokedIssuer = tokenRecord({
+  token: "w6b1_revoked_internal",
+  token_id: "tok_w6b1_revoked_internal",
+  actor_id: "w6b1_revoked_internal_actor",
+  role: "operator",
+  scopes: ["action.task.create"],
+  revoked: true,
+});
 const approver = tokenRecord({
   token: "w6b1_approver",
   token_id: "tok_w6b1_approver",
@@ -85,9 +93,11 @@ const approver = tokenRecord({
   scopes: ["approval.decide"],
 });
 
-function setTokenSource(records: any[]): void {
+const TOKEN_SOURCE = [exactIssuer, broadOperator, adminTaskOnly, revokedIssuer, approver];
+
+function setTokenSource(): void {
   process.env.GEOX_RUNTIME_ENV = "test";
-  process.env.GEOX_TOKENS_JSON = JSON.stringify({ version: "ao_act_tokens_v0", tokens: records });
+  process.env.GEOX_TOKENS_JSON = JSON.stringify({ version: "ao_act_tokens_v0", tokens: TOKEN_SOURCE });
   delete process.env.GEOX_TOKENS_FILE;
   delete process.env.GEOX_TOKEN_SSOT_PATH;
   delete process.env.GEOX_TOKEN;
@@ -106,7 +116,7 @@ function expectIssuerError(expected: string, fn: () => unknown): void {
 }
 
 async function provePrincipalSelection(): Promise<Record<string, unknown>> {
-  setTokenSource([exactIssuer, broadOperator, adminTaskOnly]);
+  setTokenSource();
   process.env.GEOX_INTERNAL_TASK_ISSUER_TOKEN_ID = exactIssuer.token_id;
   delete process.env.GEOX_INTERNAL_TASK_ISSUER_TOKEN;
 
@@ -130,13 +140,9 @@ async function provePrincipalSelection(): Promise<Record<string, unknown>> {
   process.env.GEOX_INTERNAL_TASK_ISSUER_TOKEN_ID = "tok_missing_internal_issuer";
   expectIssuerError("INTERNAL_TASK_ISSUER_PRINCIPAL_UNKNOWN", () => resolveInternalTaskIssuerPrincipalV1());
 
-  const revoked = { ...exactIssuer, revoked: true };
-  setTokenSource([revoked]);
-  process.env.GEOX_INTERNAL_TASK_ISSUER_TOKEN_ID = revoked.token_id;
-  delete process.env.GEOX_INTERNAL_TASK_ISSUER_TOKEN;
+  process.env.GEOX_INTERNAL_TASK_ISSUER_TOKEN_ID = revokedIssuer.token_id;
   expectIssuerError("INTERNAL_TASK_ISSUER_PRINCIPAL_REVOKED", () => resolveInternalTaskIssuerPrincipalV1());
 
-  setTokenSource([exactIssuer]);
   process.env.GEOX_INTERNAL_TASK_ISSUER_TOKEN_ID = exactIssuer.token_id;
   process.env.GEOX_INTERNAL_TASK_ISSUER_TOKEN = broadOperator.token;
   expectIssuerError("INTERNAL_TASK_ISSUER_TOKEN_ID_SECRET_MISMATCH", () => resolveInternalTaskIssuerPrincipalV1());
@@ -156,7 +162,7 @@ async function provePrincipalSelection(): Promise<Record<string, unknown>> {
 }
 
 async function proveDedicatedScopeCeiling(): Promise<Record<string, number>> {
-  setTokenSource([exactIssuer]);
+  setTokenSource();
   const app = Fastify({ logger: false });
   const scopes: AoActScopeV0[] = [
     "action.task.create",
@@ -236,6 +242,33 @@ class ApprovalPoolStub {
     if (text.includes("(record_json::jsonb->>'type')='operation_plan_v1'") && text.includes("operation_plan_id")) {
       return { rows: [], rowCount: 0 };
     }
+    if (text.includes("INSERT INTO public.operation_plan_index_v1")) {
+      return {
+        rows: [{
+          operation_plan_id: String(params[0]),
+          tenant_id: String(params[1]),
+          project_id: String(params[2]),
+          group_id: String(params[3]),
+          field_id: params[4] ?? null,
+          zone_id: params[5] ?? null,
+          spatial_scope_json: params[6] ? JSON.parse(String(params[6])) : null,
+          season_id: params[7] ?? null,
+          program_id: params[8] ?? null,
+          recommendation_id: params[9] ?? null,
+          recommendation_fact_id: params[10] ?? null,
+          approval_request_id: params[11] ?? null,
+          approval_decision: params[12] ?? null,
+          approval_decision_fact_id: params[13] ?? null,
+          status: String(params[14]),
+          act_task_id: params[15] ?? null,
+          receipt_fact_id: params[16] ?? null,
+          source_fact_id: params[17] ?? null,
+          created_ts: Number(params[18]),
+          updated_ts: Number(params[19]),
+        }],
+        rowCount: 1,
+      };
+    }
     if (text.includes("INSERT INTO facts")) {
       this.inserts.push(params[2] ?? null);
       return { rows: [], rowCount: 1 };
@@ -249,7 +282,7 @@ class ApprovalPoolStub {
 }
 
 async function proveApprovalIssuerSeparation(): Promise<Record<string, unknown>> {
-  setTokenSource([exactIssuer, approver]);
+  setTokenSource();
   process.env.GEOX_INTERNAL_TASK_ISSUER_TOKEN_ID = exactIssuer.token_id;
   delete process.env.GEOX_INTERNAL_TASK_ISSUER_TOKEN;
   prepareInternalTaskIssuerPrincipalV1();
