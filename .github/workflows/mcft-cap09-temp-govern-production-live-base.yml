@@ -8,20 +8,22 @@ on:
       - '.github/workflows/mcft-cap09-temp-govern-production-live-base.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  prepare-qualification-workflow-blob:
+  export-qualified-workflow-bytes:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact branch head
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Build exact qualification workflow target
+      - name: Build validate and export exact target bytes
         shell: python
         run: |
+          import base64
           from pathlib import Path
 
           predecessor = 'ef9f7d45114c98c16ad57ce69226323935f685db'
@@ -45,28 +47,15 @@ jobs:
           expected_old = 'process.env.POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA];'
           expected_new = 'process.env.POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA, process.env.POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA];'
           text = replace_once(text, expected_old, expected_new, 'EXPECTED_QUALIFICATION_PREDECESSOR_SET_TARGET_ONCE')
-          workflow.write_text(text, encoding='utf-8')
 
-      - name: Validate target and upload Git blob only
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          path='.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'
-          git diff --check -- "$path"
-          test "$(git diff --name-only | wc -l | tr -d ' ')" = "1"
-          git diff --name-only | grep -Fx "$path"
-          grep -Fx "  POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA: 'ef9f7d45114c98c16ad57ce69226323935f685db'" "$path"
-          test "$(grep -c 'POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA' "$path")" = "3"
-          payload="$(jq -Rs '{content:.,encoding:"utf-8"}' < "$path")"
-          response="$(curl --fail-with-body -sS -X POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/blobs" \
-            --data-binary "$payload")"
-          sha="$(printf '%s' "$response" | jq -r '.sha // empty')"
-          test "$(printf '%s' "$sha" | grep -Ec '^[0-9a-f]{40}$')" = "1"
-          echo "QUALIFICATION_BLOB_SHA=$sha"
-          echo "QUALIFICATION_TARGET_NUMSTAT=$(git diff --numstat -- "$path")"
+          if text.count('POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA') != 3:
+              raise SystemExit('EXPECTED_NEW_PREDECESSOR_REFERENCE_CARDINALITY_3')
+
+          data = text.encode('utf-8')
+          encoded = base64.b64encode(data).decode('ascii')
+          chunk_size = 3000
+          chunks = [encoded[i:i+chunk_size] for i in range(0, len(encoded), chunk_size)]
+          print(f'TARGET_BYTES={len(data)}')
+          print(f'TARGET_B64_CHUNKS={len(chunks)}')
+          for i, chunk in enumerate(chunks):
+              print(f'TARGET_B64_{i:02d}={chunk}')
