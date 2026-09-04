@@ -1,3 +1,938 @@
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-04 Continuation — Twin V2 Rolling Stage Authority Resolver Seam / Protected-Main Governance / EA5E2 Rebind Settlement Frontier
+
+# V — Twin V2 Rolling Stage Authority Resolver Seam / Protected-Main Governance / EA5E2 Rebind Settlement Frontier
+
+Status: **ACTIVE CONTINUATION FRONTIER — #3499 AND #3502 MERGED; #3504 DRAFT; TWIN V2 ROLLING-STAGE RESOLVER SEAM OPEN; GOVERNANCE PATCH GENERATED IN CARRIER; LATEST VISIBLE EA5E2 REBIND ATTEMPT FAILS ON MANUAL-DISPATCH INVARIANT; NO SETTLEMENT COMMIT YET PROVEN**
+
+This V-section is the current continuation point after the U-section production-live / rolling-refresh QCP frontier.
+
+Do not delete, collapse, or retroactively rewrite U/T/S/R/Q/P/O/N/M/L/K/J/I/H or any earlier historical section below. Those sections remain the chronological evidence chain for MCFT-CAP-09.
+
+## V0 — Current task / scope / authority boundary
+
+The active task is no longer #3499 rolling-refresh QCP registration and is no longer #3502 daily rolling current-crop candidate production. Both of those successors have been qualified and merged.
+
+The current engineering task is:
+
+```text
+protected main @ d67a2b3c...
+        ↓
+#3502 qualification-only rolling current-crop candidate producer exists
+        ↓
+#3504 Twin Runtime V2 per-logical-time current-crop / stage-authority resolver seam
+        ↓
+protected-main predecessor / QCP governance settlement
+        ↓
+EA5E2 generated graph exact rebind
+        ↓
+exact-head qualification
+        ↓
+#3504 Ready for Review
+        ↓
+explicit merge authorization
+```
+
+The #3504 seam is structural and read-only. It does not itself authorize production runtime restart, cutover, production-owner graduation, Formal-v5, A0, O00–O23, or MCFT completion.
+
+The production runtime remains under the already-established U-section live runtime authority. No production runtime command is required at this continuation point.
+
+## V1 — Successor lineage from U-section to the current frontier
+
+The current protected-main lineage is:
+
+```text
+#3499
+  rolling current-crop refresh / QCP ownership closure
+        ↓
+qualified head =
+  0544e4c6877b574c481bc031a89e40be9e720c31
+        ↓
+merged protected main =
+  d82d25f76535b2779ef6b15b3eb32c15c245dedf
+        ↓
+#3502
+  rolling current-crop daily qualification candidate producer
+        ↓
+qualified head =
+  d1bc86af52327f5b1e2ada27694d35ab6c1f04d2
+        ↓
+merged protected main =
+  d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3
+        ↓
+#3504
+  Twin Runtime V2 rolling stage-authority resolver seam
+        ↓
+current temporary settlement carrier head =
+  a8d39377a610669fdecbb279cee19598f844fe9f
+```
+
+Do not use historical PR heads as substitutes for the actual protected-main merge SHAs when binding predecessor governance.
+
+## V2 — #3499 is closed; do not reopen the U-section QCP blocker
+
+#3499 is no longer an open frontier.
+
+The rolling current-crop refresh QCP ownership was completed and exact-head qualified before merge.
+
+Key final pre-merge machine facts were:
+
+```text
+stage =
+  SUCCESSOR_SUBJECT_PRE_MERGE
+
+formal QCP status =
+  PASS
+
+blocker_count =
+  0
+
+unknown_changed_paths =
+  0
+
+authority_errors =
+  0
+
+resolver_errors =
+  0
+```
+
+Qualified #3499 head:
+
+```text
+0544e4c6877b574c481bc031a89e40be9e720c31
+```
+
+Protected-main merge result:
+
+```text
+d82d25f76535b2779ef6b15b3eb32c15c245dedf
+```
+
+Do not re-add #3499 qualification-only paths to the EA5E2 runtime dependency graph. That design question was already settled in U11/U12.
+
+## V3 — #3502 is closed; daily rolling candidate production is now a protected-main capability
+
+#3502 introduced the qualification-only daily rolling current-crop candidate path and completed exact-head qualification.
+
+Qualified #3502 head:
+
+```text
+d1bc86af52327f5b1e2ada27694d35ab6c1f04d2
+```
+
+Protected-main merge result:
+
+```text
+d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3
+```
+
+Post-merge exact-main verification:
+
+```text
+mcft-cap-09-ea5e2-successor-runner-qualification
+  run 33873640522
+  SUCCESS
+
+main CI
+  run 33873640759
+  SUCCESS
+```
+
+The main CI result included:
+
+```text
+build-test                         SUCCESS
+acceptance                         SUCCESS
+COMMERCIAL MVP0 release gate       SUCCESS
+runtime hygiene                    SUCCESS
+artifact upload                    SUCCESS
+```
+
+The scheduled rolling-candidate path is classified as qualification-only / read-only provider probing. It is not a production owner, does not write the live runtime, and does not itself graduate an immutable candidate into a running production mount.
+
+No production runtime/cutover workflow was triggered by the #3502 merge.
+
+## V4 — Why #3504 exists
+
+#3502 can produce rolling current-crop qualification candidates, but Twin Runtime V2 still needs a governed structural seam by which a logical-time materialization can resolve which current-crop/stage authority is effective.
+
+#3504 therefore introduces a read-only resolver port at the Twin Runtime V2 boundary.
+
+The intended semantics are:
+
+```text
+logical time t1
+  → effective current-crop authority A
+
+logical time t2
+  → effective current-crop authority B
+
+selected authority
+  → must still satisfy the existing forward-stability / freshness boundary
+
+stale selected authority
+  → FAIL CLOSED
+```
+
+The focused resolver test is intended to prove that two logical hours may resolve distinct effective authority evidence digests while stale selected authority remains rejected.
+
+The production default remains the existing static exact-bound snapshot.
+
+#3504 does NOT yet authorize or imply:
+
+```text
+file-backed rolling resolver adoption
+registry-backed rolling resolver adoption
+scheduled candidate artifact consumption by production
+live mount mutation
+production restart
+production cutover
+Formal-v5
+A0
+O00–O23
+```
+
+## V5 — #3504 exact current PR metadata
+
+At this handoff update:
+
+```text
+PR =
+  #3504
+
+title =
+  feat(mcft-cap09): add per-logical-time stage authority resolver seam
+
+base =
+  d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3
+
+head =
+  a8d39377a610669fdecbb279cee19598f844fe9f
+
+branch =
+  feat/mcft-cap09-rolling-stage-authority-resolver-v1
+
+state =
+  OPEN / DRAFT
+
+mergeable =
+  true
+
+commits =
+  6
+
+changed_files =
+  6
+
+additions =
+  580
+
+deletions =
+  20
+```
+
+The current head includes a temporary settlement carrier. Therefore `changed_files = 6` is not the intended final clean subject.
+
+Do not assume the final changed-file count must return to five. Once governance/predecessor/binding settlement is committed, additional permanent governance files may legitimately enter the PR. The correct final invariant is:
+
+```text
+temporary carrier path absent
++
+all permanent changed paths explicitly audited / governed
+```
+
+not a hard-coded final file count.
+
+## V6 — Current #3504 path boundary
+
+The five permanent implementation / qualification paths currently visible are:
+
+```text
+.github/workflows/mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1.yml
+
+apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.test.ts
+
+apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.ts
+
+apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts
+
+scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs
+```
+
+The sixth current path is temporary:
+
+```text
+.github/workflows/mcft-cap09-temp-settle-rolling-stage-resolver-v1.yml
+```
+
+That temporary workflow must not remain in the final #3504 subject.
+
+## V7 — Intended QCP ownership for the resolver seam
+
+The settlement carrier prepares an independent QCP resolver/check for the new qualification seam.
+
+Resolver:
+
+```text
+id =
+  TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1
+
+kind =
+  EXACT_PATH_SET
+```
+
+Exact resolver-owned paths:
+
+```text
+.github/workflows/mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1.yml
+
+apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.test.ts
+
+apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.ts
+
+scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs
+```
+
+Check:
+
+```text
+id =
+  TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM
+
+owner =
+  MCFT_CAP09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_QUALIFICATION
+
+authority_ref =
+  docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md
+
+carry_forward =
+  NONE
+
+fresh exact-head requalification =
+  REQUIRED
+
+fail_closed =
+  true
+```
+
+Do not broaden this into a wildcard resolver and do not add the qualification-only paths to the EA5E2 runtime dependency graph merely to make routing green.
+
+The Twin Runtime V2 composition path remains subject to its existing runtime/dependency ownership semantics.
+
+## V8 — Protected-main predecessor / governance patch prepared by the settlement carrier
+
+Run `33880185315` successfully completed the working-tree step:
+
+```text
+Patch governance and successor predecessor atomically
+  SUCCESS
+```
+
+That patch prepares the following governance changes against protected main `d67a2b3c...`:
+
+```text
+QCP authority:
+  append d67a2b3c... to governed_successor_predecessor_shas
+
+QCP authority:
+  add TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1 resolver
+
+QCP authority:
+  add TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM check
+
+qualification evidence registry:
+  append d67a2b3c... to governed_successor_predecessors
+
+all-blockers preflight:
+  add ROLLING_STAGE_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA seam
+
+formal QCP workflow:
+  add d67a2b3c... exact predecessor env / shell allowlist / expected-predecessor binding
+
+post-merge V13 workflow:
+  add d67a2b3c... exact predecessor env / shell allowlist
+```
+
+This step being SUCCESS proves the patch can be constructed structurally in the carrier workspace.
+
+It does NOT prove that the settlement has been committed to the #3504 branch.
+
+## V9 — EA5E2 generated graph rebind intent
+
+The settlement carrier then attempts to rebind the generated EA5E2 rolling runtime dependency graph to the governance-patched subject.
+
+Binding carrier:
+
+```text
+scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs
+```
+
+Intended sequence:
+
+```text
+patched governance
+        ↓
+run EA5E2 generated-graph acceptance
+        ↓
+read expected generated dependency-graph SHA256
+        ↓
+update exact binding carrier
+        ↓
+rerun acceptance
+        ↓
+require PASS
+        ↓
+validate patched governance
+        ↓
+create settlement commit
+```
+
+This is a generated-governance binding operation. It is not production runtime execution and it must not be treated as permission to widen live runtime ownership.
+
+## V10 — Run 33880185315: latest directly re-queried machine state
+
+There is an important observed-state discrepancy at this handoff boundary.
+
+An earlier conversational status summary reported:
+
+```text
+Patch governance/predecessor          SUCCESS
+Rebind EA5E2 generated graph          SUCCESS
+Validate patched governance           SUCCESS
+Create commit / push                  FAILED
+```
+
+However, a direct GitHub re-query of the currently visible attempt of:
+
+```text
+run =
+  33880185315
+
+job =
+  101046671090
+
+head =
+  a8d39377a610669fdecbb279cee19598f844fe9f
+```
+
+returns:
+
+```text
+Checkout exact PR head                           SUCCESS
+
+Patch governance and successor predecessor
+atomically                                       SUCCESS
+
+Rebind EA5E2 generated graph exactly             FAILURE
+
+Validate patched governance structure            SKIPPED
+
+Create settlement commit and attempt push        SKIPPED
+```
+
+Therefore the latest attempt visible to the connector does NOT currently prove the existence of a runner-generated settlement commit.
+
+Do not fast-forward a guessed commit.
+
+If a later rerun/attempt exists after this snapshot, re-query that later attempt and prefer its exact machine result. Do not merge the two attempt histories together.
+
+## V11 — Exact EA5E2 rebind failure: digest is already matched; manual-dispatch invariant is not
+
+The failed EA5E2 rerun produced:
+
+```text
+schema_version =
+  geox_mcft_cap09_ea5e2_rolling_runtime_dependency_graph_v5
+
+expected_dependency_graph_sha256 =
+  sha256:6ba2b357aad8ec35120600362dcf1ebf80062f4e2e09118ff19b3263cf9bc8a2
+
+carrier_dependency_graph_sha256 =
+  sha256:6ba2b357aad8ec35120600362dcf1ebf80062f4e2e09118ff19b3263cf9bc8a2
+
+digestMatch =
+  true
+
+required_runtime_discovery_missing =
+  []
+
+static_gate_uncovered_paths =
+  []
+
+expensive_live_auto_dispatch_present =
+  false
+
+live_manual_dispatch_present =
+  false
+
+binding_carrier_in_exact_main_critical =
+  true
+```
+
+The thrown failure is:
+
+```text
+EA5E2_ROLLING_RUNTIME_DEPENDENCY_GRAPH_V4_UNBOUND:
+{
+  "missing":[],
+  "uncovered":[],
+  "autoLive":false,
+  "manual":false,
+  "carrierCritical":true,
+  "digestMatch":true,
+  "expected":"sha256:6ba2b357aad8ec35120600362dcf1ebf80062f4e2e09118ff19b3263cf9bc8a2"
+}
+```
+
+Therefore the current visible blocker is NOT an EA5E2 digest mismatch.
+
+The digest rebind itself is already exact.
+
+The remaining failing invariant is:
+
+```text
+live_manual_dispatch_present = false
+```
+
+Do not churn the generated digest again unless a later governance change legitimately changes the generated graph.
+
+## V12 — Attempt / evidence precedence rule
+
+At resume, first determine which machine attempt is actually latest.
+
+Required order:
+
+```text
+re-read #3504 head/base
+        ↓
+re-read run 33880185315 and attempt metadata
+        ↓
+inspect step-level job state
+        ↓
+only then decide whether a settlement commit exists
+```
+
+If a later attempt truly has:
+
+```text
+Rebind EA5E2 generated graph          SUCCESS
+Validate patched governance           SUCCESS
+Create commit / push                  FAILED
+```
+
+then extract the exact settlement commit SHA from that later attempt and verify its parent before any connector fast-forward.
+
+If the latest visible attempt remains job `101046671090`, then:
+
+```text
+no settlement commit is proven
+current blocker = live_manual_dispatch_present=false
+```
+
+and the manual-dispatch invariant must be resolved or correctly re-adjudicated first.
+
+A conversational summary is not a substitute for step-level machine evidence when the two disagree.
+
+## V13 — Current blocker classification
+
+Current state at the visible #3504 carrier head:
+
+```text
+#3499 rolling-refresh QCP closure             COMPLETE / MERGED
+
+#3502 daily rolling candidate producer        COMPLETE / MERGED
+
+protected main                                d67a2b3c...
+
+#3504 Twin V2 resolver seam                    OPEN / DRAFT
+
+resolver implementation / test surface         PRESENT
+
+temporary settlement carrier                  PRESENT
+
+governance/predecessor patch construction      PASS in carrier workspace
+
+EA5E2 generated digest binding                 MATCHED
+
+EA5E2 manual live-dispatch invariant           FAIL
+                                                manual=false
+
+patched-governance validation                  NOT RUN in visible attempt
+
+settlement commit                              NOT PROVEN in visible attempt
+
+temporary carrier cleanup                      NOT YET
+
+clean exact-head qualification                 NOT YET
+
+Ready for Review                               NO
+
+merge authorization frontier                   NOT REACHED
+```
+
+Do not describe this as a production-runtime blocker. It is a governance / qualification binding blocker.
+
+## V14 — Frozen non-effect / authority boundary
+
+Nothing in #3504 or run `33880185315` authorizes a production effect.
+
+Frozen current facts:
+
+```text
+production runtime restart =
+  NO
+
+production cutover =
+  NO
+
+production mount mutation =
+  NO
+
+new production owner =
+  NO
+
+Formal-v5 arm =
+  false
+
+A0 execution =
+  false
+
+O00 started =
+  false
+
+O00–O23 started =
+  false
+
+mcft_cap09_completed =
+  false
+
+B-Line touched =
+  NO
+```
+
+The production runtime remains unchanged from the previously authorized U-section cutover.
+
+The #3502 scheduled candidate producer remains qualification-only. #3504 does not yet consume its artifacts in production.
+
+## V15 — Next exact execution sequence
+
+Next-session order is frozen as follows.
+
+### Step 1 — re-read exact state
+
+Require:
+
+```text
+#3504 base ==
+  d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3
+
+#3504 head ==
+  a8d39377a610669fdecbb279cee19598f844fe9f
+```
+
+If head drift exists, reconstruct before writing.
+
+Also re-query:
+
+```text
+run 33880185315
+attempt number / latest attempt
+job step states
+```
+
+### Step 2A — if the latest attempt is still the visible manual=false failure
+
+Inspect the EA5E2 acceptance / `liveSets()` manual-dispatch invariant.
+
+Determine truthfully whether:
+
+```text
+A)
+a governed manual qualification/live-dispatch surface is genuinely required
+and is missing
+
+or
+
+B)
+the manual-dispatch expectation is stale/inapplicable under the current
+Phase6 retirement / qualification-only architecture
+```
+
+Fix the correct authority/gate representation.
+
+Do NOT add `workflow_dispatch`, a production-capable workflow, or a live execution path merely to satisfy `manual=true`.
+
+The system must remain fail-closed and truthful.
+
+The already-matched digest:
+
+```text
+sha256:6ba2b357aad8ec35120600362dcf1ebf80062f4e2e09118ff19b3263cf9bc8a2
+```
+
+must not be churned without a real generated-graph change.
+
+Then rerun the settlement carrier and require:
+
+```text
+Patch governance/predecessor          SUCCESS
+Rebind EA5E2 generated graph          SUCCESS
+Validate patched governance           SUCCESS
+```
+
+### Step 2B — if a later attempt already has rebind/validate SUCCESS
+
+Extract from that exact attempt:
+
+```text
+settlement commit SHA
+settlement parent SHA
+settlement tree/diff
+```
+
+Require the settlement parent to equal the exact current carrier head for that attempt.
+
+Do not infer a commit from a failed workflow conclusion alone.
+
+### Step 3 — connector settlement
+
+If the runner generated a valid settlement commit but push failed only because of protected-workflow permissions:
+
+```text
+connector non-force fast-forward
+```
+
+Only non-force update is allowed.
+
+### Step 4 — remove temporary carrier
+
+Delete:
+
+```text
+.github/workflows/mcft-cap09-temp-settle-rolling-stage-resolver-v1.yml
+```
+
+using the connector after the settlement commit is safely attached.
+
+### Step 5 — audit the clean final subject
+
+Require:
+
+```text
+temporary carrier = absent
+
+all remaining changed paths =
+  permanent implementation / qualification / governance / binding only
+
+B-Line delta =
+  0
+```
+
+Do not hard-code the expected final changed-file count. The settlement itself may legitimately add governance/binding paths.
+
+### Step 6 — exact-head machine qualification
+
+At the clean final head require, as applicable:
+
+```text
+Twin V2 rolling-stage resolver seam acceptance
+QCP central applicability / blocker enumeration
+EA5E2 central planner / generated graph
+EA5E2 live-window preflight
+Phase6 retirement / runtime-independence sentinels
+post-merge control-plane sentinel
+CI build-test
+CI acceptance
+COMMERCIAL MVP0 release gate
+ruleset readiness / release / delivery gates
+```
+
+No unknown changed paths, no resolver/authority errors, no unexpected production-owner classification.
+
+### Step 7 — review / merge boundary
+
+Only after clean exact-head qualification:
+
+```text
+#3504 Ready for Review
+        ↓
+request explicit merge authorization
+```
+
+Do not merge from Draft or from the temporary carrier head.
+
+## V16 — DO NOT rules
+
+Do NOT:
+
+```text
+force-push #3504
+
+fast-forward to a guessed/nonexistent runner commit
+
+claim Create/push failed when the step was actually skipped
+
+treat digestMatch=true as equivalent to EA5E2 PASS
+
+churn the EA5E2 generated digest when the digest already matches
+
+add qualification-only resolver-seam files to the runtime dependency graph
+just to make a planner green
+
+add broad wildcard QCP ownership
+
+add a live/production workflow_dispatch merely to force manual=true
+
+restart production
+
+execute production cutover
+
+arm Formal-v5
+
+execute A0
+
+start O00–O23
+
+touch B-Line scope
+
+delete historical U/T/S/R/Q/P/O/N/M/L/K/J/I/H handoff sections
+```
+
+`mergeable=true` is not merge authorization.
+
+## V17 — Pitfalls / lessons to preserve
+
+### V17.1 — Workflow final FAILURE does not identify the failed step
+
+Always inspect step-level state.
+
+For run `33880185315`, the currently visible attempt did NOT reach commit/push. Rebind failed first; validation and commit/push were skipped.
+
+### V17.2 — Matching generated digest is necessary but not sufficient
+
+This attempt has:
+
+```text
+expected digest == carrier digest
+digestMatch = true
+```
+
+and still fails because:
+
+```text
+manual = false
+```
+
+Do not report the problem as “digest not rebound.”
+
+### V17.3 — Do not invent a settlement commit
+
+A connector fast-forward is safe only after the exact runner-generated commit is present in machine logs and its parent is verified.
+
+Never construct or guess the SHA from an expected diff.
+
+### V17.4 — Protected-workflow settlement pattern remains valid, but only after all validation steps pass
+
+When the runner has genuinely created a valid commit and only its push is rejected by workflow permissions:
+
+```text
+runner validates exact patch
+        ↓
+runner creates commit
+        ↓
+push fails on workflow permission
+        ↓
+connector verifies commit/parent
+        ↓
+connector non-force fast-forward
+```
+
+Do not apply this pattern when commit creation was never reached.
+
+### V17.5 — Temporary carrier lifecycle
+
+Keep the temporary carrier only while it is required to generate/validate the settlement.
+
+After the settlement is safely attached:
+
+```text
+delete carrier
+        ↓
+re-run exact-head qualification
+```
+
+Do not leave settlement machinery in the final PR.
+
+### V17.6 — No-output / long-running runner is not automatically stuck
+
+The U17 rule remains active:
+
+```text
+one cutover/settlement runner at a time
+do not duplicate long-running jobs without machine evidence of failure
+do not Ctrl+C an active build merely because output is quiet
+```
+
+### V17.7 — Re-query after head/attempt drift
+
+Parallel work can change:
+
+```text
+PR head
+run attempt
+generated graph
+governed predecessor set
+```
+
+Always re-read exact head and exact attempt before applying a settlement.
+
+### V17.8 — Keep candidate generation, resolver seam, and production authority separate
+
+The architecture is intentionally layered:
+
+```text
+qualification-only candidate producer
+        ≠
+Twin V2 resolver seam
+        ≠
+production candidate consumption
+        ≠
+Formal/A0/O00 authority
+```
+
+Do not collapse these layers during settlement.
+
+## V18 — Exact handoff sentence
+
+The next conversation should begin from this statement:
+
+```text
+#3499 and #3502 are merged and protected main is
+d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3.
+
+#3504 is OPEN / DRAFT at temporary carrier head
+a8d39377a610669fdecbb279cee19598f844fe9f.
+
+The governance/predecessor patch can be constructed successfully in carrier
+run 33880185315, and the generated EA5E2 digest has already been rebound
+exactly to sha256:6ba2b357aad8ec35120600362dcf1ebf80062f4e2e09118ff19b3263cf9bc8a2.
+
+However, the latest attempt directly visible through GitHub still fails
+EA5E2 acceptance because live_manual_dispatch_present=false; validate and
+commit/push were skipped in that attempt, so no settlement commit is yet
+proven.
+
+First re-query the run/attempt. If a later attempt has genuinely passed
+rebind + governance validation, extract and verify its exact settlement
+commit and connector-fast-forward non-force. Otherwise resolve the manual
+dispatch invariant truthfully, rerun settlement, then fast-forward, delete
+the temporary carrier, qualify the clean exact head, move #3504 to Ready
+for Review, and request explicit merge authorization.
+
+Do not restart production, do not arm Formal-v5, do not execute A0/O00,
+and do not touch B-Line.
+```
+
 # GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-04 Continuation — Production Runtime Live / Rolling Current-Crop Requalification / QCP Registration Frontier
 
 # U — Production Runtime Live / Rolling Current-Crop Requalification / QCP Registration Frontier
