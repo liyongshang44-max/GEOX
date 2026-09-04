@@ -18,11 +18,11 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
 
-      - name: Materialize bounded 5050 adoption governance blobs
+      - name: Commit bounded 5050 adoption governance
         env:
-          GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
         shell: bash
         run: |
           set -euo pipefail
@@ -108,31 +108,25 @@ jobs:
           const expected = [...paths].sort();
           if (JSON.stringify(changed) !== JSON.stringify(expected)) throw new Error(`UNEXPECTED_GOVERNANCE_PATCH_SET:${JSON.stringify(changed)}`);
           cp.execFileSync('git', ['diff', '--check'], {stdio:'inherit'});
-
-          async function createBlob(label, path) {
-            const content = fs.readFileSync(path, 'utf8');
-            const response = await fetch(`https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/git/blobs`, {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${process.env.GH_TOKEN}`,
-                Accept: 'application/vnd.github+json',
-                'X-GitHub-Api-Version': '2022-11-28',
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({content, encoding:'utf-8'}),
-            });
-            const body = await response.text();
-            if (!response.ok) throw new Error(`CREATE_BLOB_${label}_FAILED:${response.status}:${body}`);
-            const parsed = JSON.parse(body);
-            if (!/^[0-9a-f]{40}$/.test(parsed.sha || '')) throw new Error(`CREATE_BLOB_${label}_INVALID_SHA`);
-            console.log(`BLOB_${label}=${parsed.sha}`);
-          }
-          Promise.all([
-            createBlob('QCP_WORKFLOW', qcpWorkflow),
-            createBlob('POSTMERGE_WORKFLOW', postMergeWorkflow),
-            createBlob('QCP_AUTHORITY', qcpAuthority),
-            createBlob('EVIDENCE_REGISTRY', evidenceRegistry),
-            createBlob('PREFLIGHT', preflight),
-            createBlob('ROUTING_ACCEPTANCE', routing),
-          ]).catch(error => { console.error(error); process.exit(1); });
           NODE
+
+          changed="$(git diff --name-only | sort)"
+          expected="$(printf '%s\n' \
+            '.github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml' \
+            '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json' \
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json' \
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs' \
+            'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs' | sort)"
+          test "$changed" = "$expected"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            .github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml \
+            .github/workflows/mcft-cap-09-qualification-control-plane-v1.yml \
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json \
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs \
+            scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+          git commit -m 'test(mcft-cap09): register 5050 adoption qualification lineage'
+          git push origin "HEAD:${HEAD_BRANCH}"
