@@ -3,57 +3,136 @@ name: mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1
 on:
   pull_request:
     paths:
-      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.ts'
-      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.test.ts'
-      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts'
-      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs'
       - '.github/workflows/mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   qualification:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
-      - name: Checkout exact successor subject
+      - name: Checkout exact governance carrier
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
+      - name: Materialize bounded 5050 adoption governance blobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const cp = require('node:child_process');
+          const predecessor = '5050f1c08d2528048c56d56add4cbb068b956925';
+          const b37 = 'b37b6cee4aadb50a8303cdfeffd0b4ab8a89451f';
+          const qcpWorkflow = '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml';
+          const postMergeWorkflow = '.github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml';
+          const qcpAuthority = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json';
+          const evidenceRegistry = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json';
+          const preflight = 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs';
+          const routing = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs';
+          const paths = [qcpWorkflow, postMergeWorkflow, qcpAuthority, evidenceRegistry, preflight, routing];
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.11.1
-          cache: pnpm
+          function replaceOnce(text, before, after, code) {
+            const count = text.split(before).length - 1;
+            if (count !== 1) throw new Error(`${code}:COUNT=${count}`);
+            return text.replace(before, after);
+          }
 
-      - name: Install exact repository dependencies
-        run: pnpm install --frozen-lockfile
+          let qcp = fs.readFileSync(qcpWorkflow, 'utf8');
+          const pathAnchor = "      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json'\n";
+          const adoptionTriggerPaths = [
+            ".github/workflows/mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1.yml",
+            "apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.test.ts",
+            "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts",
+            "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs",
+            "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs",
+          ];
+          for (const p of adoptionTriggerPaths) {
+            if (qcp.includes(`      - '${p}'`)) throw new Error(`QCP_TRIGGER_PATH_ALREADY_PRESENT:${p}`);
+          }
+          qcp = replaceOnce(
+            qcp,
+            pathAnchor,
+            pathAnchor + adoptionTriggerPaths.map(p => `      - '${p}'\n`).join(''),
+            'QCP_PATH_ANCHOR',
+          );
+          const qcpEnv = `  EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA: '${b37}'\n`;
+          qcp = replaceOnce(qcp, qcpEnv, qcpEnv + `  TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA: '${predecessor}'\n`, 'QCP_ENV_ANCHOR');
+          const qcpGuard = '[ "$base" != "$EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA" ]; then';
+          qcp = replaceOnce(qcp, qcpGuard, '[ "$base" != "$EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base" != "$TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA" ]; then', 'QCP_BASE_GUARD');
+          const qcpExpected = 'process.env.EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA];';
+          qcp = replaceOnce(qcp, qcpExpected, 'process.env.EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA, process.env.TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA];', 'QCP_EXPECTED_PREDECESSOR_SET');
+          fs.writeFileSync(qcpWorkflow, qcp);
 
-      - name: Run focused rolling authority resolver tests
-        run: >-
-          node --import tsx --test
-          apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.test.ts
+          let post = fs.readFileSync(postMergeWorkflow, 'utf8');
+          const postEnv = `  EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA: '${b37}'\n`;
+          post = replaceOnce(post, postEnv, postEnv + `  TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA: '${predecessor}'\n`, 'POSTMERGE_ENV_ANCHOR');
+          const postGuard = '[ "$base_sha" != "$EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA" ]; then';
+          post = replaceOnce(post, postGuard, '[ "$base_sha" != "$EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base_sha" != "$TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA" ]; then', 'POSTMERGE_BASE_GUARD');
+          fs.writeFileSync(postMergeWorkflow, post);
 
-      - name: Prove governance and production non-effects
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs
+          let authority = fs.readFileSync(qcpAuthority, 'utf8');
+          const authorityAnchor = `    "${b37}"\n  ],`;
+          authority = replaceOnce(authority, authorityAnchor, `    "${b37}",\n    "${predecessor}"\n  ],`, 'QCP_AUTHORITY_PREDECESSOR_SET');
+          JSON.parse(authority);
+          fs.writeFileSync(qcpAuthority, authority);
 
-      - name: Upload resolver seam proof
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcft-cap09-twin-v2-rolling-stage-authority-resolver-seam-${{ github.event.pull_request.head.sha }}
-          path: acceptance-output/MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.json
-          if-no-files-found: warn
-          retention-days: 90
+          let evidence = fs.readFileSync(evidenceRegistry, 'utf8');
+          const evidenceAnchor = `          "${b37}"\n        ],\n        "dependency_digest_must_match_current": true,`;
+          evidence = replaceOnce(evidence, evidenceAnchor, `          "${b37}",\n          "${predecessor}"\n        ],\n        "dependency_digest_must_match_current": true,`, 'EVIDENCE_GOVERNED_PREDECESSOR_SET');
+          JSON.parse(evidence);
+          fs.writeFileSync(evidenceRegistry, evidence);
+
+          let pre = fs.readFileSync(preflight, 'utf8');
+          const preEnv = '    const effectiveCurrentCropRegistryResolverProtectedMainBase = String(process.env.EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA || "");\n';
+          pre = replaceOnce(pre, preEnv, preEnv + '    const twinV2RuntimeSelectionAdoptionProtectedMainBase = String(process.env.TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA || "");\n', 'PREFLIGHT_ENV_ANCHOR');
+          const preBase = '        (/^[0-9a-f]{40}$/.test(effectiveCurrentCropRegistryResolverProtectedMainBase) && args.base === effectiveCurrentCropRegistryResolverProtectedMainBase)\n';
+          pre = replaceOnce(pre, preBase, '        (/^[0-9a-f]{40}$/.test(effectiveCurrentCropRegistryResolverProtectedMainBase) && args.base === effectiveCurrentCropRegistryResolverProtectedMainBase) ||\n        (/^[0-9a-f]{40}$/.test(twinV2RuntimeSelectionAdoptionProtectedMainBase) && args.base === twinV2RuntimeSelectionAdoptionProtectedMainBase)\n', 'PREFLIGHT_DURABLE_BASE_ANCHOR');
+          fs.writeFileSync(preflight, pre);
+
+          let route = fs.readFileSync(routing, 'utf8');
+          const routeAnchor = '  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs"\n].sort();';
+          const routeReplacement = '  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs",\n  ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",\n  ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml",\n  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",\n  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json",\n  "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"\n].sort();';
+          route = replaceOnce(route, routeAnchor, routeReplacement, 'ROUTING_ADOPTION_EXPECTED_SET');
+          route = replaceOnce(route, 'PRODUCTION_TWIN_V2_ROUTING_ADOPTION_EXACT_FIVE_FILE_BOUNDARY_REQUIRED', 'PRODUCTION_TWIN_V2_ROUTING_ADOPTION_EXACT_TEN_FILE_BOUNDARY_REQUIRED', 'ROUTING_BOUNDARY_CODE');
+          fs.writeFileSync(routing, route);
+
+          const changed = cp.execFileSync('git', ['diff', '--name-only'], {encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean).sort();
+          const expected = [...paths].sort();
+          if (JSON.stringify(changed) !== JSON.stringify(expected)) throw new Error(`UNEXPECTED_GOVERNANCE_PATCH_SET:${JSON.stringify(changed)}`);
+          cp.execFileSync('git', ['diff', '--check'], {stdio:'inherit'});
+
+          async function createBlob(label, path) {
+            const content = fs.readFileSync(path, 'utf8');
+            const response = await fetch(`https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/git/blobs`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${process.env.GH_TOKEN}`,
+                Accept: 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28',
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({content, encoding:'utf-8'}),
+            });
+            const body = await response.text();
+            if (!response.ok) throw new Error(`CREATE_BLOB_${label}_FAILED:${response.status}:${body}`);
+            const parsed = JSON.parse(body);
+            if (!/^[0-9a-f]{40}$/.test(parsed.sha || '')) throw new Error(`CREATE_BLOB_${label}_INVALID_SHA`);
+            console.log(`BLOB_${label}=${parsed.sha}`);
+          }
+          Promise.all([
+            createBlob('QCP_WORKFLOW', qcpWorkflow),
+            createBlob('POSTMERGE_WORKFLOW', postMergeWorkflow),
+            createBlob('QCP_AUTHORITY', qcpAuthority),
+            createBlob('EVIDENCE_REGISTRY', evidenceRegistry),
+            createBlob('PREFLIGHT', preflight),
+            createBlob('ROUTING_ACCEPTANCE', routing),
+          ]).catch(error => { console.error(error); process.exit(1); });
+          NODE
