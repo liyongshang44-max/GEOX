@@ -203,14 +203,44 @@ jobs:
         timeout-minutes: 5
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          mkdir -p .w6b2-runtime-proof
+          set +e
           docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml run --rm --no-deps \
             -e W6B2_DB_HOST=postgres \
             -e W6B2_DB_PORT=5432 \
             -e POSTGRES_DB=landos \
             -e W6B2_MQTT_URL=mqtt://mqtt:1883 \
             --entrypoint /bin/sh bline-commercial-principal-bootstrap \
-            -ceu 'pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.ts'
+            -ceu 'pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.ts' \
+            2>&1 | tee .w6b2-runtime-proof/runtime-proof.log
+          proof_rc=${PIPESTATUS[0]}
+          set -e
+
+          terminal_line="$(grep '^W6B2_TERMINAL_RECORD=' .w6b2-runtime-proof/runtime-proof.log | tail -n 1 || true)"
+          if [ -n "$terminal_line" ]; then
+            printf '%s\n' "${terminal_line#W6B2_TERMINAL_RECORD=}" > .w6b2-runtime-proof/terminal.json
+            node -e "JSON.parse(require('node:fs').readFileSync('.w6b2-runtime-proof/terminal.json','utf8'))"
+          else
+            cat > .w6b2-runtime-proof/terminal.json <<'EOF_TERMINAL'
+          {"result":"FAIL","phase":"QUALIFICATION_OBSERVABILITY","DB_SERVER":"UNOBSERVED","DB_TELEMETRY":"UNOBSERVED","DB_JOBS":"UNOBSERVED","DB_EXECUTOR":"UNOBSERVED","MQTT_CONNECT_EXECUTOR":"UNOBSERVED","MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT":"UNOBSERVED","MQTT_POSITIVE_CONTROL_SUBSCRIBE":"UNOBSERVED","MQTT_TEST_PUBLISH":"UNOBSERVED","MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT":"UNOBSERVED","MQTT_POSITIVE_CONTROL_DELIVERY_COUNT":"UNOBSERVED","error_code":"W6B2_TERMINAL_RECORD_MISSING","error_message":"runtime proof exited without a machine-readable W6B2 terminal record"}
+          EOF_TERMINAL
+            proof_rc=1
+          fi
+
+          echo 'W6B2_PERSISTED_TERMINAL_RECORD_BEGIN'
+          cat .w6b2-runtime-proof/terminal.json
+          echo 'W6B2_PERSISTED_TERMINAL_RECORD_END'
+          exit "$proof_rc"
+
+      - name: Upload W6-B2 terminal runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w6b2-runtime-terminal-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .w6b2-runtime-proof/terminal.json
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Workload runtime identity hygiene
         shell: bash
