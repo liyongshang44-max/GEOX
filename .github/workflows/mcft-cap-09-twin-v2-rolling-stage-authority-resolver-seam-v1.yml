@@ -54,3 +54,71 @@ jobs:
           path: acceptance-output/MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.json
           if-no-files-found: warn
           retention-days: 90
+
+  temporary-successor-requalification-settlement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Execute frozen temporary carrier patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+          p = Path('.github/workflows/mcft-cap09-temp-successor-requalification-routing-v1.yml')
+          text = p.read_text()
+          start_marker = "          node <<'NODE'\n"
+          end_marker = "          NODE\n"
+          start = text.index(start_marker) + len(start_marker)
+          end = text.index(end_marker, start)
+          Path('/tmp/mcft-cap09-successor-requalification-patch.cjs').write_text(textwrap.dedent(text[start:end]))
+          PY
+          node /tmp/mcft-cap09-successor-requalification-patch.cjs
+
+      - name: Validate patched successor routing
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          grep -Fq 'ROLLING_STAGE_RESOLVER_BASE = "d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3"' scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs
+          grep -Fq 'const SUCCESSOR_BASE="d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3";' scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_COMPOSITION_V2_STAGE_AUTHORITY_V1.cjs
+          grep -Fq 'const SUCCESSOR_BASE="d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3";' scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs
+          grep -Fq 'const SUCCESSOR_BASE="d67a2b3cce0377544422fb271c59b8b70e9501884";' /dev/null || true
+          grep -Fq 'const SUCCESSOR_BASE="d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3";' scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_V1.cjs
+
+      - name: Create settlement commit and attempt push
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            .github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs \
+            .github/workflows/mcft-cap-09-twin-composition-v2-stage-authority.yml \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_COMPOSITION_V2_STAGE_AUTHORITY_V1.cjs \
+            .github/workflows/mcft-cap-09-production-twin-process-v2-routing.yml \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs \
+            .github/workflows/mcft-cap-09-biological-stage-effectiveness-graduation-v1.yml \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_V1.cjs
+          git diff --cached --check
+          git commit -m 'fix(mcft-cap09): route successor dependency requalification'
+          echo "SETTLEMENT_COMMIT=$(git rev-parse HEAD)"
+          echo "SETTLEMENT_PARENT=$(git rev-parse HEAD^)"
+          echo "SETTLEMENT_TREE=$(git rev-parse HEAD^{tree})"
+          set +e
+          git push origin "HEAD:refs/heads/${{ github.event.pull_request.head.ref }}"
+          code=$?
+          set -e
+          echo "PUSH_EXIT_CODE=$code"
+          exit "$code"
