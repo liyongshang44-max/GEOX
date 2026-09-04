@@ -150,6 +150,10 @@
       {
         "path": ".github/workflows/mcft-cap-09-amendment19-formal-final-readback.yml",
         "classification": "READ_ONLY_FINAL_DB_AUDIT"
+      },
+      {
+        "path": ".github/workflows/mcft-cap-09-t4r1-rolling-current-crop-candidate-v1.yml",
+        "classification": "QUALIFICATION_ONLY_READ_ONLY_PROVIDER_PROBE"
       }
     ],
     "workflow_run": [
