@@ -281,6 +281,7 @@ function main() {
     const postEffectivenessRuntimeCutoverBase = String(process.env.POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA || "");
     const postRuntimeCutoverProductionLiveBase = String(process.env.POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA || "");
     const postProductionLiveRollingRefreshBase = String(process.env.POST_PRODUCTION_LIVE_ROLLING_REFRESH_PREDECESSOR_SHA || "");
+    const rollingStageResolverProtectedMainBase = String(process.env.ROLLING_STAGE_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA || "");
     const adoptionDurableRequalification =
       stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
       (
@@ -288,7 +289,8 @@ function main() {
         (/^[0-9a-f]{40}$/.test(postAdoptionEffectivenessBase) && args.base === postAdoptionEffectivenessBase) ||
         (/^[0-9a-f]{40}$/.test(postEffectivenessRuntimeCutoverBase) && args.base === postEffectivenessRuntimeCutoverBase) ||
         (/^[0-9a-f]{40}$/.test(postRuntimeCutoverProductionLiveBase) && args.base === postRuntimeCutoverProductionLiveBase) ||
-        (/^[0-9a-f]{40}$/.test(postProductionLiveRollingRefreshBase) && args.base === postProductionLiveRollingRefreshBase)
+        (/^[0-9a-f]{40}$/.test(postProductionLiveRollingRefreshBase) && args.base === postProductionLiveRollingRefreshBase) ||
+        (/^[0-9a-f]{40}$/.test(rollingStageResolverProtectedMainBase) && args.base === rollingStageResolverProtectedMainBase)
       ) &&
       PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS.has(decision.check_id);
     if (decision.status === "NOT_APPLICABLE") {
