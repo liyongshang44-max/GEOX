@@ -8,52 +8,50 @@ on:
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs'
-      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs'
       - '.github/workflows/mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   qualification:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - name: Checkout exact qualification carrier
+      - name: Checkout exact successor subject
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
 
-      - name: Patch QCP durable-requalification successor base
-        env:
-          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          node <<'NODE'
-          const fs = require('node:fs');
-          const path = 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs';
-          let text = fs.readFileSync(path, 'utf8');
-          const anchor1 = '    const rollingStageResolverProtectedMainBase = String(process.env.ROLLING_STAGE_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA || "");\n';
-          const insert1 = anchor1 + '    const effectiveCurrentCropRegistryResolverProtectedMainBase = String(process.env.EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA || "");\n';
-          const anchor2 = '        (/^[0-9a-f]{40}$/.test(rollingStageResolverProtectedMainBase) && args.base === rollingStageResolverProtectedMainBase)\n';
-          const insert2 = '        (/^[0-9a-f]{40}$/.test(rollingStageResolverProtectedMainBase) && args.base === rollingStageResolverProtectedMainBase) ||\n        (/^[0-9a-f]{40}$/.test(effectiveCurrentCropRegistryResolverProtectedMainBase) && args.base === effectiveCurrentCropRegistryResolverProtectedMainBase)\n';
-          function replaceOnce(before, after, code) {
-            const n = text.split(before).length - 1;
-            if (n !== 1) throw new Error(`${code}:COUNT=${n}`);
-            text = text.replace(before, after);
-          }
-          replaceOnce(anchor1, insert1, 'PREDECESSOR_ENV_ANCHOR');
-          replaceOnce(anchor2, insert2, 'DURABLE_REQUAL_BASE_ANCHOR');
-          fs.writeFileSync(path, text);
-          NODE
-          changed="$(git diff --name-only)"
-          test "$changed" = 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs'
-          git diff --check
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
-          git commit -m 'fix(mcft-cap09): route b37 successor through durable requalification'
-          git push origin "HEAD:${HEAD_BRANCH}"
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run focused rolling authority resolver tests
+        run: >-
+          node --import tsx --test
+          apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.test.ts
+
+      - name: Prove governance and production non-effects
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs
+
+      - name: Upload resolver seam proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-twin-v2-rolling-stage-authority-resolver-seam-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.json
+          if-no-files-found: warn
+          retention-days: 90
