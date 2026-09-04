@@ -1,0 +1,87 @@
+name: bline-w6b1-exact-head-qualification
+
+on:
+  pull_request:
+    branches:
+      - 'bline/w6b1-authority-base-bcc78fb0'
+    paths:
+      - 'docs/architecture/semantic_convergence/GEOX-BLINE-W6B1-INTERNAL-TASK-ISSUER-PRINCIPAL-V1.json'
+      - 'apps/server/src/auth/internal_task_issuer_principal_v1.ts'
+      - 'apps/server/src/server.ts'
+      - 'docker-compose.commercial_v1.yml'
+      - 'config/auth/security_acceptance_tokens.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_PRODUCTION_CALLER_AUTHORITY_INVENTORY_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B1_INTERNAL_TASK_ISSUER_PRINCIPAL_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6B1_INTERNAL_TASK_ISSUER_PRINCIPAL_V1.ts'
+      - '.github/workflows/bline-w6b1-internal-task-issuer-principal.yml'
+      - '.github/workflows/bline-w6b1-exact-head-qualification.yml'
+
+jobs:
+  exact-head:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact PR head, not synthetic merge ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Assert exact head and merge-tree equivalence
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXACT_HEAD='${{ github.event.pull_request.head.sha }}'
+          test "$(git rev-parse HEAD)" = "$EXACT_HEAD"
+          git fetch --no-tags origin "+refs/pull/${{ github.event.pull_request.number }}/merge:refs/remotes/origin/w6b1-pr-merge"
+          HEAD_TREE="$(git rev-parse HEAD^{tree})"
+          MERGE_TREE="$(git rev-parse refs/remotes/origin/w6b1-pr-merge^{tree})"
+          test "$HEAD_TREE" = "$MERGE_TREE"
+          printf '%s\n' "W6_B1_EXACT_HEAD_SUBJECT=$EXACT_HEAD" "W6_B1_EXACT_HEAD_TREE=$HEAD_TREE" "W6_B1_PR_MERGE_TREE=$MERGE_TREE"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: Build focused server dependencies
+        run: pnpm --filter @geox/device-skills... build
+
+      - name: W6-B1 bounded exact-head gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B1_INTERNAL_TASK_ISSUER_PRINCIPAL_V1.cjs
+
+      - name: W6-B1 focused exact-head principal proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6B1_INTERNAL_TASK_ISSUER_PRINCIPAL_V1.ts
+
+      - name: W1 successor preservation
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs
+
+      - name: W2 successor preservation
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.cjs
+
+      - name: W3 successor preservation
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.cjs
+
+      - name: W4 successor preservation
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs
+
+      - name: Frozen PR-SEC-1 successor preservation
+        run: pnpm run ci:governance:bline-production-caller-authority-inventory
+
+      - name: Residual authority audit
+        run: pnpm run ci:governance:bline-residual-authority-audit
+
+      - name: Active runtime surface closure
+        run: pnpm run ci:governance:bline-active-runtime-surface-closure
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Build
+        run: pnpm -r build
