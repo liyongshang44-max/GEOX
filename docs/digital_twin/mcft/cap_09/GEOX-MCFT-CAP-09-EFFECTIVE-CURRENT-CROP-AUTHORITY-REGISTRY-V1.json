@@ -1,0 +1,38 @@
+{
+  "schema_version": "geox_mcft_cap09_effective_current_crop_authority_registry_v1",
+  "registry_id": "MCFT_CAP09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REGISTRY_V1",
+  "status": "ACTIVE",
+  "protected_main_continuation_sha": "b37b6cee4aadb50a8303cdfeffd0b4ab8a89451f",
+  "selection_policy": "LATEST_EFFECTIVE_AUTHORITY_AS_OF_NOT_AFTER_LOGICAL_TIME_WITHIN_VALIDITY_WINDOW",
+  "candidate_artifacts_admissible": false,
+  "entries": [
+    {
+      "authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-V1.json",
+      "authority_sha256": "sha256:372163dc04c306b37d2874f77be3b4ba0a167ae8d6198ce6ecc1411f2d35f9fb",
+      "authority_as_of": "2026-09-03T00:00:00.000Z",
+      "authority_valid_until": "2026-09-04T06:00:00.000Z",
+      "graduation_status": "EFFECTIVE_FOR_RUNTIME_CONSUMPTION"
+    },
+    {
+      "authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-04T04Z-V1.json",
+      "authority_sha256": "sha256:ae14573065fc9b630b9bedfb49147729d73e47f2de469eccf39256d02c195934",
+      "authority_as_of": "2026-09-04T04:00:00.000Z",
+      "authority_valid_until": "2026-09-05T10:00:00.000Z",
+      "graduation_status": "EFFECTIVE_FOR_RUNTIME_CONSUMPTION_ROLLING_REFRESH"
+    }
+  ],
+  "non_effects": {
+    "production_default_binding_changed": false,
+    "runtime_config_write_authorized": false,
+    "database_write_authorized": false,
+    "scheduler_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "production_runtime_restart_authorized": false,
+    "production_runtime_start_authorized": false,
+    "production_owner_activation_authorized": false,
+    "formal_v5_authorized": false,
+    "a0_authorized": false,
+    "o00_o23_authorized": false,
+    "mcft_cap09_completed": false
+  }
+}

@@ -6,6 +6,7 @@ on:
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.ts'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.test.ts'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs'
       - '.github/workflows/mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1.yml'
 
