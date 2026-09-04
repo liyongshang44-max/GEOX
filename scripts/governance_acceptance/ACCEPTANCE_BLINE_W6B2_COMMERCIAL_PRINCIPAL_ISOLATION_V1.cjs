@@ -19,11 +19,18 @@ function json(p) { return JSON.parse(read(p)); }
 function assert(c, m, d) { if (!c) throw new Error(m + (d === undefined ? '' : ': ' + JSON.stringify(d))); }
 function lines(s) { return String(s || '').split(/\r?\n/).filter(Boolean).sort(); }
 
-function serviceBlock(compose, name, nextName) {
-  const start = compose.indexOf(`  ${name}:\n`);
+function serviceBlock(compose, name, _nextName) {
+  const rows = compose.split(/\r?\n/);
+  const start = rows.findIndex((line) => line === `  ${name}:`);
   assert(start >= 0, `missing compose service ${name}`);
-  const end = nextName ? compose.indexOf(`\n  ${nextName}:`, start) : -1;
-  return end >= 0 ? compose.slice(start, end) : compose.slice(start);
+  let end = rows.length;
+  for (let i = start + 1; i < rows.length; i += 1) {
+    if (/^  [A-Za-z0-9][A-Za-z0-9_-]*:\s*$/.test(rows[i])) {
+      end = i;
+      break;
+    }
+  }
+  return rows.slice(start, end).join('\n');
 }
 
 const head = sh(['rev-parse', 'HEAD']);
