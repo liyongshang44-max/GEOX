@@ -78,8 +78,8 @@ services:
       GEOX_JOBS_DATABASE_PASSWORD: ${GEOX_JOBS_DATABASE_PASSWORD:?GEOX_JOBS_DATABASE_PASSWORD is required}
       GEOX_EXECUTOR_DATABASE_PASSWORD: ${GEOX_EXECUTOR_DATABASE_PASSWORD:?GEOX_EXECUTOR_DATABASE_PASSWORD is required}
     depends_on:
-      mcft-cap07-migration:
-        condition: service_completed_successfully
+      server:
+        condition: service_healthy
 
   mqtt:
     image: eclipse-mosquitto:2
@@ -210,7 +210,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      bline-commercial-principal-bootstrap:
+      mcft-cap07-migration:
         condition: service_completed_successfully
       mqtt:
         condition: service_started
