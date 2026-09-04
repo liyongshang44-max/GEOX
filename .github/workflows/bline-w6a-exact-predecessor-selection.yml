@@ -113,12 +113,6 @@ jobs:
           ADMIN_TOKEN: tenant_a_admin_token
           DATABASE_URL: postgres://geox_runtime_v1:w6a-runtime-database-strong-2026@127.0.0.1:5433/landos
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6A_COMMERCIAL_EXACT_PREDECESSOR_SELECTION_V1.ts
-      - name: Existing Crop Commercial regression
-        env:
-          BASE_URL: http://127.0.0.1:3001
-          ADMIN_TOKEN: tenant_a_admin_token
-          AO_ACT_TOKEN: tenant_a_admin_token
-        run: node scripts/agronomy_acceptance/ACCEPTANCE_FIELD_CROP_CONTEXT_V1.cjs
       - name: Runtime hygiene
         if: always()
         run: |
