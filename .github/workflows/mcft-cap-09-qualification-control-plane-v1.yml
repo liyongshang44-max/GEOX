@@ -134,6 +134,7 @@ env:
   POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA: 'ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23'
   POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA: '0630bb63b82c9ba108854f5aa26b096f9221f031'
   POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA: 'ef9f7d45114c98c16ad57ce69226323935f685db'
+  POST_PRODUCTION_LIVE_ROLLING_REFRESH_PREDECESSOR_SHA: 'd82d25f76535b2779ef6b15b3eb32c15c245dedf'
 
 concurrency:
   group: mcft-cap09-qualification-control-plane-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
@@ -158,7 +159,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             base='${{ github.event.pull_request.base.sha }}'
-            if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ] && [ "$base" != "$PHASE2_CLOSURE_SHA" ] && [ "$base" != "$PHASE3_CLOSURE_SHA" ] && [ "$base" != "$PHASE4_CLOSURE_SHA" ] && [ "$base" != "$PHASE5_CLOSURE_SHA" ] && [ "$base" != "$PHASE6_CLOSURE_SHA" ] && [ "$base" != "$PHASE7_PREPARATION_SHA" ] && [ "$base" != "$PHASE7_EVIDENCE_FORCING_SHA" ] && [ "$base" != "$PHASE7_PRIVATE_CANDIDATE_IO_SHA" ] && [ "$base" != "$PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA" ] && [ "$base" != "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ] && [ "$base" != "$POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA" ] && [ "$base" != "$POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA" ] && [ "$base" != "$POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA" ]; then
+            if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ] && [ "$base" != "$PHASE2_CLOSURE_SHA" ] && [ "$base" != "$PHASE3_CLOSURE_SHA" ] && [ "$base" != "$PHASE4_CLOSURE_SHA" ] && [ "$base" != "$PHASE5_CLOSURE_SHA" ] && [ "$base" != "$PHASE6_CLOSURE_SHA" ] && [ "$base" != "$PHASE7_PREPARATION_SHA" ] && [ "$base" != "$PHASE7_EVIDENCE_FORCING_SHA" ] && [ "$base" != "$PHASE7_PRIVATE_CANDIDATE_IO_SHA" ] && [ "$base" != "$PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA" ] && [ "$base" != "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ] && [ "$base" != "$POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA" ] && [ "$base" != "$POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA" ] && [ "$base" != "$POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA" ] && [ "$base" != "$POST_PRODUCTION_LIVE_ROLLING_REFRESH_PREDECESSOR_SHA" ]; then
               echo "MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:${base}" >&2
               exit 1
             fi
@@ -196,7 +197,7 @@ jobs:
           const assert = (condition, code, detail = null) => {
             if (!condition) failures.push({code, detail});
           };
-          const expectedPredecessors = [process.env.FROZEN_SUCCESSOR_SHA, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA, process.env.PHASE2_CLOSURE_SHA, process.env.PHASE3_CLOSURE_SHA, process.env.PHASE4_CLOSURE_SHA, process.env.PHASE5_CLOSURE_SHA, process.env.PHASE6_CLOSURE_SHA, process.env.PHASE7_PREPARATION_SHA, process.env.PHASE7_EVIDENCE_FORCING_SHA, process.env.PHASE7_PRIVATE_CANDIDATE_IO_SHA, process.env.PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA, process.env.POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA, process.env.POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA, process.env.POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA, process.env.POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA];
+          const expectedPredecessors = [process.env.FROZEN_SUCCESSOR_SHA, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA, process.env.PHASE2_CLOSURE_SHA, process.env.PHASE3_CLOSURE_SHA, process.env.PHASE4_CLOSURE_SHA, process.env.PHASE5_CLOSURE_SHA, process.env.PHASE6_CLOSURE_SHA, process.env.PHASE7_PREPARATION_SHA, process.env.PHASE7_EVIDENCE_FORCING_SHA, process.env.PHASE7_PRIVATE_CANDIDATE_IO_SHA, process.env.PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA, process.env.POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA, process.env.POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA, process.env.POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA, process.env.POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA, process.env.POST_PRODUCTION_LIVE_ROLLING_REFRESH_PREDECESSOR_SHA];
           const governedPredecessors = authority.governed_successor_predecessor_shas || [];
           assert(governedPredecessors.length === expectedPredecessors.length, 'GOVERNED_PREDECESSOR_CARDINALITY_MISMATCH', governedPredecessors);
           assert(new Set(governedPredecessors).size === governedPredecessors.length, 'GOVERNED_PREDECESSOR_DUPLICATE', governedPredecessors);
