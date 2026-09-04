@@ -217,20 +217,91 @@ jobs:
           proof_rc=${PIPESTATUS[0]}
           set -e
 
-          terminal_line="$(grep '^W6B2_TERMINAL_RECORD=' .w6b2-runtime-proof/runtime-proof.log | tail -n 1 || true)"
-          if [ -n "$terminal_line" ]; then
-            printf '%s\n' "${terminal_line#W6B2_TERMINAL_RECORD=}" > .w6b2-runtime-proof/terminal.json
-            node -e "JSON.parse(require('node:fs').readFileSync('.w6b2-runtime-proof/terminal.json','utf8'))"
-          else
-            cat > .w6b2-runtime-proof/terminal.json <<'EOF_TERMINAL'
-          {"result":"FAIL","phase":"QUALIFICATION_OBSERVABILITY","DB_SERVER":"UNOBSERVED","DB_TELEMETRY":"UNOBSERVED","DB_JOBS":"UNOBSERVED","DB_EXECUTOR":"UNOBSERVED","MQTT_CONNECT_EXECUTOR":"UNOBSERVED","MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT":"UNOBSERVED","MQTT_POSITIVE_CONTROL_SUBSCRIBE":"UNOBSERVED","MQTT_TEST_PUBLISH":"UNOBSERVED","MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT":"UNOBSERVED","MQTT_POSITIVE_CONTROL_DELIVERY_COUNT":"UNOBSERVED","error_code":"W6B2_TERMINAL_RECORD_MISSING","error_message":"runtime proof exited without a machine-readable W6B2 terminal record"}
-          EOF_TERMINAL
-            proof_rc=1
-          fi
+          W6B2_PROOF_RC="$proof_rc" node <<'NODE'
+          const fs = require('node:fs');
+          const logPath = '.w6b2-runtime-proof/runtime-proof.log';
+          const terminalPath = '.w6b2-runtime-proof/terminal.json';
+          const diagnosticPath = '.w6b2-runtime-proof/diagnostic.json';
+          const text = fs.readFileSync(logPath, 'utf8');
+          const marker = 'W6B2_TERMINAL_RECORD=';
+          const markerIndex = text.lastIndexOf(marker);
+          const evidenceKeys = new Set([
+            'DB_SERVER',
+            'DB_TELEMETRY',
+            'DB_JOBS',
+            'DB_EXECUTOR',
+            'MQTT_CONNECT_EXECUTOR',
+            'MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT',
+            'MQTT_POSITIVE_CONTROL_SUBSCRIBE',
+            'MQTT_TEST_PUBLISH',
+            'MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT',
+            'MQTT_POSITIVE_CONTROL_DELIVERY_COUNT',
+          ]);
+          const observed = {};
+          for (const rawLine of text.split(/\r?\n/)) {
+            const jsonStart = rawLine.indexOf('{"stage"');
+            if (jsonStart < 0) continue;
+            const candidate = rawLine.slice(jsonStart).replace(/\x1b\[[0-9;]*m/g, '').trim();
+            try {
+              const event = JSON.parse(candidate);
+              if (typeof event?.stage === 'string' && evidenceKeys.has(event.stage)) {
+                observed[event.stage] = event.observed;
+              }
+            } catch {}
+          }
+          const errorCodes = [...new Set(text.match(/\bW6B2_[A-Z0-9_]+\b/g) ?? [])].slice(0, 32);
+          let record = null;
+          let markerParseError = null;
+          if (markerIndex >= 0) {
+            try {
+              const rest = text.slice(markerIndex + marker.length);
+              const firstLine = rest.split(/\r?\n/, 1)[0].replace(/\x1b\[[0-9;]*m/g, '').trim();
+              record = JSON.parse(firstLine);
+            } catch (error) {
+              markerParseError = error instanceof Error ? error.message : String(error);
+            }
+          }
+          if (!record) {
+            const value = (key) => Object.prototype.hasOwnProperty.call(observed, key) ? observed[key] : 'UNOBSERVED';
+            record = {
+              result: 'FAIL',
+              phase: 'QUALIFICATION_OBSERVABILITY',
+              DB_SERVER: value('DB_SERVER'),
+              DB_TELEMETRY: value('DB_TELEMETRY'),
+              DB_JOBS: value('DB_JOBS'),
+              DB_EXECUTOR: value('DB_EXECUTOR'),
+              MQTT_CONNECT_EXECUTOR: value('MQTT_CONNECT_EXECUTOR'),
+              MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT: value('MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT'),
+              MQTT_POSITIVE_CONTROL_SUBSCRIBE: value('MQTT_POSITIVE_CONTROL_SUBSCRIBE'),
+              MQTT_TEST_PUBLISH: value('MQTT_TEST_PUBLISH'),
+              MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT: value('MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT'),
+              MQTT_POSITIVE_CONTROL_DELIVERY_COUNT: value('MQTT_POSITIVE_CONTROL_DELIVERY_COUNT'),
+              error_code: markerIndex >= 0 ? 'W6B2_TERMINAL_RECORD_PARSE_FAILED' : 'W6B2_TERMINAL_RECORD_MISSING',
+              error_message: markerIndex >= 0
+                ? 'runtime proof emitted a terminal marker that could not be parsed as JSON'
+                : 'runtime proof exited without a machine-readable W6B2 terminal record',
+            };
+          }
+          const diagnostic = {
+            proof_rc: Number.parseInt(process.env.W6B2_PROOF_RC ?? '-1', 10),
+            marker_found: markerIndex >= 0,
+            marker_parse_error: markerParseError,
+            runtime_log_bytes: Buffer.byteLength(text),
+            observed_stages: Object.keys(observed),
+            observed,
+            w6b2_error_codes: errorCodes,
+          };
+          fs.writeFileSync(terminalPath, `${JSON.stringify(record)}\n`);
+          fs.writeFileSync(diagnosticPath, `${JSON.stringify(diagnostic)}\n`);
+          NODE
 
+          node -e "JSON.parse(require('node:fs').readFileSync('.w6b2-runtime-proof/terminal.json','utf8')); JSON.parse(require('node:fs').readFileSync('.w6b2-runtime-proof/diagnostic.json','utf8'))"
           echo 'W6B2_PERSISTED_TERMINAL_RECORD_BEGIN'
           cat .w6b2-runtime-proof/terminal.json
           echo 'W6B2_PERSISTED_TERMINAL_RECORD_END'
+          echo 'W6B2_PERSISTED_DIAGNOSTIC_BEGIN'
+          cat .w6b2-runtime-proof/diagnostic.json
+          echo 'W6B2_PERSISTED_DIAGNOSTIC_END'
           exit "$proof_rc"
 
       - name: Upload W6-B2 terminal runtime evidence
@@ -238,7 +309,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: w6b2-runtime-terminal-${{ github.run_id }}-${{ github.run_attempt }}
-          path: .w6b2-runtime-proof/terminal.json
+          path: |
+            .w6b2-runtime-proof/terminal.json
+            .w6b2-runtime-proof/diagnostic.json
           if-no-files-found: error
           retention-days: 7
 
