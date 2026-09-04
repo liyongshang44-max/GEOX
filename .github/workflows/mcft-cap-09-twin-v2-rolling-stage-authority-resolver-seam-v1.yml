@@ -6,7 +6,7 @@ on:
       - '.github/workflows/mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   qualification:
@@ -18,59 +18,29 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
 
-      - name: Materialize bounded 5050 adoption governance patch
+      - name: Commit bounded non-workflow 5050 governance
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
         shell: bash
         run: |
           set -euo pipefail
           node <<'NODE'
           const fs = require('node:fs');
           const cp = require('node:child_process');
-          const path = require('node:path');
           const predecessor = '5050f1c08d2528048c56d56add4cbb068b956925';
           const b37 = 'b37b6cee4aadb50a8303cdfeffd0b4ab8a89451f';
-          const qcpWorkflow = '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml';
-          const postMergeWorkflow = '.github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml';
           const qcpAuthority = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json';
           const evidenceRegistry = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json';
           const preflight = 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs';
           const routing = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs';
-          const paths = [qcpWorkflow, postMergeWorkflow, qcpAuthority, evidenceRegistry, preflight, routing];
-
+          const paths = [qcpAuthority, evidenceRegistry, preflight, routing];
           function replaceOnce(text, before, after, code) {
             const count = text.split(before).length - 1;
             if (count !== 1) throw new Error(`${code}:COUNT=${count}`);
             return text.replace(before, after);
           }
-
-          let qcp = fs.readFileSync(qcpWorkflow, 'utf8');
-          const pathAnchor = "      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json'\n";
-          const adoptionTriggerPaths = [
-            ".github/workflows/mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1.yml",
-            "apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.test.ts",
-            "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts",
-            "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs",
-            "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs",
-          ];
-          for (const p of adoptionTriggerPaths) {
-            if (qcp.includes(`      - '${p}'`)) throw new Error(`QCP_TRIGGER_PATH_ALREADY_PRESENT:${p}`);
-          }
-          qcp = replaceOnce(qcp, pathAnchor, pathAnchor + adoptionTriggerPaths.map(p => `      - '${p}'\n`).join(''), 'QCP_PATH_ANCHOR');
-          const qcpEnv = `  EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA: '${b37}'\n`;
-          qcp = replaceOnce(qcp, qcpEnv, qcpEnv + `  TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA: '${predecessor}'\n`, 'QCP_ENV_ANCHOR');
-          const qcpGuard = '[ "$base" != "$EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA" ]; then';
-          qcp = replaceOnce(qcp, qcpGuard, '[ "$base" != "$EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base" != "$TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA" ]; then', 'QCP_BASE_GUARD');
-          const qcpExpected = 'process.env.EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA];';
-          qcp = replaceOnce(qcp, qcpExpected, 'process.env.EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA, process.env.TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA];', 'QCP_EXPECTED_PREDECESSOR_SET');
-          fs.writeFileSync(qcpWorkflow, qcp);
-
-          let post = fs.readFileSync(postMergeWorkflow, 'utf8');
-          const postEnv = `  EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA: '${b37}'\n`;
-          post = replaceOnce(post, postEnv, postEnv + `  TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA: '${predecessor}'\n`, 'POSTMERGE_ENV_ANCHOR');
-          const postGuard = '[ "$base_sha" != "$EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA" ]; then';
-          post = replaceOnce(post, postGuard, '[ "$base_sha" != "$EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base_sha" != "$TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA" ]; then', 'POSTMERGE_BASE_GUARD');
-          fs.writeFileSync(postMergeWorkflow, post);
 
           let authority = fs.readFileSync(qcpAuthority, 'utf8');
           const authorityAnchor = `    "${b37}"\n  ],`;
@@ -100,35 +70,15 @@ jobs:
 
           const changed = cp.execFileSync('git', ['diff', '--name-only'], {encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean).sort();
           const expected = [...paths].sort();
-          if (JSON.stringify(changed) !== JSON.stringify(expected)) throw new Error(`UNEXPECTED_GOVERNANCE_PATCH_SET:${JSON.stringify(changed)}`);
+          if (JSON.stringify(changed) !== JSON.stringify(expected)) throw new Error(`UNEXPECTED_NONWORKFLOW_PATCH_SET:${JSON.stringify(changed)}`);
           cp.execFileSync('git', ['diff', '--check'], {stdio:'inherit'});
-
-          const out = 'acceptance-output/MCFT_CAP_09_TWIN_V2_ADOPTION_GOVERNANCE_PATCH_V1';
-          fs.mkdirSync(out, {recursive:true});
-          const outputs = [
-            [qcpWorkflow, 'qcp-workflow.yml'],
-            [postMergeWorkflow, 'postmerge-workflow.yml'],
-            [qcpAuthority, 'qcp-authority.json'],
-            [evidenceRegistry, 'evidence-registry.json'],
-            [preflight, 'preflight.cjs'],
-            [routing, 'routing-acceptance.cjs'],
-          ];
-          for (const [source, name] of outputs) fs.copyFileSync(source, path.join(out, name));
-          fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify({
-            schema_version: 'geox_mcft_cap09_twin_v2_adoption_governance_patch_v1',
-            status: 'PASS',
-            source_head_sha: cp.execFileSync('git', ['rev-parse', 'HEAD'], {encoding:'utf8'}).trim(),
-            predecessor_sha: predecessor,
-            files: outputs.map(([source, name]) => ({source, artifact_file:name})),
-            production_activation: false,
-            b_line_touch: false,
-          }, null, 2) + '\n');
           NODE
-
-      - name: Upload bounded governance patch
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcft-cap09-twin-v2-adoption-governance-patch-${{ github.event.pull_request.head.sha }}
-          path: acceptance-output/MCFT_CAP_09_TWIN_V2_ADOPTION_GOVERNANCE_PATCH_V1
-          if-no-files-found: error
-          retention-days: 7
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json \
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs \
+            scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+          git commit -m 'test(mcft-cap09): register 5050 non-workflow qualification lineage'
+          git push origin "HEAD:${HEAD_BRANCH}"
