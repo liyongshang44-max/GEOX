@@ -105,12 +105,17 @@ for(const forbidden of ['approval.decide','action.task.dispatch','action.receipt
   assert(!issuer.scopes.includes(forbidden),'dedicated internal issuer gained forbidden successor authority',forbidden);
 
 // Re-run the complete immutable machine scanner on the exact W6-A accepted
-// predecessor. This retains all PR-SEC-1 HTTP, callback, startup, direct-writer,
-// delegation, credential and tenant-binding zero-set evidence.
+// predecessor. Bind dependency resolution to the current checkout because the
+// detached historical worktree intentionally does not run its own install.
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'geox-prsec1-base-'));
 try{
   cp.execFileSync('git',['worktree','add','--detach',tmp,BASE],{stdio:'ignore'});
-  cp.execFileSync(process.execPath,[GATE],{cwd:tmp,stdio:'inherit'});
+  const replayNodePath=[path.join(process.cwd(),'node_modules'),process.env.NODE_PATH].filter(Boolean).join(path.delimiter);
+  cp.execFileSync(process.execPath,[GATE],{
+    cwd:tmp,
+    stdio:'inherit',
+    env:{...process.env,NODE_PATH:replayNodePath}
+  });
 }finally{
   try{cp.execFileSync('git',['worktree','remove','--force',tmp],{stdio:'ignore'});}catch{}
   try{fs.rmSync(tmp,{recursive:true,force:true});}catch{}
