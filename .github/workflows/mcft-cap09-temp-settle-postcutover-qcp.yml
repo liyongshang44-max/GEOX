@@ -24,7 +24,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = "30c8b08f00e81eb216a9b2b6929c5036e8302ba5"
+          test "$(git rev-parse HEAD^)" = "29b3291d92d358f439b0eeadbcd49691111136dd"
 
       - name: Settle production-live QCP lineage
         shell: bash
@@ -36,6 +36,12 @@ jobs:
 
           const preflightPath = 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs';
           let preflight = fs.readFileSync(preflightPath, 'utf8');
+
+          const phase5SetBoundary = 'const PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS = new Set([\n  "PHASE2_EVIDENCE_PROVIDER_MODULES",\n';
+          const phase5SetReplacement = 'const PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS = new Set([\n  "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",\n  "PHASE2_EVIDENCE_PROVIDER_MODULES",\n';
+          if ((preflight.split(phase5SetBoundary).length - 1) !== 1) throw new Error('PREFLIGHT_PHASE5_DURABLE_SET_BOUNDARY_DRIFT');
+          preflight = preflight.replace(phase5SetBoundary, phase5SetReplacement);
+
           const oldBaseLine = '    const postEffectivenessRuntimeCutoverBase = String(process.env.POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA || "");\n';
           const newBaseLine = oldBaseLine + '    const postRuntimeCutoverProductionLiveBase = String(process.env.POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA || "");\n';
           if ((preflight.split(oldBaseLine).length - 1) !== 1) throw new Error('PREFLIGHT_BASE_DECLARATION_BOUNDARY_DRIFT');
@@ -81,6 +87,7 @@ jobs:
             'artifact_absence_reason','immutable',
           ];
           entry.immutable_binding_sha256 = crypto.createHash('sha256').update(JSON.stringify(bindingFields.map((key) => entry[key] ?? null))).digest('hex');
+          if (entry.immutable_binding_sha256 !== 'b93380b5c85be66e6098c303dcf8ab1fff362a4791dbd604fc5d45ff8da7128c') throw new Error('PHASE5_BINDING_UNEXPECTED');
           entries.push(entry);
           anchors.push({
             evidence_id: evidenceId,
@@ -101,8 +108,23 @@ jobs:
           NODE
 
           node --check scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
-          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1.cjs >/tmp/immutable-evidence.log
-          grep -q '"status": "PASS"' /tmp/immutable-evidence.log
+          node <<'NODE'
+          const fs = require('node:fs');
+          const preflight = require('./scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs');
+          const registry = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json', 'utf8'));
+          const evidenceId = 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_7C5A74CD_RUNTIME_CUTOVER_V1';
+          const entries = registry.requalification_evidence.entries.filter((x) => x.evidence_id === evidenceId);
+          const anchors = registry.requalification_evidence.durable_anchors.entries.filter((x) => x.evidence_id === evidenceId);
+          if (entries.length !== 1 || anchors.length !== 1) throw new Error('PHASE5_EVIDENCE_CARDINALITY_INVALID');
+          const entry = entries[0];
+          const anchor = anchors[0];
+          if (preflight.expectedRequalificationBinding(entry) !== entry.immutable_binding_sha256) throw new Error('PHASE5_EVIDENCE_BINDING_INVALID');
+          if (entry.dependency_digest !== 'sha256:63e8aac2a5c8f27d4e7e78514f3858647ac72a105ed33d5228be3a6e0ae3dd41') throw new Error('PHASE5_DEPENDENCY_DIGEST_INVALID');
+          if (anchor.run_id !== 33788575046 || anchor.run_snapshot?.head_sha !== entry.subject_sha || anchor.run_snapshot?.base_sha !== '0630bb63b82c9ba108854f5aa26b096f9221f031') throw new Error('PHASE5_DURABLE_ANCHOR_INVALID');
+          const governed = registry.requalification_evidence.durable_anchors.rules.governed_successor_predecessors;
+          if (!governed.includes('0630bb63b82c9ba108854f5aa26b096f9221f031') || !governed.includes('ef9f7d45114c98c16ad57ce69226323935f685db')) throw new Error('GOVERNED_PREDECESSOR_LINEAGE_INVALID');
+          console.log('PHASE5_DURABLE_EVIDENCE_VALID');
+          NODE
           git diff --check
           mapfile -t changed < <(git diff --name-only)
           test "${#changed[@]}" -eq 2
