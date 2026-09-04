@@ -25,6 +25,10 @@ import {
   materializeExternalFormalA18CropContextV4,
 } from "./external_formal_a18_crop_context_v4.js";
 import {
+  createStaticMcftCap09CurrentCropAuthorityResolverV1,
+  type McftCap09CurrentCropAuthorityResolverPortV1,
+} from "./mcft_cap09_current_crop_authority_resolver_v1.js";
+import {
   ExternalFormalV3Amendment19PersistentTickServiceV1,
 } from "./external_formal_v3_amendment19_persistent_tick_service_v1.js";
 import {
@@ -82,7 +86,11 @@ export const MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_CONTRACT_V2 = {
   evidence_supply_cursor_mutation_allowed: false,
   evidence_producer_lease_mutation_allowed: false,
   second_canonical_tick_path_allowed: false,
-  biological_stage_authority_consumption: "EXACT_BOUND_EFFECTIVE_SNAPSHOT_ONLY",
+  biological_stage_authority_consumption:
+    "PER_LOGICAL_TIME_RESOLVER_WITH_STATIC_EXACT_BOUND_SNAPSHOT_DEFAULT",
+  rolling_current_crop_authority_resolver_injection: true,
+  production_default_current_crop_authority_resolver:
+    "STATIC_EXACT_BOUND_SNAPSHOT",
   historical_v1_v3_rewritten: false,
   production_container_activation: false,
   canonical_fact_writer: "PostgresMcftCap09TwinCanonicalFactWriterV1",
@@ -92,20 +100,25 @@ export const MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_CONTRACT_V2 = {
 
 type JsonRecordV1 = Record<string, unknown>;
 
-export type ComposeMcftCap09TwinRuntimeInputV2 = {
-  pool: Pool;
-  manifest: ExternalFormalV4Am19WindowManifestV2;
+export type McftCap09TwinRuntimeStageAuthorityInputV2 = {
   crop_authority: JsonRecordV1;
   configuration_matrix: JsonRecordV1;
   current_crop_authority: JsonRecordV1;
   biological_stage_architecture_effectiveness: JsonRecordV1;
-  wait: TwinRuntimeHostWaitPortV1;
-  health: TwinRuntimeHostHealthPortV1;
-  stop: TwinRuntimeHostStopPortV1;
-  failure_classifier: TwinRuntimeHostFailureClassifierV1;
-  database_clock?: TwinRuntimeDatabaseClockPortV1;
-  scheduler_clock_authority?: PersistentSequentialSchedulerClockAuthorityV1;
+  current_crop_authority_resolver?: McftCap09CurrentCropAuthorityResolverPortV1;
 };
+
+export type ComposeMcftCap09TwinRuntimeInputV2 =
+  McftCap09TwinRuntimeStageAuthorityInputV2 & {
+    pool: Pool;
+    manifest: ExternalFormalV4Am19WindowManifestV2;
+    wait: TwinRuntimeHostWaitPortV1;
+    health: TwinRuntimeHostHealthPortV1;
+    stop: TwinRuntimeHostStopPortV1;
+    failure_classifier: TwinRuntimeHostFailureClassifierV1;
+    database_clock?: TwinRuntimeDatabaseClockPortV1;
+    scheduler_clock_authority?: PersistentSequentialSchedulerClockAuthorityV1;
+  };
 
 export type McftCap09TwinRuntimeCompositionV2 = {
   composition_id: typeof MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_ID_V2;
@@ -118,6 +131,33 @@ export type McftCap09TwinRuntimeCompositionV2 = {
   next_tick_repository: PostgresNextTickRepositoryV1;
   forecast_scenario_repository: PostgresForecastScenarioRecoveryRepositoryV1;
 };
+
+export function materializeMcftCap09TwinCropContextV2(
+  input: {
+    crop_authority: JsonRecordV1;
+    configuration_matrix: JsonRecordV1;
+    biological_stage_architecture_effectiveness: JsonRecordV1;
+    current_crop_authority_resolver: McftCap09CurrentCropAuthorityResolverPortV1;
+  },
+  materializeInput: {
+    logical_time: string;
+    expected_identity_hash: string;
+  },
+) {
+  const currentCropAuthority = input.current_crop_authority_resolver.resolve({
+    logical_time: materializeInput.logical_time,
+  });
+  return materializeExternalFormalA18CropContextV4({
+    logical_time: materializeInput.logical_time,
+    expected_identity_hash: materializeInput.expected_identity_hash,
+    crop_authority: input.crop_authority,
+    configuration_matrix: input.configuration_matrix,
+    current_crop_authority: currentCropAuthority,
+    biological_stage_architecture_effectiveness:
+      input.biological_stage_architecture_effectiveness,
+    activation_mode: "PRODUCTION_EFFECTIVE",
+  });
+}
 
 function cap04PersistencePortV1(
   repository: PostgresForecastScenarioRecoveryRepositoryV1,
@@ -168,21 +208,27 @@ export function composeMcftCap09TwinRuntimeV2(
     cap04PersistencePortV1(forecastScenarioRepository),
   );
 
+  const currentCropAuthorityResolver =
+    input.current_crop_authority_resolver
+    ?? createStaticMcftCap09CurrentCropAuthorityResolverV1(
+      input.current_crop_authority,
+    );
+
   const materializer = {
     materialize(materializeInput: {
       logical_time: string;
       expected_identity_hash: string;
     }) {
-      return materializeExternalFormalA18CropContextV4({
-        logical_time: materializeInput.logical_time,
-        expected_identity_hash: materializeInput.expected_identity_hash,
-        crop_authority: input.crop_authority,
-        configuration_matrix: input.configuration_matrix,
-        current_crop_authority: input.current_crop_authority,
-        biological_stage_architecture_effectiveness:
-          input.biological_stage_architecture_effectiveness,
-        activation_mode: "PRODUCTION_EFFECTIVE",
-      });
+      return materializeMcftCap09TwinCropContextV2(
+        {
+          crop_authority: input.crop_authority,
+          configuration_matrix: input.configuration_matrix,
+          biological_stage_architecture_effectiveness:
+            input.biological_stage_architecture_effectiveness,
+          current_crop_authority_resolver: currentCropAuthorityResolver,
+        },
+        materializeInput,
+      );
     },
   };
 
