@@ -135,6 +135,17 @@ services:
         printf 'listener 1883 0.0.0.0\nallow_anonymous false\npassword_file /tmp/mosquitto-config/passwords\nacl_file /tmp/mosquitto-config/acl\npersistence false\n' > /tmp/mosquitto-config/mosquitto.conf
         mosquitto_passwd -b -c /tmp/mosquitto-config/passwords "$$GEOX_TELEMETRY_MQTT_USERNAME" "$$(cat /run/geox/telemetry/mqtt_password)"
         mosquitto_passwd -b /tmp/mosquitto-config/passwords "$$GEOX_EXECUTOR_MQTT_USERNAME" "$$(cat /run/geox/executor/mqtt_password)"
+        MOSQUITTO_UID="$$(id -u mosquitto)"
+        MOSQUITTO_GID="$$(id -g mosquitto)"
+        chown "$$MOSQUITTO_UID:$$MOSQUITTO_GID" /tmp/mosquitto-config/passwords
+        chmod 0600 /tmp/mosquitto-config/passwords
+        PASSWORD_UID="$$(stat -c '%u' /tmp/mosquitto-config/passwords)"
+        PASSWORD_GID="$$(stat -c '%g' /tmp/mosquitto-config/passwords)"
+        PASSWORD_MODE="$$(stat -c '%a' /tmp/mosquitto-config/passwords)"
+        test "$$PASSWORD_UID" = "$$MOSQUITTO_UID"
+        test "$$PASSWORD_GID" = "$$MOSQUITTO_GID"
+        test "$$PASSWORD_MODE" = "600"
+        printf '[mqtt-principal] broker_user=mosquitto broker_uid=%s broker_gid=%s password_uid=%s password_gid=%s password_mode=%s world_readable=NO\n' "$$MOSQUITTO_UID" "$$MOSQUITTO_GID" "$$PASSWORD_UID" "$$PASSWORD_GID" "$$PASSWORD_MODE"
         printf 'user %s\ntopic read telemetry/+/+\ntopic read heartbeat/+/+\n\nuser %s\ntopic write #\n' "$$GEOX_TELEMETRY_MQTT_USERNAME" "$$GEOX_EXECUTOR_MQTT_USERNAME" > /tmp/mosquitto-config/acl
         exec mosquitto -c /tmp/mosquitto-config/mosquitto.conf
     ports:
