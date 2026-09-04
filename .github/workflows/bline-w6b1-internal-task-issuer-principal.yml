@@ -1,0 +1,162 @@
+name: bline-w6b1-internal-task-issuer-principal
+
+on:
+  push:
+    branches:
+      - 'feat/bline-w6b1-internal-task-issuer-principal-v1'
+  pull_request:
+    paths:
+      - 'docs/architecture/semantic_convergence/GEOX-BLINE-W6B1-INTERNAL-TASK-ISSUER-PRINCIPAL-V1.json'
+      - 'apps/server/src/auth/internal_task_issuer_principal_v1.ts'
+      - 'apps/server/src/server.ts'
+      - 'docker-compose.commercial_v1.yml'
+      - 'config/auth/security_acceptance_tokens.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B1_INTERNAL_TASK_ISSUER_PRINCIPAL_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6B1_INTERNAL_TASK_ISSUER_PRINCIPAL_V1.ts'
+      - '.github/workflows/bline-w6b1-internal-task-issuer-principal.yml'
+
+jobs:
+  bounded-closure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - name: Build focused server dependencies
+        run: pnpm --filter @geox/device-skills... build
+      - name: W6-B1 bounded source/config boundary
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B1_INTERNAL_TASK_ISSUER_PRINCIPAL_V1.cjs
+      - name: W6-B1 focused principal and issuer-separation proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6B1_INTERNAL_TASK_ISSUER_PRINCIPAL_V1.ts
+      - name: W1 closed-domain successor preservation
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs
+      - name: W2 closed-domain successor preservation
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.cjs
+      - name: W3 closed-domain successor preservation
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.cjs
+      - name: W4 closed-domain successor preservation
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs
+      - name: Frozen PR-SEC-1 caller inventory regression
+        run: pnpm run ci:governance:bline-production-caller-authority-inventory
+      - name: B-Line residual authority audit
+        run: pnpm run ci:governance:bline-residual-authority-audit
+      - name: B-Line active runtime surface closure
+        run: pnpm run ci:governance:bline-active-runtime-surface-closure
+      - name: Typecheck
+        run: pnpm -r typecheck
+      - name: Build
+        run: pnpm -r build
+
+  commercial-principal-proof:
+    runs-on: ubuntu-latest
+    needs: bounded-closure
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - name: Prepare W6-B1 Commercial runtime
+        run: |
+          set -euo pipefail
+          ADMIN_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x=>x.role==='admin'&&x.scopes.includes('security.admin')&&!x.revoked); if(!t) process.exit(1); process.stdout.write(t.token)")"
+          EXECUTOR_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x=>x.token==='executor_token'&&x.role==='executor'&&!x.revoked); if(!t) process.exit(1); process.stdout.write(t.token)")"
+          EXECUTOR_ACTOR="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x=>x.token==='executor_token'&&x.role==='executor'&&!x.revoked); if(!t) process.exit(1); process.stdout.write(t.actor_id)")"
+          TOKENS_JSON="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); process.stdout.write(JSON.stringify(f))")"
+          cat > .env.w6b1 <<EOF
+          GEOX_RUNTIME_ENV=pilot
+          GEOX_TOKENS_JSON='$TOKENS_JSON'
+          POSTGRES_USER=landos
+          POSTGRES_PASSWORD=w6b1-postgres-strong-2026
+          POSTGRES_DB=landos
+          GEOX_MCFT_MIGRATOR_PASSWORD=w6b1-mcft-migrator-strong-2026
+          GEOX_RUNTIME_DATABASE_PASSWORD=w6b1-runtime-database-strong-2026
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT=${GITHUB_SHA}
+          GEOX_AO_ACT_TOKEN=$ADMIN_TOKEN
+          GEOX_EXECUTOR_TOKEN=$EXECUTOR_TOKEN
+          GEOX_EXECUTOR_ID=$EXECUTOR_ACTOR
+          GEOX_EXECUTOR_ACTOR_ID=$EXECUTOR_ACTOR
+          GEOX_INTERNAL_TASK_ISSUER_TOKEN_ID=tok_internal_task_issuer_v1
+          GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
+          GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT=http://127.0.0.1:9000
+          MINIO_ROOT_USER=geoxminio
+          MINIO_ROOT_PASSWORD=w6b1-minio-strong-2026
+          MQTT_AUTH_REQUIRED=1
+          GEOX_MQTT_AUTH_REQUIRED=1
+          MQTT_USERNAME=geoxmqtt
+          MQTT_PASSWORD=w6b1-mqtt-strong-2026
+          CORS_ORIGINS=https://w6b1.geox.invalid
+          GEOX_ALLOWED_ORIGINS=https://w6b1.geox.invalid
+          APP_SECRET=w6b1-app-secret-strong-2026
+          GEOX_APP_SECRET=w6b1-app-secret-strong-2026
+          PUBLIC_BASE_URL=https://w6b1.geox.invalid
+          GEOX_PUBLIC_BASE_URL=https://w6b1.geox.invalid
+          GEOX_EXECUTION_DEFAULT_DISABLED=1
+          GEOX_EXECUTION_ENABLE_EXPLICITLY=0
+          GEOX_EXECUTION_ENABLE_REASON=w6b1-internal-task-issuer-principal
+          GEOX_DEVTOOLS_ENABLED=0
+          EOF
+      - name: Render Commercial compose without issuer secret fallback
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.w6b1 -f docker-compose.commercial_v1.yml config > /tmp/w6b1-compose.yml
+          ! grep -q 'GEOX_INTERNAL_TASK_ISSUER_TOKEN:' /tmp/w6b1-compose.yml
+          grep -q 'GEOX_INTERNAL_TASK_ISSUER_TOKEN_ID: tok_internal_task_issuer_v1' /tmp/w6b1-compose.yml
+      - name: Start Commercial runtime
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          timeout 180 docker compose --env-file .env.w6b1 -f docker-compose.commercial_v1.yml up -d minio minio-init
+          timeout 420 docker compose --env-file .env.w6b1 -f docker-compose.commercial_v1.yml up -d postgres mqtt server
+      - name: Wait for Commercial server
+        run: |
+          set -euo pipefail
+          if ! timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health >/dev/null; do sleep 2; done'; then
+            docker compose --env-file .env.w6b1 -f docker-compose.commercial_v1.yml ps || true
+            docker compose --env-file .env.w6b1 -f docker-compose.commercial_v1.yml logs server || true
+            exit 1
+          fi
+      - name: Dedicated issuer real HTTP capability ceiling
+        run: |
+          set -euo pipefail
+          TOKEN=internal_task_issuer_token_v1
+          BASE=http://127.0.0.1:3001
+
+          allowed_status="$(curl -sS -o /tmp/w6b1-task.json -w '%{http_code}' -X POST "$BASE/api/v1/actions/task" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}')"
+          test "$allowed_status" != 401
+          test "$allowed_status" != 403
+
+          denied_status="$(curl -sS -o /tmp/w6b1-approval.json -w '%{http_code}' -X POST "$BASE/api/v1/approvals/approve" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"request_id":"missing_w6b1"}')"
+          test "$denied_status" = 403
+          grep -q 'AUTH_SCOPE_DENIED' /tmp/w6b1-approval.json
+
+          dispatch_status="$(curl -sS -o /tmp/w6b1-dispatch.json -w '%{http_code}' -X POST "$BASE/api/v1/actions/execute" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}')"
+          test "$dispatch_status" = 403
+          grep -q 'AUTH_SCOPE_DENIED' /tmp/w6b1-dispatch.json
+
+          receipt_status="$(curl -sS -o /tmp/w6b1-receipt.json -w '%{http_code}' -X POST "$BASE/api/v1/actions/receipt" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}')"
+          test "$receipt_status" = 403
+          grep -q 'AUTH_SCOPE_DENIED' /tmp/w6b1-receipt.json
+
+          printf '%s\n' "W6_B1_COMMERCIAL_PRINCIPAL_PASS action.task.create_boundary=$allowed_status approval.decide=$denied_status dispatch=$dispatch_status receipt=$receipt_status"
+      - name: Runtime hygiene
+        if: always()
+        run: |
+          SERVER_LOG=/tmp/bline-w6b1-server.log
+          docker compose --env-file .env.w6b1 -f docker-compose.commercial_v1.yml logs server > "$SERVER_LOG" 2>&1 || true
+          ! grep -E 'FST_ERR_REP_ALREADY_SENT|ERR_HTTP_HEADERS_SENT|Reply was already sent|reply already sent' "$SERVER_LOG"
+      - name: Stop Commercial runtime
+        if: always()
+        run: docker compose --env-file .env.w6b1 -f docker-compose.commercial_v1.yml down -v --remove-orphans || true
