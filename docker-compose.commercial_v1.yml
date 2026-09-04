@@ -1,7 +1,7 @@
 # GEOX Commercial v1 compose baseline.
 # Includes independent database platform bootstrap, one-shot MCFT-CAP-07 migration,
-# one-shot B-Line Commercial workload-principal bootstrap, Runtime, web, mqtt,
-# worker, executor, telemetry ingest, and minio.
+# one-shot B-Line Commercial workload-principal bootstrap, isolated workload credential
+# volumes, Runtime, web, mqtt, worker, executor, telemetry ingest, and minio.
 
 services:
   postgres:
@@ -21,6 +21,32 @@ services:
       interval: 3s
       timeout: 2s
       retries: 20
+
+  commercial-principal-secret-init:
+    image: alpine:3.20
+    container_name: geox-v1-commercial-principal-secret-init
+    restart: "no"
+    entrypoint: ["/bin/sh", "-ceu"]
+    command:
+      - |
+        generate_secret() {
+          target="$$1"
+          if [ ! -s "$$target" ]; then
+            umask 077
+            od -An -N32 -tx1 /dev/urandom | tr -d ' \n' > "$$target"
+          fi
+          chmod 0444 "$$target"
+        }
+        generate_secret /secrets/telemetry/db_password
+        generate_secret /secrets/telemetry/mqtt_password
+        generate_secret /secrets/jobs/db_password
+        generate_secret /secrets/executor/db_password
+        generate_secret /secrets/executor/mqtt_password
+        echo "[commercial-principal-secret-init] isolated workload credentials ready"
+    volumes:
+      - geox_v1_telemetry_credentials:/secrets/telemetry
+      - geox_v1_jobs_credentials:/secrets/jobs
+      - geox_v1_executor_credentials:/secrets/executor
 
   database-platform-bootstrap:
     build:
@@ -71,13 +97,22 @@ services:
     working_dir: /app
     init: true
     restart: "no"
-    command: ["node", "apps/server/dist/database/bline_commercial_principal_bootstrap.js"]
+    entrypoint: ["/bin/sh", "-ceu"]
+    command:
+      - |
+        export GEOX_TELEMETRY_DATABASE_PASSWORD="$$(cat /run/geox/telemetry/db_password)"
+        export GEOX_JOBS_DATABASE_PASSWORD="$$(cat /run/geox/jobs/db_password)"
+        export GEOX_EXECUTOR_DATABASE_PASSWORD="$$(cat /run/geox/executor/db_password)"
+        exec node apps/server/dist/database/bline_commercial_principal_bootstrap.js
     environment:
       GEOX_DB_PLATFORM_ADMIN_DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
-      GEOX_TELEMETRY_DATABASE_PASSWORD: ${GEOX_TELEMETRY_DATABASE_PASSWORD:?GEOX_TELEMETRY_DATABASE_PASSWORD is required}
-      GEOX_JOBS_DATABASE_PASSWORD: ${GEOX_JOBS_DATABASE_PASSWORD:?GEOX_JOBS_DATABASE_PASSWORD is required}
-      GEOX_EXECUTOR_DATABASE_PASSWORD: ${GEOX_EXECUTOR_DATABASE_PASSWORD:?GEOX_EXECUTOR_DATABASE_PASSWORD is required}
+    volumes:
+      - geox_v1_telemetry_credentials:/run/geox/telemetry:ro
+      - geox_v1_jobs_credentials:/run/geox/jobs:ro
+      - geox_v1_executor_credentials:/run/geox/executor:ro
     depends_on:
+      commercial-principal-secret-init:
+        condition: service_completed_successfully
       server:
         condition: service_healthy
 
@@ -86,16 +121,20 @@ services:
     container_name: geox-v1-mqtt
     environment:
       GEOX_TELEMETRY_MQTT_USERNAME: ${GEOX_TELEMETRY_MQTT_USERNAME:-geox_telemetry_ingest_v1}
-      GEOX_TELEMETRY_MQTT_PASSWORD: ${GEOX_TELEMETRY_MQTT_PASSWORD:?GEOX_TELEMETRY_MQTT_PASSWORD is required}
       GEOX_EXECUTOR_MQTT_USERNAME: ${GEOX_EXECUTOR_MQTT_USERNAME:-geox_executor_v1}
-      GEOX_EXECUTOR_MQTT_PASSWORD: ${GEOX_EXECUTOR_MQTT_PASSWORD:?GEOX_EXECUTOR_MQTT_PASSWORD is required}
+    volumes:
+      - geox_v1_telemetry_credentials:/run/geox/telemetry:ro
+      - geox_v1_executor_credentials:/run/geox/executor:ro
+    depends_on:
+      commercial-principal-secret-init:
+        condition: service_completed_successfully
     entrypoint: ["/bin/sh", "-ceu"]
     command:
       - |
         mkdir -p /tmp/mosquitto-config /tmp/mosquitto-data /tmp/mosquitto-log
         printf 'listener 1883 0.0.0.0\nallow_anonymous false\npassword_file /tmp/mosquitto-config/passwords\nacl_file /tmp/mosquitto-config/acl\npersistence false\n' > /tmp/mosquitto-config/mosquitto.conf
-        mosquitto_passwd -b -c /tmp/mosquitto-config/passwords "$$GEOX_TELEMETRY_MQTT_USERNAME" "$$GEOX_TELEMETRY_MQTT_PASSWORD"
-        mosquitto_passwd -b /tmp/mosquitto-config/passwords "$$GEOX_EXECUTOR_MQTT_USERNAME" "$$GEOX_EXECUTOR_MQTT_PASSWORD"
+        mosquitto_passwd -b -c /tmp/mosquitto-config/passwords "$$GEOX_TELEMETRY_MQTT_USERNAME" "$$(cat /run/geox/telemetry/mqtt_password)"
+        mosquitto_passwd -b /tmp/mosquitto-config/passwords "$$GEOX_EXECUTOR_MQTT_USERNAME" "$$(cat /run/geox/executor/mqtt_password)"
         printf 'user %s\ntopic read telemetry/+/+\ntopic read heartbeat/+/+\n\nuser %s\ntopic write #\n' "$$GEOX_TELEMETRY_MQTT_USERNAME" "$$GEOX_EXECUTOR_MQTT_USERNAME" > /tmp/mosquitto-config/acl
         exec mosquitto -c /tmp/mosquitto-config/mosquitto.conf
     ports:
@@ -240,10 +279,14 @@ services:
     working_dir: /app
     init: true
     restart: unless-stopped
-    command: ["node", "apps/telemetry-ingest/dist/apps/telemetry-ingest/src/main.js"]
+    entrypoint: ["/bin/sh", "-ceu"]
+    command:
+      - |
+        export DATABASE_URL="postgres://geox_telemetry_ingest_v1:$$(cat /run/geox/telemetry/db_password)@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}"
+        export GEOX_MQTT_PASSWORD="$$(cat /run/geox/telemetry/mqtt_password)"
+        exec node apps/telemetry-ingest/dist/apps/telemetry-ingest/src/main.js
     environment:
       DB_DRIVER: postgres
-      DATABASE_URL: postgres://geox_telemetry_ingest_v1:${GEOX_TELEMETRY_DATABASE_PASSWORD:?GEOX_TELEMETRY_DATABASE_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
       DB_STRICT: "1"
       NODE_ENV: production
       GEOX_RUNTIME_ENV: ${GEOX_RUNTIME_ENV:-pilot}
@@ -254,7 +297,8 @@ services:
       GEOX_GROUP_ID: groupA
       GEOX_MQTT_URL: mqtt://mqtt:1883
       GEOX_MQTT_USERNAME: ${GEOX_TELEMETRY_MQTT_USERNAME:-geox_telemetry_ingest_v1}
-      GEOX_MQTT_PASSWORD: ${GEOX_TELEMETRY_MQTT_PASSWORD:?GEOX_TELEMETRY_MQTT_PASSWORD is required}
+    volumes:
+      - geox_v1_telemetry_credentials:/run/geox/telemetry:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -274,10 +318,13 @@ services:
     working_dir: /app
     init: true
     restart: unless-stopped
-    command: ["node", "apps/server/dist/jobs/runtime.js"]
+    entrypoint: ["/bin/sh", "-ceu"]
+    command:
+      - |
+        export DATABASE_URL="postgres://geox_jobs_v1:$$(cat /run/geox/jobs/db_password)@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}"
+        exec node apps/server/dist/jobs/runtime.js
     environment:
       DB_DRIVER: postgres
-      DATABASE_URL: postgres://geox_jobs_v1:${GEOX_JOBS_DATABASE_PASSWORD:?GEOX_JOBS_DATABASE_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
       DB_STRICT: "1"
       NODE_ENV: production
       GEOX_RUNTIME_ENV: ${GEOX_RUNTIME_ENV:-pilot}
@@ -289,6 +336,8 @@ services:
       GEOX_PROJECT_ID: projectA
       GEOX_GROUP_ID: groupA
       AGRONOMY_AGENT_ENABLED: "1"
+    volumes:
+      - geox_v1_jobs_credentials:/run/geox/jobs:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -307,10 +356,14 @@ services:
     working_dir: /app
     init: true
     restart: unless-stopped
-    command: ["node", "apps/executor/dist/runtime_loop.js"]
+    entrypoint: ["/bin/sh", "-ceu"]
+    command:
+      - |
+        export DATABASE_URL="postgres://geox_executor_runtime_v1:$$(cat /run/geox/executor/db_password)@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}"
+        export GEOX_MQTT_PASSWORD="$$(cat /run/geox/executor/mqtt_password)"
+        exec node apps/executor/dist/runtime_loop.js
     environment:
       DB_DRIVER: postgres
-      DATABASE_URL: postgres://geox_executor_runtime_v1:${GEOX_EXECUTOR_DATABASE_PASSWORD:?GEOX_EXECUTOR_DATABASE_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
       DB_STRICT: "1"
       NODE_ENV: production
       GEOX_RUNTIME_ENV: ${GEOX_RUNTIME_ENV:-pilot}
@@ -326,7 +379,6 @@ services:
       GEOX_GROUP_ID: groupA
       GEOX_MQTT_URL: mqtt://mqtt:1883
       GEOX_MQTT_USERNAME: ${GEOX_EXECUTOR_MQTT_USERNAME:-geox_executor_v1}
-      GEOX_MQTT_PASSWORD: ${GEOX_EXECUTOR_MQTT_PASSWORD:?GEOX_EXECUTOR_MQTT_PASSWORD is required}
       POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-3000}
       ALERT_WEBHOOK_URL: ""
       ALERT_WECHAT_WEBHOOK_URL: ""
@@ -337,6 +389,8 @@ services:
       TWILIO_AUTH_TOKEN: ""
       TWILIO_FROM_NUMBER: ""
       ALERT_SMS_TO: ""
+    volumes:
+      - geox_v1_executor_credentials:/run/geox/executor:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -360,3 +414,9 @@ services:
 volumes:
   geox_v1_pgdata:
   geox_v1_minio_data:
+  geox_v1_telemetry_credentials:
+    name: geox-v1-telemetry-credentials
+  geox_v1_jobs_credentials:
+    name: geox-v1-jobs-credentials
+  geox_v1_executor_credentials:
+    name: geox-v1-executor-credentials
