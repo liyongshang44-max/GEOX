@@ -42,11 +42,11 @@ assert(inv.database_principals?.jobs === 'geox_jobs_v1', 'jobs DB principal drif
 assert(inv.database_principals?.executor === 'geox_executor_runtime_v1', 'executor DB principal drift');
 
 const bootstrap = read(BOOTSTRAP);
+const normalizedBootstrap = bootstrap.replace(/\s+/g, ' ');
 for (const marker of [
   'BLINE_COMMERCIAL_TELEMETRY_ROLE_V1 = "geox_telemetry_ingest_v1"',
   'BLINE_COMMERCIAL_JOBS_ROLE_V1 = "geox_jobs_v1"',
   'BLINE_COMMERCIAL_EXECUTOR_ROLE_V1 = "geox_executor_runtime_v1"',
-  'LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS',
   'REVOKE ${MCFT_CAP07_RUNTIME_ROLE_V1} FROM ${BLINE_COMMERCIAL_TELEMETRY_ROLE_V1}',
   'REVOKE ${MCFT_CAP07_RUNTIME_ROLE_V1} FROM ${BLINE_COMMERCIAL_JOBS_ROLE_V1}',
   'REVOKE ${MCFT_CAP07_RUNTIME_ROLE_V1} FROM ${BLINE_COMMERCIAL_EXECUTOR_ROLE_V1}',
@@ -55,6 +55,7 @@ for (const marker of [
   'GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO ${roles}',
   'BLINE_COMMERCIAL_PRINCIPAL_BOOTSTRAP_INVALID:ROLE_GRAPH'
 ]) assert(bootstrap.includes(marker), 'W6-B2 DB principal marker missing', marker);
+assert(normalizedBootstrap.includes('LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;'), 'W6-B2 DB principal role flags drift');
 assert(!bootstrap.includes('GRANT ${MCFT_CAP07_RUNTIME_ROLE_V1} TO'), 'W6-B2 must not implement isolation through MCFT runtime-role membership');
 assert(!bootstrap.includes('ALTER ROLE ${MCFT_CAP07_RUNTIME_ROLE_V1}'), 'W6-B2 must not mutate the frozen MCFT runtime role');
 
