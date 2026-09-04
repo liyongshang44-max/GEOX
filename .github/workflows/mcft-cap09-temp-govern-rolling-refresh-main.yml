@@ -1,0 +1,76 @@
+name: mcft-cap09-temp-govern-rolling-refresh-main
+
+on:
+  push:
+    branches:
+      - feat/mcft-cap09-rolling-current-crop-candidate-v1
+    paths:
+      - .github/workflows/mcft-cap09-temp-govern-rolling-refresh-main.yml
+
+permissions:
+  contents: write
+
+jobs:
+  govern:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@v4
+        with:
+          ref: feat/mcft-cap09-rolling-current-crop-candidate-v1
+          fetch-depth: 0
+
+      - name: Govern rolling-refresh protected-main predecessor
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "22df8c5e79fc6c4fcece7b23400715c73e84b9cf"
+          node <<'NODE'
+          const fs=require('fs');
+          const predecessor='d82d25f76535b2779ef6b15b3eb32c15c245dedf';
+          const previous='ef9f7d45114c98c16ad57ce69226323935f685db';
+
+          const authorityPath='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json';
+          const authority=JSON.parse(fs.readFileSync(authorityPath,'utf8'));
+          const governed=authority.governed_successor_predecessor_shas;
+          if(!Array.isArray(governed) || governed.at(-1)!==previous || governed.includes(predecessor)) throw new Error('QCP_PREDECESSOR_BOUNDARY_DRIFT');
+          governed.push(predecessor);
+          fs.writeFileSync(authorityPath,JSON.stringify(authority,null,2)+'\n');
+
+          const registryPath='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json';
+          const registry=JSON.parse(fs.readFileSync(registryPath,'utf8'));
+          const registryGoverned=registry.requalification_evidence?.durable_anchors?.rules?.governed_successor_predecessors;
+          if(!Array.isArray(registryGoverned) || registryGoverned.at(-1)!==previous || registryGoverned.includes(predecessor)) throw new Error('REGISTRY_PREDECESSOR_BOUNDARY_DRIFT');
+          registryGoverned.push(predecessor);
+          fs.writeFileSync(registryPath,JSON.stringify(registry,null,2)+'\n');
+
+          const preflightPath='scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs';
+          let preflight=fs.readFileSync(preflightPath,'utf8');
+          const oldDecl='    const postRuntimeCutoverProductionLiveBase = String(process.env.POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA || "");\n';
+          const newDecl=oldDecl+'    const postProductionLiveRollingRefreshBase = String(process.env.POST_PRODUCTION_LIVE_ROLLING_REFRESH_PREDECESSOR_SHA || "");\n';
+          if((preflight.split(oldDecl).length-1)!==1) throw new Error('PREFLIGHT_DECL_BOUNDARY_DRIFT');
+          preflight=preflight.replace(oldDecl,newDecl);
+          const oldCond='        (/^[0-9a-f]{40}$/.test(postRuntimeCutoverProductionLiveBase) && args.base === postRuntimeCutoverProductionLiveBase)\n';
+          const newCond='        (/^[0-9a-f]{40}$/.test(postRuntimeCutoverProductionLiveBase) && args.base === postRuntimeCutoverProductionLiveBase) ||\n        (/^[0-9a-f]{40}$/.test(postProductionLiveRollingRefreshBase) && args.base === postProductionLiveRollingRefreshBase)\n';
+          if((preflight.split(oldCond).length-1)!==1) throw new Error('PREFLIGHT_CONDITION_BOUNDARY_DRIFT');
+          preflight=preflight.replace(oldCond,newCond);
+          fs.writeFileSync(preflightPath,preflight);
+          NODE
+          node --check scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+          git diff --check
+          mapfile -t changed < <(git diff --name-only)
+          test "${#changed[@]}" -eq 3
+          test "${changed[0]}" = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"
+          test "${changed[1]}" = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json"
+          test "${changed[2]}" = "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"
+
+      - name: Commit exact governance settlement
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+          git commit -m "chore(mcft-cap09): govern rolling-refresh protected main predecessor"
+          git push origin HEAD:feat/mcft-cap09-rolling-current-crop-candidate-v1
