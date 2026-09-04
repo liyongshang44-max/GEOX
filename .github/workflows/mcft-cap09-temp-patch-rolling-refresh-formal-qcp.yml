@@ -1,0 +1,64 @@
+name: mcft-cap09-temp-patch-rolling-refresh-formal-qcp
+
+on:
+  push:
+    branches:
+      - feat/mcft-cap09-rolling-current-crop-candidate-v1
+    paths:
+      - .github/workflows/mcft-cap09-temp-patch-rolling-refresh-formal-qcp.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact patch carrier
+        uses: actions/checkout@v4
+        with:
+          ref: feat/mcft-cap09-rolling-current-crop-candidate-v1
+          fetch-depth: 0
+
+      - name: Patch formal QCP exactly
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('fs');
+          const p='.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml';
+          let s=fs.readFileSync(p,'utf8');
+          const envOld="  POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA: 'ef9f7d45114c98c16ad57ce69226323935f685db'\n";
+          const envNew=envOld+"  POST_PRODUCTION_LIVE_ROLLING_REFRESH_PREDECESSOR_SHA: 'd82d25f76535b2779ef6b15b3eb32c15c245dedf'\n";
+          if((s.split(envOld).length-1)!==1) throw new Error('FORMAL_QCP_ENV_BOUNDARY_DRIFT');
+          s=s.replace(envOld,envNew);
+          const shellOld='&& [ "$base" != "$POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA" ]; then';
+          const shellNew='&& [ "$base" != "$POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA" ] && [ "$base" != "$POST_PRODUCTION_LIVE_ROLLING_REFRESH_PREDECESSOR_SHA" ]; then';
+          if((s.split(shellOld).length-1)!==1) throw new Error('FORMAL_QCP_SHELL_BOUNDARY_DRIFT');
+          s=s.replace(shellOld,shellNew);
+          const jsOld='  process.env.POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA\n];';
+          const jsNew='  process.env.POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA,\n  process.env.POST_PRODUCTION_LIVE_ROLLING_REFRESH_PREDECESSOR_SHA\n];';
+          if((s.split(jsOld).length-1)!==1) throw new Error('FORMAL_QCP_JS_BOUNDARY_DRIFT');
+          s=s.replace(jsOld,jsNew);
+          fs.writeFileSync(p,s);
+          NODE
+          git diff --check
+          test "$(git diff --name-only | wc -l)" -eq 1
+          test "$(git diff --name-only)" = ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml"
+          grep -F "POST_PRODUCTION_LIVE_ROLLING_REFRESH_PREDECESSOR_SHA: 'd82d25f76535b2779ef6b15b3eb32c15c245dedf'" .github/workflows/mcft-cap-09-qualification-control-plane-v1.yml
+          test "$(grep -c 'POST_PRODUCTION_LIVE_ROLLING_REFRESH_PREDECESSOR_SHA' .github/workflows/mcft-cap-09-qualification-control-plane-v1.yml)" -eq 3
+          git diff --stat
+          git diff -- .github/workflows/mcft-cap-09-qualification-control-plane-v1.yml
+
+      - name: Create exact formal-QCP patch commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/mcft-cap-09-qualification-control-plane-v1.yml
+          git commit -m "chore(mcft-cap09): govern rolling-refresh protected main in formal QCP"
+          echo "PATCH_COMMIT=$(git rev-parse HEAD)"
+          echo "PATCH_PARENT=$(git rev-parse HEAD^)"
+          echo "PATCH_BLOB=$(git rev-parse HEAD:.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml)"
+          git push origin HEAD:feat/mcft-cap09-rolling-current-crop-candidate-v1
