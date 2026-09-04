@@ -1,0 +1,48 @@
+name: mcft-cap09-temp-govern-production-live-base
+
+on:
+  push:
+    branches:
+      - 'feat/mcft-cap09-postcutover-stage-refresh-v1'
+    paths:
+      - '.github/workflows/mcft-cap09-temp-govern-production-live-base.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-registry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Append exact protected-main predecessor to durable registry
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json')
+          text = path.read_text(encoding='utf-8')
+          old = '''          "ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23",\n          "0630bb63b82c9ba108854f5aa26b096f9221f031"\n        ],\n        "dependency_digest_must_match_current": true,'''
+          new = '''          "ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23",\n          "0630bb63b82c9ba108854f5aa26b096f9221f031",\n          "ef9f7d45114c98c16ad57ce69226323935f685db"\n        ],\n        "dependency_digest_must_match_current": true,'''
+          count = text.count(old)
+          if count != 1:
+              raise SystemExit(f'EXPECTED_EXACT_REGISTRY_TARGET_ONCE:{count}')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+      - name: Commit registry-only patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          changed="$(git diff --name-only)"
+          test "$changed" = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json"
+          git diff --numstat | grep -Fx $'1\t0\tdocs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+          git commit -m 'gov(mcft-cap09): govern production-live protected main predecessor'
+          git push origin HEAD:${GITHUB_REF_NAME}
