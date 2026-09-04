@@ -9,8 +9,9 @@ import {
   deriveExternalFormalA18CropContextIdentityHashV4,
 } from "./external_formal_a18_crop_context_v4.js";
 import {
-  createFileBackedMcftCap09CurrentCropAuthorityResolverV1,
+  createRegistryBackedMcftCap09CurrentCropAuthorityResolverV1,
   type McftCap09CurrentCropAuthorityResolverPortV1,
+  type McftCap09EffectiveCurrentCropAuthoritySourcePortV1,
 } from "./mcft_cap09_current_crop_authority_resolver_v1.js";
 import {
   materializeMcftCap09TwinCropContextV2,
@@ -108,8 +109,32 @@ function expectedIdentity(logicalTime: string, evidenceDigest: string) {
   });
 }
 
-function sha256File(filePath: string) {
-  return "sha256:" + crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+function sha256Bytes(bytes: Buffer) {
+  return "sha256:" + crypto.createHash("sha256").update(bytes).digest("hex");
+}
+
+function createFileSource(
+  registryPath: string,
+  artifactRoot: string,
+): McftCap09EffectiveCurrentCropAuthoritySourcePortV1 {
+  const resolvedRoot = path.resolve(artifactRoot);
+  const rootPrefix = resolvedRoot + path.sep;
+  return {
+    read_registry() {
+      return JSON.parse(fs.readFileSync(registryPath, "utf8"));
+    },
+    read_authority(authorityRef: string) {
+      const authorityPath = path.resolve(resolvedRoot, authorityRef);
+      if (!authorityPath.startsWith(rootPrefix)) {
+        throw new Error("TEST_AUTHORITY_REF_ESCAPES_ROOT");
+      }
+      const bytes = fs.readFileSync(authorityPath);
+      return {
+        authority_sha256: sha256Bytes(bytes),
+        authority: JSON.parse(bytes.toString("utf8")),
+      };
+    },
+  };
 }
 
 function writeRegistryFixture(input: {
@@ -123,6 +148,7 @@ function writeRegistryFixture(input: {
   const authorityPath = path.join(dir, "authority.json");
   fs.writeFileSync(authorityPath, JSON.stringify(input.authority, null, 2) + "\n");
   const registryPath = path.join(dir, "registry.json");
+  const actualDigest = sha256Bytes(fs.readFileSync(authorityPath));
   fs.writeFileSync(registryPath, JSON.stringify({
     schema_version: "geox_mcft_cap09_effective_current_crop_authority_registry_v1",
     registry_id: "MCFT_CAP09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REGISTRY_V1",
@@ -131,7 +157,7 @@ function writeRegistryFixture(input: {
     candidate_artifacts_admissible: false,
     entries: [{
       authority_ref: "authority.json",
-      authority_sha256: input.digestOverride ?? sha256File(authorityPath),
+      authority_sha256: input.digestOverride ?? actualDigest,
       authority_as_of: input.authorityAsOf,
       authority_valid_until: input.authorityValidUntil,
       graduation_status: input.graduationStatus,
@@ -213,10 +239,9 @@ test("Twin V2 rolling resolver still fails closed when selected authority is sta
   );
 });
 
-test("file-backed resolver selects only graduated effective authorities by logical time", () => {
-  const resolver = createFileBackedMcftCap09CurrentCropAuthorityResolverV1({
-    registry_path: REGISTRY_PATH,
-    artifact_root: ROOT,
+test("registry-backed resolver selects only graduated effective authorities by logical time", () => {
+  const resolver = createRegistryBackedMcftCap09CurrentCropAuthorityResolverV1({
+    source: createFileSource(REGISTRY_PATH, ROOT),
   });
   const previous = resolver.resolve({ logical_time: "2026-09-03T05:00:00.000Z" });
   const refreshed = resolver.resolve({ logical_time: "2026-09-04T05:00:00.000Z" });
@@ -230,10 +255,9 @@ test("file-backed resolver selects only graduated effective authorities by logic
   );
 });
 
-test("file-backed resolver fails closed after the latest effective validity window", () => {
-  const resolver = createFileBackedMcftCap09CurrentCropAuthorityResolverV1({
-    registry_path: REGISTRY_PATH,
-    artifact_root: ROOT,
+test("registry-backed resolver fails closed after the latest effective validity window", () => {
+  const resolver = createRegistryBackedMcftCap09CurrentCropAuthorityResolverV1({
+    source: createFileSource(REGISTRY_PATH, ROOT),
   });
   assert.throws(
     () => resolver.resolve({ logical_time: "2026-09-05T11:00:00.000Z" }),
@@ -241,7 +265,7 @@ test("file-backed resolver fails closed after the latest effective validity wind
   );
 });
 
-test("file-backed resolver rejects candidate-only authority even when its digest is registered", () => {
+test("registry-backed resolver rejects candidate-only authority even when its digest is registered", () => {
   const candidate = currentCrop("2026-09-04T04:00:00.000Z", "d");
   candidate.architecture_effective = false;
   candidate.runtime_consumption_authorized = false;
@@ -252,9 +276,8 @@ test("file-backed resolver rejects candidate-only authority even when its digest
     authorityValidUntil: "2026-09-05T10:00:00.000Z",
     graduationStatus: "EFFECTIVE_FOR_RUNTIME_CONSUMPTION_ROLLING_REFRESH",
   });
-  const resolver = createFileBackedMcftCap09CurrentCropAuthorityResolverV1({
-    registry_path: fixture.registryPath,
-    artifact_root: fixture.dir,
+  const resolver = createRegistryBackedMcftCap09CurrentCropAuthorityResolverV1({
+    source: createFileSource(fixture.registryPath, fixture.dir),
   });
   assert.throws(
     () => resolver.resolve({ logical_time: "2026-09-04T05:00:00.000Z" }),
@@ -262,7 +285,7 @@ test("file-backed resolver rejects candidate-only authority even when its digest
   );
 });
 
-test("file-backed resolver rejects authority bytes that drift from the registered digest", () => {
+test("registry-backed resolver rejects authority bytes that drift from the registered digest", () => {
   const authority = currentCrop("2026-09-04T04:00:00.000Z", "e");
   const fixture = writeRegistryFixture({
     authority,
@@ -271,9 +294,8 @@ test("file-backed resolver rejects authority bytes that drift from the registere
     graduationStatus: "EFFECTIVE_FOR_RUNTIME_CONSUMPTION_ROLLING_REFRESH",
     digestOverride: `sha256:${"0".repeat(64)}`,
   });
-  const resolver = createFileBackedMcftCap09CurrentCropAuthorityResolverV1({
-    registry_path: fixture.registryPath,
-    artifact_root: fixture.dir,
+  const resolver = createRegistryBackedMcftCap09CurrentCropAuthorityResolverV1({
+    source: createFileSource(fixture.registryPath, fixture.dir),
   });
   assert.throws(
     () => resolver.resolve({ logical_time: "2026-09-04T05:00:00.000Z" }),

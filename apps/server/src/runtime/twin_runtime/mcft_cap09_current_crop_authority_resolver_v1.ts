@@ -1,13 +1,9 @@
 // MCFT-CAP-09 rolling current-crop authority selection seam.
 //
-// This port is intentionally read-only. It does not discover providers, write runtime
-// configuration, mutate the database, activate production ownership, or authorize a
-// Runtime start. Production V2 continues to use the static exact-bound snapshot unless
-// a separately governed resolver is explicitly injected by a future successor.
-
-import crypto from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
+// This port is intentionally read-only. It does not discover providers, perform direct
+// I/O, write runtime configuration, mutate the database, activate production ownership,
+// or authorize a Runtime start. Production V2 continues to use the static exact-bound
+// snapshot unless a separately governed resolver is explicitly injected by a future successor.
 
 export type McftCap09CurrentCropAuthorityJsonV1 = Record<string, unknown>;
 
@@ -37,6 +33,16 @@ export type McftCap09EffectiveCurrentCropAuthorityRegistryV1 = {
   candidate_artifacts_admissible: false;
   entries: McftCap09EffectiveCurrentCropAuthorityRegistryEntryV1[];
 };
+
+export type McftCap09CurrentCropAuthoritySourceReadV1 = {
+  authority_sha256: string;
+  authority: unknown;
+};
+
+export interface McftCap09EffectiveCurrentCropAuthoritySourcePortV1 {
+  read_registry(): unknown;
+  read_authority(authority_ref: string): McftCap09CurrentCropAuthoritySourceReadV1;
+}
 
 type JsonRecordV1 = Record<string, unknown>;
 
@@ -74,31 +80,11 @@ function exactIsoInstantV1(value: unknown, code: string): string {
   return text;
 }
 
-function sha256FileV1(filePath: string, code: string): string {
-  let bytes: Buffer;
-  try {
-    bytes = fs.readFileSync(filePath);
-  } catch (error) {
-    throw new Error(`${code}:${error instanceof Error ? error.message : String(error)}`);
-  }
-  return "sha256:" + crypto.createHash("sha256").update(bytes).digest("hex");
-}
-
-function readJsonFileV1(filePath: string, code: string): JsonRecordV1 {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
-  } catch (error) {
-    throw new Error(`${code}:${error instanceof Error ? error.message : String(error)}`);
-  }
-  return jsonRecordV1(parsed, code);
-}
-
 function parseRegistryV1(
-  registryPath: string,
+  rawInput: unknown,
 ): McftCap09EffectiveCurrentCropAuthorityRegistryV1 {
-  const raw = readJsonFileV1(
-    registryPath,
+  const raw = jsonRecordV1(
+    rawInput,
     "MCFT_CAP09_CURRENT_CROP_AUTHORITY_REGISTRY_INVALID",
   );
   if (
@@ -122,7 +108,14 @@ function parseRegistryV1(
     const authorityRef = String(entry.authority_ref ?? "").trim();
     const authoritySha256 = String(entry.authority_sha256 ?? "").trim();
     const graduationStatus = String(entry.graduation_status ?? "").trim();
-    if (!authorityRef || path.isAbsolute(authorityRef) || authorityRef.includes("..")) {
+    if (
+      !authorityRef
+      || authorityRef.startsWith("/")
+      || /^[A-Za-z]:\//.test(authorityRef)
+      || authorityRef.includes("\\")
+      || authorityRef.startsWith("./")
+      || authorityRef.split("/").includes("..")
+    ) {
       throw new Error(`MCFT_CAP09_CURRENT_CROP_AUTHORITY_REGISTRY_REF_INVALID:${index}`);
     }
     if (!/^sha256:[0-9a-f]{64}$/.test(authoritySha256)) {
@@ -261,17 +254,15 @@ export function createStaticMcftCap09CurrentCropAuthorityResolverV1(
   };
 }
 
-export function createFileBackedMcftCap09CurrentCropAuthorityResolverV1(input: {
-  registry_path: string;
-  artifact_root: string;
+export function createRegistryBackedMcftCap09CurrentCropAuthorityResolverV1(input: {
+  source: McftCap09EffectiveCurrentCropAuthoritySourcePortV1;
 }): McftCap09CurrentCropAuthorityResolverPortV1 {
-  const registryPath = String(input.registry_path ?? "").trim();
-  const artifactRoot = String(input.artifact_root ?? "").trim();
-  if (!registryPath) {
-    throw new Error("MCFT_CAP09_CURRENT_CROP_AUTHORITY_REGISTRY_PATH_REQUIRED");
-  }
-  if (!artifactRoot) {
-    throw new Error("MCFT_CAP09_CURRENT_CROP_AUTHORITY_ARTIFACT_ROOT_REQUIRED");
+  if (
+    !input.source
+    || typeof input.source.read_registry !== "function"
+    || typeof input.source.read_authority !== "function"
+  ) {
+    throw new Error("MCFT_CAP09_CURRENT_CROP_AUTHORITY_SOURCE_PORT_REQUIRED");
   }
 
   return {
@@ -281,7 +272,7 @@ export function createFileBackedMcftCap09CurrentCropAuthorityResolverV1(input: {
         "MCFT_CAP09_CURRENT_CROP_AUTHORITY_LOGICAL_TIME_INVALID",
       );
       const logicalEpoch = Date.parse(logicalTime);
-      const registry = parseRegistryV1(registryPath);
+      const registry = parseRegistryV1(input.source.read_registry());
       const eligible = registry.entries
         .filter((entry) => {
           return Date.parse(entry.authority_as_of) <= logicalEpoch
@@ -294,22 +285,20 @@ export function createFileBackedMcftCap09CurrentCropAuthorityResolverV1(input: {
         throw new Error("MCFT_CAP09_CURRENT_CROP_AUTHORITY_NO_EFFECTIVE_ENTRY_FOR_LOGICAL_TIME");
       }
 
-      const authorityPath = path.resolve(artifactRoot, selected.authority_ref);
-      const expectedRoot = path.resolve(artifactRoot) + path.sep;
-      if (!authorityPath.startsWith(expectedRoot)) {
-        throw new Error("MCFT_CAP09_CURRENT_CROP_AUTHORITY_REF_ESCAPES_ARTIFACT_ROOT");
+      const sourceRead = jsonRecordV1(
+        input.source.read_authority(selected.authority_ref),
+        "MCFT_CAP09_CURRENT_CROP_AUTHORITY_SOURCE_READ_INVALID",
+      );
+      const actualSha256 = String(sourceRead.authority_sha256 ?? "").trim();
+      if (!/^sha256:[0-9a-f]{64}$/.test(actualSha256)) {
+        throw new Error("MCFT_CAP09_CURRENT_CROP_AUTHORITY_SOURCE_DIGEST_INVALID");
       }
-      if (
-        sha256FileV1(
-          authorityPath,
-          "MCFT_CAP09_CURRENT_CROP_AUTHORITY_FILE_INVALID",
-        ) !== selected.authority_sha256
-      ) {
+      if (actualSha256 !== selected.authority_sha256) {
         throw new Error("MCFT_CAP09_CURRENT_CROP_AUTHORITY_DIGEST_MISMATCH");
       }
 
-      const artifact = readJsonFileV1(
-        authorityPath,
+      const artifact = jsonRecordV1(
+        sourceRead.authority,
         "MCFT_CAP09_CURRENT_CROP_AUTHORITY_JSON_INVALID",
       );
       assertEffectiveAuthorityV1(artifact, selected);
