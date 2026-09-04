@@ -2,6 +2,7 @@ import { readTokenFileV0 } from "./ao_act_authz_v0.js";
 
 export const INTERNAL_TASK_ISSUER_REQUIRED_SCOPE_V1 = "action.task.create" as const;
 export const INTERNAL_TASK_ISSUER_REQUIRED_ROLE_V1 = "operator" as const;
+export const INTERNAL_TASK_ISSUER_DEFAULT_TOKEN_ID_V1 = "tok_internal_task_issuer_v1" as const;
 
 export type InternalTaskIssuerPrincipalV1 = {
   authorization: string;
@@ -18,26 +19,30 @@ function issuerError(code: string): never {
   throw new Error(`INTERNAL_TASK_ISSUER_${code}`);
 }
 
-function configuredIssuerSecretV1(): string {
-  const raw = String(process.env.GEOX_INTERNAL_TASK_ISSUER_TOKEN ?? "").trim();
-  if (!raw) issuerError("TOKEN_MISSING");
-  const match = /^Bearer\s+(.+)$/i.exec(raw);
-  const token = String(match?.[1] ?? raw).trim();
-  if (!token) issuerError("TOKEN_MISSING");
-  return token;
-}
-
 function requiredIdentity(value: unknown, label: string): string {
   const normalized = String(value ?? "").trim();
   if (!normalized) issuerError(`IDENTITY_INVALID:${label}`);
   return normalized;
 }
 
+function configuredTokenIdV1(): string {
+  return String(process.env.GEOX_INTERNAL_TASK_ISSUER_TOKEN_ID ?? INTERNAL_TASK_ISSUER_DEFAULT_TOKEN_ID_V1).trim()
+    || INTERNAL_TASK_ISSUER_DEFAULT_TOKEN_ID_V1;
+}
+
+function normalizeOptionalConfiguredSecretV1(): string | null {
+  const raw = String(process.env.GEOX_INTERNAL_TASK_ISSUER_TOKEN ?? "").trim();
+  if (!raw) return null;
+  const match = /^Bearer\s+(.+)$/i.exec(raw);
+  const token = String(match?.[1] ?? raw).trim();
+  return token || null;
+}
+
 export function resolveInternalTaskIssuerPrincipalV1(): InternalTaskIssuerPrincipalV1 {
-  const token = configuredIssuerSecretV1();
+  const expectedTokenId = configuredTokenIdV1();
   const tokenFile = readTokenFileV0() as any;
   const records = Array.isArray(tokenFile?.tokens) ? tokenFile.tokens : [];
-  const record = records.find((candidate: any) => String(candidate?.token ?? "") === token) ?? null;
+  const record = records.find((candidate: any) => String(candidate?.token_id ?? "").trim() === expectedTokenId) ?? null;
   if (!record) issuerError("PRINCIPAL_UNKNOWN");
   if (record.revoked === true) issuerError("PRINCIPAL_REVOKED");
 
@@ -53,6 +58,12 @@ export function resolveInternalTaskIssuerPrincipalV1(): InternalTaskIssuerPrinci
     issuerError("SCOPE_INVALID");
   }
 
+  const token = requiredIdentity(record.token, "token");
+  const configuredSecret = normalizeOptionalConfiguredSecretV1();
+  if (configuredSecret && configuredSecret !== token) {
+    issuerError("TOKEN_ID_SECRET_MISMATCH");
+  }
+
   return {
     authorization: `Bearer ${token}`,
     token_id: requiredIdentity(record.token_id, "token_id"),
@@ -63,4 +74,10 @@ export function resolveInternalTaskIssuerPrincipalV1(): InternalTaskIssuerPrinci
     role: INTERNAL_TASK_ISSUER_REQUIRED_ROLE_V1,
     scopes: [INTERNAL_TASK_ISSUER_REQUIRED_SCOPE_V1],
   };
+}
+
+export function prepareInternalTaskIssuerPrincipalV1(): InternalTaskIssuerPrincipalV1 {
+  const principal = resolveInternalTaskIssuerPrincipalV1();
+  process.env.GEOX_INTERNAL_TASK_ISSUER_TOKEN = principal.authorization;
+  return principal;
 }
