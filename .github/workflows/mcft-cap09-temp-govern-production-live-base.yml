@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  append-registry-predecessor:
+  prepare-qualification-workflow-blob:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact branch head
@@ -19,35 +19,54 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Append protected-main predecessor to durable evidence registry
+      - name: Build exact qualification workflow target
         shell: python
         run: |
-          import json
           from pathlib import Path
 
           predecessor = 'ef9f7d45114c98c16ad57ce69226323935f685db'
-          registry = Path('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json')
-          text = registry.read_text(encoding='utf-8')
-          old = '''          "ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23",\n          "0630bb63b82c9ba108854f5aa26b096f9221f031"\n        ],\n        "dependency_digest_must_match_current": true,'''
-          new = f'''          "ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23",\n          "0630bb63b82c9ba108854f5aa26b096f9221f031",\n          "{predecessor}"\n        ],\n        "dependency_digest_must_match_current": true,'''
-          count = text.count(old)
-          if count != 1:
-              raise SystemExit(f'EXPECTED_EXACT_REGISTRY_TARGET_ONCE:{count}')
-          text = text.replace(old, new, 1)
-          json.loads(text)
-          registry.write_text(text, encoding='utf-8')
+          workflow = Path('.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml')
+          text = workflow.read_text(encoding='utf-8')
 
-      - name: Verify and push registry-only commit
+          def replace_once(text, old, new, code):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{code}:{count}')
+              return text.replace(old, new, 1)
+
+          env_old = "  POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA: '0630bb63b82c9ba108854f5aa26b096f9221f031'\n"
+          env_new = env_old + f"  POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA: '{predecessor}'\n"
+          text = replace_once(text, env_old, env_new, 'EXPECTED_QUALIFICATION_ENV_TARGET_ONCE')
+
+          gate_old = '&& [ "$base" != "$POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA" ]; then'
+          gate_new = '&& [ "$base" != "$POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA" ] && [ "$base" != "$POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA" ]; then'
+          text = replace_once(text, gate_old, gate_new, 'EXPECTED_QUALIFICATION_BASE_GATE_TARGET_ONCE')
+
+          expected_old = 'process.env.POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA];'
+          expected_new = 'process.env.POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA, process.env.POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA];'
+          text = replace_once(text, expected_old, expected_new, 'EXPECTED_QUALIFICATION_PREDECESSOR_SET_TARGET_ONCE')
+          workflow.write_text(text, encoding='utf-8')
+
+      - name: Validate target and upload Git blob only
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          git diff --check
+          path='.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'
+          git diff --check -- "$path"
           test "$(git diff --name-only | wc -l | tr -d ' ')" = "1"
-          git diff --name-only | grep -Fx 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json'
-          git diff --numstat | grep -Fx $'2\t1\tdocs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json'
-          node -e "JSON.parse(require('fs').readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json','utf8'))"
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
-          git commit -m 'gov(mcft-cap09): govern production-live evidence predecessor'
-          git push origin HEAD:${GITHUB_REF_NAME}
+          git diff --name-only | grep -Fx "$path"
+          grep -Fx "  POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA: 'ef9f7d45114c98c16ad57ce69226323935f685db'" "$path"
+          test "$(grep -c 'POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA' "$path")" = "3"
+          payload="$(jq -Rs '{content:.,encoding:"utf-8"}' < "$path")"
+          response="$(curl --fail-with-body -sS -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/blobs" \
+            --data-binary "$payload")"
+          sha="$(printf '%s' "$response" | jq -r '.sha // empty')"
+          test "$(printf '%s' "$sha" | grep -Ec '^[0-9a-f]{40}$')" = "1"
+          echo "QUALIFICATION_BLOB_SHA=$sha"
+          echo "QUALIFICATION_TARGET_NUMSTAT=$(git diff --numstat -- "$path")"
