@@ -13,6 +13,11 @@ const PROCESS = "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_pr
 const DIST = "apps/server/scripts/write_dist_entries.cjs";
 const ROUTING_ACCEPTANCE = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs";
 const RESOLVER_WORKFLOW = ".github/workflows/mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1.yml";
+const QCP_WORKFLOW = ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml";
+const POSTMERGE_WORKFLOW = ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml";
+const QCP_AUTHORITY = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
+const EVIDENCE_REGISTRY = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json";
+const PREFLIGHT = "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs";
 const EFFECTIVE_GRADUATION_STATUSES = new Set([
   "EFFECTIVE_FOR_RUNTIME_CONSUMPTION",
   "EFFECTIVE_FOR_RUNTIME_CONSUMPTION_ROLLING_REFRESH",
@@ -23,6 +28,11 @@ const ALLOWED_CHANGED = new Set([
   "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs",
   ROUTING_ACCEPTANCE,
   RESOLVER_WORKFLOW,
+  QCP_WORKFLOW,
+  POSTMERGE_WORKFLOW,
+  QCP_AUTHORITY,
+  EVIDENCE_REGISTRY,
+  PREFLIGHT,
 ]);
 const FORBIDDEN = [
   "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_start_authority_v1.ts",
