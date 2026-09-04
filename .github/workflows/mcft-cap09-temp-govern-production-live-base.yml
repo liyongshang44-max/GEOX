@@ -8,22 +8,20 @@ on:
       - '.github/workflows/mcft-cap09-temp-govern-production-live-base.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  export-qualified-workflow-bytes:
+  patch-qualified-workflow:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact branch head
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: false
 
-      - name: Build validate and export exact target bytes
+      - name: Apply exact three-surface predecessor patch
         shell: python
         run: |
-          import base64
           from pathlib import Path
 
           predecessor = 'ef9f7d45114c98c16ad57ce69226323935f685db'
@@ -51,11 +49,20 @@ jobs:
           if text.count('POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA') != 3:
               raise SystemExit('EXPECTED_NEW_PREDECESSOR_REFERENCE_CARDINALITY_3')
 
-          data = text.encode('utf-8')
-          encoded = base64.b64encode(data).decode('ascii')
-          chunk_size = 3000
-          chunks = [encoded[i:i+chunk_size] for i in range(0, len(encoded), chunk_size)]
-          print(f'TARGET_BYTES={len(data)}')
-          print(f'TARGET_B64_CHUNKS={len(chunks)}')
-          for i, chunk in enumerate(chunks):
-              print(f'TARGET_B64_{i:02d}={chunk}')
+          workflow.write_text(text, encoding='utf-8')
+
+      - name: Validate bounded diff and push exact patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected='.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'
+          changed="$(git diff --name-only)"
+          test "$changed" = "$expected"
+          git diff --check
+          stats="$(git diff --numstat -- "$expected")"
+          test "$stats" = $'3\t2\t.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- "$expected"
+          git commit -m 'chore(mcft-cap09): route production-live protected main through QCP'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
