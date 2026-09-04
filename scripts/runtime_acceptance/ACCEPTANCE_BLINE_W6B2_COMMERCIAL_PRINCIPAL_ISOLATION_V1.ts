@@ -1,23 +1,28 @@
+import fs from "node:fs";
 import { Pool } from "pg";
 import mqtt, { type MqttClient } from "mqtt";
 
 const host = String(process.env.W6B2_DB_HOST ?? "127.0.0.1").trim();
 const port = Number.parseInt(String(process.env.W6B2_DB_PORT ?? "5433"), 10);
 const database = String(process.env.POSTGRES_DB ?? "landos").trim();
-const telemetryDbPassword = required("GEOX_TELEMETRY_DATABASE_PASSWORD");
-const jobsDbPassword = required("GEOX_JOBS_DATABASE_PASSWORD");
-const executorDbPassword = required("GEOX_EXECUTOR_DATABASE_PASSWORD");
+const telemetryDbPassword = secret("GEOX_TELEMETRY_DATABASE_PASSWORD", "/run/geox/telemetry/db_password");
+const jobsDbPassword = secret("GEOX_JOBS_DATABASE_PASSWORD", "/run/geox/jobs/db_password");
+const executorDbPassword = secret("GEOX_EXECUTOR_DATABASE_PASSWORD", "/run/geox/executor/db_password");
 
 const telemetryMqttUsername = String(process.env.GEOX_TELEMETRY_MQTT_USERNAME ?? "geox_telemetry_ingest_v1").trim();
-const telemetryMqttPassword = required("GEOX_TELEMETRY_MQTT_PASSWORD");
+const telemetryMqttPassword = secret("GEOX_TELEMETRY_MQTT_PASSWORD", "/run/geox/telemetry/mqtt_password");
 const executorMqttUsername = String(process.env.GEOX_EXECUTOR_MQTT_USERNAME ?? "geox_executor_v1").trim();
-const executorMqttPassword = required("GEOX_EXECUTOR_MQTT_PASSWORD");
+const executorMqttPassword = secret("GEOX_EXECUTOR_MQTT_PASSWORD", "/run/geox/executor/mqtt_password");
 const mqttUrl = String(process.env.W6B2_MQTT_URL ?? "mqtt://127.0.0.1:1883").trim();
 
-function required(name: string): string {
-  const value = String(process.env[name] ?? "");
-  if (!value) throw new Error(`W6B2_RUNTIME_PROOF_MISSING_ENV:${name}`);
-  return value;
+function secret(envName: string, filePath: string): string {
+  const fromEnv = String(process.env[envName] ?? "");
+  if (fromEnv) return fromEnv;
+  try {
+    const fromFile = fs.readFileSync(filePath, "utf8").trim();
+    if (fromFile) return fromFile;
+  } catch {}
+  throw new Error(`W6B2_RUNTIME_PROOF_MISSING_SECRET:${envName}:${filePath}`);
 }
 
 function assert(condition: unknown, message: string, detail?: unknown): asserts condition {
@@ -67,7 +72,7 @@ async function verifyDatabasePrincipal(principal: (typeof principals)[number]) {
     `);
     const row = identity.rows[0];
     assert(row, "W6B2_DB_IDENTITY_MISSING", principal.kind);
-    assert(row.session_user === principal.user && row.current_user === principal.user, "W6B2_DB_IDENTITY_COLLAPSED", { principal, row });
+    assert(row.session_user === principal.user && row.current_user === principal.user, "W6B2_DB_IDENTITY_COLLAPSED", { principal: principal.kind, row });
     assert(row.rolcanlogin, "W6B2_DB_LOGIN_DISABLED", principal.kind);
     assert(!row.rolinherit && !row.rolsuper && !row.rolcreatedb && !row.rolcreaterole && !row.rolreplication && !row.rolbypassrls, "W6B2_DB_ROLE_FLAGS_INVALID", { principal: principal.kind, row });
     assert(!row.can_set_runtime, "W6B2_DB_CAN_SET_MCFT_RUNTIME_ROLE", principal.kind);
@@ -187,10 +192,6 @@ async function verifyMqttBoundary() {
 
     const executorPayload = `executor-allowed-${nonce}`;
     const delivered = new Promise<boolean>((resolve) => {
-      const timer = setTimeout(() => {
-        telemetry.removeListener("message", handler);
-        resolve(false);
-      }, 2500);
       const handler = (incomingTopic: string, payload: Buffer) => {
         if (incomingTopic === topic && payload.toString("utf8") === executorPayload) {
           clearTimeout(timer);
@@ -198,6 +199,10 @@ async function verifyMqttBoundary() {
           resolve(true);
         }
       };
+      const timer = setTimeout(() => {
+        telemetry.removeListener("message", handler);
+        resolve(false);
+      }, 2500);
       telemetry.on("message", handler);
     });
     await publish(executor, topic, executorPayload);
