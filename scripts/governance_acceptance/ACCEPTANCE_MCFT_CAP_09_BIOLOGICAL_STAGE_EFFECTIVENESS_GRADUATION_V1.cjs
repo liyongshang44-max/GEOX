@@ -4,6 +4,7 @@ const fs=require("node:fs");
 const cp=require("node:child_process");
 
 const EXPECTED_BASE="8d20fe6510377544422fb271c59b8b70e9501884";
+const SUCCESSOR_BASE="d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3";
 const BASE=process.env.MCFT_CAP09_BIO_STAGE_EFFECT_BASE_SHA;
 const paths=[
   ".github/workflows/mcft-cap-09-biological-stage-effectiveness-graduation-v1.yml",
@@ -16,10 +17,21 @@ function fail(c,d){throw new Error(d?c+":"+d:c)}
 function eq(a,b,c){if(a!==b)fail(c,"expected="+JSON.stringify(b)+" actual="+JSON.stringify(a))}
 function git(){return cp.execFileSync("git",Array.from(arguments),{encoding:"utf8"}).trim()}
 
-eq(BASE,EXPECTED_BASE,"BIO_STAGE_EFFECT_EXACT_BASE_REQUIRED");
-eq(git("merge-base",EXPECTED_BASE,"HEAD"),EXPECTED_BASE,"BIO_STAGE_EFFECT_BASE_NOT_ANCESTOR");
-const changed=git("diff","--name-only",EXPECTED_BASE+"...HEAD").split(/\r?\n/).filter(Boolean).sort();
-eq(JSON.stringify(changed),JSON.stringify(paths),"BIO_STAGE_EFFECT_EXACT_FIVE_FILE_BOUNDARY_REQUIRED");
+const successor=BASE===SUCCESSOR_BASE;
+if(successor){
+  eq(git("merge-base",SUCCESSOR_BASE,"HEAD"),SUCCESSOR_BASE,"BIO_STAGE_EFFECT_SUCCESSOR_BASE_NOT_ANCESTOR");
+}else{
+  eq(BASE,EXPECTED_BASE,"BIO_STAGE_EFFECT_EXACT_BASE_REQUIRED");
+  eq(git("merge-base",EXPECTED_BASE,"HEAD"),EXPECTED_BASE,"BIO_STAGE_EFFECT_BASE_NOT_ANCESTOR");
+}
+const diffBase=successor?SUCCESSOR_BASE:EXPECTED_BASE;
+const changed=git("diff","--name-only",diffBase+"...HEAD").split(/\r?\n/).filter(Boolean).sort();
+if(!successor){
+  eq(JSON.stringify(changed),JSON.stringify(paths),"BIO_STAGE_EFFECT_EXACT_FIVE_FILE_BOUNDARY_REQUIRED");
+}else{
+  if(!changed.includes("apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts")) fail("BIO_STAGE_EFFECT_SUCCESSOR_COMPOSITION_DELTA_REQUIRED");
+  for(const frozen of [paths[1],paths[3],paths[4]]) eq(git("rev-parse","HEAD:"+frozen),git("rev-parse",SUCCESSOR_BASE+":"+frozen),"BIO_STAGE_EFFECT_SUCCESSOR_AUTHORITY_DRIFT:"+frozen);
+}
 
 const a=JSON.parse(fs.readFileSync(paths[1],"utf8"));
 eq(a.record_status,"CANDIDATE_NOT_EFFECTIVE_UNTIL_EXACT_HEAD_PROOF_AND_PROTECTED_MAIN_MERGE","BIO_STAGE_EFFECT_STATUS");
@@ -54,7 +66,8 @@ for(const forbidden of [
 ]) if(wf.includes(forbidden))fail("BIO_STAGE_EFFECT_WORKFLOW_FORBIDDEN",forbidden);
 
 console.log(JSON.stringify({
-  status:"PASS",exact_base_sha:EXPECTED_BASE,subject_head_sha:git("rev-parse","HEAD"),
+  status:"PASS",exact_base_sha:successor?SUCCESSOR_BASE:EXPECTED_BASE,subject_head_sha:git("rev-parse","HEAD"),
+  successor_requalification:successor,
   exact_changed_file_count:changed.length,real_effectiveness_issued:false,
   runtime_start_authorized:false,formal_v5_authorized:false
 }));

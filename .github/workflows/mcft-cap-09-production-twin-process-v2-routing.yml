@@ -3,12 +3,14 @@ name: MCFT CAP-09 Production Twin Process V2 Routing
 on:
   pull_request:
     branches:
+      - main
       - feat/mcft-cap09-twin-v2-stage-qcp-registration-v1
     paths:
       - .github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml
       - .github/workflows/mcft-cap-09-production-twin-process-v2-routing.yml
       - apps/server/scripts/write_dist_entries.cjs
       - apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts
+      - apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts
       - docker-compose.mcft-cap09-production.yml
       - scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs
       - scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts
@@ -22,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      MCFT_CAP09_PRODUCTION_TWIN_V2_ROUTING_BASE_SHA: f605f7e22ad7a4b7605be885ef1328f2b8283b55
+      MCFT_CAP09_PRODUCTION_TWIN_V2_ROUTING_BASE_SHA: ${{ github.event.pull_request.base.sha }}
     steps:
       - uses: actions/checkout@v4
         with:

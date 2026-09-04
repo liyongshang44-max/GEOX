@@ -5,6 +5,7 @@ const fs=require("node:fs");
 const cp=require("node:child_process");
 
 const EXPECTED_BASE="f605f7e22ad7a4b7605be885ef1328f2b8283b55";
+const SUCCESSOR_BASE="d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3";
 const BASE=process.env.MCFT_CAP09_PRODUCTION_TWIN_V2_ROUTING_BASE_SHA;
 const expected=[
   ".github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml",
@@ -21,10 +22,29 @@ function fail(code,detail){throw new Error(detail?code+":"+detail:code)}
 function eq(a,b,code){if(a!==b)fail(code,"expected="+JSON.stringify(b)+" actual="+JSON.stringify(a))}
 function git(){return cp.execFileSync("git",Array.from(arguments),{encoding:"utf8"}).trim()}
 
-eq(BASE,EXPECTED_BASE,"PRODUCTION_TWIN_V2_ROUTING_EXACT_BASE_REQUIRED");
-eq(git("merge-base",EXPECTED_BASE,"HEAD"),EXPECTED_BASE,"PRODUCTION_TWIN_V2_ROUTING_BASE_NOT_ANCESTOR");
-const changed=git("diff","--name-only",EXPECTED_BASE+"...HEAD").split(/\r?\n/).filter(Boolean).sort();
-eq(JSON.stringify(changed),JSON.stringify(expected),"PRODUCTION_TWIN_V2_ROUTING_EXACT_EIGHT_FILE_BOUNDARY_REQUIRED");
+const successor=BASE===SUCCESSOR_BASE;
+if(successor){
+  eq(git("merge-base",SUCCESSOR_BASE,"HEAD"),SUCCESSOR_BASE,"PRODUCTION_TWIN_V2_ROUTING_SUCCESSOR_BASE_NOT_ANCESTOR");
+}else{
+  eq(BASE,EXPECTED_BASE,"PRODUCTION_TWIN_V2_ROUTING_EXACT_BASE_REQUIRED");
+  eq(git("merge-base",EXPECTED_BASE,"HEAD"),EXPECTED_BASE,"PRODUCTION_TWIN_V2_ROUTING_BASE_NOT_ANCESTOR");
+}
+const diffBase=successor?SUCCESSOR_BASE:EXPECTED_BASE;
+const changed=git("diff","--name-only",diffBase+"...HEAD").split(/\r?\n/).filter(Boolean).sort();
+if(!successor){
+  eq(JSON.stringify(changed),JSON.stringify(expected),"PRODUCTION_TWIN_V2_ROUTING_EXACT_EIGHT_FILE_BOUNDARY_REQUIRED");
+}else{
+  if(!changed.includes("apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts")) fail("PRODUCTION_TWIN_V2_ROUTING_SUCCESSOR_COMPOSITION_DELTA_REQUIRED");
+  for(const frozen of [
+    ".github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml",
+    "apps/server/scripts/write_dist_entries.cjs",
+    "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts",
+    "docker-compose.mcft-cap09-production.yml",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts",
+    "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json"
+  ]) eq(git("rev-parse","HEAD:"+frozen),git("rev-parse",SUCCESSOR_BASE+":"+frozen),"PRODUCTION_TWIN_V2_ROUTING_SUCCESSOR_DIRECT_ROUTE_DRIFT:"+frozen);
+}
 
 const processV2=fs.readFileSync(
   "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts","utf8"
@@ -85,7 +105,8 @@ for(const historical of [
 
 console.log(JSON.stringify({
   status:"PASS",
-  exact_base_sha:EXPECTED_BASE,
+  exact_base_sha:successor?SUCCESSOR_BASE:EXPECTED_BASE,
+  successor_requalification:successor,
   subject_head_sha:git("rev-parse","HEAD"),
   exact_changed_file_count:changed.length,
   production_route:"MCFT_CAP09_TWIN_RUNTIME_PROCESS_V2",

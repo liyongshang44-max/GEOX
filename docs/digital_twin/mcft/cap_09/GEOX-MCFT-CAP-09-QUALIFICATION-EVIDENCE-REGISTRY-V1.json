@@ -1823,6 +1823,86 @@
         "artifact_absence_reason": "RUN_LEVEL_EXACT_RUNTIME_CUTOVER_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
         "immutable_binding_sha256": "b93380b5c85be66e6098c303dcf8ab1fff362a4791dbd604fc5d45ff8da7128c"
+      },
+      {
+        "evidence_id": "PHASE2_EVIDENCE_PROVIDER_MODULES_REQUAL_8F290015_ROLLING_STAGE_V1",
+        "check_id": "PHASE2_EVIDENCE_PROVIDER_MODULES",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "rolling-stage-resolver-successor-requalification-phase2-provider-continuity",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "8f2900156df36e6a5b6ff86114c51db73fdca3f4",
+        "workflow_name": "mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor",
+        "workflow_path": ".github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml",
+        "run_id": 33899553277,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "8f2900156df36e6a5b6ff86114c51db73fdca3f4",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:5456d16652223bc6c15305078471c91526ed62d5a5891307a0f2e4aa20facf97",
+        "artifact_absence_reason": "RUN_LEVEL_EXACT_SUBJECT_ROLLING_STAGE_RESOLVER_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "8645b65d1ce3b17f75e9262095ff89ef6e19d39ad4840922ddf083990a40bec5"
+      },
+      {
+        "evidence_id": "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR_REQUAL_8F290015_ROLLING_STAGE_V1",
+        "check_id": "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "rolling-stage-resolver-successor-requalification-twin-v2-stage-authority",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "8f2900156df36e6a5b6ff86114c51db73fdca3f4",
+        "workflow_name": "MCFT CAP-09 Twin Composition V2 Stage Authority",
+        "workflow_path": ".github/workflows/mcft-cap-09-twin-composition-v2-stage-authority.yml",
+        "run_id": 33899553414,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "8f2900156df36e6a5b6ff86114c51db73fdca3f4",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:a7bd3d729ddc879d135db4459d3b8309c4e4c9990e1285eddab141e32e1f1219",
+        "artifact_absence_reason": "RUN_LEVEL_EXACT_SUBJECT_ROLLING_STAGE_RESOLVER_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "061c6ea313c0487f63bab61ca5793c93b144dc7536a01b902808e95a35982965"
+      },
+      {
+        "evidence_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING_REQUAL_8F290015_ROLLING_STAGE_V1",
+        "check_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "rolling-stage-resolver-successor-requalification-production-twin-v2-routing",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "8f2900156df36e6a5b6ff86114c51db73fdca3f4",
+        "workflow_name": "MCFT CAP-09 Production Twin Process V2 Routing",
+        "workflow_path": ".github/workflows/mcft-cap-09-production-twin-process-v2-routing.yml",
+        "run_id": 33899553628,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "8f2900156df36e6a5b6ff86114c51db73fdca3f4",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:8700ffe9997f9726579d443e02238ca309161a62bbd8b57cabf3dcfc81706ff4",
+        "artifact_absence_reason": "RUN_LEVEL_EXACT_SUBJECT_ROLLING_STAGE_RESOLVER_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "d6b6e6d917d76c72e2923d3b5c2a1380442a9439ba26b545de68be751a2bfb27"
+      },
+      {
+        "evidence_id": "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_REQUAL_8F290015_ROLLING_STAGE_V1",
+        "check_id": "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "rolling-stage-resolver-successor-requalification-biological-stage-effectiveness",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "8f2900156df36e6a5b6ff86114c51db73fdca3f4",
+        "workflow_name": "MCFT CAP-09 Biological Stage Effectiveness Graduation",
+        "workflow_path": ".github/workflows/mcft-cap-09-biological-stage-effectiveness-graduation-v1.yml",
+        "run_id": 33899553670,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "8f2900156df36e6a5b6ff86114c51db73fdca3f4",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:0a3acef65dd01c9377e4bb607e47f2b9b3a7669340d35be945177ffe3ee8bde7",
+        "artifact_absence_reason": "RUN_LEVEL_EXACT_SUBJECT_ROLLING_STAGE_RESOLVER_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "48847da9f80f5e3a2aa7bd977e27634b97017a0ffe2f83f274829395b367d7fb"
       }
     ],
     "durable_anchors": {
@@ -2892,6 +2972,62 @@
             "created_at": "2026-09-03T18:06:58Z",
             "updated_at": "2026-09-03T18:09:25Z"
           }
+        },
+        {
+          "evidence_id": "PHASE2_EVIDENCE_PROVIDER_MODULES_REQUAL_8F290015_ROLLING_STAGE_V1",
+          "run_id": 33899553277,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 213,
+            "workflow_path": ".github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml",
+            "workflow_name": "mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor",
+            "head_sha": "8f2900156df36e6a5b6ff86114c51db73fdca3f4",
+            "base_sha": "d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3",
+            "created_at": "2026-09-04T17:15:02Z",
+            "updated_at": "2026-09-04T17:16:34Z"
+          }
+        },
+        {
+          "evidence_id": "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR_REQUAL_8F290015_ROLLING_STAGE_V1",
+          "run_id": 33899553414,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 18,
+            "workflow_path": ".github/workflows/mcft-cap-09-twin-composition-v2-stage-authority.yml",
+            "workflow_name": "MCFT CAP-09 Twin Composition V2 Stage Authority",
+            "head_sha": "8f2900156df36e6a5b6ff86114c51db73fdca3f4",
+            "base_sha": "d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3",
+            "created_at": "2026-09-04T17:15:02Z",
+            "updated_at": "2026-09-04T17:15:56Z"
+          }
+        },
+        {
+          "evidence_id": "PRODUCTION_TWIN_PROCESS_V2_ROUTING_REQUAL_8F290015_ROLLING_STAGE_V1",
+          "run_id": 33899553628,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 8,
+            "workflow_path": ".github/workflows/mcft-cap-09-production-twin-process-v2-routing.yml",
+            "workflow_name": "MCFT CAP-09 Production Twin Process V2 Routing",
+            "head_sha": "8f2900156df36e6a5b6ff86114c51db73fdca3f4",
+            "base_sha": "d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3",
+            "created_at": "2026-09-04T17:15:02Z",
+            "updated_at": "2026-09-04T17:16:43Z"
+          }
+        },
+        {
+          "evidence_id": "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION_REQUAL_8F290015_ROLLING_STAGE_V1",
+          "run_id": 33899553670,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 7,
+            "workflow_path": ".github/workflows/mcft-cap-09-biological-stage-effectiveness-graduation-v1.yml",
+            "workflow_name": "MCFT CAP-09 Biological Stage Effectiveness Graduation",
+            "head_sha": "8f2900156df36e6a5b6ff86114c51db73fdca3f4",
+            "base_sha": "d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3",
+            "created_at": "2026-09-04T17:15:02Z",
+            "updated_at": "2026-09-04T17:15:14Z"
+          }
         }
       ],
       "rules": {
@@ -2921,7 +3057,8 @@
           "ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23",
           "0630bb63b82c9ba108854f5aa26b096f9221f031",
           "ef9f7d45114c98c16ad57ce69226323935f685db",
-          "d82d25f76535b2779ef6b15b3eb32c15c245dedf"
+          "d82d25f76535b2779ef6b15b3eb32c15c245dedf",
+          "d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3"
         ],
         "dependency_digest_must_match_current": true,
         "anchor_is_not_production_authority": true

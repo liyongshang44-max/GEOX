@@ -20,7 +20,8 @@
     "ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23",
     "0630bb63b82c9ba108854f5aa26b096f9221f031",
     "ef9f7d45114c98c16ad57ce69226323935f685db",
-    "d82d25f76535b2779ef6b15b3eb32c15c245dedf"
+    "d82d25f76535b2779ef6b15b3eb32c15c245dedf",
+    "d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3"
   ],
   "stacked_predecessor_branch": "fix/mcft-cap09-v13-autonomous-forcing-foundation",
   "default_stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
@@ -726,6 +727,15 @@
         ".github/workflows/mcft-cap-09-t4r1-rolling-current-crop-candidate-v1.yml",
         "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_T4R1_ROLLING_THERMAL_SNAPSHOT_V1.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_ROLLING_THERMAL_SNAPSHOT_V1.cjs"
+      ]
+    },
+    "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1.yml",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.test.ts",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs"
       ]
     }
   },
@@ -1557,6 +1567,32 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_ROLLING_THERMAL_SNAPSHOT_V1.cjs"
+    },
+    {
+      "check_id": "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM",
+      "owner": "MCFT_CAP09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_QUALIFICATION",
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md"
+      ],
+      "resolver_ids": [
+        "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "execution_workflow": ".github/workflows/mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
+      "fail_policy": "FAIL_CLOSED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs"
     }
   ],
   "non_effects": {

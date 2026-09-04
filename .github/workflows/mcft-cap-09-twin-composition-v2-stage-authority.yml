@@ -3,6 +3,7 @@ name: MCFT CAP-09 Twin Composition V2 Stage Authority
 on:
   pull_request:
     branches:
+      - main
       - feat/mcft-cap09-twin-stage-authority-mount-v1
     paths:
       - .github/workflows/mcft-cap-09-twin-composition-v2-stage-authority.yml
@@ -25,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      MCFT_CAP09_TWIN_V2_STAGE_BASE_SHA: 373e33c54109540a2bdbf1c3a31626b731d5cfc6
+      MCFT_CAP09_TWIN_V2_STAGE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
