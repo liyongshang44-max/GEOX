@@ -181,6 +181,7 @@ jobs:
           NODE
 
       - name: Start isolated Commercial runtime
+        id: start-runtime
         timeout-minutes: 10
         shell: bash
         run: |
@@ -189,6 +190,184 @@ jobs:
           docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml up -d minio minio-init
           timeout 420 docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml up -d postgres mqtt server telemetry-ingest jobs executor
           docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml ps
+
+      - name: Persist W6-B2 startup terminal evidence
+        if: always()
+        shell: bash
+        env:
+          W6B2_START_OUTCOME: ${{ steps.start-runtime.outcome }}
+          W6B2_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          W6B2_RUN_ID: ${{ github.run_id }}
+          W6B2_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -uo pipefail
+          mkdir -p .w6b2-runtime-proof
+          docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml ps -a || true
+          node <<'NODE'
+          const fs = require('node:fs');
+          const cp = require('node:child_process');
+
+          const composePrefix = ['docker', 'compose', '--env-file', '.env.w6b2', '-f', 'docker-compose.commercial_v1.yml'];
+          const services = [
+            'commercial-principal-secret-init',
+            'bline-commercial-principal-bootstrap',
+            'postgres',
+            'mqtt',
+            'server',
+            'telemetry-ingest',
+            'jobs',
+            'executor',
+            'minio',
+            'minio-init',
+          ];
+          const startupTargets = ['postgres', 'mqtt', 'server', 'telemetry-ingest', 'jobs', 'executor'];
+
+          function exec(args) {
+            try {
+              return {
+                ok: true,
+                stdout: cp.execFileSync(args[0], args.slice(1), {
+                  encoding: 'utf8',
+                  stdio: ['ignore', 'pipe', 'pipe'],
+                  maxBuffer: 4 * 1024 * 1024,
+                }),
+                stderr: '',
+                code: 0,
+              };
+            } catch (error) {
+              return {
+                ok: false,
+                stdout: String(error?.stdout ?? ''),
+                stderr: String(error?.stderr ?? ''),
+                code: Number.isInteger(error?.status) ? error.status : null,
+              };
+            }
+          }
+
+          function redact(value) {
+            return String(value ?? '')
+              .replace(/([a-z][a-z0-9+.-]*:\/\/)([^@\s]+)@/gi, '$1<redacted>@')
+              .replace(/\b(?:postgres(?:ql)?|mqtt):\/\/[^\s'"`]+/gi, (match) => `${match.split('://', 1)[0]}://<redacted>`)
+              .replace(/((?:password|passwd|pwd|token|secret|authorization|api[_-]?key|connection[_-]?(?:uri|string))\s*["']?\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,}]+)/gi, '$1<redacted>')
+              .replace(/\b[a-f0-9]{32,}\b/gi, '<redacted-hex>')
+              .replace(/\b[A-Za-z0-9+\/_=-]{48,}\b/g, '<redacted-value>');
+          }
+
+          const records = [];
+          for (const service of services) {
+            const idResult = exec([...composePrefix, 'ps', '-aq', service]);
+            const id = idResult.stdout.trim().split(/\r?\n/).filter(Boolean)[0] ?? '';
+            if (!id) {
+              records.push({
+                service,
+                container: null,
+                state: 'MISSING',
+                exit_code: null,
+                health_status: 'UNKNOWN',
+              });
+              continue;
+            }
+            const inspectResult = exec(['docker', 'inspect', id]);
+            let inspect = null;
+            try {
+              const parsed = JSON.parse(inspectResult.stdout || '[]');
+              inspect = Array.isArray(parsed) ? parsed[0] : null;
+            } catch {}
+            const state = inspect?.State ?? {};
+            records.push({
+              service,
+              container: typeof inspect?.Name === 'string' ? inspect.Name.replace(/^\//, '') : id.slice(0, 12),
+              state: typeof state.Status === 'string' ? state.Status : 'UNKNOWN',
+              exit_code: Number.isInteger(state.ExitCode) ? state.ExitCode : null,
+              health_status: typeof state.Health?.Status === 'string' ? state.Health.Status : 'NONE',
+            });
+          }
+
+          const byService = new Map(records.map((record) => [record.service, record]));
+          let composeConfig = {};
+          try {
+            composeConfig = JSON.parse(fs.readFileSync('/tmp/w6b2-commercial.rendered.json', 'utf8'));
+          } catch {}
+
+          function dependencySatisfied(condition, record) {
+            if (!record || record.state === 'MISSING') return false;
+            if (condition === 'service_healthy') return record.health_status === 'healthy';
+            if (condition === 'service_completed_successfully') return record.state === 'exited' && record.exit_code === 0;
+            return record.state === 'running';
+          }
+
+          const outcome = process.env.W6B2_START_OUTCOME ?? 'unknown';
+          let failed = records.find((record) =>
+            record.state === 'dead' ||
+            record.health_status === 'unhealthy' ||
+            (record.state === 'exited' && record.exit_code !== null && record.exit_code !== 0)
+          ) ?? null;
+          let failingDependency = null;
+
+          for (const target of startupTargets) {
+            const deps = composeConfig?.services?.[target]?.depends_on ?? {};
+            for (const [dependency, spec] of Object.entries(deps)) {
+              const condition = typeof spec === 'object' && spec !== null && typeof spec.condition === 'string'
+                ? spec.condition
+                : 'service_started';
+              const dependencyRecord = byService.get(dependency);
+              if (!dependencySatisfied(condition, dependencyRecord)) {
+                if (!failed) failed = byService.get(target) ?? { service: target, container: null, state: 'MISSING', exit_code: null, health_status: 'UNKNOWN' };
+                failingDependency = dependency;
+                break;
+              }
+            }
+            if (failingDependency) break;
+          }
+
+          if (!failed && outcome !== 'success') {
+            failed = startupTargets
+              .map((service) => byService.get(service))
+              .find((record) => !record || record.state !== 'running' || record.health_status === 'unhealthy') ?? null;
+          }
+
+          const logsResult = exec([...composePrefix, 'logs', '--no-color', '--tail', '80', ...services]);
+          const redactedLines = redact(`${logsResult.stdout}\n${logsResult.stderr}`)
+            .split(/\r?\n/)
+            .filter((line) => line.trim().length > 0)
+            .slice(-240);
+          fs.writeFileSync('.w6b2-runtime-proof/startup-logs.redacted.log', `${redactedLines.join('\n')}\n`);
+
+          const relevantNames = [failed?.service, failingDependency, failed?.container].filter(Boolean);
+          const relevantLines = relevantNames.length > 0
+            ? redactedLines.filter((line) => relevantNames.some((name) => line.includes(String(name))))
+            : redactedLines;
+          const lastError = outcome === 'success'
+            ? null
+            : (relevantLines.slice(-5).join(' | ') || 'startup step failed without a bounded redacted service error').slice(-1200);
+
+          const terminal = {
+            result: outcome === 'success' ? 'PASS' : 'FAIL',
+            phase: 'START_ISOLATED_COMMERCIAL_RUNTIME',
+            head_sha: process.env.W6B2_HEAD_SHA ?? 'UNKNOWN',
+            run_id: process.env.W6B2_RUN_ID ?? 'UNKNOWN',
+            run_attempt: Number.parseInt(process.env.W6B2_RUN_ATTEMPT ?? '0', 10),
+            service: failed?.service ?? null,
+            container: failed?.container ?? null,
+            state: failed?.state ?? (outcome === 'success' ? 'RUNNING_OR_COMPLETED' : 'UNKNOWN'),
+            exit_code: failed?.exit_code ?? null,
+            health_status: failed?.health_status ?? (outcome === 'success' ? 'HEALTHY_OR_NOT_APPLICABLE' : 'UNKNOWN'),
+            failing_dependency: failingDependency,
+            last_error: lastError,
+          };
+          const diagnostic = {
+            result: terminal.result,
+            phase: terminal.phase,
+            startup_outcome: outcome,
+            service_states: records,
+            failing_dependency: failingDependency,
+            redacted_log_lines: redactedLines.length,
+            redaction_applied: true,
+          };
+          fs.writeFileSync('.w6b2-runtime-proof/startup-terminal.json', `${JSON.stringify(terminal)}\n`);
+          fs.writeFileSync('.w6b2-runtime-proof/startup-diagnostic.json', `${JSON.stringify(diagnostic)}\n`);
+          console.log('W6B2_STARTUP_TERMINAL_RECORD=' + JSON.stringify(terminal));
+          NODE
 
       - name: Wait for server and principal bootstrap
         shell: bash
@@ -310,6 +489,9 @@ jobs:
         with:
           name: w6b2-runtime-terminal-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
+            .w6b2-runtime-proof/startup-terminal.json
+            .w6b2-runtime-proof/startup-diagnostic.json
+            .w6b2-runtime-proof/startup-logs.redacted.log
             .w6b2-runtime-proof/terminal.json
             .w6b2-runtime-proof/diagnostic.json
           if-no-files-found: error
