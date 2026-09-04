@@ -1,0 +1,120 @@
+name: mcft-cap09-temp-settle-postcutover-qcp
+
+on:
+  push:
+    branches:
+      - feat/mcft-cap09-postcutover-stage-refresh-v1
+    paths:
+      - .github/workflows/mcft-cap09-temp-settle-postcutover-qcp.yml
+
+permissions:
+  contents: write
+
+jobs:
+  settle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact carrier head
+        uses: actions/checkout@v4
+        with:
+          ref: feat/mcft-cap09-postcutover-stage-refresh-v1
+          fetch-depth: 0
+
+      - name: Verify carrier parent
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "30c8b08f00e81eb216a9b2b6929c5036e8302ba5"
+
+      - name: Settle production-live QCP lineage
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+
+          const preflightPath = 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs';
+          let preflight = fs.readFileSync(preflightPath, 'utf8');
+          const oldBaseLine = '    const postEffectivenessRuntimeCutoverBase = String(process.env.POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA || "");\n';
+          const newBaseLine = oldBaseLine + '    const postRuntimeCutoverProductionLiveBase = String(process.env.POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA || "");\n';
+          if ((preflight.split(oldBaseLine).length - 1) !== 1) throw new Error('PREFLIGHT_BASE_DECLARATION_BOUNDARY_DRIFT');
+          preflight = preflight.replace(oldBaseLine, newBaseLine);
+
+          const oldCondition = '        (/^[0-9a-f]{40}$/.test(postEffectivenessRuntimeCutoverBase) && args.base === postEffectivenessRuntimeCutoverBase)\n';
+          const newCondition = '        (/^[0-9a-f]{40}$/.test(postEffectivenessRuntimeCutoverBase) && args.base === postEffectivenessRuntimeCutoverBase) ||\n        (/^[0-9a-f]{40}$/.test(postRuntimeCutoverProductionLiveBase) && args.base === postRuntimeCutoverProductionLiveBase)\n';
+          if ((preflight.split(oldCondition).length - 1) !== 1) throw new Error('PREFLIGHT_BASE_CONDITION_BOUNDARY_DRIFT');
+          preflight = preflight.replace(oldCondition, newCondition);
+          fs.writeFileSync(preflightPath, preflight);
+
+          const registryPath = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json';
+          const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+          const evidenceId = 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_7C5A74CD_RUNTIME_CUTOVER_V1';
+          const entries = registry.requalification_evidence?.entries;
+          const anchors = registry.requalification_evidence?.durable_anchors?.entries;
+          if (!Array.isArray(entries) || !Array.isArray(anchors)) throw new Error('REQUALIFICATION_REGISTRY_STRUCTURE_MISSING');
+          if (entries.some((x) => x.evidence_id === evidenceId) || anchors.some((x) => x.evidence_id === evidenceId)) throw new Error('RUNTIME_CUTOVER_PHASE5_EVIDENCE_ALREADY_PRESENT');
+
+          const entry = {
+            evidence_id: evidenceId,
+            check_id: 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS',
+            evidence_class: 'IMMUTABLE_WORKFLOW_RUN',
+            generation: 'production-runtime-cutover-phase5-production-equivalent',
+            stage: 'SUCCESSOR_SUBJECT_PRE_MERGE',
+            subject_sha: '7c5a74cd202028b0c5252bb8dfc113c3152b804d',
+            workflow_name: 'mcft-cap-09-phase5-two-service-accelerated-24t',
+            workflow_path: '.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml',
+            run_id: 33788575046,
+            run_conclusion: 'success',
+            artifact_id: null,
+            artifact_digest: null,
+            dependency_subject_sha: '7c5a74cd202028b0c5252bb8dfc113c3152b804d',
+            dependency_digest_strategy: 'GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1',
+            dependency_digest: 'sha256:63e8aac2a5c8f27d4e7e78514f3858647ac72a105ed33d5228be3a6e0ae3dd41',
+            artifact_absence_reason: 'RUN_LEVEL_EXACT_RUNTIME_CUTOVER_REQUALIFICATION_EVIDENCE_ONLY',
+            immutable: true,
+          };
+          const bindingFields = [
+            'evidence_id','check_id','evidence_class','generation','stage','subject_sha',
+            'workflow_name','workflow_path','run_id','run_conclusion','artifact_id','artifact_digest',
+            'dependency_subject_sha','dependency_digest_strategy','dependency_digest',
+            'artifact_absence_reason','immutable',
+          ];
+          entry.immutable_binding_sha256 = crypto.createHash('sha256').update(JSON.stringify(bindingFields.map((key) => entry[key] ?? null))).digest('hex');
+          entries.push(entry);
+          anchors.push({
+            evidence_id: evidenceId,
+            run_id: 33788575046,
+            run_snapshot: {
+              event: 'pull_request',
+              run_number: 361,
+              workflow_path: '.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml',
+              workflow_name: 'mcft-cap-09-phase5-two-service-accelerated-24t',
+              head_sha: '7c5a74cd202028b0c5252bb8dfc113c3152b804d',
+              base_sha: '0630bb63b82c9ba108854f5aa26b096f9221f031',
+              created_at: '2026-09-03T18:06:58Z',
+              updated_at: '2026-09-03T18:09:25Z'
+            }
+          });
+          fs.writeFileSync(registryPath, JSON.stringify(registry, null, 2) + '\n');
+          console.log('PHASE5_BINDING=' + entry.immutable_binding_sha256);
+          NODE
+
+          node --check scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_IMMUTABLE_EVIDENCE_REFS_V1.cjs >/tmp/immutable-evidence.log
+          grep -q '"status": "PASS"' /tmp/immutable-evidence.log
+          git diff --check
+          mapfile -t changed < <(git diff --name-only)
+          test "${#changed[@]}" -eq 2
+          test "${changed[0]}" = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json"
+          test "${changed[1]}" = "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"
+
+      - name: Commit exact settlement
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+          git commit -m "gov(mcft-cap09): settle production-live QCP requalification lineage"
+          git push origin HEAD:feat/mcft-cap09-postcutover-stage-refresh-v1
