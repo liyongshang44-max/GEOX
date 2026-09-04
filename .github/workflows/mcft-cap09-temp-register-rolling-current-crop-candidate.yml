@@ -1,0 +1,80 @@
+name: mcft-cap09-temp-register-rolling-current-crop-candidate
+
+on:
+  push:
+    branches:
+      - feat/mcft-cap09-rolling-current-crop-candidate-v1
+    paths:
+      - .github/workflows/mcft-cap09-temp-register-rolling-current-crop-candidate.yml
+
+permissions:
+  contents: write
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@v4
+        with:
+          ref: feat/mcft-cap09-rolling-current-crop-candidate-v1
+          fetch-depth: 0
+
+      - name: Register exact QCP ownership
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor d82d25f76535b2779ef6b15b3eb32c15c245dedf HEAD
+          node <<'NODE'
+          const fs=require('fs');
+          const p='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json';
+          const q=JSON.parse(fs.readFileSync(p,'utf8'));
+          const id='T4R1_CURRENT_CROP_ROLLING_CANDIDATE';
+          if(q.dependency_resolvers?.[id]) throw new Error('ROLLING_CANDIDATE_RESOLVER_ALREADY_PRESENT');
+          if(q.checks?.some((x)=>x.check_id===id)) throw new Error('ROLLING_CANDIDATE_CHECK_ALREADY_PRESENT');
+          q.dependency_resolvers[id]={
+            kind:'EXACT_PATH_SET',
+            paths:[
+              '.github/workflows/mcft-cap-09-t4r1-rolling-current-crop-candidate-v1.yml',
+              'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_T4R1_ROLLING_THERMAL_SNAPSHOT_V1.cjs',
+              'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_ROLLING_THERMAL_SNAPSHOT_V1.cjs'
+            ]
+          };
+          q.checks.push({
+            check_id:id,
+            owner:'MCFT_CAP09_CURRENT_CROP_ROLLING_CANDIDATE_QUALIFICATION',
+            generation_scope:['V13_SUCCESSOR_REVALIDATION'],
+            authority_refs:[
+              'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json',
+              'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-PERSISTENT-LIFECYCLE-QUALIFICATION-V1.json',
+              'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json'
+            ],
+            resolver_ids:[id],
+            historical_evidence_policy:'FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD',
+            execution_workflow:'.github/workflows/mcft-cap-09-t4r1-rolling-current-crop-candidate-v1.yml',
+            execution_workflow_status:'IMPLEMENTED_AT_SUCCESSOR_HEAD',
+            fail_policy:'FAIL_CLOSED',
+            carry_forward_policy:'NONE',
+            requalification_triggers:[id],
+            applicable_stages:['SUCCESSOR_SUBJECT_PRE_MERGE'],
+            carry_forward_evidence_id:null,
+            diagnostic_command:'node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_ROLLING_THERMAL_SNAPSHOT_V1.cjs'
+          });
+          fs.writeFileSync(p,JSON.stringify(q,null,2)+'\n');
+          NODE
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_ROLLING_THERMAL_SNAPSHOT_V1.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+          git diff --check
+          mapfile -t changed < <(git diff --name-only)
+          test "${#changed[@]}" -eq 1
+          test "${changed[0]}" = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"
+
+      - name: Commit QCP registration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+          git commit -m "chore(mcft-cap09): register rolling current-crop candidate QCP"
+          git push origin HEAD:feat/mcft-cap09-rolling-current-crop-candidate-v1

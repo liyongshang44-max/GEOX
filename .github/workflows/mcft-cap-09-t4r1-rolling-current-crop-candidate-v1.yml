@@ -1,0 +1,114 @@
+name: MCFT CAP-09 T4R1 Rolling Current-Crop Candidate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-t4r1-rolling-current-crop-candidate-v1.yml'
+      - 'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_T4R1_ROLLING_THERMAL_SNAPSHOT_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_ROLLING_THERMAL_SNAPSHOT_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-t4r1-rolling-current-crop-candidate-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact qualification subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Prove rolling snapshot contract deterministically
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_ROLLING_THERMAL_SNAPSHOT_V1.cjs
+
+      - name: Build current rolling snapshot overlay
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/mcft-cap09-rolling/docs/digital_twin/mcft/cap_09"
+          mkdir -p "$RUNNER_TEMP/mcft-cap09-rolling/docs/digital_twin/mcft"
+          mkdir -p "$RUNNER_TEMP/mcft-cap09-rolling/acceptance-output"
+          node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_T4R1_ROLLING_THERMAL_SNAPSHOT_V1.cjs \
+            --out "$RUNNER_TEMP/mcft-cap09-rolling/docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json" \
+            > acceptance-output/MCFT_CAP09_T4R1_ROLLING_THERMAL_SNAPSHOT_OVERLAY_PROOF.json
+          cp docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json \
+            "$RUNNER_TEMP/mcft-cap09-rolling/docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json"
+
+      - name: Run existing thermal scientific probe against overlay
+        if: github.event_name != 'pull_request'
+        working-directory: ${{ runner.temp }}/mcft-cap09-rolling
+        run: python "$GITHUB_WORKSPACE/scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.py"
+
+      - name: Install lifecycle qualification dependencies
+        if: github.event_name != 'pull_request'
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+
+      - name: Run fresh persistent lifecycle qualification
+        if: github.event_name != 'pull_request'
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.mjs
+
+      - name: Compose ephemeral fresh current-crop candidate
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          cp "$RUNNER_TEMP/mcft-cap09-rolling/acceptance-output/MCFT_CAP09_T4R1_THERMAL_BIOLOGICAL_STAGE_PROBE_RESULT.json" \
+            acceptance-output/MCFT_CAP09_T4R1_THERMAL_BIOLOGICAL_STAGE_PROBE_RESULT.json
+          node scripts/runtime_acceptance/COMPOSE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_V1.cjs
+
+      - name: Enforce candidate-only authority ceiling
+        if: github.event_name != 'pull_request'
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const p='acceptance-output/MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json';
+          const c=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(c.status!=='PASS') throw new Error('ROLLING_CURRENT_CROP_CANDIDATE_NOT_PASS');
+          if(c.architecture_effective!==false || c.runtime_consumption_authorized!==false) throw new Error('ROLLING_CURRENT_CROP_PREMATURE_GRADUATION');
+          for(const key of [
+            'runtime_config_write_authorized','database_write_authorized','scheduler_write_authorized',
+            'formal_evidence_write_authorized','production_runtime_start_authorized',
+            'production_owner_activation_authorized','formal_v5_authorized','a0_authorized',
+            'o00_o23_authorized','mcft_cap09_completed'
+          ]) if(c[key]!==false) throw new Error('ROLLING_CURRENT_CROP_AUTHORITY_CEILING_DRIFT:'+key);
+          console.log(JSON.stringify({status:'PASS',candidate_only:true,production_effect:false,stage:c.biological_stage?.resolved_biological_stage,as_of:c.biological_stage?.authority_as_of}));
+
+      - name: Upload ephemeral rolling candidate evidence
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-t4r1-rolling-current-crop-candidate-${{ github.sha }}
+          path: |
+            acceptance-output/MCFT_CAP09_T4R1_ROLLING_THERMAL_SNAPSHOT_OVERLAY_PROOF.json
+            acceptance-output/MCFT_CAP09_T4R1_THERMAL_BIOLOGICAL_STAGE_PROBE_RESULT.json
+            acceptance-output/MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_RESULT.json
+            acceptance-output/MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json
+          if-no-files-found: error
+          retention-days: 3
