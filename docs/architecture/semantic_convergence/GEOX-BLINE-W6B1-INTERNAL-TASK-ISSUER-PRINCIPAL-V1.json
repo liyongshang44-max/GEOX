@@ -15,6 +15,7 @@
       "apps/server/src/routes/control_approval_request_v1.ts"
     ],
     "canonical_downstream_sink": "POST /api/v1/actions/task",
+    "server_startup_entry": "apps/server/src/server.ts",
     "auth_source": "apps/server/src/auth/ao_act_authz_v0.ts",
     "role_scope_authority": "apps/server/src/domain/auth/roles.ts",
     "commercial_runtime_config": "docker-compose.commercial_v1.yml",
@@ -26,8 +27,8 @@
     "The AO-ACT task payload issuer continues to preserve the authenticated approving human identity.",
     "The internal service principal uses the existing operator role and the existing action.task.create scope only.",
     "No new role, scope, Recommendation authority, Approval authority, Dispatch authority, Receipt authority, Acceptance authority, or Execution authority is created.",
-    "GEOX_INTERNAL_TASK_ISSUER_TOKEN has no operator_token or admin-token fallback in Commercial runtime.",
-    "A missing, revoked, unknown, wrong-role, or over-scoped internal issuer principal fails closed before a task subrequest is sent.",
+    "Commercial runtime selects the internal issuer by stable token_id from the already-authoritative structured token source; it does not use an operator_token or admin-token secret fallback.",
+    "A revoked, unknown, wrong-role, over-scoped, malformed, or token-id/secret-mismatched internal issuer principal fails closed during production-like server startup.",
     "The internal issuer credential cannot authorize approval.decide, action.task.dispatch, action.receipt.submit, acceptance.evaluate, telemetry.write, inspection.write, or unrelated mutation scopes.",
     "W1-W6A accepted behavior remains preserved.",
     "MCFT implementation, docs, workflows, bootstrap, database roles, and runtime semantics remain untouched."
@@ -35,6 +36,7 @@
   "implementation_boundary": {
     "allowed_source_changes": [
       "apps/server/src/auth/internal_task_issuer_principal_v1.ts",
+      "apps/server/src/server.ts",
       "apps/server/src/routes/control_approval_request_v1.ts",
       "docker-compose.commercial_v1.yml",
       "config/auth/security_acceptance_tokens.json",
@@ -61,9 +63,8 @@
     "dedicated issuer exact-scope positive proof",
     "broad operator-token rejection proof",
     "admin-token rejection proof",
-    "missing issuer fail-closed proof",
-    "revoked/unknown/wrong-role/over-scoped issuer fail-closed proof",
-    "approval business issuer remains the approver while task auth audit uses the dedicated service actor",
+    "unknown/revoked/wrong-role/over-scoped/mismatched issuer fail-closed proof",
+    "approval business issuer remains the approver while the internal task subrequest uses the dedicated service credential",
     "unrelated mutation scopes denied for the dedicated issuer token",
     "W1-W6A successor preservation",
     "Frozen PR-SEC-1, residual authority, active-runtime regression",
