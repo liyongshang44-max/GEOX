@@ -21,6 +21,7 @@ on:
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C2B1-LIVE-KBS-SOIL-INGRESS-EXECUTOR-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs'
   merge_group:
     types: [checks_requested]
 
@@ -84,12 +85,13 @@ jobs:
           phase1_sha="8943c752a354cb916cc7f144681203aa9a19f70b"
           phase2_closure_sha="c3346768a44b16b127378cb690ada1d8cfec1049"
           protected_main_adoption_sha="fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8"
-          if [[ "$base_sha" != "$phase1_sha" && "$base_sha" != "$phase2_closure_sha" && "$base_sha" != "$protected_main_adoption_sha" ]]; then
+          rolling_stage_resolver_sha="d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3"
+          if [[ "$base_sha" != "$phase1_sha" && "$base_sha" != "$phase2_closure_sha" && "$base_sha" != "$protected_main_adoption_sha" && "$base_sha" != "$rolling_stage_resolver_sha" ]]; then
             echo "EA5C2B1_GOVERNED_PREDECESSOR_REQUIRED: $base_sha" >&2
             exit 1
           fi
           echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
-          if [ "$base_sha" = "$protected_main_adoption_sha" ]; then
+          if [[ "$base_sha" = "$protected_main_adoption_sha" || "$base_sha" = "$rolling_stage_resolver_sha" ]]; then
             echo "protected_main_adoption=1" >> "$GITHUB_OUTPUT"
           else
             echo "protected_main_adoption=0" >> "$GITHUB_OUTPUT"
