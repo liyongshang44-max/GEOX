@@ -53,79 +53,114 @@ for (const marker of [
   'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${roles}',
   'GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO ${roles}',
   'GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO ${roles}',
-  "BLINE_COMMERCIAL_PRINCIPAL_BOOTSTRAP_INVALID:ROLE_GRAPH"
+  'BLINE_COMMERCIAL_PRINCIPAL_BOOTSTRAP_INVALID:ROLE_GRAPH'
 ]) assert(bootstrap.includes(marker), 'W6-B2 DB principal marker missing', marker);
-assert(!bootstrap.includes(`GRANT ${'${MCFT_CAP07_RUNTIME_ROLE_V1}'} TO ${'${BLINE_COMMERCIAL'}`), 'W6-B2 must not implement isolation through MCFT runtime-role membership');
+assert(!bootstrap.includes('GRANT ${MCFT_CAP07_RUNTIME_ROLE_V1} TO'), 'W6-B2 must not implement isolation through MCFT runtime-role membership');
+assert(!bootstrap.includes('ALTER ROLE ${MCFT_CAP07_RUNTIME_ROLE_V1}'), 'W6-B2 must not mutate the frozen MCFT runtime role');
 
 const dist = read(DIST);
 assert(dist.includes('bline_commercial_principal_bootstrap.js'), 'compiled B-Line principal bootstrap entry missing');
 assert(dist.includes('runBlineCommercialPrincipalBootstrapFromEnvironmentV1'), 'compiled B-Line principal bootstrap runner missing');
 
 const compose = read(COMPOSE);
+const secretInit = serviceBlock(compose, 'commercial-principal-secret-init', 'database-platform-bootstrap');
 const dbBootstrap = serviceBlock(compose, 'bline-commercial-principal-bootstrap', 'mqtt');
-const mqtt = serviceBlock(compose, 'mqtt', 'minio');
+const mqttBlock = serviceBlock(compose, 'mqtt', 'minio');
 const server = serviceBlock(compose, 'server', 'telemetry-ingest');
 const telemetry = serviceBlock(compose, 'telemetry-ingest', 'jobs');
 const jobs = serviceBlock(compose, 'jobs', 'executor');
 const executor = serviceBlock(compose, 'executor', 'web');
 
+for (const marker of [
+  '/secrets/telemetry/db_password',
+  '/secrets/telemetry/mqtt_password',
+  '/secrets/jobs/db_password',
+  '/secrets/executor/db_password',
+  '/secrets/executor/mqtt_password',
+  'geox_v1_telemetry_credentials:/secrets/telemetry',
+  'geox_v1_jobs_credentials:/secrets/jobs',
+  'geox_v1_executor_credentials:/secrets/executor'
+]) assert(secretInit.includes(marker), 'W6-B2 secret-init boundary missing marker', marker);
+assert(secretInit.includes('/dev/urandom'), 'W6-B2 workload credentials are not generated from system entropy');
+assert(!secretInit.includes('GEOX_RUNTIME_DATABASE_PASSWORD'), 'W6-B2 worker credentials derived from shared Runtime DB secret');
+assert(!secretInit.includes('APP_SECRET'), 'W6-B2 worker credentials derived from application secret');
+
 assert(dbBootstrap.includes('apps/server/dist/database/bline_commercial_principal_bootstrap.js'), 'W6-B2 bootstrap service entry drift');
 assert(dbBootstrap.includes('server:\n        condition: service_healthy'), 'W6-B2 bootstrap must run after server schema readiness');
-for (const v of ['GEOX_TELEMETRY_DATABASE_PASSWORD', 'GEOX_JOBS_DATABASE_PASSWORD', 'GEOX_EXECUTOR_DATABASE_PASSWORD']) {
-  assert(dbBootstrap.includes(v), 'W6-B2 bootstrap missing DB credential', v);
-}
+for (const marker of [
+  'GEOX_TELEMETRY_DATABASE_PASSWORD="$$(cat /run/geox/telemetry/db_password)"',
+  'GEOX_JOBS_DATABASE_PASSWORD="$$(cat /run/geox/jobs/db_password)"',
+  'GEOX_EXECUTOR_DATABASE_PASSWORD="$$(cat /run/geox/executor/db_password)"',
+  'geox_v1_telemetry_credentials:/run/geox/telemetry:ro',
+  'geox_v1_jobs_credentials:/run/geox/jobs:ro',
+  'geox_v1_executor_credentials:/run/geox/executor:ro'
+]) assert(dbBootstrap.includes(marker), 'W6-B2 bootstrap credential wiring missing', marker);
 
 assert(server.includes('DATABASE_URL: postgres://geox_runtime_v1:'), 'server must retain frozen geox_runtime_v1 DB principal');
-assert(!server.includes('GEOX_TELEMETRY_DATABASE_PASSWORD'), 'server received telemetry DB credential');
-assert(!server.includes('GEOX_JOBS_DATABASE_PASSWORD'), 'server received jobs DB credential');
-assert(!server.includes('GEOX_EXECUTOR_DATABASE_PASSWORD'), 'server received executor DB credential');
 assert(server.includes('mcft-cap07-migration:\n        condition: service_completed_successfully'), 'server must remain downstream of canonical MCFT migration');
 assert(!server.includes('bline-commercial-principal-bootstrap:'), 'server must not depend on worker-principal bootstrap');
+assert(!server.includes('geox_v1_telemetry_credentials'), 'server mounted telemetry credential volume');
+assert(!server.includes('geox_v1_jobs_credentials'), 'server mounted jobs credential volume');
+assert(!server.includes('geox_v1_executor_credentials'), 'server mounted executor credential volume');
+assert(!server.includes('GEOX_MQTT_USERNAME:'), 'server must not receive a broker username');
+assert(!server.includes('GEOX_MQTT_PASSWORD:'), 'server must not receive a broker password');
+assert(server.includes('MQTT_PASSWORD: ${APP_SECRET:?APP_SECRET is required}'), 'server runtime-security MQTT auth assertion drift');
 
-assert(telemetry.includes('DATABASE_URL: postgres://geox_telemetry_ingest_v1:'), 'telemetry-ingest DB principal not isolated');
-assert(jobs.includes('DATABASE_URL: postgres://geox_jobs_v1:'), 'jobs DB principal not isolated');
-assert(executor.includes('DATABASE_URL: postgres://geox_executor_runtime_v1:'), 'executor DB principal not isolated');
+assert(telemetry.includes('postgres://geox_telemetry_ingest_v1:$$(cat /run/geox/telemetry/db_password)'), 'telemetry-ingest DB principal not isolated');
+assert(jobs.includes('postgres://geox_jobs_v1:$$(cat /run/geox/jobs/db_password)'), 'jobs DB principal not isolated');
+assert(executor.includes('postgres://geox_executor_runtime_v1:$$(cat /run/geox/executor/db_password)'), 'executor DB principal not isolated');
 for (const block of [telemetry, jobs, executor]) {
   assert(block.includes('bline-commercial-principal-bootstrap:\n        condition: service_completed_successfully'), 'worker does not wait for W6-B2 principal bootstrap');
   assert(!block.includes('postgres://geox_runtime_v1:'), 'worker still reuses geox_runtime_v1');
 }
+assert(telemetry.includes('geox_v1_telemetry_credentials:/run/geox/telemetry:ro'), 'telemetry credential volume missing');
+assert(!telemetry.includes('geox_v1_jobs_credentials'), 'telemetry mounted jobs credentials');
+assert(!telemetry.includes('geox_v1_executor_credentials'), 'telemetry mounted executor credentials');
+assert(jobs.includes('geox_v1_jobs_credentials:/run/geox/jobs:ro'), 'jobs credential volume missing');
+assert(!jobs.includes('geox_v1_telemetry_credentials'), 'jobs mounted telemetry credentials');
+assert(!jobs.includes('geox_v1_executor_credentials'), 'jobs mounted executor credentials');
+assert(executor.includes('geox_v1_executor_credentials:/run/geox/executor:ro'), 'executor credential volume missing');
+assert(!executor.includes('geox_v1_telemetry_credentials'), 'executor mounted telemetry credentials');
+assert(!executor.includes('geox_v1_jobs_credentials'), 'executor mounted jobs credentials');
 assert(!telemetry.includes('GEOX_AO_ACT_TOKEN:'), 'telemetry-ingest still receives shared AO-ACT token');
 assert(!jobs.includes('GEOX_AO_ACT_TOKEN:'), 'jobs still receives shared AO-ACT token');
 assert(!jobs.includes('GEOX_MQTT_URL:'), 'jobs still receives unused MQTT transport');
-assert(!jobs.includes('GEOX_MQTT_USERNAME:'), 'jobs still receives unused MQTT credential');
-assert(!jobs.includes('GEOX_MQTT_PASSWORD:'), 'jobs still receives unused MQTT credential');
+assert(!jobs.includes('GEOX_MQTT_USERNAME:'), 'jobs still receives unused MQTT identity');
 assert(executor.includes('GEOX_AO_ACT_TOKEN: ${GEOX_EXECUTOR_TOKEN:?GEOX_EXECUTOR_TOKEN is required}'), 'executor must retain dedicated executor HTTP principal only');
 
-assert(mqtt.includes('allow_anonymous false'), 'MQTT anonymous access re-enabled');
-assert(mqtt.includes('acl_file /tmp/mosquitto-config/acl'), 'MQTT ACL file missing');
-assert(mqtt.includes('GEOX_TELEMETRY_MQTT_USERNAME'), 'telemetry MQTT principal missing');
-assert(mqtt.includes('GEOX_TELEMETRY_MQTT_PASSWORD'), 'telemetry MQTT credential missing');
-assert(mqtt.includes('GEOX_EXECUTOR_MQTT_USERNAME'), 'executor MQTT principal missing');
-assert(mqtt.includes('GEOX_EXECUTOR_MQTT_PASSWORD'), 'executor MQTT credential missing');
-assert(mqtt.includes('topic read telemetry/+/+'), 'telemetry MQTT telemetry read ACL missing');
-assert(mqtt.includes('topic read heartbeat/+/+'), 'telemetry MQTT heartbeat read ACL missing');
-assert(mqtt.includes('topic write #'), 'executor MQTT write-only compatibility ACL missing');
+assert(mqttBlock.includes('allow_anonymous false'), 'MQTT anonymous access re-enabled');
+assert(mqttBlock.includes('acl_file /tmp/mosquitto-config/acl'), 'MQTT ACL file missing');
+assert(mqttBlock.includes('GEOX_TELEMETRY_MQTT_USERNAME'), 'telemetry MQTT principal missing');
+assert(mqttBlock.includes('GEOX_EXECUTOR_MQTT_USERNAME'), 'executor MQTT principal missing');
+assert(mqttBlock.includes('/run/geox/telemetry/mqtt_password'), 'broker does not consume telemetry-only MQTT secret');
+assert(mqttBlock.includes('/run/geox/executor/mqtt_password'), 'broker does not consume executor-only MQTT secret');
+assert(mqttBlock.includes('topic read telemetry/+/+'), 'telemetry MQTT telemetry read ACL missing');
+assert(mqttBlock.includes('topic read heartbeat/+/+'), 'telemetry MQTT heartbeat read ACL missing');
+assert(mqttBlock.includes('topic write #'), 'executor MQTT write-only compatibility ACL missing');
+assert(!mqttBlock.includes('MQTT_PASSWORD:'), 'broker reintroduced a shared MQTT password environment variable');
 assert(telemetry.includes('GEOX_MQTT_USERNAME: ${GEOX_TELEMETRY_MQTT_USERNAME:-geox_telemetry_ingest_v1}'), 'telemetry runtime MQTT identity drift');
-assert(telemetry.includes('GEOX_MQTT_PASSWORD: ${GEOX_TELEMETRY_MQTT_PASSWORD:?GEOX_TELEMETRY_MQTT_PASSWORD is required}'), 'telemetry runtime MQTT credential drift');
+assert(telemetry.includes('GEOX_MQTT_PASSWORD="$$(cat /run/geox/telemetry/mqtt_password)"'), 'telemetry runtime MQTT secret-file wiring drift');
 assert(executor.includes('GEOX_MQTT_USERNAME: ${GEOX_EXECUTOR_MQTT_USERNAME:-geox_executor_v1}'), 'executor runtime MQTT identity drift');
-assert(executor.includes('GEOX_MQTT_PASSWORD: ${GEOX_EXECUTOR_MQTT_PASSWORD:?GEOX_EXECUTOR_MQTT_PASSWORD is required}'), 'executor runtime MQTT credential drift');
-assert(!server.includes('GEOX_MQTT_USERNAME:'), 'server must not receive a broker username');
-assert(!server.includes('GEOX_MQTT_PASSWORD:'), 'server must not receive a broker password');
-assert(!server.includes('GEOX_TELEMETRY_MQTT_PASSWORD'), 'server leaked telemetry broker credential');
-assert(!server.includes('GEOX_EXECUTOR_MQTT_PASSWORD'), 'server leaked executor broker credential');
-assert(server.includes('MQTT_PASSWORD: ${APP_SECRET:?APP_SECRET is required}'), 'server runtime-security MQTT auth assertion drift');
+assert(executor.includes('GEOX_MQTT_PASSWORD="$$(cat /run/geox/executor/mqtt_password)"'), 'executor runtime MQTT secret-file wiring drift');
 
 const envExample = read(ENV_EXAMPLE);
-for (const marker of [
+assert(envExample.includes('worker DB/MQTT credentials are generated independently into isolated'), 'Commercial env example does not document W6-B2 secret-volume boundary');
+assert(envExample.includes('GEOX_TELEMETRY_MQTT_USERNAME=geox_telemetry_ingest_v1'), 'Commercial env example missing telemetry MQTT identity');
+assert(envExample.includes('GEOX_EXECUTOR_MQTT_USERNAME=geox_executor_v1'), 'Commercial env example missing executor MQTT identity');
+assert(envExample.includes('GEOX_EXECUTOR_TOKEN=executor_token'), 'Commercial env example must use dedicated executor token');
+for (const forbidden of [
   'GEOX_TELEMETRY_DATABASE_PASSWORD=',
   'GEOX_JOBS_DATABASE_PASSWORD=',
   'GEOX_EXECUTOR_DATABASE_PASSWORD=',
-  'GEOX_TELEMETRY_MQTT_USERNAME=geox_telemetry_ingest_v1',
   'GEOX_TELEMETRY_MQTT_PASSWORD=',
-  'GEOX_EXECUTOR_MQTT_USERNAME=geox_executor_v1',
-  'GEOX_EXECUTOR_MQTT_PASSWORD=',
-  'GEOX_EXECUTOR_TOKEN=executor_token'
-]) assert(envExample.includes(marker), 'Commercial env example missing isolated principal wiring', marker);
+  'GEOX_EXECUTOR_MQTT_PASSWORD='
+]) assert(!envExample.includes(forbidden), 'Commercial env example reintroduced shared-file workload secret', forbidden);
+
+for (const marker of [
+  'geox_v1_telemetry_credentials:\n    name: geox-v1-telemetry-credentials',
+  'geox_v1_jobs_credentials:\n    name: geox-v1-jobs-credentials',
+  'geox_v1_executor_credentials:\n    name: geox-v1-executor-credentials'
+]) assert(compose.includes(marker), 'stable isolated credential volume missing', marker);
 
 const protectedUnchanged = [
   'apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.ts',
@@ -160,9 +195,7 @@ const coreAllowed = new Set([
   ENV_EXAMPLE,
   'scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.cjs',
   'scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.ts',
-  '.github/workflows/bline-w6b2-commercial-principal-isolation.yml',
-  'docs/architecture/semantic_convergence/GEOX-BLINE-W6B2-QUALIFICATION-WIRING-V1.json',
-  '.github/workflows/ci.yml'
+  '.github/workflows/bline-w6b2-commercial-principal-isolation.yml'
 ]);
 for (const p of changed) assert(coreAllowed.has(p), 'W6-B2 scope expansion', p);
 
@@ -184,6 +217,11 @@ console.log(JSON.stringify({
   blocker_id: 'COMMERCIAL-PRINCIPAL-01',
   database_principals: inv.database_principals,
   mqtt_principals: inv.mqtt_principals,
+  isolated_secret_volumes: [
+    'geox-v1-telemetry-credentials',
+    'geox-v1-jobs-credentials',
+    'geox-v1-executor-credentials'
+  ],
   server_runtime_role_preserved: true,
   mcft_source_unchanged: true,
   w6b1_qualified_gate_replayed: true,
