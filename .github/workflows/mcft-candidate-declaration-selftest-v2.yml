@@ -2,62 +2,42 @@ name: mcft-candidate-declaration-selftest-v2
 
 on:
   pull_request:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-candidate-declaration-integrity-v2.yml'
+      - '.github/workflows/mcft-candidate-declaration-selftest-v2.yml'
+      - 'docs/digital_twin/mcft/MCFT-DELIVERY-POLICY-V2.json'
+      - 'docs/digital_twin/mcft/MCFT-CANDIDATE-AUTHORITY-REGISTRY-V1.json'
+      - 'docs/digital_twin/mcft/MCFT-DELIVERY-CANDIDATE-SIGNAL-CONTRACT-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs'
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: mcft-cap09-handoff-prepend-${{ github.event.pull_request.head.sha }}
-  cancel-in-progress: false
+  group: mcft-candidate-integrity-selftest-v2-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
 
 jobs:
-  prepend-handoff-once:
+  mcft-candidate-integrity-pr-selftest:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: Apply staged U-section payload to existing handoff
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import re
-          from pathlib import Path
-
-          handoff = Path('docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md')
-          carrier = Path('.github/workflows/mcft-cap09-handoff-prepend-once-20260904.yml')
-          old = handoff.read_text(encoding='utf-8')
-          if old.startswith('# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-04 Continuation — Production Runtime Live'):
-              print('U-section already present; no-op')
-              raise SystemExit(0)
-          expected = '# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-03 Continuation — Protected-Main Governed Adoption / Pre-Merge Technical Qualification Closure / Merge Authorization Frontier'
-          if not old.startswith(expected):
-              raise SystemExit('HANDOFF_PREDECESSOR_HEADER_MISMATCH')
-          source = carrier.read_text(encoding='utf-8')
-          match = re.search(r"new = r'''(.*?)'''\n\s+p\.write_text\(new \+ old", source, re.S)
-          if not match:
-              raise SystemExit('HANDOFF_STAGED_PAYLOAD_NOT_FOUND')
-          payload = match.group(1)
-          if '# U — Production Runtime Live / Rolling Current-Crop Requalification / QCP Registration Frontier' not in payload:
-              raise SystemExit('HANDOFF_STAGED_PAYLOAD_IDENTITY_MISMATCH')
-          handoff.write_text(payload + old, encoding='utf-8', newline='\n')
-          PY
-
-      - name: Commit handoff only
-        shell: bash
-        run: |
-          set -euo pipefail
-          if git diff --quiet -- docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md; then
-            echo 'No handoff change required.'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md
-          git commit -m 'docs(mcft-cap09): hand off production-live rolling-refresh QCP frontier'
-          git push origin HEAD:docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Run registry-driven explicit-signal candidate declaration selftest
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2.cjs --selftest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-candidate-integrity-v2-selftest-${{ github.sha }}
+          path: acceptance-output/MCFT_CANDIDATE_DECLARATION_INTEGRITY_V2_RESULT.json
+          if-no-files-found: error
