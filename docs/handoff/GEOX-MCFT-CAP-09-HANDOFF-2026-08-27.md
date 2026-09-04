@@ -1,3 +1,710 @@
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-04 Continuation — Production Runtime Live / Rolling Current-Crop Requalification / QCP Registration Frontier
+
+# U — Production Runtime Live / Rolling Current-Crop Requalification / QCP Registration Frontier
+
+Status: **ACTIVE CONTINUATION FRONTIER — PRODUCTION RUNTIME LIVE; ROLLING CURRENT-CROP AUTHORITY QUALIFIED; QCP REGISTRATION NOT YET CLOSED**
+
+This U-section is the current continuation point after the T-section protected-main adoption frontier.
+
+Do not delete, collapse, or retroactively rewrite T/S/R/Q/P/O/N/M/L/K/J/I/H or any earlier historical section below. Those sections remain the chronological evidence chain for MCFT-CAP-09.
+
+## U0 — Current task / scope / authority boundary
+
+The active task is no longer pre-merge runtime-start preparation. Production runtime has been successfully cut over on the bound local production host and exact-one production owners have been observed.
+
+The current engineering task is narrower:
+
+```text
+post-cutover production runtime remains live
+        ↓
+rolling T4R1 biological-stage / current-crop requalification
+        ↓
+new immutable current-crop authority artifact
+        ↓
+QCP ownership / central applicability registration
+        ↓
+exact-head successor qualification
+        ↓
+#3499 Ready for Review
+        ↓
+explicit merge authorization
+```
+
+Do not enter Formal-v5, A0, or O00–O23 while this QCP frontier remains open. A rolling current-crop refresh is qualification / authority maintenance; it is not authorization to advance Formal execution.
+
+## U1 — Protected-main production-runtime lineage
+
+The protected-main adoption/runtime-start successor was completed through PR #3497.
+
+```text
+#3497
+
+pre-merge head =
+  b032117a9933f4379c6ffa6a84f7fbc32ea508c2
+
+base =
+  0630bb63b82c9ba108854f5aa26b096f9221f031
+
+actual merge / protected-main SHA =
+  ef9f7d45114c98c16ad57ce69226323935f685db
+
+state =
+  CLOSED / MERGED
+```
+
+Post-merge protected-main verification was successful:
+
+```text
+main CI = SUCCESS
+EA5E2 push qualification = SUCCESS
+```
+
+The production deployment subject is the actual protected-main merge SHA `ef9f7d45114c98c16ad57ce69226323935f685db`, not the historical PR head.
+
+## U2 — Production runtime cutover exact machine result
+
+The local bound host executed:
+
+```text
+node scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs
+```
+
+Machine result:
+
+```text
+schema_version =
+  geox_mcft_cap09_production_runtime_owner_cutover_result_v1
+
+status =
+  PASS
+
+deployment_subject_sha =
+  ef9f7d45114c98c16ad57ce69226323935f685db
+
+host_id =
+  fae5f756-ef25-40d5-9777-5b2c3d4837a1
+
+activation_fence_time =
+  2026-09-04T04:30:57.569Z
+
+formal_a0_planning_time =
+  2026-09-04T06:00:00.000Z
+
+stage_authority_valid_until_at_cutover =
+  2026-09-04T06:00:00.000Z
+
+runtime_processes_started =
+  true
+
+evidence_owner_activation_observed =
+  true
+
+twin_owner_activation_observed =
+  true
+
+twin_mode =
+  PRE_FORMAL_OWNER_STANDBY
+
+formal_v5_arm =
+  false
+
+a0_execution =
+  false
+
+o00_started =
+  false
+
+mcft_cap09_completed =
+  false
+```
+
+Runtime authority files were generated on the bound host under:
+
+```text
+C:\Users\mylr1\.geox\mcft-cap09\runtime\ef9f7d45114c98c16ad57ce69226323935f685db\runtime-start-authority.json
+
+C:\Users\mylr1\.geox\mcft-cap09\runtime\ef9f7d45114c98c16ad57ce69226323935f685db\owner-cutover-authority.json
+```
+
+Therefore the current production classification is:
+
+```text
+Production Evidence runtime = LIVE
+Production Evidence owner   = ACTIVE / observed
+Production Twin runtime     = LIVE
+Production Twin owner       = ACTIVE / observed
+Twin scheduler mode         = PRE_FORMAL_OWNER_STANDBY
+Formal-v5                   = NOT AUTHORIZED
+A0                          = NOT AUTHORIZED
+O00–O23                     = NOT AUTHORIZED
+MCFT-CAP-09 COMPLETE        = false
+```
+
+## U3 — Why PRE_FORMAL_OWNER_STANDBY exists
+
+During production activation work two architecture mismatches were resolved without weakening existing authority ceilings:
+
+1. Starting the real Twin production process immediately acquires/renews the Twin ownership lease. Process start therefore cannot honestly be modeled as producing no effective owner.
+2. The pre-existing production Twin compose expected a Formal Window Manifest at process start, while the task order requires runtime/live-owner establishment before Formal-v5/A0/O00. Reusing an expired historical Formal manifest would have created catch-up / stale-slot risk.
+
+The resolved production cutover uses dual-key authority:
+
+```text
+runtime-start authority
++
+production-owner cutover authority
+```
+
+and Twin starts in:
+
+```text
+PRE_FORMAL_OWNER_STANDBY
+```
+
+In this mode Twin may establish and maintain the unique production owner lease, but it must not read/execute an expired Formal manifest and must not create or advance scheduler slot/cursor state before later Formal authority exists.
+
+This is not a bypass. It restores the intended order:
+
+```text
+runtime
+→ live owners
+→ Formal-v5
+→ A0
+→ O00–O23
+```
+
+## U4 — Production external-system settlement
+
+The production runtime uses the governed Neon database:
+
+```text
+geox_mcft_cap09_production_runtime_v1
+```
+
+with separate password login principals:
+
+```text
+geox_mcft_cap09_evidence_runtime_login_v1
+geox_mcft_cap09_twin_runtime_login_v1
+```
+
+The production Evidence raw store is Cloudflare R2:
+
+```text
+bucket =
+  geox-mcft-cap09-formal-raw-v1
+
+region =
+  auto
+
+S3-compatible endpoint account binding =
+  754092382b1d92ba70a106d498ef8b68.r2.cloudflarestorage.com
+```
+
+A new bucket-scoped Account API token was created for production runtime because an existing Secret Access Key could not be re-read. No DB URL, Access Key, Secret Access Key, or password is recorded in this handoff or repository.
+
+GitHub Actions remains a control/qualification plane only. Production execution must remain on the bound `LOCAL_OPERATOR_MANAGED_DOCKER` host; do not add a GitHub-hosted production cutover path.
+
+## U5 — Neon storage cleanup performed under explicit authorization
+
+The user explicitly authorized cleanup of 23 historical Neon databases. All 23 were deleted successfully. The current protected set retained on the main Neon branch is:
+
+```text
+neondb
+geox_mcft_cap09_production_runtime_v1
+geox_mcft_cap09_s6_accel24t_am19_v12
+geox_mcft_cap09_s6_accel24t_am19_blocked_v12
+geox_mcft_cap09_s6_accel24t_am19_v13
+geox_mcft_cap09_s6_accel24t_am19_blocked_v13
+geox_mcft_cap09_s6_formal_t4r1_24h_v4
+geox_mcft_cap09_s6_formal_t4r1_24h_v5
+```
+
+Post-cleanup validation confirmed:
+
+```text
+production runtime DB still exists/readable
+Evidence runtime login still exists
+Twin runtime login still exists
+```
+
+Observed Neon storage changed approximately from:
+
+```text
+before = 486,400,000 bytes ≈ 463.9 MiB ≈ 90.6% of 512 MiB
+after  = 376,176,640 bytes ≈ 358.7 MiB ≈ 70.1% of 512 MiB
+```
+
+More reclaim may occur after the configured 6-hour Neon history-retention interval.
+
+The following archived branches were identified but were NOT deleted and have no deletion authorization in this handoff:
+
+```text
+mcft-cap09-am19-persistent-24t-qual-20260818
+mcft-cap09-s6-simulation-24h
+```
+
+Do not delete them without a separate explicit authorization.
+
+## U6 — Old production-mounted V1 stage authority expiry and refresh rationale
+
+At cutover, the production-mounted V1 current-crop/stage authority was valid only through:
+
+```text
+2026-09-04T06:00:00Z
+= 2026-09-04 14:00 +08
+```
+
+The cutover itself was legal and PASS, but the planned A0 boundary and old stage authority upper validity boundary coincided. That left no engineering safety margin for later Formal work.
+
+The correct response was not to mutate the production-mounted V1 artifact and not to restart the live runtime. Instead, a new rolling T4R1 lifecycle/thermal-stage/current-crop requalification was run and emitted a separate immutable authority artifact.
+
+## U7 — Fresh T4R1 rolling lifecycle / biological-stage / current-crop authority
+
+Fresh rolling qualification has passed.
+
+Current fresh authority facts:
+
+```text
+stage =
+  R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE
+
+epistemic_class =
+  THERMAL_MODEL_DERIVED
+
+observed_biological_stage_claimed =
+  false
+
+authority_as_of =
+  2026-09-04T04:00:00Z
+
+authority_valid_until =
+  2026-09-05T10:00:00Z
+  = 2026-09-05 18:00 +08
+
+GDU =
+  2014.452 – 2070.072
+
+remaining_GDU =
+  309.928 – 365.548
+
+crop_water_use_stage =
+  LATE
+
+Kc =
+  0.6
+
+runtime_consumption_authorized =
+  true
+```
+
+This remains a model-derived biological-stage authority. It does not claim that KBS directly observed R5/R6, and the epistemic class must remain `THERMAL_MODEL_DERIVED` unless a later governed observed-stage source proves otherwise.
+
+## U8 — Fresh authority immutable-artifact and non-effect contract
+
+The new fresh authority is a separate immutable artifact. It does NOT rewrite the production-mounted old V1 authority.
+
+Frozen non-effects:
+
+```text
+Old live V1 mount preserved  = PASS
+Production runtime restart   = NO
+Evidence owner cutover       = already-live / unchanged
+Twin owner cutover           = already-live / unchanged
+Twin mode                    = PRE_FORMAL_OWNER_STANDBY
+Formal-v5                    = NOT AUTHORIZED
+A0                           = NOT AUTHORIZED
+O00                          = NOT AUTHORIZED
+O00–O23                      = NOT STARTED
+MCFT-CAP-09 COMPLETE         = false
+```
+
+Do not restart production merely because a newer rolling authority artifact exists. Adoption into a live mount, if later required, must itself be governed and proven non-disruptive.
+
+## U9 — #3499 exact rolling-refresh frontier
+
+Draft PR:
+
+```text
+#3499
+
+title =
+  feat(mcft-cap09): refresh post-cutover current-crop authority
+
+base =
+  protected main @ ef9f7d45114c98c16ad57ce69226323935f685db
+
+head =
+  30ab09b49d08a84e7957dd8d439e93fcdbdf1eb8
+
+state =
+  OPEN / DRAFT
+
+mergeable =
+  true
+
+commits =
+  7
+
+changed_files =
+  5
+```
+
+Canonical fresh qualification subject:
+
+```text
+811101cc958ce6b83efce610bde11b3266ae8326
+```
+
+Fresh immutable current-crop authority SHA256:
+
+```text
+sha256:ae14573065fc9b630b9bedfb49147729d73e47f2de469eccf39256d02c195934
+```
+
+Latest preservation-workflow self-scan false-positive fix:
+
+```text
+30ab09b49d08a84e7957dd8d439e93fcdbdf1eb8
+```
+
+The five exact #3499 qualification-only paths are:
+
+```text
+.github/workflows/mcft-cap-09-t4r1-current-crop-refresh-v1.yml
+
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-04T04Z-V1.json
+
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-04T04Z-V1.json
+
+scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_V1.cjs
+
+scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_V1.cjs
+```
+
+## U10 — #3499 machine state and current blocker
+
+At exact head `30ab09b49d08a84e7957dd8d439e93fcdbdf1eb8`:
+
+```text
+MCFT CAP-09 T4R1 Current-Crop Refresh
+  run 33839322225
+  SUCCESS
+
+CI
+  run 33839322216
+  SUCCESS
+
+main-ruleset readiness
+  run 33839322252
+  SUCCESS
+
+release lane
+  run 33839322264
+  SUCCESS
+
+delivery policy
+  run 33839322259
+  SUCCESS
+
+EA5E2 live-window preflight hardening
+  run 33839322321
+  SUCCESS
+
+candidate declaration selftest
+  run 33839322238
+  SUCCESS
+
+central EA5E2/runtime dependency graph / qualification planner
+  run 33839322217
+  FAILURE
+```
+
+The current failure is a central-governance ownership failure, not an agricultural-data failure and not a production-runtime regression.
+
+The central planner correctly fail-closes because all five new qualification-only paths are currently outside the QCP resolver ownership graph and therefore appear as:
+
+```text
+unknown_changed_paths
+```
+
+Current blocker classification:
+
+```text
+Fresh lifecycle data              PASS
+Fresh thermal-stage model         PASS
+Rolling graduation                PASS
+Immutable current-crop artifact   PASS
+Production runtime                LIVE / PASS
+Old live V1 mount preservation    PASS
+
+QCP path ownership registration   INCOMPLETE
+central unknown_changed_paths     5
+#3499 final all-green             NOT YET
+#3499 merge                       NOT PERFORMED
+```
+
+## U11 — Frozen design correction: do NOT route rolling-refresh files through EA5E2 runtime dependencies
+
+The five #3499 files are qualification / authority-maintenance surfaces. They are not runtime dependencies.
+
+Therefore do NOT solve the red central planner by adding them to the EA5E2 runtime dependency graph.
+
+That would conflate:
+
+```text
+runtime behavioral dependency
+```
+
+with:
+
+```text
+qualification / authority-refresh ownership
+```
+
+and would incorrectly cause rolling governance artifacts to trigger runtime dependency requalification semantics.
+
+The correct design is an independent QCP resolver/check:
+
+```text
+T4R1_CURRENT_CROP_ROLLING_REFRESH
+```
+
+which owns the five exact paths (and only any explicitly defined generated closure required by current QCP schema).
+
+Existing QCP path semantics remain:
+
+```text
+exact-path / generated-closure
+fail-closed
+```
+
+Do not introduce a generic `current-main` predecessor or broad wildcard ownership to make the planner green.
+
+## U12 — QCP registration contract for the next implementation step
+
+The immediate repository work is QCP-only governance settlement.
+
+Required outcome:
+
+```text
+resolver/check =
+  T4R1_CURRENT_CROP_ROLLING_REFRESH
+
+owned subject =
+  #3499 rolling current-crop qualification-only surface
+
+changed-path ownership =
+  all 5 exact paths owned
+
+unknown_changed_paths =
+  0
+
+runtime dependency graph pollution =
+  0
+
+production runtime mutation =
+  0
+
+production restart =
+  0
+
+Formal-v5/A0/O00 authority promotion =
+  0
+```
+
+Use the existing QCP schema and resolver vocabulary already present in the repository. Do not invent a second planner or parallel authority registry.
+
+## U13 — Next machine closure sequence
+
+Next-session execution order is frozen as:
+
+```text
+re-read #3499
+  head must still be 30ab09b49d08a84e7957dd8d439e93fcdbdf1eb8
+
+re-read protected main
+  must still be ef9f7d45114c98c16ad57ce69226323935f685db
+
+if no drift:
+  register T4R1_CURRENT_CROP_ROLLING_REFRESH in QCP
+        ↓
+  central planner unknown_changed_paths = 0
+        ↓
+  rolling-refresh check applicable / SUCCESS
+        ↓
+  successor-preservation check SUCCESS
+        ↓
+  main CI / required checks all SUCCESS
+        ↓
+  #3499 Ready for Review
+        ↓
+  request explicit merge authorization
+```
+
+If either #3499 head or protected main drifts, reconstruct descendants first. Do not blindly patch against `30ab09b4...` after a drift.
+
+## U14 — Merge / post-merge / Formal authority boundary
+
+#3499 is not yet merge-ready and must not be merged merely because the fresh agricultural qualification itself passed.
+
+Current merge gate:
+
+```text
+QCP registration
++
+unknown_changed_paths = 0
++
+exact-head successor CI all green
++
+Ready for Review
++
+explicit merge authorization
+```
+
+No merge authorization for #3499 exists in this handoff.
+
+Even after a future #3499 merge:
+
+- record the actual protected-main merge SHA;
+- do not assume the merge SHA equals the PR head;
+- do not restart production runtime solely to consume the refreshed artifact;
+- do not arm Formal-v5, execute A0, or start O00–O23 without the later explicit authority required by the task line.
+
+## U15 — Current closure classification
+
+```text
+A — production implementation/runtime defects
+  0 currently known
+
+B — production cutover
+  CLOSED / PASS
+  Evidence owner active
+  Twin owner active
+  Twin PRE_FORMAL_OWNER_STANDBY
+
+C — rolling biological-stage/current-crop authority
+  fresh qualification PASS
+  immutable artifact PASS
+  old live V1 preservation PASS
+
+D — #3499 central governance
+  OPEN
+  QCP registration incomplete
+  5 unknown_changed_paths
+  final all-green not yet achieved
+
+E — protected-main merge
+  NOT AUTHORIZED for #3499
+
+F — later Formal / CAP-09 completion
+  Formal-v5 NOT AUTHORIZED
+  A0 NOT AUTHORIZED
+  O00–O23 NOT AUTHORIZED
+  MCFT-CAP-09 COMPLETE = false
+```
+
+## U16 — Local-host / operator actions at this frontier
+
+No additional local-host command is required merely to close #3499 QCP registration.
+
+Do not rerun the production cutover runner while the current production Evidence/Twin owners are already active.
+
+Do not restart Docker production services merely because the rolling authority PR exists.
+
+The next work is repository/QCP qualification. Local-host intervention becomes relevant only if a later governed production adoption/restart or Formal activation step explicitly requires it.
+
+## U17 — Pitfalls / rules frozen by the production-live and rolling-refresh work
+
+1. Do not treat silence from `RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs` as proof of a hang. The runner captures `docker compose up -d --build` output and has a silent owner-verification interval. Inspect from a second shell before intervening.
+2. Do not start duplicate cutover runners. During diagnosis duplicate Node runner processes were observed; the final canonical cutover nevertheless completed PASS. A second orchestrator can create needless build/owner contention.
+3. Do not press Ctrl+C during an apparently silent Docker build unless process/container state proves the runner is truly stuck. Premature interruption can occur before normal rollback state is established.
+4. Do not use GitHub Actions as the production execution host. Production cutover is bound to the governed local Docker host.
+5. Do not put DB URLs, database passwords, R2 Access Keys, Secret Access Keys, or API-token secrets into GitHub files, handoff text, issue comments, or chat transcripts.
+6. Do not mutate the production-mounted old V1 current-crop authority just because its validity window has passed. Rolling qualification produces a new immutable artifact.
+7. Do not restart live production runtime simply because a new current-crop artifact exists.
+8. Do not claim an observed biological stage from the thermal model. Current epistemic class remains `THERMAL_MODEL_DERIVED`; `observed_biological_stage_claimed=false`.
+9. Do not route qualification-only rolling-refresh files into EA5E2 runtime dependencies.
+10. Do not suppress `unknown_changed_paths`. Register the correct QCP ownership surface.
+11. Do not create wildcard/generic-current-main predecessor logic to force QCP green. Use exact governed predecessor/path semantics.
+12. Do not merge #3499 before QCP registration and exact-head all-green closure.
+13. `mergeable=true` is not merge authorization.
+14. A green rolling-refresh workflow is not by itself a durable protected-main adoption or Formal authority.
+15. A successful workflow run ID alone is not a substitute for repository-versioned durable evidence where QCP requires durable evidence.
+16. Do not enter Formal-v5/A0/O00–O23 from this rolling-refresh PR; those remain a later explicit authority boundary.
+17. Do not delete the two remaining archived Neon branches without separate explicit authorization.
+18. Do not revoke the older R2 credential until its remaining consumers, if any, are independently established and the newer credential has been proven sufficient.
+19. Preserve the production DB and current v12/v13 / Formal-v4/v5 protected Neon database set during any later cleanup.
+20. Any parallel head drift must be reconstructed before patching or making a readiness claim.
+21. Do not rewrite or delete historical T/S/R/Q/P/O/N/M/L/K/J/I/H handoff sections; U is a continuation, not a replacement.
+
+## U18 — Exact continuation snapshot
+
+```text
+protected main =
+  ef9f7d45114c98c16ad57ce69226323935f685db
+
+production runtime cutover =
+  PASS / LIVE
+
+production host =
+  fae5f756-ef25-40d5-9777-5b2c3d4837a1
+
+Production Evidence owner =
+  ACTIVE / observed
+
+Production Twin owner =
+  ACTIVE / observed
+
+Twin mode =
+  PRE_FORMAL_OWNER_STANDBY
+
+fresh authority valid until =
+  2026-09-05T10:00:00Z
+  = 2026-09-05 18:00 +08
+
+#3499 =
+  OPEN / DRAFT
+
+#3499 base =
+  ef9f7d45114c98c16ad57ce69226323935f685db
+
+#3499 head =
+  30ab09b49d08a84e7957dd8d439e93fcdbdf1eb8
+
+canonical fresh qualification subject =
+  811101cc958ce6b83efce610bde11b3266ae8326
+
+fresh authority SHA256 =
+  sha256:ae14573065fc9b630b9bedfb49147729d73e47f2de469eccf39256d02c195934
+
+QCP registration =
+  INCOMPLETE
+
+unknown_changed_paths =
+  5
+
+#3499 final all-green =
+  NOT YET
+
+#3499 merge =
+  NOT PERFORMED
+
+Formal-v5 =
+  NOT AUTHORIZED
+
+A0 =
+  NOT AUTHORIZED
+
+O00–O23 =
+  NOT AUTHORIZED
+
+MCFT-CAP-09 COMPLETE =
+  false
+```
+
+---
+
 # GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-03 Continuation — Protected-Main Governed Adoption / Pre-Merge Technical Qualification Closure / Merge Authorization Frontier
 
 Status: **CONVERSATION HANDOFF / CURRENT AUTHORITATIVE CONTINUATION — NOT MASTER-TASK AUTHORITY**
