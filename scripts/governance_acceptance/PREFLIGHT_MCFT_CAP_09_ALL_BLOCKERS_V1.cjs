@@ -33,6 +33,18 @@ const REQUALIFICATION_BINDING_FIELDS = [
   "dependency_subject_sha", "dependency_digest_strategy", "dependency_digest",
   "artifact_absence_reason", "immutable",
 ];
+const RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1 = {
+  evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_7C5A74CD_RUNTIME_CUTOVER_V1",
+  check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+  subject_sha: "7c5a74cd202028b0c5252bb8dfc113c3152b804d",
+  base_sha: "0630bb63b82c9ba108854f5aa26b096f9221f031",
+  run_id: 33788575046,
+  run_conclusion: "success",
+  workflow_name: "mcft-cap-09-phase5-two-service-accelerated-24t",
+  workflow_path: ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+  event: "pull_request",
+  dependency_digest: "sha256:63e8aac2a5c8f27d4e7e78514f3858647ac72a105ed33d5228be3a6e0ae3dd41",
+};
 
 function parseArgs(argv) {
   const out = {};
@@ -92,6 +104,73 @@ function phase6RetirementActive(head) {
   const status = String(authority?.status || "");
   const phase5 = String(authority?.phase5_closure_head || "");
   return status.startsWith("PHASE6_") && /^[0-9a-f]{40}$/.test(phase5) && isAncestor(phase5, head);
+}
+
+function fetchGithubRunSnapshot(runId) {
+  const repository = String(process.env.GITHUB_REPOSITORY || "liyongshang44-max/GEOX").trim();
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) {
+    return { status: "FAIL", reason_code: "PHASE5_REQUALIFICATION_GITHUB_REPOSITORY_INVALID" };
+  }
+  const url = `https://api.github.com/repos/${repository}/actions/runs/${runId}`;
+  const args = [
+    "-fsSL",
+    "-H", "Accept: application/vnd.github+json",
+    "-H", "X-GitHub-Api-Version: 2022-11-28",
+    "-H", "User-Agent: geox-mcft-cap09-qcp",
+  ];
+  const token = String(process.env.GITHUB_TOKEN || "").trim();
+  if (token) args.push("-H", `Authorization: Bearer ${token}`);
+  args.push(url);
+  let raw;
+  try {
+    raw = cp.execFileSync("curl", args, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  } catch (error) {
+    return {
+      status: "FAIL",
+      reason_code: "PHASE5_REQUALIFICATION_GITHUB_RUN_FETCH_FAILED",
+      detail: String(error?.stderr || error?.message || error).slice(-2000),
+    };
+  }
+  try {
+    return { status: "PASS", run: JSON.parse(raw) };
+  } catch {
+    return { status: "FAIL", reason_code: "PHASE5_REQUALIFICATION_GITHUB_RUN_JSON_INVALID" };
+  }
+}
+
+function validateRuntimeCutoverPhase5Requalification(decision, head, base) {
+  const anchor = RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1;
+  const fetchResult = fetchGithubRunSnapshot(anchor.run_id);
+  if (fetchResult.status !== "PASS") return { ...fetchResult, evidence_id: anchor.evidence_id };
+  const run = fetchResult.run;
+  const liveBase = Array.isArray(run.pull_requests)
+    ? run.pull_requests.map((pr) => pr?.base?.sha).find((value) => typeof value === "string") || null
+    : null;
+  const checks = {
+    check_id_match: decision.check_id === anchor.check_id,
+    dependency_digest_match: decision.dependency_digest === anchor.dependency_digest,
+    requested_base_match: base === anchor.base_sha,
+    subject_is_ancestor_of_head: isAncestor(anchor.subject_sha, head),
+    run_id_match: run.id === anchor.run_id,
+    run_success: run.status === "completed" && run.conclusion === anchor.run_conclusion,
+    run_head_match: run.head_sha === anchor.subject_sha,
+    run_base_match: liveBase === anchor.base_sha,
+    run_event_match: run.event === anchor.event,
+    run_workflow_name_match: run.name === anchor.workflow_name,
+    run_workflow_path_match: run.path === anchor.workflow_path,
+  };
+  const valid = Object.values(checks).every(Boolean);
+  return {
+    status: valid ? "PASS" : "FAIL",
+    reason_code: valid
+      ? "RUNTIME_CUTOVER_PHASE5_EXACT_RUN_AND_DEPENDENCY_DIGEST_VALID"
+      : "RUNTIME_CUTOVER_PHASE5_EXACT_RUN_OR_DEPENDENCY_DIGEST_INVALID",
+    evidence_id: anchor.evidence_id,
+    run_id: anchor.run_id,
+    subject_sha: anchor.subject_sha,
+    dependency_digest: anchor.dependency_digest,
+    checks,
+  };
 }
 
 function resolveRequalificationEvidence(decision, authority, registry, stage, head) {
@@ -198,11 +277,13 @@ function main() {
     };
     const protectedMainAdoptionBase = String(process.env.PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA || "");
     const postAdoptionEffectivenessBase = String(process.env.POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA || "");
+    const postEffectivenessRuntimeCutoverBase = String(process.env.POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA || "");
     const adoptionDurableRequalification =
       stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
       (
         (/^[0-9a-f]{40}$/.test(protectedMainAdoptionBase) && args.base === protectedMainAdoptionBase) ||
-        (/^[0-9a-f]{40}$/.test(postAdoptionEffectivenessBase) && args.base === postAdoptionEffectivenessBase)
+        (/^[0-9a-f]{40}$/.test(postAdoptionEffectivenessBase) && args.base === postAdoptionEffectivenessBase) ||
+        (/^[0-9a-f]{40}$/.test(postEffectivenessRuntimeCutoverBase) && args.base === postEffectivenessRuntimeCutoverBase)
       ) &&
       PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS.has(decision.check_id);
     if (decision.status === "NOT_APPLICABLE") {
@@ -235,6 +316,26 @@ function main() {
           blocker_class: "PHASE6_GITHUB_PRODUCTION_EXECUTION_RETIREMENT_FAILURE",
           check_id: decision.check_id,
           detail: diagnostic,
+        });
+      } else if (
+        decision.check_id === RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1.check_id &&
+        args.base === RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1.base_sha
+      ) {
+        const evidence = validateRuntimeCutoverPhase5Requalification(decision, args.head || "", args.base || "");
+        result = {
+          ...common,
+          execution: "EXACT_WORKFLOW_RUN_AND_DEPENDENCY_DIGEST_VALIDATION",
+          status: evidence.status,
+          reason_code: evidence.reason_code,
+          evidence_id: evidence.evidence_id ?? null,
+          evidence_run_id: evidence.run_id ?? null,
+          evidence_subject_sha: evidence.subject_sha ?? null,
+          evidence_checks: evidence.checks ?? null,
+        };
+        if (evidence.status !== "PASS") blockers.push({
+          blocker_class: "INVALID_OR_MISSING_RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_EVIDENCE",
+          check_id: decision.check_id,
+          detail: evidence,
         });
       } else if (decision.diagnostic_command && !adoptionDurableRequalification) {
         const diagnostic = runDiagnostic(decision.diagnostic_command);

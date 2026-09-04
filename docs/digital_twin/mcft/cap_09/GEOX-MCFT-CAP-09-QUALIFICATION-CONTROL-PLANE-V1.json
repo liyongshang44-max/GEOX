@@ -17,7 +17,8 @@
     "46c9c7b6b59c113848fc69daff88fb183fccc954",
     "fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8",
     "46367333d228a2b90a86ff6a33aebc334f3d73a2",
-    "ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23"
+    "ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23",
+    "0630bb63b82c9ba108854f5aa26b096f9221f031"
   ],
   "stacked_predecessor_branch": "fix/mcft-cap09-v13-autonomous-forcing-foundation",
   "default_stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
@@ -686,7 +687,25 @@
       "paths": [
         ".github/workflows/mcft-cap-09-biological-stage-post-merge-effectiveness-v1.yml",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1.cjs"
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1.cjs",
+        "scripts/governance_acceptance/ROUTE_MCFT_CAP_09_BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1.cjs"
+      ]
+    },
+    "PRODUCTION_RUNTIME_OWNER_CUTOVER_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-production-runtime-owner-cutover-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-FORMAL-A0-PLANNING-AUTHORITY-V1.json",
+        "apps/server/src/runtime/mcft_cap09_production_owner_cutover_authority_v1.ts",
+        "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_preformal_owner_standby_v1.ts",
+        "apps/server/src/runtime/mcft_cap09_evidence_preformal_owner_runtime_v1.ts",
+        "apps/server/src/runtime/mcft_cap09_twin_preformal_owner_runtime_v1.ts",
+        "apps/server/scripts/write_dist_entries.cjs",
+        "docker-compose.mcft-cap09-production-preformal.yml",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs"
       ]
     }
   },
@@ -1411,7 +1430,7 @@
         "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1",
         "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_AMENDMENT_03"
       ],
-      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "historical_evidence_policy": "CANONICAL_EXACT_AT_EFFECTIVENESS_SUBJECT_SUCCESSOR_BLOB_PRESERVATION_AFTER_EFFECTIVENESS_MERGE",
       "execution_workflow": ".github/workflows/mcft-cap-09-biological-stage-post-merge-effectiveness-v1.yml",
       "execution_workflow_status": "IMPLEMENTED_AT_POST_MERGE_SUCCESSOR_HEAD",
       "fail_policy": "FAIL_CLOSED",
@@ -1428,7 +1447,40 @@
         "POST_MERGE_V13_QUALIFICATION"
       ],
       "carry_forward_evidence_id": null,
-      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1.cjs"
+      "diagnostic_command": "node scripts/governance_acceptance/ROUTE_MCFT_CAP_09_BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1.cjs"
+    },
+    {
+      "check_id": "PRODUCTION_RUNTIME_OWNER_CUTOVER",
+      "owner": "MCFT_CAP09_PRODUCTION_RUNTIME_OWNER_CUTOVER_QUALIFICATION",
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json"
+      ],
+      "resolver_ids": [
+        "PRODUCTION_RUNTIME_OWNER_CUTOVER_V1",
+        "BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1",
+        "PRODUCTION_OWNER_GRADUATION_CLOSURE"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "execution_workflow": ".github/workflows/mcft-cap-09-production-runtime-owner-cutover-v1.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
+      "fail_policy": "FAIL_CLOSED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "PRODUCTION_RUNTIME_OWNER_CUTOVER_V1",
+        "BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1",
+        "PRODUCTION_OWNER_GRADUATION_CLOSURE"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs"
     }
   ],
   "non_effects": {

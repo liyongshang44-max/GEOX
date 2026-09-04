@@ -1,0 +1,41 @@
+{
+  "schema_version": "geox_mcft_cap09_production_runtime_owner_cutover_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1",
+  "status": "AUTHORIZED_FOR_LOCAL_OPERATOR_MANAGED_DOCKER_CUTOVER",
+  "authority_predecessor_protected_main_sha": "0630bb63b82c9ba108854f5aa26b096f9221f031",
+  "deployment_subject_rule": "EXACT_CURRENT_PROTECTED_MAIN_AT_LOCAL_CUTOVER",
+  "execution_host": {
+    "required_platform": "LOCAL_OPERATOR_MANAGED_DOCKER",
+    "host_binding_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
+    "exact_host_id": "fae5f756-ef25-40d5-9777-5b2c3d4837a1",
+    "github_actions_execution_forbidden": true
+  },
+  "authority_inputs": {
+    "current_crop_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-V1.json",
+    "current_crop_authority_sha256": "sha256:372163dc04c306b37d2874f77be3b4ba0a167ae8d6198ce6ecc1411f2d35f9fb",
+    "biological_stage_architecture_effectiveness_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json",
+    "biological_stage_architecture_effectiveness_sha256": "sha256:acffd98b6e014db4d11a3374a50a2e576be3396aef33ed456f7ee104ee72a1c6",
+    "formal_a0_planning_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-FORMAL-A0-PLANNING-AUTHORITY-V1.json",
+    "production_owner_graduation_gate_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json",
+    "forcing_acquisition_budget_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json"
+  },
+  "cutover_contract": {
+    "dual_key_required": true,
+    "runtime_start_authority_required": true,
+    "production_owner_cutover_authority_required": true,
+    "evidence_runtime_start_authorized": true,
+    "twin_preformal_owner_standby_start_authorized": true,
+    "evidence_owner_activation_authorized": true,
+    "twin_owner_activation_authorized": true,
+    "exact_one_live_fenced_owner_per_plane_required": true,
+    "rollback_both_services_on_owner_verification_failure": true,
+    "twin_mode": "PRE_FORMAL_OWNER_STANDBY"
+  },
+  "later_authority_ceiling": {
+    "formal_v5_arm_authorized": false,
+    "a0_execution_authorized": false,
+    "o00_authorized": false,
+    "o00_o23_execution_authorized": false,
+    "mcft_cap09_completed": false
+  }
+}

@@ -26,6 +26,7 @@ jobs:
       MCFT_CAP09_POSTMERGE_BIO_STAGE_EFFECT_BASE_SHA: ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23
       MCFT_CAP09_POSTMERGE_BIO_STAGE_EFFECT_ISSUED_AT: 2026-09-03T15:23:00.000Z
       EFFECTIVENESS_CERT: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json
+      EFFECTIVENESS_MERGE_SHA: 0630bb63b82c9ba108854f5aa26b096f9221f031
     steps:
       - name: Checkout exact successor subject
         uses: actions/checkout@v4
@@ -54,10 +55,27 @@ jobs:
       - name: Fetch current protected main
         run: git fetch origin main
 
+      - name: Resolve canonical-exact vs successor-preservation mode
+        id: mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git merge-base --is-ancestor "$EFFECTIVENESS_MERGE_SHA" HEAD; then
+            echo "mode=SUCCESSOR_PRESERVATION" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=CANONICAL_EXACT" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Preserve canonical post-merge effectiveness on successors
+        if: steps.mode.outputs.mode == 'SUCCESSOR_PRESERVATION'
+        run: node scripts/governance_acceptance/ROUTE_MCFT_CAP_09_BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1.cjs
+
       - name: Validate exact post-merge effectiveness governance boundary
+        if: steps.mode.outputs.mode == 'CANONICAL_EXACT'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_BIOLOGICAL_STAGE_POST_MERGE_EFFECTIVENESS_V1.cjs
 
       - name: Rebuild exact architecture effectiveness certificate from protected main
+        if: steps.mode.outputs.mode == 'CANONICAL_EXACT'
         shell: bash
         run: |
           set -euo pipefail
@@ -69,17 +87,21 @@ jobs:
           cmp acceptance-output/MCFT_CAP09_EXPECTED_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_V1.json "$EFFECTIVENESS_CERT"
 
       - name: Fresh read-only T4R1 lifecycle requalification
+        if: steps.mode.outputs.mode == 'CANONICAL_EXACT'
         env:
           MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
         run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.mjs
 
       - name: Fresh read-only T4R1 thermal biological-stage requalification
+        if: steps.mode.outputs.mode == 'CANONICAL_EXACT'
         run: python3 scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.py
 
       - name: Compose fresh current-crop authority candidate
+        if: steps.mode.outputs.mode == 'CANONICAL_EXACT'
         run: node scripts/runtime_acceptance/COMPOSE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_V1.cjs
 
       - name: Graduate fresh current-crop authority against effective architecture
+        if: steps.mode.outputs.mode == 'CANONICAL_EXACT'
         run: |
           node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_V1.cjs \
             --candidate acceptance-output/MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json \
@@ -87,6 +109,7 @@ jobs:
             --out acceptance-output/MCFT_CAP09_T4R1_EFFECTIVE_CURRENT_CROP_AUTHORITY_RESULT.json
 
       - name: Validate post-merge effectiveness and fresh authority non-effects
+        if: steps.mode.outputs.mode == 'CANONICAL_EXACT'
         shell: node {0}
         run: |
           const fs = require('fs');
