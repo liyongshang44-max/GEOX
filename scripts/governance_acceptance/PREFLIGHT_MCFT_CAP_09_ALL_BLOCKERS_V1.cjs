@@ -19,6 +19,7 @@ const REQUALIFICATION_BINDING_STRATEGY = "MCFT_CAP09_REQUALIFICATION_RUN_BINDING
 const PHASE6_RETIREMENT_AUTHORITY_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json";
 const PHASE6_OWNER_AUDITOR_PATH = "scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs";
 const PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS = new Set([
+  "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
   "PHASE2_EVIDENCE_PROVIDER_MODULES",
   "T4R1_BIOLOGICAL_STAGE_AUTHORITY",
   "T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION",
@@ -278,12 +279,14 @@ function main() {
     const protectedMainAdoptionBase = String(process.env.PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA || "");
     const postAdoptionEffectivenessBase = String(process.env.POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA || "");
     const postEffectivenessRuntimeCutoverBase = String(process.env.POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA || "");
+    const postRuntimeCutoverProductionLiveBase = String(process.env.POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA || "");
     const adoptionDurableRequalification =
       stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
       (
         (/^[0-9a-f]{40}$/.test(protectedMainAdoptionBase) && args.base === protectedMainAdoptionBase) ||
         (/^[0-9a-f]{40}$/.test(postAdoptionEffectivenessBase) && args.base === postAdoptionEffectivenessBase) ||
-        (/^[0-9a-f]{40}$/.test(postEffectivenessRuntimeCutoverBase) && args.base === postEffectivenessRuntimeCutoverBase)
+        (/^[0-9a-f]{40}$/.test(postEffectivenessRuntimeCutoverBase) && args.base === postEffectivenessRuntimeCutoverBase) ||
+        (/^[0-9a-f]{40}$/.test(postRuntimeCutoverProductionLiveBase) && args.base === postRuntimeCutoverProductionLiveBase)
       ) &&
       PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS.has(decision.check_id);
     if (decision.status === "NOT_APPLICABLE") {
