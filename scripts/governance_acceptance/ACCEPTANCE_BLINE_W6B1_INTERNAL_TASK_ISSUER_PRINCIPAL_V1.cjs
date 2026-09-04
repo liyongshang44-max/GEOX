@@ -102,6 +102,7 @@ const allowed=new Set([
   SERVER,
   COMPOSE,
   TOKENS,
+  'scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs',
   'scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B1_INTERNAL_TASK_ISSUER_PRINCIPAL_V1.cjs',
   'scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6B1_INTERNAL_TASK_ISSUER_PRINCIPAL_V1.ts',
   '.github/workflows/bline-w6b1-internal-task-issuer-principal.yml'
@@ -130,6 +131,7 @@ console.log(JSON.stringify({
   predecessor_tokens_unchanged:true,
   approval_route_unchanged:true,
   ao_act_route_unchanged:true,
+  w4_successor_qualification_harness_only:true,
   w6a_historical_exact_head_gate_replayed:true,
   changed_files:changed,
   mcft_delta:0
