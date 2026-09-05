@@ -201,6 +201,8 @@ const coreAllowed = new Set([
   DIST,
   COMPOSE,
   ENV_EXAMPLE,
+  'apps/server/src/routes/evidence_report_v1.ts',
+  'apps/server/src/services/device_observation_service_v1.ts',
   'scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.cjs',
   'scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.ts',
   '.github/workflows/bline-w6b2-commercial-principal-isolation.yml'
