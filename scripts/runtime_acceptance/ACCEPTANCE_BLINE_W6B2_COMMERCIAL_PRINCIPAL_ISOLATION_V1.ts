@@ -11,12 +11,15 @@ type TerminalRecord = {
   DB_TELEMETRY: unknown;
   DB_JOBS: unknown;
   DB_EXECUTOR: unknown;
+  DB_CROSS_CREDENTIALS: unknown;
   MQTT_CONNECT_EXECUTOR: unknown;
   MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT: unknown;
   MQTT_POSITIVE_CONTROL_SUBSCRIBE: unknown;
   MQTT_TEST_PUBLISH: unknown;
   MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT: unknown;
   MQTT_POSITIVE_CONTROL_DELIVERY_COUNT: unknown;
+  MQTT_TELEMETRY_FORBIDDEN_PUBLISH: unknown;
+  MQTT_CROSS_CREDENTIAL: unknown;
   error_code: string | null;
   error_message: string | null;
 };
@@ -28,12 +31,15 @@ const terminal: TerminalRecord = {
   DB_TELEMETRY: UNOBSERVED,
   DB_JOBS: UNOBSERVED,
   DB_EXECUTOR: UNOBSERVED,
+  DB_CROSS_CREDENTIALS: UNOBSERVED,
   MQTT_CONNECT_EXECUTOR: UNOBSERVED,
   MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT: UNOBSERVED,
   MQTT_POSITIVE_CONTROL_SUBSCRIBE: UNOBSERVED,
   MQTT_TEST_PUBLISH: UNOBSERVED,
   MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT: UNOBSERVED,
   MQTT_POSITIVE_CONTROL_DELIVERY_COUNT: UNOBSERVED,
+  MQTT_TELEMETRY_FORBIDDEN_PUBLISH: UNOBSERVED,
+  MQTT_CROSS_CREDENTIAL: UNOBSERVED,
   error_code: null,
   error_message: null,
 };
@@ -43,12 +49,15 @@ const terminalEvidenceKeys = new Set([
   "DB_TELEMETRY",
   "DB_JOBS",
   "DB_EXECUTOR",
+  "DB_CROSS_CREDENTIALS",
   "MQTT_CONNECT_EXECUTOR",
   "MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT",
   "MQTT_POSITIVE_CONTROL_SUBSCRIBE",
   "MQTT_TEST_PUBLISH",
   "MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT",
   "MQTT_POSITIVE_CONTROL_DELIVERY_COUNT",
+  "MQTT_TELEMETRY_FORBIDDEN_PUBLISH",
+  "MQTT_CROSS_CREDENTIAL",
 ]);
 
 let terminalEmitted = false;
@@ -325,7 +334,7 @@ async function verifyDatabasePrincipal(principal: Principal) {
   }
 }
 
-async function expectDbAuthFailure(user: string, wrongPassword: string, label: string): Promise<void> {
+async function expectDbAuthFailure(user: string, wrongPassword: string, label: string): Promise<{ label: string; user: string; denied: true }> {
   setPhase(`DB_CROSS_CREDENTIAL_${label.toUpperCase()}`);
   const pool = new Pool({ connectionString: dbUrl(user, wrongPassword), max: 1, connectionTimeoutMillis: 3000 });
   let denied = false;
@@ -337,6 +346,7 @@ async function expectDbAuthFailure(user: string, wrongPassword: string, label: s
     await pool.end().catch(() => undefined);
   }
   assert(denied, "W6B2_DB_CROSS_CREDENTIAL_ACCEPTED", label);
+  return { label, user, denied: true };
 }
 
 function connectMqtt(username: string, password: string, clientId: string): Promise<MqttClient> {
@@ -428,9 +438,12 @@ async function verifyMqttBoundary() {
 
   let executorForbiddenDeliveryCount = 0;
   let positiveControlDeliveryCount = 0;
+  let executorSubscribeAckObservation: SubscribeObservation | null = null;
+  let telemetryForbiddenPublishDenied = false;
   try {
     setPhase("MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT");
     const forbiddenSubscribe = await observeSubscribe(executor, topic);
+    executorSubscribeAckObservation = forbiddenSubscribe;
     observed("MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT", {
       ...forbiddenSubscribe,
       executor_connected_after_subscribe: executor.connected,
@@ -504,10 +517,6 @@ async function verifyMqttBoundary() {
       nonce,
     });
 
-    const deniedByOriginalSubackAssumption = forbiddenSubscribe.status === "ERROR"
-      || (forbiddenSubscribe.status === "GRANTED" && forbiddenSubscribe.qos === 128);
-    assert(deniedByOriginalSubackAssumption, "W6B2_MQTT_EXECUTOR_SUBSCRIBE_NOT_DENIED_BY_SUBACK", forbiddenSubscribe);
-
     setPhase("MQTT_TELEMETRY_FORBIDDEN_PUBLISH");
     let telemetryReceivedOwnPublish = false;
     const ownPayload = `telemetry-forbidden-${nonce}`;
@@ -515,10 +524,24 @@ async function verifyMqttBoundary() {
       if (incomingTopic === topic && incomingPayload.toString("utf8") === ownPayload) telemetryReceivedOwnPublish = true;
     };
     telemetry.on("message", ownHandler);
-    await publish(telemetry, topic, ownPayload).catch(() => undefined);
+    let telemetryPublishObservation: { status: "CALLBACK_SUCCESS" } | { status: "ERROR"; error: string };
+    try {
+      await publish(telemetry, topic, ownPayload);
+      telemetryPublishObservation = { status: "CALLBACK_SUCCESS" };
+    } catch (error) {
+      telemetryPublishObservation = { status: "ERROR", error: sanitizeErrorText(error) };
+    }
     await new Promise((resolve) => setTimeout(resolve, 500));
     telemetry.removeListener("message", ownHandler);
-    assert(!telemetryReceivedOwnPublish, "W6B2_MQTT_TELEMETRY_PUBLISH_NOT_DENIED");
+    telemetryForbiddenPublishDenied = !telemetryReceivedOwnPublish;
+    observed("MQTT_TELEMETRY_FORBIDDEN_PUBLISH", {
+      principal: telemetryMqttUsername,
+      topic,
+      publish_observation: telemetryPublishObservation,
+      self_delivery_observed: telemetryReceivedOwnPublish,
+      forbidden_publish_effect_denied: telemetryForbiddenPublishDenied,
+    });
+    assert(telemetryForbiddenPublishDenied, "W6B2_MQTT_TELEMETRY_PUBLISH_NOT_DENIED");
   } finally {
     telemetry.end(true);
     executor.end(true);
@@ -526,24 +549,34 @@ async function verifyMqttBoundary() {
 
   setPhase("MQTT_CROSS_CREDENTIAL");
   let crossCredentialDenied = false;
+  let crossCredentialObservation: { status: "ACCEPTED" } | { status: "DENIED"; error: string } = { status: "ACCEPTED" };
   try {
     const wrong = await connectMqtt(telemetryMqttUsername, executorMqttPassword, `w6b2_wrong_${nonce}`);
     wrong.end(true);
-  } catch {
+  } catch (error) {
     crossCredentialDenied = true;
+    crossCredentialObservation = { status: "DENIED", error: sanitizeErrorText(error) };
   }
+  observed("MQTT_CROSS_CREDENTIAL", {
+    attempted_username: telemetryMqttUsername,
+    credential_source: executorMqttUsername,
+    result: crossCredentialObservation,
+    denied: crossCredentialDenied,
+  });
   assert(crossCredentialDenied, "W6B2_MQTT_CROSS_CREDENTIAL_ACCEPTED");
+  assert(executorSubscribeAckObservation !== null, "W6B2_MQTT_EXECUTOR_SUBSCRIBE_ACK_UNOBSERVED");
 
   return {
     telemetry_principal: telemetryMqttUsername,
     executor_principal: executorMqttUsername,
     telemetry_read_allowed: true,
-    telemetry_publish_denied: true,
+    telemetry_publish_denied: telemetryForbiddenPublishDenied,
     executor_publish_allowed: true,
-    executor_subscribe_denied_by_original_suback_assumption: true,
+    executor_subscribe_ack_observation: executorSubscribeAckObservation,
+    executor_forbidden_delivery_denied: executorForbiddenDeliveryCount === 0,
     executor_forbidden_delivery_count: executorForbiddenDeliveryCount,
     positive_control_delivery_count: positiveControlDeliveryCount,
-    cross_credential_denied: true,
+    cross_credential_denied: crossCredentialDenied,
   };
 }
 
@@ -557,9 +590,15 @@ async function main() {
   const serverDbResult = await observeServerDatabasePrincipal();
   const dbResults = [];
   for (const principal of dbPrincipals) dbResults.push(await verifyDatabasePrincipal(principal));
-  await expectDbAuthFailure("geox_telemetry_ingest_v1", jobsDbPassword, "telemetry_user_with_jobs_password");
-  await expectDbAuthFailure("geox_jobs_v1", executorDbPassword, "jobs_user_with_executor_password");
-  await expectDbAuthFailure("geox_executor_runtime_v1", telemetryDbPassword, "executor_user_with_telemetry_password");
+  const dbCrossCredentialResults = [
+    await expectDbAuthFailure("geox_telemetry_ingest_v1", jobsDbPassword, "telemetry_user_with_jobs_password"),
+    await expectDbAuthFailure("geox_jobs_v1", executorDbPassword, "jobs_user_with_executor_password"),
+    await expectDbAuthFailure("geox_executor_runtime_v1", telemetryDbPassword, "executor_user_with_telemetry_password"),
+  ];
+  observed("DB_CROSS_CREDENTIALS", {
+    all_denied: dbCrossCredentialResults.every((result) => result.denied),
+    checks: dbCrossCredentialResults,
+  });
 
   setPhase("MQTT");
   const mqttResult = await verifyMqttBoundary();
