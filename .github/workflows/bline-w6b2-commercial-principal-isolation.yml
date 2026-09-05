@@ -384,14 +384,36 @@ jobs:
         run: |
           set -uo pipefail
           mkdir -p .w6b2-runtime-proof
+
+          telemetry_db_password="$(docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml exec -T telemetry-ingest sh -c 'cat /run/geox/telemetry/db_password')"
+          jobs_db_password="$(docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml exec -T jobs sh -c 'cat /run/geox/jobs/db_password')"
+          executor_db_password="$(docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml exec -T executor sh -c 'cat /run/geox/executor/db_password')"
+          telemetry_mqtt_password="$(docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml exec -T telemetry-ingest sh -c 'cat /run/geox/telemetry/mqtt_password')"
+          executor_mqtt_password="$(docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml exec -T executor sh -c 'cat /run/geox/executor/mqtt_password')"
+          admin_db_password="$(awk -F= '$1 == "POSTGRES_PASSWORD" { print substr($0, index($0, "=") + 1) }' .env.w6b2)"
+
+          test -n "$telemetry_db_password"
+          test -n "$jobs_db_password"
+          test -n "$executor_db_password"
+          test -n "$telemetry_mqtt_password"
+          test -n "$executor_mqtt_password"
+          test -n "$admin_db_password"
+
+          export W6B2_DB_HOST=127.0.0.1
+          export W6B2_DB_PORT=5433
+          export POSTGRES_DB=landos
+          export W6B2_MQTT_URL=mqtt://127.0.0.1:1883
+          export GEOX_DB_PLATFORM_ADMIN_DATABASE_URL="postgres://landos:${admin_db_password}@127.0.0.1:5433/landos"
+          export GEOX_TELEMETRY_DATABASE_PASSWORD="$telemetry_db_password"
+          export GEOX_JOBS_DATABASE_PASSWORD="$jobs_db_password"
+          export GEOX_EXECUTOR_DATABASE_PASSWORD="$executor_db_password"
+          export GEOX_TELEMETRY_MQTT_PASSWORD="$telemetry_mqtt_password"
+          export GEOX_EXECUTOR_MQTT_PASSWORD="$executor_mqtt_password"
+
+          unset telemetry_db_password jobs_db_password executor_db_password telemetry_mqtt_password executor_mqtt_password admin_db_password
+
           set +e
-          docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml run --rm --no-deps \
-            -e W6B2_DB_HOST=postgres \
-            -e W6B2_DB_PORT=5432 \
-            -e POSTGRES_DB=landos \
-            -e W6B2_MQTT_URL=mqtt://mqtt:1883 \
-            --entrypoint /bin/sh bline-commercial-principal-bootstrap \
-            -ceu 'pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.ts' \
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.ts \
             2>&1 | tee .w6b2-runtime-proof/runtime-proof.log
           proof_rc=${PIPESTATUS[0]}
           set -e
