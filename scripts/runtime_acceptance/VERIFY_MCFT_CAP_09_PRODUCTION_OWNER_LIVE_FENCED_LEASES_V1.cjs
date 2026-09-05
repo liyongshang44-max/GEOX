@@ -1,285 +1,146 @@
 #!/usr/bin/env node
 "use strict";
 
+const assert = require("node:assert/strict");
 const childProcess = require("node:child_process");
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 
 const ROOT = path.resolve(__dirname, "../..");
-const HOST_AUTH = path.join(
-  ROOT,
-  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json",
-);
-const OUT = path.join(
-  ROOT,
-  "acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1_RESULT.json",
-);
+const HOST_AUTH = path.join(ROOT, "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json");
+const LIVE_OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1_RESULT.json");
+const ATTEST_OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_V1_RESULT.json");
+const SELFTEST_OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_PROVENANCE_PROOF_BOUNDARY_V1_RESULT.json");
+const PROJECT = "geox-mcft-cap09-production-v1";
+const VALID_SHA = /^[0-9a-f]{40}$/;
+const VALID_IMAGE_ID = /^sha256:[0-9a-f]{64}$/;
 
-function req(ok, code) {
-  if (!ok) throw new Error(code);
+function req(ok, code) { if (!ok) throw new Error(code); }
+function text(value, code) { const out=String(value??"").trim(); if(!out) throw new Error(code); return out; }
+function sha(value, code) { const out=text(value,code); if(!VALID_SHA.test(out)) throw new Error(code); return out; }
+function imageId(value, code) { const out=text(value,code); if(!VALID_IMAGE_ID.test(out)) throw new Error(code); return out; }
+function readJson(file) { return JSON.parse(fs.readFileSync(file,"utf8")); }
+function expandHome(value) { const input=text(value,"OWNER_PATH_REQUIRED"); if(input==="~")return os.homedir(); if(input.startsWith("~/")||input.startsWith("~\\"))return path.join(os.homedir(),input.slice(2)); return input; }
+function exec(file,args){ return childProcess.execFileSync(file,args,{cwd:ROOT,encoding:"utf8",stdio:["ignore","pipe","pipe"],env:process.env}).trim(); }
+function write(file,value){ fs.mkdirSync(path.dirname(file),{recursive:true}); fs.writeFileSync(file,JSON.stringify(value,null,2)+"\n"); process.stdout.write(JSON.stringify(value,null,2)+"\n"); }
+function zeroEffects(){ return {database_write_count:0,production_runtime_start_count:0,production_lease_write_count:0,provider_request_count:0,production_owner_activation:false,formal_v5_arm:false,a0:false,o00:false}; }
+function intEnv(name,fallback,min,max){ const raw=String(process.env[name]??fallback).trim(); if(!/^\d+$/.test(raw))throw new Error(`OWNER_ENV_INVALID:${name}`); const v=Number(raw); if(!Number.isSafeInteger(v)||v<min||v>max)throw new Error(`OWNER_ENV_INVALID:${name}`); return v; }
+function deep(v){ return JSON.parse(JSON.stringify(v)); }
+
+function attestArtifact(input={}){
+  const expected=sha(input.expected_subject_sha??process.env.GEOX_DEPLOYMENT_SUBJECT_COMMIT,"ARTIFACT_EXPECTED_SUBJECT_SHA_REQUIRED");
+  const head=sha(exec("git",["rev-parse","HEAD"]),"ARTIFACT_REPOSITORY_HEAD_SHA_INVALID");
+  const tree=sha(exec("git",["rev-parse","HEAD^{tree}"]),"ARTIFACT_REPOSITORY_TREE_SHA_INVALID");
+  const dirty=exec("git",["status","--porcelain","--untracked-files=normal"]);
+  req(head===expected,"ARTIFACT_REPOSITORY_SUBJECT_MISMATCH");
+  req(!dirty,"ARTIFACT_REPOSITORY_DIRTY");
+  const tag=text(input.docker_image_tag??process.env.GEOX_MCFT_CAP09_RUNTIME_IMAGE_TAG??`geox-mcft-cap09-runtime:${expected}`,"ARTIFACT_DOCKER_IMAGE_TAG_REQUIRED");
+  const id=imageId(exec("docker",["image","inspect",tag,"--format","{{.Id}}"]),"ARTIFACT_DOCKER_IMAGE_ID_INVALID");
+  return {schema_version:"geox_mcft_cap09_production_runtime_artifact_attestation_v1",status:"PASS",subject_main_sha:head,subject_tree_sha:tree,repository_head_sha:head,repository_tree_sha:tree,repository_clean:true,docker_image_tag:tag,docker_image_id:id,authorized_image_id:id,artifact_attestation_status:"PASS_EXACT_CLEAN_SUBJECT_TO_IMMUTABLE_LOCAL_IMAGE_ID",attestation_scope:"LOCAL_DOCKER_HOST_IMAGE_IDENTITY",...zeroEffects()};
 }
-
-function text(value, code) {
-  const out = String(value ?? "").trim();
-  if (!out) throw new Error(code);
-  return out;
+function adjudicateArtifactFixture(input){
+  const blockers=[]; const expected=String(input.expected_subject_sha??""); const head=String(input.repository_head_sha??""); const tree=String(input.repository_tree_sha??""); const authorized=String(input.authorized_image_id??""); const tagImage=String(input.tag_resolved_image_id??"");
+  if(!VALID_SHA.test(expected))blockers.push("ARTIFACT_EXPECTED_SUBJECT_SHA_INVALID");
+  if(!VALID_SHA.test(head))blockers.push("ARTIFACT_REPOSITORY_HEAD_SHA_INVALID");
+  if(!VALID_SHA.test(tree))blockers.push("ARTIFACT_REPOSITORY_TREE_SHA_INVALID");
+  if(VALID_SHA.test(expected)&&VALID_SHA.test(head)&&expected!==head)blockers.push("ARTIFACT_REPOSITORY_SUBJECT_MISMATCH");
+  if(input.repository_clean!==true)blockers.push("ARTIFACT_REPOSITORY_DIRTY");
+  if(!String(input.docker_image_tag??"").trim())blockers.push("ARTIFACT_DOCKER_IMAGE_TAG_REQUIRED");
+  if(!VALID_IMAGE_ID.test(authorized))blockers.push("ARTIFACT_AUTHORIZED_IMAGE_ID_INVALID");
+  if(!VALID_IMAGE_ID.test(tagImage))blockers.push("ARTIFACT_TAG_IMAGE_ID_INVALID");
+  if(VALID_IMAGE_ID.test(authorized)&&VALID_IMAGE_ID.test(tagImage)&&authorized!==tagImage)blockers.push("ARTIFACT_MUTABLE_TAG_RESOLVES_UNAUTHORIZED_IMAGE");
+  return {status:blockers.length===0?"PASS":"FAIL",blockers};
 }
+function hostContract(){ const host=readJson(HOST_AUTH); req(host.schema_version==="geox_mcft_cap09_production_non_github_host_binding_authority_v1"&&host.status==="LOCAL_OPERATOR_MANAGED_DOCKER_HOST_IDENTITIES_BOUND","OWNER_HOST_BINDING_AUTHORITY_REQUIRED"); req(host.binding_state?.exact_two_runtime_service_identities_bound===true&&host.binding_state?.binding_authorized===true,"OWNER_EXACT_TWO_HOST_IDENTITIES_REQUIRED"); req(host.github_actions?.production_execution_host_allowed===false,"OWNER_GITHUB_PRODUCTION_HOST_FORBIDDEN"); return host; }
+function serviceIdentity(host,plane,expectedImage){ const node=plane==="EVIDENCE_RUNTIME"?host.host_identity_contract?.evidence_runtime:host.host_identity_contract?.twin_runtime; const identity=node?.service_identity; req(identity&&typeof identity==="object","OWNER_SERVICE_IDENTITY_REQUIRED"); req(identity.platform_provider==="LOCAL_OPERATOR_MANAGED_DOCKER","OWNER_SERVICE_PLATFORM_REQUIRED"); req(identity.execution_class==="LONG_RUNNING_SERVICE","OWNER_SERVICE_EXECUTION_CLASS_REQUIRED"); req(identity.runtime_role===plane,"OWNER_SERVICE_RUNTIME_ROLE_REQUIRED"); return {runtime_role:plane,host_id:text(host.next_stage?.local_host_id,"OWNER_BOUND_HOST_ID_REQUIRED"),service_id:text(identity.service_id,"OWNER_SERVICE_ID_REQUIRED"),service_name:text(identity.service_name,"OWNER_SERVICE_NAME_REQUIRED"),compose_project:PROJECT,compose_service:text(identity.service_name,"OWNER_COMPOSE_SERVICE_REQUIRED"),login_role:plane==="EVIDENCE_RUNTIME"?"geox_mcft_cap09_evidence_runtime_login_v1":"geox_mcft_cap09_twin_runtime_login_v1",image_id:imageId(expectedImage,"OWNER_EXPECTED_IMAGE_ID_INVALID")}; }
+function leaseOwnerParts(value,expectedServiceId){ const owner=String(value??"").trim(); const prefix=`${expectedServiceId}#instance:`; if(!owner.startsWith(prefix)||owner.length<=prefix.length)return {owner,prefix_match:false,instance_id:""}; return {owner,prefix_match:true,instance_id:owner.slice(prefix.length)}; }
 
-function readJson(file) {
-  return JSON.parse(fs.readFileSync(file, "utf8"));
+function adjudicatePlaneObservation(input){
+  const blockers=[]; const expected=input.expected||{}; const lease=input.lease||{}; const container=input.container||{}; const health=input.health||{}; const owner=leaseOwnerParts(lease.lease_owner,expected.service_id||"__missing__");
+  if(!expected.host_id||input.actual_host_id!==expected.host_id)blockers.push("OWNER_HOST_IDENTITY_MISMATCH");
+  if(Number(lease.live_row_count)!==1)blockers.push("OWNER_LIVE_ROW_COUNT_EXACTLY_ONE_REQUIRED");
+  if(Number(lease.distinct_owner_count)!==1)blockers.push("OWNER_DISTINCT_OWNER_COUNT_EXACTLY_ONE_REQUIRED");
+  if(String(lease.database_current_user??"")!==expected.login_role)blockers.push("OWNER_DATABASE_LOGIN_ROLE_MISMATCH");
+  if(lease.all_positive_fencing_tokens!==true)blockers.push("OWNER_POSITIVE_FENCING_TOKEN_REQUIRED");
+  if(lease.acquired_before_heartbeat!==true)blockers.push("OWNER_ACQUIRED_HEARTBEAT_CHRONOLOGY_INVALID");
+  if(lease.heartbeat_not_future!==true)blockers.push("OWNER_HEARTBEAT_FUTURE_INVALID");
+  if(lease.expiry_after_heartbeat!==true)blockers.push("OWNER_EXPIRY_HEARTBEAT_CHRONOLOGY_INVALID");
+  if(!owner.prefix_match)blockers.push("OWNER_LEASE_SERVICE_IDENTITY_MISMATCH");
+  if(Number(container.matching_container_count)!==1)blockers.push("OWNER_MATCHING_CONTAINER_COUNT_EXACTLY_ONE_REQUIRED");
+  if(container.running!==true)blockers.push("OWNER_CONTAINER_NOT_RUNNING");
+  if(!String(container.container_id??"").trim())blockers.push("OWNER_CONTAINER_ID_REQUIRED");
+  const hostname=String(container.hostname??"").trim(); if(!hostname)blockers.push("OWNER_CONTAINER_HOSTNAME_REQUIRED"); if(owner.prefix_match&&hostname&&hostname!==owner.instance_id)blockers.push("OWNER_CONTAINER_HOSTNAME_LEASE_INSTANCE_MISMATCH");
+  if(String(container.image_id??"")!==expected.image_id)blockers.push("OWNER_CONTAINER_IMAGE_ID_MISMATCH");
+  if(String(container.tag_resolved_image_id??"")!==expected.image_id)blockers.push("OWNER_MUTABLE_TAG_IMAGE_ID_MISMATCH");
+  if(String(container.compose_project??"")!==expected.compose_project)blockers.push("OWNER_COMPOSE_PROJECT_MISMATCH");
+  if(String(container.compose_service??"")!==expected.compose_service)blockers.push("OWNER_COMPOSE_SERVICE_MISMATCH");
+  if(String(health.runtime_role??"")!==expected.runtime_role)blockers.push("OWNER_HEALTH_RUNTIME_ROLE_MISMATCH");
+  if(health.current!==true)blockers.push("OWNER_CURRENT_STRUCTURED_HEALTH_EVENT_REQUIRED");
+  const accepted=expected.runtime_role==="EVIDENCE_RUNTIME"?new Set(["HEALTHY","STANDBY"]):new Set(["HEALTHY","BACKPRESSURE"]); if(!accepted.has(String(health.status??"")))blockers.push("OWNER_RUNTIME_NOT_READY");
+  return {status:blockers.length===0?"PASS":"FAIL",runtime_role:expected.runtime_role,expected_service_id:expected.service_id,expected_service_name:expected.service_name,expected_image_id:expected.image_id,expected_host_id:expected.host_id,lease_owner:String(lease.lease_owner??""),lease_instance_id:owner.instance_id,fencing_token:String(lease.minimum_fencing_token??""),acquired_at:String(lease.acquired_at??""),heartbeat_at:String(lease.heartbeat_at??""),expires_at:String(lease.expires_at??""),database_now:String(lease.database_now??""),container_id:String(container.container_id??""),container_hostname:hostname,container_running:container.running===true,container_image_id:String(container.image_id??""),tag_resolved_image_id:String(container.tag_resolved_image_id??""),compose_project:String(container.compose_project??""),compose_service:String(container.compose_service??""),health_status:String(health.status??""),health_current:health.current===true,blockers};
 }
+function adjudicateRenewal(t1,t2){ const blockers=[]; if(t1.status!=="PASS")blockers.push("OWNER_RENEWAL_T1_NOT_VALID"); if(t2.status!=="PASS")blockers.push("OWNER_RENEWAL_T2_NOT_VALID"); for(const key of ["lease_owner","fencing_token","container_id","container_hostname","container_image_id"])if(String(t1[key]??"")!==String(t2[key]??""))blockers.push(`OWNER_RENEWAL_${key.toUpperCase()}_CHANGED`); const h1=Date.parse(t1.heartbeat_at),h2=Date.parse(t2.heartbeat_at),e1=Date.parse(t1.expires_at),e2=Date.parse(t2.expires_at),n1=Date.parse(t1.database_now),n2=Date.parse(t2.database_now); if(!(Number.isFinite(h1)&&Number.isFinite(h2)&&h2>h1))blockers.push("OWNER_RENEWAL_HEARTBEAT_MUST_ADVANCE"); if(!(Number.isFinite(e1)&&Number.isFinite(e2)&&e2>e1))blockers.push("OWNER_RENEWAL_EXPIRY_MUST_ADVANCE"); if(!(Number.isFinite(n1)&&Number.isFinite(n2)&&n2>n1))blockers.push("OWNER_RENEWAL_DATABASE_TIME_MUST_ADVANCE"); return {status:blockers.length===0?"PASS":"FAIL",same_effective_owner:t1.lease_owner===t2.lease_owner,same_container_instance:t1.container_id===t2.container_id,same_image_id:t1.container_image_id===t2.container_image_id,heartbeat_advanced:Number.isFinite(h1)&&Number.isFinite(h2)&&h2>h1,expiry_advanced:Number.isFinite(e1)&&Number.isFinite(e2)&&e2>e1,blockers}; }
+function adjudicateOwnerProof(input){ const e1=adjudicatePlaneObservation(input.evidence.t1),e2=adjudicatePlaneObservation(input.evidence.t2),t1=adjudicatePlaneObservation(input.twin.t1),t2=adjudicatePlaneObservation(input.twin.t2); const er=adjudicateRenewal(e1,e2),tr=adjudicateRenewal(t1,t2); const blockers=[...e1.blockers.map(x=>`EVIDENCE_T1:${x}`),...e2.blockers.map(x=>`EVIDENCE_T2:${x}`),...t1.blockers.map(x=>`TWIN_T1:${x}`),...t2.blockers.map(x=>`TWIN_T2:${x}`),...er.blockers.map(x=>`EVIDENCE_RENEWAL:${x}`),...tr.blockers.map(x=>`TWIN_RENEWAL:${x}`)]; if(e2.lease_owner&&e2.lease_owner===t2.lease_owner)blockers.push("CROSS_PLANE_GENERIC_OWNER_FORBIDDEN"); return {status:blockers.length===0?"PASS":"FAIL",adjudication:blockers.length===0?"EXACT_ONE_EFFECTIVE_OWNER_PER_RUNTIME_ROLE_WITH_CONTAINER_IMAGE_HOST_AND_RENEWAL_PROVEN":"PRODUCTION_OWNER_PROVENANCE_NOT_SUFFICIENT",evidence_runtime:{t1:e1,t2:e2,renewal:er},twin_runtime_scheduler:{t1,t2,renewal:tr},manual_db_row_alone_rejected:true,container_correlation_contract:"LEASE_OWNER_INSTANCE_SUFFIX_EQUALS_RUNNING_CONTAINER_HOSTNAME",lease_correlation_contract:"LIVE_DB_LEASE_AND_RUNNING_BOUND_CONTAINER_AND_AUTHORIZED_IMAGE_REQUIRED",renewal_observation_contract:"T1_T2_SAME_OWNER_SAME_CONTAINER_SAME_IMAGE_HEARTBEAT_AND_EXPIRY_ADVANCE",machine_readiness_predicate:"BOUND_HOST_ID && EXACT_AUTHORIZED_IMAGE && TAG_RESOLUTION && RUNNING_CORRELATED_CONTAINER && LIVE_FENCED_LEASE && RENEWAL_T1_T2 && CURRENT_STRUCTURED_HEALTH",blockers}; }
 
-function write(value) {
-  fs.mkdirSync(path.dirname(OUT), { recursive: true });
-  fs.writeFileSync(OUT, JSON.stringify(value, null, 2) + "\n");
-  process.stdout.write(JSON.stringify(value, null, 2) + "\n");
-}
+function psql(databaseUrl,sql){ return exec("psql",[databaseUrl,"-AtF","|","-v","ON_ERROR_STOP=1","-c",sql]); }
+function queryLease(databaseUrl,tableName){ const raw=psql(databaseUrl,`WITH live AS (SELECT lease_owner,fencing_token,acquired_at,expires_at,heartbeat_at FROM public.${tableName} WHERE expires_at > transaction_timestamp()), owners AS (SELECT count(*)::int AS live_row_count,count(DISTINCT lease_owner)::int AS distinct_owner_count,min(lease_owner) AS lease_owner,min(fencing_token)::text AS minimum_fencing_token,bool_and(fencing_token > 0) AS all_positive_fencing_tokens,bool_and(acquired_at <= heartbeat_at) AS acquired_before_heartbeat,bool_and(heartbeat_at <= transaction_timestamp()) AS heartbeat_not_future,bool_and(expires_at > heartbeat_at) AS expiry_after_heartbeat,min(acquired_at) AS acquired_at,min(heartbeat_at) AS heartbeat_at,min(expires_at) AS expires_at FROM live) SELECT current_user,transaction_timestamp(),live_row_count,distinct_owner_count,COALESCE(lease_owner,''),COALESCE(minimum_fencing_token,''),COALESCE(all_positive_fencing_tokens,false),COALESCE(acquired_before_heartbeat,false),COALESCE(heartbeat_not_future,false),COALESCE(expiry_after_heartbeat,false),COALESCE(acquired_at::text,''),COALESCE(heartbeat_at::text,''),COALESCE(expires_at::text,'') FROM owners;`); const f=raw.split("|"); req(f.length===13,"OWNER_LIVE_LEASE_QUERY_SHAPE_INVALID"); return {database_current_user:f[0],database_now:f[1],live_row_count:Number(f[2]),distinct_owner_count:Number(f[3]),lease_owner:f[4],minimum_fencing_token:f[5],all_positive_fencing_tokens:f[6]==="t",acquired_before_heartbeat:f[7]==="t",heartbeat_not_future:f[8]==="t",expiry_after_heartbeat:f[9]==="t",acquired_at:f[10],heartbeat_at:f[11],expires_at:f[12]}; }
+function dockerContainer(serviceName,imageTag){ const ids=exec("docker",["ps","-aq","--filter",`label=com.docker.compose.project=${PROJECT}`,"--filter",`label=com.docker.compose.service=${serviceName}`]).split(/\r?\n/).map(x=>x.trim()).filter(Boolean); const tagResolved=imageId(exec("docker",["image","inspect",imageTag,"--format","{{.Id}}"]),"OWNER_TAG_IMAGE_ID_REQUIRED"); if(ids.length!==1)return {matching_container_count:ids.length,container_id:ids[0]??"",hostname:"",running:false,image_id:"",tag_resolved_image_id:tagResolved,compose_project:"",compose_service:""}; const rows=JSON.parse(exec("docker",["inspect",ids[0]])); req(Array.isArray(rows)&&rows.length===1,"OWNER_DOCKER_INSPECT_SHAPE_INVALID"); const c=rows[0]; return {matching_container_count:1,container_id:text(c.Id,"OWNER_CONTAINER_ID_REQUIRED"),hostname:text(c.Config?.Hostname,"OWNER_CONTAINER_HOSTNAME_REQUIRED"),running:c.State?.Running===true,image_id:imageId(c.Image,"OWNER_CONTAINER_IMAGE_ID_REQUIRED"),tag_resolved_image_id:tagResolved,compose_project:String(c.Config?.Labels?.["com.docker.compose.project"]??""),compose_service:String(c.Config?.Labels?.["com.docker.compose.service"]??"")}; }
+function latestStructuredHealthEvent(lines,runtimeRole){ req(Array.isArray(lines)&&lines.length>0,"OWNER_RUNTIME_LOG_RECORD_REQUIRED"); let parsed; try{parsed=JSON.parse(lines[lines.length-1]);}catch{throw new Error("OWNER_LATEST_RUNTIME_LOG_RECORD_NOT_STRUCTURED_HEALTH");} req(parsed?.runtime_role===runtimeRole&&typeof parsed.status==="string","OWNER_LATEST_RUNTIME_LOG_RECORD_NOT_STRUCTURED_HEALTH"); return parsed; }
+function healthObservation(logPath,runtimeRole,databaseNow,freshness){ const stat=fs.statSync(logPath); const lines=fs.readFileSync(logPath,"utf8").split(/\r?\n/).filter(line=>line.trim().length>0); const event=latestStructuredHealthEvent(lines,runtimeRole); const age=(Date.parse(databaseNow)-stat.mtimeMs)/1000; return {runtime_role:runtimeRole,status:String(event.status),current:Number.isFinite(age)&&age>=-5&&age<=freshness,latest_record_is_structured_health:true,log_path:logPath,log_mtime:new Date(stat.mtimeMs).toISOString(),age_seconds_at_database_now:age,event}; }
+function collectPlane(input){ const lease=queryLease(input.database_url,input.table_name); return {expected:input.expected,actual_host_id:input.actual_host_id,lease,container:dockerContainer(input.expected.service_name,input.image_tag),health:healthObservation(input.log_path,input.expected.runtime_role,lease.database_now,input.health_freshness_seconds)}; }
+function renewalAdvanced(a,b){ return String(a.lease.lease_owner)===String(b.lease.lease_owner)&&String(a.lease.minimum_fencing_token)===String(b.lease.minimum_fencing_token)&&String(a.container.container_id)===String(b.container.container_id)&&String(a.container.image_id)===String(b.container.image_id)&&Date.parse(b.lease.heartbeat_at)>Date.parse(a.lease.heartbeat_at)&&Date.parse(b.lease.expires_at)>Date.parse(a.lease.expires_at); }
+function sleep(ms){ return new Promise(resolve=>setTimeout(resolve,ms)); }
 
-function psql(databaseUrl, sql) {
-  return childProcess.execFileSync(
-    "psql",
-    [
-      databaseUrl,
-      "-AtF",
-      "|",
-      "-v",
-      "ON_ERROR_STOP=1",
-      "-c",
-      sql,
-    ],
-    {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      env: process.env,
-    },
-  ).trim();
-}
-
-function serviceIdentity(host, plane) {
-  const contract = host.host_identity_contract;
-  req(contract && typeof contract === "object", "OWNER_HOST_IDENTITY_CONTRACT_REQUIRED");
-  const node = plane === "EVIDENCE_RUNTIME"
-    ? contract.evidence_runtime
-    : contract.twin_runtime;
-  req(node && typeof node === "object", "OWNER_SERVICE_IDENTITY_NODE_REQUIRED");
-  const identity = node.service_identity;
-  req(identity && typeof identity === "object", "OWNER_SERVICE_IDENTITY_REQUIRED");
-  req(identity.platform_provider === "LOCAL_OPERATOR_MANAGED_DOCKER", "OWNER_SERVICE_PLATFORM_REQUIRED");
-  req(identity.execution_class === "LONG_RUNNING_SERVICE", "OWNER_SERVICE_EXECUTION_CLASS_REQUIRED");
-  req(identity.runtime_role === plane, "OWNER_SERVICE_RUNTIME_ROLE_REQUIRED");
-  return {
-    service_id: text(identity.service_id, "OWNER_SERVICE_ID_REQUIRED"),
-    service_name: text(identity.service_name, "OWNER_SERVICE_NAME_REQUIRED"),
+function fixturePlane(role,suffix){ const hostId="host-fixture-v1"; const serviceName=role==="EVIDENCE_RUNTIME"?"geox-mcft-cap09-evidence-runtime-v1":"geox-mcft-cap09-twin-runtime-v1"; const serviceId=`local-docker://${hostId}/${serviceName}`; const login=role==="EVIDENCE_RUNTIME"?"geox_mcft_cap09_evidence_runtime_login_v1":"geox_mcft_cap09_twin_runtime_login_v1"; const image="sha256:"+"a".repeat(64); const t1={expected:{runtime_role:role,host_id:hostId,service_id:serviceId,service_name:serviceName,compose_project:PROJECT,compose_service:serviceName,login_role:login,image_id:image},actual_host_id:hostId,lease:{database_current_user:login,database_now:"2026-09-05T09:00:00.000Z",live_row_count:1,distinct_owner_count:1,lease_owner:`${serviceId}#instance:${suffix}`,minimum_fencing_token:"7",all_positive_fencing_tokens:true,acquired_before_heartbeat:true,heartbeat_not_future:true,expiry_after_heartbeat:true,acquired_at:"2026-09-05T08:59:00.000Z",heartbeat_at:"2026-09-05T08:59:50.000Z",expires_at:"2026-09-05T09:04:50.000Z"},container:{matching_container_count:1,container_id:`${suffix}-container-id`,hostname:suffix,running:true,image_id:image,tag_resolved_image_id:image,compose_project:PROJECT,compose_service:serviceName},health:{runtime_role:role,status:"HEALTHY",current:true}}; const t2=deep(t1); t2.lease.database_now="2026-09-05T09:01:00.000Z"; t2.lease.heartbeat_at="2026-09-05T09:00:50.000Z"; t2.lease.expires_at="2026-09-05T09:05:50.000Z"; return {t1,t2}; }
+function fixtureProof(){ return {evidence:fixturePlane("EVIDENCE_RUNTIME","evidence-instance"),twin:fixturePlane("TWIN_RUNTIME","twin-instance")}; }
+function expectNegative(name,mutate){ const value=fixtureProof(); mutate(value); const result=adjudicateOwnerProof(value); assert.equal(result.status,"FAIL",`${name}:EXPECTED_FAIL`); return {status:"PASS_NEGATIVE",blockers:result.blockers}; }
+function selftest(){
+  const subject="1".repeat(40),otherSubject="2".repeat(40),tree="3".repeat(40),image="sha256:"+"a".repeat(64),otherImage="sha256:"+"b".repeat(64),tag=`geox-mcft-cap09-runtime:${subject}`;
+  const artifactPositive=adjudicateArtifactFixture({expected_subject_sha:subject,repository_head_sha:subject,repository_tree_sha:tree,repository_clean:true,docker_image_tag:tag,authorized_image_id:image,tag_resolved_image_id:image}); assert.equal(artifactPositive.status,"PASS");
+  const artifactNegatives={wrong_git_subject:adjudicateArtifactFixture({expected_subject_sha:subject,repository_head_sha:otherSubject,repository_tree_sha:tree,repository_clean:true,docker_image_tag:tag,authorized_image_id:image,tag_resolved_image_id:image}),dirty_source_worktree:adjudicateArtifactFixture({expected_subject_sha:subject,repository_head_sha:subject,repository_tree_sha:tree,repository_clean:false,docker_image_tag:tag,authorized_image_id:image,tag_resolved_image_id:image}),mutable_tag_pointing_to_unauthorized_image:adjudicateArtifactFixture({expected_subject_sha:subject,repository_head_sha:subject,repository_tree_sha:tree,repository_clean:true,docker_image_tag:tag,authorized_image_id:image,tag_resolved_image_id:otherImage})}; for(const [name,row] of Object.entries(artifactNegatives))assert.equal(row.status,"FAIL",`${name}:EXPECTED_FAIL`);
+  assert.equal(latestStructuredHealthEvent([JSON.stringify({runtime_role:"EVIDENCE_RUNTIME",status:"HEALTHY"})],"EVIDENCE_RUNTIME").status,"HEALTHY");
+  assert.throws(()=>latestStructuredHealthEvent([JSON.stringify({runtime_role:"EVIDENCE_RUNTIME",status:"HEALTHY"}),"newer non-health log line"],"EVIDENCE_RUNTIME"),/OWNER_LATEST_RUNTIME_LOG_RECORD_NOT_STRUCTURED_HEALTH/);
+  const positive=adjudicateOwnerProof(fixtureProof()); assert.equal(positive.status,"PASS"); assert.equal(positive.manual_db_row_alone_rejected,true);
+  const negative={
+    wrong_docker_image_id:expectNegative("wrong_docker_image_id",x=>{x.evidence.t1.container.image_id=otherImage;x.evidence.t2.container.image_id=otherImage;}),
+    missing_container:expectNegative("missing_container",x=>{for(const t of [x.evidence.t1,x.evidence.t2]){t.container.matching_container_count=0;t.container.container_id="";t.container.hostname="";t.container.running=false;}}),
+    stopped_container:expectNegative("stopped_container",x=>{x.evidence.t1.container.running=false;x.evidence.t2.container.running=false;}),
+    wrong_container_hostname:expectNegative("wrong_container_hostname",x=>{x.evidence.t1.container.hostname="other";x.evidence.t2.container.hostname="other";}),
+    wrong_service_container_correlation:expectNegative("wrong_service_container_correlation",x=>{x.evidence.t1.container.compose_service="wrong";x.evidence.t2.container.compose_service="wrong";}),
+    wrong_host_identity:expectNegative("wrong_host_identity",x=>{x.evidence.t1.actual_host_id="wrong";x.evidence.t2.actual_host_id="wrong";}),
+    db_row_only:expectNegative("db_row_only",x=>{for(const t of [x.evidence.t1,x.evidence.t2]){t.container.matching_container_count=0;t.container.container_id="";t.container.hostname="";t.container.running=false;}}),
+    expired_lease:expectNegative("expired_lease",x=>{for(const t of [x.evidence.t1,x.evidence.t2]){t.lease.live_row_count=0;t.lease.distinct_owner_count=0;}}),
+    two_db_owners:expectNegative("two_db_owners",x=>{for(const t of [x.evidence.t1,x.evidence.t2]){t.lease.live_row_count=2;t.lease.distinct_owner_count=2;}}),
+    wrong_image_otherwise_valid_lease:expectNegative("wrong_image_otherwise_valid_lease",x=>{x.evidence.t1.container.tag_resolved_image_id=otherImage;x.evidence.t2.container.tag_resolved_image_id=otherImage;}),
+    container_exists_no_live_lease:expectNegative("container_exists_no_live_lease",x=>{for(const t of [x.evidence.t1,x.evidence.t2]){t.lease.live_row_count=0;t.lease.distinct_owner_count=0;}}),
+    static_row_no_renewal:expectNegative("static_row_no_renewal",x=>{x.evidence.t2.lease.heartbeat_at=x.evidence.t1.lease.heartbeat_at;x.evidence.t2.lease.expires_at=x.evidence.t1.lease.expires_at;}),
+    wrong_instance_with_service_prefix:expectNegative("wrong_instance_with_service_prefix",x=>{x.evidence.t1.lease.lease_owner=x.evidence.t1.expected.service_id+"#instance:forged";x.evidence.t2.lease.lease_owner=x.evidence.t2.expected.service_id+"#instance:forged";}),
+    stale_health_event:expectNegative("stale_health_event",x=>{x.evidence.t1.health.current=false;x.evidence.t2.health.current=false;})
   };
+  write(SELFTEST_OUT,{schema_version:"geox_mcft_cap09_production_owner_provenance_proof_boundary_v1",status:"PASS",qualification:"PRODUCTION_OWNER_PROVENANCE_PROOF_BOUNDARY_REPAIR_QUALIFIED",artifact_negative_proofs:artifactNegatives,health_log_negative_proofs:{newer_non_health_record_after_health:{status:"PASS_NEGATIVE",blocker:"OWNER_LATEST_RUNTIME_LOG_RECORD_NOT_STRUCTURED_HEALTH"}},negative_proof_matrix:negative,container_correlation_contract:positive.container_correlation_contract,lease_correlation_contract:positive.lease_correlation_contract,renewal_observation_contract:positive.renewal_observation_contract,manual_db_row_alone_rejected:true,machine_readiness_predicate:positive.machine_readiness_predicate,owner_graduation_v2_entrypoint_alignment:true,exact_one_production_owner_proven:false,...zeroEffects()});
+}
+async function liveVerify(){
+  try{
+    const host=hostContract(); const attestation=readJson(expandHome(process.env.GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_PATH)); req(attestation.status==="PASS"&&attestation.repository_clean===true,"OWNER_ARTIFACT_ATTESTATION_PASS_REQUIRED"); const deploymentSubject=sha(process.env.GEOX_DEPLOYMENT_SUBJECT_COMMIT,"OWNER_DEPLOYMENT_SUBJECT_REQUIRED"); req(attestation.subject_main_sha===deploymentSubject,"OWNER_ARTIFACT_SUBJECT_MISMATCH"); const authorizedImage=imageId(attestation.authorized_image_id,"OWNER_AUTHORIZED_IMAGE_ID_REQUIRED"); const imageTag=text(attestation.docker_image_tag,"OWNER_IMAGE_TAG_REQUIRED");
+    const hostIdPath=expandHome(process.env.GEOX_MCFT_CAP09_LOCAL_HOST_ID_PATH??host.next_stage?.local_host_id_state_file); const actualHostId=text(fs.readFileSync(hostIdPath,"utf8"),"OWNER_ACTUAL_HOST_ID_REQUIRED"); req(actualHostId===host.next_stage?.local_host_id,"OWNER_HOST_IDENTITY_MISMATCH"); const durableRoot=expandHome(process.env.GEOX_MCFT_CAP09_DURABLE_LOG_ROOT); const freshness=intEnv("GEOX_MCFT_CAP09_OWNER_PROOF_HEALTH_FRESHNESS_SECONDS",180,1,3600); const timeoutMs=intEnv("GEOX_MCFT_CAP09_OWNER_PROOF_RENEWAL_TIMEOUT_MS",600000,1000,3600000); const pollMs=intEnv("GEOX_MCFT_CAP09_OWNER_PROOF_POLL_MS",5000,500,60000);
+    const evidenceExpected=serviceIdentity(host,"EVIDENCE_RUNTIME",authorizedImage),twinExpected=serviceIdentity(host,"TWIN_RUNTIME",authorizedImage);
+    const evidenceInput={expected:evidenceExpected,actual_host_id:actualHostId,database_url:text(process.env.EVIDENCE_RUNTIME_DATABASE_URL_SECRET??process.env.GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL,"OWNER_EVIDENCE_RUNTIME_DATABASE_URL_REQUIRED"),table_name:"external_evidence_producer_lease_v1",image_tag:imageTag,log_path:path.join(durableRoot,"evidence","runtime.log"),health_freshness_seconds:freshness};
+    const twinInput={expected:twinExpected,actual_host_id:actualHostId,database_url:text(process.env.TWIN_RUNTIME_DATABASE_URL_SECRET??process.env.GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL,"OWNER_TWIN_RUNTIME_DATABASE_URL_REQUIRED"),table_name:"twin_runtime_lease_v1",image_tag:imageTag,log_path:path.join(durableRoot,"twin","runtime.log"),health_freshness_seconds:freshness};
+    const t1={evidence:collectPlane(evidenceInput),twin:collectPlane(twinInput)}; req(adjudicatePlaneObservation(t1.evidence).status==="PASS","OWNER_EVIDENCE_T1_PROVENANCE_REQUIRED"); req(adjudicatePlaneObservation(t1.twin).status==="PASS","OWNER_TWIN_T1_PROVENANCE_REQUIRED");
+    const deadline=Date.now()+timeoutMs; let t2=null; while(Date.now()<deadline){await sleep(pollMs); const next={evidence:collectPlane(evidenceInput),twin:collectPlane(twinInput)}; if(adjudicatePlaneObservation(next.evidence).status==="PASS"&&adjudicatePlaneObservation(next.twin).status==="PASS"&&renewalAdvanced(t1.evidence,next.evidence)&&renewalAdvanced(t1.twin,next.twin)){t2=next;break;}} req(t2,"OWNER_RENEWAL_BOUNDARY_NOT_OBSERVED");
+    const proof=adjudicateOwnerProof({evidence:{t1:t1.evidence,t2:t2.evidence},twin:{t1:t1.twin,t2:t2.twin}}); req(proof.status==="PASS","OWNER_PROVENANCE_ADJUDICATION_REQUIRED");
+    write(LIVE_OUT,{schema_version:"geox_mcft_cap09_production_owner_live_fenced_leases_v2",status:"PASS",adjudication:proof.adjudication,subject_main_sha:attestation.subject_main_sha,subject_tree_sha:attestation.subject_tree_sha,repository_clean:attestation.repository_clean,authorized_image_id:authorizedImage,artifact_attestation_status:attestation.artifact_attestation_status,host_identity_contract_status:"PASS",actual_host_id:actualHostId,Evidence:{expected_service_id:evidenceExpected.service_id,expected_service_name:evidenceExpected.service_name,expected_image_id:authorizedImage},Twin:{expected_service_id:twinExpected.service_id,expected_service_name:twinExpected.service_name,expected_image_id:authorizedImage},container_correlation_contract:proof.container_correlation_contract,lease_correlation_contract:proof.lease_correlation_contract,renewal_observation_contract:proof.renewal_observation_contract,manual_db_row_alone_rejected:true,machine_readiness_predicate:proof.machine_readiness_predicate,evidence_runtime:proof.evidence_runtime,twin_runtime_scheduler:proof.twin_runtime_scheduler,blockers:[],...zeroEffects()});
+  }catch(error){write(LIVE_OUT,{schema_version:"geox_mcft_cap09_production_owner_live_fenced_leases_v2",status:"FAIL",adjudication:"PRODUCTION_OWNER_PROVENANCE_NOT_SUFFICIENT",blockers:[error instanceof Error?error.message:String(error)],...zeroEffects()}); process.exitCode=1;}
 }
 
-function queryLease(input) {
-  const raw = psql(
-    input.database_url,
-    `
-WITH live AS (
-  SELECT lease_owner,
-         fencing_token,
-         acquired_at,
-         expires_at,
-         heartbeat_at
-    FROM public.${input.table_name}
-   WHERE expires_at > transaction_timestamp()
-),
-owners AS (
-  SELECT count(*)::int AS live_row_count,
-         count(DISTINCT lease_owner)::int AS distinct_owner_count,
-         min(lease_owner) AS lease_owner,
-         min(fencing_token)::text AS minimum_fencing_token,
-         bool_and(fencing_token > 0) AS all_positive_fencing_tokens,
-         bool_and(acquired_at <= heartbeat_at) AS acquired_before_heartbeat,
-         bool_and(heartbeat_at <= transaction_timestamp()) AS heartbeat_not_future,
-         bool_and(expires_at > heartbeat_at) AS expiry_after_heartbeat
-    FROM live
-)
-SELECT current_user,
-       transaction_timestamp(),
-       live_row_count,
-       distinct_owner_count,
-       COALESCE(lease_owner,''),
-       COALESCE(minimum_fencing_token,''),
-       COALESCE(all_positive_fencing_tokens,false),
-       COALESCE(acquired_before_heartbeat,false),
-       COALESCE(heartbeat_not_future,false),
-       COALESCE(expiry_after_heartbeat,false)
-  FROM owners;`,
-  );
-  const fields = raw.split("|");
-  req(fields.length === 10, "OWNER_LIVE_LEASE_QUERY_SHAPE_INVALID");
-  return {
-    database_current_user: fields[0],
-    database_now: fields[1],
-    live_row_count: Number(fields[2]),
-    distinct_owner_count: Number(fields[3]),
-    lease_owner: fields[4],
-    minimum_fencing_token: fields[5],
-    all_positive_fencing_tokens: fields[6] === "t",
-    acquired_before_heartbeat: fields[7] === "t",
-    heartbeat_not_future: fields[8] === "t",
-    expiry_after_heartbeat: fields[9] === "t",
-  };
-}
-
-function adjudicatePlane(input) {
-  const blockers = [];
-  if (input.query.database_current_user !== input.expected_login_role) {
-    blockers.push(`${input.code}_DATABASE_LOGIN_ROLE_MISMATCH`);
-  }
-  if (input.query.live_row_count < 1) {
-    blockers.push(`${input.code}_LIVE_LEASE_NOT_ESTABLISHED`);
-  }
-  if (input.query.distinct_owner_count !== 1) {
-    blockers.push(`${input.code}_EXACT_ONE_EFFECTIVE_OWNER_NOT_PROVEN`);
-  }
-  const prefix = `${input.service.service_id}#instance:`;
-  if (
-    input.query.distinct_owner_count === 1
-    && (
-      !input.query.lease_owner.startsWith(prefix)
-      || input.query.lease_owner.length <= prefix.length
-    )
-  ) {
-    blockers.push(`${input.code}_LEASE_OWNER_SERVICE_IDENTITY_MISMATCH`);
-  }
-  if (input.query.live_row_count > 0 && !input.query.all_positive_fencing_tokens) {
-    blockers.push(`${input.code}_POSITIVE_FENCING_TOKEN_REQUIRED`);
-  }
-  if (input.query.live_row_count > 0 && !input.query.acquired_before_heartbeat) {
-    blockers.push(`${input.code}_LEASE_ACQUIRED_HEARTBEAT_CHRONOLOGY_INVALID`);
-  }
-  if (input.query.live_row_count > 0 && !input.query.heartbeat_not_future) {
-    blockers.push(`${input.code}_LEASE_HEARTBEAT_FUTURE_INVALID`);
-  }
-  if (input.query.live_row_count > 0 && !input.query.expiry_after_heartbeat) {
-    blockers.push(`${input.code}_LEASE_EXPIRY_HEARTBEAT_CHRONOLOGY_INVALID`);
-  }
-  return {
-    runtime_role: input.runtime_role,
-    expected_service_id: input.service.service_id,
-    expected_service_name: input.service.service_name,
-    expected_login_role: input.expected_login_role,
-    ...input.query,
-    owner_service_prefix_match:
-      input.query.distinct_owner_count === 1
-      && input.query.lease_owner.startsWith(prefix)
-      && input.query.lease_owner.length > prefix.length,
-    blockers,
-    status: blockers.length === 0 ? "PASS" : "FAIL",
-  };
-}
-
-try {
-  const host = readJson(HOST_AUTH);
-  req(
-    host.schema_version === "geox_mcft_cap09_production_non_github_host_binding_authority_v1",
-    "OWNER_HOST_BINDING_SCHEMA_REQUIRED",
-  );
-  req(
-    host.status === "LOCAL_OPERATOR_MANAGED_DOCKER_HOST_IDENTITIES_BOUND",
-    "OWNER_HOST_BINDING_STATUS_REQUIRED",
-  );
-  req(
-    host.binding_state?.exact_two_runtime_service_identities_bound === true
-    && host.binding_state?.binding_authorized === true,
-    "OWNER_EXACT_TWO_HOST_IDENTITIES_BOUND_REQUIRED",
-  );
-  req(
-    host.github_actions?.production_execution_host_allowed === false,
-    "OWNER_GITHUB_PRODUCTION_EXECUTION_HOST_FORBIDDEN",
-  );
-
-  const evidenceUrl = text(
-    process.env.EVIDENCE_RUNTIME_DATABASE_URL_SECRET,
-    "OWNER_EVIDENCE_RUNTIME_DATABASE_URL_REQUIRED",
-  );
-  const twinUrl = text(
-    process.env.TWIN_RUNTIME_DATABASE_URL_SECRET,
-    "OWNER_TWIN_RUNTIME_DATABASE_URL_REQUIRED",
-  );
-
-  const evidenceService = serviceIdentity(host, "EVIDENCE_RUNTIME");
-  const twinService = serviceIdentity(host, "TWIN_RUNTIME");
-  req(
-    evidenceService.service_id !== twinService.service_id,
-    "OWNER_RUNTIME_SERVICE_IDENTITIES_MUST_BE_DISTINCT",
-  );
-
-  const evidence = adjudicatePlane({
-    code: "EVIDENCE_RUNTIME",
-    runtime_role: "EVIDENCE_RUNTIME",
-    service: evidenceService,
-    expected_login_role: "geox_mcft_cap09_evidence_runtime_login_v1",
-    query: queryLease({
-      database_url: evidenceUrl,
-      table_name: "external_evidence_producer_lease_v1",
-    }),
-  });
-  const twin = adjudicatePlane({
-    code: "TWIN_RUNTIME",
-    runtime_role: "TWIN_RUNTIME",
-    service: twinService,
-    expected_login_role: "geox_mcft_cap09_twin_runtime_login_v1",
-    query: queryLease({
-      database_url: twinUrl,
-      table_name: "twin_runtime_lease_v1",
-    }),
-  });
-
-  const blockers = [...evidence.blockers, ...twin.blockers];
-  if (
-    evidence.lease_owner
-    && twin.lease_owner
-    && evidence.lease_owner === twin.lease_owner
-  ) {
-    blockers.push("CROSS_PLANE_GENERIC_OWNER_FORBIDDEN");
-  }
-
-  write({
-    schema_version:
-      "geox_mcft_cap09_production_owner_live_fenced_leases_v1",
-    status: blockers.length === 0 ? "PASS" : "FAIL",
-    adjudication:
-      blockers.length === 0
-        ? "EXACT_ONE_EFFECTIVE_OWNER_PER_RUNTIME_ROLE_PROVEN"
-        : "LIVE_OWNER_EVIDENCE_NOT_YET_SUFFICIENT",
-    non_github_host_binding_established: true,
-    exact_two_runtime_service_identities_bound: true,
-    evidence_runtime: evidence,
-    twin_runtime_scheduler: twin,
-    cross_plane_owner_independent:
-      Boolean(evidence.lease_owner)
-      && Boolean(twin.lease_owner)
-      && evidence.lease_owner !== twin.lease_owner,
-    blockers,
-    database_write_count: 0,
-    production_runtime_start_count: 0,
-    provider_request_count: 0,
-    production_owner_activation_effect: false,
-    formal_v5_arm: false,
-    a0_bootstrap: false,
-    o00_started: false,
-  });
-} catch (error) {
-  write({
-    schema_version:
-      "geox_mcft_cap09_production_owner_live_fenced_leases_v1",
-    status: "FAIL",
-    adjudication: "READ_ONLY_OWNER_ADJUDICATION_ERROR",
-    blockers: [
-      error instanceof Error ? error.message : String(error),
-    ],
-    database_write_count: 0,
-    production_runtime_start_count: 0,
-    provider_request_count: 0,
-    production_owner_activation_effect: false,
-    formal_v5_arm: false,
-    a0_bootstrap: false,
-    o00_started: false,
-  });
-  process.exitCode = 1;
+const mode=process.argv[2]??"--live";
+if(mode==="--attest-image"){
+  try{write(ATTEST_OUT,attestArtifact());}catch(error){write(ATTEST_OUT,{schema_version:"geox_mcft_cap09_production_runtime_artifact_attestation_v1",status:"FAIL",artifact_attestation_status:"FAIL_CLOSED",blockers:[error instanceof Error?error.message:String(error)],...zeroEffects()});process.exitCode=1;}
+}else if(mode==="--selftest"){
+  try{selftest();}catch(error){write(SELFTEST_OUT,{schema_version:"geox_mcft_cap09_production_owner_provenance_proof_boundary_v1",status:"FAIL",blockers:[error instanceof Error?error.message:String(error)],exact_one_production_owner_proven:false,...zeroEffects()});process.exitCode=1;}
+}else if(mode==="--live"){
+  liveVerify();
+}else{
+  throw new Error(`OWNER_VERIFIER_MODE_INVALID:${mode}`);
 }
