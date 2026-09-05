@@ -5,10 +5,11 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/mcft-cap-09-t4r1-current-crop-refresh-v1.yml'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-04T04Z-V1.json'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-04T04Z-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-05T04Z-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-05T04Z-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_05T04Z_V1.cjs'
       - 'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_V1.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_V1.cjs'
 
 permissions:
   contents: read
@@ -22,11 +23,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      QUALIFIED_SUBJECT_SHA: 811101cc958ce6b83efce610bde11b3266ae8326
-      REQUEST: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-04T04Z-V1.json
-      PREVIOUS: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-V1.json
+      QUALIFIED_SUBJECT_SHA: 93d08e4003370221218471e53a58ad356c34e3b9
+      REQUEST: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-05T04Z-V1.json
+      PREVIOUS: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-04T04Z-V1.json
       CERT: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json
-      PERSISTED: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-04T04Z-V1.json
+      PERSISTED: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-05T04Z-V1.json
+      REGISTRY: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json
     steps:
       - name: Checkout exact successor subject
         uses: actions/checkout@v4
@@ -57,14 +59,35 @@ jobs:
           for(const [key,value] of Object.entries(req.non_effects||{})) if(value!==false) throw new Error('REFRESH_NON_EFFECT_DRIFT:'+key);
           console.log(JSON.stringify({status:'PASS',main,qualified_subject_sha:process.env.QUALIFIED_SUBJECT_SHA,successor_preservation:true}));
 
-      - name: Prove running V1 mount inputs remain byte-identical to protected main
+      - name: Prove previous effective authority and architecture certificate remain byte-identical to protected main
         run: git diff --exit-code origin/main -- "$PREVIOUS" "$CERT"
 
-      - name: Syntax-check rolling refresh builder
-        run: node --check scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_V1.cjs
+      - name: Syntax-check rolling refresh builder and final acceptance
+        run: |
+          node --check scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_V1.cjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_05T04Z_V1.cjs
 
-      - name: Validate persisted rolling current-crop authority
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_V1.cjs
+      - name: Validate persisted rolling current-crop authority and registry extension
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_05T04Z_V1.cjs
+
+      - name: Validate registry latest-effective selection contract
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const crypto=require('crypto');
+          const registry=JSON.parse(fs.readFileSync(process.env.REGISTRY,'utf8'));
+          const current=JSON.parse(fs.readFileSync(process.env.PERSISTED,'utf8'));
+          if(registry.selection_policy!=='LATEST_EFFECTIVE_AUTHORITY_AS_OF_NOT_AFTER_LOGICAL_TIME_WITHIN_VALIDITY_WINDOW') throw new Error('REFRESH_REGISTRY_SELECTION_POLICY_DRIFT');
+          if(registry.candidate_artifacts_admissible!==false) throw new Error('REFRESH_CANDIDATE_ARTIFACT_ADMISSIBILITY_DRIFT');
+          if(registry.entries.length!==3) throw new Error('REFRESH_REGISTRY_CARDINALITY');
+          const latest=registry.entries[registry.entries.length-1];
+          const digest='sha256:'+crypto.createHash('sha256').update(fs.readFileSync(process.env.PERSISTED)).digest('hex');
+          if(latest.authority_ref!==process.env.PERSISTED) throw new Error('REFRESH_REGISTRY_LATEST_REF_MISMATCH');
+          if(latest.authority_sha256!==digest) throw new Error('REFRESH_REGISTRY_LATEST_DIGEST_MISMATCH');
+          if(latest.authority_as_of!==current.biological_stage.authority_as_of) throw new Error('REFRESH_REGISTRY_LATEST_AS_OF_MISMATCH');
+          if(latest.authority_valid_until!==current.biological_stage.authority_valid_until) throw new Error('REFRESH_REGISTRY_LATEST_VALID_UNTIL_MISMATCH');
+          if(latest.graduation_status!==current.graduation.status) throw new Error('REFRESH_REGISTRY_LATEST_GRADUATION_MISMATCH');
+          console.log(JSON.stringify({status:'PASS',entry_count:registry.entries.length,latest_authority_ref:latest.authority_ref,latest_authority_sha256:latest.authority_sha256,authority_as_of:latest.authority_as_of,authority_valid_until:latest.authority_valid_until,candidate_artifacts_admissible:false}));
 
       - name: Validate qualification-only authority ceiling and zero production effects
         shell: node {0}
@@ -85,7 +108,7 @@ jobs:
           ]) if(current[key]!==false) throw new Error('REFRESH_AUTHORITY_CEILING_DRIFT:'+key);
           if(current.refresh?.running_preformal_mount_replaced!==false) throw new Error('REFRESH_RUNNING_MOUNT_REPLACEMENT_FORBIDDEN');
           if(current.refresh?.production_runtime_restarted!==false) throw new Error('REFRESH_PRODUCTION_RESTART_FORBIDDEN');
-          console.log(JSON.stringify({status:'PASS',qualification_only:true,production_runtime_restarted:false,running_mount_replaced:false}));
+          console.log(JSON.stringify({status:'PASS',qualification_only:true,production_runtime_restarted:false,running_mount_replaced:false,production_runtime_start_authorized:false,production_owner_activation_authorized:false,formal_v5_authorized:false,a0_authorized:false,o00_o23_authorized:false}));
 
       - name: Upload immutable preservation evidence
         if: always()
@@ -93,7 +116,8 @@ jobs:
         with:
           name: mcft-cap09-t4r1-current-crop-refresh-preservation-${{ github.event.pull_request.head.sha }}
           path: |
-            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-04T04Z-V1.json
-            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-04T04Z-V1.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-05T04Z-V1.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-05T04Z-V1.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json
           if-no-files-found: error
           retention-days: 90
