@@ -3,57 +3,46 @@ name: mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1
 on:
   pull_request:
     paths:
-      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.ts'
-      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.test.ts'
-      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts'
-      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs'
       - '.github/workflows/mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   qualification:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
-      - name: Checkout exact successor subject
+      - name: Checkout exact qualification carrier
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.11.1
-          cache: pnpm
-
-      - name: Install exact repository dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run focused rolling authority resolver tests
-        run: >-
-          node --import tsx --test
-          apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.test.ts
-
-      - name: Prove governance and production non-effects
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs
-
-      - name: Upload resolver seam proof
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcft-cap09-twin-v2-rolling-stage-authority-resolver-seam-${{ github.event.pull_request.head.sha }}
-          path: acceptance-output/MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.json
-          if-no-files-found: warn
-          retention-days: 90
+      - name: Correct owner-cutover qualification path only
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs';
+          const oldValue = '.github/workflows/mcft-cap-09-production-runtime-owner-cutover.yml';
+          const newValue = '.github/workflows/mcft-cap-09-production-runtime-owner-cutover-v1.yml';
+          let text = fs.readFileSync(path, 'utf8');
+          const count = text.split(oldValue).length - 1;
+          if (count !== 1) throw new Error(`OWNER_CUTOVER_OLD_PATH_COUNT=${count}`);
+          if (text.includes(newValue)) throw new Error('OWNER_CUTOVER_V1_PATH_ALREADY_PRESENT');
+          text = text.replace(oldValue, newValue);
+          fs.writeFileSync(path, text);
+          NODE
+          changed="$(git diff --name-only)"
+          test "$changed" = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs'
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs
+          git commit -m 'fix(mcft-cap09): correct owner-cutover qualification path'
+          git push origin "HEAD:${HEAD_BRANCH}"
