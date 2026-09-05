@@ -1,3 +1,1147 @@
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-05 Continuation — Production Owner Cutover / Registry-Backed Authority Selection / Integrated QCP Qualification Frontier
+
+# X — Production Owner Cutover / Registry-Backed Authority Selection / Integrated QCP Qualification Frontier
+
+Status: **CURRENT CONTINUATION FRONTIER — #3506 MERGED; #3507 MERGED; #3508 READ-ONLY OWNER EVIDENCE RED; #3509 IMPLEMENTATION QUALIFIED / DRAFT; #3510 INTEGRATED GOVERNANCE SUBJECT SUPERSEDED BY #3511 REPAIR; #3511 CURRENT LIVE HEAD = 70b180b6... / OPEN / DRAFT / FRESH EXACT-HEAD QUALIFICATION GREEN; EXACT_ONE_PRODUCTION_OWNER STILL NOT PROVEN; PRODUCTION RUNTIME NOT STARTED; NO READY / NO MERGE AUTHORIZATION IN THIS HANDOFF**
+
+This X-section is the current continuation point after the W-section Twin V2 runtime-selection adoption / registry-backed resolver wiring qualification frontier.
+
+Do not delete, collapse, or retroactively rewrite W/V/U/T/S/R/Q/P/O/N/M/L/K/J/I/H or any earlier historical section below. They remain the chronological evidence chain for MCFT-CAP-09.
+
+## X0 — Current task / why this successor chain exists
+
+The active MCFT-CAP-09 task has moved past Twin V2 resolver wiring itself.
+
+The current chain is now:
+
+```text
+#3506
+  bounded Twin V2 runtime-selection adoption
+        ↓
+protected main = 0bd2300c9c8a58025df9212d7c14e640606add83
+        ↓
+#3507
+  protected-main successor-predecessor governance adoption
+        ↓
+protected main = d17f894e86b0fabab648530968c562e2fbe94c5d
+        ↓
+read-only Production Owner requalification
+        ↓
+#3508 proves zero live production owner leases
+        ↓
+#3509 makes future local owner-cutover select a valid graduated current-crop authority from the effective-authority registry
+        ↓
+#3510 integrates the cutover lane into canonical QCP governance
+        ↓
+#3511 repairs only the historical resolver-seam qualification boundary exposed by that integrated subject
+```
+
+The architectural capability is now much further advanced than the operational activation state.
+
+Do not conflate:
+
+```text
+qualified owner-cutover implementation
+with
+production owner activation
+```
+
+The former exists.
+
+The latter has NOT occurred.
+
+## X1 — Protected-main lineage frozen for this continuation
+
+The protected-main lineage relevant to this section is:
+
+```text
+#3506 qualified head = b7c6ebf48cae05e877b2f61639849e25b2ebb38f
+#3506 protected-main merge = 0bd2300c9c8a58025df9212d7c14e640606add83
+
+#3507 qualified head = fc63cf36ea070a5de7cd29d6354c012f50124aed
+#3507 protected-main merge = d17f894e86b0fabab648530968c562e2fbe94c5d
+```
+
+Current protected main for the owner-cutover / integrated-QCP successor line remains:
+
+```text
+d17f894e86b0fabab648530968c562e2fbe94c5d
+```
+
+Do not substitute a Draft PR head for this protected-main authority base.
+
+B-Line remains on its own independent authority lineage and is not part of this successor chain.
+
+## X2 — #3506 was exact-head authorized and merged
+
+#3506 final exact subject:
+
+```text
+b7c6ebf48cae05e877b2f61639849e25b2ebb38f
+```
+
+Pre-merge main:
+
+```text
+5050f1c08d2528048c56d56add4cbb068b956925
+```
+
+Merge commit / new protected main:
+
+```text
+0bd2300c9c8a58025df9212d7c14e640606add83
+```
+
+Merge identity:
+
+```text
+parent 1 = 5050f1c08d2528048c56d56add4cbb068b956925
+parent 2 = b7c6ebf48cae05e877b2f61639849e25b2ebb38f
+```
+
+The merge was performed with expected-head locking after Ready-for-Review no-drift revalidation.
+
+#3506 merge did NOT activate production rolling authority and did NOT start production runtime.
+
+## X3 — #3507 protected-main predecessor governance was qualified and merged
+
+After #3506 merged, the new main `0bd2300...` was not yet recognized by the durable successor-predecessor governance surfaces.
+
+#3507 therefore performed a bounded governance-only adoption.
+
+Final subject:
+
+```text
+fc63cf36ea070a5de7cd29d6354c012f50124aed
+```
+
+Base:
+
+```text
+0bd2300c9c8a58025df9212d7c14e640606add83
+```
+
+Final scope:
+
+```text
+5 governance files
+runtime mutation = false
+production workflow activation = false
+Formal-v5 = false
+A0 = false
+O00 = false
+```
+
+QCP machine result on the qualified head:
+
+```text
+status = PASS
+blocker_count = 0
+unknown_changed_paths = 0
+authority_errors = 0
+```
+
+#3507 was exact-head authorized and merged.
+
+Protected-main merge commit:
+
+```text
+d17f894e86b0fabab648530968c562e2fbe94c5d
+```
+
+## X4 — d17 protected-main post-merge verification is closed
+
+After #3507 merge, protected main `d17f894...` was independently requalified.
+
+Main CI push:
+
+```text
+run = 33943452436
+build-test = SUCCESS
+acceptance = SUCCESS
+```
+
+EA5E2 exact-head successor runner:
+
+```text
+run = 33943452423
+conclusion = SUCCESS
+```
+
+No runtime activation occurred through these checks.
+
+They are post-merge identity / regression qualification only.
+
+## X5 — The true next operational blocker was isolated to EXACT_ONE_PRODUCTION_OWNER
+
+The post-merge V13 machine frontier after protected-main adoption preserved one operational blocker:
+
+```text
+EXACT_ONE_PRODUCTION_OWNER
+  status = FAIL
+  reason_code = NO_VALID_REQUALIFICATION_EVIDENCE
+  candidates = []
+```
+
+The other previously material required gates remained satisfied or resolvable.
+
+The key architectural interpretation is:
+
+```text
+Twin V2 / resolver / registry / routing code readiness
+!=
+proof that a live production owner exists
+```
+
+Do not make `EXACT_ONE_PRODUCTION_OWNER` green by weakening the check.
+
+## X6 — #3508 current-main Production Owner requalification produced truthful red evidence
+
+#3508 was opened specifically as a read-only current-main production-owner requalification subject.
+
+Final relevant head:
+
+```text
+20d3d5cc54b80bfb50bb4b39f73e0238f0cc5f09
+```
+
+Base:
+
+```text
+d17f894e86b0fabab648530968c562e2fbe94c5d
+```
+
+Current-main requalification run:
+
+```text
+33944259690
+conclusion = FAILURE
+```
+
+This failure is evidence truth, not an implementation regression.
+
+The live DB readback proved:
+
+```text
+Evidence Runtime live lease rows = 0
+Twin Runtime live lease rows = 0
+```
+
+Database connectivity and login identity were valid.
+
+The exact operational meaning is:
+
+```text
+production runtimes are not running
+therefore no live fenced owner can be proven
+```
+
+The qualification performed:
+
+```text
+database writes = 0
+runtime starts = 0
+owner activation = false
+```
+
+Do not reroute this red result into a fake green qualification.
+
+## X7 — A stale historical owner preflight invariant was found and bounded
+
+The first current-main owner probe initially hit:
+
+```text
+OWNER_PRODUCTION_TWO_SERVICE_LAUNCHER_REQUIRED
+```
+
+This was traced to a historical qualification assumption that still required the old Twin V1 launcher name:
+
+```text
+mcft_cap09_twin_runtime.js
+```
+
+Current protected production routing correctly uses:
+
+```text
+mcft_cap09_twin_runtime_v2.js
+```
+
+The fix was qualification-only.
+
+Production compose and runtime topology were not modified merely to satisfy the old assertion.
+
+## X8 — Existing Production Runtime Owner Cutover architecture remains a local dual-key operation
+
+The repository already contains a dedicated owner-cutover runner and authority contract:
+
+```text
+scripts/runtime_acceptance/
+RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs
+
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json
+```
+
+Its architecture is intentionally:
+
+```text
+specified non-GitHub local Docker host
++
+exact authority inputs
++
+fail-closed preflight
++
+local process start only after all prerequisites pass
+```
+
+GitHub remains qualification-only and cannot execute production cutover.
+
+Even an authorized local cutover first enters:
+
+```text
+PRE_FORMAL_OWNER_STANDBY
+```
+
+It does NOT automatically arm Formal-v5 or execute A0/O00.
+
+## X9 — The fixed 2026-09-03 current-crop authority became stale for cutover
+
+The historical local cutover runner / policy still hard-bound the earlier current-crop authority:
+
+```text
+authority_as_of = 2026-09-03T00:00:00Z
+forward_stability_hours = 30
+valid_until = 2026-09-04T06:00:00Z
+```
+
+That authority had expired by the current owner-cutover qualification frontier.
+
+This did NOT mean the rolling authority architecture was missing.
+
+It meant the activation-side cutover selector was still fixed to an old static artifact.
+
+## X10 — A newer graduated effective current-crop authority already existed in the registry
+
+The effective-authority registry already contained a later graduated entry:
+
+```text
+as_of = 2026-09-04T04:00:00Z
+valid_until = 2026-09-05T10:00:00Z
+status = EFFECTIVE_FOR_RUNTIME_CONSUMPTION_ROLLING_REFRESH
+runtime_consumption_authorized = true
+architecture_effective = true
+```
+
+This authority is not equivalent to an activation command.
+
+It is an eligible authority artifact that a future authorized local cutover may consume if its validity covers the planned A0 / activation boundary.
+
+## X11 — #3509 closes the activation-side authority-selection implementation gap
+
+#3509 title:
+
+```text
+feat(mcft-cap09): select effective authority for owner cutover
+```
+
+Current canonical implementation head:
+
+```text
+9fc4b71e9ee757cfd8a4affd064126a69b276e1b
+```
+
+Base:
+
+```text
+d17f894e86b0fabab648530968c562e2fbe94c5d
+```
+
+State:
+
+```text
+OPEN / DRAFT
+mergeable = true
+commits = 1
+changed_files = 4
+```
+
+#3509 changes the local cutover selection contract from:
+
+```text
+fixed old authority artifact
+```
+
+to:
+
+```text
+registry-backed selection of the latest graduated authority
+whose as-of / validity window covers the planned activation/A0 boundary
+```
+
+Fail-closed checks remain mandatory for digest, graduation, lifecycle, and validity.
+
+No Docker start is performed by #3509 qualification.
+
+## X12 — #3509 exact four-file implementation boundary
+
+The canonical #3509 implementation is exactly:
+
+```text
+.github/workflows/mcft-cap-09-production-runtime-owner-cutover-v1.yml
+
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json
+
+scripts/governance_acceptance/
+ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs
+
+scripts/runtime_acceptance/
+RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs
+```
+
+Do not widen this implementation scope to unrelated Twin runtime, compose, B-Line, Formal, or owner-lease logic.
+
+## X13 — #3509 canonical implementation qualification is complete
+
+Canonical exact-head runs:
+
+```text
+Production Runtime Owner Cutover
+  33944565917
+  SUCCESS
+
+EA5E2 runtime dependency graph
+  33944565930
+  SUCCESS
+
+CI
+  33944565943
+  SUCCESS
+  build-test = SUCCESS
+  acceptance = SUCCESS
+```
+
+The cutover qualification proves:
+
+```text
+registry-backed dual-key pre-Formal contract = PASS
+runtime-start authority builder contract = PASS
+compiled pre-Formal entrypoints = PASS
+compose render = PASS
+GitHub production cutover execution = FORBIDDEN
+```
+
+EA5E2 correctly preserves the Phase6 retired production-graph route.
+
+Full EA5E2 runtime qualification may be SKIPPED when applicability says the live runtime graph is retired; that SKIPPED result must not be relabeled as a failure.
+
+## X14 — A QCP governance admission gap was found after #3509
+
+The central QCP dependency resolver already knew the owner-cutover lane.
+
+However the canonical QCP workflow trigger / predecessor governance did not fully admit the new current-main owner-cutover successor surface.
+
+The gap was classified as:
+
+```text
+QUALIFICATION / GOVERNANCE ADMISSION GAP
+```
+
+Specifically:
+
+```text
+QCP pull_request.paths did not cover the owner-cutover governance surface
++
+current protected main d17f894... was not yet admitted everywhere required for this successor
+```
+
+This was not a Twin semantic defect, production owner defect, Commercial defect, or B-Line defect.
+
+## X15 — The five-file QCP settlement was materialized without changing runtime semantics
+
+A trusted qualification carrier produced exact immutable governance blobs for:
+
+```text
+.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml
+.github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml
+
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+
+scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+```
+
+Materializer run:
+
+```text
+33945084819
+SUCCESS
+```
+
+Artifact:
+
+```text
+9963077510
+sha256:fecbf39c01ff38c25ea8173ea8b734f5dae1f8fcf5e0ba842ae325f5ea6ac116
+```
+
+Frozen blob SHAs:
+
+```text
+QCP workflow
+  2ac3090c581e612d09b12f669585f35106b2a3d1
+
+post-merge V13 workflow
+  495a9e19ea02f291075a1009904d00c8dcc4c7c8
+
+QCP authority JSON
+  8cb76b3bb0bee521f71527fd4ea91dc333041af6
+
+qualification evidence registry
+  2ce468b0f2ef24da81811d9e270bb5208661e15d
+
+all-blockers preflight
+  0d19aadbafa84b88ed82cc4ab121ec16c3c08e00
+```
+
+No materialization-time runtime activation authority was created.
+
+## X16 — #3510 clean integrated 9-file candidate was reconstructed correctly
+
+The clean integrated ancestry was built as:
+
+```text
+protected main
+  d17f894e86b0fabab648530968c562e2fbe94c5d
+        ↓
+canonical #3509 implementation
+  9fc4b71e9ee757cfd8a4affd064126a69b276e1b
+        ↓
+clean five-file QCP settlement
+  f94f7890ea351573363c331ee0d144034f821f9c
+```
+
+The final #3510 subject contained exactly:
+
+```text
+4 canonical #3509 files
++
+5 frozen governance settlement files
+=
+9 changed files
+```
+
+The temporary carrier commit was not an ancestor of the final clean head.
+
+The five governance files in the final tree were verified byte-identical to the frozen blob SHAs.
+
+The four canonical #3509 files remained byte-identical to `9fc4b71...`.
+
+## X17 — #3510 exposed one historical resolver-seam qualification incompatibility
+
+The clean 9-file subject was structurally correct and had:
+
+```text
+unknown_changed_paths = 0
+authority_errors = 0
+```
+
+But Central QCP exposed one qualification-only blocker:
+
+```text
+TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM
+  DIAGNOSTIC_FAILURE
+  failed_assertion = bounded_adoption_surface_only
+```
+
+The historical resolver-seam checker was calculating its bounded surface from the older `5050f1c...` resolver-adoption era and therefore treated the legitimate four-file Production Runtime Owner Cutover lane as unexpected.
+
+The runtime semantics assertions themselves still passed:
+
+```text
+production default remains static exact-bound = true
+no production rolling env switch = true
+forbidden production surfaces unchanged = true
+```
+
+This was correctly classified as a historical qualification-boundary defect, not a runtime semantic defect.
+
+## X18 — CTO authorized exactly one bounded resolver-seam qualification repair
+
+The authorized repair scope was only:
+
+```text
+scripts/governance_acceptance/
+ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs
+```
+
+The repair requirement was:
+
+```text
+recognize the already-existing four-file Production Runtime Owner Cutover lane
+require that lane to appear atomically
+preserve the historical resolver-seam replay semantics
+preserve current successor semantic guards
+```
+
+The repair was NOT authorized to modify:
+
+```text
+Twin runtime implementation
+current-crop registry data
+owner-cutover implementation
+production compose
+lease state
+production owner state
+Formal-v5
+A0
+O00-O23
+B-Line
+```
+
+## X19 — #3511 original c004 repair subject and qualification
+
+The first authorized repair sibling was:
+
+```text
+parent = f94f7890ea351573363c331ee0d144034f821f9c
+head = c0047d9362edbd9daa24d8f940226846e4ea40a5
+```
+
+PR metadata at that snapshot:
+
+```text
+PR = #3511
+base = d17f894e86b0fabab648530968c562e2fbe94c5d
+OPEN / DRAFT
+mergeable = true
+commits = 3
+changed_files = 10
+```
+
+First exact-head qualification completed successfully:
+
+```text
+Central QCP
+  33947168104
+  SUCCESS
+
+Post-Merge V13
+  33947168195
+  SUCCESS
+
+Production Runtime Owner Cutover qualification
+  33947168087
+  SUCCESS
+
+Rolling Resolver Seam
+  33947168186
+  SUCCESS
+
+EA5E2 runtime dependency graph
+  33947168045
+  SUCCESS
+
+CI
+  33947168187
+  SUCCESS
+  build-test = SUCCESS
+  acceptance = SUCCESS
+```
+
+Central QCP machine proof at c004:
+
+```text
+status = PASS
+blocker_count = 0
+unknown_changed_paths = []
+```
+
+Resolver-seam proof:
+
+```text
+status = PASS
+unexpected_changed_paths = []
+owner_cutover_successor_surface_is_atomic = true
+owner_cutover_successor_surface_is_independently_qualified = true
+bounded_adoption_surface_only = true
+forbidden_production_surfaces_unchanged = true
+```
+
+## X20 — c004 duplicate qualification after branch ref restore was stability evidence only
+
+At one point an external actor moved the #3511 branch away from the already qualified `c0047d93...` head.
+
+The branch ref was restored to c004 without creating a new implementation commit.
+
+GitHub then automatically launched a duplicate same-SHA qualification set.
+
+Observed duplicate runs included:
+
+```text
+resolver-seam
+  33947546629
+  SUCCESS
+
+EA5E2
+  33947546615
+  SUCCESS
+
+QCP
+  33947546614
+
+Post-Merge V13
+  33947546620
+
+Cutover qualification
+  33947546626
+
+CI
+  33947546592
+```
+
+These duplicate runs are stability / ref-restore evidence only.
+
+They do not define a new candidate SHA.
+
+The first exact-c004 qualification suite was already complete before the duplicate set started.
+
+## X21 — A later sibling-head replacement occurred after the handoff request snapshot
+
+After the user-provided c004 snapshot, live repository re-fetch found #3511 no longer at c004.
+
+Current live branch head is now:
+
+```text
+70b180b63cc61e5869b234aed3e4be0aef09b705
+```
+
+Compare result between c004 and 70b:
+
+```text
+merge_base = f94f7890ea351573363c331ee0d144034f821f9c
+status = diverged
+c004 and 70b are sibling repair commits
+```
+
+Therefore:
+
+```text
+70b is NOT a descendant of c004
+c004 qualification evidence must NOT be silently inherited by 70b
+```
+
+The branch metadata was also rewritten to describe the split historical-replay / current-successor-preservation model.
+
+Do not treat c004 as the live branch head after this point.
+
+## X22 — Current live #3511 exact metadata
+
+At the final live re-fetch used for this handoff update:
+
+```text
+PR = #3511
+
+title = test(mcft-cap09): split historical replay from successor seam preservation
+
+base = d17f894e86b0fabab648530968c562e2fbe94c5d
+head = 70b180b63cc61e5869b234aed3e4be0aef09b705
+
+state = OPEN / DRAFT
+mergeable = true
+
+commits = 3
+changed_files = 10
+```
+
+The one repair path remains:
+
+```text
+scripts/governance_acceptance/
+ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs
+```
+
+The current PR body explicitly continues to freeze:
+
+```text
+Production Runtime = NOT STARTED
+Production Owner activation = NOT AUTHORIZED
+EXACT_ONE_PRODUCTION_OWNER = NOT PROVEN
+Production rolling default = OFF
+GitHub production cutover = FORBIDDEN
+Formal-v5 = NOT ARMED
+A0 = NOT AUTHORIZED
+O00-O23 = NOT STARTED
+MCFT-CAP-09 = NOT COMPLETE
+B-Line delta = 0
+```
+
+## X23 — 70b has its own fresh exact-head qualification; do not reuse c004 runs
+
+The current live sibling head `70b180b6...` has independently rerun the major qualification lanes.
+
+Fresh current-head runs:
+
+```text
+Central QCP
+  33948265486
+  SUCCESS
+
+Post-Merge V13
+  33948265441
+  SUCCESS
+
+Production Runtime Owner Cutover
+  33948265379
+  SUCCESS
+
+Rolling Resolver Seam
+  33948265423
+  SUCCESS
+
+EA5E2 runtime dependency graph
+  33948265424
+  SUCCESS
+
+CI
+  33948265408
+  SUCCESS
+  build-test = SUCCESS
+  acceptance = SUCCESS
+```
+
+Additional current-head supporting lanes were also terminal / green, while producer-driven live qualification remained an expected SKIPPED applicability outcome.
+
+Do not use the c004 run IDs as the evidence package for 70b; 70b now has its own exact-head run set.
+
+## X24 — 70b QCP is green while Post-Merge V13 still truthfully preserves the operational blocker
+
+Current-head Central QCP job completed all stages successfully:
+
+```text
+Require governed successor predecessor and zero production bindings = SUCCESS
+Prove central applicability semantics = SUCCESS
+Prove generation / durable-anchor / dependency-digest semantics = SUCCESS
+Resolve immutable qualification evidence references = SUCCESS
+Generate exact PR applicability plan = SUCCESS
+Enumerate all blockers without fail-fast = SUCCESS
+Validate control-plane machine proof = SUCCESS
+```
+
+Current-head Post-Merge V13 artifact:
+
+```text
+run = 33948265441
+artifact = 9964018376
+artifact digest = sha256:dedf3a9ffab228be8526dd0bef84dfc751f2fbad39726a7581b05560682bb31d
+```
+
+Machine frontier:
+
+```text
+planner_status = PASS
+unknown_changed_paths = 0
+authority_errors = 0
+
+blocker_count = 1
+blocker = EXACT_ONE_PRODUCTION_OWNER
+reason = NO_VALID_REQUALIFICATION_EVIDENCE
+candidates = []
+```
+
+Non-effects remain:
+
+```text
+runtime_mutation = false
+production_workflow_activation = false
+formal_database_mutation = false
+provider_request = false
+graduation_effect = false
+mcft_cap09_completed = false
+```
+
+This is the correct split:
+
+```text
+pre-merge / structural QCP qualification = GREEN
+operational live-owner proof = STILL BLOCKED
+```
+
+Do not attempt to erase that distinction.
+
+## X25 — Current CI / Commercial regression state on live 70b
+
+Current-head CI:
+
+```text
+run = 33948265408
+build-test = SUCCESS
+acceptance = SUCCESS
+```
+
+The acceptance chain completed through:
+
+```text
+commercial compose render
+acceptance runtime dependencies
+PR18I formal-chain preflight
+Controlled Pilot full-review seed
+C8 formal chain backend P0
+frontend runtime page audit
+Controlled Pilot strict release gate
+Stage-1 raw sample contract
+P1 smoke preflight idempotency
+customer report boundary wiring + suite
+full acceptance suite
+COMMERCIAL MVP0 release gate
+final runtime hygiene
+artifact upload
+```
+
+This is a regression / product-surface qualification result only.
+
+It does not authorize MCFT production runtime activation.
+
+## X26 — Hard authority ceiling remains unchanged
+
+At this handoff boundary, freeze all of the following exactly:
+
+```text
+Production Runtime STARTED        = NO
+Production Owner Activation       = NO
+EXACT_ONE_PRODUCTION_OWNER        = NOT PROVEN
+
+Production Rolling Default        = OFF
+GitHub Production Cutover         = FORBIDDEN
+
+Formal-v5                         = NOT ARMED
+A0                                = NOT AUTHORIZED
+O00-O23                           = NOT STARTED
+
+MCFT-CAP-09                       = NOT COMPLETE
+B-Line                            = UNTOUCHED
+```
+
+Also preserve:
+
+```text
+registry-backed owner-cutover selection
+!=
+authorization to execute owner cutover
+```
+
+The registry-backed selector only makes a future separately authorized local cutover able to select a legal, graduated, validity-covering authority and fail closed otherwise.
+
+## X27 — Current blocker / what is actually unresolved
+
+The code / qualification frontier is no longer blocked by the historical resolver-seam boundary.
+
+The remaining substantive operational blocker remains:
+
+```text
+EXACT_ONE_PRODUCTION_OWNER
+```
+
+And the current evidence remains consistent with:
+
+```text
+Evidence Runtime live lease rows = 0
+Twin Runtime live lease rows = 0
+production runtimes not running
+```
+
+Therefore the unresolved frontier is not:
+
+```text
+Twin V2 semantic correctness
+registry-backed resolver correctness
+owner-cutover selection correctness
+QCP admission correctness
+Commercial regression
+B-Line integration
+```
+
+It is the future separately authorized production-host activation / owner proof boundary.
+
+## X28 — Next-session plan
+
+The next conversation must NOT begin by changing runtime code.
+
+First actions:
+
+```text
+1. re-fetch #3511 live head
+2. require exact live head = 70b180b63cc61e5869b234aed3e4be0aef09b705
+   unless a newer CTO-authorized head is explicitly supplied
+3. re-fetch base / protected main = d17f894e...
+4. verify state remains OPEN / DRAFT / mergeable
+5. verify current exact-head major runs remain terminal and no new head drift exists
+6. treat c004 as a historical qualified sibling, not the live head
+7. stop for CTO Ready-for-Review / merge adjudication unless explicit new authorization is given
+```
+
+Do NOT automatically proceed from green qualification to:
+
+```text
+Ready for Review
+merge
+production owner activation
+production runtime start
+Formal-v5 arm
+A0
+O00-O23
+```
+
+If CTO later authorizes merge, repeat the exact-head no-drift sequence used successfully for #3506 / #3507 before merging.
+
+If CTO later authorizes production-host cutover, that is a separate local-host execution boundary and must re-run all cutover preconditions before any Docker start.
+
+## X29 — Pitfalls already hit; do not repeat
+
+### X29.1 — Do not assume a branch head remains stable while qualification runs
+
+This line repeatedly experienced parallel head drift.
+
+Examples include:
+
+```text
+f94f789... → unauthorized 10-file sibling → restored
+c0047d93... → branch ref rollback → restored
+c0047d93... → later divergent sibling 70b180b...
+```
+
+Always re-fetch the live PR head immediately before making an exact-head claim.
+
+### X29.2 — A sibling repair SHA cannot inherit another sibling's qualification
+
+`c004...` and `70b...` diverge from the same `f94...` parent.
+
+Never say:
+
+```text
+c004 passed, therefore 70b passed
+```
+
+70b required and now has its own fresh run set.
+
+### X29.3 — Do not broaden a historical checker merely to make it green
+
+The old resolver-seam checker failed because it did not understand the later owner-cutover lane.
+
+The repair must preserve historical replay while separately proving current successor semantics.
+
+Do not simply append arbitrary files to an old allowlist without preserving the historical contract.
+
+### X29.4 — Keep the owner-cutover lane atomic
+
+The four canonical owner-cutover files are one governed successor surface.
+
+Qualification must reject partial inclusion.
+
+Do not permit only one or two cutover files to satisfy the bounded surface.
+
+### X29.5 — Owner-cutover qualification SUCCESS is not owner activation
+
+A green cutover workflow proves the contract and GitHub execution prohibition.
+
+It does not create a production lease or start a process.
+
+### X29.6 — EXACT_ONE red is not an implementation regression when live runtimes are intentionally absent
+
+Zero lease rows are current operational truth.
+
+Do not weaken the gate, synthesize lease rows, or start runtime solely to make qualification green.
+
+### X29.7 — Do not use expired static current-crop authority when a graduated registry entry exists
+
+The old 2026-09-03 authority expired.
+
+Future authorized cutover must resolve a validity-covering graduated registry authority for the planned boundary.
+
+### X29.8 — Registry-backed selection does not make rolling the production default
+
+The production rolling default remains OFF.
+
+No automatic registry discovery or implicit environment switch is authorized.
+
+### X29.9 — QCP trigger coverage is part of governance, not runtime semantics
+
+A missing `pull_request.paths` admission can hide a legitimate lane from canonical QCP.
+
+Repair the trigger/admission surface rather than mutating runtime behavior.
+
+### X29.10 — Temporary carriers must never remain in final ancestry/tree
+
+The #3510 settlement materializer was only a carrier.
+
+The clean final integrated subject was reconstructed from the canonical implementation tree plus frozen governance blobs.
+
+Apply the same rule to future evidence/materializer helpers.
+
+### X29.11 — Do not treat SKIPPED applicability as a failed run
+
+Producer-driven live qualification and some full EA5E2 lanes are intentionally SKIPPED when the planner says they are not applicable.
+
+Report SKIPPED truthfully.
+
+### X29.12 — Do not touch B-Line from this MCFT line
+
+B-Line remains independent.
+
+No current MCFT owner / resolver / QCP qualification problem justifies editing B-Line authority, activation graph, Decision/Approval/Dispatch/Acceptance semantics, or B-Line runtime classification.
+
+### X29.13 — Do not enter Formal-v5 / A0 / O00 because architecture qualification is green
+
+Formal-v5 remains downstream of live production ownership proof and its own explicit authority.
+
+Green architecture qualification does not collapse these gates.
+
+### X29.14 — Distinguish CI acceptance runtime dependencies from MCFT production runtime
+
+The Commercial CI acceptance job starts ephemeral/test dependencies.
+
+That does NOT mean MCFT production Evidence/Twin runtime has started.
+
+Do not infer production activation from CI service-start steps.
+
+## X30 — Exact continuation coordinates for the next conversation
+
+Use these as the continuation coordinates unless a subsequent independent live re-fetch shows newer authorized state:
+
+```text
+protected main =
+  d17f894e86b0fabab648530968c562e2fbe94c5d
+
+#3508 read-only owner evidence head =
+  20d3d5cc54b80bfb50bb4b39f73e0238f0cc5f09
+  live owner proof = NOT PROVEN
+
+#3509 canonical implementation head =
+  9fc4b71e9ee757cfd8a4affd064126a69b276e1b
+  IMPLEMENTATION QUALIFIED / DRAFT
+
+#3510 clean integrated QCP settlement head =
+  f94f7890ea351573363c331ee0d144034f821f9c
+  historical resolver-seam blocker identified
+
+#3511 previously qualified sibling =
+  c0047d9362edbd9daa24d8f940226846e4ea40a5
+
+#3511 current live head at handoff update =
+  70b180b63cc61e5869b234aed3e4be0aef09b705
+  OPEN / DRAFT / mergeable
+  commits = 3
+  changed_files = 10
+  fresh current-head major qualification = GREEN
+  Post-Merge V13 operational blocker = EXACT_ONE_PRODUCTION_OWNER
+```
+
+The next session must first verify that `70b180b6...` is still the live #3511 head before doing anything else.
+
+No Ready-for-Review or merge authorization is granted by this handoff update.
+
+---
+
 # GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-05 Continuation — Twin V2 Runtime Selection Adoption / Registry-Backed Resolver Wiring Qualification Frontier
 
 # W — Twin V2 Runtime Selection Adoption / Registry-Backed Resolver Wiring Qualification Frontier
