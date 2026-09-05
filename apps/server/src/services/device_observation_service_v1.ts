@@ -222,29 +222,72 @@ export async function writeDeviceObservationFactV1(clientConn: PoolClient, input
 }
 
 export async function ensureDeviceObservationProjectionV1(clientConn: PoolClient): Promise<void> {
-  await clientConn.query(
-    `CREATE TABLE IF NOT EXISTS device_observation_index_v1 (
-      tenant_id text NOT NULL,
-      project_id text NULL,
-      group_id text NULL,
-      device_id text NOT NULL,
-      field_id text NULL,
-      metric text NOT NULL,
-      observed_at timestamptz NOT NULL,
-      observed_at_ts_ms bigint NOT NULL,
-      value_num double precision NULL,
-      value_text text NULL,
-      unit text NULL,
-      confidence double precision NULL,
-      quality_flags_json jsonb NOT NULL DEFAULT '[]'::jsonb,
-      fact_id text NOT NULL,
-      PRIMARY KEY (tenant_id, device_id, metric, observed_at_ts_ms)
-    )`
-  );
-  await clientConn.query(`CREATE INDEX IF NOT EXISTS idx_device_observation_index_v1_scope_time ON device_observation_index_v1 (tenant_id, project_id, group_id, field_id, metric, observed_at_ts_ms DESC)`);
-  await clientConn.query(`CREATE INDEX IF NOT EXISTS idx_device_observation_index_v1_device_metric_time ON device_observation_index_v1 (tenant_id, device_id, metric, observed_at_ts_ms DESC)`);
-  await clientConn.query(`CREATE INDEX IF NOT EXISTS idx_device_observation_index_v1_tenant_field_time ON device_observation_index_v1 (tenant_id, field_id, observed_at_ts_ms DESC)`);
-  await clientConn.query(`CREATE UNIQUE INDEX IF NOT EXISTS ux_device_observation_index_v1_fact_id ON device_observation_index_v1 (fact_id)`);
+  const result = await clientConn.query<{
+    relation_name: string | null;
+    missing_columns: string[];
+    missing_indexes: string[];
+  }>(`
+    WITH required_columns(column_name) AS (
+      VALUES
+        ('tenant_id'),
+        ('project_id'),
+        ('group_id'),
+        ('device_id'),
+        ('field_id'),
+        ('metric'),
+        ('observed_at'),
+        ('observed_at_ts_ms'),
+        ('value_num'),
+        ('value_text'),
+        ('unit'),
+        ('confidence'),
+        ('quality_flags_json'),
+        ('fact_id')
+    ),
+    required_indexes(index_name) AS (
+      VALUES
+        ('idx_device_observation_index_v1_scope_time'),
+        ('idx_device_observation_index_v1_device_metric_time'),
+        ('idx_device_observation_index_v1_tenant_field_time'),
+        ('ux_device_observation_index_v1_fact_id')
+    )
+    SELECT
+      pg_catalog.to_regclass('public.device_observation_index_v1')::text AS relation_name,
+      COALESCE(
+        ARRAY(
+          SELECT required.column_name
+          FROM required_columns AS required
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM information_schema.columns AS existing
+            WHERE existing.table_schema = 'public'
+              AND existing.table_name = 'device_observation_index_v1'
+              AND existing.column_name = required.column_name
+          )
+          ORDER BY required.column_name
+        ),
+        ARRAY[]::text[]
+      ) AS missing_columns,
+      COALESCE(
+        ARRAY(
+          SELECT required.index_name
+          FROM required_indexes AS required
+          WHERE pg_catalog.to_regclass('public.' || required.index_name) IS NULL
+          ORDER BY required.index_name
+        ),
+        ARRAY[]::text[]
+      ) AS missing_indexes
+  `);
+  const row = result.rows[0];
+  if (!row?.relation_name) {
+    throw new Error("DEVICE_OBSERVATION_SCHEMA_NOT_PROVISIONED:TABLE_MISSING");
+  }
+  if ((row.missing_columns ?? []).length > 0) {
+    throw new Error(`DEVICE_OBSERVATION_SCHEMA_NOT_PROVISIONED:MISSING_COLUMNS:${row.missing_columns.join(",")}`);
+  }
+  if ((row.missing_indexes ?? []).length > 0) {
+    throw new Error(`DEVICE_OBSERVATION_SCHEMA_NOT_PROVISIONED:MISSING_INDEXES:${row.missing_indexes.join(",")}`);
+  }
 }
 
 function toFiniteNumber(v: unknown): number | null {
