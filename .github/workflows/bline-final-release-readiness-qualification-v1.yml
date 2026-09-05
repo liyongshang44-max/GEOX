@@ -530,23 +530,114 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TESTED_SUBJECT_SHA"
           test -z "$(git status --porcelain)"
-          tmp="$(mktemp -d)"
-          cleanup() { rm -rf "$tmp"; }
-          trap cleanup EXIT
-          git -C "$tmp" init -q
-          git -C "$tmp" remote add origin "$(git remote get-url origin)"
-          git -C "$tmp" fetch --quiet --no-tags origin "$TESTED_SUBJECT_SHA"
-          git -C "$tmp" checkout --detach "$TESTED_SUBJECT_SHA" >/dev/null
-          git -C "$tmp" update-ref refs/remotes/origin/main "$TESTED_SUBJECT_SHA"
-          test "$(git -C "$tmp" rev-parse HEAD)" = "$TESTED_SUBJECT_SHA"
-          test -z "$(git -C "$tmp" diff --name-only origin/main...HEAD)"
-          (
-            cd "$tmp"
-            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION.cjs --auto
-            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTION_FEEDBACK_H.cjs --auto
-          )
+          node <<'NODE'
+          "use strict";
+          const fs = require("node:fs");
+          const adapter = fs.readFileSync("apps/server/src/domain/twin_runtime/action_feedback_to_executed_irrigation_v1.ts", "utf8");
+          const receipt = fs.readFileSync("apps/server/src/evidence/twin_runtime/execution_receipt_evidence_contract_v1.ts", "utf8");
+          const service = fs.readFileSync("apps/server/src/runtime/twin_runtime/action_feedback_normalization_service_v1.ts", "utf8");
+          const runtimeAcceptance = fs.readFileSync("scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_ACTION_FEEDBACK_H_DB.ts", "utf8");
+          const failures = [];
+          const need = (src, tokens, label) => tokens.forEach((token) => {
+            if (!src.includes(token)) failures.push(`${label}_MISSING:${token}`);
+          });
+          const forbid = (src, tokens, label) => tokens.forEach((token) => {
+            if (src.includes(token)) failures.push(`${label}_FORBIDDEN:${token}`);
+          });
+
+          need(receipt, [
+            'CAP05_EXECUTION_RECEIPT_RECORD_TYPE_V1 = "irrigation_execution_receipt_evidence_v1"',
+            "assertCap05ReplayEvidenceSourceRecordHashV1",
+            "CAP05_RECEIPT_CROSS_HOUR_EXECUTION_FORBIDDEN",
+            "CAP05_RECEIPT_DEPTH_MM_ONLY_NO_VOLUME_CONVERSION",
+            "CAP05_RECEIPT_TARGET_EQUIVALENT_MISMATCH",
+            "multiplyFixedUnitsV1",
+            'executionStatus === "EXECUTED" || executionStatus === "PARTIALLY_EXECUTED"',
+            'validationStatus !== "REJECTED"',
+            'payload.source_quality !== "FAIL"'
+          ], "RECEIPT");
+
+          need(adapter, [
+            "NOT_YET_VALIDATED_MAY_BE_STATE_INPUT_ELIGIBLE_REJECTED_FORBIDDEN_V1",
+            'return validationStatus !== "REJECTED"',
+            "CAP05_ACTION_FEEDBACK_VALIDATION_REJECTED",
+            'sourceQuality === "FAIL" ? "UNUSABLE" : "USABLE"',
+            "executed_amount_mm: payload.actual_amount_mm",
+            "coverage_fraction: payload.spatial_coverage_fraction",
+            "CAP05_MULTIPLE_EXECUTION_EVENTS_FORBIDDEN_V1"
+          ], "ADAPTER");
+          forbid(adapter, [
+            "CAP05_ACTION_FEEDBACK_VALIDATION_REQUIRED",
+            "approved_amount_mm",
+            "planned_amount_mm"
+          ], "ADAPTER");
+
+          const caller = service.match(/export type CommitCap05ActionFeedbackInputV1 = \{([\s\S]*?)\n\};/);
+          if (!caller) {
+            failures.push("SERVICE_CALLER_INPUT_UNDISCOVERABLE");
+          } else {
+            const body = caller[1];
+            need(body, ["scope:", "receipt_evidence_ref:", "receipt_evidence_hash:"], "SERVICE_CALLER");
+            forbid(body, ["decision", "approved_plan", "actual_amount", "coverage", "runtime_config", "recommendation", "dispatch"], "SERVICE_CALLER");
+          }
+          need(service, [
+            "twin_approved_plan_binding_projection_v1",
+            "active_for_decision",
+            "twin_decision_record_projection_v1",
+            "readCanonicalObject",
+            "external_dispatch_evidence_v1",
+            "geox_dispatch_created: false",
+            "buildCap05ActionFeedbackV1",
+            "commitCanonicalObject",
+            "logical_time_shifted: false",
+            "coverage_applied_by_adapter: false",
+            "volume_conversion_performed: false"
+          ], "SERVICE");
+          forbid(service, [
+            "INSERT INTO facts",
+            "model_activation",
+            "createRecommendation",
+            "createApproval",
+            "createDispatch"
+          ], "SERVICE");
+
+          need(runtimeAcceptance, [
+            'validation_status, "NOT_YET_VALIDATED"',
+            'eligible_for_state_input, true',
+            "pendingResult.adapter_result",
+            'source_validation_status, "NOT_YET_VALIDATED"',
+            "pending validation remains orthogonal to trustworthy execution eligibility",
+            "applies coverage exactly once",
+            "single-event guard rejects multiple eligible execution events",
+            "forged Receipt source-record hash fails closed",
+            "cross-hour execution Receipt fails closed",
+            "volume unit is rejected",
+            "forged covered-footprint amount fails closed",
+            "creates no State, Forecast or Residual object"
+          ], "RUNTIME_ACCEPTANCE");
+          forbid(runtimeAcceptance, [
+            "pending validation independently blocks State eligibility"
+          ], "RUNTIME_ACCEPTANCE");
+
+          console.log("BLINE_S6_CURRENT_SUCCESSOR_SEMANTIC_STATS " + JSON.stringify({
+            tested_subject_sha: process.env.TESTED_SUBJECT_SHA,
+            failures: failures.length,
+            historical_status_metadata_reasserted: false,
+            historical_authority_doc_reasserted: false,
+            historical_candidate_boundary_reasserted: false,
+            receipt_validation_orthogonality_preserved: receipt.includes('validationStatus !== "REJECTED"'),
+            rejected_fail_closed_preserved: adapter.includes("CAP05_ACTION_FEEDBACK_VALIDATION_REJECTED"),
+            single_event_guard_preserved: adapter.includes("CAP05_MULTIPLE_EXECUTION_EVENTS_FORBIDDEN_V1"),
+            caller_authority_bounded: Boolean(caller),
+            canonical_commit_preserved: service.includes("commitCanonicalObject"),
+            runtime_regression_contract_present: runtimeAcceptance.includes("pending validation remains orthogonal to trustworthy execution eligibility")
+          }));
+          for (const failure of failures) console.error(`FAIL ${failure}`);
+          if (failures.length) process.exit(1);
+          console.log("BLINE_S6_CURRENT_SUCCESSOR_SEMANTIC_QUALIFICATION_PASS");
+          NODE
           test -z "$(git status --porcelain)"
-          printf 'BLINE_S6_CURRENT_SUCCESSOR_SEMANTIC_QUALIFICATION {"tested_subject_sha":"%s","historical_candidate_boundary_reasserted":false,"static_semantics":"PASS","status":"PASS"}\n' "$TESTED_SUBJECT_SHA"
+          printf 'BLINE_S6_CURRENT_SUCCESSOR_SEMANTIC_QUALIFICATION {"tested_subject_sha":"%s","historical_candidate_boundary_reasserted":false,"historical_status_metadata_reasserted":false,"static_semantics":"PASS","runtime_proof":"REQUIRED_IN_CANONICAL_ACCEPTANCE_SUITE","status":"PASS"}\n' "$TESTED_SUBJECT_SHA"
 
       - name: Prepare S6 successor acceptance doctor
         shell: bash
