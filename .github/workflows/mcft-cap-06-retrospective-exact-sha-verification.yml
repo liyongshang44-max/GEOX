@@ -1,66 +1,44 @@
-name: mcft-cap-06-retrospective-exact-sha-verification
+name: temp-mcft-cap09-handoff-x-materializer
 
 on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-06-retrospective-exact-sha-verification.yml'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-GOVERNANCE-EFFECTIVENESS-STATUS-V3.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json'
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/mcft-cap-06-retrospective-exact-sha-verification.yml'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-GOVERNANCE-EFFECTIVENESS-STATUS-V3.json'
-      - 'docs/digital_twin/mcft/cap_06/GEOX-MCFT-CAP-06-TASKBOOK-MANIFEST.json'
-  workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: mcft-cap-06-retrospective-exact-sha-ea8caa10
-  cancel-in-progress: false
-
 jobs:
-  verify-exact-cap-06-repair-merge-sha:
+  materialize-handoff:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
-      - name: Checkout exact CAP-06 repair merge SHA
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          ref: ea8caa10e6369ec5018d7c7b6630e2330d1ca085
-          fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
           persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.11.1
-      - name: Run exact-SHA attestation gate retrospectively
-        id: retrospective-gate
-        continue-on-error: true
+      - name: Materialize exact X-section pure prepend
+        env:
+          X_BZ2_B64: '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'
         run: |
-          # MCFT_CAP_06_ATTESTATION_MODE: RETROSPECTIVE_EXACT_SHA_VERIFICATION
-          MCFT_CAP_06_ATTESTATION_MODE=RETROSPECTIVE_EXACT_SHA_VERIFICATION \
-          GITHUB_SHA=ea8caa10e6369ec5018d7c7b6630e2330d1ca085 \
-          GITHUB_REF=refs/heads/main \
-          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_06_S11D_REPAIR_MERGED_MAIN_ATTESTATION.cjs
-      - name: Verify retrospective exact-SHA result
-        run: |
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const result = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_06_S11D_REPAIR_MERGED_MAIN_ATTESTATION.json', 'utf8'));
-          if (result.status !== 'PASS') throw new Error(`RETROSPECTIVE_EXACT_SHA_NOT_PASS:${result.error || 'UNKNOWN'}`);
-          if (result.mode !== 'RETROSPECTIVE_EXACT_SHA_VERIFICATION') throw new Error('RETROSPECTIVE_MODE_INVALID');
-          if (result.subject_commit !== 'ea8caa10e6369ec5018d7c7b6630e2330d1ca085') throw new Error('RETROSPECTIVE_SUBJECT_INVALID');
-          if (result.effective_hard_acceptance_status_counts.PASS !== 255 || result.effective_hard_acceptance_status_counts.PENDING !== 0) throw new Error('RETROSPECTIVE_LEDGER_INVALID');
-          if (result.repository_write_performed !== false || result.postmerge_ssot_writeback_performed !== false) throw new Error('RETROSPECTIVE_WRITEBACK_FORBIDDEN');
-          if (result.successor_capability_line_authorized !== false) throw new Error('RETROSPECTIVE_SUCCESSOR_AUTHORITY_INVALID');
-          NODE
-      - name: Upload immutable retrospective exact-SHA evidence
-        if: always()
-        uses: actions/upload-artifact@v4
+          python - <<'PY'
+          import base64,bz2,hashlib,json,os,pathlib,subprocess
+          p=pathlib.Path('docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md')
+          old=p.read_bytes(); old_blob=subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert old_blob=='1b01cdc6ff14b6d865e683268f0965d8c0b368a5', old_blob
+          x=bz2.decompress(base64.b64decode(os.environ['X_BZ2_B64']))
+          assert hashlib.sha256(x).hexdigest()=='6c72c78968c674bcb42e653a010cd5b28d94333cb5bc2f54418d2fab65d85393'
+          new=x+old; assert new[len(x):]==old
+          p.write_bytes(new)
+          out={'status':'PASS','old_handoff_blob_sha':old_blob,'new_handoff_blob_sha':subprocess.check_output(['git','hash-object',str(p)],text=True).strip(),'old_bytes':len(old),'prepend_bytes':len(x),'new_bytes':len(new),'prepend_sha256':hashlib.sha256(x).hexdigest(),'pure_prepend':True,'historical_w_and_earlier_preserved_byte_for_byte':True,'repository_ref_updated':False}
+          pathlib.Path('acceptance-output').mkdir(exist_ok=True); pathlib.Path('acceptance-output/MCFT_CAP_09_HANDOFF_X_MATERIALIZER.json').write_text(json.dumps(out,indent=2)+'\n'); print(json.dumps(out,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap-06-retrospective-exact-sha-ea8caa10-${{ github.run_id }}
-          path: acceptance-output/MCFT_CAP_06_S11D_REPAIR_MERGED_MAIN_ATTESTATION.json
+          name: mcft-cap09-handoff-x-materializer-${{ github.event.pull_request.head.sha }}
+          path: |
+            docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md
+            acceptance-output/MCFT_CAP_09_HANDOFF_X_MATERIALIZER.json
           if-no-files-found: error
-          retention-days: 90
+          retention-days: 30
