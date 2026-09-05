@@ -26,6 +26,19 @@ export type BlineCommercialPrincipalBootstrapConfigV1 = {
   executor_password: string;
 };
 
+export type BlineCommercialSchemaContractV1 = {
+  jobs_exists: true;
+  jobs_owner: string;
+  jobs_owner_is_privileged_bootstrap: true;
+  jobs_role_dml: true;
+  jobs_role_create_public: false;
+  device_observation_index_v1_exists: true;
+  device_observation_index_v1_owner: string;
+  device_observation_index_v1_owner_is_privileged_bootstrap: true;
+  telemetry_role_dml: true;
+  telemetry_role_create_public: false;
+};
+
 export type BlineCommercialPrincipalBootstrapResultV1 = {
   status: "PASS";
   session_user: string;
@@ -38,6 +51,7 @@ export type BlineCommercialPrincipalBootstrapResultV1 = {
   mcft_runtime_role_unchanged: true;
   workload_role_membership_in_mcft_roles: false;
   effective_runtime_object_baseline: true;
+  schema_contract: BlineCommercialSchemaContractV1;
 };
 
 function requiredSecret(value: string | undefined, code: string): string {
@@ -229,6 +243,68 @@ async function assertWorkloadRoleGraphV1(pool: Pool): Promise<void> {
   }
 }
 
+async function assertCommercialSchemaContractV1(pool: Pool, expectedOwner: string): Promise<BlineCommercialSchemaContractV1> {
+  const result = await pool.query<{
+    jobs_exists: boolean;
+    jobs_owner: string | null;
+    jobs_select: boolean;
+    jobs_insert: boolean;
+    jobs_update: boolean;
+    jobs_delete: boolean;
+    jobs_create_public: boolean;
+    device_exists: boolean;
+    device_owner: string | null;
+    telemetry_select: boolean;
+    telemetry_insert: boolean;
+    telemetry_update: boolean;
+    telemetry_delete: boolean;
+    telemetry_create_public: boolean;
+  }>(`
+    SELECT
+      pg_catalog.to_regclass('public.jobs') IS NOT NULL AS jobs_exists,
+      (SELECT pg_catalog.pg_get_userbyid(c.relowner) FROM pg_catalog.pg_class AS c WHERE c.oid = pg_catalog.to_regclass('public.jobs')) AS jobs_owner,
+      pg_catalog.has_table_privilege('${BLINE_COMMERCIAL_JOBS_ROLE_V1}', 'public.jobs', 'SELECT') AS jobs_select,
+      pg_catalog.has_table_privilege('${BLINE_COMMERCIAL_JOBS_ROLE_V1}', 'public.jobs', 'INSERT') AS jobs_insert,
+      pg_catalog.has_table_privilege('${BLINE_COMMERCIAL_JOBS_ROLE_V1}', 'public.jobs', 'UPDATE') AS jobs_update,
+      pg_catalog.has_table_privilege('${BLINE_COMMERCIAL_JOBS_ROLE_V1}', 'public.jobs', 'DELETE') AS jobs_delete,
+      pg_catalog.has_schema_privilege('${BLINE_COMMERCIAL_JOBS_ROLE_V1}', 'public', 'CREATE') AS jobs_create_public,
+      pg_catalog.to_regclass('public.device_observation_index_v1') IS NOT NULL AS device_exists,
+      (SELECT pg_catalog.pg_get_userbyid(c.relowner) FROM pg_catalog.pg_class AS c WHERE c.oid = pg_catalog.to_regclass('public.device_observation_index_v1')) AS device_owner,
+      pg_catalog.has_table_privilege('${BLINE_COMMERCIAL_TELEMETRY_ROLE_V1}', 'public.device_observation_index_v1', 'SELECT') AS telemetry_select,
+      pg_catalog.has_table_privilege('${BLINE_COMMERCIAL_TELEMETRY_ROLE_V1}', 'public.device_observation_index_v1', 'INSERT') AS telemetry_insert,
+      pg_catalog.has_table_privilege('${BLINE_COMMERCIAL_TELEMETRY_ROLE_V1}', 'public.device_observation_index_v1', 'UPDATE') AS telemetry_update,
+      pg_catalog.has_table_privilege('${BLINE_COMMERCIAL_TELEMETRY_ROLE_V1}', 'public.device_observation_index_v1', 'DELETE') AS telemetry_delete,
+      pg_catalog.has_schema_privilege('${BLINE_COMMERCIAL_TELEMETRY_ROLE_V1}', 'public', 'CREATE') AS telemetry_create_public
+  `);
+  const row = result.rows[0];
+  if (!row?.jobs_exists) throw new Error("BLINE_COMMERCIAL_PRINCIPAL_BOOTSTRAP_INVALID:JOBS_NOT_PROVISIONED");
+  if (row.jobs_owner !== expectedOwner) {
+    throw new Error(`BLINE_COMMERCIAL_PRINCIPAL_BOOTSTRAP_INVALID:JOBS_OWNER:${row.jobs_owner ?? "NONE"}:${expectedOwner}`);
+  }
+  if (!row.jobs_select || !row.jobs_insert || !row.jobs_update || !row.jobs_delete || row.jobs_create_public) {
+    throw new Error("BLINE_COMMERCIAL_PRINCIPAL_BOOTSTRAP_INVALID:JOBS_RUNTIME_PRIVILEGE_CONTRACT");
+  }
+  if (!row.device_exists) throw new Error("BLINE_COMMERCIAL_PRINCIPAL_BOOTSTRAP_INVALID:DEVICE_OBSERVATION_NOT_PROVISIONED");
+  if (row.device_owner !== expectedOwner) {
+    throw new Error(`BLINE_COMMERCIAL_PRINCIPAL_BOOTSTRAP_INVALID:DEVICE_OBSERVATION_OWNER:${row.device_owner ?? "NONE"}:${expectedOwner}`);
+  }
+  if (!row.telemetry_select || !row.telemetry_insert || !row.telemetry_update || !row.telemetry_delete || row.telemetry_create_public) {
+    throw new Error("BLINE_COMMERCIAL_PRINCIPAL_BOOTSTRAP_INVALID:TELEMETRY_RUNTIME_PRIVILEGE_CONTRACT");
+  }
+  return {
+    jobs_exists: true,
+    jobs_owner: row.jobs_owner,
+    jobs_owner_is_privileged_bootstrap: true,
+    jobs_role_dml: true,
+    jobs_role_create_public: false,
+    device_observation_index_v1_exists: true,
+    device_observation_index_v1_owner: row.device_owner,
+    device_observation_index_v1_owner_is_privileged_bootstrap: true,
+    telemetry_role_dml: true,
+    telemetry_role_create_public: false,
+  };
+}
+
 export async function runBlineCommercialPrincipalBootstrapV1(
   config: BlineCommercialPrincipalBootstrapConfigV1,
 ): Promise<BlineCommercialPrincipalBootstrapResultV1> {
@@ -243,6 +319,7 @@ export async function runBlineCommercialPrincipalBootstrapV1(
     await setWorkloadPasswordsV1(pool, config);
     await grantFrozenRuntimeObjectBaselineV1(pool);
     await assertWorkloadRoleGraphV1(pool);
+    const schemaContract = await assertCommercialSchemaContractV1(pool, authority.session_user);
     return {
       status: "PASS",
       session_user: authority.session_user,
@@ -251,6 +328,7 @@ export async function runBlineCommercialPrincipalBootstrapV1(
       mcft_runtime_role_unchanged: true,
       workload_role_membership_in_mcft_roles: false,
       effective_runtime_object_baseline: true,
+      schema_contract: schemaContract,
     };
   } finally {
     await pool.end();
