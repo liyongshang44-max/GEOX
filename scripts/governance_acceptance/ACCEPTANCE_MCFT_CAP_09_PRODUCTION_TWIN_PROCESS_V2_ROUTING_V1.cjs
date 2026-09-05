@@ -58,7 +58,7 @@ if(adoption){
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts",
     "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json",
-    ".github/workflows/mcft-cap-09-production-runtime-owner-cutover.yml",
+    ".github/workflows/mcft-cap-09-production-runtime-owner-cutover-v1.yml",
     ".github/workflows/mcft-cap-09-production-owner-graduation-gate.yml"
   ]) eq(git("rev-parse","HEAD:"+frozen),git("rev-parse",ADOPTION_BASE+":"+frozen),"PRODUCTION_TWIN_V2_ROUTING_ADOPTION_FROZEN_SURFACE_DRIFT:"+frozen);
 }else if(!successor){
