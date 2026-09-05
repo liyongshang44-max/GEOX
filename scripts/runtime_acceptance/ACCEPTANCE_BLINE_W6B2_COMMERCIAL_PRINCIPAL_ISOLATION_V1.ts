@@ -1,0 +1,624 @@
+import fs from "node:fs";
+import { Pool } from "pg";
+import mqtt, { type MqttClient } from "mqtt";
+
+const UNOBSERVED = "UNOBSERVED" as const;
+
+type TerminalRecord = {
+  result: "PASS" | "FAIL";
+  phase: string;
+  DB_SERVER: unknown;
+  DB_TELEMETRY: unknown;
+  DB_JOBS: unknown;
+  DB_EXECUTOR: unknown;
+  DB_CROSS_CREDENTIALS: unknown;
+  MQTT_CONNECT_EXECUTOR: unknown;
+  MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT: unknown;
+  MQTT_POSITIVE_CONTROL_SUBSCRIBE: unknown;
+  MQTT_TEST_PUBLISH: unknown;
+  MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT: unknown;
+  MQTT_POSITIVE_CONTROL_DELIVERY_COUNT: unknown;
+  MQTT_TELEMETRY_FORBIDDEN_PUBLISH: unknown;
+  MQTT_CROSS_CREDENTIAL: unknown;
+  error_code: string | null;
+  error_message: string | null;
+};
+
+const terminal: TerminalRecord = {
+  result: "FAIL",
+  phase: "INIT",
+  DB_SERVER: UNOBSERVED,
+  DB_TELEMETRY: UNOBSERVED,
+  DB_JOBS: UNOBSERVED,
+  DB_EXECUTOR: UNOBSERVED,
+  DB_CROSS_CREDENTIALS: UNOBSERVED,
+  MQTT_CONNECT_EXECUTOR: UNOBSERVED,
+  MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT: UNOBSERVED,
+  MQTT_POSITIVE_CONTROL_SUBSCRIBE: UNOBSERVED,
+  MQTT_TEST_PUBLISH: UNOBSERVED,
+  MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT: UNOBSERVED,
+  MQTT_POSITIVE_CONTROL_DELIVERY_COUNT: UNOBSERVED,
+  MQTT_TELEMETRY_FORBIDDEN_PUBLISH: UNOBSERVED,
+  MQTT_CROSS_CREDENTIAL: UNOBSERVED,
+  error_code: null,
+  error_message: null,
+};
+
+const terminalEvidenceKeys = new Set([
+  "DB_SERVER",
+  "DB_TELEMETRY",
+  "DB_JOBS",
+  "DB_EXECUTOR",
+  "DB_CROSS_CREDENTIALS",
+  "MQTT_CONNECT_EXECUTOR",
+  "MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT",
+  "MQTT_POSITIVE_CONTROL_SUBSCRIBE",
+  "MQTT_TEST_PUBLISH",
+  "MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT",
+  "MQTT_POSITIVE_CONTROL_DELIVERY_COUNT",
+  "MQTT_TELEMETRY_FORBIDDEN_PUBLISH",
+  "MQTT_CROSS_CREDENTIAL",
+]);
+
+let terminalEmitted = false;
+let telemetryDbPassword = "";
+let jobsDbPassword = "";
+let executorDbPassword = "";
+let telemetryMqttPassword = "";
+let executorMqttPassword = "";
+
+const host = String(process.env.W6B2_DB_HOST ?? "127.0.0.1").trim();
+const port = Number.parseInt(String(process.env.W6B2_DB_PORT ?? "5433"), 10);
+const database = String(process.env.POSTGRES_DB ?? "landos").trim();
+const telemetryMqttUsername = String(process.env.GEOX_TELEMETRY_MQTT_USERNAME ?? "geox_telemetry_ingest_v1").trim();
+const executorMqttUsername = String(process.env.GEOX_EXECUTOR_MQTT_USERNAME ?? "geox_executor_v1").trim();
+const mqttUrl = String(process.env.W6B2_MQTT_URL ?? "mqtt://127.0.0.1:1883").trim();
+
+function setPhase(phase: string): void {
+  terminal.phase = phase;
+}
+
+function secret(envName: string, filePath: string): string {
+  const fromEnv = String(process.env[envName] ?? "");
+  if (fromEnv) return fromEnv;
+  try {
+    const fromFile = fs.readFileSync(filePath, "utf8").trim();
+    if (fromFile) return fromFile;
+  } catch {}
+  throw new Error(`W6B2_RUNTIME_PROOF_MISSING_SECRET:${envName}:${filePath}`);
+}
+
+function loadSecrets(): void {
+  setPhase("LOAD_SECRETS");
+  telemetryDbPassword = secret("GEOX_TELEMETRY_DATABASE_PASSWORD", "/run/geox/telemetry/db_password");
+  jobsDbPassword = secret("GEOX_JOBS_DATABASE_PASSWORD", "/run/geox/jobs/db_password");
+  executorDbPassword = secret("GEOX_EXECUTOR_DATABASE_PASSWORD", "/run/geox/executor/db_password");
+  telemetryMqttPassword = secret("GEOX_TELEMETRY_MQTT_PASSWORD", "/run/geox/telemetry/mqtt_password");
+  executorMqttPassword = secret("GEOX_EXECUTOR_MQTT_PASSWORD", "/run/geox/executor/mqtt_password");
+}
+
+function assert(condition: unknown, message: string, detail?: unknown): asserts condition {
+  if (!condition) throw new Error(`${message}${detail === undefined ? "" : `:${JSON.stringify(detail)}`}`);
+}
+
+function observed(stage: string, value: unknown): void {
+  terminal.phase = stage;
+  if (terminalEvidenceKeys.has(stage)) {
+    (terminal as unknown as Record<string, unknown>)[stage] = value;
+  }
+  console.log(JSON.stringify({ stage, observed: value }));
+}
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function sanitizeErrorText(error: unknown): string {
+  let text = errorText(error);
+  for (const secretValue of [telemetryDbPassword, jobsDbPassword, executorDbPassword, telemetryMqttPassword, executorMqttPassword]) {
+    if (secretValue) text = text.split(secretValue).join("[REDACTED]");
+  }
+  return text
+    .replace(/postgres(?:ql)?:\/\/[^:@/\s]+:[^@/\s]+@/gi, "postgres://[REDACTED]@")
+    .slice(0, 4000);
+}
+
+function terminalErrorCode(error: unknown): string {
+  const message = errorText(error);
+  const w6b2Code = message.match(/\b(W6B2_[A-Z0-9_]+)/)?.[1];
+  if (w6b2Code) return w6b2Code;
+  const externalCode = (error as { code?: unknown } | null)?.code;
+  if (typeof externalCode === "string" && externalCode.trim()) return externalCode.trim();
+  return `W6B2_${terminal.phase.replace(/[^A-Z0-9]+/gi, "_").toUpperCase()}_ERROR`;
+}
+
+function emitTerminalRecord(error?: unknown): void {
+  if (terminalEmitted) return;
+  terminalEmitted = true;
+  if (error === undefined) {
+    terminal.result = "PASS";
+    terminal.phase = "COMPLETE";
+    terminal.error_code = null;
+    terminal.error_message = null;
+  } else {
+    terminal.result = "FAIL";
+    terminal.error_code = terminalErrorCode(error);
+    terminal.error_message = sanitizeErrorText(error);
+  }
+  console.log(`W6B2_TERMINAL_RECORD=${JSON.stringify(terminal)}`);
+}
+
+type Principal = {
+  kind: "telemetry" | "jobs" | "executor";
+  stage: "DB_TELEMETRY" | "DB_JOBS" | "DB_EXECUTOR";
+  user: string;
+  password: string;
+};
+
+function principals(): Principal[] {
+  return [
+    { kind: "telemetry", stage: "DB_TELEMETRY", user: "geox_telemetry_ingest_v1", password: telemetryDbPassword },
+    { kind: "jobs", stage: "DB_JOBS", user: "geox_jobs_v1", password: jobsDbPassword },
+    { kind: "executor", stage: "DB_EXECUTOR", user: "geox_executor_runtime_v1", password: executorDbPassword },
+  ];
+}
+
+function dbUrl(user: string, password: string): string {
+  return `postgres://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${encodeURIComponent(database)}`;
+}
+
+async function observeServerDatabasePrincipal() {
+  setPhase("DB_SERVER");
+  const adminUrl = String(process.env.GEOX_DB_PLATFORM_ADMIN_DATABASE_URL ?? "").trim();
+  assert(adminUrl, "W6B2_DB_SERVER_ADMIN_OBSERVER_URL_MISSING");
+  const pool = new Pool({ connectionString: adminUrl, max: 1, connectionTimeoutMillis: 5000 });
+  try {
+    const result = await pool.query<{
+      rolname: string;
+      rolcanlogin: boolean;
+      rolinherit: boolean;
+      rolsuper: boolean;
+      rolcreatedb: boolean;
+      rolcreaterole: boolean;
+      rolreplication: boolean;
+      rolbypassrls: boolean;
+      active_session_count: string;
+    }>(`
+      SELECT
+        r.rolname,
+        r.rolcanlogin,
+        r.rolinherit,
+        r.rolsuper,
+        r.rolcreatedb,
+        r.rolcreaterole,
+        r.rolreplication,
+        r.rolbypassrls,
+        (
+          SELECT count(*)::text
+          FROM pg_catalog.pg_stat_activity AS a
+          WHERE a.usename = r.rolname
+            AND a.datname = current_database()
+        ) AS active_session_count
+      FROM pg_catalog.pg_roles AS r
+      WHERE r.rolname = 'geox_runtime_v1'
+    `);
+    const row = result.rows[0];
+    assert(row, "W6B2_DB_SERVER_ROLE_MISSING");
+    const value = {
+      expected_principal: "geox_runtime_v1",
+      role: row.rolname,
+      database,
+      active_session_count: Number.parseInt(row.active_session_count, 10),
+      rolcanlogin: row.rolcanlogin,
+      rolinherit: row.rolinherit,
+      rolsuper: row.rolsuper,
+      rolcreatedb: row.rolcreatedb,
+      rolcreaterole: row.rolcreaterole,
+      rolreplication: row.rolreplication,
+      rolbypassrls: row.rolbypassrls,
+    };
+    observed("DB_SERVER", value);
+    return value;
+  } finally {
+    await pool.end();
+  }
+}
+
+async function verifyDatabasePrincipal(principal: Principal) {
+  setPhase(principal.stage);
+  const pool = new Pool({ connectionString: dbUrl(principal.user, principal.password), max: 1, connectionTimeoutMillis: 5000 });
+  try {
+    const identity = await pool.query<{
+      session_user: string;
+      current_user: string;
+      rolcanlogin: boolean;
+      rolinherit: boolean;
+      rolsuper: boolean;
+      rolcreatedb: boolean;
+      rolcreaterole: boolean;
+      rolreplication: boolean;
+      rolbypassrls: boolean;
+      can_set_runtime: boolean;
+      can_create_public: boolean;
+    }>(`
+      SELECT
+        session_user::text AS session_user,
+        current_user::text AS current_user,
+        r.rolcanlogin,
+        r.rolinherit,
+        r.rolsuper,
+        r.rolcreatedb,
+        r.rolcreaterole,
+        r.rolreplication,
+        r.rolbypassrls,
+        pg_catalog.pg_has_role(current_user, 'geox_runtime_v1', 'SET') AS can_set_runtime,
+        pg_catalog.has_schema_privilege(current_user, 'public', 'CREATE') AS can_create_public
+      FROM pg_catalog.pg_roles AS r
+      WHERE r.rolname = current_user
+    `);
+    const row = identity.rows[0];
+    assert(row, "W6B2_DB_IDENTITY_MISSING", principal.kind);
+
+    let factsSelect = "PASS";
+    try {
+      await pool.query("SELECT fact_id FROM public.facts LIMIT 1");
+    } catch (error) {
+      factsSelect = `FAIL:${errorText(error)}`;
+    }
+
+    let catalogSelect = "PASS";
+    try {
+      await pool.query("SELECT 1 FROM pg_catalog.pg_class LIMIT 1");
+    } catch (error) {
+      catalogSelect = `FAIL:${errorText(error)}`;
+    }
+
+    let createDenied = false;
+    let createObserved = "ALLOWED";
+    try {
+      await pool.query(`CREATE TABLE public.w6b2_forbidden_${principal.kind}_v1(id integer)`);
+    } catch (error) {
+      createDenied = true;
+      createObserved = `DENIED:${errorText(error)}`;
+    }
+
+    let setRuntimeDenied = false;
+    let setRuntimeObserved = "ALLOWED";
+    try {
+      await pool.query("SET ROLE geox_runtime_v1");
+    } catch (error) {
+      setRuntimeDenied = true;
+      setRuntimeObserved = `DENIED:${errorText(error)}`;
+    }
+
+    const value = {
+      principal: principal.kind,
+      expected_user: principal.user,
+      session_user: row.session_user,
+      current_user: row.current_user,
+      rolcanlogin: row.rolcanlogin,
+      rolinherit: row.rolinherit,
+      rolsuper: row.rolsuper,
+      rolcreatedb: row.rolcreatedb,
+      rolcreaterole: row.rolcreaterole,
+      rolreplication: row.rolreplication,
+      rolbypassrls: row.rolbypassrls,
+      can_set_runtime: row.can_set_runtime,
+      can_create_public: row.can_create_public,
+      facts_select: factsSelect,
+      catalog_select: catalogSelect,
+      create_public: createObserved,
+      set_runtime_role: setRuntimeObserved,
+    };
+    observed(principal.stage, value);
+
+    assert(row.session_user === principal.user && row.current_user === principal.user, "W6B2_DB_IDENTITY_COLLAPSED", { principal: principal.kind, row });
+    assert(row.rolcanlogin, "W6B2_DB_LOGIN_DISABLED", principal.kind);
+    assert(!row.rolinherit && !row.rolsuper && !row.rolcreatedb && !row.rolcreaterole && !row.rolreplication && !row.rolbypassrls, "W6B2_DB_ROLE_FLAGS_INVALID", { principal: principal.kind, row });
+    assert(!row.can_set_runtime, "W6B2_DB_CAN_SET_MCFT_RUNTIME_ROLE", principal.kind);
+    assert(!row.can_create_public, "W6B2_DB_CAN_CREATE_PUBLIC", principal.kind);
+    assert(factsSelect === "PASS", "W6B2_DB_FACTS_SELECT_FAILED", { principal: principal.kind, actual: factsSelect });
+    assert(catalogSelect === "PASS", "W6B2_DB_CATALOG_SELECT_FAILED", { principal: principal.kind, actual: catalogSelect });
+    assert(createDenied, "W6B2_DB_PUBLIC_CREATE_NOT_DENIED", principal.kind);
+    assert(setRuntimeDenied, "W6B2_DB_SET_RUNTIME_NOT_DENIED", principal.kind);
+
+    return {
+      kind: principal.kind,
+      session_user: row.session_user,
+      current_user: row.current_user,
+      public_create_denied: true,
+      mcft_runtime_set_role_denied: true,
+    };
+  } finally {
+    await pool.end();
+  }
+}
+
+async function expectDbAuthFailure(user: string, wrongPassword: string, label: string): Promise<{ label: string; user: string; denied: true }> {
+  setPhase(`DB_CROSS_CREDENTIAL_${label.toUpperCase()}`);
+  const pool = new Pool({ connectionString: dbUrl(user, wrongPassword), max: 1, connectionTimeoutMillis: 3000 });
+  let denied = false;
+  try {
+    await pool.query("SELECT 1");
+  } catch {
+    denied = true;
+  } finally {
+    await pool.end().catch(() => undefined);
+  }
+  assert(denied, "W6B2_DB_CROSS_CREDENTIAL_ACCEPTED", label);
+  return { label, user, denied: true };
+}
+
+function connectMqtt(username: string, password: string, clientId: string): Promise<MqttClient> {
+  return new Promise((resolve, reject) => {
+    const client = mqtt.connect(mqttUrl, {
+      username,
+      password,
+      clientId,
+      protocolVersion: 4,
+      reconnectPeriod: 0,
+      connectTimeout: 3000,
+      clean: true,
+    });
+    const timer = setTimeout(() => {
+      client.end(true);
+      reject(new Error(`MQTT_CONNECT_TIMEOUT:${clientId}`));
+    }, 4000);
+    client.once("connect", () => {
+      clearTimeout(timer);
+      resolve(client);
+    });
+    client.once("error", (error) => {
+      clearTimeout(timer);
+      client.end(true);
+      reject(error);
+    });
+  });
+}
+
+type SubscribeObservation =
+  | { status: "GRANTED"; qos: number; granted: Array<{ topic: string; qos: number }> }
+  | { status: "ERROR"; error: string }
+  | { status: "TIMEOUT"; timeout_ms: number };
+
+function observeSubscribe(client: MqttClient, topic: string, timeoutMs = 4000): Promise<SubscribeObservation> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value: SubscribeObservation) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(value);
+    };
+    const timer = setTimeout(() => finish({ status: "TIMEOUT", timeout_ms: timeoutMs }), timeoutMs);
+    client.subscribe(topic, { qos: 0 }, (error, granted) => {
+      if (error) {
+        finish({ status: "ERROR", error: errorText(error) });
+        return;
+      }
+      const normalized = (granted ?? []).map((item: any) => ({ topic: String(item?.topic ?? ""), qos: Number(item?.qos ?? -1) }));
+      finish({ status: "GRANTED", qos: Number(normalized[0]?.qos ?? -1), granted: normalized });
+    });
+  });
+}
+
+function publish(client: MqttClient, topic: string, payload: string, timeoutMs = 4000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error) reject(error);
+      else resolve();
+    };
+    const timer = setTimeout(() => finish(new Error(`MQTT_PUBLISH_TIMEOUT:${timeoutMs}`)), timeoutMs);
+    client.publish(topic, payload, { qos: 0, retain: false }, (error) => error ? finish(error) : finish());
+  });
+}
+
+async function verifyMqttBoundary() {
+  assert(telemetryMqttUsername !== executorMqttUsername, "W6B2_MQTT_USERNAME_COLLAPSED");
+  assert(telemetryMqttPassword !== executorMqttPassword, "W6B2_MQTT_PASSWORD_COLLAPSED");
+
+  const nonce = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  const topic = `telemetry/w6b2_${nonce}/device`;
+  const payload = `executor-authorized-publish-${nonce}`;
+  const deliveryWindowMs = 2500;
+
+  setPhase("MQTT_CONNECT_POSITIVE_CONTROL");
+  const telemetry = await connectMqtt(telemetryMqttUsername, telemetryMqttPassword, `w6b2_telemetry_${nonce}`);
+  setPhase("MQTT_CONNECT_EXECUTOR");
+  const executor = await connectMqtt(executorMqttUsername, executorMqttPassword, `w6b2_executor_${nonce}`);
+  observed("MQTT_CONNECT_EXECUTOR", {
+    principal: executorMqttUsername,
+    connected: executor.connected,
+    protocol_version: 4,
+  });
+
+  let executorForbiddenDeliveryCount = 0;
+  let positiveControlDeliveryCount = 0;
+  let executorSubscribeAckObservation: SubscribeObservation | null = null;
+  let telemetryForbiddenPublishDenied = false;
+  try {
+    setPhase("MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT");
+    const forbiddenSubscribe = await observeSubscribe(executor, topic);
+    executorSubscribeAckObservation = forbiddenSubscribe;
+    observed("MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT", {
+      ...forbiddenSubscribe,
+      executor_connected_after_subscribe: executor.connected,
+    });
+
+    setPhase("MQTT_POSITIVE_CONTROL_SUBSCRIBE");
+    const positiveSubscribe = await observeSubscribe(telemetry, topic);
+    observed("MQTT_POSITIVE_CONTROL_SUBSCRIBE", {
+      principal: telemetryMqttUsername,
+      topic,
+      result: positiveSubscribe,
+      connected_after_subscribe: telemetry.connected,
+    });
+    assert(positiveSubscribe.status === "GRANTED" && positiveSubscribe.qos !== 128, "W6B2_MQTT_TELEMETRY_READ_DENIED", positiveSubscribe);
+
+    const executorHandler = (incomingTopic: string, incomingPayload: Buffer) => {
+      if (incomingTopic === topic && incomingPayload.toString("utf8") === payload) executorForbiddenDeliveryCount += 1;
+    };
+    const positiveHandler = (incomingTopic: string, incomingPayload: Buffer) => {
+      if (incomingTopic === topic && incomingPayload.toString("utf8") === payload) positiveControlDeliveryCount += 1;
+    };
+    executor.on("message", executorHandler);
+    telemetry.on("message", positiveHandler);
+
+    setPhase("MQTT_TEST_PUBLISH");
+    observed("MQTT_TEST_PUBLISH", {
+      status: "ATTEMPT",
+      publisher: executorMqttUsername,
+      publisher_connected: executor.connected,
+      topic,
+      nonce,
+      payload,
+    });
+    await publish(executor, topic, payload);
+    observed("MQTT_TEST_PUBLISH", {
+      status: "PUBLISHED",
+      publisher: executorMqttUsername,
+      publisher_connected: executor.connected,
+      topic,
+      nonce,
+      payload,
+    });
+
+    setPhase("MQTT_DELIVERY_WINDOW");
+    await new Promise((resolve) => setTimeout(resolve, deliveryWindowMs));
+
+    executor.removeListener("message", executorHandler);
+    telemetry.removeListener("message", positiveHandler);
+
+    observed("MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT", {
+      count: executorForbiddenDeliveryCount,
+      bounded_window_ms: deliveryWindowMs,
+      topic,
+      nonce,
+    });
+    observed("MQTT_POSITIVE_CONTROL_DELIVERY_COUNT", {
+      count: positiveControlDeliveryCount,
+      bounded_window_ms: deliveryWindowMs,
+      topic,
+      nonce,
+    });
+
+    assert(executorForbiddenDeliveryCount === 0, "W6B2_MQTT_EXECUTOR_FORBIDDEN_PUBLICATION_DELIVERED", {
+      count: executorForbiddenDeliveryCount,
+      topic,
+      nonce,
+    });
+    assert(positiveControlDeliveryCount > 0, "W6B2_MQTT_POSITIVE_CONTROL_NOT_DELIVERED", {
+      count: positiveControlDeliveryCount,
+      topic,
+      nonce,
+    });
+
+    setPhase("MQTT_TELEMETRY_FORBIDDEN_PUBLISH");
+    let telemetryReceivedOwnPublish = false;
+    const ownPayload = `telemetry-forbidden-${nonce}`;
+    const ownHandler = (incomingTopic: string, incomingPayload: Buffer) => {
+      if (incomingTopic === topic && incomingPayload.toString("utf8") === ownPayload) telemetryReceivedOwnPublish = true;
+    };
+    telemetry.on("message", ownHandler);
+    let telemetryPublishObservation: { status: "CALLBACK_SUCCESS" } | { status: "ERROR"; error: string };
+    try {
+      await publish(telemetry, topic, ownPayload);
+      telemetryPublishObservation = { status: "CALLBACK_SUCCESS" };
+    } catch (error) {
+      telemetryPublishObservation = { status: "ERROR", error: sanitizeErrorText(error) };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    telemetry.removeListener("message", ownHandler);
+    telemetryForbiddenPublishDenied = !telemetryReceivedOwnPublish;
+    observed("MQTT_TELEMETRY_FORBIDDEN_PUBLISH", {
+      principal: telemetryMqttUsername,
+      topic,
+      publish_observation: telemetryPublishObservation,
+      self_delivery_observed: telemetryReceivedOwnPublish,
+      forbidden_publish_effect_denied: telemetryForbiddenPublishDenied,
+    });
+    assert(telemetryForbiddenPublishDenied, "W6B2_MQTT_TELEMETRY_PUBLISH_NOT_DENIED");
+  } finally {
+    telemetry.end(true);
+    executor.end(true);
+  }
+
+  setPhase("MQTT_CROSS_CREDENTIAL");
+  let crossCredentialDenied = false;
+  let crossCredentialObservation: { status: "ACCEPTED" } | { status: "DENIED"; error: string } = { status: "ACCEPTED" };
+  try {
+    const wrong = await connectMqtt(telemetryMqttUsername, executorMqttPassword, `w6b2_wrong_${nonce}`);
+    wrong.end(true);
+  } catch (error) {
+    crossCredentialDenied = true;
+    crossCredentialObservation = { status: "DENIED", error: sanitizeErrorText(error) };
+  }
+  observed("MQTT_CROSS_CREDENTIAL", {
+    attempted_username: telemetryMqttUsername,
+    credential_source: executorMqttUsername,
+    result: crossCredentialObservation,
+    denied: crossCredentialDenied,
+  });
+  assert(crossCredentialDenied, "W6B2_MQTT_CROSS_CREDENTIAL_ACCEPTED");
+  assert(executorSubscribeAckObservation !== null, "W6B2_MQTT_EXECUTOR_SUBSCRIBE_ACK_UNOBSERVED");
+
+  return {
+    telemetry_principal: telemetryMqttUsername,
+    executor_principal: executorMqttUsername,
+    telemetry_read_allowed: true,
+    telemetry_publish_denied: telemetryForbiddenPublishDenied,
+    executor_publish_allowed: true,
+    executor_subscribe_ack_observation: executorSubscribeAckObservation,
+    executor_forbidden_delivery_denied: executorForbiddenDeliveryCount === 0,
+    executor_forbidden_delivery_count: executorForbiddenDeliveryCount,
+    positive_control_delivery_count: positiveControlDeliveryCount,
+    cross_credential_denied: crossCredentialDenied,
+  };
+}
+
+async function main() {
+  loadSecrets();
+  const dbPrincipals = principals();
+  setPhase("DB_DISTINCT_CREDENTIALS");
+  assert(new Set(dbPrincipals.map((p) => p.user)).size === dbPrincipals.length, "W6B2_DB_USERNAME_COLLAPSED");
+  assert(new Set(dbPrincipals.map((p) => p.password)).size === dbPrincipals.length, "W6B2_DB_PASSWORD_COLLAPSED");
+
+  const serverDbResult = await observeServerDatabasePrincipal();
+  const dbResults = [];
+  for (const principal of dbPrincipals) dbResults.push(await verifyDatabasePrincipal(principal));
+  const dbCrossCredentialResults = [
+    await expectDbAuthFailure("geox_telemetry_ingest_v1", jobsDbPassword, "telemetry_user_with_jobs_password"),
+    await expectDbAuthFailure("geox_jobs_v1", executorDbPassword, "jobs_user_with_executor_password"),
+    await expectDbAuthFailure("geox_executor_runtime_v1", telemetryDbPassword, "executor_user_with_telemetry_password"),
+  ];
+  observed("DB_CROSS_CREDENTIALS", {
+    all_denied: dbCrossCredentialResults.every((result) => result.denied),
+    checks: dbCrossCredentialResults,
+  });
+
+  setPhase("MQTT");
+  const mqttResult = await verifyMqttBoundary();
+  console.log(JSON.stringify({
+    result: "PASS",
+    workstream: "W6_B2_COMMERCIAL_PRINCIPAL_ISOLATION",
+    database: {
+      server: serverDbResult,
+      principals: dbResults,
+      distinct_credentials: true,
+      cross_credentials_denied: true,
+    },
+    mqtt: mqttResult,
+  }, null, 2));
+}
+
+main()
+  .then(() => emitTerminalRecord())
+  .catch((error) => {
+    console.error(error instanceof Error ? error.stack ?? sanitizeErrorText(error) : sanitizeErrorText(error));
+    emitTerminalRecord(error);
+    process.exitCode = 1;
+  });

@@ -1,0 +1,536 @@
+name: bline-w6b2-commercial-principal-isolation
+
+on:
+  pull_request:
+    paths:
+      - 'docs/architecture/semantic_convergence/GEOX-BLINE-W6B2-COMMERCIAL-PRINCIPAL-ISOLATION-V1.json'
+      - 'apps/server/src/infra/bline_commercial_principal_bootstrap_v1.ts'
+      - 'apps/server/scripts/write_dist_entries.cjs'
+      - 'docker-compose.commercial_v1.yml'
+      - '.env.commercial_v1.example'
+      - 'scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.ts'
+      - '.github/workflows/bline-w6b2-commercial-principal-isolation.yml'
+  push:
+    branches:
+      - feat/bline-w6b2-commercial-principal-isolation-v1
+
+jobs:
+  bounded-closure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact W6-B2 subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Assert exact W6-B2 head
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          test "$(git rev-parse HEAD)" = "$EXPECTED"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build focused server dependencies
+        run: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build
+
+      - name: W6-B2 bounded source and principal graph
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.cjs
+
+      - name: B-Line residual authority audit
+        run: pnpm run ci:governance:bline-residual-authority-audit
+
+      - name: B-Line active runtime predecessor closure and W6-B2 successor delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=612d650244310cd60795c9e66883bd12d9981226
+          EXPECTED_DELTA=apps/server/src/infra/bline_commercial_principal_bootstrap_v1.ts
+          ACTUAL_DELTA="$(git diff --name-only "$BASE" HEAD -- 'apps/server/src/infra/*.ts')"
+          test "$ACTUAL_DELTA" = "$EXPECTED_DELTA"
+          tmp="$(mktemp -d)"
+          cleanup() {
+            git worktree remove --force "$tmp" >/dev/null 2>&1 || true
+            rm -rf "$tmp"
+          }
+          trap cleanup EXIT
+          git worktree add --detach "$tmp" "$BASE" >/dev/null
+          node "$tmp/scripts/governance_acceptance/ACCEPTANCE_BLINE_ACTIVE_RUNTIME_SURFACE_CLOSURE_V1.cjs"
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Build
+        run: pnpm -r build
+
+  commercial-principal-proof:
+    runs-on: ubuntu-latest
+    needs: bounded-closure
+    steps:
+      - name: Checkout exact W6-B2 subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Prepare W6-B2 Commercial runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          random_secret() { od -An -N24 -tx1 /dev/urandom | tr -d ' \n'; }
+          CI_POSTGRES_PASSWORD="$(random_secret)"
+          CI_MIGRATOR_PASSWORD="$(random_secret)"
+          CI_RUNTIME_PASSWORD="$(random_secret)"
+          CI_MINIO_PASSWORD="$(random_secret)"
+          CI_APP_SECRET="$(random_secret)"
+          TOKENS_JSON="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); process.stdout.write(JSON.stringify(f))")"
+          EXECUTOR_ID="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x=>x.token==='executor_token'&&x.role==='executor'&&!x.revoked); if(!t) process.exit(1); process.stdout.write(t.actor_id)")"
+          cat > .env.w6b2 <<EOF_INNER
+          GEOX_RUNTIME_ENV=pilot
+          GEOX_TOKENS_JSON='$TOKENS_JSON'
+          POSTGRES_USER=landos
+          POSTGRES_PASSWORD=$CI_POSTGRES_PASSWORD
+          POSTGRES_DB=landos
+          GEOX_MCFT_MIGRATOR_PASSWORD=$CI_MIGRATOR_PASSWORD
+          GEOX_RUNTIME_DATABASE_PASSWORD=$CI_RUNTIME_PASSWORD
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT=${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          GEOX_EXECUTOR_TOKEN=executor_token
+          GEOX_EXECUTOR_ID=$EXECUTOR_ID
+          GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
+          GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT=http://127.0.0.1:9000
+          MINIO_ROOT_USER=geoxminio
+          MINIO_ROOT_PASSWORD=$CI_MINIO_PASSWORD
+          CORS_ORIGINS=https://w6b2-ci.geox.invalid
+          APP_SECRET=$CI_APP_SECRET
+          PUBLIC_BASE_URL=https://w6b2-ci.geox.invalid
+          GEOX_EXECUTION_DEFAULT_DISABLED=1
+          GEOX_EXECUTION_ENABLE_EXPLICITLY=0
+          GEOX_EXECUTION_ENABLE_REASON=w6b2-commercial-principal-proof
+          GEOX_DEVTOOLS_ENABLED=0
+          EOF_INNER
+
+      - name: Render Commercial compose with isolated secret volumes
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml config --format json > /tmp/w6b2-commercial.rendered.json
+          node <<'NODE'
+          const fs = require('node:fs');
+          const cfg = JSON.parse(fs.readFileSync('/tmp/w6b2-commercial.rendered.json', 'utf8'));
+          const assert = (ok, message) => { if (!ok) throw new Error(message); };
+          const forbiddenEnv = [
+            'GEOX_TELEMETRY_DATABASE_PASSWORD',
+            'GEOX_JOBS_DATABASE_PASSWORD',
+            'GEOX_EXECUTOR_DATABASE_PASSWORD',
+          ];
+          const services = ['server', 'telemetry-ingest', 'jobs', 'executor'];
+          for (const name of services) {
+            const service = cfg.services?.[name];
+            assert(service, `missing service ${name}`);
+            const env = service.environment ?? {};
+            for (const key of forbiddenEnv) {
+              assert(!(key in env), `${name} leaked ${key} through compose environment`);
+            }
+          }
+          const expected = {
+            'telemetry-ingest': { target: '/run/geox/telemetry', principal: 'geox_telemetry_ingest_v1' },
+            jobs: { target: '/run/geox/jobs', principal: 'geox_jobs_v1' },
+            executor: { target: '/run/geox/executor', principal: 'geox_executor_runtime_v1' },
+          };
+          for (const [name, requirement] of Object.entries(expected)) {
+            const service = cfg.services[name];
+            const volumes = service.volumes ?? [];
+            const mount = volumes.find((v) => v && typeof v === 'object' && v.target === requirement.target);
+            assert(mount, `${name} missing isolated credential mount ${requirement.target}`);
+            assert(mount.read_only === true, `${name} credential mount must be read-only`);
+            const command = Array.isArray(service.command) ? service.command.join('\n') : String(service.command ?? '');
+            assert(command.includes(requirement.principal), `${name} command missing dedicated DB principal ${requirement.principal}`);
+          }
+          const serverVolumes = cfg.services.server.volumes ?? [];
+          const workerTargets = new Set(['/run/geox/telemetry', '/run/geox/jobs', '/run/geox/executor']);
+          assert(!serverVolumes.some((v) => v && typeof v === 'object' && workerTargets.has(v.target)), 'server mounted a worker credential volume');
+          console.log('[w6b2-compose-render] service-scoped credential isolation PASS');
+          NODE
+
+      - name: Start isolated Commercial runtime
+        id: start-runtime
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'rc=$?; docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml ps || true; docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml logs --tail=250 commercial-principal-secret-init bline-commercial-principal-bootstrap server mqtt telemetry-ingest jobs executor || true; exit $rc' ERR
+          docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml up -d minio minio-init
+          timeout 420 docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml up -d postgres mqtt server telemetry-ingest jobs executor
+          docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml ps
+
+      - name: Persist W6-B2 startup terminal evidence
+        if: always()
+        shell: bash
+        env:
+          W6B2_START_OUTCOME: ${{ steps.start-runtime.outcome }}
+          W6B2_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          W6B2_RUN_ID: ${{ github.run_id }}
+          W6B2_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -uo pipefail
+          mkdir -p .w6b2-runtime-proof
+          docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml ps -a || true
+          node <<'NODE'
+          const fs = require('node:fs');
+          const cp = require('node:child_process');
+
+          const composePrefix = ['docker', 'compose', '--env-file', '.env.w6b2', '-f', 'docker-compose.commercial_v1.yml'];
+          const services = [
+            'commercial-principal-secret-init',
+            'bline-commercial-principal-bootstrap',
+            'postgres',
+            'mqtt',
+            'server',
+            'telemetry-ingest',
+            'jobs',
+            'executor',
+            'minio',
+            'minio-init',
+          ];
+          const startupTargets = ['postgres', 'mqtt', 'server', 'telemetry-ingest', 'jobs', 'executor'];
+
+          function exec(args) {
+            try {
+              return {
+                ok: true,
+                stdout: cp.execFileSync(args[0], args.slice(1), {
+                  encoding: 'utf8',
+                  stdio: ['ignore', 'pipe', 'pipe'],
+                  maxBuffer: 4 * 1024 * 1024,
+                }),
+                stderr: '',
+                code: 0,
+              };
+            } catch (error) {
+              return {
+                ok: false,
+                stdout: String(error?.stdout ?? ''),
+                stderr: String(error?.stderr ?? ''),
+                code: Number.isInteger(error?.status) ? error.status : null,
+              };
+            }
+          }
+
+          function redact(value) {
+            return String(value ?? '')
+              .replace(/([a-z][a-z0-9+.-]*:\/\/)([^@\s]+)@/gi, '$1<redacted>@')
+              .replace(/\b(?:postgres(?:ql)?|mqtt):\/\/[^\s'"`]+/gi, (match) => `${match.split('://', 1)[0]}://<redacted>`)
+              .replace(/((?:password|passwd|pwd|token|secret|authorization|api[_-]?key|connection[_-]?(?:uri|string))\s*["']?\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,}]+)/gi, '$1<redacted>')
+              .replace(/\b[a-f0-9]{32,}\b/gi, '<redacted-hex>')
+              .replace(/\b[A-Za-z0-9+\/_=-]{48,}\b/g, '<redacted-value>');
+          }
+
+          const records = [];
+          for (const service of services) {
+            const idResult = exec([...composePrefix, 'ps', '-aq', service]);
+            const id = idResult.stdout.trim().split(/\r?\n/).filter(Boolean)[0] ?? '';
+            if (!id) {
+              records.push({
+                service,
+                container: null,
+                state: 'MISSING',
+                exit_code: null,
+                health_status: 'UNKNOWN',
+              });
+              continue;
+            }
+            const inspectResult = exec(['docker', 'inspect', id]);
+            let inspect = null;
+            try {
+              const parsed = JSON.parse(inspectResult.stdout || '[]');
+              inspect = Array.isArray(parsed) ? parsed[0] : null;
+            } catch {}
+            const state = inspect?.State ?? {};
+            records.push({
+              service,
+              container: typeof inspect?.Name === 'string' ? inspect.Name.replace(/^\//, '') : id.slice(0, 12),
+              state: typeof state.Status === 'string' ? state.Status : 'UNKNOWN',
+              exit_code: Number.isInteger(state.ExitCode) ? state.ExitCode : null,
+              health_status: typeof state.Health?.Status === 'string' ? state.Health.Status : 'NONE',
+            });
+          }
+
+          const byService = new Map(records.map((record) => [record.service, record]));
+          let composeConfig = {};
+          try {
+            composeConfig = JSON.parse(fs.readFileSync('/tmp/w6b2-commercial.rendered.json', 'utf8'));
+          } catch {}
+
+          function dependencySatisfied(condition, record) {
+            if (!record || record.state === 'MISSING') return false;
+            if (condition === 'service_healthy') return record.health_status === 'healthy';
+            if (condition === 'service_completed_successfully') return record.state === 'exited' && record.exit_code === 0;
+            return record.state === 'running';
+          }
+
+          const outcome = process.env.W6B2_START_OUTCOME ?? 'unknown';
+          let failed = records.find((record) =>
+            record.state === 'dead' ||
+            record.health_status === 'unhealthy' ||
+            (record.state === 'exited' && record.exit_code !== null && record.exit_code !== 0)
+          ) ?? null;
+          let failingDependency = null;
+
+          for (const target of startupTargets) {
+            const deps = composeConfig?.services?.[target]?.depends_on ?? {};
+            for (const [dependency, spec] of Object.entries(deps)) {
+              const condition = typeof spec === 'object' && spec !== null && typeof spec.condition === 'string'
+                ? spec.condition
+                : 'service_started';
+              const dependencyRecord = byService.get(dependency);
+              if (!dependencySatisfied(condition, dependencyRecord)) {
+                if (!failed) failed = byService.get(target) ?? { service: target, container: null, state: 'MISSING', exit_code: null, health_status: 'UNKNOWN' };
+                failingDependency = dependency;
+                break;
+              }
+            }
+            if (failingDependency) break;
+          }
+
+          if (!failed && outcome !== 'success') {
+            failed = startupTargets
+              .map((service) => byService.get(service))
+              .find((record) => !record || record.state !== 'running' || record.health_status === 'unhealthy') ?? null;
+          }
+
+          const logsResult = exec([...composePrefix, 'logs', '--no-color', '--tail', '80', ...services]);
+          const redactedLines = redact(`${logsResult.stdout}\n${logsResult.stderr}`)
+            .split(/\r?\n/)
+            .filter((line) => line.trim().length > 0)
+            .slice(-240);
+          fs.writeFileSync('.w6b2-runtime-proof/startup-logs.redacted.log', `${redactedLines.join('\n')}\n`);
+
+          const relevantNames = [failed?.service, failingDependency, failed?.container].filter(Boolean);
+          const relevantLines = relevantNames.length > 0
+            ? redactedLines.filter((line) => relevantNames.some((name) => line.includes(String(name))))
+            : redactedLines;
+          const lastError = outcome === 'success'
+            ? null
+            : (relevantLines.slice(-5).join(' | ') || 'startup step failed without a bounded redacted service error').slice(-1200);
+
+          const terminal = {
+            result: outcome === 'success' ? 'PASS' : 'FAIL',
+            phase: 'START_ISOLATED_COMMERCIAL_RUNTIME',
+            head_sha: process.env.W6B2_HEAD_SHA ?? 'UNKNOWN',
+            run_id: process.env.W6B2_RUN_ID ?? 'UNKNOWN',
+            run_attempt: Number.parseInt(process.env.W6B2_RUN_ATTEMPT ?? '0', 10),
+            service: failed?.service ?? null,
+            container: failed?.container ?? null,
+            state: failed?.state ?? (outcome === 'success' ? 'RUNNING_OR_COMPLETED' : 'UNKNOWN'),
+            exit_code: failed?.exit_code ?? null,
+            health_status: failed?.health_status ?? (outcome === 'success' ? 'HEALTHY_OR_NOT_APPLICABLE' : 'UNKNOWN'),
+            failing_dependency: failingDependency,
+            last_error: lastError,
+          };
+          const diagnostic = {
+            result: terminal.result,
+            phase: terminal.phase,
+            startup_outcome: outcome,
+            service_states: records,
+            failing_dependency: failingDependency,
+            redacted_log_lines: redactedLines.length,
+            redaction_applied: true,
+          };
+          fs.writeFileSync('.w6b2-runtime-proof/startup-terminal.json', `${JSON.stringify(terminal)}\n`);
+          fs.writeFileSync('.w6b2-runtime-proof/startup-diagnostic.json', `${JSON.stringify(diagnostic)}\n`);
+          console.log('W6B2_STARTUP_TERMINAL_RECORD=' + JSON.stringify(terminal));
+          NODE
+
+      - name: Wait for server and principal bootstrap
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health >/dev/null; do sleep 2; done'
+          docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml logs bline-commercial-principal-bootstrap | tee /tmp/w6b2-bootstrap.log
+          grep -q '"event":"BLINE_COMMERCIAL_PRINCIPAL_BOOTSTRAP_V1"' /tmp/w6b2-bootstrap.log
+          grep -q '"status":"PASS"' /tmp/w6b2-bootstrap.log
+
+      - name: Real PostgreSQL and MQTT principal isolation proof
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p .w6b2-runtime-proof
+
+          telemetry_db_password="$(docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml exec -T telemetry-ingest sh -c 'cat /run/geox/telemetry/db_password')"
+          jobs_db_password="$(docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml exec -T jobs sh -c 'cat /run/geox/jobs/db_password')"
+          executor_db_password="$(docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml exec -T executor sh -c 'cat /run/geox/executor/db_password')"
+          telemetry_mqtt_password="$(docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml exec -T telemetry-ingest sh -c 'cat /run/geox/telemetry/mqtt_password')"
+          executor_mqtt_password="$(docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml exec -T executor sh -c 'cat /run/geox/executor/mqtt_password')"
+          admin_db_password="$(awk -F= '$1 == "POSTGRES_PASSWORD" { print substr($0, index($0, "=") + 1) }' .env.w6b2)"
+
+          test -n "$telemetry_db_password"
+          test -n "$jobs_db_password"
+          test -n "$executor_db_password"
+          test -n "$telemetry_mqtt_password"
+          test -n "$executor_mqtt_password"
+          test -n "$admin_db_password"
+
+          export W6B2_DB_HOST=127.0.0.1
+          export W6B2_DB_PORT=5433
+          export POSTGRES_DB=landos
+          export W6B2_MQTT_URL=mqtt://127.0.0.1:1883
+          export GEOX_DB_PLATFORM_ADMIN_DATABASE_URL="postgres://landos:${admin_db_password}@127.0.0.1:5433/landos"
+          export GEOX_TELEMETRY_DATABASE_PASSWORD="$telemetry_db_password"
+          export GEOX_JOBS_DATABASE_PASSWORD="$jobs_db_password"
+          export GEOX_EXECUTOR_DATABASE_PASSWORD="$executor_db_password"
+          export GEOX_TELEMETRY_MQTT_PASSWORD="$telemetry_mqtt_password"
+          export GEOX_EXECUTOR_MQTT_PASSWORD="$executor_mqtt_password"
+
+          unset telemetry_db_password jobs_db_password executor_db_password telemetry_mqtt_password executor_mqtt_password admin_db_password
+
+          set +e
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.ts \
+            2>&1 | tee .w6b2-runtime-proof/runtime-proof.log
+          proof_rc=${PIPESTATUS[0]}
+          set -e
+
+          W6B2_PROOF_RC="$proof_rc" node <<'NODE'
+          const fs = require('node:fs');
+          const logPath = '.w6b2-runtime-proof/runtime-proof.log';
+          const terminalPath = '.w6b2-runtime-proof/terminal.json';
+          const diagnosticPath = '.w6b2-runtime-proof/diagnostic.json';
+          const text = fs.readFileSync(logPath, 'utf8');
+          const marker = 'W6B2_TERMINAL_RECORD=';
+          const markerIndex = text.lastIndexOf(marker);
+          const evidenceKeys = new Set([
+            'DB_SERVER',
+            'DB_TELEMETRY',
+            'DB_JOBS',
+            'DB_EXECUTOR',
+            'MQTT_CONNECT_EXECUTOR',
+            'MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT',
+            'MQTT_POSITIVE_CONTROL_SUBSCRIBE',
+            'MQTT_TEST_PUBLISH',
+            'MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT',
+            'MQTT_POSITIVE_CONTROL_DELIVERY_COUNT',
+          ]);
+          const observed = {};
+          for (const rawLine of text.split(/\r?\n/)) {
+            const jsonStart = rawLine.indexOf('{"stage"');
+            if (jsonStart < 0) continue;
+            const candidate = rawLine.slice(jsonStart).replace(/\x1b\[[0-9;]*m/g, '').trim();
+            try {
+              const event = JSON.parse(candidate);
+              if (typeof event?.stage === 'string' && evidenceKeys.has(event.stage)) {
+                observed[event.stage] = event.observed;
+              }
+            } catch {}
+          }
+          const errorCodes = [...new Set(text.match(/\bW6B2_[A-Z0-9_]+\b/g) ?? [])].slice(0, 32);
+          let record = null;
+          let markerParseError = null;
+          if (markerIndex >= 0) {
+            try {
+              const rest = text.slice(markerIndex + marker.length);
+              const firstLine = rest.split(/\r?\n/, 1)[0].replace(/\x1b\[[0-9;]*m/g, '').trim();
+              record = JSON.parse(firstLine);
+            } catch (error) {
+              markerParseError = error instanceof Error ? error.message : String(error);
+            }
+          }
+          if (!record) {
+            const value = (key) => Object.prototype.hasOwnProperty.call(observed, key) ? observed[key] : 'UNOBSERVED';
+            record = {
+              result: 'FAIL',
+              phase: 'QUALIFICATION_OBSERVABILITY',
+              DB_SERVER: value('DB_SERVER'),
+              DB_TELEMETRY: value('DB_TELEMETRY'),
+              DB_JOBS: value('DB_JOBS'),
+              DB_EXECUTOR: value('DB_EXECUTOR'),
+              MQTT_CONNECT_EXECUTOR: value('MQTT_CONNECT_EXECUTOR'),
+              MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT: value('MQTT_FORBIDDEN_SUBSCRIBE_OBSERVED_RESULT'),
+              MQTT_POSITIVE_CONTROL_SUBSCRIBE: value('MQTT_POSITIVE_CONTROL_SUBSCRIBE'),
+              MQTT_TEST_PUBLISH: value('MQTT_TEST_PUBLISH'),
+              MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT: value('MQTT_EXECUTOR_FORBIDDEN_DELIVERY_COUNT'),
+              MQTT_POSITIVE_CONTROL_DELIVERY_COUNT: value('MQTT_POSITIVE_CONTROL_DELIVERY_COUNT'),
+              error_code: markerIndex >= 0 ? 'W6B2_TERMINAL_RECORD_PARSE_FAILED' : 'W6B2_TERMINAL_RECORD_MISSING',
+              error_message: markerIndex >= 0
+                ? 'runtime proof emitted a terminal marker that could not be parsed as JSON'
+                : 'runtime proof exited without a machine-readable W6B2 terminal record',
+            };
+          }
+          const diagnostic = {
+            proof_rc: Number.parseInt(process.env.W6B2_PROOF_RC ?? '-1', 10),
+            marker_found: markerIndex >= 0,
+            marker_parse_error: markerParseError,
+            runtime_log_bytes: Buffer.byteLength(text),
+            observed_stages: Object.keys(observed),
+            observed,
+            w6b2_error_codes: errorCodes,
+          };
+          fs.writeFileSync(terminalPath, `${JSON.stringify(record)}\n`);
+          fs.writeFileSync(diagnosticPath, `${JSON.stringify(diagnostic)}\n`);
+          NODE
+
+          node -e "JSON.parse(require('node:fs').readFileSync('.w6b2-runtime-proof/terminal.json','utf8')); JSON.parse(require('node:fs').readFileSync('.w6b2-runtime-proof/diagnostic.json','utf8'))"
+          echo 'W6B2_PERSISTED_TERMINAL_RECORD_BEGIN'
+          cat .w6b2-runtime-proof/terminal.json
+          echo 'W6B2_PERSISTED_TERMINAL_RECORD_END'
+          echo 'W6B2_PERSISTED_DIAGNOSTIC_BEGIN'
+          cat .w6b2-runtime-proof/diagnostic.json
+          echo 'W6B2_PERSISTED_DIAGNOSTIC_END'
+          exit "$proof_rc"
+
+      - name: Upload W6-B2 terminal runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w6b2-runtime-terminal-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .w6b2-runtime-proof/startup-terminal.json
+            .w6b2-runtime-proof/startup-diagnostic.json
+            .w6b2-runtime-proof/startup-logs.redacted.log
+            .w6b2-runtime-proof/terminal.json
+            .w6b2-runtime-proof/diagnostic.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Workload runtime identity hygiene
+        shell: bash
+        run: |
+          set -euo pipefail
+          for service in telemetry-ingest jobs executor; do
+            id="$(docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml ps -q "$service")"
+            test -n "$id"
+            test "$(docker inspect -f '{{.State.Running}}' "$id")" = "true"
+          done
+          docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml logs --tail=300 server telemetry-ingest jobs executor | tee /tmp/w6b2-runtime.log
+          ! grep -Ei 'password authentication failed|permission denied for (table|schema|sequence|function)|FATAL:.*runtime crashed' /tmp/w6b2-runtime.log
+
+      - name: Stop Commercial runtime and isolated credential volumes
+        if: always()
+        run: docker compose --env-file .env.w6b2 -f docker-compose.commercial_v1.yml down -v --remove-orphans || true
