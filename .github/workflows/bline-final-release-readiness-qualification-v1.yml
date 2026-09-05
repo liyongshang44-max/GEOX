@@ -1,0 +1,386 @@
+name: bline-final-release-readiness-qualification-v1
+
+on:
+  push:
+    branches:
+      - qual/bline-final-release-readiness-413386
+
+permissions:
+  contents: read
+
+env:
+  TESTED_SUBJECT_SHA: 413386acc04fa2d3404f09d2d1fa8702472e83f1
+  W6B1_BASE_SHA: 612d650244310cd60795c9e66883bd12d9981226
+  CARRIER_BRANCH: qual/bline-final-release-readiness-413386
+  CARRIER_WORKFLOW_PATH: .github/workflows/bline-final-release-readiness-qualification-v1.yml
+
+jobs:
+  build-test-successor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout frozen tested subject
+        uses: actions/checkout@v4
+        with:
+          ref: 413386acc04fa2d3404f09d2d1fa8702472e83f1
+          fetch-depth: 0
+
+      - name: Assert exact tested subject lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TESTED_SUBJECT_SHA"
+          test -z "$(git status --porcelain)"
+          printf 'BLINE_FINAL_RELEASE_SUBJECT_LOCK {"carrier_commit_sha":"%s","tested_subject_sha":"%s","status":"PASS"}\n' "$GITHUB_SHA" "$TESTED_SUBJECT_SHA"
+
+      - name: Assert qualification carrier isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "refs/heads/$CARRIER_BRANCH:refs/remotes/origin/$CARRIER_BRANCH"
+          test "$(git rev-parse "refs/remotes/origin/$CARRIER_BRANCH")" = "$GITHUB_SHA"
+          CARRIER_DELTA="$(git diff --name-only "$TESTED_SUBJECT_SHA" "$GITHUB_SHA")"
+          test "$CARRIER_DELTA" = "$CARRIER_WORKFLOW_PATH"
+          WORKFLOW_SHA256="$(git show "$GITHUB_SHA:$CARRIER_WORKFLOW_PATH" | sha256sum | awk '{print $1}')"
+          printf 'BLINE_FINAL_RELEASE_CARRIER_ISOLATION {"carrier_commit_sha":"%s","tested_subject_sha":"%s","workflow_sha256":"%s","production_semantic_changed_files":0,"mcft_changed_files":0,"status":"PASS"}\n' "$GITHUB_SHA" "$TESTED_SUBJECT_SHA" "$WORKFLOW_SHA256"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build focused server dependencies
+        run: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build
+
+      - name: W6-B2 bounded source and principal graph
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.cjs
+
+      - name: B-Line residual authority audit
+        run: pnpm run ci:governance:bline-residual-authority-audit
+
+      - name: B-Line active runtime predecessor closure and W6-B2 successor delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=612d650244310cd60795c9e66883bd12d9981226
+          EXPECTED_DELTA=apps/server/src/infra/bline_commercial_principal_bootstrap_v1.ts
+          ACTUAL_DELTA="$(git diff --name-only "$BASE" HEAD -- 'apps/server/src/infra/*.ts')"
+          test "$ACTUAL_DELTA" = "$EXPECTED_DELTA"
+          tmp="$(mktemp -d)"
+          cleanup() {
+            git worktree remove --force "$tmp" >/dev/null 2>&1 || true
+            rm -rf "$tmp"
+          }
+          trap cleanup EXIT
+          git worktree add --detach "$tmp" "$BASE" >/dev/null
+          node "$tmp/scripts/governance_acceptance/ACCEPTANCE_BLINE_ACTIVE_RUNTIME_SURFACE_CLOSURE_V1.cjs"
+
+      - name: B-Line operation state read-only
+        run: pnpm run ci:governance:bline-operation-state-read-only
+
+      - name: B-Line execution plan-task lifecycle
+        run: pnpm run ci:governance:bline-execution-plan-task-lifecycle
+
+      - name: B-Line P0-RES-007 evidence export boundary
+        run: pnpm run ci:governance:bline-p0-res007-evidence-export-boundary
+
+      - name: B-Line operator dispatch intent boundary
+        run: pnpm run ci:governance:bline-operator-dispatch-intent
+
+      - name: B-Line Acceptance no Formal Memory side effect
+        run: pnpm run ci:governance:bline-acceptance-no-formal-memory-side-effect
+
+      - name: B-Line Formal Memory reviewed promotion proof
+        run: pnpm run ci:governance:bline-formal-memory-reviewed-promotion-proof
+
+      - name: B-Line legacy Twin no direct Formal Memory
+        run: pnpm run ci:governance:bline-legacy-twin-no-direct-formal-memory
+
+      - name: B-Line Formal Memory scope provenance
+        run: pnpm run ci:governance:bline-formal-memory-scope-provenance
+
+      - name: B-Line Sampling exact-source binding
+        run: pnpm run ci:governance:bline-sampling-exact-source-binding
+
+      - name: B-Line Fertilization execution provenance
+        run: pnpm run ci:governance:bline-fertilization-execution-provenance
+
+      - name: B-Line Agronomy Agent fail-closed authority
+        run: pnpm run ci:governance:bline-agronomy-agent-fail-closed
+
+      - name: Route response ownership guard
+        run: pnpm run ci:route-response-ownership
+
+      - name: PR-18I guarded report hotfix guard
+        run: pnpm run ci:pr18i-guarded-report-hotfix
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Build
+        run: pnpm -r build
+
+      - name: Server selfcheck
+        run: pnpm --filter @geox/server test:p1:selfcheck
+
+  acceptance:
+    runs-on: ubuntu-latest
+    needs: build-test-successor
+    steps:
+      - name: Checkout frozen tested subject
+        uses: actions/checkout@v4
+        with:
+          ref: 413386acc04fa2d3404f09d2d1fa8702472e83f1
+          fetch-depth: 0
+
+      - name: Assert exact tested subject lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TESTED_SUBJECT_SHA"
+          test -z "$(git status --porcelain)"
+          printf 'BLINE_FINAL_RELEASE_ACCEPTANCE_SUBJECT_LOCK {"carrier_commit_sha":"%s","tested_subject_sha":"%s","status":"PASS"}\n' "$GITHUB_SHA" "$TESTED_SUBJECT_SHA"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Prepare canonical acceptance replay helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/run-ci-acceptance-step.py <<'PY'
+          import os
+          import pathlib
+          import subprocess
+          import sys
+
+          target = sys.argv[1]
+          path = pathlib.Path('.github/workflows/ci.yml')
+          lines = path.read_text(encoding='utf-8').splitlines()
+          try:
+              start = lines.index('  acceptance:')
+          except ValueError:
+              raise SystemExit('canonical acceptance job not found')
+
+          step_start = None
+          marker = f'      - name: {target}'
+          for idx in range(start + 1, len(lines)):
+              line = lines[idx]
+              if line and not line.startswith('  '):
+                  break
+              if idx > start + 1 and line.startswith('  ') and not line.startswith('    '):
+                  break
+              if line == marker:
+                  step_start = idx
+                  break
+          if step_start is None:
+              raise SystemExit(f'canonical acceptance step not found: {target}')
+
+          step_end = len(lines)
+          for idx in range(step_start + 1, len(lines)):
+              line = lines[idx]
+              if line.startswith('      - name: '):
+                  step_end = idx
+                  break
+              if line and line.startswith('  ') and not line.startswith('    '):
+                  step_end = idx
+                  break
+
+          run_index = None
+          for idx in range(step_start + 1, step_end):
+              if lines[idx].startswith('        run:'):
+                  run_index = idx
+                  break
+          if run_index is None:
+              raise SystemExit(f'canonical step has no run body: {target}')
+
+          run_line = lines[run_index]
+          suffix = run_line[len('        run:'):].lstrip()
+          if suffix in ('|', '|-', '|+', '>', '>-', '>+'):
+              body = []
+              for idx in range(run_index + 1, step_end):
+                  line = lines[idx]
+                  if line.startswith('          '):
+                      body.append(line[10:])
+                  elif line == '':
+                      body.append('')
+                  else:
+                      break
+              script = '\n'.join(body) + '\n'
+          else:
+              script = suffix + '\n'
+
+          tested = os.environ['TESTED_SUBJECT_SHA']
+          if target == 'Prepare commercial compose env':
+              needle = 'GEOX_DEPLOYMENT_SUBJECT_COMMIT=${GITHUB_SHA}'
+              replacement = f'GEOX_DEPLOYMENT_SUBJECT_COMMIT={tested}'
+              if script.count(needle) != 1:
+                  raise SystemExit('deployment subject substitution cardinality mismatch')
+              script = script.replace(needle, replacement)
+
+          print(f'BLINE_FINAL_RELEASE_CANONICAL_ACCEPTANCE_STEP name={target!r} tested_subject_sha={tested}')
+          result = subprocess.run(
+              ['bash', '--noprofile', '--norc', '-e', '-o', 'pipefail', '-c', script],
+              env=os.environ.copy(),
+          )
+          raise SystemExit(result.returncode)
+          PY
+          python3 -m py_compile /tmp/run-ci-acceptance-step.py
+
+      - name: Prepare commercial compose env
+        run: python3 /tmp/run-ci-acceptance-step.py 'Prepare commercial compose env'
+
+      - name: Validate commercial compose rendering
+        run: python3 /tmp/run-ci-acceptance-step.py 'Validate commercial compose rendering'
+
+      - name: Start acceptance runtime dependencies
+        timeout-minutes: 8
+        run: python3 /tmp/run-ci-acceptance-step.py 'Start acceptance runtime dependencies'
+
+      - name: Wait for acceptance services ready
+        run: python3 /tmp/run-ci-acceptance-step.py 'Wait for acceptance services ready'
+
+      - name: B-Line root-zone exact scenario binding runtime
+        timeout-minutes: 10
+        run: python3 /tmp/run-ci-acceptance-step.py 'B-Line root-zone exact scenario binding runtime'
+
+      - name: B-Line operator dispatch intent runtime
+        timeout-minutes: 10
+        run: python3 /tmp/run-ci-acceptance-step.py 'B-Line operator dispatch intent runtime'
+
+      - name: B-Line Sampling exact-source runtime
+        timeout-minutes: 15
+        run: python3 /tmp/run-ci-acceptance-step.py 'B-Line Sampling exact-source runtime'
+
+      - name: B-Line Fertilization exact Sampling consumer runtime
+        timeout-minutes: 10
+        run: python3 /tmp/run-ci-acceptance-step.py 'B-Line Fertilization exact Sampling consumer runtime'
+
+      - name: B-Line Fertilization canonical execution provenance runtime
+        timeout-minutes: 20
+        run: python3 /tmp/run-ci-acceptance-step.py 'B-Line Fertilization canonical execution provenance runtime'
+
+      - name: B-Line Agronomy Agent fail-closed runtime
+        timeout-minutes: 5
+        run: python3 /tmp/run-ci-acceptance-step.py 'B-Line Agronomy Agent fail-closed runtime'
+
+      - name: Run PR18I formal-chain preflight gate
+        timeout-minutes: 30
+        run: python3 /tmp/run-ci-acceptance-step.py 'Run PR18I formal-chain preflight gate'
+
+      - name: Apply controlled pilot full review seed
+        timeout-minutes: 15
+        run: python3 /tmp/run-ci-acceptance-step.py 'Apply controlled pilot full review seed'
+
+      - name: Run C8 formal chain backend P0
+        timeout-minutes: 10
+        run: python3 /tmp/run-ci-acceptance-step.py 'Run C8 formal chain backend P0'
+
+      - name: Install Playwright Chromium for frontend audit
+        timeout-minutes: 5
+        run: python3 /tmp/run-ci-acceptance-step.py 'Install Playwright Chromium for frontend audit'
+
+      - name: Run frontend runtime page audit
+        timeout-minutes: 12
+        run: python3 /tmp/run-ci-acceptance-step.py 'Run frontend runtime page audit'
+
+      - name: Run Controlled Pilot strict release gate
+        timeout-minutes: 45
+        run: python3 /tmp/run-ci-acceptance-step.py 'Run Controlled Pilot strict release gate'
+
+      - name: Run Stage-1 fixture raw sample contract gate
+        run: python3 /tmp/run-ci-acceptance-step.py 'Run Stage-1 fixture raw sample contract gate'
+
+      - name: Run P1 smoke preflight idempotency gate
+        run: python3 /tmp/run-ci-acceptance-step.py 'Run P1 smoke preflight idempotency gate'
+
+      - name: Run customer report boundary suite wiring gate
+        run: python3 /tmp/run-ci-acceptance-step.py 'Run customer report boundary suite wiring gate'
+
+      - name: Run customer report boundary suite
+        timeout-minutes: 15
+        run: python3 /tmp/run-ci-acceptance-step.py 'Run customer report boundary suite'
+
+      - name: Run acceptance suite
+        run: python3 /tmp/run-ci-acceptance-step.py 'Run acceptance suite'
+
+      - name: Collect runtime evidence logs
+        if: always()
+        run: python3 /tmp/run-ci-acceptance-step.py 'Collect runtime evidence logs'
+
+      - name: Run COMMERCIAL MVP0 release gate
+        run: python3 /tmp/run-ci-acceptance-step.py 'Run COMMERCIAL MVP0 release gate'
+
+      - name: Final runtime hygiene check and artifact log collection
+        if: always()
+        run: python3 /tmp/run-ci-acceptance-step.py 'Final runtime hygiene check and artifact log collection'
+
+      - name: Record final qualification identity
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          git fetch origin "refs/heads/$CARRIER_BRANCH:refs/remotes/origin/$CARRIER_BRANCH"
+          test "$(git rev-parse HEAD)" = "$TESTED_SUBJECT_SHA"
+          test "$(git rev-parse "refs/remotes/origin/$CARRIER_BRANCH")" = "$GITHUB_SHA"
+          CARRIER_DELTA="$(git diff --name-only "$TESTED_SUBJECT_SHA" "$GITHUB_SHA")"
+          printf '%s\n' "$CARRIER_DELTA" > acceptance-output/carrier-delta.txt
+          test "$CARRIER_DELTA" = "$CARRIER_WORKFLOW_PATH"
+          WORKFLOW_SHA256="$(git show "$GITHUB_SHA:$CARRIER_WORKFLOW_PATH" | sha256sum | awk '{print $1}')"
+          cat > acceptance-output/bline-final-release-readiness-identity.json <<EOF_INNER
+          {
+            "carrier_branch": "$CARRIER_BRANCH",
+            "carrier_commit_sha": "$GITHUB_SHA",
+            "tested_subject_sha": "$TESTED_SUBJECT_SHA",
+            "workflow_path": "$CARRIER_WORKFLOW_PATH",
+            "workflow_sha256": "$WORKFLOW_SHA256",
+            "production_semantic_changed_files": 0,
+            "mcft_changed_files": 0
+          }
+          EOF_INNER
+          cat acceptance-output/bline-final-release-readiness-identity.json
+
+      - name: Upload acceptance artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-output
+          path: |
+            acceptance-output/report.json
+            acceptance-output/report.html
+            acceptance-output/BASE_CONTRACT_GATE_MATURITY_REPORT.md
+            acceptance-output/CONTROLLED_PILOT_READINESS_REPORT.md
+            acceptance-output/FRONTEND_RUNTIME_PAGE_AUDIT_REPORT.md
+            acceptance-output/controlled_pilot_full_review.plan.json
+            acceptance-output/controlled_pilot_full_review.actual.json
+            acceptance-output/controlled_pilot_full_review.release_gate.actual.json
+            acceptance-output/frontend-runtime-page-audit/**
+            acceptance-output/FRONTEND_WEB.log
+            acceptance-output/bline-final-release-readiness-identity.json
+            acceptance-output/carrier-delta.txt
+            acceptance-output/*.log
+          if-no-files-found: warn
+
+      - name: Stop acceptance runtime dependencies
+        if: always()
+        run: python3 /tmp/run-ci-acceptance-step.py 'Stop acceptance runtime dependencies'
