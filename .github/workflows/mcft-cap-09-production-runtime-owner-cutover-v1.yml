@@ -5,7 +5,8 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/mcft-cap-09-production-runtime-owner-cutover-v1.yml'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY*.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-OWNER-CUTOVER-AUTHORITY-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRE-FORMAL-A0-PLANNING-AUTHORITY-V1.json'
       - 'apps/server/src/runtime/mcft_cap09_production_owner_cutover_authority_v1.ts'
@@ -19,6 +20,8 @@ on:
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json'
       - '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'
+  merge_group:
+    types: [checks_requested]
 
 permissions:
   contents: read
@@ -49,7 +52,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Qualify dual-key pre-Formal cutover contract
+      - name: Qualify registry-backed dual-key pre-Formal cutover contract
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs
 
       - name: Preserve runtime-start authority builder contract
