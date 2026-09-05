@@ -709,15 +709,42 @@ jobs:
           cat > /tmp/run-bline-successor-test-acceptance.sh <<'SH'
           #!/usr/bin/env bash
           set -euo pipefail
+          carrier_workspace="${GITHUB_WORKSPACE:?GITHUB_WORKSPACE is required}"
+          successor_worktree="$(mktemp -d)"
+          copy_acceptance_reports() {
+            mkdir -p "$carrier_workspace/acceptance-output"
+            for report in report.json report.html; do
+              if [ -f "$successor_worktree/acceptance-output/$report" ]; then
+                cp -f "$successor_worktree/acceptance-output/$report" "$carrier_workspace/acceptance-output/$report"
+              fi
+            done
+          }
+          cleanup() {
+            copy_acceptance_reports || true
+            git -C "$carrier_workspace" worktree remove --force "$successor_worktree" >/dev/null 2>&1 || true
+            rm -rf "$successor_worktree"
+          }
+          trap cleanup EXIT
+          git -C "$carrier_workspace" worktree add --detach "$successor_worktree" "$TESTED_SUBJECT_SHA" >/dev/null
+          if [ -f "$carrier_workspace/.env.ci" ]; then
+            cp "$carrier_workspace/.env.ci" "$successor_worktree/.env.ci"
+          fi
+          cd "$successor_worktree"
+          export GITHUB_WORKSPACE="$successor_worktree"
           test "$(git rev-parse HEAD)" = "$TESTED_SUBJECT_SHA"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          pnpm install --no-frozen-lockfile
+          test -z "$(git status --porcelain --untracked-files=no)"
+          pnpm -r build
           test -z "$(git status --porcelain --untracked-files=no)"
           node /tmp/assert_local_pnpm_runtime_bline_successor.cjs
           node scripts/acceptance/run_acceptance.cjs
           test -z "$(git status --porcelain --untracked-files=no)"
+          copy_acceptance_reports
           SH
           chmod +x /tmp/run-bline-successor-test-acceptance.sh
           test -z "$(git status --porcelain)"
-          printf 'BLINE_S6_SUCCESSOR_ACCEPTANCE_DOCTOR_READY {"tested_subject_sha":"%s","source_blob_sha":"%s","historical_gate_call_externalized":true,"runtime_chain_preserved":true,"status":"PASS"}\n' "$TESTED_SUBJECT_SHA" "$S6_DOCTOR_BLOB_SHA"
+          printf 'BLINE_S6_SUCCESSOR_ACCEPTANCE_DOCTOR_READY {"tested_subject_sha":"%s","source_blob_sha":"%s","historical_gate_call_externalized":true,"runtime_chain_preserved":true,"isolated_exact_subject_worktree":true,"status":"PASS"}\n' "$TESTED_SUBJECT_SHA" "$S6_DOCTOR_BLOB_SHA"
 
       - name: Run acceptance suite
         run: python3 /tmp/run-ci-acceptance-step.py 'Run acceptance suite'
