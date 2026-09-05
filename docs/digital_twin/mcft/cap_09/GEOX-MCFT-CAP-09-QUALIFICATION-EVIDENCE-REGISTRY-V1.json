@@ -3095,7 +3095,8 @@
           "d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3",
           "b37b6cee4aadb50a8303cdfeffd0b4ab8a89451f",
           "5050f1c08d2528048c56d56add4cbb068b956925",
-          "0bd2300c9c8a58025df9212d7c14e640606add83"
+          "0bd2300c9c8a58025df9212d7c14e640606add83",
+          "d17f894e86b0fabab648530968c562e2fbe94c5d"
         ],
         "dependency_digest_must_match_current": true,
         "anchor_is_not_production_authority": true
