@@ -39,6 +39,16 @@ export type BlineCommercialSchemaContractV1 = {
   telemetry_role_create_public: false;
 };
 
+export type BlineCommercialWorkloadSessionContractV1 = {
+  telemetry_session_user: typeof BLINE_COMMERCIAL_TELEMETRY_ROLE_V1;
+  telemetry_current_user: typeof BLINE_COMMERCIAL_TELEMETRY_ROLE_V1;
+  telemetry_create_public: false;
+  jobs_session_user: typeof BLINE_COMMERCIAL_JOBS_ROLE_V1;
+  jobs_current_user: typeof BLINE_COMMERCIAL_JOBS_ROLE_V1;
+  jobs_create_public: false;
+  mcft_privileged_role_membership: false;
+};
+
 export type BlineCommercialPrincipalBootstrapResultV1 = {
   status: "PASS";
   session_user: string;
@@ -52,6 +62,7 @@ export type BlineCommercialPrincipalBootstrapResultV1 = {
   workload_role_membership_in_mcft_roles: false;
   effective_runtime_object_baseline: true;
   schema_contract: BlineCommercialSchemaContractV1;
+  workload_session_contract: BlineCommercialWorkloadSessionContractV1;
 };
 
 function requiredSecret(value: string | undefined, code: string): string {
@@ -305,6 +316,88 @@ async function assertCommercialSchemaContractV1(pool: Pool, expectedOwner: strin
   };
 }
 
+function workloadDatabaseUrlV1(adminDatabaseUrl: string, roleName: string, password: string): string {
+  const url = new URL(adminDatabaseUrl);
+  url.username = roleName;
+  url.password = password;
+  return url.toString();
+}
+
+async function assertDedicatedWorkloadSessionsV1(
+  config: BlineCommercialPrincipalBootstrapConfigV1,
+): Promise<BlineCommercialWorkloadSessionContractV1> {
+  const targets = [
+    {
+      role: BLINE_COMMERCIAL_TELEMETRY_ROLE_V1,
+      password: config.telemetry_password,
+      prefix: "TELEMETRY",
+    },
+    {
+      role: BLINE_COMMERCIAL_JOBS_ROLE_V1,
+      password: config.jobs_password,
+      prefix: "JOBS",
+    },
+  ] as const;
+  const observed = new Map<string, { session_user: string; current_user: string; can_create_public: boolean }>();
+  for (const target of targets) {
+    const workloadPool = new Pool({
+      connectionString: workloadDatabaseUrlV1(config.admin_database_url, target.role, target.password),
+      max: 1,
+    });
+    try {
+      const result = await workloadPool.query<{
+        session_user: string;
+        current_user: string;
+        can_create_public: boolean;
+        can_set_owner: boolean;
+        can_set_migrator: boolean;
+        can_set_runtime: boolean;
+      }>(`
+        SELECT
+          session_user::text AS session_user,
+          current_user::text AS current_user,
+          pg_catalog.has_schema_privilege(current_user, 'public', 'CREATE') AS can_create_public,
+          pg_catalog.pg_has_role(current_user, '${MCFT_CAP07_MIGRATION_OWNER_ROLE_V1}', 'SET') AS can_set_owner,
+          pg_catalog.pg_has_role(current_user, '${MCFT_CAP07_MIGRATOR_ROLE_V1}', 'SET') AS can_set_migrator,
+          pg_catalog.pg_has_role(current_user, '${MCFT_CAP07_RUNTIME_ROLE_V1}', 'SET') AS can_set_runtime
+      `);
+      const row = result.rows[0];
+      if (
+        !row ||
+        row.session_user !== target.role ||
+        row.current_user !== target.role ||
+        row.can_create_public ||
+        row.can_set_owner ||
+        row.can_set_migrator ||
+        row.can_set_runtime
+      ) {
+        throw new Error(`BLINE_COMMERCIAL_PRINCIPAL_BOOTSTRAP_INVALID:${target.prefix}_SESSION_IDENTITY`);
+      }
+      observed.set(target.role, {
+        session_user: row.session_user,
+        current_user: row.current_user,
+        can_create_public: row.can_create_public,
+      });
+    } finally {
+      await workloadPool.end();
+    }
+  }
+  const telemetry = observed.get(BLINE_COMMERCIAL_TELEMETRY_ROLE_V1);
+  const jobs = observed.get(BLINE_COMMERCIAL_JOBS_ROLE_V1);
+  if (!telemetry || !jobs) {
+    throw new Error("BLINE_COMMERCIAL_PRINCIPAL_BOOTSTRAP_INVALID:WORKLOAD_SESSION_INCOMPLETE");
+  }
+  return {
+    telemetry_session_user: BLINE_COMMERCIAL_TELEMETRY_ROLE_V1,
+    telemetry_current_user: BLINE_COMMERCIAL_TELEMETRY_ROLE_V1,
+    telemetry_create_public: false,
+    jobs_session_user: BLINE_COMMERCIAL_JOBS_ROLE_V1,
+    jobs_current_user: BLINE_COMMERCIAL_JOBS_ROLE_V1,
+    jobs_create_public: false,
+    mcft_privileged_role_membership: false,
+  };
+}
+
 export async function runBlineCommercialPrincipalBootstrapV1(
   config: BlineCommercialPrincipalBootstrapConfigV1,
 ): Promise<BlineCommercialPrincipalBootstrapResultV1> {
@@ -312,14 +405,30 @@ export async function runBlineCommercialPrincipalBootstrapV1(
     config.admin_database_url,
     "BLINE_COMMERCIAL_PRINCIPAL_BOOTSTRAP_INVALID:ADMIN_DATABASE_URL_REQUIRED",
   );
+  const normalizedConfig: BlineCommercialPrincipalBootstrapConfigV1 = {
+    admin_database_url: adminDatabaseUrl,
+    telemetry_password: requiredSecret(
+      config.telemetry_password,
+      "BLINE_COMMERCIAL_PRINCIPAL_BOOTSTRAP_INVALID:TELEMETRY_PASSWORD_REQUIRED",
+    ),
+    jobs_password: requiredSecret(
+      config.jobs_password,
+      "BLINE_COMMERCIAL_PRINCIPAL_BOOTSTRAP_INVALID:JOBS_PASSWORD_REQUIRED",
+    ),
+    executor_password: requiredSecret(
+      config.executor_password,
+      "BLINE_COMMERCIAL_PRINCIPAL_BOOTSTRAP_INVALID:EXECUTOR_PASSWORD_REQUIRED",
+    ),
+  };
   const pool = new Pool({ connectionString: adminDatabaseUrl, max: 1 });
   try {
     const authority = await assertAdministrativeSessionV1(pool);
     await createOrNormalizeWorkloadRolesV1(pool);
-    await setWorkloadPasswordsV1(pool, config);
+    await setWorkloadPasswordsV1(pool, normalizedConfig);
     await grantFrozenRuntimeObjectBaselineV1(pool);
     await assertWorkloadRoleGraphV1(pool);
     const schemaContract = await assertCommercialSchemaContractV1(pool, authority.session_user);
+    const workloadSessionContract = await assertDedicatedWorkloadSessionsV1(normalizedConfig);
     return {
       status: "PASS",
       session_user: authority.session_user,
@@ -329,6 +438,7 @@ export async function runBlineCommercialPrincipalBootstrapV1(
       workload_role_membership_in_mcft_roles: false,
       effective_runtime_object_baseline: true,
       schema_contract: schemaContract,
+      workload_session_contract: workloadSessionContract,
     };
   } finally {
     await pool.end();
