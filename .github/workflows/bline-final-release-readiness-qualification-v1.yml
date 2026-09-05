@@ -402,12 +402,13 @@ jobs:
                   raise SystemExit('deployment subject substitution cardinality mismatch')
               script = script.replace(needle, replacement)
           elif target == 'Run acceptance suite':
-              if script.strip() != 'pnpm run test:acceptance':
+              canonical = 'set -a\nsource .env.ci\nset +a\npnpm run test:acceptance\n'
+              if script != canonical:
                   raise SystemExit(f'canonical acceptance entry changed unexpectedly: {script!r}')
               successor = pathlib.Path('/tmp/run-bline-successor-test-acceptance.sh')
               if not successor.exists():
                   raise SystemExit('S6 successor acceptance wrapper missing')
-              script = str(successor) + '\n'
+              script = 'set -a\nsource .env.ci\nset +a\n' + str(successor) + '\n'
               print(f'BLINE_FINAL_RELEASE_S6_SUCCESSOR_ACCEPTANCE_SUBSTITUTION tested_subject_sha={tested}')
 
           print(f'BLINE_FINAL_RELEASE_CANONICAL_ACCEPTANCE_STEP name={target!r} tested_subject_sha={tested}')
@@ -528,6 +529,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          tmp="$(mktemp -d)"
+          cleanup() {
+            git -C "$GITHUB_WORKSPACE" worktree remove --force "$tmp" >/dev/null 2>&1 || true
+            rm -rf "$tmp"
+          }
+          trap cleanup EXIT
+          git worktree add --detach "$tmp" "$TESTED_SUBJECT_SHA" >/dev/null
+          cd "$tmp"
           test "$(git rev-parse HEAD)" = "$TESTED_SUBJECT_SHA"
           test -z "$(git status --porcelain)"
           node <<'NODE'
@@ -643,6 +652,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          tmp="$(mktemp -d)"
+          cleanup() {
+            git -C "$GITHUB_WORKSPACE" worktree remove --force "$tmp" >/dev/null 2>&1 || true
+            rm -rf "$tmp"
+          }
+          trap cleanup EXIT
+          git worktree add --detach "$tmp" "$TESTED_SUBJECT_SHA" >/dev/null
+          cd "$tmp"
           test "$(git rev-parse HEAD)" = "$TESTED_SUBJECT_SHA"
           test -z "$(git status --porcelain)"
           test "$(git hash-object scripts/dev/assert_local_pnpm_runtime.cjs)" = "$S6_DOCTOR_BLOB_SHA"
@@ -693,10 +710,10 @@ jobs:
           #!/usr/bin/env bash
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TESTED_SUBJECT_SHA"
-          test -z "$(git status --porcelain)"
+          test -z "$(git status --porcelain --untracked-files=no)"
           node /tmp/assert_local_pnpm_runtime_bline_successor.cjs
           node scripts/acceptance/run_acceptance.cjs
-          test -z "$(git status --porcelain)"
+          test -z "$(git status --porcelain --untracked-files=no)"
           SH
           chmod +x /tmp/run-bline-successor-test-acceptance.sh
           test -z "$(git status --porcelain)"
