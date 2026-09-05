@@ -150,8 +150,8 @@ jobs:
           if(!twinUrl)blockers.push('TWIN_RUNTIME_DATABASE_URL_SECRET_NOT_BOUND');
           if(!twinPassword)blockers.push('TWIN_RUNTIME_PASSWORD_SECRET_NOT_BOUND');
           const proof={
-            schema_version:'geox_mcft_cap09_production_owner_graduation_gate_v1',
-            status:blockers.length===0?'READ_ONLY_LIVE_OWNER_ADJUDICATION_READY':'PROVISIONING_PREREQUISITE_BLOCKED',
+            schema_version:'geox_mcft_cap09_production_owner_graduation_gate_v2',
+            status:blockers.length===0?'HOST_PROVENANCE_EVIDENCE_REQUIRED_BEFORE_OWNER_ADJUDICATION':'PROVISIONING_PREREQUISITE_BLOCKED',
             subject_sha:process.env.SUBJECT_SHA,
             timing_budget_frozen:true,
             selected_budget_ms:pre.selected_budget_ms,
@@ -166,10 +166,10 @@ jobs:
             twin_runtime_password_secret_present:twinPassword,
             production_owner_provisioning_required:blockers.length!==0,
             login_presence_is_effective_owner_proof:false,
+            db_lease_row_alone_is_effective_owner_proof:false,
+            host_container_image_renewal_provenance_required:true,
             non_github_hosting_binding_established:true,
             exact_two_runtime_service_identities_bound:true,
-            evidence_effective_owner_count:null,
-            twin_effective_scheduler_owner_count:null,
             exact_one_production_owner_proven:false,
             blocking_conditions:blockers,
             remote_mutation_count:0,
@@ -185,10 +185,10 @@ jobs:
           fs.writeFileSync('acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_GATE_V1_RESULT.json',JSON.stringify(proof,null,2)+'\n');
           console.log(JSON.stringify(proof,null,2));
 
-      - name: Read only current live fenced production owners
+      - name: Attempt host-bound owner proof readback fail-closed on non-host runner
         id: live-owner-readback
         continue-on-error: true
-        run: node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs
+        run: node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs --live
 
       - name: Upload owner graduation preflight evidence
         if: always()
@@ -203,15 +203,117 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
-      - name: Require exact one live fenced owner per runtime role
+      - name: Require host-bound exact one proof
         shell: node {0}
         run: |
           const fs=require('node:fs');
           const proof=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1_RESULT.json','utf8'));
           if(proof.status!=='PASS'){
             const blockers=Array.isArray(proof.blockers)?proof.blockers.join(','):'UNKNOWN';
-            throw new Error('PRODUCTION_OWNER_LIVE_FENCED_LEASES_NOT_ESTABLISHED:'+blockers);
+            throw new Error('PRODUCTION_OWNER_HOST_BOUND_PROOF_NOT_ESTABLISHED:'+blockers);
           }
-          if(proof.adjudication!=='EXACT_ONE_EFFECTIVE_OWNER_PER_RUNTIME_ROLE_PROVEN'){
-            throw new Error('PRODUCTION_OWNER_LIVE_ADJUDICATION_INVALID');
+          if(proof.adjudication!=='EXACT_ONE_EFFECTIVE_OWNER_PER_RUNTIME_ROLE_WITH_CONTAINER_IMAGE_HOST_AND_RENEWAL_PROVEN'){
+            throw new Error('PRODUCTION_OWNER_PROVENANCE_ADJUDICATION_INVALID');
           }
+
+  provenance-proof-boundary-repair:
+    if: >-
+      github.head_ref == 'fix/mcft-cap09-production-owner-provenance-proof-boundary-v1' &&
+      github.event.pull_request.base.sha == 'af8e80f6353ebf2c318eb6dfc4a585287d5edf89'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact proof-boundary subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Build qualification-only runtime image without starting containers
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build \
+            -f docker/mcft-cap09-runtime.Dockerfile \
+            -t "geox-mcft-cap09-runtime:${{ github.event.pull_request.head.sha }}" \
+            .
+
+      - name: Attest exact clean subject to immutable local Docker image ID
+        env:
+          GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${{ github.event.pull_request.head.sha }}
+          GEOX_MCFT_CAP09_RUNTIME_IMAGE_TAG: geox-mcft-cap09-runtime:${{ github.event.pull_request.head.sha }}
+        run: node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs --attest-image
+
+      - name: Prove owner graduation static boundary and Twin V2 alignment
+        run: node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_V1.cjs
+
+      - name: Run isolated strong negative provenance matrix
+        run: node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs --selftest
+
+      - name: Emit exact-head proof-boundary qualification artifact
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const read=p=>JSON.parse(fs.readFileSync(p,'utf8'));
+          const att=read('acceptance-output/MCFT_CAP_09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_V1_RESULT.json');
+          const pre=read('acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_PREFLIGHT_V1_RESULT.json');
+          const neg=read('acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_PROVENANCE_PROOF_BOUNDARY_V1_RESULT.json');
+          const host=read('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json');
+          for(const [name,v] of Object.entries({att,pre,neg}))if(v.status!=='PASS')throw new Error('PBR_REQUIRED_ARTIFACT_NOT_PASS:'+name);
+          const evidence=host.host_identity_contract.evidence_runtime.service_identity;
+          const twin=host.host_identity_contract.twin_runtime.service_identity;
+          const out={
+            schema_version:'geox_mcft_cap09_production_owner_provenance_proof_boundary_final_v1',
+            status:'PASS',
+            qualification:'PRODUCTION_OWNER_PROVENANCE_PROOF_BOUNDARY_REPAIR_QUALIFIED',
+            qualification_scope:'NON_ACTIVATING_REPOSITORY_AND_QUALIFICATION_HOST_ONLY',
+            subject_main_sha:att.subject_main_sha,
+            subject_tree_sha:att.subject_tree_sha,
+            repository_clean:att.repository_clean,
+            docker_image_tag:att.docker_image_tag,
+            authorized_image_id:att.authorized_image_id,
+            artifact_attestation_status:att.artifact_attestation_status,
+            artifact_attestation_scope:'QUALIFICATION_RUNNER_NON_PRODUCTION',
+            host_identity_contract_status:'PASS',
+            bound_host_id:host.next_stage.local_host_id,
+            Evidence:{expected_service_id:evidence.service_id,expected_service_name:evidence.service_name,expected_image_id:att.authorized_image_id},
+            Twin:{expected_service_id:twin.service_id,expected_service_name:twin.service_name,expected_image_id:att.authorized_image_id},
+            container_correlation_contract:neg.container_correlation_contract,
+            lease_correlation_contract:neg.lease_correlation_contract,
+            renewal_observation_contract:neg.renewal_observation_contract,
+            manual_db_row_alone_rejected:neg.manual_db_row_alone_rejected,
+            negative_proof_matrix:{...neg.artifact_negative_proofs,...neg.negative_proof_matrix},
+            machine_readiness_predicate:neg.machine_readiness_predicate,
+            owner_graduation_v2_entrypoint_alignment:pre.owner_graduation_v2_entrypoint_alignment===true,
+            exact_one_production_owner_proven:false,
+            remaining_live_host_prerequisites:[
+              'CURRENT_LOCAL_HOST_READ_ONLY_PREFLIGHT',
+              'CURRENT_LOCAL_HOST_CREDENTIAL_AND_DB_CONNECTIVITY',
+              'CURRENT_LOCAL_HOST_IMAGE_ATTESTATION',
+              'CONTROLLED_PRODUCTION_RUNTIME_START_AUTHORIZATION',
+              'LIVE_T1_T2_RENEWAL_OBSERVATION',
+              'CONTROLLED_KILL_ROLLBACK_PROOF'
+            ],
+            production_runtime_start_count:0,
+            production_lease_write_count:0,
+            production_owner_activation:false,
+            formal_v5_arm:false,
+            a0:false,
+            o00:false
+          };
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_PROVENANCE_PROOF_BOUNDARY_V1_FINAL.json',JSON.stringify(out,null,2)+'\n');
+          console.log(JSON.stringify(out,null,2));
+
+      - name: Upload proof-boundary qualification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-production-owner-provenance-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_PREFLIGHT_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_PROVENANCE_PROOF_BOUNDARY_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_PROVENANCE_PROOF_BOUNDARY_V1_FINAL.json
+          if-no-files-found: warn
+          retention-days: 90
