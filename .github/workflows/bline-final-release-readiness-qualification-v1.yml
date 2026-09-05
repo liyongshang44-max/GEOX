@@ -11,6 +11,9 @@ permissions:
 env:
   TESTED_SUBJECT_SHA: 413386acc04fa2d3404f09d2d1fa8702472e83f1
   W6B1_BASE_SHA: 612d650244310cd60795c9e66883bd12d9981226
+  S6_REMEDIATION_BASE_SHA: a9bf75333871ac62021679c1dac756be9e30cebe
+  S6_REMEDIATION_CANDIDATE_SHA: 32386b5311ce73fddf135f32be8db058651c18fb
+  S6_DOCTOR_BLOB_SHA: 9fab3e01170107e38033cd5f9e86eb28249ada26
   CARRIER_BRANCH: qual/bline-final-release-readiness-413386
   CARRIER_WORKFLOW_PATH: .github/workflows/bline-final-release-readiness-qualification-v1.yml
 
@@ -398,6 +401,14 @@ jobs:
               if script.count(needle) != 1:
                   raise SystemExit('deployment subject substitution cardinality mismatch')
               script = script.replace(needle, replacement)
+          elif target == 'Run acceptance suite':
+              if script.strip() != 'pnpm run test:acceptance':
+                  raise SystemExit(f'canonical acceptance entry changed unexpectedly: {script!r}')
+              successor = pathlib.Path('/tmp/run-bline-successor-test-acceptance.sh')
+              if not successor.exists():
+                  raise SystemExit('S6 successor acceptance wrapper missing')
+              script = str(successor) + '\n'
+              print(f'BLINE_FINAL_RELEASE_S6_SUCCESSOR_ACCEPTANCE_SUBSTITUTION tested_subject_sha={tested}')
 
           print(f'BLINE_FINAL_RELEASE_CANONICAL_ACCEPTANCE_STEP name={target!r} tested_subject_sha={tested}')
           result = subprocess.run(
@@ -481,6 +492,124 @@ jobs:
       - name: Run customer report boundary suite
         timeout-minutes: 15
         run: python3 /tmp/run-ci-acceptance-step.py 'Run customer report boundary suite'
+
+      - name: B-Line S6 predecessor historical remediation gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          cleanup() { rm -rf "$tmp"; }
+          trap cleanup EXIT
+          git -C "$tmp" init -q
+          git -C "$tmp" remote add origin "$(git remote get-url origin)"
+          git -C "$tmp" fetch --quiet --no-tags origin "$S6_REMEDIATION_BASE_SHA" "$S6_REMEDIATION_CANDIDATE_SHA"
+          git -C "$tmp" checkout --detach "$S6_REMEDIATION_CANDIDATE_SHA" >/dev/null
+          git -C "$tmp" update-ref refs/remotes/origin/main "$S6_REMEDIATION_BASE_SHA"
+          test "$(git -C "$tmp" rev-parse HEAD)" = "$S6_REMEDIATION_CANDIDATE_SHA"
+          ACTUAL="$(git -C "$tmp" diff --name-only origin/main...HEAD | sort)"
+          EXPECTED="$(cat <<'EOF_EXPECTED'
+          apps/server/src/domain/twin_runtime/action_feedback_to_executed_irrigation_v1.ts
+          apps/server/src/evidence/twin_runtime/execution_receipt_evidence_contract_v1.ts
+          docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S6-VALIDATION-ORTHOGONALITY-REMEDIATION-STATUS.json
+          scripts/dev/assert_local_pnpm_runtime.cjs
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTION_FEEDBACK_H.cjs
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION.cjs
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_ACTION_FEEDBACK_H_DB.ts
+          EOF_EXPECTED
+          )"
+          test "$ACTUAL" = "$EXPECTED"
+          (
+            cd "$tmp"
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION.cjs --candidate
+          )
+          printf 'BLINE_S6_PREDECESSOR_HISTORICAL_REMEDIATION_GATE {"base_sha":"%s","candidate_sha":"%s","changed_files":7,"status":"PASS"}\n' "$S6_REMEDIATION_BASE_SHA" "$S6_REMEDIATION_CANDIDATE_SHA"
+
+      - name: B-Line S6 current successor semantic qualification
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TESTED_SUBJECT_SHA"
+          test -z "$(git status --porcelain)"
+          tmp="$(mktemp -d)"
+          cleanup() { rm -rf "$tmp"; }
+          trap cleanup EXIT
+          git -C "$tmp" init -q
+          git -C "$tmp" remote add origin "$(git remote get-url origin)"
+          git -C "$tmp" fetch --quiet --no-tags origin "$TESTED_SUBJECT_SHA"
+          git -C "$tmp" checkout --detach "$TESTED_SUBJECT_SHA" >/dev/null
+          git -C "$tmp" update-ref refs/remotes/origin/main "$TESTED_SUBJECT_SHA"
+          test "$(git -C "$tmp" rev-parse HEAD)" = "$TESTED_SUBJECT_SHA"
+          test -z "$(git -C "$tmp" diff --name-only origin/main...HEAD)"
+          (
+            cd "$tmp"
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION.cjs --auto
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTION_FEEDBACK_H.cjs --auto
+          )
+          test -z "$(git status --porcelain)"
+          printf 'BLINE_S6_CURRENT_SUCCESSOR_SEMANTIC_QUALIFICATION {"tested_subject_sha":"%s","historical_candidate_boundary_reasserted":false,"static_semantics":"PASS","status":"PASS"}\n' "$TESTED_SUBJECT_SHA"
+
+      - name: Prepare S6 successor acceptance doctor
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TESTED_SUBJECT_SHA"
+          test -z "$(git status --porcelain)"
+          test "$(git hash-object scripts/dev/assert_local_pnpm_runtime.cjs)" = "$S6_DOCTOR_BLOB_SHA"
+          node <<'NODE'
+          "use strict";
+          const fs = require("node:fs");
+          const sourcePath = "scripts/dev/assert_local_pnpm_runtime.cjs";
+          const targetPath = "/tmp/assert_local_pnpm_runtime_bline_successor.cjs";
+          const source = fs.readFileSync(sourcePath, "utf8");
+          const functionStart = source.indexOf("function runS6RemediationAcceptance() {");
+          const functionEnd = source.indexOf("\n}\n\nfunction runS7RuntimeAcceptance", functionStart);
+          if (functionStart < 0 || functionEnd < 0) throw new Error("S6_REMEDIATION_FUNCTION_BOUNDARY_NOT_FOUND");
+          const before = source.slice(0, functionStart);
+          const block = source.slice(functionStart, functionEnd + 2);
+          const after = source.slice(functionEnd + 2);
+          const needle = "  runGate(gatePath, '--auto');";
+          const count = block.split(needle).length - 1;
+          if (count !== 1) throw new Error(`S6_HISTORICAL_GATE_CALL_CARDINALITY:${count}`);
+          const replacement = "  console.log('BLINE_S6_SUCCESSOR_RECONCILIATION historical-boundary=externalized current-semantic-runtime=preserved');";
+          const patchedBlock = block.replace(needle, replacement);
+          for (const required of [
+            "ACCEPTANCE_MCFT_CAP_05_ACTION_FEEDBACK_H_DB.ts",
+            "MCFT_CAP_05_S6_DESTRUCTIVE_ACCEPTANCE: '1'",
+            "recreateDatabase(base, databaseName)",
+            "runS7RuntimeAcceptance",
+            "runCap05S8ResidualContractRemediationAcceptance",
+            "runCap05S9RestartRecoveryAcceptance",
+            "runCap05S10BoundedFeedbackChainAcceptance"
+          ]) {
+            if (!(before + patchedBlock + after).includes(required)) throw new Error(`SUCCESSOR_DOCTOR_REQUIRED_INVARIANT_MISSING:${required}`);
+          }
+          const patched = before + patchedBlock + after;
+          if (patched.split("BLINE_S6_SUCCESSOR_RECONCILIATION").length - 1 !== 1) throw new Error("SUCCESSOR_MARKER_CARDINALITY");
+          fs.writeFileSync(targetPath, patched, "utf8");
+          console.log("BLINE_S6_SUCCESSOR_DOCTOR_DERIVATION_PASS");
+          NODE
+          node -c /tmp/assert_local_pnpm_runtime_bline_successor.cjs
+          node <<'NODE'
+          "use strict";
+          const pkg = require("./package.json");
+          const expected = "node scripts/dev/assert_local_pnpm_runtime.cjs && node scripts/acceptance/run_acceptance.cjs";
+          if (pkg.scripts?.["test:acceptance"] !== expected) {
+            throw new Error(`CANONICAL_TEST_ACCEPTANCE_MAPPING_CHANGED:${pkg.scripts?.["test:acceptance"]}`);
+          }
+          console.log("BLINE_S6_CANONICAL_TEST_ACCEPTANCE_MAPPING_PASS");
+          NODE
+          cat > /tmp/run-bline-successor-test-acceptance.sh <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TESTED_SUBJECT_SHA"
+          test -z "$(git status --porcelain)"
+          node /tmp/assert_local_pnpm_runtime_bline_successor.cjs
+          node scripts/acceptance/run_acceptance.cjs
+          test -z "$(git status --porcelain)"
+          SH
+          chmod +x /tmp/run-bline-successor-test-acceptance.sh
+          test -z "$(git status --porcelain)"
+          printf 'BLINE_S6_SUCCESSOR_ACCEPTANCE_DOCTOR_READY {"tested_subject_sha":"%s","source_blob_sha":"%s","historical_gate_call_externalized":true,"runtime_chain_preserved":true,"status":"PASS"}\n' "$TESTED_SUBJECT_SHA" "$S6_DOCTOR_BLOB_SHA"
 
       - name: Run acceptance suite
         run: python3 /tmp/run-ci-acceptance-step.py 'Run acceptance suite'
