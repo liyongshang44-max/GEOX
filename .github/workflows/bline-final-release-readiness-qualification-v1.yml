@@ -602,7 +602,7 @@ jobs:
           ], "SERVICE");
 
           need(runtimeAcceptance, [
-            'validation_status, "NOT_YET_VALIDATED"',
+            'action_feedback.payload.validation_status, "NOT_YET_VALIDATED"',
             'eligible_for_state_input, true',
             "pendingResult.adapter_result",
             'source_validation_status, "NOT_YET_VALIDATED"',
