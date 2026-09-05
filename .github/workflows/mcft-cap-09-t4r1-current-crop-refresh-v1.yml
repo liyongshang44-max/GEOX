@@ -5,10 +5,8 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/mcft-cap-09-t4r1-current-crop-refresh-v1.yml'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-04T04Z-V1.json'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-04T04Z-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-05T04Z-V1.json'
       - 'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_V1.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_V1.cjs'
 
 permissions:
   contents: read
@@ -18,32 +16,43 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  preservation:
+  qualification:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 35
     env:
-      QUALIFIED_SUBJECT_SHA: 811101cc958ce6b83efce610bde11b3266ae8326
-      REQUEST: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-04T04Z-V1.json
-      PREVIOUS: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-V1.json
-      CERT: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json
-      PERSISTED: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-04T04Z-V1.json
+      REQUEST: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-05T04Z-V1.json
+      STAGE_CONFIG: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json
+      EFFECTIVENESS_CERT: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json
+      REFRESH_OUT: acceptance-output/MCFT_CAP09_T4R1_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_2026_09_05T04Z_RESULT.json
     steps:
-      - name: Checkout exact successor subject
+      - name: Checkout exact refresh subject
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install exact repository dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium for lifecycle requalification
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Fetch current protected main
         run: git fetch --no-tags origin main
 
-      - name: Preserve exact protected-main qualification base
+      - name: Validate exact protected-main refresh base and qualification-only ceiling
         shell: node {0}
         run: |
           const fs=require('fs');
@@ -51,49 +60,94 @@ jobs:
           const req=JSON.parse(fs.readFileSync(process.env.REQUEST,'utf8'));
           const main=cp.execFileSync('git',['rev-parse','origin/main'],{encoding:'utf8'}).trim();
           if(req.protected_main_base_sha!==main) throw new Error(`REFRESH_BASE_DRIFT:${req.protected_main_base_sha}!=${main}`);
-          cp.execFileSync('git',['merge-base','--is-ancestor',process.env.QUALIFIED_SUBJECT_SHA,'HEAD']);
           if(req.status!=='QUALIFICATION_ONLY_REQUESTED') throw new Error('REFRESH_REQUEST_STATUS_INVALID');
+          if(req.qualification_policy?.qualification_host_may_be_github_actions!==true) throw new Error('REFRESH_QUALIFICATION_HOST_POLICY_REQUIRED');
           if(req.qualification_policy?.production_runtime_host_may_be_github_actions!==false) throw new Error('REFRESH_GITHUB_PRODUCTION_HOST_FORBIDDEN_REQUIRED');
-          for(const [key,value] of Object.entries(req.non_effects||{})) if(value!==false) throw new Error('REFRESH_NON_EFFECT_DRIFT:'+key);
-          console.log(JSON.stringify({status:'PASS',main,qualified_subject_sha:process.env.QUALIFIED_SUBJECT_SHA,successor_preservation:true}));
+          for(const [k,v] of Object.entries(req.non_effects||{})) if(v!==false) throw new Error('REFRESH_NON_EFFECT_DRIFT:'+k);
+          console.log(JSON.stringify({status:'PASS',protected_main_base_sha:main,qualification_only:true}));
 
-      - name: Prove running V1 mount inputs remain byte-identical to protected main
-        run: git diff --exit-code origin/main -- "$PREVIOUS" "$CERT"
-
-      - name: Syntax-check rolling refresh builder
-        run: node --check scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_V1.cjs
-
-      - name: Validate persisted rolling current-crop authority
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_V1.cjs
-
-      - name: Validate qualification-only authority ceiling and zero production effects
+      - name: Apply frozen refresh snapshot ephemerally
         shell: node {0}
         run: |
           const fs=require('fs');
-          const current=JSON.parse(fs.readFileSync(process.env.PERSISTED,'utf8'));
-          for(const key of [
-            'runtime_config_write_authorized',
-            'database_write_authorized',
-            'scheduler_write_authorized',
-            'formal_evidence_write_authorized',
-            'production_runtime_start_authorized',
-            'production_owner_activation_authorized',
-            'formal_v5_authorized',
-            'a0_authorized',
-            'o00_o23_authorized',
-            'mcft_cap09_completed'
-          ]) if(current[key]!==false) throw new Error('REFRESH_AUTHORITY_CEILING_DRIFT:'+key);
-          if(current.refresh?.running_preformal_mount_replaced!==false) throw new Error('REFRESH_RUNNING_MOUNT_REPLACEMENT_FORBIDDEN');
-          if(current.refresh?.production_runtime_restarted!==false) throw new Error('REFRESH_PRODUCTION_RESTART_FORBIDDEN');
-          console.log(JSON.stringify({status:'PASS',qualification_only:true,production_runtime_restarted:false,running_mount_replaced:false}));
+          const req=JSON.parse(fs.readFileSync(process.env.REQUEST,'utf8'));
+          const cfg=JSON.parse(fs.readFileSync(process.env.STAGE_CONFIG,'utf8'));
+          cfg.qualification_snapshot={
+            ...cfg.qualification_snapshot,
+            as_of_logical_time:req.qualification_snapshot.as_of_logical_time,
+            temperature_start_local_date:req.qualification_snapshot.temperature_start_local_date,
+            last_complete_temperature_local_date:req.qualification_snapshot.last_complete_temperature_local_date,
+            future_observations_authorized:false,
+            full_season_ex_post_normalization_authorized:false
+          };
+          fs.writeFileSync(process.env.STAGE_CONFIG,JSON.stringify(cfg,null,2)+'\n');
+          console.log(JSON.stringify({status:'PASS',snapshot:cfg.qualification_snapshot}));
 
-      - name: Upload immutable preservation evidence
+      - name: Fresh read-only T4R1 lifecycle requalification
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.mjs
+
+      - name: Fresh read-only T4R1 thermal biological-stage requalification
+        run: python3 scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.py
+
+      - name: Restore frozen V1 stage authority input
+        shell: bash
+        run: |
+          set -euo pipefail
+          git restore --source=HEAD -- "$STAGE_CONFIG"
+          git diff --exit-code -- "$STAGE_CONFIG"
+
+      - name: Compose fresh current-crop authority candidate
+        run: node scripts/runtime_acceptance/COMPOSE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_V1.cjs
+
+      - name: Graduate rolling current-crop refresh against already-effective architecture
+        run: |
+          node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_V1.cjs \
+            --candidate acceptance-output/MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json \
+            --architecture-effectiveness "$EFFECTIVENESS_CERT" \
+            --refresh-request "$REQUEST" \
+            --subject "${{ github.event.pull_request.head.sha }}" \
+            --out "$REFRESH_OUT"
+
+      - name: Validate refresh semantics and zero production effects
+        shell: node {0}
+        run: |
+          const fs=require('fs');
+          const req=JSON.parse(fs.readFileSync(process.env.REQUEST,'utf8'));
+          const stage=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP09_T4R1_THERMAL_BIOLOGICAL_STAGE_PROBE_RESULT.json','utf8'));
+          const crop=JSON.parse(fs.readFileSync(process.env.REFRESH_OUT,'utf8'));
+          if(stage.status!=='PASS'||crop.status!=='PASS') throw new Error('REFRESH_PASS_REQUIRED');
+          if(stage.as_of_logical_time!==req.qualification_snapshot.as_of_logical_time) throw new Error('REFRESH_STAGE_AS_OF_MISMATCH');
+          if(stage.source_results?.temperature_daily?.requested_end_local_date!==req.qualification_snapshot.last_complete_temperature_local_date) throw new Error('REFRESH_LAST_COMPLETE_DAY_MISMATCH');
+          if(crop.subject_head_sha!=='${{ github.event.pull_request.head.sha }}') throw new Error('REFRESH_SUBJECT_MISMATCH');
+          if(crop.architecture_effective!==true||crop.runtime_consumption_authorized!==true) throw new Error('REFRESH_EFFECTIVE_RUNTIME_CONSUMPTION_REQUIRED');
+          if(crop.biological_stage?.epistemic_class!=='THERMAL_MODEL_DERIVED'||crop.biological_stage?.observed_biological_stage_claimed!==false) throw new Error('REFRESH_DERIVED_STAGE_SEMANTICS_REQUIRED');
+          if(crop.refresh?.running_preformal_mount_replaced!==false||crop.refresh?.production_runtime_restarted!==false) throw new Error('REFRESH_RUNNING_RUNTIME_MUTATION_FORBIDDEN');
+          for(const key of ['runtime_config_write_authorized','database_write_authorized','scheduler_write_authorized','formal_evidence_write_authorized','production_runtime_start_authorized','production_owner_activation_authorized','formal_v5_authorized','a0_authorized','o00_o23_authorized','mcft_cap09_completed']) if(crop[key]!==false) throw new Error('REFRESH_AUTHORITY_CEILING_DRIFT:'+key);
+          console.log(JSON.stringify({
+            status:'PASS',
+            stage:crop.biological_stage.resolved_biological_stage,
+            water_use_stage:crop.crop_water_use_stage,
+            kc:crop.crop_model_parameter?.value,
+            authority_as_of:crop.biological_stage.authority_as_of,
+            authority_valid_until:crop.biological_stage.authority_valid_until,
+            production_runtime_restarted:false,
+            formal_v5_authorized:false,
+            a0_authorized:false,
+            o00_o23_authorized:false
+          }));
+
+      - name: Upload immutable refresh qualification evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-t4r1-current-crop-refresh-preservation-${{ github.event.pull_request.head.sha }}
+          name: mcft-cap09-t4r1-current-crop-refresh-${{ github.event.pull_request.head.sha }}
           path: |
-            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-04T04Z-V1.json
-            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-04T04Z-V1.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-05T04Z-V1.json
+            acceptance-output/MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_RESULT.json
+            acceptance-output/MCFT_CAP09_T4R1_THERMAL_BIOLOGICAL_STAGE_PROBE_RESULT.json
+            acceptance-output/MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json
+            acceptance-output/MCFT_CAP09_T4R1_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_2026_09_05T04Z_RESULT.json
           if-no-files-found: error
           retention-days: 90
