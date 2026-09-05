@@ -8,6 +8,7 @@ type DbConn = Pool | PoolClient;
 
 export const GEOX_ADR_READ_ONLY_SHADOW_CONTEXT_VERSION = "geox.adr-read-only-shadow-context.v1";
 export const GEOX_ADR_READ_ONLY_SHADOW_OBSERVATION_VERSION = "geox.adr-read-only-shadow-observation.v1";
+export const GEOX_ADR_POSTGRES_READ_ONLY_SHADOW_TRANSACTION_VERSION = "geox.adr-postgres-read-only-shadow-transaction.v1";
 
 const ADR_SINK_CONTRACT_VERSION = "adr.geox-decision-result-sink.v1";
 const ADR_TARGET_UNBOUND_MODE = "ADR_TARGET_UNBOUND_TO_GEOX_FIELD";
@@ -94,6 +95,69 @@ export async function exportGeoxAdrReadOnlyShadowContextV1(input: {
       machine_execution_authorized: false,
     }),
   });
+}
+
+export async function exportGeoxAdrPostgresTransactionGuardedReadOnlyShadowContextV1(input: {
+  pool: Pool;
+  tenant_id: string;
+  project_id: string;
+  group_id: string;
+  field_id: string;
+}) {
+  const client = await input.pool.connect();
+  let transactionOpen = false;
+
+  try {
+    await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+    transactionOpen = true;
+
+    const readOnlyQ = await client.query<{ transaction_read_only: string }>("SHOW transaction_read_only");
+    const isolationQ = await client.query<{ transaction_isolation: string }>("SHOW transaction_isolation");
+    const transaction_read_only = String(readOnlyQ.rows[0]?.transaction_read_only ?? "").trim().toLowerCase();
+    const transaction_isolation = String(isolationQ.rows[0]?.transaction_isolation ?? "").trim().toLowerCase();
+
+    if (transaction_read_only !== "on") {
+      throw new Error("ADR_SHADOW_POSTGRES_TRANSACTION_NOT_READ_ONLY");
+    }
+    if (transaction_isolation !== "repeatable read") {
+      throw new Error("ADR_SHADOW_POSTGRES_TRANSACTION_ISOLATION_INVALID");
+    }
+
+    const context = await exportGeoxAdrReadOnlyShadowContextV1({
+      db: client,
+      tenant_id: input.tenant_id,
+      project_id: input.project_id,
+      group_id: input.group_id,
+      field_id: input.field_id,
+    });
+
+    await client.query("ROLLBACK");
+    transactionOpen = false;
+
+    return Object.freeze({
+      contract_version: GEOX_ADR_POSTGRES_READ_ONLY_SHADOW_TRANSACTION_VERSION,
+      transaction_mode: "REPEATABLE_READ_READ_ONLY",
+      transaction_read_only,
+      transaction_isolation,
+      context,
+      authority_boundary: Object.freeze({
+        database_mutation_authorized: false,
+        recommendation_write_authorized: false,
+        approval_authorized: false,
+        operation_plan_or_task_creation_authorized: false,
+        dispatch_authorized: false,
+        machine_execution_authorized: false,
+      }),
+    });
+  } catch (error) {
+    if (transactionOpen) {
+      await client.query("ROLLBACK");
+      transactionOpen = false;
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 type AdrDecisionResultProjectionV1 = {
