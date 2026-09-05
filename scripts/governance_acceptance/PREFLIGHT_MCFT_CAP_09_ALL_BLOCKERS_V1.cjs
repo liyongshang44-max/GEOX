@@ -285,6 +285,7 @@ function main() {
     const effectiveCurrentCropRegistryResolverProtectedMainBase = String(process.env.EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA || "");
     const twinV2RuntimeSelectionAdoptionProtectedMainBase = String(process.env.TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA || "");
     const twinV2RuntimeSelectionAdoptionMergeProtectedMainBase = String(process.env.TWIN_V2_RUNTIME_SELECTION_ADOPTION_MERGE_PROTECTED_MAIN_PREDECESSOR_SHA || "");
+    const ownerCutoverRegistrySelectionProtectedMainBase = String(process.env.OWNER_CUTOVER_REGISTRY_SELECTION_PROTECTED_MAIN_PREDECESSOR_SHA || "");
     const adoptionDurableRequalification =
       stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
       (
@@ -296,7 +297,8 @@ function main() {
         (/^[0-9a-f]{40}$/.test(rollingStageResolverProtectedMainBase) && args.base === rollingStageResolverProtectedMainBase) ||
         (/^[0-9a-f]{40}$/.test(effectiveCurrentCropRegistryResolverProtectedMainBase) && args.base === effectiveCurrentCropRegistryResolverProtectedMainBase) ||
         (/^[0-9a-f]{40}$/.test(twinV2RuntimeSelectionAdoptionProtectedMainBase) && args.base === twinV2RuntimeSelectionAdoptionProtectedMainBase) ||
-        (/^[0-9a-f]{40}$/.test(twinV2RuntimeSelectionAdoptionMergeProtectedMainBase) && args.base === twinV2RuntimeSelectionAdoptionMergeProtectedMainBase)
+        (/^[0-9a-f]{40}$/.test(twinV2RuntimeSelectionAdoptionMergeProtectedMainBase) && args.base === twinV2RuntimeSelectionAdoptionMergeProtectedMainBase) ||
+        (/^[0-9a-f]{40}$/.test(ownerCutoverRegistrySelectionProtectedMainBase) && args.base === ownerCutoverRegistrySelectionProtectedMainBase)
       ) &&
       PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS.has(decision.check_id);
     if (decision.status === "NOT_APPLICABLE") {
