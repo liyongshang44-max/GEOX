@@ -113,8 +113,170 @@ jobs:
       - name: B-Line Fertilization execution provenance
         run: pnpm run ci:governance:bline-fertilization-execution-provenance
 
-      - name: B-Line Agronomy Agent fail-closed authority
-        run: pnpm run ci:governance:bline-agronomy-agent-fail-closed
+      - name: B-Line Agronomy Agent predecessor historical gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          cleanup() {
+            git worktree remove --force "$tmp" >/dev/null 2>&1 || true
+            rm -rf "$tmp"
+          }
+          trap cleanup EXIT
+          git worktree add --detach "$tmp" "$W6B1_BASE_SHA" >/dev/null
+          (
+            cd "$tmp"
+            test "$(git rev-parse HEAD)" = "$W6B1_BASE_SHA"
+            node scripts/governance_acceptance/ACCEPTANCE_BLINE_AGRONOMY_AGENT_FAIL_CLOSED_AUTHORITY_V1.cjs
+          )
+          printf 'BLINE_AGRONOMY_AGENT_PREDECESSOR_HISTORICAL_GATE {"predecessor_sha":"%s","status":"PASS"}\n' "$W6B1_BASE_SHA"
+
+      - name: B-Line Agronomy Agent current successor qualification
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TESTED_SUBJECT_SHA"
+          node <<'NODE'
+          "use strict";
+          const fs = require("node:fs");
+
+          const agent = fs.readFileSync("apps/server/src/jobs/agronomy_agent.ts", "utf8");
+          const jobs = fs.readFileSync("apps/server/src/jobs/runtime.ts", "utf8");
+          const compose = fs.readFileSync("docker-compose.commercial_v1.yml", "utf8");
+          const activeGate = fs.readFileSync("scripts/governance_acceptance/ACCEPTANCE_BLINE_ACTIVE_RUNTIME_SURFACE_CLOSURE_V1.cjs", "utf8");
+          const registry = JSON.parse(fs.readFileSync("docs/architecture/semantic_convergence/GEOX-BLINE-ACTIVE-RUNTIME-SURFACE-DISPOSITION-V1.json", "utf8"));
+
+          const failures = [];
+          const need = (src, tokens, label) => tokens.forEach((token) => {
+            if (!src.includes(token)) failures.push(`${label}_MISSING:${token}`);
+          });
+          const forbid = (src, tokens, label) => tokens.forEach((token) => {
+            if (src.includes(token)) failures.push(`${label}_FORBIDDEN:${token}`);
+          });
+
+          forbid(agent, [
+            "DEFAULT_SOIL_MOISTURE",
+            'type: "decision_recommendation_v1"',
+            "createOperationPlanFromRecommendation",
+            'type: "operation_plan_v1"',
+            'type: "operation_plan_transition_v1"',
+            "agronomy_agent_auto_create",
+            'evidence_refs: ["telemetry:soil_moisture"]'
+          ], "AGENT");
+
+          need(agent, [
+            "fact_id AS telemetry_fact_id",
+            "s.telemetry_fact_id",
+            "telemetry_fact_id: safeString(row.telemetry_fact_id) || null",
+            "const telemetryFactId = safeString(telemetry?.telemetry_fact_id)",
+            "if (!Number.isFinite(soilMoisture ?? Number.NaN) || !telemetryFactId)",
+            "skippedByReason.no_telemetry += 1",
+            "continue;",
+            'type: "recommendation_v1"',
+            'authority_mode: "LEGACY_AGRONOMY_SIGNAL_ONLY"',
+            "human_approval_required: true",
+            "no_direct_execution: true",
+            "approval_created: false",
+            "operation_plan_created: false",
+            "task_created: false",
+            "dispatch_created: false",
+            "evidence_refs: [telemetryFactId]",
+            "fact_id: telemetryFactId"
+          ], "AGENT");
+
+          need(jobs, [
+            'import { runAgronomyAgentOnce } from "./agronomy_agent.js";',
+            'if (process.env.AGRONOMY_AGENT_ENABLED === "1")',
+            "await runAgronomyAgentOnce(pool)"
+          ], "JOBS");
+
+          need(activeGate, [
+            "BACKGROUND_RUNTIME_ROOTS",
+            "registerBackgroundRuntimeGraph",
+            "BACKGROUND_AGRONOMY_AGENT_NOT_COMMERCIAL_ACTIVE",
+            "addParent(BACKGROUND_RUNTIME_ROOTS[0], COMMERCIAL_COMPOSE)",
+            "addParent(AGRONOMY_AGENT, BACKGROUND_RUNTIME_ROOTS[0])"
+          ], "ACTIVE_GATE");
+
+          const jobsRow = registry.surfaces.find((x) => x.source_path === "apps/server/src/jobs/runtime.ts");
+          const agentRow = registry.surfaces.find((x) => x.source_path === "apps/server/src/jobs/agronomy_agent.ts");
+          if (!jobsRow) failures.push("ACTIVE_REGISTRY_JOBS_RUNTIME_MISSING");
+          if (!agentRow) failures.push("ACTIVE_REGISTRY_AGRONOMY_AGENT_MISSING");
+          if (jobsRow && !jobsRow.activation_parent?.includes("docker-compose.commercial_v1.yml")) failures.push("ACTIVE_REGISTRY_JOBS_PARENT_INVALID");
+          if (agentRow && !agentRow.activation_parent?.includes("apps/server/src/jobs/runtime.ts")) failures.push("ACTIVE_REGISTRY_AGENT_PARENT_INVALID");
+          if (agentRow && agentRow.surface_role !== "DERIVER") failures.push("ACTIVE_REGISTRY_AGENT_ROLE_INVALID");
+          if (!Array.isArray(registry.background_runtime_roots) || !registry.background_runtime_roots.includes("apps/server/src/jobs/runtime.ts")) failures.push("BACKGROUND_RUNTIME_ROOT_REGISTRY_MISSING");
+
+          const missingBlockStart = agent.indexOf("const telemetryFactId = safeString(telemetry?.telemetry_fact_id)");
+          const missingBlockEnd = agent.indexOf("if (!selectedProgramItem.program_id)", missingBlockStart);
+          const missingBlock = missingBlockStart >= 0 ? agent.slice(missingBlockStart, missingBlockEnd) : "";
+          if (!missingBlock.includes("continue;")) failures.push("MISSING_TELEMETRY_MUST_CONTINUE");
+          if (missingBlock.includes("insertFact(")) failures.push("MISSING_TELEMETRY_WRITE_FORBIDDEN");
+
+          const composeLines = compose.split(/\r?\n/);
+          const jobsHeaders = composeLines.reduce((acc, line, index) => line === "  jobs:" ? acc.concat(index) : acc, []);
+          if (jobsHeaders.length !== 1) failures.push(`COMPOSE_JOBS_SERVICE_CARDINALITY:${jobsHeaders.length}`);
+          let jobsBlock = "";
+          if (jobsHeaders.length === 1) {
+            const start = jobsHeaders[0];
+            let end = composeLines.length;
+            for (let index = start + 1; index < composeLines.length; index += 1) {
+              if (/^  [A-Za-z0-9][A-Za-z0-9_-]*:\s*$/.test(composeLines[index])) {
+                end = index;
+                break;
+              }
+            }
+            jobsBlock = composeLines.slice(start, end).join("\n");
+          }
+
+          need(jobsBlock, [
+            "jobs:",
+            'entrypoint: ["/bin/sh", "-ceu"]',
+            "command:",
+            'export DATABASE_URL="postgres://geox_jobs_v1:$$(cat /run/geox/jobs/db_password)@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}"',
+            "exec node apps/server/dist/jobs/runtime.js",
+            'AGRONOMY_AGENT_ENABLED: "1"',
+            "geox_v1_jobs_credentials:/run/geox/jobs:ro"
+          ], "COMPOSE_JOBS_SUCCESSOR");
+          forbid(jobsBlock, [
+            'command: ["node", "apps/server/dist/jobs/runtime.js"]'
+          ], "COMPOSE_JOBS_SUCCESSOR");
+
+          const bootstrapIndex = jobsBlock.indexOf('export DATABASE_URL="postgres://geox_jobs_v1:$$(cat /run/geox/jobs/db_password)@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}"');
+          const execIndex = jobsBlock.indexOf("exec node apps/server/dist/jobs/runtime.js");
+          if (bootstrapIndex < 0 || execIndex < 0 || bootstrapIndex >= execIndex) failures.push("COMPOSE_JOBS_CREDENTIAL_BOOTSTRAP_NOT_BEFORE_EXEC");
+
+          const entrypointKeys = (jobsBlock.match(/^    entrypoint:/gm) || []).length;
+          const commandKeys = (jobsBlock.match(/^    command:/gm) || []).length;
+          const runtimePathOccurrences = (jobsBlock.match(/apps\/server\/dist\/jobs\/runtime\.js/g) || []).length;
+          const nodeProcessLines = jobsBlock.split(/\r?\n/).map((line) => line.trim()).filter((line) => /^(?:exec\s+)?node\s+\S+/.test(line));
+          if (entrypointKeys !== 1) failures.push(`COMPOSE_JOBS_ENTRYPOINT_CARDINALITY:${entrypointKeys}`);
+          if (commandKeys !== 1) failures.push(`COMPOSE_JOBS_COMMAND_CARDINALITY:${commandKeys}`);
+          if (runtimePathOccurrences !== 1) failures.push(`COMPOSE_JOBS_RUNTIME_PATH_CARDINALITY:${runtimePathOccurrences}`);
+          if (nodeProcessLines.length !== 1 || nodeProcessLines[0] !== "exec node apps/server/dist/jobs/runtime.js") {
+            failures.push(`COMPOSE_JOBS_ALTERNATE_RUNTIME_ENTRYPOINT:${JSON.stringify(nodeProcessLines)}`);
+          }
+
+          console.log("BLINE_AGRONOMY_AGENT_SUCCESSOR_QUALIFICATION_STATS " + JSON.stringify({
+            failures: failures.length,
+            tested_subject_sha: process.env.TESTED_SUBJECT_SHA,
+            jobs_service_cardinality: jobsHeaders.length,
+            entrypoint_cardinality: entrypointKeys,
+            command_cardinality: commandKeys,
+            jobs_runtime_path_cardinality: runtimePathOccurrences,
+            jobs_node_process_lines: nodeProcessLines,
+            credential_bootstrap_before_exec: bootstrapIndex >= 0 && execIndex >= 0 && bootstrapIndex < execIndex,
+            agronomy_agent_enabled_exact: jobsBlock.includes('AGRONOMY_AGENT_ENABLED: "1"'),
+            activation_parent_exact: Boolean(agentRow && agentRow.activation_parent?.includes("apps/server/src/jobs/runtime.ts")),
+            fabricated_default_absent: !agent.includes("DEFAULT_SOIL_MOISTURE"),
+            exact_telemetry_fact_bound: agent.includes("evidence_refs: [telemetryFactId]"),
+            decision_writer_absent: !agent.includes('type: "decision_recommendation_v1"'),
+            direct_plan_writer_absent: !agent.includes("createOperationPlanFromRecommendation")
+          }));
+          for (const failure of failures) console.error(`FAIL ${failure}`);
+          if (failures.length) process.exit(1);
+          console.log("BLINE_AGRONOMY_AGENT_SUCCESSOR_QUALIFICATION_PASS");
+          NODE
 
       - name: Route response ownership guard
         run: pnpm run ci:route-response-ownership
