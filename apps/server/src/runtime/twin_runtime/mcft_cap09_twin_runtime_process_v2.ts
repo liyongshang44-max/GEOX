@@ -10,6 +10,8 @@
 // - current-crop authority must be runtime-consumable and architecture-effective;
 // - DT-02 Amendment-03 must be EFFECTIVE;
 // - no provider/R2 credentials or EvidenceSupplyCursor authority.
+// - production selection remains the mounted static exact-bound snapshot unless an
+//   already-governed resolver is explicitly injected by a bounded successor caller.
 
 import fs from "node:fs";
 import os from "node:os";
@@ -23,6 +25,10 @@ import {
 import {
   composeMcftCap09TwinRuntimeV2,
 } from "./mcft_cap09_twin_runtime_composition_v2.js";
+import {
+  createStaticMcftCap09CurrentCropAuthorityResolverV1,
+  type McftCap09CurrentCropAuthorityResolverPortV1,
+} from "./mcft_cap09_current_crop_authority_resolver_v1.js";
 import type {
   ExternalFormalV4Am19WindowManifestV2,
 } from "./external_formal_v4_amendment19_runner_v2.js";
@@ -58,6 +64,10 @@ export const MCFT_CAP09_TWIN_RUNTIME_PROCESS_CONTRACT_V2 = {
   authority_loading: "EXPLICIT_MOUNTED_JSON_PATHS",
   current_crop_authority:
     "READ_ONLY_MOUNT_EXACT_SHA256_RUNTIME_CONSUMPTION_AUTHORIZED_REQUIRED",
+  current_crop_resolver_selection:
+    "STATIC_EXACT_BOUND_SNAPSHOT_DEFAULT_WITH_EXPLICIT_DEPENDENCY_INJECTION_ONLY",
+  production_rolling_authority_env_switch: false,
+  production_registry_path_discovery: false,
   biological_stage_architecture_effectiveness:
     "READ_ONLY_MOUNT_EXACT_SHA256_DT02_AMENDMENT03_EFFECTIVE_REQUIRED",
   runtime_start_authority: "SEPARATE_GOVERNED_AUTHORITY_REQUIRED",
@@ -98,9 +108,20 @@ function readJsonObjectV2(pathValue: string, code: string): JsonRecordV2 {
   return parsed as JsonRecordV2;
 }
 
+export function selectMcftCap09TwinRuntimeCurrentCropAuthorityResolverV2(input: {
+  mounted_current_crop_authority: JsonRecordV2;
+  explicit_resolver?: McftCap09CurrentCropAuthorityResolverPortV1;
+}): McftCap09CurrentCropAuthorityResolverPortV1 {
+  return input.explicit_resolver
+    ?? createStaticMcftCap09CurrentCropAuthorityResolverV1(
+      input.mounted_current_crop_authority,
+    );
+}
+
 export async function runMcftCap09TwinRuntimeProcessV2(input?: {
   env?: EnvironmentV2;
   runtime_start_authority?: unknown;
+  current_crop_authority_resolver?: McftCap09CurrentCropAuthorityResolverPortV1;
 }): Promise<void> {
   const document = productionAcquisitionHorizonAuthorityJson as {
     runtime_start_binding?: unknown;
@@ -156,6 +177,12 @@ export async function runMcftCap09TwinRuntimeProcessV2(input?: {
         config.biological_stage_architecture_effectiveness_path,
     });
 
+  const currentCropAuthorityResolver =
+    selectMcftCap09TwinRuntimeCurrentCropAuthorityResolverV2({
+      mounted_current_crop_authority: stageAuthorities.current_crop_authority,
+      explicit_resolver: input?.current_crop_authority_resolver,
+    });
+
   const cropAuthority = readJsonObjectV2(
     config.crop_authority_path,
     "MCFT_CAP09_TWIN_V2_CROP_AUTHORITY_INVALID",
@@ -177,6 +204,7 @@ export async function runMcftCap09TwinRuntimeProcessV2(input?: {
       configuration_matrix: configurationMatrix,
       current_crop_authority:
         stageAuthorities.current_crop_authority,
+      current_crop_authority_resolver: currentCropAuthorityResolver,
       biological_stage_architecture_effectiveness:
         stageAuthorities.biological_stage_architecture_effectiveness,
       wait: new McftCap09ProductionTwinWaitV1({

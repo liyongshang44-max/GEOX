@@ -16,6 +16,9 @@ import {
 import {
   materializeMcftCap09TwinCropContextV2,
 } from "./mcft_cap09_twin_runtime_composition_v2.js";
+import {
+  selectMcftCap09TwinRuntimeCurrentCropAuthorityResolverV2,
+} from "./mcft_cap09_twin_runtime_process_v2.js";
 
 const ROOT = process.cwd();
 const REGISTRY_PATH = path.join(
@@ -252,6 +255,45 @@ test("registry-backed resolver selects only graduated effective authorities by l
   assert.equal(
     refreshed.evidence_digest,
     "sha256:1d89e3a0f38b4619d44cb6504498641a004144877bb8b38fc8a810bae0d0238e",
+  );
+});
+
+test("Process V2 resolver selector preserves the mounted static snapshot by default", () => {
+  const mounted = currentCrop("2026-09-04T04:00:00.000Z", "f");
+  const resolver = selectMcftCap09TwinRuntimeCurrentCropAuthorityResolverV2({
+    mounted_current_crop_authority: mounted,
+  });
+  assert.strictEqual(
+    resolver.resolve({ logical_time: "2026-09-04T05:00:00.000Z" }),
+    mounted,
+  );
+  assert.strictEqual(
+    resolver.resolve({ logical_time: "2026-09-05T09:00:00.000Z" }),
+    mounted,
+  );
+});
+
+test("Process V2 resolver selector carries an explicitly injected registry-backed resolver only", () => {
+  const mounted = currentCrop("2026-09-03T04:00:00.000Z", "f");
+  const registryResolver = createRegistryBackedMcftCap09CurrentCropAuthorityResolverV1({
+    source: createFileSource(REGISTRY_PATH, ROOT),
+  });
+  const adopted = selectMcftCap09TwinRuntimeCurrentCropAuthorityResolverV2({
+    mounted_current_crop_authority: mounted,
+    explicit_resolver: registryResolver,
+  });
+  const refreshed = adopted.resolve({ logical_time: "2026-09-04T05:00:00.000Z" });
+  assert.equal(
+    refreshed.evidence_digest,
+    "sha256:1d89e3a0f38b4619d44cb6504498641a004144877bb8b38fc8a810bae0d0238e",
+  );
+
+  const productionDefault = selectMcftCap09TwinRuntimeCurrentCropAuthorityResolverV2({
+    mounted_current_crop_authority: mounted,
+  });
+  assert.strictEqual(
+    productionDefault.resolve({ logical_time: "2026-09-04T05:00:00.000Z" }),
+    mounted,
   );
 });
 
