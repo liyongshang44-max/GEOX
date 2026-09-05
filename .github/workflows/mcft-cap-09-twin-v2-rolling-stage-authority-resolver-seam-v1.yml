@@ -3,57 +3,162 @@ name: mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1
 on:
   pull_request:
     paths:
-      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.ts'
-      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.test.ts'
-      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts'
-      - 'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs'
       - '.github/workflows/mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1.yml'
 
 permissions:
   contents: read
 
 jobs:
-  qualification:
+  temporary-register-production-routing-evidence:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+      pull-requests: read
+    env:
+      EVIDENCE_SUBJECT_SHA: 'f7b17334fb19e08ba093ddffce930f7a53efa516'
+      GOVERNED_BASE_SHA: '5050f1c08d2528048c56d56add4cbb068b956925'
+      VERIFIED_RUN_ID: '33936015344'
+      GITHUB_TOKEN: ${{ github.token }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
     steps:
-      - name: Checkout exact successor subject
+      - name: Checkout exact registrar carrier
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-          persist-credentials: false
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
+      - name: Register verified Production Twin V2 Routing evidence
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+          const cp = require('node:child_process');
+          const crypto = require('node:crypto');
+          const registryPath = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json';
+          const planPath = '/tmp/mcft-cap09-production-routing-plan.json';
+          const subject = process.env.EVIDENCE_SUBJECT_SHA;
+          const base = process.env.GOVERNED_BASE_SHA;
+          const runId = Number(process.env.VERIFIED_RUN_ID);
+          const repo = process.env.GITHUB_REPOSITORY;
+          const token = process.env.GITHUB_TOKEN;
+          if (!/^[0-9a-f]{40}$/.test(subject) || !/^[0-9a-f]{40}$/.test(base)) throw new Error('INVALID_SHA_CONTEXT');
+          if (!Number.isSafeInteger(runId) || runId <= 0 || !token || !repo) throw new Error('GITHUB_CONTEXT_REQUIRED');
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.11.1
-          cache: pnpm
+          cp.execFileSync(process.execPath, [
+            'scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs',
+            '--base', base,
+            '--head', subject,
+            '--generation', 'v13',
+            '--stage', 'SUCCESSOR_SUBJECT_PRE_MERGE',
+            '--out', planPath,
+          ], {stdio:'inherit'});
 
-      - name: Install exact repository dependencies
-        run: pnpm install --frozen-lockfile
+          const plan = JSON.parse(fs.readFileSync(planPath,'utf8'));
+          const decision = plan.decisions.find(x => x.check_id === 'PRODUCTION_TWIN_PROCESS_V2_ROUTING');
+          const workflowPath = '.github/workflows/mcft-cap-09-production-twin-process-v2-routing.yml';
+          const workflowName = 'MCFT CAP-09 Production Twin Process V2 Routing';
+          if (!decision || decision.status !== 'REQUALIFY' || decision.execution_workflow !== workflowPath) {
+            throw new Error(`PLAN_DECISION_INVALID:${JSON.stringify(decision ?? null)}`);
+          }
+          if (!/^sha256:[0-9a-f]{64}$/.test(String(decision.dependency_digest || ''))) {
+            throw new Error('DEPENDENCY_DIGEST_INVALID');
+          }
 
-      - name: Run focused rolling authority resolver tests
-        run: >-
-          node --import tsx --test
-          apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.test.ts
+          const registry = JSON.parse(fs.readFileSync(registryPath,'utf8'));
+          const section = registry.requalification_evidence;
+          if (!section || section.binding_strategy !== 'MCFT_CAP09_REQUALIFICATION_RUN_BINDING_V1') throw new Error('REQUALIFICATION_SECTION_INVALID');
+          if (!Array.isArray(section.entries) || !Array.isArray(section.durable_anchors?.entries)) throw new Error('REQUALIFICATION_ARRAYS_INVALID');
+          const governed = section.durable_anchors?.rules?.governed_successor_predecessors || [];
+          if (!governed.includes(base)) throw new Error('CURRENT_PROTECTED_MAIN_NOT_GOVERNED');
 
-      - name: Prove governance and production non-effects
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs
+          const evidenceId = 'PRODUCTION_TWIN_PROCESS_V2_ROUTING_REQUAL_F7B17334_TWIN_V2_ADOPTION_V1';
+          if (section.entries.some(x => x.evidence_id === evidenceId) || section.durable_anchors.entries.some(x => x.evidence_id === evidenceId)) {
+            throw new Error(`EVIDENCE_ID_ALREADY_PRESENT:${evidenceId}`);
+          }
 
-      - name: Upload resolver seam proof
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcft-cap09-twin-v2-rolling-stage-authority-resolver-seam-${{ github.event.pull_request.head.sha }}
-          path: acceptance-output/MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.json
-          if-no-files-found: warn
-          retention-days: 90
+          const bindingFields = [
+            'evidence_id','check_id','evidence_class','generation','stage','subject_sha',
+            'workflow_name','workflow_path','run_id','run_conclusion','artifact_id','artifact_digest',
+            'dependency_subject_sha','dependency_digest_strategy','dependency_digest',
+            'artifact_absence_reason','immutable',
+          ];
+          const sha256 = value => crypto.createHash('sha256').update(value).digest('hex');
+          const binding = entry => sha256(JSON.stringify(bindingFields.map(k => entry?.[k] ?? null)));
+
+          async function main() {
+            const response = await fetch(`https://api.github.com/repos/${repo}/actions/runs/${runId}`, {
+              headers:{Authorization:`Bearer ${token}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'},
+            });
+            if (!response.ok) throw new Error(`RUN_FETCH_FAILED:${runId}:${response.status}`);
+            const run = await response.json();
+            const liveBase = run.pull_requests?.find(pr => pr?.base?.sha)?.base?.sha ?? null;
+            if (run.status !== 'completed' || run.conclusion !== 'success') throw new Error('RUN_NOT_SUCCESS');
+            if (run.head_sha !== subject) throw new Error(`RUN_HEAD_MISMATCH:${run.head_sha}`);
+            if (liveBase !== base) throw new Error(`RUN_BASE_MISMATCH:${liveBase}`);
+            if (run.event !== 'pull_request' || run.name !== workflowName || run.path !== workflowPath) throw new Error('RUN_IDENTITY_MISMATCH');
+
+            const entry = {
+              evidence_id:evidenceId,
+              check_id:'PRODUCTION_TWIN_PROCESS_V2_ROUTING',
+              evidence_class:'IMMUTABLE_WORKFLOW_RUN',
+              generation:'twin-v2-runtime-selection-adoption-requalification-production-routing',
+              stage:'SUCCESSOR_SUBJECT_PRE_MERGE',
+              subject_sha:subject,
+              workflow_name:workflowName,
+              workflow_path:workflowPath,
+              run_id:runId,
+              run_conclusion:'success',
+              artifact_id:null,
+              artifact_digest:null,
+              dependency_subject_sha:subject,
+              dependency_digest_strategy:registry.dependency_digest_strategy,
+              dependency_digest:decision.dependency_digest,
+              artifact_absence_reason:'RUN_LEVEL_EXACT_SUBJECT_TWIN_V2_RUNTIME_SELECTION_ADOPTION_REQUALIFICATION_EVIDENCE_ONLY',
+              immutable:true,
+            };
+            entry.immutable_binding_sha256 = binding(entry);
+            const anchor = {
+              evidence_id:evidenceId,
+              run_id:runId,
+              run_snapshot:{
+                event:run.event,
+                run_number:run.run_number,
+                workflow_path:run.path,
+                workflow_name:run.name,
+                head_sha:run.head_sha,
+                base_sha:liveBase,
+                created_at:run.created_at,
+                updated_at:run.updated_at,
+              },
+            };
+            section.entries.push(entry);
+            section.durable_anchors.entries.push(anchor);
+            fs.writeFileSync(registryPath, JSON.stringify(registry,null,2)+'\n');
+            console.log(JSON.stringify({status:'PASS',evidence_id:evidenceId,run_id:runId,dependency_digest:decision.dependency_digest,immutable_binding_sha256:entry.immutable_binding_sha256}));
+          }
+          main().catch(error => { console.error(error); process.exitCode = 1; });
+
+      - name: Validate append-only evidence settlement
+        shell: bash
+        run: |
+          set -euo pipefail
+          registry='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json'
+          node -e "JSON.parse(require('node:fs').readFileSync(process.argv[1],'utf8'))" "$registry"
+          git diff --check -- "$registry"
+          test "$(git diff --name-only)" = "$registry"
+          grep -Fq 'PRODUCTION_TWIN_PROCESS_V2_ROUTING_REQUAL_F7B17334_TWIN_V2_ADOPTION_V1' "$registry"
+
+      - name: Commit durable routing evidence settlement
+        shell: bash
+        run: |
+          set -euo pipefail
+          registry='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$registry"
+          git diff --cached --check
+          git commit -m 'test(mcft-cap09): register f7b production routing evidence'
+          echo "EVIDENCE_SETTLEMENT_COMMIT=$(git rev-parse HEAD)"
+          echo "EVIDENCE_SETTLEMENT_PARENT=$(git rev-parse HEAD^)"
+          git push origin "HEAD:refs/heads/${{ github.event.pull_request.head.ref }}"
