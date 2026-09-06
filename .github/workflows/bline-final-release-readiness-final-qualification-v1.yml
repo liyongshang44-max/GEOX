@@ -1,0 +1,431 @@
+name: bline-final-release-readiness-final-qualification-v1
+
+on:
+  push:
+    branches:
+      - qual/bline-final-release-readiness-final-413386
+
+permissions:
+  contents: read
+
+env:
+  TESTED_SUBJECT_SHA: 413386acc04fa2d3404f09d2d1fa8702472e83f1
+  SOURCE_CARRIER_SHA: 146e5e6aeabbe81ce474322cd718940503085c42
+  SOURCE_CARRIER_BRANCH: qual/bline-final-release-readiness-413386
+  SOURCE_WORKFLOW_PATH: .github/workflows/bline-final-release-readiness-qualification-v1.yml
+  W6B1_BASE_SHA: 612d650244310cd60795c9e66883bd12d9981226
+  S6_REMEDIATION_BASE_SHA: a9bf75333871ac62021679c1dac756be9e30cebe
+  S6_REMEDIATION_CANDIDATE_SHA: 32386b5311ce73fddf135f32be8db058651c18fb
+  S6_DOCTOR_BLOB_SHA: 9fab3e01170107e38033cd5f9e86eb28249ada26
+  CARRIER_BRANCH: qual/bline-final-release-readiness-final-413386
+  CARRIER_WORKFLOW_PATH: .github/workflows/bline-final-release-readiness-final-qualification-v1.yml
+
+jobs:
+  build-test-successor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout frozen tested subject
+        uses: actions/checkout@v4
+        with:
+          ref: 413386acc04fa2d3404f09d2d1fa8702472e83f1
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Prepare frozen source runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "refs/heads/$SOURCE_CARRIER_BRANCH:refs/remotes/origin/bfrr-source"
+          test "$(git rev-parse refs/remotes/origin/bfrr-source)" = "$SOURCE_CARRIER_SHA"
+          git show "$SOURCE_CARRIER_SHA:$SOURCE_WORKFLOW_PATH" > /tmp/bfrr-source.yml
+          cat > /tmp/run-bfrr-source-job.py <<'PY'
+          import os, pathlib, subprocess, sys
+
+          source = pathlib.Path('/tmp/bfrr-source.yml')
+          lines = source.read_text(encoding='utf-8').splitlines()
+          job_id = sys.argv[1]
+          marker = f'  {job_id}:'
+          try:
+              job_start = lines.index(marker)
+          except ValueError:
+              raise SystemExit(f'job not found: {job_id}')
+          job_end = len(lines)
+          for i in range(job_start + 1, len(lines)):
+              if lines[i].startswith('  ') and not lines[i].startswith('    ') and lines[i].endswith(':'):
+                  job_end = i
+                  break
+
+          steps = []
+          i = job_start + 1
+          while i < job_end:
+              if not lines[i].startswith('      - name: '):
+                  i += 1
+                  continue
+              name = lines[i][len('      - name: '):].strip()
+              step_end = next((j for j in range(i + 1, job_end) if lines[j].startswith('      - name: ')), job_end)
+              run_index = next((j for j in range(i + 1, step_end) if lines[j].startswith('        run:')), None)
+              always = any(lines[j].strip() == 'if: always()' for j in range(i + 1, step_end))
+              timeout_minutes = None
+              for j in range(i + 1, step_end):
+                  if lines[j].startswith('        timeout-minutes:'):
+                      timeout_minutes = int(lines[j].split(':', 1)[1].strip())
+              if run_index is not None:
+                  suffix = lines[run_index][len('        run:'):].lstrip()
+                  if suffix in ('|', '|-', '|+', '>', '>-', '>+'):
+                      body = []
+                      for j in range(run_index + 1, step_end):
+                          line = lines[j]
+                          if line.startswith('          '):
+                              body.append(line[10:])
+                          elif line == '':
+                              body.append('')
+                          else:
+                              break
+                      while body and body[-1] == '':
+                          body.pop()
+                      script = '\n'.join(body) + ('\n' if suffix not in ('|-', '>-') else '')
+                  else:
+                      script = suffix + '\n'
+                  steps.append((name, script, always, timeout_minutes))
+              i = step_end
+
+          first_failure = None
+          for name, script, always, timeout_minutes in steps:
+              if first_failure is not None and not always:
+                  print(f'[bfrr-runner] SKIP after failure: {name}', flush=True)
+                  continue
+              print(f'[bfrr-runner] START {name}', flush=True)
+              if job_id == 'acceptance' and name == 'Start acceptance runtime dependencies':
+                  cmd = ['/tmp/bfrr-startup-evidence.sh']
+              else:
+                  cmd = ['bash', '--noprofile', '--norc', '-e', '-o', 'pipefail', '-c', script]
+              try:
+                  result = subprocess.run(cmd, env=os.environ.copy(), timeout=None if timeout_minutes is None else timeout_minutes * 60)
+                  rc = result.returncode
+              except subprocess.TimeoutExpired:
+                  rc = 124
+                  print(f'[bfrr-runner] TIMEOUT {name}', flush=True)
+              if rc != 0 and first_failure is None:
+                  first_failure = (name, rc)
+                  print(f'[bfrr-runner] FAIL {name} rc={rc}', flush=True)
+              else:
+                  print(f'[bfrr-runner] PASS {name}', flush=True)
+
+              if job_id == 'acceptance' and name == 'Prepare canonical acceptance replay helper' and rc == 0:
+                  p = pathlib.Path('/tmp/run-ci-acceptance-step.py')
+                  text = p.read_text(encoding='utf-8')
+                  needle = "    script = '\\n'.join(body) + '\\n'\n"
+                  replacement = "    while body and body[-1] == '':\n        body.pop()\n    script = '\\n'.join(body) + '\\n'\n"
+                  count = text.count(needle)
+                  if count != 1:
+                      raise SystemExit(f'bounded helper repair cardinality mismatch: {count}')
+                  p.write_text(text.replace(needle, replacement), encoding='utf-8')
+                  subprocess.run(['python3', '-m', 'py_compile', str(p)], check=True)
+                  print('BFRR_CLASS_A_BOUNDED_HELPER_REPAIR status=PASS scope=qualification-only semantic=YAML_CLIP_CHOMPING', flush=True)
+
+          if first_failure is not None:
+              raise SystemExit(first_failure[1])
+          PY
+          python3 -m py_compile /tmp/run-bfrr-source-job.py
+
+      - name: Run frozen build-test successor
+        run: python3 /tmp/run-bfrr-source-job.py build-test-successor
+
+  acceptance:
+    runs-on: ubuntu-latest
+    needs: build-test-successor
+    steps:
+      - name: Checkout frozen tested subject
+        uses: actions/checkout@v4
+        with:
+          ref: 413386acc04fa2d3404f09d2d1fa8702472e83f1
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Prepare frozen source runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "refs/heads/$SOURCE_CARRIER_BRANCH:refs/remotes/origin/bfrr-source"
+          test "$(git rev-parse refs/remotes/origin/bfrr-source)" = "$SOURCE_CARRIER_SHA"
+          git show "$SOURCE_CARRIER_SHA:$SOURCE_WORKFLOW_PATH" > /tmp/bfrr-source.yml
+          cat > /tmp/run-bfrr-source-job.py <<'PY'
+          import os, pathlib, subprocess, sys
+
+          source = pathlib.Path('/tmp/bfrr-source.yml')
+          lines = source.read_text(encoding='utf-8').splitlines()
+          job_id = sys.argv[1]
+          marker = f'  {job_id}:'
+          try:
+              job_start = lines.index(marker)
+          except ValueError:
+              raise SystemExit(f'job not found: {job_id}')
+          job_end = len(lines)
+          for i in range(job_start + 1, len(lines)):
+              if lines[i].startswith('  ') and not lines[i].startswith('    ') and lines[i].endswith(':'):
+                  job_end = i
+                  break
+
+          steps = []
+          i = job_start + 1
+          while i < job_end:
+              if not lines[i].startswith('      - name: '):
+                  i += 1
+                  continue
+              name = lines[i][len('      - name: '):].strip()
+              step_end = next((j for j in range(i + 1, job_end) if lines[j].startswith('      - name: ')), job_end)
+              run_index = next((j for j in range(i + 1, step_end) if lines[j].startswith('        run:')), None)
+              always = any(lines[j].strip() == 'if: always()' for j in range(i + 1, step_end))
+              timeout_minutes = None
+              for j in range(i + 1, step_end):
+                  if lines[j].startswith('        timeout-minutes:'):
+                      timeout_minutes = int(lines[j].split(':', 1)[1].strip())
+              if run_index is not None:
+                  suffix = lines[run_index][len('        run:'):].lstrip()
+                  if suffix in ('|', '|-', '|+', '>', '>-', '>+'):
+                      body = []
+                      for j in range(run_index + 1, step_end):
+                          line = lines[j]
+                          if line.startswith('          '):
+                              body.append(line[10:])
+                          elif line == '':
+                              body.append('')
+                          else:
+                              break
+                      while body and body[-1] == '':
+                          body.pop()
+                      script = '\n'.join(body) + ('\n' if suffix not in ('|-', '>-') else '')
+                  else:
+                      script = suffix + '\n'
+                  steps.append((name, script, always, timeout_minutes))
+              i = step_end
+
+          first_failure = None
+          for name, script, always, timeout_minutes in steps:
+              if first_failure is not None and not always:
+                  print(f'[bfrr-runner] SKIP after failure: {name}', flush=True)
+                  continue
+              print(f'[bfrr-runner] START {name}', flush=True)
+              if job_id == 'acceptance' and name == 'Start acceptance runtime dependencies':
+                  cmd = ['/tmp/bfrr-startup-evidence.sh']
+              else:
+                  cmd = ['bash', '--noprofile', '--norc', '-e', '-o', 'pipefail', '-c', script]
+              try:
+                  result = subprocess.run(cmd, env=os.environ.copy(), timeout=None if timeout_minutes is None else timeout_minutes * 60)
+                  rc = result.returncode
+              except subprocess.TimeoutExpired:
+                  rc = 124
+                  print(f'[bfrr-runner] TIMEOUT {name}', flush=True)
+              if rc != 0 and first_failure is None:
+                  first_failure = (name, rc)
+                  print(f'[bfrr-runner] FAIL {name} rc={rc}', flush=True)
+              else:
+                  print(f'[bfrr-runner] PASS {name}', flush=True)
+
+              if job_id == 'acceptance' and name == 'Prepare canonical acceptance replay helper' and rc == 0:
+                  p = pathlib.Path('/tmp/run-ci-acceptance-step.py')
+                  text = p.read_text(encoding='utf-8')
+                  needle = "    script = '\\n'.join(body) + '\\n'\n"
+                  replacement = "    while body and body[-1] == '':\n        body.pop()\n    script = '\\n'.join(body) + '\\n'\n"
+                  count = text.count(needle)
+                  if count != 1:
+                      raise SystemExit(f'bounded helper repair cardinality mismatch: {count}')
+                  p.write_text(text.replace(needle, replacement), encoding='utf-8')
+                  subprocess.run(['python3', '-m', 'py_compile', str(p)], check=True)
+                  print('BFRR_CLASS_A_BOUNDED_HELPER_REPAIR status=PASS scope=qualification-only semantic=YAML_CLIP_CHOMPING', flush=True)
+
+          if first_failure is not None:
+              raise SystemExit(first_failure[1])
+          PY
+          python3 -m py_compile /tmp/run-bfrr-source-job.py
+
+      - name: Prepare evidence-grade canonical startup hook
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/bfrr-startup-evidence.sh <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          mkdir -p acceptance-output
+          evidence=acceptance-output/BFRR_STARTUP_RCA_EVIDENCE.log
+          : > "$evidence"
+          record() { printf '%s\n' "$*" | tee -a "$evidence"; }
+          listener_snapshot() {
+            local phase="$1"
+            record "BFRR_LISTENERS phase=$phase"
+            if command -v ss >/dev/null 2>&1; then
+              ss -ltnp 2>&1 | grep -E '(^State|:3000\b|:3001\b|:5433\b|:1883\b|:9000\b|:9002\b)' | tee -a "$evidence" || true
+            elif command -v lsof >/dev/null 2>&1; then
+              lsof -nP -iTCP -sTCP:LISTEN 2>&1 | grep -E '(:3000|:3001|:5433|:1883|:9000|:9002)' | tee -a "$evidence" || true
+            elif command -v netstat >/dev/null 2>&1; then
+              netstat -ltnp 2>&1 | grep -E '(^Proto|:3000\b|:3001\b|:5433\b|:1883\b|:9000\b|:9002\b)' | tee -a "$evidence" || true
+            else
+              record 'listener_tool=unavailable'
+            fi
+          }
+          container_snapshot() {
+            local phase="$1"
+            record "BFRR_CONTAINERS phase=$phase"
+            docker ps -a --no-trunc | tee -a "$evidence"
+            mapfile -t names < <(docker ps -a --format '{{.Names}}' | grep -E '^(geox-v1-|geox-server)' || true)
+            for name in "${names[@]:-}"; do
+              [ -n "$name" ] || continue
+              docker inspect "$name" --format 'name={{.Name}} image={{.Config.Image}} state={{json .State}} ports={{json .NetworkSettings.Ports}} restart_count={{.RestartCount}}' 2>&1 | tee -a "$evidence" || true
+            done
+          }
+
+          test "$(git rev-parse HEAD)" = "$TESTED_SUBJECT_SHA"
+          test -f .env.ci
+          record "BFRR_IDENTITY carrier_sha=$GITHUB_SHA tested_product_sha=$TESTED_SUBJECT_SHA"
+          sha256sum .github/workflows/ci.yml docker-compose.commercial_v1.yml .env.ci | tee -a "$evidence"
+          docker compose version | tee -a "$evidence"
+          docker version | tee -a "$evidence"
+
+          python3 <<'PY' | tee -a "$evidence"
+          import hashlib, pathlib
+          lines = pathlib.Path('.github/workflows/ci.yml').read_text(encoding='utf-8').splitlines()
+          start = lines.index('  acceptance:')
+          def extract(target):
+              marker = f'      - name: {target}'
+              ss = next(i for i in range(start + 1, len(lines)) if lines[i] == marker)
+              se = next((i for i in range(ss + 1, len(lines)) if lines[i].startswith('      - name: ') or (lines[i] and lines[i].startswith('  ') and not lines[i].startswith('    '))), len(lines))
+              ri = next(i for i in range(ss + 1, se) if lines[i].startswith('        run:'))
+              suffix = lines[ri][len('        run:'):].lstrip()
+              if suffix in ('|', '|-', '|+', '>', '>-', '>+'):
+                  body=[]
+                  for line in lines[ri+1:se]:
+                      if line.startswith('          '): body.append(line[10:])
+                      elif line == '': body.append('')
+                      else: break
+                  while body and body[-1] == '': body.pop()
+                  script='\n'.join(body)+('\n' if suffix not in ('|-','>-') else '')
+              else:
+                  script=suffix+'\n'
+              return script
+          for target in ('Validate commercial compose rendering','Start acceptance runtime dependencies'):
+              body=extract(target)
+              p=pathlib.Path('acceptance-output')/(target.replace(' ','_')+'.body.sh')
+              p.write_text(body,encoding='utf-8')
+              print(f'BFRR_CANONICAL_BODY name={target!r} sha256={hashlib.sha256(body.encode()).hexdigest()} bytes={len(body.encode())}')
+              print(body,end='')
+          PY
+
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml config > acceptance-output/BFRR_RENDERED_COMPOSE.yml
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml config --services > acceptance-output/BFRR_EFFECTIVE_SERVICES.txt
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml config --format json > acceptance-output/BFRR_RENDERED_COMPOSE.json
+          cat acceptance-output/BFRR_RENDERED_COMPOSE.yml >> "$evidence"
+          cat acceptance-output/BFRR_EFFECTIVE_SERVICES.txt | tee -a "$evidence"
+
+          listener_snapshot PRE_PHASE1_STATE
+          container_snapshot PRE_PHASE1_STATE
+          docker ps -a --format '{{.Names}}' | grep -E '^(geox-v1-|geox-server)' > acceptance-output/BFRR_PREEXISTING_CONTAINER_NAMES.txt || true
+          if command -v ss >/dev/null 2>&1; then
+            ss -ltnp 2>&1 | grep -E '(:3001\b)' > acceptance-output/BFRR_PREEXISTING_3001_LISTENERS.txt || true
+          else
+            : > acceptance-output/BFRR_PREEXISTING_3001_LISTENERS.txt
+          fi
+          record 'PRE_PHASE1_STATE=FROZEN'
+
+          phase1='timeout 180 docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d minio minio-init'
+          phase2='timeout 300 docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d postgres mqtt server jobs executor'
+          grep -F "$phase1" acceptance-output/Start_acceptance_runtime_dependencies.body.sh >/dev/null
+          grep -F "$phase2" acceptance-output/Start_acceptance_runtime_dependencies.body.sh >/dev/null
+
+          set +e
+          timeout 180 docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d minio minio-init
+          PHASE1_EXIT_CODE=$?
+          set -e
+          record "PHASE1_EXIT_CODE=$PHASE1_EXIT_CODE"
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps -a | tee -a "$evidence" || true
+          docker logs geox-v1-minio-init 2>&1 | tee -a "$evidence" || true
+          listener_snapshot POST_PHASE1
+          container_snapshot POST_PHASE1
+          if [ "$PHASE1_EXIT_CODE" -ne 0 ]; then
+            exit "$PHASE1_EXIT_CODE"
+          fi
+
+          docker logs geox-v1-minio-init || true
+          docker ps -a
+          listener_snapshot PRE_PHASE2_STATE
+          container_snapshot PRE_PHASE2_STATE
+          record 'PRE_PHASE2_STATE=FROZEN'
+
+          set +e
+          timeout 300 docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d postgres mqtt server jobs executor
+          PHASE2_EXIT_CODE=$?
+          set -e
+          record "PHASE2_EXIT_CODE=$PHASE2_EXIT_CODE"
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps -a | tee -a "$evidence" || true
+          docker ps -a --no-trunc | tee -a "$evidence" || true
+          docker inspect geox-v1-server > acceptance-output/BFRR_SERVER_INSPECT.json 2>/dev/null || printf '[]\n' > acceptance-output/BFRR_SERVER_INSPECT.json
+          for svc in postgres mqtt server jobs executor database-platform-bootstrap mcft-cap07-migration minio-init; do
+            docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --no-color --tail=500 "$svc" > "acceptance-output/BFRR_${svc//-/_}.log" 2>&1 || true
+          done
+          listener_snapshot POST_PHASE2
+          container_snapshot POST_PHASE2
+
+          python3 <<'PY' | tee -a "$evidence"
+          import json, pathlib, os
+          cfg=json.loads(pathlib.Path('acceptance-output/BFRR_RENDERED_COMPOSE.json').read_text())
+          server=cfg.get('services',{}).get('server',{})
+          inspect=json.loads(pathlib.Path('acceptance-output/BFRR_SERVER_INSPECT.json').read_text())
+          actual=inspect[0] if inspect else {}
+          ports=(actual.get('NetworkSettings') or {}).get('Ports') or {}
+          pre_names=[x for x in pathlib.Path('acceptance-output/BFRR_PREEXISTING_CONTAINER_NAMES.txt').read_text().splitlines() if x.strip()]
+          pre_listeners=[x for x in pathlib.Path('acceptance-output/BFRR_PREEXISTING_3001_LISTENERS.txt').read_text().splitlines() if x.strip()]
+          collision='NONE' if not pre_names and not pre_listeners else {'containers':pre_names,'listeners_3001':pre_listeners}
+          out={
+            'carrier_sha':os.environ['GITHUB_SHA'],
+            'tested_product_sha':os.environ['TESTED_SUBJECT_SHA'],
+            'EXPECTED_FROM_ACCEPTED_COMPOSE':{'server.container_name':'geox-v1-server','server.published_port':3001,'server.target_port':3000},
+            'EFFECTIVE_RENDERED_CONFIG':{'container_name':server.get('container_name'),'ports':server.get('ports')},
+            'ACTUAL_CREATED_CONTAINER':actual.get('Name','').lstrip('/') or None,
+            'ACTUAL_DOCKER_PORT_BINDING':ports.get('3000/tcp'),
+            'PREEXISTING_COLLIDING_ACTOR':collision,
+            'PHASE1_EXIT_CODE':int(os.environ.get('PHASE1_EXIT_CODE','0')) if os.environ.get('PHASE1_EXIT_CODE') else 0,
+            'PHASE2_EXIT_CODE':int(os.environ.get('PHASE2_EXIT_CODE','0')) if os.environ.get('PHASE2_EXIT_CODE') else 0,
+            'historical_comparison':{'run_id':34009041184,'marker':'FST_ERR_HOOK_TIMEOUT','role':'comparison_only_not_presumed_current_root_cause'}
+          }
+          pathlib.Path('acceptance-output/BFRR_STARTUP_IDENTITY_RECONCILIATION.json').write_text(json.dumps(out,indent=2,sort_keys=True)+'\n')
+          print('BFRR_STARTUP_IDENTITY_RECONCILIATION '+json.dumps(out,sort_keys=True,separators=(',',':')))
+          PY
+
+          if [ "$PHASE2_EXIT_CODE" -ne 0 ]; then
+            exit "$PHASE2_EXIT_CODE"
+          fi
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
+          SH
+          chmod +x /tmp/bfrr-startup-evidence.sh
+
+      - name: Run frozen acceptance successor
+        run: python3 /tmp/run-bfrr-source-job.py acceptance
+
+      - name: Upload final qualification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bfrr-final-qualification-output
+          path: |
+            acceptance-output/**
+            ${{ runner.temp }}/bline-successor-failure-leaf-trace.log
+          if-no-files-found: warn
