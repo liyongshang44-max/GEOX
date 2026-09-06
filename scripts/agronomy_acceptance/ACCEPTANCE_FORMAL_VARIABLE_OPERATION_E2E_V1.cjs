@@ -1,11 +1,13 @@
 // P0.6-post debt: migrate this scenario to runFormalScenarioKernelV1; current script still contains a standalone mini-kernel.
-const { randomUUID } = require('node:crypto');
+const { randomUUID, createHash } = require('node:crypto');
 const { Pool } = require('pg');
 const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const runId = () => `fsr_${randomUUID().replace(/-/g, '')}`;
 const sampleId = (prefix) => `${prefix}_${Date.now()}_${randomUUID().replace(/-/g, '').slice(0, 8)}`;
+const sha = (value) => createHash('sha256').update(String(value)).digest('hex');
+const deviceCredentialSecret = (run, device_id) => `${run}:${device_id}:credential`;
 const PASS_COVERAGE = 0.9;
 const MAX_DEVIATION = 0.1;
 
@@ -71,11 +73,12 @@ async function health(base) {
   }
   throw last ?? new Error('health failed');
 }
-async function ensureDevice(pool, scope, field_id, device_id) {
+async function ensureDevice(pool, scope, field_id, device_id, run) {
   await pool.query(`ALTER TABLE device_index_v1 ADD COLUMN IF NOT EXISTS device_mode TEXT NOT NULL DEFAULT 'physical'`).catch(() => undefined);
   await pool.query(`CREATE TABLE IF NOT EXISTS device_capability(tenant_id TEXT NOT NULL,device_id TEXT NOT NULL,capabilities JSONB NOT NULL DEFAULT '[]'::jsonb,updated_ts_ms BIGINT NOT NULL,PRIMARY KEY(tenant_id,device_id))`);
   await pool.query(`CREATE TABLE IF NOT EXISTS device_binding_index_v1(tenant_id TEXT NOT NULL,device_id TEXT NOT NULL,field_id TEXT NOT NULL,bound_ts_ms BIGINT NULL,PRIMARY KEY(tenant_id,device_id,field_id))`);
   await pool.query(`CREATE TABLE IF NOT EXISTS device_status_index_v1(tenant_id TEXT NOT NULL,project_id TEXT NULL,group_id TEXT NULL,field_id TEXT NULL,device_id TEXT NOT NULL,status TEXT NULL,last_telemetry_ts_ms BIGINT NULL,last_heartbeat_ts_ms BIGINT NULL,battery_percent INTEGER NULL,rssi_dbm INTEGER NULL,fw_ver TEXT NULL,updated_ts_ms BIGINT NOT NULL,PRIMARY KEY(tenant_id,device_id))`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS device_credential_index_v1(tenant_id TEXT NOT NULL,device_id TEXT NOT NULL,credential_id TEXT NOT NULL,credential_hash TEXT NOT NULL,status TEXT NOT NULL,issued_ts_ms BIGINT NOT NULL,revoked_ts_ms BIGINT NULL,created_ts_ms BIGINT NULL,updated_ts_ms BIGINT NULL,PRIMARY KEY(tenant_id,device_id,credential_id))`);
   await pool.query(`ALTER TABLE device_status_index_v1 ADD COLUMN IF NOT EXISTS status TEXT NULL`).catch(() => undefined);
   await pool.query(`ALTER TABLE device_status_index_v1 ADD COLUMN IF NOT EXISTS field_id TEXT NULL`).catch(() => undefined);
   const ts = Date.now();
@@ -89,6 +92,8 @@ async function ensureDevice(pool, scope, field_id, device_id) {
     'device.irrigation.valve.open',
   ]), ts]);
   await pool.query(`INSERT INTO device_binding_index_v1 VALUES($1,$2,$3,$4) ON CONFLICT(tenant_id,device_id,field_id) DO UPDATE SET bound_ts_ms=EXCLUDED.bound_ts_ms`, [scope.tenant_id, device_id, field_id, ts]);
+  const credential_id = `cred_${device_id}`;
+  await pool.query(`INSERT INTO device_credential_index_v1(tenant_id,device_id,credential_id,credential_hash,status,issued_ts_ms,revoked_ts_ms,created_ts_ms,updated_ts_ms) VALUES($1,$2,$3,$4,'ACTIVE',$5,NULL,$5,$5) ON CONFLICT(tenant_id,device_id,credential_id) DO UPDATE SET credential_hash=EXCLUDED.credential_hash,status='ACTIVE',revoked_ts_ms=NULL,updated_ts_ms=EXCLUDED.updated_ts_ms`, [scope.tenant_id, device_id, credential_id, sha(deviceCredentialSecret(run, device_id)), ts]);
   await pool.query(`INSERT INTO device_status_index_v1(tenant_id,project_id,group_id,field_id,device_id,status,last_telemetry_ts_ms,last_heartbeat_ts_ms,battery_percent,rssi_dbm,fw_ver,updated_ts_ms) VALUES($1,$2,$3,$4,$5,'ONLINE',$6,$6,82,-55,'formal-variable-e2e',$6) ON CONFLICT(tenant_id,device_id) DO UPDATE SET project_id=EXCLUDED.project_id,group_id=EXCLUDED.group_id,field_id=EXCLUDED.field_id,status='ONLINE',last_telemetry_ts_ms=EXCLUDED.last_telemetry_ts_ms,last_heartbeat_ts_ms=EXCLUDED.last_heartbeat_ts_ms,updated_ts_ms=EXCLUDED.updated_ts_ms`, [scope.tenant_id, scope.project_id, scope.group_id, field_id, device_id, ts - 30000]);
 }
 async function postZoneSamples(base, token, scope, field_id, device_id, zone_id, phase, formal_scenario_run_id, sampleWindow) {
@@ -117,9 +122,9 @@ async function postZoneSamples(base, token, scope, field_id, device_id, zone_id,
         sample_id: sampleId(`${phase}_${zone_id}_${m.metric}_${i}`), sensor_id: device_id, field_id,
         ts_ms, metric: m.metric, value: m.value, unit: m.unit, qc_quality: 'ok', source: i % 2 === 0 ? 'device' : 'gateway',
         interpolated: false, synthetic: false,
-        payload: { ...scope, field_id, device_id, zone_id, phase, formal_scenario_run_id, formal_scenario: 'FORMAL_VARIABLE_OPERATION_E2E_V1' },
+        payload: { ...scope, field_id, device_id, credential_id: `cred_${device_id}`, zone_id, phase, formal_scenario_run_id, formal_scenario: 'FORMAL_VARIABLE_OPERATION_E2E_V1' },
       };
-      requireOk(await fetchJson(`${base}/api/v1/sensing/raw-samples`, { method: 'POST', token, body }), `zone sample ${zone_id}/${phase}/${m.metric}/${i}`);
+      requireOk(await fetchJson(`${base}/api/v1/sensing/raw-samples`, { method: 'POST', token: deviceCredentialSecret(formal_scenario_run_id, device_id), body }), `zone sample ${zone_id}/${phase}/${m.metric}/${i}`);
       refs.push(body.sample_id);
     }
   }
@@ -178,7 +183,7 @@ async function taskPayload(pool, scope, operation_plan_id) {
 function receiptBody(scope, operation_plan_id, act_task_id, field_id, device_id, zoneApps, status = 'executed') {
   return {
     ...scope, operation_plan_id, act_task_id,
-    executor_id: { kind: 'script', id: 'formal_variable_operation_e2e', namespace: 'agronomy_acceptance' },
+    executor_id: { kind: 'script', id: 'tok_executor_actor', namespace: 'executor_runtime_v1' },
     execution_time: { start_ts: Date.now() - 1200000, end_ts: Date.now() },
     execution_coverage: { kind: 'field', ref: field_id },
     resource_usage: { fuel_l: null, electric_kwh: null, water_l: 440, chemical_ml: null },
@@ -254,7 +259,7 @@ async function fetchOperationReport(base, token, scope, operation_plan_id) {
     const season_id = `season_${run}`;
     const device_id = `dev_${run}`;
     const zones = [{ zone_id: 'zone_a', zone_name: 'North required zone' }, { zone_id: 'zone_b', zone_name: 'South required zone' }];
-    await ensureDevice(pool, scope, field_id, device_id);
+    await ensureDevice(pool, scope, field_id, device_id, run);
     await createZones(base, adminToken, scope, field_id, zones);
     await ensureCropContextViaProgram(base, adminToken, scope, field_id, season_id, run);
     const endTs = Date.now() - 60_000;

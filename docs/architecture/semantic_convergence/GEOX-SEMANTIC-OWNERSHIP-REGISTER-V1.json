@@ -1,0 +1,3642 @@
+{
+  "schema_version": "1.1",
+  "status": "proposal_machine_register",
+  "phase": "B-02",
+  "repository": "liyongshang44-max/GEOX",
+  "protected_main_baseline": "26c1383f7f45abb76c99e28ec3d06714e85d1b2c",
+  "stacked_base_branch": "docs/bline-b01-semantic-convergence-v1",
+  "architecture_candidate_pr": 3300,
+  "b01_pr": 3301,
+  "authority_note": "This register is a B-line machine-readable governance proposal. It is not repository-level SSOT and does not activate target owners. docs/SSOT.md, README_MIGRATION.md, recognized domain constitutions, migrations, and proven runtime behavior retain their assigned authority.",
+  "enforcement_model": {
+    "purpose": "Prevent new unregistered semantic ownership/touchpoints while grandfathering explicitly recorded current duplication until B-04/B-05/B-06/B-09 convergence.",
+    "linter_scope": "STATIC_EXPLICIT_ONLY",
+    "grandfathered_duplicate_rule": {
+      "grandfathered_duplicate": true,
+      "new_owner_creation": "FORBIDDEN",
+      "removal_target_required": true
+    },
+    "non_goal": "The linter does not infer arbitrary TypeScript business meaning and does not repair current runtime semantics."
+  },
+  "semantics": [
+    {
+      "semantic_id": "evidence.raw_observation",
+      "question": "What raw event/source was received?",
+      "target_owner": "Raw Evidence Ledger / Evidence ingestion plane",
+      "canonical_output_type": "CanonicalObservationV1 (B-03 target; source facts remain source records)",
+      "current_state": "MULTI_INGRESS_EXPECTED",
+      "target_phase": "B-03/B-04",
+      "new_owner_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+      "registered_producers": [
+        {
+          "producer_id": "telemetry-ingest",
+          "path": "apps/server/src/routes/telemetry_v1.ts",
+          "role": "telemetry ingestion surface",
+          "authority_level": "INGRESS",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "raw-compat-route",
+          "path": "apps/server/src/routes/raw.ts",
+          "role": "legacy/raw compatibility ingress",
+          "authority_level": "INGRESS_COMPATIBILITY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "COMPATIBILITY",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "sensing-raw-sample-ingress",
+          "path": "apps/server/src/routes/sensing_fact_envelope_v1.ts",
+          "role": "active raw_samples ingress that appends raw_sample_v1 evidence, emits a post-COMMIT raw_sample_runtime_available_v1 provenance marker for conservative runtime-availability authority, and invokes the official observation pipeline for formal device/gateway samples",
+          "authority_level": "INGRESS",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "registerSensingFactEnvelopeV1Routes",
+            "appendRawSampleV1"
+          ],
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "stage1-sensing",
+          "path": "apps/server/src/domain/sensing/run_sensing_inference_pipeline_v1.ts",
+          "role": "current sensing consumer",
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "agronomy-agent",
+          "path": "apps/server/src/jobs/agronomy_agent.ts",
+          "role": "reads telemetry_index_v1 as a fail-closed legacy agronomy-signal input and freezes the selected telemetry fact_id; missing value or exact fact identity yields no semantic output",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "FEATURE_FLAG",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "appleii-stage1-evidence-sufficiency",
+          "path": "apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts",
+          "role": "reads raw_samples plus the same-ingress post-COMMIT raw_sample_runtime_available_v1 provenance marker; legacy Apple-II sufficiency remains authoritative while the marker is also supplied to the canonical qualification shadow",
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        }
+      ],
+      "notes": [
+        "Multiple ingress adapters are expected; multiplicity here is not itself duplicate decision authority.",
+        "Raw evidence remains append-only even when qualification removes authority."
+      ],
+      "runtime_consumers": [
+        {
+          "consumer_id": "stage1-sensing",
+          "path": "apps/server/src/domain/sensing/run_sensing_inference_pipeline_v1.ts",
+          "producer_id": "telemetry-ingest",
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-001"
+        },
+        {
+          "consumer_id": "agronomy-agent",
+          "path": "apps/server/src/jobs/agronomy_agent.ts",
+          "producer_id": "telemetry-ingest",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "FEATURE_FLAG",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-002"
+        },
+        {
+          "consumer_id": "stage1-sensing",
+          "path": "apps/server/src/domain/sensing/run_sensing_inference_pipeline_v1.ts",
+          "producer_id": "sensing-raw-sample-ingress",
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-029"
+        },
+        {
+          "consumer_id": "appleii-stage1-evidence-sufficiency",
+          "path": "apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts",
+          "producer_id": "sensing-raw-sample-ingress",
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-030"
+        }
+      ]
+    },
+    {
+      "semantic_id": "evidence.qualification",
+      "question": "Can an observation carry authority for a role at decision time?",
+      "target_owner": "Evidence Qualification",
+      "canonical_output_type": "EvidenceQualificationV1 (B-03 target)",
+      "current_state": "DUPLICATE_AUTHORITY",
+      "target_phase": "B-04",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "stage1-formal-gate",
+          "path": "apps/server/src/domain/decision/stage1_action_boundary_v1.ts",
+          "role": "formal-trigger evidence sufficiency/time coverage/freshness/device/conflict gate",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "fingerprints": [
+            "evaluateFormalStage1TriggerGateV1",
+            "FORMAL_STAGE1_TRIGGER_NEEDS_EVIDENCE"
+          ],
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "evidence-judge-v2",
+          "path": "apps/server/src/domain/judge/evidence_judge_v2.ts",
+          "role": "legacy compatibility Evidence Judge verdict that still recomputes soil physical/freshness semantics; B-04e adds a canonical qualification sufficiency shadow and B-09 owns eventual authority removal",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "fingerprints": [
+            "evaluateEvidenceJudgeV2",
+            "judge_kind: \"EVIDENCE\""
+          ],
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "apple-ii-contract-semantics",
+          "path": "docs/audit/CONTRACT_ALIGNMENT_MATRIX_V1.md",
+          "role": "documented evidence-quality/time-coverage/QC/device/conflict semantics",
+          "authority_level": "REFERENCE_CONCEPT",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "COMPATIBILITY",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "mcft-evidence-authority",
+          "path": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE.md",
+          "role": "governed/as-of evidence-window semantics for Twin progression",
+          "authority_level": "FUTURE_CANONICAL_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "INTENTIONAL_ISOLATION",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "canonical-evidence-qualification-shadow",
+          "path": "apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.ts",
+          "role": "maps established B-04 source/quality/physical/scope/conflict dimensions plus B-04d4 marker-backed temporal availability into B-03 EvidenceQualificationV1 as a non-authoritative shadow projection",
+          "authority_level": "SHADOW_PROJECTION",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectRawSampleEvidenceQualificationV1",
+            "evidenceQualificationV1Schema.parse"
+          ],
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "agronomy-judge-v2",
+          "path": "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+          "role": "currently consumes evidence_judge_verdict",
+          "current": true,
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "NOT_PROVEN"
+        },
+        {
+          "consumer_id": "stage1-recommendation-path",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "role": "currently consumes Stage-1 formal trigger gate",
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "judge-v2-evidence-route",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "role": "separate Evidence Judge POST route; evaluates and persists Evidence Judge result",
+          "current": true,
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "appleii-canonical-evidence-shadow",
+          "path": "apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts",
+          "role": "builds and carries the B-03 EvidenceQualificationV1 shadow batch alongside existing Apple-II compatibility sufficiency, including conservative post-COMMIT runtime-availability authority when the same-ingress marker exists",
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "stage1-canonical-evidence-shadow-debug",
+          "path": "apps/server/src/domain/decision/stage1_action_boundary_v1.ts",
+          "role": "exposes the canonical qualification shadow in Stage-1 debug while explicitly not using it for gate authority in B-04d3",
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "evidence-judge-canonical-sufficiency-shadow",
+          "path": "apps/server/src/domain/judge/evidence_judge_v2.ts",
+          "role": "problem-specific sufficiency facade over persisted canonical EvidenceQualificationV1; shadow-only in B-04e and cannot change the legacy Evidence Judge verdict",
+          "current": true,
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "agronomy-evidence-dependency-shadow-binding",
+          "path": "apps/server/src/domain/decision/agronomy_evidence_dependency_shadow_binding_v1.ts",
+          "role": "B-09f shadow-only scoped reader of a persisted Evidence Judge result referenced by evidence_judge_id; verifies field/verdict/comparison observability without changing Agronomy authority",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        }
+      ],
+      "notes": [
+        "Must converge physical, temporal, source, spatial, conflict and role-eligibility semantics.",
+        "Device/transport health is not measurement health.",
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only.",
+        "B-09f adds a shadow-only referential consumer that resolves evidence_judge_id to the scoped persisted Evidence Judge; it is not the Agronomy Judge authoritative evidence gate.",
+        "C-004 remains NOT_PROVEN/NOT_WIRED for the historical caller-injected Agronomy verdict dependency; B-09f creates a separate shadow edge C-036 instead of overclaiming that dependency.",
+        "B-09g persists exact canonical EvidenceQualificationV1 qualification_id values in the existing Evidence Judge canonical sufficiency shadow; no new EvidenceQualification owner is created.",
+        "B-09g represents zero canonical qualifications as a known empty ref set and never fabricates a missing qualification object."
+      ],
+      "runtime_consumers": [
+        {
+          "consumer_id": "judge-v2-evidence-route",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "producer_id": "evidence-judge-v2",
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-005"
+        },
+        {
+          "consumer_id": "stage1-recommendation-path",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "producer_id": "stage1-formal-gate",
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-003"
+        },
+        {
+          "consumer_id": "appleii-canonical-evidence-shadow",
+          "path": "apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts",
+          "producer_id": "canonical-evidence-qualification-shadow",
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-031"
+        },
+        {
+          "consumer_id": "stage1-canonical-evidence-shadow-debug",
+          "path": "apps/server/src/domain/decision/stage1_action_boundary_v1.ts",
+          "producer_id": "canonical-evidence-qualification-shadow",
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-032"
+        },
+        {
+          "consumer_id": "evidence-judge-canonical-sufficiency-shadow",
+          "path": "apps/server/src/domain/judge/evidence_judge_v2.ts",
+          "producer_id": "canonical-evidence-qualification-shadow",
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-033"
+        },
+        {
+          "consumer_id": "agronomy-evidence-dependency-shadow-binding",
+          "path": "apps/server/src/domain/decision/agronomy_evidence_dependency_shadow_binding_v1.ts",
+          "producer_id": "evidence-judge-v2",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-036"
+        }
+      ]
+    },
+    {
+      "semantic_id": "context.declared_identity",
+      "question": "What field/season/crop/cultivar/planting/customer context is declared?",
+      "target_owner": "Context Authority",
+      "canonical_output_type": "ContextAssertionV1 / ContextSnapshotV1 (B-05a contracts exist; runtime owner not activated)",
+      "current_state": "BOUNDARY_SCOPED_CONTEXT_SHADOW_ACTIVE",
+      "target_phase": "B-05",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "field-program-fact",
+          "path": "apps/server/src/jobs/agronomy_agent.ts",
+          "role": "reads field_program_v1 as direct decision context input",
+          "authority_level": "GRANDFATHERED_CONTEXT_SOURCE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "fingerprints": [
+            "field_program_v1",
+            "crop_code",
+            "crop_stage"
+          ],
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "FEATURE_FLAG",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "agronomy-context-builder",
+          "path": "apps/server/src/domain/agronomy/context_builder.ts",
+          "role": "aggregates context and derives crop stage",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "fingerprints": [
+            "buildAgronomyContext",
+            "resolveCropStage"
+          ],
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "FEATURE_FLAG",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "field-program-context-compatibility-projector",
+          "path": "apps/server/src/context/field_program_context_projection_v1.ts",
+          "role": "B-05b typed FieldProgram -> ContextSnapshot compatibility projector, now explicitly consumed only by authorized B-09y exact immutable FieldProgram boundary/context binding; default legacy projection behavior remains available",
+          "authority_level": "COMPATIBILITY_PROJECTION",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectFieldProgramDeclaredContextV1",
+            "contextAssertionV1Schema.parse",
+            "contextSnapshotV1Schema.parse"
+          ],
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "b09y-boundary-context-snapshot-producer-v1",
+          "path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+          "role": "authorized B-09y server-created boundary-scoped ContextSnapshot producer backed by one exact immutable FieldProgram fact and the same candidate decision_time; shadow boundary only, no MCFT/B-07e/Approval authority",
+          "authority_level": "BOUNDARY_CONTEXT_SHADOW_ONLY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "buildCandidateDecisionBoundaryContextBindingV1",
+            "contextSnapshotV1Schema.parse",
+            "B09Y_CONTEXT_FACT_TYPE_V1"
+          ],
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "agronomy-rule-engine",
+          "path": "apps/server/src/domain/agronomy/rule_engine.ts",
+          "role": "consumes AgronomyContext",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "FEATURE_FLAG",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "decision-engine-route",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "role": "consumes request/program/read-model context",
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "b09y-candidate-decision-boundary-context-binding",
+          "path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+          "role": "authorized B-09y exact FieldProgram fact consumer creating one boundary-time ContextSnapshot with exact immutable source_ref; no latest Program fallback",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        }
+      ],
+      "notes": [
+        "B-05a freezes declared-context contract vocabulary only; no production Context Authority producer is activated yet.",
+        "Crop stage is not a field of ContextSnapshotV1 and must not be smuggled into declared context authority.",
+        "B-05b maps only typed FieldProgramV1 declaration fields; record_json-only crop_stage/days_after_planting extras are excluded from canonical Context projection.",
+        "FieldProgramV1 does not establish planting-event or management-history assertions unless those facts exist in a typed authority source.",
+        "B-05b-r1 corrected the projector registration into registered_producers; stray producers key is forbidden.",
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only.",
+        "B-09y authorizes one exact immutable FieldProgram fact selector per Candidate boundary. B-05b is consumed only through explicit B02 registration; legacy latest Program readers remain forbidden for canonical Context anchoring."
+      ],
+      "runtime_consumers": [
+        {
+          "consumer_id": "agronomy-rule-engine",
+          "path": "apps/server/src/domain/agronomy/rule_engine.ts",
+          "producer_id": "agronomy-context-builder",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "FEATURE_FLAG",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-025"
+        },
+        {
+          "consumer_id": "decision-engine-route",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "producer_id": "agronomy-context-builder",
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-026"
+        },
+        {
+          "consumer_id": "b09y-candidate-decision-boundary-context-binding",
+          "path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+          "producer_id": "field-program-context-compatibility-projector",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-052"
+        }
+      ]
+    },
+    {
+      "semantic_id": "context.crop_stage",
+      "question": "What observed/estimated crop stage is authoritative for a decision?",
+      "target_owner": "Twin Runtime using qualified Evidence plus Context",
+      "canonical_output_type": "QualifiedCropStageStateV1 (B-05a separation contract; actual Twin runtime binding later)",
+      "current_state": "DUPLICATE_AUTHORITY",
+      "target_phase": "B-05",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "stage-resolver",
+          "path": "apps/server/src/domain/agronomy/stage_resolver.ts",
+          "role": "explicit/DAP/startDate stage derivation",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "fingerprints": [
+            "resolveCropStage",
+            "resolveCropStageByPriority"
+          ],
+          "connection_class": "COMPATIBILITY",
+          "activation": "ALWAYS",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "context-builder-stage",
+          "path": "apps/server/src/domain/agronomy/context_builder.ts",
+          "role": "calls resolveCropStage while building context",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "FEATURE_FLAG",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "rule-engine-stage",
+          "path": "apps/server/src/domain/agronomy/rule_engine.ts",
+          "role": "crop-skill resolution and seedling fallback",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "fingerprints": [
+            "normalizeSkillStage",
+            "return \"seedling\""
+          ],
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "FEATURE_FLAG",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "decision-engine-stage",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "role": "direct stage-resolver consumer in recommendation route",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "field-program-state-stage",
+          "path": "apps/server/src/projections/field_program_state_v1.ts",
+          "role": "projection resolves crop stage",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "COMPATIBILITY",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "operation-state-stage",
+          "path": "apps/server/src/routes/operation_state_v1.ts",
+          "role": "operation-state route uses priority stage resolution",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "COMPATIBILITY",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "mcft-stage-reference",
+          "path": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE.md",
+          "role": "future qualified stage/state authority",
+          "authority_level": "FUTURE_CANONICAL_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "INTENTIONAL_ISOLATION",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "legacy-stage-compatibility-adapter",
+          "path": "apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.ts",
+          "role": "pure B-05c compatibility adapter from legacy stage-resolver semantics into QualifiedCropStageStateV1; UNKNOWN is preserved and legacy output never becomes canonical decision input",
+          "authority_level": "COMPATIBILITY_PROJECTION",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectLegacyCropStageCompatibilityV1",
+            "qualifiedCropStageStateV1Schema.parse",
+            "resolveCropStage"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "crop-skill-stage-compatibility-adapter",
+          "path": "apps/server/src/context/crop_skill_stage_compatibility_adapter_v1.ts",
+          "role": "pure B-05d adapter from legacy CropSkill.resolveStage output into QualifiedCropStageStateV1; missing/malformed day input preserves UNKNOWN and skill output never becomes canonical decision authority",
+          "authority_level": "COMPATIBILITY_PROJECTION",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectCropSkillStageCompatibilityV1",
+            "qualifiedCropStageStateV1Schema.parse",
+            "crop_skill.resolveStage"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        }
+      ],
+      "registered_consumers": [],
+      "notes": [
+        "UNKNOWN must remain UNKNOWN in canonical paths.",
+        "Compatibility default/resolver output must not silently become authoritative stage.",
+        "B-05a contract distinguishes UNKNOWN, COMPATIBILITY_NON_AUTHORITATIVE and TWIN_QUALIFIED representation.",
+        "No B-05a production runtime is authorized to instantiate QualifiedCropStageStateV1; future producer registration is required before runtime use.",
+        "B-05c registers one capability-island QualifiedCropStageStateV1 compatibility adapter; this is not canonical stage authority and has no runtime consumer.",
+        "Negative DAP, invalid/future start date, unsupported crop and resolver unknown are represented as canonical UNKNOWN rather than normalized into a concrete legacy stage.",
+        "Historical stage authority is not removed in B-05; authority removal remains gated by B-09 shadow-compare discipline.",
+        "B-05c adapter is registered under both the crop-stage touchpoint guard and QualifiedCropStage instantiation guard.",
+        "B-05d registers crop-skill stage calculation as compatibility-only; missing day input cannot inherit legacy seedling defaults into canonical stage.",
+        "Explicit zero-day input is distinguishable from missing input: zero may produce compatibility seedling while missing remains UNKNOWN.",
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only."
+      ],
+      "runtime_consumers": []
+    },
+    {
+      "semantic_id": "twin.physical_state",
+      "question": "What is the current estimated physical field/root-zone state?",
+      "target_owner": "Twin Runtime",
+      "canonical_output_type": "Twin State / canonical posterior (existing MCFT family)",
+      "current_state": "DUPLICATE_OR_LEGACY_STATE",
+      "target_phase": "B-09",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "derived-sensing-state-service",
+          "path": "apps/server/src/services/derived_sensing_state_service_v1.ts",
+          "role": "derived sensing state projection/service",
+          "authority_level": "PROJECTION_ONLY",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "COMPATIBILITY",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": [
+            "decision-engine-state"
+          ]
+        },
+        {
+          "producer_id": "sensing-inference-pipeline",
+          "path": "apps/server/src/domain/sensing/run_sensing_inference_pipeline_v1.ts",
+          "role": "sensing inference/derived-state producer",
+          "authority_level": "PROJECTION_OR_LEGACY",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "mcft-state-reference",
+          "path": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE.md",
+          "role": "future canonical posterior State",
+          "authority_level": "FUTURE_CANONICAL_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "INTENTIONAL_ISOLATION",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "legacy-root-zone-state-builder",
+          "path": "apps/server/src/domain/soil_water/root_zone_soil_water_state_builder_v1.ts",
+          "role": "legacy root-zone state builder retained as acceptance/library capability, not canonical MCFT State",
+          "authority_level": "ACCEPTANCE_LIBRARY",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "ACCEPTANCE_LIBRARY_ISLAND",
+          "activation": "TEST_ACCEPTANCE_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": [
+            "root-zone-state-acceptance"
+          ]
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "decision-engine-state",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "role": "currently reads derived sensing state directly",
+          "current": true,
+          "connection_class": "COMPATIBILITY",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "root-zone-state-acceptance",
+          "path": "scripts/runtime_acceptance/ACCEPTANCE_ROOT_ZONE_SOIL_WATER_STATE_RUNTIME_V1.cjs",
+          "role": "acceptance/library-only state builder consumer",
+          "current": true,
+          "connection_class": "ACCEPTANCE_LIBRARY_ISLAND",
+          "activation": "TEST_ACCEPTANCE_ONLY",
+          "runtime_edge": "PROVEN"
+        }
+      ],
+      "notes": [
+        "B-line must not redefine MCFT State semantics.",
+        "Legacy sensing/water states become projection/calculator/compatibility as already adjudicated.",
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only."
+      ],
+      "runtime_consumers": [
+        {
+          "consumer_id": "root-zone-state-acceptance",
+          "path": "scripts/runtime_acceptance/ACCEPTANCE_ROOT_ZONE_SOIL_WATER_STATE_RUNTIME_V1.cjs",
+          "producer_id": "legacy-root-zone-state-builder",
+          "connection_class": "ACCEPTANCE_LIBRARY_ISLAND",
+          "activation": "TEST_ACCEPTANCE_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-013"
+        },
+        {
+          "consumer_id": "decision-engine-state",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "producer_id": "derived-sensing-state-service",
+          "connection_class": "COMPATIBILITY",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-027"
+        }
+      ]
+    },
+    {
+      "semantic_id": "twin.forecast_scenario",
+      "question": "What may happen under future forcing, and what happens under alternative candidate actions?",
+      "target_owner": "Twin Runtime / Scenario Engine",
+      "canonical_output_type": "Twin Forecast plus Scenario Set",
+      "current_state": "BOUNDARY_CLEAR_TARGET_NOT_YET_PRODUCT_CONNECTED",
+      "target_phase": "B-08/B-09",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "external-weather-projection",
+          "path": "apps/server/src/projections/weather_forecast_v1.ts",
+          "role": "external exogenous weather forecast; not canonical field Twin forecast",
+          "authority_level": "EXTERNAL_FORCING",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "mcft-forecast-scenario-reference",
+          "path": "docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE.md",
+          "role": "canonical target field Forecast/Scenario semantics",
+          "authority_level": "FUTURE_CANONICAL_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "INTENTIONAL_ISOLATION",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "legacy-root-zone-forecast-builder",
+          "path": "apps/server/src/domain/soil_water/root_zone_soil_water_forecast_builder_v1.ts",
+          "role": "legacy root-zone forecast builder retained in acceptance/library surface",
+          "authority_level": "ACCEPTANCE_LIBRARY",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "ACCEPTANCE_LIBRARY_ISLAND",
+          "activation": "TEST_ACCEPTANCE_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": [
+            "root-zone-forecast-acceptance"
+          ]
+        },
+        {
+          "producer_id": "legacy-root-zone-scenario-builder",
+          "path": "apps/server/src/domain/soil_water/root_zone_irrigation_scenario_builder_v1.ts",
+          "role": "legacy root-zone scenario builder retained in acceptance/library surface",
+          "authority_level": "ACCEPTANCE_LIBRARY",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "ACCEPTANCE_LIBRARY_ISLAND",
+          "activation": "TEST_ACCEPTANCE_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": [
+            "root-zone-scenario-acceptance"
+          ]
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "decision-engine-weather",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "role": "currently reads external weather forecast directly",
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "root-zone-forecast-acceptance",
+          "path": "scripts/runtime_acceptance/ACCEPTANCE_ROOT_ZONE_SOIL_WATER_FORECAST_RUNTIME_V1.cjs",
+          "role": "acceptance/library-only forecast builder consumer",
+          "current": true,
+          "connection_class": "ACCEPTANCE_LIBRARY_ISLAND",
+          "activation": "TEST_ACCEPTANCE_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "root-zone-scenario-acceptance",
+          "path": "scripts/runtime_acceptance/ACCEPTANCE_ROOT_ZONE_IRRIGATION_SCENARIO_RUNTIME_V1.cjs",
+          "role": "acceptance/library-only scenario builder consumer",
+          "current": true,
+          "connection_class": "ACCEPTANCE_LIBRARY_ISLAND",
+          "activation": "TEST_ACCEPTANCE_ONLY",
+          "runtime_edge": "PROVEN"
+        }
+      ],
+      "notes": [
+        "Forecast is not Scenario; Scenario is not Recommendation.",
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only."
+      ],
+      "runtime_consumers": [
+        {
+          "consumer_id": "root-zone-forecast-acceptance",
+          "path": "scripts/runtime_acceptance/ACCEPTANCE_ROOT_ZONE_SOIL_WATER_FORECAST_RUNTIME_V1.cjs",
+          "producer_id": "legacy-root-zone-forecast-builder",
+          "connection_class": "ACCEPTANCE_LIBRARY_ISLAND",
+          "activation": "TEST_ACCEPTANCE_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-014"
+        },
+        {
+          "consumer_id": "root-zone-scenario-acceptance",
+          "path": "scripts/runtime_acceptance/ACCEPTANCE_ROOT_ZONE_IRRIGATION_SCENARIO_RUNTIME_V1.cjs",
+          "producer_id": "legacy-root-zone-scenario-builder",
+          "connection_class": "ACCEPTANCE_LIBRARY_ISLAND",
+          "activation": "TEST_ACCEPTANCE_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-015"
+        },
+        {
+          "consumer_id": "decision-engine-weather",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "producer_id": "external-weather-projection",
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-028"
+        }
+      ]
+    },
+    {
+      "semantic_id": "interpretation.agronomy",
+      "question": "How is evidence interpreted for explanation without action authority?",
+      "target_owner": "Agronomy Interpretation layer",
+      "canonical_output_type": "agronomy_interpretation_v1",
+      "current_state": "FROZEN_CLEAR",
+      "target_phase": "KEEP",
+      "new_owner_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+      "registered_producers": [
+        {
+          "producer_id": "agronomy-interpretation-contract",
+          "path": "docs/controlplane/GEOX-CP-Agronomy-Interpretation-Contract-v1.md",
+          "role": "frozen explain-only semantic contract",
+          "authority_level": "CURRENT_AUTHORITY_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "INTENTIONAL_ISOLATION",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "agronomy-inference-route",
+          "path": "apps/server/src/routes/agronomy_inference_v1.ts",
+          "role": "registered agronomy inference API surface not wired as the central decision spine",
+          "authority_level": "ROUTE_CAPABILITY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": [
+            "agronomy-module-registration"
+          ]
+        },
+        {
+          "producer_id": "agronomy-interpretation-route",
+          "path": "apps/server/src/routes/agronomy_v0.ts",
+          "role": "runtime agronomy interpretation API surface intentionally isolated from deterministic Judge authority",
+          "authority_level": "EXPLAIN_ONLY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "INTENTIONAL_ISOLATION",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": [
+            "agronomy-module-registration"
+          ]
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "agronomy-module-registration",
+          "path": "apps/server/src/modules/agronomy/registerAgronomyModule.ts",
+          "role": "registers agronomy inference and agronomy routes",
+          "current": true,
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "ALWAYS",
+          "runtime_edge": "PROVEN"
+        }
+      ],
+      "notes": [
+        "Judge must not consume Agronomy Interpretation into deterministic ProblemState semantics."
+      ],
+      "runtime_consumers": [
+        {
+          "consumer_id": "agronomy-module-registration",
+          "path": "apps/server/src/modules/agronomy/registerAgronomyModule.ts",
+          "producer_id": "agronomy-inference-route",
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "ALWAYS",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-017"
+        }
+      ]
+    },
+    {
+      "semantic_id": "decision.calculation",
+      "question": "What deterministic agronomic calculations are produced?",
+      "target_owner": "Decision calculators",
+      "canonical_output_type": "CalculationResultV1 (B-06b compatibility adapter capability registered; no runtime consumer connected)",
+      "current_state": "MULTI_CALCULATOR_EXPECTED",
+      "target_phase": "B-06",
+      "new_owner_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+      "registered_producers": [
+        {
+          "producer_id": "irrigation-requirement-skill",
+          "path": "apps/server/src/domain/agronomy/skills/irrigation/irrigation_requirement_skill_v1.ts",
+          "role": "deterministic irrigation requirement calculator",
+          "authority_level": "CALCULATOR_ONLY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "LOCAL_DIRECT_CALL",
+          "activation": "ALWAYS",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "irrigation-deficit-skill",
+          "path": "apps/server/src/domain/agronomy/skills/irrigation/irrigation_deficit_skill_v1.ts",
+          "role": "deterministic deficit calculator",
+          "authority_level": "CALCULATOR_ONLY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "LOCAL_DIRECT_CALL",
+          "activation": "ALWAYS",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "irrigation-calculation-result-compatibility-adapter",
+          "path": "apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.ts",
+          "role": "B-06b compatibility projection from the exact persisted irrigation requirement skill output into CalculationResultV1; consumed only by the authorized B-09ae shadow composition; no final eligibility/approval/execution authority",
+          "authority_level": "CALCULATION_ONLY_ADAPTER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectIrrigationRequirementCalculationResultV1",
+            "projectIrrigationDeficitCalculationResultV1",
+            "calculationResultV1Schema.parse"
+          ],
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "agronomy-rule-engine",
+          "path": "apps/server/src/domain/agronomy/rule_engine.ts",
+          "role": "deterministic rule/crop-skill evaluation but currently emits recommendation semantics",
+          "authority_level": "GRANDFATHERED_CANDIDATE_PRODUCER",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "FEATURE_FLAG",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "agronomy-judge-calculation",
+          "path": "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+          "role": "calls deficit/requirement skills and emits WATER_DEFICIT/PASS/BLOCKED",
+          "authority_level": "GRANDFATHERED_MIXED_AUTHORITY",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "decision-engine-calculation",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "role": "calls irrigation skills/diagnosis/recommendation builders directly",
+          "authority_level": "GRANDFATHERED_COMPOSITION_HOTSPOT",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "evaluate-irrigation-decision-v1",
+          "path": "apps/server/src/domain/decision_engine_v1.ts",
+          "role": "exported evaluateIrrigationDecisionV1 capability with no current repository caller found by B-02 audit",
+          "authority_level": "ORPHANED_CAPABILITY",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "fingerprints": [
+            "evaluateIrrigationDecisionV1"
+          ],
+          "connection_class": "ORPHANED",
+          "activation": "NOT_REFERENCED",
+          "runtime_edge": "NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "judge-v2-agronomy-route",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "role": "separate Agronomy Judge POST route",
+          "current": true,
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "agronomy-judge-local-skills",
+          "path": "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+          "role": "direct local caller of irrigation deficit/requirement skills; generic Skill Runtime is not in this call path",
+          "current": true,
+          "connection_class": "LOCAL_DIRECT_CALL",
+          "activation": "ALWAYS",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "b09ae-irrigate-state-calculation-shadow-binding",
+          "path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+          "role": "authorized B-09ae shadow composition consuming the exact persisted decision-engine irrigation skill trace and existing B-06b CalculationResult adapter; no B-07e invocation",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        }
+      ],
+      "notes": [
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only.",
+        "B-06a freezes CalculationResultV1 as CALCULATION_ONLY; calculators cannot directly declare CandidateDecision, eligibility, approval or execution authority.",
+        "B-06a activates no production CalculationResultV1 producer.",
+        "B-06b registers one pure CalculationResult compatibility adapter capability with no runtime consumer.",
+        "B-06b never promotes legacy skill evidence_refs into EvidenceQualification refs; canonical qualification refs must be supplied explicitly.",
+        "B-06b does not promote irrigation_deficit_skill_v1 recommended_amount into CalculationResultV1 because it is recommendation-like/candidate-like semantics.",
+        "B-06g maps only the rule engine's recommendation output into CandidateDecisionV1; expected_effect is not promoted into CalculationResultV1.",
+        "The grandfathered agronomy-rule-engine producer remains historical mixed/candidate behavior until B-09; B-06g adds no CalculationResult runtime producer.",
+        "B-09ae proposes DEC-BLINE-IRRIGATE-STATE-CALCULATION-SHADOW-BINDING-001 as RECOMMENDED_NOT_AUTHORIZED: the same immutable decision_recommendation_v1 source fact used by B-09j should supply persisted irrigation_requirement_skill_v1 skill_trace.outputs.requirement to the existing B-06b CalculationResult adapter.",
+        "B-09ae forbids promoting legacy skill_trace.evidence_refs; canonical EvidenceQualification refs must come from the exact B-09j/B-09h ref continuity set. Candidate/context/decision_time remain unchanged until separately authorized.",
+        "B-09ae is explicitly authorized to consume the exact persisted IRRIGATE recommendation skill_trace and the B-06b CalculationResult compatibility adapter in one API-only shadow composition; all other new consumers still require explicit register governance."
+      ],
+      "runtime_consumers": [
+        {
+          "consumer_id": "judge-v2-agronomy-route",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "producer_id": "agronomy-judge-calculation",
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-006"
+        },
+        {
+          "consumer_id": "agronomy-judge-local-skills",
+          "path": "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+          "producer_id": "irrigation-requirement-skill",
+          "connection_class": "LOCAL_DIRECT_CALL",
+          "activation": "ALWAYS",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-009"
+        },
+        {
+          "consumer_id": "b09ae-irrigate-state-calculation-shadow-binding",
+          "path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+          "producer_id": "decision-engine-calculation",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-047"
+        },
+        {
+          "consumer_id": "b09ae-irrigate-state-calculation-shadow-binding",
+          "path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+          "producer_id": "irrigation-calculation-result-compatibility-adapter",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-048"
+        }
+      ]
+    },
+    {
+      "semantic_id": "decision.candidate",
+      "question": "What action should be considered?",
+      "target_owner": "Decision Runtime",
+      "canonical_output_type": "CandidateDecisionV1 (B-06c recommendation + B-06d decision-plan + B-06e prescription + B-06f operation-plan candidate-view + B-06g AgronomyRecommendationV2 adapters registered; no runtime consumer connected)",
+      "current_state": "DUPLICATE_AUTHORITY",
+      "target_phase": "B-06",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "decision-engine-recommendation",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "role": "formal/product recommendation producer",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "rule-engine-recommendation",
+          "path": "apps/server/src/domain/agronomy/rule_engine.ts",
+          "role": "returns AgronomyRecommendationV2 from matched rules",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "FEATURE_FLAG",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "decision-plan-contract",
+          "path": "docs/controlplane/GEOX-CP-Decision-Plan-Contract-v0.md",
+          "role": "candidate-for-execution contract; not executable",
+          "authority_level": "COMPATIBILITY_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "COMPATIBILITY",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "legacy-operator-scenario-recommendation-writer",
+          "path": "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts",
+          "role": "two preserved legacy scenario-to-recommendation POST routes; registered by Operator Module",
+          "authority_level": "ACTIVE_LEGACY_WRITER",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "fingerprints": [
+            "registerOperatorTwinWriteLegacyRoutesV1",
+            "LEGACY_POST_PATHS_V1"
+          ],
+          "connection_class": "ACTIVE_LEGACY_WRITER",
+          "activation": "ALWAYS",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": [
+            "operator-module-registration"
+          ]
+        },
+        {
+          "producer_id": "legacy-recommendation-candidate-compatibility-adapter",
+          "path": "apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.ts",
+          "role": "pure B-06c compatibility projection from recommendation_v1/decision_recommendation_v1 payload semantics into CandidateDecisionV1; canonical Evidence/Context/Calculation refs remain explicit and no approval/plan/task runtime consumer is connected",
+          "authority_level": "CANDIDATE_ONLY_ADAPTER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectLegacyRecommendationCandidateV1",
+            "candidateDecisionV1Schema.parse"
+          ],
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "decision-plan-candidate-compatibility-adapter",
+          "path": "apps/server/src/domain/decision/decision_plan_candidate_adapter_v1.ts",
+          "role": "pure B-06d compatibility projection from frozen decision_plan_v0 ledger proposal semantics into CandidateDecisionV1; no decision-plan API/writer/runtime consumer is connected",
+          "authority_level": "CANDIDATE_ONLY_ADAPTER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectDecisionPlanCandidateV1",
+            "candidateDecisionV1Schema.parse"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "prescription-action-spec-candidate-compatibility-adapter",
+          "path": "apps/server/src/domain/decision/prescription_action_spec_candidate_adapter_v1.ts",
+          "role": "pure B-06e projection of pre-approval PrescriptionContractV1 action-spec semantics into CandidateDecisionV1; approval/timing/device/acceptance metadata are not promoted and no approval/plan/task runtime consumer is connected",
+          "authority_level": "CANDIDATE_ONLY_ADAPTER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectPrescriptionActionSpecCandidateV1",
+            "candidateDecisionV1Schema.parse"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "operation-plan-authority-classifier-candidate-compatibility-adapter",
+          "path": "apps/server/src/domain/decision/operation_plan_authority_candidate_adapter_v1.ts",
+          "role": "pure B-06f operation_plan_v1 authority classifier plus CandidateDecisionV1 compatibility projection for exact grandfathered Agronomy Agent dual provenance only; approval-derived/downstream/unknown plans fail closed",
+          "authority_level": "CANDIDATE_ONLY_ADAPTER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "classifyOperationPlanAuthorityV1",
+            "projectLegacyOperationPlanProposalCandidateV1",
+            "candidateDecisionV1Schema.parse"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "agronomy-recommendation-v2-candidate-compatibility-adapter",
+          "path": "apps/server/src/domain/decision/agronomy_recommendation_v2_candidate_adapter_v1.ts",
+          "role": "pure B-06g compatibility projection from rule-engine AgronomyRecommendationV2 into CandidateDecisionV1; legacy stage/context/evidence/expected-effect semantics are not promoted and no runtime consumer is connected",
+          "authority_level": "CANDIDATE_ONLY_ADAPTER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectAgronomyRecommendationV2CandidateV1",
+            "candidateDecisionV1Schema.parse"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "approval-request-builder",
+          "path": "apps/server/src/domain/approval/recommendation_approval_request_builder_v1.ts",
+          "role": "builds approval request from recommendation",
+          "current": true,
+          "connection_class": "LOCAL_DIRECT_CALL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "operator-module-registration",
+          "path": "apps/server/src/modules/operator/registerOperatorModule.ts",
+          "role": "actively registers legacy scenario-to-recommendation write module",
+          "current": true,
+          "connection_class": "ACTIVE_LEGACY_WRITER",
+          "activation": "ALWAYS",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+          "role": "B-09j shadow-only scoped recommendation source resolver and explicit runtime consumer of the formal decision-engine recommendation producer plus the existing B-06c CandidateDecision compatibility projector; no Decision Eligibility invocation",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "b09y-candidate-decision-boundary-context-binding",
+          "path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+          "role": "B-09y pre-Candidate boundary resolver reads one scoped decision_recommendation_v1 fact before canonical boundary-bound Candidate projection; ambiguity fails closed and no latest wins",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        }
+      ],
+      "notes": [
+        "Recommendation, decision_plan and prescription are historical/compatibility objects until mapped.",
+        "Execution authority is always NONE at candidate level.",
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only.",
+        "B-06a freezes CandidateDecisionV1 with authority_state=CANDIDATE_ONLY.",
+        "Decision Eligibility, Approval, ApprovedOperationPlan and ExecutableTask are deliberately absent from CandidateDecisionV1.",
+        "Legacy recommendation/decision_plan/prescription/operation-plan proposal mappings require later bounded B-06 adapters; B-06a activates no production CandidateDecisionV1 producer.",
+        "B-06c registers one pure recommendation_v1/decision_recommendation_v1 -> CandidateDecisionV1 compatibility adapter capability with no runtime consumer.",
+        "B-06c never promotes legacy recommendation evidence_refs into canonical EvidenceQualification refs; canonical refs must be supplied explicitly.",
+        "B-06c rejects source objects that already carry downstream approval/plan/task/dispatch/receipt authority instead of collapsing them back into CandidateDecision.",
+        "B-06c uses the legacy top-level action_type as candidate action and does not elevate nested suggested_action operational labels.",
+        "B-06d registers one pure decision_plan_v0 -> CandidateDecisionV1 compatibility adapter capability with no runtime consumer.",
+        "B-06d preserves Sprint 15/16 Decision Plan non-executing/non-coupling semantics and accepts only explicit proposal-shaped payloads.",
+        "B-06d keeps based_on.evidence_refs as legacy provenance only and never promotes them into canonical EvidenceQualification refs.",
+        "B-06e registers one pure pre-approval PrescriptionContractV1 action-spec -> CandidateDecisionV1 compatibility adapter with no runtime consumer.",
+        "B-06e treats DRAFT/READY_FOR_APPROVAL as candidate-compatible only; APPROVAL_REQUESTED/APPROVED/TASK_CREATED/REJECTED/CANCELLED fail closed.",
+        "B-06e never promotes prescription approval/timing/device/acceptance metadata or legacy evidence_refs into downstream or Evidence authority.",
+        "B-06e rejects auto_execute_allowed=true and explicit downstream approval/plan/task/receipt identities.",
+        "B-06f retains a pure historical operation-plan authority classifier/candidate-view compatibility adapter for already-persisted legacy Agronomy Agent plan facts; #3452 removes the active Agronomy Agent Plan writer.",
+        "B-06f historical compatibility classification still requires exact jobs/agronomy_agent + agronomy_agent_auto_create provenance for legacy persisted facts; no new such facts may be produced by the active Agent.",
+        "B-06f explicitly rejects approval-derived, downstream and unknown operation_plan_v1 records instead of collapsing them back into CandidateDecision.",
+        "B-06f candidate projection never removed historical persisted fact semantics; active Agronomy Agent decision/plan production is removed under P0-RES-003 while historical read compatibility remains bounded.",
+        "B-06g registers one pure AgronomyRecommendationV2 -> CandidateDecisionV1 compatibility adapter with no runtime consumer.",
+        "B-06g never promotes legacy rule-engine crop_stage/crop_code into canonical Stage/Context authority.",
+        "B-06g keeps evidence_basis and SkillTrace evidence as legacy provenance only; canonical EvidenceQualification refs remain explicit.",
+        "B-06g runtime-validates the declared AgronomyRecommendationV2 action vocabulary instead of trusting the rule_engine type assertion.",
+        "B-09i runtime provenance corpus on the formal/product decision-engine recommendation path proves that a persisted decision_recommendation_v1 source fact, immutable fact_id, scope, action, status, and occurred_at are resolvable, while no persisted CandidateDecisionV1 identity or canonical candidate_id exists on that path.",
+        "B-09i does not authorize deriving candidate_id from recommendation_id or fact_id, or promoting legacy evidence_refs, snapshot_id, crop_stage, or created_ts into canonical EvidenceQualification, Context, CropStage, or Candidate timestamps; the B-09h QUALIFIED_EVIDENCE criterion remains candidate-unbound and Decision Eligibility Runtime remains disconnected.",
+        "B-09j establishes SOURCE_FACT_SCOPE_SHA256_V1 as an explicit shadow-only candidate identity policy for the bounded decision-engine recommendation path; recommendation_id is lookup provenance only and immutable source fact identity plus tenant/project/group scope form the hash material.",
+        "B-09j connects the existing B-06c adapter only to a registered shadow consumer, rejects missing/ambiguous/non-decision-engine recommendation sources, and preserves Context/Stage/Calculation refs as null/empty rather than promoting legacy snapshot/stage/effect semantics.",
+        "B-09j binds B-09h QUALIFIED_EVIDENCE support refs and CandidateDecision basis EvidenceQualification refs by exact-set equality; it still does not invoke B-07e because full canonical EvidenceQualification objects are not materialized at this seam.",
+        "B-09k corrects the B-09j readiness interpretation: B-07e consumes canonical EvidenceQualification identity refs rather than full EvidenceQualification objects; B-04 can deterministically reconstruct the full qualification projection from persisted raw samples plus post-COMMIT availability markers at a fixed decision time, so object materialization at the B-09j seam is not itself the B-07e contract blocker.",
+        "B-09y proposes DEC-BLINE-CANDIDATE-DECISION-BOUNDARY-001 as RECOMMENDED_NOT_AUTHORIZED: canonical Candidate decision_time must come from one server-created immutable boundary envelope, not legacy created_ts, persistence occurred_at, request/evaluator/wall-clock/latest timestamps.",
+        "B-09y recommends that the same causal boundary propagate to CandidateDecision, ContextSnapshot, CalculationResult, B-09v selector and future DecisionEligibility; post-boundary reads may affect canonical Candidate semantics only when explicitly as-of bounded to the same boundary and immutably referenced.",
+        "B-09y forbids the existing field/season ORDER BY occurred_at DESC LIMIT 1 Program fallback from canonical Context/policy anchoring; canonical Program binding requires an explicit selector verified against one exact scoped immutable FieldProgram fact.",
+        "B-09y creates server-time boundary/context before boundary-bound B-09j Candidate projection. recommendation fact occurred_at and legacy created_ts remain provenance only and never become CandidateDecision.decision_time."
+      ],
+      "runtime_consumers": [
+        {
+          "consumer_id": "operator-module-registration",
+          "path": "apps/server/src/modules/operator/registerOperatorModule.ts",
+          "producer_id": "legacy-operator-scenario-recommendation-writer",
+          "connection_class": "ACTIVE_LEGACY_WRITER",
+          "activation": "ALWAYS",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-016"
+        },
+        {
+          "consumer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+          "producer_id": "legacy-recommendation-candidate-compatibility-adapter",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-041"
+        },
+        {
+          "consumer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+          "producer_id": "decision-engine-recommendation",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-040"
+        },
+        {
+          "consumer_id": "b09y-candidate-decision-boundary-context-binding",
+          "path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+          "producer_id": "decision-engine-recommendation",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-053"
+        }
+      ]
+    },
+    {
+      "semantic_id": "decision.eligibility",
+      "question": "May this candidate action proceed toward approval/production given qualified inputs?",
+      "target_owner": "Decision Eligibility Runtime",
+      "canonical_output_type": "DecisionEligibilityDecisionV1 (B-07e canonical domain runtime seam consumes CandidateDecisionV1 and the B-07d evaluator; no external route/Approval consumer connected)",
+      "current_state": "SHADOW_CRITERION_RUNTIME_OBSERVABLE",
+      "target_phase": "B-07",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "stage1-trigger-eligibility",
+          "path": "apps/server/src/domain/decision/stage1_action_boundary_v1.ts",
+          "role": "currently mixes evidence sufficiency and formal-trigger eligibility",
+          "authority_level": "GRANDFATHERED_PRECURSOR",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "agronomy-judge-gate",
+          "path": "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+          "role": "currently maps evidence verdict to BLOCKED and requirement to WATER_DEFICIT/PASS",
+          "authority_level": "GRANDFATHERED_PRECURSOR",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "future-decision-eligibility",
+          "path": "docs/architecture/semantic_convergence/GEOX-BLINE-CHARTER-V1-AMENDMENT-01-EVIDENCE-FIRST-SEQUENCE.md",
+          "role": "target contract/runtime description",
+          "authority_level": "FUTURE_TARGET_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "INTENTIONAL_ISOLATION",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "stage1-eligibility-precursor-criterion-adapter",
+          "path": "apps/server/src/domain/decision/stage1_eligibility_precursor_adapter_v1.ts",
+          "role": "pure B-07b projection of Stage1FormalTriggerGateV1 into precursor classification and QUALIFIED_EVIDENCE criterion assessment; emits no final eligibility verdict",
+          "authority_level": "ELIGIBILITY_CRITERION_ONLY_ADAPTER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectStage1FormalTriggerEligibilityPrecursorV1",
+            "decisionEligibilityCriterionAssessmentV1Schema.parse"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "agronomy-judge-eligibility-precursor-criterion-adapter",
+          "path": "apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.ts",
+          "role": "B-07c criterion-only projection of Agronomy Judge V2 into STATE or QUALIFIED_EVIDENCE; consumed only by the authorized B-09ae shadow composition and still emits no final eligibility verdict",
+          "authority_level": "ELIGIBILITY_CRITERION_ONLY_ADAPTER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectAgronomyJudgeEligibilityPrecursorV1",
+            "decisionEligibilityCriterionAssessmentV1Schema.parse"
+          ],
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "decision-eligibility-evaluator-v1",
+          "path": "apps/server/src/domain/decision/decision_eligibility_evaluator_v1.ts",
+          "role": "pure B-07d deterministic aggregation of canonical eligibility criteria under an explicit policy_ref/required_criteria set into DecisionEligibilityDecisionV1",
+          "authority_level": "ELIGIBILITY_ONLY_CANONICAL_PRODUCER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "evaluateDecisionEligibilityV1",
+            "decisionEligibilityDecisionV1Schema.parse"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "agronomy-qualified-evidence-criterion-shadow-v1",
+          "path": "apps/server/src/domain/decision/agronomy_qualified_evidence_criterion_shadow_v1.ts",
+          "role": "B-09h shadow-only projection of the audited Agronomy evidence dependency binding into one QUALIFIED_EVIDENCE criterion assessment; candidate binding and final Decision Eligibility remain absent",
+          "authority_level": "SHADOW_ONLY_ELIGIBILITY_CRITERION",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "projectAgronomyQualifiedEvidenceCriterionShadowV1",
+            "decisionEligibilityCriterionAssessmentV1Schema.parse",
+            "candidate_binding_state: z.literal(\"NOT_BOUND\")"
+          ],
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": [
+            "judge-v2-agronomy-qualified-evidence-criterion-shadow"
+          ]
+        },
+        {
+          "producer_id": "decision-eligibility-policy-declaration-writer-v1",
+          "path": "apps/server/src/domain/decision/decision_eligibility_policy_declaration_fact_v1.ts",
+          "role": "B-09s authorized append-only writer for DecisionEligibilityPolicyDeclarationV1 facts; server derives policy/declaration identity, declaration source, declared_at and POLICY_DECLARATION_ONLY authority while caller supplies policy contents",
+          "authority_level": "POLICY_DECLARATION_AUTHORITY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "appendDecisionEligibilityPolicyDeclarationFactV1",
+            "decisionEligibilityPolicyDeclarationV1Schema.parse(",
+            "pg_advisory_xact_lock(hashtext($1))",
+            "POLICY_REF_CONFLICT",
+            "POLICY_REF_AMBIGUOUS"
+          ],
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "decision-eligibility-policy-selector-v1",
+          "path": "apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.ts",
+          "role": "B-09v canonical fail-closed as-of selector over authorized immutable DecisionEligibilityPolicyDeclarationV1 facts; returns policy-selection state only and does not emit DecisionEligibilityDecisionV1",
+          "authority_level": "POLICY_SELECTION_ONLY_CANONICAL_PRODUCER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "selectDecisionEligibilityPolicyFromFactsV1",
+            "readAndSelectDecisionEligibilityPolicyV1",
+            "POLICY_SUPERSESSION_AMBIGUOUS"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "decision-eligibility-runtime-seam-v1",
+          "path": "apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts",
+          "role": "canonical B-07e domain runtime seam; validates CandidateDecision identity/scope/basis continuity and delegates final verdict aggregation to the unique B-07d evaluator",
+          "current": true,
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "judge-v2-agronomy-qualified-evidence-criterion-shadow",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "role": "B-09h attaches the shadow-only QUALIFIED_EVIDENCE criterion observation to Agronomy Judge outputs without feeding Decision Eligibility Runtime",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+          "role": "B-09j consumes only the B-09h shadow QUALIFIED_EVIDENCE criterion/support refs to prove exact Candidate basis continuity; it does not feed or invoke Decision Eligibility Runtime",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "decision-eligibility-policy-declaration-route-v1",
+          "path": "apps/server/src/routes/decision_eligibility_policy_declarations_v1.ts",
+          "role": "authorized human API ingress for append-only DecisionEligibility policy declarations; requires centralized B-09r policy-author authority and does not evaluate B-07e",
+          "current": true,
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "decision-eligibility-policy-selector-v1",
+          "path": "apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.ts",
+          "role": "B-09v reads exact-scope/PROGRAM-anchor append-only policy declarations as-of CandidateDecision.decision_time; no B-07e caller is connected",
+          "current": true,
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "b09ae-irrigate-state-calculation-shadow-binding",
+          "path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+          "role": "B-09ae consumes the existing B-07c precursor only after exact Judge/source-input congruence and explicit canonical CalculationResult support; final Decision Eligibility remains disconnected",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        }
+      ],
+      "notes": [
+        "Normative target verdicts: PASS / DEGRADED / NEED_EVIDENCE / HUMAN_REVIEW / BLOCK.",
+        "Evidence invalidity does not automatically imply action BLOCK.",
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only.",
+        "B-07a freezes DecisionEligibilityDecisionV1 with verdicts PASS/DEGRADED/NEED_EVIDENCE/HUMAN_REVIEW/BLOCK and authority_state=ELIGIBILITY_ONLY.",
+        "B-07a keeps EXPIRED in lifecycle_state rather than the eligibility verdict enum.",
+        "B-07a does not encode invalid EvidenceQualification -> automatic BLOCK; degraded independent support remains representable.",
+        "B-07a activates no production eligibility producer; Stage-1 and Agronomy Judge remain grandfathered precursors until later bounded B-07 mapping and B-09 removal.",
+        "B-07b registers a pure Stage-1 precursor/criterion adapter with direct_verdict_authority=NONE and no runtime consumer.",
+        "B-07b forbids ELIGIBLE->PASS and NOT_ELIGIBLE->BLOCK shortcuts because Stage-1 does not cover the full eligibility factor set.",
+        "B-07b maps NEEDS_EVIDENCE only to a QUALIFIED_EVIDENCE=MISSING criterion; final action verdict remains a later Decision Eligibility runtime concern.",
+        "B-07c registers a pure Agronomy Judge criterion adapter with direct_verdict_authority=NONE and no runtime consumer.",
+        "B-07c forbids WATER_DEFICIT->PASS, PASS->final PASS, and BLOCKED->BLOCK shortcuts.",
+        "B-07c requires explicit canonical CalculationResult refs for irrigation-state criteria and keeps legacy Judge calculation outputs non-authoritative.",
+        "B-07c maps recognized Evidence Judge overrides only to QUALIFIED_EVIDENCE=MISSING; final action verdict remains a later canonical runtime concern.",
+        "B-07d registers the first canonical final DecisionEligibilityDecisionV1 producer as a pure deterministic capability island with no runtime consumer.",
+        "B-07d requires an explicit policy_ref and explicit required_criteria; there is no hidden default required set.",
+        "B-07d aggregation precedence is VIOLATED>REVIEW_REQUIRED>MISSING/UNKNOWN>DEGRADED>SATISFIED.",
+        "B-07d PASS remains ELIGIBILITY_ONLY and is not Approval.",
+        "B-07e establishes the canonical domain runtime seam over a real CandidateDecisionV1 without exposing an external route.",
+        "B-07e derives candidate_ref/scope/context/stage/decision_time from CandidateDecisionV1 and forbids caller overrides.",
+        "B-07e requires Candidate evidence-basis continuity and restricts criterion support refs to canonical runtime/basis refs.",
+        "B-07e is the sole explicitly registered consumer of the B-07d evaluator; Approval and historical precursor authority remain separate.",
+        "B-09h explicitly registers one additional SHADOW_ONLY criterion producer; it is not a replacement for B-07b/B-07c and is not connected to the B-07e Decision Eligibility Runtime.",
+        "B-09h criterion support_refs come only from exact B-09g canonical EvidenceQualification qualification_id provenance.",
+        "B-09h keeps candidate_binding_state=NOT_BOUND, direct_verdict_authority=NONE, consumer_migration_performed=false and authority_removal_permitted=false.",
+        "B-09k adjudicates the bounded decision-engine recommendation path as NOT_READY_FOR_B07E_RUNTIME_CONNECTION because B-07d/B-07e require one explicit product eligibility policy_ref plus required_criteria/applicable_action_types and the repository establishes no hidden default policy for this path.",
+        "B-09k preserves B-07e disconnection: B-09j proves Candidate identity plus QUALIFIED_EVIDENCE ref continuity, while canonical Context/CropStage/CalculationResult support and product Permission/ActionWindow/lifecycle provenance remain unbound or not established on the analyzed path; which of those are mandatory must be decided by the explicit product eligibility policy rather than invented by migration code.",
+        "B-09l proves that the bounded decision-engine recommendation path has no existing DecisionEligibilityPolicyV1 product authority: FieldProgram acceptance_policy_ref is post-execution acceptance governance, evidence_policy_ref has no runtime consumer, and execution_policy/manual-approval constraints govern downstream action mode or approval rather than B-07 eligibility criteria.",
+        "B-09l permits FieldProgram/program_id only as a future eligibility-policy scope anchor; it forbids reusing acceptance_policy_ref, evidence_policy_ref, execution_policy, approval requests, or Twin Kernel P35/P46 eligibility-policy documents as B-07 policy_ref without a new explicit B-Line policy declaration and shadow provenance proof.",
+        "B-09m freezes DecisionEligibilityPolicyDeclarationV1 as a contract-only capability with version-identifying policy_ref, explicit tenant/project/group scope anchor, nonempty unique applicable_action_types and required_criteria, B07D lifecycle semantics, explicit source/provenance and POLICY_DECLARATION_ONLY authority; it intentionally defines no product policy instance, no default criterion set and no B-07e consumer.",
+        "B-09n source-authority inventory recommends a separate append-only decision_eligibility_policy_declaration_v1 fact scoped by canonical decision scope plus an explicit Program/equivalent scope anchor, rather than embedding Eligibility policy contents into FieldProgram or reusing acceptance/evidence/execution/Twin policy families; this is a topology recommendation only and creates no writer or product policy instance.",
+        "B-09n keeps product authority ungranted: before any production policy-declaration writer may be registered under G-B02-32, product governance must explicitly choose the declaration source authority, writer/authz boundary, immutable policy_ref semantics, duplicate/ambiguity behavior and as-of policy selection rules; migration code may not silently choose them.",
+        "B-09o writer-authority inventory finds no existing AoActScopeV0 that semantically matches product DecisionEligibility policy declaration writes: ao_act.task.write is execution-task authority, recommendation/prescription scopes govern different decision artifacts, and security.admin is intentionally broader than a bounded policy-declaration authority.",
+        "B-09o requires a dedicated policy-declaration write authority before any G-B02-32 production path may be registered; the exact future scope token and allowed product role set remain intentionally UNDECIDED pending explicit product-governance authorization.",
+        "B-09o treats actor_id, token_id and change_reason style metadata as a valid auditability pattern evidenced by append-only skill-binding governance, but does not reuse the Skill Binding writer, ao_act.task.write scope, or Skill Registry authority for DecisionEligibility policy declarations.",
+        "B-09p principal-authority inventory separates capability authority from actor role: existing admin/agronomist/approver/operator/support roles prove adjacent capabilities only and do not by themselves establish who may author product DecisionEligibility policy.",
+        "B-09p requires explicit product-governance assignment of the future dedicated policy-declaration capability to one or more principals after the capability itself is authorized; existing admin wildcard must not be treated as provenance for policy authorship merely because it can technically pass current authz checks.",
+        "B-09p classifies human role, service principal, and dual-control workflows as governance options only; no principal model, role set, scope token, writer path or policy contents are selected.",
+        "B-09q authz-enforcement inventory corrects the simplified admin-wildcard model: requireAoActScopeV0 currently requires BOTH explicit token scope membership and role-matrix permission. admin role wildcard alone does not mint an otherwise-absent token scope.",
+        "B-09q finds that a future dedicated policy-declaration scope would therefore be denied to an admin token unless that token explicitly carries the new scope; however, because admin role permission is wildcard, any admin token that is explicitly granted the scope would pass the role layer unless a separate principal-authority constraint is added.",
+        "B-09q recommends, without authorizing implementation, a centralized enforcement topology of dedicated token scope plus explicit product-author principal allowlist, preserving tenant/project/group scope and audit identity. Route-local role checks, global removal of admin wildcard, and hidden special-cases in isScopeAllowedForRoleV1 are not recommended.",
+        "B-09r product-governance authorization freezes the dedicated declaration capability as decision.eligibility.policy.declare and the initial human policy-author principal set as agronomist only.",
+        "B-09r qualification discovered apps/server/src/domain/auth/roles.ts is an MCFT CAP-07 S5/S6 lifecycle-sensitive compatibility surface. B-Line therefore leaves ROLE_SCOPE_MATRIX_V1 byte-identical and enforces the new authority centrally as explicit token capability plus explicit product-author principal allowlist.",
+        "B-09r does not authorize service-principal authorship. A future governed service principal may only execute an already-authorized immutable declaration; no service-principal route/writer path is registered here.",
+        "B-09s activates the first governed production DecisionEligibilityPolicyDeclarationV1 instantiation path: authorized agronomist API -> centralized B-09r authority gate -> append-only facts writer.",
+        "B-09s keeps policy contents caller-supplied and creates no repository/config policy instance or defaults. The writer derives declaration_id, policy_ref, declaration_source_type/ref, declared_at and POLICY_DECLARATION_ONLY authority so callers cannot forge provenance or authority state.",
+        "B-09s enforces one global immutable policy_ref -> one declaration intent using a transaction-scoped PostgreSQL advisory lock and LIMIT 2 historical lookup. Same intent is idempotent; changed content is POLICY_REF_CONFLICT; multiple historical rows are POLICY_REF_AMBIGUOUS; latest-wins is forbidden.",
+        "B-09s preserves B-07e disconnection. No policy selection/as-of reader, eligibility evaluation, approval, execution, consumer migration or historical authority removal is introduced.",
+        "B-09t selection-readiness audit finds CandidateDecisionV1 carries canonical EvidenceScopeV1 but no policy scope anchor/program_id; therefore FieldProgram/program selection cannot be inferred from candidate field/season alone.",
+        "B-09t records that legacy decision_recommendation_v1 may carry program_id, but B-06c/B-09j do not promote that value into canonical CandidateDecision authority. Rehydrating legacy program_id may be shadow provenance only, not authoritative policy selection.",
+        "B-09t identifies canonical ContextSnapshot as the intended future bridge for a Program/equivalent anchor: B-05b DECLARED_FIELD_PROGRAM carries program_id, but the current B-09j candidate has context_snapshot_ref=null, so the bridge is not yet bound.",
+        "B-09t forbids implicit selector precedence before authorization: no latest-version wins, no newest-declaration wins, no field/season specificity ranking, no null-as-wildcard, no supersession override, and no evaluated_at fallback when candidate decision_time is absent.",
+        "B-09u converts the B-09t selector blockers into a proposed, machine-readable product-governance decision package. It remains RECOMMENDED_NOT_AUTHORIZED and creates no selector runtime.",
+        "B-09u recommends ContextSnapshot DECLARED_FIELD_PROGRAM as the v1 canonical Program anchor; exact nullable scope equality with no wildcard/specificity ranking; non-null Candidate.decision_time as the sole selection boundary; fail-closed on multiple applicable policies; and explicit append-only supersession semantics with a half-open effective window.",
+        "B-09u recommends causal policy selection require both declaration declared_at and persisted fact occurred_at to be at-or-before Candidate.decision_time, preventing retrospective policy availability.",
+        "B-09u preserves separation of policy selection from policy contents: no policy_id/version/ref, applicable_action_types, required_criteria, or real declaration instance is selected or created.",
+        "DEC-BLINE-ELIGIBILITY-POLICY-SELECTOR-001 is explicitly authorized for selector/read-model implementation only; real product policy contents and B-07e connection remain separately gated.",
+        "B-09v implements exact ContextSnapshot DECLARED_FIELD_PROGRAM Program anchoring, exact nullable scope equality, Candidate decision_time causal as-of selection, half-open effective windows, and fail-closed 0/1/>1 cardinality.",
+        "B-09v validates same-policy/same-scope/same-anchor append-only supersession with predecessor existence/knowledge, acyclic chain and ambiguous-successor rejection; no latest/version precedence exists.",
+        "B-09v does not modify the current B-09j Candidate projection; context_snapshot_ref=null and decision_time=null therefore continue to fail closed rather than being repaired by legacy program_id or wall clock.",
+        "B-09w proposes DEC-BLINE-IRRIGATE-ELIGIBILITY-POLICY-CONTENT-001 as RECOMMENDED_NOT_AUTHORIZED: IRRIGATE baseline required criteria QUALIFIED_EVIDENCE, CONTEXT, STATE, FORECAST and ACTION_WINDOW; proposal creates no real policy declaration instance.",
+        "B-09w explicitly preserves current readiness gaps: B-09j context_snapshot_ref/decision_time remain null, canonical State/Forecast/ActionWindow support remains unbound, B-07e remains disconnected, and MCFT/ADR/LLM/Approval/Execution/consumer migration/authority removal remain untouched.",
+        "B-09x finds no current canonical CandidateDecision.decision_time source on the bounded recommendation path: legacy created_ts is explicitly non-promoted by B-06c, persisted fact occurred_at is persistence time only, and wall-clock/evaluated_at/latest fallbacks remain forbidden.",
+        "B-09x classifies Context as structurally ready but temporally blocked: FieldProgram facts are append-only and B-05b can project DECLARED_FIELD_PROGRAM, but current Program readers are latest-state readers; canonical binding requires an as-of read bounded by a separately established Candidate decision_time.",
+        "B-09x classifies STATE as B-Line-local capability-not-bound via B-06b CalculationResult plus B-07c, ACTION_WINDOW as vocabulary-only with no canonical producer, and FORECAST as frozen on incomplete MCFT-9 plus separate integration authorization.",
+        "B-09z proposes DEC-BLINE-ACTION-WINDOW-SEMANTICS-001 as RECOMMENDED_NOT_AUTHORIZED: ACTION_WINDOW means the finite interval during which one canonical Candidate may remain eligible to proceed toward Approval; it is not an AO-ACT task/authorization window, execution schedule, ProblemState window, Twin candidate-pointer use window, model activation window, policy effective window, or MCFT scientific/runtime window.",
+        "B-09z requires explicit finite window_start/window_end, Candidate decision_time anchoring, policy_ref, horizon_source_ref and immutable support refs; hidden/default/hardcoded duration is forbidden because duration itself is product policy.",
+        "B-09z finds no currently authorized ActionWindow horizon source. B-09y boundary and B-09w IRRIGATE policy content remain separately unauthorized, B-07e remains disconnected, and MCFT Forecast remains frozen.",
+        "B-09aa inventories ActionWindow horizon authority and finds current_authorized_horizon_source=NONE: irrigation 72h forecast inputs are calculation horizons, FieldProgram constraints are not candidate actionability duration, policy effective_from/effective_until is policy lifecycle, and canonical Evidence/Context/Calculation/Candidate contracts expose no common valid_until authority.",
+        "B-09aa rejects implicit ActionWindow derivations from 72h forecast, policy effective_until, hardcoded 6h/12h/24h constants, downstream AO-ACT windows, ProblemState/Twin windows, or MCFT scientific/runtime windows.",
+        "B-09aa recommends START_WITH_EXPLICIT_POLICY_ONLY_V1 as the next governance option because dynamic agronomic/action-input-validity composition lacks canonical expiry semantics and Forecast remains frozen on incomplete MCFT-9; this recommendation is not authorization.",
+        "B-09ab proposes DEC-BLINE-ACTION-WINDOW-HORIZON-AUTHORITY-TOPOLOGY-001 as RECOMMENDED_NOT_AUTHORIZED: v1 ActionWindow horizon authority should live in a successor Decision Eligibility policy-content contract rather than a separately selected parallel horizon-policy family.",
+        "B-09ab preserves DecisionEligibilityPolicyDeclarationV1 as immutable predecessor semantics; existing v1 declarations must not receive inferred/default ActionWindow horizons. A successor policy requiring ACTION_WINDOW must carry explicit horizon authority or fail closed.",
+        "B-09ab selects topology only, not numerical duration/mode/start-offset/unit/dynamic-shortening semantics; no writer, selector, ActionWindow producer, B07e, Approval/Execution or MCFT mutation is authorized.",
+        "B-09ac proposes DEC-BLINE-ELIGIBILITY-POLICY-V2-ACTION-WINDOW-CONTRACT-001 as RECOMMENDED_NOT_AUTHORIZED: a successor Eligibility policy may carry action_window_policy anchored to canonical Candidate decision_time with explicit start_offset_seconds and duration_seconds, half-open interval semantics, and no hidden defaults.",
+        "B-09ac couples ACTION_WINDOW criterion presence to action_window_policy presence and preserves DecisionEligibilityPolicyDeclarationV1 as immutable predecessor semantics with no automatic/backfilled horizon.",
+        "B-09ac selects no concrete offset/duration/min/max/IRRIGATE value and does not implement successor contract, writer/route compatibility, selector compatibility, ActionWindow producer, B07e, or MCFT integration.",
+        "B-09ad finds ActionWindow numeric horizon NOT READY: no authorized action-specific product/agronomy source currently declares IRRIGATE start_offset_seconds or duration_seconds, so no value may be selected or backfilled.",
+        "B-09ad rejects 72h forecast coverage, FieldProgram daily irrigation/night constraints, policy effective_until, EvidenceQualification temporal state, AO-ACT/Twin/ProblemState windows and engineering convenience constants as numeric ActionWindow authority.",
+        "B-09ad sets blocker NO_AUTHORIZED_ACTION_SPECIFIC_HORIZON_VALUE_BASIS and recommends DO_NOT_CHOOSE_NUMERIC_VALUE_YET; Forecast-dependent dynamic horizon remains frozen on incomplete MCFT-9 plus separate integration authorization.",
+        "B-09ae recommends reusing existing B-07c as the STATE criterion producer only after Agronomy Judge request inputs exactly match the persisted recommendation skill_trace inputs and canonical CalculationResult refs are supplied.",
+        "B-09ae forbids latest/later JudgeResult from rewriting original Candidate STATE. Changed inputs leave STATE unbound; exact-congruent PASS against a source recommendation that required requirement_detected=true is semantic mismatch and fails closed.",
+        "B-09af consolidates the current qualified-but-unauthorized non-MCFT Eligibility gates: B-09ae STATE shadow binding is the highest-value immediate implementation authorization, followed by B-09y decision-boundary/Context shadow; ActionWindow remains blocked on B-09ad numeric authority and FORECAST remains frozen on MCFT-9.",
+        "B-09af keeps B-07e disconnected until selected policy, decision_time, Context, STATE, FORECAST and ACTION_WINDOW plus exact criterion provenance are bound at one canonical decision boundary; generic continuation is not authorization.",
+        "B-09ae explicitly activates the existing B-07c precursor only inside a shadow composition after same-source CalculationResult projection and exact Judge/source-input congruence; B-07e remains disconnected."
+      ],
+      "runtime_consumers": [
+        {
+          "consumer_id": "judge-v2-agronomy-qualified-evidence-criterion-shadow",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "producer_id": "agronomy-qualified-evidence-criterion-shadow-v1",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-039"
+        },
+        {
+          "consumer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+          "producer_id": "agronomy-qualified-evidence-criterion-shadow-v1",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-043"
+        },
+        {
+          "consumer_id": "decision-eligibility-policy-declaration-route-v1",
+          "path": "apps/server/src/routes/decision_eligibility_policy_declarations_v1.ts",
+          "producer_id": "decision-eligibility-policy-declaration-writer-v1",
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-045"
+        },
+        {
+          "consumer_id": "decision-eligibility-policy-selector-v1",
+          "path": "apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.ts",
+          "producer_id": "decision-eligibility-policy-declaration-writer-v1",
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-046"
+        },
+        {
+          "consumer_id": "b09ae-irrigate-state-calculation-shadow-binding",
+          "path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+          "producer_id": "agronomy-judge-eligibility-precursor-criterion-adapter",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-049"
+        }
+      ]
+    },
+    {
+      "semantic_id": "decision.approval",
+      "question": "Who authorizes a candidate action?",
+      "target_owner": "Human or explicit Policy Approval authority",
+      "canonical_output_type": "approval request/decision contracts",
+      "current_state": "BOUNDARY_CLEAR",
+      "target_phase": "KEEP",
+      "new_owner_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+      "registered_producers": [
+        {
+          "producer_id": "control-approval-route",
+          "path": "apps/server/src/routes/control_approval_request_v1.ts",
+          "role": "approval request/decision runtime surface",
+          "authority_level": "CURRENT_AUTHORITY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "approval-builder",
+          "path": "apps/server/src/domain/approval/recommendation_approval_request_builder_v1.ts",
+          "role": "approval-request builder",
+          "authority_level": "CURRENT_AUTHORITY_HELPER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "LOCAL_DIRECT_CALL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        }
+      ],
+      "registered_consumers": [],
+      "notes": [],
+      "runtime_consumers": []
+    },
+    {
+      "semantic_id": "operation.plan",
+      "question": "How is an approved decision represented as an operation plan?",
+      "target_owner": "Operation planning after Approval authority",
+      "canonical_output_type": "ApprovedOperationPlan (B-06f authority classification target; operation_plan_v1 existence/status alone is insufficient)",
+      "current_state": "MULTIPLE_FORMATION_PATHS",
+      "target_phase": "B-06",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "control-operation-plan-route",
+          "path": "apps/server/src/routes/control_operation_plan_v1.ts",
+          "role": "formal operation-plan route",
+          "authority_level": "CURRENT_PLAN_PATH",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "approval-operation-plan-path",
+          "path": "apps/server/src/routes/control_approval_request_v1.ts",
+          "role": "approval-linked plan formation/transition",
+          "authority_level": "CURRENT_PLAN_PATH",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "decision-engine-plan-touchpoint",
+          "path": "apps/server/src/routes/decision_engine_v1.ts",
+          "role": "recommendation/plan lifecycle touchpoint",
+          "authority_level": "GRANDFATHERED_DUPLICATE",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "COMPATIBILITY",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "flight-table-plan",
+          "path": "apps/server/src/services/flight_table/flight_table_operation_v1.ts",
+          "role": "flight-table compatibility/demo plan semantics",
+          "authority_level": "COMPATIBILITY",
+          "grandfathered_duplicate": true,
+          "removal_target": "B-09",
+          "current": true,
+          "connection_class": "DEVTOOLS_ONLY",
+          "activation": "API_ONLY",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        }
+      ],
+      "registered_consumers": [],
+      "notes": [
+        "operation_plan_v1 record existence alone must not imply approval authority.",
+        "Agronomy Agent direct plan creation was grandfathered debt; #3452 removes the active writer while preserving historical fact compatibility.",
+        "Amendment-01 sequencing: target_phase identifies replacement/convergence work; actual historical semantic-authority removal_target is B-09 only.",
+        "B-06f classifies real operation_plan_v1 authority before any candidate compatibility projection.",
+        "Historical Agronomy Agent plan facts remain candidate-view compatible only under exact legacy dual provenance; approval-derived/downstream/unknown plans are not.",
+        "Agronomy Agent direct plan authority is removed by P0-RES-003; no active background Agent path may mint operation_plan_v1 or operation_plan_transition_v1."
+      ],
+      "runtime_consumers": []
+    },
+    {
+      "semantic_id": "execution.task_receipt_acceptance",
+      "question": "What is executable, what actually happened, and was it accepted?",
+      "target_owner": "AO-ACT task / Receipt / Acceptance as distinct layers",
+      "canonical_output_type": "ao_act_task_v0 -> receipt -> acceptance verdict",
+      "current_state": "BOUNDARY_CLEAR",
+      "target_phase": "KEEP",
+      "new_owner_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+      "registered_producers": [
+        {
+          "producer_id": "task-service",
+          "path": "apps/server/src/domain/controlplane/task_service.ts",
+          "role": "task creation/service under control-plane rules",
+          "authority_level": "CURRENT_TASK_AUTHORITY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "control-ao-act-route",
+          "path": "apps/server/src/routes/control_ao_act.ts",
+          "role": "AO-ACT task/receipt route boundary",
+          "authority_level": "CURRENT_EXECUTION_BOUNDARY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "receipt-builder",
+          "path": "apps/server/src/domain/controlplane/ao_act_receipt_from_task_builder_v1.ts",
+          "role": "receipt construction from approved task execution",
+          "authority_level": "CURRENT_RECEIPT_HELPER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "LOCAL_DIRECT_CALL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "acceptance-reference",
+          "path": "docs/audit/CONTRACT_ALIGNMENT_MATRIX_V1.md",
+          "role": "acceptance versus receipt semantic reference",
+          "authority_level": "CURRENT_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "COMPATIBILITY",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "execution-judge-v2",
+          "path": "apps/server/src/domain/judge/execution_judge_v2.ts",
+          "role": "Execution Judge evaluator exposed by separate Judge route",
+          "authority_level": "ROUTE_CAPABILITY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": [
+            "judge-v2-execution-route",
+            "execution-memory-side-effect"
+          ]
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "judge-v2-execution-route",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "role": "separate Execution Judge POST route",
+          "current": true,
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "execution-memory-side-effect",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "role": "Execution Judge POST writes execution_reliability Field Memory when field_id exists",
+          "current": true,
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        }
+      ],
+      "notes": [
+        "Candidate/Recommendation is not executable.",
+        "Receipt is not Acceptance."
+      ],
+      "runtime_consumers": [
+        {
+          "consumer_id": "judge-v2-execution-route",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "producer_id": "execution-judge-v2",
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-007"
+        },
+        {
+          "consumer_id": "execution-memory-side-effect",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "producer_id": "execution-judge-v2",
+          "connection_class": "ROUTE_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-008"
+        }
+      ]
+    },
+    {
+      "semantic_id": "presentation.read_model",
+      "question": "How are authoritative objects presented to operators/customers?",
+      "target_owner": "Read-model / presentation layer",
+      "canonical_output_type": "read models / reports / UI projections",
+      "current_state": "PROJECTION_ONLY",
+      "target_phase": "KEEP",
+      "new_owner_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+      "registered_producers": [
+        {
+          "producer_id": "operation-report-chain",
+          "path": "apps/server/src/projections/operation_report_chain_v1.ts",
+          "role": "read-model projection",
+          "authority_level": "PROJECTION_ONLY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "dashboard-route",
+          "path": "apps/server/src/routes/dashboard_v1.ts",
+          "role": "customer/operator read surface",
+          "authority_level": "PROJECTION_ONLY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        }
+      ],
+      "registered_consumers": [],
+      "notes": [
+        "Presentation may project authoritative truth but must not reconstruct stronger upstream truth."
+      ],
+      "runtime_consumers": []
+    },
+    {
+      "semantic_id": "runtime.skill_capability",
+      "question": "Which generic Skill Runtime capability is registered, and is it actually in a current decision/judge call path?",
+      "target_owner": "Skill Runtime capability layer",
+      "canonical_output_type": "skill run / result / trace contracts",
+      "current_state": "REGISTERED_CAPABILITY_ISLAND",
+      "target_phase": "KEEP/ADAPT",
+      "new_owner_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+      "registered_producers": [
+        {
+          "producer_id": "skill-runtime-route",
+          "path": "apps/server/src/routes/skill_runtime_v1.ts",
+          "role": "generic skill execute/cancel/status/result/trace API",
+          "authority_level": "REGISTERED_CAPABILITY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": [
+            "skill-runtime-module-registration"
+          ]
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "skill-runtime-module-registration",
+          "path": "apps/server/src/modules/decision/registerDecisionModule.ts",
+          "role": "registers generic Skill Runtime routes",
+          "current": true,
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "ALWAYS",
+          "runtime_edge": "PROVEN"
+        }
+      ],
+      "runtime_consumers": [
+        {
+          "consumer_id": "skill-runtime-module-registration",
+          "path": "apps/server/src/modules/decision/registerDecisionModule.ts",
+          "producer_id": "skill-runtime-route",
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "ALWAYS",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-011"
+        }
+      ],
+      "notes": [
+        "Generic Skill Runtime is a registered API capability. Agronomy Judge currently calls local irrigation skills directly rather than routing through this runtime."
+      ]
+    },
+    {
+      "semantic_id": "post_acceptance.verification_memory",
+      "question": "What post-acceptance verification or memory paths are actually wired from Acceptance?",
+      "target_owner": "Post-acceptance outcome/memory layers",
+      "canonical_output_type": "Field Memory / Water Response Verification downstream artifacts",
+      "current_state": "MIXED_PROVEN_AND_MANUAL_SEAMS",
+      "target_phase": "B-08/B-09",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "acceptance-formal-pass",
+          "path": "apps/server/src/routes/acceptance_v1.ts",
+          "role": "acceptance result path; on formal PASS with field_id it directly records FORMAL_FIELD_MEMORY",
+          "authority_level": "CURRENT_ACCEPTANCE_RUNTIME",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": [
+            "field-memory-service"
+          ]
+        },
+        {
+          "producer_id": "water-response-from-acceptance-builder",
+          "path": "apps/server/src/domain/water_response/water_response_verification_from_acceptance_v1.ts",
+          "role": "acceptance-derived water-response verification builder exposed through a separate/manual seam",
+          "authority_level": "MANUAL_DOWNSTREAM_CAPABILITY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "MANUAL_SEAM",
+          "activation": "MANUAL",
+          "runtime_edge": "NOT_PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "field-memory-service",
+          "path": "apps/server/src/services/field_memory_service.ts",
+          "role": "receives inline formal acceptance Field Memory write",
+          "current": true,
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "water-response-verification-route",
+          "path": "apps/server/src/routes/water_response_verification_v1.ts",
+          "role": "separate/manual Water Response Verification API surface; automatic call from Acceptance is not proven",
+          "current": true,
+          "connection_class": "MANUAL_SEAM",
+          "activation": "MANUAL",
+          "runtime_edge": "NOT_PROVEN"
+        }
+      ],
+      "runtime_consumers": [
+        {
+          "consumer_id": "field-memory-service",
+          "path": "apps/server/src/services/field_memory_service.ts",
+          "producer_id": "acceptance-formal-pass",
+          "connection_class": "MAINLINE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-019"
+        }
+      ],
+      "notes": [
+        "Exact-main acceptance_v1.ts directly writes FORMAL_FIELD_MEMORY after PASS + formal_acceptance + field_id.",
+        "Water Response Verification exists as an acceptance-derived builder/route but no automatic Acceptance->Water Response invocation is proven in B-02."
+      ]
+    },
+    {
+      "semantic_id": "evidence.reporting_artifact",
+      "question": "What existing EvidenceModule surface packages/reports/exports evidence artifacts?",
+      "target_owner": "Evidence reporting/artifact plane",
+      "canonical_output_type": "evidence bundle/report/export/artifact surfaces",
+      "current_state": "REPORTING_ARTIFACT_PLANE",
+      "target_phase": "KEEP_SEPARATE_FROM_B-04_EVIDENCE_RUNTIME",
+      "new_owner_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+      "registered_producers": [
+        {
+          "producer_id": "existing-evidence-module",
+          "path": "apps/server/src/modules/evidence/registerEvidenceModule.ts",
+          "role": "registers evidence bundle/report/export/audit/artifact routes",
+          "authority_level": "REPORTING_ARTIFACT_PLANE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "REPORTING_ARTIFACT_PLANE",
+          "activation": "ALWAYS",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": [
+            "domain-module-evidence-registration"
+          ]
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "domain-module-evidence-registration",
+          "path": "apps/server/src/modules/domain/registerDomainModules.ts",
+          "role": "registers existing EvidenceModule",
+          "current": true,
+          "connection_class": "REPORTING_ARTIFACT_PLANE",
+          "activation": "ALWAYS",
+          "runtime_edge": "PROVEN"
+        }
+      ],
+      "runtime_consumers": [
+        {
+          "consumer_id": "domain-module-evidence-registration",
+          "path": "apps/server/src/modules/domain/registerDomainModules.ts",
+          "producer_id": "existing-evidence-module",
+          "connection_class": "REPORTING_ARTIFACT_PLANE",
+          "activation": "ALWAYS",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-021"
+        }
+      ],
+      "notes": [
+        "This existing module is not the future canonical provider-to-Governed-Evidence Runtime."
+      ]
+    },
+    {
+      "semantic_id": "devtools.simulation",
+      "question": "Which simulation/Flight Table paths exist only for dev/test operation?",
+      "target_owner": "Devtools",
+      "canonical_output_type": "dev-only flight-table/simulator artifacts",
+      "current_state": "DEVTOOLS_ONLY_INTENTIONAL_ISOLATION",
+      "target_phase": "KEEP_ISOLATED",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "flight-table-devtools-module",
+          "path": "apps/server/src/modules/devtools/registerDevtoolsModule.ts",
+          "role": "registers Flight Table/devtools routes",
+          "authority_level": "DEVTOOLS_ONLY",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "DEVTOOLS_ONLY",
+          "activation": "API_ONLY",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        }
+      ],
+      "registered_consumers": [],
+      "runtime_consumers": [],
+      "notes": [
+        "Devtools outputs must not become a production semantic consumer or formal Evidence source without an explicit later authority decision."
+      ]
+    },
+    {
+      "semantic_id": "decision.episode",
+      "question": "Which governed decision-time inputs, reasoning references, decision authorities, and downstream commercial-chain refs belong to one trace-only decision episode?",
+      "target_owner": "Decision Episode Runtime",
+      "canonical_output_type": "DecisionEpisodeV1 (B-08c canonical trace assembler registered as capability island; no external route connected)",
+      "current_state": "REGISTERED_CAPABILITY_ISLAND",
+      "target_phase": "B-08",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "future-decision-episode",
+          "path": "apps/server/src/contracts/decision_episode_v1.ts",
+          "role": "B-08a canonical DecisionEpisodeV1 contract reference; not a production assembler",
+          "authority_level": "FUTURE_TARGET_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "INTENTIONAL_ISOLATION",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "decision-episode-assembler-v1",
+          "path": "apps/server/src/domain/decision/decision_episode_assembler_v1.ts",
+          "role": "canonical B-08c trace-only assembler over matched CandidateDecisionV1 and DecisionEligibilityDecisionV1 plus downstream commercial-chain references",
+          "authority_level": "TRACE_ONLY_CANONICAL_PRODUCER",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "assembleDecisionEpisodeV1",
+            "decisionEpisodeV1Schema.parse"
+          ],
+          "connection_class": "REGISTERED_CAPABILITY_ISLAND",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        }
+      ],
+      "registered_consumers": [],
+      "notes": [
+        "DecisionEpisodeV1 is TRACE_ONLY and cannot create Candidate, Eligibility, Approval, Plan, Task, execution, or Acceptance authority.",
+        "B-08a requires CandidateDecision and DecisionEligibility refs while preserving downstream commercial-chain objects as references only.",
+        "B-08a connects no real MCFT adapter, ADR runtime, or LLM provider.",
+        "Historical semantic-authority removal remains B-09 only.",
+        "B-08c registers the single canonical DecisionEpisodeV1 trace assembler as a capability island.",
+        "B-08c verifies Candidate/Eligibility identity, scope, context, stage, evidence and decision-time continuity before trace assembly.",
+        "B-08c downstream approval/plan/task/receipt/acceptance/outcome entries are reference-only and cannot create authority.",
+        "B-08c still connects no real MCFT adapter, ADR runtime or LLM provider."
+      ],
+      "runtime_consumers": []
+    },
+    {
+      "semantic_id": "decision.integration_ports",
+      "question": "Which typed authority-input and decision-producer seams may future MCFT, ADR, human, deterministic, and LLM integrations use without creating parallel authority?",
+      "target_owner": "Decision Runtime typed integration boundary",
+      "canonical_output_type": "Typed Decision Integration Ports V1 (B-08b contracts frozen; real MCFT/ADR/LLM bindings structurally disconnected)",
+      "current_state": "BOUNDARY_CLEAR_TARGET_NOT_YET_PRODUCT_CONNECTED",
+      "target_phase": "B-08",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "future-decision-integration-port-contracts",
+          "path": "apps/server/src/contracts/decision_integration_ports_v1.ts",
+          "role": "B-08b typed port contract reference; no production port output or real provider binding",
+          "authority_level": "FUTURE_TARGET_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "INTENTIONAL_ISOLATION",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        }
+      ],
+      "registered_consumers": [],
+      "notes": [
+        "B-08b freezes GovernedEvidencePort, ContextAuthorityPort, TwinDecisionInputPort, KnowledgeClaimInputPort, DeterministicCalculatorPort, HumanReasoningPort, and LLMReasoningPort typed contracts.",
+        "Decision-producer ports may output only CandidateDecisionV1 and never final eligibility/approval/task/device authority.",
+        "Real MCFT, ADR, and LLM bindings are structurally DISCONNECTED with null adapter/provider refs and INTENTIONAL_NONE runtime edges.",
+        "Real MCFT adapter, ADR runtime, and LLM provider remain a later program after B-line."
+      ],
+      "runtime_consumers": []
+    },
+    {
+      "semantic_id": "governance.semantic_authority_migration",
+      "question": "Which grandfathered semantic authorities are replacement-backed, shadow-comparable, migration-ready, or explicitly unreplaced before B-09 removal?",
+      "target_owner": "B-09 Semantic Authority Migration Governance",
+      "canonical_output_type": "SemanticMigrationInventoryV1 + SemanticShadowComparisonV1 + EvidenceSemanticShadowInventoryV1 + EvidenceConsumerDependencyInventoryV1 + AgronomyEvidenceDependencyShadowBindingV1 + canonical EvidenceQualification provenance refs (B-09g shadow-only; no criterion cutover, consumer migration, or authority removal) + Agronomy Qualified Evidence Criterion Shadow V1 (B-09h; candidate-unbound and non-authoritative)",
+      "current_state": "CANDIDATE_REFERENTIAL_SHADOW_ACTIVE",
+      "target_phase": "B-09",
+      "new_owner_creation": "FORBIDDEN",
+      "registered_producers": [
+        {
+          "producer_id": "b09a-migration-contract-reference",
+          "path": "apps/server/src/contracts/semantic_migration_v1.ts",
+          "role": "B-09a migration-readiness and shadow-comparison contract reference; no production comparison producer and no authority removal",
+          "authority_level": "FUTURE_TARGET_REFERENCE",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "connection_class": "INTENTIONAL_ISOLATION",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "evidence-semantic-shadow-comparator-v1",
+          "path": "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts",
+          "role": "pure B-09b coarse sufficiency comparator consumed by the bounded B-09c runtime collector and B-09d read-only persisted inventory; still SHADOW_ONLY and non-authoritative",
+          "authority_level": "SHADOW_ONLY_COMPARATOR",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "compareEvidenceJudgeToCanonicalEvidenceShadowV1",
+            "compareStage1GateToCanonicalEvidenceShadowV1",
+            "semanticShadowComparisonV1Schema.parse"
+          ],
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": [
+            "evidence-shadow-runtime-collector-v1",
+            "evidence-shadow-inventory-read-model-v1"
+          ]
+        },
+        {
+          "producer_id": "evidence-consumer-dependency-inventory-v1",
+          "path": "docs/architecture/semantic_convergence/GEOX-B09E-EVIDENCE-CONSUMER-DEPENDENCY-INVENTORY-V1.json",
+          "role": "B-09e machine-readable analysis of Evidence-family legacy consumer dependencies using the exact B-09e runtime corpus; reporting only and unable to migrate consumers or remove authority",
+          "authority_level": "REPORTING_ARTIFACT",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "evidence_consumer_dependency_inventory_v1",
+            "AGRONOMY_JUDGE_CALLER_INJECTED_VERDICT_DEPENDENCY_UNMIGRATED",
+            "STAGE1_EVIDENCE_AUTHORITY_NOT_COVERED_BY_EVIDENCE_JUDGE_RUNTIME_CORPUS"
+          ],
+          "connection_class": "REPORTING_ARTIFACT_PLANE",
+          "activation": "MANUAL",
+          "runtime_edge": "INTENTIONAL_NONE",
+          "new_runtime_consumer_creation": "FORBIDDEN",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "agronomy-evidence-dependency-shadow-binding-v1",
+          "path": "apps/server/src/domain/decision/agronomy_evidence_dependency_shadow_binding_v1.ts",
+          "role": "B-09f shadow-only referential binding from Agronomy evidence_judge_id to a scoped persisted Evidence Judge result and its B-04/B-09c shadow evidence; cannot emit Decision Eligibility criterion authority",
+          "authority_level": "SHADOW_ONLY_BINDING",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "buildAgronomyEvidenceDependencyShadowBindingV1",
+            "agronomyEvidenceDependencyShadowBindingV1Schema.parse",
+            "NOT_READY_FOR_CRITERION_CUTOVER"
+          ],
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": [
+            "judge-v2-agronomy-shadow-binding",
+            "agronomy-qualified-evidence-criterion-shadow-v1"
+          ]
+        },
+        {
+          "producer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+          "role": "B-09j shadow-only referential binding that proves scoped immutable recommendation source identity, deterministic CandidateDecision identity, and exact Candidate-to-B09h criterion EvidenceQualification ref continuity without invoking Decision Eligibility",
+          "authority_level": "SHADOW_ONLY_BINDING",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "buildDecisionRecommendationCandidateCriterionShadowBindingV1",
+            "decisionRecommendationCandidateCriterionShadowBindingV1Schema.parse",
+            "SOURCE_FACT_SCOPE_SHA256_V1"
+          ],
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "b09ae-irrigate-state-calculation-shadow-binding-v1",
+          "path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+          "role": "B-09ae shadow-only composition proving same-source recommendation skill calculation continuity and exact-input STATE criterion binding without changing legacy Judge or final Decision Eligibility",
+          "authority_level": "SHADOW_ONLY_BINDING",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "buildIrrigateStateCalculationShadowBindingV1",
+            "irrigateStateCalculationShadowBindingV1Schema.parse",
+            "SOURCE_FACT_SCOPE_CALCULATOR_SHA256_V1"
+          ],
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        },
+        {
+          "producer_id": "b09y-candidate-decision-boundary-context-binding-v1",
+          "path": "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts",
+          "role": "authorized B-09y shadow canonical boundary/context writer: one candidate-scoped server-created decision boundary, exact recommendation fact, exact FieldProgram fact and ContextSnapshot fact; no B-07e or MCFT integration",
+          "authority_level": "BOUNDARY_ONLY_SHADOW_BINDING",
+          "grandfathered_duplicate": false,
+          "removal_target": null,
+          "current": true,
+          "fingerprints": [
+            "buildCandidateDecisionBoundaryContextBindingV1",
+            "candidateDecisionBoundaryEnvelopeV1Schema",
+            "pg_advisory_xact_lock(hashtext($1))",
+            "EXACT_IMMUTABLE_REFS_OR_SAME_DECISION_TIME_AS_OF_ONLY"
+          ],
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "new_runtime_consumer_creation": "ALLOWED_ONLY_BY_EXPLICIT_REGISTER",
+          "grandfathered_runtime_consumers": []
+        }
+      ],
+      "registered_consumers": [
+        {
+          "consumer_id": "evidence-shadow-runtime-collector-v1",
+          "path": "apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.ts",
+          "role": "B-09c consumes the existing legacy Evidence Judge result plus B-04 canonical sufficiency shadow and emits one persisted SHADOW_ONLY comparison for the existing Judge result output envelope",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "evidence-shadow-inventory-read-model-v1",
+          "path": "apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.ts",
+          "role": "B-09d read-only reporting inventory over persisted SemanticShadowComparisonV1 outputs; unobserved legacy rows are never fabricated into semantic comparison states",
+          "current": true,
+          "connection_class": "REPORTING_ARTIFACT_PLANE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "judge-v2-agronomy-shadow-binding",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "role": "B-09f attaches the referential Evidence dependency binding to Agronomy Judge outputs while preserving the historical Agronomy verdict byte-for-byte",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "agronomy-qualified-evidence-criterion-shadow-v1",
+          "path": "apps/server/src/domain/decision/agronomy_qualified_evidence_criterion_shadow_v1.ts",
+          "role": "B-09h consumes only the B-09f/B-09g shadow binding and projects a candidate-unbound SHADOW_NON_AUTHORITATIVE QUALIFIED_EVIDENCE criterion observation",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+          "role": "B-09j consumes the existing B-09f shadow binding only as non-authoritative provenance input; the dependency is explicitly registered rather than grandfathered",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "judge-v2-agronomy-candidate-criterion-referential-shadow",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "role": "Agronomy Judge route attaches the B-09j referential binding only after constructing the historical Agronomy Judge result; no verdict or downstream authority is changed",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "b09ae-irrigate-state-calculation-shadow-binding",
+          "path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+          "role": "B-09ae consumes the already-bound B-09j Candidate/source identity as shadow provenance before projecting CalculationResult/STATE",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "judge-v2-agronomy-irrigate-state-calculation-shadow",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "role": "Agronomy Judge route persists the B-09ae shadow composition after constructing the historical Judge result; verdict and downstream authority remain unchanged",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        },
+        {
+          "consumer_id": "judge-v2-agronomy-boundary-context-shadow",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "role": "Agronomy Judge route persists B-09y boundary/context shadow output before B-09j Candidate and B-09ae Calculation/STATE shadow outputs; legacy Judge verdict remains unchanged",
+          "current": true,
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN"
+        }
+      ],
+      "notes": [
+        "B-09a covers every grandfathered producer in the replacement-readiness inventory before any authority removal.",
+        "B-09a classifies Twin/Forecast as unreplaced because real MCFT remains disconnected.",
+        "B-09a performs zero authority removal; shadow comparisons are SHADOW_ONLY and cannot authorize removal.",
+        "Consumer migration and removal remain later B-09 work after family-specific divergence evidence.",
+        "B-09b registers one pure Evidence-family SemanticShadowComparisonV1 producer with no runtime consumer.",
+        "B-09b treats Stage-1 NOT_ELIGIBLE/NO_FORMAL_STAGE1_SIGNAL as INCOMPARABLE because trigger absence is not an evidence conclusion.",
+        "B-09b explicitly captures legacy rejection versus independent canonical evidence sufficiency as DIVERGENT.",
+        "B-09b performs no consumer migration and no authority removal.",
+        "B-09c connects exactly one Evidence Judge runtime shadow collector; the comparison is persisted in existing JudgeResultV2.outputs.",
+        "B-09c does not connect the Stage-1 comparator, migrate an authoritative consumer, change a legacy verdict, or remove authority.",
+        "B-09d adds one read-only tenant-scoped inventory of persisted B-09c Evidence shadow comparisons.",
+        "B-09d treats rows without a valid persisted comparison as UNOBSERVED rather than fabricating MATCH, divergence, or missing states.",
+        "B-09d inventory has no consumer-migration or authority-removal permission.",
+        "B-09e locks a runtime-corpus-backed Evidence consumer dependency inventory without changing any runtime consumer.",
+        "B-09e finds Agronomy Judge uses a caller-injected evidence_judge_verdict and does not load evidence_judge_id.",
+        "B-09e confirms B-07 criterion/Decision Eligibility is the target evidence-consequence boundary; direct canonical evidence-to-BLOCK replacement is forbidden.",
+        "B-09e confirms Stage-1 remains a separate unshadowed grandfathered Evidence authority, so family-wide Evidence authority removal remains forbidden.",
+        "B-09f makes evidence_judge_id observable as a scoped referential shadow binding without changing the caller-injected legacy evidence_judge_verdict authority.",
+        "B-09f intentionally refuses criterion cutover because the persisted Evidence Judge output does not carry resolvable canonical EvidenceQualificationV1 refs required by B-07e provenance checks.",
+        "B-09f preserves DIVERGENT and INCOMPARABLE comparison states as observations; neither is coerced to final Decision Eligibility.",
+        "B-09f performs zero consumer migration and zero authority removal.",
+        "B-09g propagates direct canonical EvidenceQualification qualification_id refs through the existing Evidence Judge shadow into the B-09f referential binding.",
+        "B-09g may mark provenance READY_FOR_CRITERION_SHADOW while migration_readiness remains NOT_READY_FOR_CRITERION_CUTOVER.",
+        "B-09g adds no DecisionEligibility criterion producer and performs zero consumer migration and zero authority removal.",
+        "B-09h projects a candidate-unbound shadow-only QUALIFIED_EVIDENCE criterion from the B-09g canonical qualification provenance.",
+        "B-09h never sends the criterion to Decision Eligibility Runtime and keeps consumer_migration_performed=false / authority_removal_permitted=false.",
+        "User-authorized B-09ae runtime implementation registers only the same-source CalculationResult/STATE shadow chain; no consumer migration, final eligibility connection, MCFT integration, approval/execution mutation, or authority removal.",
+        "DEC-BLINE-CANDIDATE-DECISION-BOUNDARY-001 is now user-authorized for B-09y implementation. Runtime scope is boundary/context shadow binding only; Forecast remains frozen, B-07e disconnected, no Approval/Execution authority, no migration/removal."
+      ],
+      "runtime_consumers": [
+        {
+          "consumer_id": "evidence-shadow-runtime-collector-v1",
+          "path": "apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.ts",
+          "producer_id": "evidence-semantic-shadow-comparator-v1",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-034"
+        },
+        {
+          "consumer_id": "evidence-shadow-inventory-read-model-v1",
+          "path": "apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.ts",
+          "producer_id": "evidence-semantic-shadow-comparator-v1",
+          "connection_class": "REPORTING_ARTIFACT_PLANE",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-035"
+        },
+        {
+          "consumer_id": "judge-v2-agronomy-shadow-binding",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "producer_id": "agronomy-evidence-dependency-shadow-binding-v1",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-037"
+        },
+        {
+          "consumer_id": "agronomy-qualified-evidence-criterion-shadow-v1",
+          "path": "apps/server/src/domain/decision/agronomy_qualified_evidence_criterion_shadow_v1.ts",
+          "producer_id": "agronomy-evidence-dependency-shadow-binding-v1",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-038"
+        },
+        {
+          "consumer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+          "producer_id": "agronomy-evidence-dependency-shadow-binding-v1",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-042"
+        },
+        {
+          "consumer_id": "judge-v2-agronomy-candidate-criterion-referential-shadow",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "producer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-044"
+        },
+        {
+          "consumer_id": "b09ae-irrigate-state-calculation-shadow-binding",
+          "path": "apps/server/src/domain/decision/irrigate_state_calculation_shadow_binding_v1.ts",
+          "producer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-050"
+        },
+        {
+          "consumer_id": "judge-v2-agronomy-irrigate-state-calculation-shadow",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "producer_id": "b09ae-irrigate-state-calculation-shadow-binding-v1",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-051"
+        },
+        {
+          "consumer_id": "b09j-decision-recommendation-candidate-criterion-shadow-binding",
+          "path": "apps/server/src/domain/decision/decision_recommendation_candidate_criterion_shadow_binding_v1.ts",
+          "producer_id": "b09y-candidate-decision-boundary-context-binding-v1",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-054"
+        },
+        {
+          "consumer_id": "judge-v2-agronomy-boundary-context-shadow",
+          "path": "apps/server/src/routes/judge_v2.ts",
+          "producer_id": "b09y-candidate-decision-boundary-context-binding-v1",
+          "connection_class": "ACTIVE_PARALLEL",
+          "activation": "API_ONLY",
+          "runtime_edge": "PROVEN",
+          "evidence_edge_id": "C-055"
+        }
+      ]
+    }
+  ],
+  "static_guards": [
+    {
+      "guard_id": "G-B02-01-crop-stage-touchpoints",
+      "semantic_id": "context.crop_stage",
+      "description": "Any production TypeScript file that calls/imports the known crop-stage resolvers must be registered before merge.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "resolveCropStage(",
+          "resolveCropStageByPriority(",
+          "normalizeSkillStage("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/agronomy/stage_resolver.ts",
+        "apps/server/src/domain/agronomy/context_builder.ts",
+        "apps/server/src/domain/agronomy/rule_engine.ts",
+        "apps/server/src/routes/decision_engine_v1.ts",
+        "apps/server/src/projections/field_program_state_v1.ts",
+        "apps/server/src/routes/operation_state_v1.ts",
+        "apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.ts"
+      ],
+      "failure": "UNREGISTERED_CROP_STAGE_TOUCHPOINT"
+    },
+    {
+      "guard_id": "G-B02-02-irrigation-calculator-touchpoints",
+      "semantic_id": "decision.calculation",
+      "description": "Use/definition of the known irrigation deficit/requirement skills is an explicit semantic touchpoint.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "runIrrigationRequirementSkillV1(",
+          "runIrrigationDeficitSkillV1("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/agronomy/skills/irrigation/irrigation_requirement_skill_v1.ts",
+        "apps/server/src/domain/agronomy/skills/irrigation/irrigation_deficit_skill_v1.ts",
+        "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+        "apps/server/src/routes/decision_engine_v1.ts"
+      ],
+      "failure": "UNREGISTERED_IRRIGATION_CALCULATION_TOUCHPOINT"
+    },
+    {
+      "guard_id": "G-B02-03-evidence-qualification-touchpoints",
+      "semantic_id": "evidence.qualification",
+      "description": "Known Stage-1/Evidence-Judge production qualification entrypoints, including the B-04e canonical sufficiency wrapper, may not silently proliferate.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "evaluateFormalStage1TriggerGateV1(",
+          "evaluateEvidenceJudgeV2(",
+          "evaluateEvidenceJudgeV2WithCanonicalShadow("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/stage1_action_boundary_v1.ts",
+        "apps/server/src/domain/judge/evidence_judge_v2.ts",
+        "apps/server/src/routes/judge_v2.ts"
+      ],
+      "failure": "UNREGISTERED_EVIDENCE_QUALIFICATION_TOUCHPOINT"
+    },
+    {
+      "guard_id": "G-B02-04-agronomy-agent-direct-plan-fingerprint",
+      "semantic_id": "operation.plan",
+      "description": "Agronomy Agent direct operation-plan authority is removed; the active job file may not contain the legacy auto-create trigger or direct operation_plan_v1 writer fingerprint.",
+      "failure": "AGRONOMY_AGENT_DIRECT_PLAN_AUTHORITY_FORBIDDEN",
+      "scan_files": [
+        "apps/server/src/jobs/agronomy_agent.ts"
+      ],
+      "forbid": {
+        "any_of_regex": [
+          "agronomy_agent_auto_create",
+          "type\\\\s*:\\\\s*[\\\"']operation_plan_v1[\\\"']",
+          "type\\\\s*:\\\\s*[\\\"']operation_plan_transition_v1[\\\"']"
+        ]
+      }
+    },
+    {
+      "guard_id": "G-B02-05-missing-soil-default-fingerprint",
+      "semantic_id": "evidence.raw_observation",
+      "description": "Agronomy Agent telemetry consumption must fail closed on missing/non-exact telemetry and retain immutable telemetry fact provenance; fabricated numeric fallback is forbidden.",
+      "match": {
+        "all_of": [
+          "fact_id AS telemetry_fact_id",
+          "const telemetryFactId = safeString(telemetry?.telemetry_fact_id)",
+          "if (!Number.isFinite(soilMoisture ?? Number.NaN) || !telemetryFactId)",
+          "authority_mode: \"LEGACY_AGRONOMY_SIGNAL_ONLY\"",
+          "evidence_refs: [telemetryFactId]"
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/jobs/agronomy_agent.ts"
+      ],
+      "failure": "UNREGISTERED_AGRONOMY_AGENT_EXACT_TELEMETRY_FAIL_CLOSED_PATH",
+      "scan_files": [
+        "apps/server/src/jobs/agronomy_agent.ts"
+      ]
+    },
+    {
+      "guard_id": "G-B02-06-decision-engine-integration-hotspot",
+      "semantic_id": "decision.candidate",
+      "description": "decision_engine_v1 must not become the direct landing zone for future ADR/LLM/MCFT implementation imports.",
+      "scan_files": [
+        "apps/server/src/routes/decision_engine_v1.ts"
+      ],
+      "forbid": {
+        "any_of_regex": [
+          "from\\s+[\\\"'][^\\\"']*(?:/adr/|/llm/|/mcft/)[^\\\"']*[\\\"']",
+          "require\\([\\\"'][^\\\"']*(?:/adr/|/llm/|/mcft/)[^\\\"']*[\\\"']\\)"
+        ]
+      },
+      "failure": "FORBIDDEN_DIRECT_ADR_LLM_MCFT_INTEGRATION_IN_DECISION_ENGINE"
+    },
+    {
+      "guard_id": "G-B02-07-active-legacy-operator-writer",
+      "semantic_id": "decision.candidate",
+      "description": "The two legacy Operator scenario-to-recommendation POST routes and their registration must remain explicitly inventoried; no copy may silently appear.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "registerOperatorTwinWriteLegacyRoutesV1(",
+          "LEGACY_POST_PATHS_V1"
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts",
+        "apps/server/src/modules/operator/registerOperatorModule.ts"
+      ],
+      "failure": "UNREGISTERED_ACTIVE_LEGACY_OPERATOR_WRITER"
+    },
+    {
+      "guard_id": "G-B02-08-orphaned-irrigation-decision-export",
+      "semantic_id": "decision.calculation",
+      "description": "The currently orphaned evaluateIrrigationDecisionV1 export is registered as debt; new references must first change connectivity classification.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "evaluateIrrigationDecisionV1"
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision_engine_v1.ts"
+      ],
+      "failure": "ORPHANED_IRRIGATION_DECISION_EXPORT_GAINED_UNREGISTERED_REFERENCE"
+    },
+    {
+      "guard_id": "G-B02-09-devtools-flight-table-production-boundary",
+      "semantic_id": "devtools.simulation",
+      "description": "Production module/domain/job roots must not import or require Flight Table/devtools implementation.",
+      "scan_roots": [
+        "apps/server/src/modules",
+        "apps/server/src/domain",
+        "apps/server/src/jobs"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        "apps/server/src/modules/devtools/",
+        "apps/server/src/services/flight_table/",
+        "apps/server/src/routes/dev/",
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "forbid": {
+        "any_of_regex": [
+          "from\\s+[\\\"'][^\\\"']*(?:/routes/dev/|/services/flight_table/|flight_table|flight-table)[^\\\"']*[\\\"']",
+          "require\\([\\\"'][^\\\"']*(?:/routes/dev/|/services/flight_table/|flight_table|flight-table)[^\\\"']*[\\\"']\\)"
+        ]
+      },
+      "failure": "DEVTOOLS_ONLY_PATH_USED_BY_PRODUCTION_CONSUMER"
+    },
+    {
+      "guard_id": "G-B02-09-raw-sample-production-ingress",
+      "semantic_id": "evidence.raw_observation",
+      "description": "Every production route that calls appendRawSampleV1 must be explicitly registered as a raw-observation ingress producer.",
+      "scan_roots": [
+        "apps/server/src/routes"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "all_of": [
+          "appendRawSampleV1"
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/routes/sensing_fact_envelope_v1.ts"
+      ],
+      "failure": "UNREGISTERED_RAW_SAMPLE_PRODUCTION_INGRESS"
+    },
+    {
+      "guard_id": "G-B02-10-canonical-evidence-qualification-projector",
+      "semantic_id": "evidence.qualification",
+      "description": "Only the explicitly registered B-04 canonical projection may instantiate EvidenceQualificationV1 directly from runtime evidence.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "all_of": [
+          "evidenceQualificationV1Schema.parse"
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/evidence/raw_sample_evidence_qualification_projection_v1.ts"
+      ],
+      "failure": "UNREGISTERED_CANONICAL_EVIDENCE_QUALIFICATION_PROJECTOR"
+    },
+    {
+      "guard_id": "G-B02-11-canonical-context-instantiation",
+      "semantic_id": "context.declared_identity",
+      "description": "B-05a freezes ContextAssertionV1/ContextSnapshotV1 as contracts only; any production instantiation must be explicitly registered in a later B-05 phase.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "contextAssertionV1Schema.parse(",
+          "contextSnapshotV1Schema.parse("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/context/field_program_context_projection_v1.ts",
+        "apps/server/src/domain/decision/candidate_decision_boundary_context_binding_v1.ts"
+      ],
+      "failure": "UNREGISTERED_CANONICAL_CONTEXT_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-12-qualified-crop-stage-instantiation",
+      "semantic_id": "context.crop_stage",
+      "description": "B-05c/B-05d permit only explicitly registered QualifiedCropStageStateV1 compatibility projection paths; runtime authority/consumers require explicit later registration and B-09 authority-removal discipline.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "qualifiedCropStageStateV1Schema.parse("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/context/legacy_crop_stage_compatibility_adapter_v1.ts",
+        "apps/server/src/context/crop_skill_stage_compatibility_adapter_v1.ts"
+      ],
+      "failure": "UNREGISTERED_QUALIFIED_CROP_STAGE_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-13-crop-skill-stage-touchpoints",
+      "semantic_id": "context.crop_stage",
+      "description": "Direct CropSkill.resolveStage production touchpoints are frozen: legacy rule_engine is grandfathered and B-05d adapter is capability-only; new unregistered direct skill-stage calls are forbidden.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          ".resolveStage({"
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/agronomy/rule_engine.ts",
+        "apps/server/src/context/crop_skill_stage_compatibility_adapter_v1.ts"
+      ],
+      "failure": "UNREGISTERED_CROP_SKILL_STAGE_TOUCHPOINT"
+    },
+    {
+      "guard_id": "G-B02-14-calculation-result-instantiation",
+      "semantic_id": "decision.calculation",
+      "description": "B-06b permits exactly the registered irrigation CalculationResult compatibility adapter; any additional production instantiation requires explicit later B-06 registration.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "calculationResultV1Schema.parse("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/irrigation_calculation_result_adapter_v1.ts"
+      ],
+      "failure": "UNREGISTERED_CALCULATION_RESULT_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-15-candidate-decision-instantiation",
+      "semantic_id": "decision.candidate",
+      "description": "B-06g permits exactly the registered B-06c recommendation, B-06d decision-plan, B-06e prescription, B-06f operation-plan candidate-view, and B-06g AgronomyRecommendationV2 adapters; any additional CandidateDecision instantiation requires explicit later registration.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "candidateDecisionV1Schema.parse("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/legacy_recommendation_candidate_adapter_v1.ts",
+        "apps/server/src/domain/decision/decision_plan_candidate_adapter_v1.ts",
+        "apps/server/src/domain/decision/prescription_action_spec_candidate_adapter_v1.ts",
+        "apps/server/src/domain/decision/operation_plan_authority_candidate_adapter_v1.ts",
+        "apps/server/src/domain/decision/agronomy_recommendation_v2_candidate_adapter_v1.ts"
+      ],
+      "failure": "UNREGISTERED_CANDIDATE_DECISION_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-16-decision-eligibility-instantiation",
+      "semantic_id": "decision.eligibility",
+      "description": "B-07d permits exactly the registered deterministic Decision Eligibility evaluator to instantiate DecisionEligibilityDecisionV1; any additional final eligibility producer requires explicit later registration.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "decisionEligibilityDecisionV1Schema.parse("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/decision_eligibility_evaluator_v1.ts"
+      ],
+      "failure": "UNREGISTERED_DECISION_ELIGIBILITY_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-17-decision-eligibility-criterion-instantiation",
+      "semantic_id": "decision.eligibility",
+      "description": "B-09h permits exactly the registered B-07 precursor adapters plus the B-09h shadow-only Agronomy qualified-evidence criterion adapter to instantiate canonical eligibility criterion assessments; the final DecisionEligibilityDecisionV1 producer remains separately guarded.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "decisionEligibilityCriterionAssessmentV1Schema.parse("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/stage1_eligibility_precursor_adapter_v1.ts",
+        "apps/server/src/domain/decision/agronomy_judge_eligibility_precursor_adapter_v1.ts",
+        "apps/server/src/domain/decision/agronomy_qualified_evidence_criterion_shadow_v1.ts"
+      ],
+      "failure": "UNREGISTERED_DECISION_ELIGIBILITY_CRITERION_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-18-decision-eligibility-runtime-consumer",
+      "semantic_id": "decision.eligibility",
+      "description": "B-07e permits exactly the registered Decision Eligibility runtime seam to import/use the B-07d final evaluator; any additional runtime consumer requires explicit later registration.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "from \"./decision_eligibility_evaluator_v1.js\""
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/decision_eligibility_runtime_v1.ts"
+      ],
+      "failure": "UNREGISTERED_DECISION_ELIGIBILITY_RUNTIME_CONSUMER"
+    },
+    {
+      "guard_id": "G-B02-19-decision-episode-instantiation",
+      "semantic_id": "decision.episode",
+      "description": "B-08c permits exactly the registered canonical Decision Episode assembler to instantiate DecisionEpisodeV1; any additional Episode producer requires explicit later registration.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "decisionEpisodeV1Schema.parse("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/decision_episode_assembler_v1.ts"
+      ],
+      "failure": "UNREGISTERED_DECISION_EPISODE_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-20-decision-producer-port-output-instantiation",
+      "semantic_id": "decision.integration_ports",
+      "description": "B-08b freezes typed decision-producer port output contracts but permits zero production instantiations; later registration must be explicit.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "decisionProducerPortOutputV1Schema.parse("
+        ]
+      },
+      "registered_paths": [],
+      "failure": "UNREGISTERED_DECISION_PRODUCER_PORT_OUTPUT"
+    },
+    {
+      "guard_id": "G-B02-21-future-integration-binding-instantiation",
+      "semantic_id": "decision.integration_ports",
+      "description": "B-08b permits zero production future MCFT/ADR/LLM binding descriptors; real integration remains disconnected until a later explicitly governed program.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "futureDecisionIntegrationBindingV1Schema.parse("
+        ]
+      },
+      "registered_paths": [],
+      "failure": "UNREGISTERED_FUTURE_DECISION_INTEGRATION_BINDING"
+    },
+    {
+      "guard_id": "G-B02-22-semantic-shadow-comparison-instantiation",
+      "semantic_id": "governance.semantic_authority_migration",
+      "description": "B-09b permits exactly the registered Evidence semantic shadow comparator to instantiate SemanticShadowComparisonV1; any additional family comparator requires explicit later B-09 registration.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "semanticShadowComparisonV1Schema.parse("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts"
+      ],
+      "failure": "UNREGISTERED_SEMANTIC_SHADOW_COMPARISON_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-23-b09c-shadow-collector-route-attachment",
+      "semantic_id": "governance.semantic_authority_migration",
+      "description": "B-09c permits the Evidence shadow collector definition and exactly one Judge route attachment; any additional call site requires explicit later B-09 registration.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "collectEvidenceJudgeSemanticShadowComparisonV1("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.ts",
+        "apps/server/src/routes/judge_v2.ts"
+      ],
+      "failure": "UNREGISTERED_B09C_EVIDENCE_SHADOW_COLLECTOR_CONSUMER"
+    },
+    {
+      "guard_id": "G-B02-24-evidence-shadow-comparator-runtime-consumer",
+      "semantic_id": "governance.semantic_authority_migration",
+      "description": "B-09c permits the Evidence comparator definition plus exactly one runtime collector call site.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "compareEvidenceJudgeToCanonicalEvidenceShadowV1("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts",
+        "apps/server/src/domain/decision/evidence_semantic_shadow_runtime_collector_v1.ts"
+      ],
+      "failure": "UNREGISTERED_B09C_EVIDENCE_COMPARATOR_RUNTIME_CONSUMER"
+    },
+    {
+      "guard_id": "G-B02-25-stage1-shadow-comparator-runtime-disconnection",
+      "semantic_id": "governance.semantic_authority_migration",
+      "description": "B-09c keeps the Stage-1 shadow comparator disconnected; only its pure definition may contain the comparator symbol outside tests.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "compareStage1GateToCanonicalEvidenceShadowV1("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/evidence_semantic_shadow_comparator_v1.ts"
+      ],
+      "failure": "B09C_STAGE1_SHADOW_COMPARATOR_RUNTIME_CONSUMER_FORBIDDEN"
+    },
+    {
+      "guard_id": "G-B02-26-b09d-evidence-shadow-inventory-read",
+      "semantic_id": "governance.semantic_authority_migration",
+      "description": "B-09d permits exactly one read-only Evidence shadow inventory implementation and one Judge read-route attachment.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "readEvidenceSemanticShadowInventoryV1("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.ts",
+        "apps/server/src/routes/judge_v2.ts"
+      ],
+      "failure": "UNREGISTERED_B09D_EVIDENCE_SHADOW_INVENTORY_CONSUMER"
+    },
+    {
+      "guard_id": "G-B02-27-b09d-evidence-shadow-inventory-instantiation",
+      "semantic_id": "governance.semantic_authority_migration",
+      "description": "B-09d permits exactly one implementation path to instantiate EvidenceSemanticShadowInventoryV1.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "evidenceSemanticShadowInventoryV1Schema.parse("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/evidence_semantic_shadow_inventory_v1.ts"
+      ],
+      "failure": "UNREGISTERED_B09D_EVIDENCE_SHADOW_INVENTORY_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-28-b09f-agronomy-evidence-shadow-binding-call",
+      "semantic_id": "governance.semantic_authority_migration",
+      "description": "B-09f permits exactly the shadow binding implementation and the Agronomy Judge route attachment to call buildAgronomyEvidenceDependencyShadowBindingV1.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "buildAgronomyEvidenceDependencyShadowBindingV1("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/agronomy_evidence_dependency_shadow_binding_v1.ts",
+        "apps/server/src/routes/judge_v2.ts"
+      ],
+      "failure": "UNREGISTERED_B09F_AGRONOMY_EVIDENCE_SHADOW_BINDING_CONSUMER"
+    },
+    {
+      "guard_id": "G-B02-29-b09f-agronomy-evidence-shadow-binding-instantiation",
+      "semantic_id": "governance.semantic_authority_migration",
+      "description": "B-09f permits exactly one AgronomyEvidenceDependencyShadowBindingV1 producer.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "agronomyEvidenceDependencyShadowBindingV1Schema.parse("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/agronomy_evidence_dependency_shadow_binding_v1.ts"
+      ],
+      "failure": "UNREGISTERED_B09F_AGRONOMY_EVIDENCE_SHADOW_BINDING_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-31-b09h-qualified-evidence-criterion-shadow-runtime-attachment",
+      "semantic_id": "decision.eligibility",
+      "description": "B-09h allows the shadow criterion projector only at its definition and the bounded Agronomy Judge route attachment; no Decision Eligibility Runtime or Approval consumer is authorized.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "projectAgronomyQualifiedEvidenceCriterionShadowV1("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/agronomy_qualified_evidence_criterion_shadow_v1.ts",
+        "apps/server/src/routes/judge_v2.ts"
+      ],
+      "failure": "UNREGISTERED_B09H_QUALIFIED_EVIDENCE_CRITERION_SHADOW_CONSUMER"
+    },
+    {
+      "guard_id": "G-B02-32-decision-eligibility-policy-declaration-instantiation",
+      "semantic_id": "decision.eligibility",
+      "description": "B-09s registers the unique governed production DecisionEligibilityPolicyDeclarationV1 instantiation path. Any additional production declaration source remains forbidden until explicitly registered.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "decisionEligibilityPolicyDeclarationV1Schema.parse("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/decision_eligibility_policy_declaration_fact_v1.ts"
+      ],
+      "failure": "UNREGISTERED_DECISION_ELIGIBILITY_POLICY_DECLARATION_PRODUCER"
+    },
+    {
+      "guard_id": "G-B02-33-decision-eligibility-policy-selector-runtime-consumer",
+      "semantic_id": "decision.eligibility",
+      "description": "B-09v permits the canonical policy selector definition only; any external route/B-07e/other call site must be explicitly authorized and registered later.",
+      "scan_roots": [
+        "apps/server/src"
+      ],
+      "extensions": [
+        ".ts"
+      ],
+      "ignore_path_fragments": [
+        ".test.ts",
+        ".acceptance.test.ts"
+      ],
+      "match": {
+        "any_of": [
+          "readAndSelectDecisionEligibilityPolicyV1("
+        ]
+      },
+      "registered_paths": [
+        "apps/server/src/domain/decision/decision_eligibility_policy_selector_v1.ts"
+      ],
+      "failure": "UNREGISTERED_DECISION_ELIGIBILITY_POLICY_SELECTOR_RUNTIME_CONSUMER"
+    }
+  ],
+  "connectivity_model": {
+    "purpose": "Separate capability registration from proven current runtime wiring. B-02 maps both semantic ownership and runtime connectivity without changing runtime behavior.",
+    "connection_class_values": [
+      "MAINLINE",
+      "ACTIVE_PARALLEL",
+      "ROUTE_ISLAND",
+      "MANUAL_SEAM",
+      "ACCEPTANCE_LIBRARY_ISLAND",
+      "COMPATIBILITY",
+      "DEVTOOLS_ONLY",
+      "ORPHANED",
+      "INTENTIONAL_ISOLATION",
+      "REGISTERED_CAPABILITY_ISLAND",
+      "ACTIVE_LEGACY_WRITER",
+      "LOCAL_DIRECT_CALL",
+      "REPORTING_ARTIFACT_PLANE"
+    ],
+    "activation_values": [
+      "ALWAYS",
+      "FEATURE_FLAG",
+      "API_ONLY",
+      "MANUAL",
+      "TEST_ACCEPTANCE_ONLY",
+      "NOT_REFERENCED"
+    ],
+    "runtime_edge_values": [
+      "PROVEN",
+      "NOT_PROVEN",
+      "NONE",
+      "INTENTIONAL_NONE"
+    ],
+    "registered_consumer_definition": "Contract/API/code capable of consuming this semantic. Capability does not prove current runtime wiring.",
+    "runtime_consumer_definition": "Repository evidence proves the current runtime wires the producer/output into this consumer. A persisted-data edge, direct call, module registration, route registration, or explicit same-request side effect may qualify when evidence is named.",
+    "invariant": "CAN_CONSUME must never be represented as IS_WIRED without a current_connectivity_edge carrying repository evidence.",
+    "scope_note": "unknown_unclassified_production_edge=0 means zero unknown edges within the explicit B-02 static/runtime-connectivity audit scope; the linter does not infer arbitrary TypeScript business semantics."
+  }
+}

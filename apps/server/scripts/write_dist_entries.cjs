@@ -153,6 +153,16 @@ runMcftCap07StartupMigrationFromEnvironmentV1().catch((error) => {
 });
 `,
   },
+  {
+    name: path.join("database", "bline_commercial_principal_bootstrap.js"),
+    content: `import { runBlineCommercialPrincipalBootstrapFromEnvironmentV1 } from "../apps/server/src/infra/bline_commercial_principal_bootstrap_v1.js";
+
+runBlineCommercialPrincipalBootstrapFromEnvironmentV1().catch((error) => {
+  console.error(\`FATAL: B-Line Commercial principal bootstrap failed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+  process.exit(1);
+});
+`,
+  },
 ];
 
 for (const entry of entries) {

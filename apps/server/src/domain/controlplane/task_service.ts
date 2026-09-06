@@ -33,6 +33,40 @@ function badRequest(reply: FastifyReply, error: string) {
   return reply.status(400).send({ ok: false, error }); // Deterministic 400 helper.
 }
 
+function requireExecutorServicePrincipalV1(auth: AoActAuthContextV0, reply: FastifyReply): boolean {
+  if (String(auth.role ?? "") !== "executor") {
+    reply.status(403).send({ ok: false, error: "EXECUTOR_PRINCIPAL_REQUIRED" });
+    return false;
+  }
+  return true;
+}
+
+function canonicalReceiptExecutorV1(auth: AoActAuthContextV0): { kind: "human" | "script"; id: string; namespace: string } | null {
+  const role = String(auth.role ?? "");
+  if (role === "executor") return { kind: "script", id: String(auth.actor_id), namespace: "executor_runtime_v1" };
+  if (role === "operator") return { kind: "human", id: String(auth.actor_id), namespace: "operator_auth_v1" };
+  return null;
+}
+
+function requireReceiptPrincipalV1(auth: AoActAuthContextV0, reply: FastifyReply, executorOnly = false) {
+  if (executorOnly && String(auth.role ?? "") !== "executor") {
+    reply.status(403).send({ ok: false, error: "EXECUTOR_PRINCIPAL_REQUIRED" });
+    return null;
+  }
+  const principal = canonicalReceiptExecutorV1(auth);
+  if (!principal) {
+    reply.status(403).send({ ok: false, error: "EXECUTION_PRINCIPAL_REQUIRED" });
+    return null;
+  }
+  return principal;
+}
+
+function claimedReceiptExecutorMatchesV1(claimed: any, principal: { id: string }): boolean {
+  if (claimed == null || claimed === "") return true;
+  if (typeof claimed === "string") return claimed.trim() === principal.id;
+  return String(claimed?.id ?? "").trim() === principal.id;
+}
+
 function capabilityError(reply: FastifyReply, input: {
   stage: "approval" | "task_create" | "dispatch";
   act_task_id?: string | null;
@@ -836,7 +870,7 @@ export async function loadManualOperationByCommandId(
   pool: Pool,
   tenant: TenantTriple,
   command_id: string
-): Promise<{ operation_id: string; operation_plan_id: string; command_id: string } | null> {
+): Promise<{ operation_id: string; operation_plan_id: string; command_id: string; act_task_id: string } | null> {
   const normalizedCommandId = String(command_id ?? "").trim();
   if (!normalizedCommandId) return null;
   const sql = `
@@ -871,10 +905,30 @@ export async function loadManualOperationByCommandId(
   const operation_id = String(payload.operation_id ?? operation_plan_id).trim() || operation_plan_id;
   const resolvedCommandId = String(row.resolved_command_id ?? "").trim();
   if (!resolvedCommandId) return null;
+  const taskRes = await pool.query(
+    `SELECT fact_id, record_json::jsonb AS record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type') = 'ao_act_task_v0'
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+        AND (record_json::jsonb#>>'{payload,project_id}') = $2
+        AND (record_json::jsonb#>>'{payload,group_id}') = $3
+        AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $4
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 2`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, operation_plan_id]
+  );
+  if ((taskRes.rowCount ?? 0) !== 1) {
+    if ((taskRes.rowCount ?? 0) > 1) throw new Error("MANUAL_OPERATION_TASK_LINKAGE_AMBIGUOUS");
+    return null;
+  }
+  const taskRecord = parseJsonMaybe(taskRes.rows[0].record_json) ?? taskRes.rows[0].record_json;
+  const act_task_id = String(taskRecord?.payload?.act_task_id ?? "").trim();
+  if (!act_task_id) return null;
   return {
     operation_id,
     operation_plan_id,
-    command_id: resolvedCommandId
+    command_id: resolvedCommandId,
+    act_task_id
   };
 }
 
@@ -885,7 +939,8 @@ async function createOperationPlanForApproval(
   request_id: string,
   requestPayload: any,
   requestBody: any,
-  source: string
+  source: string,
+  operationPlanId?: string
 ): Promise<{ operation_plan_id: string; operation_plan_fact_id: string; transition_fact_id: string }> {
   const proposal = requestPayload?.proposal ?? {};
   const approvalPayload = requestPayload ?? {};
@@ -947,7 +1002,7 @@ async function createOperationPlanForApproval(
     ?? requestBodyPayload?.device_requirements?.device_id
     ?? null
   );
-  const operation_plan_id = `opl_${randomUUID().replace(/-/g, "")}`;
+  const operation_plan_id = String(operationPlanId ?? "").trim() || `opl_${randomUUID().replace(/-/g, "")}`;
   const operation_plan_fact_id = await insertFact(pool, source, {
     type: "operation_plan_v1",
     payload: {
@@ -1128,6 +1183,8 @@ if (!allowed.includes(next_status)) {
       required_capabilities: Array.isArray(payload.required_capabilities) ? payload.required_capabilities : [],
       status: next_status,
       approval_request_id: transition.approval_request_id ?? payload.approval_request_id ?? null,
+      approval_decision: transition.decision ?? payload.approval_decision ?? null,
+      approval_decision_fact_id: transition.decision_fact_id ?? payload.approval_decision_fact_id ?? null,
       act_task_id: transition.act_task_id ?? payload.act_task_id ?? null,
       receipt_fact_id: transition.receipt_fact_id ?? payload.receipt_fact_id ?? null,
       updated_ts: Date.now()
@@ -1412,7 +1469,6 @@ async function listOperationPlanStateReadModel(
 }
 
 async function listDispatchQueue(pool: Pool, tenant: TenantTriple, limit: number, actTaskId?: string): Promise<any[]> {
-  await ensureDispatchQueueRuntime(pool);
   const sql = `
     SELECT q.queue_id,
            q.act_task_id,
@@ -2207,13 +2263,13 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // POST /api/v1/approvals
   // Stable REST wrapper around Sprint25 approval_request runtime.
   app.post("/api/v1/approvals", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write"); // Approval creation implies later task issuance authority.
-    if (!auth) return;
-    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
+    const auth = requireAoActScopeV0(req, reply, "approval.request");
+    if (!auth) return reply;
+    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return reply;
     const body: any = req.body ?? {};
     const tenant: TenantTriple = parseTenantFromBody(body);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
 
     const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/approvals/request`, String((req.headers as any).authorization ?? ""), {
       ...body,
@@ -2257,9 +2313,9 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // approve => writes approval_decision_v1 + wrapper task_created fact via existing AO-ACT core.
   // reject  => writes approval_decision_v1 only.
   app.post("/api/v1/approvals/:request_id/decide", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
-    if (!auth) return;
-    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
+    const auth = requireAoActScopeV0(req, reply, "approval.decide");
+    if (!auth) return reply;
+    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return reply;
     const params: any = (req as any).params ?? {};
     const body: any = req.body ?? {};
     const request_id = String(params.request_id ?? "").trim();
@@ -2267,8 +2323,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const decision = String(body.decision ?? "").trim().toUpperCase();
     if (decision !== "APPROVE" && decision !== "REJECT") return badRequest(reply, "INVALID_DECISION");
     const tenant: TenantTriple = parseTenantFromBody(body);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
 
     const requestFact = await loadLatestFactByTypeAndKey(pool, "approval_request_v1", "payload,request_id", request_id, tenant);
     if (!requestFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
@@ -2283,25 +2339,21 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     let wrapper_task_created_fact_id: string | null = null; // Wrapper fact id for Commercial v1 paths.
 
     let operationPlan = await loadLatestOperationPlanByApprovalRequestId(pool, request_id, tenant);
-    if (!operationPlan && decision === "APPROVE") {
-      await createOperationPlanForApproval(pool, tenant, request_id, requestPayload, body, "api/v1/approvals");
-      operationPlan = await loadLatestOperationPlanByApprovalRequestId(pool, request_id, tenant);
-    }
-    const operation_plan_id = operationPlan?.record_json?.payload?.operation_plan_id ? String(operationPlan.record_json.payload.operation_plan_id) : null;
+    const operation_plan_id = operationPlan?.record_json?.payload?.operation_plan_id
+      ? String(operationPlan.record_json.payload.operation_plan_id)
+      : `opl_${randomUUID().replace(/-/g, "")}`;
     if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
-    if (!operationPlan) return badRequest(reply, "OPERATION_PLAN_NOT_FOUND");
     if (decision !== "APPROVE") return badRequest(reply, "OPERATION_PLAN_APPROVAL_REQUIRED");
 
-    if (decision === "APPROVE") {
       const proposal = requestPayload.proposal; // Reuse request proposal as AO-ACT task input.
-      const planPayload = operationPlan?.record_json?.payload ?? {};
+      const preDecisionPlanPayload = operationPlan?.record_json?.payload ?? {};
       const approvalDeviceId =
-        String(planPayload?.device_id ?? "").trim()
+        String(preDecisionPlanPayload?.device_id ?? "").trim()
         || String(proposal?.target?.id ?? "").trim()
         || String(proposal?.meta?.device_id ?? "").trim()
         || (typeof proposal?.target === "string" ? String(proposal.target).trim() : "");
-      const planAdapterType = typeof operationPlan?.record_json?.payload?.adapter_type === "string"
-        ? String(operationPlan.record_json.payload.adapter_type)
+      const planAdapterType = typeof preDecisionPlanPayload?.adapter_type === "string"
+        ? String(preDecisionPlanPayload.adapter_type)
         : String(proposal?.meta?.adapter_type ?? "");
       const resolvedProposalActionType = resolveActionType(proposal);
       const parsedCapabilityResult = parseTaskCapability(proposal);
@@ -2320,7 +2372,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
         group_id: tenant.group_id,
-        field_id: planPayload?.field_id ?? requestPayload?.field_id ?? requestPayload?.meta?.field_id ?? null,
+        field_id: preDecisionPlanPayload?.field_id ?? requestPayload?.field_id ?? requestPayload?.meta?.field_id ?? null,
         meta: { device_id: approvalDeviceId }
       });
       if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
@@ -2370,6 +2422,63 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           approved_by_token_id: auth.token_id
         }
       });
+
+      const decision_id = `apd_${randomUUID().replace(/-/g, "")}`;
+      const decision_fact_id = await insertFact(pool, "api/v1/approvals", {
+        type: "approval_decision_v1",
+        payload: {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          decision_id,
+          request_id,
+          decision,
+          act_task_id: null,
+          ao_act_fact_id: null,
+          auto_task_issued: false,
+          task_issue_intent: true,
+          actor_id: auth.actor_id,
+          token_id: auth.token_id,
+          created_at_ts: Date.now(),
+          reason: body.reason ?? null
+        }
+      });
+
+      if (!operationPlan) {
+        await createOperationPlanForApproval(
+          pool,
+          tenant,
+          request_id,
+          requestPayload,
+          body,
+          "api/v1/approvals",
+          operation_plan_id
+        );
+        operationPlan = await loadLatestOperationPlanByApprovalRequestId(pool, request_id, tenant);
+      }
+      if (!operationPlan) return reply.status(500).send({ ok: false, error: "OPERATION_PLAN_CREATE_FAILED" });
+
+      const approvedTransition = await transitionOperationPlanStateV1(pool, tenant, operationPlan, {
+        next_status: "APPROVED",
+        trigger: "approval_decision",
+        approval_request_id: request_id,
+        decision,
+        decision_fact_id,
+        act_task_id: null
+      }, "api/v1/approvals");
+      const approvedPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
+      if (!approvedPlan) return reply.status(500).send({ ok: false, error: "OPERATION_PLAN_UPDATE_FAILED" });
+
+      const readyTransition = await transitionOperationPlanStateV1(pool, tenant, approvedPlan, {
+        next_status: "READY",
+        trigger: "approval_ready_for_task",
+        approval_request_id: request_id,
+        decision,
+        decision_fact_id,
+        act_task_id: null
+      }, "api/v1/approvals");
+      const readyPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
+      if (!readyPlan) return reply.status(500).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND_AFTER_READY" });
       const sanitizedParameters = sanitizeParametersBySchema(proposal.parameter_schema, proposal.parameters);
       const taskCreatePayload = {
         tenant_id: tenant.tenant_id,
@@ -2391,11 +2500,13 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           capability_parameters: parsedCapability.parameters,
           evidence_requirements: parsedCapability.evidence_requirements,
           device_id: approvalDeviceId || null,
-          adapter_type: typeof operationPlan?.record_json?.payload?.adapter_type === "string"
-            ? String(operationPlan.record_json.payload.adapter_type)
+          adapter_type: typeof readyPlan?.record_json?.payload?.adapter_type === "string"
+            ? String(readyPlan.record_json.payload.adapter_type)
             : (proposal?.meta?.adapter_type ?? null),
-          device_type: planPayload?.device_type ?? null,
-          required_capabilities: Array.isArray(planPayload?.required_capabilities) ? planPayload.required_capabilities : []
+          device_type: readyPlan?.record_json?.payload?.device_type ?? preDecisionPlanPayload?.device_type ?? null,
+          required_capabilities: Array.isArray(readyPlan?.record_json?.payload?.required_capabilities)
+            ? readyPlan.record_json.payload.required_capabilities
+            : []
         }
       };
       console.info("[AO_ACT_TASK_CREATE_DEBUG]", JSON.stringify({
@@ -2443,46 +2554,6 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           created_at_ts: Date.now()
         }
       }); // Wrapper fact gives Commercial v1 stable semantics without changing v0 core.
-    }
-
-    const decision_id = `apd_${randomUUID().replace(/-/g, "")}`; // Decision identifier exposed to clients.
-    const decision_fact_id = await insertFact(pool, "api/v1/approvals", {
-      type: "approval_decision_v1",
-      payload: {
-        tenant_id: tenant.tenant_id,
-        project_id: tenant.project_id,
-        group_id: tenant.group_id,
-        decision_id,
-        request_id,
-        decision,
-        act_task_id,
-        ao_act_fact_id,
-        actor_id: auth.actor_id,
-        token_id: auth.token_id,
-        created_at_ts: Date.now(),
-        reason: body.reason ?? null
-      }
-    });
-
-    const approvedTransition = await transitionOperationPlanStateV1(pool, tenant, operationPlan, {
-      next_status: "APPROVED",
-      trigger: "approval_decision",
-      approval_request_id: request_id,
-      decision,
-      decision_fact_id,
-      act_task_id
-    }, "api/v1/approvals");
-    const approvedPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
-    if (!approvedPlan) return reply.status(500).send({ ok: false, error: "OPERATION_PLAN_UPDATE_FAILED" });
-
-    const readyTransition = await transitionOperationPlanStateV1(pool, tenant, approvedPlan, {
-      next_status: "READY",
-      trigger: "task_created",
-      approval_request_id: request_id,
-      decision,
-      decision_fact_id,
-      act_task_id
-    }, "api/v1/approvals");
 
     const createdTaskFact = await loadLatestFactByTypeAndKey(
       pool,
@@ -2493,17 +2564,6 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     );
     if (!createdTaskFact) {
       return reply.status(500).send({ ok: false, error: "TASK_FACT_NOT_FOUND_AFTER_APPROVE" });
-    }
-
-    const readyPlan = await loadLatestFactByTypeAndKey(
-      pool,
-      "operation_plan_v1",
-      "payload,operation_plan_id",
-      operation_plan_id,
-      tenant
-    );
-    if (!readyPlan) {
-      return reply.status(500).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND_AFTER_READY" });
     }
 
     const readyQueue = await enqueueReadyDispatchForTask(
@@ -2959,15 +3019,18 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // POST /api/v1/ao-act/dispatches/claim
   // Industrial runtime queue claim: atomically leases READY items to a single executor.
   app.post("/api/v1/ao-act/dispatches/claim", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    const auth = requireAoActScopeV0(req, reply, "action.task.dispatch");
     if (!auth) return reply;
+    if (!requireExecutorServicePrincipalV1(auth, reply)) return reply;
     const body: any = req.body ?? {};
     const tenant: TenantTriple = parseTenantFromBody(body);
     if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
     const limit = Math.max(1, Math.min(50, Number.parseInt(String(body.limit ?? 1), 10) || 1));
     const lease_seconds = Math.max(5, Math.min(300, Number.parseInt(String(body.lease_seconds ?? 30), 10) || 30));
-    const executor_id = String(body.executor_id ?? auth.actor_id ?? "executor").trim() || "executor";
+    const claimedExecutorId = String(body.executor_id ?? "").trim();
+    if (claimedExecutorId && claimedExecutorId !== String(auth.actor_id)) return reply.status(403).send({ ok: false, error: "EXECUTOR_IDENTITY_MISMATCH" });
+    const executor_id = String(auth.actor_id);
     const lease_token = String(body.lease_token ?? `lease_${randomUUID().replace(/-/g, "")}`).trim();
     const actTaskId = typeof body.act_task_id === "string" && body.act_task_id.trim() ? body.act_task_id.trim() : undefined;
     const adapterHint = typeof body.adapter_hint === "string" && body.adapter_hint.trim() ? body.adapter_hint.trim() : undefined;
@@ -3022,8 +3085,9 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // POST /api/v1/ao-act/dispatches/state
   // Explicit runtime state transition endpoint used by executor adapters.
   app.post("/api/v1/ao-act/dispatches/state", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
-    if (!auth) return;
+    const auth = requireAoActScopeV0(req, reply, "action.task.dispatch");
+    if (!auth) return reply;
+    if (!requireExecutorServicePrincipalV1(auth, reply)) return reply;
     const body: any = req.body ?? {};
     const tenant: TenantTriple = parseTenantFromBody(body);
     if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
@@ -3187,9 +3251,12 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // POST /api/v1/ao-act/downlinks/published
   // Adapter runtime writes one audit fact after a successful MQTT publish and before appending receipt.
   app.post("/api/v1/ao-act/downlinks/published", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
-    if (!auth) return;
+    const auth = requireAoActScopeV0(req, reply, "action.task.dispatch");
+    if (!auth) return reply;
+    if (!requireExecutorServicePrincipalV1(auth, reply)) return reply;
     const body: any = req.body ?? {};
+    const claimedExecutorId = String(body.executor_id ?? "").trim();
+    if (claimedExecutorId && claimedExecutorId !== String(auth.actor_id)) return reply.status(403).send({ ok: false, error: "EXECUTOR_IDENTITY_MISMATCH" });
     const tenant: TenantTriple = parseTenantFromBody(body);
     if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
@@ -3213,7 +3280,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         state: "DISPATCHED",
         publish_fact_id: existingPublished.fact_id,
         leaseToken: typeof body.lease_token === "string" && body.lease_token.trim() ? body.lease_token.trim() : null,
-        leasedBy: typeof body.executor_id === "string" && body.executor_id.trim() ? body.executor_id.trim() : null
+        leasedBy: String(auth.actor_id)
       });
       const dispatchedTransition = operation_plan_id
         ? await ensureOperationPlanAtLeastDispatched(
@@ -3260,7 +3327,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       state: "DISPATCHED",
       publish_fact_id: published_fact_id,
       leaseToken: typeof body.lease_token === "string" && body.lease_token.trim() ? body.lease_token.trim() : null,
-      leasedBy: typeof body.executor_id === "string" && body.executor_id.trim() ? body.executor_id.trim() : null
+      leasedBy: String(auth.actor_id)
     });
     const dispatchedTransition = operation_plan_id
       ? await ensureOperationPlanAtLeastDispatched(
@@ -3316,8 +3383,11 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // MQTT receipt uplink ingestion path: append device-ack audit fact, then delegate into stable receipt runtime.
   app.post("/api/v1/ao-act/receipts/uplink", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
-    if (!auth) return;
+    if (!auth) return reply;
+    const executionPrincipal = requireReceiptPrincipalV1(auth, reply, true);
+    if (!executionPrincipal) return reply;
     const body: any = req.body ?? {};
+    if (!claimedReceiptExecutorMatchesV1(body.executor_id, executionPrincipal)) return reply.status(403).send({ ok: false, error: "EXECUTOR_IDENTITY_MISMATCH" });
     const tenant: TenantTriple = parseTenantFromBody(body);
     if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
@@ -3401,7 +3471,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       task_id: act_task_id,
       act_task_id,
       command_id,
-      executor_id: body.executor_id ?? { kind: "device", id: device_id, namespace: "mqtt_device_v1" },
+      executor_id: executionPrincipal,
       execution_time: body.execution_time ?? { start_ts: Number(body.start_ts ?? Date.now() - 50), end_ts: Number(body.end_ts ?? Date.now()) },
       execution_coverage: body.execution_coverage ?? { kind: "field", ref: "device_uplink" },
       resource_usage: body.resource_usage ?? { fuel_l: 0, electric_kwh: 0, water_l: 0, chemical_ml: 0 },
@@ -3422,7 +3492,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!delegated.ok || !delegated.json?.ok) return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "RECEIPT_UPLINK_WRITE_FAILED" });
     const uplinkEvidenceValidity = evaluateReceiptEvidenceValidity({
       ...body,
-      executor_id: body.executor_id ?? { kind: "device", id: device_id, namespace: "mqtt_device_v1" },
+      executor_id: executionPrincipal,
       logs_refs: body.logs_refs ?? [{ kind: "mqtt", ref: deriveReceiptTopic(tenant, device_id, body) }],
     });
     const receipt_v1_fact_id = await insertFact(pool, "api/v1/ao-act/receipts/uplink", {
@@ -3441,7 +3511,11 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         receipt_code: String(body?.meta?.receipt_code ?? body?.status ?? "SUCCEEDED"),
         receipt_message: body?.meta?.receipt_message ?? null,
         raw_receipt_ref: body?.meta?.raw_receipt_ref ?? null,
-        received_ts: Number(body?.meta?.received_ts ?? Date.now())
+        received_ts: Number(body?.meta?.received_ts ?? Date.now()),
+        executor_id: executionPrincipal,
+        source_receipt_fact_id: String(delegated.json.fact_id ?? ""),
+        auth_actor_id: auth.actor_id,
+        auth_token_id: auth.token_id
       }
     });
     if (uplinkEvidenceValidity.valid) {
@@ -3752,11 +3826,14 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // Delegates to existing receipt runtime and adds a stable wrapper fact for Commercial v1 REST.
   app.post("/api/v1/ao-act/receipts", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
-    if (!auth) return;
+    if (!auth) return reply;
+    const executionPrincipal = requireReceiptPrincipalV1(auth, reply);
+    if (!executionPrincipal) return reply;
     const body: any = req.body ?? {};
+    if (!claimedReceiptExecutorMatchesV1(body.executor_id, executionPrincipal)) return reply.status(403).send({ ok: false, error: "EXECUTOR_IDENTITY_MISMATCH" });
     const tenant: TenantTriple = parseTenantFromBody(body);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
     const task_id = String(body.task_id ?? body.act_task_id ?? "").trim();
     const command_id = String(body.command_id ?? "").trim();
     if (!task_id) return badRequest(reply, "MISSING_TASK_ID");
@@ -3791,6 +3868,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (planActTaskId && planActTaskId !== task_id) return badRequest(reply, "OPERATION_PLAN_TASK_ID_MISMATCH");
     const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/actions/receipt`, String((req.headers as any).authorization ?? ""), {
       ...body,
+      executor_id: executionPrincipal,
       act_task_id: task_id,
       operation_plan_id,
       tenant_id: tenant.tenant_id,
@@ -3815,6 +3893,10 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         receipt_message: body?.meta?.receipt_message ?? null,
         raw_receipt_ref: body?.meta?.raw_receipt_ref ?? null,
         received_ts: Number(body?.meta?.received_ts ?? Date.now()),
+        executor_id: executionPrincipal,
+        source_receipt_fact_id: String(delegated.json.fact_id ?? ""),
+        auth_actor_id: auth.actor_id,
+        auth_token_id: auth.token_id,
         evidence_artifact_ids: evidenceArtifactIds
       }
     });
@@ -3909,10 +3991,10 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // GET /api/v1/ao-act/receipts
   app.get("/api/v1/ao-act/receipts", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-    if (!auth) return;
+    if (!auth) return reply;
     const tenant = queryTenantFromReq(req, auth);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
     const q: any = (req as any).query ?? {};
     const items = await listReceipts(pool, tenant, parseLimit(q), typeof q.act_task_id === "string" ? q.act_task_id : undefined);
     return reply.send({ ok: true, items });

@@ -5,6 +5,7 @@ const { resolve } = require("node:path");
 
 const steps = [
   { kind: "node", dir: "../agronomy_acceptance", file: "ACCEPTANCE_FERTILIZATION_CONTRACT_V1.cjs", label: "fertilization-release" },
+  { kind: "node", dir: "../governance_acceptance", file: "ACCEPTANCE_BLINE_FERTILIZATION_EXECUTION_PROVENANCE_V1.cjs", label: "fertilization-release" },
   { kind: "node", dir: "../governance_acceptance", file: "ACCEPTANCE_FERTILIZATION_NO_PROJECTION_WRITE_V1.cjs", label: "fertilization-release" },
   { kind: "node", dir: "../governance_acceptance", file: "ACCEPTANCE_FERTILIZATION_SKILL_BOUNDARY_V1.cjs", label: "fertilization-release" },
   { kind: "node", dir: "../agronomy_acceptance", file: "ACCEPTANCE_FERTILIZATION_API_STATIC_V1.cjs", label: "fertilization-release" },

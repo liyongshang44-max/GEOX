@@ -1127,11 +1127,11 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         },
         FieldMemorySummaryItemV1: {
           type: "object",
-          required: ["memory_id","memory_type","metric_key","confidence","summary_text","evidence_refs","occurred_at"],
+          required: ["memory_id","memory_type","metric_key","summary_text","evidence_refs","occurred_at"],
           properties: {
             memory_id: { type: "string" }, memory_type: { type: "string" }, metric_key: { type: "string" },
             before_value: { type: "number", nullable: true }, after_value: { type: "number", nullable: true },
-            delta_value: { type: "number", nullable: true }, confidence: { type: "number" },
+            delta_value: { type: "number", nullable: true }, confidence: { type: "number", nullable: true },
             summary_text: { type: "string" }, evidence_refs: { type: "array", items: {} },
             skill_id: { type: "string", nullable: true }, skill_trace_ref: { type: "string", nullable: true },
             occurred_at: { type: "string", format: "date-time" }
@@ -1312,6 +1312,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             status: { type: "string", enum: ["TASK_CREATED", "DISPATCH_PENDING", "DISPATCHED", "RETRY_DISPATCHED", "ACKED", "RECEIPT_PENDING", "EXECUTION_FAILED", "RECEIPT_RECEIVED", "COMPLETED", "UNKNOWN"] },
             execution_mode: { type: "string", nullable: true },
             task_created_at: { type: "string", format: "date-time", nullable: true },
+            dispatch_requested_at: { type: "string", format: "date-time", nullable: true },
             dispatched_at: { type: "string", format: "date-time", nullable: true },
             acked_at: { type: "string", format: "date-time", nullable: true },
             receipt_received_at: { type: "string", format: "date-time", nullable: true },
@@ -1786,14 +1787,16 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
     "/api/v1/field-memory/from-acceptance": {
       post: {
         tags: ["operations"],
-        summary: "Create formal field memory from a formal acceptance result",
+        summary: "Materialize formal field memory from Acceptance plus committed reviewed promotion proof",
+        description: "Compatibility entrypoint. Acceptance is necessary provenance but never sufficient authority. The request must bind an exact field_memory_record_v1 whose P29 candidate and independent P30 reviewed promotion basis are verified fail-closed.",
         security: [{ bearerAuth: [] }],
         requestBody: { required: true, content: { "application/json": { schema: ref("FormalFieldMemoryFromAcceptanceRequest") } } },
         responses: {
-          "200": jsonResponse(ref("FormalFieldMemoryFromAcceptanceResponse"), "Formal field memory created or reused from acceptance"),
-          "400": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["MISSING_OPERATION_PLAN_ID", "MISSING_ACCEPTANCE_ID"] } }, additionalProperties: false }, "Missing required formal field memory input"),
-          "404": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["ACCEPTANCE_NOT_FOUND"] } }, additionalProperties: false }, "Acceptance result not found"),
-          "422": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["ACCEPTANCE_VERDICT_NOT_PASS", "ACCEPTANCE_NOT_FORMAL", "FORMAL_EVIDENCE_NOT_PASSED", "CHAIN_VALIDATION_NOT_PASSED", "ACCEPTANCE_FIELD_ID_MISSING", "OBSERVATION_PAIR_NOT_FOUND"] } }, additionalProperties: false }, "Formal field memory gate rejected"),
+          "200": jsonResponse(ref("FormalFieldMemoryFromAcceptanceResponse"), "Formal field memory materialized or reused after reviewed promotion proof"),
+          "400": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["MISSING_OPERATION_PLAN_ID", "MISSING_ACCEPTANCE_ID", "MISSING_FIELD_MEMORY_RECORD_REF"] } }, additionalProperties: false }, "Missing required formal field memory input"),
+          "404": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["ACCEPTANCE_NOT_FOUND", "FIELD_MEMORY_RECORD_NOT_FOUND", "FIELD_MEMORY_CANDIDATE_NOT_FOUND"] } }, additionalProperties: false }, "Required authority/provenance fact not found"),
+          "409": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string" } }, additionalProperties: false }, "Promotion proof identity is ambiguous"),
+          "422": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string" } }, additionalProperties: false }, "Acceptance/provenance/promotion gate rejected"),
           "500": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["INTERNAL_ERROR"] } }, additionalProperties: false }, "Internal error"),
         },
       },
@@ -1865,7 +1868,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
       "/api/v1/operator/dispatch/{taskId}/dispatch": {
         post: {
           tags: ["operations"],
-          summary: "Dispatch task",
+          summary: "Request task dispatch",
           parameters: [
             { name: "taskId", in: "path", required: true, schema: { type: "string" } }
           ],
@@ -1897,7 +1900,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
       "/api/v1/operator/dispatch/{taskId}/retry": {
         post: {
           tags: ["operations"],
-          summary: "Retry dispatch task",
+          summary: "Request task redispatch",
           parameters: [
             { name: "taskId", in: "path", required: true, schema: { type: "string" } }
           ],
@@ -3541,11 +3544,12 @@ function applyP13OpenApiAlignment(spec: any) {
     },
     OperationManualResponse: {
       type: "object",
-      required: ["ok", "operation_id", "operation_plan_id", "command_id"],
+      required: ["ok", "operation_id", "operation_plan_id", "act_task_id", "command_id"],
       properties: {
         ok: { type: "boolean" },
         operation_id: { type: "string" },
         operation_plan_id: { type: "string" },
+        act_task_id: { type: "string" },
         command_id: { type: "string" },
         reused: { type: "boolean" },
       },
@@ -4303,13 +4307,14 @@ function applyP13OpenApiAlignment(spec: any) {
     },
     FormalFieldMemoryFromAcceptanceRequest: {
       type: "object",
-      required: ["tenant_id", "project_id", "group_id", "operation_plan_id", "acceptance_id"],
+      required: ["tenant_id", "project_id", "group_id", "operation_plan_id", "acceptance_id", "field_memory_record_ref"],
       properties: {
         tenant_id: { type: "string" },
         project_id: { type: "string" },
         group_id: { type: "string" },
         operation_plan_id: { type: "string" },
         acceptance_id: { type: "string" },
+        field_memory_record_ref: { type: "string", description: "Exact fact_id or field_memory_record_id for a committed P30-reviewed field_memory_record_v1 proof." },
       },
       additionalProperties: false,
     },

@@ -912,7 +912,7 @@ export async function projectReportV1(params: {
     diagnosis_human: explainHuman,
   });
   const latestWeatherForecast = operationState.field_id
-    ? await getLatestWeatherForecastIndexV1(pool, tenant, operationState.field_id).catch(() => null)
+    ? await getLatestWeatherForecastIndexV1(pool, tenant, operationState.field_id, { allow_compatibility_write: false }).catch(() => null)
     : null;
   const weatherSummaryForReport =
     buildWeatherSummaryFromWeatherForecastIndexV1(latestWeatherForecast)

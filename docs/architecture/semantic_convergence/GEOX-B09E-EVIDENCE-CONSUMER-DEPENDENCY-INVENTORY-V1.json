@@ -1,0 +1,183 @@
+{
+  "schema_version": "evidence_consumer_dependency_inventory_v1",
+  "phase": "B-09e",
+  "base_product_head": "ac0d2d43c4914d53075de0ebc4e76bfeeca12d88",
+  "semantic_id": "evidence.qualification",
+  "analysis_mode": "DEPENDENCY_ANALYSIS_ONLY",
+  "authority_removal_performed": false,
+  "consumer_migration_performed": false,
+  "runtime_corpus_evidence": {
+    "qualification_run_id": 33146582018,
+    "validation_child_sha": "fb0a3b6390346f2ed3281957fc3b4bbda86862ca",
+    "artifact_id": 9676031155,
+    "artifact_name": "b09e-evidence-runtime-corpus",
+    "artifact_digest": "sha256:196d9730009af5b3feeb3f9af65177902c41e39a2ed156de2ca1ed69e08fdb0c",
+    "product_head": "ac0d2d43c4914d53075de0ebc4e76bfeeca12d88",
+    "observation_scope_class": "SYNTHETIC_ACCEPTANCE_RUNTIME",
+    "observed_comparison_count": 3,
+    "state_counts": {
+      "MATCH": 1,
+      "DIVERGENT": 1,
+      "INCOMPARABLE": 1,
+      "CANONICAL_MISSING": 0,
+      "LEGACY_MISSING": 0
+    },
+    "observed_judge_ids": [
+      "96bb3768-4573-4019-8e20-2e2529fdeb0b",
+      "56558f4d-8379-4f1f-815f-6c8f06e2a8f3",
+      "67eca20b-410c-430a-ba07-3bd27b74b682"
+    ],
+    "limitations": [
+      "RUNTIME_CORPUS_DOES_NOT_PROVE_FIELD_LEVEL_SEMANTIC_EQUIVALENCE",
+      "RUNTIME_CORPUS_DOES_NOT_AUTHORIZE_CONSUMER_MIGRATION",
+      "RUNTIME_CORPUS_DOES_NOT_AUTHORIZE_AUTHORITY_REMOVAL",
+      "SYNTHETIC_ACCEPTANCE_SCOPE_IS_NOT_CUSTOMER_PRODUCTION_TRAFFIC"
+    ]
+  },
+  "legacy_producers": [
+    {
+      "producer_id": "evidence-judge-v2",
+      "path": "apps/server/src/domain/judge/evidence_judge_v2.ts",
+      "corpus_coverage": "RUNTIME_SHADOW_OBSERVED",
+      "removal_readiness": "FORBIDDEN_PENDING_CONSUMER_MIGRATION"
+    },
+    {
+      "producer_id": "stage1-formal-gate",
+      "path": "apps/server/src/domain/decision/stage1_action_boundary_v1.ts",
+      "corpus_coverage": "NOT_COVERED_BY_B09E_EVIDENCE_JUDGE_CORPUS",
+      "removal_readiness": "FORBIDDEN_PENDING_SEPARATE_SHADOW_AND_CONSUMER_MIGRATION"
+    },
+    {
+      "producer_id": "apple-ii-contract-semantics",
+      "path": "docs/audit/CONTRACT_ALIGNMENT_MATRIX_V1.md",
+      "corpus_coverage": "REFERENCE_ONLY",
+      "removal_readiness": "NOT_APPLICABLE_REFERENCE_ONLY"
+    }
+  ],
+  "dependencies": [
+    {
+      "dependency_id": "evidence-judge-self-surface",
+      "producer_id": "evidence-judge-v2",
+      "consumer_id": "judge-v2-evidence-route",
+      "path": "apps/server/src/routes/judge_v2.ts",
+      "dependency_class": "SELF_SURFACE_PERSISTENCE_AND_RESPONSE",
+      "runtime_edge": "PROVEN",
+      "current_behavior": [
+        "route executes Evidence Judge compatibility verdict",
+        "route attaches B-09c SHADOW_ONLY comparison",
+        "route persists both into JudgeResultV2"
+      ],
+      "divergent_case_effect": "OBSERVABILITY_ONLY_AT_THIS_SURFACE",
+      "migration_status": "COMPATIBILITY_SURFACE_MAY_REMAIN_BUT_LEGACY_VERDICT_CANNOT_BE_REMOVED_YET",
+      "prerequisites": [
+        "downstream consumers migrated or reclassified",
+        "Stage-1 evidence authority separately adjudicated"
+      ],
+      "authority_removal_permitted": false
+    },
+    {
+      "dependency_id": "agronomy-caller-injected-evidence-verdict",
+      "producer_id": "evidence-judge-v2",
+      "consumer_id": "agronomy-judge-v2",
+      "path": "apps/server/src/domain/judge/agronomy_judge_v2.ts",
+      "route_path": "apps/server/src/routes/judge_v2.ts",
+      "dependency_class": "CALLER_INJECTED_LEGACY_VERDICT",
+      "runtime_edge": "NOT_PROVEN",
+      "request_contract": {
+        "accepts_evidence_judge_id": true,
+        "accepts_evidence_judge_verdict": true,
+        "domain_loads_evidence_judge_id": false,
+        "domain_consumes_evidence_judge_verdict": true
+      },
+      "blocking_legacy_verdicts": [
+        "DEVICE_OFFLINE",
+        "INSUFFICIENT_EVIDENCE",
+        "STALE_DATA"
+      ],
+      "notable_nonblocking_legacy_verdicts": [
+        "PASS",
+        "SENSOR_DRIFT"
+      ],
+      "observed_case_implications": [
+        {
+          "comparison_state": "MATCH",
+          "runtime_case": "legacy STALE_DATA / canonical NEEDS_EVIDENCE",
+          "downstream_effect_if_forwarded": "blockedByEvidence=true"
+        },
+        {
+          "comparison_state": "DIVERGENT",
+          "runtime_case": "legacy PASS / canonical NEEDS_EVIDENCE",
+          "downstream_effect_if_forwarded": "blockedByEvidence=false; agronomy calculation may proceed"
+        },
+        {
+          "comparison_state": "INCOMPARABLE",
+          "runtime_case": "legacy PASS / canonical UNKNOWN because field scope absent",
+          "downstream_effect_if_forwarded": "blockedByEvidence=false; missing canonical scope is not represented"
+        }
+      ],
+      "target_boundary": [
+        "B-07c Agronomy Judge criterion adapter",
+        "B-07d/B-07e canonical Decision Eligibility Runtime"
+      ],
+      "migration_status": "MIGRATION_REQUIRED_BEFORE_EVIDENCE_JUDGE_AUTHORITY_REMOVAL",
+      "prerequisites": [
+        "eliminate caller-injected legacy verdict as independent authority input",
+        "bind explicit canonical EvidenceQualification support refs",
+        "project evidence consequence as criterion semantics rather than direct BLOCK",
+        "aggregate action-level consequence through canonical Decision Eligibility",
+        "prove DIVERGENT and INCOMPARABLE behavior after migration"
+      ],
+      "authority_removal_permitted": false
+    },
+    {
+      "dependency_id": "stage1-separate-evidence-authority",
+      "producer_id": "stage1-formal-gate",
+      "consumer_id": "stage1-recommendation-path",
+      "path": "apps/server/src/routes/decision_engine_v1.ts",
+      "dependency_class": "SEPARATE_GRANDFATHERED_EVIDENCE_AUTHORITY",
+      "runtime_edge": "PROVEN",
+      "b09b_comparator_exists": true,
+      "runtime_comparator_connected": false,
+      "covered_by_b09e_runtime_corpus": false,
+      "migration_status": "SEPARATE_SHADOW_AND_CONSUMER_MIGRATION_REQUIRED",
+      "prerequisites": [
+        "connect Stage-1 shadow comparison under explicit later B-09 governance",
+        "collect Stage-1 divergence inventory",
+        "migrate Stage-1 evidence consequence without conflating trigger absence with evidence conclusion"
+      ],
+      "authority_removal_permitted": false
+    }
+  ],
+  "canonical_shadow_consumers": [
+    {
+      "consumer_id": "appleii-canonical-evidence-shadow",
+      "path": "apps/server/src/domain/sensing/appleii_evidence_sufficiency_v1.ts",
+      "role": "builds canonical EvidenceQualification shadow",
+      "current_authority": "SHADOW_ONLY"
+    },
+    {
+      "consumer_id": "stage1-canonical-evidence-shadow-debug",
+      "path": "apps/server/src/domain/decision/stage1_action_boundary_v1.ts",
+      "role": "debug visibility only; not Stage-1 gate authority",
+      "current_authority": "SHADOW_ONLY"
+    },
+    {
+      "consumer_id": "evidence-judge-canonical-sufficiency-shadow",
+      "path": "apps/server/src/domain/judge/evidence_judge_v2.ts",
+      "role": "problem-specific sufficiency facade over canonical EvidenceQualification",
+      "current_authority": "SHADOW_ONLY"
+    }
+  ],
+  "conclusions": [
+    "EVIDENCE_JUDGE_AUTHORITY_REMOVAL_FORBIDDEN",
+    "AGRONOMY_JUDGE_CALLER_INJECTED_VERDICT_DEPENDENCY_UNMIGRATED",
+    "AGRONOMY_BLOCKED_SHORTCUT_MUST_NOT_MAP_DIRECTLY_TO_CANONICAL_BLOCK",
+    "STAGE1_EVIDENCE_AUTHORITY_NOT_COVERED_BY_EVIDENCE_JUDGE_RUNTIME_CORPUS",
+    "CONSUMER_MIGRATION_MUST_PRECEDE_ANY_LEGACY_AUTHORITY_REMOVAL"
+  ],
+  "next_authorized_work": [
+    "design a bounded Agronomy Judge evidence-dependency migration seam using existing B-07 criterion/eligibility contracts",
+    "keep that migration shadow/non-authoritative until DIVERGENT and INCOMPARABLE behavior is proven",
+    "separately shadow Stage-1 before any family-wide Evidence authority removal"
+  ]
+}
