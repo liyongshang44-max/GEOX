@@ -12,6 +12,7 @@ const HISTORICAL_CHECKER_BLOB = "19fb9fba262687d34232dc7aa55f1f0748cf221f";
 const HISTORICAL_REPAIR_COMMIT = "70b180b63cc61e5869b234aed3e4be0aef09b705";
 const HISTORICAL_REPAIR_CHECKER_BLOB = "003daa532e63df8f7225f4a23d578d23a49a8461";
 const REPAIR_PREDECESSOR = "f94f7890ea351573363c331ee0d144034f821f9c";
+const QCP_CURRENT_PROTECTED_MAIN_BASE = "f41dde8d44de95e71748e756e048e0166c1916b7";
 
 const CHECKER = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs";
 const RESOLVER = "apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.ts";
@@ -232,7 +233,17 @@ function allTrue(object) {
 }
 
 const currentHeadSha = git(["rev-parse", "HEAD"]);
-const currentDeltaBaseSha = String(process.env.GEOX_MCFT_CAP09_CURRENT_DELTA_BASE_SHA || "");
+const explicitCurrentDeltaBaseSha = String(process.env.GEOX_MCFT_CAP09_CURRENT_DELTA_BASE_SHA || "");
+const qcpCurrentDeltaBaseSha = String(process.env.CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA || "");
+const qcpFallbackAuthorized =
+  !explicitCurrentDeltaBaseSha &&
+  qcpCurrentDeltaBaseSha === QCP_CURRENT_PROTECTED_MAIN_BASE;
+const currentDeltaBaseSha = explicitCurrentDeltaBaseSha || (qcpFallbackAuthorized ? qcpCurrentDeltaBaseSha : "");
+const currentDeltaBaseSource = explicitCurrentDeltaBaseSha
+  ? "PULL_REQUEST_BASE_SHA"
+  : qcpFallbackAuthorized
+    ? "QCP_EXACT_CURRENT_PROTECTED_MAIN_PREDECESSOR_SHA"
+    : "UNSET";
 const currentDeltaBaseAssertions = {
   current_delta_base_sha_present: /^[0-9a-f]{40}$/.test(currentDeltaBaseSha),
   current_delta_base_commit_available: exactCommitAvailable(currentDeltaBaseSha),
@@ -415,7 +426,7 @@ const proof = {
 
   current_head_sha: currentHeadSha,
   current_delta_base_sha: currentDeltaBaseSha,
-  current_delta_base_source: "PULL_REQUEST_BASE_SHA",
+  current_delta_base_source: currentDeltaBaseSource,
   current_delta_base_assertions: currentDeltaBaseAssertions,
   forbidden_production_surface_drift_from_current_delta_base: forbiddenProductionSurfaceDrift,
 
