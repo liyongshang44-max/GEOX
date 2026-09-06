@@ -5,10 +5,10 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/mcft-cap-09-t4r1-current-crop-refresh-v1.yml'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-05T04Z-V1.json'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-05T04Z-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-06T04Z-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-06T04Z-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_05T04Z_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_06T04Z_V1.cjs'
       - 'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_V1.cjs'
 
 permissions:
@@ -23,11 +23,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      QUALIFIED_SUBJECT_SHA: 9d99ba7832b37651c48c750299587953b210ea2d
-      REQUEST: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-05T04Z-V1.json
-      PREVIOUS: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-04T04Z-V1.json
+      QUALIFIED_SUBJECT_SHA: 76c5b20173cfb130c6f91c4240b154514fd4ee58
+      REQUEST: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-06T04Z-V1.json
+      PREVIOUS: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-05T04Z-V1.json
       CERT: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json
-      PERSISTED: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-05T04Z-V1.json
+      PERSISTED: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-06T04Z-V1.json
       REGISTRY: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json
     steps:
       - name: Checkout exact successor subject
@@ -65,10 +65,10 @@ jobs:
       - name: Syntax-check rolling refresh builder and final acceptance
         run: |
           node --check scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_V1.cjs
-          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_05T04Z_V1.cjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_06T04Z_V1.cjs
 
       - name: Validate persisted rolling current-crop authority and registry extension
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_05T04Z_V1.cjs
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_06T04Z_V1.cjs
 
       - name: Validate registry latest-effective selection contract
         shell: node {0}
@@ -79,7 +79,7 @@ jobs:
           const current=JSON.parse(fs.readFileSync(process.env.PERSISTED,'utf8'));
           if(registry.selection_policy!=='LATEST_EFFECTIVE_AUTHORITY_AS_OF_NOT_AFTER_LOGICAL_TIME_WITHIN_VALIDITY_WINDOW') throw new Error('REFRESH_REGISTRY_SELECTION_POLICY_DRIFT');
           if(registry.candidate_artifacts_admissible!==false) throw new Error('REFRESH_CANDIDATE_ARTIFACT_ADMISSIBILITY_DRIFT');
-          if(registry.entries.length!==3) throw new Error('REFRESH_REGISTRY_CARDINALITY');
+          if(registry.entries.length!==4) throw new Error('REFRESH_REGISTRY_CARDINALITY');
           const latest=registry.entries[registry.entries.length-1];
           const digest='sha256:'+crypto.createHash('sha256').update(fs.readFileSync(process.env.PERSISTED)).digest('hex');
           if(latest.authority_ref!==process.env.PERSISTED) throw new Error('REFRESH_REGISTRY_LATEST_REF_MISMATCH');
@@ -116,8 +116,8 @@ jobs:
         with:
           name: mcft-cap09-t4r1-current-crop-refresh-preservation-${{ github.event.pull_request.head.sha }}
           path: |
-            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-05T04Z-V1.json
-            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-05T04Z-V1.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-06T04Z-V1.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-06T04Z-V1.json
             docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json
           if-no-files-found: error
           retention-days: 90

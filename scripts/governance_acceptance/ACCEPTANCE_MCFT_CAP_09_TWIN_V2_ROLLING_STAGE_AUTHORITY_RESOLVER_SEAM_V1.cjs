@@ -13,6 +13,7 @@ const HISTORICAL_REPAIR_COMMIT = "70b180b63cc61e5869b234aed3e4be0aef09b705";
 const HISTORICAL_REPAIR_CHECKER_BLOB = "003daa532e63df8f7225f4a23d578d23a49a8461";
 const REPAIR_PREDECESSOR = "f94f7890ea351573363c331ee0d144034f821f9c";
 const QCP_CURRENT_PROTECTED_MAIN_BASE = "f41dde8d44de95e71748e756e048e0166c1916b7";
+const QCP_CURRENT_CROP_CONTINUITY_REFRESH_MERGE_BASE = "ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd";
 
 const CHECKER = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs";
 const RESOLVER = "apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.ts";
@@ -235,15 +236,27 @@ function allTrue(object) {
 const currentHeadSha = git(["rev-parse", "HEAD"]);
 const explicitCurrentDeltaBaseSha = String(process.env.GEOX_MCFT_CAP09_CURRENT_DELTA_BASE_SHA || "");
 const qcpCurrentDeltaBaseSha = String(process.env.CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA || "");
-const qcpFallbackAuthorized =
+const qcpCurrentCropContinuityRefreshMergeBaseSha = String(process.env.CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA || "");
+const qcpCurrentCropContinuityFallbackAuthorized =
   !explicitCurrentDeltaBaseSha &&
+  qcpCurrentCropContinuityRefreshMergeBaseSha === QCP_CURRENT_CROP_CONTINUITY_REFRESH_MERGE_BASE;
+const qcpCurrentProtectedMainFallbackAuthorized =
+  !explicitCurrentDeltaBaseSha &&
+  !qcpCurrentCropContinuityFallbackAuthorized &&
   qcpCurrentDeltaBaseSha === QCP_CURRENT_PROTECTED_MAIN_BASE;
-const currentDeltaBaseSha = explicitCurrentDeltaBaseSha || (qcpFallbackAuthorized ? qcpCurrentDeltaBaseSha : "");
+const currentDeltaBaseSha = explicitCurrentDeltaBaseSha ||
+  (qcpCurrentCropContinuityFallbackAuthorized
+    ? qcpCurrentCropContinuityRefreshMergeBaseSha
+    : qcpCurrentProtectedMainFallbackAuthorized
+      ? qcpCurrentDeltaBaseSha
+      : "");
 const currentDeltaBaseSource = explicitCurrentDeltaBaseSha
   ? "PULL_REQUEST_BASE_SHA"
-  : qcpFallbackAuthorized
-    ? "QCP_EXACT_CURRENT_PROTECTED_MAIN_PREDECESSOR_SHA"
-    : "UNSET";
+  : qcpCurrentCropContinuityFallbackAuthorized
+    ? "QCP_EXACT_CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA"
+    : qcpCurrentProtectedMainFallbackAuthorized
+      ? "QCP_EXACT_CURRENT_PROTECTED_MAIN_PREDECESSOR_SHA"
+      : "UNSET";
 const currentDeltaBaseAssertions = {
   current_delta_base_sha_present: /^[0-9a-f]{40}$/.test(currentDeltaBaseSha),
   current_delta_base_commit_available: exactCommitAvailable(currentDeltaBaseSha),
