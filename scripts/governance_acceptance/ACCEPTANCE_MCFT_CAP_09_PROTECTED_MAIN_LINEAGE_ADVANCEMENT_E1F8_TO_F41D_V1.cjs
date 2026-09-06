@@ -9,9 +9,13 @@ const path=require("node:path");
 const ROOT=path.resolve(__dirname,"../..");
 const OLD_BASE="e1f8b078bb8459ecb9a77d1fad0d95f4bf143221";
 const NEW_BASE="f41dde8d44de95e71748e756e048e0166c1916b7";
+const OLD_CANDIDATE_HEAD="0d1c194c44e428ac7af88c44c8125903a2bedce3";
+const OLD_QUALIFIED_SUBJECT="93d08e4003370221218471e53a58ad356c34e3b9";
+const REPLAYED_QUALIFIED_SUBJECT="9d99ba7832b37651c48c750299587953b210ea2d";
 const QCP="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 const PLANNER="scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs";
 const ARTIFACT="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PROTECTED-MAIN-LINEAGE-ADVANCEMENT-E1F8-TO-F41D-V1.json";
+const PERSISTED_ARTIFACT_BLOB="a4cc74c9927896994d059b3b3716d5602b5bc58c";
 const EXPECTED_MERGES=[{"pr":3515,"sha":"ead9d0f0f1c787d75588b4970dd9d315fe28f1fb"},{"pr":3516,"sha":"0267c224d5c0c0524997b724b89cbe03d4e8b299"},{"pr":3517,"sha":"bf5bd1dda29d8fef2ddc21dc758c2126077bf98b"},{"pr":3518,"sha":"f41dde8d44de95e71748e756e048e0166c1916b7"}];
 const EXPECTED_CHANGED=[".github/workflows/adr-geox-one-shot-shadow-observer.yml",".github/workflows/adr-geox-postgres-transaction-guarded-shadow.yml",".github/workflows/adr-real-geox-postgres-readonly-shadow-qualification.yml",".github/workflows/adr-real-geox-readonly-shadow-adoption.yml","apps/server/src/integrations/adr/read_only_shadow_adoption_v1.ts","scripts/adr_adoption/geox_adr_one_shot_shadow_observer_v1.mjs","scripts/adr_adoption/qualified-consumer-source.v1.json","scripts/adr_adoption/qualify_geox_adr_one_shot_shadow_observer_v1.mjs","scripts/adr_adoption/real_geox_postgres_readonly_shadow_qualification_v1.mjs","scripts/adr_adoption/real_geox_postgres_transaction_guarded_shadow_v1.mjs","scripts/adr_adoption/real_geox_readonly_shadow_adoption_v1.mjs"];
 
@@ -28,6 +32,7 @@ function diffNames(a,b){const o=text("git",["diff","--name-only",a+".."+b]);retu
 function subject(sha){return text("git",["show","-s","--format=%s",sha]);}
 function gitShow(sha,rel){return run("git",["show",sha+":"+rel]).stdout;}
 function patchId(sha){const patch=run("git",["show","--pretty=format:","--binary",sha],{encoding:null}).stdout;const out=run("git",["patch-id","--stable"],{input:patch,encoding:null}).stdout;return Buffer.from(out||Buffer.alloc(0)).toString("utf8").trim().split(/\s+/)[0]||null;}
+function isSha(value){return /^[0-9a-f]{40}$/.test(String(value||""));}
 
 function coreProof(wt){
   const first=text("git",["rev-list","--first-parent","--reverse",OLD_BASE+".."+NEW_BASE]).split(/\r?\n/).filter(Boolean);
@@ -109,7 +114,15 @@ const liveMain=text("git",["rev-parse","origin/main"]);
 if(liveMain!==NEW_BASE) throw new Error("PROTECTED_MAIN_DRIFT:"+liveMain);
 run("git",["merge-base","--is-ancestor",OLD_BASE,NEW_BASE]);
 
-const artifact=JSON.parse(fs.readFileSync(path.join(ROOT,ARTIFACT),"utf8"));
+const artifactPath=path.join(ROOT,ARTIFACT);
+const artifact=JSON.parse(fs.readFileSync(artifactPath,"utf8"));
+const artifactBlob=text("git",["rev-parse","HEAD:"+ARTIFACT]);
+if(artifactBlob!==PERSISTED_ARTIFACT_BLOB) throw new Error("LINEAGE_PERSISTED_ARTIFACT_BLOB_DRIFT:"+artifactBlob);
+if(artifact.schema_version!=="geox_mcft_cap09_protected_main_lineage_advancement_adjudication_v1"||artifact.status!=="PASS") throw new Error("LINEAGE_PERSISTED_ARTIFACT_SCHEMA_OR_STATUS_INVALID");
+if(artifact.previous_mcft_base!==OLD_BASE||artifact.current_protected_main!==NEW_BASE) throw new Error("LINEAGE_PERSISTED_ARTIFACT_BASE_IDENTITY_INVALID");
+if(artifact.adjudication!=="EXTERNALLY_OWNED_NON_MCFT_APPLICABLE"||artifact.fail_closed_on_dependency_impact!==true||artifact.adr_paths_added_to_mcft_resolvers!==false||artifact.unknown_changed_path_semantics_relaxed!==false) throw new Error("LINEAGE_PERSISTED_ARTIFACT_ADJUDICATION_INVALID");
+if(!Array.isArray(artifact.mcft_control_plane_path_intersection)||artifact.mcft_control_plane_path_intersection.length!==0||!Array.isArray(artifact.mcft_authority_artifact_path_intersection)||artifact.mcft_authority_artifact_path_intersection.length!==0||!Array.isArray(artifact.mcft_runtime_dependency_closure_intersection)||artifact.mcft_runtime_dependency_closure_intersection.length!==0||!Array.isArray(artifact.mcft_dependency_resolver_digest_changes)||artifact.mcft_dependency_resolver_digest_changes.length!==0) throw new Error("LINEAGE_PERSISTED_ARTIFACT_MCFT_IMPACT_NONZERO");
+
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),"geox-mcft-lineage-"));
 const wt=path.join(tmp,"main");
 let proof;
@@ -122,17 +135,27 @@ try{
 }
 
 const replay=artifact.candidate_replay;
-if(!replay||replay.old_candidate_head!=="0d1c194c44e428ac7af88c44c8125903a2bedce3") throw new Error("LINEAGE_REPLAY_ARTIFACT_INVALID");
-const oldCommits=text("git",["rev-list","--reverse",OLD_BASE+"..0d1c194c44e428ac7af88c44c8125903a2bedce3"]).split(/\r?\n/).filter(Boolean);
-const newCommits=text("git",["rev-list","--reverse",NEW_BASE+".."+replay.replayed_pre_reconciliation_head]).split(/\r?\n/).filter(Boolean);
-if(oldCommits.length!==8||newCommits.length!==8) throw new Error("LINEAGE_REPLAY_COMMIT_COUNT");
-const map=[];
-for(let i=0;i<8;i++){
-  if(subject(oldCommits[i])!==subject(newCommits[i])) throw new Error("LINEAGE_REPLAY_MESSAGE_MISMATCH:"+i);
-  if(patchId(oldCommits[i])!==patchId(newCommits[i])) throw new Error("LINEAGE_REPLAY_PATCH_ID_MISMATCH:"+i);
-  map.push({old_sha:oldCommits[i],new_sha:newCommits[i],commit_subject:subject(oldCommits[i]),patch_id:patchId(oldCommits[i])});
+if(!replay) throw new Error("LINEAGE_REPLAY_ARTIFACT_INVALID");
+if(replay.old_candidate_base!==OLD_BASE||replay.old_candidate_head!==OLD_CANDIDATE_HEAD||replay.new_candidate_base!==NEW_BASE) throw new Error("LINEAGE_REPLAY_IDENTITY_INVALID");
+if(replay.old_qualified_subject_sha!==OLD_QUALIFIED_SUBJECT||replay.replayed_qualified_subject_sha!==REPLAYED_QUALIFIED_SUBJECT) throw new Error("LINEAGE_REPLAY_QUALIFIED_SUBJECT_IDENTITY_INVALID");
+if(replay.replay_commit_count!==8||!Array.isArray(replay.commit_map)||replay.commit_map.length!==8) throw new Error("LINEAGE_REPLAY_COMMIT_COUNT");
+if(!isSha(replay.replayed_pre_reconciliation_head)) throw new Error("LINEAGE_REPLAY_HEAD_IDENTITY_INVALID");
+const oldShas=new Set(); const newShas=new Set();
+for(let i=0;i<replay.commit_map.length;i++){
+  const row=replay.commit_map[i]||{};
+  if(!isSha(row.old_sha)||!isSha(row.new_sha)||!isSha(row.patch_id)||typeof row.commit_subject!=="string"||!row.commit_subject) throw new Error("LINEAGE_PERSISTED_REPLAY_ROW_INVALID:"+i);
+  if(oldShas.has(row.old_sha)||newShas.has(row.new_sha)) throw new Error("LINEAGE_PERSISTED_REPLAY_DUPLICATE_IDENTITY:"+i);
+  oldShas.add(row.old_sha); newShas.add(row.new_sha);
 }
-if(!same(map,replay.commit_map)) throw new Error("LINEAGE_REPLAY_MAP_MISMATCH");
+
+const newCommits=text("git",["rev-list","--reverse",NEW_BASE+".."+replay.replayed_pre_reconciliation_head]).split(/\r?\n/).filter(Boolean);
+if(newCommits.length!==8) throw new Error("LINEAGE_REPLAY_CURRENT_COMMIT_COUNT");
+for(let i=0;i<8;i++){
+  const persisted=replay.commit_map[i];
+  if(newCommits[i]!==persisted.new_sha) throw new Error("LINEAGE_REPLAY_CURRENT_SHA_MISMATCH:"+i);
+  if(subject(newCommits[i])!==persisted.commit_subject) throw new Error("LINEAGE_REPLAY_CURRENT_MESSAGE_MISMATCH:"+i);
+  if(patchId(newCommits[i])!==persisted.patch_id) throw new Error("LINEAGE_REPLAY_CURRENT_PATCH_ID_MISMATCH:"+i);
+}
 run("git",["merge-base","--is-ancestor",replay.replayed_pre_reconciliation_head,"HEAD"]);
 
 proof.candidate_replay=replay;
