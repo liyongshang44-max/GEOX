@@ -98,9 +98,15 @@ assertIncludes(
 
 assertIncludes(
   fromVariableRouteBlock,
-  "ensureVariableOperationPlanV1",
+  "ensureReadyVariableOperationPlanV1",
   "from-variable-prescription route"
 );
+const readyPlanPos = fromVariableRouteBlock.indexOf("ensureReadyVariableOperationPlanV1");
+const createTaskPos = fromVariableRouteBlock.indexOf("createAoActTaskCoreV1");
+if (readyPlanPos < 0 || createTaskPos < 0 || readyPlanPos >= createTaskPos) {
+  console.error("[route-response-ownership] FAIL: variable operation plan readiness must be established before task creation");
+  process.exit(1);
+}
 
 assertIncludes(
   fromVariableRouteBlock,

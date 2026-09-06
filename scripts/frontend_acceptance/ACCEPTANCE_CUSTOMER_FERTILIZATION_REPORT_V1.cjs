@@ -31,7 +31,7 @@ function assertAll(text, needles, label) {
 
   assertAll(labels, [
     'FORMAL_FERTILIZATION',
-    '正式施氮',
+    '施氮（实验性 / non-selling）',
     'fertilizationCustomerSummaryText',
     'fertilization_lab_low_n_formal',
     'fertilization_sensing_review_only',

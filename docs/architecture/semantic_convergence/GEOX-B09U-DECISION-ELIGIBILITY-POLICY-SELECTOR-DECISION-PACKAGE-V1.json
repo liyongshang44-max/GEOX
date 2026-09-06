@@ -1,0 +1,217 @@
+{
+  "schema_version": "b09u_decision_eligibility_policy_selector_decision_package_v1",
+  "phase": "B-09u",
+  "status": "RECOMMENDED_NOT_AUTHORIZED",
+  "proposed_governance_decision_id": "DEC-BLINE-ELIGIBILITY-POLICY-SELECTOR-001",
+  "stacked_base_product_head": "b9e0b3a3bb019c0333914e3cee432fd41d1a8228",
+  "purpose": "Resolve the minimum selector semantics required before any as-of DecisionEligibility policy selector can be implemented or connected to B-07e.",
+  "recommendations": [
+    {
+      "id": "SEL-01",
+      "topic": "CANONICAL_SCOPE_ANCHOR",
+      "recommendation": {
+        "source": "CANONICAL_CONTEXT_SNAPSHOT",
+        "assertion_kind": "DECLARED_FIELD_PROGRAM",
+        "anchor_type": "PROGRAM",
+        "anchor_ref": "DECLARED_FIELD_PROGRAM.program_id",
+        "cardinality": "EXACTLY_ONE_MATCHING_ASSERTION"
+      },
+      "rationale": [
+        "CandidateDecisionV1 has no native program_id/policy anchor.",
+        "B-05b already projects FieldProgramV1 into canonical Context with DECLARED_FIELD_PROGRAM.program_id.",
+        "Using legacy recommendation.program_id would backflow legacy provenance into canonical selection authority."
+      ],
+      "fail_closed": [
+        "context_snapshot_ref missing",
+        "ContextSnapshot unavailable/invalid",
+        "zero matching DECLARED_FIELD_PROGRAM assertions",
+        "more than one matching DECLARED_FIELD_PROGRAM assertion",
+        "anchor type/ref does not exactly match declaration"
+      ],
+      "rejected": [
+        "legacy recommendation.program_id as authority",
+        "infer Program from field_id + season_id",
+        "latest Program by timestamp",
+        "planner status as selector"
+      ]
+    },
+    {
+      "id": "SEL-02",
+      "topic": "CANONICAL_SCOPE_APPLICABILITY",
+      "recommendation": {
+        "rule": "EXACT_NULLABLE_STRUCTURAL_EQUALITY_V1",
+        "fields": [
+          "tenant_id",
+          "project_id",
+          "group_id",
+          "field_id",
+          "season_id",
+          "zone_id"
+        ],
+        "null_semantics": "NULL_EQUALS_NULL_ONLY_NOT_WILDCARD",
+        "specificity_ranking": false,
+        "parent_scope_inheritance": false
+      },
+      "rationale": [
+        "EvidenceScopeV1 defines nullable values but no hierarchy/wildcard semantics.",
+        "Exact equality is fail-closed and does not invent hierarchy."
+      ],
+      "rejected": [
+        "null means any",
+        "field-level policy automatically applies to all zones",
+        "most-specific scope wins",
+        "tenant/project/group-only fallback"
+      ]
+    },
+    {
+      "id": "SEL-03",
+      "topic": "POLICY_SELECTION_TIME",
+      "recommendation": {
+        "source": "CandidateDecisionV1.decision_time",
+        "required_non_null": true,
+        "fallback": null,
+        "causal_cutoff": [
+          "declaration.declared_at <= decision_time",
+          "fact.occurred_at <= decision_time"
+        ]
+      },
+      "rationale": [
+        "Candidate.decision_time is the closest canonical causal boundary.",
+        "Fallback to evaluation or wall clock would change what policy was knowable at the candidate boundary."
+      ],
+      "rejected": [
+        "evaluated_at fallback",
+        "candidate created_at fallback",
+        "fact latest time",
+        "request wall clock"
+      ]
+    },
+    {
+      "id": "SEL-04",
+      "topic": "MULTIPLE_APPLICABLE_POLICIES",
+      "recommendation": {
+        "exactly_zero": "POLICY_NOT_FOUND",
+        "exactly_one": "POLICY_SELECTED",
+        "more_than_one": "POLICY_SCOPE_AMBIGUOUS",
+        "latest_wins": false,
+        "version_precedence": false,
+        "composition": false
+      },
+      "rationale": [
+        "B-07e accepts one policy object.",
+        "No current authority defines composition or precedence."
+      ],
+      "rejected": [
+        "latest version wins",
+        "newest declaration wins",
+        "lexical policy_id ordering",
+        "most-specific wins",
+        "union required_criteria",
+        "intersection applicable_action_types"
+      ]
+    },
+    {
+      "id": "SEL-05",
+      "topic": "EFFECTIVE_WINDOW_AND_SUPERSESSION",
+      "recommendation": {
+        "effective_window": "HALF_OPEN_[effective_from,effective_until)",
+        "effective_until_null": "NO_EXPLICIT_END",
+        "supersession": {
+          "operational": true,
+          "predecessor_must_exist": true,
+          "predecessor_must_be_known_before_successor": true,
+          "same_policy_id_required": true,
+          "same_scope_required": true,
+          "same_anchor_required": true,
+          "acyclic_chain_required": true,
+          "effect": "PREDECESSOR_NON_SELECTABLE_AT_OR_AFTER_SUCCESSOR_EFFECTIVE_FROM",
+          "multiple_successors_for_same_predecessor": "POLICY_SUPERSESSION_AMBIGUOUS"
+        }
+      },
+      "rationale": [
+        "Immutable predecessor facts cannot be edited to add effective_until.",
+        "A validated supersession pointer can provide append-only replacement semantics.",
+        "Half-open windows remove boundary double-selection."
+      ],
+      "rejected": [
+        "supersedes pointer has no effect",
+        "pointer alone without predecessor validation",
+        "cross-scope supersession",
+        "cross-policy-id supersession",
+        "cycles",
+        "multiple live successors resolved by latest-wins"
+      ]
+    },
+    {
+      "id": "SEL-06",
+      "topic": "ACTION_APPLICABILITY",
+      "recommendation": {
+        "rule": "EXACT_STRING_MEMBERSHIP",
+        "value_source": "candidate.proposed_action.action_type"
+      },
+      "rationale": [
+        "Already matches B-07e runtime semantics.",
+        "No alias/canonicalization layer exists."
+      ],
+      "rejected": [
+        "action aliases",
+        "prefix/category matching",
+        "planner action family mapping"
+      ]
+    }
+  ],
+  "proposed_selector_result_contract": {
+    "selected": {
+      "state": "POLICY_SELECTED",
+      "requires_exactly_one_policy": true
+    },
+    "fail_closed_states": [
+      "POLICY_NOT_FOUND",
+      "POLICY_CONTEXT_MISSING",
+      "POLICY_SCOPE_ANCHOR_MISSING",
+      "POLICY_SCOPE_AMBIGUOUS",
+      "POLICY_TIME_BOUNDARY_MISSING",
+      "POLICY_SUPERSESSION_AMBIGUOUS",
+      "POLICY_DECLARATION_INVALID",
+      "POLICY_READ_ERROR"
+    ]
+  },
+  "implementation_constraints_if_authorized": [
+    "Selector must consume canonical CandidateDecisionV1, canonical ContextSnapshot, and persisted declaration facts.",
+    "Selector must not read legacy recommendation.program_id as authority.",
+    "Selector must not use wall clock to repair missing decision_time.",
+    "Selector must not silently rank or compose multiple policies.",
+    "Selector must preserve causal as-of filtering on both payload declared_at and persisted occurred_at.",
+    "Selector must return a selected policy object only after all scope/anchor/time/supersession checks pass.",
+    "B-07e may not be connected until at least one real product policy declaration is separately authorized and persisted."
+  ],
+  "authorization_boundary": {
+    "selector_semantics_authorized": false,
+    "selector_runtime_authorized": false,
+    "real_policy_content_authorized": false,
+    "b07e_connection_authorized": false
+  },
+  "exact_decision_text": [
+    "Use canonical ContextSnapshot DECLARED_FIELD_PROGRAM as the v1 policy scope anchor; exactly one matching program assertion is required.",
+    "Use exact nullable EvidenceScope equality; null is not wildcard and no specificity/parent inheritance exists in v1.",
+    "Require non-null CandidateDecision.decision_time as the sole policy-selection boundary; no fallback clock is allowed.",
+    "Require declaration.declared_at and persisted fact.occurred_at to be <= decision_time.",
+    "If more than one applicable policy remains, fail closed; no latest/version/specificity precedence and no composition.",
+    "Use half-open effective windows [effective_from,effective_until).",
+    "A valid supersedes_policy_ref deactivates its predecessor at successor.effective_from only when predecessor exists, is already known, shares policy_id, exact scope and exact anchor, and the chain is acyclic; ambiguous successors fail closed.",
+    "Action applicability remains exact string membership.",
+    "This decision does not authorize any actual policy content or B-07e connection."
+  ],
+  "non_effects": {
+    "runtime_selector_created": false,
+    "context_binding_created": false,
+    "policy_reader_created": false,
+    "real_policy_instance_created": false,
+    "policy_content_created": false,
+    "b07e_connected": false,
+    "approval_or_execution_changed": false,
+    "mcft_implementation_changed": false,
+    "consumer_migration_performed": false,
+    "authority_removal_performed": false
+  }
+}
