@@ -25,123 +25,136 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = "a74c3192fe4a179c98f3db4a5316dfeabd656f79"
-          node <<'NODE'
-          const fs = require('node:fs');
-          const predecessor = 'ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd';
-          const previous = 'f41dde8d44de95e71748e756e048e0166c1916b7';
-          const request05 = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-05T04Z-V1.json';
-          const authority05 = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-05T04Z-V1.json';
-          const acceptance05 = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_05T04Z_V1.cjs';
-          const request06 = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-06T04Z-V1.json';
-          const authority06 = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-06T04Z-V1.json';
-          const acceptance06 = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_06T04Z_V1.cjs';
-          const effectiveness = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json';
+          test "$(git rev-parse HEAD^)" = "4c16241662f2bd2ced40f1602dfe3147c678a4c4"
+          python3 <<'PY'
+          from pathlib import Path
+          import json
 
-          const authorityPath = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json';
-          const control = JSON.parse(fs.readFileSync(authorityPath, 'utf8'));
-          const governed = control.governed_successor_predecessor_shas;
-          if (!Array.isArray(governed) || governed.at(-1) !== previous || governed.includes(predecessor)) throw new Error('QCP_PREDECESSOR_BOUNDARY_DRIFT');
-          governed.push(predecessor);
-          const rollingResolver = control.dependency_resolvers?.T4R1_CURRENT_CROP_ROLLING_REFRESH;
-          if (!rollingResolver || !Array.isArray(rollingResolver.paths)) throw new Error('ROLLING_RESOLVER_MISSING');
-          const currentTail = rollingResolver.paths.slice(-3);
-          if (JSON.stringify(currentTail) !== JSON.stringify([request05, authority05, acceptance05])) throw new Error(`ROLLING_RESOLVER_TAIL_DRIFT:${JSON.stringify(currentTail)}`);
-          for (const p of [request06, authority06, acceptance06]) {
-            if (rollingResolver.paths.includes(p)) throw new Error(`ROLLING_RESOLVER_DUPLICATE:${p}`);
-            rollingResolver.paths.push(p);
-          }
-          const rollingCheck = (control.checks || []).find((row) => row.check_id === 'T4R1_CURRENT_CROP_ROLLING_REFRESH');
-          if (!rollingCheck) throw new Error('ROLLING_CHECK_MISSING');
-          if (JSON.stringify(rollingCheck.authority_refs) !== JSON.stringify([request05, authority05, effectiveness])) throw new Error(`ROLLING_CHECK_AUTHORITY_DRIFT:${JSON.stringify(rollingCheck.authority_refs)}`);
-          if (rollingCheck.diagnostic_command !== `node ${acceptance05}`) throw new Error(`ROLLING_CHECK_DIAGNOSTIC_DRIFT:${rollingCheck.diagnostic_command}`);
-          rollingCheck.authority_refs = [request06, authority06, effectiveness];
-          rollingCheck.diagnostic_command = `node ${acceptance06}`;
-          fs.writeFileSync(authorityPath, JSON.stringify(control, null, 2) + '\n');
+          predecessor = 'ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd'
+          previous = 'f41dde8d44de95e71748e756e048e0166c1916b7'
+          request05 = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-05T04Z-V1.json'
+          authority05 = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-05T04Z-V1.json'
+          acceptance05 = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_05T04Z_V1.cjs'
+          request06 = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-06T04Z-V1.json'
+          authority06 = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-06T04Z-V1.json'
+          acceptance06 = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_06T04Z_V1.cjs'
+          effectiveness = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json'
 
-          const registryPath = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json';
-          const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
-          const registryGoverned = registry.requalification_evidence?.durable_anchors?.rules?.governed_successor_predecessors;
-          if (!Array.isArray(registryGoverned) || registryGoverned.at(-1) !== previous || registryGoverned.includes(predecessor)) throw new Error('REGISTRY_PREDECESSOR_BOUNDARY_DRIFT');
-          registryGoverned.push(predecessor);
-          fs.writeFileSync(registryPath, JSON.stringify(registry, null, 2) + '\n');
+          def replace_once(text, old, new, code):
+              if text.count(old) != 1:
+                  raise SystemExit(code)
+              return text.replace(old, new, 1)
 
-          const replaceOnce = (text, oldValue, newValue, code) => {
-            if ((text.split(oldValue).length - 1) !== 1) throw new Error(code);
-            return text.replace(oldValue, newValue);
-          };
+          authority_path = Path('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json')
+          control = json.loads(authority_path.read_text())
+          governed = control.get('governed_successor_predecessor_shas')
+          if not isinstance(governed, list) or not governed or governed[-1] != previous or predecessor in governed:
+              raise SystemExit('QCP_PREDECESSOR_BOUNDARY_DRIFT')
+          governed.append(predecessor)
+          rolling = control.get('dependency_resolvers', {}).get('T4R1_CURRENT_CROP_ROLLING_REFRESH')
+          if not isinstance(rolling, dict) or not isinstance(rolling.get('paths'), list):
+              raise SystemExit('ROLLING_RESOLVER_MISSING')
+          if rolling['paths'][-3:] != [request05, authority05, acceptance05]:
+              raise SystemExit('ROLLING_RESOLVER_TAIL_DRIFT')
+          for p in [request06, authority06, acceptance06]:
+              if p in rolling['paths']:
+                  raise SystemExit('ROLLING_RESOLVER_DUPLICATE:' + p)
+              rolling['paths'].append(p)
+          checks = [row for row in control.get('checks', []) if row.get('check_id') == 'T4R1_CURRENT_CROP_ROLLING_REFRESH']
+          if len(checks) != 1:
+              raise SystemExit('ROLLING_CHECK_MISSING_OR_DUPLICATE')
+          check = checks[0]
+          if check.get('authority_refs') != [request05, authority05, effectiveness]:
+              raise SystemExit('ROLLING_CHECK_AUTHORITY_DRIFT')
+          if check.get('diagnostic_command') != 'node ' + acceptance05:
+              raise SystemExit('ROLLING_CHECK_DIAGNOSTIC_DRIFT')
+          check['authority_refs'] = [request06, authority06, effectiveness]
+          check['diagnostic_command'] = 'node ' + acceptance06
+          authority_path.write_text(json.dumps(control, indent=2) + '\n')
 
-          const qcpPath = '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml';
-          let qcp = fs.readFileSync(qcpPath, 'utf8');
-          const qcpEnv = "  CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA: 'f41dde8d44de95e71748e756e048e0166c1916b7'\n";
-          qcp = replaceOnce(qcp, qcpEnv, qcpEnv + "  CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA: 'ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd'\n", 'QCP_ENV_BOUNDARY_DRIFT');
-          const qcpGuard = '&& [ "$base" != "$CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA" ]; then';
-          qcp = replaceOnce(qcp, qcpGuard, '&& [ "$base" != "$CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA" ] && [ "$base" != "$CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA" ]; then', 'QCP_GUARD_BOUNDARY_DRIFT');
-          const qcpExpected = 'process.env.OWNER_CUTOVER_REGISTRY_SELECTION_PROTECTED_MAIN_PREDECESSOR_SHA, process.env.CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA];';
-          qcp = replaceOnce(qcp, qcpExpected, 'process.env.OWNER_CUTOVER_REGISTRY_SELECTION_PROTECTED_MAIN_PREDECESSOR_SHA, process.env.CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA, process.env.CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA];', 'QCP_EXPECTED_PREDECESSOR_BOUNDARY_DRIFT');
-          fs.writeFileSync(qcpPath, qcp);
+          registry_path = Path('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json')
+          registry = json.loads(registry_path.read_text())
+          registry_governed = registry['requalification_evidence']['durable_anchors']['rules']['governed_successor_predecessors']
+          if not isinstance(registry_governed, list) or not registry_governed or registry_governed[-1] != previous or predecessor in registry_governed:
+              raise SystemExit('REGISTRY_PREDECESSOR_BOUNDARY_DRIFT')
+          registry_governed.append(predecessor)
+          registry_path.write_text(json.dumps(registry, indent=2) + '\n')
 
-          const postPath = '.github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml';
-          let post = fs.readFileSync(postPath, 'utf8');
-          const postEnv = "  CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA: 'f41dde8d44de95e71748e756e048e0166c1916b7'\n";
-          post = replaceOnce(post, postEnv, postEnv + "  CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA: 'ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd'\n", 'POST_ENV_BOUNDARY_DRIFT');
-          const postGuard = '&& [ "$base_sha" != "$CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA" ]; then';
-          post = replaceOnce(post, postGuard, '&& [ "$base_sha" != "$CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA" ] && [ "$base_sha" != "$CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA" ]; then', 'POST_GUARD_BOUNDARY_DRIFT');
-          fs.writeFileSync(postPath, post);
+          qcp_path = Path('.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml')
+          qcp = qcp_path.read_text()
+          qcp_env = "  CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA: 'f41dde8d44de95e71748e756e048e0166c1916b7'\n"
+          qcp = replace_once(qcp, qcp_env, qcp_env + "  CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA: 'ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd'\n", 'QCP_ENV_BOUNDARY_DRIFT')
+          qcp_guard = '&& [ "$base" != "$CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA" ]; then'
+          qcp = replace_once(qcp, qcp_guard, '&& [ "$base" != "$CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA" ] && [ "$base" != "$CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA" ]; then', 'QCP_GUARD_BOUNDARY_DRIFT')
+          qcp_expected = 'process.env.OWNER_CUTOVER_REGISTRY_SELECTION_PROTECTED_MAIN_PREDECESSOR_SHA, process.env.CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA];'
+          qcp = replace_once(qcp, qcp_expected, 'process.env.OWNER_CUTOVER_REGISTRY_SELECTION_PROTECTED_MAIN_PREDECESSOR_SHA, process.env.CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA, process.env.CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA];', 'QCP_EXPECTED_PREDECESSOR_BOUNDARY_DRIFT')
+          qcp_path.write_text(qcp)
 
-          const preflightPath = 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs';
-          let preflight = fs.readFileSync(preflightPath, 'utf8');
-          const preflightDecl = '    const currentProtectedMainRefreshPredecessorBase = String(process.env.CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA || "");\n';
-          preflight = replaceOnce(preflight, preflightDecl, preflightDecl + '    const currentCropContinuityRefreshMergeBase = String(process.env.CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA || "");\n', 'PREFLIGHT_DECL_BOUNDARY_DRIFT');
-          const preflightCond = '        (/^[0-9a-f]{40}$/.test(currentProtectedMainRefreshPredecessorBase) && args.base === currentProtectedMainRefreshPredecessorBase)\n';
-          preflight = replaceOnce(preflight, preflightCond, '        (/^[0-9a-f]{40}$/.test(currentProtectedMainRefreshPredecessorBase) && args.base === currentProtectedMainRefreshPredecessorBase) ||\n        (/^[0-9a-f]{40}$/.test(currentCropContinuityRefreshMergeBase) && args.base === currentCropContinuityRefreshMergeBase)\n', 'PREFLIGHT_CONDITION_BOUNDARY_DRIFT');
-          fs.writeFileSync(preflightPath, preflight);
+          post_path = Path('.github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml')
+          post = post_path.read_text()
+          post_env = "  CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA: 'f41dde8d44de95e71748e756e048e0166c1916b7'\n"
+          post = replace_once(post, post_env, post_env + "  CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA: 'ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd'\n", 'POST_ENV_BOUNDARY_DRIFT')
+          post_guard = '&& [ "$base_sha" != "$CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA" ]; then'
+          post = replace_once(post, post_guard, '&& [ "$base_sha" != "$CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA" ] && [ "$base_sha" != "$CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA" ]; then', 'POST_GUARD_BOUNDARY_DRIFT')
+          post_path.write_text(post)
 
-          const resolverAcceptancePath = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs';
-          let resolverAcceptance = fs.readFileSync(resolverAcceptancePath, 'utf8');
-          const baseConst = 'const QCP_CURRENT_PROTECTED_MAIN_BASE = "f41dde8d44de95e71748e756e048e0166c1916b7";\n';
-          resolverAcceptance = replaceOnce(resolverAcceptance, baseConst, baseConst + 'const QCP_CURRENT_CROP_CONTINUITY_REFRESH_MERGE_BASE = "ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd";\n', 'RESOLVER_CONST_BOUNDARY_DRIFT');
-          const oldFallback = `const currentHeadSha = git(["rev-parse", "HEAD"]);
-const explicitCurrentDeltaBaseSha = String(process.env.GEOX_MCFT_CAP09_CURRENT_DELTA_BASE_SHA || "");
-const qcpCurrentDeltaBaseSha = String(process.env.CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA || "");
-const qcpFallbackAuthorized =
-  !explicitCurrentDeltaBaseSha &&
-  qcpCurrentDeltaBaseSha === QCP_CURRENT_PROTECTED_MAIN_BASE;
-const currentDeltaBaseSha = explicitCurrentDeltaBaseSha || (qcpFallbackAuthorized ? qcpCurrentDeltaBaseSha : "");
-const currentDeltaBaseSource = explicitCurrentDeltaBaseSha
-  ? "PULL_REQUEST_BASE_SHA"
-  : qcpFallbackAuthorized
-    ? "QCP_EXACT_CURRENT_PROTECTED_MAIN_PREDECESSOR_SHA"
-    : "UNSET";
-`;
-          const newFallback = `const currentHeadSha = git(["rev-parse", "HEAD"]);
-const explicitCurrentDeltaBaseSha = String(process.env.GEOX_MCFT_CAP09_CURRENT_DELTA_BASE_SHA || "");
-const qcpCurrentDeltaBaseSha = String(process.env.CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA || "");
-const qcpCurrentCropContinuityRefreshMergeBaseSha = String(process.env.CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA || "");
-const qcpCurrentCropContinuityFallbackAuthorized =
-  !explicitCurrentDeltaBaseSha &&
-  qcpCurrentCropContinuityRefreshMergeBaseSha === QCP_CURRENT_CROP_CONTINUITY_REFRESH_MERGE_BASE;
-const qcpCurrentProtectedMainFallbackAuthorized =
-  !explicitCurrentDeltaBaseSha &&
-  !qcpCurrentCropContinuityFallbackAuthorized &&
-  qcpCurrentDeltaBaseSha === QCP_CURRENT_PROTECTED_MAIN_BASE;
-const currentDeltaBaseSha = explicitCurrentDeltaBaseSha ||
-  (qcpCurrentCropContinuityFallbackAuthorized
-    ? qcpCurrentCropContinuityRefreshMergeBaseSha
-    : qcpCurrentProtectedMainFallbackAuthorized
-      ? qcpCurrentDeltaBaseSha
-      : "");
-const currentDeltaBaseSource = explicitCurrentDeltaBaseSha
-  ? "PULL_REQUEST_BASE_SHA"
-  : qcpCurrentCropContinuityFallbackAuthorized
-    ? "QCP_EXACT_CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA"
-    : qcpCurrentProtectedMainFallbackAuthorized
-      ? "QCP_EXACT_CURRENT_PROTECTED_MAIN_PREDECESSOR_SHA"
-      : "UNSET";
-`;
-          resolverAcceptance = replaceOnce(resolverAcceptance, oldFallback, newFallback, 'RESOLVER_FALLBACK_BOUNDARY_DRIFT');
-          fs.writeFileSync(resolverAcceptancePath, resolverAcceptance);
-          NODE
+          preflight_path = Path('scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs')
+          preflight = preflight_path.read_text()
+          preflight_decl = '    const currentProtectedMainRefreshPredecessorBase = String(process.env.CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA || "");\n'
+          preflight = replace_once(preflight, preflight_decl, preflight_decl + '    const currentCropContinuityRefreshMergeBase = String(process.env.CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA || "");\n', 'PREFLIGHT_DECL_BOUNDARY_DRIFT')
+          preflight_cond = '        (/^[0-9a-f]{40}$/.test(currentProtectedMainRefreshPredecessorBase) && args.base === currentProtectedMainRefreshPredecessorBase)\n'
+          preflight = replace_once(preflight, preflight_cond, preflight_cond.rstrip('\n') + ' ||\n        (/^[0-9a-f]{40}$/.test(currentCropContinuityRefreshMergeBase) && args.base === currentCropContinuityRefreshMergeBase)\n', 'PREFLIGHT_CONDITION_BOUNDARY_DRIFT')
+          preflight_path.write_text(preflight)
+
+          resolver_path = Path('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs')
+          resolver = resolver_path.read_text()
+          base_const = 'const QCP_CURRENT_PROTECTED_MAIN_BASE = "f41dde8d44de95e71748e756e048e0166c1916b7";\n'
+          resolver = replace_once(resolver, base_const, base_const + 'const QCP_CURRENT_CROP_CONTINUITY_REFRESH_MERGE_BASE = "ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd";\n', 'RESOLVER_CONST_BOUNDARY_DRIFT')
+          old_lines = [
+              'const currentHeadSha = git(["rev-parse", "HEAD"]);',
+              'const explicitCurrentDeltaBaseSha = String(process.env.GEOX_MCFT_CAP09_CURRENT_DELTA_BASE_SHA || "");',
+              'const qcpCurrentDeltaBaseSha = String(process.env.CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA || "");',
+              'const qcpFallbackAuthorized =',
+              '  !explicitCurrentDeltaBaseSha &&',
+              '  qcpCurrentDeltaBaseSha === QCP_CURRENT_PROTECTED_MAIN_BASE;',
+              'const currentDeltaBaseSha = explicitCurrentDeltaBaseSha || (qcpFallbackAuthorized ? qcpCurrentDeltaBaseSha : "");',
+              'const currentDeltaBaseSource = explicitCurrentDeltaBaseSha',
+              '  ? "PULL_REQUEST_BASE_SHA"',
+              '  : qcpFallbackAuthorized',
+              '    ? "QCP_EXACT_CURRENT_PROTECTED_MAIN_PREDECESSOR_SHA"',
+              '    : "UNSET";',
+          ]
+          new_lines = [
+              'const currentHeadSha = git(["rev-parse", "HEAD"]);',
+              'const explicitCurrentDeltaBaseSha = String(process.env.GEOX_MCFT_CAP09_CURRENT_DELTA_BASE_SHA || "");',
+              'const qcpCurrentDeltaBaseSha = String(process.env.CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA || "");',
+              'const qcpCurrentCropContinuityRefreshMergeBaseSha = String(process.env.CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA || "");',
+              'const qcpCurrentCropContinuityFallbackAuthorized =',
+              '  !explicitCurrentDeltaBaseSha &&',
+              '  qcpCurrentCropContinuityRefreshMergeBaseSha === QCP_CURRENT_CROP_CONTINUITY_REFRESH_MERGE_BASE;',
+              'const qcpCurrentProtectedMainFallbackAuthorized =',
+              '  !explicitCurrentDeltaBaseSha &&',
+              '  !qcpCurrentCropContinuityFallbackAuthorized &&',
+              '  qcpCurrentDeltaBaseSha === QCP_CURRENT_PROTECTED_MAIN_BASE;',
+              'const currentDeltaBaseSha = explicitCurrentDeltaBaseSha ||',
+              '  (qcpCurrentCropContinuityFallbackAuthorized',
+              '    ? qcpCurrentCropContinuityRefreshMergeBaseSha',
+              '    : qcpCurrentProtectedMainFallbackAuthorized',
+              '      ? qcpCurrentDeltaBaseSha',
+              '      : "");',
+              'const currentDeltaBaseSource = explicitCurrentDeltaBaseSha',
+              '  ? "PULL_REQUEST_BASE_SHA"',
+              '  : qcpCurrentCropContinuityFallbackAuthorized',
+              '    ? "QCP_EXACT_CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA"',
+              '    : qcpCurrentProtectedMainFallbackAuthorized',
+              '      ? "QCP_EXACT_CURRENT_PROTECTED_MAIN_PREDECESSOR_SHA"',
+              '      : "UNSET";',
+          ]
+          old_block = '\n'.join(old_lines) + '\n'
+          new_block = '\n'.join(new_lines) + '\n'
+          resolver = replace_once(resolver, old_block, new_block, 'RESOLVER_FALLBACK_BOUNDARY_DRIFT')
+          resolver_path.write_text(resolver)
+          PY
 
           node --check scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
           node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs
