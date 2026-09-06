@@ -12,6 +12,9 @@ on:
       - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_ARM_V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PROTECTED-MAIN-LINEAGE-ADVANCEMENT-E1F8-TO-F41D-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROTECTED_MAIN_LINEAGE_ADVANCEMENT_E1F8_TO_F41D_V1.cjs'
+      - '.github/workflows/mcft-cap-09-protected-main-lineage-advancement-e1f8-to-f41d-v1.yml'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json'
       - '.github/workflows/mcft-cap-09-twin-v2-rolling-stage-authority-resolver-seam-v1.yml'
       - 'apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.test.ts'
@@ -150,7 +153,7 @@ env:
   TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA: '5050f1c08d2528048c56d56add4cbb068b956925'
   TWIN_V2_RUNTIME_SELECTION_ADOPTION_MERGE_PROTECTED_MAIN_PREDECESSOR_SHA: '0bd2300c9c8a58025df9212d7c14e640606add83'
   OWNER_CUTOVER_REGISTRY_SELECTION_PROTECTED_MAIN_PREDECESSOR_SHA: 'd17f894e86b0fabab648530968c562e2fbe94c5d'
-  CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA: 'e1f8b078bb8459ecb9a77d1fad0d95f4bf143221'
+  CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA: 'f41dde8d44de95e71748e756e048e0166c1916b7'
 
 concurrency:
   group: mcft-cap09-qualification-control-plane-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}

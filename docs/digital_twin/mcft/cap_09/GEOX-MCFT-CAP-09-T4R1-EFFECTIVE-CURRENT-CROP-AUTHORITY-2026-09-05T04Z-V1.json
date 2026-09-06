@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_cap09_t4r1_current_crop_authority_composition_result_v1",
   "status": "PASS",
-  "subject_head_sha": "93d08e4003370221218471e53a58ad356c34e3b9",
+  "subject_head_sha": "9d99ba7832b37651c48c750299587953b210ea2d",
   "qualification_outcome": "CURRENT_CROP_CONTEXT_AUTHORITY_CANDIDATE_RESOLVED",
   "scope": {
     "tenant_id": "tenant_mcft_external",
@@ -72,8 +72,8 @@
     "protected_main_sha": "ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23",
     "architecture_effective_since": "2026-09-03T15:23:00.000Z",
     "graduated_at": "2026-09-05T12:30:00.000Z",
-    "refresh_request_sha256": "sha256:e983ad6c3b0b71271cb535dd1b99b160a61911da6bd0a9678c151ac2fb651ce4",
-    "refresh_protected_main_base_sha": "e1f8b078bb8459ecb9a77d1fad0d95f4bf143221",
+    "refresh_request_sha256": "sha256:ab4e5648467f40263f09ab8218259fa7851e018f250d7d6bf1a2511a82004f16",
+    "refresh_protected_main_base_sha": "f41dde8d44de95e71748e756e048e0166c1916b7",
     "previous_effective_current_crop_authority_sha256": "sha256:ae14573065fc9b630b9bedfb49147729d73e47f2de469eccf39256d02c195934"
   },
   "refresh": {

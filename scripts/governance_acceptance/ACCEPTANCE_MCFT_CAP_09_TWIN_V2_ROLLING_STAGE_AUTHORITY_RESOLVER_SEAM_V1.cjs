@@ -230,6 +230,16 @@ function allTrue(object) {
 }
 
 const currentHeadSha = git(["rev-parse", "HEAD"]);
+const currentDeltaBaseSha = String(process.env.GEOX_MCFT_CAP09_CURRENT_DELTA_BASE_SHA || "");
+const currentDeltaBaseAssertions = {
+  current_delta_base_sha_present: /^[0-9a-f]{40}$/.test(currentDeltaBaseSha),
+  current_delta_base_commit_available: exactCommitAvailable(currentDeltaBaseSha),
+  current_delta_base_is_ancestor_of_head:
+    /^[0-9a-f]{40}$/.test(currentDeltaBaseSha) &&
+    exactCommitAvailable(currentDeltaBaseSha) &&
+    cp.spawnSync("git", ["merge-base", "--is-ancestor", currentDeltaBaseSha, currentHeadSha]).status === 0,
+};
+
 const resolver = read(RESOLVER);
 const test = read(TEST);
 const composition = read(COMPOSITION);
@@ -237,9 +247,11 @@ const processV2 = read(PROCESS);
 const dist = read(DIST);
 const registry = readJson(REGISTRY);
 
-const forbiddenProductionSurfaceDrift = FORBIDDEN_PRODUCTION_SURFACES.filter((p) =>
-  cp.spawnSync("git", ["diff", "--quiet", HISTORICAL_SUBJECT, "--", p]).status !== 0
-);
+const forbiddenProductionSurfaceDrift = allTrue(currentDeltaBaseAssertions)
+  ? FORBIDDEN_PRODUCTION_SURFACES.filter((p) =>
+      cp.spawnSync("git", ["diff", "--quiet", currentDeltaBaseSha, currentHeadSha, "--", p]).status !== 0
+    )
+  : [...FORBIDDEN_PRODUCTION_SURFACES];
 
 const currentSeamAssertions = evaluateCurrentSeam({
   resolver,
@@ -350,6 +362,10 @@ const assertions = {
   historical_adoption_boundary_replay:
     historical.historical_gate_replay_status === "PASS",
 
+  current_exact_delta_preservation:
+    allTrue(currentDeltaBaseAssertions) &&
+    currentSeamAssertions.forbidden_production_surfaces_unchanged === true,
+
   current_successor_semantic_preservation:
     allTrue(currentSeamAssertions),
 
@@ -365,7 +381,7 @@ const failedAssertions = Object.entries(assertions)
   .map(([key]) => key);
 
 const proof = {
-  schema_version: "geox_mcft_cap09_twin_v2_rolling_stage_authority_resolver_seam_v2",
+  schema_version: "geox_mcft_cap09_twin_v2_rolling_stage_authority_resolver_seam_v3",
   status: failedAssertions.length ? "FAIL" : "PASS",
 
   historical_base_sha: HISTORICAL_BASE,
@@ -377,12 +393,16 @@ const proof = {
   historical_gate_replay_error: historical.historical_gate_replay_error,
 
   current_head_sha: currentHeadSha,
+  current_delta_base_sha: currentDeltaBaseSha,
+  current_delta_base_source: "PULL_REQUEST_BASE_SHA",
+  current_delta_base_assertions: currentDeltaBaseAssertions,
+  forbidden_production_surface_drift_from_current_delta_base: forbiddenProductionSurfaceDrift,
   current_subject_predecessor_sha: currentSubjectPredecessorSha,
   current_repair_commit_sha: lastCheckerCommit,
   current_repair_changed_paths: currentRepairChangedPaths,
 
   governed_registry_path: REGISTRY,
-  qualification_model: "HISTORICAL_EXACT_REPLAY_PLUS_CURRENT_SUCCESSOR_SEMANTIC_PRESERVATION",
+  qualification_model: "HISTORICAL_EXACT_REPLAY_PLUS_CURRENT_PR_EXACT_DELTA_SEMANTIC_PRESERVATION",
   historical_adoption_allowlist_extended: false,
 
   current_successor_semantic_assertions: currentSeamAssertions,

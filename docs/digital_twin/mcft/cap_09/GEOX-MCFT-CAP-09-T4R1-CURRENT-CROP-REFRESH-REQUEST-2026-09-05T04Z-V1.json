@@ -4,7 +4,7 @@
   "status": "QUALIFICATION_ONLY_REQUESTED",
   "capability_line_id": "MCFT-CAP-09",
   "slice_id": "MCFT-CAP-09.S6",
-  "protected_main_base_sha": "e1f8b078bb8459ecb9a77d1fad0d95f4bf143221",
+  "protected_main_base_sha": "f41dde8d44de95e71748e756e048e0166c1916b7",
   "scope": {
     "tenant_id": "tenant_mcft_external",
     "project_id": "project_mcft_cap09",
