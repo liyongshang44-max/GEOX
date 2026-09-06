@@ -1,3 +1,1065 @@
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-06 Continuation — Production-Host Readiness / Current-Crop Continuity / Protected-Main Lineage / QINF Machine-Proof Frontier
+
+# Y — Production-Host Readiness / Current-Crop Continuity / Protected-Main Lineage / Qualification-Infrastructure Machine-Proof Frontier
+
+Status: **CURRENT CONTINUATION FRONTIER — #3511 MERGED / CLOSED; #3513 PRODUCTION-OWNER PROVENANCE PROOF-BOUNDARY REPAIR MERGED / CLOSED; OLD PREFORMAL LOCAL PRODUCTION GENERATION RETIRED; LOCAL EXACT-SUBJECT e1f8 IMAGE HISTORICALLY ATTESTED; #3514 CURRENT-CROP AUTHORITY REFRESH OPEN / DRAFT AT 257d0b24... OVER f41dde8d...; Q1/Q2/Q3 CORE RECONCILIATION MACHINE-CLOSED; ALL-BLOCKERS PREFLIGHT PASS; FINAL QCP MACHINE-PROOF CROSS-CHECK STILL FAILURE; AUTHORIZED FOLLOW-UP WRITE BUDGET EXHAUSTED; NO MERGE / NO UNDRAFT / NO PRODUCTION START / NO OWNER ACQUISITION / NO FORMAL-v5 / NO A0 / NO O00-O23**
+
+This Y-section supersedes X as the current conversation continuation point.
+
+Do not delete, collapse, summarize away, or retroactively rewrite X/W/V/U/T/S/R/Q/P/O/N/M/L/K/J/I/H or any earlier section below. Those sections remain the chronological evidence chain.
+
+## Y0 — One-line continuation state
+
+The active MCFT-CAP-09 frontier is no longer a production-owner implementation problem, current-crop source-materialization problem, protected-main lineage problem, or normal applicability-planner problem.
+
+The current exact blocker is:
+
+```text
+#3514 exact-head final QCP
+machine-proof cross-check consistency
+
+run = 34013649708
+job = 101433626458
+result = FAILURE
+failure locus = Validate control-plane machine proof
+preceding decisive gate = Enumerate all blockers without fail-fast = SUCCESS
+```
+
+Therefore:
+
+```text
+runtime / authority blocker = NOT PROVEN
+normal planner / two-plane applicability blocker = CLOSED
+remaining blocker class = QUALIFICATION MACHINE-PROOF CROSS-CHECK CONSISTENCY
+```
+
+The exact assertion token inside that final validation step has NOT yet been recovered. Do not invent one.
+
+## Y1 — Current exact repository identities
+
+Current protected main:
+
+```text
+f41dde8d44de95e71748e756e048e0166c1916b7
+```
+
+Current #3514:
+
+```text
+PR = #3514
+state = OPEN / DRAFT
+merged = false
+mergeable = true
+base = f41dde8d44de95e71748e756e048e0166c1916b7
+head = 257d0b249ab5c598a3ebf283eee690e8171c23c0
+commits = 11
+changed_files = 16
+```
+
+Current PR title:
+
+```text
+feat(mcft-cap09): refresh current-crop authority continuity at 2026-09-05T04Z
+```
+
+Do not substitute older `0d1c194...`, `3e446442...`, or `e1f8b078...` as the current #3514 head/base.
+
+## Y2 — #3511 repository-side owner-cutover frontier is closed
+
+#3511 was merged after exact-head no-drift authorization.
+
+```text
+merge = af8e80f6353ebf2c318eb6dfc4a585287d5edf89
+parent 1 = d17f894e86b0fabab648530968c562e2fbe94c5d
+parent 2 = 70b180b63cc61e5869b234aed3e4be0aef09b705
+tree = 72bc5b4ad93d26e70ad5d0ca94cba01f009fba01
+signature = valid
+```
+
+Post-merge:
+
+```text
+EA5E2 successor runner 33955880055 = SUCCESS
+CI 33955880054 = SUCCESS
+build-test = SUCCESS
+acceptance = SUCCESS
+```
+
+No production activation occurred through this merge. #3511 is closed. MCFT-CAP-09 itself is not.
+
+## Y3 — #3511 closure changed the nature of the blocker
+
+After #3511, repository-side owner-cutover selection, integrated QCP admission, and historical resolver-seam repair were no longer the substantive frontier.
+
+```text
+PRODUCTION-HOST READINESS
+        ↓
+PRODUCTION-HOST ACTIVATION
+        ↓
+LIVE OWNER LEASE ESTABLISHMENT
+        ↓
+EXACT_ONE_PRODUCTION_OWNER PROOF
+```
+
+At that point:
+
+```text
+Production Runtime STARTED = NO
+Production Owner Activation = NO
+EXACT_ONE_PRODUCTION_OWNER = NOT PROVEN
+reason = NO_VALID_REQUALIFICATION_EVIDENCE
+```
+
+Repository capability does not prove a live production owner.
+
+## Y4 — Production-owner provenance proof boundary was independently repaired in #3513
+
+#3513 final candidate:
+
+```text
+base = af8e80f6353ebf2c318eb6dfc4a585287d5edf89
+head = 46248e105e2fb1c667f09b96b4dca3e2cfd52de8
+tree = af523a63a7bc6d8500290aa26e2dd523fa56ba1e
+commits = 1
+changed_files = 3
+delta = +352 / -555
+```
+
+Five bounded proof-boundary defects closed:
+
+```text
+PBR-01 artifact identity not machine-bound = CLOSED
+PBR-02 live owner proof not bound to actual container/process/host = CLOSED
+PBR-03 DB lease row alone could satisfy owner verifier = CLOSED
+PBR-04 machine readiness predicate incomplete = CLOSED
+PBR-05 owner-graduation Twin V1 entrypoint marker stale = CLOSED
+```
+
+No production runtime was started by this repair.
+
+## Y5 — #3513 was merged and protected main advanced to e1f8
+
+#3513 post-merge protected main became:
+
+```text
+e1f8b078bb8459ecb9a77d1fad0d95f4bf143221
+```
+
+The repaired proof contract requires owner evidence to correlate PostgreSQL fenced live lease + actual Docker container + container hostname/instance identity + immutable image ID + bound host identity + service identity + renewal evidence.
+
+A valid-looking lease row by itself is not sufficient owner proof.
+
+## Y6 — Owner proof invariant after #3513
+
+Per runtime future EXACT_ONE proof must establish:
+
+```text
+container running = true
+container hostname == lease_owner #instance suffix
+container actual image ID == authorized immutable image ID
+service identity == frozen host-binding service identity
+live fenced lease == fresh and valid
+renewal == observed across a real renewal boundary
+```
+
+Negative conditions:
+
+```text
+DB row only → FAIL
+wrong image → FAIL
+wrong hostname → FAIL
+wrong host → FAIL
+stopped container → FAIL
+container without lease → FAIL
+expired lease → FAIL
+two owners → FAIL
+```
+
+Do not regress to lease-table-only owner proof.
+
+## Y7 — First current-local-host preflight correctly failed closed
+
+Read-only operator-local-host preflight targeted:
+
+```text
+repository authority = e1f8b078bb8459ecb9a77d1fad0d95f4bf143221
+host_id = fae5f756-ef25-40d5-9777-5b2c3d4837a1
+platform = LOCAL_OPERATOR_MANAGED_DOCKER
+```
+
+It found:
+
+```text
+local repository HEAD = ef9f7d45114c98c16ad57ce69226323935f685db
+remote main = e1f8b078bb8459ecb9a77d1fad0d95f4bf143221
+local HEAD exact = false
+```
+
+Old local runtime image:
+
+```text
+geox-mcft-cap09-runtime:ef9f7d45114c98c16ad57ce69226323935f685db
+immutable image ID = sha256:da3d0b302f25e6fd308ace78c0e2eabca0cb0302ac021b20914d113c6732b22d
+```
+
+No current e1f8 image existed yet.
+
+## Y8 — Two pre-existing production-labelled containers were discovered
+
+```text
+Evidence = 75aa1053ebc1c8ae9a8ec481372686a293b99dc3cda09f4c0c46e30e4b3944ea
+Twin = cd4eb6e62e168b8e6b689ad03756462382f5f1bcd3c0e7bfd4cf49437ef000a1
+Evidence initial state = restarting
+Twin initial state = running
+```
+
+These were evidence objects, not environment clutter. Do not align/build/clean before adjudicating unexplained production-labelled containers.
+
+## Y9 — Pre-existing runtime provenance was machine-proven
+
+Both containers used:
+
+```text
+actual image ID = sha256:da3d0b302f25e6fd308ace78c0e2eabca0cb0302ac021b20914d113c6732b22d
+configured image reference = geox-mcft-cap09-runtime:ef9f7d45114c98c16ad57ce69226323935f685db
+```
+
+Therefore:
+
+```text
+Evidence generation = PROVEN_OLD_GENERATION
+Twin generation = PROVEN_OLD_GENERATION
+unexplained image count = 0
+```
+
+## Y10 — Twin old-generation container ↔ lease provenance was proven
+
+Twin hostname:
+
+```text
+cd4eb6e62e16
+```
+
+Live lease:
+
+```text
+lease_owner = local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/geox-mcft-cap09-twin-runtime-v1#instance:cd4eb6e62e16
+fencing_token = 6
+```
+
+Therefore container hostname == lease instance suffix and `container_lease_instance_match = PROVEN`.
+
+T1/T2 observations proved same owner, same fence, heartbeat advancement, and expiry advancement.
+
+## Y11 — Evidence runtime did not have a live owner
+
+```text
+live Evidence lease count = 0
+Evidence container_lease_instance_match = NOT_APPLICABLE_NO_LIVE_OWNER
+```
+
+Do not classify this as a failed container↔lease match. No live owner existed to match.
+
+## Y12 — Controlled retirement of old preformal generation is closed
+
+CTO separately authorized only the two exact old container IDs to receive `docker stop`.
+
+```text
+Evidence old container → exited
+Twin old container → exited
+replacement production containers = 0
+container stops = 2
+container starts = 0
+container restarts = 0
+container removes = 0
+```
+
+## Y13 — Old Twin owner lease expired naturally
+
+Final pre-stop Twin lease:
+
+```text
+owner = local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/geox-mcft-cap09-twin-runtime-v1#instance:cd4eb6e62e16
+fence = 6
+last heartbeat = 2026-09-05 12:13:32.737193+00
+last expires_at = 2026-09-05 12:18:32.737193+00
+```
+
+After stop heartbeat/expiry did not advance, owner/fence did not change, and DB clock `2026-09-05 12:18:46.758018+00` passed expires_at. Final live Twin lease count became 0.
+
+```text
+OLD TWIN OWNER LEASE = NATURALLY EXPIRED
+```
+
+No lease INSERT/UPDATE/DELETE manufactured zero-owner state.
+
+## Y14 — Old preformal local-production generation closure
+
+```text
+OLD PREFORMAL RUNTIME = RETIRED
+OLD TWIN OWNER LEASE = NATURALLY EXPIRED
+ACTIVE PRODUCTION RUNTIME = NONE
+ACTIVE PRODUCTION OWNER = NONE
+LIVE PRODUCTION OWNER COUNT = 0
+```
+
+Mutation ledger:
+
+```text
+container_stop = 2
+container_start = 0
+container_restart = 0
+container_remove = 0
+image mutation = 0
+repository mutation = 0
+lease write = 0
+owner acquisition = 0
+```
+
+This zero-owner state was the clean alignment boundary.
+
+## Y15 — Exact-subject local qualification against e1f8
+
+CTO authorized repository alignment, exact-subject image build, immutable image attestation, compose renderability, credential presence, DB read-only connectivity, zero-owner verification, and local-host read-only preflight.
+
+```text
+HEAD = e1f8b078bb8459ecb9a77d1fad0d95f4bf143221
+tree = af523a63a7bc6d8500290aa26e2dd523fa56ba1e
+clean = true
+```
+
+No production runtime was started.
+
+## Y16 — Historical exact-subject e1f8 Docker image was built and attested
+
+```text
+tag = geox-mcft-cap09-runtime:e1f8b078bb8459ecb9a77d1fad0d95f4bf143221
+immutable image ID = sha256:f2413681e2ad1675bade3f48637d99583dcdd7ac76d119c545c2334682d164c5
+attestation = PASS_EXACT_CLEAN_SUBJECT_TO_IMMUTABLE_LOCAL_IMAGE_ID
+```
+
+This image is historical attestation evidence, not current deployment authority for a later protected-main SHA.
+
+## Y17 — Exact-subject identity rule must not regress
+
+```text
+exact clean repository subject
+        ↓
+build
+        ↓
+immutable Docker image ID
+        ↓
+future running container .Image
+must equal authorized image ID
+```
+
+A mutable commit-tag alone is not artifact authority. Do not reuse `f241...` for a later protected main.
+
+## Y18 — Local e1f8 preflight did not become production-ready
+
+Required production configuration/host-path bindings were absent and compose could not be rendered under those absent bindings.
+
+```text
+LOCAL PRODUCTION PREFLIGHT = NOT READY / BLOCKED
+```
+
+This was not repaired by inventing configuration. No runtime-start authority followed.
+
+## Y19 — Current-crop authority continuity became next repository frontier
+
+Previous effective window:
+
+```text
+authority_as_of = 2026-09-04T04:00:00.000Z
+authority_valid_until = 2026-09-05T10:00:00.000Z
+```
+
+CTO authorized current-crop continuity refresh while freezing registry-backed selection, latest-effective-within-validity-window, candidate inadmissibility, and rolling-refresh graduation semantics. Validity could not be manually extended.
+
+## Y20 — #3514 current-crop authority materialization succeeded
+
+```text
+authority_as_of = 2026-09-05T04:00:00.000Z
+authority_valid_until = 2026-09-06T10:00:00.000Z
+stage = R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE
+water_use_stage = LATE
+Kc = 0.6
+lifecycle_horizon_end_utc = 2026-11-24T03:59:59.999Z
+candidate_artifacts_admissible = false
+runtime_consumption_authorized = true
+```
+
+Source/authority materialization passed. No production runtime consumed this candidate during qualification.
+
+## Y21 — QCP predecessor registration moved 22 → 23
+
+`e1f8b078bb8459ecb9a77d1fad0d95f4bf143221` was registered into governed predecessor representation.
+
+```text
+QCP governed predecessors: 22 → 23
+```
+
+Registration passed but did not prove full qualification-generation consistency.
+
+## Y22 — Original #3514 five-red root-cause matrix
+
+```text
+A1 = QUALIFICATION_CONTROL_PLANE_OWNERSHIP_PATH_SET_STALE
+A2 = STALE_EXACT_DELTA_PRESERVATION_ASSERTION
+B1 = QUALIFICATION_CONTROL_PLANE_OWNERSHIP_PATH_SET_STALE
+B2 = QUALIFICATION_CONTROL_PLANE_OWNERSHIP_PATH_SET_STALE
+B3 = QUALIFICATION_CONTROL_PLANE_OWNERSHIP_PATH_SET_STALE
+```
+
+All five predicate-level root causes were CTO ACCEPTED / CLOSED.
+
+## Y23 — A2 was not a resolver behavior regression
+
+A2 machine evidence proved historical replay PASS, current repair bounded PASS, negative fail-closed selftests PASS, and focused resolver behavior 8/8 PASS.
+
+Original sole false leaf:
+
+```text
+forbidden_production_surfaces_unchanged = false
+```
+
+The problem was historical exact-delta preservation representation, not Twin V2 resolver behavior.
+
+## Y24 — B1/B2/B3 were one ownership-representation root cause
+
+Old planner result:
+
+```text
+status = FAIL
+authority_errors = []
+resolver_errors = []
+blockers = []
+unknown_changed_paths = 3
+```
+
+The three unknowns were exactly the new T4R1 current-crop refresh artifact set. B1/B2/B3 therefore did not prove separate generation/durable-anchor/dependency-digest failures.
+
+## Y25 — Protected main advanced externally during #3514 work
+
+```text
+e1f8b078...
+  ↓ #3515 ead9d0f0f1c787d75588b4970dd9d315fe28f1fb
+  ↓ #3516 0267c224d5c0c0524997b724b89cbe03d4e8b299
+  ↓ #3517 bf5bd1dda29d8fef2ddc21dc758c2126077bf98b
+  ↓ #3518 f41dde8d44de95e71748e756e048e0166c1916b7
+```
+
+The advancing workstream was ADR adoption.
+
+## Y26 — Main advancement was handled by rebase/replay, not merge-main-into-branch
+
+CTO rejected `stale MCFT branch + merge commit containing foreign lineage`.
+
+Required subject model:
+
+```text
+current protected main + MCFT candidate delta
+```
+
+Therefore #3514 was required to rebase/replay onto exact `f41dde8d...`.
+
+## Y27 — Two-plane applicability model was established
+
+Plane A:
+
+```text
+PROTECTED-MAIN LINEAGE ADJUDICATION
+
+e1f8... → f41dde...
+→ exact ancestry
+→ exact first-parent merge lineage
+→ external owner provenance
+→ MCFT dependency-impact proof
+→ EXTERNALLY_OWNED_NON_MCFT_APPLICABLE
+```
+
+Plane B:
+
+```text
+MCFT CANDIDATE APPLICABILITY
+
+f41dde... → #3514 head
+→ normal MCFT dependency resolvers
+→ UNKNOWN_CHANGED_PATH fail-closed
+→ REQUIRED / REQUALIFY / CARRY_FORWARD / NOT_APPLICABLE
+```
+
+Do not collapse these planes into a path-prefix whitelist.
+
+## Y28 — External ownership does not automatically mean NOT_APPLICABLE
+
+Correct implication:
+
+```text
+external ownership + zero MCFT dependency impact = EXTERNALLY_OWNED_NON_MCFT_APPLICABLE
+```
+
+Not `ADR path → ignore`, and not `ADR path → add to MCFT dependency resolver`.
+
+## Y29 — Plane A ADR lineage was machine-adjudicated
+
+```text
+MCFT control-plane path intersection = []
+MCFT authority-artifact path intersection = []
+MCFT runtime dependency closure intersection = []
+MCFT dependency resolver digest changes = []
+ADR paths added to MCFT resolvers = false
+UNKNOWN_CHANGED_PATH semantics relaxed = false
+lineage_adjudication = EXTERNALLY_OWNED_NON_MCFT_APPLICABLE
+```
+
+## Y30 — Rebase preserved the eight original MCFT commits semantically
+
+Eight old commits were mapped to eight new commits using commit-subject equality + stable patch-id equality.
+
+```text
+old head = 0d1c194c44e428ac7af88c44c8125903a2bedce3
+replayed pre-reconciliation head = f96504e768b3e69cbf79e74b2488f1b5c3065b3f
+old qualified subject = 93d08e4003370221218471e53a58ad356c34e3b9
+replayed qualified subject = 9d99ba7832b37651c48c750299587953b210ea2d
+replay commit count = 8
+```
+
+## Y31 — Base-bound current-crop digests were recomputed
+
+```text
+protected_main_base_sha = f41dde8d44de95e71748e756e048e0166c1916b7
+qualified subject = 9d99ba7832b37651c48c750299587953b210ea2d
+refresh request SHA256 = sha256:ab4e5648467f40263f09ab8218259fa7851e018f250d7d6bf1a2511a82004f16
+effective authority SHA256 = sha256:cac5c82e15b1e3c9b683718f12acb8fb23b084009569b9da133256f1cb4e4119
+```
+
+Never change base SHA while retaining old derived digests.
+
+## Y32 — Current-crop semantic invariants were preserved
+
+No authorized change to authority_as_of, validity policy, crop identity, field/site identity, biological stage, stage evidence, thermal inputs, KBS inputs, irrigation state, rolling-refresh semantics, or registry selection semantics.
+
+```text
+current_crop_semantic_change = false
+biological_stage_semantic_change = false
+resolver_behavior_changed = false
+```
+
+## Y33 — First post-rebase reconciliation head was 3e446442
+
+```text
+base = f41dde8d44de95e71748e756e048e0166c1916b7
+head = 3e446442e7ccc88c0cf2dda23abf6b57a0cbe09a
+```
+
+Local planner before push:
+
+```text
+status = PASS
+authority_errors = []
+resolver_errors = []
+blockers = []
+unknown_changed_paths = []
+```
+
+This confirmed the original A1/B1/B2/B3 ownership-set defect was materially repaired.
+
+## Y34 — Residual qualification defects after 3e446442
+
+Q1/A2: PR-base preservation PASS and focused behavior PASS; remaining old-repair exact-predecessor/bounded-delta representation stale.
+
+Q2/lineage: fresh clone could not resolve force-rebase-old `0d1c194...`; verifier incorrectly depended on historical Git-object reachability despite persisted replay proof.
+
+Q3/QCP: qualification-control-plane machine representation/cross-check debt.
+
+None established runtime semantic regression.
+
+## Y35 — MCFT-QINF-RECON-01 was the single bounded follow-up authorization
+
+CTO authorized one integrated qualification-infrastructure correction wave:
+
+```text
+MCFT-QINF-RECON-01
+```
+
+It was not open-ended iterative patch permission. Its bounded #3514 write budget is now exhausted.
+
+## Y36 — Final authorized #3514 head is 257d0b
+
+```text
+base = f41dde8d44de95e71748e756e048e0166c1916b7
+head = 257d0b249ab5c598a3ebf283eee690e8171c23c0
+state = OPEN / DRAFT
+merged = false
+mergeable = true
+commits = 11
+changed_files = 16
+```
+
+This is the only #3514 head to use for current continuation.
+
+## Y37 — Q1 / A2 core residual is machine-closed at 257d
+
+```text
+Q1 A2 standalone = SUCCESS
+```
+
+Previous A2 residual is no longer the current blocker.
+
+## Y38 — Q2 protected-main lineage is machine-closed at 257d
+
+```text
+Protected-main lineage = SUCCESS
+Plane A exact segment = e1f8... → f41dde...
+adjudication = EXTERNALLY_OWNED_NON_MCFT_APPLICABLE
+Plane A MCFT dependency impact = 0
+ADR paths added to MCFT resolvers = false
+UNKNOWN_CHANGED_PATH fail-closed = preserved
+```
+
+Historical force-rebase object reachability is no longer the current blocker.
+
+## Y39 — Q3 normal central-applicability semantics are machine-closed
+
+```text
+Q3 central applicability semantics = SUCCESS
+Q3 generation / durable-anchor / dependency-digest semantics = SUCCESS
+Q3 immutable evidence refs = SUCCESS
+Q3 exact PR applicability plan = SUCCESS
+Q3 all-blockers preflight = SUCCESS
+```
+
+Final all-blockers result:
+
+```text
+status = PASS
+base_sha = f41dde8d44de95e71748e756e048e0166c1916b7
+head_sha = 257d0b249ab5c598a3ebf283eee690e8171c23c0
+planner_status = PASS
+authority_errors = []
+unknown_changed_paths = []
+blockers = []
+UNKNOWN = 0
+FORBIDDEN = 0
+```
+
+## Y40 — Plane A + Plane B composition is structurally correct
+
+```text
+Plane A = e1f8... → f41dde... external lineage adjudication
+Plane B = f41dde... → 257d0b... normal MCFT candidate planner
+candidate remodified adjudicated ADR paths = []
+normal planner = PASS
+unknown_changed_paths = []
+```
+
+No evidence found for runtime behavioral regression, authority semantic regression, current-crop semantic change, ADR→MCFT dependency impact, or new non-adjudicated UNKNOWN path.
+
+## Y41 — Final QCP remains the only unresolved exact-head failure
+
+```text
+run = 34013649708
+head = 257d0b249ab5c598a3ebf283eee690e8171c23c0
+base = f41dde8d44de95e71748e756e048e0166c1916b7
+status = COMPLETED
+conclusion = FAILURE
+job = 101433626458
+```
+
+Failure:
+
+```text
+Validate control-plane machine proof = FAILURE
+```
+
+Immediately preceding decisive gate:
+
+```text
+Enumerate all blockers without fail-fast = SUCCESS
+```
+
+## Y42 — Current final blocker classification
+
+```text
+runtime / authority blocker = NOT PROVEN
+planner blocker = CLOSED
+two-plane applicability blocker = CLOSED
+generation / durable-anchor / dependency-digest core semantics blocker = CLOSED
+remaining defect = QUALIFICATION MACHINE-PROOF CROSS-CHECK CONSISTENCY
+```
+
+Do not relabel final QCP failure without raw step-level evidence.
+
+## Y43 — Exact QCP final assertion token remains unresolved
+
+```text
+exact final assertion token = NOT RECOVERED
+```
+
+This evidence limitation is authoritative. Do not fabricate expected/actual field, digest mismatch, evidence-id mismatch, or generation mismatch.
+
+## Y44 — Current #3514 write budget is exhausted
+
+```text
+#3514 WRITE OPERATIONS = STOP
+```
+
+No new #3514 commit, correction wave, metadata regeneration, checker/workflow/evidence-registry patch, or rerun-triggering mutation without new CTO authorization.
+
+## Y45 — Current successful exact-head surfaces
+
+```text
+A1 Phase6 = SUCCESS
+A2 Rolling Resolver Seam = SUCCESS
+B1 Post-merge V13 = SUCCESS
+B2 EA5E2 runtime dependency graph = SUCCESS
+Protected-main lineage advancement = SUCCESS
+T4R1 Current-Crop Refresh = SUCCESS
+T4R1 Rolling Candidate = SUCCESS
+Release lane = SUCCESS
+Delivery policy = SUCCESS
+Main ruleset readiness = SUCCESS
+central applicability planner = PASS
+all-blockers enumeration = PASS
+```
+
+Final QCP tail red does not erase these facts, and these facts do not make whole qualification green.
+
+## Y46 — Exact-head qualification is still NOT PASS
+
+```text
+#3514 EXACT-HEAD QUALIFICATION = NOT PASS
+READY FOR MERGE ADJUDICATION = NO
+MERGE = NOT AUTHORIZED
+UNDRAFT = NOT AUTHORIZED
+```
+
+No majority-green rule exists.
+
+## Y47 — No fresh owner cardinality observation belongs to 257d frontier
+
+Historical retirement proved live owner count 0 at that earlier boundary. No fresh owner-cardinality collection was made specifically for final `#3514 @ 257d0b...`.
+
+```text
+production owner count = NOT FRESHLY OBSERVED
+live owner count = NOT FRESHLY OBSERVED
+```
+
+Do not carry old zero-owner observation forward as fresh evidence.
+
+## Y48 — Production runtime is not authorized despite repository progress
+
+```text
+PRODUCTION START = NOT AUTHORIZED
+PRODUCTION RUNTIME START/RESTART = FORBIDDEN
+OWNER ACQUISITION = NOT AUTHORIZED
+OWNER ACTIVATION = NOT AUTHORIZED
+PRODUCTION LEASE WRITE = NOT AUTHORIZED
+Production Rolling Default = OFF
+GitHub Production Cutover = FORBIDDEN
+```
+
+## Y49 — Formal / A0 / O00 ceiling remains unchanged
+
+```text
+Formal-v5 = NOT ARMED
+A0 = NOT AUTHORIZED
+O00-O23 = NOT STARTED
+MCFT-CAP-09 = NOT COMPLETE
+```
+
+## Y50 — B-Line remains untouched
+
+ADR protected-main lineage advanced independently. B-Line remains an independent technical line. This MCFT work did not authorize Commercial authority, caller-capability, execution, B-Line qualification, or B-Line release-readiness changes.
+
+## Y51 — Historical e1f8 image is not current deployment artifact
+
+```text
+historical image = sha256:f2413681e2ad1675bade3f48637d99583dcdd7ac76d119c545c2334682d164c5
+bound subject = e1f8b078bb8459ecb9a77d1fad0d95f4bf143221
+current main = f41dde8d44de95e71748e756e048e0166c1916b7
+current #3514 head = 257d0b249ab5c598a3ebf283eee690e8171c23c0
+```
+
+`f241... = HISTORICALLY ATTESTED`, not current deployment image authority.
+
+## Y52 — Host-path/configuration binding waits for repository qualification/merge
+
+Future order:
+
+```text
+new protected main
+→ local repository alignment
+→ exact-subject image build
+→ immutable image attestation
+→ bind current qualified authority/config paths
+→ current local-host read-only preflight
+```
+
+Do not bind Draft #3514 head as production authority.
+
+## Y53 — Expected future production sequence remains gated
+
+Only after repository qualification and separate CTO activation authorization:
+
+```text
+CURRENT LOCAL HOST READ-ONLY PREFLIGHT
+→ credentials / DB / Docker / image attestation
+→ CONTROLLED PRODUCTION START
+→ Evidence exactly-one owner proof
+→ Twin exactly-one owner proof
+→ T1 / T2 renewal proof
+→ combined EXACT_ONE_PRODUCTION_OWNER adjudication
+→ controlled kill / rollback proof
+→ STOP
+```
+
+Every arrow requires preceding machine proof.
+
+## Y54 — Immediate next action for successor conversation
+
+Do NOT start by writing another #3514 patch.
+
+First live-fetch protected main, #3514 exact base/head/state, QCP run `34013649708`, and job `101433626458`.
+
+Then perform only:
+
+```text
+READ-ONLY
+FINAL QCP MACHINE-PROOF
+CROSS-CHECK ROOT-CAUSE RECOVERY
+```
+
+Recover exact failing assertion token from `Validate control-plane machine proof` and bind it to source checker, exact assertion, inputs, expected, and actual.
+
+## Y55 — Required root-cause report for final QCP red
+
+Return:
+
+```text
+QCP run
+QCP job
+failed step
+exact failure token
+source file / checker
+exact predicate
+inputs consumed
+expected
+actual
+mismatch category
+runtime semantic impact
+authority semantic impact
+planner impact
+```
+
+If raw token cannot be recovered: `ROOT CAUSE = PENDING / STOP`.
+
+## Y56 — Pitfall: do not flatten qualification failures
+
+```text
+A2 = historical preservation representation
+A1/B1/B2/B3 = QCP ownership exact-path representation
+later Q1/Q2/Q3 = qualification-infrastructure reconciliation
+final QCP = machine-proof cross-check consistency
+```
+
+Rules:
+
+```text
+qualification red != runtime regression
+qualification red != stale historical gate
+focused tests green != preservation green
+planner PASS != final machine-proof validation PASS
+```
+
+## Y57 — Pitfall: external ownership needs dependency-impact proof
+
+Do not implement ADR-prefix ignore/skip and do not add ADR source to MCFT resolvers merely to remove UNKNOWN_CHANGED_PATH.
+
+Correct method is exact protected-main lineage + external owner provenance + MCFT dependency-closure intersection + resolver-digest comparison.
+
+## Y58 — Pitfall: old active base must be replaced, not accumulated
+
+When main advanced `e1f8... → f41dde...`, active current refresh predecessor became `f41dde...`. `e1f8...` remains only previous-lineage/historical provenance, not a second current base.
+
+## Y59 — Pitfall: force-rebase destroys naive old-head reachability
+
+After force-rebase old `0d1c194...` may be unreachable in fresh clone. Persist old/new SHA, stable patch-id, commit message, ordered replay map. Do not make garbage-collectable object reachability architecture authority.
+
+## Y60 — Pitfall: exact artifact identity uses immutable image ID
+
+Mutable tag is not enough. Canonical identity is `docker image inspect .Id = sha256:...`; future owner proof correlates running container `.Image == authorized image ID`.
+
+## Y61 — Pitfall: production-labelled containers are evidence objects
+
+Correct sequence:
+
+```text
+inspect → correlate image → correlate hostname → correlate lease → adjudicate generation → separately authorize retirement
+```
+
+Never cleanup unexplained production objects first.
+
+## Y62 — Pitfall: lease zero must not be manufactured
+
+Old Twin lease closure was valid because runtime ceased, heartbeat stopped, expiry stopped advancing, DB clock passed expires_at, and live count naturally became zero. Do not UPDATE/DELETE lease just to make owner count green.
+
+## Y63 — Pitfall: interactive PowerShell collectors were fragile
+
+Observed collection defects included split if/else blocks, Docker template quoting errors, absent psql, Node pg quoting issues, and status parsing inconsistency. Prefer one saved script + one invocation + machine-readable JSON ledger.
+
+## Y64 — Pitfall: do not trim full porcelain output before parsing
+
+One runner `.trim()` removed the leading dot from first `.github/...` status line and caused false recovery refusal. Preserve raw positional output.
+
+## Y65 — Pitfall: do not restage entire candidate universe after rebase
+
+Correct staging boundary is `HEAD → current reconciliation working-tree delta + explicit expected new files`, not all files in new-base→candidate delta.
+
+## Y66 — Pitfall: do not assume literal base SHA occurs in every checker
+
+`PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs` consumed predecessor identity through workflow/QCP inputs rather than a literal SHA. Trace actual authority input route before replacement.
+
+## Y67 — What has been completed
+
+```text
+#3511 merge + post-merge reconciliation
+production-owner provenance proof-boundary repair
+#3513 merge
+local host read-only discovery
+old runtime provenance adjudication
+old Evidence/Twin generation attribution
+Twin container ↔ lease identity proof
+controlled old-runtime retirement
+natural Twin lease expiry
+zero-owner clean alignment boundary
+local e1f8 repository alignment
+e1f8 exact-subject image build
+immutable e1f8 image attestation
+current-crop 2026-09-05 source/authority materialization
+QCP current predecessor registration
+A1/A2/B1/B2/B3 deterministic root-cause adjudication
+protected-main ADR lineage adjudication
+#3514 rebase onto f41dde
+base-bound current-crop digest regeneration
+two-plane lineage/applicability model
+bounded qualification consistency reconciliation
+MCFT-QINF-RECON-01 integrated correction
+Q1 A2 core closure
+Q2 lineage core closure
+Q3 planner/generation/durable-anchor/digest/immutable-ref/exact-plan/all-blockers core closure
+```
+
+## Y68 — What is NOT completed
+
+```text
+final QCP machine-proof validation
+#3514 exact-head qualification
+#3514 merge adjudication
+#3514 Ready for Review
+current protected-main current-crop refresh adoption
+new protected-main exact-subject Docker image
+final production host-path/config binding
+fresh current-host owner cardinality
+controlled production start
+live Evidence owner establishment
+live Twin owner establishment
+EXACT_ONE_PRODUCTION_OWNER proof
+renewal proof under new generation
+kill/rollback proof under new generation
+Formal-v5
+A0
+O00-O23
+MCFT-CAP-09 final completion
+```
+
+## Y69 — Current blocker hierarchy
+
+```text
+LEVEL 1 final QCP machine-proof cross-check token = OPEN
+LEVEL 2 #3514 exact-head qualification = BLOCKED BY LEVEL 1
+LEVEL 3 merge / protected-main adoption = BLOCKED BY LEVEL 2
+LEVEL 4 new exact-main local image + host preflight = BLOCKED BY LEVEL 3
+LEVEL 5 controlled production start = BLOCKED BY LEVEL 4 + separate CTO authority
+LEVEL 6 EXACT_ONE live owner proof = BLOCKED BY LEVEL 5
+LEVEL 7 Formal-v5 / A0 / O00 = NOT AUTHORIZED
+```
+
+Do not jump levels.
+
+## Y70 — Current hard authority ceiling
+
+```text
+#3514 MERGE = NOT AUTHORIZED
+#3514 UNDRAFT = NOT AUTHORIZED
+#3514 WRITE OPERATIONS = STOP
+PRODUCTION START = NOT AUTHORIZED
+PRODUCTION RUNTIME RESTART = NOT AUTHORIZED
+OWNER ACQUISITION = NOT AUTHORIZED
+OWNER ACTIVATION = NOT AUTHORIZED
+PRODUCTION LEASE WRITE = NOT AUTHORIZED
+Production Rolling Default = OFF
+GitHub Production Cutover = FORBIDDEN
+Formal-v5 = NOT ARMED
+A0 = NOT AUTHORIZED
+O00-O23 = NOT STARTED
+MCFT-CAP-09 = NOT COMPLETE
+B-Line = UNTOUCHED
+```
+
+This handoff-only documentation update on #3298 does not grant or consume #3514 qualification write authority.
+
+## Y71 — Exact continuation instructions for next assistant
+
+1. Read Y first and preserve X plus all older sections as immutable history.
+2. Live-fetch protected main and #3514.
+3. Require:
+
+```text
+main = f41dde8d44de95e71748e756e048e0166c1916b7
+#3514 base = f41dde8d44de95e71748e756e048e0166c1916b7
+#3514 head = 257d0b249ab5c598a3ebf283eee690e8171c23c0
+```
+
+4. Any SHA drift → STOP and re-adjudicate.
+5. Do not submit a new #3514 commit.
+6. Recover final QCP exact failure assertion read-only.
+7. Report predicate-level root cause.
+8. Wait for CTO authorization.
+
+## Y72 — Current continuation summary
+
+```text
+MCFT-CAP-09
+repository-side owner-cutover capability = ADVANCED / CLOSED THROUGH #3513
+old local preformal production generation = RETIRED
+old owner lease = NATURALLY EXPIRED
+historical e1f8 local artifact attestation = COMPLETE
+2026-09-05 current-crop authority refresh = MATERIALIZED
+protected-main lineage advancement = MACHINE ADJUDICATED
+ADR external ownership = PROVEN
+ADR → MCFT dependency impact = ZERO
+two-plane applicability = CLOSED
+A1 = SUCCESS
+A2 = SUCCESS
+B1 = SUCCESS
+B2 = SUCCESS
+Q1/Q2/Q3 core qualification semantics = MACHINE CLOSED
+all-blockers = PASS
+final QCP = FAILURE
+remaining class = QUALIFICATION MACHINE-PROOF CROSS-CHECK CONSISTENCY
+exact final assertion token = NOT YET RECOVERED
+#3514 write budget = EXHAUSTED
+#3514 merge = NOT AUTHORIZED
+production activation = NOT AUTHORIZED
+MCFT-CAP-09 = NOT COMPLETE
+```
+
+The next task is not to continue patching.
+
+The next task is to recover and adjudicate the exact final QCP machine-proof failure token without changing the #3514 subject.
+
 # GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-05 Continuation — Production Owner Cutover / Registry-Backed Authority Selection / Integrated QCP Qualification Frontier
 
 # X — Production Owner Cutover / Registry-Backed Authority Selection / Integrated QCP Qualification Frontier
