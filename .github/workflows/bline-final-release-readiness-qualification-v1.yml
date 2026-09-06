@@ -711,6 +711,19 @@ jobs:
           set -euo pipefail
           carrier_workspace="${GITHUB_WORKSPACE:?GITHUB_WORKSPACE is required}"
           successor_worktree="$(mktemp -d)"
+          trace_file="$carrier_workspace/acceptance-output/bline-successor-failure-leaf-trace.log"
+          mkdir -p "$carrier_workspace/acceptance-output"
+          : > "$trace_file"
+          trace() {
+            local phase="$1"
+            local status="$2"
+            local exit_code="${3:-}"
+            if [ -n "$exit_code" ]; then
+              printf 'BLINE_SUCCESSOR_TRACE phase=%s status=%s exit_code=%s\n' "$phase" "$status" "$exit_code" | tee -a "$trace_file"
+            else
+              printf 'BLINE_SUCCESSOR_TRACE phase=%s status=%s\n' "$phase" "$status" | tee -a "$trace_file"
+            fi
+          }
           copy_acceptance_reports() {
             mkdir -p "$carrier_workspace/acceptance-output"
             for report in report.json report.html; do
@@ -731,15 +744,78 @@ jobs:
           fi
           cd "$successor_worktree"
           export GITHUB_WORKSPACE="$successor_worktree"
-          test "$(git rev-parse HEAD)" = "$TESTED_SUBJECT_SHA"
-          test -z "$(git status --porcelain --untracked-files=no)"
-          pnpm install --no-frozen-lockfile
-          test -z "$(git status --porcelain --untracked-files=no)"
-          pnpm -r build
-          test -z "$(git status --porcelain --untracked-files=no)"
-          node /tmp/assert_local_pnpm_runtime_bline_successor.cjs
-          node scripts/acceptance/run_acceptance.cjs
-          test -z "$(git status --porcelain --untracked-files=no)"
+          trace head_guard START
+          if test "$(git rev-parse HEAD)" = "$TESTED_SUBJECT_SHA"; then
+            trace head_guard PASS
+          else
+            rc=$?
+            trace head_guard FAIL "$rc"
+            exit "$rc"
+          fi
+          trace initial_tracked_clean START
+          if test -z "$(git status --porcelain --untracked-files=no)"; then
+            trace initial_tracked_clean PASS
+          else
+            rc=$?
+            trace initial_tracked_clean FAIL "$rc"
+            exit "$rc"
+          fi
+          trace pnpm_install START
+          if pnpm install --no-frozen-lockfile; then
+            trace pnpm_install PASS
+          else
+            rc=$?
+            trace pnpm_install FAIL "$rc"
+            exit "$rc"
+          fi
+          trace post_install_tracked_clean START
+          if test -z "$(git status --porcelain --untracked-files=no)"; then
+            trace post_install_tracked_clean PASS
+          else
+            rc=$?
+            trace post_install_tracked_clean FAIL "$rc"
+            exit "$rc"
+          fi
+          trace pnpm_recursive_build START
+          if pnpm -r build; then
+            trace pnpm_recursive_build PASS
+          else
+            rc=$?
+            trace pnpm_recursive_build FAIL "$rc"
+            exit "$rc"
+          fi
+          trace post_build_tracked_clean START
+          if test -z "$(git status --porcelain --untracked-files=no)"; then
+            trace post_build_tracked_clean PASS
+          else
+            rc=$?
+            trace post_build_tracked_clean FAIL "$rc"
+            exit "$rc"
+          fi
+          trace successor_doctor START
+          if node /tmp/assert_local_pnpm_runtime_bline_successor.cjs; then
+            trace successor_doctor PASS
+          else
+            rc=$?
+            trace successor_doctor FAIL "$rc"
+            exit "$rc"
+          fi
+          trace canonical_acceptance START
+          if node scripts/acceptance/run_acceptance.cjs; then
+            trace canonical_acceptance PASS
+          else
+            rc=$?
+            trace canonical_acceptance FAIL "$rc"
+            exit "$rc"
+          fi
+          trace post_acceptance_tracked_clean START
+          if test -z "$(git status --porcelain --untracked-files=no)"; then
+            trace post_acceptance_tracked_clean PASS
+          else
+            rc=$?
+            trace post_acceptance_tracked_clean FAIL "$rc"
+            exit "$rc"
+          fi
           copy_acceptance_reports
           SH
           chmod +x /tmp/run-bline-successor-test-acceptance.sh
