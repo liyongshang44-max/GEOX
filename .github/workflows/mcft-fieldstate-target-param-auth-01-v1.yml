@@ -1,0 +1,54 @@
+name: MCFT Field-State Target Parameter Authority Inventory V1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/digital_twin/mcft/field_state/GEOX-MCFT-FIELDSTATE-TARGET-PARAM-AUTH-01-INVENTORY-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_FIELDSTATE_TARGET_PARAM_AUTH_01_V1.cjs'
+      - '.github/workflows/mcft-fieldstate-target-param-auth-01-v1.yml'
+      - 'docs/digital_twin/mcft/GEOX-MCFT-00-REALITY-BINDING.json'
+      - 'docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json'
+      - 'fixtures/mcft/water_state/configuration_context_source_v1.json'
+      - 'apps/server/src/runtime/twin_runtime/runtime_config_compile_service_v1.ts'
+      - 'apps/server/src/domain/twin_runtime/continuation_runtime_config_v1.ts'
+      - 'apps/server/src/runtime/twin_runtime/assimilated_continuation_record_set_builder_v2.ts'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-fieldstate-target-param-auth-01-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  authority-inventory-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Fetch exact protected main
+        run: git fetch --no-tags origin main
+
+      - name: Verify target parameter authority inventory and contract
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_FIELDSTATE_TARGET_PARAM_AUTH_01_V1.cjs
+
+      - name: Upload immutable authority inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-fieldstate-target-param-auth-01-${{ github.event.pull_request.head.sha }}
+          path: docs/digital_twin/mcft/field_state/GEOX-MCFT-FIELDSTATE-TARGET-PARAM-AUTH-01-INVENTORY-V1.json
+          if-no-files-found: error
+          retention-days: 90
