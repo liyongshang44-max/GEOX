@@ -1,3 +1,1616 @@
+# GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-06 Continuation — Rolling Current-Crop Continuity / ca2a Governance Settlement
+
+# Z — 2026-09-06T04Z Rolling Current-Crop Continuity / Protected-Main `ca2a96d...` Governance Settlement / Exact-Head Qualification Frontier
+
+Snapshot:
+
+```text
+2026-09-06 21:55 +08:00
+```
+
+Repository:
+
+```text
+liyongshang44-max/GEOX
+```
+
+Status:
+
+```text
+CURRENT REPOSITORY CONTINUATION FRONTIER
+NOT A NEW ARCHITECTURE AUTHORITY
+NOT A MERGE AUTHORIZATION
+NOT A PRODUCTION-START AUTHORIZATION
+```
+
+This Z-section supersedes Y as the current conversation continuation point.
+
+Do not delete, collapse, summarize away, or retroactively rewrite Y/X/W/V/U/T/S/R/Q/P/O/N/M/L/K/J/I/H or any earlier section below. Those sections remain the chronological evidence chain.
+
+## Z0 — One-line continuation state
+
+The predecessor protected-main adoption frontier is closed:
+
+```text
+#3514
+MCFT CAP-09
+CURRENT-CROP AUTHORITY CONTINUITY
+PROTECTED-MAIN ADOPTION
+= CTO ACCEPTED / CLOSED
+```
+
+Do not reopen:
+
+```text
+#3514
+MCFT-QINF-RECON-01
+MCFT-QINF-FINAL-01
+```
+
+The active work is now a new rolling frontier:
+
+```text
+2026-09-06T04Z
+ROLLING CURRENT-CROP CONTINUITY FRONTIER
+```
+
+Fresh biological/current-crop qualification has passed and produced the new temporal authority window:
+
+```text
+authority_as_of =
+2026-09-06T04:00:00Z
+
+authority_valid_until =
+2026-09-07T10:00:00Z
+```
+
+The substantive current blocker is not the thermal model, crop-stage semantics, current-crop authority, or rolling runtime resolver.
+
+It is:
+
+```text
+protected main =
+ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd
+
+#3524 exact PR base =
+ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd
+
+but
+
+MCFT qualification control-plane
+does not yet fully govern ca2a96d...
+as the current governed successor-predecessor context.
+```
+
+Current primary blocker:
+
+```text
+QCP =
+MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:
+ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd
+```
+
+A coherent six-file governance settlement has already been machine-materialized and has passed local acceptance.
+
+The remaining frontier is:
+
+```text
+adopt the verified settlement
+as a child of the current #3524 exact head
+
++
+remove the temporary materializer carrier from the final tree
+
++
+run one natural exact-head qualification wave
+```
+
+## Z1 — Closed predecessor frontier; do not reopen
+
+Accepted predecessor identities:
+
+```text
+qualified exact head =
+5b0b825bbd7444710df829fb2964d70fb9a3b038
+
+base =
+f41dde8d44de95e71748e756e048e0166c1916b7
+
+#3514 merge SHA =
+ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd
+
+protected main after #3514 =
+ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd
+```
+
+Qualified head and merge commit share the exact Git tree:
+
+```text
+556813eb96b4ba8125e170dd450baef6383de0b2
+```
+
+Accepted post-merge closure:
+
+```text
+EA5E2 successor runner
+= SUCCESS
+
+CI
+= SUCCESS
+
+Amendment-19
+= GOVERNED SKIP
+```
+
+Final qualified-head QCP included:
+
+```text
+Validate control-plane machine proof
+= SUCCESS
+```
+
+QCP trigger semantics are:
+
+```text
+pull_request
++
+merge_group
+
+push
+=
+NONE
+```
+
+Therefore no merge-SHA push QCP was required.
+
+Frozen predecessor conclusion:
+
+```text
+MCFT CAP-09
+CURRENT-CROP AUTHORITY CONTINUITY
+PROTECTED-MAIN ADOPTION
+= CTO ACCEPTED / CLOSED
+
+MCFT-QINF-RECON-01
+= CLOSED
+
+MCFT-QINF-FINAL-01
+= CLOSED
+```
+
+Any new work must be treated as a new rolling current-crop continuity frontier, not a continuation of the closed #3514 QINF repair.
+
+## Z2 — Current active task
+
+Active PR:
+
+```text
+PR #3524
+```
+
+Purpose:
+
+move current-crop authority forward from the preceding temporal frontier into a fresh rolling authority window:
+
+```text
+authority_as_of =
+2026-09-06T04:00:00Z
+
+authority_valid_until =
+2026-09-07T10:00:00Z
+```
+
+Task scope includes:
+
+```text
+fresh T4R1 lifecycle evidence
+fresh thermal biological-stage evidence
+current-crop authority composition
+date-scoped authority persistence
+authority registry extension
+rolling resolver continuity
+qualification/control-plane governance settlement
+exact-head machine qualification
+```
+
+Task scope does not include:
+
+```text
+Production Runtime start
+Production Owner acquisition
+Production Owner activation
+Production lease mutation
+Formal-v5
+A0
+O00-O23
+B-Line changes
+```
+
+## Z3 — Current exact repository / PR identities
+
+At this handoff snapshot:
+
+```text
+protected main =
+ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd
+
+protected-main drift =
+NO
+```
+
+Current #3524:
+
+```text
+PR #3524
+
+state =
+OPEN / DRAFT
+
+base =
+ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd
+
+head =
+f03c8c3b362088bf2af7cef026b242cfb33dbb03
+
+mergeable =
+true
+
+merge =
+NOT AUTHORIZED
+
+undraft =
+NOT AUTHORIZED
+```
+
+Exact-base invariant:
+
+```text
+PR base
+=
+protected main
+=
+ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd
+```
+
+Before any further #3524 write, this invariant must be read again.
+
+If protected main is no longer exactly `ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd`:
+
+```text
+STOP
+DO NOT CONTINUE SETTLEMENT
+DO NOT MERGE
+RE-ADJUDICATE EXACT BASE
+```
+
+## Z4 — Fresh rolling current-crop authority machine result
+
+Fresh authority:
+
+```text
+authority_as_of =
+2026-09-06T04:00:00Z
+
+authority_valid_until =
+2026-09-07T10:00:00Z
+
+stage =
+R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE
+
+epistemic_class =
+THERMAL_MODEL_DERIVED
+
+water_use_stage =
+LATE
+
+Kc =
+0.6
+```
+
+Machine-qualified surfaces:
+
+```text
+fresh T4R1 lifecycle
+= PASS
+
+fresh thermal biological stage
+= PASS
+
+current-crop composition
+= PASS
+
+rolling graduation
+= PASS
+
+zero production effects
+= PASS
+```
+
+Current evidence does not show:
+
+```text
+KBS freshness blocker
+thermal-stage regression
+biological-stage semantic regression
+current-crop authority regression
+```
+
+## Z5 — Authority semantic boundary
+
+The new authority remains:
+
+```text
+THERMAL_MODEL_DERIVED
+current-crop authority
+```
+
+It is not:
+
+```text
+KBS formally published stage authority
+```
+
+The epistemic distinction must remain explicit.
+
+Current stage:
+
+```text
+R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE
+```
+
+must not be rewritten as:
+
+```text
+FORMAL R5
+FORMAL R6
+```
+
+without corresponding Formal authority.
+
+This rolling refresh proves only that current admissible lifecycle evidence + fresh thermal evidence + the already-governed biological-stage architecture can continue to form a current-crop operational authority.
+
+It does not promote the epistemic class.
+
+## Z6 — Rolling refresh surfaces already completed
+
+This rolling frontier has already advanced through:
+
+```text
+2026-09-06 refresh request
+= CREATED
+
+fresh qualification
+= PASSED
+
+2026-09-06 effective authority
+= MATERIALIZED
+
+current-crop authority registry
+= EXTENDED
+
+date-scoped governance acceptance
+= ADDED
+
+preservation workflow
+= RETURNED TO PERSISTED-AUTHORITY VALIDATION MODE
+
+rolling resolver seam
+= ADVANCED TO NEW AUTHORITY WINDOW
+```
+
+Resolver target behavior has moved to:
+
+```text
+at 2026-09-06T11Z
+
+select =
+2026-09-06T04Z authority
+```
+
+and the temporal fail-closed boundary has moved to:
+
+```text
+2026-09-07T11Z
+```
+
+Static production-default mount semantics were not changed.
+
+## Z7 — Major exact-head green surfaces
+
+At #3524 head `f03c8c3b362088bf2af7cef026b242cfb33dbb03`:
+
+```text
+CI
+run 34031954851
+= SUCCESS
+
+T4R1 Current-Crop Refresh
+run 34031954834
+= SUCCESS
+
+Delivery Policy
+run 34031954811
+= SUCCESS
+
+Candidate Declaration
+run 34031954875
+= SUCCESS
+
+Release Lane
+run 34031954825
+= SUCCESS
+
+EA5E2 live-window preflight
+run 34031954841
+= SUCCESS
+
+Main Ruleset Readiness
+run 34031954805
+= SUCCESS
+
+Twin V2 rolling resolver seam
+run 34031954813
+= SUCCESS
+
+EA5E2 successor runner
+run 34031954840
+= SUCCESS
+
+CAP08 authority reconciliation
+run 34031954848
+= SUCCESS
+
+Production Runtime Owner Cutover qualification
+run 34031954823
+= SUCCESS
+```
+
+`Production Runtime Owner Cutover qualification = SUCCESS` is only a qualification result.
+
+It does not mean:
+
+```text
+owner activated
+production started
+lease written
+```
+
+## Z8 — Current QCP exact blocker
+
+Current QCP:
+
+```text
+run =
+34031954804
+
+failed job =
+101482997839
+```
+
+Exact machine failure:
+
+```text
+MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:
+ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd
+```
+
+Causal chain:
+
+```text
+#3524 exact base =
+ca2a96d...
+
+protected main =
+ca2a96d...
+
+base identity =
+CORRECT
+
+but
+
+qualification control-plane
+governed predecessor representation
+
+still treats historical f41dde8d...
+as the latest governed current-base context
+
+therefore
+
+ca2a96d...
+=
+UN-GOVERNED BASE
+```
+
+Classification:
+
+```text
+CLASS =
+QUALIFICATION / GOVERNANCE REPRESENTATION
+
+RUNTIME REGRESSION =
+NO EVIDENCE
+
+THERMAL SEMANTIC REGRESSION =
+NO EVIDENCE
+
+CURRENT-CROP AUTHORITY REGRESSION =
+NO EVIDENCE
+```
+
+The QCP wave fails at the front control-plane guard. Consequently the downstream central applicability / generation and dependency digest / immutable refs / exact PR plan / all-blockers tail does not have a new complete closure on this exact wave.
+
+Do not report an unexecuted downstream tail as a semantic failure.
+
+## Z9 — Why a one-line ca2a SHA patch is insufficient
+
+An overly narrow candidate existed:
+
+```text
+61309c678bba4286f5333d091b15f4d1b3d3d886
+```
+
+It was not adopted.
+
+It could address the outer predecessor allowlist while leaving the full qualification authority representation inconsistent across:
+
+```text
+qualification workflow
+post-merge control-plane workflow
+authoritative qualification-control-plane JSON
+qualification evidence registry
+all-blockers preflight
+rolling-stage resolver applicability
+```
+
+That risks merely moving the failure from:
+
+```text
+UN-GOVERNED BASE
+```
+
+to a downstream:
+
+```text
+registry cardinality mismatch
+applicability mismatch
+durable-anchor mismatch
+unknown path
+```
+
+Therefore:
+
+```text
+DO NOT PATCH ONLY THE FIRST SHA CHECK
+```
+
+The six governance surfaces must move coherently.
+
+## Z10 — Six-file authoritative settlement scope
+
+The settlement that has been machine-materialized and locally validated is exactly:
+
+```text
+1.
+.github/workflows/
+mcft-cap-09-post-merge-v13-control-plane-v1.yml
+
+2.
+.github/workflows/
+mcft-cap-09-qualification-control-plane-v1.yml
+
+3.
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+
+4.
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+
+5.
+scripts/governance_acceptance/
+ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs
+
+6.
+scripts/governance_acceptance/
+PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+```
+
+This blocker does not authorize incidental edits to:
+
+```text
+planner semantics
+A2 checker
+lineage checker
+QCP validator semantics
+runtime implementation
+production implementation
+ADR resolver policy
+current-crop model semantics
+```
+
+## Z11 — Six-file settlement semantics
+
+The intended governance settlement preserves:
+
+```text
+historical f41dde8d...
+= PRESERVED
+```
+
+and appends:
+
+```text
+current protected-main predecessor ca2a96d...
+= GOVERNED SUCCESSOR CONTEXT
+```
+
+It must not:
+
+```text
+replace f41 history
+delete historical predecessor lineage
+use prefix rules
+use wildcard rules
+use pathname-owner shortcuts
+```
+
+Resolver fallback semantics remain:
+
+```text
+1. explicit exact PR base
+2. exact current protected-main predecessor ca2a96d...
+3. historical predecessor f41dde8d...
+```
+
+Exact SHA governance remains stronger than historical fallback or pathname inference.
+
+## Z12 — Correct relation between f41dde and ca2a96
+
+`f41dde8d44de95e71748e756e048e0166c1916b7` remains a historical governed predecessor and lineage provenance.
+
+`ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd` is the current #3524 protected-main predecessor and current governed-successor qualification context.
+
+The settlement does not mean that f41 is invalid.
+
+It also does not mean that ca2a automatically validates all evidence.
+
+The correct statement is:
+
+```text
+ca2a is an exact governed successor context
+because its protected-main lineage and adopted MCFT state
+already passed the predecessor closure required
+to serve as the current evaluation base.
+```
+
+## Z13 — Temporary materializer pitfall 1: workflow never entered a job
+
+The first temporary governance materializer run:
+
+```text
+run =
+34023691299
+
+conclusion =
+FAILURE
+
+jobs =
+[]
+```
+
+Its workflow name degraded to the workflow file path.
+
+That was not a script failure.
+
+It was a pre-job YAML failure.
+
+Root cause:
+
+a JavaScript multiline template literal embedded under:
+
+```yaml
+run: |
+```
+
+contained subsequent physical lines dedented back to YAML column 0.
+
+This prematurely terminated the YAML block scalar.
+
+GitHub rejected the workflow before job dispatch.
+
+## Z14 — Temporary materializer after YAML correction
+
+After fixing indentation:
+
+```text
+fixed carrier head =
+50a40f3760e9a839aa9849eebfc0e51fe8520a18
+```
+
+the materializer entered the governance job and successfully completed:
+
+```text
+boundary assertions
+six-file materialization
+Node syntax checks
+central applicability selftest
+git diff --check
+local governance acceptance
+```
+
+Therefore:
+
+```text
+SIX-FILE SETTLEMENT LOGIC
+= MACHINE-MATERIALIZED
+
+LOCAL ACCEPTANCE
+= PASS
+```
+
+## Z15 — Temporary materializer pitfall 2: GH013
+
+The corrected materializer failed only at its final:
+
+```text
+git push
+```
+
+GitHub ruleset response:
+
+```text
+GH013
+
+Changes must be made through a pull request
+```
+
+Therefore:
+
+```text
+materialization
+= SUCCESS
+
+local acceptance
+= SUCCESS
+
+commit creation
+= SUCCESS
+
+direct Actions-bot branch push
+= REJECTED BY RULESET
+```
+
+This is deterministic repository-governance policy, not a transient network failure.
+
+Do not retry the same direct push.
+
+## Z16 — Verified dangling settlement commit
+
+Although the ref update was rejected by GH013, the generated Git object exists on GitHub.
+
+Exact dangling settlement commit:
+
+```text
+b85e2da40a9f5a5b6c6714d6f3b054e1ce1e32ab
+```
+
+Commit message:
+
+```text
+fix(mcft-cap09): govern ca2a current-crop continuity refresh
+```
+
+Parent:
+
+```text
+50a40f3760e9a839aa9849eebfc0e51fe8520a18
+```
+
+Its six-file content was machine-generated and passed local acceptance before the rejected ref update.
+
+Next continuation must not redesign the six-file semantics from scratch.
+
+Prefer the exact verified contents/blobs in `b85e2da...`.
+
+## Z17 — Why b85e2 is not itself the current PR head
+
+Do not directly reset #3524 to:
+
+```text
+b85e2da...
+```
+
+Its parent is:
+
+```text
+50a40f...
+```
+
+while #3524 has advanced to:
+
+```text
+f03c8c3...
+```
+
+Correct adoption shape:
+
+```text
+current head f03c...
+      +
+verified six-file blobs from b85e2...
+      +
+temporary carrier removal
+      ↓
+new child commit
+```
+
+Do not force-reset the branch to b85e2.
+
+## Z18 — Anti-drift check required before transplant
+
+Before adopting the dangling settlement, compare the six target files between:
+
+```text
+b85e2 parent =
+50a40f...
+
+and
+
+current #3524 head =
+f03c8c3...
+```
+
+The old-side identity for all six target files must show:
+
+```text
+NO INTERVENING SEMANTIC DRIFT
+```
+
+If any target file drifted:
+
+```text
+STOP
+DO NOT BLINDLY COPY THE VERIFIED BLOB
+RECONCILE THAT FILE EXPLICITLY
+```
+
+If all six old sides remain identical:
+
+```text
+SAFE TO TRANSPLANT VERIFIED NEW BLOBS
+```
+
+## Z19 — Temporary carrier final-tree requirement
+
+The final authoritative #3524 candidate tree must not contain the temporary governance materializer workflow.
+
+Required:
+
+```text
+temporary materializer file
+= ABSENT FROM FINAL TREE
+```
+
+Do not rewrite historical commits merely to pretend the temporary iteration never occurred.
+
+The required invariants are:
+
+```text
+final tree clean
+final diff no temporary carrier
+exact-head qualification based on the final tree
+```
+
+No unsafe force-push or history beautification is authorized.
+
+## Z20 — EA5E2 dependency graph second red
+
+A separate current red exists:
+
+```text
+EA5E2 runtime dependency graph
+
+run =
+34031954852
+
+job =
+101482997593
+
+conclusion =
+FAILURE
+```
+
+At this handoff:
+
+```text
+EXACT FIRST FALSE LEAF
+= NOT YET ADJUDICATED
+```
+
+Do not assume it is the same QCP blocker.
+
+Do not assume it proves runtime regression.
+
+The same exact head has:
+
+```text
+EA5E2 live-window preflight
+= SUCCESS
+
+EA5E2 successor runner
+= SUCCESS
+```
+
+After adopting the six-file settlement, first observe whether the dependency-graph workflow closes naturally.
+
+If it remains red, recover its first exact machine assertion and classify that leaf separately.
+
+## Z21 — Why current evidence does not prove a runtime problem
+
+Current green evidence includes:
+
+```text
+fresh current-crop refresh
+fresh biological-stage qualification
+rolling resolver seam
+EA5E2 successor
+EA5E2 live-window preflight
+CI
+ruleset readiness
+release lane
+delivery policy
+```
+
+The exact QCP blocker is:
+
+```text
+UN-GOVERNED BASE
+```
+
+which is a control-plane representation failure.
+
+Therefore current evidence does not establish:
+
+```text
+runtime behavioral regression
+authority semantic regression
+thermal model regression
+current-crop resolver regression
+```
+
+A future genuine runtime behavioral finding must be classified separately.
+
+## Z22 — Next execution step 1: relock identities
+
+Before the next write:
+
+```text
+protected main =
+ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd
+
+#3524 base =
+ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd
+
+#3524 head =
+f03c8c3b362088bf2af7cef026b242cfb33dbb03
+
+state =
+OPEN / DRAFT
+```
+
+Any protected-main or PR-base drift means:
+
+```text
+STOP
+```
+
+Do not apply the old settlement to a new exact base without re-adjudication.
+
+## Z23 — Next execution step 2: recover the verified settlement
+
+Read exact commit:
+
+```text
+b85e2da40a9f5a5b6c6714d6f3b054e1ce1e32ab
+```
+
+and its six changed-file blobs.
+
+Compare its parent-side versions against current `f03c8c3...`.
+
+If there is no six-file semantic drift, reuse the exact verified new blobs.
+
+Do not independently rewrite a merely similar correction.
+
+## Z24 — Next execution step 3: construct current-head child
+
+Use:
+
+```text
+f03c8c3b362088bf2af7cef026b242cfb33dbb03
+```
+
+as the only parent.
+
+The new child may contain only the bounded settlement and cleanup required by this frontier:
+
+```text
+six verified governance settlement files
++
+temporary governance materializer removed from final tree
+```
+
+Do not include:
+
+```text
+runtime files
+production files
+ADR files
+B-Line files
+planner semantic expansion
+```
+
+Use a PR-compliant / authorized repository mutation path.
+
+Do not repeat the Actions-bot direct `git push`; GH013 has already established that route as invalid.
+
+## Z25 — Next execution step 4: one natural exact-head qualification wave
+
+After the final child exists, allow only the naturally triggered exact-head qualification wave.
+
+Do not create:
+
+```text
+manual confidence rerun
+duplicate rerun
+extra repair commit
+```
+
+First require:
+
+```text
+CONTROL-PLANE BASE GOVERNANCE
+= PASS
+```
+
+Then require the full QCP tail:
+
+```text
+central applicability
+= PASS
+
+generation / durable-anchor /
+dependency-digest semantics
+= PASS
+
+immutable evidence refs
+= PASS
+
+exact PR applicability plan
+= PASS
+
+all-blockers preflight
+= PASS
+
+unknown_changed_paths
+= []
+
+UNKNOWN
+= 0
+
+FORBIDDEN
+= 0
+
+non-effects
+= all false
+```
+
+## Z26 — Next execution step 5: preserve the rolling qualification surfaces
+
+The final exact-head wave must continue to show:
+
+```text
+T4R1 Current-Crop Refresh
+= SUCCESS
+
+T4R1 Rolling Candidate
+= SUCCESS
+
+Rolling Resolver Seam
+= SUCCESS
+
+EA5E2 successor
+= SUCCESS
+
+CI
+= SUCCESS
+
+Release lane
+= SUCCESS
+
+Delivery policy
+= SUCCESS
+
+Main ruleset readiness
+= SUCCESS
+
+Production Runtime Owner Cutover qualification
+= SUCCESS
+```
+
+If EA5E2 dependency graph becomes SUCCESS, close the secondary blocker.
+
+If it remains FAILURE:
+
+```text
+extract exact first false leaf
+classify independently
+do not guess
+```
+
+## Z27 — Threshold for CTO report
+
+Only when all actually applicable required checks on the final exact head are terminal:
+
+```text
+SUCCESS
+or
+governed expected skip
+```
+
+and protected main still equals:
+
+```text
+ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd
+```
+
+may the team report:
+
+```text
+#3524 EXACT-HEAD QUALIFICATION
+= PASS
+
+ROLLING CURRENT-CROP CONTINUITY
+= QUALIFIED
+
+READY FOR MERGE ADJUDICATION
+= YES
+```
+
+Even then:
+
+```text
+DO NOT UNDRAFT
+DO NOT MERGE
+```
+
+without a fresh CTO merge adjudication.
+
+## Z28 — Production authority ceiling remains unchanged
+
+Neither this settlement nor its qualification grants:
+
+```text
+PRODUCTION START
+= NOT AUTHORIZED
+
+OWNER ACQUISITION
+= NOT AUTHORIZED
+
+PRODUCTION OWNER ACTIVATION
+= NOT AUTHORIZED
+
+PRODUCTION LEASE WRITE
+= NOT AUTHORIZED
+
+Production Rolling Default
+= OFF
+
+GitHub Production Cutover
+= FORBIDDEN
+
+FORMAL-v5
+= NOT ARMED
+
+A0
+= NOT AUTHORIZED
+
+O00-O23
+= NOT STARTED
+```
+
+Without a fresh read-only cardinality observation:
+
+```text
+production owner count =
+NOT FRESHLY OBSERVED
+
+live owner count =
+NOT FRESHLY OBSERVED
+```
+
+## Z29 — Hard-stop conditions
+
+Immediately STOP on any of:
+
+```text
+protected main drift
+#3524 base drift
+runtime behavioral finding
+authority semantic change
+thermal current-crop basis requiring non-deterministic change
+new UNKNOWN path
+UNKNOWN > 0
+FORBIDDEN > 0
+ADR -> MCFT dependency impact != 0
+production runtime mutation
+production owner mutation
+production lease mutation
+Formal write
+historical evidence rewrite
+durable-anchor identity rewrite
+```
+
+Do not widen authorization merely to make a gate green.
+
+## Z30 — Pitfall: workflow query API semantics
+
+`fetch_commit_workflow_runs` is a pull-request-trigger-oriented wrapper.
+
+Therefore:
+
+```text
+push workflow not returned by that wrapper
+```
+
+does not prove:
+
+```text
+push workflow did not run
+```
+
+When diagnosing a push-event workflow, use repository-level Actions run evidence or the exact run identity.
+
+Do not infer trigger absence from the wrong query surface.
+
+## Z31 — Pitfall: interpreting `jobs=[]`
+
+When a workflow reports:
+
+```text
+run = FAILURE
+jobs = []
+workflow name = file path
+```
+
+first suspect:
+
+```text
+workflow YAML / schema parse failure
+```
+
+before debugging shell, Node, or business logic.
+
+This frontier encountered exactly that failure mode.
+
+## Z32 — Pitfall: multiline source inside YAML `run: |`
+
+Code embedded inside:
+
+```yaml
+run: |
+```
+
+must preserve YAML block indentation on every physical source line, including lines that are lexically inside a JavaScript or Python multiline string.
+
+YAML does not understand JavaScript lexical context.
+
+A source line returning to YAML column 0 terminates the block scalar regardless of the JavaScript string semantics.
+
+## Z33 — Pitfall: do not retry deterministic GH013
+
+Current repository ruleset has already returned:
+
+```text
+GH013
+Changes must be made through a pull request
+```
+
+for the Actions-bot direct push.
+
+Do not:
+
+```text
+retry the same push
+sleep and retry
+change only git push syntax
+force-push from the Actions bot
+```
+
+Reuse the generated object/blob content through a PR-compliant authorized path.
+
+## Z34 — Pitfall: qualification is not production action
+
+For example:
+
+```text
+Production Runtime Owner Cutover qualification
+= SUCCESS
+```
+
+does not mean:
+
+```text
+Production Runtime Owner Cutover
+= EXECUTED
+```
+
+The same distinction applies to every qualification-only production surface in this taskline.
+
+## Z35 — Pitfall: do not reopen closed QINF tasks
+
+The current `ca2a...` successor-base governance settlement is not a continuation of:
+
+```text
+MCFT-QINF-RECON-01
+MCFT-QINF-FINAL-01
+```
+
+Those are closed.
+
+Current task classification:
+
+```text
+NEW ROLLING CONTINUITY
+SUCCESSOR-BASE GOVERNANCE REPRESENTATION
+```
+
+Do not reopen old task names to reuse their authorization.
+
+## Z36 — Pitfall: current-base refresh must preserve historical lineage
+
+Correct operation:
+
+```text
+append ca2a as current governed predecessor context
+```
+
+Incorrect operation:
+
+```text
+replace f41
+```
+
+`f41dde...` remains historical predecessor provenance.
+
+Likewise the earlier:
+
+```text
+e1f8...
+```
+
+must not be reactivated as a second current base.
+
+Historical provenance and active evaluation context are different authority roles.
+
+## Z37 — B-Line boundary
+
+For this MCFT frontier:
+
+```text
+B-Line changes =
+NONE AUTHORIZED
+
+B-Line taskline =
+UNTOUCHED
+```
+
+Contemporary B-Line evolution on protected main may be read only when needed for lineage/dependency-impact adjudication.
+
+Do not enter B-Line implementation, governance repair, or caller-authority work without separate authorization.
+
+## Z38 — Authoritative handoff carrier lineage
+
+Immediately before this Z-section was landed, the handoff carrier was:
+
+```text
+PR #3298
+
+head =
+7838d08123f4575173a9ccc4dcc70e56551c27c2
+
+state =
+OPEN / DRAFT
+```
+
+The file was:
+
+```text
+docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md
+```
+
+with blob:
+
+```text
+784126756e653a4bb2e12674ff529ff15b57255e
+```
+
+and size:
+
+```text
+802661 bytes
+```
+
+This Z update must remain a pure prepend over that exact blob.
+
+Required handoff invariant:
+
+```text
+new commit direct parent =
+7838d08123f4575173a9ccc4dcc70e56551c27c2
+
+changed files =
+handoff file only
+
+PURE_PREPEND =
+true
+
+HISTORICAL_SUFFIX_PRESERVED =
+true
+```
+
+The handoff carrier PR may remain non-mergeable against a newer protected main. Do not rebase or rewrite its historical authority chain merely to make the PR appear mergeable.
+
+## Z39 — Repository-authoritative continuation point
+
+After this Z-section is committed to #3298, Z becomes the newest repository-authoritative conversation continuation point.
+
+Y and every historical section remain preserved below it.
+
+This handoff update does not itself modify:
+
+```text
+#3524
+protected main
+MCFT runtime code
+production runtime
+Production Owner state
+Formal authority
+B-Line
+```
+
+The exact post-write #3298 head/blob/compare proof is repository metadata and should be recorded in the PR body / machine verification rather than creating a second self-referential handoff commit solely to embed its own SHA.
+
+## Z40 — First checks for the next conversation
+
+Do not begin by writing code.
+
+Read in this order:
+
+```text
+1. protected main
+2. #3524 base / head / state
+3. require main == #3524 base == ca2a96d...
+4. fetch dangling settlement b85e2da...
+5. compare six target-file old sides: 50a40f... vs current f03c...
+6. if no six-file drift, construct current-head child using exact verified blobs
+7. remove temporary materializer from final tree
+8. allow one natural exact-head qualification wave
+9. recover QCP + EA5E2 exact terminal states
+10. if all green, report READY FOR MERGE ADJUDICATION
+11. do not merge without CTO authorization
+```
+
+## Z41 — Compact continuation state
+
+```text
+PREDECESSOR #3514
+= CTO ACCEPTED / CLOSED
+
+MCFT-QINF-RECON-01
+= CLOSED
+
+MCFT-QINF-FINAL-01
+= CLOSED
+
+protected main
+= ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd
+
+#3524
+= OPEN / DRAFT
+
+#3524 base
+= ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd
+
+#3524 head
+= f03c8c3b362088bf2af7cef026b242cfb33dbb03
+
+fresh current-crop qualification
+= PASS
+
+new authority valid until
+= 2026-09-07T10:00:00Z
+
+QCP
+= FAIL
+
+QCP exact blocker
+=
+MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:
+ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd
+
+six-file governance settlement
+= MATERIALIZED / LOCALLY ACCEPTED
+
+verified dangling settlement commit
+=
+b85e2da40a9f5a5b6c6714d6f3b054e1ce1e32ab
+
+branch adoption of settlement
+= NOT YET DONE
+
+EA5E2 dependency graph
+= FAILURE
+
+EA5E2 exact false leaf
+= NOT YET ADJUDICATED
+
+temporary carrier final cleanup
+= REQUIRED
+
+exact-head final qualification
+= NOT YET COMPLETE
+
+READY FOR MERGE ADJUDICATION
+= NO
+```
+
+## Z42 — Final authority ceiling
+
+```text
+#3524 UNDRAFT
+= NOT AUTHORIZED
+
+#3524 MERGE
+= NOT AUTHORIZED
+
+PRODUCTION START
+= NOT AUTHORIZED
+
+OWNER ACQUISITION
+= NOT AUTHORIZED
+
+PRODUCTION OWNER ACTIVATION
+= NOT AUTHORIZED
+
+FORMAL-v5
+= NOT ARMED
+
+A0
+= NOT AUTHORIZED
+
+O00-O23
+= NOT STARTED
+
+B-Line
+= UNTOUCHED
+```
+
+The only legal active frontier after this handoff is:
+
+```text
+ADOPT VERIFIED ca2a GOVERNANCE SETTLEMENT
+INTO CURRENT #3524 EXACT HEAD
+
+CLEAN TEMPORARY CARRIER
+
+RUN ONE NATURAL EXACT-HEAD QUALIFICATION WAVE
+
+THEN STOP FOR CTO MERGE ADJUDICATION
+```
+
+Any action beyond this frontier requires fresh authorization.
+
 # GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-06 Continuation — Production-Host Readiness / Current-Crop Continuity / Protected-Main Lineage / QINF Machine-Proof Frontier
 
 # Y — Production-Host Readiness / Current-Crop Continuity / Protected-Main Lineage / Qualification-Infrastructure Machine-Proof Frontier
