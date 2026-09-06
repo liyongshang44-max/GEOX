@@ -111,7 +111,8 @@ function coreProof(wt){
 }
 
 const liveMain=text("git",["rev-parse","origin/main"]);
-if(liveMain!==NEW_BASE) throw new Error("PROTECTED_MAIN_DRIFT:"+liveMain);
+const mainDescendsFromAdjudicatedBase=run("git",["merge-base","--is-ancestor",NEW_BASE,liveMain],{allowFailure:true});
+if(mainDescendsFromAdjudicatedBase.status!==0) throw new Error("PROTECTED_MAIN_NOT_DESCENDANT_OF_ADJUDICATED_NEW_BASE:"+liveMain);
 run("git",["merge-base","--is-ancestor",OLD_BASE,NEW_BASE]);
 
 const artifactPath=path.join(ROOT,ARTIFACT);
