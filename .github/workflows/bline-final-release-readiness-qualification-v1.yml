@@ -474,7 +474,109 @@ jobs:
 
       - name: Start acceptance runtime dependencies
         timeout-minutes: 8
-        run: python3 /tmp/run-ci-acceptance-step.py 'Start acceptance runtime dependencies'
+        shell: bash
+        run: |
+          set -uo pipefail
+          evidence="acceptance-output/BFRR_RUNTIME_START_EVIDENCE.log"
+          mkdir -p acceptance-output
+          : > "$evidence"
+          record() {
+            printf '%s\n' "$*" | tee -a "$evidence"
+          }
+          observe_state() {
+            local phase="$1"
+            {
+              printf 'BFRR_RUNTIME_START_OBSERVE phase=%s timestamp=%s\n' "$phase" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              printf 'tested_subject_sha=%s\n' "$TESTED_SUBJECT_SHA"
+              printf 'git_head=%s\n' "$(git rev-parse HEAD)"
+              printf '%s  %s\n' "$(sha256sum .github/workflows/ci.yml | awk '{print $1}')" '.github/workflows/ci.yml'
+              printf '%s  %s\n' "$(sha256sum docker-compose.commercial_v1.yml | awk '{print $1}')" 'docker-compose.commercial_v1.yml'
+              python3 <<'PY'
+          import hashlib
+          import pathlib
+          import re
+
+          target = 'Start acceptance runtime dependencies'
+          lines = pathlib.Path('.github/workflows/ci.yml').read_text(encoding='utf-8').splitlines()
+          start = lines.index('  acceptance:')
+          marker = f'      - name: {target}'
+          step_start = next(i for i in range(start + 1, len(lines)) if lines[i] == marker)
+          step_end = next((i for i in range(step_start + 1, len(lines)) if lines[i].startswith('      - name: ') or (lines[i] and lines[i].startswith('  ') and not lines[i].startswith('    '))), len(lines))
+          run_index = next(i for i in range(step_start + 1, step_end) if lines[i].startswith('        run:'))
+          suffix = lines[run_index][len('        run:'):].lstrip()
+          if suffix in ('|', '|-', '|+', '>', '>-', '>+'):
+              body = []
+              for line in lines[run_index + 1:step_end]:
+                  if line.startswith('          '):
+                      body.append(line[10:])
+                  elif line == '':
+                      body.append('')
+                  else:
+                      break
+              script = '\n'.join(body) + '\n'
+          else:
+              script = suffix + '\n'
+          print('canonical_step_name=' + target)
+          print('canonical_step_body_sha256=' + hashlib.sha256(script.encode()).hexdigest())
+          for line in script.splitlines():
+              if re.search(r'(^|\s)docker\s+compose\b.*\bup\b', line):
+                  print('canonical_compose_up=' + line.strip())
+          PY
+              rendered="${RUNNER_TEMP:?RUNNER_TEMP is required}/bfrr-commercial-compose.rendered.yml"
+              docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml config > "$rendered"
+              printf 'effective_compose_sha256=%s\n' "$(sha256sum "$rendered" | awk '{print $1}')"
+              if docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml config --format json > "${RUNNER_TEMP}/bfrr-commercial-compose.json" 2>/dev/null; then
+                python3 <<'PY'
+          import json, os, pathlib
+          p = pathlib.Path(os.environ['RUNNER_TEMP']) / 'bfrr-commercial-compose.json'
+          data = json.loads(p.read_text(encoding='utf-8'))
+          server = data.get('services', {}).get('server', {})
+          print('effective_server_container_name=' + str(server.get('container_name')))
+          print('effective_server_ports=' + json.dumps(server.get('ports'), sort_keys=True, separators=(',', ':')))
+          PY
+              else
+                printf 'effective_server_projection=json_format_unavailable\n'
+                awk '
+                  /^  server:$/ { in_server=1; next }
+                  in_server && /^  [A-Za-z0-9_.-]+:$/ { exit }
+                  in_server && /container_name:/ { print "effective_server_" $0 }
+                  in_server && /^    ports:$/ { in_ports=1; next }
+                  in_server && in_ports && /^    [A-Za-z0-9_.-]+:/ { in_ports=0 }
+                  in_server && in_ports && /(target:|published:)/ { print "effective_server_port_" $0 }
+                ' "$rendered"
+              fi
+              printf '%s\n' '--- docker ps -a --no-trunc ---'
+              docker ps -a --no-trunc
+              printf '%s\n' '--- existing container names ---'
+              docker ps -a --format '{{.Names}}'
+              printf '%s\n' '--- host listeners 3000/3001 ---'
+              if command -v ss >/dev/null 2>&1; then
+                ss -ltnp 2>&1 | grep -E '(^State|:3000\b|:3001\b)' || true
+              elif command -v netstat >/dev/null 2>&1; then
+                netstat -ltnp 2>&1 | grep -E '(^Proto|:3000\b|:3001\b)' || true
+              else
+                printf 'listener_tool=unavailable\n'
+              fi
+              printf '%s\n' '--- geox-v1-server state projection ---'
+              docker inspect geox-v1-server --format 'name={{.Name}} image={{.Config.Image}} state={{json .State}} ports={{json .NetworkSettings.Ports}}' 2>&1 || true
+              if [ "$phase" = POST ]; then
+                printf '%s\n' '--- compose ps after canonical command ---'
+                docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps 2>&1 || true
+                printf '%s\n' '--- relevant bootstrap/runtime logs ---'
+                docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --timestamps --tail=400 database-platform-bootstrap mcft-cap07-migration minio-init server postgres mqtt jobs executor 2>&1 || true
+              fi
+              printf 'BFRR_RUNTIME_START_OBSERVE_END phase=%s timestamp=%s\n' "$phase" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            } | tee -a "$evidence"
+          }
+          observe_state PRE
+          record "BFRR_CANONICAL_RUNTIME_START status=START timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          set +e
+          python3 /tmp/run-ci-acceptance-step.py 'Start acceptance runtime dependencies'
+          rc=$?
+          set -e
+          record "BFRR_CANONICAL_RUNTIME_START status=EXIT exit_code=$rc timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          observe_state POST
+          exit "$rc"
 
       - name: Wait for acceptance services ready
         run: python3 /tmp/run-ci-acceptance-step.py 'Wait for acceptance services ready'
