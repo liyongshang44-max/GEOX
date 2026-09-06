@@ -423,6 +423,39 @@ jobs:
       - name: Prepare commercial compose env
         run: python3 /tmp/run-ci-acceptance-step.py 'Prepare commercial compose env'
 
+      - name: Snapshot successor acceptance environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          env_snapshot="${RUNNER_TEMP:?RUNNER_TEMP is required}/bline-successor-env.ci"
+          trace_file="${RUNNER_TEMP:?RUNNER_TEMP is required}/bline-successor-failure-leaf-trace.log"
+          : > "$trace_file"
+          trace() {
+            local phase="$1"
+            local status="$2"
+            local exit_code="${3:-}"
+            if [ -n "$exit_code" ]; then
+              printf 'BLINE_SUCCESSOR_TRACE phase=%s status=%s exit_code=%s\n' "$phase" "$status" "$exit_code" | tee -a "$trace_file"
+            else
+              printf 'BLINE_SUCCESSOR_TRACE phase=%s status=%s\n' "$phase" "$status" | tee -a "$trace_file"
+            fi
+          }
+          trace env_snapshot START
+          if cp -- .env.ci "$env_snapshot"; then
+            :
+          else
+            rc=$?
+            trace env_snapshot FAIL "$rc"
+            exit "$rc"
+          fi
+          if cmp -s -- .env.ci "$env_snapshot"; then
+            trace env_snapshot PASS
+          else
+            rc=$?
+            trace env_snapshot FAIL "$rc"
+            exit "$rc"
+          fi
+
       - name: Validate commercial compose rendering
         run: python3 /tmp/run-ci-acceptance-step.py 'Validate commercial compose rendering'
 
@@ -711,9 +744,9 @@ jobs:
           set -euo pipefail
           carrier_workspace="${GITHUB_WORKSPACE:?GITHUB_WORKSPACE is required}"
           successor_worktree="$(mktemp -d)"
-          trace_file="$carrier_workspace/acceptance-output/bline-successor-failure-leaf-trace.log"
-          mkdir -p "$carrier_workspace/acceptance-output"
-          : > "$trace_file"
+          env_snapshot="${RUNNER_TEMP:?RUNNER_TEMP is required}/bline-successor-env.ci"
+          trace_file="${RUNNER_TEMP:?RUNNER_TEMP is required}/bline-successor-failure-leaf-trace.log"
+          touch "$trace_file"
           trace() {
             local phase="$1"
             local status="$2"
@@ -738,9 +771,36 @@ jobs:
             rm -rf "$successor_worktree"
           }
           trap cleanup EXIT
-          git -C "$carrier_workspace" worktree add --detach "$successor_worktree" "$TESTED_SUBJECT_SHA" >/dev/null
-          if [ -f "$carrier_workspace/.env.ci" ]; then
-            cp "$carrier_workspace/.env.ci" "$successor_worktree/.env.ci"
+          trace env_snapshot_available START
+          if test -f "$env_snapshot"; then
+            trace env_snapshot_available PASS
+          else
+            rc=$?
+            trace env_snapshot_available FAIL "$rc"
+            exit "$rc"
+          fi
+          trace worktree_create START
+          if git -C "$carrier_workspace" worktree add --detach "$successor_worktree" "$TESTED_SUBJECT_SHA" >/dev/null; then
+            trace worktree_create PASS
+          else
+            rc=$?
+            trace worktree_create FAIL "$rc"
+            exit "$rc"
+          fi
+          trace env_transfer START
+          if cp -- "$env_snapshot" "$successor_worktree/.env.ci"; then
+            :
+          else
+            rc=$?
+            trace env_transfer FAIL "$rc"
+            exit "$rc"
+          fi
+          if cmp -s -- "$env_snapshot" "$successor_worktree/.env.ci"; then
+            trace env_transfer PASS
+          else
+            rc=$?
+            trace env_transfer FAIL "$rc"
+            exit "$rc"
           fi
           cd "$successor_worktree"
           export GITHUB_WORKSPACE="$successor_worktree"
@@ -881,6 +941,7 @@ jobs:
             acceptance-output/bline-final-release-readiness-identity.json
             acceptance-output/carrier-delta.txt
             acceptance-output/*.log
+            ${{ runner.temp }}/bline-successor-failure-leaf-trace.log
           if-no-files-found: warn
 
       - name: Stop acceptance runtime dependencies
