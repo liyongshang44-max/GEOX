@@ -4,7 +4,7 @@ type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 
 type SkillRegistryFactType = "skill_definition_v1" | "skill_binding_v1" | "skill_run_v1";
 
-type SkillRegistryReadRow = {
+export type SkillRegistryReadRow = {
   tenant_id: string;
   project_id: string;
   group_id: string;
@@ -193,6 +193,62 @@ async function ensureSkillRegistryReadTable(pool: Pool): Promise<void> {
   await pool.query(`ALTER TABLE skill_registry_read_v1 ADD COLUMN IF NOT EXISTS legacy_category text NULL`);
 }
 
+export async function computeSkillRegistryReadRowsV1(pool: Pool, tenant: TenantTriple): Promise<SkillRegistryReadRow[]> {
+  const factsQ = await pool.query(
+    `SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json
+     FROM facts
+     WHERE (record_json::jsonb->>'type') IN ('skill_definition_v1','skill_binding_v1','skill_run_v1')
+       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+       AND (record_json::jsonb#>>'{payload,project_id}') = $2
+       AND (record_json::jsonb#>>'{payload,group_id}') = $3
+     ORDER BY occurred_at ASC, fact_id ASC`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id]
+  );
+
+  const staged: SkillRegistryReadRow[] = (factsQ.rows ?? []).map((row: any) => {
+    const record = parseRecordJson(row.record_json) ?? row.record_json;
+    const payload = record?.payload ?? {};
+    const factType = String(record?.type ?? "") as SkillRegistryFactType;
+    const occurredAt = toIsoTimestamp(row.occurred_at);
+    const ts = toEpochMs(row.occurred_at, occurredAt);
+    const legacyCategory = str(payload.category).toLowerCase() || null;
+    const publicCategory = toPublicCategoryFromLegacy(legacyCategory);
+
+    return {
+      tenant_id: str(payload.tenant_id),
+      project_id: str(payload.project_id),
+      group_id: str(payload.group_id),
+      fact_type: factType,
+      fact_id: str(row.fact_id),
+      skill_id: str(payload.skill_id),
+      version: str(payload.version),
+      category: publicCategory,
+      legacy_category: legacyCategory,
+      status: str(payload.status) || null,
+      scope_type: str(payload.scope_type) || null,
+      rollout_mode: str(payload.rollout_mode) || null,
+      result_status: str(payload.result_status) || null,
+      crop_code: str(payload.crop_code).toLowerCase() || null,
+      device_type: str(payload.device_type) || null,
+      trigger_stage: normalizeRunTriggerStage(factType, payload.trigger_stage),
+      bind_target: str(payload.bind_target) || null,
+      operation_id: str(payload.operation_id) || null,
+      operation_plan_id: str(payload.operation_plan_id) || null,
+      field_id: str(payload.field_id) || null,
+      device_id: str(payload.device_id) || null,
+      input_digest: str(payload.input_digest) || null,
+      output_digest: str(payload.output_digest) || null,
+      lifecycle_version: Number.isFinite(Number(payload.lifecycle_version)) ? Number(payload.lifecycle_version) : null,
+      payload_json: payload,
+      occurred_at: occurredAt,
+      updated_at_ts_ms: Number.isFinite(ts) ? ts : 0,
+    };
+  }).filter((x) => x.fact_type && x.skill_id && x.version);
+
+  const latest = selectLatest(staged);
+  return latest;
+}
+
 export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTriple): Promise<SkillRegistryReadRow[]> {
   await ensureSkillRegistryReadTable(pool);
 
@@ -301,6 +357,38 @@ export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTripl
   }
 
   return latest;
+}
+
+export function filterSkillRegistryReadRowsV1(
+  rows: SkillRegistryReadRow[],
+  input: TenantTriple & {
+    category?: string;
+    status?: string;
+    crop_code?: string;
+    device_type?: string;
+    trigger_stage?: string;
+    bind_target?: string;
+    fact_type?: SkillRegistryFactType;
+  }
+): SkillRegistryReadRow[] {
+  const category = typeof input.category === "string" ? toPublicCategoryFromLegacy(input.category) : null;
+  const status = input.status?.trim().toUpperCase() || null;
+  const cropCode = input.crop_code?.trim().toLowerCase() || null;
+  const deviceType = input.device_type?.trim().toUpperCase() || null;
+  const triggerStage = input.trigger_stage?.trim() || null;
+  const bindTarget = input.bind_target?.trim() || null;
+  const factType = input.fact_type?.trim() || null;
+  return rows.filter((row) => {
+    if (row.tenant_id !== input.tenant_id || row.project_id !== input.project_id || row.group_id !== input.group_id) return false;
+    if (category && row.category !== category) return false;
+    if (status && String(row.status ?? "").toUpperCase() !== status) return false;
+    if (cropCode && String(row.crop_code ?? "").toLowerCase() !== cropCode) return false;
+    if (deviceType && String(row.device_type ?? "").toUpperCase() !== deviceType) return false;
+    if (triggerStage && row.trigger_stage !== triggerStage) return false;
+    if (bindTarget && row.bind_target !== bindTarget) return false;
+    if (factType && row.fact_type !== factType) return false;
+    return true;
+  }).slice(0, 500);
 }
 
 export async function querySkillRegistryReadV1(

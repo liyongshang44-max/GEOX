@@ -6,6 +6,8 @@ import { createHash } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 
+import { createFormalFieldMemoryFromAcceptanceV1 } from "../../services/field_memory_service.js";
+
 type Row = Record<string, unknown>;
 
 type FormalizationBody = {
@@ -19,6 +21,8 @@ type FormalizationBody = {
   roiSummary?: unknown;
   memory_statement?: unknown;
   memoryStatement?: unknown;
+  field_memory_record_ref?: unknown;
+  fieldMemoryRecordRef?: unknown;
   evidence_refs?: unknown;
   evidenceRefs?: unknown;
 };
@@ -203,25 +207,86 @@ export function registerTwinKernelFormalizationRoutes(app: FastifyInstance, pool
     if (!formalizedAtRaw) return reply.code(400).send({ ok: false, error: "FORMALIZED_AT_REQUIRED" });
     let formalizedAt: string;
     try { formalizedAt = parseFormalizedAt(formalizedAtRaw); } catch { return reply.code(400).send({ ok: false, error: "INVALID_FORMALIZED_AT" }); }
+
     const decisionCycle = await readDecisionCycle(pool, decisionCycleId);
     if (!decisionCycle) return reply.code(404).send({ ok: false, error: "DECISION_CYCLE_NOT_FOUND" });
+
     const candidateId = text(decisionCycle.field_learning_candidate_id);
     const candidate = await readFieldLearningCandidate(pool, candidateId);
     if (!candidate) return reply.code(404).send({ ok: false, error: "FIELD_LEARNING_CANDIDATE_NOT_FOUND" });
-    const fieldMemoryId = `fm_${hashPayload({ object_type: "field_memory_v1", decision_cycle_id: decisionCycleId, field_learning_candidate_id: candidateId }).slice(0, 24)}`;
-    const sourceRefs = { decision_cycle_id: decisionCycleId, field_learning_candidate_id: candidateId, calibration_replay_id: decisionCycle.calibration_replay_id ?? null, forecast_error_id: decisionCycle.forecast_error_id ?? null, acceptance_id: record(decisionCycle.external_refs_json).acceptance_id ?? null };
-    const memoryStatement = Object.keys(record(input.memory_statement ?? input.memoryStatement)).length > 0 ? record(input.memory_statement ?? input.memoryStatement) : record(candidate.learning_statement_json);
-    const refs = evidenceRefs(input.evidence_refs ?? input.evidenceRefs);
-    const inserted = await pool.query(
-      `INSERT INTO field_memory_v1 (memory_id,field_memory_id,decision_cycle_id,field_learning_candidate_id,tenant_id,project_id,group_id,field_id,as_of_ts,memory_status,formalized_by,formalized_at,memory_statement_json,evidence_refs_json,source_object_refs_json,model_update_created,memory_type,evidence_refs,source_type,source_id,occurred_at)
-       VALUES ($1,$1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9,$10,$11::timestamptz,$12::jsonb,$13::jsonb,$14::jsonb,$15,$16,$17::jsonb,$18,$19,$11::timestamptz)
-       ON CONFLICT (memory_id) DO NOTHING
-       RETURNING *`,
-      [fieldMemoryId, decisionCycleId, candidateId, decisionCycle.tenant_id, decisionCycle.project_id, decisionCycle.group_id, decisionCycle.field_id, decisionCycle.as_of_ts, "FORMAL_MEMORY_WRITTEN", formalizedBy, formalizedAt, JSON.stringify(memoryStatement), JSON.stringify(refs), JSON.stringify(sourceRefs), false, "FORMAL_FIELD_MEMORY", JSON.stringify(refs), "twin_kernel_formalization_v0", decisionCycleId],
+
+    const externalRefs = record(decisionCycle.external_refs_json);
+    const operationPlanId = text(externalRefs.operation_plan_id);
+    const acceptanceId = text(externalRefs.acceptance_id);
+    const fieldMemoryRecordRef = bodyText(input, "field_memory_record_ref", "fieldMemoryRecordRef");
+    if (!operationPlanId) return reply.code(422).send({ ok: false, error: "TWIN_FORMAL_MEMORY_OPERATION_PLAN_REF_REQUIRED" });
+    if (!acceptanceId) return reply.code(422).send({ ok: false, error: "TWIN_FORMAL_MEMORY_ACCEPTANCE_REF_REQUIRED" });
+    if (!fieldMemoryRecordRef) return reply.code(400).send({ ok: false, error: "FIELD_MEMORY_RECORD_REF_REQUIRED" });
+
+    const tenant = {
+      tenant_id: text(decisionCycle.tenant_id),
+      project_id: text(decisionCycle.project_id),
+      group_id: text(decisionCycle.group_id),
+    };
+
+    let materialized: Awaited<ReturnType<typeof createFormalFieldMemoryFromAcceptanceV1>>;
+    try {
+      materialized = await createFormalFieldMemoryFromAcceptanceV1(pool, tenant, {
+        operation_plan_id: operationPlanId,
+        acceptance_id: acceptanceId,
+        field_memory_record_ref: fieldMemoryRecordRef,
+      });
+    } catch (error) {
+      const code = text((error as Error)?.message) || "FORMAL_FIELD_MEMORY_PROMOTION_PROOF_REJECTED";
+      const status = code.includes("NOT_FOUND") ? 404 : code.includes("AMBIGUOUS") ? 409 : 422;
+      return reply.code(status).send({ ok: false, error: code });
+    }
+
+    const rawMemory = record(materialized.field_memory);
+    const fieldMemoryId = text(rawMemory.memory_id ?? rawMemory.field_memory_id);
+    if (!fieldMemoryId) return reply.code(500).send({ ok: false, error: "FIELD_MEMORY_WRITE_FAILED" });
+
+    // Legacy Twin route is a compatibility/audit facade only. It does not own
+    // Formal Field Memory semantics; the canonical proof-gated materializer above does.
+    const memoryRow: Row = {
+      ...rawMemory,
+      field_memory_id: fieldMemoryId,
+      decision_cycle_id: decisionCycleId,
+      field_learning_candidate_id: candidateId,
+      as_of_ts: decisionCycle.as_of_ts,
+      memory_status: "FORMAL_MEMORY_WRITTEN",
+      formalized_by: formalizedBy,
+      formalized_at: formalizedAt,
+      memory_statement_json: record(input.memory_statement ?? input.memoryStatement),
+      evidence_refs_json: evidenceRefs(input.evidence_refs ?? input.evidenceRefs),
+      source_object_refs_json: {
+        decision_cycle_id: decisionCycleId,
+        field_learning_candidate_id: candidateId,
+        acceptance_id: acceptanceId,
+        field_memory_record_ref: fieldMemoryRecordRef,
+        compatibility_facade: "twin_kernel_formalization_v0",
+      },
+      model_update_created: false,
+    };
+
+    const updatedDecision = await updateDecisionCycleFormalRefs(
+      pool,
+      decisionCycleId,
+      { field_memory_id: fieldMemoryId },
+      ["MEMORY_CANDIDATE_CREATED", "FORMAL_MEMORY_WRITTEN"],
     );
-    const memoryRow = (inserted.rows[0] as Row | undefined) ?? await readFieldMemory(pool, fieldMemoryId);
-    if (!memoryRow) return reply.code(500).send({ ok: false, error: "FIELD_MEMORY_WRITE_FAILED" });
-    const updatedDecision = await updateDecisionCycleFormalRefs(pool, decisionCycleId, { field_memory_id: fieldMemoryId }, ["MEMORY_CANDIDATE_CREATED", "FORMAL_MEMORY_WRITTEN"]);
-    return reply.send({ ok: true, object_type: "field_memory_v1", write_ready: true, downstream_write_ready: false, automatic_field_memory_created: false, model_update_created: false, field_memory: exposeFieldMemory(memoryRow), decision_cycle: exposeDecisionCycle(updatedDecision) });
+
+    return reply.send({
+      ok: true,
+      object_type: "field_memory_v1",
+      write_ready: true,
+      downstream_write_ready: false,
+      automatic_field_memory_created: false,
+      model_update_created: false,
+      formal_memory_authority: "CANONICAL_REVIEWED_PROMOTION_MATERIALIZER",
+      legacy_twin_direct_memory_write: false,
+      field_memory: exposeFieldMemory(memoryRow),
+      decision_cycle: exposeDecisionCycle(updatedDecision),
+    });
   });
 }

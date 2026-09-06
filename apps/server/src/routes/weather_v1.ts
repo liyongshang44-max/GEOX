@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import {
   getLatestWeatherForecastIndexV1,
-  ingestWeatherForecastFactV1,
 } from "../projections/weather_forecast_v1.js";
 import { buildUnavailableWeatherV1, computeGeometryCentroidV1, createWeatherProviderV1, type WeatherLocationV1 } from "../services/weather_provider_v1.js";
 
@@ -66,61 +66,36 @@ export function registerWeatherV1Routes(app: FastifyInstance, _pool: Pool): void
   const provider = createWeatherProviderV1();
   const pool = _pool;
 
-  app.post("/api/v1/weather/forecast/ingest", async (req, reply) => {
-    const body = ((req as any).body ?? {}) as any;
-    const q = ((req as any).query ?? {}) as any;
-
-    const tenant = {
-      tenant_id: String(body.tenant_id ?? q.tenant_id ?? "tenantA"),
-      project_id: String(body.project_id ?? q.project_id ?? "projectA"),
-      group_id: String(body.group_id ?? q.group_id ?? "groupA"),
-    };
-
-    const fieldId = String(body.field_id ?? q.field_id ?? "").trim();
-    if (!fieldId) return reply.code(400).send({ ok: false, error: "MISSING_FIELD_ID" });
-
-    const nowIso = new Date().toISOString();
-    const horizonHours = Number.isFinite(Number(body.horizon_hours)) ? Number(body.horizon_hours) : 72;
-    const validTo = new Date(Date.parse(nowIso) + horizonHours * 60 * 60 * 1000).toISOString();
-
-    const forecast = await ingestWeatherForecastFactV1(pool, {
-      forecast_id: String(body.forecast_id ?? "").trim() || undefined,
-      tenant_id: tenant.tenant_id,
-      project_id: tenant.project_id,
-      group_id: tenant.group_id,
-      field_id: fieldId,
-      provider: String(body.provider ?? "MOCK"),
-      source_type: body.source_type ?? "MOCK",
-      source_id: String(body.source_id ?? "weather_forecast_ingest_mock"),
-      latitude: body.latitude ?? null,
-      longitude: body.longitude ?? null,
-      generated_at: body.generated_at ?? nowIso,
-      valid_from: body.valid_from ?? nowIso,
-      valid_to: body.valid_to ?? validTo,
-      horizon_hours: horizonHours,
-      rainfall_forecast_mm_72h: body.rainfall_forecast_mm_72h ?? null,
-      temperature_max_c_72h: body.temperature_max_c_72h ?? null,
-      et0_mm_72h: body.et0_mm_72h ?? null,
-      hourly: Array.isArray(body.hourly) ? body.hourly : [],
-      quality: body.quality ?? { stale: false, missing_fields: [], provider_status: "OK" },
-      raw_payload: body.raw_payload ?? null,
+  // B-SEC-0 / PR-SEC-2 / BSEC-003: no Commercial weather-ingest caller authority exists.
+  // Keep the route explicit for compatibility, but fail closed before caller-controlled
+  // scope or forecast payload can reach any persistent weather writer.
+  app.post("/api/v1/weather/forecast/ingest", async (_req, reply) => {
+    return reply.code(403).send({
+      ok: false,
+      error: "WEATHER_FORECAST_INGEST_COMMERCIAL_AUTHORITY_UNAVAILABLE",
     });
-
-    return reply.code(200).send({ ok: true, weather_forecast_fact_v1: forecast });
   });
 
   app.get("/api/v1/weather/forecast/latest", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "telemetry.read");
+    if (!auth) return reply;
+
     const q = ((req as any).query ?? {}) as any;
-    const tenant = {
-      tenant_id: String(q.tenant_id ?? "tenantA"),
-      project_id: String(q.project_id ?? "projectA"),
-      group_id: String(q.group_id ?? "groupA"),
+    const requestedTenant = {
+      tenant_id: String(q.tenant_id ?? auth.tenant_id).trim(),
+      project_id: String(q.project_id ?? auth.project_id).trim(),
+      group_id: String(q.group_id ?? auth.group_id).trim(),
     };
+    if (
+      requestedTenant.tenant_id !== auth.tenant_id
+      || requestedTenant.project_id !== auth.project_id
+      || requestedTenant.group_id !== auth.group_id
+    ) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
 
     const fieldId = String(q.field_id ?? "").trim();
     if (!fieldId) return reply.code(400).send({ ok: false, error: "MISSING_FIELD_ID" });
 
-    const latest = await getLatestWeatherForecastIndexV1(pool, tenant, fieldId);
+    const latest = await getLatestWeatherForecastIndexV1(pool, requestedTenant, fieldId, { allow_compatibility_write: false });
     if (!latest) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
 
     return reply.code(200).send({ ok: true, weather_forecast_v1: latest });

@@ -66,19 +66,51 @@ function escapeHtml(v: string): string {
 }
 
 async function ensureJobsTable(pool: Pool): Promise<void> {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS jobs (
-      job_id      TEXT PRIMARY KEY,
-      job_type    TEXT NOT NULL,
-      payload     JSONB NOT NULL,
-      status      TEXT NOT NULL,
-      result      JSONB,
-      error       TEXT,
-      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
+  const result = await pool.query<{
+    relation_name: string | null;
+    missing_columns: string[];
+    index_exists: boolean;
+  }>(`
+    WITH required_columns(column_name) AS (
+      VALUES
+        ('job_id'),
+        ('job_type'),
+        ('payload'),
+        ('status'),
+        ('result'),
+        ('error'),
+        ('created_at'),
+        ('updated_at')
+    )
+    SELECT
+      pg_catalog.to_regclass('public.jobs')::text AS relation_name,
+      COALESCE(
+        ARRAY(
+          SELECT required.column_name
+          FROM required_columns AS required
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM information_schema.columns AS existing
+            WHERE existing.table_schema = 'public'
+              AND existing.table_name = 'jobs'
+              AND existing.column_name = required.column_name
+          )
+          ORDER BY required.column_name
+        ),
+        ARRAY[]::text[]
+      ) AS missing_columns,
+      pg_catalog.to_regclass('public.idx_jobs_type_status') IS NOT NULL AS index_exists
   `);
-  await pool.query(`CREATE INDEX IF NOT EXISTS idx_jobs_type_status ON jobs(job_type, status, created_at);`);
+  const row = result.rows[0];
+  if (!row?.relation_name) {
+    throw new Error("EVIDENCE_REPORT_JOBS_SCHEMA_NOT_PROVISIONED:JOBS_TABLE_MISSING");
+  }
+  if ((row.missing_columns ?? []).length > 0) {
+    throw new Error(`EVIDENCE_REPORT_JOBS_SCHEMA_NOT_PROVISIONED:MISSING_COLUMNS:${row.missing_columns.join(",")}`);
+  }
+  if (!row.index_exists) {
+    throw new Error("EVIDENCE_REPORT_JOBS_SCHEMA_NOT_PROVISIONED:INDEX_MISSING:idx_jobs_type_status");
+  }
 }
 
 async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operationPlanId: string): Promise<FactRow[]> {
