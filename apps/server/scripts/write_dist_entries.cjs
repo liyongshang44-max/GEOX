@@ -1,6 +1,9 @@
 // apps/server/scripts/write_dist_entries.cjs
-// Purpose: create stable compiled Runtime entrypoints for the server, jobs worker, external database-platform bootstrap, dedicated B-Line Commercial principal bootstrap, and dedicated MCFT-CAP-07 one-shot migration workload.
-// Boundary: file packaging only; generated Runtime entrypoints do not share credentials or collapse one-shot database authority into the long-running server process.
+// Purpose: create stable compiled Runtime entrypoints for the server, jobs worker,
+// MCFT-CAP-09 production hosts, external database-platform bootstrap, and dedicated
+// MCFT-CAP-07 one-shot migration workload.
+// Boundary: file packaging only; generated Runtime entrypoints do not share credentials
+// or collapse independent Evidence/Twin/database authorities.
 
 const fs = require("node:fs");
 const path = require("node:path");
@@ -23,6 +26,88 @@ runJobsRuntime().catch((error) => {
   process.exit(1);
 });
 `,
+  },
+  {
+    name: path.join("runtime", "mcft_cap09_evidence_runtime.js"),
+    content: `import { runMcftCap09ProductionEvidenceRuntimeV1 } from "../apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.js";
+
+runMcftCap09ProductionEvidenceRuntimeV1().catch((error) => {
+  console.error(\`FATAL: MCFT-CAP-09 Evidence Runtime crashed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+  process.exit(1);
+});
+`,
+  },
+  {
+    name: path.join("runtime", "mcft_cap09_twin_runtime.js"),
+    content: `import { runMcftCap09TwinRuntimeProcessV1 } from "../apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v1.js";
+
+runMcftCap09TwinRuntimeProcessV1().catch((error) => {
+  console.error(\`FATAL: MCFT-CAP-09 Twin Runtime crashed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+  process.exit(1);
+});
+`,
+  },
+  {
+    name: path.join("runtime", "mcft_cap09_twin_runtime_v2.js"),
+    content: `import { runMcftCap09TwinRuntimeProcessV2 } from "../apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.js";
+
+runMcftCap09TwinRuntimeProcessV2().catch((error) => {
+  console.error(\`FATAL: MCFT-CAP-09 Twin Runtime V2 crashed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+  process.exit(1);
+});
+`,
+  },
+  {
+    name: path.join("runtime", "mcft_cap09_evidence_preformal_owner_runtime.js"),
+    content: `import { runMcftCap09EvidencePreFormalOwnerRuntimeV1 } from "../apps/server/src/runtime/mcft_cap09_evidence_preformal_owner_runtime_v1.js";
+
+runMcftCap09EvidencePreFormalOwnerRuntimeV1().catch((error) => {
+  console.error(\`FATAL: MCFT-CAP-09 Evidence pre-Formal owner runtime crashed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+  process.exit(1);
+});
+`,
+  },
+  {
+    name: path.join("runtime", "mcft_cap09_twin_preformal_owner_runtime.js"),
+    content: `import { runMcftCap09TwinPreFormalOwnerRuntimeV1 } from "../apps/server/src/runtime/mcft_cap09_twin_preformal_owner_runtime_v1.js";
+
+runMcftCap09TwinPreFormalOwnerRuntimeV1().catch((error) => {
+  console.error(\`FATAL: MCFT-CAP-09 Twin pre-Formal owner runtime crashed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+  process.exit(1);
+});
+`,
+  },
+  {
+    name: path.join("qualification", "mcft_cap09_phase5_evidence_runtime.js"),
+    content: `import { runMcftCap09Phase5EvidenceRuntimeQualificationV1 } from "../apps/server/src/external_evidence/qualification/mcft_cap09_phase5_evidence_runtime_qualification_v1.js";
+
+runMcftCap09Phase5EvidenceRuntimeQualificationV1().catch((error) => {
+  console.error(\`FATAL: MCFT-CAP-09 Phase5 Evidence qualification Runtime crashed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+  process.exit(1);
+});
+`,
+  },
+  {
+    name: path.join("qualification", "mcft_cap09_phase5_twin_runtime.js"),
+    content: `import { runMcftCap09Phase5TwinRuntimeQualificationV1 } from "../apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_twin_runtime_qualification_v1.js";
+
+runMcftCap09Phase5TwinRuntimeQualificationV1().catch((error) => {
+  console.error(\`FATAL: MCFT-CAP-09 Phase5 Twin qualification Runtime crashed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+  process.exit(1);
+});
+`,
+  },
+  {
+    name: path.join("qualification", "mcft_cap09_phase5_capture_a0_fixture.js"),
+    content: `import "../apps/server/src/external_evidence/qualification/mcft_cap09_phase5_capture_a0_fixture_v1.js";\n`,
+  },
+  {
+    name: path.join("qualification", "mcft_cap09_phase5_prepare_24t.js"),
+    content: `import "../apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_prepare_24t_v1.js";\n`,
+  },
+  {
+    name: path.join("qualification", "mcft_cap09_phase5_verify_24t.js"),
+    content: `import "../apps/server/src/runtime/twin_runtime/qualification/mcft_cap09_phase5_verify_24t_v1.js";\n`,
   },
   {
     name: path.join("database", "platform_bootstrap.js"),
@@ -49,11 +134,11 @@ runDatabasePlatformBootstrapV1().catch((error) => {
 `,
   },
   {
-    name: path.join("database", "bline_commercial_principal_bootstrap.js"),
-    content: `import { runBlineCommercialPrincipalBootstrapFromEnvironmentV1 } from "../apps/server/src/infra/bline_commercial_principal_bootstrap_v1.js";
+    name: path.join("database", "mcft_cap09_phase5_service_principals.js"),
+    content: `import { runMcftCap09Phase5ServicePrincipalBootstrapFromEnvironmentV1 } from "../apps/server/src/infra/mcft_cap09_phase5_service_principal_bootstrap_v1.js";
 
-runBlineCommercialPrincipalBootstrapFromEnvironmentV1().catch((error) => {
-  console.error(\`FATAL: B-Line Commercial principal bootstrap failed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+runMcftCap09Phase5ServicePrincipalBootstrapFromEnvironmentV1().catch((error) => {
+  console.error(\`FATAL: MCFT-CAP-09 Phase5 service-principal bootstrap failed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
   process.exit(1);
 });
 `,
@@ -64,6 +149,16 @@ runBlineCommercialPrincipalBootstrapFromEnvironmentV1().catch((error) => {
 
 runMcftCap07StartupMigrationFromEnvironmentV1().catch((error) => {
   console.error(\`FATAL: MCFT-CAP-07 startup migration failed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+  process.exit(1);
+});
+`,
+  },
+  {
+    name: path.join("database", "bline_commercial_principal_bootstrap.js"),
+    content: `import { runBlineCommercialPrincipalBootstrapFromEnvironmentV1 } from "../apps/server/src/infra/bline_commercial_principal_bootstrap_v1.js";
+
+runBlineCommercialPrincipalBootstrapFromEnvironmentV1().catch((error) => {
+  console.error(\`FATAL: B-Line Commercial principal bootstrap failed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
   process.exit(1);
 });
 `,
