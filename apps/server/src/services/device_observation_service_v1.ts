@@ -10,6 +10,8 @@ import {
 import type { PoolClient } from "pg";
 import { mapStage1ObservationMetricToPipelineObservationV1 } from "../domain/sensing/stage1_sensing_input_mapping_v1.js";
 import { runSensingInferencePipelineV1, type RunSensingInferencePipelineV1Result } from "../domain/sensing/run_sensing_inference_pipeline_v1.js";
+import { buildIngressPhysicalQcSnapshotV1 } from "../evidence/ingress_physical_qc_snapshot_v1.js";
+import { evaluateStage1PhysicalQcConsumptionV1 } from "../evidence/stage1_physical_qc_consumption_guard_v1.js";
 import { refreshFieldReadModelsWithObservabilityV1 } from "./field_read_model_refresh_v1.js";
 
 export type DeviceObservationServiceV1Input = {
@@ -106,10 +108,21 @@ function isSimulatedObservation(input: DeviceObservationServiceV1Input): boolean
  * Contract boundary:
  * raw_telemetry_v1 is ingress evidence only and MUST NOT be consumed by business read models.
  * Business pipelines must consume device_observation_v1 only.
+ *
+ * B-04b boundary:
+ * physical QC is computed from the source metric/value/unit before compatibility
+ * normalization, then retained as a provenance snapshot on the observation fact.
+ * Existing compatibility metric/unit behavior remains unchanged in this subphase.
  */
 export async function writeDeviceObservationFactV1(clientConn: PoolClient, input: DeviceObservationServiceV1Input): Promise<{ fact_id: string; occurred_at_iso: string }> {
   const nowIso = new Date().toISOString();
   const occurred_at_iso = new Date(input.observed_at_ts_ms).toISOString();
+  const ingress_physical_qc = buildIngressPhysicalQcSnapshotV1({
+    source_fact_id: input.source_fact_id,
+    metric: input.metric,
+    value: input.value,
+    unit: input.unit,
+  });
   const normalizedTelemetry = normalizeMetricAndUnit(input.metric, input.unit);
   const metric = normalizedTelemetry.metric;
   const unit = normalizedTelemetry.unit;
@@ -170,6 +183,7 @@ export async function writeDeviceObservationFactV1(clientConn: PoolClient, input
       formal_eligible,
       evidence_level,
       dev_source: input.dev_source ?? null,
+      ingress_physical_qc,
       contract: parsed.data,
     },
   };
@@ -208,29 +222,72 @@ export async function writeDeviceObservationFactV1(clientConn: PoolClient, input
 }
 
 export async function ensureDeviceObservationProjectionV1(clientConn: PoolClient): Promise<void> {
-  await clientConn.query(
-    `CREATE TABLE IF NOT EXISTS device_observation_index_v1 (
-      tenant_id text NOT NULL,
-      project_id text NULL,
-      group_id text NULL,
-      device_id text NOT NULL,
-      field_id text NULL,
-      metric text NOT NULL,
-      observed_at timestamptz NOT NULL,
-      observed_at_ts_ms bigint NOT NULL,
-      value_num double precision NULL,
-      value_text text NULL,
-      unit text NULL,
-      confidence double precision NULL,
-      quality_flags_json jsonb NOT NULL DEFAULT '[]'::jsonb,
-      fact_id text NOT NULL,
-      PRIMARY KEY (tenant_id, device_id, metric, observed_at_ts_ms)
-    )`
-  );
-  await clientConn.query(`CREATE INDEX IF NOT EXISTS idx_device_observation_index_v1_scope_time ON device_observation_index_v1 (tenant_id, project_id, group_id, field_id, metric, observed_at_ts_ms DESC)`);
-  await clientConn.query(`CREATE INDEX IF NOT EXISTS idx_device_observation_index_v1_device_metric_time ON device_observation_index_v1 (tenant_id, device_id, metric, observed_at_ts_ms DESC)`);
-  await clientConn.query(`CREATE INDEX IF NOT EXISTS idx_device_observation_index_v1_tenant_field_time ON device_observation_index_v1 (tenant_id, field_id, observed_at_ts_ms DESC)`);
-  await clientConn.query(`CREATE UNIQUE INDEX IF NOT EXISTS ux_device_observation_index_v1_fact_id ON device_observation_index_v1 (fact_id)`);
+  const result = await clientConn.query<{
+    relation_name: string | null;
+    missing_columns: string[];
+    missing_indexes: string[];
+  }>(`
+    WITH required_columns(column_name) AS (
+      VALUES
+        ('tenant_id'),
+        ('project_id'),
+        ('group_id'),
+        ('device_id'),
+        ('field_id'),
+        ('metric'),
+        ('observed_at'),
+        ('observed_at_ts_ms'),
+        ('value_num'),
+        ('value_text'),
+        ('unit'),
+        ('confidence'),
+        ('quality_flags_json'),
+        ('fact_id')
+    ),
+    required_indexes(index_name) AS (
+      VALUES
+        ('idx_device_observation_index_v1_scope_time'),
+        ('idx_device_observation_index_v1_device_metric_time'),
+        ('idx_device_observation_index_v1_tenant_field_time'),
+        ('ux_device_observation_index_v1_fact_id')
+    )
+    SELECT
+      pg_catalog.to_regclass('public.device_observation_index_v1')::text AS relation_name,
+      COALESCE(
+        ARRAY(
+          SELECT required.column_name
+          FROM required_columns AS required
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM information_schema.columns AS existing
+            WHERE existing.table_schema = 'public'
+              AND existing.table_name = 'device_observation_index_v1'
+              AND existing.column_name = required.column_name
+          )
+          ORDER BY required.column_name
+        ),
+        ARRAY[]::text[]
+      ) AS missing_columns,
+      COALESCE(
+        ARRAY(
+          SELECT required.index_name
+          FROM required_indexes AS required
+          WHERE pg_catalog.to_regclass('public.' || required.index_name) IS NULL
+          ORDER BY required.index_name
+        ),
+        ARRAY[]::text[]
+      ) AS missing_indexes
+  `);
+  const row = result.rows[0];
+  if (!row?.relation_name) {
+    throw new Error("DEVICE_OBSERVATION_SCHEMA_NOT_PROVISIONED:TABLE_MISSING");
+  }
+  if ((row.missing_columns ?? []).length > 0) {
+    throw new Error(`DEVICE_OBSERVATION_SCHEMA_NOT_PROVISIONED:MISSING_COLUMNS:${row.missing_columns.join(",")}`);
+  }
+  if ((row.missing_indexes ?? []).length > 0) {
+    throw new Error(`DEVICE_OBSERVATION_SCHEMA_NOT_PROVISIONED:MISSING_INDEXES:${row.missing_indexes.join(",")}`);
+  }
 }
 
 function toFiniteNumber(v: unknown): number | null {
@@ -246,7 +303,7 @@ function mapObservationMetricToPipelineShape(metric: string, valueNum: number, d
   return mapStage1ObservationMetricToPipelineObservationV1(metric, valueNum, device_id);
 }
 
-async function loadRecentFieldObservationsForPipelineV1(db: DeviceObservationDbConn, params: {
+export async function loadRecentFieldObservationsForPipelineV1(db: DeviceObservationDbConn, params: {
   tenant_id: string;
   project_id: string;
   group_id: string;
@@ -275,6 +332,10 @@ async function loadRecentFieldObservationsForPipelineV1(db: DeviceObservationDbC
       const evidenceLevel = String(payload?.evidence_level ?? "").trim().toUpperCase();
       const simulated = payload?.is_simulated === true || payload?.formal_eligible === false || sourceLane === "SIMULATED_DEV_ONLY" || sourceLane === "DEBUG_ONLY" || evidenceLevel === "DEBUG";
       if (simulated) return null;
+
+      const physicalConsumption = evaluateStage1PhysicalQcConsumptionV1(payload);
+      if (!physicalConsumption.eligible) return null;
+
       const valueNum = toFiniteNumber(row.value_num);
       if (!metric || !device_id || !observation_id || valueNum == null) return null;
       return {

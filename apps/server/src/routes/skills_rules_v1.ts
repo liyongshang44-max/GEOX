@@ -4,7 +4,7 @@ import { appendSkillBindingFact } from "../domain/skill_registry/facts.js";
 import { requireAoActAnyScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { requireFieldAllowedOr404V1, requireTenantMatchOr404V1, tenantFromQueryOrAuthV1 } from "../auth/tenant_scope_v1.js";
 import { assertSkillBindingWriteAllowedV1, assertSkillCategoryBoundaryV1 } from "../auth/skill_security_v1.js";
-import { projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../projections/skill_registry_read_v1.js";
+import { computeSkillRegistryReadRowsV1, filterSkillRegistryReadRowsV1, projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../projections/skill_registry_read_v1.js";
 import { ensureDeviceSkillBindings } from "../services/device_skill_bindings.js";
 import { auditContextFromRequestV1, denyWithAuditV1, recordSecurityAuditEventV1 } from "../services/security_audit_service_v1.js";
 
@@ -36,7 +36,8 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
     const crop_code = typeof query.crop_code === "string" ? query.crop_code.trim().toLowerCase() : undefined;
     const tenant = tenantFromQueryOrAuthV1(query, auth);
     if (!requireTenantMatchOr404V1(reply, auth, tenant)) {
-      return denyWithAuditV1(reply, pool, { ...tenant, ...auditContextFromRequestV1(req, auth), action: "tenant.scope_denied", target_type: "skill_rules", source: "api/v1/skills/rules" }, 404, "NOT_FOUND");
+      req.log.warn({ route: "/api/v1/skills/rules", tenant, actor_id: auth.actor_id }, "skill rules read tenant scope denied");
+      return reply;
     }
     const tenant_id = tenant.tenant_id;
     const project_id = tenant.project_id;
@@ -46,8 +47,8 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
     if ((String(query.scope_type ?? "").toUpperCase() === "FIELD" || String(query.bind_target ?? "").startsWith("field_"))
       && !requireFieldAllowedOr404V1(reply, auth, String(query.bind_target ?? ""))) return;
 
-    await projectSkillRegistryReadV1(pool, { tenant_id, project_id, group_id });
-    const readRows = await querySkillRegistryReadV1(pool, {
+    const projectedRows = await computeSkillRegistryReadRowsV1(pool, { tenant_id, project_id, group_id });
+    const readRows = filterSkillRegistryReadRowsV1(projectedRows, {
       tenant_id,
       project_id,
       group_id,
@@ -86,7 +87,7 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
       }))
       .filter((item) => !enabledOnly || item.enabled);
 
-    try { await recordSecurityAuditEventV1(pool, { ...tenant, ...auditContextFromRequestV1(req, auth), action: "skill.rules_read", target_type: "skill_rules", result: "ALLOW", source: "api/v1/skills/rules" }); } catch (e) { req.log.error({ err: e }, "skill rules read audit failed"); }
+    req.log.info({ route: "/api/v1/skills/rules", actor_id: auth.actor_id, item_count: items.length }, "skill rules read authorized");
     return reply.send(items);
   });
 

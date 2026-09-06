@@ -1,5 +1,5 @@
 // apps/server/scripts/write_dist_entries.cjs
-// Purpose: create stable compiled Runtime entrypoints for the server, jobs worker, external database-platform bootstrap, and dedicated MCFT-CAP-07 one-shot migration workload.
+// Purpose: create stable compiled Runtime entrypoints for the server, jobs worker, external database-platform bootstrap, dedicated B-Line Commercial principal bootstrap, and dedicated MCFT-CAP-07 one-shot migration workload.
 // Boundary: file packaging only; generated Runtime entrypoints do not share credentials or collapse one-shot database authority into the long-running server process.
 
 const fs = require("node:fs");
@@ -44,6 +44,16 @@ async function runDatabasePlatformBootstrapV1() {
 
 runDatabasePlatformBootstrapV1().catch((error) => {
   console.error(\`FATAL: database platform bootstrap failed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+  process.exit(1);
+});
+`,
+  },
+  {
+    name: path.join("database", "bline_commercial_principal_bootstrap.js"),
+    content: `import { runBlineCommercialPrincipalBootstrapFromEnvironmentV1 } from "../apps/server/src/infra/bline_commercial_principal_bootstrap_v1.js";
+
+runBlineCommercialPrincipalBootstrapFromEnvironmentV1().catch((error) => {
+  console.error(\`FATAL: B-Line Commercial principal bootstrap failed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
   process.exit(1);
 });
 `,
