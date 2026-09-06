@@ -13,15 +13,51 @@
     "field_id": "field_c8_demo",
     "zone_id": "zone_mcft_c8_water_001",
     "crop_code": "corn",
-    "season_id": "season_2026_c8_corn"
+    "season_id": "season_2026_c8_corn",
+    "scope_class": "CONTROLLED_SYNTHETIC_SOFTWARE_PROXY"
   },
   "inventory_result": {
     "path": "PATH_B",
+    "real_target_subject_authority": "ABSENT",
+    "real_target_geometry_authority": "ABSENT",
     "real_target_parameter_authority": "ABSENT",
     "source_acquisition_gap": "IDENTIFIED",
     "software_authority_substrate": "READY",
     "real_target_source": "NOT_YET_ACQUIRED",
-    "target_specific_binding_phase": "NOT_AUTHORIZED_UNTIL_REAL_AUTHORITY_QUALIFIES"
+    "target_specific_binding_phase": "NOT_AUTHORIZED_UNTIL_REAL_SUBJECT_AND_PARAMETER_AUTHORITY_QUALIFY"
+  },
+  "target_subject_authority": {
+    "status": "ABSENT",
+    "current_software_proxy_scope_ref": "docs/digital_twin/mcft/GEOX-MCFT-00-REALITY-BINDING.json",
+    "current_software_proxy_binding_id": "mcft_rb_bf1da664164a4fedda249bcb",
+    "current_reality_scope_class": "CONTROLLED_SYNTHETIC_REPLAY_PROXY",
+    "current_field_truth_mode": "CONTROLLED_REPLAY_FIELD_PROXY",
+    "current_geometry_truth_status": "CONTROLLED_SYNTHETIC",
+    "real_target_subject_identity_ref": null,
+    "real_target_field_id": null,
+    "real_target_zone_id": null,
+    "real_target_field_geometry_authority_ref": null,
+    "real_target_zone_geometry_authority_ref": null,
+    "real_target_field_zone_mapping_authority_ref": null,
+    "qualification_prerequisite": "MUST_QUALIFY_BEFORE_ANY_REAL_TARGET_PARAMETER_AUTHORITY",
+    "required_fields": [
+      "real_target_subject_identity",
+      "field",
+      "zone",
+      "crop",
+      "season",
+      "field_geometry_authority",
+      "zone_geometry_authority",
+      "field_zone_mapping",
+      "effective_from",
+      "effective_until",
+      "available_at",
+      "source_provenance",
+      "source_authority",
+      "uncertainty_or_confidence",
+      "exact_authority_refs"
+    ],
+    "prohibited_substitution": "CONTROLLED_SYNTHETIC_PROXY_MUST_NOT_BE_RELABELED_AS_REAL_TARGET"
   },
   "current_controlled_synthetic_authority": {
     "reality_binding": {
@@ -149,6 +185,11 @@
     ],
     "admissibility_decision_basis": "COMPLETE_AUTHORITY_ENVELOPE_NOT_SINGLE_STATUS_LABEL",
     "field_calibrated_only_rule": "FORBIDDEN",
+    "qualification_dependencies": [
+      "REAL_TARGET_SUBJECT_AND_GEOMETRY_AUTHORITY_QUALIFIED",
+      "EXACT_PARAMETER_AUTHORITY_ENVELOPE_COMPLETE",
+      "EXACT_SCOPE_MATCH_WITHOUT_WIDENING"
+    ],
     "potential_source_classes": [
       "LABORATORY_MEASUREMENT",
       "TARGET_SPECIFIC_CHARACTERIZATION",
@@ -156,6 +197,7 @@
       "FIELD_CALIBRATED_CONFIGURATION"
     ],
     "qualification_rules": [
+      "real target subject identity and geometry authority must qualify before any parameter authority can qualify",
       "exact field and zone identity required; no cross-field or cross-zone reuse",
       "crop and season applicability required where parameter semantics depend on crop/rooting",
       "root-zone depth must carry an effective interval and stage/rooting applicability where relevant",
@@ -182,10 +224,22 @@
     },
     "qualified_target_binding_required_before_replacement": true
   },
+  "source_acquisition_order": [
+    "GAP_REAL_TARGET_SUBJECT_GEOMETRY_AUTHORITY",
+    "GAP_ROOT_ZONE_DEPTH_TARGET_STAGE_AWARE",
+    "GAP_SOIL_WATER_RETENTION_TARGET_PROFILE",
+    "GAP_DRAINAGE_TARGET_CHARACTERIZATION",
+    "GAP_RUNOFF_TARGET_CHARACTERIZATION"
+  ],
   "source_acquisition_gaps": [
     {
+      "gap_id": "GAP_REAL_TARGET_SUBJECT_GEOMETRY_AUTHORITY",
+      "blocking_class": "PREREQUISITE",
+      "needed": "real target subject identity and governed field/zone geometry authority with exact field-zone mapping, crop/season applicability, effective interval, available_at, provenance, source authority, uncertainty/confidence, and immutable authority refs; the current field_c8_demo / zone_mcft_c8_water_001 controlled-synthetic proxy cannot satisfy this gap"
+    },
+    {
       "gap_id": "GAP_ROOT_ZONE_DEPTH_TARGET_STAGE_AWARE",
-      "needed": "target-specific effective rooting/root-zone depth authority for the exact field/zone/crop/season with effective interval and rooting/biological-stage applicability, method, provenance, and uncertainty"
+      "needed": "target-specific effective rooting/root-zone depth authority for the exact qualified real field/zone/crop/season with effective interval and rooting/biological-stage applicability, method, provenance, and uncertainty"
     },
     {
       "gap_id": "GAP_SOIL_WATER_RETENTION_TARGET_PROFILE",
@@ -202,6 +256,7 @@
   ],
   "prohibited_shortcuts": [
     "synthetic constant relabeling",
+    "synthetic proxy relabeling as real target",
     "invented calibration",
     "invented provenance",
     "scope widening",

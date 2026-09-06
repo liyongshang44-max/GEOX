@@ -28,9 +28,48 @@ function validateAuthorityEnvelopeContract(contract) {
   check(JSON.stringify(contract.required_fields) === JSON.stringify(required), 'AUTHORITY_REQUIRED_FIELDS_MISMATCH');
   check(contract.admissibility_decision_basis === 'COMPLETE_AUTHORITY_ENVELOPE_NOT_SINGLE_STATUS_LABEL', 'AUTHORITY_ENVELOPE_DECISION_BASIS_REQUIRED');
   check(contract.field_calibrated_only_rule === 'FORBIDDEN', 'FIELD_CALIBRATED_ONLY_RULE_MUST_BE_FORBIDDEN');
+  check(Array.isArray(contract.qualification_dependencies), 'AUTHORITY_QUALIFICATION_DEPENDENCIES_REQUIRED');
+  check(contract.qualification_dependencies.includes('REAL_TARGET_SUBJECT_AND_GEOMETRY_AUTHORITY_QUALIFIED'), 'TARGET_SUBJECT_AUTHORITY_DEPENDENCY_MISSING');
+  check(contract.qualification_dependencies.includes('EXACT_PARAMETER_AUTHORITY_ENVELOPE_COMPLETE'), 'PARAMETER_ENVELOPE_DEPENDENCY_MISSING');
+  check(contract.qualification_dependencies.includes('EXACT_SCOPE_MATCH_WITHOUT_WIDENING'), 'EXACT_SCOPE_DEPENDENCY_MISSING');
   check(Array.isArray(contract.potential_source_classes) && contract.potential_source_classes.includes('LABORATORY_MEASUREMENT'), 'LAB_SOURCE_CLASS_MISSING');
   check(contract.potential_source_classes.includes('TARGET_SPECIFIC_CHARACTERIZATION'), 'TARGET_CHARACTERIZATION_CLASS_MISSING');
   check(contract.potential_source_classes.includes('GOVERNED_TARGET_SPECIFIC_MODEL_ESTIMATE'), 'GOVERNED_MODEL_ESTIMATE_CLASS_MISSING');
+}
+
+function validateTargetSubjectAuthority(inventory, reality) {
+  const r = inventory.inventory_result;
+  const t = inventory.target_subject_authority;
+  check(r.real_target_subject_authority === 'ABSENT', 'REAL_TARGET_SUBJECT_AUTHORITY_MUST_BE_ABSENT');
+  check(r.real_target_geometry_authority === 'ABSENT', 'REAL_TARGET_GEOMETRY_AUTHORITY_MUST_BE_ABSENT');
+  check(t && t.status === 'ABSENT', 'TARGET_SUBJECT_AUTHORITY_STATUS_INVALID');
+  check(t.current_reality_scope_class === 'CONTROLLED_SYNTHETIC_REPLAY_PROXY', 'TARGET_SUBJECT_PROXY_CLASS_MISMATCH');
+  check(t.current_field_truth_mode === 'CONTROLLED_REPLAY_FIELD_PROXY', 'TARGET_SUBJECT_FIELD_TRUTH_MODE_MISMATCH');
+  check(t.current_geometry_truth_status === 'CONTROLLED_SYNTHETIC', 'TARGET_SUBJECT_GEOMETRY_TRUTH_MISMATCH');
+  check(t.real_target_subject_identity_ref === null, 'INVENTED_REAL_TARGET_SUBJECT_REF');
+  check(t.real_target_field_id === null, 'INVENTED_REAL_TARGET_FIELD_ID');
+  check(t.real_target_zone_id === null, 'INVENTED_REAL_TARGET_ZONE_ID');
+  check(t.real_target_field_geometry_authority_ref === null, 'INVENTED_REAL_FIELD_GEOMETRY_AUTHORITY');
+  check(t.real_target_zone_geometry_authority_ref === null, 'INVENTED_REAL_ZONE_GEOMETRY_AUTHORITY');
+  check(t.real_target_field_zone_mapping_authority_ref === null, 'INVENTED_REAL_FIELD_ZONE_MAPPING_AUTHORITY');
+  check(t.qualification_prerequisite === 'MUST_QUALIFY_BEFORE_ANY_REAL_TARGET_PARAMETER_AUTHORITY', 'TARGET_SUBJECT_PREREQUISITE_MISSING');
+  check(t.prohibited_substitution === 'CONTROLLED_SYNTHETIC_PROXY_MUST_NOT_BE_RELABELED_AS_REAL_TARGET', 'SYNTHETIC_PROXY_RELABEL_GUARD_MISSING');
+  const requiredSubjectFields = [
+    'real_target_subject_identity','field','zone','crop','season','field_geometry_authority','zone_geometry_authority',
+    'field_zone_mapping','effective_from','effective_until','available_at','source_provenance','source_authority',
+    'uncertainty_or_confidence','exact_authority_refs'
+  ];
+  check(JSON.stringify(t.required_fields) === JSON.stringify(requiredSubjectFields), 'TARGET_SUBJECT_REQUIRED_FIELDS_MISMATCH');
+
+  check(reality.semantic_payload.reality_classification.geometry_truth_status === 'CONTROLLED_SYNTHETIC', 'REALITY_GEOMETRY_NOT_SYNTHETIC');
+  check(reality.semantic_payload.reality_classification.real_field_pilot_status === 'NOT_CLAIMED', 'REAL_FIELD_PILOT_STATUS_WIDENED');
+  check(reality.semantic_payload.geometry_binding.geometry_truth_status === 'CONTROLLED_SYNTHETIC', 'GEOMETRY_BINDING_TRUTH_WIDENED');
+  check(Array.isArray(reality.semantic_payload.limitations) && reality.semantic_payload.limitations.includes('geometry not surveyed'), 'GEOMETRY_NOT_SURVEYED_LIMITATION_MISSING');
+
+  check(Array.isArray(inventory.source_acquisition_order), 'SOURCE_ACQUISITION_ORDER_REQUIRED');
+  check(inventory.source_acquisition_order[0] === 'GAP_REAL_TARGET_SUBJECT_GEOMETRY_AUTHORITY', 'TARGET_SUBJECT_GAP_MUST_BE_FIRST');
+  const gap = inventory.source_acquisition_gaps.find((g) => g.gap_id === 'GAP_REAL_TARGET_SUBJECT_GEOMETRY_AUTHORITY');
+  check(gap && gap.blocking_class === 'PREREQUISITE', 'TARGET_SUBJECT_PREREQUISITE_GAP_MISSING');
 }
 
 function validatePathB(inventory) {
@@ -40,6 +79,7 @@ function validatePathB(inventory) {
   check(r.source_acquisition_gap === 'IDENTIFIED', 'SOURCE_ACQUISITION_GAP_REQUIRED');
   check(r.software_authority_substrate === 'READY', 'SOFTWARE_AUTHORITY_SUBSTRATE_NOT_READY');
   check(r.real_target_source === 'NOT_YET_ACQUIRED', 'REAL_TARGET_SOURCE_STATUS_INVALID');
+  check(r.target_specific_binding_phase === 'NOT_AUTHORIZED_UNTIL_REAL_SUBJECT_AND_PARAMETER_AUTHORITY_QUALIFY', 'TARGET_BINDING_PHASE_WIDENED');
   for (const p of inventory.current_parameter_inventory) {
     check(p.current_truth_class === 'CONTROLLED_SYNTHETIC', `PARAM_NOT_SYNTHETIC:${p.parameter_id}`);
     check(p.real_target_authority_ref === null, `INVENTED_TARGET_AUTHORITY_REF:${p.parameter_id}`);
@@ -68,6 +108,7 @@ function main() {
   check(inventory.frontier_id === 'MCFT-FIELDSTATE-TARGET-PARAM-AUTH-01', 'FRONTIER_ID_MISMATCH');
   check(inventory.authoritative_successor_base === BASE, 'SUCCESSOR_BASE_MISMATCH');
   check(inventory.forbidden_reopens.includes('#3514') && inventory.forbidden_reopens.includes('#3524') && inventory.forbidden_reopens.includes('QINF'), 'CLOSED_FRONTIER_GUARD_MISSING');
+  check(inventory.scope.scope_class === 'CONTROLLED_SYNTHETIC_SOFTWARE_PROXY', 'INVENTORY_SCOPE_CLASS_MISMATCH');
 
   const scope = reality.semantic_payload.scope;
   for (const [key, value] of Object.entries({tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',field_id:'field_c8_demo',season_id:'season_2026_c8_corn',zone_id:'zone_mcft_c8_water_001'})) {
@@ -98,6 +139,7 @@ function main() {
   check(rooting.limitations.includes('controlled synthetic configuration schedule'), 'ROOTING_SYNTHETIC_LIMITATION_MISSING');
   check(rooting.limitations.includes('not field-verified phenology'), 'ROOTING_FIELD_VERIFICATION_LIMITATION_MISSING');
 
+  validateTargetSubjectAuthority(inventory, reality);
   validateAuthorityEnvelopeContract(inventory.target_parameter_authority_contract);
   validatePathB(inventory);
 
@@ -114,7 +156,7 @@ function main() {
   check(builder.includes('buildMember("twin_state_estimate_v1"'), 'TWIN_STATE_ESTIMATE_BINDING_TARGET_MISSING');
 
   const prohibited = inventory.prohibited_shortcuts;
-  for (const item of ['synthetic constant relabeling','invented calibration','invented provenance','scope widening','cross-field authority reuse','cross-zone authority reuse']) {
+  for (const item of ['synthetic constant relabeling','synthetic proxy relabeling as real target','invented calibration','invented provenance','scope widening','cross-field authority reuse','cross-zone authority reuse']) {
     check(prohibited.includes(item), `PROHIBITED_SHORTCUT_MISSING:${item}`);
   }
 
@@ -128,8 +170,11 @@ function main() {
     frontier: inventory.frontier_id,
     protected_main: liveMain,
     path: inventory.inventory_result.path,
+    real_target_subject_authority: inventory.inventory_result.real_target_subject_authority,
+    real_target_geometry_authority: inventory.inventory_result.real_target_geometry_authority,
     real_target_parameter_authority: inventory.inventory_result.real_target_parameter_authority,
     source_acquisition_gap: inventory.inventory_result.source_acquisition_gap,
+    first_acquisition_gap: inventory.source_acquisition_order[0],
     software_authority_substrate: inventory.inventory_result.software_authority_substrate,
     real_target_source: inventory.inventory_result.real_target_source,
     synthetic_values_unchanged: true,
