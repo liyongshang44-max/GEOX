@@ -19,6 +19,8 @@ jobs:
   qualification:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    env:
+      GEOX_MCFT_CAP09_CURRENT_DELTA_BASE_SHA: ${{ github.event.pull_request.base.sha }}
     steps:
       - name: Checkout exact successor subject
         uses: actions/checkout@v4

@@ -248,6 +248,7 @@ test("registry-backed resolver selects only graduated effective authorities by l
   });
   const previous = resolver.resolve({ logical_time: "2026-09-03T05:00:00.000Z" });
   const refreshed = resolver.resolve({ logical_time: "2026-09-04T05:00:00.000Z" });
+  const current = resolver.resolve({ logical_time: "2026-09-05T11:00:00.000Z" });
   assert.equal(
     previous.evidence_digest,
     "sha256:8b479689dfdfc0ec65145e98b1bf5d0ba7fa7534019513ddaa5933e6e1cca81e",
@@ -255,6 +256,10 @@ test("registry-backed resolver selects only graduated effective authorities by l
   assert.equal(
     refreshed.evidence_digest,
     "sha256:1d89e3a0f38b4619d44cb6504498641a004144877bb8b38fc8a810bae0d0238e",
+  );
+  assert.equal(
+    current.evidence_digest,
+    "sha256:858924611efc07473cbf7e2e60465fadbf404a8d7847c8e75115415bf78eac7c",
   );
 });
 
@@ -302,7 +307,7 @@ test("registry-backed resolver fails closed after the latest effective validity 
     source: createFileSource(REGISTRY_PATH, ROOT),
   });
   assert.throws(
-    () => resolver.resolve({ logical_time: "2026-09-05T11:00:00.000Z" }),
+    () => resolver.resolve({ logical_time: "2026-09-06T11:00:00.000Z" }),
     /MCFT_CAP09_CURRENT_CROP_AUTHORITY_NO_EFFECTIVE_ENTRY_FOR_LOGICAL_TIME/,
   );
 });

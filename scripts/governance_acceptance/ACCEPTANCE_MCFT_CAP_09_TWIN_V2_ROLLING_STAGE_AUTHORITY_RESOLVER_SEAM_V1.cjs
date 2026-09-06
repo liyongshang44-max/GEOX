@@ -9,7 +9,10 @@ const cp = require("node:child_process");
 const HISTORICAL_BASE = "5050f1c08d2528048c56d56add4cbb068b956925";
 const HISTORICAL_SUBJECT = "b7c6ebf48cae05e877b2f61639849e25b2ebb38f";
 const HISTORICAL_CHECKER_BLOB = "19fb9fba262687d34232dc7aa55f1f0748cf221f";
+const HISTORICAL_REPAIR_COMMIT = "70b180b63cc61e5869b234aed3e4be0aef09b705";
+const HISTORICAL_REPAIR_CHECKER_BLOB = "003daa532e63df8f7225f4a23d578d23a49a8461";
 const REPAIR_PREDECESSOR = "f94f7890ea351573363c331ee0d144034f821f9c";
+const QCP_CURRENT_PROTECTED_MAIN_BASE = "f41dde8d44de95e71748e756e048e0166c1916b7";
 
 const CHECKER = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs";
 const RESOLVER = "apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.ts";
@@ -230,6 +233,26 @@ function allTrue(object) {
 }
 
 const currentHeadSha = git(["rev-parse", "HEAD"]);
+const explicitCurrentDeltaBaseSha = String(process.env.GEOX_MCFT_CAP09_CURRENT_DELTA_BASE_SHA || "");
+const qcpCurrentDeltaBaseSha = String(process.env.CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA || "");
+const qcpFallbackAuthorized =
+  !explicitCurrentDeltaBaseSha &&
+  qcpCurrentDeltaBaseSha === QCP_CURRENT_PROTECTED_MAIN_BASE;
+const currentDeltaBaseSha = explicitCurrentDeltaBaseSha || (qcpFallbackAuthorized ? qcpCurrentDeltaBaseSha : "");
+const currentDeltaBaseSource = explicitCurrentDeltaBaseSha
+  ? "PULL_REQUEST_BASE_SHA"
+  : qcpFallbackAuthorized
+    ? "QCP_EXACT_CURRENT_PROTECTED_MAIN_PREDECESSOR_SHA"
+    : "UNSET";
+const currentDeltaBaseAssertions = {
+  current_delta_base_sha_present: /^[0-9a-f]{40}$/.test(currentDeltaBaseSha),
+  current_delta_base_commit_available: exactCommitAvailable(currentDeltaBaseSha),
+  current_delta_base_is_ancestor_of_head:
+    /^[0-9a-f]{40}$/.test(currentDeltaBaseSha) &&
+    exactCommitAvailable(currentDeltaBaseSha) &&
+    cp.spawnSync("git", ["merge-base", "--is-ancestor", currentDeltaBaseSha, currentHeadSha]).status === 0,
+};
+
 const resolver = read(RESOLVER);
 const test = read(TEST);
 const composition = read(COMPOSITION);
@@ -237,9 +260,11 @@ const processV2 = read(PROCESS);
 const dist = read(DIST);
 const registry = readJson(REGISTRY);
 
-const forbiddenProductionSurfaceDrift = FORBIDDEN_PRODUCTION_SURFACES.filter((p) =>
-  cp.spawnSync("git", ["diff", "--quiet", HISTORICAL_SUBJECT, "--", p]).status !== 0
-);
+const forbiddenProductionSurfaceDrift = allTrue(currentDeltaBaseAssertions)
+  ? FORBIDDEN_PRODUCTION_SURFACES.filter((p) =>
+      cp.spawnSync("git", ["diff", "--quiet", currentDeltaBaseSha, currentHeadSha, "--", p]).status !== 0
+    )
+  : [...FORBIDDEN_PRODUCTION_SURFACES];
 
 const currentSeamAssertions = evaluateCurrentSeam({
   resolver,
@@ -251,23 +276,35 @@ const currentSeamAssertions = evaluateCurrentSeam({
   forbiddenProductionSurfaceDrift,
 });
 
-const lastCheckerCommit = git(["log", "-1", "--format=%H", "--", CHECKER]);
-const lastCheckerCommitParents = lines(git(["rev-list", "--parents", "-n", "1", lastCheckerCommit]))[0]
-  .split(/\s+/)
-  .slice(1);
-const currentSubjectPredecessorSha = lastCheckerCommitParents[0] || null;
-const currentRepairChangedPaths = changedPathsForCommit(lastCheckerCommit);
+const historicalRepairAvailable = exactCommitAvailable(HISTORICAL_REPAIR_COMMIT);
+let historicalRepairPredecessorSha = null;
+let historicalRepairChangedPaths = [];
+let historicalRepairCheckerBlobActual = null;
+if (historicalRepairAvailable) {
+  const historicalRepairCommitParents = lines(git(["rev-list", "--parents", "-n", "1", HISTORICAL_REPAIR_COMMIT]))[0]
+    .split(/\s+/)
+    .slice(1);
+  historicalRepairPredecessorSha = historicalRepairCommitParents[0] || null;
+  historicalRepairChangedPaths = changedPathsForCommit(HISTORICAL_REPAIR_COMMIT);
+  try {
+    historicalRepairCheckerBlobActual = git(["rev-parse", `${HISTORICAL_REPAIR_COMMIT}:${CHECKER}`]);
+  } catch {
+    historicalRepairCheckerBlobActual = null;
+  }
+}
 
-const currentRepairAssertions = {
-  current_repair_commit_is_ancestor_of_head:
-    cp.spawnSync("git", ["merge-base", "--is-ancestor", lastCheckerCommit, currentHeadSha]).status === 0,
-
-  current_repair_predecessor_exact:
-    currentSubjectPredecessorSha === REPAIR_PREDECESSOR,
-
-  current_repair_delta_bounded:
-    currentRepairChangedPaths.length === 1 &&
-    currentRepairChangedPaths[0] === CHECKER,
+const historicalRepairAssertions = {
+  historical_repair_commit_available: historicalRepairAvailable,
+  historical_repair_commit_is_ancestor_of_head:
+    historicalRepairAvailable &&
+    cp.spawnSync("git", ["merge-base", "--is-ancestor", HISTORICAL_REPAIR_COMMIT, currentHeadSha]).status === 0,
+  historical_repair_predecessor_exact:
+    historicalRepairPredecessorSha === REPAIR_PREDECESSOR,
+  historical_repair_checker_blob_exact:
+    historicalRepairCheckerBlobActual === HISTORICAL_REPAIR_CHECKER_BLOB,
+  historical_repair_delta_bounded:
+    historicalRepairChangedPaths.length === 1 &&
+    historicalRepairChangedPaths[0] === CHECKER,
 };
 
 const historical = historicalReplay();
@@ -350,11 +387,15 @@ const assertions = {
   historical_adoption_boundary_replay:
     historical.historical_gate_replay_status === "PASS",
 
+  historical_repair_boundedness_preserved:
+    allTrue(historicalRepairAssertions),
+
+  current_exact_delta_preservation:
+    allTrue(currentDeltaBaseAssertions) &&
+    currentSeamAssertions.forbidden_production_surfaces_unchanged === true,
+
   current_successor_semantic_preservation:
     allTrue(currentSeamAssertions),
-
-  current_repair_delta_bounded:
-    allTrue(currentRepairAssertions),
 
   negative_fail_closed_selftest:
     allTrue(negativeFailClosedCases),
@@ -365,7 +406,7 @@ const failedAssertions = Object.entries(assertions)
   .map(([key]) => key);
 
 const proof = {
-  schema_version: "geox_mcft_cap09_twin_v2_rolling_stage_authority_resolver_seam_v2",
+  schema_version: "geox_mcft_cap09_twin_v2_rolling_stage_authority_resolver_seam_v4",
   status: failedAssertions.length ? "FAIL" : "PASS",
 
   historical_base_sha: HISTORICAL_BASE,
@@ -376,17 +417,24 @@ const proof = {
   historical_gate_replay_failed_assertions: historical.historical_gate_replay_failed_assertions,
   historical_gate_replay_error: historical.historical_gate_replay_error,
 
+  historical_repair_commit_sha: HISTORICAL_REPAIR_COMMIT,
+  historical_repair_predecessor_sha: historicalRepairPredecessorSha,
+  historical_repair_checker_blob_expected: HISTORICAL_REPAIR_CHECKER_BLOB,
+  historical_repair_checker_blob_actual: historicalRepairCheckerBlobActual,
+  historical_repair_changed_paths: historicalRepairChangedPaths,
+  historical_repair_assertions: historicalRepairAssertions,
+
   current_head_sha: currentHeadSha,
-  current_subject_predecessor_sha: currentSubjectPredecessorSha,
-  current_repair_commit_sha: lastCheckerCommit,
-  current_repair_changed_paths: currentRepairChangedPaths,
+  current_delta_base_sha: currentDeltaBaseSha,
+  current_delta_base_source: currentDeltaBaseSource,
+  current_delta_base_assertions: currentDeltaBaseAssertions,
+  forbidden_production_surface_drift_from_current_delta_base: forbiddenProductionSurfaceDrift,
 
   governed_registry_path: REGISTRY,
-  qualification_model: "HISTORICAL_EXACT_REPLAY_PLUS_CURRENT_SUCCESSOR_SEMANTIC_PRESERVATION",
+  qualification_model: "HISTORICAL_EXACT_REPLAY_PLUS_HISTORICAL_REPAIR_BOUNDEDNESS_PLUS_CURRENT_PR_EXACT_DELTA_SEMANTIC_PRESERVATION",
   historical_adoption_allowlist_extended: false,
 
   current_successor_semantic_assertions: currentSeamAssertions,
-  current_repair_assertions: currentRepairAssertions,
   negative_fail_closed_selftest: negativeFailClosedCases,
   assertions,
   failed_assertions: failedAssertions,

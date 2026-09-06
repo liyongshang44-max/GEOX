@@ -12,6 +12,11 @@ const REGISTRY_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICAT
 const ACTUAL_FORMAL_STORE_AUTHORITY_PATH =
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json";
 const DEPENDENCY_DIGEST_STRATEGY = "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1";
+const EXACT_EXTERNAL_SEGMENT_ARTIFACT_PATH =
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PROTECTED-MAIN-LINEAGE-ADVANCEMENT-E1F8-TO-F41D-V1.json";
+const EXACT_EXTERNAL_SEGMENT_OLD_BASE = "e1f8b078bb8459ecb9a77d1fad0d95f4bf143221";
+const EXACT_EXTERNAL_SEGMENT_NEW_BASE = "f41dde8d44de95e71748e756e048e0166c1916b7";
+const EXACT_EXTERNAL_SEGMENT_ARTIFACT_BLOB = "a4cc74c9927896994d059b3b3716d5602b5bc58c";
 
 function readJson(root, rel) {
   return JSON.parse(fs.readFileSync(path.join(root, rel), "utf8"));
@@ -27,6 +32,14 @@ function exists(root, rel) {
 
 function sha256(bufferOrString) {
   return `sha256:${crypto.createHash("sha256").update(bufferOrString).digest("hex")}`;
+}
+
+function uniqueSortedPaths(paths) {
+  return [...new Set((paths || []).map(norm).filter(Boolean))].sort();
+}
+
+function sameStringArrays(a, b) {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
 }
 
 function resolveLocalImport(root, importer, specifier) {
@@ -291,6 +304,78 @@ function gitCommitExists(root, sha) {
   return result.status === 0;
 }
 
+function gitChangedPathsBetween(root, base, head) {
+  if (!gitCommitExists(root, base) || !gitCommitExists(root, head)) throw new Error(`CONTROL_PLANE_EXACT_SEGMENT_COMMIT_UNAVAILABLE:${base}:${head}`);
+  const result = cp.execFileSync("git", ["diff", "--name-only", `${base}..${head}`], { cwd: root, encoding: "utf8" });
+  return uniqueSortedPaths(result.split(/\r?\n/));
+}
+
+function exactExternalSegmentAdjudication(root, headSha) {
+  const requestedNewBase = String(process.env.CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA || "");
+  if (!requestedNewBase) return null;
+  if (requestedNewBase !== EXACT_EXTERNAL_SEGMENT_NEW_BASE) {
+    throw new Error(`CONTROL_PLANE_EXTERNAL_SEGMENT_NEW_BASE_NOT_AUTHORIZED:${requestedNewBase}`);
+  }
+  if (!gitCommitExists(root, EXACT_EXTERNAL_SEGMENT_OLD_BASE) || !gitCommitExists(root, EXACT_EXTERNAL_SEGMENT_NEW_BASE) || !gitCommitExists(root, headSha)) {
+    throw new Error("CONTROL_PLANE_EXTERNAL_SEGMENT_COMMIT_UNAVAILABLE");
+  }
+  if (cp.spawnSync("git", ["merge-base", "--is-ancestor", EXACT_EXTERNAL_SEGMENT_OLD_BASE, EXACT_EXTERNAL_SEGMENT_NEW_BASE], { cwd: root }).status !== 0) {
+    throw new Error("CONTROL_PLANE_EXTERNAL_SEGMENT_LINEAGE_INVALID");
+  }
+  if (cp.spawnSync("git", ["merge-base", "--is-ancestor", EXACT_EXTERNAL_SEGMENT_NEW_BASE, headSha], { cwd: root }).status !== 0) {
+    throw new Error("CONTROL_PLANE_EXTERNAL_SEGMENT_NEW_BASE_NOT_ANCESTOR_OF_HEAD");
+  }
+
+  const artifactBlob = cp.execFileSync("git", ["rev-parse", `${headSha}:${EXACT_EXTERNAL_SEGMENT_ARTIFACT_PATH}`], { cwd: root, encoding: "utf8" }).trim();
+  if (artifactBlob !== EXACT_EXTERNAL_SEGMENT_ARTIFACT_BLOB) {
+    throw new Error(`CONTROL_PLANE_EXTERNAL_SEGMENT_ARTIFACT_BLOB_DRIFT:${artifactBlob}`);
+  }
+  const artifactText = cp.execFileSync("git", ["show", `${headSha}:${EXACT_EXTERNAL_SEGMENT_ARTIFACT_PATH}`], { cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  const artifact = JSON.parse(artifactText);
+  const planeAChangedPaths = gitChangedPathsBetween(root, EXACT_EXTERNAL_SEGMENT_OLD_BASE, EXACT_EXTERNAL_SEGMENT_NEW_BASE);
+  const artifactChangedPaths = uniqueSortedPaths(artifact.changed_paths || []);
+  if (
+    artifact.schema_version !== "geox_mcft_cap09_protected_main_lineage_advancement_adjudication_v1" ||
+    artifact.status !== "PASS" ||
+    artifact.previous_mcft_base !== EXACT_EXTERNAL_SEGMENT_OLD_BASE ||
+    artifact.current_protected_main !== EXACT_EXTERNAL_SEGMENT_NEW_BASE ||
+    artifact.adjudication !== "EXTERNALLY_OWNED_NON_MCFT_APPLICABLE" ||
+    artifact.fail_closed_on_dependency_impact !== true ||
+    artifact.adr_paths_added_to_mcft_resolvers !== false ||
+    artifact.unknown_changed_path_semantics_relaxed !== false ||
+    artifact.changed_path_count !== planeAChangedPaths.length ||
+    !sameStringArrays(artifactChangedPaths, planeAChangedPaths) ||
+    !Array.isArray(artifact.mcft_control_plane_path_intersection) || artifact.mcft_control_plane_path_intersection.length !== 0 ||
+    !Array.isArray(artifact.mcft_authority_artifact_path_intersection) || artifact.mcft_authority_artifact_path_intersection.length !== 0 ||
+    !Array.isArray(artifact.mcft_runtime_dependency_closure_intersection) || artifact.mcft_runtime_dependency_closure_intersection.length !== 0 ||
+    !Array.isArray(artifact.mcft_dependency_resolver_digest_changes) || artifact.mcft_dependency_resolver_digest_changes.length !== 0
+  ) {
+    throw new Error("CONTROL_PLANE_EXTERNAL_SEGMENT_ADJUDICATION_INVALID");
+  }
+
+  const planeBChangedPaths = gitChangedPathsBetween(root, EXACT_EXTERNAL_SEGMENT_NEW_BASE, headSha);
+  const planeASet = new Set(planeAChangedPaths);
+  const remodified = planeBChangedPaths.filter((rel) => planeASet.has(rel));
+  return Object.freeze({
+    contract: "EXACT_SEGMENT_EXTERNALLY_ADJUDICATED_NON_MCFT_V1",
+    old_base_sha: EXACT_EXTERNAL_SEGMENT_OLD_BASE,
+    new_base_sha: EXACT_EXTERNAL_SEGMENT_NEW_BASE,
+    head_sha: headSha,
+    artifact_path: EXACT_EXTERNAL_SEGMENT_ARTIFACT_PATH,
+    artifact_blob_sha: artifactBlob,
+    artifact_status: artifact.status,
+    adjudication: artifact.adjudication,
+    plane_a_changed_paths: planeAChangedPaths,
+    plane_b_changed_paths: planeBChangedPaths,
+    plane_a_path_count: planeAChangedPaths.length,
+    plane_b_path_count: planeBChangedPaths.length,
+    plane_a_mcft_dependency_impact_zero: true,
+    adr_paths_added_to_mcft_resolvers: false,
+    unknown_changed_path_fail_closed_preserved: true,
+    candidate_remodified_adjudicated_paths: remodified,
+  });
+}
+
 function fileShaAtSubject(root, subjectSha, rel, allowWorkingTreeFallback) {
   if (gitCommitExists(root, subjectSha)) {
     const result = cp.spawnSync("git", ["show", `${subjectSha}:${rel}`], { cwd: root, encoding: null, maxBuffer: 64 * 1024 * 1024 });
@@ -389,6 +474,7 @@ function prepareApplicabilityContext({ root = ROOT, authority, registry, generat
   const allOwned = new Set(Object.values(resolverResult.resolved).flatMap((resolver) => resolver.paths));
   const evidence = registryMap(registry);
   const digestCatalog = resolveDependencyDigestCatalog(root, resolverResult.resolved, headSha, authority.frozen_successor_subject_sha);
+  const externalSegmentAdjudication = headSha ? exactExternalSegmentAdjudication(root, headSha) : null;
 
   return Object.freeze({
     root,
@@ -403,6 +489,7 @@ function prepareApplicabilityContext({ root = ROOT, authority, registry, generat
     allOwned,
     evidence,
     digestCatalog,
+    externalSegmentAdjudication,
   });
 }
 
@@ -439,8 +526,37 @@ function planApplicability({
     allOwned,
     evidence,
     digestCatalog,
+    externalSegmentAdjudication,
   } = context;
-  const changed = [...new Set((changedPaths || []).map(norm).filter(Boolean))].sort();
+
+  const accumulatedChanged = uniqueSortedPaths(changedPaths || []);
+  let changed = accumulatedChanged;
+  let externalSegmentComposition = null;
+  if (externalSegmentAdjudication && baseSha === authority.frozen_successor_subject_sha && headSha) {
+    const actualAccumulatedChanged = gitChangedPathsBetween(root, authority.frozen_successor_subject_sha, headSha);
+    const accumulatedInputExactMatch = sameStringArrays(accumulatedChanged, actualAccumulatedChanged);
+    const planeASet = new Set(externalSegmentAdjudication.plane_a_changed_paths);
+    const planeBSet = new Set(externalSegmentAdjudication.plane_b_changed_paths);
+    if (accumulatedInputExactMatch) {
+      changed = accumulatedChanged.filter((rel) => !planeASet.has(rel) || planeBSet.has(rel));
+    }
+    externalSegmentComposition = {
+      ...externalSegmentAdjudication,
+      accumulated_input_exact_match: accumulatedInputExactMatch,
+      composition_applied: accumulatedInputExactMatch,
+      effective_changed_path_count: changed.length,
+      accumulated_changed_path_count: accumulatedChanged.length,
+    };
+  } else if (externalSegmentAdjudication) {
+    externalSegmentComposition = {
+      ...externalSegmentAdjudication,
+      accumulated_input_exact_match: false,
+      composition_applied: false,
+      effective_changed_path_count: changed.length,
+      accumulated_changed_path_count: accumulatedChanged.length,
+    };
+  }
+
   const unknownChangedPaths = changed.filter((p) => !allOwned.has(p));
   const decisions = [];
 
@@ -546,7 +662,9 @@ function planApplicability({
     base_sha: baseSha,
     head_sha: headSha,
     frozen_successor_subject_sha: authority.frozen_successor_subject_sha,
+    accumulated_changed_paths: accumulatedChanged,
     changed_paths: changed,
+    external_segment_adjudication: externalSegmentComposition,
     unknown_changed_paths: unknownChangedPaths,
     authority_errors: authorityErrors,
     resolver_errors: resolverResult.errors,
@@ -619,6 +737,10 @@ module.exports = {
   REGISTRY_PATH,
   ACTUAL_FORMAL_STORE_AUTHORITY_PATH,
   DEPENDENCY_DIGEST_STRATEGY,
+  EXACT_EXTERNAL_SEGMENT_ARTIFACT_PATH,
+  EXACT_EXTERNAL_SEGMENT_OLD_BASE,
+  EXACT_EXTERNAL_SEGMENT_NEW_BASE,
+  EXACT_EXTERNAL_SEGMENT_ARTIFACT_BLOB,
   buildImportClosure,
   materializeGeneratedGraph,
   resolveDependencyResolvers,
@@ -631,6 +753,7 @@ module.exports = {
   resolveDependencyDigestCatalog,
   aggregateCheckDependencyDigest,
   resolveFailedV4ForbiddenEvidencePolicy,
+  exactExternalSegmentAdjudication,
   prepareApplicabilityContext,
   planApplicability,
 };
