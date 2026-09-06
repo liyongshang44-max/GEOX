@@ -408,7 +408,20 @@ jobs:
               successor = pathlib.Path('/tmp/run-bline-successor-test-acceptance.sh')
               if not successor.exists():
                   raise SystemExit('S6 successor acceptance wrapper missing')
-              script = 'set -a\nsource .env.ci\nset +a\n' + str(successor) + '\n'
+              trace = '${RUNNER_TEMP:?RUNNER_TEMP is required}/bline-successor-failure-leaf-trace.log'
+              script = (
+                  "printf 'BLINE_SUCCESSOR_TRACE phase=canonical_set_a status=START\\n' >> \"" + trace + "\"\n"
+                  "set -a\n"
+                  "printf 'BLINE_SUCCESSOR_TRACE phase=canonical_set_a status=PASS\\n' >> \"" + trace + "\"\n"
+                  "printf 'BLINE_SUCCESSOR_TRACE phase=canonical_env_source status=START\\n' >> \"" + trace + "\"\n"
+                  "source .env.ci\n"
+                  "printf 'BLINE_SUCCESSOR_TRACE phase=canonical_env_source status=PASS\\n' >> \"" + trace + "\"\n"
+                  "printf 'BLINE_SUCCESSOR_TRACE phase=canonical_set_plus_a status=START\\n' >> \"" + trace + "\"\n"
+                  "set +a\n"
+                  "printf 'BLINE_SUCCESSOR_TRACE phase=canonical_set_plus_a status=PASS\\n' >> \"" + trace + "\"\n"
+                  "printf 'BLINE_SUCCESSOR_TRACE phase=wrapper_invoke status=START\\n' >> \"" + trace + "\"\n"
+                  + str(successor) + "\n"
+              )
               print(f'BLINE_FINAL_RELEASE_S6_SUCCESSOR_ACCEPTANCE_SUBSTITUTION tested_subject_sha={tested}')
 
           print(f'BLINE_FINAL_RELEASE_CANONICAL_ACCEPTANCE_STEP name={target!r} tested_subject_sha={tested}')
