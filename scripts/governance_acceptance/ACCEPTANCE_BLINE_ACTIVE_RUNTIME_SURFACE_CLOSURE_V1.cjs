@@ -3,6 +3,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const cp = require("node:child_process");
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const BASE = path.join(ROOT, "docs/architecture/semantic_convergence");
@@ -89,14 +90,68 @@ function walkRegistrationGraph(filePath) {
   }
 }
 
+// Deliberately bounded to the governed jobs representation, not a shell parser.
+// Unknown entrypoints, shell statements and inactive profiles fail closed.
+function proveJobsRuntime(config) {
+  const jobs = config?.services?.jobs;
+  if (!jobs) return false;
+  if (jobs.profiles?.length) return false;
+  if (!Array.isArray(jobs.entrypoint) || !Array.isArray(jobs.command)) return false;
+  if (JSON.stringify(jobs.entrypoint) !== JSON.stringify(["/bin/sh", "-ceu"])) return false;
+  if (jobs.command.length !== 1 || typeof jobs.command[0] !== "string") return false;
+  const statements = jobs.command[0].trim().split(/\r?\n/).map(x => x.trim());
+  if (statements.length !== 2) return false;
+  // Compose preserves $$ in its JSON model; Docker consumes it as a literal $.
+  const credentialExport = /^export DATABASE_URL="postgres:\/\/geox_jobs_v1:\${1,2}\(cat \/run\/geox\/jobs\/db_password\)@postgres:5432\/[A-Za-z0-9_-]+"$/;
+  return credentialExport.test(statements[0]) &&
+    statements[1] === "exec node apps/server/dist/jobs/runtime.js";
+}
+
+function jobsRuntimeSelftest() {
+  const command = 'export DATABASE_URL="postgres://geox_jobs_v1:$(cat /run/geox/jobs/db_password)@postgres:5432/landos"\nexec node apps/server/dist/jobs/runtime.js';
+  const jobs = { entrypoint: ["/bin/sh", "-ceu"], command: [command] };
+  const cases = [
+    ["governed", { services: { jobs } }, true],
+    ["jobs absent", { services: {} }, false],
+    ["wrong module", { services: { jobs: { ...jobs, command: [command.replace("jobs/runtime.js", "jobs/other.js")] } } }, false],
+    ["command absent", { services: { jobs: { entrypoint: jobs.entrypoint } } }, false],
+    ["comment-only hit", { services: { jobs: { ...jobs, command: ["# exec node apps/server/dist/jobs/runtime.js"] } } }, false],
+    ["other-service-only hit", { services: { other: jobs } }, false],
+    ["unreachable command", { services: { jobs: { ...jobs, command: ["exit 0\n" + command] } } }, false],
+    ["wrong entrypoint", { services: { jobs: { ...jobs, entrypoint: ["echo"] } } }, false],
+    ["inactive representation", { services: { jobs: { ...jobs, profiles: ["inactive"] } } }, false],
+    ["unreachable shell tail", { services: { jobs: { ...jobs, command: [command.replace("\nexec", "; exit 0\nexec")] } } }, false]
+  ];
+  for (const [name, config, expected] of cases) {
+    if (proveJobsRuntime(config) !== expected) throw new Error("JOBS_RUNTIME_SELFTEST_FAILED:" + name);
+  }
+  console.log("BLINE_JOBS_RUNTIME_NEGATIVE_SELFTEST_PASS count=" + cases.length);
+}
+
+function renderedCommercialCompose() {
+  // Structural qualification only: no service is created and no runtime secret
+  // is read. Supply interpolation values as in the existing W6-B2 config proof.
+  const env = { ...process.env,
+    POSTGRES_USER: "landos", POSTGRES_PASSWORD: "structure-only", POSTGRES_DB: "landos",
+    GEOX_MCFT_MIGRATOR_PASSWORD: "structure-only", GEOX_RUNTIME_DATABASE_PASSWORD: "structure-only",
+    GEOX_DEPLOYMENT_SUBJECT_COMMIT: cp.execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" }).trim(),
+    GEOX_EXECUTOR_TOKEN: "structure-only", MINIO_ROOT_USER: "structure-only", MINIO_ROOT_PASSWORD: "structure-only",
+    CORS_ORIGINS: "https://structure.geox.invalid", APP_SECRET: "structure-only", PUBLIC_BASE_URL: "https://structure.geox.invalid"
+  };
+  return JSON.parse(cp.execFileSync("docker", ["compose", "--env-file", ".env.commercial_v1.example", "-f", COMMERCIAL_COMPOSE, "config", "--format", "json"], {
+    cwd: ROOT, env, encoding: "utf8", timeout: 30000, maxBuffer: 8 * 1024 * 1024
+  }));
+}
+
 function registerBackgroundRuntimeGraph() {
-  const compose = read(COMMERCIAL_COMPOSE);
+  jobsRuntimeSelftest();
+  const compose = renderedCommercialCompose();
   const jobs = read(BACKGROUND_RUNTIME_ROOTS[0]);
   const agent = read(AGRONOMY_AGENT);
 
-  if (!/\n\s{2}jobs:\s*\n/.test(compose)) failures.push("BACKGROUND_JOBS_SERVICE_MISSING");
-  if (!compose.includes('command: ["node", "apps/server/dist/jobs/runtime.js"]')) failures.push("BACKGROUND_JOBS_COMMAND_MISSING");
-  if (!compose.includes('AGRONOMY_AGENT_ENABLED: "1"')) failures.push("BACKGROUND_AGRONOMY_AGENT_NOT_COMMERCIAL_ACTIVE");
+  if (!compose.services?.jobs) failures.push("BACKGROUND_JOBS_SERVICE_MISSING");
+  if (!proveJobsRuntime(compose)) failures.push("BACKGROUND_JOBS_EFFECTIVE_RUNTIME_UNPROVEN");
+  if (String(compose.services?.jobs?.environment?.AGRONOMY_AGENT_ENABLED) !== "1") failures.push("BACKGROUND_AGRONOMY_AGENT_NOT_COMMERCIAL_ACTIVE");
   if (!jobs.includes('import { runAgronomyAgentOnce } from "./agronomy_agent.js";')) failures.push("BACKGROUND_AGRONOMY_AGENT_IMPORT_MISSING");
   if (!jobs.includes('if (process.env.AGRONOMY_AGENT_ENABLED === "1")')) failures.push("BACKGROUND_AGRONOMY_AGENT_FEATURE_GATE_MISSING");
   if (!jobs.includes("await runAgronomyAgentOnce(pool)")) failures.push("BACKGROUND_AGRONOMY_AGENT_CALL_MISSING");

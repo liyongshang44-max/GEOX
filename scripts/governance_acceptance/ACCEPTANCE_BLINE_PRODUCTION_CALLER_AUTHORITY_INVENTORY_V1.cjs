@@ -6,7 +6,6 @@ const cp = require('node:child_process');
 
 const PRSEC1_BASE = 'bcc78fb00e73292362f237a95db3441e07389f6f';
 const BLINE_ACCEPTED = '413386acc04fa2d3404f09d2d1fa8702472e83f1';
-const PROTECTED_MAIN = 'ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd';
 const EXPECTED_EXTERNAL_MERGE_BASE = '26c1383f7f45abb76c99e28ec3d06714e85d1b2c';
 const FROZEN_INVENTORY_BLOB = '29794eab2c7ff4732a84dc410dd0b55fb4afff15';
 const SHARED_MAIN_MIGRATION_ORDER_COMMIT = '32d574e488b1cf8811ab7df6716d42bda987143c';
@@ -74,26 +73,120 @@ function collectInventorySourcePaths(value, out = new Set()) {
   for (const child of Object.values(value)) collectInventorySourcePaths(child, out);
   return out;
 }
+const QCP = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json';
+const QCP_PLANNER = 'scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs';
+const ADR_LINEAGE = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PROTECTED-MAIN-LINEAGE-ADVANCEMENT-E1F8-TO-F41D-V1.json';
+const FORCING_CONTRACT = 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_FORCING_CONTROLLER_CONTRACT.ts';
+const FORCING_WORKFLOW = '.github/workflows/mcft-cap-09-v13-forcing-controller-contract.yml';
+const GOVERNANCE_SETTLEMENT_PATHS = [GATE,
+  'scripts/governance_acceptance/ACCEPTANCE_BLINE_ACTIVE_RUNTIME_SURFACE_CLOSURE_V1.cjs',
+  'docs/architecture/semantic_convergence/GEOX-BLINE-RESIDUAL-AUTHORITY-INVENTORY-V1.json'
+].sort();
+
+function validateTopology(parents, refs, checkedOutHead) {
+  assert(parents.length === 2, 'PR synthetic merge must have exactly two parents');
+  assert(parents[0] === refs.main, 'protected main drift from synthetic parent 1');
+  assert(parents[1] === refs.candidate, 'candidate drift from synthetic parent 2');
+  assert(checkedOutHead === refs.candidate || checkedOutHead === refs.merge || refs.boundedLocalSuccessor,
+    'checkout is not the verified PR subject');
+  return { protectedMain: parents[0], candidate: parents[1], merge: refs.merge };
+}
+function verifiedPrTopology(checkedOutHead) {
+  const event = process.env.GITHUB_EVENT_PATH ? JSON.parse(read(process.env.GITHUB_EVENT_PATH)) : {};
+  const pr = String(event.number || process.env.BLINE_PR_NUMBER ||
+    (process.env.GITHUB_REF || '').match(/^refs\/pull\/(\d+)\//)?.[1] || '');
+  assert(/^\d+$/.test(pr), 'verified PR context required; no static current-main fallback');
+  const names = ['refs/heads/main', `refs/pull/${pr}/head`, `refs/pull/${pr}/merge`];
+  function remoteRefs() {
+    const rows = sh(['ls-remote', 'origin', ...names], { timeout: 30000 });
+    const refs = Object.fromEntries(rows.split(/\r?\n/).filter(Boolean).map(row => {
+      const [sha, name] = row.split(/\s+/); return [name, sha];
+    }));
+    for (const name of names) assert(/^[0-9a-f]{40}$/.test(refs[name] || ''), 'remote PR topology ref missing', name);
+    return { main: refs[names[0]], candidate: refs[names[1]], merge: refs[names[2]] };
+  }
+  const refs = remoteRefs();
+  try { sh(['cat-file', '-e', refs.merge + '^{commit}']); }
+  catch { sh(['fetch', '--no-tags', 'origin', names[2]], { timeout: 30000 }); }
+  const parents = sh(['show', '-s', '--format=%P', refs.merge]).split(' ');
+  // Permit the single unpublished governance successor for bounded preflight.
+  // Its main authority still comes exclusively from the live PR merge parents.
+  // This does not qualify that successor as a final integrated PR merge.
+  if (checkedOutHead !== refs.candidate && checkedOutHead !== refs.merge) {
+    assert(sh(['show', '-s', '--format=%P', checkedOutHead]) === refs.candidate,
+      'unpublished successor must be one commit directly on verified PR candidate');
+    assert(JSON.stringify(diffNames(refs.candidate, checkedOutHead, [])) === JSON.stringify(GOVERNANCE_SETTLEMENT_PATHS),
+      'unpublished successor must contain exactly the three governance paths');
+    refs.boundedLocalSuccessor = true;
+  }
+  const result = validateTopology(parents, refs, checkedOutHead);
+  const after = remoteRefs();
+  for (const key of ['main', 'candidate', 'merge']) assert(after[key] === refs[key], 'remote topology drift during verification', key);
+  return { ...result, pr: Number(pr), bounded_local_successor: Boolean(refs.boundedLocalSuccessor) };
+}
+
+function exactCandidateObject(p) {
+  const candidateBlob = blob(head, p);
+  assert(candidateBlob, 'exact candidate evidence object absent', p);
+  assert(read(p) === show(head, p), 'working evidence differs from exact candidate object', p);
+  return candidateBlob;
+}
+function governedEvidenceObject(p) {
+  const evidenceBlob = exactCandidateObject(p);
+  assert(evidenceBlob === blob(PROTECTED_MAIN, p), 'owner evidence not carried from exact protected main', p);
+  return evidenceBlob;
+}
+function exactMcftEvidence() {
+  const qcpBlob = governedEvidenceObject(QCP);
+  governedEvidenceObject(QCP_PLANNER);
+  const qcp = JSON.parse(show(head, QCP));
+  assert(qcp.path_semantics === 'EXACT_PATH_OR_GENERATED_DEPENDENCY_CLOSURE_ONLY', 'QCP path semantics drift');
+  const planner = require(path.resolve(QCP_PLANNER));
+  const evidence = new Map();
+  function add(paths, resolver, kind, evidencePath = QCP, evidenceBlob = qcpBlob) {
+    for (const p of paths) {
+      exactCandidateObject(p);
+      if (!evidence.has(p)) evidence.set(p, { owner: 'MCFT', owner_evidence_type: kind,
+        owner_evidence_ref: head, owner_evidence_path: evidencePath, owner_evidence_blob: evidenceBlob,
+        resolver, exact_path_membership: true });
+    }
+  }
+  for (const [id, spec] of Object.entries(qcp.dependency_resolvers)) {
+    if (spec.kind === 'EXACT_PATH_SET') add(spec.paths || [], id, 'EXACT_PATH_SET');
+    else if (spec.kind === 'IMPORT_CLOSURE') {
+      add(spec.additional_exact_paths || [], id, 'EXACT_PATH_SET');
+      const closure = planner.buildImportClosure(process.cwd(), spec.roots || []);
+      // An incomplete closure cannot establish generated dependency ownership.
+      if (!closure.missing.length) add(closure.paths, id, 'IMPORT_CLOSURE');
+    } else assert(spec.kind === 'GENERATED_GRAPH_OUTPUT', 'UNKNOWN QCP resolver kind', spec.kind);
+  }
+  // Independent exact machine-acceptance object, selected by its governed workflow.
+  const contractBlob = governedEvidenceObject(FORCING_CONTRACT);
+  governedEvidenceObject(FORCING_WORKFLOW);
+  const workflow = show(head, FORCING_WORKFLOW);
+  assert(workflow.includes('run: pnpm exec tsx ' + FORCING_CONTRACT), 'forcing contract is not workflow-selected');
+  const closure = planner.buildImportClosure(process.cwd(), [FORCING_CONTRACT]);
+  assert(closure.missing.length === 0, 'forcing contract import closure incomplete', closure.missing);
+  // Workflow membership is exact, never a filename/owner token inference.
+  const selected = new Set([...workflow.matchAll(/^\s+- ['"]([^'"*]+)['"]\s*$/gm)].map(m => m[1]));
+  add(closure.paths.filter(p => selected.has(p)), 'FORCING_CONTROLLER_CONTRACT',
+    'EXACT_MACHINE_ACCEPTANCE_OBJECT_IMPORT', FORCING_CONTRACT, contractBlob);
+  return evidence;
+}
 function classifyCurrentMainOwner(p) {
-  if (p === 'apps/server/src/integrations/adr/read_only_shadow_adoption_v1.ts') return 'ADR';
+  if (p === DIST) return 'SHARED_PACKAGING';
   if (p === 'apps/server/src/infra/migrations.ts') return 'SHARED_MAIN_INFRA';
-  if (
-    p.startsWith('apps/server/src/external_evidence/') ||
-    p.startsWith('apps/server/src/domain/twin_runtime/') ||
-    p.startsWith('apps/server/src/persistence/external_evidence/') ||
-    p.startsWith('apps/server/src/persistence/twin_runtime/') ||
-    p.startsWith('apps/server/src/runtime/twin_runtime/') ||
-    /^apps\/server\/src\/runtime\/mcft_cap09_/i.test(p) ||
-    /^apps\/server\/src\/infra\/mcft_cap09_/i.test(p) ||
-    p === 'apps/server/src/infra/migrations.ts' ||
-    (/^apps\/server\/db\/migrations\//.test(p) && /mcft[_-]?cap[_-]?09/i.test(p)) ||
-    p === DIST
-  ) return 'MCFT';
-  return 'UNKNOWN';
+  if (p === 'apps/server/src/integrations/adr/read_only_shadow_adoption_v1.ts') return 'ADR';
+  return mcftOwnerEvidence.has(p) ? 'MCFT' : 'UNKNOWN';
 }
 function assertExternalOwnershipEvidence(owner, p, deltaPatch) {
   if (owner === 'ADR') {
     assert(p === 'apps/server/src/integrations/adr/read_only_shadow_adoption_v1.ts', 'ADR ownership path drift', p);
+    governedEvidenceObject(ADR_LINEAGE);
+    const authority = JSON.parse(show(head, ADR_LINEAGE));
+    assert(authority.status === 'PASS' && authority.external_owner === 'ADR' && authority.changed_paths.includes(p), 'exact ADR path evidence missing', p);
+    assertAncestor(authority.current_protected_main, PROTECTED_MAIN, 'ADR historical adjudication lineage');
+    assert(blob(authority.current_protected_main, p) === blob(PROTECTED_MAIN, p), 'ADR adjudicated postimage drift', p);
     const text = show(PROTECTED_MAIN, p);
     for (const marker of [
       'READ_ONLY_SELECT',
@@ -121,13 +214,13 @@ function assertExternalOwnershipEvidence(owner, p, deltaPatch) {
     ]) assert(deltaPatch.includes(marker), 'shared migration ordering provenance marker missing', marker);
     return;
   }
+  if (owner === 'SHARED_PACKAGING') {
+    assert(p === DIST, 'shared packaging path drift');
+    // Exact composite adjudication is mandatory in Layer D below.
+    return;
+  }
   if (owner === 'MCFT') {
-    const ownershipEvidence = `${p}\n${deltaPatch}`;
-    assert(/mcft|external_evidence|twin_runtime|cap08|biological_stage|external_formal/i.test(ownershipEvidence), 'MCFT ownership evidence missing', p);
-    if (p === DIST) {
-      assert(/mcft/i.test(deltaPatch), 'shared dist current-main delta lacks MCFT evidence');
-      assert(!/^\+.*bline/im.test(deltaPatch), 'current-main side of shared dist seam unexpectedly contains B-Line entry');
-    }
+    assert(mcftOwnerEvidence.has(p), 'exact MCFT owner evidence missing', p);
     return;
   }
   throw new Error(`UNKNOWN external ownership: ${p}`);
@@ -158,6 +251,9 @@ function runHistoricalGate(ref, gatePath, prefix) {
 }
 
 const head = sh(['rev-parse', 'HEAD']);
+const topology = verifiedPrTopology(head);
+const PROTECTED_MAIN = topology.protectedMain;
+const mcftOwnerEvidence = exactMcftEvidence();
 assert(head !== PRSEC1_BASE, 'successor governance gate must not replace historical PR-SEC-1 execution');
 assertAncestor(PRSEC1_BASE, BLINE_ACCEPTED, 'accepted B-Line lineage');
 assertAncestor(BLINE_ACCEPTED, head, 'candidate accepted B-Line lineage');
@@ -203,7 +299,7 @@ runHistoricalGate(BLINE_ACCEPTED, W6B2_GATE, 'geox-w6b2-accepted-replay-');
 const externalMergeBase = sh(['merge-base', PRSEC1_BASE, PROTECTED_MAIN]);
 assert(externalMergeBase === EXPECTED_EXTERNAL_MERGE_BASE, 'current-main external ownership merge-base drift', externalMergeBase);
 const currentMainExternalDelta = diffNames(externalMergeBase, PROTECTED_MAIN);
-const currentMainOwnership = { MCFT: [], ADR: [], SHARED_MAIN_INFRA: [], BLINE: [], UNKNOWN: [] };
+const currentMainOwnership = { MCFT: [], ADR: [], SHARED_MAIN_INFRA: [], SHARED_PACKAGING: [], BLINE: [], UNKNOWN: [] };
 const externalSet = new Set();
 for (const p of currentMainExternalDelta) {
   const owner = classifyCurrentMainOwner(p);
@@ -269,6 +365,9 @@ console.log(JSON.stringify({
   work_package: 'BLINE-CALLER-INVENTORY-GOV-RECON-01',
   prsec1_base: PRSEC1_BASE,
   protected_main: PROTECTED_MAIN,
+  verified_pr_synthetic_topology: topology,
+  UNKNOWN_CURRENT_MAIN_OWNER: currentMainOwnership.UNKNOWN,
+  exact_mcft_owner_manifest: currentMainOwnership.MCFT.map(p => ({ path: p, protected_main_blob: blob(PROTECTED_MAIN, p), candidate_blob: blob(head, p), ...mcftOwnerEvidence.get(p) })),
   accepted_bline_reference: BLINE_ACCEPTED,
   successor_head: head,
   FROZEN_PR_SEC_1_REPLAY: 'PASS',

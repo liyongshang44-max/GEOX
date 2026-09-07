@@ -1616,28 +1616,32 @@
     },
     {
       "source_path": "apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts",
-      "entrypoint": "MCFT/Twin runtime composition or repository caller; B-Line does not own activation",
-      "activation_mode": "MCFT_OWNED_PERSISTENCE",
+      "entrypoint": "MCFT/Twin composition invokes forecast/scenario repository with an injected canonical fact writer",
+      "activation_mode": "MCFT_OWNED_PERSISTENCE_ORCHESTRATION",
       "writes": [
-        "CAP-04 canonical Forecast/Scenario candidate facts and projections"
+        "Indirect canonical fact persistence through injected factWriter.appendCanonicalFact(); no direct facts INSERT"
       ],
       "reads": [
         "validated canonical forecast/scenario envelopes"
       ],
       "semantic_family": [
+        "evidence.qualification",
+        "twin.state",
         "twin.forecast",
         "twin.scenario"
       ],
-      "authority_class": "MCFT_FORECAST_SCENARIO_PERSISTENCE_REPOSITORY",
+      "authority_class": "INDIRECT_CANONICAL_FACT_PERSISTENCE_ORCHESTRATOR",
       "runtime_reachable": "MCFT_OWNED; DO_NOT_REINTERPRET_FROM_BLINE",
       "feature_flag": null,
       "downstream_consumers": [
         "MCFT/Twin runtime only"
       ],
       "removal_target": "DO_NOT_MODIFY_IN_BLINE; FINAL_TYPED_INTEGRATION_ONLY_AFTER_MCFT_COMPLETE",
-      "audit_note": "File boundary explicitly says persistence/projection only; no Forecast math, Scenario math, Evidence selection, route, scheduler or wall-clock authority.",
+      "audit_note": "Reclassified from historical direct ledger writer topology. Canonical persistence is delegated to the injected factWriter; the repository remains an exact-path indirect orchestrator, not a direct ledger writer.",
       "surface_id": "RES-060",
-      "b02_registered": false
+      "b02_registered": false,
+      "direct_ledger_writer": false,
+      "authority_owner": "MCFT_CAP09_TWIN_RUNTIME"
     },
     {
       "source_path": "apps/server/src/persistence/twin_runtime/postgres_immutable_decision_action_commit_repository_v1.ts",
@@ -6293,32 +6297,30 @@
     {
       "surface_id": "RES-245",
       "source_path": "apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts",
-      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
-      "activation_mode": "MCFT_FROZEN",
+      "entrypoint": "MCFT/Twin composition invokes forecast/scenario repository with an injected canonical fact writer",
+      "activation_mode": "MCFT_OWNED_PERSISTENCE_ORCHESTRATION",
       "writes": [
-        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+        "Indirect canonical fact persistence through injected factWriter.appendCanonicalFact(); no direct facts INSERT"
       ],
       "reads": [
         "writer-specific validated upstream inputs/provenance"
       ],
       "semantic_family": [
-        "governance.fact_ledger"
+        "evidence.qualification",
+        "twin.state",
+        "twin.forecast",
+        "twin.scenario"
       ],
-      "authority_class": "FACT_LEDGER_MCFT_FROZEN",
+      "authority_class": "INDIRECT_CANONICAL_FACT_PERSISTENCE_ORCHESTRATOR",
       "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
       "feature_flag": null,
       "downstream_consumers": [],
       "removal_target": "MCFT FROZEN; legacy Twin replacement target after cutover",
       "b02_registered": false,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
-      "ledger_disposition": "MCFT_FROZEN",
-      "underlying_semantic_families": [
-        "twin.forecast",
-        "twin.scenario"
-      ],
-      "authority_owner": "MCFT_TWIN_RUNTIME",
-      "writer_scope": "forecast/scenario canonical persistence",
-      "audit_note": "Canonical MCFT/Twin forecast/scenario repository."
+      "authority_owner": "MCFT_CAP09_TWIN_RUNTIME",
+      "audit_note": "Reclassified from historical direct ledger writer topology. Canonical persistence is delegated to the injected factWriter; the repository remains an exact-path indirect orchestrator, not a direct ledger writer.",
+      "direct_ledger_writer": false
     },
     {
       "surface_id": "RES-246",
@@ -7974,6 +7976,76 @@
       "b02_registered": false,
       "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
       "audit_note": "Forward-only repair preserves historical migration records while removing active schema scope fabrication."
+    },
+    {
+      "surface_id": "RES-305",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_mcft_cap09_twin_canonical_fact_writer_v1.ts",
+      "entrypoint": "exact governance.fact_ledger writer capability adjudication",
+      "activation_mode": "MCFT_FROZEN",
+      "writes": [
+        "facts ledger rows within writer_scope; semantic ownership remains authority_owner/underlying_semantic_families"
+      ],
+      "reads": [
+        "writer-specific validated upstream inputs/provenance"
+      ],
+      "semantic_family": [
+        "governance.fact_ledger"
+      ],
+      "authority_class": "FACT_LEDGER_MCFT_FROZEN_DIRECT_WRITER_AND_FENCED_ADAPTER",
+      "runtime_reachable": "PROVEN_OR_EXPLICITLY_FROZEN",
+      "feature_flag": null,
+      "downstream_consumers": [],
+      "removal_target": "MCFT-owned capability; no B-Line activation or semantic modification authorized",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "ledger_disposition": "MCFT_FROZEN",
+      "underlying_semantic_families": [
+        "evidence.qualification",
+        "twin.state",
+        "twin.forecast",
+        "twin.scenario"
+      ],
+      "authority_owner": "MCFT_CAP09_TWIN_RUNTIME",
+      "writer_scope": "DirectPostgresTwinCanonicalFactWriterV1: direct facts writer, non-production-selected; PostgresMcftCap09TwinCanonicalFactWriterV1: fenced CAP09 production-composition-selected adapter. Production activation = NOT AUTHORIZED.",
+      "audit_note": "One ledger disposition per exact source path. The direct writer and fenced adapter are distinct capabilities in this file; production composition selection does not authorize production activation. Underlying authority is exactly evidence.qualification, twin.state, twin.forecast, twin.scenario; runtime tick/checkpoint/health are not twin.state.",
+      "direct_ledger_writer": true,
+      "production_activation": "NOT_AUTHORIZED"
+    },
+    {
+      "surface_id": "RES-306",
+      "source_path": "apps/server/src/persistence/twin_runtime/postgres_external_formal_fenced_exact_base_fact_promotion_v1.ts",
+      "entrypoint": "Historical Formal exact-base promotion callsite delegating to canonical external-evidence ingress",
+      "activation_mode": "SUPERSEDED_FOR_PRODUCTION",
+      "writes": [
+        "Orchestrated exact-base qualification and canonical external-evidence ingress call; no direct facts INSERT"
+      ],
+      "reads": [
+        "Exact-base forcing evidence, qualification and promotion references"
+      ],
+      "semantic_family": [
+        "evidence.qualification",
+        "evidence.raw_observation"
+      ],
+      "authority_class": "ORCHESTRATED_EXACT_BASE_QUALIFICATION_CANONICAL_EXTERNAL_EVIDENCE_INGRESS_CALLSITE",
+      "authority_owner": "MCFT_CAP09_TWIN_RUNTIME",
+      "direct_ledger_writer": false,
+      "runtime_reachable": "RETAINED_HISTORICAL_ACCEPTANCE_COMPATIBILITY_SEAM",
+      "feature_flag": null,
+      "downstream_consumers": [
+        "historical acceptance / compatibility seam"
+      ],
+      "production_disposition": "SUPERSEDED_FOR_PRODUCTION",
+      "retained_disposition": "historical acceptance / compatibility seam",
+      "production_successor": "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts",
+      "removal_target": "Production selection superseded by external_evidence successor; retain historical acceptance / compatibility seam",
+      "b02_registered": false,
+      "capability_disposition": "ADJUDICATED_EXACT_PATH_AND_FAMILY",
+      "epistemic_distinction": {
+        "soil_moisture": "OBSERVED",
+        "future_weather": "ASSUMED",
+        "future_ET0": "ASSUMED"
+      },
+      "audit_note": "evidence.raw_observation does not promote all forcing facts to OBSERVED: soil moisture is OBSERVED; future weather and future ET0 are ASSUMED. Production activation is NOT AUTHORIZED."
     }
   ],
   "cross_branch_surfaces": [
@@ -8016,19 +8088,21 @@
     "rule": "ACTIVE_RUNTIME_SURFACE_WITHOUT_DISPOSITION_IS_FAIL_CLOSED"
   },
   "fact_ledger_closure": {
-    "status": "DYNAMIC_DIRECT_WRITER_SET_ADJUDICATED_PENDING_EXACT_PROOF",
+    "status": "EXACT_DIRECT_WRITER_SET_MATERIALIZED_PENDING_POST_COMMIT_PREFLIGHT",
     "source_exact_ci": "33509893507 / job 99862739754",
     "expected_writer_count": 65,
     "adjudicated_writer_count": 65,
     "disposition_counts": {
-      "SEED_MIGRATION": 2,
-      "SEMANTIC_FACT_WRITER": 28,
+      "DEVTOOLS_ONLY": 7,
       "LEGACY_COMPATIBILITY": 14,
       "MCFT_FROZEN": 12,
-      "READ_SIDE_EFFECT_P0": 1,
-      "DEVTOOLS_ONLY": 7,
-      "PERSISTENCE_ONLY": 1
+      "PERSISTENCE_ONLY": 1,
+      "SEED_MIGRATION": 2,
+      "SEMANTIC_FACT_WRITER": 29
     },
-    "invariant": "governance.fact_ledger is persistence topology only; it never substitutes for underlying semantic authority ownership"
+    "invariant": "governance.fact_ledger is persistence topology only; it never substitutes for underlying semantic authority ownership",
+    "source_subject": "fdfb500799bc726984f7629e899754cc5d02cf34",
+    "direct_writer_set_sha256": "ef22fd0e82e550295979be167e08f66d4c95acd768ed03a865abf30e0530591b",
+    "digest_encoding": "sha256(sorted exact paths joined by newline; no terminal newline)"
   }
 }
