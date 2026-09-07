@@ -1,9 +1,9 @@
-name: bline-final-integrated-requalification-exception-02
+name: bline-final-integrated-requalification-exception-03
 
 on:
   push:
     branches:
-      - qual/bline-final-requal-live-02
+      - qual/bline-final-requal-live-03
 
 permissions:
   contents: read
@@ -17,10 +17,10 @@ jobs:
     env:
       BLINE_PR_NUMBER: "3525"
       EXPECTED_MAIN_SHA: a56b419f6ddfc3ce2f2d957b0422bb8b4bd9d45c
-      EXPECTED_CANDIDATE_SHA: 74cf498b0e5492712248c9251461aa8228575490
+      EXPECTED_CANDIDATE_SHA: 1c33444622708fd7f5b359775be65a61b66198a2
       EXPECTED_CANDIDATE_BRANCH: feat/bline-w4-gov-recon-03-ca2a96d
-      EXPECTED_SYNTHETIC_SHA: f983440c4a7bb1410db179b97c2c062b61b5474f
-      EXPECTED_SYNTHETIC_TREE: f6bdaf9dedb67d662f35b8b075c5660fb5d8fd6b
+      EXPECTED_SYNTHETIC_SHA: f45a48d29e29fda1ed77ca2ce7efba35cfbdb02d
+      EXPECTED_SYNTHETIC_TREE: e255ba5ca039603b116c256e45fc2e3b5ab8591c
       ACCEPTED_BLINE_SEMANTIC_REFERENCE: 413386acc04fa2d3404f09d2d1fa8702472e83f1
       W5_ACCEPTED_SHA: a6d39df6af46ecfbf8e4ae99e48f400e00685875
       W6A_ACCEPTED_SHA: bcc78fb00e73292362f237a95db3441e07389f6f
@@ -31,7 +31,7 @@ jobs:
       - name: Checkout locked synthetic integration subject
         uses: actions/checkout@v4
         with:
-          ref: f983440c4a7bb1410db179b97c2c062b61b5474f
+          ref: f45a48d29e29fda1ed77ca2ce7efba35cfbdb02d
           fetch-depth: 0
 
       - name: Provenance preflight - fresh exact-state lock and workspace identity
@@ -145,7 +145,7 @@ jobs:
             .workflow_sha != "" and
             .expected.pr_number == "3525" and
             .actual_workspace.head_sha == .expected.synthetic_merge_sha and
-            .actual_workspace.tree_sha == "f6bdaf9dedb67d662f35b8b075c5660fb5d8fd6b" and
+            .actual_workspace.tree_sha == "e255ba5ca039603b116c256e45fc2e3b5ab8591c" and
             .actual_workspace.parent1_sha == .expected.protected_main_sha and
             .actual_workspace.parent2_sha == .expected.candidate_head_sha and
             .fresh_remote_lock.protected_main_sha == .expected.protected_main_sha and
