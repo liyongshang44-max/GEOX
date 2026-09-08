@@ -21,7 +21,7 @@ function pickIrrigationRecommendation(genJson) {
   ) ?? null;
 }
 
-function buildIrrigationReceiptBody({ tenant_id, project_id, group_id, operation_plan_id, act_task_id, field_id, suffix, recommendation_id, prescription_id, skill_trace_ref }) {
+function buildIrrigationReceiptBody({ tenant_id, project_id, group_id, operation_plan_id, act_task_id, field_id, suffix, recommendation_id, prescription_id, skill_trace_ref, observed_parameters }) {
   return {
     tenant_id,
     project_id,
@@ -32,7 +32,7 @@ function buildIrrigationReceiptBody({ tenant_id, project_id, group_id, operation
     execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
     execution_coverage: { kind: 'field', ref: field_id },
     resource_usage: { fuel_l: 0, electric_kwh: 0, water_l: 20, chemical_ml: 0 },
-    observed_parameters: { amount: 20, coverage_percent: 90, duration_min: 20 },
+    observed_parameters,
     evidence_refs: [{ kind: 'sensor', ref: `sensor_${suffix}` }],
     logs_refs: [
       { kind: 'dispatch_ack', ref: `ack_${suffix}` },
@@ -207,7 +207,22 @@ async function main() {
     ids.skill_binding_id = ids.skill_binding_id || String(ev.skill_binding_id ?? ev.skill_binding_fact_id ?? '');
     checks.task_binds_device_skill = toPassFail(ids.task_id.length > 0 && ids.skill_binding_id.length > 0 && ids.skill_run_id.length > 0);
 
-    const receipt = await fetchJson(`${base}/api/v1/actions/receipt`, { method: 'POST', token: executorToken, body: buildIrrigationReceiptBody({ tenant_id, project_id, group_id, operation_plan_id, act_task_id: ids.task_id, field_id, suffix, recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, skill_trace_ref: ids.skill_trace_id }) });
+    const taskPayload = taskFactQ.rows?.[0]?.record_json?.payload ?? {};
+    const successorTaskSchemaKeys = Array.isArray(taskPayload?.parameter_schema?.keys)
+      ? taskPayload.parameter_schema.keys
+      : [];
+    const successorObservedParameters = Object.fromEntries(
+      successorTaskSchemaKeys
+        .map((entry) => String(entry?.name ?? '').trim())
+        .filter((name) =>
+          name
+          && Object.prototype.hasOwnProperty.call(taskPayload?.parameters ?? {}, name)
+        )
+        .map((name) => [name, taskPayload.parameters[name]])
+    );
+    if (Object.keys(successorObservedParameters).length === 0) throw new Error(JSON.stringify({ reason: 'SUCCESSOR_TASK_OBSERVED_PARAMETERS_EMPTY', task_id: ids.task_id, task_payload: taskPayload }));
+
+    const receipt = await fetchJson(`${base}/api/v1/actions/receipt`, { method: 'POST', token: executorToken, body: buildIrrigationReceiptBody({ tenant_id, project_id, group_id, operation_plan_id, act_task_id: ids.task_id, field_id, suffix, recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, skill_trace_ref: ids.skill_trace_id, observed_parameters: successorObservedParameters }) });
     const receipt_fact_id = String(requireOk(receipt, 'receipt').fact_id ?? '');
     if (receipt_fact_id) await fetchJson(`${base}/api/v1/acceptance/evaluate`, { method: 'POST', token, body: { tenant_id, project_id, group_id, act_task_id: ids.task_id } });
 
