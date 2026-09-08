@@ -191,13 +191,11 @@ async function main() {
       token,
       body: { tenant_id, project_id, group_id, decision: 'APPROVE', reason: 'gap closure approval', device_id, adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.irrigation.valve.open'] },
     });
-    const operation_plan_id = String(requireOk(decide, 'decide approval').operation_plan_id ?? `op_gap_${suffix}`);
-
-    const taskResp = await fetchJson(`${base}/api/v1/actions/task`, {
-      method: 'POST', token,
-      body: { tenant_id, project_id, group_id, operation_plan_id, approval_request_id: ids.approval_id, field_id, season_id, device_id, issuer: { kind: 'human', id: 'qa', namespace: 'qa' }, action_type: 'IRRIGATE', target: { kind: 'field', ref: field_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 }, parameter_schema: { keys: [{ name: 'amount', type: 'number', min: 1, max: 1000 }, { name: 'coverage_percent', type: 'number', min: 0, max: 100 }, { name: 'duration_min', type: 'number', min: 1, max: 720 }] }, parameters: { amount: 20, coverage_percent: 90, duration_min: 20 }, constraints: {}, meta: { recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, skill_trace_ref: ids.skill_trace_id, device_id, adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.irrigation.valve.open'] } },
-    });
-    ids.task_id = String(requireOk(taskResp, 'create task').act_task_id ?? '');
+    const decideJson = requireOk(decide, 'decide approval');
+    const operation_plan_id = String(decideJson.operation_plan_id ?? '').trim();
+    if (!operation_plan_id) throw new Error(JSON.stringify({ reason: 'OPERATION_PLAN_ID_MISSING_AFTER_APPROVAL', response: decideJson }));
+    ids.task_id = String(decideJson.act_task_id ?? '').trim();
+    if (!ids.task_id) throw new Error(JSON.stringify({ reason: 'AUTO_TASK_ID_MISSING_AFTER_APPROVAL', response: decideJson }));
 
     const executeSkill = await executeMockValveSkill({ base, token, tenant_id, project_id, group_id, field_id, device_id, operation_plan_id, task_id: ids.task_id, approval_id: ids.approval_id });
     const executeSkillJson = requireOk(executeSkill, 'mock valve skill execute');
