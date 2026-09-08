@@ -17,7 +17,7 @@ function pickIrrigationRecommendation(genJson) {
   return recommendations.find((x) =>
     String(x?.recommendation_type ?? '') === 'irrigation_recommendation_v1'
     || String(x?.action_type ?? '').toUpperCase() === 'IRRIGATE'
-    || String(x?.skill_trace?.skill_id ?? '') === 'irrigation_deficit_skill_v1'
+    || String(x?.skill_trace?.skill_id ?? '') === 'irrigation_requirement_skill_v1'
   ) ?? null;
 }
 
@@ -152,7 +152,7 @@ async function main() {
     if (!recommendation?.skill_trace) throw new Error(JSON.stringify({ reason: 'MISSING_SKILL_TRACE', recommendation_generate_response: genJson }));
     ids.recommendation_id = String(recommendation.recommendation_id ?? '');
     ids.skill_trace_id = String(recommendation.skill_trace.trace_id ?? '');
-    checks.recommendation_has_skill_trace = toPassFail(String(recommendation.skill_trace.skill_id ?? '') === 'irrigation_deficit_skill_v1' && ids.skill_trace_id.length > 0);
+    checks.recommendation_has_skill_trace = toPassFail(String(recommendation.skill_trace.skill_id ?? '') === 'irrigation_requirement_skill_v1' && ids.skill_trace_id.length > 0);
 
     const prescriptionResp = await fetchJson(`${base}/api/v1/prescriptions/from-recommendation`, {
       method: 'POST',

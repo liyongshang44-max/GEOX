@@ -93,7 +93,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     has_confidence: Boolean(recommendationSkillTrace?.confidence && typeof recommendationSkillTrace.confidence === 'object'),
     evidence_refs_is_array: Array.isArray(recommendationSkillTrace?.evidence_refs),
   };
-  assert.equal(recommendationTraceFieldChecks.skill_id, 'irrigation_deficit_skill_v1', 'recommendation.skill_trace.skill_id mismatch');
+  assert.equal(recommendationTraceFieldChecks.skill_id, 'irrigation_requirement_skill_v1', 'recommendation.skill_trace.skill_id mismatch');
   assert.ok(recommendationTraceFieldChecks.trace_id.length > 0, 'recommendation.skill_trace.trace_id missing');
   assert.equal(recommendationTraceFieldChecks.has_inputs, true, 'recommendation.skill_trace.inputs missing');
   assert.equal(recommendationTraceFieldChecks.has_outputs, true, 'recommendation.skill_trace.outputs missing');
@@ -437,14 +437,14 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     water_deficit_diagnosed: Boolean(recommendation?.rule_id === 'irrigation_soil_moisture_threshold_v1'),
     irrigation_recommendation_created: Boolean(recommendation_id && recommendation?.recommendation_type === 'irrigation_recommendation_v1'),
     recommendation_has_skill_trace: Boolean(recommendationSkillTrace),
-    skill_trace_skill_id_is_irrigation_deficit: String(recommendationSkillTrace?.skill_id ?? '') === 'irrigation_deficit_skill_v1',
+    skill_trace_skill_id_is_irrigation_requirement: String(recommendationSkillTrace?.skill_id ?? '') === 'irrigation_requirement_skill_v1',
     recommendation_trace_id_non_empty: recommendationTraceFieldChecks.trace_id.length > 0,
     recommendation_trace_inputs_present: recommendationTraceFieldChecks.has_inputs,
     recommendation_trace_outputs_present: recommendationTraceFieldChecks.has_outputs,
     recommendation_trace_confidence_present: recommendationTraceFieldChecks.has_confidence,
     recommendation_trace_evidence_refs_array: recommendationTraceFieldChecks.evidence_refs_is_array,
     prescription_created: Boolean(prescription_id && prescription?.operation_type === 'IRRIGATION' && Number(prescription?.operation_amount?.amount) > 0 && Boolean(prescription?.operation_amount?.unit)),
-    prescription_inherits_skill_trace: Boolean((prescriptionSkillTrace && String(prescriptionSkillTrace?.skill_id ?? '') === 'irrigation_deficit_skill_v1') || prescriptionSkillTraceRef.length > 0),
+    prescription_inherits_skill_trace: Boolean((prescriptionSkillTrace && String(prescriptionSkillTrace?.skill_id ?? '') === 'irrigation_requirement_skill_v1') || prescriptionSkillTraceRef.length > 0),
     prescription_recommendation_linked: String(prescription?.recommendation_id ?? '') === recommendation_id,
     approval_submitted_or_approved: Boolean(approval_request_id),
     task_created: true,
