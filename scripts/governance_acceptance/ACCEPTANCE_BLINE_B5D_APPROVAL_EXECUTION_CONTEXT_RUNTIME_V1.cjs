@@ -34,6 +34,7 @@ async function main() {
     operation_plan_adapter_type_preserved: 'FAIL',
     operation_plan_device_type_preserved: 'FAIL',
     operation_plan_capability_preserved: 'FAIL',
+    downstream_issuer_blocker_confirmed: 'FAIL',
     downstream_task_blocked_fail_closed: 'FAIL',
     no_ao_act_task_materialized: 'FAIL',
   };
@@ -82,7 +83,7 @@ async function main() {
         token_id: 'b5d_fixture_token',
         created_at_ts: now,
         proposal: {
-          // Deliberately omit issuer. This is the downstream-only blocker:
+          // Deliberately omit issuer. This is the only downstream blocker:
           // approval preflight does not consume issuer, while /actions/task
           // requires a structured human issuer and therefore must fail closed.
           action_type: 'IRRIGATE',
@@ -92,10 +93,10 @@ async function main() {
             keys: [
               { name: 'amount', type: 'number', min: 1, max: 1000 },
               { name: 'coverage_percent', type: 'number', min: 0, max: 100 },
-              { name: 'duration_min', type: 'number', min: 1, max: 720 },
+              { name: 'duration_sec', type: 'number', min: 1, max: 43200 },
             ],
           },
-          parameters: { amount: 20, coverage_percent: 90, duration_min: 20 },
+          parameters: { amount: 20, coverage_percent: 90, duration_sec: 1200 },
           constraints: {},
           meta: {
             field_id,
@@ -150,19 +151,25 @@ async function main() {
       `historical B5-A leaf still present: ${JSON.stringify(decideSnapshot)}`,
     );
 
-    // The focused fixture intentionally blocks only the automatic task issuance.
-    // Expected response is the wrapper's fail-closed task-create error, reached
-    // after capability preflight and operation-plan materialization.
     const reachedExpectedBoundary =
       Number(decide.status) === 400
       && String(decide.json?.error ?? '') === 'AO_ACT_TASK_CREATE_FAILED';
     checks.decide_reaches_post_preflight_boundary = reachedExpectedBoundary ? 'PASS' : 'FAIL';
-    checks.downstream_task_blocked_fail_closed = reachedExpectedBoundary ? 'PASS' : 'FAIL';
+
+    const downstreamDetailText = JSON.stringify(decide.json?.detail ?? {}).toLowerCase();
+    const issuerBlockerConfirmed = reachedExpectedBoundary && downstreamDetailText.includes('issuer');
+    checks.downstream_issuer_blocker_confirmed = issuerBlockerConfirmed ? 'PASS' : 'FAIL';
+    checks.downstream_task_blocked_fail_closed = issuerBlockerConfirmed ? 'PASS' : 'FAIL';
 
     assert.equal(
       checks.decide_reaches_post_preflight_boundary,
       'PASS',
       `decide did not reach expected post-plan downstream blocker: ${JSON.stringify(decideSnapshot)}`,
+    );
+    assert.equal(
+      checks.downstream_issuer_blocker_confirmed,
+      'PASS',
+      `downstream blocker was not the intentional missing issuer: ${JSON.stringify(decideSnapshot)}`,
     );
 
     const planQ = await pool.query(
@@ -228,7 +235,7 @@ async function main() {
       decide: decideSnapshot,
       operation_plan: operationPlanSnapshot,
       boundary: {
-        task_creation: 'BLOCKED_BY_FIXTURE / NO TASK MATERIALIZED',
+        task_creation: 'BLOCKED_BY_MISSING_ISSUER_FIXTURE / NO TASK MATERIALIZED',
         skill_execution: 'NOT_ENTERED',
         receipt: 'NOT_ENTERED',
         field_memory: 'NOT_ENTERED',
