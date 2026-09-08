@@ -103,6 +103,9 @@ export function getRuntimeSecurityStatusV1() {
   const tokenPath = envValue("GEOX_TOKENS_FILE", "GEOX_TOKEN_SSOT_PATH");
   checks.example_token_forbidden = !tokenPath.includes("example_tokens.json");
   if (productionLike && !checks.example_token_forbidden) errors.push("RUNTIME_EXAMPLE_TOKEN_FORBIDDEN");
+  checks.acceptance_token_fixture_forbidden = !tokenPath.replace(/\\/g, "/").toLowerCase().endsWith("/config/auth/security_acceptance_tokens.json") &&
+    tokenPath.replace(/\\/g, "/").toLowerCase() !== "config/auth/security_acceptance_tokens.json";
+  if (productionLike && !checks.acceptance_token_fixture_forbidden) errors.push("RUNTIME_ACCEPTANCE_TOKEN_FIXTURE_FORBIDDEN");
 
   const origins = envValue("CORS_ORIGINS", "GEOX_ALLOWED_ORIGINS");
   checks.cors_origins_configured = Boolean(origins);

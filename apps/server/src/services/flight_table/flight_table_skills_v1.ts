@@ -137,8 +137,8 @@ async function ensureFieldMemoryRuntime(pool: Pool): Promise<void> {
     PRIMARY KEY (tenant_id, memory_id)
   )`);
   await pool.query(`ALTER TABLE field_memory_v1
-    ADD COLUMN IF NOT EXISTS project_id TEXT NOT NULL DEFAULT 'projectA',
-    ADD COLUMN IF NOT EXISTS group_id TEXT NOT NULL DEFAULT 'groupA',
+    ADD COLUMN IF NOT EXISTS project_id TEXT NOT NULL,
+    ADD COLUMN IF NOT EXISTS group_id TEXT NOT NULL,
     ADD COLUMN IF NOT EXISTS season_id TEXT,
     ADD COLUMN IF NOT EXISTS crop_id TEXT,
     ADD COLUMN IF NOT EXISTS metric_key TEXT,
@@ -149,7 +149,7 @@ async function ensureFieldMemoryRuntime(pool: Pool): Promise<void> {
     ADD COLUMN IF NOT EXISTS baseline_value NUMERIC,
     ADD COLUMN IF NOT EXISTS delta_value NUMERIC,
     ADD COLUMN IF NOT EXISTS target_range JSONB,
-    ADD COLUMN IF NOT EXISTS confidence NUMERIC NOT NULL DEFAULT 0.8,
+    ADD COLUMN IF NOT EXISTS confidence NUMERIC,
     ADD COLUMN IF NOT EXISTS source_type TEXT NOT NULL DEFAULT 'flight_table',
     ADD COLUMN IF NOT EXISTS source_id TEXT NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS task_id TEXT,

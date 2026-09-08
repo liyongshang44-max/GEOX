@@ -142,8 +142,12 @@ export async function ensureManualExecutionQualityProjectionV1(db: DbConn): Prom
   await ensurePromise;
 }
 
-export async function projectManualExecutionQualityV1(db: DbConn, query: ManualExecutionQualityQuery): Promise<ManualExecutionQualitySnapshot> {
-  await ensureManualExecutionQualityProjectionV1(db);
+export async function projectManualExecutionQualityV1(
+  db: DbConn,
+  query: ManualExecutionQualityQuery,
+  options: { persist?: boolean } = {},
+): Promise<ManualExecutionQualitySnapshot> {
+  if (options.persist !== false) await ensureManualExecutionQualityProjectionV1(db);
   const assignmentQ = await db.query(
     `SELECT
       a.assignment_id,
@@ -393,7 +397,8 @@ export async function projectManualExecutionQualityV1(db: DbConn, query: ManualE
   }
 
   const generatedAtMs = Date.now();
-  for (const item of output) {
+  if (options.persist !== false) {
+    for (const item of output) {
     await db.query(
         `INSERT INTO manual_execution_quality_projection_v1 (
           tenant_id, project_id, group_id, dimension, dimension_id, dimension_name, field_id, action_type,
@@ -454,7 +459,7 @@ export async function projectManualExecutionQualityV1(db: DbConn, query: ManualE
         ]
     );
   }
-  await db.query(
+    await db.query(
     "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
     [
       randomUUID(),
@@ -472,6 +477,7 @@ export async function projectManualExecutionQualityV1(db: DbConn, query: ManualE
       },
     ]
   );
+  }
 
   return {
     generated_at_ms: generatedAtMs,
@@ -486,7 +492,7 @@ export async function listManualExecutionQualityTaskDetailsV1(
   db: DbConn,
   query: ManualExecutionQualityQuery & { dimension_id: string; limit?: number }
 ): Promise<{ generated_at_ms: number; dimension: ManualExecutionQualityDimension; dimension_id: string; items: ManualExecutionTaskDetail[] }> {
-  const snapshot = await projectManualExecutionQualityV1(db, query);
+  const snapshot = await projectManualExecutionQualityV1(db, query, { persist: false });
   const assignmentQ = await db.query(
     `SELECT
       a.assignment_id, a.act_task_id, a.executor_id, a.status, a.assigned_at, a.arrive_deadline_ts,

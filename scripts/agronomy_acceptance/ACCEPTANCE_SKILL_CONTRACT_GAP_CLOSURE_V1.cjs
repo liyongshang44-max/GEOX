@@ -28,7 +28,7 @@ function buildIrrigationReceiptBody({ tenant_id, project_id, group_id, operation
     group_id,
     operation_plan_id,
     act_task_id,
-    executor_id: { kind: 'script', id: 'acceptance_executor', namespace: 'qa' },
+    executor_id: { kind: 'script', id: 'tok_executor_actor', namespace: 'executor_runtime_v1' },
     execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
     execution_coverage: { kind: 'field', ref: field_id },
     resource_usage: { fuel_l: 0, electric_kwh: 0, water_l: 20, chemical_ml: 0 },
@@ -79,6 +79,7 @@ async function queryFieldMemoryByOperationOrTask(pool, { tenant_id, project_id, 
 async function main() {
   const base = env('BASE_URL', 'http://127.0.0.1:3001');
   const token = env('AO_ACT_TOKEN', '');
+  const executorToken = env('GEOX_EXECUTOR_TOKEN', env('EXECUTOR_TOKEN', 'executor_token'));
   const tenant_id = env('TENANT_ID', 'tenantA');
   const project_id = env('PROJECT_ID', 'projectA');
   const group_id = env('GROUP_ID', 'groupA');
@@ -208,7 +209,7 @@ async function main() {
     ids.skill_binding_id = ids.skill_binding_id || String(ev.skill_binding_id ?? ev.skill_binding_fact_id ?? '');
     checks.task_binds_device_skill = toPassFail(ids.task_id.length > 0 && ids.skill_binding_id.length > 0 && ids.skill_run_id.length > 0);
 
-    const receipt = await fetchJson(`${base}/api/v1/actions/receipt`, { method: 'POST', token, body: buildIrrigationReceiptBody({ tenant_id, project_id, group_id, operation_plan_id, act_task_id: ids.task_id, field_id, suffix, recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, skill_trace_ref: ids.skill_trace_id }) });
+    const receipt = await fetchJson(`${base}/api/v1/actions/receipt`, { method: 'POST', token: executorToken, body: buildIrrigationReceiptBody({ tenant_id, project_id, group_id, operation_plan_id, act_task_id: ids.task_id, field_id, suffix, recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, skill_trace_ref: ids.skill_trace_id }) });
     const receipt_fact_id = String(requireOk(receipt, 'receipt').fact_id ?? '');
     if (receipt_fact_id) await fetchJson(`${base}/api/v1/acceptance/evaluate`, { method: 'POST', token, body: { tenant_id, project_id, group_id, act_task_id: ids.task_id } });
 
