@@ -1,0 +1,115 @@
+{
+  "schema_version": "b09y_candidate_decision_boundary_authority_decision_package_v1",
+  "phase": "B-09y",
+  "status": "RECOMMENDED_NOT_AUTHORIZED",
+  "authority_mode": "PRODUCT_GOVERNANCE_DECISION_PACKAGE_ONLY",
+  "stacked_base_product_head": "6a3d869b7658e0733af2f74b15d291e738ae890a",
+  "decision_id": "DEC-BLINE-CANDIDATE-DECISION-BOUNDARY-001",
+  "problem_statement": "B09v policy selection and future canonical Context/Calculation/Eligibility require one causal CandidateDecision.decision_time, but the current bounded recommendation path exposes only legacy created_ts and persistence occurred_at, neither of which is sufficient authority.",
+  "proposed_authority": {
+    "concept": "CANONICAL_DECISION_BOUNDARY_ENVELOPE_V1",
+    "authority_state": "BOUNDARY_ONLY",
+    "server_created": true,
+    "caller_supplied_decision_time": false,
+    "one_boundary_per_canonical_candidate": true,
+    "canonical_decision_time_source": "server-created boundary envelope decision_time",
+    "required_preconditions": [
+      "all canonical candidate-affecting source inputs intended for the decision are identified",
+      "canonical EvidenceQualification refs are fixed",
+      "canonical Program identity is explicitly supplied or otherwise independently established without field/season latest fallback",
+      "exact scoped FieldProgram fact/version used for Context is bound",
+      "all pre-boundary reads that influence canonical Candidate semantics are complete"
+    ],
+    "placement_rule": "freeze once after canonical input acquisition/binding is complete and before canonical Candidate computation begins",
+    "post_boundary_rule": "no read occurring after the boundary may alter canonical Candidate fields unless it is an as-of read explicitly bounded to the same decision_time and its immutable ref is added to the boundary envelope",
+    "propagated_to": [
+      "CandidateDecisionV1.decision_time",
+      "ContextSnapshotV1.decision_time",
+      "CalculationResultV1.decision_time",
+      "future ActionWindow derivation inputs",
+      "B09v policy selector as-of boundary",
+      "future DecisionEligibilityDecisionV1.decision_time"
+    ]
+  },
+  "boundary_envelope_required_refs": {
+    "evidence_qualification_refs": "nonempty/explicit for paths that claim QUALIFIED_EVIDENCE support",
+    "field_program_fact_ref": "exact immutable fact identity, not program_id-only latest lookup",
+    "context_snapshot_ref": "canonical snapshot built from the exact bound Program/context inputs",
+    "forecast_refs": "optional until MCFT is complete; if absent, FORECAST criterion cannot be SATISFIED",
+    "source_input_refs": "exact immutable decision input refs used by canonical Candidate computation"
+  },
+  "program_binding_rule": {
+    "current_legacy_behavior": "resolveProgramIdForRecommendation may use explicit rec.program_id or field/season ORDER BY occurred_at DESC LIMIT 1 fallback",
+    "canonical_behavior": "field/season latest fallback is forbidden for canonical Context/policy anchoring",
+    "recommended_v1_rule": "canonical path requires an explicit program selector that is server-verified against one exact scoped FieldProgram fact; caller selector is a lookup key only, never authority",
+    "exact_scope_fields": [
+      "tenant_id",
+      "project_id",
+      "group_id",
+      "field_id",
+      "season_id"
+    ],
+    "zero_match": "PROGRAM_CONTEXT_NOT_FOUND",
+    "multiple_or_ambiguous_identity": "PROGRAM_CONTEXT_AMBIGUOUS",
+    "latest_wins": false
+  },
+  "current_route_adjudication": {
+    "pre_candidate_reads_observed": [
+      "refreshFieldReadModelsWithObservabilityV1",
+      "getLatestDerivedSensingStatesByFieldV1",
+      "getLatestWeatherForecastIndexV1",
+      "buildRecommendationsFromStage1Summary inputs"
+    ],
+    "later_reads_observed": [
+      "loadRuleScores",
+      "resolveProgramIdForRecommendation"
+    ],
+    "canonical_effect_classification": {
+      "loadRuleScores": "CURRENTLY_NON_CANONICAL_RANKING_DEBUG_ONLY_FOR_B06C_CANDIDATE_PROJECTION; MUST_NOT_BECOME_CANONICAL_AFTER_BOUNDARY_WITHOUT_REDESIGN",
+      "resolveProgramIdForRecommendation": "CAN_AFFECT_PROGRAM_PROVENANCE_AND_THEREFORE_MUST_NOT_USE_LATEST_FALLBACK_ON_CANONICAL_PATH"
+    }
+  },
+  "explicitly_forbidden_decision_time_sources": [
+    "legacy recommendation created_ts",
+    "decision_recommendation_v1 fact occurred_at",
+    "decision_recommendation_input_facts_v1 fact occurred_at as currently written after recommendation computation",
+    "request arrival time",
+    "wall clock fallback inside Candidate projection",
+    "evaluated_at",
+    "latest persisted fact time"
+  ],
+  "existing_input_fact_adjudication": {
+    "type": "decision_recommendation_input_facts_v1",
+    "current_state": "NOT_CANONICAL_DECISION_BOUNDARY",
+    "reasons": [
+      "currently persisted after recommendation computation has already occurred",
+      "does not freeze all canonical authority refs required by future B-Line path",
+      "created_ts/occurred_at therefore cannot be retroactively treated as decision_time"
+    ],
+    "future_option": "may inspire or be replaced by a governed canonical boundary envelope, but no compatibility type is promoted automatically"
+  },
+  "non_effects": {
+    "runtime_change": false,
+    "schema_change": false,
+    "db_change": false,
+    "route_change": false,
+    "candidate_binding": false,
+    "context_binding": false,
+    "boundary_fact_written": false,
+    "policy_fact_written": false,
+    "b07e_connection": false,
+    "mcft_change": false,
+    "consumer_migration": false,
+    "authority_removal": false
+  },
+  "next_gate_if_authorized": [
+    "freeze exact BoundaryEnvelope contract fields and identity semantics",
+    "define exact Program fact read/binding semantics and context snapshot provenance",
+    "register producer/consumer topology in B02 before runtime implementation",
+    "implement shadow-only boundary/context binding first",
+    "prove legacy recommendation output unchanged",
+    "prove B09v selector can consume bound Candidate/Context on shadow data",
+    "keep FORECAST unresolved until MCFT completion and separate authorization",
+    "do not connect B07e without separate authorization"
+  ]
+}

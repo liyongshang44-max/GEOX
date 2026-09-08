@@ -125,13 +125,16 @@ export function registerDeviceStatusV1Routes(app: FastifyInstance, pool: Pool): 
     let tenant_id = "unknown";
     const device_id = String((req as any).params?.device_id ?? "").trim();
     try {
-      await (requireAuth as any)(req, reply);
+      const auth = await (requireAuth as any)(req, reply) as FactsAuth | null | undefined;
       if ((reply as any).sent) {
         req.log.warn({ route: "device.status", log_tag: statusLogTag, device_id }, "device.status auth blocked");
-        return;
+        return reply;
       }
-      const auth = getAuthContext(req) ?? ({ tenant_id: "tenantA" } as FactsAuth); // Fallback tenant for single-tenant dev.
-      tenant_id = String(auth.tenant_id); // Tenant id.
+      if (!auth || typeof auth.tenant_id !== "string" || !auth.tenant_id.trim()) {
+        req.log.warn({ route: "device.status", log_tag: statusLogTag, device_id }, "device.status authenticated context missing");
+        return reply.code(401).send({ ok: false, error: "AUTH_CONTEXT_REQUIRED" });
+      }
+      tenant_id = auth.tenant_id.trim(); // Tenant id is bound exclusively to authenticated context.
       req.log.info({ route: "device.status", log_tag: statusLogTag, tenant_id, device_id }, "device.status auth resolved");
       if (!device_id) return reply.code(400).send({ ok: false, error: "BAD_REQUEST", message: "invalid device_id" });
 

@@ -34,14 +34,10 @@ function toNum(v: unknown): number | null {
 }
 
 function uniqueTextList(values: unknown[]): string[] {
-  return Array.from(new Set(
-    values
-      .map((v) => toText(v))
-      .filter((v): v is string => Boolean(v))
-  ));
+  return Array.from(new Set(values.map((v) => toText(v)).filter((v): v is string => Boolean(v))));
 }
 
-function emptySamplingReportView(): SamplingReportViewV1 {
+function emptySamplingReportView(blocking_reasons: string[] = []): SamplingReportViewV1 {
   return {
     plan_id: null,
     sample_id: null,
@@ -51,25 +47,43 @@ function emptySamplingReportView(): SamplingReportViewV1 {
     lab_result_status: "MISSING",
     acceptance_status: "MISSING",
     customer_visible_eligible: false,
-    blocking_reasons: [],
+    blocking_reasons,
   };
+}
+
+function rowRecord(row: any): any {
+  return row?.record_json ?? null;
 }
 
 export async function buildSamplingReportViewV1(pool: Pool, params: SamplingScope): Promise<SamplingReportViewV1> {
   const scope = [params.tenant_id, params.project_id, params.group_id];
-  const plan = toText(params.plan_id);
+  const requestedPlanId = toText(params.plan_id);
   const operationIds = uniqueTextList([
     params.operation_id,
     ...(Array.isArray(params.operation_ids) ? params.operation_ids : []),
   ]);
 
-  if (!plan && operationIds.length < 1) return emptySamplingReportView();
+  if (!requestedPlanId && operationIds.length < 1) return emptySamplingReportView();
 
-  let resolvedPlanId: string | null = plan;
+  let planRow: any = null;
 
-  if (!resolvedPlanId && operationIds.length > 0) {
-    const relationRow = await pool.query(
-      `SELECT record_json
+  if (requestedPlanId) {
+    const planRows = await pool.query(
+      `SELECT fact_id, record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type')='sampling_plan_v1'
+          AND (record_json::jsonb->>'tenant_id')=$1
+          AND (record_json::jsonb->>'project_id')=$2
+          AND (record_json::jsonb->>'group_id')=$3
+          AND (record_json::jsonb->>'plan_id')=$4
+        LIMIT 2`,
+      [...scope, requestedPlanId],
+    );
+    if ((planRows.rows?.length ?? 0) > 1) return emptySamplingReportView(["AMBIGUOUS_SAMPLING_PLAN_BINDING"]);
+    planRow = planRows.rows?.[0] ?? null;
+  } else {
+    const relationRows = await pool.query(
+      `SELECT fact_id, record_json
          FROM facts
         WHERE (record_json::jsonb->>'type')='sampling_operation_relation_v1'
           AND (record_json::jsonb->>'tenant_id')=$1
@@ -78,94 +92,191 @@ export async function buildSamplingReportViewV1(pool: Pool, params: SamplingScop
           AND (
             (record_json::jsonb->>'operation_id') = ANY($4::text[])
             OR (record_json::jsonb->>'operation_plan_id') = ANY($4::text[])
-          )
-        ORDER BY occurred_at DESC
-        LIMIT 1`,
+          )`,
       [...scope, operationIds],
     );
-    resolvedPlanId = toText(relationRow.rows?.[0]?.record_json?.plan_id);
+    const planFactIds = uniqueTextList((relationRows.rows ?? []).map((row: any) => rowRecord(row)?.plan_fact_id));
+    if (planFactIds.length > 1) return emptySamplingReportView(["AMBIGUOUS_SAMPLING_PLAN_BINDING"]);
+    const planFactId = planFactIds[0] ?? null;
+    if (!planFactId) return emptySamplingReportView();
+    const exactPlan = await pool.query(
+      `SELECT fact_id, record_json
+         FROM facts
+        WHERE fact_id=$1
+          AND (record_json::jsonb->>'type')='sampling_plan_v1'
+          AND (record_json::jsonb->>'tenant_id')=$2
+          AND (record_json::jsonb->>'project_id')=$3
+          AND (record_json::jsonb->>'group_id')=$4
+        LIMIT 1`,
+      [planFactId, ...scope],
+    );
+    planRow = exactPlan.rows?.[0] ?? null;
   }
 
-  if (!resolvedPlanId) return emptySamplingReportView();
+  const plan: any = rowRecord(planRow);
+  if (!planRow || !plan) return emptySamplingReportView();
 
-  const planRow = await pool.query(
-      `SELECT record_json
-         FROM facts
-        WHERE (record_json::jsonb->>'type')='sampling_plan_v1'
-          AND (record_json::jsonb->>'tenant_id')=$1
-          AND (record_json::jsonb->>'project_id')=$2
-          AND (record_json::jsonb->>'group_id')=$3
-          AND (record_json::jsonb->>'plan_id')=$4
-        ORDER BY occurred_at DESC
-        LIMIT 1`,
-      [...scope, resolvedPlanId],
-    );
+  const planFactId = toText(plan.plan_fact_id);
+  const planId = toText(plan.plan_id);
+  if (!planFactId || planRow.fact_id !== planFactId) return emptySamplingReportView(["SAMPLING_PLAN_EXACT_IDENTITY_MISSING"]);
 
-  const planJson: any = planRow.rows?.[0]?.record_json ?? null;
-  resolvedPlanId = toText(planJson?.plan_id) ?? resolvedPlanId;
+  const receiptRows = await pool.query(
+    `SELECT fact_id, record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type')='sample_receipt_v1'
+        AND (record_json::jsonb->>'tenant_id')=$1
+        AND (record_json::jsonb->>'project_id')=$2
+        AND (record_json::jsonb->>'group_id')=$3
+        AND (record_json::jsonb->>'plan_fact_id')=$4
+      LIMIT 2`,
+    [...scope, planFactId],
+  );
 
-  const receiptRow = resolvedPlanId
-    ? await pool.query(
-      `SELECT record_json
-         FROM facts
-        WHERE (record_json::jsonb->>'type')='sample_receipt_v1'
-          AND (record_json::jsonb->>'tenant_id')=$1
-          AND (record_json::jsonb->>'project_id')=$2
-          AND (record_json::jsonb->>'group_id')=$3
-          AND (record_json::jsonb->>'plan_id')=$4
-        ORDER BY occurred_at DESC
-        LIMIT 1`,
-      [...scope, resolvedPlanId],
-    )
-    : { rows: [] as any[] };
-  const receipt: any = receiptRow.rows?.[0]?.record_json ?? null;
-  const sampleId = toText(receipt?.sample_id);
+  if ((receiptRows.rows?.length ?? 0) > 1) {
+    return {
+      ...emptySamplingReportView(["AMBIGUOUS_SAMPLE_RECEIPT_BINDING"]),
+      plan_id: planId,
+      sample_type: (["SOIL", "TISSUE", "WATER"].includes(String(plan.sample_type ?? "").toUpperCase())
+        ? String(plan.sample_type).toUpperCase()
+        : null) as SamplingReportViewV1["sample_type"],
+      zone_id: toText(plan.zone_id),
+    };
+  }
 
-  const labRow = sampleId
-    ? await pool.query(
-      `SELECT record_json
+  const receiptRow: any = receiptRows.rows?.[0] ?? null;
+  const receipt: any = rowRecord(receiptRow);
+  if (!receiptRow || !receipt) {
+    return {
+      ...emptySamplingReportView(),
+      plan_id: planId,
+      sample_type: (["SOIL", "TISSUE", "WATER"].includes(String(plan.sample_type ?? "").toUpperCase())
+        ? String(plan.sample_type).toUpperCase()
+        : null) as SamplingReportViewV1["sample_type"],
+      zone_id: toText(plan.zone_id),
+    };
+  }
+
+  const receiptFactId = toText(receipt.receipt_fact_id);
+  const sampleId = toText(receipt.sample_id);
+  const exactReceiptOk = Boolean(
+    receiptFactId
+    && receiptRow.fact_id === receiptFactId
+    && receipt.plan_fact_id === planFactId
+    && receipt.plan_id === planId
+  );
+  if (!exactReceiptOk) {
+    return {
+      ...emptySamplingReportView(["SAMPLE_RECEIPT_EXACT_BINDING_INVALID"]),
+      plan_id: planId,
+      sample_id: sampleId,
+      zone_id: toText(receipt.zone_id ?? plan.zone_id),
+      collected_at_ts: toNum(receipt.collected_at_ts),
+    };
+  }
+
+  const acceptanceRows = await pool.query(
+    `SELECT fact_id, record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type')='sampling_acceptance_v1'
+        AND (record_json::jsonb->>'tenant_id')=$1
+        AND (record_json::jsonb->>'project_id')=$2
+        AND (record_json::jsonb->>'group_id')=$3
+        AND (record_json::jsonb->>'plan_fact_id')=$4
+        AND (record_json::jsonb->>'receipt_fact_id')=$5
+        AND (record_json::jsonb->>'sample_id')=$6
+      LIMIT 2`,
+    [...scope, planFactId, receiptFactId, sampleId],
+  );
+
+  if ((acceptanceRows.rows?.length ?? 0) > 1) {
+    return {
+      ...emptySamplingReportView(["AMBIGUOUS_SAMPLING_ACCEPTANCE_BINDING"]),
+      plan_id: planId,
+      sample_id: sampleId,
+      sample_type: (["SOIL", "TISSUE", "WATER"].includes(String(receipt.sample_type ?? plan.sample_type ?? "").toUpperCase())
+        ? String(receipt.sample_type ?? plan.sample_type).toUpperCase()
+        : null) as SamplingReportViewV1["sample_type"],
+      zone_id: toText(receipt.zone_id ?? plan.zone_id),
+      collected_at_ts: toNum(receipt.collected_at_ts),
+    };
+  }
+
+  const acceptanceRow: any = acceptanceRows.rows?.[0] ?? null;
+  const acceptance: any = rowRecord(acceptanceRow);
+
+  let labRow: any = null;
+  let exactBlocking: string[] = [];
+
+  if (acceptance) {
+    const labFactId = toText(acceptance.lab_fact_id);
+    if (!labFactId
+      || acceptanceRow.fact_id !== toText(acceptance.acceptance_fact_id)
+      || acceptance.plan_fact_id !== planFactId
+      || acceptance.receipt_fact_id !== receiptFactId
+      || acceptance.sample_id !== sampleId) {
+      exactBlocking.push("SAMPLING_ACCEPTANCE_EXACT_BINDING_INVALID");
+    } else {
+      const exactLab = await pool.query(
+        `SELECT fact_id, record_json
+           FROM facts
+          WHERE fact_id=$1
+            AND (record_json::jsonb->>'type')='lab_result_import_v1'
+          LIMIT 1`,
+        [labFactId],
+      );
+      labRow = exactLab.rows?.[0] ?? null;
+      const lab = rowRecord(labRow);
+      if (!labRow
+        || labRow.fact_id !== toText(lab?.lab_fact_id)
+        || lab?.plan_fact_id !== planFactId
+        || lab?.receipt_fact_id !== receiptFactId
+        || lab?.sample_id !== sampleId
+        || lab?.import_id !== acceptance.import_id) {
+        labRow = null;
+        exactBlocking.push("SAMPLING_ACCEPTANCE_LAB_BINDING_INVALID");
+      }
+    }
+  } else {
+    const labRows = await pool.query(
+      `SELECT fact_id, record_json
          FROM facts
         WHERE (record_json::jsonb->>'type')='lab_result_import_v1'
-          AND (record_json::jsonb->>'sample_id')=$1
-        ORDER BY occurred_at DESC
-        LIMIT 1`,
-      [sampleId],
-    )
-    : { rows: [] as any[] };
-  const lab: any = labRow.rows?.[0]?.record_json ?? null;
-  const importId = toText(lab?.import_id);
+          AND (record_json::jsonb->>'plan_fact_id')=$1
+          AND (record_json::jsonb->>'receipt_fact_id')=$2
+          AND (record_json::jsonb->>'sample_id')=$3
+        LIMIT 2`,
+      [planFactId, receiptFactId, sampleId],
+    );
+    if ((labRows.rows?.length ?? 0) > 1) exactBlocking.push("AMBIGUOUS_LAB_RESULT_BINDING");
+    else labRow = labRows.rows?.[0] ?? null;
+  }
 
-  const acceptanceRow = sampleId
-    ? await pool.query(
-      `SELECT record_json
-         FROM facts
-        WHERE (record_json::jsonb->>'type')='sampling_acceptance_v1'
-          AND (record_json::jsonb->>'sample_id')=$1
-          AND ($2::text IS NULL OR (record_json::jsonb->>'import_id')=$2 OR (record_json::jsonb->>'plan_id')=$3)
-        ORDER BY occurred_at DESC
-        LIMIT 1`,
-      [sampleId, importId, resolvedPlanId],
-    )
-    : { rows: [] as any[] };
-  const acceptance: any = acceptanceRow.rows?.[0]?.record_json ?? null;
+  const lab: any = rowRecord(labRow);
+  if (labRow && labRow.fact_id !== toText(lab?.lab_fact_id)) {
+    labRow = null;
+    exactBlocking.push("LAB_RESULT_EXACT_IDENTITY_INVALID");
+  }
 
-  const sampleTypeRaw = String(receipt?.sample_type ?? planJson?.sample_type ?? "").toUpperCase();
+  const sampleTypeRaw = String(receipt.sample_type ?? plan.sample_type ?? "").toUpperCase();
   const sample_type = (["SOIL", "TISSUE", "WATER"].includes(sampleTypeRaw) ? sampleTypeRaw : null) as SamplingReportViewV1["sample_type"];
   const labRaw = String(lab?.quality_status ?? "").toUpperCase();
   const lab_result_status = (["PASS", "NEEDS_REVIEW", "INVALID"].includes(labRaw) ? labRaw : "MISSING") as SamplingReportViewV1["lab_result_status"];
   const verdict = String(acceptance?.verdict ?? "").toUpperCase();
   const acceptance_status = (verdict === "PASS" ? "PASS" : verdict === "FAIL" ? "FAIL" : verdict === "INSUFFICIENT_EVIDENCE" ? "NEEDS_REVIEW" : "MISSING") as SamplingReportViewV1["acceptance_status"];
-  const blocking_reasons = Array.isArray(acceptance?.reasons) ? acceptance.reasons.map((x: unknown) => String(x ?? "").trim()).filter(Boolean) : [];
+  const acceptanceReasons = Array.isArray(acceptance?.reasons)
+    ? acceptance.reasons.map((x: unknown) => String(x ?? "").trim()).filter(Boolean)
+    : [];
+  const blocking_reasons = uniqueTextList([...exactBlocking, ...acceptanceReasons]);
 
   return {
-    plan_id: resolvedPlanId,
+    plan_id: planId,
     sample_id: sampleId,
     sample_type,
-    zone_id: toText(receipt?.zone_id ?? planJson?.zone_id),
-    collected_at_ts: toNum(receipt?.collected_at_ts),
+    zone_id: toText(receipt.zone_id ?? plan.zone_id),
+    collected_at_ts: toNum(receipt.collected_at_ts),
     lab_result_status,
     acceptance_status,
-    customer_visible_eligible: lab_result_status === "PASS" && acceptance_status === "PASS",
+    customer_visible_eligible: exactBlocking.length === 0 && lab_result_status === "PASS" && acceptance_status === "PASS",
     blocking_reasons,
   };
 }
