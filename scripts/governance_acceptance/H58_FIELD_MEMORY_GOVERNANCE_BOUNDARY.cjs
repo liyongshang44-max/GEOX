@@ -99,7 +99,6 @@ requireIncludes('field_memory_service', fieldMemoryService, [
 ]);
 
 requireIncludes('field_memory_acceptance', fieldMemoryAcceptance, [
-  'ACCEPTANCE_FIELD_MEMORY_V1',
   'FIELD_RESPONSE_MEMORY',
   'DEVICE_RELIABILITY_MEMORY',
   'SKILL_PERFORMANCE_MEMORY',
