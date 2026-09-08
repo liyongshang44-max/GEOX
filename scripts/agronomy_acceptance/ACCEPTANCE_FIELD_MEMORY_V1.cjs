@@ -671,7 +671,7 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
     skill_trace_ref: x?.skill_trace_ref,
   }));
 
-  const fieldResponseItems = byScopeItems.filter((x) => x?.memory_type === 'FIELD_RESPONSE_MEMORY');
+  const formalFieldResponseItems = byScopeItems.filter((x) => x?.memory_type === 'FIELD_RESPONSE_MEMORY');
   const deviceItems = byScopeItems.filter((x) => x?.memory_type === 'DEVICE_RELIABILITY_MEMORY');
   const colCheck = await pool.query(`
     SELECT data_type, udt_name, column_default, is_nullable
@@ -704,8 +704,17 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
   const currentChainMemoryLinked = linkedMemoryItems.length >= 3;
   const checks = {
     db_contract_aligned: dbContractAligned,
-    field_response_memory_written:
-     byType.has('FIELD_RESPONSE_MEMORY'),
+    formal_field_memory_not_auto_promoted:
+      formalFieldResponseItems.length === 0,
+    formal_memory_lane_not_auto_promoted:
+      byScopeItems.every((item) =>
+        String(item?.memory_lane ?? '') !== 'FORMAL_FIELD_MEMORY'
+        && String(item?.trust_level ?? '') !== 'FORMAL_ACCEPTED'
+      ),
+    technical_memory_not_customer_visible:
+      byScopeItems.every((item) => item?.customer_visible_memory !== true),
+    technical_memory_not_learning_eligible:
+      byScopeItems.every((item) => item?.learning_eligible !== true),
     device_reliability_memory_written: byType.has('DEVICE_RELIABILITY_MEMORY'),
     skill_performance_memory_written: byType.has('SKILL_PERFORMANCE_MEMORY'),
     memory_query_by_field: byScopeItems.length >= 3 && byScopeItems.every((item) => String(item?.field_id ?? '') === field_id),
@@ -716,24 +725,10 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
     memory_has_summary_text: byScopeItems.every((item) => String(item?.summary_text ?? "").trim().length > 0),
     memory_has_evidence_refs: byScopeItems.every((item) => Array.isArray(item?.evidence_refs)),
     skill_memory_has_skill_trace_ref: byScopeItems.filter((x)=>x.memory_type==='SKILL_PERFORMANCE_MEMORY').every((x)=>String(x.skill_trace_ref??'').trim().length>0),
-    field_response_has_before_value: fieldResponseItems.some((x) => Number.isFinite(Number(x?.before_value))),
-    field_response_has_after_value: fieldResponseItems.some((x) => Number.isFinite(Number(x?.after_value))),
-    field_response_has_delta_value: fieldResponseItems.some((x) => Number.isFinite(Number(x?.delta_value))),
     device_memory_has_skill_id: deviceItems.some((x) => String(x?.skill_id ?? "").trim().length > 0),
     device_memory_has_response_metric: deviceItems.some((x) => String(x?.metric_key ?? "") === "valve_response_status"),
-    report_field_response_contains_delta: fieldResponseItems.some((x) => {
-      const before = Number(x?.before_value);
-      const after = Number(x?.after_value);
-      const delta = Number(x?.delta_value);
-      return Number.isFinite(before)
-        && Number.isFinite(after)
-        && Number.isFinite(delta)
-        && Math.abs(delta) > 0;
-    }),
-    report_reads_field_memory:
-      fieldResponseItems.length > 0
-      && deviceItems.length > 0
-      && byScopeItems.some((x) => x?.memory_type === 'SKILL_PERFORMANCE_MEMORY'),
+    formal_promotion_route_present:
+      Boolean(openapi?.paths?.['/api/v1/field-memory/from-acceptance']?.post),
     openapi_matches_routes: Boolean(openapi?.components?.schemas?.FieldMemoryV1)
       && Boolean(openapi?.paths?.['/api/v1/field-memory'])
       && Boolean(openapi?.paths?.['/api/v1/field-memory/summary']),
