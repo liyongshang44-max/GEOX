@@ -37,6 +37,7 @@ function buildIrrigationReceiptBody({
   recommendation_id,
   prescription_id,
   skill_trace_ref,
+  executor_actor_id,
   water_l = 20,
   observed_parameters,
 }) {
@@ -46,7 +47,7 @@ function buildIrrigationReceiptBody({
     group_id,
     operation_plan_id,
     act_task_id,
-    executor_id: { kind: 'script', id: 'acceptance_executor', namespace: 'qa' },
+    executor_id: { kind: 'script', id: executor_actor_id, namespace: 'executor_runtime_v1' },
     execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
     execution_coverage: { kind: 'field', ref: field_id },
     resource_usage: { fuel_l: 0, electric_kwh: 0, water_l, chemical_ml: 0 },
@@ -265,6 +266,7 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
   const approverToken = env('APPROVER_TOKEN', 'approver_token');
   const operatorToken = env('OPERATOR_TOKEN', 'operator_token');
   const executorToken = env('EXECUTOR_TOKEN', 'executor_token');
+  const executorActorId = env('EXECUTOR_ACTOR_ID', 'tok_executor_actor');
   const tenant_id = env('TENANT_ID', 'tenantA');
   const project_id = env('PROJECT_ID', 'projectA');
   const group_id = env('GROUP_ID', 'groupA');
@@ -543,6 +545,7 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
       recommendation_id: recId,
       prescription_id,
       skill_trace_ref,
+      executor_actor_id: executorActorId,
       observed_parameters: successorObservedParameters,
     })
   });
