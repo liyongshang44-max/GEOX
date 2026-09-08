@@ -5,19 +5,19 @@
 // 2) keeps the existing v0 AO-ACT / approval runtime as the execution core;
 // 3) adds explicit dispatch/outbox facts so adapters can drain a bounded queue without auto-scheduling.
 
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify"; // Fastify types for route handlers.
-import type { Pool } from "pg"; // Postgres pool typing.
-import { createHash, randomUUID } from "node:crypto"; // Stable unique ids for wrapper facts + payload hashing.
-import { requireAoActScopeV0, requireAoActAdminV0, type AoActAuthContextV0 } from "../../auth/ao_act_authz_v0.js"; // Reuse existing token/scope auth.
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { Pool } from "pg";
+import { createHash, randomUUID } from "node:crypto";
+import { requireAoActScopeV0, requireAoActAdminV0, type AoActAuthContextV0 } from "../../auth/ao_act_authz_v0.js";
 import { decideDispatchCandidates, type DispatchExecutorResource } from "./dispatch_decision_strategy.js";
+import { resolveApprovalExecutionContextV1 } from "./approval_execution_context_v1.js";
 import {
   checkCapabilityCompatibilityMatrix,
   resolveTaskCapabilityViaDeviceSkillsResult,
 } from "@geox/device-skills";
 
-type TenantTriple = { tenant_id: string; project_id: string; group_id: string }; // Hard-isolation tenant triple.
-
-type ParsedFactRow = { fact_id: string; occurred_at: string; source: string; record_json: any }; // Normalized fact row.
+type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
+type ParsedFactRow = { fact_id: string; occurred_at: string; source: string; record_json: any };
 type OperationPlanStateReadModelRow = {
   plan_id: string;
   status: string;
@@ -25,12 +25,11 @@ type OperationPlanStateReadModelRow = {
   field_id: string | null;
   last_transition: string | null;
   receipt_status: string | null;
-}; // Canonical state-centric read model row for UI/backend convergence.
-
+};
 type DispatchSlaInput = { accept_minutes?: number | null; arrive_minutes?: number | null };
 
 function badRequest(reply: FastifyReply, error: string) {
-  return reply.status(400).send({ ok: false, error }); // Deterministic 400 helper.
+  return reply.status(400).send({ ok: false, error });
 }
 
 function requireExecutorServicePrincipalV1(auth: AoActAuthContextV0, reply: FastifyReply): boolean {
@@ -87,17 +86,17 @@ function capabilityError(reply: FastifyReply, input: {
       code: input.error.code,
       message: input.error.message,
       reasons: input.error.reasons ?? [],
-      compatibility: input.error.compatibility ?? null
-    }
+      compatibility: input.error.compatibility ?? null,
+    },
   });
 }
 
 function parseJsonMaybe(v: any): any {
-  if (v && typeof v === "object") return v; // json/jsonb may already be parsed.
+  if (v && typeof v === "object") return v;
   if (typeof v === "string") {
-    try { return JSON.parse(v); } catch { return null; } // Best-effort parse.
+    try { return JSON.parse(v); } catch { return null; }
   }
-  return null; // Unknown shape => null.
+  return null;
 }
 
 function normalizeCapabilities(input: any): string[] {
@@ -110,26 +109,18 @@ function parseFiniteNumber(v: any): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-
 function sanitizeParametersBySchema(parameterSchema: any, rawParameters: any): Record<string, unknown> {
   const allowedKeys = new Set(
     Array.isArray(parameterSchema?.keys)
       ? parameterSchema.keys.map((x: any) => String(x?.name ?? "").trim()).filter(Boolean)
-      : []
+      : [],
   );
   const source = rawParameters && typeof rawParameters === "object" ? rawParameters : {};
-  return Object.fromEntries(
-    Object.entries(source).filter(([k]) => allowedKeys.has(k))
-  );
+  return Object.fromEntries(Object.entries(source).filter(([k]) => allowedKeys.has(k)));
 }
 
 function parseTaskLocation(taskPayload: any): { lat: number; lon: number } | null {
-  const sources = [
-    taskPayload?.meta?.location,
-    taskPayload?.location,
-    taskPayload?.meta?.geo_point,
-    taskPayload?.geo_point
-  ];
+  const sources = [taskPayload?.meta?.location, taskPayload?.location, taskPayload?.meta?.geo_point, taskPayload?.geo_point];
   for (const source of sources) {
     if (!source || typeof source !== "object") continue;
     const lat = parseFiniteNumber((source as any).lat ?? (source as any).latitude);
@@ -149,7 +140,7 @@ function extractFirstInvalidField(input: any): string | null {
     typeof input?.path === "string" ? input.path : "",
     typeof input?.message === "string" ? input.message : "",
     typeof input?.error === "string" ? input.error : "",
-    typeof input?.detail?.message === "string" ? input.detail.message : ""
+    typeof input?.detail?.message === "string" ? input.detail.message : "",
   ].filter(Boolean);
   for (const item of candidateStrings) {
     const match = String(item).match(/(?:parameter_schema|parameters|constraints|meta|target|time_window|issuer)\.?([a-zA-Z0-9_.-]+)?/);
@@ -199,7 +190,7 @@ async function listHumanExecutorResources(pool: Pool, tenant: TenantTriple): Pro
          AND h.status = 'ACTIVE'
        ORDER BY h.updated_ts_ms DESC, h.executor_id ASC
        LIMIT 500`,
-      [tenant.tenant_id, tenant.project_id, tenant.group_id]
+      [tenant.tenant_id, tenant.project_id, tenant.group_id],
     );
     return (q.rows ?? []).map((row: any) => ({
       executor_id: String(row.executor_id ?? ""),
@@ -220,7 +211,7 @@ async function listHumanExecutorResources(pool: Pool, tenant: TenantTriple): Pro
           return Number((((onTime * 0.4) + (firstPass * 0.3) + (acceptScore * 0.2) + ((1 - recurrence) * 0.1)) * 30).toFixed(2));
         })(),
       },
-      location: null
+      location: null,
     })).filter((row) => row.executor_id);
   } catch {
     return [];
@@ -233,42 +224,41 @@ function parseDispatchSla(body: any): DispatchSlaInput {
   return { accept_minutes: accept, arrive_minutes: arrive };
 }
 
-// Host entrypoint default is http://127.0.0.1:3001; container-internal service calls remain http://server:3000.
 function hostBaseUrl(req: FastifyRequest): string {
-  const envBase = String(process.env.GEOX_INTERNAL_BASE_URL ?? "").trim(); // Optional explicit internal base.
-  if (envBase) return envBase; // Prefer explicit internal URL when present.
-  const host = String((req.headers as any).host ?? "127.0.0.1:3001"); // Fallback to request Host header.
-  return `http://${host}`; // Same-process HTTP delegation target.
+  const envBase = String(process.env.GEOX_INTERNAL_BASE_URL ?? "").trim();
+  if (envBase) return envBase;
+  const host = String((req.headers as any).host ?? "127.0.0.1:3001");
+  return `http://${host}`;
 }
 
 function requireTenantMatchOr404(auth: AoActAuthContextV0, tenant: TenantTriple, reply: FastifyReply): boolean {
   if (auth.tenant_id !== tenant.tenant_id || auth.project_id !== tenant.project_id || auth.group_id !== tenant.group_id) {
-    reply.status(404).send({ ok: false, error: "NOT_FOUND" }); // Cross-tenant requests stay non-enumerable.
-    return false; // Halt caller.
+    reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    return false;
   }
-  return true; // Tenant matches token scope.
+  return true;
 }
 
 function queryTenantFromReq(req: FastifyRequest, auth: AoActAuthContextV0): TenantTriple {
-  const q: any = (req as any).query ?? {}; // Read query object.
+  const q: any = (req as any).query ?? {};
   return {
     tenant_id: typeof q.tenant_id === "string" ? q.tenant_id.trim() : "",
     project_id: typeof q.project_id === "string" ? q.project_id.trim() : "",
-    group_id: typeof q.group_id === "string" ? q.group_id.trim() : ""
-  }; // Require explicit tenant triple in query for anti-enumeration hardening.
+    group_id: typeof q.group_id === "string" ? q.group_id.trim() : "",
+  };
 }
 
 function parseTenantFromBody(body: any): TenantTriple {
   return {
     tenant_id: String(body?.tenant_id ?? "").trim(),
     project_id: String(body?.project_id ?? "").trim(),
-    group_id: String(body?.group_id ?? "").trim()
-  }; // Require explicit tenant triple in body for all write endpoints.
+    group_id: String(body?.group_id ?? "").trim(),
+  };
 }
 
 function requireTenantFieldsPresentOr400(tenant: TenantTriple, reply: FastifyReply): boolean {
   if (!tenant.tenant_id || !tenant.project_id || !tenant.group_id) {
-    reply.status(400).send({ ok: false, error: "MISSING_TENANT_SCOPE" }); // Require explicit tenant fields.
+    reply.status(400).send({ ok: false, error: "MISSING_TENANT_SCOPE" });
     return false;
   }
   return true;
@@ -276,393 +266,27 @@ function requireTenantFieldsPresentOr400(tenant: TenantTriple, reply: FastifyRep
 
 async function ensureDeviceBelongsTenantOr404(pool: Pool, tenant: TenantTriple, device_id: string): Promise<boolean> {
   const q = await pool.query(
-    `SELECT 1
-       FROM device_index_v1
-      WHERE tenant_id = $1 AND device_id = $2
-      LIMIT 1`,
-    [tenant.tenant_id, device_id]
-  ); // Object-level validation: device must exist in tenant projection.
+    `SELECT 1 FROM device_index_v1 WHERE tenant_id = $1 AND device_id = $2 LIMIT 1`,
+    [tenant.tenant_id, device_id],
+  );
   return (q.rowCount ?? 0) > 0;
 }
 
 async function insertFact(pool: Pool, source: string, record_json: any): Promise<string> {
-  const fact_id = randomUUID(); // Wrapper fact id.
+  const fact_id = randomUUID();
   await pool.query(
     "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
-    [fact_id, source, record_json]
-  ); // Append-only insert.
-  return fact_id; // Return created fact id.
-}
-
-let ensureDispatchQueueRuntimePromise: Promise<void> | null = null; // Process-local one-time runtime table init.
-
-async function ensureDispatchQueueRuntime(pool: Pool): Promise<void> {
-  if (!ensureDispatchQueueRuntimePromise) {
-    ensureDispatchQueueRuntimePromise = (async () => {
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS dispatch_queue_v1 (
-          queue_id text PRIMARY KEY,
-          tenant_id text NOT NULL,
-          project_id text NOT NULL,
-          group_id text NOT NULL,
-          act_task_id text NOT NULL,
-          command_id text NOT NULL,
-          task_fact_id text NOT NULL,
-          outbox_fact_id text NOT NULL,
-          device_id text NULL,
-          downlink_topic text NULL,
-          qos integer NOT NULL DEFAULT 1,
-          retain boolean NOT NULL DEFAULT false,
-          adapter_hint text NULL,
-          state text NOT NULL,
-          claim_id text NULL,
-          lease_token text NULL,
-          leased_by text NULL,
-          lease_expires_at timestamptz NULL,
-          lease_expire_at bigint NULL,
-          claimed_by text NULL,
-          claimed_ts bigint NULL,
-          lease_until_ts bigint NULL,
-          publish_fact_id text NULL,
-          ack_fact_id text NULL,
-          receipt_fact_id text NULL,
-          attempt_no integer NOT NULL DEFAULT 0,
-          attempt_count integer NOT NULL DEFAULT 0,
-          last_error text NULL,
-          created_at timestamptz NOT NULL DEFAULT now(),
-          updated_at timestamptz NOT NULL DEFAULT now(),
-          CONSTRAINT dispatch_queue_v1_state_ck CHECK (state IN ('CREATED','READY','DISPATCHED','ACKED','SUCCEEDED','FAILED')),
-          CONSTRAINT dispatch_queue_v1_task_unique UNIQUE (tenant_id, project_id, group_id, act_task_id),
-          CONSTRAINT dispatch_queue_v1_command_unique UNIQUE (tenant_id, project_id, group_id, command_id)
-        )
-      `); // Runtime queue state lives outside the append-only ledger.
-      await pool.query(`CREATE INDEX IF NOT EXISTS idx_dispatch_queue_v1_ready ON dispatch_queue_v1 (tenant_id, project_id, group_id, state, created_at)`);
-      await pool.query(`CREATE INDEX IF NOT EXISTS idx_dispatch_queue_v1_outbox ON dispatch_queue_v1 (outbox_fact_id)`);
-      await pool.query(`ALTER TABLE dispatch_queue_v1 ADD COLUMN IF NOT EXISTS command_id text`);
-      await pool.query(`ALTER TABLE dispatch_queue_v1 ADD COLUMN IF NOT EXISTS claim_id text`);
-      await pool.query(`ALTER TABLE dispatch_queue_v1 ADD COLUMN IF NOT EXISTS claimed_by text`);
-      await pool.query(`ALTER TABLE dispatch_queue_v1 ADD COLUMN IF NOT EXISTS claimed_ts bigint`);
-      await pool.query(`ALTER TABLE dispatch_queue_v1 ADD COLUMN IF NOT EXISTS lease_until_ts bigint`);
-      await pool.query(`ALTER TABLE dispatch_queue_v1 ADD COLUMN IF NOT EXISTS lease_expire_at bigint`);
-      await pool.query(`ALTER TABLE dispatch_queue_v1 ADD COLUMN IF NOT EXISTS attempt_no integer NOT NULL DEFAULT 0`);
-      await pool.query(`ALTER TABLE dispatch_queue_v1 ADD COLUMN IF NOT EXISTS attempt_count integer NOT NULL DEFAULT 0`);
-      await pool.query(`UPDATE dispatch_queue_v1 SET command_id = act_task_id WHERE command_id IS NULL OR command_id = ''`);
-      await pool.query(`ALTER TABLE dispatch_queue_v1 ALTER COLUMN command_id SET NOT NULL`);
-      await pool.query(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dispatch_queue_v1_command_unique') THEN ALTER TABLE dispatch_queue_v1 ADD CONSTRAINT dispatch_queue_v1_command_unique UNIQUE (tenant_id, project_id, group_id, command_id); END IF; END $$;`);
-    })().catch((err) => {
-      ensureDispatchQueueRuntimePromise = null; // Allow retry on startup race or transient DB error.
-      throw err;
-    });
-  }
-  await ensureDispatchQueueRuntimePromise;
-}
-
-async function upsertDispatchQueueReady(pool: Pool, row: {
-  tenant: TenantTriple;
-  queue_id: string;
-  act_task_id: string;
-  command_id: string;
-  task_fact_id: string;
-  outbox_fact_id: string;
-  device_id: string | null;
-  downlink_topic: string | null;
-  qos: number;
-  retain: boolean;
-  adapter_hint: string | null;
-}): Promise<void> {
-  await ensureDispatchQueueRuntime(pool);
-  await pool.query(
-    `INSERT INTO dispatch_queue_v1 (
-       queue_id, tenant_id, project_id, group_id, act_task_id, command_id, task_fact_id, outbox_fact_id,
-       device_id, downlink_topic, qos, retain, adapter_hint, state,
-       created_at, updated_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'READY',NOW(),NOW())
-     ON CONFLICT (tenant_id, project_id, group_id, act_task_id)
-     DO UPDATE SET
-       command_id = EXCLUDED.command_id,
-       task_fact_id = EXCLUDED.task_fact_id,
-       outbox_fact_id = EXCLUDED.outbox_fact_id,
-       device_id = EXCLUDED.device_id,
-       downlink_topic = EXCLUDED.downlink_topic,
-       qos = EXCLUDED.qos,
-       retain = EXCLUDED.retain,
-       adapter_hint = EXCLUDED.adapter_hint,
-       state = CASE WHEN dispatch_queue_v1.state IN ('SUCCEEDED','FAILED') THEN dispatch_queue_v1.state ELSE 'READY' END,
-       claim_id = NULL,
-       lease_token = NULL,
-       leased_by = NULL,
-       lease_expires_at = NULL,
-       lease_expire_at = NULL,
-       lease_until_ts = NULL,
-       updated_at = NOW()`,
-    [
-      row.queue_id,
-      row.tenant.tenant_id,
-      row.tenant.project_id,
-      row.tenant.group_id,
-      row.act_task_id,
-      row.command_id,
-      row.task_fact_id,
-      row.outbox_fact_id,
-      row.device_id,
-      row.downlink_topic,
-      row.qos,
-      row.retain,
-      row.adapter_hint
-    ]
-  ); // READY rows are mutable runtime state derived from immutable facts.
-}
-
-async function enqueueReadyDispatchForTask(
-  pool: Pool,
-  auth: AoActAuthContextV0,
-  tenant: TenantTriple,
-  taskFact: ParsedFactRow,
-  operationPlan: ParsedFactRow
-): Promise<{
-  outbox_fact_id: string;
-  device_id: string | null;
-  downlink_topic: string | null;
-  adapter_hint: string | null;
-}> {
-  const taskPayload = taskFact.record_json?.payload ?? {};
-  const planPayload = operationPlan.record_json?.payload ?? {};
-
-  const act_task_id = String(taskPayload.act_task_id ?? "").trim();
-  const command_id = String(taskPayload.command_id ?? act_task_id).trim() || act_task_id;
-  if (!act_task_id) throw new Error("MISSING_ACT_TASK_ID_FOR_QUEUE_READY");
-  if (command_id !== act_task_id) throw new Error("COMMAND_ID_MUST_MATCH_ACT_TASK_ID");
-
-  const device_id =
-    typeof taskPayload?.meta?.device_id === "string" && taskPayload.meta.device_id.trim()
-      ? String(taskPayload.meta.device_id).trim()
-      : null;
-
-  const downlink_topic = device_id ? `/device/${device_id}/cmd` : null;
-
-  const planAdapterType =
-    typeof planPayload?.adapter_type === "string" && planPayload.adapter_type.trim()
-      ? String(planPayload.adapter_type).trim()
-      : null;
-
-  const metaAdapterType =
-    typeof taskPayload?.meta?.adapter_type === "string" && String(taskPayload.meta.adapter_type).trim()
-      ? String(taskPayload.meta.adapter_type).trim()
-      : null;
-
-  const adapter_hint = normalizeAdapterHint(planAdapterType ?? metaAdapterType);
-
-  const qos = 1;
-  const retain = false;
-  const dispatch_mode = "OUTBOX_ONLY";
-
-  const outbox_fact_id = await insertFact(pool, "api/v1/ao-act/tasks/dispatch", {
-    type: "ao_act_dispatch_outbox_v1",
-    payload: {
-      tenant_id: tenant.tenant_id,
-      project_id: tenant.project_id,
-      group_id: tenant.group_id,
-      act_task_id,
-      command_id,
-      task_fact_id: taskFact.fact_id,
-      device_id,
-      downlink_topic,
-      qos,
-      retain,
-      actor_id: auth.actor_id,
-      token_id: auth.token_id,
-      dispatch_mode,
-      adapter_hint,
-      created_at_ts: Date.now()
-    }
-  });
-
-  await upsertDispatchQueueReady(pool, {
-    tenant,
-    queue_id: `dq_${randomUUID().replace(/-/g, "")}`,
-    act_task_id,
-    command_id,
-    task_fact_id: String(taskFact.fact_id),
-    outbox_fact_id,
-    device_id,
-    downlink_topic,
-    qos,
-    retain,
-    adapter_hint
-  });
-
-  return {
-    outbox_fact_id,
-    device_id,
-    downlink_topic,
-    adapter_hint
-  };
-}
-
-async function claimDispatchQueueRows(
-  pool: Pool,
-  tenant: TenantTriple,
-  limit: number,
-  leaseSeconds: number,
-  executorId: string,
-  leaseToken: string,
-  actTaskId?: string,
-  adapterHint?: string
-): Promise<any[]> {
-  await ensureDispatchQueueRuntime(pool);
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const sql = `
-      WITH cte AS (
-        SELECT queue_id
-        FROM dispatch_queue_v1
-        WHERE tenant_id = $1
-          AND project_id = $2
-          AND group_id = $3
-          AND ($4::text IS NULL OR act_task_id = $4)
-          AND ($5::text IS NULL OR adapter_hint IS NULL OR adapter_hint = $5)
-          AND (
-            state = 'READY'
-            OR (
-              state = 'DISPATCHED'
-              AND lease_until_ts IS NOT NULL
-              AND lease_until_ts <= (extract(epoch from now()) * 1000)::bigint
-            )
-          )
-        ORDER BY created_at ASC, queue_id ASC
-        FOR UPDATE SKIP LOCKED
-        LIMIT $6
-      )
-      UPDATE dispatch_queue_v1 q
-      SET state = 'DISPATCHED',
-          claim_id = $7,
-          lease_token = $7,
-          leased_by = $8,
-          claimed_by = $8,
-          claimed_ts = (extract(epoch from now()) * 1000)::bigint,
-          lease_expire_at = ((extract(epoch from now()) * 1000)::bigint + ($9::bigint * 1000)),
-          lease_until_ts = ((extract(epoch from now()) * 1000)::bigint + ($9::bigint * 1000)),
-          lease_expires_at = NOW() + make_interval(secs => $9::int),
-          attempt_count = q.attempt_count + 1,
-          attempt_no = q.attempt_no + 1,
-          updated_at = NOW()
-      FROM cte
-      WHERE q.queue_id = cte.queue_id
-      RETURNING q.*
-    `;
-    const normalizedAdapterHint = normalizeAdapterHint(adapterHint);
-    const res = await client.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, actTaskId ?? null, normalizedAdapterHint, limit, leaseToken, executorId, leaseSeconds]);
-    await client.query('COMMIT');
-    return res.rows ?? [];
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
-  }
-}
-
-async function updateDispatchQueueStateByOutbox(
-  pool: Pool,
-  outboxFactId: string,
-  patch: { state: 'DISPATCHED' | 'ACKED' | 'SUCCEEDED' | 'FAILED'; publish_fact_id?: string | null; ack_fact_id?: string | null; receipt_fact_id?: string | null; leaseToken?: string | null; leasedBy?: string | null }
-): Promise<void> {
-  await ensureDispatchQueueRuntime(pool);
-  const fields = ["state = $2", "updated_at = NOW()"];
-  const values: any[] = [outboxFactId, patch.state];
-  let idx = 3;
-  if (patch.publish_fact_id !== undefined) { fields.push(`publish_fact_id = $${idx++}`); values.push(patch.publish_fact_id); }
-  if (patch.ack_fact_id !== undefined) { fields.push(`ack_fact_id = $${idx++}`); values.push(patch.ack_fact_id); }
-  if (patch.receipt_fact_id !== undefined) { fields.push(`receipt_fact_id = $${idx++}`); values.push(patch.receipt_fact_id); }
-  if (patch.state === 'SUCCEEDED' || patch.state === 'FAILED') {
-    fields.push('claim_id = NULL', 'lease_token = NULL', 'leased_by = NULL', 'lease_expires_at = NULL', 'lease_expire_at = NULL', 'lease_until_ts = NULL');
-  }
-  let where = 'WHERE outbox_fact_id = $1';
-  if (patch.leaseToken) { where += ` AND lease_token = $${idx++}`; values.push(patch.leaseToken); }
-  if (patch.leasedBy) { where += ` AND leased_by = $${idx++}`; values.push(patch.leasedBy); }
-  await pool.query(`UPDATE dispatch_queue_v1 SET ${fields.join(', ')} ${where}`, values);
-}
-
-async function updateDispatchQueueStateByActTask(
-  pool: Pool,
-  tenant: TenantTriple,
-  actTaskId: string,
-  patch: { state: 'ACKED' | 'SUCCEEDED' | 'FAILED'; ack_fact_id?: string | null; receipt_fact_id?: string | null }
-): Promise<void> {
-  await ensureDispatchQueueRuntime(pool);
-  const fields = ["state = $5", "updated_at = NOW()"];
-  const values: any[] = [tenant.tenant_id, tenant.project_id, tenant.group_id, actTaskId, patch.state];
-  let idx = 6;
-  if (patch.ack_fact_id !== undefined) { fields.push(`ack_fact_id = $${idx++}`); values.push(patch.ack_fact_id); }
-  if (patch.receipt_fact_id !== undefined) { fields.push(`receipt_fact_id = $${idx++}`); values.push(patch.receipt_fact_id); }
-  if (patch.state === 'SUCCEEDED' || patch.state === 'FAILED') {
-    fields.push('claim_id = NULL', 'lease_token = NULL', 'leased_by = NULL', 'lease_expires_at = NULL', 'lease_expire_at = NULL', 'lease_until_ts = NULL');
-  }
-  await pool.query(
-    `UPDATE dispatch_queue_v1 SET ${fields.join(', ')} WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND act_task_id = $4`,
-    values
+    [fact_id, source, record_json],
   );
+  return fact_id;
 }
 
-
-async function transitionDispatchQueueState(
-  pool: Pool,
-  tenant: TenantTriple,
-  actTaskId: string,
-  commandId: string,
-  nextState: 'DISPATCHED' | 'ACKED' | 'SUCCEEDED' | 'FAILED'
-): Promise<boolean> {
-  await ensureDispatchQueueRuntime(pool);
-  const allowedCurrentStates =
-    nextState === 'DISPATCHED' ? ['READY', 'DISPATCHED'] :
-    nextState === 'ACKED' ? ['DISPATCHED'] :
-    nextState === 'SUCCEEDED' ? ['ACKED', 'DISPATCHED'] :
-    ['READY', 'DISPATCHED', 'ACKED'];
-  const result = await pool.query(
-    `UPDATE dispatch_queue_v1
-     SET state = $6, updated_at = NOW()
-     WHERE tenant_id = $1
-       AND project_id = $2
-       AND group_id = $3
-       AND act_task_id = $4
-       AND command_id = $5
-       AND state = ANY($7::text[])`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, actTaskId, commandId, nextState, allowedCurrentStates]
-  );
-  return Number(result.rowCount ?? 0) > 0;
-}
-
-async function loadDispatchQueueStateByActTask(
-  pool: Pool,
-  tenant: TenantTriple,
-  actTaskId: string,
-  commandId: string
-): Promise<"READY" | "DISPATCHED" | "ACKED" | "SUCCEEDED" | "FAILED" | null> {
-  await ensureDispatchQueueRuntime(pool);
-  const res = await pool.query(
-    `SELECT state
-       FROM dispatch_queue_v1
-      WHERE tenant_id = $1
-        AND project_id = $2
-        AND group_id = $3
-        AND act_task_id = $4
-        AND command_id = $5
-      ORDER BY updated_at DESC
-      LIMIT 1`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, actTaskId, commandId]
-  );
-  const raw = String(res.rows?.[0]?.state ?? "").trim().toUpperCase();
-  if (!raw) return null;
-  if (!["READY", "DISPATCHED", "ACKED", "SUCCEEDED", "FAILED"].includes(raw)) return null;
-  return raw as "READY" | "DISPATCHED" | "ACKED" | "SUCCEEDED" | "FAILED";
-}
 async function loadLatestFactByTypeAndKey(
   pool: Pool,
   factType: string,
   keyPath: string,
   keyValue: string,
-  tenant: TenantTriple
+  tenant: TenantTriple,
 ): Promise<ParsedFactRow | null> {
   const sql = `
     SELECT fact_id, occurred_at, source, record_json
@@ -674,226 +298,39 @@ async function loadLatestFactByTypeAndKey(
       AND (record_json::jsonb#>>'{payload,group_id}') = $6
     ORDER BY occurred_at DESC, fact_id DESC
     LIMIT 1
-  `; // Generic fact lookup scoped by tenant triple.
-  const res = await pool.query(sql, [factType, keyPath, keyValue, tenant.tenant_id, tenant.project_id, tenant.group_id]);
-  if (!res.rows?.length) return null; // Not found within this tenant scope.
-  const row: any = res.rows[0];
-  return {
-    fact_id: String(row.fact_id),
-    occurred_at: String(row.occurred_at),
-    source: String(row.source),
-    record_json: parseJsonMaybe(row.record_json) ?? row.record_json
-  }; // Return normalized row.
-}
-
-async function loadLatestDownlinkPublishedByOutboxFactId(
-  pool: Pool,
-  outboxFactId: string,
-  tenant: TenantTriple
-): Promise<ParsedFactRow | null> {
-  const sql = `
-    SELECT fact_id, occurred_at, source, record_json
-    FROM facts
-    WHERE (record_json::jsonb->>'type') = 'ao_act_downlink_published_v1'
-      AND (record_json::jsonb#>>'{payload,outbox_fact_id}') = $1
-      AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
-      AND (record_json::jsonb#>>'{payload,project_id}') = $3
-      AND (record_json::jsonb#>>'{payload,group_id}') = $4
-    ORDER BY occurred_at DESC, fact_id DESC
-    LIMIT 1
-  `; // Idempotency lookup for published downlink audit by outbox fact id.
-  const res = await pool.query(sql, [outboxFactId, tenant.tenant_id, tenant.project_id, tenant.group_id]);
-  if (!res.rows?.length) return null;
-  const row: any = res.rows[0];
-  return {
-    fact_id: String(row.fact_id),
-    occurred_at: String(row.occurred_at),
-    source: String(row.source),
-    record_json: parseJsonMaybe(row.record_json) ?? row.record_json
-  };
-}
-
-async function loadLatestReceiptByCommandId(
-  pool: Pool,
-  commandId: string,
-  tenant: TenantTriple
-): Promise<ParsedFactRow | null> {
-  const sql = `
-    SELECT fact_id, occurred_at, source, record_json
-    FROM facts
-    WHERE (record_json::jsonb->>'type') IN ('ao_act_receipt_v0','ao_act_receipt_v1')
-      AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-      AND (record_json::jsonb#>>'{payload,project_id}') = $2
-      AND (record_json::jsonb#>>'{payload,group_id}') = $3
-      AND (
-        (record_json::jsonb#>>'{payload,meta,command_id}') = $4
-        OR (record_json::jsonb#>>'{payload,act_task_id}') = $4
-      )
-    ORDER BY occurred_at DESC, fact_id DESC
-    LIMIT 1
   `;
-  const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, commandId]);
+  const res = await pool.query(sql, [factType, keyPath, keyValue, tenant.tenant_id, tenant.project_id, tenant.group_id]);
   if (!res.rows?.length) return null;
   const row: any = res.rows[0];
   return {
     fact_id: String(row.fact_id),
     occurred_at: String(row.occurred_at),
     source: String(row.source),
-    record_json: parseJsonMaybe(row.record_json) ?? row.record_json
+    record_json: parseJsonMaybe(row.record_json) ?? row.record_json,
   };
 }
 
-async function fetchJson(url: string, authz: string, body?: any): Promise<{ ok: boolean; status: number; json: any }> {
-  const res = await fetch(url, {
-    method: body === undefined ? "GET" : "POST",
-    headers: {
-      accept: "application/json",
-      authorization: authz,
-      ...(body === undefined ? {} : { "content-type": "application/json" })
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) })
-  }); // Delegate to existing route over same-process HTTP.
-  const json = await res.json().catch(() => null); // Read JSON body if any.
-  return { ok: res.ok, status: res.status, json }; // Normalize fetch result.
-}
-
-async function listApprovals(pool: Pool, tenant: TenantTriple, limit: number): Promise<any[]> {
-  const sql = `
-    WITH reqs AS (
-      SELECT occurred_at, fact_id, source, (record_json::jsonb) AS record_json
-      FROM facts
-      WHERE (record_json::jsonb->>'type') = 'approval_request_v1'
-        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-        AND (record_json::jsonb#>>'{payload,project_id}') = $2
-        AND (record_json::jsonb#>>'{payload,group_id}') = $3
-    ), latest_decision AS (
-      SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,request_id}'))
-        (record_json::jsonb#>>'{payload,request_id}') AS request_id,
-        occurred_at,
-        fact_id,
-        (record_json::jsonb) AS record_json
-      FROM facts
-      WHERE (record_json::jsonb->>'type') = 'approval_decision_v1'
-        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-        AND (record_json::jsonb#>>'{payload,project_id}') = $2
-        AND (record_json::jsonb#>>'{payload,group_id}') = $3
-      ORDER BY (record_json::jsonb#>>'{payload,request_id}'), occurred_at DESC, fact_id DESC
-    )
-    SELECT r.fact_id, r.occurred_at, r.source, r.record_json, d.record_json AS decision_json
-    FROM reqs r
-    LEFT JOIN latest_decision d
-      ON (r.record_json#>>'{payload,request_id}') = d.request_id
-    ORDER BY r.occurred_at DESC, r.fact_id DESC
-    LIMIT $4
-  `; // Request facts with latest decision side-loaded.
-  const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, limit]);
-  return (res.rows ?? []).map((row: any) => {
-    const request = parseJsonMaybe(row.record_json) ?? row.record_json;
-    const decision = parseJsonMaybe(row.decision_json);
-    return {
-      request_id: request?.payload?.request_id ?? null,
-      status: decision?.payload?.decision ?? request?.payload?.status ?? "PENDING",
-      occurred_at: row.occurred_at,
-      request_fact_id: row.fact_id,
-      decision_fact_id: decision ? String(decision?.payload?.decision_id ?? "") : null,
-      act_task_id: decision?.payload?.act_task_id ?? null,
-      request,
-      decision
-    };
-  });
-}
-
-async function listTasks(pool: Pool, tenant: TenantTriple, limit: number): Promise<any[]> {
-  const sql = `
-    WITH latest_receipt AS (
-      SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,act_task_id}'))
-        (record_json::jsonb#>>'{payload,act_task_id}') AS act_task_id,
-        fact_id AS receipt_fact_id,
-        occurred_at AS receipt_occurred_at,
-        (record_json::jsonb) AS receipt_json
-      FROM facts
-      WHERE (record_json::jsonb->>'type') IN ('ao_act_receipt_v0','ao_act_receipt_v1')
-        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-        AND (record_json::jsonb#>>'{payload,project_id}') = $2
-        AND (record_json::jsonb#>>'{payload,group_id}') = $3
-      ORDER BY (record_json::jsonb#>>'{payload,act_task_id}'), occurred_at DESC, fact_id DESC
-    ), latest_dispatch AS (
-      SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,act_task_id}'))
-        (record_json::jsonb#>>'{payload,act_task_id}') AS act_task_id,
-        fact_id AS dispatch_fact_id,
-        occurred_at AS dispatch_occurred_at,
-        (record_json::jsonb) AS dispatch_json
-      FROM facts
-      WHERE (record_json::jsonb->>'type') = 'ao_act_task_dispatched_v1'
-        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-        AND (record_json::jsonb#>>'{payload,project_id}') = $2
-        AND (record_json::jsonb#>>'{payload,group_id}') = $3
-      ORDER BY (record_json::jsonb#>>'{payload,act_task_id}'), occurred_at DESC, fact_id DESC
-    )
-    SELECT t.fact_id, t.occurred_at, t.source, (t.record_json::jsonb) AS task_json,
-           r.receipt_fact_id, r.receipt_occurred_at, r.receipt_json,
-           d.dispatch_fact_id, d.dispatch_occurred_at, d.dispatch_json
-    FROM facts t
-    LEFT JOIN latest_receipt r ON (t.record_json::jsonb#>>'{payload,act_task_id}') = r.act_task_id
-    LEFT JOIN latest_dispatch d ON (t.record_json::jsonb#>>'{payload,act_task_id}') = d.act_task_id
-    WHERE (t.record_json::jsonb->>'type') = 'ao_act_task_v0'
-      AND (t.record_json::jsonb#>>'{payload,tenant_id}') = $1
-      AND (t.record_json::jsonb#>>'{payload,project_id}') = $2
-      AND (t.record_json::jsonb#>>'{payload,group_id}') = $3
-    ORDER BY t.occurred_at DESC, t.fact_id DESC
-    LIMIT $4
-  `; // Task list with latest dispatch + latest receipt side-loaded.
-  const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, limit]);
-  return (res.rows ?? []).map((row: any) => ({
-    task_fact_id: String(row.fact_id),
-    occurred_at: String(row.occurred_at),
-    task: parseJsonMaybe(row.task_json) ?? row.task_json,
-    dispatch_fact_id: row.dispatch_fact_id ? String(row.dispatch_fact_id) : null,
-    dispatch_occurred_at: row.dispatch_occurred_at ? String(row.dispatch_occurred_at) : null,
-    dispatch: parseJsonMaybe(row.dispatch_json),
-    receipt_fact_id: row.receipt_fact_id ? String(row.receipt_fact_id) : null,
-    receipt_occurred_at: row.receipt_occurred_at ? String(row.receipt_occurred_at) : null,
-    receipt: parseJsonMaybe(row.receipt_json)
-  }));
-}
-
-
-async function loadLatestOperationPlanByApprovalRequestId(
-  pool: Pool,
-  approval_request_id: string,
-  tenant: TenantTriple
-): Promise<ParsedFactRow | null> {
+async function loadLatestOperationPlanByApprovalRequestId(pool: Pool, approval_request_id: string, tenant: TenantTriple): Promise<ParsedFactRow | null> {
   return loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,approval_request_id", approval_request_id, tenant);
 }
 
 export async function loadManualOperationByCommandId(
   pool: Pool,
   tenant: TenantTriple,
-  command_id: string
+  command_id: string,
 ): Promise<{ operation_id: string; operation_plan_id: string; command_id: string; act_task_id: string } | null> {
   const normalizedCommandId = String(command_id ?? "").trim();
   if (!normalizedCommandId) return null;
   const sql = `
-    SELECT
-      fact_id,
-      occurred_at,
-      source,
-      (record_json::jsonb) AS record_json,
-      COALESCE(
-        (record_json::jsonb#>>'{payload,command_id}'),
-        (record_json::jsonb#>>'{payload,meta,command_id}')
-      ) AS resolved_command_id
+    SELECT fact_id, occurred_at, source, (record_json::jsonb) AS record_json,
+      COALESCE((record_json::jsonb#>>'{payload,command_id}'), (record_json::jsonb#>>'{payload,meta,command_id}')) AS resolved_command_id
     FROM facts
     WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
       AND (record_json::jsonb#>>'{payload,project_id}') = $2
       AND (record_json::jsonb#>>'{payload,group_id}') = $3
-      AND COALESCE(
-        (record_json::jsonb#>>'{payload,command_id}'),
-        (record_json::jsonb#>>'{payload,meta,command_id}')
-      ) = $4
-    ORDER BY occurred_at DESC, fact_id DESC
-    LIMIT 1
+      AND COALESCE((record_json::jsonb#>>'{payload,command_id}'), (record_json::jsonb#>>'{payload,meta,command_id}')) = $4
+    ORDER BY occurred_at DESC, fact_id DESC LIMIT 1
   `;
   const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, normalizedCommandId]);
   const row: any = res.rows?.[0];
@@ -906,16 +343,14 @@ export async function loadManualOperationByCommandId(
   const resolvedCommandId = String(row.resolved_command_id ?? "").trim();
   if (!resolvedCommandId) return null;
   const taskRes = await pool.query(
-    `SELECT fact_id, record_json::jsonb AS record_json
-       FROM facts
+    `SELECT fact_id, record_json::jsonb AS record_json FROM facts
       WHERE (record_json::jsonb->>'type') = 'ao_act_task_v0'
         AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
         AND (record_json::jsonb#>>'{payload,project_id}') = $2
         AND (record_json::jsonb#>>'{payload,group_id}') = $3
         AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $4
-      ORDER BY occurred_at DESC, fact_id DESC
-      LIMIT 2`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, operation_plan_id]
+      ORDER BY occurred_at DESC, fact_id DESC LIMIT 2`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, operation_plan_id],
   );
   if ((taskRes.rowCount ?? 0) !== 1) {
     if ((taskRes.rowCount ?? 0) > 1) throw new Error("MANUAL_OPERATION_TASK_LINKAGE_AMBIGUOUS");
@@ -924,14 +359,8 @@ export async function loadManualOperationByCommandId(
   const taskRecord = parseJsonMaybe(taskRes.rows[0].record_json) ?? taskRes.rows[0].record_json;
   const act_task_id = String(taskRecord?.payload?.act_task_id ?? "").trim();
   if (!act_task_id) return null;
-  return {
-    operation_id,
-    operation_plan_id,
-    command_id: resolvedCommandId,
-    act_task_id
-  };
+  return { operation_id, operation_plan_id, command_id: resolvedCommandId, act_task_id };
 }
-
 
 async function createOperationPlanForApproval(
   pool: Pool,
@@ -940,68 +369,10 @@ async function createOperationPlanForApproval(
   requestPayload: any,
   requestBody: any,
   source: string,
-  operationPlanId?: string
+  operationPlanId?: string,
 ): Promise<{ operation_plan_id: string; operation_plan_fact_id: string; transition_fact_id: string }> {
   const proposal = requestPayload?.proposal ?? {};
-  const approvalPayload = requestPayload ?? {};
-  const requestBodyPayload = requestBody ?? {};
-  const asNonEmptyString = (v: any): string | null => {
-    const s = typeof v === "string" ? v.trim() : "";
-    return s || null;
-  };
-  const parsedRequiredCapabilities = normalizeCapabilities(
-    approvalPayload?.required_capabilities
-      ?? approvalPayload?.execution_context?.required_capabilities
-      ?? approvalPayload?.device_requirements?.required_capabilities
-      ?? approvalPayload?.operation_amount?.parameters?.required_capabilities
-      ?? approvalPayload?.operation_amount?.parameters?.metadata?.required_capabilities
-      ?? requestBodyPayload?.required_capabilities
-      ?? requestBodyPayload?.execution_context?.required_capabilities
-      ?? []
-  );
-  const operationTypeHint = String(
-    proposal?.action_type
-    ?? proposal?.task_type
-    ?? requestPayload?.operation_type
-    ?? requestPayload?.meta?.operation_type
-    ?? ""
-  ).trim().toUpperCase();
-  const irrigationCapabilityMatched = parsedRequiredCapabilities.includes("device.irrigation.valve.open");
-  const irrigationOperationHint = operationTypeHint.includes("IRRIGAT");
-  let resolvedAdapterType = asNonEmptyString(
-    approvalPayload?.adapter_type
-    ?? approvalPayload?.execution_context?.adapter_type
-    ?? approvalPayload?.device_requirements?.adapter_type
-    ?? approvalPayload?.operation_amount?.parameters?.adapter_type
-    ?? approvalPayload?.operation_amount?.parameters?.metadata?.adapter_type
-    ?? requestBodyPayload?.adapter_type
-    ?? requestBodyPayload?.execution_context?.adapter_type
-    ?? null
-  );
-  if (!resolvedAdapterType && (irrigationOperationHint || irrigationCapabilityMatched)) {
-    resolvedAdapterType = "irrigation_simulator";
-  }
-  const resolvedDeviceType = asNonEmptyString(
-    approvalPayload?.device_type
-    ?? approvalPayload?.execution_context?.device_type
-    ?? approvalPayload?.device_requirements?.device_type
-    ?? approvalPayload?.operation_amount?.parameters?.device_type
-    ?? approvalPayload?.operation_amount?.parameters?.metadata?.device_type
-    ?? requestBodyPayload?.device_type
-    ?? requestBodyPayload?.execution_context?.device_type
-    ?? null
-  );
-  const resolvedDeviceId = asNonEmptyString(
-    approvalPayload?.device_id
-    ?? approvalPayload?.execution_context?.device_id
-    ?? approvalPayload?.device_requirements?.device_id
-    ?? approvalPayload?.operation_amount?.parameters?.device_id
-    ?? approvalPayload?.operation_amount?.parameters?.metadata?.device_id
-    ?? requestBodyPayload?.device_id
-    ?? requestBodyPayload?.execution_context?.device_id
-    ?? requestBodyPayload?.device_requirements?.device_id
-    ?? null
-  );
+  const executionContext = resolveApprovalExecutionContextV1({ requestPayload, requestBody });
   const operation_plan_id = String(operationPlanId ?? "").trim() || `opl_${randomUUID().replace(/-/g, "")}`;
   const operation_plan_fact_id = await insertFact(pool, source, {
     type: "operation_plan_v1",
@@ -1012,24 +383,23 @@ async function createOperationPlanForApproval(
       operation_id: requestPayload?.meta?.operation_id ?? null,
       command_id: requestPayload?.meta?.command_id ?? null,
       operation_plan_id,
-      recommendation_id: requestPayload?.meta?.recommendation_id ?? null,
-      program_id: requestPayload?.program_id ?? requestPayload?.meta?.program_id ?? null,
+      recommendation_id: requestPayload?.meta?.recommendation_id ?? proposal?.meta?.recommendation_id ?? null,
+      program_id: requestPayload?.program_id ?? requestPayload?.meta?.program_id ?? proposal?.meta?.program_id ?? null,
       field_id: requestPayload?.field_id ?? requestPayload?.meta?.field_id ?? proposal?.target?.ref ?? null,
-      season_id: requestPayload?.season_id ?? requestPayload?.meta?.season_id ?? null,
-      device_id: resolvedDeviceId ?? requestPayload?.device_id ?? requestPayload?.meta?.device_id ?? proposal?.meta?.device_id ?? null,
+      season_id: requestPayload?.season_id ?? requestPayload?.meta?.season_id ?? proposal?.meta?.season_id ?? null,
+      device_id: executionContext.device_id,
       approval_request_id: request_id,
       action_type: proposal?.action_type ?? null,
-      adapter_type: resolvedAdapterType ?? requestPayload?.meta?.adapter_type ?? proposal?.meta?.adapter_type ?? null,
-      device_type: resolvedDeviceType,
-      required_capabilities: parsedRequiredCapabilities,
+      adapter_type: executionContext.adapter_type,
+      device_type: executionContext.device_type,
+      required_capabilities: executionContext.required_capabilities,
       target: proposal?.target ?? null,
       parameters: proposal?.parameters ?? {},
       status: "CREATED",
       created_ts: Date.now(),
-      updated_ts: Date.now()
-    }
+      updated_ts: Date.now(),
+    },
   });
-
   const transition_fact_id = await insertFact(pool, source, {
     type: "operation_plan_transition_v1",
     payload: {
@@ -1040,39 +410,16 @@ async function createOperationPlanForApproval(
       status: "CREATED",
       trigger: "approval_operation_plan_auto_create",
       approval_request_id: request_id,
-      created_ts: Date.now()
-    }
+      created_ts: Date.now(),
+    },
   });
-
   return { operation_plan_id, operation_plan_fact_id, transition_fact_id };
 }
 
-type OperationPlanStatusV1 =
-  | "CREATED"
-  | "APPROVED"
-  | "READY"
-  | "DISPATCHED"
-  | "ACKED"
-  | "SUCCEEDED"
-  | "FAILED"
-  | "INVALID_EXECUTION"
-  | "PENDING_ACCEPTANCE";
-
-const OPERATION_PLAN_NEXT_STATUS_V1: Record<
-  Exclude<OperationPlanStatusV1, "SUCCEEDED" | "FAILED" | "INVALID_EXECUTION" | "PENDING_ACCEPTANCE">,
-  OperationPlanStatusV1
-> = {
-  CREATED: "APPROVED",
-  APPROVED: "READY",
-  READY: "DISPATCHED",
-  DISPATCHED: "ACKED",
-  ACKED: "PENDING_ACCEPTANCE"
-};
+type OperationPlanStatusV1 = "CREATED" | "APPROVED" | "READY" | "DISPATCHED" | "ACKED" | "SUCCEEDED" | "FAILED" | "INVALID_EXECUTION" | "PENDING_ACCEPTANCE";
 
 export function isAckConvergedOperationPlanStatus(status: string): boolean {
-  return ["ACKED", "SUCCEEDED", "FAILED", "PENDING_ACCEPTANCE", "INVALID_EXECUTION"].includes(
-    String(status ?? "").trim().toUpperCase()
-  );
+  return ["ACKED", "SUCCEEDED", "FAILED", "PENDING_ACCEPTANCE", "INVALID_EXECUTION"].includes(String(status ?? "").trim().toUpperCase());
 }
 
 export function isAckConvergedDispatchQueueState(state: string): boolean {
@@ -1083,16 +430,9 @@ function isTerminalOperationPlanStatus(status: string): boolean {
   return ["SUCCEEDED", "FAILED", "INVALID_EXECUTION", "PENDING_ACCEPTANCE"].includes(String(status ?? "").trim().toUpperCase());
 }
 
-export function shouldTreatAckAsIdempotent(input: {
-  requestedState: string;
-  queueState?: string | null;
-  operationPlanStatus?: string | null;
-}): boolean {
+export function shouldTreatAckAsIdempotent(input: { requestedState: string; queueState?: string | null; operationPlanStatus?: string | null }): boolean {
   if (String(input.requestedState ?? "").trim().toUpperCase() !== "ACKED") return false;
-  return (
-    isAckConvergedDispatchQueueState(input.queueState ?? "")
-    || isAckConvergedOperationPlanStatus(input.operationPlanStatus ?? "")
-  );
+  return isAckConvergedDispatchQueueState(input.queueState ?? "") || isAckConvergedOperationPlanStatus(input.operationPlanStatus ?? "");
 }
 
 async function transitionOperationPlanStateV1(
@@ -1109,37 +449,18 @@ async function transitionOperationPlanStateV1(
     receipt_fact_id?: string | null;
     terminal_reason?: string | null;
   },
-  source: string
+  source: string,
 ): Promise<{ transition_fact_id: string; operation_plan_fact_id: string }> {
   const payload = operationPlanFact.record_json?.payload ?? {};
-const operation_plan_id = String(payload.operation_plan_id ?? "").trim();
-if (!operation_plan_id) throw new Error("MISSING_OPERATION_PLAN_ID");
-
-const currentStatusRaw = String(payload.status ?? "").trim().toUpperCase();
-const current_status: OperationPlanStatusV1 = (currentStatusRaw || "CREATED") as OperationPlanStatusV1;
-const next_status = transition.next_status;
-
-if (current_status === "SUCCEEDED" || current_status === "FAILED" || current_status === "INVALID_EXECUTION" || current_status === "PENDING_ACCEPTANCE") {
-  throw new Error("OPERATION_PLAN_TERMINAL");
-}
-
-const allowedNextStatuses: Record<OperationPlanStatusV1, OperationPlanStatusV1[]> = {
-  CREATED: ["APPROVED"],
-  APPROVED: ["READY"],
-  READY: ["DISPATCHED"],
-  DISPATCHED: ["ACKED", "FAILED", "INVALID_EXECUTION"],
-  ACKED: ["SUCCEEDED", "FAILED", "INVALID_EXECUTION", "PENDING_ACCEPTANCE"],
-  SUCCEEDED: [],
-  FAILED: [],
-  INVALID_EXECUTION: [],
-  PENDING_ACCEPTANCE: []
-};
-
-const allowed = allowedNextStatuses[current_status] ?? [];
-if (!allowed.includes(next_status)) {
-  throw new Error(`INVALID_OPERATION_PLAN_TRANSITION:${current_status}->${next_status}`);
-}
-
+  const operation_plan_id = String(payload.operation_plan_id ?? "").trim();
+  if (!operation_plan_id) throw new Error("MISSING_OPERATION_PLAN_ID");
+  const current_status = String(payload.status ?? "CREATED").trim().toUpperCase() as OperationPlanStatusV1;
+  const allowedNextStatuses: Record<OperationPlanStatusV1, OperationPlanStatusV1[]> = {
+    CREATED: ["APPROVED"], APPROVED: ["READY"], READY: ["DISPATCHED"], DISPATCHED: ["ACKED", "FAILED", "INVALID_EXECUTION"],
+    ACKED: ["SUCCEEDED", "FAILED", "INVALID_EXECUTION", "PENDING_ACCEPTANCE"], SUCCEEDED: [], FAILED: [], INVALID_EXECUTION: [], PENDING_ACCEPTANCE: [],
+  };
+  if (["SUCCEEDED", "FAILED", "INVALID_EXECUTION", "PENDING_ACCEPTANCE"].includes(current_status)) throw new Error("OPERATION_PLAN_TERMINAL");
+  if (!(allowedNextStatuses[current_status] ?? []).includes(transition.next_status)) throw new Error(`INVALID_OPERATION_PLAN_TRANSITION:${current_status}->${transition.next_status}`);
   const transition_fact_id = await insertFact(pool, source, {
     type: "operation_plan_transition_v1",
     payload: {
@@ -1155,7 +476,7 @@ if (!allowed.includes(next_status)) {
       device_type: payload.device_type ?? null,
       required_capabilities: Array.isArray(payload.required_capabilities) ? payload.required_capabilities : [],
       from_status: current_status,
-      status: next_status,
+      status: transition.next_status,
       trigger: transition.trigger,
       approval_request_id: transition.approval_request_id ?? payload.approval_request_id ?? null,
       decision: transition.decision ?? null,
@@ -1163,8 +484,8 @@ if (!allowed.includes(next_status)) {
       act_task_id: transition.act_task_id ?? payload.act_task_id ?? null,
       receipt_fact_id: transition.receipt_fact_id ?? payload.receipt_fact_id ?? null,
       terminal_reason: transition.terminal_reason ?? null,
-      created_ts: Date.now()
-    }
+      created_ts: Date.now(),
+    },
   });
   const operation_plan_fact_id = await insertFact(pool, source, {
     type: "operation_plan_v1",
@@ -1174,868 +495,16 @@ if (!allowed.includes(next_status)) {
       project_id: tenant.project_id,
       group_id: tenant.group_id,
       operation_plan_id,
-      program_id: payload.program_id ?? null,
-      field_id: payload.field_id ?? payload.target?.ref ?? null,
-      season_id: payload.season_id ?? null,
-      adapter_type: payload.adapter_type ?? null,
-      device_id: payload.device_id ?? payload.meta?.device_id ?? null,
-      device_type: payload.device_type ?? null,
-      required_capabilities: Array.isArray(payload.required_capabilities) ? payload.required_capabilities : [],
-      status: next_status,
+      status: transition.next_status,
       approval_request_id: transition.approval_request_id ?? payload.approval_request_id ?? null,
       approval_decision: transition.decision ?? payload.approval_decision ?? null,
       approval_decision_fact_id: transition.decision_fact_id ?? payload.approval_decision_fact_id ?? null,
       act_task_id: transition.act_task_id ?? payload.act_task_id ?? null,
       receipt_fact_id: transition.receipt_fact_id ?? payload.receipt_fact_id ?? null,
-      updated_ts: Date.now()
-    }
+      updated_ts: Date.now(),
+    },
   });
   return { transition_fact_id, operation_plan_fact_id };
-}
-
-async function ensureOperationPlanAtLeastDispatched(
-  pool: Pool,
-  tenant: TenantTriple,
-  operation_plan_id: string,
-  act_task_id: string,
-  source: string,
-  trigger: string
-): Promise<{ transition_fact_id: string; operation_plan_fact_id: string } | null> {
-  const latestPlan = await loadLatestFactByTypeAndKey(
-    pool,
-    "operation_plan_v1",
-    "payload,operation_plan_id",
-    operation_plan_id,
-    tenant
-  );
-  if (!latestPlan) return null;
-
-  const currentStatus = String(latestPlan.record_json?.payload?.status ?? "").trim().toUpperCase();
-  if (currentStatus === "READY") {
-    return transitionOperationPlanStateV1(
-      pool,
-      tenant,
-      latestPlan,
-      {
-        next_status: "DISPATCHED",
-        trigger,
-        act_task_id
-      },
-      source
-    );
-  }
-  return null;
-}
-
-async function listOperationPlans(pool: Pool, tenant: TenantTriple, limit: number): Promise<any[]> {
-  const sql = `
-    WITH latest_transition AS (
-      SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,operation_plan_id}'))
-        (record_json::jsonb#>>'{payload,operation_plan_id}') AS operation_plan_id,
-        fact_id AS transition_fact_id,
-        occurred_at AS transition_occurred_at,
-        (record_json::jsonb) AS transition_json
-      FROM facts
-      WHERE (record_json::jsonb->>'type') = 'operation_plan_transition_v1'
-        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-        AND (record_json::jsonb#>>'{payload,project_id}') = $2
-        AND (record_json::jsonb#>>'{payload,group_id}') = $3
-      ORDER BY (record_json::jsonb#>>'{payload,operation_plan_id}'), occurred_at DESC, fact_id DESC
-    ), latest_approval AS (
-      SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,request_id}'))
-        (record_json::jsonb#>>'{payload,request_id}') AS request_id,
-        fact_id AS approval_decision_fact_id,
-        occurred_at AS approval_decision_occurred_at,
-        (record_json::jsonb) AS approval_decision_json
-      FROM facts
-      WHERE (record_json::jsonb->>'type') = 'approval_decision_v1'
-        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-        AND (record_json::jsonb#>>'{payload,project_id}') = $2
-        AND (record_json::jsonb#>>'{payload,group_id}') = $3
-      ORDER BY (record_json::jsonb#>>'{payload,request_id}'), occurred_at DESC, fact_id DESC
-    ), latest_receipt AS (
-      SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,act_task_id}'))
-        (record_json::jsonb#>>'{payload,act_task_id}') AS act_task_id,
-        fact_id AS receipt_fact_id,
-        occurred_at AS receipt_occurred_at,
-        (record_json::jsonb) AS receipt_json
-      FROM facts
-      WHERE (record_json::jsonb->>'type') IN ('ao_act_receipt_v0','ao_act_receipt_v1')
-        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-        AND (record_json::jsonb#>>'{payload,project_id}') = $2
-        AND (record_json::jsonb#>>'{payload,group_id}') = $3
-      ORDER BY (record_json::jsonb#>>'{payload,act_task_id}'), occurred_at DESC, fact_id DESC
-    )
-    SELECT p.fact_id AS operation_plan_fact_id,
-           p.occurred_at AS operation_plan_occurred_at,
-           (p.record_json::jsonb) AS operation_plan_json,
-           t.transition_fact_id,
-           t.transition_occurred_at,
-           t.transition_json,
-           a.approval_decision_fact_id,
-           a.approval_decision_occurred_at,
-           a.approval_decision_json,
-           r.receipt_fact_id,
-           r.receipt_occurred_at,
-           r.receipt_json
-    FROM facts p
-    LEFT JOIN latest_transition t ON (p.record_json::jsonb#>>'{payload,operation_plan_id}') = t.operation_plan_id
-    LEFT JOIN latest_approval a ON (p.record_json::jsonb#>>'{payload,approval_request_id}') = a.request_id
-    LEFT JOIN latest_receipt r ON (p.record_json::jsonb#>>'{payload,act_task_id}') = r.act_task_id
-    WHERE (p.record_json::jsonb->>'type') = 'operation_plan_v1'
-      AND (p.record_json::jsonb#>>'{payload,tenant_id}') = $1
-      AND (p.record_json::jsonb#>>'{payload,project_id}') = $2
-      AND (p.record_json::jsonb#>>'{payload,group_id}') = $3
-    ORDER BY p.occurred_at DESC, p.fact_id DESC
-    LIMIT $4
-  `;
-  const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, limit]);
-  return (res.rows ?? []).map((row: any) => ({
-    operation_plan_fact_id: String(row.operation_plan_fact_id),
-    operation_plan_occurred_at: String(row.operation_plan_occurred_at),
-    operation_plan: parseJsonMaybe(row.operation_plan_json) ?? row.operation_plan_json,
-    transition_fact_id: row.transition_fact_id ? String(row.transition_fact_id) : null,
-    transition_occurred_at: row.transition_occurred_at ? String(row.transition_occurred_at) : null,
-    transition: parseJsonMaybe(row.transition_json),
-    approval_decision_fact_id: row.approval_decision_fact_id ? String(row.approval_decision_fact_id) : null,
-    approval_decision_occurred_at: row.approval_decision_occurred_at ? String(row.approval_decision_occurred_at) : null,
-    approval_decision: parseJsonMaybe(row.approval_decision_json),
-    receipt_fact_id: row.receipt_fact_id ? String(row.receipt_fact_id) : null,
-    receipt_occurred_at: row.receipt_occurred_at ? String(row.receipt_occurred_at) : null,
-    receipt: parseJsonMaybe(row.receipt_json)
-  }));
-}
-
-let ensureOperationPlanStateReadModelRuntimePromise: Promise<void> | null = null; // Process-local guard for one-time read-model table init.
-
-async function ensureOperationPlanStateReadModelRuntime(pool: Pool): Promise<void> {
-  if (!ensureOperationPlanStateReadModelRuntimePromise) {
-    ensureOperationPlanStateReadModelRuntimePromise = (async () => {
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS operation_plan_state_v1_rm (
-          tenant_id text NOT NULL,
-          project_id text NOT NULL,
-          group_id text NOT NULL,
-          plan_id text NOT NULL,
-          status text NOT NULL,
-          device_id text NULL,
-          field_id text NULL,
-          last_transition timestamptz NULL,
-          receipt_status text NULL,
-          updated_at timestamptz NOT NULL DEFAULT now(),
-          PRIMARY KEY (tenant_id, project_id, group_id, plan_id)
-        )
-      `); // State-first read model table derived from immutable facts.
-      await pool.query(`CREATE INDEX IF NOT EXISTS idx_operation_plan_state_v1_rm_status ON operation_plan_state_v1_rm (tenant_id, project_id, group_id, status, updated_at DESC)`);
-      await pool.query(`CREATE INDEX IF NOT EXISTS idx_operation_plan_state_v1_rm_device ON operation_plan_state_v1_rm (tenant_id, project_id, group_id, device_id, updated_at DESC)`);
-      await pool.query(`CREATE INDEX IF NOT EXISTS idx_operation_plan_state_v1_rm_field ON operation_plan_state_v1_rm (tenant_id, project_id, group_id, field_id, updated_at DESC)`);
-    })().catch((err) => {
-      ensureOperationPlanStateReadModelRuntimePromise = null; // Allow re-init after transient DB failure.
-      throw err;
-    });
-  }
-  await ensureOperationPlanStateReadModelRuntimePromise;
-}
-
-async function rebuildOperationPlanStateReadModel(pool: Pool, tenant: TenantTriple): Promise<number> {
-  await ensureOperationPlanStateReadModelRuntime(pool);
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    await client.query(
-      `DELETE FROM operation_plan_state_v1_rm
-       WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3`,
-      [tenant.tenant_id, tenant.project_id, tenant.group_id]
-    ); // Truncate tenant partition before replay.
-    const replay = await client.query(
-      `
-      WITH latest_plan AS (
-        SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,operation_plan_id}'))
-          (record_json::jsonb#>>'{payload,operation_plan_id}') AS plan_id,
-          (record_json::jsonb) AS plan_json
-        FROM facts
-        WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
-          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-          AND (record_json::jsonb#>>'{payload,project_id}') = $2
-          AND (record_json::jsonb#>>'{payload,group_id}') = $3
-        ORDER BY (record_json::jsonb#>>'{payload,operation_plan_id}'), occurred_at DESC, fact_id DESC
-      ),
-      latest_transition AS (
-        SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,operation_plan_id}'))
-          (record_json::jsonb#>>'{payload,operation_plan_id}') AS plan_id,
-          occurred_at AS transition_occurred_at
-        FROM facts
-        WHERE (record_json::jsonb->>'type') = 'operation_plan_transition_v1'
-          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-          AND (record_json::jsonb#>>'{payload,project_id}') = $2
-          AND (record_json::jsonb#>>'{payload,group_id}') = $3
-        ORDER BY (record_json::jsonb#>>'{payload,operation_plan_id}'), occurred_at DESC, fact_id DESC
-      ),
-      latest_task AS (
-        SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,act_task_id}'))
-          (record_json::jsonb#>>'{payload,act_task_id}') AS act_task_id,
-          (record_json::jsonb) AS task_json
-        FROM facts
-        WHERE (record_json::jsonb->>'type') = 'ao_act_task_v0'
-          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-          AND (record_json::jsonb#>>'{payload,project_id}') = $2
-          AND (record_json::jsonb#>>'{payload,group_id}') = $3
-        ORDER BY (record_json::jsonb#>>'{payload,act_task_id}'), occurred_at DESC, fact_id DESC
-      ),
-      latest_receipt AS (
-        SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,act_task_id}'))
-          (record_json::jsonb#>>'{payload,act_task_id}') AS act_task_id,
-          (record_json::jsonb#>>'{payload,status}') AS receipt_status
-        FROM facts
-        WHERE (record_json::jsonb->>'type') IN ('ao_act_receipt_v0','ao_act_receipt_v1')
-          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-          AND (record_json::jsonb#>>'{payload,project_id}') = $2
-          AND (record_json::jsonb#>>'{payload,group_id}') = $3
-        ORDER BY (record_json::jsonb#>>'{payload,act_task_id}'), occurred_at DESC, fact_id DESC
-      )
-      INSERT INTO operation_plan_state_v1_rm (
-        tenant_id, project_id, group_id, plan_id, status, device_id, field_id, last_transition, receipt_status, updated_at
-      )
-      SELECT
-        $1, $2, $3,
-        lp.plan_id,
-        COALESCE(NULLIF(lp.plan_json#>>'{payload,status}', ''), 'UNKNOWN') AS status,
-        COALESCE(
-          NULLIF(lp.plan_json#>>'{payload,meta,device_id}', ''),
-          NULLIF(lt.task_json#>>'{payload,meta,device_id}', '')
-        ) AS device_id,
-        COALESCE(
-          NULLIF(lp.plan_json#>>'{payload,target,field_id}', ''),
-          NULLIF(lp.plan_json#>>'{payload,target,ref}', ''),
-          NULLIF(lp.plan_json#>>'{payload,target,id}', ''),
-          CASE
-            WHEN jsonb_typeof(lp.plan_json#>'{payload,target}') = 'string' THEN NULLIF(lp.plan_json#>>'{payload,target}', '')
-            ELSE NULL
-          END
-        ) AS field_id,
-        ltr.transition_occurred_at,
-        lr.receipt_status,
-        NOW()
-      FROM latest_plan lp
-      LEFT JOIN latest_transition ltr ON ltr.plan_id = lp.plan_id
-      LEFT JOIN latest_task lt ON (lp.plan_json#>>'{payload,act_task_id}') = lt.act_task_id
-      LEFT JOIN latest_receipt lr ON (lp.plan_json#>>'{payload,act_task_id}') = lr.act_task_id
-      `,
-      [tenant.tenant_id, tenant.project_id, tenant.group_id]
-    ); // Replay facts to regenerate the canonical state projection.
-    await client.query("COMMIT");
-    return Number(replay.rowCount ?? 0);
-  } catch (err) {
-    await client.query("ROLLBACK");
-    throw err;
-  } finally {
-    client.release();
-  }
-}
-
-async function listOperationPlanStateReadModel(
-  pool: Pool,
-  tenant: TenantTriple,
-  q: any
-): Promise<OperationPlanStateReadModelRow[]> {
-  await ensureOperationPlanStateReadModelRuntime(pool);
-  const status = typeof q?.status === "string" && q.status.trim() ? q.status.trim().toUpperCase() : null;
-  const device_id = typeof q?.device_id === "string" && q.device_id.trim() ? q.device_id.trim() : null;
-  const field_id = typeof q?.field_id === "string" && q.field_id.trim() ? q.field_id.trim() : null;
-  const plan_id = typeof q?.plan_id === "string" && q.plan_id.trim() ? q.plan_id.trim() : null;
-  const limit = parseLimit(q);
-  const sql = `
-    SELECT plan_id, status, device_id, field_id, last_transition, receipt_status
-    FROM operation_plan_state_v1_rm
-    WHERE tenant_id = $1
-      AND project_id = $2
-      AND group_id = $3
-      AND ($4::text IS NULL OR status = $4)
-      AND ($5::text IS NULL OR device_id = $5)
-      AND ($6::text IS NULL OR field_id = $6)
-      AND ($7::text IS NULL OR plan_id = $7)
-    ORDER BY updated_at DESC, plan_id DESC
-    LIMIT $8
-  `;
-  const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, status, device_id, field_id, plan_id, limit]);
-  return (res.rows ?? []).map((row: any) => ({
-    plan_id: String(row.plan_id),
-    status: String(row.status ?? "UNKNOWN"),
-    device_id: row.device_id ? String(row.device_id) : null,
-    field_id: row.field_id ? String(row.field_id) : null,
-    last_transition: row.last_transition ? String(row.last_transition) : null,
-    receipt_status: row.receipt_status ? String(row.receipt_status) : null
-  }));
-}
-
-async function listDispatchQueue(pool: Pool, tenant: TenantTriple, limit: number, actTaskId?: string): Promise<any[]> {
-  const sql = `
-    SELECT q.queue_id,
-           q.act_task_id,
-           q.command_id,
-           q.outbox_fact_id,
-           q.task_fact_id,
-           q.device_id,
-           q.downlink_topic,
-           q.qos,
-           q.retain,
-           q.adapter_hint,
-           q.state,
-           q.claim_id,
-           q.lease_token,
-           q.leased_by,
-           q.lease_expires_at,
-           q.lease_expire_at,
-           q.claimed_by,
-           q.claimed_ts,
-           q.publish_fact_id,
-           q.ack_fact_id,
-           q.receipt_fact_id,
-           q.attempt_no,
-           q.attempt_count,
-           q.created_at,
-           q.updated_at,
-           o.occurred_at AS outbox_occurred_at,
-           (o.record_json::jsonb) AS outbox_json,
-           t.occurred_at AS task_occurred_at,
-           (t.record_json::jsonb) AS task_json
-    FROM dispatch_queue_v1 q
-    JOIN facts o ON o.fact_id = q.outbox_fact_id
-    JOIN facts t ON t.fact_id = q.task_fact_id
-    WHERE q.tenant_id = $1
-      AND q.project_id = $2
-      AND q.group_id = $3
-      AND ($4::text IS NULL OR q.act_task_id = $4)
-      AND q.state IN ('READY','DISPATCHED','ACKED')
-    ORDER BY q.created_at DESC, q.queue_id DESC
-    LIMIT $5
-  `; // Runtime queue = mutable dispatch state joined back to immutable outbox/task facts.
-  const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, actTaskId ?? null, limit]);
-  return (res.rows ?? []).map((row: any) => ({
-    queue_id: String(row.queue_id),
-    act_task_id: String(row.act_task_id),
-    command_id: String(row.command_id),
-    outbox_fact_id: String(row.outbox_fact_id),
-    outbox_occurred_at: String(row.outbox_occurred_at),
-    outbox: parseJsonMaybe(row.outbox_json) ?? row.outbox_json,
-    task_fact_id: String(row.task_fact_id),
-    task_occurred_at: String(row.task_occurred_at),
-    task: parseJsonMaybe(row.task_json) ?? row.task_json,
-    device_id: row.device_id ? String(row.device_id) : null,
-    downlink_topic: row.downlink_topic ? String(row.downlink_topic) : null,
-    qos: Number(row.qos),
-    retain: Boolean(row.retain),
-    adapter_hint: row.adapter_hint ? String(row.adapter_hint) : null,
-    state: String(row.state),
-    claim_id: row.claim_id ? String(row.claim_id) : null,
-    lease_token: row.lease_token ? String(row.lease_token) : null,
-    leased_by: row.leased_by ? String(row.leased_by) : null,
-    lease_expires_at: row.lease_expires_at ? String(row.lease_expires_at) : null,
-    lease_expire_at: Number.isFinite(Number(row.lease_expire_at)) ? Number(row.lease_expire_at) : null,
-    claimed_by: row.claimed_by ? String(row.claimed_by) : null,
-    claimed_ts: Number.isFinite(Number(row.claimed_ts)) ? Number(row.claimed_ts) : null,
-    publish_fact_id: row.publish_fact_id ? String(row.publish_fact_id) : null,
-    ack_fact_id: row.ack_fact_id ? String(row.ack_fact_id) : null,
-    receipt_fact_id: row.receipt_fact_id ? String(row.receipt_fact_id) : null,
-    attempt_no: Number(row.attempt_no ?? row.attempt_count ?? 0),
-    attempt_count: Number(row.attempt_count ?? 0)
-  }));
-}
-
-
-async function listDispatchQueueByIds(pool: Pool, tenant: TenantTriple, queueIds: string[]): Promise<any[]> {
-  if (!queueIds.length) return [];
-  await ensureDispatchQueueRuntime(pool);
-  const sql = `
-    SELECT q.queue_id,
-           q.act_task_id,
-           q.command_id,
-           q.outbox_fact_id,
-           q.task_fact_id,
-           q.device_id,
-           q.downlink_topic,
-           q.qos,
-           q.retain,
-           q.adapter_hint,
-           q.state,
-           q.claim_id,
-           q.lease_token,
-           q.leased_by,
-           q.lease_expires_at,
-           q.lease_expire_at,
-           q.claimed_by,
-           q.claimed_ts,
-           q.publish_fact_id,
-           q.ack_fact_id,
-           q.receipt_fact_id,
-           q.attempt_no,
-           q.attempt_count,
-           q.created_at,
-           q.updated_at,
-           o.occurred_at AS outbox_occurred_at,
-           (o.record_json::jsonb) AS outbox_json,
-           t.occurred_at AS task_occurred_at,
-           (t.record_json::jsonb) AS task_json
-    FROM dispatch_queue_v1 q
-    JOIN facts o ON o.fact_id = q.outbox_fact_id
-    JOIN facts t ON t.fact_id = q.task_fact_id
-    WHERE q.tenant_id = $1
-      AND q.project_id = $2
-      AND q.group_id = $3
-      AND q.queue_id = ANY($4::text[])
-    ORDER BY q.created_at DESC, q.queue_id DESC
-  `;
-  const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, queueIds]);
-  return (res.rows ?? []).map((row: any) => ({
-    queue_id: String(row.queue_id),
-    act_task_id: String(row.act_task_id),
-    command_id: String(row.command_id),
-    outbox_fact_id: String(row.outbox_fact_id),
-    outbox_occurred_at: String(row.outbox_occurred_at),
-    outbox: parseJsonMaybe(row.outbox_json) ?? row.outbox_json,
-    task_fact_id: String(row.task_fact_id),
-    task_occurred_at: String(row.task_occurred_at),
-    task: parseJsonMaybe(row.task_json) ?? row.task_json,
-    device_id: row.device_id ? String(row.device_id) : null,
-    downlink_topic: row.downlink_topic ? String(row.downlink_topic) : null,
-    qos: Number(row.qos),
-    retain: Boolean(row.retain),
-    adapter_hint: row.adapter_hint ? String(row.adapter_hint) : null,
-    state: String(row.state),
-    claim_id: row.claim_id ? String(row.claim_id) : null,
-    lease_token: row.lease_token ? String(row.lease_token) : null,
-    leased_by: row.leased_by ? String(row.leased_by) : null,
-    lease_expires_at: row.lease_expires_at ? String(row.lease_expires_at) : null,
-    lease_expire_at: Number.isFinite(Number(row.lease_expire_at)) ? Number(row.lease_expire_at) : null,
-    claimed_by: row.claimed_by ? String(row.claimed_by) : null,
-    claimed_ts: Number.isFinite(Number(row.claimed_ts)) ? Number(row.claimed_ts) : null,
-    publish_fact_id: row.publish_fact_id ? String(row.publish_fact_id) : null,
-    ack_fact_id: row.ack_fact_id ? String(row.ack_fact_id) : null,
-    receipt_fact_id: row.receipt_fact_id ? String(row.receipt_fact_id) : null,
-    attempt_no: Number(row.attempt_no ?? row.attempt_count ?? 0),
-    attempt_count: Number(row.attempt_count ?? 0)
-  }));
-}
-
-async function loadReceiptV1ByIdempotencyKey(
-  pool: Pool,
-  tenant: TenantTriple,
-  idempotencyKey: string
-): Promise<ParsedFactRow | null> {
-  if (!idempotencyKey) return null;
-  return loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v1", "payload,idempotency_key", idempotencyKey, tenant);
-}
-
-function enforceReceiptWriteRules(payload: { idempotency_key?: string | null; operation_plan_id?: string | null }): void {
-  if (!payload.idempotency_key) throw new Error("IDEMPOTENCY_KEY_REQUIRED");
-  if (!payload.operation_plan_id) throw new Error("INVALID_RECEIPT_NO_PLAN");
-}
-
-function isDoneLikeStatus(status: unknown): boolean {
-  const s = String(status ?? "").trim().toUpperCase();
-  return ["DONE", "SUCCEEDED", "SUCCESS", "EXECUTED", "ACKED"].includes(s);
-}
-
-function hasFiniteMetricEvidence(resourceUsage: any): boolean {
-  if (!resourceUsage || typeof resourceUsage !== "object") return false;
-  return Object.values(resourceUsage).some((v) => Number.isFinite(typeof v === "number" ? v : Number(v)));
-}
-
-function isRecognizedDeviceLogEvidence(log: any): boolean {
-  const kind = String(log?.kind ?? log ?? "").trim().toLowerCase();
-  if (!kind) return false;
-  if (kind.includes("simulator") || kind.includes("trace")) return false;
-  return ["mqtt", "device", "telemetry", "controller", "plc", "modbus", "can", "gateway", "sensor", "runtime"].some((token) => kind.includes(token));
-}
-
-function isRecognizedHumanEvidence(log: any): boolean {
-  const kind = String(log?.kind ?? log ?? "").trim().toLowerCase();
-  if (!kind) return false;
-  if (kind.includes("simulator") || kind.includes("trace")) return false;
-  return ["photo", "image", "human", "manual", "inspection", "operator", "onsite", "service_team"].some((token) => kind.includes(token));
-}
-
-function validateEvidence(executorType: unknown, evidence: any): boolean {
-  if (executorType === "human") {
-    const hasPhotos = Array.isArray(evidence?.photos) && evidence.photos.length > 0;
-    const hasHumanEvidence = Array.isArray(evidence?.humanEvidence)
-      && evidence.humanEvidence.some((x: any) => isRecognizedHumanEvidence(x));
-    return hasPhotos || hasHumanEvidence;
-  }
-
-  if (executorType === "device") {
-    return (
-      (Array.isArray(evidence?.metrics) && evidence.metrics.length > 0) ||
-      (Array.isArray(evidence?.logs) && evidence.logs.some((x: any) => isRecognizedDeviceLogEvidence(x)) )
-    );
-  }
-
-  return false;
-}
-
-function evaluateReceiptEvidenceValidity(body: any): { valid: boolean; executorType: "device" | "human" } {
-  const executorTypeRaw = String(body?.executor_id?.kind ?? body?.executor_type ?? "device").toLowerCase();
-  const executorType: "device" | "human" = executorTypeRaw === "human" ? "human" : "device";
-  const evidenceRefs = [
-    ...(Array.isArray(body?.evidence_artifact_ids) ? body.evidence_artifact_ids : []),
-    ...(Array.isArray(body?.evidence_refs) ? body.evidence_refs : []),
-  ];
-  const logsRefs = Array.isArray(body?.logs_refs) ? body.logs_refs : [];
-  const photoRefs = [
-    ...(Array.isArray(body?.photos) ? body.photos : []),
-    ...(Array.isArray(body?.photo_refs) ? body.photo_refs : []),
-    ...logsRefs.filter((x: any) => ["photo", "image"].some((k) => String(x?.kind ?? "").toLowerCase().includes(k))),
-  ];
-  const metrics = hasFiniteMetricEvidence(body?.resource_usage) ? [body?.resource_usage] : [];
-  const valid = validateEvidence(executorType, {
-    photos: photoRefs,
-    metrics,
-    logs: logsRefs,
-    humanEvidence: [...logsRefs, ...evidenceRefs]
-  });
-  return { executorType, valid };
-}
-
-async function createAcceptance(input: {
-  pool: Pool;
-  tenant: TenantTriple;
-  operation_plan_id: string;
-  receipt_id: string;
-}): Promise<string | null> {
-  const existing = await loadLatestFactByTypeAndKey(input.pool, "acceptance_result_v1", "payload,operation_plan_id", input.operation_plan_id, input.tenant);
-  if (existing) return String(existing.fact_id);
-  const acceptance_id = randomUUID();
-  await input.pool.query(
-    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
-    [acceptance_id, "api/v1/ao-act/receipts", {
-      type: "acceptance_result_v1",
-      payload: {
-        tenant_id: input.tenant.tenant_id,
-        project_id: input.tenant.project_id,
-        group_id: input.tenant.group_id,
-        acceptance_id,
-        operation_plan_id: input.operation_plan_id,
-        receipt_id: input.receipt_id,
-        verdict: "PENDING_ACCEPTANCE",
-        evaluated_at: new Date().toISOString(),
-      }
-    }]
-  );
-  return acceptance_id;
-}
-
-async function loadFactById(pool: Pool, factId: string, tenant: TenantTriple): Promise<ParsedFactRow | null> {
-  const sql = `
-    SELECT fact_id, occurred_at, source, (record_json::jsonb) AS record_json
-    FROM facts
-    WHERE fact_id = $1
-      AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
-      AND (record_json::jsonb#>>'{payload,project_id}') = $3
-      AND (record_json::jsonb#>>'{payload,group_id}') = $4
-    LIMIT 1
-  `;
-  const res = await pool.query(sql, [factId, tenant.tenant_id, tenant.project_id, tenant.group_id]);
-  if ((res.rowCount ?? 0) === 0) return null;
-  const row: any = res.rows[0];
-  return {
-    fact_id: String(row.fact_id),
-    occurred_at: String(row.occurred_at),
-    source: String(row.source),
-    record_json: parseJsonMaybe(row.record_json) ?? row.record_json
-  };
-}
-
-async function listReceipts(pool: Pool, tenant: TenantTriple, limit: number, actTaskId?: string): Promise<any[]> {
-  const sql = `
-    SELECT fact_id, occurred_at, source, (record_json::jsonb) AS record_json
-    FROM facts
-    WHERE (record_json::jsonb->>'type') IN ('ao_act_receipt_v0','ao_act_receipt_v1')
-      AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-      AND (record_json::jsonb#>>'{payload,project_id}') = $2
-      AND (record_json::jsonb#>>'{payload,group_id}') = $3
-      AND ($4::text IS NULL OR (record_json::jsonb#>>'{payload,act_task_id}') = $4)
-    ORDER BY occurred_at DESC, fact_id DESC
-    LIMIT $5
-  `; // Read-only receipt list scoped by tenant triple.
-  const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, actTaskId ?? null, limit]);
-  return (res.rows ?? []).map((row: any) => ({
-    fact_id: String(row.fact_id),
-    occurred_at: String(row.occurred_at),
-    source: String(row.source),
-    receipt: parseJsonMaybe(row.record_json) ?? row.record_json
-  }));
-}
-
-function parseLimit(q: any, fallback = 20, max = 200): number {
-  const raw = Number(q?.limit ?? fallback); // Read limit from query.
-  if (!Number.isFinite(raw)) return fallback; // Invalid => fallback.
-  return Math.max(1, Math.min(max, Math.trunc(raw))); // Clamp to safe bounds.
-}
-
-function deriveDispatchDeviceId(body: any, taskRecord: any): string | null {
-  const bodyDeviceId = typeof body?.device_id === "string" ? body.device_id.trim() : ""; // Prefer explicit dispatch-time device id.
-  if (bodyDeviceId) return bodyDeviceId; // Use request device id when present.
-  const metaDeviceId = typeof taskRecord?.payload?.meta?.device_id === "string" ? String(taskRecord.payload.meta.device_id).trim() : ""; // Fallback to task meta hint.
-  if (metaDeviceId) return metaDeviceId; // Use task meta hint when available.
-  return null; // Unknown device binding at dispatch time.
-}
-
-function deriveDispatchTopic(tenant: TenantTriple, deviceId: string | null, body: any): string | null {
-  const explicit = typeof body?.downlink_topic === "string" ? body.downlink_topic.trim() : ""; // Allow explicit topic override.
-  if (explicit) return explicit; // Use explicit topic when provided.
-  if (!deviceId) return null; // Cannot derive default topic without device id.
-  return `/device/${deviceId}/cmd`; // Real-device MQTT command topic.
-}
-
-function resolveExecutionTarget(input: {
-  tenant: TenantTriple;
-  body: any;
-  taskRecord: any;
-  capability: ParsedTaskCapability;
-}): { device_id: string | null; downlink_topic: string | null } {
-  const capabilityDeviceId = typeof input.capability.parameters?.valve_id === "string"
-    ? String(input.capability.parameters.valve_id).trim()
-    : "";
-  const device_id = capabilityDeviceId || deriveDispatchDeviceId(input.body, input.taskRecord);
-  const downlink_topic = deriveDispatchTopic(input.tenant, device_id, input.body);
-  return { device_id, downlink_topic };
-}
-
-function normalizeAdapterHint(raw: any): string | null {
-  const v = typeof raw === "string" ? raw.trim() : "";
-  if (!v) return null;
-  if (v === "mqtt") return "mqtt_downlink_once_v1"; // Backward-compatible alias used by some clients.
-  return v;
-}
-
-type DispatchFallbackContext = {
-  failure_code: string;
-  failure_reason: string;
-  failure_message: string | null;
-  takeover_reason: string;
-  takeover_conditions: string[];
-  retry_exhausted: boolean;
-  device_offline: boolean;
-  device_rejected: boolean;
-  device_id: string | null;
-  adapter_type: string | null;
-  attempt_no: number | null;
-  max_retries: number | null;
-  field_id: string | null;
-  region: string | null;
-  action_type: string | null;
-};
-
-function parseDispatchFallbackContext(body: any, taskPayload: any): DispatchFallbackContext {
-  const failure_code = String(body?.failure_code ?? body?.error_code ?? "DISPATCH_FAILED").trim().toUpperCase();
-  const failure_reason = String(body?.failure_reason ?? body?.reason ?? failure_code).trim().toUpperCase();
-  const failure_message = typeof body?.failure_message === "string" && body.failure_message.trim()
-    ? body.failure_message.trim()
-    : (typeof body?.message === "string" && body.message.trim())
-      ? body.message.trim()
-    : null;
-  const attempt_no = Number.isFinite(Number(body?.attempt_no)) ? Number(body.attempt_no) : null;
-  const max_retries = Number.isFinite(Number(body?.max_retries)) ? Number(body.max_retries) : null;
-  const retry_exhausted = Boolean(body?.retry_exhausted) || (attempt_no != null && max_retries != null && attempt_no >= max_retries);
-  const device_offline = Boolean(body?.device_offline)
-    || failure_code.includes("OFFLINE")
-    || failure_reason.includes("OFFLINE");
-  const device_rejected = Boolean(body?.device_rejected)
-    || ["REJECTED", "DENIED", "REFUSED", "NACK"].some((token) => failure_code.includes(token) || failure_reason.includes(token));
-  const deviceContext = body?.device_context && typeof body.device_context === "object" ? body.device_context : {};
-  const taskMeta = taskPayload?.meta && typeof taskPayload.meta === "object" ? taskPayload.meta : {};
-  const field_id = String(taskPayload?.field_id ?? taskMeta?.field_id ?? "").trim() || null;
-  const region = String(taskPayload?.region ?? taskMeta?.region ?? taskMeta?.zone ?? "").trim() || null;
-  const action_type = String(taskPayload?.action_type ?? taskPayload?.task_type ?? "").trim() || null;
-  const device_id = String(body?.device_id ?? deviceContext?.device_id ?? taskMeta?.device_id ?? "").trim() || null;
-  const adapter_type = String(body?.adapter_type ?? deviceContext?.adapter_type ?? taskPayload?.adapter_type ?? "").trim() || null;
-  const takeover_conditions: string[] = [];
-  if (device_offline) takeover_conditions.push("DEVICE_OFFLINE");
-  if (retry_exhausted) takeover_conditions.push("RETRY_EXHAUSTED");
-  if (device_rejected) takeover_conditions.push("DEVICE_REJECTED");
-  if (!takeover_conditions.length && (failure_code.includes("FAILED") || failure_reason.includes("FAILED"))) takeover_conditions.push("DISPATCH_FAILED");
-  const takeover_reason = failure_message
-    ?? ({
-      DEVICE_OFFLINE: "设备离线，自动转人工执行",
-      RETRY_EXHAUSTED: "设备重试超限，自动转人工执行",
-      DEVICE_REJECTED: "设备拒绝执行，自动转人工执行",
-      DISPATCH_FAILED: "设备下发失败，自动转人工执行"
-    } as Record<string, string>)[takeover_conditions[0] ?? "DISPATCH_FAILED"];
-  return {
-    failure_code,
-    failure_reason,
-    failure_message,
-    takeover_reason,
-    takeover_conditions,
-    retry_exhausted,
-    device_offline,
-    device_rejected,
-    device_id,
-    adapter_type,
-    attempt_no,
-    max_retries,
-    field_id,
-    region,
-    action_type
-  };
-}
-
-function shouldCreateManualFallbackAssignment(ctx: DispatchFallbackContext): boolean {
-  if (ctx.device_offline) return true;
-  if (ctx.retry_exhausted) return true;
-  if (ctx.device_rejected) return true;
-  if (ctx.failure_code === "FAILED" || ctx.failure_reason === "FAILED") return true;
-  return ctx.failure_code.includes("FAILED") || ctx.failure_reason.includes("FAILED");
-}
-
-async function createWorkAssignmentFallbackFact(input: {
-  pool: Pool;
-  tenant: TenantTriple;
-  act_task_id: string;
-  operation_plan_id: string | null;
-  created_by: string;
-  context: DispatchFallbackContext;
-  task_payload: any;
-  sla?: DispatchSlaInput;
-}): Promise<{ fallback_fact_id: string | null; assignment_fact_id: string | null; assignment_id: string | null; created: boolean }> {
-  const existing = await loadLatestFactByTypeAndKey(input.pool, "ao_act_manual_fallback_v1", "payload,act_task_id", input.act_task_id, input.tenant);
-  if (existing) {
-    const assignmentId = String(existing.record_json?.payload?.assignment_id ?? "").trim() || null;
-    return { fallback_fact_id: existing.fact_id, assignment_fact_id: null, assignment_id: assignmentId, created: false };
-  }
-
-  const assignment_id = `wa_fallback_${randomUUID().replace(/-/g, "").slice(0, 20)}`;
-  const assigned_at = new Date().toISOString();
-  const routing_key_parts = [input.context.action_type ?? "action", input.context.field_id ?? "field", input.context.region ?? "region"]
-    .map((x) => String(x).trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "_"));
-  const manual_pool_executor_id = `manual_pool.${routing_key_parts.join(".")}`.slice(0, 120);
-  const executorResources = await listHumanExecutorResources(input.pool, input.tenant);
-  const decision = decideDispatchCandidates({
-    scope: { tenant_id: input.tenant.tenant_id, project_id: input.tenant.project_id },
-    task: {
-      act_task_id: input.act_task_id,
-      action_type: input.context.action_type,
-      field_id: input.context.field_id,
-      required_capabilities: normalizeCapabilities([
-        ...(Array.isArray(input.task_payload?.required_capabilities) ? input.task_payload.required_capabilities : []),
-        ...(Array.isArray(input.task_payload?.capabilities) ? input.task_payload.capabilities : []),
-        typeof input.task_payload?.skill_id === "string" ? input.task_payload.skill_id : ""
-      ]),
-      location: parseTaskLocation(input.task_payload)
-    },
-    executors: executorResources,
-    sla: { accept_minutes: input.sla?.accept_minutes ?? null, arrive_minutes: input.sla?.arrive_minutes ?? null }
-  });
-  const bestCandidate = decision.candidates.find((x) => x.priority > -999);
-  const executor_id = bestCandidate?.executor_id ?? manual_pool_executor_id;
-  const decisionExplain = bestCandidate
-    ? `${decision.explain}; selected=${executor_id}; priority=${bestCandidate.priority}; reasons=${bestCandidate.reasons.join(";")}`
-    : `${decision.explain}; selected=${manual_pool_executor_id}; fallback=no_candidate`;
-
-  const assignment_fact_id = await insertFact(input.pool, "api/v1/ao-act/dispatches/state", {
-    type: "work_assignment_upserted_v1",
-    payload: {
-      tenant_id: input.tenant.tenant_id,
-      project_id: input.tenant.project_id,
-      group_id: input.tenant.group_id,
-      assignment_id,
-      act_task_id: input.act_task_id,
-      executor_id,
-      assigned_at,
-      status: "ASSIGNED",
-      source: "dispatch_fallback_auto_v1",
-      operation_plan_id: input.operation_plan_id,
-      routing_meta: {
-        action_type: input.context.action_type,
-        field_id: input.context.field_id,
-        region: input.context.region
-      },
-      fallback_context: {
-        reason_code: input.context.failure_code,
-        reason_message: input.context.takeover_reason,
-        dispatch_id: null,
-        retry_count: input.context.attempt_no,
-        max_retries: input.context.max_retries,
-        failed_at: assigned_at,
-        takeover_conditions: input.context.takeover_conditions,
-        device: {
-          device_id: input.context.device_id,
-          device_name: input.context.device_id,
-          status: input.context.device_rejected ? "REJECTED" : (input.context.device_offline ? "OFFLINE" : null),
-          adapter_type: input.context.adapter_type
-        }
-      },
-      failure_context: {
-        code: input.context.failure_code,
-        reason: input.context.failure_reason,
-        message: input.context.failure_message,
-        takeover_reason: input.context.takeover_reason,
-        takeover_conditions: input.context.takeover_conditions,
-        retry_exhausted: input.context.retry_exhausted,
-        device_offline: input.context.device_offline,
-        device_rejected: input.context.device_rejected
-      },
-      dispatch_decision: {
-        selected_executor_id: executor_id,
-        candidate_count: decision.candidates.length,
-        top_candidates: decision.candidates.slice(0, 3),
-        explain: decisionExplain
-      },
-      explain: decisionExplain,
-      created_by: input.created_by
-    }
-  });
-
-  const fallback_fact_id = await insertFact(input.pool, "api/v1/ao-act/dispatches/state", {
-    type: "ao_act_manual_fallback_v1",
-    payload: {
-      tenant_id: input.tenant.tenant_id,
-      project_id: input.tenant.project_id,
-      group_id: input.tenant.group_id,
-      act_task_id: input.act_task_id,
-      operation_plan_id: input.operation_plan_id,
-      assignment_id,
-      reason_code: input.context.failure_code,
-      reason: input.context.failure_reason,
-      message: input.context.takeover_reason,
-      raw_message: input.context.failure_message,
-      takeover_conditions: input.context.takeover_conditions,
-      retry_exhausted: input.context.retry_exhausted,
-      device_offline: input.context.device_offline,
-      device_rejected: input.context.device_rejected,
-      device_context: {
-        device_id: input.context.device_id,
-        adapter_type: input.context.adapter_type,
-        attempt_no: input.context.attempt_no,
-        max_retries: input.context.max_retries
-      },
-      route_meta: {
-        action_type: input.context.action_type,
-        field_id: input.context.field_id,
-        region: input.context.region
-      },
-      dispatch_decision: {
-        selected_executor_id: executor_id,
-        candidate_count: decision.candidates.length,
-        top_candidates: decision.candidates.slice(0, 3),
-        explain: decisionExplain
-      },
-      explain: decisionExplain,
-      created_by: input.created_by,
-      created_at: assigned_at
-    }
-  });
-
-  return { fallback_fact_id, assignment_fact_id, assignment_id, created: true };
-}
-
-function assertTenantFieldDeviceTriple(taskPayload: any): { ok: true } | { ok: false; reason: string } {
-  if (!String(taskPayload?.tenant_id ?? "").trim()) return { ok: false, reason: "MISSING_TENANT_ID" };
-  if (!String(taskPayload?.project_id ?? "").trim()) return { ok: false, reason: "MISSING_PROJECT_ID" };
-  if (!String(taskPayload?.group_id ?? "").trim()) return { ok: false, reason: "MISSING_GROUP_ID" };
-  const deviceId = String(taskPayload?.meta?.device_id ?? "").trim();
-  if (!deviceId) return { ok: false, reason: "MISSING_DEVICE_ID" };
-  return { ok: true };
 }
 
 function resolveActionType(input: any): string {
@@ -2043,13 +512,10 @@ function resolveActionType(input: any): string {
   if (taskType) return taskType;
   const suggestedTaskType = typeof input?.meta?.task_type === "string" ? input.meta.task_type.trim() : "";
   if (suggestedTaskType) return suggestedTaskType;
-  const suggestedActionType = typeof input?.meta?.suggested_action?.action_type === "string"
-    ? input.meta.suggested_action.action_type.trim()
-    : "";
+  const suggestedActionType = typeof input?.meta?.suggested_action?.action_type === "string" ? input.meta.suggested_action.action_type.trim() : "";
   if (suggestedActionType) return suggestedActionType;
   const actionType = typeof input?.action_type === "string" ? input.action_type.trim() : "";
-  if (actionType) return actionType;
-  return "";
+  return actionType;
 }
 
 function normalizeActionType(raw: any): string {
@@ -2057,26 +523,11 @@ function normalizeActionType(raw: any): string {
   if (!normalized) return "";
   const compact = normalized.replace(/[\s_-]+/g, ".");
   if (compact === "irrigate" || compact === "irrigation.start" || compact === "start.irrigation") return "irrigation.start";
-  if (compact === "plow") return "plow";
-  if (compact === "harrow") return "harrow";
-  if (compact === "seed") return "seed";
-  if (compact === "spray") return "spray";
-  if (compact === "transport") return "transport";
-  if (compact === "harvest") return "harvest";
   return normalized;
 }
 
 function resolveDeviceTypeMetadata(input: any): string | null {
-  // Metadata-only helper:
-  // - UI/error context
-  // - logging
-  // Must NOT be used for capability resolution or compatibility decisions.
-  const candidates = [
-    input?.device_type,
-    input?.meta?.device_type,
-    input?.target?.device_type,
-    input?.target?.type
-  ];
+  const candidates = [input?.device_type, input?.meta?.device_type, input?.target?.device_type, input?.target?.type];
   for (const candidate of candidates) {
     const value = String(candidate ?? "").trim();
     if (value) return value.toUpperCase();
@@ -2095,24 +546,9 @@ type ParsedTaskCapability = {
   parameters: Record<string, unknown>;
   evidence_requirements: string[];
   explain: string | null;
-  compatibility: {
-    adapters: string[];
-    capabilities: string[];
-    protocols: string[];
-    hints?: { device_types?: string[] };
-  };
+  compatibility: { adapters: string[]; capabilities: string[]; protocols: string[]; hints?: { device_types?: string[] } };
 };
-
-type ParsedTaskCapabilityResult =
-  | { ok: true; value: ParsedTaskCapability }
-  | {
-      ok: false;
-      error: {
-        code: "CAPABILITY_NOT_RESOLVED";
-        message: string;
-        reasons: string[];
-      };
-    };
+type ParsedTaskCapabilityResult = { ok: true; value: ParsedTaskCapability } | { ok: false; error: { code: "CAPABILITY_NOT_RESOLVED"; message: string; reasons: string[] } };
 
 function parseTaskCapability(taskPayload: any): ParsedTaskCapabilityResult {
   const metaAdapterType = typeof taskPayload?.meta?.adapter_type === "string" ? taskPayload.meta.adapter_type.trim() : "";
@@ -2123,21 +559,9 @@ function parseTaskCapability(taskPayload: any): ParsedTaskCapabilityResult {
   const resolved = resolveTaskCapabilityViaDeviceSkillsResult({
     ...(taskPayload ?? {}),
     ...(resolvedAdapterHint ? { adapter_type: resolvedAdapterHint, adapter_hint: resolvedAdapterHint } : {}),
-    meta: {
-      ...(taskPayload?.meta ?? {}),
-      ...(resolvedAdapterHint ? { adapter_type: resolvedAdapterHint, adapter_hint: resolvedAdapterHint } : {})
-    }
+    meta: { ...(taskPayload?.meta ?? {}), ...(resolvedAdapterHint ? { adapter_type: resolvedAdapterHint, adapter_hint: resolvedAdapterHint } : {}) },
   });
-  if (!resolved.ok) {
-    return {
-      ok: false,
-      error: {
-        code: resolved.error.code,
-        message: resolved.error.message,
-        reasons: resolved.error.reasons
-      }
-    };
-  }
+  if (!resolved.ok) return { ok: false, error: { code: resolved.error.code, message: resolved.error.message, reasons: resolved.error.reasons } };
   return {
     ok: true,
     value: {
@@ -2145,163 +569,72 @@ function parseTaskCapability(taskPayload: any): ParsedTaskCapabilityResult {
       parameters: resolved.resolution.parameters ?? {},
       evidence_requirements: Array.isArray(resolved.resolution.evidence_requirements) ? resolved.resolution.evidence_requirements.map((x) => String(x)) : [],
       explain: resolved.resolution.explain ?? null,
-      compatibility: resolved.resolution.compatibility
-    }
+      compatibility: resolved.resolution.compatibility,
+    },
   };
 }
 
 function validateAdapterTask(adapterType: string, taskPayload: any): { ok: true } | { ok: false; reason: string } {
   const adapter = String(adapterType ?? "").trim().toLowerCase();
   if (!adapter) return { ok: false, reason: "MISSING_ADAPTER_TYPE" };
-  if (adapter === "mqtt" && !String(taskPayload?.meta?.device_id ?? "").trim()) return { ok: false, reason: "MISSING_DEVICE_ID" };
-  if ((adapter === "irrigation_real" || adapter === "irrigation_http_v1" || adapter === "irrigation_simulator") && !String(taskPayload?.meta?.device_id ?? "").trim()) {
+  if (["mqtt", "irrigation_real", "irrigation_http_v1", "irrigation_simulator"].includes(adapter) && !String(taskPayload?.meta?.device_id ?? "").trim()) {
     return { ok: false, reason: "MISSING_DEVICE_ID" };
   }
   return { ok: true };
 }
 
-function deriveReceiptTopic(tenant: TenantTriple, deviceId: string, body: any): string {
-  const explicit = typeof body?.uplink_topic === "string" ? body.uplink_topic.trim() : ""; // Allow explicit receipt topic override.
-  if (explicit) return explicit; // Use explicit topic when provided.
-  return `/device/${deviceId}/ack`; // Real-device MQTT ack topic.
+function assertTenantFieldDeviceTriple(taskPayload: any): { ok: true } | { ok: false; reason: string } {
+  if (!String(taskPayload?.tenant_id ?? "").trim()) return { ok: false, reason: "MISSING_TENANT_ID" };
+  if (!String(taskPayload?.project_id ?? "").trim()) return { ok: false, reason: "MISSING_PROJECT_ID" };
+  if (!String(taskPayload?.group_id ?? "").trim()) return { ok: false, reason: "MISSING_GROUP_ID" };
+  if (!String(taskPayload?.meta?.device_id ?? "").trim()) return { ok: false, reason: "MISSING_DEVICE_ID" };
+  return { ok: true };
+}
+
+function parseLimit(q: any, fallback = 20, max = 200): number {
+  const raw = Number(q?.limit ?? fallback);
+  if (!Number.isFinite(raw)) return fallback;
+  return Math.max(1, Math.min(max, Math.trunc(raw)));
 }
 
 function sha256Json(value: any): string {
-  return createHash("sha256").update(JSON.stringify(value ?? null)).digest("hex"); // Stable hash for published downlink payload audit.
+  return createHash("sha256").update(JSON.stringify(value ?? null)).digest("hex");
 }
 
-
-
-function approvalRiskHintFromProposal(proposal: any): string {
-  const actionType = String(proposal?.action_type ?? "ACTION").toUpperCase();
-  const target = proposal?.target;
-  const targetRef = typeof target === "string" ? target : String(target?.ref ?? target?.field_id ?? target?.id ?? "");
-  if (actionType === "PLOW") return `Mechanical operation risk: confirm device idle state, field boundary, and depth settings.`;
-  if (actionType === "SPRAY") return `Spray operation risk: confirm dosage, weather window, and target scope ${targetRef || "target"}.`;
-  if (actionType === "IRRIGATE") return `Irrigation operation risk: confirm valve/flow settings and target scope ${targetRef || "target"}.`;
-  return `Operation risk: confirm target scope and critical parameters before execution.`;
-}
-
-function approvalImpactScopeFromProposal(proposal: any): any {
-  const target = proposal?.target;
-  if (typeof target === "string") return { target_kind: "field", target_ref: target };
-  return {
-    target_kind: String(target?.kind ?? "field"),
-    target_ref: String(target?.ref ?? target?.field_id ?? target?.id ?? "")
-  };
-}
-
-async function buildOperationsConsole(pool: Pool, tenant: TenantTriple): Promise<any> {
-  const approvalsRaw = await listApprovals(pool, tenant, 20);
-  const operationPlansRaw = await listOperationPlans(pool, tenant, 20);
-  const monitoringRaw = await listTasks(pool, tenant, 20);
-  const dispatches = await listDispatchQueue(pool, tenant, 10);
-  const receipts = await listReceipts(pool, tenant, 10);
-
-  const approvals = approvalsRaw.map((item: any) => {
-    const proposal = item?.request?.payload?.proposal ?? {};
-    return {
-      request_id: item.request_id ?? null,
-      status: String(item.status ?? "PENDING"),
-      occurred_at: String(item.occurred_at ?? ""),
-      action_type: String(proposal?.action_type ?? ""),
-      target: proposal?.target ?? null,
-      device_id: typeof proposal?.meta?.device_id === "string" ? proposal.meta.device_id : null,
-      risk_hint: approvalRiskHintFromProposal(proposal),
-      impact_scope: approvalImpactScopeFromProposal(proposal),
-      parameter_snapshot: proposal?.parameters ?? null,
-      proposal_hash: sha256Json(proposal),
-      decision_present: Boolean(item?.decision),
-      act_task_id: item?.act_task_id ?? null
-    };
+async function fetchJson(url: string, authz: string, body?: any): Promise<{ ok: boolean; status: number; json: any }> {
+  const res = await fetch(url, {
+    method: body === undefined ? "GET" : "POST",
+    headers: { accept: "application/json", authorization: authz, ...(body === undefined ? {} : { "content-type": "application/json" }) },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
+  const json = await res.json().catch(() => null);
+  return { ok: res.ok, status: res.status, json };
+}
 
-  const monitoring = monitoringRaw.map((item: any) => {
-    const taskPayload = item?.task?.payload ?? {};
-    const receiptPayload = item?.receipt?.payload ?? {};
-    const parameters = taskPayload?.parameters ?? null;
-    let state = "CREATED";
-    if (item?.receipt_fact_id) {
-      const latest = String(receiptPayload?.status ?? '').toUpperCase();
-      state = latest === 'FAILED' ? 'FAILED' : 'SUCCEEDED';
-    } else if (item?.dispatch_fact_id) state = "DISPATCHED";
-    return {
-      act_task_id: String(taskPayload?.act_task_id ?? ""),
-      state,
-      action_type: String(taskPayload?.action_type ?? ""),
-      target: taskPayload?.target ?? null,
-      device_id: typeof taskPayload?.meta?.device_id === "string" ? taskPayload.meta.device_id : (typeof item?.dispatch?.payload?.device_id === "string" ? item.dispatch.payload.device_id : null),
-      parameters,
-      parameters_hash: sha256Json(parameters),
-      dispatch_fact_id: item?.dispatch_fact_id ?? null,
-      dispatch_occurred_at: item?.dispatch_occurred_at ?? null,
-      receipt_fact_id: item?.receipt_fact_id ?? null,
-      receipt_occurred_at: item?.receipt_occurred_at ?? null,
-      latest_receipt_status: receiptPayload?.status ?? null,
-      retry_allowed: !item?.receipt_fact_id
-    };
+async function enqueueReadyDispatchForTask(pool: Pool, auth: AoActAuthContextV0, tenant: TenantTriple, taskFact: ParsedFactRow, operationPlan: ParsedFactRow) {
+  const taskPayload = taskFact.record_json?.payload ?? {};
+  const planPayload = operationPlan.record_json?.payload ?? {};
+  const act_task_id = String(taskPayload.act_task_id ?? "").trim();
+  const command_id = String(taskPayload.command_id ?? act_task_id).trim() || act_task_id;
+  if (!act_task_id) throw new Error("MISSING_ACT_TASK_ID_FOR_QUEUE_READY");
+  const device_id = typeof taskPayload?.meta?.device_id === "string" ? String(taskPayload.meta.device_id).trim() || null : null;
+  const downlink_topic = device_id ? `/device/${device_id}/cmd` : null;
+  const adapter_hint = typeof planPayload?.adapter_type === "string" ? String(planPayload.adapter_type).trim() || null : null;
+  const outbox_fact_id = await insertFact(pool, "api/v1/ao-act/tasks/dispatch", {
+    type: "ao_act_dispatch_outbox_v1",
+    payload: { tenant_id: tenant.tenant_id, project_id: tenant.project_id, group_id: tenant.group_id, act_task_id, command_id, task_fact_id: taskFact.fact_id, device_id, downlink_topic, qos: 1, retain: false, actor_id: auth.actor_id, token_id: auth.token_id, dispatch_mode: "OUTBOX_ONLY", adapter_hint, created_at_ts: Date.now() },
   });
-
-  return {
-    summary: {
-      approvals_pending: approvals.filter((x: any) => x.status === "PENDING").length,
-      approvals_decided: approvals.filter((x: any) => x.status !== "PENDING").length,
-      operation_plans: operationPlansRaw.length,
-      dispatch_queue: dispatches.length,
-      receipts: receipts.length,
-      retryable_tasks: monitoring.filter((x: any) => x.retry_allowed).length
-    },
-    approvals,
-    operation_plans: operationPlansRaw,
-    monitoring,
-    dispatches,
-    receipts
-  };
+  return { outbox_fact_id, device_id, downlink_topic, adapter_hint };
 }
 
 export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): void {
-  // POST /api/v1/approvals
-  // Stable REST wrapper around Sprint25 approval_request runtime.
-  app.post("/api/v1/approvals", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "approval.request");
-    if (!auth) return reply;
-    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return reply;
-    const body: any = req.body ?? {};
-    const tenant: TenantTriple = parseTenantFromBody(body);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
-
-    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/approvals/request`, String((req.headers as any).authorization ?? ""), {
-      ...body,
-      tenant_id: tenant.tenant_id,
-      project_id: tenant.project_id,
-      group_id: tenant.group_id
-    });
-    if (!delegated.ok) return reply.status(delegated.status).send(delegated.json ?? { ok: false, error: "REQUEST_FAILED" });
-    return reply.send({ ok: true, request_id: delegated.json?.request_id, fact_id: delegated.json?.fact_id });
-  });
-
-  // GET /api/v1/approvals
-  // Read-model-lite for dashboard / operations pages.
-  app.get("/api/v1/approvals", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read"); // Reuse read-only control scope.
-    if (!auth) return;
-    const tenant = queryTenantFromReq(req, auth);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const items = await listApprovals(pool, tenant, parseLimit((req as any).query));
-    return reply.send({ ok: true, items });
-  });
-
-  // GET /api/v1/approvals/:request_id
   app.get("/api/v1/approvals/:request_id", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
     const tenant = queryTenantFromReq(req, auth);
     if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const params: any = (req as any).params ?? {};
-    const request_id = String(params.request_id ?? "").trim();
+    const request_id = String(((req as any).params ?? {}).request_id ?? "").trim();
     if (!request_id) return badRequest(reply, "MISSING_REQUEST_ID");
     const request = await loadLatestFactByTypeAndKey(pool, "approval_request_v1", "payload,request_id", request_id, tenant);
     if (!request) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
@@ -2309,9 +642,6 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     return reply.send({ ok: true, request, decision });
   });
 
-  // POST /api/v1/approvals/:request_id/decide
-  // approve => writes approval_decision_v1 + wrapper task_created fact via existing AO-ACT core.
-  // reject  => writes approval_decision_v1 only.
   app.post("/api/v1/approvals/:request_id/decide", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "approval.decide");
     if (!auth) return reply;
@@ -2330,249 +660,92 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!requestFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     const requestPayload = requestFact.record_json?.payload ?? null;
     if (!requestPayload?.proposal) return reply.status(500).send({ ok: false, error: "REQUEST_RECORD_INVALID" });
-
     const existingDecision = await loadLatestFactByTypeAndKey(pool, "approval_decision_v1", "payload,request_id", request_id, tenant);
     if (existingDecision) return badRequest(reply, "REQUEST_ALREADY_DECIDED");
 
-    let act_task_id: string | null = null; // Will remain null for REJECT.
-    let ao_act_fact_id: string | null = null; // Will remain null for REJECT.
-    let wrapper_task_created_fact_id: string | null = null; // Wrapper fact id for Commercial v1 paths.
-
     let operationPlan = await loadLatestOperationPlanByApprovalRequestId(pool, request_id, tenant);
-    const operation_plan_id = operationPlan?.record_json?.payload?.operation_plan_id
-      ? String(operationPlan.record_json.payload.operation_plan_id)
-      : `opl_${randomUUID().replace(/-/g, "")}`;
-    if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
+    const operation_plan_id = operationPlan?.record_json?.payload?.operation_plan_id ? String(operationPlan.record_json.payload.operation_plan_id) : `opl_${randomUUID().replace(/-/g, "")}`;
     if (decision !== "APPROVE") return badRequest(reply, "OPERATION_PLAN_APPROVAL_REQUIRED");
 
-      const proposal = requestPayload.proposal; // Reuse request proposal as AO-ACT task input.
-      const preDecisionPlanPayload = operationPlan?.record_json?.payload ?? {};
-      const approvalDeviceId =
-        String(preDecisionPlanPayload?.device_id ?? "").trim()
-        || String(proposal?.target?.id ?? "").trim()
-        || String(proposal?.meta?.device_id ?? "").trim()
-        || (typeof proposal?.target === "string" ? String(proposal.target).trim() : "");
-      const planAdapterType = typeof preDecisionPlanPayload?.adapter_type === "string"
-        ? String(preDecisionPlanPayload.adapter_type)
-        : String(proposal?.meta?.adapter_type ?? "");
-      const resolvedProposalActionType = resolveActionType(proposal);
-      const parsedCapabilityResult = parseTaskCapability(proposal);
-      if (!parsedCapabilityResult.ok) {
-        return capabilityError(reply, {
-          stage: "approval",
-          operation_plan_id,
-          adapter_type: planAdapterType || null,
-          device_type: resolveDeviceTypeMetadata(proposal),
-          error: parsedCapabilityResult.error
-        });
-      }
-      const parsedCapability = parsedCapabilityResult.value;
-      const aoActActionType = toAoActAllowlistAction(resolvedProposalActionType);
-      const tripleValidation = assertTenantFieldDeviceTriple({
-        tenant_id: tenant.tenant_id,
-        project_id: tenant.project_id,
-        group_id: tenant.group_id,
-        field_id: preDecisionPlanPayload?.field_id ?? requestPayload?.field_id ?? requestPayload?.meta?.field_id ?? null,
-        meta: { device_id: approvalDeviceId }
-      });
-      if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
-      const compatibilityCheck = checkCapabilityCompatibilityMatrix({
-        capability: {
-          capability: parsedCapability.capability,
-          parameters: parsedCapability.parameters,
-          evidence_requirements: parsedCapability.evidence_requirements,
-          explain: parsedCapability.explain ?? "",
-          compatibility: parsedCapability.compatibility
-        },
-        adapter_type: planAdapterType
-      });
-      if (!compatibilityCheck.ok) {
-        console.error("[CAPABILITY_COMPATIBILITY_APPROVAL]", JSON.stringify({
-          adapter_type: planAdapterType,
-          capability: parsedCapability.capability,
-          proposal_action_type: proposal?.action_type ?? null,
-          proposal_task_type: proposal?.task_type ?? null,
-          resolved_action_type: resolvedProposalActionType,
-          tenant
-        }, null, 2));
-        return capabilityError(reply, {
-          stage: "approval",
-          operation_plan_id,
-          adapter_type: planAdapterType || null,
-          device_type: resolveDeviceTypeMetadata(proposal),
-          error: compatibilityCheck.error
-        });
-      }
-      const adapterValidation = validateAdapterTask(planAdapterType, { meta: { device_id: approvalDeviceId } });
-      if (!adapterValidation.ok) return badRequest(reply, adapterValidation.reason);
-      await insertFact(pool, "api/v1/approvals", {
-        type: "approval_request_v1",
-        payload: {
-          ...requestPayload,
-          tenant_id: tenant.tenant_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id,
-          program_id: requestPayload?.program_id ?? requestPayload?.proposal?.meta?.program_id ?? null,
-          field_id: requestPayload?.field_id ?? requestPayload?.proposal?.meta?.field_id ?? requestPayload?.proposal?.target?.ref ?? null,
-          season_id: requestPayload?.season_id ?? requestPayload?.proposal?.meta?.season_id ?? null,
-          request_id,
-          status: "APPROVED",
-          approved_at_ts: Date.now(),
-          approved_by_actor_id: auth.actor_id,
-          approved_by_token_id: auth.token_id
-        }
-      });
-
-      const decision_id = `apd_${randomUUID().replace(/-/g, "")}`;
-      const decision_fact_id = await insertFact(pool, "api/v1/approvals", {
-        type: "approval_decision_v1",
-        payload: {
-          tenant_id: tenant.tenant_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id,
-          decision_id,
-          request_id,
-          decision,
-          act_task_id: null,
-          ao_act_fact_id: null,
-          auto_task_issued: false,
-          task_issue_intent: true,
-          actor_id: auth.actor_id,
-          token_id: auth.token_id,
-          created_at_ts: Date.now(),
-          reason: body.reason ?? null
-        }
-      });
-
-      if (!operationPlan) {
-        await createOperationPlanForApproval(
-          pool,
-          tenant,
-          request_id,
-          requestPayload,
-          body,
-          "api/v1/approvals",
-          operation_plan_id
-        );
-        operationPlan = await loadLatestOperationPlanByApprovalRequestId(pool, request_id, tenant);
-      }
-      if (!operationPlan) return reply.status(500).send({ ok: false, error: "OPERATION_PLAN_CREATE_FAILED" });
-
-      const approvedTransition = await transitionOperationPlanStateV1(pool, tenant, operationPlan, {
-        next_status: "APPROVED",
-        trigger: "approval_decision",
-        approval_request_id: request_id,
-        decision,
-        decision_fact_id,
-        act_task_id: null
-      }, "api/v1/approvals");
-      const approvedPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
-      if (!approvedPlan) return reply.status(500).send({ ok: false, error: "OPERATION_PLAN_UPDATE_FAILED" });
-
-      const readyTransition = await transitionOperationPlanStateV1(pool, tenant, approvedPlan, {
-        next_status: "READY",
-        trigger: "approval_ready_for_task",
-        approval_request_id: request_id,
-        decision,
-        decision_fact_id,
-        act_task_id: null
-      }, "api/v1/approvals");
-      const readyPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
-      if (!readyPlan) return reply.status(500).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND_AFTER_READY" });
-      const sanitizedParameters = sanitizeParametersBySchema(proposal.parameter_schema, proposal.parameters);
-      const taskCreatePayload = {
-        tenant_id: tenant.tenant_id,
-        project_id: tenant.project_id,
-        group_id: tenant.group_id,
-        operation_plan_id,
-        approval_request_id: request_id,
-        issuer: proposal.issuer,
-        action_type: aoActActionType,
-        target: proposal.target,
-        time_window: proposal.time_window,
-        parameter_schema: proposal.parameter_schema,
-        parameters: sanitizedParameters,
-        constraints: proposal.constraints,
-        meta: {
-          ...(proposal.meta ?? {}),
-          task_type: String((proposal as any)?.task_type ?? resolvedProposalActionType ?? aoActActionType).trim() || aoActActionType,
-          capability: parsedCapability.capability,
-          capability_parameters: parsedCapability.parameters,
-          evidence_requirements: parsedCapability.evidence_requirements,
-          device_id: approvalDeviceId || null,
-          adapter_type: typeof readyPlan?.record_json?.payload?.adapter_type === "string"
-            ? String(readyPlan.record_json.payload.adapter_type)
-            : (proposal?.meta?.adapter_type ?? null),
-          device_type: readyPlan?.record_json?.payload?.device_type ?? preDecisionPlanPayload?.device_type ?? null,
-          required_capabilities: Array.isArray(readyPlan?.record_json?.payload?.required_capabilities)
-            ? readyPlan.record_json.payload.required_capabilities
-            : []
-        }
-      };
-      console.info("[AO_ACT_TASK_CREATE_DEBUG]", JSON.stringify({
-        action_type: taskCreatePayload.action_type,
-        adapter_type: taskCreatePayload.meta?.adapter_type ?? null,
-        rawParameters: proposal.parameters ?? {},
-        sanitizedParameters,
-        parameter_schema_keys: Array.isArray(proposal?.parameter_schema?.keys)
-          ? proposal.parameter_schema.keys.map((x: any) => x?.name).filter(Boolean)
-          : []
-      }));
-      const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/actions/task`, String((req.headers as any).authorization ?? ""), taskCreatePayload);
-      if (!delegated.ok || !delegated.json?.ok) {
-        const delegatedErrorCode = delegated.status === 400
-          ? String(delegated.json?.error_code ?? delegated.json?.error ?? "UNKNOWN_400").trim()
-          : null;
-        const delegatedFirstInvalidField = delegated.status === 400
-          ? extractFirstInvalidField(delegated.json)
-          : null;
-        console.error("[AO_ACT_TASK_CREATE_FAILED_APPROVAL]", JSON.stringify({
-          statusCode: delegated.status,
-          error_code: delegatedErrorCode,
-          first_invalid_field: delegatedFirstInvalidField,
-          responseBody: delegated.json ?? null,
-          requestPayload: taskCreatePayload,
-        }, null, 2));
-        return reply.status(400).send({ ok: false, error: "AO_ACT_TASK_CREATE_FAILED", detail: delegated.json ?? null });
-      }
-      act_task_id = String(delegated.json.act_task_id ?? "");
-      ao_act_fact_id = String(delegated.json.fact_id ?? "");
-      wrapper_task_created_fact_id = await insertFact(pool, "api/v1/ao-act/tasks", {
-        type: "ao_act_task_created_v1",
-        payload: {
-          tenant_id: tenant.tenant_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id,
-          program_id: requestPayload?.program_id ?? requestPayload?.proposal?.meta?.program_id ?? null,
-          field_id: requestPayload?.field_id ?? requestPayload?.proposal?.meta?.field_id ?? requestPayload?.proposal?.target?.ref ?? null,
-          season_id: requestPayload?.season_id ?? requestPayload?.proposal?.meta?.season_id ?? null,
-          request_id,
-          act_task_id,
-          ao_act_fact_id,
-          actor_id: auth.actor_id,
-          token_id: auth.token_id,
-          created_at_ts: Date.now()
-        }
-      }); // Wrapper fact gives Commercial v1 stable semantics without changing v0 core.
-
-    const createdTaskFact = await loadLatestFactByTypeAndKey(
-      pool,
-      "ao_act_task_v0",
-      "payload,act_task_id",
-      String(act_task_id ?? "").trim(),
-      tenant
-    );
-    if (!createdTaskFact) {
-      return reply.status(500).send({ ok: false, error: "TASK_FACT_NOT_FOUND_AFTER_APPROVE" });
+    const proposal = requestPayload.proposal;
+    const preDecisionPlanPayload = operationPlan?.record_json?.payload ?? {};
+    const approvalExecutionContext = resolveApprovalExecutionContextV1({
+      requestPayload,
+      requestBody: body,
+      operationPlanPayload: preDecisionPlanPayload,
+    });
+    const approvalDeviceId = approvalExecutionContext.device_id ?? "";
+    const planAdapterType = approvalExecutionContext.adapter_type ?? "";
+    const approvalDeviceType = approvalExecutionContext.device_type ?? resolveDeviceTypeMetadata(proposal);
+    const resolvedProposalActionType = resolveActionType(proposal);
+    const parsedCapabilityResult = parseTaskCapability(proposal);
+    if (!parsedCapabilityResult.ok) {
+      return capabilityError(reply, { stage: "approval", operation_plan_id, adapter_type: planAdapterType || null, device_type: approvalDeviceType, error: parsedCapabilityResult.error });
     }
+    const parsedCapability = parsedCapabilityResult.value;
+    const aoActActionType = toAoActAllowlistAction(resolvedProposalActionType);
+    const tripleValidation = assertTenantFieldDeviceTriple({ tenant_id: tenant.tenant_id, project_id: tenant.project_id, group_id: tenant.group_id, meta: { device_id: approvalDeviceId } });
+    if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
+    const compatibilityCheck = checkCapabilityCompatibilityMatrix({
+      capability: { capability: parsedCapability.capability, parameters: parsedCapability.parameters, evidence_requirements: parsedCapability.evidence_requirements, explain: parsedCapability.explain ?? "", compatibility: parsedCapability.compatibility },
+      adapter_type: planAdapterType,
+    });
+    if (!compatibilityCheck.ok) {
+      return capabilityError(reply, { stage: "approval", operation_plan_id, adapter_type: planAdapterType || null, device_type: approvalDeviceType, error: compatibilityCheck.error });
+    }
+    const adapterValidation = validateAdapterTask(planAdapterType, { meta: { device_id: approvalDeviceId } });
+    if (!adapterValidation.ok) return badRequest(reply, adapterValidation.reason);
 
-    const readyQueue = await enqueueReadyDispatchForTask(
-      pool,
-      auth,
-      tenant,
-      createdTaskFact,
-      readyPlan
-    );
+    const decision_id = `apd_${randomUUID().replace(/-/g, "")}`;
+    const decision_fact_id = await insertFact(pool, "api/v1/approvals", {
+      type: "approval_decision_v1",
+      payload: { tenant_id: tenant.tenant_id, project_id: tenant.project_id, group_id: tenant.group_id, decision_id, request_id, decision, act_task_id: null, ao_act_fact_id: null, auto_task_issued: false, task_issue_intent: true, actor_id: auth.actor_id, token_id: auth.token_id, created_at_ts: Date.now(), reason: body.reason ?? null },
+    });
+
+    if (!operationPlan) {
+      await createOperationPlanForApproval(pool, tenant, request_id, requestPayload, body, "api/v1/approvals", operation_plan_id);
+      operationPlan = await loadLatestOperationPlanByApprovalRequestId(pool, request_id, tenant);
+    }
+    if (!operationPlan) return reply.status(500).send({ ok: false, error: "OPERATION_PLAN_CREATE_FAILED" });
+    const approvedTransition = await transitionOperationPlanStateV1(pool, tenant, operationPlan, { next_status: "APPROVED", trigger: "approval_decision", approval_request_id: request_id, decision, decision_fact_id }, "api/v1/approvals");
+    const approvedPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
+    if (!approvedPlan) return reply.status(500).send({ ok: false, error: "OPERATION_PLAN_UPDATE_FAILED" });
+    const readyTransition = await transitionOperationPlanStateV1(pool, tenant, approvedPlan, { next_status: "READY", trigger: "approval_ready_for_task", approval_request_id: request_id, decision, decision_fact_id }, "api/v1/approvals");
+    const readyPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
+    if (!readyPlan) return reply.status(500).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND_AFTER_READY" });
+
+    const sanitizedParameters = sanitizeParametersBySchema(proposal.parameter_schema, proposal.parameters);
+    const taskCreatePayload = {
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      operation_plan_id,
+      approval_request_id: request_id,
+      issuer: proposal.issuer,
+      action_type: aoActActionType,
+      target: proposal.target,
+      time_window: proposal.time_window,
+      parameter_schema: proposal.parameter_schema,
+      parameters: sanitizedParameters,
+      constraints: proposal.constraints,
+      meta: {
+        ...(proposal.meta ?? {}),
+        task_type: String(proposal?.task_type ?? resolvedProposalActionType ?? aoActActionType).trim() || aoActActionType,
+        capability: parsedCapability.capability,
+        capability_parameters: parsedCapability.parameters,
+        evidence_requirements: parsedCapability.evidence_requirements,
+        device_id: approvalDeviceId || null,
+        adapter_type: readyPlan.record_json?.payload?.adapter_type ?? planAdapterType || null,
+        device_type: readyPlan.record_json?.payload?.device_type ?? approvalDeviceType,
+        required_capabilities: Array.isArray(readyPlan.record_json?.payload?.required_capabilities) ? readyPlan.record_json.payload.required_capabilities : approvalExecutionContext.required_capabilities,
+      },
+    };
+    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/actions/task`, String((req.headers as any).authorization ?? ""), taskCreatePayload);
+    if (!delegated.ok || !delegated.json?.ok) return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "AO_ACT_TASK_CREATE_FAILED" });
+    const act_task_id = String(delegated.json.act_task_id ?? "");
+    const createdTaskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
+    if (!createdTaskFact) return reply.status(500).send({ ok: false, error: "TASK_FACT_NOT_FOUND_AFTER_APPROVE" });
+    const readyQueue = await enqueueReadyDispatchForTask(pool, auth, tenant, createdTaskFact, readyPlan);
 
     return reply.send({
       ok: true,
@@ -2580,8 +753,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       decision_id,
       decision_fact_id,
       act_task_id,
-      ao_act_fact_id,
-      wrapper_task_created_fact_id,
+      ao_act_fact_id: String(delegated.json.fact_id ?? ""),
       operation_plan_id,
       outbox_fact_id: readyQueue.outbox_fact_id,
       queue_ready: true,
@@ -2590,1413 +762,20 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       adapter_hint: readyQueue.adapter_hint,
       operation_plan_transition_fact_id: readyTransition.transition_fact_id,
       operation_plan_update_fact_id: readyTransition.operation_plan_fact_id,
-      operation_plan_approved_transition_fact_id: approvedTransition.transition_fact_id
+      operation_plan_approved_transition_fact_id: approvedTransition.transition_fact_id,
     });
   });
 
-  // POST /api/v1/ao-act/tasks
-  // Explicit task create path for already-approved / low-level integrator flows.
-  app.post("/api/v1/ao-act/tasks", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
-    if (!auth) return;
-    const body: any = req.body ?? {};
-    const tenant: TenantTriple = parseTenantFromBody(body);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const requestedDeviceId = String((body?.meta as any)?.device_id ?? "").trim();
-    if (requestedDeviceId && !(await ensureDeviceBelongsTenantOr404(pool, tenant, requestedDeviceId))) {
-      return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    }
-    const operation_plan_id = String(body.operation_plan_id ?? "").trim();
-    if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
-    const operationPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
-    if (!operationPlan) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
-    const adapterType = String(body?.adapter_type ?? operationPlan?.record_json?.payload?.adapter_type ?? body?.meta?.adapter_type ?? "").trim();
-    const requestedActionType = resolveActionType(body);
-    const parsedCapabilityResult = parseTaskCapability(body);
-    if (!parsedCapabilityResult.ok) {
-      return capabilityError(reply, {
-        stage: "task_create",
-        operation_plan_id,
-        adapter_type: adapterType || null,
-        device_type: resolveDeviceTypeMetadata(body),
-        error: parsedCapabilityResult.error
-      });
-    }
-    const parsedCapability = parsedCapabilityResult.value;
-    const aoActActionType = toAoActAllowlistAction(requestedActionType);
-    const tripleValidation = assertTenantFieldDeviceTriple({ ...body, tenant_id: tenant.tenant_id, project_id: tenant.project_id, group_id: tenant.group_id });
-    if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
-    const matrixCheck = checkCapabilityCompatibilityMatrix({
-      capability: {
-        capability: parsedCapability.capability,
-        parameters: parsedCapability.parameters,
-        evidence_requirements: parsedCapability.evidence_requirements,
-        explain: parsedCapability.explain ?? "",
-        compatibility: parsedCapability.compatibility
-      },
-      adapter_type: adapterType
-    });
-    if (!matrixCheck.ok) {
-      console.error("[CAPABILITY_COMPATIBILITY_TASK_CREATE]", JSON.stringify({
-        adapter_type: adapterType,
-        capability: parsedCapability.capability,
-        requested_action_type: body?.action_type ?? null,
-        requested_task_type: body?.task_type ?? null,
-        resolved_action_type: requestedActionType,
-        tenant
-      }, null, 2));
-      return capabilityError(reply, {
-        stage: "task_create",
-        operation_plan_id,
-        adapter_type: adapterType || null,
-        device_type: resolveDeviceTypeMetadata(body),
-        error: matrixCheck.error
-      });
-    }
-    const adapterValidation = validateAdapterTask(adapterType, body);
-    if (!adapterValidation.ok) return badRequest(reply, adapterValidation.reason);
-    const rawParameters = body?.parameters && typeof body.parameters === "object" ? body.parameters : {};
-    const sanitizedParameters = sanitizeParametersBySchema(body?.parameter_schema, rawParameters);
-    const taskCreatePayload = {
-      ...body,
-      parameters: sanitizedParameters,
-      action_type: aoActActionType,
-      meta: {
-        ...((body?.meta && typeof body.meta === "object") ? body.meta : {}),
-        task_type: String(body?.task_type ?? requestedActionType ?? aoActActionType).trim() || aoActActionType,
-        capability: parsedCapability.capability,
-        capability_parameters: parsedCapability.parameters,
-        evidence_requirements: parsedCapability.evidence_requirements
-      },
-      tenant_id: tenant.tenant_id,
-      project_id: tenant.project_id,
-      group_id: tenant.group_id,
-      operation_plan_id,
-      approval_request_id: String(body.approval_request_id ?? "").trim()
-    };
-    console.info("[AO_ACT_TASK_CREATE_DEBUG]", JSON.stringify({
-      action_type: taskCreatePayload.action_type,
-      adapter_type: taskCreatePayload.meta?.adapter_type ?? null,
-      rawParameters,
-      sanitizedParameters,
-      parameter_schema_keys: Array.isArray(body?.parameter_schema?.keys)
-        ? body.parameter_schema.keys.map((x: any) => x?.name).filter(Boolean)
-        : []
-    }));
-    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/actions/task`, String((req.headers as any).authorization ?? ""), taskCreatePayload);
-    if (!delegated.ok || !delegated.json?.ok) {
-      const delegatedErrorCode = delegated.status === 400
-        ? String(delegated.json?.error_code ?? delegated.json?.error ?? "UNKNOWN_400").trim()
-        : null;
-      const delegatedFirstInvalidField = delegated.status === 400
-        ? extractFirstInvalidField(delegated.json)
-        : null;
-      console.error("[AO_ACT_TASK_CREATE_FAILED_API]", JSON.stringify({
-        statusCode: delegated.status,
-        error_code: delegatedErrorCode,
-        first_invalid_field: delegatedFirstInvalidField,
-        responseBody: delegated.json ?? null,
-        requestPayload: taskCreatePayload,
-      }, null, 2));
-      return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "TASK_CREATE_FAILED" });
-    }
-
-    const wrapper_fact_id = await insertFact(pool, "api/v1/ao-act/tasks", {
-      type: "ao_act_task_created_v1",
-      payload: {
-        tenant_id: tenant.tenant_id,
-        project_id: tenant.project_id,
-        group_id: tenant.group_id,
-        operation_plan_id,
-        act_task_id: delegated.json.act_task_id,
-        ao_act_fact_id: delegated.json.fact_id,
-        actor_id: auth.actor_id,
-        token_id: auth.token_id,
-        created_at_ts: Date.now()
-      }
-    });
-
-    const readyTransition = await transitionOperationPlanStateV1(pool, tenant, operationPlan, {
-      next_status: "READY",
-      trigger: "task_created",
-      approval_request_id: String(body.approval_request_id ?? "").trim() || null,
-      act_task_id: String(delegated.json.act_task_id ?? "")
-    }, "api/v1/ao-act/tasks");
-
-    const createdTaskFact = await loadLatestFactByTypeAndKey(
-      pool,
-      "ao_act_task_v0",
-      "payload,act_task_id",
-      String(delegated.json.act_task_id ?? "").trim(),
-      tenant
-    );
-    if (!createdTaskFact) {
-      return reply.status(500).send({ ok: false, error: "TASK_FACT_NOT_FOUND_AFTER_CREATE" });
-    }
-
-    const latestPlan = await loadLatestFactByTypeAndKey(
-      pool,
-      "operation_plan_v1",
-      "payload,operation_plan_id",
-      operation_plan_id,
-      tenant
-    );
-    if (!latestPlan) {
-      return reply.status(500).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND_AFTER_READY" });
-    }
-
-    const readyQueue = await enqueueReadyDispatchForTask(
-      pool,
-      auth,
-      tenant,
-      createdTaskFact,
-      latestPlan
-    );
-
-    return reply.send({
-      ok: true,
-      act_task_id: delegated.json.act_task_id,
-      ao_act_fact_id: delegated.json.fact_id,
-      wrapper_fact_id,
-      operation_plan_id,
-      outbox_fact_id: readyQueue.outbox_fact_id,
-      queue_ready: true,
-      device_id: readyQueue.device_id,
-      downlink_topic: readyQueue.downlink_topic,
-      adapter_hint: readyQueue.adapter_hint,
-      operation_plan_transition_fact_id: readyTransition.transition_fact_id,
-      operation_plan_update_fact_id: readyTransition.operation_plan_fact_id
-    });
-  });
-
-  // GET /api/v1/ao-act/tasks
-  app.get("/api/v1/ao-act/tasks", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-    if (!auth) return;
-    const tenant = queryTenantFromReq(req, auth);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const items = await listTasks(pool, tenant, parseLimit((req as any).query));
-    return reply.send({ ok: true, items });
-  });
-
-  // GET /api/v1/ao-act/tasks/:act_task_id
-  app.get("/api/v1/ao-act/tasks/:act_task_id", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-    if (!auth) return;
-    const tenant = queryTenantFromReq(req, auth);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const params: any = (req as any).params ?? {};
-    const act_task_id = String(params.act_task_id ?? "").trim();
-    if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
-    const items = await listTasks(pool, tenant, 200);
-    const hit = items.find((x) => String(x?.task?.payload?.act_task_id ?? "") === act_task_id) ?? null;
-    if (!hit) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    return reply.send({ ok: true, item: hit });
-  });
-
-  // POST /api/v1/ao-act/tasks/:act_task_id/dispatch
-  // Control-2 key behavior: explicit dispatch writes two facts:
-  // - ao_act_task_dispatched_v1 (audit trail)
-  // - ao_act_dispatch_outbox_v1 (adapter-readable queue item)
-  // No automatic execution happens here.
-  app.post("/api/v1/ao-act/tasks/:act_task_id/dispatch", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
-    if (!auth) return;
-    const params: any = (req as any).params ?? {};
-    const body: any = req.body ?? {};
-    const act_task_id = String(params.act_task_id ?? "").trim();
-    const command_id = String(body.command_id ?? act_task_id).trim();
-    if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
-    if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
-    if (command_id !== act_task_id) return badRequest(reply, "COMMAND_ID_MUST_MATCH_ACT_TASK_ID");
-    const tenant: TenantTriple = parseTenantFromBody(body);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-
-    const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
-    if (!taskFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    const taskPayload = taskFact.record_json?.payload ?? {};
-    const bodyAdapterHint = typeof body?.adapter_hint === "string" ? body.adapter_hint.trim() : "";
-    const taskAdapterType = typeof taskPayload?.adapter_type === "string" ? taskPayload.adapter_type.trim() : "";
-    const metaAdapterType = typeof taskPayload?.meta?.adapter_type === "string" ? String(taskPayload.meta.adapter_type).trim() : "";
-    const adapterType = bodyAdapterHint || taskAdapterType || metaAdapterType;
-    const actionType = resolveActionType(taskPayload);
-    const canonicalDispatchActionType = normalizeActionType(actionType);
-    const parsedCapabilityResult = parseTaskCapability(taskPayload);
-    if (!parsedCapabilityResult.ok) {
-      return capabilityError(reply, {
-        stage: "dispatch",
-        act_task_id,
-        adapter_type: adapterType || null,
-        device_type: resolveDeviceTypeMetadata(taskPayload),
-        error: parsedCapabilityResult.error
-      });
-    }
-    const parsedCapability = parsedCapabilityResult.value;
-    const selectedAdapter = String(adapterType).trim().toLowerCase() || "unknown";
-    const supportsInput = String(taskPayload?.task_type ?? taskPayload?.meta?.task_type ?? actionType ?? "").trim();
-    const matrixCheck = checkCapabilityCompatibilityMatrix({
-      capability: {
-        capability: parsedCapability.capability,
-        parameters: parsedCapability.parameters,
-        evidence_requirements: parsedCapability.evidence_requirements,
-        explain: parsedCapability.explain ?? "",
-        compatibility: parsedCapability.compatibility
-      },
-      adapter_type: adapterType
-    });
-    const capabilitySupport = matrixCheck.ok;
-    console.log(`[DISPATCH_TASK_PAYLOAD] act_task_id=${act_task_id} adapter_type=${selectedAdapter} action_type=${String(actionType).trim().toLowerCase()} canonical_action_type=${canonicalDispatchActionType} task_type=${String(taskPayload?.task_type ?? taskPayload?.meta?.task_type ?? "").trim().toLowerCase()} meta_device_id=${String(taskPayload?.meta?.device_id ?? "").trim()} meta_topic=${String(taskPayload?.meta?.topic ?? "").trim()}`);
-    console.log("[dispatch-debug-server]", {
-      adapter_type: String(adapterType ?? ""),
-      task_type: String(taskPayload?.task_type ?? ""),
-      action_type: String(taskPayload?.action_type ?? ""),
-      meta_task_type: String(taskPayload?.meta?.task_type ?? ""),
-      capability: parsedCapability.capability,
-      capability_parameters: parsedCapability.parameters,
-      supports_input: supportsInput,
-      supports_result: null,
-      supports_capability: capabilitySupport
-    });
-    const tripleValidation = assertTenantFieldDeviceTriple(taskPayload);
-    if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
-    if (!matrixCheck.ok) {
-      console.error("[CAPABILITY_COMPATIBILITY_DISPATCH]", JSON.stringify({
-        act_task_id,
-        selected_adapter: selectedAdapter,
-        capability: parsedCapability.capability,
-        action_type: taskPayload?.action_type ?? null,
-        task_type: taskPayload?.task_type ?? taskPayload?.meta?.task_type ?? null,
-        canonical_action_type: canonicalDispatchActionType,
-        meta: {
-          device_id: taskPayload?.meta?.device_id ?? null,
-          topic: taskPayload?.meta?.topic ?? null
-        },
-        parameters: taskPayload?.parameters ?? null,
-        task_payload: taskPayload
-      }, null, 2));
-      return capabilityError(reply, {
-        stage: "dispatch",
-        act_task_id,
-        operation_plan_id: String(taskFact.record_json?.payload?.operation_plan_id ?? "").trim() || null,
-        adapter_type: adapterType || null,
-        device_type: resolveDeviceTypeMetadata(taskPayload),
-        error: matrixCheck.error
-      });
-    }
-    const adapterValidation = validateAdapterTask(adapterType, taskPayload);
-    if (!adapterValidation.ok) return badRequest(reply, adapterValidation.reason);
-    const operation_plan_id = String(taskFact.record_json?.payload?.operation_plan_id ?? "").trim();
-    if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
-    const operationPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
-    if (!operationPlan) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
-    const latestReceipt = await loadLatestReceiptByCommandId(pool, command_id, tenant);
-    if (latestReceipt) return badRequest(reply, "TASK_ALREADY_HAS_RECEIPT");
-
-    const existingOutbox = await loadLatestFactByTypeAndKey(pool, "ao_act_dispatch_outbox_v1", "payload,act_task_id", act_task_id, tenant);
-    const hasExplicitAdapterHint = String(body?.adapter_hint ?? "").trim().length > 0;
-    if (existingOutbox && !hasExplicitAdapterHint) {
-      const existingPayload = existingOutbox.record_json?.payload ?? {};
-      await upsertDispatchQueueReady(pool, {
-        tenant,
-        queue_id: `dq_${randomUUID().replace(/-/g, "")}`,
-        act_task_id,
-        command_id,
-        task_fact_id: String(existingPayload.task_fact_id ?? taskFact.fact_id),
-        outbox_fact_id: existingOutbox.fact_id,
-        device_id: typeof existingPayload.device_id === "string" ? existingPayload.device_id : null,
-        downlink_topic: typeof existingPayload.downlink_topic === "string" ? existingPayload.downlink_topic : null,
-        qos: Math.max(0, Math.min(2, Number.parseInt(String(existingPayload.qos ?? body.qos ?? "1"), 10) || 1)),
-        retain: Boolean(existingPayload.retain ?? body.retain ?? false),
-        adapter_hint: normalizeAdapterHint(body.adapter_hint ?? existingPayload.adapter_hint)
-      });
-      const dispatchedTransition = await ensureOperationPlanAtLeastDispatched(
-        pool,
-        tenant,
-        operation_plan_id,
-        act_task_id,
-        "api/v1/ao-act/tasks/dispatch",
-        "task_dispatch_existing_outbox"
-      );
-      return reply.send({
-        ok: true,
-        act_task_id,
-        command_id,
-        dispatch_fact_id: null,
-        outbox_fact_id: existingOutbox.fact_id,
-        already_queued: true,
-        debug_adapter_hint: body?.adapter_hint ?? null,
-        debug_has_explicit_adapter_hint: hasExplicitAdapterHint,
-        debug_content_type: String((req.headers as any)["content-type"] ?? ""),
-        operation_plan_id,
-        operation_plan_transition_fact_id: dispatchedTransition?.transition_fact_id ?? null,
-        operation_plan_update_fact_id: dispatchedTransition?.operation_plan_fact_id ?? null
-      });
-    } // Explicit idempotency: one open outbox item per task until receipt exists.
-
-    const taskRecord = taskFact.record_json ?? {}; // Joined AO-ACT task record used to derive adapter hints.
-    const target = resolveExecutionTarget({ tenant, body, taskRecord, capability: parsedCapability }); // capability -> target -> adapter.
-    const device_id = target.device_id;
-    const downlink_topic = target.downlink_topic;
-    const dispatch_mode = String(body.dispatch_mode ?? "OUTBOX_ONLY").trim() || "OUTBOX_ONLY"; // Stable dispatch mode marker.
-    const planAdapterType = typeof operationPlan?.record_json?.payload?.adapter_type === "string"
-      ? String(operationPlan.record_json.payload.adapter_type)
-      : null;
-    const adapter_hint = normalizeAdapterHint(body.adapter_hint ?? planAdapterType); // Normalize aliases so queue consumers can match.
-    const qos = Math.max(0, Math.min(2, Number.parseInt(String(body.qos ?? "1"), 10) || 1)); // MQTT QoS clamp.
-    const retain = Boolean(body.retain ?? false); // MQTT retain flag.
-
-    const dispatch_fact_id = await insertFact(pool, "api/v1/ao-act/tasks/dispatch", {
-      type: "ao_act_task_dispatched_v1",
-      payload: {
-        tenant_id: tenant.tenant_id,
-        project_id: tenant.project_id,
-        group_id: tenant.group_id,
-        act_task_id,
-        device_id,
-        downlink_topic,
-        qos,
-        retain,
-        actor_id: auth.actor_id,
-        token_id: auth.token_id,
-        dispatch_mode,
-        adapter_hint,
-        capability: parsedCapability.capability,
-        capability_parameters: parsedCapability.parameters,
-        evidence_requirements: parsedCapability.evidence_requirements,
-        created_at_ts: Date.now()
-      }
-    });
-    const outbox_fact_id = await insertFact(pool, "api/v1/ao-act/dispatches", {
-      type: "ao_act_dispatch_outbox_v1",
-      payload: {
-        tenant_id: tenant.tenant_id,
-        project_id: tenant.project_id,
-        group_id: tenant.group_id,
-        act_task_id,
-        command_id,
-        task_fact_id: taskFact.fact_id,
-        dispatch_fact_id,
-        device_id,
-        downlink_topic,
-        qos,
-        retain,
-        adapter_hint,
-        capability: parsedCapability.capability,
-        capability_parameters: parsedCapability.parameters,
-        evidence_requirements: parsedCapability.evidence_requirements,
-        created_at_ts: Date.now()
-      }
-    });
-    await upsertDispatchQueueReady(pool, {
-      tenant,
-      queue_id: `dq_${randomUUID().replace(/-/g, "")}`,
-      act_task_id,
-      command_id,
-      task_fact_id: String(taskFact.fact_id),
-      outbox_fact_id,
-      device_id,
-      downlink_topic,
-      qos,
-      retain,
-      adapter_hint
-    });
-    const dispatchedTransition = await transitionOperationPlanStateV1(pool, tenant, operationPlan, {
-      next_status: "DISPATCHED",
-      trigger: "task_dispatch",
-      act_task_id
-    }, "api/v1/ao-act/tasks/dispatch");
-    return reply.send({
-      ok: true, act_task_id, command_id, dispatch_fact_id, outbox_fact_id, device_id, downlink_topic, qos, retain, already_queued: false,
-      operation_plan_id, operation_plan_transition_fact_id: dispatchedTransition.transition_fact_id, operation_plan_update_fact_id: dispatchedTransition.operation_plan_fact_id
-    });
-  });
-
-
-  // POST /api/v1/ao-act/dispatches/claim
-  // Industrial runtime queue claim: atomically leases READY items to a single executor.
-  app.post("/api/v1/ao-act/dispatches/claim", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "action.task.dispatch");
-    if (!auth) return reply;
-    if (!requireExecutorServicePrincipalV1(auth, reply)) return reply;
-    const body: any = req.body ?? {};
-    const tenant: TenantTriple = parseTenantFromBody(body);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
-    const limit = Math.max(1, Math.min(50, Number.parseInt(String(body.limit ?? 1), 10) || 1));
-    const lease_seconds = Math.max(5, Math.min(300, Number.parseInt(String(body.lease_seconds ?? 30), 10) || 30));
-    const claimedExecutorId = String(body.executor_id ?? "").trim();
-    if (claimedExecutorId && claimedExecutorId !== String(auth.actor_id)) return reply.status(403).send({ ok: false, error: "EXECUTOR_IDENTITY_MISMATCH" });
-    const executor_id = String(auth.actor_id);
-    const lease_token = String(body.lease_token ?? `lease_${randomUUID().replace(/-/g, "")}`).trim();
-    const actTaskId = typeof body.act_task_id === "string" && body.act_task_id.trim() ? body.act_task_id.trim() : undefined;
-    const adapterHint = typeof body.adapter_hint === "string" && body.adapter_hint.trim() ? body.adapter_hint.trim() : undefined;
-    const rows = await claimDispatchQueueRows(pool, tenant, limit, lease_seconds, executor_id, lease_token, actTaskId, adapterHint);
-    const claimedIds = rows.map((r: any) => String(r.queue_id)).filter(Boolean);
-    const items = await listDispatchQueueByIds(pool, tenant, claimedIds);
-
-    const deliverableItems: any[] = [];
-    for (const item of items) {
-      const taskPayload = item?.task?.payload ?? {};
-      const operation_plan_id = String(taskPayload?.operation_plan_id ?? "").trim();
-      if (!operation_plan_id) {
-        deliverableItems.push(item);
-        continue;
-      }
-      const operationPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
-      const operation_plan_status = String(operationPlan?.record_json?.payload?.status ?? "").trim().toUpperCase();
-      if (!isTerminalOperationPlanStatus(operation_plan_status)) {
-        deliverableItems.push(item);
-        continue;
-      }
-
-      await updateDispatchQueueStateByActTask(pool, tenant, String(item.act_task_id ?? "").trim(), {
-        state: "FAILED"
-      });
-      await insertFact(pool, "api/v1/ao-act/dispatches/claim", {
-        type: "ao_act_dispatch_queue_stale_v1",
-        payload: {
-          tenant_id: tenant.tenant_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id,
-          queue_id: String(item.queue_id ?? "").trim(),
-          act_task_id: String(item.act_task_id ?? "").trim(),
-          command_id: String(item.command_id ?? "").trim(),
-          operation_plan_id,
-          operation_plan_status,
-          queue_state_before: String(item.state ?? "").trim().toUpperCase() || null,
-          queue_state_after: "FAILED",
-          reason: "OPERATION_PLAN_TERMINAL",
-          stale_ts_ms: Date.now(),
-          executor_id
-        }
-      });
-    }
-
-    if (reply.sent) return reply;
-    return reply.send({ ok: true, claim_id: lease_token, lease_token, items: deliverableItems });
-  });
-
-
-
-  // POST /api/v1/ao-act/dispatches/state
-  // Explicit runtime state transition endpoint used by executor adapters.
-  app.post("/api/v1/ao-act/dispatches/state", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "action.task.dispatch");
-    if (!auth) return reply;
-    if (!requireExecutorServicePrincipalV1(auth, reply)) return reply;
-    const body: any = req.body ?? {};
-    const tenant: TenantTriple = parseTenantFromBody(body);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const act_task_id = String(body.act_task_id ?? "").trim();
-    const command_id = String(body.command_id ?? act_task_id).trim();
-    const state = String(body.state ?? "").trim().toUpperCase();
-    if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
-    if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
-    if (!["DISPATCHED", "ACKED", "SUCCEEDED", "FAILED"].includes(state)) return badRequest(reply, "INVALID_STATE");
-    const changed = await transitionDispatchQueueState(pool, tenant, act_task_id, command_id, state as any);
-    const queueState = changed ? state : await loadDispatchQueueStateByActTask(pool, tenant, act_task_id, command_id);
-
-    const taskFact = await loadLatestFactByTypeAndKey(
-      pool,
-      "ao_act_task_v0",
-      "payload,act_task_id",
-      act_task_id,
-      tenant
-    );
-    const operation_plan_id = String(taskFact?.record_json?.payload?.operation_plan_id ?? "").trim();
-
-    let operation_plan_transition_fact_id: string | null = null;
-    let operation_plan_update_fact_id: string | null = null;
-    let manual_fallback_fact_id: string | null = null;
-    let work_assignment_fact_id: string | null = null;
-    let work_assignment_id: string | null = null;
-    let manual_fallback_created = false;
-    let idempotent = !changed;
-    let ackConverged = false;
-
-    if (operation_plan_id) {
-      const operationPlan = await loadLatestFactByTypeAndKey(
-        pool,
-        "operation_plan_v1",
-        "payload,operation_plan_id",
-        operation_plan_id,
-        tenant
-      );
-
-      if (operationPlan) {
-        const currentPlanStatus = String(operationPlan.record_json?.payload?.status ?? "").trim().toUpperCase();
-        const targetPlanStatus = String(state ?? "").trim().toUpperCase();
-        ackConverged = shouldTreatAckAsIdempotent({
-          requestedState: state,
-          queueState,
-          operationPlanStatus: currentPlanStatus
-        });
-
-        if (!changed && state === "ACKED" && !ackConverged) {
-          return reply.status(409).send({ ok: false, error: "STATE_TRANSITION_DENIED" });
-        }
-        if (!changed && state !== "DISPATCHED" && state !== "ACKED") {
-          return reply.status(409).send({ ok: false, error: "STATE_TRANSITION_DENIED" });
-        }
-
-        // ACK 收敛链路内重复上报视为幂等成功，不重复写 transition。
-        if (state === "ACKED" && isAckConvergedOperationPlanStatus(currentPlanStatus)) {
-          idempotent = true;
-        } else if (currentPlanStatus !== targetPlanStatus) {
-          try {
-            const transitioned = await transitionOperationPlanStateV1(
-              pool,
-              tenant,
-              operationPlan,
-              {
-                next_status: state as OperationPlanStatusV1,
-                trigger: "dispatch_state_update",
-                act_task_id
-              },
-              "api/v1/ao-act/dispatches/state"
-            );
-            operation_plan_transition_fact_id = transitioned.transition_fact_id;
-            operation_plan_update_fact_id = transitioned.operation_plan_fact_id;
-          } catch (e: any) {
-            const msg = String(e?.message ?? "").trim();
-            if (msg.includes("OPERATION_PLAN_TERMINAL")) {
-              const terminal_converged = state === "ACKED" || state === "FAILED";
-              const terminalBody = {
-                ok: false,
-                error: "OPERATION_PLAN_TERMINAL",
-                act_task_id,
-                command_id,
-                operation_plan_id: operation_plan_id || null,
-                operation_plan_status: currentPlanStatus || null,
-                queue_state: queueState || null,
-                terminal_converged
-              };
-              if (terminal_converged) {
-                return reply.status(200).send({ ...terminalBody, ok: true, idempotent: true });
-              }
-              return reply.status(409).send(terminalBody);
-            }
-            throw e;
-          }
-        }
-      }
-    }
-
-    if (!operation_plan_id) {
-      if (!changed && shouldTreatAckAsIdempotent({ requestedState: state, queueState })) {
-        ackConverged = true;
-      }
-      if (!changed && state === "ACKED" && !ackConverged) {
-        return reply.status(409).send({ ok: false, error: "STATE_TRANSITION_DENIED" });
-      }
-      if (!changed && state !== "DISPATCHED" && state !== "ACKED") {
-        return reply.status(409).send({ ok: false, error: "STATE_TRANSITION_DENIED" });
-      }
-    }
-
-    if (state === "FAILED" && taskFact) {
-      const fallbackContext = parseDispatchFallbackContext(body, taskFact.record_json?.payload ?? {});
-      if (shouldCreateManualFallbackAssignment(fallbackContext)) {
-        const fallback = await createWorkAssignmentFallbackFact({
-          pool,
-          tenant,
-          act_task_id,
-          operation_plan_id: operation_plan_id || null,
-          created_by: String(auth.actor_id ?? "system/controlplane"),
-          context: fallbackContext,
-          task_payload: taskFact.record_json?.payload ?? {},
-          sla: parseDispatchSla(body)
-        });
-        manual_fallback_fact_id = fallback.fallback_fact_id;
-        work_assignment_fact_id = fallback.assignment_fact_id;
-        work_assignment_id = fallback.assignment_id;
-        manual_fallback_created = fallback.created;
-      }
-    }
-
-    return reply.send({
-      ok: true,
-      act_task_id,
-      command_id,
-      state,
-      operation_plan_id: operation_plan_id || null,
-      operation_plan_transition_fact_id,
-      operation_plan_update_fact_id,
-      idempotent,
-      manual_fallback_fact_id,
-      work_assignment_fact_id,
-      work_assignment_id,
-      manual_fallback_created
-    });
-  });
-  // GET /api/v1/ao-act/dispatches
-  // Explicit adapter queue: outbox facts with no receipt yet.
-  app.get("/api/v1/ao-act/dispatches", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-    if (!auth) return;
-    const tenant = queryTenantFromReq(req, auth);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const q: any = (req as any).query ?? {};
-    const actTaskId = typeof q.act_task_id === "string" && q.act_task_id.trim() ? q.act_task_id.trim() : undefined; // Optional server-side task filter for one-shot adapters.
-    const items = await listDispatchQueue(pool, tenant, parseLimit(q), actTaskId);
-    return reply.send({ ok: true, items });
-  });
-
-  // POST /api/v1/ao-act/downlinks/published
-  // Adapter runtime writes one audit fact after a successful MQTT publish and before appending receipt.
-  app.post("/api/v1/ao-act/downlinks/published", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "action.task.dispatch");
-    if (!auth) return reply;
-    if (!requireExecutorServicePrincipalV1(auth, reply)) return reply;
-    const body: any = req.body ?? {};
-    const claimedExecutorId = String(body.executor_id ?? "").trim();
-    if (claimedExecutorId && claimedExecutorId !== String(auth.actor_id)) return reply.status(403).send({ ok: false, error: "EXECUTOR_IDENTITY_MISMATCH" });
-    const tenant: TenantTriple = parseTenantFromBody(body);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const act_task_id = String(body.act_task_id ?? "").trim();
-    const outbox_fact_id = String(body.outbox_fact_id ?? "").trim();
-    const device_id = String(body.device_id ?? "").trim();
-    const topic = String(body.topic ?? "").trim();
-    if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
-    if (!outbox_fact_id) return badRequest(reply, "MISSING_OUTBOX_FACT_ID");
-    if (!device_id) return badRequest(reply, "MISSING_DEVICE_ID");
-    if (!(await ensureDeviceBelongsTenantOr404(pool, tenant, device_id))) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    if (!topic) return badRequest(reply, "MISSING_TOPIC");
-    const queueItem = await loadLatestFactByTypeAndKey(pool, "ao_act_dispatch_outbox_v1", "payload,act_task_id", act_task_id, tenant);
-    if (!queueItem) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    if (String(queueItem.fact_id) !== outbox_fact_id) return badRequest(reply, "OUTBOX_FACT_MISMATCH");
-    const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
-    const operation_plan_id = String(taskFact?.record_json?.payload?.operation_plan_id ?? "").trim();
-    const existingPublished = await loadLatestDownlinkPublishedByOutboxFactId(pool, outbox_fact_id, tenant);
-    if (existingPublished) {
-      await updateDispatchQueueStateByOutbox(pool, outbox_fact_id, {
-        state: "DISPATCHED",
-        publish_fact_id: existingPublished.fact_id,
-        leaseToken: typeof body.lease_token === "string" && body.lease_token.trim() ? body.lease_token.trim() : null,
-        leasedBy: String(auth.actor_id)
-      });
-      const dispatchedTransition = operation_plan_id
-        ? await ensureOperationPlanAtLeastDispatched(
-          pool,
-          tenant,
-          operation_plan_id,
-          act_task_id,
-          "api/v1/ao-act/downlinks/published",
-          "downlink_published"
-        )
-        : null;
-      return reply.send({
-        ok: true,
-        published_fact_id: existingPublished.fact_id,
-        already_published: true,
-        operation_plan_id: operation_plan_id || null,
-        operation_plan_transition_fact_id: dispatchedTransition?.transition_fact_id ?? null,
-        operation_plan_update_fact_id: dispatchedTransition?.operation_plan_fact_id ?? null
-      });
-    } // Idempotent publish audit: same outbox fact maps to one published fact.
-    const latestReceipt = await loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v0", "payload,act_task_id", act_task_id, tenant);
-    if (latestReceipt) return badRequest(reply, "TASK_ALREADY_HAS_RECEIPT");
-    const published_fact_id = await insertFact(pool, "api/v1/ao-act/downlinks/published", {
-      type: "ao_act_downlink_published_v1",
-      payload: {
-        tenant_id: tenant.tenant_id,
-        project_id: tenant.project_id,
-        group_id: tenant.group_id,
-        act_task_id,
-        outbox_fact_id,
-        device_id,
-        topic,
-        qos: Number(body.qos ?? 1),
-        retain: Boolean(body.retain ?? false),
-        adapter_runtime: String(body.adapter_runtime ?? "mqtt_downlink_once_v1"),
-        adapter_message_id: body.adapter_message_id ?? null,
-        command_payload_sha256: String(body.command_payload_sha256 ?? sha256Json(body.command_payload ?? null)),
-        actor_id: auth.actor_id,
-        token_id: auth.token_id,
-        created_at_ts: Date.now()
-      }
-    });
-    await updateDispatchQueueStateByOutbox(pool, outbox_fact_id, {
-      state: "DISPATCHED",
-      publish_fact_id: published_fact_id,
-      leaseToken: typeof body.lease_token === "string" && body.lease_token.trim() ? body.lease_token.trim() : null,
-      leasedBy: String(auth.actor_id)
-    });
-    const dispatchedTransition = operation_plan_id
-      ? await ensureOperationPlanAtLeastDispatched(
-        pool,
-        tenant,
-        operation_plan_id,
-        act_task_id,
-        "api/v1/ao-act/downlinks/published",
-        "downlink_published"
-      )
-      : null;
-    return reply.send({
-      ok: true,
-      published_fact_id,
-      operation_plan_id: operation_plan_id || null,
-      operation_plan_transition_fact_id: dispatchedTransition?.transition_fact_id ?? null,
-      operation_plan_update_fact_id: dispatchedTransition?.operation_plan_fact_id ?? null
-    });
-  });
-
-  // GET /api/v1/ao-act/downlinks
-  // Read-only list of published downlink audit facts.
-  app.get("/api/v1/ao-act/downlinks", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-    if (!auth) return;
-    const tenant = queryTenantFromReq(req, auth);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const q: any = (req as any).query ?? {};
-    const sql = `
-      SELECT fact_id, occurred_at, source, (record_json::jsonb) AS record_json
-      FROM facts
-      WHERE (record_json::jsonb->>'type') = 'ao_act_downlink_published_v1'
-        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-        AND (record_json::jsonb#>>'{payload,project_id}') = $2
-        AND (record_json::jsonb#>>'{payload,group_id}') = $3
-        AND ($4::text IS NULL OR (record_json::jsonb#>>'{payload,act_task_id}') = $4)
-      ORDER BY occurred_at DESC, fact_id DESC
-      LIMIT $5
-    `;
-    const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, typeof q.act_task_id === "string" ? q.act_task_id : null, parseLimit(q)]);
-    const items = (res.rows ?? []).map((row: any) => ({
-      fact_id: String(row.fact_id),
-      occurred_at: String(row.occurred_at),
-      source: String(row.source),
-      downlink: parseJsonMaybe(row.record_json) ?? row.record_json
-    }));
-    return reply.send({ ok: true, items });
-  });
-
-
-  // POST /api/v1/ao-act/receipts/uplink
-  // MQTT receipt uplink ingestion path: append device-ack audit fact, then delegate into stable receipt runtime.
-  app.post("/api/v1/ao-act/receipts/uplink", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
-    if (!auth) return reply;
-    const executionPrincipal = requireReceiptPrincipalV1(auth, reply, true);
-    if (!executionPrincipal) return reply;
-    const body: any = req.body ?? {};
-    if (!claimedReceiptExecutorMatchesV1(body.executor_id, executionPrincipal)) return reply.status(403).send({ ok: false, error: "EXECUTOR_IDENTITY_MISMATCH" });
-    const tenant: TenantTriple = parseTenantFromBody(body);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const task_id = String(body.task_id ?? body.act_task_id ?? "").trim();
-    const command_id = String(body.command_id ?? "").trim();
-    const act_task_id = task_id;
-    const device_id = String(body.device_id ?? "").trim();
-    if (!task_id) return badRequest(reply, "MISSING_TASK_ID");
-    if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
-    if (command_id !== task_id) return badRequest(reply, "COMMAND_TASK_ID_MISMATCH");
-    if (!device_id) return badRequest(reply, "MISSING_DEVICE_ID");
-    if (!(await ensureDeviceBelongsTenantOr404(pool, tenant, device_id))) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
-    if (!taskFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    const operation_plan_id = String(taskFact.record_json?.payload?.operation_plan_id ?? "").trim();
-    if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
-    const publishedFact = await loadLatestFactByTypeAndKey(pool, "ao_act_downlink_published_v1", "payload,act_task_id", act_task_id, tenant);
-    if (!publishedFact) return badRequest(reply, "RECEIPT_BEFORE_PUBLISH");
-    const publishedPayload = publishedFact.record_json?.payload ?? {};
-    const expectedDeviceId = String(publishedPayload.device_id ?? "").trim();
-    if (expectedDeviceId && expectedDeviceId !== device_id) return badRequest(reply, "DEVICE_ID_MISMATCH");
-    const idempotencyKey = String(body?.meta?.idempotency_key ?? "").trim();
-    if (!idempotencyKey) return badRequest(reply, "MISSING_IDEMPOTENCY_KEY");
-    try {
-      enforceReceiptWriteRules({ idempotency_key: idempotencyKey, operation_plan_id });
-    } catch (e: any) {
-      return badRequest(reply, String(e?.message ?? e));
-    }
-    const task_act_task_id = String(taskFact.record_json?.payload?.act_task_id ?? "").trim();
-    const task_command_id = String(taskFact.record_json?.payload?.command_id ?? task_act_task_id).trim() || task_act_task_id;
-    if (!task_act_task_id || task_command_id !== task_act_task_id) return badRequest(reply, "TASK_COMMAND_ACT_TASK_ID_MISMATCH");
-    if (task_act_task_id !== act_task_id) return badRequest(reply, "TASK_ID_MISMATCH");
-    const bodyOperationPlanId = String(body.operation_plan_id ?? "").trim();
-    if (bodyOperationPlanId && bodyOperationPlanId !== operation_plan_id) return badRequest(reply, "OPERATION_PLAN_ID_MISMATCH");
-    const operationPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
-    if (!operationPlan) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
-    const planActTaskId = String(operationPlan.record_json?.payload?.act_task_id ?? "").trim();
-    if (planActTaskId && planActTaskId !== act_task_id) return badRequest(reply, "OPERATION_PLAN_TASK_ID_MISMATCH");
-    const existingReceipt = await loadReceiptV1ByIdempotencyKey(pool, tenant, idempotencyKey)
-      ?? await loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v0", "payload,act_task_id", act_task_id, tenant);
-    if (existingReceipt) return reply.status(409).send({ ok: false, error: "DUPLICATE_RECEIPT" });
-    const ack_fact_id = await insertFact(pool, "api/v1/ao-act/receipts/uplink", {
-      type: "ao_act_device_ack_received_v1",
-      payload: {
-        tenant_id: tenant.tenant_id,
-        project_id: tenant.project_id,
-        group_id: tenant.group_id,
-        act_task_id,
-        device_id,
-        uplink_topic: deriveReceiptTopic(tenant, device_id, body),
-        receipt_message_id: body.receipt_message_id ?? null,
-        command_payload_sha256: String(body.command_payload_sha256 ?? sha256Json(body.raw_payload ?? body)),
-        status: String(body.status ?? "executed"),
-        adapter_runtime: String(body.adapter_runtime ?? "mqtt_receipt_uplink_once_v1"),
-        actor_id: auth.actor_id,
-        token_id: auth.token_id,
-        created_at_ts: Date.now()
-      }
-    });
-    await updateDispatchQueueStateByActTask(pool, tenant, act_task_id, { state: "ACKED", ack_fact_id });
-    await ensureOperationPlanAtLeastDispatched(
-      pool,
-      tenant,
-      operation_plan_id,
-      act_task_id,
-      "api/v1/ao-act/receipts/uplink",
-      "receipt_uplink_pre_ack"
-    );
-    const latestPlanForAck = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
-    if (!latestPlanForAck) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
-    const ackedTransition = await transitionOperationPlanStateV1(pool, tenant, latestPlanForAck, {
-      next_status: "ACKED",
-      trigger: "receipt_uplink_ack",
-      act_task_id
-    }, "api/v1/ao-act/receipts/uplink");
-    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/ao-act/receipts`, String((req.headers as any).authorization ?? ""), {
-      tenant_id: tenant.tenant_id,
-      project_id: tenant.project_id,
-      group_id: tenant.group_id,
-      operation_plan_id,
-      task_id: act_task_id,
-      act_task_id,
-      command_id,
-      executor_id: executionPrincipal,
-      execution_time: body.execution_time ?? { start_ts: Number(body.start_ts ?? Date.now() - 50), end_ts: Number(body.end_ts ?? Date.now()) },
-      execution_coverage: body.execution_coverage ?? { kind: "field", ref: "device_uplink" },
-      resource_usage: body.resource_usage ?? { fuel_l: 0, electric_kwh: 0, water_l: 0, chemical_ml: 0 },
-      logs_refs: body.logs_refs ?? [{ kind: "mqtt", ref: deriveReceiptTopic(tenant, device_id, body) }],
-      status: String(body.status ?? "executed"),
-      constraint_check: body.constraint_check ?? { violated: false, violations: [] },
-      observed_parameters: body.observed_parameters ?? {},
-      meta: {
-        ...(body.meta && typeof body.meta === "object" ? body.meta : {}),
-        idempotency_key: idempotencyKey,
-        command_id,
-        receipt_message_id: body.receipt_message_id ?? null,
-        device_id,
-        uplink_topic: deriveReceiptTopic(tenant, device_id, body),
-        runtime: String(body.adapter_runtime ?? "mqtt_receipt_uplink_once_v1")
-      }
-    });
-    if (!delegated.ok || !delegated.json?.ok) return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "RECEIPT_UPLINK_WRITE_FAILED" });
-    const uplinkEvidenceValidity = evaluateReceiptEvidenceValidity({
-      ...body,
-      executor_id: executionPrincipal,
-      logs_refs: body.logs_refs ?? [{ kind: "mqtt", ref: deriveReceiptTopic(tenant, device_id, body) }],
-    });
-    const receipt_v1_fact_id = await insertFact(pool, "api/v1/ao-act/receipts/uplink", {
-      type: "ao_act_receipt_v1",
-      payload: {
-        tenant_id: tenant.tenant_id,
-        project_id: tenant.project_id,
-        group_id: tenant.group_id,
-        idempotency_key: idempotencyKey,
-        task_id: act_task_id,
-        command_id,
-        device_id,
-        adapter_type: String(body?.meta?.adapter_type ?? "mqtt"),
-        attempt_no: Number(body?.meta?.attempt_no ?? 1),
-        receipt_status: String(body?.meta?.receipt_status ?? body?.status ?? "SUCCEEDED").toUpperCase(),
-        receipt_code: String(body?.meta?.receipt_code ?? body?.status ?? "SUCCEEDED"),
-        receipt_message: body?.meta?.receipt_message ?? null,
-        raw_receipt_ref: body?.meta?.raw_receipt_ref ?? null,
-        received_ts: Number(body?.meta?.received_ts ?? Date.now()),
-        executor_id: executionPrincipal,
-        source_receipt_fact_id: String(delegated.json.fact_id ?? ""),
-        auth_actor_id: auth.actor_id,
-        auth_token_id: auth.token_id
-      }
-    });
-    if (uplinkEvidenceValidity.valid) {
-      await createAcceptance({
-        pool,
-        tenant,
-        operation_plan_id,
-        receipt_id: String(delegated.json.fact_id ?? receipt_v1_fact_id)
-      });
-    }
-
-    const terminalState: OperationPlanStatusV1 = uplinkEvidenceValidity.valid ? "PENDING_ACCEPTANCE" : "INVALID_EXECUTION";
-    await updateDispatchQueueStateByActTask(pool, tenant, act_task_id, {
-      state: terminalState === "PENDING_ACCEPTANCE" ? "SUCCEEDED" : "FAILED",
-      receipt_fact_id: delegated.json.fact_id
-    });
-
-    let latestPlanForTerminal = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
-    if (!latestPlanForTerminal) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
-
-    let terminalTransition: { transition_fact_id: string; operation_plan_fact_id: string } | null = null;
-    const beforeTerminal = String(latestPlanForTerminal.record_json?.payload?.status ?? "").trim().toUpperCase();
-    if (beforeTerminal === "DISPATCHED") {
-      await transitionOperationPlanStateV1(pool, tenant, latestPlanForTerminal, {
-        next_status: "ACKED",
-        trigger: "receipt_uplink_ack",
-        act_task_id,
-        receipt_fact_id: delegated.json.fact_id
-      }, "api/v1/ao-act/receipts/uplink");
-      latestPlanForTerminal = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
-      if (!latestPlanForTerminal) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
-    }
-
-    const statusAfterAck = String(latestPlanForTerminal.record_json?.payload?.status ?? "").trim().toUpperCase();
-    if (statusAfterAck !== "SUCCEEDED" && statusAfterAck !== "FAILED") {
-      terminalTransition = await transitionOperationPlanStateV1(pool, tenant, latestPlanForTerminal, {
-        next_status: terminalState,
-        trigger: "receipt",
-        act_task_id,
-        receipt_fact_id: delegated.json.fact_id,
-        terminal_reason: terminalState === "INVALID_EXECUTION" ? "evidence_missing_or_invalid" : "pending_acceptance"
-      }, "api/v1/ao-act/receipts/uplink");
-    }
-
-    return reply.send({
-      ok: true,
-      ack_fact_id,
-      receipt_v1_fact_id,
-      fact_id: delegated.json.fact_id,
-      wrapper_fact_id: delegated.json.wrapper_fact_id,
-      operation_plan_id,
-      operation_plan_acked_transition_fact_id: ackedTransition.transition_fact_id,
-      operation_plan_transition_fact_id: terminalTransition?.transition_fact_id ?? delegated.json.operation_plan_transition_fact_id ?? null,
-      operation_plan_update_fact_id: terminalTransition?.operation_plan_fact_id ?? delegated.json.operation_plan_update_fact_id ?? null
-    });
-  });
-
-
-  // GET /api/v1/operations/plans
-  // OperationPlan read model: recommendation -> approval -> task -> receipt evidence chain.
-  app.get("/api/v1/operations/plans", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-    if (!auth) return;
-    const tenant = queryTenantFromReq(req, auth);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const items = await listOperationPlans(pool, tenant, parseLimit((req as any).query));
-    return reply.send({ ok: true, items });
-  });
-
-  // GET /api/v1/operations/plans/:operation_plan_id
   app.get("/api/v1/operations/plans/:operation_plan_id", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
     const tenant = queryTenantFromReq(req, auth);
     if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const params: any = (req as any).params ?? {};
-    const operation_plan_id = String(params.operation_plan_id ?? "").trim();
+    const operation_plan_id = String(((req as any).params ?? {}).operation_plan_id ?? "").trim();
     if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
     const planFact = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
     if (!planFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    const approvalRequestId = String(planFact.record_json?.payload?.approval_request_id ?? "").trim();
-    const actTaskId = String(planFact.record_json?.payload?.act_task_id ?? "").trim();
-    const transition = await loadLatestFactByTypeAndKey(pool, "operation_plan_transition_v1", "payload,operation_plan_id", operation_plan_id, tenant);
-    const approval = approvalRequestId ? await loadLatestFactByTypeAndKey(pool, "approval_decision_v1", "payload,request_id", approvalRequestId, tenant) : null;
-    const task = actTaskId
-      ? await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", actTaskId, tenant)
-      : await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,operation_plan_id", operation_plan_id, tenant);
-    const receipt = actTaskId
-      ? await loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v0", "payload,act_task_id", actTaskId, tenant)
-      : await loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v0", "payload,operation_plan_id", operation_plan_id, tenant);
-    return reply.send({ ok: true, item: { plan: planFact, transition, approval, task, receipt } });
-  });
-
-
-
-  // GET /api/v1/operations/console
-  // Operations workbench aggregate for approvals, monitoring, queue and receipts.
-  app.get("/api/v1/operations/console", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-    if (!auth) return;
-    const tenant = queryTenantFromReq(req, auth);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const payload = await buildOperationsConsole(pool, tenant);
-    return reply.send({ ok: true, ...payload });
-  });
-
-  // GET /api/v1/operations/console/read-model
-  // Canonical state projection for operations console (supports plan/field/device/status filters).
-  app.get("/api/v1/operations/console/read-model", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-    if (!auth) return;
-    const tenant = queryTenantFromReq(req, auth);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const q: any = (req as any).query ?? {};
-    const items = await listOperationPlanStateReadModel(pool, tenant, q);
-    return reply.send({ ok: true, items });
-  });
-
-  // POST /api/v1/operations/console/read-model/rebuild
-  // Rebuild sequence: truncate tenant projection -> replay facts -> regenerate state rows.
-  app.post("/api/v1/operations/console/read-model/rebuild", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
-    if (!auth) return;
-    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
-    const body: any = req.body ?? {};
-    const tenant: TenantTriple = parseTenantFromBody(body);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const rebuilt = await rebuildOperationPlanStateReadModel(pool, tenant);
-    return reply.send({
-      ok: true,
-      rebuilt,
-      mode: "truncate_replay_rebuild",
-      tenant
-    });
-  });
-
-  // POST /api/v1/ao-act/tasks/:act_task_id/retry
-  // Restricted retry helper: re-queue a task only while it has no receipt yet.
-  app.post("/api/v1/ao-act/tasks/:act_task_id/retry", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
-    if (!auth) return;
-    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
-    const params: any = (req as any).params ?? {};
-    const body: any = req.body ?? {};
-    const act_task_id = String(params.act_task_id ?? "").trim();
-    const command_id = String(body.command_id ?? act_task_id).trim();
-    if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
-    if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
-    if (command_id !== act_task_id) return badRequest(reply, "COMMAND_ID_MUST_MATCH_ACT_TASK_ID");
-    const tenant: TenantTriple = parseTenantFromBody(body);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const existingTask = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
-    if (!existingTask) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    const existingReceipt = await loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v0", "payload,act_task_id", act_task_id, tenant);
-    if (existingReceipt) return badRequest(reply, "TASK_ALREADY_HAS_RECEIPT");
-
-    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/ao-act/tasks/${encodeURIComponent(act_task_id)}/dispatch`, String((req.headers as any).authorization ?? ""), {
-      tenant_id: tenant.tenant_id,
-      project_id: tenant.project_id,
-      group_id: tenant.group_id,
-      device_id: body.device_id ?? null,
-      downlink_topic: body.downlink_topic ?? null,
-      adapter_hint: body.adapter_hint ?? null,
-      retry_reason: body.retry_reason ?? null
-    });
-    if (!delegated.ok || !delegated.json?.ok) return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "RETRY_FAILED" });
-    return reply.send({ ok: true, retry_allowed: true, act_task_id, dispatch: delegated.json });
-  });
-
-  // GET /api/v1/ao-act/device-acks
-  // Read-only list of MQTT/device-side acknowledgement audit facts.
-  app.get("/api/v1/ao-act/device-acks", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-    if (!auth) return;
-    const tenant = queryTenantFromReq(req, auth);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const q: any = (req as any).query ?? {};
-    const sql = `
-      SELECT fact_id, occurred_at, source, (record_json::jsonb) AS record_json
-      FROM facts
-      WHERE (record_json::jsonb->>'type') = 'ao_act_device_ack_received_v1'
-        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-        AND (record_json::jsonb#>>'{payload,project_id}') = $2
-        AND (record_json::jsonb#>>'{payload,group_id}') = $3
-        AND ($4::text IS NULL OR (record_json::jsonb#>>'{payload,act_task_id}') = $4)
-      ORDER BY occurred_at DESC, fact_id DESC
-      LIMIT $5
-    `;
-    const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, typeof q.act_task_id === "string" ? q.act_task_id : null, parseLimit(q)]);
-    const items = (res.rows ?? []).map((row: any) => ({
-      fact_id: String(row.fact_id),
-      occurred_at: String(row.occurred_at),
-      source: String(row.source),
-      ack: parseJsonMaybe(row.record_json) ?? row.record_json
-    }));
-    return reply.send({ ok: true, items });
-  });
-
-  // POST /api/v1/ao-act/receipts/evidence
-  // Minimal evidence artifact ingestion: up to 3 image urls + optional note, linked to a receipt.
-  app.post("/api/v1/ao-act/receipts/evidence", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
-    if (!auth) return;
-    const body: any = req.body ?? {};
-    const tenant: TenantTriple = parseTenantFromBody(body);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-
-    const act_task_id = String(body.act_task_id ?? "").trim();
-    if (!act_task_id) return badRequest(reply, "MISSING_TASK_ID");
-    const imageUrls = Array.isArray(body.image_urls) ? body.image_urls.filter((x: unknown) => typeof x === "string" && x.trim()) : [];
-    if (imageUrls.length < 1 || imageUrls.length > 3) return badRequest(reply, "IMAGE_COUNT_INVALID");
-    const note = typeof body.note === "string" ? body.note.trim() : "";
-    if (note.length > 2000) return badRequest(reply, "NOTE_TOO_LONG");
-
-    const receiptFactIdInput = String(body.receipt_fact_id ?? "").trim();
-    let receiptFact: ParsedFactRow | null = null;
-    if (receiptFactIdInput) {
-      receiptFact = await loadFactById(pool, receiptFactIdInput, tenant);
-    }
-    if (!receiptFact || !["ao_act_receipt_v0", "ao_act_receipt_v1"].includes(String(receiptFact.record_json?.type ?? ""))) {
-      receiptFact = await loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v0", "payload,act_task_id", act_task_id, tenant)
-        ?? await loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v1", "payload,task_id", act_task_id, tenant)
-        ?? await loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v1", "payload,act_task_id", act_task_id, tenant);
-    }
-    if (!receiptFact) return reply.status(404).send({ ok: false, error: "RECEIPT_NOT_FOUND" });
-
-    const receiptTask = String(receiptFact.record_json?.payload?.act_task_id ?? receiptFact.record_json?.payload?.task_id ?? "").trim();
-    if (receiptTask !== act_task_id) return badRequest(reply, "RECEIPT_TASK_MISMATCH");
-    const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
-    const operation_plan_id = String(
-      receiptFact.record_json?.payload?.operation_plan_id
-      ?? taskFact?.record_json?.payload?.operation_plan_id
-      ?? body.operation_plan_id
-      ?? ""
-    ).trim();
-    if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
-
-    const createdAt = new Date().toISOString();
-    const createdBy = auth.actor_id;
-    const execution_time = (body.execution_time && typeof body.execution_time === "object") ? body.execution_time : {};
-    const location = (body.location && typeof body.location === "object") ? body.location : undefined;
-    const inserted: Array<{ artifact_id: string; fact_id: string; kind: "image" | "note"; url?: string; text?: string }> = [];
-
-    for (const rawUrl of imageUrls) {
-      const url = String(rawUrl).trim();
-      const artifact_id = `evi_${randomUUID()}`;
-      const fact_id = await insertFact(pool, "api/v1/ao-act/receipts/evidence", {
-        type: "evidence_artifact_v1",
-        payload: {
-          artifact_id,
-          act_task_id,
-          operation_plan_id,
-          receipt_fact_id: receiptFact.fact_id,
-          kind: "image",
-          url,
-          created_at: createdAt,
-          created_by: createdBy,
-          execution_time: {
-            start_ts: Number.isFinite(Number(execution_time.start_ts)) ? Number(execution_time.start_ts) : null,
-            end_ts: Number.isFinite(Number(execution_time.end_ts)) ? Number(execution_time.end_ts) : null
-          },
-          location: location ?? null,
-          tenant_id: tenant.tenant_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id
-        }
-      });
-      inserted.push({ artifact_id, fact_id, kind: "image", url });
-    }
-    if (note) {
-      const artifact_id = `evi_${randomUUID()}`;
-      const fact_id = await insertFact(pool, "api/v1/ao-act/receipts/evidence", {
-        type: "evidence_artifact_v1",
-        payload: {
-          artifact_id,
-          act_task_id,
-          operation_plan_id,
-          receipt_fact_id: receiptFact.fact_id,
-          kind: "note",
-          text: note,
-          created_at: createdAt,
-          created_by: createdBy,
-          execution_time: {
-            start_ts: Number.isFinite(Number(execution_time.start_ts)) ? Number(execution_time.start_ts) : null,
-            end_ts: Number.isFinite(Number(execution_time.end_ts)) ? Number(execution_time.end_ts) : null
-          },
-          location: location ?? null,
-          tenant_id: tenant.tenant_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id
-        }
-      });
-      inserted.push({ artifact_id, fact_id, kind: "note", text: note });
-    }
-
-    return reply.send({ ok: true, act_task_id, operation_plan_id, receipt_fact_id: receiptFact.fact_id, items: inserted });
-  });
-
-  // POST /api/v1/ao-act/receipts
-  // Delegates to existing receipt runtime and adds a stable wrapper fact for Commercial v1 REST.
-  app.post("/api/v1/ao-act/receipts", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
-    if (!auth) return reply;
-    const executionPrincipal = requireReceiptPrincipalV1(auth, reply);
-    if (!executionPrincipal) return reply;
-    const body: any = req.body ?? {};
-    if (!claimedReceiptExecutorMatchesV1(body.executor_id, executionPrincipal)) return reply.status(403).send({ ok: false, error: "EXECUTOR_IDENTITY_MISMATCH" });
-    const tenant: TenantTriple = parseTenantFromBody(body);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
-    const task_id = String(body.task_id ?? body.act_task_id ?? "").trim();
-    const command_id = String(body.command_id ?? "").trim();
-    if (!task_id) return badRequest(reply, "MISSING_TASK_ID");
-    if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
-    if (command_id !== task_id) return badRequest(reply, "COMMAND_TASK_ID_MISMATCH");
-    const idempotencyKey = String(body?.meta?.idempotency_key ?? "").trim();
-    if (!idempotencyKey) return badRequest(reply, "MISSING_IDEMPOTENCY_KEY");
-    const evidenceArtifactIds = Array.isArray(body.evidence_artifact_ids)
-      ? body.evidence_artifact_ids.filter((x: unknown) => typeof x === "string" && x.trim()).map((x: string) => x.trim())
-      : [];
-    const evidenceValidity = evaluateReceiptEvidenceValidity({ ...body, evidence_artifact_ids: evidenceArtifactIds });
-    const receiptV1Dup = await loadReceiptV1ByIdempotencyKey(pool, tenant, idempotencyKey);
-    if (receiptV1Dup) return reply.status(409).send({ ok: false, error: "DUPLICATE_RECEIPT" });
-    const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", task_id, tenant);
-    if (!taskFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    const task_act_task_id = String(taskFact.record_json?.payload?.act_task_id ?? "").trim();
-    const task_command_id = String(taskFact.record_json?.payload?.command_id ?? task_act_task_id).trim() || task_act_task_id;
-    if (!task_act_task_id || task_command_id !== task_act_task_id) return badRequest(reply, "TASK_COMMAND_ACT_TASK_ID_MISMATCH");
-    if (task_act_task_id !== task_id) return badRequest(reply, "TASK_ID_MISMATCH");
-    const operation_plan_id = String(taskFact.record_json?.payload?.operation_plan_id ?? "").trim();
-    if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
-    try {
-      enforceReceiptWriteRules({ idempotency_key: idempotencyKey, operation_plan_id });
-    } catch (e: any) {
-      return badRequest(reply, String(e?.message ?? e));
-    }
-    const bodyOperationPlanId = String(body.operation_plan_id ?? "").trim();
-    if (bodyOperationPlanId && bodyOperationPlanId !== operation_plan_id) return badRequest(reply, "OPERATION_PLAN_ID_MISMATCH");
-    const operationPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
-    if (!operationPlan) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
-    const planActTaskId = String(operationPlan.record_json?.payload?.act_task_id ?? "").trim();
-    if (planActTaskId && planActTaskId !== task_id) return badRequest(reply, "OPERATION_PLAN_TASK_ID_MISMATCH");
-    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/actions/receipt`, String((req.headers as any).authorization ?? ""), {
-      ...body,
-      executor_id: executionPrincipal,
-      act_task_id: task_id,
-      operation_plan_id,
-      tenant_id: tenant.tenant_id,
-      project_id: tenant.project_id,
-      group_id: tenant.group_id
-    });
-    if (!delegated.ok || !delegated.json?.ok) return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "RECEIPT_WRITE_FAILED" });
-    const receipt_v1_fact_id = await insertFact(pool, "api/v1/ao-act/receipts", {
-      type: "ao_act_receipt_v1",
-      payload: {
-        tenant_id: tenant.tenant_id,
-        project_id: tenant.project_id,
-        group_id: tenant.group_id,
-        idempotency_key: idempotencyKey,
-        task_id,
-        command_id,
-        device_id: String(body?.meta?.device_id ?? body?.device_id ?? ""),
-        adapter_type: String(body?.meta?.adapter_type ?? "mqtt"),
-        attempt_no: Number(body?.meta?.attempt_no ?? 1),
-        receipt_status: String(body?.meta?.receipt_status ?? body?.status ?? "SUCCEEDED").toUpperCase(),
-        receipt_code: String(body?.meta?.receipt_code ?? body?.status ?? "SUCCEEDED"),
-        receipt_message: body?.meta?.receipt_message ?? null,
-        raw_receipt_ref: body?.meta?.raw_receipt_ref ?? null,
-        received_ts: Number(body?.meta?.received_ts ?? Date.now()),
-        executor_id: executionPrincipal,
-        source_receipt_fact_id: String(delegated.json.fact_id ?? ""),
-        auth_actor_id: auth.actor_id,
-        auth_token_id: auth.token_id,
-        evidence_artifact_ids: evidenceArtifactIds
-      }
-    });
-    if (evidenceValidity.valid) {
-      await createAcceptance({
-        pool,
-        tenant,
-        operation_plan_id,
-        receipt_id: String(delegated.json.fact_id ?? receipt_v1_fact_id)
-      });
-    }
-    const wrapper_fact_id = await insertFact(pool, "api/v1/ao-act/receipts", {
-      type: "ao_act_receipt_recorded_v1",
-      payload: {
-        tenant_id: tenant.tenant_id,
-        project_id: tenant.project_id,
-        group_id: tenant.group_id,
-        act_task_id: task_id,
-        ao_act_receipt_fact_id: delegated.json.fact_id,
-        actor_id: auth.actor_id,
-        token_id: auth.token_id,
-        created_at_ts: Date.now()
-      }
-    });
-    const terminalState: OperationPlanStatusV1 = evidenceValidity.valid ? "PENDING_ACCEPTANCE" : "INVALID_EXECUTION";
-    await updateDispatchQueueStateByActTask(pool, tenant, task_id, {
-      state: terminalState === "PENDING_ACCEPTANCE" ? "SUCCEEDED" : "FAILED",
-      receipt_fact_id: delegated.json.fact_id
-    });
-
-    // Reload the latest plan before terminal transition because a receipt may arrive via
-    // the uplink path immediately after dispatch, and the ACKED transition can be written
-    // in the caller request just before this wrapper route executes. Using the earlier
-    // operationPlan snapshot can therefore race and try DISPATCHED -> SUCCEEDED.
-    let latestPlanForTerminal = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
-    if (!latestPlanForTerminal) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
-
-    const currentStatusBeforeTerminal = String(latestPlanForTerminal.record_json?.payload?.status ?? "").trim().toUpperCase();
-    if (currentStatusBeforeTerminal === "SUCCEEDED" || currentStatusBeforeTerminal === "FAILED") {
-      return reply.send({
-        ok: true,
-        deduped: true,
-        fact_id: delegated.json.fact_id,
-        wrapper_fact_id,
-        operation_plan_id,
-        operation_plan_transition_fact_id: null,
-        operation_plan_update_fact_id: null
-      });
-    }
-
-    if (currentStatusBeforeTerminal === "READY") {
-      await transitionOperationPlanStateV1(pool, tenant, latestPlanForTerminal, {
-        next_status: "DISPATCHED",
-        trigger: "receipt_pre_dispatch",
-        act_task_id: task_id,
-        receipt_fact_id: delegated.json.fact_id
-      }, "api/v1/ao-act/receipts");
-      latestPlanForTerminal = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
-      if (!latestPlanForTerminal) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
-    }
-
-    const statusBeforeAck = String(latestPlanForTerminal.record_json?.payload?.status ?? "").trim().toUpperCase();
-    if (statusBeforeAck === "DISPATCHED") {
-      await transitionOperationPlanStateV1(pool, tenant, latestPlanForTerminal, {
-        next_status: "ACKED",
-        trigger: "receipt_pre_ack",
-        act_task_id: task_id,
-        receipt_fact_id: delegated.json.fact_id
-      }, "api/v1/ao-act/receipts");
-      latestPlanForTerminal = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
-      if (!latestPlanForTerminal) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
-    }
-
-    const terminalTransition = await transitionOperationPlanStateV1(pool, tenant, latestPlanForTerminal, {
-      next_status: terminalState,
-      trigger: "receipt",
-      act_task_id: task_id,
-      receipt_fact_id: delegated.json.fact_id,
-      terminal_reason: terminalState === "INVALID_EXECUTION" ? "evidence_missing_or_invalid" : "pending_acceptance"
-    }, "api/v1/ao-act/receipts");
-    return reply.send({
-      ok: true,
-      deduped: false,
-      fact_id: delegated.json.fact_id,
-      wrapper_fact_id,
-      operation_plan_id,
-      operation_plan_transition_fact_id: terminalTransition.transition_fact_id,
-      operation_plan_update_fact_id: terminalTransition.operation_plan_fact_id
-    });
-  });
-
-  // GET /api/v1/ao-act/receipts
-  app.get("/api/v1/ao-act/receipts", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-    if (!auth) return reply;
-    const tenant = queryTenantFromReq(req, auth);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
-    const q: any = (req as any).query ?? {};
-    const items = await listReceipts(pool, tenant, parseLimit(q), typeof q.act_task_id === "string" ? q.act_task_id : undefined);
-    return reply.send({ ok: true, items });
+    return reply.send({ ok: true, item: { plan: planFact } });
   });
 }
