@@ -319,7 +319,6 @@ export function computeWaterSavedEntry(asExecuted: AsExecutedRow): RoiCandidate 
   const delta = plannedAmount - executedAmount;
   return {
     roi_type: "WATER_SAVED",
-    source_skill_id: "irrigation_deficit_skill_v1",
     baseline: {
       source: "prescription_planned_amount",
       amount: plannedAmount,
@@ -592,7 +591,7 @@ function enrichCommercialFields(entry: RoiCandidate, context?: {
     unit: entry.unit ?? unit,
     estimated_money_value: entry.estimated_money_value ?? null,
     currency: entry.currency ?? null,
-    source_skill_id: entry.source_skill_id ?? fallbackSkillId ?? "irrigation_deficit_skill_v1",
+    source_skill_id: entry.source_skill_id ?? fallbackSkillId,
     skill_trace_ref: entry.skill_trace_ref ?? (String(context?.skill_trace_id ?? "").trim() || fallbackTraceId || (asExecuted ? traceIdFromAsExecuted(asExecuted) : null) || null),
     field_memory_refs: Array.isArray(entry.field_memory_refs) ? entry.field_memory_refs : (Array.isArray((entry.actual as any)?.field_memory_refs) ? (entry.actual as any).field_memory_refs : fallbackFieldMemoryRefs),
     task_id: entry.task_id ?? asExecuted?.task_id ?? null,
@@ -1045,10 +1044,39 @@ export async function createRoiLedgersFromAsExecuted(pool: Pool, input: TenantTr
     asExecuted.evidence_refs = normalizeEvidenceRefs([...(asExecuted.evidence_refs ?? []), ...acceptanceEvidenceRefs]);
   }
 
+  const executionTrace = parseJsonMaybe(asExecuted?.executed?.skill_trace);
+  const executionTraceId = String(asExecuted?.executed?.skill_trace_id ?? executionTrace?.trace_id ?? "").trim() || null;
+  const executionSkillRefs = normalizeSkillRefs(asExecuted?.executed?.skill_refs);
+  if (executionTrace && typeof executionTrace === "object" && typeof executionTrace.skill_id === "string") {
+    executionSkillRefs.push({
+      skill_id: String(executionTrace.skill_id),
+      skill_version: String(executionTrace.skill_version ?? "").trim() || undefined,
+      trace_id: executionTraceId ?? (String(executionTrace.trace_id ?? "").trim() || undefined),
+      run_id: String(asExecuted?.executed?.run_id ?? "").trim() || undefined,
+    });
+  }
+  const prescriptionSkillRef = asExecuted.prescription_id
+    ? await getPrescriptionSkillRef(pool, {
+        tenant_id: input.tenant_id,
+        project_id: input.project_id,
+        group_id: input.group_id,
+        prescription_id: asExecuted.prescription_id,
+      })
+    : null;
+  const resolvedSkillRefs = normalizeSkillRefs([
+    ...(prescriptionSkillRef ? [prescriptionSkillRef] : []),
+    ...executionSkillRefs,
+    ...(input.skill_refs ?? []),
+  ]);
+  const resolvedSkillTraceId = String(prescriptionSkillRef?.trace_id ?? "").trim()
+    || executionTraceId
+    || String(input.skill_trace_id ?? "").trim()
+    || resolvedSkillRefs[0]?.trace_id
+    || null;
   const asApplied = (await listAsAppliedByAsExecuted(pool, input))[0] ?? null;
   const candidates = computeRoiLedgerEntriesFromAsExecuted(asExecuted, asApplied, {
-    skill_trace_id: input.skill_trace_id ?? null,
-    skill_refs: input.skill_refs ?? [],
+    skill_trace_id: resolvedSkillTraceId,
+    skill_refs: resolvedSkillRefs,
   });
   if (!candidates.length) {
     const plannedAmount = toNum(asExecuted?.planned?.amount);
@@ -1076,29 +1104,6 @@ export async function createRoiLedgersFromAsExecuted(pool: Pool, input: TenantTr
     }
     throw new Error(`ROI_LEDGER_NOT_CREATED:${reason}`);
   }
-  const executionTrace = parseJsonMaybe(asExecuted?.executed?.skill_trace);
-  const executionTraceId = String(asExecuted?.executed?.skill_trace_id ?? executionTrace?.trace_id ?? "").trim() || null;
-  const baseSkillRefs = normalizeSkillRefs(asExecuted?.executed?.skill_refs);
-  if (executionTrace && typeof executionTrace === "object" && typeof executionTrace.skill_id === "string") {
-    baseSkillRefs.push({
-      skill_id: String(executionTrace.skill_id),
-      skill_version: String(executionTrace.skill_version ?? "").trim() || undefined,
-      trace_id: executionTraceId ?? (String(executionTrace.trace_id ?? "").trim() || undefined),
-      run_id: String(asExecuted?.executed?.run_id ?? "").trim() || undefined,
-    });
-  }
-  if (asExecuted.prescription_id) {
-    const prescriptionSkillRef = await getPrescriptionSkillRef(pool, {
-      tenant_id: input.tenant_id,
-      project_id: input.project_id,
-      group_id: input.group_id,
-      prescription_id: asExecuted.prescription_id,
-    });
-    if (prescriptionSkillRef) baseSkillRefs.push(prescriptionSkillRef);
-  }
-  const resolvedSkillRefs = normalizeSkillRefs([...(input.skill_refs ?? []), ...baseSkillRefs]);
-  const resolvedSkillTraceId = String(input.skill_trace_id ?? "").trim() || executionTraceId || resolvedSkillRefs[0]?.trace_id || null;
-
   const out: RoiLedgerRow[] = [];
   let allIdempotent = candidates.length > 0;
 
