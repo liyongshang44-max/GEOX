@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - qual-control/bline-final-closure-zero-live-01
-      - qual/bline-final-qualification-closure-01
+      - qual/bline-final-qualification-closure-02
 
 permissions:
   contents: read
@@ -19,18 +19,18 @@ jobs:
     env:
       BLINE_PR_NUMBER: "3525"
       EXPECTED_MAIN_SHA: d19913c88b81b618507ff6da6fc4f3699123cdd6
-      EXPECTED_CANDIDATE_SHA: 5e0d25d3f248f36b5bf46025bdd58682211d30f8
+      EXPECTED_CANDIDATE_SHA: 740805ad552d0dd7b6b2d929442a26f5fba447a0
       EXPECTED_CANDIDATE_BRANCH: feat/bline-w4-gov-recon-03-ca2a96d
-      EXPECTED_SYNTHETIC_SHA: e7fa0ca73022b7b73568f0ebd0d59afacee054f9
-      EXPECTED_SYNTHETIC_TREE: 8b76803accd108aa3e8ad24ded475cd79152df7d
-      FINAL_LIVE_REF: refs/heads/qual/bline-final-qualification-closure-01
+      EXPECTED_SYNTHETIC_SHA: f38c383085eadd7c1b5014cafd5efde16274e0ce
+      EXPECTED_SYNTHETIC_TREE: 7c13b3326291982f529d4a8718d5b7048b6640c0
+      FINAL_LIVE_REF: refs/heads/qual/bline-final-qualification-closure-02
       WORKFLOW_PATH: .github/workflows/bline-final-integrated-requalification-exception-01.yml
 
     steps:
       - name: Checkout authoritative synthetic subject
         uses: actions/checkout@v4
         with:
-          ref: e7fa0ca73022b7b73568f0ebd0d59afacee054f9
+          ref: f38c383085eadd7c1b5014cafd5efde16274e0ce
           fetch-depth: 0
 
       - name: 14-point zero-live proof
@@ -277,16 +277,16 @@ jobs:
 
   requalify:
     name: BLINE final integrated qualification closure
-    if: github.ref == 'refs/heads/qual/bline-final-qualification-closure-01'
+    if: github.ref == 'refs/heads/qual/bline-final-qualification-closure-02'
     runs-on: ubuntu-latest
     timeout-minutes: 180
     env:
       BLINE_PR_NUMBER: "3525"
       EXPECTED_MAIN_SHA: d19913c88b81b618507ff6da6fc4f3699123cdd6
-      EXPECTED_CANDIDATE_SHA: 5e0d25d3f248f36b5bf46025bdd58682211d30f8
+      EXPECTED_CANDIDATE_SHA: 740805ad552d0dd7b6b2d929442a26f5fba447a0
       EXPECTED_CANDIDATE_BRANCH: feat/bline-w4-gov-recon-03-ca2a96d
-      EXPECTED_SYNTHETIC_SHA: e7fa0ca73022b7b73568f0ebd0d59afacee054f9
-      EXPECTED_SYNTHETIC_TREE: 8b76803accd108aa3e8ad24ded475cd79152df7d
+      EXPECTED_SYNTHETIC_SHA: f38c383085eadd7c1b5014cafd5efde16274e0ce
+      EXPECTED_SYNTHETIC_TREE: 7c13b3326291982f529d4a8718d5b7048b6640c0
       ACCEPTED_BLINE_SEMANTIC_REFERENCE: 413386acc04fa2d3404f09d2d1fa8702472e83f1
       W5_ACCEPTED_SHA: a6d39df6af46ecfbf8e4ae99e48f400e00685875
       W6A_ACCEPTED_SHA: bcc78fb00e73292362f237a95db3441e07389f6f
@@ -297,7 +297,7 @@ jobs:
       - name: Checkout authoritative synthetic integration subject
         uses: actions/checkout@v4
         with:
-          ref: e7fa0ca73022b7b73568f0ebd0d59afacee054f9
+          ref: f38c383085eadd7c1b5014cafd5efde16274e0ce
           fetch-depth: 0
 
       - name: Initialize retained command evidence
