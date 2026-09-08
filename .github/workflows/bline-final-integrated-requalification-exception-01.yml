@@ -1,65 +1,450 @@
-name: bline-final-integrated-requalification-exception-04
+name: bline-final-integrated-qualification-closure-01
 
 on:
   push:
     branches:
-      - qual/bline-final-requal-live-04
+      - qual-control/bline-final-closure-zero-live-01
+      - qual/bline-final-qualification-closure-01
 
 permissions:
   contents: read
   actions: read
 
 jobs:
-  requalify:
-    name: BLINE final integrated requalification
+  zero_live:
+    name: BLINE final closure zero-live proof
+    if: github.ref == 'refs/heads/qual-control/bline-final-closure-zero-live-01'
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 20
     env:
       BLINE_PR_NUMBER: "3525"
-      EXPECTED_MAIN_SHA: a56b419f6ddfc3ce2f2d957b0422bb8b4bd9d45c
+      EXPECTED_MAIN_SHA: d19913c88b81b618507ff6da6fc4f3699123cdd6
       EXPECTED_CANDIDATE_SHA: 5e0d25d3f248f36b5bf46025bdd58682211d30f8
       EXPECTED_CANDIDATE_BRANCH: feat/bline-w4-gov-recon-03-ca2a96d
-      EXPECTED_SYNTHETIC_SHA: 952729abad1dd90f0ce3c8600fa552c3b3c3c877
-      EXPECTED_SYNTHETIC_TREE: 78c1b6dd65aa9c8c5a52a1f920974e938b9cc809
-      ACCEPTED_BLINE_SEMANTIC_REFERENCE: 413386acc04fa2d3404f09d2d1fa8702472e83f1
-      W5_ACCEPTED_SHA: a6d39df6af46ecfbf8e4ae99e48f400e00685875
-      W6A_ACCEPTED_SHA: bcc78fb00e73292362f237a95db3441e07389f6f
-      W6B1_QUALIFIED_SHA: 612d650244310cd60795c9e66883bd12d9981226
-      JOB_DISPLAY_NAME: BLINE final integrated requalification
+      EXPECTED_SYNTHETIC_SHA: e7fa0ca73022b7b73568f0ebd0d59afacee054f9
+      EXPECTED_SYNTHETIC_TREE: 8b76803accd108aa3e8ad24ded475cd79152df7d
+      FINAL_LIVE_REF: refs/heads/qual/bline-final-qualification-closure-01
+      WORKFLOW_PATH: .github/workflows/bline-final-integrated-requalification-exception-01.yml
 
     steps:
-      - name: Checkout locked synthetic integration subject
+      - name: Checkout authoritative synthetic subject
         uses: actions/checkout@v4
         with:
-          ref: 952729abad1dd90f0ce3c8600fa552c3b3c3c877
+          ref: e7fa0ca73022b7b73568f0ebd0d59afacee054f9
           fetch-depth: 0
 
-      - name: Provenance preflight - fresh exact-state lock and workspace identity
-        id: provenance
+      - name: 14-point zero-live proof
+        id: zero_live
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+
           ACTUAL_HEAD="$(git rev-parse HEAD)"
           ACTUAL_TREE="$(git rev-parse 'HEAD^{tree}')"
           ACTUAL_PARENT1="$(git rev-parse HEAD^1)"
           ACTUAL_PARENT2="$(git rev-parse HEAD^2)"
           STATUS="$(git status --porcelain=v1 --untracked-files=all)"
-          test "$BLINE_PR_NUMBER" = "3525"
-          test "$ACTUAL_HEAD" = "$EXPECTED_SYNTHETIC_SHA"
-          test "$ACTUAL_TREE" = "$EXPECTED_SYNTHETIC_TREE"
-          test "$ACTUAL_PARENT1" = "$EXPECTED_MAIN_SHA"
-          test "$ACTUAL_PARENT2" = "$EXPECTED_CANDIDATE_SHA"
-          test -z "$STATUS"
 
           REMOTE_MAIN="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
           REMOTE_CANDIDATE="$(git ls-remote origin "refs/heads/${EXPECTED_CANDIDATE_BRANCH}" | awk '{print $1}')"
           REMOTE_PR_HEAD="$(git ls-remote origin "refs/pull/${BLINE_PR_NUMBER}/head" | awk '{print $1}')"
           REMOTE_PR_MERGE="$(git ls-remote origin "refs/pull/${BLINE_PR_NUMBER}/merge" | awk '{print $1}')"
+          FINAL_LIVE_SHA="$(git ls-remote origin "$FINAL_LIVE_REF" | awk '{print $1}')"
+
+          PR_JSON="$RUNNER_TEMP/bline-pr.json"
+          curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/pulls/${BLINE_PR_NUMBER}" \
+            > "$PR_JSON"
+          PR_STATE="$(jq -r '.state' "$PR_JSON")"
+          PR_DRAFT="$(jq -r '.draft' "$PR_JSON")"
+          PR_MERGED="$(jq -r '.merged' "$PR_JSON")"
+          PR_BASE_REF="$(jq -r '.base.ref' "$PR_JSON")"
+          PR_HEAD_SHA="$(jq -r '.head.sha' "$PR_JSON")"
+
+          GIT_VERSION_FILE="$RUNNER_TEMP/git-version.txt"
+          git version > "$GIT_VERSION_FILE"
+          GIT_VERSION="$(cat "$GIT_VERSION_FILE")"
+
+          MERGE_TREE_OUT="$RUNNER_TEMP/merge-tree.out"
+          MERGE_TREE_ERR="$RUNNER_TEMP/merge-tree.err"
+          set +e
+          git merge-tree --write-tree "$EXPECTED_MAIN_SHA" "$EXPECTED_CANDIDATE_SHA" > "$MERGE_TREE_OUT" 2> "$MERGE_TREE_ERR"
+          MERGE_TREE_RC=$?
+          set -e
+          if [ "$MERGE_TREE_RC" -ne 0 ]; then
+            cat "$MERGE_TREE_ERR" >&2 || true
+            echo "merge-tree --write-tree unavailable or failed; zero-live hard stop" >&2
+            exit "$MERGE_TREE_RC"
+          fi
+          COMPUTED_MERGE_TREE="$(sed -n '1p' "$MERGE_TREE_OUT" | tr -d '\r')"
+
           test "$REMOTE_MAIN" = "$EXPECTED_MAIN_SHA"
           test "$REMOTE_CANDIDATE" = "$EXPECTED_CANDIDATE_SHA"
           test "$REMOTE_PR_HEAD" = "$EXPECTED_CANDIDATE_SHA"
-          test "$REMOTE_PR_MERGE" = "$EXPECTED_SYNTHETIC_SHA"
+          test "$PR_HEAD_SHA" = "$EXPECTED_CANDIDATE_SHA"
+          test "$PR_STATE" = "open"
+          test "$PR_DRAFT" = "true"
+          test "$PR_MERGED" = "false"
+          test "$PR_BASE_REF" = "main"
+          test "$ACTUAL_HEAD" = "$EXPECTED_SYNTHETIC_SHA"
+          test "$ACTUAL_PARENT1" = "$EXPECTED_MAIN_SHA"
+          test "$ACTUAL_PARENT2" = "$EXPECTED_CANDIDATE_SHA"
+          test "$ACTUAL_TREE" = "$EXPECTED_SYNTHETIC_TREE"
+          test "$COMPUTED_MERGE_TREE" = "$EXPECTED_SYNTHETIC_TREE"
+          test "$COMPUTED_MERGE_TREE" = "$ACTUAL_TREE"
+          test -z "$STATUS"
+          test -z "$FINAL_LIVE_SHA"
+
+          git fetch --no-tags origin "$GITHUB_SHA" >/dev/null
+          CONTROL_PARENT="$(git rev-parse "$GITHUB_SHA^1")"
+          CONTROL_DELTA="$RUNNER_TEMP/control-plane-delta.txt"
+          git diff --name-only "$CONTROL_PARENT" "$GITHUB_SHA" > "$CONTROL_DELTA"
+          test "$(wc -l < "$CONTROL_DELTA" | tr -d ' ')" = "1"
+          test "$(cat "$CONTROL_DELTA")" = "$WORKFLOW_PATH"
+
+          PRIOR_WORKFLOW="$RUNNER_TEMP/prior-workflow.yml"
+          CURRENT_WORKFLOW="$RUNNER_TEMP/current-workflow.yml"
+          git show "$CONTROL_PARENT:$WORKFLOW_PATH" > "$PRIOR_WORKFLOW"
+          git show "$GITHUB_SHA:$WORKFLOW_PATH" > "$CURRENT_WORKFLOW"
+          grep -F "ref: $EXPECTED_SYNTHETIC_SHA" "$CURRENT_WORKFLOW" >/dev/null
+
+          QUAL_SEQUENCE="$RUNNER_TEMP/qualification-sequence.txt"
+          cat > "$QUAL_SEQUENCE" <<'EOF'
+          pnpm install --no-frozen-lockfile
+          replay_gate "$W5_ACCEPTED_SHA" "scripts/governance_acceptance/ACCEPTANCE_BLINE_W5_LEGACY_RUNTIME_CONTAINMENT_V1.cjs"
+          replay_gate "$W6A_ACCEPTED_SHA" "scripts/governance_acceptance/ACCEPTANCE_BLINE_W6A_EXACT_PREDECESSOR_SELECTION_V1.cjs"
+          replay_gate "$W6B1_QUALIFIED_SHA" "scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B1_INTERNAL_TASK_ISSUER_PRINCIPAL_V1.cjs"
+          replay_gate "$ACCEPTED_BLINE_SEMANTIC_REFERENCE" "scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.cjs"
+          pnpm run ci:route-dependency-guard
+          node scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.ts
+          node scripts/governance_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.cjs
+          pnpm --filter @geox/device-skills... build
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.ts
+          node scripts/governance_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.cjs
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.ts
+          node scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6A_EXACT_PREDECESSOR_SELECTION_V1.ts
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6B1_INTERNAL_TASK_ISSUER_PRINCIPAL_V1.ts
+          pnpm run ci:governance:bline-production-caller-authority-inventory
+          pnpm run ci:governance:bline-residual-authority-audit
+          pnpm run ci:governance:bline-active-runtime-surface-closure
+          pnpm run ci:governance:bline-operation-state-read-only
+          pnpm run ci:governance:bline-execution-plan-task-lifecycle
+          pnpm run ci:governance:bline-p0-res007-evidence-export-boundary
+          pnpm run ci:governance:bline-operator-dispatch-intent
+          pnpm run ci:governance:bline-acceptance-no-formal-memory-side-effect
+          pnpm run ci:governance:bline-formal-memory-reviewed-promotion-proof
+          pnpm run ci:governance:bline-legacy-twin-no-direct-formal-memory
+          pnpm run ci:governance:bline-formal-memory-scope-provenance
+          pnpm run ci:governance:bline-sampling-exact-source-binding
+          pnpm run ci:governance:bline-fertilization-execution-provenance
+          pnpm run ci:governance:bline-agronomy-agent-fail-closed
+          node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_IMMEDIATE_CALLER_CONTAINMENT_V1.cjs
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_OPERATOR_TWIN_AUTH_NEGATIVE_V1.ts
+          node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_FAIL_CLOSED_V1.cjs
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_FAIL_CLOSED_V1.ts
+          node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_FAIL_CLOSED_V1.cjs
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_FAIL_CLOSED_V1.ts
+          node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_ADMIN_IMPORT_FAIL_CLOSED_V1.cjs
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_ADMIN_IMPORT_FAIL_CLOSED_V1.ts
+          node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEAK_INTERNAL_FAIL_CLOSED_V1.cjs
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEAK_INTERNAL_FAIL_CLOSED_V1.ts
+          node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_INTERNAL_AUTO_FALLBACK_FAIL_CLOSED_V1.cjs
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_INTERNAL_AUTO_FALLBACK_FAIL_CLOSED_V1.ts
+          node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_FAIL_CLOSED_V1.cjs
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_FAIL_CLOSED_V1.ts
+          node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_EVIDENCE_EXPORT_WRITE_CAPABILITY_V1.cjs
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_EVIDENCE_EXPORT_WRITE_CAPABILITY_V1.ts
+          pnpm -r typecheck
+          pnpm -r build
+          pnpm --filter @geox/server test:p1:selfcheck
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_EVIDENCE_EXPORT_COMMERCIAL_RUNTIME_V1.ts
+          pnpm run ci:root-zone-scenario-submit-recommendation
+          pnpm run ci:runtime:bline-operator-dispatch-intent
+          pnpm run ci:scenario:sampling
+          node scripts/agronomy_acceptance/ACCEPTANCE_FERTILIZATION_API_LIVE_V1.cjs
+          pnpm run ci:scenario:fertilization
+          pnpm run ci:runtime:bline-agronomy-agent-fail-closed
+          pnpm run ci:controlled-pilot
+          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --cleanup --apply --tenant tenantA
+          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --apply --tenant tenantA --base-url http://127.0.0.1:3001
+          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --verify --tenant tenantA
+          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --verify-api --tenant tenantA --base-url http://127.0.0.1:3001
+          node scripts/governance_acceptance/ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1.cjs --base-url http://127.0.0.1:3001 --tenant tenantA
+          pnpm run ci:controlled-pilot
+          pnpm exec playwright install chromium
+          pnpm run ci:frontend:runtime-page-audit
+          pnpm run ci:stage1-fixture:raw-sample-contract
+          pnpm run ci:p1-smoke:preflight-idempotent
+          pnpm run ci:customer-report-boundary-suite-wiring
+          pnpm run ci:customer-report-boundary-suite
+          pnpm run test:acceptance
+          pnpm acceptance:commercial:mvp0:syntax
+          pnpm acceptance:commercial:mvp0:release-gate
+          EOF
+          sed -i 's/^          //' "$QUAL_SEQUENCE"
+
+          python - "$PRIOR_WORKFLOW" "$CURRENT_WORKFLOW" "$QUAL_SEQUENCE" <<'PY'
+          import sys
+          prior, current, seq_path = sys.argv[1:]
+          sequence = [line.rstrip('\n') for line in open(seq_path, encoding='utf-8') if line.strip()]
+          for path in (prior, current):
+              text = open(path, encoding='utf-8').read()
+              pos = -1
+              for command in sequence:
+                  nxt = text.find(command, pos + 1)
+                  if nxt < 0:
+                      raise SystemExit(f'missing or reordered qualification command in {path}: {command}')
+                  pos = nxt
+          PY
+
+          PROOF="$RUNNER_TEMP/BLINE-FINAL-CLOSURE-ZERO-LIVE-PROOF.json"
+          jq -n \
+            --arg protected_main "$REMOTE_MAIN" \
+            --arg pr_head "$PR_HEAD_SHA" \
+            --arg remote_pr_head "$REMOTE_PR_HEAD" \
+            --arg candidate_branch "$REMOTE_CANDIDATE" \
+            --arg pr_state "$PR_STATE" \
+            --arg pr_draft "$PR_DRAFT" \
+            --arg pr_merged "$PR_MERGED" \
+            --arg pr_base_ref "$PR_BASE_REF" \
+            --arg synthetic_parent1 "$ACTUAL_PARENT1" \
+            --arg synthetic_parent2 "$ACTUAL_PARENT2" \
+            --arg synthetic_tree "$ACTUAL_TREE" \
+            --arg computed_merge_tree "$COMPUTED_MERGE_TREE" \
+            --arg checkout "$ACTUAL_HEAD" \
+            --arg git_version "$GIT_VERSION" \
+            --arg merge_tree_invocation 'git merge-tree --write-tree "$EXPECTED_MAIN_SHA" "$EXPECTED_CANDIDATE_SHA"' \
+            --argjson merge_tree_exit_status "$MERGE_TREE_RC" \
+            --arg remote_pr_merge_sha "$REMOTE_PR_MERGE" \
+            --arg final_live_ref "$FINAL_LIVE_REF" \
+            --arg control_parent "$CONTROL_PARENT" \
+            --arg control_head "$GITHUB_SHA" \
+            '{
+              schema:"BLINE-FINAL-CLOSURE-ZERO-LIVE-PROOF-V1",
+              result:"PASS",
+              score:"14/14",
+              predicates:{
+                "01_protected_main_exact":true,
+                "02_pr_head_exact":true,
+                "03_remote_pr_head_exact":true,
+                "04_candidate_branch_exact":true,
+                "05_pr_open_draft_unmerged_base_main":true,
+                "06_synthetic_parent1_exact":true,
+                "07_synthetic_parent2_exact":true,
+                "08_synthetic_tree_exact":true,
+                "09_independent_merge_tree_exact":true,
+                "10_workflow_checkout_authoritative_synthetic":true,
+                "11_qualification_command_set_order_unchanged":true,
+                "12_semantic_delta_zero":true,
+                "13_working_tree_clean":true,
+                "14_final_live_ref_absent":true
+              },
+              exact_state:{
+                protected_main_sha:$protected_main,
+                pr_head_sha:$pr_head,
+                remote_pr_head_sha:$remote_pr_head,
+                candidate_branch_sha:$candidate_branch,
+                pr:{state:$pr_state,draft:($pr_draft=="true"),merged:($pr_merged=="true"),base_ref:$pr_base_ref},
+                synthetic:{parent1:$synthetic_parent1,parent2:$synthetic_parent2,tree:$synthetic_tree,checkout_sha:$checkout},
+                merge_tree:{git_version:$git_version,invocation:$merge_tree_invocation,exit_status:$merge_tree_exit_status,computed_tree:$computed_merge_tree},
+                remote_pr_merge_sha:$remote_pr_merge_sha,
+                remote_pr_merge_matches_authoritative_subject:($remote_pr_merge_sha==$checkout),
+                control_plane:{parent:$control_parent,head:$control_head,changed_files:1,semantic_delta:{bline:0,mcft:0,adr:0}},
+                final_live_ref:$final_live_ref
+              }
+            }' > "$PROOF"
+          sha256sum "$PROOF" > "${PROOF}.sha256"
+          echo "proof=$PROOF" >> "$GITHUB_OUTPUT"
+          echo "proof_sha256=${PROOF}.sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Upload zero-live proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: BLINE-FINAL-CLOSURE-ZERO-LIVE-PROOF
+          path: |
+            ${{ steps.zero_live.outputs.proof }}
+            ${{ steps.zero_live.outputs.proof_sha256 }}
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 90
+
+  requalify:
+    name: BLINE final integrated qualification closure
+    if: github.ref == 'refs/heads/qual/bline-final-qualification-closure-01'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      BLINE_PR_NUMBER: "3525"
+      EXPECTED_MAIN_SHA: d19913c88b81b618507ff6da6fc4f3699123cdd6
+      EXPECTED_CANDIDATE_SHA: 5e0d25d3f248f36b5bf46025bdd58682211d30f8
+      EXPECTED_CANDIDATE_BRANCH: feat/bline-w4-gov-recon-03-ca2a96d
+      EXPECTED_SYNTHETIC_SHA: e7fa0ca73022b7b73568f0ebd0d59afacee054f9
+      EXPECTED_SYNTHETIC_TREE: 8b76803accd108aa3e8ad24ded475cd79152df7d
+      ACCEPTED_BLINE_SEMANTIC_REFERENCE: 413386acc04fa2d3404f09d2d1fa8702472e83f1
+      W5_ACCEPTED_SHA: a6d39df6af46ecfbf8e4ae99e48f400e00685875
+      W6A_ACCEPTED_SHA: bcc78fb00e73292362f237a95db3441e07389f6f
+      W6B1_QUALIFIED_SHA: 612d650244310cd60795c9e66883bd12d9981226
+      JOB_DISPLAY_NAME: BLINE final integrated qualification closure
+
+    steps:
+      - name: Checkout authoritative synthetic integration subject
+        uses: actions/checkout@v4
+        with:
+          ref: e7fa0ca73022b7b73568f0ebd0d59afacee054f9
+          fetch-depth: 0
+
+      - name: Initialize retained command evidence
+        run: |
+          set -euo pipefail
+          EVIDENCE_DIR="$RUNNER_TEMP/bline-final-closure-evidence"
+          RECORDS_DIR="$EVIDENCE_DIR/command-records"
+          HELPER="$RUNNER_TEMP/bline-command-recorder.sh"
+          mkdir -p "$RECORDS_DIR"
+          cat > "$HELPER" <<'BLINE_RECORDER'
+          _bline_slug() {
+            printf '%s' "$1" | tr '[:upper:] ' '[:lower:]-' | tr -cd 'a-z0-9._-'
+          }
+
+          _bline_write_failure_once() {
+            local command_id="$1" workflow_step="$2" invocation="$3" exit_code="$4" timestamp="$5"
+            local first="$BLINE_EVIDENCE_DIR/first-failure.json"
+            if [ ! -e "$first" ]; then
+              jq -n \
+                --arg first_failed_command_id "$command_id" \
+                --arg workflow_step "$workflow_step" \
+                --arg exact_invocation "$invocation" \
+                --argjson exit_code "$exit_code" \
+                --arg timestamp "$timestamp" \
+                '{first_failed_command_id:$first_failed_command_id,workflow_step:$workflow_step,"exact invocation":$exact_invocation,exit_code:$exit_code,timestamp:$timestamp}' \
+                > "$first"
+            fi
+          }
+
+          _bline_record_result() {
+            local command_id="$1" workflow_step="$2" invocation="$3" started_at="$4" completed_at="$5" exit_code="$6"
+            local result="PASS"
+            [ "$exit_code" -eq 0 ] || result="FAIL"
+            jq -n \
+              --arg command_id "$command_id" \
+              --arg workflow_step "$workflow_step" \
+              --arg exact_invocation "$invocation" \
+              --arg started_at "$started_at" \
+              --arg completed_at "$completed_at" \
+              --argjson exit_code "$exit_code" \
+              --arg result "$result" \
+              '{command_id:$command_id,workflow_step:$workflow_step,"exact invocation":$exact_invocation,started_at:$started_at,completed_at:$completed_at,exit_code:$exit_code,result:$result}' \
+              > "$BLINE_RECORDS_DIR/${command_id}.json"
+            if [ "$exit_code" -ne 0 ]; then
+              _bline_write_failure_once "$command_id" "$workflow_step" "$invocation" "$exit_code" "$completed_at"
+            fi
+          }
+
+          run_recorded() {
+            local command_id="$1" workflow_step="$2" invocation="$3"
+            local started_at completed_at rc
+            started_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            set +e
+            eval "$invocation"
+            rc=$?
+            set -e
+            completed_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            _bline_record_result "$command_id" "$workflow_step" "$invocation" "$started_at" "$completed_at" "$rc"
+            return "$rc"
+          }
+
+          run_recorded_capture_stdout() {
+            local command_id="$1" workflow_step="$2" invocation="$3" stdout_file="$4"
+            local started_at completed_at rc
+            started_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            set +e
+            eval "$invocation" > "$stdout_file"
+            rc=$?
+            set -e
+            completed_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            _bline_record_result "$command_id" "$workflow_step" "$invocation" "$started_at" "$completed_at" "$rc"
+            return "$rc"
+          }
+
+          _bline_err_fallback() {
+            local rc="$1" invocation="$2" timestamp slug command_id
+            [ "$rc" -ne 0 ] || return 0
+            timestamp="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            slug="$(_bline_slug "${BLINE_WORKFLOW_STEP:-unknown}")"
+            command_id="${slug}-unwrapped-failure"
+            _bline_write_failure_once "$command_id" "${BLINE_WORKFLOW_STEP:-unknown}" "$invocation" "$rc" "$timestamp"
+            return 0
+          }
+
+          enable_step_failure_trap() {
+            export BLINE_WORKFLOW_STEP="$1"
+            set -E
+            trap '_bline_err_fallback "$?" "$BASH_COMMAND"' ERR
+          }
+          BLINE_RECORDER
+          chmod 700 "$HELPER"
+          echo "BLINE_EVIDENCE_DIR=$EVIDENCE_DIR" >> "$GITHUB_ENV"
+          echo "BLINE_RECORDS_DIR=$RECORDS_DIR" >> "$GITHUB_ENV"
+          echo "BLINE_COMMAND_RECORDER=$HELPER" >> "$GITHUB_ENV"
+
+      - name: Provenance preflight - authoritative synthetic subject
+        id: provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Provenance preflight - authoritative synthetic subject"
+
+          ACTUAL_HEAD="$(git rev-parse HEAD)"
+          ACTUAL_TREE="$(git rev-parse 'HEAD^{tree}')"
+          ACTUAL_PARENT1="$(git rev-parse HEAD^1)"
+          ACTUAL_PARENT2="$(git rev-parse HEAD^2)"
+          STATUS="$(git status --porcelain=v1 --untracked-files=all)"
+
+          run_recorded "prov-01-pr-number" "$BLINE_WORKFLOW_STEP" 'test "$BLINE_PR_NUMBER" = "3525"'
+          run_recorded "prov-02-head" "$BLINE_WORKFLOW_STEP" 'test "$ACTUAL_HEAD" = "$EXPECTED_SYNTHETIC_SHA"'
+          run_recorded "prov-03-tree" "$BLINE_WORKFLOW_STEP" 'test "$ACTUAL_TREE" = "$EXPECTED_SYNTHETIC_TREE"'
+          run_recorded "prov-04-parent1" "$BLINE_WORKFLOW_STEP" 'test "$ACTUAL_PARENT1" = "$EXPECTED_MAIN_SHA"'
+          run_recorded "prov-05-parent2" "$BLINE_WORKFLOW_STEP" 'test "$ACTUAL_PARENT2" = "$EXPECTED_CANDIDATE_SHA"'
+          run_recorded "prov-06-clean" "$BLINE_WORKFLOW_STEP" 'test -z "$STATUS"'
+
+          REMOTE_MAIN="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          REMOTE_CANDIDATE="$(git ls-remote origin "refs/heads/${EXPECTED_CANDIDATE_BRANCH}" | awk '{print $1}')"
+          REMOTE_PR_HEAD="$(git ls-remote origin "refs/pull/${BLINE_PR_NUMBER}/head" | awk '{print $1}')"
+          REMOTE_PR_MERGE="$(git ls-remote origin "refs/pull/${BLINE_PR_NUMBER}/merge" | awk '{print $1}')"
+          run_recorded "prov-07-remote-main" "$BLINE_WORKFLOW_STEP" 'test "$REMOTE_MAIN" = "$EXPECTED_MAIN_SHA"'
+          run_recorded "prov-08-remote-candidate" "$BLINE_WORKFLOW_STEP" 'test "$REMOTE_CANDIDATE" = "$EXPECTED_CANDIDATE_SHA"'
+          run_recorded "prov-09-remote-pr-head" "$BLINE_WORKFLOW_STEP" 'test "$REMOTE_PR_HEAD" = "$EXPECTED_CANDIDATE_SHA"'
+
+          PR_JSON="$RUNNER_TEMP/requal-pr.json"
+          run_recorded "prov-10-fetch-pr" "$BLINE_WORKFLOW_STEP" 'curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/pulls/${BLINE_PR_NUMBER}" > "$PR_JSON"'
+          PR_STATE="$(jq -r '.state' "$PR_JSON")"
+          PR_DRAFT="$(jq -r '.draft' "$PR_JSON")"
+          PR_MERGED="$(jq -r '.merged' "$PR_JSON")"
+          PR_BASE_REF="$(jq -r '.base.ref' "$PR_JSON")"
+          PR_HEAD_SHA="$(jq -r '.head.sha' "$PR_JSON")"
+          run_recorded "prov-11-pr-head" "$BLINE_WORKFLOW_STEP" 'test "$PR_HEAD_SHA" = "$EXPECTED_CANDIDATE_SHA"'
+          run_recorded "prov-12-pr-state" "$BLINE_WORKFLOW_STEP" 'test "$PR_STATE" = "open"'
+          run_recorded "prov-13-pr-draft" "$BLINE_WORKFLOW_STEP" 'test "$PR_DRAFT" = "true"'
+          run_recorded "prov-14-pr-unmerged" "$BLINE_WORKFLOW_STEP" 'test "$PR_MERGED" = "false"'
+          run_recorded "prov-15-pr-base-ref" "$BLINE_WORKFLOW_STEP" 'test "$PR_BASE_REF" = "main"'
+
+          GIT_VERSION_FILE="$RUNNER_TEMP/git-version.txt"
+          run_recorded_capture_stdout "prov-16-git-version" "$BLINE_WORKFLOW_STEP" 'git version' "$GIT_VERSION_FILE"
+          GIT_VERSION="$(cat "$GIT_VERSION_FILE")"
+          MERGE_TREE_OUT="$RUNNER_TEMP/merge-tree.out"
+          run_recorded_capture_stdout "prov-17-merge-tree" "$BLINE_WORKFLOW_STEP" 'git merge-tree --write-tree "$EXPECTED_MAIN_SHA" "$EXPECTED_CANDIDATE_SHA"' "$MERGE_TREE_OUT"
+          MERGE_TREE_RC=0
+          COMPUTED_MERGE_TREE="$(sed -n '1p' "$MERGE_TREE_OUT" | tr -d '\r')"
+          run_recorded "prov-18-merge-tree-expected" "$BLINE_WORKFLOW_STEP" 'test "$COMPUTED_MERGE_TREE" = "$EXPECTED_SYNTHETIC_TREE"'
+          run_recorded "prov-19-merge-tree-local" "$BLINE_WORKFLOW_STEP" 'test "$COMPUTED_MERGE_TREE" = "$ACTUAL_TREE"'
 
           JOBS_JSON="$RUNNER_TEMP/requal-run-jobs.json"
           JOB_ID=""
@@ -74,9 +459,9 @@ jobs:
             [ -n "$JOB_ID" ] && break
             sleep 2
           done
-          test -n "$JOB_ID"
+          run_recorded "prov-20-job-id" "$BLINE_WORKFLOW_STEP" 'test -n "$JOB_ID"'
 
-          MANIFEST="$RUNNER_TEMP/BLINE-FINAL-INTEGRATED-REQUALIFICATION-EXECUTION-SUBJECT.json"
+          MANIFEST="$BLINE_EVIDENCE_DIR/BLINE-FINAL-INTEGRATED-QUALIFICATION-EXECUTION-SUBJECT.json"
           TIMESTAMP="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           DETACHED_HEAD="$(git symbolic-ref -q --short HEAD || printf '%s' DETACHED)"
           jq -n \
@@ -92,6 +477,7 @@ jobs:
             --arg candidate_head_sha "$EXPECTED_CANDIDATE_SHA" \
             --arg candidate_branch "$EXPECTED_CANDIDATE_BRANCH" \
             --arg synthetic_merge_sha "$EXPECTED_SYNTHETIC_SHA" \
+            --arg expected_synthetic_tree "$EXPECTED_SYNTHETIC_TREE" \
             --arg actual_head "$ACTUAL_HEAD" \
             --arg actual_tree "$ACTUAL_TREE" \
             --arg actual_parent1 "$ACTUAL_PARENT1" \
@@ -100,12 +486,20 @@ jobs:
             --arg remote_candidate "$REMOTE_CANDIDATE" \
             --arg remote_pr_head "$REMOTE_PR_HEAD" \
             --arg remote_pr_merge "$REMOTE_PR_MERGE" \
+            --arg pr_state "$PR_STATE" \
+            --arg pr_draft "$PR_DRAFT" \
+            --arg pr_merged "$PR_MERGED" \
+            --arg pr_base_ref "$PR_BASE_REF" \
+            --arg git_version "$GIT_VERSION" \
+            --arg merge_tree_invocation 'git merge-tree --write-tree "$EXPECTED_MAIN_SHA" "$EXPECTED_CANDIDATE_SHA"' \
+            --argjson merge_tree_exit_status "$MERGE_TREE_RC" \
+            --arg computed_merge_tree "$COMPUTED_MERGE_TREE" \
             --arg checkout_ref "$EXPECTED_SYNTHETIC_SHA" \
             --arg checkout_mode "$DETACHED_HEAD" \
             --arg working_tree_status "$STATUS" \
             --arg timestamp "$TIMESTAMP" \
             '{
-              schema:"BLINE-FINAL-INTEGRATED-REQUALIFICATION-EXECUTION-SUBJECT-V1",
+              schema:"BLINE-FINAL-INTEGRATED-QUALIFICATION-EXECUTION-SUBJECT-V2",
               run_id:$run_id,
               job_id:$job_id,
               workflow_ref:$workflow_ref,
@@ -116,8 +510,10 @@ jobs:
                 protected_main_sha:$protected_main_sha,
                 candidate_head_sha:$candidate_head_sha,
                 candidate_branch:$candidate_branch,
-                synthetic_merge_sha:$synthetic_merge_sha
+                synthetic_merge_sha:$synthetic_merge_sha,
+                synthetic_tree_sha:$expected_synthetic_tree
               },
+              pr:{state:$pr_state,draft:($pr_draft=="true"),merged:($pr_merged=="true"),base_ref:$pr_base_ref},
               actual_workspace:{
                 head_sha:$actual_head,
                 tree_sha:$actual_tree,
@@ -132,7 +528,14 @@ jobs:
                 protected_main_sha:$remote_main,
                 candidate_head_sha:$remote_candidate,
                 pr_head_sha:$remote_pr_head,
-                pr_merge_sha:$remote_pr_merge
+                remote_pr_merge_sha:$remote_pr_merge,
+                remote_pr_merge_matches_authoritative_subject:($remote_pr_merge==$synthetic_merge_sha)
+              },
+              independent_merge_tree:{
+                git_version:$git_version,
+                invocation:$merge_tree_invocation,
+                exit_status:$merge_tree_exit_status,
+                computed_merge_tree:$computed_merge_tree
               },
               execution_timestamp:$timestamp,
               unique_execution_subject:true
@@ -144,14 +547,20 @@ jobs:
             .workflow_ref != "" and
             .workflow_sha != "" and
             .expected.pr_number == "3525" and
+            .pr.state == "open" and
+            .pr.draft == true and
+            .pr.merged == false and
+            .pr.base_ref == "main" and
             .actual_workspace.head_sha == .expected.synthetic_merge_sha and
-            .actual_workspace.tree_sha == "78c1b6dd65aa9c8c5a52a1f920974e938b9cc809" and
+            .actual_workspace.tree_sha == .expected.synthetic_tree_sha and
             .actual_workspace.parent1_sha == .expected.protected_main_sha and
             .actual_workspace.parent2_sha == .expected.candidate_head_sha and
             .fresh_remote_lock.protected_main_sha == .expected.protected_main_sha and
             .fresh_remote_lock.candidate_head_sha == .expected.candidate_head_sha and
             .fresh_remote_lock.pr_head_sha == .expected.candidate_head_sha and
-            .fresh_remote_lock.pr_merge_sha == .expected.synthetic_merge_sha and
+            .independent_merge_tree.exit_status == 0 and
+            .independent_merge_tree.computed_merge_tree == .expected.synthetic_tree_sha and
+            .independent_merge_tree.computed_merge_tree == .actual_workspace.tree_sha and
             .actual_workspace.working_tree_clean == true and
             .unique_execution_subject == true
           ' "$MANIFEST" >/dev/null
@@ -166,7 +575,7 @@ jobs:
         id: provenance_upload
         uses: actions/upload-artifact@v4
         with:
-          name: BLINE-FINAL-INTEGRATED-REQUALIFICATION-EXECUTION-SUBJECT
+          name: BLINE-FINAL-INTEGRATED-QUALIFICATION-EXECUTION-SUBJECT
           path: |
             ${{ steps.provenance.outputs.manifest }}
             ${{ steps.provenance.outputs.manifest_sha256_file }}
@@ -177,9 +586,11 @@ jobs:
       - name: Provenance artifact receipt - product qualification boundary
         run: |
           set -euo pipefail
-          test -n "${{ steps.provenance_upload.outputs.artifact-id }}"
-          test -n "${{ steps.provenance_upload.outputs.artifact-digest }}"
-          test "${{ steps.provenance.outputs.execution_sha }}" = "$EXPECTED_SYNTHETIC_SHA"
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Provenance artifact receipt - product qualification boundary"
+          run_recorded "receipt-01-artifact-id" "$BLINE_WORKFLOW_STEP" 'test -n "${{ steps.provenance_upload.outputs.artifact-id }}"'
+          run_recorded "receipt-02-artifact-digest" "$BLINE_WORKFLOW_STEP" 'test -n "${{ steps.provenance_upload.outputs.artifact-digest }}"'
+          run_recorded "receipt-03-execution-sha" "$BLINE_WORKFLOW_STEP" 'test "${{ steps.provenance.outputs.execution_sha }}" = "$EXPECTED_SYNTHETIC_SHA"'
           {
             echo "PROVENANCE_PREFLIGHT=PASS"
             echo "run_id=$GITHUB_RUN_ID"
@@ -203,153 +614,199 @@ jobs:
           cache: pnpm
 
       - name: Install
-        run: pnpm install --no-frozen-lockfile
+        run: |
+          set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Install"
+          run_recorded "install-01" "$BLINE_WORKFLOW_STEP" 'pnpm install --no-frozen-lockfile'
 
       - name: Historical W5/W6 exact-head replay
         run: |
           set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Historical W5/W6 exact-head replay"
           replay_gate() {
             ref="$1"
             gate="$2"
+            command_id="$3"
             dir="$(mktemp -d)"
             git worktree add --detach "$dir" "$ref" >/dev/null
             set +e
-            (cd "$dir" && node "$gate")
+            (cd "$dir" && run_recorded "$command_id" "$BLINE_WORKFLOW_STEP" "node \"$gate\"")
             rc=$?
             set -e
             git worktree remove --force "$dir" >/dev/null 2>&1 || true
             rm -rf "$dir" || true
             test "$rc" -eq 0
           }
-          replay_gate "$W5_ACCEPTED_SHA" "scripts/governance_acceptance/ACCEPTANCE_BLINE_W5_LEGACY_RUNTIME_CONTAINMENT_V1.cjs"
-          replay_gate "$W6A_ACCEPTED_SHA" "scripts/governance_acceptance/ACCEPTANCE_BLINE_W6A_EXACT_PREDECESSOR_SELECTION_V1.cjs"
-          replay_gate "$W6B1_QUALIFIED_SHA" "scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B1_INTERNAL_TASK_ISSUER_PRINCIPAL_V1.cjs"
-          replay_gate "$ACCEPTED_BLINE_SEMANTIC_REFERENCE" "scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.cjs"
+          replay_gate "$W5_ACCEPTED_SHA" "scripts/governance_acceptance/ACCEPTANCE_BLINE_W5_LEGACY_RUNTIME_CONTAINMENT_V1.cjs" "historical-01-w5"
+          replay_gate "$W6A_ACCEPTED_SHA" "scripts/governance_acceptance/ACCEPTANCE_BLINE_W6A_EXACT_PREDECESSOR_SELECTION_V1.cjs" "historical-02-w6a"
+          replay_gate "$W6B1_QUALIFIED_SHA" "scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B1_INTERNAL_TASK_ISSUER_PRINCIPAL_V1.cjs" "historical-03-w6b1"
+          replay_gate "$ACCEPTED_BLINE_SEMANTIC_REFERENCE" "scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.cjs" "historical-04-w6b2"
 
       - name: W5 successor-aware current semantic postimage
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD:apps/server/src/runtime/legacy_runtime_containment_v1.ts)" = "5347e8c7b7a98b8fe5d60c347d4c377388d4fe21"
-          test "$(git rev-parse HEAD:apps/server/src/app.ts)" = "8d9b481cf07333ea2a7e68df82a1afac625a9b57"
-          test "$(git rev-parse HEAD:config/auth/security_acceptance_tokens.json)" = "c025511f274fbd3569eaa02117cad7448c6c42f5"
-          test "$(git rev-parse HEAD:apps/server/src/domain/auth/roles.ts)" = "da245050080e094b8cbd8026d150fddcacc23b2d"
-          git diff --quiet "$W5_ACCEPTED_SHA" HEAD -- \
-            docs/architecture/semantic_convergence/GEOX-BLINE-W5-LEGACY-RUNTIME-CONTAINMENT-V1.json \
-            scripts/governance_acceptance/ACCEPTANCE_BLINE_W5_LEGACY_RUNTIME_CONTAINMENT_V1.cjs \
-            apps/server/src/runtime/legacy_runtime_containment_v1.ts \
-            apps/server/src/app.ts
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "W5 successor-aware current semantic postimage"
+          run_recorded "w5-post-01-runtime-blob" "$BLINE_WORKFLOW_STEP" 'test "$(git rev-parse HEAD:apps/server/src/runtime/legacy_runtime_containment_v1.ts)" = "5347e8c7b7a98b8fe5d60c347d4c377388d4fe21"'
+          run_recorded "w5-post-02-app-blob" "$BLINE_WORKFLOW_STEP" 'test "$(git rev-parse HEAD:apps/server/src/app.ts)" = "8d9b481cf07333ea2a7e68df82a1afac625a9b57"'
+          run_recorded "w5-post-03-token-blob" "$BLINE_WORKFLOW_STEP" 'test "$(git rev-parse HEAD:config/auth/security_acceptance_tokens.json)" = "c025511f274fbd3569eaa02117cad7448c6c42f5"'
+          run_recorded "w5-post-04-role-blob" "$BLINE_WORKFLOW_STEP" 'test "$(git rev-parse HEAD:apps/server/src/domain/auth/roles.ts)" = "da245050080e094b8cbd8026d150fddcacc23b2d"'
+          run_recorded "w5-post-05-diff" "$BLINE_WORKFLOW_STEP" 'git diff --quiet "$W5_ACCEPTED_SHA" HEAD -- docs/architecture/semantic_convergence/GEOX-BLINE-W5-LEGACY-RUNTIME-CONTAINMENT-V1.json scripts/governance_acceptance/ACCEPTANCE_BLINE_W5_LEGACY_RUNTIME_CONTAINMENT_V1.cjs apps/server/src/runtime/legacy_runtime_containment_v1.ts apps/server/src/app.ts'
 
       - name: W6 successor-aware current B-Line postimage
         run: |
           set -euo pipefail
-          git merge-base --is-ancestor "$ACCEPTED_BLINE_SEMANTIC_REFERENCE" HEAD
-          git diff --quiet "$ACCEPTED_BLINE_SEMANTIC_REFERENCE" HEAD -- \
-            apps/server/src/domain/planner/compiler_v1.ts \
-            apps/server/src/domain/crop/crop_context_v1.ts \
-            apps/server/src/routes/programs_core_v1.ts \
-            apps/server/src/routes/field_crop_context_hooks_v1.ts \
-            apps/server/src/auth/internal_task_issuer_principal_v1.ts \
-            apps/server/src/routes/control_approval_request_v1.ts \
-            apps/server/src/auth/ao_act_authz_v0.ts \
-            apps/server/src/domain/auth/roles.ts \
-            config/auth/security_acceptance_tokens.json \
-            apps/server/src/infra/bline_commercial_principal_bootstrap_v1.ts \
-            docker-compose.commercial_v1.yml \
-            .env.commercial_v1.example
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "W6 successor-aware current B-Line postimage"
+          run_recorded "w6-post-01-ancestor" "$BLINE_WORKFLOW_STEP" 'git merge-base --is-ancestor "$ACCEPTED_BLINE_SEMANTIC_REFERENCE" HEAD'
+          run_recorded "w6-post-02-diff" "$BLINE_WORKFLOW_STEP" 'git diff --quiet "$ACCEPTED_BLINE_SEMANTIC_REFERENCE" HEAD -- apps/server/src/domain/planner/compiler_v1.ts apps/server/src/domain/crop/crop_context_v1.ts apps/server/src/routes/programs_core_v1.ts apps/server/src/routes/field_crop_context_hooks_v1.ts apps/server/src/auth/internal_task_issuer_principal_v1.ts apps/server/src/routes/control_approval_request_v1.ts apps/server/src/auth/ao_act_authz_v0.ts apps/server/src/domain/auth/roles.ts config/auth/security_acceptance_tokens.json apps/server/src/infra/bline_commercial_principal_bootstrap_v1.ts docker-compose.commercial_v1.yml .env.commercial_v1.example'
 
       - name: Current protected-main external evolution preservation
         run: |
           set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Current protected-main external evolution preservation"
           DELTA="$(git diff --name-only "$EXPECTED_MAIN_SHA" HEAD)"
           printf '%s\n' "$DELTA" > "$RUNNER_TEMP/main-to-target.changed"
-          if grep -Ei '(^|/)(mcft[^/]*|docs/digital_twin|scripts/adr_adoption|apps/server/src/integrations/adr)|(^|/)docker-compose\.mcft|(^|/)\.github/workflows/(mcft-|adr-)' "$RUNNER_TEMP/main-to-target.changed"; then
-            echo "B-Line candidate modifies MCFT/ADR-owned paths relative to locked protected main"
-            exit 1
-          fi
+          grep -Ei '(^|/)(mcft[^/]*|docs/digital_twin|scripts/adr_adoption|apps/server/src/integrations/adr)|(^|/)docker-compose\.mcft|(^|/)\.github/workflows/(mcft-|adr-)' "$RUNNER_TEMP/main-to-target.changed" > "$RUNNER_TEMP/prohibited-main-delta.txt" || true
+          run_recorded "main-preservation-01" "$BLINE_WORKFLOW_STEP" 'test ! -s "$RUNNER_TEMP/prohibited-main-delta.txt"'
 
       - name: Route dependency guard
-        run: pnpm run ci:route-dependency-guard
+        run: |
+          set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Route dependency guard"
+          run_recorded "route-guard-01" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:route-dependency-guard'
 
       - name: W1 identity foundation
         run: |
-          node scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.ts
+          set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "W1 identity foundation"
+          run_recorded "w1-01-governance" "$BLINE_WORKFLOW_STEP" 'node scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs'
+          run_recorded "w1-02-runtime" "$BLINE_WORKFLOW_STEP" 'pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.ts'
 
       - name: W2 caller read-write boundary
         run: |
-          node scripts/governance_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.cjs
-          pnpm --filter @geox/device-skills... build
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.ts
+          set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "W2 caller read-write boundary"
+          run_recorded "w2-01-governance" "$BLINE_WORKFLOW_STEP" 'node scripts/governance_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.cjs'
+          run_recorded "w2-02-device-skills-build" "$BLINE_WORKFLOW_STEP" 'pnpm --filter @geox/device-skills... build'
+          run_recorded "w2-03-runtime" "$BLINE_WORKFLOW_STEP" 'pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.ts'
 
       - name: W3 decision-approval authority
         run: |
-          node scripts/governance_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.cjs
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.ts
+          set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "W3 decision-approval authority"
+          run_recorded "w3-01-governance" "$BLINE_WORKFLOW_STEP" 'node scripts/governance_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.cjs'
+          run_recorded "w3-02-runtime" "$BLINE_WORKFLOW_STEP" 'pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.ts'
 
       - name: W4 execution-device-receipt provenance
         run: |
-          node scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts
+          set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "W4 execution-device-receipt provenance"
+          run_recorded "w4-01-governance" "$BLINE_WORKFLOW_STEP" 'node scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs'
+          run_recorded "w4-02-runtime" "$BLINE_WORKFLOW_STEP" 'pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts'
 
       - name: W6 current semantic runtime preservation
         run: |
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6A_EXACT_PREDECESSOR_SELECTION_V1.ts
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6B1_INTERNAL_TASK_ISSUER_PRINCIPAL_V1.ts
+          set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "W6 current semantic runtime preservation"
+          run_recorded "w6-runtime-01-w6a" "$BLINE_WORKFLOW_STEP" 'pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6A_EXACT_PREDECESSOR_SELECTION_V1.ts'
+          run_recorded "w6-runtime-02-w6b1" "$BLINE_WORKFLOW_STEP" 'pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W6B1_INTERNAL_TASK_ISSUER_PRINCIPAL_V1.ts'
 
       - name: Caller inventory
-        run: pnpm run ci:governance:bline-production-caller-authority-inventory
+        run: |
+          set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Caller inventory"
+          run_recorded "caller-inventory-01" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:governance:bline-production-caller-authority-inventory'
 
       - name: Residual authority audit
-        run: pnpm run ci:governance:bline-residual-authority-audit
+        run: |
+          set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Residual authority audit"
+          run_recorded "residual-audit-01" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:governance:bline-residual-authority-audit'
 
       - name: Active runtime closure
-        run: pnpm run ci:governance:bline-active-runtime-surface-closure
+        run: |
+          set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Active runtime closure"
+          run_recorded "active-runtime-01" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:governance:bline-active-runtime-surface-closure'
 
       - name: Closure aggregation
         run: |
-          pnpm run ci:governance:bline-operation-state-read-only
-          pnpm run ci:governance:bline-execution-plan-task-lifecycle
-          pnpm run ci:governance:bline-p0-res007-evidence-export-boundary
-          pnpm run ci:governance:bline-operator-dispatch-intent
-          pnpm run ci:governance:bline-acceptance-no-formal-memory-side-effect
-          pnpm run ci:governance:bline-formal-memory-reviewed-promotion-proof
-          pnpm run ci:governance:bline-legacy-twin-no-direct-formal-memory
-          pnpm run ci:governance:bline-formal-memory-scope-provenance
-          pnpm run ci:governance:bline-sampling-exact-source-binding
-          pnpm run ci:governance:bline-fertilization-execution-provenance
-          pnpm run ci:governance:bline-agronomy-agent-fail-closed
+          set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Closure aggregation"
+          run_recorded "closure-01-operation-state" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:governance:bline-operation-state-read-only'
+          run_recorded "closure-02-plan-task" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:governance:bline-execution-plan-task-lifecycle'
+          run_recorded "closure-03-evidence-export" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:governance:bline-p0-res007-evidence-export-boundary'
+          run_recorded "closure-04-dispatch-intent" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:governance:bline-operator-dispatch-intent'
+          run_recorded "closure-05-no-formal-side-effect" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:governance:bline-acceptance-no-formal-memory-side-effect'
+          run_recorded "closure-06-reviewed-promotion" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:governance:bline-formal-memory-reviewed-promotion-proof'
+          run_recorded "closure-07-legacy-twin" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:governance:bline-legacy-twin-no-direct-formal-memory'
+          run_recorded "closure-08-scope-provenance" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:governance:bline-formal-memory-scope-provenance'
+          run_recorded "closure-09-sampling-source" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:governance:bline-sampling-exact-source-binding'
+          run_recorded "closure-10-fertilization-provenance" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:governance:bline-fertilization-execution-provenance'
+          run_recorded "closure-11-agronomy-fail-closed" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:governance:bline-agronomy-agent-fail-closed'
 
       - name: PR-SEC-2 containment including BSEC-120
         run: |
-          node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_IMMEDIATE_CALLER_CONTAINMENT_V1.cjs
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_OPERATOR_TWIN_AUTH_NEGATIVE_V1.ts
-          node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_FAIL_CLOSED_V1.cjs
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_FAIL_CLOSED_V1.ts
-          node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_FAIL_CLOSED_V1.cjs
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_FAIL_CLOSED_V1.ts
-          node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_ADMIN_IMPORT_FAIL_CLOSED_V1.cjs
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_ADMIN_IMPORT_FAIL_CLOSED_V1.ts
-          node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEAK_INTERNAL_FAIL_CLOSED_V1.cjs
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEAK_INTERNAL_FAIL_CLOSED_V1.ts
-          node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_INTERNAL_AUTO_FALLBACK_FAIL_CLOSED_V1.cjs
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_INTERNAL_AUTO_FALLBACK_FAIL_CLOSED_V1.ts
-          node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_FAIL_CLOSED_V1.cjs
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_FAIL_CLOSED_V1.ts
-          node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_EVIDENCE_EXPORT_WRITE_CAPABILITY_V1.cjs
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_EVIDENCE_EXPORT_WRITE_CAPABILITY_V1.ts
+          set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "PR-SEC-2 containment including BSEC-120"
+          run_recorded "prsec2-01-immediate-caller" "$BLINE_WORKFLOW_STEP" 'node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_IMMEDIATE_CALLER_CONTAINMENT_V1.cjs'
+          run_recorded "prsec2-02-operator-twin" "$BLINE_WORKFLOW_STEP" 'pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_OPERATOR_TWIN_AUTH_NEGATIVE_V1.ts'
+          run_recorded "prsec2-03-weather-gov" "$BLINE_WORKFLOW_STEP" 'node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_FAIL_CLOSED_V1.cjs'
+          run_recorded "prsec2-04-weather-runtime" "$BLINE_WORKFLOW_STEP" 'pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEATHER_INGEST_FAIL_CLOSED_V1.ts'
+          run_recorded "prsec2-05-legacy-twin-gov" "$BLINE_WORKFLOW_STEP" 'node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_FAIL_CLOSED_V1.cjs'
+          run_recorded "prsec2-06-legacy-twin-runtime" "$BLINE_WORKFLOW_STEP" 'pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_TWIN_BASE_FAIL_CLOSED_V1.ts'
+          run_recorded "prsec2-07-admin-import-gov" "$BLINE_WORKFLOW_STEP" 'node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_ADMIN_IMPORT_FAIL_CLOSED_V1.cjs'
+          run_recorded "prsec2-08-admin-import-runtime" "$BLINE_WORKFLOW_STEP" 'pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_ADMIN_IMPORT_FAIL_CLOSED_V1.ts'
+          run_recorded "prsec2-09-weak-internal-gov" "$BLINE_WORKFLOW_STEP" 'node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEAK_INTERNAL_FAIL_CLOSED_V1.cjs'
+          run_recorded "prsec2-10-weak-internal-runtime" "$BLINE_WORKFLOW_STEP" 'pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_WEAK_INTERNAL_FAIL_CLOSED_V1.ts'
+          run_recorded "prsec2-11-auto-fallback-gov" "$BLINE_WORKFLOW_STEP" 'node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_INTERNAL_AUTO_FALLBACK_FAIL_CLOSED_V1.cjs'
+          run_recorded "prsec2-12-auto-fallback-runtime" "$BLINE_WORKFLOW_STEP" 'pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_INTERNAL_AUTO_FALLBACK_FAIL_CLOSED_V1.ts'
+          run_recorded "prsec2-13-canopy-gov" "$BLINE_WORKFLOW_STEP" 'node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_FAIL_CLOSED_V1.cjs'
+          run_recorded "prsec2-14-canopy-runtime" "$BLINE_WORKFLOW_STEP" 'pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_LEGACY_CANOPY_UPLOAD_FAIL_CLOSED_V1.ts'
+          run_recorded "prsec2-15-evidence-gov" "$BLINE_WORKFLOW_STEP" 'node scripts/governance_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_EVIDENCE_EXPORT_WRITE_CAPABILITY_V1.cjs'
+          run_recorded "prsec2-16-evidence-runtime" "$BLINE_WORKFLOW_STEP" 'pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_EVIDENCE_EXPORT_WRITE_CAPABILITY_V1.ts'
 
       - name: Typecheck
-        run: pnpm -r typecheck
+        run: |
+          set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Typecheck"
+          run_recorded "typecheck-01" "$BLINE_WORKFLOW_STEP" 'pnpm -r typecheck'
 
       - name: Build
-        run: pnpm -r build
+        run: |
+          set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Build"
+          run_recorded "build-01" "$BLINE_WORKFLOW_STEP" 'pnpm -r build'
 
       - name: Server selfcheck
-        run: pnpm --filter @geox/server test:p1:selfcheck
+        run: |
+          set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Server selfcheck"
+          run_recorded "server-selfcheck-01" "$BLINE_WORKFLOW_STEP" 'pnpm --filter @geox/server test:p1:selfcheck'
 
       - name: Prepare commercial acceptance environment
         run: |
           set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Prepare commercial acceptance environment"
           ACCEPTANCE_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='admin' && x.scopes.includes('security.admin') && !x.revoked); if(!t) process.exit(1); console.log(t.token)")"
           mapfile -t ACCEPTANCE_IDENTITY < <(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='admin' && x.scopes.includes('security.admin') && !x.revoked); if(!t) process.exit(1); for (const k of ['tenant_id','project_id','group_id','actor_id']) { const v=String(t[k]||'').trim(); if(!v) process.exit(1); console.log(v); }")
           mapfile -t EXECUTOR_IDENTITY < <(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.token==='executor_token' && x.role==='executor' && x.scopes.includes('action.task.dispatch') && x.scopes.includes('ao_act.receipt.write') && !x.revoked); if(!t) process.exit(1); for (const k of ['token','actor_id']) { const v=String(t[k]||'').trim(); if(!v) process.exit(1); console.log(v); }")
@@ -387,34 +844,40 @@ jobs:
           GEOX_PUBLIC_BASE_URL=https://pilot-ci.geox.invalid
           GEOX_EXECUTION_DEFAULT_DISABLED=1
           GEOX_EXECUTION_ENABLE_EXPLICITLY=0
-          GEOX_EXECUTION_ENABLE_REASON=bline-final-integrated-requalification-exception-01
+          GEOX_EXECUTION_ENABLE_REASON=bline-final-integrated-qualification-closure-01
           GEOX_DEVTOOLS_ENABLED=0
           EOF
-          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml config > "$RUNNER_TEMP/commercial-compose.rendered.yml"
+          run_recorded "prepare-env-01-compose-config" "$BLINE_WORKFLOW_STEP" 'docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml config > "$RUNNER_TEMP/commercial-compose.rendered.yml"'
 
       - name: Start integrated acceptance runtime
         timeout-minutes: 12
         run: |
           set -euo pipefail
-          timeout 180 docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d minio minio-init
-          timeout 420 docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d postgres mqtt server jobs executor
-          timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health >/dev/null; do sleep 2; done'
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Start integrated acceptance runtime"
+          run_recorded "runtime-start-01-minio" "$BLINE_WORKFLOW_STEP" 'timeout 180 docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d minio minio-init'
+          run_recorded "runtime-start-02-services" "$BLINE_WORKFLOW_STEP" 'timeout 420 docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d postgres mqtt server jobs executor'
+          run_recorded "runtime-start-03-health" "$BLINE_WORKFLOW_STEP" "timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health >/dev/null; do sleep 2; done'"
 
       - name: BSEC-120 Commercial capability proof
         timeout-minutes: 10
         run: |
           set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "BSEC-120 Commercial capability proof"
           set -a; source .env.ci; set +a
           export BASE_URL=http://127.0.0.1:3001
           export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
           export GEOX_READ_ONLY_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.token==='tenant_a_restricted_token' && x.scopes.includes('ao_act.index.read') && !x.scopes.includes('evidence_export.write') && !x.revoked); if(!t) process.exit(1); console.log(t.token)")"
           export GEOX_WRITE_TOKEN="$GEOX_AO_ACT_TOKEN"
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_EVIDENCE_EXPORT_COMMERCIAL_RUNTIME_V1.ts
+          run_recorded "bsec120-commercial-01" "$BLINE_WORKFLOW_STEP" 'pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_PR_SEC_2_EVIDENCE_EXPORT_COMMERCIAL_RUNTIME_V1.ts'
 
       - name: B-Line integrated runtime acceptance
         timeout-minutes: 60
         run: |
           set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "B-Line integrated runtime acceptance"
           set -a; source .env.ci; set +a
           export BASE_URL=http://127.0.0.1:3001
           export API_BASE_URL=http://127.0.0.1:3001
@@ -422,12 +885,12 @@ jobs:
           export ADMIN_TOKEN="$GEOX_AO_ACT_TOKEN"
           export AO_ACT_TOKEN="$GEOX_AO_ACT_TOKEN"
           export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
-          pnpm run ci:root-zone-scenario-submit-recommendation
-          pnpm run ci:runtime:bline-operator-dispatch-intent
+          run_recorded "integrated-01-root-zone" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:root-zone-scenario-submit-recommendation'
+          run_recorded "integrated-02-dispatch" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:runtime:bline-operator-dispatch-intent'
           export SAMPLING_API_BASE_URL=http://127.0.0.1:3001
-          pnpm run ci:scenario:sampling
+          run_recorded "integrated-03-sampling" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:scenario:sampling'
           export FERTILIZATION_API_BASE_URL=http://127.0.0.1:3001
-          node scripts/agronomy_acceptance/ACCEPTANCE_FERTILIZATION_API_LIVE_V1.cjs
+          run_recorded "integrated-04-fertilization-live" "$BLINE_WORKFLOW_STEP" 'node scripts/agronomy_acceptance/ACCEPTANCE_FERTILIZATION_API_LIVE_V1.cjs'
           export ADMIN_TOKEN=admin_token
           export APPROVER_TOKEN=approver_token
           export OPERATOR_TOKEN=operator_token
@@ -435,34 +898,38 @@ jobs:
           export EXECUTOR_ACTOR_ID="$GEOX_EXECUTOR_ACTOR_ID"
           export AO_ACT_TOKEN=admin_token
           export GEOX_ACCEPTANCE_TOKEN=admin_token
-          pnpm run ci:scenario:fertilization
-          pnpm run ci:runtime:bline-agronomy-agent-fail-closed
+          run_recorded "integrated-05-fertilization-scenario" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:scenario:fertilization'
+          run_recorded "integrated-06-agronomy-fail-closed" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:runtime:bline-agronomy-agent-fail-closed'
           export CONTROLLED_PILOT_PR18I_PHASE=formal-chain-preflight
-          pnpm run ci:controlled-pilot
+          run_recorded "integrated-07-controlled-pilot" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:controlled-pilot'
 
       - name: Controlled-pilot full-review integration
         timeout-minutes: 40
         run: |
           set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Controlled-pilot full-review integration"
           mkdir -p acceptance-output
           set -a; source .env.ci; set +a
           export BASE_URL=http://127.0.0.1:3001
           export API_BASE_URL=http://127.0.0.1:3001
           export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
-          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --cleanup --apply --tenant tenantA
-          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --apply --tenant tenantA --base-url http://127.0.0.1:3001
-          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --verify --tenant tenantA
-          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --verify-api --tenant tenantA --base-url http://127.0.0.1:3001
-          node scripts/governance_acceptance/ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1.cjs --base-url http://127.0.0.1:3001 --tenant tenantA
+          run_recorded "full-review-01-cleanup" "$BLINE_WORKFLOW_STEP" 'node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --cleanup --apply --tenant tenantA'
+          run_recorded "full-review-02-apply" "$BLINE_WORKFLOW_STEP" 'node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --apply --tenant tenantA --base-url http://127.0.0.1:3001'
+          run_recorded "full-review-03-verify" "$BLINE_WORKFLOW_STEP" 'node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --verify --tenant tenantA'
+          run_recorded "full-review-04-verify-api" "$BLINE_WORKFLOW_STEP" 'node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --verify-api --tenant tenantA --base-url http://127.0.0.1:3001'
+          run_recorded "full-review-05-c8-formal" "$BLINE_WORKFLOW_STEP" 'node scripts/governance_acceptance/ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1.cjs --base-url http://127.0.0.1:3001 --tenant tenantA'
           export CONTROLLED_PILOT_PR18I_PHASE=post-full-review
-          pnpm run ci:controlled-pilot
+          run_recorded "full-review-06-controlled-pilot" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:controlled-pilot'
 
       - name: Frontend runtime page audit
         timeout-minutes: 18
         run: |
           set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Frontend runtime page audit"
           mkdir -p acceptance-output
-          pnpm exec playwright install chromium
+          run_recorded "frontend-01-install-chromium" "$BLINE_WORKFLOW_STEP" 'pnpm exec playwright install chromium'
           set -a; source .env.ci; set +a
           export BASE_URL=http://127.0.0.1:3001
           export API_BASE_URL=http://127.0.0.1:3001
@@ -475,8 +942,8 @@ jobs:
           pnpm --filter @geox/web dev -- --host 127.0.0.1 --port 5173 > acceptance-output/FRONTEND_WEB.log 2>&1 &
           WEB_PID=$!
           trap 'kill $WEB_PID >/dev/null 2>&1 || true; wait $WEB_PID 2>/dev/null || true' EXIT
-          timeout 90 bash -lc 'until curl -fsS http://127.0.0.1:5173 >/dev/null; do sleep 2; done'
-          pnpm run ci:frontend:runtime-page-audit
+          run_recorded "frontend-02-wait" "$BLINE_WORKFLOW_STEP" "timeout 90 bash -lc 'until curl -fsS http://127.0.0.1:5173 >/dev/null; do sleep 2; done'"
+          run_recorded "frontend-03-audit" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:frontend:runtime-page-audit'
           kill "$WEB_PID" >/dev/null 2>&1 || true
           wait "$WEB_PID" 2>/dev/null || true
           trap - EXIT
@@ -485,41 +952,47 @@ jobs:
         timeout-minutes: 45
         run: |
           set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Main acceptance suite"
           set -a; source .env.ci; set +a
           export BASE_URL=http://127.0.0.1:3001
           export API_BASE_URL=http://127.0.0.1:3001
           export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
-          pnpm run ci:stage1-fixture:raw-sample-contract
-          pnpm run ci:p1-smoke:preflight-idempotent
-          pnpm run ci:customer-report-boundary-suite-wiring
+          run_recorded "main-acceptance-01-raw-sample-contract" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:stage1-fixture:raw-sample-contract'
+          run_recorded "main-acceptance-02-p1-preflight-idempotent" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:p1-smoke:preflight-idempotent'
+          run_recorded "main-acceptance-03-customer-report-wiring" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:customer-report-boundary-suite-wiring'
           export GEOX_BASE_URL=http://127.0.0.1:3001
-          pnpm run ci:customer-report-boundary-suite
-          pnpm run test:acceptance
+          run_recorded "main-acceptance-04-customer-report-suite" "$BLINE_WORKFLOW_STEP" 'pnpm run ci:customer-report-boundary-suite'
+          run_recorded "main-acceptance-05-test-acceptance" "$BLINE_WORKFLOW_STEP" 'pnpm run test:acceptance'
 
       - name: COMMERCIAL MVP0 release gate
         timeout-minutes: 30
         run: |
           set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "COMMERCIAL MVP0 release gate"
           set -a; source .env.ci; set +a
           export BASE_URL=http://127.0.0.1:3001
           export API_BASE_URL=http://127.0.0.1:3001
           export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
           export AO_ACT_TOKEN="$GEOX_AO_ACT_TOKEN"
           export STRICT_RELEASE_GATE=1
-          pnpm acceptance:commercial:mvp0:syntax
-          pnpm acceptance:commercial:mvp0:release-gate
+          run_recorded "commercial-01-syntax" "$BLINE_WORKFLOW_STEP" 'pnpm acceptance:commercial:mvp0:syntax'
+          run_recorded "commercial-02-release-gate" "$BLINE_WORKFLOW_STEP" 'pnpm acceptance:commercial:mvp0:release-gate'
 
       - name: Runtime hygiene
         if: always()
         run: |
           set -euo pipefail
+          source "$BLINE_COMMAND_RECORDER"
+          enable_step_failure_trap "Runtime hygiene"
           if [ ! -f .env.ci ]; then
             echo "runtime not started"
             exit 0
           fi
           LOG="$RUNNER_TEMP/bline-final-requal-server.log"
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --no-color --tail=5000 server > "$LOG" 2>&1 || true
-          ! grep -E 'FST_ERR_REP_ALREADY_SENT|ERR_HTTP_HEADERS_SENT|Reply was already sent|reply already sent' "$LOG"
+          run_recorded "runtime-hygiene-01-double-reply" "$BLINE_WORKFLOW_STEP" '! grep -E "FST_ERR_REP_ALREADY_SENT|ERR_HTTP_HEADERS_SENT|Reply was already sent|reply already sent" "$LOG"'
 
       - name: Stop integrated acceptance runtime
         if: always()
@@ -527,3 +1000,35 @@ jobs:
           if [ -f .env.ci ]; then
             docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml down -v --remove-orphans || true
           fi
+
+      - name: Finalize retained command evidence
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bline-final-closure-evidence/command-records"
+          EVIDENCE_DIR="$RUNNER_TEMP/bline-final-closure-evidence"
+          RECORDS_DIR="$EVIDENCE_DIR/command-records"
+          INDEX="$EVIDENCE_DIR/command-execution-index.json"
+          mapfile -t RECORD_FILES < <(find "$RECORDS_DIR" -maxdepth 1 -type f -name '*.json' -print | sort)
+          if [ "${#RECORD_FILES[@]}" -gt 0 ]; then
+            jq -s '{schema:"BLINE-FINAL-CLOSURE-COMMAND-EXECUTION-INDEX-V1",records:.}' "${RECORD_FILES[@]}" > "$INDEX"
+          else
+            jq -n '{schema:"BLINE-FINAL-CLOSURE-COMMAND-EXECUTION-INDEX-V1",records:[]}' > "$INDEX"
+          fi
+          sha256sum "$INDEX" > "${INDEX}.sha256"
+          if [ -f "$EVIDENCE_DIR/first-failure.json" ]; then
+            sha256sum "$EVIDENCE_DIR/first-failure.json" > "$EVIDENCE_DIR/first-failure.json.sha256"
+          fi
+          if [ -f "$EVIDENCE_DIR/BLINE-FINAL-INTEGRATED-QUALIFICATION-EXECUTION-SUBJECT.json" ]; then
+            sha256sum "$EVIDENCE_DIR/BLINE-FINAL-INTEGRATED-QUALIFICATION-EXECUTION-SUBJECT.json" > "$EVIDENCE_DIR/BLINE-FINAL-INTEGRATED-QUALIFICATION-EXECUTION-SUBJECT.json.sha256"
+          fi
+
+      - name: Upload retained qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: BLINE-FINAL-CLOSURE-RETAINED-EVIDENCE
+          path: ${{ runner.temp }}/bline-final-closure-evidence
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 90
