@@ -35,8 +35,62 @@ assert(source.includes('acceptance:not-written legacy-export-is-non-authoritativ
 const canonical=read(canonicalPath);
 assert(canonical.includes('app.post("/api/v1/evidence-export/jobs"'),'canonical successor create route missing');
 assert(canonical.includes('requireAoActScopeV0(req, reply, "evidence_export.write")'),'canonical successor write capability drift');
+
+function proveHistoricalDirectExecutorRuntime(config){
+  const executor=config?.services?.executor;
+  if(!executor||executor.profiles?.length)return false;
+  if(executor.entrypoint!=null)return false;
+  return Array.isArray(executor.command)&&JSON.stringify(executor.command)===JSON.stringify(['node','apps/executor/dist/runtime_loop.js']);
+}
+function proveSuccessorShellExecutorRuntime(config){
+  const executor=config?.services?.executor;
+  if(!executor||executor.profiles?.length)return false;
+  if(!Array.isArray(executor.entrypoint)||JSON.stringify(executor.entrypoint)!==JSON.stringify(['/bin/sh','-ceu']))return false;
+  if(!Array.isArray(executor.command)||executor.command.length!==1||typeof executor.command[0]!=='string')return false;
+  const statements=executor.command[0].trim().split(/\r?\n/).map(x=>x.trim());
+  if(statements.length!==3)return false;
+  const dbExport=/^export DATABASE_URL="postgres:\/\/geox_executor_runtime_v1:\${1,2}\(cat \/run\/geox\/executor\/db_password\)@postgres:5432\/[A-Za-z0-9_-]+"$/;
+  const mqttExport=/^export GEOX_MQTT_PASSWORD="\${1,2}\(cat \/run\/geox\/executor\/mqtt_password\)"$/;
+  return dbExport.test(statements[0])&&mqttExport.test(statements[1])&&statements[2]==='exec node apps/executor/dist/runtime_loop.js';
+}
+function proveEffectiveExecutorRuntime(config){return proveHistoricalDirectExecutorRuntime(config)||proveSuccessorShellExecutorRuntime(config);}
+function executorRuntimeSelftest(){
+  const direct={command:['node','apps/executor/dist/runtime_loop.js']};
+  const command='export DATABASE_URL="postgres://geox_executor_runtime_v1:$(cat /run/geox/executor/db_password)@postgres:5432/landos"\nexport GEOX_MQTT_PASSWORD="$(cat /run/geox/executor/mqtt_password)"\nexec node apps/executor/dist/runtime_loop.js';
+  const shell={entrypoint:['/bin/sh','-ceu'],command:[command]};
+  const cases=[
+    ['historical-direct',{services:{executor:direct}},true],
+    ['successor-shell',{services:{executor:shell}},true],
+    ['executor-absent',{services:{}},false],
+    ['wrong-module-direct',{services:{executor:{command:['node','apps/executor/dist/other_loop.js']}}},false],
+    ['wrong-module-shell',{services:{executor:{...shell,command:[command.replace('runtime_loop.js','other_loop.js')]}}},false],
+    ['command-absent',{services:{executor:{entrypoint:shell.entrypoint}}},false],
+    ['comment-only',{services:{executor:{...shell,command:[command.replace('exec node apps/executor/dist/runtime_loop.js','# exec node apps/executor/dist/runtime_loop.js')]}}},false],
+    ['other-service-only',{services:{other:shell}},false],
+    ['wrong-entrypoint',{services:{executor:{...shell,entrypoint:['/bin/sh','-c']}}},false],
+    ['inactive-profile',{services:{executor:{...shell,profiles:['inactive']}}},false],
+    ['unreachable-runtime-tail',{services:{executor:{...shell,command:[command.replace('\nexec node','\nexit 0\nexec node')]}}},false],
+    ['runtime-string-never-executed',{services:{executor:{...shell,command:[command.replace('exec node apps/executor/dist/runtime_loop.js','printf "%s\\n" "apps/executor/dist/runtime_loop.js"')]}}},false],
+    ['ambiguous-direct-plus-shell',{services:{executor:{entrypoint:['/bin/sh','-ceu'],command:['node','apps/executor/dist/runtime_loop.js']}}},false],
+    ['run-once-substitution',{services:{executor:{...shell,command:[command.replace('runtime_loop.js','run_once.js')]}}},false]
+  ];
+  for(const [name,config,want] of cases)assert(proveEffectiveExecutorRuntime(config)===want,'EXECUTOR_RUNTIME_SELFTEST_FAILED',name);
+  console.log(`BLINE_EXECUTOR_RUNTIME_NEGATIVE_SELFTEST_PASS count=${cases.length}`);
+}
+function renderedCommercialCompose(){
+  const env={...process.env,
+    POSTGRES_USER:'landos',POSTGRES_PASSWORD:'structure-only',POSTGRES_DB:'landos',
+    GEOX_MCFT_MIGRATOR_PASSWORD:'structure-only',GEOX_RUNTIME_DATABASE_PASSWORD:'structure-only',
+    GEOX_DEPLOYMENT_SUBJECT_COMMIT:sh(['rev-parse','HEAD']),GEOX_EXECUTOR_TOKEN:'structure-only',
+    MINIO_ROOT_USER:'structure-only',MINIO_ROOT_PASSWORD:'structure-only',
+    CORS_ORIGINS:'https://structure.geox.invalid',APP_SECRET:'structure-only',PUBLIC_BASE_URL:'https://structure.geox.invalid'
+  };
+  return JSON.parse(cp.execFileSync('docker',['compose','--env-file','.env.commercial_v1.example','-f',composePath,'config','--format','json'],{encoding:'utf8',env,maxBuffer:8*1024*1024}));
+}
 const compose=read(composePath),runOnce=read(runOncePath);
-assert(compose.includes('command: ["node", "apps/executor/dist/runtime_loop.js"]'),'Commercial executor command drift');
+executorRuntimeSelftest();
+const effectiveCompose=renderedCommercialCompose();
+assert(proveEffectiveExecutorRuntime(effectiveCompose),'Commercial executor effective runtime drift');
 assert(!compose.includes('apps/executor/dist/run_once.js'),'Commercial compose must not run legacy one-shot executor');
 assert(runOnce.includes('/api/delivery/evidence_export/v1/jobs'),'one-shot legacy caller source truth drift');
 const inv=JSON.parse(read('docs/architecture/semantic_convergence/GEOX-BLINE-PRODUCTION-CALLER-AUTHORITY-INVENTORY-V1.json'));
