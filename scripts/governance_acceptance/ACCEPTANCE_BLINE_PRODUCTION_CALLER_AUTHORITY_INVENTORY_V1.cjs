@@ -83,46 +83,85 @@ const GOVERNANCE_SETTLEMENT_PATHS = [GATE,
   'docs/architecture/semantic_convergence/GEOX-BLINE-RESIDUAL-AUTHORITY-INVENTORY-V1.json'
 ].sort();
 
-function validateTopology(parents, refs, checkedOutHead) {
-  assert(parents.length === 2, 'PR synthetic merge must have exactly two parents');
-  assert(parents[0] === refs.main, 'protected main drift from synthetic parent 1');
-  assert(parents[1] === refs.candidate, 'candidate drift from synthetic parent 2');
-  assert(checkedOutHead === refs.candidate || checkedOutHead === refs.merge || refs.boundedLocalSuccessor,
-    'checkout is not the verified PR subject');
-  return { protectedMain: parents[0], candidate: parents[1], merge: refs.merge };
+function expectedSha(name) {
+  const value = String(process.env[name] || '').trim();
+  assert(/^[0-9a-f]{40}$/.test(value), `${name} must be an exact 40-hex object id`);
+  return value;
 }
 function verifiedPrTopology(checkedOutHead) {
   const event = process.env.GITHUB_EVENT_PATH ? JSON.parse(read(process.env.GITHUB_EVENT_PATH)) : {};
   const pr = String(event.number || process.env.BLINE_PR_NUMBER ||
     (process.env.GITHUB_REF || '').match(/^refs\/pull\/(\d+)\//)?.[1] || '');
   assert(/^\d+$/.test(pr), 'verified PR context required; no static current-main fallback');
+
+  const expectedMain = expectedSha('EXPECTED_MAIN_SHA');
+  const expectedCandidate = expectedSha('EXPECTED_CANDIDATE_SHA');
+  const expectedSynthetic = expectedSha('EXPECTED_SYNTHETIC_SHA');
+  const expectedTree = expectedSha('EXPECTED_SYNTHETIC_TREE');
   const names = ['refs/heads/main', `refs/pull/${pr}/head`, `refs/pull/${pr}/merge`];
+
   function remoteRefs() {
     const rows = sh(['ls-remote', 'origin', ...names], { timeout: 30000 });
-    const refs = Object.fromEntries(rows.split(/\r?\n/).filter(Boolean).map(row => {
+    const byName = Object.fromEntries(rows.split(/\r?\n/).filter(Boolean).map(row => {
       const [sha, name] = row.split(/\s+/); return [name, sha];
     }));
-    for (const name of names) assert(/^[0-9a-f]{40}$/.test(refs[name] || ''), 'remote PR topology ref missing', name);
-    return { main: refs[names[0]], candidate: refs[names[1]], merge: refs[names[2]] };
+    for (const name of names.slice(0, 2)) {
+      assert(/^[0-9a-f]{40}$/.test(byName[name] || ''), 'remote PR topology authority ref missing', name);
+    }
+    return {
+      main: byName[names[0]],
+      candidate: byName[names[1]],
+      merge: /^[0-9a-f]{40}$/.test(byName[names[2]] || '') ? byName[names[2]] : null
+    };
   }
+
   const refs = remoteRefs();
-  try { sh(['cat-file', '-e', refs.merge + '^{commit}']); }
-  catch { sh(['fetch', '--no-tags', 'origin', names[2]], { timeout: 30000 }); }
-  const parents = sh(['show', '-s', '--format=%P', refs.merge]).split(' ');
-  // Permit the single unpublished governance successor for bounded preflight.
-  // Its main authority still comes exclusively from the live PR merge parents.
-  // This does not qualify that successor as a final integrated PR merge.
-  if (checkedOutHead !== refs.candidate && checkedOutHead !== refs.merge) {
-    assert(sh(['show', '-s', '--format=%P', checkedOutHead]) === refs.candidate,
-      'unpublished successor must be one commit directly on verified PR candidate');
-    assert(JSON.stringify(diffNames(refs.candidate, checkedOutHead, [])) === JSON.stringify(GOVERNANCE_SETTLEMENT_PATHS),
-      'unpublished successor must contain exactly the three governance paths');
-    refs.boundedLocalSuccessor = true;
-  }
-  const result = validateTopology(parents, refs, checkedOutHead);
+  assert(refs.main === expectedMain, 'protected main drift from expected authority', { expected: expectedMain, actual: refs.main });
+  assert(refs.candidate === expectedCandidate, 'PR head drift from expected authority', { expected: expectedCandidate, actual: refs.candidate });
+  assert(checkedOutHead === expectedSynthetic, 'checkout is not the authoritative synthetic subject', {
+    expected: expectedSynthetic,
+    actual: checkedOutHead
+  });
+
+  const parents = sh(['show', '-s', '--format=%P', checkedOutHead]).split(' ').filter(Boolean);
+  assert(parents.length === 2, 'authoritative synthetic must have exactly two parents');
+  assert(parents[0] === refs.main, 'protected main drift from synthetic parent 1');
+  assert(parents[1] === refs.candidate, 'candidate drift from synthetic parent 2');
+
+  const tree = sh(['rev-parse', `${checkedOutHead}^{tree}`]);
+  assert(tree === expectedTree, 'authoritative synthetic tree drift', { expected: expectedTree, actual: tree });
+
+  const mergeTreeInvocation = `git merge-tree --write-tree ${refs.main} ${refs.candidate}`;
+  const computedMergeTree = sh(['merge-tree', '--write-tree', refs.main, refs.candidate], { timeout: 30000 })
+    .split(/\r?\n/)[0].trim();
+  assert(/^[0-9a-f]{40}$/.test(computedMergeTree), 'independent merge-tree did not return an exact tree');
+  assert(computedMergeTree === tree, 'independent merge-tree differs from authoritative synthetic tree', {
+    computed: computedMergeTree,
+    actual: tree
+  });
+
+  const status = sh(['status', '--porcelain=v1', '--untracked-files=all']);
+  assert(status === '', 'working tree is not clean', status);
+
   const after = remoteRefs();
-  for (const key of ['main', 'candidate', 'merge']) assert(after[key] === refs[key], 'remote topology drift during verification', key);
-  return { ...result, pr: Number(pr), bounded_local_successor: Boolean(refs.boundedLocalSuccessor) };
+  for (const key of ['main', 'candidate']) {
+    assert(after[key] === refs[key], 'remote topology authority drift during verification', key);
+  }
+
+  return {
+    protectedMain: refs.main,
+    candidate: refs.candidate,
+    synthetic: checkedOutHead,
+    tree,
+    computed_merge_tree: computedMergeTree,
+    merge_tree_invocation: mergeTreeInvocation,
+    merge_tree_exit_status: 0,
+    git_version: sh(['version']),
+    remote_pr_merge_sha: refs.merge,
+    remote_pr_merge_matches_authoritative_subject: refs.merge === checkedOutHead,
+    remote_pr_merge_sha_after: after.merge,
+    pr: Number(pr)
+  };
 }
 
 function exactCandidateObject(p) {
