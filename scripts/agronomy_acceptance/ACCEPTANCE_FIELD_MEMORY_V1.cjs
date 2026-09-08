@@ -38,9 +38,7 @@ function buildIrrigationReceiptBody({
   prescription_id,
   skill_trace_ref,
   water_l = 20,
-  amount = 20,
-  coverage_percent = 90,
-  duration_min = 20,
+  observed_parameters,
 }) {
   return {
     tenant_id,
@@ -52,11 +50,7 @@ function buildIrrigationReceiptBody({
     execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
     execution_coverage: { kind: 'field', ref: field_id },
     resource_usage: { fuel_l: 0, electric_kwh: 0, water_l, chemical_ml: 0 },
-    observed_parameters: {
-      amount,
-      coverage_percent,
-      duration_min,
-    },
+    observed_parameters,
     evidence_refs: [formalEvidenceRef('sensor', `sensor_${suffix}`)],
     logs_refs: [
       { kind: 'dispatch_ack', ref: `ack_${suffix}` },
@@ -380,63 +374,6 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
   const operation_plan_id = String(submitJson.operation_plan_id ?? '');
   assert.ok(operation_plan_id, 'operation_plan_id missing');
 
-  await pool.query(
-    `
-    INSERT INTO facts (fact_id, occurred_at, source, record_json)
-    SELECT
-      $5,
-      NOW(),
-      'ACCEPTANCE_FIELD_MEMORY_V1_skip_auto_task_issue',
-      jsonb_set(
-        src.record_json::jsonb,
-        '{payload,proposal,meta}',
-        COALESCE((src.record_json::jsonb #> '{payload,proposal,meta}'), '{}'::jsonb)
-          || '{"skip_auto_task_issue": true}'::jsonb,
-        true
-      )
-    FROM (
-      SELECT record_json
-        FROM facts
-       WHERE (record_json::jsonb ->> 'type') = 'approval_request_v1'
-         AND (record_json::jsonb #>> '{payload,request_id}') = $1
-         AND (record_json::jsonb #>> '{payload,tenant_id}') = $2
-         AND (record_json::jsonb #>> '{payload,project_id}') = $3
-         AND (record_json::jsonb #>> '{payload,group_id}') = $4
-       ORDER BY occurred_at DESC, fact_id DESC
-       LIMIT 1
-    ) src
-    `,
-    [
-      String(submitJson.approval_request_id),
-      tenant_id,
-      project_id,
-      group_id,
-      randomUUID()
-    ]
-  );
-
-  const patchedApproval = await pool.query(
-    `
-    SELECT fact_id
-      FROM facts
-     WHERE (record_json::jsonb ->> 'type') = 'approval_request_v1'
-       AND (record_json::jsonb #>> '{payload,request_id}') = $1
-       AND (record_json::jsonb #>> '{payload,tenant_id}') = $2
-       AND (record_json::jsonb #>> '{payload,project_id}') = $3
-       AND (record_json::jsonb #>> '{payload,group_id}') = $4
-       AND COALESCE((record_json::jsonb #>> '{payload,proposal,meta,skip_auto_task_issue}')::boolean, false) = true
-     ORDER BY occurred_at DESC, fact_id DESC
-     LIMIT 1
-    `,
-    [
-      String(submitJson.approval_request_id),
-      tenant_id,
-      project_id,
-      group_id
-    ]
-  );
-
-  assert.ok(patchedApproval.rows?.length > 0, 'approval skip_auto_task_issue append fact missing');
   const nowTs = Date.now();
 
   await pool.query(
@@ -503,6 +440,8 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
   process.stdout.write(`${JSON.stringify({ approval_decide_http: { status: decideApproval.status, json: decideApproval.json } }, null, 2)}\n`);
   const decideJson = requireOk(decideApproval, 'decide approval before action task');
   process.stdout.write(`${JSON.stringify({ approval_decide_response: decideJson }, null, 2)}\n`);
+  const actTaskId = String(decideJson.act_task_id ?? '').trim();
+  assert.ok(actTaskId, 'act_task_id missing from approval decide successor auto-task');
 
   await pool.query(
     `UPDATE fail_safe_event_v1
@@ -526,56 +465,10 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
     [tenant_id, project_id, group_id, device_id, Date.now()]
   );
 
-  const taskResp = await fetchJson(`${base}/api/v1/actions/task`, {
-    method: 'POST',
-    token: operatorToken,
-    body: {
-      tenant_id,
-      project_id,
-      group_id,
-      operation_plan_id,
-      approval_request_id: approval_id,
-      field_id,
-      season_id,
-      device_id,
-      issuer: { kind: 'human', id: 'field_memory_acceptance', namespace: 'qa' },
-      action_type: 'IRRIGATE',
-      target: { kind: 'field', ref: field_id },
-      time_window: { start_ts: ts0, end_ts: ts0 + 3600_000 },
-      parameter_schema: {
-        keys: [
-          { name: 'duration_sec', type: 'number', min: 1, max: 7200 },
-          { name: 'duration_min', type: 'number', min: 1, max: 720 },
-          { name: 'amount', type: 'number', min: 1, max: 1000 },
-          { name: 'coverage_percent', type: 'number', min: 0, max: 100 },
-        ],
-      },
-      parameters: {
-        duration_sec: 1200,
-        duration_min: 20,
-        amount: 20,
-        coverage_percent: 95,
-      },
-      constraints: {},
-      meta: {
-        recommendation_id: recId,
-        prescription_id,
-        skill_trace_ref,
-        task_type: 'IRRIGATION',
-        device_id,
-        adapter_type: 'irrigation_simulator',
-        device_type: 'IRRIGATION_CONTROLLER',
-        required_capabilities: ['device.irrigation.valve.open'],
-      },
-    }
-  });
-  const taskJson = requireOk(taskResp, 'create action task');
-  const actTaskId = String(taskJson.act_task_id ?? '').trim();
-  assert.ok(actTaskId, 'act_task_id missing');
   const taskFactQ = await pool.query(
     `SELECT record_json::jsonb AS record_json
        FROM facts
-      WHERE (record_json::jsonb ->> 'type') = 'ao_act_task_v1'
+      WHERE (record_json::jsonb ->> 'type') = 'ao_act_task_v0'
         AND (
           (record_json::jsonb #>> '{payload,act_task_id}') = $1
           OR (record_json::jsonb #>> '{payload,task_id}') = $1
@@ -584,7 +477,8 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
       LIMIT 1`,
     [actTaskId]
   );
-  const taskSkillBindingEvidence = taskFactQ.rows?.[0]?.record_json?.payload?.meta?.skill_binding_evidence ?? {};
+  const taskPayload = taskFactQ.rows?.[0]?.record_json?.payload ?? {};
+  const taskSkillBindingEvidence = taskPayload?.meta?.skill_binding_evidence ?? {};
   process.stdout.write(`${JSON.stringify({ task_skill_binding_evidence: taskSkillBindingEvidence }, null, 2)}\n`);
 
   const executeSkill = await fetchJson(`${base}/api/v1/skill/execute`, {
@@ -613,6 +507,34 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
   });
   requireOk(executeSkill, 'mock valve skill execute');
 
+  const successorTaskSchemaKeys = Array.isArray(taskPayload?.parameter_schema?.keys)
+    ? taskPayload.parameter_schema.keys
+    : [];
+
+  const successorObservedParameters = Object.fromEntries(
+    successorTaskSchemaKeys
+      .map((entry) => String(entry?.name ?? '').trim())
+      .filter((name) =>
+        name
+        && Object.prototype.hasOwnProperty.call(
+          taskPayload?.parameters ?? {},
+          name
+        )
+      )
+      .map((name) => [
+        name,
+        taskPayload.parameters[name]
+      ])
+  );
+
+  if (Object.keys(successorObservedParameters).length === 0) {
+    throw new Error(JSON.stringify({
+      reason: 'SUCCESSOR_TASK_OBSERVED_PARAMETERS_EMPTY',
+      task_id: actTaskId,
+      task_payload: taskPayload,
+    }));
+  }
+
   const receiptResp = await fetchJson(`${base}/api/v1/actions/receipt`, {
     method: 'POST',
     token: executorToken,
@@ -621,9 +543,7 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
       recommendation_id: recId,
       prescription_id,
       skill_trace_ref,
-      coverage_percent: 95,
-      pre_soil_moisture,
-      post_soil_moisture,
+      observed_parameters: successorObservedParameters,
     })
   });
   const receiptJson = requireOk(receiptResp, 'submit action receipt');
@@ -760,7 +680,7 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
       field_id,
       act_task_id: actTaskId,
       approval_decide_act_task_id: decideJson?.act_task_id ?? null,
-      manual_task_act_task_id: actTaskId,
+      successor_task_act_task_id: actTaskId,
       recommendation_id: recId,
       operation_plan_id,
       execution_judge_id,
