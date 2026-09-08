@@ -13,26 +13,26 @@ function buildIrrigationReceiptBody({
   prescription_id,
   skill_trace_ref,
   idempotency_key,
+  executor_actor_id,
   water_l = 20,
-  amount = 20,
-  coverage_percent = 90,
-  duration_min = 30,
+  observed_parameters,
 }) {
+  const executionEndTs = Date.now() - 5_000;
+  const executionStartTs = executionEndTs - 15_000;
+  const executionDurationMin =
+    (executionEndTs - executionStartTs) / 60_000;
+
   return {
     tenant_id,
     project_id,
     group_id,
     operation_plan_id,
     act_task_id,
-    executor_id: { kind: 'script', id: 'acceptance_executor', namespace: 'qa' },
-    execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
+    executor_id: { kind: 'script', id: executor_actor_id, namespace: 'executor_runtime_v1' },
+    execution_time: { start_ts: executionStartTs, end_ts: executionEndTs },
     execution_coverage: { kind: 'field', ref: field_id },
     resource_usage: { fuel_l: 0, electric_kwh: 0, water_l, chemical_ml: 0 },
-    observed_parameters: {
-      amount,
-      coverage_percent,
-      duration_min,
-    },
+    observed_parameters,
     evidence_refs: [{ kind: 'sensor', ref: `sensor_${suffix}` }],
     logs_refs: [
       { kind: 'dispatch_ack', ref: `ack_${suffix}` },
@@ -44,6 +44,7 @@ function buildIrrigationReceiptBody({
     meta: {
       command_id: act_task_id,
       idempotency_key: idempotency_key ?? `receipt_${act_task_id}_${suffix}`,
+      execution_summary: { duration_min: executionDurationMin },
       recommendation_id,
       prescription_id,
       skill_id: 'irrigation_deficit_skill_v1',
@@ -55,6 +56,8 @@ function buildIrrigationReceiptBody({
 (async () => {
   const base = env('BASE_URL', 'http://127.0.0.1:3001');
   const token = env('AO_ACT_TOKEN', '');
+  const executorToken = env('EXECUTOR_TOKEN', 'executor_token');
+  const executorActorId = env('EXECUTOR_ACTOR_ID', 'tok_executor_actor');
   const tenant_id = env('TENANT_ID', 'tenantA');
   const project_id = env('PROJECT_ID', 'projectA');
   const group_id = env('GROUP_ID', 'groupA');
@@ -160,6 +163,15 @@ function buildIrrigationReceiptBody({
   ).trim();
   assert.ok(operation_plan_id, 'missing operation_plan_id');
 
+  const act_task_id = String(
+    decideApprovalJson?.act_task_id ?? ''
+  ).trim();
+
+  assert.ok(
+    act_task_id,
+    'missing act_task_id from approval successor auto-task'
+  );
+
   const healthz = await fetchJson(`${base}/api/admin/healthz`, { method: 'GET', token });
   const healthz_ok = Boolean(healthz.ok && healthz.json?.ok === true);
 
@@ -181,39 +193,68 @@ function buildIrrigationReceiptBody({
     Boolean(operationReportSchema?.properties?.roi_ledger);
 
 
-  const taskResp = await fetchJson(`${base}/api/v1/actions/task`, {
-    method: 'POST',
-    token,
-    body: {
-      idempotency_key: receipt_idempotency_key,
-      tenant_id,
-      project_id,
-      group_id,
-      operation_plan_id,
-      approval_request_id: approval_id,
-      field_id,
-      season_id: `season_${suffix}`,
-      device_id,
-      issuer: { kind: 'human', id: 'acceptance', namespace: 'qa' },
-      action_type: 'IRRIGATE',
-      target: { kind: 'field', ref: field_id },
-      time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600_000 },
-      parameter_schema: { keys: [{ name: 'amount', type: 'number', min: 1 }, { name: 'coverage_percent', type: 'number', min: 0, max: 100 }, { name: 'duration_min', type: 'number', min: 1 }] },
-      parameters: { amount: 20, coverage_percent: 88, duration_min: 30 },
-      constraints: {},
-      meta: { recommendation_id, prescription_id, task_type: 'IRRIGATION' },
-    },
-  });
-  const taskJson = requireOk(taskResp, 'create action task');
-  const act_task_id = String(taskJson?.act_task_id ?? '').trim();
-  assert.ok(act_task_id, 'missing act_task_id');
+  const taskFactQ = await pool.query(
+    `SELECT record_json::jsonb AS record_json
+       FROM facts
+      WHERE (record_json::jsonb ->> 'type') = 'ao_act_task_v0'
+        AND (
+          (record_json::jsonb #>> '{payload,act_task_id}') = $1
+          OR
+          (record_json::jsonb #>> '{payload,task_id}') = $1
+        )
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 1`,
+    [act_task_id]
+  );
+
+  const taskPayload =
+    taskFactQ.rows?.[0]?.record_json?.payload ?? {};
+
+  assert.ok(
+    Object.keys(taskPayload).length > 0,
+    'successor ao_act_task_v0 fact not found'
+  );
+
+  const successorTaskSchemaKeys =
+    Array.isArray(taskPayload?.parameter_schema?.keys)
+      ? taskPayload.parameter_schema.keys
+      : [];
+
+  const successorObservedParameters = Object.fromEntries(
+    successorTaskSchemaKeys
+      .map((entry) => String(entry?.name ?? '').trim())
+      .filter((name) =>
+        name
+        && Object.prototype.hasOwnProperty.call(
+          taskPayload?.parameters ?? {},
+          name
+        )
+      )
+      .map((name) => [
+        name,
+        taskPayload.parameters[name]
+      ])
+  );
+
+  if (Object.keys(successorObservedParameters).length === 0) {
+    throw new Error(JSON.stringify({
+      reason: 'SUCCESSOR_TASK_OBSERVED_PARAMETERS_EMPTY',
+      task_id: act_task_id,
+      task_payload: taskPayload,
+    }));
+  }
 
   const receiptResp = await fetchJson(`${base}/api/v1/actions/receipt`, {
     method: 'POST',
-    token,
+    token: executorToken,
     body: buildIrrigationReceiptBody({
       tenant_id, project_id, group_id, operation_plan_id, act_task_id, field_id, suffix,
-      recommendation_id, prescription_id, skill_trace_ref, idempotency_key: receipt_idempotency_key, coverage_percent: 88,
+      recommendation_id,
+      prescription_id,
+      skill_trace_ref,
+      idempotency_key: receipt_idempotency_key,
+      executor_actor_id: executorActorId,
+      observed_parameters: successorObservedParameters,
     }),
   });
   const receiptJson = requireOk(receiptResp, 'submit action receipt');
@@ -253,6 +294,12 @@ function buildIrrigationReceiptBody({
     body: { as_executed_id, tenant_id, project_id, group_id, skill_trace_id: skill_trace_ref, skill_refs: [{ skill_id: 'irrigation_deficit_skill_v1', skill_version: 'v1', trace_id: skill_trace_ref }] },
   });
   const createJson = requireOk(createResp, 'create roi ledger from as-executed');
+
+  const interimRoiNotCustomerVisible = Boolean(
+    createJson?.trust_layer?.default_source_lane === 'AS_EXECUTED_SIGNAL'
+    && createJson?.trust_layer?.customer_visible_value === false
+  );
+
   process.stdout.write(JSON.stringify({
     roi_debug: {
       as_executed_id,
@@ -378,6 +425,7 @@ function buildIrrigationReceiptBody({
     openapi_contains_roi_ledger_paths,
     openapi_contains_operation_report_roi_ledger,
     created_from_as_executed: Boolean(createJson.ok === true && ledgers.length > 0),
+    interim_roi_not_customer_visible: Boolean(interimRoiNotCustomerVisible),
     idempotent: Boolean(createAgainJson.ok === true && createAgainJson.idempotent === true),
     water_saved_generated: Boolean(hasWaterSaved),
     water_saved_contract_complete: Boolean(hasWaterSavedContract),

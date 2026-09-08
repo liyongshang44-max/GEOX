@@ -178,6 +178,7 @@ export async function refreshFieldReadModelsWithObservabilityV1(db: DbConn, para
   group_id: string;
   field_id: string;
   device_id?: string | null;
+  persist?: boolean;
 }): Promise<{
   sensing_overview: RefreshOutput<Awaited<ReturnType<typeof refreshFieldSensingOverviewV1>>>;
   sensing_summary_stage1: RefreshOutput<Awaited<ReturnType<typeof refreshFieldSensingSummaryStage1V1>>>;
@@ -197,7 +198,7 @@ export async function refreshFieldReadModelsWithObservabilityV1(db: DbConn, para
   const [sensing_overview, sensing_summary_stage1, fertility_state] = await Promise.all([
     refreshWithFallback({
       key: `sensing_overview:${params.tenant_id}:${params.project_id}:${params.group_id}:${params.field_id}`,
-      refresher: () => refreshFieldSensingOverviewV1(db, base),
+      refresher: () => refreshFieldSensingOverviewV1(db, { ...base, persist: params.persist }),
       resolveFreshness: (payload) => (payload as Record<string, any>).freshness,
       hasData: (payload) => {
         const p = payload as Record<string, any>;
@@ -211,7 +212,7 @@ export async function refreshFieldReadModelsWithObservabilityV1(db: DbConn, para
     }),
     refreshWithFallback({
       key: `sensing_summary_stage1:${params.tenant_id}:${params.project_id}:${params.group_id}:${params.field_id}:${params.device_id ?? "any_device"}`,
-      refresher: () => refreshFieldSensingSummaryStage1V1(db, summaryBase),
+      refresher: () => refreshFieldSensingSummaryStage1V1(db, { ...summaryBase, persist: params.persist }),
       resolveFreshness: (payload) => (payload as Record<string, any>).freshness,
       hasData: (payload) => {
         const p = payload as Record<string, any>;
@@ -224,7 +225,7 @@ export async function refreshFieldReadModelsWithObservabilityV1(db: DbConn, para
     }),
     refreshWithFallback({
       key: `fertility_state:${params.tenant_id}:${params.project_id}:${params.group_id}:${params.field_id}`,
-      refresher: () => refreshFieldFertilityStateV1(db, base),
+      refresher: () => refreshFieldFertilityStateV1(db, { ...base, persist: params.persist }),
       resolveFreshness: (payload, nowMs) => fertilityFreshnessFromComputedAt((payload as Record<string, any>).computed_at_ts_ms, nowMs),
       hasData: (payload) => Boolean((payload as Record<string, any>).fertility_level || (payload as Record<string, any>).salinity_risk || (payload as Record<string, any>).recommendation_bias || (payload as Record<string, any>).computed_at_ts_ms),
     }),

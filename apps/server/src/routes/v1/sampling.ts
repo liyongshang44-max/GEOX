@@ -60,6 +60,10 @@ function isValidEvidenceRefArray(v: unknown, mustNonEmpty: boolean): boolean {
   return true;
 }
 
+function exactFactRef(ref_id: string) {
+  return { kind: "fact_id", ref_id };
+}
+
 export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void {
   const service = new SamplingServiceV1(pool);
 
@@ -90,6 +94,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     if (!auth) return reply;
     const body: any = req.body ?? {};
     if (!isNonEmptyString(body.plan_id)) return badRequest(reply, "MISSING_OR_INVALID:plan_id");
+    if (!isNonEmptyString(body.plan_fact_id)) return badRequest(reply, "MISSING_OR_INVALID:plan_fact_id");
     if (!isNonEmptyString(body.sample_id)) return badRequest(reply, "MISSING_OR_INVALID:sample_id");
     if (!isNonEmptyString(body.tenant_id)) return badRequest(reply, "MISSING_OR_INVALID:tenant_id");
     if (!isNonEmptyString(body.project_id)) return badRequest(reply, "MISSING_OR_INVALID:project_id");
@@ -103,8 +108,11 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     if (body.ao_sense_receipt_fact_id != null && !isNonEmptyString(body.ao_sense_receipt_fact_id)) return badRequest(reply, "MISSING_OR_INVALID:ao_sense_receipt_fact_id");
     if (!tenantMatchesAuth(body, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
 
-    const plan = await service.findPlanById(body.plan_id);
-    if (!plan) return reply.status(404).send({ ok: false, error: "NOT_FOUND:plan_id" });
+    const planRow = await service.findFactByIdAndType(body.plan_fact_id, "sampling_plan_v1");
+    if (!planRow) return reply.status(404).send({ ok: false, error: "NOT_FOUND:plan_fact_id" });
+    const plan: any = planRow.record_json ?? {};
+    if (plan.plan_id !== body.plan_id || plan.plan_fact_id !== body.plan_fact_id) return badRequest(reply, "MISMATCH:plan_fact_id");
+    if (!tenantMatchesAuth(plan, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     if (plan.tenant_id !== body.tenant_id || plan.project_id !== body.project_id || plan.group_id !== body.group_id || plan.field_id !== body.field_id) {
       return badRequest(reply, "MISMATCH:plan_scope");
     }
@@ -116,8 +124,8 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
       const hasMatchedFactRef = Array.isArray(body.evidence_refs)
         && body.evidence_refs.some((e: any) => e?.kind === "fact_id" && e?.ref_id === body.ao_sense_receipt_fact_id);
       if (!hasMatchedFactRef) return badRequest(reply, "MISMATCH:ao_sense_receipt_fact_id");
-      const aoSenseReceiptExists = await service.hasFactByIdAndType(body.ao_sense_receipt_fact_id, "ao_sense_receipt_v1");
-      if (!aoSenseReceiptExists) return badRequest(reply, "NOT_FOUND:ao_sense_receipt_fact_id");
+      const aoSenseReceipt = await service.findFactByIdAndType(body.ao_sense_receipt_fact_id, "ao_sense_receipt_v1");
+      if (!aoSenseReceipt) return badRequest(reply, "NOT_FOUND:ao_sense_receipt_fact_id");
     }
 
     const created = await service.createReceipt(body);
@@ -129,17 +137,25 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     if (!auth) return reply;
     const body: any = req.body ?? {};
     if (!isNonEmptyString(body.sample_id)) return badRequest(reply, "MISSING_OR_INVALID:sample_id");
+    if (!isNonEmptyString(body.receipt_fact_id)) return badRequest(reply, "MISSING_OR_INVALID:receipt_fact_id");
     if (!isIntMs(body.imported_at_ts)) return badRequest(reply, "MISSING_OR_INVALID:imported_at_ts");
     if (!isObjectRecord(body.metrics)) return badRequest(reply, "MISSING_OR_INVALID:metrics");
     if (!isObjectRecord(body.units)) return badRequest(reply, "MISSING_OR_INVALID:units");
     if (!isValidEvidenceRefArray(body.evidence_refs, true)) return badRequest(reply, "MISSING_OR_INVALID:evidence_refs");
     if (!isNonEmptyString(body.quality_status) || !QUALITY_STATUSES.has(body.quality_status)) return badRequest(reply, "MISSING_OR_INVALID:quality_status");
 
-    const receipt = await service.findReceiptBySampleId(body.sample_id);
-    if (!receipt) return reply.status(404).send({ ok: false, error: "NOT_FOUND:sample_receipt" });
+    const receiptRow = await service.findFactByIdAndType(body.receipt_fact_id, "sample_receipt_v1");
+    if (!receiptRow) return reply.status(404).send({ ok: false, error: "NOT_FOUND:receipt_fact_id" });
+    const receipt: any = receiptRow.record_json ?? {};
+    if (receipt.receipt_fact_id !== body.receipt_fact_id || receipt.sample_id !== body.sample_id) return badRequest(reply, "MISMATCH:receipt_fact_id");
     if (!tenantMatchesAuth(receipt, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    if (!isNonEmptyString(receipt.plan_fact_id)) return badRequest(reply, "MISSING_EXACT_BINDING:plan_fact_id");
 
-    const created = await service.createLabResult(body);
+    const created = await service.createLabResult({
+      ...body,
+      receipt_fact_id: body.receipt_fact_id,
+      plan_fact_id: receipt.plan_fact_id,
+    });
     return reply.send({ ok: true, ...created });
   });
 
@@ -148,63 +164,45 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     if (!auth) return reply;
     const body: any = req.body ?? {};
     if (!isNonEmptyString(body.plan_id)) return badRequest(reply, "MISSING_OR_INVALID:plan_id");
+    if (!isNonEmptyString(body.plan_fact_id)) return badRequest(reply, "MISSING_OR_INVALID:plan_fact_id");
     if (!isNonEmptyString(body.sample_id)) return badRequest(reply, "MISSING_OR_INVALID:sample_id");
-    if (body.import_id != null && !isNonEmptyString(body.import_id)) return badRequest(reply, "MISSING_OR_INVALID:import_id");
-    const plan = await service.findPlanById(body.plan_id);
-    if (!plan) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    if (!tenantMatchesAuth(plan, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    if (!isNonEmptyString(body.receipt_fact_id)) return badRequest(reply, "MISSING_OR_INVALID:receipt_fact_id");
+    if (!isNonEmptyString(body.import_id)) return badRequest(reply, "MISSING_OR_INVALID:import_id");
+    if (!isNonEmptyString(body.lab_fact_id)) return badRequest(reply, "MISSING_OR_INVALID:lab_fact_id");
 
-    const receipt = await service.findReceiptBySampleId(body.sample_id);
-    if (!receipt) {
-      const created = await service.createAcceptance({
-        plan_id: body.plan_id,
-        sample_id: body.sample_id,
-        import_id: body.import_id,
-        tenant_id: String(plan.tenant_id),
-        project_id: String(plan.project_id),
-        group_id: String(plan.group_id),
-        verdict: "INSUFFICIENT_EVIDENCE",
-        reasons: ["MISSING_SAMPLE_RECEIPT"],
-        evidence_refs: [],
-      });
-      return reply.send({ ok: true, ...created, verdict: "INSUFFICIENT_EVIDENCE", reasons: ["MISSING_SAMPLE_RECEIPT"] });
-    }
-    if (receipt.plan_id !== body.plan_id) return badRequest(reply, "MISMATCH:plan_id");
-    if (receipt.sample_id !== body.sample_id) return badRequest(reply, "MISMATCH:sample_id");
-    if (!tenantMatchesAuth(receipt, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    if (!tenantMatchesAuth(receipt, plan)) return badRequest(reply, "MISMATCH:receipt_scope");
-    if (!Array.isArray(receipt.evidence_refs) || receipt.evidence_refs.length < 1) {
-      const created = await service.createAcceptance({
-        plan_id: body.plan_id,
-        sample_id: body.sample_id,
-        import_id: body.import_id,
-        tenant_id: String(receipt.tenant_id ?? ""),
-        project_id: String(receipt.project_id ?? ""),
-        group_id: String(receipt.group_id ?? ""),
-        verdict: "INSUFFICIENT_EVIDENCE",
-        reasons: ["MISSING_RECEIPT_EVIDENCE_REFS"],
-        evidence_refs: [],
-      });
-      return reply.send({ ok: true, ...created, verdict: "INSUFFICIENT_EVIDENCE", reasons: ["MISSING_RECEIPT_EVIDENCE_REFS"] });
-    }
+    const [planRow, receiptRow, labRow] = await Promise.all([
+      service.findFactByIdAndType(body.plan_fact_id, "sampling_plan_v1"),
+      service.findFactByIdAndType(body.receipt_fact_id, "sample_receipt_v1"),
+      service.findFactByIdAndType(body.lab_fact_id, "lab_result_import_v1"),
+    ]);
+    if (!planRow) return reply.status(404).send({ ok: false, error: "NOT_FOUND:plan_fact_id" });
+    if (!receiptRow) return reply.status(404).send({ ok: false, error: "NOT_FOUND:receipt_fact_id" });
+    if (!labRow) return reply.status(404).send({ ok: false, error: "NOT_FOUND:lab_fact_id" });
 
-    const labResult = await service.findLabResultBySampleId(body.sample_id, body.import_id);
-    if (!labResult) {
-      const created = await service.createAcceptance({
-        plan_id: body.plan_id,
-        sample_id: body.sample_id,
-        import_id: body.import_id,
-        tenant_id: String(receipt.tenant_id ?? ""),
-        project_id: String(receipt.project_id ?? ""),
-        group_id: String(receipt.group_id ?? ""),
-        verdict: "INSUFFICIENT_EVIDENCE",
-        reasons: ["MISSING_LAB_RESULT_IMPORT"],
-        evidence_refs: receipt.evidence_refs as any[],
-      });
-      return reply.send({ ok: true, ...created, verdict: "INSUFFICIENT_EVIDENCE", reasons: ["MISSING_LAB_RESULT_IMPORT"] });
-    }
+    const plan: any = planRow.record_json ?? {};
+    const receipt: any = receiptRow.record_json ?? {};
+    const labResult: any = labRow.record_json ?? {};
 
-    if (labResult.sample_id !== body.sample_id) return badRequest(reply, "MISMATCH:sample_id");
+    if (!tenantMatchesAuth(plan, auth) || !tenantMatchesAuth(receipt, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    if (plan.plan_id !== body.plan_id || plan.plan_fact_id !== body.plan_fact_id) return badRequest(reply, "MISMATCH:plan_fact_id");
+    if (receipt.receipt_fact_id !== body.receipt_fact_id
+      || receipt.plan_fact_id !== body.plan_fact_id
+      || receipt.plan_id !== body.plan_id
+      || receipt.sample_id !== body.sample_id) {
+      return badRequest(reply, "MISMATCH:receipt_fact_id");
+    }
+    if (labResult.lab_fact_id !== body.lab_fact_id
+      || labResult.receipt_fact_id !== body.receipt_fact_id
+      || labResult.plan_fact_id !== body.plan_fact_id
+      || labResult.sample_id !== body.sample_id
+      || labResult.import_id !== body.import_id) {
+      return badRequest(reply, "MISMATCH:lab_fact_id");
+    }
+    if (plan.tenant_id !== receipt.tenant_id || plan.project_id !== receipt.project_id || plan.group_id !== receipt.group_id || plan.field_id !== receipt.field_id) {
+      return badRequest(reply, "MISMATCH:receipt_scope");
+    }
+    if (!Array.isArray(receipt.evidence_refs) || receipt.evidence_refs.length < 1) return badRequest(reply, "MISSING_RECEIPT_EVIDENCE_REFS");
+
     const quality = String(labResult.quality_status ?? "").toUpperCase();
     const coc = String(receipt.chain_of_custody_status ?? "").toUpperCase();
     let verdict: "PASS" | "FAIL" | "INSUFFICIENT_EVIDENCE" = "INSUFFICIENT_EVIDENCE";
@@ -230,11 +228,20 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
       reasons.push("UNCLASSIFIED_EVIDENCE_STATE");
     }
 
-    const evidence_refs = [...(Array.isArray(receipt.evidence_refs) ? receipt.evidence_refs : []), ...(Array.isArray(labResult.evidence_refs) ? labResult.evidence_refs : [])];
+    const evidence_refs = [
+      ...(Array.isArray(receipt.evidence_refs) ? receipt.evidence_refs : []),
+      ...(Array.isArray(labResult.evidence_refs) ? labResult.evidence_refs : []),
+      exactFactRef(body.plan_fact_id),
+      exactFactRef(body.receipt_fact_id),
+      exactFactRef(body.lab_fact_id),
+    ];
     const created = await service.createAcceptance({
       plan_id: body.plan_id,
+      plan_fact_id: body.plan_fact_id,
       sample_id: body.sample_id,
-      import_id: body.import_id ?? String(labResult.import_id ?? ""),
+      receipt_fact_id: body.receipt_fact_id,
+      import_id: body.import_id,
+      lab_fact_id: body.lab_fact_id,
       tenant_id: String(receipt.tenant_id ?? ""),
       project_id: String(receipt.project_id ?? ""),
       group_id: String(receipt.group_id ?? ""),
@@ -253,9 +260,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
 
     const found = await service.getPlan(plan_id);
     const scopeRecord = (found as any)?.record_json ?? found;
-    if (!found || !tenantMatchesAuth(scopeRecord, auth)) {
-      return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    }
+    if (!found || !tenantMatchesAuth(scopeRecord, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     return reply.send({ ok: true, fact: found });
   });
 
@@ -267,9 +272,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
 
     const found = await service.getSample(sample_id);
     const scopeRecord = (found as any)?.record_json ?? found;
-    if (!found || !tenantMatchesAuth(scopeRecord, auth)) {
-      return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    }
+    if (!found || !tenantMatchesAuth(scopeRecord, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     return reply.send({ ok: true, fact: found });
   });
 }
