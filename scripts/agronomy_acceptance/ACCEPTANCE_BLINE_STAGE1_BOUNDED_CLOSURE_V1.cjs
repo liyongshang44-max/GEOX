@@ -58,7 +58,11 @@ async function assertSchemaBoundary(pool) {
        pg_catalog.to_regclass('public.field_sensing_overview_v1')::text AS overview_relation,
        pg_catalog.to_regclass('public.field_sensing_summary_stage1_v1')::text AS summary_relation,
        pg_catalog.to_regclass('public.idx_field_sensing_overview_v1_scope')::text AS overview_scope_index,
-       pg_catalog.has_schema_privilege($1, 'public', 'CREATE') AS runtime_can_create_public`,
+       pg_catalog.has_schema_privilege($1, 'public', 'CREATE') AS runtime_can_create_public,
+       pg_catalog.has_table_privilege($1, 'public.field_sensing_overview_v1', 'SELECT') AS runtime_can_select_overview,
+       pg_catalog.has_table_privilege($1, 'public.field_sensing_overview_v1', 'INSERT') AS runtime_can_insert_overview,
+       pg_catalog.has_table_privilege($1, 'public.field_sensing_overview_v1', 'UPDATE') AS runtime_can_update_overview,
+       pg_catalog.has_table_privilege($1, 'public.field_sensing_overview_v1', 'DELETE') AS runtime_can_delete_overview`,
     [RUNTIME_ROLE],
   );
   const row = result.rows?.[0] ?? {};
@@ -66,6 +70,10 @@ async function assertSchemaBoundary(pool) {
   assert.equal(row.summary_relation, 'field_sensing_summary_stage1_v1', 'Stage1 summary relation must be preprovisioned');
   assert.equal(row.overview_scope_index, 'idx_field_sensing_overview_v1_scope', 'Stage1 overview scope index must be preprovisioned');
   assert.equal(row.runtime_can_create_public, false, 'geox_runtime_v1 must not have CREATE on public');
+  assert.equal(row.runtime_can_select_overview, true, 'geox_runtime_v1 must SELECT Stage1 overview');
+  assert.equal(row.runtime_can_insert_overview, true, 'geox_runtime_v1 must INSERT Stage1 overview');
+  assert.equal(row.runtime_can_update_overview, true, 'geox_runtime_v1 must UPDATE Stage1 overview');
+  assert.equal(row.runtime_can_delete_overview, true, 'geox_runtime_v1 must DELETE Stage1 overview');
   return row;
 }
 
@@ -161,6 +169,7 @@ async function postGenerate(base, token, scope) {
         stage1_summary_relation_preprovisioned: 'PASS',
         stage1_overview_scope_index_preprovisioned: 'PASS',
         runtime_create_public_forbidden: 'PASS',
+        runtime_overview_dml_granted: 'PASS',
         formal_fixture_exact_field_device_status: 'PASS',
         formal_sufficient_admitted: 'PASS',
         insufficient_maps_to_needs_evidence: 'PASS',
