@@ -25,6 +25,7 @@ type LatestFieldTelemetry = {
   tenant_id: string;
   field_id: string;
   device_id: string | null;
+  telemetry_fact_id: string | null;
   soil_moisture: number | null;
 };
 
@@ -48,23 +49,9 @@ type ScanTarget = {
 const AGENT_SOURCE = "jobs/agronomy_agent";
 const DEDUPE_WINDOW_MINUTES = 30;
 const PENDING_PLAN_REEVALUATE_AFTER_MS = 24 * 60 * 60 * 1000;
-const DEFAULT_SOIL_MOISTURE = 30;
 const DEBUG_FIELD_ID = "field_c8_demo";
 const DEBUG_SEASON_ID = "season_demo";
 const ALLOWED_PROGRAM_STATUSES = new Set(["ACTIVE", "DRAFT"]);
-const ACTION_TO_RECOMMENDATION_TYPE: Record<string, string> = {
-  IRRIGATE: "irrigation_recommendation_v1",
-  FERTILIZE: "fertilization_recommendation_v1",
-  SPRAY: "spray_recommendation_v1",
-  INSPECT: "inspection_recommendation_v1",
-};
-const ACTION_TO_SUGGESTED_ACTION_TYPE: Record<string, string> = {
-  IRRIGATE: "irrigation.start",
-  FERTILIZE: "fertilization.apply",
-  SPRAY: "spray.start",
-  INSPECT: "inspection.start",
-};
-
 function safeString(v: any): string {
   return String(v ?? "").trim();
 }
@@ -75,6 +62,7 @@ async function loadLatestSoilTelemetryByField(pool: Pool): Promise<LatestFieldTe
        SELECT DISTINCT ON (tenant_id, device_id)
          tenant_id,
          device_id,
+         fact_id AS telemetry_fact_id,
          value_num AS soil_moisture,
          ts
        FROM telemetry_index_v1
@@ -93,6 +81,7 @@ async function loadLatestSoilTelemetryByField(pool: Pool): Promise<LatestFieldTe
        s.tenant_id,
        b.field_id,
        s.device_id,
+       s.telemetry_fact_id,
        s.soil_moisture
      FROM latest_soil s
      JOIN latest_binding b
@@ -107,6 +96,7 @@ async function loadLatestSoilTelemetryByField(pool: Pool): Promise<LatestFieldTe
     tenant_id: safeString(row.tenant_id),
     device_id: safeString(row.device_id) || null,
     field_id: safeString(row.field_id),
+    telemetry_fact_id: safeString(row.telemetry_fact_id) || null,
     soil_moisture: Number.isFinite(Number(row.soil_moisture)) ? Number(row.soil_moisture) : null,
   })).filter((row) => row.tenant_id && row.field_id);
 }
@@ -391,63 +381,6 @@ async function insertFact(pool: Pool, source: string, record_json: any): Promise
   return fact_id;
 }
 
-async function createOperationPlanFromRecommendation(
-  pool: Pool,
-  tenant: TenantTriple,
-  input: {
-    recommendation_id: string;
-    program_id: string;
-    field_id: string;
-    season_id: string | null;
-    crop_code: string | null;
-    crop_stage: string | null;
-    rule_id: string | null;
-    reason_codes: string[];
-    expected_effect: { type: string; value: number } | null;
-    action_type: string;
-    device_id: string | null;
-  },
-): Promise<string> {
-  const operation_plan_id = `opl_agent_${randomUUID().replace(/-/g, "")}`;
-  const now = Date.now();
-  await insertFact(pool, AGENT_SOURCE, {
-    type: "operation_plan_v1",
-    payload: {
-      tenant_id: tenant.tenant_id,
-      project_id: tenant.project_id,
-      group_id: tenant.group_id,
-      operation_plan_id,
-      recommendation_id: input.recommendation_id,
-      program_id: input.program_id,
-      field_id: input.field_id,
-      season_id: input.season_id,
-      crop_code: input.crop_code,
-      crop_stage: input.crop_stage,
-      rule_id: input.rule_id,
-      reason_codes: Array.isArray(input.reason_codes) ? input.reason_codes : [],
-      expected_effect: input.expected_effect,
-      device_id: input.device_id,
-      action_type: input.action_type,
-      status: "CREATED",
-      created_ts: now,
-      updated_ts: now,
-    },
-  });
-  await insertFact(pool, AGENT_SOURCE, {
-    type: "operation_plan_transition_v1",
-    payload: {
-      tenant_id: tenant.tenant_id,
-      project_id: tenant.project_id,
-      group_id: tenant.group_id,
-      operation_plan_id,
-      status: "CREATED",
-      trigger: "agronomy_agent_auto_create",
-      created_ts: now,
-    },
-  });
-  return operation_plan_id;
-}
-
 export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> {
   console.log("[agronomy-agent] scan start");
   let created = 0;
@@ -573,14 +506,18 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
         });
         const telemetry = telemetryByField.get(`${selectedProgramItem.tenant.tenant_id}::${selectedProgramItem.field_id}`);
         const soilMoisture = telemetry?.soil_moisture;
-        if (!Number.isFinite(soilMoisture ?? Number.NaN)) {
+        const telemetryFactId = safeString(telemetry?.telemetry_fact_id);
+        if (!Number.isFinite(soilMoisture ?? Number.NaN) || !telemetryFactId) {
+          skipped += 1;
           skippedByReason.no_telemetry += 1;
-          console.log("[agronomy-agent] skipped:no_telemetry", { field_id: selectedProgramItem.field_id });
+          console.log("[agronomy-agent] skipped:no_telemetry", {
+            field_id: selectedProgramItem.field_id,
+            exact_telemetry_fact_bound: Boolean(telemetryFactId),
+          });
           console.log("[agronomy-agent] branch", { result: "skipped:no_telemetry", field_id: selectedProgramItem.field_id, season_id: selectedProgramItem.season_id || null, program_id: selectedProgramItem.program_id });
+          continue;
         }
-        const effectiveSoilMoisture = Number.isFinite(soilMoisture ?? Number.NaN)
-          ? Number(soilMoisture)
-          : DEFAULT_SOIL_MOISTURE;
+        const effectiveSoilMoisture = Number(soilMoisture);
 
         if (!selectedProgramItem.program_id) {
           skipped += 1;
@@ -663,8 +600,6 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
           ? recommendation.reasons.map((x) => safeString(x)).filter(Boolean)
           : [];
         const reason_code = safeString(reasonCodes[0]) || "rule_matched";
-        const recommendation_type = ACTION_TO_RECOMMENDATION_TYPE[action_type] ?? "agronomy_recommendation_v1";
-        const suggested_action_type = ACTION_TO_SUGGESTED_ACTION_TYPE[action_type] ?? "agronomy.action";
         const summary = `根据当前作物阶段（${recommendation.crop_code} / ${recommendation.crop_stage}）与田间指标，建议执行 ${action_type}。规则：${recommendation.rule_id}`;
         const primaryExpectedEffect = recommendation.expected_effect[0]
           ? {
@@ -702,6 +637,7 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
           program_id: selectedProgramItem.program_id,
           field_id: selectedProgramItem.field_id,
           device_id: telemetry?.device_id ?? null,
+          telemetry_fact_id: telemetryFactId,
           season_id: selectedProgramItem.season_id || null,
           action_type,
           reason_codes: reasonCodes.length > 0 ? reasonCodes : [reason_code],
@@ -713,6 +649,19 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
           priority: recommendation.confidence >= 0.85 ? "high" : recommendation.confidence >= 0.7 ? "medium" : "low",
           title: "系统建议",
           summary,
+          authority_mode: "LEGACY_AGRONOMY_SIGNAL_ONLY",
+          human_approval_required: true,
+          no_direct_execution: true,
+          approval_created: false,
+          operation_plan_created: false,
+          task_created: false,
+          dispatch_created: false,
+          evidence_refs: [telemetryFactId],
+          source_input: {
+            fact_id: telemetryFactId,
+            metric: "soil_moisture",
+            value: effectiveSoilMoisture,
+          },
         };
 
         await insertFact(pool, AGENT_SOURCE, {
@@ -724,51 +673,9 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
           },
         });
 
-        await insertFact(pool, AGENT_SOURCE, {
-          type: "decision_recommendation_v1",
-          payload: {
-            ...basePayload,
-            recommendation_id,
-            recommendation_type,
-            status: "proposed",
-            evidence_refs: ["telemetry:soil_moisture"],
-            rule_hit: [
-              {
-                rule_id: recommendation.rule_id,
-                matched: true,
-                actual: effectiveSoilMoisture,
-              },
-            ],
-            confidence: 0.8,
-            suggested_action: {
-              action_type: suggested_action_type,
-              summary: basePayload.summary,
-              parameters: {
-                program_id: selectedProgramItem.program_id,
-                crop_code: selectedProgramItem.crop_code,
-                soil_moisture: effectiveSoilMoisture,
-              },
-            },
-            created_ts: Date.now(),
-            model_version: "agronomy_agent_v1",
-          },
-        });
-        await createOperationPlanFromRecommendation(pool, selectedProgramItem.tenant, {
-          recommendation_id,
-          program_id: selectedProgramItem.program_id,
-          field_id: selectedProgramItem.field_id,
-          season_id: selectedProgramItem.season_id || null,
-          crop_code: recommendation.crop_code ?? null,
-          crop_stage: recommendation.crop_stage ?? null,
-          rule_id: recommendation.rule_id ?? null,
-          reason_codes: reasonCodes.length > 0 ? reasonCodes : [reason_code],
-          expected_effect: primaryExpectedEffect,
-          action_type,
-          device_id: telemetry?.device_id ?? null,
-        });
 
         created += 1;
-        console.log("[agronomy-agent] recommendation created", {
+        console.log("[agronomy-agent] legacy recommendation signal created", {
           field_id: selectedProgramItem.field_id,
           season_id: selectedProgramItem.season_id || null,
           program_id: selectedProgramItem.program_id,

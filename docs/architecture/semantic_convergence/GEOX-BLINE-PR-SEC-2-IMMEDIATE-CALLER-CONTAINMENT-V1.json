@@ -1,0 +1,174 @@
+{
+  "schema_version": "bline_pr_sec_2_immediate_caller_containment_v1",
+  "status": "BATCH_2B_IMPLEMENTED_PENDING_EXACT_HEAD_QUALIFICATION",
+  "mission": "B-SEC-0 / PR-SEC-2 Immediate fail-closed caller-authority containment",
+  "predecessor": {
+    "pr": 3453,
+    "sha": "dc1036f3fec8173cbc775d536b50ef62672651d5",
+    "exact_ci": 33632733189,
+    "status": "PR_SEC_1_COMPLETE_FROZEN",
+    "historical_metadata_representation_drift": "OBSERVED_NON_BLOCKING"
+  },
+  "forbidden_work": [
+    "semantic redesign",
+    "Candidate meaning change",
+    "Approval meaning change",
+    "OperationPlan meaning change",
+    "Task meaning change",
+    "Dispatch meaning change",
+    "Acceptance meaning change",
+    "Agronomy Agent semantic reopening",
+    "Sampling semantic reopening",
+    "Fertilization semantic reopening",
+    "Formal Field Memory semantic reopening",
+    "MCFT implementation modification",
+    "PR #3453 modification"
+  ],
+  "debt_baseline": {
+    "production_reachable_mutating_surface_without_authn": 35,
+    "production_reachable_semantic_writer_without_validated_capability": 109,
+    "production_reachable_human_action_with_unverified_declared_actor": 7,
+    "production_reachable_service_writer_without_bound_principal": 3,
+    "tenant_scope_from_untrusted_body_or_unbound": 16
+  },
+  "batches": [
+    {
+      "batch_id": "PRSEC2-BATCH-001",
+      "risk_order": 1,
+      "subject": "Operator Twin unauthenticated recommendation candidate writers",
+      "source_surfaces": ["BSEC-001", "BSEC-002"],
+      "entrypoints": [
+        "POST /api/v1/operator/twin/fields/:field_id/root-zone-scenarios/:scenario_set_id/options/:option_id/submit-recommendation",
+        "POST /api/v1/operator/twin/fields/:field_id/scenarios/:scenario_set_id/options/:option_id/submit-recommendation"
+      ],
+      "runtime_registration": "apps/server/src/routes/v1/operator_twin_write_legacy_v1.ts::registerOperatorTwinWriteLegacyRoutesV1",
+      "authority_chain": {
+        "principal": "AO_ACT_BEARER_ACTOR",
+        "credential": "structured AO-ACT bearer token",
+        "capability": "recommendation.write",
+        "product_principal": "role admitted by ROLE_SCOPE_MATRIX_V1 for recommendation.write",
+        "tenant_project_group_binding": "request body scope must exact-match authenticated token tenant_id/project_id/group_id",
+        "field_binding": "authenticated principal field access must include route field_id",
+        "declared_actor_binding": "operator_id is rejected on mismatch and persisted from authenticated actor_id",
+        "delegated_service_principal": "commercial.server shared DB runtime principal; unchanged in this batch",
+        "producer": [
+          "insertOperatorRootZoneScenarioRecommendationFacts",
+          "insertOperatorScenarioRecommendationFacts"
+        ],
+        "persistent_targets": ["facts"],
+        "semantic_consequence": [
+          "operator_root_zone_scenario_recommendation_submission_v1 or operator_scenario_recommendation_submission_v1",
+          "decision_recommendation_v1"
+        ]
+      },
+      "negative_proofs_required": [
+        "missing bearer cannot reach producer",
+        "invalid/revoked bearer cannot reach producer",
+        "bearer without recommendation.write cannot reach producer",
+        "role not admitted for recommendation.write cannot reach producer",
+        "tenant/project/group mismatch cannot reach producer",
+        "field scope mismatch cannot reach producer",
+        "declared operator_id mismatch cannot reach producer"
+      ],
+      "semantic_runtime_changed": false,
+      "persistence_semantics_changed": false,
+      "mcft_implementation_changed": false,
+      "expected_machine_debt_delta": {
+        "production_reachable_mutating_surface_without_authn": -2,
+        "production_reachable_semantic_writer_without_validated_capability": -2,
+        "production_reachable_human_action_with_unverified_declared_actor": 0,
+        "production_reachable_service_writer_without_bound_principal": 0,
+        "tenant_scope_from_untrusted_body_or_unbound": 0
+      },
+      "expected_after": {
+        "production_reachable_mutating_surface_without_authn": 33,
+        "production_reachable_semantic_writer_without_validated_capability": 107,
+        "production_reachable_human_action_with_unverified_declared_actor": 7,
+        "production_reachable_service_writer_without_bound_principal": 3,
+        "tenant_scope_from_untrusted_body_or_unbound": 16
+      },
+      "qualification": "ACCEPTED_AT_3a8c456509070698d4f2b3f19ffec71f3ce0e248"
+    },
+    {
+      "batch_id": "PRSEC2-BATCH-002A",
+      "risk_order": 2,
+      "subject": "NOAA / NCEP GFS caller-authority provenance audit",
+      "source_surfaces": ["BSEC-003"],
+      "mode": "READ_ONLY_AUDIT",
+      "verdict": "CASE_B_VALID_NOAA_GFS_PROVIDER_EXISTS_BUT_AUTHORITY_IS_MCFT_OWNED_OR_NON_COMMERCIAL",
+      "runtime_modified": false,
+      "mcft_implementation_changed": false,
+      "qualification": "CTO_ACCEPTED"
+    },
+    {
+      "batch_id": "PRSEC2-BATCH-002B",
+      "risk_order": 2,
+      "subject": "Commercial Weather Forecast ingest fail-close",
+      "source_surfaces": ["BSEC-003"],
+      "entrypoints": [
+        "POST /api/v1/weather/forecast/ingest"
+      ],
+      "runtime_registration": "apps/server/src/modules/sensing/registerSensingModule.ts::registerSensingModule -> apps/server/src/routes/weather_v1.ts::registerWeatherV1Routes",
+      "containment_decision": "COMMERCIAL_FAIL_CLOSE",
+      "authority_result": {
+        "commercial_provider_principal": "NOT_ESTABLISHED",
+        "validated_capability": "NOT_ESTABLISHED",
+        "tenant_project_group_binding": "NOT_ESTABLISHED",
+        "production_persistence_reachability": false,
+        "reason": "No authorized Commercial weather-ingest caller authority exists; production POST route rejects before caller-controlled scope or forecast payload reaches persistence"
+      },
+      "persistent_targets_made_unreachable": [
+        "facts / weather_forecast_fact_v1",
+        "weather_forecast_index_v1"
+      ],
+      "writers_made_unreachable": [
+        "ingestWeatherForecastFactV1",
+        "appendWeatherForecastFactV1",
+        "upsertWeatherForecastIndexV1",
+        "ensureWeatherForecastIndexV1"
+      ],
+      "behavioral_proofs_required": [
+        "missing credential rejected with zero DB query",
+        "arbitrary bearer rejected with zero DB query",
+        "caller-controlled tenant/project/group/field rejected with zero DB query",
+        "caller-controlled provider/source metadata rejected with zero DB query",
+        "caller-controlled hourly/raw payload rejected with zero DB query",
+        "Commercial Compose runtime rejection leaves facts count unchanged",
+        "Commercial Compose runtime rejection leaves weather_forecast_index_v1 count/presence unchanged",
+        "rejection clean-returns without deferred/callback persistence"
+      ],
+      "closure_reason": {
+        "unauthenticated_writer_debt": "PRODUCTION_WRITER_NO_LONGER_CALLER_REACHABLE",
+        "capability_debt": "PRODUCTION_WRITER_NO_LONGER_CALLER_REACHABLE_NOT_VALIDATED_CAPABILITY_CREATED",
+        "tenant_scope_debt": "UNTRUSTED_BODY_SCOPE_NO_LONGER_REACHES_PRODUCTION_PERSISTENCE_NOT_TRUSTED_BINDING_CREATED"
+      },
+      "new_principal_created": false,
+      "new_capability_created": false,
+      "role_matrix_changed": false,
+      "semantic_runtime_changed": false,
+      "persistence_semantics_changed": false,
+      "mcft_implementation_changed": false,
+      "machine_debt_delta": {
+        "production_reachable_mutating_surface_without_authn": -1,
+        "production_reachable_semantic_writer_without_validated_capability": -1,
+        "production_reachable_human_action_with_unverified_declared_actor": 0,
+        "production_reachable_service_writer_without_bound_principal": 0,
+        "tenant_scope_from_untrusted_body_or_unbound": -1
+      },
+      "expected_after": {
+        "production_reachable_mutating_surface_without_authn": 32,
+        "production_reachable_semantic_writer_without_validated_capability": 106,
+        "production_reachable_human_action_with_unverified_declared_actor": 7,
+        "production_reachable_service_writer_without_bound_principal": 3,
+        "tenant_scope_from_untrusted_body_or_unbound": 15
+      },
+      "qualification": "PENDING_EXACT_HEAD_QUALIFICATION"
+    }
+  ],
+  "next_priority_after_batch_2": [
+    "Legacy Twin base mutation fail-close",
+    "Admin Import",
+    "/api/raw and weak __internal__ compatibility",
+    "high-risk GET write-under-read"
+  ]
+}

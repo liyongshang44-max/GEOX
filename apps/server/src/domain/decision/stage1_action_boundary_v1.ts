@@ -32,6 +32,7 @@ export type Stage1ActionBoundaryDebugV1 = {
   device_health_status: string | null;
   conflict_status: string | null;
   trigger_metric_evidence: unknown;
+  canonical_evidence_qualification_projection: unknown;
   reason_codes: string[];
 };
 
@@ -226,6 +227,7 @@ export function evaluateFormalStage1TriggerGateV1(summaryPayload: unknown): Stag
 export function buildStage1ActionBoundaryDebugV1(summaryPayload: unknown): Stage1ActionBoundaryDebugV1 {
   const summary = asRecord(summaryPayload);
   const coverage = asRecord(summary.time_coverage_v1);
+  const evidence = asRecord(summary.evidence_sufficiency_v1);
   const device = asRecord(summary.device_health_snapshot_v1);
   const conflict = asRecord(summary.conflict_detection_v1);
   const gate = evaluateFormalStage1TriggerGateV1(summaryPayload);
@@ -241,6 +243,7 @@ export function buildStage1ActionBoundaryDebugV1(summaryPayload: unknown): Stage
     device_health_status: String(device.device_health_status ?? "").trim() || null,
     conflict_status: String(conflict.conflict_status ?? "").trim() || null,
     trigger_metric_evidence: coverage.trigger_metric_evidence ?? null,
+    canonical_evidence_qualification_projection: evidence.canonical_evidence_qualification_projection_v1 ?? null,
     reason_codes: gate.reason_codes,
   };
 }

@@ -31,6 +31,90 @@ jobs:
       - name: Route dependency guard
         run: pnpm run ci:route-dependency-guard
 
+      - name: B-Line W1 identity foundation machine gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs
+
+      - name: B-Line W1 focused identity runtime proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.ts
+
+      - name: B-Line W2 bounded caller read-write gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.cjs
+
+      - name: Build W2 focused server dependencies
+        run: pnpm --filter @geox/device-skills... build
+
+      - name: B-Line W2 focused positive-negative runtime proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.ts
+
+      - name: B-Line W3 bounded decision-approval authority gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.cjs
+
+      - name: B-Line W3 focused positive-negative runtime proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.ts
+
+      - name: B-Line W4 execution-device-receipt provenance gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs
+
+      - name: B-Line W4 focused positive-negative runtime proof
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts
+
+      - name: B-Line production caller authority inventory
+        run: pnpm run ci:governance:bline-production-caller-authority-inventory
+
+      - name: B-Line residual authority audit
+        id: bline_residual
+        continue-on-error: true
+        run: pnpm run ci:governance:bline-residual-authority-audit
+
+      - name: B-Line active runtime surface closure
+        id: bline_active_runtime
+        continue-on-error: true
+        run: pnpm run ci:governance:bline-active-runtime-surface-closure
+
+      - name: B-Line operation state read-only
+        id: bline_operation_state_read_only
+        continue-on-error: true
+        run: pnpm run ci:governance:bline-operation-state-read-only
+
+      - name: B-Line execution plan-task lifecycle
+        id: bline_execution_plan_task_lifecycle
+        continue-on-error: true
+        run: pnpm run ci:governance:bline-execution-plan-task-lifecycle
+
+      - name: B-Line closure fail-closed result
+        run: |
+          test "${{ steps.bline_residual.outcome }}" = "success"
+          test "${{ steps.bline_active_runtime.outcome }}" = "success"
+          test "${{ steps.bline_operation_state_read_only.outcome }}" = "success"
+          test "${{ steps.bline_execution_plan_task_lifecycle.outcome }}" = "success"
+
+      - name: B-Line P0-RES-007 evidence export boundary
+        run: pnpm run ci:governance:bline-p0-res007-evidence-export-boundary
+
+      - name: B-Line operator dispatch intent boundary
+        run: pnpm run ci:governance:bline-operator-dispatch-intent
+
+      - name: B-Line Acceptance no Formal Memory side effect
+        run: pnpm run ci:governance:bline-acceptance-no-formal-memory-side-effect
+
+      - name: B-Line Formal Memory reviewed promotion proof
+        run: pnpm run ci:governance:bline-formal-memory-reviewed-promotion-proof
+
+      - name: B-Line legacy Twin no direct Formal Memory
+        run: pnpm run ci:governance:bline-legacy-twin-no-direct-formal-memory
+
+      - name: B-Line Formal Memory scope provenance
+        run: pnpm run ci:governance:bline-formal-memory-scope-provenance
+
+      - name: B-Line Sampling exact-source binding
+        run: pnpm run ci:governance:bline-sampling-exact-source-binding
+
+      - name: B-Line Fertilization execution provenance
+        run: pnpm run ci:governance:bline-fertilization-execution-provenance
+
+      - name: B-Line Agronomy Agent fail-closed authority
+        run: pnpm run ci:governance:bline-agronomy-agent-fail-closed
+
       - name: Route response ownership guard
         run: pnpm run ci:route-response-ownership
 
@@ -70,9 +154,12 @@ jobs:
       - name: Prepare commercial compose env
         run: |
           ACCEPTANCE_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='admin' && x.scopes.includes('security.admin') && !x.revoked); if(!t) { console.error('missing active admin security.admin token'); process.exit(1); } console.log(t.token)")"
-          EXECUTOR_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.token==='tenant_a_admin_token' && x.scopes.includes('ao_act.task.write') && x.scopes.includes('ao_act.receipt.write') && !x.revoked); if(!t) { console.error('missing active executor-compatible acceptance token'); process.exit(1); } console.log(t.token)")"
+          mapfile -t ACCEPTANCE_IDENTITY < <(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='admin' && x.scopes.includes('security.admin') && !x.revoked); if(!t) process.exit(1); for (const k of ['tenant_id','project_id','group_id','actor_id']) { const v=String(t[k]||'').trim(); if(!v) { console.error('missing acceptance identity '+k); process.exit(1); } console.log(v); }")
+          mapfile -t EXECUTOR_IDENTITY < <(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.token==='executor_token' && x.role==='executor' && x.scopes.includes('action.task.dispatch') && x.scopes.includes('ao_act.receipt.write') && !x.revoked); if(!t) { console.error('missing active dedicated executor acceptance token'); process.exit(1); } for (const k of ['token','actor_id']) { const v=String(t[k]||'').trim(); if(!v) { console.error('missing dedicated executor identity '+k); process.exit(1); } console.log(v); }")
+          TOKENS_JSON="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); process.stdout.write(JSON.stringify(f))")"
           cat > .env.ci <<EOF_INNER
           GEOX_RUNTIME_ENV=pilot
+          GEOX_TOKENS_JSON='$TOKENS_JSON'
           POSTGRES_USER=landos
           POSTGRES_PASSWORD=ci-pilot-postgres-strong-2026
           POSTGRES_DB=landos
@@ -80,7 +167,13 @@ jobs:
           GEOX_RUNTIME_DATABASE_PASSWORD=ci-pilot-runtime-database-strong-2026
           GEOX_DEPLOYMENT_SUBJECT_COMMIT=${GITHUB_SHA}
           GEOX_AO_ACT_TOKEN=$ACCEPTANCE_TOKEN
-          GEOX_EXECUTOR_TOKEN=$EXECUTOR_TOKEN
+          GEOX_ACCEPTANCE_TENANT_ID=${ACCEPTANCE_IDENTITY[0]}
+          GEOX_ACCEPTANCE_PROJECT_ID=${ACCEPTANCE_IDENTITY[1]}
+          GEOX_ACCEPTANCE_GROUP_ID=${ACCEPTANCE_IDENTITY[2]}
+          GEOX_ACCEPTANCE_ACTOR_ID=${ACCEPTANCE_IDENTITY[3]}
+          GEOX_EXECUTOR_TOKEN=${EXECUTOR_IDENTITY[0]}
+          GEOX_EXECUTOR_ID=${EXECUTOR_IDENTITY[1]}
+          GEOX_EXECUTOR_ACTOR_ID=${EXECUTOR_IDENTITY[1]}
           GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
           GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT=http://127.0.0.1:9000
           MINIO_ROOT_USER=geoxminio
@@ -140,6 +233,87 @@ jobs:
           fi
           docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -c 'set -eu; mc alias set local http://127.0.0.1:9000 geoxminio ci-pilot-minio-strong-2026; mc ls local; mc stat local/evidence-exports-v1'
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
+
+      - name: B-Line root-zone exact scenario binding runtime
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export API_BASE_URL=http://127.0.0.1:3001
+          export GEOX_ACCEPTANCE_TOKEN="$GEOX_AO_ACT_TOKEN"
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          pnpm run ci:root-zone-scenario-submit-recommendation
+
+      - name: B-Line operator dispatch intent runtime
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export GEOX_ACCEPTANCE_TOKEN="$GEOX_AO_ACT_TOKEN"
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          pnpm run ci:runtime:bline-operator-dispatch-intent
+
+      - name: B-Line Sampling exact-source runtime
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export API_BASE_URL=http://127.0.0.1:3001
+          export SAMPLING_API_BASE_URL=http://127.0.0.1:3001
+          export GEOX_ACCEPTANCE_TOKEN="$GEOX_AO_ACT_TOKEN"
+          export ADMIN_TOKEN="$GEOX_AO_ACT_TOKEN"
+          export AO_ACT_TOKEN="$GEOX_AO_ACT_TOKEN"
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          pnpm run ci:scenario:sampling
+
+      - name: B-Line Fertilization exact Sampling consumer runtime
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export API_BASE_URL=http://127.0.0.1:3001
+          export FERTILIZATION_API_BASE_URL=http://127.0.0.1:3001
+          export GEOX_ACCEPTANCE_TOKEN="$GEOX_AO_ACT_TOKEN"
+          export ADMIN_TOKEN="$GEOX_AO_ACT_TOKEN"
+          export AO_ACT_TOKEN="$GEOX_AO_ACT_TOKEN"
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          node scripts/agronomy_acceptance/ACCEPTANCE_FERTILIZATION_API_LIVE_V1.cjs
+
+      - name: B-Line Fertilization canonical execution provenance runtime
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export API_BASE_URL=http://127.0.0.1:3001
+          export FERTILIZATION_API_BASE_URL=http://127.0.0.1:3001
+          export ADMIN_TOKEN=admin_token
+          export APPROVER_TOKEN=approver_token
+          export OPERATOR_TOKEN=operator_token
+          export EXECUTOR_TOKEN=executor_token
+          export EXECUTOR_ACTOR_ID="$GEOX_EXECUTOR_ACTOR_ID"
+          export AO_ACT_TOKEN=admin_token
+          export GEOX_ACCEPTANCE_TOKEN=admin_token
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          pnpm run ci:scenario:fertilization
+
+      - name: B-Line Agronomy Agent fail-closed runtime
+        timeout-minutes: 5
+        run: pnpm run ci:runtime:bline-agronomy-agent-fail-closed
 
       - name: Run PR18I formal-chain preflight gate
         timeout-minutes: 30
@@ -238,6 +412,7 @@ jobs:
           set +a
           export BASE_URL=http://127.0.0.1:3001
           export API_BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
           pnpm run ci:p1-smoke:preflight-idempotent
 
       - name: Run customer report boundary suite wiring gate
