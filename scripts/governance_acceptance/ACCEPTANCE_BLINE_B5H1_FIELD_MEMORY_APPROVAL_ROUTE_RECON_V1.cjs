@@ -14,53 +14,60 @@ const pass = (name, cond) => {
 };
 
 pass(
-  'skip_auto_task_issue_fact_preserved',
-  text.includes("'ACCEPTANCE_FIELD_MEMORY_V1_skip_auto_task_issue'")
-    && text.includes('skip_auto_task_issue\\": true')
+  'task_service_decide_route_preserved',
+  text.includes('/api/v1/approvals/${encodeURIComponent(approval_id)}/decide')
 );
 
 pass(
-  'skip_auto_task_issue_machine_assert_preserved',
-  text.includes("approval skip_auto_task_issue append fact missing")
+  'stale_skip_auto_task_injection_removed',
+  !text.includes("'ACCEPTANCE_FIELD_MEMORY_V1_skip_auto_task_issue'")
+    && !text.includes('approval skip_auto_task_issue append fact missing')
 );
 
 pass(
-  'skip_aware_approval_route_used',
-  text.includes('`${base}/api/v1/approvals/approve`')
+  'decide_auto_task_consumed',
+  text.includes("const actTaskId = String(decideJson.act_task_id ?? '').trim();")
+    && text.includes("assert.ok(actTaskId, 'act_task_id missing from approval decide successor auto-task');")
 );
 
 pass(
-  'approval_route_uses_approver_token',
-  text.includes("token: approverToken")
+  'second_positive_task_create_removed',
+  !text.includes('const taskResp = await fetchJson(`${base}/api/v1/actions/task`')
+    && !text.includes("requireOk(taskResp, 'create action task')")
 );
 
 pass(
-  'approval_route_passes_request_id',
-  text.includes('request_id: approval_id')
+  'canonical_task_fact_type_used',
+  text.includes("(record_json::jsonb ->> 'type') = 'ao_act_task_v0'")
 );
 
 pass(
-  'task_service_decide_route_removed_from_field_memory_child',
-  !text.includes('/api/v1/approvals/${encodeURIComponent(approval_id)}/decide')
+  'successor_task_payload_captured',
+  text.includes("const taskPayload = taskFactQ.rows?.[0]?.record_json?.payload ?? {};")
 );
 
 pass(
-  'manual_task_create_preserved_after_skip_aware_approval',
-  text.includes('const taskResp = await fetchJson(`${base}/api/v1/actions/task`')
-    && text.includes("const taskJson = requireOk(taskResp, 'create action task')")
+  'receipt_observed_parameters_derived_from_task_schema',
+  text.includes('const successorTaskSchemaKeys = Array.isArray(taskPayload?.parameter_schema?.keys)')
+    && text.includes('const successorObservedParameters = Object.fromEntries(')
+    && text.includes("reason: 'SUCCESSOR_TASK_OBSERVED_PARAMETERS_EMPTY'")
 );
 
 pass(
-  'manual_task_execution_schema_preserved',
-  text.includes("{ name: 'duration_sec', type: 'number', min: 1, max: 7200 }")
-    && text.includes("{ name: 'duration_min', type: 'number', min: 1, max: 720 }")
-    && text.includes("{ name: 'coverage_percent', type: 'number', min: 0, max: 100 }")
+  'receipt_builder_consumes_successor_observed_parameters',
+  text.includes('observed_parameters: successorObservedParameters')
+    && text.includes('observed_parameters,')
+);
+
+pass(
+  'legacy_fixed_receipt_shape_removed',
+  !text.includes('observed_parameters: {\n      amount,\n      coverage_percent,\n      duration_min,\n    }')
 );
 
 const ok = Object.values(checks).every((v) => v === 'PASS');
 const output = {
   ok,
-  task: 'BLINE_B5H1_FIELD_MEMORY_APPROVAL_ROUTE_RECON_V1',
+  task: 'BLINE_B5H1_FIELD_MEMORY_SUCCESSOR_AUTO_TASK_RECON_V1',
   checks,
 };
 
