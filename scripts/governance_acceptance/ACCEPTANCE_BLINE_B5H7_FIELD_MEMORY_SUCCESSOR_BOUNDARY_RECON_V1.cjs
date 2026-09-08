@@ -81,7 +81,7 @@ pass(
     'SKILL_PERFORMANCE_MEMORY',
     'memory_query_by_field',
     'memory_query_by_operation',
-    'memory_has_confidence',
+    'memory_confidence_optional_or_finite',
     'memory_has_summary_text',
     'memory_has_evidence_refs',
     'skill_memory_has_skill_trace_ref',
