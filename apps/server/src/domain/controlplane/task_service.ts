@@ -10,6 +10,7 @@ import type { Pool } from "pg"; // Postgres pool typing.
 import { createHash, randomUUID } from "node:crypto"; // Stable unique ids for wrapper facts + payload hashing.
 import { requireAoActScopeV0, requireAoActAdminV0, type AoActAuthContextV0 } from "../../auth/ao_act_authz_v0.js"; // Reuse existing token/scope auth.
 import { decideDispatchCandidates, type DispatchExecutorResource } from "./dispatch_decision_strategy.js";
+import { resolveApprovalExecutionContextV1 } from "./approval_execution_context_v1.js";
 import {
   checkCapabilityCompatibilityMatrix,
   resolveTaskCapabilityViaDeviceSkillsResult,
@@ -1002,6 +1003,10 @@ async function createOperationPlanForApproval(
     ?? requestBodyPayload?.device_requirements?.device_id
     ?? null
   );
+  const sharedExecutionContext = resolveApprovalExecutionContextV1({
+    requestPayload,
+    requestBody,
+  });
   const operation_plan_id = String(operationPlanId ?? "").trim() || `opl_${randomUUID().replace(/-/g, "")}`;
   const operation_plan_fact_id = await insertFact(pool, source, {
     type: "operation_plan_v1",
@@ -1016,12 +1021,15 @@ async function createOperationPlanForApproval(
       program_id: requestPayload?.program_id ?? requestPayload?.meta?.program_id ?? null,
       field_id: requestPayload?.field_id ?? requestPayload?.meta?.field_id ?? proposal?.target?.ref ?? null,
       season_id: requestPayload?.season_id ?? requestPayload?.meta?.season_id ?? null,
-      device_id: resolvedDeviceId ?? requestPayload?.device_id ?? requestPayload?.meta?.device_id ?? proposal?.meta?.device_id ?? null,
+      device_id: sharedExecutionContext.device_id ?? resolvedDeviceId ?? requestPayload?.device_id ?? requestPayload?.meta?.device_id ?? proposal?.meta?.device_id ?? null,
       approval_request_id: request_id,
       action_type: proposal?.action_type ?? null,
-      adapter_type: resolvedAdapterType ?? requestPayload?.meta?.adapter_type ?? proposal?.meta?.adapter_type ?? null,
-      device_type: resolvedDeviceType,
-      required_capabilities: parsedRequiredCapabilities,
+      adapter_type: sharedExecutionContext.adapter_type ?? resolvedAdapterType ?? requestPayload?.meta?.adapter_type ?? proposal?.meta?.adapter_type ?? null,
+      device_type: sharedExecutionContext.device_type ?? resolvedDeviceType,
+      required_capabilities:
+        sharedExecutionContext.required_capabilities.length > 0
+          ? sharedExecutionContext.required_capabilities
+          : parsedRequiredCapabilities,
       target: proposal?.target ?? null,
       parameters: proposal?.parameters ?? {},
       status: "CREATED",
@@ -2347,14 +2355,24 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
 
       const proposal = requestPayload.proposal; // Reuse request proposal as AO-ACT task input.
       const preDecisionPlanPayload = operationPlan?.record_json?.payload ?? {};
-      const approvalDeviceId =
-        String(preDecisionPlanPayload?.device_id ?? "").trim()
-        || String(proposal?.target?.id ?? "").trim()
-        || String(proposal?.meta?.device_id ?? "").trim()
-        || (typeof proposal?.target === "string" ? String(proposal.target).trim() : "");
-      const planAdapterType = typeof preDecisionPlanPayload?.adapter_type === "string"
-        ? String(preDecisionPlanPayload.adapter_type)
-        : String(proposal?.meta?.adapter_type ?? "");
+      const approvalExecutionContext = resolveApprovalExecutionContextV1({
+        requestPayload,
+        requestBody: body,
+        operationPlanPayload: preDecisionPlanPayload,
+      });
+      const approvalDeviceId = String(
+        approvalExecutionContext.device_id
+          ?? preDecisionPlanPayload?.device_id
+          ?? proposal?.target?.id
+          ?? proposal?.meta?.device_id
+          ?? (typeof proposal?.target === "string" ? proposal.target : "")
+      ).trim();
+      const planAdapterType = String(
+        approvalExecutionContext.adapter_type ?? ""
+      ).trim();
+      const approvalDeviceType =
+        approvalExecutionContext.device_type
+        ?? resolveDeviceTypeMetadata(proposal);
       const resolvedProposalActionType = resolveActionType(proposal);
       const parsedCapabilityResult = parseTaskCapability(proposal);
       if (!parsedCapabilityResult.ok) {
@@ -2362,7 +2380,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           stage: "approval",
           operation_plan_id,
           adapter_type: planAdapterType || null,
-          device_type: resolveDeviceTypeMetadata(proposal),
+          device_type: approvalDeviceType,
           error: parsedCapabilityResult.error
         });
       }
@@ -2399,7 +2417,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           stage: "approval",
           operation_plan_id,
           adapter_type: planAdapterType || null,
-          device_type: resolveDeviceTypeMetadata(proposal),
+          device_type: approvalDeviceType,
           error: compatibilityCheck.error
         });
       }
