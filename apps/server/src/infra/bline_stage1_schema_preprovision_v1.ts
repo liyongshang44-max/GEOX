@@ -40,6 +40,7 @@ export type BlineStage1SchemaPreprovisionResultV1 = {
   scope_index: typeof OVERVIEW_SCOPE_INDEX_V1;
   required_column_count: number;
   runtime_schema_create_authority: "FORBIDDEN";
+  runtime_table_dml: "GRANTED";
 };
 
 async function ensureBlineStage1OverviewSchemaV1(pool: Pool): Promise<void> {
@@ -83,21 +84,41 @@ async function ensureBlineStage1OverviewSchemaV1(pool: Pool): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_field_sensing_overview_v1_scope
       ON public.field_sensing_overview_v1 (tenant_id, project_id, group_id, field_id);
+
+    GRANT SELECT, INSERT, UPDATE, DELETE
+      ON TABLE public.field_sensing_overview_v1
+      TO ${RUNTIME_ROLE_V1};
   `);
 }
 
 async function verifyBlineStage1OverviewSchemaV1(pool: Pool): Promise<void> {
-  const relation = await pool.query<{ relation: string | null; scope_index: string | null; runtime_can_create_public: boolean }>(`
+  const relation = await pool.query<{
+    relation: string | null;
+    scope_index: string | null;
+    runtime_can_create_public: boolean;
+    runtime_can_select_overview: boolean;
+    runtime_can_insert_overview: boolean;
+    runtime_can_update_overview: boolean;
+    runtime_can_delete_overview: boolean;
+  }>(`
     SELECT
       pg_catalog.to_regclass('${OVERVIEW_RELATION_V1}')::text AS relation,
       pg_catalog.to_regclass('public.${OVERVIEW_SCOPE_INDEX_V1}')::text AS scope_index,
-      pg_catalog.has_schema_privilege('${RUNTIME_ROLE_V1}', 'public', 'CREATE') AS runtime_can_create_public
+      pg_catalog.has_schema_privilege('${RUNTIME_ROLE_V1}', 'public', 'CREATE') AS runtime_can_create_public,
+      pg_catalog.has_table_privilege('${RUNTIME_ROLE_V1}', '${OVERVIEW_RELATION_V1}', 'SELECT') AS runtime_can_select_overview,
+      pg_catalog.has_table_privilege('${RUNTIME_ROLE_V1}', '${OVERVIEW_RELATION_V1}', 'INSERT') AS runtime_can_insert_overview,
+      pg_catalog.has_table_privilege('${RUNTIME_ROLE_V1}', '${OVERVIEW_RELATION_V1}', 'UPDATE') AS runtime_can_update_overview,
+      pg_catalog.has_table_privilege('${RUNTIME_ROLE_V1}', '${OVERVIEW_RELATION_V1}', 'DELETE') AS runtime_can_delete_overview
   `);
   const relationRow = relation.rows[0];
   if (
     relationRow?.relation !== "field_sensing_overview_v1"
     || relationRow?.scope_index !== OVERVIEW_SCOPE_INDEX_V1
     || relationRow.runtime_can_create_public
+    || !relationRow.runtime_can_select_overview
+    || !relationRow.runtime_can_insert_overview
+    || !relationRow.runtime_can_update_overview
+    || !relationRow.runtime_can_delete_overview
   ) {
     throw new Error("BLINE_STAGE1_SCHEMA_PREPROVISION_INVALID:RELATION_OR_RUNTIME_AUTHORITY");
   }
@@ -170,6 +191,7 @@ export async function runBlineStage1SchemaPreprovisionV1(config: {
       scope_index: OVERVIEW_SCOPE_INDEX_V1,
       required_column_count: REQUIRED_COLUMNS_V1.length,
       runtime_schema_create_authority: "FORBIDDEN",
+      runtime_table_dml: "GRANTED",
     };
   } finally {
     await pool.end();
