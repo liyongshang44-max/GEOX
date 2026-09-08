@@ -68,5 +68,13 @@ export function registerAppleIIStage1EvidenceGateV1(app: FastifyInstance, pool: 
         conflict_detection_v1: (stage1Summary as any).conflict_detection_v1 ?? null,
       });
     }
+
+    if (gate.status === "NOT_ELIGIBLE") {
+      return reply.status(400).send({
+        ok: false,
+        error: "FORMAL_STAGE1_TRIGGER_NOT_ELIGIBLE",
+        reason_codes: gate.reason_codes,
+      });
+    }
   });
 }
