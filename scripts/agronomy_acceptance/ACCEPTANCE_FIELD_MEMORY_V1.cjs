@@ -41,6 +41,10 @@ function buildIrrigationReceiptBody({
   water_l = 20,
   observed_parameters,
 }) {
+  const executionEndTs = Date.now() - 5_000;
+  const executionStartTs = executionEndTs - 15_000;
+  const executionDurationMin = (executionEndTs - executionStartTs) / 60_000;
+
   return {
     tenant_id,
     project_id,
@@ -48,7 +52,7 @@ function buildIrrigationReceiptBody({
     operation_plan_id,
     act_task_id,
     executor_id: { kind: 'script', id: executor_actor_id, namespace: 'executor_runtime_v1' },
-    execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
+    execution_time: { start_ts: executionStartTs, end_ts: executionEndTs },
     execution_coverage: { kind: 'field', ref: field_id },
     resource_usage: { fuel_l: 0, electric_kwh: 0, water_l, chemical_ml: 0 },
     observed_parameters,
@@ -66,6 +70,7 @@ function buildIrrigationReceiptBody({
     meta: {
       command_id: act_task_id,
       idempotency_key: `receipt_${act_task_id}_${suffix}`,
+      execution_summary: { duration_min: executionDurationMin },
       recommendation_id,
       prescription_id,
       skill_id: 'irrigation_deficit_skill_v1',
