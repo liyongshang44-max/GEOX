@@ -58,50 +58,61 @@ jobs:
       - name: B-Line W4 execution-device-receipt provenance successor preservation
         run: |
           set -euo pipefail
+          # Immutable B-Line final-adoption lifecycle anchor; NOT a protected-main pin.
+          FINAL_ADOPTION="2144d63477176f939a0d40d39b96ca97522af8db"
           W4_GOV="6b98279a4d4e50b5b4957594a0aaebbf74d23984"
+          W4_GATE="scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs"
           CALLER_GATE="scripts/governance_acceptance/ACCEPTANCE_BLINE_PRODUCTION_CALLER_AUTHORITY_INVENTORY_V1.cjs"
           CI_WORKFLOW=".github/workflows/ci.yml"
 
           git merge-base --is-ancestor "$W4_GOV" HEAD
 
-          TMP="$(mktemp -d)"
-          cleanup() {
-            git worktree remove --force "$TMP" >/dev/null 2>&1 || true
-            rm -rf "$TMP"
-          }
-          trap cleanup EXIT
+          if git merge-base --is-ancestor "$FINAL_ADOPTION" HEAD; then
+            test "$(git rev-parse "$FINAL_ADOPTION:$W4_GATE")" = "$(git rev-parse "HEAD:$W4_GATE")"
+            echo "W4_SUCCESSOR_MODE=FINAL_ADOPTION_GATE_BLOB_PRESERVATION"
+          else
+            TMP="$(mktemp -d)"
+            cleanup() {
+              git worktree remove --force "$TMP" >/dev/null 2>&1 || true
+              rm -rf "$TMP"
+            }
+            trap cleanup EXIT
 
-          git worktree add --detach "$TMP" "$W4_GOV" >/dev/null
+            git worktree add --detach "$TMP" "$W4_GOV" >/dev/null
 
-          (
-            cd "$TMP"
-            node scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs
-          )
+            (
+              cd "$TMP"
+              node scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs
+            )
 
-          mapfile -t DELTA < <(git diff --name-only "$W4_GOV")
+            mapfile -t DELTA < <(git diff --name-only "$W4_GOV")
 
-          test "${#DELTA[@]}" -eq 2
-          printf '%s\n' "${DELTA[@]}"
+            test "${#DELTA[@]}" -eq 2
+            printf '%s\n' "${DELTA[@]}"
 
-          for p in "${DELTA[@]}"; do
-            case "$p" in
-              "$CALLER_GATE"|"$CI_WORKFLOW")
-                ;;
-              *)
-                echo "::error::unadjudicated post-W4 delta: $p"
-                exit 1
-                ;;
-            esac
-          done
+            for p in "${DELTA[@]}"; do
+              case "$p" in
+                "$CALLER_GATE"|"$CI_WORKFLOW")
+                  ;;
+                *)
+                  echo "::error::unadjudicated post-W4 delta: $p"
+                  exit 1
+                  ;;
+              esac
+            done
+
+            echo "W4_SUCCESSOR_MODE=HISTORICAL_EXACT_DELTA"
+          fi
 
           echo "W4_SUCCESSOR_PRESERVATION=PASS"
-
       - name: B-Line W4 focused positive-negative runtime proof
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts
 
       - name: B-Line production caller authority inventory successor preservation
         run: |
           set -euo pipefail
+          # Immutable B-Line final-adoption lifecycle anchor; NOT a protected-main pin.
+          FINAL_ADOPTION="2144d63477176f939a0d40d39b96ca97522af8db"
           CALLER_GOV="3435c8309b0cbb0658ce5212942fff4808300853"
           CALLER_RUN_ID="34316951584"
           CALLER_JOB_ID="102355058860"
@@ -111,24 +122,33 @@ jobs:
 
           git merge-base --is-ancestor "$CALLER_GOV" HEAD
 
-          mapfile -t DELTA < <(git diff --name-only "$CALLER_GOV" HEAD)
-          test "${#DELTA[@]}" -eq 1
-          test "${DELTA[0]}" = "$CI_WORKFLOW"
+          if git merge-base --is-ancestor "$FINAL_ADOPTION" HEAD; then
+            test "$(git rev-parse "$FINAL_ADOPTION:$CALLER_SCRIPT")" = "$(git rev-parse "HEAD:$CALLER_SCRIPT")"
+            test "$(git rev-parse "$FINAL_ADOPTION:$CALLER_WORKFLOW")" = "$(git rev-parse "HEAD:$CALLER_WORKFLOW")"
 
-          git show "$CALLER_GOV:$CALLER_WORKFLOW" \
-            | grep -F "run: pnpm run ci:governance:bline-production-caller-authority-inventory"
+            git show "HEAD:package.json" \
+              | grep -F '"ci:governance:bline-production-caller-authority-inventory": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_PRODUCTION_CALLER_AUTHORITY_INVENTORY_V1.cjs"'
 
-          git show "$CALLER_GOV:package.json" \
-            | grep -F '"ci:governance:bline-production-caller-authority-inventory": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_PRODUCTION_CALLER_AUTHORITY_INVENTORY_V1.cjs"'
+            echo "CALLER_SUCCESSOR_MODE=FINAL_ADOPTION_AUTHORITY_BLOB_PRESERVATION"
+          else
+            mapfile -t DELTA < <(git diff --name-only "$CALLER_GOV" HEAD)
+            test "${#DELTA[@]}" -eq 1
+            test "${DELTA[0]}" = "$CI_WORKFLOW"
 
-          HIST_JOB_JSON="$(curl --fail --silent --show-error \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            -H 'Authorization: Bearer ${{ github.token }}' \
-            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/jobs/$CALLER_JOB_ID")"
-          export HIST_JOB_JSON CALLER_GOV CALLER_RUN_ID CALLER_JOB_ID
+            git show "$CALLER_GOV:$CALLER_WORKFLOW" \
+              | grep -F "run: pnpm run ci:governance:bline-production-caller-authority-inventory"
 
-          node <<'NODE'
+            git show "$CALLER_GOV:package.json" \
+              | grep -F '"ci:governance:bline-production-caller-authority-inventory": "node scripts/governance_acceptance/ACCEPTANCE_BLINE_PRODUCTION_CALLER_AUTHORITY_INVENTORY_V1.cjs"'
+
+            HIST_JOB_JSON="$(curl --fail --silent --show-error \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              -H 'Authorization: Bearer ${{ github.token }}' \
+              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/jobs/$CALLER_JOB_ID")"
+            export HIST_JOB_JSON CALLER_GOV CALLER_RUN_ID CALLER_JOB_ID
+
+            node <<'NODE'
           const j = JSON.parse(process.env.HIST_JOB_JSON);
           const expected = {
             jobId: Number(process.env.CALLER_JOB_ID),
@@ -149,8 +169,10 @@ jobs:
           console.log(`CALLER_HISTORICAL_JOB_ID=${expected.jobId}`);
           NODE
 
-          echo "CALLER_SUCCESSOR_PRESERVATION=PASS"
+            echo "CALLER_SUCCESSOR_MODE=HISTORICAL_EXACT_DELTA"
+          fi
 
+          echo "CALLER_SUCCESSOR_PRESERVATION=PASS"
       - name: B-Line residual authority audit
         id: bline_residual
         continue-on-error: true
@@ -559,6 +581,8 @@ jobs:
       - name: Preserve consumed COMMERCIAL MVP0 strict qualification
         run: |
           set -euo pipefail
+          # Immutable B-Line final-adoption lifecycle anchor; NOT a protected-main pin.
+          FINAL_ADOPTION="2144d63477176f939a0d40d39b96ca97522af8db"
           SEALED_SUBJECT="459933bc4be0d8b9a5fbe7d330e579d74357ad1a"
           CLEAN_SETTLEMENT="41c64e6b56bf78fac192d2aaf4333986c41b55f1"
           PROTECTED_BASE="d19913c88b81b618507ff6da6fc4f3699123cdd6"
@@ -575,31 +599,40 @@ jobs:
           test "$(git rev-parse "$SEALED_SUBJECT:$RELEASE_GATE")" = "$(git rev-parse "$CLEAN_SETTLEMENT:$RELEASE_GATE")"
           git merge-base --is-ancestor "$CLEAN_SETTLEMENT" HEAD
 
-          mapfile -t DELTA < <(git diff --name-only "$CLEAN_SETTLEMENT" HEAD)
-          test "${#DELTA[@]}" -eq 3
-          printf '%s\n' "${DELTA[@]}"
+          if git merge-base --is-ancestor "$FINAL_ADOPTION" HEAD; then
+            for p in "$CALLER_GATE" "$W4_GATE" "$RELEASE_GATE"; do
+              test "$(git rev-parse "$FINAL_ADOPTION:$p")" = "$(git rev-parse "HEAD:$p")"
+            done
 
-          for required in "$CALLER_GATE" "$W4_GATE" "$CI_WORKFLOW"; do
-            printf '%s\n' "${DELTA[@]}" | grep -Fx "$required" >/dev/null
-          done
+            echo "COMMERCIAL_MVP0_SUCCESSOR_MODE=FINAL_ADOPTION_AUTHORITY_BLOB_PRESERVATION"
+          else
+            mapfile -t DELTA < <(git diff --name-only "$CLEAN_SETTLEMENT" HEAD)
+            test "${#DELTA[@]}" -eq 3
+            printf '%s\n' "${DELTA[@]}"
 
-          for p in "${DELTA[@]}"; do
-            case "$p" in
-              "$CALLER_GATE"|"$W4_GATE"|"$CI_WORKFLOW")
-                ;;
-              *)
-                echo "::error::Commercial MVP0 historical qualification is not preservable across delta: $p"
-                exit 1
-                ;;
-            esac
-          done
+            for required in "$CALLER_GATE" "$W4_GATE" "$CI_WORKFLOW"; do
+              printf '%s\n' "${DELTA[@]}" | grep -Fx "$required" >/dev/null
+            done
+
+            for p in "${DELTA[@]}"; do
+              case "$p" in
+                "$CALLER_GATE"|"$W4_GATE"|"$CI_WORKFLOW")
+                  ;;
+                *)
+                  echo "::error::Commercial MVP0 historical qualification is not preservable across delta: $p"
+                  exit 1
+                  ;;
+              esac
+            done
+
+            echo "COMMERCIAL_MVP0_SUCCESSOR_MODE=HISTORICAL_EXACT_DELTA"
+          fi
 
           echo "COMMERCIAL_MVP0_MACHINE_SEALED_SUBJECT=$SEALED_SUBJECT"
           echo "COMMERCIAL_MVP0_MACHINE_SEALED_TREE=$SEALED_TREE"
           echo "COMMERCIAL_MVP0_FROZEN_QUALIFICATION_LOG_SHA256=$QUALIFICATION_LOG_SHA256"
           echo "COMMERCIAL_MVP0_FULL_GATE_RERUN=PROHIBITED"
           echo "COMMERCIAL_MVP0_HISTORICAL_STRICT_PASS_PRESERVED=PASS"
-
       - name: Final runtime hygiene check and artifact log collection
         if: always()
         run: |
