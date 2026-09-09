@@ -26,13 +26,38 @@
   "known_protected_path_overlap": [
     "apps/server/scripts/write_dist_entries.cjs"
   ],
-  "overlap_adjudication": {
-    "path": "apps/server/scripts/write_dist_entries.cjs",
-    "classification": "SHARED_PACKAGING_PATH_WITH_NON_MCFT_SUCCESSOR_EXTENSION",
-    "mcft_runtime_entry_blocks_must_be_byte_identical": true,
-    "unrelated_database_or_bline_packaging_extension_may_exist": true,
-    "unknown_additional_mcft_dependency_overlap": "FAIL_CLOSED"
-  },
+  "known_mcft_dependency_overlap": [
+    "apps/server/scripts/write_dist_entries.cjs",
+    "docker/postgres/init/001_schema.sql",
+    "package.json"
+  ],
+  "overlap_adjudications": [
+    {
+      "path": "apps/server/scripts/write_dist_entries.cjs",
+      "classification": "SHARED_PACKAGING_PATH_WITH_NON_MCFT_SUCCESSOR_EXTENSION",
+      "owner_frontier": "BLINE_COMMERCIAL_MVP0_FINAL_ADOPTION",
+      "required_proof": "MCFT_CAP09_DIST_ENTRY_BLOCKS_BYTE_IDENTICAL",
+      "whole_file_allowlist": false
+    },
+    {
+      "path": "docker/postgres/init/001_schema.sql",
+      "classification": "BLINE_FIELD_MEMORY_BOOTSTRAP_SCOPE_CONFIDENCE_HARDENING",
+      "owner_frontier": "BLINE_COMMERCIAL_MVP0_FINAL_ADOPTION",
+      "allowed_exact_transforms": [
+        "field_memory_v1.project_id:REMOVE_LEGACY_projectA_DEFAULT",
+        "field_memory_v1.group_id:REMOVE_LEGACY_groupA_DEFAULT",
+        "field_memory_v1.confidence:REMOVE_NOT_NULL_DEFAULT_0_8"
+      ],
+      "whole_file_allowlist": false
+    },
+    {
+      "path": "package.json",
+      "classification": "BLINE_GOVERNANCE_RUNTIME_COMMAND_REGISTRATION_ONLY",
+      "owner_frontier": "BLINE_COMMERCIAL_MVP0_FINAL_ADOPTION",
+      "required_proof": "ONLY_EXACT_16_BLINE_SCRIPT_KEYS_ADDED_AND_ALL_PREDECESSOR_PACKAGE_CONTENT_PRESERVED",
+      "whole_file_allowlist": false
+    }
+  ],
   "protected_anchor_paths": [
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json",
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json",
@@ -57,7 +82,9 @@
     "unexpected_mcft_authority_intersection": "FAIL",
     "unexpected_mcft_dependency_intersection": "FAIL",
     "protected_anchor_byte_drift": "FAIL",
-    "mcft_runtime_entry_block_drift": "FAIL"
+    "mcft_runtime_entry_block_drift": "FAIL",
+    "shared_bootstrap_schema_unadjudicated_drift": "FAIL",
+    "root_package_non_bline_or_existing_script_drift": "FAIL"
   },
   "non_effects": {
     "mcft_product_semantics_changed": false,

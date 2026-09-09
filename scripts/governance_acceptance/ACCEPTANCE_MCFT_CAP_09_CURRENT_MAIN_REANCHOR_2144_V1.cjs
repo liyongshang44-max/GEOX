@@ -15,12 +15,54 @@ const ARTIFACT = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-RE
 const QCP = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 const PLANNER = "scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs";
 const DIST_WRITER = "apps/server/scripts/write_dist_entries.cjs";
+const ROOT_PACKAGE = "package.json";
+const BOOTSTRAP_SCHEMA = "docker/postgres/init/001_schema.sql";
 const EXPECTED_FIRST_PARENT = [
   { pr: 3526, sha: "a56b419f6ddfc3ce2f2d957b0422bb8b4bd9d45c" },
   { pr: 3529, sha: "d19913c88b81b618507ff6da6fc4f3699123cdd6" },
   { pr: 3530, sha: NEW_BASE },
 ];
-const ALLOWED_DEPENDENCY_OVERLAP = new Set([DIST_WRITER]);
+
+const EXPECTED_BLINE_PACKAGE_SCRIPTS = {
+  "ci:governance:bline-residual-authority-audit":
+    "node scripts/governance_acceptance/ACCEPTANCE_BLINE_RESIDUAL_AUTHORITY_AUDIT_V1.cjs",
+  "ci:governance:bline-p0-res007-evidence-export-boundary":
+    "node scripts/governance_acceptance/ACCEPTANCE_BLINE_P0_RES007_EVIDENCE_EXPORT_NO_ACCEPTANCE_AUTHORITY_V1.cjs",
+  "ci:governance:bline-active-runtime-surface-closure":
+    "node scripts/governance_acceptance/ACCEPTANCE_BLINE_ACTIVE_RUNTIME_SURFACE_CLOSURE_V1.cjs",
+  "ci:governance:bline-operation-state-read-only":
+    "node scripts/governance_acceptance/ACCEPTANCE_BLINE_OPERATION_STATE_READ_ONLY_V1.cjs",
+  "ci:governance:bline-execution-plan-task-lifecycle":
+    "node scripts/governance_acceptance/ACCEPTANCE_BLINE_EXECUTION_PLAN_TASK_LIFECYCLE_V1.cjs",
+  "ci:governance:bline-operator-dispatch-intent":
+    "node scripts/governance_acceptance/ACCEPTANCE_BLINE_OPERATOR_DISPATCH_INTENT_V1.cjs",
+  "ci:runtime:bline-operator-dispatch-intent":
+    "node scripts/runtime_acceptance/ACCEPTANCE_BLINE_OPERATOR_DISPATCH_INTENT_RUNTIME_V1.cjs",
+  "ci:governance:bline-acceptance-no-formal-memory-side-effect":
+    "node scripts/governance_acceptance/ACCEPTANCE_BLINE_ACCEPTANCE_NO_FORMAL_MEMORY_SIDE_EFFECT_V1.cjs",
+  "ci:governance:bline-formal-memory-reviewed-promotion-proof":
+    "node scripts/governance_acceptance/ACCEPTANCE_BLINE_FORMAL_MEMORY_REVIEWED_PROMOTION_PROOF_V1.cjs",
+  "ci:governance:bline-legacy-twin-no-direct-formal-memory":
+    "node scripts/governance_acceptance/ACCEPTANCE_BLINE_LEGACY_TWIN_NO_DIRECT_FORMAL_MEMORY_V1.cjs",
+  "ci:governance:bline-formal-memory-scope-provenance":
+    "node scripts/governance_acceptance/ACCEPTANCE_BLINE_FORMAL_MEMORY_SCOPE_PROVENANCE_V1.cjs",
+  "ci:governance:bline-sampling-exact-source-binding":
+    "node scripts/governance_acceptance/ACCEPTANCE_BLINE_SAMPLING_EXACT_SOURCE_BINDING_V1.cjs",
+  "ci:governance:bline-fertilization-execution-provenance":
+    "node scripts/governance_acceptance/ACCEPTANCE_BLINE_FERTILIZATION_EXECUTION_PROVENANCE_V1.cjs",
+  "ci:governance:bline-agronomy-agent-fail-closed":
+    "node scripts/governance_acceptance/ACCEPTANCE_BLINE_AGRONOMY_AGENT_FAIL_CLOSED_AUTHORITY_V1.cjs",
+  "ci:runtime:bline-agronomy-agent-fail-closed":
+    "pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_AGRONOMY_AGENT_FAIL_CLOSED_RUNTIME_V1.ts",
+  "ci:governance:bline-production-caller-authority-inventory":
+    "node scripts/governance_acceptance/ACCEPTANCE_BLINE_PRODUCTION_CALLER_AUTHORITY_INVENTORY_V1.cjs",
+};
+
+const ALLOWED_DEPENDENCY_OVERLAP = new Set([
+  DIST_WRITER,
+  ROOT_PACKAGE,
+  BOOTSTRAP_SCHEMA,
+]);
 
 function run(file, args, opts = {}) {
   const r = cp.spawnSync(file, args, {
@@ -57,6 +99,11 @@ function subsetOnly(values, allowed, code) {
   const unexpected = values.filter((value) => !allowed.has(value));
   assert(unexpected.length === 0, code, unexpected);
 }
+function replaceExactOnce(source, from, to, code) {
+  const count = source.split(from).length - 1;
+  assert(count === 1, code, { expected_occurrences: 1, actual_occurrences: count, from });
+  return source.replace(from, to);
+}
 
 function mcftEntryBlocks(sourceBytes) {
   const source = Buffer.from(sourceBytes).toString("utf8");
@@ -72,6 +119,86 @@ function mcftEntryBlocks(sourceBytes) {
   return blocks;
 }
 
+function adjudicateBootstrapSchemaEvolution() {
+  const oldSql = gitShow(OLD_BASE, BOOTSTRAP_SCHEMA).toString("utf8");
+  const newSql = gitShow(NEW_BASE, BOOTSTRAP_SCHEMA).toString("utf8");
+  let expected = oldSql;
+  expected = replaceExactOnce(
+    expected,
+    "ADD COLUMN IF NOT EXISTS project_id TEXT NOT NULL DEFAULT 'projectA',",
+    "ADD COLUMN IF NOT EXISTS project_id TEXT NOT NULL,",
+    "REANCHOR_SQL_PROJECT_ID_SOURCE_SHAPE_DRIFT"
+  );
+  expected = replaceExactOnce(
+    expected,
+    "ADD COLUMN IF NOT EXISTS group_id TEXT NOT NULL DEFAULT 'groupA',",
+    "ADD COLUMN IF NOT EXISTS group_id TEXT NOT NULL,",
+    "REANCHOR_SQL_GROUP_ID_SOURCE_SHAPE_DRIFT"
+  );
+  expected = replaceExactOnce(
+    expected,
+    "ADD COLUMN IF NOT EXISTS confidence NUMERIC NOT NULL DEFAULT 0.8,",
+    "ADD COLUMN IF NOT EXISTS confidence NUMERIC,",
+    "REANCHOR_SQL_CONFIDENCE_SOURCE_SHAPE_DRIFT"
+  );
+  assert(
+    newSql === expected,
+    "REANCHOR_SQL_UNADJUDICATED_SHARED_BOOTSTRAP_DRIFT",
+    { old_sha256: sha256(oldSql), expected_sha256: sha256(expected), actual_sha256: sha256(newSql) }
+  );
+  return {
+    path: BOOTSTRAP_SCHEMA,
+    classification: "BLINE_FIELD_MEMORY_BOOTSTRAP_SCOPE_CONFIDENCE_HARDENING",
+    allowed_exact_transforms: [
+      "field_memory_v1.project_id:REMOVE_LEGACY_projectA_DEFAULT",
+      "field_memory_v1.group_id:REMOVE_LEGACY_groupA_DEFAULT",
+      "field_memory_v1.confidence:REMOVE_NOT_NULL_DEFAULT_0_8",
+    ],
+    old_sha256: sha256(oldSql),
+    new_sha256: sha256(newSql),
+    exact_transform_match: true,
+  };
+}
+
+function adjudicateRootPackageEvolution() {
+  const oldPkg = JSON.parse(gitShow(OLD_BASE, ROOT_PACKAGE).toString("utf8"));
+  const newPkg = JSON.parse(gitShow(NEW_BASE, ROOT_PACKAGE).toString("utf8"));
+  const oldScripts = oldPkg.scripts || {};
+  const newScripts = newPkg.scripts || {};
+  const oldRest = { ...oldPkg };
+  const newRest = { ...newPkg };
+  delete oldRest.scripts;
+  delete newRest.scripts;
+
+  assert(same(oldRest, newRest), "REANCHOR_PACKAGE_NON_SCRIPT_STRUCTURE_DRIFT");
+
+  for (const [key, value] of Object.entries(oldScripts)) {
+    assert(
+      Object.prototype.hasOwnProperty.call(newScripts, key),
+      "REANCHOR_PACKAGE_EXISTING_SCRIPT_REMOVED",
+      key
+    );
+    assert(newScripts[key] === value, "REANCHOR_PACKAGE_EXISTING_SCRIPT_CHANGED", key);
+  }
+
+  const added = Object.keys(newScripts).filter((key) => !Object.prototype.hasOwnProperty.call(oldScripts, key)).sort();
+  const expectedAdded = Object.keys(EXPECTED_BLINE_PACKAGE_SCRIPTS).sort();
+  assert(same(added, expectedAdded), "REANCHOR_PACKAGE_UNEXPECTED_SCRIPT_DELTA", { added, expectedAdded });
+
+  for (const [key, value] of Object.entries(EXPECTED_BLINE_PACKAGE_SCRIPTS)) {
+    assert(newScripts[key] === value, "REANCHOR_PACKAGE_BLINE_SCRIPT_COMMAND_DRIFT", { key, expected: value, actual: newScripts[key] });
+  }
+
+  return {
+    path: ROOT_PACKAGE,
+    classification: "BLINE_GOVERNANCE_RUNTIME_COMMAND_REGISTRATION_ONLY",
+    added_script_keys: expectedAdded,
+    existing_script_count_preserved: Object.keys(oldScripts).length,
+    dependency_sections_preserved: true,
+    exact_transform_match: true,
+  };
+}
+
 const artifact = JSON.parse(fs.readFileSync(path.join(ROOT, ARTIFACT), "utf8"));
 assert(artifact.schema_version === "geox_mcft_cap09_current_main_reanchor_2144_v1", "REANCHOR_ARTIFACT_SCHEMA");
 assert(artifact.status === "CANDIDATE_PROOF_BOUND_ADMISSION", "REANCHOR_ARTIFACT_STATUS");
@@ -80,6 +207,13 @@ assert(artifact.current_protected_main === NEW_BASE, "REANCHOR_ARTIFACT_NEW_BASE
 assert(artifact.current_protected_main_tree === NEW_TREE, "REANCHOR_ARTIFACT_NEW_TREE");
 assert(artifact.qcp_admission?.mode === "PROOF_BOUND_EXACT_BASE", "REANCHOR_ADMISSION_MODE");
 assert(artifact.qcp_admission?.bare_sha_allowlist_admission_authorized === false, "REANCHOR_BARE_ALLOWLIST_FORBIDDEN");
+assert(
+  same(
+    [...(artifact.known_mcft_dependency_overlap || [])].sort(),
+    [...ALLOWED_DEPENDENCY_OVERLAP].sort()
+  ),
+  "REANCHOR_ARTIFACT_DEPENDENCY_OVERLAP_DECLARATION_DRIFT"
+);
 for (const value of Object.values(artifact.non_effects || {})) assert(value === false, "REANCHOR_NON_EFFECT_MUST_BE_FALSE");
 
 const liveMain = text("git", ["rev-parse", "origin/main"]);
@@ -113,6 +247,9 @@ const oldEntries = mcftEntryBlocks(gitShow(OLD_BASE, DIST_WRITER));
 const newEntries = mcftEntryBlocks(gitShow(NEW_BASE, DIST_WRITER));
 assert(same(oldEntries, newEntries), "REANCHOR_MCFT_DIST_ENTRY_BLOCK_DRIFT", { oldEntries, newEntries });
 
+const sqlAdjudication = adjudicateBootstrapSchemaEvolution();
+const packageAdjudication = adjudicateRootPackageEvolution();
+
 const changed = diffNames(OLD_BASE, NEW_BASE);
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "geox-mcft-reanchor-"));
 const wt = path.join(tmp, "main");
@@ -134,7 +271,11 @@ try {
   assert(cpIntersection.length === 0, "REANCHOR_UNEXPECTED_CONTROL_PLANE_INTERSECTION", cpIntersection);
   assert(authorityIntersection.length === 0, "REANCHOR_UNEXPECTED_AUTHORITY_REF_INTERSECTION", authorityIntersection);
   subsetOnly(dependencyIntersection, ALLOWED_DEPENDENCY_OVERLAP, "REANCHOR_UNEXPECTED_DEPENDENCY_INTERSECTION");
-  assert(dependencyIntersection.includes(DIST_WRITER), "REANCHOR_EXPECTED_SHARED_PACKAGING_OVERLAP_MISSING");
+  assert(
+    same([...dependencyIntersection].sort(), [...ALLOWED_DEPENDENCY_OVERLAP].sort()),
+    "REANCHOR_EXPECTED_DEPENDENCY_INTERSECTION_SET_DRIFT",
+    dependencyIntersection
+  );
 
   const resolverRows = [];
   for (const [id, resolved] of Object.entries(rr.resolved).sort(([a], [b]) => a.localeCompare(b))) {
@@ -173,6 +314,15 @@ const proof = {
   planner_sha256_preserved: sha256(pNew),
   mcft_dist_entry_blocks: newEntries,
   protected_anchor_count: (artifact.protected_anchor_paths || []).length,
+  shared_dependency_evolution: [
+    {
+      path: DIST_WRITER,
+      classification: "SHARED_PACKAGING_PATH_WITH_NON_MCFT_SUCCESSOR_EXTENSION",
+      mcft_runtime_entry_blocks_byte_identical: true,
+    },
+    sqlAdjudication,
+    packageAdjudication,
+  ],
   mcft_control_plane_path_intersection: resolverSummary.cpIntersection,
   mcft_authority_ref_intersection: resolverSummary.authorityIntersection,
   mcft_dependency_intersection: resolverSummary.dependencyIntersection,
