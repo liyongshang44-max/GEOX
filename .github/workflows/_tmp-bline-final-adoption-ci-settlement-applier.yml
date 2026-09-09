@@ -1,0 +1,179 @@
+name: temporary bounded B-Line successor-settlement applier
+
+on:
+  push:
+    branches:
+      - fix/ci-bline-final-adoption-successor-preservation-01
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact settlement carrier
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact source frontier
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "2144d63477176f939a0d40d39b96ca97522af8db"
+          test "$(git rev-parse HEAD:.github/workflows/ci.yml)" = "813f9d15a69a12cd6e5071db82c7fbcddacccf4e"
+
+      - name: Apply bounded successor-preservation settlement
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/ci.yml')
+          text = path.read_text()
+
+          def replace_exact(label, old, new):
+              global text
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly one match, got {count}')
+              text = text.replace(old, new, 1)
+
+          replace_exact(
+              'w4-successor-topology',
+              '''          mapfile -t DELTA < <(git diff --name-only "$W4_GOV")
+
+          test "${#DELTA[@]}" -eq 2
+          printf '%s\\n' "${DELTA[@]}"
+
+          for p in "${DELTA[@]}"; do
+            case "$p" in
+              "$CALLER_GATE"|"$CI_WORKFLOW")
+                ;;
+              *)
+                echo "::error::unadjudicated post-W4 delta: $p"
+                exit 1
+                ;;
+            esac
+          done
+
+          echo "W4_SUCCESSOR_PRESERVATION=PASS"''',
+              '''          FINAL_ADOPTION="2144d63477176f939a0d40d39b96ca97522af8db"
+          W4_GATE="scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs"
+
+          if git merge-base --is-ancestor "$FINAL_ADOPTION" HEAD; then
+            test "$(git rev-parse "$FINAL_ADOPTION:$W4_GATE")" = "$(git rev-parse "HEAD:$W4_GATE")"
+            echo "W4_SUCCESSOR_MODE=FINAL_ADOPTION_GATE_BLOB_PRESERVATION"
+          else
+            mapfile -t DELTA < <(git diff --name-only "$W4_GOV")
+
+            test "${#DELTA[@]}" -eq 2
+            printf '%s\\n' "${DELTA[@]}"
+
+            for p in "${DELTA[@]}"; do
+              case "$p" in
+                "$CALLER_GATE"|"$CI_WORKFLOW")
+                  ;;
+                *)
+                  echo "::error::unadjudicated post-W4 delta: $p"
+                  exit 1
+                  ;;
+              esac
+            done
+            echo "W4_SUCCESSOR_MODE=HISTORICAL_EXACT_DELTA"
+          fi
+
+          echo "W4_SUCCESSOR_PRESERVATION=PASS"'''
+          )
+
+          replace_exact(
+              'caller-successor-topology',
+              '''          mapfile -t DELTA < <(git diff --name-only "$CALLER_GOV" HEAD)
+          test "${#DELTA[@]}" -eq 1
+          test "${DELTA[0]}" = "$CI_WORKFLOW"''',
+              '''          FINAL_ADOPTION="2144d63477176f939a0d40d39b96ca97522af8db"
+
+          if git merge-base --is-ancestor "$FINAL_ADOPTION" HEAD; then
+            test "$(git rev-parse "$FINAL_ADOPTION:$CALLER_SCRIPT")" = "$(git rev-parse "HEAD:$CALLER_SCRIPT")"
+            test "$(git rev-parse "$FINAL_ADOPTION:$CALLER_WORKFLOW")" = "$(git rev-parse "HEAD:$CALLER_WORKFLOW")"
+            git show "HEAD:package.json" \
+              | grep -F '\"ci:governance:bline-production-caller-authority-inventory\": \"node scripts/governance_acceptance/ACCEPTANCE_BLINE_PRODUCTION_CALLER_AUTHORITY_INVENTORY_V1.cjs\"'
+            echo "CALLER_SUCCESSOR_MODE=FINAL_ADOPTION_AUTHORITY_BLOB_PRESERVATION"
+          else
+            mapfile -t DELTA < <(git diff --name-only "$CALLER_GOV" HEAD)
+            test "${#DELTA[@]}" -eq 1
+            test "${DELTA[0]}" = "$CI_WORKFLOW"
+            echo "CALLER_SUCCESSOR_MODE=HISTORICAL_EXACT_DELTA"
+          fi'''
+          )
+
+          replace_exact(
+              'commercial-successor-topology',
+              '''          mapfile -t DELTA < <(git diff --name-only "$CLEAN_SETTLEMENT" HEAD)
+          test "${#DELTA[@]}" -eq 3
+          printf '%s\\n' "${DELTA[@]}"
+
+          for required in "$CALLER_GATE" "$W4_GATE" "$CI_WORKFLOW"; do
+            printf '%s\\n' "${DELTA[@]}" | grep -Fx "$required" >/dev/null
+          done
+
+          for p in "${DELTA[@]}"; do
+            case "$p" in
+              "$CALLER_GATE"|"$W4_GATE"|"$CI_WORKFLOW")
+                ;;
+              *)
+                echo "::error::Commercial MVP0 historical qualification is not preservable across delta: $p"
+                exit 1
+                ;;
+            esac
+          done''',
+              '''          FINAL_ADOPTION="2144d63477176f939a0d40d39b96ca97522af8db"
+
+          if git merge-base --is-ancestor "$FINAL_ADOPTION" HEAD; then
+            for p in "$CALLER_GATE" "$W4_GATE" "$RELEASE_GATE"; do
+              test "$(git rev-parse "$FINAL_ADOPTION:$p")" = "$(git rev-parse "HEAD:$p")"
+            done
+            echo "COMMERCIAL_MVP0_SUCCESSOR_MODE=FINAL_ADOPTION_AUTHORITY_BLOB_PRESERVATION"
+          else
+            mapfile -t DELTA < <(git diff --name-only "$CLEAN_SETTLEMENT" HEAD)
+            test "${#DELTA[@]}" -eq 3
+            printf '%s\\n' "${DELTA[@]}"
+
+            for required in "$CALLER_GATE" "$W4_GATE" "$CI_WORKFLOW"; do
+              printf '%s\\n' "${DELTA[@]}" | grep -Fx "$required" >/dev/null
+            done
+
+            for p in "${DELTA[@]}"; do
+              case "$p" in
+                "$CALLER_GATE"|"$W4_GATE"|"$CI_WORKFLOW")
+                  ;;
+                *)
+                  echo "::error::Commercial MVP0 historical qualification is not preservable across delta: $p"
+                  exit 1
+                  ;;
+              esac
+            done
+            echo "COMMERCIAL_MVP0_SUCCESSOR_MODE=HISTORICAL_EXACT_DELTA"
+          fi'''
+          )
+
+          path.write_text(text)
+          PY
+
+          git diff --check -- .github/workflows/ci.yml
+          git diff -- .github/workflows/ci.yml
+
+      - name: Materialize only the bounded CI settlement
+        run: |
+          set -euo pipefail
+          rm .github/workflows/_tmp-bline-final-adoption-ci-settlement-applier.yml
+          git config user.name "GEOX qualification settlement"
+          git config user.email "actions@users.noreply.github.com"
+          git add .github/workflows/ci.yml .github/workflows/_tmp-bline-final-adoption-ci-settlement-applier.yml
+          mapfile -t STAGED < <(git diff --cached --name-only)
+          test "${#STAGED[@]}" -eq 2
+          printf '%s\n' "${STAGED[@]}"
+          printf '%s\n' "${STAGED[@]}" | grep -Fx '.github/workflows/ci.yml' >/dev/null
+          printf '%s\n' "${STAGED[@]}" | grep -Fx '.github/workflows/_tmp-bline-final-adoption-ci-settlement-applier.yml' >/dev/null
+          git commit -m "fix(ci): preserve B-Line authority after final adoption"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
