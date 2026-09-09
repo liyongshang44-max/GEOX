@@ -1,0 +1,98 @@
+name: TEMP MCFT CAP-09 AA Handoff Materializer 20260909
+
+on:
+  push:
+    branches:
+      - tmp/mcft-cap09-handoff-aa-materializer-20260909
+    paths:
+      - '.github/workflows/tmp-mcft-cap09-handoff-aa-materializer-20260909.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout temporary materializer
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Materialize exact-parent pure-prepend handoff commit
+        shell: bash
+        env:
+          EXPECTED_MAIN: 2144d63477176f939a0d40d39b96ca97522af8db
+          OLD_HEAD: 46e392a2236c50ab9501e4d7e5864105b8dfdf4b
+          HANDOFF_BRANCH: docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier
+          HANDOFF_PATH: docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md
+          HISTORICAL_PATH: docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-26.md
+          PAYLOAD_PATH: .tmp/mcft-cap09-handoff-aa-prefix.md
+        run: |
+          set -euo pipefail
+
+          REMOTE_MAIN="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test "$REMOTE_MAIN" = "$EXPECTED_MAIN"
+
+          REMOTE_HANDOFF="$(git ls-remote origin "refs/heads/$HANDOFF_BRANCH" | awk '{print $1}')"
+          test "$REMOTE_HANDOFF" = "$OLD_HEAD"
+
+          cp "$PAYLOAD_PATH" /tmp/aa-prefix.md
+          git fetch --no-tags origin "+refs/heads/$HANDOFF_BRANCH:refs/remotes/origin/authoritative-handoff"
+          test "$(git rev-parse refs/remotes/origin/authoritative-handoff)" = "$OLD_HEAD"
+
+          git show "$OLD_HEAD:$HANDOFF_PATH" > /tmp/old-handoff.md
+          git show "$OLD_HEAD:$HISTORICAL_PATH" > /tmp/old-historical.md
+          cat /tmp/aa-prefix.md /tmp/old-handoff.md > /tmp/new-handoff.md
+
+          python - <<'PY'
+          from pathlib import Path
+          prefix = Path('/tmp/aa-prefix.md').read_bytes()
+          old = Path('/tmp/old-handoff.md').read_bytes()
+          new = Path('/tmp/new-handoff.md').read_bytes()
+          assert new == prefix + old
+          assert new.endswith(old)
+          print(f'OLD_BYTES={len(old)}')
+          print(f'PREPENDED_BYTES={len(prefix)}')
+          print(f'NEW_BYTES={len(new)}')
+          print('PURE_PREPEND=true')
+          print('HISTORICAL_SUFFIX_PRESERVED=true')
+          PY
+
+          git config user.name 'GEOX MCFT Handoff Materializer'
+          git config user.email 'actions@users.noreply.github.com'
+          git checkout --detach "$OLD_HEAD"
+          cp /tmp/new-handoff.md "$HANDOFF_PATH"
+
+          test ! -e .tmp/mcft-cap09-handoff-aa-prefix.md
+          test ! -e .github/workflows/tmp-mcft-cap09-handoff-aa-materializer-20260909.yml
+          cmp -s /tmp/old-historical.md "$HISTORICAL_PATH"
+
+          git add "$HANDOFF_PATH"
+          mapfile -t CHANGED < <(git diff --cached --name-only)
+          test "${#CHANGED[@]}" -eq 1
+          test "${CHANGED[0]}" = "$HANDOFF_PATH"
+          git diff --cached --check
+
+          OLD_BLOB="$(git rev-parse "$OLD_HEAD:$HANDOFF_PATH")"
+          TREE="$(git write-tree)"
+          NEW_HEAD="$(printf '%s\n' 'docs(mcft-cap09): hand off post-B-Line current-main re-anchor frontier' | git commit-tree "$TREE" -p "$OLD_HEAD")"
+          NEW_BLOB="$(git rev-parse "$NEW_HEAD:$HANDOFF_PATH")"
+
+          test "$(git rev-parse "$NEW_HEAD^")" = "$OLD_HEAD"
+          mapfile -t FINAL_CHANGED < <(git diff --name-only "$OLD_HEAD" "$NEW_HEAD")
+          test "${#FINAL_CHANGED[@]}" -eq 1
+          test "${FINAL_CHANGED[0]}" = "$HANDOFF_PATH"
+          test "$(git rev-parse "$OLD_HEAD:$HISTORICAL_PATH")" = "$(git rev-parse "$NEW_HEAD:$HISTORICAL_PATH")"
+
+          echo "PREVIOUS_HANDOFF_HEAD=$OLD_HEAD"
+          echo "NEW_HANDOFF_HEAD=$NEW_HEAD"
+          echo "OLD_HANDOFF_BLOB=$OLD_BLOB"
+          echo "NEW_HANDOFF_BLOB=$NEW_BLOB"
+          echo "NEW_TREE=$TREE"
+          git diff --numstat "$OLD_HEAD" "$NEW_HEAD"
+
+          git push --force-with-lease="refs/heads/$HANDOFF_BRANCH:$OLD_HEAD" origin "$NEW_HEAD:refs/heads/$HANDOFF_BRANCH"
+          echo 'HANDOFF_BRANCH_FAST_FORWARD=SUCCESS'
