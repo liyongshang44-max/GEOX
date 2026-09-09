@@ -1,0 +1,179 @@
+name: mcft-cap-09-production-owner-current-main-requalification-v1
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-production-owner-current-main-requalification-v1.yml'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-production-owner-current-main-requalification-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  current-main-owner-requalification:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.head_ref == 'test/mcft-cap09-d17f-production-owner-live-requalification-v1' &&
+      github.event.pull_request.base.sha == 'd17f894e86b0fabab648530968c562e2fbe94c5d'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      EVIDENCE_RUNTIME_DATABASE_URL_SECRET: ${{ secrets.GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL }}
+      TWIN_RUNTIME_DATABASE_URL_SECRET: ${{ secrets.GEOX_MCFT_CAP09_TWIN_RUNTIME_DATABASE_URL }}
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+
+    steps:
+      - name: Checkout exact current-main qualification subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact current-main read-only subject
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          test "$BASE_SHA" = 'd17f894e86b0fabab648530968c562e2fbe94c5d'
+          test "$(git merge-base "$BASE_SHA" HEAD)" = "$BASE_SHA"
+          changed="$(git diff --name-only "$BASE_SHA"...HEAD)"
+          test "$changed" = '.github/workflows/mcft-cap-09-production-owner-current-main-requalification-v1.yml'
+
+      - name: Prove current-main static production-owner boundary
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+          const assert = require('node:assert/strict');
+          const readJson = file => JSON.parse(fs.readFileSync(file,'utf8'));
+          const owner = readJson('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json');
+          const host = readJson('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json');
+          const arm = readJson('scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_CUTOVER_ARM_V1.json');
+          const runtimeStartArm = readJson('scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json');
+          const compose = fs.readFileSync('docker-compose.mcft-cap09-production.yml','utf8');
+          const launcherAcceptance = fs.readFileSync('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts','utf8');
+          assert.equal(owner.schema_version,'geox_mcft_cap09_production_owner_graduation_gate_v1');
+          assert.equal(owner.status,'READ_ONLY_LIVE_OWNER_ADJUDICATION_IMPLEMENTED_RUNTIME_START_SEPARATE');
+          assert.equal(owner.non_github_hosting_binding?.status,'ESTABLISHED_LOCAL_OPERATOR_MANAGED_DOCKER');
+          assert.equal(owner.non_github_hosting_binding?.exact_two_runtime_service_identities_bound,true);
+          assert.equal(owner.identity_semantics?.login_role_presence_is_effective_owner_proof,false);
+          assert.equal(owner.identity_semantics?.effective_owner_requires_non_github_host_binding_and_live_fenced_lease,true);
+          assert.equal(owner.implementation?.read_only_live_adjudication_only,true);
+          assert.equal(owner.implementation?.github_actions_runtime_start_allowed,false);
+          assert.equal(owner.implementation?.github_actions_owner_activation_allowed,false);
+          assert.equal(host.status,'LOCAL_OPERATOR_MANAGED_DOCKER_HOST_IDENTITIES_BOUND');
+          assert.equal(host.binding_state?.exact_two_runtime_service_identities_bound,true);
+          assert.equal(host.binding_state?.binding_authorized,true);
+          assert.equal(host.github_actions?.production_execution_host_allowed,false);
+          assert.equal(host.non_effects?.runtime_process_start,false);
+          assert.equal(host.non_effects?.production_owner_activation,false);
+          assert.equal(arm.armed,false);
+          for (const key of ['evidence_owner_activation_authorized','twin_owner_activation_authorized','production_login_provisioning_authorized','formal_v5_arm_authorized','a0_authorized','o00_authorized']) assert.equal(arm[key],false,`OWNER_LATER_AUTHORITY_MUST_REMAIN_FALSE:${key}`);
+          assert.equal(runtimeStartArm.armed,false);
+          assert.equal(runtimeStartArm.execution_requested,false);
+          for (const key of ['runtime_process_start_authorized','evidence_runtime_start_authorized','twin_runtime_start_authorized','production_owner_activation_authorized','formal_v5_arm_authorized','a0_authorized','o00_authorized']) assert.equal(runtimeStartArm[key],false,`RUNTIME_START_AUTHORITY_MUST_REMAIN_FALSE:${key}`);
+          for (const marker of ['name: geox-mcft-cap09-production-v1','restart: unless-stopped','mcft_cap09_evidence_runtime.js','mcft_cap09_twin_runtime_v2.js']) assert.ok(compose.includes(marker),`CURRENT_MAIN_PRODUCTION_LAUNCHER_MARKER_REQUIRED:${marker}`);
+          assert.ok(launcherAcceptance.includes('mcft_cap09_twin_runtime_v2\\.js'), 'CURRENT_MAIN_LAUNCHER_ACCEPTANCE_MUST_REQUIRE_TWIN_V2');
+          const proof = {
+            schema_version:'geox_mcft_cap09_production_owner_graduation_preflight_v1',
+            status:'PASS',
+            gate_status:'READ_ONLY_LIVE_OWNER_ADJUDICATION_READY',
+            exact_base_sha:process.env.BASE_SHA,
+            subject_sha:process.env.SUBJECT_SHA,
+            non_github_hosting_binding_established:true,
+            exact_two_runtime_service_identities_bound:true,
+            production_two_service_launcher_present:true,
+            production_twin_entrypoint:'mcft_cap09_twin_runtime_v2.js',
+            launcher_acceptance_requires_twin_v2:true,
+            runtime_start_arm_unarmed:true,
+            login_presence_is_not_effective_owner_proof:true,
+            exact_one_production_owner_proven:false,
+            production_runtime_mutation:false,
+            production_login_creation:false,
+            production_owner_activation:false,
+            provider_request_count:0,
+            rolling_authority_activation:false,
+            formal_v5_arm:false,
+            formal_v5_mutation:false,
+            a0_bootstrap:false,
+            o00_started:false,
+            mcft_cap09_completed:false
+          };
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_PREFLIGHT_V1_RESULT.json',JSON.stringify(proof,null,2)+'\n');
+          console.log(JSON.stringify(proof,null,2));
+
+      - name: Prove zero retired GitHub production owners and triggers
+        run: node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs enforce
+
+      - name: Read only current live fenced production owners
+        id: live-owner-readback
+        continue-on-error: true
+        run: node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs
+
+      - name: Emit current-main qualification envelope
+        if: always()
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+          const livePath = 'acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1_RESULT.json';
+          const preflightPath = 'acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_PREFLIGHT_V1_RESULT.json';
+          const phase6Path = 'acceptance-output/MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_AUDIT_V1.json';
+          const read = file => fs.existsSync(file) ? JSON.parse(fs.readFileSync(file,'utf8')) : null;
+          const live = read(livePath);
+          const preflight = read(preflightPath);
+          const phase6 = read(phase6Path);
+          const proof = {
+            schema_version:'geox_mcft_cap09_production_owner_current_main_requalification_v1',
+            status: live?.status === 'PASS' && preflight?.status === 'PASS' && phase6?.status === 'PASS' ? 'PASS' : 'FAIL',
+            exact_base_sha:process.env.BASE_SHA,
+            subject_sha:process.env.SUBJECT_SHA,
+            qualification_mode:'READ_ONLY_CURRENT_MAIN_LIVE_FENCED_OWNER_ADJUDICATION',
+            static_preflight_status:preflight?.status ?? 'MISSING',
+            phase6_owner_retirement_status:phase6?.status ?? 'MISSING',
+            live_owner_status:live?.status ?? 'MISSING',
+            live_owner_adjudication:live?.adjudication ?? null,
+            live_owner_blockers:Array.isArray(live?.blockers) ? live.blockers : [],
+            exact_one_production_owner_proven:live?.adjudication === 'EXACT_ONE_EFFECTIVE_OWNER_PER_RUNTIME_ROLE_PROVEN',
+            database_write_count:0,
+            production_runtime_start_count:0,
+            production_owner_activation_effect:false,
+            production_login_creation:false,
+            provider_request_count:0,
+            rolling_authority_activation:false,
+            formal_v5_arm:false,
+            a0_bootstrap:false,
+            o00_started:false,
+            mcft_cap09_completed:false
+          };
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_CURRENT_MAIN_REQUALIFICATION_V1_RESULT.json',JSON.stringify(proof,null,2)+'\n');
+          console.log(JSON.stringify(proof,null,2));
+
+      - name: Upload current-main owner requalification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-production-owner-current-main-requalification-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_GRADUATION_PREFLIGHT_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_AUDIT_V1.json
+            acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_CURRENT_MAIN_REQUALIFICATION_V1_RESULT.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Require exact one live fenced owner per runtime role
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+          const proof = JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_CURRENT_MAIN_REQUALIFICATION_V1_RESULT.json','utf8'));
+          if (proof.status !== 'PASS' || proof.exact_one_production_owner_proven !== true) {
+            throw new Error(`CURRENT_MAIN_EXACT_ONE_PRODUCTION_OWNER_NOT_PROVEN:${proof.live_owner_blockers.join(',') || proof.live_owner_status}`);
+          }
