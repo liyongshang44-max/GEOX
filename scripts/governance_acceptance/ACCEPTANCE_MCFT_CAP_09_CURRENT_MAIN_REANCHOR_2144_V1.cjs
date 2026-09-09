@@ -12,6 +12,8 @@ const OLD_BASE = "ca56d60e3d927ccda5d1f28255e195575bf7a487";
 const NEW_BASE = "2144d63477176f939a0d40d39b96ca97522af8db";
 const NEW_TREE = "47ffe1a6ef479f101b548b6a0e3829f2ffa3a073";
 const ARTIFACT = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-2144-V1.json";
+const REANCHOR_ACCEPTANCE = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs";
+const REANCHOR_WORKFLOW = ".github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml";
 const QCP = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
 const PLANNER = "scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs";
 const DIST_WRITER = "apps/server/scripts/write_dist_entries.cjs";
@@ -207,6 +209,26 @@ assert(artifact.current_protected_main === NEW_BASE, "REANCHOR_ARTIFACT_NEW_BASE
 assert(artifact.current_protected_main_tree === NEW_TREE, "REANCHOR_ARTIFACT_NEW_TREE");
 assert(artifact.qcp_admission?.mode === "PROOF_BOUND_EXACT_BASE", "REANCHOR_ADMISSION_MODE");
 assert(artifact.qcp_admission?.bare_sha_allowlist_admission_authorized === false, "REANCHOR_BARE_ALLOWLIST_FORBIDDEN");
+
+const candidateQcp = JSON.parse(fs.readFileSync(path.join(ROOT, QCP), "utf8"));
+const legacyQcpPredecessors = candidateQcp.governed_successor_predecessor_shas || [];
+assert(!legacyQcpPredecessors.includes(NEW_BASE), "REANCHOR_QCP_BARE_SHA_PREDECESSOR_ADMISSION_FORBIDDEN");
+const proofBoundAdmissions = candidateQcp.proof_bound_exact_base_admissions || [];
+assert(proofBoundAdmissions.length === 1, "REANCHOR_QCP_PROOF_BOUND_ADMISSION_CARDINALITY", proofBoundAdmissions);
+const proofBoundAdmission = proofBoundAdmissions[0] || {};
+assert(proofBoundAdmission.base_sha === NEW_BASE, "REANCHOR_QCP_PROOF_BOUND_BASE_DRIFT", proofBoundAdmission);
+assert(proofBoundAdmission.mode === "PROOF_BOUND_EXACT_BASE", "REANCHOR_QCP_PROOF_BOUND_MODE_DRIFT", proofBoundAdmission);
+assert(proofBoundAdmission.proof_artifact === ARTIFACT, "REANCHOR_QCP_PROOF_ARTIFACT_BINDING_DRIFT", proofBoundAdmission);
+assert(proofBoundAdmission.proof_acceptance === REANCHOR_ACCEPTANCE, "REANCHOR_QCP_PROOF_ACCEPTANCE_BINDING_DRIFT", proofBoundAdmission);
+assert(proofBoundAdmission.proof_workflow === REANCHOR_WORKFLOW, "REANCHOR_QCP_PROOF_WORKFLOW_BINDING_DRIFT", proofBoundAdmission);
+assert(proofBoundAdmission.current_protected_main_tree === NEW_TREE, "REANCHOR_QCP_PROOF_TREE_BINDING_DRIFT", proofBoundAdmission);
+assert(proofBoundAdmission.bare_sha_allowlist_admission_authorized === false, "REANCHOR_QCP_PROOF_BOUND_BARE_ALLOWLIST_FORBIDDEN");
+assert(proofBoundAdmission.admission_requires_exact_lineage_and_overlap_proof === true, "REANCHOR_QCP_PROOF_EXECUTION_REQUIRED");
+const candidateControlPaths = new Set(candidateQcp.dependency_resolvers?.CONTROL_PLANE_FILES?.paths || []);
+for (const rel of [ARTIFACT, REANCHOR_ACCEPTANCE, REANCHOR_WORKFLOW]) {
+  assert(candidateControlPaths.has(rel), "REANCHOR_QCP_PROOF_PATH_NOT_CONTROLLED", rel);
+}
+
 assert(
   same(
     [...(artifact.known_mcft_dependency_overlap || [])].sort(),
