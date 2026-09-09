@@ -331,7 +331,7 @@ jobs:
           assert(phase3?.execution_workflow === '.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml', 'PHASE3_EVIDENCE_RUNTIME_FOUNDATION_WORKFLOW_MISMATCH', phase3);
           const phase4 = current.decisions.find(x => x.check_id === 'PHASE4_TWIN_RUNTIME_FOUNDATION');
           assert(Boolean(phase4), 'PHASE4_TWIN_RUNTIME_FOUNDATION_DECISION_REQUIRED', {check_id:'PHASE4_TWIN_RUNTIME_FOUNDATION', missing:true});
-          assert(phase4?.status === 'REQUALIFY' && phase4?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED', 'PHASE4_TWIN_RUNTIME_COMPOSITION_MUST_REQUALIFY', phase4);
+          assert(phase4?.status === 'REQUALIFY' && phase4?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED', 'PHASE4_TWIN_RUNTIME_FOUNDATION_MUST_REQUALIFY', phase4);
           assert(phase4?.execution_workflow === '.github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml', 'PHASE4_TWIN_RUNTIME_FOUNDATION_WORKFLOW_MISMATCH', phase4);
           const phase5 = current.decisions.find(x => x.check_id === 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS');
           assert(Boolean(phase5), 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_DECISION_REQUIRED', {check_id:'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS', missing:true});
