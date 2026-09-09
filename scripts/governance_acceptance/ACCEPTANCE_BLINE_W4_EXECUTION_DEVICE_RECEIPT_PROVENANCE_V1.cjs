@@ -6,6 +6,11 @@ const cp = require("node:child_process");
 const W4_ACCEPTED = "f23cc22eb8158a1d9840f042f13ad3fd27b5fe8a";
 const BLINE_ACCEPTED = "413386acc04fa2d3404f09d2d1fa8702472e83f1";
 const PROTECTED_MAIN = "ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd";
+const CLEAN_SETTLEMENT_BASE = "41c64e6b56bf78fac192d2aaf4333986c41b55f1";
+const CLEAN_SETTLEMENT_PARENT = "d19913c88b81b618507ff6da6fc4f3699123cdd6";
+const SEALED_EVIDENCE = "459933bc4be0d8b9a5fbe7d330e579d74357ad1a";
+const SEALED_TREE = "511a38a6eec77a8484a0e1d17f4f66afc40af4e3";
+const TASK_SERVICE = "apps/server/src/domain/controlplane/task_service.ts";
 const W4_GATE = "scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs";
 const W6B2_GATE = "scripts/governance_acceptance/ACCEPTANCE_BLINE_W6B2_COMMERCIAL_PRINCIPAL_ISOLATION_V1.cjs";
 const W6B2_ARTIFACT = "docs/architecture/semantic_convergence/GEOX-BLINE-W6B2-COMMERCIAL-PRINCIPAL-ISOLATION-V1.json";
@@ -25,6 +30,21 @@ function lines(s) { return String(s || "").split(/\r?\n/).filter(Boolean).sort()
 function assertAncestor(ancestor, descendant, label) {
   try { cp.execFileSync("git", ["merge-base", "--is-ancestor", ancestor, descendant], { stdio: "ignore" }); }
   catch { throw new Error(`${label}: ${ancestor} is not an ancestor of ${descendant}`); }
+}
+function isAncestor(ancestor, descendant) {
+  try {
+    cp.execFileSync("git", ["merge-base", "--is-ancestor", ancestor, descendant], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+function commitParents(ref) {
+  const parts = sh(["rev-list", "--parents", "-n", "1", ref]).split(/\s+/);
+  return parts.slice(1);
+}
+function tree(ref) {
+  return sh(["rev-parse", `${ref}^{tree}`]);
 }
 function serviceBlock(compose, name) {
   const rows = compose.split(/\r?\n/);
@@ -46,11 +66,110 @@ function extractBlineDistEntry(text) {
   return text.slice(start, end + endMarker.length);
 }
 
-const head = sh(["rev-parse", "HEAD"]);
-assert(head !== W4_ACCEPTED, "W4 successor dispatcher must not replace the historical accepted-head gate");
-assertAncestor(W4_ACCEPTED, head, "W4 historical lineage");
-assertAncestor(BLINE_ACCEPTED, head, "accepted B-Line lineage");
-assertAncestor(PROTECTED_MAIN, head, "protected-main integration lineage");
+const checkoutHead = sh(["rev-parse", "HEAD"]);
+assert(checkoutHead !== W4_ACCEPTED, "W4 successor dispatcher must not replace the historical accepted-head gate");
+
+const historicalLineage =
+  isAncestor(W4_ACCEPTED, checkoutHead) &&
+  isAncestor(BLINE_ACCEPTED, checkoutHead) &&
+  isAncestor(PROTECTED_MAIN, checkoutHead);
+
+let qualificationMode = "HISTORICAL_SUCCESSOR";
+let head = checkoutHead;
+let cleanGovernanceDrift = [];
+let cleanPrMergeCarrier = false;
+
+if (historicalLineage) {
+  assertAncestor(W4_ACCEPTED, head, "W4 historical lineage");
+  assertAncestor(BLINE_ACCEPTED, head, "accepted B-Line lineage");
+  assertAncestor(PROTECTED_MAIN, head, "protected-main integration lineage");
+} else {
+  qualificationMode = "CLEAN_SETTLEMENT_SUCCESSOR";
+
+  assert(
+    sh(["rev-parse", `${CLEAN_SETTLEMENT_BASE}^`]) === CLEAN_SETTLEMENT_PARENT,
+    "clean settlement parent drift"
+  );
+
+  assert(
+    tree(CLEAN_SETTLEMENT_BASE) === SEALED_TREE,
+    "clean settlement base tree is not the sealed tree"
+  );
+
+  assert(
+    tree(SEALED_EVIDENCE) === SEALED_TREE,
+    "sealed evidence tree drift"
+  );
+
+  assert(
+    sh(["diff", "--name-only", CLEAN_SETTLEMENT_BASE, SEALED_EVIDENCE]) === "",
+    "clean settlement base differs from sealed evidence"
+  );
+
+  const checkoutParents = commitParents(checkoutHead);
+
+  if (
+    checkoutParents.length === 1 &&
+    checkoutParents[0] === CLEAN_SETTLEMENT_BASE
+  ) {
+    head = checkoutHead;
+  } else if (
+    checkoutParents.length === 2 &&
+    checkoutParents[0] === CLEAN_SETTLEMENT_PARENT
+  ) {
+    const prHead = checkoutParents[1];
+    const prHeadParents = commitParents(prHead);
+
+    assert(
+      prHeadParents.length === 1 &&
+      prHeadParents[0] === CLEAN_SETTLEMENT_BASE,
+      "clean PR merge carrier second parent is not the exact one-commit governance successor",
+      { checkoutHead, prHead, prHeadParents }
+    );
+
+    assert(
+      tree(checkoutHead) === tree(prHead),
+      "clean PR merge tree differs from PR-head tree"
+    );
+
+    head = prHead;
+    cleanPrMergeCarrier = true;
+  } else {
+    throw new Error(
+      "unrecognized W4 successor topology: " +
+      JSON.stringify({ checkoutHead, checkoutParents })
+    );
+  }
+
+  const subjectParents = commitParents(head);
+
+  assert(
+    subjectParents.length === 1 &&
+    subjectParents[0] === CLEAN_SETTLEMENT_BASE,
+    "clean W4 governance successor must have exactly the clean settlement as its single parent",
+    { head, subjectParents }
+  );
+
+  const cleanSuccessorCommitCount = Number(
+    sh(["rev-list", "--count", `${CLEAN_SETTLEMENT_BASE}..${head}`])
+  );
+
+  assert(
+    cleanSuccessorCommitCount === 1,
+    "clean W4 governance successor must be exactly one commit",
+    cleanSuccessorCommitCount
+  );
+
+  cleanGovernanceDrift = lines(
+    sh(["diff", "--name-only", CLEAN_SETTLEMENT_BASE, head])
+  );
+
+  assert(
+    JSON.stringify(cleanGovernanceDrift) === JSON.stringify([W4_GATE]),
+    "clean W4 successor contains non-governance drift",
+    cleanGovernanceDrift
+  );
+}
 
 const protectedFiles = [
   "docs/architecture/semantic_convergence/GEOX-BLINE-W4-EXECUTION-DEVICE-RECEIPT-PROVENANCE-V1.json",
@@ -76,7 +195,29 @@ const protectedFiles = [
   "scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_COMMERCIAL_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts"
 ];
 const w4Drift = lines(sh(["diff", "--name-only", W4_ACCEPTED, head, "--", ...protectedFiles]));
-assert(w4Drift.length === 0, "W4 historical protected source/artifact drift", w4Drift);
+
+if (qualificationMode === "HISTORICAL_SUCCESSOR") {
+  assert(w4Drift.length === 0, "W4 historical protected source/artifact drift", w4Drift);
+} else {
+  assert(
+    JSON.stringify(w4Drift) === JSON.stringify([TASK_SERVICE]),
+    "unexpected W4 protected successor drift",
+    w4Drift
+  );
+
+  const cleanSettlementTaskService = show(CLEAN_SETTLEMENT_BASE, TASK_SERVICE);
+  const sealedTaskService = show(SEALED_EVIDENCE, TASK_SERVICE);
+
+  assert(
+    read(TASK_SERVICE) === cleanSettlementTaskService,
+    "task_service is not exact clean-settlement successor state"
+  );
+
+  assert(
+    cleanSettlementTaskService === sealedTaskService,
+    "clean task_service differs from sealed evidence"
+  );
+}
 
 const acceptedTokens = JSON.parse(show(W4_ACCEPTED, TOKENS));
 const currentTokens = JSON.parse(read(TOKENS));
@@ -146,16 +287,62 @@ assert(!telemetry.includes("GEOX_AO_ACT_TOKEN:"), "telemetry-ingest received sha
 assert(!jobs.includes("GEOX_AO_ACT_TOKEN:"), "jobs received shared AO-ACT token");
 assert(executor.includes("GEOX_AO_ACT_TOKEN: ${GEOX_EXECUTOR_TOKEN:?GEOX_EXECUTOR_TOKEN is required}"), "executor dedicated AO-ACT principal drift");
 
-const acceptedDist = show(BLINE_ACCEPTED, DIST);
-const protectedMainDist = show(PROTECTED_MAIN, DIST);
 const currentDist = read(DIST);
-const blineDistEntry = extractBlineDistEntry(acceptedDist);
-const closeMarker = "\n];";
-assert(protectedMainDist.includes(closeMarker), "protected-main dist entries closing marker missing");
-const expectedDist = protectedMainDist.replace(closeMarker, `\n${blineDistEntry}${closeMarker}`);
-assert(currentDist === expectedDist, "shared dist packaging seam is not exact protected-main plus frozen B-Line bootstrap entry");
-assert(currentDist.includes("bline_commercial_principal_bootstrap.js"), "compiled B-Line principal bootstrap entry missing");
-assert(currentDist.includes("runBlineCommercialPrincipalBootstrapFromEnvironmentV1"), "compiled B-Line principal bootstrap runner missing");
+let sharedDistPackaging;
+
+if (qualificationMode === "HISTORICAL_SUCCESSOR") {
+  const acceptedDist = show(BLINE_ACCEPTED, DIST);
+  const protectedMainDist = show(PROTECTED_MAIN, DIST);
+  const blineDistEntry = extractBlineDistEntry(acceptedDist);
+  const closeMarker = "\n];";
+
+  assert(
+    protectedMainDist.includes(closeMarker),
+    "protected-main dist entries closing marker missing"
+  );
+
+  const expectedDist =
+    protectedMainDist.replace(closeMarker, `\n${blineDistEntry}${closeMarker}`);
+
+  assert(
+    currentDist === expectedDist,
+    "shared dist packaging seam is not exact protected-main plus frozen B-Line bootstrap entry"
+  );
+
+  sharedDistPackaging =
+    "EXACT_PROTECTED_MAIN_PLUS_FROZEN_BLINE_BOOTSTRAP_ENTRY";
+} else {
+  const cleanSettlementDist = show(CLEAN_SETTLEMENT_BASE, DIST);
+  const sealedDist = show(SEALED_EVIDENCE, DIST);
+
+  assert(
+    cleanSettlementDist === sealedDist,
+    "clean settlement dist differs from sealed evidence"
+  );
+
+  assert(
+    currentDist === cleanSettlementDist,
+    "shared dist packaging is not exact clean-settlement/sealed state"
+  );
+
+  assert(
+    currentDist.includes("runBlineStage1SchemaPreprovisionFromEnvironmentV1"),
+    "Stage1 schema preprovision packaging marker missing"
+  );
+
+  sharedDistPackaging =
+    "EXACT_CLEAN_SETTLEMENT_SEALED_STATE_WITH_FROZEN_BLINE_BOOTSTRAP_AND_STAGE1_PREPROVISION";
+}
+
+assert(
+  currentDist.includes("bline_commercial_principal_bootstrap.js"),
+  "compiled B-Line principal bootstrap entry missing"
+);
+
+assert(
+  currentDist.includes("runBlineCommercialPrincipalBootstrapFromEnvironmentV1"),
+  "compiled B-Line principal bootstrap runner missing"
+);
 
 const tmpW4 = fs.mkdtempSync(path.join(os.tmpdir(), "geox-w4-historical-"));
 try {
@@ -180,8 +367,29 @@ console.log(JSON.stringify({
   workstream: "BLINE_W4_GOV_RECON_03_SUCCESSOR_PRESERVATION",
   historical_w4_accepted_head: W4_ACCEPTED,
   accepted_bline_semantic_reference: BLINE_ACCEPTED,
+  qualification_mode: qualificationMode,
+  checkout_head: checkoutHead,
   protected_main_base: PROTECTED_MAIN,
+  clean_settlement_base:
+    qualificationMode === "CLEAN_SETTLEMENT_SUCCESSOR"
+      ? CLEAN_SETTLEMENT_BASE
+      : null,
+  clean_settlement_parent:
+    qualificationMode === "CLEAN_SETTLEMENT_SUCCESSOR"
+      ? CLEAN_SETTLEMENT_PARENT
+      : null,
+  sealed_evidence_subject:
+    qualificationMode === "CLEAN_SETTLEMENT_SUCCESSOR"
+      ? SEALED_EVIDENCE
+      : null,
+  sealed_tree:
+    qualificationMode === "CLEAN_SETTLEMENT_SUCCESSOR"
+      ? SEALED_TREE
+      : null,
   successor_head: head,
+  clean_pr_merge_carrier: cleanPrMergeCarrier,
+  clean_settlement_governance_drift: cleanGovernanceDrift,
+  product_semantic_delta: 0,
   W4_HISTORICAL_INVARIANTS_PRESERVED: true,
   W6B2_AUTHORIZED_SUCCESSOR_EVOLUTION_PRESERVED: true,
   UNADJUDICATED_W4_SUCCESSOR_DRIFT: [],
@@ -190,7 +398,7 @@ console.log(JSON.stringify({
   predecessor_principals_preserved: acceptedById.size,
   additive_non_w4_principals: additive.map((x) => String(x.token_id || "").trim()),
   w6b2_exact_file_drift: w6b2Drift,
-  shared_dist_packaging: "EXACT_PROTECTED_MAIN_PLUS_FROZEN_BLINE_BOOTSTRAP_ENTRY",
+  shared_dist_packaging: sharedDistPackaging,
   mqtt_service_health_startup_ordering: "NOT_A_FROZEN_W6B2_REQUIREMENT",
   historical_w4_exact_head_gate_replayed: true,
   frozen_w6b2_exact_head_gate_replayed: true
