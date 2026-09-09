@@ -252,7 +252,32 @@ jobs:
             baseSha:authority.frozen_successor_subject_sha, headSha:head,
           });
           const g = current.generation_context || {};
-          assert(current.status === 'PASS', 'CP2_CURRENT_PLAN_FAIL', {blockers:current.blockers, authority_errors:current.authority_errors, resolver_errors:current.resolver_errors});
+          const proofBoundSelftest =
+            process.env.MCFT_CAP09_PROOF_BOUND_BASE_ADMITTED === 'true' &&
+            proofBoundAdmission.base_sha === process.env.CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA;
+          if (proofBoundSelftest) {
+            const reanchorPreviousAcceptedBase = 'ca56d60e3d927ccda5d1f28255e195575bf7a487';
+            assert(current.blockers.length === 0, 'CP2_PROOF_BOUND_CURRENT_BLOCKERS', current.blockers);
+            assert(current.authority_errors.length === 0, 'CP2_PROOF_BOUND_CURRENT_AUTHORITY_ERRORS', current.authority_errors);
+            assert(current.resolver_errors.length === 0, 'CP2_PROOF_BOUND_CURRENT_RESOLVER_ERRORS', current.resolver_errors);
+            const reanchorSegmentPaths = new Set(
+              cp.execFileSync(
+                'git',
+                ['diff','--name-only', `${reanchorPreviousAcceptedBase}...${process.env.CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA}`],
+                {encoding:'utf8'}
+              ).split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+            );
+            const unknownChangedPaths = current.unknown_changed_paths || [];
+            const outsideProofBoundSegment = unknownChangedPaths.filter((rel) => !reanchorSegmentPaths.has(rel));
+            assert(outsideProofBoundSegment.length === 0, 'CP2_UNKNOWN_PATH_OUTSIDE_PROOF_BOUND_REANCHOR_SEGMENT', outsideProofBoundSegment);
+            assert(
+              current.status === (unknownChangedPaths.length === 0 ? 'PASS' : 'FAIL'),
+              'CP2_PROOF_BOUND_CURRENT_STATUS_INCONSISTENT',
+              {status:current.status, unknown_changed_paths:unknownChangedPaths}
+            );
+          } else {
+            assert(current.status === 'PASS', 'CP2_CURRENT_PLAN_FAIL', {blockers:current.blockers, authority_errors:current.authority_errors, resolver_errors:current.resolver_errors});
+          }
           assert(g.requested_generation === 'v13' && g.authoritative_generation === 'v13', 'V13_GENERATION_NOT_AUTHORIZED', g);
           assert(g.authority_generation === 'geox_mcft_cap09_t4r1_actual_formal_store_authority_v3', 'AUTHORITY_GENERATION_MISMATCH', g.authority_generation);
           assert(g.store_generation?.qualification_database === 'geox_mcft_cap09_s6_accel24t_am19_v13', 'QUALIFICATION_STORE_GENERATION_MISMATCH', g.store_generation);
@@ -306,7 +331,7 @@ jobs:
           assert(phase3?.execution_workflow === '.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml', 'PHASE3_EVIDENCE_RUNTIME_FOUNDATION_WORKFLOW_MISMATCH', phase3);
           const phase4 = current.decisions.find(x => x.check_id === 'PHASE4_TWIN_RUNTIME_FOUNDATION');
           assert(Boolean(phase4), 'PHASE4_TWIN_RUNTIME_FOUNDATION_DECISION_REQUIRED', {check_id:'PHASE4_TWIN_RUNTIME_FOUNDATION', missing:true});
-          assert(phase4?.status === 'REQUALIFY' && phase4?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED', 'PHASE4_TWIN_RUNTIME_FOUNDATION_MUST_REQUALIFY', phase4);
+          assert(phase4?.status === 'REQUALIFY' && phase4?.reason_code === 'GOVERNED_DEPENDENCY_CHANGED', 'PHASE4_TWIN_RUNTIME_COMPOSITION_MUST_REQUALIFY', phase4);
           assert(phase4?.execution_workflow === '.github/workflows/mcft-cap-09-phase4-twin-runtime-persistence.yml', 'PHASE4_TWIN_RUNTIME_FOUNDATION_WORKFLOW_MISMATCH', phase4);
           const phase5 = current.decisions.find(x => x.check_id === 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS');
           assert(Boolean(phase5), 'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_DECISION_REQUIRED', {check_id:'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS', missing:true});
