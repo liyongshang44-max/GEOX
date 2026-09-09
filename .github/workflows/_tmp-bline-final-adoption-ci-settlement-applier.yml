@@ -158,14 +158,18 @@ jobs:
       - name: Materialize only the bounded CI settlement
         run: |
           set -euo pipefail
-          rm .github/workflows/_tmp-bline-final-adoption-ci-settlement-applier.yml
+          TEMP=".github/workflows/_tmp-bline-final-adoption-ci-settlement-applier.yml"
+          rm "$TEMP"
           git config user.name "GEOX qualification settlement"
           git config user.email "actions@users.noreply.github.com"
-          git add .github/workflows/ci.yml .github/workflows/_tmp-bline-final-adoption-ci-settlement-applier.yml
+          git add -A -- .github/workflows/ci.yml "$TEMP"
+          echo "[staged-name-status]"
+          git diff --cached --name-status
           mapfile -t STAGED < <(git diff --cached --name-only)
-          test "${#STAGED[@]}" -eq 2
+          printf '[staged-count]=%s\n' "${#STAGED[@]}"
           printf '%s\n' "${STAGED[@]}"
+          test "${#STAGED[@]}" -eq 2
           printf '%s\n' "${STAGED[@]}" | grep -Fx '.github/workflows/ci.yml' >/dev/null
-          printf '%s\n' "${STAGED[@]}" | grep -Fx '.github/workflows/_tmp-bline-final-adoption-ci-settlement-applier.yml' >/dev/null
+          printf '%s\n' "${STAGED[@]}" | grep -Fx "$TEMP" >/dev/null
           git commit -m "fix(ci): preserve B-Line authority after final adoption"
           git push origin "HEAD:${GITHUB_REF_NAME}"
