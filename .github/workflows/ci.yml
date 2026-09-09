@@ -52,8 +52,46 @@ jobs:
       - name: B-Line W3 focused positive-negative runtime proof
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.ts
 
-      - name: B-Line W4 execution-device-receipt provenance gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs
+      - name: B-Line W4 execution-device-receipt provenance successor preservation
+        run: |
+          set -euo pipefail
+          W4_GOV="6b98279a4d4e50b5b4957594a0aaebbf74d23984"
+          CALLER_GATE="scripts/governance_acceptance/ACCEPTANCE_BLINE_PRODUCTION_CALLER_AUTHORITY_INVENTORY_V1.cjs"
+          CI_WORKFLOW=".github/workflows/ci.yml"
+
+          git merge-base --is-ancestor "$W4_GOV" HEAD
+
+          TMP="$(mktemp -d)"
+          cleanup() {
+            git worktree remove --force "$TMP" >/dev/null 2>&1 || true
+            rm -rf "$TMP"
+          }
+          trap cleanup EXIT
+
+          git worktree add --detach "$TMP" "$W4_GOV" >/dev/null
+
+          (
+            cd "$TMP"
+            node scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs
+          )
+
+          mapfile -t DELTA < <(git diff --name-only "$W4_GOV")
+
+          test "${#DELTA[@]}" -eq 2
+          printf '%s\n' "${DELTA[@]}"
+
+          for p in "${DELTA[@]}"; do
+            case "$p" in
+              "$CALLER_GATE"|"$CI_WORKFLOW")
+                ;;
+              *)
+                echo "::error::unadjudicated post-W4 delta: $p"
+                exit 1
+                ;;
+            esac
+          done
+
+          echo "W4_SUCCESSOR_PRESERVATION=PASS"
 
       - name: B-Line W4 focused positive-negative runtime proof
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts
