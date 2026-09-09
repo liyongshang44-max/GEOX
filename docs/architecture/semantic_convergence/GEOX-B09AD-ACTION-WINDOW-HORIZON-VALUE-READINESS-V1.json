@@ -1,0 +1,137 @@
+{
+  "schema_version": "b09ad_action_window_horizon_value_readiness_v1",
+  "phase": "B-09ad",
+  "status": "ANALYSIS_ONLY_NUMERIC_HORIZON_NOT_READY",
+  "stacked_base_product_head": "6787989f509d96ffb0500ad7999955189b5a76c2",
+  "purpose": "Determine whether the repository currently contains sufficient canonical product authority to choose concrete ActionWindow start_offset_seconds and duration_seconds for the bounded IRRIGATE policy.",
+  "bounded_action": "IRRIGATE",
+  "current_numeric_selection": {
+    "start_offset_seconds": null,
+    "duration_seconds": null,
+    "minimum_duration_seconds": null,
+    "maximum_duration_seconds": null,
+    "status": "NOT_SELECTED"
+  },
+  "readiness_dimensions": [
+    {
+      "dimension": "ACTION_WINDOW_SEMANTICS",
+      "state": "PROPOSAL_COMPLETE_NOT_AUTHORIZED",
+      "source": "B-09z",
+      "effect": "cannot instantiate numeric window until semantics are accepted"
+    },
+    {
+      "dimension": "HORIZON_AUTHORITY_TOPOLOGY",
+      "state": "PROPOSAL_COMPLETE_NOT_AUTHORIZED",
+      "source": "B-09ab",
+      "effect": "numeric content has no authorized owner until topology is accepted"
+    },
+    {
+      "dimension": "SUCCESSOR_POLICY_CONTRACT_SHAPE",
+      "state": "PROPOSAL_COMPLETE_NOT_AUTHORIZED",
+      "source": "B-09ac",
+      "effect": "no implemented/authorized field exists to carry numeric horizon content"
+    },
+    {
+      "dimension": "CANONICAL_DECISION_TIME",
+      "state": "PROPOSAL_COMPLETE_NOT_AUTHORIZED_AND_NOT_BOUND",
+      "source": "B-09y",
+      "effect": "relative window cannot be causally materialized"
+    },
+    {
+      "dimension": "ACTION_SPECIFIC_AGRONOMIC_HORIZON_SOURCE",
+      "state": "MISSING",
+      "source": "repository audit",
+      "effect": "no agronomist/product declaration states how long an IRRIGATE Candidate remains eligible to proceed toward Approval"
+    },
+    {
+      "dimension": "CANONICAL_INPUT_EXPIRY",
+      "state": "NOT_DEFINED",
+      "source": "canonical Evidence/Context/Calculation/Candidate contracts",
+      "effect": "no common valid_until/expires_at authority exists to justify dynamic numeric shortening"
+    },
+    {
+      "dimension": "CANONICAL_FORECAST_BINDING",
+      "state": "FROZEN_EXTERNAL_DEPENDENCY",
+      "source": "MCFT-9",
+      "effect": "forecast-dependent horizon cannot be justified or implemented before MCFT-9 completion plus separate integration authorization"
+    },
+    {
+      "dimension": "REEVALUATION_OR_REFRESH_POLICY",
+      "state": "NO_CANONICAL_BLINE_POLICY_BOUND",
+      "source": "repository audit",
+      "effect": "a numeric horizon cannot be justified merely by an assumed re-evaluation cadence"
+    },
+    {
+      "dimension": "DOWNSTREAM_EXECUTION_WINDOWS",
+      "state": "AVAILABLE_BUT_INELIGIBLE_AS_SOURCE",
+      "source": "AO-ACT/Twin/ProblemState inventories",
+      "effect": "Approval/Execution/review windows cannot determine upstream Eligibility duration"
+    }
+  ],
+  "explicit_non_evidence": [
+    {
+      "candidate": "72h weather forecast input horizon",
+      "why_not": "calculation coverage horizon, not product actionability policy"
+    },
+    {
+      "candidate": "FieldProgram max_irrigation_mm_per_day",
+      "why_not": "quantity constraint, not temporal eligibility duration"
+    },
+    {
+      "candidate": "FieldProgram allow_night_irrigation",
+      "why_not": "execution/operational permission-like constraint, not Candidate eligibility horizon"
+    },
+    {
+      "candidate": "policy effective_until",
+      "why_not": "policy lifecycle, not Candidate lifecycle"
+    },
+    {
+      "candidate": "EvidenceQualification STALE/ELIGIBLE state",
+      "why_not": "classification at a boundary with no canonical future expiry timestamp"
+    },
+    {
+      "candidate": "AO-ACT task time window",
+      "why_not": "downstream action envelope"
+    },
+    {
+      "candidate": "fixed engineering convenience such as 6h/12h/24h",
+      "why_not": "would create hidden product policy without authority"
+    }
+  ],
+  "adjudication": {
+    "numeric_horizon_ready": false,
+    "blocker_code": "NO_AUTHORIZED_ACTION_SPECIFIC_HORIZON_VALUE_BASIS",
+    "fail_closed_rule": "DO_NOT_SELECT_OR_BACKFILL_NUMERIC_HORIZON",
+    "current_safe_state": "ACTION_WINDOW_HORIZON_VALUE_UNDECIDED",
+    "b07e_implication": "ACTION_WINDOW cannot be canonically SATISFIED on the bounded IRRIGATE path"
+  },
+  "evidence_required_before_numeric_decision": [
+    "accepted ActionWindow semantics and horizon-authority topology",
+    "accepted successor Eligibility policy contract shape",
+    "canonical Candidate decision_time authority/binding",
+    "explicit product/agronomy authority for IRRIGATE actionability horizon or a separately authorized dynamic derivation model",
+    "if dynamic/forecast-sensitive: canonical input-validity semantics and MCFT Forecast completion/integration",
+    "exact provenance identity for the declaration that supplies the numeric value"
+  ],
+  "recommended_next_gate": {
+    "name": "IRRIGATE_ACTIONABILITY_HORIZON_PRODUCT_POLICY_SOURCE_DECISION",
+    "question": "Which explicit product/agronomy authority is allowed to declare the first IRRIGATE start_offset_seconds and duration_seconds values?",
+    "recommendation": "DO_NOT_CHOOSE_NUMERIC_VALUE_YET",
+    "reason": "repository lacks an authorized action-specific value source; choosing a number now would be arbitrary product policy",
+    "not_authorized_by_b09ad": true
+  },
+  "non_effects": {
+    "runtime_change": false,
+    "schema_change": false,
+    "db_change": false,
+    "route_change": false,
+    "graph_edge_change": false,
+    "policy_value_change": false,
+    "numeric_horizon_selected": false,
+    "policy_fact_written": false,
+    "action_window_producer": false,
+    "b07e_connection": false,
+    "mcft_change": false,
+    "authority_removal": false
+  }
+}

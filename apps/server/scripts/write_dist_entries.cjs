@@ -113,6 +113,7 @@ runMcftCap09Phase5TwinRuntimeQualificationV1().catch((error) => {
     name: path.join("database", "platform_bootstrap.js"),
     content: `import { runMcftCap07DatabasePlatformBootstrapFromEnvironmentV1 } from "../apps/server/src/infra/mcft_cap07_database_platform_bootstrap_v1.js";
 import { runRuntimeSchemaCompatibilityBootstrapFromEnvironmentV1 } from "../apps/server/src/infra/runtime_schema_compatibility_bootstrap_v1.js";
+import { runBlineStage1SchemaPreprovisionFromEnvironmentV1 } from "../apps/server/src/infra/bline_stage1_schema_preprovision_v1.js";
 import { runRuntimeDispatchQueueBootstrapFromEnvironmentV1 } from "../apps/server/src/infra/runtime_dispatch_queue_bootstrap_v1.js";
 import { runRuntimeDeviceStatusCompatibilityBootstrapFromEnvironmentV1 } from "../apps/server/src/infra/runtime_device_status_compatibility_bootstrap_v1.js";
 import { runRuntimeSkillRegistryCompatibilityBootstrapFromEnvironmentV1 } from "../apps/server/src/infra/runtime_skill_registry_compatibility_bootstrap_v1.js";
@@ -121,6 +122,7 @@ import { runRuntimeFieldFertilityCompatibilityBootstrapFromEnvironmentV1 } from 
 async function runDatabasePlatformBootstrapV1() {
   await runMcftCap07DatabasePlatformBootstrapFromEnvironmentV1();
   await runRuntimeSchemaCompatibilityBootstrapFromEnvironmentV1();
+  await runBlineStage1SchemaPreprovisionFromEnvironmentV1();
   await runRuntimeDispatchQueueBootstrapFromEnvironmentV1();
   await runRuntimeDeviceStatusCompatibilityBootstrapFromEnvironmentV1();
   await runRuntimeSkillRegistryCompatibilityBootstrapFromEnvironmentV1();
@@ -149,6 +151,16 @@ runMcftCap09Phase5ServicePrincipalBootstrapFromEnvironmentV1().catch((error) => 
 
 runMcftCap07StartupMigrationFromEnvironmentV1().catch((error) => {
   console.error(\`FATAL: MCFT-CAP-07 startup migration failed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+  process.exit(1);
+});
+`,
+  },
+  {
+    name: path.join("database", "bline_commercial_principal_bootstrap.js"),
+    content: `import { runBlineCommercialPrincipalBootstrapFromEnvironmentV1 } from "../apps/server/src/infra/bline_commercial_principal_bootstrap_v1.js";
+
+runBlineCommercialPrincipalBootstrapFromEnvironmentV1().catch((error) => {
+  console.error(\`FATAL: B-Line Commercial principal bootstrap failed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
   process.exit(1);
 });
 `,

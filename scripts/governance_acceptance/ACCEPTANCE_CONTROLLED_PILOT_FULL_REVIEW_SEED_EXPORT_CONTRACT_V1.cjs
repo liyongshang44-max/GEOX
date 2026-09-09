@@ -204,6 +204,12 @@ must(
   'field memory derived endpoint contract missing',
   dry.field_memory_contract
 );
+must(
+  dry.field_memory_contract?.authority_proof_type === 'field_memory_record_v1'
+    && dry.field_memory_contract?.authority_proof_id === 'fm_record_c8_irrigation_001',
+  'field memory reviewed promotion proof contract missing',
+  dry.field_memory_contract
+);
 const exported = run([SEED, '--export-json', '--tenant', 'tenantA', ...FIXED_NOW_MS_ARGS]);
 assertFormalChain(exported);
 assertIrrigationRequirementExport(exported);
@@ -239,6 +245,27 @@ must(
   exported.manifest?.governance_acceptance?.static_formal_memory_is_only_pass_source === false,
   'manifest must state static formal memory is not the only pass source',
   exported.manifest?.governance_acceptance
+);
+must(
+  exported.manifest?.governance_acceptance?.controlled_p26_p30_proof_is_pre_authorized_fixture_only === true
+    && exported.manifest?.governance_acceptance?.field_memory_route_does_not_create_p26_p30_authority === true,
+  'manifest must preserve fixture-only P26-P30 authority boundary',
+  exported.manifest?.governance_acceptance
+);
+must(
+  payloads(exported, 'outcome_review_v1').some((x) => x.review_state === 'REVIEWED')
+    && payloads(exported, 'roi_boundary_v1').some((x) => x.roi_review_eligible === true)
+    && payloads(exported, 'roi_ledger_v1').some((x) => x.ledger_state === 'RECORDED')
+    && payloads(exported, 'field_memory_candidate_v1').some((x) => x.candidate_state === 'CANDIDATE_RECORDED')
+    && payloads(exported, 'field_memory_record_v1').some((x) => x.record_state === 'RECORD_COMMITTED' && x.record_scope === 'same_field_only'),
+  'P26-P30 formal-memory proof facts missing',
+  {
+    outcome: payloads(exported, 'outcome_review_v1'),
+    roi_boundary: payloads(exported, 'roi_boundary_v1'),
+    roi_ledger: payloads(exported, 'roi_ledger_v1'),
+    candidate: payloads(exported, 'field_memory_candidate_v1'),
+    record: payloads(exported, 'field_memory_record_v1')
+  }
 );
 const c8Dry = run([SEED, '--dry-run', '--tenant', 'tenantA', '--profile', 'c8-formal-chain', ...FIXED_NOW_MS_ARGS]);
 const c8Exported = run([SEED, '--export-json', '--tenant', 'tenantA', '--profile', 'c8-formal-chain', ...FIXED_NOW_MS_ARGS]);

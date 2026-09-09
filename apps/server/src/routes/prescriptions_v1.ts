@@ -180,8 +180,8 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
   });
 
   app.post("/api/v1/prescriptions/:prescription_id/submit-approval", async (req, reply) => {
-    const auth = requireAoActAnyScopeV0(req, reply, ["prescription.submit_approval", "approval.request", "ao_act.task.write"]);
-    if (!auth) return;
+    const auth = requireAoActAnyScopeV0(req, reply, ["prescription.submit_approval", "approval.request"]);
+    if (!auth) return reply;
     if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
 
     const params: any = (req as any).params ?? {};

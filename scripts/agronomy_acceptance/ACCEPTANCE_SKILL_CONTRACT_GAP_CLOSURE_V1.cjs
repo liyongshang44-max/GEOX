@@ -17,22 +17,22 @@ function pickIrrigationRecommendation(genJson) {
   return recommendations.find((x) =>
     String(x?.recommendation_type ?? '') === 'irrigation_recommendation_v1'
     || String(x?.action_type ?? '').toUpperCase() === 'IRRIGATE'
-    || String(x?.skill_trace?.skill_id ?? '') === 'irrigation_deficit_skill_v1'
+    || String(x?.skill_trace?.skill_id ?? '') === 'irrigation_requirement_skill_v1'
   ) ?? null;
 }
 
-function buildIrrigationReceiptBody({ tenant_id, project_id, group_id, operation_plan_id, act_task_id, field_id, suffix, recommendation_id, prescription_id, skill_trace_ref }) {
+function buildIrrigationReceiptBody({ tenant_id, project_id, group_id, operation_plan_id, act_task_id, field_id, suffix, recommendation_id, prescription_id, skill_trace_ref, observed_parameters }) {
   return {
     tenant_id,
     project_id,
     group_id,
     operation_plan_id,
     act_task_id,
-    executor_id: { kind: 'script', id: 'acceptance_executor', namespace: 'qa' },
+    executor_id: { kind: 'script', id: 'tok_executor_actor', namespace: 'executor_runtime_v1' },
     execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
     execution_coverage: { kind: 'field', ref: field_id },
     resource_usage: { fuel_l: 0, electric_kwh: 0, water_l: 20, chemical_ml: 0 },
-    observed_parameters: { amount: 20, coverage_percent: 90, duration_min: 20 },
+    observed_parameters,
     evidence_refs: [{ kind: 'sensor', ref: `sensor_${suffix}` }],
     logs_refs: [
       { kind: 'dispatch_ack', ref: `ack_${suffix}` },
@@ -79,6 +79,7 @@ async function queryFieldMemoryByOperationOrTask(pool, { tenant_id, project_id, 
 async function main() {
   const base = env('BASE_URL', 'http://127.0.0.1:3001');
   const token = env('AO_ACT_TOKEN', '');
+  const executorToken = env('GEOX_EXECUTOR_TOKEN', env('EXECUTOR_TOKEN', 'executor_token'));
   const tenant_id = env('TENANT_ID', 'tenantA');
   const project_id = env('PROJECT_ID', 'projectA');
   const group_id = env('GROUP_ID', 'groupA');
@@ -151,7 +152,7 @@ async function main() {
     if (!recommendation?.skill_trace) throw new Error(JSON.stringify({ reason: 'MISSING_SKILL_TRACE', recommendation_generate_response: genJson }));
     ids.recommendation_id = String(recommendation.recommendation_id ?? '');
     ids.skill_trace_id = String(recommendation.skill_trace.trace_id ?? '');
-    checks.recommendation_has_skill_trace = toPassFail(String(recommendation.skill_trace.skill_id ?? '') === 'irrigation_deficit_skill_v1' && ids.skill_trace_id.length > 0);
+    checks.recommendation_has_skill_trace = toPassFail(String(recommendation.skill_trace.skill_id ?? '') === 'irrigation_requirement_skill_v1' && ids.skill_trace_id.length > 0);
 
     const prescriptionResp = await fetchJson(`${base}/api/v1/prescriptions/from-recommendation`, {
       method: 'POST',
@@ -190,13 +191,11 @@ async function main() {
       token,
       body: { tenant_id, project_id, group_id, decision: 'APPROVE', reason: 'gap closure approval', device_id, adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.irrigation.valve.open'] },
     });
-    const operation_plan_id = String(requireOk(decide, 'decide approval').operation_plan_id ?? `op_gap_${suffix}`);
-
-    const taskResp = await fetchJson(`${base}/api/v1/actions/task`, {
-      method: 'POST', token,
-      body: { tenant_id, project_id, group_id, operation_plan_id, approval_request_id: ids.approval_id, field_id, season_id, device_id, issuer: { kind: 'human', id: 'qa', namespace: 'qa' }, action_type: 'IRRIGATE', target: { kind: 'field', ref: field_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 }, parameter_schema: { keys: [{ name: 'amount', type: 'number', min: 1, max: 1000 }, { name: 'coverage_percent', type: 'number', min: 0, max: 100 }, { name: 'duration_min', type: 'number', min: 1, max: 720 }] }, parameters: { amount: 20, coverage_percent: 90, duration_min: 20 }, constraints: {}, meta: { recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, skill_trace_ref: ids.skill_trace_id, device_id, adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.irrigation.valve.open'] } },
-    });
-    ids.task_id = String(requireOk(taskResp, 'create task').act_task_id ?? '');
+    const decideJson = requireOk(decide, 'decide approval');
+    const operation_plan_id = String(decideJson.operation_plan_id ?? '').trim();
+    if (!operation_plan_id) throw new Error(JSON.stringify({ reason: 'OPERATION_PLAN_ID_MISSING_AFTER_APPROVAL', response: decideJson }));
+    ids.task_id = String(decideJson.act_task_id ?? '').trim();
+    if (!ids.task_id) throw new Error(JSON.stringify({ reason: 'AUTO_TASK_ID_MISSING_AFTER_APPROVAL', response: decideJson }));
 
     const executeSkill = await executeMockValveSkill({ base, token, tenant_id, project_id, group_id, field_id, device_id, operation_plan_id, task_id: ids.task_id, approval_id: ids.approval_id });
     const executeSkillJson = requireOk(executeSkill, 'mock valve skill execute');
@@ -208,7 +207,22 @@ async function main() {
     ids.skill_binding_id = ids.skill_binding_id || String(ev.skill_binding_id ?? ev.skill_binding_fact_id ?? '');
     checks.task_binds_device_skill = toPassFail(ids.task_id.length > 0 && ids.skill_binding_id.length > 0 && ids.skill_run_id.length > 0);
 
-    const receipt = await fetchJson(`${base}/api/v1/actions/receipt`, { method: 'POST', token, body: buildIrrigationReceiptBody({ tenant_id, project_id, group_id, operation_plan_id, act_task_id: ids.task_id, field_id, suffix, recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, skill_trace_ref: ids.skill_trace_id }) });
+    const taskPayload = taskFactQ.rows?.[0]?.record_json?.payload ?? {};
+    const successorTaskSchemaKeys = Array.isArray(taskPayload?.parameter_schema?.keys)
+      ? taskPayload.parameter_schema.keys
+      : [];
+    const successorObservedParameters = Object.fromEntries(
+      successorTaskSchemaKeys
+        .map((entry) => String(entry?.name ?? '').trim())
+        .filter((name) =>
+          name
+          && Object.prototype.hasOwnProperty.call(taskPayload?.parameters ?? {}, name)
+        )
+        .map((name) => [name, taskPayload.parameters[name]])
+    );
+    if (Object.keys(successorObservedParameters).length === 0) throw new Error(JSON.stringify({ reason: 'SUCCESSOR_TASK_OBSERVED_PARAMETERS_EMPTY', task_id: ids.task_id, task_payload: taskPayload }));
+
+    const receipt = await fetchJson(`${base}/api/v1/actions/receipt`, { method: 'POST', token: executorToken, body: buildIrrigationReceiptBody({ tenant_id, project_id, group_id, operation_plan_id, act_task_id: ids.task_id, field_id, suffix, recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, skill_trace_ref: ids.skill_trace_id, observed_parameters: successorObservedParameters }) });
     const receipt_fact_id = String(requireOk(receipt, 'receipt').fact_id ?? '');
     if (receipt_fact_id) await fetchJson(`${base}/api/v1/acceptance/evaluate`, { method: 'POST', token, body: { tenant_id, project_id, group_id, act_task_id: ids.task_id } });
 
