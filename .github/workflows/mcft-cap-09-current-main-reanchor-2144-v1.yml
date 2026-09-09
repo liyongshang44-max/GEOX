@@ -1,0 +1,50 @@
+name: MCFT CAP-09 Current-Main Re-Anchor 2144
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-2144-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs'
+      - '.github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-current-main-reanchor-2144-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Fetch exact protected main
+        run: git fetch --no-tags origin main
+
+      - name: Verify proof-bound current-main re-anchor
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs
+
+      - name: Upload immutable re-anchor declaration
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-current-main-reanchor-2144-${{ github.event.pull_request.head.sha }}
+          path: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-2144-V1.json
+          if-no-files-found: error
+          retention-days: 90
