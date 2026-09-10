@@ -269,6 +269,7 @@ function main() {
     proofBoundAdmission?.base_sha === args.base &&
     proofBoundAdmission?.base_sha === String(process.env.CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA || "") &&
     proofBoundAdmission?.mode === "PROOF_BOUND_EXACT_BASE" &&
+    proofBoundAdmission?.baseline_qualification_carry_forward_authorized !== false &&
     proofBoundAdmission?.proof_acceptance === String(process.env.CURRENT_MAIN_REANCHOR_PROOF_ACCEPTANCE || "") &&
     proofBoundAdmission?.bare_sha_allowlist_admission_authorized === false &&
     proofBoundAdmission?.admission_requires_exact_lineage_and_overlap_proof === true &&
