@@ -1,0 +1,46 @@
+name: MCFT CAP-09 Current-Main Successor Re-Anchor 2077
+
+on:
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-SUCCESSOR-REANCHOR-2077-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_SUCCESSOR_REANCHOR_2077_V1.cjs'
+      - '.github/workflows/mcft-cap-09-current-main-successor-reanchor-2077-v1.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-current-main-successor-reanchor-2077-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  successor-reanchor:
+    name: successor-reanchor
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact successor subject
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require exact current protected main
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED_MAIN='2077b3b1cdb0945496d9974a581d2c4934e94561'
+          EXPECTED_HEAD='${{ github.event.pull_request.head.sha }}'
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN"
+
+      - name: Prove bounded zero-overlap successor re-anchor
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_SUCCESSOR_REANCHOR_2077_V1.cjs
+
+      - name: Upload immutable successor proof declaration
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-current-main-successor-reanchor-2077-v1
+          path: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-SUCCESSOR-REANCHOR-2077-V1.json
+          if-no-files-found: error
