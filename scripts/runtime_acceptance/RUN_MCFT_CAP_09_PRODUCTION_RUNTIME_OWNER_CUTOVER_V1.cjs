@@ -90,7 +90,7 @@ function selectCurrentCropForFormalA0(registry,policy,formalA0){
   if(graduation!==selected.graduation||!EFFECTIVE_GRADUATION_STATUSES.has(graduation)) fail("CUTOVER_SELECTED_CURRENT_CROP_GRADUATION_MISMATCH");
   if(Date.parse(formalA0)>Date.parse(artifactValidUntil)) fail("CUTOVER_NO_VIABLE_A0_WITHIN_STAGE_STABILITY",formalA0+">"+artifactValidUntil);
   if(Date.parse(formalA0)>Date.parse(life.horizon_end_utc)) fail("CUTOVER_A0_EXCEEDS_LIFECYCLE_HORIZON");
-  return {crop,ref:selected.ref,digest:observedDigest,authorityAsOf:artifactAsOf,validUntil:artifactValidUntil,graduationStatus:graduation};
+  return {crop,ref:selected.ref,resolved:selected.resolved,digest:observedDigest,authorityAsOf:artifactAsOf,validUntil:artifactValidUntil,graduationStatus:graduation};
 }
 
 function composeDown(env){
