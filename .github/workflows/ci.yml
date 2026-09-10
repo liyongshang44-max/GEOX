@@ -55,12 +55,17 @@ jobs:
       - name: B-Line W3 focused positive-negative runtime proof
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W3_DECISION_APPROVAL_AUTHORITY_V1.ts
 
-      - name: B-Line W4 execution-device-receipt provenance successor preservation
+      - name: B-Line W4 execution-device receipt provenance successor preservation
         run: |
           set -euo pipefail
           W4_GOV="6b98279a4d4e50b5b4957594a0aaebbf74d23984"
           CALLER_GATE="scripts/governance_acceptance/ACCEPTANCE_BLINE_PRODUCTION_CALLER_AUTHORITY_INVENTORY_V1.cjs"
+          W4_GATE="scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs"
           CI_WORKFLOW=".github/workflows/ci.yml"
+          FINAL_ADOPTION="2144d63477176f939a0d40d39b96ca97522af8db"
+          FINAL_ADOPTION_PARENT="d19913c88b81b618507ff6da6fc4f3699123cdd6"
+          FINAL_CANDIDATE="41ab76dadad864f294a5843db3e0f344d6cf6594"
+          FINAL_ADOPTION_TREE="47ffe1a6ef479f101b548b6a0e3829f2ffa3a073"
 
           git merge-base --is-ancestor "$W4_GOV" HEAD
 
@@ -78,23 +83,34 @@ jobs:
             node scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs
           )
 
-          mapfile -t DELTA < <(git diff --name-only "$W4_GOV")
+          if git cat-file -e "${FINAL_ADOPTION}^{commit}" 2>/dev/null \
+            && git merge-base --is-ancestor "$FINAL_ADOPTION" HEAD; then
+            test "$(git rev-parse "${FINAL_ADOPTION}^1")" = "$FINAL_ADOPTION_PARENT"
+            test "$(git rev-parse "${FINAL_ADOPTION}^2")" = "$FINAL_CANDIDATE"
+            test "$(git rev-parse "${FINAL_ADOPTION}^{tree}")" = "$FINAL_ADOPTION_TREE"
+            test "$(git rev-parse "${FINAL_CANDIDATE}^{tree}")" = "$FINAL_ADOPTION_TREE"
+            for p in "$W4_GATE" "$CALLER_GATE"; do
+              test "$(git rev-parse "HEAD:$p")" = "$(git rev-parse "$FINAL_ADOPTION:$p")"
+            done
+            echo "W4_SUCCESSOR_PRESERVATION=FINAL_ADOPTION_PATH_IDENTITY"
+          else
+            mapfile -t DELTA < <(git diff --name-only "$W4_GOV")
 
-          test "${#DELTA[@]}" -eq 2
-          printf '%s\n' "${DELTA[@]}"
+            test "${#DELTA[@]}" -eq 2
+            printf '%s\n' "${DELTA[@]}"
 
-          for p in "${DELTA[@]}"; do
-            case "$p" in
-              "$CALLER_GATE"|"$CI_WORKFLOW")
-                ;;
-              *)
-                echo "::error::unadjudicated post-W4 delta: $p"
-                exit 1
-                ;;
-            esac
-          done
-
-          echo "W4_SUCCESSOR_PRESERVATION=PASS"
+            for p in "${DELTA[@]}"; do
+              case "$p" in
+                "$CALLER_GATE"|"$CI_WORKFLOW")
+                  ;;
+                *)
+                  echo "::error::unadjudicated post-W4 delta: $p"
+                  exit 1
+                  ;;
+              esac
+            done
+            echo "W4_SUCCESSOR_PRESERVATION=HISTORICAL_EXACT_TOPOLOGY"
+          fi
 
       - name: B-Line W4 focused positive-negative runtime proof
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.ts
@@ -108,12 +124,29 @@ jobs:
           CALLER_WORKFLOW=".github/workflows/bline-w2-caller-read-write-boundary.yml"
           CALLER_SCRIPT="scripts/governance_acceptance/ACCEPTANCE_BLINE_PRODUCTION_CALLER_AUTHORITY_INVENTORY_V1.cjs"
           CI_WORKFLOW=".github/workflows/ci.yml"
+          FINAL_ADOPTION="2144d63477176f939a0d40d39b96ca97522af8db"
+          FINAL_ADOPTION_PARENT="d19913c88b81b618507ff6da6fc4f3699123cdd6"
+          FINAL_CANDIDATE="41ab76dadad864f294a5843db3e0f344d6cf6594"
+          FINAL_ADOPTION_TREE="47ffe1a6ef479f101b548b6a0e3829f2ffa3a073"
 
           git merge-base --is-ancestor "$CALLER_GOV" HEAD
 
-          mapfile -t DELTA < <(git diff --name-only "$CALLER_GOV" HEAD)
-          test "${#DELTA[@]}" -eq 1
-          test "${DELTA[0]}" = "$CI_WORKFLOW"
+          if git cat-file -e "${FINAL_ADOPTION}^{commit}" 2>/dev/null \
+            && git merge-base --is-ancestor "$FINAL_ADOPTION" HEAD; then
+            test "$(git rev-parse "${FINAL_ADOPTION}^1")" = "$FINAL_ADOPTION_PARENT"
+            test "$(git rev-parse "${FINAL_ADOPTION}^2")" = "$FINAL_CANDIDATE"
+            test "$(git rev-parse "${FINAL_ADOPTION}^{tree}")" = "$FINAL_ADOPTION_TREE"
+            test "$(git rev-parse "${FINAL_CANDIDATE}^{tree}")" = "$FINAL_ADOPTION_TREE"
+            for p in "$CALLER_WORKFLOW" "$CALLER_SCRIPT"; do
+              test "$(git rev-parse "HEAD:$p")" = "$(git rev-parse "$FINAL_ADOPTION:$p")"
+            done
+            echo "CALLER_SUCCESSOR_PRESERVATION_MODE=FINAL_ADOPTION_PATH_IDENTITY"
+          else
+            mapfile -t DELTA < <(git diff --name-only "$CALLER_GOV" HEAD)
+            test "${#DELTA[@]}" -eq 1
+            test "${DELTA[0]}" = "$CI_WORKFLOW"
+            echo "CALLER_SUCCESSOR_PRESERVATION_MODE=HISTORICAL_EXACT_TOPOLOGY"
+          fi
 
           git show "$CALLER_GOV:$CALLER_WORKFLOW" \
             | grep -F "run: pnpm run ci:governance:bline-production-caller-authority-inventory"
@@ -568,6 +601,10 @@ jobs:
           W4_GATE="scripts/governance_acceptance/ACCEPTANCE_BLINE_W4_EXECUTION_DEVICE_RECEIPT_PROVENANCE_V1.cjs"
           CI_WORKFLOW=".github/workflows/ci.yml"
           RELEASE_GATE="scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_RELEASE_GATE.cjs"
+          FINAL_ADOPTION="2144d63477176f939a0d40d39b96ca97522af8db"
+          FINAL_ADOPTION_PARENT="d19913c88b81b618507ff6da6fc4f3699123cdd6"
+          FINAL_CANDIDATE="41ab76dadad864f294a5843db3e0f344d6cf6594"
+          FINAL_ADOPTION_TREE="47ffe1a6ef479f101b548b6a0e3829f2ffa3a073"
 
           test "$(git rev-parse "$SEALED_SUBJECT^{tree}")" = "$SEALED_TREE"
           test "$(git rev-parse "$CLEAN_SETTLEMENT^{tree}")" = "$SEALED_TREE"
@@ -575,24 +612,37 @@ jobs:
           test "$(git rev-parse "$SEALED_SUBJECT:$RELEASE_GATE")" = "$(git rev-parse "$CLEAN_SETTLEMENT:$RELEASE_GATE")"
           git merge-base --is-ancestor "$CLEAN_SETTLEMENT" HEAD
 
-          mapfile -t DELTA < <(git diff --name-only "$CLEAN_SETTLEMENT" HEAD)
-          test "${#DELTA[@]}" -eq 3
-          printf '%s\n' "${DELTA[@]}"
+          if git cat-file -e "${FINAL_ADOPTION}^{commit}" 2>/dev/null \
+            && git merge-base --is-ancestor "$FINAL_ADOPTION" HEAD; then
+            test "$(git rev-parse "${FINAL_ADOPTION}^1")" = "$FINAL_ADOPTION_PARENT"
+            test "$(git rev-parse "${FINAL_ADOPTION}^2")" = "$FINAL_CANDIDATE"
+            test "$(git rev-parse "${FINAL_ADOPTION}^{tree}")" = "$FINAL_ADOPTION_TREE"
+            test "$(git rev-parse "${FINAL_CANDIDATE}^{tree}")" = "$FINAL_ADOPTION_TREE"
+            for p in "$CALLER_GATE" "$W4_GATE" "$RELEASE_GATE"; do
+              test "$(git rev-parse "HEAD:$p")" = "$(git rev-parse "$FINAL_ADOPTION:$p")"
+            done
+            echo "COMMERCIAL_MVP0_SUCCESSOR_PRESERVATION=FINAL_ADOPTION_PATH_IDENTITY"
+          else
+            mapfile -t DELTA < <(git diff --name-only "$CLEAN_SETTLEMENT" HEAD)
+            test "${#DELTA[@]}" -eq 3
+            printf '%s\n' "${DELTA[@]}"
 
-          for required in "$CALLER_GATE" "$W4_GATE" "$CI_WORKFLOW"; do
-            printf '%s\n' "${DELTA[@]}" | grep -Fx "$required" >/dev/null
-          done
+            for required in "$CALLER_GATE" "$W4_GATE" "$CI_WORKFLOW"; do
+              printf '%s\n' "${DELTA[@]}" | grep -Fx "$required" >/dev/null
+            done
 
-          for p in "${DELTA[@]}"; do
-            case "$p" in
-              "$CALLER_GATE"|"$W4_GATE"|"$CI_WORKFLOW")
-                ;;
-              *)
-                echo "::error::Commercial MVP0 historical qualification is not preservable across delta: $p"
-                exit 1
-                ;;
-            esac
-          done
+            for p in "${DELTA[@]}"; do
+              case "$p" in
+                "$CALLER_GATE"|"$W4_GATE"|"$CI_WORKFLOW")
+                  ;;
+                *)
+                  echo "::error::Commercial MVP0 historical qualification is not preservable across delta: $p"
+                  exit 1
+                  ;;
+              esac
+            done
+            echo "COMMERCIAL_MVP0_SUCCESSOR_PRESERVATION=HISTORICAL_EXACT_TOPOLOGY"
+          fi
 
           echo "COMMERCIAL_MVP0_MACHINE_SEALED_SUBJECT=$SEALED_SUBJECT"
           echo "COMMERCIAL_MVP0_MACHINE_SEALED_TREE=$SEALED_TREE"
