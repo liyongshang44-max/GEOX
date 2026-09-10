@@ -280,6 +280,46 @@ jobs:
           const proofBoundSelftest =
             process.env.MCFT_CAP09_PROOF_BOUND_BASE_ADMITTED === 'true' &&
             proofBoundAdmission.base_sha === process.env.CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA;
+          const currentProtectedMainSelftest =
+            process.env.MCFT_CAP09_CURRENT_PROTECTED_MAIN_BASE_ADMITTED === 'true';
+          let currentProtectedMainPlan = null;
+          if (currentProtectedMainSelftest) {
+            const currentProtectedMainBase = '${{ github.event.pull_request.base.sha }}';
+            if (/^[0-9a-f]{40}$/.test(currentProtectedMainBase)) {
+              const currentProtectedMainChangedPaths = cp.execFileSync(
+                'git',
+                ['diff','--name-only', currentProtectedMainBase + '...' + head],
+                {encoding:'utf8'}
+              ).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+              currentProtectedMainPlan = planApplicability({
+                authority,
+                registry,
+                changedPaths:currentProtectedMainChangedPaths,
+                stage:'SUCCESSOR_SUBJECT_PRE_MERGE',
+                generation:'v13',
+                baseSha:currentProtectedMainBase,
+                headSha:head,
+              });
+              assert(
+                currentProtectedMainPlan.status === 'PASS',
+                'CP2_CURRENT_PROTECTED_MAIN_PLAN_FAIL',
+                {
+                  base_sha:currentProtectedMainBase,
+                  changed_paths:currentProtectedMainChangedPaths,
+                  unknown_changed_paths:currentProtectedMainPlan.unknown_changed_paths,
+                  blockers:currentProtectedMainPlan.blockers,
+                  authority_errors:currentProtectedMainPlan.authority_errors,
+                  resolver_errors:currentProtectedMainPlan.resolver_errors,
+                }
+              );
+            } else {
+              assert(
+                false,
+                'CP2_CURRENT_PROTECTED_MAIN_BASE_SHA_INVALID',
+                currentProtectedMainBase
+              );
+            }
+          }
           if (proofBoundSelftest) {
             const reanchorPreviousAcceptedBase = 'ca56d60e3d927ccda5d1f28255e195575bf7a487';
             assert(current.blockers.length === 0, 'CP2_PROOF_BOUND_CURRENT_BLOCKERS', current.blockers);
@@ -299,6 +339,11 @@ jobs:
               current.status === (unknownChangedPaths.length === 0 ? 'PASS' : 'FAIL'),
               'CP2_PROOF_BOUND_CURRENT_STATUS_INCONSISTENT',
               {status:current.status, unknown_changed_paths:unknownChangedPaths}
+            );
+          } else if (currentProtectedMainSelftest) {
+            assert(
+              Boolean(currentProtectedMainPlan),
+              'CP2_CURRENT_PROTECTED_MAIN_PLAN_REQUIRED'
             );
           } else {
             assert(current.status === 'PASS', 'CP2_CURRENT_PLAN_FAIL', {blockers:current.blockers, authority_errors:current.authority_errors, resolver_errors:current.resolver_errors});
