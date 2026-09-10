@@ -26,6 +26,8 @@ const PAYLOAD = [
   "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"
 ];
 
+const PROOF_PATHS = [ARTIFACT, ACCEPTANCE, WORKFLOW];
+
 const BLINE_AUTHORITY = [
   "scripts/governance_acceptance/ACCEPTANCE_BLINE_W1_IDENTITY_FOUNDATION_V1.cjs",
   "scripts/governance_acceptance/ACCEPTANCE_BLINE_W2_CALLER_READ_WRITE_BOUNDARY_V1.cjs",
@@ -51,9 +53,17 @@ function blob(ref, rel) {
 }
 
 const head = git(["rev-parse", "HEAD"]);
-const headLine = git(["rev-list", "--parents", "-n", "1", head]).split(/\s+/);
-assert(headLine.length === 2, "SUCCESSOR_PROOF_HEAD_MUST_HAVE_EXACTLY_ONE_PARENT", headLine);
-assert(headLine[1] === CARRIER, "SUCCESSOR_PROOF_HEAD_PARENT_MUST_BE_CARRIER", headLine);
+assert(git(["merge-base", CARRIER, head]) === CARRIER, "SUCCESSOR_CARRIER_MUST_BE_ANCESTOR_OF_CURRENT_SUBJECT", head);
+const proofHistoryPaths = git(["log", "--format=", "--name-only", `${CARRIER}..${head}`])
+  .split(/\r?\n/)
+  .filter(Boolean);
+assert(proofHistoryPaths.length > 0, "SUCCESSOR_PROOF_HISTORY_EMPTY");
+const proofPathSet = new Set(PROOF_PATHS);
+assert(
+  proofHistoryPaths.every((rel) => proofPathSet.has(rel)),
+  "SUCCESSOR_PROOF_HISTORY_PATH_ESCAPE",
+  [...new Set(proofHistoryPaths.filter((rel) => !proofPathSet.has(rel)))].sort()
+);
 
 const carrierLine = git(["rev-list", "--parents", "-n", "1", CARRIER]).split(/\s+/);
 assert(
@@ -68,7 +78,7 @@ const mainDelta = git(["diff", "--name-only", OLD_MAIN, NEW_MAIN]).split(/\r?\n/
 assert(same(mainDelta, [CI]), "SUCCESSOR_PROTECTED_MAIN_DELTA_NOT_CI_ONLY", mainDelta);
 
 const proofDelta = git(["diff", "--name-only", CARRIER, head]).split(/\r?\n/).filter(Boolean).sort();
-const expectedProofDelta = [ARTIFACT, ACCEPTANCE, WORKFLOW].sort();
+const expectedProofDelta = [...PROOF_PATHS].sort();
 assert(same(proofDelta, expectedProofDelta), "SUCCESSOR_PROOF_COMMIT_SCOPE_DRIFT", proofDelta);
 
 for (const rel of PAYLOAD) {
