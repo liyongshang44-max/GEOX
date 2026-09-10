@@ -51,6 +51,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/mcft-cap09-rolling/docs/digital_twin/mcft/cap_09"
           mkdir -p "$RUNNER_TEMP/mcft-cap09-rolling/docs/digital_twin/mcft"
           mkdir -p "$RUNNER_TEMP/mcft-cap09-rolling/acceptance-output"
+          mkdir -p acceptance-output
           node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_T4R1_ROLLING_THERMAL_SNAPSHOT_V1.cjs \
             --out "$RUNNER_TEMP/mcft-cap09-rolling/docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json" \
             > acceptance-output/MCFT_CAP09_T4R1_ROLLING_THERMAL_SNAPSHOT_OVERLAY_PROOF.json
