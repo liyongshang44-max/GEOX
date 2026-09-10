@@ -11,6 +11,10 @@ const DEFAULT_ARM = path.join(
   ROOT,
   "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json",
 );
+const EFFECTIVE_CURRENT_CROP_GRADUATION_STATUSES = new Set([
+  "EFFECTIVE_FOR_RUNTIME_CONSUMPTION",
+  "EFFECTIVE_FOR_RUNTIME_CONSUMPTION_ROLLING_REFRESH",
+]);
 
 function req(ok, code) {
   if (!ok) throw new Error(code);
@@ -169,7 +173,7 @@ function validateEffectiveStageAuthorities(currentCropRef, stageArchitectureRef,
 
   const graduation = currentCrop.graduation ?? {};
   req(
-    graduation.status === "EFFECTIVE_FOR_RUNTIME_CONSUMPTION"
+    EFFECTIVE_CURRENT_CROP_GRADUATION_STATUSES.has(graduation.status)
       && graduation.amendment_id === "DT02-AMENDMENT-03",
     "RUNTIME_START_CURRENT_CROP_GRADUATION_REQUIRED",
   );
