@@ -5,11 +5,8 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/mcft-cap-09-t4r1-current-crop-refresh-v1.yml'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-06T04Z-V1.json'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-06T04Z-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY*.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_06T04Z_V1.cjs'
-      - 'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_V1.cjs'
 
 permissions:
   contents: read
@@ -23,12 +20,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      QUALIFIED_SUBJECT_SHA: 76c5b20173cfb130c6f91c4240b154514fd4ee58
-      REQUEST: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-06T04Z-V1.json
-      PREVIOUS: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-05T04Z-V1.json
-      CERT: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json
-      PERSISTED: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-06T04Z-V1.json
       REGISTRY: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json
+      CERT: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json
+      WORKFLOW: .github/workflows/mcft-cap-09-t4r1-current-crop-refresh-v1.yml
+      PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - name: Checkout exact successor subject
         uses: actions/checkout@v4
@@ -45,56 +41,125 @@ jobs:
       - name: Fetch current protected main
         run: git fetch --no-tags origin main
 
-      - name: Preserve exact protected-main qualification base
+      - name: Validate registry-driven current-crop preservation contract
         shell: node {0}
         run: |
-          const fs=require('fs');
-          const cp=require('child_process');
-          const req=JSON.parse(fs.readFileSync(process.env.REQUEST,'utf8'));
-          const main=cp.execFileSync('git',['rev-parse','origin/main'],{encoding:'utf8'}).trim();
-          if(req.protected_main_base_sha!==main) throw new Error(`REFRESH_BASE_DRIFT:${req.protected_main_base_sha}!=${main}`);
-          cp.execFileSync('git',['merge-base','--is-ancestor',process.env.QUALIFIED_SUBJECT_SHA,'HEAD']);
-          if(req.status!=='QUALIFICATION_ONLY_REQUESTED') throw new Error('REFRESH_REQUEST_STATUS_INVALID');
-          if(req.qualification_policy?.production_runtime_host_may_be_github_actions!==false) throw new Error('REFRESH_GITHUB_PRODUCTION_HOST_FORBIDDEN_REQUIRED');
-          for(const [key,value] of Object.entries(req.non_effects||{})) if(value!==false) throw new Error('REFRESH_NON_EFFECT_DRIFT:'+key);
-          console.log(JSON.stringify({status:'PASS',main,qualified_subject_sha:process.env.QUALIFIED_SUBJECT_SHA,successor_preservation:true}));
+          const fs = require('fs');
+          const cp = require('child_process');
+          const crypto = require('crypto');
 
-      - name: Prove previous effective authority and architecture certificate remain byte-identical to protected main
-        run: git diff --exit-code origin/main -- "$PREVIOUS" "$CERT"
+          const fail = (code, detail = '') => {
+            throw new Error(code + (detail ? ':' + detail : ''));
+          };
+          const json = (p) => JSON.parse(fs.readFileSync(p, 'utf8'));
+          const git = (args) => cp.execFileSync('git', args, { encoding: 'utf8' }).trim();
+          const baseJson = (p) => JSON.parse(git(['show', `origin/main:${p}`]));
+          const sha256Bytes = (b) => 'sha256:' + crypto.createHash('sha256').update(b).digest('hex');
+          const sha256File = (p) => sha256Bytes(fs.readFileSync(p));
+          const stable = (v) => JSON.stringify(v);
+          const isFalseMap = (obj, prefix) => {
+            for (const [key, value] of Object.entries(obj || {})) {
+              if (value !== false) fail(prefix + key);
+            }
+          };
 
-      - name: Syntax-check rolling refresh builder and final acceptance
-        run: |
-          node --check scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_V1.cjs
-          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_06T04Z_V1.cjs
+          const head = git(['rev-parse', 'HEAD']);
+          const main = git(['rev-parse', 'origin/main']);
+          if (head !== process.env.PR_HEAD_SHA) fail('REFRESH_HEAD_DRIFT', `${head}!=${process.env.PR_HEAD_SHA}`);
+          if (main !== process.env.PR_BASE_SHA) fail('REFRESH_BASE_DRIFT', `${main}!=${process.env.PR_BASE_SHA}`);
 
-      - name: Validate persisted rolling current-crop authority and registry extension
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_06T04Z_V1.cjs
+          const registry = json(process.env.REGISTRY);
+          const baseRegistry = baseJson(process.env.REGISTRY);
+          for (const [label, r] of [['HEAD', registry], ['BASE', baseRegistry]]) {
+            if (r.schema_version !== 'geox_mcft_cap09_effective_current_crop_authority_registry_v1') fail(`REFRESH_${label}_REGISTRY_SCHEMA`);
+            if (r.status !== 'ACTIVE') fail(`REFRESH_${label}_REGISTRY_NOT_ACTIVE`);
+            if (r.selection_policy !== 'LATEST_EFFECTIVE_AUTHORITY_AS_OF_NOT_AFTER_LOGICAL_TIME_WITHIN_VALIDITY_WINDOW') fail(`REFRESH_${label}_REGISTRY_SELECTION_POLICY_DRIFT`);
+            if (r.candidate_artifacts_admissible !== false) fail(`REFRESH_${label}_CANDIDATE_ADMISSIBILITY_DRIFT`);
+            isFalseMap(r.non_effects, `REFRESH_${label}_REGISTRY_NON_EFFECT_DRIFT:`);
+            if (!Array.isArray(r.entries) || r.entries.length < 2) fail(`REFRESH_${label}_REGISTRY_ENTRIES_INVALID`);
+          }
 
-      - name: Validate registry latest-effective selection contract
-        shell: node {0}
-        run: |
-          const fs=require('fs');
-          const crypto=require('crypto');
-          const registry=JSON.parse(fs.readFileSync(process.env.REGISTRY,'utf8'));
-          const current=JSON.parse(fs.readFileSync(process.env.PERSISTED,'utf8'));
-          if(registry.selection_policy!=='LATEST_EFFECTIVE_AUTHORITY_AS_OF_NOT_AFTER_LOGICAL_TIME_WITHIN_VALIDITY_WINDOW') throw new Error('REFRESH_REGISTRY_SELECTION_POLICY_DRIFT');
-          if(registry.candidate_artifacts_admissible!==false) throw new Error('REFRESH_CANDIDATE_ARTIFACT_ADMISSIBILITY_DRIFT');
-          if(registry.entries.length!==4) throw new Error('REFRESH_REGISTRY_CARDINALITY');
-          const latest=registry.entries[registry.entries.length-1];
-          const digest='sha256:'+crypto.createHash('sha256').update(fs.readFileSync(process.env.PERSISTED)).digest('hex');
-          if(latest.authority_ref!==process.env.PERSISTED) throw new Error('REFRESH_REGISTRY_LATEST_REF_MISMATCH');
-          if(latest.authority_sha256!==digest) throw new Error('REFRESH_REGISTRY_LATEST_DIGEST_MISMATCH');
-          if(latest.authority_as_of!==current.biological_stage.authority_as_of) throw new Error('REFRESH_REGISTRY_LATEST_AS_OF_MISMATCH');
-          if(latest.authority_valid_until!==current.biological_stage.authority_valid_until) throw new Error('REFRESH_REGISTRY_LATEST_VALID_UNTIL_MISMATCH');
-          if(latest.graduation_status!==current.graduation.status) throw new Error('REFRESH_REGISTRY_LATEST_GRADUATION_MISMATCH');
-          console.log(JSON.stringify({status:'PASS',entry_count:registry.entries.length,latest_authority_ref:latest.authority_ref,latest_authority_sha256:latest.authority_sha256,authority_as_of:latest.authority_as_of,authority_valid_until:latest.authority_valid_until,candidate_artifacts_admissible:false}));
+          const baseEntries = baseRegistry.entries;
+          const headEntries = registry.entries;
+          const changedFiles = git(['diff', '--name-only', 'origin/main...HEAD']).split('\n').filter(Boolean).sort();
+          let mode;
+          if (headEntries.length === baseEntries.length) {
+            mode = 'PRESERVATION_ONLY';
+            if (stable(headEntries) !== stable(baseEntries)) fail('REFRESH_REGISTRY_MUTATED_WITHOUT_APPEND');
+            if (changedFiles.length !== 1 || changedFiles[0] !== process.env.WORKFLOW) {
+              fail('REFRESH_PRESERVATION_ONLY_SCOPE_DRIFT', changedFiles.join(','));
+            }
+          } else if (headEntries.length === baseEntries.length + 1) {
+            mode = 'SINGLE_AUTHORITY_APPEND';
+            if (stable(headEntries.slice(0, -1)) !== stable(baseEntries)) fail('REFRESH_REGISTRY_HISTORY_REWRITE');
+          } else {
+            fail('REFRESH_REGISTRY_CARDINALITY_DELTA', `${baseEntries.length}->${headEntries.length}`);
+          }
 
-      - name: Validate qualification-only authority ceiling and zero production effects
-        shell: node {0}
-        run: |
-          const fs=require('fs');
-          const current=JSON.parse(fs.readFileSync(process.env.PERSISTED,'utf8'));
-          for(const key of [
+          const latest = headEntries[headEntries.length - 1];
+          const previous = headEntries[headEntries.length - 2];
+          if (!latest || !previous) fail('REFRESH_LATEST_PREVIOUS_REQUIRED');
+          if (typeof latest.authority_ref !== 'string' || !latest.authority_ref.startsWith('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY')) {
+            fail('REFRESH_LATEST_AUTHORITY_REF_INVALID', String(latest.authority_ref));
+          }
+          if (latest.authority_ref.includes('CANDIDATE')) fail('REFRESH_CANDIDATE_ARTIFACT_FORBIDDEN');
+          if (!fs.existsSync(latest.authority_ref)) fail('REFRESH_LATEST_AUTHORITY_MISSING', latest.authority_ref);
+
+          if (mode === 'SINGLE_AUTHORITY_APPEND') {
+            const expectedChanged = [process.env.REGISTRY, latest.authority_ref].sort();
+            if (stable(changedFiles) !== stable(expectedChanged)) {
+              fail('REFRESH_MATERIALIZATION_SCOPE_DRIFT', changedFiles.join(','));
+            }
+          }
+
+          const currentBytes = fs.readFileSync(latest.authority_ref);
+          const digest = sha256Bytes(currentBytes);
+          if (latest.authority_sha256 !== digest) fail('REFRESH_REGISTRY_LATEST_DIGEST_MISMATCH', `${latest.authority_sha256}!=${digest}`);
+          const current = JSON.parse(currentBytes.toString('utf8'));
+
+          if (current.schema_version !== 'geox_mcft_cap09_t4r1_current_crop_authority_composition_result_v1') fail('REFRESH_CURRENT_SCHEMA');
+          if (current.status !== 'PASS') fail('REFRESH_CURRENT_NOT_PASS');
+          if (current.qualification_outcome !== 'CURRENT_CROP_CONTEXT_AUTHORITY_CANDIDATE_RESOLVED') fail('REFRESH_CURRENT_QUALIFICATION_OUTCOME');
+          if (current.architecture_effective !== true || current.runtime_consumption_authorized !== true) fail('REFRESH_CURRENT_RUNTIME_CONSUMPTION_NOT_EFFECTIVE');
+          if (current.biological_stage?.observed_biological_stage_claimed !== false) fail('REFRESH_OBSERVED_STAGE_OVERCLAIM');
+          if (current.lifecycle?.domain_state !== 'ACTIVE' || current.lifecycle?.authority_status !== 'RESOLVED' || current.lifecycle?.authority_validity !== 'VALID' || current.lifecycle?.authority_mode !== 'GOVERNED_PERSISTENT_STATE' || current.lifecycle?.active_consumable_candidate !== true) {
+            fail('REFRESH_LIFECYCLE_NOT_CONSUMABLE');
+          }
+          if (current.graduation?.status !== 'EFFECTIVE_FOR_RUNTIME_CONSUMPTION_ROLLING_REFRESH') fail('REFRESH_GRADUATION_STATUS');
+          if (current.graduation?.amendment_id !== 'DT02-AMENDMENT-03') fail('REFRESH_DT02_AMENDMENT_REQUIRED');
+          if (current.refresh?.target_artifact_ref !== latest.authority_ref) fail('REFRESH_TARGET_ARTIFACT_REF_MISMATCH');
+          if (current.refresh?.qualification_time !== current.graduation?.graduated_at) fail('REFRESH_QUALIFICATION_GRADUATION_TIME_MISMATCH');
+          if (latest.authority_as_of !== current.biological_stage?.authority_as_of) fail('REFRESH_REGISTRY_LATEST_AS_OF_MISMATCH');
+          if (latest.authority_valid_until !== current.biological_stage?.authority_valid_until) fail('REFRESH_REGISTRY_LATEST_VALID_UNTIL_MISMATCH');
+          if (latest.graduation_status !== current.graduation?.status) fail('REFRESH_REGISTRY_LATEST_GRADUATION_MISMATCH');
+
+          const asOfMs = Date.parse(latest.authority_as_of);
+          const untilMs = Date.parse(latest.authority_valid_until);
+          const previousAsOfMs = Date.parse(previous.authority_as_of);
+          if (!Number.isFinite(asOfMs) || !Number.isFinite(untilMs) || asOfMs >= untilMs) fail('REFRESH_AUTHORITY_WINDOW_INVALID');
+          if (!Number.isFinite(previousAsOfMs) || asOfMs <= previousAsOfMs) fail('REFRESH_AUTHORITY_AS_OF_NOT_MONOTONIC');
+
+          if (!fs.existsSync(process.env.CERT)) fail('REFRESH_ARCHITECTURE_CERT_MISSING');
+          const certDigest = sha256File(process.env.CERT);
+          if (current.graduation?.architecture_effectiveness_sha256 !== certDigest) fail('REFRESH_ARCHITECTURE_CERT_DIGEST_MISMATCH');
+
+          if (current.graduation?.previous_effective_current_crop_authority_sha256 !== previous.authority_sha256) {
+            fail('REFRESH_PREVIOUS_AUTHORITY_LINK_MISMATCH');
+          }
+          if (!fs.existsSync(previous.authority_ref)) fail('REFRESH_PREVIOUS_AUTHORITY_MISSING');
+          if (sha256File(previous.authority_ref) !== previous.authority_sha256) fail('REFRESH_PREVIOUS_AUTHORITY_DIGEST_MISMATCH');
+
+          cp.execFileSync('git', ['diff', '--exit-code', 'origin/main', '--', previous.authority_ref, process.env.CERT], { stdio: 'inherit' });
+
+          if (mode === 'SINGLE_AUTHORITY_APPEND') {
+            if (current.graduation?.refresh_protected_main_base_sha !== main) {
+              fail('REFRESH_MATERIALIZED_BASE_LINK_MISMATCH', `${current.graduation?.refresh_protected_main_base_sha}!=${main}`);
+            }
+            if (typeof current.subject_head_sha !== 'string' || !/^[0-9a-f]{40}$/.test(current.subject_head_sha)) fail('REFRESH_QUALIFICATION_SUBJECT_SHA_INVALID');
+            if (typeof current.graduation?.refresh_request_sha256 !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(current.graduation.refresh_request_sha256)) fail('REFRESH_REQUEST_DIGEST_INVALID');
+          }
+
+          for (const key of [
             'runtime_config_write_authorized',
             'database_write_authorized',
             'scheduler_write_authorized',
@@ -105,10 +170,30 @@ jobs:
             'a0_authorized',
             'o00_o23_authorized',
             'mcft_cap09_completed'
-          ]) if(current[key]!==false) throw new Error('REFRESH_AUTHORITY_CEILING_DRIFT:'+key);
-          if(current.refresh?.running_preformal_mount_replaced!==false) throw new Error('REFRESH_RUNNING_MOUNT_REPLACEMENT_FORBIDDEN');
-          if(current.refresh?.production_runtime_restarted!==false) throw new Error('REFRESH_PRODUCTION_RESTART_FORBIDDEN');
-          console.log(JSON.stringify({status:'PASS',qualification_only:true,production_runtime_restarted:false,running_mount_replaced:false,production_runtime_start_authorized:false,production_owner_activation_authorized:false,formal_v5_authorized:false,a0_authorized:false,o00_o23_authorized:false}));
+          ]) if (current[key] !== false) fail('REFRESH_AUTHORITY_CEILING_DRIFT:' + key);
+          if (current.refresh?.running_preformal_mount_replaced !== false) fail('REFRESH_RUNNING_MOUNT_REPLACEMENT_FORBIDDEN');
+          if (current.refresh?.production_runtime_restarted !== false) fail('REFRESH_PRODUCTION_RESTART_FORBIDDEN');
+          if (current.refresh?.formal_v5_authorized !== false || current.refresh?.a0_authorized !== false || current.refresh?.o00_o23_authorized !== false) fail('REFRESH_NESTED_AUTHORITY_CEILING_DRIFT');
+
+          console.log(JSON.stringify({
+            status: 'PASS',
+            mode,
+            protected_main: main,
+            head,
+            base_entry_count: baseEntries.length,
+            head_entry_count: headEntries.length,
+            latest_authority_ref: latest.authority_ref,
+            latest_authority_sha256: latest.authority_sha256,
+            authority_as_of: latest.authority_as_of,
+            authority_valid_until: latest.authority_valid_until,
+            previous_authority_sha256: previous.authority_sha256,
+            production_effect: false
+          }));
+
+      - name: Syntax-check rolling refresh builder and retained historical acceptance
+        run: |
+          node --check scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_V1.cjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_06T04Z_V1.cjs
 
       - name: Upload immutable preservation evidence
         if: always()
@@ -116,8 +201,8 @@ jobs:
         with:
           name: mcft-cap09-t4r1-current-crop-refresh-preservation-${{ github.event.pull_request.head.sha }}
           path: |
-            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-06T04Z-V1.json
-            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-06T04Z-V1.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json
             docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY*.json
           if-no-files-found: error
           retention-days: 90
