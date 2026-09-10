@@ -12,6 +12,9 @@ on:
       - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_ARM_V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-2144-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs'
+      - '.github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PROTECTED-MAIN-LINEAGE-ADVANCEMENT-E1F8-TO-F41D-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROTECTED_MAIN_LINEAGE_ADVANCEMENT_E1F8_TO_F41D_V1.cjs'
       - '.github/workflows/mcft-cap-09-protected-main-lineage-advancement-e1f8-to-f41d-v1.yml'
@@ -155,6 +158,8 @@ env:
   OWNER_CUTOVER_REGISTRY_SELECTION_PROTECTED_MAIN_PREDECESSOR_SHA: 'd17f894e86b0fabab648530968c562e2fbe94c5d'
   CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA: 'f41dde8d44de95e71748e756e048e0166c1916b7'
   CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA: 'ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd'
+  CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA: '2144d63477176f939a0d40d39b96ca97522af8db'
+  CURRENT_MAIN_REANCHOR_PROOF_ACCEPTANCE: 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs'
 
 concurrency:
   group: mcft-cap09-qualification-control-plane-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
@@ -179,10 +184,18 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             base='${{ github.event.pull_request.base.sha }}'
+            proof_bound_admitted=false
             if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ] && [ "$base" != "$PHASE2_CLOSURE_SHA" ] && [ "$base" != "$PHASE3_CLOSURE_SHA" ] && [ "$base" != "$PHASE4_CLOSURE_SHA" ] && [ "$base" != "$PHASE5_CLOSURE_SHA" ] && [ "$base" != "$PHASE6_CLOSURE_SHA" ] && [ "$base" != "$PHASE7_PREPARATION_SHA" ] && [ "$base" != "$PHASE7_EVIDENCE_FORCING_SHA" ] && [ "$base" != "$PHASE7_PRIVATE_CANDIDATE_IO_SHA" ] && [ "$base" != "$PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA" ] && [ "$base" != "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ] && [ "$base" != "$POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA" ] && [ "$base" != "$POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA" ] && [ "$base" != "$POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA" ] && [ "$base" != "$POST_PRODUCTION_LIVE_ROLLING_REFRESH_PREDECESSOR_SHA" ] && [ "$base" != "$ROLLING_STAGE_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base" != "$EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base" != "$TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base" != "$TWIN_V2_RUNTIME_SELECTION_ADOPTION_MERGE_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base" != "$OWNER_CUTOVER_REGISTRY_SELECTION_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base" != "$CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA" ] && [ "$base" != "$CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA" ]; then
-              echo "MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:${base}" >&2
-              exit 1
+              if [ "$base" = "$CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA" ]; then
+                git fetch --no-tags origin main
+                node "$CURRENT_MAIN_REANCHOR_PROOF_ACCEPTANCE"
+                proof_bound_admitted=true
+              else
+                echo "MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:${base}" >&2
+                exit 1
+              fi
             fi
+            echo "MCFT_CAP09_PROOF_BOUND_BASE_ADMITTED=$proof_bound_admitted" >> "$GITHUB_ENV"
             stage="SUCCESSOR_SUBJECT_PRE_MERGE"
             if [ "$base" = "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ]; then
               stage="POST_MERGE_V13_QUALIFICATION"
@@ -219,6 +232,16 @@ jobs:
           };
           const expectedPredecessors = [process.env.FROZEN_SUCCESSOR_SHA, process.env.CP5_CLOSURE_SHA, process.env.PHASE1_CLOSURE_SHA, process.env.PHASE2_CLOSURE_SHA, process.env.PHASE3_CLOSURE_SHA, process.env.PHASE4_CLOSURE_SHA, process.env.PHASE5_CLOSURE_SHA, process.env.PHASE6_CLOSURE_SHA, process.env.PHASE7_PREPARATION_SHA, process.env.PHASE7_EVIDENCE_FORCING_SHA, process.env.PHASE7_PRIVATE_CANDIDATE_IO_SHA, process.env.PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA, process.env.POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA, process.env.POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA, process.env.POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA, process.env.POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA, process.env.POST_PRODUCTION_LIVE_ROLLING_REFRESH_PREDECESSOR_SHA, process.env.ROLLING_STAGE_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA, process.env.EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA, process.env.TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA, process.env.TWIN_V2_RUNTIME_SELECTION_ADOPTION_MERGE_PROTECTED_MAIN_PREDECESSOR_SHA, process.env.OWNER_CUTOVER_REGISTRY_SELECTION_PROTECTED_MAIN_PREDECESSOR_SHA, process.env.CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA, process.env.CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA];
           const governedPredecessors = authority.governed_successor_predecessor_shas || [];
+          const proofBoundAdmissions = authority.proof_bound_exact_base_admissions || [];
+          assert(proofBoundAdmissions.length === 1, 'PROOF_BOUND_EXACT_BASE_ADMISSION_CARDINALITY_MISMATCH', proofBoundAdmissions);
+          const proofBoundAdmission = proofBoundAdmissions[0] || {};
+          assert(proofBoundAdmission.base_sha === process.env.CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA, 'PROOF_BOUND_EXACT_BASE_SHA_MISMATCH', proofBoundAdmission);
+          assert(proofBoundAdmission.mode === 'PROOF_BOUND_EXACT_BASE', 'PROOF_BOUND_EXACT_BASE_MODE_MISMATCH', proofBoundAdmission);
+          assert(proofBoundAdmission.bare_sha_allowlist_admission_authorized === false, 'PROOF_BOUND_BARE_SHA_ALLOWLIST_FORBIDDEN', proofBoundAdmission);
+          assert(proofBoundAdmission.admission_requires_exact_lineage_and_overlap_proof === true, 'PROOF_BOUND_EXECUTION_REQUIREMENT_MISSING', proofBoundAdmission);
+          assert(!governedPredecessors.includes(proofBoundAdmission.base_sha), 'PROOF_BOUND_BASE_MUST_NOT_ENTER_LEGACY_PREDECESSOR_SET', proofBoundAdmission.base_sha);
+          const proofControlPaths = new Set(authority.dependency_resolvers?.CONTROL_PLANE_FILES?.paths || []);
+          assert(['docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-2144-V1.json','scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs','.github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml'].every((rel) => proofControlPaths.has(rel)), 'PROOF_BOUND_FILES_NOT_IN_CONTROL_PLANE_RESOLVER');
           assert(governedPredecessors.length === expectedPredecessors.length, 'GOVERNED_PREDECESSOR_CARDINALITY_MISMATCH', governedPredecessors);
           assert(new Set(governedPredecessors).size === governedPredecessors.length, 'GOVERNED_PREDECESSOR_DUPLICATE', governedPredecessors);
           assert(governedPredecessors.every(x => /^[0-9a-f]{40}$/.test(x)), 'GOVERNED_PREDECESSOR_SHA_INVALID', governedPredecessors);
@@ -229,7 +252,32 @@ jobs:
             baseSha:authority.frozen_successor_subject_sha, headSha:head,
           });
           const g = current.generation_context || {};
-          assert(current.status === 'PASS', 'CP2_CURRENT_PLAN_FAIL', {blockers:current.blockers, authority_errors:current.authority_errors, resolver_errors:current.resolver_errors});
+          const proofBoundSelftest =
+            process.env.MCFT_CAP09_PROOF_BOUND_BASE_ADMITTED === 'true' &&
+            proofBoundAdmission.base_sha === process.env.CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA;
+          if (proofBoundSelftest) {
+            const reanchorPreviousAcceptedBase = 'ca56d60e3d927ccda5d1f28255e195575bf7a487';
+            assert(current.blockers.length === 0, 'CP2_PROOF_BOUND_CURRENT_BLOCKERS', current.blockers);
+            assert(current.authority_errors.length === 0, 'CP2_PROOF_BOUND_CURRENT_AUTHORITY_ERRORS', current.authority_errors);
+            assert(current.resolver_errors.length === 0, 'CP2_PROOF_BOUND_CURRENT_RESOLVER_ERRORS', current.resolver_errors);
+            const reanchorSegmentPaths = new Set(
+              cp.execFileSync(
+                'git',
+                ['diff','--name-only', `${reanchorPreviousAcceptedBase}...${process.env.CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA}`],
+                {encoding:'utf8'}
+              ).split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+            );
+            const unknownChangedPaths = current.unknown_changed_paths || [];
+            const outsideProofBoundSegment = unknownChangedPaths.filter((rel) => !reanchorSegmentPaths.has(rel));
+            assert(outsideProofBoundSegment.length === 0, 'CP2_UNKNOWN_PATH_OUTSIDE_PROOF_BOUND_REANCHOR_SEGMENT', outsideProofBoundSegment);
+            assert(
+              current.status === (unknownChangedPaths.length === 0 ? 'PASS' : 'FAIL'),
+              'CP2_PROOF_BOUND_CURRENT_STATUS_INCONSISTENT',
+              {status:current.status, unknown_changed_paths:unknownChangedPaths}
+            );
+          } else {
+            assert(current.status === 'PASS', 'CP2_CURRENT_PLAN_FAIL', {blockers:current.blockers, authority_errors:current.authority_errors, resolver_errors:current.resolver_errors});
+          }
           assert(g.requested_generation === 'v13' && g.authoritative_generation === 'v13', 'V13_GENERATION_NOT_AUTHORIZED', g);
           assert(g.authority_generation === 'geox_mcft_cap09_t4r1_actual_formal_store_authority_v3', 'AUTHORITY_GENERATION_MISMATCH', g.authority_generation);
           assert(g.store_generation?.qualification_database === 'geox_mcft_cap09_s6_accel24t_am19_v13', 'QUALIFICATION_STORE_GENERATION_MISMATCH', g.store_generation);
@@ -506,7 +554,11 @@ jobs:
           const registry = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json','utf8'));
           const governedBases = new Set(registry.requalification_evidence?.durable_anchors?.rules?.governed_successor_predecessors || []);
           if (plan.base_sha !== process.env.PR_BASE_SHA) throw new Error(`CONTROL_PLANE_PLAN_BASE_MUST_EQUAL_PR_BASE:${plan.base_sha}:${process.env.PR_BASE_SHA}`);
-          if (!governedBases.has(plan.base_sha)) throw new Error(`CONTROL_PLANE_PLAN_BASE_NOT_GOVERNED:${plan.base_sha}`);
+          const proofBoundBaseAdmitted =
+            plan.base_sha === process.env.CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA &&
+            process.env.MCFT_CAP09_PROOF_BOUND_BASE_ADMITTED === 'true';
+          if (!governedBases.has(plan.base_sha) && !proofBoundBaseAdmitted) throw new Error(`CONTROL_PLANE_PLAN_BASE_NOT_GOVERNED_OR_PROOF_BOUND:${plan.base_sha}`);
+          if (proofBoundBaseAdmitted && governedBases.has(plan.base_sha)) throw new Error(`CONTROL_PLANE_PROOF_BOUND_BASE_MUST_NOT_BE_HISTORICALLY_ALLOWLISTED:${plan.base_sha}`);
           const expectedStage = process.env.PR_BASE_SHA === process.env.POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA
             ? 'POST_MERGE_V13_QUALIFICATION'
             : 'SUCCESSOR_SUBJECT_PRE_MERGE';

@@ -260,6 +260,20 @@ function main() {
   const results = [];
   const blockers = [];
   const phase6Active = phase6RetirementActive(args.head || "");
+  const proofBoundAdmissions = authority.proof_bound_exact_base_admissions || [];
+  const proofBoundAdmission = proofBoundAdmissions.length === 1 ? proofBoundAdmissions[0] : null;
+  const proofBoundBaselineActive =
+    stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+    process.env.MCFT_CAP09_PROOF_BOUND_BASE_ADMITTED === "true" &&
+    proofBoundAdmissions.length === 1 &&
+    proofBoundAdmission?.base_sha === args.base &&
+    proofBoundAdmission?.base_sha === String(process.env.CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA || "") &&
+    proofBoundAdmission?.mode === "PROOF_BOUND_EXACT_BASE" &&
+    proofBoundAdmission?.proof_acceptance === String(process.env.CURRENT_MAIN_REANCHOR_PROOF_ACCEPTANCE || "") &&
+    proofBoundAdmission?.bare_sha_allowlist_admission_authorized === false &&
+    proofBoundAdmission?.admission_requires_exact_lineage_and_overlap_proof === true &&
+    isAncestor(args.base || "", args.head || "");
+  const proofBoundPreservedRequiredCheckIds = [];
 
   for (const error of plan.authority_errors || []) blockers.push({ blocker_class: "AUTHORITY_DEFINITION_FAILURE", check_id: null, detail: error });
   for (const unknownPath of plan.unknown_changed_paths) blockers.push({ blocker_class: "UNKNOWN_CHANGED_PATH", check_id: null, detail: unknownPath });
@@ -305,6 +319,12 @@ function main() {
         (/^[0-9a-f]{40}$/.test(currentCropContinuityRefreshMergeBase) && args.base === currentCropContinuityRefreshMergeBase)
       ) &&
       PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS.has(decision.check_id);
+    const proofBoundBaselineRequirementPreserved =
+      proofBoundBaselineActive &&
+      decision.status === "REQUIRED" &&
+      decision.reason_code === "APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE" &&
+      Array.isArray(decision.changed_dependencies) &&
+      decision.changed_dependencies.length === 0;
     if (decision.status === "NOT_APPLICABLE") {
       result = { ...common, execution: "NOT_APPLICABLE", status: "NOT_APPLICABLE" };
     } else if (decision.status === "CARRY_FORWARD") {
@@ -318,6 +338,18 @@ function main() {
         evidence_id: decision.carry_forward_evidence_id,
       };
       if (!valid) blockers.push({ blocker_class: "INVALID_CARRY_FORWARD_EVIDENCE_OR_DIGEST", check_id: decision.check_id, detail: decision.carry_forward_evidence_id });
+    } else if (proofBoundBaselineRequirementPreserved) {
+      proofBoundPreservedRequiredCheckIds.push(decision.check_id);
+      result = {
+        ...common,
+        execution: "PROOF_BOUND_ACCEPTED_BASELINE_PRESERVATION",
+        status: "PASS",
+        reason_code: "PROOF_BOUND_ACCEPTED_BASELINE_UNCHANGED_IN_PR",
+        proof_bound_base_sha: args.base,
+        proof_bound_admission_mode: proofBoundAdmission.mode,
+        historical_requirement_preserved: true,
+        qualification_rerun: false,
+      };
     } else if (decision.status === "REQUALIFY" || decision.status === "REQUIRED") {
       if (phase6Active && decision.check_id === "EA5E2_RUNTIME_DEPENDENCY_GRAPH") {
         const diagnostic = runDiagnostic(`node ${PHASE6_OWNER_AUDITOR_PATH} enforce`);
@@ -395,6 +427,7 @@ function main() {
     carry_forward: plan.decisions.filter((d) => d.status === "CARRY_FORWARD").length,
     required: plan.decisions.filter((d) => d.status === "REQUIRED").length,
     requalify: plan.decisions.filter((d) => d.status === "REQUALIFY").length,
+    proof_bound_preserved_required: proofBoundPreservedRequiredCheckIds.length,
     unknown: plan.decisions.filter((d) => d.status === "UNKNOWN").length,
     forbidden: plan.decisions.filter((d) => d.status === "FORBIDDEN").length,
     authority_errors: (plan.authority_errors || []).length,
@@ -416,6 +449,14 @@ function main() {
     unknown_changed_paths: plan.unknown_changed_paths,
     results,
     blockers,
+    proof_bound_baseline_preservation: {
+      active: proofBoundBaselineActive,
+      base_sha: proofBoundBaselineActive ? args.base : null,
+      admission_mode: proofBoundBaselineActive ? proofBoundAdmission.mode : null,
+      preserved_required_check_ids: [...proofBoundPreservedRequiredCheckIds].sort(),
+      preserved_required_count: proofBoundPreservedRequiredCheckIds.length,
+      qualification_rerun: false,
+    },
     non_fail_fast: true,
     non_effects: { ...authority.non_effects },
   };
