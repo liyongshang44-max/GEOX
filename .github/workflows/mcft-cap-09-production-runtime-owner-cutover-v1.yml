@@ -16,6 +16,8 @@ on:
       - 'apps/server/scripts/write_dist_entries.cjs'
       - 'docker-compose.mcft-cap09-production-preformal.yml'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs'
+      - 'scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_RUNTIME_START_ROLLING_REFRESH_TIME_SEMANTICS_V1.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json'
@@ -57,6 +59,9 @@ jobs:
 
       - name: Preserve runtime-start authority builder contract
         run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_BUILDER_V1.cjs
+
+      - name: Qualify rolling-refresh runtime-start time semantics
+        run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_RUNTIME_START_ROLLING_REFRESH_TIME_SEMANTICS_V1.cjs
 
       - name: Typecheck
         run: pnpm -r typecheck
