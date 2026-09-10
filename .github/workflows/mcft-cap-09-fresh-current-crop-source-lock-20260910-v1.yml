@@ -44,6 +44,11 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -80,7 +85,7 @@ jobs:
       - name: Machine-lock KBS batch, revision/backfill and IEM complete local-day
         shell: python
         run: |
-          import csv, hashlib, io, json, math, re, urllib.request
+          import csv, hashlib, io, json, math, urllib.request
           from urllib.parse import urlparse
           from datetime import date, datetime, timedelta, timezone
           from pathlib import Path
@@ -288,7 +293,6 @@ jobs:
 
       - name: Install lifecycle qualification dependencies
         run: |
-          corepack enable
           pnpm install --frozen-lockfile
           pnpm exec playwright install --with-deps chromium
 
