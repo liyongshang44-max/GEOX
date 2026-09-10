@@ -730,7 +730,8 @@
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-06T04Z-V1.json",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-06T04Z-V1.json",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_06T04Z_V1.cjs"
-      ]
+      ],
+      "current_crop_registry_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json"
     },
     "PRODUCTION_RUNTIME_OWNER_CUTOVER_V1": {
       "kind": "EXACT_PATH_SET",
@@ -765,7 +766,8 @@
         "apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.ts",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs"
-      ]
+      ],
+      "current_crop_registry_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json"
     },
     "PROTECTED_MAIN_LINEAGE_ADVANCEMENT_ADJUDICATION_V1": {
       "kind": "EXACT_PATH_SET",

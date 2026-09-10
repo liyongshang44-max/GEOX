@@ -12,6 +12,12 @@ const REGISTRY_PATH = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICAT
 const ACTUAL_FORMAL_STORE_AUTHORITY_PATH =
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json";
 const DEPENDENCY_DIGEST_STRATEGY = "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1";
+const CURRENT_CROP_REGISTRY_PATH =
+  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json";
+const CURRENT_CROP_REGISTRY_RESOLVERS = new Set([
+  "T4R1_CURRENT_CROP_ROLLING_REFRESH",
+  "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1",
+]);
 const EXACT_EXTERNAL_SEGMENT_ARTIFACT_PATH =
   "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PROTECTED-MAIN-LINEAGE-ADVANCEMENT-E1F8-TO-F41D-V1.json";
 const EXACT_EXTERNAL_SEGMENT_OLD_BASE = "e1f8b078bb8459ecb9a77d1fad0d95f4bf143221";
@@ -133,13 +139,64 @@ function materializeGeneratedGraph(root, resolverId, spec) {
   };
 }
 
+// Dependency ownership only. No freshness selection, carry-forward evidence,
+// runtime consumption or production authority is created here. The existing
+// current-crop preservation/runtime gates still adjudicate those properties.
+function currentCropRegistryDependencyPaths(root, resolverId, registryRef) {
+  if (!CURRENT_CROP_REGISTRY_RESOLVERS.has(resolverId) || registryRef !== CURRENT_CROP_REGISTRY_PATH) {
+    throw new Error(`CURRENT_CROP_DEPENDENCY_REGISTRY_BINDING_INVALID:${resolverId}`);
+  }
+  const registry = readJson(root, registryRef);
+  if (registry.schema_version !== "geox_mcft_cap09_effective_current_crop_authority_registry_v1"
+      || registry.registry_id !== "MCFT_CAP09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REGISTRY_V1"
+      || registry.status !== "ACTIVE"
+      || registry.selection_policy !== "LATEST_EFFECTIVE_AUTHORITY_AS_OF_NOT_AFTER_LOGICAL_TIME_WITHIN_VALIDITY_WINDOW"
+      || registry.candidate_artifacts_admissible !== false
+      || !Array.isArray(registry.entries) || registry.entries.length === 0) {
+    throw new Error("CURRENT_CROP_DEPENDENCY_REGISTRY_CONTRACT_INVALID");
+  }
+  const refs = new Set();
+  const instants = new Set();
+  const rootReal = fs.realpathSync(root);
+  const iso = (value) => typeof value === "string" && Number.isFinite(Date.parse(value))
+    && new Date(value).toISOString() === value;
+  for (const entry of registry.entries) {
+    const ref = entry?.authority_ref;
+    if (typeof ref !== "string"
+        || !/^docs\/digital_twin\/mcft\/cap_09\/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY(?:-\d{4}-\d{2}-\d{2}T\d{2}Z)?-V1\.json$/.test(ref)) {
+      throw new Error("CURRENT_CROP_DEPENDENCY_REF_INVALID");
+    }
+    if (refs.has(ref) || instants.has(entry.authority_as_of)) throw new Error("CURRENT_CROP_DEPENDENCY_DUPLICATE_ENTRY");
+    if (!iso(entry.authority_as_of) || !iso(entry.authority_valid_until)
+        || Date.parse(entry.authority_valid_until) < Date.parse(entry.authority_as_of)
+        || !["EFFECTIVE_FOR_RUNTIME_CONSUMPTION", "EFFECTIVE_FOR_RUNTIME_CONSUMPTION_ROLLING_REFRESH"].includes(entry.graduation_status)) {
+      throw new Error(`CURRENT_CROP_DEPENDENCY_ENTRY_INVALID:${ref}`);
+    }
+    const source = path.join(root, ref);
+    if (!exists(root, ref)) throw new Error(`CURRENT_CROP_DEPENDENCY_SOURCE_MISSING:${ref}`);
+    const relativeReal = path.relative(rootReal, fs.realpathSync(source));
+    if (relativeReal === ".." || relativeReal.startsWith(`..${path.sep}`) || path.isAbsolute(relativeReal)) {
+      throw new Error(`CURRENT_CROP_DEPENDENCY_SOURCE_ESCAPE:${ref}`);
+    }
+    if (!/^sha256:[0-9a-f]{64}$/.test(entry.authority_sha256 || "")
+        || sha256(fs.readFileSync(source)) !== entry.authority_sha256) {
+      throw new Error(`CURRENT_CROP_DEPENDENCY_DIGEST_MISMATCH:${ref}`);
+    }
+    refs.add(ref);
+    instants.add(entry.authority_as_of);
+  }
+  return [registryRef, ...refs].sort();
+}
+
 function resolveDependencyResolvers(root, authority) {
   const resolved = {};
   const errors = [];
   for (const [resolverId, spec] of Object.entries(authority.dependency_resolvers || {})) {
     try {
       if (spec.kind === "EXACT_PATH_SET") {
-        const paths = [...new Set((spec.paths || []).map(norm))].sort();
+        const registryPaths = spec.current_crop_registry_ref === undefined ? []
+          : currentCropRegistryDependencyPaths(root, resolverId, spec.current_crop_registry_ref);
+        const paths = [...new Set([...(spec.paths || []).map(norm), ...registryPaths])].sort();
         const missing = paths.filter((p) => !exists(root, p));
         resolved[resolverId] = { resolver_id: resolverId, kind: spec.kind, paths, missing };
         if (missing.length) errors.push({ resolver_id: resolverId, code: "RESOLVER_PATH_MISSING", detail: missing });
@@ -743,6 +800,7 @@ module.exports = {
   EXACT_EXTERNAL_SEGMENT_ARTIFACT_BLOB,
   buildImportClosure,
   materializeGeneratedGraph,
+  currentCropRegistryDependencyPaths,
   resolveDependencyResolvers,
   immutableEvidenceBindingSha256,
   readDurableAnchorEntry,

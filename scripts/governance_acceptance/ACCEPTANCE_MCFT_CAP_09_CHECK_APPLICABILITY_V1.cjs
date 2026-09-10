@@ -11,7 +11,83 @@ const {
   REGISTRY_PATH,
   prepareApplicabilityContext,
   planApplicability,
+  resolveDependencyResolvers,
 } = require("./PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs");
+
+function acceptCurrentCropRegistryDependencies() {
+  const crypto = require("node:crypto");
+  const os = require("node:os");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "mcft-crop-dependency-"));
+  const prefix = "docs/digital_twin/mcft/cap_09/";
+  const registryRef = `${prefix}GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json`;
+  const resolverId = "T4R1_CURRENT_CROP_ROLLING_REFRESH";
+  const siblingId = "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1";
+  const ref = (day) => `${prefix}GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-${day}T04Z-V1.json`;
+  const write = (rel, value) => {
+    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
+    fs.writeFileSync(path.join(root, rel), value);
+  };
+  // These are dependency fixtures, deliberately not runtime-authority proofs.
+  const bytes = JSON.stringify({ dependency_fixture: true });
+  const digest = `sha256:${crypto.createHash("sha256").update(bytes).digest("hex")}`;
+  const row = (day) => ({ authority_ref: ref(day), authority_sha256: digest,
+    authority_as_of: `2026-09-${day}T04:00:00.000Z`, authority_valid_until: `2026-09-${day}T10:00:00.000Z`,
+    graduation_status: "EFFECTIVE_FOR_RUNTIME_CONSUMPTION_ROLLING_REFRESH" });
+  const registry = { schema_version: "geox_mcft_cap09_effective_current_crop_authority_registry_v1",
+    registry_id: "MCFT_CAP09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REGISTRY_V1", status: "ACTIVE",
+    selection_policy: "LATEST_EFFECTIVE_AUTHORITY_AS_OF_NOT_AFTER_LOGICAL_TIME_WITHIN_VALIDITY_WINDOW",
+    candidate_artifacts_admissible: false, entries: [row("09"), row("10")] };
+  const authority = { dependency_resolvers: Object.fromEntries([resolverId, siblingId].map((id) => [id,
+    { kind: "EXACT_PATH_SET", paths: ["retained-exact.txt"], current_crop_registry_ref: registryRef }])) };
+  const resolve = (r = registry, a = authority) => {
+    write(registryRef, JSON.stringify(r));
+    return resolveDependencyResolvers(root, a);
+  };
+  const negative = (mutate, expectedCode) => {
+    const candidate = structuredClone(registry);
+    mutate(candidate);
+    const result = resolve(candidate);
+    assert.equal(result.errors.length, 2, expectedCode);
+    assert(result.errors.every((error) => error.code === "RESOLVER_EXCEPTION" && error.detail.includes(expectedCode)), JSON.stringify(result.errors));
+    assert.deepEqual(Object.keys(result.resolved), [], "INVALID_REGISTRY_MUST_NOT_CONTRIBUTE_OWNED_PATHS");
+  };
+  try {
+    write("retained-exact.txt", "retained\n");
+    for (const day of ["09", "10", "11"]) write(ref(day), bytes);
+    const before = resolve({ ...registry, entries: registry.entries.slice(0, 1) });
+    assert.equal(before.errors.length, 0);
+    assert(!before.resolved[resolverId].paths.includes(ref("10")), "UNREGISTERED_EXISTING_FILE_MUST_REMAIN_UNOWNED");
+    const after = resolve();
+    assert.deepEqual(after.errors, []);
+    for (const id of [resolverId, siblingId]) {
+      assert.deepEqual(after.resolved[id].paths, ["retained-exact.txt", registryRef, ref("09"), ref("10")].sort());
+      assert(!after.resolved[id].paths.includes(ref("11")), "NO_FILENAME_GLOB_ADMISSION");
+    }
+    negative((r) => { r.entries[1].authority_sha256 = `sha256:${"0".repeat(64)}`; }, "CURRENT_CROP_DEPENDENCY_DIGEST_MISMATCH");
+    negative((r) => { r.entries[1].authority_ref = "../outside.json"; }, "CURRENT_CROP_DEPENDENCY_REF_INVALID");
+    negative((r) => { r.entries[1].authority_ref = ref("10").replace("-V1.json", "-CANDIDATE-V1.json"); }, "CURRENT_CROP_DEPENDENCY_REF_INVALID");
+    negative((r) => { r.entries.push({ ...r.entries[0] }); }, "CURRENT_CROP_DEPENDENCY_DUPLICATE_ENTRY");
+    negative((r) => { r.entries[1].authority_as_of = r.entries[0].authority_as_of; }, "CURRENT_CROP_DEPENDENCY_DUPLICATE_ENTRY");
+    negative((r) => { r.candidate_artifacts_admissible = true; }, "CURRENT_CROP_DEPENDENCY_REGISTRY_CONTRACT_INVALID");
+    negative((r) => { r.registry_id = "OTHER_REGISTRY"; }, "CURRENT_CROP_DEPENDENCY_REGISTRY_CONTRACT_INVALID");
+    negative((r) => { r.entries[1].authority_valid_until = "invalid"; }, "CURRENT_CROP_DEPENDENCY_ENTRY_INVALID");
+    negative((r) => { r.entries[1].graduation_status = "CANDIDATE"; }, "CURRENT_CROP_DEPENDENCY_ENTRY_INVALID");
+    const wrongBinding = structuredClone(authority);
+    wrongBinding.dependency_resolvers[resolverId].current_crop_registry_ref = "other-registry.json";
+    assert(resolve(registry, wrongBinding).errors[0].detail.includes("CURRENT_CROP_DEPENDENCY_REGISTRY_BINDING_INVALID"));
+    fs.rmSync(path.join(root, ref("10")));
+    negative(() => {}, "CURRENT_CROP_DEPENDENCY_SOURCE_MISSING");
+    return { status: "PASS", scope: "CURRENT_CROP_REGISTRY_DEPENDENCY_OWNERSHIP_ONLY", positive_cases: 2, negative_cases: 11, production_effect: false };
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+}
+
+const currentCropDependencyResult = acceptCurrentCropRegistryDependencies();
+if (process.argv.includes("--current-crop-registry-only")) {
+  process.stdout.write(`${JSON.stringify(currentCropDependencyResult)}\n`);
+  process.exit(0);
+}
 
 const ROOT = path.resolve(__dirname, "../..");
 const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_CHECK_APPLICABILITY_V1_RESULT.json");
