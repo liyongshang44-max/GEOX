@@ -139,7 +139,79 @@ function resolveDependencyResolvers(root, authority) {
   for (const [resolverId, spec] of Object.entries(authority.dependency_resolvers || {})) {
     try {
       if (spec.kind === "EXACT_PATH_SET") {
-        const paths = [...new Set((spec.paths || []).map(norm))].sort();
+        let paths = [...new Set((spec.paths || []).map(norm))].sort();
+
+        if (resolverId === "T4R1_CURRENT_CROP_ROLLING_REFRESH") {
+          const registryPath =
+            "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json";
+
+          if (!exists(root, registryPath)) {
+            throw new Error("CURRENT_CROP_AUTHORITY_REGISTRY_MISSING");
+          }
+
+          const registry = readJson(root, registryPath);
+
+          if (
+            registry?.schema_version !==
+              "geox_mcft_cap09_effective_current_crop_authority_registry_v1" ||
+            registry?.registry_id !==
+              "MCFT_CAP09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REGISTRY_V1" ||
+            registry?.status !== "ACTIVE" ||
+            registry?.candidate_artifacts_admissible !== false ||
+            !Array.isArray(registry?.entries) ||
+            registry.entries.length === 0
+          ) {
+            throw new Error("CURRENT_CROP_AUTHORITY_REGISTRY_INVALID");
+          }
+
+          const authorityRefPattern =
+            /^docs\/digital_twin\/mcft\/cap_09\/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY(?:-\d{4}-\d{2}-\d{2}T\d{2}Z)?-V1\.json$/;
+
+          const seen = new Set();
+          const registryAuthorityPaths = [];
+
+          for (const entry of registry.entries) {
+            const rel = norm(entry?.authority_ref || "");
+
+            if (!authorityRefPattern.test(rel)) {
+              throw new Error(
+                `CURRENT_CROP_AUTHORITY_REF_OUTSIDE_EXACT_NAMESPACE:${rel}`
+              );
+            }
+
+            if (seen.has(rel)) {
+              throw new Error(`CURRENT_CROP_AUTHORITY_REF_DUPLICATE:${rel}`);
+            }
+            seen.add(rel);
+
+            if (!exists(root, rel)) {
+              throw new Error(`CURRENT_CROP_AUTHORITY_REF_MISSING:${rel}`);
+            }
+
+            if (!/^sha256:[0-9a-f]{64}$/.test(entry?.authority_sha256 || "")) {
+              throw new Error(`CURRENT_CROP_AUTHORITY_DIGEST_INVALID:${rel}`);
+            }
+
+            const actualDigest = sha256(
+              fs.readFileSync(path.join(root, rel))
+            );
+
+            if (actualDigest !== entry.authority_sha256) {
+              throw new Error(
+                `CURRENT_CROP_AUTHORITY_DIGEST_MISMATCH:${rel}:${entry.authority_sha256}:${actualDigest}`
+              );
+            }
+
+            registryAuthorityPaths.push(rel);
+          }
+
+          paths = uniqueSortedPaths([
+            ...paths,
+            registryPath,
+            ...registryAuthorityPaths,
+          ]);
+        }
+
         const missing = paths.filter((p) => !exists(root, p));
         resolved[resolverId] = { resolver_id: resolverId, kind: spec.kind, paths, missing };
         if (missing.length) errors.push({ resolver_id: resolverId, code: "RESOLVER_PATH_MISSING", detail: missing });

@@ -179,23 +179,48 @@ jobs:
 
       - name: Require governed successor predecessor and zero production bindings
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             base='${{ github.event.pull_request.base.sha }}'
             proof_bound_admitted=false
+            current_protected_main_admitted=false
             if [ "$base" != "$FROZEN_SUCCESSOR_SHA" ] && [ "$base" != "$CP5_CLOSURE_SHA" ] && [ "$base" != "$PHASE1_CLOSURE_SHA" ] && [ "$base" != "$PHASE2_CLOSURE_SHA" ] && [ "$base" != "$PHASE3_CLOSURE_SHA" ] && [ "$base" != "$PHASE4_CLOSURE_SHA" ] && [ "$base" != "$PHASE5_CLOSURE_SHA" ] && [ "$base" != "$PHASE6_CLOSURE_SHA" ] && [ "$base" != "$PHASE7_PREPARATION_SHA" ] && [ "$base" != "$PHASE7_EVIDENCE_FORCING_SHA" ] && [ "$base" != "$PHASE7_PRIVATE_CANDIDATE_IO_SHA" ] && [ "$base" != "$PROTECTED_MAIN_ADOPTION_PREDECESSOR_SHA" ] && [ "$base" != "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ] && [ "$base" != "$POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA" ] && [ "$base" != "$POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA" ] && [ "$base" != "$POST_RUNTIME_CUTOVER_PRODUCTION_LIVE_PREDECESSOR_SHA" ] && [ "$base" != "$POST_PRODUCTION_LIVE_ROLLING_REFRESH_PREDECESSOR_SHA" ] && [ "$base" != "$ROLLING_STAGE_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base" != "$EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base" != "$TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base" != "$TWIN_V2_RUNTIME_SELECTION_ADOPTION_MERGE_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base" != "$OWNER_CUTOVER_REGISTRY_SELECTION_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base" != "$CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA" ] && [ "$base" != "$CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA" ]; then
               if [ "$base" = "$CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA" ]; then
                 git fetch --no-tags origin main
                 node "$CURRENT_MAIN_REANCHOR_PROOF_ACCEPTANCE"
                 proof_bound_admitted=true
               else
-                echo "MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:${base}" >&2
-                exit 1
+                default_branch='${{ github.event.repository.default_branch }}'
+                base_ref='${{ github.event.pull_request.base.ref }}'
+
+                if [ "$base_ref" != "$default_branch" ]; then
+                  echo "MCFT_CAP09_CONTROL_PLANE_NON_DEFAULT_BASE:${base_ref}" >&2
+                  exit 1
+                fi
+
+                current_main_sha="$(
+                  gh api                     "repos/${GITHUB_REPOSITORY}/git/ref/heads/${default_branch}"                     --jq '.object.sha'
+                )"
+
+                if [ "$base" != "$current_main_sha" ]; then
+                  echo "MCFT_CAP09_CONTROL_PLANE_STALE_OR_UNGOVERNED_BASE:${base}:current=${current_main_sha}" >&2
+                  exit 1
+                fi
+
+                if ! git merge-base --is-ancestor "$base" HEAD; then
+                  echo "MCFT_CAP09_CONTROL_PLANE_CURRENT_MAIN_NOT_ANCESTOR:${base}:head=$(git rev-parse HEAD)" >&2
+                  exit 1
+                fi
+
+                current_protected_main_admitted=true
               fi
             fi
             echo "MCFT_CAP09_PROOF_BOUND_BASE_ADMITTED=$proof_bound_admitted" >> "$GITHUB_ENV"
+            echo "MCFT_CAP09_CURRENT_PROTECTED_MAIN_BASE_ADMITTED=$current_protected_main_admitted" >> "$GITHUB_ENV"
             stage="SUCCESSOR_SUBJECT_PRE_MERGE"
             if [ "$base" = "$POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA" ]; then
               stage="POST_MERGE_V13_QUALIFICATION"
