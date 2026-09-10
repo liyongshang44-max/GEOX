@@ -1,3 +1,570 @@
+# AB 鈥?2026-09-10T04Z Current-Crop V3 Authority Materialization / Final Governance Adjudication
+
+```text
+CONVERSATION CONTINUATION ONLY
+
+NOT NEW ARCHITECTURE AUTHORITY
+
+NOT PRODUCTION AUTHORIZATION
+
+NOT #3545 MERGE AUTHORIZATION
+```
+
+This AB-section is the current MCFT-CAP-09 conversation-continuation entry point.
+
+AA and every historical section below it remain historical evidence and are byte-preserved. The active frontier described in AA around `2144d634... / #3531 / #3532` has been superseded by subsequent repository history.
+
+## AB0 鈥?Current protected-main frontier
+
+```text
+protected main =
+7cb7cdc8c00252d3c87a685fbab38d96316afa3e
+```
+
+Repository progression after the AA frontier includes:
+
+```text
+#3532
+shared B-Line W4 historical-successor CI coupling
+= CLOSED / MERGED
+
+#3533
+2144d634... current-main re-anchor /
+QCP proof materialization
+= CLOSED / MERGED
+
+#3535
+2026-09-09 fresh current-crop authority graduation
+= CLOSED / MERGED
+
+#3536
+runtime-start compatibility registry materialization
+= CLOSED / MERGED
+
+#3537-#3543
+rolling qualification / exact-head /
+main-mode / logical-time /
+query-frame freshness harness convergence
+= SUBSEQUENT REPOSITORY PROGRESSION
+```
+
+Therefore:
+
+```text
+#3531 current P0
+= FALSE
+
+#3531 active authority frontier
+= FALSE
+```
+
+#3531 is historical bounded-carrier evidence only.
+
+B-Line Commercial MVP0 remains closed/frozen. CAP-05 remains independent. ADR remains orthogonal.
+
+## AB1 鈥?Fresh 2026-09-10T04Z qualification-only source carrier
+
+```text
+PR =
+#3544
+
+title =
+qualify(mcft-cap09): fresh current-crop source lock 20260910 v3
+
+state =
+OPEN / DRAFT / UNMERGED
+
+base =
+7cb7cdc8c00252d3c87a685fbab38d96316afa3e
+
+head =
+8e470fedf232a548dfd1ef2683473b480c7f71f5
+
+run =
+34476779218
+
+result =
+SUCCESS
+```
+
+Machine-qualified candidate authority window:
+
+```text
+authority_as_of =
+2026-09-10T04:00:00Z
+
+authority_valid_until =
+2026-09-11T10:00:00Z
+```
+
+Current retained run artifact identity:
+
+```text
+artifact id =
+10151865526
+
+artifact name =
+mcft-cap09-fresh-current-crop-source-lock-20260910-v3
+
+artifact digest =
+sha256:bee373ef76ec1a067f83681348313418733769945221e804f4af9ac4f3c5ad98
+```
+
+Authority boundary:
+
+```text
+#3544
+= QUALIFICATION-ONLY CARRIER
+
+governed_effective
+= FALSE
+
+MERGE
+= FORBIDDEN
+```
+
+The qualification carrier itself is not repository authority.
+
+## AB2 鈥?V3 current-crop authority materialization candidate
+
+```text
+PR =
+#3545
+
+state =
+OPEN / READY / UNMERGED
+
+base =
+7cb7cdc8c00252d3c87a685fbab38d96316afa3e
+
+head =
+326904e2854c2bb58605ed1cccaaf724d64b7832
+
+commits =
+2
+
+changed_files =
+2
+
+additions =
+96
+
+deletions =
+0
+```
+
+Exact repository delta:
+
+```text
+1.
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-10T04Z-V1.json
+
+2.
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json
+```
+
+V3 candidate binds:
+
+```text
+authority_as_of =
+2026-09-10T04:00:00.000Z
+
+authority_valid_until =
+2026-09-11T10:00:00.000Z
+
+qualification PR =
+#3544
+
+qualification candidate =
+8e470fedf232a548dfd1ef2683473b480c7f71f5
+
+qualification run =
+34476779218
+
+materialized authority SHA256 =
+sha256:96891295dbb1c9bfe74c5405e3da876cb98e730ed03217dd4e96326a485beb19
+```
+
+Current biological-stage semantics remain:
+
+```text
+lifecycle =
+ACTIVE / RESOLVED / VALID
+
+biological stage =
+R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE
+
+epistemic class =
+THERMAL_MODEL_DERIVED
+
+observed biological stage claim =
+FALSE
+
+water-use stage =
+LATE
+
+Kc =
+0.6
+```
+
+`THERMAL_MODEL_DERIVED` MUST NOT be promoted to observed biological-stage truth.
+
+#3545 is not fully green and is not merge-authorized by this handoff.
+
+## AB3 鈥?#3545 machine qualification split
+
+Machine-green surfaces include:
+
+```text
+Current-Crop Refresh
+= SUCCESS / SINGLE_AUTHORITY_APPEND
+
+generic CI
+= SUCCESS
+
+MCFT release lane
+= SUCCESS
+
+main ruleset readiness
+= SUCCESS
+
+delivery policy
+= SUCCESS
+
+candidate integrity
+= SUCCESS
+
+CAP-05 S11C closure acceptance
+= SUCCESS
+
+Production Runtime Owner Cutover qualification
+= SUCCESS
+
+Twin V2 rolling-stage authority resolver
+= SUCCESS
+
+EA5E2 live-window preflight
+= SUCCESS
+```
+
+Two independent red boundaries remain:
+
+```text
+A.
+QCP
+
+B.
+EA5E2 applicability / dependency-graph workflow
+```
+
+These MUST NOT be collapsed into:
+
+```text
+V3 FAILED
+```
+
+## AB4 鈥?QCP exact classification
+
+QCP still carries the historical static current-main proof binding:
+
+```text
+CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA =
+2144d63477176f939a0d40d39b96ca97522af8db
+```
+
+#3545 actual base is:
+
+```text
+7cb7cdc8c00252d3c87a685fbab38d96316afa3e
+```
+
+Deterministic first-red classification:
+
+```text
+MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:
+7cb7cdc8c00252d3c87a685fbab38d96316afa3e
+```
+
+Current classification:
+
+```text
+QCP CURRENT-MAIN PROOF-BOUND LAG
+= PROVEN
+
+STALE STATIC BASE ADMISSION
+= PROVEN
+
+V3 CURRENT-CROP EVIDENCE DEFECT
+= NOT ESTABLISHED
+
+V3 AUTHORITY DOCUMENT DEFECT
+= NOT ESTABLISHED
+```
+
+This is a qualification/control-plane governance frontier.
+
+This handoff does not authorize a QCP repair or admission expansion.
+
+## AB5 鈥?EA5E2 exact evidence boundary
+
+The EA5E2 red MUST NOT be described as:
+
+```text
+FULL EA5E2 QUALIFICATION = FAIL
+```
+
+The first failing workflow boundary is:
+
+```text
+Generate central applicability plan
+```
+
+Machine boundary:
+
+```text
+EA5E2_BLOCKED:
+stage1 runtime preconditions
+are not fully satisfied
+```
+
+Evidence boundary:
+
+```text
+semantic-convergence dependency
+= SUCCESS
+
+prod-go-live-subtree dependency
+= SUCCESS
+
+current-crop dependency
+= SUCCESS
+
+twin-read-path dependency
+= SUCCESS
+
+central applicability plan generation
+= BLOCKED
+
+authoritative plan/fan-in parity
+= NOT REACHED
+
+central plan evaluation
+= NOT REACHED
+
+full EA5E2 qualification
+= NOT REACHED
+```
+
+Current classification:
+
+```text
+EA5E2 APPLICABILITY /
+RUNTIME-PRECONDITION FRONTIER
+= BLOCKED
+
+PRIMARY SEMANTIC REGRESSION
+= NOT ESTABLISHED
+```
+
+Do not infer authority to modify runtime, Production Owner, Twin, or current-crop semantics from this red.
+
+## AB6 鈥?Current CTO frontier
+
+```text
+2026-09-10T04Z
+CURRENT-CROP V3
+AUTHORITY MATERIALIZATION /
+FINAL GOVERNANCE ADJUDICATION
+```
+
+Open questions:
+
+```text
+Q1
+current-main proof-bound lag
+for current protected main
+7cb7cdc8c00252d3c87a685fbab38d96316afa3e
+
+Q2
+EA5E2 central applicability /
+runtime-precondition block
+
+Q3
+whether #3545 may become
+governed-effective / merge-authorized
+after Q1/Q2 adjudication
+```
+
+The following are no longer active frontiers:
+
+```text
+#3531 adoption
+KBS 2026-09-06 recovery
+B-Line W4 repair
+```
+
+## AB7 鈥?Production authority ceiling
+
+This handoff grants zero new production authority:
+
+```text
+Production Owner activation
+= NOT AUTHORIZED
+
+Production Runtime
+= NOT AUTHORIZED
+
+Production Rolling Default
+= OFF
+
+Formal-v5
+= NOT ARMED
+
+A0
+= NOT AUTHORIZED
+
+O00-O23
+= NOT STARTED
+```
+
+`EA5E2 runtime preconditions not satisfied` does not authorize filling those prerequisites or starting production.
+
+## AB8 鈥?Machine reconciliation of transcribed identifiers
+
+Current repository verification supersedes stale transcribed identifiers where necessary.
+
+Machine-reconciled values used by this section:
+
+```text
+#3544 actual head =
+8e470fedf232a548dfd1ef2683473b480c7f71f5
+
+#3544 run artifact id =
+10151865526
+
+#3544 run artifact digest =
+sha256:bee373ef76ec1a067f83681348313418733769945221e804f4af9ac4f3c5ad98
+
+#3545 actual authority namespace =
+docs/digital_twin/mcft/cap_09/
+
+#3545 materialized authority SHA256 =
+sha256:96891295dbb1c9bfe74c5405e3da876cb98e730ed03217dd4e96326a485beb19
+```
+
+This reconciliation is factual repository-state correction only.
+
+It is not new architecture, qualification, merge or production authority.
+
+## AB9 鈥?Handoff-only mutation boundary
+
+This AB materialization is authorized to modify exactly:
+
+```text
+docs/handoff/
+GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md
+```
+
+Required invariants:
+
+```text
+PURE_PREPEND
+= TRUE
+
+HISTORICAL_SUFFIX_PRESERVED
+= TRUE
+
+historical content
+= BYTE-PRESERVED
+
+changed_files
+= EXACTLY 1
+```
+
+Explicit non-effects:
+
+```text
+MCFT product/runtime semantic writes
+= 0
+
+B-Line writes
+= 0
+
+ADR writes
+= 0
+
+Production Owner writes
+= 0
+
+qualification rerun
+= 0
+
+new live carrier
+= 0
+```
+
+No action in this handoff authorizes:
+
+```text
+QCP repair
+EA5E2 repair
+qualification rerun
+#3544 merge
+#3545 merge
+Production Owner proof
+Production Runtime start
+Formal-v5
+A0
+O00-O23
+```
+
+## AB10 鈥?Pure-prepend integrity anchor
+
+Previous authoritative #3298 head:
+
+```text
+daec9ebefe8d492b3e1a5c2589b97b6cf044f952
+```
+
+Previous authoritative handoff blob:
+
+```text
+d1383743a472ca8d46874cc1f8be22203f81dd73
+```
+
+Verified previous raw handoff byte length:
+
+```text
+858237
+```
+
+Materialization contract:
+
+```text
+exact old HEAD
++
+exact old blob SHA
++
+raw AB UTF-8 prefix
++
+byte-for-byte unchanged historical suffix
++
+exactly one changed file
++
+zero historical deletions
++
+direct parent = previous #3298 head
+```
+
+After successful AB-section materialization:
+
+```text
+STOP FOR CTO ADJUDICATION
+```
+
+---
 # GEOX MCFT-CAP-09 Conversation Handoff — 2026-09-09 Continuation — Post-B-Line Adoption / Current-Main Re-Anchor / Fresh Current-Crop Continuity
 
 # AA — 2026-09-09 Post-B-Line Adoption / Current-Main Re-Anchor / Current-Crop Freshness / Stage 1B Continuation Frontier
