@@ -185,10 +185,41 @@ function validateEffectiveStageAuthorities(currentCropRef, stageArchitectureRef,
     graduation.protected_main_sha === stageArchitecture.protected_main_sha,
     "RUNTIME_START_CURRENT_CROP_PROTECTED_MAIN_MISMATCH",
   );
-  req(
-    graduation.graduated_at === stageArchitecture.issued_at,
-    "RUNTIME_START_CURRENT_CROP_GRADUATION_TIME_MISMATCH",
-  );
+  if (graduation.status === "EFFECTIVE_FOR_RUNTIME_CONSUMPTION") {
+    req(
+      graduation.graduated_at === stageArchitecture.issued_at,
+      "RUNTIME_START_CURRENT_CROP_GRADUATION_TIME_MISMATCH",
+    );
+  } else {
+    const architectureEffectiveSince = exactIso(
+      graduation.architecture_effective_since,
+      "RUNTIME_START_CURRENT_CROP_ARCHITECTURE_EFFECTIVE_SINCE_REQUIRED",
+    );
+    req(
+      architectureEffectiveSince === certificateIssuedAt,
+      "RUNTIME_START_CURRENT_CROP_ARCHITECTURE_EFFECTIVE_SINCE_MISMATCH",
+    );
+    const graduatedAt = exactIso(
+      graduation.graduated_at,
+      "RUNTIME_START_CURRENT_CROP_REFRESH_GRADUATION_TIME_REQUIRED",
+    );
+    const refreshQualificationTime = exactIso(
+      currentCrop.refresh?.qualification_time,
+      "RUNTIME_START_CURRENT_CROP_REFRESH_QUALIFICATION_TIME_REQUIRED",
+    );
+    req(
+      graduatedAt === refreshQualificationTime,
+      "RUNTIME_START_CURRENT_CROP_REFRESH_GRADUATION_TIME_MISMATCH",
+    );
+    req(
+      Date.parse(graduatedAt) >= Date.parse(stageAsOf),
+      "RUNTIME_START_CURRENT_CROP_REFRESH_GRADUATION_PRECEDES_STAGE_AUTHORITY",
+    );
+    req(
+      Date.parse(graduatedAt) <= Date.parse(stageAsOf) + forwardHours * 3_600_000,
+      "RUNTIME_START_CURRENT_CROP_REFRESH_GRADUATION_AFTER_STAGE_VALIDITY",
+    );
+  }
 
   return {
     biological_stage: biological.resolved_biological_stage,
