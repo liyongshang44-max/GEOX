@@ -31,12 +31,12 @@
   ],
   "proof_bound_exact_base_admissions": [
     {
-      "base_sha": "7cb7cdc8c00252d3c87a685fbab38d96316afa3e",
+      "base_sha": "512fb706040bf609c949aabb641afa300bd4c91b",
       "mode": "PROOF_BOUND_EXACT_BASE",
-      "proof_artifact": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-7CB7-V1.json",
-      "proof_acceptance": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1.cjs",
+      "proof_artifact": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-512F-V1.json",
+      "proof_acceptance": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_512F_V1.cjs",
       "proof_workflow": ".github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml",
-      "current_protected_main_tree": "19a33e6a222a355d5ba615b30e518bb86ac08444",
+      "current_protected_main_tree": "2e211c9cb2af003d5878fc08f84fb01a1b3c649d",
       "bare_sha_allowlist_admission_authorized": false,
       "admission_requires_exact_lineage_and_overlap_proof": true,
       "baseline_qualification_carry_forward_authorized": false
@@ -121,7 +121,9 @@
         ".github/workflows/mcft-cap-09-s5-registry-registration.yml",
         ".github/workflows/mcft-cap-09-s6-registry-registration.yml",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-7CB7-V1.json",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1.cjs"
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1.cjs",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-512F-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_512F_V1.cjs"
       ]
     },
     "EA5E2_RUNTIME_GRAPH_V4": {
