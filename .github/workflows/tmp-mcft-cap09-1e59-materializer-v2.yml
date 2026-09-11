@@ -29,7 +29,21 @@ jobs:
             echo MANIFEST_ALREADY_PRESENT
             exit 0
           fi
+          set +e
           node tmp/mcft-cap09/materialize-1e59.cjs
+          rc=$?
+          set -e
+          if [ "$rc" -ne 0 ]; then
+            echo '=== GENERATED 1E59 ACCEPTANCE CONSTANTS / LINEAGE CODE ==='
+            grep -nE 'OLD_BASE|NEW_BASE|NEW_TREE|FIRST_PARENT|rev-list|exact_first_parent_successors' scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_1E59_V1.cjs || true
+            echo '=== DECLARATION SUCCESSORS ==='
+            node -e "const x=require('./docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-1E59-V1.json'); console.log(JSON.stringify(x.exact_first_parent_successors,null,2))"
+            echo '=== GIT FIRST-PARENT 512F..1E59 ==='
+            git rev-list --first-parent --reverse 512fb706040bf609c949aabb641afa300bd4c91b..1e59d001cbb8c1b858cd24caf61dbc02b3b0bf20 || true
+            echo '=== GIT PARENTS OF 1E59 ==='
+            git show -s --format='%H%n%P' 1e59d001cbb8c1b858cd24caf61dbc02b3b0bf20 || true
+            exit "$rc"
+          fi
           git reset --hard HEAD
           git clean -fd
           mkdir -p tmp/mcft-cap09
