@@ -58,6 +58,18 @@ const PROOF_BOUND_PHASE3_REQUALIFICATION_V1 = {
   event: "pull_request",
   dependency_digest: "sha256:a17896b0392c1e74cc683dffe3be8a518b6d384fa29914367f09b19086316424",
 };
+const PROOF_BOUND_PHASE5_REQUALIFICATION_V1 = {
+  evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_DA0A3375_PROOF_BOUND_V1",
+  check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+  subject_sha: "da0a337532b39b6d4b2edd57ee3ff4b91789e440",
+  base_sha: "7cb7cdc8c00252d3c87a685fbab38d96316afa3e",
+  run_id: 34574713486,
+  run_conclusion: "success",
+  workflow_name: "mcft-cap-09-phase5-two-service-accelerated-24t",
+  workflow_path: ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+  event: "pull_request",
+  dependency_digest: "sha256:8242448cd7ba17fa2ad713fdb3606f0745eb2ee120d39ab38f14fd316a478325",
+};
 
 function parseArgs(argv) {
   const out = {};
@@ -214,6 +226,16 @@ function validateProofBoundPhase3Requalification(decision, head, base) {
     base,
     PROOF_BOUND_PHASE3_REQUALIFICATION_V1,
     "PROOF_BOUND_PHASE3",
+  );
+}
+
+function validateProofBoundPhase5Requalification(decision, head, base) {
+  return validateExactRunAnchor(
+    decision,
+    head,
+    base,
+    PROOF_BOUND_PHASE5_REQUALIFICATION_V1,
+    "PROOF_BOUND_PHASE5",
   );
 }
 
@@ -436,6 +458,27 @@ function main() {
         };
         if (evidence.status !== "PASS") blockers.push({
           blocker_class: "INVALID_OR_MISSING_PROOF_BOUND_PHASE3_REQUALIFICATION_EVIDENCE",
+          check_id: decision.check_id,
+          detail: evidence,
+        });
+      } else if (
+        decision.check_id === PROOF_BOUND_PHASE5_REQUALIFICATION_V1.check_id &&
+        proofBoundFreshRequalificationActive &&
+        args.base === PROOF_BOUND_PHASE5_REQUALIFICATION_V1.base_sha
+      ) {
+        const evidence = validateProofBoundPhase5Requalification(decision, args.head || "", args.base || "");
+        result = {
+          ...common,
+          execution: "PROOF_BOUND_EXACT_WORKFLOW_RUN_AND_DEPENDENCY_DIGEST_VALIDATION",
+          status: evidence.status,
+          reason_code: evidence.reason_code,
+          evidence_id: evidence.evidence_id ?? null,
+          evidence_run_id: evidence.run_id ?? null,
+          evidence_subject_sha: evidence.subject_sha ?? null,
+          evidence_checks: evidence.checks ?? null,
+        };
+        if (evidence.status !== "PASS") blockers.push({
+          blocker_class: "INVALID_OR_MISSING_PROOF_BOUND_PHASE5_REQUALIFICATION_EVIDENCE",
           check_id: decision.check_id,
           detail: evidence,
         });
