@@ -57,7 +57,10 @@ jobs:
           base_sha="${{ github.event.pull_request.base.sha }}"
           if [ "$base_ref" = "main" ]; then
             if [ "$base_sha" != "$POST_MERGE_V13_BASE_SHA" ] && [ "$base_sha" != "$POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA" ] && [ "$base_sha" != "$POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA" ] && [ "$base_sha" != "$PRODUCTION_LIVE_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base_sha" != "$ROLLING_CURRENT_CROP_CANDIDATE_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base_sha" != "$ROLLING_STAGE_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base_sha" != "$EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base_sha" != "$TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base_sha" != "$TWIN_V2_RUNTIME_SELECTION_ADOPTION_MERGE_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base_sha" != "$OWNER_CUTOVER_REGISTRY_SELECTION_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base_sha" != "$CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA" ] && [ "$base_sha" != "$CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA" ]; then
-              if [ "$base_sha" = "512fb706040bf609c949aabb641afa300bd4c91b" ]; then
+              if [ "$base_sha" = "1e59d001cbb8c1b858cd24caf61dbc02b3b0bf20" ]; then
+                git fetch --no-tags origin main
+                node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_1E59_V1.cjs
+              elif [ "$base_sha" = "512fb706040bf609c949aabb641afa300bd4c91b" ]; then
                 git fetch --no-tags origin main
                 node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_512F_V1.cjs
               elif [ "$base_sha" = "7cb7cdc8c00252d3c87a685fbab38d96316afa3e" ]; then

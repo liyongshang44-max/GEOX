@@ -47,28 +47,28 @@ const RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1 = {
   dependency_digest: "sha256:63e8aac2a5c8f27d4e7e78514f3858647ac72a105ed33d5228be3a6e0ae3dd41",
 };
 const PROOF_BOUND_PHASE3_REQUALIFICATION_V1 = {
-  evidence_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_3D178B9E_PROOF_BOUND_512F_V1",
+  evidence_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_4C61E5EF_PROOF_BOUND_1E59_V1",
   check_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
-  subject_sha: "3d178b9e4b79b7a907d87ada5039453179b0231f",
-  base_sha: "512fb706040bf609c949aabb641afa300bd4c91b",
-  run_id: 34596472584,
+  subject_sha: "4c61e5ef0483fc466b2bde71922ddabb99a07c5f",
+  base_sha: "1e59d001cbb8c1b858cd24caf61dbc02b3b0bf20",
+  run_id: 34625038137,
   run_conclusion: "success",
   workflow_name: "mcft-cap-09-phase3-evidence-runtime-persistence",
   workflow_path: ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
   event: "pull_request",
-  dependency_digest: "sha256:1b0a84dcbd46b2b84a854ef7018d27cb280c15fc8fa244724ed4b718a6a426c9",
+  dependency_digest: "sha256:3d8a9077ad0897ab5848426f202887a1e1f807c51be8c246f7ec8d2cd2feddaf",
 };
 const PROOF_BOUND_PHASE5_REQUALIFICATION_V1 = {
-  evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_3D178B9E_PROOF_BOUND_512F_V1",
+  evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_4C61E5EF_PROOF_BOUND_1E59_V1",
   check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
-  subject_sha: "3d178b9e4b79b7a907d87ada5039453179b0231f",
-  base_sha: "512fb706040bf609c949aabb641afa300bd4c91b",
-  run_id: 34596472638,
+  subject_sha: "4c61e5ef0483fc466b2bde71922ddabb99a07c5f",
+  base_sha: "1e59d001cbb8c1b858cd24caf61dbc02b3b0bf20",
+  run_id: 34625038090,
   run_conclusion: "success",
   workflow_name: "mcft-cap-09-phase5-two-service-accelerated-24t",
   workflow_path: ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
   event: "pull_request",
-  dependency_digest: "sha256:092268f77a64011e4206eada68b92d64dcf83328a7163b91f7c2720becfee0e2",
+  dependency_digest: "sha256:617d09a11a5797e0a1e3793a79561613d7a1b672df76593fe9a1e0b7f24483b7",
 };
 
 function parseArgs(argv) {
