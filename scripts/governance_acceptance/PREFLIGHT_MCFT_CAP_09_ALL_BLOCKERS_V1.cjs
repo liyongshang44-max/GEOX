@@ -46,6 +46,18 @@ const RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1 = {
   event: "pull_request",
   dependency_digest: "sha256:63e8aac2a5c8f27d4e7e78514f3858647ac72a105ed33d5228be3a6e0ae3dd41",
 };
+const PROOF_BOUND_PHASE3_REQUALIFICATION_V1 = {
+  evidence_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_E76868A5_PROOF_BOUND_V1",
+  check_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+  subject_sha: "e76868a50dcd89e08cc6c1f6a318dd7453de59ef",
+  base_sha: "7cb7cdc8c00252d3c87a685fbab38d96316afa3e",
+  run_id: 34572537197,
+  run_conclusion: "success",
+  workflow_name: "mcft-cap-09-phase3-evidence-runtime-persistence",
+  workflow_path: ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+  event: "pull_request",
+  dependency_digest: "sha256:a17896b0392c1e74cc683dffe3be8a518b6d384fa29914367f09b19086316424",
+};
 
 function parseArgs(argv) {
   const out = {};
@@ -144,10 +156,16 @@ function fetchGithubRunSnapshot(runId) {
   }
 }
 
-function validateRuntimeCutoverPhase5Requalification(decision, head, base) {
-  const anchor = RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1;
+function validateExactRunAnchor(decision, head, base, anchor, reasonPrefix) {
   const fetchResult = fetchGithubRunSnapshot(anchor.run_id);
-  if (fetchResult.status !== "PASS") return { ...fetchResult, evidence_id: anchor.evidence_id };
+  if (fetchResult.status !== "PASS") {
+    return {
+      status: "FAIL",
+      reason_code: `${reasonPrefix}_GITHUB_RUN_FETCH_FAILED`,
+      evidence_id: anchor.evidence_id,
+      detail: fetchResult,
+    };
+  }
   const run = fetchResult.run;
   const liveBase = Array.isArray(run.pull_requests)
     ? run.pull_requests.map((pr) => pr?.base?.sha).find((value) => typeof value === "string") || null
@@ -169,14 +187,34 @@ function validateRuntimeCutoverPhase5Requalification(decision, head, base) {
   return {
     status: valid ? "PASS" : "FAIL",
     reason_code: valid
-      ? "RUNTIME_CUTOVER_PHASE5_EXACT_RUN_AND_DEPENDENCY_DIGEST_VALID"
-      : "RUNTIME_CUTOVER_PHASE5_EXACT_RUN_OR_DEPENDENCY_DIGEST_INVALID",
+      ? `${reasonPrefix}_EXACT_RUN_AND_DEPENDENCY_DIGEST_VALID`
+      : `${reasonPrefix}_EXACT_RUN_OR_DEPENDENCY_DIGEST_INVALID`,
     evidence_id: anchor.evidence_id,
     run_id: anchor.run_id,
     subject_sha: anchor.subject_sha,
     dependency_digest: anchor.dependency_digest,
     checks,
   };
+}
+
+function validateRuntimeCutoverPhase5Requalification(decision, head, base) {
+  return validateExactRunAnchor(
+    decision,
+    head,
+    base,
+    RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1,
+    "RUNTIME_CUTOVER_PHASE5",
+  );
+}
+
+function validateProofBoundPhase3Requalification(decision, head, base) {
+  return validateExactRunAnchor(
+    decision,
+    head,
+    base,
+    PROOF_BOUND_PHASE3_REQUALIFICATION_V1,
+    "PROOF_BOUND_PHASE3",
+  );
 }
 
 function resolveRequalificationEvidence(decision, authority, registry, stage, head) {
@@ -381,6 +419,27 @@ function main() {
           detail: diagnostic,
         });
       } else if (
+        decision.check_id === PROOF_BOUND_PHASE3_REQUALIFICATION_V1.check_id &&
+        proofBoundFreshRequalificationActive &&
+        args.base === PROOF_BOUND_PHASE3_REQUALIFICATION_V1.base_sha
+      ) {
+        const evidence = validateProofBoundPhase3Requalification(decision, args.head || "", args.base || "");
+        result = {
+          ...common,
+          execution: "PROOF_BOUND_EXACT_WORKFLOW_RUN_AND_DEPENDENCY_DIGEST_VALIDATION",
+          status: evidence.status,
+          reason_code: evidence.reason_code,
+          evidence_id: evidence.evidence_id ?? null,
+          evidence_run_id: evidence.run_id ?? null,
+          evidence_subject_sha: evidence.subject_sha ?? null,
+          evidence_checks: evidence.checks ?? null,
+        };
+        if (evidence.status !== "PASS") blockers.push({
+          blocker_class: "INVALID_OR_MISSING_PROOF_BOUND_PHASE3_REQUALIFICATION_EVIDENCE",
+          check_id: decision.check_id,
+          detail: evidence,
+        });
+      } else if (
         decision.check_id === RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1.check_id &&
         args.base === RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1.base_sha
       ) {
@@ -486,6 +545,7 @@ function main() {
 module.exports = {
   resolveRequalificationEvidence,
   expectedRequalificationBinding,
+  validateExactRunAnchor,
 };
 
 if (require.main === module) main();
