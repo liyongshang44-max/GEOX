@@ -69,8 +69,13 @@ function changedPaths(base, head) {
   return text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 }
 
-function runDiagnostic(command) {
-  const result = cp.spawnSync(command, { cwd: ROOT, encoding: "utf8", shell: true, env: { ...process.env, MCFT_CAP09_ALL_BLOCKERS_CHILD: "1" } });
+function runDiagnostic(command, extraEnv = {}) {
+  const result = cp.spawnSync(command, {
+    cwd: ROOT,
+    encoding: "utf8",
+    shell: true,
+    env: { ...process.env, ...extraEnv, MCFT_CAP09_ALL_BLOCKERS_CHILD: "1" },
+  });
   const stdout = String(result.stdout || "");
   const stderr = String(result.stderr || "");
   return {
@@ -262,18 +267,23 @@ function main() {
   const phase6Active = phase6RetirementActive(args.head || "");
   const proofBoundAdmissions = authority.proof_bound_exact_base_admissions || [];
   const proofBoundAdmission = proofBoundAdmissions.length === 1 ? proofBoundAdmissions[0] : null;
-  const proofBoundBaselineActive =
+  const proofBoundAdmissionActive =
     stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
     process.env.MCFT_CAP09_PROOF_BOUND_BASE_ADMITTED === "true" &&
     proofBoundAdmissions.length === 1 &&
     proofBoundAdmission?.base_sha === args.base &&
     proofBoundAdmission?.base_sha === String(process.env.CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA || "") &&
     proofBoundAdmission?.mode === "PROOF_BOUND_EXACT_BASE" &&
-    proofBoundAdmission?.baseline_qualification_carry_forward_authorized !== false &&
     proofBoundAdmission?.proof_acceptance === String(process.env.CURRENT_MAIN_REANCHOR_PROOF_ACCEPTANCE || "") &&
     proofBoundAdmission?.bare_sha_allowlist_admission_authorized === false &&
     proofBoundAdmission?.admission_requires_exact_lineage_and_overlap_proof === true &&
     isAncestor(args.base || "", args.head || "");
+  const proofBoundBaselineActive =
+    proofBoundAdmissionActive &&
+    proofBoundAdmission?.baseline_qualification_carry_forward_authorized !== false;
+  const proofBoundFreshRequalificationActive =
+    proofBoundAdmissionActive &&
+    proofBoundAdmission?.baseline_qualification_carry_forward_authorized === false;
   const proofBoundPreservedRequiredCheckIds = [];
 
   for (const error of plan.authority_errors || []) blockers.push({ blocker_class: "AUTHORITY_DEFINITION_FAILURE", check_id: null, detail: error });
@@ -305,6 +315,7 @@ function main() {
     const currentCropContinuityRefreshMergeBase = String(process.env.CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA || "");
     const adoptionDurableRequalification =
       stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+      PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS.has(decision.check_id) &&
       (
         (/^[0-9a-f]{40}$/.test(protectedMainAdoptionBase) && args.base === protectedMainAdoptionBase) ||
         (/^[0-9a-f]{40}$/.test(postAdoptionEffectivenessBase) && args.base === postAdoptionEffectivenessBase) ||
@@ -317,9 +328,9 @@ function main() {
         (/^[0-9a-f]{40}$/.test(twinV2RuntimeSelectionAdoptionMergeProtectedMainBase) && args.base === twinV2RuntimeSelectionAdoptionMergeProtectedMainBase) ||
         (/^[0-9a-f]{40}$/.test(ownerCutoverRegistrySelectionProtectedMainBase) && args.base === ownerCutoverRegistrySelectionProtectedMainBase) ||
         (/^[0-9a-f]{40}$/.test(currentProtectedMainRefreshPredecessorBase) && args.base === currentProtectedMainRefreshPredecessorBase) ||
-        (/^[0-9a-f]{40}$/.test(currentCropContinuityRefreshMergeBase) && args.base === currentCropContinuityRefreshMergeBase)
-      ) &&
-      PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS.has(decision.check_id);
+        (/^[0-9a-f]{40}$/.test(currentCropContinuityRefreshMergeBase) && args.base === currentCropContinuityRefreshMergeBase) ||
+        proofBoundFreshRequalificationActive
+      );
     const proofBoundBaselineRequirementPreserved =
       proofBoundBaselineActive &&
       decision.status === "REQUIRED" &&
@@ -390,7 +401,10 @@ function main() {
           detail: evidence,
         });
       } else if (decision.diagnostic_command && !adoptionDurableRequalification) {
-        const diagnostic = runDiagnostic(decision.diagnostic_command);
+        const diagnosticEnv = decision.check_id === "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM"
+          ? { GEOX_MCFT_CAP09_CURRENT_DELTA_BASE_SHA: args.base || "" }
+          : {};
+        const diagnostic = runDiagnostic(decision.diagnostic_command, diagnosticEnv);
         result = { ...common, execution: "DIAGNOSTIC_COMMAND", status: diagnostic.status, reason_code: diagnostic.status === "PASS" ? "DIAGNOSTIC_PASS" : "DIAGNOSTIC_FAIL", diagnostic_command: decision.diagnostic_command, diagnostic };
         if (diagnostic.status !== "PASS") blockers.push({ blocker_class: "DIAGNOSTIC_FAILURE", check_id: decision.check_id, detail: diagnostic });
       } else {
