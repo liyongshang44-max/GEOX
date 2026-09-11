@@ -1,0 +1,78 @@
+name: Temporary MCFT CAP-09 512F Blob Validate V4
+
+on:
+  push:
+    branches:
+      - tmp/mcft-cap09-qcp-512f-materializer-v1
+    paths:
+      - '.github/workflows/tmp-mcft-cap09-512f-blob-validate-v4.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Restore generated clean blobs and correct singleton lineage negative
+        shell: node {0}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          const fs=require('fs');const path=require('path');const https=require('https');
+          const blobs={
+            reanchor:['eafe90bfd32a8a0ca4294205219d60dc5a2e4903','.github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml'],
+            qcpwf:['130b0628210ba81bef3d009214583183a6b48271','.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'],
+            postmerge:['18119fff50559a1978498eea1fadd255a1432a00','.github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml'],
+            declaration:['82edda40b36ca15908c57f6817ac569f3b1d9322','docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-512F-V1.json'],
+            acceptance:['ed8b49975c8076422fdc99d61dba9a96a9a7db08','scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_512F_V1.cjs']
+          };
+          function request(method,pth,body){return new Promise((resolve,reject)=>{const data=body?JSON.stringify(body):null;const req=https.request({hostname:'api.github.com',path:pth,method,headers:{Authorization:`Bearer ${process.env.GH_TOKEN}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'mcft-cap09-512f-validator',...(data?{'Content-Type':'application/json','Content-Length':Buffer.byteLength(data)}:{})}},res=>{let out='';res.on('data',d=>out+=d);res.on('end',()=>{if(res.statusCode<200||res.statusCode>=300)return reject(new Error(`HTTP_${res.statusCode}:${out}`));resolve(JSON.parse(out));});});req.on('error',reject);if(data)req.write(data);req.end();});}
+          (async()=>{
+            for(const [name,[sha,p]] of Object.entries(blobs)){
+              const obj=await request('GET',`/repos/${process.env.GH_REPO}/git/blobs/${sha}`);
+              let text=Buffer.from(obj.content.replace(/\n/g,''),'base64').toString('utf8');
+              if(name==='acceptance'){
+                const from='["FIRST_PARENT_LINEAGE_DRIFT",x=>{x.first_parent_successors.reverse();}]';
+                const to='["FIRST_PARENT_LINEAGE_DRIFT",x=>{x.first_parent_successors[0].sha="0".repeat(40);}]';
+                if(!text.includes(from))throw new Error('SINGLETON_NEGATIVE_PATTERN_MISSING');
+                text=text.replace(from,to);
+                const posted=await request('POST',`/repos/${process.env.GH_REPO}/git/blobs`,{content:Buffer.from(text).toString('base64'),encoding:'base64'});
+                fs.writeFileSync('/tmp/corrected-acceptance-sha',posted.sha+'\n');
+              }
+              fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,text);
+            }
+          })().catch(e=>{console.error(e);process.exitCode=1;});
+
+      - name: Validate exact 512F proof and wiring
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse origin/main)" = "512fb706040bf609c949aabb641afa300bd4c91b"
+          test "$(git rev-parse 512fb706040bf609c949aabb641afa300bd4c91b^{tree})" = "2e211c9cb2af003d5878fc08f84fb01a1b3c649d"
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_512F_V1.cjs --selftest
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_512F_V1.cjs
+          grep -F "512fb706040bf609c949aabb641afa300bd4c91b" .github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml
+          grep -F "ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_512F_V1.cjs" .github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml
+          grep -F "CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA: '512fb706040bf609c949aabb641afa300bd4c91b'" .github/workflows/mcft-cap-09-qualification-control-plane-v1.yml
+          grep -F "ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_512F_V1.cjs" .github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml
+          node -e 'const q=require("./docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json"); if(q.proof_bound_exact_base_admissions.length!==1)process.exit(1); const a=q.proof_bound_exact_base_admissions[0]; if(a.base_sha!=="512fb706040bf609c949aabb641afa300bd4c91b"||a.baseline_qualification_carry_forward_authorized!==false||q.governed_successor_predecessor_shas.includes(a.base_sha))process.exit(1);'
+
+      - name: Persist corrected acceptance blob SHA only
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHA="$(cat /tmp/corrected-acceptance-sha)"
+          git reset --hard HEAD
+          node -e 'const fs=require("fs"); const p=".tmp-mcft-cap09-512f-blob-result.json"; const x=JSON.parse(fs.readFileSync(p,"utf8")); x.acceptance_blob=process.argv[1]; x.validation="SELFTEST_AND_LIVE_ACCEPTANCE_PASS"; fs.writeFileSync(p,JSON.stringify(x,null,2)+"\n");' "$SHA"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .tmp-mcft-cap09-512f-blob-result.json
+          git commit -m 'chore(mcft-cap09): record validated 512f acceptance blob'
+          git push origin HEAD:tmp/mcft-cap09-qcp-512f-materializer-v1
