@@ -1,0 +1,248 @@
+name: tmp-mcft-cap09-current-crop-refresh-materializer-2026-09-11-v1
+
+on:
+  push:
+    branches:
+      - tmp/mcft-cap09-current-crop-refresh-materializer-2026-09-11-v1
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BASE_SHA: 0ac2d2cf98d553285a2051a1b0b86131a23fc413
+      TARGET_BRANCH: fix/mcft-cap09-current-crop-refresh-2026-09-11-v1
+      ARTIFACT_ID: '10275137822'
+      CANDIDATE_RUN_ID: '34628435705'
+      CANDIDATE_ARTIFACT_NAME: mcft-cap09-t4r1-rolling-current-crop-2026-09-11T04:00:00Z
+      AUTHORITY_PATH: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-11T04Z-V1.json
+      REGISTRY_PATH: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json
+      CERT_PATH: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json
+      PREVIOUS_PATH: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-09T04Z-V1.json
+      EXPECTED_PREVIOUS_SHA256: sha256:586fdec859103d888a64e79a5619eac1e294a96d6643c199ddfa01730984142c
+      EXPECTED_CERT_SHA256: sha256:acffd98b6e014db4d11a3374a50a2e576be3396aef33ed456f7ee104ee72a1c6
+      EXPECTED_ARTIFACT_DIGEST: sha256:f75df0c160324e7d8bf22e9f9f23af0fdc8c434aaa0342224ac86ba09a77bb1b
+
+    steps:
+      - name: Checkout exact refresh target
+        uses: actions/checkout@v4
+        with:
+          ref: fix/mcft-cap09-current-crop-refresh-2026-09-11-v1
+          fetch-depth: 0
+
+      - name: Require exact protected main and untouched target
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main "$TARGET_BRANCH"
+          test "$(git rev-parse HEAD)" = "$BASE_SHA"
+          test "$(git rev-parse origin/main)" = "$BASE_SHA"
+          test "$(git rev-parse "origin/$TARGET_BRANCH")" = "$BASE_SHA"
+
+      - name: Fetch exact fresh candidate artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mcft-crop
+          curl -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/$ARTIFACT_ID" \
+            > /tmp/mcft-crop/artifact.json
+          node <<'NODE'
+          const fs=require('fs');
+          const a=JSON.parse(fs.readFileSync('/tmp/mcft-crop/artifact.json','utf8'));
+          const req=(v,m)=>{if(!v)throw new Error(m)};
+          req(String(a.id)===process.env.ARTIFACT_ID,'ARTIFACT_ID_MISMATCH');
+          req(a.name===process.env.CANDIDATE_ARTIFACT_NAME,'ARTIFACT_NAME_MISMATCH');
+          req(a.expired===false,'ARTIFACT_EXPIRED');
+          req(a.digest===process.env.EXPECTED_ARTIFACT_DIGEST,'ARTIFACT_DIGEST_MISMATCH');
+          req(String(a.workflow_run?.id)===process.env.CANDIDATE_RUN_ID,'ARTIFACT_RUN_ID_MISMATCH');
+          req(a.workflow_run?.head_sha===process.env.BASE_SHA,'ARTIFACT_HEAD_MISMATCH');
+          NODE
+          curl -fsSL -L \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/$ARTIFACT_ID/zip" \
+            -o /tmp/mcft-crop/candidate.zip
+          unzip -q /tmp/mcft-crop/candidate.zip -d /tmp/mcft-crop/artifact
+          test -f /tmp/mcft-crop/artifact/MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json
+          node <<'NODE'
+          const fs=require('fs');
+          const p='/tmp/mcft-crop/artifact/MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json';
+          const c=JSON.parse(fs.readFileSync(p,'utf8'));
+          const req=(v,m)=>{if(!v)throw new Error(m)};
+          req(c.status==='PASS','CANDIDATE_NOT_PASS');
+          req(c.subject_head_sha===process.env.BASE_SHA,'CANDIDATE_SUBJECT_MISMATCH');
+          req(c.qualification_outcome==='CURRENT_CROP_CONTEXT_AUTHORITY_CANDIDATE_RESOLVED','CANDIDATE_OUTCOME_MISMATCH');
+          req(c.biological_stage?.authority_as_of==='2026-09-11T04:00:00.000Z','CANDIDATE_AS_OF_MISMATCH');
+          req(c.biological_stage?.forward_stability_hours===30,'CANDIDATE_STABILITY_MISMATCH');
+          req(c.architecture_effective===false,'CANDIDATE_ALREADY_EFFECTIVE');
+          req(c.runtime_consumption_authorized===false,'CANDIDATE_RUNTIME_ALREADY_AUTHORIZED');
+          req(c.lifecycle?.domain_state==='ACTIVE' && c.lifecycle?.authority_status==='RESOLVED' && c.lifecycle?.authority_validity==='VALID','CANDIDATE_LIFECYCLE_INVALID');
+          NODE
+
+      - name: Build ephemeral qualification request
+        shell: bash
+        run: |
+          set -euo pipefail
+          CERT_DIGEST="sha256:$(sha256sum "$CERT_PATH" | awk '{print $1}')"
+          PREV_DIGEST="sha256:$(sha256sum "$PREVIOUS_PATH" | awk '{print $1}')"
+          test "$CERT_DIGEST" = "$EXPECTED_CERT_SHA256"
+          test "$PREV_DIGEST" = "$EXPECTED_PREVIOUS_SHA256"
+          node <<'NODE'
+          const fs=require('fs');
+          const request={
+            schema_version:'geox_mcft_cap09_t4r1_current_crop_refresh_request_v1',
+            request_id:'GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-2026-09-11T04Z-V1',
+            status:'QUALIFICATION_ONLY_REQUESTED',
+            capability_line_id:'MCFT-CAP-09',
+            slice_id:'MCFT-CAP-09.S6',
+            protected_main_base_sha:process.env.BASE_SHA,
+            scope:{
+              tenant_id:'tenant_mcft_external', project_id:'project_mcft_cap09', group_id:'group_public_research',
+              site_id:'KBS_MCSE_T4R1', field_id:'field_kbs_mcse_t4r1', season_id:'season_2026_corn',
+              zone_id:'zone_kbs_mcse_t4r1_crop_formal_v1', crop:'corn', hybrid_product_code:'43-96P'
+            },
+            qualification_snapshot:{
+              as_of_logical_time:'2026-09-11T04:00:00.000Z',
+              temperature_start_local_date:'2026-05-27',
+              last_complete_temperature_local_date:'2026-09-10',
+              timezone:'America/Detroit',
+              local_day_complete_boundary_utc:'2026-09-11T04:00:00.000Z',
+              future_observations_authorized:false,
+              full_season_ex_post_normalization_authorized:false
+            },
+            qualification_time:'2026-09-11T17:35:31.000Z',
+            forward_stability_hours:30,
+            architecture_effectiveness:{
+              ref:process.env.CERT_PATH,
+              sha256:process.env.EXPECTED_CERT_SHA256,
+              must_precede_or_equal_stage_snapshot:true,
+              may_not_be_reissued_solely_to_refresh_stage_data:true
+            },
+            previous_effective_current_crop_authority:{
+              ref:process.env.PREVIOUS_PATH,
+              sha256:process.env.EXPECTED_PREVIOUS_SHA256,
+              immutable_historical_input:true,
+              overwrite_forbidden:true
+            },
+            target_artifact:{
+              ref:process.env.AUTHORITY_PATH,
+              must_be_immutable:true,
+              must_not_replace_running_preformal_mount:true
+            },
+            qualification_policy:{
+              fresh_live_lifecycle_requalification_required:true,
+              fresh_live_thermal_stage_requalification_required:true,
+              derived_stage_must_not_be_relabelled_observed:true,
+              lifecycle_independent_from_stage:true,
+              architecture_effectiveness_is_persistent_after_effective_merge:true,
+              rolling_stage_refresh_may_reference_prior_effective_architecture_certificate:true,
+              qualification_host_may_be_github_actions:true,
+              production_runtime_host_may_be_github_actions:false
+            },
+            non_effects:{
+              runtime_config_write_authorized:false,
+              database_write_authorized:false,
+              scheduler_write_authorized:false,
+              formal_evidence_write_authorized:false,
+              production_runtime_restart_authorized:false,
+              production_runtime_start_authorized:false,
+              production_owner_activation_authorized:false,
+              formal_v5_authorized:false,
+              a0_authorized:false,
+              o00_o23_authorized:false,
+              mcft_cap09_completed:false
+            }
+          };
+          fs.writeFileSync('/tmp/mcft-crop/refresh-request.json',JSON.stringify(request,null,2)+'\n');
+          NODE
+
+      - name: Materialize effective current-crop authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_V1.cjs \
+            --candidate /tmp/mcft-crop/artifact/MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json \
+            --architecture-effectiveness "$CERT_PATH" \
+            --refresh-request /tmp/mcft-crop/refresh-request.json \
+            --subject "$BASE_SHA" \
+            --out "$AUTHORITY_PATH"
+          node <<'NODE'
+          const fs=require('fs');
+          const a=JSON.parse(fs.readFileSync(process.env.AUTHORITY_PATH,'utf8'));
+          const req=(v,m)=>{if(!v)throw new Error(m)};
+          req(a.subject_head_sha===process.env.BASE_SHA,'AUTHORITY_SUBJECT_MISMATCH');
+          req(a.architecture_effective===true && a.runtime_consumption_authorized===true,'AUTHORITY_NOT_EFFECTIVE');
+          req(a.biological_stage?.authority_as_of==='2026-09-11T04:00:00.000Z','AUTHORITY_AS_OF_MISMATCH');
+          req(a.biological_stage?.authority_valid_until==='2026-09-12T10:00:00.000Z','AUTHORITY_VALID_UNTIL_MISMATCH');
+          req(a.graduation?.status==='EFFECTIVE_FOR_RUNTIME_CONSUMPTION_ROLLING_REFRESH','AUTHORITY_GRADUATION_MISMATCH');
+          req(a.graduation?.refresh_protected_main_base_sha===process.env.BASE_SHA,'AUTHORITY_BASE_LINK_MISMATCH');
+          req(a.refresh?.target_artifact_ref===process.env.AUTHORITY_PATH,'AUTHORITY_TARGET_REF_MISMATCH');
+          for(const k of ['runtime_config_write_authorized','database_write_authorized','scheduler_write_authorized','formal_evidence_write_authorized','production_runtime_start_authorized','production_owner_activation_authorized','formal_v5_authorized','a0_authorized','o00_o23_authorized','mcft_cap09_completed']) req(a[k]===false,'AUTHORITY_CEILING_DRIFT:'+k);
+          NODE
+
+      - name: Append one registry entry only
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const crypto=require('crypto');
+          const fs=require('fs');
+          const digest=p=>'sha256:'+crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
+          const r=JSON.parse(fs.readFileSync(process.env.REGISTRY_PATH,'utf8'));
+          const req=(v,m)=>{if(!v)throw new Error(m)};
+          req(r.status==='ACTIVE','REGISTRY_NOT_ACTIVE');
+          const last=r.entries.at(-1);
+          req(last?.authority_ref===process.env.PREVIOUS_PATH,'REGISTRY_PREVIOUS_REF_MISMATCH');
+          req(last?.authority_sha256===process.env.EXPECTED_PREVIOUS_SHA256,'REGISTRY_PREVIOUS_DIGEST_MISMATCH');
+          req(last?.authority_as_of==='2026-09-09T04:00:00.000Z','REGISTRY_PREVIOUS_AS_OF_MISMATCH');
+          const a=JSON.parse(fs.readFileSync(process.env.AUTHORITY_PATH,'utf8'));
+          const authorityDigest=digest(process.env.AUTHORITY_PATH);
+          r.entries.push({
+            authority_ref:process.env.AUTHORITY_PATH,
+            authority_sha256:authorityDigest,
+            authority_as_of:a.biological_stage.authority_as_of,
+            authority_valid_until:a.biological_stage.authority_valid_until,
+            graduation_status:a.graduation.status
+          });
+          fs.writeFileSync(process.env.REGISTRY_PATH,JSON.stringify(r,null,2)+'\n');
+          NODE
+
+      - name: Commit locally and prove bounded registry transition
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- "$AUTHORITY_PATH" "$REGISTRY_PATH"
+          mapfile -t FILES < <(git diff --cached --name-only | sort)
+          test "${#FILES[@]}" -eq 2
+          test "${FILES[0]}" = "$REGISTRY_PATH"
+          test "${FILES[1]}" = "$AUTHORITY_PATH"
+          git commit -m 'feat(mcft-cap09): refresh effective current-crop authority at 2026-09-11T04Z'
+          NEW_HEAD="$(git rev-parse HEAD)"
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REGISTRY_PRESERVATION_V1.cjs \
+            --base "$BASE_SHA" \
+            --head "$NEW_HEAD" \
+            --invocation qcp \
+            --out /tmp/mcft-crop/registry-preservation.json
+          node -e "const r=require('/tmp/mcft-crop/registry-preservation.json'); if(r.status!=='PASS'||r.mode!=='SINGLE_AUTHORITY_APPEND'||r.current_crop_surface_changed_files.length!==2) process.exit(1)"
+
+      - name: Recheck refs and push exact target only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main "$TARGET_BRANCH"
+          test "$(git rev-parse origin/main)" = "$BASE_SHA"
+          test "$(git rev-parse "origin/$TARGET_BRANCH")" = "$BASE_SHA"
+          git push origin "HEAD:refs/heads/$TARGET_BRANCH"
