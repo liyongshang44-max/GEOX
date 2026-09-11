@@ -1,0 +1,8 @@
+{
+  "source_head": "a876f656e863d2d2071b4612069cc6abea62467a",
+  "target_path": "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+  "blob_sha": "2e352a7411b815d80de1df98f66127d737e36a8c",
+  "content_sha256": "sha256:d458642e20b716229b96cbd3d86f8ea3fb325ca00001c55406697cb69af9d014",
+  "runtime_semantic_change": false,
+  "qualification_governance_anchor_rebind_only": true
+}
