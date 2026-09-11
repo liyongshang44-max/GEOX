@@ -1,3 +1,4 @@
+// Qualification-only exact-head Phase5 requalification marker; no runtime/product semantic change.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
