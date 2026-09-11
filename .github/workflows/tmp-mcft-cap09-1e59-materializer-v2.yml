@@ -1,0 +1,41 @@
+name: tmp mcft cap09 1e59 materializer v2
+
+on:
+  push:
+    branches:
+      - tmp/mcft-cap09-1e59-materializer-v1
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: tmp/mcft-cap09-1e59-materializer-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+      - name: Materialize blobs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f tmp/mcft-cap09/1e59-blob-manifest.json ]; then
+            echo MANIFEST_ALREADY_PRESENT
+            exit 0
+          fi
+          node tmp/mcft-cap09/materialize-1e59.cjs
+          git reset --hard HEAD
+          git clean -fd
+          mkdir -p tmp/mcft-cap09
+          cp /tmp/mcft-cap09-1e59-blob-manifest.json tmp/mcft-cap09/1e59-blob-manifest.json
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add tmp/mcft-cap09/1e59-blob-manifest.json
+          git commit -m 'chore(mcft-cap09): persist 1e59 blob manifest'
+          git push origin HEAD:tmp/mcft-cap09-1e59-materializer-v1
