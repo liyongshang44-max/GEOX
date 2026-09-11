@@ -1,3 +1,1031 @@
+# AC — 2026-09-11 Proof-Bound QCP Convergence / Phase3-Phase5 Requalification / Formal-v5 Pre-Arm Adoption Frontier
+
+```text
+CONVERSATION CONTINUATION ONLY
+
+NOT NEW ARCHITECTURE AUTHORITY
+
+NOT PRODUCTION AUTHORIZATION
+
+NOT #3547 MERGE AUTHORIZATION
+
+STOP BEFORE FORMAL-v5 ARM
+```
+
+This AC-section is the current MCFT-CAP-09 continuation entry point.
+
+AB and every historical section below it remain historical evidence and MUST remain byte-preserved. The AB frontier around #3544/#3545 QCP + EA5E2 red boundaries has been superseded by the bounded qualification/control-plane repair and exact-head requalification work recorded here.
+
+## AC0 — One-line continuation conclusion
+
+```text
+MCFT-CAP-09
+= ACTIVE
+
+canonical phase
+= STAGE_1B_SHADOW_ONLINE_CLOSURE
+
+active frontier
+= FO1 / T4R1
+
+protected main
+= 7cb7cdc8c00252d3c87a685fbab38d96316afa3e
+
+#3547 exact head
+= c833a8df7595583c60d33ee29100ea1aeaf8c8ea
+
+#3547 state
+= OPEN / DRAFT / UNMERGED / mergeable
+
+PR-head QCP blockers
+= 0
+
+PR-head exact qualification convergence
+= ACHIEVED
+
+next frontier
+= #3547 ADOPTION / MERGE AUTHORIZATION CHECK
+  -> POST-MERGE CURRENT-MAIN CONVERGENCE
+  -> CURRENT-CROP FRESHNESS RECHECK
+  -> PRE-ARM PREREQUISITES
+
+Production Owner activation
+= NOT AUTHORIZED
+
+Production Runtime
+= NOT AUTHORIZED
+
+Formal-v5
+= NOT ARMED
+
+A0
+= NOT STARTED
+
+formal O00-O23
+= NOT STARTED
+
+MCFT-CAP-09 complete
+= FALSE
+```
+
+Do not interpret PR-head qualification convergence as protected-main adoption, production activation, Formal-v5 arm, or Stage 1B completion.
+
+## AC1 — Exact repository / PR matrix
+
+### AC1.1 Protected main
+
+```text
+main =
+7cb7cdc8c00252d3c87a685fbab38d96316afa3e
+
+provenance =
+merge PR #3543
+```
+
+The current engineering carrier #3547 remains based on this exact protected-main SHA.
+
+### AC1.2 #3547 current carrier
+
+```text
+PR =
+#3547
+
+title =
+fix(mcft-cap09): bind registry dependencies and prove current-main admission
+
+base =
+7cb7cdc8c00252d3c87a685fbab38d96316afa3e
+
+head =
+c833a8df7595583c60d33ee29100ea1aeaf8c8ea
+
+state =
+OPEN / DRAFT / UNMERGED
+
+mergeable =
+TRUE
+
+commits =
+18
+
+changed_files =
+13
+
+additions =
+956
+
+deletions =
+180
+```
+
+Important: the #3547 PR body still contains an earlier in-PR narrative that says exact-head qualification is pending. That body is stale relative to the current c833a8df machine state. Use the current workflow results and this AC handoff for continuation, not the stale paragraph in the PR body.
+
+### AC1.3 #3544 / #3545 remain historical-current-crop carriers
+
+#3544 remains the qualification-only source carrier from AB.
+
+#3545 remains:
+
+```text
+OPEN / READY / UNMERGED / mergeable
+
+base =
+7cb7cdc8c00252d3c87a685fbab38d96316afa3e
+
+head =
+326904e2854c2bb58605ed1cccaaf724d64b7832
+
+scope =
+exactly one immutable 2026-09-10T04Z authority
++
+one append-only registry entry
+```
+
+Its authority window is still:
+
+```text
+authority_as_of =
+2026-09-10T04:00:00Z
+
+authority_valid_until =
+2026-09-11T10:00:00Z
+```
+
+Freshness MUST be checked again at action time. It is not an indefinitely valid current authority.
+
+## AC2 — What was wrong with the AB red frontier
+
+AB correctly recorded two red workflow boundaries, but later raw-log reconstruction tightened the root causes.
+
+### AC2.1 QCP raw-log correction
+
+For #3545 run:
+
+```text
+QCP run =
+34477409679
+
+actual job =
+102871456348
+
+workflow first-red =
+Require governed successor predecessor and zero production bindings
+
+raw error =
+MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:
+7cb7cdc8c00252d3c87a685fbab38d96316afa3e
+
+old proof-bound SHA =
+2144d63477176f939a0d40d39b96ca97522af8db
+```
+
+The previously transcribed job `102871455729` is not the machine-enumerated job for that run and returned 404 during independent verification.
+
+### AC2.2 EA5E2 raw-log correction
+
+For #3545:
+
+```text
+EA5E2 run =
+34477409675
+
+job =
+102871455727
+
+workflow-step first-red =
+Generate central applicability plan
+```
+
+The direct planner failure was not a proven generic runtime-precondition failure. The machine plan showed:
+
+```text
+unknown_changed_paths =
+[2026-09-10 current-crop authority file]
+
+authority_errors = []
+resolver_errors = []
+blockers = []
+```
+
+The new authority path existed in the registry-driven current-crop refresh gate but was absent from the central applicability planner's owned dependency paths.
+
+Therefore the bounded repair target became qualification/governance ownership, not Twin/runtime/current-crop scientific semantics.
+
+## AC3 — Evidence-level discipline established during takeover
+
+Use exactly these evidence levels:
+
+```text
+WORKFLOW-STEP PROVEN
+= GitHub job/step directly bound
+
+NESTED-LOG PROVEN
+= inner command/subcheck raw log directly bound
+
+ARTIFACT PROVEN
+= exact run artifact directly bound
+
+SOURCE-CODE ESTABLISHED
+= exact-head implementation inspected
+
+RCA CONSISTENT WITH EVIDENCE
+= plausible classification not independently re-proven from raw inner log
+```
+
+Do not promote nested command output to an independent GitHub workflow step.
+
+Do not write `PROVEN` for an RCA merely because it matches a previous handoff narrative.
+
+## AC4 — #3547 planner repair
+
+Initial bounded #3547 work corrected central planner ownership for current-crop authority paths.
+
+The repair made both current-crop EXACT_PATH_SET resolvers derive precise immutable authority refs from the existing registry and verify source SHA-256 identity.
+
+Required fail-closed behavior was retained:
+
+```text
+unregistered authority file -> FAIL
+candidate artifact -> FAIL
+digest mismatch -> FAIL
+path containment violation -> FAIL
+duplicate authority ref -> FAIL
+duplicate authority_as_of -> FAIL
+registry identity drift -> FAIL
+graduation metadata drift -> FAIL
+```
+
+Local focused qualification reported:
+
+```text
+2 positive cases = PASS
+11 negative cases = PASS
+```
+
+Six registered authority source blobs were rechecked against Git blob identity and registry SHA-256.
+
+This repair did not mutate current-crop authority content, runtime science, DB, scheduler, Production Owner, Formal-v5, A0 or O00-O23 authority.
+
+## AC5 — Exact current-main successor proof
+
+The prior protected-main admission was bound to `2144d634...` and could not lawfully admit current main by simply adding another SHA.
+
+#3547 therefore introduced an exact-lineage successor proof for:
+
+```text
+2144d63477176f939a0d40d39b96ca97522af8db
+->
+7cb7cdc8c00252d3c87a685fbab38d96316afa3e
+```
+
+The proof binds:
+
+```text
+9 first-parent merge tuples
+19 changed paths
+exact blob SHAs
+known MCFT overlap
+```
+
+Critical policy:
+
+```text
+baseline_qualification_carry_forward_authorized = false
+```
+
+Meaning:
+
+```text
+lineage/base admission = allowed after exact proof
+old qualification PASS inheritance = forbidden
+```
+
+Never change this to `true` merely to make QCP green.
+
+Never add `7cb7...` to the legacy bare-SHA predecessor allowlist.
+
+## AC6 — QCP durable-requalification routing repair
+
+After the successor proof was admitted, QCP still incorrectly routed adoption-sensitive checks back into historical exact-boundary diagnostics.
+
+That produced false-looking errors such as:
+
+```text
+*_EXACT_BASE_REQUIRED
+actual=undefined
+```
+
+Root control-plane issue:
+
+```text
+proof-bound admission
++
+baseline carry-forward = false
+
+was not being interpreted as:
+
+fresh durable requalification required
+```
+
+The bounded QCP repair separated:
+
+```text
+proofBoundAdmissionActive
+proofBoundBaselineActive
+proofBoundFreshRequalificationActive
+```
+
+and routed the protected-main-adoption-sensitive check set through durable requalification instead of historical diagnostics.
+
+Historical exact-boundary checkers were NOT weakened or deleted.
+
+The same repair injected the current PR delta base only into explicitly successor-aware diagnostics such as the Twin V2 rolling-stage authority resolver seam.
+
+Result:
+
+```text
+QCP false historical exact-base blockers
+= removed
+
+real fresh requalification blockers
+= exposed
+```
+
+At the first successful routing checkpoint the blocker inventory contracted from 11 to 3.
+
+## AC7 — Current-crop rolling-preservation single source of truth
+
+One remaining false/stale blocker came from a dated checker that still hard-coded:
+
+```text
+registry.entries.length === 4
+```
+
+That historical 2026-09-06 checker was NOT edited to `4 -> 5`.
+
+Instead #3547 centralized the already-correct registry-driven preservation contract into:
+
+```text
+scripts/governance_acceptance/
+ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REGISTRY_PRESERVATION_V1.cjs
+```
+
+Both workflow and QCP now use the same rolling contract.
+
+Supported modes:
+
+```text
+PRESERVATION_ONLY
+SINGLE_AUTHORITY_APPEND
+```
+
+The checker validates at least:
+
+```text
+append-only history
+old prefix identity
+latest / previous linkage
+artifact existence
+SHA-256 identity
+authority_as_of monotonicity
+validity interval
+DT02 Amendment-03 binding
+architecture certificate
+graduation metadata
+candidate exclusion
+authority ceiling
+no running-mount replacement
+no production runtime restart
+```
+
+After this repair the QCP inventory became:
+
+```text
+23 PASS
+2 FAIL
+5 NOT_APPLICABLE
+```
+
+The only real remaining blockers were Phase3 and Phase5 fresh requalification evidence.
+
+## AC8 — Phase3 fresh exact-head requalification
+
+### AC8.1 Qualification trigger subject
+
+A qualification-only marker was added to a Phase3-owned acceptance path to force a legitimate `pull_request` run without changing runtime semantics.
+
+Trigger subject:
+
+```text
+e76868a50dcd89e08cc6c1f6a318dd7453de59ef
+```
+
+Phase3 run:
+
+```text
+workflow =
+mcft-cap-09-phase3-evidence-runtime-persistence
+
+run =
+34572537197
+
+event =
+pull_request
+
+base =
+7cb7cdc8c00252d3c87a685fbab38d96316afa3e
+
+head =
+e76868a50dcd89e08cc6c1f6a318dd7453de59ef
+
+conclusion =
+SUCCESS
+```
+
+The workflow completed the substantive Phase3 stack, including schema, typecheck, provider/scientific composition, leases/fencing, KBS baseline/snapshot/replay, cadence, runtime host/cycle, provider-attempt fence, ACL, retained-raw and provenance qualification.
+
+### AC8.2 Phase3 machine dependency digest
+
+QCP computed:
+
+```text
+sha256:a17896b0392c1e74cc683dffe3be8a518b6d384fa29914367f09b19086316424
+```
+
+### AC8.3 Proof-bound Phase3 exact-run binding
+
+Binding commit:
+
+```text
+e1d8f6e2db7282fbddd25b2a150cace954a88ab5
+```
+
+QCP run:
+
+```text
+34573427889
+```
+
+Machine result:
+
+```text
+PHASE3_EVIDENCE_RUNTIME_FOUNDATION
+status = PASS
+
+execution =
+PROOF_BOUND_EXACT_WORKFLOW_RUN_AND_DEPENDENCY_DIGEST_VALIDATION
+
+reason_code =
+PROOF_BOUND_PHASE3_EXACT_RUN_AND_DEPENDENCY_DIGEST_VALID
+
+evidence_run_id =
+34572537197
+
+evidence_subject_sha =
+e76868a50dcd89e08cc6c1f6a318dd7453de59ef
+```
+
+All exact-run checks were true:
+
+```text
+check_id_match
+dependency_digest_match
+requested_base_match
+subject_is_ancestor_of_head
+run_id_match
+run_success
+run_head_match
+run_base_match
+run_event_match
+run_workflow_name_match
+run_workflow_path_match
+```
+
+Phase3 left the blocker inventory.
+
+## AC9 — Phase5 fresh exact-head requalification
+
+### AC9.1 Qualification trigger subject
+
+A qualification-only marker was added to a Phase5-owned acceptance path.
+
+Trigger subject:
+
+```text
+da0a337532b39b6d4b2edd57ee3ff4b91789e440
+```
+
+Two Phase5 workflows completed successfully:
+
+```text
+mcft-cap-09-phase5-production-equivalent-containers
+run 34574713354
+= SUCCESS
+
+mcft-cap-09-phase5-two-service-accelerated-24t
+run 34574713486
+= SUCCESS
+```
+
+QCP planner explicitly identifies the second workflow as the execution workflow for:
+
+```text
+PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS
+```
+
+### AC9.2 Phase5 machine dependency digest
+
+```text
+sha256:8242448cd7ba17fa2ad713fdb3606f0745eb2ee120d39ab38f14fd316a478325
+```
+
+### AC9.3 Phase5 proof-bound exact-run binding
+
+Final binding head:
+
+```text
+c833a8df7595583c60d33ee29100ea1aeaf8c8ea
+```
+
+Final QCP run:
+
+```text
+34575429813
+= SUCCESS
+```
+
+Machine Phase5 result:
+
+```text
+PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS
+status = PASS
+
+execution =
+PROOF_BOUND_EXACT_WORKFLOW_RUN_AND_DEPENDENCY_DIGEST_VALIDATION
+
+reason_code =
+PROOF_BOUND_PHASE5_EXACT_RUN_AND_DEPENDENCY_DIGEST_VALID
+
+evidence_run_id =
+34574713486
+
+evidence_subject_sha =
+da0a337532b39b6d4b2edd57ee3ff4b91789e440
+```
+
+All exact-run binding checks were true.
+
+The final c833a8df head itself also re-ran both Phase5 workflows successfully:
+
+```text
+mcft-cap-09-phase5-two-service-accelerated-24t
+run 34575429906
+= SUCCESS
+
+mcft-cap-09-phase5-production-equivalent-containers
+run 34575429908
+= SUCCESS
+```
+
+## AC10 — Final PR-head QCP closure
+
+At exact head:
+
+```text
+c833a8df7595583c60d33ee29100ea1aeaf8c8ea
+```
+
+QCP run:
+
+```text
+34575429813
+= SUCCESS
+```
+
+Machine inventory:
+
+```text
+planner_status = PASS
+
+total_checks = 30
+pass = 25
+fail = 0
+not_applicable = 5
+
+carry_forward = 0
+required = 18
+requalify = 7
+proof_bound_preserved_required = 0
+unknown = 0
+forbidden = 0
+
+authority_errors = 0
+unknown_changed_paths = 0
+blocker_count = 0
+```
+
+Therefore:
+
+```text
+QCP BLOCKERS
+= 0
+
+PR-HEAD EXACT QUALIFICATION CONVERGENCE
+= ACHIEVED
+```
+
+This is a PR-head qualification statement only.
+
+It is NOT protected-main adoption authority and NOT Stage 1B completion.
+
+## AC11 — Other exact-head c833a8df workflow state
+
+Machine-successful pull-request workflows on the final head include:
+
+```text
+QCP
+34575429813
+= SUCCESS
+
+EA5E2 runtime dependency graph
+34575429795
+= SUCCESS
+
+EA5E2 live-window preflight hardening
+34575429810
+= SUCCESS
+
+Phase3 Evidence Runtime
+34575429809
+= SUCCESS
+
+Phase5 production-equivalent containers
+34575429908
+= SUCCESS
+
+Phase5 two-service accelerated-24T
+34575429906
+= SUCCESS
+
+post-merge V13 control plane
+34575429841
+= SUCCESS
+
+Current-Crop Refresh
+34575429714
+= SUCCESS
+
+Rolling Current-Crop Candidate
+34575429950
+= SUCCESS
+
+Current-Main Re-Anchor 2144
+34575429697
+= SUCCESS
+
+Production Runtime Owner Cutover qualification
+34575429753
+= SUCCESS
+
+Phase6 Runtime Independence
+34575429957
+= SUCCESS
+
+main ruleset readiness
+34575429836
+= SUCCESS
+
+MCFT release lane
+34575429903
+= SUCCESS
+
+delivery policy
+34575429977
+= SUCCESS
+
+CI
+34575429765
+= SUCCESS
+```
+
+The `mcft-cap-09-v13-producer-driven-live-qualification` run on this head is SKIPPED. Do not convert SKIPPED into PASS.
+
+## AC12 — What Phase5 SUCCESS does and does not prove
+
+The accelerated Phase5 workflow accepted a qualification path composed of:
+
+```text
+immutable full-24T baseline proof
++
+fresh Evidence container-resilience proof
++
+temporal-settlement semantic-equivalence adjudication
++
+focused real Twin fencing lane
+```
+
+Some fresh live 24-slot steps were skipped by workflow conditions.
+
+Therefore this proves Phase5 production-equivalent engineering qualification.
+
+It does NOT prove:
+
+```text
+24 actual Stage1B real hourly boundaries completed
+formal O00-O23 completed
+Formal-v5 armed
+Production Runtime started
+MCFT-CAP-09 complete
+```
+
+Do not conflate accelerated engineering 24T with formal Stage1B O00-O23.
+
+## AC13 — Current authority ceiling
+
+No work in #3547 changes the production/decision authority ceiling.
+
+```text
+runtime_mutation = false
+production_workflow_activation = false
+formal_database_mutation = false
+provider_request = false
+graduation_effect = false
+mcft_cap09_completed = false
+```
+
+Current explicit state:
+
+```text
+Production Owner activation
+= NOT AUTHORIZED
+
+Production Runtime
+= NOT AUTHORIZED
+
+Production Rolling Default
+= OFF
+
+Formal-v5
+= NOT ARMED
+
+A0
+= NOT STARTED
+
+formal O00-O23
+= NOT STARTED
+```
+
+QCP green is not permission to cross any of these boundaries.
+
+## AC14 — Current crop freshness is now a near-term action-time gate
+
+The existing 2026-09-10T04Z authority candidate has:
+
+```text
+authority_valid_until =
+2026-09-11T10:00:00Z
+```
+
+At AC preparation time this boundary had not yet elapsed, but it was near-term.
+
+Before any #3547 merge/adoption decision, post-merge convergence, Production Owner proof, runtime start or Formal-v5 pre-arm declaration, re-read current UTC and re-adjudicate freshness.
+
+If action time is at or after:
+
+```text
+2026-09-11T10:00:00Z
+```
+
+then the 2026-09-10T04Z authority MUST NOT be treated as current fresh authority solely because historical workflow qualification remains green.
+
+Required response to expiry/base drift:
+
+```text
+fresh source qualification
+-> fresh current-crop qualification
+-> fresh materialization artifact / registry append
+-> exact-head convergence
+```
+
+Do not merge an expired authority candidate merely to preserve a previous green state.
+
+## AC15 — Current active blocker / decision frontier
+
+There is no remaining QCP or Phase3/Phase5 engineering blocker at the #3547 PR head.
+
+The active frontier is now governance/adoption:
+
+```text
+1. confirm #3547 exact head remains c833a8df...
+2. confirm protected main remains 7cb7cdc...
+3. recheck current-crop freshness at action time
+4. inspect merge/adoption authority
+5. only if authorized, merge/adopt #3547
+6. read new protected-main SHA
+7. perform post-merge current-main convergence on that exact SHA
+8. recheck current-crop authority after merge
+9. adjudicate production-owner / local-host / DB / scheduler pre-arm prerequisites
+10. STOP BEFORE Formal-v5 ARM
+```
+
+Do not skip post-merge convergence merely because the PR head is green.
+
+## AC16 — Post-merge convergence contract
+
+After any lawful #3547 merge, all PR-head evidence becomes predecessor evidence relative to the new protected-main SHA.
+
+Required post-merge reconstruction includes at least:
+
+```text
+new protected-main exact SHA
+QCP exact-main convergence
+EA5E2 if dependency-relevant
+post-merge V13 control plane
+current-crop preservation/freshness
+Phase3/Phase5 dependency digest stability where applicable
+ruleset / CI / release readiness
+```
+
+If the merge changes a governed dependency digest, fresh requalification is required.
+
+Never claim:
+
+```text
+PR-head PASS == protected-main PASS
+```
+
+without a machine-bound post-merge check.
+
+## AC17 — Formal-v5 pre-arm endpoint for the next conversation
+
+The continuation target remains:
+
+```text
+FORMAL-v5 PRE-ARM READY
+```
+
+but NOT:
+
+```text
+FORMAL-v5 ARMED
+A0 STARTED
+O00-O23 STARTED
+MCFT-CAP-09 COMPLETE
+```
+
+Pre-arm readiness requires current-main qualification plus all operational prerequisites that the existing authority stack actually requires.
+
+If the authority stack does not yet authorize Production Owner / Runtime activation, STOP and report:
+
+```text
+ENGINEERING PRE-ARM READY
+OPERATIONAL ACTIVATION AUTHORITY STILL REQUIRED
+```
+
+Do not manufacture missing authority by weakening gates.
+
+## AC18 — Pitfalls already hit; do not repeat
+
+### AC18.1 Do not use old handoff/PR-body text as current machine state
+
+AB and #3547's earlier body are historical snapshots. Always bind to current SHA + run + artifact.
+
+### AC18.2 Workflow-step vs nested-log evidence
+
+Do not call inner manifest/static-fallback subcommands independent GitHub steps.
+
+### AC18.3 Wrong QCP job transcription
+
+Use job `102871456348` for the #3545 raw QCP failure, not the stale transcribed `102871455729`.
+
+### AC18.4 Do not classify the old EA5E2 planner red as a runtime regression
+
+The proved direct blocker was `unknown_changed_paths` for the new current-crop authority.
+
+### AC18.5 Never solve proof-bound admission with a bare SHA allowlist
+
+`7cb7...` is admitted by exact lineage/overlap proof. Legacy predecessor sets remain historical.
+
+### AC18.6 Proof-bound base admission does not carry qualification success
+
+`baseline_qualification_carry_forward_authorized=false` is intentional.
+
+### AC18.7 Do not run historical exact-boundary checkers against arbitrary successor heads
+
+Use durable requalification / exact-run evidence adjudication instead.
+
+### AC18.8 Do not hard-code current-crop registry cardinality
+
+The old `entries.length === 4` assertion is historical. Rolling preservation must remain registry-driven.
+
+### AC18.9 Do not resurrect the old local 2783268 SHA
+
+A local report referenced:
+
+```text
+2783268e2dbc55beca71e28def7b8d9380df12a6
+```
+
+but the object was not a valid local branch point during later reconstruction. The remote authoritative branch advanced independently. Do not use this SHA as continuation authority.
+
+### AC18.10 Do not pull the abandoned old selftest workspace into the converged branch
+
+The old workspace contained an alternative refactor/test shape based on a superseded head. The functional QCP repair was already machine-validated remotely. Reintroducing that workspace would create unnecessary digest/head drift.
+
+### AC18.11 Noop / remove-noop commits still move exact head
+
+Several accidental `noop` / cleanup commit pairs netted to zero tree change but changed commit ancestry. Do not rewrite the branch history now merely to cosmetically remove them; doing so would invalidate exact-head evidence.
+
+### AC18.12 Qualification-only markers change resolver digests if they are owned paths
+
+The Phase3 and Phase5 markers were semantic no-ops, but because they touched owned dependency paths they intentionally produced fresh dependency digests. Always bind evidence to the post-marker digest, never the previous digest.
+
+### AC18.13 Ancestor run evidence is acceptable only under exact fail-closed binding
+
+Required checks include exact check id, dependency digest, requested base, ancestor relation, run id, run success, run head, run base, event, workflow name and workflow path.
+
+### AC18.14 Accelerated 24T is not formal Stage1B 24h
+
+Never report Phase5 accelerated qualification as O00-O23 completion.
+
+### AC18.15 Current-crop freshness can expire while engineering checks stay green
+
+Freshness is an action-time authority property, not a permanent CI badge.
+
+## AC19 — Recommended continuation order
+
+Start the next conversation from this exact sequence:
+
+```text
+READ-ONLY RECONSTRUCTION
+1. #3298 newest AC handoff
+2. Master Task Line V2.3 / CURRENT
+3. CAP-09 Taskbook v0.5
+4. #3547 exact PR state / head / checks
+5. protected main exact SHA
+6. current UTC vs current-crop authority_valid_until
+
+THEN
+7. merge/adoption authorization adjudication
+8. if authorized, merge #3547 with expected-head protection
+9. post-merge exact-main qualification convergence
+10. current-crop freshness/materialization convergence if required
+11. production-owner / local-host / DB / scheduler prerequisite adjudication
+12. build Formal-v5 pre-arm package
+13. STOP BEFORE FORMAL-v5 ARM
+```
+
+No B-Line reopening.
+
+No ADR reopening.
+
+No Commercial authority redesign.
+
+No silent semantic promotion of THERMAL_MODEL_DERIVED into observed biological-stage truth.
+
+## AC20 — Handoff-only mutation boundary
+
+This AC materialization is authorized to modify exactly:
+
+```text
+docs/handoff/
+GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md
+```
+
+Required invariants:
+
+```text
+PURE_PREPEND
+= TRUE
+
+HISTORICAL_SUFFIX_PRESERVED
+= TRUE
+
+historical AB/AA/Z/... content
+= BYTE-PRESERVED
+
+changed_files in final authoritative handoff commit
+= EXACTLY 1
+
+direct parent
+= previous #3298 head
+```
+
+Previous #3298 authoritative head:
+
+```text
+8f02623f9861b735f8ac9930e0567dcdc357ebb4
+```
+
+The temporary materializer branch/workflow/payload MUST NOT become part of the authoritative #3298 ancestry or tree.
+
+After successful AC materialization:
+
+```text
+STOP FOR CONTINUATION / ADOPTION ADJUDICATION
+```
+
+---
 # AB 鈥?2026-09-10T04Z Current-Crop V3 Authority Materialization / Final Governance Adjudication
 
 ```text
