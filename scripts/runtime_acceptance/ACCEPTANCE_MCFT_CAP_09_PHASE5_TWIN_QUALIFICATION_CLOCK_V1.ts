@@ -1,4 +1,4 @@
-// Qualification-only exact-head Phase5 requalification marker; no runtime/product semantic change.
+// Qualification-only exact-head Phase5 requalification marker for 512fb706 successor re-anchor; no runtime/product semantic change.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
