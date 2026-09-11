@@ -1,0 +1,38 @@
+name: tmp mcft cap09 handoff AD materializer
+
+on:
+  push:
+    branches:
+      - tmp/mcft-cap09-handoff-ad-materializer-v1
+    paths:
+      - .github/workflows/tmp-mcft-cap09-handoff-ad-materializer-v1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Materialize AD pure prepend
+        run: python3 scripts/tmp_materialize_mcft_cap09_handoff_ad.py
+      - name: Verify pure-prepend diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git diff --name-only | wc -l)" -eq 1
+          test "$(git diff --name-only)" = "docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md"
+          git diff --check
+          git diff --numstat -- docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md
+      - name: Commit materialized handoff on temp branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "GEOX MCFT Handoff Materializer"
+          git config user.email "mcft-handoff@users.noreply.github.com"
+          git add docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md
+          git commit -m "tmp(mcft-cap09): materialize AD handoff prepend"
+          git push origin HEAD:tmp/mcft-cap09-handoff-ad-materializer-v1
