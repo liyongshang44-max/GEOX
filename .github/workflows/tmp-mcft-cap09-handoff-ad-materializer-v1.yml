@@ -17,8 +17,44 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Materialize AD pure prepend
-        run: python3 scripts/tmp_materialize_mcft_cap09_handoff_ad.py
+      - name: Materialize AD pure prepend from existing carrier payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64
+          import hashlib
+          from pathlib import Path
+
+          carrier = Path("scripts/tmp_materialize_mcft_cap09_handoff_ad.py")
+          handoff = Path("docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md")
+
+          source = carrier.read_text(encoding="utf-8")
+          marker = 'PREFIX = base64.b64decode("'
+          start = source.index(marker) + len(marker)
+          end = source.index('")', start)
+          encoded = "".join(source[start:end].split())
+          prefix = base64.b64decode(encoded, validate=True)
+
+          # Carrier repair only: prove the decoded bytes are the already-drafted AD payload.
+          assert prefix.startswith(b"# AD ")
+          assert b"1e59d001cbb8c1b858cd24caf61dbc02b3b0bf20" in prefix
+          assert b"FIRST_PARENT_SUCCESSOR_LENGTH_MISMATCH" in prefix
+          assert b"STOP BEFORE ARM" in prefix
+
+          old = handoff.read_bytes()
+          assert old.startswith(b"# AC ")
+          assert not old.startswith(b"# AD ")
+
+          new = prefix + old
+          handoff.write_bytes(new)
+
+          assert handoff.read_bytes().endswith(old)
+          print("prefix_bytes=", len(prefix))
+          print("prefix_sha256=", hashlib.sha256(prefix).hexdigest())
+          print("old_bytes=", len(old))
+          print("new_bytes=", len(new))
+          PY
       - name: Verify pure-prepend diff
         shell: bash
         run: |
@@ -26,7 +62,13 @@ jobs:
           test "$(git diff --name-only | wc -l)" -eq 1
           test "$(git diff --name-only)" = "docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md"
           git diff --check
-          git diff --numstat -- docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md
+          read -r adds dels file <<EOF
+          $(git diff --numstat -- docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md)
+          EOF
+          test "$file" = "docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md"
+          test "$adds" -gt 0
+          test "$dels" -eq 0
+          printf 'adds=%s deletions=%s file=%s\n' "$adds" "$dels" "$file"
       - name: Commit materialized handoff on temp branch
         shell: bash
         run: |
