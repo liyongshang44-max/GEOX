@@ -1,0 +1,127 @@
+name: tmp-mcft-cap09-1e59-preflight-binding-v1
+
+on:
+  push:
+    branches:
+      - 'tmp/mcft-cap09-1e59-preflight-binding-v1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bind-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact target branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/mcft-cap09-current-main-reanchor-1e59-v1
+          fetch-depth: 0
+
+      - name: Require exact target head
+        env:
+          TARGET_BRANCH: fix/mcft-cap09-current-main-reanchor-1e59-v1
+          EXPECTED_HEAD: 4c61e5ef0483fc466b2bde71922ddabb99a07c5f
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          git fetch --no-tags origin "$TARGET_BRANCH"
+          test "$(git rev-parse "origin/$TARGET_BRANCH")" = "$EXPECTED_HEAD"
+
+      - name: Bind exact fresh Phase3 and Phase5 proof
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs')
+          text = path.read_text(encoding='utf-8')
+
+          old3 = '''const PROOF_BOUND_PHASE3_REQUALIFICATION_V1 = {
+            evidence_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_3D178B9E_PROOF_BOUND_512F_V1",
+            check_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+            subject_sha: "3d178b9e4b79b7a907d87ada5039453179b0231f",
+            base_sha: "512fb706040bf609c949aabb641afa300bd4c91b",
+            run_id: 34596472584,
+            run_conclusion: "success",
+            workflow_name: "mcft-cap-09-phase3-evidence-runtime-persistence",
+            workflow_path: ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+            event: "pull_request",
+            dependency_digest: "sha256:1b0a84dcbd46b2b84a854ef7018d27cb280c15fc8fa244724ed4b718a6a426c9",
+          };'''
+          new3 = '''const PROOF_BOUND_PHASE3_REQUALIFICATION_V1 = {
+            evidence_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_4C61E5EF_PROOF_BOUND_1E59_V1",
+            check_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+            subject_sha: "4c61e5ef0483fc466b2bde71922ddabb99a07c5f",
+            base_sha: "1e59d001cbb8c1b858cd24caf61dbc02b3b0bf20",
+            run_id: 34625038137,
+            run_conclusion: "success",
+            workflow_name: "mcft-cap-09-phase3-evidence-runtime-persistence",
+            workflow_path: ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+            event: "pull_request",
+            dependency_digest: "sha256:3d8a9077ad0897ab5848426f202887a1e1f807c51be8c246f7ec8d2cd2feddaf",
+          };'''
+
+          old5 = '''const PROOF_BOUND_PHASE5_REQUALIFICATION_V1 = {
+            evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_3D178B9E_PROOF_BOUND_512F_V1",
+            check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+            subject_sha: "3d178b9e4b79b7a907d87ada5039453179b0231f",
+            base_sha: "512fb706040bf609c949aabb641afa300bd4c91b",
+            run_id: 34596472638,
+            run_conclusion: "success",
+            workflow_name: "mcft-cap-09-phase5-two-service-accelerated-24t",
+            workflow_path: ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+            event: "pull_request",
+            dependency_digest: "sha256:092268f77a64011e4206eada68b92d64dcf83328a7163b91f7c2720becfee0e2",
+          };'''
+          new5 = '''const PROOF_BOUND_PHASE5_REQUALIFICATION_V1 = {
+            evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_4C61E5EF_PROOF_BOUND_1E59_V1",
+            check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+            subject_sha: "4c61e5ef0483fc466b2bde71922ddabb99a07c5f",
+            base_sha: "1e59d001cbb8c1b858cd24caf61dbc02b3b0bf20",
+            run_id: 34625038090,
+            run_conclusion: "success",
+            workflow_name: "mcft-cap-09-phase5-two-service-accelerated-24t",
+            workflow_path: ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+            event: "pull_request",
+            dependency_digest: "sha256:617d09a11a5797e0a1e3793a79561613d7a1b672df76593fe9a1e0b7f24483b7",
+          };'''
+
+          if text.count(old3) != 1:
+              raise SystemExit('PHASE3_PROOF_BLOCK_NOT_EXACTLY_ONCE')
+          if text.count(old5) != 1:
+              raise SystemExit('PHASE5_PROOF_BLOCK_NOT_EXACTLY_ONCE')
+
+          text = text.replace(old3, new3).replace(old5, new5)
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Enforce one-file bounded diff
+        run: |
+          set -euo pipefail
+          git diff --check
+          mapfile -t changed < <(git diff --name-only)
+          test "${#changed[@]}" -eq 1
+          test "${changed[0]}" = "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs"
+          git diff -- scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+
+      - name: Commit and push exact target
+        env:
+          TARGET_BRANCH: fix/mcft-cap09-current-main-reanchor-1e59-v1
+          EXPECTED_HEAD: 4c61e5ef0483fc466b2bde71922ddabb99a07c5f
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+          git commit -m "test(mcft-cap09): bind proof-bound 1e59 phase3 phase5 evidence"
+          new_head="$(git rev-parse HEAD)"
+          parent="$(git rev-parse HEAD^)"
+          test "$parent" = "$EXPECTED_HEAD"
+          git fetch --no-tags origin "$TARGET_BRANCH"
+          test "$(git rev-parse "origin/$TARGET_BRANCH")" = "$EXPECTED_HEAD"
+          git push origin "${new_head}:refs/heads/${TARGET_BRANCH}"
+          echo "TARGET_PARENT=$parent"
+          echo "TARGET_NEW_HEAD=$new_head"
