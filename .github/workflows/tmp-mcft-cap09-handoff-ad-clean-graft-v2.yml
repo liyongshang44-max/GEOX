@@ -1,0 +1,92 @@
+name: tmp mcft cap09 handoff AD clean graft v2
+
+on:
+  push:
+    branches:
+      - tmp/mcft-cap09-handoff-ad-clean-graft-v2
+    paths:
+      - tmp/mcft-cap09-handoff-ad-v2.md
+      - .github/workflows/tmp-mcft-cap09-handoff-ad-clean-graft-v2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Materialize pure prepend from exact authoritative parent
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import subprocess
+          from pathlib import Path
+
+          parent = "736ad59a127fa0b17767b84a08807ebced894550"
+          path = "docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md"
+          payload_path = Path("tmp/mcft-cap09-handoff-ad-v2.md")
+          handoff = Path(path)
+
+          old = subprocess.check_output(["git", "show", f"{parent}:{path}"])
+          current = handoff.read_bytes()
+          payload = payload_path.read_bytes()
+
+          assert current == old, "temp branch handoff drifted from authoritative parent"
+          assert old.startswith(b"# AC "), "authoritative parent no longer starts at AC"
+          assert payload.startswith(b"# AD "), "payload does not start at AD"
+          assert b"1e59d001cbb8c1b858cd24caf61dbc02b3b0bf20" in payload
+          assert b"FIRST_PARENT_SUCCESSOR_LENGTH_MISMATCH" in payload
+          assert b"STOP BEFORE FORMAL-v5 ARM" in payload
+          assert b"baseline_qualification_carry_forward_authorized" in payload
+          assert b"EXACT_ONE_PRODUCTION_OWNER" in payload
+
+          new = payload + old
+          handoff.write_bytes(new)
+
+          written = handoff.read_bytes()
+          assert written[:len(payload)] == payload
+          assert written[len(payload):] == old, "historical suffix changed"
+          assert written.endswith(old), "old authoritative handoff is not exact suffix"
+
+          print("payload_bytes=", len(payload))
+          print("payload_sha256=", hashlib.sha256(payload).hexdigest())
+          print("old_bytes=", len(old))
+          print("old_sha256=", hashlib.sha256(old).hexdigest())
+          print("new_bytes=", len(written))
+          print("new_sha256=", hashlib.sha256(written).hexdigest())
+          PY
+
+      - name: Verify one-file additive working diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          path="docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md"
+          test "$(git diff --name-only | wc -l)" -eq 1
+          test "$(git diff --name-only)" = "$path"
+          git diff --check -- "$path"
+          read -r adds dels file <<EOF
+          $(git diff --numstat -- "$path")
+          EOF
+          test "$file" = "$path"
+          test "$adds" -gt 0
+          test "$dels" -eq 0
+          printf 'adds=%s deletions=%s file=%s\n' "$adds" "$dels" "$file"
+
+      - name: Commit materialized handoff on isolated temp branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          path="docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md"
+          git config user.name "GEOX MCFT Handoff Materializer"
+          git config user.email "mcft-handoff@users.noreply.github.com"
+          git add "$path"
+          test "$(git diff --cached --name-only | wc -l)" -eq 1
+          test "$(git diff --cached --name-only)" = "$path"
+          git commit -m "tmp(mcft-cap09): materialize AD handoff pure prepend"
+          git push origin HEAD:tmp/mcft-cap09-handoff-ad-clean-graft-v2
