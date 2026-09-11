@@ -8,82 +8,39 @@ on:
       - .github/workflows/tmp-mcft-cap09-handoff-ad-materializer-v1.yml
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  materialize:
+  diagnose:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Materialize AD pure prepend from existing carrier payload
+      - name: Diagnose existing carrier payload boundary only
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import base64
-          import hashlib
-          import re
           from pathlib import Path
 
           carrier = Path("scripts/tmp_materialize_mcft_cap09_handoff_ad.py")
-          handoff = Path("docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md")
-
           source = carrier.read_text(encoding="utf-8")
           marker = 'PREFIX = base64.b64decode("'
           start = source.index(marker) + len(marker)
-
-          # The original carrier was truncated after the encoded AD payload and
-          # therefore has no closing Python quote. Treat only the existing tail
-          # as transport data; remove whitespace only and reject any other syntax.
           tail = source[start:]
-          encoded = "".join(tail.split())
-          assert encoded
-          assert re.fullmatch(r"[A-Za-z0-9+/]*={0,2}", encoded), "carrier tail contains non-base64 data"
-          prefix = base64.b64decode(encoded, validate=True)
+          alphabet = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=")
+          invalid = [(i, ch) for i, ch in enumerate(tail) if not ch.isspace() and ch not in alphabet]
 
-          # Carrier repair only: prove the decoded bytes are the already-drafted AD payload.
-          assert prefix.startswith(b"# AD ")
-          assert b"1e59d001cbb8c1b858cd24caf61dbc02b3b0bf20" in prefix
-          assert b"FIRST_PARENT_SUCCESSOR_LENGTH_MISMATCH" in prefix
-          assert b"STOP BEFORE ARM" in prefix
-          assert b"#3547" in prefix and b"#3549" in prefix
+          print("tail_len=", len(tail))
+          print("invalid_count=", len(invalid))
+          for i, ch in invalid[:20]:
+              lo = max(0, i - 120)
+              hi = min(len(tail), i + 120)
+              print("INVALID", i, repr(ch), "SNIP", repr(tail[lo:hi]))
+          print("last_700=", repr(tail[-700:]))
 
-          old = handoff.read_bytes()
-          assert old.startswith(b"# AC ")
-          assert not old.startswith(b"# AD ")
-
-          new = prefix + old
-          handoff.write_bytes(new)
-
-          assert handoff.read_bytes()[len(prefix):] == old
-          print("prefix_bytes=", len(prefix))
-          print("prefix_sha256=", hashlib.sha256(prefix).hexdigest())
-          print("old_bytes=", len(old))
-          print("old_sha256=", hashlib.sha256(old).hexdigest())
-          print("new_bytes=", len(new))
+          # Diagnostic-only invariant: do not mutate repository content.
+          assert invalid, "expected a non-base64 carrier suffix boundary"
           PY
-      - name: Verify pure-prepend diff
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git diff --name-only | wc -l)" -eq 1
-          test "$(git diff --name-only)" = "docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md"
-          git diff --check
-          read -r adds dels file <<EOF
-          $(git diff --numstat -- docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md)
-          EOF
-          test "$file" = "docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md"
-          test "$adds" -gt 0
-          test "$dels" -eq 0
-          printf 'adds=%s deletions=%s file=%s\n' "$adds" "$dels" "$file"
-      - name: Commit materialized handoff on temp branch
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "GEOX MCFT Handoff Materializer"
-          git config user.email "mcft-handoff@users.noreply.github.com"
-          git add docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md
-          git commit -m "tmp(mcft-cap09): materialize AD handoff prepend"
-          git push origin HEAD:tmp/mcft-cap09-handoff-ad-materializer-v1
+          test -z "$(git status --porcelain)"
