@@ -1,0 +1,110 @@
+name: Temporary MCFT CAP-09 512F Workflow Materializer V2
+
+on:
+  push:
+    branches:
+      - tmp/mcft-cap09-qcp-512f-materializer-v1
+    paths:
+      - '.github/workflows/tmp-mcft-cap09-512f-workflow-materializer-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Assert temporary branch lineage and generated QCP
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 512fb706040bf609c949aabb641afa300bd4c91b HEAD
+          test "$(git rev-parse HEAD:docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json)" = "6f068f1771c96f0de87ae428f810edf430f5155a"
+
+      - name: Materialize exact 512F workflow wiring
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const oldBase = '7cb7cdc8c00252d3c87a685fbab38d96316afa3e';
+          const newBase = '512fb706040bf609c949aabb641afa300bd4c91b';
+          const oldArtifact = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-7CB7-V1.json';
+          const oldAcceptance = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1.cjs';
+          const newArtifact = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-512F-V1.json';
+          const newAcceptance = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_512F_V1.cjs';
+          const reanchor = '.github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml';
+          const qcpWorkflow = '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml';
+          const postMerge = '.github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml';
+          function replaceFirst(text, from, to, label) {
+            const first = text.indexOf(from);
+            if (first < 0) throw new Error(`MATERIALIZER_PATTERN_MISSING:${label}`);
+            return text.slice(0, first) + to + text.slice(first + from.length);
+          }
+          function replaceUnique(text, from, to, label) {
+            const first = text.indexOf(from);
+            if (first < 0) throw new Error(`MATERIALIZER_PATTERN_MISSING:${label}`);
+            if (text.indexOf(from, first + from.length) >= 0) throw new Error(`MATERIALIZER_PATTERN_DUPLICATE:${label}`);
+            return text.slice(0, first) + to + text.slice(first + from.length);
+          }
+          function edit(path, fn) {
+            const before = fs.readFileSync(path, 'utf8');
+            const after = fn(before);
+            if (after === before) throw new Error(`MATERIALIZER_NOOP:${path}`);
+            fs.writeFileSync(path, after);
+          }
+          edit(reanchor, (s) => {
+            s = replaceFirst(s,
+              `    paths:\n      - '${oldArtifact}'\n      - '${oldAcceptance}'`,
+              `    paths:\n      - '${newArtifact}'\n      - '${newAcceptance}'\n      - '${oldArtifact}'\n      - '${oldAcceptance}'`,
+              'REANCHOR_TRIGGER_PATHS');
+            s = replaceUnique(s,
+              `          if [ \"$PR_BASE_SHA\" = \"${oldBase}\" ]; then\n            node ${oldAcceptance} --selftest\n            node ${oldAcceptance}\n          else\n            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs\n          fi`,
+              `          if [ \"$PR_BASE_SHA\" = \"${newBase}\" ]; then\n            node ${newAcceptance} --selftest\n            node ${newAcceptance}\n          elif [ \"$PR_BASE_SHA\" = \"${oldBase}\" ]; then\n            node ${oldAcceptance} --selftest\n            node ${oldAcceptance}\n          else\n            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs\n          fi`,
+              'REANCHOR_ROUTING');
+            s = replaceUnique(s,
+              `            ${oldArtifact}\n            acceptance-output/MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1_RESULT.json`,
+              `            ${oldArtifact}\n            acceptance-output/MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1_RESULT.json\n            ${newArtifact}\n            acceptance-output/MCFT_CAP_09_CURRENT_MAIN_REANCHOR_512F_V1_RESULT.json`,
+              'REANCHOR_UPLOAD');
+            return s;
+          });
+          edit(qcpWorkflow, (s) => {
+            s = replaceFirst(s,
+              `      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'\n      - '${oldArtifact}'\n      - '${oldAcceptance}'`,
+              `      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'\n      - '${newArtifact}'\n      - '${newAcceptance}'\n      - '${oldArtifact}'\n      - '${oldAcceptance}'`,
+              'QCP_TRIGGER_PATHS');
+            s = replaceUnique(s,
+              `  CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA: '${oldBase}'\n  CURRENT_MAIN_REANCHOR_PROOF_ACCEPTANCE: '${oldAcceptance}'`,
+              `  CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA: '${newBase}'\n  CURRENT_MAIN_REANCHOR_PROOF_ACCEPTANCE: '${newAcceptance}'`,
+              'QCP_ENV');
+            s = replaceUnique(s,
+              `assert(['${oldArtifact}','${oldAcceptance}','.github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml'].every((rel) => proofControlPaths.has(rel)), 'PROOF_BOUND_FILES_NOT_IN_CONTROL_PLANE_RESOLVER');`,
+              `assert(['${newArtifact}','${newAcceptance}','.github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml'].every((rel) => proofControlPaths.has(rel)), 'PROOF_BOUND_FILES_NOT_IN_CONTROL_PLANE_RESOLVER');`,
+              'QCP_ASSERTION');
+            return s;
+          });
+          edit(postMerge, (s) => replaceUnique(s,
+            `              if [ \"$base_sha\" = \"${oldBase}\" ]; then\n                git fetch --no-tags origin main\n                node ${oldAcceptance}\n              else`,
+            `              if [ \"$base_sha\" = \"${newBase}\" ]; then\n                git fetch --no-tags origin main\n                node ${newAcceptance}\n              elif [ \"$base_sha\" = \"${oldBase}\" ]; then\n                git fetch --no-tags origin main\n                node ${oldAcceptance}\n              else`,
+            'POST_MERGE_ROUTING'));
+          for (const p of [reanchor, qcpWorkflow, postMerge]) {
+            const text = fs.readFileSync(p, 'utf8');
+            if (!text.includes(newBase) || !text.includes(newAcceptance)) throw new Error(`MATERIALIZER_512F_WIRING_MISSING:${p}`);
+          }
+
+      - name: Commit generated workflow blobs on temporary branch only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            .github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml \
+            .github/workflows/mcft-cap-09-qualification-control-plane-v1.yml \
+            .github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml
+          test "$(git diff --cached --name-only | wc -l)" -eq 3
+          git commit -m 'chore(mcft-cap09): materialize 512f workflow blobs on temporary branch'
+          git push origin HEAD:tmp/mcft-cap09-qcp-512f-materializer-v1
