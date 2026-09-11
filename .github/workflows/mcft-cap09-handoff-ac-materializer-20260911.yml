@@ -1,0 +1,80 @@
+name: mcft-cap09-handoff-ac-materializer-20260911
+
+on:
+  push:
+    branches:
+      - tmp/mcft-cap09-handoff-ac-materializer-20260911
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Materialize AC as pure prepend on authoritative handoff branch
+        shell: bash
+        env:
+          OLD_HEAD: 8f02623f9861b735f8ac9930e0567dcdc357ebb4
+          TARGET_BRANCH: docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier
+          HANDOFF: docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md
+          PAYLOAD: .handoff-materializer/AC-2026-09-11.md
+        run: |
+          set -euo pipefail
+
+          remote_head="$(git ls-remote origin "refs/heads/${TARGET_BRANCH}" | awk '{print $1}')"
+          test "${remote_head}" = "${OLD_HEAD}" || {
+            echo "HANDOFF_HEAD_DRIFT expected=${OLD_HEAD} actual=${remote_head}" >&2
+            exit 1
+          }
+
+          git cat-file -e "${OLD_HEAD}^{commit}"
+          git cat-file -e "${OLD_HEAD}:${HANDOFF}"
+
+          old_blob="$(git rev-parse "${OLD_HEAD}:${HANDOFF}")"
+          git show "${OLD_HEAD}:${HANDOFF}" > /tmp/handoff-old.bin
+          cp "${PAYLOAD}" /tmp/handoff-prefix.bin
+          cat /tmp/handoff-prefix.bin /tmp/handoff-old.bin > /tmp/handoff-new.bin
+
+          git checkout --detach "${OLD_HEAD}"
+          cp /tmp/handoff-new.bin "${HANDOFF}"
+
+          python - <<'PY'
+          from pathlib import Path
+          old = Path('/tmp/handoff-old.bin').read_bytes()
+          prefix = Path('/tmp/handoff-prefix.bin').read_bytes()
+          new = Path('/tmp/handoff-new.bin').read_bytes()
+          assert new == prefix + old
+          print(f'PURE_PREPEND=true old_bytes={len(old)} prefix_bytes={len(prefix)} new_bytes={len(new)}')
+          PY
+
+          git add "${HANDOFF}"
+          tree="$(git write-tree)"
+
+          export GIT_AUTHOR_NAME='GEOX MCFT Handoff Materializer'
+          export GIT_AUTHOR_EMAIL='mcft-handoff@users.noreply.github.com'
+          export GIT_COMMITTER_NAME='GEOX MCFT Handoff Materializer'
+          export GIT_COMMITTER_EMAIL='mcft-handoff@users.noreply.github.com'
+
+          commit="$(printf '%s\n' 'docs(mcft-cap09): hand off proof-bound pre-arm qualification convergence frontier' | git commit-tree "${tree}" -p "${OLD_HEAD}")"
+
+          test "$(git rev-parse "${commit}^")" = "${OLD_HEAD}"
+          changed="$(git diff-tree --no-commit-id --name-only -r "${commit}")"
+          test "${changed}" = "${HANDOFF}" || {
+            echo "CHANGED_FILE_BOUNDARY_VIOLATION" >&2
+            printf '%s\n' "${changed}" >&2
+            exit 1
+          }
+
+          new_blob="$(git rev-parse "${commit}:${HANDOFF}")"
+          echo "old_head=${OLD_HEAD}"
+          echo "old_blob=${old_blob}"
+          echo "new_commit=${commit}"
+          echo "new_blob=${new_blob}"
+          echo "changed_files=1"
+
+          git push origin "${commit}:refs/heads/${TARGET_BRANCH}"
