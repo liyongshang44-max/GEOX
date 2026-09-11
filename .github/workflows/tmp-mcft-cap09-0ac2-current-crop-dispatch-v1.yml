@@ -1,0 +1,78 @@
+name: tmp-mcft-cap09-0ac2-current-crop-dispatch-v1
+
+on:
+  push:
+    branches:
+      - tmp/mcft-cap09-0ac2-current-crop-dispatch-v1
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  dispatch-after-postmerge-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact protected main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact protected main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "0ac2d2cf98d553285a2051a1b0b86131a23fc413"
+          test "$(git rev-parse HEAD)" = "0ac2d2cf98d553285a2051a1b0b86131a23fc413"
+
+      - name: Require successful protected-main push CI
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 150); do
+            payload="$(curl -fsSL \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/34627501269")"
+            status="$(node -e 'const p=JSON.parse(process.argv[1]); process.stdout.write(String(p.status||""))' "$payload")"
+            conclusion="$(node -e 'const p=JSON.parse(process.argv[1]); process.stdout.write(String(p.conclusion||""))' "$payload")"
+            head="$(node -e 'const p=JSON.parse(process.argv[1]); process.stdout.write(String(p.head_sha||""))' "$payload")"
+            event="$(node -e 'const p=JSON.parse(process.argv[1]); process.stdout.write(String(p.event||""))' "$payload")"
+            test "$head" = "0ac2d2cf98d553285a2051a1b0b86131a23fc413"
+            test "$event" = "push"
+            if [ "$status" = "completed" ]; then
+              test "$conclusion" = "success"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "POSTMERGE_CI_NOT_COMPLETED_WITHIN_CARRIER_WINDOW" >&2
+          exit 1
+
+      - name: Recheck exact protected main before dispatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "0ac2d2cf98d553285a2051a1b0b86131a23fc413"
+
+      - name: Dispatch fresh rolling current-crop candidate on protected main
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          curl -fsSL -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/mcft-cap-09-t4r1-rolling-current-crop-candidate-v1.yml/dispatches" \
+            -d '{"ref":"main"}'
+          echo "CURRENT_CROP_DISPATCH_SUBMITTED_FOR_0AC2"
