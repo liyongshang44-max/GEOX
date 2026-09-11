@@ -1,0 +1,145 @@
+name: Temporary MCFT CAP-09 512F Blob Materializer V3
+
+on:
+  push:
+    branches:
+      - tmp/mcft-cap09-qcp-512f-materializer-v1
+    paths:
+      - '.github/workflows/tmp-mcft-cap09-512f-blob-materializer-v3.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Assert isolated materializer lineage
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 512fb706040bf609c949aabb641afa300bd4c91b HEAD
+          test "$(git rev-parse 512fb706040bf609c949aabb641afa300bd4c91b^{tree})" = "2e211c9cb2af003d5878fc08f84fb01a1b3c649d"
+          test "$(git rev-parse HEAD:docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json)" = "6f068f1771c96f0de87ae428f810edf430f5155a"
+
+      - name: Generate final clean carrier blobs
+        id: generate
+        shell: node {0}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          const fs = require('fs');
+          const cp = require('child_process');
+          const crypto = require('crypto');
+          const https = require('https');
+
+          const OLD_BASE = '7cb7cdc8c00252d3c87a685fbab38d96316afa3e';
+          const NEW_BASE = '512fb706040bf609c949aabb641afa300bd4c91b';
+          const NEW_TREE = '2e211c9cb2af003d5878fc08f84fb01a1b3c649d';
+          const OLD_ARTIFACT = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-7CB7-V1.json';
+          const OLD_ACCEPTANCE = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1.cjs';
+          const ARTIFACT = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-512F-V1.json';
+          const ACCEPTANCE = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_512F_V1.cjs';
+          const QCP = 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json';
+          const REANCHOR_WF = '.github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml';
+          const QCP_WF = '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml';
+          const POSTMERGE_WF = '.github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml';
+
+          function git(args) { return cp.execFileSync('git', args, {encoding:'utf8', maxBuffer:64*1024*1024}).trim(); }
+          function replaceFirst(text, from, to, label) {
+            const i = text.indexOf(from); if (i < 0) throw new Error(`PATTERN_MISSING:${label}`);
+            return text.slice(0,i)+to+text.slice(i+from.length);
+          }
+          function replaceUnique(text, from, to, label) {
+            const i = text.indexOf(from); if (i < 0) throw new Error(`PATTERN_MISSING:${label}`);
+            if (text.indexOf(from,i+from.length)>=0) throw new Error(`PATTERN_DUPLICATE:${label}`);
+            return text.slice(0,i)+to+text.slice(i+from.length);
+          }
+          function readBase(path) { return git(['show', `${NEW_BASE}:${path}`]); }
+          function postBlob(content) {
+            const body = JSON.stringify({content: Buffer.from(content,'utf8').toString('base64'), encoding:'base64'});
+            return new Promise((resolve,reject)=>{
+              const req=https.request({hostname:'api.github.com',path:`/repos/${process.env.GH_REPO}/git/blobs`,method:'POST',headers:{'Authorization':`Bearer ${process.env.GH_TOKEN}`,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'mcft-cap09-512f-materializer','Content-Type':'application/json','Content-Length':Buffer.byteLength(body)}},res=>{
+                let data='';res.on('data',d=>data+=d);res.on('end',()=>{if(res.statusCode!==201)return reject(new Error(`BLOB_POST_${res.statusCode}:${data}`));resolve(JSON.parse(data).sha);});
+              });req.on('error',reject);req.write(body);req.end();
+            });
+          }
+
+          let reanchor = readBase(REANCHOR_WF) + '\n';
+          reanchor = replaceFirst(reanchor,
+            `    paths:\n      - '${OLD_ARTIFACT}'\n      - '${OLD_ACCEPTANCE}'`,
+            `    paths:\n      - '${ARTIFACT}'\n      - '${ACCEPTANCE}'\n      - '${OLD_ARTIFACT}'\n      - '${OLD_ACCEPTANCE}'`, 'REANCHOR_TRIGGER');
+          reanchor = replaceUnique(reanchor,
+            `          if [ \"$PR_BASE_SHA\" = \"${OLD_BASE}\" ]; then\n            node ${OLD_ACCEPTANCE} --selftest\n            node ${OLD_ACCEPTANCE}\n          else\n            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs\n          fi`,
+            `          if [ \"$PR_BASE_SHA\" = \"${NEW_BASE}\" ]; then\n            node ${ACCEPTANCE} --selftest\n            node ${ACCEPTANCE}\n          elif [ \"$PR_BASE_SHA\" = \"${OLD_BASE}\" ]; then\n            node ${OLD_ACCEPTANCE} --selftest\n            node ${OLD_ACCEPTANCE}\n          else\n            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs\n          fi`, 'REANCHOR_ROUTING');
+          reanchor = replaceUnique(reanchor,
+            `            ${OLD_ARTIFACT}\n            acceptance-output/MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1_RESULT.json`,
+            `            ${OLD_ARTIFACT}\n            acceptance-output/MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1_RESULT.json\n            ${ARTIFACT}\n            acceptance-output/MCFT_CAP_09_CURRENT_MAIN_REANCHOR_512F_V1_RESULT.json`, 'REANCHOR_UPLOAD');
+
+          let qcpWf = readBase(QCP_WF) + '\n';
+          qcpWf = replaceFirst(qcpWf,
+            `      - '${QCP}'\n      - '${OLD_ARTIFACT}'\n      - '${OLD_ACCEPTANCE}'`,
+            `      - '${QCP}'\n      - '${ARTIFACT}'\n      - '${ACCEPTANCE}'\n      - '${OLD_ARTIFACT}'\n      - '${OLD_ACCEPTANCE}'`, 'QCP_TRIGGER');
+          qcpWf = replaceUnique(qcpWf,
+            `  CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA: '${OLD_BASE}'\n  CURRENT_MAIN_REANCHOR_PROOF_ACCEPTANCE: '${OLD_ACCEPTANCE}'`,
+            `  CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA: '${NEW_BASE}'\n  CURRENT_MAIN_REANCHOR_PROOF_ACCEPTANCE: '${ACCEPTANCE}'`, 'QCP_ENV');
+          qcpWf = replaceUnique(qcpWf,
+            `assert(['${OLD_ARTIFACT}','${OLD_ACCEPTANCE}','${REANCHOR_WF}'].every((rel) => proofControlPaths.has(rel)), 'PROOF_BOUND_FILES_NOT_IN_CONTROL_PLANE_RESOLVER');`,
+            `assert(['${ARTIFACT}','${ACCEPTANCE}','${REANCHOR_WF}'].every((rel) => proofControlPaths.has(rel)), 'PROOF_BOUND_FILES_NOT_IN_CONTROL_PLANE_RESOLVER');`, 'QCP_ASSERT');
+
+          let postmerge = readBase(POSTMERGE_WF) + '\n';
+          postmerge = replaceUnique(postmerge,
+            `              if [ \"$base_sha\" = \"${OLD_BASE}\" ]; then\n                git fetch --no-tags origin main\n                node ${OLD_ACCEPTANCE}\n              else`,
+            `              if [ \"$base_sha\" = \"${NEW_BASE}\" ]; then\n                git fetch --no-tags origin main\n                node ${ACCEPTANCE}\n              elif [ \"$base_sha\" = \"${OLD_BASE}\" ]; then\n                git fetch --no-tags origin main\n                node ${OLD_ACCEPTANCE}\n              else`, 'POSTMERGE_ROUTING');
+
+          const changed = [
+            ['.github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml','6bcb35b5638a0bb6c6761e5d50fc9e7fef90576e','modified','ADOPTED_MCFT_QUALIFICATION_GOVERNANCE'],
+            ['.github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml','86f4a426f78085d05cadd0a4f8393ac25907ad43','modified','ADOPTED_MCFT_QUALIFICATION_GOVERNANCE'],
+            ['.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml','0cd869bc5230866dc7922974954855078e5d5a69','modified','ADOPTED_MCFT_QUALIFICATION_GOVERNANCE'],
+            ['.github/workflows/mcft-cap-09-t4r1-current-crop-refresh-v1.yml','364b5713da3a8b99afa033c2d4f9efa6f6083750','modified','ADOPTED_MCFT_QUALIFICATION_GOVERNANCE'],
+            ['docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-7CB7-V1.json','121230e4b860ca51e40ee668d16fa468b37acc93','added','ADOPTED_MCFT_QUALIFICATION_GOVERNANCE'],
+            ['docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json','99bbd94de19fc2e606bc8a44a89eec71591a5cd3','modified','ADOPTED_MCFT_QUALIFICATION_GOVERNANCE'],
+            ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs','bf7076dd7715b140704f803a39a07d62662d0632','modified','ADOPTED_MCFT_QUALIFICATION_GOVERNANCE'],
+            ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1.cjs','a7c24d4e180dae566d384e81149dcef4700c5512','added','ADOPTED_MCFT_QUALIFICATION_GOVERNANCE'],
+            ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REGISTRY_PRESERVATION_V1.cjs','98b89a6c0d485f70e97fe2abf6a886f0a5d13a86','added','ADOPTED_MCFT_QUALIFICATION_GOVERNANCE'],
+            ['scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs','282bb6fce811b7fca2b6c9cdc838bfeaa1f27f40','modified','ADOPTED_MCFT_QUALIFICATION_GOVERNANCE'],
+            ['scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs','6af15aacf2d1a4f415461384cff47f405dd8c9f4','modified','ADOPTED_MCFT_QUALIFICATION_GOVERNANCE'],
+            ['scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts','4690470e782ec5635268dd8990c0f2bfec1b5113','modified','ADOPTED_PHASE3_REQUALIFICATION_MARKER'],
+            ['scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_QUALIFICATION_CLOCK_V1.ts','404b97277b5f1b823e18fb45f997541914be84ba','modified','ADOPTED_PHASE5_REQUALIFICATION_MARKER']
+          ].map(([path,blob_sha,status,classification])=>({path,blob_sha,status,classification}));
+          const declarationObj={schema_version:'geox_mcft_cap09_current_main_reanchor_512f_v1',status:'CANDIDATE_PROOF_BOUND_ADMISSION',authority_ceiling:'QUALIFICATION_GOVERNANCE_ONLY',previous_accepted_mcft_base:OLD_BASE,current_protected_main:NEW_BASE,current_protected_main_tree:NEW_TREE,exact_first_parent_successors:[{sha:NEW_BASE,parents:[OLD_BASE,'c833a8df7595583c60d33ee29100ea1aeaf8c8ea'],pr_number:3547}],exact_changed_paths:changed,overlap_policy:'EXACT_MERGED_DELTA_AND_BLOB_BINDING_NO_ZERO_OVERLAP_CLAIM',qcp_admission:{mode:'PROOF_BOUND_EXACT_BASE',bare_sha_allowlist_admission_authorized:false,admission_requires_exact_lineage_and_overlap_proof:true,baseline_qualification_carry_forward_authorized:false},non_effects:{runtime_config_write_authorized:false,database_write_authorized:false,scheduler_write_authorized:false,production_owner_activation_authorized:false,production_runtime_start_authorized:false,formal_v5_authorized:false,a0_authorized:false,o00_o23_authorized:false,bline_reopen_authorized:false,adr_semantic_change_authorized:false}};
+          const declaration=JSON.stringify(declarationObj,null,2)+'\n';
+          const declarationSha256=crypto.createHash('sha256').update(declaration).digest('hex');
+          const acceptance=`#!/usr/bin/env node\n"use strict";\n\nconst assert = require("node:assert/strict");\nconst cp = require("node:child_process");\nconst crypto = require("node:crypto");\nconst fs = require("node:fs");\nconst path = require("node:path");\nconst ROOT = path.resolve(__dirname, "../..");\nconst ARTIFACT = "${ARTIFACT}";\nconst ACCEPTANCE = "${ACCEPTANCE}";\nconst QCP = "${QCP}";\nconst ARTIFACT_SHA256 = "${declarationSha256}";\nconst OLD_BASE = "${OLD_BASE}";\nconst NEW_BASE = "${NEW_BASE}";\nconst NEW_TREE = "${NEW_TREE}";\nfunction git(args) { return cp.execFileSync("git", args, { cwd: ROOT, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }).trim(); }\nfunction lines(value) { return value.split(/\\r?\\n/).filter(Boolean); }\nfunction verifyObserved(artifact, observed) {\n  assert.equal(observed.current_main, NEW_BASE, "REANCHOR_512F_PROTECTED_MAIN_DRIFT");\n  assert.equal(observed.tree, NEW_TREE, "REANCHOR_512F_TREE_DRIFT");\n  assert.equal(observed.old_is_ancestor, true, "REANCHOR_512F_OLD_BASE_NOT_ANCESTOR");\n  assert.equal(observed.head_descends_from_main, true, "REANCHOR_512F_HEAD_NOT_DESCENDANT");\n  assert.deepEqual(observed.first_parent_successors, artifact.exact_first_parent_successors, "REANCHOR_512F_FIRST_PARENT_LINEAGE_DRIFT");\n  assert.deepEqual(observed.changed_paths, artifact.exact_changed_paths.map((row) => row.path).sort(), "REANCHOR_512F_CHANGED_PATH_SET_DRIFT");\n  for (const row of artifact.exact_changed_paths) assert.equal(observed.blobs[row.path], row.blob_sha, \`REANCHOR_512F_ADOPTED_BLOB_DRIFT:\${row.path}\`);\n}\nfunction main() {\n  const bytes = fs.readFileSync(path.join(ROOT, ARTIFACT));\n  assert.equal(crypto.createHash("sha256").update(bytes).digest("hex"), ARTIFACT_SHA256, "REANCHOR_512F_DECLARATION_DIGEST_DRIFT");\n  const artifact = JSON.parse(bytes);\n  assert.equal(artifact.previous_accepted_mcft_base, OLD_BASE);\n  assert.equal(artifact.current_protected_main, NEW_BASE);\n  assert.equal(artifact.current_protected_main_tree, NEW_TREE);\n  assert.equal(artifact.qcp_admission.baseline_qualification_carry_forward_authorized, false);\n  for (const value of Object.values(artifact.non_effects)) assert.equal(value, false);\n  if (process.argv.includes("--selftest")) {\n    const good={current_main:NEW_BASE,tree:NEW_TREE,old_is_ancestor:true,head_descends_from_main:true,first_parent_successors:structuredClone(artifact.exact_first_parent_successors),changed_paths:artifact.exact_changed_paths.map(r=>r.path).sort(),blobs:Object.fromEntries(artifact.exact_changed_paths.map(r=>[r.path,r.blob_sha]))};\n    verifyObserved(artifact,good);\n    const cases=[["MAIN_DRIFT",x=>{x.current_main=OLD_BASE;}],["TREE_DRIFT",x=>{x.tree="0".repeat(40);}],["OLD_BASE_NOT_ANCESTOR",x=>{x.old_is_ancestor=false;}],["HEAD_NOT_DESCENDANT",x=>{x.head_descends_from_main=false;}],["FIRST_PARENT_LINEAGE_DRIFT",x=>{x.first_parent_successors.reverse();}],["CHANGED_PATH_SET_DRIFT",x=>{x.changed_paths.push("apps/server/src/runtime/unadjudicated.ts");}],["ADOPTED_BLOB_DRIFT",x=>{x.blobs[x.changed_paths[0]]="0".repeat(40);}]];\n    for(const [code,mutate] of cases){const altered=structuredClone(good);mutate(altered);assert.throws(()=>verifyObserved(artifact,altered),new RegExp(code));}\n    console.log(JSON.stringify({status:"PASS",scope:"REANCHOR_OBSERVATION_NEGATIVE_TESTS_ONLY",positive_cases:1,negative_cases:cases.length,base_admitted:false}));return;\n  }\n  const observed={current_main:git(["rev-parse","origin/main"]),tree:git(["rev-parse",\`${NEW_BASE}^{tree}\`]),old_is_ancestor:cp.spawnSync("git",["merge-base","--is-ancestor",OLD_BASE,NEW_BASE],{cwd:ROOT}).status===0,head_descends_from_main:cp.spawnSync("git",["merge-base","--is-ancestor",NEW_BASE,"HEAD"],{cwd:ROOT}).status===0,first_parent_successors:lines(git(["rev-list","--first-parent","--reverse",\`${OLD_BASE}..${NEW_BASE}\`])).map((sha)=>{const parents=git(["rev-list","--parents","-n","1",sha]).split(/\\s+/).slice(1);const match=git(["show","-s","--format=%s",sha]).match(/^Merge pull request #(\\d+) /);assert(match,"REANCHOR_512F_MERGE_PR_IDENTITY_MISSING");return{sha,parents,pr_number:Number(match[1])};}),changed_paths:lines(git(["diff","--name-only",\`${OLD_BASE}..${NEW_BASE}\`])).sort(),blobs:Object.fromEntries(artifact.exact_changed_paths.map(r=>[r.path,git(["rev-parse",\`${NEW_BASE}:\${r.path}\`])]))};\n  verifyObserved(artifact,observed);\n  const qcp=JSON.parse(fs.readFileSync(path.join(ROOT,QCP),"utf8"));\n  const priorQcp=JSON.parse(git(["show",\`${NEW_BASE}:\${QCP}\`]));\n  assert.deepEqual(qcp.governed_successor_predecessor_shas,priorQcp.governed_successor_predecessor_shas,"REANCHOR_512F_BARE_ALLOWLIST_CHANGE_FORBIDDEN");\n  assert(!qcp.governed_successor_predecessor_shas.includes(NEW_BASE),"REANCHOR_512F_BARE_ALLOWLIST_FORBIDDEN");\n  assert.equal(qcp.proof_bound_exact_base_admissions?.length,1,"REANCHOR_512F_ADMISSION_CARDINALITY");\n  const admission=qcp.proof_bound_exact_base_admissions[0];\n  assert.equal(admission.base_sha,NEW_BASE);assert.equal(admission.current_protected_main_tree,NEW_TREE);assert.equal(admission.proof_artifact,ARTIFACT);assert.equal(admission.proof_acceptance,ACCEPTANCE);assert.equal(admission.proof_workflow,"${REANCHOR_WF}");assert.equal(admission.mode,"PROOF_BOUND_EXACT_BASE");assert.equal(admission.bare_sha_allowlist_admission_authorized,false);assert.equal(admission.admission_requires_exact_lineage_and_overlap_proof,true);assert.equal(admission.baseline_qualification_carry_forward_authorized,false);\n  for(const rel of [ARTIFACT,ACCEPTANCE]) assert(qcp.dependency_resolvers.CONTROL_PLANE_FILES.paths.includes(rel));\n  const result={status:"PASS",scope:"EXACT_MERGED_LINEAGE_AND_OVERLAP_PRESERVATION_ONLY",base_sha:NEW_BASE,head_sha:git(["rev-parse","HEAD"]),tree_sha:NEW_TREE,first_parent_merges:observed.first_parent_successors.length,changed_paths:observed.changed_paths.length,zero_mcft_overlap_claimed:false,baseline_qualification_carried_forward:false,production_owner_proven:false,production_runtime_started:false,formal_v5_armed:false};\n  fs.mkdirSync(path.join(ROOT,"acceptance-output"),{recursive:true});fs.writeFileSync(path.join(ROOT,"acceptance-output/MCFT_CAP_09_CURRENT_MAIN_REANCHOR_512F_V1_RESULT.json"),JSON.stringify(result,null,2)+"\\n");console.log(JSON.stringify(result,null,2));\n}\nif(require.main===module)main();\nmodule.exports={verifyObserved};\n`;
+
+          (async()=>{
+            const result={
+              qcp_blob:'6f068f1771c96f0de87ae428f810edf430f5155a',
+              reanchor_workflow_blob:await postBlob(reanchor),
+              qcp_workflow_blob:await postBlob(qcpWf),
+              postmerge_workflow_blob:await postBlob(postmerge),
+              declaration_blob:await postBlob(declaration),
+              declaration_sha256:declarationSha256,
+              acceptance_blob:await postBlob(acceptance)
+            };
+            fs.writeFileSync('/tmp/mcft-512f-blob-result.json',JSON.stringify(result,null,2)+'\n');
+            console.log('MCFT_512F_BLOB_RESULT='+JSON.stringify(result));
+          })().catch(e=>{console.error(e);process.exitCode=1;});
+
+      - name: Persist only blob SHA result on temporary branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git reset --hard HEAD
+          cp /tmp/mcft-512f-blob-result.json .tmp-mcft-cap09-512f-blob-result.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .tmp-mcft-cap09-512f-blob-result.json
+          git commit -m 'chore(mcft-cap09): record temporary 512f clean blob shas'
+          git push origin HEAD:tmp/mcft-cap09-qcp-512f-materializer-v1
