@@ -723,6 +723,7 @@
       "kind": "EXACT_PATH_SET",
       "paths": [
         ".github/workflows/mcft-cap-09-t4r1-current-crop-refresh-v1.yml",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REGISTRY_PRESERVATION_V1.cjs",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-04T04Z-V1.json",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-04T04Z-V1.json",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_V1.cjs",
@@ -1547,7 +1548,7 @@
         "SUCCESSOR_SUBJECT_PRE_MERGE"
       ],
       "carry_forward_evidence_id": null,
-      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_06T04Z_V1.cjs"
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REGISTRY_PRESERVATION_V1.cjs --invocation qcp"
     },
     {
       "check_id": "PRODUCTION_RUNTIME_OWNER_CUTOVER",
