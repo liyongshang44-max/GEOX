@@ -24,6 +24,7 @@ jobs:
           python3 - <<'PY'
           import base64
           import hashlib
+          import re
           from pathlib import Path
 
           carrier = Path("scripts/tmp_materialize_mcft_cap09_handoff_ad.py")
@@ -32,8 +33,14 @@ jobs:
           source = carrier.read_text(encoding="utf-8")
           marker = 'PREFIX = base64.b64decode("'
           start = source.index(marker) + len(marker)
-          end = source.index('")', start)
-          encoded = "".join(source[start:end].split())
+
+          # The original carrier was truncated after the encoded AD payload and
+          # therefore has no closing Python quote. Treat only the existing tail
+          # as transport data; remove whitespace only and reject any other syntax.
+          tail = source[start:]
+          encoded = "".join(tail.split())
+          assert encoded
+          assert re.fullmatch(r"[A-Za-z0-9+/]*={0,2}", encoded), "carrier tail contains non-base64 data"
           prefix = base64.b64decode(encoded, validate=True)
 
           # Carrier repair only: prove the decoded bytes are the already-drafted AD payload.
@@ -41,6 +48,7 @@ jobs:
           assert b"1e59d001cbb8c1b858cd24caf61dbc02b3b0bf20" in prefix
           assert b"FIRST_PARENT_SUCCESSOR_LENGTH_MISMATCH" in prefix
           assert b"STOP BEFORE ARM" in prefix
+          assert b"#3547" in prefix and b"#3549" in prefix
 
           old = handoff.read_bytes()
           assert old.startswith(b"# AC ")
@@ -49,10 +57,11 @@ jobs:
           new = prefix + old
           handoff.write_bytes(new)
 
-          assert handoff.read_bytes().endswith(old)
+          assert handoff.read_bytes()[len(prefix):] == old
           print("prefix_bytes=", len(prefix))
           print("prefix_sha256=", hashlib.sha256(prefix).hexdigest())
           print("old_bytes=", len(old))
+          print("old_sha256=", hashlib.sha256(old).hexdigest())
           print("new_bytes=", len(new))
           PY
       - name: Verify pure-prepend diff
