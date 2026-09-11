@@ -1,4 +1,4 @@
-// Qualification-only requalification marker for proof-bound 7cb7 convergence; no runtime semantic change.
+// Qualification-only exact-head Phase3 requalification marker for 512fb706 successor re-anchor; no runtime semantic change.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
