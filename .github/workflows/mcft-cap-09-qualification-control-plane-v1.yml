@@ -12,6 +12,8 @@ on:
       - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_ARM_V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-1E59-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_1E59_V1.cjs'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-512F-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_512F_V1.cjs'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-7CB7-V1.json'
@@ -162,8 +164,8 @@ env:
   OWNER_CUTOVER_REGISTRY_SELECTION_PROTECTED_MAIN_PREDECESSOR_SHA: 'd17f894e86b0fabab648530968c562e2fbe94c5d'
   CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA: 'f41dde8d44de95e71748e756e048e0166c1916b7'
   CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA: 'ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd'
-  CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA: '512fb706040bf609c949aabb641afa300bd4c91b'
-  CURRENT_MAIN_REANCHOR_PROOF_ACCEPTANCE: 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_512F_V1.cjs'
+  CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA: '1e59d001cbb8c1b858cd24caf61dbc02b3b0bf20'
+  CURRENT_MAIN_REANCHOR_PROOF_ACCEPTANCE: 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_1E59_V1.cjs'
 
 concurrency:
   group: mcft-cap09-qualification-control-plane-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
@@ -245,7 +247,7 @@ jobs:
           assert(proofBoundAdmission.admission_requires_exact_lineage_and_overlap_proof === true, 'PROOF_BOUND_EXECUTION_REQUIREMENT_MISSING', proofBoundAdmission);
           assert(!governedPredecessors.includes(proofBoundAdmission.base_sha), 'PROOF_BOUND_BASE_MUST_NOT_ENTER_LEGACY_PREDECESSOR_SET', proofBoundAdmission.base_sha);
           const proofControlPaths = new Set(authority.dependency_resolvers?.CONTROL_PLANE_FILES?.paths || []);
-          assert(['docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-512F-V1.json','scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_512F_V1.cjs','.github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml'].every((rel) => proofControlPaths.has(rel)), 'PROOF_BOUND_FILES_NOT_IN_CONTROL_PLANE_RESOLVER');
+          assert(['docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-1E59-V1.json','scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_1E59_V1.cjs','.github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml'].every((rel) => proofControlPaths.has(rel)), 'PROOF_BOUND_FILES_NOT_IN_CONTROL_PLANE_RESOLVER');
           assert(governedPredecessors.length === expectedPredecessors.length, 'GOVERNED_PREDECESSOR_CARDINALITY_MISMATCH', governedPredecessors);
           assert(new Set(governedPredecessors).size === governedPredecessors.length, 'GOVERNED_PREDECESSOR_DUPLICATE', governedPredecessors);
           assert(governedPredecessors.every(x => /^[0-9a-f]{40}$/.test(x)), 'GOVERNED_PREDECESSOR_SHA_INVALID', governedPredecessors);
