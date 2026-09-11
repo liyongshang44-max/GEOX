@@ -31,14 +31,15 @@
   ],
   "proof_bound_exact_base_admissions": [
     {
-      "base_sha": "2144d63477176f939a0d40d39b96ca97522af8db",
+      "base_sha": "7cb7cdc8c00252d3c87a685fbab38d96316afa3e",
       "mode": "PROOF_BOUND_EXACT_BASE",
-      "proof_artifact": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-2144-V1.json",
-      "proof_acceptance": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs",
+      "proof_artifact": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-7CB7-V1.json",
+      "proof_acceptance": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1.cjs",
       "proof_workflow": ".github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml",
-      "current_protected_main_tree": "47ffe1a6ef479f101b548b6a0e3829f2ffa3a073",
+      "current_protected_main_tree": "19a33e6a222a355d5ba615b30e518bb86ac08444",
       "bare_sha_allowlist_admission_authorized": false,
-      "admission_requires_exact_lineage_and_overlap_proof": true
+      "admission_requires_exact_lineage_and_overlap_proof": true,
+      "baseline_qualification_carry_forward_authorized": false
     }
   ],
   "stacked_predecessor_branch": "fix/mcft-cap09-v13-autonomous-forcing-foundation",
@@ -118,7 +119,9 @@
         ".github/workflows/mcft-cap-09-s1-registry-registration.yml",
         ".github/workflows/mcft-cap-09-s4-registry-registration.yml",
         ".github/workflows/mcft-cap-09-s5-registry-registration.yml",
-        ".github/workflows/mcft-cap-09-s6-registry-registration.yml"
+        ".github/workflows/mcft-cap-09-s6-registry-registration.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-7CB7-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1.cjs"
       ]
     },
     "EA5E2_RUNTIME_GRAPH_V4": {
@@ -720,6 +723,7 @@
       "kind": "EXACT_PATH_SET",
       "paths": [
         ".github/workflows/mcft-cap-09-t4r1-current-crop-refresh-v1.yml",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REGISTRY_PRESERVATION_V1.cjs",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-04T04Z-V1.json",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-04T04Z-V1.json",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_V1.cjs",
@@ -730,7 +734,8 @@
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-REFRESH-REQUEST-2026-09-06T04Z-V1.json",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-06T04Z-V1.json",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_06T04Z_V1.cjs"
-      ]
+      ],
+      "current_crop_registry_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json"
     },
     "PRODUCTION_RUNTIME_OWNER_CUTOVER_V1": {
       "kind": "EXACT_PATH_SET",
@@ -765,7 +770,8 @@
         "apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.ts",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1.cjs"
-      ]
+      ],
+      "current_crop_registry_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json"
     },
     "PROTECTED_MAIN_LINEAGE_ADVANCEMENT_ADJUDICATION_V1": {
       "kind": "EXACT_PATH_SET",
@@ -1542,7 +1548,7 @@
         "SUCCESSOR_SUBJECT_PRE_MERGE"
       ],
       "carry_forward_evidence_id": null,
-      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REFRESH_2026_09_06T04Z_V1.cjs"
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REGISTRY_PRESERVATION_V1.cjs --invocation qcp"
     },
     {
       "check_id": "PRODUCTION_RUNTIME_OWNER_CUTOVER",

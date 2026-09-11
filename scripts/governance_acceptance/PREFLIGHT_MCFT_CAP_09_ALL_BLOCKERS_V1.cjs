@@ -46,6 +46,30 @@ const RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1 = {
   event: "pull_request",
   dependency_digest: "sha256:63e8aac2a5c8f27d4e7e78514f3858647ac72a105ed33d5228be3a6e0ae3dd41",
 };
+const PROOF_BOUND_PHASE3_REQUALIFICATION_V1 = {
+  evidence_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_E76868A5_PROOF_BOUND_V1",
+  check_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+  subject_sha: "e76868a50dcd89e08cc6c1f6a318dd7453de59ef",
+  base_sha: "7cb7cdc8c00252d3c87a685fbab38d96316afa3e",
+  run_id: 34572537197,
+  run_conclusion: "success",
+  workflow_name: "mcft-cap-09-phase3-evidence-runtime-persistence",
+  workflow_path: ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+  event: "pull_request",
+  dependency_digest: "sha256:a17896b0392c1e74cc683dffe3be8a518b6d384fa29914367f09b19086316424",
+};
+const PROOF_BOUND_PHASE5_REQUALIFICATION_V1 = {
+  evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_DA0A3375_PROOF_BOUND_V1",
+  check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+  subject_sha: "da0a337532b39b6d4b2edd57ee3ff4b91789e440",
+  base_sha: "7cb7cdc8c00252d3c87a685fbab38d96316afa3e",
+  run_id: 34574713486,
+  run_conclusion: "success",
+  workflow_name: "mcft-cap-09-phase5-two-service-accelerated-24t",
+  workflow_path: ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+  event: "pull_request",
+  dependency_digest: "sha256:8242448cd7ba17fa2ad713fdb3606f0745eb2ee120d39ab38f14fd316a478325",
+};
 
 function parseArgs(argv) {
   const out = {};
@@ -69,8 +93,13 @@ function changedPaths(base, head) {
   return text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 }
 
-function runDiagnostic(command) {
-  const result = cp.spawnSync(command, { cwd: ROOT, encoding: "utf8", shell: true, env: { ...process.env, MCFT_CAP09_ALL_BLOCKERS_CHILD: "1" } });
+function runDiagnostic(command, extraEnv = {}) {
+  const result = cp.spawnSync(command, {
+    cwd: ROOT,
+    encoding: "utf8",
+    shell: true,
+    env: { ...process.env, ...extraEnv, MCFT_CAP09_ALL_BLOCKERS_CHILD: "1" },
+  });
   const stdout = String(result.stdout || "");
   const stderr = String(result.stderr || "");
   return {
@@ -139,10 +168,16 @@ function fetchGithubRunSnapshot(runId) {
   }
 }
 
-function validateRuntimeCutoverPhase5Requalification(decision, head, base) {
-  const anchor = RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1;
+function validateExactRunAnchor(decision, head, base, anchor, reasonPrefix) {
   const fetchResult = fetchGithubRunSnapshot(anchor.run_id);
-  if (fetchResult.status !== "PASS") return { ...fetchResult, evidence_id: anchor.evidence_id };
+  if (fetchResult.status !== "PASS") {
+    return {
+      status: "FAIL",
+      reason_code: `${reasonPrefix}_GITHUB_RUN_FETCH_FAILED`,
+      evidence_id: anchor.evidence_id,
+      detail: fetchResult,
+    };
+  }
   const run = fetchResult.run;
   const liveBase = Array.isArray(run.pull_requests)
     ? run.pull_requests.map((pr) => pr?.base?.sha).find((value) => typeof value === "string") || null
@@ -164,14 +199,44 @@ function validateRuntimeCutoverPhase5Requalification(decision, head, base) {
   return {
     status: valid ? "PASS" : "FAIL",
     reason_code: valid
-      ? "RUNTIME_CUTOVER_PHASE5_EXACT_RUN_AND_DEPENDENCY_DIGEST_VALID"
-      : "RUNTIME_CUTOVER_PHASE5_EXACT_RUN_OR_DEPENDENCY_DIGEST_INVALID",
+      ? `${reasonPrefix}_EXACT_RUN_AND_DEPENDENCY_DIGEST_VALID`
+      : `${reasonPrefix}_EXACT_RUN_OR_DEPENDENCY_DIGEST_INVALID`,
     evidence_id: anchor.evidence_id,
     run_id: anchor.run_id,
     subject_sha: anchor.subject_sha,
     dependency_digest: anchor.dependency_digest,
     checks,
   };
+}
+
+function validateRuntimeCutoverPhase5Requalification(decision, head, base) {
+  return validateExactRunAnchor(
+    decision,
+    head,
+    base,
+    RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1,
+    "RUNTIME_CUTOVER_PHASE5",
+  );
+}
+
+function validateProofBoundPhase3Requalification(decision, head, base) {
+  return validateExactRunAnchor(
+    decision,
+    head,
+    base,
+    PROOF_BOUND_PHASE3_REQUALIFICATION_V1,
+    "PROOF_BOUND_PHASE3",
+  );
+}
+
+function validateProofBoundPhase5Requalification(decision, head, base) {
+  return validateExactRunAnchor(
+    decision,
+    head,
+    base,
+    PROOF_BOUND_PHASE5_REQUALIFICATION_V1,
+    "PROOF_BOUND_PHASE5",
+  );
 }
 
 function resolveRequalificationEvidence(decision, authority, registry, stage, head) {
@@ -262,7 +327,7 @@ function main() {
   const phase6Active = phase6RetirementActive(args.head || "");
   const proofBoundAdmissions = authority.proof_bound_exact_base_admissions || [];
   const proofBoundAdmission = proofBoundAdmissions.length === 1 ? proofBoundAdmissions[0] : null;
-  const proofBoundBaselineActive =
+  const proofBoundAdmissionActive =
     stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
     process.env.MCFT_CAP09_PROOF_BOUND_BASE_ADMITTED === "true" &&
     proofBoundAdmissions.length === 1 &&
@@ -273,6 +338,12 @@ function main() {
     proofBoundAdmission?.bare_sha_allowlist_admission_authorized === false &&
     proofBoundAdmission?.admission_requires_exact_lineage_and_overlap_proof === true &&
     isAncestor(args.base || "", args.head || "");
+  const proofBoundBaselineActive =
+    proofBoundAdmissionActive &&
+    proofBoundAdmission?.baseline_qualification_carry_forward_authorized !== false;
+  const proofBoundFreshRequalificationActive =
+    proofBoundAdmissionActive &&
+    proofBoundAdmission?.baseline_qualification_carry_forward_authorized === false;
   const proofBoundPreservedRequiredCheckIds = [];
 
   for (const error of plan.authority_errors || []) blockers.push({ blocker_class: "AUTHORITY_DEFINITION_FAILURE", check_id: null, detail: error });
@@ -304,6 +375,7 @@ function main() {
     const currentCropContinuityRefreshMergeBase = String(process.env.CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA || "");
     const adoptionDurableRequalification =
       stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+      PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS.has(decision.check_id) &&
       (
         (/^[0-9a-f]{40}$/.test(protectedMainAdoptionBase) && args.base === protectedMainAdoptionBase) ||
         (/^[0-9a-f]{40}$/.test(postAdoptionEffectivenessBase) && args.base === postAdoptionEffectivenessBase) ||
@@ -316,9 +388,9 @@ function main() {
         (/^[0-9a-f]{40}$/.test(twinV2RuntimeSelectionAdoptionMergeProtectedMainBase) && args.base === twinV2RuntimeSelectionAdoptionMergeProtectedMainBase) ||
         (/^[0-9a-f]{40}$/.test(ownerCutoverRegistrySelectionProtectedMainBase) && args.base === ownerCutoverRegistrySelectionProtectedMainBase) ||
         (/^[0-9a-f]{40}$/.test(currentProtectedMainRefreshPredecessorBase) && args.base === currentProtectedMainRefreshPredecessorBase) ||
-        (/^[0-9a-f]{40}$/.test(currentCropContinuityRefreshMergeBase) && args.base === currentCropContinuityRefreshMergeBase)
-      ) &&
-      PROTECTED_MAIN_ADOPTION_DURABLE_REQUALIFICATION_CHECKS.has(decision.check_id);
+        (/^[0-9a-f]{40}$/.test(currentCropContinuityRefreshMergeBase) && args.base === currentCropContinuityRefreshMergeBase) ||
+        proofBoundFreshRequalificationActive
+      );
     const proofBoundBaselineRequirementPreserved =
       proofBoundBaselineActive &&
       decision.status === "REQUIRED" &&
@@ -369,6 +441,48 @@ function main() {
           detail: diagnostic,
         });
       } else if (
+        decision.check_id === PROOF_BOUND_PHASE3_REQUALIFICATION_V1.check_id &&
+        proofBoundFreshRequalificationActive &&
+        args.base === PROOF_BOUND_PHASE3_REQUALIFICATION_V1.base_sha
+      ) {
+        const evidence = validateProofBoundPhase3Requalification(decision, args.head || "", args.base || "");
+        result = {
+          ...common,
+          execution: "PROOF_BOUND_EXACT_WORKFLOW_RUN_AND_DEPENDENCY_DIGEST_VALIDATION",
+          status: evidence.status,
+          reason_code: evidence.reason_code,
+          evidence_id: evidence.evidence_id ?? null,
+          evidence_run_id: evidence.run_id ?? null,
+          evidence_subject_sha: evidence.subject_sha ?? null,
+          evidence_checks: evidence.checks ?? null,
+        };
+        if (evidence.status !== "PASS") blockers.push({
+          blocker_class: "INVALID_OR_MISSING_PROOF_BOUND_PHASE3_REQUALIFICATION_EVIDENCE",
+          check_id: decision.check_id,
+          detail: evidence,
+        });
+      } else if (
+        decision.check_id === PROOF_BOUND_PHASE5_REQUALIFICATION_V1.check_id &&
+        proofBoundFreshRequalificationActive &&
+        args.base === PROOF_BOUND_PHASE5_REQUALIFICATION_V1.base_sha
+      ) {
+        const evidence = validateProofBoundPhase5Requalification(decision, args.head || "", args.base || "");
+        result = {
+          ...common,
+          execution: "PROOF_BOUND_EXACT_WORKFLOW_RUN_AND_DEPENDENCY_DIGEST_VALIDATION",
+          status: evidence.status,
+          reason_code: evidence.reason_code,
+          evidence_id: evidence.evidence_id ?? null,
+          evidence_run_id: evidence.run_id ?? null,
+          evidence_subject_sha: evidence.subject_sha ?? null,
+          evidence_checks: evidence.checks ?? null,
+        };
+        if (evidence.status !== "PASS") blockers.push({
+          blocker_class: "INVALID_OR_MISSING_PROOF_BOUND_PHASE5_REQUALIFICATION_EVIDENCE",
+          check_id: decision.check_id,
+          detail: evidence,
+        });
+      } else if (
         decision.check_id === RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1.check_id &&
         args.base === RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1.base_sha
       ) {
@@ -389,7 +503,10 @@ function main() {
           detail: evidence,
         });
       } else if (decision.diagnostic_command && !adoptionDurableRequalification) {
-        const diagnostic = runDiagnostic(decision.diagnostic_command);
+        const diagnosticEnv = decision.check_id === "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM"
+          ? { GEOX_MCFT_CAP09_CURRENT_DELTA_BASE_SHA: args.base || "" }
+          : {};
+        const diagnostic = runDiagnostic(decision.diagnostic_command, diagnosticEnv);
         result = { ...common, execution: "DIAGNOSTIC_COMMAND", status: diagnostic.status, reason_code: diagnostic.status === "PASS" ? "DIAGNOSTIC_PASS" : "DIAGNOSTIC_FAIL", diagnostic_command: decision.diagnostic_command, diagnostic };
         if (diagnostic.status !== "PASS") blockers.push({ blocker_class: "DIAGNOSTIC_FAILURE", check_id: decision.check_id, detail: diagnostic });
       } else {
@@ -471,6 +588,7 @@ function main() {
 module.exports = {
   resolveRequalificationEvidence,
   expectedRequalificationBinding,
+  validateExactRunAnchor,
 };
 
 if (require.main === module) main();

@@ -4,6 +4,8 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-7CB7-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1.cjs'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-2144-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs'
       - '.github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml'
@@ -38,13 +40,26 @@ jobs:
         run: git fetch --no-tags origin main
 
       - name: Verify proof-bound current-main re-anchor
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$PR_BASE_SHA" = "7cb7cdc8c00252d3c87a685fbab38d96316afa3e" ]; then
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1.cjs --selftest
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1.cjs
+          else
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs
+          fi
 
       - name: Upload immutable re-anchor declaration
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap09-current-main-reanchor-2144-${{ github.event.pull_request.head.sha }}
-          path: docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-2144-V1.json
+          path: |
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-2144-V1.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-7CB7-V1.json
+            acceptance-output/MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1_RESULT.json
           if-no-files-found: error
           retention-days: 90
+
