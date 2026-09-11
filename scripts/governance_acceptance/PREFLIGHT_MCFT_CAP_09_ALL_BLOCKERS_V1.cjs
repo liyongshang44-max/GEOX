@@ -47,28 +47,28 @@ const RUNTIME_CUTOVER_PHASE5_REQUALIFICATION_V1 = {
   dependency_digest: "sha256:63e8aac2a5c8f27d4e7e78514f3858647ac72a105ed33d5228be3a6e0ae3dd41",
 };
 const PROOF_BOUND_PHASE3_REQUALIFICATION_V1 = {
-  evidence_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_E76868A5_PROOF_BOUND_V1",
+  evidence_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_3D178B9E_PROOF_BOUND_512F_V1",
   check_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
-  subject_sha: "e76868a50dcd89e08cc6c1f6a318dd7453de59ef",
-  base_sha: "7cb7cdc8c00252d3c87a685fbab38d96316afa3e",
-  run_id: 34572537197,
+  subject_sha: "3d178b9e4b79b7a907d87ada5039453179b0231f",
+  base_sha: "512fb706040bf609c949aabb641afa300bd4c91b",
+  run_id: 34596472584,
   run_conclusion: "success",
   workflow_name: "mcft-cap-09-phase3-evidence-runtime-persistence",
   workflow_path: ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
   event: "pull_request",
-  dependency_digest: "sha256:a17896b0392c1e74cc683dffe3be8a518b6d384fa29914367f09b19086316424",
+  dependency_digest: "sha256:1b0a84dcbd46b2b84a854ef7018d27cb280c15fc8fa244724ed4b718a6a426c9",
 };
 const PROOF_BOUND_PHASE5_REQUALIFICATION_V1 = {
-  evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_DA0A3375_PROOF_BOUND_V1",
+  evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_3D178B9E_PROOF_BOUND_512F_V1",
   check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
-  subject_sha: "da0a337532b39b6d4b2edd57ee3ff4b91789e440",
-  base_sha: "7cb7cdc8c00252d3c87a685fbab38d96316afa3e",
-  run_id: 34574713486,
+  subject_sha: "3d178b9e4b79b7a907d87ada5039453179b0231f",
+  base_sha: "512fb706040bf609c949aabb641afa300bd4c91b",
+  run_id: 34596472638,
   run_conclusion: "success",
   workflow_name: "mcft-cap-09-phase5-two-service-accelerated-24t",
   workflow_path: ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
   event: "pull_request",
-  dependency_digest: "sha256:8242448cd7ba17fa2ad713fdb3606f0745eb2ee120d39ab38f14fd316a478325",
+  dependency_digest: "sha256:092268f77a64011e4206eada68b92d64dcf83328a7163b91f7c2720becfee0e2",
 };
 
 function parseArgs(argv) {
