@@ -1,0 +1,157 @@
+name: tmp-mcft-cap09-qcp-proof-anchor-materializer-v1
+
+on:
+  push:
+    branches:
+      - tmp/mcft-cap09-qcp-proof-anchor-512f-v1
+    paths:
+      - .github/workflows/tmp-mcft-cap09-qcp-proof-anchor-materializer-v1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch exact proof-bound Phase3 and Phase5 anchors
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs';
+          let text = fs.readFileSync(path, 'utf8');
+
+          const oldPhase3 = `const PROOF_BOUND_PHASE3_REQUALIFICATION_V1 = {
+            evidence_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_E76868A5_PROOF_BOUND_V1",
+            check_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+            subject_sha: "e76868a50dcd89e08cc6c1f6a318dd7453de59ef",
+            base_sha: "7cb7cdc8c00252d3c87a685fbab38d96316afa3e",
+            run_id: 34572537197,
+            run_conclusion: "success",
+            workflow_name: "mcft-cap-09-phase3-evidence-runtime-persistence",
+            workflow_path: ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+            event: "pull_request",
+            dependency_digest: "sha256:a17896b0392c1e74cc683dffe3be8a518b6d384fa29914367f09b19086316424",
+          };`;
+          const newPhase3 = `const PROOF_BOUND_PHASE3_REQUALIFICATION_V1 = {
+            evidence_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_3D178B9E_PROOF_BOUND_512F_V1",
+            check_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+            subject_sha: "3d178b9e4b79b7a907d87ada5039453179b0231f",
+            base_sha: "512fb706040bf609c949aabb641afa300bd4c91b",
+            run_id: 34596472584,
+            run_conclusion: "success",
+            workflow_name: "mcft-cap-09-phase3-evidence-runtime-persistence",
+            workflow_path: ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+            event: "pull_request",
+            dependency_digest: "sha256:1b0a84dcbd46b2b84a854ef7018d27cb280c15fc8fa244724ed4b718a6a426c9",
+          };`;
+
+          const oldPhase5 = `const PROOF_BOUND_PHASE5_REQUALIFICATION_V1 = {
+            evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_DA0A3375_PROOF_BOUND_V1",
+            check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+            subject_sha: "da0a337532b39b6d4b2edd57ee3ff4b91789e440",
+            base_sha: "7cb7cdc8c00252d3c87a685fbab38d96316afa3e",
+            run_id: 34574713486,
+            run_conclusion: "success",
+            workflow_name: "mcft-cap-09-phase5-two-service-accelerated-24t",
+            workflow_path: ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+            event: "pull_request",
+            dependency_digest: "sha256:8242448cd7ba17fa2ad713fdb3606f0745eb2ee120d39ab38f14fd316a478325",
+          };`;
+          const newPhase5 = `const PROOF_BOUND_PHASE5_REQUALIFICATION_V1 = {
+            evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_3D178B9E_PROOF_BOUND_512F_V1",
+            check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+            subject_sha: "3d178b9e4b79b7a907d87ada5039453179b0231f",
+            base_sha: "512fb706040bf609c949aabb641afa300bd4c91b",
+            run_id: 34596472638,
+            run_conclusion: "success",
+            workflow_name: "mcft-cap-09-phase5-two-service-accelerated-24t",
+            workflow_path: ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+            event: "pull_request",
+            dependency_digest: "sha256:092268f77a64011e4206eada68b92d64dcf83328a7163b91f7c2720becfee0e2",
+          };`;
+
+          function replaceExactlyOnce(source, before, after, label) {
+            const first = source.indexOf(before);
+            if (first < 0) throw new Error(`${label}_OLD_BLOCK_NOT_FOUND`);
+            if (source.indexOf(before, first + 1) >= 0) throw new Error(`${label}_OLD_BLOCK_NOT_UNIQUE`);
+            return source.slice(0, first) + after + source.slice(first + before.length);
+          }
+
+          text = replaceExactlyOnce(text, oldPhase3, newPhase3, 'PHASE3');
+          text = replaceExactlyOnce(text, oldPhase5, newPhase5, 'PHASE5');
+          fs.writeFileSync(path, text);
+
+          for (const required of [
+            'PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_3D178B9E_PROOF_BOUND_512F_V1',
+            'run_id: 34596472584',
+            'sha256:1b0a84dcbd46b2b84a854ef7018d27cb280c15fc8fa244724ed4b718a6a426c9',
+            'PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_3D178B9E_PROOF_BOUND_512F_V1',
+            'run_id: 34596472638',
+            'sha256:092268f77a64011e4206eada68b92d64dcf83328a7163b91f7c2720becfee0e2',
+          ]) {
+            if (!text.includes(required)) throw new Error(`REQUIRED_PATCH_FRAGMENT_MISSING:${required}`);
+          }
+          NODE
+
+      - name: Create remote blob and persist manifest only
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp
+          node <<'NODE'
+          const fs = require('node:fs');
+          const https = require('node:https');
+          const crypto = require('node:crypto');
+          const file = 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs';
+          const content = fs.readFileSync(file, 'utf8');
+          const body = JSON.stringify({ content, encoding: 'utf-8' });
+          const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
+          const req = https.request({
+            hostname: 'api.github.com',
+            path: `/repos/${owner}/${repo}/git/blobs`,
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.GH_TOKEN}`,
+              'Accept': 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+              'User-Agent': 'geox-mcft-cap09-temp-materializer',
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(body),
+            },
+          }, (res) => {
+            let raw = '';
+            res.on('data', c => raw += c);
+            res.on('end', () => {
+              if (res.statusCode < 200 || res.statusCode >= 300) throw new Error(`CREATE_BLOB_HTTP_${res.statusCode}:${raw}`);
+              const parsed = JSON.parse(raw);
+              if (!/^[0-9a-f]{40}$/.test(parsed.sha || '')) throw new Error('CREATE_BLOB_SHA_INVALID');
+              const manifest = {
+                source_head: process.env.GITHUB_SHA,
+                target_path: file,
+                blob_sha: parsed.sha,
+                content_sha256: 'sha256:' + crypto.createHash('sha256').update(content).digest('hex'),
+                runtime_semantic_change: false,
+                qualification_governance_anchor_rebind_only: true,
+              };
+              fs.writeFileSync('.tmp/mcft-cap09-qcp-proof-anchor-512f-v1.json', JSON.stringify(manifest, null, 2) + '\n');
+            });
+          });
+          req.on('error', err => { throw err; });
+          req.write(body);
+          req.end();
+          NODE
+          while [ ! -s .tmp/mcft-cap09-qcp-proof-anchor-512f-v1.json ]; do sleep 1; done
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .tmp/mcft-cap09-qcp-proof-anchor-512f-v1.json
+          git commit -m 'chore(mcft-cap09): persist qcp proof-anchor blob manifest'
+          git push origin HEAD:tmp/mcft-cap09-qcp-proof-anchor-512f-v1
