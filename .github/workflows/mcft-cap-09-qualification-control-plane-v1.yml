@@ -528,6 +528,9 @@ jobs:
 
       - name: Enumerate all blockers without fail-fast
         if: github.event_name == 'pull_request'
+        # The enumerator exits non-zero when it records blockers. Keep the inventory
+        # available to the final machine proof, which remains the fail-closed gate.
+        continue-on-error: true
         run: >-
           node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
           --base '${{ github.event.pull_request.base.sha }}'
