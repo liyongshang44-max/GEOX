@@ -31,12 +31,12 @@
   ],
   "proof_bound_exact_base_admissions": [
     {
-      "base_sha": "36b671ce83652e7d3ba350c3e9118342226c13a8",
+      "base_sha": "b689938f6161d01dec06a1ce4ce6f24420c4b3a0",
       "mode": "PROOF_BOUND_EXACT_BASE",
-      "proof_artifact": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-36B6-V1.json",
-      "proof_acceptance": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_36B6_V1.cjs",
+      "proof_artifact": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-B689-V1.json",
+      "proof_acceptance": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_B689_V1.cjs",
       "proof_workflow": ".github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml",
-      "current_protected_main_tree": "3d84247bc622a9a5187e085f3e93acba9429c4f3",
+      "current_protected_main_tree": "3a0689d7721bf22d0d3280c9cece429dbb394801",
       "bare_sha_allowlist_admission_authorized": false,
       "admission_requires_exact_lineage_and_overlap_proof": true,
       "baseline_qualification_carry_forward_authorized": false
@@ -126,6 +126,8 @@
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_512F_V1.cjs",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-1E59-V1.json",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_1E59_V1.cjs",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-B689-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_B689_V1.cjs",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-36B6-V1.json",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_36B6_V1.cjs",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-0AC2-V1.json",
