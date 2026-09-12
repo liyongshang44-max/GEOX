@@ -3168,7 +3168,8 @@
           "f41dde8d44de95e71748e756e048e0166c1916b7",
           "ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd",
           "0ac2d2cf98d553285a2051a1b0b86131a23fc413",
-          "36b671ce83652e7d3ba350c3e9118342226c13a8"
+          "36b671ce83652e7d3ba350c3e9118342226c13a8",
+          "b689938f6161d01dec06a1ce4ce6f24420c4b3a0"
         ],
         "dependency_digest_must_match_current": true,
         "anchor_is_not_production_authority": true
