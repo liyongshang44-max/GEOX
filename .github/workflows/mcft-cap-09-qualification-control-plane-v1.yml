@@ -559,14 +559,17 @@ jobs:
           if (cp2.status !== 'PASS' || cp2.v14_frozen_checks_not_applicable !== true) throw new Error('CP2_GENERATION_DIGEST_PROOF_NOT_PASS');
           if (evidence.status !== 'PASS' || evidence.all_durable_anchor_refs_resolvable !== true || evidence.all_live_refs_match_when_present !== true || evidence.all_requalification_live_refs_match !== true || evidence.requalification_evidence_count < 1) throw new Error('IMMUTABLE_DURABLE_EVIDENCE_NOT_RESOLVED');
           if (plan.status !== 'PASS' || plan.generation !== 'v13' || plan.unknown_changed_paths.length !== 0 || plan.resolver_errors.length !== 0 || plan.authority_errors.length !== 0) throw new Error('CONTROL_PLANE_PLAN_NOT_PASS');
+          const authority = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json','utf8'));
           const registry = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json','utf8'));
-          const governedBases = new Set(registry.requalification_evidence?.durable_anchors?.rules?.governed_successor_predecessors || []);
+          const historicalGovernedBases = new Set(authority.governed_successor_predecessor_shas || []);
+          const durableAnchorBases = new Set(registry.requalification_evidence?.durable_anchors?.rules?.governed_successor_predecessors || []);
           if (plan.base_sha !== process.env.PR_BASE_SHA) throw new Error(`CONTROL_PLANE_PLAN_BASE_MUST_EQUAL_PR_BASE:${plan.base_sha}:${process.env.PR_BASE_SHA}`);
           const proofBoundBaseAdmitted =
             plan.base_sha === process.env.CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA &&
             process.env.MCFT_CAP09_PROOF_BOUND_BASE_ADMITTED === 'true';
-          if (!governedBases.has(plan.base_sha) && !proofBoundBaseAdmitted) throw new Error(`CONTROL_PLANE_PLAN_BASE_NOT_GOVERNED_OR_PROOF_BOUND:${plan.base_sha}`);
-          if (proofBoundBaseAdmitted && governedBases.has(plan.base_sha)) throw new Error(`CONTROL_PLANE_PROOF_BOUND_BASE_MUST_NOT_BE_HISTORICALLY_ALLOWLISTED:${plan.base_sha}`);
+          if (!historicalGovernedBases.has(plan.base_sha) && !proofBoundBaseAdmitted) throw new Error(`CONTROL_PLANE_PLAN_BASE_NOT_GOVERNED_OR_PROOF_BOUND:${plan.base_sha}`);
+          if (proofBoundBaseAdmitted && historicalGovernedBases.has(plan.base_sha)) throw new Error(`CONTROL_PLANE_PROOF_BOUND_BASE_MUST_NOT_BE_HISTORICALLY_ALLOWLISTED:${plan.base_sha}`);
+          if (proofBoundBaseAdmitted && !durableAnchorBases.has(plan.base_sha)) throw new Error(`CONTROL_PLANE_PROOF_BOUND_BASE_MISSING_DURABLE_ANCHOR_ADMISSION:${plan.base_sha}`);
           const expectedStage = process.env.PR_BASE_SHA === process.env.POSTMERGE_V13_QUALIFICATION_PREDECESSOR_SHA
             ? 'POST_MERGE_V13_QUALIFICATION'
             : 'SUCCESSOR_SUBJECT_PRE_MERGE';
