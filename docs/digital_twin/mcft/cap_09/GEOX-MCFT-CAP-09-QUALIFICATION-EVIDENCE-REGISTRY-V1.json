@@ -3167,7 +3167,8 @@
           "d17f894e86b0fabab648530968c562e2fbe94c5d",
           "f41dde8d44de95e71748e756e048e0166c1916b7",
           "ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd",
-          "0ac2d2cf98d553285a2051a1b0b86131a23fc413"
+          "0ac2d2cf98d553285a2051a1b0b86131a23fc413",
+          "36b671ce83652e7d3ba350c3e9118342226c13a8"
         ],
         "dependency_digest_must_match_current": true,
         "anchor_is_not_production_authority": true

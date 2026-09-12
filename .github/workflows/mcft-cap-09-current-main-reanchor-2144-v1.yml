@@ -4,6 +4,8 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-36B6-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_36B6_V1.cjs'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-0AC2-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_0AC2_V1.cjs'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-1E59-V1.json'
@@ -50,7 +52,10 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
-          if [ "$PR_BASE_SHA" = "0ac2d2cf98d553285a2051a1b0b86131a23fc413" ]; then
+          if [ "$PR_BASE_SHA" = "36b671ce83652e7d3ba350c3e9118342226c13a8" ]; then
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_36B6_V1.cjs --selftest
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_36B6_V1.cjs
+          elif [ "$PR_BASE_SHA" = "0ac2d2cf98d553285a2051a1b0b86131a23fc413" ]; then
             node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_0AC2_V1.cjs --selftest
             node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_0AC2_V1.cjs
           elif [ "$PR_BASE_SHA" = "1e59d001cbb8c1b858cd24caf61dbc02b3b0bf20" ]; then
@@ -72,6 +77,8 @@ jobs:
         with:
           name: mcft-cap09-current-main-reanchor-2144-${{ github.event.pull_request.head.sha }}
           path: |
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-36B6-V1.json
+            acceptance-output/MCFT_CAP_09_CURRENT_MAIN_REANCHOR_36B6_V1_RESULT.json
             docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-0AC2-V1.json
             acceptance-output/MCFT_CAP_09_CURRENT_MAIN_REANCHOR_0AC2_V1_RESULT.json
             docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-2144-V1.json
