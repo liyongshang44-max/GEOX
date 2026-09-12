@@ -14,6 +14,8 @@ on:
       - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_ARM_V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1.json'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-36B6-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_36B6_V1.cjs'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-0AC2-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_0AC2_V1.cjs'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-512F-V1.json'
@@ -166,8 +168,8 @@ env:
   OWNER_CUTOVER_REGISTRY_SELECTION_PROTECTED_MAIN_PREDECESSOR_SHA: 'd17f894e86b0fabab648530968c562e2fbe94c5d'
   CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA: 'f41dde8d44de95e71748e756e048e0166c1916b7'
   CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA: 'ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd'
-  CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA: '0ac2d2cf98d553285a2051a1b0b86131a23fc413'
-  CURRENT_MAIN_REANCHOR_PROOF_ACCEPTANCE: 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_0AC2_V1.cjs'
+  CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA: '36b671ce83652e7d3ba350c3e9118342226c13a8'
+  CURRENT_MAIN_REANCHOR_PROOF_ACCEPTANCE: 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_36B6_V1.cjs'
 
 concurrency:
   group: mcft-cap09-qualification-control-plane-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
@@ -249,7 +251,7 @@ jobs:
           assert(proofBoundAdmission.admission_requires_exact_lineage_and_overlap_proof === true, 'PROOF_BOUND_EXECUTION_REQUIREMENT_MISSING', proofBoundAdmission);
           assert(!governedPredecessors.includes(proofBoundAdmission.base_sha), 'PROOF_BOUND_BASE_MUST_NOT_ENTER_LEGACY_PREDECESSOR_SET', proofBoundAdmission.base_sha);
           const proofControlPaths = new Set(authority.dependency_resolvers?.CONTROL_PLANE_FILES?.paths || []);
-          assert(['docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-0AC2-V1.json','scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_0AC2_V1.cjs','.github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml'].every((rel) => proofControlPaths.has(rel)), 'PROOF_BOUND_FILES_NOT_IN_CONTROL_PLANE_RESOLVER');
+          assert(['docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-36B6-V1.json','scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_36B6_V1.cjs','.github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml'].every((rel) => proofControlPaths.has(rel)), 'PROOF_BOUND_FILES_NOT_IN_CONTROL_PLANE_RESOLVER');
           assert(governedPredecessors.length === expectedPredecessors.length, 'GOVERNED_PREDECESSOR_CARDINALITY_MISMATCH', governedPredecessors);
           assert(new Set(governedPredecessors).size === governedPredecessors.length, 'GOVERNED_PREDECESSOR_DUPLICATE', governedPredecessors);
           assert(governedPredecessors.every(x => /^[0-9a-f]{40}$/.test(x)), 'GOVERNED_PREDECESSOR_SHA_INVALID', governedPredecessors);
@@ -264,7 +266,7 @@ jobs:
             process.env.MCFT_CAP09_PROOF_BOUND_BASE_ADMITTED === 'true' &&
             proofBoundAdmission.base_sha === process.env.CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA;
           if (proofBoundSelftest) {
-            const reanchorPreviousAcceptedBase = 'ca56d60e3d927ccda5d1f28255e195575bf7a487';
+            const reanchorPreviousAcceptedBase = '0ac2d2cf98d553285a2051a1b0b86131a23fc413';
             assert(current.blockers.length === 0, 'CP2_PROOF_BOUND_CURRENT_BLOCKERS', current.blockers);
             assert(current.authority_errors.length === 0, 'CP2_PROOF_BOUND_CURRENT_AUTHORITY_ERRORS', current.authority_errors);
             assert(current.resolver_errors.length === 0, 'CP2_PROOF_BOUND_CURRENT_RESOLVER_ERRORS', current.resolver_errors);
@@ -275,8 +277,30 @@ jobs:
                 {encoding:'utf8'}
               ).split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
             );
+            const inheritedAcceptedPaths = new Set(
+              cp.execFileSync(
+                'git',
+                ['diff','--name-only', `${authority.frozen_successor_subject_sha}...${reanchorPreviousAcceptedBase}`],
+                {encoding:'utf8'}
+              ).split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+            );
+            const candidateSegmentPaths = new Set(
+              cp.execFileSync(
+                'git',
+                ['diff','--name-only', `${process.env.CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA}...${head}`],
+                {encoding:'utf8'}
+              ).split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+            );
             const unknownChangedPaths = current.unknown_changed_paths || [];
-            const outsideProofBoundSegment = unknownChangedPaths.filter((rel) => !reanchorSegmentPaths.has(rel));
+            const candidateUnknownPaths = unknownChangedPaths.filter((rel) => candidateSegmentPaths.has(rel));
+            assert(
+              candidateUnknownPaths.length === 0,
+              'CP2_PROOF_BOUND_CANDIDATE_UNKNOWN_PATH',
+              candidateUnknownPaths
+            );
+            const outsideProofBoundSegment = unknownChangedPaths.filter(
+              (rel) => !inheritedAcceptedPaths.has(rel) && !reanchorSegmentPaths.has(rel)
+            );
             assert(outsideProofBoundSegment.length === 0, 'CP2_UNKNOWN_PATH_OUTSIDE_PROOF_BOUND_REANCHOR_SEGMENT', outsideProofBoundSegment);
             assert(
               current.status === (unknownChangedPaths.length === 0 ? 'PASS' : 'FAIL'),
