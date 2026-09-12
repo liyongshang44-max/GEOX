@@ -1,0 +1,41 @@
+{
+  "contract_version": "geox.adr-qualified-consumer-source.v1",
+  "source_repository": "liyongshang44-max/agronomy-deployment-runtime",
+  "source_commit": "f4d10233a24ccaea3ae8712e6456e87d691afe3c",
+  "release_candidate": {
+    "candidate_id": "sha256:00bc519fd9c1634a5b6aba0a9a3087f5b98f6cc54aa92acc88e9c3086e469479",
+    "qualification_receipt_hash": "sha256:c5ea8846d5330a2c94622435fa8fd16b0e59709fd0f652151e6908d16781ec23",
+    "lifecycle_transition_from_predecessor": {
+      "transition_id": "sha256:6cc220f74cbfa77838c378d777e20dc39dbc2135db3b009d874712068089c0b8",
+      "decision": "REVIEW_REQUIRED"
+    }
+  },
+  "package": {
+    "name": "@adr/geox-adapter",
+    "version": "0.1.0-development",
+    "tarball_sha256": "sha256:ea2ebcb8ff4e1659027e0a2adba10d8f5350e8a64873ed8bc4b0509a8425f135",
+    "consumer_api_surface_sha256": "sha256:5e456b5604ed474b667663e39aec558d59df76da1b9fb8d6796f54779e01003c",
+    "target_correspondence_profile_set_sha256": "sha256:5f400e4cfd3bcfb72286a3a42bed7940cbb2b5d7450837ae4cebeff394cd55c4",
+    "compatibility_envelope_sha256": "sha256:4e2d77c443bec38023325405647eeda54c62d08477c200a16f59b470e7be5792",
+    "node_engine": ">=20 <21 || >=24 <25"
+  },
+  "adoption_mode": "READ_ONLY_SHADOW_QUALIFICATION_ONLY",
+  "authority": {
+    "package_publication_authorized": false,
+    "production_install_authorized": false,
+    "runtime_activation_authorized": false,
+    "replacement_authorized": false,
+    "rollback_authorized": false,
+    "geox_recommendation_write_authorized": false,
+    "approval_authorized": false,
+    "operation_plan_or_task_creation_authorized": false,
+    "dispatch_authorized": false,
+    "machine_execution_authorized": false
+  },
+  "claims": {
+    "real_geox_repository_consumer": true,
+    "live_production_read_model_observed": false,
+    "geox_field_equals_adr_target": false,
+    "same_domain_decision_equivalence_established": false
+  }
+}

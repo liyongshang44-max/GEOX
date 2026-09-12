@@ -1,58 +1,40 @@
+# Phase 6 retirement sentinel.
+# Complete pre-cutover implementation remains immutable at:
+# 75d4961279bd64dc1c9dd7d68aac189c72c98846:.github/workflows/mcft-cap-09-ea9b-current-main-window-observer.yml
+# historical blob: 76df723da3f79afe8f5bfe49ae7f29980f826757
+# No production schedule, dispatch, workflow-run, push, or callable trigger remains.
 name: mcft-cap-09-ea9b-current-main-window-observer
 
 on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-ea9b-current-main-window-observer.yml'
-      - 'scripts/runtime_acceptance/OBSERVER_MCFT_CAP_09_EA9B_CURRENT_MAIN_WINDOW_READINESS.mjs'
-  merge_group:
-    types: [checks_requested]
-  workflow_dispatch:
-  schedule:
-    - cron: '10 5,6,7 * * *'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs'
+      - '.github/workflows/mcft-cap-09-phase6-retire-github-production-execution.yml'
 
 permissions:
   contents: read
 
-concurrency:
-  group: mcft-cap09-ea9b-current-main-window-observer-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}-${{ github.event_name }}
-  cancel-in-progress: false
-
 jobs:
-  observe:
+  phase6-retirement-sentinel:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || 'main' }}
-          fetch-depth: 1
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
           persist-credentials: false
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.11.1
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Install Chromium for KBS Aglog observer
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Run current-main EA9B window observer
-        env:
-          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
-        run: node scripts/runtime_acceptance/OBSERVER_MCFT_CAP_09_EA9B_CURRENT_MAIN_WINDOW_READINESS.mjs
-
-      - name: Upload metadata-only readiness proof
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: mcft-cap09-ea9b-current-main-window-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
-          path: acceptance-output/MCFT_CAP_09_EA9B_CURRENT_MAIN_WINDOW_READINESS.json
-          if-no-files-found: error
-          retention-days: 30
+      - name: Prove immutable historical binding and retired trigger surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse '75d4961279bd64dc1c9dd7d68aac189c72c98846:.github/workflows/mcft-cap-09-ea9b-current-main-window-observer.yml')" = '76df723da3f79afe8f5bfe49ae7f29980f826757'
+          node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs selftest
+          node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs enforce >/tmp/mcft-cap09-phase6-owner-audit.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('/tmp/mcft-cap09-phase6-owner-audit.json','utf8'));
+          if(p.status!=='PASS'||p.active_retired_owner_or_trigger_count!==0||p.retired_actions_write_count!==0||p.historical_phase5_workflow_blobs_all_match!==true)throw new Error('PHASE6_RETIREMENT_SENTINEL_REQUIRED');
+          NODE

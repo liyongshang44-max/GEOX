@@ -1,0 +1,181 @@
+{
+  "schema_version": "b09t_decision_eligibility_policy_selection_readiness_v1",
+  "phase": "B-09t",
+  "status": "SELECTION_SEMANTICS_NOT_AUTHORIZED",
+  "stacked_base_product_head": "3eadd13966ae7797852b3dc9e8d1535a093e6852",
+  "purpose": "Inventory the provenance and ambiguity boundaries required before a DecisionEligibility policy selector/as-of resolver can become runtime authority.",
+  "current_authority": {
+    "declaration_writer": "READY_B09S",
+    "production_declaration_path_count": 1,
+    "real_policy_instance": "NONE",
+    "selector_runtime": "NONE",
+    "b07e_connection": "NONE"
+  },
+  "established_facts": {
+    "candidate": {
+      "contract": "CandidateDecisionV1",
+      "canonical_scope": "EvidenceScopeV1",
+      "has_program_id": false,
+      "has_policy_scope_anchor": false,
+      "context_snapshot_ref_field_exists": true,
+      "current_b09j_context_snapshot_ref": "NULL",
+      "decision_time_nullable": true,
+      "action_type_path": "proposed_action.action_type"
+    },
+    "legacy_source": {
+      "decision_recommendation_program_id_exists": true,
+      "program_id_resolved_before_recommendation_fact_persistence": true,
+      "b06c_promotes_program_id_to_candidate": false,
+      "b09j_source_fact_rehydration_available": true,
+      "authority_adjudication": "SHADOW_PROVENANCE_ONLY_NOT_CANONICAL_SELECTOR_AUTHORITY"
+    },
+    "context_bridge": {
+      "b05b_projection": "projectFieldProgramDeclaredContextV1",
+      "assertion_kind": "DECLARED_FIELD_PROGRAM",
+      "assertion_contains_program_id": true,
+      "context_snapshot_scope": "tenant/project/group/field/season/zone=null",
+      "current_candidate_binding": "NOT_BOUND",
+      "readiness": "CAPABILITY_EXISTS_BUT_CANONICAL_CANDIDATE_CONTEXT_BINDING_MISSING"
+    },
+    "policy_declaration": {
+      "scope_contract": "decisionEligibilityPolicyDeclarationScopeV1",
+      "canonical_decision_scope": "EvidenceScopeV1",
+      "scope_anchor_type": "OPEN_STRING",
+      "scope_anchor_ref_required": true,
+      "action_applicability": "EXACT_STRING_LIST",
+      "effective_from_required": true,
+      "effective_until_nullable": true,
+      "supersedes_policy_ref_nullable": true
+    },
+    "b07e": {
+      "accepts_one_policy_object": true,
+      "checks_action_type_exact_membership": true,
+      "requires_policy_ref_in_canonical_policy_refs": true,
+      "supports_policy_composition": false
+    }
+  },
+  "unresolved_selection_semantics": [
+    {
+      "id": "B09T-U01",
+      "issue": "CANONICAL_POLICY_SCOPE_ANCHOR_BINDING",
+      "blocker": "CandidateDecisionV1 has no program/policy anchor and current B-09j context_snapshot_ref is null.",
+      "forbidden_shortcut": "Do not infer program anchor from field_id/season_id or legacy recommendation.program_id.",
+      "recommendation": "Bind a canonical ContextSnapshot (or equivalent explicit canonical anchor input) and require exactly one declared FieldProgram/equivalent anchor."
+    },
+    {
+      "id": "B09T-U02",
+      "issue": "NULL_SCOPE_MATCHING",
+      "blocker": "EvidenceScopeV1 allows nullable field/season/zone but defines no wildcard or parent-scope semantics.",
+      "forbidden_shortcut": "Do not interpret null as wildcard and do not rank more-specific scopes.",
+      "recommendation": "Authorize explicit scope applicability semantics before selector runtime."
+    },
+    {
+      "id": "B09T-U03",
+      "issue": "DECISION_TIME_BOUNDARY",
+      "blocker": "Candidate decision_time is nullable.",
+      "forbidden_shortcut": "Do not silently substitute evaluated_at, created_at, wall clock, or latest data time.",
+      "recommendation": "Require an explicit causal policy-selection boundary or a separately authorized fallback rule."
+    },
+    {
+      "id": "B09T-U04",
+      "issue": "MULTIPLE_APPLICABLE_POLICIES",
+      "blocker": "B07e consumes one policy and current declaration model allows multiple policy_ids/versions with overlapping scope/action/time.",
+      "forbidden_shortcut": "No latest version, newest declaration, lexical policy_id, or specificity precedence.",
+      "recommendation": "Fail closed on >1 applicable declaration unless explicit composition/precedence semantics are authorized."
+    },
+    {
+      "id": "B09T-U05",
+      "issue": "SUPERSESSION_SEMANTICS",
+      "blocker": "supersedes_policy_ref is a pointer only; current contract does not define predecessor termination, chain validity, cycle rules, same-scope requirement, or overlap handling.",
+      "forbidden_shortcut": "Do not let a supersedes pointer automatically deactivate another policy.",
+      "recommendation": "Authorize explicit append-only supersession semantics and validate predecessor/chain constraints."
+    },
+    {
+      "id": "B09T-U06",
+      "issue": "EFFECTIVE_WINDOW_BOUNDARIES",
+      "blocker": "Contract validates ordering but not selector inclusion/exclusion semantics at effective_until.",
+      "forbidden_shortcut": "Do not choose inclusive/exclusive end boundary implicitly.",
+      "recommendation": "Prefer half-open [effective_from,effective_until) only after product-governance authorization."
+    },
+    {
+      "id": "B09T-U07",
+      "issue": "CAUSAL_KNOWLEDGE_CUTOFF",
+      "blocker": "Selection must distinguish policy effective time from when declaration became available to runtime.",
+      "forbidden_shortcut": "Do not select a fact inserted after the decision boundary even if payload dates would otherwise match.",
+      "recommendation": "As-of selector should require declared_at and persisted occurred_at to be at-or-before the authorized decision boundary."
+    }
+  ],
+  "already_stable_non_decisions": [
+    {
+      "id": "B09T-S01",
+      "rule": "ACTION_TYPE_COMPARISON",
+      "value": "EXACT_STRING_MEMBERSHIP",
+      "basis": "B07e assertPolicyActionApplicability already performs exact membership; no alias mapping is introduced."
+    },
+    {
+      "id": "B09T-S02",
+      "rule": "NO_POLICY_COMPOSITION_BY_DEFAULT",
+      "value": "FAIL_CLOSED_IF_MULTIPLE_UNLESS_AUTHORIZED",
+      "basis": "B07e accepts one policy object; composition would be a new authority model."
+    },
+    {
+      "id": "B09T-S03",
+      "rule": "PROGRAM_STATUS_SEPARATION",
+      "value": "DO_NOT_USE_FIELDPROGRAM_STATUS_AS_SELECTOR_PRECEDENCE",
+      "basis": "Program lifecycle/context is distinct from policy identity selection and from Approval/Execution."
+    },
+    {
+      "id": "B09T-S04",
+      "rule": "LEGACY_PROGRAM_ID",
+      "value": "NOT_CANONICAL_SELECTOR_AUTHORITY",
+      "basis": "B06c projects scope/action/basis but does not promote program_id into CandidateDecisionV1."
+    }
+  ],
+  "recommended_future_selector_shape_not_authorized": {
+    "inputs": [
+      "candidate_decision_v1",
+      "canonical_context_snapshot_or_explicit_canonical_scope_anchor",
+      "explicit_policy_selection_time"
+    ],
+    "candidate_filters": [
+      "tenant/project/group scope consistency",
+      "authorized field/season/zone applicability semantics",
+      "exact scope-anchor equality",
+      "exact action_type membership",
+      "declaration known by selection boundary",
+      "effective window contains selection boundary"
+    ],
+    "terminal_states": [
+      "POLICY_SELECTED",
+      "POLICY_NOT_FOUND",
+      "POLICY_SCOPE_ANCHOR_MISSING",
+      "POLICY_SCOPE_AMBIGUOUS",
+      "POLICY_TIME_BOUNDARY_MISSING",
+      "POLICY_SUPERSESSION_AMBIGUOUS",
+      "POLICY_DECLARATION_INVALID",
+      "POLICY_READ_ERROR"
+    ],
+    "fail_closed": true,
+    "latest_wins": false,
+    "implementation_authorized": false
+  },
+  "next_product_governance_decisions": [
+    "Authorize the canonical policy scope-anchor source, preferably ContextSnapshot DECLARED_FIELD_PROGRAM/equivalent rather than legacy recommendation.program_id.",
+    "Authorize null/parent scope applicability semantics.",
+    "Authorize policy-selection time semantics when candidate.decision_time is null.",
+    "Authorize multiple-policy precedence or explicit fail-closed behavior.",
+    "Authorize supersession and effective-window boundary semantics.",
+    "Separately authorize real policy content before any B07e connection."
+  ],
+  "explicit_non_effects": {
+    "selector_runtime_created": false,
+    "reader_created": false,
+    "policy_instance_created": false,
+    "policy_content_selected": false,
+    "b07e_connected": false,
+    "approval_or_execution_changed": false,
+    "mcft_implementation_changed": false,
+    "consumer_migration_performed": false,
+    "authority_removal_performed": false
+  }
+}

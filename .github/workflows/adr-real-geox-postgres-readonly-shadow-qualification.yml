@@ -1,0 +1,138 @@
+name: ADR — Real GEOX PostgreSQL Read-Only Shadow Qualification
+
+on:
+  push:
+    branches:
+      - main
+      - feat/adr-real-geox-postgres-readonly-shadow-qualification-v1
+    paths:
+      - 'apps/server/src/integrations/adr/**'
+      - 'apps/server/src/services/derived_sensing_state_v1.ts'
+      - 'apps/server/src/services/derived_sensing_state_service_v1.ts'
+      - 'scripts/adr_adoption/real_geox_postgres_readonly_shadow_qualification_v1.mjs'
+      - '.github/workflows/adr-real-geox-postgres-readonly-shadow-qualification.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/server/src/integrations/adr/**'
+      - 'apps/server/src/services/derived_sensing_state_v1.ts'
+      - 'apps/server/src/services/derived_sensing_state_service_v1.ts'
+      - 'scripts/adr_adoption/real_geox_postgres_readonly_shadow_qualification_v1.mjs'
+      - '.github/workflows/adr-real-geox-postgres-readonly-shadow-qualification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  GEOX_ADR_POSTGRES_QUALIFICATION_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+  DATABASE_URL: 'postgres://postgres:postgres@127.0.0.1:5432/geox_adr_readonly_shadow'
+
+jobs:
+  postgres_readonly_shadow:
+    name: Node 20 PostgreSQL database-enforced read-only shadow proof
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox_adr_readonly_shadow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d geox_adr_readonly_shadow"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - name: Checkout exact GEOX candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.GEOX_ADR_POSTGRES_QUALIFICATION_HEAD }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Prove exact checkout and isolated database boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GEOX_ADR_POSTGRES_QUALIFICATION_HEAD"
+          node --version | grep '^v20\.11\.1$'
+          pnpm --version | grep '^9\.15\.4$'
+          test -z "${GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL:-}"
+          test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
+          test -z "${GEOX_RUNTIME_DATABASE_URL:-}"
+
+      - name: Install exact GEOX workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Compile merged GEOX production seam
+        run: pnpm -w exec tsc -p apps/server/tsconfig.json
+
+      - name: Run real PostgreSQL database-enforced read-only qualification
+        env:
+          ADR_POSTGRES_ISOLATED_ACCEPTANCE: '1'
+        run: node scripts/adr_adoption/real_geox_postgres_readonly_shadow_qualification_v1.mjs
+
+      - name: Validate PostgreSQL read-only machine proof
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+          const path = 'acceptance-output/ADR_REAL_GEOX_POSTGRES_READONLY_SHADOW_QUALIFICATION_V1.json';
+          const proof = JSON.parse(fs.readFileSync(path, 'utf8'));
+          if (proof.status !== 'PASS') throw new Error('ADR_POSTGRES_READONLY_NOT_PASS');
+          if (proof.geoxSourceCommit !== process.env.GEOX_ADR_POSTGRES_QUALIFICATION_HEAD) throw new Error('ADR_POSTGRES_HEAD_MISMATCH');
+          if (proof.p2MergedPredecessor !== 'ead9d0f0f1c787d75588b4970dd9d315fe28f1fb') throw new Error('ADR_POSTGRES_P2_PREDECESSOR_MISMATCH');
+          if (!String(proof.postgresVersion).startsWith('16.')) throw new Error('ADR_POSTGRES_VERSION_MISMATCH');
+          for (const key of [
+            'isolatedPostgresEndpoint',
+            'databaseLayerReadOnlyEnforced',
+            'mutationProbeRejected',
+            'provenancePreserved',
+            'fixtureRowsUnchanged'
+          ]) if (proof[key] !== true) throw new Error(`ADR_POSTGRES_PROOF_MISSING:${key}`);
+          if (proof.transactionReadOnly !== 'on') throw new Error('ADR_POSTGRES_TRANSACTION_NOT_READ_ONLY');
+          if (proof.mutationRejectSqlstate !== '25006') throw new Error('ADR_POSTGRES_MUTATION_NOT_DATABASE_REJECTED');
+          if (proof.productionSeamStatementCount !== 1 || proof.productionSeamSelectCount !== 1 || proof.productionSeamWriteCount !== 0) throw new Error('ADR_POSTGRES_SEAM_STATEMENT_BOUNDARY_WRONG');
+          if (proof.realityRowCount !== 2 || proof.fixtureRowCountBefore !== 2 || proof.fixtureRowCountAfter !== 2) throw new Error('ADR_POSTGRES_FIXTURE_CARDINALITY_WRONG');
+          for (const key of [
+            'liveProductionReadModelObserved',
+            'productionDatabaseEndpointUsed',
+            'productionRuntimeActivated',
+            'mcftRemoteDatabaseSecretUsed',
+            'bLineDatabaseSecretUsed',
+            'geoxFieldEqualsAdrTarget',
+            'correspondenceOrEqualityEstablished',
+            'recommendationWriteAuthorized',
+            'approvalAuthorized',
+            'operationPlanOrTaskCreationAuthorized',
+            'dispatchAuthorized',
+            'machineExecutionAuthorized',
+            'newArchitectureDecisionRequired'
+          ]) if (proof[key] !== false) throw new Error(`ADR_POSTGRES_NONCLAIM_REGRESSION:${key}`);
+
+      - name: Upload PostgreSQL read-only proof only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: geox-adr-postgres-readonly-${{ env.GEOX_ADR_POSTGRES_QUALIFICATION_HEAD }}
+          path: acceptance-output/ADR_REAL_GEOX_POSTGRES_READONLY_SHADOW_QUALIFICATION_V1.json
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,218 @@
+{
+  "schema_version": "geox_mcft_cap09_current_main_reanchor_7cb7_v1",
+  "status": "CANDIDATE_PROOF_BOUND_ADMISSION",
+  "authority_ceiling": "QUALIFICATION_GOVERNANCE_ONLY",
+  "previous_accepted_mcft_base": "2144d63477176f939a0d40d39b96ca97522af8db",
+  "current_protected_main": "7cb7cdc8c00252d3c87a685fbab38d96316afa3e",
+  "current_protected_main_tree": "19a33e6a222a355d5ba615b30e518bb86ac08444",
+  "exact_first_parent_successors": [
+    {
+      "sha": "2077b3b1cdb0945496d9974a581d2c4934e94561",
+      "parents": [
+        "2144d63477176f939a0d40d39b96ca97522af8db",
+        "e956dcbc507fcaeb4f469a78f2dd750a4f667a8d"
+      ],
+      "pr_number": 3532
+    },
+    {
+      "sha": "93475f0c0647acec49d3326cd7e86d20c6f102c0",
+      "parents": [
+        "2077b3b1cdb0945496d9974a581d2c4934e94561",
+        "eda18de12163613a22eea0eb162e8a512378bcc2"
+      ],
+      "pr_number": 3533
+    },
+    {
+      "sha": "9fd878cd7965d4473785cc359e280a879a0d2649",
+      "parents": [
+        "93475f0c0647acec49d3326cd7e86d20c6f102c0",
+        "6a296093be038cf39744e88842e75cb8252e3152"
+      ],
+      "pr_number": 3535
+    },
+    {
+      "sha": "2512c648e102d2c58e60598c6c558a4aa0f6b1d7",
+      "parents": [
+        "9fd878cd7965d4473785cc359e280a879a0d2649",
+        "fbd132d6dec5cf3fb16445bd242d1b952d74e9d0"
+      ],
+      "pr_number": 3536
+    },
+    {
+      "sha": "352255d976866cbe5d3cbfec2f3bdfbe88dfbe66",
+      "parents": [
+        "2512c648e102d2c58e60598c6c558a4aa0f6b1d7",
+        "f11efbbb24dc30fdf52d31deec35f92bf79fb85a"
+      ],
+      "pr_number": 3537
+    },
+    {
+      "sha": "d1a33ed1c308fe0dd84dc73b508413fd88f712df",
+      "parents": [
+        "352255d976866cbe5d3cbfec2f3bdfbe88dfbe66",
+        "616548d7138984cc480f03ef4c332c43bfe51496"
+      ],
+      "pr_number": 3538
+    },
+    {
+      "sha": "9e9671e4c5cab65069ffdc16e0aa4cb387d3c092",
+      "parents": [
+        "d1a33ed1c308fe0dd84dc73b508413fd88f712df",
+        "804257f77880c0b79f761ab67686e42401cfc6fd"
+      ],
+      "pr_number": 3539
+    },
+    {
+      "sha": "13e104b39b2de2ace20bfa14c1d0d8dafef332bf",
+      "parents": [
+        "9e9671e4c5cab65069ffdc16e0aa4cb387d3c092",
+        "e669693a2af9c27b4af9370de14383d3d98092e9"
+      ],
+      "pr_number": 3540
+    },
+    {
+      "sha": "7cb7cdc8c00252d3c87a685fbab38d96316afa3e",
+      "parents": [
+        "13e104b39b2de2ace20bfa14c1d0d8dafef332bf",
+        "3f29c25b3b3d2885fb595dfbab3463bcecb5e22a"
+      ],
+      "pr_number": 3543
+    }
+  ],
+  "exact_changed_paths": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "blob_sha": "aefa226fde9b89cd048e58f9db6c4069c52054a3",
+      "status": "modified",
+      "classification": "ADOPTED_SHARED_CI_GOVERNANCE"
+    },
+    {
+      "path": ".github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml",
+      "blob_sha": "6ea7a210aa8124a109418c1764b350cb9223240b",
+      "status": "added",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": ".github/workflows/mcft-cap-09-current-main-successor-reanchor-2077-v1.yml",
+      "blob_sha": "594b29ddd2349ceb20fc55d0fafa99283cb6cf02",
+      "status": "added",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": ".github/workflows/mcft-cap-09-production-runtime-owner-cutover-v1.yml",
+      "blob_sha": "9af558bec92765a32f81111853bf9103a5578f91",
+      "status": "modified",
+      "classification": "ADOPTED_MCFT_RUNTIME_START_OR_CUTOVER_HARNESS"
+    },
+    {
+      "path": ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+      "blob_sha": "27d36222e9105fac9d5e48061bd9f491de23e9ea",
+      "status": "modified",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": ".github/workflows/mcft-cap-09-t4r1-current-crop-refresh-v1.yml",
+      "blob_sha": "fadffdc3f0189abac15e68beb00e69892af3e6db",
+      "status": "modified",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": ".github/workflows/mcft-cap-09-t4r1-rolling-current-crop-candidate-v1.yml",
+      "blob_sha": "c195697cd5cc06563ff78bb42399ebad9d944929",
+      "status": "modified",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-2144-V1.json",
+      "blob_sha": "1ef9829c5952baf4c1ccc561b18b3bc467d4649e",
+      "status": "added",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-SUCCESSOR-REANCHOR-2077-V1.json",
+      "blob_sha": "e9b117f7723c02b44270a1cb74562816cf16aa1e",
+      "status": "added",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json",
+      "blob_sha": "df3f21b90ad3b6ed3299a3999b6ea146dc60cdef",
+      "status": "modified",
+      "classification": "ADOPTED_CURRENT_CROP_AUTHORITY_OR_REGISTRY"
+    },
+    {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+      "blob_sha": "5ff051c8917e58746c48f2989c5b7804cb8037c8",
+      "status": "modified",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-09T04Z-V1.json",
+      "blob_sha": "a28089d7db42f60596a426f2a781ba31800e215d",
+      "status": "added",
+      "classification": "ADOPTED_CURRENT_CROP_AUTHORITY_OR_REGISTRY"
+    },
+    {
+      "path": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs",
+      "blob_sha": "182288d2580c68c4d62b2c349547e78860e0f64f",
+      "status": "added",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_SUCCESSOR_REANCHOR_2077_V1.cjs",
+      "blob_sha": "9ecb041833531aab1a5c571f9baecc9609d309b6",
+      "status": "added",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+      "blob_sha": "6557d70a9b0e72bcf539dab38d7bab742f189d40",
+      "status": "modified",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_CUTOVER_CURRENT_CROP_PATH_CARRY_V1.cjs",
+      "blob_sha": "e85a5973151f95a897b384b61fbf99193defe007",
+      "status": "added",
+      "classification": "ADOPTED_MCFT_RUNTIME_START_OR_CUTOVER_HARNESS"
+    },
+    {
+      "path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_RUNTIME_START_ROLLING_REFRESH_TIME_SEMANTICS_V1.cjs",
+      "blob_sha": "3aac8feabad2901fc14818ad2ac6b7fb60485e52",
+      "status": "added",
+      "classification": "ADOPTED_MCFT_RUNTIME_START_OR_CUTOVER_HARNESS"
+    },
+    {
+      "path": "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs",
+      "blob_sha": "0a80cf93009303be6875a31ac6b7344eb8487e08",
+      "status": "modified",
+      "classification": "ADOPTED_MCFT_RUNTIME_START_OR_CUTOVER_HARNESS"
+    },
+    {
+      "path": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs",
+      "blob_sha": "c3ae7eb1497405843b0dc323e1be09962e328edf",
+      "status": "modified",
+      "classification": "ADOPTED_MCFT_RUNTIME_START_OR_CUTOVER_HARNESS"
+    }
+  ],
+  "overlap_policy": "EXACT_MERGED_DELTA_AND_BLOB_BINDING_NO_ZERO_OVERLAP_CLAIM",
+  "qcp_admission": {
+    "mode": "PROOF_BOUND_EXACT_BASE",
+    "bare_sha_allowlist_admission_authorized": false,
+    "admission_requires_exact_lineage_and_overlap_proof": true,
+    "baseline_qualification_carry_forward_authorized": false
+  },
+  "non_effects": {
+    "runtime_config_write_authorized": false,
+    "database_write_authorized": false,
+    "scheduler_write_authorized": false,
+    "production_owner_activation_authorized": false,
+    "production_runtime_start_authorized": false,
+    "formal_v5_authorized": false,
+    "a0_authorized": false,
+    "o00_o23_authorized": false,
+    "bline_reopen_authorized": false,
+    "adr_semantic_change_authorized": false
+  }
+}
+

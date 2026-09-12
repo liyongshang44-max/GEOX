@@ -1,0 +1,79 @@
+name: mcft-cap-09-production-writer-owner-self-grant-cleanup
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-production-writer-owner-self-grant-cleanup.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-WRITER-OWNER-SELF-GRANT-CLEANUP-AUTHORITY-V1.json'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_ARM_V1.json'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_V1.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_POSTGRES_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-ACL-CARRYFORWARD-REMEDIATION-AUTHORITY-V1.json'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_ARM_V1.json'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_V1.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_EVIDENCE_ACL_CARRYFORWARD_REMEDIATION_V1.cjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-production-writer-owner-self-grant-cleanup
+  cancel-in-progress: false
+
+jobs:
+  selective-revoke-postgres-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Prove PostgreSQL 16 cleanup and exact-nine full mutation lifecycle
+        run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_POSTGRES_V1.cjs
+
+  live-preflight-and-cleanup:
+    needs: selective-revoke-postgres-contract
+    if: >-
+      github.head_ref == 'feat/mcft-cap09-v13-producer-driven-qualification-v1' &&
+      github.event.pull_request.base.sha == '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+      SEED_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Read-only exact writer-owner self-grant cleanup preflight
+        run: node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_V1.cjs
+      - name: Apply exact grantor-scoped membership cleanup only when armed
+        run: node scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_V1.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-production-writer-owner-self-grant-cleanup-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_PREFLIGHT_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PRODUCTION_WRITER_OWNER_SELF_GRANT_CLEANUP_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

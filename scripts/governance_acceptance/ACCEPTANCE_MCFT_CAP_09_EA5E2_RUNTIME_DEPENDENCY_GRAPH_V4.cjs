@@ -3,6 +3,7 @@
 const crypto=require("node:crypto"),fs=require("node:fs"),path=require("node:path");
 const ROOT=process.cwd();
 const LIVE=".github/workflows/mcft-cap-09-ea5e2-rolling-operational-activation-live.yml";
+const PHASE6="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json";
 const SELF="scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.cjs";
 const STATIC_WF=".github/workflows/mcft-cap-09-ea5e2-runtime-dependency-graph.yml";
 const CARRIER="scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs";
@@ -17,7 +18,7 @@ const ENTRY=[
  "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_ROLLING_CROP_LEGALITY_V1.cjs",
  "scripts/runtime_acceptance/SELECT_MCFT_CAP_09_ROLLING_KBS_INTERSECTION_V1.py",
  DRIFT,CARRIER];
-const STATIC=[LIVE,SELF,STATIC_WF,
+const STATIC=[LIVE,PHASE6,SELF,STATIC_WF,
  ".github/workflows/mcft-cap-09-rolling-preboundary-capture.yml",
  ".github/workflows/mcft-cap-09-rolling-kbs-intersection.yml",
  ".github/workflows/mcft-cap-09-ea5e2-successor-runner-qualification.yml",
@@ -25,6 +26,9 @@ const STATIC=[LIVE,SELF,STATIC_WF,
  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_ROLLING_KBS_INTERSECTION.cjs",
  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION.cjs",
  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5E2_SUCCESSOR_RUNNER_QUALIFICATION_V3.cjs",
+ "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_GFS_PRODUCT_ACQUISITION_PROVIDER_V1.ts",
+ "scripts/runtime_acceptance/FETCH_MCFT_CAP_09_GFS_PRODUCT_RAW_BUNDLE_V1.ts",
+ "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts",
  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-SUCCESSOR-RUNNER-QUALIFICATION-V3.json",
  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-SUCCESSOR-RUNNER-QUALIFICATION-V2.json",
  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5E2-TIMING-BUDGET-QUALIFICATION-V2.json",
@@ -32,6 +36,14 @@ const STATIC=[LIVE,SELF,STATIC_WF,
  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json",
  "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-11-PROVIDER-AVAILABILITY-WATERMARK-AUTHORITY.md",
  "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
+ "apps/server/src/external_evidence/provider/https_external_evidence_transport_v1.ts",
+ "apps/server/src/external_evidence/provider/kbs_raw_hourly_live_provider_v1.ts",
+ "apps/server/src/external_evidence/provider/gfs_nomads_live_provider_v1.ts",
+ "apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts",
+ "apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts",
+ "apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py",
+ "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py",
+ "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py",
  "package.json","pnpm-lock.yaml","pnpm-workspace.yaml","apps/server/package.json"];
 const MUST=[
  "scripts/runtime_acceptance/RUN_MCFT_CAP_09_EA5E2_ROLLING_OPERATIONAL_ACTIVATION_OBSERVER_V1.ts",
@@ -39,7 +51,17 @@ const MUST=[
  "scripts/runtime_acceptance/RUN_MCFT_CAP_09_KBS_EXTERNAL_FIVE_FAMILY_DATA_PATH_V1.ts",
  "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_FORMAL_SNAPSHOT_READINESS.ts",
  "scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_EA5E2_TARGET_CROP_CONSENSUS.cjs",
+ "scripts/runtime_acceptance/FETCH_MCFT_CAP_09_GFS_PRODUCT_RAW_BUNDLE_V1.ts",
+ "scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts",
  DRIFT,CARRIER,
+ "apps/server/src/external_evidence/provider/https_external_evidence_transport_v1.ts",
+ "apps/server/src/external_evidence/provider/kbs_raw_hourly_live_provider_v1.ts",
+ "apps/server/src/external_evidence/provider/gfs_nomads_live_provider_v1.ts",
+ "apps/server/src/external_evidence/provider/gfs_nomads_raw_bundle_composer_v1.ts",
+ "apps/server/src/external_evidence/provider/gfs_raw_bundle_evidence_decoder_v1.ts",
+ "apps/server/src/external_evidence/provider/python/mcft_cap09_kbs_raw_hourly_scientific_core_v1.py",
+ "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py",
+ "apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py",
  "apps/server/src/runtime/twin_runtime/external_formal_cap04_candidate_execution_service_v1.ts",
  "apps/server/src/runtime/twin_runtime/postgres_external_formal_evidence_source_v1.ts",
  "apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts",
@@ -57,7 +79,8 @@ function closure(){const s=new Set(),q=[];for(const e of ENTRY){const x=req(e);s
 function glob(p){let s="";for(let i=0;i<p.length;i++){const c=p[i];if(c==="*"&&p[i+1]==="*"){s+=".*";i++;}else if(c==="*")s+="[^/]*";else if(c==="?")s+="[^/]";else s+=c.replace(/[\\^$.*+?()[\]{}|]/g,"\\$&");}return new RegExp(`^${s}$`);}
 function listPaths(){const t=fs.readFileSync(STATIC_WF,"utf8"),i=t.indexOf("\n    paths:\n"),j=t.indexOf("\n  workflow_dispatch:",i);if(i<0||j<0)return[];return t.slice(i,j).split(/\r?\n/).map(x=>/^\s+-\s+["']?([^"']+?)["']?\s*$/.exec(x)?.[1]).filter(Boolean);}
 function liveSets(){const t=fs.readFileSync(LIVE,"utf8"),autoLive=/^\s{2}push:\s*$/m.test(t)&&/rolling-live:\n\s+if: github\.event_name == 'workflow_dispatch'/.test(t)===false,manual=/^\s{2}workflow_dispatch:\s*$/m.test(t),d=fs.readFileSync(DRIFT,"utf8"),i=d.indexOf("const critical = ["),j=d.indexOf("\n].sort();",i),critical=new Set();if(i<0||j<0)throw Error("EA5E2_DEP_V4_ROLLING_CRITICAL_BLOCK_REQUIRED");for(const m of d.slice(i,j).matchAll(/"([^"]+)"/g))critical.add(m[1]);return{autoLive,manual,critical};}
+function phase6Retirement(){const a=JSON.parse(fs.readFileSync(PHASE6,"utf8")),retired=(a.retirement_targets?.production_execution||[]).find(x=>x.path===LIVE),forbidden=a.retirement_contract?.forbidden_retired_workflow_triggers||[];return{active:String(a.status||"").startsWith("PHASE6_"),liveRetired:retired?.retirement_mode==="REPLACE_LIVE_WORKFLOW_WITH_PR_ONLY_SENTINEL",manualForbidden:forbidden.includes("workflow_dispatch")};}
 function bytes(rel){const b=fs.readFileSync(rel);if(rel!==CARRIER)return b;const t=b.toString("utf8");if(!MARK_RE.test(t))throw Error("EA5E2_DEP_V4_BINDING_MARKER_REQUIRED");return Buffer.from(t.replace(MARK_RE,`// ${MARK}=${PH}\n`));}
 function digest(g){const h=crypto.createHash("sha256");for(const x of g){h.update(x);h.update("\0");h.update(bytes(x));h.update("\0");}return`sha256:${h.digest("hex")}`;}
-function main(){const g=closure(),missing=MUST.filter(x=>!g.includes(x)),{autoLive,manual,critical}=liveSets(),patterns=listPaths().map(glob),uncovered=g.filter(x=>!patterns.some(r=>r.test(x))),expected=digest(g),actual=MARK_RE.exec(fs.readFileSync(CARRIER,"utf8"))?.[1]??null;const p={schema_version:"geox_mcft_cap09_ea5e2_rolling_runtime_dependency_graph_v5",status:missing.length||uncovered.length||autoLive||!manual||!critical.has(CARRIER)||actual!==expected?"FAIL":"PASS",final_activation_orchestration:"ROLLING_PREBOUNDARY_BATCH_INTERSECTION",runtime_dependency_graph_count:g.length,runtime_dependency_graph_paths:g,expected_dependency_graph_sha256:expected,carrier_dependency_graph_sha256:actual,binding_carrier_path:CARRIER,expensive_live_auto_dispatch_present:autoLive,live_manual_dispatch_present:manual,binding_carrier_in_exact_main_critical:critical.has(CARRIER),required_runtime_discovery_missing:missing,static_gate_uncovered_paths:uncovered,future_t_long_wait_activation_authority:false,fixed_t_plus_432_normative_authority:false,six_hour_freshness_late_admission_authority:false,provider_request_count:0,database_write_count:0,formal_effect:false};fs.mkdirSync("acceptance-output",{recursive:true});fs.writeFileSync("acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json",JSON.stringify(p,null,2)+"\n");console.log(JSON.stringify(p));if(p.status!=="PASS")throw Error(`EA5E2_ROLLING_RUNTIME_DEPENDENCY_GRAPH_V4_UNBOUND:${JSON.stringify({missing,uncovered,autoLive,manual,carrierCritical:p.binding_carrier_in_exact_main_critical,digestMatch:actual===expected,expected})}`);}
+function main(){const g=closure(),missing=MUST.filter(x=>!g.includes(x)),{autoLive,manual,critical}=liveSets(),{active,liveRetired,manualForbidden}=phase6Retirement(),patterns=listPaths().map(glob),uncovered=g.filter(x=>!patterns.some(r=>r.test(x))),expected=digest(g),actual=MARK_RE.exec(fs.readFileSync(CARRIER,"utf8"))?.[1]??null;const p={schema_version:"geox_mcft_cap09_ea5e2_rolling_runtime_dependency_graph_v5",status:missing.length||uncovered.length||autoLive||manual||!active||!liveRetired||!manualForbidden||!critical.has(CARRIER)||actual!==expected?"FAIL":"PASS",final_activation_orchestration:"ROLLING_PREBOUNDARY_BATCH_INTERSECTION",runtime_dependency_graph_count:g.length,runtime_dependency_graph_paths:g,expected_dependency_graph_sha256:expected,carrier_dependency_graph_sha256:actual,binding_carrier_path:CARRIER,expensive_live_auto_dispatch_present:autoLive,live_manual_dispatch_present:manual,phase6_retirement_authority_path:PHASE6,phase6_retirement_authority_active:active,phase6_live_activation_retired:liveRetired,phase6_live_manual_dispatch_forbidden:manualForbidden,binding_carrier_in_exact_main_critical:critical.has(CARRIER),required_runtime_discovery_missing:missing,static_gate_uncovered_paths:uncovered,future_t_long_wait_activation_authority:false,fixed_t_plus_432_normative_authority:false,six_hour_freshness_late_admission_authority:false,provider_request_count:0,database_write_count:0,formal_effect:false};fs.mkdirSync("acceptance-output",{recursive:true});fs.writeFileSync("acceptance-output/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4.json",JSON.stringify(p,null,2)+"\n");console.log(JSON.stringify(p));if(p.status!=="PASS")throw Error(`EA5E2_ROLLING_RUNTIME_DEPENDENCY_GRAPH_V4_UNBOUND:${JSON.stringify({missing,uncovered,autoLive,manual,phase6Active:active,liveRetired,manualForbidden,carrierCritical:p.binding_carrier_in_exact_main_critical,digestMatch:actual===expected,expected})}`);}
 main();

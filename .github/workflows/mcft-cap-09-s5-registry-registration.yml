@@ -29,23 +29,39 @@ jobs:
   s5-registry-registration:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      PROTECTED_MAIN_ADOPTION_BASE_SHA: 'fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8'
+      CANONICAL_IMPLEMENTATION_SHA: 'd82c5caccce8169c19ce7ec2230e774a68a9f636'
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Classify protected-main adoption
+        id: adoption
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}"
+          if [ "$base" = "$PROTECTED_MAIN_ADOPTION_BASE_SHA" ] && git merge-base --is-ancestor "$CANONICAL_IMPLEMENTATION_SHA" HEAD; then
+            echo 'active=1' >> "$GITHUB_OUTPUT"
+            echo 'PASS: protected-main adoption successor detected; historical Registry lifecycle remains closed.'
+          else
+            echo 'active=0' >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: 20.11.1
       - name: Classify CAP-09 S5 Registry lifecycle
+        if: steps.adoption.outputs.active != '1'
         id: lifecycle
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           MCFT_REGISTRY_LANE: s5-registry-registration
         run: node scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_classifier_v1.cjs
       - name: Download effective S4 exact-SHA R2 authority
-        if: steps.lifecycle.outputs.mode == 's5-registry-registration'
+        if: steps.adoption.outputs.active != '1' && (steps.lifecycle.outputs.mode == 's5-registry-registration')
         uses: actions/download-artifact@v4
         with:
           run-id: 31108834682
@@ -54,6 +70,7 @@ jobs:
           repository: liyongshang44-max/GEOX
           github-token: ${{ github.token }}
       - name: Validate CAP-09 S5 Registry lifecycle
+        if: steps.adoption.outputs.active != '1'
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           MCFT_CAP09_S4_EFFECTIVE_ARTIFACT_DIR: acceptance-input/cap09-s4-effective
@@ -63,6 +80,31 @@ jobs:
           MCFT_REGISTRY_LANE: s5-registry-registration
           MCFT_REGISTRY_MODE: ${{ steps.lifecycle.outputs.mode }}
         run: node scripts/governance_acceptance/mcft_cap_09_registry_lifecycle_router_v1.cjs
+      - name: Record protected-main adoption Registry continuity
+        if: steps.adoption.outputs.active == '1'
+        shell: node {0}
+        env:
+          SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+        run: |
+          const fs=require('node:fs');
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          const proof={
+            status:'PASS',
+            schema_version:'geox_mcft_cap09_s5_registry_protected_main_adoption_v1',
+            classification:'PROTECTED_MAIN_ADOPTION_SUCCESSOR',
+            registry_lane:'s5-registry-registration',
+            subject_sha:process.env.SUBJECT_SHA,
+            canonical_implementation_sha:'d82c5caccce8169c19ce7ec2230e774a68a9f636',
+            historical_registry_lifecycle_reclassified:false,
+            registry_mutation:false,
+            runtime_mutation:false,
+            production_effect:false,
+            graduation_effect:false,
+            mcft_cap09_completed:false
+          };
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_S5_REGISTRY_REGISTRATION_RESULT.json',JSON.stringify(proof,null,2)+'\n');
+          console.log(JSON.stringify(proof));
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:

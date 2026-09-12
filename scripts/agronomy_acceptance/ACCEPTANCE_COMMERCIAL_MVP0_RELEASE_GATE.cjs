@@ -145,7 +145,23 @@ function debugFailures(items) {
   const exactIds = new Set(exactRows.map((r) => String(r?.memory_id || '')).filter(Boolean));
   const exactTypes = new Set(exactRows.map((r) => String(r?.memory_type || '')).filter(Boolean));
   const exactIdsOk = fmIds.length >= 3 && fmIds.every((id) => exactIds.has(String(id)));
-  const exactTypesOk = exactTypes.has('FIELD_RESPONSE_MEMORY') && exactTypes.has('SKILL_PERFORMANCE_MEMORY') && exactTypes.has('DEVICE_RELIABILITY_MEMORY');
+  const formalFieldResponseNotAutoPromoted =
+    !exactTypes.has('FIELD_RESPONSE_MEMORY');
+
+  const technicalMemoryTrustBoundaryOk =
+    exactRows.every((row) =>
+      String(row?.memory_lane || '') !== 'FORMAL_FIELD_MEMORY'
+      && String(row?.trust_level || '') !== 'FORMAL_ACCEPTED'
+      && row?.customer_visible_memory !== true
+      && row?.learning_eligible !== true
+    );
+
+  const exactTypesOk =
+    exactTypes.has('SKILL_PERFORMANCE_MEMORY')
+    && exactTypes.has('DEVICE_RELIABILITY_MEMORY')
+    && formalFieldResponseNotAutoPromoted
+    && technicalMemoryTrustBoundaryOk;
+
   const scopeOk = scopeRows.length >= 3;
   const fieldMemoryScriptOk = fieldMemory?.ok === true;
   const fieldMemoryExists = exactIdsOk;
@@ -192,6 +208,10 @@ function debugFailures(items) {
       exact_field_memory_id_count: exactRows.length,
       exact_field_memory_ids_ok: exactIdsOk,
       exact_field_memory_types_ok: exactTypesOk,
+      formal_field_response_not_auto_promoted:
+        formalFieldResponseNotAutoPromoted,
+      technical_memory_trust_boundary_ok:
+        technicalMemoryTrustBoundaryOk,
       exact_field_memory_types: Array.from(exactTypes),
       missing_field_memory_ids: fmIds.filter((id) => !exactIds.has(String(id))),
       chain_ids: { field_id: c.field_id || '', report_ref: c.report_ref || '', task_id: c.task_id || '', recommendation_id: c.recommendation_id || '', prescription_id: c.prescription_id || '', acceptance_id: c.acceptance_id || '', receipt_id: c.receipt_id || '' },

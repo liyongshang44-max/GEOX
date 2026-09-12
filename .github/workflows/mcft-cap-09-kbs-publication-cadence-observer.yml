@@ -1,76 +1,40 @@
+# Phase 6 retirement sentinel.
+# Complete pre-cutover implementation remains immutable at:
+# 75d4961279bd64dc1c9dd7d68aac189c72c98846:.github/workflows/mcft-cap-09-kbs-publication-cadence-observer.yml
+# historical blob: a619057d4c22e85fd71cfd3d6282aaec09cb0213
+# No production schedule, dispatch, workflow-run, push, or callable trigger remains.
 name: mcft-cap-09-kbs-publication-cadence-observer
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: '17 * * * *'
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-kbs-publication-cadence-observer.yml'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-PUBLICATION-CADENCE-OBSERVER-V1.json'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-KBS-PUBLICATION-CADENCE-OBSERVER-V1.md'
-      - 'scripts/runtime_acceptance/OBSERVE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE.py'
-      - 'scripts/runtime_acceptance/RESTORE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE_STATE.py'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE_OBSERVER.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs'
+      - '.github/workflows/mcft-cap-09-phase6-retire-github-production-execution.yml'
 
 permissions:
   contents: read
-  actions: read
-
-concurrency:
-  group: mcft-cap09-kbs-publication-cadence-observer-${{ github.ref }}
-  cancel-in-progress: false
 
 jobs:
-  observe:
+  phase6-retirement-sentinel:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 5
     steps:
-      - name: Checkout exact subject
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
           persist-credentials: false
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Prove observer governance and deterministic semantics
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE_OBSERVER.cjs
-
-      - name: Prove safe cross-host artifact restore semantics
-        run: python scripts/runtime_acceptance/RESTORE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE_STATE.py --selftest
-
-      - name: Restore previous successful main cadence state
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          python scripts/runtime_acceptance/RESTORE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE_STATE.py \
-            --output acceptance-output/PREVIOUS_KBS_PUBLICATION_CADENCE_STATE.json
-
-      - name: Observe exact KBS Raw Hourly publication state
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Prove immutable historical binding and retired trigger surface
         shell: bash
         run: |
           set -euo pipefail
-          args=(--output acceptance-output/KBS_PUBLICATION_CADENCE_STATE.json)
-          if [[ -f acceptance-output/PREVIOUS_KBS_PUBLICATION_CADENCE_STATE.json ]]; then
-            args+=(--previous-state acceptance-output/PREVIOUS_KBS_PUBLICATION_CADENCE_STATE.json)
-          fi
-          python scripts/runtime_acceptance/OBSERVE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE.py "${args[@]}"
-
-      - name: Validate metadata-only live artifact
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE_OBSERVER.cjs --live acceptance-output/KBS_PUBLICATION_CADENCE_STATE.json
-
-      - name: Upload metadata-only cadence state
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcft-cap09-kbs-publication-cadence-state-${{ github.run_id }}
-          path: acceptance-output/KBS_PUBLICATION_CADENCE_STATE.json
-          if-no-files-found: error
-          retention-days: 30
+          test "$(git rev-parse '75d4961279bd64dc1c9dd7d68aac189c72c98846:.github/workflows/mcft-cap-09-kbs-publication-cadence-observer.yml')" = 'a619057d4c22e85fd71cfd3d6282aaec09cb0213'
+          node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs selftest
+          node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs enforce >/tmp/mcft-cap09-phase6-owner-audit.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('/tmp/mcft-cap09-phase6-owner-audit.json','utf8'));
+          if(p.status!=='PASS'||p.active_retired_owner_or_trigger_count!==0||p.retired_actions_write_count!==0||p.historical_phase5_workflow_blobs_all_match!==true)throw new Error('PHASE6_RETIREMENT_SENTINEL_REQUIRED');
+          NODE

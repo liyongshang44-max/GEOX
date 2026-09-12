@@ -35,6 +35,10 @@ import type {
   RuntimeLeaseClaimV1,
   TwinScopeKeyV1,
 } from "../../runtime/twin_runtime/ports.js";
+import {
+  DirectPostgresTwinCanonicalFactWriterV1,
+  type TwinCanonicalFactWriterV1,
+} from "./postgres_mcft_cap09_twin_canonical_fact_writer_v1.js";
 
 function factIdV1(objectId: string): string {
   return `fact_${objectId}`;
@@ -85,7 +89,10 @@ function isPgUniqueViolationV1(error: unknown): boolean {
 }
 
 export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenarioPersistencePortV1 {
-  constructor(private readonly pool: Pool) {}
+  constructor(
+    private readonly pool: Pool,
+    private readonly factWriter: TwinCanonicalFactWriterV1 = new DirectPostgresTwinCanonicalFactWriterV1(),
+  ) {}
 
   private async verifyLeaseV1(
     client: PoolClient,
@@ -342,10 +349,10 @@ export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenar
         inject(`before_fact_${index + 1}_${member.object_type}`);
         const id = factIdV1(member.object_id);
         factIds[member.object_id] = id;
-        await client.query(
-          "INSERT INTO facts (fact_id,occurred_at,source,record_json) VALUES ($1,$2::timestamptz,'system',$3::jsonb)",
-          [id, member.logical_time, recordJsonV1(member)],
-        );
+        await this.factWriter.appendCanonicalFact(client, {
+          scope: input.scope, lease: input.lease, fact_id: id,
+          occurred_at: member.logical_time, record_json: recordJsonV1(member),
+        });
       }
 
       const state = requireMemberV1(input.record_set, "twin_state_estimate_v1");
@@ -643,10 +650,10 @@ export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenar
 
       const id = factIdV1(scenario.object_id);
       inject("before_scenario_fact");
-      await client.query(
-        "INSERT INTO facts (fact_id,occurred_at,source,record_json) VALUES ($1,$2::timestamptz,'system',$3::jsonb)",
-        [id, scenario.logical_time, recordJsonV1(scenario)],
-      );
+      await this.factWriter.appendCanonicalFact(client, {
+        scope: input.scope, lease: input.lease, fact_id: id,
+        occurred_at: scenario.logical_time, record_json: recordJsonV1(scenario),
+      });
       const rows = buildCap04ScenarioProjectionRowsV1(input.record, sourcePayload, id);
       inject("before_scenario_projections");
       await this.insertScenarioProjectionRowsV1(client, rows);

@@ -1,0 +1,157 @@
+name: mcft-cap-09-post-merge-v13-control-plane-v1
+
+on:
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-B689-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_B689_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-36B6-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_36B6_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json'
+      - 'scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs'
+      - '.github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml'
+      - 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts'
+      - 'apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts'
+      - 'apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql'
+      - 'apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_composition_v1.ts'
+      - 'apps/server/src/external_evidence/mcft_cap09_v13_forcing_production_process_v1.ts'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_POSTMERGE_V13_PRODUCTION_COMPOSITION_V1.ts'
+      - '.github/workflows/mcft-cap-09-postmerge-v13-production-composition.yml'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+env:
+  POST_MERGE_V13_BASE_SHA: 'fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8'
+  POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA: 'ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23'
+  POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA: '0630bb63b82c9ba108854f5aa26b096f9221f031'
+  PRODUCTION_LIVE_PROTECTED_MAIN_PREDECESSOR_SHA: 'ef9f7d45114c98c16ad57ce69226323935f685db'
+  ROLLING_CURRENT_CROP_CANDIDATE_PROTECTED_MAIN_PREDECESSOR_SHA: 'd82d25f76535b2779ef6b15b3eb32c15c245dedf'
+  ROLLING_STAGE_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA: 'd67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3'
+  EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA: 'b37b6cee4aadb50a8303cdfeffd0b4ab8a89451f'
+  TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA: '5050f1c08d2528048c56d56add4cbb068b956925'
+  TWIN_V2_RUNTIME_SELECTION_ADOPTION_MERGE_PROTECTED_MAIN_PREDECESSOR_SHA: '0bd2300c9c8a58025df9212d7c14e640606add83'
+  OWNER_CUTOVER_REGISTRY_SELECTION_PROTECTED_MAIN_PREDECESSOR_SHA: 'd17f894e86b0fabab648530968c562e2fbe94c5d'
+  CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA: 'f41dde8d44de95e71748e756e048e0166c1916b7'
+  CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA: 'ca2a96d131bc1d3b2935e7b7460752bdbf79f9bd'
+  PRODUCER_QUALIFICATION_BASE_SHA: '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+
+jobs:
+  post-merge-v13-control-plane:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact post-merge predecessor
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_ref="${{ github.event.pull_request.base.ref }}"
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          if [ "$base_ref" = "main" ]; then
+            if [ "$base_sha" != "$POST_MERGE_V13_BASE_SHA" ] && [ "$base_sha" != "$POST_ADOPTION_EFFECTIVENESS_PREDECESSOR_SHA" ] && [ "$base_sha" != "$POST_EFFECTIVENESS_RUNTIME_CUTOVER_PREDECESSOR_SHA" ] && [ "$base_sha" != "$PRODUCTION_LIVE_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base_sha" != "$ROLLING_CURRENT_CROP_CANDIDATE_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base_sha" != "$ROLLING_STAGE_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base_sha" != "$EFFECTIVE_CURRENT_CROP_REGISTRY_RESOLVER_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base_sha" != "$TWIN_V2_RUNTIME_SELECTION_ADOPTION_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base_sha" != "$TWIN_V2_RUNTIME_SELECTION_ADOPTION_MERGE_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base_sha" != "$OWNER_CUTOVER_REGISTRY_SELECTION_PROTECTED_MAIN_PREDECESSOR_SHA" ] && [ "$base_sha" != "$CURRENT_PROTECTED_MAIN_REFRESH_PREDECESSOR_SHA" ] && [ "$base_sha" != "$CURRENT_CROP_CONTINUITY_REFRESH_MERGE_PREDECESSOR_SHA" ]; then
+              if [ "$base_sha" = "b689938f6161d01dec06a1ce4ce6f24420c4b3a0" ]; then
+                git fetch --no-tags origin main
+                node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_B689_V1.cjs
+              elif [ "$base_sha" = "36b671ce83652e7d3ba350c3e9118342226c13a8" ]; then
+                git fetch --no-tags origin main
+                node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_36B6_V1.cjs
+              elif [ "$base_sha" = "0ac2d2cf98d553285a2051a1b0b86131a23fc413" ]; then
+                git fetch --no-tags origin main
+                node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_0AC2_V1.cjs
+              elif [ "$base_sha" = "1e59d001cbb8c1b858cd24caf61dbc02b3b0bf20" ]; then
+                git fetch --no-tags origin main
+                node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_1E59_V1.cjs
+              elif [ "$base_sha" = "512fb706040bf609c949aabb641afa300bd4c91b" ]; then
+                git fetch --no-tags origin main
+                node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_512F_V1.cjs
+              elif [ "$base_sha" = "7cb7cdc8c00252d3c87a685fbab38d96316afa3e" ]; then
+                git fetch --no-tags origin main
+                node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1.cjs
+              else
+                echo "MCFT_CAP09_POST_MERGE_V13_UNGOVERNED_MAIN_BASE:${base_sha}" >&2
+                exit 1
+              fi
+            fi
+          else
+            test "$base_ref" = "feat/mcft-cap09-postmerge-v13-production-composition-v1"
+            test "$base_sha" = "$PRODUCER_QUALIFICATION_BASE_SHA"
+          fi
+
+      - name: Generate post-merge V13 applicability plan
+        if: github.event_name == 'pull_request'
+        run: >-
+          node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+          --base '${{ github.event.pull_request.base.sha }}'
+          --head '${{ github.event.pull_request.head.sha }}'
+          --generation v13
+          --stage POST_MERGE_V13_QUALIFICATION
+          --out acceptance-output/MCFT_CAP_09_POST_MERGE_V13_PLAN.json
+
+      - name: Enumerate post-merge blockers without fail-fast
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set +e
+          node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs             --base '${{ github.event.pull_request.base.sha }}'             --head '${{ github.event.pull_request.head.sha }}'             --generation v13             --stage POST_MERGE_V13_QUALIFICATION             --out acceptance-output/MCFT_CAP_09_POST_MERGE_V13_BLOCKERS.json
+          code=$?
+          set -e
+          test -f acceptance-output/MCFT_CAP_09_POST_MERGE_V13_BLOCKERS.json
+          echo "preflight_exit_code=$code" >> "$GITHUB_OUTPUT"
+
+      - name: Validate truthful post-merge frontier
+        if: github.event_name == 'pull_request'
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const plan=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_POST_MERGE_V13_PLAN.json','utf8'));
+          const pre=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_POST_MERGE_V13_BLOCKERS.json','utf8'));
+          if(plan.status!=='PASS'||plan.stage!=='POST_MERGE_V13_QUALIFICATION'||plan.generation!=='v13')throw new Error('POST_MERGE_V13_PLAN_NOT_PASS');
+          if(plan.unknown_changed_paths.length||plan.authority_errors.length||plan.resolver_errors.length)throw new Error('POST_MERGE_V13_GOVERNANCE_UNRESOLVED');
+          if(pre.stage!=='POST_MERGE_V13_QUALIFICATION'||pre.non_fail_fast!==true)throw new Error('POST_MERGE_V13_PREFLIGHT_INVALID');
+          const required=new Set(['V13_PRODUCER_DRIVEN_QUALIFICATION','END_TO_END_EVIDENCE_SUPPLY_DEADLINE','EXACT_ONE_PRODUCTION_OWNER']);
+          const decisions=new Map(plan.decisions.map(x=>[x.check_id,x]));
+          for(const id of required){
+            const row=decisions.get(id);
+            if(!row||!['REQUIRED','REQUALIFY'].includes(row.status))throw new Error('POST_MERGE_REQUIRED_GATE_NOT_FAIL_CLOSED:'+id);
+          }
+          const effects=pre.non_effects||{};
+          for(const key of ['runtime_mutation','production_workflow_activation','formal_database_mutation','provider_request','graduation_effect','mcft_cap09_completed']){
+            if(effects[key]!==false)throw new Error('POST_MERGE_CONTROL_PLANE_NON_EFFECT_VIOLATION:'+key);
+          }
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_POST_MERGE_V13_FRONTIER_V1_RESULT.json',JSON.stringify({
+            status:'PASS',
+            stage:plan.stage,
+            planner_status:plan.status,
+            blocker_count:pre.counts.blocker_count,
+            blockers:pre.blockers,
+            required_unclosed_gates:[...required],
+            remote_store_provisioned:false,
+            production_owner_activated:false,
+            formal_v5_armed:false,
+            o00_started:false,
+            mcft_cap09_completed:false
+          },null,2)+'\n');
+
+      - name: Upload post-merge frontier proof
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-post-merge-v13-control-plane-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_POST_MERGE_V13_PLAN.json
+            acceptance-output/MCFT_CAP_09_POST_MERGE_V13_BLOCKERS.json
+            acceptance-output/MCFT_CAP_09_POST_MERGE_V13_FRONTIER_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

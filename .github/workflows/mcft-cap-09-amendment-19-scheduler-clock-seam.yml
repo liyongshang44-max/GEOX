@@ -23,6 +23,8 @@ jobs:
     env:
       EXACT_BASE_SHA: '95ec662ea171ada89ba1f8ba1c848be6c20dab86'
       SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+      PROTECTED_MAIN_ADOPTION_BASE_SHA: 'fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8'
+      CANONICAL_IMPLEMENTATION_SHA: 'd82c5caccce8169c19ce7ec2230e774a68a9f636'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,18 +37,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "${{ github.event.pull_request.base.sha }}" = "$EXACT_BASE_SHA"
+          base="${{ github.event.pull_request.base.sha }}"
           test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
-          mapfile -t changed < <(git diff --name-only "$EXACT_BASE_SHA" "$SUBJECT_SHA" | sort)
-          test "${#changed[@]}" -eq 3
-          expected=$(cat <<'EOF'
+          if [ "$base" = "$EXACT_BASE_SHA" ]; then
+            mapfile -t changed < <(git diff --name-only "$EXACT_BASE_SHA" "$SUBJECT_SHA" | sort)
+            test "${#changed[@]}" -eq 3
+            expected=$(cat <<'EOF'
           .github/workflows/mcft-cap-09-amendment-19-scheduler-clock-seam.yml
           apps/server/src/runtime/twin_runtime/postgres_persistent_sequential_scheduler_adapter_v1.ts
           scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_19_SCHEDULER_CLOCK_SEAM.ts
           EOF
-          )
-          actual=$(printf '%s\n' "${changed[@]}")
-          test "$actual" = "$expected"
+            )
+            actual=$(printf '%s\n' "${changed[@]}")
+            test "$actual" = "$expected"
+          elif [ "$base" = "$PROTECTED_MAIN_ADOPTION_BASE_SHA" ]; then
+            git merge-base --is-ancestor "$CANONICAL_IMPLEMENTATION_SHA" HEAD || { echo 'AM19_CLOCK_SEAM_ADOPTION_CANONICAL_ANCESTRY_REQUIRED' >&2; exit 1; }
+            echo 'PASS: protected-main adoption runs the current scheduler-clock-seam focused proof without weakening the historical three-file gate.'
+          else
+            echo "AM19_CLOCK_SEAM_GOVERNED_BASE_REQUIRED:$base" >&2
+            exit 1
+          fi
 
       - uses: pnpm/action-setup@v4
         with:

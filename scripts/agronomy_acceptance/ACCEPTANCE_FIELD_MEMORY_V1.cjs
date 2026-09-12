@@ -37,26 +37,25 @@ function buildIrrigationReceiptBody({
   recommendation_id,
   prescription_id,
   skill_trace_ref,
+  executor_actor_id,
   water_l = 20,
-  amount = 20,
-  coverage_percent = 90,
-  duration_min = 20,
+  observed_parameters,
 }) {
+  const executionEndTs = Date.now() - 5_000;
+  const executionStartTs = executionEndTs - 15_000;
+  const executionDurationMin = (executionEndTs - executionStartTs) / 60_000;
+
   return {
     tenant_id,
     project_id,
     group_id,
     operation_plan_id,
     act_task_id,
-    executor_id: { kind: 'script', id: 'acceptance_executor', namespace: 'qa' },
-    execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
+    executor_id: { kind: 'script', id: executor_actor_id, namespace: 'executor_runtime_v1' },
+    execution_time: { start_ts: executionStartTs, end_ts: executionEndTs },
     execution_coverage: { kind: 'field', ref: field_id },
     resource_usage: { fuel_l: 0, electric_kwh: 0, water_l, chemical_ml: 0 },
-    observed_parameters: {
-      amount,
-      coverage_percent,
-      duration_min,
-    },
+    observed_parameters,
     evidence_refs: [formalEvidenceRef('sensor', `sensor_${suffix}`)],
     logs_refs: [
       { kind: 'dispatch_ack', ref: `ack_${suffix}` },
@@ -71,6 +70,7 @@ function buildIrrigationReceiptBody({
     meta: {
       command_id: act_task_id,
       idempotency_key: `receipt_${act_task_id}_${suffix}`,
+      execution_summary: { duration_min: executionDurationMin },
       recommendation_id,
       prescription_id,
       skill_id: 'irrigation_deficit_skill_v1',
@@ -271,6 +271,7 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
   const approverToken = env('APPROVER_TOKEN', 'approver_token');
   const operatorToken = env('OPERATOR_TOKEN', 'operator_token');
   const executorToken = env('EXECUTOR_TOKEN', 'executor_token');
+  const executorActorId = env('EXECUTOR_ACTOR_ID', 'tok_executor_actor');
   const tenant_id = env('TENANT_ID', 'tenantA');
   const project_id = env('PROJECT_ID', 'projectA');
   const group_id = env('GROUP_ID', 'groupA');
@@ -380,63 +381,6 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
   const operation_plan_id = String(submitJson.operation_plan_id ?? '');
   assert.ok(operation_plan_id, 'operation_plan_id missing');
 
-  await pool.query(
-    `
-    INSERT INTO facts (fact_id, occurred_at, source, record_json)
-    SELECT
-      $5,
-      NOW(),
-      'ACCEPTANCE_FIELD_MEMORY_V1_skip_auto_task_issue',
-      jsonb_set(
-        src.record_json::jsonb,
-        '{payload,proposal,meta}',
-        COALESCE((src.record_json::jsonb #> '{payload,proposal,meta}'), '{}'::jsonb)
-          || '{"skip_auto_task_issue": true}'::jsonb,
-        true
-      )
-    FROM (
-      SELECT record_json
-        FROM facts
-       WHERE (record_json::jsonb ->> 'type') = 'approval_request_v1'
-         AND (record_json::jsonb #>> '{payload,request_id}') = $1
-         AND (record_json::jsonb #>> '{payload,tenant_id}') = $2
-         AND (record_json::jsonb #>> '{payload,project_id}') = $3
-         AND (record_json::jsonb #>> '{payload,group_id}') = $4
-       ORDER BY occurred_at DESC, fact_id DESC
-       LIMIT 1
-    ) src
-    `,
-    [
-      String(submitJson.approval_request_id),
-      tenant_id,
-      project_id,
-      group_id,
-      randomUUID()
-    ]
-  );
-
-  const patchedApproval = await pool.query(
-    `
-    SELECT fact_id
-      FROM facts
-     WHERE (record_json::jsonb ->> 'type') = 'approval_request_v1'
-       AND (record_json::jsonb #>> '{payload,request_id}') = $1
-       AND (record_json::jsonb #>> '{payload,tenant_id}') = $2
-       AND (record_json::jsonb #>> '{payload,project_id}') = $3
-       AND (record_json::jsonb #>> '{payload,group_id}') = $4
-       AND COALESCE((record_json::jsonb #>> '{payload,proposal,meta,skip_auto_task_issue}')::boolean, false) = true
-     ORDER BY occurred_at DESC, fact_id DESC
-     LIMIT 1
-    `,
-    [
-      String(submitJson.approval_request_id),
-      tenant_id,
-      project_id,
-      group_id
-    ]
-  );
-
-  assert.ok(patchedApproval.rows?.length > 0, 'approval skip_auto_task_issue append fact missing');
   const nowTs = Date.now();
 
   await pool.query(
@@ -503,6 +447,8 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
   process.stdout.write(`${JSON.stringify({ approval_decide_http: { status: decideApproval.status, json: decideApproval.json } }, null, 2)}\n`);
   const decideJson = requireOk(decideApproval, 'decide approval before action task');
   process.stdout.write(`${JSON.stringify({ approval_decide_response: decideJson }, null, 2)}\n`);
+  const actTaskId = String(decideJson.act_task_id ?? '').trim();
+  assert.ok(actTaskId, 'act_task_id missing from approval decide successor auto-task');
 
   await pool.query(
     `UPDATE fail_safe_event_v1
@@ -526,56 +472,10 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
     [tenant_id, project_id, group_id, device_id, Date.now()]
   );
 
-  const taskResp = await fetchJson(`${base}/api/v1/actions/task`, {
-    method: 'POST',
-    token: operatorToken,
-    body: {
-      tenant_id,
-      project_id,
-      group_id,
-      operation_plan_id,
-      approval_request_id: approval_id,
-      field_id,
-      season_id,
-      device_id,
-      issuer: { kind: 'human', id: 'field_memory_acceptance', namespace: 'qa' },
-      action_type: 'IRRIGATE',
-      target: { kind: 'field', ref: field_id },
-      time_window: { start_ts: ts0, end_ts: ts0 + 3600_000 },
-      parameter_schema: {
-        keys: [
-          { name: 'duration_sec', type: 'number', min: 1, max: 7200 },
-          { name: 'duration_min', type: 'number', min: 1, max: 720 },
-          { name: 'amount', type: 'number', min: 1, max: 1000 },
-          { name: 'coverage_percent', type: 'number', min: 0, max: 100 },
-        ],
-      },
-      parameters: {
-        duration_sec: 1200,
-        duration_min: 20,
-        amount: 20,
-        coverage_percent: 95,
-      },
-      constraints: {},
-      meta: {
-        recommendation_id: recId,
-        prescription_id,
-        skill_trace_ref,
-        task_type: 'IRRIGATION',
-        device_id,
-        adapter_type: 'irrigation_simulator',
-        device_type: 'IRRIGATION_CONTROLLER',
-        required_capabilities: ['device.irrigation.valve.open'],
-      },
-    }
-  });
-  const taskJson = requireOk(taskResp, 'create action task');
-  const actTaskId = String(taskJson.act_task_id ?? '').trim();
-  assert.ok(actTaskId, 'act_task_id missing');
   const taskFactQ = await pool.query(
     `SELECT record_json::jsonb AS record_json
        FROM facts
-      WHERE (record_json::jsonb ->> 'type') = 'ao_act_task_v1'
+      WHERE (record_json::jsonb ->> 'type') = 'ao_act_task_v0'
         AND (
           (record_json::jsonb #>> '{payload,act_task_id}') = $1
           OR (record_json::jsonb #>> '{payload,task_id}') = $1
@@ -584,7 +484,8 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
       LIMIT 1`,
     [actTaskId]
   );
-  const taskSkillBindingEvidence = taskFactQ.rows?.[0]?.record_json?.payload?.meta?.skill_binding_evidence ?? {};
+  const taskPayload = taskFactQ.rows?.[0]?.record_json?.payload ?? {};
+  const taskSkillBindingEvidence = taskPayload?.meta?.skill_binding_evidence ?? {};
   process.stdout.write(`${JSON.stringify({ task_skill_binding_evidence: taskSkillBindingEvidence }, null, 2)}\n`);
 
   const executeSkill = await fetchJson(`${base}/api/v1/skill/execute`, {
@@ -613,6 +514,34 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
   });
   requireOk(executeSkill, 'mock valve skill execute');
 
+  const successorTaskSchemaKeys = Array.isArray(taskPayload?.parameter_schema?.keys)
+    ? taskPayload.parameter_schema.keys
+    : [];
+
+  const successorObservedParameters = Object.fromEntries(
+    successorTaskSchemaKeys
+      .map((entry) => String(entry?.name ?? '').trim())
+      .filter((name) =>
+        name
+        && Object.prototype.hasOwnProperty.call(
+          taskPayload?.parameters ?? {},
+          name
+        )
+      )
+      .map((name) => [
+        name,
+        taskPayload.parameters[name]
+      ])
+  );
+
+  if (Object.keys(successorObservedParameters).length === 0) {
+    throw new Error(JSON.stringify({
+      reason: 'SUCCESSOR_TASK_OBSERVED_PARAMETERS_EMPTY',
+      task_id: actTaskId,
+      task_payload: taskPayload,
+    }));
+  }
+
   const receiptResp = await fetchJson(`${base}/api/v1/actions/receipt`, {
     method: 'POST',
     token: executorToken,
@@ -621,9 +550,8 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
       recommendation_id: recId,
       prescription_id,
       skill_trace_ref,
-      coverage_percent: 95,
-      pre_soil_moisture,
-      post_soil_moisture,
+      executor_actor_id: executorActorId,
+      observed_parameters: successorObservedParameters,
     })
   });
   const receiptJson = requireOk(receiptResp, 'submit action receipt');
@@ -743,7 +671,7 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
     skill_trace_ref: x?.skill_trace_ref,
   }));
 
-  const fieldResponseItems = byScopeItems.filter((x) => x?.memory_type === 'FIELD_RESPONSE_MEMORY');
+  const formalFieldResponseItems = byScopeItems.filter((x) => x?.memory_type === 'FIELD_RESPONSE_MEMORY');
   const deviceItems = byScopeItems.filter((x) => x?.memory_type === 'DEVICE_RELIABILITY_MEMORY');
   const colCheck = await pool.query(`
     SELECT data_type, udt_name, column_default, is_nullable
@@ -760,7 +688,7 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
       field_id,
       act_task_id: actTaskId,
       approval_decide_act_task_id: decideJson?.act_task_id ?? null,
-      manual_task_act_task_id: actTaskId,
+      successor_task_act_task_id: actTaskId,
       recommendation_id: recId,
       operation_plan_id,
       execution_judge_id,
@@ -776,36 +704,34 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
   const currentChainMemoryLinked = linkedMemoryItems.length >= 3;
   const checks = {
     db_contract_aligned: dbContractAligned,
-    field_response_memory_written:
-     byType.has('FIELD_RESPONSE_MEMORY'),
+    formal_field_memory_not_auto_promoted:
+      formalFieldResponseItems.length === 0,
+    formal_memory_lane_not_auto_promoted:
+      byScopeItems.every((item) =>
+        String(item?.memory_lane ?? '') !== 'FORMAL_FIELD_MEMORY'
+        && String(item?.trust_level ?? '') !== 'FORMAL_ACCEPTED'
+      ),
+    technical_memory_not_customer_visible:
+      byScopeItems.every((item) => item?.customer_visible_memory !== true),
+    technical_memory_not_learning_eligible:
+      byScopeItems.every((item) => item?.learning_eligible !== true),
     device_reliability_memory_written: byType.has('DEVICE_RELIABILITY_MEMORY'),
     skill_performance_memory_written: byType.has('SKILL_PERFORMANCE_MEMORY'),
     memory_query_by_field: byScopeItems.length >= 3 && byScopeItems.every((item) => String(item?.field_id ?? '') === field_id),
     memory_query_by_operation: currentChainMemoryLinked,
     memory_linked_to_current_chain: currentChainMemoryLinked,
     memory_query_by_id_all_exist: byIdsExist,
-    memory_has_confidence: byScopeItems.every((item) => Number(item?.confidence) > 0),
+    memory_confidence_optional_or_finite:
+      byScopeItems.every((item) =>
+        item?.confidence == null || Number.isFinite(Number(item.confidence))
+      ),
     memory_has_summary_text: byScopeItems.every((item) => String(item?.summary_text ?? "").trim().length > 0),
     memory_has_evidence_refs: byScopeItems.every((item) => Array.isArray(item?.evidence_refs)),
     skill_memory_has_skill_trace_ref: byScopeItems.filter((x)=>x.memory_type==='SKILL_PERFORMANCE_MEMORY').every((x)=>String(x.skill_trace_ref??'').trim().length>0),
-    field_response_has_before_value: fieldResponseItems.some((x) => Number.isFinite(Number(x?.before_value))),
-    field_response_has_after_value: fieldResponseItems.some((x) => Number.isFinite(Number(x?.after_value))),
-    field_response_has_delta_value: fieldResponseItems.some((x) => Number.isFinite(Number(x?.delta_value))),
     device_memory_has_skill_id: deviceItems.some((x) => String(x?.skill_id ?? "").trim().length > 0),
     device_memory_has_response_metric: deviceItems.some((x) => String(x?.metric_key ?? "") === "valve_response_status"),
-    report_field_response_contains_delta: fieldResponseItems.some((x) => {
-      const before = Number(x?.before_value);
-      const after = Number(x?.after_value);
-      const delta = Number(x?.delta_value);
-      return Number.isFinite(before)
-        && Number.isFinite(after)
-        && Number.isFinite(delta)
-        && Math.abs(delta) > 0;
-    }),
-    report_reads_field_memory:
-      fieldResponseItems.length > 0
-      && deviceItems.length > 0
-      && byScopeItems.some((x) => x?.memory_type === 'SKILL_PERFORMANCE_MEMORY'),
+    formal_promotion_route_present:
+      Boolean(openapi?.paths?.['/api/v1/field-memory/from-acceptance']?.post),
     openapi_matches_routes: Boolean(openapi?.components?.schemas?.FieldMemoryV1)
       && Boolean(openapi?.paths?.['/api/v1/field-memory'])
       && Boolean(openapi?.paths?.['/api/v1/field-memory/summary']),

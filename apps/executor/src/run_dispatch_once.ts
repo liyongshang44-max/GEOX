@@ -130,16 +130,6 @@ async function writeDispatchState(args: DispatchArgs, task: AoActTask, state: st
   }
 }
 
-async function getReceipts(args: DispatchArgs, task: AoActTask): Promise<any[]> {
-  const out = await httpJson(`${args.baseUrl}/api/v1/ao-act/receipts?tenant_id=${encodeURIComponent(task.tenant_id)}&project_id=${encodeURIComponent(task.project_id)}&group_id=${encodeURIComponent(task.group_id)}&act_task_id=${encodeURIComponent(task.act_task_id)}&limit=50`, args.token, { method: "GET" });
-  return Array.isArray(out?.items) ? out.items : [];
-}
-
-function hasReceiptIdempotencyKey(items: any[], taskId: string, attemptNo: number, receiptCode: string): boolean {
-  const expected = `${taskId}:${attemptNo}:${receiptCode}`;
-  return items.some((item) => String(item?.receipt?.payload?.meta?.idempotency_key ?? "").trim() === expected);
-}
-
 async function appendReceiptV1(
   args: DispatchArgs,
   task: AoActTask,
@@ -152,11 +142,6 @@ async function appendReceiptV1(
 ): Promise<void> {
   const receiptCode = String(receipt_code ?? receipt_status).trim() || receipt_status;
   const idempotencyKey = `${task.act_task_id}:${attemptNo}:${receiptCode}`;
-  const existing = await getReceipts(args, task);
-  if (hasReceiptIdempotencyKey(existing, task.act_task_id, attemptNo, receiptCode)) {
-    console.log(`INFO: dedupe receipt hit idempotency_key=${idempotencyKey}`);
-    return;
-  }
 
   const now = Date.now();
   const operationPlanId = String(task.operation_plan_id ?? task.meta?.operation_plan_id ?? "").trim();
@@ -197,10 +182,24 @@ async function appendReceiptV1(
     }
   };
 
-  const out = await httpJson(`${args.baseUrl}/api/v1/ao-act/receipts`, args.token, {
+  const res = await fetch(`${args.baseUrl}/api/v1/ao-act/receipts`, {
     method: "POST",
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${args.token}`,
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify(receiptPayload)
   });
+  const text = await res.text();
+  let out: any = {};
+  try { out = text ? JSON.parse(text) : {}; } catch { out = { _non_json: text }; }
+
+  if (res.status === 409 && String(out?.error ?? "").trim().toUpperCase() === "DUPLICATE_RECEIPT") {
+    console.log(`INFO: dedupe receipt hit idempotency_key=${idempotencyKey} source=server_post_conflict`);
+    return;
+  }
+  if (!res.ok) throw new Error(`append receipt failed http ${res.status}: ${text}`);
   if (!out?.ok) throw new Error(`append receipt failed: ${JSON.stringify(out)}`);
 }
 

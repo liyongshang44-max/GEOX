@@ -1,0 +1,32 @@
+name: MCFT CAP-09 Runtime Start Effective Stage Validation
+
+on:
+  pull_request:
+    branches:
+      - chore/mcft-cap09-biological-stage-effectiveness-qcp-final-routing-v1
+    paths:
+      - .github/workflows/mcft-cap-09-runtime-start-effective-stage-validation-v1.yml
+      - scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_RUNTIME_START_EFFECTIVE_STAGE_VALIDATION_V1.cjs
+      - scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_BUILDER_V1.cjs
+      - scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      MCFT_CAP09_RUNTIME_START_EFFECTIVE_STAGE_BASE_SHA: 59f7e64d247eca84e9c8e42143fbade34364bba7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prove runtime-start builder fail-closed stage semantics
+        run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_BUILDER_V1.cjs
+
+      - name: Exact four-file governance
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_RUNTIME_START_EFFECTIVE_STAGE_VALIDATION_V1.cjs

@@ -1,0 +1,20 @@
+{
+  "schema_version": "geox_dt02_biological_stage_authority_effectiveness_v1",
+  "amendment_id": "DT02-AMENDMENT-03",
+  "status": "EFFECTIVE",
+  "effective": true,
+  "protected_main_sha": "ddfdbc0ee88e7845e03eaf4b14e6077dbf645a23",
+  "amendment_path": "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+  "amendment_blob_sha": "0383f89ee9aa3d57b0c870ac5d0b1197bd4a4ccb",
+  "decision_register_path": "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-DECISION-REGISTER.json",
+  "decision_register_blob_sha": "b9a5184f1557d1d5e1bb2baa977429aa57dbe7ad",
+  "graduation_authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-EFFECTIVENESS-GRADUATION-V1.json",
+  "graduation_authority_blob_sha": "54d01a20c80c575ff6fe02945738b92d4c930ff4",
+  "issued_at": "2026-09-03T15:23:00.000Z",
+  "authority_ceiling": "DT02_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_ONLY",
+  "runtime_start_authorized": false,
+  "production_owner_activation_authorized": false,
+  "formal_v5_authorized": false,
+  "a0_authorized": false,
+  "o00_o23_authorized": false
+}

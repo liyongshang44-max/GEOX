@@ -33,6 +33,18 @@ const REQUIRED_COLUMN_TYPES: Record<string, Record<string, string>> = {
   },
 };
 
+const ADMIN_IMPORT_MUTATION_FAIL_CLOSED_PATHS_V1 = new Set([
+  "/api/admin/import/caf_hourly",
+  "/api/admin/acceptance/caf009_1h/run",
+]);
+
+function failClosedAdminImportMutationV1(_req: unknown, reply: any): unknown {
+  return reply.code(403).send({
+    ok: false,
+    error: "ADMIN_IMPORT_MUTATION_COMMERCIAL_AUTHORITY_UNAVAILABLE",
+  });
+}
+
 export function registerAdminModule(app: FastifyInstance, pool: Pool): void {
   registerAdminControlPlaneV1Routes(app, pool);
   app.get("/health", async () => ({ ok: true }));
@@ -120,7 +132,20 @@ export function registerAdminModule(app: FastifyInstance, pool: Pool): void {
     });
   });
 
-  registerAdminImportModule(app, pool);
+  const originalPost = app.post.bind(app) as any;
+  const originalGet = app.get.bind(app) as any;
+  const adminImportRegistrationApp = {
+    post(path: string, ...args: any[]) {
+      if (ADMIN_IMPORT_MUTATION_FAIL_CLOSED_PATHS_V1.has(path)) {
+        return originalPost(path, failClosedAdminImportMutationV1);
+      }
+      return originalPost(path, ...args);
+    },
+    get(path: string, ...args: any[]) {
+      return originalGet(path, ...args);
+    },
+  } as unknown as FastifyInstance;
+  registerAdminImportModule(adminImportRegistrationApp, pool);
   registerAdminGroupsModule(app, pool);
   registerSecurityAuditV1Routes(app, pool);
   registerFailSafeV1Routes(app, pool);

@@ -1,217 +1,40 @@
+# Phase 6 retirement sentinel.
+# Complete pre-cutover implementation remains immutable at:
+# 75d4961279bd64dc1c9dd7d68aac189c72c98846:.github/workflows/mcft-cap-09-formal-bootstrap-evidence-authority.yml
+# historical blob: a2cb8b5f43278daf6c6d07cf39cda6cc053f31c8
+# No production schedule, dispatch, workflow-run, push, or callable trigger remains.
 name: mcft-cap-09-formal-bootstrap-evidence-authority
 
 on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-formal-bootstrap-evidence-authority.yml'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-BOOTSTRAP-EVIDENCE-AUTHORITY-*'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_BOOTSTRAP_EVIDENCE_AUTHORITY.cjs'
-      - 'scripts/runtime_acceptance/BOOTSTRAP_MCFT_CAP_09_S6_FORMAL_AUTHORITY.ts'
-      - 'scripts/runtime_acceptance/INGEST_MCFT_CAP_09_S6_FORMAL_EVIDENCE.ts'
-      - 'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_S6_FORMAL_WINDOW.ts'
-      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW_V2.ts'
-      - 'scripts/runtime_acceptance/mcft_cap09_s6_formal_authority_v1.ts'
-  merge_group:
-    types: [checks_requested]
-  schedule:
-    - cron: '17 * * * *'
-  workflow_dispatch:
-    inputs:
-      operation:
-        description: Explicit protected-main formal operation
-        required: true
-        type: choice
-        options:
-          - preflight
-          - bootstrap
-          - evidence-ingress
-          - hourly
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs'
+      - '.github/workflows/mcft-cap-09-phase6-retire-github-production-execution.yml'
 
 permissions:
   contents: read
-  actions: read
-  pull-requests: read
-
-concurrency:
-  group: mcft-cap09-formal-v2-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA || github.sha }}-${{ inputs.operation || github.event_name }}
-  cancel-in-progress: false
 
 jobs:
-  qualify-repair-candidate:
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+  phase6-retirement-sentinel:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.11.1
-          cache: pnpm
-      - run: pnpm install --no-frozen-lockfile
-      - name: Validate exact repair boundary and fail-closed semantics
-        env:
-          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_BOOTSTRAP_EVIDENCE_AUTHORITY.cjs
-      - name: Transpile all formal repair programs
+      - name: Prove immutable historical binding and retired trigger surface
+        shell: bash
         run: |
-          node <<'NODE'
-          const fs=require('node:fs'),ts=require('typescript');
-          const files=[
-            'scripts/runtime_acceptance/mcft_cap09_s6_formal_authority_v1.ts',
-            'scripts/runtime_acceptance/INGEST_MCFT_CAP_09_S6_FORMAL_EVIDENCE.ts',
-            'scripts/runtime_acceptance/BOOTSTRAP_MCFT_CAP_09_S6_FORMAL_AUTHORITY.ts',
-            'scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_S6_FORMAL_WINDOW.ts',
-            'scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW_V2.ts',
-          ];
-          for(const file of files){const result=ts.transpileModule(fs.readFileSync(file,'utf8'),{fileName:file,reportDiagnostics:true,compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext,moduleResolution:ts.ModuleResolutionKind.Bundler,esModuleInterop:true}});const errors=(result.diagnostics||[]).filter((d)=>d.category===ts.DiagnosticCategory.Error);if(errors.length){for(const error of errors)console.error(ts.flattenDiagnosticMessageText(error.messageText,'\n'));throw new Error('FORMAL_REPAIR_PROGRAM_TRANSPILE_FAILED:'+file)}}
-          console.log(JSON.stringify({status:'PASS',files},null,2));
+          set -euo pipefail
+          test "$(git rev-parse '75d4961279bd64dc1c9dd7d68aac189c72c98846:.github/workflows/mcft-cap-09-formal-bootstrap-evidence-authority.yml')" = 'a2cb8b5f43278daf6c6d07cf39cda6cc053f31c8'
+          node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs selftest
+          node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs enforce >/tmp/mcft-cap09-phase6-owner-audit.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('/tmp/mcft-cap09-phase6-owner-audit.json','utf8'));
+          if(p.status!=='PASS'||p.active_retired_owner_or_trigger_count!==0||p.retired_actions_write_count!==0||p.historical_phase5_workflow_blobs_all_match!==true)throw new Error('PHASE6_RETIREMENT_SENTINEL_REQUIRED');
           NODE
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: mcft-cap-09-formal-bootstrap-evidence-authority-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
-          path: acceptance-output/MCFT_CAP_09_FORMAL_BOOTSTRAP_EVIDENCE_AUTHORITY_RESULT.json
-          if-no-files-found: error
-          retention-days: 90
-
-  formal-evidence-ingress:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.operation == 'evidence-ingress'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}
-          persist-credentials: false
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.11.1
-      - run: pnpm install --no-frozen-lockfile
-      - name: Append externally supplied governed Evidence only
-        env:
-          MCFT_CAP09_S6_EVIDENCE_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_EVIDENCE_DATABASE_URL }}
-          MCFT_CAP09_S6_FORMAL_EVIDENCE_JSON: ${{ secrets.GEOX_MCFT_CAP09_S6_FORMAL_EVIDENCE_JSON }}
-          MCFT_CAP09_S6_SCOPE_JSON: ${{ vars.GEOX_MCFT_CAP09_S6_SCOPE_JSON }}
-        run: pnpm exec tsx scripts/runtime_acceptance/INGEST_MCFT_CAP_09_S6_FORMAL_EVIDENCE.ts
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: mcft-cap-09-formal-evidence-ingress-${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}-${{ github.run_id }}
-          path: acceptance-output/MCFT_CAP_09_S6_FORMAL_EVIDENCE_INGRESS_RESULT.json
-          if-no-files-found: error
-          retention-days: 90
-
-  formal-bootstrap:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.operation == 'bootstrap'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}
-          persist-credentials: false
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.11.1
-      - run: pnpm install --no-frozen-lockfile
-      - name: Establish exact Formal Root and 24-config chain atomically
-        env:
-          DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
-          MCFT_CAP09_S6_SUBJECT_SHA: ${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}
-          MCFT_CAP09_S6_WINDOW_START_UTC: ${{ vars.GEOX_MCFT_CAP09_S6_WINDOW_START_UTC }}
-          MCFT_CAP09_S6_SCOPE_JSON: ${{ vars.GEOX_MCFT_CAP09_S6_SCOPE_JSON }}
-        run: pnpm exec tsx scripts/runtime_acceptance/BOOTSTRAP_MCFT_CAP_09_S6_FORMAL_AUTHORITY.ts
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: mcft-cap-09-formal-bootstrap-${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}-${{ github.run_id }}
-          path: acceptance-output/MCFT_CAP_09_S6_FORMAL_BOOTSTRAP_RESULT.json
-          if-no-files-found: error
-          retention-days: 90
-
-  formal-preflight:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.operation == 'preflight'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}
-          persist-credentials: false
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.11.1
-      - run: pnpm install --no-frozen-lockfile
-      - name: Prove root, config chain, Evidence, and clean scheduler before enablement
-        env:
-          DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
-          MCFT_CAP09_S6_SUBJECT_SHA: ${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}
-          MCFT_CAP09_S6_WINDOW_START_UTC: ${{ vars.GEOX_MCFT_CAP09_S6_WINDOW_START_UTC }}
-          MCFT_CAP09_S6_SCOPE_JSON: ${{ vars.GEOX_MCFT_CAP09_S6_SCOPE_JSON }}
-        run: pnpm exec tsx scripts/runtime_acceptance/PREFLIGHT_MCFT_CAP_09_S6_FORMAL_WINDOW.ts
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: mcft-cap-09-formal-preflight-${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}-${{ github.run_id }}
-          path: acceptance-output/MCFT_CAP_09_S6_FORMAL_PREFLIGHT_RESULT.json
-          if-no-files-found: error
-          retention-days: 90
-
-  formal-hourly-observation-v2:
-    if: ((github.event_name == 'schedule') || (github.event_name == 'workflow_dispatch' && inputs.operation == 'hourly')) && github.ref == 'refs/heads/main' && vars.GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_V2_ENABLED == 'true' && vars.GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.11.1
-          cache: pnpm
-      - run: pnpm install --no-frozen-lockfile
-      - name: Execute one real-UTC oldest-due formal slot with exact hourly Config
-        env:
-          DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
-          MCFT_CAP09_S6_CANONICAL_INPUT_JSON: ${{ secrets.GEOX_MCFT_CAP09_S6_CANONICAL_INPUT_JSON }}
-          MCFT_CAP09_S6_SUBJECT_SHA: ${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}
-          MCFT_CAP09_S6_WINDOW_START_UTC: ${{ vars.GEOX_MCFT_CAP09_S6_WINDOW_START_UTC }}
-          MCFT_CAP09_S6_SCOPE_JSON: ${{ vars.GEOX_MCFT_CAP09_S6_SCOPE_JSON }}
-        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW_V2.ts
-      - name: Read back accumulated formal database state
-        env:
-          DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_S6_DATABASE_URL }}
-          MCFT_CAP09_S6_SUBJECT_SHA: ${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}
-          MCFT_CAP09_S6_WINDOW_START_UTC: ${{ vars.GEOX_MCFT_CAP09_S6_WINDOW_START_UTC }}
-          MCFT_CAP09_S6_SCOPE_JSON: ${{ vars.GEOX_MCFT_CAP09_S6_SCOPE_JSON }}
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE_DB.ts
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: mcft-cap-09-s6-formal-v2-hour-${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}-${{ github.run_id }}
-          path: |
-            acceptance-output/MCFT_CAP_09_S6_FORMAL_WINDOW_OBSERVATION.json
-            acceptance-output/MCFT_CAP_09_S6_FORMAL_24_HOUR_DB_RESULT.json
-          if-no-files-found: error
-          retention-days: 90

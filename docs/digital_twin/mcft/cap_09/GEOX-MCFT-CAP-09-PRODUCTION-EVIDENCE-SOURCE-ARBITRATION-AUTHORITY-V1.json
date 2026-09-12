@@ -1,0 +1,42 @@
+{
+  "schema_version": "geox_mcft_cap09_production_evidence_source_arbitration_authority_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-SOURCE-ARBITRATION-AUTHORITY-V1",
+  "status": "ESTABLISHED_NOT_BOUND",
+  "subject_predecessor_sha": "9815d4ea1a8b5fec4e91ed40e76c5d44c843408a",
+  "purpose": "Deterministically select one next Evidence-plane attempt from a multi-action source plan under one effective fenced Evidence owner.",
+  "policy": {
+    "model": "REPLAN_AFTER_EVERY_ATTEMPT_NO_HIDDEN_QUEUE",
+    "gfs_hard_deadline_class_first": true,
+    "gfs_deadline_source": "GFS_DUE_WINDOW_END_EXCLUSIVE",
+    "non_deadline_tiebreak_order": [
+      "KBS_SOIL",
+      "KBS_RAW_HOURLY"
+    ],
+    "non_deadline_tiebreak_is_scientific_priority": false,
+    "provider_parallelism_inferred_from_legacy_formal_collector": false,
+    "one_effective_evidence_owner_preserved": true
+  },
+  "forbidden_inferences": [
+    "ARRAY_ORDER_AS_IMPLICIT_AUTHORITY",
+    "LEGACY_FORMAL_GFS_SOIL_PROMISE_ALL_AS_CONTINUOUS_RUNTIME_REQUIREMENT",
+    "PROVIDER_CADENCE_AS_SOURCE_PRIORITY",
+    "RUNTIME_TICK_CURSOR_AS_EVIDENCE_SCHEDULER"
+  ],
+  "implementation_ref": "apps/server/src/external_evidence/mcft_cap09_production_evidence_source_arbitration_v1.ts",
+  "acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_SOURCE_ARBITRATION_V1.ts",
+  "binding": {
+    "compiled_production_host_planner_bound": false,
+    "production_entrypoint_bound": false
+  },
+  "non_effects": {
+    "provider_request_count": 0,
+    "database_write_count": 0,
+    "evidence_cursor_mutation": false,
+    "runtime_tick_cursor_mutation": false,
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+    "formal_v5_arm": false,
+    "a0_bootstrap": false,
+    "o00_started": false
+  }
+}

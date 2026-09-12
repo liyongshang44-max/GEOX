@@ -1,0 +1,80 @@
+name: mcft-cap-09-production-operational-schema-acl-materialize-one-shot
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-production-operational-schema-acl-materialize-one-shot.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_MATERIALIZATION_V1.ts'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_ARM_V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OPERATIONAL-DATABASE-CANDIDATE-V1.json'
+      - 'docker/postgres/init/001_schema.sql'
+      - 'apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql'
+      - 'apps/server/db/migrations/2026_07_10_mcft_cap_01_closure_remediation.sql'
+      - 'apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql'
+      - 'apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql'
+      - 'apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_persistence.sql'
+      - 'apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql'
+      - 'apps/server/db/migrations/2026_08_31_mcft_cap_09_production_host_projection_persistence.sql'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase3_evidence_runtime_acl.sql'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase4_twin_runtime_acl.sql'
+      - 'apps/server/db/migrations/2026_08_27_mcft_cap_09_phase5_twin_fact_writer_acl.sql'
+      - 'apps/server/db/migrations/2026_08_28_mcft_cap_09_v13_evidence_runtime_fenced_promotion_acl.sql'
+      - 'apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-production-operational-schema-acl-materialize-one-shot
+  cancel-in-progress: false
+
+jobs:
+  materialize:
+    if: >-
+      github.head_ref == 'feat/mcft-cap09-v13-producer-driven-qualification-v1' &&
+      github.event.pull_request.base.sha == '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      SEED_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+      TARGET_DB: geox_mcft_cap09_production_runtime_v1
+      MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Normalize exact operational target
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const raw=String(process.env.SEED_DATABASE_URL||'').trim();
+          if(!raw)throw new Error('OP_SCHEMA_ACL_SEED_URL_REQUIRED');
+          const u=new URL(raw);u.pathname='/'+process.env.TARGET_DB;
+          const value=u.toString();console.log('::add-mask::'+value);
+          fs.appendFileSync(process.env.GITHUB_ENV,'DATABASE_URL='+value+'\n');
+
+      - name: Materialize exact production host schema and ACL only when armed
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_MATERIALIZATION_V1.ts
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-production-operational-schema-acl-materialization-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_PRODUCTION_OPERATIONAL_SCHEMA_ACL_MATERIALIZATION_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

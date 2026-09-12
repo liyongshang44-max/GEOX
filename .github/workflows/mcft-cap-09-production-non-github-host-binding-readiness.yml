@@ -1,0 +1,52 @@
+name: mcft-cap-09-production-non-github-host-binding-readiness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-production-non-github-host-binding-readiness.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-NON-GITHUB-HOST-BINDING-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-LOCAL-OPERATOR-HOST-STATIC-ADMISSION-EVIDENCE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-TARGET-PLANNER-READINESS-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_TARGET_PLANNER_READINESS_V1.cjs'
+      - '.github/workflows/mcft-cap-09-production-evidence-target-planner-readiness.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-PROVISIONING-AUTHORITY-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md'
+      - 'scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_V1.cjs'
+      - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_READINESS_V1.cjs'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_PROVISIONING_ARM_V1.json'
+
+permissions:
+  contents: read
+
+jobs:
+  non-github-host-binding-readiness:
+    if: >-
+      github.head_ref == 'feat/mcft-cap09-v13-producer-driven-qualification-v1' &&
+      github.event.pull_request.base.sha == '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate non-GitHub host identity authority without effect
+        run: node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_V1.cjs
+
+      - name: Verify dual-state host identity readiness without runtime start
+        run: node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_READINESS_V1.cjs
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcft-cap09-production-non-github-host-binding-readiness-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_PREFLIGHT_V1_RESULT.json
+            acceptance-output/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_READINESS_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

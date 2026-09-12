@@ -201,18 +201,19 @@ async function insertDeviceRuntimeRows(pool, {
 }) {
   await pool.query(
     `INSERT INTO device_status_index_v1
-      (tenant_id, project_id, group_id, device_id, last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm, fw_ver, updated_ts_ms)
-     VALUES ($1,$2,$3,$4,$5,$5,95,-55,'mvp0-test',$5)
+      (tenant_id, project_id, group_id, field_id, device_id, last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm, fw_ver, updated_ts_ms)
+     VALUES ($1,$2,$3,$4,$5,$6,$6,95,-55,'mvp0-test',$6)
      ON CONFLICT (tenant_id, device_id) DO UPDATE SET
        project_id = EXCLUDED.project_id,
        group_id = EXCLUDED.group_id,
+       field_id = EXCLUDED.field_id,
        last_telemetry_ts_ms = EXCLUDED.last_telemetry_ts_ms,
        last_heartbeat_ts_ms = EXCLUDED.last_heartbeat_ts_ms,
        battery_percent = EXCLUDED.battery_percent,
        rssi_dbm = EXCLUDED.rssi_dbm,
        fw_ver = EXCLUDED.fw_ver,
        updated_ts_ms = EXCLUDED.updated_ts_ms`,
-    [tenant_id, project_id, group_id, device_id, now_ms]
+    [tenant_id, project_id, group_id, field_id, device_id, now_ms]
   );
 
   await pool.query(

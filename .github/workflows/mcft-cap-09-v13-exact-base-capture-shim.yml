@@ -1,0 +1,89 @@
+name: mcft-cap-09-v13-exact-base-capture-shim
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-v13-exact-base-capture-shim.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_BASE_PREBOUNDARY_CAPTURE.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_ROLLING_PREBOUNDARY_PROVIDER_PHASE_PRIVATE_TRANSIENT_R2.ts'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20.11.1'
+  PNPM_VERSION: '9.15.4'
+  EXACT_PREDECESSOR_SHA: '26c1383f7f45abb76c99e28ec3d06714e85d1b2c'
+
+concurrency:
+  group: mcft-cap09-v13-exact-base-capture-shim-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  exact-base-capture-shim:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Require exact predecessor and zero live bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            test "${{ github.event.pull_request.base.sha }}" = "$EXACT_PREDECESSOR_SHA"
+          fi
+          test -z "${MCFT_EA5E2_TRANSIENT_S3_ACCESS_KEY_ID:-}"
+          test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
+          trigger_block="$(awk '/^on:/{capture=1} /^permissions:/{capture=0} capture{print}' .github/workflows/mcft-cap-09-v13-exact-base-capture-shim.yml)"
+          ! grep -Eq '^  schedule:|^  workflow_dispatch:' <<<"$trigger_block"
+
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Run explicit-base shim selftest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          node scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_BASE_PREBOUNDARY_CAPTURE.cjs selftest \
+            > acceptance-output/MCFT_CAP_09_V13_EXACT_BASE_CAPTURE_SHIM_RESULT.json
+          node -e "const p=require('./acceptance-output/MCFT_CAP_09_V13_EXACT_BASE_CAPTURE_SHIM_RESULT.json'); if(p.status!=='PASS') process.exit(1)"
+
+      - name: Validate no alternate target authority
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const source=fs.readFileSync('scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_BASE_PREBOUNDARY_CAPTURE.cjs','utf8');
+          const proof=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_EXACT_BASE_CAPTURE_SHIM_RESULT.json','utf8'));
+          if(source.includes('PLAN_MCFT_CAP_09_ROLLING_PREBOUNDARY_TARGET.cjs')) throw new Error('V13_CAPTURE_WALL_CLOCK_PLANNER_REFERENCE_FORBIDDEN');
+          if(source.includes('mappedWorkflowIdentity')) throw new Error('V13_CAPTURE_WORKFLOW_IDENTITY_SPOOF_FORBIDDEN');
+          if(source.includes('GITHUB_WORKFLOW: mapped')) throw new Error('V13_CAPTURE_WORKFLOW_ENV_SPOOF_FORBIDDEN');
+          if(proof.target_source!=='DURABLE_FORCING_CURSOR_NEXT_MISSING_REQUIRED_BASE') throw new Error('V13_CAPTURE_CURSOR_TARGET_AUTHORITY_REQUIRED');
+          if(proof.wall_clock_target_planner_used!==false||proof.workflow_name_selects_ingress_policy!==false) throw new Error('V13_CAPTURE_ALTERNATE_TARGET_OR_POLICY_AUTHORITY_FORBIDDEN');
+          if(proof.explicit_ingress_policy_id!=='AMENDMENT11_ROLLING_PREBOUNDARY_TARGET_T_V1'||proof.amendment11_rolling_ingress_deadline!=='T') throw new Error('V13_CAPTURE_AMENDMENT11_POLICY_REQUIRED');
+          if(proof.provider_core_rewritten!==false||proof.formal_database_write_count!==0||proof.production_workflow_effect!==false) throw new Error('V13_CAPTURE_SHIM_BOUNDARY_VIOLATION');
+
+      - name: Upload explicit-base shim proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-v13-exact-base-capture-shim-${{ github.event.pull_request.head.sha || github.sha }}
+          path: acceptance-output/MCFT_CAP_09_V13_EXACT_BASE_CAPTURE_SHIM_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
