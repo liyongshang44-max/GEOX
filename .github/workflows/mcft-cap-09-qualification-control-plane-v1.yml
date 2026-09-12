@@ -532,13 +532,19 @@ jobs:
 
       - name: Enumerate all blockers without fail-fast
         if: github.event_name == 'pull_request'
-        run: >-
-          node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
-          --base '${{ github.event.pull_request.base.sha }}'
-          --head '${{ github.event.pull_request.head.sha }}'
-          --generation v13
-          --stage "$MCFT_CAP09_PR_STAGE"
-          --out acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json
+        shell: bash
+        run: |
+          set +e
+          node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs \
+            --base '${{ github.event.pull_request.base.sha }}' \
+            --head '${{ github.event.pull_request.head.sha }}' \
+            --generation v13 \
+            --stage "$MCFT_CAP09_PR_STAGE" \
+            --out acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json
+          code=$?
+          set -e
+          test -f acceptance-output/MCFT_CAP_09_ALL_BLOCKERS_PREFLIGHT_V1_RESULT.json
+          echo "preflight_exit_code=$code"
 
       - name: Validate control-plane machine proof
         if: github.event_name == 'pull_request'
