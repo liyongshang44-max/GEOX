@@ -1,0 +1,557 @@
+name: MCFT CAP-09 Fresh Current-Crop Source Lock 20260910 V2
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-fresh-current-crop-source-lock-20260910-v2.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-fresh-current-crop-source-lock-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      EXPECTED_BASE_SHA: '13e104b39b2de2ace20bfa14c1d0d8dafef332bf'
+      PREVIOUS_EFFECTIVE_AUTHORITY: 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-09T04Z-V1.json'
+      ARCHITECTURE_CERT: 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json'
+    steps:
+      - name: Checkout exact qualification subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Lock exact subject and current protected-main base
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = '${{ github.event.pull_request.head.sha }}'
+          test '${{ github.event.pull_request.base.sha }}' = "$EXPECTED_BASE_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$EXPECTED_BASE_SHA"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Prove retained metadata observer and restore semantics
+        run: |
+          python scripts/runtime_acceptance/OBSERVE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE.py --selftest
+          python scripts/runtime_acceptance/RESTORE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE_STATE.py --selftest
+
+      - name: Restore last successful metadata-only KBS cadence predecessor
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          python scripts/runtime_acceptance/RESTORE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE_STATE.py \
+            --output acceptance-output/PREVIOUS_KBS_PUBLICATION_CADENCE_STATE.json \
+            | tee acceptance-output/KBS_CADENCE_RESTORE_RESULT.json
+          test -f acceptance-output/PREVIOUS_KBS_PUBLICATION_CADENCE_STATE.json
+
+      - name: Observe current KBS cadence and latest 24h completeness
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          python scripts/runtime_acceptance/OBSERVE_MCFT_CAP_09_KBS_PUBLICATION_CADENCE.py \
+            --previous-state acceptance-output/PREVIOUS_KBS_PUBLICATION_CADENCE_STATE.json \
+            --output acceptance-output/KBS_PUBLICATION_CADENCE_STATE.json
+          python scripts/runtime_acceptance/OBSERVE_MCFT_CAP_09_KBS_CURRENT_FRESHNESS_METADATA.py \
+            > acceptance-output/KBS_CURRENT_FRESHNESS_METADATA.json
+
+      - name: Machine-lock KBS batch, revision/backfill and IEM complete local-day
+        shell: python
+        run: |
+          import csv, hashlib, io, json, math, urllib.request
+          from urllib.parse import urlparse
+          from datetime import date, datetime, timedelta, timezone
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+
+          def fail(code, detail=""):
+              raise RuntimeError(code + (":" + str(detail) if detail else ""))
+
+          def sha256(body):
+              return "sha256:" + hashlib.sha256(body).hexdigest()
+
+          def finite(value):
+              try:
+                  n = float(value)
+              except Exception:
+                  return None
+              return n if math.isfinite(n) else None
+
+          def fetch(url, agent):
+              req = urllib.request.Request(url, headers={
+                  "User-Agent": agent,
+                  "Accept": "text/csv,text/plain;q=0.9,*/*;q=0.5",
+                  "Cache-Control": "no-cache",
+                  "Pragma": "no-cache",
+              })
+              with urllib.request.urlopen(req, timeout=90) as response:
+                  body = response.read()
+                  if getattr(response, "status", 200) != 200:
+                      fail("SOURCE_LOCK_HTTP_STATUS", getattr(response, "status", None))
+                  return body, response.geturl()
+
+          cadence = json.loads(Path("acceptance-output/KBS_PUBLICATION_CADENCE_STATE.json").read_text())
+          previous = json.loads(Path("acceptance-output/PREVIOUS_KBS_PUBLICATION_CADENCE_STATE.json").read_text())
+          fresh = json.loads(Path("acceptance-output/KBS_CURRENT_FRESHNESS_METADATA.json").read_text())
+          thermal = json.loads(Path("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json").read_text())
+
+          if cadence.get("schema_version") != "geox_mcft_cap09_kbs_publication_cadence_state_v1":
+              fail("SOURCE_LOCK_KBS_CADENCE_SCHEMA")
+          if previous.get("schema_version") != "geox_mcft_cap09_kbs_publication_cadence_state_v1":
+              fail("SOURCE_LOCK_KBS_PREDECESSOR_SCHEMA")
+          if cadence.get("source_url") != "https://lter.kbs.msu.edu/datatables/13.csv":
+              fail("SOURCE_LOCK_KBS_SOURCE_IDENTITY")
+          if fresh.get("schema_version") != "geox_mcft_cap09_kbs_current_freshness_metadata_v1":
+              fail("SOURCE_LOCK_KBS_FRESHNESS_SCHEMA")
+          if cadence.get("latest_event_time") != fresh.get("latest_raw_hourly_timestamp"):
+              fail("SOURCE_LOCK_KBS_ACQUISITION_RACE_LATEST_EVENT_MISMATCH")
+
+          kbs_complete = (
+              fresh.get("latest_24h_contiguous") is True
+              and fresh.get("latest_24h_expected_hour_count") == 24
+              and fresh.get("latest_24h_observed_hour_count") == 24
+              and fresh.get("latest_24h_missing_event_times") == []
+              and fresh.get("latest_24h_duplicate_event_time_row_count") == 0
+          )
+          transition = cadence.get("transition") or {}
+          revision_backfill_determined = (
+              transition.get("baseline_only") is False
+              and isinstance(transition.get("provider_revision_count"), int)
+              and isinstance(transition.get("backfill_event_count"), int)
+              and isinstance(transition.get("disappeared_event_count"), int)
+          )
+          if cadence.get("predecessor_state") is None:
+              fail("SOURCE_LOCK_KBS_PREDECESSOR_BINDING_REQUIRED")
+
+          weather = thermal["temperature_source_candidate"]
+          if thermal.get("planting_authority", {}).get("timezone") != "America/Detroit":
+              fail("SOURCE_LOCK_TEMPERATURE_TIMEZONE_DRIFT")
+          start = thermal["qualification_snapshot"]["temperature_start_local_date"]
+          # Acquisition may request through the lifecycle horizon; selection below is source-progression based,
+          # never calendar-derived.
+          end = "2026-11-24"
+          url = weather["daily_api_url_template"].format(start_date=start, end_date=end)
+          body, final_url = fetch(url, "GEOX-MCFT-CAP09-FRESH-CURRENT-CROP-SOURCE-LOCK/1.0")
+          final = urlparse(final_url)
+          if final.scheme != "https" or final.hostname != "mesonet.agron.iastate.edu" or final.path != "/cgi-bin/request/daily.py":
+              fail("SOURCE_LOCK_IEM_SOURCE_IDENTITY_DRIFT", final_url)
+          reader = csv.DictReader(io.StringIO(body.decode("utf-8", errors="replace")))
+          rows = list(reader)
+          if not rows:
+              fail("SOURCE_LOCK_IEM_DAILY_ROWS_EMPTY")
+
+          by_day = {}
+          duplicates = []
+          for row in rows:
+              station = str(row.get("station") or row.get("Station") or "").strip()
+              if station and station.upper() != weather["station_id"].upper():
+                  continue
+              raw_day = str(row.get("day") or row.get("date") or row.get("valid") or "").strip()
+              try:
+                  d = date.fromisoformat(raw_day[:10])
+              except Exception:
+                  continue
+              max_v = None
+              min_v = None
+              for key in ("max_temp_f", "max_tmpf", "max_temp", "max"):
+                  if key in row:
+                      max_v = finite(row.get(key))
+                      if max_v is not None:
+                          break
+              for key in ("min_temp_f", "min_tmpf", "min_temp", "min"):
+                  if key in row:
+                      min_v = finite(row.get(key))
+                      if min_v is not None:
+                          break
+              if d in by_day:
+                  duplicates.append(d.isoformat())
+              by_day[d] = (max_v, min_v)
+
+          if duplicates:
+              fail("SOURCE_LOCK_IEM_DUPLICATE_DAILY_ROW", ",".join(sorted(set(duplicates))))
+
+          def valid(d):
+              pair = by_day.get(d)
+              return bool(pair and pair[0] is not None and pair[1] is not None and pair[0] >= pair[1])
+
+          source_closed = []
+          for d in sorted(by_day):
+              successor = d + timedelta(days=1)
+              if d >= date.fromisoformat(start) and valid(d) and valid(successor):
+                  source_closed.append(d)
+          if not source_closed:
+              fail("SOURCE_LOCK_IEM_NO_SOURCE_PROVED_COMPLETE_LOCAL_DAY")
+          selected = source_closed[-1]
+          successor = selected + timedelta(days=1)
+
+          tz = ZoneInfo("America/Detroit")
+          boundary_local = datetime(successor.year, successor.month, successor.day, 0, 0, 0, tzinfo=tz)
+          boundary_utc = boundary_local.astimezone(timezone.utc)
+          retrieved_at = datetime.now(timezone.utc)
+          if boundary_utc > retrieved_at:
+              fail("SOURCE_LOCK_IEM_BOUNDARY_IN_FUTURE")
+
+          source_lock = {
+              "schema_version": "geox_mcft_cap09_fresh_current_crop_source_lock_v1",
+              "status": "PASS" if kbs_complete and revision_backfill_determined else "SOURCE_INCOMPLETE",
+              "subject_sha": "${{ github.event.pull_request.head.sha }}",
+              "retrieved_at": retrieved_at.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+              "kbs_raw_hourly": {
+                  "source_url": cadence["source_url"],
+                  "snapshot_sha256": cadence.get("snapshot_sha256"),
+                  "previous_snapshot_sha256": previous.get("snapshot_sha256"),
+                  "previous_polled_at": previous.get("polled_at"),
+                  "polled_at": cadence.get("polled_at"),
+                  "previous_latest_event_time": previous.get("latest_event_time"),
+                  "latest_event_time": cadence.get("latest_event_time"),
+                  "latest_24h_observation_start": fresh.get("latest_24h_observation_start"),
+                  "latest_24h_observation_end": fresh.get("latest_24h_observation_end"),
+                  "expected_hour_count": fresh.get("latest_24h_expected_hour_count"),
+                  "observed_hour_count": fresh.get("latest_24h_observed_hour_count"),
+                  "missing_event_times": fresh.get("latest_24h_missing_event_times"),
+                  "contiguous": fresh.get("latest_24h_contiguous"),
+                  "duplicate_event_time_row_count": fresh.get("latest_24h_duplicate_event_time_row_count"),
+                  "complete": kbs_complete,
+                  "latest_age_hours": fresh.get("latest_age_hours"),
+                  "within_frozen_6h_authority": fresh.get("within_frozen_6h_authority"),
+                  "transition_shape": transition.get("shape"),
+                  "forward_new_event_count": transition.get("forward_new_event_count"),
+                  "backfill_event_count": transition.get("backfill_event_count"),
+                  "provider_revision_count": transition.get("provider_revision_count"),
+                  "disappeared_event_count": transition.get("disappeared_event_count"),
+                  "snapshot_changed_without_recent_event_delta": transition.get("snapshot_changed_without_recent_event_delta"),
+                  "revision_backfill_boundary_determined": revision_backfill_determined,
+                  "revision_backfill_boundary_scope_hours": 240,
+                  "raw_values_emitted": False,
+              },
+              "temperature_local_day": {
+                  "provider": weather["provider"],
+                  "station_id": weather["station_id"],
+                  "network": weather["network"],
+                  "response_sha256": sha256(body),
+                  "final_url": final_url,
+                  "selection_rule": "LATEST_VALID_DAY_WITH_VALID_SUCCESSOR_DAY_PRESENT_IN_PROVIDER_SOURCE",
+                  "last_source_proved_complete_local_date": selected.isoformat(),
+                  "successor_source_local_date": successor.isoformat(),
+                  "source_complete_boundary_utc": boundary_utc.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+                  "selected_day_extrema_valid": True,
+                  "successor_day_extrema_valid": True,
+                  "source_row_count": len(rows),
+                  "raw_payload_emitted": False,
+              },
+              "lifecycle_source_boundary": {
+                  "establishment_provider": "KBS_AGLOG",
+                  "establishment_observation_id": 6974,
+                  "establishment_url": "https://aglog.kbs.msu.edu/observations/6974",
+                  "transition_index_url": "https://aglog.kbs.msu.edu/observations",
+                  "provider_silence_used_as_evidence": False,
+                  "thermal_stage_may_establish_lifecycle": False,
+                  "live_probe_pending": True,
+              },
+              "authority_effect": False,
+              "runtime_write_count": 0,
+              "database_write_count": 0,
+              "scheduler_write_count": 0,
+              "formal_evidence_write_count": 0,
+              "production_owner_activation_authorized": False,
+              "production_runtime_start_authorized": False,
+              "formal_v5_authorized": False,
+              "a0_authorized": False,
+              "o00_o23_authorized": False,
+          }
+          Path("acceptance-output/FRESH_CURRENT_CROP_SOURCE_LOCK.json").write_text(
+              json.dumps(source_lock, indent=2, sort_keys=True) + "\n"
+          )
+          print(json.dumps(source_lock, sort_keys=True))
+
+      - name: Install lifecycle qualification dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+
+      - name: Machine-lock T4R1 persistent lifecycle source boundary
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.mjs
+
+      - name: Build source-derived thermal overlay
+        shell: python
+        run: |
+          import json, shutil
+          from pathlib import Path
+
+          lock = json.loads(Path("acceptance-output/FRESH_CURRENT_CROP_SOURCE_LOCK.json").read_text())
+          base = json.loads(Path("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json").read_text())
+          day = lock["temperature_local_day"]["last_source_proved_complete_local_date"]
+          boundary = lock["temperature_local_day"]["source_complete_boundary_utc"]
+
+          root = Path("/tmp/mcft-cap09-fresh")
+          (root / "docs/digital_twin/mcft/cap_09").mkdir(parents=True, exist_ok=True)
+          (root / "docs/digital_twin/mcft").mkdir(parents=True, exist_ok=True)
+          (root / "acceptance-output").mkdir(parents=True, exist_ok=True)
+          base["qualification_snapshot"] = {
+              **base["qualification_snapshot"],
+              "as_of_logical_time": boundary,
+              "last_complete_temperature_local_date": day,
+              "future_observations_authorized": False,
+              "full_season_ex_post_normalization_authorized": False,
+          }
+          (root / "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json").write_text(
+              json.dumps(base, indent=2) + "\n"
+          )
+          shutil.copy2(
+              "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
+              root / "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
+          )
+
+      - name: Run thermal-stage qualification against source-derived local-day
+        working-directory: /tmp/mcft-cap09-fresh
+        run: |
+          python "$GITHUB_WORKSPACE/scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.py"
+          cp acceptance-output/MCFT_CAP09_T4R1_THERMAL_BIOLOGICAL_STAGE_PROBE_RESULT.json \
+            "$GITHUB_WORKSPACE/acceptance-output/MCFT_CAP09_T4R1_THERMAL_BIOLOGICAL_STAGE_PROBE_RESULT.json"
+
+      - name: Bind live lifecycle result into source lock
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+          p = Path("acceptance-output/FRESH_CURRENT_CROP_SOURCE_LOCK.json")
+          lock = json.loads(p.read_text())
+          life = json.loads(Path("acceptance-output/MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_RESULT.json").read_text())
+          if life.get("status") != "PASS":
+              raise RuntimeError("SOURCE_LOCK_LIFECYCLE_PROBE_NOT_PASS")
+          if life.get("qualification_outcome") != "ACTIVE_CANDIDATE":
+              raise RuntimeError("SOURCE_LOCK_LIFECYCLE_NOT_ACTIVE_CANDIDATE")
+          season = life.get("season_lifecycle") or {}
+          if not (
+              season.get("domain_state") == "ACTIVE"
+              and season.get("authority_status") == "RESOLVED"
+              and season.get("authority_validity") == "VALID"
+              and season.get("authority_mode") == "GOVERNED_PERSISTENT_STATE"
+              and season.get("active_consumable_candidate") is True
+          ):
+              raise RuntimeError("SOURCE_LOCK_LIFECYCLE_NOT_CONSUMABLE")
+          sweep = life.get("transition_sweep") or {}
+          if sweep.get("provider_silence_used_as_evidence") is not False:
+              raise RuntimeError("SOURCE_LOCK_LIFECYCLE_SILENCE_EVIDENCE_FORBIDDEN")
+          if sweep.get("proved_no_termination_occurred") is not False:
+              raise RuntimeError("SOURCE_LOCK_LIFECYCLE_OVERCLAIM_FORBIDDEN")
+          lock["lifecycle_source_boundary"].update({
+              "live_probe_pending": False,
+              "qualification_outcome": life.get("qualification_outcome"),
+              "domain_state": season.get("domain_state"),
+              "authority_status": season.get("authority_status"),
+              "authority_validity": season.get("authority_validity"),
+              "authority_mode": season.get("authority_mode"),
+              "active_consumable_candidate": season.get("active_consumable_candidate"),
+              "known_termination_result": sweep.get("known_termination_result"),
+              "known_contradiction_result": sweep.get("known_contradiction_result"),
+              "state_evaluation_time": life.get("state_evaluation_time"),
+          })
+          p.write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n")
+
+      - name: Gate source completeness before current-crop composition
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+          lock = json.loads(Path("acceptance-output/FRESH_CURRENT_CROP_SOURCE_LOCK.json").read_text())
+          kbs = lock["kbs_raw_hourly"]
+          temp = lock["temperature_local_day"]
+          life = lock["lifecycle_source_boundary"]
+          blockers = []
+          if kbs.get("complete") is not True:
+              blockers.append("KBS_LATEST_24H_NOT_COMPLETE")
+          if kbs.get("revision_backfill_boundary_determined") is not True:
+              blockers.append("KBS_REVISION_BACKFILL_BOUNDARY_UNDETERMINED")
+          if not temp.get("last_source_proved_complete_local_date"):
+              blockers.append("IEM_COMPLETE_LOCAL_DAY_UNRESOLVED")
+          if life.get("live_probe_pending") is not False or life.get("active_consumable_candidate") is not True:
+              blockers.append("T4R1_LIFECYCLE_UNRESOLVED")
+          if blockers:
+              raise RuntimeError("FRESH_CURRENT_CROP_SOURCE_COMPLETENESS_BLOCKED:" + ",".join(blockers))
+          lock["status"] = "PASS"
+          lock["source_completeness_established"] = True
+          Path("acceptance-output/FRESH_CURRENT_CROP_SOURCE_LOCK.json").write_text(
+              json.dumps(lock, indent=2, sort_keys=True) + "\n"
+          )
+          print(json.dumps({
+              "status": "PASS",
+              "source_completeness_established": True,
+              "kbs_latest_event_time": kbs.get("latest_event_time"),
+              "kbs_latest_24h_complete": kbs.get("complete"),
+              "kbs_backfill_event_count": kbs.get("backfill_event_count"),
+              "kbs_provider_revision_count": kbs.get("provider_revision_count"),
+              "temperature_last_complete_local_date": temp.get("last_source_proved_complete_local_date"),
+              "temperature_boundary_utc": temp.get("source_complete_boundary_utc"),
+              "lifecycle_domain_state": life.get("domain_state"),
+          }, sort_keys=True))
+
+      - name: Compose ephemeral fresh current-crop candidate
+        run: |
+          node scripts/runtime_acceptance/COMPOSE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_V1.cjs
+
+      - name: Prove DT02 rolling current-crop graduation with ephemeral request
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          def digest(path):
+              return "sha256:" + hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+          lock = json.loads(Path("acceptance-output/FRESH_CURRENT_CROP_SOURCE_LOCK.json").read_text())
+          candidate = json.loads(Path("acceptance-output/MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json").read_text())
+          cert_path = Path("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json")
+          prev_path = Path("docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-09T04Z-V1.json")
+          boundary = lock["temperature_local_day"]["source_complete_boundary_utc"]
+          local_day = lock["temperature_local_day"]["last_source_proved_complete_local_date"]
+          qualification_time = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+          request = {
+              "schema_version": "geox_mcft_cap09_t4r1_current_crop_refresh_request_v1",
+              "request_id": "GEOX-MCFT-CAP-09-T4R1-FRESH-CURRENT-CROP-QUALIFICATION-2026-09-10-V2",
+              "status": "QUALIFICATION_ONLY_REQUESTED",
+              "capability_line_id": "MCFT-CAP-09",
+              "slice_id": "MCFT-CAP-09.S6",
+              "protected_main_base_sha": "${{ github.event.pull_request.base.sha }}",
+              "scope": candidate["scope"],
+              "qualification_snapshot": {
+                  "as_of_logical_time": boundary,
+                  "temperature_start_local_date": "2026-05-27",
+                  "last_complete_temperature_local_date": local_day,
+                  "timezone": "America/Detroit",
+                  "local_day_complete_boundary_utc": boundary,
+                  "future_observations_authorized": False,
+                  "full_season_ex_post_normalization_authorized": False,
+              },
+              "qualification_time": qualification_time,
+              "forward_stability_hours": 30,
+              "architecture_effectiveness": {
+                  "ref": str(cert_path),
+                  "sha256": digest(cert_path),
+                  "must_precede_or_equal_stage_snapshot": True,
+                  "may_not_be_reissued_solely_to_refresh_stage_data": True,
+              },
+              "previous_effective_current_crop_authority": {
+                  "ref": str(prev_path),
+                  "sha256": digest(prev_path),
+                  "immutable_historical_input": True,
+                  "overwrite_forbidden": True,
+              },
+              "target_artifact": {
+                  "ref": "QUALIFICATION_ONLY_NOT_MATERIALIZED",
+                  "must_be_immutable": True,
+                  "must_not_replace_running_preformal_mount": True,
+              },
+              "qualification_policy": {
+                  "fresh_live_lifecycle_requalification_required": True,
+                  "fresh_live_thermal_stage_requalification_required": True,
+                  "derived_stage_must_not_be_relabelled_observed": True,
+                  "lifecycle_independent_from_stage": True,
+                  "architecture_effectiveness_is_persistent_after_effective_merge": True,
+                  "rolling_stage_refresh_may_reference_prior_effective_architecture_certificate": True,
+                  "qualification_host_may_be_github_actions": True,
+                  "production_runtime_host_may_be_github_actions": False,
+              },
+              "non_effects": {
+                  "runtime_config_write_authorized": False,
+                  "database_write_authorized": False,
+                  "scheduler_write_authorized": False,
+                  "formal_evidence_write_authorized": False,
+                  "production_runtime_restart_authorized": False,
+                  "production_runtime_start_authorized": False,
+                  "production_owner_activation_authorized": False,
+                  "formal_v5_authorized": False,
+                  "a0_authorized": False,
+                  "o00_o23_authorized": False,
+                  "mcft_cap09_completed": False,
+              },
+          }
+          Path("acceptance-output/FRESH_CURRENT_CROP_REFRESH_REQUEST.json").write_text(
+              json.dumps(request, indent=2, sort_keys=True) + "\n"
+          )
+          PY
+          node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_EFFECTIVE_CURRENT_CROP_AUTHORITY_REFRESH_V1.cjs \
+            --candidate acceptance-output/MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json \
+            --architecture-effectiveness "$ARCHITECTURE_CERT" \
+            --refresh-request acceptance-output/FRESH_CURRENT_CROP_REFRESH_REQUEST.json \
+            --subject '${{ github.event.pull_request.head.sha }}' \
+            --out acceptance-output/FRESH_EFFECTIVE_CURRENT_CROP_AUTHORITY_QUALIFICATION_ONLY.json
+
+      - name: Enforce authority ceiling on ephemeral graduation
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+          out = json.loads(Path("acceptance-output/FRESH_EFFECTIVE_CURRENT_CROP_AUTHORITY_QUALIFICATION_ONLY.json").read_text())
+          if out.get("architecture_effective") is not True or out.get("runtime_consumption_authorized") is not True:
+              raise RuntimeError("FRESH_CURRENT_CROP_DT02_GRADUATION_REQUIRED")
+          for key in (
+              "runtime_config_write_authorized", "database_write_authorized", "scheduler_write_authorized",
+              "formal_evidence_write_authorized", "production_runtime_start_authorized",
+              "production_owner_activation_authorized", "formal_v5_authorized",
+              "a0_authorized", "o00_o23_authorized", "mcft_cap09_completed"
+          ):
+              if out.get(key) is not False:
+                  raise RuntimeError("FRESH_CURRENT_CROP_AUTHORITY_CEILING_DRIFT:" + key)
+          print(json.dumps({
+              "status": "PASS",
+              "stage": out["biological_stage"]["resolved_biological_stage"],
+              "authority_as_of": out["biological_stage"]["authority_as_of"],
+              "authority_valid_until": out["biological_stage"]["authority_valid_until"],
+              "water_use_stage": out["crop_water_use_stage"],
+              "kc": out["crop_model_parameter"]["value"],
+              "dt02_graduation": out["graduation"]["status"],
+              "production_effect": False,
+          }, sort_keys=True))
+
+      - name: Upload qualification-only derived evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-fresh-current-crop-source-lock-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/KBS_CADENCE_RESTORE_RESULT.json
+            acceptance-output/PREVIOUS_KBS_PUBLICATION_CADENCE_STATE.json
+            acceptance-output/KBS_PUBLICATION_CADENCE_STATE.json
+            acceptance-output/KBS_CURRENT_FRESHNESS_METADATA.json
+            acceptance-output/FRESH_CURRENT_CROP_SOURCE_LOCK.json
+            acceptance-output/MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION_RESULT.json
+            acceptance-output/MCFT_CAP09_T4R1_THERMAL_BIOLOGICAL_STAGE_PROBE_RESULT.json
+            acceptance-output/MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json
+            acceptance-output/FRESH_CURRENT_CROP_REFRESH_REQUEST.json
+            acceptance-output/FRESH_EFFECTIVE_CURRENT_CROP_AUTHORITY_QUALIFICATION_ONLY.json
+          if-no-files-found: warn
+          retention-days: 7
