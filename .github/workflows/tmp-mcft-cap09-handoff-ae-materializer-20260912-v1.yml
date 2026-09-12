@@ -1,0 +1,160 @@
+name: TMP MCFT CAP-09 Handoff AE Materializer 20260912 v1
+
+on:
+  push:
+    branches:
+      - tmp/mcft-cap09-handoff-ae-materializer-20260912-v1
+    paths:
+      - docs/handoff/.tmp/GEOX-MCFT-CAP-09-HANDOFF-AE-PAYLOAD-2026-09-12.md
+      - .github/workflows/tmp-mcft-cap09-handoff-ae-materializer-20260912-v1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  clean-graft-ae:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout temp carrier
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Materialize and validate AE pure-prepend clean graft
+        shell: bash
+        env:
+          EXPECTED_PARENT: 641dc6d0ed3e01a1a16b222d4272d3ba1cb4e225
+          TARGET_BRANCH: docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier
+          HANDOFF: docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md
+          PAYLOAD: docs/handoff/.tmp/GEOX-MCFT-CAP-09-HANDOFF-AE-PAYLOAD-2026-09-12.md
+          SENTINEL: '<!-- MCFT_CAP09_HANDOFF_AE_PAYLOAD_END -->'
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin "$TARGET_BRANCH" --no-tags
+
+          remote_head="$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | awk '{print $1}')"
+          test -n "$remote_head"
+          test "$remote_head" = "$EXPECTED_PARENT" || {
+            echo "AUTHORITATIVE_HEAD_DRIFT expected=$EXPECTED_PARENT actual=$remote_head" >&2
+            exit 41
+          }
+
+          git cat-file -e "$EXPECTED_PARENT^{commit}"
+          git cat-file -e "$EXPECTED_PARENT:$HANDOFF"
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+
+          payload_path = Path(os.environ["PAYLOAD"])
+          sentinel = os.environ["SENTINEL"].encode()
+          raw = payload_path.read_bytes()
+          lines = raw.splitlines(keepends=True)
+          if not lines:
+              raise SystemExit("AE_PAYLOAD_EMPTY")
+          last = lines[-1].rstrip(b"\r\n")
+          if last != sentinel:
+              raise SystemExit("AE_PAYLOAD_SENTINEL_MISSING_OR_TRUNCATED")
+          body = b"".join(lines[:-1])
+          if not body.startswith(b"# AE "):
+              raise SystemExit("AE_PAYLOAD_TOP_HEADING_INVALID")
+          if b"# AD " in body:
+              raise SystemExit("AE_PAYLOAD_MUST_NOT_EMBED_PREVIOUS_AD_SECTION")
+          Path("/tmp/ae-body.bin").write_bytes(body.rstrip(b"\r\n") + b"\n\n")
+          PY
+
+          git show "$EXPECTED_PARENT:$HANDOFF" > /tmp/old-handoff.bin
+
+          python3 - <<'PY'
+          from pathlib import Path
+          old = Path('/tmp/old-handoff.bin').read_bytes()
+          ae = Path('/tmp/ae-body.bin').read_bytes()
+          if not old.startswith(b'# AD '):
+              raise SystemExit('AUTHORITATIVE_OLD_TOP_NOT_AD')
+          new = ae + old
+          if not new.endswith(old):
+              raise SystemExit('OLD_BLOB_NOT_EXACT_SUFFIX')
+          if new[:5] != b'# AE ':
+              raise SystemExit('NEW_TOP_NOT_AE')
+          Path('/tmp/new-handoff.bin').write_bytes(new)
+          PY
+
+          old_blob="$(git rev-parse "$EXPECTED_PARENT:$HANDOFF")"
+          new_blob="$(git hash-object -w /tmp/new-handoff.bin)"
+
+          git read-tree "$EXPECTED_PARENT^{tree}"
+          git update-index --add --cacheinfo "100644,$new_blob,$HANDOFF"
+          new_tree="$(git write-tree)"
+          new_commit="$(printf '%s\n' 'docs(mcft-cap09): hand off 0ac2 proof-binding convergence frontier' | git commit-tree "$new_tree" -p "$EXPECTED_PARENT")"
+
+          parent="$(git rev-parse "$new_commit^")"
+          test "$parent" = "$EXPECTED_PARENT" || {
+            echo "CLEAN_GRAFT_PARENT_MISMATCH expected=$EXPECTED_PARENT actual=$parent" >&2
+            exit 42
+          }
+
+          mapfile -t changed < <(git diff-tree --no-commit-id --name-only -r "$EXPECTED_PARENT" "$new_commit")
+          test "${#changed[@]}" -eq 1 || {
+            printf 'CHANGED_PATH_COUNT_MISMATCH count=%s\n' "${#changed[@]}" >&2
+            printf '%s\n' "${changed[@]}" >&2
+            exit 43
+          }
+          test "${changed[0]}" = "$HANDOFF" || {
+            echo "CHANGED_PATH_MISMATCH actual=${changed[0]}" >&2
+            exit 44
+          }
+
+          numstat="$(git diff --numstat "$EXPECTED_PARENT" "$new_commit" -- "$HANDOFF")"
+          adds="$(printf '%s\n' "$numstat" | awk '{print $1}')"
+          dels="$(printf '%s\n' "$numstat" | awk '{print $2}')"
+          test "$adds" != "-" && test "$dels" != "-"
+          test "$adds" -gt 0 || {
+            echo "HANDOFF_ADDITIONS_NOT_POSITIVE additions=$adds" >&2
+            exit 45
+          }
+          test "$dels" -eq 0 || {
+            echo "HANDOFF_DELETIONS_NOT_ZERO deletions=$dels" >&2
+            exit 46
+          }
+
+          git show "$new_commit:$HANDOFF" > /tmp/final-handoff.bin
+          python3 - <<'PY'
+          from pathlib import Path
+          old = Path('/tmp/old-handoff.bin').read_bytes()
+          new = Path('/tmp/final-handoff.bin').read_bytes()
+          if not new.endswith(old):
+              raise SystemExit('FINAL_OLD_BLOB_NOT_EXACT_SUFFIX')
+          if not new.startswith(b'# AE '):
+              raise SystemExit('FINAL_TOP_NOT_AE')
+          PY
+
+          if git ls-tree -r --name-only "$new_commit" | grep -E 'GEOX-MCFT-CAP-09-HANDOFF-AE-PAYLOAD|tmp-mcft-cap09-handoff-ae-materializer' ; then
+            echo "TEMP_MATERIALIZER_LEAKED_INTO_FINAL_TREE" >&2
+            exit 47
+          fi
+
+          remote_head_before_push="$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | awk '{print $1}')"
+          test "$remote_head_before_push" = "$EXPECTED_PARENT" || {
+            echo "AUTHORITATIVE_HEAD_DRIFT_BEFORE_PUSH expected=$EXPECTED_PARENT actual=$remote_head_before_push" >&2
+            exit 48
+          }
+
+          git push origin "$new_commit:refs/heads/$TARGET_BRANCH"
+
+          remote_head_after_push="$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | awk '{print $1}')"
+          test "$remote_head_after_push" = "$new_commit" || {
+            echo "AUTHORITATIVE_PUSH_VERIFY_FAILED expected=$new_commit actual=$remote_head_after_push" >&2
+            exit 49
+          }
+
+          echo "AE_CLEAN_GRAFT_PARENT=$EXPECTED_PARENT"
+          echo "AE_CLEAN_GRAFT_HEAD=$new_commit"
+          echo "AE_OLD_BLOB=$old_blob"
+          echo "AE_NEW_BLOB=$new_blob"
+          echo "AE_ADDITIONS=$adds"
+          echo "AE_DELETIONS=$dels"
+          echo "AE_MATERIALIZATION=SUCCESS"
