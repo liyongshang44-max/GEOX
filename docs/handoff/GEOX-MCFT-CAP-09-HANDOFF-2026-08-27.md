@@ -1,3 +1,1740 @@
+# AG — 2026-09-12 Post-Merge 36B6 Current-Main Reconciliation / Proof-Bound Re-Anchor Frontier
+
+> 本 section 是 AF 之后的 authoritative continuation。AF 记录的是 `#3553 @ 1f970cc...` 时的 bounded proof-materialization / digest-stable no-rerun 路径；本 AG 记录 AF 之后已经实际发生的完整 engineering / qualification / merge / post-merge reconciliation 事实。
+>
+> 本 AG 以 pure-prepend 方式加入；AF / AE / AD / AC / AB / AA / Z / Y / X / W / V / U / T / S / R / Q / P / O / N / M / L / K / J / I / H 及其以下历史内容必须原样保留，不做回写。
+>
+> 本 section 不授权 Production Runtime、Production Owner live activation、Formal-v5 ARM、A0、O00–O23、#3552 adoption、B-Line semantic reopen 或 ADR construction。
+
+---
+
+## AG0. 一句话接手结论
+
+当前 MCFT-CAP-09 已完成：
+
+```text
+AF bounded proof materialization
+→ QCP proof-bound contract contradiction RCA
+→ minimal QCP contract repair
+→ #3553 exact-head qualification convergence
+→ #3553 merge to protected main
+```
+
+当前 protected main 已是：
+
+```text
+36b671ce83652e7d3ba350c3e9118342226c13a8
+```
+
+它是 PR #3553 merge commit：
+
+```text
+first parent
+= 0ac2d2cf98d553285a2051a1b0b86131a23fc413
+
+second parent
+= dd8257c069e1841da3f13c9efb2ab104d4251414
+```
+
+而且：
+
+```text
+tree(36b671...)
+= tree(dd8257...)
+= 3d84247bc622a9a5187e085f3e93acba9429c4f3
+
+dd8257... → 36b671...
+changed files = 0
+```
+
+因此 merge 本身没有引入 source/tree delta。
+
+当前 active MCFT engineering/governance frontier 不是 Production Runtime，而是：
+
+```text
+MCFT POST-MERGE CURRENT-MAIN CONVERGENCE
+/
+36B6 PROOF-BOUND EXACT-BASE RE-ANCHOR
+```
+
+当前唯一需要 materialize 的 MCFT governance gap：
+
+```text
+QCP proof_bound_exact_base_admissions
+仍指向 0ac2...
+
+protected main
+已前移至 36b671...
+
+36b671...
+尚未 materialize 为 current proof-bound exact base
+```
+
+这不是重新开发 MCFT semantics，也不是重新 qualification 全部 Phase3/Phase5；它是 bounded qualification/governance re-anchor。
+
+---
+
+## AG1. AF 之后已经完成：bounded proof materialization successor
+
+AF 授权的 single bounded proof-materialization successor 已实际完成。
+
+正式 successor：
+
+```text
+H
+= d69e162b9d9d9e49c663960141304042ba61323c
+
+direct parent
+= 1f970ccfc908d6ced4d44673d56206cd51087962
+
+compare
+= ahead_by 1
+= behind_by 0
+= total_commits 1
+```
+
+正式 diff 只修改：
+
+```text
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+```
+
+没有把 temporary materializer workflow/tooling 带进正式 ancestry/tree。
+
+物化的 immutable successful run proofs：
+
+```text
+Phase3
+run = 34666374039
+dependency digest =
+sha256:12853172ba486255d2134537a97ba0d2e8897c5c45511ee3d9553a73ef0554b9
+
+Phase5 accelerated-24T
+run = 34666374060
+dependency digest =
+sha256:65dee9a9db74e22bbed48ed61490a364c899e4c4a24d029efe445cb59bf95b8b
+```
+
+该阶段没有 blind rerun Phase3 / Phase5。
+
+---
+
+## AG2. H 上发现并修复的真实 contract contradiction
+
+H 上 QCP 的 planner/preflight 已满足：
+
+```text
+planner_status
+= PASS
+
+unknown_changed_paths
+= 0
+
+authority_errors
+= 0
+
+blocker_count
+= 0
+```
+
+但 QCP final machine-proof step 失败。
+
+根因不是 proof 缺失，而是 repository contract 自身把两个不同概念混成同一个集合：
+
+```text
+durable-run anchor base admission
+```
+
+与：
+
+```text
+historical governed predecessor authority
+```
+
+H 为了让 `1f970cc...` 的 fresh successful runs 通过 durable evidence resolver，需要其真实 run base `0ac2...` 能作为 durable anchor base。
+
+但 final QCP validator 又把该 durable-anchor base 集合误当成 historical authority allowlist，并拒绝：
+
+```text
+CONTROL_PLANE_PROOF_BOUND_BASE_MUST_NOT_BE_HISTORICALLY_ALLOWLISTED
+```
+
+形成：
+
+```text
+durable evidence validator:
+0ac2 must be admitted as durable anchor base
+
+final QCP validator:
+current proof-bound base must not be historical authority
+```
+
+这不是 registry 可单独修复的问题。
+
+---
+
+## AG3. Minimal contract repair 已完成并 machine-proven
+
+CTO 后续授权修正该 contract。
+
+修复 commit：
+
+```text
+dd8257c069e1841da3f13c9efb2ab104d4251414
+```
+
+commit subject：
+
+```text
+fix(mcft-cap09):
+separate proof-bound authority from durable anchor bases
+```
+
+修复只修改：
+
+```text
+.github/workflows/
+mcft-cap-09-qualification-control-plane-v1.yml
+```
+
+没有修改：
+
+```text
+qualification evidence registry
+durable proof records
+application/runtime
+Production Owner
+#3552
+B-Line semantics
+```
+
+修复后的 final validator 分离：
+
+```text
+historicalGovernedBases
+=
+authority.governed_successor_predecessor_shas
+
+durableAnchorBases
+=
+registry.requalification_evidence
+  .durable_anchors.rules
+  .governed_successor_predecessors
+```
+
+语义：
+
+```text
+0ac2 as historical authority
+= MUST NOT
+
+0ac2 as proof-bound current-base admission
+= MUST
+
+0ac2 as fresh-run durable anchor base
+= MUST
+```
+
+同时新增反向 fail-closed：
+
+```text
+CONTROL_PLANE_PROOF_BOUND_BASE_MISSING_DURABLE_ANCHOR_ADMISSION
+```
+
+因此不是简单删除安全检查换取绿色结果。
+
+---
+
+## AG4. #3553 exact-head qualification closure
+
+在 exact head：
+
+```text
+dd8257c069e1841da3f13c9efb2ab104d4251414
+```
+
+新的 QCP：
+
+```text
+run
+= 34670795779
+
+result
+= SUCCESS
+```
+
+关键步骤全部 SUCCESS：
+
+```text
+Require governed successor predecessor
+central applicability semantics
+generation / durable-anchor / dependency-digest semantics
+immutable evidence resolution
+exact PR applicability plan
+all-blockers preflight
+Validate control-plane machine proof
+```
+
+QCP artifact：
+
+```text
+status
+= PASS
+
+planner_status
+= PASS
+
+total_checks
+= 30
+
+pass
+= 25
+
+fail
+= 0
+
+not_applicable
+= 5
+
+unknown
+= 0
+
+forbidden
+= 0
+
+authority_errors
+= 0
+
+unknown_changed_paths
+= 0
+
+blocker_count
+= 0
+```
+
+exact tuple：
+
+```text
+base
+= 0ac2d2cf98d553285a2051a1b0b86131a23fc413
+
+head
+= dd8257c069e1841da3f13c9efb2ab104d4251414
+```
+
+同一 exact head 重要 qualification：
+
+```text
+Phase3
+run 34670795833
+= SUCCESS
+
+Phase5 accelerated 24T
+run 34670795844
+= SUCCESS
+
+EA5E2
+run 34670795789
+= SUCCESS
+
+Phase5 production-equivalent
+run 34670795832
+= SUCCESS
+
+Post-Merge V13 control plane
+run 34670795842
+= SUCCESS
+
+Phase6 runtime independence
+run 34670795877
+= SUCCESS
+
+MCFT release lane
+run 34670795847
+= SUCCESS
+
+Current-Main Re-Anchor proof
+run 34670795822
+= SUCCESS
+```
+
+generic `ci`：
+
+```text
+build-test
+= SUCCESS
+
+acceptance
+= SUCCESS
+```
+
+---
+
+## AG5. B-Line standalone red：ownership / merge adjudication 已分离
+
+#3553 exact head 上同时出现 B-Line standalone W1/W2/W3/W4 workflow red。
+
+RCA：
+
+```text
+W1/W2/W3
+= frozen PR-SEC-1 caller inventory regression /
+  historical exact-topology carrier assumption
+
+W4
+= frozen successor / merge-topology compatibility assumption
+```
+
+这些 workflow：
+
+```text
+不是 #3553 修改目标
+不是 MCFT semantic/runtime delta
+不是 active main ruleset required contexts
+```
+
+CTO 已明确：
+
+```text
+OWNER
+= B-Line qualification / governance control plane
+
+#3553 repair responsibility
+= NONE
+```
+
+MCFT 不得为了让 overall Checks 全绿而：
+
+```text
+修改 B-Line product semantics
+重新打开 W1–W4 semantics
+借旧 RECON write budget 写 B-Line
+```
+
+未来若需要清理，应另开：
+
+```text
+BLINE-FROZEN-SUCCESSOR-CARRIER-COMPATIBILITY
+```
+
+性质仅限：
+
+```text
+qualification-control-plane maintenance
+/
+successor-aware preservation harness
+```
+
+不是 W7。
+
+---
+
+## AG6. #3553 merge-readiness adjudication 与 merge
+
+#3553 exact head 上 active main ruleset required status contexts：
+
+```text
+8 / 8 satisfied
+```
+
+包括：
+
+```text
+acceptance
+build-test
+mcft-delivery-policy-v2-contract
+mcft-candidate-integrity-pr-selftest
+mcft-release-lane-pr-selftest
+mcft-main-ruleset-readiness-v1
+mcft-candidate-integrity-enforce-current-pr
+mcft-release-lane-enforce-current-pr
+```
+
+B-Line standalone red 不在 required set。
+
+随后 #3553 已 merge。
+
+protected main：
+
+```text
+36b671ce83652e7d3ba350c3e9118342226c13a8
+```
+
+merge commit：
+
+```text
+parents =
+0ac2d2cf98d553285a2051a1b0b86131a23fc413
+dd8257c069e1841da3f13c9efb2ab104d4251414
+```
+
+---
+
+## AG7. Post-merge local machine proof：merge 没有引入 source delta
+
+用户已在本地 Windows / PowerShell 对 exact protected main 做 machine verification。
+
+远端同步后：
+
+```text
+origin/main
+= 36b671ce83652e7d3ba350c3e9118342226c13a8
+```
+
+commit type / ancestry：
+
+```text
+36b671...
+= commit
+
+dd8257...
+= commit
+
+candidate ancestry exit
+= 0
+```
+
+tree：
+
+```text
+main tree
+= 3d84247bc622a9a5187e085f3e93acba9429c4f3
+
+candidate tree
+= 3d84247bc622a9a5187e085f3e93acba9429c4f3
+
+expected tree
+= 3d84247bc622a9a5187e085f3e93acba9429c4f3
+
+TREE_EQUIVALENCE
+= PASS
+```
+
+candidate → merge：
+
+```text
+git diff --name-status dd8257... 36b671...
+= EMPTY
+
+git diff --stat dd8257... 36b671...
+= EMPTY
+
+CANDIDATE_TO_MAIN_DIFF
+= EMPTY
+```
+
+local worktree：
+
+```text
+CLEAN
+```
+
+因此 machine conclusion：
+
+```text
+merge-introduced source delta
+= NO
+```
+
+GitHub compare 也确认：
+
+```text
+dd8257... → 36b671...
+ahead_by = 1
+files = 0
+```
+
+---
+
+## AG8. 0ac2 → 36b671 exact merged delta
+
+GitHub compare：
+
+```text
+0ac2d2cf... → 36b671ce...
+
+ahead_by
+= 5
+
+behind_by
+= 0
+
+total_commits
+= 5
+
+changed files
+= 12
+```
+
+exact changed paths：
+
+```text
+.github/workflows/ci.yml
+.github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml
+.github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml
+.github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml
+.github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml
+.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-0AC2-V1.json
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_0AC2_V1.cjs
+scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts
+scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_QUALIFICATION_CLOCK_V1.ts
+```
+
+这 12-file set 必须作为 36B6 re-anchor 的 exact merged delta proof；不得扩大。
+
+---
+
+## AG9. Post-merge main-native CI first-red：归属 B-Line W4，不属于 MCFT repair
+
+protected main merge 后，main-native `ci` push run：
+
+```text
+run
+= 34675665308
+```
+
+结果：
+
+```text
+build-test
+= SUCCESS
+
+acceptance
+= FAILURE
+```
+
+acceptance job：
+
+```text
+103505187082
+```
+
+15 个 acceptance substeps：
+
+```text
+14 PASS
+1 FAIL
+```
+
+唯一失败：
+
+```text
+P1_SMOKE
+
+pnpm --filter @geox/server run test:p1:smoke
+= exit 1
+```
+
+RCA：
+
+```text
+/api/v1/ao-act/dispatches/state
+```
+
+在 P1 smoke 与后台 executor 并发推进同一个 operation plan 时发生：
+
+```text
+READY -> ACKED
+```
+
+竞争。
+
+test 允许该并发冲突，但预期：
+
+```text
+HTTP 409
+STATE_TRANSITION_DENIED
+```
+
+实际某条 race 路径从：
+
+```text
+transitionOperationPlanStateV1
+```
+
+抛出：
+
+```text
+INVALID_OPERATION_PLAN_TRANSITION:READY->ACKED
+```
+
+并穿透成：
+
+```text
+HTTP 500
+```
+
+因此 smoke red。
+
+该 endpoint 在 authority inventory 中属于：
+
+```text
+B-Line W4
+BSEC-186
+```
+
+不是 MCFT semantic surface。
+
+由于：
+
+```text
+tree(36b671...)
+= tree(dd8257...)
+```
+
+且 pre-merge 同树 acceptance 已成功，本 red 不能判定为 merge-introduced source regression。
+
+当前裁决：
+
+```text
+OWNER
+= B-Line W4 runtime / transition semantics
+
+MCFT repair responsibility
+= NONE
+
+MCFT must not edit B-Line here
+```
+
+但 CTO 定义的整体 post-merge exit condition 包含 general acceptance，因此：
+
+```text
+POST-MERGE CURRENT-MAIN CONVERGENCE
+= HOLD
+```
+
+直到该 red 被 B-Line owner 独立 adjudicate / resolve，或 CTO 显式裁定其外域 non-blocking policy。
+
+---
+
+## AG10. 重要纠正：run 34675670606 不是 exact-main QCP
+
+监控曾把：
+
+```text
+QCP run 34675670606
+subject/head SHA = 36b671...
+```
+
+解释为：
+
+```text
+36b671 exact-main QCP = FAIL
+```
+
+该解释是错误的。
+
+机器核验：
+
+```text
+run
+= 34675670606
+
+workflow
+= mcft-cap-09-qualification-control-plane-v1
+
+event
+= pull_request
+
+associated PR
+= #3520
+
+PR base
+= 26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+
+head / subject SHA
+= 36b671ce83652e7d3ba350c3e9118342226c13a8
+```
+
+first red：
+
+```text
+MCFT_CAP09_CONTROL_PLANE_UNGOVERNED_BASE:
+26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+```
+
+即：
+
+```text
+historical #3520 PR carrier
++
+stale historical base
+```
+
+不是：
+
+```text
+main-native exact-main QCP
+```
+
+该 run fail-fast 于 predecessor/base admission，后续：
+
+```text
+central applicability
+dependency digest validation
+immutable evidence resolution
+exact applicability plan
+blocker enumeration
+machine-proof validation
+```
+
+全部未执行。
+
+artifact：
+
+```text
+count = 0
+```
+
+正确账本：
+
+```text
+#3520 historical QCP carrier
+= FAILURE / INVALID CURRENT-MAIN CARRIER
+
+36b671 exact-main native QCP
+= NOT ESTABLISHED BY THIS RUN
+```
+
+下一任严禁再用 `34675670606` 作为 `36b671 exact-main QCP failed` 证据。
+
+---
+
+## AG11. 当前真实 MCFT governance gap
+
+虽然 `34675670606` 不是 current-main QCP failure，但 repository authority source 仍存在一个真实 gap。
+
+当前 QCP authority：
+
+```text
+proof_bound_exact_base_admissions
+```
+
+仍 materialize：
+
+```text
+base_sha
+= 0ac2d2cf98d553285a2051a1b0b86131a23fc413
+```
+
+而 protected main 已是：
+
+```text
+36b671ce83652e7d3ba350c3e9118342226c13a8
+```
+
+现有 QCP workflow：
+
+```text
+CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA
+```
+
+仍 pin：
+
+```text
+0ac2...
+```
+
+现有 current-main re-anchor workflow / post-merge V13 fallback 也只认识历史 exact bases，没有把 `36b671...` materialize 成新的 current protected-main proof-bound base。
+
+因此真实 failing governance condition 是：
+
+```text
+protected main identity advanced
++
+proof-bound current-main admission authority not advanced
+```
+
+不是：
+
+```text
+Phase3 proof missing
+Phase5 proof missing
+KBS anomaly
+Production Owner blocker
+```
+
+---
+
+## AG12. 为什么现在不应 blind rerun Phase3 / Phase5
+
+已经成立：
+
+```text
+qualified candidate
+= dd8257c...
+
+merged main
+= 36b671...
+
+tree equality
+= exact
+
+candidate → merge file delta
+= zero
+```
+
+且 pre-merge exact head 上：
+
+```text
+Phase3
+= SUCCESS
+
+Phase5 accelerated
+= SUCCESS
+
+EA5E2
+= SUCCESS
+
+QCP
+= PASS / blocker_count 0
+```
+
+因此当前应先做：
+
+```text
+36B6 current-main proof-bound re-anchor
+```
+
+而不是：
+
+```text
+rerun everything merely because merge commit SHA changed
+```
+
+但同时必须继续保持：
+
+```text
+baseline_qualification_carry_forward_authorized
+= false
+```
+
+这意味着：
+
+```text
+不是无条件把旧 baseline qualification 升格
+```
+
+而是：
+
+```text
+通过 exact merge lineage
++ tree equivalence
++ zero candidate→merge delta
++ immutable successful proof ancestry/binding
+来建立新的 exact-base admission
+```
+
+---
+
+## AG13. 已创建但尚未施工的隔离 branch
+
+已创建：
+
+```text
+fix/mcft-cap09-current-main-reanchor-36b6-v1
+```
+
+branch base：
+
+```text
+36b671ce83652e7d3ba350c3e9118342226c13a8
+```
+
+最近一次 race check：
+
+```text
+protected main
+= 36b671...
+
+branch vs main
+= identical
+
+ahead_by
+= 0
+
+behind_by
+= 0
+```
+
+重要：
+
+```text
+该 branch 目前没有 re-anchor implementation commit
+```
+
+下一任不得误以为 36B6 patch 已完成。
+
+---
+
+## AG14. 当前批准的 36B6 re-anchor 最小施工面
+
+当前设计已收敛为 **6-file governance-only patch**。
+
+新增：
+
+```text
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-36B6-V1.json
+
+scripts/governance_acceptance/
+ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_36B6_V1.cjs
+```
+
+修改：
+
+```text
+docs/digital_twin/mcft/cap_09/
+GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+
+.github/workflows/
+mcft-cap-09-qualification-control-plane-v1.yml
+
+.github/workflows/
+mcft-cap-09-current-main-reanchor-2144-v1.yml
+
+.github/workflows/
+mcft-cap-09-post-merge-v13-control-plane-v1.yml
+```
+
+明确不得修改：
+
+```text
+QUALIFICATION-EVIDENCE-REGISTRY-V1.json
+
+PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+
+Phase3 runtime implementation
+
+Phase5 runtime implementation
+
+application code
+
+B-Line
+
+Production Owner
+
+#3552
+
+Formal-v5
+```
+
+如果实际施工发现需要超出 6 files：
+
+```text
+STOP
+→ re-adjudicate scope
+```
+
+不得悄悄扩大。
+
+---
+
+## AG15. 36B6 re-anchor 必须证明的 machine facts
+
+新 artifact / acceptance 必须 fail-closed 证明：
+
+```text
+origin/main
+= 36b671ce83652e7d3ba350c3e9118342226c13a8
+```
+
+merge parent identity：
+
+```text
+parents(36b671...)
+=
+[
+  0ac2d2cf98d553285a2051a1b0b86131a23fc413,
+  dd8257c069e1841da3f13c9efb2ab104d4251414
+]
+```
+
+tree：
+
+```text
+tree(36b671...)
+= 3d84247bc622a9a5187e085f3e93acba9429c4f3
+
+tree(dd8257...)
+= 3d84247bc622a9a5187e085f3e93acba9429c4f3
+```
+
+candidate→merge：
+
+```text
+changed paths
+= []
+```
+
+old-base→new-main exact delta：
+
+```text
+0ac2... → 36b671...
+exact changed path set
+= 12 known paths from AG8
+```
+
+QCP authority：
+
+```text
+legacy historical predecessor set
+= MUST NOT be expanded to include 36b671
+
+proof_bound_exact_base_admissions
+= move current exact admission from 0ac2 to 36b671
+
+bare_sha_allowlist_admission_authorized
+= false
+
+admission_requires_exact_lineage_and_overlap_proof
+= true
+
+baseline_qualification_carry_forward_authorized
+= false
+```
+
+即：
+
+```text
+36b671 must be admitted by proof
+not by bare SHA allowlist
+```
+
+---
+
+## AG16. 当前 planned acceptance negative tests
+
+新的：
+
+```text
+ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_36B6_V1.cjs
+```
+
+至少必须有：
+
+```text
+positive exact case
+= PASS
+```
+
+以及 negative mutation cases：
+
+```text
+protected main drift
+main tree drift
+qualified candidate tree drift
+merge second-parent drift
+candidate→merge unexpected delta
+old-base→new-main changed-path-set drift
+```
+
+任何一项必须 fail-closed。
+
+acceptance output scope 必须明确：
+
+```text
+EXACT_MERGE_TREE_EQUIVALENCE_AND_CURRENT_MAIN_PROOF_BOUND_ADMISSION_ONLY
+```
+
+并写明：
+
+```text
+baseline_qualification_carried_forward
+= false
+
+production_owner_proven
+= false
+
+production_runtime_started
+= false
+
+formal_v5_armed
+= false
+```
+
+---
+
+## AG17. Planned QCP / workflow semantics
+
+QCP JSON：
+
+```text
+proof_bound_exact_base_admissions[0]
+```
+
+从：
+
+```text
+0ac2...
+```
+
+迁移到：
+
+```text
+36b671...
+```
+
+并绑定：
+
+```text
+36B6 proof artifact
+36B6 proof acceptance
+existing re-anchor workflow
+current protected-main tree
+```
+
+不得把：
+
+```text
+36b671...
+```
+
+加入：
+
+```text
+governed_successor_predecessor_shas
+```
+
+因为那会再次把 current proof-bound base 混成 historical authority。
+
+QCP workflow：
+
+```text
+CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA
+→ 36b671...
+
+CURRENT_MAIN_REANCHOR_PROOF_ACCEPTANCE
+→ 36B6 acceptance
+```
+
+re-anchor workflow：
+
+```text
+if PR_BASE_SHA == 36b671...
+→ run 36B6 selftest
+→ run 36B6 positive acceptance
+```
+
+Post-Merge V13 control plane：
+
+```text
+if base_sha == 36b671...
+→ validate 36B6 current-main admission
+```
+
+旧历史 re-anchor cases 保留，不删除。
+
+---
+
+## AG18. 施工后 validation 顺序
+
+必须：
+
+```text
+1. race-check origin/main == 36b671...
+2. exact 6-file scope check
+3. node --check new acceptance
+4. run 36B6 acceptance --selftest
+5. run 36B6 positive acceptance
+6. run applicability selftest
+7. git diff --check
+8. verify legacy predecessor set unchanged
+9. verify governed_successor_predecessor_shas does NOT contain 36b671
+10. verify proof_bound_exact_base_admissions exact base == 36b671
+11. only then commit / push
+12. open bounded governance PR
+13. adjudicate automatic QCP / re-anchor / V13 / Phase3 / Phase5 lanes
+```
+
+如果 automatic workflows 因 changed governance files 合法触发 Phase3/Phase5：
+
+```text
+collect their actual result
+```
+
+但不得在它们尚未失败前手动 blind rerun。
+
+---
+
+## AG19. Main-native acceptance red 的处理边界
+36B6 re-anchor 完成：
+
+```text
+≠
+main-native acceptance P1_SMOKE red 自动解决
+```
+
+两条线必须分开：
+
+```text
+MCFT current-main admission
+→ MCFT Qualification / Governance Control Plane
+
+P1_SMOKE READY→ACKED 500-vs-409 race
+→ B-Line W4 owner
+```
+
+当前 MCFT 组：
+
+```text
+不得修改 AO-ACT dispatch runtime
+不得为了 MCFT convergence 消掉 B-Line red
+```
+
+但最终 CTO exit condition 若仍要求：
+
+```text
+general acceptance = SUCCESS
+```
+
+则 overall：
+
+```text
+POST-MERGE CURRENT-MAIN CONVERGENCE
+```
+
+在 B-Line first-red 未 adjudicate 前仍为：
+
+```text
+HOLD
+```
+
+---
+
+## AG20. KBS monitoring 本轮没有改变 MCFT temporal authority
+
+最新 monitoring 通知未建立新的可信 KBS row-level forward observation。
+
+保守 ledger：
+
+```text
+previous machine-observed latest event_time
+= 2026-09-10T04:00:00Z
+
+new latest event_time
+= NOT RE-OBSERVED / NOT ESTABLISHED
+
+forward advancement
+= NOT ESTABLISHED
+
+new active-provider batch bracket
+= none
+
+new continuity/gap defect
+= none established
+
+new duplicate/identity conflict
+= none established
+
+new backfill
+= none established
+
+new disappeared event
+= none established
+
+new row-identity revision
+= none established
+
+affected row hashes
+= none established
+```
+
+公共页面展示截面停在：
+
+```text
+2026-09-06T04:00:00Z
+```
+
+不能推翻此前机器观察，也不能证明 9/7–9/10 rows 消失。
+
+monitoring poll time：
+
+```text
+≠ provider publication time
+```
+
+所以本轮：
+
+```text
+repository temporal authority
+= NO AMENDMENT FROM KBS MONITORING
+```
+
+---
+
+## AG21. 当前组织 ownership
+
+当前 active owner：
+
+```text
+MCFT Post-Merge Convergence /
+Qualification Control Plane group
+```
+
+mission：
+
+```text
+materialize protected-main 36b671 exact admission
++
+collect post-merge qualification evidence
++
+classify first-red before repair
+```
+
+不是：
+
+```text
+Production Runtime group
+Production Owner activation group
+B-Line group
+Formal group
+```
+
+B-Line red owner：
+
+```text
+B-Line qualification / governance control plane
+```
+
+---
+
+## AG22. 当前状态矩阵
+
+```text
+protected main
+= 36b671ce83652e7d3ba350c3e9118342226c13a8
+
+#3553
+= MERGED
+
+qualified candidate
+= dd8257c069e1841da3f13c9efb2ab104d4251414
+
+candidate/main tree equivalence
+= PASS / MACHINE-PROVEN
+
+candidate→merge source delta
+= ZERO / MACHINE-PROVEN
+
+0ac2→36b671 merged delta
+= 5 commits / 12 files / MACHINE-PROVEN
+
+pre-merge QCP
+= PASS
+
+pre-merge blocker_count
+= 0
+
+pre-merge Phase3
+= SUCCESS
+
+pre-merge Phase5 accelerated
+= SUCCESS
+
+36b671 proof-bound exact-base admission
+= NOT YET MATERIALIZED
+
+36B6 re-anchor branch
+= CREATED / NO IMPLEMENTATION COMMIT YET
+
+36B6 re-anchor planned scope
+= 6 governance files
+
+main-native build-test
+= PASS
+
+main-native acceptance
+= FAIL / P1_SMOKE
+
+P1 first-red owner
+= B-Line W4
+
+historical #3520 QCP run 34675670606
+= INVALID CURRENT-MAIN CARRIER
+= NOT exact-main QCP evidence
+
+Production Owner live activation
+= NOT STARTED
+
+Production Runtime
+= NOT STARTED
+
+Formal-v5
+= NOT ARMED
+
+#3552
+= FROZEN / DO NOT TOUCH
+
+overall post-merge current-main convergence
+= HOLD
+```
+
+---
+
+## AG23. Exact next action
+
+下一任接手第一动作：
+
+```text
+verify protected main still exactly
+36b671ce83652e7d3ba350c3e9118342226c13a8
+```
+
+如果 drift：
+
+```text
+STOP
+→ do not apply 36B6 exact re-anchor patch
+→ rebuild exact-main reconciliation against new main
+```
+
+如果 unchanged：
+
+```text
+checkout / sync
+fix/mcft-cap09-current-main-reanchor-36b6-v1
+
+require branch base == 36b671...
+require worktree clean
+
+materialize exact 6-file governance patch
+
+run local fail-closed validation
+
+only after all local validation passes:
+commit / push
+open bounded re-anchor PR
+```
+
+不得先：
+
+```text
+rerun failed #3520 QCP
+rerun everything
+repair P1 smoke inside MCFT
+touch Production Runtime
+touch Production Owner live activation
+arm Formal-v5
+touch #3552
+```
+
+---
+
+## AG24. 踩过的坑：必须避免
+
+### AG24.1 不要把 workflow subject SHA 当成 qualification tuple
+
+错误：
+
+```text
+head SHA = current main
+→ therefore exact-main qualification
+```
+
+正确：
+
+```text
+always inspect:
+event
+associated PR
+PR base
+head
+workflow inputs
+```
+
+`34675670606` 就是典型反例。
+
+### AG24.2 不要把 durable-anchor base 与 historical authority 混为同一集合
+
+这是 H 上 QCP contract contradiction 的根因。
+
+必须继续区分：
+
+```text
+historical predecessor authority
+vs
+durable successful-run anchor base
+vs
+current proof-bound exact-base admission
+```
+
+### AG24.3 不要用 bare SHA allowlist 代替 exact proof
+
+36B6 必须通过：
+
+```text
+merge lineage
+tree equivalence
+zero candidate→merge delta
+exact changed path set
+```
+
+而不是：
+
+```text
+if base == 36b671 then pass
+```
+
+### AG24.4 不要因为 merge SHA 变化就默认 fresh qualification
+
+先判断：
+
+```text
+tree changed?
+dependency digest changed?
+binding changed?
+authority changed?
+```
+
+同树 merge 不等于“无需治理”，但也不等于“必须全部重跑”。
+
+### AG24.5 不要把 baseline carry-forward 打开
+
+必须保持：
+
+```text
+baseline_qualification_carry_forward_authorized
+= false
+```
+
+36B6 re-anchor 是 exact proof-bound admission，不是 baseline promotion。
+
+### AG24.6 不要在 MCFT PR 里修 B-Line standalone red
+
+ownership 必须保持。
+
+### AG24.7 不要从 KBS 公共页面截面推断 rows disappeared
+
+只有 active row-level observation 才能改变 temporal evidence ledger。
+
+### AG24.8 不要在 protected main 漂移后继续沿用 exact-main patch
+
+36B6 patch 只对：
+
+```text
+protected main == 36b671...
+```
+
+成立。
+
+---
+
+## AG25. 权限天花板仍未变化
+
+```text
+#3552
+= FROZEN / DO NOT TOUCH
+
+EXACT_ONE_PRODUCTION_OWNER
+= NOT LIVE-PROVEN
+
+Production Owner live activation
+= NOT STARTED
+
+Production Runtime
+= NOT STARTED
+
+Formal-v5
+= NOT ARMED
+
+A0
+= NOT STARTED
+
+O00–O23
+= NOT STARTED
+```
+
+当前只能继续：
+
+```text
+MCFT qualification/governance current-main convergence
+```
+
+不能越级进入 production runtime。
+
+---
+
+## AG26. Stop conditions
+
+以下任何一项出现，立即 STOP：
+
+```text
+protected main != 36b671...
+
+candidate tree != merged-main tree
+
+candidate→merge delta non-zero
+
+0ac2→36b671 changed path set != known 12 paths
+
+new re-anchor patch touches > 6 authorized files
+
+legacy historical predecessor set changes
+
+36b671 added as bare historical allowlist
+
+baseline qualification carry-forward becomes true
+
+registry/preflight/runtime/B-Line/#3552/Production Owner/Formal files enter diff
+
+QCP first-red appears at a new exact gate
+```
+
+遇到新 first-red：
+
+```text
+collect
+→ classify
+→ identify owner
+→ no blind rerun
+→ no repair before exact failing gate is known
+```
+
+---
+
+## AG27. Handoff exit / continuation contract
+
+本 AG 的 continuation contract：
+
+```text
+START FROM
+= protected main 36b671 exact identity check
+
+THEN
+= bounded 36B6 proof-bound re-anchor materialization
+
+THEN
+= local fail-closed validation
+
+THEN
+= governance PR / automatic qualification collection
+
+THEN
+= exact first-red adjudication
+
+NOT YET
+= Production Runtime
+= Production Owner live activation
+= Formal-v5
+= #3552
+```
+
+当前最重要的一句话：
+
+```text
+The MCFT semantic candidate is already merged with an identical tree;
+the remaining MCFT-specific gap is current-main proof-bound admission
+materialization for 36b671, while the main-native acceptance P1 red
+belongs to B-Line W4 and must not be repaired inside MCFT.
+```
+
+---
+
 # AF — 2026-09-12 CTO Gate Refinement / Bounded Run-Proof Materialization Successor / Digest-Stable No-Rerun Path
 
 > 本 section 是 AE 之后的 authoritative continuation，并记录 CTO 对当前 proof-binding successor gate 的最新显式裁决。凡本 section 与 AE 中“successor head 变化后默认重跑 Phase3 / Phase5”的保守路径冲突，以本 AF 为准；AE 及其以下全部历史 section 原样保留，作为当时状态与 RCA 记录，不做回写改写。
