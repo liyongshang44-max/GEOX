@@ -132,7 +132,8 @@
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_36B6_V1.cjs",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-0AC2-V1.json",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_0AC2_V1.cjs",
-        ".github/workflows/ci.yml"
+        ".github/workflows/ci.yml",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs"
       ]
     },
     "EA5E2_RUNTIME_GRAPH_V4": {
@@ -1682,5 +1683,31 @@
     "provider_request": false,
     "graduation_effect": false,
     "mcft_cap09_completed": false
+  },
+  "proof_bound_first_parent_successor_chain_admission": {
+    "schema_version": "geox_mcft_cap09_proof_bound_first_parent_successor_chain_admission_v1",
+    "mode": "STRUCTURAL_FIRST_PARENT_MERGE_TREE_EQUIVALENCE_WITH_CURRENT_QCP",
+    "anchor_base_sha": "b689938f6161d01dec06a1ce4ce6f24420c4b3a0",
+    "acceptance": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs",
+    "max_successor_hops": 64,
+    "first_parent_continuity_required": true,
+    "exact_two_parent_merge_required": true,
+    "merge_tree_equals_candidate_tree_required": true,
+    "candidate_descends_from_previous_base_required": true,
+    "candidate_to_merge_zero_delta_required": true,
+    "current_qcp_planner_pass_required": true,
+    "current_qcp_zero_new_unknown_paths_required": true,
+    "current_qcp_zero_authority_errors_required": true,
+    "current_qcp_zero_resolver_errors_required": true,
+    "current_qcp_zero_blockers_required": true,
+    "bare_sha_allowlist_admission_authorized": false,
+    "historical_authority_promotion_authorized": false,
+    "baseline_qualification_carry_forward_authorized": false,
+    "production_runtime_start_authorized": false,
+    "production_owner_activation_authorized": false,
+    "formal_v5_authorized": false,
+    "a0_authorized": false,
+    "o00_o23_authorized": false,
+    "current_protected_main_match_required": true
   }
 }
