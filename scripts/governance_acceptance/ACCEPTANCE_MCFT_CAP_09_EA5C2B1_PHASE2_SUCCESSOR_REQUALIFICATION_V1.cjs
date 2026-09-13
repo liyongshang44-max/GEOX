@@ -11,6 +11,8 @@ const PHASE1_BASE = "8943c752a354cb916cc7f144681203aa9a19f70b";
 const PHASE2_CLOSURE = "c3346768a44b16b127378cb690ada1d8cfec1049";
 const PROTECTED_MAIN_ADOPTION_BASE = "fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8";
 const ROLLING_STAGE_RESOLVER_BASE = "d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3";
+const SUCCESSOR_CHAIN = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs";
+const SUCCESSOR_CHAIN_OUT = "acceptance-output/MCFT_CAP_09_EA5C2B1_PROOF_BOUND_SUCCESSOR_CHAIN_RESULT.json";
 const HISTORICAL_GATE = "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs";
 const HISTORICAL_AUTHORITY = "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C2B1-LIVE-KBS-SOIL-INGRESS-EXECUTOR-V1.json";
 const HISTORICAL_ACCEPTANCE = "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS.ts";
@@ -91,7 +93,80 @@ try {
   const base = exactCommit(process.env.MCFT_BASE_SHA || PHASE1_BASE, "EA5C2B1_PHASE2_BASE_SHA_INVALID");
   const protectedMainAdoption = process.env.MCFT_CAP09_PROTECTED_MAIN_ADOPTION === "1";
   if (protectedMainAdoption) {
-    assert.ok([PROTECTED_MAIN_ADOPTION_BASE, ROLLING_STAGE_RESOLVER_BASE].includes(base), "EA5C2B1_PROTECTED_MAIN_ADOPTION_BASE_REQUIRED");
+    const legacyProtectedMainBase =
+      [PROTECTED_MAIN_ADOPTION_BASE, ROLLING_STAGE_RESOLVER_BASE].includes(base);
+
+    if (!legacyProtectedMainBase) {
+      const currentMain = git("rev-parse", "origin/main");
+      assert.equal(
+        base,
+        currentMain,
+        "EA5C2B1_PROTECTED_MAIN_SUCCESSOR_BASE_NOT_CURRENT_MAIN",
+      );
+
+      const successorRun = cp.spawnSync(
+        process.execPath,
+        [
+          path.join(ROOT, SUCCESSOR_CHAIN),
+          "--base",
+          base,
+          "--out",
+          SUCCESSOR_CHAIN_OUT,
+        ],
+        {
+          cwd: ROOT,
+          encoding: "utf8",
+        },
+      );
+
+      assert.equal(
+        successorRun.status,
+        0,
+        `EA5C2B1_PROTECTED_MAIN_SUCCESSOR_CHAIN_REQUIRED:${String(
+          successorRun.error?.message ||
+          successorRun.stderr ||
+          successorRun.stdout ||
+          "",
+        ).trim()}`,
+      );
+
+      const successor = JSON.parse(
+        fs.readFileSync(path.join(ROOT, SUCCESSOR_CHAIN_OUT), "utf8"),
+      );
+
+      assert.equal(
+        successor.status,
+        "PASS",
+        "EA5C2B1_PROTECTED_MAIN_SUCCESSOR_CHAIN_PASS_REQUIRED",
+      );
+      assert.equal(
+        successor.admitted_base_sha,
+        base,
+        "EA5C2B1_PROTECTED_MAIN_SUCCESSOR_CHAIN_BASE_MISMATCH",
+      );
+      assert.equal(
+        successor.current_protected_main_match,
+        true,
+        "EA5C2B1_PROTECTED_MAIN_SUCCESSOR_CURRENT_MAIN_MATCH_REQUIRED",
+      );
+
+      for (const key of [
+        "bare_sha_allowlist_admission_authorized",
+        "historical_authority_promotion_authorized",
+        "baseline_qualification_carry_forward_authorized",
+        "production_runtime_start_authorized",
+        "production_owner_activation_authorized",
+        "formal_v5_authorized",
+        "a0_authorized",
+        "o00_o23_authorized",
+      ]) {
+        assert.equal(
+          successor[key],
+          false,
+          `EA5C2B1_PROTECTED_MAIN_SUCCESSOR_AUTHORITY_CEILING:${key}`,
+        );
+      }
+    }
     assert.equal(git("merge-base", PHASE2_CLOSURE, "HEAD"), PHASE2_CLOSURE, "EA5C2B1_PHASE2_CLOSURE_NOT_ANCESTOR_OF_ADOPTION");
     for (const file of [HISTORICAL_GATE, HISTORICAL_AUTHORITY, HISTORICAL_ACCEPTANCE]) {
       assert.equal(
@@ -103,6 +178,7 @@ try {
     const workflow = requireMarkers(WORKFLOW, [
       "ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs",
       "ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs",
+      SUCCESSOR_CHAIN,
       PROTECTED_MAIN_ADOPTION_BASE,
       ROLLING_STAGE_RESOLVER_BASE,
       "Execute live KBS source through frozen EA3 and EA5C1 pipeline against CI-only stores",
