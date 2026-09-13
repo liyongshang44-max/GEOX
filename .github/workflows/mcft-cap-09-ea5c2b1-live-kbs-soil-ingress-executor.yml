@@ -21,6 +21,7 @@ on:
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C2B1-LIVE-KBS-SOIL-INGRESS-EXECUTOR-V1.json'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs'
       - 'scripts/runtime_acceptance/MCFT_CAP_09_EA5E2_RUNTIME_DEPENDENCY_GRAPH_V4_BINDING.cjs'
   merge_group:
     types: [checks_requested]
@@ -86,16 +87,23 @@ jobs:
           phase2_closure_sha="c3346768a44b16b127378cb690ada1d8cfec1049"
           protected_main_adoption_sha="fa6e260d8cdec4a82403a86f1c7b3d5420e44ef8"
           rolling_stage_resolver_sha="d67a2b3cce037c1eaad4d7d051d1f6a11eb09fc3"
-          if [[ "$base_sha" != "$phase1_sha" && "$base_sha" != "$phase2_closure_sha" && "$base_sha" != "$protected_main_adoption_sha" && "$base_sha" != "$rolling_stage_resolver_sha" ]]; then
-            echo "EA5C2B1_GOVERNED_PREDECESSOR_REQUIRED: $base_sha" >&2
-            exit 1
-          fi
-          echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
+
+          protected_main_adoption="0"
+
           if [[ "$base_sha" = "$protected_main_adoption_sha" || "$base_sha" = "$rolling_stage_resolver_sha" ]]; then
-            echo "protected_main_adoption=1" >> "$GITHUB_OUTPUT"
-          else
-            echo "protected_main_adoption=0" >> "$GITHUB_OUTPUT"
+            protected_main_adoption="1"
+          elif [[ "$base_sha" != "$phase1_sha" && "$base_sha" != "$phase2_closure_sha" ]]; then
+            git fetch --no-tags origin main
+            current_main="$(git rev-parse origin/main)"
+            if [[ "$base_sha" != "$current_main" ]]; then
+              echo "EA5C2B1_GOVERNED_PREDECESSOR_REQUIRED: base=$base_sha current_main=$current_main" >&2
+              exit 1
+            fi
+            protected_main_adoption="1"
           fi
+
+          echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
+          echo "protected_main_adoption=$protected_main_adoption" >> "$GITHUB_OUTPUT"
 
       - name: Install exact repository dependencies
         run: pnpm install --frozen-lockfile
@@ -107,6 +115,7 @@ jobs:
         run: |
           node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_LIVE_KBS_SOIL_INGRESS_EXECUTOR.cjs
           node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA5C2B1_PHASE2_SUCCESSOR_REQUALIFICATION_V1.cjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs
 
       - name: Validate Phase2 successor boundary without rewriting historical EA5C2B1 authority
         env:
