@@ -344,6 +344,38 @@ function main() {
   const proofBoundFreshRequalificationActive =
     proofBoundAdmissionActive &&
     proofBoundAdmission?.baseline_qualification_carry_forward_authorized === false;
+
+  const successorChainAdmissionPath =
+    "acceptance-output/MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1_RESULT.json";
+  let successorChainAdmission = null;
+  try {
+    if (fs.existsSync(path.join(ROOT, successorChainAdmissionPath))) {
+      successorChainAdmission = readJson(successorChainAdmissionPath);
+    }
+  } catch {
+    successorChainAdmission = null;
+  }
+
+  const successorChainAdmissionActive =
+    stage === "SUCCESSOR_SUBJECT_PRE_MERGE" &&
+    process.env.MCFT_CAP09_SUCCESSOR_CHAIN_BASE_ADMITTED === "true" &&
+    successorChainAdmission?.status === "PASS" &&
+    successorChainAdmission?.acceptance_id ===
+      "MCFT_CAP09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1" &&
+    successorChainAdmission?.admitted_base_sha === args.base &&
+    successorChainAdmission?.current_protected_main_sha === args.base &&
+    successorChainAdmission?.current_protected_main_match === true &&
+    successorChainAdmission?.first_parent_chain_complete === true &&
+    successorChainAdmission?.merge_tree_equivalence_all === true &&
+    successorChainAdmission?.candidate_to_merge_zero_delta_all === true &&
+    successorChainAdmission?.admission_effect ===
+      "QCP_EVALUATION_ENTRY_ONLY_CURRENT_QCP_STILL_REQUIRED" &&
+    successorChainAdmission?.baseline_qualification_carry_forward_authorized === false &&
+    successorChainAdmission?.historical_authority_promotion_authorized === false &&
+    successorChainAdmission?.runtime_mutation === false &&
+    successorChainAdmission?.production_runtime_start_authorized === false &&
+    successorChainAdmission?.formal_v5_authorized === false;
+
   const proofBoundPreservedRequiredCheckIds = [];
 
   for (const error of plan.authority_errors || []) blockers.push({ blocker_class: "AUTHORITY_DEFINITION_FAILURE", check_id: null, detail: error });
@@ -389,7 +421,8 @@ function main() {
         (/^[0-9a-f]{40}$/.test(ownerCutoverRegistrySelectionProtectedMainBase) && args.base === ownerCutoverRegistrySelectionProtectedMainBase) ||
         (/^[0-9a-f]{40}$/.test(currentProtectedMainRefreshPredecessorBase) && args.base === currentProtectedMainRefreshPredecessorBase) ||
         (/^[0-9a-f]{40}$/.test(currentCropContinuityRefreshMergeBase) && args.base === currentCropContinuityRefreshMergeBase) ||
-        proofBoundFreshRequalificationActive
+        proofBoundFreshRequalificationActive ||
+        successorChainAdmissionActive
       );
     const proofBoundBaselineRequirementPreserved =
       proofBoundBaselineActive &&

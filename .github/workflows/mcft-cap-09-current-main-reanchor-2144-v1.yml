@@ -20,6 +20,7 @@ on:
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs'
       - '.github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs'
       - '.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml'
 
 permissions:
@@ -72,8 +73,18 @@ jobs:
           elif [ "$PR_BASE_SHA" = "7cb7cdc8c00252d3c87a685fbab38d96316afa3e" ]; then
             node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1.cjs --selftest
             node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1.cjs
-          else
+          elif [ "$PR_BASE_SHA" = "2144d63477176f939a0d40d39b96ca97522af8db" ]; then
             node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_2144_V1.cjs
+          else
+            current_main="$(git rev-parse origin/main)"
+            if [ "$current_main" != "$PR_BASE_SHA" ]; then
+              echo "MCFT_CAP09_REANCHOR_CHAIN_BASE_NOT_CURRENT_MAIN:${PR_BASE_SHA}:${current_main}" >&2
+              exit 1
+            fi
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs --selftest
+            node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs \
+              --base "$PR_BASE_SHA" \
+              --out acceptance-output/MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1_RESULT.json
           fi
 
       - name: Upload immutable re-anchor declaration
@@ -82,6 +93,7 @@ jobs:
         with:
           name: mcft-cap09-current-main-reanchor-2144-${{ github.event.pull_request.head.sha }}
           path: |
+            acceptance-output/MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1_RESULT.json
             docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-B689-V1.json
             acceptance-output/MCFT_CAP_09_CURRENT_MAIN_REANCHOR_B689_V1_RESULT.json
             docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-36B6-V1.json
