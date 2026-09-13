@@ -4,6 +4,8 @@ on:
   pull_request:
     branches:
       - feat/mcft-cap09-t4r1-thermal-stage-authority-v1
+      - qual/mcft-cap09-current-main-requal-cb9-v1
+      - main
     paths:
       - .github/workflows/mcft-cap-09-t4r1-current-crop-authority-composition-v1.yml
       - docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-CURRENT-CROP-AUTHORITY-COMPOSITION-V1.json
@@ -15,6 +17,14 @@ permissions:
 
 jobs:
   qualification:
+    if: >-
+      github.base_ref == 'feat/mcft-cap09-t4r1-thermal-stage-authority-v1' ||
+      github.base_ref == 'qual/mcft-cap09-current-main-requal-cb9-v1' ||
+      (
+        github.base_ref == 'main' &&
+        github.head_ref == 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' &&
+        github.event.pull_request.base.sha == 'a8a5046f38e51fdd7b745c9e211ed61299164b23'
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -23,8 +33,43 @@ jobs:
       - name: Checkout exact candidate
         uses: actions/checkout@v4
         with:
+          ref: ${{ ((github.base_ref == 'qual/mcft-cap09-current-main-requal-cb9-v1' && github.head_ref == 'main' && github.event.pull_request.base.sha == 'cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4') || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' && github.event.pull_request.base.sha == 'a8a5046f38e51fdd7b745c9e211ed61299164b23')) && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Resolve bounded qualification mode
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MODE=HISTORICAL
+
+          if [ '${{ github.base_ref }}' = 'qual/mcft-cap09-current-main-requal-cb9-v1' ]; then
+            test '${{ github.head_ref }}' = 'main'
+            test '${{ github.event.pull_request.base.sha }}' = 'cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4'
+
+            SUBJECT='${{ github.event.pull_request.head.sha }}'
+
+            test "$(git rev-parse HEAD)" = "$SUBJECT"
+
+            git fetch --no-tags origin main
+            test "$(git rev-parse origin/main)" = "$SUBJECT"
+
+            MODE=CURRENT_MAIN_REQUALIFICATION_PR
+
+          elif [ '${{ github.base_ref }}' = 'main' ] && \
+               [ '${{ github.head_ref }}' = 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' ]; then
+
+            test '${{ github.event.pull_request.base.sha }}' = 'a8a5046f38e51fdd7b745c9e211ed61299164b23'
+            test "$(git rev-parse HEAD)" = '${{ github.event.pull_request.head.sha }}'
+
+            git fetch --no-tags origin main
+            test "$(git rev-parse origin/main)" = 'a8a5046f38e51fdd7b745c9e211ed61299164b23'
+
+            MODE=ROUTING_INSTALLATION_PR
+          fi
+
+          echo "MCFT_CAP09_REQUAL_MODE=$MODE" >> "$GITHUB_ENV"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -44,6 +89,7 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Verify exact four-file integration boundary
+        if: env.MCFT_CAP09_REQUAL_MODE == 'HISTORICAL'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_V1.cjs
 
       - name: Fresh read-only T4R1 lifecycle requalification
@@ -56,6 +102,48 @@ jobs:
 
       - name: Compose exact current-crop authority
         run: node scripts/runtime_acceptance/COMPOSE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_V1.cjs
+      - name: Verify current-main candidate authority ceiling
+        if: env.MCFT_CAP09_REQUAL_MODE != 'HISTORICAL'
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+
+          const p =
+            'acceptance-output/MCFT_CAP09_T4R1_CURRENT_CROP_AUTHORITY_COMPOSITION_RESULT.json';
+
+          const r = JSON.parse(fs.readFileSync(p, 'utf8'));
+
+          const fail = (k,v) => {
+            if (v !== false) throw new Error(`${k}:${JSON.stringify(v)}`);
+          };
+
+          if (r.status !== 'PASS')
+            throw new Error(`CURRENT_CROP_STATUS:${r.status}`);
+
+          if (r.qualification_outcome !==
+              'CURRENT_CROP_CONTEXT_AUTHORITY_CANDIDATE_RESOLVED')
+            throw new Error(`CURRENT_CROP_OUTCOME:${r.qualification_outcome}`);
+
+          for (const k of [
+            'architecture_effective',
+            'runtime_consumption_authorized',
+            'runtime_config_write_authorized',
+            'database_write_authorized',
+            'scheduler_write_authorized',
+            'formal_evidence_write_authorized',
+            'production_runtime_start_authorized',
+            'production_owner_activation_authorized',
+            'formal_v5_authorized',
+            'a0_authorized',
+            'o00_o23_authorized',
+            'mcft_cap09_completed'
+          ]) fail(k,r[k]);
+
+          console.log(JSON.stringify({
+            status:'PASS',
+            authority_ceiling_preserved:true,
+            subject_head_sha:r.subject_head_sha
+          }));
 
       - name: Upload sanitized composition evidence
         if: always()
