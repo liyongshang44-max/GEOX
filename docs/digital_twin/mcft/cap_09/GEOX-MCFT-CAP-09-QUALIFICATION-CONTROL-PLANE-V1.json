@@ -771,7 +771,11 @@
       "paths": [
         ".github/workflows/mcft-cap-09-t4r1-rolling-current-crop-candidate-v1.yml",
         "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_T4R1_ROLLING_THERMAL_SNAPSHOT_V1.cjs",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_ROLLING_THERMAL_SNAPSHOT_V1.cjs"
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_ROLLING_THERMAL_SNAPSHOT_V1.cjs",
+        ".github/workflows/mcft-cap-09-t4r1-crop-only-geometry.yml",
+        ".github/workflows/mcft-cap-09-t4r1-persistent-lifecycle-qualification.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-PERSISTENT-LIFECYCLE-QUALIFICATION-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_PERSISTENT_LIFECYCLE_QUALIFICATION.cjs"
       ]
     },
     "TWIN_V2_ROLLING_STAGE_AUTHORITY_RESOLVER_SEAM_V1": {
