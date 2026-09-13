@@ -102,8 +102,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          node --import tsx <<'NODE'
-          const fs = require("node:fs");
+          node --import tsx --input-type=module <<'NODE'
+          import fs from "node:fs";
 
           const {
             deriveExternalFormalA18CropContextIdentityHashV4,
