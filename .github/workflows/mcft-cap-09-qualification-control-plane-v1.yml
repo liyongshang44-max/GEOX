@@ -696,6 +696,12 @@ jobs:
           const registry = JSON.parse(fs.readFileSync('docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-EVIDENCE-REGISTRY-V1.json','utf8'));
           const historicalGovernedBases = new Set(authority.governed_successor_predecessor_shas || []);
           const durableAnchorBases = new Set(registry.requalification_evidence?.durable_anchors?.rules?.governed_successor_predecessors || []);
+          const proofBoundAdmissions =
+            authority.proof_bound_exact_base_admissions || [];
+          const proofBoundAdmission =
+            proofBoundAdmissions.length === 1
+              ? proofBoundAdmissions[0]
+              : null;
           if (plan.base_sha !== process.env.PR_BASE_SHA) throw new Error(`CONTROL_PLANE_PLAN_BASE_MUST_EQUAL_PR_BASE:${plan.base_sha}:${process.env.PR_BASE_SHA}`);
           const proofBoundBaseAdmitted =
             plan.base_sha === process.env.CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA &&
@@ -764,6 +770,12 @@ jobs:
             if (plan.base_sha === process.env.CURRENT_MAIN_REANCHOR_PROOF_BOUND_SHA) {
               throw new Error(
                 'CONTROL_PLANE_SUCCESSOR_CHAIN_MUST_BE_POST_ANCHOR'
+              );
+            }
+
+            if (!proofBoundAdmission) {
+              throw new Error(
+                'CONTROL_PLANE_SUCCESSOR_CHAIN_PROOF_BOUND_ADMISSION_MISSING_OR_AMBIGUOUS'
               );
             }
 
