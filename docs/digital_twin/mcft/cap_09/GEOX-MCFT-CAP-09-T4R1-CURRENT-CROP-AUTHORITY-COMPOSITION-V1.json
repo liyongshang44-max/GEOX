@@ -22,7 +22,7 @@
   },
   "lifecycle_axis": {
     "authority_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-PERSISTENT-LIFECYCLE-QUALIFICATION-V1.json",
-    "authority_blob_sha": "58891e7ac7d887e3fdbb439c60728a794c9d70c7",
+    "authority_blob_sha": "c5d83ff15d2b81753db63dfb63c5d4dede4f6552",
     "formal_site_consumer_path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V3.json",
     "required": {
       "qualification_outcome": "ACTIVE_CANDIDATE",
