@@ -149,7 +149,7 @@ jobs:
             if [ "$attempt" = 60 ]; then docker logs ea5c2b1-minio; exit 1; fi
             sleep 1
           done
-          docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -ceu '
+          docker run --rm --network host --entrypoint /bin/sh quay.io/minio/mc@sha256:993e8c454a7ec632923f7e3e61adf1d473261da6354cefd641aedd33a2cfe112 -ceu '
             mc alias set local http://127.0.0.1:9000 minioadmin minioadmin123
             mc mb --ignore-existing local/geox-mcft-cap09-formal-raw-v1
             mc anonymous set private local/geox-mcft-cap09-formal-raw-v1
