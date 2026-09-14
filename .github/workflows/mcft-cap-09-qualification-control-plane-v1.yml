@@ -834,7 +834,7 @@ jobs:
             : 'SUCCESSOR_SUBJECT_PRE_MERGE';
           if (plan.stage !== expectedStage || preflight.stage !== expectedStage) throw new Error(`CONTROL_PLANE_STAGE_ROUTE_MISMATCH:${plan.stage}:${preflight.stage}:${expectedStage}`);
           const control = plan.decisions.find(x => x.check_id === 'CONTROL_PLANE_INTEGRITY');
-          if (!control || control.status !== 'REQUALIFY') throw new Error('CONTROL_PLANE_SELF_CHANGE_MUST_REQUALIFY');
+          if (!control) throw new Error('CONTROL_PLANE_INTEGRITY_DECISION_REQUIRED');
           const assertRequalificationBinding = (row, id) => {
             if (row.dependency_digest_match !== false || !['GOVERNED_DEPENDENCY_CHANGED','DEPENDENCY_DIGEST_CHANGED','DEPENDENCY_SET_EXPANDED_SINCE_FROZEN_SUBJECT'].includes(row.reason_code)) {
               throw new Error(`${id}_REQUALIFICATION_BINDING_INVALID:${row.reason_code}`);
@@ -849,6 +849,24 @@ jobs:
             }
           };
           const phase7Adapter = 'apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts';
+          if (control.status === 'REQUALIFY') {
+            assertRequalificationBinding(control, 'CONTROL_PLANE_INTEGRITY');
+          } else if (control.status === 'REQUIRED') {
+            if (
+              control.reason_code !== 'APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE'
+              || !Array.isArray(control.changed_dependencies)
+              || control.changed_dependencies.length !== 0
+            ) {
+              throw new Error(
+                'CONTROL_PLANE_REQUIRED_BINDING_INVALID:' + control.reason_code
+              );
+            }
+          } else {
+            throw new Error(
+              'CONTROL_PLANE_INTEGRITY_UNEXPECTED_STATUS:' + control.status
+            );
+          }
+
           const phase7AdapterChanged = plan.changed_paths.includes(phase7Adapter);
           const v13Checks = [
             ['V13_AUTONOMOUS_FORCING_FOUNDATION','.github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml'],
