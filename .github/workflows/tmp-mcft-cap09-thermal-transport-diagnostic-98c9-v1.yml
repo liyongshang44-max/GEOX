@@ -61,13 +61,23 @@ jobs:
         shell: python
         run: |
           import json
+          import os
           import socket
           import time
           import urllib.error
           import urllib.request
           from pathlib import Path
 
-          cfg = json.loads(Path("$RUNNER_TEMP/mcft-cap09-rolling/docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json").read_text())
+          cfg_path = (
+              Path(os.environ["RUNNER_TEMP"])
+              / "mcft-cap09-rolling"
+              / "docs"
+              / "digital_twin"
+              / "mcft"
+              / "cap_09"
+              / "GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json"
+          )
+          cfg = json.loads(cfg_path.read_text())
           sources = cfg["r5_residual_to_maturity_model"]["sources"]
           failures = []
           for source in sources:
@@ -107,8 +117,15 @@ jobs:
         shell: python
         run: |
           import json
+          import os
           from pathlib import Path
-          p = Path("$RUNNER_TEMP/mcft-cap09-rolling/acceptance-output/MCFT_CAP09_T4R1_THERMAL_BIOLOGICAL_STAGE_PROBE_RESULT.json")
+
+          p = (
+              Path(os.environ["RUNNER_TEMP"])
+              / "mcft-cap09-rolling"
+              / "acceptance-output"
+              / "MCFT_CAP09_T4R1_THERMAL_BIOLOGICAL_STAGE_PROBE_RESULT.json"
+          )
           r = json.loads(p.read_text())
           assert r["status"] == "PASS"
           assert r["production_stage_authority_established"] is False
