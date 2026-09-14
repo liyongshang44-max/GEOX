@@ -145,7 +145,6 @@ on:
 permissions:
   contents: read
   actions: read
-  pull-requests: read
 
 env:
   FROZEN_SUCCESSOR_SHA: '3bbf096ee5cb73e8e0e0251dc400733d6cab501f'
@@ -628,40 +627,22 @@ jobs:
                 throw new Error(`REQUALIFICATION_SNAPSHOT_BASE_UNGOVERNED:${entry.evidence_id}:${snapshot.base_sha}`);
               }
 
-              if (typeof run.head_branch !== 'string' || run.head_branch.length === 0) {
-                throw new Error(`REQUALIFICATION_RUN_HEAD_BRANCH_REQUIRED:${entry.evidence_id}`);
-              }
-
-              const [repoOwner] = repo.split('/');
-              if (!repoOwner) {
-                throw new Error(`REQUALIFICATION_REPOSITORY_OWNER_REQUIRED:${entry.evidence_id}`);
-              }
-
-              const carrierCandidates = await apiMaybe(
-                `/pulls?state=all&head=${encodeURIComponent(`${repoOwner}:${run.head_branch}`)}&per_page=100`
-              );
-
-              if (!Array.isArray(carrierCandidates)) {
-                throw new Error(`REQUALIFICATION_CARRIER_QUERY_UNAVAILABLE:${entry.evidence_id}`);
-              }
-
-              const exactCarrierMatches = carrierCandidates.filter(pr =>
-                pr?.head?.sha === entry.subject_sha &&
-                pr?.head?.ref === run.head_branch &&
-                pr?.base?.sha === snapshot.base_sha
-              );
-
-              if (exactCarrierMatches.length !== 1) {
-                throw new Error(`REQUALIFICATION_EXACT_CARRIER_NOT_UNIQUE:${entry.evidence_id}:${exactCarrierMatches.length}`);
-              }
-
-              const exactCarrier = exactCarrierMatches[0];
+              const liveRunAssociationMatchesSnapshot =
+                liveRunAssociatedBases.length === 1 &&
+                liveRunAssociatedBases[0] === snapshot.base_sha;
+              const liveRunAssociationState =
+                liveRunAssociatedBases.length === 0
+                  ? 'ABSENT'
+                  : liveRunAssociationMatchesSnapshot
+                    ? 'MATCHES_DURABLE_SNAPSHOT'
+                    : 'NON_AUTHORITATIVE_DIVERGENCE';
               const runBaseSha = snapshot.base_sha;
               requalificationResults.push({
                 evidence_id:entry.evidence_id, check_id:entry.check_id, run_id:entry.run_id,
-                live_run_resolved:true, live_pr_base_resolved:true,
-                carrier_pr_number:exactCarrier.number,
-                carrier_resolution:'HEAD_SCOPED_EXACT_PR_HEAD_BASE_MATCH',
+                live_run_resolved:true,
+                live_pr_base_resolved:liveRunAssociationMatchesSnapshot,
+                base_resolution:'DURABLE_RUN_SNAPSHOT_BASE_AUTHORITY',
+                run_pull_request_association_state:liveRunAssociationState,
                 non_authoritative_run_associated_bases:liveRunAssociatedBases,
                 run_conclusion:run.conclusion, head_sha:run.head_sha,
                 base_sha:runBaseSha, workflow_name:run.name, workflow_path:run.path, event:run.event,
