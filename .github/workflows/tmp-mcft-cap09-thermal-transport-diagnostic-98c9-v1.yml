@@ -1,0 +1,118 @@
+name: TMP MCFT CAP-09 Thermal Transport Diagnostic 98c9
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/tmp-mcft-cap09-thermal-transport-diagnostic-98c9-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  thermal-transport-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact protected-main subject
+        uses: actions/checkout@v4
+        with:
+          ref: 98c944b6bec163076067b772682ac74c8f045d60
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact protected-main binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          subject="$(git rev-parse HEAD)"
+          current_main="$(git rev-parse origin/main)"
+          test "$subject" = "98c944b6bec163076067b772682ac74c8f045d60"
+          test "$current_main" = "$subject"
+          echo "MCFT_THERMAL_DIAG_EXACT_MAIN=PASS:$subject"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build rolling thermal snapshot overlay
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/mcft-cap09-rolling/docs/digital_twin/mcft/cap_09"
+          mkdir -p "$RUNNER_TEMP/mcft-cap09-rolling/docs/digital_twin/mcft"
+          mkdir -p "$RUNNER_TEMP/mcft-cap09-rolling/acceptance-output"
+          mkdir -p acceptance-output
+          node scripts/runtime_acceptance/BUILD_MCFT_CAP_09_T4R1_ROLLING_THERMAL_SNAPSHOT_V1.cjs \
+            --out "$RUNNER_TEMP/mcft-cap09-rolling/docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json" \
+            > acceptance-output/MCFT_CAP09_T4R1_ROLLING_THERMAL_SNAPSHOT_OVERLAY_PROOF.json
+          cp docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json \
+            "$RUNNER_TEMP/mcft-cap09-rolling/docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json"
+
+      - name: Probe authoritative R5 transport with existing bounded policy
+        shell: python
+        run: |
+          import json
+          import socket
+          import time
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          cfg = json.loads(Path("$RUNNER_TEMP/mcft-cap09-rolling/docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-THERMAL-BIOLOGICAL-STAGE-AUTHORITY-V1.json").read_text())
+          sources = cfg["r5_residual_to_maturity_model"]["sources"]
+          failures = []
+          for source in sources:
+              source_id = source["source_id"]
+              url = source["official_url"]
+              ok = False
+              for attempt in range(3):
+                  started = time.monotonic()
+                  req = urllib.request.Request(url, headers={"User-Agent": "GEOX-MCFT-CAP09-stage-authority-qualification/1.0"})
+                  try:
+                      with urllib.request.urlopen(req, timeout=30) as response:
+                          response.read()
+                          status = getattr(response, "status", 200)
+                          final_url = response.geturl()
+                      elapsed = round(time.monotonic() - started, 3)
+                      print(json.dumps({"source_id": source_id, "attempt": attempt + 1, "result": "PASS", "status": status, "elapsed_seconds": elapsed, "official_url": url, "final_url": final_url}, sort_keys=True))
+                      if status == 200:
+                          ok = True
+                          break
+                      raise RuntimeError(f"SOURCE_HTTP_STATUS:{status}")
+                  except (urllib.error.HTTPError, urllib.error.URLError, socket.timeout, TimeoutError, RuntimeError) as exc:
+                      elapsed = round(time.monotonic() - started, 3)
+                      print(json.dumps({"source_id": source_id, "attempt": attempt + 1, "result": "FAIL", "failure_class": type(exc).__name__, "detail": str(exc), "elapsed_seconds": elapsed, "official_url": url}, sort_keys=True))
+                      if attempt < 2:
+                          time.sleep(2 ** attempt)
+              if not ok:
+                  failures.append(source_id)
+          if failures:
+              raise SystemExit("MCFT_THERMAL_TRANSPORT_DIAGNOSTIC_FAIL:" + ",".join(failures))
+          print("MCFT_THERMAL_TRANSPORT_DIAGNOSTIC=PASS")
+
+      - name: Run unchanged thermal scientific probe against overlay
+        working-directory: ${{ runner.temp }}/mcft-cap09-rolling
+        run: python "$GITHUB_WORKSPACE/scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY_V1.py"
+
+      - name: Assert thermal probe PASS and authority ceiling
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+          p = Path("$RUNNER_TEMP/mcft-cap09-rolling/acceptance-output/MCFT_CAP09_T4R1_THERMAL_BIOLOGICAL_STAGE_PROBE_RESULT.json")
+          r = json.loads(p.read_text())
+          assert r["status"] == "PASS"
+          assert r["production_stage_authority_established"] is False
+          assert r["runtime_start_authorized"] is False
+          assert r["formal_v5_authorized"] is False
+          assert r["a0_o00_authorized"] is False
+          print(json.dumps({"status": "PASS", "candidate_outcome": r["candidate_outcome"], "thermal_method": r["thermal_method"], "writes": r["writes"], "formal_v5_authorized": r["formal_v5_authorized"]}, sort_keys=True))
