@@ -1,0 +1,150 @@
+{
+  "schema_version": "geox_mcft_cap09_production_evidence_runtime_private_store_binding_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-RUNTIME-PRIVATE-STORE-BINDING-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "frontier_id": "PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_IDENTITY_BINDING",
+  "record_status": "NON_SECRET_BINDING_IDENTITY_DEFINED_PROVIDER_MATERIALIZATION_PENDING",
+  "base_main_sha": "9360c2cd06961688fd192803c7006a29fc9bca4e",
+
+  "runtime_contract": {
+    "process_ref": "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
+    "raw_storage_authority": "EVIDENCE_RUNTIME_S3_CREDENTIALS_ONLY",
+    "database_principal": "geox_mcft_cap09_evidence_runtime_login_v1"
+  },
+
+  "binding_identity": {
+    "provider_contract": "S3_COMPATIBLE_PRIVATE_OBJECT_STORE",
+
+    "physical_provider": "CLOUDFLARE_R2",
+    "physical_provider_selection_status": "EXPLICIT_INFRASTRUCTURE_ADJUDICATION_NOT_YET_MATERIALIZED",
+
+    "same_r2_account_as_formal_raw_allowed": true,
+
+    "bucket": "geox-mcft-cap09-evidence-runtime-v1",
+    "bucket_identity_must_be_explicit": true,
+    "bucket_must_be_separate_from_formal_raw": true,
+
+    "formal_raw_bucket": "geox-mcft-cap09-formal-raw-v1",
+    "formal_raw_bucket_reuse_allowed": false,
+
+    "credential_scope": "BUCKET_SCOPED",
+    "credential_must_be_separate_from_formal_raw": true,
+    "silent_formal_raw_credential_alias_allowed": false,
+
+    "credential_source": "PROCESS_ENVIRONMENT_SECRET_BINDING",
+    "credential_material_repository_allowed": false,
+
+    "endpoint_transport": "HTTPS_ONLY",
+    "local_or_ci_fallback_allowed": false,
+    "provider_specific_runtime_branching_required": false
+  },
+
+  "required_secret_bindings": [
+    "GEOX_MCFT_CAP09_EVIDENCE_S3_ENDPOINT",
+    "GEOX_MCFT_CAP09_EVIDENCE_S3_BUCKET",
+    "GEOX_MCFT_CAP09_EVIDENCE_S3_REGION",
+    "GEOX_MCFT_CAP09_EVIDENCE_S3_ACCESS_KEY_ID",
+    "GEOX_MCFT_CAP09_EVIDENCE_S3_SECRET_ACCESS_KEY"
+  ],
+
+  "forbidden_formal_raw_secret_aliases": [
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID",
+    "GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY"
+  ],
+
+  "formal_raw_separation": {
+    "authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C2A-FORMAL-RAW-STORE-BINDING-CONTRACT-V1.json",
+    "provider_contract": "S3_COMPATIBLE_PRIVATE_OBJECT_STORE",
+    "bucket": "geox-mcft-cap09-formal-raw-v1",
+    "separate_bucket_identity_required": true,
+    "separate_credential_identity_required": true
+  },
+
+  "credential_rematerialization_readiness_contract": {
+    "new_current_state_verifier_required": true,
+    "historical_zero_row_provisioning_verifier_reuse_forbidden": true,
+
+    "operational_database_name": "geox_mcft_cap09_production_runtime_v1",
+    "exact_table_count": 41,
+
+    "non_lease_production_state_rows_must_be_zero": true,
+
+    "historical_expired_evidence_lease_residue_allowed": true,
+    "historical_expired_twin_lease_residue_allowed": true,
+
+    "current_live_evidence_owner_count_required": 0,
+    "current_live_twin_owner_count_required": 0,
+
+    "existing_evidence_login_principal_must_be_preserved": true,
+    "existing_twin_login_principal_must_be_preserved": true,
+
+    "login_role_recreation_allowed": false,
+    "password_rotation_only": true,
+
+    "exact_one_privilege_membership_each_required": true,
+    "cross_plane_membership_allowed": false,
+
+    "both_role_specific_urls_must_target_same_operational_database": true,
+
+    "storage_capability_proof_required": [
+      "AUTHENTICATED_PUT",
+      "AUTHENTICATED_HEAD",
+      "AUTHENTICATED_DELETE"
+    ],
+
+    "formal_raw_bucket_alias_forbidden": true,
+    "formal_raw_credential_alias_forbidden": true
+  },
+
+  "effect_if_merged_to_protected_main": {
+    "production_evidence_private_store_identity_defined": true,
+
+    "cloudflare_r2_bucket_created": false,
+    "evidence_s3_credential_created": false,
+
+    "local_operator_secret_materialized": false,
+    "github_secret_materialized": false,
+
+    "database_password_rotated": false,
+
+    "runtime_process_start": false,
+    "production_owner_activation": false,
+
+    "formal_v5_arm": false,
+    "a0_authorized": false,
+    "o00_o23_started": false,
+
+    "mcft_cap09_completed": false
+  },
+
+  "next_stage": {
+    "stage": "PROVIDER_AND_CREDENTIAL_MATERIALIZATION",
+
+    "separate_explicit_operator_authorization_required": true,
+
+    "cloudflare_mutation_authorized_by_this_record": false,
+    "neon_password_rotation_authorized_by_this_record": false,
+    "runtime_start_authorized_by_this_record": false,
+
+    "qcp_registration_may_be_required_as_separate_successor": true
+  },
+
+  "hard_nonclaims": [
+    "NO_CLOUDFLARE_BUCKET_CREATED",
+    "NO_CLOUDFLARE_CREDENTIAL_CREATED",
+    "NO_FORMAL_RAW_BUCKET_REUSE",
+    "NO_FORMAL_RAW_CREDENTIAL_REUSE",
+    "NO_DATABASE_PASSWORD_ROTATION",
+    "NO_DATABASE_ROLE_RECREATION",
+    "NO_DATABASE_SCHEMA_MUTATION",
+    "NO_RUNTIME_PROCESS_START",
+    "NO_PRODUCTION_OWNER_ACTIVATION",
+    "NO_FORMAL_V5_ARM",
+    "NO_A0_EXECUTION",
+    "NO_O00_O23_START",
+    "NO_MCFT_CAP09_COMPLETION"
+  ]
+}

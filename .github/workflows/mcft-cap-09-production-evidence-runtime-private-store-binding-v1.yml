@@ -1,0 +1,63 @@
+name: MCFT CAP-09 Production Evidence Runtime Private Store Binding
+
+on:
+  pull_request:
+    paths:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-RUNTIME-PRIVATE-STORE-BINDING-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1.cjs'
+      - '.github/workflows/mcft-cap-09-production-evidence-runtime-private-store-binding-v1.yml'
+      - 'apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C2A-FORMAL-RAW-STORE-BINDING-CONTRACT-V1.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-production-evidence-private-store-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  binding-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    env:
+      MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+
+    steps:
+      - name: Checkout exact PR subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Syntax-check binding acceptance
+        run: >-
+          node --check
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1.cjs
+
+      - name: Verify non-secret production Evidence private-store binding
+        run: >-
+          node
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1.cjs
+
+      - name: Run fail-closed binding selftest
+        run: >-
+          node
+          scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1.cjs
+          --selftest
+
+      - name: Upload binding proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-production-evidence-private-store-binding-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
