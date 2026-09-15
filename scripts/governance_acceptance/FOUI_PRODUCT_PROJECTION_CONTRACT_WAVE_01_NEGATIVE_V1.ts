@@ -10,13 +10,29 @@ import {
   assertProductProjectionInteractionHintsV1,
   deriveCapabilityAvailabilityStateV1,
   type ProductProjectionEnvelopeV1,
+  type ProductProjectionNonAuthorityRefClassV1,
 } from "../../apps/server/src/product_projection/contracts/product_projection_contracts_v1.ts";
 
 const TS = "2026-09-15T12:00:00.000Z";
 
+type AuthorityFixtureRef = {
+  ref_key: string;
+  authority_domain: "MCFT" | "ADR" | "B_LINE" | "OUTCOME" | "EXTERNAL";
+  authority_object_kind: string;
+  exact_ref: string;
+};
+
+type NonAuthorityFixtureRef = {
+  ref_key: string;
+  ref_class: ProductProjectionNonAuthorityRefClassV1;
+  object_kind: string;
+  exact_ref: string;
+};
+
 function envelope(
   projection_type: ProductProjectionEnvelopeV1["projection_type"],
-  refs: Array<{ ref_key: string; authority_domain: "MCFT" | "ADR" | "B_LINE" | "OUTCOME" | "EXTERNAL"; authority_object_kind: string; exact_ref: string }> = [],
+  refs: AuthorityFixtureRef[] = [],
+  nonAuthorityRefs: NonAuthorityFixtureRef[] = [],
 ): ProductProjectionEnvelopeV1 {
   return {
     projection_id: `proj:${projection_type.toLowerCase()}:1`,
@@ -33,6 +49,7 @@ function envelope(
       season_id: "season2026",
     },
     source_authority_refs: refs.map((ref) => ({ ...ref, source_fact_ref: null })),
+    source_non_authority_refs: nonAuthorityRefs.map((ref) => ({ ...ref, source_fact_ref: null })),
     source_content_digests: [],
     source_effective_interval: {
       mode: "NOT_ESTABLISHED",
@@ -136,7 +153,7 @@ function expectCode(code: string, fn: () => void): void {
   });
 }
 
-// PP-01: all projections are explicitly non-authoritative.
+// PP-01: every product projection is explicitly non-authoritative.
 {
   const valid = envelope("ATTENTION_QUEUE");
   assert.doesNotThrow(() => assertProductProjectionEnvelopeV1(valid));
@@ -145,7 +162,26 @@ function expectCode(code: string, fn: () => void): void {
   );
 }
 
-// Amendment-02: UI interaction hint never substitutes command authorization.
+// Ref taxonomy: authority and non-authority keys share one namespace but not one semantic class.
+{
+  const valid = envelope(
+    "GOVERNED_ACTION_CASE",
+    [{ ref_key: "decision", authority_domain: "ADR", authority_object_kind: "DecisionResult", exact_ref: "adr:decision:1" }],
+    [{ ref_key: "manifest", ref_class: "COMPOSITION_MANIFEST", object_kind: "DecisionTimeAuthorityManifest", exact_ref: "manifest:1" }],
+  );
+  assert.doesNotThrow(() => assertProductProjectionEnvelopeV1(valid));
+  expectCode("PRODUCT_PROJECTION_DUPLICATE_SOURCE_REF_KEY", () =>
+    assertProductProjectionEnvelopeV1({
+      ...valid,
+      source_non_authority_refs: [
+        ...valid.source_non_authority_refs,
+        { ref_key: "decision", ref_class: "OTHER_NON_AUTHORITY", object_kind: "BadAlias", exact_ref: "bad:1", source_fact_ref: null },
+      ],
+    }),
+  );
+}
+
+// Amendment-02: interaction hint never substitutes command authorization.
 {
   const valid = envelope("GOVERNED_ACTION_CASE", [
     { ref_key: "approval", authority_domain: "B_LINE", authority_object_kind: "ApprovalRequest", exact_ref: "bline:approval:1" },
@@ -176,7 +212,7 @@ function expectCode(code: string, fn: () => void): void {
   );
 }
 
-// CAP-01/CAP-02/CAP-03: availability is derived from implementation + authority + operational eligibility.
+// CAP-01/CAP-02/CAP-03: availability is three-axis derived and product release basis is non-authority governance.
 {
   assert.deepEqual(
     deriveCapabilityAvailabilityStateV1({ product_implementation: "BUILT", authority_maturity: "AUTHORIZED", operational_eligibility: "CURRENT" }),
@@ -191,9 +227,11 @@ function expectCode(code: string, fn: () => void): void {
     { customer_state: "LIMITED", default_release_surface_state: "DISABLED" },
   );
   const preview = {
-    envelope: envelope("CAPABILITY_AVAILABILITY", [
-      { ref_key: "adr_shadow", authority_domain: "ADR" as const, authority_object_kind: "DecisionResultProjection", exact_ref: "adr:shadow:1" },
-    ]),
+    envelope: envelope(
+      "CAPABILITY_AVAILABILITY",
+      [{ ref_key: "adr_shadow", authority_domain: "ADR" as const, authority_object_kind: "DecisionResultProjection", exact_ref: "adr:shadow:1" }],
+      [{ ref_key: "release_manifest", ref_class: "PRODUCT_GOVERNANCE" as const, object_kind: "ProductReleaseManifest", exact_ref: "product-release:1" }],
+    ),
     capability_id: "ADR_DECISION",
     availability_scope: { scope_kind: "FIELD" as const, field_id: "field17", zone_id: null, action_type: null },
     product_implementation: "BUILT" as const,
@@ -202,18 +240,21 @@ function expectCode(code: string, fn: () => void): void {
     customer_state: "PREVIEW" as const,
     default_release_surface_state: "PREVIEW" as const,
     reason_codes: ["ADR_AUTHORITATIVE_CUTOVER_NOT_COMPLETE"],
-    product_release_basis_ref_keys: [],
+    product_release_basis_ref_keys: ["release_manifest"],
     authority_maturity_basis_ref_keys: ["adr_shadow"],
-    operational_eligibility_basis_ref_keys: [],
+    operational_eligibility_basis_ref_keys: ["adr_shadow"],
     evaluated_at: TS,
   };
   assert.doesNotThrow(() => assertCapabilityAvailabilityProjectionV1(preview));
   expectCode("CAPABILITY_AVAILABILITY_DERIVATION_MISMATCH", () =>
     assertCapabilityAvailabilityProjectionV1({ ...preview, customer_state: "AVAILABLE", default_release_surface_state: "ACTIVE" }),
   );
+  expectCode("CAPABILITY_AVAILABILITY_PRODUCT_BASIS_MUST_BE_PRODUCT_GOVERNANCE_REF", () =>
+    assertCapabilityAvailabilityProjectionV1({ ...preview, product_release_basis_ref_keys: ["adr_shadow"] }),
+  );
 }
 
-// AC-02: exact composition cannot be asserted without exact linkage proof.
+// AC-02: exact composition cannot be asserted without explicit exact linkage proof.
 {
   const action = unresolvedActionCase();
   assert.doesNotThrow(() => assertGovernedActionCaseProjectionV1(action));
@@ -222,25 +263,52 @@ function expectCode(code: string, fn: () => void): void {
   );
 }
 
-// AC-03/AC-04: historical basis never falls back to current MCFT state.
+// Amendment-03: historical basis never falls back to current MCFT state.
 {
   const action = unresolvedActionCase();
   expectCode("GOVERNED_ACTION_CASE_UNAVAILABLE_BASIS_CANNOT_FALLBACK", () =>
     assertGovernedActionCaseProjectionV1({
       ...action,
-      decision_time_basis: {
-        ...action.decision_time_basis,
-        field_state_ref_at_decision_key: "current_state",
-      },
+      decision_time_basis: { ...action.decision_time_basis, field_state_ref_at_decision_key: "current_state" },
     }),
   );
   expectCode("GOVERNED_ACTION_CASE_CURRENT_STATE_SUBSTITUTION_FORBIDDEN", () =>
     assertGovernedActionCaseProjectionV1({
       ...action,
-      decision_time_basis: {
-        ...action.decision_time_basis,
-        current_state_substitution_forbidden: false,
-      },
+      decision_time_basis: { ...action.decision_time_basis, current_state_substitution_forbidden: false },
+    }),
+  );
+}
+
+// DecisionTimeAuthorityManifest is an immutable composition/replay envelope, never an authority ref.
+{
+  const exact = unresolvedActionCase();
+  exact.envelope = envelope(
+    "GOVERNED_ACTION_CASE",
+    [
+      { ref_key: "decision", authority_domain: "ADR", authority_object_kind: "DecisionResult", exact_ref: "adr:decision:1" },
+      { ref_key: "current_state", authority_domain: "MCFT", authority_object_kind: "FieldState", exact_ref: "mcft:state:current" },
+      { ref_key: "decision_state", authority_domain: "MCFT", authority_object_kind: "FieldState", exact_ref: "mcft:state:decision" },
+    ],
+    [{ ref_key: "manifest", ref_class: "COMPOSITION_MANIFEST", object_kind: "DecisionTimeAuthorityManifest", exact_ref: "manifest:1" }],
+  );
+  exact.decision_time_basis = {
+    ...exact.decision_time_basis,
+    basis_integrity: "EXACT_MANIFEST",
+    historical_basis_source: "HISTORICAL_REPLAY",
+    decision_time: "2026-09-15T09:42:00.000Z",
+    evidence_cutoff: "2026-09-15T09:40:00.000Z",
+    decision_time_manifest_ref_key: "manifest",
+    field_state_ref_at_decision_key: "decision_state",
+    decision_basis_ref_keys: ["manifest", "decision_state"],
+    decision_basis_digest: "sha256:decision-basis-fixture",
+    capture_integrity: "LATER_RECONSTRUCTED",
+  };
+  assert.doesNotThrow(() => assertGovernedActionCaseProjectionV1(exact));
+  expectCode("GOVERNED_ACTION_CASE_MANIFEST_MUST_BE_NON_AUTHORITY_COMPOSITION_REF", () =>
+    assertGovernedActionCaseProjectionV1({
+      ...exact,
+      decision_time_basis: { ...exact.decision_time_basis, decision_time_manifest_ref_key: "decision" },
     }),
   );
 }
@@ -249,6 +317,15 @@ function expectCode(code: string, fn: () => void): void {
 {
   const action = unresolvedActionCase();
   expectCode("GOVERNED_ACTION_CASE_UNRESOLVED_MUST_DISPLAY_LINKAGE_INCOMPLETE", () =>
+    assertGovernedActionCaseProjectionV1({ ...action, derived_display_phase: "AWAITING_APPROVAL" }),
+  );
+}
+
+// Display phase itself cannot mint downstream authority.
+{
+  const action = unresolvedActionCase();
+  action.composition_status = "PARTIAL_REF_LINKED";
+  expectCode("GOVERNED_ACTION_CASE_AWAITING_APPROVAL_PHASE_REQUIRES_PENDING_APPROVAL_REF", () =>
     assertGovernedActionCaseProjectionV1({ ...action, derived_display_phase: "AWAITING_APPROVAL" }),
   );
 }
@@ -278,10 +355,7 @@ function expectCode(code: string, fn: () => void): void {
   };
   assert.doesNotThrow(() => assertAttentionQueueProjectionV1(valid));
   expectCode("ATTENTION_QUEUE_PRODUCT_OWNED_PRIORITY_FORBIDDEN", () =>
-    assertAttentionQueueProjectionV1({
-      ...valid,
-      items: [{ ...valid.items[0], priority: "CRITICAL" }],
-    }),
+    assertAttentionQueueProjectionV1({ ...valid, items: [{ ...valid.items[0], priority: "CRITICAL" }] }),
   );
   expectCode("ATTENTION_QUEUE_SOURCE_SEVERITY_REF_UNKNOWN", () =>
     assertAttentionQueueProjectionV1({
