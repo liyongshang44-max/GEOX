@@ -46,6 +46,10 @@ const schema = JSON.parse(schemaText);
 // P0 common envelope invariants.
 mustContain(contract, 'NON_AUTHORITATIVE_PRODUCT_PROJECTION_ONLY', 'P0 authority ceiling');
 mustContain(contract, 'non_authoritative: true', 'P0 non-authoritative invariant');
+mustContain(contract, 'source_authority_refs', 'P0 authority refs');
+mustContain(contract, 'source_non_authority_refs', 'P0 non-authority refs');
+mustContain(contract, 'COMPOSITION_MANIFEST', 'P0 composition manifest classification');
+mustContain(contract, 'PRODUCT_GOVERNANCE', 'P0 product governance classification');
 mustContain(contract, 'CURRENT_PROJECTION', 'P0 current semantics');
 mustContain(contract, 'DECISION_TIME_SNAPSHOT', 'P0 decision-time semantics');
 mustContain(contract, 'HISTORICAL_REPLAY', 'P0 historical replay semantics');
@@ -58,6 +62,8 @@ mustContain(contract, 'current_state_substitution_forbidden: true', 'P1 no-curre
 mustContain(contract, 'later_changes', 'P1 later changes isolation');
 mustContain(contract, 'EXACT_REF_LINKED', 'P1 exact composition');
 mustContain(contract, 'UNRESOLVED', 'P1 unresolved composition');
+mustContain(contract, 'GOVERNED_ACTION_CASE_MANIFEST_MUST_BE_NON_AUTHORITY_COMPOSITION_REF', 'P1 manifest authority-promotion guard');
+mustContain(negative, 'DecisionTimeAuthorityManifest is an immutable composition/replay envelope, never an authority ref.', 'P1 manifest negative proof');
 
 // Product triage is explicitly not product-owned risk authority.
 mustContain(contract, 'presentation_rank', 'P3 presentation rank');
@@ -72,14 +78,19 @@ mustContain(contract, 'product_implementation', 'P2 implementation axis');
 mustContain(contract, 'authority_maturity', 'P2 authority axis');
 mustContain(contract, 'operational_eligibility', 'P2 operational axis');
 mustContain(contract, 'CAPABILITY_AVAILABILITY_DERIVATION_MISMATCH', 'P2 deterministic mapping guard');
+mustContain(contract, 'CAPABILITY_AVAILABILITY_PRODUCT_BASIS_MUST_BE_PRODUCT_GOVERNANCE_REF', 'P2 product-governance basis guard');
 
 // JSON schema must carry the same safety boundary.
 assert.equal(schema.$schema, 'https://json-schema.org/draft/2020-12/schema');
-for (const def of ['ProductProjectionEnvelopeV1', 'GovernedActionCaseProjectionV1', 'CapabilityAvailabilityProjectionV1', 'AttentionQueueProjectionV1']) {
+for (const def of ['ProductProjectionEnvelopeV1', 'GovernedActionCaseProjectionV1', 'CapabilityAvailabilityProjectionV1', 'AttentionQueueProjectionV1', 'AuthorityRef', 'NonAuthorityRef']) {
   assert.ok(schema.$defs && schema.$defs[def], `JSON schema missing $defs.${def}`);
 }
 assert.equal(schema.$defs.ProductProjectionEnvelopeV1.properties.non_authoritative.const, true);
 assert.equal(schema.$defs.ProductProjectionEnvelopeV1.properties.authority_ceiling.const, 'NON_AUTHORITATIVE_PRODUCT_PROJECTION_ONLY');
+assert.ok(schema.$defs.ProductProjectionEnvelopeV1.properties.source_authority_refs);
+assert.ok(schema.$defs.ProductProjectionEnvelopeV1.properties.source_non_authority_refs);
+assert.ok(schema.$defs.NonAuthorityRef.properties.ref_class.enum.includes('COMPOSITION_MANIFEST'));
+assert.ok(schema.$defs.NonAuthorityRef.properties.ref_class.enum.includes('PRODUCT_GOVERNANCE'));
 assert.equal(schema.$defs.InteractionIntentHint.properties.requires_command_reauthorization.const, true);
 assert.equal(schema.$defs.GovernedActionCaseProjectionV1.properties.decision_time_basis.properties.current_state_substitution_forbidden.const, true);
 
