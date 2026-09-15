@@ -1,3 +1,723 @@
+# AH — 2026-09-15 Post-Merge 41FC31 Event Attribution / Successor Admission Coverage / Credential Re-Materialization Frontier
+
+> 本 section 是 AG 之后的当前 continuation entry point。AG 的 36B6 re-anchor、P1 first-red 与各旧 exact-head 状态已被后续事实推进；不得把 AG 的待办重新当作当前任务。
+>
+> 本 AH 以 pure-prepend 加入；AG 及其以下全部历史字节原样保留。旧段落的 SHA、权限范围和待办只对当时裁决有效，不覆盖 AH。
+>
+> 这是 conversation-continuation handoff，不是新的 architecture authority、production authorization、credential rotation ARM 或 Formal-v5 ARM。本次只更新 handoff 与其 PR 索引。
+
+---
+
+## AH0. 一句话接手结论
+
+MCFT-CAP-09 / Stage 1B 的当前任务是：在 #3567 已合入的 protected main 上，完成 post-merge qualification / successor admission coverage 裁决，然后才进入已定义的 credential re-materialization successor。
+
+```text
+protected main
+= 41fc31ad63e9dafa8a857e86f4455a120710dd79
+
+#3567
+= MERGED
+
+TRUE_POST_MERGE_PUSH_COUNT
+= 2
+
+TRUE_POST_MERGE_PUSH_FIRST_RED
+= NONE
+
+POST_MERGE_PUSH_QUALIFICATION
+= NO_ACTIVE_RED
+
+TARGET_SUCCESSOR_GATES_MATCHED_ON_PUSH
+= 0
+
+SUCCESSOR_ADMISSION_COVERAGE
+= NOT YET ADJUDICATED
+
+NEXT
+= ADJUDICATE SUCCESSOR ADMISSION COVERAGE
+
+credential re-materialization execution
+= NOT PERFORMED IN THIS HANDOFF
+
+EXACT_ONE_PRODUCTION_OWNER
+= NOT ESTABLISHED BY CURRENT EVIDENCE
+
+Formal-v5 / A0 / O00–O23
+= HOLD / NO NEW AUTHORIZATION
+```
+
+两条 push 成功是已发生事实；目标 gates 在这两条 push 中缺席也是已发生事实。“没有 push 红灯”不构成“successor admission 已通过”。
+
+另有独立的 temporal blocker：最新合入的 current-crop authority 截止于 2026-09-15T10:00:00Z。本次复核约在 2026-09-15T18:03Z，不能再用该窗口证明现在或未来 A0 的 freshness。
+
+---
+
+## AH1. 证据来源与可信边界
+
+本 AH 依据：
+
+1. 用户本轮完整 Windows / PowerShell 输出：fetch main、expected/actual SHA、110 条 exact-SHA runs 的事件分组及真实 push 结果。
+2. 本轮 GitHub 只读复核：main branch、#3298 / #3557 / #3561 / #3562 / #3565 / #3566 / #3567 metadata、commit lineage/tree、41fc31 的两页 runs、fec44b 的 candidate runs，以及 exact-main workflow/authority 原文。
+3. 用户补充的本地 MinIO 修复原始 transcript：fb2424 的正确 parent、单文件单行 diff 和 fast-forward push。
+4. 找回的历史对话只作为历史补充；未重新读取的旧 CI step/log 不冒充本轮直接复核结果。
+
+本轮未连接用户 Windows Docker、Neon 当前数据或 Cloudflare 账户。因此不能把仓库 contract 的预期值写成实际 live owner count、实际 bucket 创建状态或实际密码可用性。
+
+---
+
+## AH2. AG 之后已经完成的主线进展
+
+下表 merge SHA 已从当前 main 的提交链或对应 PR metadata 核实。
+
+| PR | 完成事项 | 合并后的 main |
+| --- | --- | --- |
+| #3554 | 36B6 proof-bound current-main re-anchor；AG 的待施工事项已完成 | b689938f6161d01dec06a1ce4ce6f24420c4b3a0 |
+| #3555 | B689 current-main re-anchor | d6bcdda9ee2b0955057234ef3506237ccd221e90 |
+| #3556 | proof-bound first-parent protected-main successor chain | cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4 |
+| #3557 | T4R1 lifecycle successor effectiveness、EA5C2B1 successor seam、CI MinIO/mc pin、fresh Phase2 provider evidence | 06176baf18591a6c00d2622ad9a80a20d0bb6045 |
+| #3558 | T4R1 current-crop lifecycle authority blob pin 修复 | a8a5046f38e51fdd7b745c9e211ed61299164b23 |
+| #3559 | current-main requalification PR carriers；A18 bounded proof ESM stdin 修复 | 61634e7e367695bc11a22f3f93b022ff3169369e |
+| #3561 | 五条 exact-M1 durable evidence 与 QCP immutable-reference resolver 合并收敛 | 98c944b6bec163076067b772682ac74c8f045d60 |
+| #3565 | QCP CONTROL_PLANE_INTEGRITY 的合法 REQUIRED 状态准入修复 | 3077c5ec8787a2e3fda01b8641f9665345102876 |
+| #3566 | 2026-09-14T04Z fresh current-crop authority + 单条 registry append | 9360c2cd06961688fd192803c7006a29fc9bca4e |
+| #3567 | Production Evidence Runtime private-store 非秘密身份定义 + QCP registration/diagnostic base binding | 41fc31ad63e9dafa8a857e86f4455a120710dd79 |
+
+#3562 的 resolver 修复已被 #3561 吸收；本轮核实其 CLOSED / NOT MERGED，不再单独合并。#3560 是历史 qualification-only carrier（#3561 记录其 CLOSED / NOT MERGED）；#3564 的 stale exact-subject construction 已由 #3566 supersede。
+
+不要补造未核实的 #3563 结论，不要为了编号完整而把所有 PR 写成已合并。
+
+---
+
+## AH3. EA5C2B1 / MinIO 阶段已推进，不能停在旧等待点
+
+用户原始本地记录已证明：
+
+```text
+clean server pin commit
+= fb2424e98c44bf5c57fc02bd108ac26b89fdc4f5
+
+sole parent
+= b57aa11a3bc7aac9b5deb3291e073ae4d074f8e8
+
+changed files
+= 1
+
+delta
+= 1 insertion / 1 deletion
+
+file
+= .github/workflows/mcft-cap-09-ea5c2b1-live-kbs-soil-ingress-executor.yml
+
+remote lease
+= PASS
+
+push
+= b57aa11a3..fb2424e98 / FAST-FORWARD SUCCESS
+```
+
+server image：
+
+```text
+quay.io/minio/minio@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e
+```
+
+旧回复里“fb2424 的 Typecheck running，等 Step16/17”已经不是最新状态。后续主线包含：
+
+```text
+efeee9ff3fca7a897913f04c74fcea822d258f63
+= pin EA5C2B1 regression mc image
+
+e2d04f75e92dfc6d02bef75e28273f2d55605458
+= bind fresh Phase2 provider evidence
+= #3557 final head
+
+#3557 merged
+= 2026-09-13T12:03:38Z
+```
+
+历史对话记录的关键顺序：server pull/start/health 通过后，Step16 又暴露 minio/mc:latest pull denied；client pin 后 Step16/17、private-store、nonclaims 通过；随后 QCP 暴露 dependency_digest_match=false，需要 fresh current-digest durable evidence。记录中的 fresh run 是 34748267539；该 run 的逐 step 原始日志本轮未重取。
+
+当前不能继续把 MinIO pin 当作 active P0，也不能把 CI-only S3 regression store 成功解释为 production Evidence R2 store 已物化。
+
+---
+
+## AH4. #3561 / #3565 的修复语义必须保留
+
+#3561 修复的是 durable evidence 与可变反向关联之间的 authority 错配：
+
+```text
+durable run_snapshot.base_sha
+= governed recorded base authority
+
+live Actions run
+= still must match success / subject SHA /
+  workflow name / workflow path / event
+
+run.pull_requests[]
+= diagnostic corroboration only
+= must not override durable snapshot
+```
+
+历史 carrier PR 可能已前移；不能要求历史 run 总能找到“当前 head/ref/base 完全相同”的 live PR，否则合法历史 evidence 会被误拒绝。反向关联缺失或漂移要记录，但不能删除 live-run 身份和成功状态核验。
+
+#3565 的真实 first red 为 Validate control-plane machine proof：planner 与 blocker inventory 已 PASS / zero blockers，但 CONTROL_PLANE_INTEGRITY 为 REQUIRED，validator 错误地无条件要求 REQUALIFY。
+
+修复只允许：
+
+```text
+status = REQUIRED
+reason = APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE
+changed dependencies = 0
+```
+
+同时保留 REQUALIFY 原有 fail-closed 校验；不是把任意 REQUIRED 或任意 reason 都放行。
+
+这些修复已合并，不应在下一轮重复施工。bare-SHA allowlist、无条件 baseline carry-forward 仍不能取代 proof-bound admission。
+
+---
+
+## AH5. #3567 的 exact construction 与 candidate qualification
+
+```text
+PR
+= #3567
+
+base
+= 9360c2cd06961688fd192803c7006a29fc9bca4e
+
+qualified head
+= fec44b37515fd653baca8e11bd5d1140c282a116
+
+commits
+= 4
+
+changed files
+= 5
+
+merge commit
+= 41fc31ad63e9dafa8a857e86f4455a120710dd79
+
+merged_at
+= 2026-09-15T13:35:50Z
+
+merge parents
+= 9360c2cd06961688fd192803c7006a29fc9bca4e
+= fec44b37515fd653baca8e11bd5d1140c282a116
+
+tree(candidate)
+= tree(merged main)
+= 84ce4015a976b3b04d3093063df3e780389cd8be
+
+candidate -> merge source tree delta
+= ZERO / TREE IDENTITY VERIFIED
+```
+
+本轮直接读取 candidate exact-head runs，以下均为 completed / success / pull_request：
+
+| Gate | Run ID |
+| --- | --- |
+| Production Evidence Runtime Private Store Binding | 34970733578 |
+| Qualification Control Plane | 34970733703 |
+| EA5E2 runtime dependency graph | 34970733728 |
+| Phase6 runtime independence | 34970733518 |
+| Production Runtime Owner Cutover qualification | 34970733865 |
+| T4R1 Rolling Current-Crop Candidate | 34970733674 |
+| Main ruleset readiness | 34970733701 |
+| ci | 34970733693 |
+
+PR description 另记录 QCP all-blockers enumeration / machine-proof validation、CI build-test / acceptance 全部 SUCCESS；本轮直接重取的是上述 run-level conclusion，不把 PR 文案替代成逐 step 新检验。
+
+candidate qualification 完成不等于 merged-main successor admission 已完成；同树 merge 是后续 proof 的重要事实，不自动产生生产授权。
+
+---
+
+## AH6. #3567 实际定义了什么
+
+exact-main binding record：
+
+```text
+record_status
+= NON_SECRET_BINDING_IDENTITY_DEFINED_PROVIDER_MATERIALIZATION_PENDING
+
+provider contract
+= S3_COMPATIBLE_PRIVATE_OBJECT_STORE
+
+physical provider
+= CLOUDFLARE_R2
+
+Evidence Runtime bucket
+= geox-mcft-cap09-evidence-runtime-v1
+
+Formal Raw bucket
+= geox-mcft-cap09-formal-raw-v1
+
+same R2 account
+= ALLOWED
+
+same bucket
+= FORBIDDEN
+
+same credential identity
+= FORBIDDEN
+
+silent FORMAL_RAW_S3_* -> EVIDENCE_S3_* alias
+= FORBIDDEN
+
+local / CI fallback
+= FORBIDDEN
+```
+
+QCP 中新增：
+
+```text
+resolver
+= PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1
+
+check
+= PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING
+
+applicability
+= REQUALIFY
+
+reason
+= GOVERNED_DEPENDENCY_CHANGED
+```
+
+最后一个 fec44b 修复使 QCP diagnostic invocation 获得 exact PR-base binding；没有修改历史 diagnostic semantics。
+
+#3567 合并效果只有非秘密 contract/identity 与 qualification wiring。它不证明 bucket 已创建、凭据已生成、密码已轮换、GitHub secrets 已物化、runtime 已启动或 owner 已激活。
+
+---
+
+## AH7. 41FC31 exact-SHA 事件分组：本轮已完成的核实
+
+用户最新操作目录：
+
+```text
+C:\Users\mylr1\GEOX
+```
+
+用户完成 git fetch origin main 并比较：
+
+```text
+expected
+= 41fc31ad63e9dafa8a857e86f4455a120710dd79
+
+actual
+= 41fc31ad63e9dafa8a857e86f4455a120710dd79
+
+MAIN_BINDING
+= PASS
+```
+
+GitHub 本轮 API 分页复核同样得到 total_count=110：
+
+| event | Count | 在本次真实 push 裁决中的用途 |
+| --- | ---: | --- |
+| pull_request | 105 | PR-context 资格结果，不能因 headBranch=main 直接算作 main push |
+| pull_request_target | 2 | 独立事件，不能混算作 push |
+| push | 2 | exact SHA + main branch 的真实 push 集合 |
+| workflow_run | 1 | 独立 chained workflow；本次为 skipped |
+
+真实 push：
+
+| Workflow | Status | Conclusion | Run ID |
+| --- | --- | --- | --- |
+| ci | completed | success | 34976023487 |
+| mcft-cap-09-ea5e2-successor-runner-qualification | completed | success | 34976023521 |
+
+workflow_run：
+
+```text
+mcft-cap-09-amendment19-formal-graduation-wiring
+run = 34976311139
+conclusion = skipped
+```
+
+此 skipped 不证明 formal graduation，也不表示 Formal-v5 已启动。
+
+---
+
+## AH8. PR 红灯不能冒充本次真实 push first-red
+
+以下 run 虽然 head SHA 都是 41fc31ad，实际 event 都是 pull_request：
+
+| Workflow | Run ID | Conclusion |
+| --- | --- | --- |
+| Qualification Control Plane | 34976056572 | failure |
+| Production Evidence Runtime Private Store Binding | 34976051765 | failure |
+| Current-Main Successor Re-Anchor 2077 | 34976054274 | failure |
+| Post-Merge V13 control plane | 34976051281 | failure |
+
+本轮 live API 的反向关联均显示：
+
+```text
+associated PR
+= #3520
+
+reported base
+= 26c1383f7f45abb76c99e28ec3d06714e85d1b2c
+```
+
+该反向关联只按 AH4 当作 diagnostic 信息；本轮没有用它重写历史 durable run base。
+
+足以确定的是：event=pull_request，不能把它们计入 event=push 的 first-red。这也不是宣称这些 PR failure 已修复或全部 non-blocking；它们是否具有其他正式资格用途要按真实 tuple / artifact / authority 另行判断。
+
+不要重犯 AG10 的错误：只见 head==main 或 workflow 名包含 post-merge 就报告“当前 main-native QCP 失败”。
+
+---
+
+## AH9. 当前卡点：successor admission coverage 尚未裁决
+
+用户的 targetPattern 在真实 push 集合中匹配 0 项，覆盖的意图包括 QCP、Private Store Binding、EA5E2 dependency graph、Phase6、owner、rolling current-crop、Current/Protected-Main、post-merge 与 ruleset readiness。
+
+这个 0 的准确含义：
+
+```text
+NO MATCHING RUN IN THE TWO PUSH RUNS
+```
+
+不能扩大成：
+
+```text
+ALL TARGET GATES PASSED
+ALL TARGET GATES FAILED
+ALL TARGET GATES DO NOT EXIST
+ALL TARGET GATES ARE NOT APPLICABLE
+```
+
+targetPattern 是名称检索，不是正式 gate inventory。它也不能覆盖所有 workflow 命名变体；后续应用 workflow path / ID / governed resolver 构建清单。
+
+本轮 exact-main workflow 源码已证明：
+
+| Workflow | 配置的事件 | 直接含义 |
+| --- | --- | --- |
+| production-evidence-runtime-private-store-binding-v1.yml | pull_request | 没有 push 或 workflow_dispatch |
+| qualification-control-plane-v1.yml | pull_request、merge_group | 没有 push 或 workflow_dispatch |
+
+Private Store Binding 使用 github.event.pull_request.base.sha，并 checkout exact PR head。不能伪造 event/base、硬塞 main SHA 或直接给 PR-only workflow 加一个 push 触发来“补绿”。
+
+所以继续等待这两条 workflow 自动出现 push 结果不能填补 coverage；盲目 gh workflow run 也不是当前可行路线。
+
+当前需要的是治理裁决：明确每个必需 gate 的适用性、合法 carrier / event、exact subject/base、可复用的 immutable evidence、当前 dependency digest 与证明缺口，再决定是否需要 bounded qualification/governance successor。
+
+---
+
+## AH10. Current-crop：已经刷新过，但窗口已再次过期
+
+#3566 已完成新的有效 authority materialization；不能继续沿用旧说法“最新有效 authority 只到 9 月 10 日”。
+
+最新 registry entry：
+
+```text
+authority_ref
+= docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-14T04Z-V1.json
+
+authority SHA256
+= f7482b09d5ddc423ad065db98573891141eceb58c1424eff886f3d96078214e5
+
+qualification subject
+= 3077c5ec8787a2e3fda01b8641f9665345102876
+
+qualification run recorded in #3566
+= 34873003037
+
+authority_as_of
+= 2026-09-14T04:00:00.000Z
+
+authority_valid_until
+= 2026-09-15T10:00:00.000Z
+
+graduation status
+= EFFECTIVE_FOR_RUNTIME_CONSUMPTION_ROLLING_REFRESH
+```
+
+在本次 18:03Z 左右复核时，所有 registry entries 的 validity end 均已过去。对现在或未来的 logical time / A0，没有在本次已读取 registry 中找到仍覆盖的窗口；freshness 必须重新获得合法 evidence 并按既有 rolling authority 路径物化。
+
+区别必须保留：
+
+```text
+historical qualification at valid time
+= can remain historical PASS
+
+current / future runtime temporal admission
+= NOT PROVEN BY AN EXPIRED WINDOW
+```
+
+lifecycle horizon_end=2026-11-24T03:59:59.999Z 不等于 biological-stage authority_valid_until；不能用长期 lifecycle horizon 延长 30h stage window。
+
+生物语义仍是 THERMAL_MODEL_DERIVED / R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE，observed_biological_stage_claimed=false，water-use stage=LATE，Kc=0.6；不得提升为实测生育期结论。
+
+此 temporal gap 与 push coverage gap 独立记录；本 AH 不把它冒充已经执行过 cutover 后返回的错误码。
+
+---
+
+## AH11. Credential re-materialization successor 的既定边界
+
+当 post-merge / successor admission 裁决完成后，后续任务是 provider / credential materialization 与 residue-aware readiness，不是重新 provision 整套数据库。
+
+必须保留：
+
+```text
+existing Neon database
+= geox_mcft_cap09_production_runtime_v1
+
+schema / ACL / privilege roles / login roles / memberships
+= PRESERVE
+
+login role recreation
+= FORBIDDEN
+
+password change scope
+= Evidence / Twin login passwords only
+
+historical expired Evidence/Twin lease residue
+= ALLOWED BY NEW READINESS CONTRACT
+
+current live Evidence owners
+= MUST BE 0
+
+current live Twin owners
+= MUST BE 0
+
+non-lease production state rows
+= MUST BE 0
+
+exact table count in contract
+= 41
+```
+
+验证还必须包含：每个 login 只有正确的一条 privilege membership、无跨 plane membership、两个 role-specific URL 指向同一 operational database。
+
+不要把“允许过期 lease residue”改成“所有 lease 都允许”，也不要继续套用历史 all-table-zero provisioning verifier。
+
+Evidence store 的动态能力证明：
+
+```text
+AUTHENTICATED PUT
+AUTHENTICATED HEAD
+AUTHENTICATED DELETE
+NO FORMAL RAW BUCKET ALIAS
+NO FORMAL RAW CREDENTIAL ALIAS
+```
+
+可共用同一个 R2 account，不可复用 Formal Raw bucket/credential。禁止把 FORMAL_RAW_S3_* 静默映射成 EVIDENCE_S3_*。日志、handoff、PR 和仓库都不写 secret 值。
+
+此处记录的是下一阶段 contract，不是这些操作已完成的 receipt。#3567 明确将基础设施 mutation 放在另一个 operator-authorized successor；执行时沿用已有有效授权的真实 scope，不由 handoff 文本追加生产权限。
+
+---
+
+## AH12. Runtime / owner / Formal 状态的准确写法
+
+本轮可确认：
+
+```text
+#3567 introduced runtime start / owner activation
+= NO
+
+this handoff performed runtime / DB / bucket / credential mutation
+= NO
+
+current-generation exact-main live runtime readiness
+= NOT VERIFIED HERE
+
+current live owner counts
+= NOT QUERIED HERE
+
+EXACT_ONE_PRODUCTION_OWNER
+= NOT ESTABLISHED BY THIS HANDOFF
+
+Formal-v5 ARM / A0 / O00–O23
+= NO NEW AUTHORIZATION / HOLD
+
+MCFT-CAP09 completion
+= NOT CLAIMED
+```
+
+历史对话/文件存在旧 generation 容器运行后停止和 lease residue 的记录，因此不能把“本次未启动”写成“整个项目从未启动任何 runtime”。workflow job 启动更不等于 production runtime 启动。
+
+曾完成的 static pre-formal admission、image/host/compose/namespace 检查也不是当前 generation 的动态 ready receipt；接手后要对新 exact main/image 重新核对其适用性。
+
+runtime-start-authority.json、runtime-start-arm.json、owner-cutover-authority.json 属于相应 cutover 流程生成/消费的证据。不能因为当前目录缺失就手工填造，更不能跳过 dynamic gates 直接 owner cutover。
+
+---
+
+## AH13. 下一步计划与退出条件
+
+顺序固定为：
+
+1. 重新读取 protected main，先确认仍为 41fc31ad；如已移动，保留本 AH snapshot，按新 main 重建 tuple，不能继续使用陈旧 exact binding。
+2. 读取当前 governance / QCP / workflow / successor-chain authority，建立完整 gate inventory。每行记录 gate ID、workflow path、合法 event/carrier、subject/base、dependency digest、immutable proof、结论与缺口。
+3. 把 #3567 candidate evidence、merge parent/tree 同一性、current-main successor-chain admission proof 分开核验。禁止 bare-SHA allowlist 或无条件 carry-forward。
+4. 对每项明确 adjudication：已证明 PASS；由治理规则明确 NOT_APPLICABLE；需要 REQUALIFY；或缺少合法执行/证据载体。缺席不得算 PASS，skipped/neutral 不自动算 dynamic qualification PASS。
+5. 如需新 carrier 或 harness seam，只做经裁决的 bounded qualification/governance successor；先固定 scope 和 negative/fail-closed checks，保留 source semantics，再收集自然 CI 或治理明确允许的执行证据。
+6. 同时把 expired current-crop 列为 runtime/owner/A0 前的 temporal gate，通过合法 fresh observation / rolling qualification / authority materialization 路径解决，禁止手改有效期。
+7. successor admission 完成且相关 first-red 已归因解决后，再进入 credential re-materialization successor，执行 AH11 的 residue-aware readiness 和 authenticated store proof。
+8. provider/credential readiness 不等于 Production Owner activation。运行启动、owner cutover、Formal-v5 ARM、A0、O00–O23 继续分别满足各自 authority 与 dynamic gates。
+
+当前这次 handoff 的任务到“记录并落库”结束，没有执行第 5–8 步。
+
+```text
+next conversation first useful output
+= 41FC31 successor admission coverage matrix
+  with exact legal evidence/carrier for each required gate
+
+not sufficient
+= print two green push runs again
+= rerun historical #3520
+= report all 105 PR runs as post-merge reds
+```
+
+---
+
+## AH14. 本地 worktree 与构造陷阱
+
+当前用户贴出的命令在 C:\Users\mylr1\GEOX 运行，但本次输出未展示本地 HEAD / branch / status。origin/main==41fc31ad 不等于本地 HEAD 也已切换到该 SHA。
+
+历史明确记录：
+
+| Worktree / commit | 历史用途及约束 |
+| --- | --- |
+| C:\Users\mylr1\GEOX | 曾绑定 fix/mcft-cap09-proof-bound-successor-chain-v1，HEAD=a8f459fd60b4083212de33baef451c5bf7c76571；这是旧 snapshot，不能当成本次实时 HEAD |
+| geox-ea5c2b1-fixedpoint-v2-ef39515dc5c74fb3a2a949d4822b7efd | 当时是 clean detached B57，从这里构造了 fb2424 并成功推送 |
+| geox-ea5c2b1-successor-closure-098bee3af8f24c4d8783fcb626bf8372 | 错误 parent 的 construction，HEAD=82ecd2559...，还曾有未提交 acceptance 修改；不得继续当 #3557 正确 head 使用 |
+| rescue/ea5c2b1-minio-wrong-parent | 历史 rescue 标识，用于保留错误构造审计；本轮未删除或重用 |
+
+下一次写代码前先核实 git status、git rev-parse HEAD、git branch --show-current、git worktree list 与 remote branch head。不要按目录名字猜 parent，不要把用户带回 GEOX 后就直接在另一条 branch 改文件。
+
+单行修复要比较其真实 parent 的 diff；仅看工作树 diff 不足以发现错误 ancestry。需要同时证明正确 parent、单文件、1 insertion/1 deletion、push 前 remote lease，以及正常 fast-forward；不要 force-push 错误 construction。
+
+---
+
+## AH15. 踩坑清单：下一任必须避免
+
+1. **event attribution 错配**：headBranch=main、headSha=current-main、名称含 post-merge 都不等于 push。保留 event / subject / base / carrier / inputs 的完整 tuple。
+2. **零红灯当全覆盖**：pushBad.Count=0 只描述已观测 push 集合；targets.Count=0 必须保留为 coverage 未裁决。
+3. **PR-only workflow 盲目 dispatch**：先读 on: 和 env/checkout，不能伪造 PR base 或增加触发就绕过 qualification contract。
+4. **可变 PR 反向关联冒充 durable authority**：遵守 AH4；也不要反过来忽略 live run 的 SHA/path/event/success。
+5. **merge 追 SHA 死循环**：先看 tree / dependency digest / immutable binding / successor-chain proof；AG 的旧 36B6、B689 任务不能无限复制。
+6. **CI MinIO 与生产 store 混淆**：server pin 成功还要看 client；CI S3 成功不证明生产 R2 bucket/credentials。
+7. **旧 proof digest 不匹配仍复用**：provider execution 绿灯不等于 registry 的 durable evidence 已刷新。
+8. **fresh authority 合入后就永久有效**：检查 planned logical time 和 authority_valid_until，不能拿 lifecycle horizon 或 PR green 延长窗口。
+9. **provider identity 定义当 provider 创建**：#3567 只落非秘密身份与 QCP wiring；动态 readiness 必须有实际 receipt。
+10. **过期 lease residue 导致重复 provision**：新 verifier 区分 expired lease、live owners 和 non-lease state；不重建角色、不清表凑全零。
+11. **把历史 runtime 运行痕迹抹成从未启动**：当前 not-proven 与历史曾运行是不同事实；不拿 workflow job 状态替代容器/DB evidence。
+12. **缺少 cutover artifact 就手工造 JSON**：必须由合法流程产生，不能填造 authority。
+13. **PowerShell native exit code 被忽略**：ErrorActionPreference=Stop 和 StrictMode 不保证 git/gh 非零 exit 自动终止；调用后检查 LASTEXITCODE，再解析 JSON、Trim 或提交。
+14. **格式化表格遮挡证据**：宽表会截断 databaseId；保存 JSON 或明确列值，完整分页核对。limit=200 是本次查询参数，不是未来 completeness 保证。
+15. **聊天转义污染命令**：从 Markdown 转录时不能把反斜线转义带入 image、SHA、变量、路径；保留原始实际字面值和 UTF-8。
+16. **借 MCFT 修 B-Line**：旧 P1/W1–W4 red 的 ownership 不因此改变。当前 ci push success 也不证明所有 B-Line 历史问题已修复。B-Line frozen closure、CAP-05 独立、ADR orthogonal、#3552 frozen 边界继续保留；本轮不修改。
+
+---
+
+## AH16. 状态矩阵
+
+| 项目 | 本次交接状态 |
+| --- | --- |
+| #3557 MinIO/mc/fresh Phase2 evidence | 已进入后续主线并合并，不是当前 P0 |
+| #3561 durable evidence / resolver | 已合并；#3562 已关闭未合并、被吸收 |
+| #3565 integrity REQUIRED admission | 已合并 |
+| #3566 current-crop materialization | 已合并，但最新窗口在 2026-09-15T10Z 到期 |
+| #3567 private-store binding | 已合并；candidate 关键 gates SUCCESS |
+| #3567 candidate/main tree | 完全相同，84ce4015... |
+| 41FC31 exact-SHA runs | 110，事件分组已复核 |
+| 41FC31 true push | 2 SUCCESS，first-red NONE |
+| 41FC31 successor admission coverage | 待正式裁决 |
+| current/future crop freshness | 本次 registry 无仍覆盖的窗口 |
+| R2 provider/credential materialization | 本轮未执行；binding record 标注 pending |
+| Neon credential re-materialization | 后继任务；保留现有 schema/ACL/roles |
+| 当前 live owner count | 本轮未查询；不可宣称已满足零 owner 或 exactly-one |
+| Production Runtime / Owner cutover | 无本轮启动或激活；不得宣称已 ready |
+| Formal-v5 / A0 / O00–O23 | HOLD；无新授权 |
+| CAP09 completion | 不宣称完成 |
+| handoff #3298 | 原 draft continuation 分支，AH pure-prepend；不合并到 main |
+
+---
+
+## AH17. 本次 handoff 落库契约
+
+```text
+repository
+= liyongshang44-max/GEOX
+
+handoff PR
+= #3298
+
+branch
+= docs/mcft-cap09-handoff-2026-08-26-phase2-evidence-module-frontier
+
+file
+= docs/handoff/GEOX-MCFT-CAP-09-HANDOFF-2026-08-27.md
+
+expected previous branch head
+= 30e276c0b51590198cd5cdac07da877b069ba330
+
+expected previous handoff blob
+= 93e02e567ab8f97d275830d3e963ec9c9ba15806
+
+expected previous bytes
+= 972736
+
+mutation
+= AH pure prepend only
+
+historical suffix
+= exact AG-and-earlier bytes
+
+commit delta
+= one handoff file / additions only / zero deletions
+
+PR
+= remains DRAFT / OPEN / UNMERGED
+```
+
+提交后必须复核新 commit 的唯一 parent、changed-file set、零删除、old-content exact suffix，以及 #3298 实际 branch head。不要继承 temporary materializer workflow/chunks 的 ancestry，不要修改 protected main。
+
+本节记录预期写入契约；最终 commit SHA 由真实写入返回值与复核 receipt 给出，不在提交前编造自身 SHA。
+
+---
+
+## AH18. 接手证据入口
+
+- [Handoff PR #3298](https://github.com/liyongshang44-max/GEOX/pull/3298)
+- [#3557 successor effectiveness](https://github.com/liyongshang44-max/GEOX/pull/3557)
+- [#3561 durable evidence / immutable resolver](https://github.com/liyongshang44-max/GEOX/pull/3561)
+- [#3562 absorbed harness branch](https://github.com/liyongshang44-max/GEOX/pull/3562)
+- [#3565 integrity REQUIRED admission](https://github.com/liyongshang44-max/GEOX/pull/3565)
+- [#3566 current-crop authority](https://github.com/liyongshang44-max/GEOX/pull/3566)
+- [#3567 private-store binding](https://github.com/liyongshang44-max/GEOX/pull/3567)
+- [41FC31 merge commit](https://github.com/liyongshang44-max/GEOX/commit/41fc31ad63e9dafa8a857e86f4455a120710dd79)
+- [真实 push ci 34976023487](https://github.com/liyongshang44-max/GEOX/actions/runs/34976023487)
+- [真实 push successor runner 34976023521](https://github.com/liyongshang44-max/GEOX/actions/runs/34976023521)
+- [candidate QCP success 34970733703](https://github.com/liyongshang44-max/GEOX/actions/runs/34970733703)
+- [candidate binding success 34970733578](https://github.com/liyongshang44-max/GEOX/actions/runs/34970733578)
+- [exact-main private-store authority](https://github.com/liyongshang44-max/GEOX/blob/41fc31ad63e9dafa8a857e86f4455a120710dd79/docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-RUNTIME-PRIVATE-STORE-BINDING-V1.json)
+- [exact-main current-crop registry](https://github.com/liyongshang44-max/GEOX/blob/41fc31ad63e9dafa8a857e86f4455a120710dd79/docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json)
+- [exact-main private-store workflow](https://github.com/liyongshang44-max/GEOX/blob/41fc31ad63e9dafa8a857e86f4455a120710dd79/.github/workflows/mcft-cap-09-production-evidence-runtime-private-store-binding-v1.yml)
+- [exact-main QCP workflow](https://github.com/liyongshang44-max/GEOX/blob/41fc31ad63e9dafa8a857e86f4455a120710dd79/.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml)
+
+当前最重要的接手指令：
+
+```text
+START
+= re-bind current protected main
+
+THEN
+= adjudicate successor admission coverage
+
+THEN
+= resolve lawful evidence/carrier and temporal gaps
+
+THEN
+= credential re-materialization successor within its real authorization
+
+DO NOT CLAIM
+= NO_ACTIVE_RED means production admission complete
+```
+
+---
+
 # AG — 2026-09-12 Post-Merge 36B6 Current-Main Reconciliation / Proof-Bound Re-Anchor Frontier
 
 > 本 section 是 AF 之后的 authoritative continuation。AF 记录的是 `#3553 @ 1f970cc...` 时的 bounded proof-materialization / digest-stable no-rerun 路径；本 AG 记录 AF 之后已经实际发生的完整 engineering / qualification / merge / post-merge reconciliation 事实。
