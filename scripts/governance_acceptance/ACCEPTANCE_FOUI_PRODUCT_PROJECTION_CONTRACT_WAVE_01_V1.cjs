@@ -40,7 +40,7 @@ function mustNotMatch(text, pattern, label) {
 
 const contract = read(contractPath);
 const schemaText = read(schemaPath);
-read(negativePath);
+const negative = read(negativePath);
 const schema = JSON.parse(schemaText);
 
 // P0 common envelope invariants.
@@ -62,9 +62,10 @@ mustContain(contract, 'UNRESOLVED', 'P1 unresolved composition');
 // Product triage is explicitly not product-owned risk authority.
 mustContain(contract, 'presentation_rank', 'P3 presentation rank');
 mustContain(contract, 'source_declared_severity', 'P3 source-declared severity');
-mustContain(contract, 'ATTENTION_QUEUE_PRODUCT_OWNED_PRIORITY_FORBIDDEN', 'P3 priority negative guard');
-mustContain(contract, 'ATTENTION_QUEUE_PRODUCT_OWNED_SEVERITY_FORBIDDEN', 'P3 severity negative guard');
-mustContain(contract, 'ATTENTION_QUEUE_PRODUCT_OWNED_RISK_SCORE_FORBIDDEN', 'P3 risk-score negative guard');
+mustContain(contract, '["priority", "severity", "risk_score"]', 'P3 forbidden product-owned triage fields');
+mustContain(contract, 'ATTENTION_QUEUE_PRODUCT_OWNED_${forbidden.toUpperCase()}_FORBIDDEN', 'P3 dynamic fail-closed error family');
+mustContain(negative, 'ATTENTION_QUEUE_PRODUCT_OWNED_PRIORITY_FORBIDDEN', 'P3 priority negative proof');
+mustContain(negative, 'ATTENTION_QUEUE_SOURCE_SEVERITY_REF_UNKNOWN', 'P3 source severity provenance proof');
 
 // Capability availability is a three-axis derivation, not route/API existence.
 mustContain(contract, 'product_implementation', 'P2 implementation axis');
