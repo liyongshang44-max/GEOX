@@ -688,6 +688,8 @@ jobs:
 
       - name: Enumerate all blockers without fail-fast
         if: github.event_name == 'pull_request'
+        env:
+          MCFT_CAP09_PRIVATE_STORE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: >-
           node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
           --base '${{ github.event.pull_request.base.sha }}'

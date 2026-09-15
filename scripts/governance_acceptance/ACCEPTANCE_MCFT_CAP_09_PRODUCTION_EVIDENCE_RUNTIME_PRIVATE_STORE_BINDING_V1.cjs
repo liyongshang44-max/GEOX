@@ -588,7 +588,11 @@ if (process.argv.includes("--selftest")) {
   process.exit(0);
 }
 
-const base = String(process.env.MCFT_BASE_SHA || "").trim();
+const base = String(
+  process.env.MCFT_CAP09_PRIVATE_STORE_BASE_SHA ||
+  process.env.MCFT_BASE_SHA ||
+  ""
+).trim();
 
 if (!base) {
   fail("STORE_BINDING_BASE_SHA_REQUIRED");
