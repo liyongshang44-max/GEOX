@@ -1,4 +1,4 @@
-name: fui-projection-contract-wave01
+name: foui-projection-contract-wave01
 
 on:
   pull_request:
