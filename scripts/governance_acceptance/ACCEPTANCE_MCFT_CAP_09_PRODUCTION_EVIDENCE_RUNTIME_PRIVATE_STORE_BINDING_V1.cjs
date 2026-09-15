@@ -31,7 +31,22 @@ const OUT =
   "acceptance-output/" +
   "MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1_RESULT.json";
 
-const EXPECTED_FILES = [AUTH, ACCEPT, WORKFLOW].sort();
+const QCP =
+  "docs/digital_twin/mcft/cap_09/" +
+  "GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json";
+
+const QCP_WORKFLOW =
+  ".github/workflows/" +
+  "mcft-cap-09-qualification-control-plane-v1.yml";
+
+const QCP_RESOLVER_ID =
+  "PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1";
+
+const QCP_CHECK_ID =
+  "PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING";
+
+const EXPECTED_FILES =
+  [AUTH, ACCEPT, WORKFLOW, QCP, QCP_WORKFLOW].sort();
 
 const EVIDENCE_SECRETS = [
   "GEOX_MCFT_CAP09_EVIDENCE_S3_ENDPOINT",
@@ -597,7 +612,7 @@ const changed = git(
 sameArray(
   changed,
   EXPECTED_FILES,
-  "STORE_BINDING_EXACT_THREE_FILE_BOUNDARY"
+  "STORE_BINDING_EXACT_FIVE_FILE_BOUNDARY"
 );
 
 /*
@@ -669,6 +684,131 @@ const authority = readJson(AUTH);
 
 validateAuthority(authority);
 
+const qcp = readJson(QCP);
+
+const resolver =
+  qcp.dependency_resolvers?.[QCP_RESOLVER_ID];
+
+if (!resolver) {
+  fail("STORE_BINDING_QCP_RESOLVER_MISSING");
+}
+
+eq(
+  resolver.kind,
+  "EXACT_PATH_SET",
+  "STORE_BINDING_QCP_RESOLVER_KIND"
+);
+
+sameArray(
+  [...resolver.paths].sort(),
+  [
+    WORKFLOW,
+    RUNTIME,
+    FORMAL,
+    AUTH,
+    ACCEPT
+  ].sort(),
+  "STORE_BINDING_QCP_RESOLVER_PATHS"
+);
+
+const qcpCheck =
+  (qcp.checks || []).find(
+    (row) => row.check_id === QCP_CHECK_ID
+  );
+
+if (!qcpCheck) {
+  fail("STORE_BINDING_QCP_CHECK_MISSING");
+}
+
+eq(
+  qcpCheck.owner,
+  "MCFT_CAP09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_QUALIFICATION",
+  "STORE_BINDING_QCP_OWNER"
+);
+
+sameArray(
+  qcpCheck.generation_scope,
+  ["V13_SUCCESSOR_REVALIDATION"],
+  "STORE_BINDING_QCP_GENERATION"
+);
+
+sameArray(
+  qcpCheck.authority_refs,
+  [AUTH, FORMAL],
+  "STORE_BINDING_QCP_AUTHORITY_REFS"
+);
+
+sameArray(
+  qcpCheck.resolver_ids,
+  [QCP_RESOLVER_ID],
+  "STORE_BINDING_QCP_RESOLVER_BINDING"
+);
+
+eq(
+  qcpCheck.execution_workflow,
+  WORKFLOW,
+  "STORE_BINDING_QCP_EXECUTION_WORKFLOW"
+);
+
+eq(
+  qcpCheck.execution_workflow_status,
+  "IMPLEMENTED_AT_SUCCESSOR_HEAD",
+  "STORE_BINDING_QCP_WORKFLOW_STATUS"
+);
+
+eq(
+  qcpCheck.fail_policy,
+  "FAIL_CLOSED",
+  "STORE_BINDING_QCP_FAIL_POLICY"
+);
+
+eq(
+  qcpCheck.carry_forward_policy,
+  "NONE",
+  "STORE_BINDING_QCP_CARRY_FORWARD"
+);
+
+sameArray(
+  qcpCheck.requalification_triggers,
+  [QCP_RESOLVER_ID],
+  "STORE_BINDING_QCP_REQUALIFICATION_TRIGGER"
+);
+
+sameArray(
+  qcpCheck.applicable_stages,
+  ["SUCCESSOR_SUBJECT_PRE_MERGE"],
+  "STORE_BINDING_QCP_STAGE"
+);
+
+eq(
+  qcpCheck.carry_forward_evidence_id,
+  null,
+  "STORE_BINDING_QCP_NO_CARRY_FORWARD_EVIDENCE"
+);
+
+eq(
+  qcpCheck.diagnostic_command,
+  `node ${ACCEPT}`,
+  "STORE_BINDING_QCP_DIAGNOSTIC_COMMAND"
+);
+
+const qcpWorkflow =
+  fs.readFileSync(QCP_WORKFLOW, "utf8");
+
+for (const requiredPath of [
+  WORKFLOW,
+  AUTH,
+  ACCEPT
+]) {
+  if (!qcpWorkflow.includes(
+    `- '${requiredPath}'`
+  )) {
+    fail(
+      `STORE_BINDING_QCP_TRIGGER_MISSING:${requiredPath}`
+    );
+  }
+}
+
 const result = {
   schema_version:
     "geox_mcft_cap09_production_evidence_runtime_private_store_binding_result_v1",
@@ -707,7 +847,9 @@ const result = {
   a0_authorized: false,
   o00_o23_started: false,
 
-  qcp_registration_claimed: false,
+  qcp_registration_claimed: true,
+  qcp_resolver_id: QCP_RESOLVER_ID,
+  qcp_check_id: QCP_CHECK_ID,
   mcft_cap09_completed: false
 };
 
