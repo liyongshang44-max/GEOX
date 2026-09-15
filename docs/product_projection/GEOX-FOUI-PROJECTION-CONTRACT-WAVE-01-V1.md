@@ -13,19 +13,17 @@ Wave-01 contains:
 3. `CapabilityAvailabilityProjectionV1`
 4. `AttentionQueueProjectionV1`
 
-The contracts live in:
+Machine contracts:
 
 - `apps/server/src/product_projection/contracts/product_projection_contracts_v1.ts`
 - `apps/server/src/product_projection/contracts/product_projection_contracts_v1.schema.json`
 
-Qualification lives in:
+Qualification:
 
 - `scripts/governance_acceptance/ACCEPTANCE_FOUI_PRODUCT_PROJECTION_CONTRACT_WAVE_01_V1.cjs`
 - `scripts/governance_acceptance/FOUI_PRODUCT_PROJECTION_CONTRACT_WAVE_01_NEGATIVE_V1.ts`
 
-## 2. Authority ceiling
-
-Permanent invariant:
+## 2. Permanent authority ceiling
 
 ```text
 FOUI-PROJ
@@ -39,7 +37,7 @@ FOUI-PROJ
 != command authorization
 ```
 
-Every product projection carries:
+Every projection carries:
 
 ```text
 authority_ceiling
@@ -49,20 +47,77 @@ non_authoritative
 = true
 ```
 
-A product projection ID is not an authority reference and must never be accepted as sufficient predecessor authority for a domain command.
+A `projection_id` is not an authority ref and must never be accepted as sufficient predecessor authority for a domain command.
 
-## 3. Query / command physical separation
+## 3. Source-ref taxonomy
+
+Wave-01 permanently separates authority refs from non-authority basis refs.
+
+### 3.1 Authority refs
+
+```text
+source_authority_refs[]
+```
+
+These may reference exact outputs owned by authority domains such as:
+
+```text
+MCFT
+ADR
+B_LINE
+OUTCOME
+EXTERNAL
+```
+
+They retain the source object's authority; FOUI does not confer or widen it.
+
+### 3.2 Non-authority refs
+
+```text
+source_non_authority_refs[]
+```
+
+Allowed classes:
+
+```text
+COMPOSITION_MANIFEST
+PRODUCT_GOVERNANCE
+OPERATIONAL_QUALIFICATION
+PROVIDER
+MEASUREMENT
+VERIFICATION_STATE
+EVIDENCE
+OTHER_NON_AUTHORITY
+```
+
+This distinction is mandatory because a referenced object does not become authority merely because it participates in product composition.
+
+In particular:
+
+```text
+DecisionTimeAuthorityManifest
+= COMPOSITION_MANIFEST
+!= authority object
+```
+
+Likewise product-release manifests, provider metadata, measurement refs and verification-state refs must not be silently inserted into `source_authority_refs`.
+
+The two ref families share one `ref_key` namespace so a projection cannot alias the same key as both authority and non-authority.
+
+`source_content_digests[]`, effective intervals, evidence cutoffs and limitations may bind either ref family. Interaction hints targeting a command may target only `source_authority_refs`.
+
+## 4. Query / command physical separation
 
 Projection APIs are read-only.
 
-Allowed product-projection transport methods:
+Allowed methods:
 
 ```text
 GET
 HEAD
 ```
 
-Forbidden:
+Forbidden methods under FOUI-PROJ:
 
 ```text
 POST
@@ -78,31 +133,29 @@ button visible
 != authority granted
 ```
 
-Every intent requires:
+Every intent must carry:
 
 ```text
 requires_command_reauthorization = true
 ```
 
-The actual authority owner must authenticate, authorize and adjudicate the command again at its own command boundary.
-
-Example:
+Correct flow:
 
 ```text
-GET GovernedActionCaseProjection
-  -> interaction hint: APPROVE
-  -> user selects Approve
-  -> explicit B-Line approval command
-  -> B-Line re-authorizes
-  -> B-Line creates ApprovalDecision
+GET Product Projection
+  -> show allowed intent
+  -> user chooses intent
+  -> explicit authority-owner command
+  -> authority owner re-authenticates/re-authorizes
+  -> authority owner creates/changes authority object
   -> projection is recomputed
 ```
 
-FOUI-PROJ never creates the ApprovalDecision.
+FOUI-PROJ never mutates the authority object itself.
 
-## 4. Common ProductProjectionEnvelopeV1
+## 5. ProductProjectionEnvelopeV1
 
-All product projections carry common provenance and time semantics:
+All product projections carry one common provenance/time envelope:
 
 ```text
 projection_id
@@ -115,6 +168,7 @@ derivation_version
 subject_scope
 
 source_authority_refs[]
+source_non_authority_refs[]
 source_content_digests[]
 
 source_effective_interval
@@ -128,11 +182,11 @@ projection_semantics
 non_authoritative
 ```
 
-`source_content_digests` may only preserve source-owned digests. FOUI-PROJ must not mint a replacement authority digest when an authority source does not provide one.
+`source_content_digests` preserve source-owned digests only. FOUI-PROJ must not mint an authority-equivalent digest when a source does not provide one.
 
-Freshness is projection freshness / source-declared validity composition. It is not a claim that physical reality is perfectly known.
+`freshness=CURRENT` means the projection is current under its declared product/source validity semantics. It does not mean physical reality is perfectly known.
 
-## 5. Current world vs decision-time world
+## 6. Current world vs decision-time world
 
 Permanent invariant:
 
@@ -142,7 +196,7 @@ CURRENT BEST-KNOWN WORLD
 DECISION-TIME WORLD
 ```
 
-`GovernedActionCaseProjectionV1` therefore has separate surfaces:
+`GovernedActionCaseProjectionV1` therefore separates:
 
 ```text
 current_context
@@ -154,21 +208,19 @@ later_changes
 
 `current_context` answers what the latest qualified product projection currently references.
 
-`decision_time_basis` answers what exact authority basis was available for the historical decision.
+`decision_time_basis` answers what was actually available/recoverable as the historical decision basis.
 
-The following invariant is literal contract state:
+Literal invariant:
 
 ```text
 current_state_substitution_forbidden = true
 ```
 
-If historical decision-time basis cannot be recovered, FOUI must return an unavailable/partial historical basis. It must never substitute current MCFT state into the historical explanation.
+If historical basis cannot be recovered, FOUI returns an unavailable/partial basis. It must not substitute current MCFT state into the historical explanation.
 
-## 6. GovernedActionCaseProjectionV1
+## 7. GovernedActionCaseProjectionV1
 
-`GovernedActionCaseProjectionV1` is a customer/product composition envelope, not a new domain object.
-
-It contains:
+The Action Case is a product composition envelope, not a domain state machine.
 
 ```text
 case_anchor
@@ -185,9 +237,7 @@ authority_chain
 derived_display_phase
 ```
 
-### 6.1 Composition status
-
-Allowed values:
+### 7.1 Composition status
 
 ```text
 EXACT_REF_LINKED
@@ -195,25 +245,52 @@ PARTIAL_REF_LINKED
 UNRESOLVED
 ```
 
-Only exact predecessor/source-fact/digest-bound relations are accepted as linkage proof types.
+Exact composition requires explicit exact linkage proof. Allowed linkage proof kinds are:
 
-Forbidden composition heuristic:
+```text
+EXACT_PREDECESSOR_REF
+EXACT_SOURCE_FACT_REF
+EXACT_DIGEST_BOUND_REF
+```
+
+Forbidden heuristic:
 
 ```text
 same field
 + nearby timestamp
 + same action type
-+ similar parameter value
++ similar parameters
 => same governed action
 ```
 
-That inference is not permitted.
+No exact linkage means no silent exact composition.
 
-If exact linkage is not established, the projection must remain partial or unresolved.
+### 7.2 Decision-time basis
 
-### 6.2 Authority-chain slots
+Decision-time authority objects remain authority refs:
 
-The Action Case may reference, without collapsing:
+```text
+decision_ref
+field_state_ref_at_decision
+applicability_ref
+runtime_eligibility_ref
+runtime_binding_refs[]
+```
+
+Historical composition/basis metadata remains non-authority:
+
+```text
+decision_time_manifest_ref
+provider_refs[]
+measurement_refs[]
+verification_state_refs[]
+```
+
+`EXACT_MANIFEST` requires an exact `COMPOSITION_MANIFEST` ref.
+
+### 7.3 Authority chain remains decomposed
+
+The projection may reference, but never collapse:
 
 ```text
 Agronomic Decision
@@ -234,9 +311,9 @@ Outcome
 Attribution
 ```
 
-A missing standalone authority object stays `null`. FOUI-PROJ must not synthesize it.
+A missing standalone authority object stays `null`. FOUI-PROJ must not synthesize one.
 
-### 6.3 Display phase
+### 7.4 Presentation phase
 
 `derived_display_phase` is presentation-only.
 
@@ -251,9 +328,9 @@ EVIDENCE_REVIEW
 EXECUTION_EVIDENCE_ACCEPTED
 ```
 
-It is not a domain state machine and must never be written back into authority storage.
+The validator requires minimum source refs for downstream display phases. For example, `AWAITING_APPROVAL` requires a real ApprovalRequest ref, while `EXECUTION_EVIDENCE_ACCEPTED` requires a real acceptance ref.
 
-Forbidden display states include semantic promotions such as:
+Forbidden semantic promotions include:
 
 ```text
 OPERATION_SUCCESSFUL
@@ -263,9 +340,9 @@ PHYSICAL_EXECUTION_VERIFIED
 
 unless a future authority contract explicitly supports those claims.
 
-## 7. CapabilityAvailabilityProjectionV1
+## 8. CapabilityAvailabilityProjectionV1
 
-Capability availability uses three independent dimensions:
+Availability derives from three independent axes:
 
 ```text
 PRODUCT IMPLEMENTATION
@@ -278,7 +355,7 @@ OPERATIONAL ELIGIBILITY
 CURRENT / DEGRADED / EXPIRED / UNAVAILABLE
 ```
 
-Only after evaluating all three does the product derive:
+Only then does FOUI derive:
 
 ```text
 customer_state
@@ -288,9 +365,22 @@ default_release_surface_state
 ACTIVE / LIMITED / PREVIEW / DISABLED
 ```
 
-Route existence, API existence, code existence or screen existence is never sufficient to derive `AVAILABLE`.
+Route/API/code/screen existence is never sufficient to derive `AVAILABLE`.
 
-Non-available states require reason codes.
+Basis rules:
+
+```text
+product_release_basis_ref_keys
+-> PRODUCT_GOVERNANCE non-authority refs
+
+authority_maturity_basis_ref_keys
+-> authority refs
+
+operational_eligibility_basis_ref_keys
+-> exact source refs supporting current/degraded/expired state
+```
+
+Non-available customer states require reason codes.
 
 Example:
 
@@ -303,11 +393,11 @@ customer_state = PREVIEW
 reason_codes = [ADR_AUTHORITATIVE_CUTOVER_NOT_COMPLETE]
 ```
 
-Caller-specific hiding is not stored in canonical capability projection state. Navigation hiding remains caller-capability/UI-surface policy.
+Caller-specific hiding is not canonical capability truth. Navigation hiding remains caller-capability/UI-surface policy.
 
-## 8. AttentionQueueProjectionV1
+## 9. AttentionQueueProjectionV1
 
-FOUI attention ordering is product triage, not agronomic risk authority.
+Attention ordering is product triage, not agronomic risk authority.
 
 Forbidden product-owned fields:
 
@@ -317,7 +407,7 @@ severity
 risk_score
 ```
 
-Canonical product fields are:
+Canonical triage fields:
 
 ```text
 triage_bucket
@@ -328,53 +418,70 @@ presentation_rank
 sort_reason_code
 ```
 
-If a domain authority provides severity, FOUI may expose it only as:
+If a domain authority declares severity, FOUI may expose it only as:
 
 ```text
 source_declared_severity
 ```
 
-with an exact source ref.
+with an exact authority ref.
 
-`presentation_rank` is internal display ordering only. It is not customer-visible domain priority.
+`presentation_rank` is internal display ordering only, not domain priority.
 
-## 9. Source binding for Wave-01
+Due semantics are also separated:
 
-Wave-01 contracts may consume these existing authority/read-model families without changing their authority:
+```text
+DOMAIN_SOURCE
+-> authority ref
 
-| Product projection need | Current source family | Boundary |
+PRODUCT_SLA
+-> PRODUCT_GOVERNANCE non-authority ref
+
+NONE
+-> no due timestamp/ref
+```
+
+## 10. Existing source families
+
+Wave-01 may consume these existing families without changing their authority:
+
+| Product need | Existing source family | Boundary |
 |---|---|---|
-| Current field context | `apps/server/src/domain/field_twin_read_model/contracts_v1.ts` | MCFT read model; exact scope/hash/time/limitations are preserved |
-| Current-crop operational validity | `apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.ts` | Consume source validity; do not re-run MCFT qualification |
-| ADR preview/cutover state | `apps/server/src/integrations/adr/read_only_shadow_adoption_v1.ts` | Read-only shadow; no field actionability/dispatch authority |
-| ADR decision semantics | ADR `DecisionResult` authority in agronomy-deployment-runtime | ACT/WAIT/ASK/ABSTAIN stays distinct from human approval/execution |
-| Human approval | `apps/server/src/domain/approval/recommendation_approval_decision_builder_v1.ts` and exact source facts/indexes | B-Line command remains separate |
-| Operation/dispatch/task | existing B-Line operation-plan/AO-ACT/dispatch sources | Projection references only |
-| Execution proof | receipt -> as-executed -> evidence artifact -> acceptance sources | PASS means execution-evidence acceptance only; not effect/outcome |
+| Current field context | `apps/server/src/domain/field_twin_read_model/contracts_v1.ts` | MCFT read model; preserve exact scope/hash/time/limitations |
+| Current-crop validity | `apps/server/src/runtime/twin_runtime/mcft_cap09_current_crop_authority_resolver_v1.ts` | consume validity; do not rerun MCFT qualification |
+| ADR preview/cutover state | `apps/server/src/integrations/adr/read_only_shadow_adoption_v1.ts` | read-only shadow; no field actionability/dispatch authority |
+| ADR decision semantics | ADR `DecisionResult` authority | ACT/WAIT/ASK/ABSTAIN remains distinct from approval/execution |
+| Human approval | B-Line approval objects and exact source facts/indexes | command remains at B-Line boundary |
+| Operation/dispatch/task | B-Line operation-plan/AO-ACT/dispatch sources | projection references only |
+| Execution proof | Receipt -> AsExecuted -> EvidenceArtifact -> AcceptanceResult | acceptance is execution-evidence acceptance, not outcome/effect |
 
-Source paths are implementation anchors, not permission for FOUI-PROJ to import command builders into projection code.
+Implementation paths are source anchors, not permission for FOUI-PROJ to import command builders.
 
-## 10. Allowed derivations
+## 11. Allowed derivations
 
 FOUI-PROJ may:
 
-- preserve exact authority refs and source-owned digests;
-- assemble explicitly linked authority objects into a product view;
-- derive presentation-only phase from already-existing source states;
+- preserve exact authority refs;
+- preserve exact non-authority basis refs without promoting them;
+- preserve source-owned digests;
+- assemble explicitly linked objects into a product view;
+- derive presentation-only phase from existing source states/refs;
 - compare current and historical refs when comparability is explicit;
-- derive customer capability state from frozen implementation/authority/operational axes;
+- derive customer capability state from the frozen three axes;
 - compute presentation ordering from workflow-blocking facts and declared due information;
-- produce caller-relative interaction hints from caller-capability projection.
+- produce caller-relative interaction hints.
 
-## 11. Forbidden derivations
+## 12. Forbidden derivations
 
 FOUI-PROJ must not:
 
 - mint authority;
+- classify a replay/composition manifest as authority;
+- classify product governance as domain authority;
 - re-adjudicate MCFT state;
 - run ADR applicability/runtime/decision calculation;
-- create or infer Human Approval;
-- create or infer Execution Authorization;
+- create/infer Human Approval;
+- create/infer Execution Authorization;
 - mutate dispatch/execution state;
 - create receipts/evidence/acceptance;
 - infer evidence sufficiency beyond source acceptance authority;
@@ -383,30 +490,34 @@ FOUI-PROJ must not:
 - replace historical decision basis with current world state;
 - join independent authority objects by similarity when exact linkage is absent.
 
-## 12. Wave-01 qualification gates
+## 13. Machine qualification
 
-The governance acceptance gate proves at minimum:
+The dedicated gate proves at minimum:
 
 ```text
-PP-01 all projections remain non-authoritative
+PP-01 projection non-authority invariant
 PP-02 no FOUI-PROJ command methods
-PP-03 no product-projection database/domain writes
-PP-04 projection IDs do not substitute authority predecessors
+PP-03 no projection domain/database writes
+PP-04 projection IDs cannot substitute authority refs
 PP-05 interaction hints require command reauthorization
+PP-06 authority and non-authority ref keys cannot alias
 
-AC-01 unresolved ADR/product linkage cannot display downstream approval authority
+AC-01 unresolved linkage cannot display downstream approval authority
 AC-02 exact composition requires exact linkage proof
-AC-03 current-state change does not replace decision-time basis
-AC-04 unavailable historical basis cannot fall back to current state
-AC-05 late/revised information is isolated from historical basis
+AC-03 current state cannot replace decision-time basis
+AC-04 unavailable history cannot fall back to current state
+AC-05 DecisionTimeAuthorityManifest must be non-authority COMPOSITION_MANIFEST
+AC-06 downstream display phases require corresponding source refs
 
 CAP-01 API/code existence cannot imply AVAILABLE
 CAP-02 PREVIEW authority cannot map to ACTIVE
 CAP-03 expired/unavailable operational eligibility cannot remain ACTIVE
+CAP-04 product release basis must be PRODUCT_GOVERNANCE non-authority ref
 
 ATTN-01 no product-owned priority/severity/risk_score
 ATTN-02 presentation ordering cannot write authority
-ATTN-03 source severity requires exact source authority reference
+ATTN-03 source severity requires exact authority ref
+ATTN-04 product SLA due basis uses PRODUCT_GOVERNANCE non-authority ref
 ```
 
 Run:
@@ -415,15 +526,19 @@ Run:
 node scripts/governance_acceptance/ACCEPTANCE_FOUI_PRODUCT_PROJECTION_CONTRACT_WAVE_01_V1.cjs
 ```
 
-## 13. Construction authorization after freeze
-
-After CTO acceptance of Wave-01 contracts, the next authorized construction may add narrow read-only projection builders/readers/routes.
-
-Allowed:
+Dedicated PR workflow:
 
 ```text
-product projection builders
-read-only authority readers
+foui-projection-contract-wave01
+```
+
+## 14. Construction authorization after freeze
+
+After CTO acceptance, the next narrow construction may add:
+
+```text
+read-only product projection builders
+read-only authority/basis readers
 GET projection routes
 projection fixtures/tests
 interaction hint adapters
@@ -436,10 +551,10 @@ domain writes
 authority minting
 authority re-adjudication
 MCFT state calculation
-ADR decision calculation
+ADR decision/applicability calculation
 B-Line approval/authorization logic
 execution mutation
-outcome/attribution promotion
+Outcome/Attribution promotion
 ```
 
-High-fidelity FOUI design remains held until the first projection contracts are accepted and machine-qualified.
+High-fidelity FOUI remains held until Wave-01 contracts are accepted and machine-qualified.
