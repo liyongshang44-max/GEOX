@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://geox.local/contracts/product_projection_contracts_v1.schema.json",
   "title": "GEOX FOUI Product Projection Contract Wave-01",
-  "description": "Non-authoritative read-model contracts. These schemas do not confer domain or command authority.",
+  "description": "Non-authoritative read-model contracts. Authority refs and non-authority basis refs are deliberately separate.",
   "$defs": {
     "SubjectScope": {
       "type": "object",
@@ -29,6 +29,29 @@
         "source_fact_ref": { "type": ["string", "null"] }
       }
     },
+    "NonAuthorityRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref_key", "ref_class", "object_kind", "exact_ref", "source_fact_ref"],
+      "properties": {
+        "ref_key": { "type": "string", "minLength": 1 },
+        "ref_class": {
+          "enum": [
+            "COMPOSITION_MANIFEST",
+            "PRODUCT_GOVERNANCE",
+            "OPERATIONAL_QUALIFICATION",
+            "PROVIDER",
+            "MEASUREMENT",
+            "VERIFICATION_STATE",
+            "EVIDENCE",
+            "OTHER_NON_AUTHORITY"
+          ]
+        },
+        "object_kind": { "type": "string", "minLength": 1 },
+        "exact_ref": { "type": "string", "minLength": 1 },
+        "source_fact_ref": { "type": ["string", "null"] }
+      }
+    },
     "SourceDigest": {
       "type": "object",
       "additionalProperties": false,
@@ -47,7 +70,7 @@
         "mode": { "enum": ["SINGLE_EXACT", "COMMON_INTERSECTION", "MIXED", "NOT_ESTABLISHED", "NOT_APPLICABLE"] },
         "effective_from": { "type": ["string", "null"], "format": "date-time" },
         "effective_until": { "type": ["string", "null"], "format": "date-time" },
-        "basis_ref_keys": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+        "basis_ref_keys": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
       }
     },
     "EvidenceCutoff": {
@@ -84,9 +107,22 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "projection_id", "projection_type", "projection_schema_version", "generated_at", "derivation_version",
-        "subject_scope", "source_authority_refs", "source_content_digests", "source_effective_interval",
-        "source_evidence_cutoff", "authority_ceiling", "limitations", "freshness", "projection_semantics", "non_authoritative"
+        "projection_id",
+        "projection_type",
+        "projection_schema_version",
+        "generated_at",
+        "derivation_version",
+        "subject_scope",
+        "source_authority_refs",
+        "source_non_authority_refs",
+        "source_content_digests",
+        "source_effective_interval",
+        "source_evidence_cutoff",
+        "authority_ceiling",
+        "limitations",
+        "freshness",
+        "projection_semantics",
+        "non_authoritative"
       ],
       "properties": {
         "projection_id": { "type": "string", "minLength": 1 },
@@ -96,6 +132,7 @@
         "derivation_version": { "type": "string", "minLength": 1 },
         "subject_scope": { "$ref": "#/$defs/SubjectScope" },
         "source_authority_refs": { "type": "array", "items": { "$ref": "#/$defs/AuthorityRef" } },
+        "source_non_authority_refs": { "type": "array", "items": { "$ref": "#/$defs/NonAuthorityRef" } },
         "source_content_digests": { "type": "array", "items": { "$ref": "#/$defs/SourceDigest" } },
         "source_effective_interval": { "$ref": "#/$defs/EffectiveInterval" },
         "source_evidence_cutoff": { "oneOf": [{ "$ref": "#/$defs/EvidenceCutoff" }, { "type": "null" }] },
@@ -190,9 +227,23 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "basis_integrity", "historical_basis_source", "current_state_substitution_forbidden", "decision_ref_key", "decision_time", "evidence_cutoff",
-            "decision_time_manifest_ref_key", "field_state_ref_at_decision_key", "applicability_ref_key", "runtime_eligibility_ref_key", "runtime_binding_ref_keys",
-            "decision_basis_ref_keys", "provider_ref_keys", "measurement_ref_keys", "verification_state_ref_keys", "decision_basis_digest", "capture_integrity"
+            "basis_integrity",
+            "historical_basis_source",
+            "current_state_substitution_forbidden",
+            "decision_ref_key",
+            "decision_time",
+            "evidence_cutoff",
+            "decision_time_manifest_ref_key",
+            "field_state_ref_at_decision_key",
+            "applicability_ref_key",
+            "runtime_eligibility_ref_key",
+            "runtime_binding_ref_keys",
+            "decision_basis_ref_keys",
+            "provider_ref_keys",
+            "measurement_ref_keys",
+            "verification_state_ref_keys",
+            "decision_basis_digest",
+            "capture_integrity"
           ],
           "properties": {
             "basis_integrity": { "enum": ["EXACT_MANIFEST", "EXACT_DOMAIN_LOCAL_REFS", "PARTIAL_RECONSTRUCTION", "UNAVAILABLE"] },
