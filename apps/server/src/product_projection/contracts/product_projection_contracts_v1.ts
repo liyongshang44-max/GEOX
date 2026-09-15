@@ -17,6 +17,24 @@ export const PRODUCT_PROJECTION_TYPES_V1 = [
 ] as const;
 export type ProductProjectionTypeV1 = (typeof PRODUCT_PROJECTION_TYPES_V1)[number];
 
+export const PRODUCT_PROJECTION_AUTHORITY_DOMAINS_V1 = ["MCFT", "ADR", "B_LINE", "OUTCOME", "EXTERNAL"] as const;
+export type ProductProjectionAuthorityDomainV1 = (typeof PRODUCT_PROJECTION_AUTHORITY_DOMAINS_V1)[number];
+
+// These refs are deliberately not authority refs. Keeping them in a distinct namespace prevents
+// replay envelopes, product governance, measurements, provider metadata, and evidence pointers
+// from acquiring authority semantics merely because FOUI references them.
+export const PRODUCT_PROJECTION_NON_AUTHORITY_REF_CLASSES_V1 = [
+  "COMPOSITION_MANIFEST",
+  "PRODUCT_GOVERNANCE",
+  "OPERATIONAL_QUALIFICATION",
+  "PROVIDER",
+  "MEASUREMENT",
+  "VERIFICATION_STATE",
+  "EVIDENCE",
+  "OTHER_NON_AUTHORITY",
+] as const;
+export type ProductProjectionNonAuthorityRefClassV1 = (typeof PRODUCT_PROJECTION_NON_AUTHORITY_REF_CLASSES_V1)[number];
+
 export const PRODUCT_PROJECTION_FRESHNESS_STATUSES_V1 = ["CURRENT", "STALE", "EXPIRED", "UNKNOWN"] as const;
 export type ProductProjectionFreshnessStatusV1 = (typeof PRODUCT_PROJECTION_FRESHNESS_STATUSES_V1)[number];
 
@@ -28,11 +46,7 @@ export const PRODUCT_PROJECTION_FRESHNESS_BASES_V1 = [
 ] as const;
 export type ProductProjectionFreshnessBasisV1 = (typeof PRODUCT_PROJECTION_FRESHNESS_BASES_V1)[number];
 
-export const PRODUCT_PROJECTION_SEMANTICS_V1 = [
-  "CURRENT_PROJECTION",
-  "DECISION_TIME_SNAPSHOT",
-  "HISTORICAL_REPLAY",
-] as const;
+export const PRODUCT_PROJECTION_SEMANTICS_V1 = ["CURRENT_PROJECTION", "DECISION_TIME_SNAPSHOT", "HISTORICAL_REPLAY"] as const;
 export type ProductProjectionSemanticsV1 = (typeof PRODUCT_PROJECTION_SEMANTICS_V1)[number];
 
 export const PRODUCT_PROJECTION_EFFECTIVE_INTERVAL_MODES_V1 = [
@@ -43,15 +57,6 @@ export const PRODUCT_PROJECTION_EFFECTIVE_INTERVAL_MODES_V1 = [
   "NOT_APPLICABLE",
 ] as const;
 export type ProductProjectionEffectiveIntervalModeV1 = (typeof PRODUCT_PROJECTION_EFFECTIVE_INTERVAL_MODES_V1)[number];
-
-export const PRODUCT_PROJECTION_AUTHORITY_DOMAINS_V1 = [
-  "MCFT",
-  "ADR",
-  "B_LINE",
-  "OUTCOME",
-  "EXTERNAL",
-] as const;
-export type ProductProjectionAuthorityDomainV1 = (typeof PRODUCT_PROJECTION_AUTHORITY_DOMAINS_V1)[number];
 
 export type ProductProjectionSubjectScopeV1 = {
   tenant_id: string;
@@ -66,6 +71,14 @@ export type ProductProjectionAuthorityRefV1 = {
   ref_key: string;
   authority_domain: ProductProjectionAuthorityDomainV1;
   authority_object_kind: string;
+  exact_ref: string;
+  source_fact_ref: string | null;
+};
+
+export type ProductProjectionNonAuthorityRefV1 = {
+  ref_key: string;
+  ref_class: ProductProjectionNonAuthorityRefClassV1;
+  object_kind: string;
   exact_ref: string;
   source_fact_ref: string | null;
 };
@@ -109,6 +122,7 @@ export type ProductProjectionEnvelopeV1 = {
   derivation_version: string;
   subject_scope: ProductProjectionSubjectScopeV1;
   source_authority_refs: readonly ProductProjectionAuthorityRefV1[];
+  source_non_authority_refs: readonly ProductProjectionNonAuthorityRefV1[];
   source_content_digests: readonly ProductProjectionSourceDigestV1[];
   source_effective_interval: ProductProjectionEffectiveIntervalV1;
   source_evidence_cutoff: ProductProjectionEvidenceCutoffV1 | null;
@@ -153,11 +167,7 @@ export type GovernedActionCaseAnchorKindV1 = (typeof GOVERNED_ACTION_CASE_ANCHOR
 export const GOVERNED_ACTION_COMPOSITION_STATUSES_V1 = ["EXACT_REF_LINKED", "PARTIAL_REF_LINKED", "UNRESOLVED"] as const;
 export type GovernedActionCompositionStatusV1 = (typeof GOVERNED_ACTION_COMPOSITION_STATUSES_V1)[number];
 
-export const GOVERNED_ACTION_LINKAGE_KINDS_V1 = [
-  "EXACT_PREDECESSOR_REF",
-  "EXACT_SOURCE_FACT_REF",
-  "EXACT_DIGEST_BOUND_REF",
-] as const;
+export const GOVERNED_ACTION_LINKAGE_KINDS_V1 = ["EXACT_PREDECESSOR_REF", "EXACT_SOURCE_FACT_REF", "EXACT_DIGEST_BOUND_REF"] as const;
 export type GovernedActionLinkageKindV1 = (typeof GOVERNED_ACTION_LINKAGE_KINDS_V1)[number];
 
 export type GovernedActionLinkageProofV1 = {
@@ -172,11 +182,7 @@ export type GovernedActionCaseAnchorV1 = {
   anchor_kind: GovernedActionCaseAnchorKindV1;
 };
 
-export const GOVERNED_ACTION_CURRENT_CONTEXT_STATUSES_V1 = [
-  "AVAILABLE",
-  "AVAILABLE_WITH_LIMITATIONS",
-  "UNAVAILABLE",
-] as const;
+export const GOVERNED_ACTION_CURRENT_CONTEXT_STATUSES_V1 = ["AVAILABLE", "AVAILABLE_WITH_LIMITATIONS", "UNAVAILABLE"] as const;
 export type GovernedActionCurrentContextStatusV1 = (typeof GOVERNED_ACTION_CURRENT_CONTEXT_STATUSES_V1)[number];
 
 export type GovernedActionCurrentContextV1 = {
@@ -188,20 +194,10 @@ export type GovernedActionCurrentContextV1 = {
   current_context_status: GovernedActionCurrentContextStatusV1;
 };
 
-export const DECISION_BASIS_INTEGRITY_STATUSES_V1 = [
-  "EXACT_MANIFEST",
-  "EXACT_DOMAIN_LOCAL_REFS",
-  "PARTIAL_RECONSTRUCTION",
-  "UNAVAILABLE",
-] as const;
+export const DECISION_BASIS_INTEGRITY_STATUSES_V1 = ["EXACT_MANIFEST", "EXACT_DOMAIN_LOCAL_REFS", "PARTIAL_RECONSTRUCTION", "UNAVAILABLE"] as const;
 export type DecisionBasisIntegrityStatusV1 = (typeof DECISION_BASIS_INTEGRITY_STATUSES_V1)[number];
 
-export const DECISION_BASIS_SOURCE_MODES_V1 = [
-  "DECISION_TIME_CAPTURE",
-  "HISTORICAL_REPLAY",
-  "LATER_RECONSTRUCTION",
-  "UNAVAILABLE",
-] as const;
+export const DECISION_BASIS_SOURCE_MODES_V1 = ["DECISION_TIME_CAPTURE", "HISTORICAL_REPLAY", "LATER_RECONSTRUCTION", "UNAVAILABLE"] as const;
 export type DecisionBasisSourceModeV1 = (typeof DECISION_BASIS_SOURCE_MODES_V1)[number];
 
 export const DECISION_CAPTURE_INTEGRITY_STATUSES_V1 = [
@@ -245,10 +241,7 @@ export type GovernedActionLaterChangesV1 = {
   comparison_limitation_reason_codes: readonly string[];
 };
 
-export type GovernedActionAuthoritySlotV1 = {
-  ref_key: string | null;
-  source_status: string | null;
-};
+export type GovernedActionAuthoritySlotV1 = { ref_key: string | null; source_status: string | null };
 
 export type GovernedActionAuthorityChainV1 = {
   agronomic_decision: GovernedActionAuthoritySlotV1;
@@ -303,19 +296,14 @@ export type GovernedActionCaseProjectionV1 = {
 
 export const CAPABILITY_PRODUCT_IMPLEMENTATION_STATUSES_V1 = ["BUILT", "PARTIAL", "NOT_BUILT"] as const;
 export type CapabilityProductImplementationStatusV1 = (typeof CAPABILITY_PRODUCT_IMPLEMENTATION_STATUSES_V1)[number];
-
 export const CAPABILITY_AUTHORITY_MATURITY_STATUSES_V1 = ["AUTHORIZED", "PREVIEW", "NOT_AUTHORIZED"] as const;
 export type CapabilityAuthorityMaturityStatusV1 = (typeof CAPABILITY_AUTHORITY_MATURITY_STATUSES_V1)[number];
-
 export const CAPABILITY_OPERATIONAL_ELIGIBILITY_STATUSES_V1 = ["CURRENT", "DEGRADED", "EXPIRED", "UNAVAILABLE"] as const;
 export type CapabilityOperationalEligibilityStatusV1 = (typeof CAPABILITY_OPERATIONAL_ELIGIBILITY_STATUSES_V1)[number];
-
 export const CAPABILITY_CUSTOMER_STATES_V1 = ["AVAILABLE", "LIMITED", "PREVIEW", "NOT_YET_AVAILABLE"] as const;
 export type CapabilityCustomerStateV1 = (typeof CAPABILITY_CUSTOMER_STATES_V1)[number];
-
 export const CAPABILITY_RELEASE_SURFACE_STATES_V1 = ["ACTIVE", "LIMITED", "PREVIEW", "DISABLED"] as const;
 export type CapabilityReleaseSurfaceStateV1 = (typeof CAPABILITY_RELEASE_SURFACE_STATES_V1)[number];
-
 export const CAPABILITY_AVAILABILITY_SCOPE_KINDS_V1 = ["PRODUCT_GLOBAL", "TENANT", "FIELD", "FIELD_ACTION_TYPE"] as const;
 export type CapabilityAvailabilityScopeKindV1 = (typeof CAPABILITY_AVAILABILITY_SCOPE_KINDS_V1)[number];
 
@@ -356,25 +344,12 @@ export const ATTENTION_TRIAGE_BUCKETS_V1 = [
   "TIME_BOUND_REVIEW",
 ] as const;
 export type AttentionTriageBucketV1 = (typeof ATTENTION_TRIAGE_BUCKETS_V1)[number];
-
 export const ATTENTION_DUE_BASES_V1 = ["DOMAIN_SOURCE", "PRODUCT_SLA", "NONE"] as const;
 export type AttentionDueBasisV1 = (typeof ATTENTION_DUE_BASES_V1)[number];
 
-export type AttentionBlockingStateV1 = {
-  source_ref_key: string;
-  source_state: string;
-};
-
-export type AttentionDueV1 = {
-  due_at: string | null;
-  due_basis: AttentionDueBasisV1;
-  basis_ref_key: string | null;
-};
-
-export type AttentionSourceDeclaredSeverityV1 = {
-  value: string;
-  source_ref_key: string;
-};
+export type AttentionBlockingStateV1 = { source_ref_key: string; source_state: string };
+export type AttentionDueV1 = { due_at: string | null; due_basis: AttentionDueBasisV1; basis_ref_key: string | null };
+export type AttentionSourceDeclaredSeverityV1 = { value: string; source_ref_key: string };
 
 export type AttentionQueueItemV1 = {
   attention_id: string;
@@ -406,30 +381,25 @@ export class ProductProjectionContractError extends Error {
 }
 
 function record(value: unknown, code: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new ProductProjectionContractError(code, code);
-  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new ProductProjectionContractError(code, code);
   return value as Record<string, unknown>;
 }
 
 function text(value: unknown, code: string): string {
-  const normalized = String(value ?? "").trim();
-  if (!normalized) throw new ProductProjectionContractError(code, code);
-  return normalized;
+  const v = String(value ?? "").trim();
+  if (!v) throw new ProductProjectionContractError(code, code);
+  return v;
 }
 
 function optionalText(value: unknown): string | null {
   if (value === null || value === undefined) return null;
-  const normalized = String(value).trim();
-  return normalized || null;
+  return String(value).trim() || null;
 }
 
 function explicitIso(value: unknown, code: string): string {
-  const normalized = text(value, code);
-  const epoch = Date.parse(normalized);
-  if (!Number.isFinite(epoch) || !/(Z|[+-]\d{2}:\d{2})$/.test(normalized)) {
-    throw new ProductProjectionContractError(code, code);
-  }
+  const v = text(value, code);
+  const epoch = Date.parse(v);
+  if (!Number.isFinite(epoch) || !/(Z|[+-]\d{2}:\d{2})$/.test(v)) throw new ProductProjectionContractError(code, code);
   return new Date(epoch).toISOString();
 }
 
@@ -438,44 +408,77 @@ function array(value: unknown, code: string): readonly unknown[] {
   return value;
 }
 
-function nonEmptyStringArray(value: unknown, code: string): readonly string[] {
-  const values = array(value, code).map((item, index) => text(item, `${code}:${index}`));
-  if (values.length === 0) throw new ProductProjectionContractError(code, code);
-  if (new Set(values).size !== values.length) throw new ProductProjectionContractError(`${code}:DUPLICATE`, `${code}:DUPLICATE`);
-  return values;
-}
-
 function stringArray(value: unknown, code: string): readonly string[] {
   const values = array(value, code).map((item, index) => text(item, `${code}:${index}`));
   if (new Set(values).size !== values.length) throw new ProductProjectionContractError(`${code}:DUPLICATE`, `${code}:DUPLICATE`);
   return values;
 }
 
+function nonEmptyStringArray(value: unknown, code: string): readonly string[] {
+  const values = stringArray(value, code);
+  if (values.length === 0) throw new ProductProjectionContractError(code, code);
+  return values;
+}
+
 function enumValue<T extends readonly string[]>(value: unknown, allowed: T, code: string): T[number] {
-  const normalized = text(value, code);
-  if (!(allowed as readonly string[]).includes(normalized)) throw new ProductProjectionContractError(code, code);
-  return normalized as T[number];
+  const v = text(value, code);
+  if (!(allowed as readonly string[]).includes(v)) throw new ProductProjectionContractError(code, code);
+  return v as T[number];
 }
 
-function refKeySet(envelope: ProductProjectionEnvelopeV1): Set<string> {
-  return new Set(envelope.source_authority_refs.map((ref) => ref.ref_key));
+function authorityRefMap(envelope: ProductProjectionEnvelopeV1): Map<string, ProductProjectionAuthorityRefV1> {
+  return new Map(envelope.source_authority_refs.map((ref) => [ref.ref_key, ref]));
 }
 
-function assertKnownRefKey(value: string | null, refs: Set<string>, code: string): void {
+function nonAuthorityRefMap(envelope: ProductProjectionEnvelopeV1): Map<string, ProductProjectionNonAuthorityRefV1> {
+  return new Map(envelope.source_non_authority_refs.map((ref) => [ref.ref_key, ref]));
+}
+
+function sourceRefKeySet(envelope: ProductProjectionEnvelopeV1): Set<string> {
+  return new Set([...envelope.source_authority_refs, ...envelope.source_non_authority_refs].map((ref) => ref.ref_key));
+}
+
+function assertKnownSourceRef(value: string | null, refs: Set<string>, code: string): void {
   if (value !== null && !refs.has(value)) throw new ProductProjectionContractError(code, `${code}:${value}`);
 }
 
-function assertKnownRefKeys(values: readonly string[], refs: Set<string>, code: string): void {
-  for (const value of values) assertKnownRefKey(value, refs, code);
+function assertKnownSourceRefs(values: readonly string[], refs: Set<string>, code: string): void {
+  for (const value of values) assertKnownSourceRef(value, refs, code);
+}
+
+function assertKnownAuthorityRef(value: string | null, refs: Map<string, ProductProjectionAuthorityRefV1>, code: string): void {
+  if (value !== null && !refs.has(value)) throw new ProductProjectionContractError(code, `${code}:${value}`);
+}
+
+function assertKnownAuthorityRefs(values: readonly string[], refs: Map<string, ProductProjectionAuthorityRefV1>, code: string): void {
+  for (const value of values) assertKnownAuthorityRef(value, refs, code);
+}
+
+function assertNonAuthorityRefClass(
+  value: string | null,
+  refs: Map<string, ProductProjectionNonAuthorityRefV1>,
+  expectedClass: ProductProjectionNonAuthorityRefClassV1,
+  code: string,
+): void {
+  if (value === null) return;
+  const ref = refs.get(value);
+  if (!ref || ref.ref_class !== expectedClass) throw new ProductProjectionContractError(code, `${code}:${value}`);
+}
+
+function assertNonAuthorityRefClasses(
+  values: readonly string[],
+  refs: Map<string, ProductProjectionNonAuthorityRefV1>,
+  expectedClass: ProductProjectionNonAuthorityRefClassV1,
+  code: string,
+): void {
+  for (const value of values) assertNonAuthorityRefClass(value, refs, expectedClass, code);
 }
 
 export function assertProductProjectionEnvelopeV1(input: unknown): asserts input is ProductProjectionEnvelopeV1 {
   const obj = record(input, "PRODUCT_PROJECTION_ENVELOPE_REQUIRED");
   text(obj.projection_id, "PRODUCT_PROJECTION_ID_REQUIRED");
   enumValue(obj.projection_type, PRODUCT_PROJECTION_TYPES_V1, "PRODUCT_PROJECTION_TYPE_INVALID");
-  if (obj.projection_schema_version !== PRODUCT_PROJECTION_CONTRACT_VERSION_V1) {
-    throw new ProductProjectionContractError("PRODUCT_PROJECTION_SCHEMA_VERSION_INVALID", "PRODUCT_PROJECTION_SCHEMA_VERSION_INVALID");
-  }
+  if (obj.projection_schema_version !== PRODUCT_PROJECTION_CONTRACT_VERSION_V1) throw new ProductProjectionContractError("PRODUCT_PROJECTION_SCHEMA_VERSION_INVALID", "PRODUCT_PROJECTION_SCHEMA_VERSION_INVALID");
   explicitIso(obj.generated_at, "PRODUCT_PROJECTION_GENERATED_AT_INVALID");
   text(obj.derivation_version, "PRODUCT_PROJECTION_DERIVATION_VERSION_REQUIRED");
 
@@ -483,61 +486,64 @@ export function assertProductProjectionEnvelopeV1(input: unknown): asserts input
   text(scope.tenant_id, "PRODUCT_PROJECTION_TENANT_REQUIRED");
   text(scope.project_id, "PRODUCT_PROJECTION_PROJECT_REQUIRED");
   text(scope.group_id, "PRODUCT_PROJECTION_GROUP_REQUIRED");
-  optionalText(scope.field_id);
-  optionalText(scope.zone_id);
-  optionalText(scope.season_id);
+  optionalText(scope.field_id); optionalText(scope.zone_id); optionalText(scope.season_id);
 
-  const refs = array(obj.source_authority_refs, "PRODUCT_PROJECTION_SOURCE_REFS_REQUIRED").map((value, index) => {
-    const ref = record(value, `PRODUCT_PROJECTION_SOURCE_REF_INVALID:${index}`);
-    const refKey = text(ref.ref_key, `PRODUCT_PROJECTION_SOURCE_REF_KEY_REQUIRED:${index}`);
+  const authorityKeys: string[] = [];
+  for (const [index, value] of array(obj.source_authority_refs, "PRODUCT_PROJECTION_AUTHORITY_REFS_REQUIRED").entries()) {
+    const ref = record(value, `PRODUCT_PROJECTION_AUTHORITY_REF_INVALID:${index}`);
+    authorityKeys.push(text(ref.ref_key, `PRODUCT_PROJECTION_AUTHORITY_REF_KEY_REQUIRED:${index}`));
     enumValue(ref.authority_domain, PRODUCT_PROJECTION_AUTHORITY_DOMAINS_V1, `PRODUCT_PROJECTION_AUTHORITY_DOMAIN_INVALID:${index}`);
     text(ref.authority_object_kind, `PRODUCT_PROJECTION_AUTHORITY_OBJECT_KIND_REQUIRED:${index}`);
-    text(ref.exact_ref, `PRODUCT_PROJECTION_EXACT_REF_REQUIRED:${index}`);
+    text(ref.exact_ref, `PRODUCT_PROJECTION_AUTHORITY_EXACT_REF_REQUIRED:${index}`);
     optionalText(ref.source_fact_ref);
-    return refKey;
-  });
-  if (new Set(refs).size !== refs.length) throw new ProductProjectionContractError("PRODUCT_PROJECTION_DUPLICATE_SOURCE_REF_KEY", "PRODUCT_PROJECTION_DUPLICATE_SOURCE_REF_KEY");
-  const knownRefs = new Set(refs);
+  }
+
+  const nonAuthorityKeys: string[] = [];
+  for (const [index, value] of array(obj.source_non_authority_refs, "PRODUCT_PROJECTION_NON_AUTHORITY_REFS_REQUIRED").entries()) {
+    const ref = record(value, `PRODUCT_PROJECTION_NON_AUTHORITY_REF_INVALID:${index}`);
+    nonAuthorityKeys.push(text(ref.ref_key, `PRODUCT_PROJECTION_NON_AUTHORITY_REF_KEY_REQUIRED:${index}`));
+    enumValue(ref.ref_class, PRODUCT_PROJECTION_NON_AUTHORITY_REF_CLASSES_V1, `PRODUCT_PROJECTION_NON_AUTHORITY_REF_CLASS_INVALID:${index}`);
+    text(ref.object_kind, `PRODUCT_PROJECTION_NON_AUTHORITY_OBJECT_KIND_REQUIRED:${index}`);
+    text(ref.exact_ref, `PRODUCT_PROJECTION_NON_AUTHORITY_EXACT_REF_REQUIRED:${index}`);
+    optionalText(ref.source_fact_ref);
+  }
+
+  const allKeys = [...authorityKeys, ...nonAuthorityKeys];
+  if (new Set(allKeys).size !== allKeys.length) throw new ProductProjectionContractError("PRODUCT_PROJECTION_DUPLICATE_SOURCE_REF_KEY", "PRODUCT_PROJECTION_DUPLICATE_SOURCE_REF_KEY");
+  const sourceRefs = new Set(allKeys);
 
   for (const [index, value] of array(obj.source_content_digests, "PRODUCT_PROJECTION_SOURCE_DIGESTS_REQUIRED").entries()) {
     const digest = record(value, `PRODUCT_PROJECTION_SOURCE_DIGEST_INVALID:${index}`);
     const sourceRefKey = text(digest.source_ref_key, `PRODUCT_PROJECTION_SOURCE_DIGEST_REF_REQUIRED:${index}`);
-    assertKnownRefKey(sourceRefKey, knownRefs, "PRODUCT_PROJECTION_SOURCE_DIGEST_UNKNOWN_REF");
+    assertKnownSourceRef(sourceRefKey, sourceRefs, "PRODUCT_PROJECTION_SOURCE_DIGEST_UNKNOWN_REF");
     text(digest.digest, `PRODUCT_PROJECTION_SOURCE_DIGEST_VALUE_REQUIRED:${index}`);
     text(digest.digest_kind, `PRODUCT_PROJECTION_SOURCE_DIGEST_KIND_REQUIRED:${index}`);
   }
 
   const interval = record(obj.source_effective_interval, "PRODUCT_PROJECTION_EFFECTIVE_INTERVAL_REQUIRED");
-  const intervalMode = enumValue(interval.mode, PRODUCT_PROJECTION_EFFECTIVE_INTERVAL_MODES_V1, "PRODUCT_PROJECTION_EFFECTIVE_INTERVAL_MODE_INVALID");
-  const effectiveFrom = optionalText(interval.effective_from);
-  const effectiveUntil = optionalText(interval.effective_until);
-  if (effectiveFrom) explicitIso(effectiveFrom, "PRODUCT_PROJECTION_EFFECTIVE_FROM_INVALID");
-  if (effectiveUntil) explicitIso(effectiveUntil, "PRODUCT_PROJECTION_EFFECTIVE_UNTIL_INVALID");
-  const intervalBasisRefs = stringArray(interval.basis_ref_keys, "PRODUCT_PROJECTION_EFFECTIVE_INTERVAL_BASIS_REFS_INVALID");
-  assertKnownRefKeys(intervalBasisRefs, knownRefs, "PRODUCT_PROJECTION_EFFECTIVE_INTERVAL_UNKNOWN_REF");
-  if (["SINGLE_EXACT", "COMMON_INTERSECTION"].includes(intervalMode) && (!effectiveFrom || !effectiveUntil || intervalBasisRefs.length === 0)) {
-    throw new ProductProjectionContractError("PRODUCT_PROJECTION_EFFECTIVE_INTERVAL_INCOMPLETE", "PRODUCT_PROJECTION_EFFECTIVE_INTERVAL_INCOMPLETE");
-  }
+  const mode = enumValue(interval.mode, PRODUCT_PROJECTION_EFFECTIVE_INTERVAL_MODES_V1, "PRODUCT_PROJECTION_EFFECTIVE_INTERVAL_MODE_INVALID");
+  const from = optionalText(interval.effective_from);
+  const until = optionalText(interval.effective_until);
+  if (from) explicitIso(from, "PRODUCT_PROJECTION_EFFECTIVE_FROM_INVALID");
+  if (until) explicitIso(until, "PRODUCT_PROJECTION_EFFECTIVE_UNTIL_INVALID");
+  const intervalRefs = stringArray(interval.basis_ref_keys, "PRODUCT_PROJECTION_EFFECTIVE_INTERVAL_BASIS_REFS_INVALID");
+  assertKnownSourceRefs(intervalRefs, sourceRefs, "PRODUCT_PROJECTION_EFFECTIVE_INTERVAL_UNKNOWN_REF");
+  if (["SINGLE_EXACT", "COMMON_INTERSECTION"].includes(mode) && (!from || !until || intervalRefs.length === 0)) throw new ProductProjectionContractError("PRODUCT_PROJECTION_EFFECTIVE_INTERVAL_INCOMPLETE", "PRODUCT_PROJECTION_EFFECTIVE_INTERVAL_INCOMPLETE");
 
   if (obj.source_evidence_cutoff !== null) {
     const cutoff = record(obj.source_evidence_cutoff, "PRODUCT_PROJECTION_EVIDENCE_CUTOFF_INVALID");
     explicitIso(cutoff.cutoff, "PRODUCT_PROJECTION_EVIDENCE_CUTOFF_TIME_INVALID");
-    const basisRefs = nonEmptyStringArray(cutoff.basis_ref_keys, "PRODUCT_PROJECTION_EVIDENCE_CUTOFF_BASIS_REQUIRED");
-    assertKnownRefKeys(basisRefs, knownRefs, "PRODUCT_PROJECTION_EVIDENCE_CUTOFF_UNKNOWN_REF");
+    const refs = nonEmptyStringArray(cutoff.basis_ref_keys, "PRODUCT_PROJECTION_EVIDENCE_CUTOFF_BASIS_REQUIRED");
+    assertKnownSourceRefs(refs, sourceRefs, "PRODUCT_PROJECTION_EVIDENCE_CUTOFF_UNKNOWN_REF");
   }
 
-  if (obj.authority_ceiling !== PRODUCT_PROJECTION_AUTHORITY_CEILING_V1) {
-    throw new ProductProjectionContractError("PRODUCT_PROJECTION_AUTHORITY_CEILING_INVALID", "PRODUCT_PROJECTION_AUTHORITY_CEILING_INVALID");
-  }
-  if (obj.non_authoritative !== true) {
-    throw new ProductProjectionContractError("PRODUCT_PROJECTION_NON_AUTHORITATIVE_INVARIANT_VIOLATION", "PRODUCT_PROJECTION_NON_AUTHORITATIVE_INVARIANT_VIOLATION");
-  }
+  if (obj.authority_ceiling !== PRODUCT_PROJECTION_AUTHORITY_CEILING_V1) throw new ProductProjectionContractError("PRODUCT_PROJECTION_AUTHORITY_CEILING_INVALID", "PRODUCT_PROJECTION_AUTHORITY_CEILING_INVALID");
+  if (obj.non_authoritative !== true) throw new ProductProjectionContractError("PRODUCT_PROJECTION_NON_AUTHORITATIVE_INVARIANT_VIOLATION", "PRODUCT_PROJECTION_NON_AUTHORITATIVE_INVARIANT_VIOLATION");
 
   for (const [index, value] of array(obj.limitations, "PRODUCT_PROJECTION_LIMITATIONS_REQUIRED").entries()) {
     const limitation = record(value, `PRODUCT_PROJECTION_LIMITATION_INVALID:${index}`);
     text(limitation.reason_code, `PRODUCT_PROJECTION_LIMITATION_REASON_REQUIRED:${index}`);
-    const sourceRefKey = optionalText(limitation.source_ref_key);
-    assertKnownRefKey(sourceRefKey, knownRefs, "PRODUCT_PROJECTION_LIMITATION_UNKNOWN_REF");
+    assertKnownSourceRef(optionalText(limitation.source_ref_key), sourceRefs, "PRODUCT_PROJECTION_LIMITATION_UNKNOWN_REF");
     optionalText(limitation.detail);
   }
 
@@ -552,18 +558,16 @@ export function assertProductProjectionEnvelopeV1(input: unknown): asserts input
 export function assertProductProjectionInteractionHintsV1(input: unknown, envelope: ProductProjectionEnvelopeV1): asserts input is ProductProjectionInteractionHintsV1 {
   const obj = record(input, "PRODUCT_PROJECTION_INTERACTION_HINTS_REQUIRED");
   text(obj.caller_context_id, "PRODUCT_PROJECTION_CALLER_CONTEXT_REQUIRED");
-  const refs = refKeySet(envelope);
+  const authorityRefs = authorityRefMap(envelope);
   for (const [index, value] of array(obj.allowed_intents, "PRODUCT_PROJECTION_ALLOWED_INTENTS_REQUIRED").entries()) {
     const hint = record(value, `PRODUCT_PROJECTION_INTENT_INVALID:${index}`);
     text(hint.intent, `PRODUCT_PROJECTION_INTENT_NAME_REQUIRED:${index}`);
     enumValue(hint.command_owner, PRODUCT_PROJECTION_COMMAND_OWNERS_V1, `PRODUCT_PROJECTION_COMMAND_OWNER_INVALID:${index}`);
     stringArray(hint.required_capabilities, `PRODUCT_PROJECTION_REQUIRED_CAPABILITIES_INVALID:${index}`);
-    const targetRefs = stringArray(hint.target_authority_ref_keys, `PRODUCT_PROJECTION_TARGET_REFS_INVALID:${index}`);
-    assertKnownRefKeys(targetRefs, refs, "PRODUCT_PROJECTION_INTENT_UNKNOWN_TARGET_REF");
+    const targets = stringArray(hint.target_authority_ref_keys, `PRODUCT_PROJECTION_TARGET_REFS_INVALID:${index}`);
+    assertKnownAuthorityRefs(targets, authorityRefs, "PRODUCT_PROJECTION_INTENT_UNKNOWN_AUTHORITY_TARGET_REF");
     text(hint.display_reason_code, `PRODUCT_PROJECTION_DISPLAY_REASON_REQUIRED:${index}`);
-    if (hint.requires_command_reauthorization !== true) {
-      throw new ProductProjectionContractError("PRODUCT_PROJECTION_COMMAND_REAUTHORIZATION_REQUIRED", "PRODUCT_PROJECTION_COMMAND_REAUTHORIZATION_REQUIRED");
-    }
+    if (hint.requires_command_reauthorization !== true) throw new ProductProjectionContractError("PRODUCT_PROJECTION_COMMAND_REAUTHORIZATION_REQUIRED", "PRODUCT_PROJECTION_COMMAND_REAUTHORIZATION_REQUIRED");
   }
 }
 
@@ -572,125 +576,109 @@ export function assertGovernedActionCaseProjectionV1(input: unknown): asserts in
   assertProductProjectionEnvelopeV1(obj.envelope);
   const envelope = obj.envelope as ProductProjectionEnvelopeV1;
   if (envelope.projection_type !== "GOVERNED_ACTION_CASE") throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_PROJECTION_TYPE_INVALID", "GOVERNED_ACTION_CASE_PROJECTION_TYPE_INVALID");
-  const refs = refKeySet(envelope);
+  const authorityRefs = authorityRefMap(envelope);
+  const nonAuthorityRefs = nonAuthorityRefMap(envelope);
+  const sourceRefs = sourceRefKeySet(envelope);
 
   const anchor = record(obj.case_anchor, "GOVERNED_ACTION_CASE_ANCHOR_REQUIRED");
-  const anchorRef = text(anchor.source_ref_key, "GOVERNED_ACTION_CASE_ANCHOR_REF_REQUIRED");
-  assertKnownRefKey(anchorRef, refs, "GOVERNED_ACTION_CASE_ANCHOR_UNKNOWN_REF");
+  assertKnownAuthorityRef(text(anchor.source_ref_key, "GOVERNED_ACTION_CASE_ANCHOR_REF_REQUIRED"), authorityRefs, "GOVERNED_ACTION_CASE_ANCHOR_UNKNOWN_AUTHORITY_REF");
   enumValue(anchor.anchor_kind, GOVERNED_ACTION_CASE_ANCHOR_KINDS_V1, "GOVERNED_ACTION_CASE_ANCHOR_KIND_INVALID");
   text(obj.action_type, "GOVERNED_ACTION_CASE_ACTION_TYPE_REQUIRED");
-  const compositionStatus = enumValue(obj.composition_status, GOVERNED_ACTION_COMPOSITION_STATUSES_V1, "GOVERNED_ACTION_CASE_COMPOSITION_STATUS_INVALID");
+  const composition = enumValue(obj.composition_status, GOVERNED_ACTION_COMPOSITION_STATUSES_V1, "GOVERNED_ACTION_CASE_COMPOSITION_STATUS_INVALID");
 
-  const linkageProofs = array(obj.linkage_proofs, "GOVERNED_ACTION_CASE_LINKAGE_PROOFS_REQUIRED");
-  for (const [index, value] of linkageProofs.entries()) {
+  const proofs = array(obj.linkage_proofs, "GOVERNED_ACTION_CASE_LINKAGE_PROOFS_REQUIRED");
+  for (const [index, value] of proofs.entries()) {
     const proof = record(value, `GOVERNED_ACTION_CASE_LINKAGE_PROOF_INVALID:${index}`);
-    const from = text(proof.from_source_ref_key, `GOVERNED_ACTION_CASE_LINKAGE_FROM_REQUIRED:${index}`);
-    const to = text(proof.to_source_ref_key, `GOVERNED_ACTION_CASE_LINKAGE_TO_REQUIRED:${index}`);
-    assertKnownRefKey(from, refs, "GOVERNED_ACTION_CASE_LINKAGE_FROM_UNKNOWN_REF");
-    assertKnownRefKey(to, refs, "GOVERNED_ACTION_CASE_LINKAGE_TO_UNKNOWN_REF");
+    assertKnownAuthorityRef(text(proof.from_source_ref_key, `GOVERNED_ACTION_CASE_LINKAGE_FROM_REQUIRED:${index}`), authorityRefs, "GOVERNED_ACTION_CASE_LINKAGE_FROM_UNKNOWN_AUTHORITY_REF");
+    assertKnownAuthorityRef(text(proof.to_source_ref_key, `GOVERNED_ACTION_CASE_LINKAGE_TO_REQUIRED:${index}`), authorityRefs, "GOVERNED_ACTION_CASE_LINKAGE_TO_UNKNOWN_AUTHORITY_REF");
     enumValue(proof.linkage_kind, GOVERNED_ACTION_LINKAGE_KINDS_V1, `GOVERNED_ACTION_CASE_LINKAGE_KIND_INVALID:${index}`);
-    assertKnownRefKey(optionalText(proof.evidence_ref_key), refs, "GOVERNED_ACTION_CASE_LINKAGE_EVIDENCE_UNKNOWN_REF");
+    assertKnownSourceRef(optionalText(proof.evidence_ref_key), sourceRefs, "GOVERNED_ACTION_CASE_LINKAGE_EVIDENCE_UNKNOWN_REF");
   }
-  if (compositionStatus === "EXACT_REF_LINKED" && linkageProofs.length === 0) {
-    throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_EXACT_LINKAGE_PROOF_REQUIRED", "GOVERNED_ACTION_CASE_EXACT_LINKAGE_PROOF_REQUIRED");
-  }
+  if (composition === "EXACT_REF_LINKED" && proofs.length === 0) throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_EXACT_LINKAGE_PROOF_REQUIRED", "GOVERNED_ACTION_CASE_EXACT_LINKAGE_PROOF_REQUIRED");
 
   const current = record(obj.current_context, "GOVERNED_ACTION_CASE_CURRENT_CONTEXT_REQUIRED");
   explicitIso(current.current_projection_time, "GOVERNED_ACTION_CASE_CURRENT_PROJECTION_TIME_INVALID");
-  assertKnownRefKey(optionalText(current.current_field_state_ref_key), refs, "GOVERNED_ACTION_CASE_CURRENT_FIELD_STATE_UNKNOWN_REF");
+  assertKnownAuthorityRef(optionalText(current.current_field_state_ref_key), authorityRefs, "GOVERNED_ACTION_CASE_CURRENT_FIELD_STATE_UNKNOWN_AUTHORITY_REF");
   if (current.current_state_effective_interval !== null) {
-    const nested = { ...envelope, source_effective_interval: current.current_state_effective_interval };
-    assertProductProjectionEnvelopeV1(nested);
+    assertProductProjectionEnvelopeV1({ ...envelope, source_effective_interval: current.current_state_effective_interval });
   }
-  assertKnownRefKeys(stringArray(current.current_forecast_ref_keys, "GOVERNED_ACTION_CASE_CURRENT_FORECAST_REFS_INVALID"), refs, "GOVERNED_ACTION_CASE_CURRENT_FORECAST_UNKNOWN_REF");
+  assertKnownAuthorityRefs(stringArray(current.current_forecast_ref_keys, "GOVERNED_ACTION_CASE_CURRENT_FORECAST_REFS_INVALID"), authorityRefs, "GOVERNED_ACTION_CASE_CURRENT_FORECAST_UNKNOWN_AUTHORITY_REF");
   stringArray(current.current_limitation_reason_codes, "GOVERNED_ACTION_CASE_CURRENT_LIMITATIONS_INVALID");
   enumValue(current.current_context_status, GOVERNED_ACTION_CURRENT_CONTEXT_STATUSES_V1, "GOVERNED_ACTION_CASE_CURRENT_CONTEXT_STATUS_INVALID");
 
   const basis = record(obj.decision_time_basis, "GOVERNED_ACTION_CASE_DECISION_TIME_BASIS_REQUIRED");
-  const basisIntegrity = enumValue(basis.basis_integrity, DECISION_BASIS_INTEGRITY_STATUSES_V1, "GOVERNED_ACTION_CASE_BASIS_INTEGRITY_INVALID");
-  const basisSource = enumValue(basis.historical_basis_source, DECISION_BASIS_SOURCE_MODES_V1, "GOVERNED_ACTION_CASE_BASIS_SOURCE_INVALID");
-  if (basis.current_state_substitution_forbidden !== true) {
-    throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_CURRENT_STATE_SUBSTITUTION_FORBIDDEN", "GOVERNED_ACTION_CASE_CURRENT_STATE_SUBSTITUTION_FORBIDDEN");
-  }
+  const integrity = enumValue(basis.basis_integrity, DECISION_BASIS_INTEGRITY_STATUSES_V1, "GOVERNED_ACTION_CASE_BASIS_INTEGRITY_INVALID");
+  const sourceMode = enumValue(basis.historical_basis_source, DECISION_BASIS_SOURCE_MODES_V1, "GOVERNED_ACTION_CASE_BASIS_SOURCE_INVALID");
+  if (basis.current_state_substitution_forbidden !== true) throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_CURRENT_STATE_SUBSTITUTION_FORBIDDEN", "GOVERNED_ACTION_CASE_CURRENT_STATE_SUBSTITUTION_FORBIDDEN");
+
   const decisionRef = optionalText(basis.decision_ref_key);
   const manifestRef = optionalText(basis.decision_time_manifest_ref_key);
-  const decisionStateRef = optionalText(basis.field_state_ref_at_decision_key);
+  const stateAtDecision = optionalText(basis.field_state_ref_at_decision_key);
   const applicabilityRef = optionalText(basis.applicability_ref_key);
   const eligibilityRef = optionalText(basis.runtime_eligibility_ref_key);
-  for (const [value, code] of [
-    [decisionRef, "GOVERNED_ACTION_CASE_DECISION_REF_UNKNOWN"],
-    [manifestRef, "GOVERNED_ACTION_CASE_MANIFEST_REF_UNKNOWN"],
-    [decisionStateRef, "GOVERNED_ACTION_CASE_DECISION_STATE_REF_UNKNOWN"],
-    [applicabilityRef, "GOVERNED_ACTION_CASE_APPLICABILITY_REF_UNKNOWN"],
-    [eligibilityRef, "GOVERNED_ACTION_CASE_ELIGIBILITY_REF_UNKNOWN"],
-  ] as const) assertKnownRefKey(value, refs, code);
+  assertKnownAuthorityRef(decisionRef, authorityRefs, "GOVERNED_ACTION_CASE_DECISION_REF_UNKNOWN_AUTHORITY_REF");
+  assertNonAuthorityRefClass(manifestRef, nonAuthorityRefs, "COMPOSITION_MANIFEST", "GOVERNED_ACTION_CASE_MANIFEST_MUST_BE_NON_AUTHORITY_COMPOSITION_REF");
+  assertKnownAuthorityRef(stateAtDecision, authorityRefs, "GOVERNED_ACTION_CASE_DECISION_STATE_UNKNOWN_AUTHORITY_REF");
+  assertKnownAuthorityRef(applicabilityRef, authorityRefs, "GOVERNED_ACTION_CASE_APPLICABILITY_UNKNOWN_AUTHORITY_REF");
+  assertKnownAuthorityRef(eligibilityRef, authorityRefs, "GOVERNED_ACTION_CASE_ELIGIBILITY_UNKNOWN_AUTHORITY_REF");
+
   const bindingRefs = stringArray(basis.runtime_binding_ref_keys, "GOVERNED_ACTION_CASE_RUNTIME_BINDING_REFS_INVALID");
+  assertKnownAuthorityRefs(bindingRefs, authorityRefs, "GOVERNED_ACTION_CASE_RUNTIME_BINDING_UNKNOWN_AUTHORITY_REF");
   const decisionBasisRefs = stringArray(basis.decision_basis_ref_keys, "GOVERNED_ACTION_CASE_DECISION_BASIS_REFS_INVALID");
+  assertKnownSourceRefs(decisionBasisRefs, sourceRefs, "GOVERNED_ACTION_CASE_DECISION_BASIS_UNKNOWN_REF");
   const providerRefs = stringArray(basis.provider_ref_keys, "GOVERNED_ACTION_CASE_PROVIDER_REFS_INVALID");
   const measurementRefs = stringArray(basis.measurement_ref_keys, "GOVERNED_ACTION_CASE_MEASUREMENT_REFS_INVALID");
   const verificationRefs = stringArray(basis.verification_state_ref_keys, "GOVERNED_ACTION_CASE_VERIFICATION_REFS_INVALID");
-  for (const values of [bindingRefs, decisionBasisRefs, providerRefs, measurementRefs, verificationRefs]) {
-    assertKnownRefKeys(values, refs, "GOVERNED_ACTION_CASE_DECISION_BASIS_UNKNOWN_REF");
-  }
+  assertNonAuthorityRefClasses(providerRefs, nonAuthorityRefs, "PROVIDER", "GOVERNED_ACTION_CASE_PROVIDER_MUST_BE_NON_AUTHORITY_REF");
+  assertNonAuthorityRefClasses(measurementRefs, nonAuthorityRefs, "MEASUREMENT", "GOVERNED_ACTION_CASE_MEASUREMENT_MUST_BE_NON_AUTHORITY_REF");
+  assertNonAuthorityRefClasses(verificationRefs, nonAuthorityRefs, "VERIFICATION_STATE", "GOVERNED_ACTION_CASE_VERIFICATION_MUST_BE_NON_AUTHORITY_REF");
   enumValue(basis.capture_integrity, DECISION_CAPTURE_INTEGRITY_STATUSES_V1, "GOVERNED_ACTION_CASE_CAPTURE_INTEGRITY_INVALID");
 
-  if (basisIntegrity === "UNAVAILABLE") {
-    if (basisSource !== "UNAVAILABLE") throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_UNAVAILABLE_BASIS_SOURCE_MISMATCH", "GOVERNED_ACTION_CASE_UNAVAILABLE_BASIS_SOURCE_MISMATCH");
-    const forbiddenHistoricalFields = [
-      decisionStateRef,
-      applicabilityRef,
-      eligibilityRef,
-      manifestRef,
-      optionalText(basis.decision_basis_digest),
-      ...bindingRefs,
-      ...decisionBasisRefs,
-      ...providerRefs,
-      ...measurementRefs,
-      ...verificationRefs,
-    ].filter(Boolean);
-    if (forbiddenHistoricalFields.length > 0) {
-      throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_UNAVAILABLE_BASIS_CANNOT_FALLBACK", "GOVERNED_ACTION_CASE_UNAVAILABLE_BASIS_CANNOT_FALLBACK");
-    }
+  if (integrity === "UNAVAILABLE") {
+    if (sourceMode !== "UNAVAILABLE") throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_UNAVAILABLE_BASIS_SOURCE_MISMATCH", "GOVERNED_ACTION_CASE_UNAVAILABLE_BASIS_SOURCE_MISMATCH");
+    const forbidden = [manifestRef, stateAtDecision, applicabilityRef, eligibilityRef, optionalText(basis.decision_basis_digest), ...bindingRefs, ...decisionBasisRefs, ...providerRefs, ...measurementRefs, ...verificationRefs].filter(Boolean);
+    if (forbidden.length > 0) throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_UNAVAILABLE_BASIS_CANNOT_FALLBACK", "GOVERNED_ACTION_CASE_UNAVAILABLE_BASIS_CANNOT_FALLBACK");
   } else {
-    if (!decisionRef || !optionalText(basis.decision_time) || !optionalText(basis.evidence_cutoff)) {
-      throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_DECISION_TIME_BASIS_INCOMPLETE", "GOVERNED_ACTION_CASE_DECISION_TIME_BASIS_INCOMPLETE");
-    }
+    if (!decisionRef || !optionalText(basis.decision_time) || !optionalText(basis.evidence_cutoff)) throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_DECISION_TIME_BASIS_INCOMPLETE", "GOVERNED_ACTION_CASE_DECISION_TIME_BASIS_INCOMPLETE");
     explicitIso(basis.decision_time, "GOVERNED_ACTION_CASE_DECISION_TIME_INVALID");
     explicitIso(basis.evidence_cutoff, "GOVERNED_ACTION_CASE_EVIDENCE_CUTOFF_INVALID");
+    if (integrity === "EXACT_MANIFEST" && !manifestRef) throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_EXACT_MANIFEST_REF_REQUIRED", "GOVERNED_ACTION_CASE_EXACT_MANIFEST_REF_REQUIRED");
   }
 
   const later = record(obj.later_changes, "GOVERNED_ACTION_CASE_LATER_CHANGES_REQUIRED");
   enumValue(later.current_state_differs, TRI_STATE_COMPARISON_VALUES_V1, "GOVERNED_ACTION_CASE_CURRENT_STATE_DIFFERS_INVALID");
   enumValue(later.later_evidence_available, TRI_STATE_COMPARISON_VALUES_V1, "GOVERNED_ACTION_CASE_LATER_EVIDENCE_INVALID");
-  for (const values of [
-    stringArray(later.later_arriving_or_revised_ref_keys, "GOVERNED_ACTION_CASE_LATER_REFS_INVALID"),
-    stringArray(later.comparison_basis_ref_keys, "GOVERNED_ACTION_CASE_COMPARISON_REFS_INVALID"),
-  ]) assertKnownRefKeys(values, refs, "GOVERNED_ACTION_CASE_LATER_CHANGES_UNKNOWN_REF");
+  assertKnownSourceRefs(stringArray(later.later_arriving_or_revised_ref_keys, "GOVERNED_ACTION_CASE_LATER_REFS_INVALID"), sourceRefs, "GOVERNED_ACTION_CASE_LATER_UNKNOWN_REF");
+  assertKnownSourceRefs(stringArray(later.comparison_basis_ref_keys, "GOVERNED_ACTION_CASE_COMPARISON_REFS_INVALID"), sourceRefs, "GOVERNED_ACTION_CASE_COMPARISON_UNKNOWN_REF");
   stringArray(later.comparison_limitation_reason_codes, "GOVERNED_ACTION_CASE_COMPARISON_LIMITATIONS_INVALID");
 
   const chain = record(obj.authority_chain, "GOVERNED_ACTION_CASE_AUTHORITY_CHAIN_REQUIRED");
   const slotNames = [
-    "agronomic_decision", "recommendation_candidate", "approval_request", "approval_decision",
-    "operation_plan", "execution_authorization", "task", "dispatch", "executor", "device",
-    "execution_receipt", "as_executed", "execution_evidence_acceptance", "attribution",
+    "agronomic_decision", "recommendation_candidate", "approval_request", "approval_decision", "operation_plan",
+    "execution_authorization", "task", "dispatch", "executor", "device", "execution_receipt", "as_executed",
+    "execution_evidence_acceptance", "attribution",
   ] as const;
   for (const slotName of slotNames) {
     const slot = record(chain[slotName], `GOVERNED_ACTION_CASE_SLOT_REQUIRED:${slotName}`);
-    assertKnownRefKey(optionalText(slot.ref_key), refs, `GOVERNED_ACTION_CASE_SLOT_UNKNOWN_REF:${slotName}`);
+    assertKnownAuthorityRef(optionalText(slot.ref_key), authorityRefs, `GOVERNED_ACTION_CASE_SLOT_UNKNOWN_AUTHORITY_REF:${slotName}`);
     optionalText(slot.source_status);
   }
-  for (const key of ["evidence_artifact_ref_keys", "outcome_ref_keys"] as const) {
-    const values = stringArray(chain[key], `GOVERNED_ACTION_CASE_CHAIN_REFS_INVALID:${key}`);
-    assertKnownRefKeys(values, refs, `GOVERNED_ACTION_CASE_CHAIN_UNKNOWN_REF:${key}`);
-  }
+  assertKnownAuthorityRefs(stringArray(chain.evidence_artifact_ref_keys, "GOVERNED_ACTION_CASE_EVIDENCE_ARTIFACT_REFS_INVALID"), authorityRefs, "GOVERNED_ACTION_CASE_EVIDENCE_ARTIFACT_UNKNOWN_AUTHORITY_REF");
+  assertKnownAuthorityRefs(stringArray(chain.outcome_ref_keys, "GOVERNED_ACTION_CASE_OUTCOME_REFS_INVALID"), authorityRefs, "GOVERNED_ACTION_CASE_OUTCOME_UNKNOWN_AUTHORITY_REF");
 
-  const displayPhase = enumValue(obj.derived_display_phase, GOVERNED_ACTION_DISPLAY_PHASES_V1, "GOVERNED_ACTION_CASE_DISPLAY_PHASE_INVALID");
-  if (compositionStatus === "UNRESOLVED" && displayPhase !== "LINKAGE_INCOMPLETE") {
-    throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_UNRESOLVED_MUST_DISPLAY_LINKAGE_INCOMPLETE", "GOVERNED_ACTION_CASE_UNRESOLVED_MUST_DISPLAY_LINKAGE_INCOMPLETE");
-  }
-  if (displayPhase === "EXECUTION_EVIDENCE_ACCEPTED" && !optionalText(record(chain.execution_evidence_acceptance, "GOVERNED_ACTION_CASE_ACCEPTANCE_SLOT_REQUIRED").ref_key)) {
-    throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_ACCEPTED_PHASE_REQUIRES_ACCEPTANCE_REF", "GOVERNED_ACTION_CASE_ACCEPTED_PHASE_REQUIRES_ACCEPTANCE_REF");
-  }
+  const display = enumValue(obj.derived_display_phase, GOVERNED_ACTION_DISPLAY_PHASES_V1, "GOVERNED_ACTION_CASE_DISPLAY_PHASE_INVALID");
+  if (composition === "UNRESOLVED" && display !== "LINKAGE_INCOMPLETE") throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_UNRESOLVED_MUST_DISPLAY_LINKAGE_INCOMPLETE", "GOVERNED_ACTION_CASE_UNRESOLVED_MUST_DISPLAY_LINKAGE_INCOMPLETE");
+
+  const approvalRequest = record(chain.approval_request, "GOVERNED_ACTION_CASE_APPROVAL_REQUEST_SLOT_REQUIRED");
+  const approvalDecision = record(chain.approval_decision, "GOVERNED_ACTION_CASE_APPROVAL_DECISION_SLOT_REQUIRED");
+  const receipt = record(chain.execution_receipt, "GOVERNED_ACTION_CASE_RECEIPT_SLOT_REQUIRED");
+  const asExecuted = record(chain.as_executed, "GOVERNED_ACTION_CASE_AS_EXECUTED_SLOT_REQUIRED");
+  const acceptance = record(chain.execution_evidence_acceptance, "GOVERNED_ACTION_CASE_ACCEPTANCE_SLOT_REQUIRED");
+  if (display === "AWAITING_APPROVAL" && (!optionalText(approvalRequest.ref_key) || optionalText(approvalDecision.ref_key))) throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_AWAITING_APPROVAL_PHASE_REQUIRES_PENDING_APPROVAL_REF", "GOVERNED_ACTION_CASE_AWAITING_APPROVAL_PHASE_REQUIRES_PENDING_APPROVAL_REF");
+  if (["APPROVED", "PLAN_PREPARING", "PLAN_READY", "READY_FOR_DISPATCH"].includes(display) && !optionalText(approvalDecision.ref_key)) throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_POST_APPROVAL_PHASE_REQUIRES_APPROVAL_DECISION_REF", "GOVERNED_ACTION_CASE_POST_APPROVAL_PHASE_REQUIRES_APPROVAL_DECISION_REF");
+  if (display === "EXECUTION_REPORTED" && !optionalText(receipt.ref_key) && !optionalText(asExecuted.ref_key)) throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_EXECUTION_REPORTED_REQUIRES_SOURCE_REF", "GOVERNED_ACTION_CASE_EXECUTION_REPORTED_REQUIRES_SOURCE_REF");
+  if (display === "EVIDENCE_REVIEW" && array(chain.evidence_artifact_ref_keys, "GOVERNED_ACTION_CASE_EVIDENCE_ARTIFACT_REFS_REQUIRED").length === 0) throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_EVIDENCE_REVIEW_REQUIRES_EVIDENCE_REF", "GOVERNED_ACTION_CASE_EVIDENCE_REVIEW_REQUIRES_EVIDENCE_REF");
+  if (display === "EXECUTION_EVIDENCE_ACCEPTED" && !optionalText(acceptance.ref_key)) throw new ProductProjectionContractError("GOVERNED_ACTION_CASE_ACCEPTED_PHASE_REQUIRES_ACCEPTANCE_REF", "GOVERNED_ACTION_CASE_ACCEPTED_PHASE_REQUIRES_ACCEPTANCE_REF");
 }
 
 export function deriveCapabilityAvailabilityStateV1(input: {
@@ -698,23 +686,14 @@ export function deriveCapabilityAvailabilityStateV1(input: {
   authority_maturity: CapabilityAuthorityMaturityStatusV1;
   operational_eligibility: CapabilityOperationalEligibilityStatusV1;
 }): CapabilityAvailabilityDerivedStateV1 {
-  if (input.product_implementation === "NOT_BUILT" || input.authority_maturity === "NOT_AUTHORIZED") {
-    return { customer_state: "NOT_YET_AVAILABLE", default_release_surface_state: "DISABLED" };
-  }
+  if (input.product_implementation === "NOT_BUILT" || input.authority_maturity === "NOT_AUTHORIZED") return { customer_state: "NOT_YET_AVAILABLE", default_release_surface_state: "DISABLED" };
   if (input.authority_maturity === "PREVIEW") {
-    return input.operational_eligibility === "CURRENT" || input.operational_eligibility === "DEGRADED"
+    return ["CURRENT", "DEGRADED"].includes(input.operational_eligibility)
       ? { customer_state: "PREVIEW", default_release_surface_state: "PREVIEW" }
       : { customer_state: "PREVIEW", default_release_surface_state: "DISABLED" };
   }
-  if (input.operational_eligibility === "EXPIRED" || input.operational_eligibility === "UNAVAILABLE") {
-    return { customer_state: "LIMITED", default_release_surface_state: "DISABLED" };
-  }
-  if (input.operational_eligibility === "DEGRADED") {
-    return { customer_state: "LIMITED", default_release_surface_state: "LIMITED" };
-  }
-  if (input.product_implementation === "PARTIAL") {
-    return { customer_state: "LIMITED", default_release_surface_state: "LIMITED" };
-  }
+  if (["EXPIRED", "UNAVAILABLE"].includes(input.operational_eligibility)) return { customer_state: "LIMITED", default_release_surface_state: "DISABLED" };
+  if (input.operational_eligibility === "DEGRADED" || input.product_implementation === "PARTIAL") return { customer_state: "LIMITED", default_release_surface_state: "LIMITED" };
   return { customer_state: "AVAILABLE", default_release_surface_state: "ACTIVE" };
 }
 
@@ -723,8 +702,11 @@ export function assertCapabilityAvailabilityProjectionV1(input: unknown): assert
   assertProductProjectionEnvelopeV1(obj.envelope);
   const envelope = obj.envelope as ProductProjectionEnvelopeV1;
   if (envelope.projection_type !== "CAPABILITY_AVAILABILITY") throw new ProductProjectionContractError("CAPABILITY_AVAILABILITY_PROJECTION_TYPE_INVALID", "CAPABILITY_AVAILABILITY_PROJECTION_TYPE_INVALID");
-  const refs = refKeySet(envelope);
+  const authorityRefs = authorityRefMap(envelope);
+  const nonAuthorityRefs = nonAuthorityRefMap(envelope);
+  const sourceRefs = sourceRefKeySet(envelope);
   text(obj.capability_id, "CAPABILITY_AVAILABILITY_ID_REQUIRED");
+
   const scope = record(obj.availability_scope, "CAPABILITY_AVAILABILITY_SCOPE_REQUIRED");
   const scopeKind = enumValue(scope.scope_kind, CAPABILITY_AVAILABILITY_SCOPE_KINDS_V1, "CAPABILITY_AVAILABILITY_SCOPE_KIND_INVALID");
   const fieldId = optionalText(scope.field_id);
@@ -739,15 +721,20 @@ export function assertCapabilityAvailabilityProjectionV1(input: unknown): assert
   const customerState = enumValue(obj.customer_state, CAPABILITY_CUSTOMER_STATES_V1, "CAPABILITY_AVAILABILITY_CUSTOMER_STATE_INVALID");
   const releaseState = enumValue(obj.default_release_surface_state, CAPABILITY_RELEASE_SURFACE_STATES_V1, "CAPABILITY_AVAILABILITY_RELEASE_STATE_INVALID");
   const expected = deriveCapabilityAvailabilityStateV1({ product_implementation: implementation, authority_maturity: authority, operational_eligibility: operational });
-  if (customerState !== expected.customer_state || releaseState !== expected.default_release_surface_state) {
-    throw new ProductProjectionContractError("CAPABILITY_AVAILABILITY_DERIVATION_MISMATCH", "CAPABILITY_AVAILABILITY_DERIVATION_MISMATCH");
-  }
-  const reasonCodes = stringArray(obj.reason_codes, "CAPABILITY_AVAILABILITY_REASON_CODES_INVALID");
-  if (customerState !== "AVAILABLE" && reasonCodes.length === 0) throw new ProductProjectionContractError("CAPABILITY_AVAILABILITY_REASON_REQUIRED", "CAPABILITY_AVAILABILITY_REASON_REQUIRED");
-  for (const key of ["product_release_basis_ref_keys", "authority_maturity_basis_ref_keys", "operational_eligibility_basis_ref_keys"] as const) {
-    const values = stringArray(obj[key], `CAPABILITY_AVAILABILITY_BASIS_REFS_INVALID:${key}`);
-    assertKnownRefKeys(values, refs, `CAPABILITY_AVAILABILITY_BASIS_UNKNOWN_REF:${key}`);
-  }
+  if (customerState !== expected.customer_state || releaseState !== expected.default_release_surface_state) throw new ProductProjectionContractError("CAPABILITY_AVAILABILITY_DERIVATION_MISMATCH", "CAPABILITY_AVAILABILITY_DERIVATION_MISMATCH");
+
+  const reasons = stringArray(obj.reason_codes, "CAPABILITY_AVAILABILITY_REASON_CODES_INVALID");
+  if (customerState !== "AVAILABLE" && reasons.length === 0) throw new ProductProjectionContractError("CAPABILITY_AVAILABILITY_REASON_REQUIRED", "CAPABILITY_AVAILABILITY_REASON_REQUIRED");
+
+  const productRefs = stringArray(obj.product_release_basis_ref_keys, "CAPABILITY_AVAILABILITY_PRODUCT_BASIS_REFS_INVALID");
+  const authorityBasis = stringArray(obj.authority_maturity_basis_ref_keys, "CAPABILITY_AVAILABILITY_AUTHORITY_BASIS_REFS_INVALID");
+  const operationalBasis = stringArray(obj.operational_eligibility_basis_ref_keys, "CAPABILITY_AVAILABILITY_OPERATIONAL_BASIS_REFS_INVALID");
+  assertNonAuthorityRefClasses(productRefs, nonAuthorityRefs, "PRODUCT_GOVERNANCE", "CAPABILITY_AVAILABILITY_PRODUCT_BASIS_MUST_BE_PRODUCT_GOVERNANCE_REF");
+  assertKnownAuthorityRefs(authorityBasis, authorityRefs, "CAPABILITY_AVAILABILITY_AUTHORITY_BASIS_UNKNOWN_AUTHORITY_REF");
+  assertKnownSourceRefs(operationalBasis, sourceRefs, "CAPABILITY_AVAILABILITY_OPERATIONAL_BASIS_UNKNOWN_REF");
+  if (implementation !== "NOT_BUILT" && productRefs.length === 0) throw new ProductProjectionContractError("CAPABILITY_AVAILABILITY_PRODUCT_RELEASE_BASIS_REQUIRED", "CAPABILITY_AVAILABILITY_PRODUCT_RELEASE_BASIS_REQUIRED");
+  if (authority !== "NOT_AUTHORIZED" && authorityBasis.length === 0) throw new ProductProjectionContractError("CAPABILITY_AVAILABILITY_AUTHORITY_BASIS_REQUIRED", "CAPABILITY_AVAILABILITY_AUTHORITY_BASIS_REQUIRED");
+  if (operational !== "UNAVAILABLE" && operationalBasis.length === 0) throw new ProductProjectionContractError("CAPABILITY_AVAILABILITY_OPERATIONAL_BASIS_REQUIRED", "CAPABILITY_AVAILABILITY_OPERATIONAL_BASIS_REQUIRED");
   explicitIso(obj.evaluated_at, "CAPABILITY_AVAILABILITY_EVALUATED_AT_INVALID");
 }
 
@@ -756,13 +743,12 @@ export function assertAttentionQueueProjectionV1(input: unknown): asserts input 
   assertProductProjectionEnvelopeV1(obj.envelope);
   const envelope = obj.envelope as ProductProjectionEnvelopeV1;
   if (envelope.projection_type !== "ATTENTION_QUEUE") throw new ProductProjectionContractError("ATTENTION_QUEUE_PROJECTION_TYPE_INVALID", "ATTENTION_QUEUE_PROJECTION_TYPE_INVALID");
-  const refs = refKeySet(envelope);
+  const authorityRefs = authorityRefMap(envelope);
+  const nonAuthorityRefs = nonAuthorityRefMap(envelope);
   for (const [index, value] of array(obj.items, "ATTENTION_QUEUE_ITEMS_REQUIRED").entries()) {
     const item = record(value, `ATTENTION_QUEUE_ITEM_INVALID:${index}`);
     for (const forbidden of ["priority", "severity", "risk_score"]) {
-      if (Object.prototype.hasOwnProperty.call(item, forbidden)) {
-        throw new ProductProjectionContractError(`ATTENTION_QUEUE_PRODUCT_OWNED_${forbidden.toUpperCase()}_FORBIDDEN`, `ATTENTION_QUEUE_PRODUCT_OWNED_${forbidden.toUpperCase()}_FORBIDDEN`);
-      }
+      if (Object.prototype.hasOwnProperty.call(item, forbidden)) throw new ProductProjectionContractError(`ATTENTION_QUEUE_PRODUCT_OWNED_${forbidden.toUpperCase()}_FORBIDDEN`, `ATTENTION_QUEUE_PRODUCT_OWNED_${forbidden.toUpperCase()}_FORBIDDEN`);
     }
     text(item.attention_id, `ATTENTION_QUEUE_ATTENTION_ID_REQUIRED:${index}`);
     const itemScope = record(item.subject_scope, `ATTENTION_QUEUE_SUBJECT_SCOPE_REQUIRED:${index}`);
@@ -773,35 +759,40 @@ export function assertAttentionQueueProjectionV1(input: unknown): asserts input 
     text(item.attention_kind, `ATTENTION_QUEUE_KIND_REQUIRED:${index}`);
     enumValue(item.triage_bucket, ATTENTION_TRIAGE_BUCKETS_V1, `ATTENTION_QUEUE_TRIAGE_BUCKET_INVALID:${index}`);
     text(item.attention_reason_code, `ATTENTION_QUEUE_REASON_REQUIRED:${index}`);
-    const sourceRefs = nonEmptyStringArray(item.source_authority_ref_keys, `ATTENTION_QUEUE_SOURCE_REFS_REQUIRED:${index}`);
-    assertKnownRefKeys(sourceRefs, refs, "ATTENTION_QUEUE_SOURCE_REF_UNKNOWN");
+    const sources = nonEmptyStringArray(item.source_authority_ref_keys, `ATTENTION_QUEUE_SOURCE_REFS_REQUIRED:${index}`);
+    assertKnownAuthorityRefs(sources, authorityRefs, "ATTENTION_QUEUE_SOURCE_UNKNOWN_AUTHORITY_REF");
+
     if (item.blocking_state !== null) {
       const blocking = record(item.blocking_state, `ATTENTION_QUEUE_BLOCKING_STATE_INVALID:${index}`);
-      const blockingRef = text(blocking.source_ref_key, `ATTENTION_QUEUE_BLOCKING_REF_REQUIRED:${index}`);
-      assertKnownRefKey(blockingRef, refs, "ATTENTION_QUEUE_BLOCKING_REF_UNKNOWN");
+      assertKnownAuthorityRef(text(blocking.source_ref_key, `ATTENTION_QUEUE_BLOCKING_REF_REQUIRED:${index}`), authorityRefs, "ATTENTION_QUEUE_BLOCKING_UNKNOWN_AUTHORITY_REF");
       text(blocking.source_state, `ATTENTION_QUEUE_BLOCKING_STATE_REQUIRED:${index}`);
     }
-    const effectiveTime = optionalText(item.source_effective_time);
-    const evidenceCutoff = optionalText(item.source_evidence_cutoff);
-    if (effectiveTime) explicitIso(effectiveTime, `ATTENTION_QUEUE_EFFECTIVE_TIME_INVALID:${index}`);
-    if (evidenceCutoff) explicitIso(evidenceCutoff, `ATTENTION_QUEUE_EVIDENCE_CUTOFF_INVALID:${index}`);
+    const effective = optionalText(item.source_effective_time);
+    const cutoff = optionalText(item.source_evidence_cutoff);
+    if (effective) explicitIso(effective, `ATTENTION_QUEUE_EFFECTIVE_TIME_INVALID:${index}`);
+    if (cutoff) explicitIso(cutoff, `ATTENTION_QUEUE_EVIDENCE_CUTOFF_INVALID:${index}`);
+
     const due = record(item.due, `ATTENTION_QUEUE_DUE_REQUIRED:${index}`);
     const dueBasis = enumValue(due.due_basis, ATTENTION_DUE_BASES_V1, `ATTENTION_QUEUE_DUE_BASIS_INVALID:${index}`);
     const dueAt = optionalText(due.due_at);
-    const dueBasisRef = optionalText(due.basis_ref_key);
+    const dueRef = optionalText(due.basis_ref_key);
     if (dueAt) explicitIso(dueAt, `ATTENTION_QUEUE_DUE_AT_INVALID:${index}`);
     if (dueBasis === "DOMAIN_SOURCE") {
-      if (!dueAt || !dueBasisRef) throw new ProductProjectionContractError("ATTENTION_QUEUE_DOMAIN_DUE_BASIS_INCOMPLETE", "ATTENTION_QUEUE_DOMAIN_DUE_BASIS_INCOMPLETE");
-      assertKnownRefKey(dueBasisRef, refs, "ATTENTION_QUEUE_DUE_BASIS_REF_UNKNOWN");
+      if (!dueAt || !dueRef) throw new ProductProjectionContractError("ATTENTION_QUEUE_DOMAIN_DUE_BASIS_INCOMPLETE", "ATTENTION_QUEUE_DOMAIN_DUE_BASIS_INCOMPLETE");
+      assertKnownAuthorityRef(dueRef, authorityRefs, "ATTENTION_QUEUE_DUE_DOMAIN_BASIS_UNKNOWN_AUTHORITY_REF");
     }
-    if (dueBasis === "NONE" && (dueAt || dueBasisRef)) throw new ProductProjectionContractError("ATTENTION_QUEUE_NONE_DUE_MUST_BE_EMPTY", "ATTENTION_QUEUE_NONE_DUE_MUST_BE_EMPTY");
+    if (dueBasis === "PRODUCT_SLA") {
+      if (!dueAt || !dueRef) throw new ProductProjectionContractError("ATTENTION_QUEUE_PRODUCT_SLA_BASIS_INCOMPLETE", "ATTENTION_QUEUE_PRODUCT_SLA_BASIS_INCOMPLETE");
+      assertNonAuthorityRefClass(dueRef, nonAuthorityRefs, "PRODUCT_GOVERNANCE", "ATTENTION_QUEUE_PRODUCT_SLA_MUST_USE_PRODUCT_GOVERNANCE_REF");
+    }
+    if (dueBasis === "NONE" && (dueAt || dueRef)) throw new ProductProjectionContractError("ATTENTION_QUEUE_NONE_DUE_MUST_BE_EMPTY", "ATTENTION_QUEUE_NONE_DUE_MUST_BE_EMPTY");
+
     if (!Number.isInteger(item.presentation_rank) || Number(item.presentation_rank) < 0) throw new ProductProjectionContractError("ATTENTION_QUEUE_PRESENTATION_RANK_INVALID", "ATTENTION_QUEUE_PRESENTATION_RANK_INVALID");
     text(item.sort_reason_code, `ATTENTION_QUEUE_SORT_REASON_REQUIRED:${index}`);
     if (item.source_declared_severity !== null) {
-      const sourceSeverity = record(item.source_declared_severity, `ATTENTION_QUEUE_SOURCE_SEVERITY_INVALID:${index}`);
-      text(sourceSeverity.value, `ATTENTION_QUEUE_SOURCE_SEVERITY_VALUE_REQUIRED:${index}`);
-      const sourceRef = text(sourceSeverity.source_ref_key, `ATTENTION_QUEUE_SOURCE_SEVERITY_REF_REQUIRED:${index}`);
-      assertKnownRefKey(sourceRef, refs, "ATTENTION_QUEUE_SOURCE_SEVERITY_REF_UNKNOWN");
+      const severity = record(item.source_declared_severity, `ATTENTION_QUEUE_SOURCE_SEVERITY_INVALID:${index}`);
+      text(severity.value, `ATTENTION_QUEUE_SOURCE_SEVERITY_VALUE_REQUIRED:${index}`);
+      assertKnownAuthorityRef(text(severity.source_ref_key, `ATTENTION_QUEUE_SOURCE_SEVERITY_REF_REQUIRED:${index}`), authorityRefs, "ATTENTION_QUEUE_SOURCE_SEVERITY_REF_UNKNOWN");
     }
   }
 }
