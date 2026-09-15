@@ -325,6 +325,22 @@ function main() {
   if (credentialArm) {
     const ready = authority.runtime_credential_url_ready_evidence;
     assert.equal(ready?.status, "IMMUTABLE_SUCCESS_PRE_ARM", "RUNTIME_CREDENTIAL_URL_READY_EVIDENCE_REQUIRED");
+    assert.equal(ready?.subject_sha, "a3278aec6c2134356d6a5de39da32760dbd43a71", "RUNTIME_CREDENTIAL_URL_READY_SUBJECT_MISMATCH");
+    assert.equal(
+      ready?.runtime_credential_readiness?.artifact_digest,
+      "sha256:45a7109537ba10011f7dfb9a72bfc6c2b2064ae3ff6e7bf4d62e4e12fea59f69",
+      "RUNTIME_CREDENTIAL_URL_READY_DIGEST_MISMATCH",
+    );
+    assert.equal(
+      ready?.runtime_credential_readiness?.runtime_credential_pre_arm_ready,
+      true,
+      "RUNTIME_CREDENTIAL_URL_READY_SHAPE_REQUIRED",
+    );
+    assert.equal(
+      ready?.runtime_credential_readiness?.runtime_database_url_secret_count,
+      2,
+      "RUNTIME_CREDENTIAL_URL_READY_EXACT_TWO_REQUIRED",
+    );
     assert.equal(urlCount, 2, "RUNTIME_CREDENTIAL_ARM_REQUIRES_EXACT_TWO_URLS");
   }
 
@@ -352,6 +368,7 @@ function main() {
     production_host_table_count: state.table_count,
     runtime_routine_count: Number(counts[2]),
     service_login_role_count: 2,
+    bootstrap_password_secret_count: 2,
     non_lease_table_count: state.non_lease_table_count,
     non_lease_production_state_row_count: state.non_lease_row_count,
     non_lease_production_state_rows_zero: true,
@@ -364,12 +381,18 @@ function main() {
     twin_lease_live_owner_count: state.twin_lease.live,
     twin_lease_expired_count: state.twin_lease.expired,
     all_table_rows_zero: state.evidence_lease.total === 0 && state.twin_lease.total === 0,
+    exact_database_name_match: urlCount === 2,
+    exact_login_username_match: urlCount === 2,
+    exact_password_pairing_match: urlCount === 2,
+    exact_seed_host_port_match: urlCount === 2,
     exact_one_privilege_membership_each: true,
     cross_plane_membership: false,
     login_role_recreation: false,
     password_rotation_only: true,
     evidence_login_connectivity_proven: true,
     twin_login_connectivity_proven: true,
+    evidence_runtime_url_connectivity_proven: urlCount === 2,
+    twin_runtime_url_connectivity_proven: urlCount === 2,
     runtime_database_url_secret_count: urlCount,
     runtime_endpoint_metadata: endpointMetadata,
     runtime_credential_pre_arm_ready: urlCount === 2,
