@@ -16,7 +16,7 @@ const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_PROV
 
 const TARGET_DB = "geox_mcft_cap09_production_runtime_v1";
 const HOST_ID = "fae5f756-ef25-40d5-9777-5b2c3d4837a1";
-const HOST_PROOF_SUBJECT = "5be8293a03d7947a09fe8c8dc863c9965d26a74b";
+const HOST_PROOF_SUBJECT = "d1db5463d1363eb5f9efacc13425b75a7c8b7ee8";
 const REMAT_SUBJECT = "3848376647bd0f7d6f93450644c9e3baed7b15cd";
 const REMAT_RUN_ID = 35054759709;
 const REMAT_ARTIFACT_ID = 10430112693;
