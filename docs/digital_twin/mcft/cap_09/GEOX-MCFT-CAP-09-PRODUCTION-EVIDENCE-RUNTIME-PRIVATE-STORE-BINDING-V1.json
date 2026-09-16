@@ -3,7 +3,7 @@
   "authority_id": "GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-RUNTIME-PRIVATE-STORE-BINDING-V1",
   "capability_line_id": "MCFT-CAP-09",
   "frontier_id": "PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_IDENTITY_BINDING",
-  "record_status": "NON_SECRET_BINDING_IDENTITY_DEFINED_PROVIDER_MATERIALIZATION_PENDING",
+  "record_status": "NON_SECRET_BINDING_IDENTITY_DEFINED_MATERIALIZATION_SUCCESSOR_EVIDENCE_ATTACHED",
   "base_main_sha": "9360c2cd06961688fd192803c7006a29fc9bca4e",
 
   "runtime_contract": {
@@ -14,26 +14,19 @@
 
   "binding_identity": {
     "provider_contract": "S3_COMPATIBLE_PRIVATE_OBJECT_STORE",
-
     "physical_provider": "CLOUDFLARE_R2",
-    "physical_provider_selection_status": "EXPLICIT_INFRASTRUCTURE_ADJUDICATION_NOT_YET_MATERIALIZED",
-
+    "physical_provider_selection_status": "EXPLICIT_INFRASTRUCTURE_ADJUDICATION_MATERIALIZED",
     "same_r2_account_as_formal_raw_allowed": true,
-
     "bucket": "geox-mcft-cap09-evidence-runtime-v1",
     "bucket_identity_must_be_explicit": true,
     "bucket_must_be_separate_from_formal_raw": true,
-
     "formal_raw_bucket": "geox-mcft-cap09-formal-raw-v1",
     "formal_raw_bucket_reuse_allowed": false,
-
     "credential_scope": "BUCKET_SCOPED",
     "credential_must_be_separate_from_formal_raw": true,
     "silent_formal_raw_credential_alias_allowed": false,
-
     "credential_source": "PROCESS_ENVIRONMENT_SECRET_BINDING",
     "credential_material_repository_allowed": false,
-
     "endpoint_transport": "HTTPS_ONLY",
     "local_or_ci_fallback_allowed": false,
     "provider_specific_runtime_branching_required": false
@@ -66,78 +59,161 @@
   "credential_rematerialization_readiness_contract": {
     "new_current_state_verifier_required": true,
     "historical_zero_row_provisioning_verifier_reuse_forbidden": true,
-
     "operational_database_name": "geox_mcft_cap09_production_runtime_v1",
     "exact_table_count": 41,
-
     "non_lease_production_state_rows_must_be_zero": true,
-
     "historical_expired_evidence_lease_residue_allowed": true,
     "historical_expired_twin_lease_residue_allowed": true,
-
     "current_live_evidence_owner_count_required": 0,
     "current_live_twin_owner_count_required": 0,
-
     "existing_evidence_login_principal_must_be_preserved": true,
     "existing_twin_login_principal_must_be_preserved": true,
-
     "login_role_recreation_allowed": false,
     "password_rotation_only": true,
-
     "exact_one_privilege_membership_each_required": true,
     "cross_plane_membership_allowed": false,
-
     "both_role_specific_urls_must_target_same_operational_database": true,
-
     "storage_capability_proof_required": [
       "AUTHENTICATED_PUT",
       "AUTHENTICATED_HEAD",
       "AUTHENTICATED_DELETE"
     ],
-
     "formal_raw_bucket_alias_forbidden": true,
     "formal_raw_credential_alias_forbidden": true
   },
 
+  "credential_rematerialization_evidence": {
+    "schema_version": "geox_mcft_cap09_production_credential_rematerialization_evidence_v1",
+    "status": "PASS",
+    "observed_subject_sha": "3848376647bd0f7d6f93450644c9e3baed7b15cd",
+    "successor_admission": {
+      "status": "ESTABLISHED",
+      "t4r1_run_id": 35049752299,
+      "event": "workflow_dispatch",
+      "head_sha": "3848376647bd0f7d6f93450644c9e3baed7b15cd",
+      "formal_v5_authorized": false
+    },
+    "operational_database": {
+      "project_id": "delicate-glade-62464340",
+      "branch_id": "br-cold-dust-a6j6aymz",
+      "database_name": "geox_mcft_cap09_production_runtime_v1",
+      "public_table_count": 41,
+      "runtime_routine_count": 3,
+      "non_lease_table_count": 39,
+      "non_lease_production_state_row_count": 0,
+      "evidence_lease": {
+        "total": 1,
+        "live": 0,
+        "expired": 1
+      },
+      "twin_lease": {
+        "total": 1,
+        "live": 0,
+        "expired": 1
+      }
+    },
+    "database_credentials": {
+      "evidence_login": "geox_mcft_cap09_evidence_runtime_login_v1",
+      "twin_login": "geox_mcft_cap09_twin_runtime_login_v1",
+      "evidence_password_rotated_at": "2026-09-16T03:04:30Z",
+      "twin_password_rotated_at": "2026-09-16T03:04:39Z",
+      "login_principals_preserved": true,
+      "login_role_recreation": false,
+      "password_rotation_only": true,
+      "exact_one_privilege_membership_each": true,
+      "cross_plane_membership": false,
+      "both_role_specific_urls_target_same_operational_database": true,
+      "evidence_password_authenticated_login": true,
+      "twin_password_authenticated_login": true,
+      "role_specific_connectivity_proof": "PASS",
+      "secret_material_embedded": false
+    },
+    "private_store": {
+      "physical_provider": "CLOUDFLARE_R2",
+      "bucket": "geox-mcft-cap09-evidence-runtime-v1",
+      "formal_raw_bucket": "geox-mcft-cap09-formal-raw-v1",
+      "bucket_distinct_from_formal_raw": true,
+      "credential_name": "GEOX MCFT-CAP-09 Evidence Runtime v1",
+      "credential_permission": "OBJECT_READ_WRITE",
+      "credential_scope": "SPECIFIC_BUCKET_ONLY",
+      "credential_separate_from_formal_raw": true,
+      "region": "auto",
+      "endpoint_transport": "HTTPS",
+      "proof_executed_at": "2026-09-16T03:40:52.969Z",
+      "proof_object_key": "credential-rematerialization-proof/2026-09-16T03-40-52-969Z-7696623dac6d.txt",
+      "authenticated_put": {
+        "status": "PASS",
+        "http_status": 200
+      },
+      "authenticated_head": {
+        "status": "PASS",
+        "http_status": 200
+      },
+      "authenticated_delete": {
+        "status": "PASS",
+        "http_status": 204
+      },
+      "post_delete_head": {
+        "status": "PASS",
+        "http_status": 404
+      },
+      "formal_raw_bucket_reused": false,
+      "secret_material_embedded": false
+    },
+    "proof_sources": {
+      "neon_control_plane_post_rotation_recheck": "MACHINE_READ_ONLY_PASS",
+      "local_password_authenticated_pg_client": "MACHINE_PASS",
+      "local_aws_sigv4_r2_put_head_delete": "MACHINE_PASS",
+      "cloudflare_bucket_scope_configuration": "OPERATOR_UI_OBSERVED_SPECIFIC_BUCKET_ONLY"
+    },
+    "canonicalization": {
+      "repository_secret_material_allowed": false,
+      "github_secret_materialized": false,
+      "full_database_url_embedded": false,
+      "r2_endpoint_value_embedded": false,
+      "access_key_id_embedded": false,
+      "secret_access_key_embedded": false,
+      "canonical_acceptance_artifact_required": true
+    },
+    "non_effects": {
+      "runtime_process_start": false,
+      "production_owner_activation": false,
+      "formal_v5_arm": false,
+      "a0_bootstrap": false,
+      "o00_o23_started": false
+    }
+  },
+
   "effect_if_merged_to_protected_main": {
     "production_evidence_private_store_identity_defined": true,
-
     "cloudflare_r2_bucket_created": false,
     "evidence_s3_credential_created": false,
-
     "local_operator_secret_materialized": false,
     "github_secret_materialized": false,
-
     "database_password_rotated": false,
-
     "runtime_process_start": false,
     "production_owner_activation": false,
-
     "formal_v5_arm": false,
     "a0_authorized": false,
     "o00_o23_started": false,
-
     "mcft_cap09_completed": false
   },
 
   "next_stage": {
-    "stage": "PROVIDER_AND_CREDENTIAL_MATERIALIZATION",
-
+    "stage": "PRODUCTION_HOST_SECRET_BINDING_AND_PRE_OWNER_CUTOVER_READINESS",
     "separate_explicit_operator_authorization_required": true,
-
     "cloudflare_mutation_authorized_by_this_record": false,
     "neon_password_rotation_authorized_by_this_record": false,
     "runtime_start_authorized_by_this_record": false,
-
-    "qcp_registration_may_be_required_as_separate_successor": true
+    "production_owner_activation_authorized_by_this_record": false,
+    "formal_v5_arm_authorized_by_this_record": false,
+    "qcp_registration_may_be_required_as_separate_successor": false
   },
 
   "hard_nonclaims": [
-    "NO_CLOUDFLARE_BUCKET_CREATED",
-    "NO_CLOUDFLARE_CREDENTIAL_CREATED",
+    "NO_SECRET_MATERIAL_IN_REPOSITORY",
     "NO_FORMAL_RAW_BUCKET_REUSE",
     "NO_FORMAL_RAW_CREDENTIAL_REUSE",
-    "NO_DATABASE_PASSWORD_ROTATION",
     "NO_DATABASE_ROLE_RECREATION",
     "NO_DATABASE_SCHEMA_MUTATION",
     "NO_RUNTIME_PROCESS_START",
