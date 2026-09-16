@@ -15,8 +15,8 @@ permissions:
 jobs:
   provisioning-readiness:
     if: >-
-      github.head_ref == 'work/host-secret-proof-canonical-v1' &&
-      github.event.pull_request.base.sha == '174c7cadb83767d60ee53e866631d6e780304a65'
+      github.head_ref == 'work/host-secret-proof-canonical-d1db-v1' &&
+      github.event.pull_request.base.sha == 'd1db5463d1363eb5f9efacc13425b75a7c8b7ee8'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
@@ -48,7 +48,7 @@ jobs:
           req(pre.status==='PASS'&&pre.stage==='PRODUCTION_HOST_SECRET_BINDING_PROVEN_PRE_OWNER_CUTOVER_READY','PRE_OWNER_CANONICAL_PREFLIGHT_REQUIRED');
           req(pre.residue_aware_current_state===true&&pre.historical_all_table_zero_readiness_reused===false,'PRE_OWNER_RESIDUE_AWARE_REQUIRED');
           req(pre.production_host_secret_binding_authorized===true&&pre.production_host_secret_binding_machine_proof_observed===true,'PRE_OWNER_LOCAL_MACHINE_PROOF_REQUIRED');
-          req(pre.production_host_secret_binding_proof_subject_sha==='5be8293a03d7947a09fe8c8dc863c9965d26a74b','PRE_OWNER_LOCAL_PROOF_SUBJECT_REQUIRED');
+          req(pre.production_host_secret_binding_proof_subject_sha==='d1db5463d1363eb5f9efacc13425b75a7c8b7ee8','PRE_OWNER_LOCAL_PROOF_SUBJECT_REQUIRED');
           req(pre.pre_owner_cutover_ready===true,'PRE_OWNER_READY_REQUIRED');
           req(Array.isArray(pre.remaining_blockers)&&pre.remaining_blockers.length===1&&pre.remaining_blockers[0]==='PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED','PRE_OWNER_EXACT_NEXT_BLOCKER_REQUIRED');
           req(host.status==='PASS'&&host.production_host_secret_binding_observed===false,'PRE_OWNER_GITHUB_MUST_NOT_REEXECUTE_LOCAL_PROOF');
