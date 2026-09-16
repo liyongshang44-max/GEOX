@@ -16,6 +16,7 @@ const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_PROV
 
 const TARGET_DB = "geox_mcft_cap09_production_runtime_v1";
 const HOST_ID = "fae5f756-ef25-40d5-9777-5b2c3d4837a1";
+const HOST_PROOF_SUBJECT = "5be8293a03d7947a09fe8c8dc863c9965d26a74b";
 const REMAT_SUBJECT = "3848376647bd0f7d6f93450644c9e3baed7b15cd";
 const REMAT_RUN_ID = 35054759709;
 const REMAT_ARTIFACT_ID = 10430112693;
@@ -40,6 +41,7 @@ try {
   const hostArm = j(HOST_ARM);
   const ownerArm = j(OWNER_ARM);
   const remat = store.credential_rematerialization_evidence || {};
+  const localProof = hostArm.local_machine_proof_evidence || {};
 
   assert.equal(owner.target_database?.status, "BOUND", "PRE_OWNER_TARGET_DATABASE_MUST_REMAIN_BOUND");
   assert.equal(owner.target_database?.database_name, TARGET_DB, "PRE_OWNER_TARGET_DATABASE_MISMATCH");
@@ -107,15 +109,47 @@ try {
   assert.equal(hostArm.r2_transient_capability_probe_authorized, true, "PRE_OWNER_R2_PROBE_AUTHORIZED_REQUIRED");
   assert.equal(hostArm.compose_render_only_authorized, true, "PRE_OWNER_COMPOSE_RENDER_AUTHORIZED_REQUIRED");
 
+  assert.equal(localProof.schema_version, "geox_mcft_cap09_production_host_secret_binding_pre_owner_readiness_v1", "PRE_OWNER_LOCAL_PROOF_SCHEMA_REQUIRED");
+  assert.equal(localProof.status, "PASS", "PRE_OWNER_LOCAL_PROOF_PASS_REQUIRED");
+  assert.equal(localProof.stage, "PRODUCTION_HOST_SECRET_BINDING_PROVEN_PRE_OWNER_CUTOVER_READY", "PRE_OWNER_LOCAL_PROOF_STAGE_REQUIRED");
+  assert.equal(localProof.observed_subject_sha, HOST_PROOF_SUBJECT, "PRE_OWNER_LOCAL_PROOF_SUBJECT_REQUIRED");
+  assert.equal(localProof.local_host_id, HOST_ID, "PRE_OWNER_LOCAL_PROOF_HOST_REQUIRED");
+  assert.equal(localProof.exact_two_runtime_service_identities_bound, true, "PRE_OWNER_LOCAL_PROOF_SERVICE_IDENTITIES_REQUIRED");
+  assert.equal(localProof.runtime_secret_binding_count, 7, "PRE_OWNER_LOCAL_PROOF_EXACT_SECRET_COUNT_REQUIRED");
+  assert.equal(localProof.repository_secret_materialized, false, "PRE_OWNER_LOCAL_PROOF_REPO_SECRET_FORBIDDEN");
+  assert.equal(localProof.github_secret_materialized, false, "PRE_OWNER_LOCAL_PROOF_GITHUB_SECRET_FORBIDDEN");
+  assert.equal(localProof.evidence_database_connectivity_proven, true, "PRE_OWNER_LOCAL_PROOF_EVIDENCE_DB_REQUIRED");
+  assert.equal(localProof.twin_database_connectivity_proven, true, "PRE_OWNER_LOCAL_PROOF_TWIN_DB_REQUIRED");
+  assert.equal(localProof.exact_one_privilege_membership_each_proven_by_current_credentials, true, "PRE_OWNER_LOCAL_PROOF_MEMBERSHIP_REQUIRED");
+  assert.equal(localProof.cross_plane_privilege_forbidden_proven, true, "PRE_OWNER_LOCAL_PROOF_CROSS_PLANE_REQUIRED");
+  assert.equal(localProof.r2_bucket, "geox-mcft-cap09-evidence-runtime-v1", "PRE_OWNER_LOCAL_PROOF_R2_BUCKET_REQUIRED");
+  assert.equal(localProof.r2_formal_bucket_reused, false, "PRE_OWNER_LOCAL_PROOF_FORMAL_BUCKET_REUSE_FORBIDDEN");
+  assert.equal(localProof.r2_put_status, 200, "PRE_OWNER_LOCAL_PROOF_R2_PUT_REQUIRED");
+  assert.equal(localProof.r2_head_status, 200, "PRE_OWNER_LOCAL_PROOF_R2_HEAD_REQUIRED");
+  assert.equal(localProof.r2_delete_status, 204, "PRE_OWNER_LOCAL_PROOF_R2_DELETE_REQUIRED");
+  assert.equal(localProof.r2_post_delete_head_status, 404, "PRE_OWNER_LOCAL_PROOF_R2_POST_DELETE_REQUIRED");
+  assert.equal(localProof.compose_render_only_pass, true, "PRE_OWNER_LOCAL_PROOF_COMPOSE_RENDER_REQUIRED");
+  assert.equal(localProof.production_container_count_before, 0, "PRE_OWNER_LOCAL_PROOF_PRE_CONTAINER_ZERO_REQUIRED");
+  assert.equal(localProof.production_container_count_after, 0, "PRE_OWNER_LOCAL_PROOF_POST_CONTAINER_ZERO_REQUIRED");
+  assert.equal(localProof.pre_owner_cutover_ready, true, "PRE_OWNER_LOCAL_PROOF_READY_REQUIRED");
+  assert.deepEqual(localProof.remaining_blockers, ["PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED"], "PRE_OWNER_LOCAL_PROOF_EXACT_BLOCKER_REQUIRED");
+  assert.equal(localProof.canonical_rematerialization?.run_id, REMAT_RUN_ID, "PRE_OWNER_LOCAL_PROOF_REMAT_RUN_REQUIRED");
+  assert.equal(localProof.canonical_rematerialization?.artifact_id, REMAT_ARTIFACT_ID, "PRE_OWNER_LOCAL_PROOF_REMAT_ARTIFACT_REQUIRED");
+  assert.equal(localProof.canonical_rematerialization?.artifact_digest, REMAT_ARTIFACT_DIGEST, "PRE_OWNER_LOCAL_PROOF_REMAT_DIGEST_REQUIRED");
+  assert.equal(localProof.canonical_rematerialization?.authority_sha256, REMAT_AUTHORITY_SHA256, "PRE_OWNER_LOCAL_PROOF_REMAT_AUTHORITY_REQUIRED");
+  for (const key of ["database_write", "compose_build", "compose_create", "compose_up", "runtime_process_start", "production_owner_activation", "formal_v5_arm", "a0_bootstrap", "o00_started", "secret_values_recorded"]) {
+    assert.equal(localProof[key], false, "PRE_OWNER_LOCAL_PROOF_HARD_NON_EFFECT:" + key);
+  }
+
   assert.equal(ownerArm.armed, false, "PRE_OWNER_OWNER_ARM_MUST_REMAIN_FALSE");
   assert.equal(ownerArm.runtime_process_start_authorized, false, "PRE_OWNER_OWNER_ARM_RUNTIME_FALSE");
   assert.equal(ownerArm.production_owner_activation_authorized, false, "PRE_OWNER_OWNER_ARM_ACTIVATION_FALSE");
   assert.equal(ownerArm.formal_v5_arm_authorized, false, "PRE_OWNER_OWNER_ARM_FORMAL_FALSE");
 
   write({
-    schema_version: "geox_mcft_cap09_production_owner_provisioning_preflight_v2",
+    schema_version: "geox_mcft_cap09_production_owner_provisioning_preflight_v3",
     status: "PASS",
-    stage: "PRODUCTION_HOST_SECRET_BINDING_AUTHORIZED_PRE_OWNER_CUTOVER_MACHINE_PROOF_REQUIRED",
+    stage: "PRODUCTION_HOST_SECRET_BINDING_PROVEN_PRE_OWNER_CUTOVER_READY",
     subject_sha: subject,
     target_database_name: TARGET_DB,
     residue_aware_current_state: true,
@@ -131,9 +165,10 @@ try {
     local_host_id: HOST_ID,
     exact_two_runtime_service_identities_bound: true,
     production_host_secret_binding_authorized: true,
-    production_host_secret_binding_machine_proof_observed: false,
-    pre_owner_cutover_ready: false,
-    remaining_blockers: ["LOCAL_HOST_SECRET_BINDING_MACHINE_PROOF_REQUIRED"],
+    production_host_secret_binding_machine_proof_observed: true,
+    production_host_secret_binding_proof_subject_sha: HOST_PROOF_SUBJECT,
+    pre_owner_cutover_ready: true,
+    remaining_blockers: ["PRODUCTION_RUNTIME_START_AUTHORITY_NOT_ARMED"],
     canonical_rematerialization: {
       subject_sha: REMAT_SUBJECT,
       run_id: REMAT_RUN_ID,
@@ -155,7 +190,7 @@ try {
   });
 } catch (error) {
   write({
-    schema_version: "geox_mcft_cap09_production_owner_provisioning_preflight_v2",
+    schema_version: "geox_mcft_cap09_production_owner_provisioning_preflight_v3",
     status: "FAIL",
     error: error instanceof Error ? error.message : String(error),
     runtime_process_start: false,
