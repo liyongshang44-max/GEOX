@@ -93,6 +93,8 @@ const evidenceSource=read(evidencePath);
 const twinSource=read(twinPath);
 assert.ok(evidenceSource.includes("readMcftCap09OwnerCutoverAuthorityV1"));
 assert.ok(twinSource.includes("readMcftCap09OwnerCutoverAuthorityV1"));
+assert.ok(evidenceSource.includes('const EVIDENCE_LEASE_TABLE = "external_evidence_producer_lease_v1"'));
+assert.ok(twinSource.includes('const TWIN_LEASE_TABLE = "twin_runtime_lease_v1"'));
 assert.ok(evidenceSource.includes("if(mode()===NON_OWNER_STANDBY_MODE)"));
 assert.ok(twinSource.includes("if(mode()===NON_OWNER_STANDBY_MODE)"));
 const evidenceNonOwner=section(
@@ -102,7 +104,7 @@ const evidenceNonOwner=section(
 );
 for(const required of [
   "assertMcftCap09ServicePrincipalV1",
-  "external_evidence_producer_lease_v1",
+  "EVIDENCE_LEASE_TABLE",
   "SELECT count(*)::int AS n",
   "headObject",
   "evidence_producer_lease_claimed:false",
@@ -125,7 +127,7 @@ const twinNonOwner=section(
 for(const required of [
   "assertMcftCap09ServicePrincipalV1",
   "loadMcftCap09ProductionStageAuthorityMountsV1",
-  "twin_runtime_lease_v1",
+  "TWIN_LEASE_TABLE",
   "SELECT count(*)::int AS n",
   "twin_scheduler_lease_claimed:false",
   "scheduler_cursor_mutation:false",
