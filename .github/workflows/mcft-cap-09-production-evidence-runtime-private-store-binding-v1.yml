@@ -42,7 +42,7 @@ jobs:
           node --check
           scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1.cjs
 
-      - name: Verify non-secret production Evidence private-store binding
+      - name: Verify canonical rematerialization successor evidence
         run: >-
           node
           scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1.cjs
@@ -53,11 +53,27 @@ jobs:
           scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1.cjs
           --selftest
 
-      - name: Upload binding proof
+      - name: Assert canonical artifact hard non-effects
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+          const p = 'acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1_RESULT.json';
+          const r = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (r.status !== 'PASS') throw new Error('REMAT_CANONICAL_ARTIFACT_PASS_REQUIRED');
+          if (r.stage !== 'CREDENTIAL_REMATERIALIZATION_CANONICAL_EVIDENCE') throw new Error('REMAT_CANONICAL_STAGE_REQUIRED');
+          if (r.observed_subject_sha !== '3848376647bd0f7d6f93450644c9e3baed7b15cd') throw new Error('REMAT_OBSERVED_SUBJECT_REQUIRED');
+          for (const key of ['repository_secret_material_bound','runtime_process_started','production_owner_activated','formal_v5_armed','a0_authorized','o00_o23_started']) {
+            if (r[key] !== false) throw new Error('REMAT_HARD_NON_EFFECT_REQUIRED:' + key);
+          }
+          console.log('REMAT_CANONICAL_HARD_NON_EFFECTS=PASS');
+
+      - name: Upload canonical rematerialization proof
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mcft-cap09-production-evidence-private-store-binding-${{ github.event.pull_request.head.sha }}
-          path: acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1_RESULT.json
+          name: mcft-cap09-credential-rematerialization-${{ github.event.pull_request.head.sha }}
+          path: |
+            acceptance-output/MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1_RESULT.json
+            docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-RUNTIME-PRIVATE-STORE-BINDING-V1.json
           if-no-files-found: error
           retention-days: 90
