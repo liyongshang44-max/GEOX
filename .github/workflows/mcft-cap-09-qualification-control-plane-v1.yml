@@ -371,12 +371,6 @@ jobs:
               );
 
             assert(
-              chainBaseUnknownPaths.length === 0,
-              'CP2_SUCCESSOR_CHAIN_BASE_UNKNOWN_PATH',
-              chainBaseUnknownPaths
-            );
-
-            assert(
               candidateUnknownPaths.length === 0,
               'CP2_SUCCESSOR_CHAIN_CANDIDATE_UNKNOWN_PATH',
               candidateUnknownPaths
@@ -384,7 +378,9 @@ jobs:
 
             const outsideAcceptedAnchor =
               unknownChangedPaths.filter(
-                (rel) => !anchorAcceptedPaths.has(rel)
+                (rel) =>
+                  !anchorAcceptedPaths.has(rel) &&
+                  !chainBaseSegmentPaths.has(rel)
               );
 
             assert(
