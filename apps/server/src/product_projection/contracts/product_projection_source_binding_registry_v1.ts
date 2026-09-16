@@ -402,10 +402,24 @@ function fail(code: string, detail?: string): never {
   throw new ProductProjectionContractError(code, detail ? `${code}:${detail}` : code);
 }
 
+type ProductProjectionSourceRefMapValueV1 =
+  | {
+      namespace: "AUTHORITY";
+      ref: ProductProjectionEnvelopeV1["source_authority_refs"][number];
+    }
+  | {
+      namespace: "NON_AUTHORITY";
+      ref: ProductProjectionEnvelopeV1["source_non_authority_refs"][number];
+    };
+
 function sourceRefMap(envelope: ProductProjectionEnvelopeV1) {
-  return new Map([
-    ...envelope.source_authority_refs.map((ref) => [ref.ref_key, { namespace: "AUTHORITY" as const, ref }]),
-    ...envelope.source_non_authority_refs.map((ref) => [ref.ref_key, { namespace: "NON_AUTHORITY" as const, ref }]),
+  return new Map<string, ProductProjectionSourceRefMapValueV1>([
+    ...envelope.source_authority_refs.map(
+      (ref) => [ref.ref_key, { namespace: "AUTHORITY" as const, ref }] as const,
+    ),
+    ...envelope.source_non_authority_refs.map(
+      (ref) => [ref.ref_key, { namespace: "NON_AUTHORITY" as const, ref }] as const,
+    ),
   ]);
 }
 
