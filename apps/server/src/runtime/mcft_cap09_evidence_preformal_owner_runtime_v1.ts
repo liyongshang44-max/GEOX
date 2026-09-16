@@ -24,16 +24,16 @@ function mode():typeof NON_OWNER_STANDBY_MODE|typeof OWNER_CUTOVER_MODE{
  if(value!==NON_OWNER_STANDBY_MODE&&value!==OWNER_CUTOVER_MODE)throw new Error("MCFT_CAP09_EVIDENCE_PREFORMAL_MODE_INVALID:"+value);
  return value;
 }
-function standbyHeartbeat(subject:string,r2HeadStatus:number):void{
- process.stdout.write(JSON.stringify({
-  runtime_role:"EVIDENCE_RUNTIME",mode:NON_OWNER_STANDBY_MODE,status:"HEALTHY_NON_OWNER_STANDBY",
-  deployment_subject_sha:subject,database_connectivity:true,r2_authenticated_head_status:r2HeadStatus,
-  evidence_producer_lease_claimed:false,production_evidence_write:false,r2_write:false,
-  production_owner_activation:false,formal_v5_arm:false,a0_execution:false,o00_started:false
- })+"\n");
-}
 
 export async function runMcftCap09EvidenceNonOwnerStandbyV1():Promise<void>{
+ function standbyHeartbeat(subject:string,r2HeadStatus:number):void{
+  process.stdout.write(JSON.stringify({
+   runtime_role:"EVIDENCE_RUNTIME",mode:NON_OWNER_STANDBY_MODE,status:"HEALTHY_NON_OWNER_STANDBY",
+   deployment_subject_sha:subject,database_connectivity:true,r2_authenticated_head_status:r2HeadStatus,
+   evidence_producer_lease_claimed:false,production_evidence_write:false,r2_write:false,
+   production_owner_activation:false,formal_v5_arm:false,a0_execution:false,o00_started:false
+  })+"\n");
+ }
  const s=scope(); const subject=req("GEOX_DEPLOYMENT_SUBJECT_COMMIT");
  const runtimePath=req("GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH");
  const raw=JSON.parse(fs.readFileSync(runtimePath,"utf8"));
