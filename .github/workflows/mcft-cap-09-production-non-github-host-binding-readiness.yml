@@ -15,8 +15,8 @@ permissions:
 jobs:
   non-github-host-binding-readiness:
     if: >-
-      github.head_ref == 'work/host-secret-proof-canonical-v1' &&
-      github.event.pull_request.base.sha == '174c7cadb83767d60ee53e866631d6e780304a65'
+      github.head_ref == 'work/host-secret-proof-canonical-d1db-v1' &&
+      github.event.pull_request.base.sha == 'd1db5463d1363eb5f9efacc13425b75a7c8b7ee8'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
@@ -51,7 +51,7 @@ jobs:
           req(staticProof.provider_request_count===0&&staticProof.database_connection_attempted===false&&staticProof.compose_render_attempted===false,'HOST_PROOF_GITHUB_ZERO_LIVE_EFFECT_REQUIRED');
           req(p.schema_version==='geox_mcft_cap09_production_host_secret_binding_pre_owner_readiness_v1','HOST_PROOF_SCHEMA_REQUIRED');
           req(p.status==='PASS'&&p.stage==='PRODUCTION_HOST_SECRET_BINDING_PROVEN_PRE_OWNER_CUTOVER_READY','HOST_PROOF_PASS_STAGE_REQUIRED');
-          req(p.observed_subject_sha==='5be8293a03d7947a09fe8c8dc863c9965d26a74b','HOST_PROOF_EXACT_OBSERVED_SUBJECT_REQUIRED');
+          req(p.observed_subject_sha==='d1db5463d1363eb5f9efacc13425b75a7c8b7ee8','HOST_PROOF_EXACT_OBSERVED_SUBJECT_REQUIRED');
           req(p.local_host_id==='fae5f756-ef25-40d5-9777-5b2c3d4837a1','HOST_PROOF_EXACT_HOST_REQUIRED');
           req(p.runtime_secret_binding_count===7&&p.exact_two_runtime_service_identities_bound===true,'HOST_PROOF_BINDING_CARDINALITY_REQUIRED');
           req(p.evidence_database_connectivity_proven===true&&p.twin_database_connectivity_proven===true,'HOST_PROOF_DB_CONNECTIVITY_REQUIRED');
