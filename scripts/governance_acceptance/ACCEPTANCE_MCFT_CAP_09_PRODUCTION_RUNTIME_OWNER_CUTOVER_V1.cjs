@@ -8,6 +8,11 @@ const ROOT=path.resolve(__dirname,"../..");
 const read=(p)=>fs.readFileSync(path.join(ROOT,p),"utf8");
 const json=(p)=>JSON.parse(read(p));
 const digest=(p)=>"sha256:"+crypto.createHash("sha256").update(fs.readFileSync(path.join(ROOT,p))).digest("hex");
+function section(source,start,end){
+  const a=source.indexOf(start); const b=source.indexOf(end,a+start.length);
+  assert.ok(a>=0&&b>a,"CUTOVER_SOURCE_SECTION_REQUIRED:"+start);
+  return source.slice(a,b);
+}
 
 const registryPath="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json";
 const certPath="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-STAGE-ARCHITECTURE-EFFECTIVENESS-V1.json";
@@ -71,13 +76,72 @@ assert.equal(a0.selection_policy.selected_budget_ms,timing.qualified_budget.sele
 assert.equal(a0.authority_ceiling.a0_execution_authorized,false);
 
 const compose=read(composePath);
-for(const marker of ["mcft_cap09_evidence_preformal_owner_runtime.js","mcft_cap09_twin_preformal_owner_runtime.js","GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH"]) assert.ok(compose.includes(marker),marker);
+for(const marker of [
+  "mcft_cap09_evidence_preformal_owner_runtime.js",
+  "mcft_cap09_twin_preformal_owner_runtime.js",
+  "GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH",
+  "GEOX_MCFT_CAP09_PREFORMAL_MODE",
+  "OWNER_CUTOVER",
+  "MCFT_CAP_09_PRODUCTION_OWNER_CUTOVER_ARM_V1.json"
+]) assert.ok(compose.includes(marker),marker);
 for(const forbidden of ["FORMAL_WINDOW_MANIFEST","TWIN_RUNTIME_CROP_AUTHORITY_PATH","TWIN_RUNTIME_CONFIGURATION_MATRIX_PATH"]) assert.equal(compose.includes(forbidden),false,"PREFORMAL_COMPOSE_FORBIDDEN:"+forbidden);
 const standby=read(standbyPath);
 assert.ok(standby.includes("twin_runtime_lease_v1"));
 for(const forbidden of ["twin_shadow_online_scheduler_cursor_v1","twin_shadow_online_scheduler_slot_v1","claimDueSlot","recordTerminalResult"]) assert.equal(standby.includes(forbidden),false,"PREFORMAL_STANDBY_SCHEDULER_EFFECT_FORBIDDEN:"+forbidden);
-assert.ok(read(evidencePath).includes("readMcftCap09OwnerCutoverAuthorityV1"));
-assert.ok(read(twinPath).includes("readMcftCap09OwnerCutoverAuthorityV1"));
+
+const evidenceSource=read(evidencePath);
+const twinSource=read(twinPath);
+assert.ok(evidenceSource.includes("readMcftCap09OwnerCutoverAuthorityV1"));
+assert.ok(twinSource.includes("readMcftCap09OwnerCutoverAuthorityV1"));
+assert.ok(evidenceSource.includes('const EVIDENCE_LEASE_TABLE = "external_evidence_producer_lease_v1"'));
+assert.ok(twinSource.includes('const TWIN_LEASE_TABLE = "twin_runtime_lease_v1"'));
+assert.ok(evidenceSource.includes("if(mode()===NON_OWNER_STANDBY_MODE)"));
+assert.ok(twinSource.includes("if(mode()===NON_OWNER_STANDBY_MODE)"));
+const evidenceNonOwner=section(
+  evidenceSource,
+  "export async function runMcftCap09EvidenceNonOwnerStandbyV1",
+  "export async function runMcftCap09EvidencePreFormalOwnerRuntimeV1"
+);
+for(const required of [
+  "assertMcftCap09ServicePrincipalV1",
+  "EVIDENCE_LEASE_TABLE",
+  "SELECT count(*)::int AS n",
+  "headObject",
+  "evidence_producer_lease_claimed:false",
+  "production_evidence_write:false",
+  "r2_write:false"
+]) assert.ok(evidenceNonOwner.includes(required),"EVIDENCE_NON_OWNER_REQUIRED:"+required);
+for(const forbidden of [
+  "runMcftCap09ProductionEvidenceRuntimeV1",
+  "lease_owner",
+  "INSERT INTO",
+  "UPDATE ",
+  "DELETE FROM"
+]) assert.equal(evidenceNonOwner.includes(forbidden),false,"EVIDENCE_NON_OWNER_EFFECT_FORBIDDEN:"+forbidden);
+
+const twinNonOwner=section(
+  twinSource,
+  "export async function runMcftCap09TwinNonOwnerStandbyV1",
+  "export async function runMcftCap09TwinPreFormalOwnerRuntimeV1"
+);
+for(const required of [
+  "assertMcftCap09ServicePrincipalV1",
+  "loadMcftCap09ProductionStageAuthorityMountsV1",
+  "TWIN_LEASE_TABLE",
+  "SELECT count(*)::int AS n",
+  "twin_scheduler_lease_claimed:false",
+  "scheduler_cursor_mutation:false",
+  "scheduler_slot_mutation:false",
+  "formal_runner_started:false"
+]) assert.ok(twinNonOwner.includes(required),"TWIN_NON_OWNER_REQUIRED:"+required);
+for(const forbidden of [
+  "runMcftCap09TwinPreFormalOwnerStandbyV1",
+  "buildMcftCap09ProductionLeaseOwnerV1",
+  "INSERT INTO",
+  "UPDATE ",
+  "DELETE FROM"
+]) assert.equal(twinNonOwner.includes(forbidden),false,"TWIN_NON_OWNER_EFFECT_FORBIDDEN:"+forbidden);
+
 const dist=read(distPath);
 assert.ok(dist.includes("mcft_cap09_evidence_preformal_owner_runtime.js"));
 assert.ok(dist.includes("mcft_cap09_twin_preformal_owner_runtime.js"));
@@ -109,6 +173,9 @@ console.log(JSON.stringify({
   candidate_artifacts_admissible:false,
   rolling_refresh_effective_entry_present:true,
   stage_certificate_digest:digest(certPath),
+  runtime_start_non_owner_standby_seam:true,
+  evidence_non_owner_standby_lease_claim:false,
+  twin_non_owner_standby_lease_claim:false,
   twin_preformal_scheduler_effect:false,
   dual_key_cutover:true,
   registry_backed_current_crop_selection:true,

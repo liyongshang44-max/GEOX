@@ -18,6 +18,7 @@ services:
         >> /var/log/geox/mcft-cap09/evidence/runtime.log 2>&1
     environment:
       GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?required}
+      GEOX_MCFT_CAP09_PREFORMAL_MODE: ${GEOX_MCFT_CAP09_PREFORMAL_MODE:-OWNER_CUTOVER}
       GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_SERVICE_ID: local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/geox-mcft-cap09-evidence-runtime-v1
       GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH: /run/geox/mcft-cap09/runtime-start-authority.json
       GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH: /run/geox/mcft-cap09/owner-cutover-authority.json
@@ -39,7 +40,7 @@ services:
         target: /run/geox/mcft-cap09/runtime-start-authority.json
         read_only: true
       - type: bind
-        source: ${GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH:?required}
+        source: ${GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH:-scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_CUTOVER_ARM_V1.json}
         target: /run/geox/mcft-cap09/owner-cutover-authority.json
         read_only: true
       - type: bind
@@ -66,6 +67,7 @@ services:
         >> /var/log/geox/mcft-cap09/twin/runtime.log 2>&1
     environment:
       GEOX_DEPLOYMENT_SUBJECT_COMMIT: ${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?required}
+      GEOX_MCFT_CAP09_PREFORMAL_MODE: ${GEOX_MCFT_CAP09_PREFORMAL_MODE:-OWNER_CUTOVER}
       GEOX_MCFT_CAP09_TWIN_RUNTIME_SERVICE_ID: local-docker://fae5f756-ef25-40d5-9777-5b2c3d4837a1/geox-mcft-cap09-twin-runtime-v1
       GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH: /run/geox/mcft-cap09/runtime-start-authority.json
       GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH: /run/geox/mcft-cap09/owner-cutover-authority.json
@@ -84,7 +86,7 @@ services:
         target: /run/geox/mcft-cap09/runtime-start-authority.json
         read_only: true
       - type: bind
-        source: ${GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH:?required}
+        source: ${GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH:-scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_OWNER_CUTOVER_ARM_V1.json}
         target: /run/geox/mcft-cap09/owner-cutover-authority.json
         read_only: true
       - type: bind
