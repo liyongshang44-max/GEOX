@@ -1,0 +1,157 @@
+{
+  "version": "GEOX_BLINE_W6A_EXACT_PREDECESSOR_SELECTION_V1",
+  "status": "FROZEN_BOUNDED_WORKSTREAM_INVENTORY",
+  "authority_base": "a6d39df6af46ecfbf8e4ae99e48f400e00685875",
+  "workstream": "W6A_EXACT_PLANNER_CROP_PREDECESSOR_SELECTION",
+  "authorization": "CTO_AUTHORIZED",
+  "discovery_policy": "BOUNDED_DIRECT_CALLER_IMPORT_TRAVERSAL_FROM_TWO_FROZEN_ROOTS_ONLY; NO_WHOLE_REPOSITORY_DISCOVERY",
+  "blocker_count": 2,
+  "blockers": [
+    {
+      "id": "PLANNER-LATEST-01",
+      "protected_invariant": "I-08_EXACT_FACT_LINEAGE",
+      "closure_domain": "CD-05_FACT_LINEAGE_AND_STATE_AMBIGUITY",
+      "root": "apps/server/src/domain/planner/compiler_v1.ts",
+      "direct_callers": [
+        "apps/server/src/routes/programs_core_v1.ts"
+      ],
+      "direct_import_predecessors": [
+        "apps/server/src/projections/program_state_v1.ts"
+      ],
+      "affected_route": "GET /api/v1/programs/:program_id/actions",
+      "current_unsafe_selection": [
+        "field_program_v1 selected by tenant/project/group/program_id + ORDER BY occurred_at DESC, fact_id DESC LIMIT 1",
+        "acceptance_result_v1 selected by tenant/project/group/program_id + ORDER BY occurred_at DESC, fact_id DESC LIMIT 1",
+        "resource_usage_v1 selected by tenant/project/group/program_id + ORDER BY occurred_at DESC, fact_id DESC LIMIT 1",
+        "sla_evaluation_v1 selected by tenant/project/group/program_id + ORDER BY occurred_at DESC, fact_id DESC LIMIT 1"
+      ],
+      "available_identity_lineage_fields": {
+        "field_program_v1": [
+          "facts.fact_id",
+          "payload.program_id",
+          "payload.field_id",
+          "payload.season_id",
+          "payload.crop_code",
+          "payload.created_ts",
+          "payload.updated_ts"
+        ],
+        "acceptance_result_v1": [
+          "facts.fact_id",
+          "payload.acceptance_id",
+          "payload.program_id",
+          "payload.field_id",
+          "payload.act_task_id",
+          "payload.operation_plan_id",
+          "payload.receipt_id",
+          "payload.evidence_refs"
+        ],
+        "resource_usage_v1": [
+          "facts.fact_id",
+          "payload.program_id",
+          "payload.act_task_id",
+          "payload.recorded_ts"
+        ],
+        "sla_evaluation_v1": [
+          "facts.fact_id",
+          "payload.program_id",
+          "payload.sla_name",
+          "payload.recorded_ts"
+        ]
+      },
+      "adjudication_rules": [
+        "ORDER BY latest is not lineage authority",
+        "multiple field_program_v1 facts are allowed only when they remain within one stable program lineage root; differing stable lineage roots are ambiguous",
+        "single unambiguous auxiliary predecessor preserves existing behavior",
+        "multiple auxiliary predecessors require existing exact identity/lineage evidence; otherwise fail closed with explicit ambiguity",
+        "resource_usage_v1 may bind through an exact act_task_id when that exact task identity is established by the selected acceptance chain",
+        "sla_evaluation_v1 has no execution-chain foreign key beyond program_id; multiple candidates therefore cannot be silently latest-selected"
+      ]
+    },
+    {
+      "id": "CROP-LATEST-01",
+      "protected_invariant": "I-08_EXACT_FACT_LINEAGE",
+      "closure_domain": "CD-05_FACT_LINEAGE_AND_STATE_AMBIGUITY",
+      "root": "apps/server/src/domain/crop/crop_context_v1.ts",
+      "direct_callers": [
+        "apps/server/src/routes/field_crop_context_hooks_v1.ts",
+        "apps/server/src/routes/field_report_semantics_hook_v1.ts"
+      ],
+      "direct_import_predecessors": [
+        "apps/server/src/projections/field_program_state_v1.ts"
+      ],
+      "affected_flows": [
+        "POST /api/v1/recommendations/generate response crop-context guard",
+        "POST /api/v1/prescriptions/from-recommendation pre-handler guard",
+        "POST /api/v1/prescriptions/variable/from-recommendation pre-handler guard",
+        "GET /api/v1/reports/field/:field_id semantics enrichment"
+      ],
+      "current_unsafe_selection": [
+        "when season_id is absent, crop_context_v1 query allows every season for the field and ORDER BY occurred_at DESC LIMIT 1",
+        "fallback projectFieldProgramStateV1 filters only by field when season_id is absent, sorts by last_event_ts DESC, and selects index 0"
+      ],
+      "available_identity_lineage_fields": {
+        "crop_context_v1": [
+          "facts.fact_id",
+          "payload.field_id",
+          "payload.season_id",
+          "payload.crop_code",
+          "payload.variety_code",
+          "payload.crop_stage"
+        ],
+        "field_program_state_v1": [
+          "program_id",
+          "field_id",
+          "season_id",
+          "crop_code",
+          "variety_code",
+          "crop_stage"
+        ],
+        "caller_parent_context": [
+          "recommendation request body program_id",
+          "recommendation request body season_id",
+          "persisted recommendation payload program_id",
+          "persisted recommendation payload season_id",
+          "field report crop_context.season_id",
+          "field report recent_operation.season_id",
+          "field report query season_id"
+        ]
+      },
+      "adjudication_rules": [
+        "explicit season_id is authoritative and must be matched strictly",
+        "without explicit season_id, exact season may be resolved only from existing parent/context identity",
+        "a single unique season across authoritative crop/program context may be resolved",
+        "multiple distinct legal seasons without an exact parent identity are ambiguous and must not be latest-selected",
+        "an exact parent program_id may resolve its already-recorded season_id; this does not create season inference authority",
+        "when exact season cannot be resolved, return UNKNOWN/AMBIGUOUS fail-closed crop context",
+        "latest ordering may be used only as a version projection after exact season lineage has already been established"
+      ]
+    }
+  ],
+  "required_qualification": [
+    "exact frozen two-blocker inventory",
+    "source/caller boundary gate",
+    "single-history positive proof",
+    "duplicate-history ambiguity negative proof",
+    "explicit-season Crop positive proof",
+    "cross-season ambiguity negative proof",
+    "planner wrong-history prevention proof",
+    "W1-W5 successor preservation",
+    "Frozen PR-SEC-1 regression",
+    "residual authority regression",
+    "active-runtime regression",
+    "typecheck",
+    "build",
+    "Commercial affected-flow regression",
+    "MCFT delta = 0"
+  ],
+  "forbidden_scope": [
+    "MCFT implementation/docs/workflows",
+    "current protected main as authority base",
+    "W1-W5 semantic reopening",
+    "Recommendation/Approval/Execution authority creation",
+    "shared DB/service/MQTT principal redesign",
+    "Action Qualification",
+    "generic event-sourcing/versioning refactor",
+    "whole-repository discovery"
+  ]
+}

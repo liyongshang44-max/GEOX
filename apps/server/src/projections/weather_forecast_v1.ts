@@ -372,8 +372,13 @@ export async function ingestWeatherForecastFactV1(pool: Pool, payloadInput: Part
   return upsertWeatherForecastIndexV1(pool, appended.payload, appended.fact_id);
 }
 
-export async function getLatestWeatherForecastIndexV1(pool: Pool, tenant: { tenant_id: string; project_id: string; group_id: string }, fieldId: string): Promise<WeatherForecastIndexV1 | null> {
-  await ensureWeatherForecastIndexV1(pool);
+export async function getLatestWeatherForecastIndexV1(
+  pool: Pool,
+  tenant: { tenant_id: string; project_id: string; group_id: string },
+  fieldId: string,
+  options: { allow_compatibility_write?: boolean } = {},
+): Promise<WeatherForecastIndexV1 | null> {
+  if (options.allow_compatibility_write !== false) await ensureWeatherForecastIndexV1(pool);
   const q = await pool.query(
     `SELECT *
        FROM weather_forecast_index_v1

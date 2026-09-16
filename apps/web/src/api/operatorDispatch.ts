@@ -43,6 +43,7 @@ export type OperatorDispatchItem = {
   status: OperatorDispatchStatus;
   executionMode: OperatorExecutionMode;
   taskCreatedAt?: string | null;
+  dispatchRequestedAt?: string | null;
   dispatchedAt?: string | null;
   ackedAt?: string | null;
   receiptReceivedAt?: string | null;
@@ -102,6 +103,7 @@ function normalizeStatus(row: AnyRecord): OperatorDispatchStatus {
   if (failed) return "EXECUTION_FAILED";
   if (hasReceipt || raw.includes("RECEIPT_RECEIVED") || raw.includes("RECEIPT_SUBMITTED")) return "RECEIPT_RECEIVED";
   if (raw.includes("ACKED") || raw.includes("ACK")) return "ACKED";
+  if (raw.includes("DISPATCH_REQUESTED") || raw.includes("RETRY_DISPATCH_REQUESTED")) return "DISPATCH_PENDING";
   if (raw.includes("RETRY_DISPATCHED")) return "RETRY_DISPATCHED";
   if (raw.includes("DISPATCHED") || raw.includes("SENT")) return "DISPATCHED";
   if (raw.includes("PENDING_DISPATCH") || raw.includes("READY_TO_DISPATCH") || raw.includes("WAITING_DISPATCH")) return "DISPATCH_PENDING";
@@ -141,6 +143,7 @@ function normalizeOfficial(payload: unknown): OperatorDispatchItem[] {
       status: normalizeStatus(row),
       executionMode: normalizeMode(row.execution_mode ?? row.executor_type ?? row.task_type ?? row.actor_type),
       taskCreatedAt: text(row.task_created_at ?? row.created_at ?? row.generated_at, ""),
+      dispatchRequestedAt: text(row.dispatch_requested_at ?? row.requested_at, ""),
       dispatchedAt: text(row.dispatched_at ?? row.dispatch_at, ""),
       ackedAt: text(row.acked_at ?? row.ack_at, ""),
       receiptReceivedAt: text(row.receipt_received_at ?? row.receipt_at ?? row.receipt?.created_at, ""),

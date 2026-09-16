@@ -44,6 +44,7 @@ includesAll(boundary, [
 
 assert(boundary.includes('irrigationEffectiveness === "low" || leakRisk === "high"'), 'raw formal signal must remain irrigation_effectiveness=low OR leak_risk=high');
 assert(boundary.includes('if (reasons.length > 0)'), 'formal signal must be gated by evidence reason codes');
+assert(boundary.includes('return { status: "NOT_ELIGIBLE", reason_codes: ["NO_FORMAL_STAGE1_SIGNAL"] }'), 'no formal signal must remain NOT_ELIGIBLE');
 assert(boundary.includes('return { status: "NEEDS_EVIDENCE", error: FORMAL_STAGE1_TRIGGER_NEEDS_EVIDENCE'), 'failed evidence gate must return FORMAL_STAGE1_TRIGGER_NEEDS_EVIDENCE');
 assert(boundary.includes('return { status: "ELIGIBLE", reason_codes: [] }'), 'only fully satisfied evidence gate may become ELIGIBLE');
 assert(boundary.includes('formalCoverageRatio == null || formalCoverageRatio < 0.5'), 'formal coverage不足必须阻断 formal trigger');
@@ -64,6 +65,8 @@ includesAll(gateRoute, [
   'evaluateFormalStage1TriggerGateV1(stage1Summary)',
   'gate.status === "NEEDS_EVIDENCE"',
   'error: gate.error ?? FORMAL_STAGE1_TRIGGER_NEEDS_EVIDENCE',
+  'gate.status === "NOT_ELIGIBLE"',
+  'error: "FORMAL_STAGE1_TRIGGER_NOT_ELIGIBLE"',
   'reason_codes: gate.reason_codes',
   'problem_state_v1',
   'uncertainty_envelope_v1',
@@ -71,7 +74,7 @@ includesAll(gateRoute, [
   'time_coverage_v1',
   'device_health_snapshot_v1',
   'conflict_detection_v1',
-], 'recommendation generate preHandler gate');
+], 'recommendation generate preHandler tri-state gate');
 
 assert(!gateRoute.includes('createPrescription'), 'evidence gate must not create prescription');
 assert(!gateRoute.includes('operation_plan'), 'evidence gate must not create operation plan');

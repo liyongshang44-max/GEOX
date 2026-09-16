@@ -1,0 +1,290 @@
+{
+  "schema_version": "geox_mcft_cap09_t4r1_thermal_biological_stage_authority_v1",
+  "record_status": "IMPLEMENTATION_CANDIDATE_DEPENDS_ON_DT02_AMENDMENT03_EFFECTIVENESS",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "frontier": "T4R1_THERMAL_BIOLOGICAL_STAGE_AUTHORITY",
+  "implementation_base_sha": "17eb06c4c79f36e51b88561395f8e69cd86195b7",
+  "architecture_candidate": {
+    "amendment_id": "DT02-AMENDMENT-03",
+    "amendment_path": "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md",
+    "amendment_candidate_head": "17eb06c4c79f36e51b88561395f8e69cd86195b7",
+    "effective_required_before_production_consumption": true
+  },
+  "formal_scope": {
+    "site_id": "KBS_MCSE_T4R1",
+    "field_id": "field_kbs_mcse_t4r1",
+    "season_id": "season_2026_corn",
+    "zone_id": "zone_kbs_mcse_t4r1_crop_formal_v1",
+    "crop": "corn",
+    "hybrid_product_code": "43-96P",
+    "provider_treatment": "T4",
+    "replicate": "R1"
+  },
+  "planting_authority": {
+    "provider": "KBS_AGLOG",
+    "observation_id": 6974,
+    "official_url": "https://aglog.kbs.msu.edu/observations/6974",
+    "planting_local_date": "2026-05-27",
+    "timezone": "America/Detroit",
+    "precision": "LOCAL_CALENDAR_DAY_ONLY",
+    "crop": "corn",
+    "hybrid_product_code": "43-96P",
+    "required_markers": [
+      "2026-05-27",
+      "Planting",
+      "43-96P"
+    ],
+    "source_role": "DIRECT_MANAGEMENT_PLANTING_AND_HYBRID_IDENTITY"
+  },
+  "hybrid_thermal_landmark_candidate": {
+    "provider": "ALBERT_LEA_SEED_BLUE_RIVER",
+    "official_url": "https://alseed.com/product/organic-blue-river-43-96p-seed-corn/",
+    "brand_authority_url": "https://alseed.com/albert-lea-seed-house-announces-acquisition-of-blue-river-organic-seed/",
+    "source_class": "FIRST_PARTY_BRAND_OWNER_EXACT_PRODUCT_SPECIFICATION",
+    "required_markers": [
+      "Organic Blue River 43-96P Seed Corn",
+      "96-day CRM",
+      "Performance Table",
+      "GDU",
+      "Black Layer",
+      "43-96P",
+      "2380"
+    ],
+    "brand_authority_required_markers": [
+      "acquired",
+      "Blue River Organic Seed",
+      "Albert Lea Seed"
+    ],
+    "hybrid_product_code": "43-96P",
+    "crm_days": 96,
+    "gdu_to_black_layer": 2380,
+    "exact_product_match_required": true,
+    "sibling_threshold_transfer_authorized": false,
+    "crm_to_gdu_conversion_authorized": false,
+    "observed_phenology_claim_authorized": false,
+    "authority_ceiling": "FIRST_PARTY_HYBRID_THERMAL_MODEL_INPUT_NOT_DIRECT_FIELD_TRUTH"
+  },
+  "black_layer_semantics": {
+    "provider": "PURDUE_UNIVERSITY_EXTENSION",
+    "official_url": "https://www.agry.purdue.edu/ext/corn/news/timeless/grainfill.html",
+    "required_markers": [
+      "Physiological Maturity (R6)",
+      "black layer"
+    ],
+    "semantic_mapping": "BLACK_LAYER_APPROXIMATES_PHYSIOLOGICAL_MATURITY_R6",
+    "direct_t4r1_observation": false
+  },
+  "temperature_source_candidate": {
+    "provider": "IOWA_ENVIRONMENTAL_MESONET",
+    "station_id": "KBSM4",
+    "network": "MI_DCP",
+    "station_name": "KELLOGG BIOLOGICAL STATION - MAWN",
+    "latitude": 42.4081,
+    "longitude": -85.3736,
+    "station_metadata_url": "https://mesonet.agron.iastate.edu/sites/networks.php?network=MI_DCP&station=KBSM4",
+    "daily_api_url_template": "https://mesonet.agron.iastate.edu/cgi-bin/request/daily.py?stations=KBSM4&network=MI_DCP&sts={start_date}&ets={end_date}&format=csv",
+    "source_role": "NEAR_SITE_DAILY_EXTREMA_THERMAL_INPUT_CANDIDATE",
+    "direct_t4r1_field_truth": false,
+    "raw_payload_persistence_authorized": false,
+    "derived_aggregate_and_digest_only": true
+  },
+  "thermal_method": {
+    "algorithm_id": "CORN_BASE50_DAILY_EXTREMA_CAP86_FLOOR50_V1",
+    "unit": "degF",
+    "base_f": 50,
+    "max_cap_f": 86,
+    "min_floor_f": 50,
+    "daily_max_gdu": 36,
+    "formula": "max(0, ((min(Tmax,86)+max(Tmin,50))/2)-50)",
+    "planting_day_lower_gdu": 0,
+    "planting_day_upper_uses_observed_full_day_if_valid": true,
+    "missing_or_invalid_day_lower_gdu": 0,
+    "missing_or_invalid_day_upper_gdu": 36,
+    "silent_imputation_authorized": false
+  },
+  "qualification_snapshot": {
+    "as_of_logical_time": "2026-09-03T00:00:00.000Z",
+    "temperature_start_local_date": "2026-05-27",
+    "last_complete_temperature_local_date": "2026-09-02",
+    "future_observations_authorized": false,
+    "full_season_ex_post_normalization_authorized": false
+  },
+  "thermal_landmark_mapping": {
+    "biological_stage_system": "CORN_REPRODUCTIVE_THERMAL_LANDMARK_AND_RESIDUAL_MATURITY_V1",
+    "below_r5_residual_candidate": "PRE_R5_MODEL_ESTIMATE",
+    "r5_or_later_pre_r6_candidate": "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE",
+    "at_or_above_black_layer_candidate": "R6_OR_LATER_MODEL_ESTIMATE",
+    "black_layer_threshold_crossing_rule": "LOWER_GDU_AT_OR_ABOVE_2380_REQUIRED_FOR_R6_OR_LATER_SINGLETON",
+    "r5_residual_rule": "UPPER_REMAINING_GDU_BELOW_CONSERVATIVE_R5_REFERENCE_MIN_400_AND_ACCUMULATED_UPPER_BELOW_2380",
+    "black_layer_straddle_rule": "LOWER_LT_2380_AND_UPPER_GE_2380_RETURNS_NON_SINGLETON",
+    "observed_biological_stage_claimed": false
+  },
+  "biological_to_water_use_mapping": {
+    "PRE_R5_MODEL_ESTIMATE": [
+      "MID",
+      "LATE"
+    ],
+    "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE": [
+      "LATE"
+    ],
+    "R6_OR_LATER_MODEL_ESTIMATE": [
+      "LATE"
+    ],
+    "mapping_semantics": "PARTIAL_CONSERVATIVE_FAO_LATE_RIPENING_MAPPING_V2",
+    "mapping_basis": [
+      "FAO_LATE_SEASON_RUNS_FROM_START_OF_MATURITY_TO_HARVEST_OR_FULL_SENESCENCE",
+      "FAO_LATE_SEASON_INCLUDES_RIPENING",
+      "R5_DENT_IS_MATURING_KERNEL_PROGRESS_TOWARD_PHYSIOLOGICAL_MATURITY",
+      "UNIVERSITY_EXTENSION_LATE_SEASON_WATER_USE_INCLUDES_DENT_PROGRESS"
+    ],
+    "kc_resolution_requires_singleton_water_use_stage": true
+  },
+  "lifecycle_independence": {
+    "thermal_stage_proves_lifecycle_active": false,
+    "harvest_or_termination_guard_required_for_operational_consumption": true,
+    "lifecycle_authority_source_unchanged": true
+  },
+  "expected_candidate_outcomes": [
+    "THERMAL_SOURCE_QUALIFICATION_FAIL_CLOSED",
+    "THERMAL_STAGE_PRE_R5_WATER_USE_UNRESOLVED",
+    "THERMAL_STAGE_R5_DENT_OR_LATER_LATE_CANDIDATE",
+    "THERMAL_STAGE_THRESHOLD_STRADDLE_UNRESOLVED",
+    "THERMAL_STAGE_R6_OR_LATER_LATE_CANDIDATE"
+  ],
+  "data_use_policy": {
+    "provider_payload_may_be_committed": false,
+    "provider_payload_may_be_uploaded_as_ci_artifact": false,
+    "provider_body_text_may_be_emitted": false,
+    "provider_response_digest_may_be_emitted": true,
+    "derived_daily_count_may_be_emitted": true,
+    "derived_gdu_bounds_may_be_emitted": true,
+    "database_write_authorized": false,
+    "formal_evidence_write_authorized": false,
+    "raw_object_write_authorized": false,
+    "runtime_config_write_authorized": false,
+    "scheduler_write_authorized": false,
+    "production_runtime_start_authorized": false
+  },
+  "nonclaims": {
+    "observed_t4r1_biological_stage_established": false,
+    "current_t4r1_lifecycle_active_established_by_thermal_model": false,
+    "current_t4r1_kc_resolved_by_this_candidate": false,
+    "runtime_start_authorized": false,
+    "formal_v5_authorized": false,
+    "a0_authorized": false,
+    "o00_o23_authorized": false,
+    "mcft_cap09_completed": false,
+    "production_crop_model_parameter_authority_effective": false,
+    "runtime_config_kc_rebound": false
+  },
+  "r5_residual_to_maturity_model": {
+    "model_id": "CORN_R5_RESIDUAL_TO_MATURITY_CONSERVATIVE_ENVELOPE_V1",
+    "purpose": "Use exact-hybrid black-layer GDU as the maturity anchor and separately qualified university residual-GDU stage references to determine whether the full current thermal uncertainty lies beyond the conservative R5 dent reference.",
+    "sources": [
+      {
+        "source_id": "WISCONSIN_CORN_DEVELOPMENT_R5_RESIDUAL_GDU",
+        "provider": "UNIVERSITY_OF_WISCONSIN_CORN_AGRONOMY",
+        "official_url": "https://corn.agronomy.wisc.edu/management/L011.aspx",
+        "required_markers": [
+          "Early Dent (R5)",
+          "425-525",
+          "Fully Dented",
+          "200-300",
+          "Physiological maturity (R6)"
+        ],
+        "role": "REGIONAL_CORN_RESIDUAL_GDU_STAGE_REFERENCE"
+      },
+      {
+        "source_id": "FAO56_LATE_SEASON_SEMANTICS",
+        "provider": "FAO",
+        "official_url": "https://www.fao.org/4/X0490E/x0490e0a.htm",
+        "required_markers": [
+          "Late season stage",
+          "start of maturity",
+          "harvest or full senescence"
+        ],
+        "role": "CROP_WATER_USE_LATE_STAGE_SEMANTICS"
+      },
+      {
+        "source_id": "UMN_CORN_R5_MATURING_KERNEL_SEMANTICS",
+        "provider": "UNIVERSITY_OF_MINNESOTA_EXTENSION",
+        "official_url": "https://extension.umn.edu/agriculture/crop-production/corn/growth-and-development",
+        "required_markers": [
+          "R5: Kernel dent stage",
+          "maturing kernels",
+          "R6: Physiological maturity"
+        ],
+        "role": "R5_DENT_BIOLOGICAL_DEVELOPMENT_SEMANTICS"
+      },
+      {
+        "source_id": "UMN_LATE_SEASON_CORN_WATER_USE",
+        "provider": "UNIVERSITY_OF_MINNESOTA_EXTENSION",
+        "official_url": "https://extension.umn.edu/natural-resources/conservation/agricultural-soil-and-water/irrigation/late-season-irrigation",
+        "required_markers": [
+          "late season",
+          "Beginning dent",
+          "Full dent",
+          "Water use"
+        ],
+        "role": "LATE_SEASON_WATER_USE_CORROBORATION"
+      }
+    ],
+    "regional_reference_envelope": {
+      "southern_wisconsin_early_dent_r5_gdu_to_maturity": [
+        425,
+        525
+      ],
+      "northern_wisconsin_early_dent_r5_gdu_to_maturity": [
+        400,
+        500
+      ],
+      "southern_wisconsin_r5_5_gdu_to_maturity": [
+        200,
+        300
+      ],
+      "northern_wisconsin_r5_5_gdu_to_maturity": [
+        175,
+        275
+      ],
+      "conservative_r5_reference_min_gdu_to_maturity": 400,
+      "conservative_r5_5_reference_max_gdu_to_maturity": 300
+    },
+    "decision_policy": {
+      "exact_hybrid_maturity_anchor_required": true,
+      "current_accumulation_must_be_bounded": true,
+      "remaining_gdu_lower_formula": "max(0, exact_maturity_gdu - accumulated_upper_gdu)",
+      "remaining_gdu_upper_formula": "max(0, exact_maturity_gdu - accumulated_lower_gdu)",
+      "r5_or_later_pre_r6_if": "accumulated_upper_gdu < exact_maturity_gdu AND remaining_gdu_upper < 400",
+      "r5_progress_between_early_and_half_milkline_if": "remaining_gdu_upper < 400 AND remaining_gdu_lower > 300",
+      "biological_result_on_r5_or_later": "R5_DENT_OR_LATER_PRE_R6_MODEL_ESTIMATE",
+      "water_use_result_on_r5_or_later": "LATE",
+      "observed_biological_stage_claimed": false,
+      "exact_r5_field_observation_claimed": false,
+      "generic_absolute_gdu_stage_threshold_transfer_authorized": false,
+      "linear_flower_to_black_layer_interpolation_authorized": false
+    },
+    "limitation_codes": [
+      "REGIONAL_RESIDUAL_GDU_MODEL_NOT_T4R1_FIELD_OBSERVATION",
+      "R5_ESTIMATE_IS_THERMAL_MODEL_DERIVED",
+      "LIFECYCLE_MUST_BE_SEPARATELY_ADJUDICATED"
+    ]
+  },
+  "crop_model_parameter_binding": {
+    "required_parameter": "Kc",
+    "configuration_matrix_path": "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
+    "configuration_matrix_blob_sha": "c04c6805ab79c715781b99f8fbcf997fae3a8c48",
+    "configuration_source_id": "mcft_crop_water_use_corn_v1",
+    "configuration_semantic_hash": "sha256:56ac92e34148bd81fe20f2925e1079cb1a3ed647ffefd1471caf1302df70ee4c",
+    "resolution_rule": "ONE_UNIQUE_WATER_USE_STAGE_THEN_EXACT_STAGE_CODE_LOOKUP_IN_FROZEN_KC_SCHEDULE",
+    "expected_current_candidate_if_late": {
+      "stage_code": "LATE",
+      "kc": 0.6
+    },
+    "stage_specific_lookup_only": true,
+    "interpolation_authorized": false,
+    "lifecycle_to_kc_inference_authorized": false,
+    "biological_stage_direct_to_kc_without_water_use_mapping_authorized": false,
+    "production_effective_before_architecture_and_runtime_binding": false
+  }
+}

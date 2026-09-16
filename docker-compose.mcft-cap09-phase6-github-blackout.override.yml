@@ -1,0 +1,24 @@
+# Phase 6 qualification-only GitHub control-plane blackout overlay.
+# Base Phase5 production-equivalent topology/process entrypoints are unchanged.
+services:
+  fixture-capture:
+    extra_hosts:
+      - "github.com=127.0.0.1"
+      - "api.github.com=127.0.0.1"
+      - "objects.githubusercontent.com=127.0.0.1"
+      - "pipelines.actions.githubusercontent.com=127.0.0.1"
+      - "results-receiver.actions.githubusercontent.com=127.0.0.1"
+  evidence-runtime:
+    extra_hosts:
+      - "github.com=127.0.0.1"
+      - "api.github.com=127.0.0.1"
+      - "objects.githubusercontent.com=127.0.0.1"
+      - "pipelines.actions.githubusercontent.com=127.0.0.1"
+      - "results-receiver.actions.githubusercontent.com=127.0.0.1"
+  twin-runtime:
+    extra_hosts:
+      - "github.com=127.0.0.1"
+      - "api.github.com=127.0.0.1"
+      - "objects.githubusercontent.com=127.0.0.1"
+      - "pipelines.actions.githubusercontent.com=127.0.0.1"
+      - "results-receiver.actions.githubusercontent.com=127.0.0.1"

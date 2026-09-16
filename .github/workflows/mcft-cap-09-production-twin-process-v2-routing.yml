@@ -1,0 +1,191 @@
+name: MCFT CAP-09 Production Twin Process V2 Routing
+
+on:
+  pull_request:
+    branches:
+      - main
+      - feat/mcft-cap09-twin-v2-stage-qcp-registration-v1
+      - qual/mcft-cap09-current-main-requal-cb9-v1
+    paths:
+      - .github/workflows/mcft-cap-09-phase5-production-equivalent-containers.yml
+      - .github/workflows/mcft-cap-09-production-twin-process-v2-routing.yml
+      - apps/server/scripts/write_dist_entries.cjs
+      - apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts
+      - apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts
+      - docker-compose.mcft-cap09-production.yml
+      - scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs
+      - scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts
+      - scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MCFT_CAP09_PRODUCTION_TWIN_V2_ROUTING_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ ((github.base_ref == 'qual/mcft-cap09-current-main-requal-cb9-v1' && github.head_ref == 'main' && github.event.pull_request.base.sha == 'cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4') || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' && github.event.pull_request.base.sha == 'a8a5046f38e51fdd7b745c9e211ed61299164b23')) && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve bounded qualification mode
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MODE=HISTORICAL
+
+          if [ '${{ github.base_ref }}' = 'qual/mcft-cap09-current-main-requal-cb9-v1' ]; then
+            test '${{ github.head_ref }}' = 'main'
+            test '${{ github.event.pull_request.base.sha }}' = 'cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4'
+
+            SUBJECT='${{ github.event.pull_request.head.sha }}'
+
+            test "$(git rev-parse HEAD)" = "$SUBJECT"
+
+            git fetch --no-tags origin main
+            test "$(git rev-parse origin/main)" = "$SUBJECT"
+
+            MODE=CURRENT_MAIN_REQUALIFICATION_PR
+
+          elif [ '${{ github.base_ref }}' = 'main' ] && \
+               [ '${{ github.head_ref }}' = 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' ]; then
+
+            test '${{ github.event.pull_request.base.sha }}' = 'a8a5046f38e51fdd7b745c9e211ed61299164b23'
+            test "$(git rev-parse HEAD)" = '${{ github.event.pull_request.head.sha }}'
+
+            git fetch --no-tags origin main
+            test "$(git rev-parse origin/main)" = 'a8a5046f38e51fdd7b745c9e211ed61299164b23'
+
+            MODE=ROUTING_INSTALLATION_PR
+          fi
+
+          echo "MCFT_CAP09_REQUAL_MODE=$MODE" >> "$GITHUB_ENV"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Server typecheck
+        run: pnpm --filter @geox/server run typecheck
+
+      - name: Typecheck routing acceptances
+        run: >-
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck
+          --target ES2022 --module NodeNext --moduleResolution NodeNext
+          --esModuleInterop --types node
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts
+
+      - name: Prove production two-service launcher V2 route
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_LOCAL_TWO_SERVICE_LAUNCHER_V1.ts
+
+      - name: Prove process authority separation and V1 preservation
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_PROCESS_BOUNDARY_V1.ts
+
+      - name: Build exact server production package
+        run: pnpm --filter @geox/server run build
+
+      - name: Prove stable V1 and V2 compiled entrypoints
+        run: |
+          test -f apps/server/dist/runtime/mcft_cap09_twin_runtime.js
+          grep -Fq 'runMcftCap09TwinRuntimeProcessV1' apps/server/dist/runtime/mcft_cap09_twin_runtime.js
+          test -f apps/server/dist/runtime/mcft_cap09_twin_runtime_v2.js
+          grep -Fq 'runMcftCap09TwinRuntimeProcessV2' apps/server/dist/runtime/mcft_cap09_twin_runtime_v2.js
+          ! grep -Rq 'scripts/runtime_acceptance' apps/server/dist/runtime/mcft_cap09_twin_runtime.js apps/server/dist/runtime/mcft_cap09_twin_runtime_v2.js
+
+      - name: Verify current-state production routing semantic guard
+        if: env.MCFT_CAP09_REQUAL_MODE != 'HISTORICAL'
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+
+          const processV2 = fs.readFileSync(
+            'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v2.ts',
+            'utf8'
+          );
+
+          for (const marker of [
+            'MCFT_CAP09_TWIN_RUNTIME_PROCESS_V2',
+            'composeMcftCap09TwinRuntimeV2',
+            'ExternalFormalV4Am19WindowManifestV2',
+            'loadMcftCap09ProductionStageAuthorityMountsV1',
+            'MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_V2',
+            'materializeExternalFormalA18CropContextV4'
+          ]) {
+            if (!processV2.includes(marker)) {
+              throw new Error(
+                `PRODUCTION_TWIN_V2_CURRENT_MAIN_MARKER:${marker}`
+              );
+            }
+          }
+
+          for (const forbidden of [
+            'scripts/runtime_acceptance',
+            'GITHUB_RUN_ID',
+            'github.event',
+            'qualification_lease_owner'
+          ]) {
+            if (processV2.includes(forbidden)) {
+              throw new Error(
+                `PRODUCTION_TWIN_V2_TEST_SEAM_FORBIDDEN:${forbidden}`
+              );
+            }
+          }
+
+          const compose = fs.readFileSync(
+            'docker-compose.mcft-cap09-production.yml',
+            'utf8'
+          );
+
+          if (!compose.includes(
+            'apps/server/dist/runtime/mcft_cap09_twin_runtime_v2.js'
+          )) {
+            throw new Error(
+              'PRODUCTION_TWIN_V2_CURRENT_MAIN_ENTRYPOINT_MISSING'
+            );
+          }
+
+          if (compose.includes(
+            'exec node apps/server/dist/runtime/mcft_cap09_twin_runtime.js'
+          )) {
+            throw new Error(
+              'PRODUCTION_TWIN_V2_CURRENT_MAIN_OLD_ENTRYPOINT_FORBIDDEN'
+            );
+          }
+
+          for (const marker of [
+            'current-crop-authority.json',
+            'biological-stage-architecture-effectiveness.json',
+            'read_only: true'
+          ]) {
+            if (!compose.includes(marker)) {
+              throw new Error(
+                `PRODUCTION_TWIN_V2_CURRENT_MAIN_MOUNT_MARKER:${marker}`
+              );
+            }
+          }
+
+          console.log(JSON.stringify({
+            status: 'PASS',
+            production_route: 'MCFT_CAP09_TWIN_RUNTIME_PROCESS_V2',
+            current_state_semantics: true,
+            real_runtime_arm_mutated: false,
+            runtime_started: false
+          }));
+      - name: Exact routing governance
+        if: env.MCFT_CAP09_REQUAL_MODE == 'HISTORICAL'
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1.cjs

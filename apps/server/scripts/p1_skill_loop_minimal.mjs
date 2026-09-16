@@ -57,6 +57,10 @@ function resolveAccessToken() {
 }
 
 const TOKEN = resolveAccessToken();
+const EXECUTOR_TOKEN = String(process.env.GEOX_EXECUTOR_TOKEN ?? "").trim();
+const EXECUTOR_ACTOR_ID = String(process.env.GEOX_EXECUTOR_ACTOR_ID ?? process.env.GEOX_EXECUTOR_ID ?? "").trim();
+if (!EXECUTOR_TOKEN) throw new Error("MISSING_ENV:GEOX_EXECUTOR_TOKEN");
+if (!EXECUTOR_ACTOR_ID) throw new Error("MISSING_ENV:GEOX_EXECUTOR_ACTOR_ID");
 const tenant = {
   tenant_id: process.env.GEOX_TENANT_ID ?? "tenantA",
   project_id: process.env.GEOX_PROJECT_ID ?? "projectA",
@@ -67,6 +71,11 @@ const headers = {
   "content-type": "application/json",
   accept: "application/json",
   authorization: `Bearer ${TOKEN}`,
+};
+const executorHeaders = {
+  "content-type": "application/json",
+  accept: "application/json",
+  authorization: `Bearer ${EXECUTOR_TOKEN}`,
 };
 const DEVICE_ID = process.env.GEOX_DEVICE_ID ?? "dev_smoke_01";
 const ADAPTER_TYPE = "irrigation_simulator";
@@ -324,22 +333,8 @@ async function createOperation(actionType, suffix, fieldId) {
     body: JSON.stringify(body),
   });
   assert.ok(out.operation_plan_id, "operation 创建失败：缺少 operation_plan_id");
-  return { commandId, operationPlanId: out.operation_plan_id };
-}
-
-async function waitForTask(operationPlanId) {
-  for (let i = 0; i < 10; i += 1) {
-    const detail = await requestWithRetry(`/api/v1/operations/${encodeURIComponent(operationPlanId)}/detail`, { method: "GET" });
-    const taskId = detail?.operation?.act_task_id;
-    if (taskId) {
-      return {
-        taskId,
-        detail,
-      };
-    }
-    await sleep(300);
-  }
-  throw new Error(`operation ${operationPlanId} 未就绪：无法读取 act_task_id`);
+  assert.ok(out.act_task_id, "operation 创建失败：缺少显式 act_task_id linkage");
+  return { commandId, operationPlanId: out.operation_plan_id, actTaskId: out.act_task_id };
 }
 
 async function submitReceipt(operationPlanId, actTaskId, evidenceKinds, fieldId) {
@@ -350,11 +345,12 @@ async function submitReceipt(operationPlanId, actTaskId, evidenceKinds, fieldId)
   }));
   return requestWithRetry("/api/control/ao_act/receipt", {
     method: "POST",
+    headers: executorHeaders,
     body: JSON.stringify({
       ...tenant,
       operation_plan_id: operationPlanId,
       act_task_id: actTaskId,
-      executor_id: { kind: "script", id: "p1_smoke_executor", namespace: "qa" },
+      executor_id: { kind: "script", id: EXECUTOR_ACTOR_ID, namespace: "executor_runtime_v1" },
       execution_time: { start_ts: now - 2000, end_ts: now },
       execution_coverage: { kind: "field", ref: fieldId },
       resource_usage: { fuel_l: 0, electric_kwh: 0.2, water_l: 15, chemical_ml: 0 },
@@ -420,7 +416,7 @@ async function setDispatchState(actTaskId, state) {
   };
   const res = await fetch(`${BASE_URL}/api/v1/ao-act/dispatches/state`, {
     method: "POST",
-    headers,
+    headers: executorHeaders,
     body: JSON.stringify(body),
   });
   const text = await res.text();
@@ -531,14 +527,12 @@ async function main() {
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     successAttempts = attempt;
     successOp = await createOperation("IRRIGATE", `success_${attempt}`, SMOKE_SUCCESS_BIND_TARGET);
-    const successTask = await waitForTask(successOp.operationPlanId);
-    const successTaskId = successTask.taskId;
-    console.log("[p1-smoke][success][waitTask]", {
+    const successTaskId = successOp.actTaskId;
+    console.log("[p1-smoke][success][taskLinkage]", {
       attempt,
       operation_plan_id: successOp.operationPlanId,
       act_task_id: successTaskId,
-      detail_task: successTask?.detail?.operation?.task ?? successTask?.detail?.task ?? null,
-      detail_status: successTask?.detail?.operation?.final_status ?? successTask?.detail?.final_status ?? null,
+      linkage_source: "operations_manual_response",
     });
     const successDispatchState = await setDispatchState(successTaskId, "ACKED");
     console.log("[p1-smoke][success][setDispatchState]", { attempt, ...successDispatchState });
@@ -597,8 +591,7 @@ async function main() {
   if (!successOp) throw new Error("success lane did not produce operation");
 
   const invalidOp = await createOperation("IRRIGATE", "invalid", SMOKE_FAILURE_BIND_TARGET);
-  const invalidTask = await waitForTask(invalidOp.operationPlanId);
-  const invalidTaskId = invalidTask.taskId;
+  const invalidTaskId = invalidOp.actTaskId;
   await setDispatchState(invalidTaskId, "ACKED");
   await submitReceipt(invalidOp.operationPlanId, invalidTaskId, ["sim_trace"], SMOKE_FAILURE_BIND_TARGET);
   const invalidFinalState = await waitForFinalState(invalidOp.operationPlanId);

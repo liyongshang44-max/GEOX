@@ -1,0 +1,131 @@
+{
+  "schema_version": "b09ae_irrigate_state_calculation_shadow_binding_decision_package_v1",
+  "phase": "B-09ae",
+  "status": "RECOMMENDED_NOT_AUTHORIZED",
+  "authority_mode": "PRODUCT_GOVERNANCE_DECISION_PACKAGE_ONLY",
+  "stacked_base_product_head": "9c758d4951c5e54d5571b14f438dd7ddfd49b84d",
+  "decision_id": "DEC-BLINE-IRRIGATE-STATE-CALCULATION-SHADOW-BINDING-001",
+  "bounded_path": {
+    "action_type": "IRRIGATE",
+    "recommendation_fact_type": "decision_recommendation_v1",
+    "recommendation_source": "api/v1/recommendations/generate",
+    "current_candidate_binding": "B09J_SOURCE_FACT_SCOPE_SHA256_V1"
+  },
+  "problem_statement": "B09j CandidateDecision currently has calculation_result_refs=[]; B07c may emit STATE only when explicit canonical CalculationResult refs are supplied. Agronomy Judge reruns irrigation skills later and therefore its outputs are not automatically the original Candidate calculation basis.",
+  "proposed_binding": {
+    "source_of_calculation_outputs": "same immutable decision_recommendation_v1 source fact used by B09j Candidate binding",
+    "required_skill_trace": {
+      "skill_id": "irrigation_requirement_skill_v1",
+      "skill_version": "v1",
+      "requirement_output_required": true,
+      "deficit_output_used_as_secondary_trace_only": true
+    },
+    "canonical_projection": "projectIrrigationRequirementCalculationResultV1 via existing B06b adapter",
+    "canonical_evidence_refs_source": "exact B09j/B09h canonical EvidenceQualification ref set",
+    "legacy_skill_evidence_refs_promoted": false,
+    "context_snapshot_ref_source": "CandidateDecision.basis.context_snapshot_ref; remains null until separately authorized binding",
+    "crop_stage_state_ref_source": "CandidateDecision.basis.crop_stage_state_ref; remains null until separately authorized binding",
+    "decision_time_source": "CandidateDecision.decision_time; remains null until B09y semantics are authorized and bound",
+    "evaluated_at_source": "immutable recommendation source fact occurred_at for deterministic shadow projection only",
+    "evaluated_at_limitation": "source fact persistence time is not canonical decision_time and does not establish original computation-time authority"
+  },
+  "calculation_identity_policy": {
+    "policy": "SOURCE_FACT_SCOPE_CALCULATOR_SHA256_V1",
+    "material": [
+      "policy version",
+      "tenant_id",
+      "project_id",
+      "group_id",
+      "decision_recommendation_v1 source fact_id",
+      "calculator_ref=irrigation_requirement_skill_v1"
+    ],
+    "output_shape": "calculation_sfsha256_<64hex>",
+    "recommendation_id_not_identity_authority": true
+  },
+  "source_integrity_rules": {
+    "exact_one_recommendation_source_fact": true,
+    "candidate_and_source_fact_identity_must_match": true,
+    "source_action_type_must_equal": "IRRIGATE",
+    "source_status_must_be_candidate_like": true,
+    "source_skill_trace_requirement_detected_must_be_true": true,
+    "source_skill_trace_malformed": "FAIL_CLOSED",
+    "duplicate_or_ambiguous_source": "FAIL_CLOSED"
+  },
+  "judge_congruence_rule": {
+    "purpose": "Reuse existing B07c criterion producer without letting a later Judge recomputation rewrite original Candidate basis.",
+    "judge_route": "POST /api/v1/judge/agronomy/evaluate",
+    "recommendation_id_must_match": true,
+    "exact_scope_must_match": true,
+    "exact_input_fields": [
+      "soil_moisture",
+      "target_soil_moisture",
+      "root_zone_depth_mm",
+      "rain_forecast_mm_72h",
+      "et0_mm_72h",
+      "crop_stage",
+      "application_efficiency"
+    ],
+    "null_and_numeric_semantics": "structural/null exactness plus finite numeric equality after existing route normalization; no omitted-field defaults may be used to claim congruence",
+    "evidence_judge_blocked_behavior": "B07c QUALIFIED_EVIDENCE path only; STATE remains unbound",
+    "expected_congruent_nonblocked_verdict": "WATER_DEFICIT",
+    "PASS_under_exact_same_inputs": "SEMANTIC_MISMATCH_FAIL_CLOSED",
+    "changed_inputs": "STATE_NOT_BOUND",
+    "latest_judge_result_lookup_forbidden": true
+  },
+  "state_criterion_rule": {
+    "producer": "existing B07c Agronomy Judge eligibility precursor only",
+    "third_criterion_producer_created": false,
+    "on_exact_congruence_and_water_deficit": "STATE=SATISFIED with support_refs=[canonical CalculationResult ref]",
+    "on_blocked_evidence": "no STATE criterion emitted",
+    "on_changed_inputs_or_semantic_mismatch": "STATE remains unbound",
+    "final_eligibility_authority": "NONE"
+  },
+  "current_readiness_after_authorization": {
+    "calculation_result_shadow": "IMPLEMENTABLE_WITHOUT_MCFT",
+    "candidate_calculation_result_ref_binding": "WOULD_REQUIRE_EXPLICIT_RUNTIME_EDGE_REGISTRATION",
+    "state_criterion_shadow": "WOULD_REQUIRE_EXPLICIT_RUNTIME_EDGE_REGISTRATION",
+    "context_snapshot_ref": "STILL_NULL_ON_CURRENT_B09J_PATH",
+    "decision_time": "STILL_NULL_ON_CURRENT_B09J_PATH",
+    "forecast": "FROZEN_EXTERNAL_DEPENDENCY",
+    "b07e": "DISCONNECTED"
+  },
+  "required_b02_topology_if_later_implemented": [
+    "register B09j shadow runtime as explicit consumer of irrigation-calculation-result-compatibility-adapter",
+    "register persisted recommendation skill_trace -> B06b CalculationResult shadow edge",
+    "register CalculationResult ref supply into existing B07c precursor only",
+    "preserve final DecisionEligibilityDecision producer/runtime as disconnected"
+  ],
+  "authorization_effect_if_accepted": {
+    "authorizes": [
+      "shadow-only same-source recommendation skill_trace -> B06b CalculationResult binding design/implementation",
+      "deterministic calculation identity policy",
+      "exact Judge/source-input congruence gate before supplying CalculationResult refs to B07c",
+      "B02 topology registration for those shadow edges"
+    ],
+    "does_not_authorize": [
+      "using later/changed Judge outputs as original Candidate calculation basis",
+      "new third eligibility criterion producer",
+      "B09y decision_time implementation",
+      "ContextSnapshot binding",
+      "real policy declaration",
+      "B07e connection",
+      "MCFT/Twin integration",
+      "Approval/AO-ACT/Execution change",
+      "consumer migration",
+      "historical authority removal"
+    ]
+  },
+  "non_effects": {
+    "runtime_change": false,
+    "schema_change": false,
+    "db_change": false,
+    "route_change": false,
+    "graph_edge_change": false,
+    "calculation_result_instance": false,
+    "candidate_binding_change": false,
+    "state_criterion_binding": false,
+    "b07e_connection": false,
+    "mcft_change": false,
+    "authority_removal": false
+  }
+}

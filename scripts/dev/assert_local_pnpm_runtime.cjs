@@ -145,9 +145,104 @@ function runGate(gatePath, mode = '--auto') {
   }
 }
 
-function runS6RemediationAcceptance() {
-  const gatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION.cjs');
-  runGate(gatePath, '--auto');
+function parseJsonLifecycleFile(filePath, code) {
+  try {
+    const value = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('OBJECT_REQUIRED');
+    return value;
+  } catch (error) {
+    throw new Error(`${code}:${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+function cap05S6HistoricalGovernanceDecision({ closureRecord, finalReconciliation }) {
+  const closureAbsent = closureRecord == null;
+  const reconciliationAbsent = finalReconciliation == null;
+  if (closureAbsent && reconciliationAbsent) return true;
+  if (closureAbsent || reconciliationAbsent) {
+    throw new Error('MCFT_CAP05_S6_SUCCESSOR_LIFECYCLE_INCOMPLETE');
+  }
+
+  const effectiveClaims = Array.isArray(closureRecord.effective_completion_claims)
+    ? closureRecord.effective_completion_claims
+    : [];
+  const currentAuthority = closureRecord.current_authority;
+  const reconciliationEffectiveness = finalReconciliation.reconciliation_effectiveness;
+  const s11cEffectiveness = finalReconciliation.s11c_effectiveness;
+  const lifecycleEffective =
+    closureRecord.schema_version === 'geox_mcft_cap_05_closure_record_v1'
+    && closureRecord.capability_line_id === 'MCFT-CAP-05'
+    && closureRecord.lifecycle_stage === 'S11C_COMPLETE_AND_RECONCILED'
+    && closureRecord.status === 'COMPLETE'
+    && closureRecord.implementation_status === 'COMPLETE'
+    && closureRecord.closure_effective === true
+    && closureRecord.capability_complete === true
+    && closureRecord.active_delivery_slice_id === null
+    && closureRecord.effectiveness_condition_satisfied === true
+    && effectiveClaims.includes('ACTION_FEEDBACK_VALIDATION_ORTHOGONALITY_ESTABLISHED')
+    && currentAuthority?.authority_kind === 'FINAL_EFFECTIVENESS_RECONCILIATION'
+    && currentAuthority?.authority_ref === 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-FINAL-EFFECTIVENESS-RECONCILIATION.json'
+    && currentAuthority?.preconditions?.effectiveness_preconditions_satisfied === true
+    && finalReconciliation.schema_version === 'geox_mcft_cap_05_final_effectiveness_reconciliation_v1'
+    && finalReconciliation.capability_line_id === 'MCFT-CAP-05'
+    && finalReconciliation.lifecycle_stage === 'S11C_POSTMERGE_EFFECTIVENESS_RECONCILIATION'
+    && finalReconciliation.status === 'MERGED_EFFECTIVE'
+    && finalReconciliation.capability_status === 'COMPLETE'
+    && finalReconciliation.implementation_status === 'COMPLETE'
+    && finalReconciliation.closure_effective === true
+    && finalReconciliation.capability_complete === true
+    && finalReconciliation.active_delivery_slice_id === null
+    && finalReconciliation.effectiveness_condition_satisfied === true
+    && s11cEffectiveness?.permanent_runtime_postgresql_regressions === 'PASS'
+    && s11cEffectiveness?.effectiveness_preconditions_satisfied === true
+    && reconciliationEffectiveness?.effectiveness_preconditions_satisfied === true
+    && currentAuthority?.reconciliation_merge_commit === finalReconciliation.effective_main_commit;
+
+  if (!lifecycleEffective) {
+    throw new Error('MCFT_CAP05_S6_SUCCESSOR_LIFECYCLE_NOT_EFFECTIVE');
+  }
+  return false;
+}
+
+function resolveCap05S6HistoricalGovernance() {
+  const closurePath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-CLOSURE-RECORD.json');
+  const reconciliationPath = path.join(process.cwd(), 'docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-FINAL-EFFECTIVENESS-RECONCILIATION.json');
+  const closureExists = fs.existsSync(closurePath);
+  const reconciliationExists = fs.existsSync(reconciliationPath);
+  const closureRecord = closureExists
+    ? parseJsonLifecycleFile(closurePath, 'MCFT_CAP05_S6_CLOSURE_RECORD_MALFORMED')
+    : null;
+  const finalReconciliation = reconciliationExists
+    ? parseJsonLifecycleFile(reconciliationPath, 'MCFT_CAP05_S6_FINAL_RECONCILIATION_MALFORMED')
+    : null;
+  return cap05S6HistoricalGovernanceDecision({ closureRecord, finalReconciliation });
+}
+
+function runCap05S6LifecycleDecisionSelftest() {
+  if (cap05S6HistoricalGovernanceDecision({ closureRecord: null, finalReconciliation: null }) !== true) {
+    throw new Error('MCFT_CAP05_S6_HISTORICAL_LIFECYCLE_SELFTEST_FAILED');
+  }
+  let malformedFailedClosed = false;
+  try {
+    cap05S6HistoricalGovernanceDecision({ closureRecord: {}, finalReconciliation: {} });
+  } catch {
+    malformedFailedClosed = true;
+  }
+  if (!malformedFailedClosed) {
+    throw new Error('MCFT_CAP05_S6_MALFORMED_LIFECYCLE_FAIL_CLOSED_SELFTEST_FAILED');
+  }
+  console.log('PASS MCFT_CAP05_S6_HISTORICAL_LIFECYCLE_REQUIRES_HISTORICAL_GOVERNANCE');
+  console.log('PASS MCFT_CAP05_S6_MALFORMED_LIFECYCLE_FAILS_CLOSED');
+}
+
+function runS6RemediationAcceptance({ runHistoricalGovernance }) {
+  const permanentSemanticGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTION_FEEDBACK_H.cjs');
+  runGate(permanentSemanticGatePath, '--auto');
+
+  if (runHistoricalGovernance) {
+    const historicalGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION.cjs');
+    runGate(historicalGatePath, '--auto');
+  }
 
   const base = postgresBaseUrl();
   const shouldRunDatabase = env.CI === 'true' || env.MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_RUN_DB_ACCEPTANCE === '1';
@@ -282,6 +377,7 @@ function runCap05S10BoundedFeedbackChainAcceptance({ runHistoricalGovernance }) 
 }
 
 runRuntimeDoctor();
+runCap05S6LifecycleDecisionSelftest();
 
 const activationGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_ACTIVATION.cjs');
 const s7SettlementGatePath = path.join(process.cwd(), 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_SETTLEMENT.cjs');
@@ -310,8 +406,13 @@ if (!settlementActive) {
   runGate(activationGatePath, '--auto');
 }
 
-// MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION_GATE_V1: preserve the corrected validation/eligibility contract and permanent PostgreSQL S6 regression.
-runS6RemediationAcceptance();
+// MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION_GATE_V1: preserve permanent S6 semantics and PostgreSQL regression, but do not reassert the historical seven-file remediation boundary after effective CAP-05 closure materializes.
+const runS6HistoricalGovernance = resolveCap05S6HistoricalGovernance();
+if (runS6HistoricalGovernance !== false && runS6HistoricalGovernance !== true) {
+  throw new Error('MCFT_CAP05_S6_LIFECYCLE_DECISION_INVALID');
+}
+console.log(`PASS MCFT_CAP05_S6_SUCCESSOR_LIFECYCLE_DECISION:${runS6HistoricalGovernance ? 'HISTORICAL_BOUNDARY_REQUIRED' : 'CLOSED_SUCCESSOR_BOUNDARY_RETIRED'}`);
+runS6RemediationAcceptance({ runHistoricalGovernance: runS6HistoricalGovernance });
 
 // MCFT_CAP_05_S7_RECEIPT_CONSUMING_TICK_GATE_V1: always rerun S7 Runtime behavior; the historical static gate is superseded once S7 settlement exists.
 runS7RuntimeAcceptance({ runHistoricalGovernance: !settlementActive });

@@ -1,0 +1,156 @@
+{
+  "schema_version": "b09p_decision_eligibility_policy_principal_authority_inventory_v1",
+  "phase": "B-09p",
+  "status": "ANALYSIS_ONLY_PRINCIPAL_MODEL_NOT_AUTHORIZED",
+  "authority_mode": "GOVERNANCE_ANALYSIS_ONLY",
+  "stacked_base_product_head": "ff8968f5468c12fcfce30203622230bfd660d477",
+  "writer_authority_anchor": {
+    "b09o_result": "DEDICATED_POLICY_DECLARATION_WRITE_AUTHORITY_REQUIRED",
+    "exact_scope_token": null,
+    "allowed_roles": null,
+    "production_writer_registered": false
+  },
+  "existing_roles": {
+    "source_path": "apps/server/src/domain/auth/roles.ts",
+    "roles": [
+      "admin",
+      "operator",
+      "viewer",
+      "client",
+      "executor",
+      "agronomist",
+      "approver",
+      "auditor",
+      "support"
+    ],
+    "observations": [
+      {
+        "role": "admin",
+        "current_capability": "WILDCARD_ALL_SCOPES",
+        "proves_policy_authorship": false,
+        "reason": "TECHNICAL_SUPERSET_ACCESS_IS_NOT_PRODUCT_POLICY_PROVENANCE"
+      },
+      {
+        "role": "agronomist",
+        "current_capability": "RECOMMENDATION_AND_PRESCRIPTION_AUTHORING_PLUS_AGRONOMIC_READS",
+        "proves_policy_authorship": false,
+        "reason": "AGRONOMIC_ARTIFACT_AUTHORSHIP_IS_ADJACENT_BUT_NOT_EXPLICIT_POLICY_GOVERNANCE"
+      },
+      {
+        "role": "approver",
+        "current_capability": "APPROVAL_DECIDE",
+        "proves_policy_authorship": false,
+        "reason": "DOWNSTREAM_APPROVAL_AUTHORITY_MUST_NOT_BACKFLOW_INTO_POLICY_DEFINITION"
+      },
+      {
+        "role": "operator",
+        "current_capability": "PLAN_TASK_DISPATCH_ACCEPTANCE_EXECUTION_SIDE_OPERATIONS",
+        "proves_policy_authorship": false,
+        "reason": "OPERATIONAL_AUTHORITY_IS_NOT_POLICY_GOVERNANCE"
+      },
+      {
+        "role": "support",
+        "current_capability": "SUPPORT_AND_SKILL_BINDING_ADJACENCY",
+        "proves_policy_authorship": false,
+        "reason": "SUPPORT_GOVERNANCE_IS_NOT_DECISION_POLICY_AUTHORITY"
+      }
+    ],
+    "existing_role_set_sufficient_without_explicit_policy_assignment": false
+  },
+  "principal_models": [
+    {
+      "model": "EXISTING_HUMAN_ROLE_PLUS_DEDICATED_SCOPE",
+      "examples": [
+        "admin",
+        "agronomist"
+      ],
+      "strengths": [
+        "USES_EXISTING_IDENTITY_MODEL",
+        "HUMAN_ACCOUNTABILITY"
+      ],
+      "risks": [
+        "ROLE_NAME_ALONE_DOES_NOT_PROVE_POLICY_AUTHORITY",
+        "ADMIN_IS_OVERBROAD"
+      ],
+      "state": "VIABLE_ONLY_AFTER_EXPLICIT_PRODUCT_ASSIGNMENT"
+    },
+    {
+      "model": "NEW_DEDICATED_PRODUCT_GOVERNANCE_ROLE",
+      "strengths": [
+        "CLEAR_SEPARATION_OF_DUTIES",
+        "LEAST_PRIVILEGE_CAN_BE_EXPLICIT"
+      ],
+      "risks": [
+        "ROLE_MODEL_EXPANSION",
+        "MIGRATION_AND_UI_AUTHZ_COST"
+      ],
+      "state": "VIABLE_OPTION_NOT_SELECTED"
+    },
+    {
+      "model": "GOVERNED_SERVICE_PRINCIPAL",
+      "strengths": [
+        "DETERMINISTIC_AUTOMATION",
+        "AUDITABLE_MACHINE_IDENTITY"
+      ],
+      "risks": [
+        "MACHINE_IDENTITY_DOES_NOT_SUPPLY_PRODUCT_POLICY_JUDGMENT",
+        "REQUIRES_SEPARATE_HUMAN_OR_CONFIG_AUTHORITY_SOURCE"
+      ],
+      "state": "VIABLE_ONLY_AS_EXECUTION_OF_PRIOR_GOVERNANCE_DECISION"
+    },
+    {
+      "model": "DUAL_CONTROL_HUMAN_AUTHOR_PLUS_APPROVER",
+      "strengths": [
+        "SEPARATION_OF_DUTIES",
+        "HIGH_RISK_POLICY_CHANGE_REVIEW"
+      ],
+      "risks": [
+        "ADDS_WORKFLOW_COMPLEXITY",
+        "CURRENT_APPROVAL_DOMAIN_MUST_NOT_BE_REUSED_AS_DECISION_ELIGIBILITY_VERDICT"
+      ],
+      "state": "VIABLE_GOVERNANCE_PATTERN_NOT_SELECTED"
+    }
+  ],
+  "minimum_principal_audit_requirements": [
+    "actor_id",
+    "token_id_OR_EQUIVALENT_MACHINE_PRINCIPAL_ID",
+    "change_reason",
+    "declared_at",
+    "declaration_source_ref",
+    "provenance_refs",
+    "tenant_project_group_scope",
+    "immutable_fact_id"
+  ],
+  "separation_of_duties": {
+    "policy_authoring_is_not_recommendation_generation": true,
+    "policy_authoring_is_not_approval_decision": true,
+    "policy_authoring_is_not_task_execution": true,
+    "policy_authoring_is_not_security_administration": true,
+    "policy_authoring_is_not_b07e_runtime_invocation": true
+  },
+  "explicitly_undecided": {
+    "capability_scope_token": null,
+    "authorized_human_roles": null,
+    "authorized_service_principals": null,
+    "dual_control_required": null,
+    "route_path": null,
+    "writer_service_path": null,
+    "policy_content": null,
+    "state": "INTENTIONALLY_UNDECIDED"
+  },
+  "repository_effects": {
+    "auth_scope_added": false,
+    "role_added": false,
+    "role_matrix_changed": false,
+    "service_principal_added": false,
+    "approval_workflow_added": false,
+    "writer_added": false,
+    "route_added": false,
+    "policy_instance_added": false,
+    "g_b02_32_registered_paths_changed": false,
+    "runtime_schema_workflow_mcft_changed": false,
+    "consumer_migration_performed": false,
+    "authority_removal_performed": false
+  },
+  "next_permitted_step": "PRODUCT_GOVERNANCE_MUST_SELECT_AND_AUTHORIZE_THE_PRINCIPAL_MODEL_FOR_THE_DEDICATED_POLICY_DECLARATION_CAPABILITY_BEFORE_AUTHZ_OR_WRITER_IMPLEMENTATION"
+}

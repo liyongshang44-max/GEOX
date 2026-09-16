@@ -1,0 +1,203 @@
+{
+  "schema_version": "b09aa_action_window_horizon_authority_inventory_v1",
+  "phase": "B-09aa",
+  "status": "ANALYSIS_ONLY_NO_HORIZON_AUTHORITY_SELECTED",
+  "stacked_base_product_head": "4ab816a5cd612392b8d47e8849754d017418beca",
+  "purpose": "Inventory all plausible ActionWindow horizon sources and prove that no current repository source is already authorized as canonical Candidate actionability-horizon authority.",
+  "current_authorized_horizon_source": "NONE",
+  "observed_sources": [
+    {
+      "source_id": "IRRIGATION_SKILL_72H_FORECAST_INPUT",
+      "paths": [
+        "apps/server/src/domain/agronomy/skills/irrigation/irrigation_requirement_skill_v1.ts"
+      ],
+      "semantics": "rain_forecast_mm_72h and et0_mm_72h are calculation inputs over a 72h forecast horizon",
+      "authority_class": "CALCULATION_INPUT_HORIZON",
+      "action_window_authority": "FORBIDDEN_IMPLICIT_PROMOTION",
+      "reason": "forecast horizon describes modeled input coverage; it does not declare how long a Candidate remains eligible to proceed toward Approval"
+    },
+    {
+      "source_id": "FIELD_PROGRAM_CONSTRAINTS",
+      "paths": [
+        "packages/contracts/src/schema/field_program_v1.ts"
+      ],
+      "semantics": "max_irrigation_mm_per_day, allow_night_irrigation, manual_approval_required_for and execution_policy",
+      "authority_class": "PROGRAM_CONSTRAINT_AND_DOWNSTREAM_EXECUTION_GOVERNANCE",
+      "action_window_authority": "FORBIDDEN_IMPLICIT_PROMOTION",
+      "reason": "no candidate actionability duration is declared"
+    },
+    {
+      "source_id": "ELIGIBILITY_POLICY_EFFECTIVE_WINDOW",
+      "paths": [
+        "apps/server/src/contracts/decision_eligibility_policy_declaration_v1.ts"
+      ],
+      "semantics": "effective_from/effective_until determine policy applicability lifecycle",
+      "authority_class": "POLICY_LIFECYCLE",
+      "action_window_authority": "FORBIDDEN_REUSE",
+      "reason": "policy applicability window and Candidate-specific actionability window are different lifecycles"
+    },
+    {
+      "source_id": "CANONICAL_EVIDENCE_TEMPORAL_ELIGIBILITY",
+      "paths": [
+        "apps/server/src/contracts/canonical_evidence_v1.ts"
+      ],
+      "semantics": "EvidenceQualification records temporal_eligibility status at evaluation/decision boundary",
+      "authority_class": "EVIDENCE_QUALIFICATION_STATE",
+      "action_window_authority": "INSUFFICIENT",
+      "reason": "contract has no canonical valid_until/expires_at TTL from which Candidate ActionWindow end can be deterministically derived"
+    },
+    {
+      "source_id": "CANONICAL_CONTEXT_CALCULATION_CANDIDATE",
+      "paths": [
+        "apps/server/src/contracts/canonical_context_v1.ts",
+        "apps/server/src/contracts/canonical_decision_v1.ts"
+      ],
+      "semantics": "decision_time/evaluated_at anchors exist, but no unified canonical input-expiry field exists",
+      "authority_class": "CAUSAL_AND_EVALUATION_TIMESTAMPS",
+      "action_window_authority": "INSUFFICIENT",
+      "reason": "timestamps do not define an actionability horizon"
+    },
+    {
+      "source_id": "PROBLEM_STATE_WINDOW",
+      "paths": [
+        "apps/judge/src/lifecycle/problem_state_lifecycle_v1.ts"
+      ],
+      "semantics": "evidence/problem lifecycle and reuse window",
+      "authority_class": "PROBLEM_STATE_LIFECYCLE",
+      "action_window_authority": "FORBIDDEN_REUSE",
+      "reason": "ProblemState reuse semantics are not Decision Eligibility actionability authority"
+    },
+    {
+      "source_id": "TWIN_P35_CANDIDATE_POINTER_USE_WINDOW",
+      "paths": [
+        "docs/twin_kernel/P35_CANDIDATE_EXPIRY_USE_WINDOW_POLICY_V0.json"
+      ],
+      "semantics": "Twin candidate-pointer calibration/review use window",
+      "authority_class": "TWIN_REVIEW_LIFECYCLE",
+      "action_window_authority": "FORBIDDEN_REUSE",
+      "reason": "different object identity, owner and use semantics"
+    },
+    {
+      "source_id": "TWIN_P44_ACTIVATION_WINDOW",
+      "paths": [
+        "docs/twin_kernel/P44_ACTIVATION_WINDOW_CANARY_POLICY_V0.json"
+      ],
+      "semantics": "model activation/canary lifecycle",
+      "authority_class": "MODEL_ACTIVATION_GOVERNANCE",
+      "action_window_authority": "FORBIDDEN_REUSE",
+      "reason": "not an action Candidate eligibility lifecycle"
+    },
+    {
+      "source_id": "AO_ACT_P47_TIME_WINDOW",
+      "paths": [
+        "docs/twin_kernel/P47_AO_ACT_TIME_WINDOW_POLICY_V0.json"
+      ],
+      "semantics": "downstream AO-ACT authorization/task time window",
+      "authority_class": "DOWNSTREAM_ACTION_ENVELOPE",
+      "action_window_authority": "FORBIDDEN_REUSE",
+      "reason": "Eligibility must precede Approval/AO-ACT/Execution; downstream task window cannot retroactively authorize Eligibility"
+    },
+    {
+      "source_id": "MCFT_TWIN_SCIENTIFIC_RUNTIME_WINDOWS",
+      "paths": [
+        "docs/digital_twin",
+        "apps/server/src/runtime/twin_runtime"
+      ],
+      "semantics": "forecast/evidence/Formal/scheduler/runtime windows",
+      "authority_class": "EXTERNAL_SCIENTIFIC_RUNTIME_DEPENDENCY",
+      "action_window_authority": "FORBIDDEN_REUSE_AND_FROZEN",
+      "reason": "MCFT-9 incomplete and authority domain is scientific/runtime, not B-Line Eligibility ActionWindow"
+    }
+  ],
+  "rejected_derivations": [
+    {
+      "derivation": "ActionWindow duration = 72 hours because forecast input is 72h",
+      "verdict": "FORBIDDEN",
+      "reason": "input forecast horizon is not candidate actionability policy"
+    },
+    {
+      "derivation": "ActionWindow end = policy effective_until",
+      "verdict": "FORBIDDEN",
+      "reason": "conflates policy lifecycle with Candidate lifecycle"
+    },
+    {
+      "derivation": "ActionWindow end = minimum canonical input valid_until",
+      "verdict": "NOT_CURRENTLY_DEFINED",
+      "reason": "canonical Evidence/Context/Calculation/Candidate contracts do not currently expose a common valid_until authority"
+    },
+    {
+      "derivation": "ActionWindow duration = fixed 6h/12h/24h constant",
+      "verdict": "FORBIDDEN",
+      "reason": "hidden duration is hidden product policy"
+    },
+    {
+      "derivation": "ActionWindow = downstream AO-ACT task window",
+      "verdict": "FORBIDDEN",
+      "reason": "reverses Eligibility -> Approval -> Execution authority order"
+    }
+  ],
+  "future_governance_options": [
+    {
+      "option_id": "EXPLICIT_ELIGIBILITY_HORIZON_POLICY",
+      "description": "A separately governed actionability-horizon policy/ref bound to selected eligibility policy/context, yielding finite duration/window semantics.",
+      "current_status": "NOT_AUTHORIZED",
+      "strengths": [
+        "explicit product intent",
+        "auditable provenance",
+        "does not depend on downstream execution"
+      ],
+      "risks": [
+        "requires new policy vocabulary/authority decision"
+      ]
+    },
+    {
+      "option_id": "DYNAMIC_AGRONOMIC_ACTIONABILITY_CALCULATION",
+      "description": "A canonical CalculationResult-like producer derives a candidate-specific horizon from authorized agronomic inputs and explicit policy bounds.",
+      "current_status": "NOT_AUTHORIZED",
+      "strengths": [
+        "can adapt to crop/state/weather context"
+      ],
+      "risks": [
+        "must distinguish calculation from policy authority",
+        "Forecast remains blocked on MCFT completion",
+        "requires explicit input validity semantics"
+      ]
+    },
+    {
+      "option_id": "POLICY_CAP_PLUS_DYNAMIC_INPUT_VALIDITY",
+      "description": "Final window is bounded by an explicit product-policy maximum and dynamically derived canonical input validity horizons.",
+      "current_status": "NOT_CURRENTLY_IMPLEMENTABLE",
+      "strengths": [
+        "combines policy risk tolerance with causal input validity"
+      ],
+      "risks": [
+        "no current common valid_until contract",
+        "requires multiple new authorities and precedence rules"
+      ]
+    }
+  ],
+  "recommendation_for_next_governance_gate": {
+    "decision_needed": "Choose whether v1 ActionWindow horizon is explicit policy-only or permits dynamic agronomic derivation under an explicit policy cap.",
+    "recommendation": "START_WITH_EXPLICIT_POLICY_ONLY_V1",
+    "rationale": [
+      "repository has no common canonical valid_until semantics today",
+      "MCFT Forecast remains incomplete and cannot be a current dependency",
+      "policy-only v1 keeps authority legible and fail-closed",
+      "dynamic derivation can be added later without redefining Eligibility/Approval/Execution ordering"
+    ],
+    "not_authorized_by_b09aa": true
+  },
+  "non_effects": {
+    "runtime_change": false,
+    "schema_change": false,
+    "db_change": false,
+    "route_change": false,
+    "graph_edge_change": false,
+    "policy_change": false,
+    "horizon_source_selected": false,
+    "action_window_producer": false,
+    "b07e_connection": false,
+    "mcft_change": false,
+    "authority_removal": false
+  }
+}

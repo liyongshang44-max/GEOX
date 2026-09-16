@@ -254,6 +254,11 @@ function assertExportContract(plan) {
     'acceptance_result_v1',
     'evidence_artifact_v1',
     'telemetry_observation_v1',
+    'outcome_review_v1',
+    'roi_boundary_v1',
+    'roi_ledger_v1',
+    'field_memory_candidate_v1',
+    'field_memory_record_v1',
   ]) {
     assertFactPresent(plan, type);
   }
@@ -271,7 +276,7 @@ function assertExportContract(plan) {
   assertOk(manifest.formalized_by_seed === false, 'E2E_FORMALIZED_BY_SEED_MUST_BE_FALSE', manifest);
   assertOk(manifest.field_memory_written_by_seed === false, 'E2E_FIELD_MEMORY_WRITTEN_BY_SEED_MUST_BE_FALSE', manifest);
   assertOk(Array.isArray(manifest.field_memory_flow), 'E2E_FIELD_MEMORY_FLOW_MISSING', manifest);
-  for (const item of ['acceptance_result_v1', 'field-memory/from-acceptance', 'field_memory_v1']) {
+  for (const item of ['acceptance_result_v1', 'outcome_review_v1', 'roi_boundary_v1', 'roi_ledger_v1', 'field_memory_candidate_v1', 'field_memory_record_v1', 'field-memory/from-acceptance', 'field_memory_v1']) {
     assertOk(manifest.field_memory_flow.includes(item), 'E2E_FIELD_MEMORY_FLOW_INCOMPLETE', { item, flow: manifest.field_memory_flow });
   }
   assertOk(Array.isArray(manifest.seed_forbidden_fact_types) && manifest.seed_forbidden_fact_types.includes('soil_moisture_sensing_window_v1'), 'E2E_SENSING_WINDOW_FACTS_FORBIDDEN_MANIFEST_REQUIRED', manifest);
@@ -302,8 +307,8 @@ async function runRuntime(args) {
 
   const memory = await loadFormalMemoryRow(args.tenant);
   assertOk(Boolean(memory), 'E2E_FIELD_MEMORY_ROW_MISSING_AFTER_DERIVATION', null);
-  assertOk(memory.source_type === 'acceptance_result_v1', 'E2E_FIELD_MEMORY_SOURCE_TYPE_MISMATCH', memory);
-  assertOk(memory.source_id === ACCEPTANCE_ID, 'E2E_FIELD_MEMORY_SOURCE_ID_MISMATCH', memory);
+  assertOk(memory.source_type === 'field_memory_record_v1', 'E2E_FIELD_MEMORY_SOURCE_TYPE_MISMATCH', memory);
+  assertOk(memory.source_id === `full_review_seed_${args.tenant}_field_memory_record_c8_001`, 'E2E_FIELD_MEMORY_SOURCE_ID_MISMATCH', memory);
   assertOk(memory.memory_lane === 'FORMAL_FIELD_MEMORY' && memory.trust_level === 'FORMAL_ACCEPTED', 'E2E_FIELD_MEMORY_TRUST_LAYER_MISMATCH', memory);
   assertOk(memory.customer_visible_memory === true && memory.learning_eligible === true, 'E2E_FIELD_MEMORY_VISIBILITY_MISMATCH', memory);
   assertOk(memory.formal_acceptance_id === ACCEPTANCE_ID, 'E2E_FIELD_MEMORY_ACCEPTANCE_MISMATCH', memory);
