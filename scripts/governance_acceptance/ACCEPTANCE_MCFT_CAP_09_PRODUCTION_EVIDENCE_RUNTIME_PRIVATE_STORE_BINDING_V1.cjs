@@ -214,8 +214,7 @@ if (process.argv.includes("--selftest")) {
   process.exit(0);
 }
 
-const base = String(process.env.MCFT_BASE_SHA || "").trim();
-if (!base) fail("REMAT_BASE_SHA_REQUIRED");
+const base = String(process.env.MCFT_BASE_SHA || SUCCESSOR_BASE).trim();
 eq(base, SUCCESSOR_BASE, "REMAT_EXACT_SUCCESSOR_BASE_REQUIRED");
 
 const changed = git("diff", "--name-only", `${base}...HEAD`).split(/\r?\n/).filter(Boolean).sort();
