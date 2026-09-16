@@ -6,13 +6,17 @@ import { createDatabasePool } from "../infra/database.js";
 import { assertMcftCap09ServicePrincipalV1 } from "../infra/mcft_cap09_phase5_service_principal_v1.js";
 import { createMcftCap09ProcessStopV1 } from "./mcft_cap09_production_process_lifecycle_v1.js";
 import { buildMcftCap09ProductionLeaseOwnerV1 } from "./mcft_cap09_production_service_identity_v1.js";
-import { parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1 } from "./mcft_cap09_production_runtime_start_authority_v1.js";
+import {
+  MCFT_CAP09_NON_OWNER_STANDBY_MODE_V1,
+  MCFT_CAP09_OWNER_CUTOVER_MODE_V1,
+  parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1,
+} from "./mcft_cap09_production_runtime_start_authority_v1.js";
 import { readMcftCap09OwnerCutoverAuthorityV1, type McftCap09OwnerCutoverScopeV1 } from "./mcft_cap09_production_owner_cutover_authority_v1.js";
 import { loadMcftCap09ProductionStageAuthorityMountsV1 } from "./twin_runtime/mcft_cap09_twin_runtime_process_v1.js";
 import { runMcftCap09TwinPreFormalOwnerStandbyV1 } from "./twin_runtime/mcft_cap09_twin_preformal_owner_standby_v1.js";
 
-const NON_OWNER_STANDBY_MODE = "NON_OWNER_STANDBY" as const;
-const OWNER_CUTOVER_MODE = "OWNER_CUTOVER" as const;
+const NON_OWNER_STANDBY_MODE = MCFT_CAP09_NON_OWNER_STANDBY_MODE_V1;
+const OWNER_CUTOVER_MODE = MCFT_CAP09_OWNER_CUTOVER_MODE_V1;
 const TWIN_LEASE_TABLE = "twin_runtime_lease_v1" as const;
 
 function req(name:string):string{const v=String(process.env[name]??"").trim();if(!v)throw new Error("MCFT_CAP09_TWIN_PREFORMAL_ENV_REQUIRED:"+name);return v;}
@@ -39,7 +43,9 @@ export async function runMcftCap09TwinNonOwnerStandbyV1():Promise<void>{
  const s=scope(); const subject=req("GEOX_DEPLOYMENT_SUBJECT_COMMIT");
  const runtimePath=req("GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH");
  const raw=JSON.parse(fs.readFileSync(runtimePath,"utf8"));
- const runtime=parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"TWIN_RUNTIME",{deployment_subject_sha:subject,scope:s});
+ const runtime=parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"TWIN_RUNTIME",{
+  deployment_subject_sha:subject,scope:s,runtime_mode:NON_OWNER_STANDBY_MODE
+ });
  loadMcftCap09ProductionStageAuthorityMountsV1({
   runtime_start_authority:runtime,
   current_crop_authority_path:req("GEOX_MCFT_CAP09_TWIN_RUNTIME_CURRENT_CROP_AUTHORITY_PATH"),
@@ -65,7 +71,9 @@ export async function runMcftCap09TwinPreFormalOwnerRuntimeV1():Promise<void>{
  const runtimePath=req("GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH");
  const ownerPath=req("GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH");
  const raw=JSON.parse(fs.readFileSync(runtimePath,"utf8"));
- const runtime=parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"TWIN_RUNTIME",{deployment_subject_sha:subject,scope:s});
+ const runtime=parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"TWIN_RUNTIME",{
+  deployment_subject_sha:subject,scope:s,runtime_mode:OWNER_CUTOVER_MODE
+ });
  readMcftCap09OwnerCutoverAuthorityV1({authority_path:ownerPath,expected_deployment_subject_sha:subject,expected_scope:s});
  loadMcftCap09ProductionStageAuthorityMountsV1({
    runtime_start_authority:runtime,
