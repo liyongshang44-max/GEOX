@@ -430,6 +430,15 @@ function main() {
       decision.reason_code === "APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE" &&
       Array.isArray(decision.changed_dependencies) &&
       decision.changed_dependencies.length === 0;
+    const successorChainUnchangedPrivateStoreSelftest =
+      successorChainAdmissionActive &&
+      decision.check_id === "PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING" &&
+      decision.status === "REQUIRED" &&
+      decision.reason_code === "APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE" &&
+      Array.isArray(decision.changed_dependencies) &&
+      decision.changed_dependencies.length === 0 &&
+      decision.diagnostic_command ===
+        "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1.cjs";
     if (decision.status === "NOT_APPLICABLE") {
       result = { ...common, execution: "NOT_APPLICABLE", status: "NOT_APPLICABLE" };
     } else if (decision.status === "CARRY_FORWARD") {
@@ -456,7 +465,29 @@ function main() {
         qualification_rerun: false,
       };
     } else if (decision.status === "REQUALIFY" || decision.status === "REQUIRED") {
-      if (phase6Active && decision.check_id === "EA5E2_RUNTIME_DEPENDENCY_GRAPH") {
+      if (successorChainUnchangedPrivateStoreSelftest) {
+        const diagnosticCommand = `${decision.diagnostic_command} --selftest`;
+        const diagnostic = runDiagnostic(diagnosticCommand);
+        result = {
+          ...common,
+          execution: "SUCCESSOR_CHAIN_UNCHANGED_CURRENT_STATE_SELFTEST",
+          status: diagnostic.status,
+          reason_code: diagnostic.status === "PASS"
+            ? "SUCCESSOR_CHAIN_UNCHANGED_CURRENT_STATE_SELFTEST_PASS"
+            : "SUCCESSOR_CHAIN_UNCHANGED_CURRENT_STATE_SELFTEST_FAIL",
+          diagnostic_command: diagnosticCommand,
+          admitted_current_main_base_sha: args.base,
+          candidate_dependency_delta_count: decision.changed_dependencies.length,
+          qualification_rerun: true,
+          baseline_qualification_carry_forward: false,
+          diagnostic,
+        };
+        if (diagnostic.status !== "PASS") blockers.push({
+          blocker_class: "DIAGNOSTIC_FAILURE",
+          check_id: decision.check_id,
+          detail: diagnostic,
+        });
+      } else if (phase6Active && decision.check_id === "EA5E2_RUNTIME_DEPENDENCY_GRAPH") {
         const diagnostic = runDiagnostic(`node ${PHASE6_OWNER_AUDITOR_PATH} enforce`);
         result = {
           ...common,
