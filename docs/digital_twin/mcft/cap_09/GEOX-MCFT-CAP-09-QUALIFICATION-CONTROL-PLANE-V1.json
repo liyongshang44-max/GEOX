@@ -796,6 +796,16 @@
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PROTECTED-MAIN-LINEAGE-ADVANCEMENT-E1F8-TO-F41D-V1.json",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROTECTED_MAIN_LINEAGE_ADVANCEMENT_E1F8_TO_F41D_V1.cjs"
       ]
+    },
+    "PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-production-evidence-runtime-private-store-binding-v1.yml",
+        "apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C2A-FORMAL-RAW-STORE-BINDING-CONTRACT-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-RUNTIME-PRIVATE-STORE-BINDING-V1.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1.cjs"
+      ]
     }
   },
   "checks": [
@@ -1678,6 +1688,33 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROTECTED_MAIN_LINEAGE_ADVANCEMENT_E1F8_TO_F41D_V1.cjs"
+    },
+    {
+      "check_id": "PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING",
+      "owner": "MCFT_CAP09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_QUALIFICATION",
+      "generation_scope": [
+        "V13_SUCCESSOR_REVALIDATION"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-EVIDENCE-RUNTIME-PRIVATE-STORE-BINDING-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EA5C2A-FORMAL-RAW-STORE-BINDING-CONTRACT-V1.json"
+      ],
+      "resolver_ids": [
+        "PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1"
+      ],
+      "historical_evidence_policy": "FRESH_EXACT_HEAD_REQUALIFICATION_REQUIRED_NO_CARRY_FORWARD",
+      "execution_workflow": ".github/workflows/mcft-cap-09-production-evidence-runtime-private-store-binding-v1.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD",
+      "fail_policy": "FAIL_CLOSED",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_EVIDENCE_RUNTIME_PRIVATE_STORE_BINDING_V1.cjs"
     }
   ],
   "non_effects": {
