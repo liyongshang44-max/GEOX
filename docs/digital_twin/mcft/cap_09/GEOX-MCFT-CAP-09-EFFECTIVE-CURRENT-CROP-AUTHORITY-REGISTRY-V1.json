@@ -47,6 +47,13 @@
       "authority_as_of": "2026-09-14T04:00:00.000Z",
       "authority_valid_until": "2026-09-15T10:00:00.000Z",
       "graduation_status": "EFFECTIVE_FOR_RUNTIME_CONSUMPTION_ROLLING_REFRESH"
+    },
+    {
+      "authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-15T04Z-V1.json",
+      "authority_sha256": "sha256:89dd4f8e45fcf53cf814a8bd6f17df00ef8a7de13a59908248e8753cc890fc92",
+      "authority_as_of": "2026-09-15T04:00:00.000Z",
+      "authority_valid_until": "2026-09-16T10:00:00.000Z",
+      "graduation_status": "EFFECTIVE_FOR_RUNTIME_CONSUMPTION_ROLLING_REFRESH"
     }
   ],
   "non_effects": {
