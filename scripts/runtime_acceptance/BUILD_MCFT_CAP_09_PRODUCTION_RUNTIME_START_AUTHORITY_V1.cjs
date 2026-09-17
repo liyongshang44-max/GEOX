@@ -322,20 +322,20 @@ function validateEffectiveStageAuthorities(
     "RUNTIME_START_CURRENT_CROP_STAGE_AUTHORITY_VALID_UNTIL_MISMATCH",
   );
   req(
-    Date.parse(formalA0) >= Date.parse(stageAsOf),
-    "RUNTIME_START_CURRENT_CROP_FUTURE_STAGE_EVIDENCE_FORBIDDEN",
-  );
-  req(
-    Date.parse(formalA0) <= Date.parse(stageValidUntil),
-    "RUNTIME_START_CURRENT_CROP_STAGE_AUTHORITY_STALE_AT_A0",
-  );
-  req(
     Date.parse(adjudicationTime) + MAX_ADJUDICATION_CLOCK_SKEW_MS >= Date.parse(stageAsOf),
     "RUNTIME_START_CURRENT_CROP_STAGE_AUTHORITY_FUTURE_AT_ADJUDICATION",
   );
   req(
     Date.parse(adjudicationTime) <= Date.parse(stageValidUntil),
     "RUNTIME_START_CURRENT_CROP_STAGE_AUTHORITY_STALE_AT_ADJUDICATION",
+  );
+  req(
+    Date.parse(formalA0) >= Date.parse(stageAsOf),
+    "RUNTIME_START_CURRENT_CROP_FUTURE_STAGE_EVIDENCE_FORBIDDEN",
+  );
+  req(
+    Date.parse(formalA0) <= Date.parse(stageValidUntil),
+    "RUNTIME_START_CURRENT_CROP_STAGE_AUTHORITY_STALE_AT_A0",
   );
 
   const waterUseStage = text(
