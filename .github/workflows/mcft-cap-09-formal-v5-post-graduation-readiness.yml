@@ -1,0 +1,140 @@
+name: mcft-cap-09-formal-v5-post-graduation-readiness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-POST-GRADUATION-CONTROL-SURFACE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1.cjs'
+      - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1.cjs'
+      - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-POST-GRADUATION-CONTROL-SURFACE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1.cjs'
+      - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1.cjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-formal-v5-post-graduation-readiness-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+env:
+  SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  FORMAL_V5_DB: geox_mcft_cap09_s6_formal_t4r1_24h_v5
+  SEED_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+
+jobs:
+  formal-v5-post-graduation-readiness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact readiness subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact subject
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+
+      - name: Prove static post-graduation control surface
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1.cjs
+
+      - name: Normalize Formal-v5 read-only URL
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const raw=String(process.env.SEED_DATABASE_URL||'').trim();
+          if(!raw)throw new Error('FORMAL_V5_ZERO_STATE_SEED_DATABASE_SECRET_REQUIRED');
+          const u=new URL(raw);
+          if(!['postgres:','postgresql:'].includes(u.protocol))throw new Error('FORMAL_V5_ZERO_STATE_POSTGRES_URL_REQUIRED');
+          u.pathname='/'+process.env.FORMAL_V5_DB;
+          const target=u.toString();
+          console.log('::add-mask::'+target);
+          fs.appendFileSync(process.env.GITHUB_ENV,'FORMAL_V5_URL='+target+'\n');
+
+      - name: Prove fresh Formal-v5 zero-state read-only
+        id: zero-state
+        shell: bash
+        env:
+          PGOPTIONS: '-c default_transaction_read_only=on'
+        run: |
+          set -euo pipefail
+          row="$(psql "$FORMAL_V5_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT
+              current_setting('transaction_read_only'),
+              current_database(),
+              (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'),
+              (SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public')")"
+          IFS='|' read -r read_only database_name table_count routine_count <<<"$row"
+          test "$read_only" = "on" || { echo "FORMAL_V5_TRANSACTION_NOT_READ_ONLY:$read_only" >&2; exit 1; }
+          test "$database_name" = "$FORMAL_V5_DB" || { echo "FORMAL_V5_DATABASE_IDENTITY_MISMATCH:$database_name" >&2; exit 1; }
+          test "$table_count" = "0" || { echo "FORMAL_V5_PUBLIC_BASE_TABLE_COUNT_NONZERO:$table_count" >&2; exit 1; }
+          test "$routine_count" = "0" || { echo "FORMAL_V5_PUBLIC_ROUTINE_COUNT_NONZERO:$routine_count" >&2; exit 1; }
+          echo "table_count=$table_count" >> "$GITHUB_OUTPUT"
+          echo "routine_count=$routine_count" >> "$GITHUB_OUTPUT"
+
+      - name: Emit exact-subject zero-state proof
+        shell: node {0}
+        env:
+          TABLE_COUNT: ${{ steps.zero-state.outputs.table_count }}
+          ROUTINE_COUNT: ${{ steps.zero-state.outputs.routine_count }}
+        run: |
+          const fs=require('node:fs');
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          const proof={
+            schema_version:'geox_mcft_cap09_formal_v5_post_graduation_zero_state_proof_v1',
+            status:'PASS',
+            subject_sha:process.env.SUBJECT_SHA,
+            formal_database_name:process.env.FORMAL_V5_DB,
+            required_role:'FRESH_FORMAL_STORE_ONLY',
+            required_pre_arm_state:'ZERO_STATE_PRE_ARM',
+            transaction_read_only:true,
+            public_base_table_count:Number(process.env.TABLE_COUNT),
+            public_routine_count:Number(process.env.ROUTINE_COUNT),
+            failed_v4_reuse:false,
+            failed_v4_clone:false,
+            production_owner_activation:false,
+            production_runtime_restart:false,
+            formal_database_mutation:false,
+            formal_v5_arm:false,
+            formal_v5_epoch_selected:false,
+            a0_bootstrap:false,
+            o00_started:false,
+            provider_request_count:0,
+            mcft_cap09_completed:false,
+            observed_at:new Date().toISOString(),
+            github_run_id:Number(process.env.GITHUB_RUN_ID),
+            github_run_attempt:Number(process.env.GITHUB_RUN_ATTEMPT),
+          };
+          if(proof.public_base_table_count!==0||proof.public_routine_count!==0)throw new Error('FORMAL_V5_ZERO_STATE_PROOF_INVALID');
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ZERO_STATE_PROOF_V1.json',JSON.stringify(proof,null,2)+'\n');
+          console.log(JSON.stringify(proof,null,2));
+
+      - name: Prove repository remained untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Upload immutable zero-state readiness proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-formal-v5-post-graduation-zero-state-${{ env.SUBJECT_SHA }}
+          path: acceptance-output/MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ZERO_STATE_PROOF_V1.json
+          if-no-files-found: error
+          retention-days: 90
