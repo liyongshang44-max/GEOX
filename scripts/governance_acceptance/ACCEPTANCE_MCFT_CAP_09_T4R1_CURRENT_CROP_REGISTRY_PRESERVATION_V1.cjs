@@ -125,6 +125,24 @@ function currentCropSurface(rel) {
   return rel === REGISTRY || rel === CERT || rel.startsWith(AUTHORITY_PREFIX) || rel.startsWith(REQUEST_PREFIX);
 }
 
+function validateMaterializedBaseLineage(materializedBase, currentBase) {
+  assertSha("REFRESH_MATERIALIZED_BASE_SHA_INVALID", materializedBase);
+  if (materializedBase === currentBase) return;
+  git(["cat-file", "-e", `${materializedBase}^{commit}`]);
+  try {
+    cp.execFileSync("git", ["merge-base", "--is-ancestor", materializedBase, currentBase], { cwd: ROOT, stdio: "ignore" });
+  } catch {
+    fail("REFRESH_MATERIALIZED_BASE_NOT_ANCESTOR", `${materializedBase}->${currentBase}`);
+  }
+  const drift = git(["diff", "--name-only", `${materializedBase}...${currentBase}`])
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter(currentCropSurface)
+    .sort();
+  if (drift.length !== 0) fail("REFRESH_MATERIALIZED_BASE_CURRENT_CROP_SURFACE_DRIFT", drift.join(","));
+}
+
 function expectFail(label, fn, expectedPrefix) {
   try {
     fn();
@@ -241,7 +259,7 @@ function main() {
   }
 
   if (mode === "SINGLE_AUTHORITY_APPEND") {
-    if (current.graduation?.refresh_protected_main_base_sha !== base) fail("REFRESH_MATERIALIZED_BASE_LINK_MISMATCH", `${current.graduation?.refresh_protected_main_base_sha}!=${base}`);
+    validateMaterializedBaseLineage(current.graduation?.refresh_protected_main_base_sha, base);
     assertSha("REFRESH_QUALIFICATION_SUBJECT_SHA_INVALID", current.subject_head_sha);
     if (!/^sha256:[0-9a-f]{64}$/.test(String(current.graduation?.refresh_request_sha256 || ""))) fail("REFRESH_REQUEST_DIGEST_INVALID");
   }
