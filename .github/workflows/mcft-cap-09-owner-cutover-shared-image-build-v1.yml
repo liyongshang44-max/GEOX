@@ -1,0 +1,33 @@
+name: MCFT CAP-09 Owner Cutover Shared Image Build
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_OWNER_CUTOVER_SHARED_IMAGE_BUILD_V1.cjs'
+      - '.github/workflows/mcft-cap-09-owner-cutover-shared-image-build-v1.yml'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Syntax check
+        run: |
+          node --check scripts/runtime_acceptance/RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs
+          node --check scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_OWNER_CUTOVER_SHARED_IMAGE_BUILD_V1.cjs
+
+      - name: Qualify shared image build orchestration
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_OWNER_CUTOVER_SHARED_IMAGE_BUILD_V1.cjs
