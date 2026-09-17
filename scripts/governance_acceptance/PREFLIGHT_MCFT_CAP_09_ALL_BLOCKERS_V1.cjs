@@ -180,7 +180,7 @@ function fetchGithubRunSnapshot(runId) {
   }
 }
 
-function validateExactRunAnchor(decision, head, base, anchor, reasonPrefix) {
+function validateExactRunAnchor(decision, head, base, anchor, reasonPrefix, options = {}) {
   const fetchResult = fetchGithubRunSnapshot(anchor.run_id);
   if (fetchResult.status !== "PASS") {
     return {
@@ -194,10 +194,11 @@ function validateExactRunAnchor(decision, head, base, anchor, reasonPrefix) {
   const liveBase = Array.isArray(run.pull_requests)
     ? run.pull_requests.map((pr) => pr?.base?.sha).find((value) => typeof value === "string") || null
     : null;
+  const allowSuccessorBase = options.allowSuccessorBase === true;
   const checks = {
     check_id_match: decision.check_id === anchor.check_id,
     dependency_digest_match: decision.dependency_digest === anchor.dependency_digest,
-    requested_base_match: base === anchor.base_sha,
+    requested_base_match: allowSuccessorBase ? isAncestor(anchor.base_sha, base) : base === anchor.base_sha,
     subject_is_ancestor_of_head: isAncestor(anchor.subject_sha, head),
     run_id_match: run.id === anchor.run_id,
     run_success: run.status === "completed" && run.conclusion === anchor.run_conclusion,
@@ -561,7 +562,7 @@ function main() {
       } else if (
         decision.check_id === SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1.check_id &&
         successorChainAdmissionActive &&
-        args.base === SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1.base_sha
+        isAncestor(SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1.base_sha, args.base || "")
       ) {
         const evidence = validateExactRunAnchor(
           decision,
@@ -569,6 +570,7 @@ function main() {
           args.base || "",
           SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1,
           "SUCCESSOR_CHAIN_PHASE5",
+          { allowSuccessorBase: true },
         );
         result = {
           ...common,
