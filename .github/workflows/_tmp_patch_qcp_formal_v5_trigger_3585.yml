@@ -1,0 +1,48 @@
+name: tmp-patch-qcp-formal-v5-trigger-3585
+
+on:
+  push:
+    branches:
+      - fix/mcft-cap09-formal-v5-readiness-event-isolation-v1
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/mcft-cap09-formal-v5-readiness-event-isolation-v1
+          fetch-depth: 0
+      - name: Patch QCP governed trigger paths
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('.github/workflows/mcft-cap-09-qualification-control-plane-v1.yml')
+          s = p.read_text(encoding='utf-8')
+          anchor = "      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'\n"
+          insert = anchor + "      - '.github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml'\n" + "      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-POST-GRADUATION-CONTROL-SURFACE-V1.json'\n" + "      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1.cjs'\n" + "      - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1.cjs'\n"
+          if s.count(anchor) != 1:
+              raise SystemExit(f'EXPECTED_ONE_QCP_TRIGGER_ANCHOR_GOT_{s.count(anchor)}')
+          for rel in [
+              '.github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml',
+              'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-POST-GRADUATION-CONTROL-SURFACE-V1.json',
+              'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1.cjs',
+              'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1.cjs',
+          ]:
+              if rel in s:
+                  raise SystemExit(f'QCP_TRIGGER_ALREADY_PRESENT:{rel}')
+          p.write_text(s.replace(anchor, insert, 1), encoding='utf-8')
+      - name: Commit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .github/workflows/mcft-cap-09-qualification-control-plane-v1.yml
+          git diff --cached --check
+          git commit -m 'fix(mcft-cap09): trigger QCP for Formal-v5 readiness surface'
+          git push origin HEAD:fix/mcft-cap09-formal-v5-readiness-event-isolation-v1
