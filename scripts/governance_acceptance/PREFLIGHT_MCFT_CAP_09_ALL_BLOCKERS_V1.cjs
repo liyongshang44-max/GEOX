@@ -75,6 +75,8 @@ const SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1 = {
   check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
   subject_sha: "e0dcaa7ab72f2e21601254834a970689f61e4437",
   base_sha: "f9cdeb4eddb1801a339149a592ee41f9cf120257",
+  final_head_sha: "3b996b803ac8b5e4a798353d0abe92223c7287d2",
+  merge_commit_sha: "75a5572bdea8fdf22acff925cdc95d34b7437aab",
   run_id: 35194905359,
   run_conclusion: "success",
   workflow_name: "mcft-cap-09-phase5-two-service-accelerated-24t",
@@ -130,6 +132,16 @@ function sha256(text) {
 function isAncestor(ancestor, descendant) {
   if (!/^[0-9a-f]{40}$/.test(String(ancestor || "")) || !/^[0-9a-f]{40}$/.test(String(descendant || ""))) return false;
   return cp.spawnSync("git", ["merge-base", "--is-ancestor", ancestor, descendant], { cwd: ROOT, stdio: "ignore" }).status === 0;
+}
+
+function exactCommitParents(commitSha) {
+  if (!/^[0-9a-f]{40}$/.test(String(commitSha || ""))) return [];
+  try {
+    const text = cp.execFileSync("git", ["show", "-s", "--format=%P", commitSha], { cwd: ROOT, encoding: "utf8" }).trim();
+    return text ? text.split(/\s+/).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
 }
 
 function expectedRequalificationBinding(entry) {
@@ -195,15 +207,20 @@ function validateExactRunAnchor(decision, head, base, anchor, reasonPrefix, opti
     ? run.pull_requests.map((pr) => pr?.base?.sha).find((value) => typeof value === "string") || null
     : null;
   const allowSuccessorBase = options.allowSuccessorBase === true;
+  const mergeParents = allowSuccessorBase ? exactCommitParents(anchor.merge_commit_sha) : [];
   const checks = {
     check_id_match: decision.check_id === anchor.check_id,
     dependency_digest_match: decision.dependency_digest === anchor.dependency_digest,
-    requested_base_match: allowSuccessorBase ? isAncestor(anchor.base_sha, base) : base === anchor.base_sha,
+    requested_base_match: allowSuccessorBase ? isAncestor(anchor.merge_commit_sha, base) : base === anchor.base_sha,
     subject_is_ancestor_of_head: isAncestor(anchor.subject_sha, head),
     run_id_match: run.id === anchor.run_id,
     run_success: run.status === "completed" && run.conclusion === anchor.run_conclusion,
     run_head_match: run.head_sha === anchor.subject_sha,
-    run_base_match: liveBase === anchor.base_sha,
+    run_base_match: allowSuccessorBase
+      ? mergeParents.length === 2 && mergeParents[0] === anchor.base_sha && mergeParents[1] === anchor.final_head_sha
+      : liveBase === anchor.base_sha,
+    successor_run_head_to_final_head_match: !allowSuccessorBase || isAncestor(anchor.subject_sha, anchor.final_head_sha),
+    successor_merge_commit_to_requested_base_match: !allowSuccessorBase || isAncestor(anchor.merge_commit_sha, base),
     run_event_match: run.event === anchor.event,
     run_workflow_name_match: run.name === anchor.workflow_name,
     run_workflow_path_match: run.path === anchor.workflow_path,
@@ -562,7 +579,7 @@ function main() {
       } else if (
         decision.check_id === SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1.check_id &&
         successorChainAdmissionActive &&
-        isAncestor(SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1.base_sha, args.base || "")
+        isAncestor(SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1.merge_commit_sha, args.base || "")
       ) {
         const evidence = validateExactRunAnchor(
           decision,
