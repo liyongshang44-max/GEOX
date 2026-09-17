@@ -51,7 +51,7 @@ export async function runMcftCap09EvidenceNonOwnerStandbyV1():Promise<void>{
  const client=new S3CompatiblePrivateEvidenceObjectClientV1({
   endpoint:req("GEOX_MCFT_CAP09_EVIDENCE_S3_ENDPOINT"),bucket,
   region:req("GEOX_MCFT_CAP09_EVIDENCE_S3_REGION"),
-  access_key_id:req("GEOX_MCFT_CAP09_EVIDNCE_S3_ACCESS_KEY_ID"),
+  access_key_id:req("GEOX_MCFT_CAP09_EVIDENCE_S3_ACCESS_KEY_ID"),
   secret_access_key:req("GEOX_MCFT_CAP09_EVIDENCE_S3_SECRET_ACCESS_KEY")
  });
  const pool=createDatabasePool(databaseUrl);
@@ -62,7 +62,7 @@ export async function runMcftCap09EvidenceNonOwnerStandbyV1():Promise<void>{
   if(live.rows[0]?.n!==0)throw new Error("MCFT_CAP09_EVIDENCE_NON_OWNER_STANDBY_LIVE_OWNER_MUST_BE_ZERO");
   const probeKey=`pre-runtime-non-owner-standby/${subject}/authenticated-head-only`;
   const head=await client.headObject(probeKey,[200,404]);
- standbyHeartbeat(subject,head.status);
+  standbyHeartbeat(subject,head.status);
   while(!stop.stopRequested()){
    await sleep(30_000);
    if(!stop.stopRequested())standbyHeartbeat(subject,head.status);
