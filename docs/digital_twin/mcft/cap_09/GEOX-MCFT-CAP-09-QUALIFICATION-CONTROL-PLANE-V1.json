@@ -426,7 +426,12 @@
         "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_RUNTIME_START_ARM_V1.json",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_RUNTIME_START_EFFECTIVE_STAGE_VALIDATION_V1.cjs",
         "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_BUILDER_V1.cjs"
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_BUILDER_V1.cjs",
+        ".github/workflows/mcft-cap-09-production-runtime-non-owner-standby-materialization-v1.yml",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-RUNTIME-NON-OWNER-STANDBY-ACTIVATION-AUTHORITY-V1.json",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PRODUCTION_RUNTIME_NON_OWNER_STANDBY_MATERIALIZATION_V1.cjs",
+        "scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_NON_OWNER_STANDBY_AUTHORITY_V1.cjs",
+        "scripts/runtime_acceptance/MATERIALIZE_MCFT_CAP_09_PRODUCTION_RUNTIME_NON_OWNER_STANDBY_V1.cjs"
       ]
     },
     "PHASE7_PRIVATE_CANDIDATE_PROMOTION_IMPORT_CLOSURE": {
