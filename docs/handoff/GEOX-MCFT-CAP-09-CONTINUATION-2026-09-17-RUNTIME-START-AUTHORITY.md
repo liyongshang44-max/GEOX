@@ -1,3 +1,86 @@
+# 2026-09-17 补充核验 — 当前接手入口（优先于下方历史快照）
+
+> 本次为用户要求的直接落库 handoff 更新。仅记录任务、完成项、阻塞、计划与踩坑；不授予 runtime / owner / Formal-v5 权限。
+> 核验时间：2026-09-17T03:41Z 左右。以下内容 PURE PREPEND 到既有 continuation 文件；其原全文保留为 exact suffix。原 8/27 canonical handoff（含 AH）不动，不新建更多 continuation 文件。
+
+## A. 我们正在做什么
+
+MCFT-CAP-09 当前唯一工程边界：把独立的 PRODUCTION_RUNTIME_START_AUTHORITY 限定为 TRUE NON_OWNER_STANDBY，并机器强制 mode、exact Gate-A/host-proof binding、actual process-admission wall-clock freshness。
+
+总推进边界仍止于 Formal-v5 arm 之前；B-Line 保持冻结，ADR 保持 PARKED。Gate A 完成不等于获得启动权。此 handoff 也不构成启动裁决。
+
+## B. 已完成与本次远端核验
+
+- protected main 本次重新读取仍为 `f9cdeb4eddb1801a339149a592ee41f9cf120257`。
+- [#3577](https://github.com/liyongshang44-max/GEOX/pull/3577) 已 closed / merged；head `faf42498789ed31156888e8a0d8270b97048adf6`；4 files / +9 / -9；merge SHA 即上述 main。不应再次 merge 或重开该 PR。
+- Gate A 物理 Windows host proof 的用户原始 verifier 输出为 PASS，subject `d1db5463d1363eb5f9efacc13425b75a7c8b7ee8`；host `fae5f756-ef25-40d5-9777-5b2c3d4837a1`。两 plane DB connectivity、exact-one membership 与 cross-plane isolation 均通过；R2 PUT/HEAD/DELETE/post-delete HEAD=200/200/204/404；production containers before/after=0/0。本轮未重新在用户主机执行此 proof。
+- [post-merge CI 35125065838](https://github.com/liyongshang44-max/GEOX/actions/runs/35125065838) 本次读取 jobs：build-test、acceptance 均 completed/success；Run acceptance suite、runtime hygiene、artifact upload、dependency cleanup 均 success。
+- [EA5E2 35125065957](https://github.com/liyongshang44-max/GEOX/actions/runs/35125065957) job completed/success。准确限定：Route Phase6 retirement successor 与 proof upload 成功；steps 14–18 为 skipped，不能把 job 成功扩写为每条 rolling-runner 子证明都重新执行成功。
+- credential rematerialization、独立 Evidence R2 bucket、#3575 current-crop、#3576 standby seam 的前轮事实与索引继续见下方原文；本轮未轮换凭据、重建资源或执行生产进程。
+
+```text
+Gate A = CANONICAL / MERGED / POST-MERGE GREEN
+PRE_RUNTIME_START_READY = MACHINE-CLOSED
+PRODUCTION_RUNTIME_START_AUTHORITY = HOLD / UNARMED
+PRODUCTION_RUNTIME = NOT STARTED (last observed host state)
+PRODUCTION_OWNER = NOT ACTIVATED (last observed host state)
+Formal-v5 / A0 / O00-O23 = HOLD
+```
+
+## C. 当前卡在哪：治理绑定缺口 + 未验收 WIP
+
+治理 intent 接受，但 implementation enforcement 未闭合；不能把窄治理意图提升为 AUTHORIZED。
+
+远端 WIP 本次读取仍为：
+
+```text
+branch = work/runtime-start-non-owner-hardening-v1
+head = b357918194d89a9f250624769322d7c0e89e24c6
+base recorded by prior handoff = f9cdeb4eddb1801a339149a592ee41f9cf120257
+changed files = 5
+status = NOT QUALIFIED / DO NOT MERGE / DO NOT START
+```
+
+**新发现的确定问题（优先于下方“先修 typo”的旧顺序）：**
+
+远端 `scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs` 在 WIP exact head 上的 blob 为 `e9f5ddaeaa47a3de3dd9494710ce83fd42d37ecb`。本次 fetch_file 与 commit patch 都显示文件在检查 proof 字段的 for-loop 中途结束，尾部为 `req(proofZ...`，包含 U+0001 / U+0003 / U+0014 等异常控制字符，缺少函数/脚本后续闭合内容。这是远端源码完整性缺陷；成因尚未确认，不能仅归因于显示问题，也不能将旧的 temporary draft acceptance 视为该远端文件已通过。
+
+另有已知 Evidence entrypoint env-key typo：
+
+```text
+WRONG   GEOX_MCFT_CAP09_EVIDNCE_S3_ACCESS_KEY_ID
+CORRECT GEOX_MCFT_CAP09_EVIDENCE_S3_ACCESS_KEY_ID
+```
+
+本次没有修改工程分支，没有运行完整 server build，也没有为 WIP 赋予新资格。
+
+## D. 下一步严格顺序
+
+1. 重新绑定 protected main、WIP exact head 与当前 UTC；若 main 漂移，先重新裁决 successor base。
+2. 先检查全部 5 个远端文件的完整性，修复截断 builder 与 env-key typo。以 main 完整文件和冻结语义为依据作最小修复，不盲目沿用压缩重写；不能以本地 draft 代替 remote exact-head。
+3. 审查 mode 双向隔离、Gate A proof ref/digest、canonicalization SHA、host proof subject/id、deployment subject、current-crop as-of/valid-until 的真实校验，不能只检查字段存在。
+4. 执行 node syntax check、repo-native TypeScript/server build、runtime-start builder acceptance、standby acceptance 和既有 owner-path compatibility。负例至少覆盖缺失/错误 mode、standby authority 被 owner path 消费、错误 proof/digest/host/subject、未生效或已过期 current-crop。
+5. 明确 QCP applicability 与合法 carrier；修正 head 后 Draft PR，完成 exact-head CI / acceptance / applicable successor gates；全部满足再 Ready，复核 Ready-triggered checks 后按既定授权边界处理 merge，随后验证 post-merge adoption。
+6. 单独重新裁决 runtime-start authority，仅允许 NON_OWNER_STANDBY；Owner/Formal-v5/A0/O00-O23 全部 false。不得把本 handoff 当作 arm。
+7. 裁决与实际 process admission 两个时刻分别检查 freshness。旧窗口截止 `2026-09-17T10:00:00.000Z`；本次 03:41Z 核验尚未越过该上界，但这不证明未来启动仍 fresh。超过上界必须先取得新的 fresh T4R1 current-crop authority。
+8. 仅在窄授权明确成立且全部执行前提满足后才进入 standby；独立证明 liveness、credentials usable、mounts valid、EvidenceProducerLease 未取得、TwinRuntimeSchedulerLease 未取得、scheduler 未执行、production writes=ZERO、owner=false。
+9. STOP / HOLD；Gate B owner activation 独立裁决。Formal-v5 持续 HOLD。
+
+## E. 必须避开的坑
+
+- 不重开 Gate A / readiness / #3577；不重建已有 Neon roles/ACL/database 或 R2 bucket。
+- PowerShell → node -e quoting 曾吃掉引号；用临时 .cjs 文件。C# shim 必须转发 stdout/stderr，EXIT=0 且空输出不能证明 DB identity 正确。
+- SQL 显式 `::text` 的布尔结果实际为 `true|false`；此前要求必须 `t|f` 的预期不准确。canonical verifier 已接受实际输出并 PASS，不改 DB role 去迎合错误预期。
+- pg SSL warning 本身不是该次 DB proof 失败，不应为消除 warning 放宽 TLS。
+- 必须显式检查 native command exit code；无条件 Write-Host PASS 不算证明。
+- local HEAD 与 fetched origin/main 都要 exact-bind；保留用户 sensor-sim/、sensor-sim-kbs/，需要 clean tree 时移出保存，不删除。
+- 当前源码缺陷属于确定性错误，不套用 CI transient rerun 策略。只有确认 first-red 为 transient 才可同一 head 无效应重跑。
+- GitHub 写入成功不代表代码完整：必须回读远端全文、核对预期内容与语法。WIP builder 截断是本次新增的反例。
+- 历史 PASS 不自动继承到 successor；missing/skipped QCP 不是 PASS；job-level success 不代表 skipped steps 执行成功。
+- handoff #3298 保持 OPEN / DRAFT / UNMERGED，docs-only；历史全文不得删除或改写。本次只 prepend 此既有 continuation 文件。
+
+---
+
 # MCFT-CAP-09 Continuation Handoff — 2026-09-17 — Runtime-Start Authority Frontier
 
 > 用途：conversation continuation only。
