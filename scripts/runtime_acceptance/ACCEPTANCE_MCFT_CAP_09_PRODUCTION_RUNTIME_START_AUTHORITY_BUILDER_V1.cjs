@@ -214,7 +214,7 @@ try {
   assert.equal(authority.o00_authorized, false);
 
   const missingModeArm = path.join(OUT_DIR, "MCFT_CAP_09_TEST_MISSING_MODE_RUNTIME_START_ARM_V1.json");
-  writeJson*missingModeArm, { ...armed, runtime_mode: undefined });
+  writeJson(missingModeArm, { ...armed, runtime_mode: undefined });
   const missingModeOut = path.join(OUT_DIR, "MCFT_CAP_09_TEST_MISSING_MODE_RUNTIME_START_AUTHORITY_V1.json");
   fs.rmSync(missingModeOut, { force: true });
   const missingModeAttempt = runBuilder(missingModeArm, missingModeOut);
@@ -333,6 +333,14 @@ try {
     assert.ok(source.includes("runtime_mode:NON_OWNER_STANDBY_MODE"), "RUNTIME_START_NON_OWNER_MODE_BINDING_REQUIRED");
     assert.ok(source.includes("runtime_mode:OWNER_CUTOVER_MODE"), "RUNTIME_START_OWNER_MODE_BINDING_REQUIRED");
   }
+  assert.ok(
+    evidence.includes("GEOX_MCFT_CAP09_EVIDENCE_S3_ACCESS_KEY_ID"),
+    "RUNTIME_START_EVIDENCE_ACCESS_KEY_ENV_REQUIRED",
+  );
+  assert.ok(
+    !evidence.includes("GEOX_MCFT_CAP09_EVIDNCE_S3_ACCESS_KEY_ID"),
+    "RUNTIME_START_EVIDENCE_ACCESS_KEY_ENV_TYPO_FORBIDDEN",
+  );
 
   writeJson(RESULT, {
     status: "PASS",
@@ -354,6 +362,7 @@ try {
     missing_non_owner_runtime_mode_rejected: true,
     exact_head_binding_required: true,
     authority_digest_binding_required: true,
+    evidence_access_key_env_exact: true,
     production_owner_activation_authorized: false,
     formal_v5_arm_authorized: false,
     a0_authorized: false,
