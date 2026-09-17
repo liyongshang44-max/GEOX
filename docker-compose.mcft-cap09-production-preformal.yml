@@ -52,9 +52,7 @@ services:
 
   geox-mcft-cap09-twin-runtime-v1:
     image: geox-mcft-cap09-runtime:${GEOX_DEPLOYMENT_SUBJECT_COMMIT:?GEOX_DEPLOYMENT_SUBJECT_COMMIT is required}
-    build:
-      context: .
-      dockerfile: docker/mcft-cap09-runtime.Dockerfile
+    # Shares the exact runtime image built once by the evidence service.
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
