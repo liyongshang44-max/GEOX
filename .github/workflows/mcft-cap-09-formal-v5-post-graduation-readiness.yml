@@ -77,41 +77,56 @@ jobs:
         if: github.event_name == 'pull_request'
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
 
-      - name: Generate central QCP applicability plan
+      - name: Generate central QCP successor applicability plan
         if: github.event_name == 'pull_request'
         run: >-
           node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
           --base '${{ github.event.pull_request.base.sha }}'
           --head '${{ github.event.pull_request.head.sha }}'
           --generation v13
-          --stage "$MCFT_CAP09_PR_STAGE"
-          --out acceptance-output/MCFT_CAP_09_FORMAL_V5_READINESS_QCP_PLAN_V1.json
+          --stage SUCCESSOR_SUBJECT_PRE_MERGE
+          --out acceptance-output/MCFT_CAP_09_FORMAL_V5_READINESS_QCP_SUCCESSOR_PLAN_V1.json
 
-      - name: Enumerate central QCP blockers without fail-fast
+      - name: Generate central QCP post-graduation Formal-v5 plan
         if: github.event_name == 'pull_request'
-        env:
-          MCFT_CAP09_PRIVATE_STORE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: >-
-          node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+          node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
           --base '${{ github.event.pull_request.base.sha }}'
           --head '${{ github.event.pull_request.head.sha }}'
           --generation v13
-          --stage "$MCFT_CAP09_PR_STAGE"
-          --out acceptance-output/MCFT_CAP_09_FORMAL_V5_READINESS_QCP_PREFLIGHT_V1_RESULT.json
+          --stage POST_GRADUATION_FORMAL_V5_ACTIVATION
+          --out acceptance-output/MCFT_CAP_09_FORMAL_V5_READINESS_QCP_POST_GRADUATION_PLAN_V1.json
 
-      - name: Require central QCP pass
+      - name: Require central QCP Formal-v5 fail-closed stage contract
         if: github.event_name == 'pull_request'
         shell: node {0}
         run: |
           const fs=require('node:fs');
-          const plan=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_FORMAL_V5_READINESS_QCP_PLAN_V1.json','utf8'));
-          const preflight=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_FORMAL_V5_READINESS_QCP_PREFLIGHT_V1_RESULT.json','utf8'));
-          if(plan.status!=='PASS') throw new Error(`FORMAL_V5_READINESS_QCP_PLAN_NOT_PASS:${JSON.stringify({blockers:plan.blockers,authority_errors:plan.authority_errors,resolver_errors:plan.resolver_errors,unknown_changed_paths:plan.unknown_changed_paths})}`);
-          if((plan.unknown_changed_paths||[]).length!==0) throw new Error(`FORMAL_V5_READINESS_QCP_UNKNOWN_PATHS:${JSON.stringify(plan.unknown_changed_paths)}`);
-          if((plan.authority_errors||[]).length!==0) throw new Error(`FORMAL_V5_READINESS_QCP_AUTHORITY_ERRORS:${JSON.stringify(plan.authority_errors)}`);
-          if((plan.resolver_errors||[]).length!==0) throw new Error(`FORMAL_V5_READINESS_QCP_RESOLVER_ERRORS:${JSON.stringify(plan.resolver_errors)}`);
-          if(preflight.status!=='PASS') throw new Error(`FORMAL_V5_READINESS_QCP_PREFLIGHT_NOT_PASS:${JSON.stringify({blocker_count:preflight.blocker_count,blockers:preflight.blockers})}`);
-          if(Number(preflight.blocker_count||0)!==0) throw new Error(`FORMAL_V5_READINESS_QCP_BLOCKERS_NONZERO:${preflight.blocker_count}`);
+          const successor=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_FORMAL_V5_READINESS_QCP_SUCCESSOR_PLAN_V1.json','utf8'));
+          const post=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_FORMAL_V5_READINESS_QCP_POST_GRADUATION_PLAN_V1.json','utf8'));
+          const workflow='.github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml';
+          const requirePlan=(plan,label)=>{
+            if(plan.status!=='PASS')throw new Error(`${label}_PLAN_NOT_PASS:${JSON.stringify({blockers:plan.blockers,authority_errors:plan.authority_errors,resolver_errors:plan.resolver_errors,unknown_changed_paths:plan.unknown_changed_paths})}`);
+            if((plan.unknown_changed_paths||[]).length!==0)throw new Error(`${label}_UNKNOWN_PATHS:${JSON.stringify(plan.unknown_changed_paths)}`);
+            if((plan.authority_errors||[]).length!==0)throw new Error(`${label}_AUTHORITY_ERRORS:${JSON.stringify(plan.authority_errors)}`);
+            if((plan.resolver_errors||[]).length!==0)throw new Error(`${label}_RESOLVER_ERRORS:${JSON.stringify(plan.resolver_errors)}`);
+          };
+          const byId=(plan,id)=>{
+            const row=(plan.decisions||[]).find((item)=>item.check_id===id);
+            if(!row)throw new Error(`QCP_DECISION_REQUIRED:${id}`);
+            return row;
+          };
+          requirePlan(successor,'FORMAL_V5_READINESS_QCP_SUCCESSOR');
+          requirePlan(post,'FORMAL_V5_READINESS_QCP_POST_GRADUATION');
+          const successorFormal=byId(successor,'FORMAL_V5_ACTIVATION');
+          if(successorFormal.status!=='NOT_APPLICABLE'||successorFormal.reason_code!=='STAGE_NOT_APPLICABLE')throw new Error(`FORMAL_V5_SUCCESSOR_STAGE_MUST_FAIL_CLOSED:${JSON.stringify(successorFormal)}`);
+          const owner=byId(post,'EXACT_ONE_PRODUCTION_OWNER');
+          if(owner.status!=='REQUIRED')throw new Error(`FORMAL_V5_POST_GRADUATION_OWNER_REQUIRED:${JSON.stringify(owner)}`);
+          const formal=byId(post,'FORMAL_V5_ACTIVATION');
+          if(formal.status!=='REQUIRED')throw new Error(`FORMAL_V5_POST_GRADUATION_ACTIVATION_REQUIRED:${JSON.stringify(formal)}`);
+          if(formal.execution_workflow!==workflow)throw new Error(`FORMAL_V5_POST_GRADUATION_WORKFLOW_MISMATCH:${formal.execution_workflow}`);
+          if(formal.execution_workflow_status!=='IMPLEMENTED_POST_GRADUATION_READINESS')throw new Error(`FORMAL_V5_POST_GRADUATION_WORKFLOW_STATUS_MISMATCH:${formal.execution_workflow_status}`);
+          if(!(formal.changed_dependencies||[]).includes(workflow))throw new Error(`FORMAL_V5_READINESS_WORKFLOW_MUST_REQUALIFY_FORMAL_ACTIVATION:${JSON.stringify(formal.changed_dependencies)}`);
 
       - name: Normalize Formal-v5 read-only URL
         shell: node {0}
