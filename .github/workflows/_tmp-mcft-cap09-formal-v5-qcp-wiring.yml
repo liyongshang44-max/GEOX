@@ -1,0 +1,76 @@
+name: tmp-mcft-cap09-formal-v5-qcp-wiring
+
+on:
+  push:
+    branches:
+      - feat/mcft-cap09-formal-v5-post-graduation-readiness-v1
+
+permissions:
+  contents: write
+
+jobs:
+  wire-qcp:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/mcft-cap09-formal-v5-post-graduation-readiness-v1
+          fetch-depth: 0
+
+      - name: Patch QCP stage overlay structurally
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p='docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json';
+          const q=JSON.parse(fs.readFileSync(p,'utf8'));
+          q.dependency_resolvers.FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1={
+            kind:'EXACT_PATH_SET',
+            paths:[
+              '.github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml',
+              'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-POST-GRADUATION-CONTROL-SURFACE-V1.json',
+              'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json',
+              'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json',
+              'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1.cjs',
+              'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1.cjs',
+              'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs'
+            ]
+          };
+          const c=q.checks.find(x=>x.check_id==='FORMAL_V5_ACTIVATION');
+          if(!c)throw new Error('FORMAL_V5_ACTIVATION_CHECK_MISSING');
+          for(const ref of [
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-POST-GRADUATION-CONTROL-SURFACE-V1.json',
+            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json'
+          ]) if(!c.authority_refs.includes(ref)) c.authority_refs.push(ref);
+          c.resolver_ids=[
+            'V13_RUNTIME_SEMANTIC_CLOSURE',
+            'PRODUCTION_OWNER_GRADUATION_CLOSURE',
+            'FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1'
+          ];
+          c.requalification_triggers=[...c.resolver_ids];
+          c.fail_policy='FAIL_CLOSED_UNTIL_POST_GRADUATION_READINESS_AND_SEPARATE_OPERATOR_ARM_AUTHORIZATION';
+          c.execution_workflows_by_stage={
+            ...(c.execution_workflows_by_stage||{}),
+            POST_GRADUATION_FORMAL_V5_ACTIVATION:'.github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml'
+          };
+          c.execution_workflow_status_by_stage={
+            ...(c.execution_workflow_status_by_stage||{}),
+            POST_GRADUATION_FORMAL_V5_ACTIVATION:'IMPLEMENTED_POST_GRADUATION_READINESS'
+          };
+          fs.writeFileSync(p,JSON.stringify(q,null,2)+'\n');
+
+      - name: Validate patched control surface
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1.cjs
+
+      - name: Commit QCP wiring if changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json; then
+            echo 'QCP_ALREADY_WIRED'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json
+          git commit -m 'feat(mcft-cap09): wire Formal-v5 post-graduation QCP stage'
+          git push origin HEAD:feat/mcft-cap09-formal-v5-post-graduation-readiness-v1
