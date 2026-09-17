@@ -6,11 +6,15 @@ import { assertMcftCap09ServicePrincipalV1 } from "../infra/mcft_cap09_phase5_se
 import { S3CompatiblePrivateEvidenceObjectClientV1 } from "../external_evidence/s3_compatible_private_evidence_object_client_v1.js";
 import { runMcftCap09ProductionEvidenceRuntimeV1 } from "../external_evidence/mcft_cap09_evidence_runtime_process_v1.js";
 import { createMcftCap09ProcessStopV1 } from "./mcft_cap09_production_process_lifecycle_v1.js";
-import { parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1 } from "./mcft_cap09_production_runtime_start_authority_v1.js";
+import {
+  MCFT_CAP09_NON_OWNER_STANDBY_MODE_V1,
+  MCFT_CAP09_OWNER_CUTOVER_MODE_V1,
+  parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1,
+} from "./mcft_cap09_production_runtime_start_authority_v1.js";
 import { readMcftCap09OwnerCutoverAuthorityV1, type McftCap09OwnerCutoverScopeV1 } from "./mcft_cap09_production_owner_cutover_authority_v1.js";
 
-const NON_OWNER_STANDBY_MODE = "NON_OWNER_STANDBY" as const;
-const OWNER_CUTOVER_MODE = "OWNER_CUTOVER" as const;
+const NON_OWNER_STANDBY_MODE = MCFT_CAP09_NON_OWNER_STANDBY_MODE_V1;
+const OWNER_CUTOVER_MODE = MCFT_CAP09_OWNER_CUTOVER_MODE_V1;
 const EVIDENCE_LEASE_TABLE = "external_evidence_producer_lease_v1" as const;
 const FORMAL_RAW_BUCKET = "geox-mcft-cap09-formal-raw-v1" as const;
 
@@ -37,7 +41,9 @@ export async function runMcftCap09EvidenceNonOwnerStandbyV1():Promise<void>{
  const s=scope(); const subject=req("GEOX_DEPLOYMENT_SUBJECT_COMMIT");
  const runtimePath=req("GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH");
  const raw=JSON.parse(fs.readFileSync(runtimePath,"utf8"));
- parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"EVIDENCE_RUNTIME",{deployment_subject_sha:subject,scope:s});
+ parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"EVIDENCE_RUNTIME",{
+  deployment_subject_sha:subject,scope:s,runtime_mode:NON_OWNER_STANDBY_MODE
+ });
 
  const databaseUrl=req("GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL");
  const bucket=req("GEOX_MCFT_CAP09_EVIDENCE_S3_BUCKET");
@@ -70,7 +76,9 @@ export async function runMcftCap09EvidencePreFormalOwnerRuntimeV1():Promise<void
  const runtimePath=req("GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH");
  const ownerPath=req("GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH");
  const raw=JSON.parse(fs.readFileSync(runtimePath,"utf8"));
- parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"EVIDENCE_RUNTIME",{deployment_subject_sha:subject,scope:s});
+ parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(raw,"EVIDENCE_RUNTIME",{
+  deployment_subject_sha:subject,scope:s,runtime_mode:OWNER_CUTOVER_MODE
+ });
  readMcftCap09OwnerCutoverAuthorityV1({authority_path:ownerPath,expected_deployment_subject_sha:subject,expected_scope:s});
  await runMcftCap09ProductionEvidenceRuntimeV1({runtime_start_authority:raw});
 }

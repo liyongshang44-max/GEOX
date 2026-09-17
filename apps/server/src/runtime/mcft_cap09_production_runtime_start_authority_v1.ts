@@ -9,6 +9,24 @@ import fs from "node:fs";
 export const MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_CLASS_V1 =
   "MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY" as const;
 
+export const MCFT_CAP09_NON_OWNER_STANDBY_MODE_V1 =
+  "NON_OWNER_STANDBY" as const;
+export const MCFT_CAP09_OWNER_CUTOVER_MODE_V1 =
+  "OWNER_CUTOVER" as const;
+
+const PRE_RUNTIME_READY_PROOF_REF_V1 =
+  "scripts/runtime_acceptance/MCFT_CAP_09_PRODUCTION_NON_GITHUB_HOST_BINDING_ARM_V1.json" as const;
+const PRE_RUNTIME_READY_CANONICAL_MAIN_V1 =
+  "f9cdeb4eddb1801a339149a592ee41f9cf120257" as const;
+const PRE_RUNTIME_READY_HOST_PROOF_SUBJECT_V1 =
+  "d1db5463d1363eb5f9efacc13425b75a7c8b7ee8" as const;
+const CANONICAL_PRODUCTION_HOST_ID_V1 =
+  "fae5f756-ef25-40d5-9777-5b2c3d4837a1" as const;
+
+export type McftCap09ProductionRuntimeModeV1 =
+  | typeof MCFT_CAP09_NON_OWNER_STANDBY_MODE_V1
+  | typeof MCFT_CAP09_OWNER_CUTOVER_MODE_V1;
+
 export type McftCap09ProductionRuntimePlaneV1 =
   | "EVIDENCE_RUNTIME"
   | "TWIN_RUNTIME";
@@ -37,11 +55,21 @@ export type McftCap09ProductionRuntimeStartAuthorityInstanceV1 = {
   biological_stage_architecture_effectiveness_ref: string;
   biological_stage_architecture_effectiveness_sha256: string;
   formal_a0_logical_time: string;
+  runtime_mode?: McftCap09ProductionRuntimeModeV1;
+  current_crop_authority_as_of?: string;
+  current_crop_authority_valid_until?: string;
+  pre_runtime_start_ready_proof_ref?: string;
+  pre_runtime_start_ready_proof_sha256?: string;
+  pre_runtime_start_ready_canonical_protected_main_sha?: string;
+  host_proof_subject_sha?: string;
+  host_id?: string;
 };
 
 export type McftCap09ProductionRuntimeStartExpectedBindingV1 = {
   deployment_subject_sha: string;
   scope: McftCap09ProductionRuntimeScopeV1;
+  runtime_mode?: McftCap09ProductionRuntimeModeV1;
+  admission_time_utc?: string;
 };
 
 function recordV1(value: unknown): Record<string, unknown> {
@@ -80,6 +108,25 @@ function shaV1(value: unknown, code: string): string {
 function digestV1(value: unknown, code: string): string {
   const text = textV1(value, code);
   if (!/^sha256:[0-9a-f]{64}$/.test(text)) throw new Error(code);
+  return text;
+}
+
+function hostIdV1(value: unknown, code: string): string {
+  const text = textV1(value, code).toLowerCase();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(text)) {
+    throw new Error(code);
+  }
+  return text;
+}
+
+function runtimeModeV1(value: unknown, code: string): McftCap09ProductionRuntimeModeV1 {
+  const text = textV1(value, code);
+  if (
+    text !== MCFT_CAP09_NON_OWNER_STANDBY_MODE_V1
+    && text !== MCFT_CAP09_OWNER_CUTOVER_MODE_V1
+  ) {
+    throw new Error(code);
+  }
   return text;
 }
 
@@ -190,6 +237,83 @@ export function parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
     throw new Error("MCFT_CAP09_PRODUCTION_RUNTIME_START_FENCE_MUST_PRECEDE_A0");
   }
 
+  let runtimeMode: McftCap09ProductionRuntimeModeV1 | undefined;
+  let currentCropAsOf: string | undefined;
+  let currentCropValidUntil: string | undefined;
+  let proofRef: string | undefined;
+  let proofDigest: string | undefined;
+  let canonicalProtectedMain: string | undefined;
+  let hostProofSubject: string | undefined;
+  let hostId: string | undefined;
+
+  if (expected.runtime_mode !== undefined) {
+    runtimeMode = runtimeModeV1(
+      authority.runtime_mode,
+      "MCFT_CAP09_PRODUCTION_RUNTIME_START_MODE_REQUIRED",
+    );
+    if (runtimeMode !== expected.runtime_mode) {
+      throw new Error("MCFT_CAP09_PRODUCTION_RUNTIME_START_MODE_MISMATCH");
+    }
+
+    currentCropAsOf = isoV1(
+      authority.current_crop_authority_as_of,
+      "MCFT_CAP09_PRODUCTION_RUNTIME_START_CURRENT_CROP_AS_OF_REQUIRED",
+    );
+    currentCropValidUntil = isoV1(
+      authority.current_crop_authority_valid_until,
+      "MCFT_CAP09_PRODUCTION_RUNTIME_START_CURRENT_CROP_VALID_UNTIL_REQUIRED",
+    );
+    if (Date.parse(currentCropValidUntil) < Date.parse(currentCropAsOf)) {
+      throw new Error("MCFT_CAP09_PRODUCTION_RUNTIME_START_CURRENT_CROP_WINDOW_INVALID");
+    }
+
+    const admissionTime = expected.admission_time_utc === undefined
+      ? new Date().toISOString()
+      : isoV1(
+        expected.admission_time_utc,
+        "MCFT_CAP09_PRODUCTION_RUNTIME_START_ADMISSION_TIME_INVALID",
+      );
+    if (Date.parse(admissionTime) < Date.parse(currentCropAsOf)) {
+      throw new Error("MCFT_CAP09_PRODUCTION_RUNTIME_START_CURRENT_CROP_FUTURE_AT_PROCESS_ADMISSION");
+    }
+    if (Date.parse(admissionTime) > Date.parse(currentCropValidUntil)) {
+      throw new Error("MCFT_CAP09_PRODUCTION_RUNTIME_START_CURRENT_CROP_STALE_AT_PROCESS_ADMISSION");
+    }
+
+    proofRef = textV1(
+      authority.pre_runtime_start_ready_proof_ref,
+      "MCFT_CAP09_PRODUCTION_RUNTIME_START_PRE_READY_PROOF_REF_REQUIRED",
+    );
+    if (proofRef !== PRE_RUNTIME_READY_PROOF_REF_V1) {
+      throw new Error("MCFT_CAP09_PRODUCTION_RUNTIME_START_PRE_READY_PROOF_REF_MISMATCH");
+    }
+    proofDigest = digestV1(
+      authority.pre_runtime_start_ready_proof_sha256,
+      "MCFT_CAP09_PRODUCTION_RUNTIME_START_PRE_READY_PROOF_DIGEST_REQUIRED",
+    );
+    canonicalProtectedMain = shaV1(
+      authority.pre_runtime_start_ready_canonical_protected_main_sha,
+      "MCFT_CAP09_PRODUCTION_RUNTIME_START_PRE_READY_CANONICAL_MAIN_REQUIRED",
+    );
+    if (canonicalProtectedMain !== PRE_RUNTIME_READY_CANONICAL_MAIN_V1) {
+      throw new Error("MCFT_CAP09_PRODUCTION_RUNTIME_START_PRE_READY_CANONICAL_MAIN_MISMATCH");
+    }
+    hostProofSubject = shaV1(
+      authority.host_proof_subject_sha,
+      "MCFT_CAP09_PRODUCTION_RUNTIME_START_HOST_PROOF_SUBJECT_REQUIRED",
+    );
+    if (hostProofSubject !== PRE_RUNTIME_READY_HOST_PROOF_SUBJECT_V1) {
+      throw new Error("MCFT_CAP09_PRODUCTION_RUNTIME_START_HOST_PROOF_SUBJECT_MISMATCH");
+    }
+    hostId = hostIdV1(
+      authority.host_id,
+      "MCFT_CAP09_PRODUCTION_RUNTIME_START_HOST_ID_REQUIRED",
+    );
+    if (hostId !== CANONICAL_PRODUCTION_HOST_ID_V1) {
+      throw new Error("MCFT_CAP09_PRODUCTION_RUNTIME_START_HOST_ID_MISMATCH");
+    }
+  }
+
   return {
     authority_class: MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_CLASS_V1,
     authority_ref: textV1(
@@ -232,9 +356,16 @@ export function parseMcftCap09ProductionRuntimeStartAuthorityForPlaneV1(
       "MCFT_CAP09_PRODUCTION_RUNTIME_START_STAGE_ARCHITECTURE_EFFECTIVENESS_DIGEST_REQUIRED",
     ),
     formal_a0_logical_time: formalA0,
+    runtime_mode: runtimeMode,
+    current_crop_authority_as_of: currentCropAsOf,
+    current_crop_authority_valid_until: currentCropValidUntil,
+    pre_runtime_start_ready_proof_ref: proofRef,
+    pre_runtime_start_ready_proof_sha256: proofDigest,
+    pre_runtime_start_ready_canonical_protected_main_sha: canonicalProtectedMain,
+    host_proof_subject_sha: hostProofSubject,
+    host_id: hostId,
   };
 }
-
 
 export function loadMcftCap09ProductionRuntimeStartAuthorityV1(input: {
   plane: McftCap09ProductionRuntimePlaneV1;
