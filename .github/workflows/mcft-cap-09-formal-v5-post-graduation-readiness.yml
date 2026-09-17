@@ -24,7 +24,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: mcft-cap09-formal-v5-post-graduation-readiness-${{ github.event.pull_request.head.sha || github.sha }}
+  group: mcft-cap09-formal-v5-post-graduation-readiness-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 env:
@@ -34,6 +34,7 @@ env:
 
 jobs:
   formal-v5-post-graduation-readiness:
+    if: github.event_name != 'pull_request' || github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
