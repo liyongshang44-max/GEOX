@@ -22,6 +22,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: mcft-cap09-formal-v5-post-graduation-readiness-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
@@ -36,7 +37,7 @@ jobs:
   formal-v5-post-graduation-readiness:
     if: github.event_name != 'pull_request' || github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout exact readiness subject
         uses: actions/checkout@v4
@@ -53,6 +54,64 @@ jobs:
 
       - name: Prove static post-graduation control surface
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1.cjs
+
+      - name: Admit exact current-main successor into central QCP
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='${{ github.event.pull_request.base.sha }}'
+          base_ref='${{ github.event.pull_request.base.ref }}'
+          test "$base_ref" = 'main' || { echo "FORMAL_V5_READINESS_QCP_REQUIRES_MAIN_BASE_REF:$base_ref" >&2; exit 1; }
+          git fetch --no-tags origin main
+          current_main="$(git rev-parse origin/main)"
+          test "$current_main" = "$base" || { echo "FORMAL_V5_READINESS_QCP_BASE_NOT_CURRENT_MAIN:$base:$current_main" >&2; exit 1; }
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs \
+            --base "$base" \
+            --out acceptance-output/MCFT_CAP_09_FORMAL_V5_READINESS_SUCCESSOR_CHAIN_V1_RESULT.json
+          echo "MCFT_CAP09_SUCCESSOR_CHAIN_BASE_ADMITTED=true" >> "$GITHUB_ENV"
+          echo "MCFT_CAP09_ADMITTED_PR_BASE_SHA=$base" >> "$GITHUB_ENV"
+          echo "MCFT_CAP09_PR_STAGE=SUCCESSOR_SUBJECT_PRE_MERGE" >> "$GITHUB_ENV"
+
+      - name: Prove central QCP applicability semantics
+        if: github.event_name == 'pull_request'
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+
+      - name: Generate central QCP applicability plan
+        if: github.event_name == 'pull_request'
+        run: >-
+          node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+          --base '${{ github.event.pull_request.base.sha }}'
+          --head '${{ github.event.pull_request.head.sha }}'
+          --generation v13
+          --stage "$MCFT_CAP09_PR_STAGE"
+          --out acceptance-output/MCFT_CAP_09_FORMAL_V5_READINESS_QCP_PLAN_V1.json
+
+      - name: Enumerate central QCP blockers without fail-fast
+        if: github.event_name == 'pull_request'
+        env:
+          MCFT_CAP09_PRIVATE_STORE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: >-
+          node scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs
+          --base '${{ github.event.pull_request.base.sha }}'
+          --head '${{ github.event.pull_request.head.sha }}'
+          --generation v13
+          --stage "$MCFT_CAP09_PR_STAGE"
+          --out acceptance-output/MCFT_CAP_09_FORMAL_V5_READINESS_QCP_PREFLIGHT_V1_RESULT.json
+
+      - name: Require central QCP pass
+        if: github.event_name == 'pull_request'
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const plan=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_FORMAL_V5_READINESS_QCP_PLAN_V1.json','utf8'));
+          const preflight=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_FORMAL_V5_READINESS_QCP_PREFLIGHT_V1_RESULT.json','utf8'));
+          if(plan.status!=='PASS') throw new Error(`FORMAL_V5_READINESS_QCP_PLAN_NOT_PASS:${JSON.stringify({blockers:plan.blockers,authority_errors:plan.authority_errors,resolver_errors:plan.resolver_errors,unknown_changed_paths:plan.unknown_changed_paths})}`);
+          if((plan.unknown_changed_paths||[]).length!==0) throw new Error(`FORMAL_V5_READINESS_QCP_UNKNOWN_PATHS:${JSON.stringify(plan.unknown_changed_paths)}`);
+          if((plan.authority_errors||[]).length!==0) throw new Error(`FORMAL_V5_READINESS_QCP_AUTHORITY_ERRORS:${JSON.stringify(plan.authority_errors)}`);
+          if((plan.resolver_errors||[]).length!==0) throw new Error(`FORMAL_V5_READINESS_QCP_RESOLVER_ERRORS:${JSON.stringify(plan.resolver_errors)}`);
+          if(preflight.status!=='PASS') throw new Error(`FORMAL_V5_READINESS_QCP_PREFLIGHT_NOT_PASS:${JSON.stringify({blocker_count:preflight.blocker_count,blockers:preflight.blockers})}`);
+          if(Number(preflight.blocker_count||0)!==0) throw new Error(`FORMAL_V5_READINESS_QCP_BLOCKERS_NONZERO:${preflight.blocker_count}`);
 
       - name: Normalize Formal-v5 read-only URL
         shell: node {0}
