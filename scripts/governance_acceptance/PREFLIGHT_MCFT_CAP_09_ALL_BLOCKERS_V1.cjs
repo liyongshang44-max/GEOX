@@ -71,18 +71,18 @@ const PROOF_BOUND_PHASE5_REQUALIFICATION_V1 = {
   dependency_digest: "sha256:617d09a11a5797e0a1e3793a79561613d7a1b672df76593fe9a1e0b7f24483b7",
 };
 const SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1 = {
-  evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_E0DCAA7A_SUCCESSOR_CHAIN_V1",
+  evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_FC6ADDADE_SUCCESSOR_3DC53712_V1",
   check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
-  subject_sha: "e0dcaa7ab72f2e21601254834a970689f61e4437",
-  base_sha: "f9cdeb4eddb1801a339149a592ee41f9cf120257",
-  final_head_sha: "3b996b803ac8b5e4a798353d0abe92223c7287d2",
-  merge_commit_sha: "75a5572bdea8fdf22acff925cdc95d34b7437aab",
-  run_id: 35194905359,
+  subject_sha: "fc6addade5e1e8a3ae4e2c6a27de670f2b7f0e2e",
+  base_sha: "e287b1b491d31a0b9be845719c3f65ea72c33744",
+  final_head_sha: "779782e95b1fa2244f5a7a8f812df1de85520ae5",
+  merge_commit_sha: "3dc53712bc0fe3d6b9e0d83c81edda09b9cd98a5",
+  run_id: 35223711062,
   run_conclusion: "success",
   workflow_name: "mcft-cap-09-phase5-two-service-accelerated-24t",
   workflow_path: ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
   event: "pull_request",
-  dependency_digest: "sha256:60896a0d9ddd773afe57172e62b7d0f0e67d7f2f025153ed02b7ad09b77187c7",
+  dependency_digest: "sha256:a123e0f8bdce0bf1a0bafa8157b57a0c2713e70629677cb6b1f4c5c01119df68",
 };
 const CURRENT_PR_PHASE5_REQUALIFICATION_V1 = {
   evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_FC6ADDADE_CURRENT_PR_V1",
