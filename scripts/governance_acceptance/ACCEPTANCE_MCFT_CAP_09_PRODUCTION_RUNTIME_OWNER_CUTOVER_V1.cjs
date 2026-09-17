@@ -158,6 +158,11 @@ for(const marker of [
   "down",
   "--remove-orphans"
 ]) assert.ok(runner.includes(marker),marker);
+const serializedSharedImageBuild='exec("docker",["compose","-f",COMPOSE_REL,"build","geox-mcft-cap09-evidence-runtime-v1"],{env});';
+const dualServiceNoBuildStart='exec("docker",["compose","-f",COMPOSE_REL,"up","-d","--no-build","geox-mcft-cap09-evidence-runtime-v1","geox-mcft-cap09-twin-runtime-v1"],{env});';
+assert.ok(runner.includes(serializedSharedImageBuild),"CUTOVER_SHARED_RUNTIME_IMAGE_SINGLE_BUILD_REQUIRED");
+assert.ok(runner.includes(dualServiceNoBuildStart),"CUTOVER_DUAL_SERVICE_NO_BUILD_START_REQUIRED");
+assert.equal(runner.includes('"--build"'),false,"CUTOVER_PARALLEL_SHARED_IMAGE_BUILD_FORBIDDEN");
 assert.ok(runner.includes("current_crop_authority_ref:selectedCurrentCrop.ref"));
 assert.ok(runner.includes("GEOX_MCFT_CAP09_PRODUCTION_CURRENT_CROP_AUTHORITY_PATH:selectedCurrentCrop.resolved"));
 assert.equal(runner.includes("const CURRENT_CROP_REL="),false,"CUTOVER_FIXED_CURRENT_CROP_BINDING_FORBIDDEN");
@@ -177,6 +182,8 @@ console.log(JSON.stringify({
   evidence_non_owner_standby_lease_claim:false,
   twin_non_owner_standby_lease_claim:false,
   twin_preformal_scheduler_effect:false,
+  shared_runtime_image_build_serialized:true,
+  dual_service_start_uses_no_build:true,
   dual_key_cutover:true,
   registry_backed_current_crop_selection:true,
   github_actions_production_execution:false,
