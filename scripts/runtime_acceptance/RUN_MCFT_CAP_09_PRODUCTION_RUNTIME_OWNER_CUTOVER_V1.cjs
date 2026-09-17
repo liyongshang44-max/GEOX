@@ -217,7 +217,8 @@ try{
 
   let started=false;
   try{
-    exec("docker",["compose","-f",COMPOSE_REL,"up","-d","--build","geox-mcft-cap09-evidence-runtime-v1","geox-mcft-cap09-twin-runtime-v1"],{env});
+    exec("docker",["compose","-f",COMPOSE_REL,"build","geox-mcft-cap09-evidence-runtime-v1"],{env});
+    exec("docker",["compose","-f",COMPOSE_REL,"up","-d","--no-build","geox-mcft-cap09-evidence-runtime-v1","geox-mcft-cap09-twin-runtime-v1"],{env});
     started=true;
     const deadline=Date.now()+180_000;
     let lastError="";
