@@ -70,6 +70,18 @@ const PROOF_BOUND_PHASE5_REQUALIFICATION_V1 = {
   event: "pull_request",
   dependency_digest: "sha256:617d09a11a5797e0a1e3793a79561613d7a1b672df76593fe9a1e0b7f24483b7",
 };
+const SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1 = {
+  evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_E0DCAA7A_SUCCESSOR_CHAIN_V1",
+  check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+  subject_sha: "e0dcaa7ab72f2e21601254834a970689f61e4437",
+  base_sha: "f9cdeb4eddb1801a339149a592ee41f9cf120257",
+  run_id: 35194905359,
+  run_conclusion: "success",
+  workflow_name: "mcft-cap-09-phase5-two-service-accelerated-24t",
+  workflow_path: ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+  event: "pull_request",
+  dependency_digest: "sha256:60896a0d9ddd773afe57172e62b7d0f0e67d7f2f025153ed02b7ad09b77187c7",
+};
 
 function parseArgs(argv) {
   const out = {};
@@ -543,6 +555,33 @@ function main() {
         };
         if (evidence.status !== "PASS") blockers.push({
           blocker_class: "INVALID_OR_MISSING_PROOF_BOUND_PHASE5_REQUALIFICATION_EVIDENCE",
+          check_id: decision.check_id,
+          detail: evidence,
+        });
+      } else if (
+        decision.check_id === SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1.check_id &&
+        successorChainAdmissionActive &&
+        args.base === SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1.base_sha
+      ) {
+        const evidence = validateExactRunAnchor(
+          decision,
+          args.head || "",
+          args.base || "",
+          SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1,
+          "SUCCESSOR_CHAIN_PHASE5",
+        );
+        result = {
+          ...common,
+          execution: "SUCCESSOR_CHAIN_EXACT_WORKFLOW_RUN_AND_DEPENDENCY_DIGEST_VALIDATION",
+          status: evidence.status,
+          reason_code: evidence.reason_code,
+          evidence_id: evidence.evidence_id ?? null,
+          evidence_run_id: evidence.run_id ?? null,
+          evidence_subject_sha: evidence.subject_sha ?? null,
+          evidence_checks: evidence.checks ?? null,
+        };
+        if (evidence.status !== "PASS") blockers.push({
+          blocker_class: "INVALID_OR_MISSING_SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_EVIDENCE",
           check_id: decision.check_id,
           detail: evidence,
         });
