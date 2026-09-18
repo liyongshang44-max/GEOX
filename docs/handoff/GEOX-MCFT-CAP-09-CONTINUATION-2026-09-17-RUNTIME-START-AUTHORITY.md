@@ -1,3 +1,359 @@
+# 2026-09-18 H3/H4/H5 CLOSURE — FORMAL-V5 ARM READY / EXPLICIT OPERATOR AUTHORIZATION RECEIVED
+
+> 用途：conversation continuation only。
+> 本节不是 architecture authority、production runtime authority、production-owner authority、Formal-v5 arm authority、A0 authority 或 O00-O23 authority。
+> 落库纪律：PURE PREPEND 到既有 continuation 文件；下方既有全文保持 exact suffix；原 8/27 canonical handoff（含 AH）继续不动；本次不改工程文件。
+> 本节记录的是截至 2026-09-18T17:44Z 左右已经机器证明的最新现场事实；优先于下方所有历史 SHA、blocker、container 状态与 next-step 快照。
+
+## A. 当前结论
+
+MCFT-CAP-09 已完成 production owner graduation 与 Formal-v5 post-graduation arm readiness，当前 exact protected main 为：
+
+```text
+2ce0c90ef30b3c04ed112639c87926ac19be4e03
+```
+
+当前机器裁决：
+
+```text
+H2A non-owner standby materialization
+= PASS
+
+local production-host machine admission
+= PASS
+
+H2B production host secret-binding physical proof
+= PASS
+
+H3 current-main production owner cutover
+= PASS
+
+H4 live fenced-owner provenance + renewal
+= PASS
+
+H4 legal current-main GFS in-flight >300s
+= PASS
+
+H5 Formal-v5 post-graduation arm readiness
+= PASS
+
+formal_v5_arm_ready
+= true
+
+separate_explicit_operator_authorization_still_required
+= true
+```
+
+同时仍严格保持：
+
+```text
+Formal-v5 arm
+= FALSE
+
+Formal-v5 epoch selected
+= FALSE
+
+formal database mutation
+= FALSE
+
+A0 bootstrap
+= FALSE
+
+O00 started
+= FALSE
+
+MCFT-CAP-09 complete
+= FALSE
+```
+
+因此 H5 所要求的 HARD STOP 已经命中。
+
+在本次 handoff 更新请求中，operator 已随后明确给出新的独立指令：
+
+```text
+先补进handoff，然后开始formalv5
+```
+
+这构成后续 Formal-v5 arm 的 separate explicit operator authorization，但本 handoff 文档本身不构成该 authority，也不表示 Formal-v5 已经执行。实际 arm 必须在本次 handoff 提交完成后重新绑定 protected main、current-crop、live owners、zero-state 与 repo-native Formal-v5 arm 入口后再执行。
+
+## B. 从旧 production stale state 到 H5 的闭合证据
+
+### B1. stale production runtime 已被确认为旧 subject 并受控清除
+
+最初 local exact-main guard 命中两个遗留 production containers，但两者实际 subject 均为旧 main：
+
+```text
+running stale subject
+= 1137e327df07011ec54186feb88d7a544301fe70
+
+current protected main
+= 2ce0c90ef30b3c04ed112639c87926ac19be4e03
+```
+
+旧 Evidence container：
+
+```text
+restart_count = 492
+status = restarting
+first deterministic durable-log red =
+PRODUCTION_EVIDENCE_HOST_PLANNER_GFS_MISSED_WINDOW:2026-09-18T16:00:00.000Z
+```
+
+旧 Twin container 保持 PRE_FORMAL_OWNER_STANDBY / OWNER_LEASE_HEALTHY。
+
+两个旧 containers 被严格按 compose project
+`geox-mcft-cap09-production-v1` 清除；没有 docker prune，没有 DB UPDATE/DELETE，没有 retry schedule mutation。
+
+旧 Evidence/Twin leases 随后按各自 expires_at 自然失效：
+
+```text
+PRODUCTION_CONTAINERS=0
+EVIDENCE_LIVE_LEASES=0
+TWIN_LIVE_LEASES=0
+STALE_RUNTIME_CLEAR=PASS
+```
+
+### B2. H2A / host admission / H2B
+
+exact main：
+
+```text
+2ce0c90ef30b3c04ed112639c87926ac19be4e03
+```
+
+H2A materialization：
+
+```text
+status = PASS
+materialization_only = true
+runtime_started = false
+activation_fence_time = 2026-09-18T17:21:34.138Z
+formal_a0_logical_time = 2026-09-18T18:00:00.000Z
+production_owner_activation_authorized = false
+formal_v5_arm_authorized = false
+a0_authorized = false
+o00_authorized = false
+```
+
+第一次 local host admission 唯一 first-red 为 Windows Time service 停止：
+
+```text
+LOCAL_PREFLIGHT_WINDOWS_TIME_SERVICE_RUNNING_REQUIRED
+LOCAL_PREFLIGHT_TIME_SOURCE_REQUIRED
+LOCAL_PREFLIGHT_TIME_STATUS_REQUIRED
+```
+
+只修主机时间服务，不改仓库、不改 NTP authority；启动 W32Time 后：
+
+```text
+source = time.windows.com,0x9
+status readable = true
+local host machine admission = PASS
+```
+
+H2B physical proof：
+
+```text
+status = PASS
+stage = PRODUCTION_HOST_SECRET_BINDING_PROVEN_PRE_OWNER_CUTOVER_READY
+exact_two_runtime_service_identities_bound = true
+runtime_secret_binding_count = 7
+evidence_database_connectivity_proven = true
+twin_database_connectivity_proven = true
+exact_one_privilege_membership_each_proven_by_current_credentials = true
+cross_plane_privilege_forbidden_proven = true
+r2_bucket = geox-mcft-cap09-evidence-runtime-v1
+r2_formal_bucket_reused = false
+PUT/HEAD/DELETE/post-delete HEAD = 200/200/204/404
+compose_render_only_pass = true
+production_container_count_before/after = 0/0
+pre_owner_cutover_ready = true
+```
+
+### B3. H3 — current-main production owner cutover
+
+repo-native cutover result：
+
+```text
+status = PASS
+deployment_subject_sha = 2ce0c90ef30b3c04ed112639c87926ac19be4e03
+host_id = fae5f756-ef25-40d5-9777-5b2c3d4837a1
+activation_fence_time = 2026-09-18T17:25:56.774Z
+formal_a0_planning_time = 2026-09-18T19:00:00.000Z
+runtime_processes_started = true
+evidence_owner_activation_observed = true
+twin_owner_activation_observed = true
+twin_mode = PRE_FORMAL_OWNER_STANDBY
+formal_v5_arm = false
+a0_execution = false
+o00_started = false
+mcft_cap09_completed = false
+```
+
+两个 live containers：
+
+```text
+Evidence container = 4a4b78d40a09
+Twin container     = e17a50773bb3
+image tag          = geox-mcft-cap09-runtime:2ce0c90ef30b3c04ed112639c87926ac19be4e03
+restart_count      = 0 / 0
+```
+
+immutable local image：
+
+```text
+sha256:4443a7a02570efd20cfd5ae6ad40c2bf924144bd1b6468796a6521563e880714
+```
+
+### B4. H4 — exact-one live fenced owners + legitimate current-main GFS >300s
+
+repo-native live owner verifier：
+
+```text
+status = PASS
+adjudication =
+EXACT_ONE_EFFECTIVE_OWNER_PER_RUNTIME_ROLE_WITH_CONTAINER_IMAGE_HOST_AND_RENEWAL_PROVEN
+```
+
+Evidence T1→T2：
+
+```text
+same effective owner = true
+same container       = true
+same image           = true
+heartbeat advanced   = true
+expiry advanced      = true
+health               = HEALTHY
+```
+
+Twin T1→T2：
+
+```text
+same effective owner = true
+same container       = true
+same image           = true
+heartbeat advanced   = true
+expiry advanced      = true
+health               = OWNER_LEASE_HEALTHY
+mode                 = PRE_FORMAL_OWNER_STANDBY
+```
+
+current-main GFS durable state：
+
+```text
+target = 2026-09-18T19:00:00Z
+attempt_count = 1
+last_attempt_started = 2026-09-18T17:29:51.917Z
+target_class = CURRENT_RUNTIME_WARM_START_A0_TARGET
+writer owner/fence = current live Evidence owner/fence
+```
+
+在 read-only 观察时：
+
+```text
+Evidence structured health
+= HEALTHY / ATTEMPT_IN_PROGRESS
+
+same attempt age
+= 527s
+
+H4_GFS_OBSERVATION
+= LEGAL_TARGET_WITH_RUNTIME_ATTEMPT_IN_PROGRESS
+```
+
+没有强制 provider attempt，没有 retry reset，没有制造 attempt #4。
+
+该证明应精确表述为：合法 current-main GFS canonical attempt/cycle 在 live Evidence owner 下持续 in-flight 超过 300 秒。不要扩大成“单个 HTTP 请求持续 >300 秒”的未经单独建立的事实。
+
+### B5. H5 — Formal-v5 post-graduation arm readiness
+
+exact-main GitHub zero-state workflow：
+
+```text
+run_id = 35370329903
+job = formal-v5-post-graduation-readiness
+conclusion = success
+```
+
+zero-state artifact：
+
+```text
+artifact_id = 10558076380
+name = mcft-cap09-formal-v5-post-graduation-zero-state-2ce0c90ef30b3c04ed112639c87926ac19be4e03
+digest = sha256:16d1d864d21fd0afe8532585346a6ad1fe3c6922bb719c423e87ac76228bc2ef
+expired = false
+```
+
+artifact 内容：
+
+```text
+formal_database_name = geox_mcft_cap09_s6_formal_t4r1_24h_v5
+required_role = FRESH_FORMAL_STORE_ONLY
+required_pre_arm_state = ZERO_STATE_PRE_ARM
+transaction_read_only = true
+public_base_table_count = 0
+public_routine_count = 0
+formal_database_mutation = false
+formal_v5_arm = false
+formal_v5_epoch_selected = false
+a0_bootstrap = false
+o00_started = false
+```
+
+local repo-native H5 verifier 又重新执行 live owner proof，并最终输出：
+
+```text
+status = PASS
+deployment_subject_sha = 2ce0c90ef30b3c04ed112639c87926ac19be4e03
+zero_state_proof_subject_sha = 2ce0c90ef30b3c04ed112639c87926ac19be4e03
+public_base_table_count = 0
+public_routine_count = 0
+exact_one_live_fenced_owner_per_runtime_role_reverified = true
+formal_v5_arm_ready = true
+separate_explicit_operator_authorization_still_required = true
+formal_v5_arm = false
+formal_v5_epoch_selected = false
+formal_database_mutation = false
+a0_bootstrap = false
+o00_started = false
+mcft_cap09_completed = false
+```
+
+## C. 当前下一步 — operator 已显式授权开始 Formal-v5
+
+handoff 更新之后，执行顺序必须是：
+
+```text
+re-fetch protected main
+-> require exact main = 2ce0c90e...
+-> require clean worktree
+-> require both production containers still exact-main/running
+-> require live Evidence/Twin owner re-verification
+-> require current-crop authority still covers newly selected Formal-v5 A0
+-> require Formal-v5 zero-state still true
+-> use repo-native Formal-v5 arm path only
+-> capture exact first effect / first red
+-> do NOT skip directly to O00
+```
+
+如果 protected main、crop authority、live owner、zero-state 任一项漂移，必须 fail closed 并重新裁决；不得沿用本节历史 PASS 绕过执行时检查。
+
+特别禁止：
+
+```text
+manual DB schema/bootstrap mutation
+manual lease edits
+manual GFS retry reset
+manual epoch invention
+reuse failed Formal-v4 store
+skip repo-native arm path
+declare MCFT-CAP-09 complete
+```
+
+Formal-v5 arm 之后仍必须按 taskbook/Amendment-19 的正式执行链继续 A0 -> O00-O23；仅 arm 本身不构成 Stage 1B closure。
+
+---
+
 # 2026-09-18 接手更新 — #3599 GFS EXHAUSTED-TARGET PLANNER CLOSURE / FINAL PRE-FORMAL-V5 ARM PATH
 
 > 用途：conversation continuation only。
