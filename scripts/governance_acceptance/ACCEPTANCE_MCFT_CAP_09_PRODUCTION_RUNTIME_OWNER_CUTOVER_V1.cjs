@@ -167,6 +167,7 @@ assert.ok(runner.includes(exactSubjectAttestation),"CUTOVER_EXACT_SUBJECT_IMAGE_
 assert.ok(runner.indexOf(serializedSharedImageBuild)<runner.indexOf(exactSubjectAttestation),"CUTOVER_ATTESTATION_MUST_FOLLOW_BUILD");
 assert.ok(runner.indexOf(exactSubjectAttestation)<runner.indexOf(dualServiceNoBuildStart),"CUTOVER_ATTESTATION_MUST_PRECEDE_RUNTIME_START");
 assert.ok(runner.includes("GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_PATH:artifactAttestationPath"),"CUTOVER_ARTIFACT_ATTESTATION_PATH_BINDING_REQUIRED");
+assert.ok(runner.includes("GEOX_MCFT_CAP09_LOCAL_HOST_ID_PATH:HOST_ID_FILE"),"CUTOVER_LOCAL_HOST_ID_PATH_BINDING_REQUIRED");
 assert.ok(runner.includes("GEOX_MCFT_CAP09_RUNTIME_IMAGE_TAG:`geox-mcft-cap09-runtime:${head}`"),"CUTOVER_RUNTIME_IMAGE_TAG_BINDING_REQUIRED");
 const cutoverEnvSection=section(
   runner,
