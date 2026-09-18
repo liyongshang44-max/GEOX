@@ -29,7 +29,7 @@ function read(rel){return JSON.parse(fs.readFileSync(path.join(ROOT,rel),"utf8")
 function digestFile(file){return "sha256:"+crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");}
 function digestRel(rel){return digestFile(path.join(ROOT,rel));}
 function git(...args){return cp.execFileSync("git",args,{cwd:ROOT,encoding:"utf8",stdio:["ignore","pipe","pipe"]}).trim();}
-function exec(command,args,options={}){return cp.execFileSync(command,args,{cwd:ROOT,encoding:"utf8",stdio:["ignore","pipe","pipe"],env:options.env??process.env});}
+function exec(command,args,options={}){return cp.execFileSync(command,args,{cwd:ROOT,encoding:"utf8",stdio:["ignore","pipe","pipe"],env:options.env??process.env,timeout:options.timeoutMs});}
 function requiredEnv(name){const v=String(process.env[name]??"").trim();if(!v)fail("CUTOVER_ENV_REQUIRED",name);return v;}
 function exactIso(v,code){const ms=Date.parse(v);if(!Number.isFinite(ms)||new Date(ms).toISOString()!==v)fail(code);return v;}
 function ceilHour(ms){return Math.ceil(ms/HOUR)*HOUR;}
@@ -232,7 +232,8 @@ try{
     let lastError="";
     while(Date.now()<deadline){
       try{
-        exec(process.execPath,[VERIFY_REL],{env});
+        const remainingMs=Math.max(1,deadline-Date.now());
+        exec(process.execPath,[VERIFY_REL],{env,timeoutMs:remainingMs});
         lastError="";
         break;
       }catch(error){
