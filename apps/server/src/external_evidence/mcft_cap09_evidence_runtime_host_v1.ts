@@ -8,6 +8,8 @@ import type {
   EvidenceRuntimeHostAttemptResultV1,
 } from "./mcft_cap09_evidence_runtime_host_attempt_v1.js";
 import type {
+  EvidenceProducerLeaseClaimV1,
+  EvidenceProducerLeasePortV1,
   EvidenceRuntimeScopeV1,
 } from "./mcft_cap09_evidence_runtime_persistence_v1.js";
 
@@ -123,6 +125,7 @@ export class EvidenceRuntimeHostV1 {
   readonly host_id = MCFT_CAP09_EVIDENCE_RUNTIME_HOST_ID_V1;
   constructor(private readonly deps: {
     planner: EvidenceRuntimeHostPlannerV1;
+    lease: EvidenceProducerLeasePortV1;
     wait: EvidenceRuntimeHostWaitPortV1;
     health: EvidenceRuntimeHostHealthPortV1;
     stop: EvidenceRuntimeHostStopPortV1;
@@ -173,6 +176,14 @@ export class EvidenceRuntimeHostV1 {
     let retryableFailures = 0;
     let consecutiveFailures = 0;
     let previousResult: EvidenceRuntimeHostAttemptResultV1 | null = null;
+    let ownerClaim: EvidenceProducerLeaseClaimV1 | null = null;
+
+    const releaseOwnerLeaseV1 = async (): Promise<void> => {
+      if (!ownerClaim) return;
+      const claim = ownerClaim;
+      ownerClaim = null;
+      await this.deps.lease.releaseLease({ claim });
+    };
 
     await this.healthV1({
       status: "STARTING",
@@ -191,6 +202,7 @@ export class EvidenceRuntimeHostV1 {
           consecutive_failure_count: consecutiveFailures,
           detail: "STOP_REQUESTED",
         });
+        await releaseOwnerLeaseV1();
         return this.resultV1({
           reason: "STOP_REQUESTED",
           cycle_attempt: cycleAttempt,
@@ -200,6 +212,36 @@ export class EvidenceRuntimeHostV1 {
           retryable_failure_count: retryableFailures,
           previous_result: previousResult,
         });
+      }
+
+      if (ownerClaim) {
+        ownerClaim = await this.deps.lease.renewLease({
+          claim: ownerClaim,
+          lease_duration_seconds: input.lease_duration_seconds,
+        });
+      } else {
+        ownerClaim = await this.deps.lease.acquireLease({
+          scope: input.scope,
+          lease_owner: input.lease_owner,
+          lease_duration_seconds: input.lease_duration_seconds,
+        });
+        if (!ownerClaim) {
+          standbyCycles += 1;
+          consecutiveFailures = 0;
+          await this.healthV1({
+            status: "STANDBY",
+            cycle_attempt: cycleAttempt,
+            successful_cycle_count: successfulCycles,
+            consecutive_failure_count: consecutiveFailures,
+            detail: "LEASE_HELD_BY_OTHER_OWNER",
+          });
+          await this.deps.wait.waitAfterAttempt({
+            reason: "LEASE_STANDBY",
+            cycle_attempt: cycleAttempt,
+            consecutive_failure_count: consecutiveFailures,
+          });
+          continue;
+        }
       }
 
       const plan = await this.deps.planner.nextAttemptPlan({
@@ -216,6 +258,7 @@ export class EvidenceRuntimeHostV1 {
           consecutive_failure_count: consecutiveFailures,
           detail: "PLANNER_EXHAUSTED",
         });
+        await releaseOwnerLeaseV1();
         return this.resultV1({
           reason: "PLANNER_EXHAUSTED",
           cycle_attempt: cycleAttempt,
@@ -261,6 +304,7 @@ export class EvidenceRuntimeHostV1 {
         });
         validateAttemptResultV1(plan, result);
         previousResult = result;
+        ownerClaim = result.lease_claim;
         if (result.status === "LEASE_HELD_BY_OTHER_OWNER") {
           standbyCycles += 1;
           consecutiveFailures = 0;
