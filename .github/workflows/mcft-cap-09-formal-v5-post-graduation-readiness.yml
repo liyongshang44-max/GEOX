@@ -116,7 +116,15 @@ jobs:
           const successorFormal=byId(successor,'FORMAL_V5_ACTIVATION');
           if(successorFormal.status!=='NOT_APPLICABLE'||successorFormal.reason_code!=='STAGE_NOT_APPLICABLE')throw new Error(`FORMAL_V5_SUCCESSOR_STAGE_MUST_FAIL_CLOSED:${JSON.stringify(successorFormal)}`);
           const owner=byId(post,'EXACT_ONE_PRODUCTION_OWNER');
-          if(owner.status!=='REQUIRED')throw new Error(`FORMAL_V5_POST_GRADUATION_OWNER_REQUIRED:${JSON.stringify(owner)}`);
+          const ownerChanged=(owner.changed_dependencies||[]).length>0;
+          if(owner.status==='REQUALIFY'){
+            if(owner.reason_code!=='GOVERNED_DEPENDENCY_CHANGED'||!ownerChanged)throw new Error(`FORMAL_V5_POST_GRADUATION_OWNER_REQUALIFY_INVALID:${JSON.stringify(owner)}`);
+          }else if(owner.status==='REQUIRED'){
+            if(owner.reason_code!=='APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE'||ownerChanged)throw new Error(`FORMAL_V5_POST_GRADUATION_OWNER_REQUIRED_INVALID:${JSON.stringify(owner)}`);
+          }else{
+            throw new Error(`FORMAL_V5_POST_GRADUATION_OWNER_MUST_REMAIN_PENDING:${JSON.stringify(owner)}`);
+          }
+          if(owner.execution_workflow!=='.github/workflows/mcft-cap-09-production-owner-graduation-gate.yml')throw new Error(`FORMAL_V5_POST_GRADUATION_OWNER_WORKFLOW_MISMATCH:${owner.execution_workflow}`);
           const formal=byId(post,'FORMAL_V5_ACTIVATION');
           if(formal.status!=='REQUALIFY'||formal.reason_code!=='GOVERNED_DEPENDENCY_CHANGED')throw new Error(`FORMAL_V5_POST_GRADUATION_ACTIVATION_MUST_REQUALIFY:${JSON.stringify(formal)}`);
           if(formal.execution_workflow!==workflow)throw new Error(`FORMAL_V5_POST_GRADUATION_WORKFLOW_MISMATCH:${formal.execution_workflow}`);
