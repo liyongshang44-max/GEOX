@@ -2143,6 +2143,46 @@
         "artifact_absence_reason": "RUN_LEVEL_OWNER_LEASE_KEEPALIVE_REQUALIFICATION_EVIDENCE_ONLY",
         "immutable": true,
         "immutable_binding_sha256": "c80f4a00a5767c9a414b5821e9d2de46c69a9ebf5ce54cdbb7449340e2498e3f"
+      },
+      {
+        "evidence_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_D0713268_INFLIGHT_OWNER_KEEPALIVE_V1",
+        "check_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "inflight-owner-lease-keepalive-requalification",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "d07132684bed574e304ea7099209285b4fe0efc2",
+        "workflow_name": "mcft-cap-09-phase3-evidence-runtime-persistence",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+        "run_id": 35352230779,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "d07132684bed574e304ea7099209285b4fe0efc2",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:3fefb206eeec1a12f47dc00f8f7c05a472b42831c8d5a4d8e60d78c3450197ae",
+        "artifact_absence_reason": "RUN_LEVEL_INFLIGHT_OWNER_LEASE_KEEPALIVE_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "8cbb003dd87411909d765576a2c28c973792b99d2db862d1b6749357bebf6efb"
+      },
+      {
+        "evidence_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_D0713268_INFLIGHT_OWNER_KEEPALIVE_V1",
+        "check_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
+        "evidence_class": "IMMUTABLE_WORKFLOW_RUN",
+        "generation": "inflight-owner-lease-keepalive-requalification",
+        "stage": "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "subject_sha": "d07132684bed574e304ea7099209285b4fe0efc2",
+        "workflow_name": "mcft-cap-09-phase5-two-service-accelerated-24t",
+        "workflow_path": ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+        "run_id": 35352230742,
+        "run_conclusion": "success",
+        "artifact_id": null,
+        "artifact_digest": null,
+        "dependency_subject_sha": "d07132684bed574e304ea7099209285b4fe0efc2",
+        "dependency_digest_strategy": "GIT_OR_WORKTREE_FILE_SHA256_CATALOG_V1",
+        "dependency_digest": "sha256:b41e59b68847d083747e0d43326a1a4cc15f9d9a4f90a74621773e45fe3d4052",
+        "artifact_absence_reason": "RUN_LEVEL_INFLIGHT_OWNER_LEASE_KEEPALIVE_REQUALIFICATION_EVIDENCE_ONLY",
+        "immutable": true,
+        "immutable_binding_sha256": "8f04a2a5beaab567eb451c10c3c43922ca4121e0dc5fae4c229f5f0953788e39"
       }
     ],
     "durable_anchors": {
@@ -3436,6 +3476,34 @@
             "created_at": "2026-09-18T08:19:31Z",
             "updated_at": "2026-09-18T08:22:10Z"
           }
+        },
+        {
+          "evidence_id": "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_D0713268_INFLIGHT_OWNER_KEEPALIVE_V1",
+          "run_id": 35352230779,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 638,
+            "workflow_path": ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+            "workflow_name": "mcft-cap-09-phase3-evidence-runtime-persistence",
+            "head_sha": "d07132684bed574e304ea7099209285b4fe0efc2",
+            "base_sha": "7a9482104e0bbced906f48df220657f39da23b51",
+            "created_at": "2026-09-18T13:46:54Z",
+            "updated_at": "2026-09-18T13:48:26Z"
+          }
+        },
+        {
+          "evidence_id": "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_D0713268_INFLIGHT_OWNER_KEEPALIVE_V1",
+          "run_id": 35352230742,
+          "run_snapshot": {
+            "event": "pull_request",
+            "run_number": 470,
+            "workflow_path": ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
+            "workflow_name": "mcft-cap-09-phase5-two-service-accelerated-24t",
+            "head_sha": "d07132684bed574e304ea7099209285b4fe0efc2",
+            "base_sha": "7a9482104e0bbced906f48df220657f39da23b51",
+            "created_at": "2026-09-18T13:46:54Z",
+            "updated_at": "2026-09-18T13:49:10Z"
+          }
         }
       ],
       "rules": {
@@ -3478,7 +3546,8 @@
           "b689938f6161d01dec06a1ce4ce6f24420c4b3a0",
           "cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4",
           "1444ad55e92b6c519fc61fde7119013be9881721",
-          "f7d28aef3d2fe8e65ce0afff64e6f2673c2eb39b"
+          "f7d28aef3d2fe8e65ce0afff64e6f2673c2eb39b",
+          "7a9482104e0bbced906f48df220657f39da23b51"
         ],
         "dependency_digest_must_match_current": true,
         "anchor_is_not_production_authority": true
