@@ -29,7 +29,7 @@ function read(rel){return JSON.parse(fs.readFileSync(path.join(ROOT,rel),"utf8")
 function digestFile(file){return "sha256:"+crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");}
 function digestRel(rel){return digestFile(path.join(ROOT,rel));}
 function git(...args){return cp.execFileSync("git",args,{cwd:ROOT,encoding:"utf8",stdio:["ignore","pipe","pipe"]}).trim();}
-function exec(command,args,options={}){return cp.execFileSync(command,args,{cwd:ROOT,encoding:"utf8",stdio:["ignore","pipe","pipe"],env:options.env??process.env});}
+function exec(command,args,options={}){return cp.execFileSync(command,args,{cwd:ROOT,encoding:"utf8",stdio:["ignore","pipe","pipe"],env:options.env??process.env,timeout:options.timeoutMs});}
 function requiredEnv(name){const v=String(process.env[name]??"").trim();if(!v)fail("CUTOVER_ENV_REQUIRED",name);return v;}
 function exactIso(v,code){const ms=Date.parse(v);if(!Number.isFinite(ms)||new Date(ms).toISOString()!==v)fail(code);return v;}
 function ceilHour(ms){return Math.ceil(ms/HOUR)*HOUR;}
@@ -211,6 +211,7 @@ try{
     GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH:runtimeAuthorityPath,
     GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH:ownerAuthorityPath,
     GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_PATH:artifactAttestationPath,
+    GEOX_MCFT_CAP09_LOCAL_HOST_ID_PATH:HOST_ID_FILE,
     GEOX_MCFT_CAP09_RUNTIME_IMAGE_TAG:`geox-mcft-cap09-runtime:${head}`,
     GEOX_MCFT_CAP09_PRODUCTION_CURRENT_CROP_AUTHORITY_PATH:selectedCurrentCrop.resolved,
     GEOX_MCFT_CAP09_PRODUCTION_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_PATH:path.join(ROOT,STAGE_CERT_REL),
@@ -231,7 +232,8 @@ try{
     let lastError="";
     while(Date.now()<deadline){
       try{
-        exec(process.execPath,[VERIFY_REL],{env});
+        const remainingMs=Math.max(1,deadline-Date.now());
+        exec(process.execPath,[VERIFY_REL],{env,timeoutMs:remainingMs});
         lastError="";
         break;
       }catch(error){

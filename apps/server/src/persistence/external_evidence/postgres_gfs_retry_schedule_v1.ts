@@ -85,6 +85,8 @@ export class PostgresGfsRetryScheduleV1 implements GfsRetrySchedulePortV1{
     requested_at:string;
     due_window_start:string;
     due_window_end_exclusive:string;
+    authority_target_floor_logical_time:string;
+    canonical_durable_paired_target_logical_times:readonly string[];
   }):Promise<GfsRetryAttemptClaimResultV1>{
     assertScopeV1(input.claim.scope,this.configuredScope);
     if(input.claim.lease_contract_id!==MCFT_CAP09_EVIDENCE_PRODUCER_LEASE_CONTRACT_ID_V1)throw new Error("GFS_RETRY_LEASE_CONTRACT_INVALID");
@@ -92,6 +94,11 @@ export class PostgresGfsRetryScheduleV1 implements GfsRetrySchedulePortV1{
     const requested=isoV1(input.requested_at,"GFS_RETRY_REQUESTED_AT_INVALID");
     const windowStart=isoV1(input.due_window_start,"GFS_RETRY_DUE_WINDOW_START_INVALID");
     const windowEnd=isoV1(input.due_window_end_exclusive,"GFS_RETRY_DUE_WINDOW_END_INVALID");
+    const targetFloor=hourV1(input.authority_target_floor_logical_time,"GFS_RETRY_AUTHORITY_TARGET_FLOOR_INVALID");
+    if(Date.parse(target)<Date.parse(targetFloor))throw new Error("GFS_RETRY_TARGET_BEFORE_AUTHORITY_FLOOR");
+    const canonicalTargets=input.canonical_durable_paired_target_logical_times.map(value=>hourV1(value,"GFS_RETRY_CANONICAL_DURABLE_TARGET_INVALID"));
+    if(new Set(canonicalTargets).size!==canonicalTargets.length)throw new Error("GFS_RETRY_CANONICAL_DURABLE_TARGET_DUPLICATE");
+    const canonicalDurable=new Set(canonicalTargets);
     if(Date.parse(windowStart)>=Date.parse(windowEnd))throw new Error("GFS_RETRY_DUE_WINDOW_ORDER_INVALID");
     if(Date.parse(requested)<Date.parse(windowStart))throw new Error("GFS_RETRY_REQUEST_BEFORE_DUE_WINDOW");
 
@@ -113,7 +120,12 @@ export class PostgresGfsRetryScheduleV1 implements GfsRetrySchedulePortV1{
         const currentMs=Date.parse(current.target_logical_time),targetMs=Date.parse(target);
         if(targetMs<currentMs)throw new Error("GFS_RETRY_TARGET_REWIND_FORBIDDEN");
         if(targetMs>currentMs){
-          if(target!==addHoursV1(current.target_logical_time,1))throw new Error("GFS_RETRY_TARGET_SKIP_FORBIDDEN");
+          const firstRequired=Date.parse(current.target_logical_time)<Date.parse(targetFloor)
+            ? targetFloor
+            : addHoursV1(current.target_logical_time,1);
+          for(let expected=firstRequired;Date.parse(expected)<targetMs;expected=addHoursV1(expected,1)){
+            if(!canonicalDurable.has(expected))throw new Error("GFS_RETRY_TARGET_SKIP_FORBIDDEN");
+          }
         }else{
           if(current.attempt_count>=MCFT_CAP09_GFS_MAX_ATTEMPTS_PER_TARGET_WINDOW_V1){
             await client.query("COMMIT");

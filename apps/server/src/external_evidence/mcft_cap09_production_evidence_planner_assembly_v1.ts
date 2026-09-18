@@ -128,6 +128,7 @@ export function assembleProductionEvidencePlannerV1(input: {
     gfs_retry_schedule: gfsRetrySchedule,
     gfs_target_pair_history: gfsTargetPairHistory,
     activation_fence_time: input.runtime_start_authority.activation_fence_time,
+    formal_a0_logical_time: input.runtime_start_authority.formal_a0_logical_time,
   });
 
   const sourcePlanExecutor = new ProductionEvidenceSourcePlanExecutorV1({

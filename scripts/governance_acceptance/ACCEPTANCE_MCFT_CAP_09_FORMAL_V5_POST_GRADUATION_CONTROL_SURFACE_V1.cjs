@@ -59,6 +59,12 @@ function main() {
   assert.match(workflow, /pg_catalog\.pg_proc/);
   assert.match(workflow, /FORMAL_V5_PUBLIC_BASE_TABLE_COUNT_NONZERO/);
   assert.match(workflow, /FORMAL_V5_PUBLIC_ROUTINE_COUNT_NONZERO/);
+  assert.match(workflow, /owner\.status==='REQUALIFY'/, "FORMAL_V5_OWNER_REQUALIFY_PENDING_STATE_REQUIRED");
+  assert.match(workflow, /owner\.reason_code!=='GOVERNED_DEPENDENCY_CHANGED'/, "FORMAL_V5_OWNER_REQUALIFY_REASON_REQUIRED");
+  assert.match(workflow, /owner\.status==='REQUIRED'/, "FORMAL_V5_OWNER_REQUIRED_PENDING_STATE_REQUIRED");
+  assert.match(workflow, /owner\.reason_code!=='APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE'/, "FORMAL_V5_OWNER_REQUIRED_REASON_REQUIRED");
+  assert.match(workflow, /FORMAL_V5_POST_GRADUATION_OWNER_MUST_REMAIN_PENDING/, "FORMAL_V5_OWNER_OTHER_STATE_FAIL_CLOSED_REQUIRED");
+  assert.match(workflow, /mcft-cap-09-production-owner-graduation-gate\.yml/, "FORMAL_V5_OWNER_WORKFLOW_BINDING_REQUIRED");
   assert.doesNotMatch(workflow, /\bpsql\b[^\n]*(?:-c|--command)[^\n]*\b(?:CREATE|ALTER|DROP|INSERT|UPDATE|DELETE|TRUNCATE|GRANT|REVOKE)\b/i);
 
   const localVerifier = fs.readFileSync(path.join(ROOT, localVerifierRel), "utf8");
