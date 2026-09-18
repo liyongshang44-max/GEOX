@@ -47,7 +47,7 @@ export class ProductionEvidenceHostPlannerV1 implements EvidenceRuntimeHostPlann
     planning_clock:ProductionEvidencePlanningClockV1;
     progress_reader:Pick<EvidenceSourceSpecificProgressReaderV1,"readProgress">;
     source_poll_schedule:EvidenceSourcePollScheduleReadPortV1;
-    gfs_retry_schedule:GfsRetrySchedulePortV1;
+    gfs_retry_schedule:Pick<GfsRetrySchedulePortV1,"readGfsRetrySchedule">;
     gfs_target_pair_history:GfsCanonicalTargetPairHistoryReadPortV1;
     source_plan_executor:Pick<ProductionEvidenceSourcePlanExecutorV1,"buildAttempt">;
   }){
