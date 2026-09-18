@@ -162,6 +162,13 @@ const serializedSharedImageBuild='exec("docker",["compose","-f",COMPOSE_REL,"bui
 const dualServiceNoBuildStart='exec("docker",["compose","-f",COMPOSE_REL,"up","-d","--no-build","geox-mcft-cap09-evidence-runtime-v1","geox-mcft-cap09-twin-runtime-v1"],{env});';
 assert.ok(runner.includes(serializedSharedImageBuild),"CUTOVER_SHARED_RUNTIME_IMAGE_SINGLE_BUILD_REQUIRED");
 assert.ok(runner.includes(dualServiceNoBuildStart),"CUTOVER_DUAL_SERVICE_NO_BUILD_START_REQUIRED");
+const cutoverEnvSection=section(
+  runner,
+  "const env={...process.env,",
+  "fs.mkdirSync(path.join(env.GEOX_MCFT_CAP09_DURABLE_LOG_ROOT"
+);
+assert.ok(cutoverEnvSection.includes('GEOX_MCFT_CAP09_PREFORMAL_MODE:"OWNER_CUTOVER"'),"CUTOVER_PREFORMAL_MODE_EXPLICIT_PIN_REQUIRED");
+assert.equal((cutoverEnvSection.match(/GEOX_MCFT_CAP09_PREFORMAL_MODE/g)||[]).length,1,"CUTOVER_PREFORMAL_MODE_SINGLE_PIN_REQUIRED");
 assert.equal(runner.includes('"--build"'),false,"CUTOVER_PARALLEL_SHARED_IMAGE_BUILD_FORBIDDEN");
 assert.ok(runner.includes("current_crop_authority_ref:selectedCurrentCrop.ref"));
 assert.ok(runner.includes("GEOX_MCFT_CAP09_PRODUCTION_CURRENT_CROP_AUTHORITY_PATH:selectedCurrentCrop.resolved"));
@@ -184,6 +191,7 @@ console.log(JSON.stringify({
   twin_preformal_scheduler_effect:false,
   shared_runtime_image_build_serialized:true,
   dual_service_start_uses_no_build:true,
+  owner_cutover_mode_explicitly_pinned:true,
   dual_key_cutover:true,
   registry_backed_current_crop_selection:true,
   github_actions_production_execution:false,
