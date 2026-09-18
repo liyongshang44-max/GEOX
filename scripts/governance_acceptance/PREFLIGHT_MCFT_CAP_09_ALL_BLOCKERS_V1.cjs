@@ -89,6 +89,8 @@ const CURRENT_PR_PHASE3_REQUALIFICATION_C12_V1 = {
   check_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
   subject_sha: "c12e6f666e39d8a436f8d7880e8903e3a1bc6bfd",
   base_sha: "1137e327df07011ec54186feb88d7a544301fe70",
+  final_head_sha: "24cd4b592d671974f5b3a1449a6194bfca0806cb",
+  merge_commit_sha: "2ce0c90ef30b3c04ed112639c87926ac19be4e03",
   run_id: 35365650837,
   run_conclusion: "success",
   workflow_name: "mcft-cap-09-phase3-evidence-runtime-persistence",
@@ -101,6 +103,8 @@ const CURRENT_PR_PHASE5_REQUALIFICATION_C12_V1 = {
   check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
   subject_sha: "c12e6f666e39d8a436f8d7880e8903e3a1bc6bfd",
   base_sha: "1137e327df07011ec54186feb88d7a544301fe70",
+  final_head_sha: "24cd4b592d671974f5b3a1449a6194bfca0806cb",
+  merge_commit_sha: "2ce0c90ef30b3c04ed112639c87926ac19be4e03",
   run_id: 35365650950,
   run_conclusion: "success",
   workflow_name: "mcft-cap-09-phase5-production-equivalent-containers",
@@ -616,15 +620,20 @@ function main() {
       } else if (
         decision.check_id === CURRENT_PR_PHASE3_REQUALIFICATION_C12_V1.check_id &&
         successorChainAdmissionActive &&
-        args.base === CURRENT_PR_PHASE3_REQUALIFICATION_C12_V1.base_sha &&
+        (
+          args.base === CURRENT_PR_PHASE3_REQUALIFICATION_C12_V1.base_sha ||
+          isAncestor(CURRENT_PR_PHASE3_REQUALIFICATION_C12_V1.merge_commit_sha, args.base || "")
+        ) &&
         isAncestor(CURRENT_PR_PHASE3_REQUALIFICATION_C12_V1.subject_sha, args.head || "")
       ) {
+        const successorBase = args.base !== CURRENT_PR_PHASE3_REQUALIFICATION_C12_V1.base_sha;
         const evidence = validateExactRunAnchor(
           decision,
           args.head || "",
           args.base || "",
           CURRENT_PR_PHASE3_REQUALIFICATION_C12_V1,
           "CURRENT_PR_PHASE3_C12",
+          { allowSuccessorBase: successorBase },
         );
         result = {
           ...common,
@@ -644,15 +653,20 @@ function main() {
       } else if (
         decision.check_id === CURRENT_PR_PHASE5_REQUALIFICATION_C12_V1.check_id &&
         successorChainAdmissionActive &&
-        args.base === CURRENT_PR_PHASE5_REQUALIFICATION_C12_V1.base_sha &&
+        (
+          args.base === CURRENT_PR_PHASE5_REQUALIFICATION_C12_V1.base_sha ||
+          isAncestor(CURRENT_PR_PHASE5_REQUALIFICATION_C12_V1.merge_commit_sha, args.base || "")
+        ) &&
         isAncestor(CURRENT_PR_PHASE5_REQUALIFICATION_C12_V1.subject_sha, args.head || "")
       ) {
+        const successorBase = args.base !== CURRENT_PR_PHASE5_REQUALIFICATION_C12_V1.base_sha;
         const evidence = validateExactRunAnchor(
           decision,
           args.head || "",
           args.base || "",
           CURRENT_PR_PHASE5_REQUALIFICATION_C12_V1,
           "CURRENT_PR_PHASE5_C12",
+          { allowSuccessorBase: successorBase },
         );
         result = {
           ...common,
