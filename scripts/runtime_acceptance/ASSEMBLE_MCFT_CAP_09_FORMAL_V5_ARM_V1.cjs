@@ -75,17 +75,6 @@ function evaluateSlot(targetMs,crop){
   const stage=stages.size===1?[...stages][0]:null;
   return {stage:stage&&allowed.has(stage)?stage:null,stages:[...stages].sort()};
 }
-function cropContextHash(stage,logicalTime){
-  return semhash({
-    authority_ref:CROP_AUTH,
-    authority_blob_sha:CROP_AUTH_BLOB,
-    derived_context_authority:"FORMAL_DERIVED_CROP_WATER_USE_STAGE_CONTEXT_V3",
-    crop_stage_code:stage,
-    derivation_authority_time:logicalTime,
-    observed_biological_stage_claimed:false,
-    field_calibration_status:"NOT_FIELD_CALIBRATED",
-  });
-}
 function selectEpoch({armMs,crop,currentCrop}){
   const horizon=Date.parse(currentCrop.lifecycle?.horizon_end_utc);
   req(Number.isFinite(horizon),"FORMAL_V5_ARM_LIFECYCLE_HORIZON_REQUIRED");
@@ -104,7 +93,7 @@ function selectEpoch({armMs,crop,currentCrop}){
         ok=false;break;
       }
       const logical=iso(t);
-      slots.push({slot_id:"O"+String(i).padStart(2,"0"),logical_time:logical,crop_stage_code:e.stage,crop_stage_context_hash:cropContextHash(e.stage,logical)});
+      slots.push({slot_id:"O"+String(i).padStart(2,"0"),logical_time:logical,crop_stage_code:e.stage,qualification_only:true});
     }
     if(ok){
       return {
@@ -112,7 +101,7 @@ function selectEpoch({armMs,crop,currentCrop}){
         o23:iso(candidate+23*HOUR),
         a0:iso(candidate-HOUR),
         readiness_deadline:iso(candidate-12*HOUR),
-        slot_contexts:slots,
+        slot_stage_viability:slots,
         current_water_use_stage:currentStage,
         first_ineligible_candidate:firstDiagnostic,
       };
@@ -156,8 +145,8 @@ function selftest(){
   const crop=readJson(CROP_AUTH);
   const current={lifecycle:{horizon_end_utc:"2026-11-24T03:59:59.999Z"},crop_water_use_stage:"LATE"};
   const selected=selectEpoch({armMs:Date.parse("2026-09-19T00:00:00.000Z"),crop,currentCrop:current});
-  req(selected.slot_contexts.length===24,"FORMAL_V5_ARM_SELFTEST_24_SLOTS_REQUIRED");
-  req(selected.slot_contexts.every(x=>x.crop_stage_code==="LATE"),"FORMAL_V5_ARM_SELFTEST_LATE_WINDOW_REQUIRED");
+  req(selected.slot_stage_viability.length===24,"FORMAL_V5_ARM_SELFTEST_24_SLOTS_REQUIRED");
+  req(selected.slot_stage_viability.every(x=>x.crop_stage_code==="LATE"),"FORMAL_V5_ARM_SELFTEST_LATE_WINDOW_REQUIRED");
   const budget=readJson(BUDGET_AUTH);
   req(budget.qualified_budget?.selected_budget_ms===2081804&&budget.fixed_35_minute_lead_authorized_for_v5===false,"FORMAL_V5_ARM_SELFTEST_TIMING_BUDGET_REQUIRED");
   process.stdout.write(JSON.stringify({schema_version:"geox_mcft_cap09_formal_v5_arm_selftest_v1",status:"PASS",selected_o00:selected.o00,selected_o23:selected.o23,slot_count:24,fixed_35_minute_lead_used:false,provider_request_count:0,formal_database_mutation:false,a0_bootstrap:false,o00_started:false},null,2)+"\n");
@@ -211,7 +200,10 @@ function main(){
     o00:epoch.o00,
     o23:epoch.o23,
     readiness_deadline:epoch.readiness_deadline,
-    slot_contexts:epoch.slot_contexts,
+    slot_stage_viability:epoch.slot_stage_viability,
+    formal_runtime_config_pins_frozen:false,
+    formal_stage_authority_pins_frozen:false,
+    h6_stage_successor_materialization_still_required:true,
     current_crop_authority_ref:current.row.authority_ref,
     current_crop_authority_sha256:current.row.authority_sha256,
     current_crop_stage_at_arm:current.authority.crop_water_use_stage,
