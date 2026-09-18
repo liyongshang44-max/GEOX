@@ -36,9 +36,9 @@ for(const [k,v] of Object.entries(c.non_effects)){
 const readiness=JSON.parse(fs.readFileSync(path.join(ROOT,READINESS),"utf8"));
 assert.equal(readiness.authorization_ceiling.formal_v5_arm_authorized,false);
 assert.equal(readiness.authorization_ceiling.formal_v5_epoch_selection_authorized,false);
-assert.equal(readiness.authorization_ceiling.formal_database_mutation_authorized,false);
-assert.equal(readiness.authorization_ceiling.a0_bootstrap_authorized,false);
-assert.equal(readiness.authorization_ceiling.o00_start_authorized,false);
+assert.equal(readiness.authorization_ceiling.formal_v5_database_mutation_authorized,false);
+assert.equal(readiness.authorization_ceiling.a0_authorized,false);
+assert.equal(readiness.authorization_ceiling.o00_authorized,false);
 
 const source=fs.readFileSync(path.join(ROOT,PREFLIGHT),"utf8");
 for(const marker of [
