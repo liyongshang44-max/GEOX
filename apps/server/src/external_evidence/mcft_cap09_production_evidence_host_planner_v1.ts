@@ -7,6 +7,7 @@ import type { EvidenceRuntimeHostPlannerV1 } from "./mcft_cap09_evidence_runtime
 import type { EvidenceRuntimeScopeV1 } from "./mcft_cap09_evidence_runtime_persistence_v1.js";
 import type { EvidenceSourceSpecificProgressReaderV1 } from "./mcft_cap09_evidence_source_progress_v1.js";
 import type { EvidenceSourcePollScheduleReadPortV1 } from "./mcft_cap09_evidence_source_poll_schedule_v1.js";
+import type { GfsRetrySchedulePortV1 } from "./mcft_cap09_gfs_retry_schedule_v1.js";
 import type { GfsCanonicalTargetPairHistoryReadPortV1 } from "./mcft_cap09_gfs_target_pair_history_v1.js";
 import {
   MCFT_CAP09_SEPARATE_PRODUCTION_RUNTIME_START_AUTHORITY_CLASS_V1,
@@ -46,6 +47,7 @@ export class ProductionEvidenceHostPlannerV1 implements EvidenceRuntimeHostPlann
     planning_clock:ProductionEvidencePlanningClockV1;
     progress_reader:Pick<EvidenceSourceSpecificProgressReaderV1,"readProgress">;
     source_poll_schedule:EvidenceSourcePollScheduleReadPortV1;
+    gfs_retry_schedule:GfsRetrySchedulePortV1;
     gfs_target_pair_history:GfsCanonicalTargetPairHistoryReadPortV1;
     source_plan_executor:Pick<ProductionEvidenceSourcePlanExecutorV1,"buildAttempt">;
   }){
@@ -63,10 +65,11 @@ export class ProductionEvidenceHostPlannerV1 implements EvidenceRuntimeHostPlann
 
   async nextAttemptPlan():ReturnType<EvidenceRuntimeHostPlannerV1["nextAttemptPlan"]>{
     const planningTime=isoV1(this.deps.planning_clock.now(),"PRODUCTION_EVIDENCE_HOST_PLANNER_CLOCK_INVALID");
-    const [progress,rawSchedule,soilSchedule,gfsTargetHistory]=await Promise.all([
+    const [progress,rawSchedule,soilSchedule,gfsRetrySchedule,gfsTargetHistory]=await Promise.all([
       this.deps.progress_reader.readProgress({scope:this.deps.scope}),
       this.deps.source_poll_schedule.readSourcePollSchedule({scope:this.deps.scope,source_family:"KBS_RAW_HOURLY"}),
       this.deps.source_poll_schedule.readSourcePollSchedule({scope:this.deps.scope,source_family:"KBS_SOIL"}),
+      this.deps.gfs_retry_schedule.readGfsRetrySchedule({scope:this.deps.scope}),
       this.deps.gfs_target_pair_history.readGfsTargetPairHistory({scope:this.deps.scope,from_target_logical_time:this.formalA0}),
     ]);
     const rawDue=evaluateProductionEvidenceSourceDueV1({source_family:"KBS_RAW_HOURLY",planning_time:planningTime,activation_fence_time:this.horizon.activation_fence_time,schedule:rawSchedule});
@@ -78,7 +81,11 @@ export class ProductionEvidenceHostPlannerV1 implements EvidenceRuntimeHostPlann
       durable_paired_targets:gfsTargetHistory.pairs.map(pair=>({paired_valid_from:pair.target_logical_time})),
     });
     if(gfs.status==="MISSED_WINDOW")throw new Error("PRODUCTION_EVIDENCE_HOST_PLANNER_GFS_MISSED_WINDOW:"+gfs.target_logical_time);
-    const gfsDue:ProductionEvidenceGfsDueStateV1=gfs.status==="DUE"
+    const gfsAttemptBudgetExhausted=gfs.status==="DUE"
+      && gfsRetrySchedule!==null
+      && gfsRetrySchedule.target_logical_time===gfs.target_logical_time
+      && gfsRetrySchedule.attempt_count>=gfs.max_attempts_per_target_window;
+    const gfsDue:ProductionEvidenceGfsDueStateV1=gfs.status==="DUE"&&!gfsAttemptBudgetExhausted
       ? {status:"DUE",authority_ref:gfs.authority_ref,evaluated_at:planningTime,requested_at:gfs.requested_at,target_logical_time:gfs.target_logical_time,due_window_start:gfs.due_window_start,due_window_end_exclusive:gfs.due_window_end_exclusive,max_attempts_per_target_window:gfs.max_attempts_per_target_window,retry_minimum_interval_seconds:gfs.retry_minimum_interval_seconds}
       : {status:"NOT_DUE",authority_ref:gfs.authority_ref,evaluated_at:planningTime};
 
