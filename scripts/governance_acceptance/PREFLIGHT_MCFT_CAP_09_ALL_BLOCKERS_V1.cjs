@@ -85,16 +85,16 @@ const SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1 = {
   dependency_digest: "sha256:a123e0f8bdce0bf1a0bafa8157b57a0c2713e70629677cb6b1f4c5c01119df68",
 };
 const CURRENT_PR_PHASE5_REQUALIFICATION_V1 = {
-  evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_FC6ADDADE_CURRENT_PR_V1",
+  evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_4B9AC4DA_OWNER_LEASE_KEEPALIVE_V1",
   check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
-  subject_sha: "fc6addade5e1e8a3ae4e2c6a27de670f2b7f0e2e",
-  base_sha: "e287b1b491d31a0b9be845719c3f65ea72c33744",
-  run_id: 35223711062,
+  subject_sha: "4b9ac4da51b81aacb4bcf64911202fec91c45470",
+  base_sha: "f7d28aef3d2fe8e65ce0afff64e6f2673c2eb39b",
+  run_id: 35323793632,
   run_conclusion: "success",
   workflow_name: "mcft-cap-09-phase5-two-service-accelerated-24t",
   workflow_path: ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
   event: "pull_request",
-  dependency_digest: "sha256:a123e0f8bdce0bf1a0bafa8157b57a0c2713e70629677cb6b1f4c5c01119df68",
+  dependency_digest: "sha256:345990ca3028eb920c144b3fe4c9f7c8364b328428c05b9bb860c1218890b6a0",
 };
 
 function parseArgs(argv) {

@@ -24,6 +24,7 @@ import {
 } from "./mcft_cap09_evidence_runtime_host_v1.js";
 import type {
   EvidenceProducerLeaseClaimV1,
+  EvidenceProducerLeasePortV1,
   EvidenceRuntimeScopeV1,
 } from "./mcft_cap09_evidence_runtime_persistence_v1.js";
 import {
@@ -83,7 +84,7 @@ export type EvidenceRuntimeHostPlannerFactoryInputV1 = {
   cycle_service: EvidenceRuntimeCycleServiceV1;
   work_item_factory: EvidenceRuntimeWorkItemFactoryV1;
   retention: S3CompatiblePrivateRawEvidenceRetentionAdapterV1;
-  lease_repository: PostgresEvidenceProducerLeaseV1;
+  lease_repository: EvidenceProducerLeasePortV1;
   visibility: PostgresExternalFormalEvidenceVisibilityV1;
   committed_ingress_factory: {
     createForProducerClaim(
@@ -107,7 +108,7 @@ export type EvidenceRuntimeCompositionV1 = {
   host: EvidenceRuntimeHostV1;
   work_item_factory: EvidenceRuntimeWorkItemFactoryV1;
   retention: S3CompatiblePrivateRawEvidenceRetentionAdapterV1;
-  lease_repository: PostgresEvidenceProducerLeaseV1;
+  lease_repository: EvidenceProducerLeasePortV1;
 };
 
 export function composeEvidenceRuntimeV1(input: {
@@ -121,6 +122,7 @@ export function composeEvidenceRuntimeV1(input: {
   completion_clock: () => string;
   work_item_factory?: EvidenceRuntimeWorkItemFactoryV1;
   work_item_config?: Omit<ProductionEvidenceWorkItemFactoryConfigV1, "retention">;
+  lease_repository?: EvidenceProducerLeasePortV1;
 } & (
   | { target_planner: EvidenceRuntimeAcquisitionTargetPlannerV1; host_planner?: never; host_planner_factory?: never }
   | { target_planner?: never; host_planner: EvidenceRuntimeHostPlannerV1; host_planner_factory?: never }
@@ -136,7 +138,8 @@ export function composeEvidenceRuntimeV1(input: {
     throw new Error("PHASE3_EVIDENCE_RUNTIME_EXACTLY_ONE_PLANNER_BOUNDARY_REQUIRED");
   }
   const retention = new S3CompatiblePrivateRawEvidenceRetentionAdapterV1(input.raw_retention);
-  const leaseRepository = new PostgresEvidenceProducerLeaseV1(input.pool, input.scope);
+  const leaseRepository: EvidenceProducerLeasePortV1 =
+    input.lease_repository ?? new PostgresEvidenceProducerLeaseV1(input.pool, input.scope);
   const visibility = new PostgresExternalFormalEvidenceVisibilityV1(input.pool);
   const workItemFactory: EvidenceRuntimeWorkItemFactoryV1 = input.work_item_factory
     ?? new ProductionEvidenceWorkItemFactoryV1({
@@ -204,6 +207,7 @@ export function composeEvidenceRuntimeV1(input: {
 
   const host = new EvidenceRuntimeHostV1({
     planner,
+    lease: leaseRepository,
     wait: input.wait,
     health: input.health,
     stop: input.stop,
