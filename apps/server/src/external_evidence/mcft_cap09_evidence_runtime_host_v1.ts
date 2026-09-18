@@ -183,6 +183,13 @@ export class EvidenceRuntimeHostV1 {
       const claim = ownerClaim;
       ownerClaim = null;
       await this.deps.lease.releaseLease({ claim });
+      if (
+        previousResult?.lease_claim
+        && previousResult.lease_claim.lease_owner === claim.lease_owner
+        && previousResult.lease_claim.fencing_token === claim.fencing_token
+      ) {
+        previousResult = { ...previousResult, lease_claim: null };
+      }
     };
 
     await this.healthV1({
@@ -203,6 +210,7 @@ export class EvidenceRuntimeHostV1 {
           consecutive_failure_count: consecutiveFailures,
           detail: "STOP_REQUESTED",
         });
+        await releaseOwnerLeaseV1();
         return this.resultV1({
           reason: "STOP_REQUESTED",
           cycle_attempt: cycleAttempt,
@@ -258,6 +266,7 @@ export class EvidenceRuntimeHostV1 {
           consecutive_failure_count: consecutiveFailures,
           detail: "PLANNER_EXHAUSTED",
         });
+        await releaseOwnerLeaseV1();
         return this.resultV1({
           reason: "PLANNER_EXHAUSTED",
           cycle_attempt: cycleAttempt,
