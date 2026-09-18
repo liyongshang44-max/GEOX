@@ -12,6 +12,11 @@ on:
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1.cjs'
       - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1.cjs'
       - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs'
+      - 'apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs'
+      - 'scripts/runtime_acceptance/mcft_cap09_formal_v5_arm_contract_v1.ts'
+      - 'scripts/runtime_acceptance/mcft_cap09_amendment19_formal_v5_manifest_v1.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_ACTUAL_ARM_SUCCESSOR_V1.cjs'
   push:
     branches: [main]
 
@@ -49,6 +54,11 @@ jobs:
 
       - name: Prove static post-graduation control surface
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1.cjs
+
+      - name: Prove Formal-v5 actual-arm successor remains zero-effect in CI
+        run: |
+          node --check scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_ACTUAL_ARM_SUCCESSOR_V1.cjs
 
       - name: Admit exact current-main successor into central QCP
         if: github.event_name == 'pull_request'
