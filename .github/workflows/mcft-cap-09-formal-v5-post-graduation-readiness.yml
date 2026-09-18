@@ -1,6 +1,7 @@
 name: mcft-cap-09-formal-v5-post-graduation-readiness
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml'
