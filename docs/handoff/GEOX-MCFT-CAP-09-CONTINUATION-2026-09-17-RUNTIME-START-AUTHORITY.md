@@ -1,3 +1,666 @@
+# 2026-09-18 接手更新 — FINAL PRE-FORMAL-V5 ARM CLOSURE
+
+> 用途：conversation continuation only。
+> 本节不是 architecture authority、production runtime authority、production-owner authority、Formal-v5 arm authority、A0 authority 或 O00-O23 authority。
+> 落库纪律：PURE PREPEND 到既有 continuation 文件；下方既有全文保持 exact suffix；原 8/27 canonical handoff（含 AH）继续不动；不新建更多 continuation 文件。
+> 核验时点：2026-09-18 约 05:02Z（UTC）。
+
+## A. 当前正在做什么
+
+MCFT-CAP-09 当前唯一 active frontier 已从 runtime-start/production-owner implementation hardening 前移到：
+
+```text
+FINAL PRE-FORMAL-V5 ARM CLOSURE
+=
+final protected-main exact binding
+-> local exact-main rematerialization
+-> production-owner cutover rebuild
+-> sustained live fenced-owner proof
+-> exact-subject Formal-v5 zero-state proof consumption
+-> formal_v5_arm_ready=true
+-> STOP
+```
+
+目标仍然是**停在真正 Formal-v5 arm 之前**。
+
+不得把本 handoff、任何 CI success、任何 zero-state artifact 或任何 owner-cutover proof解释为已经授权 Formal-v5 arm。
+
+当前权限边界：
+
+```text
+production runtime containers
+= 0（最后一次本地主机明确观测；后续未重新启动）
+
+production owner
+= NOT CURRENTLY RUNNING / REBUILD REQUIRED ON FINAL MAIN
+
+Formal-v5
+= NOT ARMED
+
+A0
+= NOT STARTED
+
+O00-O23
+= NOT STARTED
+
+MCFT-CAP-09
+= NOT COMPLETED
+```
+
+B-Line 保持 ENGINEERING CLOSED / FROZEN；ADR 保持 PARKED。不要重开其它工程线。
+
+## B. 最终 protected main 与 post-merge qualification
+
+最新 protected main 已前移到：
+
+```text
+protected main
+= 1444ad55e92b6c519fc61fde7119013be9881721
+```
+
+这是 #3589 merge 后的 current main。
+
+该 exact main 的 post-merge qualification 已全部 GREEN：
+
+```text
+Formal-v5 post-graduation readiness
+run = 35306743185
+status = SUCCESS
+
+EA5E2 successor runner qualification
+run = 35306743233
+status = SUCCESS
+
+CI
+run = 35306743057
+status = SUCCESS
+```
+
+因此，之前绑定于以下 subject 的本地 runtime-start authority、owner-cutover authority、image attestation、zero-state proof 都只能作为历史证据，不能直接复用：
+
+```text
+c69d27cfb5fe2b45c2c82570e4b2be0f6d81348a
+4b85cce43739e75540be202dbc78b0ed646e4505
+59e2fb4e6f0c4864f04fab607d8ab6850c92f767
+```
+
+下一次本地执行必须从 `1444ad55...` 重新 rematerialize。
+
+## C. 最终 exact-subject Formal-v5 zero-state proof
+
+新 main 已产生新的 exact-subject zero-state artifact：
+
+```text
+workflow
+= mcft-cap-09-formal-v5-post-graduation-readiness
+
+run
+= 35306743185
+
+subject
+= 1444ad55e92b6c519fc61fde7119013be9881721
+
+artifact id
+= 10531771454
+
+artifact name
+= mcft-cap09-formal-v5-post-graduation-zero-state-1444ad55e92b6c519fc61fde7119013be9881721
+
+artifact digest
+= sha256:f576e100c32ea14627e925985ea8cab2a769c5d70d0a0d940c3ae7d820284130
+
+workflow conclusion
+= SUCCESS
+```
+
+该 artifact 是下一轮 final arm-readiness verifier 应消费的 zero-state proof。
+
+它**不是 Formal-v5 arm authority**。final verifier 仍必须证明：
+
+```text
+exact protected-main subject
++ fresh/rebuilt production owner
++ live fenced lease proof
++ zero-state proof exact-subject match
++ Formal-v5 still unarmed
++ A0=false
++ O00=false
+```
+
+## D. 本轮完成的重要工程修复
+
+### D1. #3587 — owner-cutover mode pin
+
+本地曾出现两个 production runtime 同时 restart-loop。
+
+Evidence 与 Twin durable logs 的 first deterministic fatal 均为：
+
+```text
+MCFT_CAP09_PRODUCTION_RUNTIME_START_MODE_MISMATCH
+```
+
+根因不是数据库、current-crop 或 lease，而是：
+
+```text
+runtime-start authority.runtime_mode
+= OWNER_CUTOVER
+
+actual container mode inherited from operator PowerShell
+= NON_OWNER_STANDBY
+```
+
+owner-cutover runner 当时使用 `env={...process.env,...}`，却没有显式覆盖：
+
+```text
+GEOX_MCFT_CAP09_PREFORMAL_MODE
+```
+
+此前同一 PowerShell 会话中的 `NON_OWNER_STANDBY` 残留被继承进 production owner launch，触发 runtime authority fail-closed。
+
+#3587 已修复：
+
+```text
+owner-cutover runner
+=> explicitly pins
+GEOX_MCFT_CAP09_PREFORMAL_MODE="OWNER_CUTOVER"
+```
+
+并增加 static acceptance，要求该 pin 位于 cutover env 内且只出现一次。
+
+#3587 已 MERGED，且 exact-head / post-merge qualification 均已通过。
+
+### D2. #3588 — exact-main Formal-v5 readiness dispatch
+
+final Formal-v5 verifier 要求 zero-state proof 与 exact protected-main subject 一致。
+
+此前 readiness workflow 只有窄 path trigger；合法 main 前移后，可能产生：
+
+```text
+new protected main
++
+old zero-state artifact
+=
+FINAL VERIFIER MUST REJECT
+```
+
+同时 connector 没有可直接 dispatch 该 workflow 的能力。
+
+#3588 已增加：
+
+```yaml
+workflow_dispatch:
+```
+
+并增加 static acceptance，确保该入口不会被后续删掉。
+
+它只允许重新执行现有 read-only zero-state readiness，不授予 Formal-v5/A0/O00 权限。
+
+#3588 已 MERGED。
+
+### D3. #3589 — owner cutover exact-subject image attestation self-containment
+
+继续核查 final live owner verifier 时发现：
+
+```text
+VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs
+requires
+GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_PATH
+```
+
+但 owner-cutover runner 原来没有自行生成并绑定该 exact-subject image attestation。
+
+这会让 live verifier 潜在依赖：
+
+```text
+stale shell env
+or
+stale acceptance-output
+```
+
+不能接受。
+
+#3589 已将 owner cutover 顺序固定为：
+
+```text
+single shared image build
+-> exact-subject / clean-worktree image attestation
+-> explicit attestation-path + image-tag binding
+-> dual-service --no-build start
+-> live fenced-owner verifier
+```
+
+新增 acceptance 证明：
+
+```text
+attestation occurs after build
+attestation occurs before runtime start
+attestation path is explicitly bound
+runtime image tag is exact-subject bound
+```
+
+#3589：
+
+```text
+PR head
+= 78a5604dd21ff03a03ef9e1306405a6313fbfc35
+
+changed files
+= 2
+
+diff
+= +15 / -1
+```
+
+其 exact-head checks 已完成：
+
+```text
+Owner Cutover qualification
+run = 35304776305
+SUCCESS
+
+QCP
+run = 35304776259
+SUCCESS
+
+CI
+run = 35304776329
+SUCCESS
+
+EA5E2 runtime dependency graph
+run = 35304776250
+SUCCESS
+
+Ready-triggered candidate/release checks
+= SUCCESS
+```
+
+#3589 已 MERGED；merge 后 current protected main 即 `1444ad55...`，并且 post-merge三条核心 qualification 再次全绿。
+
+## E. 本地主机最后一次明确状态
+
+在发现 restart-loop 后，已执行：
+
+```powershell
+docker compose -f docker-compose.mcft-cap09-production-preformal.yml down --remove-orphans
+docker compose -f docker-compose.mcft-cap09-production-preformal.yml ps -a
+```
+
+明确得到：
+
+```text
+NAME IMAGE COMMAND SERVICE CREATED STATUS PORTS
+(empty)
+```
+
+因此最后一次明确生产容器状态：
+
+```text
+production container count
+= 0
+```
+
+在那之后，本对话没有再次执行 production owner start。
+
+此前绑定旧 main 的本地：
+
+```text
+runtime-start-authority.json
+owner-cutover-authority.json
+```
+
+均不得直接复用到 `1444ad55...`。
+
+## F. Current-crop freshness 边界
+
+最近已知 selected current-crop authority：
+
+```text
+ref
+= docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-EFFECTIVE-CURRENT-CROP-AUTHORITY-2026-09-17T04Z-V1.json
+
+authority_as_of
+= 2026-09-17T04:00:00.000Z
+
+stage/current-crop valid until
+= 2026-09-18T10:00:00.000Z
+```
+
+本 handoff 核验时点约为 2026-09-18T05:02Z，因此该窗口**在 handoff 时仍未过期**。
+
+但是：
+
+```text
+HANDOFF-TIME FRESH
+!=
+EXECUTION-TIME FRESH
+```
+
+下一任执行者必须在：
+
+1. rematerialization；
+2. owner-cutover admission；
+3. final Formal-v5 arm-readiness；
+
+各自依赖的实际执行时刻重新检查 freshness。
+
+如 `2026-09-18T10:00:00Z` 已过去或 runner 的 planned-A0 coverage 不再成立，必须 fail-closed，先取得新的 effective current-crop authority，不得延长旧 authority。
+
+## G. 当前“卡点”准确表述
+
+仓库侧目前**没有已知红灯 blocker**：
+
+```text
+#3587 merged
+#3588 merged
+#3589 merged
+final main post-merge qualifications green
+exact-subject zero-state proof available
+```
+
+当前尚未完成的是**本地 physical production execution proof**：
+
+```text
+final-main local rematerialization
+-> production-owner cutover rebuild
+-> sustained live fenced-owner proof
+-> final arm-readiness verification
+```
+
+所以当前 frontier 不是：
+
+```text
+FIX MORE REPO CODE
+```
+
+而是：
+
+```text
+EXECUTE FINAL MAIN LOCAL PROOF CHAIN
+```
+
+但任何本地 first-red 都必须先分类；不得为了“赶到 Formal-v5”绕过 fail-closed gate。
+
+## H. 下一步严格执行计划
+
+下一任接手后按以下顺序，不重新扫描已关闭历史链：
+
+### H1. Bind final protected main
+
+```text
+git fetch origin main
+git switch main
+git pull --ff-only origin main
+
+HEAD
+= origin/main
+= 1444ad55e92b6c519fc61fde7119013be9881721
+
+worktree
+= clean
+
+production containers
+= 0
+```
+
+任一不成立则 STOP。
+
+### H2. Final-main rematerialization
+
+在 exact main 上重新运行：
+
+```text
+MATERIALIZE_MCFT_CAP_09_PRODUCTION_RUNTIME_NON_OWNER_STANDBY_V1.cjs
+```
+
+随后重新运行 non-GitHub production host secret-binding preflight。
+
+不得继承旧 main 的 runtime-start authority。
+
+### H3. Production-owner cutover rebuild
+
+运行修复后的：
+
+```text
+RUN_MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1.cjs
+```
+
+新的 runner 必须自己完成：
+
+```text
+OWNER_CUTOVER mode pin
+single shared image build
+exact-subject image attestation
+dual --no-build start
+live owner verification
+```
+
+不要手工预填旧 attestation path。
+
+### H4. Sustained owner proof
+
+确认至少：
+
+```text
+Evidence runtime
+= running
+= restart_count 0
+= owner lease healthy / correct fenced ownership
+
+Twin runtime
+= running
+= restart_count 0
+= scheduler owner lease healthy
+= correct fenced token progression
+
+subject
+= exact 1444ad55...
+
+image id
+= both services exact same built image
+
+Formal-v5
+= false
+
+A0
+= false
+
+O00
+= false
+```
+
+必须跨至少一个真实 renewal interval 复核，不接受只看启动瞬间。
+
+### H5. Consume final zero-state proof
+
+使用 artifact：
+
+```text
+10531771454
+sha256:f576e100c32ea14627e925985ea8cab2a769c5d70d0a0d940c3ae7d820284130
+```
+
+运行：
+
+```text
+VERIFY_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1.cjs
+```
+
+目标结果：
+
+```text
+status = PASS
+formal_v5_arm_ready = true
+separate_explicit_operator_authorization_still_required = true
+
+formal_v5_arm = false
+formal_v5_epoch_selected = false
+A0 = false
+O00 = false
+```
+
+### H6. HARD STOP
+
+一旦得到：
+
+```text
+formal_v5_arm_ready=true
+```
+
+立即 STOP。
+
+**不要执行真正 Formal-v5 arm。**
+
+真正 arm 必须由用户再次显式授权。
+
+## I. 这轮踩过的坑 — 必须避免
+
+### I1. PowerShell 环境变量会跨命令残留
+
+不要假设 compose 默认值会覆盖调用者环境。
+
+已经真实发生：
+
+```text
+old shell:
+GEOX_MCFT_CAP09_PREFORMAL_MODE=NON_OWNER_STANDBY
+
+owner authority:
+OWNER_CUTOVER
+
+result:
+both runtimes restart-loop
+MCFT_CAP09_PRODUCTION_RUNTIME_START_MODE_MISMATCH
+```
+
+owner runner 现在已修为显式 pin，但后续新 mode-dependent runner 也必须遵循相同原则：
+
+```text
+authority-critical env
+must be explicitly set by runner
+not implicitly inherited
+```
+
+### I2. 不要把旧 exact-subject artifact 带到新 main
+
+任何 main merge 都会使以下 proof 需要重新绑定：
+
+```text
+runtime-start authority
+owner-cutover authority
+runtime image attestation
+Formal-v5 zero-state proof
+```
+
+final verifier 应拒绝旧 subject，这是正确的 fail-closed 行为。
+
+### I3. owner live verifier 不得依赖旧 shell attestation path
+
+#3589 已修为 runner 自包含。
+
+后续不要再手工用：
+
+```text
+GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_PATH
+```
+
+指向旧 acceptance-output 来“让 verifier 通过”。
+
+### I4. 两个 compose services 共用同一个 image tag 时，不要并行 build 两次
+
+此前执行：
+
+```text
+docker compose ... up -d --build evidence twin
+```
+
+曾发生：
+
+```text
+image "...:<subject>" already exists
+```
+
+原因是两个 target 同时导出到同一 tag。
+
+可靠路径：
+
+```text
+build once
+-> attest exact image
+-> up both --no-build
+```
+
+现在 owner runner 已按该纪律固化。
+
+### I5. CI runtime dependency startup 要看 first-red，不要凭 warning 下结论
+
+历史 CI 在 dependency startup 会出现类似：
+
+```text
+pull access denied for geox/server-runtime
+```
+
+但 compose 可能随后本地 build/继续完成；warning 不等于 deterministic failure。
+
+必须以最终 step conclusion 和 diagnostic first-red 为准。
+
+### I6. QCP success 不能被泛化为“所有历史子证据都重新执行”
+
+QCP applicability 输出会区分 REQUIRED / carry-forward / successor execution。
+
+只陈述机器实际运行并成功的 workflow/step，不把 skipped 或历史 missing digest 解释成新执行 proof。
+
+例如 Formal-v5 readiness 中，`BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION` 等仍按 QCP resolver / successor-head语义处理；不能自行晋升为新的 live authority。
+
+### I7. current-crop freshness 是 wall-clock gate
+
+```text
+fresh at handoff
+!= fresh at owner cutover
+!= fresh at Formal-v5 readiness
+```
+
+每次 admission 必须重新判断。
+
+### I8. 不要重新创建已经存在的 production resources
+
+继续禁止无必要的：
+
+```text
+Neon role recreation
+ACL rebuild
+R2 bucket recreation
+credential reprovisioning
+```
+
+除非新的 machine gate 明确证明资源失效并要求独立 remediation。
+
+### I9. 不要把 restart-loop 当作“再启动一次就好”
+
+本轮正确流程是：
+
+```text
+observe restart loop
+-> down to zero
+-> read durable logs
+-> identify deterministic mode mismatch
+-> repair runner + acceptance
+-> exact-head qualification
+-> merge + post-merge qualification
+```
+
+以后同类问题继续这样处理。
+
+## J. 接手一句话
+
+```text
+MCFT-CAP-09 repo-side pre-Formal-v5 control surface is now green on protected main 1444ad55... .
+The remaining work is one final local exact-main proof chain:
+rematerialize -> rebuild production owner -> prove sustained fenced ownership -> consume exact-main zero-state proof -> reach formal_v5_arm_ready=true -> STOP.
+Do not arm Formal-v5 without a new explicit user authorization.
+```
+
+---
+
 # 2026-09-17 补充核验 — 当前接手入口（优先于下方历史快照）
 
 > 本次为用户要求的直接落库 handoff 更新。仅记录任务、完成项、阻塞、计划与踩坑；不授予 runtime / owner / Formal-v5 权限。
