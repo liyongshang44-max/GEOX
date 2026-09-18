@@ -33,5 +33,7 @@ export interface GfsRetrySchedulePortV1 {
     requested_at: string;
     due_window_start: string;
     due_window_end_exclusive: string;
+    authority_target_floor_logical_time: string;
+    canonical_durable_paired_target_logical_times: readonly string[];
   }): Promise<GfsRetryAttemptClaimResultV1>;
 }
