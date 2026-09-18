@@ -88,7 +88,7 @@ function selftest(){
 }
 
 function current(){
-  req(!process.env.GITHUB_ACTIONS&&!process.env.CI,"FORMAL_V5_ACTUAL_ARM_LOCAL_HOST_ONLY");
+  req(process.env.GITHUB_ACTIONS!=="true"&&process.env.CI!=="true","FORMAL_V5_ACTUAL_ARM_LOCAL_HOST_ONLY");
   req(process.argv.includes("--operator-authorized"),"FORMAL_V5_SEPARATE_EXPLICIT_OPERATOR_AUTHORIZATION_REQUIRED");
   git("fetch","--no-tags","origin","main");
   const head=git("rev-parse","HEAD");
