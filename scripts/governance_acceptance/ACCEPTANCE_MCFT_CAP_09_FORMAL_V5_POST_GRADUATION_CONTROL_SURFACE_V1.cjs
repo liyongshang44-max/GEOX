@@ -50,6 +50,7 @@ function main() {
   }
 
   const workflow = fs.readFileSync(path.join(ROOT, workflowRel), "utf8");
+  assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /transaction_read_only/);
   assert.match(workflow, /information_schema\.tables/);
   assert.match(workflow, /pg_catalog\.pg_proc/);
