@@ -14,12 +14,6 @@ on:
       - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs'
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-POST-GRADUATION-CONTROL-SURFACE-V1.json'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1.cjs'
-      - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1.cjs'
 
 permissions:
   contents: read

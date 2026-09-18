@@ -51,6 +51,9 @@ function main() {
 
   const workflow = fs.readFileSync(path.join(ROOT, workflowRel), "utf8");
   assert.match(workflow, /workflow_dispatch:/);
+  const pushSection = workflow.slice(workflow.indexOf("  push:"), workflow.indexOf("\n\npermissions:"));
+  assert.match(pushSection, /branches:\s*\[main\]/);
+  assert.doesNotMatch(pushSection, /\n\s+paths:/, "FORMAL_V5_READINESS_MAIN_PUSH_MUST_NOT_BE_PATH_FILTERED");
   assert.match(workflow, /transaction_read_only/);
   assert.match(workflow, /information_schema\.tables/);
   assert.match(workflow, /pg_catalog\.pg_proc/);
