@@ -144,6 +144,7 @@ export function assembleProductionEvidencePlannerV1(input: {
     planning_clock: input.planning_clock,
     progress_reader: progressReader,
     source_poll_schedule: sourcePollSchedule,
+    gfs_retry_schedule: gfsRetrySchedule,
     gfs_target_pair_history: gfsTargetPairHistory,
     source_plan_executor: sourcePlanExecutor,
   });

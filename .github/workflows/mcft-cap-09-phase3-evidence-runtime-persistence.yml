@@ -1,4 +1,5 @@
 name: mcft-cap-09-phase3-evidence-runtime-persistence
+# Current-successor synchronization marker: planner repair requires exact-head Phase 3 requalification.
 
 on:
   pull_request:
