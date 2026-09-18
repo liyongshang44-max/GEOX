@@ -36,6 +36,7 @@ export type EvidenceRuntimeHostHealthEventV1 = {
   consecutive_failure_count: number;
   detail:
     | "HOST_START"
+    | "ATTEMPT_IN_PROGRESS"
     | "ATTEMPT_COMPLETED"
     | "LEASE_HELD_BY_OTHER_OWNER"
     | "PLANNER_NOT_DUE"
@@ -70,6 +71,10 @@ export interface EvidenceRuntimeHostWaitPortV1 {
     cycle_attempt: number;
     consecutive_failure_count: number;
   }): Promise<void>;
+  waitForLeaseRenewal?(input: {
+    lease_duration_seconds: number;
+    signal: AbortSignal;
+  }): Promise<"DUE" | "CANCELLED">;
 }
 export interface EvidenceRuntimeHostHealthPortV1 {
   recordHealth(event: EvidenceRuntimeHostHealthEventV1): Promise<void>;
@@ -305,14 +310,76 @@ export class EvidenceRuntimeHostV1 {
 
       cycleAttempt += 1;
       try {
-        const result = await plan.execute({
-          scope: input.scope,
-          lease_owner: input.lease_owner,
-          lease_duration_seconds: input.lease_duration_seconds,
-        });
+        const waitForLeaseRenewal = this.deps.wait.waitForLeaseRenewal;
+        if (typeof waitForLeaseRenewal !== "function") {
+          throw new Error("PHASE3_EVIDENCE_HOST_INFLIGHT_LEASE_KEEPALIVE_REQUIRED");
+        }
+        const keepaliveAbort = new AbortController();
+        let keepaliveError: unknown = null;
+        const keepalivePromise = (async (): Promise<void> => {
+          try {
+            while (true) {
+              const waitResult = await waitForLeaseRenewal.call(this.deps.wait, {
+                lease_duration_seconds: input.lease_duration_seconds,
+                signal: keepaliveAbort.signal,
+              });
+              if (waitResult === "CANCELLED") return;
+              if (waitResult !== "DUE") {
+                throw new Error("PHASE3_EVIDENCE_HOST_INFLIGHT_LEASE_WAIT_RESULT_INVALID");
+              }
+              if (!ownerClaim) {
+                throw new Error("PHASE3_EVIDENCE_HOST_INFLIGHT_OWNER_CLAIM_REQUIRED");
+              }
+              ownerClaim = await this.deps.lease.renewLease({
+                claim: ownerClaim,
+                lease_duration_seconds: input.lease_duration_seconds,
+              });
+              await this.healthV1({
+                status: "HEALTHY",
+                cycle_attempt: cycleAttempt,
+                successful_cycle_count: successfulCycles,
+                consecutive_failure_count: consecutiveFailures,
+                detail: "ATTEMPT_IN_PROGRESS",
+              });
+            }
+          } catch (error) {
+            keepaliveError = error;
+          }
+        })();
+
+        let result: EvidenceRuntimeHostAttemptResultV1;
+        try {
+          result = await plan.execute({
+            scope: input.scope,
+            lease_owner: input.lease_owner,
+            lease_duration_seconds: input.lease_duration_seconds,
+          });
+        } finally {
+          keepaliveAbort.abort();
+          await keepalivePromise;
+        }
+        if (keepaliveError) throw keepaliveError;
         validateAttemptResultV1(plan, result);
         previousResult = result;
-        ownerClaim = result.lease_claim;
+        if (result.lease_claim === null) {
+          ownerClaim = null;
+        } else if (ownerClaim) {
+          if (
+            ownerClaim.lease_owner !== result.lease_claim.lease_owner
+            || ownerClaim.fencing_token !== result.lease_claim.fencing_token
+          ) {
+            throw new Error("PHASE3_EVIDENCE_HOST_INFLIGHT_LEASE_IDENTITY_MISMATCH");
+          }
+          const ownerHeartbeat = Date.parse(ownerClaim.heartbeat_at);
+          const resultHeartbeat = Date.parse(result.lease_claim.heartbeat_at);
+          if (!Number.isFinite(ownerHeartbeat) || !Number.isFinite(resultHeartbeat)) {
+            throw new Error("PHASE3_EVIDENCE_HOST_INFLIGHT_LEASE_HEARTBEAT_INVALID");
+          }
+          if (resultHeartbeat > ownerHeartbeat) ownerClaim = result.lease_claim;
+          previousResult = { ...result, lease_claim: ownerClaim };
+        } else {
+          ownerClaim = result.lease_claim;
+        }
         if (result.status === "LEASE_HELD_BY_OTHER_OWNER") {
           standbyCycles += 1;
           consecutiveFailures = 0;
