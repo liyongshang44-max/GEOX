@@ -193,7 +193,8 @@ export class EvidenceRuntimeHostV1 {
       detail: "HOST_START",
     });
 
-    while (true) {
+    try {
+      while (true) {
       if (this.deps.stop.stopRequested()) {
         await this.healthV1({
           status: "STOPPING",
@@ -202,7 +203,6 @@ export class EvidenceRuntimeHostV1 {
           consecutive_failure_count: consecutiveFailures,
           detail: "STOP_REQUESTED",
         });
-        await releaseOwnerLeaseV1();
         return this.resultV1({
           reason: "STOP_REQUESTED",
           cycle_attempt: cycleAttempt,
@@ -258,7 +258,6 @@ export class EvidenceRuntimeHostV1 {
           consecutive_failure_count: consecutiveFailures,
           detail: "PLANNER_EXHAUSTED",
         });
-        await releaseOwnerLeaseV1();
         return this.resultV1({
           reason: "PLANNER_EXHAUSTED",
           cycle_attempt: cycleAttempt,
@@ -373,6 +372,9 @@ export class EvidenceRuntimeHostV1 {
           consecutive_failure_count: consecutiveFailures,
         });
       }
+      }
+    } finally {
+      await releaseOwnerLeaseV1();
     }
   }
 }
