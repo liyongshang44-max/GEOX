@@ -16,6 +16,7 @@ on:
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs'
       - 'scripts/runtime_acceptance/mcft_cap09_formal_v5_arm_contract_v1.ts'
       - 'scripts/runtime_acceptance/mcft_cap09_amendment19_formal_v5_manifest_v1.ts'
+      - 'scripts/runtime_acceptance/mcft_cap09_amendment19_formal_v5_manifest_v1.test.ts'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_ACTUAL_ARM_SUCCESSOR_V1.cjs'
   push:
     branches: [main]
@@ -52,6 +53,20 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install exact workspace dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Prove static post-graduation control surface
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1.cjs
 
@@ -59,6 +74,15 @@ jobs:
         run: |
           node --check scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs
           node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_ACTUAL_ARM_SUCCESSOR_V1.cjs
+
+      - name: Typecheck and execute Formal-v5 manifest successor tests
+        run: |
+          pnpm exec tsc --noEmit --pretty false --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --esModuleInterop --types node \
+            apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts \
+            scripts/runtime_acceptance/mcft_cap09_formal_v5_arm_contract_v1.ts \
+            scripts/runtime_acceptance/mcft_cap09_amendment19_formal_v5_manifest_v1.ts \
+            scripts/runtime_acceptance/mcft_cap09_amendment19_formal_v5_manifest_v1.test.ts
+          pnpm exec tsx --test scripts/runtime_acceptance/mcft_cap09_amendment19_formal_v5_manifest_v1.test.ts
 
       - name: Admit exact current-main successor into central QCP
         if: github.event_name == 'pull_request'
