@@ -59,6 +59,9 @@ function main() {
 
   const localVerifier = fs.readFileSync(path.join(ROOT, localVerifierRel), "utf8");
   assert.match(localVerifier, /VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1\.cjs/);
+  assert.match(localVerifier, /--attest-image/);
+  assert.match(localVerifier, /GEOX_DEPLOYMENT_SUBJECT_COMMIT/);
+  assert.match(localVerifier, /GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_PATH/);
   assert.match(localVerifier, /FORMAL_V5_ZERO_STATE_PROOF_SUBJECT_MISMATCH/);
   assert.match(localVerifier, /FORMAL_V5_ARM_REMAINS_UNAUTHORIZED/);
 
