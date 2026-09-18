@@ -29,7 +29,18 @@
     "local_arm_readiness_verifier_ref": "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1.cjs",
     "formal_store_probe_mode": "READ_ONLY",
     "zero_state_proof_must_bind_exact_subject": true,
-    "zero_state_proof_must_be_revalidated_for_actual_arm": true
+    "zero_state_proof_must_be_revalidated_for_actual_arm": true,
+    "actual_arm_successor": {
+      "execution_host_class": "LOCAL_NON_GITHUB_OPERATOR_HOST_ONLY",
+      "runner_ref": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs",
+      "arm_contract_ref": "scripts/runtime_acceptance/mcft_cap09_formal_v5_arm_contract_v1.ts",
+      "prewindow_bundle_ref": "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts",
+      "manifest_builder_ref": "scripts/runtime_acceptance/mcft_cap09_amendment19_formal_v5_manifest_v1.ts",
+      "acceptance_ref": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_ACTUAL_ARM_SUCCESSOR_V1.cjs",
+      "separate_explicit_operator_authorization_required": true,
+      "github_actions_actual_arm_forbidden": true,
+      "arm_only_no_a0_or_o00": true
+    }
   },
   "fail_closed": {
     "missing_seed_database_credential": "FAIL",
