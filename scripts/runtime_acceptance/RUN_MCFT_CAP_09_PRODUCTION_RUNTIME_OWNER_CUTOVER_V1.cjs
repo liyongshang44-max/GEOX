@@ -203,6 +203,7 @@ try{
 
   const env={...process.env,
     GEOX_DEPLOYMENT_SUBJECT_COMMIT:head,
+    GEOX_MCFT_CAP09_PREFORMAL_MODE:"OWNER_CUTOVER",
     GEOX_MCFT_CAP09_TENANT_ID:scope.tenant_id,GEOX_MCFT_CAP09_PROJECT_ID:scope.project_id,GEOX_MCFT_CAP09_GROUP_ID:scope.group_id,
     GEOX_MCFT_CAP09_FIELD_ID:scope.field_id,GEOX_MCFT_CAP09_SEASON_ID:scope.season_id,GEOX_MCFT_CAP09_ZONE_ID:scope.zone_id,
     GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH:runtimeAuthorityPath,
