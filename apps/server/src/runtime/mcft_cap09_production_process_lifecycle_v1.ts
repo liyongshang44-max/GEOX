@@ -81,6 +81,18 @@ export function createMcftCap09ProcessStopV1(input?: {
   };
 }
 
+export function mcftCap09EvidenceLeaseKeepaliveIntervalMsV1(
+  leaseDurationSeconds: number,
+): number {
+  const leaseMs = boundedMillisecondsV1(
+    Math.floor(leaseDurationSeconds * 1000),
+    "PHASE5_EVIDENCE_LEASE_KEEPALIVE_DURATION_INVALID",
+    1000,
+    3_600_000,
+  );
+  return Math.max(100, Math.min(60_000, Math.floor(leaseMs / 3)));
+}
+
 export class McftCap09ProductionEvidenceWaitV1
 implements EvidenceRuntimeHostWaitPortV1 {
   readonly lifecycle_id = MCFT_CAP09_PRODUCTION_PROCESS_LIFECYCLE_ID_V1;
@@ -151,13 +163,9 @@ implements EvidenceRuntimeHostWaitPortV1 {
     lease_duration_seconds: number;
     signal: AbortSignal;
   }): Promise<"DUE" | "CANCELLED"> {
-    const leaseMs = boundedMillisecondsV1(
-      Math.floor(input.lease_duration_seconds * 1000),
-      "PHASE5_EVIDENCE_LEASE_KEEPALIVE_DURATION_INVALID",
-      1000,
-      3_600_000,
+    const waitMs = mcftCap09EvidenceLeaseKeepaliveIntervalMsV1(
+      input.lease_duration_seconds,
     );
-    const waitMs = Math.max(100, Math.min(60_000, Math.floor(leaseMs / 3)));
     if (input.signal.aborted) return "CANCELLED";
     try {
       await sleep(waitMs, undefined, { signal: input.signal });
