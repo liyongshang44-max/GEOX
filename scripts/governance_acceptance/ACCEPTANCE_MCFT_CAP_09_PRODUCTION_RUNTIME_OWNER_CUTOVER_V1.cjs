@@ -160,8 +160,14 @@ for(const marker of [
 ]) assert.ok(runner.includes(marker),marker);
 const serializedSharedImageBuild='exec("docker",["compose","-f",COMPOSE_REL,"build","geox-mcft-cap09-evidence-runtime-v1"],{env});';
 const dualServiceNoBuildStart='exec("docker",["compose","-f",COMPOSE_REL,"up","-d","--no-build","geox-mcft-cap09-evidence-runtime-v1","geox-mcft-cap09-twin-runtime-v1"],{env});';
+const exactSubjectAttestation='exec(process.execPath,[VERIFY_REL,"--attest-image"],{env});';
 assert.ok(runner.includes(serializedSharedImageBuild),"CUTOVER_SHARED_RUNTIME_IMAGE_SINGLE_BUILD_REQUIRED");
 assert.ok(runner.includes(dualServiceNoBuildStart),"CUTOVER_DUAL_SERVICE_NO_BUILD_START_REQUIRED");
+assert.ok(runner.includes(exactSubjectAttestation),"CUTOVER_EXACT_SUBJECT_IMAGE_ATTESTATION_REQUIRED");
+assert.ok(runner.indexOf(serializedSharedImageBuild)<runner.indexOf(exactSubjectAttestation),"CUTOVER_ATTESTATION_MUST_FOLLOW_BUILD");
+assert.ok(runner.indexOf(exactSubjectAttestation)<runner.indexOf(dualServiceNoBuildStart),"CUTOVER_ATTESTATION_MUST_PRECEDE_RUNTIME_START");
+assert.ok(runner.includes("GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_PATH:artifactAttestationPath"),"CUTOVER_ARTIFACT_ATTESTATION_PATH_BINDING_REQUIRED");
+assert.ok(runner.includes("GEOX_MCFT_CAP09_RUNTIME_IMAGE_TAG:`geox-mcft-cap09-runtime:${head}`"),"CUTOVER_RUNTIME_IMAGE_TAG_BINDING_REQUIRED");
 const cutoverEnvSection=section(
   runner,
   "const env={...process.env,",
@@ -192,6 +198,7 @@ console.log(JSON.stringify({
   shared_runtime_image_build_serialized:true,
   dual_service_start_uses_no_build:true,
   owner_cutover_mode_explicitly_pinned:true,
+  exact_subject_image_attestation_before_runtime_start:true,
   dual_key_cutover:true,
   registry_backed_current_crop_selection:true,
   github_actions_production_execution:false,
