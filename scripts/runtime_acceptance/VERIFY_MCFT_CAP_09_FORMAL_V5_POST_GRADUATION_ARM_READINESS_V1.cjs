@@ -9,6 +9,7 @@ const { spawnSync, execFileSync } = require("node:child_process");
 const ROOT = path.resolve(__dirname, "../..");
 const OWNER_VERIFIER = path.join(ROOT, "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs");
 const OWNER_RESULT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1_RESULT.json");
+const OWNER_ATTESTATION_RESULT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_V1_RESULT.json");
 const OUTPUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1_RESULT.json");
 
 function fail(message) {
@@ -71,10 +72,26 @@ function main() {
   }
   assert.equal(zero.provider_request_count, 0, "FORMAL_V5_ZERO_STATE_PROVIDER_REQUEST_FORBIDDEN");
 
+  const ownerEnv = {
+    ...process.env,
+    GEOX_DEPLOYMENT_SUBJECT_COMMIT: expectedSubject,
+  };
+  const attestation = spawnSync(process.execPath, [OWNER_VERIFIER, "--attest-image"], {
+    cwd: ROOT,
+    stdio: "inherit",
+    env: ownerEnv,
+  });
+  if (attestation.status !== 0) fail(`FORMAL_V5_ARM_READINESS_IMAGE_ATTESTATION_FAILED:${attestation.status}`);
+  if (!fs.existsSync(OWNER_ATTESTATION_RESULT)) fail("FORMAL_V5_ARM_READINESS_IMAGE_ATTESTATION_RESULT_MISSING");
+  const ownerAttestation = readJson(OWNER_ATTESTATION_RESULT);
+  assert.equal(ownerAttestation.status, "PASS", "FORMAL_V5_ARM_READINESS_IMAGE_ATTESTATION_PASS_REQUIRED");
+  assert.equal(ownerAttestation.subject_main_sha, expectedSubject, "FORMAL_V5_ARM_READINESS_IMAGE_ATTESTATION_SUBJECT_MISMATCH");
+
+  ownerEnv.GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_PATH = OWNER_ATTESTATION_RESULT;
   const owner = spawnSync(process.execPath, [OWNER_VERIFIER, "--live"], {
     cwd: ROOT,
     stdio: "inherit",
-    env: process.env,
+    env: ownerEnv,
   });
   if (owner.status !== 0) fail(`FORMAL_V5_ARM_READINESS_LIVE_OWNER_REVERIFICATION_FAILED:${owner.status}`);
   if (!fs.existsSync(OWNER_RESULT)) fail("FORMAL_V5_ARM_READINESS_LIVE_OWNER_RESULT_MISSING");
