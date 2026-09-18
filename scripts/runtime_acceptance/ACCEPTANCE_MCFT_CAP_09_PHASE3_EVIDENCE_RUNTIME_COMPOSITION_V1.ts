@@ -13,10 +13,56 @@ import {
 import type {
   RawEvidenceRetentionPortV1,
 } from "../../apps/server/src/external_evidence/mcft_cap09_external_collector_canonicalizer_v1.js";
+import {
+  MCFT_CAP09_EVIDENCE_PRODUCER_LEASE_CONTRACT_ID_V1,
+  type EvidenceProducerLeaseClaimV1,
+  type EvidenceProducerLeasePortV1,
+} from "../../apps/server/src/external_evidence/mcft_cap09_evidence_runtime_persistence_v1.js";
 
 const OUT = path.resolve("acceptance-output/MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_COMPOSITION_V1_RESULT.json");
 const TARGET = "2026-08-27T12:00:00.000Z";
 const REQUESTED = "2026-08-27T11:50:00.000Z";
+
+function qualificationLeaseV1(trace: string[] = []): EvidenceProducerLeasePortV1 {
+  let claim: EvidenceProducerLeaseClaimV1 | null = null;
+  let heartbeat = 0;
+  const nextIso = () => {
+    heartbeat += 1;
+    return `2026-08-27T11:50:${String(heartbeat).padStart(2, "0")}.000Z`;
+  };
+  return {
+    async acquireLease(input) {
+      trace.push("acquire");
+      const now = nextIso();
+      claim = {
+        lease_contract_id: MCFT_CAP09_EVIDENCE_PRODUCER_LEASE_CONTRACT_ID_V1,
+        scope: { ...input.scope },
+        lease_owner: input.lease_owner,
+        fencing_token: 1n,
+        acquired_at: now,
+        expires_at: "2026-08-27T12:00:00.000Z",
+        heartbeat_at: now,
+        database_now: now,
+      };
+      return claim;
+    },
+    async renewLease(input) {
+      trace.push("renew");
+      const now = nextIso();
+      claim = {
+        ...input.claim,
+        heartbeat_at: now,
+        database_now: now,
+        expires_at: "2026-08-27T12:00:00.000Z",
+      };
+      return claim;
+    },
+    async releaseLease() {
+      trace.push("release");
+      claim = null;
+    },
+  };
+}
 
 async function main(): Promise<void> {
   const retention: RawEvidenceRetentionPortV1 = {
@@ -69,6 +115,7 @@ async function main(): Promise<void> {
 
   const composition = composeEvidenceRuntimeV1({
     pool: fakePool,
+    lease_repository: qualificationLeaseV1(),
     scope: {
       tenant_id: "tenantA",
       project_id: "projectA",
@@ -145,8 +192,10 @@ async function main(): Promise<void> {
       throw new Error("PHASE3_COMPOSITION_INJECTED_WORK_ITEM_FACTORY_SENTINEL");
     },
   };
+  const injectedLeaseTrace: string[] = [];
   const injectedComposition = composeEvidenceRuntimeV1({
     pool: fakePool,
+    lease_repository: qualificationLeaseV1(injectedLeaseTrace),
     scope: {
       tenant_id: "tenantA",
       project_id: "projectA",
@@ -206,12 +255,15 @@ async function main(): Promise<void> {
   );
   assert.equal(injectedTargetPlannerCalls, 1);
   assert.equal(injectedFactoryCalls, 1);
+  assert.deepEqual(injectedLeaseTrace, ["acquire", "release"]);
   assert.equal(databaseCalls, 0);
 
   let notDueStopped = false;
   let notDueFactoryCalls = 0;
+  const notDueLeaseTrace: string[] = [];
   const notDueComposition = composeEvidenceRuntimeV1({
     pool: fakePool,
+    lease_repository: qualificationLeaseV1(notDueLeaseTrace),
     scope: {
       tenant_id: "tenantA", project_id: "projectA", group_id: "groupA",
       field_id: "field_e3r1", season_id: "season_2026", zone_id: "zone_root",
@@ -244,13 +296,16 @@ async function main(): Promise<void> {
   assert.equal(notDueResult.cycle_attempt_count, 0);
   assert.equal(notDueResult.not_due_wait_count, 1);
   assert.equal(notDueFactoryCalls, 0);
+  assert.deepEqual(notDueLeaseTrace, ["acquire", "release"]);
   assert.equal(databaseCalls, 0);
 
   let directHostPlannerCalls = 0;
   let directHostPlannerWaited = false;
   let directHostPlannerFactoryCalls = 0;
+  const directHostPlannerLeaseTrace: string[] = [];
   const directHostPlannerComposition = composeEvidenceRuntimeV1({
     pool: fakePool,
+    lease_repository: qualificationLeaseV1(directHostPlannerLeaseTrace),
     scope: {
       tenant_id: "tenantA", project_id: "projectA", group_id: "groupA",
       field_id: "field_e3r1", season_id: "season_2026", zone_id: "zone_root",
@@ -296,6 +351,7 @@ async function main(): Promise<void> {
   assert.equal(directHostPlannerResult.not_due_wait_count, 1);
   assert.equal(directHostPlannerCalls, 1);
   assert.equal(directHostPlannerFactoryCalls, 0);
+  assert.deepEqual(directHostPlannerLeaseTrace, ["acquire", "release"]);
   assert.equal(databaseCalls, 0);
 
   assert.throws(
@@ -392,7 +448,8 @@ async function main(): Promise<void> {
     direct_host_planner_legacy_factory_calls: directHostPlannerFactoryCalls,
     exactly_one_planner_boundary_required: true,
     same_canonical_cycle_service_path: true,
-    planner_not_due_skips_work_item_factory_database_and_provider: true,
+    planner_not_due_owner_lease_maintenance_required: true,
+    planner_not_due_skips_work_item_factory_nonlease_database_and_provider: true,
     production_activation: false,
     runtime_tick_cursor_mutation: false,
     twin_state_mutation: false,
