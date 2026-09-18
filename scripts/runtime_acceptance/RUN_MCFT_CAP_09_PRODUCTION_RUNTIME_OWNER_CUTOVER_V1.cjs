@@ -15,6 +15,7 @@ const STAGE_CERT_REL="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-BIOLOGICAL-
 const BUDGET_REL="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json";
 const BUILDER_REL="scripts/runtime_acceptance/BUILD_MCFT_CAP_09_PRODUCTION_RUNTIME_START_AUTHORITY_V1.cjs";
 const VERIFY_REL="scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs";
+const ARTIFACT_ATTEST_REL="acceptance-output/MCFT_CAP_09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_V1_RESULT.json";
 const COMPOSE_REL="docker-compose.mcft-cap09-production-preformal.yml";
 const HOST_ID_FILE=path.join(os.homedir(),".geox","mcft-cap09","local-host-id-v1");
 const HOUR=3_600_000;
@@ -160,6 +161,7 @@ try{
   const runtimeAuthorityPath=path.join(runtimeRoot,"runtime-start-authority.json");
   const runtimeArmPath=path.join(runtimeRoot,"runtime-start-arm.json");
   const ownerAuthorityPath=path.join(runtimeRoot,"owner-cutover-authority.json");
+  const artifactAttestationPath=path.join(ROOT,ARTIFACT_ATTEST_REL);
   fs.mkdirSync(runtimeRoot,{recursive:true});
 
   const scope={
@@ -208,6 +210,8 @@ try{
     GEOX_MCFT_CAP09_FIELD_ID:scope.field_id,GEOX_MCFT_CAP09_SEASON_ID:scope.season_id,GEOX_MCFT_CAP09_ZONE_ID:scope.zone_id,
     GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_START_AUTHORITY_PATH:runtimeAuthorityPath,
     GEOX_MCFT_CAP09_PRODUCTION_OWNER_CUTOVER_AUTHORITY_PATH:ownerAuthorityPath,
+    GEOX_MCFT_CAP09_PRODUCTION_RUNTIME_ARTIFACT_ATTESTATION_PATH:artifactAttestationPath,
+    GEOX_MCFT_CAP09_RUNTIME_IMAGE_TAG:`geox-mcft-cap09-runtime:${head}`,
     GEOX_MCFT_CAP09_PRODUCTION_CURRENT_CROP_AUTHORITY_PATH:selectedCurrentCrop.resolved,
     GEOX_MCFT_CAP09_PRODUCTION_BIOLOGICAL_STAGE_ARCHITECTURE_EFFECTIVENESS_PATH:path.join(ROOT,STAGE_CERT_REL),
     EVIDENCE_RUNTIME_DATABASE_URL_SECRET:requiredEnv("GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL"),
@@ -218,7 +222,9 @@ try{
 
   let started=false;
   try{
+    try{fs.rmSync(artifactAttestationPath,{force:true});}catch{}
     exec("docker",["compose","-f",COMPOSE_REL,"build","geox-mcft-cap09-evidence-runtime-v1"],{env});
+    exec(process.execPath,[VERIFY_REL,"--attest-image"],{env});
     exec("docker",["compose","-f",COMPOSE_REL,"up","-d","--no-build","geox-mcft-cap09-evidence-runtime-v1","geox-mcft-cap09-twin-runtime-v1"],{env});
     started=true;
     const deadline=Date.now()+180_000;
@@ -246,7 +252,8 @@ try{
       runtime_processes_started:true,evidence_owner_activation_observed:true,twin_owner_activation_observed:true,
       twin_mode:"PRE_FORMAL_OWNER_STANDBY",
       formal_v5_arm:false,a0_execution:false,o00_started:false,mcft_cap09_completed:false,
-      runtime_start_authority_path:runtimeAuthorityPath,owner_cutover_authority_path:ownerAuthorityPath
+      runtime_start_authority_path:runtimeAuthorityPath,owner_cutover_authority_path:ownerAuthorityPath,
+      artifact_attestation_path:artifactAttestationPath
     };
     write(path.join(ROOT,"acceptance-output","MCFT_CAP_09_PRODUCTION_RUNTIME_OWNER_CUTOVER_V1_RESULT.json"),result);
     process.stdout.write(JSON.stringify(result,null,2)+"\n");
