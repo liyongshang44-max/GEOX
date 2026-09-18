@@ -77,7 +77,10 @@ function adjudicatePlaneObservation(input){
   if(String(container.compose_service??"")!==expected.compose_service)blockers.push("OWNER_COMPOSE_SERVICE_MISMATCH");
   if(String(health.runtime_role??"")!==expected.runtime_role)blockers.push("OWNER_HEALTH_RUNTIME_ROLE_MISMATCH");
   if(health.current!==true)blockers.push("OWNER_CURRENT_STRUCTURED_HEALTH_EVENT_REQUIRED");
-  const accepted=expected.runtime_role==="EVIDENCE_RUNTIME"?new Set(["HEALTHY","STANDBY"]):new Set(["HEALTHY","BACKPRESSURE"]); if(!accepted.has(String(health.status??"")))blockers.push("OWNER_RUNTIME_NOT_READY");
+  const accepted=expected.runtime_role==="EVIDENCE_RUNTIME"
+    ?new Set(["HEALTHY","STANDBY"])
+    :new Set(["HEALTHY","BACKPRESSURE","OWNER_LEASE_HEALTHY"]);
+  if(!accepted.has(String(health.status??"")))blockers.push("OWNER_RUNTIME_NOT_READY");
   return {status:blockers.length===0?"PASS":"FAIL",runtime_role:expected.runtime_role,expected_service_id:expected.service_id,expected_service_name:expected.service_name,expected_image_id:expected.image_id,expected_host_id:expected.host_id,lease_owner:String(lease.lease_owner??""),lease_instance_id:owner.instance_id,fencing_token:String(lease.minimum_fencing_token??""),acquired_at:String(lease.acquired_at??""),heartbeat_at:String(lease.heartbeat_at??""),expires_at:String(lease.expires_at??""),database_now:String(lease.database_now??""),container_id:String(container.container_id??""),container_hostname:hostname,container_running:container.running===true,container_image_id:String(container.image_id??""),tag_resolved_image_id:String(container.tag_resolved_image_id??""),compose_project:String(container.compose_project??""),compose_service:String(container.compose_service??""),health_status:String(health.status??""),health_current:health.current===true,blockers};
 }
 function adjudicateRenewal(t1,t2){ const blockers=[]; if(t1.status!=="PASS")blockers.push("OWNER_RENEWAL_T1_NOT_VALID"); if(t2.status!=="PASS")blockers.push("OWNER_RENEWAL_T2_NOT_VALID"); for(const key of ["lease_owner","fencing_token","container_id","container_hostname","container_image_id"])if(String(t1[key]??"")!==String(t2[key]??""))blockers.push(`OWNER_RENEWAL_${key.toUpperCase()}_CHANGED`); const h1=Date.parse(t1.heartbeat_at),h2=Date.parse(t2.heartbeat_at),e1=Date.parse(t1.expires_at),e2=Date.parse(t2.expires_at),n1=Date.parse(t1.database_now),n2=Date.parse(t2.database_now); if(!(Number.isFinite(h1)&&Number.isFinite(h2)&&h2>h1))blockers.push("OWNER_RENEWAL_HEARTBEAT_MUST_ADVANCE"); if(!(Number.isFinite(e1)&&Number.isFinite(e2)&&e2>e1))blockers.push("OWNER_RENEWAL_EXPIRY_MUST_ADVANCE"); if(!(Number.isFinite(n1)&&Number.isFinite(n2)&&n2>n1))blockers.push("OWNER_RENEWAL_DATABASE_TIME_MUST_ADVANCE"); return {status:blockers.length===0?"PASS":"FAIL",same_effective_owner:t1.lease_owner===t2.lease_owner,same_container_instance:t1.container_id===t2.container_id,same_image_id:t1.container_image_id===t2.container_image_id,heartbeat_advanced:Number.isFinite(h1)&&Number.isFinite(h2)&&h2>h1,expiry_advanced:Number.isFinite(e1)&&Number.isFinite(e2)&&e2>e1,blockers}; }
@@ -102,6 +105,16 @@ function selftest(){
   assert.equal(latestStructuredHealthEvent([JSON.stringify({runtime_role:"EVIDENCE_RUNTIME",status:"HEALTHY"})],"EVIDENCE_RUNTIME").status,"HEALTHY");
   assert.throws(()=>latestStructuredHealthEvent([JSON.stringify({runtime_role:"EVIDENCE_RUNTIME",status:"HEALTHY"}),"newer non-health log line"],"EVIDENCE_RUNTIME"),/OWNER_LATEST_RUNTIME_LOG_RECORD_NOT_STRUCTURED_HEALTH/);
   const positive=adjudicateOwnerProof(fixtureProof()); assert.equal(positive.status,"PASS"); assert.equal(positive.manual_db_row_alone_rejected,true);
+  const twinOwnerLeaseHealthy=fixtureProof();
+  twinOwnerLeaseHealthy.twin.t1.health.status="OWNER_LEASE_HEALTHY";
+  twinOwnerLeaseHealthy.twin.t2.health.status="OWNER_LEASE_HEALTHY";
+  const twinOwnerLeaseHealthyResult=adjudicateOwnerProof(twinOwnerLeaseHealthy);
+  assert.equal(twinOwnerLeaseHealthyResult.status,"PASS","TWIN_OWNER_LEASE_HEALTHY_MUST_BE_READY");
+  const twinLeaseHeld=fixtureProof();
+  twinLeaseHeld.twin.t1.health.status="LEASE_HELD_BY_OTHER_OWNER";
+  twinLeaseHeld.twin.t2.health.status="LEASE_HELD_BY_OTHER_OWNER";
+  const twinLeaseHeldResult=adjudicateOwnerProof(twinLeaseHeld);
+  assert.equal(twinLeaseHeldResult.status,"FAIL","TWIN_LEASE_HELD_BY_OTHER_OWNER_MUST_NOT_BE_READY");
   const negative={
     wrong_docker_image_id:expectNegative("wrong_docker_image_id",x=>{x.evidence.t1.container.image_id=otherImage;x.evidence.t2.container.image_id=otherImage;}),
     missing_container:expectNegative("missing_container",x=>{for(const t of [x.evidence.t1,x.evidence.t2]){t.container.matching_container_count=0;t.container.container_id="";t.container.hostname="";t.container.running=false;}}),
