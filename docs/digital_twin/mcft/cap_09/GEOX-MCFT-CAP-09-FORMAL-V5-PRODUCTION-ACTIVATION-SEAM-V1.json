@@ -1,0 +1,135 @@
+{
+  "schema_version": "geox_mcft_cap09_formal_v5_production_activation_seam_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "record_status": "H6_IMPLEMENTATION_CANDIDATE_NO_PRODUCTION_EFFECT_UNTIL_EXACT_HEAD_MERGE_AND_LOCAL_OPERATOR_EXECUTION",
+  "exact_predecessor_protected_main": "2ce0c90ef30b3c04ed112639c87926ac19be4e03",
+  "frontier": "FORMAL_V5_ACTIVATION_SUCCESSOR_NOT_YET_PRODUCTIZED",
+  "closes_frontier_as": "H6_FORMAL_V5_PRODUCTION_ACTIVATION_SEAM",
+  "subordinate_to": [
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-06-FORMAL-WINDOW-EPOCH-REBASE-AUTHORITY.md",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-CADENCE-DECOUPLING-AUTHORITY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-POST-GRADUATION-CONTROL-SURFACE-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md"
+  ],
+  "physical_store": {
+    "database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v5",
+    "authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+    "authority_blob_sha": "34fd3e92e0e628cf0db16e10df3633337fe81a1a",
+    "failed_v4_database": "geox_mcft_cap09_s6_formal_t4r1_24h_v4",
+    "failed_v4_reuse_forbidden": true,
+    "compatibility_alias_for_v5_forbidden": true
+  },
+  "arm": {
+    "assembler_ref": "scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs",
+    "execution_host": "LOCAL_NON_GITHUB_PRODUCTION_HOST_ONLY",
+    "exact_current_protected_main_required": true,
+    "clean_worktree_required": true,
+    "explicit_operator_authorization_required": true,
+    "h5_exact_subject_readiness_reverification_required": true,
+    "live_exact_one_owner_per_runtime_role_reverification_required": true,
+    "retired_github_production_trigger_zero_required": true,
+    "actual_arm_zero_state_read_only_revalidation_required": true,
+    "database_clock_authoritative_for_arm_time": true,
+    "epoch_selection": {
+      "minimum_governance_lead_hours": 36,
+      "source_authority": "AMENDMENT_06",
+      "actual_utc_only": true,
+      "scan_first_eligible_future_whole_window": true,
+      "exact_slot_count": 24,
+      "whole_window_crop_context_viability_required": true,
+      "readiness_deadline_offset_hours_before_o00": 12,
+      "a0_offset_hours_before_o00": 1
+    },
+    "timing_budget": {
+      "authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json",
+      "authority_blob_sha": "82b9cfadc94aa0a3f83b69a8a111ac6c5d993cf1",
+      "selected_budget_ms": 2081804,
+      "applies_to": "FORCING_ACQUISITION_START_DEADLINE_PER_BASE",
+      "fixed_35_minute_lead_authorized": false
+    }
+  },
+  "schema_materialization": {
+    "new_schema_design": false,
+    "exact_public_table_count_after_materialization": 29,
+    "base_schema_files": [
+      "docker/postgres/init/001_schema.sql",
+      "apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql",
+      "apps/server/db/migrations/2026_07_10_mcft_cap_01_closure_remediation.sql"
+    ],
+    "v13_schema_files": [
+      "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql",
+      "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql",
+      "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql"
+    ],
+    "formal_store_must_be_zero_state_before_materialization": true
+  },
+  "a0_adoption": {
+    "historical_ea5e2_reference_database_forbidden": true,
+    "historical_transient_r2_as_current_production_source_forbidden": true,
+    "provider_refetch_for_a0_forbidden": true,
+    "production_operational_fact_replay_provenance_required": true,
+    "private_retained_raw_replay_required": true,
+    "formal_raw_retain_before_decoder_required": true,
+    "canonical_semantics_must_match_source_fact": true,
+    "bootstrap_service_reused": "ExternalFormalBootstrapPersistenceServiceV1",
+    "scheduler_slot_count_after_a0": 0,
+    "next_tick_equals_o00": true
+  },
+  "runtime_adoption": {
+    "runtime_kernel_rewrite": false,
+    "scheduler_semantics_rewrite": false,
+    "v5_viability_runner_reuse": "ExternalFormalV5ViabilityGatedSchedulerV1",
+    "stage_aware_runner_reuse": "ExternalFormalV4Amendment19RunnerV2",
+    "required_successor": "THIN_V5_STAGE_AWARE_RUNNER_AND_DEDICATED_PRODUCTION_PROCESS_COMPOSITION",
+    "preformal_mode": "PRE_FORMAL_OWNER_STANDBY",
+    "active_mode": "FORMAL_V5_ACTIVE",
+    "github_production_wake_allowed": false,
+    "github_production_tick_allowed": false,
+    "system_database_utc_required": true
+  },
+  "owner_cutover": {
+    "evidence_owner_must_remain_exactly_one": true,
+    "forcing_controller_must_remain_subordinate_to_evidence_plane": true,
+    "twin_preformal_owner_must_release_before_formal_owner_claim": true,
+    "twin_double_owner_window_allowed": false,
+    "new_twin_fencing_token_required_after_cutover": true
+  },
+  "execution_sequence": [
+    "REVERIFY_H5_EXACT_MAIN_AND_LIVE_OWNERS",
+    "ARM_FRESH_V5_EPOCH",
+    "MATERIALIZE_EXISTING_29_TABLE_V13_FORMAL_SCHEMA_AND_ACL",
+    "REPLAY_CURRENT_PRODUCTION_A0_EVIDENCE_WITH_ZERO_PROVIDER_REFETCH",
+    "BOOTSTRAP_FRESH_A0",
+    "ACTIVATE_V13_FORCING_PROCESS_ON_NON_GITHUB_EVIDENCE_HOST",
+    "CUTOVER_TWIN_PRE_FORMAL_OWNER_STANDBY_TO_FORMAL_V5_ACTIVE",
+    "RUN_REAL_WALL_CLOCK_O00_O23",
+    "RUN_AUTOMATIC_FINAL_READBACK",
+    "FINAL_READ_ONLY_COMPLETION_ADJUDICATION"
+  ],
+  "hard_nonclaims": [
+    "NO_RUNTIME_KERNEL_REWRITE",
+    "NO_SCHEDULER_SEMANTIC_REWRITE",
+    "NO_NEW_DATABASE_SCHEMA_DESIGN",
+    "NO_AMENDMENT_19_REDESIGN",
+    "NO_GITHUB_PRODUCTION_CLOCK",
+    "NO_NEW_AUTHORITY_DOMAIN",
+    "NO_FAILED_V4_STORE_REUSE",
+    "NO_FORMAL_COMPLETION_FROM_H6_IMPLEMENTATION_ALONE"
+  ],
+  "candidate_non_effects": {
+    "formal_v5_arm": false,
+    "formal_v5_epoch_selected": false,
+    "formal_database_mutation": false,
+    "schema_materialization": false,
+    "a0_bootstrap": false,
+    "production_runtime_restart": false,
+    "production_owner_mutation": false,
+    "o00_started": false,
+    "provider_request_count": 0,
+    "mcft_cap09_completed": false
+  }
+}
