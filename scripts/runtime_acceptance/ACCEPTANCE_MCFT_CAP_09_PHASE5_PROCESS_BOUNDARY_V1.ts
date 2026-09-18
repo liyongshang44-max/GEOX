@@ -10,6 +10,7 @@ import {
 } from "../../apps/server/src/external_evidence/mcft_cap09_evidence_runtime_process_v1.js";
 import {
   createMcftCap09ProcessStopV1,
+  mcftCap09EvidenceLeaseKeepaliveIntervalMsV1,
   McftCap09ProductionTwinFailureClassifierV1,
   MCFT_CAP09_PRODUCTION_PROCESS_LIFECYCLE_ID_V1,
 } from "../../apps/server/src/runtime/mcft_cap09_production_process_lifecycle_v1.js";
@@ -404,6 +405,16 @@ function main(): void {
     MCFT_CAP09_EVIDENCE_RUNTIME_PROCESS_CONTRACT_V1.host_planner_boundary,
     "EXPLICIT_INJECTED_HOST_PLANNER",
   );
+  assert.equal(
+    mcftCap09EvidenceLeaseKeepaliveIntervalMsV1(300),
+    60_000,
+    "PHASE5_EVIDENCE_300_SECOND_LEASE_RENEWS_AT_60_SECONDS",
+  );
+  assert.equal(
+    mcftCap09EvidenceLeaseKeepaliveIntervalMsV1(1),
+    333,
+    "PHASE5_EVIDENCE_MINIMUM_LEASE_KEEPALIVE_INTERVAL_REQUIRED",
+  );
 
   const signals = new FakeProcessSignalsV1();
   const stop = createMcftCap09ProcessStopV1({
@@ -547,6 +558,8 @@ function main(): void {
     production_twin_process_uses_v2_stage_authority_composition: true,
     signal_stop_supported: true,
     evidence_graceful_current_fence_release: true,
+    evidence_inflight_lease_keepalive_interval_for_300s_ms: 60_000,
+    evidence_inflight_health_keepalive_same_cadence: true,
     twin_duplicate_coordination_contention_retryable: true,
     twin_stale_fence_corruption_fatal: true,
     twin_scheduler_lease_standby_waits_without_fatal: true,
