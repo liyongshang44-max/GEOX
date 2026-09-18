@@ -1,4 +1,5 @@
 name: mcft-cap-09-formal-v5-post-graduation-readiness
+# Exact-main zero-state proof regeneration surface; no arm authority is granted here.
 
 on:
   workflow_dispatch:
