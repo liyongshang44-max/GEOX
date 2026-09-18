@@ -15,17 +15,26 @@ function isoV1(value: unknown, code: string): string {
   if (!Number.isFinite(parsed) || new Date(parsed).toISOString()!==value) throw new Error(code);
   return value;
 }
+function hourV1(value: unknown, code: string): string {
+  const text=isoV1(value,code);
+  if(!text.endsWith(":00:00.000Z")) throw new Error(code);
+  return text;
+}
 
 export class ProductionEvidenceProviderAttemptFenceFactoryV1 {
   readonly factory_id=MCFT_CAP09_PRODUCTION_PROVIDER_ATTEMPT_FENCE_FACTORY_ID_V1;
   private readonly activationFenceTime:string;
+  private readonly formalA0LogicalTime:string;
   constructor(private readonly deps:{
     source_poll_schedule: EvidenceSourcePollScheduleClaimPortV1;
     gfs_retry_schedule: GfsRetrySchedulePortV1;
     gfs_target_pair_history: GfsCanonicalTargetPairHistoryReadPortV1;
     activation_fence_time:string;
+    formal_a0_logical_time:string;
   }){
     this.activationFenceTime=isoV1(deps.activation_fence_time,"PRODUCTION_PROVIDER_ATTEMPT_FENCE_ACTIVATION_FENCE_INVALID");
+    this.formalA0LogicalTime=hourV1(deps.formal_a0_logical_time,"PRODUCTION_PROVIDER_ATTEMPT_FENCE_FORMAL_A0_INVALID");
+    if(Date.parse(this.activationFenceTime)>=Date.parse(this.formalA0LogicalTime)) throw new Error("PRODUCTION_PROVIDER_ATTEMPT_FENCE_ACTIVATION_FENCE_MUST_PRECEDE_A0");
   }
 
   buildForDecision(decision:ProductionEvidenceSourceDecisionV1):EvidenceRuntimeProviderAttemptFencePortV1|null {
@@ -45,7 +54,7 @@ export class ProductionEvidenceProviderAttemptFenceFactoryV1 {
     if(op.kind==="GFS_BUNDLE_ACQUIRE"){
       return {claimBeforeProviderFetch:async({claim})=>{
         const history=await this.deps.gfs_target_pair_history.readGfsTargetPairHistory({
-          scope:claim.scope,from_target_logical_time:op.target_logical_time
+          scope:claim.scope,from_target_logical_time:this.formalA0LogicalTime
         });
         const completed=history.pairs.map(pair=>pair.target_logical_time);
         if(completed.includes(op.target_logical_time)){
@@ -55,7 +64,9 @@ export class ProductionEvidenceProviderAttemptFenceFactoryV1 {
         if(later) throw new Error("PRODUCTION_PROVIDER_ATTEMPT_GFS_CANONICAL_TARGET_HISTORY_GAP:"+op.target_logical_time+":"+later);
         const r=await this.deps.gfs_retry_schedule.claimGfsAttemptBeforeProviderFetch({
           claim,target_logical_time:op.target_logical_time,requested_at:op.requested_at,
-          due_window_start:op.due_window_start,due_window_end_exclusive:op.due_window_end_exclusive
+          due_window_start:op.due_window_start,due_window_end_exclusive:op.due_window_end_exclusive,
+          authority_target_floor_logical_time:this.formalA0LogicalTime,
+          canonical_durable_paired_target_logical_times:completed
         });
         if(r.status==="CLAIMED") return {status:"AUTHORIZED" as const,durable_coordination_write_count:r.database_write_count};
         if(r.status==="NOT_DUE") return {status:"NOT_DUE" as const,durable_coordination_write_count:0 as const};
