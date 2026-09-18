@@ -1,3 +1,757 @@
+# 2026-09-18 接手更新 — #3599 GFS EXHAUSTED-TARGET PLANNER CLOSURE / FINAL PRE-FORMAL-V5 ARM PATH
+
+> 用途：conversation continuation only。
+> 本节不是 architecture authority、production runtime authority、production-owner authority、Formal-v5 arm authority、A0 authority 或 O00-O23 authority。
+> 落库纪律：继续 PURE PREPEND 到既有 continuation 文件；下方既有全文保持 exact suffix；原 8/27 canonical handoff（含 AH）继续不动；不新建 handoff，不绕到 main，不修改工程文件。
+> 核验时点：2026-09-18T15:57Z 左右（UTC）。
+> 本节优先于下方所有历史快照；历史 SHA、blocker、container 状态和 next step 不得重新当作当前事实。
+
+## A. 当前正在做什么
+
+MCFT-CAP-09 当前唯一 active frontier 仍是：
+
+```text
+FINAL PRE-FORMAL-V5 ARM CLOSURE
+```
+
+但当前最前面的工程子任务已经具体收敛为：
+
+```text
+close exhausted-current-target GFS planner defect
+-> exact-head #3599 qualification
+-> exact-head merge only after all required gates green
+-> new protected-main post-merge qualification / zero-state
+-> local exact-main rematerialization + H3
+-> real legitimate GFS in-flight >300s physical proof
+-> H4 live fenced-owner proof
+-> H5 formal_v5_arm_ready=true
+-> HARD STOP
+```
+
+当前仍严禁：
+
+```text
+Formal-v5 arm
+A0
+O00-O23
+MCFT-CAP-09 completion declaration
+```
+
+B-Line 继续 ENGINEERING CLOSED / FROZEN；ADR 继续 PARKED。不要重新打开其它工程线。
+
+## B. 已经完成的关键事实
+
+### B1. #3597 — Evidence long in-flight owner keepalive 已取得真实 production proof
+
+此前已修复 Evidence runtime 在单次长 provider/GFS attempt 内无法回到 host loop、导致 300 秒 owner lease/structured health 过期的问题。
+
+#3597 已合并，runtime 现在在 in-flight attempt 内执行 bounded keepalive：
+
+```text
+300s lease
+-> renew every 60s
+-> emit HEALTHY / ATTEMPT_IN_PROGRESS
+-> preserve same-owner / same-fence freshest claim
+```
+
+该修复不是只靠 CI 证明；在真实 Windows production host + real Neon + real GFS attempt 上已经观测到：
+
+```text
+GFS started_at
+= 2026-09-18T14:46:19.178Z
+
+same attempt age
+= 306s
+
+health
+= ATTEMPT_IN_PROGRESS
+
+Evidence heartbeat
+= 2026-09-18T14:50:38.495737Z
+
+Evidence expires
+= 2026-09-18T14:55:38.495737Z
+
+GFS_INFLIGHT_GT_300_SECONDS
+= PASS
+```
+
+因此原始“长 GFS attempt 导致 Evidence lease 过期”的 runtime defect 已被真实 physical proof 命中并证明修复。
+
+但是该旧 physical proof 绑定的 subject 不是当前最终 main，不能直接作为最终 H4/H5 closure subject。
+
+### B2. #3598 — H4 Twin health predicate harness defect 已修并合并
+
+#3597 physical proof 后，H4 first-red 转为：
+
+```text
+OWNER_TWIN_T1_PROVENANCE_REQUIRED
+```
+
+现场 Neon 表明 Twin lease 实际仍 live 并持续 heartbeat/expiry；根因是 production Twin 在：
+
+```text
+PRE_FORMAL_OWNER_STANDBY
+```
+
+合法输出：
+
+```text
+status = OWNER_LEASE_HEALTHY
+```
+
+而旧 H4 verifier 只接受：
+
+```text
+HEALTHY
+BACKPRESSURE
+```
+
+#3598 已将 `OWNER_LEASE_HEALTHY` 纳入 Twin ready health predicate，同时保留对 `LEASE_HELD_BY_OTHER_OWNER` 的 negative rejection；并修复 Formal-v5 readiness harness 错误要求 workflow 自身必须出现在 changed_dependencies 的断言。
+
+#3598 已 exact-head merge，形成当前 #3599 的 base main：
+
+```text
+1137e327df07011ec54186feb88d7a544301fe70
+```
+
+#3598 不改变 Twin runtime、Evidence runtime、数据库、lease cadence、current-crop、Formal-v5、A0 或 O00 语义。
+
+### B3. 新 production first-red — exhausted current GFS target 被重复规划
+
+在 #3598 后续 production 诊断中，Evidence runtime 出现 crash/restart；Twin runtime 保持稳定。
+
+用户 Windows durable log 已反复记录确定性 first-red：
+
+```text
+FATAL_ATTEMPT_FAILURE
+Error: GFS_RETRY_TARGET_SKIP_FORBIDDEN
+```
+
+调用链稳定落在：
+
+```text
+PostgresGfsRetryScheduleV1.claimGfsAttemptBeforeProviderFetch
+-> production provider attempt fence
+-> EvidenceRuntimeCycleServiceV1.executeCycle
+-> EvidenceRuntimeHostV1.run
+-> pre-Formal owner runtime crash
+```
+
+现场根因已经闭合：
+
+```text
+current GFS target durable attempt budget
+= 3 / 3 exhausted
+
+canonical pair
+= not yet formed
+
+old host planner
+= still constructs the same GFS target
+
+provider fence
+= correctly fail-closed
+
+result
+= GFS_RETRY_TARGET_SKIP_FORBIDDEN
+-> Evidence runtime crash/restart
+-> repeated owner reacquisition
+-> fencing-token churn
+```
+
+必须强调：
+
+```text
+provider fence is NOT the defect
+```
+
+provider fence 对第 4 次非法 attempt 的拒绝是正确 fail-closed 行为。缺陷在 planner 上游没有读取 durable retry schedule、没有在当前 target budget exhausted 时停止构造该 GFS action。
+
+此前物理观察还出现：
+
+```text
+Twin container
+= running / restart=0
+
+Evidence container
+= restarting / restart=18
+```
+
+随后 exact production compose project containers 已 force remove 并明确验证：
+
+```text
+PRODUCTION_CONTAINERS=0
+```
+
+旧 crash-loop 不能靠“再启动一次”处理。
+
+### B4. #3599 — planner 修复已落库
+
+当前修复 PR：
+
+```text
+PR
+= #3599
+= OPEN
+= NOT MERGED
+
+exact head
+= e7fbdcc6e6f043b226b34a4497d9f3c4bb2fce25
+
+base main
+= 1137e327df07011ec54186feb88d7a544301fe70
+
+ahead
+= 6 commits
+
+changed files
+= 4
+
+diff
+= +19 / -5
+```
+
+核心修复：
+
+```text
+production Evidence host planner
+-> reads durable GFS retry schedule
+
+if current target durable budget is exhausted
+-> suppress ONLY the GFS action
+-> do NOT construct provider attempt #4
+-> continue planning KBS Soil / KBS Raw independently
+```
+
+保留的 fail-closed 语义：
+
+```text
+ATTEMPT_BUDGET_EXHAUSTED provider-fence rejection
+= retained
+
+MISSED_WINDOW
+= not relaxed
+
+target gap
+= not relaxed
+
+target skip
+= not relaxed
+
+provider fence
+= not bypassed
+```
+
+该修复的设计目标不是“让第 4 次请求通过”，而是“planner 不再构造本来就不允许执行的第 4 次请求”。
+
+## C. #3599 当前 exact-head qualification 状态
+
+以下状态为 2026-09-18T15:57Z 左右的远端回读；优先于更早的“QCP / Owner Cutover in_progress”快照。
+
+### C1. 已通过
+
+```text
+CI build-test
+run = 35365065650
+status = SUCCESS
+
+Production Runtime Owner Cutover qualification
+run = 35365065682
+status = SUCCESS
+
+delivery policy
+= SUCCESS
+
+release lane
+= SUCCESS
+
+EA5E2 successor runner
+= SUCCESS
+
+EA5E2 runtime dependency graph
+= SUCCESS
+
+current-main re-anchor
+= SUCCESS
+
+main ruleset readiness
+= SUCCESS
+
+candidate declaration selftest
+= SUCCESS
+
+EA5E2 live-window preflight hardening
+= SUCCESS
+```
+
+target-planner readiness：
+
+```text
+run = 35365065672
+conclusion = SKIPPED
+```
+
+这是 skipped，不是 failure；不得伪写为已执行 PASS，也不得当作 first-red。
+
+### C2. CI acceptance 仍在运行
+
+```text
+CI
+run = 35365065650
+
+acceptance job
+= IN_PROGRESS
+
+current observed step
+= Run frontend runtime page audit
+```
+
+当前没有 acceptance first-red，但其最终 conclusion 尚未形成。
+
+### C3. QCP 已从 in-progress 转为 FAILURE — 当前真正 blocker
+
+```text
+QCP
+run = 35365065566
+status = FAILURE
+
+first failed step
+= Enumerate all blockers without fail-fast
+
+blocker_count
+= 2
+```
+
+两个 blocker 精确为：
+
+```text
+1.
+blocker_class
+= INVALID_OR_MISSING_REQUALIFICATION_EVIDENCE
+
+check_id
+= PHASE3_EVIDENCE_RUNTIME_FOUNDATION
+
+reason_code
+= NO_VALID_REQUALIFICATION_EVIDENCE
+
+observed detail
+= prior durable evidence binding exists
+  but dependency_digest_match=false
+
+
+2.
+blocker_class
+= INVALID_OR_MISSING_SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_EVIDENCE
+
+check_id
+= PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS
+
+reason_code
+= SUCCESSOR_CHAIN_PHASE5_EXACT_RUN_OR_DEPENDENCY_DIGEST_INVALID
+
+observed detail
+= prior exact run remains success
+  but dependency_digest_match=false
+```
+
+QCP artifact：
+
+```text
+artifact id
+= 10556267527
+
+artifact zip sha256
+= 1f23eab368b86762f2560fb1ef620c19dc765f40cd95aaa59ef0fa6d95898b1
+```
+
+因此当前准确判断：
+
+```text
+#3599 runtime semantic fix
+= QUALIFICATION NOT CLOSED
+
+QCP
+= RED
+
+merge
+= FORBIDDEN
+
+repair declaration
+= FORBIDDEN
+```
+
+这两个 QCP red 当前表现为 successor requalification evidence / dependency-digest 绑定缺口，不是新的 production runtime semantic first-red。不得为消除它们去放宽 GFS attempt budget、provider fence 或 planner fail-closed 语义。
+
+## D. 当前卡在哪里
+
+当前唯一明确 blocker：
+
+```text
+QCP successor requalification evidence convergence
+```
+
+更具体地：
+
+```text
+PHASE3_EVIDENCE_RUNTIME_FOUNDATION
+-> needs exact successor requalification evidence
+-> dependency digest must match current #3599 dependency set
+
+PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS
+-> needs exact successor-chain Phase5 requalification binding
+-> exact run + dependency digest must match current #3599 dependency set
+```
+
+Owner Cutover qualification 已绿，不能拿它覆盖 QCP failure。
+
+CI acceptance 尚未结束；即使它绿，QCP 仍然阻止 merge。
+
+如果为了闭合 QCP evidence 产生任何新 commit：
+
+```text
+e7fbdcc6...
+= immediately historical
+
+new commit
+= new exact head
+```
+
+之后必须重新按新 exact head 判断所有 required gates，不能拼接旧 head 的 success。
+
+## E. 下一步严格执行计划
+
+### E1. 先闭合两个 QCP evidence blocker
+
+以 QCP run `35365065566` / artifact `10556267527` 为当前机器裁决基准。
+
+只处理：
+
+```text
+PHASE3_EVIDENCE_RUNTIME_FOUNDATION
+PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS
+```
+
+的 exact successor requalification evidence / dependency digest。
+
+不要扩大 runtime 修复范围，除非新的 machine first-red 明确指出 runtime semantic defect。
+
+### E2. 形成新的 exact head 后重新资格化
+
+如果 evidence binding 需要提交：
+
+```text
+new exact head
+-> QCP blocker_count=0
+-> CI build-test SUCCESS
+-> CI acceptance SUCCESS
+-> Production Runtime Owner Cutover qualification SUCCESS
+-> applicable EA5E2 / delivery / release / ruleset gates SUCCESS
+```
+
+target-planner readiness 若按 applicability 合法 skipped，继续记录为 skipped，不伪造 PASS。
+
+只有 final exact head 全绿才可 merge #3599。
+
+### E3. exact-head guard merge #3599
+
+合并前重新证明：
+
+```text
+PR #3599
+= OPEN
+= clean / mergeable under required rules
+= exact expected head
+
+QCP
+= SUCCESS
+= blocker_count 0
+
+required CI / qualification
+= SUCCESS
+```
+
+使用 expected-head guard merge；任何 head 漂移先 STOP。
+
+### E4. 新 protected-main post-merge qualification
+
+merge 后立即取得：
+
+```text
+new protected-main SHA
+```
+
+然后只接受该 exact main 的：
+
+```text
+post-merge CI
+Formal-v5 readiness / zero-state
+EA5E2 successor qualification
+required runtime qualification
+```
+
+旧 subject 的 runtime-start authority、image attestation、zero-state、H3/H4 均不能直接继承。
+
+### E5. 本机重新进入 exact-main production proof
+
+严格：
+
+```text
+fetch / ff-only pull
+-> HEAD == origin/main == new protected main
+-> clean worktree
+-> production containers = 0
+-> old live leases released/expired
+-> fresh H2A rematerialization
+-> H2B host binding
+-> new H3 owner cutover
+```
+
+必须重新检查 current-crop freshness 和 planned-A0 coverage；不得继承 handoff 时钟。
+
+### E6. 新 H3 后的 GFS physical proof
+
+目标仍要求真实 GFS in-flight 跨过原 300 秒 lease window，再做 H4。
+
+但是 #3599 的语义意味着：
+
+```text
+current exhausted target
+= MUST remain suppressed
+
+do not manufacture attempt #4
+do not reset durable attempt budget
+do not bypass provider fence
+```
+
+要证明 >300 秒 GFS in-flight，必须等待/使用**下一次合法 eligible GFS target**。当前 exhausted target 只能作为“planner 应跳过 GFS action”的证明。
+
+在等待下一合法 GFS target 时：
+
+```text
+KBS Soil / KBS Raw
+= must remain independently plannable
+= must not be blocked by exhausted GFS target
+```
+
+### E7. H4
+
+在新 exact-main image / container / host / Neon lease 上证明：
+
+```text
+Evidence
+= exact one effective owner
+= same exact-main image
+= lease renewal / heartbeat live
+= long legitimate GFS in-flight survives >300s
+
+Twin
+= exact one effective owner
+= PRE_FORMAL_OWNER_STANDBY
+= OWNER_LEASE_HEALTHY accepted by fixed verifier
+
+Formal-v5
+= false
+
+A0
+= false
+
+O00
+= false
+```
+
+### E8. H5 readiness only
+
+消费**新 protected-main exact-subject** zero-state proof，运行：
+
+```text
+VERIFY_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1.cjs
+```
+
+唯一目标：
+
+```text
+status = PASS
+formal_v5_arm_ready = true
+separate_explicit_operator_authorization_still_required = true
+
+formal_v5_arm = false
+A0 = false
+O00 = false
+```
+
+### E9. HARD STOP
+
+一旦：
+
+```text
+formal_v5_arm_ready=true
+```
+
+立即停止。
+
+**不要执行真正 Formal-v5 arm。**
+
+## F. 本轮踩过的坑 — 后续必须避免
+
+### F1. 不要把 provider fence 的 fail-closed 当成 defect
+
+本轮 `GFS_RETRY_TARGET_SKIP_FORBIDDEN` 证明 provider fence 正确阻止非法 attempt。
+
+正确修复层：
+
+```text
+planner
+```
+
+不是：
+
+```text
+relax fence
+increase attempt budget
+allow target skip
+force attempt #4
+```
+
+### F2. exhausted GFS target 不能拖死 KBS
+
+#3599 的关键合同：
+
+```text
+GFS exhausted
+-> suppress GFS only
+
+KBS Soil / KBS Raw
+-> continue independently
+```
+
+以后 acceptance 必须防止把 provider-specific suppression 提升成整个 Evidence cycle suppression。
+
+### F3. 不得人为制造第 4 次 provider attempt 来做 >300 秒证明
+
+当前 target 已是：
+
+```text
+3 / 3
+```
+
+最终 production proof 必须使用下一合法 target；不能 reset schedule、改 DB、删 retry row 或绕过 fence。
+
+### F4. QCP dependency digest red 不等于 runtime semantic red
+
+当前两个 QCP blocker 的共同特征：
+
+```text
+dependency_digest_match=false
+```
+
+先修 successor evidence binding。没有新的 runtime first-red 时，不要继续改 production planner/provider semantics。
+
+### F5. 每次 commit 都使 exact-head 资格重新开始
+
+任何 evidence-only commit 也会改变：
+
+```text
+exact head
+dependency digest
+QCP applicability
+CI subject
+```
+
+所以不能把：
+
+```text
+old-head QCP
++ new-head CI
++ older Owner Cutover
+```
+
+拼成一次“全绿”。
+
+### F6. old physical proof 有价值，但不能冒充 final exact-main closure
+
+#3597 已取得真实 >300 秒 GFS keepalive proof，这是 runtime defect 的重要证据。
+
+但最终 H4/H5 仍必须绑定 #3599 merge 后的新 protected main。
+
+### F7. restart-loop 必须先归零，再读 durable first-red
+
+本轮 production 曾出现 Evidence restart churn。正确做法已经再次证明：
+
+```text
+observe
+-> capture durable log
+-> remove exact compose project containers
+-> verify container count=0
+-> classify deterministic first-red
+-> fix upstream semantic source
+```
+
+不要靠重复 restart 碰运气。
+
+### F8. PowerShell / psql launcher 作用域不要再踩
+
+曾出现 helper 内使用：
+
+```powershell
+& $script:Psql
+```
+
+但调用者只定义 local `$Psql`，导致：
+
+```text
+管道元素中的 "&" 后面的表达式生成无效对象
+```
+
+可靠做法：
+
+```powershell
+Invoke-PsqlRow -CommandPath $Psql ...
+```
+
+并在函数内部显式：
+
+```powershell
+& $CommandPath
+```
+
+### F9. pg SSL warning 不是本轮 root cause
+
+`pg` / `pg-connection-string` 关于 future SSL semantics 的 warning 不等于连接失败。
+
+必须按 exit code / query result / machine verifier 判断，不要为了消 warning 放宽 TLS。
+
+### F10. target-planner readiness skipped 不是失败，也不是 PASS
+
+始终按实际 applicability 记录：
+
+```text
+SKIPPED
+```
+
+不要升级为 success proof；也不要因为 skipped 自行制造补跑，除非 QCP / workflow contract 明确要求。
+
+## G. 当前接手一句话
+
+```text
+MCFT-CAP-09 is still in FINAL PRE-FORMAL-V5 ARM CLOSURE.
+
+#3599 exact head e7fbdcc6... contains the exhausted-GFS-target planner fix:
+read durable retry schedule, suppress only exhausted GFS action, preserve provider-fence fail-closed semantics, and keep KBS Soil / KBS Raw independent.
+
+Owner Cutover qualification and build-test are green, but QCP 35365065566 is RED with exactly two successor requalification evidence/dependency-digest blockers; CI acceptance is still in progress.
+
+Do NOT merge #3599 yet.
+First close the two QCP evidence blockers, then rerun all required gates on the new exact head.
+Only after exact-head all-green may #3599 merge.
+Then: new protected main -> post-merge zero-state/readiness -> local exact-main H3 -> next legitimate GFS in-flight >300s -> H4 -> H5 formal_v5_arm_ready=true -> HARD STOP.
+
+Formal-v5 / A0 / O00 remain NOT STARTED.
+```
+
+---
+
 # 2026-09-18 接手更新 — FINAL PRE-FORMAL-V5 ARM CLOSURE
 
 > 用途：conversation continuation only。
