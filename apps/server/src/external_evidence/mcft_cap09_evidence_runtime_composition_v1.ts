@@ -204,6 +204,7 @@ export function composeEvidenceRuntimeV1(input: {
 
   const host = new EvidenceRuntimeHostV1({
     planner,
+    lease: leaseRepository,
     wait: input.wait,
     health: input.health,
     stop: input.stop,
