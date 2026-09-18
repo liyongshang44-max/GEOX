@@ -146,6 +146,31 @@ implements EvidenceRuntimeHostWaitPortV1 {
     }
     await sleep(waitMs);
   }
+
+  async waitForLeaseRenewal(input: {
+    lease_duration_seconds: number;
+    signal: AbortSignal;
+  }): Promise<"DUE" | "CANCELLED"> {
+    const leaseMs = boundedMillisecondsV1(
+      Math.floor(input.lease_duration_seconds * 1000),
+      "PHASE5_EVIDENCE_LEASE_KEEPALIVE_DURATION_INVALID",
+      1000,
+      3_600_000,
+    );
+    const waitMs = Math.max(100, Math.min(60_000, Math.floor(leaseMs / 3)));
+    if (input.signal.aborted) return "CANCELLED";
+    try {
+      await sleep(waitMs, undefined, { signal: input.signal });
+      return "DUE";
+    } catch (error) {
+      if (
+        input.signal.aborted
+        && error instanceof Error
+        && error.name === "AbortError"
+      ) return "CANCELLED";
+      throw error;
+    }
+  }
 }
 
 export class McftCap09ProductionTwinWaitV1
