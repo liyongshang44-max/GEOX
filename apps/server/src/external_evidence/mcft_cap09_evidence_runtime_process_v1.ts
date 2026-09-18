@@ -278,11 +278,15 @@ export async function runMcftCap09EvidenceRuntimeProcessV1(input: {
       work_item_factory: input.work_item_factory,
     });
 
-    await composition.host.run({
+    const result = await composition.host.run({
       scope: config.scope,
       lease_owner: config.lease_owner,
       lease_duration_seconds: config.lease_duration_seconds,
     });
+    const finalClaim = result.last_attempt_result?.lease_claim ?? null;
+    if (finalClaim && finalClaim.lease_owner === config.lease_owner) {
+      await composition.lease_repository.releaseLease({ claim: finalClaim });
+    }
   } finally {
     stop.dispose();
     await pool.end();
