@@ -176,6 +176,8 @@ const cutoverEnvSection=section(
 );
 assert.ok(cutoverEnvSection.includes('GEOX_MCFT_CAP09_PREFORMAL_MODE:"OWNER_CUTOVER"'),"CUTOVER_PREFORMAL_MODE_EXPLICIT_PIN_REQUIRED");
 assert.equal((cutoverEnvSection.match(/GEOX_MCFT_CAP09_PREFORMAL_MODE/g)||[]).length,1,"CUTOVER_PREFORMAL_MODE_SINGLE_PIN_REQUIRED");
+assert.ok(runner.includes("timeout:options.timeoutMs"),"CUTOVER_EXEC_TIMEOUT_FORWARDING_REQUIRED");
+assert.ok(runner.includes("timeoutMs:remainingMs"),"CUTOVER_OWNER_VERIFIER_OUTER_DEADLINE_REQUIRED");
 assert.equal(runner.includes('"--build"'),false,"CUTOVER_PARALLEL_SHARED_IMAGE_BUILD_FORBIDDEN");
 assert.ok(runner.includes("current_crop_authority_ref:selectedCurrentCrop.ref"));
 assert.ok(runner.includes("GEOX_MCFT_CAP09_PRODUCTION_CURRENT_CROP_AUTHORITY_PATH:selectedCurrentCrop.resolved"));
