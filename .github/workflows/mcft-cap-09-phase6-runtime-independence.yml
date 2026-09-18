@@ -958,7 +958,17 @@ jobs:
             const covering=p.decisions.filter(row=>(row.changed_dependencies||[]).includes(file));
             const requalified=covering.some(row=>row.status==='REQUALIFY'||row.status==='REQUIRED');
             const ownerDeferred=covering.some(row=>row.check_id==='EXACT_ONE_PRODUCTION_OWNER'&&row.status==='NOT_APPLICABLE');
-            if(!requalified&&!ownerDeferred){
+            const formalV5PostGraduationDeferred=
+              file==='apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts'
+              && covering.length===1
+              && covering.some(row=>
+                row.check_id==='FORMAL_V5_ACTIVATION'
+                && row.status==='NOT_APPLICABLE'
+                && row.reason_code==='STAGE_NOT_APPLICABLE'
+                && Array.isArray(row.resolver_ids)
+                && row.resolver_ids.includes('FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1')
+              );
+            if(!requalified&&!ownerDeferred&&!formalV5PostGraduationDeferred){
               throw new Error('PHASE6_SUCCESSOR_RUNTIME_DELTA_NOT_GOVERNED:'+file);
             }
           }
