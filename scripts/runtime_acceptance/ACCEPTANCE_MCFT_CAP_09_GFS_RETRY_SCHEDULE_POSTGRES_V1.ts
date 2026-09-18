@@ -11,6 +11,7 @@ const DATABASE_URL=process.env.DATABASE_URL?.trim();if(!DATABASE_URL)throw new E
 const SCOPE:EvidenceRuntimeScopeV1={tenant_id:"gfsRetryTenant",project_id:"gfsRetryProject",group_id:"gfsRetryGroup",field_id:"gfsRetryField",season_id:"gfsRetrySeason",zone_id:"gfsRetryZone"};
 const A0="2026-09-02T19:00:00.000Z",A0_START="2026-09-02T17:00:00.000Z",A0_END=A0;
 const O00="2026-09-02T20:00:00.000Z",O00_START="2026-09-02T18:50:00.000Z",O00_END="2026-09-02T19:30:00.000Z";
+const O01="2026-09-02T21:00:00.000Z",O02="2026-09-02T22:00:00.000Z",O04="2026-09-03T00:00:00.000Z";
 
 async function main():Promise<void>{
   const pool=new Pool({connectionString:DATABASE_URL,application_name:"mcft-cap09-gfs-retry-schedule"});
@@ -20,29 +21,33 @@ async function main():Promise<void>{
     const a=await lease.acquireLease({scope:SCOPE,lease_owner:"gfs-owner-A",lease_duration_seconds:600});assert(a);
     assert.equal(await repo.readGfsRetrySchedule({scope:SCOPE}),null);
 
-    const first=await repo.claimGfsAttemptBeforeProviderFetch({claim:a,target_logical_time:A0,requested_at:"2026-09-02T17:30:00.000Z",due_window_start:A0_START,due_window_end_exclusive:A0_END});
+    const first=await repo.claimGfsAttemptBeforeProviderFetch({claim:a,target_logical_time:A0,requested_at:"2026-09-02T17:30:00.000Z",due_window_start:A0_START,due_window_end_exclusive:A0_END,authority_target_floor_logical_time:A0,canonical_durable_paired_target_logical_times:[]});
     assert.equal(first.status,"CLAIMED");assert.equal(first.schedule.attempt_count,1);assert.equal(first.schedule.next_attempt_eligible_at,"2026-09-02T17:31:00.000Z");
-    const throttled=await repo.claimGfsAttemptBeforeProviderFetch({claim:a,target_logical_time:A0,requested_at:"2026-09-02T17:30:30.000Z",due_window_start:A0_START,due_window_end_exclusive:A0_END});
+    const throttled=await repo.claimGfsAttemptBeforeProviderFetch({claim:a,target_logical_time:A0,requested_at:"2026-09-02T17:30:30.000Z",due_window_start:A0_START,due_window_end_exclusive:A0_END,authority_target_floor_logical_time:A0,canonical_durable_paired_target_logical_times:[]});
     assert.equal(throttled.status,"NOT_DUE");assert.equal(throttled.database_write_count,0);
-    const second=await repo.claimGfsAttemptBeforeProviderFetch({claim:a,target_logical_time:A0,requested_at:"2026-09-02T17:31:00.000Z",due_window_start:A0_START,due_window_end_exclusive:A0_END});
+    const second=await repo.claimGfsAttemptBeforeProviderFetch({claim:a,target_logical_time:A0,requested_at:"2026-09-02T17:31:00.000Z",due_window_start:A0_START,due_window_end_exclusive:A0_END,authority_target_floor_logical_time:A0,canonical_durable_paired_target_logical_times:[]});
     assert.equal(second.status,"CLAIMED");assert.equal(second.schedule.attempt_count,2);
 
     await lease.releaseLease({claim:a});
     const b=await lease.acquireLease({scope:SCOPE,lease_owner:"gfs-owner-B",lease_duration_seconds:600});assert(b);assert(b.fencing_token>a.fencing_token);
     const restart=await repo.readGfsRetrySchedule({scope:SCOPE});assert(restart);assert.equal(restart.attempt_count,2);assert.equal(restart.target_logical_time,A0);
-    await assert.rejects(()=>repo.claimGfsAttemptBeforeProviderFetch({claim:a,target_logical_time:A0,requested_at:"2026-09-02T17:32:00.000Z",due_window_start:A0_START,due_window_end_exclusive:A0_END}),/GFS_RETRY_STALE_FENCE/);
-    const third=await repo.claimGfsAttemptBeforeProviderFetch({claim:b,target_logical_time:A0,requested_at:"2026-09-02T17:32:00.000Z",due_window_start:A0_START,due_window_end_exclusive:A0_END});
+    await assert.rejects(()=>repo.claimGfsAttemptBeforeProviderFetch({claim:a,target_logical_time:A0,requested_at:"2026-09-02T17:32:00.000Z",due_window_start:A0_START,due_window_end_exclusive:A0_END,authority_target_floor_logical_time:A0,canonical_durable_paired_target_logical_times:[]}),/GFS_RETRY_STALE_FENCE/);
+    const third=await repo.claimGfsAttemptBeforeProviderFetch({claim:b,target_logical_time:A0,requested_at:"2026-09-02T17:32:00.000Z",due_window_start:A0_START,due_window_end_exclusive:A0_END,authority_target_floor_logical_time:A0,canonical_durable_paired_target_logical_times:[]});
     assert.equal(third.status,"CLAIMED");assert.equal(third.schedule.attempt_count,3);
-    const exhausted=await repo.claimGfsAttemptBeforeProviderFetch({claim:b,target_logical_time:A0,requested_at:"2026-09-02T17:33:00.000Z",due_window_start:A0_START,due_window_end_exclusive:A0_END});
+    const exhausted=await repo.claimGfsAttemptBeforeProviderFetch({claim:b,target_logical_time:A0,requested_at:"2026-09-02T17:33:00.000Z",due_window_start:A0_START,due_window_end_exclusive:A0_END,authority_target_floor_logical_time:A0,canonical_durable_paired_target_logical_times:[]});
     assert.equal(exhausted.status,"ATTEMPT_BUDGET_EXHAUSTED");assert.equal(exhausted.database_write_count,0);
 
-    const nextTarget=await repo.claimGfsAttemptBeforeProviderFetch({claim:b,target_logical_time:O00,requested_at:O00_START,due_window_start:O00_START,due_window_end_exclusive:O00_END});
+    const nextTarget=await repo.claimGfsAttemptBeforeProviderFetch({claim:b,target_logical_time:O00,requested_at:O00_START,due_window_start:O00_START,due_window_end_exclusive:O00_END,authority_target_floor_logical_time:A0,canonical_durable_paired_target_logical_times:[]});
     assert.equal(nextTarget.status,"CLAIMED");assert.equal(nextTarget.schedule.target_logical_time,O00);assert.equal(nextTarget.schedule.attempt_count,1);
-    await assert.rejects(()=>repo.claimGfsAttemptBeforeProviderFetch({claim:b,target_logical_time:"2026-09-02T22:00:00.000Z",requested_at:"2026-09-02T20:50:00.000Z",due_window_start:"2026-09-02T20:50:00.000Z",due_window_end_exclusive:"2026-09-02T21:30:00.000Z"}),/GFS_RETRY_TARGET_SKIP_FORBIDDEN/);
-    const missed=await repo.claimGfsAttemptBeforeProviderFetch({claim:b,target_logical_time:O00,requested_at:O00_END,due_window_start:O00_START,due_window_end_exclusive:O00_END});
+    await assert.rejects(()=>repo.claimGfsAttemptBeforeProviderFetch({claim:b,target_logical_time:O02,requested_at:"2026-09-02T20:50:00.000Z",due_window_start:"2026-09-02T20:50:00.000Z",due_window_end_exclusive:"2026-09-02T21:30:00.000Z",authority_target_floor_logical_time:A0,canonical_durable_paired_target_logical_times:[]}),/GFS_RETRY_TARGET_SKIP_FORBIDDEN/);
+    const provenSkip=await repo.claimGfsAttemptBeforeProviderFetch({claim:b,target_logical_time:O02,requested_at:"2026-09-02T20:50:00.000Z",due_window_start:"2026-09-02T20:50:00.000Z",due_window_end_exclusive:"2026-09-02T21:30:00.000Z",authority_target_floor_logical_time:A0,canonical_durable_paired_target_logical_times:[O01]});
+    assert.equal(provenSkip.status,"CLAIMED");assert.equal(provenSkip.schedule.target_logical_time,O02);assert.equal(provenSkip.schedule.attempt_count,1);
+    const authorityFloorReset=await repo.claimGfsAttemptBeforeProviderFetch({claim:b,target_logical_time:O04,requested_at:"2026-09-02T22:50:00.000Z",due_window_start:"2026-09-02T22:50:00.000Z",due_window_end_exclusive:"2026-09-02T23:30:00.000Z",authority_target_floor_logical_time:O04,canonical_durable_paired_target_logical_times:[]});
+    assert.equal(authorityFloorReset.status,"CLAIMED");assert.equal(authorityFloorReset.schedule.target_logical_time,O04);assert.equal(authorityFloorReset.schedule.attempt_count,1);
+    const missed=await repo.claimGfsAttemptBeforeProviderFetch({claim:b,target_logical_time:O00,requested_at:O00_END,due_window_start:O00_START,due_window_end_exclusive:O00_END,authority_target_floor_logical_time:A0,canonical_durable_paired_target_logical_times:[]});
     assert.equal(missed.status,"MISSED_WINDOW");assert.equal(missed.database_write_count,0);
 
-    const proof={schema_version:"geox_mcft_cap09_gfs_retry_schedule_postgres_v1",status:"PASS",durable_target_bound:true,retry_minimum_interval_seconds:60,max_attempts_per_target_window:3,same_target_throttle_restart_safe:true,attempt_budget_restart_safe:true,owner_takeover_preserves_budget:true,stale_fence_rejected:true,target_plus_one_resets_budget:true,target_skip_fail_closed:true,missed_window_zero_write:true,provider_request_count:0,canonical_evidence_write_count:0,evidence_supply_cursor_mutation_count:0,runtime_tick_cursor_mutation_count:0,twin_state_mutation:false,production_runtime_start:false};
+    const proof={schema_version:"geox_mcft_cap09_gfs_retry_schedule_postgres_v1",status:"PASS",durable_target_bound:true,retry_minimum_interval_seconds:60,max_attempts_per_target_window:3,same_target_throttle_restart_safe:true,attempt_budget_restart_safe:true,owner_takeover_preserves_budget:true,stale_fence_rejected:true,target_plus_one_resets_budget:true,target_skip_fail_closed:true,canonical_durable_skip_proof_required:true,authority_floor_stale_retry_reset:true,missed_window_zero_write:true,provider_request_count:0,canonical_evidence_write_count:0,evidence_supply_cursor_mutation_count:0,runtime_tick_cursor_mutation_count:0,twin_state_mutation:false,production_runtime_start:false};
     fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify(proof,null,2)+"\n");console.log(JSON.stringify(proof,null,2));
   }finally{await pool.end();}
 }
