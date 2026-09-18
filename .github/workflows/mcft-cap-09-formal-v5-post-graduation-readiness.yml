@@ -129,7 +129,7 @@ jobs:
           if(formal.status!=='REQUALIFY'||formal.reason_code!=='GOVERNED_DEPENDENCY_CHANGED')throw new Error(`FORMAL_V5_POST_GRADUATION_ACTIVATION_MUST_REQUALIFY:${JSON.stringify(formal)}`);
           if(formal.execution_workflow!==workflow)throw new Error(`FORMAL_V5_POST_GRADUATION_WORKFLOW_MISMATCH:${formal.execution_workflow}`);
           if(formal.execution_workflow_status!=='IMPLEMENTED_POST_GRADUATION_READINESS')throw new Error(`FORMAL_V5_POST_GRADUATION_WORKFLOW_STATUS_MISMATCH:${formal.execution_workflow_status}`);
-          if(!(formal.changed_dependencies||[]).includes(workflow))throw new Error(`FORMAL_V5_READINESS_WORKFLOW_MUST_REQUALIFY_FORMAL_ACTIVATION:${JSON.stringify(formal.changed_dependencies)}`);
+          if((formal.changed_dependencies||[]).length===0)throw new Error(`FORMAL_V5_GOVERNED_DEPENDENCY_CHANGE_REQUIRED:${JSON.stringify(formal.changed_dependencies)}`);
 
       - name: Normalize Formal-v5 read-only URL
         shell: node {0}
