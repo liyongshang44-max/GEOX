@@ -7,7 +7,6 @@ const fs=require("node:fs");
 const os=require("node:os");
 const path=require("node:path");
 const {execFileSync,spawnSync}=require("node:child_process");
-const {Pool}=require("pg");
 
 const ROOT=path.resolve(__dirname,"../..");
 const H5=path.join(ROOT,"scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1.cjs");
@@ -58,6 +57,7 @@ function selectWindow(input){
 }
 
 async function liveZeroState(databaseUrl){
+  const {Pool}=require("pg");
   const u=new URL(databaseUrl);
   req(["postgres:","postgresql:"].includes(u.protocol),"FORMAL_V5_ARM_DB_URL_INVALID");
   req(!["localhost","127.0.0.1","::1"].includes(u.hostname),"FORMAL_V5_ARM_REMOTE_DB_REQUIRED");
