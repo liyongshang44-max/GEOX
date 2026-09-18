@@ -127,7 +127,7 @@ async function main():Promise<void>{
   const providerFenceHealth:EvidenceRuntimeHostHealthEventV1[]=[];
   const providerFenceHost=new EvidenceRuntimeHostV1({
     lease:leaseV1(),
-    planner:{async nextAttemptPlan(){return planV1("provider-not-due","CANONICAL_WORK_ITEM_CYCLE",async()=>resultV1({id:"provider-not-due",kind:"CANONICAL_WORK_ITEM_CYCLE",status:"PROVIDER_NOT_DUE"}));}},
+    planner:{async nextAttemptPlan(){return planV1("provider-not-due","CANONICAL_WORK_ITEM_CYCLE",async()=>resultV1({id:"provider-not-due",kind:"CANONICAL_WORK_ITEM_CYCLE",status:"PROVIDER_NOT_DUE",owner:"host-provider-not-due"}));}},
     wait:{waitForLeaseRenewal:waitForCancelledLeaseRenewalV1,async waitAfterAttempt(input){assert.equal(input.reason,"PROVIDER_NOT_DUE");providerFenceStopped=true;}},
     health:{async recordHealth(event){providerFenceHealth.push(structuredClone(event));}},
     stop:{stopRequested:()=>providerFenceStopped},
