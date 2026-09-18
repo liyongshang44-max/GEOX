@@ -1,4 +1,5 @@
 name: mcft-cap-09-qualification-control-plane-v1
+# Successor synchronization marker: no qualification semantics changed.
 
 on:
   pull_request:
