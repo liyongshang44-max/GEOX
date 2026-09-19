@@ -22,6 +22,62 @@ function read(rel){return fs.readFileSync(path.join(ROOT,rel),"utf8");}
 function ceilHour(ms){return Math.ceil(ms/HOUR)*HOUR;}
 function iso(ms){return new Date(ms).toISOString();}
 
+function partsAt(ms,timeZone){
+  const parts=new Intl.DateTimeFormat("en-US",{
+    timeZone,
+    year:"numeric",month:"2-digit",day:"2-digit",
+    hour:"2-digit",minute:"2-digit",second:"2-digit",
+    hourCycle:"h23",
+  }).formatToParts(new Date(ms));
+  const values=Object.fromEntries(parts.filter((p)=>p.type!=="literal").map((p)=>[p.type,p.value]));
+  return {
+    year:Number(values.year),month:Number(values.month),day:Number(values.day),
+    hour:Number(values.hour),minute:Number(values.minute),second:Number(values.second),
+  };
+}
+function localDateAt(ms,timeZone){
+  const p=partsAt(ms,timeZone);
+  return `${String(p.year).padStart(4,"0")}-${String(p.month).padStart(2,"0")}-${String(p.day).padStart(2,"0")}`;
+}
+function localMidnightUtc(localDate,timeZone){
+  const [year,month,day]=localDate.split("-").map(Number);
+  const targetWall=Date.UTC(year,month-1,day,0,0,0);
+  let guess=targetWall;
+  for(let i=0;i<6;i+=1){
+    const p=partsAt(guess,timeZone);
+    const representedWall=Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second);
+    const offset=representedWall-guess;
+    const next=targetWall-offset;
+    if(next===guess)break;
+    guess=next;
+  }
+  const p=partsAt(guess,timeZone);
+  assert.equal(
+    p.year===year&&p.month===month&&p.day===day&&p.hour===0&&p.minute===0&&p.second===0,
+    true,
+    "AM21_REGRESSION_LOCAL_MIDNIGHT_RESOLUTION_REQUIRED"
+  );
+  return guess;
+}
+function stageAuthorityCadenceEligibility(a0Ms,o23Ms){
+  const timeZone="America/Detroit";
+  const localDate=localDateAt(a0Ms,timeZone);
+  const boundary=localMidnightUtc(localDate,timeZone);
+  const validUntil=boundary+30*HOUR;
+  return {
+    eligible:boundary<a0Ms&&validUntil>=o23Ms,
+    boundary,validUntil,localDate,
+  };
+}
+function firstCadenceCompatibleEpoch(firstO00,horizon){
+  for(let candidate=firstO00;candidate+23*HOUR<=horizon;candidate+=HOUR){
+    const a0=candidate-HOUR,o23=candidate+23*HOUR;
+    const cadence=stageAuthorityCadenceEligibility(a0,o23);
+    if(cadence.eligible)return {o00:candidate,a0,o23,cadence};
+  }
+  return null;
+}
+
 function stageAt(ageDays,lengths){
   if(!Array.isArray(lengths)||lengths.length!==4)return null;
   const [a,b,c,d]=lengths.map(Number);
@@ -84,6 +140,22 @@ assert.equal(Number.isFinite(horizon),true,"AM21_REGRESSION_LIFECYCLE_HORIZON_RE
 const first=ceilHour(Date.parse(INCIDENT_ARM_TIME)+36*HOUR);
 assert.equal(iso(first),"2026-09-20T17:00:00.000Z","AM21_REGRESSION_REAL_FIRST_CANDIDATE_REQUIRED");
 
+const naiveA0=first-HOUR;
+const naiveO23=first+23*HOUR;
+const naiveCadence=stageAuthorityCadenceEligibility(naiveA0,naiveO23);
+assert.equal(naiveCadence.eligible,false,"AM21_REGRESSION_NAIVE_CLOCK_MUST_NOT_BE_STAGE_AUTHORITY_CADENCE_ELIGIBLE");
+assert.equal(iso(naiveCadence.boundary),"2026-09-20T04:00:00.000Z","AM21_REGRESSION_NAIVE_BOUNDARY_REQUIRED");
+assert.equal(iso(naiveCadence.validUntil),"2026-09-21T10:00:00.000Z","AM21_REGRESSION_NAIVE_VALID_UNTIL_REQUIRED");
+assert.equal(iso(naiveO23),"2026-09-21T16:00:00.000Z","AM21_REGRESSION_NAIVE_O23_REQUIRED");
+
+const cadenceEpoch=firstCadenceCompatibleEpoch(first,horizon);
+assert.ok(cadenceEpoch,"AM21_REGRESSION_CADENCE_COMPATIBLE_EPOCH_REQUIRED");
+assert.equal(iso(cadenceEpoch.o00),"2026-09-21T06:00:00.000Z","AM21_REGRESSION_CADENCE_O00_REQUIRED");
+assert.equal(iso(cadenceEpoch.a0),"2026-09-21T05:00:00.000Z","AM21_REGRESSION_CADENCE_A0_REQUIRED");
+assert.equal(iso(cadenceEpoch.o23),"2026-09-22T05:00:00.000Z","AM21_REGRESSION_CADENCE_O23_REQUIRED");
+assert.equal(iso(cadenceEpoch.cadence.boundary),"2026-09-21T04:00:00.000Z","AM21_REGRESSION_CADENCE_BOUNDARY_REQUIRED");
+assert.equal(iso(cadenceEpoch.cadence.validUntil),"2026-09-22T10:00:00.000Z","AM21_REGRESSION_CADENCE_VALID_UNTIL_REQUIRED");
+
 let candidateCount=0;
 let eligibleCount=0;
 let firstDiagnostic=null;
@@ -122,7 +194,12 @@ assert.equal(fastestModelEndDay,125,"AM21_REGRESSION_FASTEST_MODEL_END_DAY_REQUI
 assert.ok(slowestLateDay>fastestModelEndDay,"AM21_REGRESSION_CALENDAR_ENVELOPE_DEADLOCK_REQUIRED");
 
 for(const marker of [
-  'CLOCK_ONLY_LIFECYCLE_BOUNDED_PENDING_POST_ARM_DT02_A18_STAGE_AUTHORITY',
+  'CLOCK_ONLY_LIFECYCLE_AND_STAGE_AUTHORITY_CADENCE_BOUNDED_PENDING_POST_ARM_DT02_A18_STAGE_AUTHORITY',
+  'STAGE_AUTHORITY_TIME_ZONE="America/Detroit"',
+  'STAGE_AUTHORITY_FORWARD_STABILITY_HOURS=30',
+  'snapshot_boundary_strictly_before_a0',
+  'snapshot_validity_covers_o23',
+  'stage_authority_refresh_clock_eligibility:epoch.stage_authority_refresh_clock_eligibility',
   'future_stage_pins_deferred_to_post_arm_dt02_a18:true',
   'required_future_stage_authority_coverage:"A0_THROUGH_O23_INCLUSIVE"',
   'formal_stage_authority_pins_frozen:false',
@@ -150,6 +227,14 @@ assert.equal(h6.arm.epoch_selection.whole_window_crop_context_viability_required
 assert.equal(h6.arm.epoch_selection.arm_time_future_stage_pin_freeze_forbidden,true);
 assert.equal(h6.arm.epoch_selection.lifecycle_horizon_must_cover_o23,true);
 assert.equal(h6.arm.epoch_selection.required_stage_authority_coverage,"A0_THROUGH_O23_INCLUSIVE");
+assert.equal(h6.arm.epoch_selection.future_stage_authority_refresh_clock_eligibility_required,true);
+assert.equal(h6.arm.epoch_selection.future_stage_authority_refresh_time_zone,"America/Detroit");
+assert.equal(h6.arm.epoch_selection.future_stage_authority_refresh_snapshot_boundary,"LOCAL_CIVIL_DAY_MIDNIGHT");
+assert.equal(h6.arm.epoch_selection.future_stage_authority_forward_stability_hours,30);
+assert.equal(h6.arm.epoch_selection.future_stage_authority_snapshot_boundary_must_be_strictly_before_a0,true);
+assert.equal(h6.arm.epoch_selection.future_stage_authority_snapshot_validity_must_cover_o23,true);
+assert.equal(h6.arm.epoch_selection.future_stage_value_consulted_during_arm,false);
+assert.equal(h6.arm.epoch_selection.future_stage_authority_identity_frozen_during_arm,false);
 assert.equal(h6.post_arm_authority_continuity.selected_authority_must_cover_a0_through_o23_inclusive,true);
 
 for(const marker of [
@@ -176,6 +261,20 @@ const proof={
   historical_fao_calendar_envelope_retained_as_model_prior:true,
   historical_fao_calendar_envelope_used_as_future_v5_stage_truth:false,
   v5_arm_clock_only:true,
+  naive_first_clock_candidate_stage_authority_cadence_eligible:false,
+  naive_first_clock_candidate_o00:iso(first),
+  naive_first_clock_candidate_o23:iso(naiveO23),
+  naive_snapshot_boundary_utc:iso(naiveCadence.boundary),
+  naive_snapshot_valid_until_utc:iso(naiveCadence.validUntil),
+  cadence_compatible_o00:iso(cadenceEpoch.o00),
+  cadence_compatible_a0:iso(cadenceEpoch.a0),
+  cadence_compatible_o23:iso(cadenceEpoch.o23),
+  cadence_snapshot_boundary_utc:iso(cadenceEpoch.cadence.boundary),
+  cadence_snapshot_valid_until_utc:iso(cadenceEpoch.cadence.validUntil),
+  stage_authority_refresh_time_zone:"America/Detroit",
+  stage_authority_forward_stability_hours:30,
+  future_stage_value_consulted_at_arm:false,
+  future_stage_authority_identity_frozen_at_arm:false,
   minimum_governance_lead_hours:36,
   lifecycle_horizon_o23_gate_preserved:true,
   future_stage_pins_frozen_at_arm:false,
