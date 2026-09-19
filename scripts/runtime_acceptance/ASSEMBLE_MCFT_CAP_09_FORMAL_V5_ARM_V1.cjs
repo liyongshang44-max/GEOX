@@ -10,6 +10,8 @@ const cp=require("node:child_process");
 const ROOT=path.resolve(__dirname,"../..");
 const HOUR=3_600_000;
 const DAY=24*HOUR;
+const STAGE_AUTHORITY_TIME_ZONE="America/Detroit";
+const STAGE_AUTHORITY_FORWARD_STABILITY_HOURS=30;
 const FORMAL_DB="geox_mcft_cap09_s6_formal_t4r1_24h_v5";
 const STORE_AUTH="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json";
 const STORE_AUTH_BLOB="34fd3e92e0e628cf0db16e10df3633337fe81a1a";
@@ -44,22 +46,88 @@ function semhash(v){return "sha256:"+crypto.createHash("sha256").update(canonica
 function iso(ms){return new Date(ms).toISOString();}
 function canonicalIso(v,code){const t=String(v||"");const ms=Date.parse(t);req(Number.isFinite(ms)&&new Date(ms).toISOString()===t,code);return t;}
 function ceilHour(ms){return Math.ceil(ms/HOUR)*HOUR;}
+function partsAt(ms,timeZone){
+  const parts=new Intl.DateTimeFormat("en-US",{
+    timeZone,
+    year:"numeric",month:"2-digit",day:"2-digit",
+    hour:"2-digit",minute:"2-digit",second:"2-digit",
+    hourCycle:"h23",
+  }).formatToParts(new Date(ms));
+  const values=Object.fromEntries(parts.filter((p)=>p.type!=="literal").map((p)=>[p.type,p.value]));
+  return {
+    year:Number(values.year),month:Number(values.month),day:Number(values.day),
+    hour:Number(values.hour),minute:Number(values.minute),second:Number(values.second),
+  };
+}
+function localDateAt(ms,timeZone){
+  const p=partsAt(ms,timeZone);
+  return `${String(p.year).padStart(4,"0")}-${String(p.month).padStart(2,"0")}-${String(p.day).padStart(2,"0")}`;
+}
+function localMidnightUtc(localDate,timeZone){
+  const [year,month,day]=localDate.split("-").map(Number);
+  const targetWall=Date.UTC(year,month-1,day,0,0,0);
+  let guess=targetWall;
+  for(let i=0;i<6;i+=1){
+    const p=partsAt(guess,timeZone);
+    const representedWall=Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second);
+    const offset=representedWall-guess;
+    const next=targetWall-offset;
+    if(next===guess)break;
+    guess=next;
+  }
+  const p=partsAt(guess,timeZone);
+  req(
+    p.year===year&&p.month===month&&p.day===day&&p.hour===0&&p.minute===0&&p.second===0,
+    "FORMAL_V5_ARM_STAGE_AUTHORITY_LOCAL_MIDNIGHT_RESOLUTION_FAILED",
+    localDate+":"+iso(guess)
+  );
+  return guess;
+}
+function stageAuthorityRefreshClockEligibility(a0Ms,o23Ms){
+  const localDate=localDateAt(a0Ms,STAGE_AUTHORITY_TIME_ZONE);
+  const snapshotBoundaryMs=localMidnightUtc(localDate,STAGE_AUTHORITY_TIME_ZONE);
+  const snapshotValidUntilMs=snapshotBoundaryMs+STAGE_AUTHORITY_FORWARD_STABILITY_HOURS*HOUR;
+  return {
+    eligible:snapshotBoundaryMs<a0Ms&&snapshotValidUntilMs>=o23Ms,
+    time_zone:STAGE_AUTHORITY_TIME_ZONE,
+    local_date:localDate,
+    snapshot_boundary_utc:iso(snapshotBoundaryMs),
+    snapshot_valid_until_utc:iso(snapshotValidUntilMs),
+    snapshot_boundary_strictly_before_a0:snapshotBoundaryMs<a0Ms,
+    snapshot_validity_covers_o23:snapshotValidUntilMs>=o23Ms,
+    stage_value_consulted:false,
+    authority_identity_frozen:false,
+  };
+}
 function selectEpoch({armMs,currentCrop}){
   const horizon=Date.parse(currentCrop.lifecycle?.horizon_end_utc);
   req(Number.isFinite(horizon),"FORMAL_V5_ARM_LIFECYCLE_HORIZON_REQUIRED");
   const first=ceilHour(armMs+36*HOUR);
-  req(
-    first+23*HOUR<=horizon,
-    "FORMAL_V5_ARM_NO_ELIGIBLE_CLOCK_WINDOW_BEFORE_LIFECYCLE_HORIZON",
-    JSON.stringify({candidate_o00:iso(first),candidate_o23:iso(first+23*HOUR),lifecycle_horizon:iso(horizon)})
+  let scanned=0;
+  let firstRejected=null;
+  for(let candidate=first;candidate+23*HOUR<=horizon;candidate+=HOUR){
+    const a0=candidate-HOUR;
+    const o23=candidate+23*HOUR;
+    const cadence=stageAuthorityRefreshClockEligibility(a0,o23);
+    scanned+=1;
+    if(!cadence.eligible){
+      if(!firstRejected)firstRejected={candidate_o00:iso(candidate),a0:iso(a0),o23:iso(o23),cadence};
+      continue;
+    }
+    return {
+      o00:iso(candidate),
+      o23:iso(o23),
+      a0:iso(a0),
+      readiness_deadline:iso(candidate-12*HOUR),
+      epoch_selection_mode:"CLOCK_ONLY_LIFECYCLE_AND_STAGE_AUTHORITY_CADENCE_BOUNDED_PENDING_POST_ARM_DT02_A18_STAGE_AUTHORITY",
+      stage_authority_refresh_clock_eligibility:cadence,
+      scanned_candidate_hour_count:scanned,
+    };
+  }
+  fail(
+    "FORMAL_V5_ARM_NO_AUTHORITY_CADENCE_COMPATIBLE_CLOCK_WINDOW_BEFORE_LIFECYCLE_HORIZON",
+    JSON.stringify({first_candidate_o00:iso(first),lifecycle_horizon:iso(horizon),first_rejected:firstRejected,scanned_candidate_hour_count:scanned})
   );
-  return {
-    o00:iso(first),
-    o23:iso(first+23*HOUR),
-    a0:iso(first-HOUR),
-    readiness_deadline:iso(first-12*HOUR),
-    epoch_selection_mode:"CLOCK_ONLY_LIFECYCLE_BOUNDED_PENDING_POST_ARM_DT02_A18_STAGE_AUTHORITY",
-  };
 }
 function epochId(o00){return "mcft_cap09_external_formal_window_epoch_"+o00.replace(/[-:.]/g,"").replace("Z","z").toLowerCase()+"_v5";}
 function manifestRef(epoch){return "formal-arm://mcft-cap09/formal-v5/"+epoch+"/"+FORMAL_DB;}
@@ -96,24 +164,34 @@ function selectCurrentCrop(nowMs){
 }
 function selftest(){
   const current={lifecycle:{horizon_end_utc:"2026-11-24T03:59:59.999Z"}};
-  const armMs=Date.parse("2026-09-19T00:00:00.000Z");
+  const armMs=Date.parse("2026-09-19T04:43:45.612Z");
   const selected=selectEpoch({armMs,currentCrop:current});
-  req(selected.o00==="2026-09-20T12:00:00.000Z","FORMAL_V5_ARM_SELFTEST_CLOCK_O00_REQUIRED",selected.o00);
-  req(selected.o23==="2026-09-21T11:00:00.000Z","FORMAL_V5_ARM_SELFTEST_CLOCK_O23_REQUIRED",selected.o23);
-  req(selected.a0==="2026-09-20T11:00:00.000Z","FORMAL_V5_ARM_SELFTEST_CLOCK_A0_REQUIRED",selected.a0);
+  req(selected.o00==="2026-09-21T06:00:00.000Z","FORMAL_V5_ARM_SELFTEST_CLOCK_O00_REQUIRED",selected.o00);
+  req(selected.o23==="2026-09-22T05:00:00.000Z","FORMAL_V5_ARM_SELFTEST_CLOCK_O23_REQUIRED",selected.o23);
+  req(selected.a0==="2026-09-21T05:00:00.000Z","FORMAL_V5_ARM_SELFTEST_CLOCK_A0_REQUIRED",selected.a0);
   req(Date.parse(selected.o00)>=ceilHour(armMs+36*HOUR),"FORMAL_V5_ARM_SELFTEST_36H_GOVERNANCE_LEAD_REQUIRED");
-  req(selected.epoch_selection_mode==="CLOCK_ONLY_LIFECYCLE_BOUNDED_PENDING_POST_ARM_DT02_A18_STAGE_AUTHORITY","FORMAL_V5_ARM_SELFTEST_STAGE_HANDOFF_MODE_REQUIRED");
+  req(selected.epoch_selection_mode==="CLOCK_ONLY_LIFECYCLE_AND_STAGE_AUTHORITY_CADENCE_BOUNDED_PENDING_POST_ARM_DT02_A18_STAGE_AUTHORITY","FORMAL_V5_ARM_SELFTEST_STAGE_HANDOFF_MODE_REQUIRED");
+  req(selected.stage_authority_refresh_clock_eligibility?.snapshot_boundary_utc==="2026-09-21T04:00:00.000Z","FORMAL_V5_ARM_SELFTEST_STAGE_BOUNDARY_REQUIRED");
+  req(selected.stage_authority_refresh_clock_eligibility?.snapshot_valid_until_utc==="2026-09-22T10:00:00.000Z","FORMAL_V5_ARM_SELFTEST_STAGE_VALID_UNTIL_REQUIRED");
+  req(selected.stage_authority_refresh_clock_eligibility?.snapshot_boundary_strictly_before_a0===true,"FORMAL_V5_ARM_SELFTEST_STAGE_BOUNDARY_BEFORE_A0_REQUIRED");
+  req(selected.stage_authority_refresh_clock_eligibility?.snapshot_validity_covers_o23===true,"FORMAL_V5_ARM_SELFTEST_STAGE_VALIDITY_O23_REQUIRED");
+  req(selected.stage_authority_refresh_clock_eligibility?.stage_value_consulted===false,"FORMAL_V5_ARM_SELFTEST_STAGE_VALUE_MUST_NOT_BE_CONSULTED");
+  req(selected.stage_authority_refresh_clock_eligibility?.authority_identity_frozen===false,"FORMAL_V5_ARM_SELFTEST_STAGE_AUTHORITY_IDENTITY_MUST_NOT_BE_FROZEN");
   const budget=readJson(BUDGET_AUTH);
   req(budget.qualified_budget?.selected_budget_ms===2081804&&budget.fixed_35_minute_lead_authorized_for_v5===false,"FORMAL_V5_ARM_SELFTEST_TIMING_BUDGET_REQUIRED");
   process.stdout.write(JSON.stringify({
-    schema_version:"geox_mcft_cap09_formal_v5_arm_selftest_v2",
+    schema_version:"geox_mcft_cap09_formal_v5_arm_selftest_v3",
     status:"PASS",
-    authority_mode:"CONTROLLED_CLOCK_ONLY_SELFTEST",
+    authority_mode:"CONTROLLED_CLOCK_ONLY_WITH_STAGE_AUTHORITY_CADENCE_ELIGIBILITY_SELFTEST",
     amendment_21_stage_handoff_required:true,
     future_stage_pins_frozen_at_arm:false,
+    future_stage_value_consulted_at_arm:false,
+    future_stage_authority_identity_frozen_at_arm:false,
     post_arm_dt02_a18_stage_authority_required:true,
+    selected_a0:selected.a0,
     selected_o00:selected.o00,
     selected_o23:selected.o23,
+    stage_authority_refresh_clock_eligibility:selected.stage_authority_refresh_clock_eligibility,
     minimum_governance_lead_hours:36,
     fixed_35_minute_lead_used:false,
     provider_request_count:0,
@@ -179,6 +257,10 @@ function main(){
     future_stage_pins_deferred_to_post_arm_dt02_a18:true,
     required_future_stage_authority_coverage:"A0_THROUGH_O23_INCLUSIVE",
     epoch_selection_mode:epoch.epoch_selection_mode,
+    stage_authority_refresh_clock_eligibility:epoch.stage_authority_refresh_clock_eligibility,
+    stage_authority_refresh_snapshot_boundary_is_runtime_pin:false,
+    stage_authority_refresh_stage_value_frozen:false,
+    stage_authority_refresh_authority_identity_frozen:false,
     amendment_21_stage_handoff_authority_ref:STAGE_HANDOFF_AUTH,
     amendment_21_stage_handoff_authority_blob_sha:STAGE_HANDOFF_AUTH_BLOB,
     h6_stage_successor_materialization_still_required:true,
