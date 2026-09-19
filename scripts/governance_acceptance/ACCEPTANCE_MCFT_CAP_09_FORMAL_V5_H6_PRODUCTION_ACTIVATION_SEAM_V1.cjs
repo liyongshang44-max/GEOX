@@ -26,11 +26,55 @@ const FROZEN=[
   "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts",
   "docker-compose.mcft-cap09-production.yml",
 ];
+const FORMAL_SCHEMA_MIGRATIONS=[
+  "apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql",
+  "apps/server/db/migrations/2026_07_10_mcft_cap_01_closure_remediation.sql",
+  "apps/server/db/migrations/2026_07_13_mcft_cap_04_forecast_scenario_persistence.sql",
+  "apps/server/db/migrations/2026_07_14_mcft_cap_05_feedback_persistence.sql",
+  "apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql",
+  "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql",
+  "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql",
+  "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql"
+];
+const EXPECTED_FORMAL_V5_PUBLIC_TABLES=[
+  "facts",
+  "twin_action_feedback_cycle_projection_v1",
+  "twin_action_feedback_evidence_index_v1",
+  "twin_action_feedback_projection_v1",
+  "twin_active_lineage_index_v1",
+  "twin_approved_plan_binding_projection_v1",
+  "twin_decision_record_projection_v1",
+  "twin_external_formal_forcing_base_cursor_v1",
+  "twin_external_formal_forcing_base_target_v1",
+  "twin_external_formal_forcing_controller_lease_v1",
+  "twin_forecast_point_projection_v1",
+  "twin_forecast_residual_projection_v1",
+  "twin_forecast_result_latest_index_v1",
+  "twin_forecast_run_projection_v1",
+  "twin_forecast_success_latest_index_v1",
+  "twin_object_idempotency_index_v1",
+  "twin_runtime_authority_snapshot_v1",
+  "twin_runtime_checkpoint_latest_index_v1",
+  "twin_runtime_health_latest_index_v1",
+  "twin_runtime_lease_v1",
+  "twin_scenario_latest_index_v1",
+  "twin_scenario_point_projection_v1",
+  "twin_scenario_set_projection_v1",
+  "twin_scenario_set_uniqueness_v1",
+  "twin_shadow_online_scheduler_cursor_v1",
+  "twin_shadow_online_scheduler_slot_v1",
+  "twin_state_history_projection_v1",
+  "twin_state_latest_index_v1",
+  "twin_terminal_tick_uniqueness_v1"
+];
 
 function read(rel){return fs.readFileSync(path.join(ROOT,rel),"utf8");}
 function git(...args){return cp.execFileSync("git",args,{cwd:ROOT,encoding:"utf8"}).trim();}
 function marker(text,value,code){assert.ok(text.includes(value),code+":"+value);}
 function notMarker(text,value,code){assert.equal(text.includes(value),false,code+":"+value);}
+function createTableNames(rel){
+  return [...read(rel).matchAll(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:public\.)?([a-zA-Z0-9_]+)/gi)].map((m)=>m[1]);
+}
 
 const auth=JSON.parse(read(AUTH));
 assert.equal(auth.schema_version,"geox_mcft_cap09_formal_v5_production_activation_seam_v1");
@@ -118,6 +162,26 @@ for(const value of [
 notMarker(schema,"runSqlMigrations","H6_SCHEMA_GENERIC_MIGRATION_LEDGER_FORBIDDEN");
 notMarker(schema,"external_evidence_producer_lease_v1","H6_FORMAL_STORE_OPERATIONAL_EVIDENCE_LEASE_FORBIDDEN");
 notMarker(schema,"external_evidence_supply_cursor_v1","H6_FORMAL_STORE_OPERATIONAL_EVIDENCE_CURSOR_FORBIDDEN");
+for(const value of [
+  "CANONICAL_FACTS_SCHEMA",
+  "2026_07_13_mcft_cap_04_forecast_scenario_persistence.sql",
+  "2026_07_14_mcft_cap_05_feedback_persistence.sql",
+  "2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql",
+  "EXPECTED_PUBLIC_TABLES",
+  "FORMAL_V5_SCHEMA_ACL_EXACT_29_TABLE_SET_REQUIRED",
+  "FORMAL_V5_SCHEMA_ACL_MATERIALIZED_TABLE_SET_MISMATCH",
+])marker(schema,value,"H6_SCHEMA_COMPOSITION_MARKER_REQUIRED");
+notMarker(schema,"field_index_v1","H6_FORMAL_V5_GENERIC_FIELD_SCHEMA_FORBIDDEN");
+notMarker(schema,"device_index_v1","H6_FORMAL_V5_GENERIC_DEVICE_SCHEMA_FORBIDDEN");
+const composedFormalTables=[
+  "facts",
+  ...FORMAL_SCHEMA_MIGRATIONS.flatMap(createTableNames),
+].sort();
+assert.deepEqual(
+  composedFormalTables,
+  EXPECTED_FORMAL_V5_PUBLIC_TABLES,
+  "H6_FORMAL_V5_EXACT_29_TABLE_COMPOSITION_REQUIRED",
+);
 
 const runner=read(RUNNER);
 for(const value of [
