@@ -181,6 +181,11 @@ for(const value of [
   "mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1",
   "FORMAL_V5_SCHEMA_ACL_FACTS_MATRIX_MISMATCH",
   "FORMAL_V5_SCHEMA_ACL_FORCING_MATRIX_MISMATCH",
+  "GRANTED BY CURRENT_USER RESTRICT",
+  "FORMAL_V5_SCHEMA_ACL_TEMP_OWNER_SET_MEMBERSHIP_MUST_BE_REVOKED",
+  "FORMAL_V5_SCHEMA_ACL_EFFECTIVE_SET_AUTHORITY_MUST_BE_ZERO",
+  "FORMAL_V5_SCHEMA_ACL_TEMP_SELF_GRANT_MUST_BE_ZERO",
+  "non_self_management_memberships_preserved:true",
   "provider_request_count:0",
 ])marker(schema,value,"H6_SCHEMA_MARKER_REQUIRED");
 notMarker(schema,"runSqlMigrations","H6_SCHEMA_GENERIC_MIGRATION_LEDGER_FORBIDDEN");

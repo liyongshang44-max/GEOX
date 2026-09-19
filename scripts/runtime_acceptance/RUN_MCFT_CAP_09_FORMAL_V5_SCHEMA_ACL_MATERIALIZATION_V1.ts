@@ -168,6 +168,14 @@ async function createPrivilegeRoles(pool:Pool):Promise<void>{
     const canSet=(await pool.query<{ok:boolean}>("SELECT pg_catalog.pg_has_role(current_user,$1,'SET') AS ok",[role])).rows[0]?.ok;
     assert.equal(canSet,false,"FORMAL_V5_SCHEMA_ACL_PREEXISTING_WRITER_OWNER_SET_FORBIDDEN:"+role);
     await pool.query("GRANT "+role+" TO CURRENT_USER WITH SET TRUE");
+    const tempSelfGrant=(await pool.query<{set_option:boolean}>(
+      "SELECT m.set_option FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid JOIN pg_catalog.pg_roles member ON member.oid=m.member JOIN pg_catalog.pg_roles grantor ON grantor.oid=m.grantor WHERE granted.rolname=$1 AND member.rolname=current_user AND grantor.rolname=current_user",
+      [role],
+    )).rows;
+    assert.equal(tempSelfGrant.length,1,"FORMAL_V5_SCHEMA_ACL_EXACT_ONE_TEMP_SELF_GRANT_REQUIRED:"+role);
+    assert.equal(tempSelfGrant[0]?.set_option,true,"FORMAL_V5_SCHEMA_ACL_TEMP_SET_OPTION_REQUIRED:"+role);
+    const canSetAfterGrant=(await pool.query<{ok:boolean}>("SELECT pg_catalog.pg_has_role(current_user,$1,'SET') AS ok",[role])).rows[0]?.ok;
+    assert.equal(canSetAfterGrant,true,"FORMAL_V5_SCHEMA_ACL_TEMP_SET_MEMBERSHIP_REQUIRED:"+role);
   }
 }
 async function applyFormalRuntimeAcl(pool:Pool):Promise<void>{
@@ -221,18 +229,45 @@ async function applyFormalRuntimeAcl(pool:Pool):Promise<void>{
     FROM geox_mcft_cap09_twin_runtime_v1;
   `);
 }
-async function revokeTemporaryOwnerMembership(pool:Pool):Promise<void>{
-  for(const role of OWNER_ROLES)await pool.query("REVOKE "+role+" FROM CURRENT_USER");
-  const residual=Number((await pool.query<{n:number}>(
+async function assertWriterOwnerMembershipPostcondition(pool:Pool):Promise<Record<string,unknown>>{
+  const residualSetMemberships=Number((await pool.query<{n:number}>(
     `SELECT count(*)::int AS n
        FROM pg_catalog.pg_auth_members m
        JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
        JOIN pg_catalog.pg_roles member ON member.oid=m.member
       WHERE member.rolname=current_user
-        AND granted.rolname=ANY($1::text[])`,
+        AND granted.rolname=ANY($1::text[])
+        AND m.set_option`,
     [[...OWNER_ROLES]],
   )).rows[0]?.n??-1);
-  assert.equal(residual,0,"FORMAL_V5_SCHEMA_ACL_TEMP_OWNER_MEMBERSHIP_RESIDUAL");
+  assert.equal(residualSetMemberships,0,"FORMAL_V5_SCHEMA_ACL_TEMP_OWNER_SET_MEMBERSHIP_MUST_BE_REVOKED");
+
+  let residualSelfGrants=0;
+  for(const role of OWNER_ROLES){
+    const canSet=(await pool.query<{ok:boolean}>(
+      "SELECT pg_catalog.pg_has_role(current_user,$1,'SET') AS ok",
+      [role],
+    )).rows[0]?.ok;
+    assert.equal(canSet,false,"FORMAL_V5_SCHEMA_ACL_EFFECTIVE_SET_AUTHORITY_MUST_BE_ZERO:"+role);
+    const selfGrants=Number((await pool.query<{n:number}>(
+      "SELECT count(*)::int AS n FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid JOIN pg_catalog.pg_roles member ON member.oid=m.member JOIN pg_catalog.pg_roles grantor ON grantor.oid=m.grantor WHERE granted.rolname=$1 AND member.rolname=current_user AND grantor.rolname=current_user",
+      [role],
+    )).rows[0]?.n??-1);
+    assert.equal(selfGrants,0,"FORMAL_V5_SCHEMA_ACL_TEMP_SELF_GRANT_MUST_BE_ZERO:"+role);
+    residualSelfGrants+=selfGrants;
+  }
+  return {
+    provisioning_admin_writer_owner_set_membership_residual_count:residualSetMemberships,
+    effective_writer_owner_set_authority_zero:true,
+    provisioning_admin_writer_owner_self_grant_residual_count:residualSelfGrants,
+    non_self_management_memberships_preserved:true,
+  };
+}
+async function revokeTemporaryOwnerMembership(pool:Pool):Promise<Record<string,unknown>>{
+  for(const role of OWNER_ROLES){
+    await pool.query("REVOKE "+role+" FROM CURRENT_USER GRANTED BY CURRENT_USER RESTRICT");
+  }
+  return assertWriterOwnerMembershipPostcondition(pool);
 }
 async function assertFinalAcl(pool:Pool):Promise<Record<string,unknown>>{
   const facts=(await pool.query<{
@@ -329,6 +364,7 @@ async function main():Promise<void>{
       assert.deepEqual(beforeTables,[...EXPECTED_PUBLIC_TABLES],"FORMAL_V5_SCHEMA_ACL_MATERIALIZED_TABLE_SET_MISMATCH");
       assert.equal(beforeRoutines,2,"FORMAL_V5_SCHEMA_ACL_MATERIALIZED_ROUTINE_COUNT_MISMATCH");
       assert.equal(await totalRows(pool,beforeTables),0,"FORMAL_V5_SCHEMA_ACL_PRE_A0_ROWS_MUST_BE_ZERO");
+      const ownerMembership=await assertWriterOwnerMembershipPostcondition(pool);
       const acl=await assertFinalAcl(pool);
       write(out,{
         schema_version:"geox_mcft_cap09_formal_v5_schema_acl_materialization_v1",
@@ -337,7 +373,7 @@ async function main():Promise<void>{
         public_table_count:29,public_routine_count:2,all_table_rows_zero:true,
         public_tables:[...EXPECTED_PUBLIC_TABLES],canonical_facts_schema_ref:CANONICAL_FACTS_SCHEMA,
         schema_materialization_performed:false,acl_materialization_performed:false,
-        ...acl,formal_v5_arm:true,a0_bootstrap:false,o00_started:false,provider_request_count:0,
+        ...ownerMembership,...acl,formal_v5_arm:true,a0_bootstrap:false,o00_started:false,provider_request_count:0,
       });
       return;
     }
@@ -377,6 +413,7 @@ async function main():Promise<void>{
     assert.deepEqual(afterTables,[...EXPECTED_PUBLIC_TABLES],"FORMAL_V5_SCHEMA_ACL_POST_MATERIALIZATION_TABLE_SET_MISMATCH");
     assert.equal(afterRoutines,2);
     assert.equal(await totalRows(pool,afterTables),0,"FORMAL_V5_SCHEMA_ACL_POST_MATERIALIZATION_ROWS_MUST_BE_ZERO");
+    const ownerMembership=await assertWriterOwnerMembershipPostcondition(pool);
     const acl=await assertFinalAcl(pool);
     write(out,{
       schema_version:"geox_mcft_cap09_formal_v5_schema_acl_materialization_v1",
@@ -388,7 +425,7 @@ async function main():Promise<void>{
       twin_writer_acl_ref:TWIN_WRITER_ACL,
       forcing_writer_acl_ref:FORCING_WRITER_ACL,
       schema_materialization_performed:true,acl_materialization_performed:true,
-      ...acl,formal_v5_arm:true,a0_bootstrap:false,o00_started:false,provider_request_count:0,
+      ...ownerMembership,...acl,formal_v5_arm:true,a0_bootstrap:false,o00_started:false,provider_request_count:0,
     });
   }finally{
     await pool.end();
