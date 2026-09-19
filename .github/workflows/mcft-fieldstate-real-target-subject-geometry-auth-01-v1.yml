@@ -1,0 +1,48 @@
+name: MCFT Field-State Real Target Subject Geometry Authority Phase A V1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/digital_twin/mcft/field_state/GEOX-MCFT-FIELDSTATE-REAL-TARGET-SUBJECT-GEOMETRY-AUTH-01-CONTRACT-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_FIELDSTATE_REAL_TARGET_SUBJECT_GEOMETRY_AUTH_01_V1.cjs'
+      - '.github/workflows/mcft-fieldstate-real-target-subject-geometry-auth-01-v1.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-fieldstate-real-target-subject-geometry-auth-01-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  phase-a-acquisition-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+
+      - name: Fetch exact protected main
+        run: git fetch --no-tags origin main
+
+      - name: Verify Phase A real-target subject and geometry acquisition contract
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_FIELDSTATE_REAL_TARGET_SUBJECT_GEOMETRY_AUTH_01_V1.cjs
+
+      - name: Upload immutable Phase A contract
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-fieldstate-real-target-subject-geometry-auth-01-${{ github.event.pull_request.head.sha }}
+          path: docs/digital_twin/mcft/field_state/GEOX-MCFT-FIELDSTATE-REAL-TARGET-SUBJECT-GEOMETRY-AUTH-01-CONTRACT-V1.json
+          if-no-files-found: error
+          retention-days: 90
