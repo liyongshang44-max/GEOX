@@ -223,6 +223,7 @@ function validateBootstrapV1(
     ) !== arm.subject_sha
     || proof.arm_identity_hash !== arm.arm_identity_hash
     || proof.epoch_id !== arm.epoch_id
+    || proof.manifest_ref !== arm.manifest_ref
     || proof.a0 !== arm.a0
     || proof.o00 !== arm.o00
     || proof.o23 !== arm.o23
