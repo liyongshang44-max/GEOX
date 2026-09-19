@@ -13,6 +13,9 @@ on:
       - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1.cjs'
       - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs'
       - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-21-FORMAL-V5-EPOCH-STAGE-AUTHORITY-HANDOFF.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_21_FORMAL_V5_EPOCH_STAGE_HANDOFF_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_LATE_SEASON_EPOCH_STAGE_HANDOFF_V1.cjs'
       - 'scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_SCHEMA_ACL_MATERIALIZATION_V1.ts'
       - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_PRODUCTION_REPLAY_PROMOTION_V1.ts'
@@ -76,6 +79,15 @@ jobs:
 
       - name: Prove static H6 production activation seam
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM_V1.cjs
+
+      - name: Prove Amendment-21 epoch/stage authority handoff
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+          MCFT_SUBJECT_SHA: ${{ env.SUBJECT_SHA }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_21_FORMAL_V5_EPOCH_STAGE_HANDOFF_V1.cjs
+
+      - name: Prove real T4R1 late-season stage-handoff regression
+        run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_LATE_SEASON_EPOCH_STAGE_HANDOFF_V1.cjs
 
       - name: Selftest local-only H6 Formal-v5 arm assembler
         run: node scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs --selftest
