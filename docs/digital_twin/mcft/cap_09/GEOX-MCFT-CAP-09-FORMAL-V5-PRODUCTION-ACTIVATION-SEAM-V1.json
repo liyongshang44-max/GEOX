@@ -50,7 +50,16 @@
       "whole_window_stage_authority_coverage_required_before_a0": true,
       "required_stage_authority_coverage": "A0_THROUGH_O23_INCLUSIVE",
       "readiness_deadline_offset_hours_before_o00": 12,
-      "a0_offset_hours_before_o00": 1
+      "a0_offset_hours_before_o00": 1,
+      "future_stage_authority_refresh_clock_eligibility_required": true,
+      "future_stage_authority_refresh_time_zone": "America/Detroit",
+      "future_stage_authority_refresh_snapshot_boundary": "LOCAL_CIVIL_DAY_MIDNIGHT",
+      "future_stage_authority_forward_stability_hours": 30,
+      "future_stage_authority_snapshot_boundary_must_be_strictly_before_a0": true,
+      "future_stage_authority_snapshot_validity_must_cover_o23": true,
+      "future_stage_value_consulted_during_arm": false,
+      "future_stage_authority_identity_frozen_during_arm": false,
+      "eligibility_reason": "CLOCK_SELECTION_MUST_LEAVE_A_LEGAL_POST_ARM_PRE_A0_DAILY_BOUNDARY_STAGE_AUTHORITY_WHOSE_30H_VALIDITY_COVERS_O23_WITHOUT_FREEZING_STAGE_VALUE_OR_AUTHORITY_IDENTITY"
     },
     "timing_budget": {
       "authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json",
