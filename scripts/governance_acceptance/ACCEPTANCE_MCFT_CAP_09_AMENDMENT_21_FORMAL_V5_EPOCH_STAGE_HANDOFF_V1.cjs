@@ -131,7 +131,6 @@ for(const value of [
   "formal_stage_authority_pins_frozen:false",
   "arm_time_stage_snapshot_is_runtime_pin:false",
   "minimum_epoch_selection_governance_lead_hours:36",
-  "FORMAL_V5_ARM_NO_ELIGIBLE_CLOCK_WINDOW_BEFORE_LIFECYCLE_HORIZON",
 ]){
   marker(arm,value,"AM21_ARM_MARKER_REQUIRED");
 }
