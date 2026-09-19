@@ -1,3 +1,716 @@
+# 2026-09-19 FORMAL-V5 RE-ARM HANDOFF — SCHEMA COMPOSITION FIX MERGED / 574777 ARM SUPERSEDED
+
+> 用途：conversation continuation only。
+> 本节不是 architecture authority、production runtime authority、production-owner authority、Formal-v5 arm authority、A0 authority 或 O00-O23 authority。
+> 落库纪律：继续对既有 continuation 文件做 PURE PREPEND；下方既有全文保持 exact suffix；不新开 handoff，不修改 8/26、8/27 canonical handoff，不碰 main，不碰工程文件。
+> 本节记录截至 2026-09-19T09:21Z 已核验的最新 frontier；本节优先于下方所有历史 SHA、container、arm、blocker 与 next-step 快照。
+
+## A. 当前在做什么
+
+当前唯一 active engineering / production frontier 仍是 MCFT-CAP-09 / T4R1 / Formal-v5。
+
+不是重新开发 H6，也不是重做 Amendment-21；当前任务是：
+
+```text
+第一次真实 Formal-v5 schema execution
+→ 暴露 historical Formal migration composition bug
+→ #3604 已完成最小 schema-composition correction 并合并
+→ protected main 前移
+→ 原 574777 Formal-v5 arm 因 subject/main 不再一致而 superseded
+→ 在修复后的 exact protected main 上重新闭合 owner/readiness/zero-state
+→ 生成新的 Formal-v5 arm
+→ 新 arm 后立即执行 corrected schema/ACL materialization
+→ 再进入 Amendment-21 post-arm authority-only lane
+```
+
+Formal-v5 本身的 production activation seam、Amendment-21 epoch/stage-authority handoff、runtime kernel、scheduler semantics 均不重新设计。
+
+## B. 当前 protected main 与仓库事实
+
+当前 protected main 已核验为：
+
+```text
+252c9ebf5bfe43a31a405ee1b854b25e50d1ad72
+```
+
+来源：PR #3604 merge commit。
+
+PR #3604：
+
+```text
+title
+= fix(mcft-cap09): correct Formal-v5 schema composition
+
+base
+= 574777ffddd280b27a7e0ba040c215fb64c12a62
+
+PR head
+= cd809be5aa7aee1f53fe0337db562fe5658cc6f1
+
+merge/main
+= 252c9ebf5bfe43a31a405ee1b854b25e50d1ad72
+
+state
+= MERGED
+```
+
+#3604 精确修改 3 个工程/acceptance 文件：
+
+```text
+scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_21_FORMAL_V5_EPOCH_STAGE_HANDOFF_V1.cjs
+scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM_V1.cjs
+scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_SCHEMA_ACL_MATERIALIZATION_V1.ts
+```
+
+重复 PR #3605 已关闭且未合并：
+
+```text
+#3605
+= CLOSED / UNMERGED
+= DO NOT REVIVE
+```
+
+## C. 第一次真实 schema execution 暴露的根因
+
+根因已经精确到 migration composition，不是 Neon、credential、role membership 或 ACL authority 本身。
+
+冻结的正确 historical Formal runtime baseline 为：
+
+```text
+facts only                               1
+2026_07_09 CAP-01 runtime persistence    9
+2026_07_10 authority snapshot            1
+2026_07_13 forecast/scenario             7
+2026_07_14 decision/action-feedback      6
+2026_08_06 persistent scheduler          2
+------------------------------------------
+historical Formal baseline              26
+V13 forcing relations                    3
+------------------------------------------
+Formal-v5 exact total                   29
+```
+
+旧 materializer 错误 composition 为：
+
+```text
+完整 docker/postgres/init/001_schema.sql 16
+2026_07_09                               9
+2026_07_10                               1
+V13 forcing                              3
+------------------------------------------
+numeric count                           29
+```
+
+因此旧实现只验证 `count == 29` 时出现了 count collision：数字正确、table identity 错误。
+
+它错误引入 Field / Device / Alert 等通用表，同时漏掉：
+
+```text
+forecast / scenario
+decision / action-feedback
+persistent scheduler
+```
+
+第一次真实 ACL application 到：
+
+```text
+public.twin_shadow_online_scheduler_cursor_v1
+```
+
+时因 relation 不存在而真实 fail-closed。
+
+#3604 的修复边界是正确的最小修复：
+
+```text
+只从 001_schema.sql 提取 facts DDL
++ 2026_07_09 CAP-01 runtime persistence
++ 2026_07_10 authority snapshot
++ 2026_07_13 forecast/scenario
++ 2026_07_14 decision/action-feedback
++ 2026_08_06 persistent scheduler
++ 3 V13 forcing relations
+= exact 29-table Formal-v5 set
+```
+
+并增加 exact table-set assertion，不再允许仅凭 table count 通过。
+
+不要重新扩大到 generic schema；不要因为最终仍是 29 张表而回退到旧 composition。
+
+## D. #3604 qualification — 已核验
+
+#3604 PR head `cd809be5...`：
+
+```text
+Formal-v5 post-graduation readiness
+run 35428183448
+event = pull_request
+= SUCCESS
+
+CI
+run 35428183529
+event = pull_request
+= SUCCESS
+```
+
+merge 后 exact protected main `252c9ebf...` 的真实 push qualification 已重新核验：
+
+```text
+Formal-v5 post-graduation readiness
+run 35432395223
+event = push
+head = 252c9ebf5bfe43a31a405ee1b854b25e50d1ad72
+= SUCCESS
+
+CI
+run 35432395251
+event = push
+head = 252c9ebf5bfe43a31a405ee1b854b25e50d1ad72
+= SUCCESS
+
+EA5E2 successor runner qualification
+run 35432395270
+event = push
+head = 252c9ebf5bfe43a31a405ee1b854b25e50d1ad72
+= SUCCESS
+```
+
+同时观察到：
+
+```text
+QCP run 35432402019
+event = pull_request
+head_sha = 252c9ebf...
+conclusion = FAILURE
+```
+
+这个 QCP run 是 pull_request carrier，不是 exact-main push run；不能因为 SHA 相同就把它直接解释成 252c protected-main push qualification failure。
+
+因此当前 QCP 口径必须保持：
+
+```text
+exact-main push QCP admission / carrier
+= NOT YET ADJUDICATED IN THIS HANDOFF
+
+35432402019
+= synthetic/pull_request evidence
+= must not be promoted to exact-main push red without event/base/head adjudication
+```
+
+不要再次犯“synthetic merge SHA 与 protected main SHA 相同，因此把所有 pull_request reds 当成 main reds”的旧错误。
+
+## E. 574777 production arm — 成功事实保留，但已 superseded
+
+修复前 production owners 已在 exact main：
+
+```text
+574777ffddd280b27a7e0ba040c215fb64c12a62
+```
+
+并完成：
+
+```text
+H2A = PASS
+H2B = PASS
+H3 exact-main owner cutover = PASS
+live owner renewal = PASS
+H5 = PASS
+```
+
+最后一次已证明的 574777 production owner identities：
+
+```text
+Evidence container
+= d646d3c7b88d
+
+Twin container
+= 17b679482d38
+
+authorized image
+= sha256:e8e50c660a8f1b8f40ce18a451329d626408a8e01472446099ac91cd05415421
+
+last observed
+= ACTIVE / HEALTHY
+```
+
+574777 上的真实 Formal-v5 arm 也确实成功生成：
+
+```text
+subject
+= 574777ffddd280b27a7e0ba040c215fb64c12a62
+
+arm_identity_hash
+= sha256:1a4ce6e3f21a9d2726c65ee16eff1a8c4a7e3727f3ab17ecd66c4d7f910925df
+
+epoch_id
+= mcft_cap09_external_formal_window_epoch_20260921t060000000z_v5
+
+arm_time_database_utc
+= 2026-09-19T06:35:00.597Z
+
+A0
+= 2026-09-21T05:00:00.000Z
+
+O00
+= 2026-09-21T06:00:00.000Z
+
+O23
+= 2026-09-22T05:00:00.000Z
+
+readiness_deadline
+= 2026-09-20T18:00:00.000Z
+
+formal_database_mutation
+= false
+
+schema_materialization
+= false
+
+a0_bootstrap
+= false
+
+o00_started
+= false
+```
+
+该 arm 的历史事实必须保留：它是真实成功 arm，不是失败或伪造。
+
+但是 #3604 是 ordinary code/acceptance correction，protected main 已从 574777 前移到 252c9e。Amendment-21 post-arm continuity 不允许把这种 ordinary code commit静默吸收进既有 arm。
+
+因此当前正式裁决是：
+
+```text
+574777 Formal-v5 arm
+= SUCCESSFULLY CREATED
+= HISTORICALLY VALID FOR 574777 SUBJECT
+= NOW SUPERSEDED BY SCHEMA-CORRECTION MAIN ADVANCE
+= MUST NOT AUTHORIZE 252c9e SCHEMA / A0 / O00
+```
+
+不要删除、改写或伪装旧 arm；也绝不能继续拿旧 `arm-v1.json` 在 252c9e main 上执行 schema materialization。
+
+新 arm 完成后，A0/O00/O23 会重新由新的 actual arm 选择；上面的旧 epoch 时间不能继续当作当前执行 authority。
+
+## F. Formal-v5 database 当前口径
+
+第一次真实 schema materialization 在 relation 缺失处失败；executor 设计为 transaction fail-closed / rollback-before-commit。
+
+因此当前合理预期是 Formal-v5 物理库仍为 zero-state，但本 handoff 不把预期提升成新的机器证明。
+
+当前必须写成：
+
+```text
+first real schema attempt
+= FAILED CLOSED
+
+failure class
+= MIGRATION_COMPOSITION / MISSING_EXPECTED_FORMAL_RELATION
+
+transaction
+= EXPECTED ROLLBACK
+
+Formal-v5 physical zero-state after failure
+= MUST BE REPROVEN READ-ONLY
+= NOT CLAIMED PASS BY THIS HANDOFF
+
+A0
+= NOT STARTED
+
+O00
+= NOT STARTED
+
+MCFT-CAP-09
+= NOT COMPLETED
+```
+
+re-arm 前必须读取：
+
+```text
+public base table count = 0
+public routine count    = 0
+```
+
+若不是精确 0 / 0，立即 hard stop；不得继续 re-arm，不得手工删除关系来伪造 zero-state。
+
+## G. Amendment-21 / H6 状态保持不变
+
+不要因为 schema composition bug 重新做 H6。
+
+仍然冻结：
+
+```text
+H6 production activation seam
+= IMPLEMENTED / MERGED / QUALIFIED
+
+Amendment-21
+= ACTIVE DESIGN BOUNDARY
+
+old FAO six-calendar envelope
+= MODEL PRIOR
+= NOT future Formal-v5 stage truth after DT02/A18 handoff
+
+Formal-v5 arm
+= freezes epoch clock only
+= does NOT freeze future stage pins
+
+post-arm
+= fresh effective Biological Stage Authority required before A0
+
+required authority coverage
+= A0 THROUGH O23 INCLUSIVE
+
+unresolved stage / inactive lifecycle / authority not covering O23
+= FAIL CLOSED
+= A0/O00 MUST NOT START
+
+future observation / most-likely stage / manual LATE override
+= FORBIDDEN
+```
+
+36h actual-UTC governance lead、O00/O23 clock 与 lifecycle horizon 仍按 Amendment-06 / Amendment-21 handoff 保持。
+
+## H. 当前真正 blocker
+
+当前 blocker 已从 schema composition bug 转换为 re-bind / re-arm：
+
+```text
+SCHEMA_COMPOSITION_BUG
+= FIXED / MERGED AS #3604
+
+OLD_574777_ARM
+= SUPERSEDED
+
+CURRENT_PROTECTED_MAIN
+= 252c9ebf5bfe43a31a405ee1b854b25e50d1ad72
+
+CURRENT_BLOCKER
+= FORMAL_V5_REARM_ON_SCHEMA_CORRECTED_EXACT_MAIN_NOT_YET_COMPLETED
+```
+
+次级待裁决：
+
+```text
+Formal-v5 DB zero-state reproof
+= PENDING
+
+252c exact-main QCP carrier/admission
+= PENDING ADJUDICATION
+
+252c production owner cutover
+= NOT YET EXECUTED
+
+252c exact-main zero-state artifact
+= NOT YET BOUND FOR NEW ARM
+
+new Formal-v5 arm
+= NOT YET CREATED
+
+corrected schema/ACL materialization
+= NOT YET EXECUTED
+
+A0
+= NOT STARTED
+
+O00
+= NOT STARTED
+```
+
+## I. 下一步 — 严格执行顺序
+
+### I1. 只读确认 Formal-v5 DB 仍为 zero-state
+
+第一步只读检查 exact V5 database：
+
+```text
+database = geox_mcft_cap09_s6_formal_t4r1_24h_v5
+public base tables = 0
+public routines = 0
+```
+
+禁止 schema drop / truncate / manual cleanup；如果不是 0/0，先调查 transaction residue。
+
+### I2. 收敛 252c exact-main qualification
+
+已确认三个真实 push run 全绿：
+
+```text
+35432395223 Formal-v5 readiness = SUCCESS
+35432395251 CI = SUCCESS
+35432395270 EA5E2 successor = SUCCESS
+```
+
+下一步只需继续 adjudicate QCP applicability/carrier 与任何真正 required post-merge gate；不要把大量 `event=pull_request` 的历史/不适用 red 自动当 main blocker。
+
+### I3. production owners 574777 → actual current main
+
+在 destructive retirement 前必须再次核：
+
+```text
+origin/main exact SHA
+existing container subjects
+compose project/service identities
+Evidence/Twin live lease owner correlation
+current-crop freshness / planned A0 coverage
+```
+
+如果 574777 containers 仍是 stale owners：
+
+```text
+remove only the exact identified stale two containers
+→ no docker prune
+→ no DB lease UPDATE/DELETE
+→ wait natural lease expiry
+→ H2A/H2B
+→ H3 exact-main owner cutover
+→ independent live-owner renewal proof
+```
+
+若 current-crop authority 已过期或不覆盖 H2/H3 planned A0，不得硬顶 252c；先取得合法 fresh effective current-crop authority，并把随后所有 proof/owner/arm 绑定到当时真实 protected main。
+
+### I4. exact-main Formal-v5 zero-state artifact + H5
+
+新的 arm 必须绑定：
+
+```text
+actual protected main
+= local HEAD
+= origin/main
+= live Evidence image subject
+= live Twin image subject
+= zero-state proof subject
+```
+
+然后重新 H5，要求 exact-one live fenced owner per role + renewal + V5 zero-state。
+
+### I5. 生成新的 Formal-v5 arm
+
+只有以上全部成立后，再执行 actual arm。
+
+新 arm 必须重新产生：
+
+```text
+new arm_identity_hash
+new epoch_id
+new A0
+new O00
+new O23
+new readiness_deadline
+```
+
+不得复用 574777 的 arm identity 或 epoch clock。
+
+### I6. 新 arm 成功后立即 corrected schema/ACL materialization
+
+这是关键顺序：schema materializer 要求 `HEAD == origin/main == arm.subject_sha`。
+
+因此：
+
+```text
+new arm
+→ immediately run corrected schema/ACL materialization on same exact subject
+→ require exact 29-table set
+→ require exact 2 routines
+→ require all business rows zero
+→ A0=false / O00=false
+```
+
+不要在新 arm 与 schema materialization 之间先 merge current-crop authority PR 或任何其他 commit，否则 subject mismatch 会合法 fail-closed。
+
+### I7. schema proof 完成后进入 authority-only lane
+
+schema/ACL 成功后才进入 Amendment-21 post-arm continuity：
+
+```text
+only effective current-crop / Biological Stage Authority additions
++ registry append
+```
+
+从新 arm 到 A0 的 first-parent continuity 禁止普通代码、workflow、QCP、handoff merge 进入 protected main。
+
+#3298 必须继续：
+
+```text
+OPEN / DRAFT / UNMERGED
+```
+
+直到 Formal window / continuity boundary 允许，否则不要把 handoff merge 到 main。
+
+## J. 已踩过的坑 — 必须避免
+
+### J1. `29 tables` 不等于正确 schema
+
+这是本轮最重要的新坑：只检查 cardinality 会被 count collision 欺骗。
+
+以后 schema qualification 必须同时检查：
+
+```text
+exact table names
++ exact routine names
++ ACL target existence
++ zero business rows before A0
+```
+
+### J2. 旧 arm 成功不等于可跨 main 继续使用
+
+arm subject 是 immutable authority binding。普通代码修复导致 main 前移时，旧 arm 不应被“更新”，而应被标记 superseded，再在新 exact main 上重新 arm。
+
+### J3. schema failure 的 rollback 不能靠推断冒充 proof
+
+transactional executor 失败通常会 rollback，但必须用 read-only physical proof确认 0 tables / 0 routines；不要因为代码里有 rollback 就直接写 PASS。
+
+### J4. synthetic pull_request SHA 不能冒充 protected-main qualification
+
+同一个 SHA 可能同时出现在 merge/main 与 pull_request synthetic runs。判断 gate 时必须同时核：
+
+```text
+event
+head_sha
+head_branch
+base/head relationship
+workflow carrier
+```
+
+本轮 `35432402019` QCP 就属于必须单独 adjudicate 的 pull_request evidence。
+
+### J5. 不要复活 #3605
+
+#3604 已完成同一根因的正式修复并合并。#3605 是重复分支，已 CLOSED / UNMERGED；不要 merge、cherry-pick 或再复制一次。
+
+### J6. PowerShell `:` 变量解析
+
+双引号字符串中：
+
+```text
+$Var:$Other
+```
+
+会触发 invalid variable reference；使用：
+
+```text
+${Var}:${Other}
+```
+
+或 `-f` formatting。
+
+### J7. PowerShell `.Count` strict-mode
+
+native command 单值结果可能不是 array。需要 cardinality 的地方一律：
+
+```text
+@(...)
+```
+
+再访问 `.Count`。
+
+### J8. `psql` SSL warning 不是 SQL first-red
+
+Windows PowerShell 可能把 pg/psql 写到 stderr 的 TLS warning 提升成 NativeCommandError。
+
+正确做法：
+
+```text
+stdout / stderr 分离
+只按 native exit code 判断 SQL failure
+不要把 SSL warning 当 DB failure
+```
+
+同时不要打印 connection string/password。
+
+### J9. stale owner retirement 必须精确
+
+允许的 retirement gate：
+
+```text
+每个 role
+= 0 live lease
+OR
+= exactly 1 live lease strictly correlated to the stale container being retired
+```
+
+未知 owner、>1 live owner、subject mismatch 均 hard stop。
+
+停止容器后等 lease 自然过期；禁止手工 UPDATE/DELETE lease row。
+
+### J10. current-crop freshness 与 actual Formal epoch 是两件事
+
+H2A/H3 的 `formal_a0_planning_time` 只是 PRE_FORMAL planning time，不是 actual Formal-v5 A0。
+
+actual Formal A0/O00/O23 只能来自新的 arm artifact；Amendment-21 的 future Biological Stage Authority 仍必须在 arm 后按 cadence refresh 并覆盖 A0→O23。
+
+### J11. 新 arm 后先 schema，再 authority-only main advance
+
+schema materializer 绑定 `arm.subject_sha == HEAD == origin/main`。
+
+所以新 arm 后不要先合并 rolling authority；必须先完成 corrected schema/ACL proof，再允许 authority-only first-parent advancement。
+
+## K. 当前接手摘要
+
+```text
+MCFT-CAP-09
+= ACTIVE
+
+task
+= T4R1 Formal-v5 re-arm after real schema-composition correction
+
+protected main
+= 252c9ebf5bfe43a31a405ee1b854b25e50d1ad72
+
+#3604
+= MERGED / SCHEMA COMPOSITION FIX
+
+#3605
+= CLOSED / UNMERGED DUPLICATE
+
+252c push Formal-v5 readiness
+= SUCCESS (35432395223)
+
+252c push CI
+= SUCCESS (35432395251)
+
+252c push EA5E2 successor
+= SUCCESS (35432395270)
+
+252c exact-main QCP
+= CARRIER / APPLICABILITY STILL TO ADJUDICATE
+
+574777 production owners
+= LAST OBSERVED ACTIVE / HEALTHY
+= NOW STALE RELATIVE TO PROTECTED MAIN
+
+574777 Formal-v5 arm
+= REAL SUCCESS
+= SUPERSEDED
+= DO NOT USE FOR 252c SCHEMA/A0
+
+Formal-v5 database
+= FAILED SCHEMA TRANSACTION EXPECTED ROLLBACK
+= ZERO-STATE READ-ONLY REPROOF REQUIRED
+
+new Formal-v5 arm
+= NOT YET CREATED
+
+corrected schema/ACL materialization
+= NOT YET EXECUTED ON NEW ARM
+
+A0
+= NOT STARTED
+
+O00
+= NOT STARTED
+
+MCFT-CAP-09 complete
+= FALSE
+
+next frontier
+= zero-state reproof
+→ exact-main qualification/QCP adjudication
+→ owner refresh
+→ exact-main zero-state/H5
+→ new arm
+→ corrected schema/ACL
+→ authority-only lane
+```
+
+---
 # 2026-09-18 H3/H4/H5 CLOSURE — FORMAL-V5 ARM READY / EXPLICIT OPERATOR AUTHORIZATION RECEIVED
 
 > 用途：conversation continuation only。
