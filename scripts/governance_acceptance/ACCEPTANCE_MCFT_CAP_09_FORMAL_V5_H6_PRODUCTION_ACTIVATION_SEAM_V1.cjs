@@ -316,8 +316,19 @@ for(const rel of changed){
   }
 }
 const githubChanges=changed.filter((rel)=>rel.startsWith(".github/workflows/"));
+const allowedGithubQualificationChanges=new Set([
+  ".github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml",
+  ".github/workflows/mcft-cap-09-v13-holistic-schema-postgres.yml",
+  ".github/workflows/mcft-cap-09-v13-autonomous-forcing-foundation.yml",
+  ".github/workflows/mcft-cap-09-final-semantic-closure.yml",
+]);
 for(const rel of githubChanges){
-  assert.equal(rel,".github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml","H6_NEW_GITHUB_PRODUCTION_WORKFLOW_FORBIDDEN:"+rel);
+  assert.equal(allowedGithubQualificationChanges.has(rel),true,"H6_UNGOVERNED_GITHUB_WORKFLOW_CHANGE:"+rel);
+  if(rel!==".github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml"){
+    const workflow=read(rel);
+    notMarker(workflow,"  schedule:","H6_SCHEMA_QUALIFICATION_SCHEDULE_FORBIDDEN");
+    notMarker(workflow,"GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL: ${{ secrets.","H6_SCHEMA_QUALIFICATION_PRODUCTION_DB_SECRET_FORBIDDEN");
+  }
 }
 
 const proof={
