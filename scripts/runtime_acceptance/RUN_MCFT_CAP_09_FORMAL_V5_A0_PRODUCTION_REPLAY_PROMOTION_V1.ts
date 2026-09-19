@@ -365,10 +365,14 @@ async function main():Promise<void>{
   });
   const formalRaw=createFormalDurableRawEvidenceRetentionAdapterV1(process.env);
 
-  const sourcePool=new Pool({connectionString:sourceUrl,max:1,application_name:"mcft-cap09-h6-v5-a0-source-readonly"});
+  const sourcePool=new Pool({
+    connectionString:sourceUrl,
+    max:1,
+    application_name:"mcft-cap09-h6-v5-a0-source-readonly",
+    options:"-c default_transaction_read_only=on",
+  });
   const formalPool=new Pool({connectionString:formalUrl,max:2,application_name:"mcft-cap09-h6-v5-a0-promotion"});
   try{
-    await sourcePool.query("SET default_transaction_read_only=on");
     const sourceIdentity=(await sourcePool.query<{current_user:string;db:string;read_only:string}>(
       "SELECT current_user::text AS current_user,current_database()::text AS db,current_setting('default_transaction_read_only') AS read_only"
     )).rows[0]!;
