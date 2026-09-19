@@ -105,19 +105,17 @@ function assertV5Config(
 ): void {
   validateExternalFormalRuntimeConfigPayloadV1(config.payload);
   const payload = config.payload;
+  const freshDatabaseRef: string = payload.formal_authorities.fresh_database.ref;
+  const freshDatabaseHash: string = payload.formal_authorities.fresh_database.hash;
   if (
-    payload.formal_authorities.fresh_database.ref
-      !== MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V5
-    || payload.formal_authorities.fresh_database.hash
-      !== MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V5
+    freshDatabaseRef !== MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V5
+    || freshDatabaseHash !== MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V5
   ) {
     throw new Error(code + "_V5_DATABASE_AUTHORITY_REQUIRED");
   }
   if (
-    payload.formal_authorities.fresh_database.ref
-      === MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4
-    || payload.formal_authorities.fresh_database.hash
-      === MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4
+    freshDatabaseRef === MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4
+    || freshDatabaseHash === MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4
   ) {
     throw new Error(code + "_V4_DATABASE_AUTHORITY_RESIDUAL_FORBIDDEN");
   }
