@@ -70,19 +70,33 @@ const PROOF_BOUND_PHASE5_REQUALIFICATION_V1 = {
   event: "pull_request",
   dependency_digest: "sha256:617d09a11a5797e0a1e3793a79561613d7a1b672df76593fe9a1e0b7f24483b7",
 };
+const SUCCESSOR_CHAIN_PHASE3_REQUALIFICATION_V1 = {
+  evidence_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_24CD4B59_SUCCESSOR_2CE0C90_V1",
+  check_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION",
+  subject_sha: "24cd4b592d671974f5b3a1449a6194bfca0806cb",
+  base_sha: "1137e327df07011ec54186feb88d7a544301fe70",
+  final_head_sha: "24cd4b592d671974f5b3a1449a6194bfca0806cb",
+  merge_commit_sha: "2ce0c90ef30b3c04ed112639c87926ac19be4e03",
+  run_id: 35369069593,
+  run_conclusion: "success",
+  workflow_name: "mcft-cap-09-phase3-evidence-runtime-persistence",
+  workflow_path: ".github/workflows/mcft-cap-09-phase3-evidence-runtime-persistence.yml",
+  event: "pull_request",
+  dependency_digest: "sha256:d5d1cf09c4cde3b0fe82e658d9af2b25fe5beccee1a582d40ba00349fab8534b",
+};
 const SUCCESSOR_CHAIN_PHASE5_REQUALIFICATION_V1 = {
-  evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_4B9AC4DA_SUCCESSOR_92D76BF1_V1",
+  evidence_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS_REQUAL_24CD4B59_SUCCESSOR_2CE0C90_V1",
   check_id: "PHASE5_PRODUCTION_EQUIVALENT_CONTAINERS",
-  subject_sha: "4b9ac4da51b81aacb4bcf64911202fec91c45470",
-  base_sha: "f7d28aef3d2fe8e65ce0afff64e6f2673c2eb39b",
-  final_head_sha: "22c94f6f05e4bbee25fb130bfdcc87e8594c4115",
-  merge_commit_sha: "92d76bf16d2ec8f40738c559e7b03cc5f48f3cf9",
-  run_id: 35323793632,
+  subject_sha: "24cd4b592d671974f5b3a1449a6194bfca0806cb",
+  base_sha: "1137e327df07011ec54186feb88d7a544301fe70",
+  final_head_sha: "24cd4b592d671974f5b3a1449a6194bfca0806cb",
+  merge_commit_sha: "2ce0c90ef30b3c04ed112639c87926ac19be4e03",
+  run_id: 35369069614,
   run_conclusion: "success",
   workflow_name: "mcft-cap-09-phase5-two-service-accelerated-24t",
   workflow_path: ".github/workflows/mcft-cap-09-phase5-two-service-accelerated-24t.yml",
   event: "pull_request",
-  dependency_digest: "sha256:345990ca3028eb920c144b3fe4c9f7c8364b328428c05b9bb860c1218890b6a0",
+  dependency_digest: "sha256:e4c2d6c263f4de4f0dee9beb0f688005295c96cb4e795d21fd92359489b1964d",
 };
 const CURRENT_PR_PHASE3_REQUALIFICATION_C12_V1 = {
   evidence_id: "PHASE3_EVIDENCE_RUNTIME_FOUNDATION_REQUAL_C12E6F66_GFS_PLANNER_V1",
@@ -694,6 +708,34 @@ function main() {
         };
         if (evidence.status !== "PASS") blockers.push({
           blocker_class: "INVALID_OR_MISSING_CURRENT_PR_PHASE5_REQUALIFICATION_EVIDENCE",
+          check_id: decision.check_id,
+          detail: evidence,
+        });
+      } else if (
+        decision.check_id === SUCCESSOR_CHAIN_PHASE3_REQUALIFICATION_V1.check_id &&
+        successorChainAdmissionActive &&
+        isAncestor(SUCCESSOR_CHAIN_PHASE3_REQUALIFICATION_V1.merge_commit_sha, args.base || "")
+      ) {
+        const evidence = validateExactRunAnchor(
+          decision,
+          args.head || "",
+          args.base || "",
+          SUCCESSOR_CHAIN_PHASE3_REQUALIFICATION_V1,
+          "SUCCESSOR_CHAIN_PHASE3",
+          { allowSuccessorBase: true },
+        );
+        result = {
+          ...common,
+          execution: "SUCCESSOR_CHAIN_EXACT_WORKFLOW_RUN_AND_DEPENDENCY_DIGEST_VALIDATION",
+          status: evidence.status,
+          reason_code: evidence.reason_code,
+          evidence_id: evidence.evidence_id ?? null,
+          evidence_run_id: evidence.run_id ?? null,
+          evidence_subject_sha: evidence.subject_sha ?? null,
+          evidence_checks: evidence.checks ?? null,
+        };
+        if (evidence.status !== "PASS") blockers.push({
+          blocker_class: "INVALID_OR_MISSING_SUCCESSOR_CHAIN_PHASE3_REQUALIFICATION_EVIDENCE",
           check_id: decision.check_id,
           detail: evidence,
         });
