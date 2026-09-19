@@ -1415,7 +1415,7 @@
       "historical_evidence_policy": "FRESH_V5_EPOCH_ONLY_FAILED_V4_REUSE_FORBIDDEN",
       "execution_workflow": null,
       "execution_workflow_status": "NOT_IMPLEMENTED_AT_FROZEN_SUBJECT",
-      "fail_policy": "FAIL_CLOSED_UNTIL_POST_GRADUATION_READINESS_AMENDMENT21_STAGE_HANDOFF_AND_SEPARATE_OPERATOR_ARM_AUTHORIZATION",
+      "fail_policy": "FAIL_CLOSED_UNTIL_POST_GRADUATION_READINESS_AND_SEPARATE_OPERATOR_ARM_AUTHORIZATION",
       "carry_forward_policy": "NONE",
       "requalification_triggers": [
         "V13_RUNTIME_SEMANTIC_CLOSURE",
