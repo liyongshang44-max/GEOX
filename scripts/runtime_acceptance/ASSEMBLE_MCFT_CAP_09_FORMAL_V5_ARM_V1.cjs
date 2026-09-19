@@ -142,14 +142,32 @@ function selectCurrentCrop(nowMs){
   return {row,authority:a};
 }
 function selftest(){
-  const crop=readJson(CROP_AUTH);
+  const crop={
+    model_stage_prior:{
+      variant_stage_lengths_days:Array.from({length:6},()=>[1,1,1,400]),
+    },
+    planting_authority:{
+      possible_event_window_utc:{
+        start_inclusive:"2026-06-01T00:00:00.000Z",
+        end_exclusive:"2026-06-01T01:00:00.000Z",
+      },
+    },
+    as_of_derivation_policy:{
+      backward_stability_hours:6,
+      forward_transition_guard_hours:30,
+      planting_time_uncertainty_must_be_carried:true,
+      future_observations_authorized:false,
+      allowed_stage_codes:["INITIAL","DEVELOPMENT","MID","LATE"],
+    },
+  };
   const current={lifecycle:{horizon_end_utc:"2026-11-24T03:59:59.999Z"},crop_water_use_stage:"LATE"};
   const selected=selectEpoch({armMs:Date.parse("2026-09-19T00:00:00.000Z"),crop,currentCrop:current});
   req(selected.slot_stage_viability.length===24,"FORMAL_V5_ARM_SELFTEST_24_SLOTS_REQUIRED");
   req(selected.slot_stage_viability.every(x=>x.crop_stage_code==="LATE"),"FORMAL_V5_ARM_SELFTEST_LATE_WINDOW_REQUIRED");
+  req(Date.parse(selected.o00)>=ceilHour(Date.parse("2026-09-19T00:00:00.000Z")+36*HOUR),"FORMAL_V5_ARM_SELFTEST_36H_GOVERNANCE_LEAD_REQUIRED");
   const budget=readJson(BUDGET_AUTH);
   req(budget.qualified_budget?.selected_budget_ms===2081804&&budget.fixed_35_minute_lead_authorized_for_v5===false,"FORMAL_V5_ARM_SELFTEST_TIMING_BUDGET_REQUIRED");
-  process.stdout.write(JSON.stringify({schema_version:"geox_mcft_cap09_formal_v5_arm_selftest_v1",status:"PASS",selected_o00:selected.o00,selected_o23:selected.o23,slot_count:24,fixed_35_minute_lead_used:false,provider_request_count:0,formal_database_mutation:false,a0_bootstrap:false,o00_started:false},null,2)+"\n");
+  process.stdout.write(JSON.stringify({schema_version:"geox_mcft_cap09_formal_v5_arm_selftest_v1",status:"PASS",authority_mode:"CONTROLLED_SYNTHETIC_SELFTEST_ONLY",real_crop_authority_bypassed_in_selftest_only:true,production_select_epoch_unchanged:true,selected_o00:selected.o00,selected_o23:selected.o23,slot_count:24,minimum_governance_lead_hours:36,fixed_35_minute_lead_used:false,provider_request_count:0,formal_database_mutation:false,a0_bootstrap:false,o00_started:false},null,2)+"\n");
 }
 function main(){
   if(has("--selftest"))return selftest();
