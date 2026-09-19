@@ -3,7 +3,11 @@
 // V4 stage-aware Amendment-19 runner. No scheduler, tick, persistence, evidence,
 // crop-stage, provider, or clock semantics are reimplemented here.
 
-import type { RuntimeConfigRepositoryPortV1, SchedulerPortV1 } from "./ports.js";
+import type {
+  RuntimeConfigRepositoryPortV1,
+  SchedulerPortV1,
+  ShadowOnlineSlotIdV1,
+} from "./ports.js";
 import type {
   ExternalFormalV3Amendment19DatabaseEvidenceSourcePortV1,
   ExternalFormalV3Amendment19PersistentTickServiceV1,
@@ -33,7 +37,7 @@ type TickServicePortV2 = Pick<ExternalFormalV3Amendment19PersistentTickServiceV1
 export type ExternalFormalV5Am19ViabilityFailureResultV2 = {
   runner_id: typeof EXTERNAL_FORMAL_V5_AM19_RUNNER_ID_V2;
   status: "NOT_READY_PRECLAIM";
-  slot_id: string;
+  slot_id: ShadowOnlineSlotIdV1;
   logical_time: string;
   reason: "NEXT_TICK_FORCING_NOT_VIABLE";
   detail: string;
