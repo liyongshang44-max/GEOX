@@ -18,6 +18,35 @@ const EXPECTED_NEW_RELATIONS = [
   "twin_external_formal_forcing_base_target_v1",
   "twin_external_formal_forcing_controller_lease_v1",
 ];
+const EXPECTED_PREDECESSOR_RELATIONS = [
+  "facts",
+  "twin_action_feedback_cycle_projection_v1",
+  "twin_action_feedback_evidence_index_v1",
+  "twin_action_feedback_projection_v1",
+  "twin_active_lineage_index_v1",
+  "twin_approved_plan_binding_projection_v1",
+  "twin_decision_record_projection_v1",
+  "twin_forecast_point_projection_v1",
+  "twin_forecast_residual_projection_v1",
+  "twin_forecast_result_latest_index_v1",
+  "twin_forecast_run_projection_v1",
+  "twin_forecast_success_latest_index_v1",
+  "twin_object_idempotency_index_v1",
+  "twin_runtime_authority_snapshot_v1",
+  "twin_runtime_checkpoint_latest_index_v1",
+  "twin_runtime_health_latest_index_v1",
+  "twin_runtime_lease_v1",
+  "twin_scenario_latest_index_v1",
+  "twin_scenario_point_projection_v1",
+  "twin_scenario_set_projection_v1",
+  "twin_scenario_set_uniqueness_v1",
+  "twin_shadow_online_scheduler_cursor_v1",
+  "twin_shadow_online_scheduler_slot_v1",
+  "twin_state_history_projection_v1",
+  "twin_state_latest_index_v1",
+  "twin_terminal_tick_uniqueness_v1",
+];
+const EXPECTED_V13_RELATIONS = [...EXPECTED_PREDECESSOR_RELATIONS, ...EXPECTED_NEW_RELATIONS].sort();
 
 function read(file) {
   return fs.readFileSync(path.join(ROOT, file), "utf8");
@@ -84,7 +113,19 @@ function main() {
   const holistic = read(HOLISTIC_SCHEMA_ACCEPTANCE);
   requireText(holistic, "EXPECTED_PREDECESSOR_TABLE_COUNT = 26", "V13_FOUNDATION_HOLISTIC_PREDECESSOR_26_REQUIRED");
   requireText(holistic, "EXPECTED_V13_TABLE_COUNT = 29", "V13_FOUNDATION_HOLISTIC_V13_29_REQUIRED");
-  for (const relation of EXPECTED_NEW_RELATIONS) requireText(holistic, `\"${relation}\"`, `V13_FOUNDATION_HOLISTIC_RELATION_REQUIRED:${relation}`);
+  requireText(holistic, 'const CANONICAL_FACTS_SCHEMA = "docker/postgres/init/001_schema.sql"', "V13_FOUNDATION_HOLISTIC_CANONICAL_FACTS_SOURCE_REQUIRED");
+  requireText(holistic, 'canonical_facts_extraction_mode: "FACTS_ONLY"', "V13_FOUNDATION_HOLISTIC_FACTS_ONLY_EXTRACTION_REQUIRED");
+  for (const migration of [
+    "2026_07_09_mcft_cap_01_a0_persistence.sql",
+    "2026_07_10_mcft_cap_01_closure_remediation.sql",
+    "2026_07_13_mcft_cap_04_forecast_scenario_persistence.sql",
+    "2026_07_14_mcft_cap_05_feedback_persistence.sql",
+    "2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql",
+  ]) requireText(holistic, migration, `V13_FOUNDATION_HOLISTIC_PREDECESSOR_MIGRATION_REQUIRED:${migration}`);
+  for (const relation of EXPECTED_PREDECESSOR_RELATIONS) requireText(holistic, `\"${relation}\"`, `V13_FOUNDATION_HOLISTIC_PREDECESSOR_RELATION_REQUIRED:${relation}`);
+  for (const relation of EXPECTED_NEW_RELATIONS) requireText(holistic, `\"${relation}\"`, `V13_FOUNDATION_HOLISTIC_V13_RELATION_REQUIRED:${relation}`);
+  requireText(holistic, "V13_SCHEMA_EXACT_PREDECESSOR_TABLE_SET_REQUIRED", "V13_FOUNDATION_HOLISTIC_EXACT_PREDECESSOR_ASSERTION_REQUIRED");
+  requireText(holistic, "V13_SCHEMA_EXACT_FINAL_TABLE_SET_REQUIRED", "V13_FOUNDATION_HOLISTIC_EXACT_FINAL_ASSERTION_REQUIRED");
   requireText(holistic, "information_schema.tables", "V13_FOUNDATION_HOLISTIC_TABLE_INTROSPECTION_REQUIRED");
   requireText(holistic, "information_schema.columns", "V13_FOUNDATION_HOLISTIC_COLUMN_INTROSPECTION_REQUIRED");
   requireText(holistic, "pg_constraint", "V13_FOUNDATION_HOLISTIC_CONSTRAINT_INTROSPECTION_REQUIRED");
@@ -113,7 +154,9 @@ function main() {
     candidate_authority_v3_present: true,
     selector_authority_changed: false,
     predecessor_public_table_count: 26,
+    exact_predecessor_relations: EXPECTED_PREDECESSOR_RELATIONS,
     v13_required_public_table_count: 29,
+    exact_v13_relations: EXPECTED_V13_RELATIONS,
     operational_table_delta: 3,
     exact_new_operational_relations: EXPECTED_NEW_RELATIONS,
     holistic_schema_acceptance_required: true,
