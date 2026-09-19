@@ -51,6 +51,33 @@ assert.equal(auth.runtime_adoption.scheduler_semantics_rewrite,false);
 assert.equal(auth.runtime_adoption.github_production_wake_allowed,false);
 assert.equal(auth.runtime_adoption.github_production_tick_allowed,false);
 assert.equal(auth.owner_cutover.twin_double_owner_window_allowed,false);
+const expectedOperatorBindings=[
+  "GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL",
+  "GEOX_MCFT_CAP09_FORMAL_V5_ADMIN_DATABASE_URL",
+  "GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL",
+  "GEOX_MCFT_CAP09_EVIDENCE_S3_ENDPOINT",
+  "GEOX_MCFT_CAP09_EVIDENCE_S3_BUCKET",
+  "GEOX_MCFT_CAP09_EVIDENCE_S3_REGION",
+  "GEOX_MCFT_CAP09_EVIDENCE_S3_ACCESS_KEY_ID",
+  "GEOX_MCFT_CAP09_EVIDENCE_S3_SECRET_ACCESS_KEY",
+  "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT",
+  "GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET",
+  "GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION",
+  "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID",
+  "GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY",
+].sort();
+assert.equal(auth.operator_bindings.secret_values_in_repository_forbidden,true);
+assert.equal(auth.operator_bindings.github_actions_effectful_operator_binding_allowed,false);
+assert.equal(auth.operator_bindings.exact_required_secret_binding_count,13);
+assert.deepEqual([...auth.operator_bindings.required_secret_binding_names].sort(),expectedOperatorBindings);
+assert.equal(auth.operator_bindings.arm_read_only_formal_database.default_transaction_read_only_required,true);
+assert.equal(auth.operator_bindings.formal_v5_admin_database.github_actions_allowed,false);
+assert.equal(auth.operator_bindings.production_evidence_source.required_login,"geox_mcft_cap09_evidence_runtime_login_v1");
+assert.equal(auth.operator_bindings.production_evidence_source.default_transaction_read_only_required_for_a0_replay,true);
+assert.equal(auth.operator_bindings.production_evidence_source.s3.bucket,"geox-mcft-cap09-evidence-runtime-v1");
+assert.equal(auth.operator_bindings.production_evidence_source.s3.access_mode_for_a0_replay,"HEAD_GET_ONLY");
+assert.equal(auth.operator_bindings.formal_raw_store.bucket,"geox-mcft-cap09-formal-raw-v1");
+assert.equal(auth.operator_bindings.formal_raw_store.access_mode_for_a0_replay,"PUT_HEAD_AFTER_SOURCE_RAW_VERIFICATION");
 for(const value of Object.values(auth.candidate_non_effects))assert.ok(value===false||value===0,"H6_CANDIDATE_NON_EFFECT_REQUIRED");
 
 const arm=read(ARM);
@@ -219,6 +246,7 @@ const proof={
   github_production_execution_reintroduced:false,
   explicit_v5_physical_store_identity:true,
   local_operator_arm_surface_present:true,
+  local_operator_secret_binding_contract_frozen:true,
   fresh_v5_schema_acl_surface_present:true,
   v5_stage_aware_runner_composition_present:true,
   v5_store_bound_prewindow_config_successor_present:true,
