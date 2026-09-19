@@ -110,6 +110,7 @@ function selectEpoch({armMs,crop,currentCrop}){
   fail("FORMAL_V5_ARM_NO_ELIGIBLE_WHOLE_WINDOW_BEFORE_LIFECYCLE_HORIZON",JSON.stringify(firstDiagnostic));
 }
 function epochId(o00){return "mcft_cap09_external_formal_window_epoch_"+o00.replace(/[-:.]/g,"").replace("Z","z").toLowerCase()+"_v5";}
+function manifestRef(epoch){return "formal-arm://mcft-cap09/formal-v5/"+epoch+"/"+FORMAL_DB;}
 function psqlZeroState(url){
   const env={...process.env,PGOPTIONS:"-c default_transaction_read_only=on"};
   const sql="SELECT current_setting('transaction_read_only'),current_database(),(SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'),(SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'),transaction_timestamp();";
@@ -214,6 +215,7 @@ function main(){
     formal_store_authority_blob_sha:STORE_AUTH_BLOB,
     arm_time_database_utc:zero.database_now,
     epoch_id:epochId(epoch.o00),
+    manifest_ref:manifestRef(epochId(epoch.o00)),
     a0:epoch.a0,
     o00:epoch.o00,
     o23:epoch.o23,
