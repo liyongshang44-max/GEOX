@@ -105,7 +105,14 @@
     "active_mode": "FORMAL_V5_ACTIVE",
     "github_production_wake_allowed": false,
     "github_production_tick_allowed": false,
-    "system_database_utc_required": true
+    "system_database_utc_required": true,
+    "v5_prewindow_bundle_ref": "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts",
+    "v5_manifest_builder_ref": "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts",
+    "a0_stage_authority_selection": "LATEST_REGISTRY_EFFECTIVE_AUTHORITY_AT_A0_AFTER_POST_ARM_CONTINUITY_PROOF",
+    "arm_time_stage_snapshot_is_runtime_pin": false,
+    "current_crop_graduated_at_must_be_not_after_a0": true,
+    "stage_forward_stability_must_cover_through_o23": true,
+    "lifecycle_horizon_must_cover_through_o23": true
   },
   "owner_cutover": {
     "evidence_owner_must_remain_exactly_one": true,
@@ -118,6 +125,7 @@
     "REVERIFY_H5_EXACT_MAIN_AND_LIVE_OWNERS",
     "ARM_FRESH_V5_EPOCH",
     "MATERIALIZE_EXISTING_29_TABLE_V13_FORMAL_SCHEMA_AND_ACL",
+    "PROVE_POST_ARM_CURRENT_CROP_ONLY_AUTHORITY_CONTINUITY",
     "PROMOTE_A0_PRODUCTION_EVIDENCE_TO_FORMAL_V5_WITH_VERIFIED_RAW_REPLAY",
     "BOOTSTRAP_FRESH_A0",
     "ACTIVATE_V13_FORCING_PROCESS_ON_NON_GITHUB_EVIDENCE_HOST",
@@ -147,5 +155,22 @@
     "o00_started": false,
     "provider_request_count": 0,
     "mcft_cap09_completed": false
+  },
+  "post_arm_authority_continuity": {
+    "verifier_ref": "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_ARM_AUTHORITY_CONTINUITY_V1.cjs",
+    "arm_runtime_semantic_subject_frozen": true,
+    "current_protected_main_may_advance_after_arm": true,
+    "allowed_post_arm_advancement_only": [
+      "IMMUTABLE_EFFECTIVE_CURRENT_CROP_AUTHORITY_ARTIFACT_ADD",
+      "EFFECTIVE_CURRENT_CROP_REGISTRY_SINGLE_APPEND"
+    ],
+    "first_parent_commit_by_commit_audit_required": true,
+    "arm_subject_must_remain_ancestor": true,
+    "runtime_code_changes_allowed": false,
+    "qcp_changes_allowed": false,
+    "workflow_changes_allowed": false,
+    "any_other_protected_main_change_invalidates_arm": true,
+    "selected_authority_must_cover_a0": true,
+    "reason": "36H_FORMAL_EPOCH_GOVERNANCE_LEAD_EXCEEDS_30H_STAGE_FORWARD_STABILITY_SO_A_POST_ARM_ROLLING_STAGE_AUTHORITY_REFRESH_IS_REQUIRED_WITHOUT_RUNTIME_SEMANTIC_DRIFT"
   }
 }
