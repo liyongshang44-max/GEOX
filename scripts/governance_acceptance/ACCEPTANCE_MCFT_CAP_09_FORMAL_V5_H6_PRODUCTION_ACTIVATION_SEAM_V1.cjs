@@ -12,6 +12,7 @@ const ARM="scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs"
 const SCHEMA="scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_SCHEMA_ACL_MATERIALIZATION_V1.ts";
 const RUNNER="apps/server/src/runtime/twin_runtime/external_formal_v5_amendment19_runner_v2.ts";
 const RUNNER_ACCEPT="scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_STAGE_AWARE_RUNNER_V2.ts";
+const A0_REPLAY="scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_PRODUCTION_REPLAY_PROMOTION_V1.ts";
 const FROZEN=[
   "scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_V1.cjs",
   "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_BOOTSTRAP_V1.ts",
@@ -107,6 +108,32 @@ for(const value of [
   "runtime_kernel_rewritten:false",
 ])marker(runnerAccept,value,"H6_RUNNER_ACCEPTANCE_MARKER_REQUIRED");
 
+const a0Replay=read(A0_REPLAY);
+for(const value of [
+  "FORMAL_V5_A0_REPLAY_LOCAL_NON_GITHUB_HOST_ONLY",
+  "FORMAL_V5_A0_REPLAY_SOURCE_READ_ONLY_REQUIRED",
+  "PostgresGfsCanonicalTargetPairHistoryV1",
+  "from_target_logical_time:a0",
+  "a0_base_supports_o00_warm_start:true",
+  "buildFrozenEvidenceWindowV1",
+  "PostgresExternalEvidenceFactReplayProvenanceV1",
+  "S3CompatiblePrivateRetainedRawReaderV1",
+  "createFormalDurableRawEvidenceRetentionAdapterV1",
+  "GfsRawBundleEvidenceDecoderV1(a0",
+  "KbsVariate25SoilEvidenceDecoderV1",
+  "normalized_semantic_equivalence_verified:true",
+  "exact_cross_bucket_fact_identity_preserved:false",
+  "provider_request_count:0",
+  "a0_bootstrap:false",
+  "formal_o00_started:false",
+])marker(a0Replay,value,"H6_A0_REPLAY_MARKER_REQUIRED");
+for(const value of [
+  "REFERENCE_DATABASE_URL",
+  "ea5e2_readiness",
+  "MCFT_EA5E2_TRANSIENT_S3_",
+  "fetch(",
+])notMarker(a0Replay,value,"H6_A0_HISTORICAL_OR_PROVIDER_PATH_FORBIDDEN");
+
 assert.equal(git("merge-base",BASE,"HEAD"),BASE,"H6_EXACT_PREDECESSOR_MUST_BE_ANCESTOR");
 for(const frozen of FROZEN){
   assert.equal(git("rev-parse","HEAD:"+frozen),git("rev-parse",BASE+":"+frozen),"H6_HISTORICAL_OR_PRODUCTION_V2_REWRITE_FORBIDDEN:"+frozen);
@@ -137,6 +164,10 @@ const proof={
   local_operator_arm_surface_present:true,
   fresh_v5_schema_acl_surface_present:true,
   v5_stage_aware_runner_composition_present:true,
+  a0_production_replay_promotion_surface_present:true,
+  source_operational_database_read_only_contract_present:true,
+  production_to_formal_raw_store_transition_explicit:true,
+  cross_bucket_fact_identity_promotion_forbidden:true,
   actual_formal_v5_arm:false,
   formal_database_mutation:false,
   a0_bootstrap:false,
