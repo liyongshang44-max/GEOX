@@ -46,6 +46,8 @@ export const MCFT_CAP09_FORMAL_V5_FORCING_RUNTIME_CONTRACT_V1 = {
   a0_warm_start_supplies_o00: true,
   outer_wake_is_clock_authority: false,
   database_admission_is_authority: true,
+  forcing_cursor_initialized_by_governed_wrapper: true,
+  forcing_cursor_initialization_is_idempotent: true,
   github_production_wake_allowed: false,
   third_production_authority_domain_created: false,
   operational_evidence_owner_rewritten: false,
@@ -271,6 +273,19 @@ export async function runMcftCap09FormalV5ForcingRuntimeV1(input?: {
     env: processEnv,
   });
 
+  const cursor = await forcing.composition.forcing_continuity.initializeCursor();
+  if (
+    cursor.epoch_id !== activation.arm.epoch_id
+    || cursor.subject_sha !== subject
+    || cursor.first_required_base !== firstRequiredBase
+    || cursor.last_required_base !== lastRequiredBase
+    || cursor.next_missing_required_base !== firstRequiredBase
+    || cursor.completed !== false
+  ) {
+    await forcing.close();
+    throw new Error("FORMAL_V5_FORCING_CURSOR_INITIALIZATION_DRIFT");
+  }
+
   const stop = createMcftCap09ProcessStopV1();
   const wakeMs = integerEnvV1(
     env,
@@ -294,6 +309,8 @@ export async function runMcftCap09FormalV5ForcingRuntimeV1(input?: {
       first_required_base: firstRequiredBase,
       last_required_base: lastRequiredBase,
       required_base_count: 23,
+      forcing_cursor_initialized: true,
+      next_missing_required_base: cursor.next_missing_required_base,
       outer_wake_is_clock_authority: false,
       provider_request_count: 0,
     })}\n`);
