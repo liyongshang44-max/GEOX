@@ -58,6 +58,26 @@ runMcftCap09TwinRuntimeProcessV2().catch((error) => {
 `,
   },
   {
+    name: path.join("runtime", "mcft_cap09_evidence_formal_v5_active_runtime.js"),
+    content: `import { runMcftCap09EvidenceFormalV5ActiveRuntimeV1 } from "../apps/server/src/runtime/mcft_cap09_evidence_formal_v5_active_runtime_v1.js";
+
+runMcftCap09EvidenceFormalV5ActiveRuntimeV1().catch((error) => {
+  console.error(\`FATAL: MCFT-CAP-09 Evidence Formal-v5 active runtime crashed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+  process.exit(1);
+});
+`,
+  },
+  {
+    name: path.join("runtime", "mcft_cap09_twin_runtime_v3.js"),
+    content: `import { runMcftCap09TwinRuntimeProcessV3 } from "../apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_process_v3.js";
+
+runMcftCap09TwinRuntimeProcessV3().catch((error) => {
+  console.error(\`FATAL: MCFT-CAP-09 Twin Runtime V3 Formal-v5 active crashed: \${error instanceof Error ? error.stack ?? error.message : String(error)}\`);
+  process.exit(1);
+});
+`,
+  },
+  {
     name: path.join("runtime", "mcft_cap09_evidence_preformal_owner_runtime.js"),
     content: `import { runMcftCap09EvidencePreFormalOwnerRuntimeV1 } from "../apps/server/src/runtime/mcft_cap09_evidence_preformal_owner_runtime_v1.js";
 
