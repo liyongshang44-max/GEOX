@@ -108,16 +108,16 @@ function assertV5Config(
   const freshDatabaseRef: string = payload.formal_authorities.fresh_database.ref;
   const freshDatabaseHash: string = payload.formal_authorities.fresh_database.hash;
   if (
-    freshDatabaseRef !== MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V5
-    || freshDatabaseHash !== MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V5
-  ) {
-    throw new Error(code + "_V5_DATABASE_AUTHORITY_REQUIRED");
-  }
-  if (
     freshDatabaseRef === MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4
     || freshDatabaseHash === MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4
   ) {
     throw new Error(code + "_V4_DATABASE_AUTHORITY_RESIDUAL_FORBIDDEN");
+  }
+  if (
+    freshDatabaseRef !== MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V5
+    || freshDatabaseHash !== MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V5
+  ) {
+    throw new Error(code + "_V5_DATABASE_AUTHORITY_REQUIRED");
   }
   if (
     payload.parent_runtime_config_ref !== (expectedParent?.object_id ?? null)
