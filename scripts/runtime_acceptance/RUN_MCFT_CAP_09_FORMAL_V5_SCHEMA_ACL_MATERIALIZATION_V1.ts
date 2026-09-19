@@ -9,10 +9,13 @@ const ROOT=process.cwd();
 const TARGET_DB="geox_mcft_cap09_s6_formal_t4r1_24h_v5";
 const DEFAULT_ARM=path.join(os.homedir(),".geox","mcft-cap09","formal-v5","arm-v1.json");
 const DEFAULT_OUT=path.join(os.homedir(),".geox","mcft-cap09","formal-v5","schema-acl-v1.json");
+const CANONICAL_FACTS_SCHEMA="docker/postgres/init/001_schema.sql";
 const SCHEMA_FILES=[
-  "docker/postgres/init/001_schema.sql",
   "apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql",
   "apps/server/db/migrations/2026_07_10_mcft_cap_01_closure_remediation.sql",
+  "apps/server/db/migrations/2026_07_13_mcft_cap_04_forecast_scenario_persistence.sql",
+  "apps/server/db/migrations/2026_07_14_mcft_cap_05_feedback_persistence.sql",
+  "apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql",
   "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql",
   "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql",
   "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql",
@@ -27,6 +30,37 @@ const EXPECTED_NEW_RELATIONS=[
 const OWNER_ROLES=[
   "geox_mcft_cap09_twin_writer_owner_v1",
   "geox_mcft_cap09_forcing_writer_owner_v1",
+] as const;
+const EXPECTED_PUBLIC_TABLES=[
+  "facts",
+  "twin_action_feedback_cycle_projection_v1",
+  "twin_action_feedback_evidence_index_v1",
+  "twin_action_feedback_projection_v1",
+  "twin_active_lineage_index_v1",
+  "twin_approved_plan_binding_projection_v1",
+  "twin_decision_record_projection_v1",
+  "twin_external_formal_forcing_base_cursor_v1",
+  "twin_external_formal_forcing_base_target_v1",
+  "twin_external_formal_forcing_controller_lease_v1",
+  "twin_forecast_point_projection_v1",
+  "twin_forecast_residual_projection_v1",
+  "twin_forecast_result_latest_index_v1",
+  "twin_forecast_run_projection_v1",
+  "twin_forecast_success_latest_index_v1",
+  "twin_object_idempotency_index_v1",
+  "twin_runtime_authority_snapshot_v1",
+  "twin_runtime_checkpoint_latest_index_v1",
+  "twin_runtime_health_latest_index_v1",
+  "twin_runtime_lease_v1",
+  "twin_scenario_latest_index_v1",
+  "twin_scenario_point_projection_v1",
+  "twin_scenario_set_projection_v1",
+  "twin_scenario_set_uniqueness_v1",
+  "twin_shadow_online_scheduler_cursor_v1",
+  "twin_shadow_online_scheduler_slot_v1",
+  "twin_state_history_projection_v1",
+  "twin_state_latest_index_v1",
+  "twin_terminal_tick_uniqueness_v1",
 ] as const;
 
 function arg(name:string):string|null{
@@ -45,6 +79,14 @@ function write(file:string,value:unknown):void{
 }
 async function apply(pool:Pool,files:readonly string[]):Promise<void>{
   for(const file of files)await pool.query(fs.readFileSync(path.join(ROOT,file),"utf8"));
+}
+function canonicalFactsSchemaSql():string{
+  const source=fs.readFileSync(path.join(ROOT,CANONICAL_FACTS_SCHEMA),"utf8");
+  const match=/^(CREATE TABLE IF NOT EXISTS facts[\s\S]*?CREATE INDEX IF NOT EXISTS facts_record_json_idx[\s\S]*?;\s*)/.exec(source);
+  assert.ok(match?.[1],"FORMAL_V5_SCHEMA_ACL_CANONICAL_FACTS_DDL_REQUIRED");
+  const sql=match[1];
+  assert.equal((sql.match(/\bCREATE\s+TABLE\b/gi)??[]).length,1,"FORMAL_V5_SCHEMA_ACL_FACTS_ONLY_DDL_REQUIRED");
+  return sql;
 }
 async function publicTables(pool:Pool):Promise<string[]>{
   return (await pool.query<{table_name:string}>(
@@ -284,6 +326,7 @@ async function main():Promise<void>{
     const beforeRoutines=await publicRoutineCount(pool);
 
     if(beforeTables.length===29){
+      assert.deepEqual(beforeTables,[...EXPECTED_PUBLIC_TABLES],"FORMAL_V5_SCHEMA_ACL_MATERIALIZED_TABLE_SET_MISMATCH");
       assert.equal(beforeRoutines,2,"FORMAL_V5_SCHEMA_ACL_MATERIALIZED_ROUTINE_COUNT_MISMATCH");
       assert.equal(await totalRows(pool,beforeTables),0,"FORMAL_V5_SCHEMA_ACL_PRE_A0_ROWS_MUST_BE_ZERO");
       const acl=await assertFinalAcl(pool);
@@ -292,6 +335,7 @@ async function main():Promise<void>{
         status:"PASS_ALREADY_MATERIALIZED_IDEMPOTENT",
         subject_sha:subject,database_name:TARGET_DB,
         public_table_count:29,public_routine_count:2,all_table_rows_zero:true,
+        public_tables:[...EXPECTED_PUBLIC_TABLES],canonical_facts_schema_ref:CANONICAL_FACTS_SCHEMA,
         schema_materialization_performed:false,acl_materialization_performed:false,
         ...acl,formal_v5_arm:true,a0_bootstrap:false,o00_started:false,provider_request_count:0,
       });
@@ -303,9 +347,11 @@ async function main():Promise<void>{
     await pool.query("BEGIN");
     try{
       await createPrivilegeRoles(pool);
+      await pool.query(canonicalFactsSchemaSql());
       await apply(pool,SCHEMA_FILES);
       const midTables=await publicTables(pool);
       assert.equal(midTables.length,29,"FORMAL_V5_SCHEMA_ACL_EXACT_29_TABLES_REQUIRED");
+      assert.deepEqual(midTables,[...EXPECTED_PUBLIC_TABLES],"FORMAL_V5_SCHEMA_ACL_EXACT_29_TABLE_SET_REQUIRED");
       const newRelations=midTables.filter((name)=>EXPECTED_NEW_RELATIONS.includes(name as typeof EXPECTED_NEW_RELATIONS[number]));
       assert.deepEqual(newRelations.sort(),[...EXPECTED_NEW_RELATIONS].sort(),"FORMAL_V5_SCHEMA_ACL_V13_RELATIONS_REQUIRED");
       assert.equal(await totalRows(pool,midTables),0,"FORMAL_V5_SCHEMA_ACL_SCHEMA_MATERIALIZATION_MUST_REMAIN_ZERO_ROW");
@@ -328,6 +374,7 @@ async function main():Promise<void>{
     const afterTables=await publicTables(pool);
     const afterRoutines=await publicRoutineCount(pool);
     assert.equal(afterTables.length,29);
+    assert.deepEqual(afterTables,[...EXPECTED_PUBLIC_TABLES],"FORMAL_V5_SCHEMA_ACL_POST_MATERIALIZATION_TABLE_SET_MISMATCH");
     assert.equal(afterRoutines,2);
     assert.equal(await totalRows(pool,afterTables),0,"FORMAL_V5_SCHEMA_ACL_POST_MATERIALIZATION_ROWS_MUST_BE_ZERO");
     const acl=await assertFinalAcl(pool);
@@ -336,6 +383,7 @@ async function main():Promise<void>{
       status:"PASS",
       subject_sha:subject,database_name:TARGET_DB,
       public_table_count:29,public_routine_count:2,all_table_rows_zero:true,
+      public_tables:[...EXPECTED_PUBLIC_TABLES],canonical_facts_schema_ref:CANONICAL_FACTS_SCHEMA,
       schema_files:[...SCHEMA_FILES],
       twin_writer_acl_ref:TWIN_WRITER_ACL,
       forcing_writer_acl_ref:FORCING_WRITER_ACL,
