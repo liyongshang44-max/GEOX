@@ -366,19 +366,19 @@ async function main():Promise<void>{
       sourcePool,{...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1},
     ).readGfsTargetPairHistory({
       scope:{...MCFT_CAP09_EXTERNAL_FORMAL_SCOPE_V1},
-      from_target_logical_time:o00,
+      from_target_logical_time:a0,
     });
-    if(history.partial_targets.some((row)=>row.target_logical_time===o00)){
-      throw new Error("FORMAL_V5_A0_REPLAY_O00_GFS_PARTIAL_PAIR_FORBIDDEN");
+    if(history.partial_targets.some((row)=>row.target_logical_time===a0)){
+      throw new Error("FORMAL_V5_A0_REPLAY_A0_GFS_PARTIAL_PAIR_FORBIDDEN");
     }
-    const pair=history.pairs.filter((row)=>row.target_logical_time===o00);
-    assert.equal(pair.length,1,"FORMAL_V5_A0_REPLAY_EXACT_ONE_O00_GFS_PAIR_REQUIRED");
+    const pair=history.pairs.filter((row)=>row.target_logical_time===a0);
+    assert.equal(pair.length,1,"FORMAL_V5_A0_REPLAY_EXACT_ONE_A0_GFS_PAIR_REQUIRED");
     const weather=await loadFact(sourcePool,pair[0]!.weather_fact_id);
     const et0=await loadFact(sourcePool,pair[0]!.future_et0_fact_id);
     assert.equal(weather.record.record_type,"future_weather_assumption_v1");
     assert.equal(et0.record.record_type,"future_et0_assumption_v1");
-    assert.equal(exactHour(weather.record.role_time?.valid_from,"FORMAL_V5_A0_REPLAY_WEATHER_VALID_FROM_INVALID"),o00);
-    assert.equal(exactHour(et0.record.role_time?.valid_from,"FORMAL_V5_A0_REPLAY_ET0_VALID_FROM_INVALID"),o00);
+    assert.equal(exactHour(weather.record.role_time?.valid_from,"FORMAL_V5_A0_REPLAY_WEATHER_VALID_FROM_INVALID"),a0);
+    assert.equal(exactHour(et0.record.role_time?.valid_from,"FORMAL_V5_A0_REPLAY_ET0_VALID_FROM_INVALID"),a0);
     assert.equal(exactHour(weather.record.role_time?.issued_at,"FORMAL_V5_A0_REPLAY_WEATHER_ISSUED_INVALID"),pair[0]!.cycle_issued_at);
     assert.equal(exactHour(et0.record.role_time?.issued_at,"FORMAL_V5_A0_REPLAY_ET0_ISSUED_INVALID"),pair[0]!.cycle_issued_at);
     assertCausalAtA0(weather,a0);
@@ -448,7 +448,7 @@ async function main():Promise<void>{
     },{
       transport:new VerifiedRetainedRawReadbackTransportV1(weatherReplay.raw_provenance,gfsRead),
       retention:formalRaw.adapter,
-      decoder:new GfsRawBundleEvidenceDecoderV1(o00,{
+      decoder:new GfsRawBundleEvidenceDecoderV1(a0,{
         normalize_et0:true,
         restored_ingested_at:weatherReplay.restored_ingested_at,
       }),
@@ -513,8 +513,9 @@ async function main():Promise<void>{
       formal_fact_count:finalFacts,
       formal_canonical_fact_write_count:newWrites,
       formal_existing_idempotent_fact_count:existingWrites,
-      exact_o00_same_cycle_gfs_pair:true,
-      gfs_pair_causal_at_a0:true,
+      exact_a0_same_cycle_gfs_pair:true,
+      a0_gfs_pair_causal_at_a0:true,
+      a0_base_supports_o00_warm_start:true,
       soil_selected_by_existing_a0_evidence_window:true,
       source_operational_database_read_only:true,
       production_raw_bucket:EVIDENCE_BUCKET,
