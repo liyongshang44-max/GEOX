@@ -1,0 +1,90 @@
+{
+  "schema_version": "geox_mcft_cap09_formal_v5_runtime_cutover_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-FORMAL-V5-RUNTIME-CUTOVER-V1",
+  "status": "IMPLEMENTATION_CANDIDATE_NO_PRODUCTION_EFFECT_UNTIL_MERGED_AND_OPERATOR_EXECUTED",
+  "subordinate_to": [
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md"
+  ],
+  "execution_host": "LOCAL_NON_GITHUB_PRODUCTION_HOST_ONLY",
+  "service_topology": {
+    "compose_project": "geox-mcft-cap09-production-v1",
+    "service_count": 2,
+    "evidence_service": "geox-mcft-cap09-evidence-runtime-v1",
+    "twin_service": "geox-mcft-cap09-twin-runtime-v1",
+    "third_service_forbidden": true
+  },
+  "evidence_plane": {
+    "container": "SAME_EVIDENCE_CONTAINER",
+    "operational_lane": "EXISTING_PREFORMAL_OWNER_RUNTIME_CONTINUES",
+    "formal_forcing_lane": "V13_AUTONOMOUS_FORCING_CONTROLLER_SUBORDINATE",
+    "operational_database": "geox_mcft_cap09_production_runtime_v1",
+    "formal_database": "geox_mcft_cap09_s6_formal_t4r1_24h_v5",
+    "operational_raw_bucket": "geox-mcft-cap09-evidence-runtime-v1",
+    "formal_raw_bucket": "geox-mcft-cap09-formal-raw-v1",
+    "raw_bucket_identity_separation_required": true,
+    "operational_owner_count_target": 1,
+    "forcing_controller_new_authority_domain": false
+  },
+  "twin_plane": {
+    "preformal_mode": "PRE_FORMAL_OWNER_STANDBY",
+    "active_mode": "FORMAL_V5_ACTIVE",
+    "operational_preformal_database": "geox_mcft_cap09_production_runtime_v1",
+    "formal_database": "geox_mcft_cap09_s6_formal_t4r1_24h_v5",
+    "stop_preformal_before_formal_claim": true,
+    "wait_operational_twin_lease_zero": true,
+    "double_owner_window_forbidden": true,
+    "formal_fencing_token_must_exceed_a0_bootstrap_fence": true,
+    "runtime_process": "MCFT_CAP09_TWIN_RUNTIME_PROCESS_V3_FORMAL_V5_ACTIVE",
+    "composition": "MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_V3_FORMAL_V5_ACTIVE"
+  },
+  "credentials": {
+    "existing_cluster_logins_reused": true,
+    "evidence_login": "geox_mcft_cap09_evidence_runtime_login_v1",
+    "twin_login": "geox_mcft_cap09_twin_runtime_login_v1",
+    "runtime_database_url_derivation": "SAME_LOGIN_CREDENTIALS_REPLACE_DATABASE_NAME_WITH_FIXED_V5_DATABASE_THEN_PHYSICALLY_VERIFY",
+    "evidence_twin_credentials_shared": false,
+    "admin_url_used_by_long_running_runtime": false
+  },
+  "cutover_sequence": [
+    "REVERIFY_POST_ARM_AUTHORITY_CONTINUITY",
+    "REQUIRE_ARM_AND_A0_BOOTSTRAP_PASS",
+    "REQUIRE_PREFORMAL_TWO_CONTAINERS_EXACT_ARM_SUBJECT",
+    "REQUIRE_OPERATIONAL_EVIDENCE_AND_TWIN_LIVE_OWNERS",
+    "VERIFY_FORMAL_RUNTIME_DATABASE_LOGINS_AND_PRIVILEGES_READ_ONLY",
+    "STOP_PREFORMAL_TWO_SERVICES_GRACEFULLY",
+    "WAIT_OPERATIONAL_EVIDENCE_AND_TWIN_LIVE_LEASES_ZERO_WITHOUT_DB_MUTATION",
+    "REMOVE_STOPPED_PREFORMAL_CONTAINERS_WITHOUT_VOLUMES",
+    "START_FORMAL_V5_TWO_SERVICE_COMPOSE_NO_BUILD",
+    "REQUIRE_OPERATIONAL_EVIDENCE_OWNER_REACQUIRED_BY_NEW_EVIDENCE_CONTAINER",
+    "REQUIRE_OPERATIONAL_TWIN_LIVE_OWNER_ZERO",
+    "REQUIRE_FORMAL_TWIN_OWNER_ACQUIRED_BY_NEW_TWIN_CONTAINER",
+    "REQUIRE_FORMAL_TWIN_FENCE_GT_A0_BOOTSTRAP_FENCE",
+    "REQUIRE_FORMAL_V5_ACTIVE_STRUCTURED_HEALTH",
+    "REQUIRE_SUBORDINATE_FORMAL_FORCING_STRUCTURED_HEALTH"
+  ],
+  "failure_policy": {
+    "database_lease_rows_manually_mutated": false,
+    "automatic_preformal_semantic_rollback": false,
+    "formal_compose_stopped_on_post_start_verification_failure": true,
+    "natural_lease_expiry_required_after_failure": true,
+    "retry_requires_fresh_read_only_adjudication": true
+  },
+  "clock_and_forcing": {
+    "outer_forcing_wake_is_clock_authority": false,
+    "formal_database_admission_is_authority": true,
+    "a0_warm_start_supplies_o00": true,
+    "post_a0_required_forcing_base_range": "O00_THROUGH_O22",
+    "github_production_wake_allowed": false,
+    "github_production_tick_allowed": false
+  },
+  "nonclaims": {
+    "runtime_kernel_rewritten": false,
+    "scheduler_semantics_rewritten": false,
+    "amendment19_redesigned": false,
+    "new_database_schema_designed": false,
+    "new_authority_domain_created": false,
+    "formal_v5_completion_from_cutover_alone": false,
+    "mcft_cap09_completion_from_cutover_alone": false
+  }
+}
