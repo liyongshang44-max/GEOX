@@ -19,6 +19,8 @@ on:
       - 'apps/server/src/runtime/twin_runtime/external_formal_v5_amendment19_runner_v2.ts'
       - 'apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts'
       - 'apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.test.ts'
+      - 'scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts'
+      - 'scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_STAGE_AWARE_RUNNER_V2.ts'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM_V1.cjs'
   push:
@@ -87,9 +89,14 @@ jobs:
           scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_STAGE_AWARE_RUNNER_V2.ts
           apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts
           apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.test.ts
+          scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts
+          scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts
 
       - name: Run focused H6 V5 prewindow bundle unit test
         run: pnpm exec tsx --test apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.test.ts
+
+      - name: Run focused H6 V5 manifest stage-authority unit test
+        run: pnpm exec tsx --test scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts
 
       - name: Admit exact current-main successor into central QCP
         if: github.event_name == 'pull_request'
