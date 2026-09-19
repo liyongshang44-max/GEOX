@@ -17,6 +17,9 @@ const files = {
   reconciliation: 'docs/frontend-productization/FOUI-0-CURRENT-MAIN-FRONTEND-RECONCILIATION.md',
   surfaceMatrix: 'docs/frontend-productization/FOUI-0-FIELD-OPERATIONS-PRODUCT-SURFACE-MATRIX.md',
   gapRegister: 'docs/product_projection/FOUI-0-PROJECTION-API-GAP-REGISTER.md',
+  reuseRegister: 'docs/frontend-productization/FOUI-0-CAPABILITY-REUSE-REGISTER.md',
+  preWave02Handoff: 'docs/product_projection/FOUI-0-PRE-WAVE02-CONSTRUCTION-HANDOFF.md',
+  freezeManifest: 'docs/frontend-productization/FOUI-0-FREEZE-MANIFEST.json',
 };
 
 for (const [key, rel] of Object.entries(files)) {
@@ -32,6 +35,9 @@ const registry = read(files.registry);
 const reconciliation = read(files.reconciliation);
 const surfaceMatrix = read(files.surfaceMatrix);
 const gapRegister = read(files.gapRegister);
+const reuseRegister = read(files.reuseRegister);
+const preWave02Handoff = read(files.preWave02Handoff);
+const freezeManifest = JSON.parse(read(files.freezeManifest));
 
 if (!app.includes('<Route path="/operator/*" element={<OperatorShell />} />')) fail('FOUI0_OPERATOR_SHELL_NOT_CANONICAL');
 
@@ -132,6 +138,36 @@ if (!hasAll(gapRegister, [
   'current MCFT state != decision-time state',
 ])) fail('FOUI0_GAP_REGISTER_INCOMPLETE');
 
+if (!hasAll(reuseRegister, [
+  'priorityText',
+  'AttentionQueueProjectionV1',
+  'submitOperatorApprovalAction',
+  'EvidenceArtifact authority chain',
+  'acceptance_result_v1 PASS',
+  'ROI row != Outcome authority',
+])) fail('FOUI0_CAPABILITY_REUSE_REGISTER_INCOMPLETE');
+
+if (!hasAll(preWave02Handoff, [
+  'NOT IMPLEMENTATION AUTHORIZATION',
+  'W2-1 GovernedActionCaseProjection builder',
+  'W2-2 CapabilityAvailabilityProjection builder',
+  'W2-3 AttentionQueueProjection builder',
+  'GET',
+  'HEAD',
+  'POST',
+  'current_state_substitution_forbidden = true',
+])) fail('FOUI0_PRE_WAVE02_HANDOFF_INCOMPLETE');
+
+if (freezeManifest.schema_version !== 'geox_foui0_frontend_reconciliation_freeze_v1') fail('FOUI0_FREEZE_MANIFEST_SCHEMA_INVALID');
+if (freezeManifest.audit_base_main_sha !== 'd054b334b3e74f3356b5d02498da9ba845eccdfb') fail('FOUI0_FREEZE_MANIFEST_BASE_MISMATCH');
+if (freezeManifest.merge_authorization !== 'NONE_DURING_MCFT_FORMAL_V5_FREEZE') fail('FOUI0_FREEZE_MANIFEST_MERGE_BOUNDARY_INVALID');
+if (freezeManifest.wave02_implementation_authorization !== 'NONE') fail('FOUI0_FREEZE_MANIFEST_WAVE02_AUTHORIZATION_INVALID');
+if (freezeManifest.high_fidelity_authorization !== 'NONE') fail('FOUI0_FREEZE_MANIFEST_HIGH_FIDELITY_INVALID');
+if (freezeManifest.outcome_promotion !== 'HOLD') fail('FOUI0_FREEZE_MANIFEST_OUTCOME_INVALID');
+if (freezeManifest.projection_runtime?.governed_action_case_builder !== 'NOT_CONSTRUCTED') fail('FOUI0_FREEZE_MANIFEST_ACTION_BUILDER_INVALID');
+if (freezeManifest.projection_runtime?.capability_availability_builder !== 'NOT_CONSTRUCTED') fail('FOUI0_FREEZE_MANIFEST_CAPABILITY_BUILDER_INVALID');
+if (freezeManifest.projection_runtime?.attention_queue_builder !== 'NOT_CONSTRUCTED') fail('FOUI0_FREEZE_MANIFEST_ATTENTION_BUILDER_INVALID');
+
 const projectionRoot = path.join(ROOT, 'apps/server/src/product_projection');
 const projectionFiles = [];
 function walk(dir) {
@@ -154,6 +190,9 @@ console.log(JSON.stringify({
   wave01_contract: 'PRESENT',
   source_binding_registry: 'PRESENT',
   projection_runtime: 'NOT_CONSTRUCTED',
+  capability_reuse_register: 'PRESENT',
+  pre_wave02_handoff: 'PRESENT_NOT_AUTHORIZED',
+  freeze_manifest: freezeManifest.schema_version,
   high_fidelity_authorization: 'NONE',
   backend_authority_change: 'NONE',
   main_merge_authorization: 'NONE_DURING_MCFT_FREEZE',
