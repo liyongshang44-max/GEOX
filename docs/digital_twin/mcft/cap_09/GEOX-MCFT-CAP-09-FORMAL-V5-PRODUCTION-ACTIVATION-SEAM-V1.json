@@ -93,7 +93,17 @@
     "normalized_semantic_equivalence_required": true,
     "same_decoder_id_and_version_required": true,
     "source_raw_digest_and_bytes_reverification_required": true,
-    "target_fact_set_before_bootstrap": "EXACT_THREE_A0_CAUSAL_FORMAL_FACTS"
+    "target_fact_set_before_bootstrap": "EXACT_THREE_A0_CAUSAL_FORMAL_FACTS",
+    "bootstrap_executor_ref": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_BOOTSTRAP_V1.ts",
+    "bootstrap_execution_host": "LOCAL_NON_GITHUB_OPERATOR_ONE_SHOT_ONLY",
+    "bootstrap_operator_database_credential_required": true,
+    "bootstrap_runtime_principal_for_operator_step_forbidden": true,
+    "bootstrap_exact_29_table_2_routine_schema_required": true,
+    "bootstrap_exact_three_promoted_facts_required": true,
+    "bootstrap_manifest_file_is_not_activation_authority_by_itself": true,
+    "bootstrap_result_pass_required_before_runtime_cutover": true,
+    "bootstrap_partial_mutation_makes_store_and_epoch_non_reusable": true,
+    "bootstrap_automatic_truncate_retry_forbidden": true
   },
   "runtime_adoption": {
     "runtime_kernel_rewrite": false,
