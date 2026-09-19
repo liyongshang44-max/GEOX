@@ -153,7 +153,8 @@ async function main(): Promise<void> {
     const v13Tables = await publicTables(pool);
     assert.equal(v13Tables.length, EXPECTED_V13_TABLE_COUNT, `V13_SCHEMA_FINAL_TABLE_COUNT:${v13Tables.length}`);
     assert.deepEqual(v13Tables, [...EXPECTED_V13_TABLES], "V13_SCHEMA_EXACT_FINAL_TABLE_SET_REQUIRED");
-    const delta = v13Tables.filter((name) => !predecessorTables.includes(name)).sort();
+    const predecessorTableSet = new Set<string>(predecessorTables);
+    const delta = v13Tables.filter((name) => !predecessorTableSet.has(name)).sort();
     assert.deepEqual(delta, [...EXPECTED_NEW_RELATIONS].sort(), "V13_SCHEMA_EXACT_NEW_RELATION_SET_REQUIRED");
     for (const expected of EXPECTED_NEW_RELATIONS) assert.equal(v13Tables.includes(expected), true, `V13_SCHEMA_RELATION_MISSING:${expected}`);
 
