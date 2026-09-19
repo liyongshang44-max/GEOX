@@ -21,6 +21,7 @@ on:
       - 'apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.test.ts'
       - 'scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts'
       - 'scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts'
+      - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_ARM_AUTHORITY_CONTINUITY_V1.cjs'
       - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_STAGE_AWARE_RUNNER_V2.ts'
       - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM_V1.cjs'
   push:
@@ -78,6 +79,9 @@ jobs:
 
       - name: Selftest local-only H6 Formal-v5 arm assembler
         run: node scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs --selftest
+
+      - name: Selftest H6 post-arm authority continuity verifier
+        run: node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_ARM_AUTHORITY_CONTINUITY_V1.cjs --selftest
 
       - name: Typecheck H6 activation seam TypeScript
         run: >-
