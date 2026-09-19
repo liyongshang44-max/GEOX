@@ -71,8 +71,9 @@ export async function runMcftCap09EvidenceFormalV5ActiveRuntimeV1(input?: {
 
   try {
     const first = await Promise.race([operational, forcing]);
+    const externalStopAlreadyRequested = supervisorStop.stopRequested();
 
-    if (!supervisorStop.stopRequested()) {
+    if (!externalStopAlreadyRequested) {
       // Internal early return/failure is not a normal production lifecycle boundary.
       // Signal both child lifecycles so their existing lease-release paths run.
       process.kill(process.pid, "SIGTERM");
@@ -80,7 +81,7 @@ export async function runMcftCap09EvidenceFormalV5ActiveRuntimeV1(input?: {
 
     const outcomes = await Promise.all([operational, forcing]);
 
-    if (supervisorStop.stopRequested() && outcomes.every(
+    if (externalStopAlreadyRequested && outcomes.every(
       (item) => item.status === "RETURNED",
     )) {
       return;
