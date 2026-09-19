@@ -326,7 +326,9 @@ for(const rel of githubChanges){
   assert.equal(allowedGithubQualificationChanges.has(rel),true,"H6_UNGOVERNED_GITHUB_WORKFLOW_CHANGE:"+rel);
   if(rel!==".github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml"){
     const workflow=read(rel);
-    notMarker(workflow,"  schedule:","H6_SCHEMA_QUALIFICATION_SCHEDULE_FORBIDDEN");
+    const triggerBlock=workflow.match(/^on:\n[\s\S]*?^permissions:/m)?.[0]??"";
+    assert.ok(triggerBlock,"H6_SCHEMA_QUALIFICATION_TRIGGER_BLOCK_REQUIRED:"+rel);
+    assert.equal(/^  schedule:/m.test(triggerBlock),false,"H6_SCHEMA_QUALIFICATION_SCHEDULE_FORBIDDEN:"+rel);
     notMarker(workflow,"GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL: ${{ secrets.","H6_SCHEMA_QUALIFICATION_PRODUCTION_DB_SECRET_FORBIDDEN");
   }
 }
