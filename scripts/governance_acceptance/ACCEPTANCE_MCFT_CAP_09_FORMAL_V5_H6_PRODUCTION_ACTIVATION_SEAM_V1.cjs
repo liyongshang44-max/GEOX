@@ -87,7 +87,31 @@ assert.equal(auth.arm.execution_host,"LOCAL_NON_GITHUB_PRODUCTION_HOST_ONLY");
 assert.equal(auth.arm.epoch_selection.minimum_governance_lead_hours,36);
 assert.equal(auth.arm.timing_budget.selected_budget_ms,2081804);
 assert.equal(auth.arm.timing_budget.fixed_35_minute_lead_authorized,false);
+assert.equal(auth.schema_materialization.canonical_facts_schema_source,"docker/postgres/init/001_schema.sql");
+assert.equal(auth.schema_materialization.canonical_facts_extraction_mode,"FACTS_ONLY");
+assert.deepEqual(auth.schema_materialization.predecessor_schema_files,FORMAL_SCHEMA_MIGRATIONS.slice(0,5));
+assert.deepEqual(auth.schema_materialization.v13_schema_files,FORMAL_SCHEMA_MIGRATIONS.slice(5));
+const expectedFormalV5NewRelations=[
+  "twin_external_formal_forcing_base_cursor_v1",
+  "twin_external_formal_forcing_base_target_v1",
+  "twin_external_formal_forcing_controller_lease_v1",
+];
+const expectedFormalV5PredecessorTables=EXPECTED_FORMAL_V5_PUBLIC_TABLES
+  .filter((name)=>!expectedFormalV5NewRelations.includes(name))
+  .sort();
+assert.equal(auth.schema_materialization.exact_predecessor_public_table_count,26);
+assert.deepEqual(
+  [...auth.schema_materialization.exact_predecessor_public_table_set].sort(),
+  expectedFormalV5PredecessorTables,
+  "H6_AUTHORITY_EXACT_PREDECESSOR_TABLE_SET_REQUIRED",
+);
 assert.equal(auth.schema_materialization.exact_public_table_count_after_materialization,29);
+assert.deepEqual(
+  [...auth.schema_materialization.exact_public_table_set_after_materialization].sort(),
+  [...EXPECTED_FORMAL_V5_PUBLIC_TABLES].sort(),
+  "H6_AUTHORITY_EXACT_29_TABLE_SET_REQUIRED",
+);
+assert.equal(auth.schema_materialization.formal_store_must_be_zero_state_before_materialization,true);
 assert.equal(auth.a0_adoption.historical_ea5e2_reference_database_forbidden,true);
 assert.equal(auth.a0_adoption.provider_refetch_for_a0_forbidden,true);
 assert.equal(auth.runtime_adoption.runtime_kernel_rewrite,false);
