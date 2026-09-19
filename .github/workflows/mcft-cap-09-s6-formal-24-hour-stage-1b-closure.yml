@@ -1,225 +1,40 @@
+# Phase 6 retirement sentinel.
+# Complete pre-cutover implementation remains immutable at:
+# 75d4961279bd64dc1c9dd7d68aac189c72c98846:.github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml
+# historical blob: 2728266b5cb9dab49d42b590f5df558d61346728
+# No production schedule, dispatch, workflow-run, push, or callable trigger remains.
 name: mcft-cap-09-s6-formal-24-hour-stage-1b-closure
 
 on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml'
-      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-*'
-      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE.cjs'
-      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE_DB.ts'
-      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW.ts'
-  merge_group:
-    types: [checks_requested]
-  schedule:
-    - cron: '17 * * * *'
-  workflow_dispatch:
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PHASE6-GITHUB-PRODUCTION-EXECUTION-RETIREMENT-AUTHORITY-V1.json'
+      - 'scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs'
+      - '.github/workflows/mcft-cap-09-phase6-retire-github-production-execution.yml'
 
 permissions:
   contents: read
-  actions: read
-  pull-requests: read
-
-concurrency:
-  group: mcft-cap09-s6-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA || github.sha }}-${{ github.event_name }}
-  cancel-in-progress: false
 
 jobs:
-  qualify-candidate:
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+  phase6-retirement-sentinel:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
-
-      - name: Classify S6 Formal lifecycle applicability
-        id: lifecycle
-        env:
-          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+      - name: Prove immutable historical binding and retired trigger surface
         shell: bash
         run: |
           set -euo pipefail
-          files="$(git diff --name-only "$MCFT_BASE_SHA"...HEAD | sort)"
-          candidate_files="$(printf '%s\n' \
-            '.github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-DELIVERY-STATUS-V1.json' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-24-HOUR-CANDIDATE-BOUNDARY-V1.json' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-24-HOUR-CANDIDATE-V1.json' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-24-HOUR-CONFIG-V1.json' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-HARD-ACCEPTANCE-LEDGER-V1.json' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-S5-ATTESTATION-CONSUMPTION-V1.json' \
-            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE.cjs' \
-            'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE_DB.ts' \
-            'scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW.ts' | sort)"
-          ea2_successor_files="$(printf '%s\n' \
-            '.github/workflows/mcft-cap-09-ea2-formal-authority-freeze.yml' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V1.json' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-EXTERNAL-EVIDENCE-PACKAGE-V1.json' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V1.json' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V1.json' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SOURCE-BINDING-MATRIX-V1.json' \
-            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_EA2_FORMAL_AUTHORITY_FREEZE.cjs' | sort)"
-          t3r1_successor_files="$(printf '%s\n' \
-            '.github/workflows/mcft-cap-09-t3r1-formal-successor-authority.yml' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-17-T3R1-FORMAL-SUCCESSOR-SCOPE-AUTHORITY.md' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V2.json' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V2.json' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V2.json' \
-            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T3R1_FORMAL_SUCCESSOR_AUTHORITY.cjs' \
-            'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T3R1_FORMAL_SUCCESSOR_AUTHORITY.mjs' | sort)"
-          t4r1_successor_files="$(printf '%s\n' \
-            '.github/workflows/mcft-cap-09-t4r1-formal-successor-authority.yml' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-20-T4R1-FORMAL-SUCCESSOR-SCOPE-AUTHORITY.md' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-REALITY-BINDING-V3.json' \
-            'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-SITE-AUTHORITY-V3.json' \
-            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_FORMAL_SUCCESSOR_AUTHORITY.cjs' \
-            'scripts/runtime_acceptance/PROBE_MCFT_CAP_09_T4R1_FORMAL_SUCCESSOR_AUTHORITY.mjs' | sort)"
-          routing_repair_files="$(printf '%s\n' \
-            '.github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml' \
-            '.github/workflows/mcft-cap-09-s6-registry-registration.yml' | sort)"
-          if [[ "$files" == "$candidate_files" ]]; then
-            mode='historical-s6-formal-candidate'
-          elif [[ "$files" == "$ea2_successor_files" ]]; then
-            mode='not-applicable-ea2-successor-authority'
-          elif [[ "$files" == "$t3r1_successor_files" ]]; then
-            mode='not-applicable-t3r1-formal-successor-authority'
-          elif [[ "$files" == "$t4r1_successor_files" ]]; then
-            mode='not-applicable-t4r1-formal-successor-authority'
-          elif [[ "$files" == "$routing_repair_files" ]]; then
-            mode='successor-authority-routing-repair'
-          else
-            mode='unsupported-s6-formal-trigger'
-          fi
-          echo "mode=$mode" >> "$GITHUB_OUTPUT"
-          printf '%s\n' "mode=$mode" "files:" "$files"
-
-      - name: Record S6 Formal gate not applicable to EA2 successor authority freeze
-        if: steps.lifecycle.outputs.mode == 'not-applicable-ea2-successor-authority'
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo 'Historical S6 Formal candidate gate is not applicable: exact EA2 successor authority boundary changed with no historical S6 Formal candidate-owned mutation.'
-
-      - name: Record S6 Formal gate not applicable to T3R1 Formal successor authority
-        if: steps.lifecycle.outputs.mode == 'not-applicable-t3r1-formal-successor-authority'
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo 'Historical S6 Formal candidate gate is not applicable: exact T3R1 Formal successor authority boundary changes only successor authority and does not reopen the historical S6 Formal candidate.'
-
-      - name: Record S6 Formal gate not applicable to T4R1 Formal successor authority
-        if: steps.lifecycle.outputs.mode == 'not-applicable-t4r1-formal-successor-authority'
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo 'Historical S6 Formal candidate gate is not applicable: exact T4R1 Formal successor authority boundary changes only successor authority and does not reopen the historical S6 Formal candidate.'
-
-      - name: Validate successor authority routing repair
-        if: steps.lifecycle.outputs.mode == 'successor-authority-routing-repair'
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo 'Exact two-workflow successor authority/database routing repair recognized; historical S6 Formal candidate authority is not reopened.'
-
-      - name: Reject unsupported S6 Formal trigger
-        if: steps.lifecycle.outputs.mode == 'unsupported-s6-formal-trigger'
-        shell: bash
-        run: |
-          echo 'unsupported S6 Formal workflow trigger outside historical exact candidate, exact EA2 successor, exact T3R1 successor, exact T4R1 successor, or exact routing-repair boundary' >&2
-          exit 1
-
-      - uses: pnpm/action-setup@v4
-        if: steps.lifecycle.outputs.mode == 'historical-s6-formal-candidate'
-        with:
-          version: 9.15.4
-      - uses: actions/setup-node@v4
-        if: steps.lifecycle.outputs.mode == 'historical-s6-formal-candidate'
-        with:
-          node-version: 20.11.1
-          cache: pnpm
-      - if: steps.lifecycle.outputs.mode == 'historical-s6-formal-candidate'
-        run: pnpm install --no-frozen-lockfile
-      - name: Download effective S5 exact-SHA R2 authority
-        if: steps.lifecycle.outputs.mode == 'historical-s6-formal-candidate'
-        uses: actions/download-artifact@v4
-        with:
-          run-id: 31165105531
-          artifact-ids: 8988635083
-          path: acceptance-input/cap09-s5-effective
-          merge-multiple: true
-          repository: liyongshang44-max/GEOX
-          github-token: ${{ github.token }}
-      - name: Validate exact Candidate and predecessor authority
-        if: steps.lifecycle.outputs.mode == 'historical-s6-formal-candidate'
-        env:
-          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
-          MCFT_CAP09_S5_EFFECTIVE_ARTIFACT_DIR: acceptance-input/cap09-s5-effective
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE.cjs
-      - name: Transpile formal operation programs
-        if: steps.lifecycle.outputs.mode == 'historical-s6-formal-candidate'
-        run: |
-          node <<'NODE'
-          const fs=require('node:fs'),ts=require('typescript');
-          const files=['scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW.ts','scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE_DB.ts'];
-          for(const file of files){const result=ts.transpileModule(fs.readFileSync(file,'utf8'),{fileName:file,reportDiagnostics:true,compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext,moduleResolution:ts.ModuleResolutionKind.Bundler,esModuleInterop:true}});const errors=(result.diagnostics||[]).filter((d)=>d.category===ts.DiagnosticCategory.Error);if(errors.length){for(const error of errors)console.error(ts.flattenDiagnosticMessageText(error.messageText,'\n'));throw new Error('FORMAL_PROGRAM_TRANSPILE_FAILED:'+file)}}
-          console.log(JSON.stringify({status:'PASS',files},null,2));
+          test "$(git rev-parse '75d4961279bd64dc1c9dd7d68aac189c72c98846:.github/workflows/mcft-cap-09-s6-formal-24-hour-stage-1b-closure.yml')" = '2728266b5cb9dab49d42b590f5df558d61346728'
+          node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs selftest
+          node scripts/governance_acceptance/AUDIT_MCFT_CAP_09_PHASE6_GITHUB_PRODUCTION_OWNERS_V1.cjs enforce >/tmp/mcft-cap09-phase6-owner-audit.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('/tmp/mcft-cap09-phase6-owner-audit.json','utf8'));
+          if(p.status!=='PASS'||p.active_retired_owner_or_trigger_count!==0||p.retired_actions_write_count!==0||p.historical_phase5_workflow_blobs_all_match!==true)throw new Error('PHASE6_RETIREMENT_SENTINEL_REQUIRED');
           NODE
-      - uses: actions/upload-artifact@v4
-        if: always() && steps.lifecycle.outputs.mode == 'historical-s6-formal-candidate'
-        with:
-          name: mcft-cap-09-s6-candidate-${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
-          path: acceptance-output/MCFT_CAP_09_S6_FORMAL_24_HOUR_CANDIDATE_RESULT.json
-          if-no-files-found: error
-          retention-days: 90
-
-  formal-hourly-observation:
-    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && vars.GEOX_MCFT_CAP09_S6_FORMAL_WINDOW_ENABLED == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - name: Require exact frozen formal subject
-        run: |
-          test -n '${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}'
-          test -n '${{ vars.GEOX_MCFT_CAP09_S6_WINDOW_START_UTC }}'
-          test -n '${{ vars.GEOX_MCFT_CAP09_S6_SCOPE_JSON }}'
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.11.1
-          cache: pnpm
-      - run: pnpm install --no-frozen-lockfile
-      - name: Execute one real-UTC oldest-due formal slot
-        env:
-          DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
-          MCFT_CAP09_S6_CANONICAL_INPUT_JSON: ${{ secrets.GEOX_MCFT_CAP09_S6_CANONICAL_INPUT_JSON }}
-          MCFT_CAP09_S6_SUBJECT_SHA: ${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}
-          MCFT_CAP09_S6_WINDOW_START_UTC: ${{ vars.GEOX_MCFT_CAP09_S6_WINDOW_START_UTC }}
-          MCFT_CAP09_S6_SCOPE_JSON: ${{ vars.GEOX_MCFT_CAP09_S6_SCOPE_JSON }}
-        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_WINDOW.ts
-      - name: Read back accumulated formal database state
-        env:
-          DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
-          MCFT_CAP09_S6_SUBJECT_SHA: ${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}
-          MCFT_CAP09_S6_WINDOW_START_UTC: ${{ vars.GEOX_MCFT_CAP09_S6_WINDOW_START_UTC }}
-          MCFT_CAP09_S6_SCOPE_JSON: ${{ vars.GEOX_MCFT_CAP09_S6_SCOPE_JSON }}
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_S6_FORMAL_24_HOUR_STAGE_1B_CLOSURE_DB.ts
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: mcft-cap-09-s6-formal-hour-${{ vars.GEOX_MCFT_CAP09_S6_SUBJECT_SHA }}-${{ github.run_id }}
-          path: |
-            acceptance-output/MCFT_CAP_09_S6_FORMAL_WINDOW_OBSERVATION.json
-            acceptance-output/MCFT_CAP_09_S6_FORMAL_24_HOUR_DB_RESULT.json
-          if-no-files-found: error
-          retention-days: 90

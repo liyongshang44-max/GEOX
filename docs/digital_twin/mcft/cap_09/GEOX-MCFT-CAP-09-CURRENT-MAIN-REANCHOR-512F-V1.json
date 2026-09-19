@@ -1,0 +1,117 @@
+{
+  "schema_version": "geox_mcft_cap09_current_main_reanchor_512f_v1",
+  "status": "CANDIDATE_PROOF_BOUND_ADMISSION",
+  "authority_ceiling": "QUALIFICATION_GOVERNANCE_ONLY",
+  "previous_accepted_mcft_base": "7cb7cdc8c00252d3c87a685fbab38d96316afa3e",
+  "current_protected_main": "512fb706040bf609c949aabb641afa300bd4c91b",
+  "current_protected_main_tree": "2e211c9cb2af003d5878fc08f84fb01a1b3c649d",
+  "exact_first_parent_successors": [
+    {
+      "sha": "512fb706040bf609c949aabb641afa300bd4c91b",
+      "parents": [
+        "7cb7cdc8c00252d3c87a685fbab38d96316afa3e",
+        "c833a8df7595583c60d33ee29100ea1aeaf8c8ea"
+      ],
+      "pr_number": 3547
+    }
+  ],
+  "exact_changed_paths": [
+    {
+      "path": ".github/workflows/mcft-cap-09-current-main-reanchor-2144-v1.yml",
+      "blob_sha": "6bcb35b5638a0bb6c6761e5d50fc9e7fef90576e",
+      "status": "modified",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": ".github/workflows/mcft-cap-09-post-merge-v13-control-plane-v1.yml",
+      "blob_sha": "86f4a426f78085d05cadd0a4f8393ac25907ad43",
+      "status": "modified",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": ".github/workflows/mcft-cap-09-qualification-control-plane-v1.yml",
+      "blob_sha": "0cd869bc5230866dc7922974954855078e5d5a69",
+      "status": "modified",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": ".github/workflows/mcft-cap-09-t4r1-current-crop-refresh-v1.yml",
+      "blob_sha": "364b5713da3a8b99afa033c2d4f9efa6f6083750",
+      "status": "modified",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-CURRENT-MAIN-REANCHOR-7CB7-V1.json",
+      "blob_sha": "121230e4b860ca51e40ee668d16fa468b37acc93",
+      "status": "added",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json",
+      "blob_sha": "99bbd94de19fc2e606bc8a44a89eec71591a5cd3",
+      "status": "modified",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs",
+      "blob_sha": "bf7076dd7715b140704f803a39a07d62662d0632",
+      "status": "modified",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CURRENT_MAIN_REANCHOR_7CB7_V1.cjs",
+      "blob_sha": "a7c24d4e180dae566d384e81149dcef4700c5512",
+      "status": "added",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_T4R1_CURRENT_CROP_REGISTRY_PRESERVATION_V1.cjs",
+      "blob_sha": "98b89a6c0d485f70e97fe2abf6a886f0a5d13a86",
+      "status": "added",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": "scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs",
+      "blob_sha": "282bb6fce811b7fca2b6c9cdc838bfeaa1f27f40",
+      "status": "modified",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": "scripts/governance_acceptance/PREFLIGHT_MCFT_CAP_09_ALL_BLOCKERS_V1.cjs",
+      "blob_sha": "6af15aacf2d1a4f415461384cff47f405dd8c9f4",
+      "status": "modified",
+      "classification": "ADOPTED_MCFT_QUALIFICATION_GOVERNANCE"
+    },
+    {
+      "path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE3_EVIDENCE_RUNTIME_PERSISTENCE_V1.ts",
+      "blob_sha": "4690470e782ec5635268dd8990c0f2bfec1b5113",
+      "status": "modified",
+      "classification": "ADOPTED_PHASE3_REQUALIFICATION_MARKER"
+    },
+    {
+      "path": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_PHASE5_TWIN_QUALIFICATION_CLOCK_V1.ts",
+      "blob_sha": "404b97277b5f1b823e18fb45f997541914be84ba",
+      "status": "modified",
+      "classification": "ADOPTED_PHASE5_REQUALIFICATION_MARKER"
+    }
+  ],
+  "overlap_policy": "EXACT_MERGED_DELTA_AND_BLOB_BINDING_NO_ZERO_OVERLAP_CLAIM",
+  "qcp_admission": {
+    "mode": "PROOF_BOUND_EXACT_BASE",
+    "bare_sha_allowlist_admission_authorized": false,
+    "admission_requires_exact_lineage_and_overlap_proof": true,
+    "baseline_qualification_carry_forward_authorized": false
+  },
+  "non_effects": {
+    "runtime_config_write_authorized": false,
+    "database_write_authorized": false,
+    "scheduler_write_authorized": false,
+    "production_owner_activation_authorized": false,
+    "production_runtime_start_authorized": false,
+    "formal_v5_authorized": false,
+    "a0_authorized": false,
+    "o00_o23_authorized": false,
+    "bline_reopen_authorized": false,
+    "adr_semantic_change_authorized": false
+  }
+}

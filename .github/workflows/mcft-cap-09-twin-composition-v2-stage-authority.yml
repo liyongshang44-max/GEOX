@@ -1,0 +1,142 @@
+name: MCFT CAP-09 Twin Composition V2 Stage Authority
+
+on:
+  pull_request:
+    branches:
+      - main
+      - feat/mcft-cap09-twin-stage-authority-mount-v1
+      - qual/mcft-cap09-current-main-requal-cb9-v1
+    paths:
+      - .github/workflows/mcft-cap-09-twin-composition-v2-stage-authority.yml
+      - apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v4.test.ts
+      - apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v4.ts
+      - apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.test.ts
+      - apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.ts
+      - apps/server/src/runtime/twin_runtime/external_formal_v4_amendment19_runner_v2.ts
+      - apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts
+      - scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_COMPOSITION_V2_STAGE_AUTHORITY_V1.cjs
+      - scripts/runtime_acceptance/COMPOSE_MCFT_CAP_09_T4R1_CURRENT_CROP_AUTHORITY_V1.cjs
+      - scripts/runtime_acceptance/mcft_cap09_amendment19_formal_manifest_from_stage_authority_v2.test.ts
+      - scripts/runtime_acceptance/mcft_cap09_amendment19_formal_manifest_from_stage_authority_v2.ts
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MCFT_CAP09_TWIN_V2_STAGE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ ((github.base_ref == 'qual/mcft-cap09-current-main-requal-cb9-v1' && github.head_ref == 'main' && github.event.pull_request.base.sha == 'cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4') || (github.base_ref == 'main' && github.head_ref == 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' && github.event.pull_request.base.sha == 'a8a5046f38e51fdd7b745c9e211ed61299164b23')) && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve bounded qualification mode
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MODE=HISTORICAL
+
+          if [ '${{ github.base_ref }}' = 'qual/mcft-cap09-current-main-requal-cb9-v1' ]; then
+            test '${{ github.head_ref }}' = 'main'
+            test '${{ github.event.pull_request.base.sha }}' = 'cb9fea1c7e37c4aea34ae9a7985dd371cd7fe4e4'
+
+            SUBJECT='${{ github.event.pull_request.head.sha }}'
+
+            test "$(git rev-parse HEAD)" = "$SUBJECT"
+
+            git fetch --no-tags origin main
+            test "$(git rev-parse origin/main)" = "$SUBJECT"
+
+            MODE=CURRENT_MAIN_REQUALIFICATION_PR
+
+          elif [ '${{ github.base_ref }}' = 'main' ] && \
+               [ '${{ github.head_ref }}' = 'fix/mcft-cap09-current-main-requal-pr-carrier-v1' ]; then
+
+            test '${{ github.event.pull_request.base.sha }}' = 'a8a5046f38e51fdd7b745c9e211ed61299164b23'
+            test "$(git rev-parse HEAD)" = '${{ github.event.pull_request.head.sha }}'
+
+            git fetch --no-tags origin main
+            test "$(git rev-parse origin/main)" = 'a8a5046f38e51fdd7b745c9e211ed61299164b23'
+
+            MODE=ROUTING_INSTALLATION_PR
+          fi
+
+          echo "MCFT_CAP09_REQUAL_MODE=$MODE" >> "$GITHUB_ENV"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Server typecheck
+        run: pnpm run typecheck:server
+      - name: V4 crop-context tests
+        run: node --import tsx --test apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.test.ts
+      - name: V4 prewindow tests
+        run: node --import tsx --test apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v4.test.ts
+      - name: V4 manifest successor tests
+        run: node --import tsx --test scripts/runtime_acceptance/mcft_cap09_amendment19_formal_manifest_from_stage_authority_v2.test.ts
+      - name: Verify current-state Twin V2 semantic guard
+        if: env.MCFT_CAP09_REQUAL_MODE != 'HISTORICAL'
+        shell: node {0}
+        run: |
+          const fs = require('node:fs');
+
+          const requireMarkers = (path, markers, code) => {
+            const text = fs.readFileSync(path, 'utf8');
+            for (const marker of markers) {
+              if (!text.includes(marker)) {
+                throw new Error(`${code}:${marker}`);
+              }
+            }
+          };
+
+          requireMarkers(
+            'apps/server/src/runtime/twin_runtime/external_formal_a18_crop_context_v4.ts',
+            [
+              'PRODUCTION_EFFECTIVE',
+              'EXTERNAL_FORMAL_A18_V4_ARCHITECTURE_EFFECTIVENESS_REQUIRED',
+              'EXTERNAL_FORMAL_A18_V4_STAGE_AUTHORITY_FORWARD_WINDOW_EXCEEDED',
+              'current_crop_authority_evidence_digest'
+            ],
+            'TWIN_V2_CURRENT_MAIN_V4_MARKER'
+          );
+
+          requireMarkers(
+            'apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v4.ts',
+            [
+              'buildExternalFormalPrewindowAuthorityBundleV4',
+              'EXTERNAL_FORMAL_V4_FUTURE_STAGE_EVIDENCE_FORBIDDEN',
+              'EXTERNAL_FORMAL_V4_STAGE_AUTHORITY_FORWARD_WINDOW_EXCEEDED'
+            ],
+            'TWIN_V2_CURRENT_MAIN_BUNDLE_MARKER'
+          );
+
+          requireMarkers(
+            'apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts',
+            [
+              'MCFT_CAP09_TWIN_RUNTIME_COMPOSITION_V2',
+              'materializeExternalFormalA18CropContextV4',
+              'activation_mode: "PRODUCTION_EFFECTIVE"'
+            ],
+            'TWIN_V2_CURRENT_MAIN_COMPOSITION_MARKER'
+          );
+
+          console.log(JSON.stringify({
+            status: 'PASS',
+            current_state_semantics: true,
+            historical_v1_v3_rewritten: false,
+            runtime_started: false
+          }));
+      - name: Exact changed-file governance
+        if: env.MCFT_CAP09_REQUAL_MODE == 'HISTORICAL'
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_COMPOSITION_V2_STAGE_AUTHORITY_V1.cjs

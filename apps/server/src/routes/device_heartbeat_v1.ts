@@ -15,6 +15,7 @@
 
 import type { FastifyInstance } from "fastify"; // Fastify types.
 import type { Pool } from "pg"; // Postgres pool type.
+import { requireDeviceCredentialAuthV1 } from "../auth/device_credential_auth_v1.js";
 
 type ColumnsCache = { loaded: boolean; cols: Set<string> }; // Cached column set for schema compatibility.
 
@@ -29,26 +30,6 @@ function normalizeDeviceId(raw: unknown): string { // Normalize device_id (path 
   const v = s.trim(); // Remove whitespace.
   if (!v) throw new Error("invalid device_id"); // Must be non-empty.
   return v; // Return normalized id.
-}
-
-function firstNonEmpty(...values: unknown[]): string | null {
-  for (const value of values) {
-    const text = typeof value === "string" ? value.trim() : String(value ?? "").trim();
-    if (text) return text;
-  }
-  return null;
-}
-
-function pickTenantId(req: any): string { // Best-effort tenant id derivation.
-  return firstNonEmpty(req?.auth?.tenant_id, req?.user?.tenant_id, req?.body?.tenant_id) ?? "tenantA";
-}
-
-function pickProjectId(req: any): string { // Best-effort project id derivation.
-  return firstNonEmpty(req?.auth?.project_id, req?.user?.project_id, req?.body?.project_id) ?? "projectA";
-}
-
-function pickGroupId(req: any): string { // Best-effort group id derivation.
-  return firstNonEmpty(req?.auth?.group_id, req?.user?.group_id, req?.body?.group_id) ?? "groupA";
 }
 
 async function loadDeviceStatusIndexColumns(pool: Pool): Promise<Set<string>> { // Load columns for device_status_index_v1.
@@ -82,28 +63,21 @@ function pushColumn(input: {
   input.updates.push(input.update ?? `"${input.name}" = EXCLUDED."${input.name}"`);
 }
 
-async function ensureDeviceExists(pool: Pool, tenant_id: string, device_id: string): Promise<void> { // Verify device exists.
-  const candidates = ["devices_v1", "devices"]; // Candidate device tables.
-  for (const table of candidates) { // Iterate candidates.
-    try { // Attempt query.
-      const r = await pool.query(`SELECT 1 AS ok FROM ${table} WHERE tenant_id = $1 AND device_id = $2 LIMIT 1`, [tenant_id, device_id]); // Query.
-      if ((r.rowCount ?? 0) > 0) return; // Found.
-    } catch { // If table doesn't exist, try next.
-      continue; // Next candidate.
-    }
-  }
-}
-
 export function registerDeviceHeartbeatV1Routes(app: FastifyInstance, pool: Pool) { // Register routes.
   app.post("/api/v1/devices/:device_id/heartbeat", async (req: any, reply: any) => { // Heartbeat endpoint.
     try { // Begin handler.
-      const tenant_id = pickTenantId(req); // Resolve tenant id.
-      const project_id = pickProjectId(req); // Resolve project id for fail-safe scoped status lookup.
-      const group_id = pickGroupId(req); // Resolve group id for fail-safe scoped status lookup.
+      const body: any = req?.body ?? {};
       const device_id = normalizeDeviceId(req?.params?.device_id); // Normalize device id.
+      const deviceAuth = await requireDeviceCredentialAuthV1(pool, req, reply, { device_id });
+      if (!deviceAuth) return reply;
+      for (const [key, expected] of [["tenant_id", deviceAuth.tenant_id], ["project_id", deviceAuth.project_id], ["group_id", deviceAuth.group_id]] as const) {
+        const provided = body?.[key] == null ? "" : String(body[key]).trim();
+        if (provided && provided !== expected) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+      }
+      const tenant_id = deviceAuth.tenant_id;
+      const project_id = deviceAuth.project_id;
+      const group_id = deviceAuth.group_id;
       const now_ms = nowMs(); // Timestamp.
-
-      await ensureDeviceExists(pool, tenant_id, device_id); // Optional existence check.
 
       const cols = await loadDeviceStatusIndexColumns(pool); // Load schema columns.
 
@@ -118,6 +92,7 @@ export function registerDeviceHeartbeatV1Routes(app: FastifyInstance, pool: Pool
 
       pushColumn({ cols, insertCols, insertVals, updates, name: "project_id", value: project_id });
       pushColumn({ cols, insertCols, insertVals, updates, name: "group_id", value: group_id });
+      pushColumn({ cols, insertCols, insertVals, updates, name: "field_id", value: deviceAuth.field_id });
       pushColumn({ cols, insertCols, insertVals, updates, name: "last_heartbeat_ts_ms", value: now_ms });
       pushColumn({ cols, insertCols, insertVals, updates, name: "last_seen_ts_ms", value: now_ms });
       pushColumn({ cols, insertCols, insertVals, updates, name: "updated_ts_ms", value: now_ms });
@@ -144,7 +119,7 @@ export function registerDeviceHeartbeatV1Routes(app: FastifyInstance, pool: Pool
       ); // Execute.
 
       reply.code(200); // Set HTTP status.
-      return { ok: true, device_id, tenant_id, project_id, group_id, ts_ms: now_ms }; // Return payload (Fastify sends once).
+      return { ok: true, device_id, tenant_id, project_id, group_id, field_id: deviceAuth.field_id, credential_id: deviceAuth.credential_id, ts_ms: now_ms }; // Return payload (Fastify sends once).
     } catch (e: any) { // Error path.
       const msg = typeof e?.message === "string" ? e.message : "heartbeat failed"; // Normalize message.
       if (reply.sent) {

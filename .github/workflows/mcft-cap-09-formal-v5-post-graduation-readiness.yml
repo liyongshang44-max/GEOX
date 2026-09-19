@@ -1,0 +1,291 @@
+name: mcft-cap-09-formal-v5-post-graduation-readiness
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-POST-GRADUATION-CONTROL-SURFACE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-QUALIFICATION-CONTROL-PLANE-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1.cjs'
+      - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1.cjs'
+      - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-21-FORMAL-V5-EPOCH-STAGE-AUTHORITY-HANDOFF.md'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_21_FORMAL_V5_EPOCH_STAGE_HANDOFF_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_LATE_SEASON_EPOCH_STAGE_HANDOFF_V1.cjs'
+      - 'scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_SCHEMA_ACL_MATERIALIZATION_V1.ts'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_PRODUCTION_REPLAY_PROMOTION_V1.ts'
+      - 'apps/server/src/runtime/twin_runtime/external_formal_v5_amendment19_runner_v2.ts'
+      - 'apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts'
+      - 'apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.test.ts'
+      - 'scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts'
+      - 'scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts'
+      - 'scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_ARM_AUTHORITY_CONTINUITY_V1.cjs'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_STAGE_AWARE_RUNNER_V2.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM_V1.cjs'
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mcft-cap09-formal-v5-post-graduation-readiness-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+env:
+  SUBJECT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  FORMAL_V5_DB: geox_mcft_cap09_s6_formal_t4r1_24h_v5
+  SEED_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+
+jobs:
+  formal-v5-post-graduation-readiness:
+    if: github.event_name != 'pull_request' || github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact readiness subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.4'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+
+      - name: Install repository dependencies for H6 typecheck only
+        run: pnpm install --frozen-lockfile
+
+      - name: Require exact subject
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+
+      - name: Prove static post-graduation control surface
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1.cjs
+
+      - name: Prove static H6 production activation seam
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM_V1.cjs
+
+      - name: Prove Amendment-21 epoch/stage authority handoff
+        if: github.event_name != 'pull_request' || github.event.pull_request.base.sha != '252c9ebf5bfe43a31a405ee1b854b25e50d1ad72'
+        env:
+          MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+          MCFT_SUBJECT_SHA: ${{ env.SUBJECT_SHA }}
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_AMENDMENT_21_FORMAL_V5_EPOCH_STAGE_HANDOFF_V1.cjs
+
+      - name: Prove real T4R1 late-season stage-handoff regression
+        run: node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_LATE_SEASON_EPOCH_STAGE_HANDOFF_V1.cjs
+
+      - name: Selftest local-only H6 Formal-v5 arm assembler
+        run: node scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs --selftest
+
+      - name: Selftest H6 post-arm authority continuity verifier
+        run: node scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_ARM_AUTHORITY_CONTINUITY_V1.cjs --selftest
+
+      - name: Typecheck H6 activation seam TypeScript
+        run: >-
+          pnpm exec tsc --noEmit --strict
+          --target ES2022 --module ESNext --moduleResolution Bundler
+          --skipLibCheck --types node
+          scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_SCHEMA_ACL_MATERIALIZATION_V1.ts
+          scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_PRODUCTION_REPLAY_PROMOTION_V1.ts
+          scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_BOOTSTRAP_V1.ts
+          scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_STAGE_AWARE_RUNNER_V2.ts
+          apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts
+          apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.test.ts
+          scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts
+          scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts
+
+      - name: Selftest H6 Formal-v5 A0 bootstrap successor
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_BOOTSTRAP_V1.ts --selftest
+
+      - name: Run focused H6 V5 prewindow bundle unit test
+        run: pnpm exec tsx --test apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.test.ts
+
+      - name: Run focused H6 V5 manifest stage-authority unit test
+        run: pnpm exec tsx --test scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts
+
+      - name: Admit exact current-main successor into central QCP
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='${{ github.event.pull_request.base.sha }}'
+          base_ref='${{ github.event.pull_request.base.ref }}'
+          test "$base_ref" = 'main' || { echo "FORMAL_V5_READINESS_QCP_REQUIRES_MAIN_BASE_REF:$base_ref" >&2; exit 1; }
+          git fetch --no-tags origin main
+          current_main="$(git rev-parse origin/main)"
+          test "$current_main" = "$base" || { echo "FORMAL_V5_READINESS_QCP_BASE_NOT_CURRENT_MAIN:$base:$current_main" >&2; exit 1; }
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_PROOF_BOUND_FIRST_PARENT_SUCCESSOR_CHAIN_V1.cjs \
+            --base "$base" \
+            --out acceptance-output/MCFT_CAP_09_FORMAL_V5_READINESS_SUCCESSOR_CHAIN_V1_RESULT.json
+          echo "MCFT_CAP09_SUCCESSOR_CHAIN_BASE_ADMITTED=true" >> "$GITHUB_ENV"
+          echo "MCFT_CAP09_ADMITTED_PR_BASE_SHA=$base" >> "$GITHUB_ENV"
+          echo "MCFT_CAP09_PR_STAGE=SUCCESSOR_SUBJECT_PRE_MERGE" >> "$GITHUB_ENV"
+
+      - name: Prove central QCP applicability semantics
+        if: github.event_name == 'pull_request'
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+
+      - name: Generate central QCP successor applicability plan
+        if: github.event_name == 'pull_request'
+        run: >-
+          node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+          --base '${{ github.event.pull_request.base.sha }}'
+          --head '${{ github.event.pull_request.head.sha }}'
+          --generation v13
+          --stage SUCCESSOR_SUBJECT_PRE_MERGE
+          --out acceptance-output/MCFT_CAP_09_FORMAL_V5_READINESS_QCP_SUCCESSOR_PLAN_V1.json
+
+      - name: Generate central QCP post-graduation Formal-v5 plan
+        if: github.event_name == 'pull_request'
+        run: >-
+          node scripts/governance_acceptance/PLAN_MCFT_CAP_09_CHECK_APPLICABILITY_V1.cjs
+          --base '${{ github.event.pull_request.base.sha }}'
+          --head '${{ github.event.pull_request.head.sha }}'
+          --generation v13
+          --stage POST_GRADUATION_FORMAL_V5_ACTIVATION
+          --out acceptance-output/MCFT_CAP_09_FORMAL_V5_READINESS_QCP_POST_GRADUATION_PLAN_V1.json
+
+      - name: Require central QCP Formal-v5 fail-closed stage contract
+        if: github.event_name == 'pull_request'
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const successor=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_FORMAL_V5_READINESS_QCP_SUCCESSOR_PLAN_V1.json','utf8'));
+          const post=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_FORMAL_V5_READINESS_QCP_POST_GRADUATION_PLAN_V1.json','utf8'));
+          const workflow='.github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml';
+          const requirePlan=(plan,label)=>{
+            if(plan.status!=='PASS')throw new Error(`${label}_PLAN_NOT_PASS:${JSON.stringify({blockers:plan.blockers,authority_errors:plan.authority_errors,resolver_errors:plan.resolver_errors,unknown_changed_paths:plan.unknown_changed_paths})}`);
+            if((plan.unknown_changed_paths||[]).length!==0)throw new Error(`${label}_UNKNOWN_PATHS:${JSON.stringify(plan.unknown_changed_paths)}`);
+            if((plan.authority_errors||[]).length!==0)throw new Error(`${label}_AUTHORITY_ERRORS:${JSON.stringify(plan.authority_errors)}`);
+            if((plan.resolver_errors||[]).length!==0)throw new Error(`${label}_RESOLVER_ERRORS:${JSON.stringify(plan.resolver_errors)}`);
+          };
+          const byId=(plan,id)=>{
+            const row=(plan.decisions||[]).find((item)=>item.check_id===id);
+            if(!row)throw new Error(`QCP_DECISION_REQUIRED:${id}`);
+            return row;
+          };
+          requirePlan(successor,'FORMAL_V5_READINESS_QCP_SUCCESSOR');
+          requirePlan(post,'FORMAL_V5_READINESS_QCP_POST_GRADUATION');
+          const successorFormal=byId(successor,'FORMAL_V5_ACTIVATION');
+          if(successorFormal.status!=='NOT_APPLICABLE'||successorFormal.reason_code!=='STAGE_NOT_APPLICABLE')throw new Error(`FORMAL_V5_SUCCESSOR_STAGE_MUST_FAIL_CLOSED:${JSON.stringify(successorFormal)}`);
+          const owner=byId(post,'EXACT_ONE_PRODUCTION_OWNER');
+          const ownerChanged=(owner.changed_dependencies||[]).length>0;
+          if(owner.status==='REQUALIFY'){
+            if(owner.reason_code!=='GOVERNED_DEPENDENCY_CHANGED'||!ownerChanged)throw new Error(`FORMAL_V5_POST_GRADUATION_OWNER_REQUALIFY_INVALID:${JSON.stringify(owner)}`);
+          }else if(owner.status==='REQUIRED'){
+            if(owner.reason_code!=='APPLICABLE_WITHOUT_CARRY_FORWARD_EVIDENCE'||ownerChanged)throw new Error(`FORMAL_V5_POST_GRADUATION_OWNER_REQUIRED_INVALID:${JSON.stringify(owner)}`);
+          }else{
+            throw new Error(`FORMAL_V5_POST_GRADUATION_OWNER_MUST_REMAIN_PENDING:${JSON.stringify(owner)}`);
+          }
+          if(owner.execution_workflow!=='.github/workflows/mcft-cap-09-production-owner-graduation-gate.yml')throw new Error(`FORMAL_V5_POST_GRADUATION_OWNER_WORKFLOW_MISMATCH:${owner.execution_workflow}`);
+          const formal=byId(post,'FORMAL_V5_ACTIVATION');
+          if(formal.status!=='REQUALIFY'||formal.reason_code!=='GOVERNED_DEPENDENCY_CHANGED')throw new Error(`FORMAL_V5_POST_GRADUATION_ACTIVATION_MUST_REQUALIFY:${JSON.stringify(formal)}`);
+          if(formal.execution_workflow!==workflow)throw new Error(`FORMAL_V5_POST_GRADUATION_WORKFLOW_MISMATCH:${formal.execution_workflow}`);
+          if(formal.execution_workflow_status!=='IMPLEMENTED_POST_GRADUATION_READINESS')throw new Error(`FORMAL_V5_POST_GRADUATION_WORKFLOW_STATUS_MISMATCH:${formal.execution_workflow_status}`);
+          if((formal.changed_dependencies||[]).length===0)throw new Error(`FORMAL_V5_GOVERNED_DEPENDENCY_CHANGE_REQUIRED:${JSON.stringify(formal.changed_dependencies)}`);
+
+      - name: Normalize Formal-v5 read-only URL
+        if: github.event_name != 'pull_request' || github.event.pull_request.base.sha != '252c9ebf5bfe43a31a405ee1b854b25e50d1ad72'
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const raw=String(process.env.SEED_DATABASE_URL||'').trim();
+          if(!raw)throw new Error('FORMAL_V5_ZERO_STATE_SEED_DATABASE_SECRET_REQUIRED');
+          const u=new URL(raw);
+          if(!['postgres:','postgresql:'].includes(u.protocol))throw new Error('FORMAL_V5_ZERO_STATE_POSTGRES_URL_REQUIRED');
+          u.pathname='/'+process.env.FORMAL_V5_DB;
+          const target=u.toString();
+          console.log('::add-mask::'+target);
+          fs.appendFileSync(process.env.GITHUB_ENV,'FORMAL_V5_URL='+target+'\n');
+
+      - name: Prove fresh Formal-v5 zero-state read-only
+        if: github.event_name != 'pull_request' || github.event.pull_request.base.sha != '252c9ebf5bfe43a31a405ee1b854b25e50d1ad72'
+        id: zero-state
+        shell: bash
+        env:
+          PGOPTIONS: '-c default_transaction_read_only=on'
+        run: |
+          set -euo pipefail
+          row="$(psql "$FORMAL_V5_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT
+              current_setting('transaction_read_only'),
+              current_database(),
+              (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'),
+              (SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public')")"
+          IFS='|' read -r read_only database_name table_count routine_count <<<"$row"
+          test "$read_only" = "on" || { echo "FORMAL_V5_TRANSACTION_NOT_READ_ONLY:$read_only" >&2; exit 1; }
+          test "$database_name" = "$FORMAL_V5_DB" || { echo "FORMAL_V5_DATABASE_IDENTITY_MISMATCH:$database_name" >&2; exit 1; }
+          test "$table_count" = "0" || { echo "FORMAL_V5_PUBLIC_BASE_TABLE_COUNT_NONZERO:$table_count" >&2; exit 1; }
+          test "$routine_count" = "0" || { echo "FORMAL_V5_PUBLIC_ROUTINE_COUNT_NONZERO:$routine_count" >&2; exit 1; }
+          echo "table_count=$table_count" >> "$GITHUB_OUTPUT"
+          echo "routine_count=$routine_count" >> "$GITHUB_OUTPUT"
+
+      - name: Emit exact-subject zero-state proof
+        if: github.event_name != 'pull_request' || github.event.pull_request.base.sha != '252c9ebf5bfe43a31a405ee1b854b25e50d1ad72'
+        shell: node {0}
+        env:
+          TABLE_COUNT: ${{ steps.zero-state.outputs.table_count }}
+          ROUTINE_COUNT: ${{ steps.zero-state.outputs.routine_count }}
+        run: |
+          const fs=require('node:fs');
+          fs.mkdirSync('acceptance-output',{recursive:true});
+          const proof={
+            schema_version:'geox_mcft_cap09_formal_v5_post_graduation_zero_state_proof_v1',
+            status:'PASS',
+            subject_sha:process.env.SUBJECT_SHA,
+            formal_database_name:process.env.FORMAL_V5_DB,
+            required_role:'FRESH_FORMAL_STORE_ONLY',
+            required_pre_arm_state:'ZERO_STATE_PRE_ARM',
+            transaction_read_only:true,
+            public_base_table_count:Number(process.env.TABLE_COUNT),
+            public_routine_count:Number(process.env.ROUTINE_COUNT),
+            failed_v4_reuse:false,
+            failed_v4_clone:false,
+            production_owner_activation:false,
+            production_runtime_restart:false,
+            formal_database_mutation:false,
+            formal_v5_arm:false,
+            formal_v5_epoch_selected:false,
+            a0_bootstrap:false,
+            o00_started:false,
+            provider_request_count:0,
+            mcft_cap09_completed:false,
+            observed_at:new Date().toISOString(),
+            github_run_id:Number(process.env.GITHUB_RUN_ID),
+            github_run_attempt:Number(process.env.GITHUB_RUN_ATTEMPT),
+          };
+          if(proof.public_base_table_count!==0||proof.public_routine_count!==0)throw new Error('FORMAL_V5_ZERO_STATE_PROOF_INVALID');
+          fs.writeFileSync('acceptance-output/MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ZERO_STATE_PROOF_V1.json',JSON.stringify(proof,null,2)+'\n');
+          console.log(JSON.stringify(proof,null,2));
+
+      - name: Prove repository remained untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Upload immutable zero-state readiness proof
+        if: github.event_name != 'pull_request' || github.event.pull_request.base.sha != '252c9ebf5bfe43a31a405ee1b854b25e50d1ad72'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-formal-v5-post-graduation-zero-state-${{ env.SUBJECT_SHA }}
+          path: acceptance-output/MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ZERO_STATE_PROOF_V1.json
+          if-no-files-found: error
+          retention-days: 90

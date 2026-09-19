@@ -1,0 +1,38 @@
+name: DT-02 Amendment 03 Biological Stage Authority
+
+on:
+  pull_request:
+    branches:
+      - feat/mcft-cap09-v13-producer-driven-qualification-v1
+    paths:
+      - docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-03-BIOLOGICAL-STAGE-AUTHORITY.md
+      - docs/digital_twin/GEOX-DT-02-ARCHITECTURE-DECISION-REGISTER.json
+      - scripts/governance_acceptance/ACCEPTANCE_DT_02_ARCHITECTURE_AMENDMENT_03.cjs
+      - .github/workflows/dt-02-architecture-amendment-03-biological-stage-authority.yml
+
+permissions:
+  contents: read
+
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DT02_AMENDMENT03_BASE_SHA: 35b06a92165acc5a6598ccfefc76e4467d93da04
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify biological-stage architecture candidate
+        run: node scripts/governance_acceptance/ACCEPTANCE_DT_02_ARCHITECTURE_AMENDMENT_03.cjs
+
+      - name: Upload governance result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dt02-amendment03-biological-stage-authority
+          path: acceptance-output/DT02_ARCHITECTURE_AMENDMENT03_BIOLOGICAL_STAGE_AUTHORITY_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

@@ -228,8 +228,9 @@ export async function refreshFieldSensingSummaryStage1V1(db: DbConn, params: {
   field_id: string;
   device_id?: string | null;
   now_ms?: number;
+  persist?: boolean;
 }): Promise<FieldSensingSummaryStage1V1> {
-  await ensureFieldSensingSummaryStage1ProjectionV1(db);
+  if (params.persist !== false) await ensureFieldSensingSummaryStage1ProjectionV1(db);
 
   const overview = await refreshFieldSensingOverviewV1(db, params);
   const nowMs = Number.isFinite(params.now_ms) ? Number(params.now_ms) : Date.now();
@@ -261,6 +262,8 @@ export async function refreshFieldSensingSummaryStage1V1(db: DbConn, params: {
     computed_at_ts_ms: toFiniteNumber(overview.computed_at_ts_ms),
     updated_ts_ms: nowMs,
   };
+
+  if (params.persist === false) return payload;
 
   await db.query(
     `INSERT INTO field_sensing_summary_stage1_v1

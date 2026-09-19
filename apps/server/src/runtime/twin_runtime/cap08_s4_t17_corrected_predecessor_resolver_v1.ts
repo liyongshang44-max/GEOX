@@ -11,6 +11,11 @@ import {
 } from "../../domain/twin_runtime/cap08_s4_append_forward_contracts_v1.js";
 import { PostgresCap08S4AppendForwardRepositoryV1 } from "../../persistence/twin_runtime/postgres_cap08_s4_append_forward_repository_v1.js";
 
+export type Cap08S4AppendForwardInspectRepositoryPortV1 = Pick<
+  PostgresCap08S4AppendForwardRepositoryV1,
+  "inspect"
+>;
+
 function requiredStringV1(value: unknown, code: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(code);
   return value;
@@ -40,10 +45,13 @@ function parseAuthorityV1(value: unknown): Cap08S4AppendForwardAuthorityV1 {
 }
 
 export class Cap08S4T17CorrectedPredecessorResolverV1 {
-  private readonly repository: PostgresCap08S4AppendForwardRepositoryV1;
+  private readonly repository: Cap08S4AppendForwardInspectRepositoryPortV1;
 
-  constructor(private readonly pool: Pool) {
-    this.repository = new PostgresCap08S4AppendForwardRepositoryV1(pool);
+  constructor(
+    private readonly pool: Pool,
+    repository?: Cap08S4AppendForwardInspectRepositoryPortV1,
+  ) {
+    this.repository = repository ?? new PostgresCap08S4AppendForwardRepositoryV1(pool);
   }
 
   async resolve(input: {

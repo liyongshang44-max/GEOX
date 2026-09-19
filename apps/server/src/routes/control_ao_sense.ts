@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { Pool } from "pg";
 import { randomUUID } from "crypto";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 
 /**
  * AO-SENSE route ownership migration.
@@ -48,7 +49,7 @@ const insertFactSql = `
   RETURNING fact_id
 `;
 
-async function handleCreateSenseTask(pool: Pool, req: any, reply: any) {
+async function handleCreateSenseTask(pool: Pool, req: any, reply: any, auth: any) {
   const body: any = req.body;
   const allowedKeys = ["subjectRef", "window", "sense_kind", "sense_focus", "priority", "supporting_problem_state_id", "supporting_determinism_hash", "supporting_effective_config_hash", "kind", "focus"];
   const extraErr = checkNoExtraKeys(body, allowedKeys);
@@ -75,6 +76,7 @@ async function handleCreateSenseTask(pool: Pool, req: any, reply: any) {
   if (srExtra) return badRequest(reply, `subjectRef.${srExtra}`);
   if (!isNonEmptyString(sr.projectId)) return badRequest(reply, "MISSING_OR_INVALID:subjectRef.projectId");
   if (!isNonEmptyString(sr.groupId)) return badRequest(reply, "MISSING_OR_INVALID:subjectRef.groupId");
+  if (String(sr.projectId) !== String(auth.project_id) || String(sr.groupId) !== String(auth.group_id)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
 
   const win = body.window;
   const winExtra = checkNoExtraKeys(win, ["startTs", "endTs"]);
@@ -98,6 +100,7 @@ async function handleCreateSenseTask(pool: Pool, req: any, reply: any) {
     supporting_problem_state_id: body.supporting_problem_state_id,
     supporting_determinism_hash: body.supporting_determinism_hash,
     supporting_effective_config_hash: body.supporting_effective_config_hash,
+    authority: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id, actor_id: auth.actor_id, token_id: auth.token_id },
     boundary: { lane: "AO_SENSE", does_not_imply_ao_act_execution_success: true },
   };
 
@@ -145,7 +148,7 @@ async function validateObservationOnlyEvidenceRefs(pool: Pool, evidenceRefs: any
   return null;
 }
 
-async function handleCreateSenseReceipt(pool: Pool, req: any, reply: any) {
+async function handleCreateSenseReceipt(pool: Pool, req: any, reply: any, auth: any) {
   const body: any = req.body;
   const allowedKeys = ["task_id", "executed_at_ts", "result", "evidence_refs"];
   const extraErr = checkNoExtraKeys(body, allowedKeys);
@@ -154,6 +157,23 @@ async function handleCreateSenseReceipt(pool: Pool, req: any, reply: any) {
   if (!isIntMs(body.executed_at_ts)) return badRequest(reply, "MISSING_OR_INVALID:executed_at_ts");
   const allowedResults = new Set(["success", "fail", "partial"]);
   if (!isNonEmptyString(body.result) || !allowedResults.has(body.result)) return badRequest(reply, "MISSING_OR_INVALID:result");
+
+  const taskRows = await pool.query(
+    `SELECT record_json FROM facts
+      WHERE (record_json::jsonb->>'type')='ao_sense_task_v1'
+        AND (record_json::jsonb->>'task_id')=$1
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 2`,
+    [body.task_id],
+  );
+  if ((taskRows.rows ?? []).length !== 1) return reply.status(404).send({ ok: false, error: "SENSE_TASK_NOT_FOUND" });
+  const taskRecord = safeJsonParse(taskRows.rows[0]?.record_json) ?? {};
+  const taskAuthority = taskRecord?.authority ?? {};
+  if (
+    String(taskAuthority.tenant_id ?? "") !== String(auth.tenant_id) ||
+    String(taskAuthority.project_id ?? "") !== String(auth.project_id) ||
+    String(taskAuthority.group_id ?? "") !== String(auth.group_id)
+  ) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
 
   const evidenceError = await validateObservationOnlyEvidenceRefs(pool, body.evidence_refs);
   if (evidenceError) return badRequest(reply, evidenceError);
@@ -169,6 +189,7 @@ async function handleCreateSenseReceipt(pool: Pool, req: any, reply: any) {
     executed_at_ts: body.executed_at_ts,
     result: body.result,
     evidence_refs: body.evidence_refs,
+    authority: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id, actor_id: auth.actor_id, token_id: auth.token_id },
     boundary: {
       lane: "AO_SENSE",
       receipt_success_is_observation_only: true,
@@ -242,16 +263,38 @@ async function handleNextSenseTask(pool: Pool, req: any, reply: any) {
 }
 
 export function registerAoSenseV1Routes(app: FastifyInstance, pool: Pool) {
-  app.post("/api/v1/sense/task", async (req, reply) => handleCreateSenseTask(pool, req, reply));
-  app.post("/api/v1/sense/receipt", async (req, reply) => handleCreateSenseReceipt(pool, req, reply));
+  app.post("/api/v1/sense/task", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "telemetry.write");
+    if (!auth) return reply;
+    (req as any).auth = auth;
+    return handleCreateSenseTask(pool, req, reply, auth);
+  });
+  app.post("/api/v1/sense/receipt", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "telemetry.write");
+    if (!auth) return reply;
+    (req as any).auth = auth;
+    return handleCreateSenseReceipt(pool, req, reply, auth);
+  });
   app.get("/api/v1/sense/tasks", async (req, reply) => handleListSenseTasks(pool, req, reply));
   app.get("/api/v1/sense/receipts", async (req, reply) => handleListSenseReceipts(pool, req, reply));
   app.get("/api/v1/sense/next-task", async (req, reply) => handleNextSenseTask(pool, req, reply));
 }
 
 export function registerAoSenseLegacyRoutes(app: FastifyInstance, pool: Pool) {
-  app.post("/api/control/ao_sense/task", async (req, reply) => { applyLegacyHeadersAndWarning(app, req, reply, "/api/control/ao_sense/task"); return handleCreateSenseTask(pool, req, reply); });
-  app.post("/api/control/ao_sense/receipt", async (req, reply) => { applyLegacyHeadersAndWarning(app, req, reply, "/api/control/ao_sense/receipt"); return handleCreateSenseReceipt(pool, req, reply); });
+  app.post("/api/control/ao_sense/task", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "telemetry.write");
+    if (!auth) return reply;
+    (req as any).auth = auth;
+    applyLegacyHeadersAndWarning(app, req, reply, "/api/control/ao_sense/task");
+    return handleCreateSenseTask(pool, req, reply, auth);
+  });
+  app.post("/api/control/ao_sense/receipt", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "telemetry.write");
+    if (!auth) return reply;
+    (req as any).auth = auth;
+    applyLegacyHeadersAndWarning(app, req, reply, "/api/control/ao_sense/receipt");
+    return handleCreateSenseReceipt(pool, req, reply, auth);
+  });
   app.get("/api/control/ao_sense/tasks", async (req, reply) => { applyLegacyHeadersAndWarning(app, req, reply, "/api/control/ao_sense/tasks"); return handleListSenseTasks(pool, req, reply); });
   app.get("/api/control/ao_sense/receipts", async (req, reply) => { applyLegacyHeadersAndWarning(app, req, reply, "/api/control/ao_sense/receipts"); return handleListSenseReceipts(pool, req, reply); });
   app.get("/api/control/ao_sense/next_task", async (req, reply) => { applyLegacyHeadersAndWarning(app, req, reply, "/api/control/ao_sense/next_task"); return handleNextSenseTask(pool, req, reply); });

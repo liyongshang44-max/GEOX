@@ -1,0 +1,201 @@
+name: mcft-cap-09-v13-exact-head-timing-measurement
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/mcft-cap-09-v13-exact-head-timing-measurement.yml'
+      - '.github/workflows/mcft-cap-09-v13-exact-head-timing-sample.yml'
+      - 'scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V1.ts'
+      - 'scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V1.ts'
+      - 'scripts/runtime_acceptance/MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_ARM_V1.json'
+      - 'apps/server/src/domain/twin_runtime/external_formal_forcing_acquisition_budget_v1.ts'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcft-cap09-v13-exact-head-timing-measurement
+  cancel-in-progress: false
+
+env:
+  IMPLEMENTATION_BASE_SHA: '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+  STEP4_CLOSURE_SUBJECT_SHA: 'ae3f82fea3ad4dc131376db3768b268f3c3d5025'
+
+jobs:
+  gate:
+    if: >-
+      github.head_ref == 'feat/mcft-cap09-v13-producer-driven-qualification-v1' &&
+      github.event.pull_request.base.sha == '46367333d228a2b90a86ff6a33aebc334f3d73a2'
+    runs-on: ubuntu-24.04
+    outputs:
+      armed: ${{ steps.arm.outputs.armed }}
+      base1: ${{ steps.arm.outputs.base1 }}
+      base2: ${{ steps.arm.outputs.base2 }}
+      base3: ${{ steps.arm.outputs.base3 }}
+    steps:
+      - name: Checkout exact timing subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve explicit timing measurement arm
+        id: arm
+        shell: node {0}
+        env:
+          SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          const fs=require('node:fs');
+          const cp=require('node:child_process');
+          const p='scripts/runtime_acceptance/MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_ARM_V1.json';
+          if(!fs.existsSync(p))throw new Error('V13_TIMING_ARM_FILE_REQUIRED');
+          const a=JSON.parse(fs.readFileSync(p,'utf8'));
+          if(a.schema_version!=='geox_mcft_cap09_v13_exact_head_timing_measurement_arm_v1')throw new Error('V13_TIMING_ARM_SCHEMA_MISMATCH');
+          if(a.activation_step!=='RUN_EXACT_HEAD_REAL_TIMING_MEASUREMENT')throw new Error('V13_TIMING_ARM_STEP_MISMATCH');
+          if(a.implementation_base_sha!==process.env.IMPLEMENTATION_BASE_SHA)throw new Error('V13_TIMING_ARM_BASE_MISMATCH');
+          if(a.exact_branch!=='feat/mcft-cap09-v13-producer-driven-qualification-v1')throw new Error('V13_TIMING_ARM_BRANCH_MISMATCH');
+          if(a.step4_closure_subject_sha!==process.env.STEP4_CLOSURE_SUBJECT_SHA)throw new Error('V13_TIMING_STEP4_CLOSURE_SUBJECT_MISMATCH');
+          if(cp.spawnSync('git',['merge-base','--is-ancestor',a.step4_closure_subject_sha,process.env.SUBJECT_SHA],{stdio:'ignore'}).status!==0)throw new Error('V13_TIMING_STEP4_CLOSURE_MUST_BE_ANCESTOR');
+          if(a.production_owner_activation_authorized!==false||a.formal_v5_arm_authorized!==false||a.a0_authorized!==false||a.o00_authorized!==false)throw new Error('V13_TIMING_LATER_STAGE_EFFECT_FORBIDDEN');
+          if(a.armed!==true){
+            if(a.measurement_first_base!==null)throw new Error('V13_TIMING_DISABLED_ARM_MUST_NOT_CLAIM_BASE');
+            console.log('EXACT_HEAD_TIMING_MEASUREMENT_NOT_ARMED');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,'armed=false\n');
+            process.exit(0);
+          }
+          const first=String(a.measurement_first_base||'');
+          const ms=Date.parse(first);
+          if(!Number.isFinite(ms)||new Date(ms).toISOString()!==first||!/:00:00\.000Z$/.test(first))throw new Error('V13_TIMING_FIRST_BASE_CANONICAL_HOUR_REQUIRED');
+          if(ms<=Date.now()+6*60*60*1000)throw new Error('V13_TIMING_FIRST_BASE_MUST_LEAD_BY_MORE_THAN_6H');
+          const bases=[0,1,2].map(h=>new Date(ms+h*3600000).toISOString());
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,[
+            'armed=true',
+            'base1='+bases[0],
+            'base2='+bases[1],
+            'base3='+bases[2],
+          ].join('\n')+'\n');
+
+  anchor1:
+    needs: gate
+    if: needs.gate.outputs.armed == 'true'
+    runs-on: ubuntu-24.04
+    outputs:
+      anchor_ms: ${{ steps.anchor.outputs.anchor_ms }}
+    steps:
+      - id: anchor
+        run: echo "anchor_ms=$(date +%s%3N)" >> "$GITHUB_OUTPUT"
+
+  sample1:
+    needs: [gate, anchor1]
+    if: needs.gate.outputs.armed == 'true'
+    uses: ./.github/workflows/mcft-cap-09-v13-exact-head-timing-sample.yml
+    with:
+      sample_id: sample1
+      subject_sha: ${{ github.event.pull_request.head.sha }}
+      base_target_t: ${{ needs.gate.outputs.base1 }}
+      anchor_ms: ${{ needs.anchor1.outputs.anchor_ms }}
+    secrets: inherit
+
+  anchor2:
+    needs: [gate, sample1]
+    if: needs.gate.outputs.armed == 'true'
+    runs-on: ubuntu-24.04
+    outputs:
+      anchor_ms: ${{ steps.anchor.outputs.anchor_ms }}
+    steps:
+      - id: anchor
+        run: echo "anchor_ms=$(date +%s%3N)" >> "$GITHUB_OUTPUT"
+
+  sample2:
+    needs: [gate, anchor2]
+    if: needs.gate.outputs.armed == 'true'
+    uses: ./.github/workflows/mcft-cap-09-v13-exact-head-timing-sample.yml
+    with:
+      sample_id: sample2
+      subject_sha: ${{ github.event.pull_request.head.sha }}
+      base_target_t: ${{ needs.gate.outputs.base2 }}
+      anchor_ms: ${{ needs.anchor2.outputs.anchor_ms }}
+    secrets: inherit
+
+  anchor3:
+    needs: [gate, sample2]
+    if: needs.gate.outputs.armed == 'true'
+    runs-on: ubuntu-24.04
+    outputs:
+      anchor_ms: ${{ steps.anchor.outputs.anchor_ms }}
+    steps:
+      - id: anchor
+        run: echo "anchor_ms=$(date +%s%3N)" >> "$GITHUB_OUTPUT"
+
+  sample3:
+    needs: [gate, anchor3]
+    if: needs.gate.outputs.armed == 'true'
+    uses: ./.github/workflows/mcft-cap-09-v13-exact-head-timing-sample.yml
+    with:
+      sample_id: sample3
+      subject_sha: ${{ github.event.pull_request.head.sha }}
+      base_target_t: ${{ needs.gate.outputs.base3 }}
+      anchor_ms: ${{ needs.anchor3.outputs.anchor_ms }}
+    secrets: inherit
+
+  aggregate:
+    needs: [gate, sample3]
+    if: needs.gate.outputs.armed == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact timing subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - name: Install exact repository
+        run: pnpm install --frozen-lockfile
+
+      - name: Download all immutable timing samples
+        uses: actions/download-artifact@v4
+        with:
+          pattern: mcft-cap09-v13-timing-sample*-${{ github.event.pull_request.head.sha }}
+          path: timing-samples
+          merge-multiple: true
+
+      - name: Aggregate measured envelope and controlled delay matrix
+        env:
+          MCFT_SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+          MCFT_TIMING_SAMPLE_DIR: timing-samples
+        run: pnpm exec tsx scripts/runtime_acceptance/AGGREGATE_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V1.ts
+
+      - name: Validate pre-freeze timing measurement
+        shell: node {0}
+        env:
+          SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V1_RESULT.json','utf8'));
+          if(p.status!=='PASS'||p.subject_sha!==process.env.SUBJECT_SHA)throw new Error('V13_TIMING_MEASUREMENT_PASS_REQUIRED');
+          if(p.real_sample_count!==3||p.controlled_delay_matrix_executed!==true||p.controlled_delay_cases?.length!==6)throw new Error('V13_TIMING_MEASUREMENT_SAMPLE_MATRIX_REQUIRED');
+          if(p.timing_budget_qualified!==false||p.timing_budget_frozen!==false||p.authority_freeze_requires_separate_successor_commit!==true)throw new Error('V13_TIMING_MEASUREMENT_PRE_FREEZE_REQUIRED');
+          const a=p.selected_budget_candidate||{};
+          if(a.status!=='PASS'||a.real_sample_count!==3||a.controlled_delay_case_count!==6||a.hardcoded_default_budget_minutes!==null||a.selected_budget_ms<=a.measured_envelope_ms||a.safety_margin_ms<=0)throw new Error('V13_TIMING_MEASUREMENT_BUDGET_CANDIDATE_INVALID');
+          if(p.hardcoded_35_minute_budget_authorized!==false||p.hardcoded_replacement_budget_minutes!==null)throw new Error('V13_TIMING_MEASUREMENT_HARDCODED_BUDGET_FORBIDDEN');
+          for(const k of ['production_owner_activation','formal_v5_arm','a0_bootstrap','o00_started','mcft_cap09_completed'])if(p[k]!==false)throw new Error('V13_TIMING_MEASUREMENT_LATER_STAGE_EFFECT:'+k);
+
+      - name: Upload immutable exact-head timing measurement
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-v13-exact-head-timing-measurement-${{ github.event.pull_request.head.sha }}
+          path: acceptance-output/MCFT_CAP_09_V13_EXACT_HEAD_TIMING_MEASUREMENT_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90

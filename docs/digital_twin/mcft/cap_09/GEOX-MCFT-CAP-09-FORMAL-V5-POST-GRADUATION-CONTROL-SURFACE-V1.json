@@ -1,0 +1,63 @@
+{
+  "schema_version": "geox_mcft_cap09_formal_v5_post_graduation_control_surface_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-FORMAL-V5-POST-GRADUATION-CONTROL-SURFACE-V1",
+  "status": "AUTHORIZED_FOR_POST_GRADUATION_READINESS_QUALIFICATION_ONLY",
+  "stage": "POST_GRADUATION_FORMAL_V5_ACTIVATION",
+  "qcp_check_id": "FORMAL_V5_ACTIVATION",
+  "formal_store": {
+    "authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+    "database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v5",
+    "required_role": "FRESH_FORMAL_STORE_ONLY",
+    "required_pre_arm_state": "ZERO_STATE_PRE_ARM",
+    "required_public_base_table_count": 0,
+    "required_public_routine_count": 0,
+    "failed_predecessor_database": "geox_mcft_cap09_s6_formal_t4r1_24h_v4",
+    "failed_predecessor_reuse_forbidden": true,
+    "failed_predecessor_clone_forbidden": true
+  },
+  "owner_prerequisite": {
+    "authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json",
+    "live_verifier_ref": "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs",
+    "exact_one_live_fenced_owner_per_runtime_role_required_at_arm_readiness": true,
+    "historical_owner_evidence_substitute_forbidden": true,
+    "github_runner_as_live_owner_authority_forbidden": true,
+    "local_production_host_reverification_required": true
+  },
+  "qualification_surface": {
+    "workflow_ref": ".github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml",
+    "static_acceptance_ref": "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1.cjs",
+    "local_arm_readiness_verifier_ref": "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1.cjs",
+    "formal_store_probe_mode": "READ_ONLY",
+    "zero_state_proof_must_bind_exact_subject": true,
+    "zero_state_proof_must_be_revalidated_for_actual_arm": true
+  },
+  "fail_closed": {
+    "missing_seed_database_credential": "FAIL",
+    "formal_v5_database_unreachable": "FAIL",
+    "formal_v5_public_table_count_nonzero": "FAIL",
+    "formal_v5_public_routine_count_nonzero": "FAIL",
+    "formal_v5_proof_subject_mismatch": "FAIL",
+    "live_owner_reverification_missing_or_failed": "FAIL",
+    "actual_arm_without_separate_explicit_operator_authorization": "FAIL"
+  },
+  "authorization_ceiling": {
+    "formal_v5_arm_authorized": false,
+    "formal_v5_database_mutation_authorized": false,
+    "formal_v5_epoch_selection_authorized": false,
+    "a0_authorized": false,
+    "o00_authorized": false,
+    "o00_o23_authorized": false,
+    "mcft_cap09_completion_authorized": false
+  },
+  "non_effects": {
+    "production_runtime_restart": false,
+    "production_owner_mutation": false,
+    "formal_database_mutation": false,
+    "formal_v5_arm": false,
+    "formal_v5_epoch_selected": false,
+    "a0_bootstrap": false,
+    "o00_started": false,
+    "provider_request": false,
+    "mcft_cap09_completed": false
+  }
+}

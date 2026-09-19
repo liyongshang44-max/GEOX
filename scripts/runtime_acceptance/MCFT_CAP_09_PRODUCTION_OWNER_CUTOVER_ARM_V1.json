@@ -1,0 +1,12 @@
+{
+  "schema_version": "geox_mcft_cap09_production_owner_cutover_arm_v1",
+  "armed": false,
+  "activation_step": "OPEN_NEW_MACHINE_ONLY_GRADUATION_GATE",
+  "evidence_owner_activation_authorized": false,
+  "twin_owner_activation_authorized": false,
+  "production_login_provisioning_authorized": false,
+  "non_github_hosting_binding_authorized": false,
+  "formal_v5_arm_authorized": false,
+  "a0_authorized": false,
+  "o00_authorized": false
+}

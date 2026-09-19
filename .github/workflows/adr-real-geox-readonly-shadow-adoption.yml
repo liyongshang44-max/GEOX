@@ -1,0 +1,109 @@
+name: ADR — Real GEOX Read-Only Shadow Adoption
+
+on:
+  push:
+    branches:
+      - main
+      - feat/adr-real-geox-readonly-shadow-adoption-v1
+    paths:
+      - 'apps/server/src/integrations/adr/**'
+      - 'apps/server/src/services/derived_sensing_state_v1.ts'
+      - 'apps/server/src/services/derived_sensing_state_service_v1.ts'
+      - 'scripts/adr_adoption/**'
+      - '.github/workflows/adr-real-geox-readonly-shadow-adoption.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/server/src/integrations/adr/**'
+      - 'apps/server/src/services/derived_sensing_state_v1.ts'
+      - 'apps/server/src/services/derived_sensing_state_service_v1.ts'
+      - 'scripts/adr_adoption/**'
+      - '.github/workflows/adr-real-geox-readonly-shadow-adoption.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  readonly_shadow_adoption:
+    name: Node 20 real-repository read-only shadow proof
+    runs-on: ubuntu-latest
+    env:
+      GEOX_ADR_QUALIFICATION_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      GEOX_ADR_EVIDENCE_PATH: /tmp/geox-adr-readonly-shadow/evidence.json
+    steps:
+      - name: Checkout exact GEOX candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.GEOX_ADR_QUALIFICATION_HEAD }}
+          fetch-depth: 1
+
+      - name: Read GEOX-owned ADR source pin
+        id: pin
+        shell: bash
+        run: |
+          set -euo pipefail
+          ADR_SHA="$(node -p "require('./scripts/adr_adoption/qualified-consumer-source.v1.json').source_commit")"
+          test -n "$ADR_SHA"
+          echo "adr_sha=$ADR_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact ADR authority source
+        uses: actions/checkout@v4
+        with:
+          repository: liyongshang44-max/agronomy-deployment-runtime
+          ref: ${{ steps.pin.outputs.adr_sha }}
+          path: _adr_source
+          fetch-depth: 1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Prove exact checkouts and runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GEOX_ADR_QUALIFICATION_HEAD"
+          test "$(git -C _adr_source rev-parse HEAD)" = "${{ steps.pin.outputs.adr_sha }}"
+          node --version | grep '^v20\.'
+          pnpm --version | grep '^9\.15\.4$'
+
+      - name: Install GEOX workspace dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Compile real GEOX production seam
+        run: pnpm -w exec tsc -p apps/server/tsconfig.json
+
+      - name: Build and independently verify exact ADR private bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/geox-adr-qualified-bundle
+          mkdir -p /tmp/geox-adr-qualified-bundle
+          (
+            cd _adr_source
+            node adapters/geox/scripts/build-consumer-release-bundle.mjs /tmp/geox-adr-qualified-bundle "${{ steps.pin.outputs.adr_sha }}"
+            node adapters/geox/scripts/verify-consumer-release-bundle.mjs /tmp/geox-adr-qualified-bundle/bundle "${{ steps.pin.outputs.adr_sha }}"
+          )
+          TARBALL="$(find /tmp/geox-adr-qualified-bundle/bundle -maxdepth 1 -type f -name '*.tgz' -print -quit)"
+          test -n "$TARBALL"
+          echo "ADR_SOURCE_DIR=$GITHUB_WORKSPACE/_adr_source" >> "$GITHUB_ENV"
+          echo "ADR_PACKAGE_TARBALL=$TARBALL" >> "$GITHUB_ENV"
+
+      - name: Prove installed read-only GEOX shadow adoption
+        run: node scripts/adr_adoption/real_geox_readonly_shadow_adoption_v1.mjs
+
+      - name: Upload qualification evidence only
+        uses: actions/upload-artifact@v4
+        with:
+          name: geox-adr-readonly-shadow-${{ env.GEOX_ADR_QUALIFICATION_HEAD }}
+          path: ${{ env.GEOX_ADR_EVIDENCE_PATH }}
+          if-no-files-found: error
+          retention-days: 7

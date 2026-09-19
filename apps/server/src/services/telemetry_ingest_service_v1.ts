@@ -53,6 +53,10 @@ function toNumericValue(value: number | string | boolean | null): number | null 
   return null;
 }
 
+function isDurableRawObservationProjectionFailure(error: unknown): boolean {
+  return error instanceof Error && error.message === "DEVICE_OBSERVATION_VALUE_NOT_NUMERIC";
+}
+
 async function resolveConn(db: Pool | PoolClient): Promise<{ conn: PoolClient; release: () => void }> {
   if (typeof (db as Pool).connect === "function") {
     const conn = await (db as Pool).connect();
@@ -68,6 +72,16 @@ async function resolveConn(db: Pool | PoolClient): Promise<{ conn: PoolClient; r
  * Dev/simulator boundary:
  * simulator telemetry may be recorded for debugging, but must carry simulated trust metadata and
  * must be excluded by the observation pipeline from formal Stage-1 sensing triggers.
+ *
+ * B-04b2 durability boundary:
+ * missing/non-numeric source telemetry is still source evidence. When the legacy
+ * numeric DeviceObservation projection rejects that payload with
+ * DEVICE_OBSERVATION_VALUE_NOT_NUMERIC, commit the already-written raw fact,
+ * telemetry index row, and device receipt status, then preserve the existing
+ * caller-visible failure. No numeric observation is fabricated and Stage-1 is
+ * not entered for that payload.
+ *
+ * All other downstream failures retain the historical all-or-nothing rollback.
  */
 export async function ingestTelemetryV1(
   db: Pool | PoolClient,
@@ -86,8 +100,10 @@ export async function ingestTelemetryV1(
   const evidence_level = context.evidence_level ?? (is_simulated ? "DEBUG" : "FORMAL");
 
   const { conn, release } = await resolveConn(db);
+  let transactionOpen = false;
   try {
     await conn.query("BEGIN");
+    transactionOpen = true;
 
     await conn.query(
       `INSERT INTO facts (fact_id, occurred_at, source, record_json)
@@ -143,33 +159,46 @@ export async function ingestTelemetryV1(
       [payload.tenant_id, payload.device_id, ts_ms, ts_ms]
     );
 
-    const pipelineResult = await writeObservationRunPipelineAndRefreshFieldV1(conn, {
-      tenant_id: payload.tenant_id,
-      project_id: context.project_id ?? null,
-      group_id: context.group_id ?? null,
-      field_id: context.field_id ?? null,
-      device_id: payload.device_id,
-      metric,
-      value: payload.value,
-      unit: payload.unit,
-      quality_flags: Array.isArray(context.quality_flags) ? context.quality_flags : ["OK"],
-      confidence: context.confidence ?? null,
-      observed_at_ts_ms: ts_ms,
-      source_fact_id: raw_fact_id,
-      source_lane,
-      is_simulated,
-      formal_eligible,
-      evidence_level,
-      dev_source: context.dev_source ?? null,
-    });
+    let pipelineResult;
+    try {
+      pipelineResult = await writeObservationRunPipelineAndRefreshFieldV1(conn, {
+        tenant_id: payload.tenant_id,
+        project_id: context.project_id ?? null,
+        group_id: context.group_id ?? null,
+        field_id: context.field_id ?? null,
+        device_id: payload.device_id,
+        metric,
+        value: payload.value,
+        unit: payload.unit,
+        quality_flags: Array.isArray(context.quality_flags) ? context.quality_flags : ["OK"],
+        confidence: context.confidence ?? null,
+        observed_at_ts_ms: ts_ms,
+        source_fact_id: raw_fact_id,
+        source_lane,
+        is_simulated,
+        formal_eligible,
+        evidence_level,
+        dev_source: context.dev_source ?? null,
+      });
+    } catch (error) {
+      if (!isDurableRawObservationProjectionFailure(error)) throw error;
+
+      await conn.query("COMMIT");
+      transactionOpen = false;
+      throw error;
+    }
 
     await conn.query("COMMIT");
+    transactionOpen = false;
     return {
       raw: { fact_id: raw_fact_id, telemetry_id, occurred_at_iso },
       observation: pipelineResult.observation,
     };
   } catch (error) {
-    await conn.query("ROLLBACK");
+    if (transactionOpen) {
+      await conn.query("ROLLBACK");
+      transactionOpen = false;
+    }
     throw error;
   } finally {
     release();

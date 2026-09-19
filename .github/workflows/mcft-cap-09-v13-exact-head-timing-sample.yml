@@ -1,0 +1,262 @@
+name: mcft-cap-09-v13-exact-head-timing-sample
+
+on:
+  workflow_call:
+    inputs:
+      sample_id:
+        required: true
+        type: string
+      subject_sha:
+        required: true
+        type: string
+      base_target_t:
+        required: true
+        type: string
+      anchor_ms:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  V13_DB: geox_mcft_cap09_s6_accel24t_am19_v13
+  FORMAL_V5_DB: geox_mcft_cap09_s6_formal_t4r1_24h_v5
+  EVIDENCE_ROLE: geox_mcft_cap09_evidence_runtime_v1
+  EVIDENCE_LOGIN_ROLE: geox_mcft_cap09_evidence_runtime_login_v1
+  SEED_DATABASE_URL: ${{ secrets.GEOX_MCFT_CAP09_T3R1_S6_DATABASE_URL }}
+  S3_ENDPOINT: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT }}
+  S3_BUCKET: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET }}
+  S3_REGION: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION }}
+  S3_ACCESS_KEY_ID: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID }}
+  S3_SECRET_ACCESS_KEY: ${{ secrets.GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY }}
+
+jobs:
+  timing-sample:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Record runner arrival
+        id: arrival
+        shell: bash
+        run: |
+          set -euo pipefail
+          now="$(date +%s%3N)"
+          anchor='${{ inputs.anchor_ms }}'
+          [[ "$anchor" =~ ^[0-9]+$ ]] || { echo "TIMING_SAMPLE_ANCHOR_MS_INVALID:$anchor" >&2; exit 1; }
+          wake="$(( now - anchor ))"
+          test "$wake" -ge 0 || { echo "TIMING_SAMPLE_WAKE_DELAY_NEGATIVE:$wake" >&2; exit 1; }
+          echo "runner_start_ms=$now" >> "$GITHUB_OUTPUT"
+          echo "wake_delay_ms=$wake" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact timing subject
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.subject_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exact sample identity
+        shell: bash
+        env:
+          BASE_TARGET: ${{ inputs.base_target_t }}
+          EXPECTED_SUBJECT: ${{ inputs.subject_sha }}
+          SAMPLE_ID: ${{ inputs.sample_id }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SUBJECT"
+          [[ "$SAMPLE_ID" =~ ^sample[123]$ ]]
+          node - <<'NODE'
+          const base=process.env.BASE_TARGET;
+          const ms=Date.parse(base);
+          if(!Number.isFinite(ms)||new Date(ms).toISOString()!==base||!/:00:00\.000Z$/.test(base))throw new Error('TIMING_SAMPLE_BASE_INVALID');
+          if(ms<=Date.now())throw new Error('TIMING_SAMPLE_BASE_MUST_BE_FUTURE');
+          NODE
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.1
+          cache: pnpm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install exact repository and scientific dependencies
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          python -m pip install --disable-pip-version-check \
+            'eccodes==2.47.0' 'eccodeslib==2.47.3.23' 'numpy==1.26.4' 'refet==0.4.2'
+          python -m eccodes selfcheck
+          python apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_scientific_core_v1.py selftest
+          python apps/server/src/external_evidence/provider/python/mcft_cap09_gfs_raw_bundle_decoder_v1.py selftest
+
+      - name: Normalize governed database URLs
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const raw=String(process.env.SEED_DATABASE_URL||'').trim();
+          if(!raw)throw new Error('V13_TIMING_DATABASE_SECRET_REQUIRED');
+          const seed=new URL(raw);
+          if(!['postgres:','postgresql:'].includes(seed.protocol))throw new Error('V13_TIMING_POSTGRES_URL_REQUIRED');
+          function target(name,asEvidence=false){
+            const u=new URL(raw);
+            u.pathname='/'+name;
+            let v=u.toString();
+            if(asEvidence){
+              const separator=u.search?'&':'?';
+              v+=separator+'options='+encodeURIComponent('-c role='+process.env.EVIDENCE_ROLE);
+            }
+            console.log('::add-mask::'+v);
+            return v;
+          }
+          fs.appendFileSync(process.env.GITHUB_ENV,[
+            'V13_ADMIN_URL='+target(process.env.V13_DB),
+            'FORMAL_V5_URL='+target(process.env.FORMAL_V5_DB),
+            'V13_EVIDENCE_URL='+target(process.env.V13_DB,true),
+          ].join('\n')+'\n');
+
+      - name: Require exact qualification store and Formal-v5 untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          formal_counts="$(psql "$FORMAL_V5_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT
+              (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'),
+              (SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public')")"
+          test "$formal_counts" = "0|0" || { echo "V13_TIMING_FORMAL_V5_NOT_ZERO_STATE:$formal_counts" >&2; exit 1; }
+          tables="$(psql "$V13_ADMIN_URL" -At -v ON_ERROR_STOP=1 -c "SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'")"
+          test "$tables" = "29" || { echo "V13_TIMING_29_TABLE_SCHEMA_REQUIRED:$tables" >&2; exit 1; }
+          functions="$(psql "$V13_ADMIN_URL" -At -v ON_ERROR_STOP=1 -c "
+            SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+             WHERE n.nspname='public' AND p.proname='mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1'")"
+          test "$functions" = "1" || { echo "V13_TIMING_FENCED_WRITER_REQUIRED:$functions" >&2; exit 1; }
+
+      - name: Establish temporary Evidence SET membership
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence_state="$(psql "$SEED_DATABASE_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT rolcanlogin::text,rolinherit::text,rolsuper::text,rolcreatedb::text,rolcreaterole::text,rolreplication::text,rolbypassrls::text
+              FROM pg_catalog.pg_roles WHERE rolname='$EVIDENCE_ROLE'")"
+          test "$evidence_state" = "false|true|false|false|false|false|false" || {
+            echo "V13_TIMING_EVIDENCE_ROLE_UNSAFE:$evidence_state" >&2; exit 1;
+          }
+          can_admin="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
+            SELECT EXISTS (
+              SELECT 1 FROM pg_catalog.pg_auth_members m
+              JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
+              JOIN pg_catalog.pg_roles member ON member.oid=m.member
+              WHERE granted.rolname='$EVIDENCE_ROLE' AND member.rolname=current_user AND m.admin_option
+            )::text")"
+          can_set_before="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT pg_catalog.pg_has_role(current_user,'$EVIDENCE_ROLE','SET')::text")"
+          test "$can_admin" = "true" || test "$can_set_before" = "true" || {
+            echo "V13_TIMING_EVIDENCE_TEMP_MEMBERSHIP_CANNOT_BE_ESTABLISHED" >&2; exit 1;
+          }
+          psql "$SEED_DATABASE_URL" -v ON_ERROR_STOP=1 -c "GRANT $EVIDENCE_ROLE TO CURRENT_USER"
+          can_set_after="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT pg_catalog.pg_has_role(current_user,'$EVIDENCE_ROLE','SET')::text")"
+          test "$can_set_after" = "true"
+          login_count="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT count(*)::int FROM pg_catalog.pg_roles WHERE rolname='$EVIDENCE_LOGIN_ROLE'")"
+          test "$login_count" = "0" || { echo "V13_TIMING_PRODUCTION_LOGIN_MUST_NOT_EXIST:$login_count" >&2; exit 1; }
+
+      - name: Prove Evidence ACL before timing sample
+        shell: bash
+        run: |
+          set -euo pipefail
+          role="$(psql "$V13_EVIDENCE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT current_user")"
+          test "$role" = "$EVIDENCE_ROLE"
+          test "$(psql "$V13_EVIDENCE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT has_schema_privilege(current_user,'public','USAGE')::text")" = "true"
+          test "$(psql "$V13_EVIDENCE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT has_schema_privilege(current_user,'public','CREATE')::text")" = "false"
+          test "$(psql "$V13_EVIDENCE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT has_table_privilege(current_user,'public.facts','INSERT')::text")" = "false"
+          test "$(psql "$V13_EVIDENCE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT has_function_privilege(current_user,'public.mcft_cap09_v13_evidence_runtime_append_exact_base_facts_v1(text,text,text,text,text,text,text,text,timestamptz,text,bigint,text,bigint,text,jsonb)','EXECUTE')::text")" = "true"
+
+      - name: Record setup completion
+        id: setup
+        shell: bash
+        run: |
+          set -euo pipefail
+          now="$(date +%s%3N)"
+          start='${{ steps.arrival.outputs.runner_start_ms }}'
+          setup="$(( now - start ))"
+          test "$setup" -ge 0
+          echo "job_start_setup_ms=$setup" >> "$GITHUB_OUTPUT"
+
+      - name: Run exact-head real timing sample
+        env:
+          MCFT_CAP09_V13_EXACT_HEAD_TIMING_SAMPLE: '1'
+          MCFT_SUBJECT_SHA: ${{ inputs.subject_sha }}
+          MCFT_TIMING_SAMPLE_ID: ${{ inputs.sample_id }}
+          MCFT_TIMING_RUN_ID: ${{ github.run_id }}
+          MCFT_TIMING_RUN_ATTEMPT: ${{ github.run_attempt }}
+          MCFT_TIMING_BASE_TARGET: ${{ inputs.base_target_t }}
+          MCFT_TIMING_WAKE_DELAY_MS: ${{ steps.arrival.outputs.wake_delay_ms }}
+          MCFT_TIMING_JOB_START_SETUP_MS: ${{ steps.setup.outputs.job_start_setup_ms }}
+          DATABASE_URL: ${{ env.V13_EVIDENCE_URL }}
+          MCFT_CAP09_FORMAL_RAW_ENDPOINT: ${{ env.S3_ENDPOINT }}
+          MCFT_CAP09_FORMAL_RAW_BUCKET: ${{ env.S3_BUCKET }}
+          MCFT_CAP09_FORMAL_RAW_REGION: ${{ env.S3_REGION }}
+          MCFT_CAP09_FORMAL_RAW_ACCESS_KEY_ID: ${{ env.S3_ACCESS_KEY_ID }}
+          MCFT_CAP09_FORMAL_RAW_SECRET_ACCESS_KEY: ${{ env.S3_SECRET_ACCESS_KEY }}
+        run: pnpm exec tsx scripts/runtime_acceptance/RUN_MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_V1.ts
+
+      - name: Validate timing sample proof
+        shell: node {0}
+        env:
+          SAMPLE_ID: ${{ inputs.sample_id }}
+          SUBJECT_SHA: ${{ inputs.subject_sha }}
+        run: |
+          const fs=require('node:fs');
+          const id=process.env.SAMPLE_ID.toUpperCase();
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_'+id+'_V1_RESULT.json','utf8'));
+          if(p.status!=='PASS'||p.subject_sha!==process.env.SUBJECT_SHA||p.sample_id!==process.env.SAMPLE_ID)throw new Error('V13_TIMING_SAMPLE_PASS_REQUIRED');
+          if(p.timing_budget_qualified!==false||p.timing_budget_frozen!==false||p.measurement_only!==true)throw new Error('V13_TIMING_SAMPLE_PRE_FREEZE_REQUIRED');
+          if(p.production_canonical_modules_reused!==true||p.provider_refetch_during_promotion!==0||p.formal_fact_present_count!==3)throw new Error('V13_TIMING_SAMPLE_PRODUCTION_GRAPH_PROOF_REQUIRED');
+          for(const k of ['production_owner_activation','formal_v5_arm','a0_bootstrap','o00_started','mcft_cap09_completed'])if(p[k]!==false)throw new Error('V13_TIMING_SAMPLE_LATER_STAGE_EFFECT:'+k);
+          const phases=p.timing_phases||{};
+          for(const k of ['wake_delay_ms','job_start_setup_ms','provider_capture_ms','retained_raw_and_candidate_ms','promotion_queue_and_setup_ms','rehydration_promotion_commit_readback_ms']){
+            if(!Number.isSafeInteger(phases[k])||phases[k]<0)throw new Error('V13_TIMING_SAMPLE_PHASE_INVALID:'+k);
+          }
+
+      - name: Reprove Formal-v5 untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          counts="$(psql "$FORMAL_V5_URL" -AtF '|' -v ON_ERROR_STOP=1 -c "
+            SELECT
+              (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'),
+              (SELECT count(*)::int FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public')")"
+          test "$counts" = "0|0" || { echo "V13_TIMING_FORMAL_V5_MUTATION_FORBIDDEN:$counts" >&2; exit 1; }
+
+      - name: Upload immutable timing sample
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap09-v13-timing-${{ inputs.sample_id }}-${{ inputs.subject_sha }}
+          path: acceptance-output/MCFT_CAP_09_V13_EXACT_HEAD_TIMING_SAMPLE_*_V1_RESULT.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Revoke temporary Evidence SET membership
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "$SEED_DATABASE_URL" ]; then
+            present="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='$EVIDENCE_ROLE')::text")"
+            if [ "$present" = "true" ]; then
+              psql "$SEED_DATABASE_URL" -v ON_ERROR_STOP=1 -c "REVOKE $EVIDENCE_ROLE FROM CURRENT_USER"
+              can_set="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "SELECT pg_catalog.pg_has_role(current_user,'$EVIDENCE_ROLE','SET')::text")"
+              test "$can_set" = "false" || { echo "V13_TIMING_TEMP_SET_MEMBERSHIP_LEAK:$can_set" >&2; exit 1; }
+              self_grants="$(psql "$SEED_DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
+                SELECT count(*)::int FROM pg_catalog.pg_auth_members m
+                JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
+                JOIN pg_catalog.pg_roles member ON member.oid=m.member
+                JOIN pg_catalog.pg_roles grantor ON grantor.oid=m.grantor
+                WHERE granted.rolname='$EVIDENCE_ROLE' AND member.rolname=current_user AND grantor.rolname=current_user")"
+              test "$self_grants" = "0" || { echo "V13_TIMING_TEMP_SELF_GRANT_LEAK:$self_grants" >&2; exit 1; }
+            fi
+          fi

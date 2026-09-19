@@ -1,0 +1,15 @@
+{
+  "schema_version": "geox_mcft_cap09_production_operational_database_provision_arm_v1",
+  "armed": false,
+  "candidate_database_name": "geox_mcft_cap09_production_runtime_v1",
+  "create_database_authorized": false,
+  "apply_production_host_schema_authorized": false,
+  "apply_runtime_acl_authorized": false,
+  "service_login_bootstrap_authorized": false,
+  "runtime_credential_binding_authorized": false,
+  "runtime_process_start_authorized": false,
+  "production_owner_activation_authorized": false,
+  "formal_v5_arm_authorized": false,
+  "a0_authorized": false,
+  "o00_authorized": false
+}
