@@ -222,17 +222,39 @@ async function applyFormalRuntimeAcl(pool:Pool):Promise<void>{
   `);
 }
 async function revokeTemporaryOwnerMembership(pool:Pool):Promise<void>{
-  for(const role of OWNER_ROLES)await pool.query("REVOKE "+role+" FROM CURRENT_USER");
-  const residual=Number((await pool.query<{n:number}>(
+  for(const role of OWNER_ROLES){
+    await pool.query("REVOKE "+role+" FROM CURRENT_USER GRANTED BY CURRENT_USER RESTRICT");
+  }
+  const residualSet=Number((await pool.query<{n:number}>(
     `SELECT count(*)::int AS n
        FROM pg_catalog.pg_auth_members m
        JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
        JOIN pg_catalog.pg_roles member ON member.oid=m.member
       WHERE member.rolname=current_user
-        AND granted.rolname=ANY($1::text[])`,
+        AND granted.rolname=ANY($1::text[])
+        AND m.set_option`,
     [[...OWNER_ROLES]],
   )).rows[0]?.n??-1);
-  assert.equal(residual,0,"FORMAL_V5_SCHEMA_ACL_TEMP_OWNER_MEMBERSHIP_RESIDUAL");
+  assert.equal(residualSet,0,"FORMAL_V5_SCHEMA_ACL_TEMP_OWNER_SET_MEMBERSHIP_MUST_BE_REVOKED");
+  for(const role of OWNER_ROLES){
+    const canSet=(await pool.query<{ok:boolean}>(
+      "SELECT pg_catalog.pg_has_role(current_user,$1,'SET') AS ok",
+      [role],
+    )).rows[0]?.ok;
+    assert.equal(canSet,false,"FORMAL_V5_SCHEMA_ACL_EFFECTIVE_SET_AUTHORITY_MUST_BE_ZERO:"+role);
+    const selfGrants=Number((await pool.query<{n:number}>(
+      `SELECT count(*)::int AS n
+         FROM pg_catalog.pg_auth_members m
+         JOIN pg_catalog.pg_roles granted ON granted.oid=m.roleid
+         JOIN pg_catalog.pg_roles member ON member.oid=m.member
+         JOIN pg_catalog.pg_roles grantor ON grantor.oid=m.grantor
+        WHERE granted.rolname=$1
+          AND member.rolname=current_user
+          AND grantor.rolname=current_user`,
+      [role],
+    )).rows[0]?.n??-1);
+    assert.equal(selfGrants,0,"FORMAL_V5_SCHEMA_ACL_TEMP_OWNER_SELF_GRANT_MUST_BE_ZERO:"+role);
+  }
 }
 async function assertFinalAcl(pool:Pool):Promise<Record<string,unknown>>{
   const facts=(await pool.query<{
