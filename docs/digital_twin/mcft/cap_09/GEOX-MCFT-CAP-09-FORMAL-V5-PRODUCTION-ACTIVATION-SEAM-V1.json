@@ -1,0 +1,247 @@
+{
+  "schema_version": "geox_mcft_cap09_formal_v5_production_activation_seam_v1",
+  "authority_id": "GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1",
+  "capability_line_id": "MCFT-CAP-09",
+  "slice_id": "MCFT-CAP-09.S6",
+  "record_status": "H6_IMPLEMENTATION_CANDIDATE_NO_PRODUCTION_EFFECT_UNTIL_EXACT_HEAD_MERGE_AND_LOCAL_OPERATOR_EXECUTION",
+  "exact_predecessor_protected_main": "2ce0c90ef30b3c04ed112639c87926ac19be4e03",
+  "frontier": "FORMAL_V5_ACTIVATION_SUCCESSOR_NOT_YET_PRODUCTIZED",
+  "closes_frontier_as": "H6_FORMAL_V5_PRODUCTION_ACTIVATION_SEAM",
+  "subordinate_to": [
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-06-FORMAL-WINDOW-EPOCH-REBASE-AUTHORITY.md",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-CADENCE-DECOUPLING-AUTHORITY-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-POST-GRADUATION-CONTROL-SURFACE-V1.json",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-HOSTING-ARCHITECTURE-AND-DEVELOPMENT-ROUTE-V1.md"
+  ],
+  "physical_store": {
+    "database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v5",
+    "authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+    "authority_blob_sha": "34fd3e92e0e628cf0db16e10df3633337fe81a1a",
+    "failed_v4_database": "geox_mcft_cap09_s6_formal_t4r1_24h_v4",
+    "failed_v4_reuse_forbidden": true,
+    "compatibility_alias_for_v5_forbidden": true
+  },
+  "arm": {
+    "assembler_ref": "scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs",
+    "execution_host": "LOCAL_NON_GITHUB_PRODUCTION_HOST_ONLY",
+    "exact_current_protected_main_required": true,
+    "clean_worktree_required": true,
+    "explicit_operator_authorization_required": true,
+    "h5_exact_subject_readiness_reverification_required": true,
+    "live_exact_one_owner_per_runtime_role_reverification_required": true,
+    "retired_github_production_trigger_zero_required": true,
+    "actual_arm_zero_state_read_only_revalidation_required": true,
+    "database_clock_authoritative_for_arm_time": true,
+    "epoch_selection": {
+      "minimum_governance_lead_hours": 36,
+      "source_authority": "AMENDMENT_06",
+      "actual_utc_only": true,
+      "scan_first_eligible_future_whole_window": true,
+      "exact_slot_count": 24,
+      "whole_window_crop_context_viability_required": true,
+      "readiness_deadline_offset_hours_before_o00": 12,
+      "a0_offset_hours_before_o00": 1
+    },
+    "timing_budget": {
+      "authority_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING-ACQUISITION-BUDGET-AUTHORITY-V1.json",
+      "authority_blob_sha": "82b9cfadc94aa0a3f83b69a8a111ac6c5d993cf1",
+      "selected_budget_ms": 2081804,
+      "applies_to": "FORCING_ACQUISITION_START_DEADLINE_PER_BASE",
+      "fixed_35_minute_lead_authorized": false
+    }
+  },
+  "schema_materialization": {
+    "new_schema_design": false,
+    "exact_public_table_count_after_materialization": 29,
+    "base_schema_files": [
+      "docker/postgres/init/001_schema.sql",
+      "apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql",
+      "apps/server/db/migrations/2026_07_10_mcft_cap_01_closure_remediation.sql"
+    ],
+    "v13_schema_files": [
+      "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql",
+      "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql",
+      "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql"
+    ],
+    "formal_store_must_be_zero_state_before_materialization": true
+  },
+  "a0_adoption": {
+    "historical_ea5e2_reference_database_forbidden": true,
+    "historical_transient_r2_as_current_production_source_forbidden": true,
+    "provider_refetch_for_a0_forbidden": true,
+    "production_operational_fact_replay_provenance_required": true,
+    "private_retained_raw_replay_required": true,
+    "formal_raw_retain_before_decoder_required": true,
+    "canonical_semantics_must_match_source_fact": true,
+    "bootstrap_service_reused": "ExternalFormalBootstrapPersistenceServiceV1",
+    "scheduler_slot_count_after_a0": 0,
+    "next_tick_equals_o00": true,
+    "production_replay_promotion_ref": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_PRODUCTION_REPLAY_PROMOTION_V1.ts",
+    "operational_database_name": "geox_mcft_cap09_production_runtime_v1",
+    "operational_database_read_only_required": true,
+    "operational_raw_bucket": "geox-mcft-cap09-evidence-runtime-v1",
+    "formal_raw_bucket": "geox-mcft-cap09-formal-raw-v1",
+    "raw_bucket_identity_separation_required": true,
+    "a0_gfs_base_target_rule": "EXACT_A0_SAME_CYCLE_WEATHER_ET0_PAIR",
+    "a0_gfs_base_supports_o00_warm_start": true,
+    "o01_and_later_predecessor_forcing_rule": "O01_REQUIRES_O00_THEN_EXACT_PREDECESSOR_BASE",
+    "soil_selection_rule": "EXISTING_A0_EVIDENCE_WINDOW_AND_AUTHORIZED_SOIL_BINDING",
+    "source_fact_identity_preserved_across_raw_bucket_transition": false,
+    "source_fact_identity_preservation_across_raw_bucket_transition_forbidden": true,
+    "normalized_semantic_equivalence_required": true,
+    "same_decoder_id_and_version_required": true,
+    "source_raw_digest_and_bytes_reverification_required": true,
+    "target_fact_set_before_bootstrap": "EXACT_THREE_A0_CAUSAL_FORMAL_FACTS",
+    "bootstrap_executor_ref": "scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_BOOTSTRAP_V1.ts",
+    "bootstrap_execution_host": "LOCAL_NON_GITHUB_OPERATOR_ONE_SHOT_ONLY",
+    "bootstrap_operator_database_credential_required": true,
+    "bootstrap_runtime_principal_for_operator_step_forbidden": true,
+    "bootstrap_exact_29_table_2_routine_schema_required": true,
+    "bootstrap_exact_three_promoted_facts_required": true,
+    "bootstrap_manifest_file_is_not_activation_authority_by_itself": true,
+    "bootstrap_result_pass_required_before_runtime_cutover": true,
+    "bootstrap_partial_mutation_makes_store_and_epoch_non_reusable": true,
+    "bootstrap_automatic_truncate_retry_forbidden": true
+  },
+  "runtime_adoption": {
+    "runtime_kernel_rewrite": false,
+    "scheduler_semantics_rewrite": false,
+    "v5_viability_runner_reuse": "ExternalFormalV5ViabilityGatedSchedulerV1",
+    "stage_aware_runner_reuse": "ExternalFormalV4Amendment19RunnerV2",
+    "required_successor": "THIN_V5_STAGE_AWARE_RUNNER_AND_DEDICATED_PRODUCTION_PROCESS_COMPOSITION",
+    "preformal_mode": "PRE_FORMAL_OWNER_STANDBY",
+    "active_mode": "FORMAL_V5_ACTIVE",
+    "github_production_wake_allowed": false,
+    "github_production_tick_allowed": false,
+    "system_database_utc_required": true,
+    "v5_prewindow_bundle_ref": "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts",
+    "v5_manifest_builder_ref": "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts",
+    "a0_stage_authority_selection": "LATEST_REGISTRY_EFFECTIVE_AUTHORITY_AT_A0_AFTER_POST_ARM_CONTINUITY_PROOF",
+    "arm_time_stage_snapshot_is_runtime_pin": false,
+    "current_crop_graduated_at_must_be_not_after_a0": true,
+    "stage_forward_stability_must_cover_through_o23": true,
+    "lifecycle_horizon_must_cover_through_o23": true
+  },
+  "owner_cutover": {
+    "evidence_owner_must_remain_exactly_one": true,
+    "forcing_controller_must_remain_subordinate_to_evidence_plane": true,
+    "twin_preformal_owner_must_release_before_formal_owner_claim": true,
+    "twin_double_owner_window_allowed": false,
+    "new_twin_fencing_token_required_after_cutover": true
+  },
+  "execution_sequence": [
+    "REVERIFY_H5_EXACT_MAIN_AND_LIVE_OWNERS",
+    "ARM_FRESH_V5_EPOCH",
+    "MATERIALIZE_EXISTING_29_TABLE_V13_FORMAL_SCHEMA_AND_ACL",
+    "PROVE_POST_ARM_CURRENT_CROP_ONLY_AUTHORITY_CONTINUITY",
+    "PROMOTE_A0_PRODUCTION_EVIDENCE_TO_FORMAL_V5_WITH_VERIFIED_RAW_REPLAY",
+    "BOOTSTRAP_FRESH_A0",
+    "ACTIVATE_V13_FORCING_PROCESS_ON_NON_GITHUB_EVIDENCE_HOST",
+    "CUTOVER_TWIN_PRE_FORMAL_OWNER_STANDBY_TO_FORMAL_V5_ACTIVE",
+    "RUN_REAL_WALL_CLOCK_O00_O23",
+    "RUN_AUTOMATIC_FINAL_READBACK",
+    "FINAL_READ_ONLY_COMPLETION_ADJUDICATION"
+  ],
+  "hard_nonclaims": [
+    "NO_RUNTIME_KERNEL_REWRITE",
+    "NO_SCHEDULER_SEMANTIC_REWRITE",
+    "NO_NEW_DATABASE_SCHEMA_DESIGN",
+    "NO_AMENDMENT_19_REDESIGN",
+    "NO_GITHUB_PRODUCTION_CLOCK",
+    "NO_NEW_AUTHORITY_DOMAIN",
+    "NO_FAILED_V4_STORE_REUSE",
+    "NO_FORMAL_COMPLETION_FROM_H6_IMPLEMENTATION_ALONE"
+  ],
+  "candidate_non_effects": {
+    "formal_v5_arm": false,
+    "formal_v5_epoch_selected": false,
+    "formal_database_mutation": false,
+    "schema_materialization": false,
+    "a0_bootstrap": false,
+    "production_runtime_restart": false,
+    "production_owner_mutation": false,
+    "o00_started": false,
+    "provider_request_count": 0,
+    "mcft_cap09_completed": false
+  },
+  "post_arm_authority_continuity": {
+    "verifier_ref": "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_ARM_AUTHORITY_CONTINUITY_V1.cjs",
+    "arm_runtime_semantic_subject_frozen": true,
+    "current_protected_main_may_advance_after_arm": true,
+    "allowed_post_arm_advancement_only": [
+      "IMMUTABLE_EFFECTIVE_CURRENT_CROP_AUTHORITY_ARTIFACT_ADD",
+      "EFFECTIVE_CURRENT_CROP_REGISTRY_SINGLE_APPEND"
+    ],
+    "first_parent_commit_by_commit_audit_required": true,
+    "arm_subject_must_remain_ancestor": true,
+    "runtime_code_changes_allowed": false,
+    "qcp_changes_allowed": false,
+    "workflow_changes_allowed": false,
+    "any_other_protected_main_change_invalidates_arm": true,
+    "selected_authority_must_cover_a0": true,
+    "reason": "36H_FORMAL_EPOCH_GOVERNANCE_LEAD_EXCEEDS_30H_STAGE_FORWARD_STABILITY_SO_A_POST_ARM_ROLLING_STAGE_AUTHORITY_REFRESH_IS_REQUIRED_WITHOUT_RUNTIME_SEMANTIC_DRIFT"
+  },
+  "operator_bindings": {
+    "secret_values_in_repository_forbidden": true,
+    "github_actions_effectful_operator_binding_allowed": false,
+    "exact_required_secret_binding_count": 13,
+    "arm_read_only_formal_database": {
+      "env": "GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL",
+      "database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v5",
+      "purpose": "ARM_ZERO_STATE_AND_DATABASE_UTC_READ_ONLY",
+      "default_transaction_read_only_required": true
+    },
+    "formal_v5_admin_database": {
+      "env": "GEOX_MCFT_CAP09_FORMAL_V5_ADMIN_DATABASE_URL",
+      "database_name": "geox_mcft_cap09_s6_formal_t4r1_24h_v5",
+      "purposes": [
+        "SCHEMA_ACL_MATERIALIZATION",
+        "A0_PRODUCTION_REPLAY_PROMOTION"
+      ],
+      "ddl_and_formal_fact_ingress_authorized_only_after_explicit_operator_step": true,
+      "github_actions_allowed": false
+    },
+    "production_evidence_source": {
+      "database_url_env": "GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL",
+      "database_name": "geox_mcft_cap09_production_runtime_v1",
+      "required_login": "geox_mcft_cap09_evidence_runtime_login_v1",
+      "default_transaction_read_only_required_for_a0_replay": true,
+      "s3": {
+        "endpoint_env": "GEOX_MCFT_CAP09_EVIDENCE_S3_ENDPOINT",
+        "bucket_env": "GEOX_MCFT_CAP09_EVIDENCE_S3_BUCKET",
+        "region_env": "GEOX_MCFT_CAP09_EVIDENCE_S3_REGION",
+        "access_key_id_env": "GEOX_MCFT_CAP09_EVIDENCE_S3_ACCESS_KEY_ID",
+        "secret_access_key_env": "GEOX_MCFT_CAP09_EVIDENCE_S3_SECRET_ACCESS_KEY",
+        "bucket": "geox-mcft-cap09-evidence-runtime-v1",
+        "access_mode_for_a0_replay": "HEAD_GET_ONLY"
+      }
+    },
+    "formal_raw_store": {
+      "binding_ref": "apps/server/src/external_evidence/formal_durable_raw_store_binding_v1.ts",
+      "endpoint_env": "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT",
+      "bucket_env": "GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET",
+      "region_env": "GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION",
+      "access_key_id_env": "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID",
+      "secret_access_key_env": "GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY",
+      "bucket": "geox-mcft-cap09-formal-raw-v1",
+      "access_mode_for_a0_replay": "PUT_HEAD_AFTER_SOURCE_RAW_VERIFICATION"
+    },
+    "required_secret_binding_names": [
+      "GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL",
+      "GEOX_MCFT_CAP09_FORMAL_V5_ADMIN_DATABASE_URL",
+      "GEOX_MCFT_CAP09_EVIDENCE_RUNTIME_DATABASE_URL",
+      "GEOX_MCFT_CAP09_EVIDENCE_S3_ENDPOINT",
+      "GEOX_MCFT_CAP09_EVIDENCE_S3_BUCKET",
+      "GEOX_MCFT_CAP09_EVIDENCE_S3_REGION",
+      "GEOX_MCFT_CAP09_EVIDENCE_S3_ACCESS_KEY_ID",
+      "GEOX_MCFT_CAP09_EVIDENCE_S3_SECRET_ACCESS_KEY",
+      "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ENDPOINT",
+      "GEOX_MCFT_CAP09_FORMAL_RAW_S3_BUCKET",
+      "GEOX_MCFT_CAP09_FORMAL_RAW_S3_REGION",
+      "GEOX_MCFT_CAP09_FORMAL_RAW_S3_ACCESS_KEY_ID",
+      "GEOX_MCFT_CAP09_FORMAL_RAW_S3_SECRET_ACCESS_KEY"
+    ]
+  }
+}
