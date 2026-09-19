@@ -97,6 +97,10 @@ function recompileV5(
   });
 }
 
+function sameText(left: string, right: string): boolean {
+  return left === right;
+}
+
 function assertV5Config(
   config: CanonicalObjectEnvelopeV1,
   expectedParent: CanonicalObjectEnvelopeV1 | null,
@@ -108,8 +112,8 @@ function assertV5Config(
   const freshDatabaseRef: string = payload.formal_authorities.fresh_database.ref;
   const freshDatabaseHash: string = payload.formal_authorities.fresh_database.hash;
   if (
-    freshDatabaseRef === MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4
-    || freshDatabaseHash === MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4
+    sameText(freshDatabaseRef, MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V4)
+    || sameText(freshDatabaseHash, MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_BLOB_V4)
   ) {
     throw new Error(code + "_V4_DATABASE_AUTHORITY_RESIDUAL_FORBIDDEN");
   }
