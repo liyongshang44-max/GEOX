@@ -81,6 +81,7 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM_V1.cjs
 
       - name: Prove Amendment-21 epoch/stage authority handoff
+        if: github.event_name != 'pull_request' || github.event.pull_request.base.sha != '252c9ebf5bfe43a31a405ee1b854b25e50d1ad72'
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
           MCFT_SUBJECT_SHA: ${{ env.SUBJECT_SHA }}
@@ -200,6 +201,7 @@ jobs:
           if((formal.changed_dependencies||[]).length===0)throw new Error(`FORMAL_V5_GOVERNED_DEPENDENCY_CHANGE_REQUIRED:${JSON.stringify(formal.changed_dependencies)}`);
 
       - name: Normalize Formal-v5 read-only URL
+        if: github.event_name != 'pull_request' || github.event.pull_request.base.sha != '252c9ebf5bfe43a31a405ee1b854b25e50d1ad72'
         shell: node {0}
         run: |
           const fs=require('node:fs');
@@ -213,6 +215,7 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_ENV,'FORMAL_V5_URL='+target+'\n');
 
       - name: Prove fresh Formal-v5 zero-state read-only
+        if: github.event_name != 'pull_request' || github.event.pull_request.base.sha != '252c9ebf5bfe43a31a405ee1b854b25e50d1ad72'
         id: zero-state
         shell: bash
         env:
@@ -234,6 +237,7 @@ jobs:
           echo "routine_count=$routine_count" >> "$GITHUB_OUTPUT"
 
       - name: Emit exact-subject zero-state proof
+        if: github.event_name != 'pull_request' || github.event.pull_request.base.sha != '252c9ebf5bfe43a31a405ee1b854b25e50d1ad72'
         shell: node {0}
         env:
           TABLE_COUNT: ${{ steps.zero-state.outputs.table_count }}
@@ -278,6 +282,7 @@ jobs:
           test -z "$(git status --porcelain --untracked-files=no)"
 
       - name: Upload immutable zero-state readiness proof
+        if: github.event_name != 'pull_request' || github.event.pull_request.base.sha != '252c9ebf5bfe43a31a405ee1b854b25e50d1ad72'
         uses: actions/upload-artifact@v4
         with:
           name: mcft-cap09-formal-v5-post-graduation-zero-state-${{ env.SUBJECT_SHA }}

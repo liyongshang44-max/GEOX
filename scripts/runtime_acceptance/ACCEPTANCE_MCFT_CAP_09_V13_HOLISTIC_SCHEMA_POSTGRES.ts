@@ -8,21 +8,56 @@ const ROOT = process.cwd();
 const OUT = path.join(ROOT, "acceptance-output/MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES_RESULT.json");
 const EXPECTED_PREDECESSOR_TABLE_COUNT = 26;
 const EXPECTED_V13_TABLE_COUNT = 29;
+const CANONICAL_FACTS_SCHEMA = "docker/postgres/init/001_schema.sql";
+const PREDECESSOR_SCHEMA_FILES = [
+  "apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql",
+  "apps/server/db/migrations/2026_07_10_mcft_cap_01_closure_remediation.sql",
+  "apps/server/db/migrations/2026_07_13_mcft_cap_04_forecast_scenario_persistence.sql",
+  "apps/server/db/migrations/2026_07_14_mcft_cap_05_feedback_persistence.sql",
+  "apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql",
+] as const;
 const EXPECTED_NEW_RELATIONS = [
   "twin_external_formal_forcing_base_cursor_v1",
   "twin_external_formal_forcing_base_target_v1",
   "twin_external_formal_forcing_controller_lease_v1",
-] as const;
-const PREDECESSOR_SCHEMA_CHAIN = [
-  "docker/postgres/init/001_schema.sql",
-  "apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql",
-  "apps/server/db/migrations/2026_07_10_mcft_cap_01_closure_remediation.sql",
 ] as const;
 const V13_MIGRATIONS = [
   "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql",
   "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql",
   "apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql",
 ] as const;
+const EXPECTED_PREDECESSOR_TABLES = [
+  "facts",
+  "twin_action_feedback_cycle_projection_v1",
+  "twin_action_feedback_evidence_index_v1",
+  "twin_action_feedback_projection_v1",
+  "twin_active_lineage_index_v1",
+  "twin_approved_plan_binding_projection_v1",
+  "twin_decision_record_projection_v1",
+  "twin_forecast_point_projection_v1",
+  "twin_forecast_residual_projection_v1",
+  "twin_forecast_result_latest_index_v1",
+  "twin_forecast_run_projection_v1",
+  "twin_forecast_success_latest_index_v1",
+  "twin_object_idempotency_index_v1",
+  "twin_runtime_authority_snapshot_v1",
+  "twin_runtime_checkpoint_latest_index_v1",
+  "twin_runtime_health_latest_index_v1",
+  "twin_runtime_lease_v1",
+  "twin_scenario_latest_index_v1",
+  "twin_scenario_point_projection_v1",
+  "twin_scenario_set_projection_v1",
+  "twin_scenario_set_uniqueness_v1",
+  "twin_shadow_online_scheduler_cursor_v1",
+  "twin_shadow_online_scheduler_slot_v1",
+  "twin_state_history_projection_v1",
+  "twin_state_latest_index_v1",
+  "twin_terminal_tick_uniqueness_v1",
+] as const;
+const EXPECTED_V13_TABLES = [
+  ...EXPECTED_PREDECESSOR_TABLES,
+  ...EXPECTED_NEW_RELATIONS,
+].sort();
 
 function md5Rows(rows: readonly Record<string, unknown>[], fields: readonly string[]): string {
   const lines = rows.map((row) => fields.map((field) => String(row[field] ?? "")).join("|")).join("\n");
@@ -81,6 +116,15 @@ async function factsColumns(pool: Pool): Promise<unknown[]> {
   )).rows;
 }
 
+function canonicalFactsSchemaSql(): string {
+  const source = fs.readFileSync(path.join(ROOT, CANONICAL_FACTS_SCHEMA), "utf8");
+  const match = /^(CREATE TABLE IF NOT EXISTS facts[\s\S]*?CREATE INDEX IF NOT EXISTS facts_record_json_idx[\s\S]*?;\s*)/.exec(source);
+  assert.ok(match?.[1], "V13_SCHEMA_CANONICAL_FACTS_DDL_REQUIRED");
+  const sql = match[1];
+  assert.equal((sql.match(/\bCREATE\s+TABLE\b/gi) ?? []).length, 1, "V13_SCHEMA_FACTS_ONLY_DDL_REQUIRED");
+  return sql;
+}
+
 async function applyFiles(pool: Pool, files: readonly string[]): Promise<void> {
   for (const file of files) await pool.query(fs.readFileSync(path.join(ROOT, file), "utf8"));
 }
@@ -95,10 +139,12 @@ async function main(): Promise<void> {
   try {
     await pool.query("DROP SCHEMA public CASCADE");
     await pool.query("CREATE SCHEMA public");
-    await applyFiles(pool, PREDECESSOR_SCHEMA_CHAIN);
+    await pool.query(canonicalFactsSchemaSql());
+    await applyFiles(pool, PREDECESSOR_SCHEMA_FILES);
 
     const predecessorTables = await publicTables(pool);
     assert.equal(predecessorTables.length, EXPECTED_PREDECESSOR_TABLE_COUNT, `V13_SCHEMA_PREDECESSOR_TABLE_COUNT:${predecessorTables.length}`);
+    assert.deepEqual(predecessorTables, [...EXPECTED_PREDECESSOR_TABLES], "V13_SCHEMA_EXACT_PREDECESSOR_TABLE_SET_REQUIRED");
     const predecessorFactsColumns = await factsColumns(pool);
     if (predecessorFactsColumns.length === 0) throw new Error("V13_SCHEMA_PREDECESSOR_FACTS_REQUIRED");
 
@@ -106,7 +152,9 @@ async function main(): Promise<void> {
 
     const v13Tables = await publicTables(pool);
     assert.equal(v13Tables.length, EXPECTED_V13_TABLE_COUNT, `V13_SCHEMA_FINAL_TABLE_COUNT:${v13Tables.length}`);
-    const delta = v13Tables.filter((name) => !predecessorTables.includes(name)).sort();
+    assert.deepEqual(v13Tables, [...EXPECTED_V13_TABLES], "V13_SCHEMA_EXACT_FINAL_TABLE_SET_REQUIRED");
+    const predecessorTableSet = new Set<string>(predecessorTables);
+    const delta = v13Tables.filter((name) => !predecessorTableSet.has(name)).sort();
     assert.deepEqual(delta, [...EXPECTED_NEW_RELATIONS].sort(), "V13_SCHEMA_EXACT_NEW_RELATION_SET_REQUIRED");
     for (const expected of EXPECTED_NEW_RELATIONS) assert.equal(v13Tables.includes(expected), true, `V13_SCHEMA_RELATION_MISSING:${expected}`);
 
@@ -150,9 +198,13 @@ async function main(): Promise<void> {
     const result = {
       status: "PASS",
       acceptance_mode: "REAL_POSTGRES_HOLISTIC_V13_SCHEMA",
-      predecessor_schema_chain: [...PREDECESSOR_SCHEMA_CHAIN],
+      canonical_facts_schema_ref: CANONICAL_FACTS_SCHEMA,
+      canonical_facts_extraction_mode: "FACTS_ONLY",
+      predecessor_schema_files: [...PREDECESSOR_SCHEMA_FILES],
       predecessor_public_table_count: predecessorTables.length,
+      predecessor_public_tables: [...predecessorTables],
       v13_required_public_table_count: v13Tables.length,
+      v13_public_tables: [...v13Tables],
       exact_new_operational_relations: delta,
       operational_table_delta: delta.length,
       v13_migration_order: [...V13_MIGRATIONS],
