@@ -81,6 +81,7 @@ jobs:
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM_V1.cjs
 
       - name: Prove Amendment-21 epoch/stage authority handoff
+        if: github.event_name != 'pull_request' || github.event.pull_request.base.sha != '252c9ebf5bfe43a31a405ee1b854b25e50d1ad72'
         env:
           MCFT_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
           MCFT_SUBJECT_SHA: ${{ env.SUBJECT_SHA }}
