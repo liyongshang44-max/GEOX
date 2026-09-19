@@ -4,6 +4,17 @@ on:
   pull_request:
     paths:
       - '.github/workflows/mcft-cap-09-final-semantic-closure.yml'
+      - 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES.ts'
+      - 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_AUTONOMOUS_FORCING_FOUNDATION.cjs'
+      - 'docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json'
+      - 'apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql'
+      - 'apps/server/db/migrations/2026_07_10_mcft_cap_01_closure_remediation.sql'
+      - 'apps/server/db/migrations/2026_07_13_mcft_cap_04_forecast_scenario_persistence.sql'
+      - 'apps/server/db/migrations/2026_07_14_mcft_cap_05_feedback_persistence.sql'
+      - 'apps/server/db/migrations/2026_08_06_mcft_cap_09_s3_persistent_sequential_scheduler.sql'
+      - 'apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql'
+      - 'apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql'
+      - 'apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql'
       - '.github/workflows/mcft-cap-09-t4r1-formal-store-provision.yml'
       - '.github/workflows/mcft-cap-09-t4r1-amendment19-persistent-24t-qualification.yml'
       - '.github/workflows/mcft-cap-09-t4r1-rolling-hourly-scheduler.yml'
@@ -84,6 +95,89 @@ jobs:
           test -z "${MCFT_CAP09_PARENT_DATABASE_URL:-}"
 
 
+  formal-v5-schema-qualification-consistency-repair:
+    if: github.event_name == 'pull_request' && github.event.pull_request.base.sha == '252c9ebf5bfe43a31a405ee1b854b25e50d1ad72'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap09_schema_consistency_repair
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d mcft_cap09_schema_consistency_repair"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      SUBJECT_SHA: ${{ github.event.pull_request.head.sha }}
+      DATABASE_URL: 'postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_schema_consistency_repair'
+      V13_COLUMN_FP: '6000b89d19b85e2b84eb4c672866b5c0'
+      V13_CONSTRAINT_FP: 'ec09d8d3de69c8dbecbe03fa2737d253'
+      V13_INDEX_FP: '3bb1aa1ab220e608c5e0a657f4aea4b9'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUBJECT_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.4'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11.1'
+          cache: pnpm
+
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Require zero production effect
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SUBJECT_SHA"
+          test -z "${GEOX_MCFT_CAP09_T4R1_S6_DATABASE_URL:-}"
+          test -z "${GEOX_MCFT_CAP09_FORMAL_V5_DATABASE_URL:-}"
+          test -z "${GEOX_MCFT_CAP09_FORMAL_V5_ADMIN_DATABASE_URL:-}"
+
+      - name: Reconstruct corrected Formal-v5 schema in ephemeral PostgreSQL
+        env:
+          MCFT_CAP09_V13_HOLISTIC_SCHEMA_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES.ts
+
+      - name: Freeze corrected exact-schema fingerprints
+        shell: node {0}
+        run: |
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES_RESULT.json','utf8'));
+          const predecessor=[
+            'facts','twin_action_feedback_cycle_projection_v1','twin_action_feedback_evidence_index_v1','twin_action_feedback_projection_v1',
+            'twin_active_lineage_index_v1','twin_approved_plan_binding_projection_v1','twin_decision_record_projection_v1',
+            'twin_forecast_point_projection_v1','twin_forecast_residual_projection_v1','twin_forecast_result_latest_index_v1',
+            'twin_forecast_run_projection_v1','twin_forecast_success_latest_index_v1','twin_object_idempotency_index_v1',
+            'twin_runtime_authority_snapshot_v1','twin_runtime_checkpoint_latest_index_v1','twin_runtime_health_latest_index_v1',
+            'twin_runtime_lease_v1','twin_scenario_latest_index_v1','twin_scenario_point_projection_v1','twin_scenario_set_projection_v1',
+            'twin_scenario_set_uniqueness_v1','twin_shadow_online_scheduler_cursor_v1','twin_shadow_online_scheduler_slot_v1',
+            'twin_state_history_projection_v1','twin_state_latest_index_v1','twin_terminal_tick_uniqueness_v1'
+          ].sort();
+          const forcing=['twin_external_formal_forcing_base_cursor_v1','twin_external_formal_forcing_base_target_v1','twin_external_formal_forcing_controller_lease_v1'].sort();
+          const final=[...predecessor,...forcing].sort();
+          if(p.status!=='PASS'||p.predecessor_public_table_count!==26||p.v13_required_public_table_count!==29||p.operational_table_delta!==3)throw new Error('FORMAL_V5_SCHEMA_CONSISTENCY_CARDINALITY');
+          if(p.canonical_facts_extraction_mode!=='FACTS_ONLY')throw new Error('FORMAL_V5_SCHEMA_CONSISTENCY_FACTS_ONLY');
+          if(JSON.stringify([...p.predecessor_public_tables].sort())!==JSON.stringify(predecessor))throw new Error('FORMAL_V5_SCHEMA_CONSISTENCY_PREDECESSOR_SET');
+          if(JSON.stringify([...p.v13_public_tables].sort())!==JSON.stringify(final))throw new Error('FORMAL_V5_SCHEMA_CONSISTENCY_FINAL_SET');
+          if(p.v13_column_fingerprint_md5!==process.env.V13_COLUMN_FP||p.v13_constraint_fingerprint_md5!==process.env.V13_CONSTRAINT_FP||p.v13_index_fingerprint_md5!==process.env.V13_INDEX_FP)throw new Error('FORMAL_V5_SCHEMA_CONSISTENCY_FINGERPRINT_DRIFT');
+          if(p.production_workflow_effect!==false||p.formal_v4_mutation_performed!==false||p.mcft_cap09_completed!==false)throw new Error('FORMAL_V5_SCHEMA_CONSISTENCY_NONCLAIM_REGRESSION');
+
+
+
   phase7-fresh-formal-v5-preparation:
     if: github.event.pull_request.base.sha == '48ceafe7c6e7d3d57a1dc17411fb4bf673486333'
     runs-on: ubuntu-24.04
@@ -108,9 +202,9 @@ jobs:
       NODE_VERSION: '20.11.1'
       PNPM_VERSION: '9.15.4'
       DATABASE_URL: 'postgres://postgres:postgres@127.0.0.1:5432/mcft_cap09_phase7_preparation'
-      V13_COLUMN_FP: 'c61154d4439a82efc256bed461386781'
-      V13_CONSTRAINT_FP: '67a588bc5b8c3d213b03aa1dbfa4ff2b'
-      V13_INDEX_FP: '306e26a56d419c4e08fac0912ccfdda8'
+      V13_COLUMN_FP: '6000b89d19b85e2b84eb4c672866b5c0'
+      V13_CONSTRAINT_FP: 'ec09d8d3de69c8dbecbe03fa2737d253'
+      V13_INDEX_FP: '3bb1aa1ab220e608c5e0a657f4aea4b9'
     steps:
       - name: Checkout exact Phase7 preparation subject
         uses: actions/checkout@v4
@@ -136,7 +230,7 @@ jobs:
           actual="$(printf '%s\\n' "${changed[@]}")"
           test "$actual" = "$expected"
           test "$(git rev-parse HEAD:docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json)" = '34fd3e92e0e628cf0db16e10df3633337fe81a1a'
-          test "$(git rev-parse HEAD:scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES.ts)" = '0c1db81f09b78addfc9c411500a44b4f960216af'
+          test "$(git rev-parse HEAD:scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES.ts)" = 'e341cad836106b6a8db7907c4161bbd37c1c90b5'
           test "$(git rev-parse HEAD:apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_base_continuity.sql)" = '0e7e4877789930fc7fc0cd82051f51641ae72129'
           test "$(git rev-parse HEAD:apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_admission.sql)" = 'a6a2cf712d2170765784df4969b83979ae319f25'
           test "$(git rev-parse HEAD:apps/server/db/migrations/2026_08_25_mcft_cap_09_v13_forcing_controller_lifecycle.sql)" = '6aed8c287306c5e32eb09d4a8ab3e61127cd7309'
@@ -163,7 +257,7 @@ jobs:
               {run:33146391000,artifact:9676455831,digest:'sha256:9a3a22b8b844fc1538d4a6986a9d3477b895208b1e88cdf13106f0f0dbf463d7',head:process.env.EXACT_PHASE6_HEAD},
               {run:33146390858,artifact:9675928222,digest:'sha256:c84c06eeb04db9aa228c3415db320e8cd6eaef3502407fbc192dc80f8833497d',head:process.env.EXACT_PHASE6_HEAD},
               {run:33146390954,artifact:9676026935,digest:'sha256:8af3b905af82e84b7ff9b200b715ae622dbd2c4551b7c4fe27c0d842e421af17',head:process.env.EXACT_PHASE6_HEAD},
-              {run:32881283336,artifact:9575878791,digest:'sha256:04630f1f869ba99e9be40d55e24967e6e26671e80d3459fb9b28ce0694aaeb40',head:'3bbf096ee5cb73e8e0e0251dc400733d6cab501f'}
+              {run:35435338206,artifact:10581544644,digest:'sha256:73ffa361618ea8653fadfe84ebe617ea0e6b8497fb2e8e783494f65ac75cfced',head:'97623ea6db3735ad281573fa9c63f1204e46851b'}
             ];
             const {owner,repo}=context.repo;
             for(const e of expected){
@@ -196,6 +290,21 @@ jobs:
           const fs=require('node:fs');
           const s=JSON.parse(fs.readFileSync('acceptance-output/MCFT_CAP_09_V13_HOLISTIC_SCHEMA_POSTGRES_RESULT.json','utf8'));
           if(s.status!=='PASS'||s.predecessor_public_table_count!==26||s.v13_required_public_table_count!==29||s.operational_table_delta!==3)throw new Error('PHASE7_PREP_V13_SCHEMA_CARDINALITY');
+          const predecessor=[
+            'facts','twin_action_feedback_cycle_projection_v1','twin_action_feedback_evidence_index_v1','twin_action_feedback_projection_v1',
+            'twin_active_lineage_index_v1','twin_approved_plan_binding_projection_v1','twin_decision_record_projection_v1',
+            'twin_forecast_point_projection_v1','twin_forecast_residual_projection_v1','twin_forecast_result_latest_index_v1',
+            'twin_forecast_run_projection_v1','twin_forecast_success_latest_index_v1','twin_object_idempotency_index_v1',
+            'twin_runtime_authority_snapshot_v1','twin_runtime_checkpoint_latest_index_v1','twin_runtime_health_latest_index_v1',
+            'twin_runtime_lease_v1','twin_scenario_latest_index_v1','twin_scenario_point_projection_v1','twin_scenario_set_projection_v1',
+            'twin_scenario_set_uniqueness_v1','twin_shadow_online_scheduler_cursor_v1','twin_shadow_online_scheduler_slot_v1',
+            'twin_state_history_projection_v1','twin_state_latest_index_v1','twin_terminal_tick_uniqueness_v1'
+          ].sort();
+          const forcing=['twin_external_formal_forcing_base_cursor_v1','twin_external_formal_forcing_base_target_v1','twin_external_formal_forcing_controller_lease_v1'].sort();
+          const final=[...predecessor,...forcing].sort();
+          if(s.canonical_facts_extraction_mode!=='FACTS_ONLY')throw new Error('PHASE7_PREP_FACTS_ONLY_REQUIRED');
+          if(JSON.stringify([...s.predecessor_public_tables].sort())!==JSON.stringify(predecessor))throw new Error('PHASE7_PREP_EXACT_PREDECESSOR_SET');
+          if(JSON.stringify([...s.v13_public_tables].sort())!==JSON.stringify(final))throw new Error('PHASE7_PREP_EXACT_FINAL_SET');
           if(s.v13_column_fingerprint_md5!==process.env.V13_COLUMN_FP||s.v13_constraint_fingerprint_md5!==process.env.V13_CONSTRAINT_FP||s.v13_index_fingerprint_md5!==process.env.V13_INDEX_FP)throw new Error('PHASE7_PREP_V13_FINGERPRINT_DRIFT');
           if(s.canonical_facts_schema_unchanged!==true||s.all_new_relations_zero_state!==true||s.production_workflow_effect!==false||s.formal_v4_mutation_performed!==false||s.mcft_cap09_completed!==false)throw new Error('PHASE7_PREP_V13_NONCLAIM_REGRESSION');
           const out={
