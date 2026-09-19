@@ -10,6 +10,7 @@
   "subordinate_to": [
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-TASK.md",
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-06-FORMAL-WINDOW-EPOCH-REBASE-AUTHORITY.md",
+    "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-21-FORMAL-V5-EPOCH-STAGE-AUTHORITY-HANDOFF.md",
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-19-CADENCE-DECOUPLING-AUTHORITY-V1.json",
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
     "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-POST-GRADUATION-CONTROL-SURFACE-V1.json",
@@ -36,11 +37,18 @@
     "database_clock_authoritative_for_arm_time": true,
     "epoch_selection": {
       "minimum_governance_lead_hours": 36,
-      "source_authority": "AMENDMENT_06",
+      "source_authority": "AMENDMENT_06_WITH_AMENDMENT_21_T4R1_FORMAL_V5_STAGE_HANDOFF",
+      "amendment_21_ref": "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-21-FORMAL-V5-EPOCH-STAGE-AUTHORITY-HANDOFF.md",
+      "amendment_21_blob_sha": "b79e52620865a36d83cdbb0d95e6cccf1fed1ad3",
       "actual_utc_only": true,
-      "scan_first_eligible_future_whole_window": true,
+      "scan_first_eligible_future_clock_window": true,
       "exact_slot_count": 24,
-      "whole_window_crop_context_viability_required": true,
+      "whole_window_crop_context_viability_required_at_arm": false,
+      "arm_time_future_stage_pin_freeze_forbidden": true,
+      "lifecycle_horizon_must_cover_o23": true,
+      "future_stage_truth_authority": "DT02_A18_EFFECTIVE_CURRENT_BIOLOGICAL_STAGE_AUTHORITY",
+      "whole_window_stage_authority_coverage_required_before_a0": true,
+      "required_stage_authority_coverage": "A0_THROUGH_O23_INCLUSIVE",
       "readiness_deadline_offset_hours_before_o00": 12,
       "a0_offset_hours_before_o00": 1
     },
@@ -181,7 +189,9 @@
     "workflow_changes_allowed": false,
     "any_other_protected_main_change_invalidates_arm": true,
     "selected_authority_must_cover_a0": true,
-    "reason": "36H_FORMAL_EPOCH_GOVERNANCE_LEAD_EXCEEDS_30H_STAGE_FORWARD_STABILITY_SO_A_POST_ARM_ROLLING_STAGE_AUTHORITY_REFRESH_IS_REQUIRED_WITHOUT_RUNTIME_SEMANTIC_DRIFT"
+    "reason": "36H_FORMAL_EPOCH_GOVERNANCE_LEAD_EXCEEDS_30H_STAGE_FORWARD_STABILITY; AMENDMENT_21 MAKES ARM CLOCK_ONLY AND REQUIRES A POST_ARM_PRE_A0 DT02_A18 AUTHORITY WHOSE VALIDITY COVERS A0_THROUGH_O23",
+    "selected_authority_must_cover_o23": true,
+    "selected_authority_must_cover_a0_through_o23_inclusive": true
   },
   "operator_bindings": {
     "secret_values_in_repository_forbidden": true,

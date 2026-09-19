@@ -17,6 +17,8 @@ const BUDGET_AUTH="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-FORCING
 const BUDGET_AUTH_BLOB="82b9cfadc94aa0a3f83b69a8a111ac6c5d993cf1";
 const CROP_AUTH="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-S6-FORMAL-CROP-CONTEXT-AUTHORITY-V3.json";
 const CROP_AUTH_BLOB="4bc1f8dda6559c8951db915132172b65469affcb";
+const STAGE_HANDOFF_AUTH="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-AMENDMENT-21-FORMAL-V5-EPOCH-STAGE-AUTHORITY-HANDOFF.md";
+const STAGE_HANDOFF_AUTH_BLOB="b79e52620865a36d83cdbb0d95e6cccf1fed1ad3";
 const CURRENT_REGISTRY="docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-EFFECTIVE-CURRENT-CROP-AUTHORITY-REGISTRY-V1.json";
 const H5="scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1.cjs";
 const H5_OUT="acceptance-output/MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1_RESULT.json";
@@ -42,72 +44,22 @@ function semhash(v){return "sha256:"+crypto.createHash("sha256").update(canonica
 function iso(ms){return new Date(ms).toISOString();}
 function canonicalIso(v,code){const t=String(v||"");const ms=Date.parse(t);req(Number.isFinite(ms)&&new Date(ms).toISOString()===t,code);return t;}
 function ceilHour(ms){return Math.ceil(ms/HOUR)*HOUR;}
-function stageAt(ageDays,lengths){
-  if(!Array.isArray(lengths)||lengths.length!==4)return null;
-  const [a,b,c,d]=lengths;
-  const b1=a,b2=a+b,b3=a+b+c,b4=a+b+c+d;
-  if(!Number.isFinite(ageDays)||ageDays<0||ageDays>=b4)return null;
-  if(ageDays<b1)return "INITIAL";
-  if(ageDays<b2)return "DEVELOPMENT";
-  if(ageDays<b3)return "MID";
-  return "LATE";
-}
-function evaluateSlot(targetMs,crop){
-  const variants=crop.model_stage_prior?.variant_stage_lengths_days;
-  const w=crop.planting_authority?.possible_event_window_utc;
-  const p=crop.as_of_derivation_policy;
-  req(Array.isArray(variants)&&variants.length===6,"FORMAL_V5_ARM_EXACT_SIX_STAGE_VARIANTS_REQUIRED");
-  req(p?.backward_stability_hours===6&&p?.forward_transition_guard_hours===30,"FORMAL_V5_ARM_STAGE_GUARD_DRIFT");
-  req(p?.planting_time_uncertainty_must_be_carried===true&&p?.future_observations_authorized===false,"FORMAL_V5_ARM_STAGE_POLICY_DRIFT");
-  const start=Date.parse(w?.start_inclusive),end=Date.parse(w?.end_exclusive);
-  req(Number.isFinite(start)&&Number.isFinite(end)&&start<end,"FORMAL_V5_ARM_PLANTING_WINDOW_INVALID");
-  const stages=new Set();
-  for(const variant of variants){
-    for(const planting of [start,end-1]){
-      for(const t of [targetMs-6*HOUR,targetMs,targetMs+30*HOUR]){
-        const stage=stageAt((t-planting)/DAY,variant);
-        if(!stage)return {stage:null,stages:["OUTSIDE_MODEL_WINDOW"]};
-        stages.add(stage);
-      }
-    }
-  }
-  const allowed=new Set(p.allowed_stage_codes||[]);
-  const stage=stages.size===1?[...stages][0]:null;
-  return {stage:stage&&allowed.has(stage)?stage:null,stages:[...stages].sort()};
-}
-function selectEpoch({armMs,crop,currentCrop}){
+function selectEpoch({armMs,currentCrop}){
   const horizon=Date.parse(currentCrop.lifecycle?.horizon_end_utc);
   req(Number.isFinite(horizon),"FORMAL_V5_ARM_LIFECYCLE_HORIZON_REQUIRED");
-  const currentStage=String(currentCrop.crop_water_use_stage||"");
-  req(["INITIAL","DEVELOPMENT","MID","LATE"].includes(currentStage),"FORMAL_V5_ARM_CURRENT_WATER_USE_STAGE_REQUIRED");
   const first=ceilHour(armMs+36*HOUR);
-  let firstDiagnostic=null;
-  for(let candidate=first;candidate+23*HOUR<=horizon;candidate+=HOUR){
-    const slots=[];
-    let ok=true;
-    for(let i=0;i<24;i++){
-      const t=candidate+i*HOUR;
-      const e=evaluateSlot(t,crop);
-      if(!e.stage||e.stage!==currentStage){
-        if(!firstDiagnostic)firstDiagnostic={candidate_o00:iso(candidate),slot_id:"O"+String(i).padStart(2,"0"),logical_time:iso(t),current_stage:currentStage,derived_stage:e.stage,derived_stages:e.stages};
-        ok=false;break;
-      }
-      const logical=iso(t);
-      slots.push({slot_id:"O"+String(i).padStart(2,"0"),logical_time:logical,crop_stage_code:e.stage,qualification_only:true});
-    }
-    if(ok){
-      return {
-        o00:iso(candidate),
-        o23:iso(candidate+23*HOUR),
-        a0:iso(candidate-HOUR),
-        readiness_deadline:iso(candidate-12*HOUR),
-        slot_stage_viability:slots,
-        current_water_use_stage:currentStage,
-        first_ineligible_candidate:firstDiagnostic,
-      };
-    }
-  }
-  fail("FORMAL_V5_ARM_NO_ELIGIBLE_WHOLE_WINDOW_BEFORE_LIFECYCLE_HORIZON",JSON.stringify(firstDiagnostic));
+  req(
+    first+23*HOUR<=horizon,
+    "FORMAL_V5_ARM_NO_ELIGIBLE_CLOCK_WINDOW_BEFORE_LIFECYCLE_HORIZON",
+    JSON.stringify({candidate_o00:iso(first),candidate_o23:iso(first+23*HOUR),lifecycle_horizon:iso(horizon)})
+  );
+  return {
+    o00:iso(first),
+    o23:iso(first+23*HOUR),
+    a0:iso(first-HOUR),
+    readiness_deadline:iso(first-12*HOUR),
+    epoch_selection_mode:"CLOCK_ONLY_LIFECYCLE_BOUNDED_PENDING_POST_ARM_DT02_A18_STAGE_AUTHORITY",
+  };
 }
 function epochId(o00){return "mcft_cap09_external_formal_window_epoch_"+o00.replace(/[-:.]/g,"").replace("Z","z").toLowerCase()+"_v5";}
 function manifestRef(epoch){return "formal-arm://mcft-cap09/formal-v5/"+epoch+"/"+FORMAL_DB;}
@@ -143,32 +95,32 @@ function selectCurrentCrop(nowMs){
   return {row,authority:a};
 }
 function selftest(){
-  const crop={
-    model_stage_prior:{
-      variant_stage_lengths_days:Array.from({length:6},()=>[1,1,1,400]),
-    },
-    planting_authority:{
-      possible_event_window_utc:{
-        start_inclusive:"2026-06-01T00:00:00.000Z",
-        end_exclusive:"2026-06-01T01:00:00.000Z",
-      },
-    },
-    as_of_derivation_policy:{
-      backward_stability_hours:6,
-      forward_transition_guard_hours:30,
-      planting_time_uncertainty_must_be_carried:true,
-      future_observations_authorized:false,
-      allowed_stage_codes:["INITIAL","DEVELOPMENT","MID","LATE"],
-    },
-  };
-  const current={lifecycle:{horizon_end_utc:"2026-11-24T03:59:59.999Z"},crop_water_use_stage:"LATE"};
-  const selected=selectEpoch({armMs:Date.parse("2026-09-19T00:00:00.000Z"),crop,currentCrop:current});
-  req(selected.slot_stage_viability.length===24,"FORMAL_V5_ARM_SELFTEST_24_SLOTS_REQUIRED");
-  req(selected.slot_stage_viability.every(x=>x.crop_stage_code==="LATE"),"FORMAL_V5_ARM_SELFTEST_LATE_WINDOW_REQUIRED");
-  req(Date.parse(selected.o00)>=ceilHour(Date.parse("2026-09-19T00:00:00.000Z")+36*HOUR),"FORMAL_V5_ARM_SELFTEST_36H_GOVERNANCE_LEAD_REQUIRED");
+  const current={lifecycle:{horizon_end_utc:"2026-11-24T03:59:59.999Z"}};
+  const armMs=Date.parse("2026-09-19T00:00:00.000Z");
+  const selected=selectEpoch({armMs,currentCrop:current});
+  req(selected.o00==="2026-09-20T12:00:00.000Z","FORMAL_V5_ARM_SELFTEST_CLOCK_O00_REQUIRED",selected.o00);
+  req(selected.o23==="2026-09-21T11:00:00.000Z","FORMAL_V5_ARM_SELFTEST_CLOCK_O23_REQUIRED",selected.o23);
+  req(selected.a0==="2026-09-20T11:00:00.000Z","FORMAL_V5_ARM_SELFTEST_CLOCK_A0_REQUIRED",selected.a0);
+  req(Date.parse(selected.o00)>=ceilHour(armMs+36*HOUR),"FORMAL_V5_ARM_SELFTEST_36H_GOVERNANCE_LEAD_REQUIRED");
+  req(selected.epoch_selection_mode==="CLOCK_ONLY_LIFECYCLE_BOUNDED_PENDING_POST_ARM_DT02_A18_STAGE_AUTHORITY","FORMAL_V5_ARM_SELFTEST_STAGE_HANDOFF_MODE_REQUIRED");
   const budget=readJson(BUDGET_AUTH);
   req(budget.qualified_budget?.selected_budget_ms===2081804&&budget.fixed_35_minute_lead_authorized_for_v5===false,"FORMAL_V5_ARM_SELFTEST_TIMING_BUDGET_REQUIRED");
-  process.stdout.write(JSON.stringify({schema_version:"geox_mcft_cap09_formal_v5_arm_selftest_v1",status:"PASS",authority_mode:"CONTROLLED_SYNTHETIC_SELFTEST_ONLY",real_crop_authority_bypassed_in_selftest_only:true,production_select_epoch_unchanged:true,selected_o00:selected.o00,selected_o23:selected.o23,slot_count:24,minimum_governance_lead_hours:36,fixed_35_minute_lead_used:false,provider_request_count:0,formal_database_mutation:false,a0_bootstrap:false,o00_started:false},null,2)+"\n");
+  process.stdout.write(JSON.stringify({
+    schema_version:"geox_mcft_cap09_formal_v5_arm_selftest_v2",
+    status:"PASS",
+    authority_mode:"CONTROLLED_CLOCK_ONLY_SELFTEST",
+    amendment_21_stage_handoff_required:true,
+    future_stage_pins_frozen_at_arm:false,
+    post_arm_dt02_a18_stage_authority_required:true,
+    selected_o00:selected.o00,
+    selected_o23:selected.o23,
+    minimum_governance_lead_hours:36,
+    fixed_35_minute_lead_used:false,
+    provider_request_count:0,
+    formal_database_mutation:false,
+    a0_bootstrap:false,
+    o00_started:false,
+  },null,2)+"\n");
 }
 function main(){
   if(has("--selftest"))return selftest();
@@ -184,6 +136,7 @@ function main(){
   req(git("rev-parse","HEAD:"+STORE_AUTH)===STORE_AUTH_BLOB,"FORMAL_V5_ARM_STORE_AUTHORITY_BLOB_DRIFT");
   req(git("rev-parse","HEAD:"+BUDGET_AUTH)===BUDGET_AUTH_BLOB,"FORMAL_V5_ARM_TIMING_AUTHORITY_BLOB_DRIFT");
   req(git("rev-parse","HEAD:"+CROP_AUTH)===CROP_AUTH_BLOB,"FORMAL_V5_ARM_CROP_AUTHORITY_BLOB_DRIFT");
+  req(git("rev-parse","HEAD:"+STAGE_HANDOFF_AUTH)===STAGE_HANDOFF_AUTH_BLOB,"FORMAL_V5_ARM_AMENDMENT_21_STAGE_HANDOFF_BLOB_DRIFT");
 
   cp.execFileSync(process.execPath,[path.join(ROOT,H5),"--zero-state-proof="+path.resolve(zeroPath),"--expected-subject="+head],{cwd:ROOT,stdio:"inherit",env:process.env});
   const h5=readJson(H5_OUT);
@@ -204,7 +157,7 @@ function main(){
   req(timing.fixed_35_minute_lead_authorized_for_v5===false&&timing.hardcoded_replacement_budget_minutes===null,"FORMAL_V5_ARM_FIXED_35_MINUTE_LEAD_FORBIDDEN");
   req(timing.qualified_budget?.selected_budget_ms===2081804&&timing.qualified_budget?.status==="PASS","FORMAL_V5_ARM_EXACT_QUALIFIED_BUDGET_REQUIRED");
 
-  const epoch=selectEpoch({armMs,crop,currentCrop:current.authority});
+  const epoch=selectEpoch({armMs,currentCrop:current.authority});
   req(Date.parse(epoch.readiness_deadline)>armMs,"FORMAL_V5_ARM_READINESS_DEADLINE_MUST_BE_FUTURE");
   const core={
     schema_version:"geox_mcft_cap09_formal_v5_arm_v1",
@@ -220,9 +173,14 @@ function main(){
     o00:epoch.o00,
     o23:epoch.o23,
     readiness_deadline:epoch.readiness_deadline,
-    slot_stage_viability:epoch.slot_stage_viability,
     formal_runtime_config_pins_frozen:false,
     formal_stage_authority_pins_frozen:false,
+    arm_time_stage_snapshot_is_runtime_pin:false,
+    future_stage_pins_deferred_to_post_arm_dt02_a18:true,
+    required_future_stage_authority_coverage:"A0_THROUGH_O23_INCLUSIVE",
+    epoch_selection_mode:epoch.epoch_selection_mode,
+    amendment_21_stage_handoff_authority_ref:STAGE_HANDOFF_AUTH,
+    amendment_21_stage_handoff_authority_blob_sha:STAGE_HANDOFF_AUTH_BLOB,
     h6_stage_successor_materialization_still_required:true,
     current_crop_authority_ref:current.row.authority_ref,
     current_crop_authority_sha256:current.row.authority_sha256,
