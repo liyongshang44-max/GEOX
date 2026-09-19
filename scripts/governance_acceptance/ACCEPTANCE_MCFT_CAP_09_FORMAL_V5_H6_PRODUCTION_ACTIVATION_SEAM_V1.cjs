@@ -13,6 +13,8 @@ const SCHEMA="scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_SCHEMA_ACL_MA
 const RUNNER="apps/server/src/runtime/twin_runtime/external_formal_v5_amendment19_runner_v2.ts";
 const RUNNER_ACCEPT="scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_STAGE_AWARE_RUNNER_V2.ts";
 const A0_REPLAY="scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_PRODUCTION_REPLAY_PROMOTION_V1.ts";
+const V5_BUNDLE="apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts";
+const V5_BUNDLE_TEST="apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.test.ts";
 const FROZEN=[
   "scripts/governance_acceptance/ASSEMBLE_MCFT_CAP_09_AMENDMENT_19_FORMAL_ARM_V1.cjs",
   "scripts/runtime_acceptance/RUN_MCFT_CAP_09_AMENDMENT_19_FORMAL_A0_BOOTSTRAP_V1.ts",
@@ -134,14 +136,33 @@ for(const value of [
   "fetch(",
 ])notMarker(a0Replay,value,"H6_A0_HISTORICAL_OR_PROVIDER_PATH_FORBIDDEN");
 
+const v5Bundle=read(V5_BUNDLE);
+for(const value of [
+  "buildExternalFormalPrewindowAuthorityBundleV4",
+  "compileExternalFormalRuntimeConfigV1",
+  "MCFT_CAP09_AM19_FRESH_STORE_AUTHORITY_REF_V5",
+  "GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+  "V4_DATABASE_AUTHORITY_RESIDUAL_FORBIDDEN",
+  "EXTERNAL_FORMAL_V5_EXACT_24_HOURLY_CONFIGS_REQUIRED",
+])marker(v5Bundle,value,"H6_V5_BUNDLE_MARKER_REQUIRED");
+const v5BundleTest=read(V5_BUNDLE_TEST);
+for(const value of [
+  "preserves A18 stage pins while rebinding only fresh-store authority",
+  "inherits fail-closed A18 forward-stability boundary",
+  "never exposes the V4 fresh-store authority",
+])marker(v5BundleTest,value,"H6_V5_BUNDLE_TEST_MARKER_REQUIRED");
+
 assert.equal(git("merge-base",BASE,"HEAD"),BASE,"H6_EXACT_PREDECESSOR_MUST_BE_ANCESTOR");
 for(const frozen of FROZEN){
   assert.equal(git("rev-parse","HEAD:"+frozen),git("rev-parse",BASE+":"+frozen),"H6_HISTORICAL_OR_PRODUCTION_V2_REWRITE_FORBIDDEN:"+frozen);
 }
 const changed=git("diff","--name-only",BASE+"...HEAD").split(/\r?\n/).filter(Boolean);
+const allowedDomainSuccessors=new Set([V5_BUNDLE,V5_BUNDLE_TEST]);
 for(const rel of changed){
   assert.equal(rel.startsWith("apps/web/"),false,"H6_WEB_CHANGE_FORBIDDEN:"+rel);
-  assert.equal(rel.startsWith("apps/server/src/domain/"),false,"H6_DOMAIN_KERNEL_CHANGE_FORBIDDEN:"+rel);
+  if(rel.startsWith("apps/server/src/domain/")&&!allowedDomainSuccessors.has(rel)){
+    assert.fail("H6_DOMAIN_KERNEL_CHANGE_FORBIDDEN:"+rel);
+  }
 }
 const githubChanges=changed.filter((rel)=>rel.startsWith(".github/workflows/"));
 for(const rel of githubChanges){
@@ -164,6 +185,8 @@ const proof={
   local_operator_arm_surface_present:true,
   fresh_v5_schema_acl_surface_present:true,
   v5_stage_aware_runner_composition_present:true,
+  v5_store_bound_prewindow_config_successor_present:true,
+  a18_dt02_stage_semantics_reused_without_v4_rewrite:true,
   a0_production_replay_promotion_surface_present:true,
   source_operational_database_read_only_contract_present:true,
   production_to_formal_raw_store_transition_explicit:true,
