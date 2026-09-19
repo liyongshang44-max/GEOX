@@ -694,6 +694,8 @@
         ".github/workflows/mcft-cap-09-twin-composition-v2-stage-authority.yml",
         "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v4.test.ts",
         "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v4.ts",
+        "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.test.ts",
+        "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts",
         "apps/server/src/runtime/twin_runtime/external_formal_v4_amendment19_runner_v2.ts",
         "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_COMPOSITION_V2_STAGE_AUTHORITY_V1.cjs",
@@ -817,6 +819,8 @@
       "kind": "EXACT_PATH_SET",
       "paths": [
         ".github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml",
+        "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.test.ts",
+        "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts",
         "apps/server/src/runtime/twin_runtime/external_formal_v5_amendment19_runner_v2.ts",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-POST-GRADUATION-CONTROL-SURFACE-V1.json",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json",
