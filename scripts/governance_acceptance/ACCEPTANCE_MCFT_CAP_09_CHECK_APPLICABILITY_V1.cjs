@@ -856,6 +856,76 @@ function main() {
   }
   assert.equal(byId(plan(authority, registry, [], "POST_MERGE_V13_QUALIFICATION"), "V13_PRODUCER_DRIVEN_QUALIFICATION").status, "REQUIRED");
 
+  // H6 Formal-v5 productionization is a successor consumer seam. It must be governed
+  // without silently promoting the new consumer modules into already-frozen V13/Twin-v2
+  // producer authority closures.
+  const h6Resolver = resolved.resolved.FORMAL_V5_H6_SUCCESSOR_SEAM_V1;
+  assert.ok(h6Resolver, "FORMAL_V5_H6_SUCCESSOR_RESOLVER_REQUIRED");
+  const h6Paths = new Set(h6Resolver.paths);
+  const twinV2StagePaths = new Set(resolved.resolved.TWIN_V2_STAGE_AUTHORITY_SUCCESSOR_V1.paths);
+  for (const h6ConsumerPath of [
+    "apps/server/src/runtime/twin_runtime/external_formal_v5_amendment19_runner_v2.ts",
+    "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts",
+    "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.test.ts",
+    "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts",
+    "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts",
+  ]) {
+    assert(h6Paths.has(h6ConsumerPath), `FORMAL_V5_H6_CONSUMER_PATH_REQUIRED:${h6ConsumerPath}`);
+  }
+  assert.equal(
+    v13RuntimePaths.has("apps/server/src/runtime/twin_runtime/external_formal_v5_amendment19_runner_v2.ts"),
+    false,
+    "FORMAL_V5_H6_RUNNER_MUST_NOT_REOPEN_FROZEN_V13_PRODUCER_CLOSURE",
+  );
+  for (const rel of [
+    "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts",
+    "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.test.ts",
+    "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts",
+    "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts",
+  ]) {
+    assert.equal(twinV2StagePaths.has(rel), false, `FORMAL_V5_H6_CONSUMER_MUST_NOT_REOPEN_TWIN_V2_PRODUCER_AUTHORITY:${rel}`);
+  }
+  const h6Check = authority.checks.find((row) => row.check_id === "FORMAL_V5_H6_SUCCESSOR_SEAM");
+  assert.ok(h6Check, "FORMAL_V5_H6_SUCCESSOR_CHECK_REQUIRED");
+  assert.deepEqual(h6Check.resolver_ids, ["FORMAL_V5_H6_SUCCESSOR_SEAM_V1"]);
+  assert.deepEqual(h6Check.requalification_triggers, ["FORMAL_V5_H6_SUCCESSOR_SEAM_V1"]);
+  assert.deepEqual(h6Check.applicable_stages, ["SUCCESSOR_SUBJECT_PRE_MERGE", "POST_MERGE_V13_QUALIFICATION"]);
+  assert.equal(h6Check.diagnostic_command, "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM_V1.cjs");
+
+  const h6RunnerPath = "apps/server/src/runtime/twin_runtime/external_formal_v5_amendment19_runner_v2.ts";
+  const h6RunnerChange = plan(authority, registry, [h6RunnerPath]);
+  assert.equal(h6RunnerChange.status, "PASS");
+  assert.equal(h6RunnerChange.unknown_changed_paths.length, 0);
+  assert.equal(byId(h6RunnerChange, "FORMAL_V5_H6_SUCCESSOR_SEAM").status, "REQUALIFY");
+  assert(byId(h6RunnerChange, "FORMAL_V5_H6_SUCCESSOR_SEAM").changed_dependencies.includes(h6RunnerPath));
+  for (const id of ["V13_AUTONOMOUS_FORCING_FOUNDATION", "V13_HOLISTIC_SCHEMA", "V13_NEXT_TICK_VIABILITY"]) {
+    assert.equal(
+      byId(h6RunnerChange, id).changed_dependencies.includes(h6RunnerPath),
+      false,
+      `FORMAL_V5_H6_RUNNER_MUST_NOT_PROPAGATE_TO_FROZEN_V13_PRODUCER_CHECK:${id}`,
+    );
+  }
+  assert.equal(byId(h6RunnerChange, "FORMAL_V5_ACTIVATION").status, "NOT_APPLICABLE");
+
+  const h6StageConsumerPath = "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts";
+  const h6StageConsumerChange = plan(authority, registry, [h6StageConsumerPath]);
+  assert.equal(h6StageConsumerChange.status, "PASS");
+  assert.equal(h6StageConsumerChange.unknown_changed_paths.length, 0);
+  assert.equal(byId(h6StageConsumerChange, "FORMAL_V5_H6_SUCCESSOR_SEAM").status, "REQUALIFY");
+  assert(byId(h6StageConsumerChange, "FORMAL_V5_H6_SUCCESSOR_SEAM").changed_dependencies.includes(h6StageConsumerPath));
+  for (const id of [
+    "TWIN_V2_STAGE_AUTHORITY_SUCCESSOR",
+    "PRODUCTION_TWIN_PROCESS_V2_ROUTING",
+    "BIOLOGICAL_STAGE_EFFECTIVENESS_GRADUATION",
+  ]) {
+    assert.equal(
+      byId(h6StageConsumerChange, id).changed_dependencies.includes(h6StageConsumerPath),
+      false,
+      `FORMAL_V5_H6_STAGE_CONSUMER_MUST_NOT_PROPAGATE_TO_FROZEN_PRODUCER_CHECK:${id}`,
+    );
+  }
+  assert.equal(byId(h6StageConsumerChange, "FORMAL_V5_ACTIVATION").status, "NOT_APPLICABLE");
+
   // Step 5 may be implemented without being treated as qualified. Its dependency
   // closure is deliberately separate from Step 4 so timing work cannot invalidate
   // the already-closed producer-driven qualification.
@@ -1008,6 +1078,7 @@ function main() {
     not_applicable_generation_is_machine_recorded: true,
     failed_v4_reuse_is_forbidden: true,
     v13_runtime_change_uses_generated_dependency_closure: true,
+    formal_v5_h6_consumer_seam_is_governed_without_reopening_frozen_producer_closures: true,
     postmerge_obligations_enumerated_without_serial_short_circuit: true,
     cp4_frozen_negative_case_matrix_complete: true,
     regex_fallback_used: false,
