@@ -629,7 +629,6 @@
         "apps/server/db/migrations/2026_09_01_mcft_cap_09_v13_evidence_runtime_phase3_acl_carryforward.sql",
         "apps/server/src/external_evidence/mcft_cap09_phase7_private_candidate_capture_promotion_v1.ts",
         "apps/server/src/persistence/external_evidence/postgres_evidence_runtime_fenced_exact_base_fact_promotion_v1.ts",
-        "apps/server/src/runtime/twin_runtime/external_formal_v5_amendment19_runner_v2.ts",
         "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json"
       ]
     },
@@ -694,15 +693,11 @@
         ".github/workflows/mcft-cap-09-twin-composition-v2-stage-authority.yml",
         "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v4.test.ts",
         "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v4.ts",
-        "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.test.ts",
-        "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts",
         "apps/server/src/runtime/twin_runtime/external_formal_v4_amendment19_runner_v2.ts",
         "apps/server/src/runtime/twin_runtime/mcft_cap09_twin_runtime_composition_v2.ts",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_TWIN_COMPOSITION_V2_STAGE_AUTHORITY_V1.cjs",
         "scripts/runtime_acceptance/mcft_cap09_amendment19_formal_manifest_from_stage_authority_v2.test.ts",
-        "scripts/runtime_acceptance/mcft_cap09_amendment19_formal_manifest_from_stage_authority_v2.ts",
-        "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts",
-        "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts"
+        "scripts/runtime_acceptance/mcft_cap09_amendment19_formal_manifest_from_stage_authority_v2.ts"
       ]
     },
     "PRODUCTION_TWIN_PROCESS_V2_ROUTING_V1": {
@@ -818,6 +813,30 @@
       ]
     },
     "FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1": {
+      "kind": "EXACT_PATH_SET",
+      "paths": [
+        ".github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml",
+        "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.test.ts",
+        "apps/server/src/domain/twin_runtime/external_formal_prewindow_authority_bundle_v5.ts",
+        "apps/server/src/runtime/twin_runtime/external_formal_v5_amendment19_runner_v2.ts",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-POST-GRADUATION-CONTROL-SURFACE-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-PRODUCTION-OWNER-GRADUATION-GATE-V1.json",
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-T4R1-ACTUAL-FORMAL-STORE-AUTHORITY-V3.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM_V1.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_CONTROL_SURFACE_V1.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_STAGE_AWARE_RUNNER_V2.ts",
+        "scripts/runtime_acceptance/ASSEMBLE_MCFT_CAP_09_FORMAL_V5_ARM_V1.cjs",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_A0_PRODUCTION_REPLAY_PROMOTION_V1.ts",
+        "scripts/runtime_acceptance/RUN_MCFT_CAP_09_FORMAL_V5_SCHEMA_ACL_MATERIALIZATION_V1.ts",
+        "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_ARM_AUTHORITY_CONTINUITY_V1.cjs",
+        "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_FORMAL_V5_POST_GRADUATION_ARM_READINESS_V1.cjs",
+        "scripts/runtime_acceptance/VERIFY_MCFT_CAP_09_PRODUCTION_OWNER_LIVE_FENCED_LEASES_V1.cjs",
+        "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.test.ts",
+        "scripts/runtime_acceptance/mcft_cap09_formal_v5_manifest_from_stage_authority_v1.ts"
+      ]
+    },
+    "FORMAL_V5_H6_SUCCESSOR_SEAM_V1": {
       "kind": "EXACT_PATH_SET",
       "paths": [
         ".github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml",
@@ -1296,6 +1315,34 @@
       ],
       "carry_forward_evidence_id": null,
       "diagnostic_command": null
+    },
+    {
+      "check_id": "FORMAL_V5_H6_SUCCESSOR_SEAM",
+      "owner": "MCFT_CAP09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM",
+      "generation_scope": [
+        "V13",
+        "FORMAL_V5_H6_SUCCESSOR_SEAM"
+      ],
+      "authority_refs": [
+        "docs/digital_twin/mcft/cap_09/GEOX-MCFT-CAP-09-FORMAL-V5-PRODUCTION-ACTIVATION-SEAM-V1.json"
+      ],
+      "resolver_ids": [
+        "FORMAL_V5_H6_SUCCESSOR_SEAM_V1"
+      ],
+      "historical_evidence_policy": "NO_HISTORICAL_CARRY_FORWARD_SUCCESSOR_SEAM_MUST_REQUALIFY",
+      "execution_workflow": ".github/workflows/mcft-cap-09-formal-v5-post-graduation-readiness.yml",
+      "execution_workflow_status": "IMPLEMENTED_AT_SUCCESSOR_HEAD_ZERO_EFFECT_READINESS",
+      "fail_policy": "FAIL_CLOSED_NO_FORMAL_ARM_OR_DATABASE_EFFECT",
+      "carry_forward_policy": "NONE",
+      "requalification_triggers": [
+        "FORMAL_V5_H6_SUCCESSOR_SEAM_V1"
+      ],
+      "applicable_stages": [
+        "SUCCESSOR_SUBJECT_PRE_MERGE",
+        "POST_MERGE_V13_QUALIFICATION"
+      ],
+      "carry_forward_evidence_id": null,
+      "diagnostic_command": "node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_09_FORMAL_V5_H6_PRODUCTION_ACTIVATION_SEAM_V1.cjs"
     },
     {
       "check_id": "FORMAL_V5_ACTIVATION",
